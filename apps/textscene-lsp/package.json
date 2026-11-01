@@ -6,8 +6,17 @@
   "bin": {
     "tscn-lsp": "./bin/tscn-lsp.js"
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "files": [
     "dist",
+    "!dist/*.meta.json",
     "bin"
   ],
   "publishConfig": {
@@ -15,8 +24,8 @@
   },
   "scripts": {
     "prebuild": "pnpm --filter @textscene/core build",
-    "build": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.js --external:vscode-languageserver --external:vscode-languageserver-textdocument",
-    "dev": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.js --external:vscode-languageserver --external:vscode-languageserver-textdocument --watch",
+    "build": "node scripts/build.mjs",
+    "dev": "esbuild src/server.ts src/index.ts --bundle --platform=node --format=esm --outdir=dist --external:vscode-languageserver --external:vscode-languageserver-textdocument --watch",
     "clean": "rimraf dist",
     "test": "vitest run",
     "test:watch": "vitest --watch",
@@ -64,6 +73,7 @@
     "@textscene/core": "workspace:*",
     "@textscene/dev-kit": "workspace:*",
     "@types/node": "catalog:",
+    "dts-bundle-generator": "catalog:",
     "esbuild": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:",

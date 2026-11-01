@@ -24,7 +24,7 @@ const REACT_AND_THREE_IMPORTS = [
  * `resources/diskProject.ts` may read the disk.
  */
 const NODE_ONLY_MESSAGE =
-  'Core ships to the browser: only resources/diskProject.ts may use Node built-ins, and only the tscn-lint CLI and the tscn-lsp server may import it.';
+  'Core ships to the browser: only resources/diskProject.ts may use Node built-ins, and only the tscn-lint CLI, the tscn-lsp server and their library entries may import it.';
 const NODE_BUILTIN_PATHS = ['fs', 'fs/promises', 'path', 'os', 'url', 'child_process'].map((name) => ({
   name,
   message: NODE_ONLY_MESSAGE,

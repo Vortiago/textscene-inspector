@@ -25,6 +25,20 @@ tscn-lint scenes/                     # every .tscn and .tres file underneath
 tscn-lint --no-color scenes/          # no ANSI colours
 ```
 
+## Library use
+
+The package works as a library too: the run, the formatters and the `res://` roots all import
+from the package root, so a tool lints instead of forking the CLI.
+
+```js
+import { collectFileDiagnostics, createDiskResRoots, expandTscnPaths, formatJson } from '@textscene/linter';
+
+const resRoots = createDiskResRoots(process.cwd());
+const { exitCode, files } = await collectFileDiagnostics(expandTscnPaths(['scenes/']), resRoots);
+console.log(formatJson(files));
+process.exitCode = exitCode;
+```
+
 ## Project files
 
 When the scene's own directory, or a directory above it, holds

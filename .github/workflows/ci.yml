@@ -104,9 +104,10 @@ jobs:
       # The prebuild hook builds @textscene/core.
       - run: pnpm build:linter
 
-      # check:package below reads the dist of the parser and renderer packages.
+      # check:package below reads the dist of the linter, lsp, parser and renderer packages.
       - run: pnpm build:tscn
       - run: pnpm build:renderer
+      - run: pnpm build:lsp
 
       # Lints with the binary this run built. The vendored demos are scenes Godot itself
       # opens, so an error here is a false positive in a rule.

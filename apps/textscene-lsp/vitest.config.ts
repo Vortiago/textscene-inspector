@@ -11,6 +11,9 @@ export default mergeConfig(
       name: 'textscene-lsp',
       environment: 'node',
       include: ['src/**/*.{test,spec}.ts'],
+      // server.e2e and package.e2e each rebuild the one dist the other reads (the server bundle,
+      // the tarball, the metafile), so their builds never overlap a reader.
+      fileParallelism: false,
     },
   })
 );

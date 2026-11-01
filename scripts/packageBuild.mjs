@@ -29,19 +29,31 @@ export function packageLayout(buildScriptUrl) {
 /**
  * Writes the bundle's metafile, which is not published, and one declaration file that imports
  * nothing from the workspace into `outDir`, then the notices of the third-party code the bundle
- * holds.
+ * holds. A build of several bundles names `metafileName` for their shared one, and turns
+ * `notices` off while its package ships none.
  *
  * @param {ReturnType<typeof packageLayout>} layout - the package's files.
  * @param {{ inputs: Record<string, unknown> }} metafile - the esbuild metafile of the bundle.
+ * @param {{ metafileName?: string, notices?: boolean }} [options]
  */
-export function writeBesideBundle({ packageDir, ownSourceDir, entry, outDir }, metafile) {
-  writeFileSync(resolve(outDir, 'index.meta.json'), JSON.stringify(metafile));
+export function writeBesideBundle(
+  { packageDir, ownSourceDir, entry, outDir },
+  metafile,
+  { metafileName = 'index.meta.json', notices = true } = {}
+) {
+  writeFileSync(resolve(outDir, metafileName), JSON.stringify(metafile));
   writeFileSync(resolve(outDir, 'index.d.ts'), bundledDeclarations(packageDir, entry));
-  writeBundledNotices(metafile, { packageDir, ownSourceDir });
+  if (notices) writeBundledNotices(metafile, { packageDir, ownSourceDir });
 }
 
-/** The declarations of `entry` in one file. Each package installs the generator, not the root. */
-function bundledDeclarations(packageDir, entry) {
+/**
+ * The declarations of `entry` in one file, with every workspace type it names inlined, so the file
+ * imports nothing from the workspace. Each published package installs the generator itself, and its
+ * own tsconfig answers the type resolution.
+ *
+ * @canonical One package's TypeScript bundled into one declaration file
+ */
+export function bundledDeclarations(packageDir, entry) {
   const requireFromPackage = createRequire(resolve(packageDir, 'package.json'));
   const { generateDtsBundle } = requireFromPackage('dts-bundle-generator');
   const [declarations] = generateDtsBundle(
