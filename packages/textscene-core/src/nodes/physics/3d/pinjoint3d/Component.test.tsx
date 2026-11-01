@@ -4,7 +4,6 @@
  * tree, so every case mounts the whole scene.
  */
 import { describe, expect, it } from 'vitest';
-import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { describeGizmoToggle, describeInstantiatedGizmo } from '../../../../r3f/testing/gizmoContract';
 import {
   BOTH_BODIES,
@@ -14,9 +13,11 @@ import {
   nodeText,
   twoBodyScene,
 } from '../joint3d/jointScene.testkit';
+import { describeJointBodyGating } from '../joint3d/jointBodyGating.testkit';
+import { EXPECTED_PART_COLOURS } from '../joint3d/jointVertices.testkit';
 import { pinJointSegments } from '../joint3d/jointGizmoDrawer';
 
-const JOINT_COLOUR = godotColorToLinear({ r: 0.5, g: 0.8, b: 1 }).toArray();
+const JOINT_COLOUR = EXPECTED_PART_COLOURS.joint;
 const PIN_CROSS = Array.from(pinJointSegments());
 
 const pinScene = (joint: Record<string, string>) => twoBodyScene('PinJoint3D', joint);
@@ -27,25 +28,6 @@ describe('<PinJoint3D> cross', () => {
       await mountJointScene({ nodes: pinScene(BOTH_BODIES), selectedPath: 'Root/Joint' })
     );
     expect(lines).toEqual([{ color: JOINT_COLOUR, opacity: 1, positions: PIN_CROSS }]);
-  });
-
-  it('draws at 0.3 of that opacity while unselected', async () => {
-    const [line] = drawnLines(await mountJointScene({ nodes: pinScene(BOTH_BODIES) }));
-    expect(line!.opacity).toBeCloseTo(0.3, 10);
-  });
-
-  it('draws with only node_a resolved', async () => {
-    const lines = drawnLines(await mountJointScene({ nodes: pinScene({ node_a: BOTH_BODIES.node_a }) }));
-    expect(lines).toHaveLength(1);
-  });
-
-  it('draws nothing when neither body resolves', async () => {
-    expect(drawnLines(await mountJointScene({ nodes: pinScene({}) }))).toEqual([]);
-  });
-
-  it('draws nothing for a path that names no node', async () => {
-    const nodes = pinScene({ node_a: 'NodePath("../Nowhere")' });
-    expect(drawnLines(await mountJointScene({ nodes }))).toEqual([]);
   });
 
   it('resolves a body inside an instanced scene', async () => {
@@ -65,14 +47,12 @@ describe('<PinJoint3D> cross', () => {
     );
     expect(lines).toHaveLength(1);
   });
+});
 
-  it('draws nothing when the path names a node that is no Node3D', async () => {
-    const nodes = [
-      nodeText('Joint', 'PinJoint3D', '.', { node_a: 'NodePath("../Plain")' }),
-      nodeText('Plain', 'Node', '.'),
-    ];
-    expect(drawnLines(await mountJointScene({ nodes }))).toEqual([]);
-  });
+describeJointBodyGating('<PinJoint3D>', 'PinJoint3D', {
+  both: ['joint'],
+  onlyA: ['joint'],
+  onlyB: ['joint'],
 });
 
 const GIZMO_CASE = jointGizmoCase('PinJoint3D', {});

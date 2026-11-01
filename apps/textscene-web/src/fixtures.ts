@@ -1148,6 +1148,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Joint 3d Gizmos Hinge Slider",
+    "file": "unit-joint-3d-gizmos-hinge-slider.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Joint 3d Gizmos Pin Cone",
     "file": "unit-joint-3d-gizmos-pin-cone.tscn",
     "category": "Other"
