@@ -6,7 +6,8 @@ packages: `vscode`, `linter`, `lsp`, `tscn` and `renderer`.
 
 ## Tag a release
 
-1. Find the commits since the package's previous tag that touch it or a package it bundles.
+1. Find the commits since the package's previous tag that touch it or a directory in its
+   `inputs` in `RELEASE_TARGETS`.
 2. Pick the version from them. A breaking change bumps the major, a `feat` the minor, and
    anything else the patch.
 3. Tag `origin/main` and push the tag.
