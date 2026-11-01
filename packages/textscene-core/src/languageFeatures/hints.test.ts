@@ -9,7 +9,7 @@ const ENUM = 2;
 const enumEntries = (hintString: string) => enumEntriesOf({ type: INT, hint: ENUM, hintString });
 
 describe('hints', () => {
-  it('numbers an enum label by its index when the label carries no value', () => {
+  it('numbers an enum label by its position when the label carries no value', () => {
     expect(enumEntries('Euler,Quaternion,Basis')).toEqual([
       { label: 'Euler', value: '0' },
       { label: 'Quaternion', value: '1' },
@@ -17,11 +17,37 @@ describe('hints', () => {
     ]);
   });
 
-  it('honours a label that carries its own value, and keeps the next index after it', () => {
+  it('runs the value on from an explicit value, as the editor does', () => {
     expect(enumEntries('Off,On:4,Auto')).toEqual([
       { label: 'Off', value: '0' },
       { label: 'On', value: '4' },
-      { label: 'Auto', value: '2' },
+      { label: 'Auto', value: '5' },
+    ]);
+  });
+
+  it('reads only the second colon slice as the value', () => {
+    expect(enumEntries('A:7:ignored,B')).toEqual([
+      { label: 'A', value: '7' },
+      { label: 'B', value: '8' },
+    ]);
+  });
+
+  it('answers 0 for an empty or non-numeric value, then runs on', () => {
+    expect(enumEntries('A:,B')).toEqual([
+      { label: 'A', value: '0' },
+      { label: 'B', value: '1' },
+    ]);
+    expect(enumEntries('A:no,B')).toEqual([
+      { label: 'A', value: '0' },
+      { label: 'B', value: '1' },
+    ]);
+  });
+
+  it('keeps two labels with the same value, so both spell it', () => {
+    expect(enumEntries('A:4,A:4,B')).toEqual([
+      { label: 'A', value: '4' },
+      { label: 'A', value: '4' },
+      { label: 'B', value: '5' },
     ]);
   });
 
