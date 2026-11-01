@@ -36,10 +36,10 @@ describe('launchGodotComparisonBrowser', () => {
     expect(launch.mock.calls[0][0].args).not.toContain('--use-angle=swiftshader');
   });
 
-  it('points the Vulkan loader at the lavapipe driver', async () => {
+  it('makes the Vulkan loader pick the lavapipe driver by its manifest name', async () => {
     browserReporting(LAVAPIPE, 8);
     await launchGodotComparisonBrowser();
-    expect(launch.mock.calls[0][0].env.VK_ICD_FILENAMES).toBe('/usr/share/vulkan/icd.d/lvp_icd.json');
+    expect(launch.mock.calls[0][0].env.VK_LOADER_DRIVERS_SELECT).toBe('*lvp*');
   });
 
   it('refuses SwiftShader, names it and closes the browser', async () => {
