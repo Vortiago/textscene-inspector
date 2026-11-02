@@ -72,7 +72,6 @@ describe('a bag derived without grow keeps three its own program', () => {
     const material = buildMaterial(parseStandardMaterial3DScalars({}));
     expect(growInjectionOf(parseStandardMaterial3DScalars({}))).toBeUndefined();
     expect(patchedVertex(material, 'standard')).toBe(programShader('standard').vertexShader);
-    expect(growInjectionOf(parseStandardMaterial3DScalars({}))).toBeUndefined();
   });
 
   it('the amount alone, without the flag, injects nothing (error case)', () => {

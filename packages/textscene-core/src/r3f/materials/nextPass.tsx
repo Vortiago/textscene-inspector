@@ -285,6 +285,7 @@ export function NextPassChain({
   overlay,
   draw,
   drawsPoints,
+  skeleton,
   shadow,
 }: {
   /** The base draw, whose geometry every extra draw shares. */
@@ -299,6 +300,8 @@ export function NextPassChain({
   draw?: ChainDrawFactory;
   /** The base draws points, so the chain draws do too. */
   drawsPoints: boolean;
+  /** The skeleton that skins a skinned base's chain links, or null for an unskinned draw. */
+  skeleton?: THREE.Skeleton | null;
   shadow: ShadowCastingEffects;
 }) {
   // Owners that hold their geometry directly leave the read-back nothing to read: a
@@ -329,6 +332,7 @@ export function NextPassChain({
           draw={draw}
           onOrdinal={onOrdinal}
           drawsPoints={drawsPoints}
+          skeleton={skeleton}
           shadow={shadow}
         />
       ))}

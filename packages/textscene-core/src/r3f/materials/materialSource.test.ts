@@ -240,6 +240,19 @@ describe('resolveNextPass', () => {
     });
     expect(link).toMatchObject({ kind: 'inline', isHeldLocally: false });
   });
+
+  it('resolves an ExtResource link by the tables of the file the material is written in', () => {
+    // The surface's file holds no such ext resource: only the material's own do,
+    // as `_geometry_instance_add_surface_with_material_chain` reads the next pass
+    // off the material, not off the geometry instance.
+    const written = { ...CHAIN[0]!, data: { next_pass: 'ExtResource("9")' } };
+    const link = resolveNextPass('ExtResource("9")', {
+      resource: written,
+      internalResources: CHAIN,
+      externalResources: [{ id: '9', path: 'res://link/heavy.tres', type: 'StandardMaterial3D' }],
+    });
+    expect(link).toMatchObject({ kind: 'file', path: 'res://link/heavy.tres' });
+  });
 });
 
 describe('materialSourceKey', () => {

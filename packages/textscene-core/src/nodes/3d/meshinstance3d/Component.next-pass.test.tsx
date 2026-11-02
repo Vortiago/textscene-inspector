@@ -14,6 +14,12 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { nextPassRenderOrder } from '../../../r3f/materials/nextPass';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import { DispatchedScene } from '../../../r3f/testing/DispatchedScene';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
+import { loaderServing } from '../../../resources/testing/servingResourceLoader';
+import { parseTscnContent } from '../../../r3f/hooks/useParsedScene';
+import { instanceAs } from '../testing/reactThreeTestInstance';
+import { ribbonScene } from '../testing/skinnedRibbon.testkit';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
 
@@ -134,11 +140,9 @@ function which(mesh: THREE.Mesh): string {
   const { r, g, b } = soleMaterial(mesh).color;
   if (r > 0.9 && g > 0.9 && b < 0.1) return 'yellow';
   if (r > 0.9 && b > 0.9 && g < 0.1) return 'magenta';
-  if (r > g && b > g) return 'magenta';
   if (r > 0.9 && g > 0.4) return 'orange';
   if (r > g && r > b) return 'red'; // the surface override and the red-tinted overlay alike
   if (b > r && b > g) return 'blue';
-  void g;
   return 'mesh'; // green
 }
 
@@ -220,5 +224,92 @@ describe('MeshInstance3D — next_pass', () => {
   it('ends the chain on a missing link material', async () => {
     const drawn = meshes(await render({ materialOverride: 'SubResource("Mat_missing")' }));
     expect(drawn).toHaveLength(1);
+  });
+
+  /** A full scene through the dispatched harness, settled, for the file and skinned cases. */
+  async function renderContent(content: string, files: Record<string, string> = {}) {
+    const { sceneGraph: graph, error } = parseTscnContent(content, 'res://main.tscn');
+    if (!graph) throw new Error(`expected a scene, got ${error}`);
+    const renderer = await ReactThreeTestRenderer.create(
+      <DispatchedScene sceneGraph={graph} loader={loaderServing(files)} />
+    );
+    await settleLoads();
+    return renderer;
+  }
+
+  it("draws the overlay chain after the surface's whole chain, orders ascending", async () => {
+    // The surface chains two links (0,1), the overlay draws one past them (2),
+    // and the overlay's own link runs after it (3).
+    const drawn = meshes(
+      await render({
+        surfaceMaterialOverrides: new Map([[0, 'SubResource("Mat_chain2")']]),
+        materialOverlay: 'SubResource("Mat_overlay")',
+      })
+    );
+
+    expect(drawn).toHaveLength(4);
+    expect([which(drawn[0]!), which(drawn[1]!), which(drawn[2]!), which(drawn[3]!)]).toEqual([
+      'mesh',
+      'blue',
+      'red',
+      'blue',
+    ]);
+    expect([drawn[1]!.renderOrder, drawn[2]!.renderOrder, drawn[3]!.renderOrder]).toEqual([1, 2, 3]);
+  });
+
+  it('mounts a chain link from a file material when it lands, and shares the geometry', async () => {
+    // A `.tres` surface override whose own `next_pass` is an inline sub-resource of
+    // the file: the arrival mounts the link after the surface drew, then the walk
+    // continues within the file's tables.
+    const scene = `[gd_scene format=3]
+
+[ext_resource type="StandardMaterial3D" path="res://chained.tres" id="1_link"]
+
+[sub_resource type="BoxMesh" id="Box_1"]
+
+[node name="Root" type="Node3D"]
+[node name="M" type="MeshInstance3D" parent="."]
+mesh = SubResource("Box_1")
+surface_material_override/0 = ExtResource("1_link")
+`;
+    const file = `[gd_resource type="StandardMaterial3D" format=3]
+
+[sub_resource type="StandardMaterial3D" id="Ink"]
+albedo_color = Color(0, 0, 1, 1)
+
+[resource]
+albedo_color = Color(0, 1, 0, 1)
+next_pass = SubResource("Ink")`;
+
+    const renderer = await renderContent(scene, { 'res://chained.tres': file });
+
+    const drawn = meshes(renderer);
+    expect(drawn).toHaveLength(2);
+    expect(which(drawn[1]!)).toBe('blue');
+    expect(drawn[1]!.geometry).toBe(drawn[0]!.geometry);
+  });
+
+  it('skins a chain link by the same skeleton as its base draw', async () => {
+    // The skinned ribbon's surface override chains an inverted-hull style pass:
+    // the link must skin, not draw the bind pose beside the posed body.
+    const ribbon = renderContent(
+      ribbonScene({
+        extra: `[sub_resource type="StandardMaterial3D" id="Hull"]
+albedo_color = Color(0, 0, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="ChainedRed"]
+albedo_color = Color(1, 0, 0, 1)
+next_pass = SubResource("Hull")`,
+        meshLines: `skeleton = NodePath("../Skeleton3D")
+surface_material_override/0 = SubResource("ChainedRed")`,
+      })
+    );
+    const skinned = (await ribbon).scene
+      .findAllByType('SkinnedMesh')
+      .map((m) => instanceAs<THREE.SkinnedMesh>(m));
+
+    expect(skinned).toHaveLength(2);
+    expect(skinned[1]!.skeleton).toBe(skinned[0]!.skeleton);
+    expect(which(skinned[1]!)).toBe('blue');
   });
 });

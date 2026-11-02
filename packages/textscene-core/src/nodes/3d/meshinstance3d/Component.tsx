@@ -341,6 +341,7 @@ function MeshSurfaces({
         meshRef={meshRef}
         sources={sources}
         drawsPoints={drawsPoints}
+        skeleton={skeleton}
         shadow={shadow}
         overlay={
           overlaySource
