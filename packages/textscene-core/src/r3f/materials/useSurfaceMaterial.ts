@@ -26,6 +26,11 @@ export interface SurfaceMaterial {
   isAbsent: boolean;
   /** The unfaded and the alpha-pass bag, or null when a texture never draws: the surface takes the missing-texture placeholder. */
   bags: FadeVariants<StandardMaterialBag> | null;
+  /**
+   * The ready material resource, whose own tables a chain walker resolves the
+   * material's `next_pass` in. Null while the source names nothing material.
+   */
+  material: MaterialResource | null;
 }
 
 /** The material `source` draws on `surface`, whichever file it came from: a glTF surface's UVs run top-down. */
@@ -39,7 +44,7 @@ export function useSurfaceMaterial(
   const textures = useSurfaceTextures(scalars, material, surface);
   // No bags while unresolved, so a late map leaves the placeholder material as it is.
   const bags = useMemo(() => textures && standardMaterialBags(scalars, textures), [scalars, textures]);
-  return { scalars, isAbsent: loaded.status === 'absent', bags };
+  return { scalars, isAbsent: loaded.status === 'absent', bags, material };
 }
 
 function useDecodedScalars(material: MaterialResource | null): StandardMaterial3DScalars | null {

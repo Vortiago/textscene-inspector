@@ -16,6 +16,7 @@ import {
   useEffect,
   useMemo,
   useLayoutEffect,
+  useRef,
   useState,
   type ReactNode,
   type RefObject,
@@ -138,9 +139,27 @@ export type PassProps = {
   attach: string;
   /** The part's draw-group count, which sizes the invisible starting materials. */
   surfaceCount: number;
+  /**
+   * Renders the pass's own draw when the owner's object is instanced or placed, the
+   * plain surface mesh's draw being the default. The walk decides the pass's draw and
+   * carries the continuation; the factory mounts only this one draw.
+   */
+  draw?: ChainDrawFactory;
   /** Reports the greatest walked position, so an overlay mounts one past it. */
   onOrdinal?: (ordinal: number) => void;
 } & ChainDrawBase;
+
+/** What a chain draw site receives from the walk: the pass, and what it covers. */
+export type ChainDrawSpec = {
+  source: MaterialSource;
+  ordinal: number;
+  attach: string;
+  surfaceCount: number;
+  geometry: THREE.BufferGeometry;
+} & ChainDrawBase;
+
+/** Renders one chain draw. The default mounts a plain draw of the shared geometry. */
+export type ChainDrawFactory = (spec: ChainDrawSpec) => ReactNode;
 
 /**
  * One pass of a chain, recursive. The starting pass draws nothing of its own; every
@@ -152,7 +171,8 @@ export type PassProps = {
  * @canonical One pass of a material's next_pass chain
  */
 export function NextPassLink(props: PassProps) {
-  const { source, ordinal, drawsSelf, visited, geometry, attach, surfaceCount, onOrdinal, shadow } = props;
+  const { source, ordinal, drawsSelf, visited, geometry, attach, surfaceCount, onOrdinal, draw, shadow } =
+    props;
   const loaded = useMaterial(source);
   const material = readyMaterial(loaded);
   const scalars = useMemo(
@@ -183,6 +203,7 @@ export function NextPassLink(props: PassProps) {
         geometry={geometry}
         attach={attach}
         surfaceCount={surfaceCount}
+        draw={draw}
         onOrdinal={onOrdinal}
         drawsPoints={props.drawsPoints}
         skeleton={props.skeleton}
@@ -193,27 +214,35 @@ export function NextPassLink(props: PassProps) {
   // walk continues past it at the next ordinal, the starting pass's draw kept.
   if (scalars.readsStencil) return continuation;
   if (!geometry) return null;
+  const site: ChainDrawSpec = {
+    source,
+    ordinal,
+    attach,
+    surfaceCount,
+    geometry,
+    drawsPoints: props.drawsPoints,
+    skeleton: props.skeleton,
+    shadow,
+  };
   return (
     <>
-      {drawsSelf && (
-        <ChainDraw
-          geometry={geometry}
-          source={source}
-          ordinal={ordinal}
-          attach={attach}
-          surfaceCount={surfaceCount}
-          drawsPoints={props.drawsPoints}
-          skeleton={props.skeleton}
-          shadow={shadow}
-        />
-      )}
+      {drawsSelf && (draw ? draw(site) : <ChainDraw {...site} />)}
       {continuation}
     </>
   );
 }
 
-/** The visited set the next pass walks with: every key so far, plus this pass's own. */
-function visitedWith(visited: ReadonlySet<string>, source: MaterialSource | undefined): ReadonlySet<string> {
+/**
+ * The visited set the next pass walks with: every key so far, plus this pass's own. The
+ * imperative GLB walk shares it, so a hand-written cycle draws each material once on
+ * both.
+ *
+ * @canonical The visited set of a next_pass chain walk
+ */
+export function visitedWith(
+  visited: ReadonlySet<string>,
+  source: MaterialSource | undefined
+): ReadonlySet<string> {
   if (!source) return visited;
   const own = materialSourceKey(source);
   if (visited.has(own)) return visited;
@@ -228,22 +257,32 @@ function visitedWith(visited: ReadonlySet<string>, source: MaterialSource | unde
  */
 export function NextPassChain({
   meshRef,
+  geometry: ownGeometry,
   sources,
   overlay,
+  draw,
   drawsPoints,
   shadow,
 }: {
   /** The base draw, whose geometry every extra draw shares. */
-  meshRef: RefObject<THREE.Object3D | null>;
+  meshRef?: RefObject<THREE.Object3D | null>;
+  /** The geometry every extra draw shares, where the owner holds it directly. */
+  geometry?: THREE.BufferGeometry | null;
   /** The per-group starting materials, override applied. */
   sources: readonly (MaterialSource | undefined)[];
   /** Renders the part's overlay draw, at the explicit order one past the surface chains. */
   overlay?: (renderOrder: number) => ReactNode;
+  /** Renders each pass's own draw when the owner's object is instanced or placed. */
+  draw?: ChainDrawFactory;
   /** The base draws points, so the chain draws do too. */
   drawsPoints: boolean;
   shadow: ShadowCastingEffects;
 }) {
-  const geometry = useDrawnGeometry(meshRef);
+  // Owners that hold their geometry directly leave the read-back nothing to read: a
+  // stable ref keeps the hook whole without one.
+  const readBackRef = useRef<THREE.Object3D | null>(null);
+  const readBack = useDrawnGeometry(meshRef ?? readBackRef);
+  const geometry = ownGeometry !== undefined ? ownGeometry : readBack;
   const [reached, setReached] = useState(0);
   const onOrdinal = useCallback(
     (ordinal: number) => setReached((greatest) => Math.max(greatest, ordinal)),
@@ -264,6 +303,7 @@ export function NextPassChain({
           geometry={geometry}
           attach={surfaceAttach(group, groups.length)}
           surfaceCount={groups.length}
+          draw={draw}
           onOrdinal={onOrdinal}
           drawsPoints={drawsPoints}
           shadow={shadow}

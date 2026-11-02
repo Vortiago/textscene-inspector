@@ -7,7 +7,7 @@
  * InstancedMesh.
  */
 
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { Fragment, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { nodeComponentRegistry, type NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { parseNodeWithRegistry } from '../../../core/NodeRegistry';
@@ -22,6 +22,13 @@ import { usePathResolution } from '../../../resources/useSubOrExtResource';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { surfaceAttach, surfaceSources } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { useOneSurfaceStartingMaterial } from '../../../r3f/materials/useOneSurfaceStartingMaterial';
+import {
+  NextPassChain,
+  nextPassRenderOrder,
+  type ChainDrawFactory,
+  type ChainDrawSpec,
+} from '../../../r3f/materials/nextPass';
+import { NO_RAYCAST } from '../../../r3f/materials/materialOverlay';
 import type { MeshLibraryItem } from '../../../resources/meshlibrary/types';
 import type { Transform3D } from '../../../godot/math/transform3d';
 import type { GridMapProperties } from './types';
@@ -249,16 +256,77 @@ function PartSurfaces({
 }: GridMapPartProps & { cellPoints?: CellPoints }) {
   const surfaces = surfaceSources(part.materials);
   const { geometry } = part;
+  const points = geometryDrawsPoints(geometry);
+  // A cell's chain draw is its own instanced batch, so each surface's material chain
+  // mounts beside its own batch, over the geometry its surface draws.
+  const chainDraw: ChainDrawFactory = (spec) =>
+    cellPoints ? (
+      <ChainCellPoints spec={spec} cellPoints={cellPoints} />
+    ) : (
+      <ChainBatchedTiles spec={spec} matrices={matrices} />
+    );
   return (
     <>
       {surfaces.map((source, surface) => (
-        <GridMapSurface
-          key={surface}
-          draw={{ geometry, cellPoints, source, surface, surfaceCount: surfaces.length, shadow }}
-          matrices={matrices}
-        />
+        <Fragment key={surface}>
+          <GridMapSurface
+            draw={{ geometry, cellPoints, source, surface, surfaceCount: surfaces.length, shadow }}
+            matrices={matrices}
+          />
+          <NextPassChain
+            sources={source ? [source] : []}
+            geometry={cellPoints?.geometry ?? geometry}
+            drawsPoints={points}
+            shadow={shadow}
+            draw={chainDraw}
+          />
+        </Fragment>
       ))}
     </>
+  );
+}
+
+/** The chain link of a tile surface's material, as one more instanced batch of the cells. */
+function ChainBatchedTiles({ spec, matrices }: { spec: ChainDrawSpec; matrices: THREE.Matrix4[] }) {
+  const startingMaterial = useOneSurfaceStartingMaterial(spec.surfaceCount);
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  // Every arg is a dependency: a changed arg rebuilds the mesh with identity instance matrices.
+  useLayoutEffect(() => writeInstanceMatrices(meshRef.current, matrices), [matrices, spec.geometry]);
+  return (
+    <instancedMesh
+      key={matrices.length}
+      ref={meshRef}
+      args={[spec.geometry, startingMaterial, matrices.length]}
+      renderOrder={nextPassRenderOrder(spec.ordinal)}
+      // The surface's own batch is the grid's pickable body; a coincident second hit
+      // would report the same cells twice.
+      raycast={NO_RAYCAST}
+      {...drawHookProps(spec.shadow)}
+    >
+      <SurfaceMaterialSlot source={spec.source} points={pointPlacementOf(spec.geometry)} />
+    </instancedMesh>
+  );
+}
+
+/** The chain link of a points surface's material, as one more draw of the cells' points. */
+function ChainCellPoints({ spec, cellPoints }: { spec: ChainDrawSpec; cellPoints: CellPoints }) {
+  const { geometry, boundingBox, boundingSphere } = cellPoints;
+  const startingMaterial = useOneSurfaceStartingMaterial(spec.surfaceCount);
+  const pointsRef = useRef<THREE.Points>(null);
+  // Typed props hold no box on THREE.Points, which three and the framing read off the object.
+  useLayoutEffect(() => {
+    if (pointsRef.current) Object.assign(pointsRef.current, { boundingBox, boundingSphere });
+  }, [boundingBox, boundingSphere]);
+  return (
+    <points
+      ref={pointsRef}
+      args={[geometry, startingMaterial]}
+      renderOrder={nextPassRenderOrder(spec.ordinal)}
+      raycast={NO_RAYCAST}
+      {...drawHookProps(spec.shadow)}
+    >
+      <SurfaceMaterialSlot source={spec.source} points="instances" />
+    </points>
   );
 }
 
