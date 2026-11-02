@@ -1,4 +1,4 @@
-import { availableParallelism } from 'node:os';
+import { availableParallelism, totalmem, freemem } from 'node:os';
 import { getHeapStatistics } from 'node:v8';
 import { defineConfig } from 'vitest/config';
 
@@ -34,6 +34,31 @@ const WORKER_HEAP_SHARE_BEFORE_RECYCLE = 0.7;
 export const vmMemoryLimit = `${Math.floor(
   (getHeapStatistics().heap_size_limit * WORKER_HEAP_SHARE_BEFORE_RECYCLE) / 1024 ** 2
 )}MB`;
+
+/**
+ * Per-worker memory budget used to cap concurrency. Measured on a 12-core / 31 GB dev box: a full
+ * textscene-core run with 11 workers peaked at ~22.5 GB of node RSS (~2 GB per worker average),
+ * which tripped the kernel OOM killer while other desktop apps were running. CI runners are small
+ * and idle, so the CPU cap below still dominates there.
+ */
+const WORKER_MEMORY_BUDGET_BYTES = 2 * 1024 ** 3;
+/** Keep this much memory free for the OS and other apps (browser, editor, a parallel tsc). */
+const MEMORY_RESERVE_BYTES = 4 * 1024 ** 3;
+
+/**
+ * Worker count from both CPUs and memory, so a loaded big desktop does not overcommit.
+ * Extracted as a pure function so packages/textscene-dev-kit/src/vitestShared.test.ts can
+ * cover the arithmetic without spawning workers. `total`/`free` are injected; pass
+ * os.totalmem()/freemem() in production.
+ */
+export function maxWorkersFor(total: number, free: number, cpus: number): number {
+  const cpuCap = Math.max(1, cpus - 1);
+  const memCap = Math.max(
+    1,
+    Math.floor((Math.max(0, total - MEMORY_RESERVE_BYTES) - (total - free)) / WORKER_MEMORY_BUDGET_BYTES)
+  );
+  return Math.min(16, cpuCap, memCap);
+}
 
 /**
  * Shared Vitest configuration for all packages.
@@ -72,8 +97,10 @@ export default defineConfig({
     // Cap at 16 on big dev boxes, but never oversubscribe the host: GitHub
     // runners have 4 vCPUs, and a hardcoded 16 workers there starved the
     // heavy full-shell mount tests past testing-library's waitFor timeout
-    // (CI failed for a week while local runs stayed green).
-    maxWorkers: Math.min(16, Math.max(1, availableParallelism() - 1)),
+    // (CI failed for a week while local runs stayed green). Memory adds a
+    // second cap so a loaded desktop (browser + editor + parallel tsc) does
+    // not push 11 workers x ~2 GB past the kernel OOM killer.
+    maxWorkers: maxWorkersFor(totalmem(), freemem(), availableParallelism()),
     fileParallelism: true,
     maxConcurrency: 15,
     vmMemoryLimit,
