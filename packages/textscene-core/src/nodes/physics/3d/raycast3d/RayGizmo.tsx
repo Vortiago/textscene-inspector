@@ -1,7 +1,7 @@
 /**
- * The RayCast3D editor gizmo, ported from ray_cast_3d.cpp:403-425: the origin→target_position line,
+ * The RayCast3D editor gizmo, ported from ray_cast_3d.cpp:397-419: the origin→target_position line,
  * and, at a thickness above 1, the truncated pyramid the plugin adds as a fill
- * (ray_cast_3d_gizmo_plugin.cpp:61-67). The node's own debug material never varies.
+ * (ray_cast_3d_gizmo_plugin.cpp:60-66). The node's own debug material never varies.
  */
 
 import { useMemo } from 'react';
@@ -16,10 +16,10 @@ import { useCastGizmoLook } from '../../shared/castGizmoLook';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { GizmoMesh } from '../../../../r3f/components/GizmoMesh';
 
-/** Godot's strip order: slot 0 to 3 walks the base ring, 4 to 7 the one at the tip (ray_cast_3d.cpp:420). */
+/** Godot's strip order: slot 0 to 3 walks the base ring, 4 to 7 the one at the tip (ray_cast_3d.cpp:414). */
 const PYRAMID_STRIP = [4, 5, 0, 1, 2, 5, 6, 4, 7, 0, 3, 2, 7, 6] as const;
 
-/** Godot pushes 14 strip vertices (ray_cast_3d.cpp:420), a triangle per consecutive triple: 12 of them. */
+/** Godot pushes 14 strip vertices (ray_cast_3d.cpp:414), a triangle per consecutive triple: 12 of them. */
 const STRIP_VERTICES = 14;
 
 /** The strip drawn as triangles: consecutive triples of the 14 pushed vertices. */
@@ -44,19 +44,19 @@ function rayPyramid(target: Vector3, thickness: number): THREE.BufferGeometry | 
   if (thickness <= 1 || isZeroTarget(target)) return null;
 
   const [dx, dy, dz] = normalizedVector3(target.x, target.y, target.z);
-  // The cross axis: a ray level with x and y picks the y/z pair (ray_cast_3d.cpp:418).
+  // The cross axis: a ray level with x and y picks the y/z pair (ray_cast_3d.cpp:412).
   const levelWithXAndY = Math.abs(dx) + Math.abs(dy) > CMP_EPSILON;
   const [nx, ny, nz] = normalizedVector3(
     levelWithXAndY ? -dy : 0,
     levelWithXAndY ? dx : -dz,
     levelWithXAndY ? 0 : dy
   );
-  // `normal *= debug_shape_thickness / scale_factor` (ray_cast_3d.cpp:419): the base ring radius.
+  // `normal *= debug_shape_thickness / scale_factor` (ray_cast_3d.cpp:413): the base ring radius.
   const radius = storedReal(thickness / 100);
   const rx = storedReal(nx * radius);
   const ry = storedReal(ny * radius);
   const rz = storedReal(nz * radius);
-  // The tip ring sits a third of the base radius out, at the target: slot >= 4 (ray_cast_3d.cpp:422-424).
+  // The tip ring sits a third of the base radius out, at the target: slot >= 4 (ray_cast_3d.cpp:416-418).
   const tipX = storedReal(storedReal(rx / 3) + target.x);
   const tipY = storedReal(storedReal(ry / 3) + target.y);
   const tipZ = storedReal(storedReal(rz / 3) + target.z);
@@ -65,8 +65,10 @@ function rayPyramid(target: Vector3, thickness: number): THREE.BufferGeometry | 
   const positions = new Float32Array(STRIP_VERTICES * 3);
   for (let v = 0; v < STRIP_VERTICES; v += 1) {
     // `vertices_strip_order[v] < 4` picks the ring slot, the tip a third of the base radius, at
-    // `PI * (0.5 * (slot % 4) + 0.25)` about the ray (ray_cast_3d.cpp:422-424), each op real_t float.
+    // `PI * (0.5 * (slot % 4) + 0.25)` about the ray (ray_cast_3d.cpp:416-418), each op real_t float.
     const slot = PYRAMID_STRIP[v]!;
+    // The engine multiplies the double `Math::PI` and narrows at the rotated() call
+    // (ray_cast_3d.cpp:416-418); each op here keeps that order.
     const angle = storedReal(REAL_PI * storedReal(storedReal(0.5 * (slot % 4)) + 0.25));
     const vertex = rotated(slot < 4 ? { x: rx, y: ry, z: rz } : { x: tipX, y: tipY, z: tipZ }, axis, angle);
     positions[v * 3] = vertex.x;
@@ -86,7 +88,7 @@ interface RayGizmoProps {
   thickness: number;
   /** The authored `debug_shape_custom_color`, undefined when unauthored. */
   customColor?: Rgba;
-  /** Whether the ray casts. Godot default true, per ray_cast_3d.h:42. */
+  /** Whether the ray casts. Godot default true, per ray_cast_3d.h:40. */
   enabled: boolean;
 }
 

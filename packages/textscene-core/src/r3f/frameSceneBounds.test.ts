@@ -134,25 +134,31 @@ describe('frameSceneBounds — a bounds union with no extent', () => {
 describe('frameSceneBounds — editor chrome meshes frame with the gizmos', () => {
   it('frames on a small real mesh, a chrome fill and a long gizmo line never widening the frame', () => {
     // Godot frames on the scene's geometry: a gizmo fill is a mesh in the tree but not a frame, so
-    // it and every editor-chrome object join the line box (ADR-0056).
+    // it and every editor-chrome object join the line box (ADR-0056). The chrome sits off the
+    // origin, so a chrome-in-mesh-box build would pull the target or the distance off the real mesh.
     const scene = new THREE.Scene();
     const fill = new THREE.Mesh(new THREE.BoxGeometry(60, 60, 60), new THREE.MeshBasicMaterial());
+    fill.position.set(500, 500, 500);
     // Editor chrome, as GizmoGroup tags a gizmo's wrapper (GizmoGroup.tsx:23).
     fill.userData = { tscnEditorHelper: true };
     scene.add(fill);
     const line = new THREE.LineSegments(
-      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-50, 0, 0), new THREE.Vector3(50, 0, 0)])
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(400, 0, 0), new THREE.Vector3(600, 0, 0)])
     );
     line.userData = { tscnEditorHelper: true };
     scene.add(line);
     const real = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial());
     scene.add(real);
+    const camera = makeCamera();
+    const before = camera.position.length();
 
     const controls = { target: new THREE.Vector3(), update: () => {} };
-    frameSceneBounds(scene, makeCamera(), controls);
+    frameSceneBounds(scene, camera, controls);
 
+    // The real mesh alone frames: target at its centre, distance sized to its 2 m extent.
     expect(controls.target.x).toBeCloseTo(0, 5);
     expect(controls.target.y).toBeCloseTo(0, 5);
+    expect(camera.position.length()).toBeLessThan(before + 100);
   });
 });
 

@@ -1,7 +1,7 @@
 /**
  * `castTargetLine` and `isZeroTarget`: the origin→target line the two cast nodes' gizmos share
- * (ray_cast_3d.cpp:411-412, shape_cast_3d.cpp:518-520), and the zero target both vertex builders
- * return before any vertex on (ray_cast_3d.cpp:407-409).
+ * (ray_cast_3d.cpp:405-406, shape_cast_3d.cpp:512-514), and the zero target both vertex builders
+ * return before any vertex on (ray_cast_3d.cpp:401-403).
  */
 import { describe, expect, it } from 'vitest';
 import { castTargetLine, isZeroTarget } from './castTarget';

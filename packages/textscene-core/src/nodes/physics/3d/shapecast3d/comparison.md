@@ -44,12 +44,12 @@ The lenient parser reads `enabled`, `shape`, `target_position` and `debug_shape_
 
 ## Gizmo
 
-Every node draws the sweep: one line from the origin to `target_position` (`shape_cast_3d.cpp:518-520`), and, with a shape, its debug wireframe at the sweep's end (`shape_cast_3d.cpp:504-513`). The wireframe sits at the end because the editor pose's safe fraction of 1 offsets the shape by the whole target. The target comparison runs after the wireframe, so a target of `Vector3()` draws the wireframe alone. The colour is the node's `debug_shape_custom_color`, or the project collision colour when that is `Color(0, 0, 0)` (`shape_cast_3d.cpp:571-574`). Godot's gizmo source is `shape_cast_3d_gizmo_plugin.cpp:61-67`.
+Every node draws the sweep: one line from the origin to `target_position` (`shape_cast_3d.cpp:512-514`), and, with a shape, its debug wireframe at the sweep's end (`shape_cast_3d.cpp:504-513`). The wireframe sits at the end because the editor pose's safe fraction of 1 offsets the shape by the whole target. The target comparison runs after the wireframe, so a target of `Vector3()` draws the wireframe alone. The colour is the node's `debug_shape_custom_color`, or the project collision colour when that is `Color(0, 0, 0)` (`shape_cast_3d.cpp:565-568`). Godot's gizmo source is `shape_cast_3d_gizmo_plugin.cpp:60-66`.
 
 The plugin passes the node's own debug material and no variant replaces it, so the gizmo keeps that colour in every state (ADR-0056 names the split). A disabled node draws both parts in the grey that `get_material("shape_material_disabled")` fetches alone, grey at 0.18.
 
 ## Known limitations
 
 - **Editor only** The gizmo draws for every sweep when the Gizmos toggle is on, which a capture keeps off.
-- **Shape ports** The wireframe ports the six shape types the previewer decodes, and a type they leave falls back to a unit wireframe box.
-- **Hull diagonals** A convex wireframe dedups the triangulated hull, whose coplanar faces are cut along a diagonal QuickHull picks, Godot's possibly another.
+- **Approximated** The wireframe ports six shape types, and a type without a port draws no wireframe where Godot draws that shape's own lines.
+- **Approximated** A convex wireframe cuts coplanar hull faces along a diagonal QuickHull picks, which Godot's hull computer may pick differently.

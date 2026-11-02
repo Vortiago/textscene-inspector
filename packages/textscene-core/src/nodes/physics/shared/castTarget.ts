@@ -1,16 +1,16 @@
 /**
  * What a Godot cast node's target_position draws: the origin→target line its debug vertices hold,
- * and the zero vector no gizmo draws (ray_cast_3d.cpp:407-412, shape_cast_3d.cpp:515-520).
+ * and the zero vector no gizmo draws (ray_cast_3d.cpp:401-406, shape_cast_3d.cpp:509-514).
  */
 
 import type { Vector3 } from '../../../godot/math/vector.js';
 import { parseVector3 } from '../../../parser/vectors';
 import { warn } from '../../../logger';
 
-/** `_target_position = Vector3(0, -1, 0)` in scene/3d/physics/ray_cast_3d.h:51 and shape_cast_3d.h:50. */
+/** `_target_position = Vector3(0, -1, 0)` in scene/3d/physics/ray_cast_3d.h:49 and shape_cast_3d.h:48. */
 export const DEFAULT_TARGET_POSITION: Vector3 = Object.freeze({ x: 0, y: -1, z: 0 });
 
-/** `enabled = true` in scene/3d/physics/ray_cast_3d.h:42 and shape_cast_3d.h:43. */
+/** `enabled = true` in scene/3d/physics/ray_cast_3d.h:40 and shape_cast_3d.h:41. */
 export const DEFAULT_ENABLED = true;
 
 /**

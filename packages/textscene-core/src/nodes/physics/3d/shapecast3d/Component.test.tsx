@@ -1,6 +1,6 @@
 /**
- * <ShapeCast3D> draws the editor sweep gizmo for every node (shape_cast_3d_gizmo_plugin.cpp:61-67),
- * the sweep line and offset wireframe ported from shape_cast_3d.cpp:504-521, the wireframe from
+ * <ShapeCast3D> draws the editor sweep gizmo for every node (shape_cast_3d_gizmo_plugin.cpp:60-66),
+ * the sweep line and offset wireframe ported from shape_cast_3d.cpp:498-515, the wireframe from
  * Shape3D::get_debug_mesh_lines. The node's own debug material never varies.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -207,7 +207,7 @@ describe('<ShapeCast3D> sweep line', () => {
 
   // `_update_debug_shape_vertices` returns before the line vertices when the target is Vector3(),
   // but the shape wireframe is offset before that guard, so it still draws at the origin
-  // (shape_cast_3d.cpp:508-516).
+  // (shape_cast_3d.cpp:502-510).
   it('draws the wireframe alone for a zero target, without the line', async () => {
     const lines = await castLines({ target_position: 'Vector3(0, 0, 0)' });
     expect(lines).toHaveLength(1);
@@ -352,7 +352,7 @@ describe('<ShapeCast3D> shape wireframe', () => {
       .findAllByType('LineSegments')
       .map((line) => line.instance as THREE.LineSegments);
     // The unique pairs of the triangulated cube hull: the 12 boundary edges and the 6 face diagonals,
-    // which ConvexHullComputer copies one per canonical a < b pair (convex_hull.cpp:2275-2283).
+    // which ConvexHullComputer copies one per canonical a < b pair (convex_hull.cpp:2269-2278).
     const wire = await lineOf(lines, 36);
     for (let i = 0; i < wire.length; i += 3) {
       const [x, y, z] = [wire[i]!, wire[i + 1]!, wire[i + 2]!].map((v) => Number(v.toFixed(6))) as [

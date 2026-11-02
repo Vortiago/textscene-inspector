@@ -6,7 +6,7 @@ import type { Node3DProperties } from '../../../base/node3d/types';
 
 export { DEFAULT_ENABLED, DEFAULT_TARGET_POSITION } from '../../shared/castTarget';
 
-/** `_debug_shape_thickness = 2` in scene/3d/physics/ray_cast_3d.h:59, which fills the pyramid gizmo. */
+/** `_debug_shape_thickness = 2` in scene/3d/physics/ray_cast_3d.h:57, which fills the pyramid gizmo. */
 export const DEFAULT_DEBUG_SHAPE_THICKNESS = 2;
 
 export interface RayCast3DProperties extends Node3DProperties {

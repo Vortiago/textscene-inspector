@@ -1,9 +1,7 @@
 /**
- * The dispatcher mounts each cast node's gizmo through the Gizmos toggle alone: the RayCast3D line
- * and pyramid and the ShapeCast3D sweep line and wireframe draw in the node's debug colour in every
- * selection and instance state, because the cast plugins pass the node's own debug material and
- * fetch no variant (`ray_cast_3d_gizmo_plugin.cpp:61-67`), as the SpringArm3D length line draws
- * faint in NodeDispatcher.instantiatedGizmos.test.tsx instead.
+ * The dispatcher mounts each cast node's gizmo through the Gizmos toggle alone. The cast plugins
+ * pass the node's own debug material and fetch no variant, so the gizmo draws that colour in every
+ * selection and instance state, unlike the SpringArm3D line in NodeDispatcher.instantiatedGizmos.
  */
 
 import { describe, expect, it } from 'vitest';

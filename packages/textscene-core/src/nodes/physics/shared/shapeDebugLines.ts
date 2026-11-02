@@ -1,6 +1,6 @@
 /**
  * Godot's `Shape3D::get_debug_mesh_lines()` for the shapes the previewer decodes, as flat segment
- * ends the ShapeCast3D gizmo draws (shape_cast_3d.cpp:508-513,
+ * ends the ShapeCast3D gizmo draws (shape_cast_3d.cpp:502-507,
  * shape_cast_3d_gizmo_plugin.cpp:63-67). The circles read the engine's float trig.
  */
 
@@ -15,12 +15,12 @@ import { decodeCylinderShape3D } from '../../../resources/shapes/cylindershape3d
 import { decodeSphereShape3D } from '../../../resources/shapes/sphereshape3d';
 import type { TscnInternalResource } from '../../../parser/types';
 
-/** The unit box a shape type without a port falls back to, as CollisionShape3D's overlay does. */
+/** The unit box CollisionShape3D's overlay falls back to for an unported type. */
 export const UNIT_BOX_SIZE: Vector3 = { x: 1, y: 1, z: 1 };
 
 /**
  * Godot's `AABB::get_edge` (`aabb.cpp:357-416`): the 12 edges of `-size/2, size`, in index order.
- * `BoxShape3D::get_debug_mesh_lines` reads them off its centred box (`box_shape_3d.cpp:37-52`), with
+ * `BoxShape3D::get_debug_mesh_lines` reads them off its centred box (`box_shape_3d.cpp:36-51`), with
  * each end stored through the `real_t` float the engine keeps.
  *
  * @canonical BoxShape3D's debug wireframe
@@ -33,11 +33,15 @@ export function boxDebugLines({ x, y, z }: Vector3): Float32Array {
 }
 
 /** One step of a circle in the x/z plane: `sin(deg) * r`, `cos(deg) * r`, each op a `real_t` float. */
+/** One step of a circle in the x/z plane. The engine narrows `Math::sin(float)` first (`math_funcs.h:45`), then multiplies in float. */
 function ringPoint(radius: number, i: number): [number, number] {
-  return [storedReal(Math.sin(degToRadf(i)) * radius), storedReal(Math.cos(degToRadf(i)) * radius)];
+  return [
+    storedReal(storedReal(Math.sin(degToRadf(i))) * radius),
+    storedReal(storedReal(Math.cos(degToRadf(i))) * radius),
+  ];
 }
 
-/** `SphereShape3D::get_debug_mesh_lines` (`sphere_shape_3d.cpp:37-60`): three great circles, 361 steps. */
+/** `SphereShape3D::get_debug_mesh_lines` (`sphere_shape_3d.cpp:36-59`): three great circles, 361 steps. */
 function sphereDebugLines(radius: number): Float32Array {
   const points: number[] = [];
   for (let i = 0; i <= 360; i++) {
@@ -50,7 +54,7 @@ function sphereDebugLines(radius: number): Float32Array {
   return new Float32Array(points);
 }
 
-/** `CylinderShape3D::get_debug_mesh_lines` (`cylinder_shape_3d.cpp:37-58`): two rings, one tick a quarter turn. */
+/** `CylinderShape3D::get_debug_mesh_lines` (`cylinder_shape_3d.cpp:36-57`): two rings, one tick a quarter turn. */
 function cylinderDebugLines(radius: number, height: number): Float32Array {
   const points: number[] = [];
   const dy = storedReal(height / 2);
@@ -64,7 +68,7 @@ function cylinderDebugLines(radius: number, height: number): Float32Array {
   return new Float32Array(points);
 }
 
-/** `CapsuleShape3D::get_debug_mesh_lines` (`capsule_shape_3d.cpp:37-62`): rings, ticks and hemisphere seams. */
+/** `CapsuleShape3D::get_debug_mesh_lines` (`capsule_shape_3d.cpp:36-61`): rings, ticks and hemisphere seams. */
 function capsuleDebugLines(radius: number, height: number): Float32Array {
   const points: number[] = [];
   const dy = storedReal(storedReal(height / 2) - radius);
@@ -83,7 +87,7 @@ function capsuleDebugLines(radius: number, height: number): Float32Array {
 }
 
 /**
- * `ConcavePolygonShape3D::get_debug_mesh_lines` (`concave_polygon_shape_3d.cpp:37-56`): one pair per
+ * `ConcavePolygonShape3D::get_debug_mesh_lines` (`concave_polygon_shape_3d.cpp:36-55`): one pair per
  * triangle edge. The dedup reads Godot's `DrawEdge`, which swaps its ends so the larger one leads
  * (`concave_polygon_shape_3d.h:54-59`), and its `==` compares that canonical pair, so a shared edge
  * draws once, its winding never mind. The draw order per edge pairs (larger, smaller).

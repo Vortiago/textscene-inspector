@@ -42,7 +42,7 @@ The lenient parser reads `enabled`, `target_position`, `debug_shape_thickness` a
 
 ## Gizmo
 
-Every node draws the ray: one line from the origin to `target_position` (`ray_cast_3d.cpp:411-412`). A target of `Vector3()` returns before any vertex, so it draws nothing (`ray_cast_3d.cpp:407-409`). A `debug_shape_thickness` above 1 fills a truncated pyramid around the line, a base ring `thickness / 100` m across and a third of that at the tip. The colour is the node's `debug_shape_custom_color`, or the project collision colour when that is `Color(0, 0, 0)` (`ray_cast_3d.cpp:489-492`). Godot's gizmo source is `ray_cast_3d_gizmo_plugin.cpp:61-67`.
+Every node draws the ray: one line from the origin to `target_position` (`ray_cast_3d.cpp:405-406`). A target of `Vector3()` returns before any vertex, so it draws nothing (`ray_cast_3d.cpp:401-403`). A `debug_shape_thickness` above 1 fills a truncated pyramid around the line, a base ring `thickness / 100` m across and a third of that at the tip. The colour is the node's `debug_shape_custom_color`, or the project collision colour when that is `Color(0, 0, 0)` (`ray_cast_3d.cpp:483-486`). Godot's gizmo source is `ray_cast_3d_gizmo_plugin.cpp:60-66`.
 
 The plugin passes the node's own debug material and no variant replaces it, so the gizmo keeps that colour in every state (ADR-0056 names the split). A disabled node draws both parts in the grey that `get_material("shape_material_disabled")` fetches alone, grey at 0.18.
 

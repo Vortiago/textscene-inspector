@@ -1,7 +1,7 @@
 /**
- * The ShapeCast3D editor gizmo, per shape_cast_3d_gizmo_plugin.cpp:61-67: the origin→target sweep
+ * The ShapeCast3D editor gizmo, per shape_cast_3d_gizmo_plugin.cpp:60-66: the origin→target sweep
  * line first, then the shape's debug wireframe at the sweep's end, where the safe fraction of 1 of
- * the editor pose puts it (shape_cast_3d.cpp:504-521). The node's own debug material never varies.
+ * the editor pose puts it (shape_cast_3d.cpp:498-515). The node's own debug material never varies.
  */
 
 import { useMemo } from 'react';
@@ -16,7 +16,7 @@ import type { Rgba } from '../../../../godot/math/math.js';
 import type { Vector3 } from '../../../../godot/math/vector.js';
 import { castTargetLine } from '../../shared/castTarget';
 import { useCastGizmoLook, type CastGizmoLook } from '../../shared/castGizmoLook';
-import { UNIT_BOX_SIZE, boxDebugLines, shapeDebugLines } from '../../shared/shapeDebugLines';
+import { shapeDebugLines } from '../../shared/shapeDebugLines';
 
 /** The one place the gizmo imports three's convex hull, and lazily, as CollisionShape3D's is. */
 const loadConvexHull = memoisedImport(() => import('three/addons/math/ConvexHull.js'));
@@ -31,7 +31,7 @@ interface ShapeCastGizmoProps {
   shape: TscnInternalResource | null;
   /** The authored `debug_shape_custom_color`, undefined when unauthored. */
   customColor?: Rgba;
-  /** Whether the sweep casts. Godot default true, per shape_cast_3d.h:43. */
+  /** Whether the sweep casts. Godot default true, per shape_cast_3d.h:41. */
   enabled: boolean;
 }
 
@@ -71,9 +71,10 @@ function SyncWireframe({ shape, target, look }: WireframeGizmoProps & { shape: T
   const wire = useMemo(() => {
     const lines = shapeDebugLines(shape);
     if (lines) return lines;
-    // Godot draws every Shape3D type; without a port, the shape's presence still shows.
-    warn(`[ShapeCast3D] Unsupported shape type "${shape.type}", drawing a unit wireframe box.`);
-    return boxDebugLines(UNIT_BOX_SIZE);
+    // Types without a port draw nothing here, as Godot's hull refuses a degenerate cloud; the
+    // sweep line still shows the cast.
+    warn(`[ShapeCast3D] Shape type "${shape.type}" has no wireframe port, drawing nothing for it.`);
+    return null;
   }, [shape]);
   return <Wireframe wire={wire} target={target} look={look} />;
 }
@@ -135,7 +136,7 @@ function buildHullEdges(
 function Wireframe({ wire, target, look }: WireframeGizmoProps & { wire: Float32Array | null }) {
   const offset = useMemo(() => {
     // The wireframe sits at the sweep's end, where the editor pose's safe fraction of 1 puts it
-    // (shape_cast_3d.cpp:508-513).
+    // (shape_cast_3d.cpp:502-507).
     if (!wire) return null;
     return offsetByTarget(wire, target);
   }, [wire, target]);

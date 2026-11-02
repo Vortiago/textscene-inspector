@@ -1,6 +1,6 @@
 /**
- * <RayCast3D> draws the editor ray gizmo for every node (ray_cast_3d_gizmo_plugin.cpp:61-67), the
- * line and pyramid ported from ray_cast_3d.cpp:403-425. The node's own debug material never
+ * <RayCast3D> draws the editor ray gizmo for every node (ray_cast_3d_gizmo_plugin.cpp:60-66), the
+ * line and pyramid ported from ray_cast_3d.cpp:397-419. The node's own debug material never
  * varies; a disabled node draws in the grey the disabled fetch returns.
  */
 import { describe, expect, it } from 'vitest';
@@ -182,7 +182,7 @@ describe('<RayCast3D> pyramid fill', () => {
 
   // The strip buffer in Godot's push order: the first slot is a tip vertex, a third of a base
   // ring `thickness / 100` m across at the origin, each swung a quarter turn step about the ray
-  // (ray_cast_3d.cpp:422-424).
+  // (ray_cast_3d.cpp:416-418).
   it('builds the base ring at radius thickness/100 and the tip at a third of it', async () => {
     const renderer = await renderRay('Ray', { target_position: 'Vector3(0, -3, 0)' });
     const positions = Array.from(fillOf(renderer).geometry.getAttribute('position').array);
@@ -258,7 +258,7 @@ describe('<RayCast3D> debug colour', () => {
   });
 
   // `color == Color(0, 0, 0)` compares all four channels with the default's alpha of 1
-  // (color.h:80, ray_cast_3d.cpp:490), so an alpha-less black reads as the empty colour.
+  // (color.h:75, ray_cast_3d.cpp:484), so an alpha-less black reads as the empty colour.
   it('reads an authored Color(0, 0, 0, 1) as empty, and puts on the collision colour', async () => {
     const line = await gizmoLine({ debug_shape_custom_color: 'Color(0, 0, 0, 1)' });
     const material = line.material as THREE.LineBasicMaterial;

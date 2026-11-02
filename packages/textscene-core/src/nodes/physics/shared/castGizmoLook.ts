@@ -1,7 +1,7 @@
 /**
  * The look a cast node's gizmo parts draw with: the node's own debug material, which no variant
  * replaces, or the grey the disabled fetch returns alone
- * (node_3d_editor_gizmos.cpp:1027-1028, ADR-0056).
+ * (node_3d_editor_gizmos.cpp:1023-1024, ADR-0056).
  */
 
 import type * as THREE from 'three';
