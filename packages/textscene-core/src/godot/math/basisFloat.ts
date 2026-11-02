@@ -1,7 +1,7 @@
 /**
- * Godot `Basis` methods in `real_t` float that only the lazily loaded particle simulations call.
- * esbuild puts a whole module in one chunk, so they live apart from `basis.ts`, which the
- * webview's initial chunk carries.
+ * Godot `Basis` methods in `real_t` float that the lazily loaded particle simulations read, so
+ * esbuild chunks them off the webview's initial paint. The cast gizmos also read them, which the
+ * bundle-size budget holds.
  */
 
 import { storedReal as f } from './real.js';

@@ -1,11 +1,8 @@
 /**
- * ShapeCast3D draws nothing of its own (ADR-0008), so it reuses the Node3D
- * component, and its children still land in the right transform space.
+ * ShapeCast3D draws its sweep gizmo for every node, faint while unselected (ADR-0056), and its
+ * children still land in the Node3D transform space.
  */
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../../base/node3d/Component';
-nodeComponentRegistry.register({
-  typeName: 'ShapeCast3D',
-  Component: Node3D,
-  renderIntent: 'transform-only',
-});
+import { ShapeCast3D } from './Component';
+
+nodeComponentRegistry.register({ typeName: 'ShapeCast3D', Component: ShapeCast3D });

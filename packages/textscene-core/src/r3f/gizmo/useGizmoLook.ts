@@ -10,7 +10,7 @@ import { INSTANTIATED_GIZMO_COLOUR, gizmoAlpha } from './gizmoVariant';
 import { useGizmoLookValue } from './PluginGizmo';
 
 /** One colour for every part: the materials only read it. */
-const INSTANTIATED_LINEAR = godotColorToLinear(INSTANTIATED_GIZMO_COLOUR);
+export const INSTANTIATED_LINEAR = godotColorToLinear(INSTANTIATED_GIZMO_COLOUR);
 
 interface GizmoLook {
   color: THREE.ColorRepresentation;

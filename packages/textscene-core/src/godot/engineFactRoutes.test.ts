@@ -255,6 +255,7 @@ describe('src/godot is the one route to an engine fact', () => {
     expect(violations, 'declare it as an `as const` object, in godot/ with its Godot cite').toEqual([]);
   });
 
+  // The enum walk over every source sits near 5 s from a cold start, so it carries its own budget.
   it('copies no godot/ enum as an object outside it', () => {
     const engineEnums = files.filter(isInGodot).flatMap((file) =>
       objectEnumsIn(read(file))
@@ -271,5 +272,5 @@ describe('src/godot is the one route to an engine fact', () => {
         })
       );
     expect(violations, 'import the enum from godot/ instead').toEqual([]);
-  });
+  }, 20000);
 });

@@ -11,7 +11,7 @@ const UNSELECTED_ALPHA_FACTOR = 0.3;
 
 /**
  * The colour of every gizmo material of a node the edited scene does not own, which replaces the
- * colour and the alpha the gizmo plugin gave (`editor_settings.cpp:879`).
+ * colour and the alpha the gizmo plugin gave (`editor_settings.cpp:934`).
  */
 export const INSTANTIATED_GIZMO_COLOUR = { r: 0.7, g: 0.7, b: 0.7, a: 0.6 };
 

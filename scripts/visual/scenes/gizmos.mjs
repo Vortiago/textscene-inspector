@@ -20,6 +20,13 @@ export const GIZMO_SCENES = [
   { name: 'vehiclewheel3d-selected', file: 'unit-physics-vehicle.tscn', gizmos: true, select: 'Root/Vehicle/Wheel1' },
   // The SpringArm3D length line: one segment from the origin along +Z, spring_length long.
   { name: 'spring-arm-3d-selected', file: 'unit-spring-arm-3d.tscn', gizmos: true, select: 'Root/MySpringArm3D' },
+  // RayCast3D: the ray line plus the pyramid fill of the authored thickness 3, along target_position.
+  { name: 'raycast3d-selected', file: 'unit-ray-cast-3d.tscn', gizmos: true, select: 'Root/MyRayCast3D' },
+  { name: 'raycast3d-unselected', file: 'unit-ray-cast-3d.tscn', gizmos: true },
+  // ShapeCast3D: the sweep line plus the BoxShape3D wireframe sitting at the sweep's end. Godot
+  // draws them for every node, like the ray above, so an unselected golden pairs each selected one.
+  { name: 'shapecast3d-selected', file: 'unit-shape-cast-3d.tscn', gizmos: true, select: 'Root/MyShapeCast3D' },
+  { name: 'shapecast3d-unselected', file: 'unit-shape-cast-3d.tscn', gizmos: true },
   // The PinJoint3D cross and the ConeTwistJoint3D cones toward each body, selected one at a time and then
   // faint with nothing selected.
   { name: 'pin-joint-3d-selected', file: 'unit-joint-3d-gizmos-pin-cone.tscn', gizmos: true, select: 'Root/Pin' },
