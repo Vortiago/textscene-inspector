@@ -33,7 +33,13 @@ for (const srcFile of files) {
   const rel = path.relative(srcRoot, srcFile);
   const destFile = path.join(distRoot, rel);
   await fs.mkdir(path.dirname(destFile), { recursive: true });
-  await fs.copyFile(srcFile, destFile);
+  // Write to a sibling then rename: a rename is atomic on POSIX, so a build that
+  // reads the dist while this copy runs never sees a truncated stylesheet. A
+  // concurrent package build's `prebuild` reruns this copy, and esbuild read a
+  // truncated `TscnCanvas.module.css` as empty on CI's `Unit tests (3/4)`.
+  const tempFile = `${destFile}.css-copy`;
+  await fs.copyFile(srcFile, tempFile);
+  await fs.rename(tempFile, destFile);
   copied += 1;
 }
 
