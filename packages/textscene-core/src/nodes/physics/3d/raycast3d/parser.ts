@@ -4,12 +4,10 @@
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';
-import { parseVector3 } from '../../../../parser/vectors';
-import { parseOptionalInt } from '../../../../parser/valueParsers';
+import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valueParsers';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
-import { warn } from '../../../../logger';
-import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { parseNode3D } from '../../../base/node3d/parser';
+import { parseCastTargetPosition } from '../../shared/castTarget';
 import type { RayCast3DProperties } from './types';
 
 export function parseRayCast3D(
@@ -18,19 +16,11 @@ export function parseRayCast3D(
 ): RayCast3DProperties {
   const result: RayCast3DProperties = { ...parseNode3D(heading, properties) };
 
-  if (properties.enabled !== undefined) {
-    result.enabled = boolSlotValue(properties.enabled) === true;
-  }
+  const enabled = parseOptionalBool(properties.enabled);
+  if (enabled !== undefined) result.enabled = enabled;
 
-  if (properties.target_position) {
-    try {
-      result.target_position = parseVector3(properties.target_position);
-    } catch (error) {
-      warn(
-        `[RayCast3D] Failed to parse target_position: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
+  const targetPosition = parseCastTargetPosition(properties, 'RayCast3D');
+  if (targetPosition !== undefined) result.target_position = targetPosition;
 
   const thickness = parseOptionalInt(properties.debug_shape_thickness);
   if (thickness !== undefined) result.debug_shape_thickness = thickness;

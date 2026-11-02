@@ -13,14 +13,11 @@ import { memoisedImport } from '../../../../resources/memoisedImport';
 import { useLazyModule } from '../../../../resources/useLazyModule';
 import { decodeConvexPolygonShape3D } from '../../../../resources/shapes/convexpolygonshape3d';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { INSTANTIATED_LINEAR } from '../../../../r3f/gizmo/useGizmoLook';
-import { INSTANTIATED_GIZMO_COLOUR, gizmoAlpha } from '../../../../r3f/gizmo/gizmoVariant';
 import { warn } from '../../../../logger';
 import type { Rgba } from '../../../../godot/math/math.js';
 import type { Vector3 } from '../../../../godot/math/vector.js';
 import { castTargetLine } from '../../shared/castTarget';
-import { debugShapeColour } from '../../shared/debugColor';
+import { useCastGizmoLook } from '../../shared/castGizmoLook';
 import { UNIT_BOX_SIZE, boxDebugLines, shapeDebugLines } from '../../shared/shapeDebugLines';
 
 /** The one place the gizmo imports three's convex hull, and lazily, as CollisionShape3D's is. */
@@ -41,13 +38,7 @@ interface ShapeCastGizmoProps {
 }
 
 export function ShapeCastGizmo({ target, shape, customColor, enabled }: ShapeCastGizmoProps) {
-  // The enabled look is the node's debug colour; the disabled one is the grey that
-  // `get_material("shape_material_disabled")` fetches alone, the unselected instantiated variant (:1027-1028).
-  const colour = debugShapeColour(customColor);
-  const color = useGodotLinearColor(colour);
-  const look = enabled
-    ? { color, opacity: colour.a }
-    : { color: INSTANTIATED_LINEAR, opacity: gizmoAlpha('unselected', INSTANTIATED_GIZMO_COLOUR.a) };
+  const look = useCastGizmoLook(customColor, enabled);
   const line = useMemo(() => castTargetLine(target), [target]);
   return (
     <>

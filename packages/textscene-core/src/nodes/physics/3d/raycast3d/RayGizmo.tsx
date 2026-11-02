@@ -14,29 +14,21 @@ import { CMP_EPSILON, REAL_PI, type Rgba } from '../../../../godot/math/math.js'
 import { normalizedVector3, type Vector3 } from '../../../../godot/math/vector.js';
 import { storedReal } from '../../../../godot/math/real.js';
 import { castTargetLine, isZeroTarget } from '../../shared/castTarget';
+import { useCastGizmoLook } from '../../shared/castGizmoLook';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { GizmoMesh } from '../../../../r3f/components/GizmoMesh';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { INSTANTIATED_LINEAR } from '../../../../r3f/gizmo/useGizmoLook';
-import { INSTANTIATED_GIZMO_COLOUR, gizmoAlpha } from '../../../../r3f/gizmo/gizmoVariant';
-import { debugShapeColour } from '../../shared/debugColor';
 
 /** Godot's strip order: slot 0 to 3 walks the base ring, 4 to 7 the one at the tip (ray_cast_3d.cpp:420). */
 const PYRAMID_STRIP = [4, 5, 0, 1, 2, 5, 6, 4, 7, 0, 3, 2, 7, 6] as const;
 
-/** Godot pushes 14 strip vertices, a triangle per consecutive triple: 12 of them. */
+/** Godot pushes 14 strip vertices (ray_cast_3d.cpp:420), a triangle per consecutive triple: 12 of them. */
 const STRIP_VERTICES = 14;
-const STRIP_TRIANGLES = STRIP_VERTICES - 2;
 
 /** The strip drawn as triangles: consecutive triples of the 14 pushed vertices. */
-const PYRAMID_TRIANGLES = new Uint16Array(
-  Array.from({ length: STRIP_TRIANGLES * 3 }, (_, i) => Math.floor(i / 3) + (i % 3))
-);
-
-interface PyramidGeometry {
-  positions: Float32Array;
-  indices: Uint16Array;
-}
+const PYRAMID_TRIANGLES = new Uint16Array([
+  0, 1, 2, 1, 2, 3, 2, 3, 4, 3, 4, 5, 4, 5, 6, 5, 6, 7, 6, 7, 8, 7, 8, 9, 8, 9, 10, 9, 10, 11, 10, 11, 12, 11,
+  12, 13,
+]);
 
 /** `Vector3::rotated` (core/math/vector3.cpp:38-40): the vertex through `Basis(axis, angle)`
  * (`basis.cpp:840-868`), whose axis-angle matrix this ports. */
@@ -50,7 +42,7 @@ function rotated(vertex: Vector3, axis: Vector3, angle: number): Vector3 {
  * origin, a third of that at the tip, each slot swung a quarter turn step about the ray. Null
  * when the thickness fills nothing, or at the zero target.
  */
-function rayPyramid(target: Vector3, thickness: number): PyramidGeometry | null {
+function rayPyramid(target: Vector3, thickness: number): THREE.BufferGeometry | null {
   if (thickness <= 1 || isZeroTarget(target)) return null;
 
   const [dx, dy, dz] = normalizedVector3(target.x, target.y, target.z);
@@ -66,6 +58,11 @@ function rayPyramid(target: Vector3, thickness: number): PyramidGeometry | null 
   const rx = storedReal(nx * radius);
   const ry = storedReal(ny * radius);
   const rz = storedReal(nz * radius);
+  // The tip ring sits a third of the base radius out, at the target: slot >= 4 (ray_cast_3d.cpp:422-424).
+  const tipX = storedReal(storedReal(rx / 3) + target.x);
+  const tipY = storedReal(storedReal(ry / 3) + target.y);
+  const tipZ = storedReal(storedReal(rz / 3) + target.z);
+  const axis: Vector3 = { x: dx, y: dy, z: dz };
 
   const positions = new Float32Array(STRIP_VERTICES * 3);
   for (let v = 0; v < STRIP_VERTICES; v += 1) {
@@ -73,20 +70,15 @@ function rayPyramid(target: Vector3, thickness: number): PyramidGeometry | null 
     // `PI * (0.5 * (slot % 4) + 0.25)` about the ray (ray_cast_3d.cpp:422-424), each op real_t float.
     const slot = PYRAMID_STRIP[v]!;
     const angle = storedReal(REAL_PI * storedReal(storedReal(0.5 * (slot % 4)) + 0.25));
-    const vertex = rotated(
-      {
-        x: slot < 4 ? rx : storedReal(storedReal(rx / 3) + target.x),
-        y: slot < 4 ? ry : storedReal(storedReal(ry / 3) + target.y),
-        z: slot < 4 ? rz : storedReal(storedReal(rz / 3) + target.z),
-      },
-      { x: dx, y: dy, z: dz },
-      angle
-    );
+    const vertex = rotated(slot < 4 ? { x: rx, y: ry, z: rz } : { x: tipX, y: tipY, z: tipZ }, axis, angle);
     positions[v * 3] = vertex.x;
     positions[v * 3 + 1] = vertex.y;
     positions[v * 3 + 2] = vertex.z;
   }
-  return { positions, indices: PYRAMID_TRIANGLES };
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setIndex(new THREE.BufferAttribute(PYRAMID_TRIANGLES, 1));
+  return geometry;
 }
 
 interface RayGizmoProps {
@@ -101,22 +93,9 @@ interface RayGizmoProps {
 }
 
 export function RayGizmo({ target, thickness, customColor, enabled }: RayGizmoProps) {
-  // The enabled look is the node's debug colour; the disabled one is the grey that
-  // `get_material("shape_material_disabled")` fetches alone, the unselected instantiated variant (:1027-1028).
-  const colour = debugShapeColour(customColor);
-  const color = useGodotLinearColor(colour);
-  const look = enabled
-    ? { color, opacity: colour.a }
-    : { color: INSTANTIATED_LINEAR, opacity: gizmoAlpha('unselected', INSTANTIATED_GIZMO_COLOUR.a) };
+  const look = useCastGizmoLook(customColor, enabled);
   const line = useMemo(() => castTargetLine(target), [target]);
-  const pyramid = useMemo(() => rayPyramid(target, thickness), [target, thickness]);
-  const geometry = useMemo(() => {
-    if (!pyramid) return null;
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(pyramid.positions, 3));
-    g.setIndex(new THREE.BufferAttribute(pyramid.indices, 1));
-    return g;
-  }, [pyramid]);
+  const geometry = useMemo(() => rayPyramid(target, thickness), [target, thickness]);
   return (
     <>
       {line && <GizmoLine positions={line} color={look.color} opacity={look.opacity} />}

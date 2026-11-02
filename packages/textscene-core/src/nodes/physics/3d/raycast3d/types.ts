@@ -4,14 +4,10 @@ import type { Rgba } from '../../../../godot/math/math.js';
 import type { Vector3 } from '../../../../godot/math/vector.js';
 import type { Node3DProperties } from '../../../base/node3d/types';
 
-/** `_target_position = Vector3(0, -1, 0)` in scene/3d/physics/ray_cast_3d.h:51. */
-export const DEFAULT_TARGET_POSITION: Vector3 = Object.freeze({ x: 0, y: -1, z: 0 });
+export { DEFAULT_ENABLED, DEFAULT_TARGET_POSITION } from '../../shared/castTarget';
 
 /** `_debug_shape_thickness = 2` in scene/3d/physics/ray_cast_3d.h:59, which fills the pyramid gizmo. */
 export const DEFAULT_DEBUG_SHAPE_THICKNESS = 2;
-
-/** `enabled = true` in scene/3d/physics/ray_cast_3d.h:50. */
-export const DEFAULT_ENABLED = true;
 
 export interface RayCast3DProperties extends Node3DProperties {
   /** Whether the ray casts each frame. Godot default true. */

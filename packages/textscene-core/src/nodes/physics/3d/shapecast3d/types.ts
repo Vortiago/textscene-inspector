@@ -4,11 +4,7 @@ import type { Rgba } from '../../../../godot/math/math.js';
 import type { Vector3 } from '../../../../godot/math/vector.js';
 import type { Node3DProperties } from '../../../base/node3d/types';
 
-/** `_target_position = Vector3(0, -1, 0)` in scene/3d/physics/shape_cast_3d.h:50. */
-export const DEFAULT_TARGET_POSITION: Vector3 = Object.freeze({ x: 0, y: -1, z: 0 });
-
-/** `enabled = true` in scene/3d/physics/shape_cast_3d.h:49. */
-export const DEFAULT_ENABLED = true;
+export { DEFAULT_ENABLED, DEFAULT_TARGET_POSITION } from '../../shared/castTarget';
 
 export interface ShapeCast3DProperties extends Node3DProperties {
   /** Whether the sweep casts each frame. Godot default true. */

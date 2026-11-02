@@ -7,6 +7,7 @@
  * float overloads of the engine's trig, as the shape code does.
  */
 
+import { aabbEdges, centredAabb } from '../../../godot/math/aabb.js';
 import { degToRadf } from '../../../godot/math/math.js';
 import { storedReal } from '../../../godot/math/real.js';
 import type { Vector3 } from '../../../godot/math/vector.js';
@@ -22,40 +23,27 @@ export const UNIT_BOX_SIZE: Vector3 = { x: 1, y: 1, z: 1 };
 
 /**
  * Godot's `AABB::get_edge` (`aabb.cpp:357-416`): the 12 edges of `-size/2, size`, in index order.
+ * `BoxShape3D::get_debug_mesh_lines` reads them off its centred box (`box_shape_3d.cpp:37-52`), with
+ * each end stored through the `real_t` float the engine keeps.
  */
 export function boxDebugLines({ x, y, z }: Vector3): Float32Array {
-  const px = storedReal(x / -2);
-  const py = storedReal(y / -2);
-  const pz = storedReal(z / -2);
-  const points: number[] = [];
-  const edge = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number): void => {
-    points.push(x0, y0, z0, x1, y1, z1);
-  };
-  edge(px + x, py, pz, px, py, pz);
-  edge(px + x, py, pz + z, px + x, py, pz);
-  edge(px, py, pz + z, px + x, py, pz + z);
-  edge(px, py, pz, px, py, pz + z);
-  edge(px, py + y, pz, px + x, py + y, pz);
-  edge(px + x, py + y, pz, px + x, py + y, pz + z);
-  edge(px + x, py + y, pz + z, px, py + y, pz + z);
-  edge(px, py + y, pz + z, px, py + y, pz);
-  edge(px, py, pz + z, px, py + y, pz + z);
-  edge(px, py, pz, px, py + y, pz);
-  edge(px + x, py, pz, px + x, py + y, pz);
-  edge(px + x, py, pz + z, px + x, py + y, pz + z);
-  return new Float32Array(points);
+  const edges = aabbEdges(centredAabb({ x, y, z }));
+  const points = new Float32Array(edges.length);
+  for (let i = 0; i < edges.length; i += 1) points[i] = storedReal(edges[i]!);
+  return points;
+}
+
+/** One step of a circle in the x/z plane: `sin(deg) * r`, `cos(deg) * r`, each op a `real_t` float. */
+function ringPoint(radius: number, i: number): [number, number] {
+  return [storedReal(Math.sin(degToRadf(i)) * radius), storedReal(Math.cos(degToRadf(i)) * radius)];
 }
 
 /** `SphereShape3D::get_debug_mesh_lines` (`sphere_shape_3d.cpp:37-60`): three great circles, 361 steps. */
 function sphereDebugLines(radius: number): Float32Array {
   const points: number[] = [];
-  const ring = (i: number): [number, number] => [
-    storedReal(Math.sin(degToRadf(i)) * radius),
-    storedReal(Math.cos(degToRadf(i)) * radius),
-  ];
   for (let i = 0; i <= 360; i++) {
-    const [ax, ay] = ring(i);
-    const [bx, by] = ring(i + 1);
+    const [ax, ay] = ringPoint(radius, i);
+    const [bx, by] = ringPoint(radius, i + 1);
     points.push(ax, 0, ay, bx, 0, by);
     points.push(0, ax, ay, 0, bx, by);
     points.push(ax, ay, 0, bx, by, 0);
@@ -67,13 +55,9 @@ function sphereDebugLines(radius: number): Float32Array {
 function cylinderDebugLines(radius: number, height: number): Float32Array {
   const points: number[] = [];
   const dy = storedReal(height / 2);
-  const ring = (i: number): [number, number] => [
-    storedReal(Math.sin(degToRadf(i)) * radius),
-    storedReal(Math.cos(degToRadf(i)) * radius),
-  ];
   for (let i = 0; i < 360; i++) {
-    const [ax, ay] = ring(i);
-    const [bx, by] = ring(i + 1);
+    const [ax, ay] = ringPoint(radius, i);
+    const [bx, by] = ringPoint(radius, i + 1);
     points.push(ax, dy, ay, bx, dy, by);
     points.push(ax, -dy, ay, bx, -dy, by);
     if (i % 90 === 0) points.push(ax, dy, ay, ax, -dy, ay);
@@ -85,13 +69,9 @@ function cylinderDebugLines(radius: number, height: number): Float32Array {
 function capsuleDebugLines(radius: number, height: number): Float32Array {
   const points: number[] = [];
   const dy = storedReal(storedReal(height / 2) - radius);
-  const ring = (i: number): [number, number] => [
-    storedReal(Math.sin(degToRadf(i)) * radius),
-    storedReal(Math.cos(degToRadf(i)) * radius),
-  ];
   for (let i = 0; i < 360; i++) {
-    const [ax, ay] = ring(i);
-    const [bx, by] = ring(i + 1);
+    const [ax, ay] = ringPoint(radius, i);
+    const [bx, by] = ringPoint(radius, i + 1);
     points.push(ax, dy, ay, bx, dy, by);
     points.push(ax, -dy, ay, bx, -dy, by);
     if (i % 90 === 0) points.push(ax, dy, ay, ax, -dy, ay);

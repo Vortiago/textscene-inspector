@@ -5,6 +5,33 @@
  */
 
 import type { Vector3 } from '../../../godot/math/vector.js';
+import { parseVector3 } from '../../../parser/vectors';
+import { warn } from '../../../logger';
+
+/** `_target_position = Vector3(0, -1, 0)` in scene/3d/physics/ray_cast_3d.h:51 and shape_cast_3d.h:50. */
+export const DEFAULT_TARGET_POSITION: Vector3 = Object.freeze({ x: 0, y: -1, z: 0 });
+
+/** `enabled = true` in scene/3d/physics/ray_cast_3d.h:50 and shape_cast_3d.h:49. */
+export const DEFAULT_ENABLED = true;
+
+/**
+ * Reads a cast node's authored `target_position`, warning and leaving it undefined on a literal
+ * the vector grammar refuses, so the consumer applies Godot's default.
+ */
+export function parseCastTargetPosition(
+  properties: Record<string, string>,
+  label: string
+): Vector3 | undefined {
+  if (!properties.target_position) return undefined;
+  try {
+    return parseVector3(properties.target_position);
+  } catch (error) {
+    warn(
+      `[${label}] Failed to parse target_position: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return undefined;
+  }
+}
 
 /**
  * Whether the target is `Vector3()`, the exact zero `==` compares (three equal components, where a
