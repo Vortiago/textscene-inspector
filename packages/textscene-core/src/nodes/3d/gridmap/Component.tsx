@@ -7,7 +7,8 @@
  * InstancedMesh.
  */
 
-import { Fragment, useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
+import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../../godot/scene/visualLayers';
 import * as THREE from 'three';
 import { nodeComponentRegistry, type NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { parseNodeWithRegistry } from '../../../core/NodeRegistry';
@@ -257,8 +258,8 @@ function PartSurfaces({
   const surfaces = surfaceSources(part.materials);
   const { geometry } = part;
   const points = geometryDrawsPoints(geometry);
-  // A cell's chain draw is its own instanced batch, so each surface's material chain
-  // mounts beside its own batch, over the geometry its surface draws.
+  // A cell's chain draw is its own instanced batch of the cells, at its surface's
+  // ordinal, over the geometry the part draws, and at its surface's own draw group.
   const chainDraw: ChainDrawFactory = (spec) =>
     cellPoints ? (
       <ChainCellPoints spec={spec} cellPoints={cellPoints} />
@@ -268,22 +269,20 @@ function PartSurfaces({
   return (
     <>
       {surfaces.map((source, surface) => (
-        <Fragment key={surface}>
-          <GridMapSurface
-            draw={{ geometry, cellPoints, source, surface, surfaceCount: surfaces.length, shadow }}
-            matrices={matrices}
-          />
-          {source && (
-            <NextPassChain
-              sources={[source]}
-              geometry={cellPoints?.geometry ?? geometry}
-              drawsPoints={points}
-              shadow={shadow}
-              draw={chainDraw}
-            />
-          )}
-        </Fragment>
+        <GridMapSurface
+          key={surface}
+          draw={{ geometry, cellPoints, source, surface, surfaceCount: surfaces.length, shadow }}
+          matrices={matrices}
+        />
       ))}
+      <NextPassChain
+        sources={surfaces}
+        geometry={cellPoints?.geometry ?? geometry}
+        drawsPoints={points}
+        godotLayers={GODOT_DEFAULT_VISUAL_LAYERS}
+        shadow={shadow}
+        draw={chainDraw}
+      />
     </>
   );
 }
@@ -307,7 +306,11 @@ function ChainBatchedTiles({ spec, matrices }: { spec: ChainDrawSpec; matrices: 
       onBeforeRender={spec.shadow.onBeforeRender}
       onAfterRender={spec.shadow.onAfterRender}
     >
-      <SurfaceMaterialSlot source={spec.source} points={pointPlacementOf(spec.geometry)} />
+      <SurfaceMaterialSlot
+        source={spec.source}
+        attach={spec.attach}
+        points={pointPlacementOf(spec.geometry)}
+      />
     </instancedMesh>
   );
 }
@@ -333,7 +336,7 @@ function ChainCellPoints({ spec, cellPoints }: { spec: ChainDrawSpec; cellPoints
       onBeforeRender={spec.shadow.onBeforeRender}
       onAfterRender={spec.shadow.onAfterRender}
     >
-      <SurfaceMaterialSlot source={spec.source} points="instances" />
+      <SurfaceMaterialSlot source={spec.source} attach={spec.attach} points="instances" />
     </points>
   );
 }

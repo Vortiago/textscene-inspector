@@ -131,6 +131,7 @@ export function CsgRootMesh({
             meshRef={meshRef}
             sources={surfaces}
             drawsPoints={false}
+            godotLayers={layers}
             // The result draws as the root's own instance: a chain link casts nothing
             // and is posed by the root's hooks, which it shares here.
             shadow={shadow}

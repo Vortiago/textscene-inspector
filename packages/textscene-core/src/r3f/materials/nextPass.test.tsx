@@ -74,7 +74,7 @@ describe('visitedWith', () => {
   it('adds a pass that has not drawn, and never mutates the set it walks with', () => {
     const added = visitedWith(NOTHING_DRAWN, inline);
     expect(added).not.toBe(NOTHING_DRAWN);
-    expect(added.has('inline:A')).toBe(true);
+    expect(added.has('inline:scene:A')).toBe(true);
     expect(NOTHING_DRAWN.size).toBe(0);
   });
 

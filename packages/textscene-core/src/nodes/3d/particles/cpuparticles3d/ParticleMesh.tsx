@@ -145,7 +145,7 @@ function ParticleChainDraw({ spec, points }: { spec: ChainDrawSpec; points: bool
         receiveShadow
         onBeforeRender={spec.shadow.onBeforeRender}
         onAfterRender={spec.shadow.onAfterRender}
-        userData={boxlessUserData()}
+        userData={drawnUserData(spec.godotLayers)}
       >
         <SurfaceMaterialSlot
           source={spec.source}
@@ -166,7 +166,7 @@ function ParticleChainDraw({ spec, points }: { spec: ChainDrawSpec; points: bool
       receiveShadow
       onBeforeRender={spec.shadow.onBeforeRender}
       onAfterRender={spec.shadow.onAfterRender}
-      userData={boxlessUserData()}
+      userData={drawnUserData(spec.godotLayers)}
     >
       <SurfaceMaterialSlot source={spec.source} attach={spec.attach} particles={withParticleDraw} />
     </instancedMesh>
@@ -211,6 +211,7 @@ function ParticlePoints({ draws }: { draws: ParticlePartDraws }) {
         sources={draw.sources}
         geometry={geometry}
         drawsPoints
+        godotLayers={draw.godotLayers}
         shadow={draw.shadow}
         draw={chainDrawOf(true)}
         overlay={overlayOf(draws, true)}
@@ -238,6 +239,7 @@ function ParticleMeshInstances({ draws }: { draws: ParticlePartDraws }) {
         sources={draw.sources}
         geometry={geometry}
         drawsPoints={false}
+        godotLayers={draw.godotLayers}
         shadow={draw.shadow}
         draw={chainDrawOf(false)}
         overlay={overlayOf(draws, false)}
@@ -256,12 +258,14 @@ function OverlayDraw({
   overlay,
   shadow,
   points,
+  godotLayers,
   order,
 }: {
   geometry: THREE.InstancedBufferGeometry;
   overlay: MaterialSource;
   shadow: ShadowCastingEffects;
   points: boolean;
+  godotLayers: number;
   order: number;
 }) {
   const overlayDraw = points ? (
@@ -291,6 +295,7 @@ function OverlayDraw({
         attach="material"
         surfaceCount={1}
         drawsPoints={points}
+        godotLayers={godotLayers}
         shadow={shadow}
         draw={chainDrawOf(points)}
       />
@@ -336,6 +341,7 @@ function overlayOf(
       geometry={draws.geometry}
       overlay={draws.draw.overlay!}
       shadow={draws.draw.shadow}
+      godotLayers={draws.draw.godotLayers}
       points={points}
       order={order}
     />

@@ -19,6 +19,7 @@ import { OTHER_DRAWS_SURFACE } from '../../materials/useOneSurfaceStartingMateri
 
 import { registerFadedCopyBuilders, unfadedMaterial } from '../../materials/fadedMeshMaterials.js';
 import { useDisposeOnRelease } from '../../useDisposeOnRelease.js';
+import { setVisualLayers, visualLayersOf } from '../../visualLayers.js';
 
 interface GlbSurfaceMaterialOverrideProps {
   /** The GLB-internal object whose surface materials are being replaced. */
@@ -86,8 +87,11 @@ function GlbNextPassLink({
 }) {
   const { isAbsent, bags, material: resource, scalars } = useSurfaceMaterial(source, GLTF_SURFACE);
   const link = useMemo(() => {
-    if (isAbsent || !bags) return null;
-    return materialFromBag(bags.unfaded);
+    // The link's own file cannot load: Godot's `!material` guard ends the chain there
+    // (`render_forward_clustered.cpp:4192`). Anything else unresolved draws the
+    // placeholder its React surface slot draws, until its texture arrives.
+    if (isAbsent) return null;
+    return materialFromBag(bags ? bags.unfaded : MISSING_TEXTURE_MATERIAL);
   }, [isAbsent, bags]);
   useDisposeOnRelease(link);
   const nextSource = useMemo(
@@ -126,12 +130,12 @@ function useGlbChainMount(
   useEffect(() => {
     if (!link || !covered) return undefined;
 
-    const added: THREE.Mesh[] = [];
+    const added: THREE.Object3D[] = [];
     for (const { holder, index, count } of covered) {
-      // A points or line surface draws no triangle geometry for a sibling Mesh to share,
-      // so its surface carries the swap alone and no chain draw.
-      if (!holder.isMesh) continue;
-      const mesh = chainSibling(holder, chainMaterial(count, index, link));
+      // The sibling mirrors the holder's class of drawn object: an InstancedMesh draws its
+      // instances, and a glTF's points or line primitives carry materials their own class
+      // draws, which a plain Mesh sibling would not draw.
+      const mesh = chainSibling(holder, chainMaterial(holder instanceof THREE.Mesh ? count : 1, index, link));
       mesh.renderOrder = nextPassRenderOrder(ordinal);
       mesh.raycast = NO_RAYCAST;
       mesh.receiveShadow = true;
@@ -158,26 +162,52 @@ function chainMaterial(
 }
 
 /**
- * The sibling draw over a surface slot's holder, where the holder draws: its local
- * transform and skinning ride along, so the link lands where the surface draws and
- * deforms as the surface deforms.
+ * The sibling draw over a surface slot's holder, where the holder draws: its transform,
+ * skinning, instances, culling, visual layers and per-surface draw hooks ride along, so
+ * the link lands, deforms, culls and is seen where the surface draws.
  */
-function chainSibling(holder: THREE.Mesh, materials: THREE.Material | THREE.Material[]): THREE.Mesh {
+function chainSibling(holder: THREE.Object3D, materials: THREE.Material | THREE.Material[]): THREE.Object3D {
+  let sibling: THREE.Object3D;
   if (holder instanceof THREE.SkinnedMesh) {
     // The skinned branch binds the surface's skinning, so the link deforms as the surface does.
     const skinned = new THREE.SkinnedMesh(holder.geometry, materials);
-    skinned.position.copy(holder.position);
-    skinned.quaternion.copy(holder.quaternion);
-    skinned.scale.copy(holder.scale);
     skinned.bindMode = holder.bindMode;
     skinned.bind(holder.skeleton, holder.bindMatrix);
-    return skinned;
+    sibling = skinned;
+  } else if (holder instanceof THREE.InstancedMesh) {
+    // The instances ride through the holder's own attributes: the sibling never disposes
+    // them, so sharing the buffer writes no reader against the holder's own draw.
+    const instanced = new THREE.InstancedMesh(holder.geometry, materials, holder.count);
+    instanced.instanceMatrix = holder.instanceMatrix;
+    if (holder.instanceColor) instanced.instanceColor = holder.instanceColor;
+    sibling = instanced;
+  } else if (holder instanceof THREE.Points) {
+    sibling = new THREE.Points(holder.geometry, materials);
+  } else if (holder instanceof THREE.Line) {
+    sibling = new (
+      holder.constructor as new (
+        geometry: THREE.BufferGeometry,
+        material: THREE.Material | THREE.Material[]
+      ) => THREE.Line
+    )(holder.geometry, materials);
+  } else if (holder instanceof THREE.Mesh) {
+    sibling = new THREE.Mesh(holder.geometry, materials);
+  } else {
+    // A class this mount does not mirror drew nothing for the base either.
+    return holder;
   }
-  const mesh = new THREE.Mesh(holder.geometry, materials);
-  mesh.position.copy(holder.position);
-  mesh.quaternion.copy(holder.quaternion);
-  mesh.scale.copy(holder.scale);
-  return mesh;
+  sibling.position.copy(holder.position);
+  sibling.quaternion.copy(holder.quaternion);
+  sibling.scale.copy(holder.scale);
+  sibling.visible = holder.visible;
+  sibling.frustumCulled = holder.frustumCulled;
+  sibling.castShadow = holder.castShadow;
+  sibling.onBeforeRender = holder.onBeforeRender;
+  sibling.onAfterRender = holder.onAfterRender;
+  sibling.onBeforeShadow = holder.onBeforeShadow;
+  sibling.onAfterShadow = holder.onAfterShadow;
+  setVisualLayers(sibling, visualLayersOf(holder));
+  return sibling;
 }
 
 /**

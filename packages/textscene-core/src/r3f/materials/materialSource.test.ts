@@ -271,6 +271,44 @@ describe('materialSourceKey', () => {
     expect(materialSourceKey(sourceOf('A'))).toBe(materialSourceKey(sourceOf('A')));
   });
 
+  it('keys two file materials of one inline id apart, so a cross-file chain is not cut', () => {
+    // Two `.tres` files each hold an inline `Link`; a chain that walks both must
+    // visit both, so the key holds the file the id resolves in.
+    const inlineOf = (origin: string) => ({
+      kind: 'inline' as const,
+      material: {
+        resource: { id: 'Link', type: 'StandardMaterial3D', data: {} },
+        internalResources: [] as TscnInternalResource[],
+        externalResources: [] as TscnExternalResource[],
+        origin,
+      },
+    });
+    const fileA = inlineOf('res://a.tres');
+    const fileB = inlineOf('res://b.tres');
+    expect(materialSourceKey(fileA)).not.toBe(materialSourceKey(fileB));
+    expect(materialSourceKey(fileA)).toBe(materialSourceKey(inlineOf('res://a.tres')));
+  });
+
+  it('hands a link its material, own file origin, so a chain across files keys each step', () => {
+    const chained = {
+      resource: { id: 'From', type: 'StandardMaterial3D' as const, data: { next_pass: 'SubResource("M2")' } },
+      internalResources: [
+        { id: 'From', type: 'StandardMaterial3D', data: { next_pass: 'SubResource("M2")' } },
+        { id: 'M2', type: 'StandardMaterial3D', data: { next_pass: 'SubResource("M3")' } },
+        { id: 'M3', type: 'StandardMaterial3D', data: {} },
+      ] as TscnInternalResource[],
+      externalResources: [] as TscnExternalResource[],
+      origin: 'res://stage/chained.tres',
+    };
+    const link = resolveNextPass('SubResource("M2")', chained);
+    expect(link).toMatchObject({ kind: 'inline', material: { origin: 'res://stage/chained.tres' } });
+    if (!link || link.kind !== 'inline') throw new Error('the link did not resolve inline');
+    // The step after keeps the file: the chain across a file's inline ids visits
+    // each once, and a next file's id of the same name stays its own key.
+    const next = resolveNextPass(link.material.resource.data.next_pass, link.material);
+    expect(next).toMatchObject({ kind: 'inline', material: { origin: 'res://stage/chained.tres' } });
+  });
+
   it('keys a file source on its path', () => {
     const a = resolveMaterialSource('ExtResource("4")', {
       internalResources: [],

@@ -33,13 +33,18 @@ for (const srcFile of files) {
   const rel = path.relative(srcRoot, srcFile);
   const destFile = path.join(distRoot, rel);
   await fs.mkdir(path.dirname(destFile), { recursive: true });
-  // Write to a sibling then rename: a rename is atomic on POSIX, so a build that
-  // reads the dist while this copy runs never sees a truncated stylesheet. A
-  // concurrent package build's `prebuild` reruns this copy, and esbuild read a
-  // truncated `TscnCanvas.module.css` as empty on CI's `Unit tests (3/4)`.
-  const tempFile = `${destFile}.css-copy`;
-  await fs.copyFile(srcFile, tempFile);
-  await fs.rename(tempFile, destFile);
+  // Write to a per-process sibling then rename: a rename is atomic on POSIX, so a build
+  // that reads the dist while this copy runs never sees a truncated stylesheet, and two
+  // concurrent package builds' `prebuild`s cannot take each other's temp file. The copy
+  // removes its own temp again, so a failed copy leaves no `.css-copy-*` in the dist the
+  // pack would carry; a hard kill can still leave one, and its build failed visibly.
+  const tempFile = `${destFile}.css-copy-${process.pid}`;
+  try {
+    await fs.copyFile(srcFile, tempFile);
+    await fs.rename(tempFile, destFile);
+  } finally {
+    await fs.rm(tempFile, { force: true });
+  }
   copied += 1;
 }
 

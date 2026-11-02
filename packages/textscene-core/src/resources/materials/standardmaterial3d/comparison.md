@@ -2,7 +2,6 @@
 type: StandardMaterial3D
 category: Resources
 renders_as: a THREE.MeshStandardMaterial / MeshPhysicalMaterial
-camera: MaterialNextPass/Camera3D
 ---
 
 # StandardMaterial3D
@@ -156,12 +155,13 @@ A 40 px point that draws shadows only hangs under an omni light, above a floor t
 
 <!-- compare: image=material-next-pass status=done fixture=unit-material-next-pass.tscn -->
 
-A material's `next_pass` draws one extra surface after its own. Every link draws after the links before it, as the chain walk runs (`render_forward_clustered.cpp:4183-4201`). The fixture's pass culls front faces, so its back faces draw a rim round the sphere. Unshaded blue with `grow = true` offsets each vertex by `grow_amount = 0.03` along its normal (`material.cpp:1458-1461`), in model space before the node's transform. The rim therefore sits outside the orange edge. The link resolves against the starting material's own tables and decodes through the one bag derivation. Every surface owner mounts the chain the same way: MeshInstance3D, CPUParticles3D, CSG, GridMap and the GLB surface override. Each link shares the base draw's geometry and draws unpicked one past the draw it covers. Each link casts nothing, since the surface's own draw casts the geometry once.
+A material's `next_pass` draws one extra surface after its own. Every link draws after the links before it, as the chain walk runs (`render_forward_clustered.cpp:4183-4201`). The fixture's pass culls front faces, so its back faces draw a rim round the sphere. Unshaded blue with `grow = true` offsets each vertex by `grow_amount = 0.03` along its normal (`material.cpp:1458-1461`), in model space before the node's transform. The rim therefore sits outside the orange edge. The link resolves against the starting material's own tables and decodes through the one bag derivation. Every surface owner mounts the chain the same way: MeshInstance3D, CPUParticles3D, CSG, GridMap and the GLB surface override. Each link shares the base draw's geometry and draws unpicked one past the draw it covers. Each link casts nothing, since the surface's own draw casts the geometry once. A GLB link reads the holder's own draw state: its instances, its culling, its visual layers and its per-surface hooks.
 
-At equal `render_priority`, the chain order decides which draw covers which. Godot's opaque sort breaks the tie later in the key, on the material's RID (`render_forward_clustered.h:517-526`). So a link at the base's priority covers its base.
+At equal `render_priority`, the two engines can disagree, and the measured case shows it. Godot's opaque sort packs the priority above the shader and material ids (`render_forward_clustered.h:517-526`). The chain's links then sort inside that bucket, and the material RID order decides. This previewer keeps the chain order instead, so its link covers its base: the order the `while` walk guarantees.
 
 - **Unimplemented** A stencil-reading link's own draw: the chain continues past it (`material.cpp:916-968`), and the stencil buffer itself stays unrendered.
 - **Approximated** A transparent link draws at three's per-object order, so it sorts after every unrelated order-0 transparent draw. Godot keeps one sort keyed on the material's `render_priority` (`render_forward_clustered.h:517-526`).
+- **Approximated** A multi-part instance's overlay mounts one past its own part's chain, where Godot orders the overlay after the whole instance's chains. A cut link keeps its ordinal, so the overlay's slot can outrun the draws it describes.
 - **Approximated** A GLB chain sibling never joins the range fade. `fadedMeshMaterials` tracks the clone's own slots, so a fading surface's link stays opaque while its surface fades.
 - **Unimplemented** `grow` offsets the colour pass's vertices only. The alpha-depth prepass and the shadow depth draw the un-offset position, where Godot's depth variant runs the same vertex body. `surfaceDepthMaterial` clones the depth base without the grow injection. The billboard offset records its depth injection at `materialBag.ts:235-236`.
 

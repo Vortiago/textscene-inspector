@@ -149,6 +149,7 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
             overrides={meshOverrides}
             meshRef={meshRef}
             skeleton={skeleton}
+            godotLayers={properties.layers}
             overlaySource={overlaySource}
             shadow={shadow}
           />
@@ -183,6 +184,7 @@ function MaterialOverlayMesh({
   meshRef,
   drawsPoints,
   skeleton,
+  godotLayers,
   source,
   shadow,
   renderOrder,
@@ -192,6 +194,8 @@ function MaterialOverlayMesh({
   drawsPoints: boolean;
   /** The base is skinned, so the overlay is skinned by the same skeleton. */
   skeleton?: THREE.Skeleton | null;
+  /** The node's `layers`, which an overlay chain draw carries for the decals and probes. */
+  godotLayers: number;
   source: MaterialSource;
   /**
    * The base mesh's hooks. The overlay casts nothing of its own, so only the colour pair
@@ -228,6 +232,7 @@ function MaterialOverlayMesh({
         surfaceCount={1}
         drawsPoints={drawsPoints}
         skeleton={skeleton}
+        godotLayers={godotLayers}
         shadow={shadow}
       />
     </>
@@ -313,6 +318,7 @@ function MeshSurfaces({
   overrides,
   meshRef,
   skeleton,
+  godotLayers,
   overlaySource,
   shadow,
 }: {
@@ -322,6 +328,8 @@ function MeshSurfaces({
   meshRef: RefObject<DrawnMesh | null>;
   /** The skeleton that skins the shell's surfaces, or null for an unskinned draw. */
   skeleton?: THREE.Skeleton | null;
+  /** The node's `layers`, which the chain draws carry for the decals and probes. */
+  godotLayers: number;
   overlaySource: MaterialSource | undefined;
   shadow: ShadowCastingEffects;
 }) {
@@ -339,6 +347,7 @@ function MeshSurfaces({
         sources={sources}
         drawsPoints={drawsPoints}
         skeleton={skeleton}
+        godotLayers={godotLayers}
         shadow={shadow}
         overlay={
           overlaySource
@@ -347,6 +356,7 @@ function MeshSurfaces({
                   meshRef={meshRef}
                   drawsPoints={drawsPoints}
                   skeleton={skeleton}
+                  godotLayers={godotLayers}
                   source={overlaySource}
                   shadow={shadow}
                   renderOrder={renderOrder}
@@ -386,6 +396,7 @@ function FollowingPart({
         part={part}
         overrides={overrides}
         meshRef={ref}
+        godotLayers={godotLayers}
         overlaySource={overlaySource}
         shadow={shadow}
       />

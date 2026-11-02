@@ -292,7 +292,7 @@ next_pass = SubResource("Ink")`;
   it('skins a chain link by the same skeleton as its base draw', async () => {
     // The skinned ribbon's surface override chains an inverted-hull style pass:
     // the link must skin, not draw the bind pose beside the posed body.
-    const ribbon = renderContent(
+    const ribbon = await renderContent(
       ribbonScene({
         extra: `[sub_resource type="StandardMaterial3D" id="Hull"]
 albedo_color = Color(0, 0, 1, 1)
@@ -304,12 +304,16 @@ next_pass = SubResource("Hull")`,
 surface_material_override/0 = SubResource("ChainedRed")`,
       })
     );
-    const skinned = (await ribbon).scene
-      .findAllByType('SkinnedMesh')
-      .map((m) => instanceAs<THREE.SkinnedMesh>(m));
+    const skinned = ribbon.scene.findAllByType('SkinnedMesh').map((m) => instanceAs<THREE.SkinnedMesh>(m));
 
     expect(skinned).toHaveLength(2);
     expect(skinned[1]!.skeleton).toBe(skinned[0]!.skeleton);
     expect(which(skinned[1]!)).toBe('blue');
+  });
+
+  it("carries the node's layers to its chain draws, which decals and probes filter on", async () => {
+    const renderer = await render({ layers: 2, materialOverride: 'SubResource("Mat_chain2")' });
+
+    expect(meshes(renderer).map((m) => (m.userData as { godotLayers?: number }).godotLayers)).toEqual([2, 2]);
   });
 });

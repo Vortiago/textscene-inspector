@@ -21,12 +21,13 @@ type SurfaceVisitor = (
  * per-surface rules reach too.
  */
 function slotsOfNode(node: THREE.Object3D): SurfaceSlot[] {
-  const holder = node as THREE.Mesh;
-  const slot = holder.material as THREE.Material | THREE.Material[] | undefined;
+  // The classes that draw a material: a mesh and its skinned and instanced selves, a glTF's points and lines, a sprite.
+  const drawn = node as THREE.Mesh | THREE.Points | THREE.Line | THREE.Sprite;
+  const slot = drawn.material as THREE.Material | THREE.Material[] | undefined;
   if (!slot) return [];
   if (Array.isArray(slot)) {
     return slot.map((_, index) => ({
-      holder,
+      holder: node,
       index,
       count: slot.length,
       assign: (replacement: THREE.Material) => {
@@ -37,13 +38,13 @@ function slotsOfNode(node: THREE.Object3D): SurfaceSlot[] {
   }
   return [
     {
-      holder,
+      holder: node,
       index: 0,
       count: 1,
       assign: (replacement: THREE.Material) => {
-        holder.material = replacement;
+        drawn.material = replacement;
       },
-      read: () => holder.material as THREE.Material | undefined,
+      read: () => drawn.material as THREE.Material | undefined,
     },
   ];
 }
@@ -60,11 +61,11 @@ export function forEachSurfaceMaterial(object: THREE.Object3D, visit: SurfaceVis
 /** One surface slot of a glTF asset, with the object that draws it. */
 export interface SurfaceSlot {
   /**
-   * The object that draws the slot's surface, cast as a Mesh: a glTF's points and line
-   * primitives own a slot too. A caller that mounts a sibling draw over the slot's
-   * geometry gates on `isMesh` — a Mesh over their vertices would draw triangles.
+   * The object that draws the slot's surface: a glTF's points and line primitives own a
+   * slot too. A caller that mounts a sibling draw over the slot gates on the class it
+   * draws, and `chainSibling` mirrors it.
    */
-  holder: THREE.Mesh;
+  holder: THREE.Object3D;
   /** The draw group the surface sits in, over the holder's slot count. */
   index: number;
   count: number;

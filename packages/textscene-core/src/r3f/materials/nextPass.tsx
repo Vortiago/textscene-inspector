@@ -30,6 +30,7 @@ import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
 import { surfaceAttach, surfaceSources } from './SurfaceMaterialSlots';
 import { useOneSurfaceStartingMaterial } from './useOneSurfaceStartingMaterial';
 import type { ShadowCastingEffects } from '../shadowCasting';
+import { visualLayersUserData } from '../visualLayers';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 
 /**
@@ -93,6 +94,11 @@ export interface ChainDrawBase {
   /** The base is skinned, so a chain draw is skinned by the same skeleton. */
   skeleton?: THREE.Skeleton | null;
   /**
+   * The node's `layers` mask, which a decal's and a reflection probe's masks filter on:
+   * the chain draw carries the base's own, as Godot draws the same surface again.
+   */
+  godotLayers: number;
+  /**
    * The base's shadow hooks. A chain draw casts nothing of its own, so only the colour
    * pair mounts, and SHADOWS_ONLY skips its draw like any other colour pass.
    */
@@ -108,6 +114,7 @@ function ChainDraw({
   surfaceCount,
   drawsPoints,
   skeleton,
+  godotLayers,
   shadow,
 }: {
   geometry: THREE.BufferGeometry;
@@ -132,6 +139,8 @@ function ChainDraw({
       receiveShadow
       onBeforeRender={shadow.onBeforeRender}
       onAfterRender={shadow.onAfterRender}
+      // The node's layers mask, which a decal's and a reflection probe's masks filter on.
+      userData={visualLayersUserData(godotLayers)}
     >
       <SurfaceMaterialSlot source={source} attach={attach} points={drawsPoints ? 'mesh' : undefined} />
     </Drawn>
@@ -232,6 +241,7 @@ export function NextPassLink(props: PassProps) {
         onOrdinal={onOrdinal}
         drawsPoints={props.drawsPoints}
         skeleton={props.skeleton}
+        godotLayers={props.godotLayers}
         shadow={shadow}
       />
     ) : null;
@@ -247,6 +257,7 @@ export function NextPassLink(props: PassProps) {
     geometry,
     drawsPoints: props.drawsPoints,
     skeleton: props.skeleton,
+    godotLayers: props.godotLayers,
     shadow,
   };
   return (
@@ -288,6 +299,7 @@ export function NextPassChain({
   draw,
   drawsPoints,
   skeleton,
+  godotLayers,
   shadow,
 }: {
   /** The base draw, whose geometry every extra draw shares. */
@@ -304,6 +316,8 @@ export function NextPassChain({
   drawsPoints: boolean;
   /** The skeleton that skins a skinned base's chain links, or null for an unskinned draw. */
   skeleton?: THREE.Skeleton | null;
+  /** The node's `layers` mask, which its chain draws carry for the decals and probes. */
+  godotLayers: number;
   shadow: ShadowCastingEffects;
 }) {
   // Owners that hold their geometry directly leave the read-back nothing to read: a
@@ -335,6 +349,7 @@ export function NextPassChain({
           onOrdinal={onOrdinal}
           drawsPoints={drawsPoints}
           skeleton={skeleton}
+          godotLayers={godotLayers}
           shadow={shadow}
         />
       ))}
