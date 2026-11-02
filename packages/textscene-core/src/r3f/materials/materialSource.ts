@@ -102,6 +102,8 @@ export function held(isHeldLocally: boolean): Held {
  * resolves in the tables of the file the material is written in, and its own
  * `isHeldLocally` carries over, so the link's textures resolve in the file that owns it.
  * Undefined ends the chain, as the loop's `!material` guard does.
+ *
+ * @canonical One link of a material's next_pass chain
  */
 export function resolveNextPass(
   nextPass: string | undefined,
@@ -120,6 +122,8 @@ export function resolveNextPass(
  * a file source's path. Prefixed, so an inline id and a path cannot collide. Godot
  * refuses a cyclic chain at the setter (`material.cpp:39-42`), so only a hand-written
  * file can produce one, and the renderer cuts it with this key.
+ *
+ * @canonical The visited-set key of a material source
  */
 export function materialSourceKey(source: MaterialSource): string {
   return source.kind === 'inline' ? `inline:${source.material.resource.id}` : `file:${source.path}`;

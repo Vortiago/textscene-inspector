@@ -10,8 +10,6 @@ import type { SurfaceDrawHooks } from '../surfaceDrawHooks';
  * part with no chain — ordinal 1, after the surface — and any value above the 3D
  * default keeps the overlay after its own surface when the call site writes the
  * explicit computed order over it.
- *
- * @canonical The draw order of a material overlay
  */
 const MATERIAL_OVERLAY_RENDER_ORDER = 1;
 

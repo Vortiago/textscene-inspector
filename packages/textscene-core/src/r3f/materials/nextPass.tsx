@@ -32,6 +32,13 @@ import type { ShadowCastingEffects } from '../shadowCasting';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 
 /**
+ * The visited seed every chain's walk starts from: nothing has drawn yet, so no key is
+ * held. The walkers never mutate their visited set — `visitedWith` returns a new one —
+ * so one frozen instance serves every group and every owner per render.
+ */
+const NOTHING_DRAWN: ReadonlySet<string> = new Set();
+
+/**
  * The draw order of a next_pass chain draw: the surface's own draw is ordinal 0, each
  * resolved link takes its index, a stencil-skipped link leaves a numbered gap, and the
  * overlay mounts one past the greatest ordinal any chain reached.
@@ -46,6 +53,8 @@ export function nextPassRenderOrder(ordinal: number): number {
  * The element and bind props of a draw the base draws: `THREE.Points` for a points
  * surface, and a detached `THREE.SkinnedMesh` for a skinned one, as the skin matrices
  * stay in mesh space and the node's transform applies after them.
+ *
+ * @canonical The drawn element of a surface draw
  */
 export function drawnElementOf(drawsPoints: boolean, skeleton: THREE.Skeleton | null | undefined) {
   return skeleton && !drawsPoints
@@ -59,6 +68,8 @@ export function drawnElementOf(drawsPoints: boolean, skeleton: THREE.Skeleton | 
  * returns the same value when nothing moved, so the pair cannot loop. The layout pass
  * swaps a re-parsed geometry before paint, and on mount it runs before the parent's
  * ref lands, so the passive pass reads the first geometry.
+ *
+ * @canonical The geometry a surface draw reads back
  */
 export function useDrawnGeometry(ref: RefObject<THREE.Object3D | null>): THREE.BufferGeometry | null {
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
@@ -149,14 +160,19 @@ export type PassProps = {
   onOrdinal?: (ordinal: number) => void;
 } & ChainDrawBase;
 
-/** What a chain draw site receives from the walk: the pass, and what it covers. */
-export type ChainDrawSpec = {
+/**
+ * What a chain draw site receives from the walk: the pass, and what it covers. The base
+ * fields ride `PassProps`, narrowed here to what a drawn pass has: a resolved source,
+ * its own ordinal, and the geometry non-null to draw.
+ */
+export type ChainDrawSpec = Omit<
+  PassProps,
+  'source' | 'ordinal' | 'drawsSelf' | 'visited' | 'geometry' | 'draw' | 'onOrdinal'
+> & {
   source: MaterialSource;
   ordinal: number;
-  attach: string;
-  surfaceCount: number;
   geometry: THREE.BufferGeometry;
-} & ChainDrawBase;
+};
 
 /** Renders one chain draw. The default mounts a plain draw of the shared geometry. */
 export type ChainDrawFactory = (spec: ChainDrawSpec) => ReactNode;
@@ -179,6 +195,12 @@ export function NextPassLink(props: PassProps) {
     () => (material ? parseStandardMaterial3DScalars(material.resource.data) : null),
     [material]
   );
+  // Stable between loads: a re-render of an already-loaded link re-scans nothing.
+  const nextSource = useMemo(
+    () => (material && scalars ? resolveNextPass(scalars.nextPass, material) : undefined),
+    [material, scalars]
+  );
+  const nextVisited = useMemo(() => visitedWith(visited, source), [visited, source]);
   // The pass's fate reported once it is known: a resolved one reached its position
   // whether it drew or was skipped over, and a declined one ends its chain there. A
   // pass still loading waits, and the overlay's own order then moves past it, in
@@ -192,14 +214,13 @@ export function NextPassLink(props: PassProps) {
   if (source && visited.has(materialSourceKey(source))) return null;
   if (!material || !scalars || !source) return null;
 
-  const nextSource = resolveNextPass(scalars.nextPass, material);
   const continuation =
     nextSource !== undefined ? (
       <NextPassLink
         source={nextSource}
         ordinal={ordinal + 1}
         drawsSelf
-        visited={visitedWith(visited, source)}
+        visited={nextVisited}
         geometry={geometry}
         attach={attach}
         surfaceCount={surfaceCount}
@@ -299,7 +320,7 @@ export function NextPassChain({
           drawsSelf={false}
           // The starting pass's own key lands in the set when it recurses; the set
           // holds only what has drawn, so the pass's fate is its own to decide.
-          visited={new Set()}
+          visited={NOTHING_DRAWN}
           geometry={geometry}
           attach={surfaceAttach(group, groups.length)}
           surfaceCount={groups.length}

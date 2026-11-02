@@ -103,12 +103,34 @@ function ParticlePart({ source, draw }: { source: THREE.BufferGeometry; draw: Pa
 }
 
 /**
+ * Each instanced draw gets its own matrices back before r3f disposes it: three frees a
+ * disposed InstancedMesh's matrices (`WebGLObjects.js:78`), which the part's other
+ * draws read. Memoise the returned ref beside the geometry, so a re-render keeps it.
+ */
+function sharesInstanceMatrices(geometry: THREE.InstancedBufferGeometry) {
+  return (mesh: THREE.InstancedMesh | null) => {
+    if (!mesh) return;
+    const own = mesh.instanceMatrix;
+    mesh.instanceMatrix = instanceMatrices(geometry);
+    return () => {
+      mesh.instanceMatrix = own;
+    };
+  };
+}
+
+/**
  * One chain link of the part's surfaces: the same instanced draw the surface is, at the
  * link's draw order, reading the geometry's shared instance matrices. It casts nothing
  * and is picked nowhere.
  */
 function ParticleChainDraw({ spec, points }: { spec: ChainDrawSpec; points: boolean }) {
   const startingMaterial = useOneSurfaceStartingMaterial(spec.surfaceCount);
+  // A points emitter shares only geometry; an instanced one counts its instances on it.
+  const instanceCount = (spec.geometry as THREE.InstancedBufferGeometry).instanceCount;
+  const sharesMatrices = useMemo(
+    () => sharesInstanceMatrices(spec.geometry as THREE.InstancedBufferGeometry),
+    [spec.geometry]
+  );
   if (points) {
     // A points emitter shares only geometry, and a point's size rides its material.
     return (
@@ -129,18 +151,6 @@ function ParticleChainDraw({ spec, points }: { spec: ChainDrawSpec; points: bool
       </points>
     );
   }
-  // Each instanced draw gets its own matrices back before r3f disposes it: three frees
-  // a disposed InstancedMesh's matrices (`WebGLObjects.js:78`), which the draws read.
-  const sharesMatrices = (mesh: THREE.InstancedMesh | null) => {
-    if (!mesh) return;
-    const own = mesh.instanceMatrix;
-    mesh.instanceMatrix = instanceMatrices(spec.geometry);
-    return () => {
-      mesh.instanceMatrix = own;
-    };
-  };
-  // A points emitter shares only geometry; an instanced one counts its instances on it.
-  const instanceCount = (spec.geometry as THREE.InstancedBufferGeometry).instanceCount;
   return (
     <instancedMesh
       ref={sharesMatrices}
@@ -205,16 +215,7 @@ function ParticlePoints({ draws }: { draws: ParticlePartDraws }) {
 /** An InstancedMesh, and the chain's and the overlay's, each reading the geometry's instance matrices. */
 function ParticleMeshInstances({ draws }: { draws: ParticlePartDraws }) {
   const { geometry, startingMaterial, draw } = draws;
-  // Each instanced draw gets its own matrices back before r3f disposes it: three frees
-  // a disposed InstancedMesh's matrices (`WebGLObjects.js:78`), which the others read.
-  const sharesMatrices = (mesh: THREE.InstancedMesh | null) => {
-    if (!mesh) return;
-    const own = mesh.instanceMatrix;
-    mesh.instanceMatrix = instanceMatrices(geometry);
-    return () => {
-      mesh.instanceMatrix = own;
-    };
-  };
+  const sharesMatrices = useMemo(() => sharesInstanceMatrices(geometry), [geometry]);
   return (
     <>
       <instancedMesh
@@ -302,16 +303,7 @@ function InstancedOverlayDraw({
   shadow: ShadowCastingEffects;
   order: number;
 }) {
-  // Each instanced draw gets its own matrices back before r3f disposes it, as every
-  // draw of the part keeps.
-  const sharesMatrices = (mesh: THREE.InstancedMesh | null) => {
-    if (!mesh) return;
-    const own = mesh.instanceMatrix;
-    mesh.instanceMatrix = instanceMatrices(geometry);
-    return () => {
-      mesh.instanceMatrix = own;
-    };
-  };
+  const sharesMatrices = useMemo(() => sharesInstanceMatrices(geometry), [geometry]);
   return (
     <instancedMesh
       ref={sharesMatrices}

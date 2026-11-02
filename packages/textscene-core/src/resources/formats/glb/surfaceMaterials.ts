@@ -25,11 +25,10 @@ function slotsOfNode(node: THREE.Object3D): SurfaceSlot[] {
   const slot = holder.material as THREE.Material | THREE.Material[] | undefined;
   if (!slot) return [];
   if (Array.isArray(slot)) {
-    return slot.map((material, index) => ({
+    return slot.map((_, index) => ({
       holder,
       index,
       count: slot.length,
-      material,
       assign: (replacement: THREE.Material) => {
         slot[index] = replacement;
       },
@@ -41,7 +40,6 @@ function slotsOfNode(node: THREE.Object3D): SurfaceSlot[] {
       holder,
       index: 0,
       count: 1,
-      material: slot,
       assign: (replacement: THREE.Material) => {
         holder.material = replacement;
       },
@@ -52,7 +50,11 @@ function slotsOfNode(node: THREE.Object3D): SurfaceSlot[] {
 
 /** Visit every surface material under `object`, with the setter for its own slot. */
 export function forEachSurfaceMaterial(object: THREE.Object3D, visit: SurfaceVisitor): void {
-  for (const { material, assign, read } of surfaceSlotsUnder(object)) visit(material, assign, read);
+  for (const slot of surfaceSlotsUnder(object)) {
+    const material = slot.read();
+    if (material === undefined) continue;
+    visit(material, slot.assign, slot.read);
+  }
 }
 
 /** One surface slot of a glTF asset, with the object that draws it. */
@@ -66,8 +68,6 @@ export interface SurfaceSlot {
   /** The draw group the surface sits in, over the holder's slot count. */
   index: number;
   count: number;
-  /** What the slot holds when the slot is read. */
-  material: THREE.Material;
   /** Swaps the slot's material in place, as the visit's setter does. */
   assign(replacement: THREE.Material): void;
   /**
@@ -82,6 +82,8 @@ export interface SurfaceSlot {
  * `forEachSurfaceMaterial`'s reach order; a holder with several surfaces appears once
  * per slot. A caller that pairs draws with the slot they cover, instead of visiting the
  * materials, needs this shape.
+ *
+ * @canonical The surface material slots under an object
  */
 export function surfaceSlotsUnder(object: THREE.Object3D): SurfaceSlot[] {
   const slots: SurfaceSlot[] = [];

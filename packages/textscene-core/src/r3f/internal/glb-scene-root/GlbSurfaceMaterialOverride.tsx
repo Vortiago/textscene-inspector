@@ -16,7 +16,7 @@ import { materialSourceKey, resolveNextPass, type MaterialSource } from '../../m
 import { nextPassRenderOrder, visitedWith } from '../../materials/nextPass.js';
 import { NO_RAYCAST } from '../../materials/materialOverlay.js';
 import { OTHER_DRAWS_SURFACE } from '../../materials/useOneSurfaceStartingMaterial.js';
-import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars.js';
+
 import { registerFadedCopyBuilders, unfadedMaterial } from '../../materials/fadedMeshMaterials.js';
 import { useDisposeOnRelease } from '../../useDisposeOnRelease.js';
 
@@ -42,7 +42,7 @@ export function GlbSurfaceMaterialOverride({
 }: GlbSurfaceMaterialOverrideProps) {
   // The geometry is the glTF's: no Godot mesh sub-resource for a triplanar material to tile
   // against, and UVs in Godot's top-down V.
-  const { isAbsent, bags, material: resource } = useSurfaceMaterial(source, GLTF_SURFACE);
+  const { isAbsent, bags, material: resource, scalars } = useSurfaceMaterial(source, GLTF_SURFACE);
   const material = useMemo(() => {
     if (isAbsent) return null;
     if (!bags) return materialFromBag(MISSING_TEXTURE_MATERIAL);
@@ -57,23 +57,13 @@ export function GlbSurfaceMaterialOverride({
   const covered = useGlbMaterialSwap(target, material, replaces);
   // The override drew the surface, so its own `next_pass` runs from ordinal 1, resolved
   // in the tables of the file that wrote the override material.
-  const scalars = useMemo(
-    () => (resource ? parseStandardMaterial3DScalars(resource.resource.data) : null),
-    [resource]
-  );
   const nextSource = useMemo(
     () => (resource && scalars ? resolveNextPass(scalars.nextPass, resource) : undefined),
     [resource, scalars]
   );
+  const visited = useMemo(() => new Set([materialSourceKey(source)]), [source]);
   if (nextSource === undefined) return null;
-  return (
-    <GlbNextPassLink
-      covered={covered}
-      source={nextSource}
-      ordinal={1}
-      visited={new Set([materialSourceKey(source)])}
-    />
-  );
+  return <GlbNextPassLink covered={covered} source={nextSource} ordinal={1} visited={visited} />;
 }
 
 /**
@@ -94,16 +84,12 @@ function GlbNextPassLink({
   ordinal: number;
   visited: ReadonlySet<string>;
 }) {
-  const { isAbsent, bags, material: resource } = useSurfaceMaterial(source, GLTF_SURFACE);
+  const { isAbsent, bags, material: resource, scalars } = useSurfaceMaterial(source, GLTF_SURFACE);
   const link = useMemo(() => {
     if (isAbsent || !bags) return null;
     return materialFromBag(bags.unfaded);
   }, [isAbsent, bags]);
   useDisposeOnRelease(link);
-  const scalars = useMemo(
-    () => (resource ? parseStandardMaterial3DScalars(resource.resource.data) : null),
-    [resource]
-  );
   const nextSource = useMemo(
     () => (resource && scalars ? resolveNextPass(scalars.nextPass, resource) : undefined),
     [resource, scalars]
@@ -177,16 +163,21 @@ function chainMaterial(
  * deforms as the surface deforms.
  */
 function chainSibling(holder: THREE.Mesh, materials: THREE.Material | THREE.Material[]): THREE.Mesh {
-  const skin = holder instanceof THREE.SkinnedMesh ? new THREE.SkinnedMesh(holder.geometry, materials) : null;
-  const sibling = skin ?? new THREE.Mesh(holder.geometry, materials);
-  sibling.position.copy(holder.position);
-  sibling.quaternion.copy(holder.quaternion);
-  sibling.scale.copy(holder.scale);
-  if (skin && holder instanceof THREE.SkinnedMesh) {
-    skin.bindMode = holder.bindMode;
-    skin.bind(holder.skeleton, holder.bindMatrix);
+  if (holder instanceof THREE.SkinnedMesh) {
+    // The skinned branch binds the surface's skinning, so the link deforms as the surface does.
+    const skinned = new THREE.SkinnedMesh(holder.geometry, materials);
+    skinned.position.copy(holder.position);
+    skinned.quaternion.copy(holder.quaternion);
+    skinned.scale.copy(holder.scale);
+    skinned.bindMode = holder.bindMode;
+    skinned.bind(holder.skeleton, holder.bindMatrix);
+    return skinned;
   }
-  return sibling;
+  const mesh = new THREE.Mesh(holder.geometry, materials);
+  mesh.position.copy(holder.position);
+  mesh.quaternion.copy(holder.quaternion);
+  mesh.scale.copy(holder.scale);
+  return mesh;
 }
 
 /**
@@ -213,7 +204,9 @@ function useGlbMaterialSwap(
     const restore: Array<() => void> = [];
     const taken: SurfaceSlot[] = [];
     for (const slot of surfaceSlotsUnder(target)) {
-      const current = unfadedMaterial(slot.material);
+      const held = slot.read();
+      if (held === undefined) continue;
+      const current = unfadedMaterial(held);
       if (!replaces(current)) continue;
       slot.assign(material);
       restore.push(() => {

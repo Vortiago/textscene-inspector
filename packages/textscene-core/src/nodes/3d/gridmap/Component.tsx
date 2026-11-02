@@ -273,13 +273,15 @@ function PartSurfaces({
             draw={{ geometry, cellPoints, source, surface, surfaceCount: surfaces.length, shadow }}
             matrices={matrices}
           />
-          <NextPassChain
-            sources={source ? [source] : []}
-            geometry={cellPoints?.geometry ?? geometry}
-            drawsPoints={points}
-            shadow={shadow}
-            draw={chainDraw}
-          />
+          {source && (
+            <NextPassChain
+              sources={[source]}
+              geometry={cellPoints?.geometry ?? geometry}
+              drawsPoints={points}
+              shadow={shadow}
+              draw={chainDraw}
+            />
+          )}
         </Fragment>
       ))}
     </>
