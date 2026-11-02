@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import type { MeshInstance3DProperties } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import {
@@ -27,7 +27,13 @@ import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
-import { MATERIAL_OVERLAY_RENDER_ORDER, NO_RAYCAST } from '../../../r3f/materials/materialOverlay';
+import { NO_RAYCAST } from '../../../r3f/materials/materialOverlay';
+import {
+  NextPassChain,
+  NextPassLink,
+  drawnElementOf,
+  useDrawnGeometry,
+} from '../../../r3f/materials/nextPass';
 import { isOutgrownBySkin, useSkinSkeleton } from '../../../r3f/meshes/skinSkeleton';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useMeshSkin } from './useMeshSkin';
@@ -39,18 +45,6 @@ import { partsPlacement, UNPLACED } from '../../../r3f/visibilityRange/placement
 
 /** What a MeshInstance3D mounts: a mesh draws triangles, a PointMesh draws points. */
 type DrawnMesh = THREE.Mesh | THREE.Points;
-
-/**
- * The element of the node's own draw and the props that bind it. A skeleton makes it a
- * THREE.SkinnedMesh, drawn detached so the skin matrices stay in mesh space and the node's
- * transform applies after them.
- */
-function drawOf(drawsPoints: boolean, skeleton: THREE.Skeleton | null | undefined) {
-  // A PointMesh stays `<points>`: a SkinnedMesh would draw its one index per point as triangles.
-  return skeleton && !drawsPoints
-    ? { Drawn: 'skinnedMesh' as const, skin: { skeleton, bindMode: THREE.DetachedBindMode } }
-    : { Drawn: drawnTag(drawsPoints), skin: {} };
-}
 
 /** Literal-only, so its key is constant and it never remounts. */
 const UNRESOLVED_MESH_MATERIAL = wireGizmoProgram(0xff00ff);
@@ -131,24 +125,11 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
       ) : (
         children
       ),
-    overlay: overlaySource ? (
-      <MaterialOverlayMesh
-        meshRef={meshRef}
-        drawsPoints={drawsPoints}
-        skeleton={skeleton}
-        source={overlaySource}
-        shadow={shadow}
-      />
-    ) : null,
   };
 
   switch (content.kind) {
     case 'unresolved':
-      return (
-        <MeshShell {...shellProps} overlay={null}>
-          {UNRESOLVED_MESH}
-        </MeshShell>
-      );
+      return <MeshShell {...shellProps}>{UNRESOLVED_MESH}</MeshShell>;
     // While it loads, the shell keeps the node's descendants mounted: they do not depend on
     // the `.tres`. A node with no mesh, and a mesh Godot builds no surface for, draw nothing and
     // their descendants still mount.
@@ -158,16 +139,18 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
       return <MeshShell {...shellProps}>{null}</MeshShell>;
     case 'surfaced': {
       // The skin leaves the instance without bounds, so Godot places none of its surfaces.
-      if (isOutgrown)
-        return (
-          <MeshShell {...shellProps} overlay={null}>
-            {null}
-          </MeshShell>
-        );
+      if (isOutgrown) return <MeshShell {...shellProps}>{null}</MeshShell>;
       const { parts } = content.mesh;
       return (
         <MeshShell {...shellProps}>
-          <MeshSurfaces part={parts[0]} overrides={meshOverrides} />
+          <MeshSurfaces
+            part={parts[0]}
+            overrides={meshOverrides}
+            meshRef={meshRef}
+            skeleton={skeleton}
+            overlaySource={overlaySource}
+            shadow={shadow}
+          />
           {parts.slice(1).map((part, i) => (
             <FollowingPart
               key={i}
@@ -191,6 +174,9 @@ const NO_PARTS: readonly SurfacedPart[] = [];
  * overlay material. A separate mesh, not a material array entry: Godot's
  * overlay covers every surface (`_geometry_instance_add_surface` runs per
  * surface), and one material over a grouped geometry draws the same pixels.
+ * A valid overlay's own `next_pass` chain mounts after its draw
+ * (`render_forward_clustered.cpp:4230-4239`), its links sharing the base draw's
+ * geometry.
  */
 function MaterialOverlayMesh({
   meshRef,
@@ -198,6 +184,7 @@ function MaterialOverlayMesh({
   skeleton,
   source,
   shadow,
+  renderOrder,
 }: {
   meshRef: RefObject<DrawnMesh | null>;
   /** The base draws points, so the overlay does too. */
@@ -210,40 +197,43 @@ function MaterialOverlayMesh({
    * mounts: its own material decides its billboard, and SHADOWS_ONLY skips its draw too.
    */
   shadow: ShadowCastingEffects;
+  /** The explicit order one past the part's surface chains (`nextPassRenderOrder`). */
+  renderOrder: number;
 }) {
   // Read back off the base mesh rather than built again, so all four geometry branches
   // share one component and the two meshes share one geometry.
-  const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
-  const readBack = () => {
-    const attached = meshRef.current?.geometry ?? null;
-    setGeometry((previous) => (previous === attached ? previous : attached));
-  };
-  // Dep-less, since a re-parse replaces the geometry and `[meshRef]` would keep the old
-  // one. They cannot loop: the updater returns the same value when nothing moved. The
-  // layout pass swaps a re-parsed geometry before paint. On mount it runs before React
-  // attaches the parent mesh's ref, so the passive pass reads the first geometry.
-  useLayoutEffect(readBack);
-  useEffect(readBack);
-
+  const geometry = useDrawnGeometry(meshRef);
   if (!geometry) return null;
-  const { Drawn, skin } = drawOf(drawsPoints, skeleton);
+  const { Drawn, skin } = drawnElementOf(drawsPoints, skeleton);
   return (
-    <Drawn
-      {...skin}
-      geometry={geometry}
-      // Explicit: three breaks ties by creation order, so a re-parse that remounts one
-      // material would draw the overlay under its surface. Godot appends the overlay
-      // after the surface's own material chain.
-      renderOrder={MATERIAL_OVERLAY_RENDER_ORDER}
-      // The base mesh is the node's pickable body and the one `bounds.ts`
-      // measures; a coincident second hit would report the same node twice.
-      raycast={NO_RAYCAST}
-      receiveShadow
-      onBeforeRender={shadow.onBeforeRender}
-      onAfterRender={shadow.onAfterRender}
-    >
-      <SurfaceMaterialSlot source={source} points={drawsPoints ? 'mesh' : undefined} />
-    </Drawn>
+    <>
+      <Drawn
+        {...skin}
+        geometry={geometry}
+        // The explicit computed order, over `overlayDrawProps`'s plain value: a chain
+        // on the surface draws between the surface and this overlay.
+        renderOrder={renderOrder}
+        raycast={NO_RAYCAST}
+        receiveShadow
+        onBeforeRender={shadow.onBeforeRender}
+        onAfterRender={shadow.onAfterRender}
+      >
+        <SurfaceMaterialSlot source={source} points={drawsPoints ? 'mesh' : undefined} />
+      </Drawn>
+      <NextPassLink
+        source={source}
+        ordinal={renderOrder}
+        drawsSelf={false}
+        // The overlay drew at this order; its own key lands in the set on recursion.
+        visited={new Set()}
+        geometry={geometry}
+        attach="material"
+        surfaceCount={1}
+        drawsPoints={drawsPoints}
+        skeleton={skeleton}
+        shadow={shadow}
+      />
+    </>
   );
 }
 
@@ -262,8 +252,6 @@ interface MeshShellProps {
   godotLayers: number;
   /** The dispatched scene-tree subtree parented under this MeshInstance3D. */
   subtree: ReactNode;
-  /** `material_overlay`'s second draw of this same surface, if the node has one. */
-  overlay: ReactNode;
   children: ReactNode;
 }
 
@@ -282,10 +270,9 @@ function MeshShell({
   shadow,
   godotLayers,
   subtree,
-  overlay,
   children,
 }: MeshShellProps) {
-  const { Drawn, skin } = drawOf(drawsPoints, skeleton);
+  const { Drawn, skin } = drawnElementOf(drawsPoints, skeleton);
   return (
     <Drawn
       {...skin}
@@ -300,7 +287,6 @@ function MeshShell({
       {children}
       {/* Not `visible = false` for SHADOWS_ONLY: `WebGLShadowMap.renderObject` would skip
           the shadow pass and the subtree. The hooks skip each colour draw instead. */}
-      {overlay}
       {subtree}
     </Drawn>
   );
@@ -321,19 +307,55 @@ const UNRESOLVED_MESH = (
  * A mesh's geometry plus a `<SurfaceMaterialSlots>` over its draw groups, so one hook per
  * component serves any surface count. Godot sizes the override array to the surface count
  * (`scene/3d/mesh_instance_3d.cpp:68,407`), so the draw groups set the slot count and an extra
- * override is dropped: a PrimitiveMesh takes only surface 0's.
+ * override is dropped: a PrimitiveMesh takes only surface 0's. Each group's starting material
+ * carries its own `next_pass` chain through `<NextPassChain>`, and the part's overlay mounts
+ * through the chain, one past the surface chains.
  */
-function MeshSurfaces({ part, overrides }: { part: SurfacedPart; overrides: MeshOverrides }) {
+function MeshSurfaces({
+  part,
+  overrides,
+  meshRef,
+  skeleton,
+  overlaySource,
+  shadow,
+}: {
+  part: SurfacedPart;
+  overrides: MeshOverrides;
+  /** The base draw, whose geometry every chain draw shares. */
+  meshRef: RefObject<DrawnMesh | null>;
+  /** The skeleton that skins the shell's surfaces, or null for an unskinned draw. */
+  skeleton?: THREE.Skeleton | null;
+  overlaySource: MaterialSource | undefined;
+  shadow: ShadowCastingEffects;
+}) {
   const groupCount = Math.max(part.surfaceIndices.length, 1);
   const sources = Array.from({ length: groupCount }, (_unused, i) =>
     effectiveMaterialSource(overrides, part.surfaceIndices[i] ?? i, part.materials[i])
   );
+  const drawsPoints = geometryDrawsPoints(part.geometry);
   return (
     <>
       <primitive object={part.geometry} attach="geometry" />
-      <SurfaceMaterialSlots
+      <SurfaceMaterialSlots sources={sources} points={drawsPoints ? 'mesh' : undefined} />
+      <NextPassChain
+        meshRef={meshRef}
         sources={sources}
-        points={geometryDrawsPoints(part.geometry) ? 'mesh' : undefined}
+        drawsPoints={drawsPoints}
+        shadow={shadow}
+        overlay={
+          overlaySource
+            ? (renderOrder) => (
+                <MaterialOverlayMesh
+                  meshRef={meshRef}
+                  drawsPoints={drawsPoints}
+                  skeleton={skeleton}
+                  source={overlaySource}
+                  shadow={shadow}
+                  renderOrder={renderOrder}
+                />
+              )
+            : undefined
+        }
       />
     </>
   );
@@ -362,10 +384,13 @@ function FollowingPart({
   const Drawn = drawnTag(drawsPoints);
   return (
     <Drawn ref={ref} {...drawHookProps(shadow)} userData={visualLayersUserData(godotLayers)}>
-      <MeshSurfaces part={part} overrides={overrides} />
-      {overlaySource && (
-        <MaterialOverlayMesh meshRef={ref} drawsPoints={drawsPoints} source={overlaySource} shadow={shadow} />
-      )}
+      <MeshSurfaces
+        part={part}
+        overrides={overrides}
+        meshRef={ref}
+        overlaySource={overlaySource}
+        shadow={shadow}
+      />
     </Drawn>
   );
 }
