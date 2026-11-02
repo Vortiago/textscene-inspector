@@ -284,7 +284,9 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
  */
 function readsStencilOf(properties: Record<string, string>): boolean {
   const mode = intOr(properties['stencil_mode'], StencilMode.DISABLED, CONTEXT);
-  const flags = intOr(properties['stencil_flags'], 0, CONTEXT);
+  // The bit field is an INT slot declared at int64 (`material.cpp:3267,3776`), the
+  // width the validator reads it at.
+  const flags = intOr(properties['stencil_flags'], 0, CONTEXT, 'int64');
   const compare = intOr(properties['stencil_compare'], StencilCompare.ALWAYS, CONTEXT);
   return (
     mode !== StencilMode.DISABLED && (flags & StencilFlag.READ) !== 0 && compare !== StencilCompare.ALWAYS

@@ -28,6 +28,7 @@ import { parallaxInjection, unshadedParallaxInjection } from '../materials/godot
 import { withPointDraw, type PointPlacement } from '../materials/godotPoint';
 import { withParticleDraw } from '../materials/godotParticlesProgram';
 import { SRGB_VERTEX_COLOR } from '../materials/godotVertexColor';
+import { growInjection } from '../materials/godotGrow';
 import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 import { triplanarInjection, triplanarUserData } from '../materials/godotTriplanar';
 import { worldTriplanarRecord } from '../testing/triplanarRecord';
@@ -169,6 +170,7 @@ const INJECTIONS: readonly InjectionCase[] = [
     () => particleBag().injection
   ),
   injected('materials/godotVertexColor.ts', 'sRGB vertex colour', COLOUR, () => SRGB_VERTEX_COLOR),
+  injected('materials/godotGrow.ts', 'grow', COLOUR, () => growInjection(0.03)),
   injected('materials/godotPoint.ts', 'points at instances', COLOUR, () => pointBag(false, 'instances')),
   injected('surfaceBillboard.ts', 'billboard', COLOUR, () => billboardInjections(KEPT_PARTICLES)?.colour),
   injected(
