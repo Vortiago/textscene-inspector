@@ -23,7 +23,7 @@ const BEGIN_VERTEX = '#include <begin_vertex>';
  * The include stays, so a later patch can still anchor on it; the line lands directly
  * after the `transformed` declaration three resolves into it.
  */
-export function growInjection(amount: number): ProgramInjection {
+function growInjection(amount: number): ProgramInjection {
   const line = `\ttransformed += normal * ${glslFloat(amount)};`;
   return {
     cacheKey: `godot-grow:${glslFloat(amount)}`,

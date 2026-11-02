@@ -14,7 +14,7 @@ import { buildMaterial } from '../../resources/materials/standardmaterial3d/buil
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import { standardMaterialBags } from '../../resources/materials/standardmaterial3d/materialBag';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
-import { growInjection, growInjectionOf } from './godotGrow';
+import { growInjectionOf } from './godotGrow';
 import { StandardMaterialSlot } from './StandardMaterialSlot';
 
 const GROWN = { grow: 'true', grow_amount: '0.03' };
@@ -111,8 +111,6 @@ describe('grow_amount is a program input, keyed through the injection', () => {
 
   it('keys the two amounts apart and the same amount to one key', () => {
     // The injection's own key, which `materialProgramInputs` rides (ADR-0038).
-    expect(growInjection(0.03).cacheKey).not.toBe(growInjection(0.02).cacheKey);
-    expect(growInjection(0.03).cacheKey).toBe(growInjection(0.03).cacheKey);
     const scalars = (amount: number) =>
       ({ ...parseStandardMaterial3DScalars(GROWN), growAmount: amount }) as StandardMaterial3DScalars;
     const grown = growInjectionOf(scalars(0.03));

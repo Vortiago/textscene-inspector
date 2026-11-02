@@ -13,7 +13,7 @@ import type { SurfaceDrawHooks } from '../surfaceDrawHooks';
  *
  * @canonical The draw order of a material overlay
  */
-export const MATERIAL_OVERLAY_RENDER_ORDER = 1;
+const MATERIAL_OVERLAY_RENDER_ORDER = 1;
 
 /**
  * Opts a draw out of picking: three calls `raycast` and collects nothing. The base draw is the
