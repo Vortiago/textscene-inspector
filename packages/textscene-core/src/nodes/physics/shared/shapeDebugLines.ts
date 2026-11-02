@@ -1,10 +1,7 @@
 /**
- * Godot's `Shape3D::get_debug_mesh_lines()` for the shape types the previewer decodes, as flat
- * segment ends the ShapeCast3D gizmo draws (shape_cast_3d.cpp:508-513,
- * shape_cast_3d_gizmo_plugin.cpp:63-67): scene/resources/3d/box_shape_3d.cpp:37-52,
- * sphere_shape_3d.cpp:37-60, cylinder_shape_3d.cpp:37-58, capsule_shape_3d.cpp:37-62,
- * concave_polygon_shape_3d.cpp:37-56, convex_polygon_shape_3d.cpp:38-56. The circles read the
- * float overloads of the engine's trig, as the shape code does.
+ * Godot's `Shape3D::get_debug_mesh_lines()` for the shapes the previewer decodes, as flat segment
+ * ends the ShapeCast3D gizmo draws (shape_cast_3d.cpp:508-513,
+ * shape_cast_3d_gizmo_plugin.cpp:63-67). The circles read the engine's float trig.
  */
 
 import { aabbEdges, centredAabb } from '../../../godot/math/aabb.js';
@@ -25,6 +22,8 @@ export const UNIT_BOX_SIZE: Vector3 = { x: 1, y: 1, z: 1 };
  * Godot's `AABB::get_edge` (`aabb.cpp:357-416`): the 12 edges of `-size/2, size`, in index order.
  * `BoxShape3D::get_debug_mesh_lines` reads them off its centred box (`box_shape_3d.cpp:37-52`), with
  * each end stored through the `real_t` float the engine keeps.
+ *
+ * @canonical BoxShape3D's debug wireframe
  */
 export function boxDebugLines({ x, y, z }: Vector3): Float32Array {
   const edges = aabbEdges(centredAabb({ x, y, z }));

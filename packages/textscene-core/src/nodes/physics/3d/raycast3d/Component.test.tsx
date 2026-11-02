@@ -1,9 +1,7 @@
 /**
- * <RayCast3D> draws the editor ray gizmo for every node (`ray_cast_3d_gizmo_plugin.cpp:61-67`): the
- * origin→target_position line plus the truncated pyramid of a `debug_shape_thickness` above 1,
- * ported from ray_cast_3d.cpp:403-425 (`_update_debug_shape_vertices`). The plugin passes the
- * node's own debug material, which no selected, unselected or instantiated variant replaces
- * (ray_cast_3d.cpp:531-551); a disabled node draws in the grey `shape_material_disabled` fetches.
+ * <RayCast3D> draws the editor ray gizmo for every node (ray_cast_3d_gizmo_plugin.cpp:61-67), the
+ * line and pyramid ported from ray_cast_3d.cpp:403-425. The node's own debug material never
+ * varies; a disabled node draws in the grey the disabled fetch returns.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -131,6 +129,7 @@ describe('<RayCast3D> instantiated gizmo', () => {
 describe('<RayCast3D> ray line', () => {
   it.each([
     ['the authored target', { target_position: 'Vector3(0, -3, 0)' }, [0, 0, 0, 0, -3, 0]],
+    ['a corner target, the value-check case', { target_position: 'Vector3(3, 2, -4)' }, [0, 0, 0, 3, 2, -4]],
     ['an off-axis target', { target_position: 'Vector3(2, 0, -3)' }, [0, 0, 0, 2, 0, -3]],
     ["Godot's default when the key is absent", {}, [0, 0, 0, 0, -1, 0]],
     ["Godot's default when the key is unreadable", { target_position: 'long' }, [0, 0, 0, 0, -1, 0]],
@@ -181,15 +180,6 @@ describe('<RayCast3D> pyramid fill', () => {
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
-  it('draws in the grey Godot fetches alone when the ray is disabled', async () => {
-    const renderer = await renderRay('Ray', { enabled: 'false' });
-    expect(lineOpacities(renderer)).toEqual([gizmoAlpha('unselected', INSTANTIATED_GIZMO_COLOUR.a)]);
-    expect(fillLook(renderer)).toEqual([
-      gizmoAlpha('unselected', INSTANTIATED_GIZMO_COLOUR.a),
-      godotColorToLinear(INSTANTIATED_GIZMO_COLOUR).toArray(),
-    ]);
-  });
-
   // The strip buffer in Godot's push order: the first slot is a tip vertex, a third of a base
   // ring `thickness / 100` m across at the origin, each swung a quarter turn step about the ray
   // (ray_cast_3d.cpp:422-424).
@@ -222,6 +212,30 @@ describe('<RayCast3D> pyramid fill', () => {
     expect(positions[7]).toBeCloseTo(-0.02 * Math.cos(ring), 6);
     expect(positions[8]).toBeCloseTo(0, 6);
   });
+
+  it('builds the base ring at the maximum grade of 5, 0.05 m across', async () => {
+    const renderer = await renderRay('Ray', {
+      target_position: 'Vector3(0, -3, 0)',
+      debug_shape_thickness: '5',
+    });
+    const positions = Array.from(fillOf(renderer).geometry.getAttribute('position').array);
+    const ring = Math.PI / 4;
+    expect(positions[6]).toBeCloseTo(0.05 * Math.cos(ring), 6);
+    expect(positions[8]).toBeCloseTo(0.05 * Math.sin(ring), 6);
+  });
+});
+
+describe('<RayCast3D> disabled gizmo', () => {
+  it('draws both parts in the grey Godot fetches alone while the ray is disabled, selected and unselected', async () => {
+    for (const selectedPath of [null, 'Ray']) {
+      const renderer = await renderRay(selectedPath, { enabled: 'false' });
+      expect(lineOpacities(renderer)).toEqual([gizmoAlpha('unselected', INSTANTIATED_GIZMO_COLOUR.a)]);
+      expect(fillLook(renderer)).toEqual([
+        gizmoAlpha('unselected', INSTANTIATED_GIZMO_COLOUR.a),
+        godotColorToLinear(INSTANTIATED_GIZMO_COLOUR).toArray(),
+      ]);
+    }
+  });
 });
 
 describe('<RayCast3D> debug colour', () => {
@@ -244,7 +258,7 @@ describe('<RayCast3D> debug colour', () => {
   });
 
   // `color == Color(0, 0, 0)` compares all four channels with the default's alpha of 1
-  // (color.h:80, ray_cast_3d.cpp:545), so an alpha-less black reads as the empty colour.
+  // (color.h:80, ray_cast_3d.cpp:490), so an alpha-less black reads as the empty colour.
   it('reads an authored Color(0, 0, 0, 1) as empty, and puts on the collision colour', async () => {
     const line = await gizmoLine({ debug_shape_custom_color: 'Color(0, 0, 0, 1)' });
     const material = line.material as THREE.LineBasicMaterial;

@@ -69,7 +69,8 @@ async function renderRoot(extraProperties = '') {
 }
 
 // The gizmo parts in draw order: the dispatcher mounts Locked, then its own, each the ray's line,
-// the cast's sweep line and the cast's wireframe: 9 lines, then the 3 pyramid fills as meshes.
+// the cast's sweep line and the cast's wireframe: 6 lines and 2 pyramid fills before any test
+// appends a node; the Sleepy run adds the seventh line and the third fill.
 const LOCKED_RAY = 0;
 const LOCKED_CAST_LINE = 1;
 const LOCKED_CAST_WIRE = 2;

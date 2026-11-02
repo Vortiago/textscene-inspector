@@ -1,8 +1,10 @@
 /**
  * Gizmos, both halves of each pair: the unselected render, and the selected one that adds the
  * helper. A scene that sets `gizmos: true` opens with the Gizmos toggle on, which every other
- * capture keeps off. With it on and nothing selected, a node Godot draws a gizmo for in every node
- * shows it faint (ADR-0056), and a node Godot draws it for only when selected shows none.
+ * capture keeps off. With it on and nothing selected, a node Godot draws a gizmo for in every
+ * node still shows it (ADR-0056). A plugin material draws the faint variant, and a plugin that
+ * passes the node's own material, as the cast nodes' do, passes full colour. A node Godot draws a
+ * gizmo for only when selected shows none.
  */
 
 export const GIZMO_SCENES = [

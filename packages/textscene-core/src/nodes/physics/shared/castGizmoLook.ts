@@ -1,7 +1,6 @@
 /**
- * The look a cast node's gizmo parts draw with. The cast plugins pass the node's own debug material
- * and `get_material` never replaces it, so the look holds in every selection and instance state; a
- * disabled node draws in the grey `shape_material_disabled` fetches alone
+ * The look a cast node's gizmo parts draw with: the node's own debug material, which no variant
+ * replaces, or the grey the disabled fetch returns alone
  * (node_3d_editor_gizmos.cpp:1027-1028, ADR-0056).
  */
 

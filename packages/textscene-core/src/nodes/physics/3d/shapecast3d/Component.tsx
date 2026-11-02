@@ -1,10 +1,7 @@
 /**
- * <ShapeCast3D>: a Node3D group that draws Godot's sweep gizmo for every node: the
- * origin→target_position line plus the shape's wireframe at the sweep's end
- * (shape_cast_3d_gizmo_plugin.cpp:61-67, ADR-0056 every-node). The plugin passes the node's own
- * debug material and never varies it, so the gizmo keeps that colour in every selection and
- * instance state; without a shape the line alone draws, and a zero target draws the wireframe
- * alone, as in shape_cast_3d.cpp:504-521.
+ * <ShapeCast3D>: a Node3D group that draws Godot's sweep gizmo for every node: the origin→target
+ * line plus the shape's wireframe at the sweep's end. Without a shape the line alone draws, and a
+ * zero target draws the wireframe alone, as in shape_cast_3d.cpp:504-521.
  */
 
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';

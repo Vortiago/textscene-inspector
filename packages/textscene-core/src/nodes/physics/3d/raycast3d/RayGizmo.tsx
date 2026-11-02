@@ -1,9 +1,7 @@
 /**
  * The RayCast3D editor gizmo, ported from ray_cast_3d.cpp:403-425: the origin→target_position line,
  * and, at a thickness above 1, the truncated pyramid the plugin adds as a fill
- * (ray_cast_3d_gizmo_plugin.cpp:61-67). The plugin passes the node's own debug material, and
- * `get_material` never replaces it, so the look holds in every selection and instance state. It
- * draws disabled in the grey `shape_material_disabled` fetches alone.
+ * (ray_cast_3d_gizmo_plugin.cpp:61-67). The node's own debug material never varies.
  */
 
 import { useMemo } from 'react';
@@ -46,7 +44,7 @@ function rayPyramid(target: Vector3, thickness: number): THREE.BufferGeometry | 
   if (thickness <= 1 || isZeroTarget(target)) return null;
 
   const [dx, dy, dz] = normalizedVector3(target.x, target.y, target.z);
-  // The cross axis: a ray level with x and y picks the y/z pair (ray_cast_3d.cpp:417).
+  // The cross axis: a ray level with x and y picks the y/z pair (ray_cast_3d.cpp:418).
   const levelWithXAndY = Math.abs(dx) + Math.abs(dy) > CMP_EPSILON;
   const [nx, ny, nz] = normalizedVector3(
     levelWithXAndY ? -dy : 0,
@@ -88,7 +86,7 @@ interface RayGizmoProps {
   thickness: number;
   /** The authored `debug_shape_custom_color`, undefined when unauthored. */
   customColor?: Rgba;
-  /** Whether the ray casts. Godot default true, per ray_cast_3d.h:50. */
+  /** Whether the ray casts. Godot default true, per ray_cast_3d.h:42. */
   enabled: boolean;
 }
 

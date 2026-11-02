@@ -131,6 +131,31 @@ describe('frameSceneBounds — a bounds union with no extent', () => {
   });
 });
 
+describe('frameSceneBounds — editor chrome meshes frame with the gizmos', () => {
+  it('frames on a small real mesh, a chrome fill and a long gizmo line never widening the frame', () => {
+    // Godot frames on the scene's geometry: a gizmo fill is a mesh in the tree but not a frame, so
+    // it and every editor-chrome object join the line box (ADR-0056).
+    const scene = new THREE.Scene();
+    const fill = new THREE.Mesh(new THREE.BoxGeometry(60, 60, 60), new THREE.MeshBasicMaterial());
+    // Editor chrome, as GizmoGroup tags a gizmo's wrapper (GizmoGroup.tsx:23).
+    fill.userData = { tscnEditorHelper: true };
+    scene.add(fill);
+    const line = new THREE.LineSegments(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-50, 0, 0), new THREE.Vector3(50, 0, 0)])
+    );
+    line.userData = { tscnEditorHelper: true };
+    scene.add(line);
+    const real = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial());
+    scene.add(real);
+
+    const controls = { target: new THREE.Vector3(), update: () => {} };
+    frameSceneBounds(scene, makeCamera(), controls);
+
+    expect(controls.target.x).toBeCloseTo(0, 5);
+    expect(controls.target.y).toBeCloseTo(0, 5);
+  });
+});
+
 describe('frameSceneBounds — CSG contributor bounds proxies', () => {
   it('frames a contributor solid the boolean subtracted away', () => {
     // Each shape's node_aabb is its own brush, filled by the root's recursive build

@@ -1,7 +1,6 @@
 /**
- * What a Godot cast node's `target_position` draws: the origin→target line its debug vertices
- * hold, and the zero vector no gizmo draws, which both nodes' vertex builders return early on
- * (`ray_cast_3d.cpp:407-412`, `shape_cast_3d.cpp:515-520`).
+ * What a Godot cast node's target_position draws: the origin→target line its debug vertices hold,
+ * and the zero vector no gizmo draws (ray_cast_3d.cpp:407-412, shape_cast_3d.cpp:515-520).
  */
 
 import type { Vector3 } from '../../../godot/math/vector.js';
@@ -11,12 +10,14 @@ import { warn } from '../../../logger';
 /** `_target_position = Vector3(0, -1, 0)` in scene/3d/physics/ray_cast_3d.h:51 and shape_cast_3d.h:50. */
 export const DEFAULT_TARGET_POSITION: Vector3 = Object.freeze({ x: 0, y: -1, z: 0 });
 
-/** `enabled = true` in scene/3d/physics/ray_cast_3d.h:50 and shape_cast_3d.h:49. */
+/** `enabled = true` in scene/3d/physics/ray_cast_3d.h:42 and shape_cast_3d.h:43. */
 export const DEFAULT_ENABLED = true;
 
 /**
  * Reads a cast node's authored `target_position`, warning and leaving it undefined on a literal
  * the vector grammar refuses, so the consumer applies Godot's default.
+ *
+ * @canonical A cast node's target_position parse
  */
 export function parseCastTargetPosition(
   properties: Record<string, string>,

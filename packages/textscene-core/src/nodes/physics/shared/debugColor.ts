@@ -28,7 +28,7 @@ export function parseDebugColor(raw: string | undefined): Rgba {
 /**
  * The colour a cast node's gizmo material takes: the node's `debug_shape_custom_color`, or
  * the project collision colour when it is absent or equals Godot's empty default, whose literal
- * carries an alpha of 1 (`ray_cast_3d.cpp:545-551`, `shape_cast_3d.cpp:626-633`, `color.h:80`).
+ * carries an alpha of 1 (`ray_cast_3d.cpp:489-492`, `shape_cast_3d.cpp:571-574`, `color.h:80`).
  *
  * @canonical A cast node's debug shape colour
  */

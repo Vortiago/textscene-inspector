@@ -1,9 +1,7 @@
 /**
  * The ShapeCast3D editor gizmo, per shape_cast_3d_gizmo_plugin.cpp:61-67: the origin→target sweep
  * line first, then the shape's debug wireframe at the sweep's end, where the safe fraction of 1 of
- * the editor pose puts it (shape_cast_3d.cpp:504-521). The plugin passes the node's own debug
- * material, and `get_material` never replaces it, so the look holds in every selection and
- * instance state. It draws disabled in the grey `shape_material_disabled` fetches alone.
+ * the editor pose puts it (shape_cast_3d.cpp:504-521). The node's own debug material never varies.
  */
 
 import { useMemo } from 'react';
@@ -17,7 +15,7 @@ import { warn } from '../../../../logger';
 import type { Rgba } from '../../../../godot/math/math.js';
 import type { Vector3 } from '../../../../godot/math/vector.js';
 import { castTargetLine } from '../../shared/castTarget';
-import { useCastGizmoLook } from '../../shared/castGizmoLook';
+import { useCastGizmoLook, type CastGizmoLook } from '../../shared/castGizmoLook';
 import { UNIT_BOX_SIZE, boxDebugLines, shapeDebugLines } from '../../shared/shapeDebugLines';
 
 /** The one place the gizmo imports three's convex hull, and lazily, as CollisionShape3D's is. */
@@ -33,7 +31,7 @@ interface ShapeCastGizmoProps {
   shape: TscnInternalResource | null;
   /** The authored `debug_shape_custom_color`, undefined when unauthored. */
   customColor?: Rgba;
-  /** Whether the sweep casts. Godot default true, per shape_cast_3d.h:48. */
+  /** Whether the sweep casts. Godot default true, per shape_cast_3d.h:43. */
   enabled: boolean;
 }
 
@@ -43,7 +41,7 @@ export function ShapeCastGizmo({ target, shape, customColor, enabled }: ShapeCas
   return (
     <>
       {line && <GizmoLine positions={line} color={look.color} opacity={look.opacity} />}
-      {shape && <ShapeWireframe shape={shape} target={target} color={look.color} opacity={look.opacity} />}
+      {shape && <ShapeWireframe shape={shape} target={target} look={look} />}
     </>
   );
 }
@@ -51,55 +49,43 @@ export function ShapeCastGizmo({ target, shape, customColor, enabled }: ShapeCas
 interface ShapeWireframeProps {
   shape: TscnInternalResource;
   target: Vector3;
-  color: THREE.Color;
-  opacity: number;
+  look: CastGizmoLook;
 }
 
 /** The shape's wireframe beside the sweep line, from Godot's `get_debug_mesh_lines` port. */
-function ShapeWireframe({ shape, target, color, opacity }: ShapeWireframeProps) {
+function ShapeWireframe({ shape, target, look }: ShapeWireframeProps) {
   return shape.type === 'ConvexPolygonShape3D' ? (
-    <ConvexHullWireframe shape={shape} target={target} color={color} opacity={opacity} />
+    <ConvexHullWireframe shape={shape} target={target} look={look} />
   ) : (
-    <SyncWireframe shape={shape} target={target} color={color} opacity={opacity} />
+    <SyncWireframe shape={shape} target={target} look={look} />
   );
 }
 
 interface WireframeGizmoProps {
   target: Vector3;
-  color: THREE.Color;
-  opacity: number;
+  look: CastGizmoLook;
 }
 
 /** The wireframe Godot's sync debug-line ports draw, or the unit box a type without a port falls back to. */
-function SyncWireframe({
-  shape,
-  target,
-  color,
-  opacity,
-}: WireframeGizmoProps & { shape: TscnInternalResource }) {
+function SyncWireframe({ shape, target, look }: WireframeGizmoProps & { shape: TscnInternalResource }) {
   const wire = useMemo(() => {
     const lines = shapeDebugLines(shape);
     if (lines) return lines;
     // Godot draws every Shape3D type; without a port, the shape's presence still shows.
-    warn(`[ShapeCast3D] Unsupported shape type "${shape.type}" — drawing a unit wireframe box.`);
+    warn(`[ShapeCast3D] Unsupported shape type "${shape.type}", drawing a unit wireframe box.`);
     return boxDebugLines(UNIT_BOX_SIZE);
   }, [shape]);
-  return <Wireframe wire={wire} target={target} color={color} opacity={opacity} />;
+  return <Wireframe wire={wire} target={target} look={look} />;
 }
 
 /**
  * The wireframe of a convex shape: the hull's face outlines, through the lazy ConvexHull, as
  * CollisionShape3D hulls load off the initial paint too. Nothing draws while it loads.
  */
-function ConvexHullWireframe({
-  shape,
-  target,
-  color,
-  opacity,
-}: WireframeGizmoProps & { shape: TscnInternalResource }) {
+function ConvexHullWireframe({ shape, target, look }: WireframeGizmoProps & { shape: TscnInternalResource }) {
   const hull = useLazyModule(loadConvexHull);
   const edges = useMemo(() => buildHullEdges(shape, hull), [hull, shape]);
-  return <Wireframe wire={edges} target={target} color={color} opacity={opacity} />;
+  return <Wireframe wire={edges} target={target} look={look} />;
 }
 
 /** The hull's face outlines from `ConvexPolygonShape3D::get_debug_mesh_lines` port, or null while loading or for a thin cloud. */
@@ -146,7 +132,7 @@ function buildHullEdges(
 }
 
 /** The built wireframe at the sweep's end: each vertex plus the whole target. */
-function Wireframe({ wire, target, color, opacity }: WireframeGizmoProps & { wire: Float32Array | null }) {
+function Wireframe({ wire, target, look }: WireframeGizmoProps & { wire: Float32Array | null }) {
   const offset = useMemo(() => {
     // The wireframe sits at the sweep's end, where the editor pose's safe fraction of 1 puts it
     // (shape_cast_3d.cpp:508-513).
@@ -154,7 +140,7 @@ function Wireframe({ wire, target, color, opacity }: WireframeGizmoProps & { wir
     return offsetByTarget(wire, target);
   }, [wire, target]);
   if (!offset) return null;
-  return <GizmoLine positions={offset} color={color} opacity={opacity} />;
+  return <GizmoLine positions={offset} color={look.color} opacity={look.opacity} />;
 }
 
 /** Each wireframe vertex plus the target, the offset Godot's loop applies componentwise. */

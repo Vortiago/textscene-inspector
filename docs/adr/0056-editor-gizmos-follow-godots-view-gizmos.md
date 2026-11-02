@@ -44,12 +44,13 @@ every gate and keeps its own colour. A part that Godot draws for the selected no
 gizmo that is drawn for every node, sits in `<SelectedOnly>`.
 
 The variants exist only where Godot fetches a `create_material` material per gizmo, through
-`get_material(name, gizmo)`, or where the look rides vertex colours. RayCast3D and ShapeCast3D are
-neither: their redraw passes the node's own debug material (`ray_cast_3d_gizmo_plugin.cpp:63`), so
-their parts draw in that colour at its alpha in every selection and instance state. A disabled
-cast node's redraw fetches `shape_material_disabled` without a gizmo, which returns the grey
-variant at its unselected alpha alone (`node_3d_editor_gizmos.cpp:1027-1028`), so those parts draw
-grey at 0.18 in every state. Both gates take the `useGizmoDrawn` shape and name their own look.
+`get_material(name, gizmo)`, or where the look rides vertex colours. RayCast3D and ShapeCast3D's
+enabled redraw passes neither path: it hands the node's own debug material to `add_lines` and
+`add_vertices` (`ray_cast_3d_gizmo_plugin.cpp:63`), so those parts draw in that colour at its alpha
+in every selection and instance state. A disabled cast node's redraw fetches `shape_material_disabled`
+without a gizmo, which returns the grey variant at its unselected alpha alone
+(`node_3d_editor_gizmos.cpp:1027-1028`), so those parts draw grey at 0.18 in every state. Both
+gates take the `useGizmoDrawn` shape and name their own look.
 
 ### The split
 

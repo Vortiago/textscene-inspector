@@ -1,10 +1,7 @@
 /**
- * <ShapeCast3D> draws the editor sweep gizmo for every node (`shape_cast_3d_gizmo_plugin.cpp:61-67`):
- * the origin→target_position line plus the shape's debug wireframe sitting at the sweep's end,
- * where the editor pose's safe fraction of 1 puts it (shape_cast_3d.cpp:504-521). The wireframe
- * is Godot's `Shape3D::get_debug_mesh_lines()` port, scene/resources/3d/*.cpp. The plugin passes
- * the node's own debug material, which no selected, unselected or instantiated variant replaces;
- * a disabled node draws in the grey `shape_material_disabled` fetches.
+ * <ShapeCast3D> draws the editor sweep gizmo for every node (shape_cast_3d_gizmo_plugin.cpp:61-67),
+ * the sweep line and offset wireframe ported from shape_cast_3d.cpp:504-521, the wireframe from
+ * Shape3D::get_debug_mesh_lines. The node's own debug material never varies.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -58,8 +55,9 @@ const convexShape: TscnInternalResource = {
 };
 
 /**
- * The gizmo `import()`s three's ConvexGeometry lazily for a convex shape, which reads a file the
- * first time. Loading it here first leaves that import a cache hit, which lands within the settle.
+ * The gizmo imports three's ConvexHull lazily for a convex shape, which reads a file the first
+ * time. ConvexGeometry imports it as well, so this warm import leaves the gizmo's a cache hit,
+ * which lands within the settle.
  */
 beforeAll(() => import('three/addons/geometries/ConvexGeometry.js'));
 
@@ -169,14 +167,18 @@ describe('<ShapeCast3D> instantiated gizmo', () => {
       }
     }
   });
+});
 
-  it('draws both parts in the grey Godot fetches alone while disabled', async () => {
-    const renderer = await renderCast('Cast', { enabled: 'false' });
-    const expected = godotColorToLinear(INSTANTIATED_GIZMO_COLOUR).toArray();
-    const disabledOpacity = gizmoAlpha('unselected', INSTANTIATED_GIZMO_COLOUR.a);
-    for (const material of lineMaterials(renderer)) {
-      expect(material.color.toArray()).toEqual(expected);
-      expect(material.opacity).toBe(disabledOpacity);
+describe('<ShapeCast3D> disabled gizmo', () => {
+  it('draws both parts in the grey Godot fetches alone while disabled, selected and unselected', async () => {
+    for (const selectedPath of [null, 'Cast']) {
+      const renderer = await renderCast(selectedPath, { enabled: 'false' });
+      const expected = godotColorToLinear(INSTANTIATED_GIZMO_COLOUR).toArray();
+      const disabledOpacity = gizmoAlpha('unselected', INSTANTIATED_GIZMO_COLOUR.a);
+      for (const material of lineMaterials(renderer)) {
+        expect(material.color.toArray()).toEqual(expected);
+        expect(material.opacity).toBe(disabledOpacity);
+      }
     }
   });
 });

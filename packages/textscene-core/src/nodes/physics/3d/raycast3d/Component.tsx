@@ -1,8 +1,7 @@
 /**
- * <RayCast3D>: a Node3D group that draws Godot's ray gizmo: the origin→target_position line plus
- * the pyramid of a thickness above 1 (ray_cast_3d_gizmo_plugin.cpp:61-67, ADR-0056 every-node). The
- * plugin fetches the node's own debug material and never varies it, so the gizmo keeps that colour
- * in every selection and instance state, and a zero target draws nothing, as in Godot.
+ * <RayCast3D>: a Node3D group that draws Godot's ray gizmo for every node: the origin→target line
+ * and the pyramid of a thickness above 1. The node's own debug material never varies, and a zero
+ * target draws nothing, as in Godot.
  */
 
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
