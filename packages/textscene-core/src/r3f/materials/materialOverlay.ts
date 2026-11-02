@@ -4,9 +4,12 @@ import type * as THREE from 'three';
 import type { SurfaceDrawHooks } from '../surfaceDrawHooks';
 
 /**
- * The overlay's draw-order key. Any value above the 3D default (0) puts it after its own surface. 1
- * keeps it as close to that surface as three allows, since every step also steps it past unrelated
- * content at the same depth. Godot appends the overlay after the surface's own material chain.
+ * The overlay's draw-order seed. The next_pass scheme orders a part's draws 0..k: the
+ * surface's own draw at 0, each chain link at its index, and the overlay one past the
+ * greatest ordinal any chain reached (`nextPassRenderOrder`). This is that value for a
+ * part with no chain — ordinal 1, after the surface — and any value above the 3D
+ * default keeps the overlay after its own surface when the call site writes the
+ * explicit computed order over it.
  *
  * @canonical The draw order of a material overlay
  */
