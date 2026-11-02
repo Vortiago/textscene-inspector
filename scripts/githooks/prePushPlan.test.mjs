@@ -7,7 +7,13 @@ const plan = (changed, deleted = [], isNegativeFixture = () => false, testsBesid
 /** A negative-fixture predicate over the one fixture `edge-a.tscn`, wherever it sits. */
 const isEdgeA = (path) => path.split('/').at(-1) === 'edge-a.tscn';
 
-const STATIC_GATE = ['pnpm format:check', 'pnpm lint', 'pnpm type-check:all', 'pnpm type-check:tests'];
+const STATIC_GATE = [
+  'pnpm format:check',
+  'pnpm lint',
+  'pnpm check:dep-scripts',
+  'pnpm type-check:all',
+  'pnpm type-check:tests',
+];
 
 /** The packages whose tests project already type-checks every source file. */
 const COVERED_BY_TESTS =

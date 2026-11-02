@@ -63,6 +63,7 @@ jobs:
       # First: it needs no build and fails in seconds.
       - run: pnpm format:check
       - run: pnpm lint
+      - run: pnpm check:dep-scripts
       # `type-check:all` builds the packages once before the parallel app checks. Each app's
       # `pretype-check` rebuilds core, so four parallel builds would rewrite the dist an app
       # is reading. The test projects and the docs checks read that dist too.
