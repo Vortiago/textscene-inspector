@@ -24,6 +24,7 @@ import {
 import * as THREE from 'three';
 import { materialSourceKey, resolveNextPass, type MaterialSource } from './materialSource';
 import { NO_RAYCAST } from './materialOverlay';
+import { drawnTag } from '../meshes/meshContent';
 import { readyMaterial, useMaterial } from './useMaterial';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
 import { surfaceAttach, surfaceSources } from './SurfaceMaterialSlots';
@@ -57,9 +58,10 @@ export function nextPassRenderOrder(ordinal: number): number {
  * @canonical The drawn element of a surface draw
  */
 export function drawnElementOf(drawsPoints: boolean, skeleton: THREE.Skeleton | null | undefined) {
-  return skeleton && !drawsPoints
-    ? { Drawn: 'skinnedMesh' as const, skin: { skeleton, bindMode: THREE.DetachedBindMode } }
-    : { Drawn: drawsPoints ? ('points' as const) : ('mesh' as const), skin: {} };
+  if (skeleton && !drawsPoints) {
+    return { Drawn: 'skinnedMesh' as const, skin: { skeleton, bindMode: THREE.DetachedBindMode } };
+  }
+  return { Drawn: drawnTag(drawsPoints), skin: {} };
 }
 
 /**
