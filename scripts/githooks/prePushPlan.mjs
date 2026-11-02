@@ -40,7 +40,12 @@ const REPOSITORY_TYPE_CHECKS = [
 ];
 
 /** The repository-wide static checks, in the order of the CI `static` job: fastest first. */
-export const STATIC_GATE = [['pnpm', 'format:check'], ['pnpm', 'lint'], ...REPOSITORY_TYPE_CHECKS];
+export const STATIC_GATE = [
+  ['pnpm', 'format:check'],
+  ['pnpm', 'lint'],
+  ['pnpm', 'check:dep-scripts'],
+  ...REPOSITORY_TYPE_CHECKS,
+];
 
 /**
  * The packages whose `type-check:tests` project holds every file of their `type-check` project,
