@@ -35,9 +35,11 @@ import { parseStandardMaterial3DScalars } from '../../resources/materials/standa
 /**
  * The visited seed every chain's walk starts from: nothing has drawn yet, so no key is
  * held. The walkers never mutate their visited set — `visitedWith` returns a new one —
- * so one frozen instance serves every group and every owner per render.
+ * so one instance serves every group, every owner and every overlay link per render.
+ *
+ * @canonical The visited seed of a next_pass chain walk
  */
-const NOTHING_DRAWN: ReadonlySet<string> = new Set();
+export const NOTHING_DRAWN: ReadonlySet<string> = new Set();
 
 /**
  * The draw order of a next_pass chain draw: the surface's own draw is ordinal 0, each
@@ -203,11 +205,11 @@ export function NextPassLink(props: PassProps) {
     [material, scalars]
   );
   const nextVisited = useMemo(() => visitedWith(visited, source), [visited, source]);
-  // The pass's fate reported once it is known: a resolved one reached its position
-  // whether it drew or was skipped over, and a declined one ends its chain there. A
-  // pass still loading waits, and the overlay's own order then moves past it, in
-  // place, in the same frame the link draws.
-  useEffect(() => {
+  // The pass's fate reported once it is known, in the layout pass: a resolved one
+  // reached its position whether it drew or was skipped over, and a declined one ends
+  // its chain there. A pass still loading waits, and the overlay's own order then
+  // moves past it in the same frame the link draws, before paint.
+  useLayoutEffect(() => {
     if (material || loaded.status === 'declined') onOrdinal?.(ordinal);
   }, [loaded.status, material, ordinal, onOrdinal]);
 

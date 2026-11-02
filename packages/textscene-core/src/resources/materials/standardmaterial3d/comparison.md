@@ -156,11 +156,14 @@ A 40 px point that draws shadows only hangs under an omni light, above a floor t
 
 <!-- compare: image=material-next-pass status=done fixture=unit-material-next-pass.tscn -->
 
-A material's `next_pass` draws one extra surface after its own. Every link draws after the links before it, as the chain walk runs (`render_forward_clustered.cpp:4183-4201`). The fixture's pass culls front faces, so its back faces draw a rim round the sphere. Unshaded blue with `grow = true` moves each of those vertices 0.03 along its normal (`material.cpp:1458-1461`). The rim therefore sits outside the orange edge. The link resolves against the starting material's own tables and decodes through the one bag derivation. Every surface owner therefore mounts the chain the same way: MeshInstance3D, CPUParticles3D, CSG, GridMap and the GLB surface override.
+A material's `next_pass` draws one extra surface after its own. Every link draws after the links before it, as the chain walk runs (`render_forward_clustered.cpp:4183-4201`). The fixture's pass culls front faces, so its back faces draw a rim round the sphere. Unshaded blue with `grow = true` offsets each vertex by `grow_amount = 0.03` along its normal (`material.cpp:1458-1461`), in model space before the node's transform. The rim therefore sits outside the orange edge. The link resolves against the starting material's own tables and decodes through the one bag derivation. Every surface owner therefore mounts the chain the same way: MeshInstance3D, CPUParticles3D, CSG, GridMap and the GLB surface override each share the base draw's geometry, draw unpicked one past the draw they cover, and cast nothing of their own, since the surface's own draw casts the geometry once.
 
 At equal `render_priority`, the chain order decides which draw covers which. Godot's opaque sort breaks the tie later in the key, on the material's RID (`render_forward_clustered.h:517-526`). So a link at the base's priority covers its base.
 
 - **Unimplemented** A stencil-reading link's own draw: the chain continues past it (`material.cpp:916-968`), and the stencil buffer itself stays unrendered.
+- **Approximated** A transparent link draws at three's per-object order, which sorts it after every unrelated order-0 transparent draw, where Godot keeps one global transparent sort keyed on the material's `render_priority` (`render_forward_clustered.h:517-526`).
+- **Approximated** A GLB chain sibling never joins the range fade: `fadedMeshMaterials` tracks the clone's own slots, so a fading surface's link stays opaque while its surface fades.
+- **Unimplemented** `grow` offsets the colour pass's vertices only. The alpha-depth prepass and the shadow depth draw the un-offset position, where Godot's depth variant runs the same vertex body. (`surfaceDepthMaterial` clones the depth base without the grow injection; the billboard offset records its depth injection at `materialBag.ts:235-236`.)
 
 ## Linting
 

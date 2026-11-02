@@ -11,6 +11,7 @@ import { resolveMaterialSource, type MaterialSource } from '../../../../r3f/mate
 import { SurfaceMaterialSlot } from '../../../../r3f/materials/SurfaceMaterialSlot';
 import { SurfaceMaterialSlots, surfaceSources } from '../../../../r3f/materials/SurfaceMaterialSlots';
 import {
+  NOTHING_DRAWN,
   NextPassChain,
   NextPassLink,
   nextPassRenderOrder,
@@ -139,7 +140,11 @@ function ParticleChainDraw({ spec, points }: { spec: ChainDrawSpec; points: bool
         frustumCulled={false}
         renderOrder={nextPassRenderOrder(spec.ordinal)}
         raycast={NO_RAYCAST}
-        {...drawHookProps(spec.shadow)}
+        // The chain draw casts nothing of its own: the surface's own draw casts
+        // the geometry once, so only the colour pair mounts.
+        receiveShadow
+        onBeforeRender={spec.shadow.onBeforeRender}
+        onAfterRender={spec.shadow.onAfterRender}
         userData={boxlessUserData()}
       >
         <SurfaceMaterialSlot
@@ -158,7 +163,9 @@ function ParticleChainDraw({ spec, points }: { spec: ChainDrawSpec; points: bool
       frustumCulled={false}
       renderOrder={nextPassRenderOrder(spec.ordinal)}
       raycast={NO_RAYCAST}
-      {...drawHookProps(spec.shadow)}
+      receiveShadow
+      onBeforeRender={spec.shadow.onBeforeRender}
+      onAfterRender={spec.shadow.onAfterRender}
       userData={boxlessUserData()}
     >
       <SurfaceMaterialSlot source={spec.source} attach={spec.attach} particles={withParticleDraw} />
@@ -279,7 +286,7 @@ function OverlayDraw({
         drawsSelf={false}
         // The overlay drew at this order; its own key lands in the set on recursion,
         // so a cycle back to the overlay material ends its chain.
-        visited={new Set()}
+        visited={NOTHING_DRAWN}
         geometry={geometry}
         attach="material"
         surfaceCount={1}

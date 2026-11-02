@@ -27,8 +27,9 @@ import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
-import { NO_RAYCAST } from '../../../r3f/materials/materialOverlay';
+import { overlayDrawProps } from '../../../r3f/materials/materialOverlay';
 import {
+  NOTHING_DRAWN,
   NextPassChain,
   NextPassLink,
   drawnElementOf,
@@ -210,13 +211,9 @@ function MaterialOverlayMesh({
       <Drawn
         {...skin}
         geometry={geometry}
-        // The explicit computed order, over `overlayDrawProps`'s plain value: a chain
-        // on the surface draws between the surface and this overlay.
+        {...overlayDrawProps(shadow)}
         renderOrder={renderOrder}
-        raycast={NO_RAYCAST}
         receiveShadow
-        onBeforeRender={shadow.onBeforeRender}
-        onAfterRender={shadow.onAfterRender}
       >
         <SurfaceMaterialSlot source={source} points={drawsPoints ? 'mesh' : undefined} />
       </Drawn>
@@ -225,7 +222,7 @@ function MaterialOverlayMesh({
         ordinal={renderOrder}
         drawsSelf={false}
         // The overlay drew at this order; its own key lands in the set on recursion.
-        visited={new Set()}
+        visited={NOTHING_DRAWN}
         geometry={geometry}
         attach="material"
         surfaceCount={1}

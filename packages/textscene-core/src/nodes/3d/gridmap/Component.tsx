@@ -303,7 +303,9 @@ function ChainBatchedTiles({ spec, matrices }: { spec: ChainDrawSpec; matrices: 
       // The surface's own batch is the grid's pickable body; a coincident second hit
       // would report the same cells twice.
       raycast={NO_RAYCAST}
-      {...drawHookProps(spec.shadow)}
+      receiveShadow
+      onBeforeRender={spec.shadow.onBeforeRender}
+      onAfterRender={spec.shadow.onAfterRender}
     >
       <SurfaceMaterialSlot source={spec.source} points={pointPlacementOf(spec.geometry)} />
     </instancedMesh>
@@ -325,7 +327,11 @@ function ChainCellPoints({ spec, cellPoints }: { spec: ChainDrawSpec; cellPoints
       args={[geometry, startingMaterial]}
       renderOrder={nextPassRenderOrder(spec.ordinal)}
       raycast={NO_RAYCAST}
-      {...drawHookProps(spec.shadow)}
+      // The chain draw casts nothing of its own: the surface's own draw casts the
+      // geometry once, so only the colour pair mounts.
+      receiveShadow
+      onBeforeRender={spec.shadow.onBeforeRender}
+      onAfterRender={spec.shadow.onAfterRender}
     >
       <SurfaceMaterialSlot source={spec.source} points="instances" />
     </points>
