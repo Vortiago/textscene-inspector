@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { maxWorkersFor, vmMemoryLimit } from '../../vitest.shared';
+import { maxWorkersFor, vmMemoryLimit } from '../vitest.shared.ts';
 
 const GB = 1024 ** 3;
 

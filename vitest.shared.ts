@@ -47,12 +47,16 @@ const MEMORY_RESERVE_BYTES = 4 * 1024 ** 3;
 
 /**
  * Worker count from both CPUs and memory, so a loaded big desktop does not overcommit.
- * Extracted as a pure function so vitest.shared.test.ts can cover the arithmetic without
- * spawning workers. `total`/`free` are injected; pass os.totalmem()/freemem() in production.
+ * Extracted as a pure function so packages/textscene-dev-kit/src/vitestShared.test.ts can
+ * cover the arithmetic without spawning workers. `total`/`free` are injected; pass
+ * os.totalmem()/freemem() in production.
  */
 export function maxWorkersFor(total: number, free: number, cpus: number): number {
   const cpuCap = Math.max(1, cpus - 1);
-  const memCap = Math.max(1, Math.floor((Math.max(0, total - MEMORY_RESERVE_BYTES) - (total - free)) / WORKER_MEMORY_BUDGET_BYTES));
+  const memCap = Math.max(
+    1,
+    Math.floor((Math.max(0, total - MEMORY_RESERVE_BYTES) - (total - free)) / WORKER_MEMORY_BUDGET_BYTES)
+  );
   return Math.min(16, cpuCap, memCap);
 }
 
