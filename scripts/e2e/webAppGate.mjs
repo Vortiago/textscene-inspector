@@ -5,11 +5,16 @@
  * running app. It observes from outside (`cameraProbe.mjs`, DOM shape), so no production file
  * carries a test hook.
  */
-import { launchShowcaseBrowser } from '../showcase/browser.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
 import { previewPort, readViewportMode, settleCanvas, withPreviewBrowser } from '../visual/previewServer.mjs';
 import { installViewMatrixProbe, matricesEqual, formatMatrix, readViewProbe } from './cameraProbe.mjs';
-import { checkNodePaths, expandAllTreeRows, readOutlinerPaths, selectOutlinerNode } from './outliner.mjs';
+import {
+  checkNodePaths,
+  expandAllTreeRows,
+  readOutlinerPaths,
+  SELECT_SETTLE_MS,
+  selectOutlinerNode,
+} from './outliner.mjs';
 import { findRowValue, readInspectorPanel } from './inspector.mjs';
 import { openFixture } from './openFixture.mjs';
 import { longTasksAfterFirstReply, longTasksDuringTextureWork } from './textureWorkProbe.mjs';
@@ -48,10 +53,6 @@ const SELECT_B = 'Root/Description';
 // A Node2D root (2D workspace, ADR-0006) with one local PNG, a same-origin
 // fetch and not a failure.
 const FIXTURE_2D = 'unit-sprite2d.tscn';
-
-// A selection re-renders synchronously off React state, so a fixed wait
-// suffices, as in `clickNode` in `scripts/showcase/record.mjs`.
-const SELECT_SETTLE_MS = 400;
 
 // Far below a passing run (3D ~195k ink px on a 631x756 canvas), as in
 // `scripts/vscode/webview-csp-gate.mjs`: nothing drawn reads as 0 on any
@@ -135,10 +136,7 @@ class GateFailures {
 }
 
 async function main() {
-  const results = await withPreviewBrowser(
-    { ...previewPort('e2eWeb'), launchBrowser: launchShowcaseBrowser },
-    runScenarios
-  );
+  const results = await withPreviewBrowser(previewPort('e2eWeb'), runScenarios);
   const gate = new GateFailures();
   checkScenarios(gate, results);
   logMeasurements(results);

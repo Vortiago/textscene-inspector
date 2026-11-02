@@ -1,0 +1,107 @@
+[gd_scene load_steps=7 format=3 uid="uid://unitboneattachment3dfollow"]
+
+; The one variable: the seat of a BoneAttachment3D. Two BoneAttachment3D nodes ride bones of the
+; skinned ribbon's skeleton: GreenRider is parented to the Skeleton3D on bone b5, and BlueRider
+; stands under the root and names the skeleton through external_skeleton, on bone b3. Each holds
+; a small box at local (0, 0, 0.1), so the boxes stand where the bones' global poses put them;
+; the green one's local offset shows in the rider's own space. No other scene seats a
+; BoneAttachment3D, so no other golden shows a regression in it. The ribbon itself is the scene of
+; unit-mesh-instance-3d-skinned-ribbon.tscn, so the skin and the seats read one posed skeleton.
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_red"]
+shading_mode = 0
+albedo_color = Color(1, 0, 0, 1)
+cull_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_green"]
+shading_mode = 0
+albedo_color = Color(0, 1, 0, 1)
+cull_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_blue"]
+shading_mode = 0
+albedo_color = Color(0, 0, 1, 1)
+cull_mode = 2
+
+[sub_resource type="RibbonTrailMesh" id="RibbonTrailMesh_flat"]
+material = SubResource("StandardMaterial3D_red")
+shape = 0
+size = 0.4
+
+[sub_resource type="BoxMesh" id="BoxMesh_green"]
+material = SubResource("StandardMaterial3D_green")
+size = Vector3(0.08, 0.08, 0.08)
+
+[sub_resource type="BoxMesh" id="BoxMesh_blue"]
+material = SubResource("StandardMaterial3D_blue")
+size = Vector3(0.08, 0.08, 0.08)
+
+[node name="Root" type="Node3D"]
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+bones/0/name = "b0"
+bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+bones/0/enabled = true
+bones/0/position = Vector3(0, 0.5, 0)
+bones/0/rotation = Quaternion(0, 0, 0, 1)
+bones/0/scale = Vector3(1, 1, 1)
+bones/1/name = "b1"
+bones/1/parent = 0
+bones/1/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+bones/1/enabled = true
+bones/1/position = Vector3(0, -0.2, 0)
+bones/1/rotation = Quaternion(0, 0, 0, 1)
+bones/1/scale = Vector3(1, 1, 1)
+bones/2/name = "b2"
+bones/2/parent = 1
+bones/2/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+bones/2/enabled = true
+bones/2/position = Vector3(0, -0.2, 0)
+bones/2/rotation = Quaternion(0, 0, 0.5, 0.866025)
+bones/2/scale = Vector3(1, 1, 1)
+bones/3/name = "b3"
+bones/3/parent = 2
+bones/3/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+bones/3/enabled = true
+bones/3/position = Vector3(0, -0.2, 0)
+bones/3/rotation = Quaternion(0, 0, 0, 1)
+bones/3/scale = Vector3(1, 1, 1)
+bones/4/name = "b4"
+bones/4/parent = 3
+bones/4/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+bones/4/enabled = true
+bones/4/position = Vector3(0, -0.2, 0)
+bones/4/rotation = Quaternion(0, 0, 0, 1)
+bones/4/scale = Vector3(1, 1, 1)
+bones/5/name = "b5"
+bones/5/parent = 4
+bones/5/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+bones/5/enabled = true
+bones/5/position = Vector3(0, -0.2, 0)
+bones/5/rotation = Quaternion(0, 0, 0, 1)
+bones/5/scale = Vector3(1, 1, 1)
+
+[node name="Ribbon" type="MeshInstance3D" parent="."]
+mesh = SubResource("RibbonTrailMesh_flat")
+skeleton = NodePath("../Skeleton3D")
+
+; Parented: get_skeleton takes the Skeleton3D as its parent, and on_skeleton_update sets
+; set_transform(bone_global_pose), so the rider sits on b5's posed end.
+[node name="GreenRider" type="BoneAttachment3D" parent="Skeleton3D"]
+bone_name = "b5"
+bone_idx = 5
+
+[node name="GreenBox" type="MeshInstance3D" parent="Skeleton3D/GreenRider"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.1)
+mesh = SubResource("BoxMesh_green")
+
+; External: get_skeleton takes the node external_skeleton names, and on_skeleton_update composes
+; set_global_transform(skeleton_global * bone_global_pose), so the rider rides b3 from the root.
+[node name="BlueRider" type="BoneAttachment3D" parent="."]
+use_external_skeleton = true
+external_skeleton = NodePath("../Skeleton3D")
+bone_name = "b3"
+
+[node name="BlueBox" type="MeshInstance3D" parent="BlueRider"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.1)
+mesh = SubResource("BoxMesh_blue")

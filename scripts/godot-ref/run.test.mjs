@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { PNG } from 'pngjs';
 import { degToRad } from '../../packages/textscene-core/src/godot/math/math.ts';
+import { LAVAPIPE_LOADER_ENV } from './lavapipe.mjs';
 import {
   CANVAS_2D_CAPTURE,
   CANVAS_CAPTURE,
@@ -37,6 +38,7 @@ import {
   RENDER_QUIET_MSEC,
   RENDER_WAIT_MAX_FRAMES,
   renderArgv,
+  renderingDeviceMessage,
   renderingMethodFallbackMessage,
   requestedRenderingMethod,
   SPAWN_BACKSTOP_MS,
@@ -548,6 +550,24 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', { timeout: ENGINE_TE
   });
 
   /**
+   * A paused 3D emitter spends a request only in `_update_internal`, which the enter-tree
+   * notification calls once, so the request has to reach the node before it enters the tree
+   * (`cpu_particles_3d.cpp:586`, `:1354`). Asked afterwards, the reference draws no particles.
+   */
+  it('draws a 3D emitter at the seconds `particles` names', async () => {
+    const dir = await scratchDir();
+    const emitterScene = join(import.meta.dirname, 'scenes', 'cpuparticles3d-unpreprocessed.tscn');
+    const renderAt = async (particles) => {
+      const out = join(dir, `emitter-${particles}.png`);
+      await renderReference({ scene: emitterScene, out, width: 200, height: 150, particles });
+      return readFile(out);
+    };
+    const unadvanced = await renderAt(0);
+    const advanced = await renderAt(1.25);
+    expect(advanced.equals(unadvanced)).toBe(false);
+  });
+
+  /**
    * `--emit-bounds` lets both renderers derive one camera, so it measures what the previewer
    * frames on: `frameSceneBounds.ts` unions meshes, and gizmos only when a scene has none. A
    * Light3D is a VisualInstance3D too, and a union of every visual moves the look-at towards it.
@@ -909,6 +929,14 @@ describe('an expired engine pass is reaped as a process group', () => {
     expect(plan.argv[plan.argv.indexOf('godot') + 1]).toBe('--headless');
   });
 
+  it('makes the Vulkan loader pick lavapipe, the driver the comparison browser renders on', () => {
+    // On a host with a GPU, the loader would otherwise pick the GPU's driver.
+    for (const display of [true, false]) {
+      const plan = godotSpawnPlan([], { display });
+      expect(plan.env).toMatchObject(LAVAPIPE_LOADER_ENV);
+    }
+  });
+
   it('falls back to spawning the engine directly where the group killer is absent', () => {
     const plan = godotSpawnPlan(['--path', '/tmp/work'], {
       display: true,
@@ -1048,6 +1076,46 @@ describe('a renderer fallback', () => {
     expect(script).toContain('RenderingServer.get_current_rendering_method()');
     expect(script.indexOf('_write_renderer()\n')).toBeGreaterThan(script.indexOf('get_tree().paused = true'));
   });
+
+  it('reports the device that drew the frame', () => {
+    expect(bootstrap({ rendererOut: '/tmp/r.json' })).toContain('RenderingServer.get_video_adapter_name()');
+  });
+});
+
+describe('renderingDeviceMessage', () => {
+  it('answers when lavapipe drew a Vulkan frame', () => {
+    expect(
+      renderingDeviceMessage({
+        method: 'forward_plus',
+        driver: 'vulkan',
+        adapter: 'llvmpipe (LLVM 22.1.8, 256 bits)',
+      })
+    ).toBeNull();
+  });
+
+  it('refuses a Vulkan frame from a GPU, naming the device and the package (error case)', () => {
+    const message = renderingDeviceMessage({
+      method: 'forward_plus',
+      driver: 'vulkan',
+      adapter: 'Intel(R) UHD Graphics 630 (CFL GT2)',
+    });
+    expect(message).toMatch(/Intel\(R\) UHD Graphics 630/);
+    expect(message).toMatch(/mesa-vulkan-drivers/);
+  });
+
+  it('answers for an OpenGL frame, which Xvfb draws in software on every host (edge case)', () => {
+    expect(
+      renderingDeviceMessage({
+        method: 'gl_compatibility',
+        driver: 'opengl3',
+        adapter: 'llvmpipe (LLVM 22.1.8, 256 bits)',
+      })
+    ).toBeNull();
+  });
+
+  it('answers when the bootstrap wrote no report (edge case)', () => {
+    expect(renderingDeviceMessage(null)).toBeNull();
+  });
 });
 
 /**
@@ -1082,13 +1150,15 @@ describe('--particles advances the emitters by a named number of seconds', () =>
   it('asks Godot for the advance through its own API, before any frame runs', () => {
     const lines = bootstrap({ particles: 0.95 }).split('\n');
     expect(lines).toContain('const PARTICLES_PROCESS := 0.95');
-    // `_update_internal` zeroes `_requested_process_time` on its first pass, so both render paths
-    // ask right after the subtree enters the tree.
-    for (const parent of ['\tadd_child(target)', '\tvp.add_child(target)']) {
-      const at = lines.indexOf(parent);
-      expect(at).toBeGreaterThan(-1);
-      expect(lines[at + 1]).toBe('\t_advance_particles(target)');
-    }
+    // `_update_internal` zeroes `_requested_process_time` on its first pass. A 2D emitter spends the
+    // request at its first draw, so that path asks right after the subtree enters the tree. A 3D
+    // emitter spends it at the enter-tree notification, so that path asks before.
+    const at3d = lines.indexOf('\tadd_child(target)');
+    expect(at3d).toBeGreaterThan(0);
+    expect(lines[at3d - 1]).toBe('\t_advance_particles(target)');
+    const at2d = lines.indexOf('\tvp.add_child(target)');
+    expect(at2d).toBeGreaterThan(-1);
+    expect(lines[at2d + 1]).toBe('\t_advance_particles(target)');
     expect(lines.some((l) => l.includes('request_particles_process(PARTICLES_PROCESS)'))).toBe(true);
   });
 

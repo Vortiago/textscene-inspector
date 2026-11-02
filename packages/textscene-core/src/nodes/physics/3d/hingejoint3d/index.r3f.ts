@@ -1,13 +1,12 @@
 /**
- * HingeJoint3D draws nothing of its own (ADR-0008), so it reuses the Node3D
- * component, and its children still land in the right transform space.
+ * HingeJoint3D draws its axis and a circle toward each body for every node, faint while unselected
+ * (ADR-0056). The joint simulation is runtime only (ADR-0005), so the previewer's editor pose has no
+ * drive to register.
  */
-
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../../base/node3d/Component';
+import { HingeJoint3D } from './Component';
 
 nodeComponentRegistry.register({
   typeName: 'HingeJoint3D',
-  Component: Node3D,
-  renderIntent: 'transform-only',
+  Component: HingeJoint3D,
 });

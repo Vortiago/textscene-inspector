@@ -1,13 +1,12 @@
 /**
- * Generic6DOFJoint3D draws nothing of its own (ADR-0008), so it reuses the Node3D
- * component, and its children still land in the right transform space.
+ * Generic6DOFJoint3D draws its travel and the circles toward each body for every node, faint while
+ * unselected (ADR-0056). The joint simulation is runtime only (ADR-0005), so the previewer's editor pose
+ * has no drive to register.
  */
-
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../../base/node3d/Component';
+import { Generic6DOFJoint3D } from './Component';
 
 nodeComponentRegistry.register({
   typeName: 'Generic6DOFJoint3D',
-  Component: Node3D,
-  renderIntent: 'transform-only',
+  Component: Generic6DOFJoint3D,
 });

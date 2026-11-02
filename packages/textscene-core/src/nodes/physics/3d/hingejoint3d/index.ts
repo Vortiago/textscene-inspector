@@ -1,17 +1,11 @@
-/**
- * HingeJoint3D registration: the parser.
- *
- * It reuses the Node3D parse, and property knowledge lives in linterParser.ts. It
- * draws nothing by design (ADR-0008), so index.r3f.ts registers Node3D and its children
- * still land in the right transform space.
- */
+/** HingeJoint3D registration: the parser. Property knowledge for linting lives in linterParser.ts. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseNode3D } from '../../../base/node3d/parser';
+import { parseHingeJoint3D } from './parser';
 
 const hingeJoint3DRegistration: NodeTypeRegistration = {
   typeName: 'HingeJoint3D',
-  parser: parseNode3D,
+  parser: parseHingeJoint3D,
 };
 
 nodeRegistry.register(hingeJoint3DRegistration);

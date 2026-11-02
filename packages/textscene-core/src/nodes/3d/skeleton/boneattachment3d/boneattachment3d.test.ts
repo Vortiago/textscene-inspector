@@ -1,29 +1,33 @@
 /**
- * BoneAttachment3D registration: it is parsed, and its drive of children onto its bone each
- * update is a gap (ADR-0045), not a nil effect. It registers `pending` on the Node3D component,
- * so children keep their transform space while the badge reads a gap.
+ * BoneAttachment3D registration: its own parse reads the five seat properties, and the component
+ * seats the node on its bone through the live scene pass (ADR-0060). It drives other nodes, so it
+ * registers `transform-only` with `scenePass`, and draws nothing itself.
  */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { parseNode3D } from '../../../base/node3d/parser';
-import { Node3D } from '../../../base/node3d/Component';
+import { parseBoneAttachment3D } from './parser';
+import { BoneAttachment3D } from './Component';
 import './index';
 import './index.r3f';
 
 describe('BoneAttachment3D registration', () => {
-  it('registers the parseNode3D parse it reuses', () => {
+  it('registers the parse that reads its five own properties', () => {
     const registration = nodeRegistry.getRegistration('BoneAttachment3D');
     expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode3D);
+    expect(registration!.parser).toBe(parseBoneAttachment3D);
   });
 
-  it('reuses the Node3D component so children keep their transform space', () => {
-    expect(nodeComponentRegistry.get('BoneAttachment3D')).toBe(Node3D);
+  it('registers the seat component, which draws nothing of its own', () => {
+    expect(nodeComponentRegistry.get('BoneAttachment3D')).toBe(BoneAttachment3D);
   });
 
-  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.renderIntentOf('BoneAttachment3D')).toBe('pending');
+  it('registers `transform-only`, so its own geometry stays unseen (ADR-0008)', () => {
+    expect(nodeComponentRegistry.renderIntentOf('BoneAttachment3D')).toBe('transform-only');
+  });
+
+  it('declares the scene pass that seats every node by its live path (ADR-0060)', () => {
+    expect(nodeComponentRegistry.scenePassTypeNames().has('BoneAttachment3D')).toBe(true);
   });
 });

@@ -5,6 +5,7 @@
  * serialisations, so nothing here invents a value the inspector would not offer.
  */
 
+import { parseHintEnum } from '../godot/classdb/enumHint.js';
 import { PROPERTY_HINT } from '../godot/classdb/propertyHint.js';
 import { resourceTypeHint } from '../godot/classdb/resourceTypeHint.js';
 import { VARIANT_TYPE } from '../godot/variant/variantType.js';
@@ -12,28 +13,13 @@ import { VARIANT_TYPE } from '../godot/variant/variantType.js';
 /** One `PROPERTY_HINT_ENUM` label, with the integer the engine stores for it. */
 interface EnumEntry {
   readonly label: string;
-  /** The integer literal to write. An explicit `Label:3` uses 3, else the label's index. */
+  /** The integer literal to write. An implicit label takes the value that runs on. */
   readonly value: string;
 }
 
 /** Whether the hint offers a fixed set of integer labels. Flags are a bitmask, so excluded. */
 function isEnumHint(hint: number): boolean {
   return hint === PROPERTY_HINT.ENUM || hint === PROPERTY_HINT.ENUM_SUGGESTION;
-}
-
-/**
- * The labels of an enum hint, in order. An empty hint string is a hint of unknown
- * labels, so it yields nothing rather than one empty label. A label's `:value`
- * suffix overrides the index, as `PropertyHint`'s own syntax states.
- */
-function enumEntries(hintString: string): readonly EnumEntry[] {
-  if (hintString.length === 0) return [];
-  return hintString.split(',').map((raw, index) => {
-    const colon = raw.indexOf(':');
-    if (colon === -1) return { label: raw, value: String(index) };
-    const value = raw.slice(colon + 1);
-    return { label: raw.slice(0, colon), value: value.length > 0 ? value : String(index) };
-  });
 }
 
 /** The hint fields of a property, as a ClassDB row spells them. */
@@ -46,7 +32,10 @@ interface HintedProperty {
 /** The labels an integer enum property offers, or none for any other property. */
 export function enumEntriesOf(property: HintedProperty): readonly EnumEntry[] {
   if (!isEnumHint(property.hint) || property.type !== VARIANT_TYPE.INT) return [];
-  return enumEntries(property.hintString);
+  return parseHintEnum(property.hintString).map((entry) => ({
+    label: entry.label,
+    value: String(entry.value),
+  }));
 }
 
 /** The labels of a flags hint, whose value is a bitmask rather than one choice. */

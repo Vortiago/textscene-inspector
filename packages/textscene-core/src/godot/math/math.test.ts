@@ -12,6 +12,7 @@ import {
   multiplyColor,
   multiplyColorInto,
   radToDeg,
+  radToDegf,
   lerpColor,
   lerpf,
   remapf,
@@ -47,6 +48,13 @@ describe('degToRad', () => {
 
   it('keeps a non-finite value non-finite (edge case)', () => {
     expect(degToRad(Number.POSITIVE_INFINITY)).toBe(Number.POSITIVE_INFINITY);
+  });
+});
+
+describe('radToDegf', () => {
+  it('turns radians into degrees with the float constant 180 / PI', () => {
+    expect(radToDegf(Math.PI)).toBe(180);
+    expect(radToDegf(13)).toBe(744.8451538085938);
   });
 });
 

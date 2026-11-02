@@ -11,6 +11,9 @@ export default mergeConfig(
       name: 'textscene-linter',
       environment: 'node',
       include: ['src/**/*.{test,spec}.ts'],
+      // cli.e2e and package.e2e each rebuild the one dist the other reads (the bundle, the
+      // tarball, the metafile), so their builds never overlap a reader.
+      fileParallelism: false,
     },
   })
 );

@@ -17,6 +17,8 @@ const PREVIEW_PORTS = {
   uniformVectors: { port: 4331, envName: 'UNIFORM_VECTORS_PORT' },
   rendererConsumer: { port: 4335, envName: 'RENDERER_CONSUMER_PORT' },
   showcase: { port: 4188, envName: 'SHOWCASE_PORT' },
+  /** The run-textscene-web skill's driver, which an agent runs beside any gate. */
+  runWeb: { port: 4339, envName: 'RUN_WEB_PORT' },
 };
 
 /** The port `harness` serves on, its override or its default, and the name of that override. */

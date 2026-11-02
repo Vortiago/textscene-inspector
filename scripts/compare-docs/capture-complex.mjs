@@ -26,11 +26,16 @@ const here = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(here, '../..');
 const IMAGES = join(REPO_ROOT, 'docs/comparison/images');
 
+/** The `lifetime` of the exhaust smoke emitters in the truck town vehicles. */
+const EXHAUST_SETTLE_SECONDS = 1.25;
+
 /**
  * These scenes live outside scenes/fixtures/. `godot` is the path from the repo
  * root, `ours` the `?fixture=` value from apps/textscene-web/src/fixtures.ts.
  * `frame` fits the 3D camera to the bounds, `sceneCamera` looks through the
  * scene's camera. A 2D scene uses the project viewport and ignores Camera2D.
+ * `particles` is the seconds Godot advances its emitters: the one `lifetime` the
+ * previewer settles to, which a paused reference does not reach.
  */
 export const COMPLEX_SCENES = [
   {
@@ -92,6 +97,7 @@ export const COMPLEX_SCENES = [
     frame: true,
     godot: 'scenes/demos/3d/truck_town/vehicles/trailer_truck.tscn',
     ours: 'demos/3d/truck_town/vehicles/trailer_truck.tscn',
+    particles: EXHAUST_SETTLE_SECONDS,
   },
   {
     // The tow truck's mesh mixes compressed and uncompressed surfaces in one
@@ -101,6 +107,7 @@ export const COMPLEX_SCENES = [
     frame: true,
     godot: 'scenes/demos/3d/truck_town/vehicles/tow_truck.tscn',
     ours: 'demos/3d/truck_town/vehicles/tow_truck.tscn',
+    particles: EXHAUST_SETTLE_SECONDS,
   },
 ];
 
@@ -119,6 +126,7 @@ async function captureGodot(scenes) {
       // Both sides name one camera, or a scene with several Camera3Ds leaves
       // Godot to tree order and the previewer to `oursCamera`.
       sceneCameraPath: c.oursCamera ?? null,
+      particles: c.particles,
     });
     console.log('ok');
   }

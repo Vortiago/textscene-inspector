@@ -34,6 +34,10 @@ const field = (name) => Object.fromEntries(Object.entries(RELEASE_TARGETS).map((
 
 export const RELEASE_PACKAGES = field('directory');
 export const RELEASE_INPUTS = field('inputs');
+/** The directories of the targets that ship an npm tarball, which the entry-point gate reads. */
+export const RELEASE_NPM_DIRECTORIES = Object.values(RELEASE_TARGETS)
+  .filter((target) => target.kind === 'npm')
+  .map((target) => target.directory);
 
 /** Own keys only: a tag like `constructor-v1.0.0` must not find `Object.prototype.constructor`. */
 function releaseTarget(name) {

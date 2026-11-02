@@ -1,15 +1,17 @@
 /**
- * BoneAttachment3D registration: the parser. It reuses the Node3D parse, and property knowledge
- * lives in linterParser.ts. Its Godot runtime effect is not implemented here yet (ADR-0045), so
- * index.r3f.ts registers Node3D as `pending`.
+ * BoneAttachment3D registration: the parser. The five own properties reach the parse; the seat
+ * they drive lives in `boneAttachmentSeats.ts`, and index.r3f.ts registers the seat component.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseNode3D } from '../../../base/node3d/parser';
+import { parseBoneAttachment3D } from './parser';
 
 const boneAttachment3DRegistration: NodeTypeRegistration = {
   typeName: 'BoneAttachment3D',
-  parser: parseNode3D,
+  parser: parseBoneAttachment3D,
 };
 
 nodeRegistry.register(boneAttachment3DRegistration);
+
+export * from './parser';
+export * from './types';

@@ -21,12 +21,16 @@ function decodeText(body: string) {
   return decodeLightmapGIData(properties, extResources);
 }
 
-/** A `probe_data` Dictionary with bounds of size 2 and `points`. */
-function probeData(points: string): string {
+/** A `probe_data` Dictionary with bounds of size 2, `points` and the nine `sh` colours of each of `pointCount` points. */
+function probeData(points: string, pointCount = 0, shColours = pointCount * 9): string {
   return (
     'probe_data = {\n"bounds": AABB(-1, -1, -1, 2, 2, 2), "points": ' +
     points +
-    ', "tetrahedra": PackedInt32Array(), "bsp": PackedInt32Array(), "sh": PackedColorArray(), ' +
+    ', "tetrahedra": PackedInt32Array(), "bsp": PackedInt32Array(), "sh": PackedColorArray(' +
+    Array(shColours * 4)
+      .fill(0)
+      .join(', ') +
+    '), ' +
     '"interior": false, "baked_exposure": 1.0\n}'
   );
 }
@@ -130,7 +134,7 @@ describe('decodeLightmapGIData on text', () => {
   });
 
   it('reads the capture bounds from points in the Array spelling the PackedVector3Array slot converts', () => {
-    expect(decodeText(probeData('[Vector3(0, 0, 0)]')).bounds.size).toEqual({ x: 2, y: 2, z: 2 });
+    expect(decodeText(probeData('[Vector3(0, 0, 0)]', 1)).bounds.size).toEqual({ x: 2, y: 2, z: 2 });
   });
 
   it('reads no capture bounds from probe data with no points, which set_capture_data drops', () => {
@@ -143,9 +147,21 @@ describe('decodeLightmapGIData on text', () => {
     ).toEqual(EMPTY_AABB);
   });
 
+  it('reads no capture bounds from probe data whose sh is not nine colours per point, which set_capture_data refuses (error case)', () => {
+    expect(decodeText(probeData('[Vector3(0, 0, 0)]', 1, 8)).bounds).toEqual(EMPTY_AABB);
+  });
+
+  it('reads the baked exposure 1 from probe data whose sh is not nine colours per point (error case)', () => {
+    const data = probeData('[Vector3(0, 0, 0)]', 1, 8).replace(
+      '"baked_exposure": 1.0',
+      '"baked_exposure": 4.0'
+    );
+    expect(decodeText(data).bakedExposure).toBe(1);
+  });
+
   it('reads the exposure the bake ran at from probe data, which a camera attributes scene divides out', () => {
     expect(
-      decodeText(probeData('[Vector3(0, 0, 0)]').replace('"baked_exposure": 1.0', '"baked_exposure": 2.5'))
+      decodeText(probeData('[Vector3(0, 0, 0)]', 1).replace('"baked_exposure": 1.0', '"baked_exposure": 2.5'))
         .bakedExposure
     ).toBe(2.5);
   });

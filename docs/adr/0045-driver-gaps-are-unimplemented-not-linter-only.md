@@ -67,7 +67,7 @@ must be in the ledger, so a new subclass cannot drop out of it.
 The ledger of runtime effects is `runtimeEffectNodes.data.mjs`: a type absent
 from it claims a nil effect. Deliberate exclusions keep `linter-only`, because
 the previewer's contract says their effect is nil here, not missing: physics
-bodies and joints, `PhysicalBone2D`/`PhysicalBone3D` ragdoll physics (ADR-0005
+bodies, the joints that draw no gizmo, `PhysicalBone2D`/`PhysicalBone3D` ragdoll physics (ADR-0005
 settled these as transform-only by design), navigation nodes, `BackBufferCopy`,
 `VisibleOnScreenNotifier2D`/`Enabler2D`, `OccluderInstance3D`, and `Bone2D` (the
 bone `Skeleton2D` moves, not a driver itself). The XR trackers (`XRNode3D`,
@@ -92,3 +92,7 @@ as `Marker3D` does (ADR-0056). Its sheet is not `linter-only`, because that stat
 `transform-only` registration. A gizmo is not the Godot effect of a node, so a gizmo changes no
 `pending` registration and no `unimplemented` sheet: `ReflectionProbe`, `VoxelGI`, `FogVolume` and the
 particle emitters keep the intent and the status their effect has.
+
+`PinJoint3D`, `ConeTwistJoint3D`, `HingeJoint3D`, `SliderJoint3D` and `Generic6DOFJoint3D` draw the Joint3D editor gizmo (`joint_3d_gizmo_plugin.cpp`) the same
+way: each registers a component of its own that wraps `Node3D` and adds the gated gizmo, and each sheet
+is `limitation` with an **Editor only** line and a **Needs runtime** line for the joint simulation.

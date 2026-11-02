@@ -27,6 +27,10 @@ const NEEDS_NO_OVERLAY = new Map([
     'A pass: it reads the tree it places nodes in, and builds the placements.',
   ],
   [
+    'nodes/physics/3d/joint3d/useJointBodies.ts',
+    'Asks whether the node a body path names is a Node3D, by type. The pose comes from the drawn objects.',
+  ],
+  [
     'nodes/viewport/subviewport/controlRasterViewports.ts',
     'Reads the type and the Control layout direction, which no pass patches.',
   ],

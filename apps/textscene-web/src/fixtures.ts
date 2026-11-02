@@ -243,6 +243,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Bone Attachment 3d Follow",
+    "file": "unit-bone-attachment-3d-follow.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Bone Attachment 3d",
     "file": "unit-bone-attachment-3d.tscn",
     "category": "Other"
@@ -1145,6 +1150,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Jacobian Ik 3d",
     "file": "unit-jacobian-ik-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Joint 3d Gizmos 6dof",
+    "file": "unit-joint-3d-gizmos-6dof.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Joint 3d Gizmos Hinge Slider",
+    "file": "unit-joint-3d-gizmos-hinge-slider.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Joint 3d Gizmos Pin Cone",
+    "file": "unit-joint-3d-gizmos-pin-cone.tscn",
     "category": "Other"
   },
   {

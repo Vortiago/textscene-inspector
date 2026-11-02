@@ -23,6 +23,7 @@ import { atLeast, nodesRoot, walk } from './ruleNameScrape.js';
  */
 export const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   Node3D: 'base/node3d/parser.ts',
+  Joint3D: 'physics/3d/joint3d/parser.ts',
   Node2D: 'base/node2d/parser.ts',
   Light3D: '3d/lights/shared/parser.ts',
   Light2D: '2d/lights/shared/parser.ts',
