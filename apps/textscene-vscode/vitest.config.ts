@@ -1,7 +1,7 @@
-import { availableParallelism } from 'node:os';
+import { availableParallelism, totalmem, freemem } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
-import { sourceResolve } from '../../vitest.shared';
+import { maxWorkersFor, sourceResolve } from '../../vitest.shared';
 
 export default defineConfig({
   // Resolve @textscene/core to its TS source so a fresh checkout tests without
@@ -24,12 +24,12 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.ts'],
     // The mocha suites that run inside VS Code.
     exclude: ['src/test/**/*.{test,spec}.ts'],
-    // Matches vitest.shared.ts: vitest 4 rejects workspace projects with differing
+    // Same formula as vitest.shared.ts: vitest 4 rejects workspace projects with differing
     // maxWorkers unless they get distinct groupOrders.
-    maxWorkers: Math.min(16, Math.max(1, availableParallelism() - 1)),
+    maxWorkers: maxWorkersFor(totalmem(), freemem(), availableParallelism()),
     fileParallelism: true,
     maxConcurrency: 15,
-    // Matches vitest.shared.ts: keeps each module's transform between runs.
+    // Same formula as vitest.shared.ts: keeps each module's transform between runs.
     fsModuleCache: true,
     coverage: {
       provider: 'v8',
