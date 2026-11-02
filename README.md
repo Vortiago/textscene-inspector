@@ -42,6 +42,12 @@ pnpm --filter textscene-inspector package   # VS Code .vsix
 pnpm build:linter                           # CLI linter, then: pnpm lint:tscn <files>
 ```
 
+pnpm blocks every dependency's `preinstall`, `install` and `postinstall`: the root `package.json`
+sets `pnpm.onlyBuiltDependencies` to `[]`, so only a name on that list runs a script. The root's
+own `prepare` and `postinstall` (git hooks, demo vendoring) are root-project scripts and still
+run. If a dependency needs a build step, add its name to that list, and `pnpm check:dep-scripts`
+will fail on any package outside it.
+
 Install a `.vsix` with **Extensions: Install from VSIX…**.
 
 ## Scripts
