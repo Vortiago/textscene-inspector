@@ -7001,6 +7001,25 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p><code>vertex_color_use_as_albedo</code> reads the vertex colour into the albedo, and <code>vertex_color_is_srgb</code> decodes that colour from sRGB to linear first. Two rows of particles share one colour: the upper row's material decodes it and draws darker, and the lower row's reads it as linear. A particle's colour multiplies the vertex colour before the decode, as in Godot.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Next pass</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/material-next-pass-godot.png" alt="Godot render of Next pass">
+          <img class="img-ours" src="images/material-next-pass-ours.png" alt="Our render of Next pass">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A material's <code>next_pass</code> draws one extra surface after its own. Every link draws after the links before it, as the chain walk runs (<code>render_forward_clustered.cpp:4183-4201</code>). The fixture's pass culls front faces, so its back faces draw a rim round the sphere. Unshaded blue with <code>grow = true</code> moves each of those vertices 0.03 along its normal (<code>material.cpp:1458-1461</code>). The rim therefore sits outside the orange edge. The link resolves against the starting material's own tables and decodes through the one bag derivation. Every surface owner therefore mounts the chain the same way: MeshInstance3D, CPUParticles3D, CSG, GridMap and the GLB surface override.</p>
+<p>At equal <code>render_priority</code>, the chain order decides which draw covers which. Godot's opaque sort breaks the tie later in the key, on the material's RID (<code>render_forward_clustered.h:517-526</code>). So a link at the base's priority covers its base.</p>
+<ul><li><strong>Unimplemented</strong> A stencil-reading link's own draw: the chain continues past it (<code>material.cpp:916-968</code>), and the stencil buffer itself stays unrendered.</li></ul></div>
       </section><div class="prose"><h3>Linting</h3>
 <p>Strict parsing format-checks the inherited set (131 inherited from BaseMaterial3D, 2 inherited from Material, 2 inherited from Resource); <code>StandardMaterial3D</code> declares none of its own. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>

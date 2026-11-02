@@ -2,6 +2,7 @@
 type: StandardMaterial3D
 category: Resources
 renders_as: a THREE.MeshStandardMaterial / MeshPhysicalMaterial
+camera: MaterialNextPass/Camera3D
 ---
 
 # StandardMaterial3D
@@ -150,6 +151,16 @@ A 40 px point that draws shadows only hangs under an omni light, above a floor t
 <!-- compare: image=unit-material-vertex-color-srgb status=unreviewed fixture=unit-material-vertex-color-srgb.tscn -->
 
 `vertex_color_use_as_albedo` reads the vertex colour into the albedo, and `vertex_color_is_srgb` decodes that colour from sRGB to linear first. Two rows of particles share one colour: the upper row's material decodes it and draws darker, and the lower row's reads it as linear. A particle's colour multiplies the vertex colour before the decode, as in Godot.
+
+## Next pass
+
+<!-- compare: image=material-next-pass status=done fixture=unit-material-next-pass.tscn -->
+
+A material's `next_pass` draws one extra surface after its own. Every link draws after the links before it, as the chain walk runs (`render_forward_clustered.cpp:4183-4201`). The fixture's pass culls front faces, so its back faces draw a rim round the sphere. Unshaded blue with `grow = true` moves each of those vertices 0.03 along its normal (`material.cpp:1458-1461`). The rim therefore sits outside the orange edge. The link resolves against the starting material's own tables and decodes through the one bag derivation. Every surface owner therefore mounts the chain the same way: MeshInstance3D, CPUParticles3D, CSG, GridMap and the GLB surface override.
+
+At equal `render_priority`, the chain order decides which draw covers which. Godot's opaque sort breaks the tie later in the key, on the material's RID (`render_forward_clustered.h:517-526`). So a link at the base's priority covers its base.
+
+- **Unimplemented** A stencil-reading link's own draw: the chain continues past it (`material.cpp:916-968`), and the stencil buffer itself stays unrendered.
 
 ## Linting
 
