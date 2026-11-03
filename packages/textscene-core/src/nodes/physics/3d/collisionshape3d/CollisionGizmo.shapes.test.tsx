@@ -15,7 +15,7 @@ import { createFakeResourceLoader } from '../../../../resources/testing/createFa
 import { findMesh } from '../../../3d/testing/reactThreeTestInstance';
 import { godotDebugLinesFor, undirectedEdges } from '../../shared/godotDebugLines.testkit';
 
-/** Mounts the gizmo, lets its lazy hull chunk land, and returns the renderer with the lines drawn. */
+/** Mounts the gizmo, lets its lazy hull chunk land, and returns the lines drawn, none when it draws none. */
 async function drawn(shape: TscnInternalResource) {
   const { loader } = createFakeResourceLoader();
   const gizmo = (
@@ -26,7 +26,9 @@ async function drawn(shape: TscnInternalResource) {
   const renderer = await ReactThreeTestRenderer.create(gizmo);
   await settlePendingLoads(loader);
   await renderer.update(gizmo);
-  return { positions: linePositions(renderer), meshCount: renderer.scene.findAllByType('Mesh').length };
+  const hasLines = renderer.scene.findAllByType('LineSegments').length > 0;
+  const positions = hasLines ? linePositions(renderer) : new Float32Array(0);
+  return { positions, meshCount: renderer.scene.findAllByType('Mesh').length };
 }
 
 describe.each(['BoxShape3D', 'SphereShape3D', 'CylinderShape3D', 'CapsuleShape3D', 'WorldBoundaryShape3D'])(

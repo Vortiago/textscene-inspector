@@ -1,7 +1,7 @@
 /**
  * Shapes and the debug-line vertices Godot 4.6.3 gives for each, read back from `get_debug_mesh()`.
  * The shape tests and the CollisionShape3D gizmo tests share them. A ConvexPolygonShape3D case keeps
- * Bullet's edge order, so compare its edges as a set.
+ * Godot's edge order, so compare its edges as a set.
  */
 
 import type { TscnInternalResource } from '../../../parser/types';

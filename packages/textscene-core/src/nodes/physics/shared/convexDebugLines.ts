@@ -4,6 +4,7 @@
  * edge between coplanar triangles is not an edge of the hull and is not drawn.
  */
 
+import * as THREE from 'three';
 import {
   FLOATS_PER_VERTEX,
   normalizedVector3,
@@ -95,49 +96,94 @@ function farthestFromFirst(points: Float32Array): Vector3 {
   return farthest;
 }
 
-/** The two ends of a line of collinear points, or null when the points leave the line. */
-function lineEnds(points: Float32Array): [Vector3, Vector3] | null {
-  const origin = vertexAt(points, 0);
-  const far = farthestFromFirst(points);
-  const direction = vector3Sub(far, origin);
-  const length = Math.hypot(direction.x, direction.y, direction.z);
-  let [low, high] = [0, 0];
+function tuple({ x, y, z }: Vector3): [number, number, number] {
+  return [x, y, z];
+}
+
+/** The offsets of every point from the first along `direction`, or null when one leaves the line. */
+function offsetsAlong(points: Float32Array, origin: Vector3, direction: Vector3): number[] | null {
+  const lengthSquared = vector3Dot(tuple(direction), tuple(direction));
+  const offsets: number[] = [];
   for (let index = 0; index < points.length / FLOATS_PER_VERTEX; index += 1) {
-    const offset = vector3Sub(vertexAt(points, index), origin);
-    const off = vector3Cross([offset.x, offset.y, offset.z], [direction.x, direction.y, direction.z]);
-    if (Math.hypot(...off) > COLLINEAR_TOLERANCE * length * length) return null;
-    const along = vector3Dot([offset.x, offset.y, offset.z], [direction.x, direction.y, direction.z]);
-    [low, high] = [Math.min(low, along), Math.max(high, along)];
+    const offset = tuple(vector3Sub(vertexAt(points, index), origin));
+    const off = vector3Cross(offset, tuple(direction));
+    if (Math.hypot(...off) > COLLINEAR_TOLERANCE * lengthSquared) return null;
+    offsets.push(vector3Dot(offset, tuple(direction)) / lengthSquared);
   }
-  const at = (along: number): Vector3 => ({
-    x: origin.x + (direction.x * along) / (length * length),
-    y: origin.y + (direction.y * along) / (length * length),
-    z: origin.z + (direction.z * along) / (length * length),
-  });
-  return [at(low), at(high)];
+  return offsets;
 }
 
 /**
- * Godot draws a hull of two collinear points or three non-collinear ones, which a triangle hull
- * builder returns nothing for: the line between the ends, or the triangle's three sides.
+ * The two ends of a line of collinear points, or null when the points leave the line. The points
+ * are distinct, so the line has a direction.
+ */
+function lineEnds(points: Float32Array): [Vector3, Vector3] | null {
+  const origin = vertexAt(points, 0);
+  const direction = vector3Sub(farthestFromFirst(points), origin);
+  const offsets = offsetsAlong(points, origin, direction);
+  if (!offsets) return null;
+  const at = (along: number): Vector3 => ({
+    x: origin.x + direction.x * along,
+    y: origin.y + direction.y * along,
+    z: origin.z + direction.z * along,
+  });
+  return [at(Math.min(0, ...offsets)), at(Math.max(0, ...offsets))];
+}
+
+function triangleSides(points: Float32Array): Float32Array {
+  const sides = [0, 1, 1, 2, 2, 0].flatMap((corner) => tuple(vertexAt(points, corner)));
+  return Float32Array.from(sides);
+}
+
+/**
+ * Godot draws a hull of collinear points as the line between the ends, and of three other points
+ * as their triangle. A volume hull builder returns no triangles for either.
  */
 function degenerateHullLines(points: Float32Array): Float32Array {
   const count = points.length / FLOATS_PER_VERTEX;
   if (count < 2) return new Float32Array(0);
   const ends = lineEnds(points);
-  if (ends) return Float32Array.from(ends.flatMap(({ x, y, z }) => [x, y, z]));
-  if (count !== 3) return new Float32Array(0);
-  return Float32Array.from(
-    [0, 1, 1, 2, 2, 0].flatMap((index) => Array.from(points.subarray(index * 3, index * 3 + 3)))
-  );
+  if (ends) return Float32Array.from(ends.flatMap(tuple));
+  return count === 3 ? triangleSides(points) : new Float32Array(0);
 }
 
-/**
- * The segments of the convex hull of `points`. `hullTriangles` are the hull's triangles as flat
- * non-indexed positions, from a builder that returns none for fewer than four points or a line.
- */
-export function convexDebugLines(points: Float32Array, hullTriangles: ArrayLike<number>): Float32Array {
-  return hullTriangles.length >= FLOATS_PER_TRIANGLE
-    ? solidHullLines(hullTriangles)
-    : degenerateHullLines(points);
+/** The finite points once each: a builder throws on a repeated or non-finite point. */
+function distinctFinitePoints(points: Float32Array): Float32Array {
+  const seen = new Set<string>();
+  const kept: number[] = [];
+  for (let index = 0; index < points.length / FLOATS_PER_VERTEX; index += 1) {
+    const point = tuple(vertexAt(points, index));
+    const key = point.join(',');
+    if (!point.every(Number.isFinite) || seen.has(key)) continue;
+    seen.add(key);
+    kept.push(...point);
+  }
+  return Float32Array.from(kept);
+}
+
+/** Builds the hull of `points` as flat non-indexed triangles, which is what three's ConvexGeometry gives. */
+export type HullBuilder = new (points: THREE.Vector3[]) => THREE.BufferGeometry;
+
+/** The hull's triangles, or none for the points three's builder throws on: a line, or a flat cloud of three. */
+function hullTriangles(points: Float32Array, Builder: HullBuilder): ArrayLike<number> {
+  const vectors: THREE.Vector3[] = [];
+  for (let index = 0; index < points.length / FLOATS_PER_VERTEX; index += 1) {
+    vectors.push(new THREE.Vector3(...tuple(vertexAt(points, index))));
+  }
+  try {
+    const hull = new Builder(vectors);
+    const triangles = hull.getAttribute('position').array;
+    hull.dispose();
+    return triangles;
+  } catch {
+    // The builder reads a missing face on a cloud with no volume and no plane.
+    return [];
+  }
+}
+
+/** The segments of the convex hull of `points`, built through `Builder`. Empty for fewer than two points. */
+export function convexDebugLines(points: Float32Array, Builder: HullBuilder): Float32Array {
+  const distinct = distinctFinitePoints(points);
+  const triangles = hullTriangles(distinct, Builder);
+  return triangles.length >= FLOATS_PER_TRIANGLE ? solidHullLines(triangles) : degenerateHullLines(distinct);
 }
