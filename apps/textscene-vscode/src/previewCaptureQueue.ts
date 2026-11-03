@@ -38,9 +38,13 @@ export const WEBVIEW_LOAD_DEADLINE_MS = 30000;
 
 const CLOSED: PreviewCapture = { error: 'The preview was closed.' };
 const CANCELLED: PreviewCapture = { error: 'The capture was cancelled.' };
-const NOT_LOADED: PreviewCapture = {
-  error: `The preview webview did not load within ${WEBVIEW_LOAD_DEADLINE_MS / 1000} s.`,
-};
+/**
+ * The reason a request ends when the load deadline passes.
+ *
+ * @canonical The error text of a capture whose webview never loaded
+ */
+export const NOT_LOADED_ERROR = `The preview webview did not load within ${WEBVIEW_LOAD_DEADLINE_MS / 1000} s.`;
+const NOT_LOADED: PreviewCapture = { error: NOT_LOADED_ERROR };
 const NOT_ANSWERING: PreviewCapture = {
   error: `The preview stopped answering for ${PING_INTERVAL_MS / 1000} s.`,
 };

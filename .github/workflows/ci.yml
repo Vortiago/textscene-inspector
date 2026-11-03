@@ -64,6 +64,7 @@ jobs:
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm check:dep-scripts
+      - run: pnpm canonical --check
       # `type-check:all` builds the packages once before the parallel app checks. Each app's
       # `pretype-check` rebuilds core, so four parallel builds would rewrite the dist an app
       # is reading. The test projects and the docs checks read that dist too.
@@ -272,6 +273,7 @@ jobs:
           path: |
             apps/textscene-vscode/.test-workspace/
             apps/textscene-vscode/out/
+            /tmp/vscode-test-data/logs/
             scripts/vscode/output/csp-gate/
 
   vsix:
