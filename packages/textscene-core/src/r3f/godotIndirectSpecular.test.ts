@@ -44,12 +44,19 @@ describe('installGodotIndirectSpecular', () => {
     expect(pars).not.toContain('indirectSpecular += multiScattering * cosineWeightedIrradiance;');
   });
 
+  it("multiplies the light by each weight in turn, as three's line did, so the product rounds the same", () => {
+    const { pars } = patchedChunks();
+
+    expect(pars).toContain('return light * godotEnergyCompensation * ( ( godotF90 - godotF0 )');
+    expect(pars).toContain('vec3 indirectSpecular = godotIndirectSpecular( radiance, material );');
+  });
+
   it("weighs a toon surface's reflection by its specular, metallic and albedo instead", () => {
     const { pars } = patchedChunks();
 
     expect(pars).toContain('#ifdef GODOT_DIFFUSE_TOON');
     expect(pars).toContain(
-      'radiance * sqrt( material.specularColor.g / 0.16 ) * material.metalness * material.diffuseColor * 2.0'
+      'return light * sqrt( material.specularColor.g / 0.16 ) * material.metalness * material.diffuseColor * 2.0;'
     );
   });
 
