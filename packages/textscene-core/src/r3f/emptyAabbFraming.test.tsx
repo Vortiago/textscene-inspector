@@ -50,3 +50,31 @@ describe('every registered GeometryInstance3D type', () => {
     }
   );
 });
+
+describe('a MultiMeshInstance3D with instances', () => {
+  const MULTIMESH_SCENE = `[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="Box"]
+
+[sub_resource type="MultiMesh" id="Instances"]
+transform_format = 1
+instance_count = 2
+mesh = SubResource("Box")
+buffer = PackedFloat32Array(1, 0, 0, 3, 0, 1, 0, 0, 0, 0, 1, -2, 1, 0, 0, 6, 0, 1, 0, 2, 0, 0, 1, 0)
+
+[node name="Root" type="Node3D"]
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("Box")
+
+[node name="Instances" type="MultiMeshInstance3D" parent="."]
+multimesh = SubResource("Instances")
+`;
+
+  it('frames on the box of its instances, as the rendering server builds it', async () => {
+    // `godot --emit-bounds`: position [-0.5,-0.5,-2.5], size [7,3,3], so the centre is (3, 1, -1).
+    const target = await framedTarget(MULTIMESH_SCENE);
+
+    expect([target.x, target.y, target.z]).toEqual([3, 1, -1]);
+  });
+});
