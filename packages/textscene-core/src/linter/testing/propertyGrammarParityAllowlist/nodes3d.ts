@@ -189,6 +189,34 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'The group wildcard validates the limit keys the parser reads, since the registry holds an exact key only for a bounded leaf. The motors, springs and solver parameters change how a running game moves the bodies (ADR-0005); the gizmo reads only the limits and the bodies.',
   },
 
+  RayCast3D: {
+    linterOnly: [
+      // The runtime ray's physics: none decides what the editor gizmo draws.
+      'collide_with_areas',
+      'collide_with_bodies',
+      'collision_mask',
+      'exclude_parent',
+      'hit_back_faces',
+      'hit_from_inside',
+    ],
+    reason:
+      'The gizmo reads enabled, target_position, debug_shape_thickness and debug_shape_custom_color; the physics keys drive the ray at runtime alone.',
+  },
+
+  ShapeCast3D: {
+    linterOnly: [
+      // The runtime sweep's physics: none decides what the editor gizmo draws.
+      'collide_with_areas',
+      'collide_with_bodies',
+      'collision_mask',
+      'exclude_parent',
+      'margin',
+      'max_results',
+    ],
+    reason:
+      'The gizmo reads enabled, shape, target_position and debug_shape_custom_color; the sweep parameters drive the cast at runtime alone.',
+  },
+
   Camera3D: {
     renderGap: ['compositor'],
     reason: 'A camera can run a Compositor stack, and the previewer runs none.',

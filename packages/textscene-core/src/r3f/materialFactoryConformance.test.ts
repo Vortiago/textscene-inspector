@@ -290,6 +290,8 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the depth prepass sentinel: its material writes nothing and is never mutated, and the sentinel is removed with its scene',
   'packages/textscene-core/src/resources/sky/build.ts':
     'the sky cube: built once, consumed by a single cube render, disposed with the environment',
+  'packages/textscene-core/src/r3f/internal/glb-scene-root/GlbSurfaceMaterialOverride.tsx':
+    'the next_pass chain sibling: the effect builds the draw beside a long-lived clone of the loader’s mesh and removes it when the link unmounts, so the material never passes through React',
 };
 
 /**

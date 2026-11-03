@@ -1,16 +1,16 @@
 ---
 type: RayCast3D
 category: 3D
-status: linter-only
+status: unreviewed
 fixture: unit-ray-cast-3d.tscn
 # image: unit-ray-cast-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: a ray line and pyramid gizmo for every node
 ---
 
 # RayCast3D
 
-Casts a ray each physics frame toward `target_position` and reports the first hit. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+Casts a ray each physics frame toward `target_position` and reports the first hit. The previewer runs no cast, so nothing of it draws.
 
 ## Linting
 
@@ -38,4 +38,14 @@ Strict parsing format-checks these `RayCast3D` properties, plus 17 inherited fro
 |  | `raycast3d-zero-mask` | info |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D` unmodified, which pulls only `transform` and `visible` off the property bag. A bad `collision_mask = "all"` or a two-component `target_position` is never read, so strict linting is the only path that sees it.
+The lenient parser reads `enabled`, `target_position`, `debug_shape_thickness` and `debug_shape_custom_color` on top of the Node3D transform. An unreadable `target_position` stays `undefined` with a warn in the log, not Godot's default, and the gizmo substitutes `Vector3(0, -1, 0)` where it draws. `collide_with_areas`, `collide_with_bodies`, `collision_mask`, `exclude_parent`, `hit_from_inside` and `hit_back_faces` are never read, because they steer the cast that only a running game runs.
+
+## Gizmo
+
+Every node draws the ray: one line from the origin to `target_position` (`ray_cast_3d.cpp:405-406`). A target of `Vector3()` returns before any vertex, so it draws nothing (`ray_cast_3d.cpp:401-403`). A `debug_shape_thickness` above 1 fills a truncated pyramid around the line, a base ring `thickness / 100` m across and a third of that at the tip. The colour is the node's `debug_shape_custom_color`, or the project collision colour when that is `Color(0, 0, 0)` (`ray_cast_3d.cpp:483-486`). Godot's gizmo source is `ray_cast_3d_gizmo_plugin.cpp:60-66`.
+
+The plugin passes the node's own debug material and no variant replaces it, so the gizmo keeps that colour in every state (ADR-0056 names the split). A disabled node draws both parts in the grey that `get_material("shape_material_disabled")` fetches alone, grey at 0.18.
+
+## Known limitations
+
+- **Editor only** The gizmo draws for every ray when the Gizmos toggle is on, which a capture keeps off.

@@ -1,11 +1,8 @@
 /**
- * RayCast3D draws nothing of its own (ADR-0008), so it reuses the Node3D
- * component, and its children still land in the right transform space.
+ * RayCast3D draws its ray gizmo for every node, in the material the node owns, which no variant
+ * replaces (ADR-0056), and its children still land in the Node3D transform space.
  */
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../../base/node3d/Component';
-nodeComponentRegistry.register({
-  typeName: 'RayCast3D',
-  Component: Node3D,
-  renderIntent: 'transform-only',
-});
+import { RayCast3D } from './Component';
+
+nodeComponentRegistry.register({ typeName: 'RayCast3D', Component: RayCast3D });

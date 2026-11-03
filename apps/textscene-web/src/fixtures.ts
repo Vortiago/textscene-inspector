@@ -4249,6 +4249,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Next Pass",
+    "file": "unit-material-next-pass.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Normal Map Blue",
     "file": "unit-material-normal-map-blue.tscn",
     "category": "Unit - Materials"

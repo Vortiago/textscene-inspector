@@ -88,6 +88,7 @@ describe('core imports each engine fact from its own file', () => {
     expect(importsGodotBarrel(file, "// import { a } from '../../../godot';")).toBe(false);
   });
 
+  // The walk over every core source sits near 5 s from a cold start, so it carries its own budget.
   it('lets no core file import through the godot barrel', () => {
     const sources = walkSources([coreSrc], (name) => /\.tsx?$/.test(name));
     expect(sources.length).toBeGreaterThan(100);
@@ -96,7 +97,7 @@ describe('core imports each engine fact from its own file', () => {
       offenders.map(({ file }) => repoPath(file)),
       'import the fact from its file under godot/<group>/'
     ).toEqual([]);
-  });
+  }, 20000);
 });
 
 describe('a package barrel re-exports only what a package outside core imports', () => {
