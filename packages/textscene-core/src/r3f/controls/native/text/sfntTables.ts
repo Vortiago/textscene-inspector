@@ -61,8 +61,28 @@ const FVAR_AXIS_DEFAULT_OFFSET = 8;
 /** The tables the readers of this module use. A compressed container decompresses these and no others. */
 export const SCENE_FONT_TABLE_TAGS: readonly string[] = ['head', 'hhea', 'OS/2', 'fvar'];
 
-/** The tables an outline reader uses (`sfntOutlines.ts`), for the container readers to decompress. */
-export const OUTLINE_TABLE_TAGS: readonly string[] = ['head', 'maxp', 'cmap', 'glyf', 'loca', 'CFF ', 'CFF2'];
+/**
+ * The tables an outline reader uses (`sfntOutlines.ts`), for the container readers to decompress:
+ * the outlines, the metrics that place a TrueType glyph's phantom points, and its hinting programs.
+ */
+export const OUTLINE_TABLE_TAGS: readonly string[] = [
+  'head',
+  'maxp',
+  'cmap',
+  'glyf',
+  'loca',
+  'CFF ',
+  'CFF2',
+  'hhea',
+  'hmtx',
+  'vhea',
+  'vmtx',
+  'OS/2',
+  'cvt ',
+  'fpgm',
+  'prep',
+  'fvar',
+];
 
 export interface TableRecord {
   offset: number;

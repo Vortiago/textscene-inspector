@@ -100,16 +100,14 @@ describe('openFontOutlines containers', () => {
 });
 
 describe('openFontOutlines simple glyph', () => {
-  it('reads the points of H at 64 px with the x Godot measured and the y negated', async () => {
+  it('reads the hinted points of H at 64 px that Godot measured, the y negated', async () => {
     const contours = contoursOf(await openSans(), 'H', 64);
-    // x: `font_get_glyph_contours` of this font at size 64 in Godot 4.6.3. y: the design units
-    // 0, 660, 1462 and 864 over 32, without the vertical hinting Godot adds.
+    // `font_get_glyph_contours` of this font at size 64 in Godot 4.6.3. The hints move the cap
+    // height to a whole pixel and the crossbar with it, and no x at all.
     expect(xs(contours)).toEqual([
       42.03125, 34.5625, 34.5625, 13.5, 13.5, 6, 6, 13.5, 13.5, 34.5625, 34.5625, 42.03125,
     ]);
-    expect(ys(contours)).toEqual([
-      -0, -0, -20.625, -20.625, -0, -0, -45.6875, -45.6875, -27, -27, -45.6875, -45.6875,
-    ]);
+    expect(ys(contours)).toEqual([-0, -0, -21.03125, -21.03125, -0, -0, -45, -45, -27, -27, -45, -45]);
   });
 
   it('ends the one contour of H on its last point, every point on the curve', async () => {

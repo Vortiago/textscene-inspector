@@ -18,9 +18,23 @@ export function toUint8(value: number): number {
   return value & 0xff;
 }
 
-/** `(int16_t)` of a 16-bit field, for the packed cell streams (`variant.h:437`). */
+/**
+ * `(int16_t)` of a 16-bit field, for the packed cell streams (`variant.h:437`) and a font's
+ * 16-bit values.
+ *
+ * @canonical the C cast of an integer to int16_t
+ */
 export function toInt16(value: number): number {
   return ((value & 0xffff) << 16) >> 16;
+}
+
+/**
+ * `(uint16_t)` of an integer: its low 16 bits.
+ *
+ * @canonical the C cast of an integer to uint16_t
+ */
+export function toUint16(value: number): number {
+  return value & 0xffff;
 }
 
 /** A `PackedByteArray` element: `Vector<uint8_t>` (`variant_parser.cpp:650`). */

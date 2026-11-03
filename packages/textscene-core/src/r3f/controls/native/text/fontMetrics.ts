@@ -143,6 +143,20 @@ function freeTypeSizeRequest(unitsPerEm: number, fontSizePx: number): { xScale: 
 }
 
 /**
+ * The ppem and the 16.16 scale of a TrueType glyph load at `fontSizePx` (`ttobjs.c`,
+ * `tt_size_reset`). A font whose `head` flags round the ppem scales by the whole-pixel size,
+ * which a whole-pixel request already is.
+ */
+export function freeTypeTrueTypeSize(
+  unitsPerEm: number,
+  fontSizePx: number,
+  isPpemRounded: boolean
+): { scale: number; ppem: number } {
+  const { xScale, ppem } = freeTypeSizeRequest(unitsPerEm, fontSizePx);
+  return { scale: isPpemRounded ? ftDivFix(ppem * FIXED_26_6_ONE, unitsPerEm) : xScale, ppem };
+}
+
+/**
  * FreeType's `x_scale` for `fontSizePx`: the 16.16 factor that takes a design-unit coordinate to 26.6
  * px (`FT_MulFix(units, scale)`), which scales every outline point Godot reads
  * (`text_server_adv.cpp:3613`, `FT_Load_Glyph`).

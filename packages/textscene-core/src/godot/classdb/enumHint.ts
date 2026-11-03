@@ -5,8 +5,6 @@
  * implicit label is 5, not its array index. An option's label is the text before its
  * first colon, and its value is the second colon-separated slice (`get_slicec(':', 1)`),
  * read as `String::to_int`, which answers 0 for text that is not a number.
- *
- * @canonical The labels and values of a property-hint enum
  */
 
 export interface HintEnumEntry {
@@ -20,7 +18,11 @@ function toInt(text: string): number {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-/** Each label of `hintString` with the integer the engine stores for it, in hint order. */
+/**
+ * Each label of `hintString` with the integer the engine stores for it, in hint order.
+ *
+ * @canonical The labels and values of a property-hint enum
+ */
 export function parseHintEnum(hintString: string): readonly HintEnumEntry[] {
   if (hintString.length === 0) return [];
   const entries: HintEnumEntry[] = [];

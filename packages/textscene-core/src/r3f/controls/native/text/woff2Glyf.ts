@@ -51,6 +51,8 @@ export interface RebuiltGlyf {
   glyf: Uint8Array;
   /** In the format of the transform's `indexFormat`, which `head.indexToLocFormat` repeats. */
   loca: Uint8Array;
+  /** Each glyph's `xMin`, zero for an empty one, which a transformed `hmtx` may take its side bearings from. */
+  xMins: Int16Array;
 }
 
 interface Point {
@@ -309,6 +311,13 @@ function glyphAt(index: number, bitmap: Uint8Array, streams: Streams): Uint8Arra
   return simpleGlyph(contourCount, isBoxStored ? readStoredBox(streams.boxes) : null, streams);
 }
 
+/** The `xMin` of a rebuilt glyph's header, or zero for an empty glyph (`sfwoff2.c`, `reconstruct_glyf`). */
+function xMinOf(glyph: Uint8Array): number {
+  return glyph.length === 0
+    ? 0
+    : new DataView(glyph.buffer, glyph.byteOffset, glyph.byteLength).getInt16(2, false);
+}
+
 /** The glyphs laid end to end, each padded to `alignment`, and the offset each starts at, with the end last. */
 function joinGlyphs(
   glyphs: readonly Uint8Array[],
@@ -369,5 +378,5 @@ export function rebuildGlyfTables(transformed: Uint8Array): RebuiltGlyf {
     glyphs,
     locaFormat === LONG_LOCA_FORMAT ? LONG_GLYPH_ALIGNMENT : SHORT_GLYPH_ALIGNMENT
   );
-  return { glyf, loca: locaOf(offsets, locaFormat) };
+  return { glyf, loca: locaOf(offsets, locaFormat), xMins: Int16Array.from(glyphs, xMinOf) };
 }

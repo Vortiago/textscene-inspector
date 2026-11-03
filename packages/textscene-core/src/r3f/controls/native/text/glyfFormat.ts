@@ -18,11 +18,14 @@ export const SIMPLE_Y_SAME_OR_POSITIVE = 0x20;
 // The flags of a component of a composite glyph.
 export const COMPONENT_ARGS_ARE_WORDS = 0x0001;
 export const COMPONENT_ARGS_ARE_XY_VALUES = 0x0002;
+export const COMPONENT_ROUND_XY_TO_GRID = 0x0004;
 export const COMPONENT_HAS_SCALE = 0x0008;
 export const COMPONENT_MORE = 0x0020;
 export const COMPONENT_HAS_XY_SCALE = 0x0040;
 export const COMPONENT_HAS_2X2 = 0x0080;
 export const COMPONENT_HAS_INSTRUCTIONS = 0x0100;
+export const COMPONENT_USE_MY_METRICS = 0x0200;
+export const COMPONENT_SCALED_OFFSET = 0x0800;
 
 /** The bytes of a component's two arguments: words with the flag set, bytes without it. */
 export function componentArgumentByteCount(flags: number): number {

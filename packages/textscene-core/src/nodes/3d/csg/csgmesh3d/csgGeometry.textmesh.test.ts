@@ -77,12 +77,12 @@ describe('csgMesh3DGeometry for a TextMesh with depth', () => {
   const DEEP_PROPERTIES = { mesh: 'SubResource("DeepH")', flipFaces: false };
   const brush = async (properties: typeof DEEP_PROPERTIES) =>
     csgMesh3DGeometry(properties, await readyContext())!.geometry;
-  // The H outline of this font encloses 818.158 px² at 64 px (fontTools). A pixel is 0.01 and the depth 0.05.
-  const OUTLINE_VOLUME = 818.158 * 0.01 ** 2 * 0.05;
+  // Godot 4.6.3 hints the H of this font at 64 px to an outline of 799.310546875 px²
+  // (`hinting.godot.json`). A pixel is 0.01 and the depth 0.05.
+  const OUTLINE_VOLUME = 799.310546875 * 0.01 ** 2 * 0.05;
 
   // Godot's CSG builds an "H" at font_size 64 and depth 0.05 from 44 triangles on 24 distinct
-  // positions (measured in Godot 4.6.3). Godot hints the glyph to 45 px, so its y extent and its
-  // volume are 2.4% under this port's unhinted outline.
+  // positions (measured in Godot 4.6.3).
   it('reaches the brush with the triangles and the positions Godot builds', async () => {
     const positions = (await brush(DEEP_PROPERTIES)).getAttribute('position');
 

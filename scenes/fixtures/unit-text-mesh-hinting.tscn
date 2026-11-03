@@ -1,0 +1,48 @@
+[gd_scene load_steps=7 format=3 uid="uid://unittextmeshhinting"]
+
+; The one variable: a small `font_size` on a TextMesh with a TrueType font. Godot hints the outline at
+; the size with the font's own bytecode, so the stems and the crossbar snap to whole pixels, and the
+; `pixel_size` scales the snapped outline up. The left text is at 12 px and the right one at 17 px,
+; and each `pixel_size` gives the same height as unit-text-mesh.tscn at 64 px. Both texts are flat.
+; Every other TrueType TextMesh golden is at 64 px, where the hints move the outline less.
+
+[ext_resource type="FontFile" path="res://fonts/open-sans-semibold-subset.ttf" id="1_font"]
+
+[sub_resource type="Gradient" id="Gradient_uv"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv"]
+gradient = SubResource("Gradient_uv")
+fill_to = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv"]
+shading_mode = 0
+albedo_texture = SubResource("GradientTexture2D_uv")
+
+[sub_resource type="TextMesh" id="TextMesh_12"]
+material = SubResource("StandardMaterial3D_uv")
+text = "Hoa"
+font = ExtResource("1_font")
+font_size = 12
+pixel_size = 0.0533333
+depth = 0.0
+
+[sub_resource type="TextMesh" id="TextMesh_17"]
+material = SubResource("StandardMaterial3D_uv")
+text = "Hoa"
+font = ExtResource("1_font")
+font_size = 17
+pixel_size = 0.0376471
+depth = 0.0
+
+[node name="Root" type="Node3D"]
+
+[node name="Small" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, -1.1, 0, 0)
+mesh = SubResource("TextMesh_12")
+
+[node name="Odd" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, 1.1, 0, 0)
+mesh = SubResource("TextMesh_17")

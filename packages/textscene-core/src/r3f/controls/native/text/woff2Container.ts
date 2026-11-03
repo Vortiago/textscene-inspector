@@ -1,8 +1,7 @@
 /**
  * Reads the tables of a WOFF 2.0 file (W3C WOFF 2.0, §"WOFF2 Header", §"Table directory" and
  * §"Compressed data format"): one Brotli stream holding every table, end to end. A transformed
- * `glyf` and `loca` are rebuilt (`woff2Glyf.ts`), and the other transformed table, `hmtx`, stays out:
- * no reader needs it.
+ * `glyf` and `loca` are rebuilt (`woff2Glyf.ts`), and so is a transformed `hmtx` (`woff2Hmtx.ts`).
  */
 
 import { ByteReader } from '../../../../resources/formats/binaryresource/byteReader';
@@ -10,7 +9,8 @@ import { exactly } from '../../../../resources/formats/binaryresource/compressed
 import { perObject } from '../../../../utils/perObject';
 import { loadBrotliDecoder } from './brotliDecoder';
 import { SCENE_FONT_TABLE_TAGS, sfntFileOfTables, type SfntFile } from './sfntTables';
-import { rebuildGlyfTables } from './woff2Glyf';
+import { rebuildGlyfTables, type RebuiltGlyf } from './woff2Glyf';
+import { longMetricCountOf, plainGlyfXMins, rebuildHmtx } from './woff2Hmtx';
 
 export const WOFF2_SIGNATURE = 0x774f4632; // 'wOF2'
 const SFNT_COLLECTION_FLAVOR = 0x74746366; // 'ttcf'
@@ -131,14 +131,12 @@ function readDirectoryEntry(reader: ByteReader): DirectoryEntry {
   return { tag, isTransformed, storedLength: isTransformed ? readBase128(reader) : originalLength };
 }
 
-/**
- * The `glyf` and `loca` that the transformed `glyf` holds. The `loca` is stored with a length of 0,
- * so the transformed `glyf` is the one place the pair comes from.
- */
-function setRebuiltGlyfTables(tables: Map<string, Uint8Array>, transformedGlyf: Uint8Array): void {
-  const { glyf, loca } = rebuildGlyfTables(transformedGlyf);
-  tables.set('glyf', glyf);
-  tables.set('loca', loca);
+/** A table as the decoded stream stores it. */
+interface StoredTable {
+  bytes: Uint8Array;
+  /** Where the table starts in the decoded stream. */
+  offset: number;
+  isTransformed: boolean;
 }
 
 interface DecodedStream {
@@ -167,19 +165,67 @@ const decodedStreamOf = perObject(async (bytes: ArrayBuffer): Promise<DecodedStr
   return { entries, decoded: exactly(decodedLength, decode(compressed, decodedLength)) };
 });
 
-/** Throws on a collection, a directory or stream that does not fit `bytes`, or a Brotli stream that does not decode to the lengths the directory sums to. */
+/** The bytes each table takes in the decoded stream, by tag. */
+function storedTablesOf({ entries, decoded }: DecodedStream): Map<string, StoredTable> {
+  const stored = new Map<string, StoredTable>();
+  let offset = 0;
+  for (const { tag, storedLength, isTransformed } of entries) {
+    stored.set(tag, { bytes: decoded.subarray(offset, offset + storedLength), offset, isTransformed });
+    offset += storedLength;
+  }
+  return stored;
+}
+
+/** The `xMin` of each glyph, from the rebuilt `glyf` or else the plain one. Throws on a font without the tables. */
+function glyphXMinsOf(
+  { decoded }: DecodedStream,
+  stored: ReadonlyMap<string, StoredTable>,
+  rebuilt: RebuiltGlyf | null
+): Int16Array {
+  if (rebuilt) return rebuilt.xMins;
+  const offsetOf = (tag: string) => {
+    const table = stored.get(tag);
+    if (!table) throw new Error(`expected a ${tag} table beside a transformed hmtx, got none`);
+    return table.offset;
+  };
+  return plainGlyfXMins(decoded, {
+    maxp: offsetOf('maxp'),
+    head: offsetOf('head'),
+    loca: offsetOf('loca'),
+    glyf: offsetOf('glyf'),
+  });
+}
+
+/**
+ * Throws on a collection, a directory or stream that does not fit `bytes`, a Brotli stream that
+ * does not decode to the lengths the directory sums to, or a transformed table FreeType rejects.
+ */
 export async function readWoff2Tables(
   bytes: ArrayBuffer,
   tags: readonly string[] = SCENE_FONT_TABLE_TAGS
 ): Promise<SfntFile> {
-  const { entries, decoded } = await decodedStreamOf(bytes);
+  const stream = await decodedStreamOf(bytes);
+  const stored = storedTablesOf(stream);
   const tables = new Map<string, Uint8Array>();
-  let offset = 0;
-  for (const { tag, storedLength, isTransformed } of entries) {
-    const stored = decoded.subarray(offset, offset + storedLength);
-    if (tag === 'glyf' && isTransformed && tags.includes('glyf')) setRebuiltGlyfTables(tables, stored);
-    else if (!isTransformed && tags.includes(tag)) tables.set(tag, stored);
-    offset += storedLength;
+  for (const [tag, { bytes: tableBytes, isTransformed }] of stored)
+    if (!isTransformed && tags.includes(tag)) tables.set(tag, tableBytes);
+
+  const glyf = stored.get('glyf');
+  const hmtx = stored.get('hmtx');
+  const isHmtxRebuilt = hmtx?.isTransformed === true && tags.includes('hmtx');
+  const rebuilt =
+    glyf?.isTransformed && (tags.includes('glyf') || isHmtxRebuilt) ? rebuildGlyfTables(glyf.bytes) : null;
+  if (rebuilt && tags.includes('glyf')) {
+    tables.set('glyf', rebuilt.glyf);
+    tables.set('loca', rebuilt.loca);
+  }
+  if (isHmtxRebuilt) {
+    const hhea = stored.get('hhea');
+    if (!hhea) throw new Error('expected an hhea table beside a transformed hmtx, got none');
+    tables.set(
+      'hmtx',
+      rebuildHmtx(hmtx.bytes, longMetricCountOf(hhea.bytes), glyphXMinsOf(stream, stored, rebuilt))
+    );
   }
   return sfntFileOfTables(tables);
 }
