@@ -91,6 +91,7 @@ export function decodeSkyMaterial(type: string, data: Record<string, string>): S
       return {
         kind: 'panorama',
         panorama: data.panorama,
+        filter: boolOr(data.filter, true, 'filter'),
         energy_multiplier: floatOr(data.energy_multiplier, 1, 'energy_multiplier'),
       };
 

@@ -37,19 +37,29 @@ const GODOT_DFG = /* glsl */ `material.godotDfg = texture2D( ${DFG_UNIFORM}, vec
 	material.dfg = material.godotDfg;`;
 
 /**
- * `F0` (`scene_forward_lights_inc.glsl:55-58`) is three's blended specular colour, and Godot's f90
- * for an indirect specular is `50 * f0.g` (`scene_forward_clustered.glsl:2230`). A toon surface
- * weighs it by `specular * metallic * albedo * 2` instead (`:2219-2220`). three's dielectric
- * specular colour is Godot's `0.16 * specular * specular` (`materialBag.ts`), which gives `specular`.
+ * `light` weighed as Godot weighs an indirect specular (`scene_forward_clustered.glsl:2216-2231`). `F0`
+ * (`scene_forward_lights_inc.glsl:55-58`) is three's blended specular colour, and Godot's f90 is
+ * `50 * f0.g` (`:2230`). A toon surface weighs it by `specular * metallic * albedo * 2` instead
+ * (`:2219-2220`). three's dielectric specular colour is Godot's `0.16 * specular * specular`
+ * (`materialBag.ts`), which gives `specular`. The light takes each weight in turn, left to right:
+ * another order rounds a surface at an exact half step one level apart.
  */
-const GODOT_INDIRECT_SPECULAR = /* glsl */ `#ifdef GODOT_DIFFUSE_TOON
-	vec3 indirectSpecular = radiance * sqrt( material.specularColor.g / 0.16 ) * material.metalness * material.diffuseColor * 2.0;
+const GODOT_INDIRECT_SPECULAR_FUNCTION = /* glsl */ `vec3 godotIndirectSpecular( vec3 light, const in PhysicalMaterial material ) {
+	#ifdef GODOT_DIFFUSE_TOON
+	return light * sqrt( material.specularColor.g / 0.16 ) * material.metalness * material.diffuseColor * 2.0;
 	#else
 	vec3 godotF0 = material.specularColorBlended;
 	float godotF90 = clamp( 50.0 * godotF0.g, material.metalness, 1.0 );
 	vec3 godotEnergyCompensation = 1.0 + godotF0 * ( 1.0 / material.godotDfg.y - 1.0 );
-	vec3 indirectSpecular = radiance * godotEnergyCompensation * ( ( godotF90 - godotF0 ) * material.godotDfg.x + godotF0 * material.godotDfg.y );
-	#endif`;
+	return light * godotEnergyCompensation * ( ( godotF90 - godotF0 ) * material.godotDfg.x + godotF0 * material.godotDfg.y );
+	#endif
+}
+
+`;
+
+const GODOT_INDIRECT_SPECULAR = 'vec3 indirectSpecular = godotIndirectSpecular( radiance, material );';
+
+const THREE_INDIRECT_SPECULAR_FUNCTION = 'void RE_IndirectSpecular_Physical(';
 
 /**
  * three's occlusion of a reflection by the AO map alone, the clearcoat's included, each line apart:
@@ -95,6 +105,11 @@ const EDITS: readonly ChunkEdit<SpecularChunk>[] = [
   },
   { chunk: 'lights_fragment_begin', three: THREE_DFG, godot: GODOT_DFG },
   {
+    chunk: 'lights_physical_pars_fragment',
+    three: THREE_INDIRECT_SPECULAR_FUNCTION,
+    godot: `${GODOT_INDIRECT_SPECULAR_FUNCTION}${THREE_INDIRECT_SPECULAR_FUNCTION}`,
+  },
+  {
     chunk: 'lights_fragment_begin',
     three:
       'material.multiScatteringCompensation = 1.0 + material.specularColorBlended * ( 1.0 / EssMs - 1.0 );',
@@ -128,7 +143,7 @@ class DfgTexture extends sharedTexture(THREE.DataTexture) {
  * program compiled after the call. A three release that rewrites a replaced line keeps all its
  * chunks, and `godotIndirectSpecular.test.ts` fails on that release. A second call changes nothing.
  */
-export function installGodotIndirectSpecular(): void {
+export function installGodotIndirectSpecular(): boolean {
   const isPatched = installChunkEdits({
     edits: EDITS,
     mark: GODOT_INDIRECT_SPECULAR,
@@ -138,4 +153,5 @@ export function installGodotIndirectSpecular(): void {
     requires: [installGodotOcclusion],
   });
   if (isPatched) installLitUniform(DFG_UNIFORM, releasedOnUnmount(new DfgTexture()));
+  return isPatched;
 }

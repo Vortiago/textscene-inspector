@@ -111,6 +111,24 @@ describe('createEnvironmentSettings', () => {
     expect(settings.fog).toBeNull();
   });
 
+  it('has no screen-space reflection while ssr_enabled is off', () => {
+    expect(createEnvironmentSettings(base(), DEFAULT_CLEAR_COLOR).ssr).toBeNull();
+  });
+
+  it('carries the screen-space reflection trace while ssr_enabled is on', () => {
+    const settings = createEnvironmentSettings(
+      base({
+        ssr_enabled: true,
+        ssr_max_steps: 32,
+        ssr_fade_in: 0.5,
+        ssr_fade_out: 4,
+        ssr_depth_tolerance: 0.05,
+      }),
+      DEFAULT_CLEAR_COLOR
+    );
+    expect(settings.ssr).toEqual({ maxSteps: 32, fadeIn: 0.5, fadeOut: 4, depthTolerance: 0.05 });
+  });
+
   it('has no volumetric fog while volumetric_fog_enabled is off', () => {
     expect(createEnvironmentSettings(base(), DEFAULT_CLEAR_COLOR).volumetricFog).toBeNull();
   });

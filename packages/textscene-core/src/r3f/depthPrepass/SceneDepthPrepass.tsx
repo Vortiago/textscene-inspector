@@ -13,8 +13,7 @@ export function useSceneDepthPrepass(scene: THREE.Scene | null): void {
     scene.add(sentinel);
     return () => {
       scene.remove(sentinel);
-      sentinel.geometry.dispose();
-      (sentinel.material as THREE.Material).dispose();
+      sentinel.dispose();
     };
   }, [scene]);
 }

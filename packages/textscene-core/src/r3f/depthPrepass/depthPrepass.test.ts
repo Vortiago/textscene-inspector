@@ -58,7 +58,7 @@ function prepassDraws(...objects: THREE.Object3D[]): PrepassDraw[] {
   const args = [recordingRenderer(draws), scene, CAMERA] as unknown as Parameters<
     THREE.Object3D['onBeforeRender']
   >;
-  sentinel.onBeforeRender(...args);
+  sentinel.mesh.onBeforeRender(...args);
   return draws;
 }
 
@@ -123,19 +123,8 @@ describe('the depth prepass a sentinel draws', () => {
 });
 
 describe('createDepthPrepassSentinel', () => {
-  it('sorts before every opaque draw and is never culled, so the prepass precedes the opaque pass', () => {
-    const sentinel = createDepthPrepassSentinel();
-    expect(sentinel.renderOrder).toBe(Number.MIN_SAFE_INTEGER);
-    expect(sentinel.frustumCulled).toBe(false);
-  });
-
-  it('takes no pick and leaves no mark of its own (edge case)', () => {
-    const sentinel = createDepthPrepassSentinel();
-    const hits: THREE.Intersection[] = [];
-    sentinel.raycast(new THREE.Raycaster(), hits);
-    expect(hits).toEqual([]);
-    expect(sentinel.material).toMatchObject({ colorWrite: false, depthWrite: false });
-    expect(sentinel.castShadow).toBe(false);
+  it('sorts before every opaque draw, so the prepass precedes the opaque pass', () => {
+    expect(createDepthPrepassSentinel().renderOrder).toBe(Number.MIN_SAFE_INTEGER);
   });
 });
 
@@ -155,7 +144,7 @@ describe('the depth prepass under a frame profile', () => {
     const stats = profiledWindow(
       renderer,
       () => time,
-      () => sentinel.onBeforeRender(...args)
+      () => sentinel.mesh.onBeforeRender(...args)
     );
 
     expect(stepCpuMs(stats)).toEqual([

@@ -54,6 +54,32 @@ export function fullScreenPass(
   });
 }
 
+/** A full-screen pass whose uniforms are `uniformNames`, each empty until a draw sets it. */
+export function namedUniformPass(
+  name: string,
+  fragmentShader: string,
+  uniformNames: readonly string[]
+): THREE.ShaderMaterial {
+  const uniforms = Object.fromEntries(uniformNames.map((uniform) => [uniform, { value: null }]));
+  return fullScreenPass(name, fragmentShader, uniforms);
+}
+
+/** Sets each uniform `values` names on `pass`, and throws for a name the pass does not declare. */
+export function setUniforms(pass: THREE.ShaderMaterial, values: Record<string, unknown>): void {
+  for (const [name, value] of Object.entries(values)) {
+    const uniform = pass.uniforms[name];
+    if (!uniform) throw new Error(`expected a uniform of the pass, got ${name}`);
+    uniform.value = value;
+  }
+}
+
+/** Lets go of the textures `pass` reads, as a pass outlives the targets a draw set. */
+export function releaseTextures(pass: THREE.ShaderMaterial): void {
+  for (const uniform of Object.values(pass.uniforms)) {
+    if (uniform.value instanceof THREE.Texture) uniform.value = null;
+  }
+}
+
 /**
  * A pass whose `fragmentShader` writes every texel's depth through `gl_FragDepth`, which always
  * passes, so the target takes the pass's depth as it takes its colour.
