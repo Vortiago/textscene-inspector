@@ -1,3 +1,7 @@
+; ShapeCast3D draws its editor sweep gizmo for every node with the Gizmos toggle on (ADR-0056),
+; which no other golden enables for a ShapeCast3D: the origin-to-target_position line plus the
+; BoxShape3D wireframe sitting at the sweep's end, in the collision debug colour, where the authored
+; Color(0, 0, 0, 1) reads as empty. No mesh draws, so the camera frames on the gizmo's own lines.
 [gd_scene load_steps=2 format=3]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_1"]

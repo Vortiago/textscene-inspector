@@ -117,7 +117,9 @@ describe('@textscene/tscn tarball in a plain Node project', () => {
     expect(notices).not.toContain('## Open Sans font');
   });
 
+  // The consumer's declaration type-check loads the whole parser tree, near 5 s cold, so it carries
+  // its own budget.
   it('ships declarations that type-check without @textscene/core', () => {
     expect(() => run('node', [tscBin, '-p', '.'], consumerDir)).not.toThrow();
-  });
+  }, 30000);
 });
