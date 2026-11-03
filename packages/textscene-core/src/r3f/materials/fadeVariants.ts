@@ -63,12 +63,13 @@ export function surfaceFadeVariants(
 /**
  * The blend of each pass of a Sprite3D or Label3D surface, whose `get_material_for_2d` material
  * keeps DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth. Both draw MIX, three's default
- * blending. A Label3D run takes its opacity from its tint.
+ * blending. A Label3D run takes its opacity from its tint. A disabled depth test files the unfaded
+ * surface in the alpha pass too (`scene_shader_forward_clustered.h:279-287`).
  */
-export function cutBlends(cut: AlphaCutSurface) {
+export function cutBlends(cut: AlphaCutSurface, depthTest: boolean) {
   const { alphaTest, alphaHash } = cut;
-  const unfaded = { transparent: cut.blended, depthWrite: cut.depthWrite };
   const alphaPass = { transparent: true, depthWrite: false };
+  const unfaded = depthTest ? { transparent: cut.blended, depthWrite: cut.depthWrite } : alphaPass;
   return {
     unfaded: { ...unfaded, ...surfaceAlphaProps(cut, unfaded), alphaTest, alphaHash },
     alphaPass: { ...alphaPass, ...surfaceAlphaProps(cut, alphaPass), alphaTest, alphaHash },
