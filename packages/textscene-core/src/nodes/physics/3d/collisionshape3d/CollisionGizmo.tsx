@@ -12,12 +12,12 @@ import { decodeConcavePolygonShape3D } from '../../../../resources/shapes/concav
 import { decodeCapsuleShape3D } from '../../../../resources/shapes/capsuleshape3d';
 import { decodeSphereShape3D } from '../../../../resources/shapes/sphereshape3d';
 import { decodeCylinderShape3D } from '../../../../resources/shapes/cylindershape3d';
-import { worldBoundaryOutline } from './worldBoundaryOutline';
 import { decodeWorldBoundaryShape3D } from '../../../../resources/shapes/worldboundaryshape3d';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { warn } from '../../../../logger';
 import { wireGizmoProgram } from '../../../../r3f/components/wireGizmoProgram';
 import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
+import { worldBoundaryOutline } from './worldBoundaryOutline';
 
 interface CollisionGizmoProps {
   shape: TscnInternalResource;

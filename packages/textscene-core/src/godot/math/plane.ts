@@ -3,6 +3,6 @@
 import type { Vector3 } from './vector.js';
 
 export interface Plane {
-  normal: Vector3;
-  d: number;
+  readonly normal: Readonly<Vector3>;
+  readonly d: number;
 }
