@@ -59,8 +59,15 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
       });
     }
     if (!file || !body) return ABSENT;
-    return ready({ resource: body, ...fileResources(file), ...holding });
-  }, [inlineResource, inlineInternal, inlineExternal, isHeldLocally, file, body]);
+    return ready({
+      resource: body,
+      ...fileResources(file),
+      // The file's own address, so a chain's visited key holds the file an inline id
+      // resolves in: two files' ids of one name stay two keys.
+      origin: resourceFilePath(address),
+      ...holding,
+    });
+  }, [inlineResource, inlineInternal, inlineExternal, isHeldLocally, file, body, address]);
 
   useEffect(() => {
     if (loaded.status === 'declined' && loaded.type === 'ShaderMaterial') {

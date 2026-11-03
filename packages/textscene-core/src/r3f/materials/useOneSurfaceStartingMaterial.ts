@@ -9,7 +9,7 @@ import * as THREE from 'three';
  * invisible, in the colour pass (`WebGLRenderer.js:1948`) and the shadow pass
  * (`WebGLShadowMap.js:542`). Shared by every draw and never disposed.
  */
-const OTHER_DRAWS_SURFACE = new THREE.MeshBasicMaterial({ visible: false });
+export const OTHER_DRAWS_SURFACE = new THREE.MeshBasicMaterial({ visible: false });
 
 /**
  * One entry per draw group, each hiding its group until the owned surface's slot attaches over
