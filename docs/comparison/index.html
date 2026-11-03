@@ -2505,7 +2505,8 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>The preview environment enables glow, which blooms the emissive sphere. Both engines draw the same tight halo and leave the ground untouched. The bright pass, the seven-level pyramid and all five blend modes are ported from Godot's shaders. Each level blurs with Godot's five-weight gaussian. The composite reads each level with the bicubic filter, or with a bilinear fetch when the project sets <code>rendering/environment/glow/upscale_mode</code> to Linear. A frame too small to halve to the seventh level builds fewer levels, as Godot does. The glow runs whenever the environment enables it, so a lit specular highlight blooms as well, as in Godot. A <code>glow_map</code> scales the glow per screen position, as Godot's tonemap pass does.</p></div>
+        <div class="prose"><p>The preview environment enables glow, which blooms the emissive sphere. Both engines draw the same tight halo and leave the ground untouched. The bright pass, the seven-level pyramid and all five blend modes are ported from Godot's shaders. Each level blurs with Godot's five-weight gaussian. The composite reads each level with the bicubic filter, or with a bilinear fetch when the project sets <code>rendering/environment/glow/upscale_mode</code> to Linear. A frame too small to halve to the seventh level builds fewer levels, as Godot does. The glow runs whenever the environment enables it, so a lit specular highlight blooms as well, as in Godot.</p>
+<p>A <code>glow_map</code> scales the glow per screen position, as Godot's tonemap pass does. A ViewportTexture <code>glow_map</code> samples its live target only under an Environment local to scene. Otherwise it samples the magenta and black placeholder, as in Godot.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Adjustments</h3><span class="status st-done">Done</span></div>
@@ -6184,7 +6185,8 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>An equirectangular image wrapped onto the sky. The coloured calibration bands and the black grid confirm the U/V orientation matches Godot.</p></div>
+        <div class="prose"><p>An equirectangular image wrapped onto the sky. The coloured calibration bands and the black grid confirm the U/V orientation matches Godot.</p>
+<p>A panorama that is a ViewportTexture counts its path from the local scene of the node that holds the Environment: a WorldEnvironment or a Camera3D. Godot sets it up only when the Environment, the Sky and the PanoramaSkyMaterial are all local to scene. Otherwise the sky samples the magenta and black placeholder, as in Godot. A set-up panorama samples the live target. The background follows each draw of the target. The radiance keeps the first draw, as in Godot, where a draw of the target leaves the sky clean.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>PhysicalSkyMaterial</h3><span class="status st-done">Done</span></div>
