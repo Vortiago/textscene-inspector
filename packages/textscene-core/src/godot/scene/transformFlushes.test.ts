@@ -1,21 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import { HARNESS_FRAME, replayTransformFlushes, transformFlushesThrough } from './transformFlushes';
+import { DEFAULT_PHYSICS_CLOCK } from './physicsTicks';
 
 describe('transformFlushesThrough', () => {
   // A two-relay cycle pushes twice in the first flush and once in each flush after it, so these
   // are the pushes Godot 4.6.3 logged by the end of each frame under --fixed-fps 1000, less one.
   // Frame 8 holds the first physics tick.
   it('counts the flushes Godot runs by the end of each of the first ten frames', () => {
-    const flushes = Array.from({ length: 10 }, (_, frame) => transformFlushesThrough(frame));
+    const flushes = Array.from({ length: 10 }, (_, frame) =>
+      transformFlushesThrough(frame, DEFAULT_PHYSICS_CLOCK)
+    );
     expect(flushes).toEqual([3, 6, 9, 12, 15, 18, 21, 24, 29, 32]);
   });
 
   it('counts the 55 physics ticks Godot runs by the harness frame', () => {
-    expect(transformFlushesThrough(HARNESS_FRAME)).toBe(2882);
+    expect(transformFlushesThrough(HARNESS_FRAME, DEFAULT_PHYSICS_CLOCK)).toBe(2882);
   });
 
-  it('adds the second physics tick in frame 33, not frame 32', () => {
-    expect(transformFlushesThrough(33) - transformFlushesThrough(32)).toBe(5);
+  it('counts two flushes for each physics tick a faster clock adds', () => {
+    // 110 ticks at 120 a second: Godot logged 2993 pushes on a two-relay cycle.
+    expect(transformFlushesThrough(HARNESS_FRAME, { ticksPerSecond: 120, jitterFix: 0.5 })).toBe(2992);
   });
 });
 

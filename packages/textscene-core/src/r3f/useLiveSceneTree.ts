@@ -25,6 +25,9 @@ import { perObject } from '../utils/perObject.js';
 import { sameElements } from '../utils/sameElements.js';
 import { subscribeToNothing } from '../utils/subscribeToNothing.js';
 import { NOTHING_CACHED } from './cacheSources.js';
+import { useProjectSettings } from './contexts/ProjectSettingsContext.js';
+import { projectPhysicsClock } from '../parser/projectSettingsParser.js';
+import type { PhysicsClock } from '../godot/scene/physicsTicks.js';
 
 /** The live-tree roots and the snapshot of the loader's caches they are walked over. */
 export interface SharedLiveTree {
@@ -38,12 +41,13 @@ function loaderCaches(loader: ResourceLoader | null | undefined) {
 }
 
 /**
- * Build the live-tree roots and context from the parsed SceneGraph and the loader
- * cache snapshots. `null` while the root scene is not available.
+ * Build the live-tree roots and context from the parsed SceneGraph, the loader
+ * cache snapshots and the project's physics clock. `null` while the root scene is not available.
  */
 function liveTreeContext(
   sceneGraph: SceneGraph | null | undefined,
-  loader: ResourceLoader | null | undefined
+  loader: ResourceLoader | null | undefined,
+  physicsClock: PhysicsClock
 ): SharedLiveTree | null {
   // `scenes` is optional-chained too: readers outside the canvas (the toolbar)
   // see whatever the host put in HierarchyContext, which is not always a fully
@@ -56,6 +60,7 @@ function liveTreeContext(
       externalResources: root.externalResources,
       internalResources: root.internalResources,
       ...loaderCaches(loader),
+      physicsClock,
     },
   };
 }
@@ -142,18 +147,24 @@ function valueAtLoadTick<T>(
   };
 }
 
-/** The one tree every reader of a scene graph over a loader shares for a load tick. */
+/**
+ * The one tree every reader of a scene graph and physics clock over a loader shares for a load
+ * tick. `projectPhysicsClock` hands back one clock for one settings object, so the key holds.
+ */
 const sharedTreesOf = perObject((sceneGraph: SceneGraph) =>
-  valueAtLoadTick((loader) => liveTreeContext(sceneGraph, loader))
+  perObject((physicsClock: PhysicsClock) =>
+    valueAtLoadTick((loader) => liveTreeContext(sceneGraph, loader, physicsClock))
+  )
 );
 
-/** The scene graph in context, or null with none, and the loader. */
+/** The scene graph in context, or null with none, the loader and the project's physics clock. */
 function useSceneGraphAndLoader() {
   // Optional so viewport-level readers (the preview lighting) work in the
   // empty-canvas and test-renderer cases, where no scene is mounted at all.
   const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
   const loader = useResourceLoader();
-  return { sceneGraph, loader };
+  const physicsClock = projectPhysicsClock(useProjectSettings().settings);
+  return { sceneGraph, loader, physicsClock };
 }
 
 /**
@@ -161,11 +172,11 @@ function useSceneGraphAndLoader() {
  * the one the graph, loader and load tick give, so a node collapses once however many ask.
  */
 export function useSharedLiveTree(): SharedLiveTree | null {
-  const { sceneGraph, loader } = useSceneGraphAndLoader();
+  const { sceneGraph, loader, physicsClock } = useSceneGraphAndLoader();
   const version = useLiveTreeVersion(loader);
   return useMemo(
-    () => (sceneGraph ? sharedTreesOf(sceneGraph)(loader, version) : null),
-    [sceneGraph, loader, version]
+    () => (sceneGraph ? sharedTreesOf(sceneGraph)(physicsClock)(loader, version) : null),
+    [sceneGraph, physicsClock, loader, version]
   );
 }
 
@@ -211,14 +222,14 @@ export function useLiveTreeSelection<T>(
   select: ((tree: SharedLiveTree) => T | undefined) | null,
   isSame: (a: T, b: T) => boolean
 ): T | undefined {
-  const { sceneGraph, loader } = useSceneGraphAndLoader();
+  const { sceneGraph, loader, physicsClock } = useSceneGraphAndLoader();
   const readAt = useCallback(
     (version: number) => {
       if (!sceneGraph || !select) return undefined;
-      const tree = sharedTreesOf(sceneGraph)(loader, version);
+      const tree = sharedTreesOf(sceneGraph)(physicsClock)(loader, version);
       return tree ? select(tree) : undefined;
     },
-    [sceneGraph, loader, select]
+    [sceneGraph, physicsClock, loader, select]
   );
   const isSameSelection = useCallback(
     (a: T | undefined, b: T | undefined) => sameSelection(a, b, isSame),

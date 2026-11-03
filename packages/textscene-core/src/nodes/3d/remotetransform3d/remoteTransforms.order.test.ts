@@ -6,7 +6,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { liveTreeOfText } from '../../../r3f/liveSceneTree.testkit';
+import { contextOver, liveTreeOfText } from '../../../r3f/liveSceneTree.testkit';
+import { liveTreeOf } from '../../../r3f/liveSceneTree';
+import { TscnParser } from '../../../parser/TscnParser';
 import { liveGlobalTransform3D, nodesOnTheWayTo } from '../../../r3f/liveGlobalTransform';
 import { node2DLocalTransform } from '../../../r3f/node2dTransform';
 import { TRANSFORM2D_IDENTITY, multiplyTransform2D } from '../../../godot/math/transform2d';
@@ -161,6 +163,42 @@ describe('applyRemoteTransforms draws a relay cycle at the frame the ref:godot h
   it('puts the holders of a 3D cycle where Godot has pushed them by then', () => {
     expectCloseTo(globalOrigin3D(cycle3D(), 'Root/HolderA'), [2883, 0, 3]);
     expectCloseTo(globalOrigin3D(cycle3D(), 'Root/HolderB'), [2882, 0, 3]);
+  });
+
+  it("counts the project's physics ticks, which flush transforms too", () => {
+    // Godot logged holder A at x 2993 with `physics_ticks_per_second=120`.
+    const main = new TscnParser().parse(cycle3D());
+    const tree = liveTreeOf(main.nodes, {
+      ...contextOver(main, {}),
+      physicsClock: { ticksPerSecond: 120, jitterFix: 0.5 },
+    });
+    const holderA = liveGlobalTransform3D(tree, 'Root/HolderA', applyRemoteTransforms(tree))!;
+    expectCloseTo([holderA.origin.x, holderA.origin.y, holderA.origin.z], [2993, 0, 3]);
+  });
+
+  it('draws a mesh where its last transform notification left it, a push behind its holder', () => {
+    // Godot hands a VisualInstance3D's global transform to the server only when a flush notifies
+    // it (`visual_instance_3d.cpp:90-96`). Holder A moves in the last flush, so its box is queued
+    // for a flush the harness frame does not run.
+    expectCloseTo(globalOrigin3D(cycle3D(), 'Root/HolderA/Box'), [2881, 0, 3]);
+  });
+
+  it('draws the mesh of a turned cycle a whole turn step behind its holder', () => {
+    const turned = `[gd_scene format=3]
+[node name="Root" type="Node3D"]
+[node name="HolderA" type="Node3D" parent="."]
+[node name="Box" type="MeshInstance3D" parent="HolderA"]
+[node name="RelayA" type="RemoteTransform3D" parent="HolderA"]
+transform = Transform3D(0.9848078, 0, -0.1736482, 0, 1, 0, 0.1736482, 0, 0.9848078, 0.5, 0, 0)
+remote_path = NodePath("../../HolderB")
+[node name="HolderB" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)
+[node name="RelayB" type="RemoteTransform3D" parent="HolderB"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0, 0)
+remote_path = NodePath("../../HolderA")
+`;
+    const box = globalOrigin3D(turned, 'Root/HolderA/Box');
+    [0.500087, 0, 0.999679].forEach((value, i) => expect(Math.abs(box[i]! - value)).toBeLessThan(1e-3));
   });
 
   it('puts the holders of a 2D cycle where Godot has pushed them by then', () => {

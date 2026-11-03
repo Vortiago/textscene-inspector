@@ -4,6 +4,8 @@
  * captures a scene. Measured on Godot 4.6.3 with the harness's `--fixed-fps 1000`.
  */
 
+import { physicsTicksThrough, type PhysicsClock } from './physicsTicks.js';
+
 /**
  * The process frame the `ref:godot` harness captures a scene at when its transforms never hold
  * still: six convergence frames, then every frame of the render wait. `run.test.mjs` checks it
@@ -13,32 +15,13 @@
  */
 export const HARNESS_FRAME = 923;
 
-/** The first physics tick lands in this process frame, measured, not at a whole tick step. */
-const FIRST_TICK_FRAME = 8;
-
-/** The harness's `--fixed-fps`, the process frames in a second of Godot's time. */
-const PROCESS_FRAMES_PER_SECOND = 1000;
-
-/** `physics/common/physics_ticks_per_second`'s default. */
-const PHYSICS_TICKS_PER_SECOND = 60;
-
-/**
- * The physics ticks Godot runs by the end of process frame `frame`. After the first, tick k
- * (k from 2) lands in frame ceil(k × 1000 / 60) − 1, and `Engine.time_scale = 0` stops none.
- * Integer arithmetic, as a float quotient falls a hair short of a whole tick.
- */
-function physicsTicksThrough(frame: number): number {
-  if (frame < FIRST_TICK_FRAME) return 0;
-  return Math.max(1, Math.floor(((frame + 1) * PHYSICS_TICKS_PER_SECOND) / PROCESS_FRAMES_PER_SECOND));
-}
-
 /**
  * The transform flushes Godot runs from the moment a scene enters the tree to the end of process
  * frame `frame`: three in each process frame (`scene_tree.cpp:706,712,721`) and two in each
- * physics tick (`:631`, `:652`).
+ * physics tick (`:631`, `:652`) that `clock` paces.
  */
-export function transformFlushesThrough(frame: number): number {
-  return 3 * (frame + 1) + 2 * physicsTicksThrough(frame);
+export function transformFlushesThrough(frame: number, clock: PhysicsClock): number {
+  return 3 * (frame + 1) + 2 * physicsTicksThrough(frame, clock);
 }
 
 /** Puts an entry on the transform-change list, unless it is on the list already. */

@@ -15,6 +15,7 @@ import { dataDirectoryPath, extensionListPath } from '../godot/project/project.j
 import { isLocaleRightToLeft } from '../godot/text/textServer.js';
 import type { LayoutDirectionEnv } from '../godot/scene/control.js';
 import { DEFAULT_CLEAR_COLOR } from '../godot/rendering/rendering.js';
+import { DEFAULT_PHYSICS_CLOCK, type PhysicsClock } from '../godot/scene/physicsTicks.js';
 import { unquoteLiteral } from './utils.js';
 import { colorOr } from '../utils/colorParser.js';
 import { perObject } from '../utils/perObject.js';
@@ -438,4 +439,27 @@ export function projectDataDirectoryPath(settings: ProjectSettings | null): stri
 /** The `res://` path of the project's GDExtension list, in the data directory the project names. */
 export function projectExtensionListPath(settings: ProjectSettings | null): string {
   return extensionListPath(usesHiddenDataDirectory(settings));
+}
+
+/** Read once for each settings object, so a cache keyed on the clock holds across readers. */
+const physicsClockOf = perObject((settings: ProjectSettings): PhysicsClock => {
+  const ticksPerSecond = parseOptionalInt(settings['physics/common/physics_ticks_per_second']);
+  const jitterFix = parseOptionalFloat(settings['physics/common/physics_jitter_fix']);
+  return {
+    // The setter refuses a rate of 0 or less and keeps the default (`engine.cpp:47-51`).
+    ticksPerSecond:
+      ticksPerSecond !== undefined && ticksPerSecond > 0
+        ? ticksPerSecond
+        : DEFAULT_PHYSICS_CLOCK.ticksPerSecond,
+    // The setter raises a negative fix to 0 (`engine.cpp:75-80`).
+    jitterFix: Math.max(jitterFix ?? DEFAULT_PHYSICS_CLOCK.jitterFix, 0),
+  };
+});
+
+/**
+ * `physics/common/physics_ticks_per_second` and `physics_jitter_fix`, which pace the physics ticks
+ * and so the transform flushes a scene runs by a frame (`main.cpp:4801-4806`).
+ */
+export function projectPhysicsClock(settings: ProjectSettings | null): PhysicsClock {
+  return settings ? physicsClockOf(settings) : DEFAULT_PHYSICS_CLOCK;
 }

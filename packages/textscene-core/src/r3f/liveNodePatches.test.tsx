@@ -9,6 +9,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseTscnContent } from './hooks/useParsedScene';
 import { DispatchedScene } from './testing/DispatchedScene';
 import { settleLoads } from './testing/settleLoads';
+import { ProjectSettingsProvider } from './contexts/ProjectSettingsContext';
 import { loaderServing } from '../resources/testing/servingResourceLoader';
 import { instanceAs } from '../nodes/3d/testing/reactThreeTestInstance';
 import './nodes/index';
@@ -92,5 +93,44 @@ remote_path = NodePath("../Props")
     marker!.updateWorldMatrix(true, false);
     // The relay moves Props to x = 100, so the marker at 5 into Props stands at 105.
     expect(marker!.getWorldPosition(new THREE.Vector3()).x).toBeCloseTo(105, 3);
+  });
+});
+
+describe("a relay cycle under the project's physics clock", () => {
+  // Godot drew the box at x 2991 with `physics_ticks_per_second=120`, two pushes behind 2993.
+  const CYCLE = `[gd_scene load_steps=2 format=3]
+[sub_resource type="BoxMesh" id="Box"]
+[node name="Root" type="Node3D"]
+[node name="HolderA" type="Node3D" parent="."]
+[node name="Box" type="MeshInstance3D" parent="HolderA"]
+mesh = SubResource("Box")
+[node name="RelayA" type="RemoteTransform3D" parent="HolderA"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+remote_path = NodePath("../../HolderB")
+[node name="HolderB" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+[node name="RelayB" type="RemoteTransform3D" parent="HolderB"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+remote_path = NodePath("../../HolderA")
+`;
+
+  it('draws the mesh where the project ticks it by the harness frame', async () => {
+    const { sceneGraph, error } = parseTscnContent(CYCLE, 'res://main.tscn');
+    if (!sceneGraph) throw new Error(`expected a scene, got ${error}`);
+    const loader = loaderServing({
+      'res://project.godot': 'config_version=5\n\n[physics]\n\ncommon/physics_ticks_per_second=120\n',
+    });
+    const renderer = await ReactThreeTestRenderer.create(
+      <DispatchedScene
+        sceneGraph={sceneGraph}
+        loader={loader}
+        around={(nodes) => (
+          <ProjectSettingsProvider sceneKey="res://main.tscn">{nodes}</ProjectSettingsProvider>
+        )}
+      />
+    );
+    await settleLoads();
+
+    expect(meshWorldXs(renderer)).toEqual([expect.closeTo(2991, 3)]);
   });
 });

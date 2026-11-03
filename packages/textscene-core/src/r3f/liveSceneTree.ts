@@ -16,6 +16,7 @@ import { liveInstancePath, scopeOf, withFallbackScope, type LiveNode } from '../
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 import { followTrailIn } from '../resources/sceneTrail.js';
 import type { TrailWalk } from '../godot/scene/packedScene.js';
+import type { PhysicsClock } from '../godot/scene/physicsTicks.js';
 import { mayHandBack, seatInFile, type CollapseInstance } from '../resources/seatEscaped.js';
 import { withRootFallbacksDecided } from '../resources/ownerHandOff.js';
 import { cachedUniqueNamesBelowRoot } from '../utils/uniqueNames.js';
@@ -61,6 +62,8 @@ export interface LiveTreeContext {
   internalResources: readonly TscnInternalResource[];
   sceneCache: CachedSceneSource;
   glbCache?: CachedGlbSource;
+  /** The project's physics clock, which paces a relay cycle (`remoteTransforms.ts`). Absent: Godot's default. */
+  physicsClock?: PhysicsClock;
 }
 
 /** The scene cache of `ctx` as the walks over it read it: each path asked of the loader once. */

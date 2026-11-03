@@ -3,6 +3,7 @@
  * unless `remote_node` (key `remote_path`) resolves to a Node3D. `remote_node` defaults to
  * `NodePath()` (remote_transform_3d.h:38, no constructor override), which triggers it, so the rule
  * covers an absent path, a path to nothing in this file and a path to a node that is no Node3D.
+ * A second arm warns on a relay in a ring of relays (`relayCycles.ts`).
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -11,9 +12,11 @@ import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { relayCycleArm, relayCycleDiagnostics } from './relayCycles.js';
 
 const arms = {
   invalidRemotePath: groundedArm('remotetransform3d-invalid-remote-path', { kind: 'configuration-warning' }),
+  relayCycle: relayCycleArm('remotetransform3d-relay-cycle', 'remote_transform_3d.cpp:118-126'),
 } as const satisfies RuleArms<string>;
 
 function checkRemoteTransform3D(context: RuleContext): Diagnostic[] {
@@ -65,12 +68,15 @@ const remoteTransform3DValidationRule: LintRule = {
   meta: {
     name: 'valid-remotetransform3d-remote-path',
     description:
-      "Mirrors RemoteTransform3D::get_configuration_warnings' remote_path check: absent, dangling, or not a Node3D",
+      "Mirrors RemoteTransform3D::get_configuration_warnings' remote_path check: absent, dangling, or not a Node3D. Warns on a relay in a ring of relays",
     category: 'validation',
     applicableNodeTypes: ['RemoteTransform3D'],
     emits: armEmits(arms),
   },
-  check: checkRemoteTransform3D,
+  check: (context) => [
+    ...checkRemoteTransform3D(context),
+    ...relayCycleDiagnostics(arms.relayCycle, context),
+  ],
 };
 
 ruleRegistry.register(remoteTransform3DValidationRule);

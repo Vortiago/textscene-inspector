@@ -2,9 +2,10 @@
 
 The Godot capture harness saves a 3D, 2D or root picture only after `_await_rendered` in
 `run.mjs` sees nothing pending. Godot signals none of the pending work, so the wait reads what
-each kind changes. It returns when the picture and the pending counters have held still for
-`RENDER_QUIET_FRAMES` frames in a row. A scene that never settles is captured as it stands, with a
-warning on stderr. The longest wait is `RENDER_WAIT_MAX_FRAMES`.
+each kind changes. It returns when the picture, the pending counters and the global transforms have
+held still for `RENDER_QUIET_FRAMES` frames in a row. A scene that never settles is captured after
+the longest wait, `RENDER_WAIT_MAX_FRAMES`, with a warning. That capture is the harness frame, which
+the previewer's `HARNESS_FRAME` names.
 
 ## What is pending
 
@@ -25,6 +26,13 @@ made later, such as a viewport's target, moves `RENDERING_INFO_TEXTURE_MEM_USED`
 black (`volumetric_fog_process.glsl:683`, `fog.cpp:482`). It jitters each frame by `frame % 16`
 (`fog.cpp:1113`). The picture must repeat the one a jitter cycle earlier, so the wait compares each
 picture with the one `FOG_JITTER_CYCLE_FRAMES` frames back.
+
+**Moving transforms.** The tree is paused and the time scale is 0, so game logic stops. A
+transform notification still runs (`scene_tree.cpp:193-204`), so a ring of RemoteTransform relays
+moves its nodes on every frame (`remote_transform_3d.cpp:118-126`). The picture misses that motion
+once the nodes leave the view, and the clock would then pick the frame. The wait reads the global
+transform of every Node3D and CanvasItem in the viewport, so such a scene runs the whole wait and
+the frame it is captured at does not depend on the host.
 
 **Anything else.** Any other change shows in the picture, which must repeat the one before it.
 

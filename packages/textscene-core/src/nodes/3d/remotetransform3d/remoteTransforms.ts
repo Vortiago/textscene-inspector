@@ -7,7 +7,6 @@
  * instance border too. Semantics are measured on Godot 4.6.3.
  */
 
-import type { TscnNode } from '../../../parser/types.js';
 import { parentPathOf, relativeTo } from '../../../utils/nodePath.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
@@ -15,47 +14,24 @@ import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { nodesOnTheWayTo } from '../../../r3f/liveGlobalTransform.js';
 import { uniquePathsOfLiteral } from '../../../r3f/nodePathUniqueNames.js';
 import type { NodePatch, NodePatches } from '../../../r3f/nodePatch.js';
-import { globalMatrix3D, localMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
 import { isTopLevelItem } from '../../../r3f/canvasPaintOrder.js';
+import { sameData } from '../../../utils/sameData.js';
+import type { Transform3D } from '../../../godot/math/transform3d.js';
 import {
   HARNESS_FRAME,
   replayTransformFlushes,
   transformFlushesThrough,
   type QueueTransformChange,
 } from '../../../godot/scene/transformFlushes.js';
-import { node2DLocalTransform } from '../../../r3f/node2dTransform.js';
-import type { Node2DProperties } from '../../../nodes/base/node2d/types.js';
+import { DEFAULT_PHYSICS_CLOCK } from '../../../godot/scene/physicsTicks.js';
 import {
-  TRANSFORM2D_IDENTITY,
-  affineInverseTransform2D,
-  multiplyTransform2D,
-  transform2DDecompose,
-  transform2DGetScale,
-  transform2DSetScale,
-  type Transform2DColumns,
-} from '../../../godot/math/transform2d.js';
-import {
-  affineInverseTransform3D,
-  identityTransform3D,
-  multiplyTransform3D,
-  transformColumnsAlong,
-  type Transform3D,
-} from '../../../godot/math/transform3d.js';
-
-interface RemoteFlags {
-  updatePosition: boolean;
-  updateRotation: boolean;
-  updateScale: boolean;
-  useGlobal: boolean;
-}
-
-interface RelayProps {
-  remote_path?: string;
-  update_position?: boolean;
-  update_rotation?: boolean;
-  update_scale?: boolean;
-  use_global_coordinates?: boolean;
-}
+  globalTransform3D,
+  localFromGlobal3D,
+  moveTarget,
+  readFlags,
+  type Push,
+  type RelayProps,
+} from './relayPush.js';
 
 /**
  * The properties every RemoteTransform of `tree` pushes onto its target, by the target's live path.
@@ -71,12 +47,13 @@ export function applyRemoteTransforms(tree: LiveTree): NodePatches {
   const placed = new Map<string, NodePatch>();
   if (relays.length === 0) return placed;
 
-  const queuedBy = relaysQueuedByAMoveOf(tree, relays);
+  const queuedBy = entriesQueuedByAMoveOf(tree, relays);
+  const entered = entriesOnTheListAtEnterTree(tree, relays, queuedBy);
   const localRelayAt = new Map(relays.filter((r) => !r.flags.useGlobal).map((r) => [r.link.path, r]));
   // Godot recurses without end through a ring of local relays and overflows its stack. The replay
   // stops at the relay that is already pushing.
   const pushing = new Set<Relay>();
-  const push = (relay: Relay, queue: QueueTransformChange<Relay>): void => {
+  const push = (relay: Relay, queue: QueueTransformChange<ListEntry>): void => {
     if (pushing.has(relay) || !moveTarget(relay, tree, placed)) return;
     pushing.add(relay);
     for (const queued of queuedBy(relay.target)) queue(queued);
@@ -86,17 +63,37 @@ export function applyRemoteTransforms(tree: LiveTree): NodePatches {
     if (localTarget) push(localTarget, queue);
     pushing.delete(relay);
   };
-  replayTransformFlushes(relays.filter(isOnTheListAtEnterTree), transformFlushesThrough(HARNESS_FRAME), push);
+  const flushes = transformFlushesThrough(HARNESS_FRAME, tree.ctx.physicsClock ?? DEFAULT_PHYSICS_CLOCK);
+  replayTransformFlushes(entered, flushes, (entry, queue) => {
+    if (entry.kind === 'relay') push(entry, queue);
+    else entry.drawn = globalTransform3D(entry.link.path, nodesOnTheWayTo(tree, entry.link.path, placed));
+  });
+  placeWhereDrawn(
+    entered.filter((entry) => entry.kind === 'visual'),
+    tree,
+    placed
+  );
   return placed;
 }
 
 /** A RemoteTransform3D or RemoteTransform2D whose target Godot caches on enter-tree. */
-interface Relay {
-  readonly link: LiveLink;
-  readonly target: LiveLink;
-  readonly space: Space;
-  readonly flags: RemoteFlags;
+interface Relay extends Push {
+  readonly kind: 'relay';
 }
+
+/**
+ * A VisualInstance3D a relay can move. Godot hands its global transform to the server only when a
+ * flush notifies it (`visual_instance_3d.cpp:90-96`), so it draws where that left it.
+ */
+interface Visual {
+  readonly kind: 'visual';
+  readonly link: LiveLink;
+  /** Written by the replay on each notification. Absent until the first. */
+  drawn?: Transform3D;
+}
+
+/** What the replay keeps on the transform-change list: a relay, or a visual it can move. */
+type ListEntry = Relay | Visual;
 
 type Space = 'Node3D' | 'Node2D';
 
@@ -111,31 +108,51 @@ function relaysOf(tree: LiveTree): Relay[] {
   tree.fold<void, void>(undefined, (link, _, descend) => {
     const space = SPACE_OF_RELAY[link.step.node.type];
     const target = space ? remoteTargetOf(link, tree, space) : null;
-    if (space && target)
-      relays.push({ link, target, space, flags: readFlags(link.step.node.properties as RelayProps) });
+    if (space && target) {
+      const flags = readFlags(link.step.node.properties as RelayProps);
+      relays.push({ kind: 'relay', link, target, space, flags });
+    }
     descend();
   });
   return relays;
 }
 
 /**
- * Whether entering the tree puts `relay` on the transform-change list. A Node3D asks for transform
- * notifications only in global coordinates (`remote_transform_3d.cpp:101-102`, `node_3d.cpp:94`),
- * and every CanvasItem goes on the list (`canvas_item.cpp:365-367`).
+ * The entries that entering the tree puts on the transform-change list, in tree order: every
+ * visual a relay can move, a RemoteTransform3D in global coordinates, which alone asks for the
+ * notification (`remote_transform_3d.cpp:101-102`, `node_3d.cpp:94`), and every RemoteTransform2D,
+ * as every CanvasItem goes on the list (`canvas_item.cpp:365-367`).
  */
-function isOnTheListAtEnterTree(relay: Relay): boolean {
-  return relay.space === 'Node2D' || relay.flags.useGlobal;
+function entriesOnTheListAtEnterTree(
+  tree: LiveTree,
+  relays: readonly Relay[],
+  queuedBy: (target: LiveLink) => readonly ListEntry[]
+): ListEntry[] {
+  const entryAt = new Map<string, ListEntry>();
+  for (const relay of relays) {
+    if (relay.space === 'Node2D' || relay.flags.useGlobal) entryAt.set(relay.link.path, relay);
+    for (const entry of queuedBy(relay.target)) entryAt.set(entry.link.path, entry);
+  }
+  const entered: ListEntry[] = [];
+  tree.fold<void, void>(undefined, (link, _, descend) => {
+    const entry = entryAt.get(link.path);
+    if (entry) entered.push(entry);
+    descend();
+  });
+  return entered;
 }
 
-/** The relays a move of each target queues, cached by target, as {@link relaysQueuedBy} gives them. */
-function relaysQueuedByAMoveOf(tree: LiveTree, relays: readonly Relay[]): (target: LiveLink) => Relay[] {
+/** The entries a move of each target queues, cached by target, as {@link entriesQueuedBy} gives them. */
+function entriesQueuedByAMoveOf(tree: LiveTree, relays: readonly Relay[]): (target: LiveLink) => ListEntry[] {
   // Only a relay in global coordinates asks for the notification.
-  const listenerAt = new Map(relays.filter((r) => r.flags.useGlobal).map((r) => [r.link.path, r]));
-  const queuedByTarget = new Map<string, Relay[]>();
+  const listenerAt = new Map<string, ListEntry>(
+    relays.filter((r) => r.flags.useGlobal).map((r) => [r.link.path, r])
+  );
+  const queuedByTarget = new Map<string, ListEntry[]>();
   return (target) => {
     let queued = queuedByTarget.get(target.path);
     if (!queued) {
-      queued = relaysQueuedBy(target, tree, listenerAt);
+      queued = entriesQueuedBy(target, tree, listenerAt);
       queuedByTarget.set(target.path, queued);
     }
     return queued;
@@ -143,24 +160,62 @@ function relaysQueuedByAMoveOf(tree: LiveTree, relays: readonly Relay[]): (targe
 }
 
 /**
- * The relays of `listenerAt` that a move of `target` queues, in the order Godot queues them: a
- * Node3D queues its Node3D children's subtrees before itself (`node_3d.cpp:106-133`), a CanvasItem
- * itself before its CanvasItem children's (`canvas_item.cpp:1069-1101`). A `top_level` child keeps
- * its place, so the walk stops there.
+ * The entries a move of `target` queues, in the order Godot queues them: a Node3D queues its Node3D
+ * children's subtrees before itself (`node_3d.cpp:106-133`), a CanvasItem itself before its
+ * CanvasItem children's (`canvas_item.cpp:1069-1101`). A `top_level` child keeps its place, so the
+ * walk stops there. Each listener comes from `listenerAt`, and each visual it meets joins it.
  */
-function relaysQueuedBy(target: LiveLink, tree: LiveTree, listenerAt: ReadonlyMap<string, Relay>): Relay[] {
+function entriesQueuedBy(target: LiveLink, tree: LiveTree, listenerAt: Map<string, ListEntry>): ListEntry[] {
   const family = descendsFromClass(target.step.node.type, 'Node3D') ? 'Node3D' : 'CanvasItem';
-  const queued: Relay[] = [];
+  const queued: ListEntry[] = [];
   const reaches = (child: LiveLink): boolean =>
     descendsFromClass(child.step.node.type, family) && !isTopLevelItem(child.step.node);
   const walk = (link: LiveLink): void => {
-    const listener = listenerAt.get(link.path);
+    const listener = listenerOrVisualAt(link, listenerAt);
     if (listener && family === 'CanvasItem') queued.push(listener);
     tree.fold<void, void>(undefined, (child) => (reaches(child) ? walk(child) : undefined), link);
     if (listener && family === 'Node3D') queued.push(listener);
   };
   walk(target);
   return queued;
+}
+
+/** The listener at `link`, or the visual it is, added to `listenerAt` on the first ask. */
+function listenerOrVisualAt(link: LiveLink, listenerAt: Map<string, ListEntry>): ListEntry | undefined {
+  const listener = listenerAt.get(link.path);
+  if (listener || !descendsFromClass(link.step.node.type, 'VisualInstance3D')) return listener;
+  const visual: Visual = { kind: 'visual', link };
+  listenerAt.set(link.path, visual);
+  return visual;
+}
+
+/**
+ * Places each of `visuals`, in tree order, where its last notification drew it, when a move it
+ * has not been notified of yet left it elsewhere. Its local transform under its parent's placed
+ * pose gives that drawn pose, so each child keeps its own.
+ */
+function placeWhereDrawn(
+  visuals: readonly ListEntry[],
+  tree: LiveTree,
+  placed: Map<string, NodePatch>
+): void {
+  const lagging = visuals.filter(
+    (visual): visual is Visual =>
+      visual.kind === 'visual' &&
+      visual.drawn !== undefined &&
+      !sameData(
+        visual.drawn,
+        globalTransform3D(visual.link.path, nodesOnTheWayTo(tree, visual.link.path, placed))
+      )
+  );
+  for (const { link, drawn } of lagging) {
+    const local = localFromGlobal3D(
+      drawn!,
+      parentPathOf(link.path),
+      nodesOnTheWayTo(tree, link.path, placed)
+    );
+    placed.set(link.path, { ...placed.get(link.path), transform: local });
+  }
 }
 
 /**
@@ -185,169 +240,4 @@ function remoteTargetOf(relay: LiveLink, tree: LiveTree, targetClass: 'Node3D' |
   const target = targetPath === null ? null : tree.at(targetPath);
   if (!target || isOnOneLine(relay.path, target.path)) return null;
   return descendsFromClass(target.step.node.type, targetClass) ? target : null;
-}
-
-/** Parse a relay's flags, each defaulting to Godot's `true`. */
-function readFlags(props: RelayProps): RemoteFlags {
-  return {
-    updatePosition: props.update_position !== false,
-    updateRotation: props.update_rotation !== false,
-    updateScale: props.update_scale !== false,
-    useGlobal: props.use_global_coordinates !== false,
-  };
-}
-
-function flagsAnyPart({ updatePosition, updateRotation, updateScale }: RemoteFlags): boolean {
-  return updatePosition || updateRotation || updateScale;
-}
-
-/** Moves `relay`'s target as `_update_remote` does, and whether Godot sets the target's transform. */
-function moveTarget(relay: Relay, tree: LiveTree, placed: Map<string, NodePatch>): boolean {
-  return relay.space === 'Node3D' ? moveTarget3D(relay, tree, placed) : moveTarget2D(relay, tree, placed);
-}
-
-function moveTarget3D(relay: Relay, tree: LiveTree, placed: Map<string, NodePatch>): boolean {
-  // With no part flagged, the 3D relay sets the target's own transform back
-  // (`remote_transform_3d.cpp:71-97`), so the pose stays and the set still notifies.
-  if (!flagsAnyPart(relay.flags)) return true;
-  placed.set(relay.target.path, { transform: newTargetLocal3D(relay, tree, placed) });
-  return true;
-}
-
-/** The local transform `relay` gives its target, from the poses the pass has placed so far. */
-function newTargetLocal3D({ link, target, flags }: Relay, tree: LiveTree, placed: NodePatches): Transform3D {
-  const relayChain = nodesOnTheWayTo(tree, link.path, placed);
-  const targetChain = nodesOnTheWayTo(tree, target.path, placed);
-  if (!flags.useGlobal) {
-    return composeSelected3D(
-      localTransform3D(targetChain.get(target.path)!),
-      localTransform3D(relayChain.get(link.path)!),
-      flags
-    );
-  }
-  const global = composeSelected3D(
-    globalTransform3D(target.path, targetChain),
-    globalTransform3D(link.path, relayChain),
-    flags
-  );
-  return localFromGlobal3D(global, parentPathOf(target.path), targetChain);
-}
-
-/** The local transform that puts a node under `parentPath` at `global` (`node_3d.cpp:413-420`). */
-function localFromGlobal3D(
-  global: Transform3D,
-  parentPath: string | null,
-  chain: Map<string, TscnNode>
-): Transform3D {
-  const parentGlobal = parentPath ? globalTransform3D(parentPath, chain) : identityTransform3D();
-  return multiplyTransform3D(affineInverseTransform3D(parentGlobal), global);
-}
-
-function localTransform3D(node: TscnNode): Transform3D {
-  return matrixToTransform3D(localMatrix3D(node));
-}
-
-function globalTransform3D(path: string, nodeByPath: Map<string, TscnNode>): Transform3D {
-  return matrixToTransform3D(globalMatrix3D(path, nodeByPath));
-}
-
-/**
- * The global transform `target` takes from `relay` (`_update_remote`, `remote_transform_3d.cpp:63-99`).
- * The flagged parts come from the relay: the whole basis for rotation and scale, the direction of
- * each column for rotation, the length of each column for scale, the origin for position. The basis
- * is never decomposed, so a shear and a mirror stay as they are.
- */
-function composeSelected3D(target: Transform3D, relay: Transform3D, flags: RemoteFlags): Transform3D {
-  const { updatePosition, updateRotation, updateScale } = flags;
-  if (updatePosition && updateRotation && updateScale) return relay;
-
-  const origin = updatePosition ? relay.origin : target.origin;
-  if (updateRotation && updateScale) return { ...relay, origin };
-  if (updateRotation) return { ...transformColumnsAlong(relay, target), origin };
-  if (updateScale) return { ...transformColumnsAlong(target, relay), origin };
-  return { ...target, origin };
-}
-
-function moveTarget2D(relay: Relay, tree: LiveTree, placed: Map<string, NodePatch>): boolean {
-  // With no part flagged, the 2D relay returns before it sets anything (`remote_transform_2d.cpp:63-65`).
-  if (!flagsAnyPart(relay.flags)) return false;
-  // The parts Node2D reads from the matrix (`node_2d.cpp:127-133`), skew included.
-  const { position, rotation, scale, skew } = transform2DDecompose(newTargetLocal2D(relay, tree, placed));
-  placed.set(relay.target.path, { position, rotation, scale, skew });
-  return true;
-}
-
-/** The local transform `relay` gives its target, from the poses the pass has placed so far. */
-function newTargetLocal2D(
-  { link, target, flags }: Relay,
-  tree: LiveTree,
-  placed: NodePatches
-): Transform2DColumns {
-  const relayChain = nodesOnTheWayTo(tree, link.path, placed);
-  const targetChain = nodesOnTheWayTo(tree, target.path, placed);
-  if (!flags.useGlobal) {
-    return composeSelected2D(
-      localTransform2D(targetChain.get(target.path)!),
-      localTransform2D(relayChain.get(link.path)!),
-      flags
-    );
-  }
-  const global = composeSelected2D(
-    globalTransform2D(target.path, targetChain),
-    globalTransform2D(link.path, relayChain),
-    flags
-  );
-  return localFromGlobal2D(global, parentPathOf(target.path), targetChain);
-}
-
-/** The local transform that puts a node under `parentPath` at `global` (`node_2d.cpp:384-392`). */
-function localFromGlobal2D(
-  global: Transform2DColumns,
-  parentPath: string | null,
-  chain: Map<string, TscnNode>
-): Transform2DColumns {
-  const parentGlobal = parentPath ? globalTransform2D(parentPath, chain) : TRANSFORM2D_IDENTITY;
-  return multiplyTransform2D(affineInverseTransform2D(parentGlobal), global);
-}
-
-function localTransform2D(node: TscnNode): Transform2DColumns {
-  const props = node.properties as Partial<Node2DProperties>;
-  if (!props || props.position === undefined) return TRANSFORM2D_IDENTITY;
-  return node2DLocalTransform(props);
-}
-
-function globalTransform2D(path: string, nodeByPath: Map<string, TscnNode>): Transform2DColumns {
-  let result = TRANSFORM2D_IDENTITY;
-  let acc = '';
-  for (const segment of path.split('/')) {
-    acc = acc ? `${acc}/${segment}` : segment;
-    const node = nodeByPath.get(acc);
-    if (node) result = multiplyTransform2D(result, localTransform2D(node));
-  }
-  return result;
-}
-
-/**
- * The transform `target` takes from `relay`, in global or in local coordinates, whichever the two
- * arguments are in (`remote_transform_2d.cpp:63-107`). It starts from the relay's matrix when the rotation is flagged,
- * else from the target's. Position then differs by an exclusive-or against rotation, and scale
- * likewise: a flag that differs from the rotation flag swaps that part to the flagged side.
- */
-function composeSelected2D(
-  target: Transform2DColumns,
-  relay: Transform2DColumns,
-  flags: RemoteFlags
-): Transform2DColumns {
-  const { updatePosition, updateRotation, updateScale } = flags;
-  if (updatePosition && updateRotation && updateScale) return relay;
-
-  let composed = updateRotation ? relay : target;
-  if (updateRotation !== updatePosition) {
-    const origin = updatePosition ? relay : target;
-    composed = { ...composed, tx: origin.tx, ty: origin.ty };
-  }
-  if (updateRotation !== updateScale) {
-    composed = transform2DSetScale(composed, transform2DGetScale(updateScale ? relay : target));
-  }
-  return composed;
 }
