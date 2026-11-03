@@ -38,7 +38,6 @@ function boxDebugLines({ x, y, z }: Vector3): Float32Array {
   return points;
 }
 
-/** One step of a circle in the x/z plane: `sin(deg) * r`, `cos(deg) * r`, each op a `real_t` float. */
 /** One step of a circle in the x/z plane. The engine narrows `Math::sin(float)` first (`math_funcs.h:45`), then multiplies in float. */
 function ringPoint(radius: number, i: number): [number, number] {
   return [
@@ -120,7 +119,7 @@ function concaveDebugLines(faces: Float32Array): Float32Array {
       points.push(faces[slot * 3]!, faces[slot * 3 + 1]!, faces[slot * 3 + 2]!);
     }
   };
-  for (let slot = 0; slot * 3 + 2 * 3 < faces.length; slot += 3) {
+  for (let slot = 0; (slot + 2) * 3 + 2 < faces.length; slot += 3) {
     edge(slot, slot + 1);
     edge(slot + 1, slot + 2);
     edge(slot + 2, slot);

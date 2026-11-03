@@ -138,7 +138,7 @@ const GODOT_WORLD_BOUNDARY_LINES: readonly (readonly [string, number[], number[]
   ],
 ];
 
-/** Nine planes measured against Godot 4.6.3: `get_debug_mesh()` read back after `plane` is set. */
+/** Seven planes measured against Godot 4.6.3: `get_debug_mesh()` read back after `plane` is set. */
 describe('worldBoundaryDebugLines', () => {
   it.each(GODOT_WORLD_BOUNDARY_LINES)('matches Godot for %s', (_name, [nx, ny, nz, d], expected) => {
     const wire = shapeDebugLines({
