@@ -698,6 +698,33 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', { timeout: ENGINE_TE
   });
 
   /**
+   * A CPUParticles3D reports an empty AABB and a Label3D only its position before its text shapes,
+   * so the bounds are a point. `frameSceneBounds.ts` keeps the editor camera's distance for a point
+   * and re-points at it. A scene framed on a point at the origin therefore equals the unframed
+   * editor camera, and a distance of 0 would put the camera inside the point, looking at the sky.
+   */
+  it.each([
+    ['a CPUParticles3D', 'unit-cpuparticles3d-row.tscn'],
+    ['a Label3D', 'label3d-glyph-mipmaps/unit-label3d-glyph-mipmaps.tscn'],
+  ])(
+    'frames %s, whose bounds are a point at the origin, at the editor camera distance',
+    async (_, fixture) => {
+      const dir = await scratchDir();
+      const scene = join(REPO_ROOT, 'scenes/fixtures', fixture);
+      const framed = join(dir, 'framed.png');
+      const editor = join(dir, 'editor.png');
+      await renderReference({ scene, out: framed, width: 160, height: 120, frame: true });
+      await renderReference({ scene, out: editor, width: 160, height: 120 });
+
+      const a = PNG.sync.read(await readFile(framed)).data;
+      const c = PNG.sync.read(await readFile(editor)).data;
+      let worst = 0;
+      for (let i = 0; i < a.length; i++) worst = Math.max(worst, Math.abs(a[i] - c[i]));
+      expect(worst).toBeLessThanOrEqual(1);
+    }
+  );
+
+  /**
    * The 2D path end to end: a Node2D scene comes back as the project-viewport rectangle that the
    * previewer's 2D stage draws, with no 3D camera. The 3D path would return it at the wrong size,
    * over a sky.
