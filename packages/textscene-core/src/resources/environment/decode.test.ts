@@ -331,3 +331,42 @@ describe('decodeEnvironment — AgX carries its own white', () => {
     expect(r.tonemap_agx_white).toBeCloseTo(16.29, 6);
   });
 });
+
+describe('decodeEnvironment — screen-space reflections', () => {
+  it("carries Godot's SSR defaults: off, 64 steps, fade in 0.15, fade out 2, tolerance 0.5", () => {
+    const r = decodeEnvironment({});
+    expect(r.ssr_enabled).toBe(false);
+    expect(r.ssr_max_steps).toBe(64);
+    expect(r.ssr_fade_in).toBe(0.15);
+    expect(r.ssr_fade_out).toBe(2);
+    expect(r.ssr_depth_tolerance).toBe(0.5);
+  });
+
+  it('reads the authored SSR properties', () => {
+    const r = decodeEnvironment({
+      ssr_enabled: 'true',
+      ssr_max_steps: '256',
+      ssr_fade_in: '0.5',
+      ssr_fade_out: '4.0',
+      ssr_depth_tolerance: '0.05',
+    });
+    expect(r.ssr_enabled).toBe(true);
+    expect(r.ssr_max_steps).toBe(256);
+    expect(r.ssr_fade_in).toBe(0.5);
+    expect(r.ssr_fade_out).toBe(4);
+    expect(r.ssr_depth_tolerance).toBe(0.05);
+  });
+
+  it('falls back to the defaults on malformed SSR literals, never NaN (error path)', () => {
+    const r = decodeEnvironment({ ssr_max_steps: 'many', ssr_fade_in: 'x', ssr_depth_tolerance: 'y' });
+    expect(r.ssr_max_steps).toBe(64);
+    expect(r.ssr_fade_in).toBe(0.15);
+    expect(r.ssr_depth_tolerance).toBe(0.5);
+  });
+
+  it('clamps a negative ssr_fade_in and ssr_fade_out to 0, as their setters do (edge case)', () => {
+    const r = decodeEnvironment({ ssr_fade_in: '-1.0', ssr_fade_out: '-2.0' });
+    expect(r.ssr_fade_in).toBe(0);
+    expect(r.ssr_fade_out).toBe(0);
+  });
+});

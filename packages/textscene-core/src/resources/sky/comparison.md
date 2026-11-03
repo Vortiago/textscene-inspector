@@ -6,7 +6,7 @@ renders_as: Godot's radiance layers as an octmap array + background
 
 # Sky
 
-A `Sky` resource's `sky_material` is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers, an octmap array with a mip chain per layer, give every reflection, the ambient light and the sky light in both fogs. Each read picks its mip from the screen derivatives of its direction, as Godot does. A small, strongly curved mirror reads a coarser mip than a large one. The radiance renders at the sky's `radiance_size`, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.
+A `Sky` resource's `sky_material` is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. The background runs the sky shader at each pixel on the ray the pixel casts, as Godot's does, so no texture softens its edges. Godot's radiance layers, an octmap array with a mip chain per layer, give every reflection, the ambient light and the sky light in both fogs. Each read picks its mip from the screen derivatives of its direction, as Godot does. A small, strongly curved mirror reads a coarser mip than a large one. The radiance renders at the sky's `radiance_size`, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.
 
 Viewports that draw one Sky share one radiance, as in Godot (`sky.h:251`). A render that finds the sky changed bakes it at its own exposure, and the children of a viewport render first (`renderer_viewport.cpp:91-127`). A sky that reads the lights changes at each new exposure, so two viewports of one world read the bake of the first. An incremental sky bakes again only after it filters every layer (`sky.cpp:1263-1369`). Each viewport draws the background at its own exposure.
 
@@ -20,9 +20,14 @@ A gradient sky from top, horizon and ground colours. The warm-top, green-horizon
 ## PanoramaSkyMaterial
 <!-- compare: image=unit-sky-panorama status=done fixture=unit-sky-panorama.tscn -->
 
-An equirectangular image wrapped onto the sky. The coloured calibration bands and the black grid confirm the U/V orientation matches Godot.
+An equirectangular image wrapped onto the sky. The coloured calibration bands and the black grid confirm the U/V orientation matches Godot. The previewer maps each direction to the image with Godot's approximations of `acos` and `atan2` (`sky.glsl:179-201`). These place the texels near the horizon 6% closer together than the exact functions, so the black horizon band has Godot's width.
 
 A panorama that is a ViewportTexture counts its path from the local scene of the node that holds the Environment: a WorldEnvironment or a Camera3D. Godot sets it up only when the Environment, the Sky and the PanoramaSkyMaterial are all local to scene. Otherwise the sky samples the magenta and black placeholder, as in Godot. A set-up panorama samples the live target. The background follows each draw of the target. The radiance keeps the first draw, as in Godot, where a draw of the target leaves the sky clean.
+
+## PanoramaSkyMaterial without filtering
+<!-- compare: image=unit-sky-panorama-nearest status=done fixture=unit-sky-panorama-nearest.tscn -->
+
+With `filter = false` the panorama samples the nearest texel, and each texel draws as a block with hard edges. With `filter = true`, the default, it samples linearly. Neither reads mipmaps, as Godot's `filter_linear` and `filter_nearest` read none (`sky_material.cpp:498-505`).
 
 ## PhysicalSkyMaterial
 <!-- compare: image=unit-sky-physical status=done fixture=unit-sky-physical.tscn -->

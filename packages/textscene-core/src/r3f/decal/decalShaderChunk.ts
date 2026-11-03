@@ -8,6 +8,11 @@
 
 import * as THREE from 'three';
 import { installChunkEdits, type TextEdit } from '../shaderPatch/chunkPatch.js';
+import {
+  installUnlitVaryings,
+  UNLIT_NORMAL_VARYING,
+  UNLIT_VIEW_VARYING,
+} from '../shaderPatch/unlitVaryings.js';
 import { FOG_UNIFORMS_MERGE, installMergedUniform } from '../shaderPatch/litUniform.js';
 import { EMISSION_EXPOSURE_FACTOR, installEmissionExposure } from '../exposure/emissionExposure.js';
 import { installGodotOcclusion, OCCLUSION_MIX } from '../materials/godotAmbientOcclusion.js';
@@ -28,10 +33,6 @@ const GODOT_DECAL_PARS_CHUNK = 'godot_decal_pars';
 
 /** Defined ahead of the chunk by a program that has a normal, roughness, metallic, emission and occlusion to mix. */
 const SHADED_DEFINE = 'GODOT_DECAL_SHADED';
-
-const VIEW_VARYING = 'vGodotDecalView';
-const NORMAL_VARYING = 'vGodotDecalNormal';
-const VARYING_DECLARATIONS = `varying vec3 ${VIEW_VARYING};\nvarying vec3 ${NORMAL_VARYING};\n`;
 
 /**
  * The decal functions, all in view space, as Godot's rows are. `shown` holds the count, the factor
@@ -219,7 +220,7 @@ const LIT_EDITS: readonly TextEdit[] = [
 const UNLIT_FRAGMENT_EDITS: readonly TextEdit[] = [
   {
     three: THREE_MAIN,
-    godot: `#include <${GODOT_DECAL_PARS_CHUNK}>\n${VARYING_DECLARATIONS}${THREE_MAIN}`,
+    godot: `#include <${GODOT_DECAL_PARS_CHUNK}>\n${THREE_MAIN}`,
   },
   {
     three: '#include <alphahash_fragment>',
@@ -230,23 +231,8 @@ const UNLIT_FRAGMENT_EDITS: readonly TextEdit[] = [
 		float godotDecalFace = 1.0;
 	#endif
 	GodotDecalSurface godotDecalSurface = GodotDecalSurface( diffuseColor.rgb );
-	godotApplyDecals( godotDecalSurface, ${VIEW_VARYING}, ${NORMAL_VARYING} * godotDecalFace );
+	godotApplyDecals( godotDecalSurface, ${UNLIT_VIEW_VARYING}, ${UNLIT_NORMAL_VARYING} * godotDecalFace );
 	diffuseColor.rgb = godotDecalSurface.albedo;`,
-  },
-];
-
-/** three's guard on the normal, which only an environment map or a skin reads, and the lines it wraps. */
-const THREE_NORMAL_GUARD = '#if defined ( USE_ENVMAP ) || defined ( USE_SKINNING )';
-
-const UNLIT_VERTEX_EDITS: readonly TextEdit[] = [
-  {
-    three: THREE_MAIN,
-    godot: `${VARYING_DECLARATIONS}${THREE_MAIN}`,
-  },
-  { three: THREE_NORMAL_GUARD, godot: '#if 1' },
-  {
-    three: '#include <project_vertex>',
-    godot: `#include <project_vertex>\n\t${VIEW_VARYING} = mvPosition.xyz;\n\t${NORMAL_VARYING} = transformedNormal;`,
   },
 ];
 
@@ -261,8 +247,8 @@ export function installGodotDecals(): boolean {
     mark: 'godotApplyDecals(',
     patch: 'decal',
     fragmentShaders: { standard: LIT_EDITS, physical: LIT_EDITS, basic: UNLIT_FRAGMENT_EDITS },
-    vertexShaders: { basic: UNLIT_VERTEX_EDITS },
     requires: [
+      installUnlitVaryings,
       installInstanceLayers,
       installSceneRows,
       installDecalChunk,
