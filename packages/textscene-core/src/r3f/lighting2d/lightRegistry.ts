@@ -8,6 +8,7 @@ import {
   placementId,
   type CanvasLightDeclaration,
   type ItemPlacement,
+  type LitItemRead,
   type PlacementDeclarations,
 } from './itemLightList.js';
 import type { CanvasLightSlot } from './lightPassContext.js';
@@ -57,39 +58,44 @@ export function useLightRegistry(): [
 
 interface PlacementCount {
   placement: ItemPlacement;
-  items: number;
-  lightOnlyItems: number;
+  /** How many of the placement's items read each accumulation. */
+  readers: Map<LitItemRead, number>;
+}
+
+function placementDeclarations({ placement, readers }: PlacementCount): PlacementDeclarations {
+  return { placement, reads: new Set(readers.keys()) };
+}
+
+function sameReads(a: ReadonlySet<LitItemRead>, b: ReadonlySet<LitItemRead>): boolean {
+  return a.size === b.size && [...a].every((read) => b.has(read));
 }
 
 /** The placements of the lit items by `placementId`, counted so each stands while an item holds it. */
 export function usePlacementRegistry(): [
   ReadonlyMap<string, PlacementDeclarations>,
-  (placement: ItemPlacement, lightOnly: boolean) => () => void,
+  (placement: ItemPlacement, read: LitItemRead) => () => void,
 ] {
   const [placements, setPlacements] = useState<ReadonlyMap<string, PlacementDeclarations>>(() => new Map());
   const counts = useRef(new Map<string, PlacementCount>()).current;
 
   const publish = useCallback(() => {
     setPlacements((previous) => {
+      const next = new Map([...counts].map(([id, count]) => [id, placementDeclarations(count)]));
       const unchanged =
-        previous.size === counts.size &&
-        [...counts].every(([id, count]) => previous.get(id)?.hasLightOnly === count.lightOnlyItems > 0);
-      if (unchanged) return previous;
-      return new Map(
-        [...counts].map(([id, count]) => [
-          id,
-          { placement: count.placement, hasLightOnly: count.lightOnlyItems > 0 },
-        ])
-      );
+        previous.size === next.size &&
+        [...next].every(([id, declared]) => {
+          const held = previous.get(id);
+          return held !== undefined && sameReads(held.reads, declared.reads);
+        });
+      return unchanged ? previous : next;
     });
   }, [counts]);
 
   const declare = useCallback(
-    (placement: ItemPlacement, lightOnly: boolean) => {
+    (placement: ItemPlacement, read: LitItemRead) => {
       const id = placementId(placement);
-      const count = counts.get(id) ?? { placement, items: 0, lightOnlyItems: 0 };
-      count.items += 1;
-      if (lightOnly) count.lightOnlyItems += 1;
+      const count = counts.get(id) ?? { placement, readers: new Map<LitItemRead, number>() };
+      count.readers.set(read, (count.readers.get(read) ?? 0) + 1);
       counts.set(id, count);
       publish();
 
@@ -99,9 +105,10 @@ export function usePlacementRegistry(): [
       return () => {
         if (released) return;
         released = true;
-        count.items -= 1;
-        if (lightOnly) count.lightOnlyItems -= 1;
-        if (count.items === 0) counts.delete(id);
+        const left = count.readers.get(read)! - 1;
+        if (left > 0) count.readers.set(read, left);
+        else count.readers.delete(read);
+        if (count.readers.size === 0) counts.delete(id);
         publish();
       };
     },

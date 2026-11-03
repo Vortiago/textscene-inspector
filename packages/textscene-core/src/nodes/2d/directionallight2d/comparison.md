@@ -49,6 +49,14 @@ One render takes 256 lights, the directional lights first (`renderer_canvas_rend
 A directional light past them lights nothing. Here the red and green lights past the 256th leave
 the square untinted by them.
 
+## Height on a normal-mapped item
+
+<!-- compare: image=unit-directionallight2d-normal-map status=done fixture=unit-directionallight2d-normal-map.tscn -->
+
+`height` tilts the light from the canvas plane, 0, toward the viewer, 1. A plain Sprite2D takes it
+head-on whatever the height. Two normal-mapped ones take it by their normals: Flat tilts to +x, and
+Dome sweeps from -x to +x. Each lands on Godot.
+
 ## Linting
 
 <!-- lint:begin DirectionalLight2D -->
@@ -70,8 +78,3 @@ Strict parsing format-checks these `DirectionalLight2D` properties, plus 15 inhe
 `enabled` falls back to `true`, `energy` to `1.0`, `height` to `0`, `max_distance` to
 `10000` and `blend_mode` to `0` (ADD), each with a warning. `color` falls back to opaque
 white silently.
-
-## Known limitations
-
-- **Shader missing** A `CanvasTexture.normal_texture` is not read, so `height` has no effect
-  and every surface takes the light head-on.

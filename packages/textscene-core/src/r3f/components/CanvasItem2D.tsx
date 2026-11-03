@@ -20,6 +20,7 @@ import { useAnimatedValue } from '../contexts/AnimatedValueContext';
 import { CanvasItemKeyProvider } from './CanvasItemGroup';
 import { CanvasItemMaterialProvider, useCanvasItemMaterial } from './canvasItemMaterialContext';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
+import type { CanvasItemSurface } from '../lighting2d/normalMappedLighting';
 
 interface CanvasItem2DProps {
   node: TscnNode;
@@ -34,6 +35,8 @@ interface CanvasItem2DProps {
     material: CanvasItemMaterialProperties | null,
     pixelMaterial: CanvasItemPixelMaterial
   ) => ReactNode;
+  /** The normal and specular maps `body` lights its pixels with, or null to light them flat. */
+  surface?: CanvasItemSurface | null;
   /**
    * Draws this node's own child canvas items, each with its own light list, as a TileMapLayer's
    * rendering quadrants are. A node that draws them passes no `body`. They take the own-pixel tint,
@@ -47,7 +50,7 @@ interface CanvasItem2DProps {
   children?: ReactNode;
 }
 
-export function CanvasItem2D({ node, props, body, ownItems, children }: CanvasItem2DProps) {
+export function CanvasItem2D({ node, props, body, surface = null, ownItems, children }: CanvasItem2DProps) {
   // Draw order is `renderOrder` below, which three compares before distance, so
   // every canvas item stays in the z=0 plane.
   const local = useMemo(() => node2dGroupProps(props), [props]);
@@ -90,7 +93,12 @@ export function CanvasItem2D({ node, props, body, ownItems, children }: CanvasIt
     >
       <CanvasItemKeyProvider value={renderOrder}>
         {body && (
-          <LitCanvasItemPixels material={material} lightMask={props.light_mask} zFinal={effectiveZ}>
+          <LitCanvasItemPixels
+            material={material}
+            lightMask={props.light_mask}
+            zFinal={effectiveZ}
+            surface={surface}
+          >
             {(pixelMaterial) => body(tint, material, pixelMaterial)}
           </LitCanvasItemPixels>
         )}

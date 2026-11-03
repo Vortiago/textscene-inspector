@@ -3,7 +3,7 @@
  * Godot's editor collision overlay. CollisionShape3D mounts it only when `showCollisions` is on.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { TscnInternalResource } from '../../../../parser/types';
 import { decodeBoxShape3D } from '../../../../resources/shapes/boxshape3d';
@@ -12,9 +12,13 @@ import { decodeConcavePolygonShape3D } from '../../../../resources/shapes/concav
 import { decodeCapsuleShape3D } from '../../../../resources/shapes/capsuleshape3d';
 import { decodeSphereShape3D } from '../../../../resources/shapes/sphereshape3d';
 import { decodeCylinderShape3D } from '../../../../resources/shapes/cylindershape3d';
+import { shapeDebugLines } from '../../shared/shapeDebugLines';
+import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { warn } from '../../../../logger';
 import { wireGizmoProgram } from '../../../../r3f/components/wireGizmoProgram';
 import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
+import { memoisedImport } from '../../../../resources/memoisedImport';
+import { useLazyModule } from '../../../../resources/useLazyModule';
 
 interface CollisionGizmoProps {
   shape: TscnInternalResource;
@@ -62,6 +66,8 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
         </mesh>
       );
     }
+    case 'WorldBoundaryShape3D':
+      return <WorldBoundaryLines shape={shape} color={color} />;
     case 'ConcavePolygonShape3D':
       return <TriangleSoupWire shapeData={data} color={color} />;
     case 'ConvexPolygonShape3D':
@@ -77,7 +83,7 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
   }
 }
 
-interface PolygonWireProps {
+interface ShapeWireProps {
   /**
    * The shape resource's property bag, whose identity holds across renders. A decode per render
    * hands back a new array, and each new array would rebuild the geometry.
@@ -92,8 +98,14 @@ const MIN_TRIANGLE_SOUP_FLOATS = 3 * 3;
 /** A tetrahedron's four corners: the fewest points that enclose a volume. */
 const MIN_CONVEX_HULL_POINTS = 4;
 
+/** Godot draws a world boundary as lines, not a wireframe mesh: a square and a normal ray. */
+function WorldBoundaryLines({ shape, color }: { shape: TscnInternalResource; color: THREE.Color }) {
+  const positions = useMemo(() => shapeDebugLines(shape), [shape]);
+  return positions && <GizmoLine positions={positions} color={color} />;
+}
+
 /** A concave shape is already a triangle soup, bound as a non-indexed BufferGeometry. */
-function TriangleSoupWire({ shapeData, color }: PolygonWireProps) {
+function TriangleSoupWire({ shapeData, color }: ShapeWireProps) {
   const geometry = useMemo(() => {
     const { data } = decodeConcavePolygonShape3D(shapeData);
     if (data.length < MIN_TRIANGLE_SOUP_FLOATS) return null;
@@ -112,35 +124,26 @@ function TriangleSoupWire({ shapeData, color }: PolygonWireProps) {
   );
 }
 
-/** Convex hull from a point cloud, through the lazy-loaded ConvexGeometry. */
-function ConvexHullWire({ shapeData, color }: PolygonWireProps) {
-  const points = useMemo(() => decodeConvexPolygonShape3D(shapeData).points, [shapeData]);
-  const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
-  useDisposeOnRelease(geometry);
+/**
+ * `ConvexGeometry` lives in three's examples bundle, so it loads on demand: it stays off the
+ * static-paint closure and out of the VS Code webview budget until collisions show.
+ */
+const loadConvexGeometry = memoisedImport(() => import('three/addons/geometries/ConvexGeometry.js'));
 
-  useEffect(() => {
-    let cancelled = false;
+/** Convex hull from a point cloud, through the lazy-loaded ConvexGeometry. */
+function ConvexHullWire({ shapeData, color }: ShapeWireProps) {
+  const hullModule = useLazyModule(loadConvexGeometry);
+  const geometry = useMemo(() => {
+    if (!hullModule) return null;
+    const { points } = decodeConvexPolygonShape3D(shapeData);
     const verts: THREE.Vector3[] = [];
     for (let i = 0; i + 2 < points.length; i += 3) {
       verts.push(new THREE.Vector3(points[i], points[i + 1], points[i + 2]));
     }
-    if (verts.length < MIN_CONVEX_HULL_POINTS) {
-      setGeometry(null);
-      return;
-    }
-    // `ConvexGeometry` lives in three's examples bundle, so it is lazy-`import()`ed: it stays off
-    // the static-paint closure and out of the VS Code webview budget until collisions show.
-    void import('three/addons/geometries/ConvexGeometry.js')
-      .then(({ ConvexGeometry }) => {
-        if (!cancelled) setGeometry(new ConvexGeometry(verts));
-      })
-      .catch((error) => {
-        warn(`[CollisionShape3D] Failed to build convex hull gizmo: ${String(error)}`);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [points]);
+    if (verts.length < MIN_CONVEX_HULL_POINTS) return null;
+    return new hullModule.ConvexGeometry(verts);
+  }, [hullModule, shapeData]);
+  useDisposeOnRelease(geometry);
 
   const wire = wireGizmoProgram(color);
   if (!geometry) return null;

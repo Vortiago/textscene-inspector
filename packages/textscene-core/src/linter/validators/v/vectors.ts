@@ -353,6 +353,14 @@ export const vectorCombinators = {
     );
   },
 
+  /** `Plane(nx, ny, nz, d)` format. */
+  plane(name: string): PropertyValidator {
+    return shape(
+      floatTupleValidator(name, 'Plane', 4, 'Plane with 4 numbers like Plane(0, 1, 0, 0)', formatCode(name)),
+      'Plane(nx, ny, nz, d)'
+    );
+  },
+
   /** `Transform2D(6 floats)` format. */
   transform2d(name: string): PropertyValidator {
     return shape(

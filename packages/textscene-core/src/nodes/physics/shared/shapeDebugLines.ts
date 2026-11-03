@@ -5,14 +5,25 @@
  */
 
 import { aabbEdges, centredAabb } from '../../../godot/math/aabb.js';
+import type { Plane } from '../../../godot/math/plane.js';
 import { degToRadf } from '../../../godot/math/math.js';
 import { storedReal } from '../../../godot/math/real.js';
-import type { Vector3 } from '../../../godot/math/vector.js';
+import {
+  FLOATS_PER_VERTEX,
+  normalizedVector3,
+  vector3Add,
+  vector3Cross,
+  vector3Dot,
+  vector3Scaled,
+  vector3Sub,
+  type Vector3,
+} from '../../../godot/math/vector.js';
 import { decodeBoxShape3D } from '../../../resources/shapes/boxshape3d';
 import { decodeCapsuleShape3D } from '../../../resources/shapes/capsuleshape3d';
 import { decodeConcavePolygonShape3D } from '../../../resources/shapes/concavepolygonshape3d';
 import { decodeCylinderShape3D } from '../../../resources/shapes/cylindershape3d';
 import { decodeSphereShape3D } from '../../../resources/shapes/sphereshape3d';
+import { decodeWorldBoundaryShape3D } from '../../../resources/shapes/worldboundaryshape3d';
 import type { TscnInternalResource } from '../../../parser/types';
 
 /**
@@ -27,7 +38,6 @@ function boxDebugLines({ x, y, z }: Vector3): Float32Array {
   return points;
 }
 
-/** One step of a circle in the x/z plane: `sin(deg) * r`, `cos(deg) * r`, each op a `real_t` float. */
 /** One step of a circle in the x/z plane. The engine narrows `Math::sin(float)` first (`math_funcs.h:45`), then multiplies in float. */
 function ringPoint(radius: number, i: number): [number, number] {
   return [
@@ -109,12 +119,65 @@ function concaveDebugLines(faces: Float32Array): Float32Array {
       points.push(faces[slot * 3]!, faces[slot * 3 + 1]!, faces[slot * 3 + 2]!);
     }
   };
-  for (let slot = 0; slot * 3 + 2 * 3 < faces.length; slot += 3) {
+  for (let slot = 0; (slot + 2) * 3 + 2 < faces.length; slot += 3) {
     edge(slot, slot + 1);
     edge(slot + 1, slot + 2);
     edge(slot + 2, slot);
   }
   return new Float32Array(points);
+}
+
+/** Half the side of the drawn square (`world_boundary_shape_3d.cpp:45-48`). */
+const SQUARE_HALF_SIDE = 10;
+
+/** The length of the ray from the plane's closest point to the origin, along the normal (`:60`). */
+const NORMAL_RAY_LENGTH = 3;
+
+const SQUARE_CORNERS = 4;
+const VERTICES = SQUARE_CORNERS * 2 + 2;
+
+/** `Plane::get_any_perpendicular_normal` (`plane.cpp:56-71`): 0.99 is the "too close to x" cut. */
+function anyPerpendicularNormal(normal: Vector3): Vector3 {
+  const seed = Math.abs(normal.x) > 0.99 ? { x: 0, y: 1, z: 0 } : { x: 1, y: 0, z: 0 };
+  const along = vector3Dot([seed.x, seed.y, seed.z], [normal.x, normal.y, normal.z]);
+  const perpendicular = vector3Sub(seed, vector3Scaled(normal, along));
+  const [x, y, z] = normalizedVector3(perpendicular.x, perpendicular.y, perpendicular.z);
+  return { x, y, z };
+}
+
+/**
+ * `WorldBoundaryShape3D::get_debug_mesh_lines` (`world_boundary_shape_3d.cpp:36-63`): four square
+ * edges, then the normal ray. A zero normal gives a zero second axis, as Godot's `normalized()`
+ * does, so the square collapses to a line.
+ */
+function worldBoundaryDebugLines({ normal, d }: Plane): Float32Array {
+  const first = anyPerpendicularNormal(normal);
+  const [bx, by, bz] = normalizedVector3(
+    ...vector3Cross([normal.x, normal.y, normal.z], [first.x, first.y, first.z])
+  );
+  const second = { x: bx, y: by, z: bz };
+
+  const centre = vector3Scaled(normal, d);
+  const corner = (alongFirst: number, alongSecond: number) =>
+    vector3Add(
+      centre,
+      vector3Add(
+        vector3Scaled(first, alongFirst * SQUARE_HALF_SIDE),
+        vector3Scaled(second, alongSecond * SQUARE_HALF_SIDE)
+      )
+    );
+  const corners = [corner(1, 1), corner(1, -1), corner(-1, -1), corner(-1, 1)];
+
+  const vertices = new Float32Array(VERTICES * FLOATS_PER_VERTEX);
+  const setVertex = (index: number, { x, y, z }: Vector3) =>
+    vertices.set([x, y, z], index * FLOATS_PER_VERTEX);
+  corners.forEach((from, index) => {
+    setVertex(index * 2, from);
+    setVertex(index * 2 + 1, corners[(index + 1) % SQUARE_CORNERS]!);
+  });
+  setVertex(SQUARE_CORNERS * 2, centre);
+  setVertex(SQUARE_CORNERS * 2 + 1, vector3Add(centre, vector3Scaled(normal, NORMAL_RAY_LENGTH)));
+  return vertices;
 }
 
 /**
@@ -137,6 +200,8 @@ export function shapeDebugLines(shape: TscnInternalResource): Float32Array | nul
       const { radius, height } = decodeCapsuleShape3D(shape.data);
       return capsuleDebugLines(radius, height);
     }
+    case 'WorldBoundaryShape3D':
+      return worldBoundaryDebugLines(decodeWorldBoundaryShape3D(shape.data).plane);
     case 'ConcavePolygonShape3D':
       return concaveDebugLines(decodeConcavePolygonShape3D(shape.data).data);
     default:

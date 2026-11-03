@@ -24,6 +24,7 @@ const RECT2I = 8;
 const VECTOR3 = 9;
 const VECTOR3I = 10;
 const TRANSFORM2D = 11;
+const PLANE = 14;
 const QUATERNION = 15;
 const AABB = 16;
 const TRANSFORM3D = 18;
@@ -149,6 +150,7 @@ export const FORMAT_ONLY_CORPUS = [
   asWritten(VECTOR3I, 'Vector3i(1, 2, 3)', 'variant_parser.cpp:773'),
   converted(VECTOR3I, 'Vector3(1, 2, 3)', 'variant.cpp:644-651'),
   asWritten(TRANSFORM2D, 'Transform2D(1, 0, 0, 1, 0, 0)', 'variant_parser.cpp:812'),
+  asWritten(PLANE, 'Plane(0, 1, 0, 0)', 'variant_parser.cpp:829'),
   asWritten(QUATERNION, 'Quaternion(0, 0, 0, 1)', 'variant_parser.cpp:842'),
   asWritten(AABB, 'AABB(0, 0, 0, 1, 1, 1)', 'variant_parser.cpp:855'),
   asWritten(TRANSFORM3D, 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)', 'variant_parser.cpp:881'),

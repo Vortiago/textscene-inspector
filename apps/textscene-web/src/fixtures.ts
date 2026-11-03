@@ -603,6 +603,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Directionallight2d Normal Map",
+    "file": "unit-directionallight2d-normal-map.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Directionallight2d Render Budget",
     "file": "unit-directionallight2d-render-budget.tscn",
     "category": "Other"
@@ -1698,6 +1703,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Pointlight2d Normal Map Height",
+    "file": "unit-pointlight2d-normal-map-height.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Normal Map Specular",
+    "file": "unit-pointlight2d-normal-map-specular.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d Range Layer",
     "file": "unit-pointlight2d-range-layer.tscn",
     "category": "Other"
@@ -2005,6 +2020,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sky Orthographic",
     "file": "unit-sky-orthographic.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Panorama Nearest",
+    "file": "unit-sky-panorama-nearest.tscn",
     "category": "Other"
   },
   {
@@ -4031,6 +4051,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Collision Shapes",
     "file": "unit-collision-shapes.tscn",
+    "category": "Unit - Physics"
+  },
+  {
+    "name": "Collision World Boundary",
+    "file": "unit-collision-world-boundary.tscn",
     "category": "Unit - Physics"
   },
   {

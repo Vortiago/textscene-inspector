@@ -18,6 +18,7 @@ import {
   type CanvasLightDeclaration,
   type ItemPlacement,
   type LightListEntry,
+  type LitItemRead,
   type PlacementDeclarations,
 } from './itemLightList';
 import type { Rect2 } from '../../godot/math/rect2';
@@ -27,7 +28,14 @@ function key(overrides: Partial<LightCullKey> = {}): LightCullKey {
 }
 
 function light(overrides: Partial<CanvasLightDeclaration> = {}): CanvasLightDeclaration {
-  return { reach: key(), sequence: 0, shadowItemCullMask: null, tintsShadow: false, ...overrides };
+  return {
+    reach: key(),
+    sequence: 0,
+    shadowItemCullMask: null,
+    tintsShadow: false,
+    mixes: false,
+    ...overrides,
+  };
 }
 
 const ITEM: ItemPlacement = { lightMask: 1, z: 0, layer: 0, takenLights: null };
@@ -36,9 +44,12 @@ function lights(...declarations: CanvasLightDeclaration[]): ReadonlyMap<number, 
   return new Map(declarations.map((declaration, ordinal) => [ordinal, declaration]));
 }
 
-function placements(...items: [ItemPlacement, boolean][]): ReadonlyMap<string, PlacementDeclarations> {
+/** Each placement and what its items read. */
+function placements(
+  ...items: [ItemPlacement, ...LitItemRead[]][]
+): ReadonlyMap<string, PlacementDeclarations> {
   return new Map(
-    items.map(([placement, hasLightOnly]) => [placementId(placement), { placement, hasLightOnly }])
+    items.map(([placement, ...reads]) => [placementId(placement), { placement, reads: new Set(reads) }])
   );
 }
 
@@ -47,7 +58,7 @@ function listAt(
   all: ReadonlyMap<number, CanvasLightDeclaration>,
   item: ItemPlacement
 ): readonly LightListEntry[] {
-  return planLightLists(all, placements([item, false]))[0]?.entries ?? [];
+  return planLightLists(all, placements([item, 'plain']))[0]?.entries ?? [];
 }
 
 describe('the light list of an item', () => {
@@ -222,7 +233,7 @@ describe('placementId', () => {
 
 describe('planLightLists', () => {
   it('gives placements with the same list one plan', () => {
-    const plans = planLightLists(lights(light()), placements([ITEM, false], [{ ...ITEM, z: 3 }, false]));
+    const plans = planLightLists(lights(light()), placements([ITEM, 'plain'], [{ ...ITEM, z: 3 }, 'plain']));
     expect(plans).toHaveLength(1);
     expect(plans[0]!.placementIds).toEqual([placementId(ITEM), placementId({ ...ITEM, z: 3 })]);
   });
@@ -230,38 +241,72 @@ describe('planLightLists', () => {
   it('gives placements with different lists a plan each', () => {
     const plans = planLightLists(
       lights(light(), light({ reach: key({ itemCullMask: 2 }) })),
-      placements([ITEM, false], [{ ...ITEM, lightMask: 3 }, false])
+      placements([ITEM, 'plain'], [{ ...ITEM, lightMask: 3 }, 'plain'])
     );
     expect(plans.map((plan) => plan.entries.map((entry) => entry.ordinal))).toEqual([[0], [0, 1]]);
   });
 
   it('gives placements a plan each when their lists differ only in one shadow state', () => {
     const all = lights(light({ reach: key({ itemCullMask: 3 }), shadowItemCullMask: 2 }));
-    const plans = planLightLists(all, placements([ITEM, false], [{ ...ITEM, lightMask: 2 }, false]));
+    const plans = planLightLists(all, placements([ITEM, 'plain'], [{ ...ITEM, lightMask: 2 }, 'plain']));
     expect(plans.map((plan) => plan.entries[0]!.unshadowed)).toEqual([true, false]);
   });
 
   it('leaves out a placement no light reaches', () => {
-    expect(planLightLists(lights(light()), placements([{ ...ITEM, lightMask: 2 }, false]))).toEqual([]);
+    expect(planLightLists(lights(light()), placements([{ ...ITEM, lightMask: 2 }, 'plain']))).toEqual([]);
   });
 
-  it('asks for the unmodulated buffer once any placement on the list holds a Light Only item', () => {
-    const plans = planLightLists(lights(light()), placements([ITEM, false], [{ ...ITEM, z: 3 }, true]));
-    expect(plans[0]!.hasLightOnly).toBe(true);
-  });
-
-  it('asks for no unmodulated buffer while no placement holds a Light Only item', () => {
-    expect(planLightLists(lights(light()), placements([ITEM, false]))[0]!.hasLightOnly).toBe(false);
+  it('gathers what the items of every placement on the list read', () => {
+    const plans = planLightLists(
+      lights(light()),
+      placements([ITEM, 'plain'], [{ ...ITEM, z: 3 }, 'lightOnly'])
+    );
+    expect([...plans[0]!.reads]).toEqual(['plain', 'lightOnly']);
   });
 
   it('tints a list that holds a shadowed light which tints', () => {
-    const plans = planLightLists(lights(light({ tintsShadow: true })), placements([ITEM, false]));
+    const plans = planLightLists(lights(light({ tintsShadow: true })), placements([ITEM, 'plain']));
     expect(plans[0]!.tintsShadow).toBe(true);
   });
 
   it('does not tint a list on which the tinting light is unshadowed', () => {
     const tinting = light({ reach: key({ itemCullMask: 3 }), shadowItemCullMask: 2, tintsShadow: true });
-    expect(planLightLists(lights(tinting), placements([ITEM, false]))[0]!.tintsShadow).toBe(false);
+    expect(planLightLists(lights(tinting), placements([ITEM, 'plain']))[0]!.tintsShadow).toBe(false);
+  });
+
+  it('keeps no light apart while no normal-mapped item reads the list', () => {
+    expect(planLightLists(lights(light()), placements([ITEM, 'plain']))[0]!.lightsApart).toBeNull();
+  });
+
+  it('keeps the lights apart for a normal-mapped item in the order Godot applies them', () => {
+    // `canvas.glsl:727` loops the directional lights by slot before `:768` loops the positional
+    // lights by sequence, whatever the ordinals.
+    const all = lights(
+      light({ sequence: 1 }),
+      light({ reach: directionalLightCullKey(0, 0), sequence: null, slot: 1 }),
+      light({ sequence: 0 }),
+      light({ reach: directionalLightCullKey(0, 0), sequence: null, slot: 0 })
+    );
+    const plans = planLightLists(all, placements([ITEM, 'plain'], [{ ...ITEM, z: 3 }, 'apart']));
+    expect(plans[0]!.lightsApart?.entries.map((entry) => entry.ordinal)).toEqual([3, 1, 2, 0]);
+  });
+
+  it('keeps apart only the lights on the list', () => {
+    const all = lights(light({ reach: key({ itemCullMask: 2 }) }), light());
+    const plans = planLightLists(all, placements([ITEM, 'apart']));
+    expect(plans[0]!.lightsApart?.entries.map((entry) => entry.ordinal)).toEqual([1]);
+  });
+
+  it('gives a tint layer only to each light kept apart that adds a `shadow_color`', () => {
+    const unshadowedTint = light({
+      reach: key({ itemCullMask: 3 }),
+      shadowItemCullMask: 2,
+      tintsShadow: true,
+    });
+    const all = lights(light({ tintsShadow: true }), light(), unshadowedTint, light({ tintsShadow: true }));
+    const apart = planLightLists(all, placements([ITEM, 'apart']))[0]!.lightsApart!;
+    expect(apart.tintLayers).toEqual([0, -1, -1, 1]);
+    expect(apart.tintLayerCount).toBe(2);
   });
 });
 
