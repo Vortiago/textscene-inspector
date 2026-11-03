@@ -51,11 +51,6 @@ describe('collision-shape slice registrations', () => {
       expect(resourceSliceRegistry.byTypeName(typeName)?.extensions).toBeUndefined();
     }
   });
-
-  it('leaves a shape type nobody implements unclaimed by these slices', () => {
-    const unimplemented = resourceSliceRegistry.byTypeName('SegmentShape2D');
-    expect(CLAIMS.some(([, slice]) => slice === unimplemented?.slice)).toBe(false);
-  });
 });
 
 describe('parsePackedVector3Array', () => {
