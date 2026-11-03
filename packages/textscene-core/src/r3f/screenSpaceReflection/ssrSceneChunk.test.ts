@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotScreenSpaceReflection } from './ssrSceneChunk';
 import { SSR_UNIFORM } from './ssrUniforms';
+import { UNLIT_DEFAULT_ROUGHNESS } from './unshadedRoughness';
+import { UNLIT_NORMAL_VARYING } from '../shaderPatch/unlitVaryings';
 import { scalarGlslFunction } from '../testing/glslScalar';
 import { installedShaderChunks, restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 
@@ -67,13 +69,19 @@ describe('installGodotScreenSpaceReflection', () => {
     );
   });
 
-  it('writes an unshaded surface its face normal and roughness 1, after its alpha cut', () => {
+  it('writes an unshaded surface its interpolated normal, after its alpha cut and its roughness map read', () => {
     installGodotScreenSpaceReflection();
     const fragment = THREE.ShaderLib.basic.fragmentShader;
-    const output = fragment.indexOf('godotEncodeNormal( godotFaceNormal ) * 0.5 + 0.5, 127.0 / 255.0 )');
+    const output = fragment.indexOf(`godotEncodeNormal( ${UNLIT_NORMAL_VARYING} * godotUnlitFace )`);
 
     expect(output).toBeGreaterThan(fragment.indexOf('#include <alphahash_fragment>'));
-    expect(THREE.ShaderLib.basic.vertexShader).toContain('vGodotViewPosition = - mvPosition.xyz;');
+    expect(output).toBeGreaterThan(fragment.indexOf('#include <specularmap_fragment>'));
+  });
+
+  it("writes an unshaded surface Godot's default roughness, which its material's own replaces", () => {
+    installGodotScreenSpaceReflection();
+
+    expect(THREE.ShaderLib.basic.fragmentShader).toContain(UNLIT_DEFAULT_ROUGHNESS);
   });
 
   it('gives the unshaded material the prepass state and the best-fit table it encodes with', () => {

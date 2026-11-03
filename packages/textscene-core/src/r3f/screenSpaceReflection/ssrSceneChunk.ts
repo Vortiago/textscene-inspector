@@ -11,6 +11,8 @@ import { installGodotIndirectSpecular } from '../godotIndirectSpecular.js';
 import { installGodotLightFunction } from '../godotLightFunction.js';
 import { bestFitNormalsSlot, reflectionSlot, SSR_UNIFORM, ssrState } from './ssrUniforms.js';
 import { GODOT_ENCODE_NORMAL } from './bestFitNormals.js';
+import { UNLIT_DEFAULT_ROUGHNESS } from './unshadedRoughness.js';
+import { installUnlitVaryings, UNLIT_NORMAL_VARYING } from '../shaderPatch/unlitVaryings.js';
 
 const { reflection, bestFitNormals, state } = SSR_UNIFORM;
 
@@ -57,48 +59,38 @@ const PREPASS_OUTPUT: TextEdit = {
 };
 
 /**
- * An unshaded surface's output: the roughness Godot's shaders start from, 1
- * (`scene_forward_clustered.glsl:1232`), and the face's normal, as three's basic program carries
- * none. A flat face's normal is its vertex normal.
+ * An unshaded surface's output: its interpolated normal, turned to face a double-sided surface's
+ * viewer (`DO_SIDE_CHECK`, `scene_forward_clustered.glsl:1263-1267`), and Godot's default roughness,
+ * which `unshadedRoughness.ts` replaces with the material's own. `encode24` keeps only the direction, so the normal needs no normalising.
  */
-const UNSHADED_NORMAL_ROUGHNESS_OUTPUT = /* glsl */ `if ( ${state}.x > 0.5 ) {
+const UNSHADED_NORMAL_ROUGHNESS_OUTPUT = /* glsl */ `
+	if ( ${state}.x > 0.5 ) {
 		if ( diffuseColor.a < ${state}.z ) discard;
-		vec3 godotFaceNormal = normalize( cross( dFdx( vGodotViewPosition ), dFdy( vGodotViewPosition ) ) );
-		gl_FragColor = vec4( godotEncodeNormal( godotFaceNormal ) * 0.5 + 0.5, 127.0 / 255.0 );
+		#ifdef DOUBLE_SIDED
+			float godotUnlitFace = gl_FrontFacing ? 1.0 : - 1.0;
+		#else
+			float godotUnlitFace = 1.0;
+		#endif
+		${UNLIT_DEFAULT_ROUGHNESS}
+		gl_FragColor = vec4( godotEncodeNormal( ${UNLIT_NORMAL_VARYING} * godotUnlitFace ) * 0.5 + 0.5, godotUnlitRoughness * ( 127.0 / 255.0 ) );
 		return;
-	}
-	`;
+	}`;
 
 const THREE_CLIPPING_PARS_FRAGMENT = '#include <clipping_planes_pars_fragment>';
 const THREE_SPECULARMAP_FRAGMENT = '#include <specularmap_fragment>';
-const THREE_CLIPPING_PARS_VERTEX = '#include <clipping_planes_pars_vertex>';
-const THREE_LOGDEPTH_VERTEX = '#include <logdepthbuf_vertex>';
 
-/** After the alpha cut and before the unlit colour, as the lit output sits. */
+/** After the alpha cut and the roughness map's read, before the unlit colour, as the lit output sits. */
 const UNSHADED_PREPASS_FRAGMENT: readonly TextEdit[] = [
   {
     three: THREE_CLIPPING_PARS_FRAGMENT,
     godot: `${THREE_CLIPPING_PARS_FRAGMENT}
 uniform highp sampler2D ${bestFitNormals};
 uniform vec4 ${state};
-varying vec3 vGodotViewPosition;
 ${GODOT_ENCODE_NORMAL}`,
   },
   {
     three: THREE_SPECULARMAP_FRAGMENT,
-    godot: `${UNSHADED_NORMAL_ROUGHNESS_OUTPUT}${THREE_SPECULARMAP_FRAGMENT}`,
-  },
-];
-
-/** The view position, after every edit that moves the vertex has placed it. */
-const UNSHADED_PREPASS_VERTEX: readonly TextEdit[] = [
-  {
-    three: THREE_CLIPPING_PARS_VERTEX,
-    godot: `${THREE_CLIPPING_PARS_VERTEX}\nvarying vec3 vGodotViewPosition;`,
-  },
-  {
-    three: THREE_LOGDEPTH_VERTEX,
-    godot: `vGodotViewPosition = - mvPosition.xyz;\n\t${THREE_LOGDEPTH_VERTEX}`,
+    godot: `${THREE_SPECULARMAP_FRAGMENT}${UNSHADED_NORMAL_ROUGHNESS_OUTPUT}`,
   },
 ];
 
@@ -127,10 +119,9 @@ export function installGodotScreenSpaceReflection(): boolean {
       standard: [PREPASS_OUTPUT],
       physical: [PREPASS_OUTPUT],
     },
-    vertexShaders: { basic: UNSHADED_PREPASS_VERTEX },
     // After Godot's occlusion of a reflection, which `installGodotIndirectSpecular` appends.
     append: { lights_physical_pars_fragment: SSR_FUNCTIONS, aomap_fragment: SSR_FOLD },
-    requires: [installGodotIndirectSpecular, installGodotLightFunction],
+    requires: [installGodotIndirectSpecular, installGodotLightFunction, installUnlitVaryings],
   });
   if (!isPatched) return false;
   installLitUniform(reflection, reflectionSlot);

@@ -61,6 +61,11 @@ import {
 } from '../../../r3f/materials/opaquePrepass';
 import { resolveEmission } from './emission';
 import {
+  DEFAULT_ROUGHNESS,
+  UNSHADED_ROUGHNESS,
+  unshadedRoughnessUserData,
+} from '../../../r3f/screenSpaceReflection/unshadedRoughness';
+import {
   TEXTURE_SLOTS,
   type MaterialBlendState,
   type ResolvedTextures,
@@ -383,13 +388,16 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
   // Godot SHADING_MODE_UNSHADED (0) outputs albedo unlit, as three's MeshBasicMaterial
   // does, and still shifts it by the heightmap. Dropping emission is parity: Godot's
   // unshaded branch writes `frag_color = vec4(albedo, alpha)` and never reads the emission term.
+  // Its roughness reaches only the normal-roughness prepass (`unshadedRoughness.ts`).
   if (scalars.shadingMode === 'unshaded') {
+    const roughnessMap = slot('roughness_texture');
     return {
       materialClass: 'basic',
       props: {
         color,
         vertexColors: scalars.useVertexColors,
         map: slot('albedo_texture'),
+        specularMap: roughnessMap,
         transparent: scalars.transparent,
         opacity: scalars.opacity,
         alphaTest: scalars.alphaTest,
@@ -397,10 +405,11 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
         depthWrite: scalars.depthWrite,
         depthTest: scalars.depthTest,
         side: scalars.side,
-        userData,
+        userData: { ...userData, ...unshadedRoughnessUserData(scalars.roughness) },
         ...blend,
       },
       injection: composeInjections([
+        roughnessMap || scalars.roughness !== DEFAULT_ROUGHNESS ? UNSHADED_ROUGHNESS : undefined,
         vertexColorInjection(scalars),
         heightmap ? unshadedParallaxInjection(heightmap) : undefined,
         billboardInjection(scalars),

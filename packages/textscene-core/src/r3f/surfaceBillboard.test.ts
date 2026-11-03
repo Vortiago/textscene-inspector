@@ -177,11 +177,11 @@ describe('the billboard normal of a StandardMaterial3D', () => {
     }
   });
 
-  it('turns the normals the unshaded parallax adds too, as its program includes the chunk twice', () => {
+  it('turns the normal the unshaded parallax reads', () => {
     const vertex = patchedVertex(
       standardMaterial({ shading_mode: '0', heightmap_enabled: 'true', billboard_mode: '1' })
     );
-    expect(vertex.split(TURNS_BY_BILLBOARD)).toHaveLength(3);
+    expect(vertex.split(TURNS_BY_BILLBOARD)).toHaveLength(2);
   });
 
   it("keeps three's normal matrix for a surface that does not billboard (edge case)", () => {

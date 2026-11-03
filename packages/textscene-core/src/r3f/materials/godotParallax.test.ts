@@ -10,6 +10,10 @@ import type { ProgramShader } from '../materialProgramInputs';
 import type { Heightmap } from '../../resources/materials/standardmaterial3d/types';
 import { UV2_CHANNEL } from '../../resources/meshes/uv2';
 import { preprocessorBranch } from '../testing/glslSource';
+import { installUnlitVaryings } from '../shaderPatch/unlitVaryings';
+import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
+
+restoreShaderGlobalsAfterEach();
 
 const HEIGHTMAP: Heightmap = { scale: 3, isDeep: false, layers: [8, 32], flip: [1, -1], readsHeight: false };
 
@@ -178,6 +182,13 @@ describe('unshadedParallaxInjection', () => {
 
     expect(vertexShader).toContain('vViewPosition = - mvPosition.xyz;');
     expect(vertexShader).toContain('vNormal = normalize( transformedNormal );');
+  });
+
+  it('computes the normal once, over the unlit varyings that already compute it', () => {
+    installUnlitVaryings();
+    const { vertexShader } = patchedUnshaded();
+
+    expect(vertexShader.split('#include <beginnormal_vertex>')).toHaveLength(2);
   });
 
   it('shifts the albedo coordinate', () => {

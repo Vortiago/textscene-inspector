@@ -209,8 +209,8 @@ vGodotHeightmapUv = ( godotHeightmapTransform * vec3( uv, 1.0 ) ).xy;`;
 
 /**
  * What three's unshaded program lacks of what the parallax reads: the view position, and the
- * normal its fragment program declares but its vertex program never writes. The normal chunks run
- * only where neither an environment map nor skinning has run them already.
+ * normal its fragment program declares but its vertex program never writes. `transformedNormal` is
+ * the one the unlit varyings compute (`unlitVaryings.ts`).
  */
 const UNSHADED_VERTEX_PARS = `#include <common>
 varying vec3 vViewPosition;
@@ -221,11 +221,6 @@ varying vec3 vViewPosition;
 const UNSHADED_VERTEX = `#include <project_vertex>
 vViewPosition = - mvPosition.xyz;
 #ifndef FLAT_SHADED
-	#if ! defined( USE_ENVMAP ) && ! defined( USE_SKINNING )
-		#include <beginnormal_vertex>
-		#include <morphnormal_vertex>
-		#include <defaultnormal_vertex>
-	#endif
 	vNormal = normalize( transformedNormal );
 #endif`;
 
