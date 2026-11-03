@@ -18,6 +18,7 @@ import {
   type SkyRadianceLayout,
 } from '../../godot/rendering/environment/skyReflection.js';
 import { fastFilter } from './fastFilter.js';
+import { withMipLevels } from '../../r3f/mipLevels.js';
 import { importanceSampleFilter } from './importanceSampleFilter.js';
 import type { LayerFilter } from './layerFilter.js';
 import { DOWNSAMPLE_FRAGMENT_SHADER, RADIANCE_OCTMAP_FRAGMENT_SHADER } from './skyLayerShaders.js';
@@ -75,7 +76,7 @@ function createOctmapArray<Layout extends SkyOctmapLayout>(
   depth: number
 ): OctmapArray<Layout> {
   const target = new THREE.WebGLArrayRenderTarget(layout.size, layout.size, depth, MIPMAPPED_TARGET_OPTIONS);
-  return { layout, target: withMips(target, 1 + layout.downsampledSizes.length) };
+  return { layout, target: withMipLevels(target, 1 + layout.downsampledSizes.length) };
 }
 
 /** Lets go of the textures a bake set on `gl`'s passes, as the passes outlive it. */
@@ -339,15 +340,5 @@ const MIPMAPPED_TARGET_OPTIONS: THREE.RenderTargetOptions = {
 /** The chain's octmap, a mip for each of `sizes`, which a filter reads between mips. */
 function chainTarget(sizes: readonly number[]): THREE.WebGLRenderTarget {
   const size = sizes[0]!;
-  return withMips(new THREE.WebGLRenderTarget(size, size, MIPMAPPED_TARGET_OPTIONS), sizes.length);
-}
-
-/**
- * `target` with `levels` mips, each half the one before, as it filters between them. A render target
- * reads only the count (three r187 `WebGLTextures.js:2122-2130`), which the type of `Texture.mipmaps`
- * does not name, and caps `TEXTURE_MAX_LEVEL` at the last level, so the texture is complete (`:2293-2297`).
- */
-function withMips<T extends THREE.WebGLRenderTarget>(target: T, levels: number): T {
-  target.texture.mipmaps = Array.from({ length: levels }, () => ({})) as unknown as THREE.Texture['mipmaps'];
-  return target;
+  return withMipLevels(new THREE.WebGLRenderTarget(size, size, MIPMAPPED_TARGET_OPTIONS), sizes.length);
 }
