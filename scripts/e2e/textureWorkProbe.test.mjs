@@ -134,14 +134,14 @@ describe('describeTextureWorkState', () => {
 
   it('says the status never attached, with the worker counts that tell a stalled build from a missed one', () => {
     expect(describeTextureWorkState({ ...state, probe: { ...state.probe, workers: 1 } })).toBe(
-      'the status never attached (1 job worker, 0 replies, 0 long tasks)'
+      'the status never attached (job workers 1, replies 0, long tasks 0)'
     );
   });
 
   it('says the status attached and never detached, and that it still shows', () => {
     const probe = { ...state.probe, statusAttached: [800], workers: 1 };
     expect(describeTextureWorkState({ isShowing: true, probe })).toBe(
-      'the status attached 1 time(s) and detached 0, and it still shows (1 job worker, 0 replies, 0 long tasks)'
+      'the status attached 1, detached 0, and it still shows (job workers 1, replies 0, long tasks 0)'
     );
   });
 
@@ -154,12 +154,32 @@ describe('describeTextureWorkState', () => {
       workers: 1,
     };
     expect(describeTextureWorkState({ ...state, probe })).toBe(
-      'the status attached 2 time(s) and detached 1, and it is gone (1 job worker, 1 replies, 0 long tasks)'
+      'the status attached 2, detached 1, and it is gone (job workers 1, replies 1, long tasks 0)'
     );
   });
 });
 
 describe('waitForTextureWorkToClear', () => {
+  it('names the timeout and its cause when the page state cannot be read', async () => {
+    const page = {
+      waitForFunction: async () => {
+        throw new Error('Timeout 5ms exceeded');
+      },
+      evaluate: async () => {
+        throw new Error('Target closed');
+      },
+    };
+    await expect(
+      waitForTextureWorkToClear(page, {
+        statusTestId: 'status',
+        timeoutMs: 5,
+        diagnostics: { consoleErrors: [], pageErrors: [] },
+      })
+    ).rejects.toThrow(
+      'texture work did not clear within 5 ms: the page state could not be read (Target closed)'
+    );
+  });
+
   const probe = { statusAttached: [], statusDetached: [], workers: 1, replies: 0, longTasks: [] };
   const diagnostics = { consoleErrors: ['boom'], pageErrors: [] };
 
@@ -174,7 +194,7 @@ describe('waitForTextureWorkToClear', () => {
       waitForTextureWorkToClear(page, { statusTestId: 'status', timeoutMs: 120000, diagnostics })
     ).rejects.toThrow(
       'texture work did not clear within 120000 ms: the status never attached ' +
-        '(1 job worker, 0 replies, 0 long tasks); load errors: boom'
+        '(job workers 1, replies 0, long tasks 0); load errors: boom'
     );
   });
 });

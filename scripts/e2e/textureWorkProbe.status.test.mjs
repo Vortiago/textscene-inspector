@@ -15,6 +15,8 @@ function chip() {
 const nextTask = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('the probe recording the texture work status', () => {
+  const nativeWorker = window.Worker;
+
   beforeEach(() => {
     vi.stubGlobal(
       'PerformanceObserver',
@@ -28,6 +30,7 @@ describe('the probe recording the texture work status', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    window.Worker = nativeWorker;
     document.body.replaceChildren();
   });
 
@@ -44,6 +47,17 @@ describe('the probe recording the texture work status', () => {
     const wrapper = document.createElement('section');
     wrapper.append(chip());
     document.body.append(wrapper);
+    await nextTask();
+    wrapper.remove();
+    await nextTask();
+    expect(window.__textureWorkProbe.statusAttached).toHaveLength(1);
+    expect(window.__textureWorkProbe.statusDetached).toHaveLength(1);
+  });
+
+  it('counts one status once when its wrapper and it attach in one batch', async () => {
+    const wrapper = document.createElement('section');
+    document.body.append(wrapper);
+    wrapper.append(chip());
     await nextTask();
     wrapper.remove();
     await nextTask();

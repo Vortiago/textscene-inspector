@@ -47,15 +47,30 @@ export function installTextureWorkProbe(statusTestId) {
   };
 
   const selector = `[data-testid="${statusTestId}"]`;
-  const isStatus = (node) =>
-    node.nodeType === 1 && (node.matches(selector) || node.querySelector(selector) !== null);
-  // Each record, not the page's state after the batch: a status that attaches and detaches in
-  // one batch leaves the page as it was, and a net-state probe would never see it.
+  const statusesIn = (node) => {
+    if (node.nodeType !== 1) return [];
+    return node.matches(selector) ? [node] : [...node.querySelectorAll(selector)];
+  };
+  // Each status element is counted when it joins or leaves this set, by the records of a
+  // batch, not by the page after it: a status that attaches and detaches in one batch leaves the
+  // page as it was, and a status inside a wrapper that attaches in the same batch has two records.
+  const attached = new Set();
   const observe = () => {
     new MutationObserver((records) => {
       for (const { addedNodes, removedNodes } of records) {
-        for (const node of addedNodes) if (isStatus(node)) probe.statusAttached.push(performance.now());
-        for (const node of removedNodes) if (isStatus(node)) probe.statusDetached.push(performance.now());
+        for (const node of addedNodes) {
+          for (const status of statusesIn(node)) {
+            if (attached.has(status)) continue;
+            attached.add(status);
+            probe.statusAttached.push(performance.now());
+          }
+        }
+        for (const node of removedNodes) {
+          for (const status of statusesIn(node)) {
+            if (!attached.delete(status)) continue;
+            probe.statusDetached.push(performance.now());
+          }
+        }
       }
     }).observe(document.documentElement, { childList: true, subtree: true });
   };
@@ -113,14 +128,31 @@ export function installWorkerBlock() {
  */
 export function describeTextureWorkState({ isShowing, probe }) {
   const { statusAttached, statusDetached, workers, replies, longTasks } = probe;
-  const seen = `${workers} job worker${workers === 1 ? '' : 's'}, ${replies} replies, ${longTasks.length} long tasks`;
+  const seen = `job workers ${workers}, replies ${replies}, long tasks ${longTasks.length}`;
   if (statusAttached.length === 0) return `the status never attached (${seen})`;
-  const counts = `the status attached ${statusAttached.length} time(s) and detached ${statusDetached.length}`;
+  const counts = `the status attached ${statusAttached.length}, detached ${statusDetached.length}`;
   return `${counts}, and ${isShowing ? 'it still shows' : 'it is gone'} (${seen})`;
+}
+
+/** The page's probe and whether the status shows, or the reason it cannot be read (a closed page). */
+async function readTextureWorkState(page, statusTestId) {
+  try {
+    const state = await page.evaluate(
+      (testId) => ({
+        probe: window.__textureWorkProbe,
+        isShowing: document.querySelector(`[data-testid="${testId}"]`) !== null,
+      }),
+      statusTestId
+    );
+    return state.probe ? state : { error: 'the probe never installed' };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 /**
  * Waits until the status has attached and detached the same number of times, at least once.
+ * It returns at the first such moment, so a status that attaches again later is not waited for.
  * It polls on a timer, not on animation frames: the check reads recorded state and needs no
  * frame, and a frame waits on the GPU process. A timeout throws what the page saw
  * (`describeTextureWorkState`) and its load errors, not only that the time ran out.
@@ -136,16 +168,13 @@ export async function waitForTextureWorkToClear(page, { statusTestId, timeoutMs,
       { timeout: timeoutMs, polling: STATE_POLL_MS }
     );
   } catch (error) {
-    const state = await page.evaluate(
-      (testId) => ({
-        probe: window.__textureWorkProbe,
-        isShowing: document.querySelector(`[data-testid="${testId}"]`) !== null,
-      }),
-      statusTestId
-    );
+    const state = await readTextureWorkState(page, statusTestId);
     const loadErrors = [...diagnostics.consoleErrors, ...diagnostics.pageErrors].slice(0, 3);
+    const seen = state.error
+      ? `the page state could not be read (${state.error})`
+      : describeTextureWorkState(state);
     throw new Error(
-      `texture work did not clear within ${timeoutMs} ms: ${describeTextureWorkState(state)}` +
+      `texture work did not clear within ${timeoutMs} ms: ${seen}` +
         (loadErrors.length > 0 ? `; load errors: ${loadErrors.join(' | ')}` : ''),
       { cause: error }
     );
