@@ -7,7 +7,13 @@
  */
 
 export const VARIANT_PROPERTIES: Readonly<Record<string, readonly string[]>> = Object.freeze({
-  BoneMap: ['bonemap'],
-  Curve: ['_limits'],
-  JSON: ['data'],
+  "BoneMap": [
+    "bonemap",
+  ],
+  "Curve": [
+    "_limits",
+  ],
+  "JSON": [
+    "data",
+  ],
 });
