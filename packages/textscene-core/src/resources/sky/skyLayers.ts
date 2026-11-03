@@ -28,7 +28,8 @@ import type { SkyBake } from './types.js';
 
 /**
  * An octmap array with a mip chain, laid out as `layout`: a sky's radiance layers or the
- * reflection atlas. A read clamps its lod to the mips the layout names, as Godot's texture ends there.
+ * reflection atlas. It holds only the mips the layout names, so a read's lod stops at the last, as
+ * Godot's texture ends there.
  */
 interface OctmapArray<Layout extends SkyOctmapLayout> {
   readonly layout: Layout;
@@ -188,7 +189,6 @@ function bakeFromChain(
       try {
         setUniforms(filter.passFor(gl), {
           chain: chain.texture,
-          lastMip: filter.chainSizes.length - 1,
           borderSize: layout.borderSize,
         });
         drawLayers({ octmap, scratch });

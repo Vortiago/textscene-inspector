@@ -66,16 +66,16 @@ uniform mat3 ${ROTATION};
 #define GODOT_SKY_CONTRIBUTION ${SHOWN}[ 0 ].x
 #define GODOT_SKY_BORDER_SIZE ${SHOWN}[ 0 ].y
 #define GODOT_SKY_DERIVATIVE_SCALE ${SHOWN}[ 0 ].z
-#define GODOT_SKY_LAST_MIP ${SHOWN}[ 0 ].w
 #define GODOT_SKY_ENERGY ${SHOWN}[ 1 ].x
 #define GODOT_SKY_REFLECTION ${SHOWN}[ 1 ].y
 ${OCTMAP_GLSL}
-// The mip whose texels span the octmap distance the direction moves across a pixel, at most the last.
+// The mip whose texels span the octmap distance the direction moves across a pixel (oct_inc.glsl:43-51).
+// The array's last level caps it, as Godot's texture does.
 float godotSkyLod( const in vec3 direction ) {
 	vec3 directionDdx = dFdx( direction );
 	vec3 directionDdy = dFdy( direction );
 	float texelsSqr = max( dot( directionDdx, directionDdx ), dot( directionDdy, directionDdy ) ) * GODOT_SKY_DERIVATIVE_SCALE;
-	return min( 0.25 * log2( texelsSqr + 1e-6 ), GODOT_SKY_LAST_MIP );
+	return 0.25 * log2( texelsSqr + 1e-6 );
 }
 
 // Radiance layer \`layer\` at the octmap texel \`uv\`, at mip \`lod\`. A layer past the last reads the last.
@@ -135,12 +135,11 @@ export class SkyRadiance {
    * takes the array's handle.
    */
   show(contribution: number, reflects: boolean, energy: number): void {
-    const { borderSize, pixelSize, downsampledSizes } = this.layers.layout;
+    const { borderSize, pixelSize } = this.layers.layout;
     shownSky[0] = contribution;
     shownSky[1] = borderSize;
     // One over `vec3_to_oct_lod`'s `pixel_size_sqr` (`oct_inc.glsl:46`), so a fragment multiplies.
     shownSky[2] = 1 / (4 * pixelSize * pixelSize);
-    shownSky[3] = downsampledSizes.length;
     shownSky[SHOWN_ENERGY] = energy;
     shownSky[SHOWN_REFLECTION] = reflects ? 1 : 0;
     skyRotation.set(this.toSky);
