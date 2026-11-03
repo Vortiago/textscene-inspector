@@ -6,9 +6,10 @@
  */
 import { describe, expect, it, vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
-import { TscnPreviewPanel, dispatchWebviewMessage } from './TscnPreviewPanel';
+import { dispatchWebviewMessage } from './TscnPreviewPanel';
 import { isWebviewToHostMessage, type WebviewToHostMessage } from './protocol';
-import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } from './test-setup';
+import { openPreviewPanel, openReadyPreviewPanel, settle } from './previewPanel.testkit';
+import { createMockUri, createMockFileData, type MockWebview } from './test-setup';
 
 const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
 
@@ -102,13 +103,7 @@ function loadTscnMessages(webview: MockWebview): unknown[] {
 
 describe('TscnPreviewPanel webviewReady through production dispatch', () => {
   it('replays a pending loadTscn payload via the production dispatch path', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
-
-    TscnPreviewPanel.create(createMockUri('/extension'), createMockUri('/workspace/scene.tscn'));
-
-    // Let the constructor's async _loadTscnContent finish.
-    await new Promise<void>((r) => setTimeout(r, 10));
+    const { webview, triggerMessage } = await openPreviewPanel(MINIMAL_TSCN);
 
     expect(loadTscnMessages(webview)).toHaveLength(0);
 
@@ -122,15 +117,10 @@ describe('TscnPreviewPanel webviewReady through production dispatch', () => {
   });
 
   it('uses the fake panel postMessage captures as the sole observation mechanism', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
-
-    TscnPreviewPanel.create(createMockUri('/extension'), createMockUri('/workspace/scene.tscn'));
-    await new Promise<void>((r) => setTimeout(r, 10));
-    triggerMessage({ type: 'webviewReady' });
+    const { webview } = await openReadyPreviewPanel(MINIMAL_TSCN);
 
     const allMessages = webview.postMessage.mock.calls.map((c) => c[0]);
     const loadTscn = allMessages.find((m) => (m as { type: string }).type === 'loadTscn');
@@ -140,20 +130,8 @@ describe('TscnPreviewPanel webviewReady through production dispatch', () => {
 });
 
 describe('TscnPreviewPanel — all message types through fake onDidReceiveMessage', () => {
-  async function makeReadyPanel(triggerMessage: (msg: unknown) => void): Promise<TscnPreviewPanel> {
-    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
-    const panel = TscnPreviewPanel.create(
-      createMockUri('/extension'),
-      createMockUri('/workspace/scene.tscn')
-    );
-    await new Promise<void>((r) => setTimeout(r, 10));
-    triggerMessage({ type: 'webviewReady' });
-    return panel;
-  }
-
   it('jumpToNode: opens the text document and positions the editor', async () => {
-    const { triggerMessage } = setupMockPanel();
-    await makeReadyPanel(triggerMessage);
+    const { triggerMessage } = await openReadyPreviewPanel(MINIMAL_TSCN);
 
     const editor = { selection: undefined as unknown, revealRange: vi.fn() };
     (vscode.workspace.openTextDocument as Mock).mockResolvedValue({
@@ -162,15 +140,14 @@ describe('TscnPreviewPanel — all message types through fake onDidReceiveMessag
     (vscode.window.showTextDocument as Mock).mockResolvedValue(editor);
 
     triggerMessage({ type: 'jumpToNode', nodeName: 'Root', path: 'Root' });
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settle();
 
     expect(vscode.window.showTextDocument as Mock).toHaveBeenCalled();
     expect(editor.revealRange).toHaveBeenCalled();
   });
 
   it('loadResource: posts resourceLoaded for a text resource', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    await makeReadyPanel(triggerMessage);
+    const { webview, triggerMessage } = await openReadyPreviewPanel(MINIMAL_TSCN);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
@@ -183,7 +160,7 @@ describe('TscnPreviewPanel — all message types through fake onDidReceiveMessag
       resourceType: 'PackedScene',
       requestId: 'rq1',
     });
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settle();
 
     const loaded = webview.postMessage.mock.calls
       .map((c) => c[0])
@@ -193,8 +170,7 @@ describe('TscnPreviewPanel — all message types through fake onDidReceiveMessag
   });
 
   it('log: does not throw even when no output channel is initialised', async () => {
-    const { triggerMessage } = setupMockPanel();
-    await makeReadyPanel(triggerMessage);
+    const { triggerMessage } = await openReadyPreviewPanel(MINIMAL_TSCN);
 
     expect(() =>
       triggerMessage({
@@ -207,8 +183,7 @@ describe('TscnPreviewPanel — all message types through fake onDidReceiveMessag
   });
 
   it('null: the production listener survives a webview posting a non-object', async () => {
-    const { triggerMessage } = setupMockPanel();
-    await makeReadyPanel(triggerMessage);
+    const { triggerMessage } = await openReadyPreviewPanel(MINIMAL_TSCN);
 
     // Nothing catches inside `onDidReceiveMessage`, so a throw here escapes
     // into the extension host.

@@ -78,8 +78,8 @@ export type WebviewReadyMessage = {
 };
 
 /**
- * The page's entry script failed to load, so no bundle code runs and `webviewReady` never
- * comes. The page's own bootstrap posts this with the import's error.
+ * The import of the page's entry script failed to fetch, parse or run, so `webviewReady`
+ * never comes. The page's own bootstrap posts this with the import's error.
  */
 export type WebviewLoadFailedMessage = {
   type: 'webviewLoadFailed';

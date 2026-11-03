@@ -3,21 +3,12 @@
  * webview's clipboard permission.
  */
 import { describe, expect, it } from 'vitest';
-import { TscnPreviewPanel } from './TscnPreviewPanel';
-import { createMockFileData, createMockUri, setupMockPanel, vscode } from './test-setup';
-
-async function createReadyPanel(): Promise<ReturnType<typeof setupMockPanel>> {
-  const mockPanel = setupMockPanel();
-  vscode.workspace.fs.readFile.mockResolvedValue(createMockFileData('[gd_scene format=3]'));
-  TscnPreviewPanel.create(createMockUri('/extension'), createMockUri('/workspace/test.tscn'));
-  await new Promise<void>((r) => setTimeout(r, 10));
-  mockPanel.triggerMessage({ type: 'webviewReady' });
-  return mockPanel;
-}
+import { openReadyPreviewPanel } from './previewPanel.testkit';
+import { vscode } from './test-setup';
 
 describe('TscnPreviewPanel copyNodePath', () => {
   it('writes the webview node path to the clipboard', async () => {
-    const { triggerMessage } = await createReadyPanel();
+    const { triggerMessage } = await openReadyPreviewPanel('[gd_scene format=3]');
 
     triggerMessage({ type: 'copyNodePath', nodePath: 'Player/Camera3D' });
 

@@ -275,8 +275,11 @@ export class TscnPreviewPanel {
    * VS Code's webview resource loader can end a script's transfer early, and the page
    * then never runs (#1147). A new document fetches the script again. A second failure
    * before a `webviewReady` ends every capture with the error, so no reload loops.
+   * The failed document has no listener, so posts wait for the next `webviewReady`.
    */
   private _handleFailedLoad(error: string): void {
+    this._webviewReady = false;
+    this._captures.webviewLoading();
     const reason = `The preview script failed to load: ${error}`;
     if (!this._hasReloadedDocument) {
       this._hasReloadedDocument = true;

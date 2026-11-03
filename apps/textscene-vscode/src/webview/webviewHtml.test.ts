@@ -21,8 +21,11 @@ function entryLoaderOf(html: string): string {
   return loader;
 }
 
-/** Runs the entry loader as the page would, with `acquireVsCodeApi` handing out `api`. */
-async function runEntryLoader(html: string, api: { postMessage: (message: unknown) => void }): Promise<void> {
+/** Runs the entry loader as the page would, with `acquireVsCodeApi` as the page's global. */
+async function runEntryLoader(
+  html: string,
+  acquireVsCodeApi: () => { postMessage: (message: unknown) => void }
+): Promise<void> {
   // A function body, not a module, since vitest evaluates no module from a string. Its
   // `import()` is the test's own, which a `Function` body cannot reach in vitest's VM.
   const run = new Function(
@@ -30,10 +33,7 @@ async function runEntryLoader(html: string, api: { postMessage: (message: unknow
     'importEntry',
     `return ${entryLoaderOf(html).replace('import(', 'importEntry(')}`
   );
-  await run(
-    () => api,
-    (url: string) => import(/* @vite-ignore */ url)
-  );
+  await run(acquireVsCodeApi, (url: string) => import(/* @vite-ignore */ url));
 }
 
 describe('the entry loader', () => {
@@ -44,7 +44,7 @@ describe('the entry loader', () => {
       scriptUri: 'data:text/javascript,export const cut = (',
     });
 
-    await runEntryLoader(html, { postMessage });
+    await runEntryLoader(html, () => ({ postMessage }));
 
     expect(postMessage).toHaveBeenCalledWith({
       type: 'webviewLoadFailed',
@@ -59,9 +59,24 @@ describe('the entry loader', () => {
       scriptUri: 'data:text/javascript,export const whole = 1;',
     });
 
-    await runEntryLoader(html, { postMessage });
+    await runEntryLoader(html, () => ({ postMessage }));
 
     expect(postMessage).not.toHaveBeenCalled();
+  });
+
+  it('logs the import error when the entry acquired the API before it threw', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const html = generateWebviewHtml({
+      ...BASE_OPTIONS,
+      scriptUri: 'data:text/javascript,throw new Error("mount failed");',
+    });
+
+    await runEntryLoader(html, () => {
+      throw new Error('An instance of the VS Code API has already been acquired');
+    });
+
+    expect(consoleError).toHaveBeenCalledWith(expect.objectContaining({ message: 'mount failed' }));
+    consoleError.mockRestore();
   });
 });
 

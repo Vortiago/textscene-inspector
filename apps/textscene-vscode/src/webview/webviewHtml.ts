@@ -58,11 +58,11 @@ function scriptLiteral(value: unknown): string {
 
 /**
  * Imports the entry script, and tells the host when the import fails, such as on a cut-off
- * copy (`webviewLoadFailed`). A script that fails to fetch or parse runs no bundle code, so
- * the API is still free to acquire.
+ * copy (`webviewLoadFailed`). An entry that throws after it acquired the API leaves none to
+ * acquire, so that error goes to the console instead of being replaced by the acquire's.
  */
 function entryLoader(scriptUri: string): string {
-  return `import(${scriptLiteral(scriptUri)}).catch((error) => acquireVsCodeApi().postMessage({ type: 'webviewLoadFailed', error: String(error) }));`;
+  return `import(${scriptLiteral(scriptUri)}).catch((error) => { try { acquireVsCodeApi().postMessage({ type: 'webviewLoadFailed', error: String(error) }); } catch { console.error(error); } });`;
 }
 
 export function generateWebviewHtml(options: WebviewHtmlOptions): string {

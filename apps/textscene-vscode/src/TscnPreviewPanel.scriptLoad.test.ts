@@ -4,12 +4,17 @@
  * `webviewReady` ends every capture with the error instead of the load deadline.
  */
 import { describe, expect, it } from 'vitest';
-import './test-setup';
 import { openPreviewPanel } from './previewPanel.testkit';
+import { type MockWebview } from './test-setup';
 
 const CUT_SCRIPT_ERROR = 'SyntaxError: Unexpected end of input';
 
 const openPanel = () => openPreviewPanel('[gd_scene format=3]');
+
+function captureRequestCount(webview: MockWebview): number {
+  return webview.postMessage.mock.calls.filter((c) => (c[0] as { type: string }).type === 'capturePreview')
+    .length;
+}
 
 describe('TscnPreviewPanel script load failure', () => {
   it('loads a new document once the first one reports its script failed', async () => {
@@ -53,5 +58,30 @@ describe('TscnPreviewPanel script load failure', () => {
     await expect(captured).resolves.toEqual({
       error: `The preview script failed to load: ${CUT_SCRIPT_ERROR}`,
     });
+  });
+
+  it('posts no resource change to a document that failed after one that loaded', async () => {
+    const { panel, webview, triggerMessage } = await openPanel();
+    triggerMessage({ type: 'webviewReady' });
+    triggerMessage({ type: 'webviewLoadFailed', error: CUT_SCRIPT_ERROR });
+    webview.postMessage.mockClear();
+
+    panel.invalidateResource('res://tex.png');
+
+    expect(webview.postMessage).not.toHaveBeenCalled();
+  });
+
+  it('holds a capture for the next document when a document that could capture fails', async () => {
+    const { panel, webview, triggerMessage } = await openPanel();
+    triggerMessage({ type: 'webviewReady' });
+    triggerMessage({ type: 'previewCaptureReady' });
+    triggerMessage({ type: 'webviewLoadFailed', error: CUT_SCRIPT_ERROR });
+
+    void panel.capture();
+    expect(captureRequestCount(webview)).toBe(0);
+
+    triggerMessage({ type: 'webviewReady' });
+    triggerMessage({ type: 'previewCaptureReady' });
+    expect(captureRequestCount(webview)).toBe(1);
   });
 });
