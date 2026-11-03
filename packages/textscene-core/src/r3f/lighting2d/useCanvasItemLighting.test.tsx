@@ -198,6 +198,20 @@ describe('useCanvasItemLighting with a normal map', () => {
     expect(registerItem).toHaveBeenCalledWith(PLACEMENT, 'apart');
   });
 
+  it('declares an unshaded normal-mapped item as ordinary, as it reads no light', () => {
+    const { wrapper, registerItem } = lighting(list(apartLights()));
+    renderHook(
+      () =>
+        useCanvasItemLighting({
+          material: material(CanvasItemMaterialLightMode.UNSHADED),
+          lightMask: 1,
+          surface: surface(),
+        }),
+      { wrapper }
+    );
+    expect(registerItem).toHaveBeenCalledWith(PLACEMENT, 'plain');
+  });
+
   it('shades the lights its list keeps apart, with its own maps', () => {
     const apart = apartLights();
     const maps = surface();

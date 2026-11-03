@@ -3,11 +3,11 @@
  * raw, and its specular shading, which Godot uses only with a normal map.
  */
 
-import { describe, it, expect } from 'vitest';
-import type { ReactNode } from 'react';
+import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
-import { renderHook } from '@testing-library/react';
-import { useCanvasItemSurface } from './useCanvasItemSurface';
+import { render } from '@testing-library/react';
+import { CanvasItemSurfaceSource } from './canvasItemSurface';
+import type { CanvasItemSurface } from './lighting2d/normalMappedLighting';
 import { decodeCanvasTexture } from '../resources/textures/canvastexture/decode';
 import type { CanvasTextureSlot } from '../resources/useTexture2D';
 import type { TscnInternalResource } from '../parser/types';
@@ -36,15 +36,22 @@ function slot(properties: Record<string, string>): CanvasTextureSlot {
   return { texture: decodeCanvasTexture(properties), externalResources: [], internalResources: MAP };
 }
 
-function surfaceOf(canvasTexture: CanvasTextureSlot | undefined) {
+function surfaceOf(canvasTexture: CanvasTextureSlot): CanvasItemSurface | null {
   const fake = createFakeResourceLoader();
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
+  let surface: CanvasItemSurface | null = null;
+  render(
+    <ResourceLoaderProvider loader={fake.loader}>
+      <CanvasItemSurfaceSource
+        slot={canvasTexture}
+        sampler={SAMPLER}
+        onSurface={(next) => (surface = next)}
+      />
+    </ResourceLoaderProvider>
   );
-  return renderHook(() => useCanvasItemSurface(canvasTexture, SAMPLER), { wrapper }).result.current;
+  return surface;
 }
 
-describe('useCanvasItemSurface', () => {
+describe('CanvasItemSurfaceSource', () => {
   it('reads the normal map raw, without the sRGB decode', () => {
     const surface = surfaceOf(slot({ normal_texture: 'SubResource("GradientTexture2D_flat")' }));
     expect(surface?.normalMap.colorSpace).toBe(THREE.NoColorSpace);
@@ -97,7 +104,18 @@ describe('useCanvasItemSurface', () => {
     expect(surfaceOf(nested)).toBeNull();
   });
 
-  it('is null with no CanvasTexture', () => {
-    expect(surfaceOf(undefined)).toBeNull();
+  it('hands null on unmount', () => {
+    const onSurface = vi.fn();
+    const view = render(
+      <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
+        <CanvasItemSurfaceSource
+          slot={slot({ normal_texture: 'SubResource("GradientTexture2D_flat")' })}
+          sampler={SAMPLER}
+          onSurface={onSurface}
+        />
+      </ResourceLoaderProvider>
+    );
+    view.unmount();
+    expect(onSurface).toHaveBeenLastCalledWith(null);
   });
 });

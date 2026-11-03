@@ -28,6 +28,7 @@ import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
 import { viewportSize, viewportTargetSize } from './targetSize';
 import { useInCanvasOverWorld } from './canvasOverWorldScope';
+import { CanvasFrameContext } from '../../../r3f/canvasFrame';
 
 // Lazy: the Control painters register on import, and a viewport with no Controls never needs them.
 const ViewportControls = lazy(() =>
@@ -96,10 +97,14 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
   // A canvas holds the 2D items and Controls of a viewport, in one tree-order draw. A 2D pass draws
   // it in its portal. A 3D pass draws it over its world, in a scene of its own (`OffscreenViewportPass`),
   // so the world's portal holds the children alone and each workspace drops the other's nodes.
+  // The viewport's canvas is a root of its own, so a CanvasLayer frame around the SubViewport never
+  // scales the height of a light inside it.
   const inViewport = (inner: ReactNode) => (
     <ViewportSizeProvider size={layoutSize}>
       <LayerRanksProvider value={canvasLayers}>
-        <SubViewportSamplerScope properties={properties}>{inner}</SubViewportSamplerScope>
+        <CanvasFrameContext.Provider value={null}>
+          <SubViewportSamplerScope properties={properties}>{inner}</SubViewportSamplerScope>
+        </CanvasFrameContext.Provider>
       </LayerRanksProvider>
     </ViewportSizeProvider>
   );

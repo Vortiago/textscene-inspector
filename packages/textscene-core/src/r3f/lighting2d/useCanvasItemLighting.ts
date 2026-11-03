@@ -119,7 +119,7 @@ function useNormalMappedUniforms(
 /** Where an item sits and what it draws with, for its light list. */
 interface CanvasItemLightingOptions {
   material: CanvasItemMaterialProperties | null;
-  /** The item's CanvasItem `light_mask`; Godot's default 1 for a node without one. */
+  /** The item's CanvasItem `light_mask`, or Godot's default 1 for a node without one. */
   lightMask?: number;
   /**
    * The item's own `z_final`. Defaults to the enclosing item's accumulated z, which is what every
@@ -167,7 +167,9 @@ export function useCanvasItemLighting({
   const [takenLights, setTakenLights] = useState<readonly number[] | null>(null);
   const placement = { lightMask, z: itemZ, layer: canvasLayer, takenLights };
   useCapItemLights(placement, geometryRef, setTakenLights);
-  const read: LitItemRead = surface ? 'apart' : lightOnly ? 'lightOnly' : 'plain';
+  // An unshaded item reads no light, so its normal map asks for no layer per light.
+  const unshaded = lightMode === CanvasItemMaterialLightMode.UNSHADED;
+  const read: LitItemRead = surface && !unshaded ? 'apart' : lightOnly ? 'lightOnly' : 'plain';
   useRegisterLitItem(placement, read);
   const list = lists.get(placementId(placement));
 
@@ -191,7 +193,7 @@ export function useCanvasItemLighting({
 
   // A normal map scales each light by its own normal term, so it shades the lights the list keeps
   // apart.
-  const apart = surface ? (list?.apart ?? null) : null;
+  const apart = read === 'apart' ? (list?.apart ?? null) : null;
   const shaded = useNormalMappedUniforms(bound, apart, surface);
   const apartCount = apart?.places.length ?? 0;
 
