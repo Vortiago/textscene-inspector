@@ -24,7 +24,6 @@ interface CollisionGizmoProps {
 
 export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
   const data = shape.data;
-  const wire = wireGizmoProgram(color);
   switch (shape.type) {
     case 'BoxShape3D':
     case 'CapsuleShape3D':
@@ -36,7 +35,8 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
       return <TriangleSoupWire shapeData={data} color={color} />;
     case 'ConvexPolygonShape3D':
       return <ConvexHullWire shapeData={data} color={color} />;
-    default:
+    default: {
+      const wire = wireGizmoProgram(color);
       warn(`[CollisionShape3D] Unsupported shape type "${shape.type}": drawing a unit wireframe box.`);
       return (
         <mesh>
@@ -44,6 +44,7 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
           <meshBasicMaterial key={wire.key} {...wire.props} />
         </mesh>
       );
+    }
   }
 }
 

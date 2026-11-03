@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionShape3D } from './Component';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
+import { linePositions } from '../../../../r3f/testing/GizmoScene';
 import { ViewportModeProvider } from '../../../../r3f/contexts/ViewportModeContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { CollisionShape3DProperties } from './types';
@@ -63,11 +64,9 @@ describe('<CollisionShape3D> gizmo', () => {
 
   it('renders the box outline as line segments when showCollisions is on', async () => {
     const renderer = await render(true);
-    const lines = renderer.scene.findAll((n) => n.type === 'LineSegments');
-    expect(lines).toHaveLength(1);
-    const positions = (lines[0]!.instance as THREE.LineSegments).geometry.getAttribute('position');
-    expect(positions.count).toBe(24);
-    expect(renderer.scene.findAll((n) => n.type === 'Mesh')).toHaveLength(0);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(1);
+    expect(linePositions(renderer)).toHaveLength(24 * 3);
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
   it('renders a convex-hull wireframe for ConvexPolygonShape3D (lazy ConvexGeometry)', async () => {
@@ -119,7 +118,7 @@ describe('<CollisionShape3D> gizmo', () => {
 
   it('still renders the gizmo when disabled=true and showCollisions is on', async () => {
     const renderer = await render(true, { disabled: true });
-    expect(renderer.scene.findAll((n) => n.type === 'LineSegments')).toHaveLength(1);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(1);
   });
 
   it('applies the node transform to the gizmo group', async () => {

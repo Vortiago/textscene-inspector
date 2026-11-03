@@ -8,16 +8,15 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionGizmo } from './CollisionGizmo';
 import type { TscnInternalResource } from '../../../../parser/types';
+import { linePositions } from '../../../../r3f/testing/GizmoScene';
 import { findMesh } from '../../../3d/testing/reactThreeTestInstance';
 
-/** The flat segment ends of the gizmo's one `<lineSegments>`, and the meshes it drew beside them. */
+/** The flat segment ends of the gizmo's lines, and how many meshes it drew beside them. */
 async function drawn(shape: TscnInternalResource) {
   const renderer = await ReactThreeTestRenderer.create(
     <CollisionGizmo shape={shape} color={new THREE.Color(0x00ff88)} />
   );
-  const [lines] = renderer.scene.findAll((n) => n.type === 'LineSegments');
-  const positions = (lines!.instance as THREE.LineSegments).geometry.getAttribute('position').array;
-  return { positions, meshCount: renderer.scene.findAll((n) => n.type === 'Mesh').length };
+  return { positions: linePositions(renderer), meshCount: renderer.scene.findAllByType('Mesh').length };
 }
 
 const VERTEX_FLOATS = 3;

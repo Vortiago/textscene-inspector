@@ -4,9 +4,9 @@
  * CollisionGizmo runs only once a resource exists, so a miss here draws nothing, silently.
  */
 import { describe, expect, it } from 'vitest';
-import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionShape3D } from './Component';
+import { linePositions } from '../../../../r3f/testing/GizmoScene';
 import { CollisionShape2D } from '../../2d/collisionshape2d/Component';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ViewportModeProvider } from '../../../../r3f/contexts/ViewportModeContext';
@@ -57,8 +57,7 @@ async function render3D(shape: string | undefined, tres?: ParsedResource) {
 
 /** The extents of the box outline's segment ends, one number per axis. */
 function boxSize(renderer: Awaited<ReturnType<typeof render3D>>) {
-  const [lines] = renderer.scene.findAll((n) => n.type === 'LineSegments');
-  const positions = (lines!.instance as THREE.LineSegments).geometry.getAttribute('position').array;
+  const positions = linePositions(renderer);
   return [0, 1, 2].map((axis) => {
     const values = Array.from(positions).filter((_, index) => index % 3 === axis);
     return Math.max(...values) - Math.min(...values);

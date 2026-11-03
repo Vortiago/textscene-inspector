@@ -73,6 +73,16 @@ export function lineMaterials(renderer: TestRenderer): THREE.LineBasicMaterial[]
     .map((line) => (line.instance as THREE.LineSegments).material as THREE.LineBasicMaterial);
 }
 
+/**
+ * The flat segment ends of the first line object, `[x0, y0, z0, x1, …]`.
+ *
+ * @canonical The segment ends a rendered gizmo line draws
+ */
+export function linePositions(renderer: TestRenderer): ArrayLike<number> {
+  const [line] = renderer.scene.findAllByType('LineSegments');
+  return (line!.instance as THREE.LineSegments).geometry.getAttribute('position').array;
+}
+
 /** The opacity of each gizmo line object, in draw order. */
 export function lineOpacities(renderer: TestRenderer): number[] {
   return lineMaterials(renderer).map((material) => material.opacity);
