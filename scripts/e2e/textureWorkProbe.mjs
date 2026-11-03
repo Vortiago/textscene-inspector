@@ -8,6 +8,9 @@
 /* global window, document, MutationObserver */
 // These globals exist only in the browser the init scripts are serialised into.
 
+/** How often the wait for the status reads the probe. */
+const STATE_POLL_MS = 100;
+
 /**
  * Installed before the app's scripts run. Self-contained, since no closure over this
  * module survives `Function.prototype.toString` serialisation.
@@ -43,14 +46,16 @@ export function installTextureWorkProbe(statusTestId) {
     }
   };
 
-  let attached = false;
   const selector = `[data-testid="${statusTestId}"]`;
+  const isStatus = (node) => node.nodeType === 1 && (node.matches(selector) || node.querySelector(selector));
+  // Each record, not the page's state after the batch: a status that attaches and detaches in
+  // one batch leaves the page as it was, and a net-state probe would never see it.
   const observe = () => {
-    new MutationObserver(() => {
-      const isAttached = document.querySelector(selector) !== null;
-      if (isAttached === attached) return;
-      attached = isAttached;
-      (isAttached ? probe.statusAttached : probe.statusDetached).push(performance.now());
+    new MutationObserver((records) => {
+      for (const { addedNodes, removedNodes } of records) {
+        for (const node of addedNodes) if (isStatus(node)) probe.statusAttached.push(performance.now());
+        for (const node of removedNodes) if (isStatus(node)) probe.statusDetached.push(performance.now());
+      }
     }).observe(document.documentElement, { childList: true, subtree: true });
   };
   if (document.documentElement) observe();
@@ -99,6 +104,51 @@ export function installWorkerBlock() {
       throw new Error('worker blocked by the long-task control');
     }
   };
+}
+
+/**
+ * One line for a failed wait: what the status did, and whether a worker started and replied.
+ * The three show a build that never started, one that never answered, and a status that stuck.
+ */
+export function describeTextureWorkState({ isShowing, probe }) {
+  const { statusAttached, statusDetached, workers, replies, longTasks } = probe;
+  const seen = `${workers} job worker${workers === 1 ? '' : 's'}, ${replies} replies, ${longTasks.length} long tasks`;
+  if (statusAttached.length === 0) return `the status never attached (${seen})`;
+  const counts = `the status attached ${statusAttached.length} time(s) and detached ${statusDetached.length}`;
+  return `${counts}, and ${isShowing ? 'it still shows' : 'it is gone'} (${seen})`;
+}
+
+/**
+ * Waits until the status has attached and detached the same number of times, at least once.
+ * It polls on a timer, not on animation frames: the check reads recorded state and needs no
+ * frame, and a frame waits on the GPU process. A timeout throws what the page saw
+ * (`describeTextureWorkState`) and its load errors, not only that the time ran out.
+ */
+export async function waitForTextureWorkToClear(page, { statusTestId, timeoutMs, diagnostics }) {
+  try {
+    await page.waitForFunction(
+      () => {
+        const { statusAttached, statusDetached } = window.__textureWorkProbe;
+        return statusAttached.length > 0 && statusDetached.length === statusAttached.length;
+      },
+      undefined,
+      { timeout: timeoutMs, polling: STATE_POLL_MS }
+    );
+  } catch (error) {
+    const state = await page.evaluate(
+      (testId) => ({
+        probe: window.__textureWorkProbe,
+        isShowing: document.querySelector(`[data-testid="${testId}"]`) !== null,
+      }),
+      statusTestId
+    );
+    const loadErrors = [...diagnostics.consoleErrors, ...diagnostics.pageErrors].slice(0, 3);
+    throw new Error(
+      `texture work did not clear within ${timeoutMs} ms: ${describeTextureWorkState(state)}` +
+        (loadErrors.length > 0 ? `; load errors: ${loadErrors.join(' | ')}` : ''),
+      { cause: error }
+    );
+  }
 }
 
 /**
