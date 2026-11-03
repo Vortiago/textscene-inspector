@@ -833,6 +833,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glow Map Viewport Texture Local",
+    "file": "unit-glow-map-viewport-texture-local.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glow Map Viewport Texture Shared",
+    "file": "unit-glow-map-viewport-texture-shared.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glow Map",
     "file": "unit-glow-map.tscn",
     "category": "Other"
@@ -1995,6 +2005,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sky Panorama Tres",
     "file": "unit-sky-panorama-tres.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Panorama Viewport Texture Local",
+    "file": "unit-sky-panorama-viewport-texture-local.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Panorama Viewport Texture Shared",
+    "file": "unit-sky-panorama-viewport-texture-shared.tscn",
     "category": "Other"
   },
   {

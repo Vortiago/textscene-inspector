@@ -32,6 +32,10 @@ export const LIGHTING_SCENES = [
   { name: 'scene-buffer-half-float', file: 'unit-scene-buffer-half-float.tscn' },
   { name: 'glow-specular', file: 'unit-glow-specular.tscn' },
   { name: 'glow-map', file: 'unit-glow-map.tscn' },
+  // A ViewportTexture glow map under an Environment that is, and one that is not, local to scene.
+  // The headers state why no other golden shows them.
+  { name: 'glow-map-viewport-texture-local', file: 'unit-glow-map-viewport-texture-local.tscn' },
+  { name: 'glow-map-viewport-texture-shared', file: 'unit-glow-map-viewport-texture-shared.tscn' },
   // A 4x4 checkerboard on two quads carries far more edge than a
   // silhouette-only scene.
   { name: 'material-emission-texture', file: 'unit-material-emission-texture.tscn' },
@@ -130,6 +134,10 @@ export const LIGHTING_SCENES = [
   // A PanoramaSkyMaterial .tres whose panorama is its own sub-resource. The header states why no
   // other golden shows it.
   { name: 'sky-panorama-tres', file: 'unit-sky-panorama-tres.tscn' },
+  // A ViewportTexture panorama with every holder local to scene, and with none. The headers state
+  // why no other golden shows them.
+  { name: 'sky-panorama-viewport-texture-local', file: 'unit-sky-panorama-viewport-texture-local.tscn' },
+  { name: 'sky-panorama-viewport-texture-shared', file: 'unit-sky-panorama-viewport-texture-shared.tscn' },
   // Two overlapping ReflectionProbes that update ALWAYS: the floor takes its ambient and its
   // reflection from the fast-filtered captures, which the blue background tints.
   { name: 'reflection-probe-always', file: 'unit-reflection-probe-always.tscn' },

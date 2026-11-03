@@ -5,7 +5,15 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { fillLiveCopy, liveTargetCrop, publishLiveTargets, unrenderedTexel } from './liveTargets';
+import {
+  fillLiveCopy,
+  liveTargetCopy,
+  liveTargetCrop,
+  liveTargetDrawCount,
+  noteLiveTargetDrawn,
+  publishLiveTargets,
+  unrenderedTexel,
+} from './liveTargets';
 import { ownedTextureView, releaseView, textureView } from '../resources/textures/textureView';
 import { createCanvasTarget, createSceneTarget } from '../nodes/viewport/subviewport/offscreenViewport';
 import { copiesFilledFrom, recordingRenderer } from './liveTargets.testkit';
@@ -308,5 +316,25 @@ describe('unrenderedTexel', () => {
     withdrawOpaque();
     expect(unrenderedTexel(crop)).toEqual([0, 0, 0, 0]);
     crop.dispose();
+  });
+});
+
+describe('liveTargetDrawCount', () => {
+  it('is 0 for a live target its pass has not drawn yet', () => {
+    expect(liveTargetDrawCount(liveCanvasTarget().texture)).toBe(0);
+  });
+
+  it('counts each draw its pass notes', () => {
+    const target = liveCanvasTarget();
+    noteLiveTargetDrawn(target.texture);
+    noteLiveTargetDrawn(target.texture);
+    expect(liveTargetDrawCount(target.texture)).toBe(2);
+  });
+
+  it('counts the draws of the target a crop of a copy cuts from', () => {
+    const target = liveCanvasTarget();
+    const crop = held(liveTargetCrop(held(liveTargetCopy(target.texture)), CORNER_CELL));
+    noteLiveTargetDrawn(target.texture);
+    expect(liveTargetDrawCount(crop)).toBe(1);
   });
 });

@@ -12,7 +12,7 @@ import { warn } from '../../logger';
 import { skyFragmentShader, skyGlsl, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight, type SkyUniforms } from './skyUniforms';
 import { releaseView, textureView } from '../textures/textureView';
-import { fillLiveCopy } from '../../r3f/liveTargets';
+import { fillLiveCopy, isLiveTarget } from '../../r3f/liveTargets';
 import { bakeSkyLayers, disposeSkyLayers, type SkyLayers } from './skyLayers';
 import { isDebanded } from './debanding';
 import { godotTextureFilterState } from '../textures/godotTextureFilter';
@@ -38,6 +38,12 @@ export interface SkyEnvironment {
   background: SkyBackground | null;
   /** Godot's radiance layers, which its ambient, its reflections and the fogs read. */
   layers: SkyLayers;
+  /**
+   * Fills the background's copy of the panorama's live target again, as Godot draws the background
+   * from the sky shader each frame (`sky.cpp:1463`). Absent unless a pass draws the panorama and
+   * the sky paints the background.
+   */
+  redrawBackground?: () => void;
   /** Frees the background, the panorama it samples, and the layers. */
   dispose: () => void;
 }
@@ -100,9 +106,14 @@ export function buildSkyEnvironment(
 
   // After the bake only the background samples the panorama.
   if (!background) releaseView(panoramaView);
+  const redrawBackground =
+    background && panorama && panoramaView && isLiveTarget(panorama)
+      ? () => fillLiveCopy(panorama, panoramaView, gl)
+      : undefined;
   return {
     background,
     layers,
+    redrawBackground,
     dispose: () => {
       if (background) {
         background.dispose();

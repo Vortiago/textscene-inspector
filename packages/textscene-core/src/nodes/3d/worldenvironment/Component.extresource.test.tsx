@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import * as THREE from 'three';
 import { useResolvedEnvironment } from './useResolvedEnvironment';
 import type {
   EnvironmentResolution,
@@ -138,8 +139,13 @@ describe('useResolvedEnvironment — references held in an external .tres', () =
     expect(resolved!.settings).toBeTruthy();
   });
 
-  it('hands back the Environment .tres pools, where its glow_map sub-resource lives', async () => {
-    const gradient = { id: 'Gradient_1', type: 'GradientTexture2D', data: {} };
+  it('resolves a glow_map sub-resource in the Environment .tres pools', async () => {
+    const gradient = {
+      id: 'Gradient_1',
+      type: 'GradientTexture2D',
+      data: { gradient: 'SubResource("Ramp_1")' },
+    };
+    const ramp = { id: 'Ramp_1', type: 'Gradient', data: {} };
     const resolved = await resolve(
       'ExtResource("1_env")',
       [],
@@ -149,16 +155,21 @@ describe('useResolvedEnvironment — references held in an external .tres', () =
           resourceType: 'Environment',
           properties: { glow_enabled: 'true', glow_map: 'SubResource("Gradient_1")' },
           extResources: [],
-          subResources: [gradient],
+          subResources: [gradient, ramp],
         },
       }
     );
     expect(resolved?.settings.glow?.map).toBe('SubResource("Gradient_1")');
-    expect(resolved?.resources.internalResources.map((r) => r.id)).toEqual(['Gradient_1']);
+    expect(resolved?.glowMap).toBeInstanceOf(THREE.Texture);
   });
 
-  it('hands back the sky material .tres pools, where its panorama sub-resource lives', async () => {
-    const gradient = { id: 'Gradient_1', type: 'GradientTexture2D', data: {} };
+  it('resolves a panorama sub-resource in the sky material .tres pools', async () => {
+    const gradient = {
+      id: 'Gradient_1',
+      type: 'GradientTexture2D',
+      data: { gradient: 'SubResource("Ramp_1")' },
+    };
+    const ramp = { id: 'Ramp_1', type: 'Gradient', data: {} };
     const resolved = await resolve(
       'SubResource("Environment_1")',
       [ENVIRONMENT_WITH_SKY, { id: 'Sky_1', type: 'Sky', data: { sky_material: 'ExtResource("1_sky")' } }],
@@ -166,12 +177,12 @@ describe('useResolvedEnvironment — references held in an external .tres', () =
       {
         'res://panorama_sky.tres': {
           ...tres('PanoramaSkyMaterial', { panorama: 'SubResource("Gradient_1")' }),
-          subResources: [gradient],
+          subResources: [gradient, ramp],
         },
       }
     );
     expect(resolved?.sky?.material.kind).toBe('panorama');
-    expect(resolved?.skyResources.internalResources.map((r) => r.id)).toEqual(['Gradient_1']);
+    expect(resolved?.panorama).toBeInstanceOf(THREE.Texture);
   });
 
   it('still resolves the inline SubResource chain every other corpus scene uses', async () => {
