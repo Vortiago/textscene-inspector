@@ -167,9 +167,8 @@ export function useCanvasItemLighting({
   const [takenLights, setTakenLights] = useState<readonly number[] | null>(null);
   const placement = { lightMask, z: itemZ, layer: canvasLayer, takenLights };
   useCapItemLights(placement, geometryRef, setTakenLights);
-  // An unshaded item reads no light, so its normal map asks for no layer per light.
-  const unshaded = lightMode === CanvasItemMaterialLightMode.UNSHADED;
-  const read: LitItemRead = surface && !unshaded ? 'apart' : lightOnly ? 'lightOnly' : 'plain';
+  const readsNormals = surface !== null && lightMode !== CanvasItemMaterialLightMode.UNSHADED;
+  const read: LitItemRead = readsNormals ? 'apart' : lightOnly ? 'lightOnly' : 'plain';
   useRegisterLitItem(placement, read);
   const list = lists.get(placementId(placement));
 
