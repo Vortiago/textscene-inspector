@@ -104,13 +104,12 @@ describe('buildSkyEnvironment radiance size', () => {
     return { rendered, hasPmrem: pmrem.mock.calls.length > 0, hasBackground: env!.background !== null };
   }
 
-  it('renders only the radiance cube, as the background draws the sky at each pixel', async () => {
-    expect(await cubeSizes(32)).toEqual({ rendered: [32], hasPmrem: false, hasBackground: true });
-  });
-
-  it('renders the radiance at the default size', async () => {
-    expect(await cubeSizes(256)).toEqual({ rendered: [256], hasPmrem: false, hasBackground: true });
-  });
+  it.each([32, 256])(
+    'renders only the radiance cube of size %i, as the background draws the sky at each pixel',
+    async (size) => {
+      expect(await cubeSizes(size)).toEqual({ rendered: [size], hasPmrem: false, hasBackground: true });
+    }
+  );
 
   it('bakes a size above 256 at 256 (edge case)', async () => {
     expect(await cubeSizes(1024)).toEqual({ rendered: [256], hasPmrem: false, hasBackground: true });

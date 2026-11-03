@@ -18,18 +18,14 @@
 import { LTC_SIZE } from '../../godot/rendering/lights/ltcSize.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
 import { AREA_TEXTURE_FETCH } from './areaTextureFetch.js';
+import { GODOT_ACOS_APPROX_GLSL } from '../../godot/rendering/acosApprox.js';
 
 /**
  * Each function keeps Godot's operations in Godot's order, so a pixel matches. The clip keeps
  * Godot's sixteen cases, two of them impossible for a rectangle.
  */
 export const LTC_INTEGRAL = /* glsl */ `
-float godotAcosApprox( const in float value ) {
-	float x = abs( value );
-	float angle = - 0.156583 * x + ( PI / 2.0 );
-	angle *= sqrt( 1.0 - x );
-	return ( value >= 0.0 ) ? angle : PI - angle;
-}
+${GODOT_ACOS_APPROX_GLSL}
 
 // Hill and Heitz's fit of the cosine distribution's integral over the arc from one point to another.
 vec3 godotEdgeVector( const in vec3 from, const in vec3 to ) {

@@ -34,7 +34,7 @@ import {
   useEnvironmentKey,
 } from '../environment/sceneEnvironment';
 import { debandSky } from './skyDebanding';
-import { removeSkyBackground } from './skyBackground';
+import { showSkyBackground } from './skyBackground';
 import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
 
@@ -141,44 +141,32 @@ export function SkyLayer({
       radiance = bakes.at(update.baked?.exposure ?? drawn) ?? radiance;
       scene.environmentIntensity = bakedBrightness(drawn) * brightnessAt(drawn);
     };
-    const drawBackgroundAt = (drawn: number) => {
-      (bakes.at(drawn) ?? radiance).background?.drawIn(scene, brightnessAt(drawn), skyRotation);
-    };
     // Each render shows the sky at the exposure it draws at, a staged draw too (`drawAtExposure`).
     const showForRender = () => {
       const drawn = drawnExposureOf(scene);
       const isDirtied = noteSkyLights(gl, lightData, exposureScalesLights ? drawn : 1);
       stepSkyRadiance(update, plan, { exposure: drawn, brightness: brightnessAt(drawn) }, isDirtied);
       showAt(drawn);
-      if (asBackground) drawBackgroundAt(drawn);
+      (bakes.at(drawn) ?? radiance).background?.drawIn(scene, brightnessAt(drawn), skyRotation);
       radiance.radiance.show(contributionRef.current, reflectsRef.current, bakedBrightness(drawn));
     };
     const stopRegistering = registerEnvironmentPart(scene, environment, () => {
       const previousEnvironment = scene.environment;
       const previousIntensity = scene.environmentIntensity;
-      const previousBackground = scene.background;
       scene.environment = ENVIRONMENT_SWITCH;
       // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
       const stopShowingRadiance = observeSceneCamera(scene, showForRender);
       const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
-      const stopRemovingBackground = asBackground
-        ? observeSceneRenderEnd(scene, () => removeSkyBackground(scene))
-        : undefined;
-      if (asBackground) scene.background = null;
+      const stopShowingBackground = asBackground ? showSkyBackground(scene) : undefined;
       showAt(exposure);
       const stopDebanding = asBackground && isDebanded(sky.material) ? debandSky(gl, scene) : undefined;
       return () => {
         stopShowingRadiance();
         stopHidingRadiance();
-        stopRemovingBackground?.();
+        stopShowingBackground?.();
         stopDebanding?.();
         scene.environment = previousEnvironment;
         scene.environmentIntensity = previousIntensity;
-        if (asBackground) {
-          // A render that threw never reached its end, which takes the sky out.
-          removeSkyBackground(scene);
-          scene.background = previousBackground;
-        }
       };
     });
 

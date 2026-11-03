@@ -136,7 +136,7 @@ ${HENYEY_GREENSTEIN_GLSL}
 vec3 godotSky(vec3 eyedir) {
   if (!LIGHT0_ENABLED) {
     // No sun: Godot shows only the night sky, which we do not sample.
-    return vec3(0.0) * exposure;
+    return vec3(0.0);
   }
 
   float zenith_angle = clamp(dot(UP, normalize(LIGHT0_DIRECTION)), -1.0, 1.0);

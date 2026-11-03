@@ -9,19 +9,15 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { GODOT_ACOS_APPROX_GLSL } from '../acosApprox.js';
+
 /**
  * `godotSkyCoords(eyedir)` is u from 0 at -Z, turning towards +X, and v from 0 at +Y to 1 at -Y.
  * Like Godot's, it has no guard: a direction straight up or down divides 0 by 0 for u.
  */
 export const GODOT_SKY_COORDS_GLSL = /* glsl */ `
 const float GODOT_SKY_PI = 3.14159265359;
-
-float godotAcosApprox(float p_x) {
-  float x = abs(p_x);
-  float res = -0.156583 * x + (GODOT_SKY_PI / 2.0);
-  res *= sqrt(1.0 - x);
-  return (p_x >= 0.0) ? res : GODOT_SKY_PI - res;
-}
+${GODOT_ACOS_APPROX_GLSL}
 
 float godotAtan2Approx(float y, float x) {
   float a = min(abs(x), abs(y)) / max(abs(x), abs(y));

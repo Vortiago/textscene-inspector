@@ -94,14 +94,17 @@ export function buildSkyEnvironment(
     return null;
   }
 
-  const freePanorama = () => releaseView(panoramaView);
-  const background = asBackground ? new SkyBackground(skyGlsl(sky.material), uniforms, freePanorama) : null;
+  const background = asBackground ? new SkyBackground(skyGlsl(sky.material), uniforms) : null;
+  // After the bake only the background samples the panorama.
+  if (!background) releaseView(panoramaView);
   return {
     background,
     layers,
     dispose: () => {
-      if (background) background.dispose();
-      else freePanorama();
+      if (background) {
+        background.dispose();
+        releaseView(panoramaView);
+      }
       disposeSkyLayers(layers);
     },
   };

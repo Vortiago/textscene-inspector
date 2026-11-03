@@ -34,7 +34,9 @@ const built = vi.hoisted(() => ({ next: null as ((gl: THREE.WebGLRenderer) => Sk
 vi.mock('../../resources/sky/build', () => ({
   buildSkyEnvironment: (gl: THREE.WebGLRenderer, input: SkyEnvironmentInput) => {
     bakes.push(input);
-    return built.next?.(gl) ?? null;
+    const environment = built.next?.(gl) ?? null;
+    // As the build does: a sky that paints no background gets none.
+    return environment && !input.asBackground ? { ...environment, background: null } : environment;
   },
 }));
 
@@ -99,7 +101,7 @@ function skyEnvironment(dispose: () => void = () => {}): (gl: THREE.WebGLRendere
     gl.initRenderTarget(target);
     const layers = { layout: skyOctmapLayout(32, 8), target };
     return {
-      background: new SkyBackground('vec3 godotSky(vec3 eyedir) { return eyedir; }', {}, () => {}),
+      background: new SkyBackground('vec3 godotSky(vec3 eyedir) { return eyedir; }', {}),
       layers,
       dispose,
     };
@@ -437,7 +439,8 @@ describe('SkyLayer background', () => {
       <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} resources={NO_RESOURCES} />
     );
     fireSceneRender(scene, camera);
-    expect([scene.background, drawnBackground(scene)?.isSkyBackground]).toEqual([null, true]);
+    expect(scene.background).toBeNull();
+    expect(drawnBackground(scene)).toBeInstanceOf(SkyBackground);
   });
 
   it('takes the sky out of the scene once the render ends, so no pass outside a render sees it', async () => {
