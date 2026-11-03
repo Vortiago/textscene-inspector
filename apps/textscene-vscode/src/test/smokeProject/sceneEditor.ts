@@ -49,12 +49,30 @@ export function lintCodes(document: vscode.TextDocument): unknown[] {
     .map((d) => d.code);
 }
 
-/** The label of every open preview tab. VS Code prefixes a webview tab's viewType with its own namespace. */
+/** Every open preview tab. VS Code prefixes a webview tab's viewType with its own namespace. */
+function previewTabs(): { group: vscode.TabGroup; tab: vscode.Tab }[] {
+  return vscode.window.tabGroups.all.flatMap((group) =>
+    group.tabs
+      .filter(
+        (tab) => tab.input instanceof vscode.TabInputWebview && tab.input.viewType.endsWith('tscnPreview')
+      )
+      .map((tab) => ({ group, tab }))
+  );
+}
+
+/** The label of every open preview tab. */
 export function previewTabLabels(): string[] {
-  return vscode.window.tabGroups.all
-    .flatMap((group) => group.tabs)
-    .filter(
-      (tab) => tab.input instanceof vscode.TabInputWebview && tab.input.viewType.endsWith('tscnPreview')
-    )
-    .map((tab) => tab.label);
+  return previewTabs().map(({ tab }) => tab.label);
+}
+
+/**
+ * Where each preview tab sits and whether it is showing. VS Code starts a webview only
+ * while its tab shows, so a preview that never loads is first checked here.
+ */
+export function previewTabStates(): string[] {
+  return previewTabs().map(
+    ({ group, tab }) =>
+      `${tab.label}: column ${String(group.viewColumn)}, tab ${tab.isActive ? 'active' : 'hidden'}, ` +
+      `group ${group.isActive ? 'active' : 'inactive'}, ${group.tabs.length} tabs in the group`
+  );
 }

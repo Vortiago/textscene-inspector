@@ -16,6 +16,8 @@ import { InsideLockedInstance, lineMaterials, lineOpacities } from '../../../r3f
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import {
   describeGizmoToggle,
+  describeSelectionBox,
+  expectSelectionBox,
   describeInstantiatedGizmo,
   type GizmoNodeCase,
 } from '../../../r3f/testing/gizmoContract';
@@ -131,6 +133,15 @@ const GIZMO_CASE: GizmoNodeCase = {
 };
 describeGizmoToggle('<Decal>', GIZMO_CASE);
 describeInstantiatedGizmo('<Decal>', GIZMO_CASE);
+describeSelectionBox('<Decal>', GIZMO_CASE, { min: [-1, -1, -1], max: [1, 1, 1] });
+
+describe('<Decal> selection box', () => {
+  // Measured in Godot 4.6.3: Decal.size = (3, 0.5, 7) gives get_aabb (-1.5, -0.25, -3.5, 3, 0.5, 7).
+  it('is the box of its size', async () => {
+    const renderer = await render({ node: makeNode({ size: 'Vector3(3, 0.5, 7)' }) });
+    expectSelectionBox(renderer, { min: [-1.5, -0.25, -3.5], max: [1.5, 0.25, 3.5] });
+  });
+});
 
 describe('<Decal>', () => {
   it("draws the box gizmo in Godot's decal colour, at the colour's alpha 1, when the node is selected", async () => {

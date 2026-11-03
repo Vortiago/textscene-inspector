@@ -9,15 +9,15 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { EnvironmentSettings } from '../../resources/environment/types';
 import type { AutoExposure } from '../../resources/cameraattributes/types';
-import { NO_RESOURCES, type SceneResources } from '../SceneResourcesContext';
+import type * as THREE from 'three';
 import { useAutoExposure } from './worldExposure';
 
 /** The Environment a viewport pass draws with, as its tonemap pass reads it. */
 interface PassEnvironmentToneMap {
   /** Null for a pass with no Environment, which keeps Godot's defaults: LINEAR at exposure 1. */
   settings: EnvironmentSettings | null;
-  /** The pools the Environment's own references, such as `glow_map`, resolve in. */
-  resources: SceneResources;
+  /** The texture `glow_map` names, null for none or while it loads. */
+  glowMap: THREE.Texture | null;
 }
 
 /** What a tonemap pass reads of its viewport pass. */
@@ -28,17 +28,17 @@ export interface PassToneMap extends PassEnvironmentToneMap {
 
 const PassToneMapContext = createContext<PassEnvironmentToneMap>({
   settings: null,
-  resources: NO_RESOURCES,
+  glowMap: null,
 });
 PassToneMapContext.displayName = 'PassToneMapContext';
 
 /** Gives the tonemap stage below it the Environment its pass draws with. One per viewport pass. */
 export function PassToneMapProvider({
   settings,
-  resources,
+  glowMap,
   children,
 }: PassEnvironmentToneMap & { children: ReactNode }) {
-  const value = useMemo(() => ({ settings, resources }), [settings, resources]);
+  const value = useMemo(() => ({ settings, glowMap }), [settings, glowMap]);
   return <PassToneMapContext.Provider value={value}>{children}</PassToneMapContext.Provider>;
 }
 

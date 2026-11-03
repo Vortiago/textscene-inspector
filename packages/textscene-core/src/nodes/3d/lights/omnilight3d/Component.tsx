@@ -10,6 +10,8 @@ import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { node3dGroupSpread, transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import { omniShadowBias } from '../shared/shadowBias';
+import { omniLight3DAabb } from '../../../../godot/scene/light';
+import { NodeAabb } from '../../../../r3f/components/NodeAabb';
 import { PointLightGizmo } from '../shared/lightHelpers';
 import { positionalLightRange, usePositionalLight } from '../shared/positionalLight';
 
@@ -20,9 +22,11 @@ export function OmniLight3D({ node, children }: NodeComponentProps) {
   const color = parseColorToHex(properties.light_color);
   const { distance, shadowNear, shadowFar } = positionalLightRange(properties.omni_range);
   const { intensity, shadowOpacity, userData } = usePositionalLight(lightRef, properties);
+  const aabb = useMemo(() => omniLight3DAabb(properties.omni_range), [properties.omni_range]);
 
   return (
     <group name={node.name} {...node3dGroupSpread(transform)}>
+      <NodeAabb aabb={aabb} />
       <pointLight
         ref={lightRef}
         color={color}

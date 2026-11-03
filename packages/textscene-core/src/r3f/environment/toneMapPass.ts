@@ -74,7 +74,7 @@ export function useToneMapPass(options: ToneMapPassOptions): ToneMapPass {
     autoExposure: passToneMap.autoExposure,
     transparentBackground,
     usesDebanding,
-    resources: passToneMap.resources,
+    glowMap: passToneMap.glowMap,
   });
   const worldBuffer = useWorldBuffer(msaaMode, width, height, name);
   const gl = useThree((state) => state.gl);

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { DirectionalLight3D } from './Component';
+import { computeWorldBoundingBox } from '../../../../r3f/bounds';
 import type { TscnNode } from '../../../../parser/types';
 import type { DirectionalLight3DProperties } from './types';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
@@ -264,5 +265,14 @@ describe('<DirectionalLight3D> sky mode', () => {
     const light = await renderLight({ light_energy: 1, sky_mode: 7 });
     expect(light.intensity).toBeCloseTo(LIGHT_INTENSITY_SCALE);
     expect(skyLightEnergy(light)).toBe(1);
+  });
+});
+
+describe('<DirectionalLight3D> selection box', () => {
+  it('is the cube of side 2 (`light_3d.cpp:158-159`)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(<DirectionalLight3D node={makeNode()} />);
+    const box = computeWorldBoundingBox(renderer.scene.instance as THREE.Object3D);
+    expect(box.min.toArray()).toEqual([-1, -1, -1]);
+    expect(box.max.toArray()).toEqual([1, 1, 1]);
   });
 });

@@ -4,7 +4,11 @@
  * GDScript port of `look_body_toward_x` and `draw_circle` that ran in Godot 4.6.3.
  */
 import { describe, expect, it } from 'vitest';
-import { describeGizmoToggle, describeInstantiatedGizmo } from '../../../../r3f/testing/gizmoContract';
+import {
+  describeGizmoToggle,
+  describeSelectionBox,
+  describeInstantiatedGizmo,
+} from '../../../../r3f/testing/gizmoContract';
 import {
   BOTH_BODIES,
   drawnLines,
@@ -75,3 +79,4 @@ describeJointBodyGating('<SliderJoint3D>', 'SliderJoint3D', {
 const GIZMO_CASE = jointGizmoCase('SliderJoint3D', {});
 describeGizmoToggle('<SliderJoint3D>', GIZMO_CASE);
 describeInstantiatedGizmo('<SliderJoint3D>', GIZMO_CASE);
+describeSelectionBox('<SliderJoint3D>', GIZMO_CASE, null);

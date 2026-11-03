@@ -12,6 +12,8 @@ import { godotColorToLinear } from '../../../r3f/godotColor';
 import { GizmoScene, lineOpacities } from '../../../r3f/testing/GizmoScene';
 import {
   describeGizmoToggle,
+  describeSelectionBox,
+  expectSelectionBox,
   describeInstantiatedGizmo,
   type GizmoNodeCase,
 } from '../../../r3f/testing/gizmoContract';
@@ -74,8 +76,19 @@ for (const type of ['VisibleOnScreenNotifier3D', 'VisibleOnScreenEnabler3D']) {
       render(selectedPath, {}, type, showGizmos, instantiated),
   };
   describeGizmoToggle(`<${type}>`, gizmoCase);
+  describeSelectionBox(`<${type}>`, gizmoCase, { min: [-1, -1, -1], max: [1, 1, 1] });
   describeInstantiatedGizmo(`<${type}>`, gizmoCase);
 }
+
+describe.each(['VisibleOnScreenNotifier3D', 'VisibleOnScreenEnabler3D'])('<%s> selection box', (type) => {
+  // Measured in Godot 4.6.3: aabb = AABB(1, 2, 3, 4, 5, 6) is returned as it is.
+  it('is its aabb, off the origin', async () => {
+    expectSelectionBox(await render(null, { aabb: 'AABB(1, 2, 3, 4, 5, 6)' }, type), {
+      min: [1, 2, 3],
+      max: [5, 7, 9],
+    });
+  });
+});
 
 describe.each(['VisibleOnScreenNotifier3D', 'VisibleOnScreenEnabler3D'])('<%s> gizmo state', (type) => {
   it('draws the edges, the axes and the fill in full colour when the node is selected', async () => {

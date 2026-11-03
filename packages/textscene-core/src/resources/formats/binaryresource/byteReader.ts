@@ -5,6 +5,9 @@
 
 const UTF8 = new TextDecoder('utf-8');
 
+/** A read past the last byte, which a format reader may turn into its own error. */
+export class ReadPastEndError extends Error {}
+
 export class ByteReader {
   private readonly view: DataView;
   private offset = 0;
@@ -24,12 +27,26 @@ export class ByteReader {
     return reader;
   }
 
+  /** The offset of the next byte to read. */
+  get position(): number {
+    return this.offset;
+  }
+
+  /** The bytes left after the position. */
+  get remaining(): number {
+    return this.bytes.byteLength - this.offset;
+  }
+
   seek(offset: number): void {
     this.offset = offset;
   }
 
   u8(): number {
     return this.view.getUint8(this.advance(1));
+  }
+
+  i8(): number {
+    return this.view.getInt8(this.advance(1));
   }
 
   u16(): number {
@@ -89,7 +106,7 @@ export class ByteReader {
   private advance(length: number): number {
     const start = this.offset;
     if (start + length > this.bytes.byteLength) {
-      throw new Error(
+      throw new ReadPastEndError(
         `expected ${length} more bytes at offset ${start}, got ${this.bytes.byteLength - start}`
       );
     }

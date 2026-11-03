@@ -11,6 +11,7 @@ const STATIC_GATE = [
   'pnpm format:check',
   'pnpm lint',
   'pnpm check:dep-scripts',
+  'pnpm canonical --check',
   'pnpm type-check:all',
   'pnpm type-check:tests',
 ];
@@ -72,6 +73,7 @@ describe('planChecks', () => {
       ...typeChecks('packages/textscene-core'),
       'npx eslint --cache packages/textscene-core/src/a.ts',
       'pnpm exec prettier --cache --check packages/textscene-core/src/a.ts',
+      'pnpm canonical --check',
     ]);
   });
 
@@ -80,6 +82,7 @@ describe('planChecks', () => {
     expect(plan(['scripts/x.mjs', 'scripts/x.test.mjs'], [], undefined, testsBeside)).toEqual([
       'npx eslint --cache scripts/x.mjs scripts/x.test.mjs',
       'pnpm exec prettier --cache --check scripts/x.mjs scripts/x.test.mjs',
+      'pnpm canonical --check',
       'pnpm exec vitest run scripts/x.test.mjs',
     ]);
   });
@@ -92,6 +95,7 @@ describe('planChecks', () => {
       ...typeChecks('apps/textscene-vscode'),
       `npx eslint --cache ${suite}`,
       `pnpm exec prettier --cache --check ${suite}`,
+      'pnpm canonical --check',
     ]);
   });
 
@@ -105,6 +109,14 @@ describe('planChecks', () => {
     expect(plan(['scripts/x.mjs'])).toEqual([
       'npx eslint --cache scripts/x.mjs',
       'pnpm exec prettier --cache --check scripts/x.mjs',
+      'pnpm canonical --check',
+    ]);
+  });
+
+  it('reads no @canonical tags for code outside the roots the list reads', () => {
+    expect(plan(['tools/x.mjs'])).toEqual([
+      'npx eslint --cache tools/x.mjs',
+      'pnpm exec prettier --cache --check tools/x.mjs',
     ]);
   });
 

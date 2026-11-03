@@ -428,6 +428,13 @@ _Avoid_: "viewport container" for the concept. "render target" for the surface.
 **ViewportTextureRegistry**:
 The `nodePath → { texture, size }` lookup that a **sub-viewport** publishes its render target into and every **viewport surface** resolves against.
 
+**Holder node**:
+The node whose property holds a resource chain down to a `ViewportTexture`: a `WorldEnvironment` or a `Camera3D` for an Environment's panorama and `glow_map`. The `ViewportTexture` counts its path from the holder node's local scene, and Godot sets it up only when every resource in the chain is local to scene (`packed_scene.cpp:701-704`, `core/io/resource.cpp:497-503`). So a slot resolves inside the holder node's component, never at the world scope.
+_Avoid_: "owner", which is Godot's scene owner.
+
+**Live target**:
+A render target texture that a **sub-viewport** pass redraws, which every reader shares (`liveTargets.ts`). A reader that copies it once, as a sky bake does, waits for the pass's first draw and follows each later draw.
+
 **Light pass host** (`r3f/lighting2d/lightPassHost.ts`):
 The scene, camera, buffer size and clip rect that one `CanvasLightPass` accumulates and shades through, and the call that runs it. The 2D stage and each **sub-viewport** with 2D content are hosts, and each one's lights, occluders and CanvasModulate act on its own items alone (ADR-0033).
 

@@ -1,17 +1,16 @@
 /**
  * OccluderInstance3D registration: parser.
  *
- * Reuses the Node3D parse; property knowledge lives in linterParser.ts.
- * Draws nothing by design (ADR-0008), so index.r3f.ts registers Node3D
- * and its children still land in the right transform space.
+ * The Node3D parse plus the occluder reference; property knowledge lives in linterParser.ts.
+ * Draws nothing by design (ADR-0008). Its component only gives the selection box the AABB of the occluder.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseNode3D } from '../../base/node3d/parser';
+import { parseOccluderInstance3D } from './parser';
 
 const occluderInstance3DRegistration: NodeTypeRegistration = {
   typeName: 'OccluderInstance3D',
-  parser: parseNode3D,
+  parser: parseOccluderInstance3D,
 };
 
 nodeRegistry.register(occluderInstance3DRegistration);

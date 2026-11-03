@@ -12,7 +12,11 @@ import { GizmoScene, lineOpacities } from '../../../../r3f/testing/GizmoScene';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { INSTANTIATED_GIZMO_COLOUR, gizmoAlpha } from '../../../../r3f/gizmo/gizmoVariant';
 import { DEFAULT_COLLISION_DEBUG_COLOR, debugShapeColour } from '../../shared/debugColor';
-import { describeGizmoToggle, type GizmoNodeCase } from '../../../../r3f/testing/gizmoContract';
+import {
+  describeGizmoToggle,
+  describeSelectionBox,
+  type GizmoNodeCase,
+} from '../../../../r3f/testing/gizmoContract';
 import { RayCast3D } from './Component';
 import { parseRayCast3D } from './parser';
 
@@ -109,6 +113,7 @@ const GIZMO_CASE: GizmoNodeCase = {
     renderRay(selectedPath, {}, showGizmos, instantiated),
 };
 describeGizmoToggle('<RayCast3D>', GIZMO_CASE);
+describeSelectionBox('<RayCast3D>', GIZMO_CASE, null);
 
 // No describeInstantiatedGizmo: the plugin passes the node's own debug material, which no variant
 // replaces, so the gizmo keeps its colour inside a locked instance too, as Marker3D's cross does.

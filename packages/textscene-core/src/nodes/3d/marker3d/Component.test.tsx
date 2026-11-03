@@ -10,7 +10,11 @@ import type { TscnNode } from '../../../parser/types';
 import { Marker3D } from './Component';
 import { parseMarker3D } from './parser';
 import { GizmoScene, lineOpacities } from '../../../r3f/testing/GizmoScene';
-import { describeGizmoToggle, type GizmoNodeCase } from '../../../r3f/testing/gizmoContract';
+import {
+  describeGizmoToggle,
+  describeSelectionBox,
+  type GizmoNodeCase,
+} from '../../../r3f/testing/gizmoContract';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 
 function markerNode(name = 'MyMarker', props: Record<string, string> = {}): TscnNode {
@@ -44,6 +48,7 @@ const GIZMO_CASE: GizmoNodeCase = {
   mount: ({ selectedPath, showGizmos }) => renderMarker(selectedPath, {}, showGizmos),
 };
 describeGizmoToggle('<Marker3D>', GIZMO_CASE);
+describeSelectionBox('<Marker3D>', GIZMO_CASE, null);
 
 describe('<Marker3D>', () => {
   it.each([

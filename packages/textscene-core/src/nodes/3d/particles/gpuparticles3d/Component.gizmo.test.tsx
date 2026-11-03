@@ -14,6 +14,7 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { GizmoScene } from '../../../../r3f/testing/GizmoScene';
 import {
   describeGizmoToggle,
+  describeSelectionBox,
   describeInstantiatedGizmo,
   type GizmoNodeCase,
 } from '../../../../r3f/testing/gizmoContract';
@@ -121,6 +122,7 @@ const GIZMO_CASE: GizmoNodeCase = {
 };
 describeGizmoToggle('<GPUParticles3D>', GIZMO_CASE);
 describeInstantiatedGizmo('<GPUParticles3D>', GIZMO_CASE);
+describeSelectionBox('<GPUParticles3D>', GIZMO_CASE, null);
 
 describe('<GPUParticles3D> gizmo gate', () => {
   it.each([

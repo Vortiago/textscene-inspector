@@ -4,6 +4,8 @@
  * from the build.
  */
 import { describe, expect, it } from 'vitest';
+import type * as THREE from 'three';
+import { computeWorldBoundingBox } from '../bounds';
 import { godotColorToLinear } from '../godotColor';
 import { INSTANTIATED_GIZMO_COLOUR } from '../gizmo/gizmoVariant';
 import type { GizmoDrawnFor } from '../hooks/useGizmoState';
@@ -79,4 +81,35 @@ export function describeInstantiatedGizmo(label: string, { mount, nodePath, draw
       });
     }
   });
+}
+
+/** The `get_aabb` of a node as its least and greatest corner, or null for the `AABB()` of Godot. */
+type NodeBox = { min: [number, number, number]; max: [number, number, number] } | null;
+
+/**
+ * The selection box is the `get_aabb` of the node alone, with no gizmo line in it
+ * (`node_3d_editor_plugin.cpp:5029-5065`), so the Gizmos toggle and the selection do not move it.
+ */
+export function describeSelectionBox(
+  label: string,
+  { mount, nodePath }: GizmoNodeCase,
+  expected: NodeBox
+): void {
+  describe(`${label} selection box`, () => {
+    it.each([
+      ['selected, Gizmos on', nodePath, true],
+      ['unselected, Gizmos on', null, true],
+      ['selected, Gizmos off', nodePath, false],
+    ])('is the get_aabb of the node when %s', async (_label, selectedPath, showGizmos) => {
+      expectSelectionBox(await mount({ instantiated: false, selectedPath, showGizmos }), expected);
+    });
+  });
+}
+
+/** Expects the selection box of everything `renderer` mounts to be `expected`. */
+export function expectSelectionBox(renderer: TestRenderer, expected: NodeBox): void {
+  const box = computeWorldBoundingBox(renderer.scene.instance as THREE.Object3D);
+  if (expected === null) return expect(box.isEmpty()).toBe(true);
+  expect(box.min.toArray()).toEqual(expected.min);
+  expect(box.max.toArray()).toEqual(expected.max);
 }

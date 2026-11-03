@@ -11,7 +11,7 @@ import type { DirectionalLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
-import { DIRECTIONAL_LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
+import { DIRECTIONAL_LIGHT_3D_AABB, DIRECTIONAL_LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 import {
   directionalLightDrawsInSky,
   directionalLightLightsSurfaces,
@@ -83,6 +83,7 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
     <LightWithTarget
       name={node.name}
       transform={transform}
+      aabb={DIRECTIONAL_LIGHT_3D_AABB}
       renderLight={(target) => (
         <>
           <directionalLight
