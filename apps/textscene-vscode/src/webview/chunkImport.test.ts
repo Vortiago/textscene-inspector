@@ -43,6 +43,7 @@ function captureWarnings(): string[] {
 describe('importChunk', () => {
   afterEach(() => {
     setLogAdapter(null);
+    setChunkFailureReporter(() => {});
     for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true });
   });
 

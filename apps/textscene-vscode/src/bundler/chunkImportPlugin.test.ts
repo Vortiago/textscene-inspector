@@ -21,10 +21,18 @@ describe('rewriteChunkImports', () => {
     );
   });
 
-  it('leaves an import of anything but a listed chunk as it is', () => {
-    const code = 'import("./other.js");import(url)';
+  it('fails the build for a listed chunk it finds no import of, so the retry never goes missing', () => {
+    expect(() => rewriteChunkImports('import( "./chunks/a-1.js")', ['./chunks/a-1.js'])).toThrow(
+      'expected import("./chunks/a-1.js") in the output, found none'
+    );
+  });
 
-    expect(rewriteChunkImports(code, ['./chunks/a-1.js'])).toBe(code);
+  it('leaves an import of anything but a listed chunk as it is', () => {
+    const others = 'import("./other.js");import(url)';
+
+    expect(rewriteChunkImports(`${others};import("./chunks/a-1.js")`, ['./chunks/a-1.js'])).toBe(
+      `${others};${CHUNK_IMPORTER}("./chunks/a-1.js",import.meta.url)`
+    );
   });
 });
 

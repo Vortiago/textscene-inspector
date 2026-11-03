@@ -63,11 +63,12 @@ function currentWebviewMetafile() {
 }
 
 /**
- * Static imports of a JS file. Dynamic `import()` calls become a sentinel first, since those
+ * Static imports of a JS file. Dynamic `import()` calls, and the chunk importer calls the
+ * webview build rewrites them into (chunkImportPlugin.mjs), become a sentinel first, since those
  * chunks load on demand and stay out of the closure.
  */
 function findStaticImports(content) {
-  const stripped = content.replace(/import\([^)]*\)/g, '__DYN__()');
+  const stripped = content.replace(/(?:import|__textsceneImportChunk)\([^)]*\)/g, '__DYN__()');
   const out = new Set();
   // `import ... from`, `export ... from` and `export * from`: a re-export pulls its target onto
   // the critical path as an import does. esbuild emits only the import form, and the gate must
