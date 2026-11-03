@@ -12,6 +12,7 @@ import {
   type DirectionalShadowAtlasRect,
 } from '../../godot/rendering/lights/directionalShadow.js';
 import { readDirectionalShadowDeclaration, type DirectionalShadowDeclaration } from './declaration.js';
+import { isLight } from '../isLight.js';
 
 /** A light in the scene, and whether three's render reaches it: it and every ancestor are visible. */
 export interface SceneLight {
@@ -40,7 +41,7 @@ export function sceneLights(scene: THREE.Object3D): SceneLight[] {
 
 function collectLights(object: THREE.Object3D, isParentVisible: boolean, lights: SceneLight[]): void {
   const isVisible = isParentVisible && object.visible;
-  if ((object as THREE.Light).isLight) lights.push({ light: object as THREE.Light, isVisible });
+  if (isLight(object)) lights.push({ light: object, isVisible });
   for (const child of object.children) collectLights(child, isVisible, lights);
 }
 

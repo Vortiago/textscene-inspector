@@ -21,11 +21,13 @@ import { skyEuler } from './skyRotation';
 import { hideShownSky } from './skyRadiance';
 import { holdSkyBakes, radianceUpdateOf, type SkyBakes, skyUpdatePlan } from './skyBakes';
 import { materialReadsLights } from '../../resources/sky/readsLights';
-import { stepSkyRadiance } from '../../godot/rendering/environment/skyRadianceUpdate';
+import { stepSkyRadiance, type SkyRender } from '../../godot/rendering/environment/skyRadianceUpdate';
+import { probeCaptureOf } from '../reflectionProbe/captureCameras';
+import { takeRealTimeCaptureRenders } from '../reflectionProbe/realTimeCaptures';
 import { ENVIRONMENT_SWITCH } from './environmentSwitch';
-import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera';
+import { observeSceneRenderEnd } from '../sceneRenderCamera';
 import { useExposureFactor } from '../environment/worldExposure';
-import { drawnExposureOf } from '../exposure/sceneExposure';
+import { followSceneExposure, worldExposureOfScene } from '../exposure/sceneExposure';
 import {
   noteEnvironmentChange,
   registerEnvironmentPart,
@@ -128,23 +130,38 @@ export function SkyLayer({
     // brightness that baked it, times its own exposure and its `background_energy_multiplier`
     // (`render_forward_clustered.cpp:2045`, `render_scene_data_rd.cpp:169`,
     // `scene_forward_clustered.glsl:1732`, `:1756`). A fog reads it without the multiplier (`:1121`).
-    const brightnessAt = (drawn: number) => energyMultiplier * drawn;
-    const bakedBrightness = (drawn: number) => update.baked?.brightness ?? brightnessAt(drawn);
-    const showAt = (drawn: number) => {
-      radiance = bakes.at(update.baked?.exposure ?? drawn) ?? radiance;
-      scene.environmentIntensity = bakedBrightness(drawn) * brightnessAt(drawn);
+    const renderAt = (drawn: number): SkyRender => ({
+      exposure: drawn,
+      brightness: energyMultiplier * drawn,
+    });
+    const showAt = (render: SkyRender, baked: SkyRender) => {
+      radiance = bakes.at(baked.exposure) ?? radiance;
+      scene.environmentIntensity = baked.brightness * render.brightness;
       if (asBackground) {
-        scene.background = (bakes.at(drawn) ?? radiance).background;
-        scene.backgroundIntensity = brightnessAt(drawn);
+        scene.background = (bakes.at(render.exposure) ?? radiance).background;
+        scene.backgroundIntensity = render.brightness;
       }
     };
-    // Each render shows the sky at the exposure it draws at, a staged draw too (`drawAtExposure`).
-    const showForRender = () => {
-      const drawn = drawnExposureOf(scene);
-      const isDirtied = noteSkyLights(gl, lightData, exposureScalesLights ? drawn : 1);
-      stepSkyRadiance(update, plan, { exposure: drawn, brightness: brightnessAt(drawn) }, isDirtied);
-      showAt(drawn);
-      radiance.radiance.show(contributionRef.current, reflectsRef.current, bakedBrightness(drawn));
+    const stepRadiance = (render: SkyRender) => {
+      const isDirtied = noteSkyLights(gl, lightData, exposureScalesLights ? render.exposure : 1);
+      stepSkyRadiance(update, plan, render, isDirtied);
+    };
+    // Each view runs its render through the radiance update, the first of a frame after the faces
+    // Godot draws for the ALWAYS probes at the world's exposure. A capture reads that bake and steps
+    // nothing, as ours captures again only on change. An interior capture draws no sky.
+    const showForRender = (drawn: number, camera: THREE.Camera) => {
+      const render = renderAt(drawn);
+      const capture = probeCaptureOf(camera);
+      if (capture?.isInterior) return;
+      if (!capture) {
+        const captureRenders = takeRealTimeCaptureRenders(scene);
+        const world = renderAt(worldExposureOfScene(scene) ?? 1);
+        for (let replayed = 0; replayed < captureRenders; replayed += 1) stepRadiance(world);
+        stepRadiance(render);
+      }
+      const baked = update.baked ?? render;
+      showAt(render, baked);
+      radiance.radiance.show(contributionRef.current, reflectsRef.current, baked.brightness);
     };
     const previousBackgroundRotation = new THREE.Euler();
     const stopRegistering = registerEnvironmentPart(scene, environment, () => {
@@ -154,11 +171,12 @@ export function SkyLayer({
       const previousBackgroundIntensity = scene.backgroundIntensity;
       previousBackgroundRotation.copy(scene.backgroundRotation);
       scene.environment = ENVIRONMENT_SWITCH;
-      // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
-      const stopShowingRadiance = observeSceneCamera(scene, showForRender);
+      const stopShowingRadiance = followSceneExposure(scene, (drawn, camera) =>
+        showForRender(drawn ?? 1, camera)
+      );
       const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
       if (asBackground) scene.backgroundRotation.copy(skyRotation);
-      showAt(exposure);
+      showAt(renderAt(exposure), update.baked ?? renderAt(exposure));
       const stopDebanding = asBackground && isDebanded(sky.material) ? debandSky(gl, scene) : undefined;
       return () => {
         stopShowingRadiance();

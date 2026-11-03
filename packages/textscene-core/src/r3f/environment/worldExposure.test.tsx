@@ -5,7 +5,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { EnclosingViewportProvider } from '../contexts/EnclosingViewportContext';
@@ -16,7 +16,9 @@ import { CanvasWorldScope, WorldEnvironmentScope, usePublishEnvironment } from '
 import { useCanvasWorld, useDrawCanvasWorld } from './canvasWorldScene';
 import type { EnvironmentResolution } from './WorldEnvironmentScope';
 import { NO_RESOLUTION, PENDING_RESOLUTION } from './worldGroup';
-import { exposureOfScene, worldExposureOfScene } from '../exposure/sceneExposure';
+import { worldExposureOfScene } from '../exposure/sceneExposure';
+import { EMISSION_EXPOSURE } from '../exposure/emissionExposure';
+import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
 import { SceneCamerasProvider } from '../sceneCameras';
 import type { AutoExposure } from '../../resources/cameraattributes/types';
 import {
@@ -445,7 +447,11 @@ describe('the exposure of a world seen through a Camera3D', () => {
       )
     );
     const scene = renderer.scene.instance as THREE.Scene;
-    expect([exposureOfScene(scene), worldExposureOfScene(scene)]).toEqual([5, 2]);
+    const camera = new THREE.PerspectiveCamera();
+    fireSceneRender(scene, camera);
+    const drawn = EMISSION_EXPOSURE[0];
+    fireSceneRenderEnd(scene, camera);
+    expect([drawn, worldExposureOfScene(scene)]).toEqual([5, 2]);
   });
 
   it('returns to the WorldEnvironment attributes when the camera leaves', async () => {

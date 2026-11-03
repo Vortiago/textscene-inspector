@@ -1,25 +1,26 @@
 /**
- * The exposure each scene renders with. A scene writes its world's factor into the shared emission
- * buffer for each render it takes and puts 1 back when the render ends, so each world, a
- * sub-viewport included, draws with its own. `drawAtExposure` draws it at another exposure, as
- * Godot captures a reflection probe at the exposure of the world and not of the camera.
+ * The exposure each render of a scene draws at, through one path. A scene holds its world's factor,
+ * and `drawAtExposure` draws it at another, as Godot captures a reflection probe at the exposure of
+ * the world and not of the camera. Each render scales every light's energy and the emission by the
+ * factor it draws at, and runs each follower with it, as Godot fills its buffers for each render
+ * (`light_storage.cpp:656-658`, `:884-886`, `scene_forward_clustered.glsl:1679-1683`).
  */
 
 import { useLayoutEffect } from 'react';
 import type * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { isAmbientLight } from '../ambientLight.js';
-import { sceneLights } from '../directionalShadow/lightLists.js';
-import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera.js';
+import { isLight } from '../isLight.js';
+import { observeSceneExposure, observeSceneRenderEnd } from '../sceneRenderCamera.js';
+import { TrackedObjects } from '../trackedObjects.js';
 import { EMISSION_EXPOSURE } from './emissionExposure.js';
 import { scaleLightIntensities } from './scaleLightIntensities.js';
-import { perObject } from '../../utils/perObject.js';
 
 /**
- * What a consumer draws for `exposure`, in place of what it draws for the exposure the scene holds.
- * It answers the call that puts its state back.
+ * What a consumer draws for the exposure of one render through `camera`, null for a render with no
+ * CameraAttributes. It writes its state for each render, so it puts nothing back.
  */
-export type ExposureStage = (exposure: number | null) => () => void;
+export type ExposureFollower = (exposure: number | null, camera: THREE.Camera) => void;
 
 /** What a scene's world holds: the factor its scene renders with, and the factor of its own attributes. */
 interface HeldExposure {
@@ -27,145 +28,198 @@ interface HeldExposure {
   world: number | null;
 }
 
-/**
- * Each scene's held exposures, the latest last. A list, not one entry: the shared-world viewports of
- * a 2D canvas all hold its one scene. Written only by `useSceneExposure`, each entry removed when its
- * world unmounts.
- */
-const heldOf = perObject<THREE.Scene, HeldExposure[]>(() => []);
+/** What applies the exposure to the renders of one scene. */
+interface SceneExposure {
+  /**
+   * The held exposures, the latest last. A list, not one entry: the shared-world viewports of a 2D
+   * canvas all hold its one scene.
+   */
+  held: HeldExposure[];
+  followers: Set<ExposureFollower>;
+  /**
+   * Takes the hooks off the renders of the scene. Present only while a render needs the exposure,
+   * so a scene without one keeps three's own hooks.
+   */
+  unhookRenders: (() => void) | null;
+  /**
+   * Every light but the flat ambient, which takes no exposure. Made by the first render that scales
+   * them, so a scene whose renders all draw at 1 tracks none, and kept until the exposure is removed.
+   */
+  lights: TrackedObjects<THREE.Light> | null;
+  /** Puts back what the render under way changed, null between renders. */
+  restore: (() => void) | null;
+}
 
-function latestHeld(scene: THREE.Scene): HeldExposure | undefined {
-  const entries = heldOf(scene);
-  return entries[entries.length - 1];
+/**
+ * Each scene's exposure, made by the first held exposure, follower or draw, and removed with the
+ * last. Written only by `useSceneExposure`, `followSceneExposure` and `drawAtExposure`.
+ */
+// eslint-disable-next-line no-restricted-syntax -- the last holder's release deletes the scene's entry
+const exposures = new WeakMap<THREE.Scene, SceneExposure>();
+
+/** A draw at an exposure, null for none. Boxed, so a draw at null reads as a draw. */
+interface DrawnExposure {
+  exposure: number | null;
 }
 
 /** The exposure `drawAtExposure` draws a scene at, written only by it and cleared when the draw ends. */
 // eslint-disable-next-line no-restricted-syntax -- drawAtExposure writes an entry for one draw and deletes it after the draw
-const drawnExposures = new WeakMap<THREE.Scene, number>();
+const drawnExposures = new WeakMap<THREE.Scene, DrawnExposure>();
 
-/** Each scene's exposure stages, filled only by `registerExposureStage`. */
-const stagesOf = perObject<THREE.Scene, Set<ExposureStage>>(() => new Set());
+function isExposedLight(object: THREE.Object3D): object is THREE.Light {
+  return isLight(object) && !isAmbientLight(object);
+}
+
+/** The exposure of `scene`, made on the first ask. The caller settles it with `settleExposure`. */
+function exposureOf(scene: THREE.Scene): SceneExposure {
+  const existing = exposures.get(scene);
+  if (existing) return existing;
+  const exposure: SceneExposure = {
+    held: [],
+    followers: new Set(),
+    unhookRenders: null,
+    lights: null,
+    restore: null,
+  };
+  exposures.set(scene, exposure);
+  return exposure;
+}
+
+/** Whether a render of `scene` draws at an exposure, or runs a follower. */
+function needsRenderHooks(scene: THREE.Scene, exposure: SceneExposure): boolean {
+  return (
+    exposure.followers.size > 0 ||
+    drawnExposures.has(scene) ||
+    exposure.held.some(({ view }) => view !== null)
+  );
+}
+
+/** Applies the exposure to each render of `scene`, until the returned function runs. */
+function hookRenders(scene: THREE.Scene, exposure: SceneExposure): () => void {
+  const stopApplying = observeSceneExposure(scene, (camera) => applyRenderExposure(scene, exposure, camera));
+  const stopRestoring = observeSceneRenderEnd(scene, () => exposure.restore?.());
+  return () => {
+    stopApplying();
+    stopRestoring();
+  };
+}
 
 /**
- * The factor `scene` renders with, or null without a world that holds an exposure.
- *
- * @canonical The exposure a scene renders with
+ * Hooks the renders of `scene` while one needs the exposure, unhooks them after, and removes the
+ * exposure once nothing holds it.
  */
-export function exposureOfScene(scene: THREE.Scene): number | null {
-  return latestHeld(scene)?.view ?? null;
+function settleExposure(scene: THREE.Scene, exposure: SceneExposure): void {
+  if (needsRenderHooks(scene, exposure)) {
+    exposure.unhookRenders ??= hookRenders(scene, exposure);
+    return;
+  }
+  exposure.restore?.();
+  exposure.unhookRenders?.();
+  exposure.unhookRenders = null;
+  if (exposure.held.length > 0) return;
+  exposure.lights?.dispose();
+  exposures.delete(scene);
+}
+
+function latestHeld(scene: THREE.Scene): HeldExposure | undefined {
+  const held = exposures.get(scene)?.held;
+  return held?.[held.length - 1];
 }
 
 /**
  * The factor of the attributes of the world of `scene` itself, or null without them. A camera of
- * the world may render it with others (`exposureOfScene`).
+ * the world may render it with others.
  *
- * @canonical The exposure a scene renders with
+ * @canonical The exposure of the attributes of a scene's own world
  */
 export function worldExposureOfScene(scene: THREE.Scene): number | null {
   return latestHeld(scene)?.world ?? null;
 }
 
+/** The exposure a render of `scene` draws at: the one `drawAtExposure` draws at, else the held one. */
+function drawnExposureOf(scene: THREE.Scene): number | null {
+  const drawn = drawnExposures.get(scene);
+  return drawn ? drawn.exposure : (latestHeld(scene)?.view ?? null);
+}
+
+function exposedLightsOf(scene: THREE.Scene, exposure: SceneExposure): readonly THREE.Light[] {
+  exposure.lights ??= new TrackedObjects(scene, isExposedLight);
+  return exposure.lights.current();
+}
+
 /**
- * Has `stage` run for each `drawAtExposure` of `scene` until the returned function runs. A consumer
- * whose state follows the exposure registers one, so a draw at another exposure shows it.
- *
- * @canonical The state a scene draws for another exposure
+ * Scales each exposed light and the emission of a render of `scene` by the factor it draws at, 1
+ * with no exposure, and runs each follower. A render that never ended is put back first, so a light's
+ * energy is scaled once. The emission buffer reads 1 again after the render, as outside any.
  */
-export function registerExposureStage(scene: THREE.Scene, stage: ExposureStage): () => void {
-  const registered = stagesOf(scene);
-  registered.add(stage);
+function applyRenderExposure(scene: THREE.Scene, exposure: SceneExposure, camera: THREE.Camera): void {
+  exposure.restore?.();
+  const drawn = drawnExposureOf(scene);
+  const factor = drawn ?? 1;
+  EMISSION_EXPOSURE[0] = factor;
+  // A factor of 1 leaves every light as it holds, so most renders scale none.
+  const restoreLights = factor === 1 ? null : scaleLightIntensities(exposedLightsOf(scene, exposure), factor);
+  exposure.restore = () => {
+    exposure.restore = null;
+    restoreLights?.();
+    EMISSION_EXPOSURE[0] = 1;
+  };
+  for (const follower of exposure.followers) follower(drawn, camera);
+}
+
+/**
+ * Runs `follower` in each render of `scene` with the exposure the render draws at, until the
+ * returned function runs. A consumer whose state follows the exposure follows it here, so a draw
+ * at another exposure shows it too.
+ *
+ * @canonical The state a scene draws for the exposure of a render
+ */
+export function followSceneExposure(scene: THREE.Scene, follower: ExposureFollower): () => void {
+  const exposure = exposureOf(scene);
+  exposure.followers.add(follower);
+  settleExposure(scene, exposure);
   return () => {
-    registered.delete(stage);
+    exposure.followers.delete(follower);
+    settleExposure(scene, exposure);
   };
 }
 
 /**
- * Runs `draw` with `scene` set for `exposure`, null for none, and puts the scene back after it. A draw
- * at the exposure the scene holds changes nothing. A light scales by the exposure over the held one,
- * so a scene at the held exposure 0, whose lights hold no energy, keeps them dark.
+ * Runs `draw` with each render of `scene` at `exposure`, null for none. Godot gives each render the
+ * exposure of its own camera attributes, so a held exposure of 0 leaves a draw at another lit.
  *
- * @canonical The state a scene draws for another exposure
+ * @canonical The state a scene draws for the exposure of a render
  */
 export function drawAtExposure<T>(scene: THREE.Scene, exposure: number | null, draw: () => T): T {
-  if (exposure === exposureOfScene(scene)) return draw();
-  const factor = exposure ?? 1;
-  const restores: (() => void)[] = [];
+  const outer = drawnExposures.get(scene);
+  drawnExposures.set(scene, { exposure });
+  settleExposure(scene, exposureOf(scene));
   try {
-    drawnExposures.set(scene, factor);
-    EMISSION_EXPOSURE[0] = factor;
-    restores.push(scaleLights(scene, drawnExposureRatio(scene)));
-    for (const stage of stagesOf(scene)) restores.push(stage(exposure));
     return draw();
   } finally {
-    for (const restore of restores.reverse()) restore();
-    drawnExposures.delete(scene);
-    EMISSION_EXPOSURE[0] = 1;
+    if (outer) drawnExposures.set(scene, outer);
+    else drawnExposures.delete(scene);
+    settleExposure(scene, exposureOf(scene));
   }
 }
 
 /**
- * The scale from the held exposure to the one `drawAtExposure` draws at, or 1 outside a draw and
- * under a held exposure of 0. A light that sets its own energy before each render applies it, since
- * `drawAtExposure` scales the energy only once.
- *
- * @canonical The state a scene draws for another exposure
- */
-export function drawnExposureRatio(scene: THREE.Scene): number {
-  const drawn = drawnExposures.get(scene);
-  const held = exposureOfScene(scene) ?? 1;
-  return drawn === undefined || held === 0 ? 1 : drawn / held;
-}
-
-/**
- * The factor the draw of `scene` takes: the one `drawAtExposure` draws at, else the held one, and 1
- * without either. A sky reads it in each render to tell which exposure bakes it.
- *
- * @canonical The state a scene draws for another exposure
- */
-export function drawnExposureOf(scene: THREE.Scene): number {
-  return drawnExposures.get(scene) ?? exposureOfScene(scene) ?? 1;
-}
-
-/** Scales the energy of each Light3D of `scene` by `ratio`: the flat ambient takes no exposure. */
-function scaleLights(scene: THREE.Scene, ratio: number): () => void {
-  const lights = sceneLights(scene)
-    .map(({ light }) => light)
-    .filter((light) => !isAmbientLight(light));
-  return scaleLightIntensities(lights, ratio);
-}
-
-/** Writes `factor` to the emission buffer for each render of `scene` until the returned function runs. */
-function writeEmissionExposure(scene: THREE.Scene, factor: number): () => void {
-  const stopWriting = observeSceneCamera(scene, () => {
-    EMISSION_EXPOSURE[0] = drawnExposures.get(scene) ?? factor;
-  });
-  const stopClearing = observeSceneRenderEnd(scene, () => {
-    EMISSION_EXPOSURE[0] = 1;
-  });
-  return () => {
-    stopWriting();
-    stopClearing();
-  };
-}
-
-/**
  * Renders the scene of the enclosing world with `factor` until the world unmounts, and answers
- * `worldFactor` as the factor of its own attributes. A null factor holds nothing: the emission
- * buffer already reads 1 outside a render of a world that holds one.
+ * `worldFactor` as the factor of its own attributes. A null factor draws at 1.
  *
  * @canonical The exposure a scene renders with
  */
 export function useSceneExposure(factor: number | null, worldFactor: number | null): void {
   const scene = useThree((state) => state.scene);
-  // A layout effect, so the buffer changes in the commit that changes every light's intensity.
+  // A layout effect, so a render after the commit draws at the new factor.
   useLayoutEffect(() => {
     const entry: HeldExposure = { view: factor, world: worldFactor };
-    const entries = heldOf(scene);
-    entries.push(entry);
-    const stopWriting = factor === null ? undefined : writeEmissionExposure(scene, factor);
+    const exposure = exposureOf(scene);
+    exposure.held.push(entry);
+    settleExposure(scene, exposure);
     return () => {
-      stopWriting?.();
-      entries.splice(entries.indexOf(entry), 1);
+      exposure.held.splice(exposure.held.indexOf(entry), 1);
+      settleExposure(scene, exposure);
     };
   }, [scene, factor, worldFactor]);
 }

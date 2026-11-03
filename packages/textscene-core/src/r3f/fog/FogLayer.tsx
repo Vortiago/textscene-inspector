@@ -12,8 +12,10 @@ import { projectVolumetricFogSettings } from '../../parser/projectSettingsParser
 import { useProjectSettings } from '../contexts/ProjectSettingsContext.js';
 import { observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { registerEnvironmentPart, useEnvironmentKey } from '../environment/sceneEnvironment.js';
+import { followSceneExposure } from '../exposure/sceneExposure.js';
 import { readShadowMaps } from '../shadowPass.js';
 import { TrackedObjects } from '../trackedObjects.js';
+import { isLight } from '../isLight.js';
 import { probeCaptureOf } from '../reflectionProbe/captureCameras.js';
 import { captureFog, finishFog, prepareFog, type FogSettings } from './fogFrame.js';
 import { acquireVolumetricFogPass } from './sharedVolumetricFogPass.js';
@@ -24,10 +26,6 @@ import type { DepthFog, VolumetricFog } from '../../resources/environment/types.
 interface FogLayerProps {
   depth: DepthFog | null;
   volumetric: VolumetricFog | null;
-}
-
-function isLight(object: THREE.Object3D): object is THREE.Light {
-  return (object as THREE.Light).isLight === true;
 }
 
 function isMesh(object: THREE.Object3D): object is THREE.Mesh {
@@ -67,6 +65,8 @@ export function FogLayer({ depth, volumetric }: FogLayerProps) {
     const lights = new TrackedObjects(scene, isLight);
     const casters = new TrackedObjects(scene, isMesh);
     const volumes = new TrackedObjects(scene, isFogVolume);
+    // Written by each render before the fog prepares for it.
+    let exposure = 1;
     const prepare = (camera: THREE.Camera) => {
       const capture = probeCaptureOf(camera);
       const fog = capture ? captureFog(settings.current, capture.isInterior) : settings.current;
@@ -75,15 +75,20 @@ export function FogLayer({ depth, volumetric }: FogLayerProps) {
         lights: lights.current(),
         casters: isVolumetric ? casters.current() : NO_CASTERS,
         volumes: isVolumetric ? volumes.current() : NO_VOLUMES,
+        exposure,
       };
       if (prepareFog(gl, scene, camera, fog, pass, objects)) invalidate();
     };
     const stopRegistering = registerEnvironmentPart(scene, environment, () => {
       // After the shadow pass, so the fog reads this render's shadow maps, and each light's distance
       // fade for this camera, which the scene's observers wrote before it.
+      const stopFollowing = followSceneExposure(scene, (drawn) => {
+        exposure = drawn ?? 1;
+      });
       const stopPreparing = readShadowMaps(gl, scene, prepare);
       const stopFinishing = observeSceneRenderEnd(scene, finishFog);
       return () => {
+        stopFollowing();
         stopPreparing();
         stopFinishing();
       };

@@ -10,12 +10,14 @@ import { EnvironmentLayer } from './EnvironmentLayer';
 import { WorldKindProvider } from './WorldKindContext';
 import { WorldExposureScope, usePublishCameraAttributes } from './worldExposure';
 import { drawAtExposure } from '../exposure/sceneExposure';
+import { fireSceneRender } from '../testing/fireSceneRender';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { textureTexel } from '../testing/backgroundTexel';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { sRGBToLinearRGB } from '../../utils/colorSpace';
 import { shownAmbientLights } from '../testing/ambientLights';
+import { captureCameras } from '../reflectionProbe/captureCameras';
 
 vi.mock('../fog/FogLayer', () => ({ FogLayer: () => <group name="FogLayer" /> }));
 
@@ -69,9 +71,13 @@ describe('<EnvironmentLayer> colour background under an exposure', () => {
   });
 
   describe('drawn at another exposure', () => {
-    /** The background's hex while `scene` draws at `exposure`. */
+    const camera = new THREE.PerspectiveCamera();
+    /** The background's hex in a render of `scene` at `exposure`. */
     function backgroundHexAt(scene: THREE.Scene, exposure: number | null): string {
-      return drawAtExposure(scene, exposure, () => backgroundHex(scene));
+      return drawAtExposure(scene, exposure, () => {
+        fireSceneRender(scene, camera);
+        return backgroundHex(scene);
+      });
     }
 
     it('scales the colour in sRGB by that exposure, so 0.2 becomes 0.6 at 3', async () => {
@@ -84,18 +90,36 @@ describe('<EnvironmentLayer> colour background under an exposure', () => {
       expect(backgroundHexAt(scene, null)).toBe('333333');
     });
 
-    it('puts the background it drew with back', async () => {
+    it('draws the background it holds again in the next render', async () => {
       const { scene } = await mount(BACKGROUND_COLOR, 2);
-      const drawn = scene.background;
+      const held = scene.background;
       backgroundHexAt(scene, 3);
-      expect(scene.background).toBe(drawn);
-      expect(backgroundHex(scene)).toBe('666666');
+      fireSceneRender(scene, camera);
+      expect(scene.background).toBe(held);
     });
 
     it('draws with the one texture again at the same exposure', async () => {
       const { scene } = await mount(BACKGROUND_COLOR, 2);
-      const drawnTexture = () => drawAtExposure(scene, 3, () => scene.background);
+      const drawnTexture = () =>
+        drawAtExposure(scene, 3, () => {
+          fireSceneRender(scene, camera);
+          return scene.background;
+        });
       expect(drawnTexture()).toBe(drawnTexture());
+    });
+
+    it('keeps the clear colour an interior capture stages', async () => {
+      const { scene } = await mount(BACKGROUND_COLOR, 2);
+      const [face] = captureCameras(new THREE.Matrix4(), { x: 0, y: 0, z: 0 }, [1, 1, 1, 1, 1, 1], {
+        isInterior: true,
+        hasShadows: false,
+      });
+      const clearColor = new THREE.Color(0x123456);
+      drawAtExposure(scene, 3, () => {
+        scene.background = clearColor;
+        fireSceneRender(scene, face!);
+      });
+      expect(scene.background).toBe(clearColor);
     });
   });
 

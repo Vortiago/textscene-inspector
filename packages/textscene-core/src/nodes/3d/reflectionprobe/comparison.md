@@ -12,6 +12,10 @@ meshes and textures load.
 
 A probe captures the scene with the Environment and the exposure of its world, not with those of the
 camera the view renders through (`renderer_scene_cull.cpp:3692`).
+Each render shows the capture at its own exposure over the capture's (`light_storage.cpp:1810-1814`).
+Over a sky, a ONCE probe reflects the bake of the view, as Godot captures it while that bake holds.
+An ALWAYS probe draws its faces at the world's exposure before the view in each frame. Those
+renders bake the sky for the view too (`renderer_scene_cull.cpp:3755-3762`).
 
 ## Two overlapping probes
 <!-- compare: image=unit-reflection-probe-always status=unreviewed fixture=unit-reflection-probe-always.tscn -->

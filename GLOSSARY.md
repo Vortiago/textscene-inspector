@@ -561,8 +561,12 @@ The `exposure_multiplier` of the CameraAttributes that a world renders with. A w
 _Avoid_: "exposure" alone, which `tonemap_exposure` also names. "Brightness".
 
 **Pass attributes** (`ViewportPassAttributes` in `r3f/environment/worldExposure.tsx`):
-The CameraAttributes a viewport pass draws with: those of the camera it elects, else those of its world. A world holds one **Exposure factor** for its lights, and a pass draws the world at the factor of its own **Pass attributes**, so two viewports of one world draw one frame at two exposures.
+The CameraAttributes a viewport pass draws with: those of the camera it elects, else those of its world. A light holds its energy, and a pass draws the world at the **Exposure factor** of its own **Pass attributes**, so two viewports of one world draw one frame at two exposures.
 _Avoid_: "viewport exposure", "camera exposure".
+
+**Exposure follower** (`followSceneExposure` in `r3f/exposure/sceneExposure.ts`):
+A consumer that writes its state for the **Exposure factor** of each render of a scene, such as the sky, a lightmap or the probe rows. A draw at another factor shows it too, so no consumer reads a held factor at render time.
+_Avoid_: "exposure stage", "exposure listener".
 
 **Pass Environment** (`ViewportPassEnvironment` in `r3f/environment/WorldEnvironmentScope.tsx`):
 The Environment a viewport pass draws with: that of the camera it elects, else its world's own. A world's scene shows one Environment, and a pass puts its own **Pass Environment** on the scene for its draw only, so two viewports of one world draw one frame with two backgrounds.

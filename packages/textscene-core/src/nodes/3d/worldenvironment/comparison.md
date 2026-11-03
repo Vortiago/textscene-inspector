@@ -33,14 +33,14 @@ Strict parsing format-checks these `WorldEnvironment` properties, plus 10 inheri
 
 ## Exposure
 
-The `camera_attributes` of the first WorldEnvironment that holds a valid one set the exposure of the world, apart from the Environment. The `attributes` of the Camera3D that a viewport renders through replace them for that viewport (`renderer_scene_cull.cpp`). The exposure scales:
+The `camera_attributes` of the first WorldEnvironment that holds a valid one set the exposure of the world, apart from the Environment. The `attributes` of the Camera3D that a viewport renders through replace them for that viewport (`renderer_scene_cull.cpp`). A light holds its energy, and each render scales it by its own exposure, so a pass at 2 lights a world at 0 (`light_storage.cpp:656-658`). The exposure scales:
 
 - the energy of each light, including the lights of a GLB file, and each emission.
 - a colour background and a sky background, a colour before the linear conversion.
 - the ambient light and the reflection of a sky, by the square.
 - a baked lightmap, over the exposure of the bake.
 
-A flat ambient light and the clear colour of a world with no Environment do not scale. A ReflectionProbe captures at the exposure of the world and shows at the exposure of the camera over it. The goldens in `scripts/visual/scenes/lighting.mjs` pin these.
+A flat ambient light and the clear colour of a world with no Environment do not scale. A ReflectionProbe captures at the exposure of the world. Each render shows it at its own exposure over that one. The goldens in `scripts/visual/scenes/lighting.mjs` pin these.
 
 With `auto_exposure_enabled`, the tone-map pass and the glow's bright pass divide the exposure by the luminance of the frame over `auto_exposure_scale`. The luminance is the average of the largest channel over the top left region of the frame, held between the range of the attributes. The goldens pin it as well.
 
@@ -48,4 +48,3 @@ With `auto_exposure_enabled`, the tone-map pass and the glow's bright pass divid
 
 - **Not drawn** Depth of field and physical light units have no effect.
 - **Approximated** A frame draws at its settled luminance, where Godot adapts at `auto_exposure_speed`.
-- **Approximated** Under a camera whose exposure differs from the world's, a ReflectionProbe in a scene with a sun and a sky differs from Godot.
