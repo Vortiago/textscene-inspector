@@ -10,6 +10,7 @@ import { sameTransform3D, type Transform3D } from '../../../../godot/math/transf
 import type { TscnNode } from '../../../../parser/types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { PluginGizmo, SelectedOnly } from '../../../../r3f/gizmo/PluginGizmo';
+import { FramePoint } from '../../../../r3f/components/FrameAabb';
 import { realGlobalTransform3D } from '../../../../r3f/nodeTreeTransforms';
 import { useLazyModule } from '../../../../resources/useLazyModule';
 import { Node3D } from '../../../base/node3d/Component';
@@ -25,6 +26,8 @@ export function CPUParticles3D({ node, children }: NodeComponentProps) {
 
   return (
     <Node3D node={node} ref={nodeRef}>
+      {/* `get_aabb()` is `AABB()` (`cpu_particles_3d.cpp:43-45`), whatever the instance's box is. */}
+      <FramePoint />
       {emitter && emissionTransform && (
         <emitter.ParticleEmitter
           properties={properties}

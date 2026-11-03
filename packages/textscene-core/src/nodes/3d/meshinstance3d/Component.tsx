@@ -41,6 +41,7 @@ import { useMeshSkin } from './useMeshSkin';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import { drawHookProps, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
+import { FramePoint } from '../../../r3f/components/FrameAabb';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { partsPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 
@@ -133,11 +134,16 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
       return <MeshShell {...shellProps}>{UNRESOLVED_MESH}</MeshShell>;
     // While it loads, the shell keeps the node's descendants mounted: they do not depend on
     // the `.tres`. A node with no mesh, and a mesh Godot builds no surface for, draw nothing and
-    // their descendants still mount.
-    case 'none':
+    // their descendants still mount. Their `get_aabb()` is `AABB()`, a point to frame on.
     case 'loading':
-    case 'empty':
       return <MeshShell {...shellProps}>{null}</MeshShell>;
+    case 'none':
+    case 'empty':
+      return (
+        <MeshShell {...shellProps}>
+          <FramePoint />
+        </MeshShell>
+      );
     case 'surfaced': {
       // The skin leaves the instance without bounds, so Godot places none of its surfaces.
       if (isOutgrown) return <MeshShell {...shellProps}>{null}</MeshShell>;

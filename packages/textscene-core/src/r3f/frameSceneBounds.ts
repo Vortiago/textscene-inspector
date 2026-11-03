@@ -4,7 +4,7 @@
  */
 import * as THREE from 'three';
 import { EDITOR_CAMERA_FOV, editorCameraDirection } from './godotEditorCamera.js';
-import { computeWorldBoundingBox } from './bounds.js';
+import { computeWorldBoundingBox, frameBoxOf } from './bounds.js';
 import { isDrawable } from './drawable.js';
 import { isUnderEditorHelper } from './editorHelpers.js';
 import { degToRad } from '../godot/math/math.js';
@@ -49,6 +49,13 @@ export function frameSceneBounds(
     // A Label3D glyph mesh is skipped, so async mount timing cannot change the frame. Label3D frames
     // by its zero-size `LABEL3D_BOUNDS_PROXY` alone, as Godot's reference camera does.
     if (obj.userData?.tscnFrameExcluded) return;
+    // A node whose `get_aabb` Godot frames on, drawn or not, an empty one as the point it is.
+    const nodeBox = frameBoxOf(obj, new THREE.Box3());
+    if (nodeBox) {
+      meshBox.union(nodeBox);
+      hasMesh = true;
+      return;
+    }
     // CSG contributor bounds proxies are INCLUDED: Godot counts a contributor's own
     // unevaluated brush too (modules/csg/csg_shape.cpp:470,507, reached recursively), so a
     // subtracted solid enlarges its bounds on both sides. An invisible one the recursion

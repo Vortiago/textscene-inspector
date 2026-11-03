@@ -15,6 +15,7 @@ import { invisibleBase } from '../../../r3f/invisibleBase';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { TscnNode } from '../../../parser/types';
 import type { Aabb } from '../../../godot/math/aabb';
+import { FrameAabb } from '../../../r3f/components/FrameAabb';
 
 /**
  * The box the node's base gives its instance, in node space, or null while it is unknown. The
@@ -22,15 +23,24 @@ import type { Aabb } from '../../../godot/math/aabb';
  */
 type UseOwnAabb = (node: TscnNode) => Aabb | null;
 
-/** The component an undrawn GeometryInstance3D type registers, culled by the box `useOwnAabb` gives. */
-export function undrawnGeometryInstance(useOwnAabb: UseOwnAabb): NodeComponent {
+/**
+ * The component an undrawn GeometryInstance3D type registers, culled by the box `useOwnAabb` gives
+ * and framed on the box `useGetAabb` gives. Those are one box unless the type's `get_aabb()` differs
+ * from its instance box, as a particle emitter's does.
+ */
+export function undrawnGeometryInstance(
+  useOwnAabb: UseOwnAabb,
+  useGetAabb: UseOwnAabb = useOwnAabb
+): NodeComponent {
   function UndrawnGeometryInstance({ node, children }: NodeComponentProps) {
     const nodeRef = useRef<THREE.Group | null>(null);
     const ownAabb = useOwnAabb(node);
+    const getAabb = useGetAabb(node);
     const placement = useMemo(() => boxPlacement(nodeRef, ownAabb), [ownAabb]);
     useGeometryInstance(placement);
     return (
       <Node3D node={node} ref={nodeRef}>
+        {getAabb && <FrameAabb aabb={getAabb} />}
         {children}
       </Node3D>
     );
@@ -51,10 +61,11 @@ export interface GeometryInstanceGizmosProps<Properties> {
  */
 export function undrawnGeometryInstanceWithGizmos<Properties>(
   useOwnAabb: UseOwnAabb,
+  useGetAabb: UseOwnAabb,
   Gizmos: ComponentType<GeometryInstanceGizmosProps<Properties>>,
   drawnFor: GizmoDrawnFor
 ): NodeComponent {
-  const Undrawn = undrawnGeometryInstance(useOwnAabb);
+  const Undrawn = undrawnGeometryInstance(useOwnAabb, useGetAabb);
   function UndrawnGeometryInstanceWithGizmos({ node, children }: NodeComponentProps) {
     return (
       <Undrawn node={node}>

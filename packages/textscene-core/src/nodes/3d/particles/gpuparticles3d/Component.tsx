@@ -9,6 +9,7 @@ import {
   undrawnGeometryInstanceWithGizmos,
   type GeometryInstanceGizmosProps,
 } from '../../geometryinstance3d/Component';
+import { EMPTY_AABB } from '../../../../godot/math/aabb';
 import { EmissionShapeGizmo, ParticlesBoxGizmo } from '../gizmo/ParticleGizmos';
 import { useGPUParticles3DAabb } from './ownAabb';
 import type { GPUParticles3DProperties } from './types';
@@ -24,8 +25,12 @@ function Gizmos({ properties }: GeometryInstanceGizmosProps<GPUParticles3DProper
   );
 }
 
+/** `GPUParticles3D::get_aabb` is `AABB()` (`gpu_particles_3d.cpp:40-42`), not the `visibility_aabb` it culls by. */
+const useGetAabb = () => EMPTY_AABB;
+
 export const GPUParticles3D = undrawnGeometryInstanceWithGizmos(
   useGPUParticles3DAabb,
+  useGetAabb,
   Gizmos,
   'selected-only'
 );
