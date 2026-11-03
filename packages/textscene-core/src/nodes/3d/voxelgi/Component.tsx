@@ -4,6 +4,9 @@
  * while the node is selected (`voxel_gi_gizmo_plugin.cpp:99`).
  */
 
+import { useMemo } from 'react';
+import { centredAabb } from '../../../godot/math/aabb';
+import { NodeAabb } from '../../../r3f/components/NodeAabb';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { invisibleBase } from '../../../r3f/invisibleBase';
@@ -12,10 +15,13 @@ import { VoxelGIGizmo } from './Gizmo';
 import type { VoxelGIProperties } from './types';
 
 function UndrawnVoxelGI({ node, children }: NodeComponentProps) {
+  const voxelGi = node.properties as VoxelGIProperties;
+  const aabb = useMemo(() => centredAabb(voxelGi.size), [voxelGi.size]);
   return (
     <Node3D node={node}>
+      <NodeAabb aabb={aabb} />
       <PluginGizmo drawnFor="selected-only">
-        <VoxelGIGizmo voxelGi={node.properties as VoxelGIProperties} />
+        <VoxelGIGizmo voxelGi={voxelGi} />
       </PluginGizmo>
       {children}
     </Node3D>

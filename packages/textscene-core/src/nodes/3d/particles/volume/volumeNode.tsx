@@ -4,7 +4,9 @@
  * Godot's editor gizmo on it for every node, faint while unselected (ADR-0056).
  */
 
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
+import { centredAabb, type Aabb } from '../../../../godot/math/aabb';
+import { NodeAabb } from '../../../../r3f/components/NodeAabb';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { PluginGizmo } from '../../../../r3f/gizmo/PluginGizmo';
 import { invisibleBase } from '../../../../r3f/invisibleBase';
@@ -17,11 +19,20 @@ type Kind = 'collision' | 'attractor';
 
 const colorOf = (kind: Kind) => (kind === 'collision' ? COLLISION_COLOR : ATTRACTOR_COLOR);
 
-function volumeNode<P extends Node3DProperties>(drawGizmo: (properties: P) => ReactNode) {
+/** `get_aabb` of the sphere nodes (`gpu_particles_collision_3d.cpp:84-86`, `:935-937`): the cube round the sphere. */
+const sphereAabb = (radius: number): Aabb => centredAabb({ x: radius * 2, y: radius * 2, z: radius * 2 });
+
+function volumeNode<P extends Node3DProperties>(
+  aabbOf: (properties: P) => Aabb,
+  drawGizmo: (properties: P) => ReactNode
+) {
   return invisibleBase(function VolumeNode({ node, children }: NodeComponentProps) {
+    const properties = node.properties as P;
+    const aabb = useMemo(() => aabbOf(properties), [properties]);
     return (
       <Node3D node={node}>
-        <PluginGizmo drawnFor="every-node">{drawGizmo(node.properties as P)}</PluginGizmo>
+        <NodeAabb aabb={aabb} />
+        <PluginGizmo drawnFor="every-node">{drawGizmo(properties)}</PluginGizmo>
         {children}
       </Node3D>
     );
@@ -29,14 +40,19 @@ function volumeNode<P extends Node3DProperties>(drawGizmo: (properties: P) => Re
 }
 
 export const boxVolumeNode = (kind: Kind) =>
-  volumeNode<BoxVolumeProperties>(({ size }) => <BoxVolumeGizmo size={size} color={colorOf(kind)} />);
+  volumeNode<BoxVolumeProperties>(
+    ({ size }) => centredAabb(size),
+    ({ size }) => <BoxVolumeGizmo size={size} color={colorOf(kind)} />
+  );
 
 export const sphereVolumeNode = (kind: Kind) =>
-  volumeNode<SphereVolumeProperties>(({ radius }) => (
-    <SphereVolumeGizmo radius={radius} color={colorOf(kind)} />
-  ));
+  volumeNode<SphereVolumeProperties>(
+    ({ radius }) => sphereAabb(radius),
+    ({ radius }) => <SphereVolumeGizmo radius={radius} color={colorOf(kind)} />
+  );
 
 export const sdfVolumeNode = () =>
-  volumeNode<SdfVolumeProperties>(({ size, resolution }) => (
-    <SdfVolumeGizmo size={size} resolution={resolution} />
-  ));
+  volumeNode<SdfVolumeProperties>(
+    ({ size }) => centredAabb(size),
+    ({ size, resolution }) => <SdfVolumeGizmo size={size} resolution={resolution} />
+  );

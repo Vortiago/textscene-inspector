@@ -4,7 +4,10 @@
  * but Godot's editor gizmo while it is selected (`reflection_probe_gizmo_plugin.cpp:152`).
  */
 
+import { useMemo } from 'react';
 import { extend } from '@react-three/fiber';
+import { centredAabb } from '../../../godot/math/aabb';
+import { NodeAabb } from '../../../r3f/components/NodeAabb';
 import { useTreeOrder } from '../../../r3f/contexts/TreeOrderContext';
 import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -21,9 +24,11 @@ export function ReflectionProbe({ node, children }: NodeComponentProps) {
   useSceneProbes();
   const treeOrder = useTreeOrder();
   const probe = node.properties as ReflectionProbeProperties;
+  const aabb = useMemo(() => centredAabb(probe.size), [probe.size]);
   return (
     <Node3D node={node}>
       <ReflectionProbeElement probe={probe} treeOrder={treeOrder} />
+      <NodeAabb aabb={aabb} />
       <PluginGizmo drawnFor="selected-only">
         <ReflectionProbeGizmo probe={probe} />
       </PluginGizmo>

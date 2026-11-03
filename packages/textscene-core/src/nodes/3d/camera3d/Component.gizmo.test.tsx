@@ -14,6 +14,7 @@ import { godotColorToLinear } from '../../../r3f/godotColor';
 import { GizmoScene, lineMaterials, lineOpacities, type TestRenderer } from '../../../r3f/testing/GizmoScene';
 import {
   describeGizmoToggle,
+  describeSelectionBox,
   describeInstantiatedGizmo,
   type GizmoNodeCase,
 } from '../../../r3f/testing/gizmoContract';
@@ -99,6 +100,7 @@ const GIZMO_CASE: GizmoNodeCase = {
 };
 describeGizmoToggle('<Camera3D>', GIZMO_CASE);
 describeInstantiatedGizmo('<Camera3D>', GIZMO_CASE);
+describeSelectionBox('<Camera3D>', GIZMO_CASE, null);
 
 describe('<Camera3D> gizmo', () => {
   it('draws in the camera colour at the colour alpha 1 when the node is selected', async () => {

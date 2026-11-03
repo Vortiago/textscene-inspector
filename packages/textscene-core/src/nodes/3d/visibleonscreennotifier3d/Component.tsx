@@ -5,6 +5,7 @@
  */
 
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
+import { NodeAabb } from '../../../r3f/components/NodeAabb';
 import { AabbAxesGizmo } from '../../../r3f/components/AabbAxesGizmo';
 import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { Node3D } from '../../base/node3d/Component';
@@ -20,6 +21,7 @@ export function VisibleOnScreenNotifier3D({ node, children }: NodeComponentProps
   const { aabb } = node.properties as VisibleOnScreenNotifier3DProperties;
   return (
     <Node3D node={node}>
+      <NodeAabb aabb={aabb} />
       <PluginGizmo drawnFor="every-node">
         <AabbAxesGizmo aabb={aabb} color={GIZMO_COLOR} solidAlpha={SOLID_ALPHA} />
       </PluginGizmo>

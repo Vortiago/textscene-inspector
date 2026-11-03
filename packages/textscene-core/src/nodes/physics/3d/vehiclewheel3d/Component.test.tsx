@@ -13,6 +13,7 @@ import { heading } from '../../../../parser/testing/parserKit';
 import { GizmoScene, lineOpacities } from '../../../../r3f/testing/GizmoScene';
 import {
   describeGizmoToggle,
+  describeSelectionBox,
   describeInstantiatedGizmo,
   type GizmoNodeCase,
 } from '../../../../r3f/testing/gizmoContract';
@@ -77,6 +78,7 @@ const GIZMO_CASE: GizmoNodeCase = {
 };
 describeGizmoToggle('<VehicleWheel3D>', GIZMO_CASE);
 describeInstantiatedGizmo('<VehicleWheel3D>', GIZMO_CASE);
+describeSelectionBox('<VehicleWheel3D>', GIZMO_CASE, null);
 
 describe('<VehicleWheel3D> gizmo state', () => {
   it('draws the wheel gizmo at the alpha of the collision colour, 0.42, when selected', async () => {

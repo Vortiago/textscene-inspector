@@ -161,9 +161,10 @@ manifest entry. Every capture without that field is unchanged.
 
 ## Consequences
 
-An always-drawn gizmo enlarges the hover and selection box of its node. It also counts in the
-frame-on-open fallback for a scene with no mesh, so a scene that holds only a Marker3D frames on its
-cross. A faint fill would count as a mesh in `frameSceneBounds`, and all fills are selected-only, so
+A gizmo adds nothing to the hover and selection box of its node. The box is the `get_aabb` of the node
+and of its children (`node_3d_editor_plugin.cpp:5029-5065`), and a node with a box of its own, such
+as a Decal, mounts it as a `NodeAabb`. A gizmo counts in the frame-on-open fallback for a scene with
+no mesh, so a scene that holds only a Marker3D frames on its cross. A faint fill would count as a mesh in `frameSceneBounds`, and all fills are selected-only, so
 no gizmo needs `tscnFrameExcluded`.
 
 Value check, over the 0.3 grey clear: the CPUParticles3D box draws rgb(204, 179, 102) selected and

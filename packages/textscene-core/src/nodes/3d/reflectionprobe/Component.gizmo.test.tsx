@@ -12,6 +12,8 @@ import { godotColorToLinear } from '../../../r3f/godotColor';
 import { GizmoScene } from '../../../r3f/testing/GizmoScene';
 import {
   describeGizmoToggle,
+  describeSelectionBox,
+  expectSelectionBox,
   describeInstantiatedGizmo,
   type GizmoNodeCase,
 } from '../../../r3f/testing/gizmoContract';
@@ -71,6 +73,17 @@ const GIZMO_CASE: GizmoNodeCase = {
 };
 describeGizmoToggle('<ReflectionProbe>', GIZMO_CASE);
 describeInstantiatedGizmo('<ReflectionProbe>', GIZMO_CASE);
+describeSelectionBox('<ReflectionProbe>', GIZMO_CASE, { min: [-10, -10, -10], max: [10, 10, 10] });
+
+describe('<ReflectionProbe> selection box', () => {
+  // Measured in Godot 4.6.3: size = (4, 6, 8) gives get_aabb (-2, -3, -4, 4, 6, 8).
+  it('is the box of its size', async () => {
+    expectSelectionBox(await render(null, { size: 'Vector3(4, 6, 8)' }), {
+      min: [-2, -3, -4],
+      max: [2, 3, 4],
+    });
+  });
+});
 
 describe('<ReflectionProbe> gizmo gate', () => {
   it.each([
