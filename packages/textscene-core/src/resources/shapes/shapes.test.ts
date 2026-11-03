@@ -17,6 +17,7 @@ import './concavepolygonshape3d';
 import './rectangleshape2d';
 import './circleshape2d';
 import './capsuleshape2d';
+import './worldboundaryshape3d';
 
 /** Every shape type this package claims, with the slice folder that claims it. */
 const CLAIMS: readonly (readonly [string, string])[] = [
@@ -29,6 +30,7 @@ const CLAIMS: readonly (readonly [string, string])[] = [
   ['RectangleShape2D', 'rectangleshape2d'],
   ['CircleShape2D', 'circleshape2d'],
   ['CapsuleShape2D', 'capsuleshape2d'],
+  ['WorldBoundaryShape3D', 'worldboundaryshape3d'],
 ];
 
 describe('collision-shape slice registrations', () => {
@@ -51,7 +53,7 @@ describe('collision-shape slice registrations', () => {
   });
 
   it('leaves a shape type nobody implements unclaimed by these slices', () => {
-    const unimplemented = resourceSliceRegistry.byTypeName('WorldBoundaryShape3D');
+    const unimplemented = resourceSliceRegistry.byTypeName('SegmentShape2D');
     expect(CLAIMS.some(([, slice]) => slice === unimplemented?.slice)).toBe(false);
   });
 });

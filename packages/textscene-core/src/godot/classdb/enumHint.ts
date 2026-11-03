@@ -8,7 +8,6 @@
  *
  * @canonical The labels and values of a property-hint enum
  */
-
 export interface HintEnumEntry {
   readonly label: string;
   readonly value: number;
