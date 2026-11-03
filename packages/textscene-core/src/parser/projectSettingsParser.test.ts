@@ -19,6 +19,7 @@ import {
   projectCanvasTextureDefaults,
   projectClearColor,
   projectTransparentBackground,
+  projectTracesHalfSizeReflections,
   projectGlowUsesBicubicUpscale,
   projectUsesLightmapBicubicFilter,
   projectMsaaModes,
@@ -221,6 +222,23 @@ describe('projectTransparentBackground', () => {
   it('is opaque with no project or a malformed value', () => {
     expect(projectTransparentBackground(null)).toBe(false);
     expect(projectTransparentBackground({ 'rendering/viewport/transparent_background': 'yes' })).toBe(false);
+  });
+});
+
+describe('projectTracesHalfSizeReflections', () => {
+  const KEY = 'rendering/environment/screen_space_reflection/half_size';
+
+  it('traces at half size by default, as rendering_server.cpp:3812 registers it', () => {
+    expect(projectTracesHalfSizeReflections(null)).toBe(true);
+    expect(projectTracesHalfSizeReflections({})).toBe(true);
+  });
+
+  it('traces at full size when the project turns half_size off', () => {
+    expect(projectTracesHalfSizeReflections({ [KEY]: 'false' })).toBe(false);
+  });
+
+  it('keeps the default for a malformed value (error path)', () => {
+    expect(projectTracesHalfSizeReflections({ [KEY]: 'nope' })).toBe(true);
   });
 });
 

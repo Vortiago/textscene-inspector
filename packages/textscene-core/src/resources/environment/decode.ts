@@ -144,6 +144,13 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
       'volumetric_fog_temporal_reprojection_amount'
     ),
 
+    // Screen-space reflections. The fade setters clamp to 0 or more (`environment.cpp:276-288`).
+    ssr_enabled: boolSlotValue(properties.ssr_enabled) === true,
+    ssr_max_steps: intOr(properties.ssr_max_steps, 64, 'ssr_max_steps'),
+    ssr_fade_in: Math.max(0, floatOr(properties.ssr_fade_in, 0.15, 'ssr_fade_in')),
+    ssr_fade_out: Math.max(0, floatOr(properties.ssr_fade_out, 2.0, 'ssr_fade_out')),
+    ssr_depth_tolerance: floatOr(properties.ssr_depth_tolerance, 0.5, 'ssr_depth_tolerance'),
+
     // Glow.
     glow_enabled: boolSlotValue(properties.glow_enabled) === true,
     glow_levels: parseGlowLevels(properties),

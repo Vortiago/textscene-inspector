@@ -20,11 +20,12 @@ import {
 import { perObject } from '../../utils/perObject';
 import { holdUntilReleased } from '../useDisposeOnRelease';
 import { SkyRadiance } from './skyRadiance';
+import type { SkyBackground } from './skyBackground';
 import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
 
 /** A sky baked at one exposure: its background and the radiance its readers sample. */
 interface BakedSky {
-  background: THREE.Texture | null;
+  background: SkyBackground | null;
   radiance: SkyRadiance;
   /** Draws the background again from a live panorama, absent for any other. */
   redrawBackground?: () => void;
