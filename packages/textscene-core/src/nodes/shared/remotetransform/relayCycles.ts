@@ -103,10 +103,10 @@ function relaysReached<R>(from: R, queuedBy: ReadonlyMap<R, readonly R[]>): Set<
 }
 
 /**
- * The relays that a push of `relay` makes push again: each relay in global coordinates that its
- * move of the target reaches, and the target itself when it is a relay in local coordinates, as
- * its own local transform changed (`node_3d.cpp:398-400`, `canvas_item.h:173-178`). A relay with no
- * part flagged leaves the pose as it is, so it moves no cycle. A target in another file is not seen.
+ * The relays a push of `relay` makes push again: each global relay its move of the target reaches,
+ * and the target itself when it is a local relay, as its local transform changed
+ * (`node_3d.cpp:398-400`, `canvas_item.h:173-178`). A relay with no part flagged moves no cycle.
+ * A target in another file is not seen.
  */
 function relaysAPushOfMoves(
   { target, relayClass, flags }: Relay<RawNode>,

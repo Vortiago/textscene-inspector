@@ -194,6 +194,17 @@ describe('applyRemoteTransforms draws a relay cycle at the frame the ref:godot h
     expectCloseTo(globalOrigin3D(cycle3D(), 'Root/HolderA/Box/Marker'), [2883, 0, 3]);
   });
 
+  it('draws a node that is no mesh, under a mesh that lags with its mesh parent, at its own pose', () => {
+    // The inner mesh lags as far as the box carries it, so it takes no drawn transform of its own.
+    const nested = cycle3D().replace(
+      '[node name="Marker" type="Marker3D" parent="HolderA/Box"]',
+      `[node name="Inner" type="MeshInstance3D" parent="HolderA/Box"]
+[node name="Marker" type="Marker3D" parent="HolderA/Box/Inner"]`
+    );
+    expectCloseTo(globalOrigin3D(nested, 'Root/HolderA/Box/Inner'), [2881, 0, 3]);
+    expectCloseTo(globalOrigin3D(nested, 'Root/HolderA/Box/Inner/Marker'), [2883, 0, 3]);
+  });
+
   it('draws the mesh of a turned cycle a whole turn step behind its holder', () => {
     const turned = `[gd_scene format=3]
 [node name="Root" type="Node3D"]
