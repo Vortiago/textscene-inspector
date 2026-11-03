@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { EDITOR_CAMERA_FOV, editorCameraDirection } from './godotEditorCamera.js';
 import { computeWorldBoundingBox } from './bounds.js';
 import { isDrawable } from './drawable.js';
+import { isUnderEditorHelper } from './editorHelpers.js';
 import { degToRad } from '../godot/math/math.js';
 
 /**
@@ -55,13 +56,14 @@ export function frameSceneBounds(
     if (!isDrawable(obj)) return;
     const objBox = computeWorldBoundingBox(obj, new THREE.Box3());
     if (objBox.isEmpty() || !Number.isFinite(objBox.min.x)) return;
-    // Points frame as meshes do: Godot unions the AABB of every visual instance, a PointMesh's too.
-    if (!(obj as THREE.Line).isLine) {
-      meshBox.union(objBox);
-      hasMesh = true;
-    } else {
+    // A gizmo fill is a mesh, but editor chrome does not frame as meshes do: Godot's gizmo draws
+    // no frame, so a chrome mesh joins the gizmo box of the scene's own gizmos (ADR-0056).
+    if (isUnderEditorHelper(obj) || (obj as THREE.Line).isLine) {
       gizmoBox.union(objBox);
       hasGizmo = true;
+    } else {
+      meshBox.union(objBox);
+      hasMesh = true;
     }
   });
   // A point union is reachable, since every mesh can be a bounds proxy for a node Godot never
