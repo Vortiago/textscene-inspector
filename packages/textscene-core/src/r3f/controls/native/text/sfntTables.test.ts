@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { openSfnt, parseSfntScalars, readAxisDefaults, sfntFileOfTables } from './sfntTables';
+import { os2Table } from './sfntTables.testkit';
 
 const CORPUS_TTF = join(
   import.meta.dirname,
@@ -86,24 +87,6 @@ function hheaTable(ascender: number, descender: number): Uint8Array {
 }
 
 const USE_TYPO_METRICS = 1 << 7;
-
-/** An `OS/2` table of 78 bytes holding the fields that choose a font's vertical metrics. */
-function os2Table(fields: {
-  fsSelection?: number;
-  typoAscender?: number;
-  typoDescender?: number;
-  winAscent?: number;
-  winDescent?: number;
-}): Uint8Array {
-  const table = new Uint8Array(78);
-  const dv = new DataView(table.buffer);
-  dv.setUint16(62, fields.fsSelection ?? 0, false);
-  dv.setInt16(68, fields.typoAscender ?? 0, false);
-  dv.setInt16(70, fields.typoDescender ?? 0, false);
-  dv.setUint16(74, fields.winAscent ?? 0, false);
-  dv.setUint16(76, fields.winDescent ?? 0, false);
-  return table;
-}
 
 function scalarsOfTables(hhea: [number, number], os2?: Uint8Array) {
   const tables = new Map([

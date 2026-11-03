@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { isNativelyHinted } from './glyphHinting';
-import { nameTableOf, NAME_ID_FONT_FAMILY, windowsName } from './sfntFamilyName.testkit';
-import { sfntFileOfTables, type SfntFile } from './sfntTables';
+import { fontOfFamily } from './sfntFamilyName.testkit';
+import { sfntFileOfTables } from './sfntTables';
 import { isTrickyFont } from './trickyFont';
-
-function fontOfFamily(family: string): SfntFile {
-  return sfntFileOfTables(new Map([['name', nameTableOf([windowsName(NAME_ID_FONT_FAMILY, family)])]]));
-}
 
 /** A table of `length` bytes whose words sum to `checksum`. */
 function tableWithChecksum(checksum: number, length: number): Uint8Array {
@@ -54,12 +49,5 @@ describe('isTrickyFont', () => {
     const tables = new Map([...FADPOP7_TABLES, ['prep', tableWithChecksum(0xa39b58e4, 0x117c)]]);
 
     expect(isTrickyFont(sfntFileOfTables(tables))).toBe(false);
-  });
-});
-
-describe('isNativelyHinted', () => {
-  it('runs the native hinter on a tricky font with no programs, which FreeType never auto-hints', () => {
-    expect(isNativelyHinted(fontOfFamily('MingLiU'))).toBe(true);
-    expect(isNativelyHinted(fontOfFamily('Open Sans'))).toBe(false);
   });
 });

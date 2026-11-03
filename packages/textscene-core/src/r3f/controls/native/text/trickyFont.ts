@@ -176,19 +176,20 @@ function tableChecksum(bytes: Uint8Array): number {
   return checksum;
 }
 
-/** `tt_check_trickyness_sfnt_ids`: whether the three tables of one listed face match, a missing one by a zero length. */
+/**
+ * `tt_check_trickyness_sfnt_ids`: whether the three tables of one listed face match, a missing one
+ * by a zero length. Lengths compare first, so a font of no listed face sums no table.
+ */
 function hasTrickyTableIds(sfnt: SfntFile): boolean {
-  const ids = ID_TABLE_TAGS.map((tag): TableId | null => {
-    const table = sfnt.tables.get(tag);
-    if (!table) return null;
-    // A table past the file reads as no bytes, whose checksum is zero, as FreeType answers it.
-    return [tableChecksum(tableBytes(sfnt, tag)), table.length];
-  });
-  return TRICKY_FACES.some((face) =>
-    face.every(([checksum, length], index) => {
-      const id = ids[index];
-      return id ? id[1] === length && id[0] === checksum : length === 0;
-    })
+  const lengths = ID_TABLE_TAGS.map((tag) => sfnt.tables.get(tag)?.length ?? 0);
+  const checksums: (number | undefined)[] = [];
+  // A table past the file reads as no bytes, whose checksum is zero, as FreeType answers it.
+  const checksumOf = (index: number) =>
+    (checksums[index] ??= tableChecksum(tableBytes(sfnt, ID_TABLE_TAGS[index]!)));
+  return TRICKY_FACES.some(
+    (face) =>
+      face.every(([, length], index) => lengths[index] === length) &&
+      face.every(([checksum], index) => checksumOf(index) === checksum)
   );
 }
 

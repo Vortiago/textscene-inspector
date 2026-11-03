@@ -6,11 +6,11 @@ import {
   NAME_ID_FONT_FAMILY,
   NAME_ID_TYPOGRAPHIC_FAMILY,
   NAME_ID_WWS_FAMILY,
-  os2TableOf,
   windowsName,
   type NameRecordSpec,
 } from './sfntFamilyName.testkit';
 import { sfntFileOfTables } from './sfntTables';
+import { os2Table } from './sfntTables.testkit';
 
 /** `OS/2` fsSelection bit 8: the family is WWS-only. */
 const WWS_ONLY = 1 << 8;
@@ -42,7 +42,7 @@ describe('familyNameOf', () => {
       windowsName(NAME_ID_WWS_FAMILY, 'WWS'),
     ];
 
-    expect(familyOf(records, os2TableOf(WWS_ONLY))).toBe('Typographic');
+    expect(familyOf(records, os2Table({ fsSelection: WWS_ONLY }))).toBe('Typographic');
   });
 
   it('reads the WWS family of a font whose OS/2 is shorter than version 0', () => {
@@ -51,7 +51,7 @@ describe('familyNameOf', () => {
       windowsName(NAME_ID_WWS_FAMILY, 'WWS'),
     ];
 
-    expect(familyOf(records, os2TableOf(WWS_ONLY).subarray(0, 77))).toBe('WWS');
+    expect(familyOf(records, os2Table({ fsSelection: WWS_ONLY }).subarray(0, 77))).toBe('WWS');
   });
 
   it('prefers an Apple record to a Windows record that is not English', () => {

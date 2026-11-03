@@ -49,12 +49,13 @@ const HHEA_TABLE_MIN_LENGTH = 8;
 /** `hhea` numberOfHMetrics and `vhea` numOfLongVerMetrics(2) at 34. */
 const METRICS_HEADER_LONG_METRIC_COUNT_OFFSET = 34;
 // OS/2 table: fsSelection at 62, sTypoAscender(2) sTypoDescender(2) sTypoLineGap(2) usWinAscent(2) usWinDescent(2) from 68.
-const OS2_FS_SELECTION_OFFSET = 62;
+export const OS2_FS_SELECTION_OFFSET = 62;
 export const OS2_TYPO_ASCENDER_OFFSET = 68;
 export const OS2_TYPO_DESCENDER_OFFSET = 70;
 const OS2_WIN_ASCENT_OFFSET = 74;
 const OS2_WIN_DESCENT_OFFSET = 76;
-const OS2_TABLE_MIN_LENGTH = 78;
+/** FreeType loads an `OS/2` of version 0 from its first 78 bytes, and marks a shorter one as missing. */
+export const OS2_TABLE_MIN_LENGTH = 78;
 const OS2_USE_TYPO_METRICS = 1 << 7; // fsSelection bit 7
 // fvar table: majorVersion(2) minorVersion(2) axesArrayOffset(2) reserved(2) axisCount(2) axisSize(2) ...
 const FVAR_AXES_ARRAY_OFFSET_FIELD = 4;
