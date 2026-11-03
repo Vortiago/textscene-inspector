@@ -74,7 +74,7 @@ function createOctmapArray<Layout extends SkyOctmapLayout>(
   depth: number
 ): OctmapArray<Layout> {
   const target = new THREE.WebGLArrayRenderTarget(layout.size, layout.size, depth, MIPMAPPED_TARGET_OPTIONS);
-  return { layout, target: withMips(target) };
+  return { layout, target: withMips(target, 1 + layout.downsampledSizes.length) };
 }
 
 /** Lets go of the textures a bake set on `gl`'s passes, as the passes outlive it. */
@@ -209,7 +209,7 @@ function downsampleChain(
   chainSizes: readonly number[],
   scratch: ScratchOctmaps
 ): THREE.WebGLRenderTarget {
-  const chain = chainTarget(chainSizes[0]!);
+  const chain = chainTarget(chainSizes);
   try {
     gl.initRenderTarget(chain);
     downsample(gl, octmap, chainSizes, borderSize, scratch, (mip, level) =>
@@ -335,23 +335,18 @@ const MIPMAPPED_TARGET_OPTIONS: THREE.RenderTargetOptions = {
   minFilter: THREE.LinearMipmapLinearFilter,
 };
 
-/** The chain's octmap, `size` wide at its first mip, which a filter reads between mips. */
-function chainTarget(size: number): THREE.WebGLRenderTarget {
-  return withMips(new THREE.WebGLRenderTarget(size, size, MIPMAPPED_TARGET_OPTIONS));
-}
-
-/** `target` with a level for each mip, as it filters between them. */
-function withMips<T extends THREE.WebGLRenderTarget>(target: T): T {
-  target.texture.mipmaps = fullMipChain(target.width);
-  return target;
+/** The chain's octmap, a mip for each of `sizes`, which a filter reads between mips. */
+function chainTarget(sizes: readonly number[]): THREE.WebGLRenderTarget {
+  const size = sizes[0]!;
+  return withMips(new THREE.WebGLRenderTarget(size, size, MIPMAPPED_TARGET_OPTIONS), sizes.length);
 }
 
 /**
- * Every mip down to one texel. Only the first few are drawn, and each read clamps its lod to those.
- * A render target reads only the count (three r187 `WebGLTextures.js:2122-2130`), which the type of
- * `Texture.mipmaps` does not name, and caps `TEXTURE_MAX_LEVEL` at the last level (`:2293-2297`).
+ * `target` with `levels` mips, each half the one before, as it filters between them. A render target
+ * reads only the count (three r187 `WebGLTextures.js:2122-2130`), which the type of `Texture.mipmaps`
+ * does not name, and caps `TEXTURE_MAX_LEVEL` at the last level, so the texture is complete (`:2293-2297`).
  */
-function fullMipChain(size: number): THREE.Texture['mipmaps'] {
-  const levels = Array.from({ length: Math.floor(Math.log2(size)) + 1 }, () => ({}));
-  return levels as unknown as THREE.Texture['mipmaps'];
+function withMips<T extends THREE.WebGLRenderTarget>(target: T, levels: number): T {
+  target.texture.mipmaps = Array.from({ length: levels }, () => ({})) as unknown as THREE.Texture['mipmaps'];
+  return target;
 }
