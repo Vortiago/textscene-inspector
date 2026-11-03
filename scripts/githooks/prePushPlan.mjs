@@ -21,6 +21,8 @@ const LINTED_CODE = /\.(?:ts|tsx|js|mjs|cjs)$/;
 /** What Prettier formats here. Markdown is not: `.prettierignore` leaves it to the STE rules. */
 const FORMATTED = /\.(?:ts|tsx|js|mjs|cjs|css|json|ya?ml|html)$/;
 const SCENE = /\.(?:tscn|tres)$/;
+/** The roots `pnpm canonical` reads its `@canonical` tags from. */
+const CANONICAL_ROOT = /^(?:(?:packages|apps)\/[^/]+\/src|scripts)\//;
 /** Markdown that the generated-docs checks read or write. */
 const GENERATED_DOCS_INPUT = /(?:^|\/)comparison\.md$|^docs\/comparison\//;
 const VENDORED = /^\.claude\/(?:skills\/conventional-commits\/|rules\/|agents\/ste-review\.md$)/;
@@ -44,6 +46,7 @@ export const STATIC_GATE = [
   ['pnpm', 'format:check'],
   ['pnpm', 'lint'],
   ['pnpm', 'check:dep-scripts'],
+  ['pnpm', 'canonical', '--check'],
   ...REPOSITORY_TYPE_CHECKS,
 ];
 
@@ -99,6 +102,7 @@ export function planChecks({ changed, deleted, isNegativeFixture, testsBeside })
   if (linted.length > 0) plan.push(['npx', 'eslint', '--cache', ...linted]);
   const formatted = changed.filter((path) => FORMATTED.test(path));
   if (formatted.length > 0) plan.push(['pnpm', 'exec', 'prettier', '--cache', '--check', ...formatted]);
+  if (linted.some((path) => CANONICAL_ROOT.test(path))) plan.push(['pnpm', 'canonical', '--check']);
   plan.push(...runTests);
 
   const scenes = changed.filter((path) => SCENE.test(path) && !isNegativeFixture(path));

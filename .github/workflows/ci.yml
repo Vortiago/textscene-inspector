@@ -64,6 +64,7 @@ jobs:
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm check:dep-scripts
+      - run: pnpm canonical --check
       # `type-check:all` builds the packages once before the parallel app checks. Each app's
       # `pretype-check` rebuilds core, so four parallel builds would rewrite the dist an app
       # is reading. The test projects and the docs checks read that dist too.
@@ -74,8 +75,6 @@ jobs:
       - run: pnpm docs:index --check
       # After the sheets, which the gallery is assembled from.
       - run: pnpm docs:gallery --check
-      # No other check reads the @canonical tags, so a tag on no export would go unnoticed.
-      - run: pnpm -s canonical > /dev/null
       - run: pnpm fonts:bake --check
       - run: pnpm godot:dfg --check
       - run: pnpm godot:ltc --check
