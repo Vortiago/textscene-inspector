@@ -1,7 +1,7 @@
 /** The one texel copy pass: a placement per draw, and the sRGB transfer a view copy needs. */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { copyTexels, wholeTexels, type TexelTransfer } from './texelCopy';
+import { copyTexels, reversedTexelRows, wholeTexels, type TexelTransfer } from './texelCopy';
 
 /** A renderer that keeps the uniforms and fragment of each pass it draws, read during the draw. */
 function passRecorder() {
@@ -59,5 +59,11 @@ describe('copyTexels', () => {
 
   it('holds no texture once the draw ends', () => {
     expect(copyWith().drawn.pass.uniforms.source!.value).toBeNull();
+  });
+});
+
+describe('reversedTexelRows', () => {
+  it('reads each row from its mirror row, across the whole source', () => {
+    expect(reversedTexelRows(4, 3)).toEqual({ offsetX: 0, offsetY: 2, rowStep: -1, bounds: [0, 0, 4, 3] });
   });
 });
