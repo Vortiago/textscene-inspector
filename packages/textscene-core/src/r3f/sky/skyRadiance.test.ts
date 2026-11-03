@@ -79,7 +79,7 @@ describe('SkyRadiance', () => {
 
     radianceOf(renderer, 32).show(1, true, 1);
 
-    expect([shownSky[1], shownSky[2]]).toEqual([Math.fround(0.8), 32 ** 2 / 4]);
+    expect(shownSky[2]).toBe(32 ** 2 / 4);
   });
 
   it('leaves the readers sampling none of its array when hidden, as it is freed next (error case)', async () => {

@@ -7,7 +7,8 @@
  */
 
 import * as THREE from 'three';
-import { drawFullScreen } from '../../r3f/fullScreenPass.js';
+import { drawFullScreen, releaseTextures, setUniforms } from '../../r3f/fullScreenPass.js';
+import { withMipLevels } from '../../r3f/mipLevels.js';
 import { drawOffscreen } from '../../r3f/offscreen.js';
 import { perObject } from '../../utils/perObject.js';
 import {
@@ -18,12 +19,10 @@ import {
   type SkyRadianceLayout,
 } from '../../godot/rendering/environment/skyReflection.js';
 import { fastFilter } from './fastFilter.js';
-import { withMipLevels } from '../../r3f/mipLevels.js';
 import { importanceSampleFilter } from './importanceSampleFilter.js';
 import type { LayerFilter } from './layerFilter.js';
 import { DOWNSAMPLE_FRAGMENT_SHADER, RADIANCE_OCTMAP_FRAGMENT_SHADER } from './skyLayerShaders.js';
 import { skyPass } from './skyPass.js';
-import { releaseTextures, setUniforms } from '../../r3f/fullScreenPass.js';
 import type { SkyBake } from './types.js';
 
 /**

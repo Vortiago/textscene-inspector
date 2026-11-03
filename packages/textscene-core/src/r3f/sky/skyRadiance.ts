@@ -34,8 +34,8 @@ const { layers: LAYERS, shown: SHOWN, rotation: ROTATION } = SKY_RADIANCE_UNIFOR
 const skyLayersSlot = installedSlot(LAYERS, THREE.DataArrayTexture);
 
 /**
- * The shown sky's `ambient_light_sky_contribution`, its layers' border size, the scale from a
- * squared screen derivative to squared texels and its last mip, then the energy its radiance holds.
+ * The shown sky's `ambient_light_sky_contribution`, its layers' border size and the scale from a
+ * squared screen derivative to squared texels, then the energy its radiance holds.
  * `UniformsUtils.cloneUniforms` keeps a typed array by reference (three r187
  * `UniformsUtils.js:43-64`), so every material reads this buffer. After a dev server reloads this
  * module, it is the buffer the earlier evaluation installed.

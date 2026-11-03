@@ -98,23 +98,17 @@ export class ReflectionBuffers {
     this.samplePrepasses = Array.from({ length: Math.max(1, samples) }, () => prepassTarget(width, height));
     this.resolved = samples > 1 ? resolvedTarget(width, height) : null;
     this.rowsReversed = reversedTexelRows(width, height);
-    this.hiz = withMipLevels(
-      new THREE.WebGLRenderTarget(trace.width, trace.height, {
-        ...DEPTH_LEVEL,
-        minFilter: THREE.NearestMipmapNearestFilter,
-      }),
-      this.mipCount
-    );
+    this.hiz = chainTarget(trace, this.mipCount, {
+      ...DEPTH_LEVEL,
+      minFilter: THREE.NearestMipmapNearestFilter,
+    });
     this.hizLevels = levelTargets(trace.width, trace.height, this.mipCount, DEPTH_LEVEL);
     this.normalRoughness = new THREE.WebGLRenderTarget(trace.width, trace.height, NORMAL_ROUGHNESS);
     this.trace = traceTarget(trace.width, trace.height);
-    this.chain = withMipLevels(
-      new THREE.WebGLRenderTarget(trace.width, trace.height, {
-        ...HALF_FLOAT_LINEAR,
-        minFilter: THREE.LinearMipmapLinearFilter,
-      }),
-      this.mipCount
-    );
+    this.chain = chainTarget(trace, this.mipCount, {
+      ...HALF_FLOAT_LINEAR,
+      minFilter: THREE.LinearMipmapLinearFilter,
+    });
     this.chainLevels = levelTargets(trace.width, trace.height, this.mipCount, HALF_FLOAT_LINEAR);
     this.chainAcross = levelTargets(
       trace.width,
@@ -211,6 +205,15 @@ function traceTarget(width: number, height: number): THREE.WebGLRenderTarget {
   mipLevel.minFilter = THREE.NearestFilter;
   mipLevel.magFilter = THREE.NearestFilter;
   return target;
+}
+
+/** A chain of `mipCount` mips, `size` at mip 0, which a read reaches across its mips. */
+function chainTarget(
+  size: { width: number; height: number },
+  mipCount: number,
+  options: THREE.RenderTargetOptions
+): THREE.WebGLRenderTarget {
+  return withMipLevels(new THREE.WebGLRenderTarget(size.width, size.height, options), mipCount);
 }
 
 /** A target for each mip from 1 of a chain `width` by `height`, each `extraRows` taller than its mip. */
