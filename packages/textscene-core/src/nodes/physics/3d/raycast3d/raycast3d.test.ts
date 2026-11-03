@@ -1,28 +1,28 @@
 /**
- * RayCast3D registration: it is parsed, and it draws nothing on purpose
- * (ADR-0008) rather than for want of an implementation.
+ * RayCast3D registration: it is parsed, and it draws its editor ray gizmo
+ * (ray_cast_3d_gizmo_plugin.cpp:61-69).
  */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { parseNode3D } from '../../../base/node3d/parser';
-import { Node3D } from '../../../base/node3d/Component';
+import { parseRayCast3D } from './parser';
+import { RayCast3D } from './Component';
 import './index';
 import './index.r3f';
 
 describe('RayCast3D registration', () => {
-  it('registers the Node3D base parser', () => {
+  it('registers its own parser', () => {
     const registration = nodeRegistry.getRegistration('RayCast3D');
     expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode3D);
+    expect(registration!.parser).toBe(parseRayCast3D);
   });
 
-  it('reuses the Node3D component so children keep their transform space', () => {
-    expect(nodeComponentRegistry.get('RayCast3D')).toBe(Node3D);
+  it('registers its own component, which keeps children in the Node3D transform space', () => {
+    expect(nodeComponentRegistry.get('RayCast3D')).toBe(RayCast3D);
   });
 
-  it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.renderIntentOf('RayCast3D')).toBe('transform-only');
+  it('registers as a drawing type, not a gap', () => {
+    expect(nodeComponentRegistry.renderIntentOf('RayCast3D')).toBe('draws');
   });
 });

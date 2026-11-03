@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { OmniLight3D } from './Component';
+import { computeWorldBoundingBox } from '../../../../r3f/bounds';
 import type { TscnNode } from '../../../../parser/types';
 import type { OmniLight3DProperties } from './types';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
@@ -155,5 +156,17 @@ describe('<OmniLight3D> shadow fit', () => {
     const renderer = await ReactThreeTestRenderer.create(withFitter(makeNode({ shadow_blur: 3 })));
     renderThrough(renderer);
     expect(instanceAs<THREE.PointLight>(renderer.scene.findByType('PointLight')).shadow.radius).toBe(1);
+  });
+});
+
+describe('<OmniLight3D> selection box', () => {
+  // `Light3D::get_aabb` is the cube of side 2 * range (`light_3d.cpp:161-162`).
+  it.each([5, 2.5])('is the cube round omni_range %s', async (range) => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <OmniLight3D node={makeNode({ omni_range: range })} />
+    );
+    const box = computeWorldBoundingBox(renderer.scene.instance as THREE.Object3D);
+    expect(box.min.toArray()).toEqual([-range, -range, -range]);
+    expect(box.max.toArray()).toEqual([range, range, range]);
   });
 });

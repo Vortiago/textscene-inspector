@@ -22,6 +22,7 @@ import { splitSunOf } from '../../../r3f/directionalShadow/splitSun';
 import '../../../r3f/nodes/index';
 import { advanceFrameWithStubbedGl, withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
+import { liveTargetDrawCount } from '../../../r3f/liveTargets';
 import { instanceAs } from '../../3d/testing/reactThreeTestInstance';
 import { fittedAspect } from '../../3d/camera3d/projectionFit';
 import { useEffect } from 'react';
@@ -397,6 +398,14 @@ size = Vector2i(300, 300)
   it('publishes a target for content with no camera', async () => {
     const { published } = await renderScene(NO_CAMERA_SCENE);
     expect(published()).not.toBeNull();
+  });
+
+  it('counts a draw of both views after each render of its pass', async () => {
+    const { renderer, gl, published } = await renderScene(scene3D());
+    await advanceFrameWithStubbedGl(renderer, gl());
+    await advanceFrameWithStubbedGl(renderer, gl());
+    const views = [published()!.plain.texture, published()!.decoding.texture];
+    expect(views.map(liveTargetDrawCount)).toEqual([2, 2]);
   });
 
   // A render clears only while the renderer's autoClear is on (see `CanvasFrame.render`).

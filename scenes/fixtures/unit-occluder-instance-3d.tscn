@@ -1,3 +1,6 @@
+; An OccluderInstance3D with a box occluder of 2 x 2 x 2, for the one variable no other golden moves:
+; its selection box, which is the get_aabb of the occluder (occluder_instance_3d.cpp:427-432). The node
+; draws nothing else, so only the `select:` golden shows it.
 [gd_scene format=3]
 
 [sub_resource type="BoxOccluder3D" id="BoxOccluder3D_1"]

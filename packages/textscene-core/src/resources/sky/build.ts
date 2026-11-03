@@ -11,7 +11,7 @@ import { warn } from '../../logger';
 import { skyFragmentShader, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight } from './skyUniforms';
 import { releaseView, textureView } from '../textures/textureView';
-import { fillLiveCopy } from '../../r3f/liveTargets';
+import { fillLiveCopy, isLiveTarget } from '../../r3f/liveTargets';
 import { bakeSkyLayers, disposeSkyLayers, type SkyLayers } from './skyLayers';
 import { isDebanded } from './debanding';
 
@@ -41,6 +41,12 @@ export interface SkyEnvironment {
   background: THREE.Texture | null;
   /** Godot's radiance layers, which its ambient, its reflections and the fogs read. */
   layers: SkyLayers;
+  /**
+   * Draws the background again from the panorama's live target, as Godot draws the background
+   * from the sky shader each frame (`sky.cpp:1463`). Absent unless a pass draws the panorama and
+   * the sky paints the background.
+   */
+  redrawBackground?: () => void;
   /** Frees the background and the layers. */
   dispose: () => void;
 }
@@ -102,6 +108,11 @@ export function buildSkyEnvironment(
       ? backgroundTarget
       : cubeTarget(bake.radianceSize);
   const hasOwnRadianceCube = radianceTarget !== backgroundTarget;
+  const freeSkyScene = () => {
+    geometry.dispose();
+    material.dispose();
+    releaseView(panoramaView);
+  };
   let layers: SkyLayers;
 
   try {
@@ -113,24 +124,44 @@ export function buildSkyEnvironment(
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);
     backgroundTarget?.dispose();
+    freeSkyScene();
     return null;
   } finally {
-    // The sky scene renders once, so its mesh and panorama are freed here and
-    // not held for the environment's lifetime. A radiance cube of its own
-    // has served the layers by now.
+    // A radiance cube of its own has served the layers by now.
     if (hasOwnRadianceCube) radianceTarget.dispose();
-    geometry.dispose();
-    material.dispose();
-    releaseView(panoramaView);
   }
 
+  // The sky scene of a live background stays, since each redraw renders it again. Any other sky
+  // scene renders once, so it is freed now and not held for the environment's lifetime.
+  const redrawBackground =
+    backgroundTarget && panorama && panoramaView && isLiveTarget(panorama)
+      ? backgroundRedraw(gl, skyScene, panorama, panoramaView, backgroundTarget)
+      : undefined;
+  if (!redrawBackground) freeSkyScene();
   return {
     background: backgroundTarget?.texture ?? null,
     layers,
+    redrawBackground,
     dispose: () => {
       backgroundTarget?.dispose();
       disposeSkyLayers(layers);
+      if (redrawBackground) freeSkyScene();
     },
+  };
+}
+
+/** Renders `skyScene` into `target` again from the live `panorama`'s copy, through one cube camera. */
+function backgroundRedraw(
+  gl: THREE.WebGLRenderer,
+  skyScene: THREE.Scene,
+  panorama: THREE.Texture,
+  panoramaView: THREE.Texture,
+  target: THREE.WebGLCubeRenderTarget
+): () => void {
+  const camera = cubeCamera(target);
+  return () => {
+    fillLiveCopy(panorama, panoramaView, gl);
+    camera.update(gl, skyScene);
   };
 }
 
@@ -158,5 +189,9 @@ function cubeTarget(size: number): THREE.WebGLCubeRenderTarget {
 }
 
 function renderCube(gl: THREE.WebGLRenderer, scene: THREE.Scene, target: THREE.WebGLCubeRenderTarget): void {
-  new THREE.CubeCamera(0.1, 10, target).update(gl, scene);
+  cubeCamera(target).update(gl, scene);
+}
+
+function cubeCamera(target: THREE.WebGLCubeRenderTarget): THREE.CubeCamera {
+  return new THREE.CubeCamera(0.1, 10, target);
 }

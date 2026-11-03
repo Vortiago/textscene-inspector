@@ -6,6 +6,7 @@ import type { Sky } from './types';
 import { testRenderer } from '../../testing/recordingWebGL';
 import { debandingDrawnBy } from './skyLayers.testkit';
 import { publishLiveTargets } from '../../r3f/liveTargets';
+import { publishedCanvasTarget } from '../../r3f/liveTargets.testkit';
 import { createCanvasTarget } from '../../nodes/viewport/subviewport/offscreenViewport';
 
 /** A sky of `materialType` with every property at Godot's default. */
@@ -229,5 +230,41 @@ describe('buildSkyEnvironment panorama wiring', () => {
     expect(sampled).toBe(shared);
     env!.dispose();
     expect(disposed).not.toHaveBeenCalled();
+  });
+});
+
+describe('buildSkyEnvironment over a live panorama', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** Builds a panorama sky over `panorama`, and answers it with the cube targets each render drew. */
+  async function buildOver(panorama: THREE.Texture) {
+    const { renderer } = await testRenderer();
+    const drawnCubes: THREE.WebGLCubeRenderTarget[] = [];
+    vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation(function (this: THREE.CubeCamera) {
+      drawnCubes.push(this.renderTarget);
+    });
+    const env = buildSkyEnvironment(renderer, {
+      sky: defaultSky('PanoramaSkyMaterial'),
+      lights: [],
+      panorama,
+      asBackground: true,
+      energy: 1,
+    });
+    return { env: env!, drawnCubes };
+  }
+
+  it('draws the background again from the target, and only the background', async () => {
+    const { env, drawnCubes } = await buildOver(publishedCanvasTarget(8, 4));
+    const background = drawnCubes[0]!;
+    drawnCubes.length = 0;
+    env.redrawBackground!();
+    expect(drawnCubes).toEqual([background]);
+  });
+
+  it('offers no redraw over a panorama no pass draws', async () => {
+    const { env } = await buildOver(new THREE.Texture());
+    expect(env.redrawBackground).toBeUndefined();
   });
 });

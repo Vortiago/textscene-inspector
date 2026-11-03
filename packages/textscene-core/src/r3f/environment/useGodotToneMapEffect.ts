@@ -6,13 +6,11 @@
 
 import { useEffect, useMemo } from 'react';
 import type * as THREE from 'three';
-import { samplesGlowMap, type GlowParams } from '../../resources/environment/godotGlow';
+import type { GlowParams } from '../../resources/environment/godotGlow';
 import type { EnvironmentAdjustments, EnvironmentSettings } from '../../resources/environment/types';
 import type { AutoExposure } from '../../resources/cameraattributes/types';
-import { useTexture2D } from '../../resources/useTexture2D';
 import { projectGlowUsesBicubicUpscale } from '../../parser/projectSettingsParser';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
-import type { SceneResources } from '../SceneResourcesContext';
 import { useTextureView } from '../useTextureView';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { GLOW_MAP_SAMPLER, GodotToneMapEffect } from './GodotToneMapEffect';
@@ -29,16 +27,15 @@ export interface ToneMapEffectInputs {
   transparentBackground: boolean;
   /** The viewport's `use_debanding`. */
   usesDebanding: boolean;
-  /** The pools `glow_map` resolves in: those of the Environment that names it. */
-  resources: SceneResources;
+  /** The texture `glow_map` names, null while it loads and when the composite samples no map. */
+  glowMap: THREE.Texture | null;
 }
 
 /** The effect for `inputs`, rebuilt when one changes. The hook owns the effect and disposes it. */
 export function useGodotToneMapEffect(inputs: ToneMapEffectInputs): GodotToneMapEffect {
-  const { glow, adjustments, toneMapping, autoExposure, transparentBackground, usesDebanding, resources } =
-    inputs;
+  const { glow, adjustments, toneMapping, autoExposure, transparentBackground, usesDebanding } = inputs;
   const { mode, white, exposure, agxContrast } = toneMapping;
-  const glowMap = useGlowMap(glow, resources);
+  const glowMap = useTextureView(inputs.glowMap, GLOW_MAP_SAMPLER);
   const usesBicubicGlowUpscale = projectGlowUsesBicubicUpscale(useProjectSettings().settings);
 
   const effect = useMemo(
@@ -73,14 +70,4 @@ export function useGodotToneMapEffect(inputs: ToneMapEffectInputs): GodotToneMap
     else effect.clearGlowMap();
   }, [effect, glowMap]);
   return effect;
-}
-
-/**
- * The glow map's sampled view, or null while it loads and when the composite samples no map, so
- * an unsampled map never loads.
- */
-function useGlowMap(glow: GlowParams | null, resources: SceneResources): THREE.Texture | null {
-  const ref = glow && samplesGlowMap(glow) ? glow.map : undefined;
-  const loaded = useTexture2D(ref, resources.externalResources, resources.internalResources).texture;
-  return useTextureView(loaded, GLOW_MAP_SAMPLER);
 }

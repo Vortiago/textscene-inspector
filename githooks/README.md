@@ -26,8 +26,10 @@ again.
 
 A change to the toolchain (`package.json`, the lockfile, a `tsconfig`, a vitest, eslint or
 Prettier config, or a hook) runs the static checks over the whole repository: `format:check`,
-`lint`, `check:dep-scripts`, `type-check:all` and `type-check:tests`. It still runs the tests
-beside the pushed files. A push that changes only files no check reads runs nothing.
+`lint`, `check:dep-scripts`, `canonical --check`, `type-check:all` and `type-check:tests`. It still
+runs the tests beside the pushed files. A push that changes code under a package's `src/` or under
+`scripts/` runs `canonical --check`, which fails on a `@canonical` tag that is on no export. A push
+that changes only files no check reads runs nothing.
 `FULL_VALIDATE=1 git push` runs the full `pnpm validate`.
 
 The hook stops at the first check that fails. Below the tool's output, it prints the command that

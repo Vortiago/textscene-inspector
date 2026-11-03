@@ -18,6 +18,9 @@ export const CMP_EPSILON = 0.00001;
 /** `UNIT_EPSILON` (`math_defs.h:65`), the tolerance of `Vector3::is_normalized` in an official build. */
 export const UNIT_EPSILON = 0.001;
 
+/** `Math::PI` (`math_defs.h:44`): the double the engine's gizmo loops multiply by, narrowing at the rotated() call. */
+export const REAL_PI = Math.PI;
+
 /** The times of the key after, the key before and the key past the next, counted from a key. */
 export interface KeyTimes {
   toT: number;

@@ -29,7 +29,6 @@ import {
 } from './worldExposure';
 import { createWorldGroup, type WorldResolution } from './worldGroup';
 import { PassToneMapProvider } from './passToneMap';
-import { NO_RESOURCES, type SceneResources } from '../SceneResourcesContext';
 import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
 import { useSceneShadowFit } from '../SceneShadowFitter';
 import { useSceneDepthPrepass } from '../depthPrepass/SceneDepthPrepass';
@@ -37,9 +36,10 @@ import { CanvasWorldContext, type CanvasWorld } from './canvasWorldScene';
 import { identityKey } from '../../utils/identityKey';
 import { useOwnEnvironment } from './sceneEnvironment';
 
-/** A resolved Environment: what its layer draws, and the pools its own references, such as `glow_map`, resolve in. */
+/** A resolved Environment: what its layer draws, and the glow map its tonemap pass scales by. */
 export interface ResolvedEnvironment extends EnvironmentLayerProps {
-  resources: SceneResources;
+  /** The texture `glow_map` names, resolved by the node that holds the Environment. */
+  glowMap: THREE.Texture | null;
 }
 
 /** What a WorldEnvironment's `environment` resolves to, when it holds a valid one. */
@@ -166,7 +166,7 @@ function RootEnvironment({ children }: { children: ReactNode }) {
   const own = !chosen && preview.environment ? previewEnvironment() : resolvedEnvironment(chosen);
   return (
     <WorldOwnEnvironmentContext.Provider value={own}>
-      <PassToneMapProvider settings={shown?.settings ?? null} resources={shown?.resources ?? NO_RESOURCES}>
+      <PassToneMapProvider settings={shown?.settings ?? null} glowMap={shown?.glowMap ?? null}>
         {draws3D && <Compositor />}
         <RootEnvironmentLayer authored={authored} showsPreview={showsPreview} />
         <DrawnEnvironments shown={shown} own={own} />
@@ -215,7 +215,7 @@ function SubViewportEnvironment({ children }: { children: ReactNode }) {
 export function ViewportPassEnvironment({ children }: { children: ReactNode }) {
   const drawn = passEnvironmentOf(usePassCameraEnvironment(), useContext(WorldOwnEnvironmentContext));
   return (
-    <PassToneMapProvider settings={drawn?.settings ?? null} resources={drawn?.resources ?? NO_RESOURCES}>
+    <PassToneMapProvider settings={drawn?.settings ?? null} glowMap={drawn?.glowMap ?? null}>
       {children}
     </PassToneMapProvider>
   );

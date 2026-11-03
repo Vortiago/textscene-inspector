@@ -27,6 +27,11 @@ export function centredAabb(size: AabbCorner): Aabb {
   return { position: { x: -size.x / 2, y: -size.y / 2, z: -size.z / 2 }, size };
 }
 
+/** `AABB(Vector3(-1, -1, -1) * half, Vector3(2, 2, 2) * half)`: the cube round the origin, as the sphere and omni nodes build it. */
+export function cubeAabb(half: number): Aabb {
+  return centredAabb({ x: 2 * half, y: 2 * half, z: 2 * half });
+}
+
 /** `AABB::get_center` (`core/math/aabb.h:131-133`): the middle of the box. */
 export function aabbCenter({ position, size }: Aabb): AabbCorner {
   return { x: position.x + size.x * 0.5, y: position.y + size.y * 0.5, z: position.z + size.z * 0.5 };

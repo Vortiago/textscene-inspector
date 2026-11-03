@@ -14,6 +14,8 @@ import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { GizmoScene } from '../../../../r3f/testing/GizmoScene';
 import {
   describeGizmoToggle,
+  describeSelectionBox,
+  expectSelectionBox,
   describeInstantiatedGizmo,
   type GizmoNodeCase,
 } from '../../../../r3f/testing/gizmoContract';
@@ -89,6 +91,7 @@ describe.each([...COLLISION_BOXES, ...ATTRACTOR_BOXES, ...SPHERES, SDF])('<%s> g
   };
   describeGizmoToggle(`<${type}>`, gizmoCase);
   describeInstantiatedGizmo(`<${type}>`, gizmoCase);
+  describeSelectionBox(`<${type}>`, gizmoCase, { min: [-1, -1, -1], max: [1, 1, 1] });
 
   it('keeps its children in the node transform, selected or not', async () => {
     for (const selected of [null, 'Volume']) {
@@ -96,6 +99,31 @@ describe.each([...COLLISION_BOXES, ...ATTRACTOR_BOXES, ...SPHERES, SDF])('<%s> g
       const group = renderer.scene.findByProps({ name: 'Volume' });
       expect(group.children.map((child) => child.props.name)).toContain('Child');
     }
+  });
+});
+
+describe('selection box', () => {
+  // Measured in Godot 4.6.3: a sphere of radius 2.5 gives (-2.5, -2.5, -2.5, 5, 5, 5), a box of
+  // size (3, 4, 5) gives (-1.5, -2, -2.5, 3, 4, 5) and an SDF of size (6, 2, 4) gives (-3, -1, -2, 6, 2, 4).
+  it.each(SPHERES)('<%s> is the cube round its radius', async (type) => {
+    expectSelectionBox(await render(type, { props: { radius: '2.5' }, selectedPath: null }), {
+      min: [-2.5, -2.5, -2.5],
+      max: [2.5, 2.5, 2.5],
+    });
+  });
+
+  it.each([...COLLISION_BOXES, ...ATTRACTOR_BOXES])('<%s> is the box of its size', async (type) => {
+    expectSelectionBox(await render(type, { props: { size: 'Vector3(3, 4, 5)' }, selectedPath: null }), {
+      min: [-1.5, -2, -2.5],
+      max: [1.5, 2, 2.5],
+    });
+  });
+
+  it(`<${SDF}> is the box of its size`, async () => {
+    expectSelectionBox(await render(SDF, { props: { size: 'Vector3(6, 2, 4)' }, selectedPath: null }), {
+      min: [-3, -1, -2],
+      max: [3, 1, 2],
+    });
   });
 });
 

@@ -4,7 +4,11 @@
  * tree, so every case mounts the whole scene.
  */
 import { describe, expect, it } from 'vitest';
-import { describeGizmoToggle, describeInstantiatedGizmo } from '../../../../r3f/testing/gizmoContract';
+import {
+  describeGizmoToggle,
+  describeSelectionBox,
+  describeInstantiatedGizmo,
+} from '../../../../r3f/testing/gizmoContract';
 import {
   BOTH_BODIES,
   drawnLines,
@@ -58,3 +62,4 @@ describeJointBodyGating('<PinJoint3D>', 'PinJoint3D', {
 const GIZMO_CASE = jointGizmoCase('PinJoint3D', {});
 describeGizmoToggle('<PinJoint3D>', GIZMO_CASE);
 describeInstantiatedGizmo('<PinJoint3D>', GIZMO_CASE);
+describeSelectionBox('<PinJoint3D>', GIZMO_CASE, null);

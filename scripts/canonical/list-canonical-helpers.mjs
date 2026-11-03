@@ -1,7 +1,8 @@
 /**
  * Prints the shared helpers of the repo, one job a line, from the `@canonical` tags in the `src/` of
  * every workspace package and in `scripts/`. The list lives only here, so it never goes stale: pipe
- * it to grep to find a helper for a job.
+ * it to grep to find a helper for a job. `--check` reads every tag and prints nothing, so it fails
+ * only on a tag that is on no export or has no job.
  */
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -23,4 +24,5 @@ function taggedEntries() {
     .flatMap(([path, text]) => canonicalEntries(text, path));
 }
 
-process.stdout.write(renderCanonicalList(taggedEntries()));
+const entries = taggedEntries();
+if (!process.argv.includes('--check')) process.stdout.write(renderCanonicalList(entries));

@@ -12,6 +12,7 @@ import { parseColorToHex } from '../../../../utils/colorParser';
 import { godotConePenumbra } from '../../../../r3f/godotLightAttenuation';
 import { degToRad } from '../../../../godot/math/math.js';
 import { spotShadowBias } from '../shared/shadowBias';
+import { spotLight3DAabb } from '../../../../godot/scene/light';
 import { LightWithTarget } from '../shared/lightShared';
 import { SpotLightGizmo } from '../shared/lightHelpers';
 import { positionalLightRange, usePositionalLight } from '../shared/positionalLight';
@@ -23,6 +24,10 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
   const color = parseColorToHex(properties.light_color);
   const { distance, shadowNear, shadowFar } = positionalLightRange(properties.spot_range);
   const angleRadians = degToRad(properties.spot_angle);
+  const aabb = useMemo(
+    () => spotLight3DAabb(properties.spot_range, properties.spot_angle),
+    [properties.spot_range, properties.spot_angle]
+  );
   // `spot_attenuation` is Godot's distance falloff exponent, which three calls decay.
   const decay = properties.spot_attenuation;
   const penumbra = godotConePenumbra(angleRadians, properties.spot_angle_attenuation);
@@ -36,6 +41,7 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
     <LightWithTarget
       name={node.name}
       transform={transform}
+      aabb={aabb}
       renderLight={(target) => (
         <>
           <spotLight

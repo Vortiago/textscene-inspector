@@ -6,7 +6,9 @@
  */
 import * as THREE from 'three';
 import { godotMatrixWorld } from '../resources/formats/glb/skinnedMeshSpace';
-import { isNodeIcon } from './editorHelpers';
+import { hasSurface, type Aabb } from '../godot/math/aabb';
+import { copyAabb } from './visibilityRange/placements';
+import { isEditorHelper, isNodeIcon } from './editorHelpers';
 
 const _box = /*@__PURE__*/ new THREE.Box3();
 const _matrix = /*@__PURE__*/ new THREE.Matrix4();
@@ -24,9 +26,11 @@ interface BoundsBearing extends THREE.Object3D {
 }
 
 /**
- * Union of every descendant's world-space box, after a refresh of the world
- * matrices. Returns an empty box when no descendant has geometry. A node icon adds nothing: its size
- * follows the camera, so it has no place in the scene.
+ * Union of every descendant's world-space box, after a refresh of the world matrices: the drawn
+ * geometry and the explicit AABB of a node ({@link godotAabbUserData}). Returns an empty box when
+ * there is none. Editor chrome adds nothing, as the selection box of Godot unions `get_aabb` alone
+ * (`node_3d_editor_plugin.cpp:5029-5065`). A node icon adds nothing either: its size follows the
+ * camera, so it has no place in the scene.
  */
 export function computeWorldBoundingBox(
   object: THREE.Object3D,
@@ -47,7 +51,7 @@ function unionSubtree(
 ): void {
   unionOwnBox(object, target);
   for (const child of object.children) {
-    if (!skipsSubtree?.(child)) unionSubtree(child, target, skipsSubtree);
+    if (!isEditorHelper(child) && !skipsSubtree?.(child)) unionSubtree(child, target, skipsSubtree);
   }
 }
 
@@ -63,7 +67,28 @@ export function boxlessUserData(): { godotBoxless: true } {
   return { [BOXLESS_KEY]: true };
 }
 
+const AABB_KEY = 'godotAabb';
+
+/**
+ * The userData of an object that stands for the `get_aabb` of its node, in the node's space. A node
+ * with a box and no drawn geometry of that size, such as a Decal, mounts it.
+ */
+export function godotAabbUserData(aabb: Aabb): { godotAabb: Aabb } {
+  return { [AABB_KEY]: aabb };
+}
+
+function unionExplicitBox(object: THREE.Object3D, aabb: Aabb, target: THREE.Box3): void {
+  if (!hasSurface(aabb.size)) return;
+  copyAabb(_box, aabb);
+  target.union(_box.applyMatrix4(object.matrixWorld));
+}
+
 function unionOwnBox(object: THREE.Object3D, target: THREE.Box3): void {
+  const explicit = object.userData[AABB_KEY] as Aabb | undefined;
+  if (explicit) {
+    unionExplicitBox(object, explicit, target);
+    return;
+  }
   const bearing = object as BoundsBearing;
   const geometry = bearing.geometry;
   if (!geometry || isNodeIcon(object) || object.userData[BOXLESS_KEY] === true) return;
