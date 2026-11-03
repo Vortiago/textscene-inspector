@@ -35,7 +35,6 @@ const DEFAULT_NORMAL_INCLUDE = /#include <defaultnormal_vertex>/g;
 /**
  * Godot's billboard turns normals by `mat3(MODELVIEW_MATRIX)` (`material.cpp:1284,1307,1338`), not
  * by its inverse transpose, so a kept non-uniform scale stretches them as it stretches the surface.
- * The unshaded parallax adds a second include, so every include turns.
  */
 const BILLBOARD_NORMAL: ProgramInjection = {
   cacheKey: 'godot-billboard-normal',

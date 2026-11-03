@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotDecals } from './decalShaderChunk';
 import { DECAL_UNIFORMS, decalAtlasSlot, shownDecals } from './decalSlots';
+import { UNLIT_NORMAL_VARYING, UNLIT_VIEW_VARYING } from '../shaderPatch/unlitVaryings';
 import { warningsOf } from '../testing/logWarnings';
 import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 
@@ -82,13 +83,13 @@ describe('installGodotDecals', () => {
     expect(fragment).toContain('GodotDecalSurface( diffuseColor.rgb )');
   });
 
-  it('has the unlit vertex hand on the view position and the normal of every surface', () => {
+  it('mixes the unlit decals on the shared view position and normal', () => {
     installGodotDecals();
-    const vertex = THREE.ShaderLib.basic.vertexShader;
 
-    expect(vertex).toContain('vGodotDecalView = mvPosition.xyz;');
-    expect(vertex).toContain('vGodotDecalNormal = transformedNormal;');
-    expect(vertex).not.toContain('#if defined ( USE_ENVMAP ) || defined ( USE_SKINNING )');
+    expect(THREE.ShaderLib.basic.fragmentShader).toContain(
+      `godotApplyDecals( godotDecalSurface, ${UNLIT_VIEW_VARYING}, ${UNLIT_NORMAL_VARYING} * godotDecalFace );`
+    );
+    expect(THREE.ShaderLib.basic.vertexShader).toContain(`${UNLIT_NORMAL_VARYING} = transformedNormal;`);
   });
 
   it('gives every program with fog the atlas and the shown decals', () => {

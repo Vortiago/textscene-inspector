@@ -8,6 +8,7 @@ import {
   type DepthFog,
   type EnvironmentProperties,
   type EnvironmentSettings,
+  type ScreenSpaceReflection,
   type VolumetricFog,
 } from './types';
 import { scaledRgb } from '../../utils/colorParser';
@@ -54,6 +55,7 @@ export function createEnvironmentSettings(
     fog: properties.fog_enabled ? depthFogFor(properties) : null,
     skyRotation: properties.sky_rotation,
     volumetricFog: properties.volumetric_fog_enabled ? volumetricFogFor(properties) : null,
+    ssr: properties.ssr_enabled ? ssrFor(properties) : null,
     adjustments: properties.adjustment_enabled ? adjustmentsFor(properties) : null,
     glow: properties.glow_enabled
       ? {
@@ -82,6 +84,15 @@ function adjustmentsFor(properties: EnvironmentProperties): NonNullable<Environm
     brightness: sRGBChannelToLinear(properties.adjustment_brightness),
     contrast: properties.adjustment_contrast,
     saturation: properties.adjustment_saturation,
+  };
+}
+
+function ssrFor(properties: EnvironmentProperties): ScreenSpaceReflection {
+  return {
+    maxSteps: properties.ssr_max_steps,
+    fadeIn: properties.ssr_fade_in,
+    fadeOut: properties.ssr_fade_out,
+    depthTolerance: properties.ssr_depth_tolerance,
   };
 }
 

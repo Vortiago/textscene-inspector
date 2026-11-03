@@ -658,6 +658,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Environment Ssr",
+    "file": "unit-environment-ssr.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Escaped Heading Hud",
     "file": "unit-escaped-heading-hud.tscn",
     "category": "Other"
@@ -2010,6 +2015,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sky Orthographic",
     "file": "unit-sky-orthographic.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Panorama Nearest",
+    "file": "unit-sky-panorama-nearest.tscn",
     "category": "Other"
   },
   {

@@ -31,6 +31,8 @@ export interface PanoramaSkyProperties {
   kind: 'panorama';
   /** An equirectangular Texture2D reference, or undefined for an unset sky. */
   panorama: string | undefined;
+  /** Whether the panorama samples with linear filtering, else nearest (`sky_material.cpp:498-505`). */
+  filter: boolean;
   energy_multiplier: number;
 }
 

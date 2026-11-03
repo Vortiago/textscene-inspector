@@ -604,6 +604,14 @@ _Avoid_: "probe cubemap", "probe bake".
 The array texture that holds every **Reflection probe capture**, one layer per probe, each with its **Radiance layers** as mips.
 _Avoid_: "probe texture", "cube array".
 
+**Screen-space reflection**:
+The Environment's `ssr_*` reflection: each smooth opaque surface traces its mirror direction through the depth of the frame and shows the colour of the **last frame** where the ray lands.
+_Avoid_: "SSR pass", "mirror reflection", which a planar mirror or a **Reflection probe capture** gives.
+
+**Last frame**:
+The finished colour of a world buffer's last render, which the next **screen-space reflection** reads, so a still scene shows its reflection from the second frame on.
+_Avoid_: "previous frame", "frame before", "history buffer".
+
 **Depth fog**:
 The Environment's `fog_*` fog, which fades a surface towards the fog colour with its distance from the camera.
 _Avoid_: "screen-space fog". Bare "fog" where **volumetric fog** is on too.

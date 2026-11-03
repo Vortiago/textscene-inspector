@@ -115,6 +115,22 @@ describe('materialFor2d side and depth test', () => {
     expect(materialWith({ noDepthTest: false }).depthTest).toBe(true);
     expect(materialWith({ noDepthTest: true }).depthTest).toBe(false);
   });
+
+  // `uses_alpha_pass()` files a surface with no depth test in the alpha pass
+  // (`scene_shader_forward_clustered.h:279-287`), so it draws after the sky.
+  it.each([
+    ['DISCARD', AlphaCutMode.DISCARD],
+    ['HASH', AlphaCutMode.HASH],
+  ])('draws a %s cut in the alpha pass with no depth test', (_name, alphaCut) => {
+    const { blends } = materialWith({ alphaCut, noDepthTest: true });
+    expect(blends.unfaded).toMatchObject({ transparent: true, depthWrite: false });
+    expect(blends.unfaded.alphaTest > 0 || blends.unfaded.alphaHash).toBe(true);
+  });
+
+  it('draws a Sprite3D with the transparent flag off in the alpha pass with no depth test', () => {
+    const { blends } = materialWith({ transparentFlag: false, noDepthTest: true });
+    expect(blends.unfaded).toMatchObject({ transparent: true, depthWrite: false });
+  });
 });
 
 describe('materialFor2d texture filter', () => {

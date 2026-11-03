@@ -25,6 +25,8 @@ const FREED_OTHERWISE: Record<string, string> = {
     "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
   'r3f/sky/skyRadiance.ts':
     "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
+  'r3f/screenSpaceReflection/ssrUniforms.ts':
+    "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
 };
 
 /** Every non-test `.ts` and `.tsx` file under `dir`, relative to `srcDir`. */

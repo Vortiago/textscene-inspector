@@ -23,6 +23,10 @@ import {
   opaquePrepassOf,
 } from '../../../r3f/materials/opaquePrepass';
 import { materialFromBag } from './build';
+import {
+  UNSHADED_ROUGHNESS,
+  unshadedRoughnessUserData,
+} from '../../../r3f/screenSpaceReflection/unshadedRoughness';
 import { standardMaterial } from './testing/standardMaterial';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { parseStandardMaterial3DScalars } from './scalars';
@@ -201,6 +205,18 @@ describe('standardMaterialBags — texture slots', () => {
     const derived = bag({ shading_mode: '0' }, { albedo_texture: texture, normal_texture: texture });
     expect(derived.props.map).toBe(texture);
     expect(derived.props).not.toHaveProperty('normalMap');
+  });
+
+  it("gives an unshaded material the roughness and roughness map Godot's prepass writes", () => {
+    const derived = bag({ shading_mode: '0', roughness: '0.3' }, { roughness_texture: texture });
+
+    expect((derived.props as THREE.MeshBasicMaterialParameters).specularMap).toBe(texture);
+    expect(derived.injection?.cacheKey).toContain(UNSHADED_ROUGHNESS.cacheKey);
+    expect(derived.props.userData).toMatchObject(unshadedRoughnessUserData(0.3));
+  });
+
+  it("patches nothing for an unshaded material at Godot's default roughness and no roughness map", () => {
+    expect(bag({ shading_mode: '0' }).injection).toBeUndefined();
   });
 
   it('shifts an unshaded material by its heightmap, as Godot does', () => {
