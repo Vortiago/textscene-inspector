@@ -11,7 +11,6 @@ import { WorldKindProvider } from './WorldKindContext';
 import { WorldExposureScope, usePublishCameraAttributes } from './worldExposure';
 import { drawAtExposure } from '../exposure/sceneExposure';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
-import { NO_RESOURCES } from '../SceneResourcesContext';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { textureTexel } from '../testing/backgroundTexel';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
@@ -34,11 +33,7 @@ function layer(properties: Record<string, string>, multiplier: number | null) {
       <WorldKindProvider world="subViewport">
         <WorldExposureScope>
           {multiplier !== null && <Exposure multiplier={multiplier} />}
-          <EnvironmentLayer
-            settings={environmentSettingsOf(properties)}
-            sky={null}
-            skyResources={NO_RESOURCES}
-          />
+          <EnvironmentLayer settings={environmentSettingsOf(properties)} sky={null} panorama={null} />
         </WorldExposureScope>
       </WorldKindProvider>
     </ViewportModeProvider>

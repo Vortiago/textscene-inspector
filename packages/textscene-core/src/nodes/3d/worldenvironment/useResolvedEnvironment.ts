@@ -1,6 +1,7 @@
 /**
- * Resolves `WorldEnvironment.environment` → `Environment.sky` → `Sky.sky_material`, in the
- * `SubResource` or the `ExtResource` form at every level, as Godot does. A lost sky also loses the
+ * Resolves `WorldEnvironment.environment` or `Camera3D.environment` → `Environment.sky` →
+ * `Sky.sky_material`, in the `SubResource` or the `ExtResource` form at every level, as Godot does,
+ * and the Environment's Texture2D slots under the node that holds it. A lost sky also loses the
  * ambient an Environment draws from it, so surfaces the sun does not reach go black.
  */
 
@@ -16,6 +17,8 @@ import { decodeSky, decodeSkyMaterial, skyMaterialRef } from '../../../resources
 import type { TscnInternalResource } from '../../../parser/types';
 import type { Sky } from '../../../resources/sky/types';
 import { perObject } from '../../../utils/perObject';
+import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene';
+import { useGlowMap, usePanorama } from './environmentTextures';
 
 /**
  * One `Sky` for each Sky resource and material, whichever Environment or camera resolves it, as
@@ -51,7 +54,6 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Envi
   const materialRef = skyMaterialRef(skyResource?.resource.type, skyResource?.resource.data);
   const scopedMaterial = useSubOrExtResource(materialRef, skyResource?.resources ?? NO_RESOURCES);
   const material = scopedMaterial?.resource;
-  const skyResources = scopedMaterial?.resources ?? NO_RESOURCES;
 
   const skyOwner = skyResource?.resource;
   const sky = skyOwner && material ? skyOf(skyOwner)(material) : null;
@@ -64,12 +66,15 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Envi
     [envProps, clearColor]
   );
 
+  const isSkyHeldLocally = [environment?.resource, skyOwner].every(
+    (holder) => !!holder && isLocalToScene(holder)
+  );
+  const panorama = usePanorama(sky, scopedMaterial, isSkyHeldLocally);
+  const glowMap = useGlowMap(settings, environment);
+
   return useMemo((): EnvironmentResolution => {
     if (status === 'pending') return PENDING_RESOLUTION;
     if (!settings || !environment) return NO_RESOLUTION;
-    return {
-      status: 'resolved',
-      environment: { settings, sky, resources: environment.resources, skyResources },
-    };
-  }, [status, settings, environment, sky, skyResources]);
+    return { status: 'resolved', environment: { settings, sky, panorama, glowMap } };
+  }, [status, settings, environment, sky, panorama, glowMap]);
 }

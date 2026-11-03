@@ -28,25 +28,28 @@ interface LiveCopy {
 
 /**
  * A target's publishers, the copies it fills in the order they were made, the renderer that
- * holds its texels, null for one no renderer draws, and whether its image keeps alpha.
+ * holds its texels, null for one no renderer draws, whether its image keeps alpha, and how many
+ * times its pass has drawn it.
  */
 interface LiveTarget {
   publishers: number;
   readonly copies: Set<LiveCopy>;
   renderer: THREE.WebGLRenderer | null;
   isTransparent: boolean;
+  draws: number;
 }
 
 /**
- * Written by `publishLiveTarget`, its withdrawal and `addCopy`. An entry goes with its texture, and a
- * copy leaves `copies` when it is disposed: by its last holder, or by its target's withdrawal when no
- * reader holds it.
+ * Written by `publishLiveTarget`, its withdrawal, `addCopy` and `noteLiveTargetsDrawn`. An entry
+ * goes with its texture, and a copy leaves `copies` when it is disposed: by its last holder, or by
+ * its target's withdrawal when no reader holds it.
  */
 const liveTargetOf = perObject<THREE.Texture, LiveTarget>(() => ({
   publishers: 0,
   copies: new Set(),
   renderer: null,
   isTransparent: false,
+  draws: 0,
 }));
 
 /**
@@ -100,6 +103,19 @@ function freeUnheldCopies(live: LiveTarget): void {
   for (const copy of [...live.copies]) {
     if (!isHeld(copy.texture)) copy.texture.dispose();
   }
+}
+
+/** Counts a draw of each of `textures`. A target's pass calls it after each render. */
+export function noteLiveTargetsDrawn(textures: readonly THREE.Texture[]): void {
+  for (const texture of textures) liveTargetOf(texture).draws++;
+}
+
+/**
+ * How many times the pass has drawn `texture`. A reader that copies the target once, as a sky bake
+ * does, waits for the first draw and copies again on each later one.
+ */
+export function liveTargetDrawCount(texture: THREE.Texture): number {
+  return liveTargetOf(texture).draws;
 }
 
 /** Whether a pass redraws `texture`, so a reader that samples it differently needs its own copy. */

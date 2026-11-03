@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import * as THREE from 'three';
 import { buildSkyEnvironment } from './build';
 import { decodeSky, decodeSkyMaterial } from './decode';
@@ -229,5 +229,48 @@ describe('buildSkyEnvironment panorama wiring', () => {
     expect(sampled).toBe(shared);
     env!.dispose();
     expect(disposed).not.toHaveBeenCalled();
+  });
+});
+
+describe('buildSkyEnvironment over a live panorama', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** Builds a panorama sky over `panorama`, and answers it with the cube targets each render drew. */
+  async function buildOver(panorama: THREE.Texture) {
+    const { renderer } = await testRenderer();
+    const drawnCubes: THREE.WebGLCubeRenderTarget[] = [];
+    vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation(function (this: THREE.CubeCamera) {
+      drawnCubes.push(this.renderTarget);
+    });
+    const env = buildSkyEnvironment(renderer, {
+      sky: defaultSky('PanoramaSkyMaterial'),
+      lights: [],
+      panorama,
+      asBackground: true,
+      energy: 1,
+    });
+    return { env: env!, drawnCubes };
+  }
+
+  /** A canvas target its pass publishes until the test ends. */
+  function liveTarget(): THREE.Texture {
+    const target = createCanvasTarget(8, 4, 'SubViewport');
+    onTestFinished(publishLiveTargets([target.texture], null, false));
+    return target.texture;
+  }
+
+  it('draws the background again from the target, and only the background', async () => {
+    const { env, drawnCubes } = await buildOver(liveTarget());
+    const background = drawnCubes[0]!;
+    drawnCubes.length = 0;
+    env.redrawBackground!();
+    expect(drawnCubes).toEqual([background]);
+  });
+
+  it('offers no redraw over a panorama no pass draws', async () => {
+    const { env } = await buildOver(new THREE.Texture());
+    expect(env.redrawBackground).toBeUndefined();
   });
 });

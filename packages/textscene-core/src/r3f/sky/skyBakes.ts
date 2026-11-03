@@ -25,6 +25,8 @@ import { SkyRadiance } from './skyRadiance';
 interface BakedSky {
   background: THREE.Texture | null;
   radiance: SkyRadiance;
+  /** Draws the background again from a live panorama, absent for any other. */
+  redrawBackground?: () => void;
   /** Frees the background and the radiance layers. */
   dispose: () => void;
 }
@@ -152,6 +154,11 @@ export class SkyBakes {
     return true;
   }
 
+  /** Draws the background of each bake again, as a live panorama's pass drew it anew. */
+  redrawBackgrounds(): void {
+    for (const baked of this.bakes.values()) baked?.redrawBackground?.();
+  }
+
   dispose(): void {
     for (const baked of this.bakes.values()) free(baked);
     this.onDispose();
@@ -198,7 +205,8 @@ function bakeSky(gl: THREE.WebGLRenderer, input: SkyBakeInput, exposure: number)
   const built = buildSkyEnvironment(gl, { ...sky, lights: exposed(lights, exposure), energy });
   if (!built) return null;
   const radiance = new SkyRadiance(gl, built.layers, rotation);
-  return { background: built.background, radiance, dispose: built.dispose };
+  const { background, redrawBackground, dispose } = built;
+  return { background, radiance, ...(redrawBackground && { redrawBackground }), dispose };
 }
 
 function exposed(lights: readonly SkyLight[], exposure: number): SkyLight[] {

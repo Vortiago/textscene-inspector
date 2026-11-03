@@ -11,7 +11,7 @@ import { warn } from '../../logger';
 import { skyFragmentShader, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight } from './skyUniforms';
 import { releaseView, textureView } from '../textures/textureView';
-import { fillLiveCopy } from '../../r3f/liveTargets';
+import { fillLiveCopy, isLiveTarget } from '../../r3f/liveTargets';
 import { bakeSkyLayers, disposeSkyLayers, type SkyLayers } from './skyLayers';
 import { isDebanded } from './debanding';
 
@@ -41,6 +41,12 @@ export interface SkyEnvironment {
   background: THREE.Texture | null;
   /** Godot's radiance layers, which its ambient, its reflections and the fogs read. */
   layers: SkyLayers;
+  /**
+   * Draws the background again from the panorama's live target, as Godot draws the background
+   * from the sky shader each frame (`sky.cpp:1463`). Absent unless a pass draws the panorama and
+   * the sky paints the background.
+   */
+  redrawBackground?: () => void;
   /** Frees the background and the layers. */
   dispose: () => void;
 }
@@ -102,6 +108,13 @@ export function buildSkyEnvironment(
       ? backgroundTarget
       : cubeTarget(bake.radianceSize);
   const hasOwnRadianceCube = radianceTarget !== backgroundTarget;
+  // The sky scene of a live background stays, since each redraw renders it again.
+  const isLiveBackground = !!backgroundTarget && !!panorama && isLiveTarget(panorama);
+  const freeSkyScene = () => {
+    geometry.dispose();
+    material.dispose();
+    releaseView(panoramaView);
+  };
   let layers: SkyLayers;
 
   try {
@@ -113,23 +126,30 @@ export function buildSkyEnvironment(
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);
     backgroundTarget?.dispose();
+    if (isLiveBackground) freeSkyScene();
     return null;
   } finally {
-    // The sky scene renders once, so its mesh and panorama are freed here and
-    // not held for the environment's lifetime. A radiance cube of its own
-    // has served the layers by now.
+    // A radiance cube of its own has served the layers by now. Any other sky scene renders once,
+    // so it is freed here and not held for the environment's lifetime.
     if (hasOwnRadianceCube) radianceTarget.dispose();
-    geometry.dispose();
-    material.dispose();
-    releaseView(panoramaView);
+    if (!isLiveBackground) freeSkyScene();
   }
 
+  const redrawBackground =
+    isLiveBackground && panoramaView
+      ? () => {
+          fillLiveCopy(panorama, panoramaView, gl);
+          renderCube(gl, skyScene, backgroundTarget);
+        }
+      : undefined;
   return {
     background: backgroundTarget?.texture ?? null,
     layers,
+    ...(redrawBackground && { redrawBackground }),
     dispose: () => {
       backgroundTarget?.dispose();
       disposeSkyLayers(layers);
+      if (isLiveBackground) freeSkyScene();
     },
   };
 }

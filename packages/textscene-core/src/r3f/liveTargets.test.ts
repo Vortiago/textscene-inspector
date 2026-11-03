@@ -5,7 +5,14 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { fillLiveCopy, liveTargetCrop, publishLiveTargets, unrenderedTexel } from './liveTargets';
+import {
+  fillLiveCopy,
+  liveTargetCrop,
+  liveTargetDrawCount,
+  noteLiveTargetsDrawn,
+  publishLiveTargets,
+  unrenderedTexel,
+} from './liveTargets';
 import { ownedTextureView, releaseView, textureView } from '../resources/textures/textureView';
 import { createCanvasTarget, createSceneTarget } from '../nodes/viewport/subviewport/offscreenViewport';
 import { copiesFilledFrom, recordingRenderer } from './liveTargets.testkit';
@@ -308,5 +315,18 @@ describe('unrenderedTexel', () => {
     withdrawOpaque();
     expect(unrenderedTexel(crop)).toEqual([0, 0, 0, 0]);
     crop.dispose();
+  });
+});
+
+describe('liveTargetDrawCount', () => {
+  it('is 0 for a live target its pass has not drawn yet', () => {
+    expect(liveTargetDrawCount(liveCanvasTarget().texture)).toBe(0);
+  });
+
+  it('counts each draw its pass notes', () => {
+    const target = liveCanvasTarget();
+    noteLiveTargetsDrawn([target.texture]);
+    noteLiveTargetsDrawn([target.texture]);
+    expect(liveTargetDrawCount(target.texture)).toBe(2);
   });
 });

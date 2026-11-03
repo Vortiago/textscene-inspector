@@ -17,7 +17,6 @@ import { environmentSettingsOf } from '../../resources/environment/testing/envir
 import type { EnvironmentSettings } from '../../resources/environment/types';
 import type { AutoExposure } from '../../resources/cameraattributes/types';
 import { LUMINANCE_UNIFORM } from '../../resources/environment/godotLuminance';
-import { NO_RESOURCES } from '../SceneResourcesContext';
 import { withProject } from '../testing/ProjectFixture';
 import { withStubbedGl } from '../testing/stubbedGl';
 import { CaptureRenderer } from '../testing/CaptureRenderer';
@@ -66,7 +65,7 @@ async function mount({
       <CaptureRenderer captured={captured} />
       <InWorld>
         <PublishedAutoExposure autoExposure={autoExposure} />
-        <PassToneMapProvider settings={settings} resources={NO_RESOURCES}>
+        <PassToneMapProvider settings={settings} glowMap={null}>
           <Content object={content} />
           <Compositor />
         </PassToneMapProvider>

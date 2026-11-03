@@ -15,8 +15,6 @@ import * as THREE from 'three';
 import { visibleInTree } from '../visibleInTree';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { Sky } from '../../resources/sky/types';
-import { useTexture2D } from '../../resources/useTexture2D';
-import type { SceneResources } from '../SceneResourcesContext';
 import type { SkyLight } from '../../resources/sky/build';
 import { NO_SKY_LIGHTS, noteSkyLights, skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
@@ -34,6 +32,7 @@ import {
   useEnvironmentKey,
 } from '../environment/sceneEnvironment';
 import { debandSky } from './skyDebanding';
+import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
 import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
 
@@ -59,8 +58,8 @@ interface SkyLayerProps {
   asBackground?: boolean;
   /** `sky_rotation`, which turns the background and the light the sky gives. */
   rotation: Vector3;
-  /** The pools the sky material's references, such as a panorama, resolve in. */
-  resources: SceneResources;
+  /** The texture a PanoramaSkyMaterial samples, null for any other sky. */
+  panorama: THREE.Texture | null;
   /** Whether the fog scatters the sun, which reads the lights for any sky (`sky.cpp:1053`). */
   fogScattersSun?: boolean;
 }
@@ -75,7 +74,7 @@ export function SkyLayer({
   reflects = true,
   asBackground = true,
   rotation,
-  resources,
+  panorama,
   fogScattersSun = false,
 }: SkyLayerProps) {
   const gl = useThree((state) => state.gl);
@@ -83,15 +82,6 @@ export function SkyLayer({
   const exposure = useExposureFactor();
   const environment = useEnvironmentKey();
 
-  // The panorama sky samples `source_panorama` as `source_color` (`sky_material.cpp:498`).
-  // Every other sky kind passes `undefined` and the hook idles.
-  const panorama =
-    useTexture2D(
-      sky.material.kind === 'panorama' ? sky.material.panorama : undefined,
-      resources.externalResources,
-      resources.internalResources,
-      'decoding'
-    ).texture ?? null;
   const lightsKey = useSkyLightsKey(scene);
   const contextRestores = useContextRestores(gl);
   const { x: rotationX, y: rotationY, z: rotationZ } = rotation;
@@ -101,9 +91,13 @@ export function SkyLayer({
   const reflectsRef = useRef(reflects);
   reflectsRef.current = reflects;
 
+  const isPanoramaDrawn = useIsPanoramaDrawn(panorama);
+
   // Written only by the effect below, while it holds bakes.
   const bakeWantedRef = useRef<(() => boolean) | null>(null);
+  const redrawRef = useRef<(() => void) | null>(null);
   useFrame(({ invalidate }) => {
+    redrawRef.current?.();
     if (bakeWantedRef.current?.()) invalidate();
   });
 
@@ -111,6 +105,8 @@ export function SkyLayer({
     // No frame has read the lights yet. A bake now would be replaced before it
     // is seen, and each bake costs a six-face cube render and the layer passes.
     if (lightsKey === null) return undefined;
+    // A bake samples the panorama once, so it waits for the pass to draw a live target.
+    if (!isPanoramaDrawn) return undefined;
 
     const lights = directionalLights(scene);
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
@@ -129,6 +125,7 @@ export function SkyLayer({
     }
     let radiance = first;
     bakeWantedRef.current = bakeWantedOf(bakes, () => noteEnvironmentChange(scene, environment));
+    redrawRef.current = panorama && isLiveTarget(panorama) ? redrawOnEachDraw(bakes, panorama) : null;
 
     // A render draws the background live at its own exposure. A surface reads the radiance at the
     // brightness that baked it, times its own exposure and its `background_energy_multiplier`
@@ -183,6 +180,7 @@ export function SkyLayer({
     return () => {
       stopRegistering();
       bakeWantedRef.current = null;
+      redrawRef.current = null;
       release();
     };
   }, [
@@ -194,6 +192,7 @@ export function SkyLayer({
     energyMultiplier,
     exposure,
     panorama,
+    isPanoramaDrawn,
     asBackground,
     lightsKey,
     contextRestores,
@@ -219,6 +218,35 @@ function bakeWantedOf(bakes: SkyBakes, noteBake: () => void): () => boolean {
     noteBake();
     return true;
   };
+}
+
+/**
+ * Draws the background of `bakes` again after each draw of the live `panorama` past the one they
+ * baked, as Godot draws the background from the sky shader each frame (`sky.cpp:1463`). The
+ * radiance keeps the bake, as Godot's updates only when the sky is dirty.
+ */
+function redrawOnEachDraw(bakes: SkyBakes, panorama: THREE.Texture): () => void {
+  let bakedDraws = liveTargetDrawCount(panorama);
+  return () => {
+    const draws = liveTargetDrawCount(panorama);
+    if (draws === bakedDraws) return;
+    bakedDraws = draws;
+    bakes.redrawBackgrounds();
+  };
+}
+
+/**
+ * Whether `panorama` holds a picture a bake may sample: false for a live target until its pass first
+ * draws it, read each frame until then, and true for any other texture or none.
+ */
+function useIsPanoramaDrawn(panorama: THREE.Texture | null): boolean {
+  const isLive = !!panorama && isLiveTarget(panorama);
+  const [drawnPanorama, setDrawnPanorama] = useState<THREE.Texture | null>(null);
+  const isDrawn = !isLive || drawnPanorama === panorama;
+  useFrame(() => {
+    if (!isDrawn && liveTargetDrawCount(panorama!) > 0) setDrawnPanorama(panorama);
+  });
+  return isDrawn;
 }
 
 /**
