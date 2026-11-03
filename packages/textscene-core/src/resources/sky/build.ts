@@ -14,6 +14,8 @@ import { releaseView, textureView } from '../textures/textureView';
 import { fillLiveCopy } from '../../r3f/liveTargets';
 import { bakeSkyLayers, disposeSkyLayers, type SkyLayers } from './skyLayers';
 import { isDebanded } from './debanding';
+import { godotTextureFilterState } from '../textures/godotTextureFilter';
+import { TextureFilter } from '../../godot/rendering/materials/textureFilter';
 
 export type { SkyLight } from './skyUniforms';
 
@@ -56,17 +58,22 @@ export interface SkyEnvironmentInput {
 }
 
 /**
- * The panorama as the sky shader samples it. `PANORAMA_SKY_FRAGMENT_SHADER`
- * wraps u with `fract(atan(...))`, so it states Repeat (ADR-0044). The result is
- * a clone only when the arrival diverges, and `releaseView` frees it
- * only then. A live target's copy is filled now, since the bake samples it
- * before the target's next render. Returns null for a sky with no panorama.
+ * The panorama as the sky shader samples it: `filter_linear` or `filter_nearest` with no mipmaps
+ * (`sky_material.cpp:498-505`). `PANORAMA_SKY_FRAGMENT_SHADER` wraps u across the seam, so it
+ * states Repeat (ADR-0044). The result is a clone only when the arrival diverges, and `releaseView`
+ * frees it only then. A live target's copy is filled now, since the bake samples it before the
+ * target's next render. Returns null for a sky with no panorama.
  */
-function skyPanoramaTexture(gl: THREE.WebGLRenderer, panorama?: THREE.Texture | null): THREE.Texture | null {
-  if (!panorama) return null;
+function skyPanoramaTexture(
+  gl: THREE.WebGLRenderer,
+  sky: Sky,
+  panorama?: THREE.Texture | null
+): THREE.Texture | null {
+  if (!panorama || sky.material.kind !== 'panorama') return null;
   const view = textureView(panorama, {
     colorSpace: panorama.colorSpace as THREE.ColorSpace,
     wrap: THREE.RepeatWrapping,
+    filter: godotTextureFilterState(sky.material.filter ? TextureFilter.LINEAR : TextureFilter.NEAREST),
   });
   fillLiveCopy(panorama, view, gl);
   return view;
@@ -81,7 +88,7 @@ export function buildSkyEnvironment(
   gl: THREE.WebGLRenderer,
   { sky, lights, panorama, asBackground, energy }: SkyEnvironmentInput
 ): SkyEnvironment | null {
-  const panoramaView = skyPanoramaTexture(gl, panorama);
+  const panoramaView = skyPanoramaTexture(gl, sky, panorama);
   const geometry = new THREE.BoxGeometry(2, 2, 2);
   const material = new THREE.ShaderMaterial({
     uniforms: skyUniforms(sky.material, lights, panoramaView),

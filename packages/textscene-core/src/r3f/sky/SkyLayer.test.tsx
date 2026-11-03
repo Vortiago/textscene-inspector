@@ -59,7 +59,7 @@ let proceduralSky: Sky;
 
 beforeEach(() => {
   panoramaSky = {
-    material: { kind: 'panorama', panorama: undefined, energy_multiplier: 1 },
+    material: { kind: 'panorama', panorama: undefined, filter: true, energy_multiplier: 1 },
     processMode: 'automatic',
     radianceFilter: 'importance-sample',
     radianceSize: 256,

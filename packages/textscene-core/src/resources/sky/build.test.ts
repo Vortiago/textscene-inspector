@@ -8,9 +8,9 @@ import { debandingDrawnBy } from './skyLayers.testkit';
 import { publishLiveTargets } from '../../r3f/liveTargets';
 import { createCanvasTarget } from '../../nodes/viewport/subviewport/offscreenViewport';
 
-/** A sky of `materialType` with every property at Godot's default. */
-function defaultSky(materialType: string): Sky {
-  return decodeSky({}, decodeSkyMaterial(materialType, {})!);
+/** A sky of `materialType` with `properties` and every other property at Godot's default. */
+function defaultSky(materialType: string, properties: Record<string, string> = {}): Sky {
+  return decodeSky({}, decodeSkyMaterial(materialType, properties)!);
 }
 
 describe('buildSkyEnvironment layers', () => {
@@ -131,7 +131,10 @@ describe('buildSkyEnvironment panorama wiring', () => {
    * panorama the sky shader read, taken during the render because the builder
    * frees it straight after. With `renders` false the render throws.
    */
-  async function build(panorama: THREE.Texture | null, renders = true) {
+  async function build(
+    panorama: THREE.Texture | null,
+    { renders = true, sky = defaultSky('PanoramaSkyMaterial') } = {}
+  ) {
     const { renderer } = await testRenderer();
     let sampled: THREE.Texture | null = null;
     vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation((_renderer, scene) => {
@@ -142,7 +145,6 @@ describe('buildSkyEnvironment panorama wiring', () => {
     vi.spyOn(THREE.PMREMGenerator.prototype, 'fromCubemap').mockReturnValue(
       new THREE.WebGLRenderTarget(1, 1)
     );
-    const sky = defaultSky('PanoramaSkyMaterial');
     const env = buildSkyEnvironment(renderer, { sky, lights: [], panorama, asBackground: true, energy: 1 });
     return { env, sampled: sampled as THREE.Texture | null };
   }
@@ -159,6 +161,17 @@ describe('buildSkyEnvironment panorama wiring', () => {
     expect(sampled!.wrapT).toBe(THREE.RepeatWrapping);
     expect(sampled!.source).toBe(shared.source);
     expect(shared.wrapS).toBe(THREE.ClampToEdgeWrapping);
+  });
+
+  it('samples the panorama linearly with no mipmaps, as `filter_linear` does', async () => {
+    const { sampled } = await build(new THREE.Texture());
+    expect([sampled!.magFilter, sampled!.minFilter]).toEqual([THREE.LinearFilter, THREE.LinearFilter]);
+  });
+
+  it('samples the panorama of `filter = false` at the nearest texel, as `filter_nearest` does', async () => {
+    const sky = defaultSky('PanoramaSkyMaterial', { filter: 'false' });
+    const { sampled } = await build(new THREE.Texture(), { sky });
+    expect([sampled!.magFilter, sampled!.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
   });
 
   it('samples no panorama when the sky has none (edge case)', async () => {
@@ -180,7 +193,7 @@ describe('buildSkyEnvironment panorama wiring', () => {
       disposedTextures.push(this);
       realDispose.call(this);
     });
-    const { env, sampled } = await build(shared, renders);
+    const { env, sampled } = await build(shared, { renders });
     expect(env === null).toBe(!renders);
     expect(sampled).not.toBe(shared);
     expect(disposedTextures).toContain(sampled);
@@ -220,9 +233,11 @@ describe('buildSkyEnvironment panorama wiring', () => {
     expect(boundBeforeCube).toContain(sampled);
   });
 
-  it('never disposes a shared panorama that already repeats', async () => {
+  it('never disposes a shared panorama that already repeats and filters as the sky samples', async () => {
     const shared = new THREE.Texture();
     shared.wrapS = shared.wrapT = THREE.RepeatWrapping;
+    shared.minFilter = THREE.LinearFilter;
+    shared.generateMipmaps = false;
     const disposed = vi.fn();
     shared.addEventListener('dispose', disposed);
     const { env, sampled } = await build(shared);
