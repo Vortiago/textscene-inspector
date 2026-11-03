@@ -21,7 +21,7 @@ describe('convexDebugLines', () => {
     expect(convexDebugLines(new Float32Array([1, 2, 3]), ConvexGeometry)).toHaveLength(0);
   });
 
-  it('draws nothing for a point that is not finite, and no crash (edge case)', () => {
+  it('drops a point that is not finite and still draws the finite ones, without a crash (edge case)', () => {
     const points = new Float32Array([0, 0, 0, 1, 0, 0, Number.NaN, 0, 0]);
     expect(undirectedEdges(convexDebugLines(points, ConvexGeometry))).toEqual(
       undirectedEdges([0, 0, 0, 1, 0, 0])
