@@ -24,8 +24,8 @@ export interface LightShadowInternals {
 
 /**
  * Confines the shadow's draws to `rect`, given in units of `mapSize` as three gives a viewport
- * (`WebGLShadowMap.js:347-352`). three binds a target with its own scissor
- * (`WebGLRenderer.js:3066-3069`), and shrinks `mapSize` on a GPU whose textures are smaller than the
+ * (r187 `WebGLShadowMap.js:347-352`). three binds a target with its own scissor
+ * (`WebGLRenderer.js:3067-3069`), and shrinks `mapSize` on a GPU whose textures are smaller than the
  * atlas (`WebGLShadowMap.js:180-198`), so the scissor scales with it. A shadow without a map has none.
  */
 export function confineShadowScissor(shadow: THREE.LightShadow, rect: THREE.Vector4): void {

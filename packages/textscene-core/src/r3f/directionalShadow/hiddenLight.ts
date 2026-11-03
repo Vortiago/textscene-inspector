@@ -1,7 +1,7 @@
 /**
  * Hides a declared directional light from three's render through its layers, and hands them back.
  * R3F owns the light's `visible` and its `castShadow`, so the fitter leaves both alone. A light that
- * fails the camera's layer test never enters the render's light list (`WebGLRenderer.js:1864-1888`),
+ * fails the camera's layer test never enters the render's light list (r187 `WebGLRenderer.js:1877-1891`),
  * while its children still do.
  */
 

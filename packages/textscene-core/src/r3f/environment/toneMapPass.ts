@@ -30,7 +30,7 @@ export interface ToneMapPass {
   /**
    * Renders `scene` into `worldBuffer`, cleared by the render itself, and leaves the renderer as it
    * found it. Three applies the clear colour in the bound target's colour space only inside a
-   * render's own clear (`WebGLBackground.js:53`), so a clear before it writes the canvas's sRGB value.
+   * render's own clear (r187 `WebGLBackground.js:53`), so a clear before it writes the canvas's sRGB value.
    */
   drawWorld: (scene: THREE.Scene, camera: THREE.Camera) => void;
   /** Tonemaps what `worldBuffer` holds into the target, and leaves the renderer as it found it. */

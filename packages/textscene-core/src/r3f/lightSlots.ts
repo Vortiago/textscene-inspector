@@ -69,7 +69,7 @@ function shadedKindOf(light: THREE.Light): ShadedLightKind | null {
   return null;
 }
 
-/** three's own sort: shadowed lights first, then lights with a map (r187 `WebGLLights.js:152-156`). */
+/** three's own sort: shadowed lights first, then lights with a map (r187 `WebGLLights.js:153-157`). */
 function shadowedAndTexturedFirst(a: THREE.Light, b: THREE.Light): number {
   const rank = (light: THREE.Light) => (light.castShadow ? 2 : 0) + ((light as THREE.SpotLight).map ? 1 : 0);
   return rank(b) - rank(a);

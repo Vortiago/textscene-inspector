@@ -2,8 +2,8 @@
  * Godot surface state that three holds per object, applied per draw group: a billboard's
  * cameras, the node's pose a program reads, the layers a probe's mask meets, shadow-pass membership,
  * the shadow's alpha cut and SHADOWS_ONLY. three calls each before-hook and its
- * after-hook around one group's draw, with that group's material (`WebGLRenderer.js:2158-2183`,
- * `WebGLShadowMap.js:546-564`), so one mesh can mix surfaces the way Godot does.
+ * after-hook around one group's draw, with that group's material (r187 `WebGLRenderer.js:2171-2196`,
+ * `WebGLShadowMap.js:548-566`), so one mesh can mix surfaces the way Godot does.
  */
 
 import * as THREE from 'three';
@@ -60,7 +60,7 @@ export const UNRANGED_INSTANCE: DrawnInstance = Object.freeze({
 
 /**
  * three passes the object as the second `onBeforeShadow` argument
- * (`WebGLShadowMap.js:546,560`) and the geometry group as the last, but types
+ * (r187 `WebGLShadowMap.js:548,562`) and the geometry group as the last, but types
  * them `Scene` and `Group`. Narrow to what this file reads.
  */
 type ShadowHookObject = { material?: THREE.Material | THREE.Material[] };
@@ -86,7 +86,7 @@ const nodeMatrix = new THREE.Matrix4();
 
 /**
  * Make this draw draw nothing: an empty `drawRange` gives the GPU zero elements
- * (`WebGLRenderer.js:1223-1250`). On the geometry, which a clone or an overlay shares,
+ * (r187 `WebGLRenderer.js:1227-1252`). On the geometry, which a clone or an overlay shares,
  * so the after-hook puts the count back before any other draw.
  */
 function skip(geometry: THREE.BufferGeometry): void {
@@ -137,12 +137,12 @@ function castOwnShadow(
   const own = surfaceDepthMaterial(material, depthMaterial);
   syncSurfaceDepth(own, material, shadowAlphaCut(material));
   own.side = depthMaterial.side;
-  // three hands a distance material its light inside `getDepthMaterial` (`WebGLShadowMap.js:487-492`).
+  // three hands a distance material its light inside `getDepthMaterial` (r187 `WebGLShadowMap.js:509-514`).
   if ((depthMaterial as THREE.MeshDistanceMaterial).isMeshDistanceMaterial) {
     lightState(renderer, own).light = lightState(renderer, depthMaterial).light;
   }
   alignPose(object, own, instance);
-  // The scene three's own shadow draw passes: none (`WebGLShadowMap.js:550`), typed as one.
+  // The scene three's own shadow draw passes: none (r187 `WebGLShadowMap.js:550`), typed as one.
   renderer.renderBufferDirect(shadowCamera, null as unknown as THREE.Scene, geometry, own, object, group);
   skip(geometry);
 }

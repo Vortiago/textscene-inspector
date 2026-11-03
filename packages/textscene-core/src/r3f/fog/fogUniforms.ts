@@ -12,7 +12,7 @@ import { installedUniformValue } from '../shaderPatch/litUniform.js';
 /**
  * The volume the fog pass integrates into. It is no render target's texture in three's eyes, so it
  * reaches each material's clone. Until a pass draws it, three binds its empty 3D texture in its
- * place (`WebGLState.js:953`).
+ * place (r187 `WebGLState.js:953`).
  */
 class FogVolumeTexture extends sharedTexture(THREE.Data3DTexture) {
   constructor() {

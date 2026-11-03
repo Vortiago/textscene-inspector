@@ -62,7 +62,7 @@ describe('shadowCastingEffects', () => {
     // Godot's shadow pass takes CULL_VARIANT_DOUBLE_SIDED only for
     // FLAG_USES_DOUBLE_SIDED_SHADOWS and otherwise falls through to the
     // material's own cull (`render_forward_clustered.cpp:395-411`). three flips
-    // it as its own acne mitigation (`WebGLShadowMap.js:51`).
+    // it as its own acne mitigation (r187 `WebGLShadowMap.js:51`).
     for (const value of [
       undefined,
       ShadowCastingSetting.OFF,

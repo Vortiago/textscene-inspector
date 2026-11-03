@@ -76,7 +76,7 @@ function drawsPrepass(material: THREE.Material): boolean {
 
 /**
  * One surface's prepass, between the object's own draw hooks, which pose it and skip a draw its
- * range culls, as three's colour draw does (`WebGLRenderer.js:2158-2183`).
+ * range culls, as three's colour draw does (r187 `WebGLRenderer.js:2171-2196`).
  */
 function drawSurfacePrepass(
   renderer: THREE.WebGLRenderer,

@@ -32,7 +32,7 @@ const nowhere = () => new THREE.Plane(new THREE.Vector3(1, 0, 0), -Infinity);
 
 /**
  * A frustum that holds nothing, so the shadow pass draws no caster into an undrawn slot. three
- * still walks the scene for the slot (`WebGLShadowMap.js:289-358`), so each caster's test answers
+ * still walks the scene for the slot (r187 `WebGLShadowMap.js:289-360`), so each caster's test answers
  * at once, without the bounding sphere `Frustum.intersectsObject` transforms.
  */
 class UndrawnFrustum extends THREE.Frustum {
@@ -58,7 +58,7 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
   splitCount = SPLIT_SLOTS;
 
   /**
-   * One vec4 per slot, read by name into `sunShadowCascade` (`WebGLLights.js:315`). The fitter
+   * One vec4 per slot, read by name into `sunShadowCascade` (r187 `WebGLLights.js:315`). The fitter
    * writes them, in the layout `fitDirectionalShadowSplits.ts` documents, before the shadow's
    * first render.
    */
@@ -93,7 +93,7 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
 
   /**
    * The light's share of the atlas, in units of one split's rectangle, as three gives each slot's
-   * viewport (`WebGLShadowMap.js:345-350`).
+   * viewport (r187 `WebGLShadowMap.js:347-352`).
    */
   private readonly share = new THREE.Vector4();
 
@@ -125,7 +125,7 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
   /**
    * Lays out `splitCount` splits inside the light's rectangle of Godot's atlas. `mapSize` is one
    * split's rectangle. three multiplies it by the frame extents to size the atlas
-   * (`WebGLShadowMap.js:170-176`), so every shadow asks for the same size and none resizes it
+   * (r187 `WebGLShadowMap.js:172-176`), so every shadow asks for the same size and none resizes it
    * (`:281-285`). The fitter calls this on every render, so an unchanged layout is kept. three
    * shrinks `mapSize` on a GPU whose textures are smaller than the atlas (`:180-198`), so a kept
    * layout still writes it again.
@@ -187,7 +187,7 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
 
   /**
    * Sets each drawn split's frustum from its camera, as the shadow pass will
-   * (`LightShadow.js:237-238`). The fitter calls this once it places the cameras, so a cull that
+   * (r187 `LightShadow.js:237-238`). The fitter calls this once it places the cameras, so a cull that
    * runs before the shadow pass reads this render's splits.
    */
   placeSplitFrusta(): void {
@@ -210,12 +210,12 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
   }
 
   /**
-   * three calls this before it draws the light's share (`WebGLShadowMap.js:291`). The cameras are
+   * three calls this before it draws the light's share (r187 `WebGLShadowMap.js:291`). The cameras are
    * already placed, so only their matrices follow. An undrawn slot repeats the last split's matrix,
    * as its vec4 repeats that split's far end. With no split drawn, every slot keeps its matrix.
    */
   override updateMatrices(_light: THREE.Light): void {
-    // three clears the whole target before it draws a light (`WebGLShadowMap.js:338-339`), so the
+    // three clears the whole target before it draws a light (r187 `WebGLShadowMap.js:340-341`), so the
     // scissor keeps the clear inside this light's share.
     confineShadowScissor(this, this.share);
     const lastSplit = Math.max(this.splitCount - 1, 0);
@@ -239,7 +239,7 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
   }
 
   /**
-   * three sets the depth convention on the light's own camera (`WebGLShadowMap.js:201`), after the
+   * three sets the depth convention on the light's own camera (r187 `WebGLShadowMap.js:201`), after the
    * fit built the slot's projection, so a slot whose convention changes rebuilds its projection.
    */
   private followDepthConvention(camera: THREE.OrthographicCamera): void {

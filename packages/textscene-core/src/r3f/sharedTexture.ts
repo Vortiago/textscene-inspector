@@ -80,7 +80,8 @@ export function releasedOnUnmount<T extends Pick<THREE.Texture, 'dispose'>>(text
 /**
  * Frees each `releasedOnUnmount` texture when the canvas it sits in unmounts. A dispose reaches every
  * renderer, so a live canvas would upload each texture again. Both apps show one canvas at a time,
- * so the canvas that follows uploads them once, as it would anyway.
+ * so the canvas that follows uploads them once, as it would anyway. The renderer's own dispose frees
+ * its GL copies (r187 `WebGLTextures.js:391-414`), so this still owns the caches that free their own.
  */
 export function SharedTextureRelease(): null {
   useEffect(

@@ -95,7 +95,7 @@ export class OmniShadowCopy {
   /**
    * Writes the cube three rendered for `light` into both of its slots. Godot passes the cube camera's
    * near plane and the range as the far one (`render_forward_clustered.cpp:2732-2734`), which three's
-   * shadow camera holds after its pass (`WebGLShadowMap.js:302-308`). It leaves the render target
+   * shadow camera holds after its pass (r187 `WebGLShadowMap.js:304-311`). It leaves the render target
    * as it found it.
    */
   copy(renderer: THREE.WebGLRenderer, light: THREE.PointLight, slot: PositionalShadowSlot): void {
@@ -123,8 +123,8 @@ export class OmniShadowCopy {
 
   /**
    * Draws the quad over one slot. three binds a target with its own viewport and scissor
-   * (`WebGLRenderer.js:3040-3071`). The render neither clears nor counts towards the frame's render
-   * info, which three would otherwise reset (`WebGLRenderer.js:1731`).
+   * (r187 `WebGLRenderer.js:3067-3097`). The render neither clears nor counts towards the frame's render
+   * info, which three would otherwise reset (`WebGLRenderer.js:1744`).
    */
   private drawInto(renderer: THREE.WebGLRenderer, slot: PositionalShadowSlot, paraboloid: number): void {
     const atlas = positionalShadowAtlas();

@@ -349,7 +349,7 @@ describe('fitSceneDirectionalShadows fades', () => {
 /**
  * The lights `WebGLRenderer.projectObject` hands `WebGLLights.setup`: visible pre-order, a light
  * only where the camera's layers include it, and the children of any visible object (three r187
- * `WebGLRenderer.js:1872-1897`).
+ * `WebGLRenderer.js:1873-1897`).
  */
 function threeRenderLights(
   object: THREE.Object3D,

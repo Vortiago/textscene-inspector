@@ -274,7 +274,7 @@ describe('bindSlotTexture — the saved format of a colour slot texture', () => 
   });
 
   it('binds a float albedo raw, which three uploads without its sRGB warning (edge case)', () => {
-    // three warns for an sRGB tag on anything but RGBA bytes (`WebGLTextures.js:2441-2451`).
+    // three warns for an sRGB tag on anything but RGBA bytes (r187 `WebGLTextures.js:2498-2508`).
     expect(bindSlotTexture(R_FLOAT(), 'albedo_texture', DEFAULTS).colorSpace).toBe(THREE.NoColorSpace);
   });
 

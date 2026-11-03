@@ -101,7 +101,7 @@ describe('drawFullScreen', () => {
 
 /**
  * The quad a new renderer draws a pass on. three leaves a dispose listener that closes over the
- * renderer on each drawn geometry and material (`WebGLGeometries.js:55`, `WebGLRenderer.js:2216`),
+ * renderer on each drawn geometry and material (r187 `WebGLGeometries.js:62`, `WebGLRenderer.js:2239`),
  * so a quad two renderers share would keep both alive.
  */
 async function quadDrawnBy(): Promise<THREE.Mesh> {
