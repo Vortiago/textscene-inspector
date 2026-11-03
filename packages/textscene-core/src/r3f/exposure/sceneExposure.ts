@@ -14,7 +14,7 @@ import { isLight } from '../isLight.js';
 import { observeSceneExposure, observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { TrackedObjects } from '../trackedObjects.js';
 import { EMISSION_EXPOSURE } from './emissionExposure.js';
-import { scaleLightIntensities } from './scaleLightIntensities.js';
+import { ScaledLights } from './scaledLights.js';
 
 /**
  * What a consumer draws for the exposure of one render through `camera`, null for a render with no
@@ -46,8 +46,10 @@ interface SceneExposure {
    * them, so a scene whose renders all draw at 1 tracks none, and kept until the exposure is removed.
    */
   lights: TrackedObjects<THREE.Light> | null;
-  /** Puts back what the render under way changed, null between renders. */
-  restore: (() => void) | null;
+  /** The lights the render under way scaled. */
+  scaled: ScaledLights;
+  /** Whether a render is under way, whose changes `endRender` puts back. */
+  isRendering: boolean;
 }
 
 /**
@@ -79,7 +81,8 @@ function exposureOf(scene: THREE.Scene): SceneExposure {
     followers: new Set(),
     unhookRenders: null,
     lights: null,
-    restore: null,
+    scaled: new ScaledLights(),
+    isRendering: false,
   };
   exposures.set(scene, exposure);
   return exposure;
@@ -97,7 +100,7 @@ function needsRenderHooks(scene: THREE.Scene, exposure: SceneExposure): boolean 
 /** Applies the exposure to each render of `scene`, until the returned function runs. */
 function hookRenders(scene: THREE.Scene, exposure: SceneExposure): () => void {
   const stopApplying = observeSceneExposure(scene, (camera) => applyRenderExposure(scene, exposure, camera));
-  const stopRestoring = observeSceneRenderEnd(scene, () => exposure.restore?.());
+  const stopRestoring = observeSceneRenderEnd(scene, () => endRender(exposure));
   return () => {
     stopApplying();
     stopRestoring();
@@ -113,7 +116,7 @@ function settleExposure(scene: THREE.Scene, exposure: SceneExposure): void {
     exposure.unhookRenders ??= hookRenders(scene, exposure);
     return;
   }
-  exposure.restore?.();
+  endRender(exposure);
   exposure.unhookRenders?.();
   exposure.unhookRenders = null;
   if (exposure.held.length > 0) return;
@@ -147,23 +150,27 @@ function exposedLightsOf(scene: THREE.Scene, exposure: SceneExposure): readonly 
   return exposure.lights.current();
 }
 
+/** Puts back what the render under way changed. The emission reads 1 again, as outside any render. */
+function endRender(exposure: SceneExposure): void {
+  if (!exposure.isRendering) return;
+  exposure.isRendering = false;
+  exposure.scaled.restore();
+  EMISSION_EXPOSURE[0] = 1;
+}
+
 /**
  * Scales each exposed light and the emission of a render of `scene` by the factor it draws at, 1
  * with no exposure, and runs each follower. A render that never ended is put back first, so a light's
  * energy is scaled once. The emission buffer reads 1 again after the render, as outside any.
  */
 function applyRenderExposure(scene: THREE.Scene, exposure: SceneExposure, camera: THREE.Camera): void {
-  exposure.restore?.();
+  endRender(exposure);
+  exposure.isRendering = true;
   const drawn = drawnExposureOf(scene);
   const factor = drawn ?? 1;
   EMISSION_EXPOSURE[0] = factor;
   // A factor of 1 leaves every light as it holds, so most renders scale none.
-  const restoreLights = factor === 1 ? null : scaleLightIntensities(exposedLightsOf(scene, exposure), factor);
-  exposure.restore = () => {
-    exposure.restore = null;
-    restoreLights?.();
-    EMISSION_EXPOSURE[0] = 1;
-  };
+  if (factor !== 1) exposure.scaled.scale(exposedLightsOf(scene, exposure), factor);
   for (const follower of exposure.followers) follower(drawn, camera);
 }
 

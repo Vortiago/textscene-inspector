@@ -81,4 +81,4 @@ The lenient parser reads every property above. A malformed value keeps Godot's d
 
 ## Known limitations
 
-- **Approximated** A probe that updates ALWAYS captures once, so it does not follow a moving node.
+- **Approximated** A probe that updates ALWAYS captures only when the content changes, where Godot captures it in each frame.

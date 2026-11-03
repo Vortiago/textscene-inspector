@@ -5719,7 +5719,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-reflectionprobe-properties</code></td><td><code>reflectionprobe-ambient-color-no-effect</code></td><td>info</td></tr><tr><td></td><td><code>reflectionprobe-origin-offset-clamped</code></td><td>warning</td></tr></tbody></table></div>
 <p>The lenient parser reads every property above. A malformed value keeps Godot's default, a <code>max_distance</code> above 262144 clamps to it, and an <code>ambient_mode</code> outside 0 to 2 reads as <code>AMBIENT_DISABLED</code>.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> A probe that updates ALWAYS captures once, so it does not follow a moving node.</li></ul></div>
+<ul><li><strong>Approximated</strong> A probe that updates ALWAYS captures only when the content changes, where Godot captures it in each frame.</li></ul></div>
     </article>
     <article class="sheet" data-type="RemoteTransform2D" hidden>
       <header class="sheet-head">
