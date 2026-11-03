@@ -47,7 +47,8 @@ export function installTextureWorkProbe(statusTestId) {
   };
 
   const selector = `[data-testid="${statusTestId}"]`;
-  const isStatus = (node) => node.nodeType === 1 && (node.matches(selector) || node.querySelector(selector));
+  const isStatus = (node) =>
+    node.nodeType === 1 && (node.matches(selector) || node.querySelector(selector) !== null);
   // Each record, not the page's state after the batch: a status that attaches and detaches in
   // one batch leaves the page as it was, and a net-state probe would never see it.
   const observe = () => {
