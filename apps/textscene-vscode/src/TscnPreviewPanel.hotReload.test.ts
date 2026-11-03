@@ -5,20 +5,10 @@
  */
 import { describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
-import { TscnPreviewPanel } from './TscnPreviewPanel';
-import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } from './test-setup';
+import { openPreviewPanel, openReadyPreviewPanel } from './previewPanel.testkit';
+import { createMockUri, createMockFileData, type MockWebview } from './test-setup';
 
 const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
-
-async function createReadyPanel(
-  triggerMessage: (msg: { type: string; [key: string]: unknown }) => void
-): Promise<TscnPreviewPanel> {
-  (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
-  const panel = TscnPreviewPanel.create(createMockUri('/extension'), createMockUri('/workspace/scene.tscn'));
-  await new Promise<void>((r) => setTimeout(r, 10));
-  triggerMessage({ type: 'webviewReady' });
-  return panel;
-}
 
 function resourceChangedCalls(webview: MockWebview): unknown[] {
   return webview.postMessage.mock.calls
@@ -28,8 +18,7 @@ function resourceChangedCalls(webview: MockWebview): unknown[] {
 
 describe('TscnPreviewPanel dependency hot-reload', () => {
   it('posts resourceChanged for a dependency even though the main scene is unchanged', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createReadyPanel(triggerMessage);
+    const { webview, panel } = await openReadyPreviewPanel(MINIMAL_TSCN);
 
     // The main .tscn content is unchanged, so the loadTscn path no-ops here.
     panel.invalidateResource('res://textures/wood.png');
@@ -40,13 +29,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
   });
 
   it('does not post before the webview handshake (it will load fresh anyway)', async () => {
-    const { webview } = setupMockPanel();
-    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
-    const panel = TscnPreviewPanel.create(
-      createMockUri('/extension'),
-      createMockUri('/workspace/scene.tscn')
-    );
-    await new Promise<void>((r) => setTimeout(r, 10));
+    const { webview, panel } = await openPreviewPanel(MINIMAL_TSCN);
     // No webviewReady triggered.
 
     panel.invalidateResource('res://textures/wood.png');
@@ -55,8 +38,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
   });
 
   it('resolves a changed dependency file to its res:// path and posts resourceChanged', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createReadyPanel(triggerMessage); // main scene: /workspace/scene.tscn
+    const { webview, triggerMessage, panel } = await openReadyPreviewPanel(MINIMAL_TSCN); // main scene: /workspace/scene.tscn
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
@@ -89,8 +71,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     ['project.godot', 'res://project.godot', '/workspace/project.godot', 'ProjectSettings'],
     ['a font file', 'res://fonts/body.ttf', '/workspace/fonts/body.ttf', 'FontFile'],
   ])('posts resourceChanged for %s the webview read', async (_kind, resPath, fsPath, resourceType) => {
-    const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createReadyPanel(triggerMessage);
+    const { webview, triggerMessage, panel } = await openReadyPreviewPanel(MINIMAL_TSCN);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
@@ -103,8 +84,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
   });
 
   it('does not post resourceChanged for a file the scene never requested (relevance gate)', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createReadyPanel(triggerMessage);
+    const { webview, panel } = await openReadyPreviewPanel(MINIMAL_TSCN);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
@@ -116,8 +96,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
   });
 
   it('caches project-root resolution across repeated loadResource calls on the same panel', async () => {
-    const { triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { triggerMessage } = await openReadyPreviewPanel(MINIMAL_TSCN);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
@@ -151,8 +130,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
   });
 
   it('clears the cached resource provider when update() receives a different document', async () => {
-    const { triggerMessage } = setupMockPanel();
-    const panel = await createReadyPanel(triggerMessage); // main scene: /workspace/scene.tscn
+    const { triggerMessage, panel } = await openReadyPreviewPanel(MINIMAL_TSCN); // main scene: /workspace/scene.tscn
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
@@ -186,8 +164,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
   });
 
   it('recovers a resource whose initial load failed once it is created on disk (missing -> loaded)', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createReadyPanel(triggerMessage);
+    const { webview, triggerMessage, panel } = await openReadyPreviewPanel(MINIMAL_TSCN);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
@@ -212,8 +189,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
   });
 
   it('posts resourceChanged for a deleted dependency (re-fetch fails -> missing placeholder)', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createReadyPanel(triggerMessage);
+    const { webview, triggerMessage, panel } = await openReadyPreviewPanel(MINIMAL_TSCN);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
@@ -241,8 +217,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
   });
 
   it("surfaces an error and holds the last render when the panel's own main scene is deleted", async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createReadyPanel(triggerMessage);
+    const { webview, panel } = await openReadyPreviewPanel(MINIMAL_TSCN);
     const loadTscnCalls = (): number =>
       webview.postMessage.mock.calls.filter((c) => (c[0] as { type: string }).type === 'loadTscn').length;
     const loadsBefore = loadTscnCalls();
@@ -262,13 +237,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
   });
 
   it('skips resolution IO entirely when the webview is not ready', async () => {
-    const { webview } = setupMockPanel();
-    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
-    const panel = TscnPreviewPanel.create(
-      createMockUri('/extension'),
-      createMockUri('/workspace/scene.tscn')
-    );
-    await new Promise<void>((r) => setTimeout(r, 10));
+    const { webview, panel } = await openPreviewPanel(MINIMAL_TSCN);
     // No webviewReady triggered.
     const getWorkspaceFolder = vscode.workspace.getWorkspaceFolder as Mock;
 

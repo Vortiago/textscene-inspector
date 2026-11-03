@@ -100,16 +100,25 @@ export class PreviewCaptureQueue {
    */
   public webviewLoaded(): void {
     this._state = PENDING;
-    for (const request of this._inFlight.values()) {
-      request.requestId = undefined;
-      this._waiting.push(request);
-    }
-    this._inFlight.clear();
+    this._requeueInFlight();
     for (const request of this._waiting) {
       clearTimeout(request.loadTimer);
       request.loadTimer = undefined;
     }
     this._unansweredPingId = undefined;
+    this._watchLiveness();
+  }
+
+  /**
+   * The current document has no listener and a new one loads, as after a failed script load.
+   * Each request waits for the next `webviewReady`, under the load deadline again.
+   */
+  public webviewLoading(): void {
+    this._state = LOADING;
+    this._requeueInFlight();
+    for (const request of this._waiting) {
+      request.loadTimer ??= setTimeout(() => this._end(request, NOT_LOADED), WEBVIEW_LOAD_DEADLINE_MS);
+    }
     this._watchLiveness();
   }
 
@@ -143,6 +152,15 @@ export class PreviewCaptureQueue {
       for (const request of [...this._waiting]) this._end(request, { error: state.reason });
     }
     this._watchLiveness();
+  }
+
+  /** The document that held each posted request is gone, so each one waits again. */
+  private _requeueInFlight(): void {
+    for (const request of this._inFlight.values()) {
+      request.requestId = undefined;
+      this._waiting.push(request);
+    }
+    this._inFlight.clear();
   }
 
   private _send(request: CaptureRequest): void {
