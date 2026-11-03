@@ -104,6 +104,17 @@ export interface EnvironmentProperties {
   /** The share of the last frame each frame keeps, 0.5-0.99. */
   volumetric_fog_temporal_reprojection_amount: number;
 
+  // Screen-space reflections
+  ssr_enabled: boolean;
+  /** The most steps a ray marches through the depth pyramid. */
+  ssr_max_steps: number;
+  /** The exponent that fades a reflection in along its ray's screen length, 0 or more. */
+  ssr_fade_in: number;
+  /** The exponent that fades a reflection out towards a full-screen ray, 0 or more. */
+  ssr_fade_out: number;
+  /** How far behind a surface, in metres, a ray still counts as a hit. */
+  ssr_depth_tolerance: number;
+
   // Glow, a compositor post-process: a peak-channel bright pass over a weighted mip
   // pyramid, blended back around the tone curve. The editor preview environment
   // enables it, which is why emissive materials bloom in Godot's editor.
@@ -203,6 +214,17 @@ export interface VolumetricFog {
   temporalReprojection: number | null;
 }
 
+/**
+ * Screen-space reflections: each smooth opaque surface traces its reflection through the depth of
+ * the frame and reads the colour of the last frame (`ss_effects.cpp:1471`).
+ */
+export interface ScreenSpaceReflection {
+  maxSteps: number;
+  fadeIn: number;
+  fadeOut: number;
+  depthTolerance: number;
+}
+
 /** `createEnvironmentSettings`'s output: one Environment as the render layer applies it. */
 export interface EnvironmentSettings {
   background: {
@@ -261,6 +283,8 @@ export interface EnvironmentSettings {
   skyRotation: Vector3;
   /** Null when disabled. */
   volumetricFog: VolumetricFog | null;
+  /** Null when disabled. */
+  ssr: ScreenSpaceReflection | null;
   /** The colour adjustments the tone-map pass applies after the curve, null when disabled. */
   adjustments: EnvironmentAdjustments | null;
   /**

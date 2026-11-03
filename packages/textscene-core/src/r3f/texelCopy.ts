@@ -29,6 +29,11 @@ export function wholeTexels(width: number, height: number): TexelPlacement {
   return { offsetX: 0, offsetY: 0, rowStep: 1, bounds: [0, 0, width, height] };
 }
 
+/** Every texel of a `width` x `height` source, each row from its mirror row. */
+export function reversedTexelRows(width: number, height: number): TexelPlacement {
+  return { offsetX: 0, offsetY: height - 1, rowStep: -1, bounds: [0, 0, width, height] };
+}
+
 /**
  * What a copy does to each texel's colour, its alpha unchanged. `decode` fills an SRGB8_ALPHA8
  * storage from bytes, which it encodes back to the same byte. `encode` fills an RGBA8 storage from

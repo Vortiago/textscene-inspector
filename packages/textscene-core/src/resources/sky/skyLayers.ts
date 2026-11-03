@@ -21,7 +21,8 @@ import { fastFilter } from './fastFilter.js';
 import { importanceSampleFilter } from './importanceSampleFilter.js';
 import type { LayerFilter } from './layerFilter.js';
 import { DOWNSAMPLE_FRAGMENT_SHADER, RADIANCE_OCTMAP_FRAGMENT_SHADER } from './skyLayerShaders.js';
-import { releaseTextures, setUniforms, skyPass } from './skyPass.js';
+import { skyPass } from './skyPass.js';
+import { releaseTextures, setUniforms } from '../../r3f/fullScreenPass.js';
 import type { SkyBake } from './types.js';
 
 /**
