@@ -93,6 +93,7 @@ export const GIZMO_SCENES = [
   { name: 'directional-light-3d', file: 'unit-directional-light-3d.tscn' },
   { name: 'omni-light-3d', file: 'unit-omni-light-3d.tscn' },
   { name: 'spot-light-3d', file: 'unit-spot-light-3d.tscn' },
+  { name: 'occluder-instance-3d-selected', file: 'unit-occluder-instance-3d.tscn', select: 'Root/MyOccluderInstance3D' },
   { name: 'camera-basic', file: 'unit-camera-basic.tscn' },
   { name: 'audio-stream-player-3d', file: 'unit-audio-stream-player.tscn' },
   // Selected: the real tree-click → selection → gizmo render for each gate.
