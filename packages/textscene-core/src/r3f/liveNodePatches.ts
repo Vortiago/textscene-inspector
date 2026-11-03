@@ -8,7 +8,7 @@
 import { useMemo } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
-import { applyRemoteTransforms } from '../nodes/3d/remotetransform3d/remoteTransforms.js';
+import { applyRemoteTransforms } from '../nodes/shared/remotetransform/remoteTransforms.js';
 import { resolveCsgPolygonPaths } from '../nodes/3d/csg/csgpolygon3d/csgPolygonPaths.js';
 import { joinPath } from '../utils/nodePath.js';
 import { sameEntries } from '../utils/sameEntries.js';

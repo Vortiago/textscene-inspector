@@ -57,7 +57,7 @@ _Avoid_: "update", "tick" for a flush.
 The process frame at which `pnpm ref:godot` captures a scene whose transforms never hold still. The previewer draws such a scene at this frame, so both sides show the same pose.
 _Avoid_: "last frame", "the capture time".
 
-**Relay cycle** (`relayCycles.ts` in `nodes/3d/remotetransform3d/`):
+**Relay cycle** (`relayCycles.ts` in `nodes/shared/remotetransform/`):
 RemoteTransform relays whose pushes lead back to the first. When the cycle holds a relay in global coordinates, Godot pushes it on every **Transform flush** without end, so the previewer draws the **Harness frame**. A cycle of local relays recurses inside one push, and Godot overflows its stack. The linter warns on each relay of either kind.
 _Avoid_: "ring", "feedback loop".
 

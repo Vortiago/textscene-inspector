@@ -23,7 +23,7 @@ const NEEDS_NO_OVERLAY = new Map([
     'A pass: it takes the placements of the pass before it as an argument.',
   ],
   [
-    'nodes/3d/remotetransform3d/remoteTransforms.ts',
+    'nodes/shared/remotetransform/remoteTransforms.ts',
     'A pass: it reads the tree it places nodes in, and builds the placements.',
   ],
   [

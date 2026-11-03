@@ -12,7 +12,7 @@ import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
-import { relayCycleArm, relayCycleDiagnostics } from './relayCycles.js';
+import { relayCycleArm, relayCycleDiagnostics } from '../../shared/remotetransform/relayCycles.js';
 
 const arms = {
   invalidRemotePath: groundedArm('remotetransform3d-invalid-remote-path', { kind: 'configuration-warning' }),

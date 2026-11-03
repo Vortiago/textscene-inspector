@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { lintRule } from '../../../linter/testing/testkit';
-import './linter';
+import '../../3d/remotetransform3d/linter';
 import '../../2d/remotetransform2d/linter';
 
 const RULE_3D = 'remotetransform3d-relay-cycle';
