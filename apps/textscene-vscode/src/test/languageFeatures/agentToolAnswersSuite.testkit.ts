@@ -79,7 +79,7 @@ export function launchedWithoutGpu(): boolean {
 
 /**
  * Fails with the preview tabs' state when the capture ended because the webview never
- * loaded (#1131). The VS Code logs of that run are in the CI artifact.
+ * loaded. A failed CI run keeps the VS Code logs in its artifact.
  */
 function assertWebviewLoaded(result: vscode.LanguageModelToolResult): void {
   const text = textOf(result);
