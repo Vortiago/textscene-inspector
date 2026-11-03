@@ -24,10 +24,10 @@ export function useMultiMeshInstance3DAabb(node: TscnNode): Aabb | null {
   const multiMesh = useContentMemo(scoped, ownContentKey, readMultiMesh);
   const meshAabb = useMeshAabb(multiMesh?.mesh, scoped?.resources ?? NO_RESOURCES);
   const hasMultiMesh = node.rawProperties['multimesh'] !== undefined;
-  return useMemo(
-    () => (multiMesh ? multiMeshAabb(multiMesh, meshAabb) : hasMultiMesh ? null : EMPTY_AABB),
-    [multiMesh, meshAabb, hasMultiMesh]
-  );
+  return useMemo(() => {
+    if (multiMesh) return multiMeshAabb(multiMesh, meshAabb);
+    return hasMultiMesh ? null : EMPTY_AABB;
+  }, [multiMesh, meshAabb, hasMultiMesh]);
 }
 
 /** A MultiMesh reads no file, so its own content is the whole key. */

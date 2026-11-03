@@ -24,23 +24,31 @@ import { FrameAabb } from '../../../r3f/components/FrameAabb';
 type UseOwnAabb = (node: TscnNode) => Aabb | null;
 
 /**
- * The component an undrawn GeometryInstance3D type registers, culled by the box `useOwnAabb` gives
- * and framed on the box `useGetAabb` gives. Those are one box unless the type's `get_aabb()` differs
- * from its instance box, as a particle emitter's does.
+ * The box the camera frames a node on, its `get_aabb()`, given the instance box it culls by. They
+ * are one box unless the type's `get_aabb()` differs from its instance box, as a particle emitter's
+ * does.
  */
+export type FrameAabbOf = (ownAabb: Aabb | null) => Aabb | null;
+
+const sameAsOwn: FrameAabbOf = (ownAabb) => ownAabb;
+
+/** `get_aabb()` is `AABB()`: a point at the node origin, whatever box the instance culls by. */
+export const emptyFrameAabb: FrameAabbOf = () => EMPTY_AABB;
+
+/** The component an undrawn GeometryInstance3D type registers, culled by the box `useOwnAabb` gives. */
 export function undrawnGeometryInstance(
   useOwnAabb: UseOwnAabb,
-  useGetAabb: UseOwnAabb = useOwnAabb
+  frameAabbOf: FrameAabbOf = sameAsOwn
 ): NodeComponent {
   function UndrawnGeometryInstance({ node, children }: NodeComponentProps) {
     const nodeRef = useRef<THREE.Group | null>(null);
     const ownAabb = useOwnAabb(node);
-    const getAabb = useGetAabb(node);
+    const frameAabb = frameAabbOf(ownAabb);
     const placement = useMemo(() => boxPlacement(nodeRef, ownAabb), [ownAabb]);
     useGeometryInstance(placement);
     return (
       <Node3D node={node} ref={nodeRef}>
-        {getAabb && <FrameAabb aabb={getAabb} />}
+        {frameAabb && <FrameAabb aabb={frameAabb} />}
         {children}
       </Node3D>
     );
@@ -61,11 +69,11 @@ export interface GeometryInstanceGizmosProps<Properties> {
  */
 export function undrawnGeometryInstanceWithGizmos<Properties>(
   useOwnAabb: UseOwnAabb,
-  useGetAabb: UseOwnAabb,
+  frameAabbOf: FrameAabbOf,
   Gizmos: ComponentType<GeometryInstanceGizmosProps<Properties>>,
   drawnFor: GizmoDrawnFor
 ): NodeComponent {
-  const Undrawn = undrawnGeometryInstance(useOwnAabb, useGetAabb);
+  const Undrawn = undrawnGeometryInstance(useOwnAabb, frameAabbOf);
   function UndrawnGeometryInstanceWithGizmos({ node, children }: NodeComponentProps) {
     return (
       <Undrawn node={node}>
@@ -83,7 +91,4 @@ export function undrawnGeometryInstanceWithGizmos<Properties>(
  * A bare GeometryInstance3D gives its instance no base (`godot/scene/geometryBase.ts`), so no box to
  * cull by, and `get_aabb()` is the unset virtual's `AABB()`, a point to frame on.
  */
-export const GeometryInstance3D = undrawnGeometryInstance(
-  () => null,
-  () => EMPTY_AABB
-);
+export const GeometryInstance3D = undrawnGeometryInstance(() => null, emptyFrameAabb);

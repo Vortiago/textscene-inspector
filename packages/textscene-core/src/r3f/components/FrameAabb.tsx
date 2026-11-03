@@ -6,13 +6,12 @@
  */
 
 import { useMemo } from 'react';
-import type { Aabb } from '../../godot/math/aabb';
-import { EMPTY_AABB } from '../../godot/math/aabb';
+import { EMPTY_AABB, type Aabb } from '../../godot/math/aabb';
 import { frameAabbUserData } from '../bounds';
 
 const POINT_USER_DATA = frameAabbUserData(EMPTY_AABB);
 
-/** @canonical Give a node the `get_aabb` the camera frames it on, in the node's space */
+/** Gives a node the `get_aabb` the camera frames it on, in the node's space. */
 export function FrameAabb({ aabb }: { aabb: Aabb }) {
   const userData = useMemo(() => frameAabbUserData(aabb), [aabb]);
   return <object3D userData={userData} />;

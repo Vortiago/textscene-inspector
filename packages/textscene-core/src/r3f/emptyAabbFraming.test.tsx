@@ -23,22 +23,6 @@ mesh = SubResource("Box")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 0)
 `;
 
-describe('a GeometryInstance3D with an empty AABB', () => {
-  it.each([
-    'CPUParticles3D',
-    'GPUParticles3D',
-    'MeshInstance3D',
-    'MultiMeshInstance3D',
-    'Sprite3D',
-    'AnimatedSprite3D',
-    'Label3D',
-  ])('frames a %s as a point at its node origin', async (type) => {
-    const target = await framedTarget(sceneBeside(type));
-
-    expect(target.x).toBeCloseTo(3.75, 5);
-  });
-});
-
 describe('every registered GeometryInstance3D type', () => {
   const types = nodeComponentRegistry
     .getAllTypeNames()
@@ -48,9 +32,21 @@ describe('every registered GeometryInstance3D type', () => {
     expect(types).toContain('CPUParticles3D');
   });
 
-  it.each(types)('adds %s to the frame beside a box at the origin', async (type) => {
+  // A CSG shape draws its own solid, so it frames on that box and not on a point.
+  const pointTypes = types.filter((type) => !nodeComponentRegistry.isCsgShape(type));
+
+  it.each(pointTypes)('frames %s with no content as a point at its node origin', async (type) => {
     const target = await framedTarget(sceneBeside(type));
 
-    expect(target.x).toBeGreaterThan(0);
+    expect(target.x).toBeCloseTo(3.75, 5);
   });
+
+  it.each(types.filter((type) => nodeComponentRegistry.isCsgShape(type)))(
+    'adds %s to the frame beside a box at the origin',
+    async (type) => {
+      const target = await framedTarget(sceneBeside(type));
+
+      expect(target.x).toBeGreaterThan(0);
+    }
+  );
 });
