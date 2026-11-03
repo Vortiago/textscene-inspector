@@ -20,16 +20,31 @@ describe('installGodotRefraction', () => {
     expect(sample).not.toContain('textureBicubic');
   });
 
-  it("blurs by the material's raw roughness, with no floor and no geometry roughness", () => {
+  it("blurs by the material's roughness as the fragment writes it, before the decals mix theirs in", () => {
     installGodotRefraction();
 
-    expect(THREE.ShaderChunk.transmission_fragment).toContain('n, v, roughnessFactor,');
-    expect(THREE.ShaderChunk.transmission_fragment).not.toContain('material.roughness');
+    expect(THREE.ShaderChunk.roughnessmap_fragment).toContain(
+      'float godotRefractionRoughness = roughnessFactor;'
+    );
+    expect(THREE.ShaderChunk.transmission_fragment).toContain(
+      'n, v, material.roughness, godotRefractionRoughness,'
+    );
+  });
+
+  it("keeps three's floored roughness for the Fresnel on the refraction", () => {
+    installGodotRefraction();
+    const refraction = functionBody(
+      THREE.ShaderChunk.transmission_pars_fragment,
+      'vec4 getIBLVolumeRefraction'
+    );
+
+    expect(refraction).toContain('EnvironmentBRDF( n, v, specularColor, specularF90, roughness )');
+    expect(refraction).toContain('getTransmissionSample( refractionCoords, godotRefractionRoughness, ior )');
   });
 
   it('installs with every other patch a canvas draws with', () => {
     installShaderPatches();
 
-    expect(THREE.ShaderChunk.transmission_fragment).toContain('n, v, roughnessFactor,');
+    expect(THREE.ShaderChunk.transmission_fragment).toContain('godotRefractionRoughness');
   });
 });
