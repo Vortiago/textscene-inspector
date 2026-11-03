@@ -60,23 +60,26 @@ describe('<CollisionGizmo> primitive shapes', () => {
     expect(geometry.parameters.height).toBeCloseTo(3, 6);
   });
 
-  it('draws a WorldBoundaryShape3D as the square and normal ray Godot draws, not a box', async () => {
+  async function expectDrawnAsDebugLines(drawn: TscnInternalResource) {
     const renderer = await ReactThreeTestRenderer.create(
-      <CollisionGizmo
-        shape={shape('WorldBoundaryShape3D', { plane: 'Plane(1, 0, 0, 2.5)' })}
-        color={new THREE.Color(0x00ff88)}
-      />
+      <CollisionGizmo shape={drawn} color={new THREE.Color(0x00ff88)} />
     );
     const [lines] = renderer.scene.findAll((n) => n.type === 'LineSegments');
     const positions = (lines!.instance as THREE.LineSegments).geometry.getAttribute('position');
-    expect(Array.from(positions.array)).toEqual(
-      Array.from(shapeDebugLines(shape('WorldBoundaryShape3D', { plane: 'Plane(1, 0, 0, 2.5)' }))!)
-    );
+    expect(Array.from(positions.array)).toEqual(Array.from(shapeDebugLines(drawn)!));
     expect(renderer.scene.findAll((n) => n.type === 'Mesh')).toHaveLength(0);
+  }
+
+  it('draws a WorldBoundaryShape3D as the square and normal ray Godot draws, not a box', async () => {
+    await expectDrawnAsDebugLines(shape('WorldBoundaryShape3D', { plane: 'Plane(1, 0, 0, 2.5)' }));
+  });
+
+  it('draws a SeparationRayShape3D as the one segment along +Z Godot draws, not a box', async () => {
+    await expectDrawnAsDebugLines(shape('SeparationRayShape3D', { length: '2.5' }));
   });
 
   it('still falls back to a unit box for a genuinely unknown shape type', async () => {
-    const geometry = await geometryOf(shape('SeparationRayShape3D'));
+    const geometry = await geometryOf(shape('HeightMapShape3D'));
     expect(geometry.type).toBe('BoxGeometry');
   });
 });

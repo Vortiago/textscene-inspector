@@ -22,6 +22,7 @@ import { decodeBoxShape3D } from '../../../resources/shapes/boxshape3d';
 import { decodeCapsuleShape3D } from '../../../resources/shapes/capsuleshape3d';
 import { decodeConcavePolygonShape3D } from '../../../resources/shapes/concavepolygonshape3d';
 import { decodeCylinderShape3D } from '../../../resources/shapes/cylindershape3d';
+import { decodeSeparationRayShape3D } from '../../../resources/shapes/separationrayshape3d';
 import { decodeSphereShape3D } from '../../../resources/shapes/sphereshape3d';
 import { decodeWorldBoundaryShape3D } from '../../../resources/shapes/worldboundaryshape3d';
 import type { TscnInternalResource } from '../../../parser/types';
@@ -180,6 +181,11 @@ function worldBoundaryDebugLines({ normal, d }: Plane): Float32Array {
   return vertices;
 }
 
+/** `SeparationRayShape3D::get_debug_mesh_lines` (`separation_ray_shape_3d.cpp:36-44`): the origin to `(0, 0, length)`. */
+function separationRayDebugLines(length: number): Float32Array {
+  return new Float32Array([0, 0, 0, 0, 0, length]);
+}
+
 /**
  * The wireframe of a shape the previewer decodes synchronously. Null for `ConvexPolygonShape3D`,
  * whose lazy hull draws it, and for a type without a port, which the caller warns about.
@@ -202,6 +208,8 @@ export function shapeDebugLines(shape: TscnInternalResource): Float32Array | nul
     }
     case 'WorldBoundaryShape3D':
       return worldBoundaryDebugLines(decodeWorldBoundaryShape3D(shape.data).plane);
+    case 'SeparationRayShape3D':
+      return separationRayDebugLines(decodeSeparationRayShape3D(shape.data).length);
     case 'ConcavePolygonShape3D':
       return concaveDebugLines(decodeConcavePolygonShape3D(shape.data).data);
     default:

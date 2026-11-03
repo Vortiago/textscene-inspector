@@ -86,6 +86,14 @@ export const SCENE_COMPOSITION_SCENES = [
     collisions: true,
     camera: 'WorldBoundaryRoot/Camera',
   },
+  // The one variable against `collision-shapes`: SeparationRayShape3D, drawn as Godot's single
+  // segment along +Z in three lengths. Thin lines, AA-sensitive.
+  {
+    name: 'collision-separation-ray',
+    file: 'unit-collision-separation-ray.tscn',
+    collisions: true,
+    camera: 'SeparationRayRoot/Camera',
+  },
   // Decal projects a local SVG checkerboard onto the floor its box intersects
   // (mixed per fragment), one plain and one tinted. The box gizmo
   // is a gizmo, which a capture draws only with `gizmos: true` (ADR-0056), so this is the runtime

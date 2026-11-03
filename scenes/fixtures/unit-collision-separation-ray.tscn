@@ -1,0 +1,37 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitcollisionseparationray"]
+
+; The one variable against `unit-collision-shapes`: SeparationRayShape3D, which Godot draws as a
+; single segment from the origin to (0, 0, length) (separation_ray_shape_3d.cpp:36-44), not as a
+; wireframe mesh. The three rays differ by length; `unit-collision-shapes` shows no
+; ray, so a regression in this draw moves only this scene. The camera frames all three.
+
+[sub_resource type="SeparationRayShape3D" id="Default"]
+
+[sub_resource type="SeparationRayShape3D" id="Long"]
+length = 3.0
+slide_on_slope = true
+
+[sub_resource type="SeparationRayShape3D" id="Short"]
+length = 0.5
+
+[node name="SeparationRayRoot" type="Node3D"]
+
+[node name="Bodies" type="CharacterBody3D" parent="."]
+
+[node name="Default" type="CollisionShape3D" parent="Bodies"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+shape = SubResource("Default")
+debug_color = Color(1, 1, 0, 1)
+
+[node name="Long" type="CollisionShape3D" parent="Bodies"]
+shape = SubResource("Long")
+debug_color = Color(1, 0.2, 0.2, 1)
+
+[node name="Short" type="CollisionShape3D" parent="Bodies"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+shape = SubResource("Short")
+debug_color = Color(0.2, 0.5, 1, 1)
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(0.9272, -0.1137, 0.3578, 0.0, 0.9535, 0.3029, -0.3752, -0.2809, 0.8841, 3, 2.5, 8)
+current = true
