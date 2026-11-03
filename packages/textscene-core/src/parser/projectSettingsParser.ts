@@ -352,6 +352,14 @@ export function projectUsesDebanding(settings: ProjectSettings | null): boolean 
 }
 
 /**
+ * `rendering/environment/screen_space_reflection/half_size`, true by default
+ * (`servers/rendering/rendering_server.cpp:3812`): whether the reflection traces at half size.
+ */
+export function projectTracesHalfSizeReflections(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['rendering/environment/screen_space_reflection/half_size']) ?? true;
+}
+
+/**
  * `rendering/viewport/transparent_background`, which the root viewport takes
  * (`scene/main/scene_tree.cpp:2085-2086`). A transparent root clears to `Color(0, 0, 0, 0)`, not
  * the clear colour (`renderer_viewport.cpp:371`).

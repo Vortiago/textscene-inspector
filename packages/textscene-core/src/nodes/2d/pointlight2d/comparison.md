@@ -147,6 +147,23 @@ left, in list order (`renderer_canvas_render_rd.cpp:525-530`, `:592-596`). A lig
 nothing and does not count toward the 15 an item takes. A light whose rect misses the viewport is
 not listed. Here 100 directional lights leave room for the first 156 positional lights.
 
+## Height on a normal-mapped item
+
+<!-- compare: image=unit-pointlight2d-normal-map-height status=done fixture=unit-pointlight2d-normal-map-height.tscn -->
+
+A Sprite2D whose CanvasTexture has a `normal_texture` takes each light at an angle, so `height`
+counts. Both sprites carry the same normal map, which tilts to +x. The light at height 0 lights only
+the side that faces it. The light at height 50 also reaches the side that faces away and the top.
+The previewer keeps each light that reaches a normal-mapped item in a buffer of its own. The item
+shades each one by its normal, then blends them in Godot's order.
+
+## Specular on a normal-mapped item
+
+<!-- compare: image=unit-pointlight2d-normal-map-specular status=done fixture=unit-pointlight2d-normal-map-specular.tscn -->
+
+`specular_shininess` below 1 adds Godot's Blinn highlight, scaled by `specular_color` and the
+`specular_texture`. Godot shades specular only with a normal map. The highlight lands on Godot.
+
 ## Linting
 
 <!-- lint:begin PointLight2D -->
@@ -171,13 +188,11 @@ Strict parsing format-checks these `PointLight2D` properties, plus 15 inherited 
 
 The linter warns (`resource-type-excluded-by-hint`) when `texture` holds a class its hint excludes, such as an `AtlasTexture`. Godot's editor never offers such a class, and the setter keeps it with a debug warning (`light_2d.cpp:396-405`).
 
-`enabled` falls back to `true`, `energy` and `texture_scale` to `1.0`, `offset` to `(0,
-0)` and `blend_mode` to `0` (ADD), each with a warning. `color` falls back to opaque
+`enabled` falls back to `true`, `energy` and `texture_scale` to `1.0`, `height` to `0`,
+`offset` to `(0, 0)` and `blend_mode` to `0` (ADD), each with a warning. `color` falls back to opaque
 white silently. `texture` is stored with no reference check.
 
 ## Known limitations
 
-- **Shader missing** A `CanvasTexture.normal_texture` is not read, so every surface
-  takes the light head-on with no specular response.
 - **Approximated** Under a `shadow_filter`, a step of the penumbra can sit one polar bin
   from Godot's, so its stepped edge shifts slightly in places.

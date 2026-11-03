@@ -1273,14 +1273,17 @@ ${
       }	var cam := Camera3D.new()
 	add_child(cam)
 	cam.fov = FOV
+	var distance := float(${EDITOR_CAMERA_DISTANCE})
 ${
   frame
     ? `	var bounds := _scene_bounds(target)
 	var span: float = maxf(maxf(bounds.size.x, bounds.size.y), bounds.size.z)
-	var distance := (span / 2.0 / tan(deg_to_rad(FOV) / 2.0)) * ${FRAME_MARGIN}
+	# A point (an empty particle AABB, a Label3D before its text shapes) has no span to fit, and a
+	# distance of 0 puts the camera inside it. frameSceneBounds.ts keeps the editor distance instead.
+	if span > 0.0:
+		distance = (span / 2.0 / tan(deg_to_rad(FOV) / 2.0)) * ${FRAME_MARGIN}
 	var focus := bounds.get_center()`
-    : `	var distance := float(${EDITOR_CAMERA_DISTANCE})
-	var focus := Vector3.ZERO`
+    : `	var focus := Vector3.ZERO`
 }
 	cam.global_position = focus + ${gdVec3(EDITOR_CAMERA_DIRECTION)} * distance
 	cam.look_at(focus, Vector3.UP)

@@ -456,6 +456,10 @@ A render target texture that a **sub-viewport** pass redraws, which every reader
 **Light pass host** (`r3f/lighting2d/lightPassHost.ts`):
 The scene, camera, buffer size and clip rect that one `CanvasLightPass` accumulates and shades through, and the call that runs it. The 2D stage and each **sub-viewport** with 2D content are hosts, and each one's lights, occluders and CanvasModulate act on its own items alone (ADR-0033).
 
+**Light kept apart** (`r3f/lighting2d/apartLight.ts`):
+A light on a list that a normal-mapped canvas item reads, drawn alone into its own layer instead of the list's accumulation buffer, with where it sits and its height, so the item shades it by its own normal term (ADR-0062).
+_Avoid_: "per-light buffer" for the light itself. The layer is its buffer.
+
 **ViewportPassRegistry**:
 The pass-ordering half of the same seam (`ViewportPassRegistryContext.tsx`): one `<ViewportPassOrchestrator>` per canvas runs every registered sub-viewport pass in dependency order each frame.
 A pass in a dependency cycle never runs, and `useViewportPassCycle` lets a consumer fall back.
@@ -617,6 +621,14 @@ _Avoid_: "probe cubemap", "probe bake".
 **Reflection atlas** (`resources/sky/skyLayers.ts`):
 The array texture that holds every **Reflection probe capture**, one layer per probe, each with its **Radiance layers** as mips.
 _Avoid_: "probe texture", "cube array".
+
+**Screen-space reflection**:
+The Environment's `ssr_*` reflection: each smooth opaque surface traces its mirror direction through the depth of the frame and shows the colour of the **last frame** where the ray lands.
+_Avoid_: "SSR pass", "mirror reflection", which a planar mirror or a **Reflection probe capture** gives.
+
+**Last frame**:
+The finished colour of a world buffer's last render, which the next **screen-space reflection** reads, so a still scene shows its reflection from the second frame on.
+_Avoid_: "previous frame", "frame before", "history buffer".
 
 **Depth fog**:
 The Environment's `fog_*` fog, which fades a surface towards the fog colour with its distance from the camera.

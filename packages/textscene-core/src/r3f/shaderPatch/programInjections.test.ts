@@ -42,11 +42,13 @@ import { AtlasDepthMaterial, ParaboloidDepthMaterial } from '../positionalShadow
 import { canvasItemLightingProps } from '../lighting2d/canvasItemLighting';
 import { LIGHTMAP_PROGRAM } from '../lightmap/lightmapProgram';
 import { TILE_TEXTURE_PADDING } from '../tileTexturePadding';
+import { UNSHADED_ROUGHNESS } from '../screenSpaceReflection/unshadedRoughness';
 import { HEIGHTMAP_DEFAULTS } from '../../resources/materials/standardmaterial3d/types';
 import { GODOT_FOG_PARS_CHUNK } from '../fog/fogChunks';
 import { INSTANCE_LAYERS_CHUNK } from '../instanceLayers/instanceLayersChunk';
 import { SCENE_ROWS_CHUNK } from '../sceneRows/sceneRowsChunk';
-import { lightUniforms } from '../lighting2d/testing/lightUniforms';
+import { lightUniforms, normalMappedUniforms } from '../lighting2d/testing/lightUniforms';
+import { normalMappedLightingProps } from '../lighting2d/normalMappedLighting';
 
 const NO_SHADER = (): ProgramShader => ({ vertexShader: '', fragmentShader: '', uniforms: {} });
 
@@ -163,6 +165,12 @@ const INJECTIONS: readonly InjectionCase[] = [
   injected('materials/godotParallax.ts', 'unshaded parallax', ['basic'], () =>
     unshadedParallaxInjection(HEIGHTMAP_DEFAULTS)
   ),
+  injected(
+    'screenSpaceReflection/unshadedRoughness.ts',
+    'unshaded roughness',
+    ['basic'],
+    () => UNSHADED_ROUGHNESS
+  ),
   injected('materials/godotPoint.ts', 'point size', COLOUR, () => pointBag(false)),
   injected('materials/godotPoint.ts', 'point coordinate albedo', COLOUR, () => pointBag(true)),
   injected(
@@ -228,6 +236,12 @@ const INJECTIONS: readonly InjectionCase[] = [
     'canvas item lighting',
     ['basic'],
     () => canvasItemLightingProps(lightUniforms()).injection
+  ),
+  injected(
+    'lighting2d/normalMappedLighting.ts',
+    'normal-mapped canvas item lighting',
+    ['basic'],
+    () => normalMappedLightingProps(normalMappedUniforms(), 1).injection
   ),
   injected('lightmap/lightmapProgram.ts', 'lightmap read', LIT, () => LIGHTMAP_PROGRAM),
   injected('tileTexturePadding.ts', 'tile texture padding', COLOUR, () => TILE_TEXTURE_PADDING),

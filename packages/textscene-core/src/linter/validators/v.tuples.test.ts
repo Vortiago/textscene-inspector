@@ -214,6 +214,14 @@ describe('float-tuple validators speak the tokenizer float grammar', () => {
     expect(v.quaternion('q')('q', 'Quaternion(0.5, 5., 0, 1)', 1)).toBeNull();
   });
 
+  it('v.plane accepts the tokenizer grammar', () => {
+    expect(v.plane('p')('p', 'Plane(0, 1., 0, -2.5)', 1)).toBeNull();
+  });
+
+  it('v.plane rejects a Plane with three components', () => {
+    expect(v.plane('p')('p', 'Plane(0, 1, 0)', 1)).toBeAtTier('error');
+  });
+
   it('v.transform2d accepts the tokenizer grammar', () => {
     expect(v.transform2d('t')('t', 'Transform2D(1., 0.5, 0, 1, 0, 0)', 1)).toBeNull();
   });

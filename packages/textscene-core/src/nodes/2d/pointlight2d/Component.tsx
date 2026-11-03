@@ -30,9 +30,10 @@ import { useShadowLightPose } from '../../../r3f/lighting2d/shadowLightPose';
 import { litQuadRenderOrder, ShadowVolumeMask } from '../../../r3f/lighting2d/ShadowVolumeMask';
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { useLightQuadMaterials, type LightQuadMaterials } from './useLightQuadMaterials';
+import { placePositionalLight, useApartLightOrigin } from '../../../r3f/lighting2d/apartLight';
 import type { Rgba } from '../../../godot/math/math';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
-import { Light2DShadowFilter } from '../../../godot/scene/light2d.js';
+import { Light2DBlendMode, Light2DShadowFilter } from '../../../godot/scene/light2d.js';
 
 /** The quads a light draws besides its lit quad, each only when its material exists. */
 const OPTIONAL_ROLES = [
@@ -96,10 +97,14 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
     sequence: lightDrawSequence(listed, null),
     shadowItemCullMask: casts ? props.shadow_item_cull_mask : null,
     tintsShadow,
+    mixes: props.blend_mode === Light2DBlendMode.MIX,
   });
   const sequence = lightDrawSequence(listed, ordinal);
   // An item the light reaches through a bit outside `shadow_item_cull_mask` takes it unshadowed.
   const reachesUnshadowedItem = (props.range_item_cull_mask & ~props.shadow_item_cull_mask) !== 0;
+
+  // A normal-mapped item shades the light from where its node sits.
+  const setOrigin = useApartLightOrigin(ordinal, placePositionalLight, props.height);
 
   // A disabled light still draws its children: `enabled` switches the light alone.
   return (
@@ -110,22 +115,25 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
         !props.enabled ? null : missing ? (
           <MissingResourcePlaceholder shape="plane" name={node.name} />
         ) : cookie ? (
-          <QuadMesh
-            cookie={cookie}
-            color={props.color}
-            energy={props.energy}
-            scale={props.texture_scale}
-            offset={props.offset}
-            blendMode={props.blend_mode}
-            shadowColor={props.shadow_color}
-            shadowFilter={props.shadow_filter}
-            shadowFilterSmooth={props.shadow_filter_smooth}
-            ordinal={ordinal}
-            sequence={sequence}
-            tintsShadow={tintsShadow}
-            reachesUnshadowedItem={reachesUnshadowedItem}
-            casters={casters}
-          />
+          <>
+            <object3D ref={setOrigin} />
+            <QuadMesh
+              cookie={cookie}
+              color={props.color}
+              energy={props.energy}
+              scale={props.texture_scale}
+              offset={props.offset}
+              blendMode={props.blend_mode}
+              shadowColor={props.shadow_color}
+              shadowFilter={props.shadow_filter}
+              shadowFilterSmooth={props.shadow_filter_smooth}
+              ordinal={ordinal}
+              sequence={sequence}
+              tintsShadow={tintsShadow}
+              reachesUnshadowedItem={reachesUnshadowedItem}
+              casters={casters}
+            />
+          </>
         ) : null
       }
     >

@@ -38,9 +38,14 @@ export function metallicRoughnessChannelsUserData(
   return { [ROUGHNESS_CHANNEL_KEY]: roughnessMask, [METALLIC_CHANNEL_KEY]: metallicMask };
 }
 
+/** The mask of the roughness map's channel `material` records, read at each upload. */
+export function roughnessChannelUniform(material: Pick<Material, 'userData'>): IUniform<TextureChannelMask> {
+  return recordedUniform(material, ROUGHNESS_CHANNEL_KEY, DEFAULT_TEXTURE_CHANNEL_MASK);
+}
+
 function channelUniforms(material: Material): Record<string, IUniform> {
   return {
-    [ROUGHNESS_CHANNEL_KEY]: recordedUniform(material, ROUGHNESS_CHANNEL_KEY, DEFAULT_TEXTURE_CHANNEL_MASK),
+    [ROUGHNESS_CHANNEL_KEY]: roughnessChannelUniform(material),
     [METALLIC_CHANNEL_KEY]: recordedUniform(material, METALLIC_CHANNEL_KEY, DEFAULT_TEXTURE_CHANNEL_MASK),
   };
 }

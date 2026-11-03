@@ -28,6 +28,7 @@ import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
 import { viewportSize, viewportTargetSize } from './targetSize';
 import { useInCanvasOverWorld } from './canvasOverWorldScope';
+import { ViewportCanvasScope } from '../../../r3f/viewportCanvasScope';
 
 // Lazy: the Control painters register on import, and a viewport with no Controls never needs them.
 const ViewportControls = lazy(() =>
@@ -99,7 +100,9 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
   const inViewport = (inner: ReactNode) => (
     <ViewportSizeProvider size={layoutSize}>
       <LayerRanksProvider value={canvasLayers}>
-        <SubViewportSamplerScope properties={properties}>{inner}</SubViewportSamplerScope>
+        <ViewportCanvasScope>
+          <SubViewportSamplerScope properties={properties}>{inner}</SubViewportSamplerScope>
+        </ViewportCanvasScope>
       </LayerRanksProvider>
     </ViewportSizeProvider>
   );

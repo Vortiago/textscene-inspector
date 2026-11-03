@@ -1,6 +1,7 @@
 /**
  * Sky slice build (ADR-0031): renders decoded sky Data, the scene's directional
- * lights and a panorama texture into a cubemap, baked into Godot's radiance layers.
+ * lights and a panorama texture into a cubemap, baked into Godot's radiance layers,
+ * and builds the background that draws the same sky at each pixel.
  * `skyUniforms.ts` and `skyShaders.ts` are internals: nothing outside the slice
  * reaches past `build.ts`.
  */
@@ -8,20 +9,17 @@
 import * as THREE from 'three';
 import type { Sky, SkyBake } from './types';
 import { warn } from '../../logger';
-import { skyFragmentShader, SKY_VERTEX_SHADER } from './skyShaders';
-import { skyUniforms, type SkyLight } from './skyUniforms';
+import { skyFragmentShader, skyGlsl, SKY_VERTEX_SHADER } from './skyShaders';
+import { skyUniforms, type SkyLight, type SkyUniforms } from './skyUniforms';
 import { releaseView, textureView } from '../textures/textureView';
 import { fillLiveCopy, isLiveTarget } from '../../r3f/liveTargets';
 import { bakeSkyLayers, disposeSkyLayers, type SkyLayers } from './skyLayers';
 import { isDebanded } from './debanding';
+import { godotTextureFilterState } from '../textures/godotTextureFilter';
+import { TextureFilter } from '../../godot/rendering/materials/textureFilter';
+import { SkyBackground } from '../../r3f/sky/skyBackground';
 
 export type { SkyLight } from './skyUniforms';
-
-/**
- * The background's cube face. Godot draws the background per pixel, and 256 is ample for a gradient.
- * It is also the radiance's cube at the default radiance size.
- */
-const BACKGROUND_SIZE = 256;
 
 /**
  * The largest radiance the previewer bakes, as each doubling costs four times the bake. Metal balls
@@ -33,21 +31,20 @@ const LARGEST_RADIANCE_SIZE = 256;
  * Godot's sky ambient is the sky's own radiance: it lights surfaces and is what
  * they reflect (`Environment.reflection_source` defaults to the background), and
  * the fogs read it too. So a cube render at the radiance size feeds Godot's layers
- * of it. A sky that paints the background renders a cube for `scene.background`
- * too, the same cube when the sizes match.
+ * of it. The background draws the sky shader at each pixel, as Godot's does.
  */
 export interface SkyEnvironment {
-  /** Sharp cubemap for `scene.background`, or null for a sky that does not paint it. */
-  background: THREE.Texture | null;
+  /** The sky at each pixel behind the scene, or null for a sky that does not paint the background. */
+  background: SkyBackground | null;
   /** Godot's radiance layers, which its ambient, its reflections and the fogs read. */
   layers: SkyLayers;
   /**
-   * Draws the background again from the panorama's live target, as Godot draws the background
+   * Fills the background's copy of the panorama's live target again, as Godot draws the background
    * from the sky shader each frame (`sky.cpp:1463`). Absent unless a pass draws the panorama and
    * the sky paints the background.
    */
   redrawBackground?: () => void;
-  /** Frees the background and the layers. */
+  /** Frees the background, the panorama it samples, and the layers. */
   dispose: () => void;
 }
 
@@ -55,24 +52,29 @@ export interface SkyEnvironmentInput {
   sky: Sky;
   lights: readonly SkyLight[];
   panorama?: THREE.Texture | null;
-  /** Whether the sky paints the background, which then needs a cube of its own size. */
+  /** Whether the sky paints the background. */
   asBackground: boolean;
   /** The scale a surface reads the radiance at, `scene.environmentIntensity`. */
   energy: number;
 }
 
 /**
- * The panorama as the sky shader samples it. `PANORAMA_SKY_FRAGMENT_SHADER`
- * wraps u with `fract(atan(...))`, so it states Repeat (ADR-0044). The result is
- * a clone only when the arrival diverges, and `releaseView` frees it
- * only then. A live target's copy is filled now, since the bake samples it
- * before the target's next render. Returns null for a sky with no panorama.
+ * The panorama as the sky shader samples it: `filter_linear` or `filter_nearest` with no mipmaps
+ * (`sky_material.cpp:498-505`). `PANORAMA_SKY` samples across the seam at u = 0 and 1, so it
+ * states Repeat (ADR-0044). The result is a clone only when the arrival diverges, and `releaseView`
+ * frees it only then. A live target's copy is filled now, since the bake samples it before the
+ * target's next render. Returns null for a sky with no panorama.
  */
-function skyPanoramaTexture(gl: THREE.WebGLRenderer, panorama?: THREE.Texture | null): THREE.Texture | null {
-  if (!panorama) return null;
+function skyPanoramaTexture(
+  gl: THREE.WebGLRenderer,
+  sky: Sky,
+  panorama?: THREE.Texture | null
+): THREE.Texture | null {
+  if (!panorama || sky.material.kind !== 'panorama') return null;
   const view = textureView(panorama, {
     colorSpace: panorama.colorSpace as THREE.ColorSpace,
     wrap: THREE.RepeatWrapping,
+    filter: godotTextureFilterState(sky.material.filter ? TextureFilter.LINEAR : TextureFilter.NEAREST),
   });
   fillLiveCopy(panorama, view, gl);
   return view;
@@ -87,82 +89,67 @@ export function buildSkyEnvironment(
   gl: THREE.WebGLRenderer,
   { sky, lights, panorama, asBackground, energy }: SkyEnvironmentInput
 ): SkyEnvironment | null {
-  const panoramaView = skyPanoramaTexture(gl, panorama);
+  const panoramaView = skyPanoramaTexture(gl, sky, panorama);
+  const uniforms = skyUniforms(sky.material, lights, panoramaView);
+  let background: SkyBackground | null = null;
+  let layers: SkyLayers;
+  try {
+    // Ahead of the bake, so a three whose background program moved frees no layers it baked.
+    background = asBackground ? new SkyBackground(skyGlsl(sky.material), uniforms) : null;
+    layers = bakeRadiance(gl, sky, uniforms, energy);
+  } catch (error) {
+    warn('[Sky] could not render the sky environment', error);
+    background?.dispose();
+    releaseView(panoramaView);
+    return null;
+  }
+
+  // After the bake only the background samples the panorama.
+  if (!background) releaseView(panoramaView);
+  const redrawBackground =
+    background && panorama && panoramaView && isLiveTarget(panorama)
+      ? () => fillLiveCopy(panorama, panoramaView, gl)
+      : undefined;
+  return {
+    background,
+    layers,
+    redrawBackground,
+    dispose: () => {
+      if (background) {
+        background.dispose();
+        releaseView(panoramaView);
+      }
+      disposeSkyLayers(layers);
+    },
+  };
+}
+
+/** Renders `sky` into a cube at the radiance size and bakes Godot's layers from it. */
+function bakeRadiance(gl: THREE.WebGLRenderer, sky: Sky, uniforms: SkyUniforms, energy: number): SkyLayers {
   const geometry = new THREE.BoxGeometry(2, 2, 2);
   const material = new THREE.ShaderMaterial({
-    uniforms: skyUniforms(sky.material, lights, panoramaView),
+    uniforms,
     vertexShader: SKY_VERTEX_SHADER,
     fragmentShader: skyFragmentShader(sky.material),
     side: THREE.BackSide,
     depthWrite: false,
     depthTest: false,
   });
-
   const skyScene = new THREE.Scene();
   skyScene.add(new THREE.Mesh(geometry, material));
-
   const bake = cappedBake(sky);
-  const backgroundTarget = asBackground ? cubeTarget(BACKGROUND_SIZE) : null;
-  const radianceTarget =
-    backgroundTarget && bake.radianceSize === BACKGROUND_SIZE
-      ? backgroundTarget
-      : cubeTarget(bake.radianceSize);
-  const hasOwnRadianceCube = radianceTarget !== backgroundTarget;
-  const freeSkyScene = () => {
-    geometry.dispose();
-    material.dispose();
-    releaseView(panoramaView);
-  };
-  let layers: SkyLayers;
-
+  const radianceTarget = new THREE.WebGLCubeRenderTarget(bake.radianceSize, { type: THREE.HalfFloatType });
   try {
     // The cube camera sits at the origin inside the unit box, so each face
     // samples the same directions Godot's `EYEDIR` covers.
-    if (backgroundTarget) renderCube(gl, skyScene, backgroundTarget);
-    if (hasOwnRadianceCube) renderCube(gl, skyScene, radianceTarget);
-    layers = bakeSkyLayers(gl, radianceTarget.texture, bake, radianceDebanding(sky, energy));
-  } catch (error) {
-    warn('[Sky] could not render the sky environment', error);
-    backgroundTarget?.dispose();
-    freeSkyScene();
-    return null;
+    new THREE.CubeCamera(0.1, 10, radianceTarget).update(gl, skyScene);
+    return bakeSkyLayers(gl, radianceTarget.texture, bake, radianceDebanding(sky, energy));
   } finally {
-    // A radiance cube of its own has served the layers by now.
-    if (hasOwnRadianceCube) radianceTarget.dispose();
+    // The cube serves the layers once, so it and its sky mesh are freed here.
+    radianceTarget.dispose();
+    geometry.dispose();
+    material.dispose();
   }
-
-  // The sky scene of a live background stays, since each redraw renders it again. Any other sky
-  // scene renders once, so it is freed now and not held for the environment's lifetime.
-  const redrawBackground =
-    backgroundTarget && panorama && panoramaView && isLiveTarget(panorama)
-      ? backgroundRedraw(gl, skyScene, panorama, panoramaView, backgroundTarget)
-      : undefined;
-  if (!redrawBackground) freeSkyScene();
-  return {
-    background: backgroundTarget?.texture ?? null,
-    layers,
-    redrawBackground,
-    dispose: () => {
-      backgroundTarget?.dispose();
-      disposeSkyLayers(layers);
-      if (redrawBackground) freeSkyScene();
-    },
-  };
-}
-
-/** Renders `skyScene` into `target` again from the live `panorama`'s copy, through one cube camera. */
-function backgroundRedraw(
-  gl: THREE.WebGLRenderer,
-  skyScene: THREE.Scene,
-  panorama: THREE.Texture,
-  panoramaView: THREE.Texture,
-  target: THREE.WebGLCubeRenderTarget
-): () => void {
-  const camera = cubeCamera(target);
-  return () => {
-    fillLiveCopy(panorama, panoramaView, gl);
-    camera.update(gl, skyScene);
-  };
 }
 
 /**
@@ -182,16 +169,4 @@ function cappedBake(bake: SkyBake): SkyBake {
     radianceFilter: 'importance-sample',
     radianceSize: Math.min(bake.radianceSize, LARGEST_RADIANCE_SIZE),
   };
-}
-
-function cubeTarget(size: number): THREE.WebGLCubeRenderTarget {
-  return new THREE.WebGLCubeRenderTarget(size, { type: THREE.HalfFloatType });
-}
-
-function renderCube(gl: THREE.WebGLRenderer, scene: THREE.Scene, target: THREE.WebGLCubeRenderTarget): void {
-  cubeCamera(target).update(gl, scene);
-}
-
-function cubeCamera(target: THREE.WebGLCubeRenderTarget): THREE.CubeCamera {
-  return new THREE.CubeCamera(0.1, 10, target);
 }
