@@ -7,6 +7,7 @@
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { parseOptionalRect2 } from '../../../parser/valueParsers';
 import { type AtlasRect, type AtlasTextureData, type AtlasTextureLayout } from './types';
+import type { ImageSize } from '../../formats/image/imagePixels.js';
 
 const ZERO_RECT: AtlasRect = { x: 0, y: 0, width: 0, height: 0 };
 
@@ -38,6 +39,24 @@ export function atlasTextureSize(
   const width = roundedW === 0 ? atlasSize?.width : roundedW + tex.margin.width;
   const height = roundedH === 0 ? atlasSize?.height : roundedH + tex.margin.height;
   return width === undefined || height === undefined ? null : { width, height };
+}
+
+/**
+ * `tex` moved from a sheet of size `from` to one of size `to`, covering the same fraction of it.
+ * A CanvasTexture's normal and specular maps are sampled at the diffuse uv (`canvas.glsl:654,679`),
+ * so a map of another size is cut by the fraction the diffuse cell covers.
+ */
+export function atlasTextureOnSheet(tex: AtlasTextureData, from: ImageSize, to: ImageSize): AtlasTextureData {
+  if (from.width === to.width && from.height === to.height) return tex;
+  const sx = to.width / from.width;
+  const sy = to.height / from.height;
+  const scaled = (rect: AtlasRect): AtlasRect => ({
+    x: rect.x * sx,
+    y: rect.y * sy,
+    width: rect.width * sx,
+    height: rect.height * sy,
+  });
+  return { ...tex, region: scaled(tex.region), margin: scaled(tex.margin) };
 }
 
 /**

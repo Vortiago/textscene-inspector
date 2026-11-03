@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import type * as THREE from 'three';
 import { LIGHT_PASS_LAYER } from './lightPassLayers.js';
-import type { CanvasLightDeclaration, ItemPlacement, PassMeshRole } from './itemLightList.js';
+import type { CanvasLightDeclaration, ItemPlacement, LitItemRead, PassMeshRole } from './itemLightList.js';
 import { useCanvasLighting2D } from './lightPassContext.js';
 
 /**
@@ -22,7 +22,7 @@ export function useRegisterCanvasLight2D(
   const { registerLight } = useCanvasLighting2D();
   const [ordinal, setOrdinal] = useState<number | null>(null);
   const { itemCullMask, zMin, zMax, layerMin, layerMax } = declaration.reach;
-  const { sequence, slot, shadowItemCullMask, tintsShadow } = declaration;
+  const { sequence, slot, shadowItemCullMask, tintsShadow, mixes } = declaration;
   useEffect(() => {
     if (!enabled) {
       setOrdinal(null);
@@ -34,6 +34,7 @@ export function useRegisterCanvasLight2D(
       slot,
       shadowItemCullMask,
       tintsShadow,
+      mixes,
     });
     setOrdinal(registration.ordinal);
     return registration.release;
@@ -49,20 +50,21 @@ export function useRegisterCanvasLight2D(
     slot,
     shadowItemCullMask,
     tintsShadow,
+    mixes,
   ]);
   return ordinal;
 }
 
 /**
- * Declares a lit item at `placement`, by value. A Light Only item asks for the unmodulated buffer.
- * The cap hands `takenLights` as a new array only when they change, so its identity serves.
+ * Declares a lit item at `placement`, by value, with the accumulation it reads. The cap hands
+ * `takenLights` as a new array only when they change, so its identity serves.
  */
-export function useRegisterLitItem(placement: ItemPlacement, lightOnly: boolean): void {
+export function useRegisterLitItem(placement: ItemPlacement, read: LitItemRead): void {
   const { registerItem } = useCanvasLighting2D();
   const { lightMask, z, layer, takenLights } = placement;
   useEffect(
-    () => registerItem({ lightMask, z, layer, takenLights }, lightOnly),
-    [registerItem, lightMask, z, layer, takenLights, lightOnly]
+    () => registerItem({ lightMask, z, layer, takenLights }, read),
+    [registerItem, lightMask, z, layer, takenLights, read]
   );
 }
 

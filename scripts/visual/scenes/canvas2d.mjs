@@ -103,6 +103,24 @@ export const CANVAS_2D_SCENES = [
   { name: 'directionallight2d', file: 'unit-directionallight2d.tscn', mode: '2d' },
   { name: 'directionallight2d-shadow', file: 'unit-directionallight2d-shadow.tscn', mode: '2d' },
   { name: 'directionallight2d-shadow-pcf5', file: 'unit-directionallight2d-shadow-pcf5.tscn', mode: '2d' },
+  // A normal-mapped Sprite2D shades each light by its own angle. Godot 4.6.3 `--mode 2d`: at height 0,
+  // rgb(201) at (100,324) and rgb(128) at (224,324); at height 50, rgb(226) at (852,324), rgb(168)
+  // at (976,324) and rgb(160) at (952,224).
+  {
+    name: 'pointlight2d-normal-map-height',
+    file: 'unit-pointlight2d-normal-map-height.tscn',
+    mode: '2d',
+  },
+  // specular_shininess 0.5 adds the highlight. Godot 4.6.3 `--mode 2d`: rgb(255) at (476,324),
+  // rgb(244) at (552,324) and rgb(168) at (600,324).
+  {
+    name: 'pointlight2d-normal-map-specular',
+    file: 'unit-pointlight2d-normal-map-specular.tscn',
+    mode: '2d',
+  },
+  // A DirectionalLight2D at height 0.5. Godot 4.6.3 `--mode 2d`: Plain rgb(255) at (200,324), Flat
+  // rgb(193) at (576,324), Dome rgb(200), rgb(219) and rgb(200) at x=840, 952 and 1064.
+  { name: 'directionallight2d-normal-map', file: 'unit-directionallight2d-normal-map.tscn', mode: '2d' },
   // CPUParticles2D renders a frozen pose: a live emitter never gives two
   // identical frames, so the harness fails it as unstable, not as changed. Each
   // fixture pins `use_fixed_seed`/`seed`/`fixed_fps`/`preprocess` so the pose

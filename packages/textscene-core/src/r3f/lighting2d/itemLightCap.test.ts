@@ -22,7 +22,13 @@ const EVERYWHERE: Rect2 = { x: -1e6, y: -1e6, w: 2e6, h: 2e6 };
 const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, takenLights: null };
 
 function positional(sequence: number | null): CanvasLightDeclaration {
-  return { reach: DEFAULT_LIGHT_CULL_KEY, sequence, shadowItemCullMask: null, tintsShadow: false };
+  return {
+    reach: DEFAULT_LIGHT_CULL_KEY,
+    sequence,
+    shadowItemCullMask: null,
+    tintsShadow: false,
+    mixes: false,
+  };
 }
 
 /** `count` positional lights, ordinal `n` at sequence `n`. */

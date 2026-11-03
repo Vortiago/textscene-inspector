@@ -35,6 +35,8 @@ export interface CanvasLightDeclaration {
   readonly shadowItemCullMask: number | null;
   /** Whether the light adds a `shadow_color` where it is blocked. */
   readonly tintsShadow: boolean;
+  /** Whether the light blends by MIX, which a normal-mapped item reads to shade it. */
+  readonly mixes: boolean;
 }
 
 /** Where an item sits for the cull test: its `light_mask`, `z_final` and canvas layer. */
@@ -164,10 +166,16 @@ export function placementId(item: ItemPlacement): string {
   return `${item.lightMask}|${item.z}|${item.layer}|${taken}`;
 }
 
-/** One placement the canvas holds a lit item at, and whether a Light Only item sits there. */
+/**
+ * The accumulation a lit item reads: the ordinary one, the one seeded from white for a Light Only
+ * item, or each light apart for a normal-mapped item, whatever its light mode.
+ */
+export type LitItemRead = 'plain' | 'lightOnly' | 'apart';
+
+/** One placement the canvas holds a lit item at, and what its items read. */
 export interface PlacementDeclarations {
   readonly placement: ItemPlacement;
-  readonly hasLightOnly: boolean;
+  readonly reads: ReadonlySet<LitItemRead>;
 }
 
 /** One list the pass accumulates, and the placements that read it. */
@@ -176,10 +184,57 @@ export interface LightListPlan {
   readonly id: string;
   readonly entries: readonly LightListEntry[];
   readonly placementIds: readonly string[];
-  /** Whether a Light Only item reads the list, so it needs the unmodulated buffer. */
-  readonly hasLightOnly: boolean;
+  /** What the list's items read, so the pass draws only those buffers. */
+  readonly reads: ReadonlySet<LitItemRead>;
   /** Whether a light that tints its shadow shadows the list, so it needs the `shadow_color` buffer. */
   readonly tintsShadow: boolean;
+  /** The lights kept apart, while a normal-mapped item reads the list. Null otherwise. */
+  readonly lightsApart: ApartLightPlan | null;
+}
+
+/** The lights of a list a normal-mapped item reads, each accumulated alone into a layer. */
+export interface ApartLightPlan {
+  /** The entries in layer order, which is the order Godot applies them. */
+  readonly entries: readonly LightListEntry[];
+  /**
+   * Each entry's layer in a `shadow_color` buffer that holds only the lights that add one, or -1 for
+   * a light that adds none.
+   */
+  readonly tintLayers: readonly number[];
+  /** How many lights add a `shadow_color`, the layers of that buffer. */
+  readonly tintLayerCount: number;
+}
+
+/** Whether `entry`'s light adds a `shadow_color` on its list: it tints, and shadows the list. */
+function entryTintsShadow(
+  lights: ReadonlyMap<number, CanvasLightDeclaration>,
+  entry: LightListEntry
+): boolean {
+  return !entry.unshadowed && lights.get(entry.ordinal)!.tintsShadow;
+}
+
+/**
+ * `entries` in the order `canvas.glsl` applies them: the directional lights by slot (`:727`), then
+ * the positional lights by sequence (`:768`).
+ */
+function applicationOrder(
+  lights: ReadonlyMap<number, CanvasLightDeclaration>,
+  entries: readonly LightListEntry[]
+): LightListEntry[] {
+  const byOrdinal = new Map(entries.map((entry) => [entry.ordinal, entry]));
+  return [...directionalListOrder(lights), ...positionalListOrder(lights)]
+    .map((ordinal) => byOrdinal.get(ordinal))
+    .filter((entry) => entry !== undefined);
+}
+
+function apartLightPlan(
+  lights: ReadonlyMap<number, CanvasLightDeclaration>,
+  entries: readonly LightListEntry[]
+): ApartLightPlan {
+  const ordered = applicationOrder(lights, entries);
+  let tintLayerCount = 0;
+  const tintLayers = ordered.map((entry) => (entryTintsShadow(lights, entry) ? tintLayerCount++ : -1));
+  return { entries: ordered, tintLayers, tintLayerCount };
 }
 
 /** The lists the canvas's lit placements take, one plan per distinct list, empty lists left out. */
@@ -187,22 +242,27 @@ export function planLightLists(
   lights: ReadonlyMap<number, CanvasLightDeclaration>,
   placements: ReadonlyMap<string, PlacementDeclarations>
 ): LightListPlan[] {
-  const plans = new Map<string, LightListPlan & { placementIds: string[] }>();
-  for (const [id, { placement, hasLightOnly }] of placements) {
+  const lists = new Map<
+    string,
+    { entries: LightListEntry[]; placementIds: string[]; reads: Set<LitItemRead> }
+  >();
+  for (const [id, { placement, reads }] of placements) {
     const entries = itemLightList(lights, placement);
     if (entries.length === 0) continue;
     const listId = lightListId(entries);
-    const plan = plans.get(listId) ?? {
-      id: listId,
-      entries,
-      placementIds: [],
-      hasLightOnly: false,
-      tintsShadow: entries.some((entry) => !entry.unshadowed && lights.get(entry.ordinal)!.tintsShadow),
-    };
-    plan.placementIds.push(id);
-    plans.set(listId, { ...plan, hasLightOnly: plan.hasLightOnly || hasLightOnly });
+    const list = lists.get(listId) ?? { entries, placementIds: [], reads: new Set<LitItemRead>() };
+    list.placementIds.push(id);
+    for (const read of reads) list.reads.add(read);
+    lists.set(listId, list);
   }
-  return [...plans.values()];
+  return [...lists].map(([id, { entries, placementIds, reads }]) => ({
+    id,
+    entries,
+    placementIds,
+    reads,
+    tintsShadow: entries.some((entry) => entryTintsShadow(lights, entry)),
+    lightsApart: reads.has('apart') ? apartLightPlan(lights, entries) : null,
+  }));
 }
 
 /**

@@ -2256,13 +2256,28 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>One render takes 256 lights, the directional lights first (<code>renderer_canvas_render_rd.cpp:525-530</code>). A directional light past them lights nothing. Here the red and green lights past the 256th leave the square untinted by them.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Height on a normal-mapped item</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-directionallight2d-normal-map-godot.png" alt="Godot render of Height on a normal-mapped item">
+          <img class="img-ours" src="images/unit-directionallight2d-normal-map-ours.png" alt="Our render of Height on a normal-mapped item">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p><code>height</code> tilts the light from the canvas plane, 0, toward the viewer, 1. A plain Sprite2D takes it head-on whatever the height. Two normal-mapped ones take it by their normals: Flat tilts to +x, and Dome sweeps from -x to +x. Each lands on Godot.</p></div>
       </section><div class="prose"><h3>Linting</h3>
 <p>Strict parsing format-checks these <code>DirectionalLight2D</code> properties, plus 15 inherited from Light2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>height</code></td><td>float 0-1</td><td>warning</td></tr><tr><td><code>max_distance</code></td><td>float &gt;= 0</td><td>warning below</td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-canvasitem-clip-ancestry</code> (type-family match)</td><td><code>canvasitem-ancestor-clips-children</code></td><td>warning</td></tr><tr><td></td><td><code>canvasitem-ancestor-is-canvasgroup</code></td><td>warning</td></tr><tr><td><code>valid-directionallight2d-ranges</code></td><td><code>directionallight2d-inverted-layer-range</code></td><td>info</td></tr></tbody></table></div>
-<p><code>enabled</code> falls back to <code>true</code>, <code>energy</code> to <code>1.0</code>, <code>height</code> to <code>0</code>, <code>max_distance</code> to <code>10000</code> and <code>blend_mode</code> to <code>0</code> (ADD), each with a warning. <code>color</code> falls back to opaque white silently.</p>
-<h3>Known limitations</h3>
-<ul><li><strong>Shader missing</strong> A <code>CanvasTexture.normal_texture</code> is not read, so <code>height</code> has no effect and every surface takes the light head-on.</li></ul></div>
+<p><code>enabled</code> falls back to <code>true</code>, <code>energy</code> to <code>1.0</code>, <code>height</code> to <code>0</code>, <code>max_distance</code> to <code>10000</code> and <code>blend_mode</code> to <code>0</code> (ADD), each with a warning. <code>color</code> falls back to opaque white silently.</p></div>
     </article>
     <article class="sheet" data-type="DirectionalLight3D" hidden>
       <header class="sheet-head">
@@ -5439,14 +5454,48 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>One render takes 256 lights: the directional lights first, then the positional lights in what is left, in list order (<code>renderer_canvas_render_rd.cpp:525-530</code>, <code>:592-596</code>). A light past it draws nothing and does not count toward the 15 an item takes. A light whose rect misses the viewport is not listed. Here 100 directional lights leave room for the first 156 positional lights.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Height on a normal-mapped item</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-pointlight2d-normal-map-height-godot.png" alt="Godot render of Height on a normal-mapped item">
+          <img class="img-ours" src="images/unit-pointlight2d-normal-map-height-ours.png" alt="Our render of Height on a normal-mapped item">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A Sprite2D whose CanvasTexture has a <code>normal_texture</code> takes each light at an angle, so <code>height</code> counts. Both sprites carry the same normal map, which tilts to +x. The light at height 0 lights only the side that faces it. The light at height 50 also reaches the side that faces away and the top. The previewer keeps each light that reaches a normal-mapped item in a buffer of its own. The item shades each one by its normal, then blends them in Godot's order.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Specular on a normal-mapped item</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-pointlight2d-normal-map-specular-godot.png" alt="Godot render of Specular on a normal-mapped item">
+          <img class="img-ours" src="images/unit-pointlight2d-normal-map-specular-ours.png" alt="Our render of Specular on a normal-mapped item">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p><code>specular_shininess</code> below 1 adds Godot's Blinn highlight, scaled by <code>specular_color</code> and the <code>specular_texture</code>. Godot shades specular only with a normal map. The highlight lands on Godot.</p></div>
       </section><div class="prose"><h3>Linting</h3>
 <p>Strict parsing format-checks these <code>PointLight2D</code> properties, plus 15 inherited from Light2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>height</code></td><td>float &gt;= 0</td><td>warning below</td></tr><tr><td><code>offset</code></td><td>Vector2(x, y), or the Vector2i spelling Godot converts</td><td></td></tr><tr><td><code>texture</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>texture_scale</code></td><td>float 0.01-50, never exactly 0</td><td>warning</td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-canvasitem-clip-ancestry</code> (type-family match)</td><td><code>canvasitem-ancestor-clips-children</code></td><td>warning</td></tr><tr><td></td><td><code>canvasitem-ancestor-is-canvasgroup</code></td><td>warning</td></tr><tr><td><code>valid-pointlight2d-ranges</code></td><td><code>pointlight2d-requires-texture</code></td><td>warning</td></tr><tr><td></td><td><code>pointlight2d-inverted-z-range</code></td><td>info</td></tr><tr><td></td><td><code>pointlight2d-inverted-layer-range</code></td><td>info</td></tr></tbody></table></div>
 <p>The linter warns (<code>resource-type-excluded-by-hint</code>) when <code>texture</code> holds a class its hint excludes, such as an <code>AtlasTexture</code>. Godot's editor never offers such a class, and the setter keeps it with a debug warning (<code>light_2d.cpp:396-405</code>).</p>
-<p><code>enabled</code> falls back to <code>true</code>, <code>energy</code> and <code>texture_scale</code> to <code>1.0</code>, <code>offset</code> to <code>(0, 0)</code> and <code>blend_mode</code> to <code>0</code> (ADD), each with a warning. <code>color</code> falls back to opaque white silently. <code>texture</code> is stored with no reference check.</p>
+<p><code>enabled</code> falls back to <code>true</code>, <code>energy</code> and <code>texture_scale</code> to <code>1.0</code>, <code>height</code> to <code>0</code>, <code>offset</code> to <code>(0, 0)</code> and <code>blend_mode</code> to <code>0</code> (ADD), each with a warning. <code>color</code> falls back to opaque white silently. <code>texture</code> is stored with no reference check.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Shader missing</strong> A <code>CanvasTexture.normal_texture</code> is not read, so every surface takes the light head-on with no specular response.</li><li><strong>Approximated</strong> Under a <code>shadow_filter</code>, a step of the penumbra can sit one polar bin from Godot's, so its stepped edge shifts slightly in places.</li></ul></div>
+<ul><li><strong>Approximated</strong> Under a <code>shadow_filter</code>, a step of the penumbra can sit one polar bin from Godot's, so its stepped edge shifts slightly in places.</li></ul></div>
     </article>
     <article class="sheet" data-type="Polygon2D" hidden>
       <header class="sheet-head">
@@ -6565,7 +6614,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Sprite2D draws a texture as a flat quad on the canvas. The previewer renders it as an unlit plane at the texture's pixel size, tinted by <code>modulate</code>. A Sprite2D with no texture draws nothing, as Godot does (<code>sprite_2d.cpp:159</code>). It samples with the <code>texture_filter</code> and <code>texture_repeat</code> inherited from its ancestors (see Node2D). A frame or region of a ViewportTexture blends its edge texels with the texels past it, as Godot's filter does. A texture that is set but fails to load draws a placeholder.</p>
+      <div class="prose"><p>Sprite2D draws a texture as a flat quad on the canvas. The previewer renders it as an unlit plane at the texture's pixel size, tinted by <code>modulate</code>. A Sprite2D with no texture draws nothing, as Godot does (<code>sprite_2d.cpp:159</code>). It samples with the <code>texture_filter</code> and <code>texture_repeat</code> inherited from its ancestors (see Node2D), unless its CanvasTexture sets its own. A CanvasTexture's <code>normal_texture</code> and <code>specular_texture</code> shade the sprite under PointLight2D and DirectionalLight2D (see those sheets), also through an AtlasTexture that cuts a cell of the CanvasTexture. A frame or region of a ViewportTexture blends its edge texels with the texels past it, as Godot's filter does. A texture that is set but fails to load draws a placeholder.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>Sprite2D</code> properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>centered</code></td><td>true or false</td><td></td></tr><tr><td><code>flip_h</code></td><td>true or false</td><td></td></tr><tr><td><code>flip_v</code></td><td>true or false</td><td></td></tr><tr><td><code>frame</code></td><td>integer &gt;= 0</td><td>error below</td></tr><tr><td><code>frame_coords</code></td><td>Vector2i(x, y), both &gt;= 0, or the Vector2 spelling Godot converts</td><td>error below</td></tr><tr><td><code>hframes</code></td><td>integer 1-16384</td><td>error below, warning above</td></tr><tr><td><code>offset</code></td><td>Vector2(x, y), or the Vector2i spelling Godot converts</td><td></td></tr><tr><td><code>region_enabled</code></td><td>true or false</td><td></td></tr><tr><td><code>region_filter_clip_enabled</code></td><td>true or false</td><td></td></tr><tr><td><code>region_rect</code></td><td>Rect2(x, y, w, h), or the Rect2i spelling Godot converts</td><td></td></tr><tr><td><code>texture</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>vframes</code></td><td>integer 1-16384</td><td>error below, warning above</td></tr></tbody></table></div>
