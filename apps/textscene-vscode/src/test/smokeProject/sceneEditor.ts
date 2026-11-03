@@ -58,3 +58,21 @@ export function previewTabLabels(): string[] {
     )
     .map((tab) => tab.label);
 }
+
+/**
+ * Where each preview tab sits and whether it is showing. VS Code starts a webview only
+ * while its tab shows, so a preview that never loads is first checked here.
+ */
+export function previewTabStates(): string[] {
+  return vscode.window.tabGroups.all.flatMap((group) =>
+    group.tabs
+      .filter(
+        (tab) => tab.input instanceof vscode.TabInputWebview && tab.input.viewType.endsWith('tscnPreview')
+      )
+      .map(
+        (tab) =>
+          `${tab.label}: column ${String(group.viewColumn)}, tab ${tab.isActive ? 'active' : 'hidden'}, ` +
+          `group ${group.isActive ? 'active' : 'inactive'}, ${group.tabs.length} tabs in the group`
+      )
+  );
+}

@@ -11,7 +11,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { PING_INTERVAL_MS, WEBVIEW_LOAD_DEADLINE_MS } from '../../previewCaptureQueue';
 import { DISABLE_GPU_ENV } from '../integration/integrationLaunch';
-import { EXTENSION_ID, previewTabLabels } from '../smokeProject/sceneEditor';
+import { EXTENSION_ID, previewTabLabels, previewTabStates } from '../smokeProject/sceneEditor';
 import { waitFor } from '../waitFor';
 import { copyFixtureProject, removeFixtureProject } from './answers';
 
@@ -75,6 +75,16 @@ export function launchedWithoutGpu(): boolean {
     throw new Error(`expected the launcher to set ${DISABLE_GPU_ENV} to 0 or 1, got ${String(value)}`);
   }
   return value === '1';
+}
+
+/**
+ * Fails with the preview tabs' state when the capture ended because the webview never
+ * loaded (#1131). The VS Code logs of that run are in the CI artifact.
+ */
+function assertWebviewLoaded(result: vscode.LanguageModelToolResult): void {
+  const text = textOf(result);
+  if (!text.includes('did not load')) return;
+  throw new Error(`${text}\nPreview tabs: ${JSON.stringify(previewTabStates())}`);
 }
 
 /** The width and height a PNG's IHDR chunk records. */
@@ -239,6 +249,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
       const main = scene('main.tscn');
 
       const result = await invoke('textscene_capture', main);
+      assertWebviewLoaded(result);
       const image = imageOf(result);
 
       assert.ok(image, `expected an image part, found the text ${JSON.stringify(textOf(result))}`);
@@ -260,6 +271,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
       const main = scene('main.tscn');
 
       const result = await invoke('textscene_capture', main);
+      assertWebviewLoaded(result);
 
       assert.strictEqual(imageOf(result), undefined);
       assert.strictEqual(
