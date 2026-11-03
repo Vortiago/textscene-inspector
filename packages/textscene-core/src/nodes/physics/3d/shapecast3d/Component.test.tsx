@@ -361,7 +361,7 @@ describe('<ShapeCast3D> shape wireframe', () => {
     const renderer = await ReactThreeTestRenderer.create(tree);
     await settlePendingLoads(loader);
     // Re-flushes so the test renderer's fiber snapshot picks up the hull's commit. The wireframe
-    // holds the cube's 12 edges and no face diagonal, as Godot's `get_debug_mesh()` gives (#1144).
+    // holds the cube's 12 edges and no face diagonal, as Godot's `get_debug_mesh()` gives.
     await renderer.update(tree);
     const wire = lineOf(linesOf(renderer), 24);
     for (let i = 0; i < wire.length; i += 3) {
