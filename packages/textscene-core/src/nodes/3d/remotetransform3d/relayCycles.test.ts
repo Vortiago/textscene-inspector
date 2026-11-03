@@ -162,6 +162,25 @@ describe('the RemoteTransform3D relay cycle rule, with relays in local coordinat
     expect(warnedNodes(localOnly, RULE_3D)).toEqual([]);
   });
 
+  it('warns on a cycle of local relays that a relay in global coordinates starts', () => {
+    const startedLocalCycle = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Starter" type="RemoteTransform3D" parent="."]
+remote_path = NodePath("../LocalA")
+
+[node name="LocalA" type="RemoteTransform3D" parent="."]
+remote_path = NodePath("../LocalB")
+use_global_coordinates = false
+
+[node name="LocalB" type="RemoteTransform3D" parent="."]
+remote_path = NodePath("../LocalA")
+use_global_coordinates = false
+`;
+    expect(warnedNodes(startedLocalCycle, RULE_3D)).toEqual(['LocalA', 'LocalB']);
+  });
+
   it('reads a flag as the previewer does, so a malformed one moves nothing', () => {
     const malformed = cycle3D('update_position = yes\nupdate_rotation = no\nupdate_scale = 0');
     expect(warnedNodes(malformed, RULE_3D)).toEqual([]);
@@ -176,6 +195,22 @@ describe('the RemoteTransform2D relay cycle rule', () => {
   it('stays silent when a relay of the cycle flags no part, as it pushes nothing', () => {
     const noPart = 'update_position = false\nupdate_rotation = false\nupdate_scale = false';
     expect(warnedNodes(cycle2D(noPart), RULE_2D)).toEqual([]);
+  });
+
+  it('warns on a cycle of local relays, which the first flush starts and Godot recurses through', () => {
+    const localCycle = `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="RelayA" type="RemoteTransform2D" parent="."]
+remote_path = NodePath("../RelayB")
+use_global_coordinates = false
+
+[node name="RelayB" type="RemoteTransform2D" parent="."]
+remote_path = NodePath("../RelayA")
+use_global_coordinates = false
+`;
+    expect(warnedNodes(localCycle, RULE_2D)).toEqual(['RelayA', 'RelayB']);
   });
 
   it('stays silent on a chain, which settles', () => {

@@ -2,7 +2,8 @@
  * The relay cycle check of RemoteTransform3D and RemoteTransform2D. A push moves the target, which
  * queues every relay in global coordinates that the move reaches, and that relay pushes on the next
  * transform flush (`remote_transform_3d.cpp:118-126`, `remote_transform_2d.cpp:127-136`). A relay
- * cycle so pushes on every frame without end, and no one frame's pose is the game's pose.
+ * cycle so pushes on every frame without end, and no one frame's pose is the game's pose. A local
+ * relay pushes the moment its own local transform changes, so a cycle of local relays recurses.
  */
 
 import type { RawNode, RawScene } from '../../../parser/types.js';
@@ -21,33 +22,51 @@ export function relayCycleArm(ruleName: string, pushAt: string): RuleArm {
   return { severity: 'warning', ruleName, grounding: { kind: 'engine', at: pushAt } };
 }
 
-/** A warning under `arm` when the relay of `context` is in a relay cycle. */
+/** A warning under `arm` when the relay of `context` is in a relay cycle that Godot runs. */
 export function relayCycleDiagnostics(arm: RuleArm, { node, scene }: RuleContext): Diagnostic[] {
-  if (!relaysInACycle(scene).has(node)) return [];
+  const kind = relayCyclesOf(scene).get(node);
+  if (!kind) return [];
   return [
     armDiagnostic(
       arm,
       node,
       `${node.type} '${node.name}' is in a relay cycle: its target carries a relay that leads back to it. ` +
-        'Godot pushes these relays again on every frame without end, so their pose depends on the frame count.'
+        CYCLE_CONSEQUENCES[kind]
     ),
   ];
 }
 
+/** How Godot runs a relay cycle: once on each transform flush, or inside one push without end. */
+type CycleKind = 'perFlush' | 'recursive';
+
+const CYCLE_CONSEQUENCES: Readonly<Record<CycleKind, string>> = {
+  perFlush:
+    'Godot pushes these relays again on every frame without end, so their pose depends on the frame count.',
+  recursive:
+    'Godot pushes these relays inside one another without end when the scene loads, and overflows its stack.',
+};
+
 /**
- * The relays of `scene` on a cycle that holds a relay in global coordinates. A cycle of local relays
- * alone pushes only when something else moves one of them, which no push does when the scene loads.
+ * The relays of `scene` on a cycle that Godot runs, and how it runs it. A cycle that holds a relay
+ * in global coordinates pushes on every flush. A cycle of local relays alone pushes the moment a
+ * push starts it, inside that push. A relay in global coordinates and every RemoteTransform2D push
+ * on the first flush (`remoteTransforms.ts`), so a local cycle one of them leads to recurses.
  */
-const relaysInACycle = perObject((scene: RawScene): ReadonlySet<RawNode> => {
+const relayCyclesOf = perObject((scene: RawScene): ReadonlyMap<RawNode, CycleKind> => {
   const relays = Object.keys(RELAY_CLASSES).flatMap((type) => nodesOfType(scene.nodes, type));
   const queuedBy = new Map(relays.map((relay) => [relay, relaysAPushOfMoves(relay, scene)]));
   const reachedFrom = perObject((relay: RawNode) => relaysReached(relay, queuedBy));
   const isGlobal = (relay: RawNode): boolean => flagsOf(relay).useGlobal;
-  return new Set(
-    relays.filter((relay) =>
-      [...reachedFrom(relay)].some((other) => isGlobal(other) && reachedFrom(other).has(relay))
-    )
-  );
+  const pushesAtLoad = (relay: RawNode): boolean => relay.type === 'RemoteTransform2D' || isGlobal(relay);
+  const isStartedAtLoad = (relay: RawNode): boolean =>
+    relays.some((starter) => pushesAtLoad(starter) && (starter === relay || reachedFrom(starter).has(relay)));
+  const kinds = new Map<RawNode, CycleKind>();
+  for (const relay of relays) {
+    const cycle = [...reachedFrom(relay)].filter((other) => reachedFrom(other).has(relay));
+    if (cycle.some(isGlobal)) kinds.set(relay, 'perFlush');
+    else if (cycle.length > 0 && isStartedAtLoad(relay)) kinds.set(relay, 'recursive');
+  }
+  return kinds;
 });
 
 /** Every relay a push of `from` leads to, relay by relay, `from` included when it leads back. */

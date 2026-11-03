@@ -58,7 +58,7 @@ The process frame at which `pnpm ref:godot` captures a scene whose transforms ne
 _Avoid_: "last frame", "the capture time".
 
 **Relay cycle** (`relayCycles.ts` in `nodes/3d/remotetransform3d/`):
-RemoteTransform relays in global coordinates whose pushes lead back to the first. Godot pushes them on every **Transform flush** without end, so the previewer draws the **Harness frame** and the linter warns on each relay.
+RemoteTransform relays whose pushes lead back to the first. When the cycle holds a relay in global coordinates, Godot pushes it on every **Transform flush** without end, so the previewer draws the **Harness frame**. A cycle of local relays recurses inside one push, and Godot overflows its stack. The linter warns on each relay of either kind.
 _Avoid_: "ring", "feedback loop".
 
 **Physics clock** (`PhysicsClock` in `godot/scene/physicsTicks.ts`):

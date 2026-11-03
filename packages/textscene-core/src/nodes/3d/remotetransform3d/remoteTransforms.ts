@@ -191,16 +191,10 @@ function listenerOrVisualAt(link: LiveLink, listenerAt: Map<string, ListEntry>):
  * pose gives that drawn pose, so each child keeps its own.
  */
 function placeWhereDrawn(visuals: readonly Visual[], tree: LiveTree, placed: Map<string, NodePatch>): void {
-  // Read every current pose before any visual moves, as a moved parent would carry its children.
-  const lagging = visuals.filter(
-    ({ link, drawn }) => drawn && !sameData(drawn, liveGlobalTransform3D(tree, link.path, placed))
-  );
-  for (const { link, drawn } of lagging) {
-    const local = localFromGlobal3D(
-      drawn!,
-      parentPathOf(link.path),
-      nodesOnTheWayTo(tree, link.path, placed)
-    );
+  // Each pose is read after the visuals above it have moved, as a moved parent carries its children.
+  for (const { link, drawn } of visuals) {
+    if (!drawn || sameData(drawn, liveGlobalTransform3D(tree, link.path, placed))) continue;
+    const local = localFromGlobal3D(drawn, parentPathOf(link.path), nodesOnTheWayTo(tree, link.path, placed));
     placed.set(link.path, { ...placed.get(link.path), transform: local });
   }
 }
