@@ -20,7 +20,7 @@ A gradient sky from top, horizon and ground colours. The warm-top, green-horizon
 ## PanoramaSkyMaterial
 <!-- compare: image=unit-sky-panorama status=done fixture=unit-sky-panorama.tscn -->
 
-An equirectangular image wrapped onto the sky. The coloured calibration bands and the black grid confirm the U/V orientation matches Godot. The previewer maps each direction to the image with Godot's own approximations of `acos` and `atan2` (`sky.glsl:179-201`), which place the texels near the horizon 6% closer together than the exact functions do. The black horizon band has Godot's width.
+An equirectangular image wrapped onto the sky. The coloured calibration bands and the black grid confirm the U/V orientation matches Godot. The previewer maps each direction to the image with Godot's approximations of `acos` and `atan2` (`sky.glsl:179-201`). These place the texels near the horizon 6% closer together than the exact functions, so the black horizon band has Godot's width.
 
 ## PanoramaSkyMaterial without filtering
 <!-- compare: image=unit-sky-panorama-nearest status=done fixture=unit-sky-panorama-nearest.tscn -->

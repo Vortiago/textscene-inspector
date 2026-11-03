@@ -208,6 +208,8 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
   'packages/textscene-core/src/r3f/lighting2d/lightQuad.ts':
     'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
+  'packages/textscene-core/src/r3f/sky/skyBackground.ts':
+    'one material per sky bake, its shaders fixed at construction; a render moves only its brightness and rotation uniforms, and it is disposed with the bake',
   'packages/textscene-core/src/resources/sky/build.ts':
     'built once per sky, consumed by a single cube render, disposed with the environment',
   'packages/textscene-core/src/resources/materials/standardmaterial3d/build.ts':
