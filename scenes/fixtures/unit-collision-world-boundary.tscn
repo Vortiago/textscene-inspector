@@ -1,0 +1,41 @@
+[gd_scene load_steps=5 format=3 uid="uid://unitcollisionworldboundary"]
+
+; The one variable against `unit-collision-shapes`: WorldBoundaryShape3D, which Godot draws as a
+; 20x20 square in its plane and a ray along its normal (world_boundary_shape_3d.cpp:36-63), not
+; as a wireframe mesh. The four planes differ by normal and offset; `unit-collision-shapes`
+; shows no plane, so a regression in this draw moves only this scene. The camera frames all four.
+
+[sub_resource type="WorldBoundaryShape3D" id="Default"]
+
+[sub_resource type="WorldBoundaryShape3D" id="Offset"]
+plane = Plane(0, 1, 0, -2)
+
+[sub_resource type="WorldBoundaryShape3D" id="Tilted"]
+plane = Plane(0.6, 0.8, 0, 1.5)
+
+[sub_resource type="WorldBoundaryShape3D" id="NonUnit"]
+plane = Plane(0, 0, 2, 1)
+
+[node name="WorldBoundaryRoot" type="Node3D"]
+
+[node name="Bodies" type="StaticBody3D" parent="."]
+
+[node name="Default" type="CollisionShape3D" parent="Bodies"]
+shape = SubResource("Default")
+debug_color = Color(1, 1, 0, 1)
+
+[node name="Offset" type="CollisionShape3D" parent="Bodies"]
+shape = SubResource("Offset")
+debug_color = Color(1, 0.2, 0.2, 1)
+
+[node name="Tilted" type="CollisionShape3D" parent="Bodies"]
+shape = SubResource("Tilted")
+debug_color = Color(0.2, 0.5, 1, 1)
+
+[node name="NonUnit" type="CollisionShape3D" parent="Bodies"]
+shape = SubResource("NonUnit")
+debug_color = Color(0.2, 1, 0.4, 1)
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(0.85166, -0.17766, 0.49307, 0.0, 0.94079, 0.33898, -0.5241, -0.2887, 0.80123, 16, 11, 26)
+current = true
