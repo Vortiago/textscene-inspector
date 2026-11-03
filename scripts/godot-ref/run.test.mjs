@@ -512,6 +512,21 @@ const ENGINE_TEST_TIMEOUT_MS = 2 * 2 * (ENGINE_TIMEOUT_S + ENGINE_KILL_AFTER_S) 
 describe.skipIf(!hasEngine)('renderReference (real Godot)', { timeout: ENGINE_TEST_TIMEOUT_MS }, () => {
   // On a tmpfs /tmp each render's output stays in RAM after every suite run.
   const scratch = [];
+  /**
+   * Per channel, not a mean: a mean under 1 passes with thousands of channels off by 200. The two
+   * PNGs must be the same size.
+   */
+  const worstChannelDelta = async (pathA, pathB) => {
+    const a = PNG.sync.read(await readFile(pathA)).data;
+    const b = PNG.sync.read(await readFile(pathB)).data;
+    expect(b.length).toBe(a.length);
+    let worst = 0;
+    for (let i = 0; i < a.length; i++) worst = Math.max(worst, Math.abs(a[i] - b[i]));
+    return worst;
+  };
+  /** The rasteriser's 1/255 blend-rounding floor. */
+  const ROUNDING_FLOOR = 1;
+
   const scratchDir = async () => {
     const dir = await mkdtemp(join(tmpdir(), 'godot-ref-'));
     scratch.push(dir);
@@ -687,14 +702,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', { timeout: ENGINE_TE
       lookAt: focus,
     });
 
-    const a = PNG.sync.read(await readFile(framed)).data;
-    const c = PNG.sync.read(await readFile(derived)).data;
-    expect(c.length).toBe(a.length);
-    let worst = 0;
-    for (let i = 0; i < a.length; i++) worst = Math.max(worst, Math.abs(a[i] - c[i]));
-    // Per channel, not a mean: a mean under 1 passes with thousands of channels off by 200. The
-    // allowance is the rasteriser's 1/255 blend-rounding floor, and it measures 0 here.
-    expect(worst).toBeLessThanOrEqual(1);
+    expect(await worstChannelDelta(framed, derived)).toBeLessThanOrEqual(ROUNDING_FLOOR);
   });
 
   /**
@@ -716,11 +724,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', { timeout: ENGINE_TE
       await renderReference({ scene, out: framed, width: 160, height: 120, frame: true });
       await renderReference({ scene, out: editor, width: 160, height: 120 });
 
-      const a = PNG.sync.read(await readFile(framed)).data;
-      const c = PNG.sync.read(await readFile(editor)).data;
-      let worst = 0;
-      for (let i = 0; i < a.length; i++) worst = Math.max(worst, Math.abs(a[i] - c[i]));
-      expect(worst).toBeLessThanOrEqual(1);
+      expect(await worstChannelDelta(framed, editor)).toBeLessThanOrEqual(ROUNDING_FLOOR);
     }
   );
 
