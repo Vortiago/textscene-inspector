@@ -66,10 +66,10 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Envi
     [envProps, clearColor]
   );
 
-  const isSkyHeldLocally = [environment?.resource, skyOwner].every(
+  const isPanoramaHeldLocally = [environment?.resource, skyOwner, material].every(
     (holder) => !!holder && isLocalToScene(holder)
   );
-  const panorama = usePanorama(sky, scopedMaterial, isSkyHeldLocally);
+  const panorama = usePanorama(sky, scopedMaterial, isPanoramaHeldLocally);
   const glowMap = useGlowMap(settings, environment);
 
   return useMemo((): EnvironmentResolution => {

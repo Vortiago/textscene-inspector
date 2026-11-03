@@ -124,11 +124,10 @@ export class SkyBakes {
     private readonly input: SkyBakeInput,
     private readonly onDispose: () => void
   ) {
-    const { sky, lights } = input;
+    const { sky, lights, panorama } = input;
     const exposureScalesLights =
       materialReadsLights(sky.material) && lights.some((light) => light.energy !== 0);
     this.holdsExposure = exposureScalesLights || isDebanded(sky.material);
-    const { panorama } = input;
     this.backgroundDraws = panorama && isLiveTarget(panorama) ? liveTargetDrawCount(panorama) : null;
   }
 

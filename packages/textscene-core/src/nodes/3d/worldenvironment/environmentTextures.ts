@@ -5,6 +5,7 @@
  * (`packed_scene.cpp:701-704`, `core/io/resource.cpp:497-503`).
  */
 
+import { useMemo } from 'react';
 import type * as THREE from 'three';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { glowParamsFor, samplesGlowMap } from '../../../resources/environment/godotGlow';
@@ -17,8 +18,8 @@ import { isLocalToScene } from '../../../resources/textures/viewporttexture/loca
 /**
  * The texture a PanoramaSkyMaterial samples, in its decoded view, as the shader reads
  * `source_panorama` as `source_color` (`sky_material.cpp:498`). `material` is the scoped material
- * that names it, and `isHeldLocally` is whether the Environment and the Sky above it are local to
- * scene. Null for any other sky, and while the texture loads.
+ * that names it, and `isHeldLocally` is whether the Environment, the Sky and the material are all
+ * local to scene. Null for any other sky, and while the texture loads.
  */
 export function usePanorama(
   sky: Sky | null,
@@ -27,8 +28,7 @@ export function usePanorama(
 ): THREE.Texture | null {
   const ref = sky?.material.kind === 'panorama' ? sky.material.panorama : undefined;
   const { externalResources, internalResources } = material?.resources ?? NO_RESOURCES;
-  const isMaterialHeldLocally = isHeldLocally && !!material && isLocalToScene(material.resource);
-  return useTexture2D(ref, externalResources, internalResources, 'decoding', isMaterialHeldLocally).texture;
+  return useTexture2D(ref, externalResources, internalResources, 'decoding', isHeldLocally).texture;
 }
 
 /**
@@ -40,8 +40,10 @@ export function useGlowMap(
   settings: EnvironmentSettings | null,
   environment: ScopedResource | null
 ): THREE.Texture | null {
-  const glow = settings && glowParamsFor(settings);
-  const ref = glow && samplesGlowMap(glow) ? glow.map : undefined;
+  const ref = useMemo(() => {
+    const glow = settings && glowParamsFor(settings);
+    return glow && samplesGlowMap(glow) ? glow.map : undefined;
+  }, [settings]);
   const { externalResources, internalResources } = environment?.resources ?? NO_RESOURCES;
   const isHeldLocally = !!environment && isLocalToScene(environment.resource);
   return useTexture2D(ref, externalResources, internalResources, 'plain', isHeldLocally).texture;
