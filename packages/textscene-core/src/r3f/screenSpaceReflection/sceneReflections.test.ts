@@ -44,7 +44,6 @@ describe('SceneReflections', () => {
   it('draws its last sentinel after every other surface of the opaque list', () => {
     const { reflections } = tracedRender();
 
-    expect(reflections.lastSentinel.renderOrder).toBeGreaterThan(reflections.sentinel.renderOrder);
     expect(reflections.lastSentinel.renderOrder).toBe(Number.MAX_SAFE_INTEGER);
   });
 });

@@ -25,7 +25,7 @@ export function ScreenSpaceReflectionLayer({ ssr }: { ssr: ScreenSpaceReflection
 
   useEffect(() => {
     const reflections = new SceneReflections(gl, () => settings.current, invalidate);
-    const sentinels = [reflections.sentinel, reflections.lastSentinel];
+    const sentinels = [reflections.firstSentinel, reflections.lastSentinel];
     const showSentinels = (isShown: boolean) => sentinels.forEach((sentinel) => (sentinel.visible = isShown));
     // Shown, not added, by each pass: an add would tell every tracker of the scene that it changed.
     showSentinels(false);

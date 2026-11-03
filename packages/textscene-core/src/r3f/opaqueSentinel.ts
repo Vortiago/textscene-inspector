@@ -43,7 +43,7 @@ function createSentinel(name: string, renderOrder: number, reach: Reach): THREE.
   sentinel.layers.enableAll();
   sentinel.userData = { tscnFrameExcluded: true };
   sentinel.raycast = () => {};
-  sentinel.onBeforeRender = (renderer, scene, camera) => reach(renderer, scene, camera);
+  sentinel.onBeforeRender = reach;
   return sentinel;
 }
 

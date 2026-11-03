@@ -79,7 +79,7 @@ const inverseProjection = new THREE.Matrix4();
 const reprojection = new THREE.Matrix4();
 
 export class SceneReflections {
-  readonly sentinel: THREE.Mesh;
+  readonly firstSentinel: THREE.Mesh;
   readonly lastSentinel: THREE.Mesh;
   private readonly worlds = new Map<THREE.WebGLRenderTarget, WorldReflection>();
   /** Written by `begin` and `end`, as renders of the scene nest. */
@@ -90,7 +90,7 @@ export class SceneReflections {
     private readonly settings: () => ReflectionSettings,
     private readonly askFrame: () => void
   ) {
-    this.sentinel = createFirstOpaqueSentinel('ScreenSpaceReflection', (_renderer, scene, camera) =>
+    this.firstSentinel = createFirstOpaqueSentinel('ScreenSpaceReflection', (_renderer, scene, camera) =>
       this.trace(scene, camera)
     );
     this.lastSentinel = createLastOpaqueSentinel('ScreenSpaceReflectionEnd', () => this.endOpaque());
@@ -122,7 +122,7 @@ export class SceneReflections {
 
   dispose(): void {
     for (const [target, world] of this.worlds) this.release(target, world);
-    disposeOpaqueSentinel(this.sentinel);
+    disposeOpaqueSentinel(this.firstSentinel);
     disposeOpaqueSentinel(this.lastSentinel);
   }
 

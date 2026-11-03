@@ -234,6 +234,12 @@ void main() {
 `;
 
 /**
+ * The roughness range over which the scene fades a reflection out (`scene_forward_clustered.glsl:2204`).
+ * The trace draws none from its end.
+ */
+export const ROUGHNESS_FADE = { start: 0.6, end: 0.7 } as const;
+
+/**
  * The trace (`screen_space_reflection.glsl`, cited as `:N`): from each smooth pixel, a ray along the
  * reflection through the depth pyramid, which reads the last frame where it hits, faded by its
  * screen length, its confidence and the screen's margin, and tone mapped. It writes the colour, and
@@ -335,7 +341,7 @@ void main() {
 		float roughness = storedRoughness( normal_roughness.w );
 
 		// :120-126
-		if ( roughness >= 0.7 ) {
+		if ( roughness >= ${ROUGHNESS_FADE.end} ) {
 			output_color = vec4( 0.0 );
 			output_mip_level = vec4( 0.0 );
 			return;
@@ -531,11 +537,13 @@ const FILTER_WEIGHTS = `0.07130343198685299, 0.1315141208431224, 0.1898792328888
 /** The taps on each side of the roughness filter's centre. */
 export const FILTER_RADIUS = 3;
 
+const FILTER_TAPS = 2 * FILTER_RADIUS + 1;
+
 /** Each tap weighted by its validity, more so at a deeper mip (`screen_space_reflection_filter.glsl:29-31`). */
-const FILTER_WEIGHT = /* glsl */ `
+const FILTER_TAP_WEIGHT = /* glsl */ `
 uniform int mip_level;
 
-const float WEIGHTS[ 7 ] = float[ 7 ]( ${FILTER_WEIGHTS} );
+const float WEIGHTS[ ${FILTER_TAPS} ] = float[ ${FILTER_TAPS} ]( ${FILTER_WEIGHTS} );
 
 float get_weight( vec4 c ) {
 	return mix( clamp( float( mip_level ) * 0.2, 0.0, 1.0 ), 1.0, c.a );
@@ -550,7 +558,7 @@ float get_weight( vec4 c ) {
  */
 export const FILTER_ACROSS_FRAGMENT = /* glsl */ `
 uniform highp sampler2D chain;
-${FILTER_WEIGHT}
+${FILTER_TAP_WEIGHT}
 ivec2 screen_size;
 
 vec4 get_sample( ivec2 pixel_pos ) {
@@ -563,8 +571,8 @@ void main() {
 
 	vec4 c = vec4( 0.0 );
 	float w = 0.0;
-	for ( int i = 0; i < 7; i ++ ) {
-		vec4 tap = get_sample( pixel_pos + ivec2( i - 3, 0 ) );
+	for ( int i = 0; i < ${FILTER_TAPS}; i ++ ) {
+		vec4 tap = get_sample( pixel_pos + ivec2( i - ${FILTER_RADIUS}, 0 ) );
 		float tap_weight = WEIGHTS[ i ] * get_weight( tap );
 		c += tap * tap_weight;
 		w += tap_weight;
@@ -579,13 +587,13 @@ void main() {
  */
 export const FILTER_DOWN_FRAGMENT = /* glsl */ `
 uniform highp sampler2D across;
-${FILTER_WEIGHT}
+${FILTER_TAP_WEIGHT}
 void main() {
 	ivec2 pixel_pos = ivec2( gl_FragCoord.xy );
 
 	vec4 c = vec4( 0.0 );
 	float w = 0.0;
-	for ( int i = 0; i < 7; i ++ ) {
+	for ( int i = 0; i < ${FILTER_TAPS}; i ++ ) {
 		vec4 tap = texelFetch( across, pixel_pos + ivec2( 0, i ), 0 );
 		float tap_weight = WEIGHTS[ i ] * get_weight( tap );
 		c += tap * tap_weight;
@@ -594,9 +602,6 @@ void main() {
 	gl_FragColor = w > 0.0 ? c / w : vec4( 0.0 );
 }
 `;
-
-/** The roughness from which the scene shows none of a reflection (`scene_forward_clustered.glsl:2204`). */
-export const ROUGHNESS_FADE = { start: 0.6, end: 0.7 } as const;
 
 /**
  * A stored roughness from which the scene's own roughness is past the fade's end: a stored roughness
