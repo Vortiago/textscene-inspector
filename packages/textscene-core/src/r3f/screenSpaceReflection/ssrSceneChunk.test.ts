@@ -34,7 +34,7 @@ describe('godotSsrRoughnessFade', () => {
 describe('installGodotScreenSpaceReflection', () => {
   it("lays the premultiplied reflection over the indirect specular, weighted as Godot's", () => {
     expect(chunks.aomap_fragment).toContain(
-      'reflectedLight.indirectSpecular = reflectedLight.indirectSpecular * ( 1.0 - godotSsr.a ) + godotSsr.rgb * godotIndirectSpecularWeight( material );'
+      'reflectedLight.indirectSpecular = reflectedLight.indirectSpecular * ( 1.0 - godotSsr.a ) + godotIndirectSpecular( godotSsr.rgb, material );'
     );
   });
 

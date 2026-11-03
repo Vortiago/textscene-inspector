@@ -33,8 +33,8 @@ vec4 godotNormalRoughness( vec3 normal, float roughness ) {
 `;
 
 /**
- * The fade keeps a reflection whole up to roughness 0.6 and none from 0.7, where the trace draws
- * nothing (`:2204`). The reflection holds Godot's rows, top row first, so the read flips three's
+ * The fade keeps a reflection whole up to `ROUGHNESS_FADE.start` and none from its end, where the
+ * trace draws nothing (`:2204`). The reflection holds Godot's rows, top row first, so the read flips three's
  * bottom-up row.
  */
 const SSR_FUNCTIONS = /* glsl */ `
@@ -108,8 +108,10 @@ const UNSHADED_PREPASS_FRAGMENT: readonly TextEdit[] = [
 const SSR_FOLD = /* glsl */ `
 #if defined( STANDARD )
 
-	vec4 godotSsr = godotScreenSpaceReflection( material.godotRoughness );
-	reflectedLight.indirectSpecular = reflectedLight.indirectSpecular * ( 1.0 - godotSsr.a ) + godotSsr.rgb * godotIndirectSpecularWeight( material );
+	if ( ${state}.y > 0.5 ) {
+		vec4 godotSsr = godotScreenSpaceReflection( material.godotRoughness );
+		reflectedLight.indirectSpecular = reflectedLight.indirectSpecular * ( 1.0 - godotSsr.a ) + godotIndirectSpecular( godotSsr.rgb, material );
+	}
 
 #endif
 `;

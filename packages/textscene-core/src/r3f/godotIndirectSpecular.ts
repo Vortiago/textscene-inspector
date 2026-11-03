@@ -37,26 +37,27 @@ const GODOT_DFG = /* glsl */ `material.godotDfg = texture2D( ${DFG_UNIFORM}, vec
 	material.dfg = material.godotDfg;`;
 
 /**
- * What Godot weighs an indirect specular by (`scene_forward_clustered.glsl:2216-2231`). `F0`
+ * `light` weighed as Godot weighs an indirect specular (`scene_forward_clustered.glsl:2216-2231`). `F0`
  * (`scene_forward_lights_inc.glsl:55-58`) is three's blended specular colour, and Godot's f90 is
  * `50 * f0.g` (`:2230`). A toon surface weighs it by `specular * metallic * albedo * 2` instead
  * (`:2219-2220`). three's dielectric specular colour is Godot's `0.16 * specular * specular`
- * (`materialBag.ts`), which gives `specular`.
+ * (`materialBag.ts`), which gives `specular`. The light takes each weight in turn, left to right:
+ * another order rounds a surface at an exact half step one level apart.
  */
-const GODOT_INDIRECT_SPECULAR_WEIGHT = /* glsl */ `vec3 godotIndirectSpecularWeight( const in PhysicalMaterial material ) {
+const GODOT_INDIRECT_SPECULAR_FUNCTION = /* glsl */ `vec3 godotIndirectSpecular( vec3 light, const in PhysicalMaterial material ) {
 	#ifdef GODOT_DIFFUSE_TOON
-	return sqrt( material.specularColor.g / 0.16 ) * material.metalness * material.diffuseColor * 2.0;
+	return light * sqrt( material.specularColor.g / 0.16 ) * material.metalness * material.diffuseColor * 2.0;
 	#else
 	vec3 godotF0 = material.specularColorBlended;
 	float godotF90 = clamp( 50.0 * godotF0.g, material.metalness, 1.0 );
 	vec3 godotEnergyCompensation = 1.0 + godotF0 * ( 1.0 / material.godotDfg.y - 1.0 );
-	return godotEnergyCompensation * ( ( godotF90 - godotF0 ) * material.godotDfg.x + godotF0 * material.godotDfg.y );
+	return light * godotEnergyCompensation * ( ( godotF90 - godotF0 ) * material.godotDfg.x + godotF0 * material.godotDfg.y );
 	#endif
 }
 
 `;
 
-const GODOT_INDIRECT_SPECULAR = 'vec3 indirectSpecular = radiance * godotIndirectSpecularWeight( material );';
+const GODOT_INDIRECT_SPECULAR = 'vec3 indirectSpecular = godotIndirectSpecular( radiance, material );';
 
 const THREE_INDIRECT_SPECULAR_FUNCTION = 'void RE_IndirectSpecular_Physical(';
 
@@ -106,7 +107,7 @@ const EDITS: readonly ChunkEdit<SpecularChunk>[] = [
   {
     chunk: 'lights_physical_pars_fragment',
     three: THREE_INDIRECT_SPECULAR_FUNCTION,
-    godot: `${GODOT_INDIRECT_SPECULAR_WEIGHT}${THREE_INDIRECT_SPECULAR_FUNCTION}`,
+    godot: `${GODOT_INDIRECT_SPECULAR_FUNCTION}${THREE_INDIRECT_SPECULAR_FUNCTION}`,
   },
   {
     chunk: 'lights_fragment_begin',
