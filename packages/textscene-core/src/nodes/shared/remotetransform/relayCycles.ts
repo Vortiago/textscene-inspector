@@ -12,10 +12,9 @@ import { armDiagnostic } from '../../../linter/ruleArms.js';
 import { extractNodePath, nodesOfType } from '../../../linter/linterUtils.js';
 import { parentIdentity } from '../../../linter/parentType.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
-import { parseOptionalBool } from '../../../parser/valueParsers.js';
-import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { perObject } from '../../../utils/perObject.js';
-import { RELAY_CLASSES, flagsAnyPart, readFlags, type RemoteFlags } from './relayRules.js';
+import { RELAY_CLASSES, flagsAnyPart } from './relayRules.js';
+import { nodesAMoveReaches, relayOf, type Relay, type RelayTreeView } from './relayTree.js';
 
 /** The arm that warns on a relay in a cycle, grounded on the push `pushAt` names (`file.cpp:line`). */
 export function relayCycleArm(ruleName: string, pushAt: string): RuleArm {
@@ -46,6 +45,20 @@ const CYCLE_CONSEQUENCES: Readonly<Record<CycleKind, string>> = {
     'Godot pushes these relays inside one another without end when the scene loads, and overflows its stack.',
 };
 
+/** The parsed scene as the relay walk reads it, a node's parent found by its `parent=` path. */
+const rawRelayView = perObject((scene: RawScene): RelayTreeView<RawNode> => ({
+  typeOf: (node) => node.type,
+  rawPropertiesOf: (node) => node.rawProperties,
+  childrenOf: (node) => node.children,
+  parentOf: (node) => parentIdentity(scene, node),
+  isSame: (node, other) => node === other,
+  nodeAt: (from, literal) => {
+    const path = extractNodePath(literal ?? '');
+    const resolved = path ? resolveNodePath(scene, from, path) : null;
+    return resolved?.status === 'found' ? resolved.node : null;
+  },
+}));
+
 /**
  * The relays of `scene` on a cycle that Godot runs, and how it runs it. A cycle that holds a relay
  * in global coordinates pushes on every flush. A cycle of local relays alone pushes the moment a
@@ -53,25 +66,29 @@ const CYCLE_CONSEQUENCES: Readonly<Record<CycleKind, string>> = {
  * on the first flush (`remoteTransforms.ts`), so a local cycle one of them leads to recurses.
  */
 const relayCyclesOf = perObject((scene: RawScene): ReadonlyMap<RawNode, CycleKind> => {
-  const relays = Object.keys(RELAY_CLASSES).flatMap((type) => nodesOfType(scene.nodes, type));
-  const queuedBy = new Map(relays.map((relay) => [relay, relaysAPushOfMoves(relay, scene)]));
-  const reachedFrom = perObject((relay: RawNode) => relaysReached(relay, queuedBy));
-  const isGlobal = (relay: RawNode): boolean => flagsOf(relay).useGlobal;
-  const pushesAtLoad = (relay: RawNode): boolean => relay.type === 'RemoteTransform2D' || isGlobal(relay);
-  const isStartedAtLoad = (relay: RawNode): boolean =>
+  const view = rawRelayView(scene);
+  const relays = Object.keys(RELAY_CLASSES)
+    .flatMap((type) => nodesOfType(scene.nodes, type))
+    .flatMap((node) => relayOf(view, node) ?? []);
+  const relayAt = new Map(relays.map((relay) => [relay.node, relay]));
+  const queuedBy = new Map(relays.map((relay) => [relay, relaysAPushOfMoves(relay, view, relayAt)]));
+  const reachedFrom = perObject((relay: Relay<RawNode>) => relaysReached(relay, queuedBy));
+  const pushesAtLoad = (relay: Relay<RawNode>): boolean =>
+    relay.relayClass.space === 'Node2D' || relay.flags.useGlobal;
+  const isStartedAtLoad = (relay: Relay<RawNode>): boolean =>
     relays.some((starter) => pushesAtLoad(starter) && (starter === relay || reachedFrom(starter).has(relay)));
   const kinds = new Map<RawNode, CycleKind>();
   for (const relay of relays) {
     const cycle = [...reachedFrom(relay)].filter((other) => reachedFrom(other).has(relay));
-    if (cycle.some(isGlobal)) kinds.set(relay, 'perFlush');
-    else if (cycle.length > 0 && isStartedAtLoad(relay)) kinds.set(relay, 'recursive');
+    if (cycle.some((other) => other.flags.useGlobal)) kinds.set(relay.node, 'perFlush');
+    else if (cycle.length > 0 && isStartedAtLoad(relay)) kinds.set(relay.node, 'recursive');
   }
   return kinds;
 });
 
 /** Every relay a push of `from` leads to, relay by relay, `from` included when it leads back. */
-function relaysReached(from: RawNode, queuedBy: ReadonlyMap<RawNode, readonly RawNode[]>): Set<RawNode> {
-  const reached = new Set<RawNode>();
+function relaysReached<R>(from: R, queuedBy: ReadonlyMap<R, readonly R[]>): Set<R> {
+  const reached = new Set<R>();
   const pending = [...(queuedBy.get(from) ?? [])];
   for (let next = pending.pop(); next; next = pending.pop()) {
     if (reached.has(next)) continue;
@@ -81,53 +98,20 @@ function relaysReached(from: RawNode, queuedBy: ReadonlyMap<RawNode, readonly Ra
   return reached;
 }
 
-function flagsOf({ rawProperties: props }: RawNode): RemoteFlags {
-  return readFlags({
-    update_position: parseOptionalBool(props.update_position),
-    update_rotation: parseOptionalBool(props.update_rotation),
-    update_scale: parseOptionalBool(props.update_scale),
-    use_global_coordinates: parseOptionalBool(props.use_global_coordinates),
-  });
-}
-
 /**
  * The relays that a push of `relay` makes push again: each relay in global coordinates that its
  * move of the target reaches, and the target itself when it is a relay in local coordinates, as
  * its own local transform changed (`node_3d.cpp:398-400`, `canvas_item.h:173-178`). A relay with no
- * part flagged leaves the pose as it is, so it moves no cycle. A target on the relay's own line of
- * the tree is refused (`remote_transform_3d.cpp:37`), and a target in another file is not seen.
+ * part flagged leaves the pose as it is, so it moves no cycle. A target in another file is not seen.
  */
-function relaysAPushOfMoves(relay: RawNode, scene: RawScene): RawNode[] {
-  if (!flagsAnyPart(flagsOf(relay))) return [];
-  const path = extractNodePath(relay.rawProperties.remote_path ?? '');
-  const resolved = path ? resolveNodePath(scene, relay, path) : null;
-  if (resolved?.status !== 'found') return [];
-  const target = resolved.node;
-  const { space, reached } = RELAY_CLASSES[relay.type]!;
-  if (!descendsFromClass(target.type, space) || isOnOneLine(relay, target, scene)) return [];
-  return nodesAMoveReaches(target, reached).filter(
-    (node) => node.type === relay.type && (flagsOf(node).useGlobal || node === target)
-  );
-}
-
-/** Whether one node is the other or above it. */
-function isOnOneLine(relay: RawNode, target: RawNode, scene: RawScene): boolean {
-  return isAtOrAbove(relay, target, scene) || isAtOrAbove(target, relay, scene);
-}
-
-function isAtOrAbove(upper: RawNode, node: RawNode, scene: RawScene): boolean {
-  for (let at: RawNode | null = node; at; at = parentIdentity(scene, at)) {
-    if (at === upper) return true;
-  }
-  return false;
-}
-
-/**
- * `target` and the nodes below it that a move of it notifies: a child of the `reached` class that
- * is not `top_level` (`node_3d.cpp:106-133`, `canvas_item.cpp:1069-1101`).
- */
-function nodesAMoveReaches(target: RawNode, reached: string): RawNode[] {
-  const isReached = (child: RawNode): boolean =>
-    descendsFromClass(child.type, reached) && parseOptionalBool(child.rawProperties.top_level) !== true;
-  return [target, ...target.children.filter(isReached).flatMap((child) => nodesAMoveReaches(child, reached))];
+function relaysAPushOfMoves(
+  { target, relayClass, flags }: Relay<RawNode>,
+  view: RelayTreeView<RawNode>,
+  relayAt: ReadonlyMap<RawNode, Relay<RawNode>>
+): Relay<RawNode>[] {
+  if (!flagsAnyPart(flags)) return [];
+  return nodesAMoveReaches(view, target, relayClass.reached).flatMap((node) => {
+    const reached = relayAt.get(node);
+    return reached && (reached.flags.useGlobal || node === target) ? [reached] : [];
+  });
 }

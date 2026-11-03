@@ -8,14 +8,13 @@
  * (`remote_transform_3d.cpp:35-36`), across an instance border too. Measured on Godot 4.6.3.
  */
 
-import { parentPathOf, relativeTo } from '../../../utils/nodePath.js';
+import { parentPathOf } from '../../../utils/nodePath.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { liveGlobalTransform3D, nodesOnTheWayTo } from '../../../r3f/liveGlobalTransform.js';
 import { uniquePathsOfLiteral } from '../../../r3f/nodePathUniqueNames.js';
 import type { NodePatch, NodePatches } from '../../../r3f/nodePatch.js';
-import { isTopLevelItem } from '../../../r3f/canvasPaintOrder.js';
 import { sameData } from '../../../utils/sameData.js';
 import type { Transform3D } from '../../../godot/math/transform3d.js';
 import {
@@ -26,8 +25,9 @@ import {
 } from '../../../godot/scene/transformFlushes.js';
 import type { PhysicsClock } from '../../../godot/scene/physicsTicks.js';
 import { perObject } from '../../../utils/perObject.js';
-import { localFromGlobal3D, moveTarget, type Push, type RelayProps } from './relayPush.js';
-import { RELAY_CLASSES, readFlags, type RelayClass, type Space } from './relayRules.js';
+import { localFromGlobal3D, moveTarget, type Push } from './relayPush.js';
+import type { RelayClass } from './relayRules.js';
+import { nodesAMoveReaches, relayOf, type RelayTreeView } from './relayTree.js';
 
 /** Where the RemoteTransform pass leaves the nodes of a tree, by live path. */
 export interface RelayPoses {
@@ -91,6 +91,7 @@ const harnessFlushes = perObject((clock: PhysicsClock) => transformFlushesThroug
 /** A RemoteTransform3D or RemoteTransform2D whose target Godot caches on enter-tree. */
 interface Relay extends Push {
   readonly kind: 'relay';
+  readonly reached: RelayClass['reached'];
 }
 
 /**
@@ -107,15 +108,38 @@ interface Visual {
 /** What the replay keeps on the transform-change list: a relay, or a visual it can move. */
 type ListEntry = Relay | Visual;
 
+/** The live tree as the relay walk reads it. A `%Name` resolves through the tree's unique names. */
+const liveRelayView = perObject((tree: LiveTree): RelayTreeView<LiveLink> => ({
+  typeOf: (link) => link.step.node.type,
+  rawPropertiesOf: (link) => link.step.node.rawProperties,
+  childrenOf: (link) => tree.fold<void, LiveLink>(undefined, (child) => child, link),
+  parentOf: (link) => {
+    const parentPath = parentPathOf(link.path);
+    return parentPath === null ? null : tree.at(parentPath);
+  },
+  isSame: (link, other) => link.path === other.path,
+  nodeAt: (from, literal) => {
+    const path = resolveNodePathLiteral(from.path, literal, uniquePathsOfLiteral(literal, from.path, tree));
+    return path === null ? null : tree.at(path);
+  },
+}));
+
 /** Every relay of `tree` that can move its target, in tree order. */
 function relaysOf(tree: LiveTree): Relay[] {
+  const view = liveRelayView(tree);
   const relays: Relay[] = [];
   tree.fold<void, void>(undefined, (link, _, descend) => {
-    const relayClass = RELAY_CLASSES[link.step.node.type];
-    const target = relayClass && remoteTargetOf(link, tree, relayClass.space);
-    if (target) {
-      const flags = readFlags(link.step.node.properties as RelayProps);
-      relays.push({ kind: 'relay', link, target, space: relayClass.space, flags });
+    const relay = relayOf(view, link);
+    if (relay) {
+      const { target, relayClass, flags } = relay;
+      relays.push({
+        kind: 'relay',
+        link,
+        target,
+        space: relayClass.space,
+        reached: relayClass.reached,
+        flags,
+      });
     }
     descend();
   });
@@ -154,10 +178,10 @@ function entriesQueuedByAMoveOf(tree: LiveTree, relays: readonly Relay[]): (rela
     relays.filter((r) => r.flags.useGlobal).map((r) => [r.link.path, r])
   );
   const queuedByTarget = new Map<string, ListEntry[]>();
-  return ({ link, target }) => {
+  return ({ target, reached }) => {
     let queued = queuedByTarget.get(target.path);
     if (!queued) {
-      queued = entriesQueuedBy(target, RELAY_CLASSES[link.step.node.type]!.reached, tree, listenerAt);
+      queued = entriesQueuedBy(target, reached, tree, listenerAt);
       queuedByTarget.set(target.path, queued);
     }
     return queued;
@@ -165,28 +189,18 @@ function entriesQueuedByAMoveOf(tree: LiveTree, relays: readonly Relay[]): (rela
 }
 
 /**
- * The entries a move of `target` queues, in the order Godot queues them: a Node3D queues its Node3D
- * children's subtrees before itself (`node_3d.cpp:106-133`), a CanvasItem itself before its
- * CanvasItem children's (`canvas_item.cpp:1069-1101`). A `top_level` child keeps its place, so the
- * walk stops there. Each listener comes from `listenerAt`, and each visual it meets joins it.
+ * The entries a move of `target` queues, in the order Godot queues them ({@link nodesAMoveReaches}).
+ * Each listener comes from `listenerAt`, and each visual it meets joins it.
  */
 function entriesQueuedBy(
   target: LiveLink,
-  family: RelayClass['reached'],
+  reached: RelayClass['reached'],
   tree: LiveTree,
   listenerAt: Map<string, ListEntry>
 ): ListEntry[] {
-  const queued: ListEntry[] = [];
-  const reaches = (child: LiveLink): boolean =>
-    descendsFromClass(child.step.node.type, family) && !isTopLevelItem(child.step.node);
-  const walk = (link: LiveLink): void => {
-    const listener = listenerOrVisualAt(link, listenerAt);
-    if (listener && family === 'CanvasItem') queued.push(listener);
-    tree.fold<void, void>(undefined, (child) => (reaches(child) ? walk(child) : undefined), link);
-    if (listener && family === 'Node3D') queued.push(listener);
-  };
-  walk(target);
-  return queued;
+  return nodesAMoveReaches(liveRelayView(tree), target, reached).flatMap(
+    (link) => listenerOrVisualAt(link, listenerAt) ?? []
+  );
 }
 
 /** The listener at `link`, or the visual it is, added to `listenerAt` on the first ask. */
@@ -218,28 +232,4 @@ function drawnLagOf(visuals: readonly Visual[], tree: LiveTree, placed: NodePatc
     drawnPoses.set(link.path, { ...drawnPoses.get(link.path), transform: local });
   }
   return drawnLag;
-}
-
-/**
- * Whether the live paths put one node on the other's line of the tree: the same node, or one
- * above the other. Godot refuses such a target (`remote_transform_3d.cpp:37`).
- */
-function isOnOneLine(path: string, otherPath: string): boolean {
-  return relativeTo(path, otherPath) !== undefined || relativeTo(otherPath, path) !== undefined;
-}
-
-/**
- * The node `relay`'s `remote_path` names, when it descends from `targetClass` and is not the relay,
- * its ancestor or its descendant, else null.
- */
-function remoteTargetOf(relay: LiveLink, tree: LiveTree, targetClass: Space): LiveLink | null {
-  const remotePath = (relay.step.node.properties as RelayProps).remote_path;
-  const targetPath = resolveNodePathLiteral(
-    relay.path,
-    remotePath,
-    uniquePathsOfLiteral(remotePath, relay.path, tree)
-  );
-  const target = targetPath === null ? null : tree.at(targetPath);
-  if (!target || isOnOneLine(relay.path, target.path)) return null;
-  return descendsFromClass(target.step.node.type, targetClass) ? target : null;
 }

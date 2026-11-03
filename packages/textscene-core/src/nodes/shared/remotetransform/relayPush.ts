@@ -28,18 +28,7 @@ import {
   transformColumnsAlong,
   type Transform3D,
 } from '../../../godot/math/transform3d.js';
-import {
-  flagsAnyPart,
-  flagsEveryPart,
-  pushSetsTarget,
-  type RelayFlagProps,
-  type RemoteFlags,
-  type Space,
-} from './relayRules.js';
-
-export interface RelayProps extends RelayFlagProps {
-  remote_path?: string;
-}
+import { flagsAnyPart, flagsEveryPart, pushSetsTarget, type RemoteFlags, type Space } from './relayRules.js';
 
 /** What one push reads: the relay, its target, the class the target must be and the flags. */
 export interface Push {

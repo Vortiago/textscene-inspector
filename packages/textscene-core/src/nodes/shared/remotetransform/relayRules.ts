@@ -29,24 +29,6 @@ export interface RemoteFlags {
   useGlobal: boolean;
 }
 
-/** The flag properties as the parser stores them: absent, or a boolean. */
-export interface RelayFlagProps {
-  update_position?: boolean;
-  update_rotation?: boolean;
-  update_scale?: boolean;
-  use_global_coordinates?: boolean;
-}
-
-/** A relay's flags, each defaulting to Godot's `true`. */
-export function readFlags(props: RelayFlagProps): RemoteFlags {
-  return {
-    updatePosition: props.update_position !== false,
-    updateRotation: props.update_rotation !== false,
-    updateScale: props.update_scale !== false,
-    useGlobal: props.use_global_coordinates !== false,
-  };
-}
-
 export function flagsAnyPart({ updatePosition, updateRotation, updateScale }: RemoteFlags): boolean {
   return updatePosition || updateRotation || updateScale;
 }
