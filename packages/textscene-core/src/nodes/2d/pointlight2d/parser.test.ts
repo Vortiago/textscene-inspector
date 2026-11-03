@@ -37,6 +37,12 @@ describe('parsePointLight2D', () => {
     expect(p.offset).toEqual({ x: 0, y: 0 });
   });
 
+  it('reads height as authored, 0 when absent', () => {
+    // `Light2D::set_height` assigns with no clamp (`light_2d.cpp:89-92`).
+    expect(parsePointLight2D(nodeHeading, {}).height).toBe(0);
+    expect(parsePointLight2D(nodeHeading, { height: '50.0' }).height).toBe(50);
+  });
+
   it('reads a texture of null as no texture', () => {
     expect(parsePointLight2D(nodeHeading, { texture: 'null' }).texture).toBeUndefined();
   });

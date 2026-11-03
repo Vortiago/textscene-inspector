@@ -46,7 +46,8 @@ import { HEIGHTMAP_DEFAULTS } from '../../resources/materials/standardmaterial3d
 import { GODOT_FOG_PARS_CHUNK } from '../fog/fogChunks';
 import { INSTANCE_LAYERS_CHUNK } from '../instanceLayers/instanceLayersChunk';
 import { SCENE_ROWS_CHUNK } from '../sceneRows/sceneRowsChunk';
-import { lightUniforms } from '../lighting2d/testing/lightUniforms';
+import { lightUniforms, normalMappedUniforms } from '../lighting2d/testing/lightUniforms';
+import { normalMappedLightingProps } from '../lighting2d/normalMappedLighting';
 
 const NO_SHADER = (): ProgramShader => ({ vertexShader: '', fragmentShader: '', uniforms: {} });
 
@@ -228,6 +229,12 @@ const INJECTIONS: readonly InjectionCase[] = [
     'canvas item lighting',
     ['basic'],
     () => canvasItemLightingProps(lightUniforms()).injection
+  ),
+  injected(
+    'lighting2d/normalMappedLighting.ts',
+    'normal-mapped canvas item lighting',
+    ['basic'],
+    () => normalMappedLightingProps(normalMappedUniforms(), 1).injection
   ),
   injected('lightmap/lightmapProgram.ts', 'lightmap read', LIT, () => LIGHTMAP_PROGRAM),
   injected('tileTexturePadding.ts', 'tile texture padding', COLOUR, () => TILE_TEXTURE_PADDING),

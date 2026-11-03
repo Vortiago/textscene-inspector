@@ -185,17 +185,6 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'Light2D base validators live in 2d/lights/shared/linterParser.ts and reach PointLight2D and DirectionalLight2D via the base-walk; editor_only gates the light at runtime and no parser here reads it.',
   },
 
-  PointLight2D: {
-    renderGap: [
-      // The light's Z, the third light-vector component in the normal-map
-      // branch (canvas.glsl:808) and the custom-light-shader branch
-      // (LIGHT_CODE_USED, canvas.glsl:799). This previewer implements neither.
-      'height',
-    ],
-    reason:
-      'height only alters the picture through normal mapping or a custom light shader, neither of which this previewer implements, so its cookie render never reads the key.',
-  },
-
   Node2D: {
     parserOnly: [
       // Meaningful only for TileMapLayer tiles, and any number is valid.

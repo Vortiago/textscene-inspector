@@ -8,7 +8,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
-import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { COOKIE, cookieLoader } from './viewportPasses.testkit';
 import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnNode } from '../../../parser/types';
 import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureContext';
@@ -26,8 +26,6 @@ import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { useCanvasModulateColor } from '../../../r3f/canvasModulate';
 
 import '../../../r3f/nodes/index';
-
-const COOKIE = 'res://light.png';
 
 const SCENE = `[gd_scene format=3]
 [ext_resource type="Texture2D" path="${COOKIE}" id="1"]
@@ -96,13 +94,9 @@ function TintedStage({ nodes }: { nodes: readonly TscnNode[] }) {
 
 async function frameOf(): Promise<Frame> {
   const parsed = new TscnParser().parse(SCENE);
-  const fake = createFakeResourceLoader();
-  const texture = new THREE.Texture();
-  (texture as unknown as { image: object }).image = { width: 64, height: 64 };
-  fake.textures.seed(COOKIE, texture);
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
+    <SceneStack workspace="2d" loader={cookieLoader()} scene={parsed}>
       <ViewportTextureProvider>
         <ViewportPassProvider>
           <TintedStage nodes={parsed.nodes} />

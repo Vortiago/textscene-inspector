@@ -26,6 +26,7 @@ import {
   type DirectionalShadowSampling,
 } from '../../../r3f/lighting2d/directionalLightQuad';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
+import { placeDirectionalLight, useApartLightOrigin } from '../../../r3f/lighting2d/apartLight';
 import { Light2DBlendMode } from '../../../godot/scene/light2d';
 
 export function DirectionalLight2D({ node, children }: NodeComponentProps) {
@@ -44,6 +45,7 @@ export function DirectionalLight2D({ node, children }: NodeComponentProps) {
     slot: slot ?? undefined,
     shadowItemCullMask: null,
     tintsShadow,
+    mixes: props.blend_mode === Light2DBlendMode.MIX,
   });
 
   // A disabled light still draws its children: `enabled` switches the light alone.
@@ -87,6 +89,9 @@ function DirectionalLightQuads({
 }) {
   const { color, energy, blend_mode: blendMode, shadow_filter, shadow_filter_smooth, shadow_color } = props;
 
+  // A normal-mapped item shades the light from the way its node points.
+  const setOrigin = useApartLightOrigin(ordinal, placeDirectionalLight, props.height);
+
   // Held in state, so the shadow starts once the quad is in the tree: the light's world matrix
   // does not exist before that.
   const [quad, setQuad] = useState<THREE.Mesh | null>(null);
@@ -126,6 +131,7 @@ function DirectionalLightQuads({
 
   return (
     <>
+      <object3D ref={setOrigin} />
       <FullScreenQuad meshRef={litRef} material={material} renderOrder={renderOrder} />
       {shadowMaterial && (
         <FullScreenQuad meshRef={tintRef} material={shadowMaterial} renderOrder={renderOrder} />

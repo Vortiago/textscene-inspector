@@ -4,9 +4,10 @@
  * `directionallight2d-*` goldens pin the pixels.
  */
 
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import type { ReactNode } from 'react';
 
 import { TscnParser } from '../../../parser/TscnParser';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
@@ -19,6 +20,11 @@ import { itemUniforms, ownerName, recordLightPass } from '../../../r3f/lighting2
 import { SHADOW_MAP_FAR } from '../../../r3f/lighting2d/shadowPolarMap';
 import { DispatchedScene } from '../../../r3f/testing/DispatchedScene';
 import { underWhiteCanvasLighting } from '../../../r3f/lighting2d/testing/whiteCanvasLighting';
+import {
+  apartLightRecord,
+  placeOf,
+  RecordApartLights,
+} from '../../../r3f/lighting2d/testing/apartLightProbe';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import '../../../r3f/nodes'; // side-effect: registers every node's r3f component
@@ -55,6 +61,16 @@ const CASTER = `
 occluder = SubResource("bar")
 `;
 
+/** What the lights of the last render handed the pass for a normal-mapped item. */
+let apartLights = apartLightRecord();
+beforeEach(() => {
+  apartLights = apartLightRecord();
+});
+
+function underProbedLighting(nodes: ReactNode) {
+  return underWhiteCanvasLighting(<RecordApartLights record={apartLights}>{nodes}</RecordApartLights>);
+}
+
 async function render(tscn: string) {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
@@ -63,7 +79,7 @@ async function render(tscn: string) {
       sceneGraph={createSceneGraphFromTscnScene(parsed)}
       loader={fake.loader}
       workspace="2d"
-      around={underWhiteCanvasLighting}
+      around={underProbedLighting}
     />,
     // An orthographic view of the canvas around the origin, as the 2D stage has.
     { orthographic: true, camera: { position: [0, 0, 10] } }
@@ -97,6 +113,16 @@ function uniformsOf(mesh: THREE.Mesh): Record<string, THREE.IUniform> {
 }
 
 describe('DirectionalLight2D Component', () => {
+  it('places itself for a normal-mapped item: toward the light, its height, and its blend', async () => {
+    // Turned 90 degrees clockwise on Godot's y-down canvas, the light shines toward -x.
+    await render(scene(sun('rotation = 1.5707964\nheight = 0.5\nblend_mode = 2\n')));
+    const place = placeOf(apartLights, 0);
+    expect(place.x).toBeCloseTo(1);
+    expect(place.y).toBeCloseTo(0);
+    expect(place.z).toBe(0.5);
+    expect(apartLights.declarations.get(0)).toMatchObject({ sequence: null, mixes: true });
+  });
+
   it('draws its term on the light pass layer alone, which the visible pass never renders', async () => {
     expect(onlyQuad(await render(scene(sun()))).layers.mask).toBe(1 << LIGHT_PASS_LAYER);
   });

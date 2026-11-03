@@ -77,6 +77,8 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/resources/meshes/primitivemesh/flipFaces.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PrimitiveMesh::_update`'s `flip_faces` block) |
 | `packages/textscene-core/src/r3f/lighting2d/CanvasLightPass.tsx` | `drivers/gles3/shaders/canvas.glsl` (the canvas light pass: `base_color`, `canvas_modulation`, the light loop) and `servers/rendering/renderer_canvas_cull.cpp` (`light->item_mask & ci->light_mask`) |
 | `packages/textscene-core/src/r3f/lighting2d/canvasItemLighting.ts` | `drivers/gles3/shaders/canvas.glsl` (`MODE_UNSHADED` / `MODE_LIGHT_ONLY` guards, `light_only_alpha`) and `servers/rendering/renderer_canvas_cull.cpp` (the item cull-mask test) |
+| `packages/textscene-core/src/r3f/lighting2d/apartLight.ts` | `servers/rendering/renderer_rd/renderer_canvas_render_rd.cpp` (a positional light's height and a directional light's direction and height) |
+| `packages/textscene-core/src/r3f/lighting2d/normalMappedLighting.ts` | `servers/rendering/renderer_rd/shaders/canvas.glsl` (the normal map decode, `light_normal_compute` and the light loop) |
 | `packages/textscene-core/src/r3f/lighting2d/lightQuad.ts` | `drivers/gles3/shaders/canvas.glsl` (`light_blend_compute`'s three blend modes and the `shadow_color` mix, `light_base_color` energy packing) |
 | `packages/textscene-core/src/r3f/lighting2d/lightQuadShaders.ts` | `drivers/gles3/shaders/canvas.glsl` (`light_shadow_compute`'s PCF5/PCF13 tap kernels and the `shadow_pos` quadrant block) |
 | `packages/textscene-core/src/r3f/lighting2d/shadowSampling.ts` | `drivers/gles3/rasterizer_canvas_gles3.cpp` (`shadow_pixel_size`, the shadow atlas's linear-filter and repeat-wrap state) |
