@@ -9,7 +9,7 @@ import * as assert from 'assert';
 import type { Context } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { PING_INTERVAL_MS, WEBVIEW_LOAD_DEADLINE_MS } from '../../previewCaptureQueue';
+import { NOT_LOADED_ERROR, PING_INTERVAL_MS, WEBVIEW_LOAD_DEADLINE_MS } from '../../previewCaptureQueue';
 import { DISABLE_GPU_ENV } from '../integration/integrationLaunch';
 import { EXTENSION_ID, previewTabLabels, previewTabStates } from '../smokeProject/sceneEditor';
 import { waitFor } from '../waitFor';
@@ -83,7 +83,7 @@ export function launchedWithoutGpu(): boolean {
  */
 function assertWebviewLoaded(result: vscode.LanguageModelToolResult): void {
   const text = textOf(result);
-  if (!text.includes('did not load')) return;
+  if (!text.includes(NOT_LOADED_ERROR)) return;
   throw new Error(`${text}\nPreview tabs: ${JSON.stringify(previewTabStates())}`);
 }
 
