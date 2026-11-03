@@ -78,7 +78,7 @@ export function lineMaterials(renderer: TestRenderer): THREE.LineBasicMaterial[]
  *
  * @canonical The segment ends a rendered gizmo line draws
  */
-export function linePositions(renderer: TestRenderer): ArrayLike<number> {
+export function linePositions(renderer: TestRenderer): THREE.TypedArray {
   const [line] = renderer.scene.findAllByType('LineSegments');
   return (line!.instance as THREE.LineSegments).geometry.getAttribute('position').array;
 }
