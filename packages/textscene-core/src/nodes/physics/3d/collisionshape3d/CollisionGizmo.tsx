@@ -66,14 +66,13 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
         </mesh>
       );
     }
-    case 'WorldBoundaryShape3D':
-    case 'SeparationRayShape3D':
-      return <DebugLines shape={shape} color={color} />;
     case 'ConcavePolygonShape3D':
       return <TriangleSoupWire shapeData={data} color={color} />;
     case 'ConvexPolygonShape3D':
       return <ConvexHullWire shapeData={data} color={color} />;
     default:
+      // A shape `shapeDebugLines` ports draws as Godot's own lines, so a new port needs no case here.
+      if (shapeDebugLines(shape)) return <DebugLines shape={shape} color={color} />;
       warn(`[CollisionShape3D] Unsupported shape type "${shape.type}" — drawing a unit wireframe box.`);
       return (
         <mesh>

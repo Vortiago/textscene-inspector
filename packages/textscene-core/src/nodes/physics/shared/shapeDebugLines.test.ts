@@ -151,9 +151,9 @@ describe('worldBoundaryDebugLines', () => {
   });
 });
 
-/** Nine lengths measured against Godot 4.6.3: `get_debug_mesh()` read back after `length` is set. */
-const GODOT_SEPARATION_RAY_LINES: readonly (readonly [string, string, number[]])[] = [
-  ['the default length', '', [0, 0, 0, 0, 0, 1]],
+/** Six lengths measured against Godot 4.6.3: `get_debug_mesh()` read back after `length` is set. */
+const GODOT_SEPARATION_RAY_LINES: readonly (readonly [string, string | undefined, number[]])[] = [
+  ['the default length', undefined, [0, 0, 0, 0, 0, 1]],
   ['the smallest inspector length', '0.001', [0, 0, 0, 0, 0, 0.001]],
   ['a fractional length', '0.5', [0, 0, 0, 0, 0, 0.5]],
   ['a long length', '250', [0, 0, 0, 0, 0, 250]],
@@ -166,7 +166,7 @@ describe('separationRayDebugLines', () => {
     const wire = shapeDebugLines({
       id: 'a',
       type: 'SeparationRayShape3D',
-      data: length === '' ? {} : { length },
+      data: length === undefined ? {} : { length },
     })!;
     expect(wire).toHaveLength(expected.length);
     expected.forEach((value, index) => expect(wire[index]).toBeCloseTo(value, 6));
