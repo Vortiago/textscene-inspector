@@ -1,7 +1,7 @@
 /**
  * An OccluderInstance3D draws nothing, but its selection box is the `get_aabb` of its occluder
- * (`occluder_instance_3d.cpp:427-432`). The values are measured in Godot 4.6.3
- * (`/mnt/project-files/aabb-1122/occluder-oracle.out.txt`).
+ * (`occluder_instance_3d.cpp:427-432`). The values are measured in Godot 4.6.3,
+ * from `get_vertices` of each occluder shape.
  */
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';

@@ -107,7 +107,7 @@ describe('Light3D::get_aabb (light_3d.cpp:157-179)', () => {
     expect(size.z).toBe(10);
   });
 
-  // Measured in Godot 4.6.3 (`/mnt/project-files/aabb-1122/oracle.out.txt`).
+  // Measured in Godot 4.6.3 with `Light3D.get_aabb`.
   it.each([
     [5, 45, 3.535534],
     [3, 1, 0.052357],
