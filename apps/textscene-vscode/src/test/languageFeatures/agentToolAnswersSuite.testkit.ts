@@ -9,9 +9,9 @@ import * as assert from 'assert';
 import type { Context } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { PING_INTERVAL_MS, WEBVIEW_LOAD_DEADLINE_MS } from '../../previewCaptureQueue';
+import { NOT_LOADED_ERROR, PING_INTERVAL_MS, WEBVIEW_LOAD_DEADLINE_MS } from '../../previewCaptureQueue';
 import { DISABLE_GPU_ENV } from '../integration/integrationLaunch';
-import { EXTENSION_ID, previewTabLabels } from '../smokeProject/sceneEditor';
+import { EXTENSION_ID, previewTabLabels, previewTabStates } from '../smokeProject/sceneEditor';
 import { waitFor } from '../waitFor';
 import { copyFixtureProject, removeFixtureProject } from './answers';
 
@@ -77,6 +77,16 @@ export function launchedWithoutGpu(): boolean {
   return value === '1';
 }
 
+/**
+ * Fails with the preview tabs' state when the capture ended because the webview never
+ * loaded. A failed CI run keeps the VS Code logs in its artifact.
+ */
+function assertWebviewLoaded(result: vscode.LanguageModelToolResult): void {
+  const text = textOf(result);
+  if (!text.includes(NOT_LOADED_ERROR)) return;
+  throw new Error(`${text}\nPreview tabs: ${JSON.stringify(previewTabStates())}`);
+}
+
 /** The width and height a PNG's IHDR chunk records. */
 function pngSize(data: Uint8Array): { width: number; height: number } {
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
@@ -110,6 +120,11 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
   const scene = (file: string) => vscode.Uri.file(path.join(projectDir, file)).fsPath;
   const invoke = async (tool: string, scenePath: string) =>
     vscode.lm.invokeTool(tool, { input: { path: scenePath } });
+  const invokeCapture = async (scenePath: string) => {
+    const result = await invoke('textscene_capture', scenePath);
+    assertWebviewLoaded(result);
+    return result;
+  };
 
   suite('Agent tool answers', function () {
     suiteSetup(async function () {
@@ -238,7 +253,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
       this.timeout(CAPTURE_TEST_TIMEOUT_MS);
       const main = scene('main.tscn');
 
-      const result = await invoke('textscene_capture', main);
+      const result = await invokeCapture(main);
       const image = imageOf(result);
 
       assert.ok(image, `expected an image part, found the text ${JSON.stringify(textOf(result))}`);
@@ -259,7 +274,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
       this.timeout(CAPTURE_TEST_TIMEOUT_MS);
       const main = scene('main.tscn');
 
-      const result = await invoke('textscene_capture', main);
+      const result = await invokeCapture(main);
 
       assert.strictEqual(imageOf(result), undefined);
       assert.strictEqual(

@@ -6,20 +6,20 @@
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { parseNode3D } from '../../base/node3d/parser';
-import { Node3D } from '../../base/node3d/Component';
+import { OccluderInstance3D } from './Component';
+import { parseOccluderInstance3D } from './parser';
 import './index';
 import './index.r3f';
 
 describe('OccluderInstance3D registration', () => {
-  it('registers the parseNode3D parse it reuses', () => {
+  it('registers the parse that keeps the occluder reference', () => {
     const registration = nodeRegistry.getRegistration('OccluderInstance3D');
     expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode3D);
+    expect(registration!.parser).toBe(parseOccluderInstance3D);
   });
 
-  it('reuses the Node3D component so children keep their transform space', () => {
-    expect(nodeComponentRegistry.get('OccluderInstance3D')).toBe(Node3D);
+  it('registers the component that mounts the AABB of the occluder', () => {
+    expect(nodeComponentRegistry.get('OccluderInstance3D')).toBe(OccluderInstance3D);
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {

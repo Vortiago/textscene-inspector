@@ -6,7 +6,11 @@
  */
 import { describe, expect, it } from 'vitest';
 import { identityTransform3D } from '../../../../godot/math/transform3d';
-import { describeGizmoToggle, describeInstantiatedGizmo } from '../../../../r3f/testing/gizmoContract';
+import {
+  describeGizmoToggle,
+  describeSelectionBox,
+  describeInstantiatedGizmo,
+} from '../../../../r3f/testing/gizmoContract';
 import {
   BOTH_BODIES,
   drawnGeometries,
@@ -119,3 +123,4 @@ describeJointBodyGating('<Generic6DOFJoint3D>', 'Generic6DOFJoint3D', {
 const GIZMO_CASE = jointGizmoCase('Generic6DOFJoint3D', {});
 describeGizmoToggle('<Generic6DOFJoint3D>', GIZMO_CASE);
 describeInstantiatedGizmo('<Generic6DOFJoint3D>', GIZMO_CASE);
+describeSelectionBox('<Generic6DOFJoint3D>', GIZMO_CASE, null);

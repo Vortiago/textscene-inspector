@@ -8,12 +8,13 @@
 import { useEffect, useMemo } from 'react';
 import type * as THREE from 'three';
 import { extend } from '@react-three/fiber';
-import { fogVolumeSize } from '../../../godot/rendering/environment/fogVolume';
+import { fogVolumeAabb, fogVolumeSize } from '../../../godot/rendering/environment/fogVolume';
 import { ShaderMode, shaderModeOf } from '../../../godot/rendering/shaderLanguage';
 import { holdsResource } from '../../../godot/scene/resourceLiteral';
 import { literalText, stringToInt } from '../../../godot/string/string';
 import * as logger from '../../../logger';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
+import { NodeAabb } from '../../../r3f/components/NodeAabb';
 import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import {
   DEFAULT_FOG_VOLUME_FILL,
@@ -122,8 +123,11 @@ export function FogVolume({ node, children }: NodeComponentProps) {
     [animatedSize, properties.size]
   );
 
+  const aabb = useMemo(() => fogVolumeAabb(properties.shape, size), [properties.shape, size]);
+
   return (
     <Node3D node={node}>
+      <NodeAabb aabb={aabb} />
       <FogVolumeElement size={[size.x, size.y, size.z]} shape={properties.shape} fill={fill} />
       <PluginGizmo drawnFor="every-node">
         <FogVolumeGizmo size={size} shape={properties.shape} />
