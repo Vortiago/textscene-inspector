@@ -12,7 +12,7 @@ import { drawOffscreen } from '../../../r3f/offscreen.js';
 import { copyTexels, wholeTexels, type TexelPlacement, type TexelTransfer } from '../../../r3f/texelCopy.js';
 import {
   hasLiveCopies,
-  noteLiveTargetsDrawn,
+  noteLiveTargetDrawn,
   publishLiveTargets,
   refillLiveCopies,
 } from '../../../r3f/liveTargets';
@@ -51,7 +51,8 @@ export function useTargetViews(target: THREE.WebGLRenderTarget, isTransparent: b
       // for a pass with nothing to fill.
       fill: () => {
         const views = [plain, decoding];
-        noteLiveTargetsDrawn([plain.texture, decoding.texture]);
+        noteLiveTargetDrawn(plain.texture);
+        noteLiveTargetDrawn(decoding.texture);
         if (!views.some((view) => view.isFilled() || hasLiveCopies(view.texture))) return;
         drawOffscreen(gl, () => {
           views.forEach((view) => view.fill());

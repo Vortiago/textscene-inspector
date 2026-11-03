@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo } from 'react';
 import type * as THREE from 'three';
-import { samplesGlowMap, type GlowParams } from '../../resources/environment/godotGlow';
+import type { GlowParams } from '../../resources/environment/godotGlow';
 import type { EnvironmentAdjustments, EnvironmentSettings } from '../../resources/environment/types';
 import type { AutoExposure } from '../../resources/cameraattributes/types';
 import { projectGlowUsesBicubicUpscale } from '../../parser/projectSettingsParser';
@@ -27,7 +27,7 @@ export interface ToneMapEffectInputs {
   transparentBackground: boolean;
   /** The viewport's `use_debanding`. */
   usesDebanding: boolean;
-  /** The texture `glow_map` names, null for none or while it loads. */
+  /** The texture `glow_map` names, null while it loads and when the composite samples no map. */
   glowMap: THREE.Texture | null;
 }
 
@@ -35,7 +35,7 @@ export interface ToneMapEffectInputs {
 export function useGodotToneMapEffect(inputs: ToneMapEffectInputs): GodotToneMapEffect {
   const { glow, adjustments, toneMapping, autoExposure, transparentBackground, usesDebanding } = inputs;
   const { mode, white, exposure, agxContrast } = toneMapping;
-  const glowMap = useTextureView(glow && samplesGlowMap(glow) ? inputs.glowMap : null, GLOW_MAP_SAMPLER);
+  const glowMap = useTextureView(inputs.glowMap, GLOW_MAP_SAMPLER);
   const usesBicubicGlowUpscale = projectGlowUsesBicubicUpscale(useProjectSettings().settings);
 
   const effect = useMemo(

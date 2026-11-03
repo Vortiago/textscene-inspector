@@ -28,8 +28,8 @@ interface LiveCopy {
 
 /**
  * A target's publishers, the copies it fills in the order they were made, the renderer that
- * holds its texels, null for one no renderer draws, whether its image keeps alpha, and how many
- * times its pass has drawn it.
+ * holds its texels, null for one no renderer draws, whether its image keeps alpha, how many times
+ * its pass has drawn it, and for a copy, the target it copies at the root of its chain.
  */
 interface LiveTarget {
   publishers: number;
@@ -37,10 +37,11 @@ interface LiveTarget {
   renderer: THREE.WebGLRenderer | null;
   isTransparent: boolean;
   draws: number;
+  root: LiveTarget | null;
 }
 
 /**
- * Written by `publishLiveTarget`, its withdrawal, `addCopy` and `noteLiveTargetsDrawn`. An entry
+ * Written by `publishLiveTarget`, its withdrawal, `addCopy` and `noteLiveTargetDrawn`. An entry
  * goes with its texture, and a copy leaves `copies` when it is disposed: by its last holder, or by
  * its target's withdrawal when no reader holds it.
  */
@@ -50,6 +51,7 @@ const liveTargetOf = perObject<THREE.Texture, LiveTarget>(() => ({
   renderer: null,
   isTransparent: false,
   draws: 0,
+  root: null,
 }));
 
 /**
@@ -105,9 +107,9 @@ function freeUnheldCopies(live: LiveTarget): void {
   }
 }
 
-/** Counts a draw of each of `textures`. A target's pass calls it after each render. */
-export function noteLiveTargetsDrawn(textures: readonly THREE.Texture[]): void {
-  for (const texture of textures) liveTargetOf(texture).draws++;
+/** Counts a draw of `texture`. A target's pass calls it after each render. */
+export function noteLiveTargetDrawn(texture: THREE.Texture): void {
+  liveTargetOf(texture).draws++;
 }
 
 /**
@@ -115,7 +117,8 @@ export function noteLiveTargetsDrawn(textures: readonly THREE.Texture[]): void {
  * does, waits for the first draw and copies again on each later one.
  */
 export function liveTargetDrawCount(texture: THREE.Texture): number {
-  return liveTargetOf(texture).draws;
+  const live = liveTargetOf(texture);
+  return (live.root ?? live).draws;
 }
 
 /** Whether a pass redraws `texture`, so a reader that samples it differently needs its own copy. */
@@ -273,7 +276,8 @@ function addCopy(
   texture.colorSpace = source.colorSpace;
   if (holdsSrgbBytes(source)) markSrgbBytes(texture);
 
-  const { copies, renderer, isTransparent } = liveTargetOf(source);
+  const sourceLive = liveTargetOf(source);
+  const { copies, renderer, isTransparent } = sourceLive;
   const copy: LiveCopy = {
     texture,
     sharing,
@@ -281,6 +285,7 @@ function addCopy(
   };
   copies.add(copy);
   const withdraw = publishLiveTarget(texture, renderer, isTransparent);
+  liveTargetOf(texture).root = sourceLive.root ?? sourceLive;
   texture.addEventListener('dispose', () => {
     withdraw();
     copies.delete(copy);

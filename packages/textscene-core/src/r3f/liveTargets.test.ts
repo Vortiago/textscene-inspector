@@ -7,9 +7,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   fillLiveCopy,
+  liveTargetCopy,
   liveTargetCrop,
   liveTargetDrawCount,
-  noteLiveTargetsDrawn,
+  noteLiveTargetDrawn,
   publishLiveTargets,
   unrenderedTexel,
 } from './liveTargets';
@@ -325,8 +326,15 @@ describe('liveTargetDrawCount', () => {
 
   it('counts each draw its pass notes', () => {
     const target = liveCanvasTarget();
-    noteLiveTargetsDrawn([target.texture]);
-    noteLiveTargetsDrawn([target.texture]);
+    noteLiveTargetDrawn(target.texture);
+    noteLiveTargetDrawn(target.texture);
     expect(liveTargetDrawCount(target.texture)).toBe(2);
+  });
+
+  it('counts the draws of the target a crop of a copy cuts from', () => {
+    const target = liveCanvasTarget();
+    const crop = held(liveTargetCrop(held(liveTargetCopy(target.texture)), CORNER_CELL));
+    noteLiveTargetDrawn(target.texture);
+    expect(liveTargetDrawCount(crop)).toBe(1);
   });
 });

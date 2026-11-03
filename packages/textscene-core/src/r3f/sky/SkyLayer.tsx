@@ -95,9 +95,7 @@ export function SkyLayer({
 
   // Written only by the effect below, while it holds bakes.
   const bakeWantedRef = useRef<(() => boolean) | null>(null);
-  const redrawRef = useRef<(() => void) | null>(null);
   useFrame(({ invalidate }) => {
-    redrawRef.current?.();
     if (bakeWantedRef.current?.()) invalidate();
   });
 
@@ -125,7 +123,6 @@ export function SkyLayer({
     }
     let radiance = first;
     bakeWantedRef.current = bakeWantedOf(bakes, () => noteEnvironmentChange(scene, environment));
-    redrawRef.current = panorama && isLiveTarget(panorama) ? redrawOnEachDraw(bakes, panorama) : null;
 
     // A render draws the background live at its own exposure. A surface reads the radiance at the
     // brightness that baked it, times its own exposure and its `background_energy_multiplier`
@@ -180,7 +177,6 @@ export function SkyLayer({
     return () => {
       stopRegistering();
       bakeWantedRef.current = null;
-      redrawRef.current = null;
       release();
     };
   }, [
@@ -205,33 +201,20 @@ export function SkyLayer({
 }
 
 /**
- * Bakes each exposure a render of `bakes` asked for, and answers whether a frame should draw. A bake
- * that lands, whichever layer baked it, runs `noteBake`: a reflection probe captured the bake it
- * replaces, and captures again only for a change of its Environment (`sceneProbes.ts`).
+ * Bakes each exposure a render of `bakes` asked for, after it redraws the backgrounds for a new draw
+ * of a live panorama, and answers whether a frame should draw. A bake that lands, whichever layer
+ * baked it, runs `noteBake`: a reflection probe captured the bake it replaces, and captures again
+ * only for a change of its Environment (`sceneProbes.ts`).
  */
 function bakeWantedOf(bakes: SkyBakes, noteBake: () => void): () => boolean {
   let seenCount = bakes.bakeCount;
   return () => {
+    bakes.followPanorama();
     const isBaked = bakes.bakeWanted();
     if (bakes.bakeCount === seenCount) return isBaked;
     seenCount = bakes.bakeCount;
     noteBake();
     return true;
-  };
-}
-
-/**
- * Draws the background of `bakes` again after each draw of the live `panorama` past the one they
- * baked, as Godot draws the background from the sky shader each frame (`sky.cpp:1463`). The
- * radiance keeps the bake, as Godot's updates only when the sky is dirty.
- */
-function redrawOnEachDraw(bakes: SkyBakes, panorama: THREE.Texture): () => void {
-  let bakedDraws = liveTargetDrawCount(panorama);
-  return () => {
-    const draws = liveTargetDrawCount(panorama);
-    if (draws === bakedDraws) return;
-    bakedDraws = draws;
-    bakes.redrawBackgrounds();
   };
 }
 
@@ -244,7 +227,7 @@ function useIsPanoramaDrawn(panorama: THREE.Texture | null): boolean {
   const [drawnPanorama, setDrawnPanorama] = useState<THREE.Texture | null>(null);
   const isDrawn = !isLive || drawnPanorama === panorama;
   useFrame(() => {
-    if (!isDrawn && liveTargetDrawCount(panorama!) > 0) setDrawnPanorama(panorama);
+    if (!isDrawn && panorama && liveTargetDrawCount(panorama) > 0) setDrawnPanorama(panorama);
   });
   return isDrawn;
 }

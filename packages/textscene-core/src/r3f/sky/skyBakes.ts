@@ -20,6 +20,7 @@ import {
 import { perObject } from '../../utils/perObject';
 import { holdUntilReleased } from '../useDisposeOnRelease';
 import { SkyRadiance } from './skyRadiance';
+import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
 
 /** A sky baked at one exposure: its background and the radiance its readers sample. */
 interface BakedSky {
@@ -112,6 +113,11 @@ export class SkyBakes {
   private readonly holdsExposure: boolean;
   /** Grows by one with each bake made, so a reader tells a new one. */
   bakeCount = 0;
+  /**
+   * The draw of a live panorama the backgrounds show, written only by `followPanorama`. Null for a
+   * panorama no pass draws.
+   */
+  private backgroundDraws: number | null;
 
   constructor(
     private readonly gl: THREE.WebGLRenderer,
@@ -122,6 +128,8 @@ export class SkyBakes {
     const exposureScalesLights =
       materialReadsLights(sky.material) && lights.some((light) => light.energy !== 0);
     this.holdsExposure = exposureScalesLights || isDebanded(sky.material);
+    const { panorama } = input;
+    this.backgroundDraws = panorama && isLiveTarget(panorama) ? liveTargetDrawCount(panorama) : null;
   }
 
   /** Bakes the sky at `exposure` now, outside any render, or answers the bake it holds. */
@@ -154,8 +162,17 @@ export class SkyBakes {
     return true;
   }
 
-  /** Draws the background of each bake again, as a live panorama's pass drew it anew. */
-  redrawBackgrounds(): void {
+  /**
+   * Draws the background of each bake again once per new draw of a live panorama, as Godot draws
+   * the background from the sky shader each frame (`sky.cpp:1463`). The radiance keeps its bake, as
+   * a draw of the target leaves Godot's sky clean. Every layer that shares these bakes may call it.
+   */
+  followPanorama(): void {
+    const { panorama } = this.input;
+    if (this.backgroundDraws === null || !panorama) return;
+    const draws = liveTargetDrawCount(panorama);
+    if (draws === this.backgroundDraws) return;
+    this.backgroundDraws = draws;
     for (const baked of this.bakes.values()) baked?.redrawBackground?.();
   }
 
@@ -206,7 +223,7 @@ function bakeSky(gl: THREE.WebGLRenderer, input: SkyBakeInput, exposure: number)
   if (!built) return null;
   const radiance = new SkyRadiance(gl, built.layers, rotation);
   const { background, redrawBackground, dispose } = built;
-  return { background, radiance, ...(redrawBackground && { redrawBackground }), dispose };
+  return { background, radiance, redrawBackground, dispose };
 }
 
 function exposed(lights: readonly SkyLight[], exposure: number): SkyLight[] {

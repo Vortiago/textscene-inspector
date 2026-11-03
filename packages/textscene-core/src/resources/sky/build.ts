@@ -108,8 +108,6 @@ export function buildSkyEnvironment(
       ? backgroundTarget
       : cubeTarget(bake.radianceSize);
   const hasOwnRadianceCube = radianceTarget !== backgroundTarget;
-  // The sky scene of a live background stays, since each redraw renders it again.
-  const isLiveBackground = !!backgroundTarget && !!panorama && isLiveTarget(panorama);
   const freeSkyScene = () => {
     geometry.dispose();
     material.dispose();
@@ -126,31 +124,44 @@ export function buildSkyEnvironment(
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);
     backgroundTarget?.dispose();
-    if (isLiveBackground) freeSkyScene();
+    freeSkyScene();
     return null;
   } finally {
-    // A radiance cube of its own has served the layers by now. Any other sky scene renders once,
-    // so it is freed here and not held for the environment's lifetime.
+    // A radiance cube of its own has served the layers by now.
     if (hasOwnRadianceCube) radianceTarget.dispose();
-    if (!isLiveBackground) freeSkyScene();
   }
 
+  // The sky scene of a live background stays, since each redraw renders it again. Any other sky
+  // scene renders once, so it is freed now and not held for the environment's lifetime.
   const redrawBackground =
-    isLiveBackground && panoramaView
-      ? () => {
-          fillLiveCopy(panorama, panoramaView, gl);
-          renderCube(gl, skyScene, backgroundTarget);
-        }
+    backgroundTarget && panorama && panoramaView && isLiveTarget(panorama)
+      ? backgroundRedraw(gl, skyScene, panorama, panoramaView, backgroundTarget)
       : undefined;
+  if (!redrawBackground) freeSkyScene();
   return {
     background: backgroundTarget?.texture ?? null,
     layers,
-    ...(redrawBackground && { redrawBackground }),
+    redrawBackground,
     dispose: () => {
       backgroundTarget?.dispose();
       disposeSkyLayers(layers);
-      if (isLiveBackground) freeSkyScene();
+      if (redrawBackground) freeSkyScene();
     },
+  };
+}
+
+/** Renders `skyScene` into `target` again from the live `panorama`'s copy, through one cube camera. */
+function backgroundRedraw(
+  gl: THREE.WebGLRenderer,
+  skyScene: THREE.Scene,
+  panorama: THREE.Texture,
+  panoramaView: THREE.Texture,
+  target: THREE.WebGLCubeRenderTarget
+): () => void {
+  const camera = cubeCamera(target);
+  return () => {
+    fillLiveCopy(panorama, panoramaView, gl);
+    camera.update(gl, skyScene);
   };
 }
 
@@ -178,5 +189,9 @@ function cubeTarget(size: number): THREE.WebGLCubeRenderTarget {
 }
 
 function renderCube(gl: THREE.WebGLRenderer, scene: THREE.Scene, target: THREE.WebGLCubeRenderTarget): void {
-  new THREE.CubeCamera(0.1, 10, target).update(gl, scene);
+  cubeCamera(target).update(gl, scene);
+}
+
+function cubeCamera(target: THREE.WebGLCubeRenderTarget): THREE.CubeCamera {
+  return new THREE.CubeCamera(0.1, 10, target);
 }

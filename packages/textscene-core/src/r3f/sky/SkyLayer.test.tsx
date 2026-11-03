@@ -24,8 +24,8 @@ import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 import { installSkyDebanding } from './skyDebanding';
 import { WorldExposureScope, usePublishCameraAttributes } from '../environment/worldExposure';
 import { drawAtExposure } from '../exposure/sceneExposure';
-import { noteLiveTargetsDrawn, publishLiveTargets } from '../liveTargets';
-import { createCanvasTarget } from '../../nodes/viewport/subviewport/offscreenViewport';
+import { noteLiveTargetDrawn } from '../liveTargets';
+import { publishedCanvasTarget } from '../liveTargets.testkit';
 
 const bakes = vi.hoisted((): SkyEnvironmentInput[] => []);
 /** What the next bake returns on its renderer: null, as a headless renderer gives, unless a test sets it. */
@@ -876,24 +876,19 @@ function OwnEnvironment() {
 }
 
 describe('<SkyLayer> over a live panorama', () => {
-  /** A canvas target its pass publishes until the test ends, which no frame of the test draws. */
-  function liveTarget(): THREE.Texture {
-    const target = createCanvasTarget(8, 4, 'SubViewport');
-    onTestFinished(publishLiveTargets([target.texture], null, false));
-    return target.texture;
-  }
-
   it('bakes nothing until the pass has drawn the target', async () => {
-    await mount(<ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={liveTarget()} />);
+    await mount(
+      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={publishedCanvasTarget(8, 4)} />
+    );
     expect(bakes).toHaveLength(0);
   });
 
   it('bakes once the pass draws the target', async () => {
-    const panorama = liveTarget();
+    const panorama = publishedCanvasTarget(8, 4);
     const mounted = await mount(
       <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={panorama} />
     );
-    noteLiveTargetsDrawn([panorama]);
+    noteLiveTargetDrawn(panorama);
     await mounted.advanceFrames(1);
     expect(bakes.map((bake) => bake.panorama)).toEqual([panorama]);
   });
@@ -902,14 +897,32 @@ describe('<SkyLayer> over a live panorama', () => {
     const redrawBackground = vi.fn();
     const environment = skyEnvironment();
     built.next = (gl) => ({ ...environment(gl), redrawBackground });
-    const panorama = liveTarget();
-    noteLiveTargetsDrawn([panorama]);
+    const panorama = publishedCanvasTarget(8, 4);
+    noteLiveTargetDrawn(panorama);
     const mounted = await mount(
       <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={panorama} />
     );
     await mounted.advanceFrames(1);
-    noteLiveTargetsDrawn([panorama]);
+    noteLiveTargetDrawn(panorama);
     await mounted.advanceFrames(1);
     expect([bakes.length, redrawBackground.mock.calls.length]).toEqual([1, 1]);
+  });
+
+  it('draws a shared background once for each draw of the target, however many layers share it', async () => {
+    const redrawBackground = vi.fn();
+    const environment = skyEnvironment();
+    built.next = (gl) => ({ ...environment(gl), redrawBackground });
+    const panorama = publishedCanvasTarget(8, 4);
+    noteLiveTargetDrawn(panorama);
+    const mounted = await mount(
+      <ShownEnvironment environment={ENVIRONMENT}>
+        <SkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={panorama} />
+        <SkyLayer sky={panoramaSky} rotation={NO_ROTATION} panorama={panorama} />
+      </ShownEnvironment>
+    );
+    await mounted.advanceFrames(1);
+    noteLiveTargetDrawn(panorama);
+    await mounted.advanceFrames(1);
+    expect(redrawBackground).toHaveBeenCalledTimes(1);
   });
 });

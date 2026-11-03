@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { buildSkyEnvironment } from './build';
 import { decodeSky, decodeSkyMaterial } from './decode';
@@ -6,6 +6,7 @@ import type { Sky } from './types';
 import { testRenderer } from '../../testing/recordingWebGL';
 import { debandingDrawnBy } from './skyLayers.testkit';
 import { publishLiveTargets } from '../../r3f/liveTargets';
+import { publishedCanvasTarget } from '../../r3f/liveTargets.testkit';
 import { createCanvasTarget } from '../../nodes/viewport/subviewport/offscreenViewport';
 
 /** A sky of `materialType` with every property at Godot's default. */
@@ -254,15 +255,8 @@ describe('buildSkyEnvironment over a live panorama', () => {
     return { env: env!, drawnCubes };
   }
 
-  /** A canvas target its pass publishes until the test ends. */
-  function liveTarget(): THREE.Texture {
-    const target = createCanvasTarget(8, 4, 'SubViewport');
-    onTestFinished(publishLiveTargets([target.texture], null, false));
-    return target.texture;
-  }
-
   it('draws the background again from the target, and only the background', async () => {
-    const { env, drawnCubes } = await buildOver(liveTarget());
+    const { env, drawnCubes } = await buildOver(publishedCanvasTarget(8, 4));
     const background = drawnCubes[0]!;
     drawnCubes.length = 0;
     env.redrawBackground!();
