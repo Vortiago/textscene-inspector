@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { afterEach, describe, expect, it } from 'vitest';
+import type { OpaqueSentinel } from '../opaqueSentinel';
 import { SceneReflections, type ReflectionSettings } from './sceneReflections';
 import { SSR_STATE, ssrState } from './ssrUniforms';
 
@@ -23,9 +24,9 @@ function tracedRender() {
   return { renderer, reflections, camera };
 }
 
-function reach(sentinel: THREE.Mesh, renderer: THREE.WebGLRenderer, camera: THREE.Camera): void {
-  const { geometry, material } = sentinel;
-  sentinel.onBeforeRender(renderer, new THREE.Scene(), camera, geometry, material as THREE.Material, null!);
+function reach(sentinel: OpaqueSentinel, renderer: THREE.WebGLRenderer, camera: THREE.Camera): void {
+  const { mesh } = sentinel;
+  mesh.onBeforeRender(renderer, new THREE.Scene(), camera, mesh.geometry, mesh.material, null!);
 }
 
 afterEach(() => {

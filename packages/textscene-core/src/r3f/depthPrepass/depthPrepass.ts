@@ -2,7 +2,7 @@
  * Godot's depth prepass for the alpha-pass surfaces that use `depth_prepass_alpha`: before the
  * opaque pass, each writes depth where its alpha reaches `opaque_prepass_threshold`, and its
  * colour then blends uncut (`render_forward_clustered.cpp:1791,2088-2112`). three has no such pass,
- * so a sentinel mesh that three draws first in the opaque list draws them.
+ * so a sentinel that three draws first in the opaque list draws them.
  */
 
 import * as THREE from 'three';
@@ -11,13 +11,13 @@ import { opaquePrepassOf } from '../materials/opaquePrepass';
 import { surfaceDepthMaterial, syncSurfaceDepth } from '../materials/surfaceDepthMaterial';
 import { beginStep, endStep } from '../frameProfile/frameProfile';
 import { drawSurface, visibleSurfaces } from '../opaqueSurfaces';
-import { createFirstOpaqueSentinel } from '../opaqueSentinel';
+import { createFirstOpaqueSentinel, type OpaqueSentinel } from '../opaqueSentinel';
 
 /** The material each surface's prepass copy starts from: depth, and no colour. */
 const PREPASS_BASE = new THREE.MeshDepthMaterial({ colorWrite: false });
 
 /** The sentinel that draws the depth prepass of every surface in its scene before three's opaque pass. */
-export function createDepthPrepassSentinel(): THREE.Mesh {
+export function createDepthPrepassSentinel(): OpaqueSentinel {
   return createFirstOpaqueSentinel('DepthPrepass', drawDepthPrepass);
 }
 

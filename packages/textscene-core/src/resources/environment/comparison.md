@@ -100,7 +100,7 @@ A thin box under a DirectionalLight3D tilted 60° with `shadow_enabled`, in volu
 ## SSR
 <!-- compare: image=unit-environment-ssr status=done fixture=unit-environment-ssr.tscn -->
 
-`ssr_enabled` over a smooth metal floor and a red box, under a colour background. The floor reflects the box only through the screen-space trace, so with SSR off it stays black, as in Godot. The trace is Godot's: the depth pyramid, the march with its step count, fades and depth tolerance, and the reprojection of the last frame. The roughness filter blurs a rough surface's reflection and fades it out from roughness 0.6 to 0.7. The project's `screen_space_reflection/half_size` and a multisampled viewport trace as Godot does. A viewport with a transparent background and a ReflectionProbe's capture trace none, as in Godot. A smooth transparent surface, drawn in the alpha pass, shows no reflection of its own, and a refracting surface shows the reflection behind it, as in Godot. The trace reads the last frame, as Godot's does, so the previewer draws a second frame after each change.
+`ssr_enabled` over a smooth metal floor and a red box, under a colour background. The floor reflects the box only through the screen-space trace, so with SSR off it stays black, as in Godot. The trace is Godot's: the depth pyramid, the march with its step count, fades and depth tolerance, and the reprojection of the last frame. The roughness filter blurs a rough surface's reflection and fades it out from roughness 0.6 to 0.7. The project's `screen_space_reflection/half_size` and a multisampled viewport trace as Godot does. A viewport with a transparent background and a ReflectionProbe's capture trace none, as in Godot. A smooth transparent surface, drawn in the alpha pass, shows no reflection of its own, as in Godot. A refracting surface shows the reflection behind it. The trace reads the last frame, as Godot's does, so the previewer draws a second frame after each change.
 
 ## Linting
 
@@ -212,3 +212,4 @@ The lenient parser never rejects. Every scalar goes through the shared `floatOr`
 ## Known limitations
 
 - **Resource gap** `adjustment_color_correction` is not applied, so a colour-correction texture leaves the frame unchanged.
+- **Renderer gap** A refracting surface draws an opaque outline behind it unlike Godot: three's transmission reads its own copy of the opaque pass.

@@ -15,7 +15,7 @@ import { beginStep, endStep } from '../frameProfile/frameProfile.js';
 import {
   createFirstOpaqueSentinel,
   createLastOpaqueSentinel,
-  disposeOpaqueSentinel,
+  type OpaqueSentinel,
 } from '../opaqueSentinel.js';
 import { leaveSlot, showInSlot } from '../sharedTexture.js';
 import { drawsTransparentBackground } from '../environment/toneMapPass.js';
@@ -79,8 +79,8 @@ const inverseProjection = new THREE.Matrix4();
 const reprojection = new THREE.Matrix4();
 
 export class SceneReflections {
-  readonly firstSentinel: THREE.Mesh;
-  readonly lastSentinel: THREE.Mesh;
+  readonly firstSentinel: OpaqueSentinel;
+  readonly lastSentinel: OpaqueSentinel;
   private readonly worlds = new Map<THREE.WebGLRenderTarget, WorldReflection>();
   /** Written by `begin` and `end`, as renders of the scene nest. */
   private readonly renders: SceneRender[] = [];
@@ -122,8 +122,8 @@ export class SceneReflections {
 
   dispose(): void {
     for (const [target, world] of this.worlds) this.release(target, world);
-    disposeOpaqueSentinel(this.firstSentinel);
-    disposeOpaqueSentinel(this.lastSentinel);
+    this.firstSentinel.dispose();
+    this.lastSentinel.dispose();
   }
 
   /**
