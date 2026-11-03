@@ -39,18 +39,31 @@ export function macintoshName(nameID: number, text: string): NameRecordSpec {
   };
 }
 
-/** A format 0 `name` table of `records`, their strings laid out in order after the records. */
-export function nameTableOf(records: readonly NameRecordSpec[]): Uint8Array {
+/**
+ * A `name` table of `records`, their strings laid out in order after the records. With
+ * `languageTags`, a format 1 table whose tag strings follow the record strings.
+ */
+export function nameTableOf(
+  records: readonly NameRecordSpec[],
+  languageTags?: readonly string[]
+): Uint8Array {
+  const tags = (languageTags ?? []).map((tag) => windowsName(0, tag).string);
+  const headerLength = 6 + 12 * records.length + (languageTags ? 2 + 4 * tags.length : 0);
   const table = new ByteWriter()
-    .u16(0)
+    .u16(languageTags ? 1 : 0)
     .u16(records.length)
-    .u16(6 + 12 * records.length);
+    .u16(headerLength);
   let stringOffset = 0;
   for (const { platformID, encodingID, languageID, nameID, string } of records) {
     table.u16(platformID).u16(encodingID).u16(languageID).u16(nameID).u16(string.length).u16(stringOffset);
     stringOffset += string.length;
   }
-  for (const { string } of records) table.raw(string);
+  if (languageTags) table.u16(tags.length);
+  for (const tag of tags) {
+    table.u16(tag.length).u16(stringOffset);
+    stringOffset += tag.length;
+  }
+  for (const string of [...records.map((record) => record.string), ...tags]) table.raw(string);
   return Uint8Array.from(table.toBytes());
 }
 

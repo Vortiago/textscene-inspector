@@ -8,7 +8,13 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { OS2_FS_SELECTION_OFFSET, OS2_TABLE_MIN_LENGTH, tableFits, type SfntFile } from './sfntTables';
+import {
+  OS2_FS_SELECTION_OFFSET,
+  OS2_TABLE_MIN_LENGTH,
+  tableFits,
+  type SfntFile,
+  type TableRecord,
+} from './sfntTables';
 
 /** `name`: format(2), count(2), storageOffset(2), then 12-byte records. */
 const NAME_HEADER_LENGTH = 6;
@@ -52,6 +58,52 @@ interface NameRecord {
   string: Uint8Array;
 }
 
+/** A format 1 `languageID` at or above this names a language tag record, not a language. */
+const FIRST_LANGUAGE_TAG_ID = 0x8000;
+
+/** Where a `name` table's strings may lie, and the string length of each language tag record. */
+interface NameStorage {
+  start: number;
+  limit: number;
+  /** Zero for a tag whose string lies outside the storage. Null for format 0, which has no tags. */
+  languageTagLengths: readonly number[] | null;
+}
+
+/**
+ * The storage of `name`: after the records, and after the language tags of format 1. Null when
+ * the storage start passes its limit, or the tags run past the font: FreeType reads them past the
+ * table's end, and then loads no name.
+ */
+function nameStorageOf(
+  dv: DataView,
+  table: TableRecord,
+  recordsEnd: number,
+  storageOffset: number
+): NameStorage | null {
+  const limit = table.offset + table.length;
+  if (recordsEnd > limit) return null;
+  if (dv.getUint16(table.offset, false) !== NAME_FORMAT_WITH_LANGUAGE_TAGS)
+    return { start: recordsEnd, limit, languageTagLengths: null };
+  if (recordsEnd + 2 > dv.byteLength) return null;
+  const tagCount = dv.getUint16(recordsEnd, false);
+  const tagsStart = recordsEnd + 2;
+  const start = tagsStart + LANGUAGE_TAG_RECORD_LENGTH * tagCount;
+  if (start > dv.byteLength) return null;
+  const languageTagLengths = Array.from({ length: tagCount }, (_, index) => {
+    const at = tagsStart + LANGUAGE_TAG_RECORD_LENGTH * index;
+    const length = dv.getUint16(at, false);
+    const stringStart = storageOffset + dv.getUint16(at + 2, false);
+    return stringStart >= start && stringStart + length <= limit ? length : 0;
+  });
+  return { start, limit, languageTagLengths };
+}
+
+/** Whether a record's language is valid: in format 1, a language tag ID must name a tag with a string. */
+function hasValidLanguage({ languageTagLengths }: NameStorage, languageID: number): boolean {
+  if (!languageTagLengths || languageID < FIRST_LANGUAGE_TAG_ID) return true;
+  return (languageTagLengths[languageID - FIRST_LANGUAGE_TAG_ID] ?? 0) > 0;
+}
+
 /**
  * The family records of `name` whose string lies in the table's storage (`tt_face_load_name`).
  * FreeType keeps every record, but the family name reads only these.
@@ -59,27 +111,24 @@ interface NameRecord {
 function familyRecordsOf({ dv, tables }: SfntFile): NameRecord[] {
   const table = tables.get('name');
   if (!table || !tableFits(dv, table, NAME_HEADER_LENGTH)) return [];
-  const format = dv.getUint16(table.offset, false);
   const count = dv.getUint16(table.offset + 2, false);
   const storageOffset = table.offset + dv.getUint16(table.offset + 4, false);
-  const storageLimit = table.offset + table.length;
   const recordsStart = table.offset + NAME_HEADER_LENGTH;
-  let storageStart = recordsStart + NAME_RECORD_LENGTH * count;
-  if (storageStart > storageLimit) return [];
-  if (format === NAME_FORMAT_WITH_LANGUAGE_TAGS && storageStart + 2 <= storageLimit)
-    storageStart += 2 + LANGUAGE_TAG_RECORD_LENGTH * dv.getUint16(storageStart, false);
+  const storage = nameStorageOf(dv, table, recordsStart + NAME_RECORD_LENGTH * count, storageOffset);
+  if (!storage) return [];
   const records: NameRecord[] = [];
   for (let index = 0; index < count; index++) {
     const at = recordsStart + NAME_RECORD_LENGTH * index;
+    const languageID = dv.getUint16(at + 4, false);
     const nameID = dv.getUint16(at + 6, false);
     const length = dv.getUint16(at + 8, false);
     const start = storageOffset + dv.getUint16(at + 10, false);
-    if (!FAMILY_NAME_IDS.has(nameID) || length === 0 || start < storageStart || start + length > storageLimit)
-      continue;
+    const isInStorage = length > 0 && start >= storage.start && start + length <= storage.limit;
+    if (!FAMILY_NAME_IDS.has(nameID) || !isInStorage || !hasValidLanguage(storage, languageID)) continue;
     records.push({
       platformID: dv.getUint16(at, false),
       encodingID: dv.getUint16(at + 2, false),
-      languageID: dv.getUint16(at + 4, false),
+      languageID,
       nameID,
       string: new Uint8Array(dv.buffer, dv.byteOffset + start, length),
     });

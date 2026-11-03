@@ -15,6 +15,12 @@ import { os2Table } from './sfntTables.testkit';
 /** `OS/2` fsSelection bit 8: the family is WWS-only. */
 const WWS_ONLY = 1 << 8;
 const WINDOWS_GERMAN = 0x407;
+/** A format 1 language ID at or above this names a language tag. */
+const FIRST_LANGUAGE_TAG_ID = 0x8000;
+
+function familyOfTagged(records: readonly NameRecordSpec[], languageTags: readonly string[]): string | null {
+  return familyNameOf(sfntFileOfTables(new Map([['name', nameTableOf(records, languageTags)]])));
+}
 
 function familyOf(records: readonly NameRecordSpec[], os2?: Uint8Array): string | null {
   const tables = new Map([['name', nameTableOf(records)]]);
@@ -74,6 +80,33 @@ describe('familyNameOf', () => {
 
   it('reads a character outside printable ASCII as a question mark', () => {
     expect(familyOf([windowsName(NAME_ID_FONT_FAMILY, '華康楷書 W5')])).toBe('???? W5');
+  });
+
+  it('reads a format 1 record whose language tag has a string', () => {
+    const records = [windowsName(NAME_ID_FONT_FAMILY, 'Tagged', FIRST_LANGUAGE_TAG_ID)];
+
+    expect(familyOfTagged(records, ['en'])).toBe('Tagged');
+  });
+
+  it('skips a format 1 record whose language tag ID names no tag', () => {
+    const records = [
+      windowsName(NAME_ID_FONT_FAMILY, 'Tagged', FIRST_LANGUAGE_TAG_ID + 1),
+      windowsName(NAME_ID_FONT_FAMILY, 'Untagged', WINDOWS_GERMAN),
+    ];
+
+    expect(familyOfTagged(records, ['en'])).toBe('Untagged');
+  });
+
+  it('reads no name from a format 1 table whose language tags run past the font', () => {
+    const table = nameTableOf([windowsName(NAME_ID_FONT_FAMILY, 'Tagged')], ['en']);
+    const tagCountAt = 6 + 12;
+    new DataView(table.buffer).setUint16(tagCountAt, 0xffff, false);
+
+    expect(familyNameOf(sfntFileOfTables(new Map([['name', table]])))).toBeNull();
+  });
+
+  it('reads a format 0 record whatever its language ID', () => {
+    expect(familyOf([windowsName(NAME_ID_FONT_FAMILY, 'Plain', FIRST_LANGUAGE_TAG_ID)])).toBe('Plain');
   });
 
   it('answers null for a font with no family name', () => {
