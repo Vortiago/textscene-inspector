@@ -3,7 +3,7 @@
  * unless `remote_node` (key `remote_path`) resolves to a Node3D. `remote_node` defaults to
  * `NodePath()` (remote_transform_3d.h:38, no constructor override), which triggers it, so the rule
  * covers an absent path, a path to nothing in this file and a path to a node that is no Node3D.
- * A second arm warns on a relay in a ring of relays (`relayCycles.ts`).
+ * A second arm warns on a relay in a relay cycle (`relayCycles.ts`).
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -68,7 +68,7 @@ const remoteTransform3DValidationRule: LintRule = {
   meta: {
     name: 'valid-remotetransform3d-remote-path',
     description:
-      "Mirrors RemoteTransform3D::get_configuration_warnings' remote_path check: absent, dangling, or not a Node3D. Warns on a relay in a ring of relays",
+      "Mirrors RemoteTransform3D::get_configuration_warnings' remote_path check: absent, dangling, or not a Node3D. Warns on a relay in a relay cycle",
     category: 'validation',
     applicableNodeTypes: ['RemoteTransform3D'],
     emits: armEmits(arms),

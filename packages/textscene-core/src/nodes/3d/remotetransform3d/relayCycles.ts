@@ -1,7 +1,7 @@
 /**
  * The relay cycle check of RemoteTransform3D and RemoteTransform2D. A push moves the target, which
  * queues every relay the target carries, and that relay pushes on the next transform flush
- * (`remote_transform_3d.cpp:118-126`, `remote_transform_2d.cpp:127-136`). A ring of relays so
+ * (`remote_transform_3d.cpp:118-126`, `remote_transform_2d.cpp:127-136`). A relay cycle so
  * pushes on every frame without end, and no one frame's pose is the game's pose.
  */
 
@@ -20,26 +20,26 @@ const RELAY_CLASSES: Readonly<Record<string, { target: string; reached: string }
   RemoteTransform2D: { target: 'Node2D', reached: 'CanvasItem' },
 };
 
-/** The arm that warns on a relay in a ring, grounded on the push `pushAt` names (`file.cpp:line`). */
+/** The arm that warns on a relay in a cycle, grounded on the push `pushAt` names (`file.cpp:line`). */
 export function relayCycleArm(ruleName: string, pushAt: string): RuleArm {
   return { severity: 'warning', ruleName, grounding: { kind: 'engine', at: pushAt } };
 }
 
-/** A warning under `arm` when the relay of `context` is in a ring of relays. */
+/** A warning under `arm` when the relay of `context` is in a relay cycle. */
 export function relayCycleDiagnostics(arm: RuleArm, { node, scene }: RuleContext): Diagnostic[] {
-  if (!relaysInARing(scene).has(node)) return [];
+  if (!relaysInACycle(scene).has(node)) return [];
   return [
     armDiagnostic(
       arm,
       node,
-      `${node.type} '${node.name}' is in a ring of relays: its target carries a relay that leads back to it. ` +
+      `${node.type} '${node.name}' is in a relay cycle: its target carries a relay that leads back to it. ` +
         'Godot pushes these relays again on every frame without end, so their pose depends on the frame count.'
     ),
   ];
 }
 
-/** The relays of `scene` on a ring, each reaching itself through the relays its push queues. */
-const relaysInARing = perObject((scene: RawScene): ReadonlySet<RawNode> => {
+/** The relays of `scene` on a cycle, each reaching itself through the relays its push queues. */
+const relaysInACycle = perObject((scene: RawScene): ReadonlySet<RawNode> => {
   const relays = scene.nodes.flatMap(nodesBelow).filter((node) => node.type in RELAY_CLASSES);
   const queuedBy = new Map(relays.map((relay) => [relay, relaysQueuedByAPushOf(relay, scene)]));
   return new Set(relays.filter((relay) => reaches(relay, relay, queuedBy)));
@@ -66,7 +66,7 @@ function reaches(from: RawNode, to: RawNode, queuedBy: ReadonlyMap<RawNode, read
 /**
  * The relays that a push of `relay` makes push again: those its move of the target reaches. A
  * relay in local coordinates pushes only when its own local transform changes, and a relay with no
- * part flagged leaves the pose as it is, so neither moves a ring. A target on the relay's own line
+ * part flagged leaves the pose as it is, so neither moves a cycle. A target on the relay's own line
  * of the tree is refused (`remote_transform_3d.cpp:37`), and a target in another file is not seen.
  */
 function relaysQueuedByAPushOf(relay: RawNode, scene: RawScene): RawNode[] {

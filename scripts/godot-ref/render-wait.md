@@ -28,7 +28,7 @@ black (`volumetric_fog_process.glsl:683`, `fog.cpp:482`). It jitters each frame 
 picture with the one `FOG_JITTER_CYCLE_FRAMES` frames back.
 
 **Moving transforms.** The tree is paused and the time scale is 0, so game logic stops. A
-transform notification still runs (`scene_tree.cpp:193-204`), so a ring of RemoteTransform relays
+transform notification still runs (`scene_tree.cpp:193-204`), so a RemoteTransform relay cycle
 moves its nodes on every frame (`remote_transform_3d.cpp:118-126`). The picture misses that motion
 once the nodes leave the view, and the clock would then pick the frame. The wait reads the global
 transform of every Node3D and CanvasItem in the viewport, so such a scene runs the whole wait and

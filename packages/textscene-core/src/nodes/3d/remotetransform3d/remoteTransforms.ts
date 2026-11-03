@@ -50,7 +50,7 @@ export function applyRemoteTransforms(tree: LiveTree): NodePatches {
   const queuedBy = entriesQueuedByAMoveOf(tree, relays);
   const entered = entriesOnTheListAtEnterTree(tree, relays, queuedBy);
   const localRelayAt = new Map(relays.filter((r) => !r.flags.useGlobal).map((r) => [r.link.path, r]));
-  // Godot recurses without end through a ring of local relays and overflows its stack. The replay
+  // Godot recurses without end through a cycle of local relays and overflows its stack. The replay
   // stops at the relay that is already pushing.
   const pushing = new Set<Relay>();
   const push = (relay: Relay, queue: QueueTransformChange<ListEntry>): void => {

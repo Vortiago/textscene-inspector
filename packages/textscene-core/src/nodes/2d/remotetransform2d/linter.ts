@@ -3,7 +3,7 @@
  * one warning for `remote_path` absent, naming no node, or naming a non-Node2D.
  * An absent path is the empty `NodePath()`, and `has_node()` on it is false, so
  * absence is the trigger. `resolveNodePath` declines only a walk into another file.
- * A second arm warns on a relay in a ring of relays (`relayCycles.ts`).
+ * A second arm warns on a relay in a relay cycle (`relayCycles.ts`).
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -56,7 +56,7 @@ const remoteTransform2DPathRule: LintRule = {
   meta: {
     name: 'valid-remotetransform2d-remote-path',
     description:
-      'Warns when RemoteTransform2D has no remote_path, or remote_path resolves to no node or a non-Node2D node, and on a relay in a ring of relays',
+      'Warns when RemoteTransform2D has no remote_path, or remote_path resolves to no node or a non-Node2D node, and on a relay in a relay cycle',
     category: 'validation',
     applicableNodeTypes: ['RemoteTransform2D'],
     emits: armEmits(arms),

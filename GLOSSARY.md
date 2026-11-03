@@ -31,6 +31,7 @@ _Avoid_: reading a node's merge, scope or children in separate calls.
 **Live tree snapshot** (`LiveTreeContext` in `r3f/liveSceneTree.ts`, shared by `useSharedLiveTree`):
 One read of the loader's scene cache that every question over the **Live scene tree** shares until the next scene or GLB load.
 It reads each scene path once, composes each inherited sub-scene once, and holds the one tree and owner walk that every path question asks.
+It also carries the project's **Physics clock**, so one snapshot answers for one project.
 _Avoid_: a live tree or a context per consumer, per question.
 
 **Authored scope** (`LiveNode.scope`, read through `scopeOf` and `LiveTree.stepOf`):
@@ -46,6 +47,23 @@ _Avoid_: writing a pass's result into a node. A pass that runs before the sub-sc
 **Node patch** (`NodePatch`, `r3f/nodePatch.ts`, ADR-0060):
 The property values a **Live scene pass** lays over one node of the **Live scene tree**, found by the node's live path. `patchedNode` returns the node with its patch over its properties.
 _Avoid_: a pass mutating a node it was handed.
+
+**Transform flush** (`replayTransformFlushes` in `godot/scene/transformFlushes.ts`):
+One walk of Godot's transform-change list, which sends `NOTIFICATION_TRANSFORM_CHANGED` to each node queued since the last walk. Godot runs three in each process frame and two in each physics tick.
+A RemoteTransform pushes each time a flush reaches it, so the RemoteTransform pass replays flushes, not the file order.
+_Avoid_: "update", "tick" for a flush.
+
+**Harness frame** (`HARNESS_FRAME` in `godot/scene/transformFlushes.ts`):
+The process frame at which `pnpm ref:godot` captures a scene whose transforms never hold still. The previewer draws such a scene at this frame, so both sides show the same pose.
+_Avoid_: "last frame", "the capture time".
+
+**Relay cycle** (`relayCycles.ts` in `nodes/3d/remotetransform3d/`):
+RemoteTransform relays in global coordinates whose pushes lead back to the first. Godot pushes them on every **Transform flush** without end, so the previewer draws the **Harness frame** and the linter warns on each relay.
+_Avoid_: "ring", "feedback loop".
+
+**Physics clock** (`PhysicsClock` in `godot/scene/physicsTicks.ts`):
+The two **Project settings** that pace physics ticks: `physics_ticks_per_second` and `physics_jitter_fix`. With the harness's fixed frame rate, they decide how many **Transform flushes** run by the **Harness frame**.
+_Avoid_: "tick rate" alone, since the jitter fix moves ticks too.
 
 **Instance name table** (`resources/instanceNameTable.ts`):
 An instance root's `%Name` table, which the merge composes as instantiate builds it: the sub-scene's own names, then each host `unique_name_in_owner` setting at its heading, in file order.

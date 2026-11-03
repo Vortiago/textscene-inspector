@@ -155,7 +155,7 @@ use_global_coordinates = false
     expect(placementsOf(content).has('Root/Target')).toBe(false);
   });
 
-  it('resolves a relay chain in document order (A drives B, B drives C)', () => {
+  it('carries a push on through a relay that another relay moves (A drives B, B drives C)', () => {
     // Relay A at +4 drives B. B, itself a relay at authored +1, is driven to +4, then B drives C,
     // so C ends at +4.
     const content = `[gd_scene format=3]

@@ -36,15 +36,18 @@ error does not withhold the tree, so a file reports its parse errors and the
 semantic findings under them together. A pre-current format header is the one
 exception. It reports a single `legacy-format-version` info and nothing else.
 
-## What a RemoteTransform relay does not reproduce
+## What a RemoteTransform relay cycle shows
 
 `RemoteTransform2D` and `RemoteTransform3D` share one implementation and one set
 of limitations, so this file records them once.
 
-A relay copies its transform onto its `remote_path` target once on load: the
-static enter-tree effect, not a per-frame drive. One case is not fully
-reproduced: relay chains resolve in document (pre-order) order. A feedback loop
-is not iterated to a fixed point.
+A relay pushes its transform each time its own global transform changes, in the
+order of Godot's transform-change list. A chain of relays settles in the first
+frames. A relay cycle never settles, because Godot moves it on every frame.
+The previewer draws the frame that `pnpm ref:godot` captures, and the project's
+physics tick rate decides how far the cycle has moved by then. A 3D mesh in the
+cycle draws where its last transform notification left it, which can be a push
+behind its node.
 
 ## Why a 2D background reads 77 here and 76 in Godot
 

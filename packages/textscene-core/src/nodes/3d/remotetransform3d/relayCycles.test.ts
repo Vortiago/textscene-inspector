@@ -1,7 +1,7 @@
 /**
  * The relay cycle rules of RemoteTransform3D and RemoteTransform2D. Godot pushes a relay each time
  * its own global transform changes (`remote_transform_3d.cpp:118-126`,
- * `remote_transform_2d.cpp:127-136`), so a ring of relays moves on every frame without end.
+ * `remote_transform_2d.cpp:127-136`), so a relay cycle moves on every frame without end.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -89,7 +89,7 @@ remote_path = NodePath("../P")
 `;
 
 describe('the RemoteTransform3D relay cycle rule', () => {
-  it('warns on each relay of a ring, through a node below the target', () => {
+  it('warns on each relay of a cycle, through a node below the target', () => {
     expect(warnedNodes(cycle3D(), RULE_3D)).toEqual(['RelayA', 'RelayB']);
   });
 
@@ -101,11 +101,11 @@ describe('the RemoteTransform3D relay cycle rule', () => {
     expect(warnedNodes(TARGET_PARENT_3D, RULE_3D)).toEqual([]);
   });
 
-  it('stays silent when a relay of the ring works in local coordinates, which a move of its holder does not push', () => {
+  it('stays silent when a relay of the cycle works in local coordinates, which a move of its holder does not push', () => {
     expect(warnedNodes(cycle3D('use_global_coordinates = false'), RULE_3D)).toEqual([]);
   });
 
-  it('stays silent when a top_level node cuts the ring, as a move does not reach below it', () => {
+  it('stays silent when a top_level node cuts the cycle, as a move does not reach below it', () => {
     const cut = cycle3D().replace(
       '[node name="Inner" type="Node3D" parent="HolderB"]',
       '[node name="Inner" type="Node3D" parent="HolderB"]\ntop_level = true'
@@ -113,7 +113,7 @@ describe('the RemoteTransform3D relay cycle rule', () => {
     expect(warnedNodes(cut, RULE_3D)).toEqual([]);
   });
 
-  it('stays silent on a ring through an instanced scene, which one file cannot see whole', () => {
+  it('stays silent on a cycle through an instanced scene, which one file cannot see whole', () => {
     const throughInstance = `[gd_scene load_steps=2 format=3]
 
 [ext_resource type="PackedScene" path="res://holder.tscn" id="1"]
@@ -135,11 +135,11 @@ remote_path = NodePath("../../HolderA")
 });
 
 describe('the RemoteTransform2D relay cycle rule', () => {
-  it('warns on each relay of a ring', () => {
+  it('warns on each relay of a cycle', () => {
     expect(warnedNodes(cycle2D(), RULE_2D)).toEqual(['RelayA', 'RelayB']);
   });
 
-  it('stays silent when a relay of the ring flags no part, as it pushes nothing', () => {
+  it('stays silent when a relay of the cycle flags no part, as it pushes nothing', () => {
     const noPart = 'update_position = false\nupdate_rotation = false\nupdate_scale = false';
     expect(warnedNodes(cycle2D(noPart), RULE_2D)).toEqual([]);
   });
