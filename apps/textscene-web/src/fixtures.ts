@@ -603,6 +603,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Directionallight2d Normal Map",
+    "file": "unit-directionallight2d-normal-map.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Directionallight2d Render Budget",
     "file": "unit-directionallight2d-render-budget.tscn",
     "category": "Other"
@@ -830,6 +835,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Glow Exposure",
     "file": "unit-glow-exposure.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glow Map Viewport Texture Local",
+    "file": "unit-glow-map-viewport-texture-local.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glow Map Viewport Texture Shared",
+    "file": "unit-glow-map-viewport-texture-shared.tscn",
     "category": "Other"
   },
   {
@@ -1688,6 +1703,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Pointlight2d Normal Map Height",
+    "file": "unit-pointlight2d-normal-map-height.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Normal Map Specular",
+    "file": "unit-pointlight2d-normal-map-specular.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d Range Layer",
     "file": "unit-pointlight2d-range-layer.tscn",
     "category": "Other"
@@ -1990,6 +2015,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sky Panorama Tres",
     "file": "unit-sky-panorama-tres.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Panorama Viewport Texture Local",
+    "file": "unit-sky-panorama-viewport-texture-local.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Panorama Viewport Texture Shared",
+    "file": "unit-sky-panorama-viewport-texture-shared.tscn",
     "category": "Other"
   },
   {
@@ -3400,6 +3435,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Text Mesh Hinting",
+    "file": "unit-text-mesh-hinting.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Text Mesh Triangulation Failure",
     "file": "unit-text-mesh-triangulation-failure.tscn",
     "category": "Unit - Primitive Meshes"
@@ -4246,6 +4286,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Mipmap Import",
     "file": "unit-material-mipmap-import.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Next Pass",
+    "file": "unit-material-next-pass.tscn",
     "category": "Unit - Materials"
   },
   {

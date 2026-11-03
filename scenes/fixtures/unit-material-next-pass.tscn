@@ -1,0 +1,49 @@
+[gd_scene format=3]
+
+; The one variable: a material with a `next_pass`. `_geometry_instance_add_surface_with_material_chain`
+; adds the surface once for the start material and once per link of the `while` walk
+; (`render_forward_clustered.cpp:4183-4201`), so the chained sphere draws its hull after its own
+; surface, grown along the normals (`material.cpp:1458-1461`). No golden sets `next_pass`, `grow`
+; or `grow_amount` today, so no other fixture shows the chain drawing, sorting after its surface,
+; or growing. The subject sphere sits at the origin the measurement table's probes read. The
+; Camera3D's fov 70 is the editor viewport's (`editors/3d/default_fov`; a bare Camera3D defaults
+; to 75, which would move the probed edge), and the entry's `camera:` pins both harnesses to look
+; through this one, so a probe coordinate addresses the same surface point on both sides.
+
+[sub_resource type="SphereMesh" id="SphereMesh_body"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_base"]
+shading_mode = 0
+albedo_color = Color(1, 0.5, 0, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pass"]
+shading_mode = 0
+albedo_color = Color(0, 0, 1, 1)
+cull_mode = 1
+grow = true
+grow_amount = 0.03
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_chained"]
+shading_mode = 0
+albedo_color = Color(1, 0.5, 0, 1)
+next_pass = SubResource("StandardMaterial3D_pass")
+
+[node name="MaterialNextPass" type="Node3D"]
+
+; The control, with only its surface material: it keeps a whole-scene outline from reading as success.
+[node name="Base" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.15, 0, 0)
+mesh = SubResource("SphereMesh_body")
+surface_material_override/0 = SubResource("StandardMaterial3D_base")
+
+; The same surface material chaining the inverted-hull outline: unshaded blue back faces grown
+; 0.03 along the normals draw the rim outside the orange edge, at the link's draw after the base.
+[node name="BasePlusNextPass" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_body")
+surface_material_override/0 = SubResource("StandardMaterial3D_chained")
+
+; The frame both harnesses look through: a sphere at the origin seen from (0, 0, 3) puts its
+; centre over the canvas centre, where the probes measure.
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+fov = 70.0

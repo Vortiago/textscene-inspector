@@ -5,21 +5,29 @@
  * leaves a GPU buffer behind.
  */
 
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { ReactElement } from 'react';
 import { CollisionGizmo } from './CollisionGizmo';
 import type { TscnInternalResource } from '../../../../parser/types';
-import { settleLoads } from '../../../../r3f/testing/settleLoads';
+import { settlePendingLoads } from '../../../../r3f/testing/settleLoads';
+import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 /**
- * The gizmo `import()`s three's ConvexGeometry lazily, which reads a file the first time. Loading it
- * here first leaves the gizmo's import a cache hit, which lands within `settleLoads`'s one tick.
+ * The gizmo imports three's ConvexGeometry lazily, and under CI load that import outlasts a timer
+ * tick. The delay makes it late on every run, so each hull test proves it waits for the chunk itself.
  */
-beforeAll(() => import('three/addons/geometries/ConvexGeometry.js'));
+vi.mock('three/addons/geometries/ConvexGeometry.js', async (importOriginal) => {
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  return importOriginal();
+});
+
+/** Counts the gizmo's lazy chunk. Every test unmounts, so it counts nothing between tests. */
+const { loader } = createFakeResourceLoader();
 
 /** Written only by `mount`, emptied after each test. */
 const mounted: Renderer[] = [];
@@ -44,7 +52,11 @@ function concave(data: string): TscnInternalResource {
 
 /** A fresh colour per call: a parent re-render hands over a new one each time. */
 function gizmo(shape: TscnInternalResource): ReactElement {
-  return <CollisionGizmo shape={shape} color={new THREE.Color(0x00ff88)} />;
+  return (
+    <ResourceLoaderProvider loader={loader}>
+      <CollisionGizmo shape={shape} color={new THREE.Color(0x00ff88)} />
+    </ResourceLoaderProvider>
+  );
 }
 
 async function mount(element: ReactElement): Promise<Renderer> {
@@ -53,9 +65,9 @@ async function mount(element: ReactElement): Promise<Renderer> {
   return renderer;
 }
 
-/** Lets the gizmo's state update land, then re-flushes so the test renderer's snapshot sees the commit. */
+/** Lets the gizmo's lazy chunk land, then re-flushes so the test renderer's snapshot sees the commit. */
 async function settle(renderer: Renderer, element: ReactElement): Promise<void> {
-  await settleLoads();
+  await settlePendingLoads(loader);
   await renderer.update(element);
 }
 
@@ -118,6 +130,16 @@ describe('<CollisionGizmo> ConcavePolygonShape3D geometry lifecycle', () => {
 });
 
 describe('<CollisionGizmo> ConvexPolygonShape3D hull lifecycle', () => {
+  it('counts as a pending load until its hull draws, so a capture waits for it', async () => {
+    const shape = convex(CUBE_POINTS);
+    const renderer = await mount(gizmo(shape));
+    expect([drawnGeometry(renderer), loader.pendingResourceCount]).toEqual([null, 1]);
+
+    await settle(renderer, gizmo(shape));
+    expect(loader.pendingResourceCount).toBe(0);
+    requireGeometry(renderer);
+  });
+
   it('keeps one hull across re-renders of the same shape', async () => {
     const shape = convex(CUBE_POINTS);
     const renderer = await mount(gizmo(shape));

@@ -4,6 +4,7 @@
  */
 
 import { enumNamesByValue } from '../../classdb/enumNames.js';
+import { centredAabb, EMPTY_AABB, type Aabb } from '../../math/aabb.js';
 import { clamp } from '../../math/math.js';
 import type { HalfExtents, VolumetricFogGrid } from './volumetricFog.js';
 import { VECTOR3_AXES, vector3Maxf, type Vector3 } from '../../math/vector.js';
@@ -21,6 +22,14 @@ export const FogVolumeShape = {
 /** Whether the editor gizmo plugin draws the box and the icon: every shape but WORLD (`fog_volume_gizmo_plugin.cpp:99-123`). */
 export function fogVolumeHasGizmo(shape: number): boolean {
   return shape !== FogVolumeShape.WORLD;
+}
+
+/**
+ * `FogVolume::get_aabb` (`scene/3d/fog_volume.cpp:113-118`): the box of `size` for every shape but
+ * WORLD, which has none.
+ */
+export function fogVolumeAabb(shape: number, size: Vector3): Aabb {
+  return shape === FogVolumeShape.WORLD ? EMPTY_AABB : centredAabb(size);
 }
 
 /** Each shape's name by the integer a `.tscn` stores, as a validator names it. */

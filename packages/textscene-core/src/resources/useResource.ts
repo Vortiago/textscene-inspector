@@ -121,15 +121,23 @@ export function useResourceLoad<T>(path: string, type: ResourceBusType): Resourc
       return rawValue;
     };
 
+    /** A reload's refetch releases what the loader counted, on its settle. */
+    const reloadPendingReleases: Array<() => void> = [];
+    const releaseReloadPendings = () => {
+      while (reloadPendingReleases.length) reloadPendingReleases.pop()?.();
+    };
+
     /** The one writer of the loaded state, so a cache hit and a `loaded` event clone alike. */
     const applyValue = (rawValue: unknown) => {
       if (!isCurrent()) return;
+      releaseReloadPendings();
       const value = toConsumerValue(rawValue) as T;
       setResult({ value, status: 'loaded' });
     };
 
     const applyFailure = (errMessage: string) => {
       if (!isCurrent()) return;
+      releaseReloadPendings();
       // The bus reports every failure as one `failed` event with no reason code.
       setResult({ value: undefined, status: 'unavailable', error: errMessage });
     };
@@ -157,13 +165,17 @@ export function useResourceLoad<T>(path: string, type: ResourceBusType): Resourc
     const onFailed = (eventPath: string, error?: Error) => {
       if (eventPath !== path) return;
       applyFailure(error?.message ?? 'Unknown error');
-    };
-    // A clear dropped this path (a corpus switch, or a **Dependency hot-reload** of its file), so
+    }; // A clear dropped this path (a corpus switch, or a **Dependency hot-reload** of its file), so
     // it is requested again and the old value stays on screen meanwhile. A path that is gone now
     // fails to unavailable: one burst of doomed refetches, bounded by the mounted working set.
     const onInvalidated = (eventPath: string) => {
       if (eventPath !== path) return;
       if (!isCurrent()) return;
+      // A reload's refetch is real work to a capture: the loader counts it, so
+      // isSceneComplete moves through the reload's window and the shell posts the
+      // states again. It releases on the next settled event of this path, or on unmount.
+      const releasePending = loader.beginPending();
+      reloadPendingReleases.push(releasePending);
       access.request(path);
     };
 
@@ -177,6 +189,7 @@ export function useResourceLoad<T>(path: string, type: ResourceBusType): Resourc
     }
 
     return () => {
+      releaseReloadPendings();
       access.unpin(path);
       eventBus.off(busType, 'loaded', onLoaded);
       eventBus.off<Error>(busType, 'failed', onFailed);

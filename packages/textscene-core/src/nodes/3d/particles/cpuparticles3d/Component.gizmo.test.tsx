@@ -13,6 +13,7 @@ import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { GizmoScene, lineOpacities } from '../../../../r3f/testing/GizmoScene';
 import {
   describeGizmoToggle,
+  describeSelectionBox,
   describeInstantiatedGizmo,
   type GizmoNodeCase,
 } from '../../../../r3f/testing/gizmoContract';
@@ -73,6 +74,7 @@ beforeAll(loadParticleEmitter);
 
 describeGizmoToggle('<CPUParticles3D>', GIZMO_CASE);
 describeInstantiatedGizmo('<CPUParticles3D>', GIZMO_CASE);
+describeSelectionBox('<CPUParticles3D>', GIZMO_CASE, null);
 
 describe('<CPUParticles3D> gizmo state', () => {
   it('draws the box and its axes in full colour when the node is selected', async () => {

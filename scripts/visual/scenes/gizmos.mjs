@@ -1,8 +1,10 @@
 /**
  * Gizmos, both halves of each pair: the unselected render, and the selected one that adds the
  * helper. A scene that sets `gizmos: true` opens with the Gizmos toggle on, which every other
- * capture keeps off. With it on and nothing selected, a node Godot draws a gizmo for in every node
- * shows it faint (ADR-0056), and a node Godot draws it for only when selected shows none.
+ * capture keeps off. With it on and nothing selected, a node Godot draws a gizmo for in every
+ * node still shows it (ADR-0056). A plugin material draws the faint variant, and a plugin that
+ * passes the node's own material, as the cast nodes' do, passes full colour. A node Godot draws a
+ * gizmo for only when selected shows none.
  */
 
 export const GIZMO_SCENES = [
@@ -20,6 +22,13 @@ export const GIZMO_SCENES = [
   { name: 'vehiclewheel3d-selected', file: 'unit-physics-vehicle.tscn', gizmos: true, select: 'Root/Vehicle/Wheel1' },
   // The SpringArm3D length line: one segment from the origin along +Z, spring_length long.
   { name: 'spring-arm-3d-selected', file: 'unit-spring-arm-3d.tscn', gizmos: true, select: 'Root/MySpringArm3D' },
+  // RayCast3D: the ray line plus the pyramid fill of the authored thickness 3, along target_position.
+  { name: 'raycast3d-selected', file: 'unit-ray-cast-3d.tscn', gizmos: true, select: 'Root/MyRayCast3D' },
+  { name: 'raycast3d-unselected', file: 'unit-ray-cast-3d.tscn', gizmos: true },
+  // ShapeCast3D: the sweep line plus the BoxShape3D wireframe sitting at the sweep's end. Godot
+  // draws them for every node, like the ray above, so an unselected golden pairs each selected one.
+  { name: 'shapecast3d-selected', file: 'unit-shape-cast-3d.tscn', gizmos: true, select: 'Root/MyShapeCast3D' },
+  { name: 'shapecast3d-unselected', file: 'unit-shape-cast-3d.tscn', gizmos: true },
   // The PinJoint3D cross and the ConeTwistJoint3D cones toward each body, selected one at a time and then
   // faint with nothing selected.
   { name: 'pin-joint-3d-selected', file: 'unit-joint-3d-gizmos-pin-cone.tscn', gizmos: true, select: 'Root/Pin' },
@@ -93,6 +102,7 @@ export const GIZMO_SCENES = [
   { name: 'directional-light-3d', file: 'unit-directional-light-3d.tscn' },
   { name: 'omni-light-3d', file: 'unit-omni-light-3d.tscn' },
   { name: 'spot-light-3d', file: 'unit-spot-light-3d.tscn' },
+  { name: 'occluder-instance-3d-selected', file: 'unit-occluder-instance-3d.tscn', select: 'Root/MyOccluderInstance3D' },
   { name: 'camera-basic', file: 'unit-camera-basic.tscn' },
   { name: 'audio-stream-player-3d', file: 'unit-audio-stream-player.tscn' },
   // Selected: the real tree-click → selection → gizmo render for each gate.

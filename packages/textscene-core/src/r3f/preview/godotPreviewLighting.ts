@@ -18,7 +18,6 @@ import { degToRad } from '../../godot/math/math.js';
 import { BackgroundMode } from '../../godot/scene/environment.js';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 import type { ResolvedEnvironment } from '../environment/WorldEnvironmentScope';
-import { NO_RESOURCES } from '../SceneResourcesContext';
 
 /** The node types the editor counts, one independent counter each. */
 export const PREVIEW_SUN_YIELD_TYPE = 'DirectionalLight3D';
@@ -138,8 +137,8 @@ function buildPreviewEnvironment(): EnvironmentAndSky {
 
   return {
     settings,
-    resources: NO_RESOURCES,
-    skyResources: NO_RESOURCES,
+    panorama: null,
+    glowMap: null,
     // The editor's Sky keeps every default but its material (`node_3d_editor_plugin.cpp:10394`).
     sky: decodeSky(
       {},

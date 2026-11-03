@@ -60,7 +60,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/resources/meshes/textmesh/polypartition.ts` | `thirdparty/misc/polypartition.cpp` (MIT, Copyright (c) 2011-2021 Ivan Fratric and contributors — `RemoveHoles`, `Triangulate_EC`, `ConvexPartition_HM` and `Triangulate_OPT`, as `TextMesh::_generate_glyph_mesh_data` calls them) |
 | `packages/textscene-core/src/resources/meshes/textmesh/textMeshLines.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TextMesh::_generate_glyph_mesh_data`'s line breaking and `HORIZONTAL_ALIGNMENT_FILL` justification) |
 | `packages/textscene-core/src/r3f/controls/native/text/sfntOutlines.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) |
-| `packages/textscene-core/src/r3f/controls/native/text/sfntGlyf.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) and FreeType's outline scaling |
+| `packages/textscene-core/src/r3f/controls/native/text/sfntGlyf.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) and FreeType's TrueType glyph loader |
 | `packages/textscene-core/src/r3f/controls/native/text/glyphContours.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) |
 | `packages/textscene-core/src/r3f/controls/native/text/sfntCff.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) and FreeType's outline scaling |
 | `packages/textscene-core/src/r3f/controls/native/text/sfntCmap.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_index`) |
@@ -75,6 +75,8 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/resources/meshes/primitivemesh/flipFaces.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PrimitiveMesh::_update`'s `flip_faces` block) |
 | `packages/textscene-core/src/r3f/lighting2d/CanvasLightPass.tsx` | `drivers/gles3/shaders/canvas.glsl` (the canvas light pass: `base_color`, `canvas_modulation`, the light loop) and `servers/rendering/renderer_canvas_cull.cpp` (`light->item_mask & ci->light_mask`) |
 | `packages/textscene-core/src/r3f/lighting2d/canvasItemLighting.ts` | `drivers/gles3/shaders/canvas.glsl` (`MODE_UNSHADED` / `MODE_LIGHT_ONLY` guards, `light_only_alpha`) and `servers/rendering/renderer_canvas_cull.cpp` (the item cull-mask test) |
+| `packages/textscene-core/src/r3f/lighting2d/apartLight.ts` | `servers/rendering/renderer_rd/renderer_canvas_render_rd.cpp` (a positional light's height and a directional light's direction and height) |
+| `packages/textscene-core/src/r3f/lighting2d/normalMappedLighting.ts` | `servers/rendering/renderer_rd/shaders/canvas.glsl` (the normal map decode, `light_normal_compute` and the light loop) |
 | `packages/textscene-core/src/r3f/lighting2d/lightQuad.ts` | `drivers/gles3/shaders/canvas.glsl` (`light_blend_compute`'s three blend modes and the `shadow_color` mix, `light_base_color` energy packing) |
 | `packages/textscene-core/src/r3f/lighting2d/lightQuadShaders.ts` | `drivers/gles3/shaders/canvas.glsl` (`light_shadow_compute`'s PCF5/PCF13 tap kernels and the `shadow_pos` quadrant block) |
 | `packages/textscene-core/src/r3f/lighting2d/shadowSampling.ts` | `drivers/gles3/rasterizer_canvas_gles3.cpp` (`shadow_pixel_size`, the shadow atlas's linear-filter and repeat-wrap state) |
@@ -344,7 +346,9 @@ pre-baked atlas, not a runtime font parse, is what the VS Code webview CSP allow
 `packages/textscene-core/src/r3f/controls/native/text/openSansAtlasImage.ts` (the atlas image) and
 `packages/textscene-core/src/r3f/controls/native/text/openSansFontBytes.ts` (the font's bytes as base64, which the canvas text painter loads as a font face).
 
-`scenes/fixtures/fonts/open-sans-semibold-subset.ttf` is a TrueType subset of the same font: the space, `!`, the digits, the Latin letters and `é`. The TextMesh golden and the tests that read glyph outlines use it, since the vendored woff2 has no `glyf` table to read.
+`scenes/fixtures/fonts/open-sans-semibold-subset.ttf` is a TrueType subset of the same font: the space, `!`, the digits, the Latin letters and `é`. The TextMesh goldens and the tests that read glyph outlines use it.
+
+`scenes/fixtures/fonts/open-sans-semibold-subset-hmtx.woff2` and `open-sans-semibold-subset-hmtx-plain-glyf.woff2` are that subset in WOFF2 with a transformed `hmtx`, the first with a transformed `glyf` and the second with a plain one. The tests of the WOFF2 `hmtx` rebuild use them.
 
 `scenes/fixtures/fonts/open-sans-typo-metrics-subset.ttf` is that subset with the `OS/2` typographic ascender and descender changed to 1700 and -450, so they differ from `hhea`. The typo-metrics golden uses it.
 
@@ -446,6 +450,68 @@ DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
+
+---
+
+## Montserrat and Recursive fonts
+
+<https://github.com/JulietaUla/Montserrat> and <https://github.com/arrowtype/recursive>
+
+The tests and goldens that read a font file's outlines use these fixture fonts:
+
+- `scenes/fixtures/fonts/montserrat-extra-bold.otf`: Montserrat Extra Bold, an OpenType-CFF font. Copyright (c) 2011-2015, Julieta Ulanovsky.
+- `scenes/fixtures/fonts/montserrat-semibold-subset.ttf`: a TrueType subset of Montserrat SemiBold. Copyright 2011 The Montserrat Project Authors (https://github.com/JulietaUla/Montserrat).
+- `scenes/fixtures/fonts/recursive-vf-subset.woff2`: a subset of the Recursive variable font, as the Godot demo `gui/bidi_and_font_features` ships it. Copyright 2019 The Recursive Project Authors (github.com/arrowtype/recursive).
+
+Each is licensed under the SIL Open Font License, Version 1.1 (OFL-1.1), whose full text the Open Sans section above holds.
+
+---
+
+## DejaVu Sans font
+
+<https://dejavu-fonts.github.io>
+
+`scenes/fixtures/fonts/dejavu-sans-subset-tricky.ttf` is a subset of DejaVu Sans with no `fpgm` or `prep` table,
+renamed to the family "MingLiU Test" so that FreeType flags it as a tricky font. The tests of the tricky-font
+check read it. Its `name` table holds the full licence.
+
+DejaVu Sans is Copyright (c) 2003 by Bitstream, Inc. All Rights Reserved. Bitstream Vera is a trademark of
+Bitstream, Inc. Glyphs imported from Arev fonts are Copyright (c) 2006 by Tavmjong Bah. All Rights Reserved.
+DejaVu changes are in the public domain. It is licensed under the Bitstream Vera Fonts licence and the Arev
+Fonts licence, which allow a modified copy whose name contains neither "Bitstream", "Vera", "Tavmjong Bah" nor
+"Arev":
+
+> Permission is hereby granted, free of charge, to any person obtaining a copy of the fonts accompanying this
+> license ("Fonts") and associated documentation files (the "Font Software"), to reproduce and distribute the
+> Font Software, including without limitation the rights to use, copy, merge, publish, distribute, and/or sell
+> copies of the Font Software, and to permit persons to whom the Font Software is furnished to do so, subject
+> to the following conditions:
+>
+> The above copyright and trademark notices and this permission notice shall be included in all copies of one
+> or more of the Font Software typefaces.
+>
+> The Font Software may be modified, altered, or added to, and in particular the designs of glyphs or
+> characters in the Fonts may be modified and additional glyphs or characters may be added to the Fonts, only
+> if the fonts are renamed to names not containing either the words "Bitstream" or the word "Vera".
+>
+> This License becomes null and void to the extent applicable to Fonts or Font Software that has been modified
+> and is distributed under the "Bitstream Vera" names.
+>
+> The Font Software may be sold as part of a larger software package but no copy of one or more of the Font
+> Software typefaces may be sold by itself.
+>
+> THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+> LIMITED TO ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF
+> COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL BITSTREAM OR THE GNOME FOUNDATION BE LIABLE
+> FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR
+> CONSEQUENTIAL DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR
+> INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE.
+>
+> Except as contained in this notice, the names of Gnome, the Gnome Foundation, and Bitstream Inc., shall not
+> be used in advertising or otherwise to promote the sale, use or other dealings in this Font Software without
+> prior written authorization from the Gnome Foundation or Bitstream Inc., respectively.
+
+The Arev Fonts licence has the same terms, with "Tavmjong Bah" and "Arev" in place of "Bitstream" and "Vera".
 
 ---
 
@@ -556,8 +622,17 @@ SOFTWARE.
 `cffHintEdge.ts`, `cffHintAdjust.ts`, `cffHintMap.ts`, `cffGlyphPath.ts`, `cffFontMatrix.ts`, `cffFontMatrixOperands.ts`, `cffReal.ts` and `sfntCff.ts`, all in
 `packages/textscene-core/src/r3f/controls/native/text/`, port the CFF loader, the Adobe
 charstring engine and its hinter of FreeType, because Godot reads the outlines of an OpenType-CFF font with it
-(`modules/text_server_adv/text_server_adv.cpp`). Godot vendors it as `thirdparty/freetype`. FreeType
-is by David Turner, Robert Wilhelm and Werner Lemberg, and the charstring engine is by Adobe. It is
+(`modules/text_server_adv/text_server_adv.cpp`). Godot vendors it as `thirdparty/freetype`.
+
+The files in `packages/textscene-core/src/r3f/controls/native/text/truetype/`, with `sfntGlyf.ts`,
+`sfntGlyphMetrics.ts`, `glyphHinting.ts`, `trickyFont.ts`, `sfntFamilyName.ts`, `woff2Hmtx.ts` and the CORDIC
+vector length in `ftVector.ts`, port FreeType's TrueType glyph loader, its v40 bytecode interpreter and its list of
+tricky fonts (`src/truetype/ttgload.c`, `ttinterp.c` and `ttobjs.c`), its family name and metrics readers
+(`src/sfnt/sfobjs.c`, `ttload.c` and `ttmtx.c`), its WOFF2 `hmtx` rebuild (`src/sfnt/sfwoff2.c`)
+and `FT_Vector_Length` (`src/base/fttrigon.c`), because Godot hints and reads the outlines of a TrueType font
+with them.
+
+FreeType is by David Turner, Robert Wilhelm and Werner Lemberg, and the charstring engine is by Adobe. It is
 licensed under the FreeType Project License, separately from Godot's own MIT licence above.
 
 Portions of this software are copyright © 1996-2026 The FreeType Project (https://freetype.org).

@@ -18,6 +18,12 @@ import type { TscnNode } from '../../../parser/types';
 import { createTextureFromBuffer } from '../../../resources/formats/image/textureProcessing';
 import { DEFAULT_TEXTURE_IMPORT } from '../../../godot/import/textureImport';
 import { CanvasLighting2DProvider } from '../../../r3f/lighting2d/CanvasLighting2D';
+import {
+  apartLightRecord,
+  placeOf,
+  RecordApartLights,
+  type ApartLightRecord,
+} from '../../../r3f/lighting2d/testing/apartLightProbe';
 import { LIGHT_PASS_LAYER } from '../../../r3f/lighting2d/lightPassLayers';
 
 // happy-dom never settles a real image load, so the decode hands back a bare
@@ -46,7 +52,7 @@ function node(raw: Record<string, string> = {}): TscnNode {
   };
 }
 
-async function render(rootNode: TscnNode, tex = new THREE.Texture()) {
+async function render(rootNode: TscnNode, tex = new THREE.Texture(), apartLights?: ApartLightRecord) {
   const fake = createFakeResourceLoader();
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
   fake.textures.seed(TEX, tex);
@@ -62,7 +68,9 @@ async function render(rootNode: TscnNode, tex = new THREE.Texture()) {
           externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
         >
           <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
-            <PointLight2D node={rootNode} />
+            <RecordApartLights record={apartLights ?? apartLightRecord()}>
+              <PointLight2D node={rootNode} />
+            </RecordApartLights>
           </CanvasLighting2DProvider>
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
@@ -125,6 +133,20 @@ describe('PointLight2D Component', () => {
     // The opaque list sorts nearest-first, which reverses canvas order, and MIX
     // is the one mode whose result depends on that order.
     expect(lightMaterial(await render(node({ blend_mode: '2' }))).transparent).toBe(true);
+  });
+
+  it('places itself for a normal-mapped item: its origin, not its offset, and its height', async () => {
+    const apartLights = apartLightRecord();
+    const placed = node({ position: 'Vector2(576, 324)', offset: 'Vector2(30, 0)', height: '50.0' });
+    await render(placed, undefined, apartLights);
+    expect(placeOf(apartLights, 0).toArray()).toEqual([576, -324, 50]);
+    expect(apartLights.declarations.get(0)).toMatchObject({ mixes: false });
+  });
+
+  it('declares itself a MIX light', async () => {
+    const apartLights = apartLightRecord();
+    await render(node({ blend_mode: '2' }), undefined, apartLights);
+    expect(apartLights.declarations.get(0)).toMatchObject({ mixes: true });
   });
 
   it('draws no quad when enabled=false', async () => {

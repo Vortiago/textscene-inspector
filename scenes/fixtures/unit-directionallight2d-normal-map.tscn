@@ -1,0 +1,56 @@
+[gd_scene format=3]
+; DirectionalLight2D height 0.5 on normal-mapped Sprite2Ds beside a plain one: Flat tilts to +x,
+; Dome sweeps from -x to +x. Height only changes how a light meets a normal map, so no scene
+; without one shows it.
+
+[sub_resource type="Gradient" id="Gradient_grey"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.5, 0.5, 0.5, 1, 0.5, 0.5, 0.5, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_grey"]
+gradient = SubResource("Gradient_grey")
+width = 256
+height = 256
+
+[sub_resource type="Gradient" id="Gradient_normal"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.85, 0.5, 1, 1, 0.85, 0.5, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_normal"]
+gradient = SubResource("Gradient_normal")
+width = 256
+height = 256
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_mapped"]
+diffuse_texture = SubResource("GradientTexture2D_grey")
+normal_texture = SubResource("GradientTexture2D_normal")
+
+[sub_resource type="Gradient" id="Gradient_dome"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.15, 0.5, 0.8, 1, 0.85, 0.5, 0.8, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_dome"]
+gradient = SubResource("Gradient_dome")
+width = 256
+height = 256
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_dome"]
+diffuse_texture = SubResource("GradientTexture2D_grey")
+normal_texture = SubResource("GradientTexture2D_dome")
+
+[node name="Root" type="Node2D"]
+
+[node name="Plain" type="Sprite2D" parent="."]
+position = Vector2(200, 324)
+texture = SubResource("GradientTexture2D_grey")
+
+[node name="Flat" type="Sprite2D" parent="."]
+position = Vector2(576, 324)
+texture = SubResource("CanvasTexture_mapped")
+
+[node name="Dome" type="Sprite2D" parent="."]
+position = Vector2(952, 324)
+texture = SubResource("CanvasTexture_dome")
+
+[node name="Sun" type="DirectionalLight2D" parent="."]
+height = 0.5

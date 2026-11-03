@@ -36,18 +36,28 @@ the colour alpha by 0.3 (`node_3d_editor_gizmos.cpp:919-920`). `gizmoAlpha` in
 A part declares whether Godot draws it for every node (`'every-node'`) or only for the selected node
 (`'selected-only'`).
 
-`<PluginGizmo drawnFor>` is the one gate of a Godot gizmo-plugin gizmo. It is the only caller of
-`useGizmoState` for such a gizmo. It mounts its children for a visible state and hands them the
-look of their node through a context, so `GizmoLine` and `GizmoMesh` take no `variant` prop. A part
-that is no plugin material, such as the 2D helpers, the follower handles and Marker3D, draws outside
-every gate and keeps its own colour. A part that Godot draws for the selected node only, inside a
-gizmo that is drawn for every node, sits in `<SelectedOnly>`.
+`<PluginGizmo drawnFor>` is the one gate of a Godot gizmo-plugin gizmo whose look varies. It is the
+only caller of `useGizmoState` for such a gizmo. It mounts its children for a visible state and hands
+them the look of their node through a context, so `GizmoLine` and `GizmoMesh` take no `variant` prop.
+A part whose look never varies, such as the 2D helpers, the follower handles, Marker3D and the cast
+nodes, gates through `useGizmoDrawn` alone and keeps its own colour. A part that Godot draws for the
+selected node only, inside a gizmo that is drawn for every node, sits in `<SelectedOnly>`.
+
+The variants exist only where Godot fetches a `create_material` material per gizmo, through
+`get_material(name, gizmo)`, or where the look rides vertex colours. RayCast3D and ShapeCast3D's
+enabled redraw passes neither path: it hands the node's own debug material to `add_lines` and
+`add_vertices` (`ray_cast_3d_gizmo_plugin.cpp:63`), so those parts draw in that colour at its alpha
+in every selection and instance state. A disabled cast node's redraw fetches `shape_material_disabled`
+without a gizmo, which returns the grey variant at its unselected alpha alone
+(`node_3d_editor_gizmos.cpp:1023-1024`), so those parts draw grey at 0.18 in every state. Both
+gates take the `useGizmoDrawn` shape and name their own look.
 
 ### The split
 
 | Draws | Nodes |
 | --- | --- |
 | Every node, faint when unselected | CPUParticles3D box and centre axes, Path3D curve, SpringArm3D line, VehicleWheel3D, SoftBody3D wireframe, Camera3D frustum, Decal box, VisibleOnScreenNotifier3D and Enabler edges and axes, FogVolume box, the GPU particles collision and attractor nodes (box, sphere circles, SDF cell grid), PinJoint3D cross, ConeTwistJoint3D cone of each resolved body, HingeJoint3D axis and circle of each resolved body, SliderJoint3D travel and circle of each resolved body, Generic6DOFJoint3D travel and circles of each resolved body |
+| Every node, full colour, its own material | RayCast3D line and pyramid, ShapeCast3D sweep line and shape wireframe (the node's debug material, never varied; grey at 0.18 while `enabled` is off) |
 | Every node, full colour | Marker3D (one material with no variants, `marker_3d_gizmo_plugin.cpp:80-92,115`), Marker2D, Path2D, LightOccluder2D |
 | Selected node only | Light helpers, the range and cone of AudioStreamPlayer3D, GPUParticles3D box, CPUParticles3D solid box, every emission shape, ReflectionProbe, VoxelGI, LightmapGI probes, PathFollow2D and PathFollow3D handle |
 
@@ -86,9 +96,10 @@ along an instantiation chain can set the flag, with paths relative to its own ro
 scope. `PluginGizmo` reads it once for its node, and `useGizmoLook` turns that and the variant into
 the colour and opacity of a part.
 
-A part inside a gate wears the grey. A part outside every gate keeps its own colour, because its
-Godot material is not a plugin material: the 2D helpers, PathFollow2D and PathFollow3D, and Marker3D
-(`marker_3d_gizmo_plugin.cpp:80-92`) never turn grey.
+A part inside a gate wears the grey. A part outside every gate keeps its own colour: its Godot
+material is not a plugin material, as with the 2D helpers, the follower handles and Marker3D
+(`marker_3d_gizmo_plugin.cpp:80-92`), or its plugin hands the node's own material through, as the
+cast nodes' do.
 
 A node that the edited scene authors under an instanced GLB takes the level of the scene that
 instances the GLB, not the GLB's, so its gizmo keeps its colour. `GlbInstanceProvider` holds that
@@ -161,10 +172,14 @@ manifest entry. Every capture without that field is unchanged.
 
 ## Consequences
 
-An always-drawn gizmo enlarges the hover and selection box of its node. It also counts in the
-frame-on-open fallback for a scene with no mesh, so a scene that holds only a Marker3D frames on its
-cross. A faint fill would count as a mesh in `frameSceneBounds`, and all fills are selected-only, so
-no gizmo needs `tscnFrameExcluded`.
+A gizmo adds nothing to the hover and selection box of its node. The box is the `get_aabb` of the node
+and of its children (`node_3d_editor_plugin.cpp:5029-5065`). A node with a box of its own, such as a
+Decal, mounts it as a `NodeAabb`.
+
+A gizmo counts in the frame-on-open fallback for a scene with no mesh, so a scene that holds only a
+Marker3D frames on its cross. A gizmo mesh joins the line box, not the mesh box: Godot frames on the
+scene's geometry, and a chrome mesh is no geometry, so the RayCast3D pyramid needs no
+`tscnFrameExcluded`.
 
 Value check, over the 0.3 grey clear: the CPUParticles3D box draws rgb(204, 179, 102) selected and
 rgb(132, 119, 85) unselected. The runtime replica gives rgb(204, 178, 102) and rgb(132, 119, 85).

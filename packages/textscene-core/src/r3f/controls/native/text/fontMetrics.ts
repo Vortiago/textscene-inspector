@@ -127,6 +127,21 @@ export function ftMulFix(a: number, b: number): number {
   return ftMulDiv(a, b, FIXED_16_16_ONE);
 }
 
+/** `FT_PIX_FLOOR`: down to a whole pixel in 26.6. */
+export function pixFloor(value: number): number {
+  return Math.floor(value / FIXED_26_6_ONE) * FIXED_26_6_ONE;
+}
+
+/** `FT_PIX_ROUND`: to the nearest whole pixel in 26.6, half up. */
+export function pixRound(value: number): number {
+  return pixFloor(value + FIXED_26_6_ONE / 2);
+}
+
+/** `FT_PIX_CEIL`: up to a whole pixel in 26.6. */
+export function pixCeil(value: number): number {
+  return pixFloor(value + FIXED_26_6_ONE - 1);
+}
+
 /**
  * The `FT_Size_Request` Godot issues: `FT_SIZE_REQUEST_TYPE_NOMINAL` at `width =
  * height = sz * 64` with zero resolutions (`text_server_adv.cpp:1500-1507`, `sz` at
@@ -140,6 +155,20 @@ function freeTypeSizeRequest(unitsPerEm: number, fontSizePx: number): { xScale: 
   // `req.width = sz * 64.0` lands in an `FT_Long`, truncating toward zero.
   const requested26_6 = Math.trunc(fontSizePx * FIXED_26_6_ONE);
   return { xScale: ftDivFix(requested26_6, unitsPerEm), ppem: (requested26_6 + 32) >> 6 };
+}
+
+/**
+ * The ppem and the 16.16 scale of a TrueType glyph load at `fontSizePx` (`ttobjs.c`,
+ * `tt_size_reset`). A font whose `head` flags round the ppem scales by the whole-pixel size,
+ * which a whole-pixel request already is.
+ */
+export function freeTypeTrueTypeSize(
+  unitsPerEm: number,
+  fontSizePx: number,
+  isPpemRounded: boolean
+): { scale: number; ppem: number } {
+  const { xScale, ppem } = freeTypeSizeRequest(unitsPerEm, fontSizePx);
+  return { scale: isPpemRounded ? ftDivFix(ppem * FIXED_26_6_ONE, unitsPerEm) : xScale, ppem };
 }
 
 /**

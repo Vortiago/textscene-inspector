@@ -4,7 +4,11 @@
  * port of `look_body_toward_z` and `draw_circle` that ran in Godot 4.6.3.
  */
 import { describe, expect, it } from 'vitest';
-import { describeGizmoToggle, describeInstantiatedGizmo } from '../../../../r3f/testing/gizmoContract';
+import {
+  describeGizmoToggle,
+  describeSelectionBox,
+  describeInstantiatedGizmo,
+} from '../../../../r3f/testing/gizmoContract';
 import {
   BOTH_BODIES,
   drawnLines,
@@ -83,3 +87,4 @@ describeJointBodyGating('<HingeJoint3D>', 'HingeJoint3D', {
 const GIZMO_CASE = jointGizmoCase('HingeJoint3D', {});
 describeGizmoToggle('<HingeJoint3D>', GIZMO_CASE);
 describeInstantiatedGizmo('<HingeJoint3D>', GIZMO_CASE);
+describeSelectionBox('<HingeJoint3D>', GIZMO_CASE, null);

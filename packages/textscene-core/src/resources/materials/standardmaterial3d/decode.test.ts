@@ -39,6 +39,16 @@ describe('decodeStandardMaterial3D — defaults', () => {
     expect(data.textureSlots).toEqual({});
   });
 
+  it("reads the chain fields' defaults from an empty bag", () => {
+    // `next_pass` absent, `grow` off with a 0.0 amount (`material.cpp:3990`), and
+    // no stencil keys, so the link reads no stencil value.
+    const data = decodeStandardMaterial3D({});
+    expect(data.nextPass).toBeUndefined();
+    expect(data.grows).toBe(false);
+    expect(data.growAmount).toBe(0);
+    expect(data.readsStencil).toBe(false);
+  });
+
   it('reads metallic_specular unclamped, as the setter stores it', () => {
     expect(decodeStandardMaterial3D({ metallic_specular: '1.5' }).specular).toBe(1.5);
   });

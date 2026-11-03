@@ -242,7 +242,7 @@ describe('property-grammar parity guard', () => {
   // equality: it moves only when a slice is added or a gap closes. A new
   // validator makes an unread key visible, so a rise usually means the list
   // became honest.
-  const EXPECTED_RENDER_GAP_KEYS = 157;
+  const EXPECTED_RENDER_GAP_KEYS = 156;
 
   it('the render-gap surface matches its recorded size', () => {
     const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>
@@ -263,10 +263,10 @@ describe('property-grammar parity guard', () => {
   // Both are ratchets, not derived, or the assertion compares a number to
   // itself. A transform-only type draws nothing, and a `pending` type is one
   // gap `renderIntent` already declares, so neither widens the population.
-  // BoneAttachment3D used to reuse the Node3D parse; it now reads its five own properties through
-  // a parser of its own, so one slice moves from the reusers to the swept ones, on top of main's three.
-  const SWEPT_SLICES = 134;
-  const PARSER_REUSING_SLICES = 117;
+  // A type that reads its own properties through a parser of its own is a swept slice, not a reuser.
+  // BoneAttachment3D, OccluderInstance3D, RayCast3D and ShapeCast3D read theirs.
+  const SWEPT_SLICES = 137;
+  const PARSER_REUSING_SLICES = 114;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>

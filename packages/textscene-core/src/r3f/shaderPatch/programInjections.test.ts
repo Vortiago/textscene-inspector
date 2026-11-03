@@ -28,6 +28,8 @@ import { parallaxInjection, unshadedParallaxInjection } from '../materials/godot
 import { withPointDraw, type PointPlacement } from '../materials/godotPoint';
 import { withParticleDraw } from '../materials/godotParticlesProgram';
 import { SRGB_VERTEX_COLOR } from '../materials/godotVertexColor';
+import { growInjectionOf } from '../materials/godotGrow';
+import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 import { triplanarInjection, triplanarUserData } from '../materials/godotTriplanar';
 import { worldTriplanarRecord } from '../testing/triplanarRecord';
@@ -44,7 +46,8 @@ import { HEIGHTMAP_DEFAULTS } from '../../resources/materials/standardmaterial3d
 import { GODOT_FOG_PARS_CHUNK } from '../fog/fogChunks';
 import { INSTANCE_LAYERS_CHUNK } from '../instanceLayers/instanceLayersChunk';
 import { SCENE_ROWS_CHUNK } from '../sceneRows/sceneRowsChunk';
-import { lightUniforms } from '../lighting2d/testing/lightUniforms';
+import { lightUniforms, normalMappedUniforms } from '../lighting2d/testing/lightUniforms';
+import { normalMappedLightingProps } from '../lighting2d/normalMappedLighting';
 
 const NO_SHADER = (): ProgramShader => ({ vertexShader: '', fragmentShader: '', uniforms: {} });
 
@@ -170,6 +173,9 @@ const INJECTIONS: readonly InjectionCase[] = [
     () => particleBag().injection
   ),
   injected('materials/godotVertexColor.ts', 'sRGB vertex colour', COLOUR, () => SRGB_VERTEX_COLOR),
+  injected('materials/godotGrow.ts', 'grow', COLOUR, () =>
+    growInjectionOf(parseStandardMaterial3DScalars({ grow: 'true', grow_amount: '0.03' }))
+  ),
   injected('materials/godotPoint.ts', 'points at instances', COLOUR, () => pointBag(false, 'instances')),
   injected('surfaceBillboard.ts', 'billboard', COLOUR, () => billboardInjections(KEPT_PARTICLES)?.colour),
   injected(
@@ -223,6 +229,12 @@ const INJECTIONS: readonly InjectionCase[] = [
     'canvas item lighting',
     ['basic'],
     () => canvasItemLightingProps(lightUniforms()).injection
+  ),
+  injected(
+    'lighting2d/normalMappedLighting.ts',
+    'normal-mapped canvas item lighting',
+    ['basic'],
+    () => normalMappedLightingProps(normalMappedUniforms(), 1).injection
   ),
   injected('lightmap/lightmapProgram.ts', 'lightmap read', LIT, () => LIGHTMAP_PROGRAM),
   injected('tileTexturePadding.ts', 'tile texture padding', COLOUR, () => TILE_TEXTURE_PADDING),

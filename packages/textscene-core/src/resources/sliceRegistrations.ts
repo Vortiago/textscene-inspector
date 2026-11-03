@@ -64,6 +64,7 @@ import './navigation/navigationmesh/index.js';
 import './textures/gradienttexture2d/index.js';
 import './textures/spriteframes/index.js';
 import './textures/atlastexture/index.js';
+import './textures/canvastexture/index.js';
 import './textures/viewporttexture/index.js';
 import './textures/noisetexture2d/index.js';
 import './textures/noisetexture3d/index.js';

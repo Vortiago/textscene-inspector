@@ -3,7 +3,7 @@
  * not derived values, so the Node2D walk (`NodeDispatcher`) and the Control walk's
  * `CanvasLayer` painter publish the same four facts and the same canvas transform.
  */
-import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
@@ -16,6 +16,7 @@ import { ROOT_TEXTURE_SAMPLER, TextureSampler2DContext } from './canvasItemTextu
 import { CanvasLayerIndexProvider, EffectiveZProvider } from './lighting2d/canvasItemPlacement.js';
 import { isViewportPass, observeSceneCamera } from './sceneRenderCamera.js';
 import { viewportLayerMatrix, type ViewportLayerFollow } from './viewportLayerAnchor.js';
+import { CanvasFrameContext } from './canvasFrame.js';
 
 /** Places `layer` for each render of the scene, unanchored outside a sub-viewport's pass. */
 function useViewportLayerAnchor(layer: RefObject<THREE.Object3D | null>, follow: ViewportLayerFollow): void {
@@ -55,6 +56,8 @@ export function CanvasLayerScope({ node, children }: { node: TscnNode; children:
     node.properties as CanvasLayerProperties;
   const matrix = useMemo(() => threeMatrixFromTransform2D(canvasTransform), [canvasTransform]);
   const anchor = useRef<THREE.Object3D>(null);
+  // State, not a ref: a light reads the frame once it mounts.
+  const [frame, setFrame] = useState<THREE.Object3D | null>(null);
   useViewportLayerAnchor(anchor, { enabled: follow_viewport_enabled, scale: follow_viewport_scale });
 
   // The layer index picks the 2D lights: a light reaches a canvas whose layer is
@@ -69,8 +72,8 @@ export function CanvasLayerScope({ node, children }: { node: TscnNode; children:
               {/* Object3Ds, not Groups: three takes `groupOrder` from the nearest Group, so these
                   reset no canvas key. */}
               <object3D ref={anchor} matrixAutoUpdate={false}>
-                <object3D matrix={matrix} matrixAutoUpdate={false}>
-                  {children}
+                <object3D ref={setFrame} matrix={matrix} matrixAutoUpdate={false}>
+                  <CanvasFrameContext.Provider value={frame}>{children}</CanvasFrameContext.Provider>
                 </object3D>
               </object3D>
             </EffectiveZProvider>

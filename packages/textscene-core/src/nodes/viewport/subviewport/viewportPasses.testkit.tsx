@@ -17,6 +17,18 @@ import {
 import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureContext';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 
+/** The light cookie the SubViewport lighting tests seed. */
+export const COOKIE = 'res://light.png';
+
+/** A fake loader holding a 64 by 64 cookie at `COOKIE`, which happy-dom cannot decode. */
+export function cookieLoader() {
+  const fake = createFakeResourceLoader();
+  const texture = new THREE.Texture();
+  (texture as unknown as { image: object }).image = { width: 64, height: 64 };
+  fake.textures.seed(COOKIE, texture);
+  return fake.loader;
+}
+
 /** Mounts `children` where a pass publishes and runs, and writes the renderer into `captured`. */
 export function ViewportPassStack({
   captured,

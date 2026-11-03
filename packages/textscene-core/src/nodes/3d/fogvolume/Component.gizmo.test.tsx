@@ -11,6 +11,8 @@ import { godotColorToLinear } from '../../../r3f/godotColor';
 import { GizmoScene, lineOpacities } from '../../../r3f/testing/GizmoScene';
 import {
   describeGizmoToggle,
+  describeSelectionBox,
+  expectSelectionBox,
   describeInstantiatedGizmo,
   type GizmoNodeCase,
 } from '../../../r3f/testing/gizmoContract';
@@ -68,6 +70,21 @@ const GIZMO_CASE: GizmoNodeCase = {
 };
 describeGizmoToggle('<FogVolume>', GIZMO_CASE);
 describeInstantiatedGizmo('<FogVolume>', GIZMO_CASE);
+describe('<FogVolume> selection box', () => {
+  // Measured in Godot 4.6.3 for size = (4, 2, 6): shape 3 (BOX) and 0 (ELLIPSOID) give
+  // (-2, -1, -3, 4, 2, 6), and shape 4 (WORLD) gives AABB().
+  it.each([3, 0])('is the box of its size for shape %s', async (shape) => {
+    expectSelectionBox(await render(null, { size: 'Vector3(4, 2, 6)', shape: String(shape) }), {
+      min: [-2, -1, -3],
+      max: [2, 1, 3],
+    });
+  });
+
+  it('is empty for the WORLD shape', async () => {
+    expectSelectionBox(await render(null, { size: 'Vector3(4, 2, 6)', shape: '4' }), null);
+  });
+});
+describeSelectionBox('<FogVolume>', GIZMO_CASE, { min: [-1, -1, -1], max: [1, 1, 1] });
 
 describe('<FogVolume> gizmo state', () => {
   it('draws the box in full colour when the node is selected', async () => {

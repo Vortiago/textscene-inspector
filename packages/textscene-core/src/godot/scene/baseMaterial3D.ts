@@ -27,6 +27,8 @@ export const BASE_MATERIAL_3D_DEFAULTS = {
   alphaScissorThreshold: 0.5, // :3975, the glTF alpha cutoff
   alphaHashScale: 1, // :3976
   aoLightAffect: 0, // :3983
+  // `set_grow(0.0)` in the constructor; `set_grow_amount` (:2942) bare assigns.
+  growAmount: 0, // :3990
   heightmapMinLayers: 8, // :3995
   heightmapMaxLayers: 32, // :3996
   /** `material.h:573`. */
