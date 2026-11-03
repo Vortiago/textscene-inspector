@@ -6,12 +6,8 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { TscnInternalResource } from '../../../../parser/types';
-import { decodeBoxShape3D } from '../../../../resources/shapes/boxshape3d';
 import { decodeConvexPolygonShape3D } from '../../../../resources/shapes/convexpolygonshape3d';
 import { decodeConcavePolygonShape3D } from '../../../../resources/shapes/concavepolygonshape3d';
-import { decodeCapsuleShape3D } from '../../../../resources/shapes/capsuleshape3d';
-import { decodeSphereShape3D } from '../../../../resources/shapes/sphereshape3d';
-import { decodeCylinderShape3D } from '../../../../resources/shapes/cylindershape3d';
 import { shapeDebugLines } from '../../shared/shapeDebugLines';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { warn } from '../../../../logger';
@@ -30,50 +26,18 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
   const data = shape.data;
   const wire = wireGizmoProgram(color);
   switch (shape.type) {
-    case 'BoxShape3D': {
-      const { size } = decodeBoxShape3D(data);
-      return (
-        <mesh>
-          <boxGeometry args={[size.x, size.y, size.z]} />
-          <meshBasicMaterial key={wire.key} {...wire.props} />
-        </mesh>
-      );
-    }
-    case 'CapsuleShape3D': {
-      const { radius, height } = decodeCapsuleShape3D(data);
-      return (
-        <mesh>
-          {/* Godot's `height` spans the whole capsule; three's `length` is only
-              the cylindrical section between the two hemispheres. */}
-          <capsuleGeometry args={[radius, height - radius * 2, 4, 16]} />
-          <meshBasicMaterial key={wire.key} {...wire.props} />
-        </mesh>
-      );
-    }
+    case 'BoxShape3D':
+    case 'CapsuleShape3D':
     case 'SphereShape3D':
-      return (
-        <mesh>
-          <sphereGeometry args={[decodeSphereShape3D(data).radius, 16, 12]} />
-          <meshBasicMaterial key={wire.key} {...wire.props} />
-        </mesh>
-      );
-    case 'CylinderShape3D': {
-      const { radius, height } = decodeCylinderShape3D(data);
-      return (
-        <mesh>
-          <cylinderGeometry args={[radius, radius, height, 16]} />
-          <meshBasicMaterial key={wire.key} {...wire.props} />
-        </mesh>
-      );
-    }
+    case 'CylinderShape3D':
     case 'WorldBoundaryShape3D':
-      return <WorldBoundaryLines shape={shape} color={color} />;
+      return <ShapeLines shape={shape} color={color} />;
     case 'ConcavePolygonShape3D':
       return <TriangleSoupWire shapeData={data} color={color} />;
     case 'ConvexPolygonShape3D':
       return <ConvexHullWire shapeData={data} color={color} />;
     default:
-      warn(`[CollisionShape3D] Unsupported shape type "${shape.type}" — drawing a unit wireframe box.`);
+      warn(`[CollisionShape3D] Unsupported shape type "${shape.type}": drawing a unit wireframe box.`);
       return (
         <mesh>
           <boxGeometry args={[1, 1, 1]} />
@@ -98,8 +62,8 @@ const MIN_TRIANGLE_SOUP_FLOATS = 3 * 3;
 /** A tetrahedron's four corners: the fewest points that enclose a volume. */
 const MIN_CONVEX_HULL_POINTS = 4;
 
-/** Godot draws a world boundary as lines, not a wireframe mesh: a square and a normal ray. */
-function WorldBoundaryLines({ shape, color }: { shape: TscnInternalResource; color: THREE.Color }) {
+/** The lines of Godot's `get_debug_mesh_lines()`, which its editor collision overlay draws for a shape. */
+function ShapeLines({ shape, color }: { shape: TscnInternalResource; color: THREE.Color }) {
   const positions = useMemo(() => shapeDebugLines(shape), [shape]);
   return positions && <GizmoLine positions={positions} color={color} />;
 }
@@ -111,7 +75,6 @@ function TriangleSoupWire({ shapeData, color }: ShapeWireProps) {
     if (data.length < MIN_TRIANGLE_SOUP_FLOATS) return null;
     const geom = new THREE.BufferGeometry();
     geom.setAttribute('position', new THREE.BufferAttribute(data, 3));
-    geom.computeVertexNormals();
     return geom;
   }, [shapeData]);
   useDisposeOnRelease(geometry);

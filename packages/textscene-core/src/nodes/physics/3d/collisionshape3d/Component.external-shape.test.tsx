@@ -4,6 +4,7 @@
  * CollisionGizmo runs only once a resource exists, so a miss here draws nothing, silently.
  */
 import { describe, expect, it } from 'vitest';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionShape3D } from './Component';
 import { CollisionShape2D } from '../../2d/collisionshape2d/Component';
@@ -14,7 +15,6 @@ import { createFakeResourceLoader } from '../../../../resources/testing/createFa
 import type { ParsedResource } from '../../../../parser/parsedResource';
 import { TscnParser } from '../../../../parser/TscnParser';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../../parser/types';
-import { findMesh } from '../../../3d/testing/reactThreeTestInstance';
 
 const SHAPE_PATH = 'res://robot_head_collision.tres';
 
@@ -55,11 +55,14 @@ async function render3D(shape: string | undefined, tres?: ParsedResource) {
   );
 }
 
+/** The extents of the box outline's segment ends, one number per axis. */
 function boxSize(renderer: Awaited<ReturnType<typeof render3D>>) {
-  const geometry = findMesh(renderer.scene).geometry as unknown as {
-    parameters: { width: number; height: number; depth: number };
-  };
-  return [geometry.parameters.width, geometry.parameters.height, geometry.parameters.depth];
+  const [lines] = renderer.scene.findAll((n) => n.type === 'LineSegments');
+  const positions = (lines!.instance as THREE.LineSegments).geometry.getAttribute('position').array;
+  return [0, 1, 2].map((axis) => {
+    const values = Array.from(positions).filter((_, index) => index % 3 === axis);
+    return Math.max(...values) - Math.min(...values);
+  });
 }
 
 describe('<CollisionShape3D> shape resolution', () => {
@@ -75,12 +78,12 @@ describe('<CollisionShape3D> shape resolution', () => {
 
   it('draws nothing while the .tres is still loading', async () => {
     const renderer = await render3D('ExtResource("1")');
-    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('draws nothing when no shape is declared', async () => {
     const renderer = await render3D(undefined);
-    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 });
 

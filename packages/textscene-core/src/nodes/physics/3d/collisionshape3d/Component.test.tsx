@@ -61,18 +61,13 @@ describe('<CollisionShape3D> gizmo', () => {
     expect(meshes).toHaveLength(0);
   });
 
-  it('renders a wireframe box gizmo when showCollisions is on', async () => {
+  it('renders the box outline as line segments when showCollisions is on', async () => {
     const renderer = await render(true);
-    const meshes = renderer.scene.findAll((n) => n.type === 'Mesh');
-    expect(meshes).toHaveLength(1);
-    const mesh = meshes[0]!.instance as THREE.Mesh;
-    const geom = mesh.geometry as THREE.BoxGeometry & {
-      parameters: { width: number; height: number; depth: number };
-    };
-    expect(geom.parameters.width).toBe(2);
-    expect(geom.parameters.height).toBe(4);
-    expect(geom.parameters.depth).toBe(0.3);
-    expect((mesh.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
+    const lines = renderer.scene.findAll((n) => n.type === 'LineSegments');
+    expect(lines).toHaveLength(1);
+    const positions = (lines[0]!.instance as THREE.LineSegments).geometry.getAttribute('position');
+    expect(positions.count).toBe(24);
+    expect(renderer.scene.findAll((n) => n.type === 'Mesh')).toHaveLength(0);
   });
 
   it('renders a convex-hull wireframe for ConvexPolygonShape3D (lazy ConvexGeometry)', async () => {
@@ -124,8 +119,7 @@ describe('<CollisionShape3D> gizmo', () => {
 
   it('still renders the gizmo when disabled=true and showCollisions is on', async () => {
     const renderer = await render(true, { disabled: true });
-    const meshes = renderer.scene.findAll((n) => n.type === 'Mesh');
-    expect(meshes).toHaveLength(1);
+    expect(renderer.scene.findAll((n) => n.type === 'LineSegments')).toHaveLength(1);
   });
 
   it('applies the node transform to the gizmo group', async () => {
