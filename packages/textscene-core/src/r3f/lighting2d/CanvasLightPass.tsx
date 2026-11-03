@@ -17,16 +17,23 @@ import { useThree } from '@react-three/fiber';
 import { CanvasModulateContext } from '../canvasModulate.js';
 import { ShadowCasterStage } from './ShadowCasterStage.js';
 import { CanvasLightSequenceProvider } from './useLightSequence.js';
-import { planLightLists, type LightListPlan, type PassMeshRole } from './itemLightList.js';
+import {
+  planLightLists,
+  type ApartLightPlan,
+  type CanvasLightDeclaration,
+  type LightListPlan,
+  type PassMeshRole,
+} from './itemLightList.js';
 import {
   CanvasLighting2DContext,
+  type ApartPlacer,
   type CanvasLighting2D,
   type CanvasLightList,
   type LightPassStep,
 } from './lightPassContext.js';
 import type { LightPassHost } from './lightPassHost.js';
 import { useLightRegistry, usePlacementRegistry } from './lightRegistry.js';
-import { useAccumulationTargets } from './lightAccumulationTargets.js';
+import { useAccumulationTargets, useLayeredAccumulationTargets } from './lightAccumulationTargets.js';
 import { createSeedMaterial, LightAccumulatorSeed } from './lightSeedQuad.js';
 import { renderLightLists, type AccumulationList, type PassMesh } from './lightAccumulationPass.js';
 import { capItemLights, type CappedItem } from './itemLightCap.js';
@@ -50,6 +57,35 @@ function planIds(plans: readonly LightListPlan[], needs: (plan: LightListPlan) =
   return plans.filter(needs).map((plan) => plan.id);
 }
 
+/** Whether an item reads `plan`'s lights summed in one buffer, the ordinary or the Light Only one. */
+function readsWholeList(plan: LightListPlan): boolean {
+  return plan.reads.has('plain') || plan.reads.has('lightOnly');
+}
+
+/** The layer count `layersOf` gives each plan that keeps its lights apart, plans it gives 0 left out. */
+function apartLayers(
+  plans: readonly LightListPlan[],
+  layersOf: (apart: ApartLightPlan) => number
+): ReadonlyMap<string, number> {
+  return new Map(
+    plans.flatMap((plan) => {
+      const layers = plan.lightsApart ? layersOf(plan.lightsApart) : 0;
+      return layers > 0 ? [[plan.id, layers]] : [];
+    })
+  );
+}
+
+/** Each layer's mode, as `ApartLightBuffers.modes` describes it. */
+function apartModes(
+  lights: ReadonlyMap<number, CanvasLightDeclaration>,
+  apart: ApartLightPlan
+): THREE.Vector3[] {
+  return apart.entries.map((entry, layer) => {
+    const light = lights.get(entry.ordinal)!;
+    return new THREE.Vector3(light.sequence === null ? 1 : 0, light.mixes ? 1 : 0, apart.tintLayers[layer]!);
+  });
+}
+
 /**
  * One canvas's 2D light pass. The host runs it once a frame, so a SubViewport can run it inside its
  * own ordered pass, after it has framed its camera and before it draws its target.
@@ -67,13 +103,48 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
   // A float, since Godot clamps only after multiplying the light into the albedo: blending onto
   // the canvas would clamp first and flatten an `energy = 2` torch into a disc with no falloff.
   // Alpha holds the summed cookie coverage `light_only_alpha` (`color.a *= light_only_alpha`).
-  const targets = useAccumulationTargets(planIds(plans, () => true));
+  const targets = useAccumulationTargets(planIds(plans, (plan) => plan.reads.has('plain')));
   // Light Only seeds from white, and MIX interpolates toward the light, so the seed must be there
-  // while the lights apply: a second pass over the same quads with another seed, run only for a
-  // list a Light Only item reads. Godot's transparent default `shadow_color` (`light_2d.h:58`)
+  // while the lights apply: a pass of its own over the same quads with another seed, run only for
+  // a list a Light Only item reads. Godot's transparent default `shadow_color` (`light_2d.h:58`)
   // adds nothing, so the tint pass runs only for a list a tinting light shadows.
-  const lightOnlyTargets = useAccumulationTargets(planIds(plans, (plan) => plan.hasLightOnly));
-  const shadowTintTargets = useAccumulationTargets(planIds(plans, (plan) => plan.tintsShadow));
+  const lightOnlyTargets = useAccumulationTargets(planIds(plans, (plan) => plan.reads.has('lightOnly')));
+  const shadowTintTargets = useAccumulationTargets(
+    planIds(plans, (plan) => plan.tintsShadow && readsWholeList(plan))
+  );
+  // A normal term scales each light before it blends, so a normal-mapped item reads each light alone.
+  const apartTargets = useLayeredAccumulationTargets(apartLayers(plans, (apart) => apart.entries.length));
+  const apartTintTargets = useLayeredAccumulationTargets(apartLayers(plans, (apart) => apart.tintLayerCount));
+
+  // Read by the pass each frame, like the pass meshes.
+  const apartPlacers = useRef(new Map<number, ApartPlacer>()).current;
+  const registerApartPlacer = useCallback(
+    (ordinal: number, placer: ApartPlacer) => {
+      apartPlacers.set(ordinal, placer);
+      return () => {
+        if (apartPlacers.get(ordinal) === placer) apartPlacers.delete(ordinal);
+      };
+    },
+    [apartPlacers]
+  );
+  // One per ordinal, kept for the canvas's life, so an item binds it once: ordinals are dense and
+  // reused, so the map stays as small as the most lights the canvas has held at once.
+  const apartPlaces = useRef(new Map<number, THREE.Vector3>()).current;
+  const apartPlace = useCallback(
+    (ordinal: number) => {
+      let place = apartPlaces.get(ordinal);
+      if (!place) {
+        place = new THREE.Vector3();
+        apartPlaces.set(ordinal, place);
+      }
+      return place;
+    },
+    [apartPlaces]
+  );
+  const apartOrdinals = useMemo(
+    () => new Set(plans.flatMap((plan) => plan.lightsApart?.entries.map((entry) => entry.ordinal) ?? [])),
+    [plans]
+  );
 
   // Read by the pass each frame, so a mesh needs no re-render of the provider to join it.
   const passMeshes = useRef(new Set<PassMesh>()).current;
@@ -120,11 +191,16 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
       plans.map((plan) => ({
         entries: new Map(plan.entries.map((entry) => [entry.ordinal, entry])),
         placementIds: plan.placementIds,
-        target: targets.get(plan.id)!,
+        target: targets.get(plan.id) ?? null,
         lightOnlyTarget: lightOnlyTargets.get(plan.id) ?? null,
         shadowTintTarget: shadowTintTargets.get(plan.id) ?? null,
+        apart: plan.lightsApart && {
+          ...plan.lightsApart,
+          target: apartTargets.get(plan.id)!,
+          shadowTintTarget: apartTintTargets.get(plan.id) ?? null,
+        },
       })),
-    [plans, targets, lightOnlyTargets, shadowTintTargets]
+    [plans, targets, lightOnlyTargets, shadowTintTargets, apartTargets, apartTintTargets]
   );
 
   const seedMaterial = useMemo(createSeedMaterial, []);
@@ -141,6 +217,7 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
     const clip = readClip();
     for (const step of passSteps) step(camera, clip);
     capItemLights({ lights, items: cappedItems, passMeshes, viewport: clip.rect, windows });
+    for (const ordinal of apartOrdinals) apartPlacers.get(ordinal)?.(apartPlace(ordinal));
     renderLightLists({
       gl,
       scene,
@@ -164,6 +241,9 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
     cappedItems,
     passMeshes,
     windows,
+    apartOrdinals,
+    apartPlacers,
+    apartPlace,
     accumulationLists,
     seedMaterial,
     canvasModulate,
@@ -180,10 +260,17 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
     const lists = new Map<string, CanvasLightList>();
     plans.forEach((plan, index) => {
       const accumulation = accumulationLists[index]!;
+      const { apart } = accumulation;
       const list: CanvasLightList = {
-        buffer: accumulation.target.texture,
+        buffer: accumulation.target?.texture ?? null,
         lightOnlyBuffer: accumulation.lightOnlyTarget?.texture ?? null,
         shadowTintBuffer: accumulation.shadowTintTarget?.texture ?? null,
+        apart: apart && {
+          buffer: apart.target.texture,
+          shadowTintBuffer: apart.shadowTintTarget?.texture ?? null,
+          places: apart.entries.map((entry) => apartPlace(entry.ordinal)),
+          modes: apartModes(lights, apart),
+        },
       };
       for (const id of plan.placementIds) lists.set(id, list);
     });
@@ -193,16 +280,20 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
       registerLight,
       registerItem,
       registerCappedItem,
+      registerApartPlacer,
       registerPassMesh,
       registerPassStep,
     };
   }, [
     plans,
+    lights,
     accumulationLists,
+    apartPlace,
     resolution,
     registerLight,
     registerItem,
     registerCappedItem,
+    registerApartPlacer,
     registerPassMesh,
     registerPassStep,
   ]);

@@ -17,6 +17,7 @@ import { projectCanvasTextureDefaults } from '../parser/projectSettingsParser';
 import { godotTextureFilterState, type TextureFilterState } from '../resources/textures/godotTextureFilter';
 import { useProjectSettings } from './contexts/ProjectSettingsContext';
 import type { ViewSampler } from '../resources/textures/textureView';
+import type { CanvasTextureData } from '../resources/textures/canvastexture/types';
 
 /** three's wrapping for each of Godot's repeat modes. */
 export const WRAP: Record<'clamp' | 'repeat' | 'mirror', THREE.Wrapping> = {
@@ -149,4 +150,22 @@ export function useNode2DTextureSampler(
  */
 export function useResolvedTextureSampler(): CanvasItemTextureSampler {
   return useInheritedTextureSampler(undefined, undefined);
+}
+
+/**
+ * The sampler an item draws a CanvasTexture with: the texture's own filter and repeat, each unless
+ * it inherits (`texture_storage.cpp:737-738`), else the item's. `item` itself while nothing
+ * overrides it, so a texture view keyed on the sampler keeps.
+ */
+export function useCanvasTextureSampler(
+  item: CanvasItemTextureSampler,
+  texture: Pick<CanvasTextureData, 'textureFilter' | 'textureRepeat'> | undefined
+): CanvasItemTextureSampler {
+  const filter = texture?.textureFilter ?? CanvasItemTextureFilter.PARENT_NODE;
+  const repeat = texture?.textureRepeat ?? CanvasItemTextureRepeat.PARENT_NODE;
+  return useMemo(() => {
+    const named = inheritTextureSampler({ filter, repeat }, item);
+    const unchanged = named.filter === item.filter && named.repeat === item.repeat;
+    return unchanged ? item : { filter: named.filter ?? item.filter, repeat: named.repeat ?? item.repeat };
+  }, [item, filter, repeat]);
 }

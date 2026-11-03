@@ -53,7 +53,7 @@ export function materialFor2d(input: MaterialFor2dInput): MaterialFor2d {
     antialiasing: { mode: input.alphaAntialiasingMode, edge: input.alphaAntialiasingEdge },
   });
   const depthTest = !input.noDepthTest;
-  const blends = cutBlends(cut);
+  const blends = cutBlends(cut, depthTest);
   const prepasses = cutOpaquePrepasses(cut, depthTest);
   const { antialiasing } = cut;
   const { alphaHashScale } = input;

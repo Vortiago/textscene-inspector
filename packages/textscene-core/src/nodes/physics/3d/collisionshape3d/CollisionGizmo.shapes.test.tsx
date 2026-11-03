@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionGizmo } from './CollisionGizmo';
 import type { TscnInternalResource } from '../../../../parser/types';
+import { shapeDebugLines } from '../../shared/shapeDebugLines';
 import { findMesh } from '../../../3d/testing/reactThreeTestInstance';
 
 async function geometryOf(shape: TscnInternalResource) {
@@ -57,6 +58,21 @@ describe('<CollisionGizmo> primitive shapes', () => {
     expect(geometry.parameters.radiusTop).toBeCloseTo(0.75, 6);
     expect(geometry.parameters.radiusBottom).toBeCloseTo(0.75, 6);
     expect(geometry.parameters.height).toBeCloseTo(3, 6);
+  });
+
+  it('draws a WorldBoundaryShape3D as the square and normal ray Godot draws, not a box', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CollisionGizmo
+        shape={shape('WorldBoundaryShape3D', { plane: 'Plane(1, 0, 0, 2.5)' })}
+        color={new THREE.Color(0x00ff88)}
+      />
+    );
+    const [lines] = renderer.scene.findAll((n) => n.type === 'LineSegments');
+    const positions = (lines!.instance as THREE.LineSegments).geometry.getAttribute('position');
+    expect(Array.from(positions.array)).toEqual(
+      Array.from(shapeDebugLines(shape('WorldBoundaryShape3D', { plane: 'Plane(1, 0, 0, 2.5)' }))!)
+    );
+    expect(renderer.scene.findAll((n) => n.type === 'Mesh')).toHaveLength(0);
   });
 
   it('still falls back to a unit box for a genuinely unknown shape type', async () => {

@@ -1,7 +1,7 @@
 /**
  * The offscreen buffers the 2D light pass accumulates `S` into, and their lifetime: one per item
- * light list, plus the Light Only and `shadow_color` variants. `lightPassContext.ts` says what each
- * holds.
+ * light list, plus the Light Only and `shadow_color` variants and the layers of lights kept apart.
+ * `lightPassContext.ts` says what each holds.
  */
 
 import { useThree } from '@react-three/fiber';
@@ -9,16 +9,20 @@ import { useMemo } from 'react';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import * as THREE from 'three';
 
-function createAccumulationTarget(type: THREE.TextureDataType): THREE.WebGLRenderTarget {
+/** A plain target for a null `layers`, else an array target of that many layers. */
+function createAccumulationTarget(
+  type: THREE.TextureDataType,
+  layers: number | null
+): THREE.WebGLRenderTarget {
   // NoColorSpace writes the raw sRGB-space value.
   // The stencil carries the shadows, and three's default of off renders silently as no shadows.
   // WebGL2 allocates one DEPTH24_STENCIL8 attachment beside the colour, so the depth buffer comes
   // along unused: the pass draws with `depthTest` off.
-  const rt = new THREE.WebGLRenderTarget(1, 1, {
-    type,
-    depthBuffer: true,
-    stencilBuffer: true,
-  });
+  const options = { type, depthBuffer: true, stencilBuffer: true };
+  const rt =
+    layers === null
+      ? new THREE.WebGLRenderTarget(1, 1, options)
+      : new THREE.WebGLArrayRenderTarget(1, 1, layers, options);
   rt.texture.colorSpace = THREE.NoColorSpace;
   rt.texture.minFilter = THREE.LinearFilter;
   rt.texture.magFilter = THREE.LinearFilter;
@@ -40,22 +44,38 @@ function accumulatorType(gl: THREE.WebGLRenderer): THREE.TextureDataType {
 }
 
 /**
- * One accumulator per id, disposed together when the set of ids changes. A list set changes only
- * when a light or a placement does, so rebuilding them all then costs less than tracking each.
+ * The targets a signature names, one per line: an id, and after a tab the layer count of an array
+ * target. No id holds a newline or a tab. They are disposed together when the signature changes:
+ * a list set changes only when a light or a placement does, so rebuilding them all then costs less
+ * than tracking each.
  */
-export function useAccumulationTargets(ids: readonly string[]): ReadonlyMap<string, THREE.WebGLRenderTarget> {
-  // Keyed on the joined ids, since a caller rebuilds the array every render. No id holds a newline.
-  const signature = ids.join('\n');
+function useTargets(signature: string): ReadonlyMap<string, THREE.WebGLRenderTarget> {
   const type = useThree((state) => accumulatorType(state.gl));
   const accumulation = useMemo(() => {
     const targets = new Map(
       signature
         .split('\n')
         .filter(Boolean)
-        .map((id) => [id, createAccumulationTarget(type)])
+        .map((line) => {
+          const [id, layers] = line.split('\t') as [string, string | undefined];
+          return [id, createAccumulationTarget(type, layers === undefined ? null : Number(layers))];
+        })
     );
     return { targets, dispose: () => targets.forEach((target) => target.dispose()) };
   }, [signature, type]);
   useDisposeOnRelease(accumulation);
   return accumulation.targets;
+}
+
+/** One accumulator per id. Keyed on the joined ids, since a caller rebuilds the array every render. */
+export function useAccumulationTargets(ids: readonly string[]): ReadonlyMap<string, THREE.WebGLRenderTarget> {
+  return useTargets(ids.join('\n'));
+}
+
+/** One array accumulator per id, with its count of layers. */
+export function useLayeredAccumulationTargets(
+  layers: ReadonlyMap<string, number>
+): ReadonlyMap<string, THREE.WebGLArrayRenderTarget> {
+  const signature = [...layers].map(([id, count]) => `${id}\t${count}`).join('\n');
+  return useTargets(signature) as ReadonlyMap<string, THREE.WebGLArrayRenderTarget>;
 }
