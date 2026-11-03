@@ -2,7 +2,8 @@
  * What the TrueType glyph loader (`sfntGlyf.ts`) asks of a hinter, and the glyph zone it hands it:
  * FreeType's bytecode interpreter (`truetype/`), which TextMesh loads on demand for a font that
  * FreeType hints natively. A font with neither a font program nor a control value program of more
- * than 7 bytes goes to FreeType's auto-hinter instead (`ftobjs.c`, `FT_Load_Glyph`).
+ * than 7 bytes goes to FreeType's auto-hinter instead (`ftobjs.c`, `FT_Load_Glyph`), whatever its
+ * glyph programs hold.
  *
  * Portions ported from FreeType (FreeType Project License).
  * Copyright (C) 1996-2026 by David Turner, Robert Wilhelm, and Werner Lemberg.

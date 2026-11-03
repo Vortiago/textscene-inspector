@@ -14,7 +14,7 @@ import { mulDivNoRound } from './ttArithmetic';
 import type { ExecContext } from './ttExecContext';
 
 /** Whether `count` more values would overflow the stack (`BOUNDS( L, stackSize + 1 - top )`). */
-function overflowsStack(exc: ExecContext, count: number): boolean {
+export function overflowsStack(exc: ExecContext, count: number): boolean {
   return count >= exc.stack.length + 1 - exc.top;
 }
 
@@ -146,7 +146,10 @@ export function divide(exc: ExecContext, a: number): void {
   else exc.stack[a] = mulDivNoRound(exc.stack[a]!, FIXED_26_6_ONE, divisor);
 }
 
-/** ODD and EVEN: whether the value, rounded in the current state, is an odd or even pixel. */
+/**
+ * ODD and EVEN: whether the value, rounded in the current state, is an odd or even pixel. FreeType
+ * 2.14 reads bit 6 alone (`& 64`), so a value off the pixel grid answers by that bit too.
+ */
 export function isOdd(exc: ExecContext, a: number): void {
   exc.stack[a] = asNumber((exc.round(exc.stack[a]!) & FIXED_26_6_ONE) === FIXED_26_6_ONE);
 }

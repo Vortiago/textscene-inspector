@@ -20,6 +20,7 @@ import {
   type RoundStateValue,
 } from './ttRounding';
 import type { GlyphZone } from '../glyphHinting';
+import { overflowsStack } from './ttStackInstructions';
 
 type Instruction = (exc: ExecContext, a: number) => void;
 /** The index of a reference point or zone pointer: 0, 1 or 2. */
@@ -190,7 +191,7 @@ export function getInformation(exc: ExecContext, a: number): void {
  */
 export function getVariation(exc: ExecContext, a: number): void {
   const { axisCount } = exc.face;
-  if (axisCount >= exc.stack.length + 1 - exc.top) {
+  if (overflowsStack(exc, axisCount)) {
     exc.fail('Stack_Overflow');
     return;
   }

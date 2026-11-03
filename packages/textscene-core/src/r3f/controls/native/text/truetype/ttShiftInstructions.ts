@@ -145,7 +145,8 @@ function isYMoveAllowed(exc: ExecContext, zone: GlyphZone, point: number): boole
 
 /**
  * SHPIX: shifts each looped point by a pixel distance along the free vector. Backward
- * compatibility lets only a y shift through, as for DELTAP, but every shift in the twilight zone.
+ * compatibility lets only a y shift through, as for DELTAP, and in the twilight zone a y shift of
+ * any point.
  */
 export function shiftPointsByPixels(exc: ExecContext, a: number): void {
   const isInTwilight = isAnyZoneTwilight(exc.graphicsState);

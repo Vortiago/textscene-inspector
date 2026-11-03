@@ -66,6 +66,9 @@ const FVAR_AXIS_DEFAULT_OFFSET = 8;
 // maxp table: version(4) numGlyphs(2)
 const MAXP_GLYPH_COUNT_OFFSET = 4;
 const MAXP_GLYPH_COUNT_LENGTH = 6;
+/** `maxp` 1.0, which TrueType outlines use, runs through maxComponentDepth(2) at 30. */
+const MAXP_VERSION_1 = 0x10000;
+const MAXP_VERSION_1_LENGTH = 32;
 
 /** The tables the readers of this module use. A compressed container decompresses these and no others. */
 export const SCENE_FONT_TABLE_TAGS: readonly string[] = ['head', 'hhea', 'OS/2', 'fvar'];
@@ -204,6 +207,17 @@ export function readGlyphCount({ dv, tables }: SfntFile): number | null {
   const maxp = tables.get('maxp');
   if (!maxp || !tableFits(dv, maxp, MAXP_GLYPH_COUNT_LENGTH)) return null;
   return dv.getUint16(maxp.offset + MAXP_GLYPH_COUNT_OFFSET, false);
+}
+
+/**
+ * The 16-bit field at `offset` of a `maxp` 1.0, or null for a font with no `maxp` 1.0 that fits.
+ * Version 0.5, which CFF outlines use, ends at numGlyphs.
+ */
+export function readMaxpVersion1Field({ dv, tables }: SfntFile, offset: number): number | null {
+  const maxp = tables.get('maxp');
+  if (!maxp || !tableFits(dv, maxp, MAXP_VERSION_1_LENGTH)) return null;
+  if (dv.getUint32(maxp.offset, false) < MAXP_VERSION_1) return null;
+  return dv.getUint16(maxp.offset + offset, false);
 }
 
 /**

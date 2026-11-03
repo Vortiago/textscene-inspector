@@ -20,19 +20,23 @@ import {
   type GlyphLoadHinter,
   type GlyphZone,
 } from '../glyphHinting';
-import { readFvarAxisCount, readGlyphCount, tableBytes, tableFits, type SfntFile } from '../sfntTables';
+import {
+  readFvarAxisCount,
+  readGlyphCount,
+  readMaxpVersion1Field,
+  tableBytes,
+  type SfntFile,
+} from '../sfntTables';
 import { CodeRange, ExecContext, type FaceBytecode } from './ttExecContext';
 import { INSTRUCT_CONTROL_NO_HINTING, saveProgramState } from './ttGraphicsState';
 import { runContext } from './ttRunInstructions';
 
 /** `maxp` 1.0: maxTwilightPoints(2) at 16, then maxStorage, maxFunctionDefs, maxInstructionDefs, maxStackElements. */
-const MAXP_VERSION_1 = 0x10000;
 const MAXP_TWILIGHT_OFFSET = 16;
 const MAXP_STORAGE_OFFSET = 18;
 const MAXP_FUNCTION_DEFS_OFFSET = 20;
 const MAXP_INSTRUCTION_DEFS_OFFSET = 22;
 const MAXP_STACK_OFFSET = 24;
-const MAXP_VERSION_1_LENGTH = 32;
 /** FreeType allows 64 functions at least, for broken fonts that declare fewer (`tt_face_load_maxp`). */
 const MIN_FUNCTION_DEFS = 64;
 /** The twilight points FreeType allows, four phantom points short of 16 bits. */
@@ -49,18 +53,15 @@ function controlValuesOf(sfnt: SfntFile): Int16Array {
 function faceBytecodeOf(sfnt: SfntFile): FaceBytecode | null {
   const glyphCount = readGlyphCount(sfnt);
   if (glyphCount === null) return null;
-  const { dv } = sfnt;
-  const maxp = sfnt.tables.get('maxp')!;
-  const isVersion1 =
-    dv.getUint32(maxp.offset, false) >= MAXP_VERSION_1 && tableFits(dv, maxp, MAXP_VERSION_1_LENGTH);
-  const field = (offset: number) => (isVersion1 ? dv.getUint16(maxp.offset + offset, false) : 0);
+  const field = (offset: number) => readMaxpVersion1Field(sfnt, offset) ?? 0;
+  const functionDefs = readMaxpVersion1Field(sfnt, MAXP_FUNCTION_DEFS_OFFSET);
   return {
     fontProgram: tableBytes(sfnt, 'fpgm'),
     controlValueProgram: tableBytes(sfnt, 'prep'),
     controlValues: controlValuesOf(sfnt),
     maxStackElements: field(MAXP_STACK_OFFSET),
     maxStorage: field(MAXP_STORAGE_OFFSET),
-    maxFunctionDefs: isVersion1 ? Math.max(field(MAXP_FUNCTION_DEFS_OFFSET), MIN_FUNCTION_DEFS) : 0,
+    maxFunctionDefs: functionDefs === null ? 0 : Math.max(functionDefs, MIN_FUNCTION_DEFS),
     maxInstructionDefs: field(MAXP_INSTRUCTION_DEFS_OFFSET),
     maxTwilightPoints: Math.min(field(MAXP_TWILIGHT_OFFSET), MAX_TWILIGHT_POINTS),
     glyphCount,
@@ -85,9 +86,8 @@ function runFontProgram(exc: ExecContext): string | null {
   exc.loadContext();
   exc.clearCodeRange(CodeRange.CVT);
   exc.clearCodeRange(CodeRange.GLYPH);
-  const error = runProgram(exc, CodeRange.FONT, exc.face.fontProgram);
-  if (!error) saveProgramState(exc.sizeGraphicsState, exc.graphicsState);
-  return error;
+  // The control value program starts from the default state, so the font program's state is not kept.
+  return runProgram(exc, CodeRange.FONT, exc.face.fontProgram);
 }
 
 /** `tt_size_run_prep`: the control value program, from a reset size state and scaled control values. */
