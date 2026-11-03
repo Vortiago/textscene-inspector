@@ -5,8 +5,8 @@
  */
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
-import { TscnPreviewPanel } from './TscnPreviewPanel';
-import { createMockUri, createMockFileData, MockTabInputText, setupMockPanel } from './test-setup';
+import { openReadyPreviewPanel } from './previewPanel.testkit';
+import { createMockUri, MockTabInputText, setupMockPanel } from './test-setup';
 
 const SCENE_PATH = '/workspace/test.tscn';
 
@@ -35,17 +35,9 @@ function stubJumpTarget(documentText: string): MockEditor {
   return editor;
 }
 
-async function createReadyPanel(triggerMessage: (msg: { type: string }) => void): Promise<void> {
-  (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(TWO_SIBLINGS_TSCN));
-  TscnPreviewPanel.create(createMockUri('/extension'), createMockUri(SCENE_PATH));
-  await new Promise<void>((r) => setTimeout(r, 10));
-  triggerMessage({ type: 'webviewReady' });
-}
-
 describe('TscnPreviewPanel jumpToNode tree-path resolution', () => {
   it('resolves a duplicate name to the sibling its path names (B)', async () => {
-    const { triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { triggerMessage } = await openReadyPreviewPanel(TWO_SIBLINGS_TSCN, SCENE_PATH);
     const editor = stubJumpTarget(TWO_SIBLINGS_TSCN);
 
     triggerMessage({ type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/B/Leaf' });
@@ -58,8 +50,7 @@ describe('TscnPreviewPanel jumpToNode tree-path resolution', () => {
   });
 
   it('resolves the other duplicate sibling by its path (A)', async () => {
-    const { triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { triggerMessage } = await openReadyPreviewPanel(TWO_SIBLINGS_TSCN, SCENE_PATH);
     const editor = stubJumpTarget(TWO_SIBLINGS_TSCN);
 
     triggerMessage({ type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/A/Leaf' });
@@ -77,8 +68,7 @@ describe('TscnPreviewPanel jumpToNode tree-path resolution', () => {
       '[node name="Item" type="Node3D" parent="A"]',
       '[node name="Item" type="Node3D" parent="."]',
     ].join('\n');
-    const { triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { triggerMessage } = await openReadyPreviewPanel(TWO_SIBLINGS_TSCN, SCENE_PATH);
     const editor = stubJumpTarget(fixture);
 
     triggerMessage({ type: 'jumpToNode', nodeName: 'Item', path: 'Root/Item' });
@@ -89,8 +79,7 @@ describe('TscnPreviewPanel jumpToNode tree-path resolution', () => {
   });
 
   it('resolves the root node to its heading', async () => {
-    const { triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { triggerMessage } = await openReadyPreviewPanel(TWO_SIBLINGS_TSCN, SCENE_PATH);
     const editor = stubJumpTarget(TWO_SIBLINGS_TSCN);
 
     triggerMessage({ type: 'jumpToNode', nodeName: 'Root', path: 'Root' });
@@ -100,8 +89,7 @@ describe('TscnPreviewPanel jumpToNode tree-path resolution', () => {
   });
 
   it('warns and opens no editor when the node is absent', async () => {
-    const { triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { triggerMessage } = await openReadyPreviewPanel(TWO_SIBLINGS_TSCN, SCENE_PATH);
     const editor = stubJumpTarget(TWO_SIBLINGS_TSCN);
 
     triggerMessage({ type: 'jumpToNode', nodeName: 'Nope', path: 'Root/Nope' });
@@ -154,8 +142,7 @@ describe('TscnPreviewPanel jumpToNode editor column', () => {
 
   it('focuses the editor that already shows the scene in another column', async () => {
     openTabs(tabGroup(1, [textTab('/workspace/player.gd', true)]), tabGroup(3, [textTab(SCENE_PATH, true)]));
-    const { triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { triggerMessage } = await openReadyPreviewPanel(TWO_SIBLINGS_TSCN, SCENE_PATH);
 
     expect(await jumpColumn(triggerMessage)).toBe(vscode.ViewColumn.Three);
   });
@@ -165,8 +152,7 @@ describe('TscnPreviewPanel jumpToNode editor column', () => {
       tabGroup(1, [textTab('/workspace/player.gd', true)]),
       tabGroup(2, [textTab(SCENE_PATH, false), textTab('/workspace/level.gd', true)])
     );
-    const { triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { triggerMessage } = await openReadyPreviewPanel(TWO_SIBLINGS_TSCN, SCENE_PATH);
 
     expect(await jumpColumn(triggerMessage)).toBe(vscode.ViewColumn.Two);
   });
@@ -176,25 +162,22 @@ describe('TscnPreviewPanel jumpToNode editor column', () => {
       tabGroup(2, [textTab(SCENE_PATH, false), textTab('/workspace/level.gd', true)]),
       tabGroup(3, [textTab(SCENE_PATH, true)])
     );
-    const { triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { triggerMessage } = await openReadyPreviewPanel(TWO_SIBLINGS_TSCN, SCENE_PATH);
 
     expect(await jumpColumn(triggerMessage)).toBe(vscode.ViewColumn.Three);
   });
 
   it('opens the scene in column one when no tab holds it', async () => {
     openTabs(tabGroup(2, [textTab('/workspace/player.gd', true)]));
-    const { triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { triggerMessage } = await openReadyPreviewPanel(TWO_SIBLINGS_TSCN, SCENE_PATH);
 
     expect(await jumpColumn(triggerMessage)).toBe(vscode.ViewColumn.One);
   });
 
   it('skips a scene tab behind the preview in its own column, which would cover the preview', async () => {
     openTabs(tabGroup(2, [textTab(SCENE_PATH, false)]));
-    const { panel, triggerMessage } = setupMockPanel();
-    panel.viewColumn = vscode.ViewColumn.Two;
-    await createReadyPanel(triggerMessage);
+    const { hostPanel, triggerMessage } = await openReadyPreviewPanel(TWO_SIBLINGS_TSCN, SCENE_PATH);
+    hostPanel.viewColumn = vscode.ViewColumn.Two;
 
     expect(await jumpColumn(triggerMessage)).toBe(vscode.ViewColumn.One);
   });
@@ -204,18 +187,16 @@ describe('TscnPreviewPanel jumpToNode editor column', () => {
       tabGroup(2, [textTab(SCENE_PATH, false)]),
       tabGroup(3, [textTab(SCENE_PATH, false), textTab('/workspace/level.gd', true)])
     );
-    const { panel, triggerMessage } = setupMockPanel();
-    panel.viewColumn = vscode.ViewColumn.Two;
-    await createReadyPanel(triggerMessage);
+    const { hostPanel, triggerMessage } = await openReadyPreviewPanel(TWO_SIBLINGS_TSCN, SCENE_PATH);
+    hostPanel.viewColumn = vscode.ViewColumn.Two;
 
     expect(await jumpColumn(triggerMessage)).toBe(vscode.ViewColumn.Three);
   });
 
   it('opens the scene beside a preview that sits in column one, not over it', async () => {
     openTabs(tabGroup(2, [textTab('/workspace/player.gd', true)]));
-    const { panel, triggerMessage } = setupMockPanel();
-    panel.viewColumn = vscode.ViewColumn.One;
-    await createReadyPanel(triggerMessage);
+    const { hostPanel, triggerMessage } = await openReadyPreviewPanel(TWO_SIBLINGS_TSCN, SCENE_PATH);
+    hostPanel.viewColumn = vscode.ViewColumn.One;
 
     expect(await jumpColumn(triggerMessage)).toBe(vscode.ViewColumn.Beside);
   });
@@ -224,8 +205,7 @@ describe('TscnPreviewPanel jumpToNode editor column', () => {
     // A custom editor's input carries the same `uri`, but showing the text in that column
     // would open a second editor there, not focus one.
     openTabs(tabGroup(3, [{ input: { uri: createMockUri(SCENE_PATH) }, isActive: true }]));
-    const { triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { triggerMessage } = await openReadyPreviewPanel(TWO_SIBLINGS_TSCN, SCENE_PATH);
 
     expect(await jumpColumn(triggerMessage)).toBe(vscode.ViewColumn.One);
   });

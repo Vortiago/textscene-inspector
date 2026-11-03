@@ -4,21 +4,15 @@
  * `invalidateResource` still posts, and a load in flight posts from its try/catch,
  * whose catch posts again and throws out of a `void`ed call as an unhandled rejection.
  */
-import { describe, expect, it, type Mock } from 'vitest';
-import * as vscode from 'vscode';
-import { TscnPreviewPanel } from './TscnPreviewPanel';
-import { createMockUri, createMockFileData, setupMockPanel } from './test-setup';
+import { describe, expect, it } from 'vitest';
+import { openReadyPreviewPanel } from './previewPanel.testkit';
 
 const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
 
 async function readyPanel() {
-  const mock = setupMockPanel();
-  (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
-  const panel = TscnPreviewPanel.create(createMockUri('/extension'), createMockUri('/w/test.tscn'));
-  await new Promise<void>((r) => setTimeout(r, 10));
-  mock.triggerMessage({ type: 'webviewReady' });
-  mock.webview.postMessage.mockClear();
-  return { ...mock, hostPanel: mock.panel, panel };
+  const opened = await openReadyPreviewPanel(MINIMAL_TSCN);
+  opened.webview.postMessage.mockClear();
+  return opened;
 }
 
 describe('a disposed preview panel', () => {

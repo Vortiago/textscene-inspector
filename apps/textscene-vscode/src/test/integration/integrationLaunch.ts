@@ -113,6 +113,9 @@ export function integrationLaunchOptions(
       '--disable-extensions',
       `--user-data-dir=${paths.userDataDir}`,
       ...gpu.launchArgs,
+      // Chromium prints every page's console to stderr, a webview's too, so a preview
+      // that never loads shows its script error in the job log.
+      '--enable-logging=stderr',
     ],
     extensionTestsEnv: { [SUITE_STARTED_MARKER_ENV]: paths.suiteStartedMarker, ...gpu.extensionTestsEnv },
   };

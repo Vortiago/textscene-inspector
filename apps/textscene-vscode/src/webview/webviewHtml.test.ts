@@ -14,7 +14,81 @@ const BASE_OPTIONS = {
   cspSource: 'https://example.test',
 };
 
+/** The page's inline module script that imports the entry. */
+function entryLoaderOf(html: string): string {
+  const loader = /<script type="module" nonce="[^"]*">([\s\S]*?)<\/script>/.exec(html)?.[1];
+  if (loader === undefined) throw new Error(`expected an inline module script, found ${html}`);
+  return loader;
+}
+
+/** Runs the entry loader as the page would, with `acquireVsCodeApi` as the page's global. */
+async function runEntryLoader(
+  html: string,
+  acquireVsCodeApi: () => { postMessage: (message: unknown) => void }
+): Promise<void> {
+  // A function body, not a module, since vitest evaluates no module from a string. Its
+  // `import()` is the test's own, which a `Function` body cannot reach in vitest's VM.
+  const run = new Function(
+    'acquireVsCodeApi',
+    'importEntry',
+    `return ${entryLoaderOf(html).replace('import(', 'importEntry(')}`
+  );
+  await run(acquireVsCodeApi, (url: string) => import(/* @vite-ignore */ url));
+}
+
+describe('the entry loader', () => {
+  it('reports an entry script that fails to parse, with the error', async () => {
+    const postMessage = vi.fn();
+    const html = generateWebviewHtml({
+      ...BASE_OPTIONS,
+      scriptUri: 'data:text/javascript,export const cut = (',
+    });
+
+    await runEntryLoader(html, () => ({ postMessage }));
+
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'webviewLoadFailed',
+      error: expect.stringContaining('SyntaxError'),
+    });
+  });
+
+  it('reports nothing for an entry script that runs', async () => {
+    const postMessage = vi.fn();
+    const html = generateWebviewHtml({
+      ...BASE_OPTIONS,
+      scriptUri: 'data:text/javascript,export const whole = 1;',
+    });
+
+    await runEntryLoader(html, () => ({ postMessage }));
+
+    expect(postMessage).not.toHaveBeenCalled();
+  });
+
+  it('logs the import error when the entry acquired the API before it threw', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const html = generateWebviewHtml({
+      ...BASE_OPTIONS,
+      scriptUri: 'data:text/javascript,throw new Error("mount failed");',
+    });
+
+    await runEntryLoader(html, () => {
+      throw new Error('An instance of the VS Code API has already been acquired');
+    });
+
+    expect(consoleError).toHaveBeenCalledWith(expect.objectContaining({ message: 'mount failed' }));
+    consoleError.mockRestore();
+  });
+});
+
 describe('generateWebviewHtml', () => {
+  it('preloads the entry script, so its fetch starts while the page parses', () => {
+    const html = generateWebviewHtml(BASE_OPTIONS);
+
+    expect(html).toContain(
+      `<link rel="modulepreload" nonce="${BASE_OPTIONS.nonce}" href="${BASE_OPTIONS.scriptUri}">`
+    );
+  });
+
   it('omits the config script entirely when initialConfig is not provided', () => {
     const html = generateWebviewHtml(BASE_OPTIONS);
 
@@ -29,7 +103,7 @@ describe('generateWebviewHtml', () => {
 
     expect(html).toContain('window.__TEXTSCENE_CONFIG__ = {"viewportMode":"2D"};');
     const configIndex = html.indexOf('__TEXTSCENE_CONFIG__');
-    const entryScriptIndex = html.indexOf(BASE_OPTIONS.scriptUri);
+    const entryScriptIndex = html.indexOf(entryLoaderOf(html));
     expect(configIndex).toBeGreaterThan(-1);
     expect(configIndex).toBeLessThan(entryScriptIndex);
   });
