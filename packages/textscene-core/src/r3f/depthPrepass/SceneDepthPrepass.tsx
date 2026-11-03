@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import { createDepthPrepassSentinel } from './depthPrepass';
-import { disposeFirstOpaqueSentinel } from '../firstOpaqueSentinel';
+import { disposeOpaqueSentinel } from '../opaqueSentinel';
 
 /** Draws `scene`'s depth prepass before each of its opaque passes, until unmount. Null draws none. */
 export function useSceneDepthPrepass(scene: THREE.Scene | null): void {
@@ -14,7 +14,7 @@ export function useSceneDepthPrepass(scene: THREE.Scene | null): void {
     scene.add(sentinel);
     return () => {
       scene.remove(sentinel);
-      disposeFirstOpaqueSentinel(sentinel);
+      disposeOpaqueSentinel(sentinel);
     };
   }, [scene]);
 }

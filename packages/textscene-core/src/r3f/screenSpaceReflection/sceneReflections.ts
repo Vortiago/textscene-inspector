@@ -1,8 +1,10 @@
 /**
  * The screen-space reflection of each render of one scene. A sentinel that three draws first in the
  * opaque list traces it, as Godot traces between its depth prepass and its opaque pass
- * (`render_forward_clustered.cpp:2150`), and the end of the render copies the finished frame for the
- * next trace (`:2413-2417`). Each world buffer keeps its own buffers and the camera of its last frame.
+ * (`render_forward_clustered.cpp:2150`). One drawn last hides it from the alpha pass, which Godot
+ * sets up with no screen-space effects (`:2381`, `:754-769`). The end of the render copies the
+ * finished frame for the next trace (`:2413-2417`). Each world buffer keeps its own buffers and the
+ * camera of its last frame.
  */
 
 import * as THREE from 'three';
@@ -10,7 +12,11 @@ import type { ScreenSpaceReflection } from '../../resources/environment/types.js
 import { probeCaptureOf } from '../reflectionProbe/captureCameras.js';
 import { drawOffscreen } from '../offscreen.js';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
-import { createFirstOpaqueSentinel, disposeFirstOpaqueSentinel } from '../firstOpaqueSentinel.js';
+import {
+  createFirstOpaqueSentinel,
+  createLastOpaqueSentinel,
+  disposeOpaqueSentinel,
+} from '../opaqueSentinel.js';
 import { leaveSlot, showInSlot } from '../sharedTexture.js';
 import { drawsTransparentBackground } from '../environment/toneMapPass.js';
 import { ReflectionBuffers, type ReflectionShape } from './reflectionBuffers.js';
@@ -63,6 +69,8 @@ interface SceneRender {
   readonly target: THREE.WebGLRenderTarget | null;
   readonly world: WorldReflection | null;
   isTraced: boolean;
+  /** Whether three has drawn the render's opaque list, after which its surfaces show no reflection. */
+  isPastOpaque: boolean;
 }
 
 /** Scratch for one trace. */
@@ -72,6 +80,7 @@ const reprojection = new THREE.Matrix4();
 
 export class SceneReflections {
   readonly sentinel: THREE.Mesh;
+  readonly lastSentinel: THREE.Mesh;
   private readonly worlds = new Map<THREE.WebGLRenderTarget, WorldReflection>();
   /** Written by `begin` and `end`, as renders of the scene nest. */
   private readonly renders: SceneRender[] = [];
@@ -84,26 +93,37 @@ export class SceneReflections {
     this.sentinel = createFirstOpaqueSentinel('ScreenSpaceReflection', (_renderer, scene, camera) =>
       this.trace(scene, camera)
     );
+    this.lastSentinel = createLastOpaqueSentinel('ScreenSpaceReflectionEnd', () => this.endOpaque());
   }
 
   /** Starts a render of the scene through `camera` into `target`, null for the canvas. */
   readonly begin = (camera: THREE.Camera, target: THREE.WebGLRenderTarget | null): void => {
-    this.renders.push({ camera, target, world: this.worldOf(camera, target), isTraced: false });
+    this.renders.push({
+      camera,
+      target,
+      world: this.worldOf(camera, target),
+      isTraced: false,
+      isPastOpaque: false,
+    });
     ssrState[SSR_STATE.showsReflection] = 0;
   };
 
-  /** Ends the innermost render: keeps its frame for the next trace, and shows the outer render's reflection again. */
+  /**
+   * Ends the innermost render: keeps its frame for the next trace, and shows the outer render's
+   * reflection again while the outer render draws its opaque list.
+   */
   readonly end = (): void => {
     const render = this.renders.pop();
     if (render?.isTraced) this.finish(render);
     const outer = this.renders.at(-1);
-    if (outer?.isTraced) this.show(outer.world!.buffers!);
+    if (outer?.isTraced && !outer.isPastOpaque) this.show(outer.world!.buffers!);
     else ssrState[SSR_STATE.showsReflection] = 0;
   };
 
   dispose(): void {
     for (const [target, world] of this.worlds) this.release(target, world);
-    disposeFirstOpaqueSentinel(this.sentinel);
+    disposeOpaqueSentinel(this.sentinel);
+    disposeOpaqueSentinel(this.lastSentinel);
   }
 
   /**
@@ -162,6 +182,14 @@ export class SceneReflections {
     endStep(this.renderer, 'Screen-space reflection');
     render.isTraced = true;
     this.show(buffers);
+  }
+
+  /** Ends the innermost render's opaque list. three's transmission pass draws one of its own first. */
+  private endOpaque(): void {
+    const render = this.renders.at(-1);
+    if (!render || this.renderer.getRenderTarget() !== render.target) return;
+    render.isPastOpaque = true;
+    ssrState[SSR_STATE.showsReflection] = 0;
   }
 
   /**

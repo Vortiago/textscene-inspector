@@ -11,7 +11,7 @@ import { opaquePrepassOf } from '../materials/opaquePrepass';
 import { surfaceDepthMaterial, syncSurfaceDepth } from '../materials/surfaceDepthMaterial';
 import { beginStep, endStep } from '../frameProfile/frameProfile';
 import { drawSurface, visibleSurfaces } from '../opaqueSurfaces';
-import { createFirstOpaqueSentinel } from '../firstOpaqueSentinel';
+import { createFirstOpaqueSentinel } from '../opaqueSentinel';
 
 /** The material each surface's prepass copy starts from: depth, and no colour. */
 const PREPASS_BASE = new THREE.MeshDepthMaterial({ colorWrite: false });
