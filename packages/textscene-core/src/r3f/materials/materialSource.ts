@@ -24,6 +24,13 @@ export interface MaterialResource {
   internalResources: readonly TscnInternalResource[];
   externalResources: readonly TscnExternalResource[];
   /**
+   * The address the tables live in, set when `useMaterial` loads a file: the file's own
+   * `res://` path. Undefined for the scene's own tables, whose ids are unique within the
+   * scene. A chain's visited key holds it, so two files' inline ids of one name cannot
+   * collide.
+   */
+  origin?: string;
+  /**
    * False when a resource between the node and the material, such as the mesh that holds a
    * surface's material, is not local to scene. Absent when every one is, as for the node's property.
    */
@@ -50,7 +57,8 @@ export type MaterialSource =
 export function resolveMaterialSource(
   ref: string | undefined,
   { internalResources, externalResources }: SceneResources,
-  isHeldLocally: boolean = NODE_PROPERTY
+  isHeldLocally: boolean = NODE_PROPERTY,
+  origin?: string
 ): MaterialSource | undefined {
   if (!ref) return undefined;
   if (ref.startsWith(RES_SCHEME)) return fileMaterialSource(ref, isHeldLocally);
@@ -62,7 +70,7 @@ export function resolveMaterialSource(
     if (!resource || !BUILDABLE_MATERIAL_TYPES.has(resource.type)) return undefined;
     return {
       kind: 'inline',
-      material: { resource, internalResources, externalResources },
+      material: { resource, internalResources, externalResources, origin },
       ...held(isHeldLocally),
     };
   }
@@ -94,4 +102,41 @@ function fileMaterialSource(path: string, isHeldLocally: boolean): MaterialSourc
 
 export function held(isHeldLocally: boolean): Held {
   return isHeldLocally ? {} : { isHeldLocally };
+}
+
+/**
+ * One link of the material's `next_pass` chain, as
+ * `render_forward_clustered.cpp:4189`'s `while` walk reads each link: the reference
+ * resolves in the tables of the file the material is written in, and its own
+ * `isHeldLocally` carries over, so the link's textures resolve in the file that owns it.
+ * Undefined ends the chain, as the loop's `!material` guard does.
+ *
+ * @canonical One link of a material's next_pass chain
+ */
+export function resolveNextPass(
+  nextPass: string | undefined,
+  material: MaterialResource
+): MaterialSource | undefined {
+  const { internalResources, externalResources, isHeldLocally, origin } = material;
+  return resolveMaterialSource(
+    nextPass,
+    { internalResources, externalResources },
+    isHeldLocally ?? NODE_PROPERTY,
+    // The link resolves in the same file's tables, so it keys by that file too.
+    origin
+  );
+}
+
+/**
+ * The identity a visited set holds a chain source by: an inline material's resource id,
+ * a file source's path. Prefixed, so an inline id and a path cannot collide. Godot
+ * refuses a cyclic chain at the setter (`material.cpp:39-42`), so only a hand-written
+ * file can produce one, and the renderer cuts it with this key.
+ *
+ * @canonical The visited-set key of a material source
+ */
+export function materialSourceKey(source: MaterialSource): string {
+  return source.kind === 'inline'
+    ? `inline:${source.material.origin ?? 'scene'}:${source.material.resource.id}`
+    : `file:${source.path}`;
 }

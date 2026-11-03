@@ -16,36 +16,78 @@ type SurfaceVisitor = (
 ) => void;
 
 /**
- * One node's material slot or slots, the one place that owns the array-or-single branch.
- * Gated on the slot, not on `isMesh`, because a glTF's non-triangle primitives arrive as
- * `Points`/`Line` with a material the importer's per-surface rules reach too.
+ * One node's material slot or slots. Gated on the slot, not on `isMesh`, because a glTF's
+ * non-triangle primitives arrive as `Points`/`Line` with a material the importer's
+ * per-surface rules reach too.
  */
-function visitNodeMaterials(node: THREE.Object3D, visit: SurfaceVisitor): void {
-  const holder = node as THREE.Mesh;
-  const slot = holder.material as THREE.Material | THREE.Material[] | undefined;
-  if (!slot) return;
+function slotsOfNode(node: THREE.Object3D): SurfaceSlot[] {
+  // The classes that draw a material: a mesh and its skinned and instanced selves, a glTF's points and lines, a sprite.
+  const drawn = node as THREE.Mesh | THREE.Points | THREE.Line | THREE.Sprite;
+  const slot = drawn.material as THREE.Material | THREE.Material[] | undefined;
+  if (!slot) return [];
   if (Array.isArray(slot)) {
-    slot.forEach((material, index) => {
-      visit(
-        material,
-        (replacement) => {
-          slot[index] = replacement;
-        },
-        () => slot[index]
-      );
-    });
-  } else {
-    visit(
-      slot,
-      (replacement) => {
-        holder.material = replacement;
+    return slot.map((_, index) => ({
+      holder: node,
+      index,
+      count: slot.length,
+      assign: (replacement: THREE.Material) => {
+        slot[index] = replacement;
       },
-      () => holder.material as THREE.Material
-    );
+      read: () => slot[index],
+    }));
   }
+  return [
+    {
+      holder: node,
+      index: 0,
+      count: 1,
+      assign: (replacement: THREE.Material) => {
+        drawn.material = replacement;
+      },
+      read: () => drawn.material as THREE.Material | undefined,
+    },
+  ];
 }
 
 /** Visit every surface material under `object`, with the setter for its own slot. */
 export function forEachSurfaceMaterial(object: THREE.Object3D, visit: SurfaceVisitor): void {
-  object.traverse((node) => visitNodeMaterials(node, visit));
+  for (const slot of surfaceSlotsUnder(object)) {
+    const material = slot.read();
+    if (material === undefined) continue;
+    visit(material, slot.assign, slot.read);
+  }
+}
+
+/** One surface slot of a glTF asset, with the object that draws it. */
+export interface SurfaceSlot {
+  /**
+   * The object that draws the slot's surface: a glTF's points and line primitives own a
+   * slot too. A caller that mounts a sibling draw over the slot gates on the class it
+   * draws, and `chainSibling` mirrors it.
+   */
+  holder: THREE.Object3D;
+  /** The draw group the surface sits in, over the holder's slot count. */
+  index: number;
+  count: number;
+  /** Swaps the slot's material in place, as the visit's setter does. */
+  assign(replacement: THREE.Material): void;
+  /**
+   * Reads what the slot holds later, after other writers may have replaced it, so a
+   * restore does not undo a newer writer.
+   */
+  read(): THREE.Material | undefined;
+}
+
+/**
+ * Every surface material slot under `object`, with its own holder, in
+ * `forEachSurfaceMaterial`'s reach order; a holder with several surfaces appears once
+ * per slot. A caller that pairs draws with the slot they cover, instead of visiting the
+ * materials, needs this shape.
+ *
+ * @canonical The surface material slots under an object
+ */
+export function surfaceSlotsUnder(object: THREE.Object3D): SurfaceSlot[] {
+  const slots: SurfaceSlot[] = [];
+  object.traverse((node) => slots.push(...slotsOfNode(node)));
+  return slots;
 }
