@@ -147,7 +147,11 @@ export function SkyLayer({
       const isDirtied = noteSkyLights(gl, lightData, exposureScalesLights ? drawn : 1);
       stepSkyRadiance(update, plan, { exposure: drawn, brightness: brightnessAt(drawn) }, isDirtied);
       showAt(drawn);
-      (bakes.at(drawn) ?? radiance).background?.drawIn(scene, brightnessAt(drawn), skyRotation);
+      // Only a background reads the bake at the drawn exposure: for a sky that paints none, the
+      // read would bake that exposure to no use.
+      if (asBackground) {
+        (bakes.at(drawn) ?? radiance).background?.drawIn(scene, brightnessAt(drawn), skyRotation);
+      }
       radiance.radiance.show(contributionRef.current, reflectsRef.current, bakedBrightness(drawn));
     };
     const stopRegistering = registerEnvironmentPart(scene, environment, () => {

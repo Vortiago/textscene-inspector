@@ -57,20 +57,23 @@ export class SkyBackground extends THREE.Mesh<THREE.BoxGeometry, THREE.ShaderMat
     this.matrixWorldAutoUpdate = false;
     this.layers.enableAll();
     this.raycast = () => {};
+    this.userData = { tscnFrameExcluded: true };
+    this.visible = false;
   }
 
   /**
    * Draws behind `scene` in the render now starting, at `intensity` and turned by `rotation`, unless
    * the scene shows a background of its own, as an interior probe's capture does (`captureStage.ts`).
-   * `showSkyBackground` takes it out once the render ends. It is in the scene only in a render, so
-   * no traversal between renders, such as a pick or a bounds fit, meets it.
+   * `showSkyBackground` hides it once the render ends. It stays a child of the scene it drew in, so
+   * the trackers of the scene's children see it arrive once and not in every render.
    */
   drawIn(scene: THREE.Scene, intensity: number, rotation: THREE.Euler): void {
     if (scene.background !== null) return;
     const { uniforms } = this.material;
     uniforms.backgroundIntensity!.value = intensity;
     worldToSky(rotation, uniforms.backgroundRotation!.value as THREE.Matrix3);
-    scene.add(this);
+    if (this.parent !== scene) scene.add(this);
+    this.visible = true;
   }
 
   /** The box follows the camera, as three's cube background does (`WebGLBackground.js`). */
@@ -87,22 +90,28 @@ export class SkyBackground extends THREE.Mesh<THREE.BoxGeometry, THREE.ShaderMat
 }
 
 /**
- * Clears `scene`'s own background so a `SkyBackground` draws, and takes the one each render drew out
- * of the scene when the render ends, until the returned disposer puts the background back.
+ * Clears `scene`'s own background so a `SkyBackground` draws, and hides the one each render drew
+ * when the render ends, so no pass outside a render draws it. The returned disposer takes every
+ * sky out of the scene and puts the background back.
  */
 export function showSkyBackground(scene: THREE.Scene): () => void {
   const previousBackground = scene.background;
   scene.background = null;
-  const stopRemoving = observeSceneRenderEnd(scene, () => removeSkyBackground(scene));
+  const stopHiding = observeSceneRenderEnd(scene, () => hideSkyBackgrounds(scene));
   return () => {
-    stopRemoving();
-    // A render that threw never reached its end, which takes the sky out.
-    removeSkyBackground(scene);
+    stopHiding();
+    removeSkyBackgrounds(scene);
     scene.background = previousBackground;
   };
 }
 
-function removeSkyBackground(scene: THREE.Scene): void {
+function hideSkyBackgrounds(scene: THREE.Scene): void {
+  for (const child of scene.children) {
+    if (child instanceof SkyBackground) child.visible = false;
+  }
+}
+
+function removeSkyBackgrounds(scene: THREE.Scene): void {
   // Backwards, as each removal shifts the children after it.
   for (let i = scene.children.length - 1; i >= 0; i--) {
     const child = scene.children[i]!;

@@ -110,7 +110,9 @@ function skyEnvironment(dispose: () => void = () => {}): (gl: THREE.WebGLRendere
 
 /** The sky background a render of `scene` drew, read before the render ends. */
 function drawnBackground(scene: THREE.Scene): SkyBackground | undefined {
-  return scene.children.find((child): child is SkyBackground => child instanceof SkyBackground);
+  return scene.children.find(
+    (child): child is SkyBackground => child instanceof SkyBackground && child.visible
+  );
 }
 
 /** The brightness of the sky background a render of `scene` drew, or null for none. */
@@ -443,7 +445,7 @@ describe('SkyLayer background', () => {
     expect(drawnBackground(scene)).toBeInstanceOf(SkyBackground);
   });
 
-  it('takes the sky out of the scene once the render ends, so no pass outside a render sees it', async () => {
+  it('hides the sky once the render ends, so no pass outside a render draws it', async () => {
     const { scene } = await mount(
       <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} resources={NO_RESOURCES} />
     );
@@ -469,6 +471,15 @@ describe('SkyLayer background', () => {
     scene.background = new THREE.Color(0.3, 0.3, 0.3);
     fireSceneRender(scene, camera);
     expect(drawnBackground(scene)).toBeUndefined();
+  });
+
+  it('takes its sky out of the scene when it unmounts', async () => {
+    const { scene, update } = await mount(
+      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+    );
+    fireSceneRender(scene, camera);
+    await update(null);
+    expect(scene.children.some((child) => child instanceof SkyBackground)).toBe(false);
   });
 });
 

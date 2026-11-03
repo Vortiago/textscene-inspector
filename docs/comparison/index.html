@@ -6173,7 +6173,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>An equirectangular image wrapped onto the sky. The coloured calibration bands and the black grid confirm the U/V orientation matches Godot. The previewer maps each direction to the image with Godot's own approximations of <code>acos</code> and <code>atan2</code> (<code>sky.glsl:179-201</code>), which place the texels near the horizon 6% closer together than the exact functions do. The black horizon band has Godot's width.</p></div>
+        <div class="prose"><p>An equirectangular image wrapped onto the sky. The coloured calibration bands and the black grid confirm the U/V orientation matches Godot. The previewer maps each direction to the image with Godot's approximations of <code>acos</code> and <code>atan2</code> (<code>sky.glsl:179-201</code>). These place the texels near the horizon 6% closer together than the exact functions, so the black horizon band has Godot's width.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>PanoramaSkyMaterial without filtering</h3><span class="status st-done">Done</span></div>

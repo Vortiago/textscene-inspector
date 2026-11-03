@@ -54,7 +54,7 @@ export interface SkyEnvironmentInput {
 
 /**
  * The panorama as the sky shader samples it: `filter_linear` or `filter_nearest` with no mipmaps
- * (`sky_material.cpp:498-505`). `PANORAMA_SKY_FRAGMENT_SHADER` wraps u across the seam, so it
+ * (`sky_material.cpp:498-505`). `PANORAMA_SKY` samples across the seam at u = 0 and 1, so it
  * states Repeat (ADR-0044). The result is a clone only when the arrival diverges, and `releaseView`
  * frees it only then. A live target's copy is filled now, since the bake samples it before the
  * target's next render. Returns null for a sky with no panorama.
@@ -85,16 +85,19 @@ export function buildSkyEnvironment(
 ): SkyEnvironment | null {
   const panoramaView = skyPanoramaTexture(gl, sky, panorama);
   const uniforms = skyUniforms(sky.material, lights, panoramaView);
+  let background: SkyBackground | null = null;
   let layers: SkyLayers;
   try {
+    // Ahead of the bake, so a three whose background program moved frees no layers it baked.
+    background = asBackground ? new SkyBackground(skyGlsl(sky.material), uniforms) : null;
     layers = bakeRadiance(gl, sky, uniforms, energy);
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);
+    background?.dispose();
     releaseView(panoramaView);
     return null;
   }
 
-  const background = asBackground ? new SkyBackground(skyGlsl(sky.material), uniforms) : null;
   // After the bake only the background samples the panorama.
   if (!background) releaseView(panoramaView);
   return {
