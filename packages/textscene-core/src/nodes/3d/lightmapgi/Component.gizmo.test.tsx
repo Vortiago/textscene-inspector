@@ -13,6 +13,7 @@ import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { GizmoScene } from '../../../r3f/testing/GizmoScene';
 import {
   describeGizmoToggle,
+  describeSelectionBox,
   describeInstantiatedGizmo,
   type GizmoNodeCase,
 } from '../../../r3f/testing/gizmoContract';
@@ -85,6 +86,7 @@ const GIZMO_CASE: GizmoNodeCase = {
 };
 describeGizmoToggle('<LightmapGI>', GIZMO_CASE);
 describeInstantiatedGizmo('<LightmapGI>', GIZMO_CASE);
+describeSelectionBox('<LightmapGI>', GIZMO_CASE, null);
 
 describe('<LightmapGI> probe gizmo gate', () => {
   it.each([

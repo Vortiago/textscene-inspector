@@ -172,10 +172,14 @@ manifest entry. Every capture without that field is unchanged.
 
 ## Consequences
 
-An always-drawn gizmo enlarges the hover and selection box of its node. It also counts in the
-frame-on-open fallback for a scene with no mesh, so a scene that holds only a Marker3D frames on its
-cross. A gizmo mesh joins the line box, not the mesh box: Godot frames on the scene's geometry, and
-a chrome mesh is no geometry, so the RayCast3D pyramid needs no `tscnFrameExcluded`.
+A gizmo adds nothing to the hover and selection box of its node. The box is the `get_aabb` of the node
+and of its children (`node_3d_editor_plugin.cpp:5029-5065`). A node with a box of its own, such as a
+Decal, mounts it as a `NodeAabb`.
+
+A gizmo counts in the frame-on-open fallback for a scene with no mesh, so a scene that holds only a
+Marker3D frames on its cross. A gizmo mesh joins the line box, not the mesh box: Godot frames on the
+scene's geometry, and a chrome mesh is no geometry, so the RayCast3D pyramid needs no
+`tscnFrameExcluded`.
 
 Value check, over the 0.3 grey clear: the CPUParticles3D box draws rgb(204, 179, 102) selected and
 rgb(132, 119, 85) unselected. The runtime replica gives rgb(204, 178, 102) and rgb(132, 119, 85).

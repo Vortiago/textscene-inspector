@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SpotLight3D } from './Component';
+import { computeWorldBoundingBox } from '../../../../r3f/bounds';
 import type { TscnNode } from '../../../../parser/types';
 import type { SpotLight3DProperties } from './types';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
@@ -146,5 +147,27 @@ describe('<SpotLight3D> shadow fit', () => {
     const renderer = await ReactThreeTestRenderer.create(withFitter(makeNode({ shadow_blur: 3 })));
     renderThrough(renderer);
     expect(instanceAs<THREE.SpotLight>(renderer.scene.findByType('SpotLight')).shadow.radius).toBe(1);
+  });
+});
+
+describe('<SpotLight3D> selection box', () => {
+  // `Light3D::get_aabb` is the box of the cone along -Z (`light_3d.cpp:164-176`).
+  it('is the box of the cone, with sin(angle) * range for half its width', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <SpotLight3D node={makeNode({ spot_range: 10, spot_angle: 30 })} />
+    );
+    const box = computeWorldBoundingBox(renderer.scene.instance as THREE.Object3D);
+    expect(box.min.x).toBeCloseTo(-5, 5);
+    expect(box.max.y).toBeCloseTo(5, 5);
+    expect([box.min.z, box.max.z]).toEqual([-10, 0]);
+  });
+
+  it('is the cube round the range for an angle past 90 degrees', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <SpotLight3D node={makeNode({ spot_range: 4, spot_angle: 100 })} />
+    );
+    const box = computeWorldBoundingBox(renderer.scene.instance as THREE.Object3D);
+    expect(box.min.toArray()).toEqual([-4, -4, -4]);
+    expect(box.max.toArray()).toEqual([4, 4, 4]);
   });
 });

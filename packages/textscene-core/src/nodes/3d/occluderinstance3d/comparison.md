@@ -12,6 +12,8 @@ renders_as: nothing (a transform-only group)
 
 Holds a baked occluder shape for Godot's occlusion culling. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
+The selection box is the AABB of the occluder: the vertices its mesh builds, grown from the origin (`occluder_instance_3d.cpp:50-58`). A polygon that cannot triangulate has no box.
+
 ## Linting
 
 <!-- lint:begin OccluderInstance3D -->

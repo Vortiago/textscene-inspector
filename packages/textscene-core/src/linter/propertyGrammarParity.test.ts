@@ -263,11 +263,10 @@ describe('property-grammar parity guard', () => {
   // Both are ratchets, not derived, or the assertion compares a number to
   // itself. A transform-only type draws nothing, and a `pending` type is one
   // gap `renderIntent` already declares, so neither widens the population.
-  // BoneAttachment3D used to reuse the Node3D parse; it now reads its five own properties through
-  // a parser of its own, so one slice moves from the reusers to the swept ones, on top of main's three.
-  // RayCast3D and ShapeCast3D move the same way in this branch, two more off the reuser bucket.
-  const SWEPT_SLICES = 136;
-  const PARSER_REUSING_SLICES = 115;
+  // A type that reads its own properties through a parser of its own is a swept slice, not a reuser.
+  // BoneAttachment3D, OccluderInstance3D, RayCast3D and ShapeCast3D read theirs.
+  const SWEPT_SLICES = 137;
+  const PARSER_REUSING_SLICES = 114;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>

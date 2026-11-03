@@ -12,6 +12,7 @@ import { AudioStreamPlayer3D } from './Component';
 import { GizmoScene } from '../../../r3f/testing/GizmoScene';
 import {
   describeGizmoToggle,
+  describeSelectionBox,
   describeInstantiatedGizmo,
   type GizmoNodeCase,
 } from '../../../r3f/testing/gizmoContract';
@@ -82,6 +83,7 @@ const GIZMO_CASE: GizmoNodeCase = {
 };
 describeGizmoToggle('<AudioStreamPlayer3D>', GIZMO_CASE);
 describeInstantiatedGizmo('<AudioStreamPlayer3D>', GIZMO_CASE);
+describeSelectionBox('<AudioStreamPlayer3D>', GIZMO_CASE, null);
 
 describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
   it('renders a gizmo group tagged userData.isAudioGizmo', async () => {

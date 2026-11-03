@@ -14,12 +14,14 @@ import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import { useTreeOrder } from '../../../r3f/contexts/TreeOrderContext';
 import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
+import { NodeAabb } from '../../../r3f/components/NodeAabb';
 import { DecalObject } from '../../../r3f/decal/decalObject';
 import { useSceneDecals } from '../../../r3f/decal/useSceneDecals';
 import { useHeldTexture } from '../../../r3f/textureAtlas/useHeldTexture';
 import type { DecalProperties } from './types';
 import { holdDecalTexture, releaseDecalTexture } from './decalAtlas';
 import { decalGizmoLines } from './gizmoLines';
+import { centredAabb } from '../../../godot/math/aabb';
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector3 } from '../../../godot/math/vector';
 
@@ -58,10 +60,12 @@ export function Decal({ node, children }: NodeComponentProps) {
   const modulate = animatedModulate ?? properties.modulate;
   const size = animatedSize ?? properties.size;
   const decal = useMemo(() => ({ ...properties, modulate, size }), [properties, modulate, size]);
+  const aabb = useMemo(() => centredAabb(size), [size]);
 
   return (
     <Node3D node={node}>
       <DecalElement look={decal} textures={textures} treeOrder={treeOrder} />
+      <NodeAabb aabb={aabb} />
       {/* Godot's editor draws the projector box for every decal, faint while it is not selected
           (`decal_gizmo_plugin.cpp:128`), and its runtime, which the reference renders, draws none. */}
       <PluginGizmo drawnFor="every-node">

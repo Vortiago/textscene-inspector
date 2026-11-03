@@ -5,8 +5,8 @@
  */
 import * as THREE from 'three';
 import { describe, it, expect } from 'vitest';
-import { boxlessUserData, computeWorldBoundingBox } from './bounds.js';
-import { nodeIconUserData } from './editorHelpers.js';
+import { boxlessUserData, computeWorldBoundingBox, godotAabbUserData } from './bounds.js';
+import { editorHelperUserData, nodeIconUserData } from './editorHelpers.js';
 import { placeSkinnedMeshInSkeletonSpace } from '../resources/formats/glb/skinnedMeshSpace.js';
 
 function unitBoxGeometry(): THREE.BufferGeometry {
@@ -147,5 +147,41 @@ describe('computeWorldBoundingBox of a boxless draw', () => {
     const drawn = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     drawn.userData = boxlessUserData();
     expect(computeWorldBoundingBox(new THREE.Group().add(drawn)).isEmpty()).toBe(true);
+  });
+});
+
+describe('computeWorldBoundingBox: editor chrome', () => {
+  // The selection box of Godot unions `get_aabb` alone (`node_3d_editor_plugin.cpp:5029-5065`).
+  it('leaves out a gizmo subtree, whatever it draws', () => {
+    const node = new THREE.Group();
+    const gizmo = new THREE.Group();
+    gizmo.userData = editorHelperUserData();
+    gizmo.add(new THREE.Mesh(unitBoxGeometry(), new THREE.MeshBasicMaterial()));
+    node.add(gizmo);
+
+    expect(computeWorldBoundingBox(node).isEmpty()).toBe(true);
+  });
+});
+
+describe('computeWorldBoundingBox: an explicit Godot AABB', () => {
+  it('bounds the box of a node under its transform', () => {
+    const node = new THREE.Group();
+    node.position.set(10, 0, 0);
+    node.scale.set(2, 1, 1);
+    const aabb = new THREE.Object3D();
+    aabb.userData = godotAabbUserData({ position: { x: -1, y: -2, z: -3 }, size: { x: 2, y: 4, z: 6 } });
+    node.add(aabb);
+
+    const box = computeWorldBoundingBox(node);
+
+    expect(box.min.toArray()).toEqual([8, -2, -3]);
+    expect(box.max.toArray()).toEqual([12, 2, 3]);
+  });
+
+  it('bounds nothing for an AABB with no surface', () => {
+    const aabb = new THREE.Object3D();
+    aabb.userData = godotAabbUserData({ position: { x: 0, y: 0, z: 0 }, size: { x: 0, y: 0, z: 0 } });
+
+    expect(computeWorldBoundingBox(new THREE.Group().add(aabb)).isEmpty()).toBe(true);
   });
 });

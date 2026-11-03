@@ -4,6 +4,8 @@
  */
 
 import { enumNamesByValue } from '../classdb/enumNames.js';
+import { cubeAabb, type Aabb } from '../math/aabb.js';
+import { degToRad } from '../math/math.js';
 import { DirectionalLightSkyMode } from '../rendering/lights/directionalLightSkyMode.js';
 import { DirectionalShadowMode } from '../rendering/lights/directionalShadow.js';
 
@@ -78,3 +80,22 @@ const OmniShadowMode = {
 
 /** Each omni shadow mode by its integer, spelled as its constant without `SHADOW_`. */
 export const OMNI_LIGHT_3D_SHADOW_MODE_NAMES = enumNamesByValue(OmniShadowMode);
+
+/** `Light3D::get_aabb` of a directional light (`scene/3d/light_3d.cpp:158-159`). */
+export const DIRECTIONAL_LIGHT_3D_AABB: Aabb = cubeAabb(1);
+
+/** `Light3D::get_aabb` of an omni light (`scene/3d/light_3d.cpp:161-162`): the cube round its range. */
+export function omniLight3DAabb(range: number): Aabb {
+  return cubeAabb(range);
+}
+
+/**
+ * `Light3D::get_aabb` of a spot light (`scene/3d/light_3d.cpp:164-176`): the box of its cone, apex to
+ * range along -Z. Past 90 degrees the cone is wider than its range, and the box is the omni box.
+ */
+export function spotLight3DAabb(range: number, spotAngleDegrees: number): Aabb {
+  const angle = degToRad(spotAngleDegrees);
+  if (angle > Math.PI / 2) return omniLight3DAabb(range);
+  const side = Math.sin(angle) * range;
+  return { position: { x: -side, y: -side, z: -range }, size: { x: 2 * side, y: 2 * side, z: range } };
+}
