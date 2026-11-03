@@ -35,7 +35,7 @@ vec4 godotNormalRoughness( vec3 normal, float roughness ) {
 /**
  * The fade keeps a reflection whole up to `ROUGHNESS_FADE.start` and none from its end, where the
  * trace draws nothing (`:2204`). The reflection holds Godot's rows, top row first, so the read
- * flips three's bottom-up row. Only the fold calls it, while a render shows its reflection.
+ * flips three's bottom-up row. The caller checks that the render shows its reflection.
  */
 const SSR_FUNCTIONS = /* glsl */ `
 uniform highp sampler2D ${reflection};

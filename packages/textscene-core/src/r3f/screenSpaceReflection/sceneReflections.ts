@@ -69,7 +69,7 @@ interface SceneRender {
   readonly target: THREE.WebGLRenderTarget | null;
   readonly world: WorldReflection | null;
   isTraced: boolean;
-  /** Whether three has drawn the render's opaque list, after which its surfaces show no reflection. */
+  /** Whether three is past the render's latest opaque list, after which its surfaces show no reflection. */
   isPastOpaque: boolean;
 }
 
@@ -161,13 +161,18 @@ export class SceneReflections {
   private beginOpaque(scene: THREE.Scene, camera: THREE.Camera): void {
     const render = this.renders.at(-1);
     if (!render?.world) return;
-    if (!render.isTraced) this.trace(render, scene, camera);
+    const buffers = render.isTraced ? render.world.buffers! : this.trace(render, render.world, scene, camera);
     render.isPastOpaque = false;
-    this.show(render.world.buffers!);
+    this.show(buffers);
   }
 
-  private trace(render: SceneRender, scene: THREE.Scene, camera: THREE.Camera): void {
-    const world = render.world!;
+  /** Traces `render` into its world's buffers, and returns them. */
+  private trace(
+    render: SceneRender,
+    world: WorldReflection,
+    scene: THREE.Scene,
+    camera: THREE.Camera
+  ): ReflectionBuffers {
     const { ssr, isHalfSize } = this.settings();
     const { width, height, samples } = render.target!;
     const buffers = world.buffersFor(this.renderer, { width, height, samples, isHalfSize });
@@ -188,6 +193,7 @@ export class SceneReflections {
     });
     endStep(this.renderer, 'Screen-space reflection');
     render.isTraced = true;
+    return buffers;
   }
 
   /** Ends an opaque list of the innermost render: the transmissive and transparent lists show none. */

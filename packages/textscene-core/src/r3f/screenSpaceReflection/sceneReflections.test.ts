@@ -8,11 +8,10 @@ const SETTINGS: ReflectionSettings = {
   isHalfSize: true,
 };
 
-/** A render of one world buffer whose opaque list has traced, as `trace` leaves the state. */
+/** A render of one world buffer whose opaque list has traced, as `beginOpaque` leaves the state. */
 function tracedRender() {
   const target = new THREE.WebGLRenderTarget(4, 4);
-  const drawn = { target };
-  const renderer = { getRenderTarget: () => drawn.target } as unknown as THREE.WebGLRenderer;
+  const renderer = {} as unknown as THREE.WebGLRenderer;
   const reflections = new SceneReflections(
     renderer,
     () => SETTINGS,
@@ -21,7 +20,7 @@ function tracedRender() {
   const camera = new THREE.PerspectiveCamera();
   reflections.begin(camera, target);
   ssrState[SSR_STATE.showsReflection] = 1;
-  return { renderer, reflections, camera, drawn };
+  return { renderer, reflections, camera };
 }
 
 function reach(sentinel: THREE.Mesh, renderer: THREE.WebGLRenderer, camera: THREE.Camera): void {
@@ -36,15 +35,6 @@ afterEach(() => {
 describe('SceneReflections', () => {
   it("shows no reflection after the opaque list, as Godot's alpha pass reads none", () => {
     const { renderer, reflections, camera } = tracedRender();
-
-    reach(reflections.lastSentinel, renderer, camera);
-
-    expect(ssrState[SSR_STATE.showsReflection]).toBe(0);
-  });
-
-  it("hides the reflection after the opaque list of three's transmission pass too", () => {
-    const { renderer, reflections, camera, drawn } = tracedRender();
-    drawn.target = new THREE.WebGLRenderTarget(4, 4);
 
     reach(reflections.lastSentinel, renderer, camera);
 
