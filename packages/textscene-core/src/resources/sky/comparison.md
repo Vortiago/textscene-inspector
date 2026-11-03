@@ -22,6 +22,8 @@ A gradient sky from top, horizon and ground colours. The warm-top, green-horizon
 
 An equirectangular image wrapped onto the sky. The coloured calibration bands and the black grid confirm the U/V orientation matches Godot.
 
+A panorama that is a ViewportTexture counts its path from the local scene of the node that holds the Environment: a WorldEnvironment or a Camera3D. Godot sets it up only when the Environment, the Sky and the PanoramaSkyMaterial are all local to scene. Otherwise the sky samples the magenta and black placeholder, as in Godot. A set-up panorama samples the live target. The background follows each draw of the target. The radiance keeps the first draw, as in Godot, where a draw of the target leaves the sky clean.
+
 ## PhysicalSkyMaterial
 <!-- compare: image=unit-sky-physical status=done fixture=unit-sky-physical.tscn -->
 

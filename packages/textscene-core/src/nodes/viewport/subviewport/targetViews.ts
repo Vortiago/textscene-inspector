@@ -10,7 +10,12 @@ import type { TargetView } from '../../../r3f/contexts/ViewportTextureContext.js
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures.js';
 import { drawOffscreen } from '../../../r3f/offscreen.js';
 import { copyTexels, wholeTexels, type TexelPlacement, type TexelTransfer } from '../../../r3f/texelCopy.js';
-import { hasLiveCopies, publishLiveTargets, refillLiveCopies } from '../../../r3f/liveTargets';
+import {
+  hasLiveCopies,
+  noteLiveTargetDrawn,
+  publishLiveTargets,
+  refillLiveCopies,
+} from '../../../r3f/liveTargets';
 import { holdUntilReleased, isHeld, useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { copySampling } from '../../../resources/textures/copySampling.js';
 import { storeSrgbBytes } from './offscreenViewport.js';
@@ -23,10 +28,11 @@ interface PassView extends TargetView {
   dispose(): void;
 }
 
-/** Both views of a target, filled and disposed together. `fill` fills each reader's copy after. */
+/** Both views of a target, filled and disposed together. */
 interface PassTargetViews {
   plain: PassView;
   decoding: PassView;
+  /** Runs after each render of the pass: counts a draw of both views, then fills each reader's copy. */
   fill(): void;
   dispose(): void;
 }
@@ -45,6 +51,8 @@ export function useTargetViews(target: THREE.WebGLRenderTarget, isTransparent: b
       // for a pass with nothing to fill.
       fill: () => {
         const views = [plain, decoding];
+        noteLiveTargetDrawn(plain.texture);
+        noteLiveTargetDrawn(decoding.texture);
         if (!views.some((view) => view.isFilled() || hasLiveCopies(view.texture))) return;
         drawOffscreen(gl, () => {
           views.forEach((view) => view.fill());

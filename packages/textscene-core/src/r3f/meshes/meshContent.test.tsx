@@ -169,6 +169,9 @@ describe('useMeshContent for a TextMesh', () => {
     const { fake, result } = renderText('SubResource("text")');
 
     await act(async () => fake.fonts._resolve(FONT_PATH, TRUE_TYPE_FILE));
+    // The outlines settle after the lazy chunk of the hinting interpreter loads, which a cold
+    // import in a fresh CI worker makes slower than one act.
+    await vi.waitFor(() => expect(result.current.content.kind).toBe('surfaced'));
 
     const { content, undrawn } = result.current;
     if (content.kind !== 'surfaced') throw new Error(`expected a surfaced mesh, got ${content.kind}`);

@@ -2,7 +2,8 @@
  * A font's glyph outlines as Godot's text server hands them to TextMesh: the glyph index of a
  * character from `cmap` (`sfntCmap.ts`), and the points of that glyph from `glyf` (`sfntGlyf.ts`) or
  * from `CFF ` and `CFF2` (`sfntCff.ts`). A WOFF or WOFF2 opens through `fontContainer.ts`, which
- * hands the readers the plain tables.
+ * hands the readers the plain tables. A TrueType font that FreeType hints natively loads the bytecode
+ * interpreter (`truetype/trueTypeHinting.ts`) on demand, which hints each `glyf` outline.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -14,6 +15,7 @@ import { cmapLookup } from './sfntCmap';
 import type { GlyphContours } from './glyphContours';
 import type { GlyphVariation } from './fontMetrics';
 import { cffOutlineReader } from './sfntCff';
+import { isNativelyHinted, type GlyphHinting } from './glyphHinting';
 import { glyphOutlineReader } from './sfntGlyf';
 import { variedContours } from './glyphVariation';
 import { openFontContainer } from './fontContainer';
@@ -44,12 +46,19 @@ function orOnRangeError<T>(read: () => T, fallback: T): T {
  */
 export async function openFontOutlines(bytes: ArrayBuffer): Promise<SfntOutlines | null> {
   const sfnt = await openFontContainer(bytes, OUTLINE_TABLE_TAGS);
-  return sfnt && readSfntOutlines(sfnt);
+  return sfnt && readSfntOutlines(sfnt, await glyphHintingOf(sfnt));
 }
 
-function readSfntOutlines(sfnt: SfntFile): SfntOutlines | null {
+/** The TrueType hinting of a natively hinted `glyf` font, or null for a font FreeType does not hint so. */
+async function glyphHintingOf(sfnt: SfntFile): Promise<GlyphHinting | null> {
+  if (!sfnt.tables.has('glyf') || !isNativelyHinted(sfnt)) return null;
+  const { trueTypeHinting } = await import('./truetype/trueTypeHinting');
+  return orOnRangeError(() => trueTypeHinting(sfnt), null);
+}
+
+function readSfntOutlines(sfnt: SfntFile, hinting: GlyphHinting | null): SfntOutlines | null {
   const cmap = sfnt.tables.get('cmap');
-  const outlineOf = glyphOutlineReader(sfnt) ?? cffOutlineReader(sfnt);
+  const outlineOf = glyphOutlineReader(sfnt, hinting) ?? cffOutlineReader(sfnt);
   if (!cmap || !outlineOf) return null;
   const lookup = orOnRangeError(() => cmapLookup(sfnt.dv, cmap.offset), null);
   if (!lookup) return null;

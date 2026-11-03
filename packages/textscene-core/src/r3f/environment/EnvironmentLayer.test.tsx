@@ -4,7 +4,6 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { EnvironmentLayer } from './EnvironmentLayer';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
-import { NO_RESOURCES } from '../SceneResourcesContext';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { SSR_STATE, ssrState } from '../screenSpaceReflection/ssrUniforms';
 
@@ -16,7 +15,7 @@ interface MountOptions {
 function layer(properties: Record<string, string>, { showFog = true }: MountOptions) {
   return (
     <ViewportModeProvider initialShowFog={showFog}>
-      <EnvironmentLayer settings={environmentSettingsOf(properties)} sky={null} skyResources={NO_RESOURCES} />
+      <EnvironmentLayer settings={environmentSettingsOf(properties)} sky={null} panorama={null} />
     </ViewportModeProvider>
   );
 }

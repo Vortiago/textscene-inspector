@@ -10,7 +10,6 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { EnclosingViewportProvider } from '../contexts/EnclosingViewportContext';
 import { ViewportActionsProvider } from '../contexts/ViewportActionsContext';
-import { NO_RESOURCES } from '../SceneResourcesContext';
 import { TreeOrderProvider, type TreeOrder } from '../contexts/TreeOrderContext';
 import type { EnvironmentLayerProps } from './EnvironmentLayer';
 import { CanvasWorldScope, WorldEnvironmentScope, usePublishEnvironment } from './WorldEnvironmentScope';
@@ -55,7 +54,7 @@ function environment(name: string): EnvironmentResolution {
   const settings = { name } as unknown as EnvironmentLayerProps['settings'];
   return {
     status: 'resolved',
-    environment: { settings, sky: null, resources: NO_RESOURCES, skyResources: NO_RESOURCES },
+    environment: { settings, sky: null, panorama: null, glowMap: null },
   };
 }
 

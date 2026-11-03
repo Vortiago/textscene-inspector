@@ -1,28 +1,49 @@
 /**
- * Reads the outline of a glyph from the `glyf` and `loca` tables of a TrueType font, simple or
- * composite, scaled to a font size with FreeType's fixed-point arithmetic.
+ * Loads the outline of a glyph from the `glyf` and `loca` tables of a TrueType font as FreeType's
+ * TrueType driver does for Godot (`ttgload.c`, `load_truetype_glyph`): simple or composite, scaled
+ * to a font size with FreeType's fixed-point arithmetic, and hinted by the font's own instructions
+ * when a hinter (`glyphHinting.ts`) is given. Each glyph ends in four phantom points, which mark
+ * its side bearings and advances and which the instructions may move.
  *
+ * Portions ported from FreeType (FreeType Project License).
+ * Copyright (C) 1996-2026 by David Turner, Robert Wilhelm, and Werner Lemberg.
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { ContourPointTag } from '../../../../godot/text/textServerEnums';
-import { ftMulFix, getFontOutlineScale } from './fontMetrics';
+import { ByteReader, ReadPastEndError } from '../../../../resources/formats/binaryresource/byteReader';
+import { freeTypeTrueTypeSize, ftMulFix, pixRound } from './fontMetrics';
+import { ftVectorLength } from './ftVector';
 import {
   transformOutline,
+  type ContourTag,
   type GlyphOutlineReader,
   type Matrix2x2,
   type ScaledOutline,
 } from './glyphContours';
 import {
+  newGlyphZone,
+  PHANTOM_POINT_COUNT,
+  TAG_TOUCH_BOTH,
+  type GlyphHinting,
+  type GlyphLoadHinter,
+  type GlyphZone,
+} from './glyphHinting';
+import {
   COMPONENT_ARGS_ARE_WORDS,
   COMPONENT_ARGS_ARE_XY_VALUES,
   COMPONENT_HAS_2X2,
+  COMPONENT_HAS_INSTRUCTIONS,
   COMPONENT_HAS_SCALE,
   COMPONENT_HAS_XY_SCALE,
   COMPONENT_MORE,
+  COMPONENT_ROUND_XY_TO_GRID,
+  COMPONENT_SCALED_OFFSET,
+  COMPONENT_USE_MY_METRICS,
+  GLYPH_HEADER_SIZE,
+  GLYPH_Y_MAX_OFFSET,
   LONG_LOCA_FORMAT,
   SIMPLE_ON_CURVE,
   SIMPLE_REPEAT,
@@ -30,220 +51,494 @@ import {
   SIMPLE_X_SHORT,
   SIMPLE_Y_SAME_OR_POSITIVE,
   SIMPLE_Y_SHORT,
-  componentArgumentByteCount,
-  componentMatrixByteCount,
+  locaEntry,
 } from './glyfFormat';
-import { readUnitsPerEm, tableFits, type SfntFile } from './sfntTables';
+import { glyphMetricsReader, type GlyphMetrics } from './sfntGlyphMetrics';
+import { readGlyphCount, readIndexToLocFormat, readUnitsPerEm, tableFits, type SfntFile } from './sfntTables';
 
-const HEAD_INDEX_TO_LOC_FORMAT_OFFSET = 50;
+/** `head`: flags(2) at 16, whose bit 3 rounds the ppem, and the table through indexToLocFormat. */
+const HEAD_FLAGS_OFFSET = 16;
+const HEAD_FLAG_PPEM_ROUNDED = 0x8;
 const HEAD_TABLE_MIN_LENGTH = 52;
-const MAXP_NUM_GLYPHS_OFFSET = 4;
-const MAXP_TABLE_MIN_LENGTH = 6;
 
-/**
- * The deepest chain of composite glyphs read. FreeType refuses a loop through its own recursion
- * limit (`ttgload.c`, `loader->recurse_count`), and a font that nests deeper is corrupt.
- */
-const MAX_COMPOSITE_DEPTH = 16;
-
-/** An F2Dot14 matrix entry as the 16.16 `FT_Fixed` FreeType multiplies by (`ttgload.c`, `* 4`). */
+/** FreeType's arbitrary limit on nested composites. */
+const MAX_COMPOSITE_DEPTH = 100;
+/** The contour count FreeType refuses for a simple glyph. */
+const MAX_SIMPLE_CONTOURS = 0xfff;
+/** An F2Dot14 matrix entry as the 16.16 `FT_Fixed` FreeType multiplies by (`* 4`). */
 const F2DOT14_TO_16_16 = 4;
+/** `FT_CURVE_TAG`: the bits of a tag that say what kind of point it is, which Godot reads. */
+const CURVE_TAG_MASK = 0x3;
 
-/**
- * Reads the flags of a simple glyph, expanding each repeat, and returns where the x deltas start.
- * A repeat that runs past `pointCount` is cut there: the axis readers would otherwise emit more
- * coordinates than the glyph has points.
- */
-function readSimpleFlags(dv: DataView, start: number, pointCount: number): { flags: number[]; next: number } {
-  const flags: number[] = [];
-  let at = start;
-  while (flags.length < pointCount) {
-    const flag = dv.getUint8(at++);
-    flags.push(flag);
-    if (flag & SIMPLE_REPEAT) {
-      for (let repeats = dv.getUint8(at++); repeats > 0 && flags.length < pointCount; repeats--)
-        flags.push(flag);
-    }
+/** A FreeType error that fails the whole glyph load, so Godot draws no outline for the glyph. */
+class GlyphLoadError extends Error {}
+
+/** `read`, where a read past the glyph's bytes fails the load with `error`, as FreeType's checks do. */
+function readingGlyph<T>(error: string, read: () => T): T {
+  try {
+    return read();
+  } catch (cause) {
+    if (cause instanceof ReadPastEndError) throw new GlyphLoadError(error);
+    throw cause;
   }
-  return { flags, next: at };
+}
+
+/** The four phantom points: left and right side bearing, then top and bottom, in 26.6 once scaled. */
+interface PhantomPoints {
+  x: number[];
+  y: number[];
+}
+
+interface GlyphHeader {
+  contourCount: number;
+  xMin: number;
+  yMax: number;
+}
+
+const EMPTY_GLYPH_HEADER: GlyphHeader = Object.freeze({ contourCount: 0, xMin: 0, yMax: 0 });
+
+/** `TT_Load_Glyph_Header`, which leaves `reader` on the body. A glyph of no contours sits at the origin. */
+function readHeader(reader: ByteReader): GlyphHeader {
+  if (reader.remaining < GLYPH_HEADER_SIZE) throw new GlyphLoadError('Invalid_Outline');
+  const contourCount = reader.i16();
+  const xMin = reader.i16();
+  reader.seek(GLYPH_Y_MAX_OFFSET);
+  const yMax = reader.i16();
+  return contourCount === 0 ? EMPTY_GLYPH_HEADER : { contourCount, xMin, yMax };
+}
+
+/** One component of a composite glyph (`TT_Load_Composite_Glyph`). */
+interface Component {
+  flags: number;
+  glyphIndex: number;
+  /** A signed offset in font units, or with the XY flag clear the numbers of the points to match. */
+  arguments: [number, number];
+  matrix: Matrix2x2 | null;
+}
+
+/** The tables and facts of a font that every glyph load reads. */
+interface GlyfFont {
+  dv: DataView;
+  /** The bytes of the whole font, which each glyph's bytes are a view of. */
+  bytes: Uint8Array;
+  unitsPerEm: number;
+  isPpemRounded: boolean;
+  glyfOffset: number;
+  glyfLength: number;
+  locaOffset: number;
+  locationCount: number;
+  isLongLoca: boolean;
+  glyphCount: number;
+  metricsOf: (glyphIndex: number, yMax: number) => GlyphMetrics;
+}
+
+/** `tt_face_get_location`: the glyph's offset in `glyf` and its length, 0 for none or a broken entry. */
+function glyphLocation(font: GlyfFont, glyphIndex: number): { offset: number; length: number } {
+  const { dv, locaOffset, locationCount, isLongLoca, glyfLength } = font;
+  let start = 0;
+  let end = 0;
+  if (glyphIndex < locationCount) {
+    start = locaEntry(dv, locaOffset, glyphIndex, isLongLoca);
+    end = glyphIndex + 1 < locationCount ? locaEntry(dv, locaOffset, glyphIndex + 1, isLongLoca) : start;
+  }
+  if (start > glyfLength) return { offset: 0, length: 0 };
+  if (end > glyfLength) {
+    // The last entry may run past the table, and is cut at its end.
+    if (glyphIndex !== locationCount - 2) return { offset: 0, length: 0 };
+    end = glyfLength;
+  }
+  return { offset: start, length: end >= start ? end - start : glyfLength - start };
+}
+
+/** `tt_loader_set_pp`: the phantom points in font units. The v40 interpreter centres the top and bottom ones. */
+function phantomPoints({ xMin, yMax }: GlyphHeader, { horizontal, vertical }: GlyphMetrics): PhantomPoints {
+  const left = xMin - horizontal.bearing;
+  const top = yMax + vertical.bearing;
+  const centre = Math.trunc(horizontal.advance / 2);
+  return { x: [left, left + horizontal.advance, centre, centre], y: [0, 0, top, top - vertical.advance] };
+}
+
+/** The flags of each point of a simple glyph, a repeat expanded, which may not run past the last point. */
+function readSimpleFlags(reader: ByteReader, pointCount: number): number[] {
+  const flags: number[] = [];
+  while (flags.length < pointCount) {
+    const flag = reader.u8();
+    flags.push(flag);
+    if (!(flag & SIMPLE_REPEAT)) continue;
+    const repeats = reader.u8();
+    if (flags.length + repeats > pointCount) throw new GlyphLoadError('Invalid_Outline');
+    for (let k = 0; k < repeats; k++) flags.push(flag);
+  }
+  return flags;
 }
 
 /** One axis of a simple glyph: a delta per point, a byte or a word or none, summed into coordinates. */
 function readSimpleAxis(
-  dv: DataView,
-  start: number,
+  reader: ByteReader,
   flags: readonly number[],
   masks: { short: number; sameOrPositive: number }
-): { coordinates: number[]; next: number } {
-  const coordinates: number[] = [];
-  let at = start;
+): number[] {
   let value = 0;
-  for (const flag of flags) {
+  return flags.map((flag) => {
     if (flag & masks.short) {
-      const magnitude = dv.getUint8(at++);
+      const magnitude = reader.u8();
       value += flag & masks.sameOrPositive ? magnitude : -magnitude;
-    } else if (!(flag & masks.sameOrPositive)) {
-      value += dv.getInt16(at, false);
-      at += 2;
-    }
-    coordinates.push(value);
-  }
-  return { coordinates, next: at };
+    } else if (!(flag & masks.sameOrPositive)) value += reader.i16();
+    return value;
+  });
 }
 
-function readSimpleGlyph(dv: DataView, glyph: number, contourCount: number, scale: number): ScaledOutline {
-  const contourEnds = Array.from({ length: contourCount }, (_, i) => dv.getUint16(glyph + 10 + i * 2, false));
-  const pointCount = (contourEnds[contourCount - 1] ?? -1) + 1;
-  const instructionLength = dv.getUint16(glyph + 10 + contourCount * 2, false);
-  const { flags, next: xStart } = readSimpleFlags(
-    dv,
-    glyph + 12 + contourCount * 2 + instructionLength,
-    pointCount
-  );
-  const x = readSimpleAxis(dv, xStart, flags, {
+/** A simple glyph in font units (`TT_Load_Simple_Glyph`), with its instructions. */
+interface SimpleGlyph {
+  x: number[];
+  y: number[];
+  tags: number[];
+  contourEnds: number[];
+  instructions: Uint8Array;
+}
+
+function readSimpleGlyph(reader: ByteReader, contourCount: number): SimpleGlyph {
+  if (contourCount >= MAX_SIMPLE_CONTOURS) throw new GlyphLoadError('Invalid_Outline');
+  const contourEnds: number[] = [];
+  for (let contour = 0, last = -1; contour < contourCount; contour++) {
+    const end = reader.u16();
+    if (end <= last) throw new GlyphLoadError('Invalid_Outline');
+    contourEnds.push((last = end));
+  }
+  const pointCount = contourEnds[contourCount - 1]! + 1;
+  const instructionCount = reader.u16();
+  if (instructionCount > reader.remaining) throw new GlyphLoadError('Too_Many_Hints');
+  const instructions = reader.take(instructionCount);
+  const flags = readSimpleFlags(reader, pointCount);
+  const x = readSimpleAxis(reader, flags, {
     short: SIMPLE_X_SHORT,
     sameOrPositive: SIMPLE_X_SAME_OR_POSITIVE,
   });
-  const y = readSimpleAxis(dv, x.next, flags, {
+  const y = readSimpleAxis(reader, flags, {
     short: SIMPLE_Y_SHORT,
     sameOrPositive: SIMPLE_Y_SAME_OR_POSITIVE,
   });
-  // The font stores design units: `FT_Load_Glyph` scales them to 26.6.
-  return {
-    x: x.coordinates.map((value) => ftMulFix(value, scale)),
-    y: y.coordinates.map((value) => ftMulFix(value, scale)),
-    tags: flags.map((flag) => (flag & SIMPLE_ON_CURVE ? ContourPointTag.ON : ContourPointTag.OFF_CONIC)),
-    contourEnds,
-  };
+  return { x, y, tags: flags.map((flag) => flag & SIMPLE_ON_CURVE), contourEnds, instructions };
 }
 
 /** A component's matrix, or null for the identity. */
-function readComponentMatrix(
-  dv: DataView,
-  at: number,
-  flags: number
-): { matrix: Matrix2x2 | null; next: number } {
-  const entry = (offset: number) => dv.getInt16(at + offset, false) * F2DOT14_TO_16_16;
+function readComponentMatrix(reader: ByteReader, flags: number): Matrix2x2 | null {
+  const entry = () => reader.i16() * F2DOT14_TO_16_16;
   if (flags & COMPONENT_HAS_SCALE) {
-    const scale = entry(0);
-    return { matrix: [scale, 0, 0, scale], next: at + componentMatrixByteCount(flags) };
+    const scale = entry();
+    return [scale, 0, 0, scale];
   }
   if (flags & COMPONENT_HAS_XY_SCALE) {
-    return { matrix: [entry(0), 0, 0, entry(2)], next: at + componentMatrixByteCount(flags) };
+    const xx = entry();
+    return [xx, 0, 0, entry()];
   }
   if (flags & COMPONENT_HAS_2X2) {
-    return { matrix: [entry(0), entry(4), entry(2), entry(6)], next: at + componentMatrixByteCount(flags) };
+    const [xx, yx, xy, yy] = [entry(), entry(), entry(), entry()];
+    return [xx, xy, yx, yy];
   }
-  return { matrix: null, next: at };
+  return null;
 }
 
-class GlyphReader {
-  private readonly glyfTable: number;
-  private readonly locaTable: number;
-  private readonly isLongLoca: boolean;
-
-  constructor(
-    private readonly dv: DataView,
-    private readonly glyphCount: number,
-    tables: SfntFile['tables'],
-    isLongLoca: boolean
-  ) {
-    this.glyfTable = tables.get('glyf')!.offset;
-    this.locaTable = tables.get('loca')!.offset;
-    this.isLongLoca = isLongLoca;
-  }
-
-  /** The glyph's `glyf` offset from its `loca` entry: a short entry stores half the offset, a long one the whole. */
-  private locaEntry(glyphIndex: number): number {
-    return this.isLongLoca
-      ? this.dv.getUint32(this.locaTable + glyphIndex * 4, false)
-      : this.dv.getUint16(this.locaTable + glyphIndex * 2, false) * 2;
-  }
-
-  /** The glyph's offset in `glyf`, or null for a glyph with no data. */
-  private glyphOffset(glyphIndex: number): number | null {
-    if (glyphIndex < 0 || glyphIndex >= this.glyphCount) return null;
-    const start = this.locaEntry(glyphIndex);
-    return this.locaEntry(glyphIndex + 1) > start ? this.glyfTable + start : null;
-  }
-
-  /** The glyph's points in 26.6 fixed point, y up, with a composite resolved to its components. */
-  load(glyphIndex: number, scale: number, depth = 0): ScaledOutline | null {
-    const glyph = this.glyphOffset(glyphIndex);
-    if (glyph === null || depth > MAX_COMPOSITE_DEPTH) return null;
-    const contourCount = this.dv.getInt16(glyph, false);
-    if (contourCount >= 0) return readSimpleGlyph(this.dv, glyph, contourCount, scale);
-    return this.loadComposite(glyph + 10, scale, depth);
-  }
-
-  private loadComposite(start: number, scale: number, depth: number): ScaledOutline {
-    const whole: ScaledOutline = { x: [], y: [], tags: [], contourEnds: [] };
-    let at = start;
-    let flags: number;
-    do {
-      flags = this.dv.getUint16(at, false);
-      const componentIndex = this.dv.getUint16(at + 2, false);
-      const arguments_ = this.readComponentArguments(at + 4, flags);
-      const { matrix, next } = readComponentMatrix(this.dv, arguments_.next, flags);
-      at = next;
-
-      const component = this.load(componentIndex, scale, depth + 1);
-      if (!component) continue;
-      if (matrix) transformOutline(component, matrix);
-      const [first, second] = arguments_.values;
-      const [dx, dy] =
-        flags & COMPONENT_ARGS_ARE_XY_VALUES
-          ? [ftMulFix(first, scale), ftMulFix(second, scale)]
-          : [whole.x[first]! - component.x[second]!, whole.y[first]! - component.y[second]!];
-      appendOutline(whole, component, dx, dy);
-    } while (flags & COMPONENT_MORE);
-    return whole;
-  }
-
-  /**
-   * The two arguments of a component: a signed offset in design units, or with the XY flag clear
-   * the unsigned numbers of the point to match in the glyph so far and in the component.
-   */
-  private readComponentArguments(at: number, flags: number): { values: [number, number]; next: number } {
-    const isXyOffset = (flags & COMPONENT_ARGS_ARE_XY_VALUES) !== 0;
-    if (flags & COMPONENT_ARGS_ARE_WORDS) {
-      const read = (offset: number) =>
-        isXyOffset ? this.dv.getInt16(offset, false) : this.dv.getUint16(offset, false);
-      return { values: [read(at), read(at + 2)], next: at + componentArgumentByteCount(flags) };
-    }
-    const read = (offset: number) => (isXyOffset ? this.dv.getInt8(offset) : this.dv.getUint8(offset));
-    return { values: [read(at), read(at + 1)], next: at + componentArgumentByteCount(flags) };
-  }
-}
-
-function appendOutline(whole: ScaledOutline, part: ScaledOutline, dx: number, dy: number): void {
-  const firstPoint = whole.x.length;
-  for (let i = 0; i < part.x.length; i++) {
-    whole.x.push(part.x[i]! + dx);
-    whole.y.push(part.y[i]! + dy);
-    whole.tags.push(part.tags[i]!);
-  }
-  for (const end of part.contourEnds) whole.contourEnds.push(firstPoint + end);
+/** The two arguments of a component: signed offsets, or with the XY flag clear unsigned point numbers. */
+function readComponentArguments(reader: ByteReader, flags: number): [number, number] {
+  const isOffset = (flags & COMPONENT_ARGS_ARE_XY_VALUES) !== 0;
+  const read =
+    flags & COMPONENT_ARGS_ARE_WORDS
+      ? () => (isOffset ? reader.i16() : reader.u16())
+      : () => (isOffset ? reader.i8() : reader.u8());
+  return [read(), read()];
 }
 
 /**
- * The glyph-outline reader of a font's `glyf` outlines, or null for a font with no `glyf` or `loca`
- * table, or a `head` or `maxp` that does not fit. A corrupt table that puts an offset past the
- * buffer reads as a glyph with no outline.
+ * `TT_Load_Composite_Glyph`: the components after the header, and the offset in the glyph's bytes
+ * after them, where the composite's instructions start.
  */
-export function glyphOutlineReader({ dv, tables }: SfntFile): GlyphOutlineReader | null {
-  const head = tables.get('head');
-  const maxp = tables.get('maxp');
-  if (!head || !maxp || !tables.has('glyf') || !tables.has('loca')) return null;
-  if (!tableFits(dv, head, HEAD_TABLE_MIN_LENGTH) || !tableFits(dv, maxp, MAXP_TABLE_MIN_LENGTH)) return null;
+function readComponents(
+  reader: ByteReader,
+  glyphCount: number
+): { components: Component[]; instructionsAt: number } {
+  const components: Component[] = [];
+  let flags: number;
+  do {
+    flags = reader.u16();
+    const glyphIndex = reader.u16();
+    if (glyphIndex >= glyphCount) throw new GlyphLoadError('Invalid_Composite');
+    const args = readComponentArguments(reader, flags);
+    components.push({ flags, glyphIndex, arguments: args, matrix: readComponentMatrix(reader, flags) });
+  } while (flags & COMPONENT_MORE);
+  return { components, instructionsAt: reader.position };
+}
 
+/** The phantom points a zone ends in. */
+function zonePhantoms(zone: GlyphZone): PhantomPoints {
+  const first = zone.pointCount - PHANTOM_POINT_COUNT;
+  return { x: Array.from(zone.curX.subarray(first)), y: Array.from(zone.curY.subarray(first)) };
+}
+
+/** One `FT_Load_Glyph` of a TrueType glyph: the outline it builds, and the loader's phantom points. */
+class GlyphLoad {
+  readonly x: number[] = [];
+  readonly y: number[] = [];
+  /** FreeType's tags, with the touch flags the instructions set. */
+  readonly tags: number[] = [];
+  readonly contourEnds: number[] = [];
+  phantoms: PhantomPoints = { x: [0, 0, 0, 0], y: [0, 0, 0, 0] };
+  /** The composite glyph of each nesting level above the glyph loading, which no component may repeat. */
+  private readonly composites: number[] = [];
+
+  constructor(
+    private readonly font: GlyfFont,
+    private readonly scale: number,
+    private readonly hinter: GlyphLoadHinter | null
+  ) {}
+
+  /** `load_truetype_glyph`: appends the glyph's points, or throws the error that fails the load. */
+  load(glyphIndex: number, depth: number): void {
+    if (depth > MAX_COMPOSITE_DEPTH) throw new GlyphLoadError('Invalid_Composite');
+    if (glyphIndex >= this.font.glyphCount) throw new GlyphLoadError('Invalid_Glyph_Index');
+    const { offset, length } = glyphLocation(this.font, glyphIndex);
+    const start = this.font.glyfOffset + offset;
+    // `subarray` cuts a glyph that runs past the font short, so its read fails the load.
+    const reader = ByteReader.bigEndian(this.font.bytes.subarray(start, start + length));
+    const header = length === 0 ? EMPTY_GLYPH_HEADER : readHeader(reader);
+    this.phantoms = phantomPoints(header, this.font.metricsOf(glyphIndex, header.yMax));
+    if (header.contourCount === 0) {
+      this.phantoms = this.scaled(this.phantoms);
+      return;
+    }
+    if (header.contourCount > 0)
+      this.loadSimple(readingGlyph('Invalid_Outline', () => readSimpleGlyph(reader, header.contourCount)));
+    else this.loadComposite(glyphIndex, depth, reader, start, length);
+  }
+
+  private scaled({ x, y }: PhantomPoints): PhantomPoints {
+    return {
+      x: x.map((value) => ftMulFix(value, this.scale)),
+      y: y.map((value) => ftMulFix(value, this.scale)),
+    };
+  }
+
+  /** `TT_Process_Simple_Glyph`: scales the glyph, hints it, and appends it with its contours renumbered. */
+  private loadSimple(glyph: SimpleGlyph): void {
+    const zone = this.simpleZone(glyph);
+    this.phantoms = zonePhantoms(zone);
+    if (this.hinter) this.hint(zone, glyph.instructions, false);
+    this.append(zone, glyph.contourEnds);
+  }
+
+  /** The zone of a simple glyph and its phantom points, scaled, and unscaled for the instructions. */
+  private simpleZone({ x, y, tags, contourEnds }: SimpleGlyph): GlyphZone {
+    const pointCount = x.length;
+    const zone = newGlyphZone(pointCount + PHANTOM_POINT_COUNT, contourEnds, 0);
+    for (let point = 0; point < pointCount; point++) this.place(zone, point, x[point]!, y[point]!);
+    for (let phantom = 0; phantom < PHANTOM_POINT_COUNT; phantom++)
+      this.place(zone, pointCount + phantom, this.phantoms.x[phantom]!, this.phantoms.y[phantom]!);
+    zone.tags.set(tags);
+    return zone;
+  }
+
+  /** Puts `point` of `zone` at `(x, y)` in font units, and at its scaled place. */
+  private place(zone: GlyphZone, point: number, x: number, y: number): void {
+    zone.orusX[point] = x;
+    zone.orusY[point] = y;
+    zone.curX[point] = ftMulFix(x, this.scale);
+    zone.curY[point] = ftMulFix(y, this.scale);
+  }
+
+  /** `FT_GlyphLoader_Add`: the zone's points after those loaded, its contours numbered in the outline. */
+  private append(zone: GlyphZone, contourEnds: readonly number[]): void {
+    const firstPoint = this.x.length;
+    for (let point = 0; point < zone.pointCount - PHANTOM_POINT_COUNT; point++) {
+      this.x.push(zone.curX[point]!);
+      this.y.push(zone.curY[point]!);
+      this.tags.push(zone.tags[point]!);
+    }
+    for (const end of contourEnds) this.contourEnds.push(firstPoint + end);
+  }
+
+  /** `TT_Hint_Glyph`'s part in the loader: the hinted phantom points stand, but under backward compatibility. */
+  private hint(zone: GlyphZone, instructions: Uint8Array, isComposite: boolean): void {
+    this.hinter!.hint(zone, instructions, isComposite);
+    if (!this.hinter!.isBackwardCompatible) this.phantoms = zonePhantoms(zone);
+  }
+
+  /**
+   * Loads each component in turn, each with its own phantom points, which a component with
+   * USE_MY_METRICS hands to the composite. A composite in its own chain is an error.
+   */
+  private loadComposite(
+    glyphIndex: number,
+    depth: number,
+    reader: ByteReader,
+    start: number,
+    byteLength: number
+  ): void {
+    this.composites.length = depth;
+    if (this.composites.includes(glyphIndex)) throw new GlyphLoadError('Invalid_Composite');
+    this.composites[depth] = glyphIndex;
+
+    const { components, instructionsAt } = readingGlyph('Invalid_Composite', () =>
+      readComponents(reader, this.font.glyphCount)
+    );
+    this.phantoms = this.scaled(this.phantoms);
+    const firstPoint = this.x.length;
+    const firstContour = this.contourEnds.length;
+    for (const component of components) {
+      const phantoms = this.phantoms;
+      const basePointCount = this.x.length;
+      this.load(component.glyphIndex, depth + 1);
+      if (!(component.flags & COMPONENT_USE_MY_METRICS)) this.phantoms = phantoms;
+      if (this.x.length !== basePointCount) this.placeComponent(component, firstPoint, basePointCount);
+    }
+    const last = components[components.length - 1]!;
+    if (this.hinter && last.flags & COMPONENT_HAS_INSTRUCTIONS && this.x.length > firstPoint)
+      this.hintComposite(firstPoint, firstContour, start + instructionsAt, byteLength);
+  }
+
+  /**
+   * `TT_Process_Composite_Component`: transforms the component's points, then moves them by an
+   * offset or so that two points match. A scaled offset scales by the matrix too, and a hinted
+   * offset rounds to the grid, x only without backward compatibility.
+   */
+  private placeComponent(
+    { flags, arguments: [first, second], matrix }: Component,
+    firstPoint: number,
+    componentStart: number
+  ): void {
+    if (matrix) transformOutline(this, matrix, componentStart);
+    let dx: number;
+    let dy: number;
+    if (!(flags & COMPONENT_ARGS_ARE_XY_VALUES)) {
+      const target = first + firstPoint;
+      const own = second + componentStart;
+      if (target >= componentStart || own >= this.x.length) throw new GlyphLoadError('Invalid_Composite');
+      dx = this.x[target]! - this.x[own]!;
+      dy = this.y[target]! - this.y[own]!;
+    } else {
+      if (first === 0 && second === 0) return;
+      [dx, dy] = [first, second];
+      if (matrix && flags & COMPONENT_SCALED_OFFSET) {
+        const [xx, xy, yx, yy] = matrix;
+        dx = ftMulFix(dx, ftVectorLength({ x: xx, y: xy }));
+        dy = ftMulFix(dy, ftVectorLength({ x: yy, y: yx }));
+      }
+      dx = ftMulFix(dx, this.scale);
+      dy = ftMulFix(dy, this.scale);
+      if (flags & COMPONENT_ROUND_XY_TO_GRID && this.hinter) {
+        if (!this.hinter.isBackwardCompatible) dx = pixRound(dx);
+        dy = pixRound(dy);
+      }
+    }
+    for (let point = componentStart; point < this.x.length; point++) {
+      this.x[point] = this.x[point]! + dx;
+      this.y[point] = this.y[point]! + dy;
+    }
+  }
+
+  /**
+   * `TT_Process_Composite_Glyph`: runs the composite's own instructions on all its points, untouched
+   * first, with the composite's phantom points after them.
+   */
+  private hintComposite(
+    firstPoint: number,
+    firstContour: number,
+    instructionsAt: number,
+    byteLength: number
+  ): void {
+    const { dv } = this.font;
+    const instructionCount = dv.getUint16(instructionsAt, false);
+    if (instructionCount === 0) return;
+    if (instructionCount > byteLength) throw new GlyphLoadError('Too_Many_Hints');
+    // A view of the font, which the interpreter only reads. One past the buffer throws a `RangeError`.
+    const instructions = new Uint8Array(dv.buffer, dv.byteOffset + instructionsAt + 2, instructionCount);
+    const zone = this.compositeZone(firstPoint, firstContour);
+    this.hint(zone, instructions, true);
+    for (let point = firstPoint; point < this.x.length; point++) {
+      this.x[point] = zone.curX[point - firstPoint]!;
+      this.y[point] = zone.curY[point - firstPoint]!;
+      this.tags[point] = zone.tags[point - firstPoint]!;
+    }
+  }
+
+  /** `tt_prepare_zone`: the points from `firstPoint`, untouched, then the composite's phantom points. */
+  private compositeZone(firstPoint: number, firstContour: number): GlyphZone {
+    const pointCount = this.x.length - firstPoint;
+    const zone = newGlyphZone(
+      pointCount + PHANTOM_POINT_COUNT,
+      this.contourEnds.slice(firstContour),
+      firstPoint
+    );
+    for (let point = 0; point < pointCount; point++) {
+      zone.curX[point] = this.x[firstPoint + point]!;
+      zone.curY[point] = this.y[firstPoint + point]!;
+      zone.tags[point] = this.tags[firstPoint + point]! & ~TAG_TOUCH_BOTH;
+    }
+    zone.curX.set(this.phantoms.x, pointCount);
+    zone.curY.set(this.phantoms.y, pointCount);
+    return zone;
+  }
+
+  /** `TT_Load_Glyph`'s end: the outline moved so that the left side bearing point is the origin. */
+  outline(): ScaledOutline {
+    const [left] = this.phantoms.x as [number];
+    return {
+      x: left === 0 ? this.x : this.x.map((value) => value - left),
+      y: this.y,
+      tags: this.tags.map((tag) => (tag & CURVE_TAG_MASK) as ContourTag),
+      contourEnds: this.contourEnds,
+    };
+  }
+}
+
+/**
+ * The tables of a font's `glyf` outlines, or null for a font without them, with a `head` or `maxp`
+ * that does not fit, or with no units per em.
+ */
+function glyfFont(sfnt: SfntFile): GlyfFont | null {
+  const { dv, tables } = sfnt;
+  const head = tables.get('head');
+  const glyf = tables.get('glyf');
+  const loca = tables.get('loca');
+  const glyphCount = readGlyphCount(sfnt);
+  if (!head || !glyf || !loca || glyphCount === null || !tableFits(dv, head, HEAD_TABLE_MIN_LENGTH))
+    return null;
   const unitsPerEm = readUnitsPerEm(dv, head);
   if (unitsPerEm === 0) return null;
-  const isLongLoca = dv.getInt16(head.offset + HEAD_INDEX_TO_LOC_FORMAT_OFFSET, false) === LONG_LOCA_FORMAT;
-  const glyphCount = dv.getUint16(maxp.offset + MAXP_NUM_GLYPHS_OFFSET, false);
-  const glyphs = new GlyphReader(dv, glyphCount, tables, isLongLoca);
+  const isLongLoca = readIndexToLocFormat(dv, head) === LONG_LOCA_FORMAT;
+  return {
+    dv,
+    bytes: new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength),
+    unitsPerEm,
+    isPpemRounded: (dv.getUint16(head.offset + HEAD_FLAGS_OFFSET, false) & HEAD_FLAG_PPEM_ROUNDED) !== 0,
+    glyfOffset: glyf.offset,
+    glyfLength: glyf.length,
+    locaOffset: loca.offset,
+    locationCount: Math.floor(loca.length / (isLongLoca ? 4 : 2)),
+    isLongLoca,
+    glyphCount,
+    metricsOf: glyphMetricsReader(sfnt),
+  };
+}
+
+/**
+ * The glyph-outline reader of a font's `glyf` outlines, hinted by `hinting` when it is not null, or
+ * null for a font with no `glyf` or `loca` table, or a `head` or `maxp` that does not fit. A glyph
+ * that FreeType fails to load, and one of no points, has no outline.
+ */
+export function glyphOutlineReader(sfnt: SfntFile, hinting: GlyphHinting | null): GlyphOutlineReader | null {
+  const font = glyfFont(sfnt);
+  if (!font) return null;
   return (glyphIndex, fontSizePx) => {
-    const outline = glyphs.load(glyphIndex, getFontOutlineScale(unitsPerEm, fontSizePx));
-    return outline && outline.x.length > 0 ? outline : null;
+    const { scale, ppem } = freeTypeTrueTypeSize(font.unitsPerEm, fontSizePx, font.isPpemRounded);
+    const hinter = hinting ? hinting.beginLoad(ppem, scale) : null;
+    if (hinter === 'failed') return null;
+    const load = new GlyphLoad(font, scale, hinter);
+    try {
+      load.load(glyphIndex, 0);
+    } catch (error) {
+      if (!(error instanceof GlyphLoadError)) throw error;
+      return null;
+    }
+    return load.x.length > 0 ? load.outline() : null;
   };
 }

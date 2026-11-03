@@ -8,7 +8,6 @@ import type { ReactNode } from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
-import { NO_RESOURCES } from '../SceneResourcesContext';
 import { TreeOrderProvider, type TreeOrder } from '../contexts/TreeOrderContext';
 import type { EnvironmentLayerProps } from './EnvironmentLayer';
 import {
@@ -51,7 +50,7 @@ function resolved(name: string): EnvironmentResolution {
   const settings = { name } as unknown as EnvironmentLayerProps['settings'];
   return {
     status: 'resolved',
-    environment: { settings, sky: null, resources: NO_RESOURCES, skyResources: NO_RESOURCES },
+    environment: { settings, sky: null, panorama: null, glowMap: null },
   };
 }
 
