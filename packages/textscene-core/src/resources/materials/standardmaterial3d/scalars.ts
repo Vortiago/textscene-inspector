@@ -82,6 +82,10 @@ function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMateri
     transmission: data.transmission,
     refractionThickness: data.refractionThickness,
     textureSlots: data.textureSlots,
+    nextPass: data.nextPass,
+    grows: data.grows,
+    growAmount: data.growAmount,
+    readsStencil: data.readsStencil,
   };
 }
 

@@ -149,13 +149,13 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [PhysicalBone3D](../../packages/textscene-core/src/nodes/physics/3d/physicalbone3d/comparison.md): nothing (a transform-only group)
 - [PhysicalBoneSimulator3D](../../packages/textscene-core/src/nodes/3d/skeleton/physicalbonesimulator3d/comparison.md): nothing yet, Godot drives its ragdoll through the physics server, the previewer does not
 - [PinJoint3D](../../packages/textscene-core/src/nodes/physics/3d/pinjoint3d/comparison.md): a transform group with a pin cross for every node
-- [RayCast3D](../../packages/textscene-core/src/nodes/physics/3d/raycast3d/comparison.md): nothing (a transform-only group)
+- [RayCast3D](../../packages/textscene-core/src/nodes/physics/3d/raycast3d/comparison.md): a ray line and pyramid gizmo for every node
 - [ReflectionProbe](../../packages/textscene-core/src/nodes/3d/reflectionprobe/comparison.md): a capture of the scene, baked into an atlas layer that lit surfaces in its box read
 - [RemoteTransform3D](../../packages/textscene-core/src/nodes/3d/remotetransform3d/comparison.md): nothing (a transform-only group that drives its target)
 - [RetargetModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/retargetmodifier3d/comparison.md): nothing yet, Godot retargets poses onto child skeletons, the previewer does not
 - [RigidBody3D](../../packages/textscene-core/src/nodes/physics/3d/rigidbody3d/comparison.md): an invisible transform-only group
 - [RootMotionView](../../packages/textscene-core/src/nodes/3d/rootmotionview/comparison.md): nothing (a transform-only group)
-- [ShapeCast3D](../../packages/textscene-core/src/nodes/physics/3d/shapecast3d/comparison.md): nothing (a transform-only group)
+- [ShapeCast3D](../../packages/textscene-core/src/nodes/physics/3d/shapecast3d/comparison.md): a sweep line and shape wireframe gizmo for every node
 - [Skeleton3D](../../packages/textscene-core/src/nodes/3d/skeleton3d/comparison.md): nothing (a transform-only group that poses the meshes bound to it)
 - [SkeletonIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonik3d/comparison.md): nothing yet, Godot solves its deprecated chain onto the target, the previewer does not
 - [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md): nothing (the base class makes no edit to the pose)

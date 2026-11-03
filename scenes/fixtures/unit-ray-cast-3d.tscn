@@ -1,3 +1,8 @@
+; RayCast3D draws its editor ray gizmo for every node with the Gizmos toggle on (ADR-0056), which no
+; other golden enables for a RayCast3D: the origin-to-target_position line and the pyramid of the
+; authored debug_shape_thickness = 3, in the authored custom red, so the golden pins the gizmo's
+; extent and look for one node type alone. No mesh draws, so the camera frames on the gizmo's own
+; lines and fill.
 [gd_scene format=3]
 
 [node name="Root" type="Node3D"]

@@ -1,6 +1,6 @@
 /**
- * `CollisionShape2D/3D.debug_color`, the colour Godot draws the shape in. The
- * documented `Color(0, 0, 0, 0)` is a placeholder: `_validate_property` strips a
+ * `CollisionShape2D/3D.debug_color`, the colour Godot draws the shape in, and the cast nodes' debug
+ * shape colour. The documented `Color(0, 0, 0, 0)` is a placeholder: `_validate_property` strips a
  * value equal to the project colour, so an absent key means that translucent teal.
  */
 
@@ -23,6 +23,20 @@ export const DEFAULT_COLLISION_DEBUG_COLOR: Rgba = Object.freeze({
 
 export function parseDebugColor(raw: string | undefined): Rgba {
   return colorOr(raw, DEFAULT_COLLISION_DEBUG_COLOR);
+}
+
+/**
+ * The colour a cast node's gizmo material takes: the node's `debug_shape_custom_color`, or
+ * the project collision colour when it is absent or equals Godot's empty default, whose literal
+ * carries an alpha of 1 (`ray_cast_3d.cpp:483-486`, `shape_cast_3d.cpp:565-568`, `color.h:75`).
+ *
+ * @canonical A cast node's debug shape colour
+ */
+export function debugShapeColour(customColor: Rgba | undefined): Rgba {
+  return customColor &&
+    (customColor.r !== 0 || customColor.g !== 0 || customColor.b !== 0 || customColor.a !== 1)
+    ? customColor
+    : DEFAULT_COLLISION_DEBUG_COLOR;
 }
 
 /**

@@ -1,17 +1,14 @@
-/**
- * RayCast3D registration: the parser.
- *
- * It reuses the Node3D parse, and property knowledge lives in linterParser.ts. It
- * draws nothing by design (ADR-0008), so index.r3f.ts registers Node3D and its children
- * still land in the right transform space.
- */
+/** RayCast3D parser registration. Property knowledge lives in linterParser.ts. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseNode3D } from '../../../base/node3d/parser';
+import { parseRayCast3D } from './parser';
 
 const rayCast3DRegistration: NodeTypeRegistration = {
   typeName: 'RayCast3D',
-  parser: parseNode3D,
+  parser: parseRayCast3D,
 };
 
 nodeRegistry.register(rayCast3DRegistration);
+
+export * from './parser';
+export * from './types';

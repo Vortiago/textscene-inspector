@@ -31,6 +31,7 @@ import { threeAnisotropy } from '../../../r3f/godotLightFunction';
 import { lightModesInjection } from '../../../r3f/lightModes';
 import { GODOT_NORMAL_MAP_READ } from '../../../r3f/materials/godotNormalMap';
 import { billboardInjections } from '../../../r3f/surfaceBillboard';
+import { growInjectionOf } from '../../../r3f/materials/godotGrow';
 import { withDepthInjection } from '../../../r3f/materials/depthInjections';
 import { SPECULAR_OCCLUSION_DISABLED } from '../../../r3f/godotIndirectSpecular';
 import {
@@ -403,6 +404,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
         vertexColorInjection(scalars),
         heightmap ? unshadedParallaxInjection(heightmap) : undefined,
         billboardInjection(scalars),
+        growInjectionOf(scalars),
       ]),
       heightmapTexture,
     };
@@ -453,6 +455,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
     heightmap ? parallaxInjection(heightmap) : undefined,
     emissionTextureAddInjection(emission.addedTextureEnergy),
     billboardInjection(scalars),
+    growInjectionOf(scalars),
   ]);
   if (!needsPhysicalMaterial(scalars)) {
     return { materialClass: 'standard', props: pbr, injection, heightmapTexture };

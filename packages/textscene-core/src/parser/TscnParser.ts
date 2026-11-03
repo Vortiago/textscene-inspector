@@ -29,12 +29,12 @@ import '../nodes/3d/worldenvironment/index.js';
 import '../nodes/physics/3d/staticbody3d/index.js';
 import '../nodes/physics/3d/area3d/index.js';
 import '../nodes/physics/3d/collisionshape3d/index.js';
-// Non-visual nodes: transform-only groups, no own geometry (ADR-0008).
-import '../nodes/physics/3d/characterbody3d/index.js';
-import '../nodes/physics/3d/rigidbody3d/index.js';
 import '../nodes/physics/3d/raycast3d/index.js';
 import '../nodes/physics/3d/shapecast3d/index.js';
 import '../nodes/physics/3d/springarm3d/index.js';
+// Non-visual nodes: transform-only groups, no own geometry (ADR-0008).
+import '../nodes/physics/3d/characterbody3d/index.js';
+import '../nodes/physics/3d/rigidbody3d/index.js';
 import '../nodes/physics/3d/animatablebody3d/index.js';
 import '../nodes/physics/3d/physicalbone3d/index.js';
 import '../nodes/physics/3d/vehiclebody3d/index.js';
