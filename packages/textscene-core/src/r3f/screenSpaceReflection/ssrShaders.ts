@@ -604,8 +604,8 @@ void main() {
 `;
 
 /**
- * A stored roughness from which the scene's own roughness is past the fade's end: a stored roughness
- * is the scene's within half a step of its 127.
+ * A stored roughness from which the scene's own roughness is past the fade's end. A stored roughness
+ * is the scene's within half a step of its 127, so one whole step past the end clears it.
  */
 const SHOWN_ROUGHNESS_LIMIT = `( ${ROUGHNESS_FADE.end} + 1.0 / 127.0 )`;
 

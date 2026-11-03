@@ -91,7 +91,7 @@ export class SceneReflections {
     private readonly askFrame: () => void
   ) {
     this.firstSentinel = createFirstOpaqueSentinel('ScreenSpaceReflection', (_renderer, scene, camera) =>
-      this.trace(scene, camera)
+      this.beginOpaque(scene, camera)
     );
     this.lastSentinel = createLastOpaqueSentinel('ScreenSpaceReflectionEnd', () => this.endOpaque());
   }
@@ -154,22 +154,29 @@ export class SceneReflections {
   }
 
   /**
-   * Traces the innermost render's reflection once, in its opaque pass. three's transmission pass
-   * draws the opaque list into a target of its own first, which no trace serves.
+   * Shows the innermost render's reflection from the start of each of its opaque lists, traced at the
+   * first. three's transmission pass draws one before the colour pass, and the frame it refracts
+   * shows the reflection, as the screen copy after Godot's opaque pass does (`:2337`).
    */
-  private trace(scene: THREE.Scene, camera: THREE.Camera): void {
+  private beginOpaque(scene: THREE.Scene, camera: THREE.Camera): void {
     const render = this.renders.at(-1);
-    if (!render?.world || render.isTraced || this.renderer.getRenderTarget() !== render.target) return;
-    const target = render.target!;
+    if (!render?.world) return;
+    if (!render.isTraced) this.trace(render, scene, camera);
+    render.isPastOpaque = false;
+    this.show(render.world.buffers!);
+  }
+
+  private trace(render: SceneRender, scene: THREE.Scene, camera: THREE.Camera): void {
+    const world = render.world!;
     const { ssr, isHalfSize } = this.settings();
-    const { width, height, samples } = target;
-    const buffers = render.world.buffersFor(this.renderer, { width, height, samples, isHalfSize });
+    const { width, height, samples } = render.target!;
+    const buffers = world.buffersFor(this.renderer, { width, height, samples, isHalfSize });
     projection.multiplyMatrices(DEPTH_CORRECTION, camera.projectionMatrix);
     inverseProjection.copy(projection).invert();
     const inputs = {
       projection,
       inverseProjection,
-      reprojection: this.reprojectionOf(render.world, camera),
+      reprojection: this.reprojectionOf(world, camera),
       isOrthogonal: (camera as THREE.OrthographicCamera).isOrthographicCamera === true,
       ssr,
     };
@@ -181,13 +188,12 @@ export class SceneReflections {
     });
     endStep(this.renderer, 'Screen-space reflection');
     render.isTraced = true;
-    this.show(buffers);
   }
 
-  /** Ends the innermost render's opaque list. three's transmission pass draws one of its own first. */
+  /** Ends an opaque list of the innermost render: the transmissive and transparent lists show none. */
   private endOpaque(): void {
     const render = this.renders.at(-1);
-    if (!render || this.renderer.getRenderTarget() !== render.target) return;
+    if (!render) return;
     render.isPastOpaque = true;
     ssrState[SSR_STATE.showsReflection] = 0;
   }

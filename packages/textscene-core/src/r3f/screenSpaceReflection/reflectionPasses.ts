@@ -41,8 +41,8 @@ function multipleTargetPass(pass: THREE.ShaderMaterial): THREE.ShaderMaterial {
   return pass;
 }
 
-function resolvePass(): THREE.ShaderMaterial {
-  return namedUniformPass('SsrResolve', RESOLVE_FRAGMENT, [
+function resolvePass(name: string): THREE.ShaderMaterial {
+  return namedUniformPass(name, RESOLVE_FRAGMENT, [
     'source_depth',
     'source_normal_roughness',
     'source_depth_half',
@@ -79,8 +79,8 @@ const passesOf = perObject((_renderer: THREE.WebGLRenderer) => ({
   ),
   filterAcross: namedUniformPass('SsrFilterAcross', FILTER_ACROSS_FRAGMENT, ['chain', 'mip_level']),
   filterDown: namedUniformPass('SsrFilterDown', FILTER_DOWN_FRAGMENT, ['across', 'mip_level']),
-  resolve: resolvePass(),
-  resolveOneSample: Object.assign(resolvePass(), { defines: { SKIPS_UNREFLECTED: '' } }),
+  resolve: resolvePass('SsrResolve'),
+  resolveOneSample: Object.assign(resolvePass('SsrResolveOneSample'), { defines: { SKIPS_UNREFLECTED: '' } }),
   fullSize: namedUniformPass('SsrFullSize', FULL_SIZE_FRAGMENT, ['source_color', 'source_mip_level']),
   lastFrame: namedUniformPass('SsrLastFrame', LAST_FRAME_FRAGMENT, ['frame', 'blockSize']),
 }));

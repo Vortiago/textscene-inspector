@@ -34,8 +34,8 @@ vec4 godotNormalRoughness( vec3 normal, float roughness ) {
 
 /**
  * The fade keeps a reflection whole up to `ROUGHNESS_FADE.start` and none from its end, where the
- * trace draws nothing (`:2204`). The reflection holds Godot's rows, top row first, so the read flips three's
- * bottom-up row.
+ * trace draws nothing (`:2204`). The reflection holds Godot's rows, top row first, so the read
+ * flips three's bottom-up row. Only the fold calls it, while a render shows its reflection.
  */
 const SSR_FUNCTIONS = /* glsl */ `
 uniform highp sampler2D ${reflection};
@@ -45,7 +45,6 @@ float godotSsrRoughnessFade( float roughness ) {
 }
 
 vec4 godotScreenSpaceReflection( float roughness ) {
-	if ( ${state}.y < 0.5 ) return vec4( 0.0 );
 	ivec2 pixel = ivec2( gl_FragCoord.xy );
 	pixel.y = textureSize( ${reflection}, 0 ).y - 1 - pixel.y;
 	return texelFetch( ${reflection}, pixel, 0 ) * godotSsrRoughnessFade( roughness );
@@ -104,7 +103,10 @@ const UNSHADED_PREPASS_FRAGMENT: readonly TextEdit[] = [
   },
 ];
 
-/** Premultiplied, over the indirect specular, which the base layer's weights then scale (`:2207`). */
+/**
+ * Premultiplied, over the indirect specular, which the base layer's weights then scale (`:2207`).
+ * Only while a render shows its reflection: the alpha pass and an untraced render read none.
+ */
 const SSR_FOLD = /* glsl */ `
 #if defined( STANDARD )
 
@@ -118,9 +120,9 @@ const SSR_FOLD = /* glsl */ `
 
 /**
  * Writes the prepass's output in every basic and physical program compiled after the call, lays the
- * reflection in every physical one, and gives every built-in material the shared slots it reads. A three release that rewrites the
- * anchor keeps all its chunks, and `ssrSceneChunk.test.ts` fails on that release. A second call
- * changes nothing.
+ * reflection in every physical one, and gives every built-in material the shared slots it reads. A
+ * three release that rewrites the anchor keeps all its chunks, and `ssrSceneChunk.test.ts` fails on
+ * that release. A second call changes nothing.
  */
 export function installGodotScreenSpaceReflection(): boolean {
   const isPatched = installChunkEdits({
