@@ -712,11 +712,21 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', { timeout: ENGINE_TE
    * editor camera, and a distance of 0 would put the camera inside the point, looking at the sky.
    */
   it.each([
-    ['a CPUParticles3D', 'unit-cpuparticles3d-row.tscn'],
-    ['a Label3D', 'label3d-glyph-mipmaps/unit-label3d-glyph-mipmaps.tscn'],
+    // The particles are saturated yellow; the sky and ground are near grey.
+    [
+      'a CPUParticles3D',
+      'unit-cpuparticles3d-row.tscn',
+      (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b) > 100,
+    ],
+    // The text is white; the brightest sky is about 205.
+    [
+      'a Label3D',
+      'label3d-glyph-mipmaps/unit-label3d-glyph-mipmaps.tscn',
+      (r, g, b) => Math.min(r, g, b) > 245,
+    ],
   ])(
     'frames %s, whose bounds are a point at the origin, at the editor camera distance',
-    async (_, fixture) => {
+    async (_, fixture, isContent) => {
       const dir = await scratchDir();
       const scene = join(REPO_ROOT, 'scenes/fixtures', fixture);
       const framed = join(dir, 'framed.png');
@@ -724,6 +734,13 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', { timeout: ENGINE_TE
       await renderReference({ scene, out: framed, width: 160, height: 120, frame: true });
       await renderReference({ scene, out: editor, width: 160, height: 120 });
 
+      // Two empty skies would also be equal, so the frame must hold the content itself.
+      const { data } = PNG.sync.read(await readFile(framed));
+      let contentPixels = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        if (isContent(data[i], data[i + 1], data[i + 2])) contentPixels++;
+      }
+      expect(contentPixels).toBeGreaterThan(0);
       expect(await worstChannelDelta(framed, editor)).toBeLessThanOrEqual(ROUNDING_FLOOR);
     }
   );
