@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { worldBoundaryDebugLines } from './debugLines';
+import { worldBoundaryOutline } from './worldBoundaryOutline';
 
 /** Plane `[nx, ny, nz, d]` and the 10 vertices (5 segments) Godot draws for it. */
 const GODOT_LINES: readonly (readonly [string, number[], number[]])[] = [
@@ -59,11 +59,16 @@ const GODOT_LINES: readonly (readonly [string, number[], number[]])[] = [
       0.4, 0,
     ],
   ],
+  [
+    'a zero normal, which Godot normalises to zero rather than NaN',
+    [0, 0, 0, 5],
+    [10, 0, 0, 10, 0, 0, 10, 0, 0, -10, 0, 0, -10, 0, 0, -10, 0, 0, -10, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0],
+  ],
 ];
 
-describe('worldBoundaryDebugLines', () => {
+describe('worldBoundaryOutline', () => {
   it.each(GODOT_LINES)('matches Godot for %s', (_name, [nx, ny, nz, d], expected) => {
-    const lines = worldBoundaryDebugLines({ normal: { x: nx!, y: ny!, z: nz! }, d: d! });
+    const lines = worldBoundaryOutline({ normal: { x: nx!, y: ny!, z: nz! }, d: d! });
     expect(lines).toHaveLength(expected.length);
     expected.forEach((value, index) => expect(lines[index]).toBeCloseTo(value, 4));
   });

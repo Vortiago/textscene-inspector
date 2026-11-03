@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionGizmo } from './CollisionGizmo';
 import type { TscnInternalResource } from '../../../../parser/types';
-import { worldBoundaryDebugLines } from '../../../../resources/shapes/worldboundaryshape3d/debugLines';
+import { worldBoundaryOutline } from './worldBoundaryOutline';
 import { findMesh } from '../../../3d/testing/reactThreeTestInstance';
 
 async function geometryOf(shape: TscnInternalResource) {
@@ -70,7 +70,7 @@ describe('<CollisionGizmo> primitive shapes', () => {
     const [lines] = renderer.scene.findAll((n) => n.type === 'LineSegments');
     const positions = (lines!.instance as THREE.LineSegments).geometry.getAttribute('position');
     expect(Array.from(positions.array)).toEqual(
-      Array.from(worldBoundaryDebugLines({ normal: { x: 1, y: 0, z: 0 }, d: 2.5 }))
+      Array.from(worldBoundaryOutline({ normal: { x: 1, y: 0, z: 0 }, d: 2.5 }))
     );
     expect(renderer.scene.findAll((n) => n.type === 'Mesh')).toHaveLength(0);
   });

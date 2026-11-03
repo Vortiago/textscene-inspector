@@ -12,8 +12,8 @@ import { decodeConcavePolygonShape3D } from '../../../../resources/shapes/concav
 import { decodeCapsuleShape3D } from '../../../../resources/shapes/capsuleshape3d';
 import { decodeSphereShape3D } from '../../../../resources/shapes/sphereshape3d';
 import { decodeCylinderShape3D } from '../../../../resources/shapes/cylindershape3d';
+import { worldBoundaryOutline } from './worldBoundaryOutline';
 import { decodeWorldBoundaryShape3D } from '../../../../resources/shapes/worldboundaryshape3d';
-import { worldBoundaryDebugLines } from '../../../../resources/shapes/worldboundaryshape3d/debugLines';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { warn } from '../../../../logger';
 import { wireGizmoProgram } from '../../../../r3f/components/wireGizmoProgram';
@@ -100,7 +100,7 @@ const MIN_CONVEX_HULL_POINTS = 4;
 /** Godot draws a world boundary as lines, not a wireframe mesh: a square and a normal ray. */
 function WorldBoundaryLines({ shapeData, color }: ShapeWireProps) {
   const positions = useMemo(
-    () => worldBoundaryDebugLines(decodeWorldBoundaryShape3D(shapeData).plane),
+    () => worldBoundaryOutline(decodeWorldBoundaryShape3D(shapeData).plane),
     [shapeData]
   );
   return <GizmoLine positions={positions} color={color} />;
