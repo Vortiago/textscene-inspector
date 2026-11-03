@@ -72,13 +72,12 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
       return <ConvexHullWire shapeData={data} color={color} />;
     default:
       // A shape `shapeDebugLines` ports draws as Godot's own lines, so a new port needs no case here.
-      if (shapeDebugLines(shape)) return <DebugLines shape={shape} color={color} />;
-      warn(`[CollisionShape3D] Unsupported shape type "${shape.type}" — drawing a unit wireframe box.`);
       return (
-        <mesh>
-          <boxGeometry args={[1, 1, 1]} />
-          <meshBasicMaterial key={wire.key} {...wire.props} />
-        </mesh>
+        <DebugLines
+          shape={shape}
+          color={color}
+          fallback={<UnknownShapeBox typeName={shape.type} wire={wire} />}
+        />
       );
   }
 }
@@ -98,10 +97,40 @@ const MIN_TRIANGLE_SOUP_FLOATS = 3 * 3;
 /** A tetrahedron's four corners: the fewest points that enclose a volume. */
 const MIN_CONVEX_HULL_POINTS = 4;
 
-/** Godot draws a world boundary and a separation ray as lines, not a wireframe mesh. */
-function DebugLines({ shape, color }: { shape: TscnInternalResource; color: THREE.Color }) {
+/**
+ * Godot draws a world boundary and a separation ray as lines, not a wireframe mesh. The
+ * `fallback` draws for a shape `shapeDebugLines` has no port for. One memoised call serves both.
+ */
+function DebugLines({
+  shape,
+  color,
+  fallback,
+}: {
+  shape: TscnInternalResource;
+  color: THREE.Color;
+  fallback: React.ReactNode;
+}) {
   const positions = useMemo(() => shapeDebugLines(shape), [shape]);
-  return positions && <GizmoLine positions={positions} color={color} />;
+  return positions ? <GizmoLine positions={positions} color={color} /> : fallback;
+}
+
+function UnknownShapeBox({
+  typeName,
+  wire,
+}: {
+  typeName: string;
+  wire: ReturnType<typeof wireGizmoProgram>;
+}) {
+  useMemo(
+    () => warn(`[CollisionShape3D] Unsupported shape type "${typeName}" — drawing a unit wireframe box.`),
+    [typeName]
+  );
+  return (
+    <mesh>
+      <boxGeometry args={[1, 1, 1]} />
+      <meshBasicMaterial key={wire.key} {...wire.props} />
+    </mesh>
+  );
 }
 
 /** A concave shape is already a triangle soup, bound as a non-indexed BufferGeometry. */
