@@ -3425,6 +3425,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Text Mesh Hinting",
+    "file": "unit-text-mesh-hinting.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Text Mesh Triangulation Failure",
     "file": "unit-text-mesh-triangulation-failure.tscn",
     "category": "Unit - Primitive Meshes"

@@ -18,6 +18,7 @@ import {
   SIMPLE_Y_SHORT,
   componentArgumentByteCount,
   componentMatrixByteCount,
+  glyphXMin,
 } from './glyfFormat';
 
 const HEADER_STREAM_COUNT = 7;
@@ -51,6 +52,8 @@ export interface RebuiltGlyf {
   glyf: Uint8Array;
   /** In the format of the transform's `indexFormat`, which `head.indexToLocFormat` repeats. */
   loca: Uint8Array;
+  /** Each glyph's `xMin`, zero for an empty one, which a transformed `hmtx` may take its side bearings from. */
+  xMins: Int16Array;
 }
 
 interface Point {
@@ -369,5 +372,5 @@ export function rebuildGlyfTables(transformed: Uint8Array): RebuiltGlyf {
     glyphs,
     locaFormat === LONG_LOCA_FORMAT ? LONG_GLYPH_ALIGNMENT : SHORT_GLYPH_ALIGNMENT
   );
-  return { glyf, loca: locaOf(offsets, locaFormat) };
+  return { glyf, loca: locaOf(offsets, locaFormat), xMins: Int16Array.from(glyphs, glyphXMin) };
 }

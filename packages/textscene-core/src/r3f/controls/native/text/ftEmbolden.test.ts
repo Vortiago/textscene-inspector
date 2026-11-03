@@ -43,15 +43,14 @@ describe('emboldenOutline', () => {
   });
 });
 
-describe('glyph contours of an emboldened CFF font', () => {
-  it.each(
-    emboldenedGlyphs
-      .filter((glyph) => glyph.font.endsWith('.otf'))
-      .map((glyph) => [referenceGlyphTitle(glyph), glyph] as const)
-  )('matches Godot for %s', async (_, glyph) => {
-    const contours = await readerContours(glyph);
+describe('glyph contours of an emboldened font', () => {
+  it.each(emboldenedGlyphs.map((glyph) => [referenceGlyphTitle(glyph), glyph] as const))(
+    'matches Godot for %s',
+    async (_, glyph) => {
+      const contours = await readerContours(glyph);
 
-    expect(referencePoints(contours.points)).toEqual(glyph.points);
-    expect(contours.contourEnds).toEqual(glyph.contourEnds);
-  });
+      expect(referencePoints(contours.points)).toEqual(glyph.points);
+      expect(contours.contourEnds).toEqual(glyph.contourEnds);
+    }
+  );
 });
