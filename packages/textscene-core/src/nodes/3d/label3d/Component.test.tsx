@@ -102,7 +102,7 @@ describe('<Label3D>', () => {
     expect(box.min.length()).toBeCloseTo(0, 6);
   });
 
-  it('the bounds-proxy point stays at the node origin even after useBillboard rotates the label group', async () => {
+  it('the frame point stays at the node origin even after useBillboard rotates the label group', async () => {
     // A point is rotation-invariant: rotating its group never moves it off the
     // node's position.
     const renderer = await renderLabel(

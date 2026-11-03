@@ -14,7 +14,7 @@ import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { invisibleBase } from '../../../r3f/invisibleBase';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { TscnNode } from '../../../parser/types';
-import type { Aabb } from '../../../godot/math/aabb';
+import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
 import { FrameAabb } from '../../../r3f/components/FrameAabb';
 
 /**
@@ -79,5 +79,11 @@ export function undrawnGeometryInstanceWithGizmos<Properties>(
   return invisibleBase(UndrawnGeometryInstanceWithGizmos);
 }
 
-/** A bare GeometryInstance3D gives its instance no base (`godot/scene/geometryBase.ts`), so no box. */
-export const GeometryInstance3D = undrawnGeometryInstance(() => null);
+/**
+ * A bare GeometryInstance3D gives its instance no base (`godot/scene/geometryBase.ts`), so no box to
+ * cull by, and `get_aabb()` is the unset virtual's `AABB()`, a point to frame on.
+ */
+export const GeometryInstance3D = undrawnGeometryInstance(
+  () => null,
+  () => EMPTY_AABB
+);

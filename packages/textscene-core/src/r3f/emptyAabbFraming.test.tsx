@@ -5,20 +5,10 @@
  * on x = 3.75 (the box's -0.5 to the point's 8).
  */
 import { describe, expect, it } from 'vitest';
-import * as THREE from 'three';
-import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { TscnParser } from '../parser/TscnParser';
-import { SceneResourcesProvider } from './SceneResourcesContext';
-import { frameSceneBounds } from './frameSceneBounds';
-import { NodeTree } from './testing/NodeTree';
-import '../nodes/base/node3d/index.r3f';
-import '../nodes/3d/meshinstance3d/index.r3f';
-import '../nodes/3d/multimeshinstance3d/index.r3f';
-import '../nodes/3d/sprite3d/index.r3f';
-import '../nodes/3d/animatedsprite3d/index.r3f';
-import '../nodes/3d/label3d/index.r3f';
-import '../nodes/3d/particles/cpuparticles3d/index.r3f';
-import '../nodes/3d/particles/gpuparticles3d/index.r3f';
+import { descendsFromClass } from '../godot/classdb/classBaseTypes';
+import { nodeComponentRegistry } from './NodeComponentRegistry';
+import { framedTarget } from './testing/framedTarget';
+import './nodes';
 
 const sceneBeside = (type: string) => `[gd_scene load_steps=2 format=3]
 
@@ -33,19 +23,6 @@ mesh = SubResource("Box")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 0)
 `;
 
-async function framedTarget(source: string): Promise<THREE.Vector3> {
-  const scene = new TscnParser().parse(source);
-  const root = scene.nodes[0]!;
-  const renderer = await ReactThreeTestRenderer.create(
-    <SceneResourcesProvider internalResources={scene.internalResources}>
-      <NodeTree node={root} path={root.name} />
-    </SceneResourcesProvider>
-  );
-  const controls = { target: new THREE.Vector3(), update: () => {} };
-  frameSceneBounds(renderer.scene.instance, new THREE.PerspectiveCamera(70, 1, 0.1, 4000), controls);
-  return controls.target;
-}
-
 describe('a GeometryInstance3D with an empty AABB', () => {
   it.each([
     'CPUParticles3D',
@@ -59,5 +36,21 @@ describe('a GeometryInstance3D with an empty AABB', () => {
     const target = await framedTarget(sceneBeside(type));
 
     expect(target.x).toBeCloseTo(3.75, 5);
+  });
+});
+
+describe('every registered GeometryInstance3D type', () => {
+  const types = nodeComponentRegistry
+    .getAllTypeNames()
+    .filter((type) => descendsFromClass(type, 'GeometryInstance3D'));
+
+  it('is covered by this walk', () => {
+    expect(types).toContain('CPUParticles3D');
+  });
+
+  it.each(types)('adds %s to the frame beside a box at the origin', async (type) => {
+    const target = await framedTarget(sceneBeside(type));
+
+    expect(target.x).toBeGreaterThan(0);
   });
 });
