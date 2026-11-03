@@ -2,7 +2,7 @@
  * The esbuild plugin that routes the webview's chunk imports through the chunk importer, so a
  * chunk VS Code cut short loads once more.
  */
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import * as esbuild from 'esbuild';
@@ -39,23 +39,31 @@ describe('chunkImportPlugin', () => {
     writeFileSync(join(source, 'lazy.js'), 'export const lazy = 1;');
     const outdir = join(source, 'out');
 
-    await esbuild.build({
-      absWorkingDir: source,
-      entryPoints: ['entry.js'],
-      bundle: true,
-      format: 'esm',
-      splitting: true,
-      outdir,
-      chunkNames: 'chunks/[name]-[hash]',
-      metafile: true,
-      logLevel: 'silent',
-      plugins: [chunkImportPlugin()],
-    });
-
-    const entry = readFileSync(join(outdir, 'entry.js'), 'utf8');
-    expect(entry).toMatch(
-      new RegExp(`${CHUNK_IMPORTER}\\("\\./chunks/lazy-\\w+\\.js", ?import\\.meta\\.url\\)`)
-    );
-    expect(entry).not.toMatch(/import\("/);
+    try {
+      await buildSplit(source, outdir);
+      const entry = readFileSync(join(outdir, 'entry.js'), 'utf8');
+      expect(entry).toMatch(
+        new RegExp(`${CHUNK_IMPORTER}\\("\\./chunks/lazy-\\w+\\.js", ?import\\.meta\\.url\\)`)
+      );
+      expect(entry).not.toMatch(/import\("/);
+    } finally {
+      rmSync(source, { recursive: true, force: true });
+    }
   });
 });
+
+/** A code-split build of `entry.js` in `source`, through the plugin. */
+async function buildSplit(source: string, outdir: string): Promise<void> {
+  await esbuild.build({
+    absWorkingDir: source,
+    entryPoints: ['entry.js'],
+    bundle: true,
+    format: 'esm',
+    splitting: true,
+    outdir,
+    chunkNames: 'chunks/[name]-[hash]',
+    metafile: true,
+    logLevel: 'silent',
+    plugins: [chunkImportPlugin()],
+  });
+}

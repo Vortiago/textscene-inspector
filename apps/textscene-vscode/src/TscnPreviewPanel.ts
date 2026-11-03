@@ -48,6 +48,8 @@ export class TscnPreviewPanel {
   private _disposed = false;
   /** Set by a `webviewLoadFailed`, which loads the document once more. Cleared by `webviewReady`. */
   private _hasReloadedDocument = false;
+  /** Set by the first `chunkLoadFailed`, and never cleared, so a chunk failure reloads once per panel. */
+  private _hasReloadedForChunk = false;
 
   /**
    * Cached per panel, so the `res://` root walk and the served `fsPath -> res://`
@@ -112,6 +114,9 @@ export class TscnPreviewPanel {
       },
       webviewLoadFailed: (msg) => {
         this._handleFailedLoad(msg.error);
+      },
+      chunkLoadFailed: (msg) => {
+        this._handleFailedChunkLoad(msg.error);
       },
       jumpToNode: (msg) => {
         void jumpToNodeDefinition(this._currentResource, msg.nodeName, msg.path, this._panel.viewColumn);
@@ -273,22 +278,42 @@ export class TscnPreviewPanel {
 
   /**
    * VS Code's webview resource loader can end a script's transfer early, and the page
-   * then never runs (#1147). A new document fetches the script again. A second failure
+   * then never runs. A new document fetches the script again. A second failure
    * before a `webviewReady` ends every capture with the error, so no reload loops.
-   * The failed document has no listener, so posts wait for the next `webviewReady`.
    */
   private _handleFailedLoad(error: string): void {
-    this._webviewReady = false;
-    this._captures.webviewLoading();
     const reason = `The preview script failed to load: ${error}`;
     if (!this._hasReloadedDocument) {
       this._hasReloadedDocument = true;
       warn(`${reason}. The preview loads again.`);
-      this._loadDocument();
+      this._reloadDocument();
       return;
     }
     logError(reason);
     this._captures.setState({ kind: 'unavailable', reason });
+  }
+
+  /**
+   * A chunk failed in a document that runs, so its pane shows the error. A new document
+   * fetches the chunk and each chunk it imports again. That happens once per panel, since a
+   * `webviewReady` comes before each chunk failure and a broken build would reload forever.
+   */
+  private _handleFailedChunkLoad(error: string): void {
+    const reason = `A preview chunk failed to load: ${error}`;
+    if (this._hasReloadedForChunk) {
+      logError(reason);
+      return;
+    }
+    this._hasReloadedForChunk = true;
+    warn(`${reason}. The preview loads again.`);
+    this._reloadDocument();
+  }
+
+  /** The current document has no listener, so posts and captures wait for the next `webviewReady`. */
+  private _reloadDocument(): void {
+    this._webviewReady = false;
+    this._captures.webviewLoading();
+    this._loadDocument();
   }
 
   private async _loadTscnContent(resource: vscode.Uri) {

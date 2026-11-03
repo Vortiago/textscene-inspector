@@ -16,13 +16,10 @@ export const CHUNK_IMPORTER = '__textsceneImportChunk';
  * @returns {string} the code with each `import("<chunk>")` replaced by an importer call
  */
 export function rewriteChunkImports(code, chunkSpecifiers) {
-  return chunkSpecifiers.reduce(
-    (rewritten, specifier) =>
-      rewritten.replaceAll(
-        `import(${JSON.stringify(specifier)})`,
-        `${CHUNK_IMPORTER}(${JSON.stringify(specifier)},import.meta.url)`
-      ),
-    code
+  const chunks = new Set(chunkSpecifiers);
+  // One pass, not one per chunk: the entry is megabytes and imports many chunks.
+  return code.replace(/import\(("\.\.?\/[^"]+")\)/g, (call, quoted) =>
+    chunks.has(JSON.parse(quoted)) ? `${CHUNK_IMPORTER}(${quoted},import.meta.url)` : call
   );
 }
 

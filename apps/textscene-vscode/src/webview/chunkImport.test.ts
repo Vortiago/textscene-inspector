@@ -3,19 +3,29 @@
  * the second try loads the chunk at a new URL. A second failure rejects, for the pane's
  * error boundary.
  */
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setLogAdapter } from '@textscene/core/logger';
-import { CHUNK_IMPORTER, importChunk } from './chunkImport';
+import { CHUNK_IMPORTER, importChunk, setChunkFailureReporter } from './chunkImport';
 
-/** A directory URL, ending in a slash, that holds `chunk.mjs` with `source`. */
-function chunkDirectory(source: string): string {
+/** Written by `emptyDirectory`. Removed after each test. */
+const directories: string[] = [];
+
+/** The URL, ending in a slash, of a new empty directory. */
+function emptyDirectory(): string {
   const directory = mkdtempSync(join(tmpdir(), 'tsi-chunk-'));
-  writeFileSync(join(directory, 'chunk.mjs'), source);
+  directories.push(directory);
   return pathToFileURL(directory).href + '/';
+}
+
+/** The URL, ending in a slash, of a directory that holds `chunk.mjs` with `source`. */
+function chunkDirectory(source: string): string {
+  const directory = emptyDirectory();
+  writeFileSync(new URL('chunk.mjs', directory), source);
+  return directory;
 }
 
 function captureWarnings(): string[] {
@@ -31,7 +41,10 @@ function captureWarnings(): string[] {
 }
 
 describe('importChunk', () => {
-  afterEach(() => setLogAdapter(null));
+  afterEach(() => {
+    setLogAdapter(null);
+    for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true });
+  });
 
   it('resolves the chunk relative to the module that imports it', async () => {
     const base = chunkDirectory('export const answer = 42;') + 'webview.js';
@@ -47,13 +60,17 @@ describe('importChunk', () => {
     expect(warnings).toEqual([]);
   });
 
-  it('loads a chunk that failed once again at a new URL, and warns once', async () => {
-    const warnings = captureWarnings();
-    const base = chunkDirectory('export {};') + 'webview.js';
-
-    const failure = await importChunk('./missing.mjs', base).catch((error: unknown) => String(error));
+  it('imports a chunk that failed once again at a new URL, and rejects with that one', async () => {
+    const failure = await importChunk('./missing.mjs', emptyDirectory() + 'webview.js').catch(String);
 
     expect(failure).toContain('missing.mjs?reload=1');
+  });
+
+  it('warns once, with the first URL and its error, for a chunk that fails', async () => {
+    const warnings = captureWarnings();
+
+    await importChunk('./missing.mjs', emptyDirectory() + 'webview.js').catch(() => {});
+
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toMatch(
       /^A preview chunk failed to load: file:.*\/missing\.mjs: .*\. It loads again\.$/
@@ -62,5 +79,24 @@ describe('importChunk', () => {
 
   it('installs itself as the global the rewritten chunk imports call', () => {
     expect((globalThis as Record<string, unknown>)[CHUNK_IMPORTER]).toBe(importChunk);
+  });
+
+  it('reports a chunk that fails at both URLs, since a new document is the one way left', async () => {
+    const reported: string[] = [];
+    setChunkFailureReporter((error) => reported.push(error));
+
+    await importChunk('./missing.mjs', emptyDirectory() + 'webview.js').catch(() => {});
+
+    expect(reported).toHaveLength(1);
+    expect(reported[0]).toContain('missing.mjs?reload=1');
+  });
+
+  it('reports nothing for a chunk that loads', async () => {
+    const reported: string[] = [];
+    setChunkFailureReporter((error) => reported.push(error));
+
+    await importChunk('./chunk.mjs', chunkDirectory('export {};') + 'webview.js');
+
+    expect(reported).toEqual([]);
   });
 });

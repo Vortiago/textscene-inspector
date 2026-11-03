@@ -105,7 +105,6 @@ const webviewOptions = {
         workerMetafile = metafile;
       },
     }),
-    // A chunk import retries once, at a new URL, when VS Code cuts the chunk short.
     chunkImportPlugin(),
   ],
   loader: {
