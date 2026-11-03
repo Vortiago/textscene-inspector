@@ -49,7 +49,7 @@ describe('installGodotIndirectSpecular', () => {
 
     expect(pars).toContain('#ifdef GODOT_DIFFUSE_TOON');
     expect(pars).toContain(
-      'radiance * sqrt( material.specularColor.g / 0.16 ) * material.metalness * material.diffuseColor * 2.0'
+      'return sqrt( material.specularColor.g / 0.16 ) * material.metalness * material.diffuseColor * 2.0;'
     );
   });
 

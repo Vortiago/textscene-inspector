@@ -141,6 +141,8 @@ export const LIGHTING_SCENES = [
   { name: 'environment-reflected-source-disabled', file: 'unit-environment-reflected-source-disabled.tscn' },
   { name: 'environment-reflected-source-sky', file: 'unit-environment-reflected-source-sky.tscn' },
   { name: 'environment-reflected-source-disabled-probe', file: 'unit-environment-reflected-source-disabled-probe.tscn' },
+  // Screen-space reflections: the smooth metal floor reflects the red box only through the trace.
+  { name: 'environment-ssr', file: 'unit-environment-ssr.tscn' },
   // CameraAttributesPractical at exposure_multiplier 2: Godot scales a light's energy, an emission and
   // a colour background by it, and a flat ambient not at all.
   { name: 'camera-attributes-exposure', file: 'unit-camera-attributes-exposure.tscn', camera: 'Root/Camera3D' },

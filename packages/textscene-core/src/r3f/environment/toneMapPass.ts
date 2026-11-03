@@ -52,6 +52,14 @@ export interface ToneMapPassOptions {
   name: string;
 }
 
+/** Written only by `useToneMapPass`, while its viewport keeps a transparent background. */
+const transparentWorldBuffers = new WeakSet<THREE.WebGLRenderTarget>();
+
+/** Whether `worldBuffer` is the world buffer of a viewport with a transparent background. */
+export function drawsTransparentBackground(worldBuffer: THREE.WebGLRenderTarget): boolean {
+  return transparentWorldBuffers.has(worldBuffer);
+}
+
 /** The tonemap effect reads no time, since a frame draws at its settled luminance. */
 const NO_ELAPSED_TIME = 0;
 
@@ -77,6 +85,7 @@ export function useToneMapPass(options: ToneMapPassOptions): ToneMapPass {
     resources: passToneMap.resources,
   });
   const worldBuffer = useWorldBuffer(msaaMode, width, height, name);
+  useTransparentWorldBuffer(worldBuffer, transparentBackground);
   const gl = useThree((state) => state.gl);
   const pass = useEffectPass(effect, width, height);
   return useMemo(() => {
@@ -92,6 +101,20 @@ export function useToneMapPass(options: ToneMapPassOptions): ToneMapPass {
       toneMap: () => drawOffscreen(gl, toneMapDraw),
     };
   }, [gl, pass, worldBuffer, target]);
+}
+
+/** Marks `worldBuffer` while `transparentBackground` holds. */
+function useTransparentWorldBuffer(
+  worldBuffer: THREE.WebGLRenderTarget,
+  transparentBackground: boolean
+): void {
+  useLayoutEffect(() => {
+    if (!transparentBackground) return undefined;
+    transparentWorldBuffers.add(worldBuffer);
+    return () => {
+      transparentWorldBuffers.delete(worldBuffer);
+    };
+  }, [worldBuffer, transparentBackground]);
 }
 
 /** The world buffer, resized in place as the viewport resizes. */

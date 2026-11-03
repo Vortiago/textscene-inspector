@@ -653,6 +653,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Environment Ssr",
+    "file": "unit-environment-ssr.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Escaped Heading Hud",
     "file": "unit-escaped-heading-hud.tscn",
     "category": "Other"

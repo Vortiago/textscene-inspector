@@ -11,9 +11,7 @@ import { opaquePrepassOf } from '../materials/opaquePrepass';
 import { surfaceDepthMaterial, syncSurfaceDepth } from '../materials/surfaceDepthMaterial';
 import { beginStep, endStep } from '../frameProfile/frameProfile';
 import { cameraFrustum } from '../cameraFrustum';
-
-/** Below every `render_priority` (`material.h:66-67`), so three's opaque sort puts it first. */
-const PREPASS_RENDER_ORDER = Number.MIN_SAFE_INTEGER;
+import { createFirstOpaqueSentinel } from '../firstOpaqueSentinel';
 
 /** The material each surface's prepass copy starts from: depth, and no colour. */
 const PREPASS_BASE = new THREE.MeshDepthMaterial({ colorWrite: false });
@@ -21,23 +19,9 @@ const PREPASS_BASE = new THREE.MeshDepthMaterial({ colorWrite: false });
 /** Scratch for one prepass: three renders one scene at a time. */
 const frustum = new THREE.Frustum();
 
-/**
- * The sentinel that draws the depth prepass of every surface in its scene before three's opaque
- * pass. It draws nothing of its own, casts nothing and takes no pick.
- */
+/** The sentinel that draws the depth prepass of every surface in its scene before three's opaque pass. */
 export function createDepthPrepassSentinel(): THREE.Mesh {
-  const sentinel = new THREE.Mesh(
-    new THREE.BufferGeometry(),
-    new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: false })
-  );
-  sentinel.name = 'DepthPrepass';
-  sentinel.renderOrder = PREPASS_RENDER_ORDER;
-  sentinel.frustumCulled = false;
-  sentinel.layers.enableAll();
-  sentinel.userData = { tscnFrameExcluded: true };
-  sentinel.raycast = () => {};
-  sentinel.onBeforeRender = (renderer, scene, camera) => drawDepthPrepass(renderer, scene, camera);
-  return sentinel;
+  return createFirstOpaqueSentinel('DepthPrepass', drawDepthPrepass);
 }
 
 /** Draws the depth prepass of every surface of `scene` that `camera` sees. */

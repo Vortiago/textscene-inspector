@@ -6,7 +6,7 @@ renders_as: THREE scene.environment / background / tone mapping / fog
 
 # Environment
 
-The resource a `WorldEnvironment` holds: background and sky, ambient light, tone mapping, glow, colour adjustments, depth fog and volumetric fog. The editor injects a preview Environment on a scene that declares none (ADR-0025). Each section drives one feature from its own fixture.
+The resource a `WorldEnvironment` holds: background and sky, ambient light, tone mapping, glow, colour adjustments, depth fog, volumetric fog and screen-space reflections. The editor injects a preview Environment on a scene that declares none (ADR-0025). Each section drives one feature from its own fixture.
 
 ## Background sky
 <!-- compare: image=unit-sky-procedural status=done fixture=unit-sky-procedural.tscn -->
@@ -94,6 +94,11 @@ The preview environment enables glow, which blooms the emissive sphere. Both eng
 <!-- compare: image=unit-volumetric-fog-shadow status=done fixture=unit-volumetric-fog-shadow.tscn -->
 
 A thin box under a DirectionalLight3D tilted 60° with `shadow_enabled`, in volumetric fog of density 0.1 over a colour background. The fog under the box stays dark where the box blocks the light, and the shadow's edge in the fog matches Godot. An OmniLight3D or a SpotLight3D that casts shadows darkens the fog behind its casters in the same way. A SpotLight3D's `shadow_bias` pushes each fog cell away from the light, as in Godot, so a large bias darkens its whole cone. The fog around a shadowed SpotLight3D's origin shows no dark blocks. The cells behind the light's plane stay unlit, as Godot's clamped shadow read leaves them.
+
+## SSR
+<!-- compare: image=unit-environment-ssr status=done fixture=unit-environment-ssr.tscn -->
+
+`ssr_enabled` over a smooth metal floor and a red box, under a colour background. The floor reflects the box only through the screen-space trace, so with SSR off it stays black, as in Godot. The trace is Godot's: the depth pyramid, the march with its step count, fades and depth tolerance, and the reprojection of the last frame. The roughness filter blurs a rough surface's reflection and fades it out from roughness 0.6 to 0.7. The project's `screen_space_reflection/half_size` and a multisampled viewport trace as Godot does. A viewport with a transparent background and a ReflectionProbe's capture trace none, as in Godot. The trace reads the last frame, as Godot's does, so the previewer draws a second frame after each change.
 
 ## Linting
 
@@ -204,5 +209,4 @@ The lenient parser never rejects. Every scalar goes through the shared `floatOr`
 
 ## Known limitations
 
-- **Shader missing** `ssr_enabled` draws no screen-space reflections.
 - **Resource gap** `adjustment_color_correction` is not applied, so a colour-correction texture leaves the frame unchanged.

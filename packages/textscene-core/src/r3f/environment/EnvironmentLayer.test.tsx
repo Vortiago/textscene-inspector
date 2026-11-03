@@ -1,4 +1,4 @@
-/** The background and the fog one Environment draws into its world's scene. */
+/** The background, the fog and the screen-space reflection one Environment draws into its world's scene. */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -6,6 +6,7 @@ import { EnvironmentLayer } from './EnvironmentLayer';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { SSR_STATE, ssrState } from '../screenSpaceReflection/ssrUniforms';
 
 /** `showFog` is the viewport's Fog toggle. */
 interface MountOptions {
@@ -59,5 +60,24 @@ describe('<EnvironmentLayer> fog', () => {
   it('draws no fog for an Environment without one (edge case)', async () => {
     const { scene } = await mountLayer({});
     expect(scene.fog).toBeNull();
+  });
+});
+
+describe('<EnvironmentLayer> screen-space reflection', () => {
+  it('mounts the trace of an Environment that enables it', async () => {
+    const { scene } = await mountLayer({ ssr_enabled: 'true' });
+    expect(scene.getObjectByName('ScreenSpaceReflection')).toBeDefined();
+  });
+
+  it('mounts no trace for an Environment without one, so no surface reads a reflection', async () => {
+    const { scene } = await mountLayer({});
+    expect(scene.getObjectByName('ScreenSpaceReflection')).toBeUndefined();
+    expect(ssrState[SSR_STATE.showsReflection]).toBe(0);
+  });
+
+  it('takes the trace off the scene on unmount', async () => {
+    const { scene, unmount } = await mountLayer({ ssr_enabled: 'true' });
+    await unmount();
+    expect(scene.getObjectByName('ScreenSpaceReflection')).toBeUndefined();
   });
 });

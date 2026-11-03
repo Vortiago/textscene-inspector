@@ -191,7 +191,9 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/r3f/fullScreenPass.ts':
     'one material per call, its shaders fixed at construction and owned by the caller that draws it; callers move only uniforms, and each `defines` change, the sky radiance layout and the volumetric fog integrate depth, sets `needsUpdate`',
   'packages/textscene-core/src/r3f/depthPrepass/depthPrepass.ts':
-    'the depth prepass base, cloned per surface and never drawn itself, and the sentinel, which writes nothing; neither is ever mutated',
+    'the depth prepass base, cloned per surface and never drawn itself, and never mutated',
+  'packages/textscene-core/src/r3f/firstOpaqueSentinel.ts':
+    "a first-opaque sentinel's material, which writes nothing and is never mutated",
   'packages/textscene-core/src/r3f/controls/native/text/canvasTextPainter.ts':
     'one material per built text run, replaced and disposed together with its geometry; its single `defines` write happens before the material has ever been rendered',
   'packages/textscene-core/src/r3f/controls/native/text/msdfMaterial.ts':
@@ -284,8 +286,8 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
  * and separate from both lists above for the same reason.
  */
 const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
-  'packages/textscene-core/src/r3f/depthPrepass/depthPrepass.ts':
-    'the depth prepass sentinel: its material writes nothing and is never mutated, and the sentinel is removed with its scene',
+  'packages/textscene-core/src/r3f/firstOpaqueSentinel.ts':
+    'a first-opaque sentinel: its material writes nothing and is never mutated, and its owner removes it with its scene',
   'packages/textscene-core/src/resources/sky/build.ts':
     'the sky cube: built once, consumed by a single cube render, disposed with the environment',
   'packages/textscene-core/src/r3f/internal/glb-scene-root/GlbSurfaceMaterialOverride.tsx':
