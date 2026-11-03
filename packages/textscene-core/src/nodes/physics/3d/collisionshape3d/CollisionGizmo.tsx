@@ -12,6 +12,9 @@ import { decodeConcavePolygonShape3D } from '../../../../resources/shapes/concav
 import { decodeCapsuleShape3D } from '../../../../resources/shapes/capsuleshape3d';
 import { decodeSphereShape3D } from '../../../../resources/shapes/sphereshape3d';
 import { decodeCylinderShape3D } from '../../../../resources/shapes/cylindershape3d';
+import { decodeWorldBoundaryShape3D } from '../../../../resources/shapes/worldboundaryshape3d';
+import { worldBoundaryDebugLines } from '../../../../resources/shapes/worldboundaryshape3d/debugLines';
+import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { warn } from '../../../../logger';
 import { wireGizmoProgram } from '../../../../r3f/components/wireGizmoProgram';
 import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
@@ -62,6 +65,8 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
         </mesh>
       );
     }
+    case 'WorldBoundaryShape3D':
+      return <WorldBoundaryLines shapeData={data} color={color} />;
     case 'ConcavePolygonShape3D':
       return <TriangleSoupWire shapeData={data} color={color} />;
     case 'ConvexPolygonShape3D':
@@ -77,7 +82,7 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
   }
 }
 
-interface PolygonWireProps {
+interface ShapeWireProps {
   /**
    * The shape resource's property bag, whose identity holds across renders. A decode per render
    * hands back a new array, and each new array would rebuild the geometry.
@@ -92,8 +97,17 @@ const MIN_TRIANGLE_SOUP_FLOATS = 3 * 3;
 /** A tetrahedron's four corners: the fewest points that enclose a volume. */
 const MIN_CONVEX_HULL_POINTS = 4;
 
+/** Godot draws a world boundary as lines, not a wireframe mesh: a square and a normal ray. */
+function WorldBoundaryLines({ shapeData, color }: ShapeWireProps) {
+  const positions = useMemo(
+    () => worldBoundaryDebugLines(decodeWorldBoundaryShape3D(shapeData).plane),
+    [shapeData]
+  );
+  return <GizmoLine positions={positions} color={color} />;
+}
+
 /** A concave shape is already a triangle soup, bound as a non-indexed BufferGeometry. */
-function TriangleSoupWire({ shapeData, color }: PolygonWireProps) {
+function TriangleSoupWire({ shapeData, color }: ShapeWireProps) {
   const geometry = useMemo(() => {
     const { data } = decodeConcavePolygonShape3D(shapeData);
     if (data.length < MIN_TRIANGLE_SOUP_FLOATS) return null;
@@ -113,7 +127,7 @@ function TriangleSoupWire({ shapeData, color }: PolygonWireProps) {
 }
 
 /** Convex hull from a point cloud, through the lazy-loaded ConvexGeometry. */
-function ConvexHullWire({ shapeData, color }: PolygonWireProps) {
+function ConvexHullWire({ shapeData, color }: ShapeWireProps) {
   const points = useMemo(() => decodeConvexPolygonShape3D(shapeData).points, [shapeData]);
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
   useDisposeOnRelease(geometry);
