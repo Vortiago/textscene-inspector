@@ -15,17 +15,13 @@ import { decodeCylinderShape3D } from '../../../resources/shapes/cylindershape3d
 import { decodeSphereShape3D } from '../../../resources/shapes/sphereshape3d';
 import type { TscnInternalResource } from '../../../parser/types';
 
-/** The unit box CollisionShape3D's overlay falls back to for an unported type. */
-export const UNIT_BOX_SIZE: Vector3 = { x: 1, y: 1, z: 1 };
-
-/**
- * Godot's `AABB::get_edge` (`aabb.cpp:357-416`): the 12 edges of `-size/2, size`, in index order.
+/** Godot's `AABB::get_edge` (`aabb.cpp:357-416`): the 12 edges of `-size/2, size`, in index order.
  * `BoxShape3D::get_debug_mesh_lines` reads them off its centred box (`box_shape_3d.cpp:36-51`), with
  * each end stored through the `real_t` float the engine keeps.
  *
  * @canonical BoxShape3D's debug wireframe
  */
-export function boxDebugLines({ x, y, z }: Vector3): Float32Array {
+function boxDebugLines({ x, y, z }: Vector3): Float32Array {
   const edges = aabbEdges(centredAabb({ x, y, z }));
   const points = new Float32Array(edges.length);
   for (let i = 0; i < edges.length; i += 1) points[i] = storedReal(edges[i]!);

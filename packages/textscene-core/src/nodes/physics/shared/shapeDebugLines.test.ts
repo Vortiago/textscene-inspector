@@ -4,7 +4,7 @@
  * order and the concave pairs per the canonical `DrawEdge` (concave_polygon_shape_3d.h:54-59).
  */
 import { describe, expect, it } from 'vitest';
-import { UNIT_BOX_SIZE, boxDebugLines, shapeDebugLines } from './shapeDebugLines';
+import { shapeDebugLines } from './shapeDebugLines';
 import { degToRadf } from '../../../godot/math/math.js';
 import type { TscnInternalResource } from '../../../parser/types';
 
@@ -26,7 +26,7 @@ describe('boxDebugLines', () => {
   ];
 
   it('writes the 12 edges in index order', () => {
-    const wire = boxDebugLines({ x: 1, y: 1, z: 1 });
+    const wire = shapeDebugLines({ id: 'a', type: 'BoxShape3D', data: { size: 'Vector3(1, 1, 1)' } })!;
     expect(wire.length).toBe(12 * 6);
     for (let i = 0; i < firstFourEdges.length; i += 1) {
       expect(Array.from(wire.slice(i * 6, i * 6 + 6))).toEqual(firstFourEdges[i]);
@@ -34,7 +34,7 @@ describe('boxDebugLines', () => {
   });
 
   it('scales the corners by a non-cubic size, from -size/2', () => {
-    const wire = boxDebugLines({ x: 2, y: 0.5, z: 1 });
+    const wire = shapeDebugLines({ id: 'a', type: 'BoxShape3D', data: { size: 'Vector3(2, 0.5, 1)' } })!;
     expect(Array.from(wire.slice(0, 3))).toEqual([1, -0.25, -0.5]);
   });
 });
@@ -74,7 +74,7 @@ describe('shapeDebugLines', () => {
     ]);
   });
 
-  it('pins the unit box of the fallback call site', () => {
-    expect(boxDebugLines(UNIT_BOX_SIZE).length).toBe(12 * 6);
+  it('pins a default-size box to 12 edges', () => {
+    expect(shapeDebugLines({ id: 'a', type: 'BoxShape3D', data: {} })!.length).toBe(12 * 6);
   });
 });
