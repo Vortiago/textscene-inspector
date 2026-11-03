@@ -120,6 +120,11 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
   const scene = (file: string) => vscode.Uri.file(path.join(projectDir, file)).fsPath;
   const invoke = async (tool: string, scenePath: string) =>
     vscode.lm.invokeTool(tool, { input: { path: scenePath } });
+  const invokeCapture = async (scenePath: string) => {
+    const result = await invoke('textscene_capture', scenePath);
+    assertWebviewLoaded(result);
+    return result;
+  };
 
   suite('Agent tool answers', function () {
     suiteSetup(async function () {
@@ -248,8 +253,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
       this.timeout(CAPTURE_TEST_TIMEOUT_MS);
       const main = scene('main.tscn');
 
-      const result = await invoke('textscene_capture', main);
-      assertWebviewLoaded(result);
+      const result = await invokeCapture(main);
       const image = imageOf(result);
 
       assert.ok(image, `expected an image part, found the text ${JSON.stringify(textOf(result))}`);
@@ -270,8 +274,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
       this.timeout(CAPTURE_TEST_TIMEOUT_MS);
       const main = scene('main.tscn');
 
-      const result = await invoke('textscene_capture', main);
-      assertWebviewLoaded(result);
+      const result = await invokeCapture(main);
 
       assert.strictEqual(imageOf(result), undefined);
       assert.strictEqual(
