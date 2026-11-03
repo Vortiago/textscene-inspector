@@ -134,6 +134,40 @@ remote_path = NodePath("../../HolderA")
   });
 });
 
+/** A global relay drives a local relay, whose push moves the global relay's holder. */
+const MIXED_3D = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Holder" type="Node3D" parent="."]
+
+[node name="Global" type="RemoteTransform3D" parent="Holder"]
+remote_path = NodePath("../../Local")
+
+[node name="Local" type="RemoteTransform3D" parent="."]
+remote_path = NodePath("../Holder")
+use_global_coordinates = false
+`;
+
+describe('the RemoteTransform3D relay cycle rule, with relays in local coordinates', () => {
+  it('warns on a cycle through a local relay that another relay moves, which pushes at once', () => {
+    expect(warnedNodes(MIXED_3D, RULE_3D)).toEqual(['Global', 'Local']);
+  });
+
+  it('stays silent on a cycle of local relays alone, which no push starts when the scene loads', () => {
+    const localOnly = MIXED_3D.replace(
+      'remote_path = NodePath("../../Local")',
+      'remote_path = NodePath("../../Local")\nuse_global_coordinates = false'
+    );
+    expect(warnedNodes(localOnly, RULE_3D)).toEqual([]);
+  });
+
+  it('reads a flag as the previewer does, so a malformed one moves nothing', () => {
+    const malformed = cycle3D('update_position = yes\nupdate_rotation = no\nupdate_scale = 0');
+    expect(warnedNodes(malformed, RULE_3D)).toEqual([]);
+  });
+});
+
 describe('the RemoteTransform2D relay cycle rule', () => {
   it('warns on each relay of a cycle', () => {
     expect(warnedNodes(cycle2D(), RULE_2D)).toEqual(['RelayA', 'RelayB']);

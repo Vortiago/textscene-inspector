@@ -237,6 +237,35 @@ remote_path = NodePath("../../HolderA")
 });
 
 describe('applyRemoteTransforms pushes a relay in local coordinates the moment another relay moves it', () => {
+  it('moves the holder of a 3D cycle that runs through a local relay on every flush', () => {
+    // Godot logged the holder at x 2882 by the harness frame.
+    const mixed = `[gd_scene format=3]
+[node name="Root" type="Node3D"]
+[node name="Holder" type="Node3D" parent="."]
+[node name="Global" type="RemoteTransform3D" parent="Holder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+remote_path = NodePath("../../Local")
+[node name="Local" type="RemoteTransform3D" parent="."]
+remote_path = NodePath("../Holder")
+use_global_coordinates = false
+`;
+    expectCloseTo(globalOrigin3D(mixed, 'Root/Holder'), [2882, 0, 0]);
+  });
+
+  it('moves the holder of a 2D cycle that runs through a local relay on every flush', () => {
+    const mixed = `[gd_scene format=3]
+[node name="Root" type="Node2D"]
+[node name="Holder" type="Node2D" parent="."]
+[node name="Global" type="RemoteTransform2D" parent="Holder"]
+position = Vector2(10, 0)
+remote_path = NodePath("../../Local")
+[node name="Local" type="RemoteTransform2D" parent="."]
+remote_path = NodePath("../Holder")
+use_global_coordinates = false
+`;
+    expectCloseTo(globalOrigin2D(mixed, 'Root/Holder'), [28820, 0]);
+  });
+
   it('gives the target the new local transform of a 3D local relay', () => {
     const content = `[gd_scene format=3]
 [node name="Root" type="Node3D"]

@@ -149,7 +149,7 @@ function valueAtLoadTick<T>(
 
 /**
  * The one tree every reader of a scene graph and physics clock over a loader shares for a load
- * tick. `projectPhysicsClock` hands back one clock for one settings object, so the key holds.
+ * tick. `projectPhysicsClock` hands back one clock for each pair of values, so the key holds.
  */
 const sharedTreesOf = perObject((sceneGraph: SceneGraph) =>
   perObject((physicsClock: PhysicsClock) =>
@@ -157,8 +157,23 @@ const sharedTreesOf = perObject((sceneGraph: SceneGraph) =>
   )
 );
 
+/** The shared tree of what {@link useLiveTreeInputs} read, at the load tick `version`. */
+function sharedTreeAt(
+  { sceneGraph, loader, physicsClock }: LiveTreeInputs & { sceneGraph: SceneGraph },
+  version: number
+): SharedLiveTree | null {
+  return sharedTreesOf(sceneGraph)(physicsClock)(loader, version);
+}
+
+/** What a shared live tree is built from. */
+interface LiveTreeInputs {
+  sceneGraph: SceneGraph | null;
+  loader: ResourceLoader | null;
+  physicsClock: PhysicsClock;
+}
+
 /** The scene graph in context, or null with none, the loader and the project's physics clock. */
-function useSceneGraphAndLoader() {
+function useLiveTreeInputs(): LiveTreeInputs {
   // Optional so viewport-level readers (the preview lighting) work in the
   // empty-canvas and test-renderer cases, where no scene is mounted at all.
   const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
@@ -172,10 +187,10 @@ function useSceneGraphAndLoader() {
  * the one the graph, loader and load tick give, so a node collapses once however many ask.
  */
 export function useSharedLiveTree(): SharedLiveTree | null {
-  const { sceneGraph, loader, physicsClock } = useSceneGraphAndLoader();
+  const { sceneGraph, loader, physicsClock } = useLiveTreeInputs();
   const version = useLiveTreeVersion(loader);
   return useMemo(
-    () => (sceneGraph ? sharedTreesOf(sceneGraph)(physicsClock)(loader, version) : null),
+    () => (sceneGraph ? sharedTreeAt({ sceneGraph, loader, physicsClock }, version) : null),
     [sceneGraph, physicsClock, loader, version]
   );
 }
@@ -222,11 +237,11 @@ export function useLiveTreeSelection<T>(
   select: ((tree: SharedLiveTree) => T | undefined) | null,
   isSame: (a: T, b: T) => boolean
 ): T | undefined {
-  const { sceneGraph, loader, physicsClock } = useSceneGraphAndLoader();
+  const { sceneGraph, loader, physicsClock } = useLiveTreeInputs();
   const readAt = useCallback(
     (version: number) => {
       if (!sceneGraph || !select) return undefined;
-      const tree = sharedTreesOf(sceneGraph)(physicsClock)(loader, version);
+      const tree = sharedTreeAt({ sceneGraph, loader, physicsClock }, version);
       return tree ? select(tree) : undefined;
     },
     [sceneGraph, physicsClock, loader, select]

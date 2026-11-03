@@ -53,7 +53,7 @@ One walk of Godot's transform-change list, which sends `NOTIFICATION_TRANSFORM_C
 A RemoteTransform pushes each time a flush reaches it, so the RemoteTransform pass replays flushes, not the file order.
 _Avoid_: "update", "tick" for a flush.
 
-**Harness frame** (`HARNESS_FRAME` in `godot/scene/transformFlushes.ts`):
+**Harness frame** (`HARNESS_CAPTURE` in `godot/scene/transformFlushes.ts`):
 The process frame at which `pnpm ref:godot` captures a scene whose transforms never hold still. The previewer draws such a scene at this frame, so both sides show the same pose.
 _Avoid_: "last frame", "the capture time".
 

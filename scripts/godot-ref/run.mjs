@@ -64,11 +64,15 @@ export const RENDER_QUIET_MSEC = 2000;
  */
 export const CONVERGENCE_FRAMES = 6;
 
-/**
- * The most frames the render wait draws: the longest fog convergence, then the quiet window. A
- * scene that never settles is captured after the last, so the previewer's `HARNESS_FRAME` follows it.
- */
+/** The longest fog convergence, then the quiet window: the frames the render wait allows. */
 export const RENDER_WAIT_MAX_FRAMES = FOG_HISTORY_MAX_CYCLES * FOG_JITTER_CYCLE_FRAMES + RENDER_QUIET_FRAMES;
+
+/**
+ * The process frame the render wait ends at when the scene never settles. It counts from the frame
+ * the scene enters, so a reflection probe's frames shorten the wait, not move the capture. The
+ * previewer's `HARNESS_CAPTURE` draws a relay cycle at this frame.
+ */
+export const NEVER_SETTLES_CAPTURE_FRAME = CONVERGENCE_FRAMES + RENDER_WAIT_MAX_FRAMES - 1;
 
 /**
  * `--quit-after`: a backstop for a bootstrap that never quits. It sits above the render wait's
@@ -681,9 +685,9 @@ func _apply_preview_lighting(target: Node) -> void:
 /** What the bootstrap prints on stderr to warn about a capture, before each warning. */
 const HARNESS_WARNING_PREFIX = 'godot-ref: ';
 
-/** The lines of the engine's `stderr` that the bootstrap wrote to warn about its capture. */
-export function harnessWarnings(stderr) {
-  return stderr.split('\n').filter((line) => line.startsWith(HARNESS_WARNING_PREFIX));
+/** The lines of the engine's output that the bootstrap wrote to warn about its capture. */
+export function harnessWarnings(output) {
+  return output.split('\n').filter((line) => line.startsWith(HARNESS_WARNING_PREFIX));
 }
 
 /**
@@ -753,7 +757,7 @@ const FOG_JITTER_CYCLE_FRAMES := ${FOG_JITTER_CYCLE_FRAMES}
 const FOG_HISTORY_MAX_CYCLES := ${FOG_HISTORY_MAX_CYCLES}
 const RENDER_QUIET_FRAMES := ${RENDER_QUIET_FRAMES}
 const RENDER_QUIET_MSEC := ${RENDER_QUIET_MSEC}
-const RENDER_WAIT_MAX_FRAMES := ${RENDER_WAIT_MAX_FRAMES}
+const NEVER_SETTLES_CAPTURE_FRAME := ${NEVER_SETTLES_CAPTURE_FRAME}
 const CONVERGENCE_FRAMES := ${CONVERGENCE_FRAMES}
 
 # Set by a refusal inside the render, so the ONE quit() below carries a non-zero
@@ -1053,14 +1057,13 @@ func _advance_particles(node: Node) -> void:
 	for child in node.get_children():
 		_advance_particles(child)
 
-# CONVERGENCE, not the settle contract — do not "align" this count with
-# anything on the previewer side. These frames exist so the picture stops
-# moving: an import lands, the first draw completes, shaped text finally
-# measures. They carry no simulated time, because the tree is paused before the
-# scene exists, so no number of them moves the instant being captured. Our side
-# reaches the same standstill by a different route (screenshots until two are
-# byte-identical) and that asymmetry is correct — a stopping test has no
-# semantics to share.
+# CONVERGENCE: these frames exist so the picture stops moving. An import lands,
+# the first draw completes and shaped text measures. They carry no simulated
+# time, because the tree is paused before the scene exists. Transform
+# notifications still run in them, so a relay cycle moves, but the render wait
+# ends a scene that never settles at NEVER_SETTLES_CAPTURE_FRAME, whatever this
+# count is. Our side reaches the same standstill by screenshots until two are
+# byte-identical.
 func _converge(source: Viewport) -> void:
 	for _i in CONVERGENCE_FRAMES:
 		await get_tree().process_frame
@@ -1097,7 +1100,7 @@ func _await_rendered(source: Viewport) -> void:
 	var transforms := _global_transforms(movers)
 	var quiet := 0
 	var quiet_since := Time.get_ticks_msec()
-	for _frame in RENDER_WAIT_MAX_FRAMES:
+	while Engine.get_process_frames() < NEVER_SETTLES_CAPTURE_FRAME:
 		await RenderingServer.frame_post_draw
 		var picture := source.get_texture().get_image().get_data()
 		var now_pending := _pending_work()
@@ -1635,7 +1638,9 @@ async function renderInto(
   // Marked, so a caller that follows the message to `--mode 2d-root` need not match on its prose.
   if (drift) await refuse(drift, { rootOnlyDrift: true });
 
-  return { workDir: work, out: resolve(out), mode: rendered, warnings: harnessWarnings(render.stderr) };
+  // Both streams: `xvfb-run` hands the engine's `printerr` on through its stdout.
+  const warnings = harnessWarnings(`${render.stdout}\n${render.stderr}`);
+  return { workDir: work, out: resolve(out), mode: rendered, warnings };
 }
 
 async function main() {

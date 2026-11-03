@@ -11,17 +11,21 @@ function tickFrames(clock: PhysicsClock, count: number): number[] {
   const frames: number[] = [];
   for (let frame = 0; frames.length < count; frame++) {
     const landed =
-      physicsTicksThrough(frame, clock) - (frame === 0 ? 0 : physicsTicksThrough(frame - 1, clock));
+      physicsTicksThrough(frame, HARNESS_FPS, clock) -
+      (frame === 0 ? 0 : physicsTicksThrough(frame - 1, HARNESS_FPS, clock));
     for (let tick = 0; tick < landed; tick++) frames.push(frame);
   }
   return frames;
 }
 
+/** The harness's `--fixed-fps`, which every measurement here ran at. */
+const HARNESS_FPS = 1000;
+
 const clockAt = (ticksPerSecond: number, jitterFix = 0.5): PhysicsClock => ({ ticksPerSecond, jitterFix });
 
 describe('physicsTicksThrough', () => {
   it('runs no tick before the first lands', () => {
-    expect(physicsTicksThrough(7, DEFAULT_PHYSICS_CLOCK)).toBe(0);
+    expect(physicsTicksThrough(7, HARNESS_FPS, DEFAULT_PHYSICS_CLOCK)).toBe(0);
   });
 
   it('lands the first ticks of the default clock where Godot does', () => {
@@ -49,16 +53,16 @@ describe('physicsTicksThrough', () => {
     [240, 221],
     [1000, 924],
   ])('counts the ticks Godot runs by frame 923 at %i ticks a second', (ticksPerSecond, ticks) => {
-    expect(physicsTicksThrough(923, clockAt(ticksPerSecond))).toBe(ticks);
+    expect(physicsTicksThrough(923, HARNESS_FPS, clockAt(ticksPerSecond))).toBe(ticks);
   });
 
   it('lets a wide jitter fix pull ticks early', () => {
     expect(tickFrames(clockAt(144, 2), 5)).toEqual([0, 1, 6, 13, 20]);
-    expect(physicsTicksThrough(923, clockAt(144, 2))).toBe(134);
+    expect(physicsTicksThrough(923, HARNESS_FPS, clockAt(144, 2))).toBe(134);
   });
 
   it('lets no jitter fix hold ticks to the clock', () => {
     expect(tickFrames(clockAt(144, 0), 5)).toEqual([6, 13, 20, 27, 34]);
-    expect(physicsTicksThrough(923, clockAt(144, 0))).toBe(133);
+    expect(physicsTicksThrough(923, HARNESS_FPS, clockAt(144, 0))).toBe(133);
   });
 });

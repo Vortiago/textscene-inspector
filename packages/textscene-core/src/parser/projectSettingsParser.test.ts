@@ -688,7 +688,7 @@ describe('projectPhysicsClock', () => {
 
   it("is Godot's default clock with no project or no key (main.cpp:2173,2175)", () => {
     expect(projectPhysicsClock(null)).toBe(DEFAULT_PHYSICS_CLOCK);
-    expect(projectPhysicsClock({ 'physics/other': '1' })).toEqual(DEFAULT_PHYSICS_CLOCK);
+    expect(projectPhysicsClock({ 'physics/other': '1' })).toBe(DEFAULT_PHYSICS_CLOCK);
   });
 
   it('keeps the default rate for a rate the setter refuses (engine.cpp:47-51)', () => {
@@ -706,8 +706,9 @@ describe('projectPhysicsClock', () => {
     expect(projectPhysicsClock({ [JITTER]: '3' }).jitterFix).toBe(3);
   });
 
-  it('hands back one clock for one settings object, so a cache keyed on it holds', () => {
-    const settings = { [TICKS]: '30' };
-    expect(projectPhysicsClock(settings)).toBe(projectPhysicsClock(settings));
+  it('hands back one clock for equal values, so an edit to another setting keeps every cache keyed on it', () => {
+    expect(projectPhysicsClock({ [TICKS]: '30' })).toBe(
+      projectPhysicsClock({ [TICKS]: '30', 'other/key': '1' })
+    );
   });
 });

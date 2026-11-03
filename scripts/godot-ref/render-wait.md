@@ -3,9 +3,9 @@
 The Godot capture harness saves a 3D, 2D or root picture only after `_await_rendered` in
 `run.mjs` sees nothing pending. Godot signals none of the pending work, so the wait reads what
 each kind changes. It returns when the picture, the pending counters and the global transforms have
-held still for `RENDER_QUIET_FRAMES` frames in a row. A scene that never settles is captured after
-the longest wait, `RENDER_WAIT_MAX_FRAMES`, with a warning. That capture is the harness frame, which
-the previewer's `HARNESS_FRAME` names.
+held still for `RENDER_QUIET_FRAMES` frames in a row. A scene that never settles is captured with a
+warning at process frame `NEVER_SETTLES_CAPTURE_FRAME`, counted from the frame the scene enters.
+That capture is the harness frame, which the previewer's `HARNESS_CAPTURE` names.
 
 ## What is pending
 

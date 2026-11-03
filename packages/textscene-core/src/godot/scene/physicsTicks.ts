@@ -1,9 +1,11 @@
 /**
- * The physics ticks Godot runs in each process frame under the `ref:godot` harness's fixed frame
- * rate: a port of `MainTimerSync::advance_checked` and `advance_core` (`main_timer_sync.cpp:331-487`).
+ * The physics ticks Godot runs in each process frame under a fixed frame rate, as the `ref:godot`
+ * harness's `--fixed-fps` sets: a port of `MainTimerSync::advance_checked` and `advance_core` (`main_timer_sync.cpp:331-487`).
  * The sync keeps each frame's tick count near the recent typical count, so a tick can land up to
  * `jitterFix` of a tick early or late.
  */
+
+import { clamp } from '../math/math.js';
 
 /** The project settings that pace the physics ticks. */
 export interface PhysicsClock {
@@ -20,17 +22,8 @@ export interface PhysicsClock {
  */
 export const DEFAULT_PHYSICS_CLOCK: PhysicsClock = { ticksPerSecond: 60, jitterFix: 0.5 };
 
-/** The `ref:godot` harness's `--fixed-fps`, the process frames in a second of Godot's time. */
-const HARNESS_FIXED_FPS = 1000;
-
 /** `MainTimerSync::CONTROL_STEPS`, the frames back the sync compares tick counts over. */
 const CONTROL_STEPS = 12;
-
-/** The process step and tick count of one frame. */
-interface FrameTime {
-  processStep: number;
-  physicsSteps: number;
-}
 
 /** `MainTimerSync`'s state, which a scene's frames advance from its constructor's values. */
 class MainTimerSync {
@@ -40,67 +33,64 @@ class MainTimerSync {
   private readonly typicalSteps = Array.from({ length: CONTROL_STEPS }, (_, i) => i);
   private readonly physicsStep: number;
 
-  constructor(private readonly clock: PhysicsClock) {
+  constructor(
+    private readonly clock: PhysicsClock,
+    private readonly fixedFps: number
+  ) {
     this.physicsStep = 1 / clock.ticksPerSecond;
   }
 
   /** The ticks of the next process frame (`advance_checked`, `main_timer_sync.cpp:414-487`). */
   advance(): number {
-    let processStep = 1 / HARNESS_FIXED_FPS;
+    let processStep = 1 / this.fixedFps;
     // A `float` in Godot, not a `double`.
     const minOutputStep = Math.fround(Math.max(Math.fround(processStep / 8), 1e-6));
     processStep += this.timeDeficit;
-    const frame = this.advanceCore(processStep);
-    const processMinusAccum = frame.processStep - this.timeAccum;
+    let steps = this.advanceCore(processStep);
+    let outputStep = processStep;
+    const processMinusAccum = outputStep - this.timeAccum;
     const [consistentSteps, minAverage, maxAverage] = this.averagePhysicsSteps();
     if (consistentSteps > 3) {
-      frame.processStep = clamp(
-        frame.processStep,
-        minAverage * this.physicsStep,
-        maxAverage * this.physicsStep
-      );
+      outputStep = clamp(outputStep, minAverage * this.physicsStep, maxAverage * this.physicsStep);
     }
     const maxClockDeviation = this.clock.jitterFix * this.physicsStep;
-    frame.processStep = clamp(
-      frame.processStep,
-      processStep - maxClockDeviation,
-      processStep + maxClockDeviation
-    );
-    frame.processStep = clamp(frame.processStep, processMinusAccum, processMinusAccum + this.physicsStep);
-    frame.processStep = Math.max(frame.processStep, minOutputStep);
-    this.timeAccum = frame.processStep - processMinusAccum;
+    outputStep = clamp(outputStep, processStep - maxClockDeviation, processStep + maxClockDeviation);
+    outputStep = clamp(outputStep, processMinusAccum, processMinusAccum + this.physicsStep);
+    outputStep = Math.max(outputStep, minOutputStep);
+    this.timeAccum = outputStep - processMinusAccum;
     if (this.timeAccum > this.physicsStep) {
       const extraSteps = Math.floor(this.timeAccum * this.clock.ticksPerSecond);
       this.timeAccum -= extraSteps * this.physicsStep;
-      frame.physicsSteps += extraSteps;
+      steps += extraSteps;
     }
-    this.timeDeficit = processStep - frame.processStep;
-    return frame.physicsSteps;
+    this.timeDeficit = processStep - outputStep;
+    return steps;
   }
 
-  /** `advance_core` (`main_timer_sync.cpp:331-411`). */
-  private advanceCore(processStep: number): FrameTime {
+  /** `advance_core` (`main_timer_sync.cpp:331-411`): the ticks before `advance` clamps the step. */
+  private advanceCore(processStep: number): number {
     this.timeAccum += processStep;
     const ticksAccumulated = this.timeAccum * this.clock.ticksPerSecond;
     let steps = Math.floor(ticksAccumulated);
-    const { min, max, ...typical } = this.typicalStepBounds();
-    let { updateTypical } = typical;
-    if (steps < min) {
+    const bounds = this.typicalStepBounds();
+    let updateTypical = bounds.updateTypical;
+    if (steps < bounds.min) {
       const maxPossible = Math.floor(ticksAccumulated + this.clock.jitterFix);
-      updateTypical ||= maxPossible < min;
-      steps = Math.min(maxPossible, min);
-    } else if (steps > max) {
+      updateTypical ||= maxPossible < bounds.min;
+      steps = Math.min(maxPossible, bounds.min);
+    } else if (steps > bounds.max) {
       const minPossible = Math.floor(ticksAccumulated - this.clock.jitterFix);
-      updateTypical ||= minPossible > max;
-      steps = Math.max(minPossible, max);
+      updateTypical ||= minPossible > bounds.max;
+      steps = Math.max(minPossible, bounds.max);
     }
     steps = Math.max(steps, 0);
     this.timeAccum -= steps * this.physicsStep;
-    for (let i = CONTROL_STEPS - 2; i >= 0; i--)
+    for (let i = CONTROL_STEPS - 2; i >= 0; i--) {
       this.accumulatedSteps[i + 1] = this.accumulatedSteps[i]! + steps;
+    }
     this.accumulatedSteps[0] = steps;
     if (updateTypical) this.updateTypicalSteps();
-    return { processStep, physicsSteps: steps };
+    return steps;
   }
 
   /**
@@ -148,15 +138,12 @@ class MainTimerSync {
   }
 }
 
-/** `value` held to `[low, high]`, the low bound first, as `MainFrameTime::clamp_process_step` does. */
-function clamp(value: number, low: number, high: number): number {
-  if (value < low) return low;
-  return value > high ? high : value;
-}
-
-/** The physics ticks Godot runs from process frame 0 to the end of process frame `frame`. */
-export function physicsTicksThrough(frame: number, clock: PhysicsClock): number {
-  const sync = new MainTimerSync(clock);
+/**
+ * The physics ticks Godot runs from process frame 0 to the end of process frame `frame`, at
+ * `fixedFps` process frames a second.
+ */
+export function physicsTicksThrough(frame: number, fixedFps: number, clock: PhysicsClock): number {
+  const sync = new MainTimerSync(clock, fixedFps);
   let ticks = 0;
   for (let f = 0; f <= frame; f++) ticks += sync.advance();
   return ticks;
