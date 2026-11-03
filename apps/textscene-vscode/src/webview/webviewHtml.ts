@@ -49,23 +49,29 @@ export interface WebviewHtmlOptions {
 }
 
 /**
+ * `value` as a JavaScript literal for an inline script. `<` is escaped, so a value never
+ * closes or opens a script tag: an HTML parser ends a script only on a literal `</script`.
+ */
+function scriptLiteral(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
+}
+
+/**
  * Imports the entry script, and tells the host when the import fails, such as on a cut-off
- * copy (`webviewLoadFailed`). A failed import ran none of the bundle, so the API is still
- * free to acquire. The URL is a JSON string, with `<` escaped as in the config script.
+ * copy (`webviewLoadFailed`). A script that fails to fetch or parse runs no bundle code, so
+ * the API is still free to acquire.
  */
 function entryLoader(scriptUri: string): string {
-  const url = JSON.stringify(scriptUri).replace(/</g, '\\u003c');
-  return `import(${url}).catch((error) => acquireVsCodeApi().postMessage({ type: 'webviewLoadFailed', error: String(error) }));`;
+  return `import(${scriptLiteral(scriptUri)}).catch((error) => acquireVsCodeApi().postMessage({ type: 'webviewLoadFailed', error: String(error) }));`;
 }
 
 export function generateWebviewHtml(options: WebviewHtmlOptions): string {
   const { scriptUri, nonce, cssUri, cspSource, initialConfig } = options;
   const cssLink = cssUri ? `<link rel="stylesheet" nonce="${nonce}" href="${cssUri}">` : '';
 
-  // `<` is escaped, so a config value never closes or opens a script tag. The
-  // closed `viewportMode` enum cannot carry one, so this is defence in depth.
+  // The closed `viewportMode` enum cannot carry a `<`, so its escape is defence in depth.
   const configScript = initialConfig
-    ? `<script nonce="${nonce}">window.__TEXTSCENE_CONFIG__ = ${JSON.stringify(initialConfig).replace(/</g, '\\u003c')};</script>`
+    ? `<script nonce="${nonce}">window.__TEXTSCENE_CONFIG__ = ${scriptLiteral(initialConfig)};</script>`
     : '';
 
   // Dynamic `import()` of the ESM chunks needs `<script type="module">`, and
@@ -81,6 +87,7 @@ export function generateWebviewHtml(options: WebviewHtmlOptions): string {
       <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${cspSource}; img-src ${cspSource} blob: data:; worker-src blob:;">
       <title>TextScene Inspector</title>
       ${cssLink}
+      <link rel="modulepreload" nonce="${nonce}" href="${scriptUri}">
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {

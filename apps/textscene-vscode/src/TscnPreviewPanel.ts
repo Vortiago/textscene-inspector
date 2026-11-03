@@ -6,13 +6,13 @@
 
 import * as vscode from 'vscode';
 import { PROJECT_FILE_NAME } from '@textscene/core/godot';
+import { error as logError, warn } from '@textscene/core/logger';
 import type { HostToWebviewMessage } from './protocol';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
 import { buildPanelHtml } from './panelHtml';
 import { dispatchWebviewMessage, type WebviewMessageHandlers } from './webviewDispatch';
 import { jumpToNodeDefinition } from './jumpToNodeDefinition';
 import { relayWebviewLog } from './hostLogRelay';
-import * as logger from './logger';
 import { writeClipboard } from './writeClipboard';
 import { encodeResourceResponse } from './wireCodec';
 import { PreviewCaptureQueue, type PreviewCapture } from './previewCaptureQueue';
@@ -46,7 +46,7 @@ export class TscnPreviewPanel {
   private _webviewReady = false;
   /** Set by `dispose()`. `_webviewReady` stays true after it, so it is not this. */
   private _disposed = false;
-  /** Set by the first `webviewLoadFailed`, which loads the document once more. */
+  /** Set by a `webviewLoadFailed`, which loads the document once more. Cleared by `webviewReady`. */
   private _hasReloadedDocument = false;
 
   /**
@@ -100,6 +100,7 @@ export class TscnPreviewPanel {
     const handlers: WebviewMessageHandlers = {
       webviewReady: (_msg) => {
         this._webviewReady = true;
+        this._hasReloadedDocument = false;
         this._captures.webviewLoaded();
         // Every remount, such as a move to another editor group, posts ready with
         // an empty tree. Replay always, so a ready webview holds the current text:
@@ -273,17 +274,17 @@ export class TscnPreviewPanel {
   /**
    * VS Code's webview resource loader can end a script's transfer early, and the page
    * then never runs (#1147). A new document fetches the script again. A second failure
-   * is no cut transfer, so it ends every capture with the error instead of reloading.
+   * before a `webviewReady` ends every capture with the error, so no reload loops.
    */
   private _handleFailedLoad(error: string): void {
+    const reason = `The preview script failed to load: ${error}`;
     if (!this._hasReloadedDocument) {
       this._hasReloadedDocument = true;
-      logger.getChannel()?.warn(`The preview script failed to load, so the preview loads again: ${error}`);
+      warn(`${reason}. The preview loads again.`);
       this._loadDocument();
       return;
     }
-    const reason = `The preview script failed to load: ${error}`;
-    logger.getChannel()?.error(reason);
+    logError(reason);
     this._captures.setState({ kind: 'unavailable', reason });
   }
 

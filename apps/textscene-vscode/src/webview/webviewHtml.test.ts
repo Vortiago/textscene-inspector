@@ -25,11 +25,11 @@ function entryLoaderOf(html: string): string {
 async function runEntryLoader(html: string, api: { postMessage: (message: unknown) => void }): Promise<void> {
   // A function body, not a module, since vitest evaluates no module from a string. Its
   // `import()` is the test's own, which a `Function` body cannot reach in vitest's VM.
-  const body = entryLoaderOf(html)
-    .trim()
-    .replace(/^import\(/, 'importEntry(')
-    .replace(/;$/, '');
-  const run = new Function('acquireVsCodeApi', 'importEntry', `return ${body};`);
+  const run = new Function(
+    'acquireVsCodeApi',
+    'importEntry',
+    `return ${entryLoaderOf(html).replace('import(', 'importEntry(')}`
+  );
   await run(
     () => api,
     (url: string) => import(/* @vite-ignore */ url)
@@ -66,6 +66,14 @@ describe('the entry loader', () => {
 });
 
 describe('generateWebviewHtml', () => {
+  it('preloads the entry script, so its fetch starts while the page parses', () => {
+    const html = generateWebviewHtml(BASE_OPTIONS);
+
+    expect(html).toContain(
+      `<link rel="modulepreload" nonce="${BASE_OPTIONS.nonce}" href="${BASE_OPTIONS.scriptUri}">`
+    );
+  });
+
   it('omits the config script entirely when initialConfig is not provided', () => {
     const html = generateWebviewHtml(BASE_OPTIONS);
 
@@ -80,7 +88,7 @@ describe('generateWebviewHtml', () => {
 
     expect(html).toContain('window.__TEXTSCENE_CONFIG__ = {"viewportMode":"2D"};');
     const configIndex = html.indexOf('__TEXTSCENE_CONFIG__');
-    const entryScriptIndex = html.indexOf(BASE_OPTIONS.scriptUri);
+    const entryScriptIndex = html.indexOf(entryLoaderOf(html));
     expect(configIndex).toBeGreaterThan(-1);
     expect(configIndex).toBeLessThan(entryScriptIndex);
   });

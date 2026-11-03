@@ -15,6 +15,7 @@ const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
 function makeHandlers() {
   return {
     webviewReady: vi.fn(),
+    webviewLoadFailed: vi.fn(),
     jumpToNode: vi.fn(),
     copyNodePath: vi.fn(),
     loadResource: vi.fn(),
@@ -31,6 +32,7 @@ function makeHandlers() {
 describe('dispatchWebviewMessage', () => {
   const ROUTING_CASES: WebviewToHostMessage[] = [
     { type: 'webviewReady' },
+    { type: 'webviewLoadFailed', error: 'SyntaxError: Unexpected end of input' },
     { type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/Leaf' },
     { type: 'copyNodePath', nodePath: 'Player/Camera3D' },
     { type: 'loadResource', path: 'res://tex.png', resourceType: 'Texture2D', requestId: 'r1' },
@@ -258,6 +260,12 @@ describe('a message whose type is known but whose body is not', () => {
     const h = makeHandlers();
     dispatchWebviewMessage({ type: 'previewCaptureUnavailable' }, h);
     expect(h.previewCaptureUnavailable).not.toHaveBeenCalled();
+  });
+
+  it('drops a webviewLoadFailed with no error, which the capture answer would print', () => {
+    const h = makeHandlers();
+    dispatchWebviewMessage({ type: 'webviewLoadFailed' }, h);
+    expect(h.webviewLoadFailed).not.toHaveBeenCalled();
   });
 
   it('drops a capturePong with no pingId, which could answer no ping', () => {

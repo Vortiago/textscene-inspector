@@ -1,22 +1,15 @@
 /**
  * A webview whose entry script fails to load posts `webviewLoadFailed`, since nothing of the
- * bundle runs. The panel loads its document once more, and a second failure ends every
- * capture with the error instead of the load deadline.
+ * bundle runs. The panel loads its document once more, and a second failure before a
+ * `webviewReady` ends every capture with the error instead of the load deadline.
  */
-import { describe, expect, it, vi, type Mock } from 'vitest';
-import * as vscode from 'vscode';
-import { TscnPreviewPanel } from './TscnPreviewPanel';
-import { createMockUri, createMockFileData, setupMockPanel } from './test-setup';
+import { describe, expect, it } from 'vitest';
+import './test-setup';
+import { openPreviewPanel } from './previewPanel.testkit';
 
 const CUT_SCRIPT_ERROR = 'SyntaxError: Unexpected end of input';
 
-async function openPanel() {
-  const { webview, triggerMessage } = setupMockPanel();
-  (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData('[gd_scene format=3]'));
-  const panel = TscnPreviewPanel.create(createMockUri('/extension'), createMockUri('/workspace/scene.tscn'));
-  await vi.waitFor(() => expect(vscode.workspace.fs.readFile).toHaveBeenCalled());
-  return { panel, webview, triggerMessage };
-}
+const openPanel = () => openPreviewPanel('[gd_scene format=3]');
 
 describe('TscnPreviewPanel script load failure', () => {
   it('loads a new document once the first one reports its script failed', async () => {
@@ -37,6 +30,17 @@ describe('TscnPreviewPanel script load failure', () => {
     triggerMessage({ type: 'webviewLoadFailed', error: CUT_SCRIPT_ERROR });
 
     expect(webview.html).toBe(secondDocument);
+  });
+
+  it('loads a new document again for a failure after a document that loaded', async () => {
+    const { webview, triggerMessage } = await openPanel();
+    triggerMessage({ type: 'webviewLoadFailed', error: CUT_SCRIPT_ERROR });
+    triggerMessage({ type: 'webviewReady' });
+    const loadedDocument = webview.html;
+
+    triggerMessage({ type: 'webviewLoadFailed', error: CUT_SCRIPT_ERROR });
+
+    expect(webview.html).not.toBe(loadedDocument);
   });
 
   it('answers a capture with the script error once the second document fails', async () => {
