@@ -7,6 +7,7 @@ import { enumOr, floatOr } from '../../../parser/valueParsers.js';
 import { colorOr } from '../../../utils/colorParser.js';
 import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../godot/scene/canvasItem.js';
 import type { Rgba } from '../../../godot/math/math.js';
+import { unitByte } from '../../../godot/rendering/unitByte.js';
 import type { CanvasTextureData } from './types.js';
 
 const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
@@ -41,11 +42,6 @@ export function decodeCanvasTexture(properties: Record<string, string>): CanvasT
   };
 }
 
-/** `uint8_t(CLAMP(v * 255, 0, 255))`: the unorm8 a packed channel holds, truncated. */
-function unorm8(value: number): number {
-  return Math.trunc(Math.min(Math.max(value * 255, 0), 255)) / 255;
-}
-
 /**
  * `Color(specular_color.rgb, specular_shininess)` as the shader reads it, packed to unorm8
  * (`renderer_canvas_render_rd.cpp:3337-3346`), or null while the shininess leaves specular off.
@@ -54,5 +50,5 @@ function unorm8(value: number): number {
 export function canvasTextureSpecular(texture: CanvasTextureData): Rgba | null {
   const { specularColor: color, specularShininess: shininess } = texture;
   if (shininess >= SPECULAR_OFF_SHININESS) return null;
-  return { r: unorm8(color.r), g: unorm8(color.g), b: unorm8(color.b), a: unorm8(shininess) };
+  return { r: unitByte(color.r), g: unitByte(color.g), b: unitByte(color.b), a: unitByte(shininess) };
 }

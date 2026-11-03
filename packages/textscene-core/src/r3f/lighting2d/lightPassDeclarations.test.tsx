@@ -15,7 +15,7 @@ import {
   type CanvasLightSlot,
 } from './lightPassContext';
 import { DEFAULT_LIGHT_CULL_KEY } from './lightCullKey';
-import type { CanvasLightDeclaration, ItemPlacement, LitItemNeeds, PassMeshRole } from './itemLightList';
+import type { CanvasLightDeclaration, ItemPlacement, LitItemRead, PassMeshRole } from './itemLightList';
 import {
   useCapItemLights,
   usePassMeshRef,
@@ -32,7 +32,7 @@ function spyLighting() {
   const releaseMesh = vi.fn();
   const slot: CanvasLightSlot = { ordinal: 3, release };
   const registerLight = vi.fn((_declaration: CanvasLightDeclaration) => slot);
-  const registerItem = vi.fn((_placement: ItemPlacement, _needs: LitItemNeeds) => releaseItem);
+  const registerItem = vi.fn((_placement: ItemPlacement, _read: LitItemRead) => releaseItem);
   const releaseCapped = vi.fn();
   const registerCappedItem = vi.fn((_item: CappedItem) => releaseCapped);
   const registerPassMesh = vi.fn(
@@ -66,6 +66,7 @@ const DECLARATION: CanvasLightDeclaration = {
   sequence: 0,
   shadowItemCullMask: null,
   tintsShadow: false,
+  mixes: false,
 };
 
 /** A light that rebuilds its declaration object each render. */
@@ -132,7 +133,7 @@ describe('useRegisterCanvasLight2D', () => {
 
 describe('useRegisterLitItem', () => {
   const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, takenLights: null };
-  const PLAIN: LitItemNeeds = { lightOnly: false, normalMapped: false };
+  const PLAIN: LitItemRead = 'plain';
 
   it('survives a re-render at the same placement', () => {
     const { Wrap, registerItem, releaseItem } = spyLighting();
@@ -169,13 +170,16 @@ describe('useRegisterLitItem', () => {
 
   it('declares again when the item gains a normal map', () => {
     const { Wrap, registerItem, releaseItem } = spyLighting();
-    const { rerender } = renderHook(({ needs }) => useRegisterLitItem(PLACEMENT, needs), {
-      wrapper: Wrap,
-      initialProps: { needs: PLAIN },
-    });
-    rerender({ needs: { ...PLAIN, normalMapped: true } });
+    const { rerender } = renderHook<void, { read: LitItemRead }>(
+      ({ read }) => useRegisterLitItem(PLACEMENT, read),
+      {
+        wrapper: Wrap,
+        initialProps: { read: PLAIN },
+      }
+    );
+    rerender({ read: 'apart' });
     expect(releaseItem).toHaveBeenCalledTimes(1);
-    expect(registerItem.mock.calls[1]).toEqual([PLACEMENT, { ...PLAIN, normalMapped: true }]);
+    expect(registerItem.mock.calls[1]).toEqual([PLACEMENT, 'apart']);
   });
 });
 

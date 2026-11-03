@@ -4,7 +4,7 @@
  * (`r3f/lighting2d/CanvasLighting2D`). CanvasItem2D supplies transform, `visible` and z.
  */
 
-import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
@@ -30,12 +30,7 @@ import { useShadowLightPose } from '../../../r3f/lighting2d/shadowLightPose';
 import { litQuadRenderOrder, ShadowVolumeMask } from '../../../r3f/lighting2d/ShadowVolumeMask';
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { useLightQuadMaterials, type LightQuadMaterials } from './useLightQuadMaterials';
-import {
-  canvasFrameScale,
-  placePositionalLight,
-  usePlaceApartLight,
-  type PlaceApartLight,
-} from '../../../r3f/lighting2d/apartLight';
+import { placePositionalLight, useApartLightOrigin } from '../../../r3f/lighting2d/apartLight';
 import type { Rgba } from '../../../godot/math/math';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { Light2DBlendMode, Light2DShadowFilter } from '../../../godot/scene/light2d.js';
@@ -102,20 +97,14 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
     sequence: lightDrawSequence(listed, null),
     shadowItemCullMask: casts ? props.shadow_item_cull_mask : null,
     tintsShadow,
+    mixes: props.blend_mode === Light2DBlendMode.MIX,
   });
   const sequence = lightDrawSequence(listed, ordinal);
   // An item the light reaches through a bit outside `shadow_item_cull_mask` takes it unshadowed.
   const reachesUnshadowedItem = (props.range_item_cull_mask & ~props.shadow_item_cull_mask) !== 0;
 
   // A normal-mapped item shades the light from where its node sits.
-  const [origin, setOrigin] = useState<THREE.Object3D | null>(null);
-  const { height } = props;
-  const mixes = props.blend_mode === Light2DBlendMode.MIX;
-  const place = useCallback<PlaceApartLight>(
-    (light, at, frame) => placePositionalLight(light, at, height * canvasFrameScale(frame), mixes),
-    [height, mixes]
-  );
-  usePlaceApartLight(ordinal, origin, place);
+  const setOrigin = useApartLightOrigin(ordinal, placePositionalLight, props.height);
 
   // A disabled light still draws its children: `enabled` switches the light alone.
   return (

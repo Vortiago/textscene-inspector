@@ -36,6 +36,8 @@ import { useTextureSources } from './useTextureSources.js';
 import { useParsedResourceSlot } from './useParsedResourceSlot.js';
 import { decodeCanvasTexture } from './textures/canvastexture/decode.js';
 import type { CanvasTextureData } from './textures/canvastexture/types.js';
+import { useByValue } from '../r3f/hooks/useByValue.js';
+import { sameData } from '../utils/sameData.js';
 
 export interface Texture2DResult {
   /**
@@ -105,8 +107,7 @@ export function useTexture2D(
   // draws nothing and is no resource error.
   const texture = atlas ? cropped : slot.result.texture;
   const size = useReportedSize(texture, atlas, slot.result);
-  const { canvasTexture } = slot;
-  return canvasTexture ? { ...slot.result, texture, size, canvasTexture } : { ...slot.result, texture, size };
+  return { ...slot.result, texture, size, canvasTexture: slot.canvasTexture };
 }
 
 /**
@@ -203,9 +204,9 @@ function atlasCanvasTexture(
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[]
 ): CanvasTextureSlot | undefined {
+  if (!reference || !sheetSize) return undefined;
   const slot = peeledCanvasTexture(wrapper, externalResources, internalResources);
-  if (!slot || !reference || !sheetSize) return undefined;
-  return { ...slot, atlas: { reference, sheetSize } };
+  return slot && { ...slot, atlas: { reference, sheetSize } };
 }
 
 function useTexture2DSlot(
@@ -271,9 +272,8 @@ function useTexture2DSlot(
   const source = unconfigured ?? viewport.texture ?? procedural.texture ?? loaded.value ?? null;
   const atlasResources = slot.internalResources;
   const namesCanvasTexture = [outer, inner, sheet].some((layer) => (layer?.wrappers.length ?? 0) > 0);
-  const sheetSize = imageSize(source?.image);
-  const sheetWidth = sheetSize?.width;
-  const sheetHeight = sheetSize?.height;
+  // By value: `imageSize` builds a new object on every render.
+  const sheetSize = useByValue(imageSize(source?.image), sameData);
   const canvasTexture = useMemo(
     () =>
       peeledCanvasTexture(outer.wrappers[0], externalResources, internalResources) ??
@@ -281,9 +281,7 @@ function useTexture2DSlot(
       atlasCanvasTexture(
         sheet?.wrappers[0],
         atlas,
-        sheetWidth === undefined || sheetHeight === undefined
-          ? undefined
-          : { width: sheetWidth, height: sheetHeight },
+        sheetSize,
         slot.externalResources,
         slot.internalResources
       ),
@@ -292,8 +290,7 @@ function useTexture2DSlot(
       inner,
       sheet,
       atlas,
-      sheetWidth,
-      sheetHeight,
+      sheetSize,
       externalResources,
       internalResources,
       slot.externalResources,

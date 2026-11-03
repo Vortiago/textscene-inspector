@@ -1,7 +1,7 @@
 /**
- * The light side of a light kept apart: each frame, ahead of the draws, a light writes where it
- * sits into the `ApartLight` the pass holds for its ordinal (`lightPassContext.ts`). The values sit
- * in the canvas's world frame, Godot's canvas flipped to y up, where a normal-mapped item shades.
+ * The light side of a light kept apart: each frame, ahead of the draws, the pass asks a light's
+ * placer where the light sits (`lightPassContext.ts`). The values sit in the canvas's world frame,
+ * Godot's canvas flipped to y up, where a normal-mapped item shades.
  */
 /*
  * Portions ported from Godot Engine (MIT).
@@ -9,15 +9,20 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type * as THREE from 'three';
+import { normalizedVector2 } from '../../godot/math/vector.js';
 import { useCanvasFrame } from '../canvasFrame.js';
-import { useCanvasLighting2D, type ApartLight } from './lightPassContext.js';
+import { useCanvasLighting2D } from './lightPassContext.js';
 
-/** Writes what one light's origin, in the canvas whose `frame` is given, says about it into `light`. */
+/**
+ * Writes where a light sits into `place`, from its `origin` in the canvas whose `frame` is given,
+ * and its `Light2D.height`.
+ */
 export type PlaceApartLight = (
-  light: ApartLight,
+  place: THREE.Vector3,
   origin: THREE.Object3D,
+  height: number,
   frame: THREE.Object3D | null
 ) => void;
 
@@ -25,7 +30,7 @@ export type PlaceApartLight = (
  * The mean length of the frame's two axes, as Godot scales a positional light's height by the canvas
  * transform (`renderer_canvas_render_rd.cpp:612`). Positions in the world frame carry the same scale.
  */
-export function canvasFrameScale(frame: THREE.Object3D | null): number {
+function canvasFrameScale(frame: THREE.Object3D | null): number {
   if (!frame) return 1;
   frame.updateWorldMatrix(true, false);
   const e = frame.matrixWorld.elements;
@@ -33,54 +38,41 @@ export function canvasFrameScale(frame: THREE.Object3D | null): number {
 }
 
 /**
- * A positional light: its origin, not its texture's offset, and `height` in world units
- * (`renderer_canvas_render_rd.cpp:612-620`): the caller scales it with `canvasFrameScale`.
+ * A positional light: its origin, not its texture's offset, and its height scaled by the canvas
+ * transform into world units (`renderer_canvas_render_rd.cpp:612-620`).
  */
-export function placePositionalLight(
-  light: ApartLight,
-  origin: THREE.Object3D,
-  height: number,
-  mixes: boolean
-): void {
+export const placePositionalLight: PlaceApartLight = (place, origin, height, frame) => {
   origin.updateWorldMatrix(true, false);
-  light.place.setFromMatrixPosition(origin.matrixWorld).setZ(height);
-  light.mode.set(0, mixes ? 1 : 0);
-}
+  place.setFromMatrixPosition(origin.matrixWorld).setZ(height * canvasFrameScale(frame));
+};
 
 /**
  * A directional light: the direction toward it is minus its normalised y axis
  * (`renderer_canvas_render_rd.cpp:542-545`). The world frame flips y, which negates that axis
  * again, so the direction is the world y axis itself. The height stays in 0 to 1 (`:549`).
  */
-export function placeDirectionalLight(
-  light: ApartLight,
-  origin: THREE.Object3D,
-  height: number,
-  mixes: boolean
-): void {
+export const placeDirectionalLight: PlaceApartLight = (place, origin, height) => {
   origin.updateWorldMatrix(true, false);
   const elements = origin.matrixWorld.elements;
-  const yAxisX = elements[4]!;
-  const yAxisY = elements[5]!;
-  const length = Math.hypot(yAxisX, yAxisY);
-  light.place.set(yAxisX / length, yAxisY / length, height);
-  light.mode.set(1, mixes ? 1 : 0);
-}
+  const direction = normalizedVector2({ x: elements[4]!, y: elements[5]! });
+  place.set(direction.x, direction.y, height);
+};
 
 /**
- * Writes light `ordinal`'s place with `place` ahead of every pass, while the light is declared and
- * its origin mounted. `place` is memoised by the caller: a new function places again.
+ * Hands the pass light `ordinal`'s placer, which reads the origin this returns a ref for, while the
+ * light is declared and the origin mounted. `place` is a module function, so its identity holds.
  */
-export function usePlaceApartLight(
+export function useApartLightOrigin(
   ordinal: number | null,
-  origin: THREE.Object3D | null,
-  place: PlaceApartLight
-): void {
-  const { apartLight, registerPassStep } = useCanvasLighting2D();
+  place: PlaceApartLight,
+  height: number
+): (origin: THREE.Object3D | null) => void {
+  const { registerApartPlacer } = useCanvasLighting2D();
   const frame = useCanvasFrame();
+  const [origin, setOrigin] = useState<THREE.Object3D | null>(null);
   useEffect(() => {
     if (ordinal === null || !origin) return undefined;
-    const light = apartLight(ordinal);
-    return registerPassStep(() => place(light, origin, frame));
-  }, [ordinal, origin, frame, place, apartLight, registerPassStep]);
+    return registerApartPlacer(ordinal, (target) => place(target, origin, height, frame));
+  }, [ordinal, origin, place, height, frame, registerApartPlacer]);
+  return setOrigin;
 }

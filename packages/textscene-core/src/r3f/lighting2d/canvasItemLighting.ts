@@ -24,7 +24,7 @@ import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMateria
 export const CANVAS_MODULATE_FLOOR = 1 / 255;
 
 /** Both directions: the item side encodes to compare and decodes to write back. */
-export const TRANSFER_GLSL = GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL;
+const TRANSFER_GLSL = GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL;
 
 /**
  * A `merge` part for `materialProgramInputs()`: the one material prop the
@@ -62,14 +62,17 @@ export interface CanvasItemLightingUniforms {
   readonly lightMode: THREE.IUniform;
 }
 
+/** The uniforms every lit item's program reads, with the sRGB transfer it shades in. */
+export const ITEM_LIGHTING_GLSL = `uniform vec2 uLightResolution;
+uniform vec3 uCanvasModulate;
+uniform float uLightMode;
+${TRANSFER_GLSL}`;
+
 /** Both injections depend only on module constants, so they are built once. */
 const UNIFORM_PREAMBLE = `uniform sampler2D uLightList;
 uniform sampler2D uShadowTint;
 uniform float uLit;
-uniform vec2 uLightResolution;
-uniform vec3 uCanvasModulate;
-uniform float uLightMode;
-${TRANSFER_GLSL}
+${ITEM_LIGHTING_GLSL}
 void main() {`;
 
 /** Midpoints between adjacent LightMode ordinals, so the GLSL never tests equality. */
@@ -81,20 +84,24 @@ const ABOVE_UNSHADED = midpoint(CanvasItemMaterialLightMode.UNSHADED, CanvasItem
 export const LIGHT_MODE_GLSL = `bool unshaded = uLightMode > ${ABOVE_NORMAL} && uLightMode < ${ABOVE_UNSHADED};
 bool lightOnly = uLightMode > ${ABOVE_UNSHADED};`;
 
+/**
+ * Where `S` starts, the fragment's place in the light buffers, and the albedo. canvas.glsl:713:
+ * Light Only skips the tint, and its buffers are seeded to match. Dividing by the seed is the tint
+ * divide-out: Light Only seeds at 1, where the fragment already is the albedo.
+ */
+export const ITEM_ALBEDO_GLSL = `vec3 lightSeed = lightOnly ? vec3(1.0) : uCanvasModulate;
+vec2 lightUv = gl_FragCoord.xy / uLightResolution;
+vec3 albedo = godotToSrgb(gl_FragColor.rgb) / max(lightSeed, vec3(${CANVAS_MODULATE_FLOOR}));`;
+
 const LIGHT_INJECTION = `${LIGHT_MODE_GLSL}
 // canvas.glsl:719: MODE_UNSHADED skips the canvas tint and the light loop,
 // so the fragment leaves as it arrived. So does an item no light reaches: the CPU already folded
 // the tint in, and the round trip through the two sRGB curves would only perturb it.
 if (!unshaded && (uLit > 0.5 || lightOnly)) {
-  // canvas.glsl:713: Light Only skips the tint, and its buffers are seeded to match.
-  vec3 lightSeed = lightOnly ? vec3(1.0) : uCanvasModulate;
-  vec2 lightUv = gl_FragCoord.xy / uLightResolution;
+  ${ITEM_ALBEDO_GLSL}
   vec4 accum = uLit > 0.5 ? texture2D(uLightList, lightUv) : vec4(lightSeed, 0.0);
   // shadow_color is the one light term Godot does NOT scale by the albedo.
   vec3 shadowTint = texture2D(uShadowTint, lightUv).rgb;
-  // Dividing by the seed IS the tint divide-out: Light Only seeds at 1, where it
-  // is a no-op and the fragment already is the albedo.
-  vec3 albedo = godotToSrgb(gl_FragColor.rgb) / max(lightSeed, vec3(${CANVAS_MODULATE_FLOOR}));
   if (lightOnly) gl_FragColor.a = clamp(gl_FragColor.a * accum.a, 0.0, 1.0);
   gl_FragColor.rgb = godotToLinear(clamp(albedo * accum.rgb + shadowTint, 0.0, 1.0));
 }

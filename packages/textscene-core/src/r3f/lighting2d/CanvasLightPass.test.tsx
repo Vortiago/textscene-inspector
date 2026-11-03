@@ -37,9 +37,10 @@ function Scene({ seen, normalMapped = false }: { seen: Seen; normalMapped?: bool
     sequence: 0,
     shadowItemCullMask: null,
     tintsShadow: false,
+    mixes: false,
   });
   const meshRef = usePassMeshRef<THREE.Mesh>(ordinal, 'lit');
-  useRegisterLitItem(PLACEMENT, { lightOnly: false, normalMapped });
+  useRegisterLitItem(PLACEMENT, normalMapped ? 'apart' : 'plain');
   return <mesh ref={meshRef} />;
 }
 
@@ -103,19 +104,30 @@ describe('CanvasLightPass', () => {
     expect(seen.lighting!.lists.get(placementId(PLACEMENT))!.apart).toBeNull();
   });
 
-  it('publishes a layer and a place per light for a normal-mapped item', async () => {
+  it('publishes a layer, a place and a mode per light for a normal-mapped item', async () => {
     const { seen } = await mount(fakeLightPassHost(300, 200), true);
     const { apart } = seen.lighting!.lists.get(placementId(PLACEMENT))!;
     expect(apart!.buffer).toBeInstanceOf(THREE.DataArrayTexture);
-    expect(apart!.lights).toEqual([seen.lighting!.apartLight(0)]);
+    expect(apart!.places).toHaveLength(1);
+    // A positional light, not MIX, that adds no `shadow_color`.
+    expect(apart!.modes.map((mode) => mode.toArray())).toEqual([[0, 0, -1]]);
   });
 
-  it('draws the layers of a normal-mapped item at the host size', async () => {
+  it('draws only the layers while only a normal-mapped item reads the list', async () => {
     const host = fakeLightPassHost(300, 200);
     const { seen } = await mount(host, true);
     const draws = await drawsDuring(seen.gl!, () => host.run.current!());
-    // The list's ordinary buffer, then the light's own layer.
-    expect(draws.map((draw) => draw.size.join('x'))).toEqual(['300x200', '300x200']);
+    expect(draws.map((draw) => draw.size.join('x'))).toEqual(['300x200']);
+    expect(seen.lighting!.lists.get(placementId(PLACEMENT))!.buffer).toBeNull();
+  });
+
+  it("asks the light's placer where it sits ahead of the draws", async () => {
+    const host = fakeLightPassHost(300, 200);
+    const { seen } = await mount(host, true);
+    seen.lighting!.registerApartPlacer(0, (place) => place.set(1, 2, 3));
+    await drawsDuring(seen.gl!, () => host.run.current!());
+    const { apart } = seen.lighting!.lists.get(placementId(PLACEMENT))!;
+    expect(apart!.places[0]!.toArray()).toEqual([1, 2, 3]);
   });
 
   it('draws nothing on a frame the host does not run it', async () => {

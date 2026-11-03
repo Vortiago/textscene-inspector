@@ -6,7 +6,13 @@
 
 import type * as THREE from 'three';
 import { LIGHT_PASS_LAYER } from './lightPassLayers.js';
-import { drawsInPass, type LightListEntry, type PassKind, type PassMeshRole } from './itemLightList.js';
+import {
+  drawsInPass,
+  type ApartLightPlan,
+  type LightListEntry,
+  type PassKind,
+  type PassMeshRole,
+} from './itemLightList.js';
 import { listWindow, windowScissor } from './lightListWindow.js';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
 import type { Rect2 } from '../../godot/math/rect2.js';
@@ -22,11 +28,9 @@ export interface PassMesh {
  * The lights of a list a normal-mapped item reads, each accumulated alone into a layer of its own
  * from a black seed, so the item can shade each one (`lightPassContext.ts`).
  */
-export interface ApartAccumulation {
-  /** The entries in layer order, which is the order Godot applies them. */
-  readonly entries: readonly LightListEntry[];
+interface ApartAccumulation extends ApartLightPlan {
   readonly target: THREE.WebGLArrayRenderTarget;
-  /** The `shadow_color` layers, or null while no light on the list tints its shadow. */
+  /** The `shadow_color` layers of the lights that add one, or null while none does. */
   readonly shadowTintTarget: THREE.WebGLArrayRenderTarget | null;
 }
 
@@ -36,8 +40,8 @@ export interface AccumulationList {
   readonly entries: ReadonlyMap<number, LightListEntry>;
   /** The placements whose items read the list (`placementId`). */
   readonly placementIds: readonly string[];
-  /** The ordinary accumulator, always allocated. */
-  readonly target: THREE.WebGLRenderTarget;
+  /** The ordinary accumulator, or null when no ordinary item reads the list. */
+  readonly target: THREE.WebGLRenderTarget | null;
   /** The unmodulated-seed accumulator, or null when no Light Only item reads the list. */
   readonly lightOnlyTarget: THREE.WebGLRenderTarget | null;
   /** The albedo-free `shadow_color` accumulator, or null. */
@@ -118,9 +122,10 @@ function renderLightsApart(apart: ApartAccumulation, passMeshes: ReadonlySet<Pas
   apart.entries.forEach((entry, layer) => {
     showLightMeshes(passMeshes, entry, 'light');
     render(apart.target, BLACK, layer);
-    if (!apart.shadowTintTarget) return;
+    const tintLayer = apart.tintLayers[layer]!;
+    if (tintLayer < 0) return;
     showLightMeshes(passMeshes, entry, 'tint');
-    render(apart.shadowTintTarget, BLACK, layer);
+    render(apart.shadowTintTarget!, BLACK, tintLayer);
   });
 }
 
@@ -144,6 +149,7 @@ export function renderLightLists({
   readBufferSize(resolution);
   const previousTarget = gl.getRenderTarget();
   const previousMask = camera.layers.mask;
+  const previousAutoUpdate = scene.matrixWorldAutoUpdate;
   const seed = seedMaterial.uniforms.uSeed!.value as THREE.Vector3;
 
   const render = (target: THREE.WebGLRenderTarget, seedRgb: readonly [number, number, number], layer = 0) => {
@@ -154,6 +160,8 @@ export function renderLightLists({
     // that has stopped casting keep the hole it cut.
     gl.clear(false, false, true);
     gl.render(scene, camera);
+    // Only visibility changes between the passes, so the first render's world matrices hold.
+    scene.matrixWorldAutoUpdate = false;
   };
 
   // `finally`, as in the SubViewport pass: a throw out of `gl.render` (a link failure, a lost
@@ -165,7 +173,7 @@ export function renderLightLists({
     for (const list of lists) {
       fitListTargets(list, windows, camera, resolution);
       showListMeshes(passMeshes, list, 'light');
-      render(list.target, [canvasModulate.r, canvasModulate.g, canvasModulate.b]);
+      if (list.target) render(list.target, [canvasModulate.r, canvasModulate.g, canvasModulate.b]);
       // Light Only skips `color *= canvas_modulation`, so its accumulation is the same lights
       // over an unmodulated seed.
       if (list.lightOnlyTarget) render(list.lightOnlyTarget, [1, 1, 1]);
@@ -181,6 +189,7 @@ export function renderLightLists({
   } finally {
     gl.setRenderTarget(previousTarget);
     camera.layers.mask = previousMask;
+    scene.matrixWorldAutoUpdate = previousAutoUpdate;
     endStep(gl, '2D lights');
   }
 }

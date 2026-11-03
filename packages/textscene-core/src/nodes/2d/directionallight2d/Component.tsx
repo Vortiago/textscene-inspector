@@ -6,7 +6,7 @@
  * its shadow samples a parallel map (`directionalShadowMap.ts`) built over the view.
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
@@ -26,11 +26,7 @@ import {
   type DirectionalShadowSampling,
 } from '../../../r3f/lighting2d/directionalLightQuad';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
-import {
-  placeDirectionalLight,
-  usePlaceApartLight,
-  type PlaceApartLight,
-} from '../../../r3f/lighting2d/apartLight';
+import { placeDirectionalLight, useApartLightOrigin } from '../../../r3f/lighting2d/apartLight';
 import { Light2DBlendMode } from '../../../godot/scene/light2d';
 
 export function DirectionalLight2D({ node, children }: NodeComponentProps) {
@@ -49,6 +45,7 @@ export function DirectionalLight2D({ node, children }: NodeComponentProps) {
     slot: slot ?? undefined,
     shadowItemCullMask: null,
     tintsShadow,
+    mixes: props.blend_mode === Light2DBlendMode.MIX,
   });
 
   // A disabled light still draws its children: `enabled` switches the light alone.
@@ -93,14 +90,7 @@ function DirectionalLightQuads({
   const { color, energy, blend_mode: blendMode, shadow_filter, shadow_filter_smooth, shadow_color } = props;
 
   // A normal-mapped item shades the light from the way its node points.
-  const [origin, setOrigin] = useState<THREE.Object3D | null>(null);
-  const { height } = props;
-  const mixes = blendMode === Light2DBlendMode.MIX;
-  const place = useCallback<PlaceApartLight>(
-    (light, at) => placeDirectionalLight(light, at, height, mixes),
-    [height, mixes]
-  );
-  usePlaceApartLight(ordinal, origin, place);
+  const setOrigin = useApartLightOrigin(ordinal, placeDirectionalLight, props.height);
 
   // Held in state, so the shadow starts once the quad is in the tree: the light's world matrix
   // does not exist before that.
@@ -128,7 +118,7 @@ function DirectionalLightQuads({
   useDisposeOnRelease(material);
 
   // A MIX light scales the tint buffer under it by its alpha, so it draws there untinted too.
-  const drawsTint = mixes || (!!sampling && tintsShadow);
+  const drawsTint = blendMode === Light2DBlendMode.MIX || (!!sampling && tintsShadow);
   const shadowMaterial = useMemo(
     () =>
       drawsTint ? createDirectionalShadowColorMaterial({ color, energy, blendMode, shadow: sampling }) : null,

@@ -17,11 +17,13 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import type { TscnNode } from '../../../parser/types';
 import { createTextureFromBuffer } from '../../../resources/formats/image/textureProcessing';
 import { DEFAULT_TEXTURE_IMPORT } from '../../../godot/import/textureImport';
+import { CanvasLighting2DProvider } from '../../../r3f/lighting2d/CanvasLighting2D';
 import {
-  CanvasLighting2DProvider,
-  useCanvasLighting2D,
-  type CanvasLighting2D,
-} from '../../../r3f/lighting2d/CanvasLighting2D';
+  apartLightRecord,
+  placeOf,
+  RecordApartLights,
+  type ApartLightRecord,
+} from '../../../r3f/lighting2d/testing/apartLightProbe';
 import { LIGHT_PASS_LAYER } from '../../../r3f/lighting2d/lightPassLayers';
 
 // happy-dom never settles a real image load, so the decode hands back a bare
@@ -50,14 +52,7 @@ function node(raw: Record<string, string> = {}): TscnNode {
   };
 }
 
-/** What the light pass around the light publishes, read by a sibling of the light. */
-const seen: { lighting?: CanvasLighting2D } = {};
-function LightingProbe() {
-  seen.lighting = useCanvasLighting2D();
-  return null;
-}
-
-async function render(rootNode: TscnNode, tex = new THREE.Texture()) {
+async function render(rootNode: TscnNode, tex = new THREE.Texture(), apartLights?: ApartLightRecord) {
   const fake = createFakeResourceLoader();
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
   fake.textures.seed(TEX, tex);
@@ -73,8 +68,9 @@ async function render(rootNode: TscnNode, tex = new THREE.Texture()) {
           externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
         >
           <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
-            <PointLight2D node={rootNode} />
-            <LightingProbe />
+            <RecordApartLights record={apartLights ?? apartLightRecord()}>
+              <PointLight2D node={rootNode} />
+            </RecordApartLights>
           </CanvasLighting2DProvider>
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
@@ -140,15 +136,17 @@ describe('PointLight2D Component', () => {
   });
 
   it('places itself for a normal-mapped item: its origin, not its offset, and its height', async () => {
-    await render(node({ position: 'Vector2(576, 324)', offset: 'Vector2(30, 0)', height: '50.0' }));
-    const light = seen.lighting!.apartLight(0);
-    expect(light.place.toArray()).toEqual([576, -324, 50]);
-    expect(light.mode.toArray()).toEqual([0, 0]);
+    const apartLights = apartLightRecord();
+    const placed = node({ position: 'Vector2(576, 324)', offset: 'Vector2(30, 0)', height: '50.0' });
+    await render(placed, undefined, apartLights);
+    expect(placeOf(apartLights, 0).toArray()).toEqual([576, -324, 50]);
+    expect(apartLights.declarations.get(0)).toMatchObject({ mixes: false });
   });
 
-  it('places itself as a MIX light', async () => {
-    await render(node({ blend_mode: '2' }));
-    expect(seen.lighting!.apartLight(0).mode.toArray()).toEqual([0, 1]);
+  it('declares itself a MIX light', async () => {
+    const apartLights = apartLightRecord();
+    await render(node({ blend_mode: '2' }), undefined, apartLights);
+    expect(apartLights.declarations.get(0)).toMatchObject({ mixes: true });
   });
 
   it('draws no quad when enabled=false', async () => {

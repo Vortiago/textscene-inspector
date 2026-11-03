@@ -19,13 +19,14 @@ blends over the colour the lights before it left.
 
 A light list that a normal-mapped item reads keeps each light apart. The pass draws each light alone,
 from a black seed, into its own layer of an array target: its shadowed colour and its alpha, with
-the sign of a SUB light, plus a matching layer for the shadow tint. Each light writes, every frame,
-where it sits in the canvas's world frame and its height (`apartLight.ts`).
+the sign of a SUB light. A light that adds a `shadow_color` also draws a layer of a tint target.
+Ahead of every frame's draws, the pass asks each light where it sits in the canvas's world frame and
+its height (`apartLight.ts`).
 
 The item loops over the layers in Godot's light order, directional lights first. It shades each
 layer with its own normal term and blends it with that light's mode (`normalMappedLighting.ts`). An
 item without a normal map keeps the single accumulation buffer, so its pixels and its cost do not
-change.
+change. The pass draws only the buffers that the items of a list read.
 
 ## Considered Options
 

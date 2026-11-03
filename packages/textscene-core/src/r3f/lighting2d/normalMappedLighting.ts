@@ -14,9 +14,9 @@ import type * as THREE from 'three';
 import type { Rgba } from '../../godot/math/math.js';
 import { editedProgram } from '../shaderPatch/chunkPatch.js';
 import {
-  CANVAS_MODULATE_FLOOR,
+  ITEM_ALBEDO_GLSL,
+  ITEM_LIGHTING_GLSL,
   LIGHT_MODE_GLSL,
-  TRANSFER_GLSL,
   type CanvasItemLightingProps,
   type CanvasItemLightingUniforms,
 } from './canvasItemLighting.js';
@@ -44,9 +44,9 @@ export interface NormalMappedLightingUniforms extends Pick<
   readonly lightLayers: THREE.IUniform;
   /** `ApartLightBuffers.shadowTintBuffer`, or a black layer while no light tints. */
   readonly shadowTintLayers: THREE.IUniform;
-  /** Each layer's `ApartLight.place`. */
+  /** `ApartLightBuffers.places`. */
   readonly places: THREE.IUniform;
-  /** Each layer's `ApartLight.mode`. */
+  /** `ApartLightBuffers.modes`. */
   readonly modes: THREE.IUniform;
   /** The normal map, raw, sampled where the diffuse is. */
   readonly normalMap: THREE.IUniform;
@@ -71,17 +71,14 @@ vItemAxes = vec4(normalize(modelMatrix[0].xy), normalize(modelMatrix[1].xy));`;
 const FRAGMENT_PREAMBLE = `uniform highp sampler2DArray uLightLayers;
 uniform highp sampler2DArray uShadowTintLayers;
 uniform vec3 uLightPlaces[APART_LIGHT_COUNT];
-uniform vec2 uLightModes[APART_LIGHT_COUNT];
+uniform vec3 uLightModes[APART_LIGHT_COUNT];
 uniform sampler2D uNormalMap;
 uniform sampler2D uSpecularMap;
 uniform vec4 uSpecular;
 uniform float uUsesSpecular;
-uniform vec2 uLightResolution;
-uniform vec3 uCanvasModulate;
-uniform float uLightMode;
+${ITEM_LIGHTING_GLSL}
 varying vec2 vCanvasPosition;
 varying vec4 vItemAxes;
-${TRANSFER_GLSL}
 
 // canvas.glsl:652-665 and :706-712. Godot's decode, vec2(2, -2) - vec2(1, -1), flips y into its
 // y-down canvas. The world frame is y up, so the flip drops out.
@@ -122,9 +119,7 @@ void main() {`;
 // `light_blend_compute` (canvas.glsl:549-563) is `color * (1 - A·mix) + term`.
 const FRAGMENT_INJECTION = `${LIGHT_MODE_GLSL}
 if (!unshaded) {
-  vec3 lightSeed = lightOnly ? vec3(1.0) : uCanvasModulate;
-  vec2 lightUv = gl_FragCoord.xy / uLightResolution;
-  vec3 albedo = godotToSrgb(gl_FragColor.rgb) / max(lightSeed, vec3(${CANVAS_MODULATE_FLOOR}));
+  ${ITEM_ALBEDO_GLSL}
   vec3 normal = itemNormal();
   bool usesSpecular = uUsesSpecular > 0.5;
   vec4 specular = usesSpecular ? texture2D(uSpecularMap, vMapUv) * uSpecular : vec4(1.0);
@@ -132,7 +127,8 @@ if (!unshaded) {
   float lightOnlyAlpha = 0.0;
   for (int i = 0; i < APART_LIGHT_COUNT; i++) {
     vec4 lit = texture(uLightLayers, vec3(lightUv, float(i)));
-    vec3 tint = texture(uShadowTintLayers, vec3(lightUv, float(i))).rgb;
+    float tintLayer = uLightModes[i].z;
+    vec3 tint = tintLayer < 0.0 ? vec3(0.0) : texture(uShadowTintLayers, vec3(lightUv, tintLayer)).rgb;
     vec3 lightVec = lightVector(uLightPlaces[i], uLightModes[i].x > 0.5);
     vec3 term = lightNormalCompute(lightVec, normal, albedo, lit.rgb, specular, usesSpecular) + tint;
     color = color * (1.0 - uLightModes[i].y * lit.a) + term;

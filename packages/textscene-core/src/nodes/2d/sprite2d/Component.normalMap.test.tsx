@@ -16,7 +16,7 @@ import {
   INERT_CANVAS_LIGHTING,
   type CanvasLighting2D,
 } from '../../../r3f/lighting2d/lightPassContext';
-import type { ItemPlacement, LitItemNeeds } from '../../../r3f/lighting2d/itemLightList';
+import type { ItemPlacement, LitItemRead } from '../../../r3f/lighting2d/itemLightList';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 
 const FLAT_GREY: TscnInternalResource[] = [
@@ -48,7 +48,7 @@ function sprite(): TscnNode {
 }
 
 async function render(wrapper: TscnInternalResource) {
-  const registerItem = vi.fn((_placement: ItemPlacement, _needs: LitItemNeeds) => () => {});
+  const registerItem = vi.fn((_placement: ItemPlacement, _read: LitItemRead) => () => {});
   const lighting: CanvasLighting2D = { ...INERT_CANVAS_LIGHTING, registerItem };
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
@@ -68,18 +68,12 @@ describe('Sprite2D with a CanvasTexture', () => {
     const { registerItem } = await render(
       canvasTexture({ normal_texture: 'SubResource("GradientTexture2D_grey")' })
     );
-    expect(registerItem).toHaveBeenLastCalledWith(expect.anything(), {
-      lightOnly: false,
-      normalMapped: true,
-    });
+    expect(registerItem).toHaveBeenLastCalledWith(expect.anything(), 'apart');
   });
 
   it('declares no normal map while the CanvasTexture names none', async () => {
     const { registerItem } = await render(canvasTexture({}));
-    expect(registerItem).toHaveBeenLastCalledWith(expect.anything(), {
-      lightOnly: false,
-      normalMapped: false,
-    });
+    expect(registerItem).toHaveBeenLastCalledWith(expect.anything(), 'plain');
   });
 
   it("samples the diffuse with the CanvasTexture's own filter", async () => {

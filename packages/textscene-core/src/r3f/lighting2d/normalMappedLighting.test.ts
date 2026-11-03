@@ -45,7 +45,13 @@ describe('normalMappedLightingProps', () => {
   it('reads each light from its own layer at the fragment', () => {
     const { shader } = compile(2);
     expect(shader.fragmentShader).toContain('texture(uLightLayers, vec3(lightUv, float(i)))');
-    expect(shader.fragmentShader).toContain('texture(uShadowTintLayers, vec3(lightUv, float(i)))');
+  });
+
+  it("reads a light's shadow_color from the tint layer its mode names, and none for -1", () => {
+    const { shader } = compile(2);
+    expect(shader.fragmentShader).toContain(
+      'tintLayer < 0.0 ? vec3(0.0) : texture(uShadowTintLayers, vec3(lightUv, tintLayer)).rgb'
+    );
   });
 
   it("ports light_normal_compute's Blinn term", () => {

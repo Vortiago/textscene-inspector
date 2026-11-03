@@ -26,6 +26,7 @@ const SUN = {
   sequence: null,
   shadowItemCullMask: null,
   tintsShadow: false,
+  mixes: false,
 };
 
 interface Seen {
@@ -47,10 +48,7 @@ function occluder(object: THREE.Object3D): ShadowCaster {
 /** Reads the outer canvas's light pass, beside an occluder and a lit item of the outer canvas. */
 function Outer({ seen }: { seen: Seen }) {
   const [object] = useState(() => new THREE.Group());
-  useRegisterLitItem(
-    { lightMask: 1, z: 0, layer: 0, takenLights: null },
-    { lightOnly: false, normalMapped: false }
-  );
+  useRegisterLitItem({ lightMask: 1, z: 0, layer: 0, takenLights: null }, 'plain');
   const [caster] = useState(() => occluder(object));
   useShadowCaster(caster);
   seen.outerLighting = useCanvasLighting2D();

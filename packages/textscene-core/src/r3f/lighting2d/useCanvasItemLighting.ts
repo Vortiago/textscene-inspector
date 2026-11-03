@@ -15,7 +15,7 @@ import {
   type CanvasItemLightingProps,
   type CanvasItemLightingUniforms,
 } from './canvasItemLighting.js';
-import { placementId } from './itemLightList.js';
+import { placementId, type LitItemRead } from './itemLightList.js';
 import { releasedOnUnmount } from '../sharedTexture.js';
 import { useCanvasLayerIndex, useEffectiveZ } from './canvasItemPlacement.js';
 import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial.js';
@@ -25,35 +25,34 @@ import {
   type NormalMappedLightingUniforms,
 } from './normalMappedLighting.js';
 import type { ApartLightBuffers } from './lightPassContext.js';
+import { defaultWhiteTexture } from '../materials/defaultWhiteTexture.js';
 
 export type { CanvasItemLightingProps };
+
+/** `texture`, read raw and uploaded on first use. */
+function rawTexel<T extends THREE.DataTexture | THREE.DataArrayTexture>(texture: T): T {
+  texture.colorSpace = THREE.NoColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
 
 /**
  * Bound while no light reaches the item, and as the tint of a list no light tints. Transparent
  * black, so the tint adds nothing, and a sampler uniform still has to point at a real texture.
  */
-const EMPTY_LIGHT_BUFFER: THREE.DataTexture = (() => {
-  const texture = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1);
-  texture.colorSpace = THREE.NoColorSpace;
-  texture.needsUpdate = true;
-  return releasedOnUnmount(texture);
-})();
+const EMPTY_LIGHT_BUFFER = releasedOnUnmount(
+  rawTexel(new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1))
+);
 
 /** The `shadow_color` layers of a list no light tints: one transparent black layer. */
-const EMPTY_LIGHT_LAYERS: THREE.DataArrayTexture = (() => {
-  const texture = new THREE.DataArrayTexture(new Uint8Array([0, 0, 0, 0]), 1, 1, 1);
-  texture.colorSpace = THREE.NoColorSpace;
-  texture.needsUpdate = true;
-  return releasedOnUnmount(texture);
-})();
+const EMPTY_LIGHT_LAYERS = releasedOnUnmount(
+  rawTexel(new THREE.DataArrayTexture(new Uint8Array([0, 0, 0, 0]), 1, 1, 1))
+);
 
-/** Godot's default specular map, white (`texture_storage.cpp:773-776`). */
-const WHITE_SPECULAR_MAP: THREE.DataTexture = (() => {
-  const texture = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
-  texture.colorSpace = THREE.NoColorSpace;
-  texture.needsUpdate = true;
-  return releasedOnUnmount(texture);
-})();
+/** A flat normal, (0, 0, 1) encoded, until the item binds its own map. */
+const FLAT_NORMAL_MAP = releasedOnUnmount(
+  rawTexel(new THREE.DataTexture(new Uint8Array([128, 128, 255, 255]), 1, 1))
+);
 
 function createUniforms(resolution: THREE.Vector2): CanvasItemLightingUniforms {
   return {
@@ -76,8 +75,8 @@ function createNormalMappedUniforms(plain: CanvasItemLightingUniforms): NormalMa
     shadowTintLayers: { value: EMPTY_LIGHT_LAYERS as THREE.Texture },
     places: { value: [] },
     modes: { value: [] },
-    normalMap: { value: EMPTY_LIGHT_BUFFER as THREE.Texture },
-    specularMap: { value: WHITE_SPECULAR_MAP as THREE.Texture },
+    normalMap: { value: FLAT_NORMAL_MAP as THREE.Texture },
+    specularMap: { value: defaultWhiteTexture() as THREE.Texture },
     specular: { value: new THREE.Vector4(1, 1, 1, 1) },
     usesSpecular: { value: 0 },
   };
@@ -91,14 +90,30 @@ function bindNormalMapped(
 ): void {
   uniforms.lightLayers.value = apart.buffer;
   uniforms.shadowTintLayers.value = apart.shadowTintBuffer ?? EMPTY_LIGHT_LAYERS;
-  uniforms.places.value = apart.lights.map((light) => light.place);
-  uniforms.modes.value = apart.lights.map((light) => light.mode);
+  uniforms.places.value = apart.places;
+  uniforms.modes.value = apart.modes;
   uniforms.normalMap.value = surface.normalMap;
-  uniforms.specularMap.value = surface.specularMap ?? WHITE_SPECULAR_MAP;
+  // Godot's default specular map is white (`texture_storage.cpp:773-776`).
+  uniforms.specularMap.value = surface.specularMap ?? defaultWhiteTexture();
   const { specular } = surface;
   if (specular)
     (uniforms.specular.value as THREE.Vector4).set(specular.r, specular.g, specular.b, specular.a);
   uniforms.usesSpecular.value = specular ? 1 : 0;
+}
+
+/**
+ * The normal-mapped program's uniforms, created once and bound to `apart` and `surface` while both
+ * are there.
+ */
+function useNormalMappedUniforms(
+  plain: CanvasItemLightingUniforms,
+  apart: ApartLightBuffers | null,
+  surface: CanvasItemSurface | null
+): NormalMappedLightingUniforms {
+  const uniforms = useRef<NormalMappedLightingUniforms | null>(null);
+  uniforms.current ??= createNormalMappedUniforms(plain);
+  if (apart && surface) bindNormalMapped(uniforms.current, apart, surface);
+  return uniforms.current;
 }
 
 /** Where an item sits and what it draws with, for its light list. */
@@ -152,7 +167,8 @@ export function useCanvasItemLighting({
   const [takenLights, setTakenLights] = useState<readonly number[] | null>(null);
   const placement = { lightMask, z: itemZ, layer: canvasLayer, takenLights };
   useCapItemLights(placement, geometryRef, setTakenLights);
-  useRegisterLitItem(placement, { lightOnly, normalMapped: surface !== null });
+  const read: LitItemRead = surface ? 'apart' : lightOnly ? 'lightOnly' : 'plain';
+  useRegisterLitItem(placement, read);
   const list = lists.get(placementId(placement));
 
   const uniforms = useRef<CanvasItemLightingUniforms | null>(null);
@@ -174,16 +190,13 @@ export function useCanvasItemLighting({
   bound.lightMode.value = lightMode;
 
   // A normal map scales each light by its own normal term, so it shades the lights the list keeps
-  // apart. Until the pass keeps them, it reads the ordinary buffer.
-  const normalMapped = useRef<NormalMappedLightingUniforms | null>(null);
-  normalMapped.current ??= createNormalMappedUniforms(bound);
-  const apart = surface ? list?.apart : null;
-  if (apart && surface) bindNormalMapped(normalMapped.current, apart, surface);
-  const apartCount = apart?.lights.length ?? 0;
+  // apart.
+  const apart = surface ? (list?.apart ?? null) : null;
+  const shaded = useNormalMappedUniforms(bound, apart, surface);
+  const apartCount = apart?.places.length ?? 0;
 
   // Mode-independent by design: the props change only with the count of lights kept apart, which
   // sizes the program, and the key that follows it remounts the material.
-  const shaded = normalMapped.current;
   const props = useMemo(
     () => (apartCount > 0 ? normalMappedLightingProps(shaded, apartCount) : canvasItemLightingProps(bound)),
     [bound, shaded, apartCount]

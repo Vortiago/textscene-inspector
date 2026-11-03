@@ -1,11 +1,10 @@
 /** A CanvasLayer publishes the frame its canvas draws through, which a light scales its height by. */
 
 import { describe, expect, it } from 'vitest';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CanvasLayerScope } from './canvasLayerScope';
 import { useCanvasFrame } from './canvasFrame';
-import { canvasFrameScale } from './lighting2d/apartLight';
 import type { TscnNode } from '../parser/types';
 import type { CanvasLayerProperties } from '../nodes/2d/ui/canvaslayer/types';
 
@@ -33,6 +32,6 @@ describe('CanvasLayerScope', () => {
     );
     // What the renderer does ahead of each frame's draws.
     renderer.scene.instance.updateMatrixWorld();
-    expect(canvasFrameScale(frames.at(-1)!)).toBe(2);
+    expect(new THREE.Vector3().setFromMatrixScale(frames.at(-1)!.matrixWorld).x).toBeCloseTo(2);
   });
 });

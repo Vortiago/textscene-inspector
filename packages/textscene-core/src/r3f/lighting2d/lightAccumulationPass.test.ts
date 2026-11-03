@@ -25,6 +25,8 @@ interface Draw {
   readonly cameraMask: number;
   /** The target's scissor while it clips, else null. */
   readonly scissor: number[] | null;
+  /** Whether the render updates the scene's world matrices first. */
+  readonly updatesMatrices: boolean;
 }
 
 function passMesh(name: string, ordinal: number, role: PassMeshRole): PassMesh {
@@ -35,20 +37,38 @@ function passMesh(name: string, ordinal: number, role: PassMeshRole): PassMesh {
 
 function list(
   entries: LightListEntry[],
-  options: { lightOnly?: boolean; tint?: boolean; placementIds?: string[]; apart?: boolean } = {}
+  options: {
+    plain?: boolean;
+    lightOnly?: boolean;
+    tint?: boolean;
+    placementIds?: string[];
+    /** Each entry's `shadow_color` layer, for a list kept apart. */
+    apartTintLayers?: number[];
+  } = {}
 ): AccumulationList {
-  const layers = () => new THREE.WebGLArrayRenderTarget(1, 1, entries.length);
+  const tintLayers = options.apartTintLayers;
+  const tintLayerCount = tintLayers?.filter((layer) => layer >= 0).length ?? 0;
   return {
     entries: new Map(entries.map((entry) => [entry.ordinal, entry])),
     placementIds: options.placementIds ?? ['uncapped'],
-    target: new THREE.WebGLRenderTarget(1, 1),
+    target: (options.plain ?? true) ? new THREE.WebGLRenderTarget(1, 1) : null,
     lightOnlyTarget: options.lightOnly ? new THREE.WebGLRenderTarget(1, 1) : null,
     shadowTintTarget: options.tint ? new THREE.WebGLRenderTarget(1, 1) : null,
-    apart: options.apart
-      ? { entries, target: layers(), shadowTintTarget: options.tint ? layers() : null }
+    apart: tintLayers
+      ? {
+          entries,
+          tintLayers,
+          tintLayerCount,
+          target: new THREE.WebGLArrayRenderTarget(1, 1, entries.length),
+          shadowTintTarget:
+            tintLayerCount > 0 ? new THREE.WebGLArrayRenderTarget(1, 1, tintLayerCount) : null,
+        }
       : null,
   };
 }
+
+/** Each of `count` entries kept apart, none of which adds a `shadow_color`. */
+const untinted = (count: number) => new Array<number>(count).fill(-1);
 
 function run(
   lists: AccumulationList[],
@@ -59,6 +79,7 @@ function run(
   const draws: Draw[] = [];
   const seedMaterial = createSeedMaterial();
   const camera = new THREE.OrthographicCamera();
+  const scene = new THREE.Scene();
   let target: THREE.WebGLRenderTarget | null = null;
   let layer = 0;
   const gl = {
@@ -79,12 +100,13 @@ function run(
         visible: meshes.filter(({ mesh }) => mesh.visible).map(({ mesh }) => mesh.name),
         cameraMask: camera.layers.mask,
         scissor: target?.scissorTest ? target.scissor.toArray() : null,
+        updatesMatrices: scene.matrixWorldAutoUpdate,
       });
     },
   } as unknown as THREE.WebGLRenderer;
   const pass: LightAccumulationPass = {
     gl,
-    scene: new THREE.Scene(),
+    scene,
     camera,
     lists,
     passMeshes: new Set(meshes),
@@ -94,7 +116,7 @@ function run(
     readBufferSize: (out) => gl.getDrawingBufferSize(out),
     windows,
   };
-  return { draws, camera, run: () => renderLightLists(pass), getTarget: () => target };
+  return { draws, camera, scene, run: () => renderLightLists(pass), getTarget: () => target };
 }
 
 const SHADOWED = (ordinal: number): LightListEntry => ({ ordinal, unshadowed: false });
@@ -143,7 +165,7 @@ describe('renderLightLists', () => {
   });
 
   it('draws each light of a list kept apart alone, into its own layer, from a black seed', () => {
-    const apart = list([SHADOWED(1), SHADOWED(0)], { apart: true });
+    const apart = list([SHADOWED(1), SHADOWED(0)], { apartTintLayers: untinted(2) });
     const pass = run([apart], [passMesh('a', 0, 'lit'), passMesh('b', 1, 'lit')]);
     pass.run();
     expect(pass.draws.slice(1)).toMatchObject([
@@ -153,7 +175,7 @@ describe('renderLightLists', () => {
   });
 
   it("draws each light kept apart into its own shadow_color layer, after the light's own layer", () => {
-    const apart = list([SHADOWED(0)], { apart: true, tint: true });
+    const apart = list([SHADOWED(0)], { apartTintLayers: [0], tint: true });
     const meshes = [passMesh('volume', 0, 'volume'), passMesh('lit', 0, 'lit'), passMesh('tint', 0, 'tint')];
     const pass = run([apart], meshes);
     pass.run();
@@ -163,8 +185,34 @@ describe('renderLightLists', () => {
     ]);
   });
 
+  it('draws a shadow_color layer only for each light kept apart that adds one', () => {
+    const apart = list([SHADOWED(0), SHADOWED(1)], { plain: false, apartTintLayers: [-1, 0] });
+    const meshes = [passMesh('lit0', 0, 'lit'), passMesh('lit1', 1, 'lit'), passMesh('tint1', 1, 'tint')];
+    const pass = run([apart], meshes);
+    pass.run();
+    expect(pass.draws).toMatchObject([
+      { target: apart.apart!.target, layer: 0, visible: ['lit0'] },
+      { target: apart.apart!.target, layer: 1, visible: ['lit1'] },
+      { target: apart.apart!.shadowTintTarget, layer: 0, visible: ['tint1'] },
+    ]);
+  });
+
+  it('draws no ordinary buffer while no ordinary item reads the list', () => {
+    const apart = list([SHADOWED(0)], { plain: false, apartTintLayers: untinted(1) });
+    const pass = run([apart], [passMesh('a', 0, 'lit')]);
+    pass.run();
+    expect(pass.draws.map((draw) => draw.target)).toEqual([apart.apart!.target]);
+  });
+
+  it("updates the scene's world matrices on the first draw alone, and restores the setting", () => {
+    const pass = run([list([SHADOWED(0)], { lightOnly: true })], [passMesh('a', 0, 'lit')]);
+    pass.run();
+    expect(pass.draws.map((draw) => draw.updatesMatrices)).toEqual([true, false]);
+    expect(pass.scene.matrixWorldAutoUpdate).toBe(true);
+  });
+
   it('sizes the layers to the drawing buffer and keeps one per light', () => {
-    const apart = list([SHADOWED(0), SHADOWED(1)], { apart: true });
+    const apart = list([SHADOWED(0), SHADOWED(1)], { apartTintLayers: untinted(2) });
     run([apart], [passMesh('a', 0, 'lit')]).run();
     const { width, height, depth } = apart.apart!.target;
     expect([width, height, depth]).toEqual([4, 2, 2]);
@@ -173,7 +221,7 @@ describe('renderLightLists', () => {
   it('sizes every buffer to the drawing buffer', () => {
     const only = list([SHADOWED(0)]);
     run([only], [passMesh('a', 0, 'lit')]).run();
-    expect([only.target.width, only.target.height]).toEqual([4, 2]);
+    expect([only.target!.width, only.target!.height]).toEqual([4, 2]);
   });
 
   it("clips every buffer of a capped list to its items' window", () => {

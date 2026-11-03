@@ -17,7 +17,7 @@ import {
   type CanvasLighting2D,
   type CanvasLightList,
 } from './lightPassContext';
-import { placementId, type ItemPlacement, type LitItemNeeds } from './itemLightList';
+import { placementId, type ItemPlacement, type LitItemRead } from './itemLightList';
 import type { ApartLightBuffers } from './lightPassContext';
 import type { CanvasItemSurface } from './normalMappedLighting';
 import type { CappedItem } from './itemLightCap';
@@ -33,7 +33,7 @@ const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, takenLights: nu
 
 /** A lighting context publishing `list` at `placement`, with spied item registrars. */
 function lighting(list: CanvasLightList, placement = PLACEMENT) {
-  const registerItem = vi.fn((_placement: ItemPlacement, _needs: LitItemNeeds) => () => {});
+  const registerItem = vi.fn((_placement: ItemPlacement, _read: LitItemRead) => () => {});
   const registerCappedItem = vi.fn((_item: CappedItem) => () => {});
   const value: CanvasLighting2D = {
     ...INERT_CANVAS_LIGHTING,
@@ -61,10 +61,8 @@ function apartLights(): ApartLightBuffers {
   return {
     buffer: new THREE.DataArrayTexture(),
     shadowTintBuffer: null,
-    lights: [
-      { place: new THREE.Vector3(10, 20, 50), mode: new THREE.Vector2(0, 0) },
-      { place: new THREE.Vector3(0, 1, 0.5), mode: new THREE.Vector2(1, 1) },
-    ],
+    places: [new THREE.Vector3(10, 20, 50), new THREE.Vector3(0, 1, 0.5)],
+    modes: [new THREE.Vector3(0, 0, -1), new THREE.Vector3(1, 1, -1)],
   };
 }
 
@@ -149,7 +147,7 @@ describe('useCanvasItemLighting reads its light list', () => {
         useCanvasItemLighting({ material: material(CanvasItemMaterialLightMode.LIGHT_ONLY), lightMask: 1 }),
       { wrapper }
     );
-    expect(registerItem).toHaveBeenCalledWith(PLACEMENT, { lightOnly: true, normalMapped: false });
+    expect(registerItem).toHaveBeenCalledWith(PLACEMENT, 'lightOnly');
   });
 
   it('binds the buffer of the list at its placement, and is lit', () => {
@@ -183,6 +181,12 @@ describe('useCanvasItemLighting reads its light list', () => {
     expect(bound.uLit!.value).toBe(0);
     expect(bound.uLightList!.value).not.toBe(published.buffer);
   });
+
+  it('stays unlit while the pass draws no ordinary buffer for its list', () => {
+    const { wrapper } = lighting({ ...list(), buffer: null });
+    const { result } = renderHook(() => useCanvasItemLighting({ material: null, lightMask: 1 }), { wrapper });
+    expect(boundUniforms(result.current).uLit!.value).toBe(0);
+  });
 });
 
 describe('useCanvasItemLighting with a normal map', () => {
@@ -191,7 +195,7 @@ describe('useCanvasItemLighting with a normal map', () => {
     renderHook(() => useCanvasItemLighting({ material: null, lightMask: 1, surface: surface() }), {
       wrapper,
     });
-    expect(registerItem).toHaveBeenCalledWith(PLACEMENT, { lightOnly: false, normalMapped: true });
+    expect(registerItem).toHaveBeenCalledWith(PLACEMENT, 'apart');
   });
 
   it('shades the lights its list keeps apart, with its own maps', () => {
@@ -204,8 +208,8 @@ describe('useCanvasItemLighting with a normal map', () => {
     );
     const bound = boundUniforms(result.current);
     expect(bound.uLightLayers!.value).toBe(apart.buffer);
-    expect(bound.uLightPlaces!.value).toEqual(apart.lights.map((light) => light.place));
-    expect(bound.uLightModes!.value).toEqual(apart.lights.map((light) => light.mode));
+    expect(bound.uLightPlaces!.value).toBe(apart.places);
+    expect(bound.uLightModes!.value).toBe(apart.modes);
     expect(bound.uNormalMap!.value).toBe(maps.normalMap);
   });
 
@@ -260,10 +264,7 @@ describe('useCanvasItemLighting under the per-item cap', () => {
   it('declares the light list the cap hands it', () => {
     const { capped, registerItem } = mountCapped(list(), PLACEMENT);
     act(() => capped.take([0, 2]));
-    expect(registerItem).toHaveBeenLastCalledWith(
-      { ...PLACEMENT, takenLights: [0, 2] },
-      { lightOnly: false, normalMapped: false }
-    );
+    expect(registerItem).toHaveBeenLastCalledWith({ ...PLACEMENT, takenLights: [0, 2] }, 'plain');
   });
 
   it('drops the light list it was handed when its placement changes', () => {
@@ -274,10 +275,7 @@ describe('useCanvasItemLighting under the per-item cap', () => {
     });
     act(() => registerCappedItem.mock.calls.at(-1)![0].take([0, 2]));
     hook.rerender({ lightMask: 2 });
-    expect(registerItem).toHaveBeenLastCalledWith(
-      { ...PLACEMENT, lightMask: 2, takenLights: null },
-      { lightOnly: false, normalMapped: false }
-    );
+    expect(registerItem).toHaveBeenLastCalledWith({ ...PLACEMENT, lightMask: 2, takenLights: null }, 'plain');
   });
 
   it('binds the buffer of the list its capped placement reads', () => {

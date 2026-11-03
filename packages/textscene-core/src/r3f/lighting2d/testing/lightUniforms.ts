@@ -23,7 +23,7 @@ export function normalMappedUniforms(): NormalMappedLightingUniforms {
     lightLayers: { value: new THREE.DataArrayTexture() },
     shadowTintLayers: { value: new THREE.DataArrayTexture() },
     places: { value: [new THREE.Vector3()] },
-    modes: { value: [new THREE.Vector2()] },
+    modes: { value: [new THREE.Vector3()] },
     normalMap: { value: new THREE.Texture() },
     specularMap: { value: new THREE.Texture() },
     specular: { value: new THREE.Vector4(1, 1, 1, 1) },
