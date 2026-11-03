@@ -12,6 +12,7 @@ import { buildPanelHtml } from './panelHtml';
 import { dispatchWebviewMessage, type WebviewMessageHandlers } from './webviewDispatch';
 import { jumpToNodeDefinition } from './jumpToNodeDefinition';
 import { relayWebviewLog } from './hostLogRelay';
+import * as logger from './logger';
 import { writeClipboard } from './writeClipboard';
 import { encodeResourceResponse } from './wireCodec';
 import { PreviewCaptureQueue, type PreviewCapture } from './previewCaptureQueue';
@@ -45,6 +46,8 @@ export class TscnPreviewPanel {
   private _webviewReady = false;
   /** Set by `dispose()`. `_webviewReady` stays true after it, so it is not this. */
   private _disposed = false;
+  /** Set by the first `webviewLoadFailed`, which loads the document once more. */
+  private _hasReloadedDocument = false;
 
   /**
    * Cached per panel, so the `res://` root walk and the served `fsPath -> res://`
@@ -88,7 +91,7 @@ export class TscnPreviewPanel {
     this._extensionUri = extensionUri;
     this._currentResource = resource;
 
-    this._panel.webview.html = buildPanelHtml(this._panel.webview, this._extensionUri);
+    this._loadDocument();
 
     this._loadTscnContent(resource);
 
@@ -105,6 +108,9 @@ export class TscnPreviewPanel {
         if (this._previousContent !== undefined) {
           this._postMessageToWebview({ type: 'loadTscn', content: this._previousContent });
         }
+      },
+      webviewLoadFailed: (msg) => {
+        this._handleFailedLoad(msg.error);
       },
       jumpToNode: (msg) => {
         void jumpToNodeDefinition(this._currentResource, msg.nodeName, msg.path, this._panel.viewColumn);
@@ -257,6 +263,28 @@ export class TscnPreviewPanel {
       return;
     }
     this._postMessageToWebview({ type: 'resourceChanged', path: resPath });
+  }
+
+  /** Sets a new document, which VS Code loads in place of the current one. */
+  private _loadDocument(): void {
+    this._panel.webview.html = buildPanelHtml(this._panel.webview, this._extensionUri);
+  }
+
+  /**
+   * VS Code's webview resource loader can end a script's transfer early, and the page
+   * then never runs (#1147). A new document fetches the script again. A second failure
+   * is no cut transfer, so it ends every capture with the error instead of reloading.
+   */
+  private _handleFailedLoad(error: string): void {
+    if (!this._hasReloadedDocument) {
+      this._hasReloadedDocument = true;
+      logger.getChannel()?.warn(`The preview script failed to load, so the preview loads again: ${error}`);
+      this._loadDocument();
+      return;
+    }
+    const reason = `The preview script failed to load: ${error}`;
+    logger.getChannel()?.error(reason);
+    this._captures.setState({ kind: 'unavailable', reason });
   }
 
   private async _loadTscnContent(resource: vscode.Uri) {

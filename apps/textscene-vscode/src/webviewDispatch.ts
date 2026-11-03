@@ -53,6 +53,7 @@ const CARRIES_ITS_PAYLOAD: {
   [K in WebviewToHostMessage['type']]: (msg: Record<string, unknown>) => boolean;
 } = {
   webviewReady: () => true,
+  webviewLoadFailed: (m) => isString(m.error),
   jumpToNode: (m) => isString(m.nodeName) && isString(m.path),
   copyNodePath: (m) => isString(m.nodePath),
   // `resourceType` only when present: the byte layer requests a file it knows no type for.

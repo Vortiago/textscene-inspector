@@ -48,6 +48,16 @@ export interface WebviewHtmlOptions {
   initialConfig?: WebviewInitialConfig;
 }
 
+/**
+ * Imports the entry script, and tells the host when the import fails, such as on a cut-off
+ * copy (`webviewLoadFailed`). A failed import ran none of the bundle, so the API is still
+ * free to acquire. The URL is a JSON string, with `<` escaped as in the config script.
+ */
+function entryLoader(scriptUri: string): string {
+  const url = JSON.stringify(scriptUri).replace(/</g, '\\u003c');
+  return `import(${url}).catch((error) => acquireVsCodeApi().postMessage({ type: 'webviewLoadFailed', error: String(error) }));`;
+}
+
 export function generateWebviewHtml(options: WebviewHtmlOptions): string {
   const { scriptUri, nonce, cssUri, cspSource, initialConfig } = options;
   const cssLink = cssUri ? `<link rel="stylesheet" nonce="${nonce}" href="${cssUri}">` : '';
@@ -90,7 +100,7 @@ export function generateWebviewHtml(options: WebviewHtmlOptions): string {
     <body>
       <div id="r3f-root"></div>
       ${configScript}
-      <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+      <script type="module" nonce="${nonce}">${entryLoader(scriptUri)}</script>
     </body>
     </html>
   `;

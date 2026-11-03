@@ -14,6 +14,57 @@ const BASE_OPTIONS = {
   cspSource: 'https://example.test',
 };
 
+/** The page's inline module script that imports the entry. */
+function entryLoaderOf(html: string): string {
+  const loader = /<script type="module" nonce="[^"]*">([\s\S]*?)<\/script>/.exec(html)?.[1];
+  if (loader === undefined) throw new Error(`expected an inline module script, found ${html}`);
+  return loader;
+}
+
+/** Runs the entry loader as the page would, with `acquireVsCodeApi` handing out `api`. */
+async function runEntryLoader(html: string, api: { postMessage: (message: unknown) => void }): Promise<void> {
+  // A function body, not a module, since vitest evaluates no module from a string. Its
+  // `import()` is the test's own, which a `Function` body cannot reach in vitest's VM.
+  const body = entryLoaderOf(html)
+    .trim()
+    .replace(/^import\(/, 'importEntry(')
+    .replace(/;$/, '');
+  const run = new Function('acquireVsCodeApi', 'importEntry', `return ${body};`);
+  await run(
+    () => api,
+    (url: string) => import(/* @vite-ignore */ url)
+  );
+}
+
+describe('the entry loader', () => {
+  it('reports an entry script that fails to parse, with the error', async () => {
+    const postMessage = vi.fn();
+    const html = generateWebviewHtml({
+      ...BASE_OPTIONS,
+      scriptUri: 'data:text/javascript,export const cut = (',
+    });
+
+    await runEntryLoader(html, { postMessage });
+
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'webviewLoadFailed',
+      error: expect.stringContaining('SyntaxError'),
+    });
+  });
+
+  it('reports nothing for an entry script that runs', async () => {
+    const postMessage = vi.fn();
+    const html = generateWebviewHtml({
+      ...BASE_OPTIONS,
+      scriptUri: 'data:text/javascript,export const whole = 1;',
+    });
+
+    await runEntryLoader(html, { postMessage });
+
+    expect(postMessage).not.toHaveBeenCalled();
+  });
+});
+
 describe('generateWebviewHtml', () => {
   it('omits the config script entirely when initialConfig is not provided', () => {
     const html = generateWebviewHtml(BASE_OPTIONS);

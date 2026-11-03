@@ -77,6 +77,15 @@ export type WebviewReadyMessage = {
   type: 'webviewReady';
 };
 
+/**
+ * The page's entry script failed to load, so no bundle code runs and `webviewReady` never
+ * comes. The page's own bootstrap posts this with the import's error.
+ */
+export type WebviewLoadFailedMessage = {
+  type: 'webviewLoadFailed';
+  error: string;
+};
+
 /** Double-click in the scene tree: jump the editor to the node line. */
 export type JumpToNodeMessage = {
   type: 'jumpToNode';
@@ -152,6 +161,7 @@ export type CapturePongMessage = {
 
 export type WebviewToHostMessage =
   | WebviewReadyMessage
+  | WebviewLoadFailedMessage
   | JumpToNodeMessage
   | CopyNodePathMessage
   | LoadResourceMessage
