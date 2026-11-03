@@ -380,6 +380,10 @@ _Avoid_: "paint index".
 The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057).
 _Avoid_: "MSAA frame".
 
+**Frame AABB** (`r3f/components/FrameAabb.tsx`):
+The `get_aabb()` of a GeometryInstance3D, in node space, that the camera frames the scene on (`r3f/frameSceneBounds.ts`). An empty one still frames, as the point at the node origin that `AABB()` is. The selection and hover boxes do not read it.
+_Avoid_: "bounds proxy".
+
 **Rendering quadrant** (`resources/tileset/renderingQuadrants.ts`):
 The cells of a tile layer that Godot draws together: a `rendering_quadrant_size` square of cells, or one tile row on a y-sorted layer (`tile_map_layer.cpp:546-554`).
 _Avoid_: "chunk", "tile batch".
