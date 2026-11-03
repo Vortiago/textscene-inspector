@@ -40,11 +40,8 @@ describe('variedContours', () => {
   });
 });
 
-describe('glyph contours of a sheared CFF font', () => {
-  it.each(cases.filter(([, glyph]) => glyph.font.endsWith('.otf')))(
-    'match Godot for %s',
-    async (_, glyph) => {
-      expect(referencePoints((await readerContours(glyph)).points)).toEqual(glyph.points);
-    }
-  );
+describe('glyph contours of a sheared font', () => {
+  it.each(cases)('match Godot for %s', async (_, glyph) => {
+    expect(referencePoints((await readerContours(glyph)).points)).toEqual(glyph.points);
+  });
 });

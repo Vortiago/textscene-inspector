@@ -46,9 +46,13 @@ export interface ScaledOutline {
 /** The entries `[xx, xy, yx, yy]` of a 2 x 2 matrix, 16.16. */
 export type Matrix2x2 = readonly [number, number, number, number];
 
-/** `FT_Vector_Transform` of every point of `outline` by `matrix`. */
-export function transformOutline(outline: ScaledOutline, [xx, xy, yx, yy]: Matrix2x2): void {
-  for (let i = 0; i < outline.x.length; i++) {
+/** `FT_Vector_Transform` of every point of `outline` from `firstPoint` on by `matrix`. */
+export function transformOutline(
+  outline: Pick<ScaledOutline, 'x' | 'y'>,
+  [xx, xy, yx, yy]: Matrix2x2,
+  firstPoint = 0
+): void {
+  for (let i = firstPoint; i < outline.x.length; i++) {
     const x = outline.x[i]!;
     const y = outline.y[i]!;
     outline.x[i] = ftMulFix(x, xx) + ftMulFix(y, xy);

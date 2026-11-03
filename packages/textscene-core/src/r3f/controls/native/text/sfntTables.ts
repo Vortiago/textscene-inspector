@@ -3,7 +3,8 @@
  * default of each `fvar` axis: the facts the runtime bundle cannot get from `fontkit`, a
  * bake-time-only devDependency that `pnpm check:bundle-size` keeps out. Advances and kerning come from
  * canvas `measureText`, and the glyph outlines from `sfntOutlines.ts`, which opens the font through
- * this module. `fontContainer.ts` opens a WOFF or WOFF2 into the same `SfntFile`.
+ * this module and reads the small fields its readers share here. `fontContainer.ts` opens a WOFF or
+ * WOFF2 into the same `SfntFile`.
  */
 
 import { perObject } from '../../../../utils/perObject';
@@ -39,16 +40,22 @@ const SFNT_HEADER_SIZE = 12; // sfntVersion(4) numTables(2) searchRange(2) entry
 const TABLE_RECORD_SIZE = 16; // tag(4) checksum(4) offset(4) length(4)
 const HEAD_UNITS_PER_EM_OFFSET = 18; // head table: majorVersion(2) minorVersion(2) fontRevision(4) checkSumAdjustment(4) magicNumber(4) flags(2) unitsPerEm(2)
 const HEAD_TABLE_MIN_LENGTH = 20;
-const HHEA_ASCENDER_OFFSET = 4; // hhea table: majorVersion(2) minorVersion(2) ascender(2) ...
-const HHEA_DESCENDER_OFFSET = 6;
+/** `head`: indexToLocFormat(2) at 50. */
+export const HEAD_INDEX_TO_LOC_FORMAT_OFFSET = 50;
+/** `hhea` and `vhea`: majorVersion(2) minorVersion(2), then ascender(2) and descender(2). */
+export const HHEA_ASCENDER_OFFSET = 4;
+export const HHEA_DESCENDER_OFFSET = 6;
 const HHEA_TABLE_MIN_LENGTH = 8;
+/** `hhea` numberOfHMetrics and `vhea` numOfLongVerMetrics(2) at 34. */
+const METRICS_HEADER_LONG_METRIC_COUNT_OFFSET = 34;
 // OS/2 table: fsSelection at 62, sTypoAscender(2) sTypoDescender(2) sTypoLineGap(2) usWinAscent(2) usWinDescent(2) from 68.
-const OS2_FS_SELECTION_OFFSET = 62;
-const OS2_TYPO_ASCENDER_OFFSET = 68;
-const OS2_TYPO_DESCENDER_OFFSET = 70;
+export const OS2_FS_SELECTION_OFFSET = 62;
+export const OS2_TYPO_ASCENDER_OFFSET = 68;
+export const OS2_TYPO_DESCENDER_OFFSET = 70;
 const OS2_WIN_ASCENT_OFFSET = 74;
 const OS2_WIN_DESCENT_OFFSET = 76;
-const OS2_TABLE_MIN_LENGTH = 78;
+/** FreeType loads an `OS/2` of version 0 from its first 78 bytes, and marks a shorter one as missing. */
+export const OS2_TABLE_MIN_LENGTH = 78;
 const OS2_USE_TYPO_METRICS = 1 << 7; // fsSelection bit 7
 // fvar table: majorVersion(2) minorVersion(2) axesArrayOffset(2) reserved(2) axisCount(2) axisSize(2) ...
 const FVAR_AXES_ARRAY_OFFSET_FIELD = 4;
@@ -57,12 +64,39 @@ const FVAR_HEADER_SIZE = 16;
 // VariationAxisRecord: axisTag(4) minValue(4) defaultValue(4) maxValue(4) flags(2) axisNameID(2)
 const FVAR_AXIS_SIZE = 20;
 const FVAR_AXIS_DEFAULT_OFFSET = 8;
+// maxp table: version(4) numGlyphs(2)
+const MAXP_GLYPH_COUNT_OFFSET = 4;
+const MAXP_GLYPH_COUNT_LENGTH = 6;
+/** `maxp` 1.0, which TrueType outlines use, runs through maxComponentDepth(2) at 30. */
+const MAXP_VERSION_1 = 0x10000;
+const MAXP_VERSION_1_LENGTH = 32;
 
 /** The tables the readers of this module use. A compressed container decompresses these and no others. */
 export const SCENE_FONT_TABLE_TAGS: readonly string[] = ['head', 'hhea', 'OS/2', 'fvar'];
 
-/** The tables an outline reader uses (`sfntOutlines.ts`), for the container readers to decompress. */
-export const OUTLINE_TABLE_TAGS: readonly string[] = ['head', 'maxp', 'cmap', 'glyf', 'loca', 'CFF ', 'CFF2'];
+/**
+ * The tables an outline reader uses (`sfntOutlines.ts`), for the container readers to decompress:
+ * the outlines, the metrics that place a TrueType glyph's phantom points, and its hinting programs.
+ */
+export const OUTLINE_TABLE_TAGS: readonly string[] = [
+  'head',
+  'maxp',
+  'cmap',
+  'glyf',
+  'loca',
+  'CFF ',
+  'CFF2',
+  'hhea',
+  'hmtx',
+  'vhea',
+  'vmtx',
+  'OS/2',
+  'cvt ',
+  'fpgm',
+  'prep',
+  'fvar',
+  'name',
+];
 
 export interface TableRecord {
   offset: number;
@@ -117,6 +151,13 @@ export function tableFits(dv: DataView, table: TableRecord, minLength: number): 
   return table.offset + minLength <= dv.byteLength && table.length >= minLength;
 }
 
+/** The bytes of a table, or none for a font without it or with a table past the buffer. */
+export function tableBytes({ dv, tables }: SfntFile, tag: string): Uint8Array {
+  const table = tables.get(tag);
+  if (!table || table.offset + table.length > dv.byteLength) return new Uint8Array(0);
+  return new Uint8Array(dv.buffer, dv.byteOffset + table.offset, table.length);
+}
+
 /**
  * Opens raw SFNT bytes: a plain container (TrueType, OpenType-CFF, or the first face of a `'ttcf'`
  * collection) with a table directory that fits. Returns `null`, never throws, for a compressed
@@ -147,7 +188,7 @@ function readSfnt(bytes: ArrayBuffer): SfntFile | null {
   return tables && { dv, tables };
 }
 
-/** `head.unitsPerEm`; the caller has checked that `head` fits. */
+/** `head.unitsPerEm`. The caller has checked that `head` fits. */
 export function readUnitsPerEm(dv: DataView, head: TableRecord): number {
   return dv.getUint16(head.offset + HEAD_UNITS_PER_EM_OFFSET, false);
 }
@@ -156,6 +197,44 @@ export function readUnitsPerEm(dv: DataView, head: TableRecord): number {
 export function readHeadUnitsPerEm({ dv, tables }: SfntFile): number {
   const head = tables.get('head');
   return head && tableFits(dv, head, HEAD_TABLE_MIN_LENGTH) ? readUnitsPerEm(dv, head) : 0;
+}
+
+/** `head.indexToLocFormat`, `LONG_LOCA_FORMAT` for 32-bit offsets. The caller has checked that `head` fits. */
+export function readIndexToLocFormat(dv: DataView, head: TableRecord): number {
+  return dv.getInt16(head.offset + HEAD_INDEX_TO_LOC_FORMAT_OFFSET, false);
+}
+
+/** `maxp.numGlyphs`, or null for a font with no `maxp` or one that does not fit. */
+export function readGlyphCount({ dv, tables }: SfntFile): number | null {
+  const maxp = tables.get('maxp');
+  if (!maxp || !tableFits(dv, maxp, MAXP_GLYPH_COUNT_LENGTH)) return null;
+  return dv.getUint16(maxp.offset + MAXP_GLYPH_COUNT_OFFSET, false);
+}
+
+/**
+ * The 16-bit field at `offset` of a `maxp` 1.0, or null for a font with no `maxp` 1.0 that fits.
+ * Version 0.5, which CFF outlines use, ends at numGlyphs.
+ */
+export function readMaxpVersion1Field({ dv, tables }: SfntFile, offset: number): number | null {
+  const maxp = tables.get('maxp');
+  if (!maxp || !tableFits(dv, maxp, MAXP_VERSION_1_LENGTH)) return null;
+  if (dv.getUint32(maxp.offset, false) < MAXP_VERSION_1) return null;
+  return dv.getUint16(maxp.offset + offset, false);
+}
+
+/**
+ * The count of long metrics an `hhea` or `vhea` header gives `hmtx` or `vmtx`. The caller has
+ * checked that the header fits.
+ */
+export function readLongMetricCount(dv: DataView, header: TableRecord): number {
+  return dv.getUint16(header.offset + METRICS_HEADER_LONG_METRIC_COUNT_OFFSET, false);
+}
+
+/** `fvar.axisCount`, or 0 for a font with no `fvar` or one whose header does not fit. */
+export function readFvarAxisCount({ dv, tables }: SfntFile): number {
+  const fvar = tables.get('fvar');
+  if (!fvar || !tableFits(dv, fvar, FVAR_HEADER_SIZE)) return 0;
+  return dv.getUint16(fvar.offset + FVAR_AXIS_COUNT_FIELD, false);
 }
 
 /** The signed ascender and descender, in design units, that FreeType gives the face. */
@@ -212,13 +291,14 @@ export function parseSfntScalars({ dv, tables }: SfntFile): SfntScalars | null {
  * a variation (`text_server_adv.cpp:1930-1933`). Empty for a font with no `fvar`, or one whose
  * axis records do not fit the table.
  */
-export function readAxisDefaults({ dv, tables }: SfntFile): Readonly<Record<string, number>> {
-  const fvar = tables.get('fvar');
+export function readAxisDefaults(sfnt: SfntFile): Readonly<Record<string, number>> {
   const defaults: Record<string, number> = {};
-  if (!fvar || !tableFits(dv, fvar, FVAR_HEADER_SIZE)) return defaults;
+  const axisCount = readFvarAxisCount(sfnt);
+  if (axisCount === 0) return defaults;
 
+  const { dv } = sfnt;
+  const fvar = sfnt.tables.get('fvar')!;
   const axesStart = fvar.offset + dv.getUint16(fvar.offset + FVAR_AXES_ARRAY_OFFSET_FIELD, false);
-  const axisCount = dv.getUint16(fvar.offset + FVAR_AXIS_COUNT_FIELD, false);
   if (axesStart + axisCount * FVAR_AXIS_SIZE > fvar.offset + fvar.length) return defaults;
 
   for (let axis = 0; axis < axisCount; axis++) {
