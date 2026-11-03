@@ -6,7 +6,6 @@
  */
 
 import * as THREE from 'three';
-import { releasedOnUnmount } from '../sharedTexture';
 
 /**
  * three reads a prefiltered environment's size and last mip from its `mipmaps` (r187
@@ -22,6 +21,6 @@ function createEnvironmentSwitch(): THREE.CubeTexture {
 
 /**
  * The one switch every sky shows. three compares `scene.environment` by identity, so a pass that puts
- * another sky on resolves no program again. Each canvas that unmounts frees it from its renderer.
+ * another sky on resolves no program again. It holds no GL texture, so a canvas has nothing to free.
  */
-export const ENVIRONMENT_SWITCH = releasedOnUnmount(createEnvironmentSwitch());
+export const ENVIRONMENT_SWITCH = createEnvironmentSwitch();

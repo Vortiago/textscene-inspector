@@ -1,5 +1,5 @@
 /**
- * Godot's split selection, PCF and soft shadow in three r186's sun-light shadow lookup, which walks
+ * Godot's split selection, PCF and soft shadow in three r187's sun-light shadow lookup, which walks
  * two cascades and takes three's own five taps. Godot picks one of up to four splits by view depth,
  * blends into the next over its last tenth, and narrows a far split's filter
  * (`scene_forward_clustered.glsl:2403-2478`, the branch without soft shadows). It samples each split

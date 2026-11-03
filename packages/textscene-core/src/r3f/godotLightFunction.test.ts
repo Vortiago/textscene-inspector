@@ -42,8 +42,8 @@ describe('the installed light function', () => {
   it('drops the Fresnel weight from every Lambert diffuse line', () => {
     const patched = godotChunks()[CHUNK];
     expect(patched).not.toContain('* ( 1.0 - F )');
-    // three's EON diffuse lines keep their weight: they compile only for `diffuseRoughness > 0`,
-    // which Godot has no property for.
+    // three's two indirect EON diffuse lines keep their weight: they compile only for
+    // `diffuseRoughness > 0`, which Godot has no property for. The direct line is shared and replaced.
     expect(patched).not.toContain(
       'BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - singleScattering - multiScattering )'
     );

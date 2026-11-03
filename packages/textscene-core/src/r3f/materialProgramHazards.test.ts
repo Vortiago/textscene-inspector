@@ -286,6 +286,24 @@ describe('material program hazards, against three itself', () => {
     ).toEqual([]);
   });
 
+  it('keys every feature three bakes as a threshold', () => {
+    // A `> 0` feature the factory does not key keeps a material's old program when it crosses 0,
+    // unless its own accessor bumps `version`.
+    const features = Object.keys(everyFeatureActive()).filter(
+      (feature) => !VERSION_BUMPING_ACCESSORS.includes(feature)
+    );
+    const bare = materialProgramInputs({ props: {} }).key;
+    const unkeyed = features.filter(
+      (feature) => materialProgramInputs({ props: { [feature]: 1 } }).key === bare
+    );
+
+    expect(features.length).toBeGreaterThanOrEqual(8);
+    expect(
+      unkeyed,
+      `add each to PHYSICAL_FEATURES in materialProgramInputs.ts: ${unkeyed.join(', ')}`
+    ).toEqual([]);
+  });
+
   it('keys no slot it declines, and declines only slots three bakes', () => {
     const slots = bakedTextureSlots();
     const stale = Object.keys(DECLINED_TEXTURE_SLOTS).filter(

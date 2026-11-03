@@ -168,8 +168,8 @@ export function materialProgramInputs<
 
   const composed = composeInjections(injections);
   if (composed) {
-    // `undefined` rather than `delete`: fiber 9.6.1's `applyProps` skips an
-    // undefined value (`:24-27`, "Ignore setting undefined props"), and deleting
+    // `undefined` rather than `delete`: fiber 9.8's `applyProps` skips an
+    // undefined value ("Ignore setting undefined props"), and deleting
     // deoptimises the object it is handed.
     merged.injection = undefined;
     merged.customProgramCacheKey = cacheKeyThunk(composed.cacheKey);
@@ -334,19 +334,19 @@ function programKey(props: Record<string, unknown>, cacheKey: string): string {
 
   const alphaToCoverage = props.alphaToCoverage === true;
   const blending = props.blending ?? THREE.NormalBlending;
-  // The `opaque` composite (`:262`, one boolean at `:581`), as its negation so the
+  // The `opaque` composite (`:272`, one boolean at `:603`), as its negation so the
   // opaque default costs no token. `blending` enters only here, so on a transparent
-  // material it is per-draw GL state. `alphaToCoverage` is also its own term (`:213`,
-  // layer `:589`).
+  // material it is per-draw GL state. `alphaToCoverage` is also its own term (`:218`,
+  // layer `:611`).
   if (props.transparent === true || blending !== THREE.NormalBlending || alphaToCoverage) add('blended');
   if (alphaToCoverage) add('a2c');
-  // `alphaHash` (`:172`, published `:266`) is a plain field (`Material.js:134`).
-  // `alphaTest` (`:170`) is not keyed: its `> 0` crossing bumps `version` itself
-  // (`Material.js:494-502`).
+  // `alphaHash` (`:175`, published `:276`) is a plain field (`Material.js:135`).
+  // `alphaTest` (`:173`) is not keyed: its `> 0` crossing bumps `version` itself
+  // (`Material.js:495-503`).
   if (props.alphaHash === true) add('ahash');
-  // `side` (`:369-370`) has one default across material types, so it is normalised.
-  // `combine` (`:268`) and `fog` (`:314`) do not. Also keyed: `vertexColors` (`:308`),
-  // `premultipliedAlpha` (`:367`), `dithering` (`:357`).
+  // `side` (`:382-383`) has one default across material types, so it is normalised.
+  // `combine` (`:278`) and `fog` (`:324`) do not. Also keyed: `vertexColors` (`:319`),
+  // `premultipliedAlpha` (`:380`), `dithering` (`:370`).
   const side = props.side ?? THREE.FrontSide;
   if (side !== THREE.FrontSide) add(`side:${String(side)}`);
   if (props.vertexColors === true) add('vcol');
@@ -354,7 +354,7 @@ function programKey(props: Record<string, unknown>, cacheKey: string): string {
   if (props.combine !== undefined) add(`combine:${String(props.combine)}`);
   if (props.dithering === true) add('dither');
   if (props.fog !== undefined) add(`fog:${String(props.fog)}`);
-  // `:317`, first arm only: the second reads geometry and the material's brand,
+  // `:328`, first arm only: the second reads geometry and the material's brand,
   // out of reach like `vertexAlphas`. `wireframe` alone reaches only this and the
   // `bumpMap` term (`:132`), a slot this factory declines.
   if (props.flatShading === true && props.wireframe !== true) add('flat');
@@ -365,7 +365,7 @@ function programKey(props: Record<string, unknown>, cacheKey: string): string {
   if (features !== '') add(`feat:${features}`);
 
   // Presence only: a swapped texture compiles to the same program. The one
-  // identity-dependent term, `decodeVideoTexture` (`:364`), cannot fire: no map is a
+  // identity-dependent term, `decodeVideoTexture` (`:377`), cannot fire: no map is a
   // `THREE.VideoTexture`, and `canvas2DTextureDecode.ts` retags canvas maps `NoColorSpace`.
   let slots = '';
   for (const [slot, gate] of TEXTURE_SLOT_ENTRIES) {
@@ -375,7 +375,7 @@ function programKey(props: Record<string, unknown>, cacheKey: string): string {
   }
   if (slots !== '') add(`slots:${slots}`);
 
-  // Keys and values both (`:415-420`).
+  // Keys and values both (`:426-433`).
   const defines = props.defines as Record<string, string> | undefined;
   if (defines !== undefined && defines !== null) {
     let declared = '';
@@ -384,7 +384,7 @@ function programKey(props: Record<string, unknown>, cacheKey: string): string {
     if (declared !== '') add(`defines:${declared}`);
   }
 
-  // The injections' part of `customProgramCacheKey()` (`:382`, pushed at `:432`). Its curve term
+  // The injections' part of `customProgramCacheKey()` (`:395`, pushed at `:445`). Its curve term
   // stays out: a curve swap marks the material dirty, which compiles it without a remount.
   if (cacheKey !== '') add(`inject:${cacheKey}`);
   // Not a program input, but mount-only the same way: fiber applies `attach` only at

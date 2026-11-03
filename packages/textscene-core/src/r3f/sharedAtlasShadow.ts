@@ -1,12 +1,12 @@
 /**
  * What a three shadow needs to draw into its own rectangle of an atlas that other shadows share:
- * three r186's own `LightShadow` members, and a scissor on the shared target.
+ * three r187's own `LightShadow` members, and a scissor on the shared target.
  */
 
 import type * as THREE from 'three';
 
 /**
- * three r186's own `LightShadow` members, which its types leave out (`LightShadow.js:160-169`,
+ * three r187's own `LightShadow` members, which its types leave out (`LightShadow.js:160-169`,
  * `:235`). A shadow class types them through its base's constructor, so no class field resets them.
  */
 export interface LightShadowInternals {
@@ -24,8 +24,8 @@ export interface LightShadowInternals {
 
 /**
  * Confines the shadow's draws to `rect`, given in units of `mapSize` as three gives a viewport
- * (`WebGLShadowMap.js:345-350`). three binds a target with its own scissor
- * (`WebGLRenderer.js:3040-3043`), and shrinks `mapSize` on a GPU whose textures are smaller than the
+ * (`WebGLShadowMap.js:347-352`). three binds a target with its own scissor
+ * (`WebGLRenderer.js:3066-3069`), and shrinks `mapSize` on a GPU whose textures are smaller than the
  * atlas (`WebGLShadowMap.js:180-198`), so the scissor scales with it. A shadow without a map has none.
  */
 export function confineShadowScissor(shadow: THREE.LightShadow, rect: THREE.Vector4): void {

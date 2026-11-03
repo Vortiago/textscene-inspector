@@ -40,7 +40,7 @@ it at the side of its own atlas, and the target takes the largest side: 4096 for
 texels, so a SubViewport's slots use the texture's lower-left quarter.
 
 One texture serves every viewport because each render draws its own slots before it samples them.
-three runs the shadow pass at the start of each `render` call (r186 `WebGLRenderer.js:1737`). So a
+three runs the shadow pass at the start of each `render` call (r187 `WebGLRenderer.js:1750`). So a
 SubViewport pass draws its slots, samples them, and the main view then draws its own.
 
 - The depth is 16-bit, as Godot's atlas stores it by default (`light_storage.cpp:2531-2533`).
@@ -67,7 +67,7 @@ extents are the atlas over the slot, so three asks for the atlas's own size and 
 Its one viewport is the slot.
 
 three calls `updateMatrices` before it binds and clears the atlas for the light
-(`WebGLShadowMap.js:291`, `:338-339`). The shadow then:
+(`WebGLShadowMap.js:291`, `:340-341`). The shadow then:
 
 1. Turns its camera to the light's own axes, as Godot's spot camera takes the light's transform
    (`renderer_scene_cull.cpp:2582`). three aims at the target with the world's up, which rolls the
@@ -75,7 +75,7 @@ three calls `updateMatrices` before it binds and clears the atlas for the light
 2. Builds its matrix with the slot's rectangle, so the lookup reads the slot, as Godot's
    `atlas_rect` places it (`scene_forward_lights_inc.glsl:846`).
 3. Sets the atlas's scissor to the slot. three binds a target with its own scissor
-   (`WebGLRenderer.js:3040-3071`), so the clear stays inside the slot.
+   (`WebGLRenderer.js:3066-3097`), so the clear stays inside the slot.
 
 ## Omni shadows
 
@@ -90,7 +90,7 @@ the first of the next row after a row's last slot (`light_storage.h:683-691`).
   sampler does. A texel past a face's edge reads the neighbouring face.
 - three gives the renderer no hook between its shadow pass and its draw. So
   `installShadowPass` wraps `renderer.shadowMap.render`: three's own pass, then each omni
-  light's copy, before the draw uploads the lights (`WebGLRenderer.js:1737-1752`).
+  light's copy, before the draw uploads the lights (`WebGLRenderer.js:1750-1765`).
 - `OmniShadowCopy` ports `cube_to_dp.glsl`. Each texel of a slot holds the distance to the light
   over its range, along the direction its paraboloid maps it to. The first slot holds the light's
   -Z half, and the second its +Z half. Godot's cube follows its own face convention, which its copy
@@ -102,7 +102,7 @@ the first of the next row after a row's last slot (`light_storage.h:683-691`).
 The lookup reads the slot from the omni light's `pointShadowMatrix`. Its upper rows hold Godot's
 world-to-light transform (`light_storage.cpp:989-991`). Its bottom row, which a light-space position
 never needs, holds the first slot's corner and the step to the second, in units of the atlas
-texture. three writes the matrix while it renders the cube (`WebGLShadowMap.js:320`), so the pass
+texture. three writes the matrix while it renders the cube (`WebGLShadowMap.js:322`), so the pass
 writes it after the copy. three hands each light's own matrix to the lit programs by reference
 (`WebGLLights.js:446`).
 
@@ -121,7 +121,7 @@ the range plus half the rectangle's diagonal (4.7.2 `scene_forward_clustered.gls
 - three never draws the shadow by itself (`autoUpdate` is off). The shadow pass then runs three's
   pass again with the slotted area lights alone. Each caster wears `ParaboloidDepthMaterial` as its
   `customDepthMaterial` for that pass, as three's depth material is private
-  (`WebGLShadowMap.js:430-436`). A surface that cuts its alpha keeps the bend in its own copy.
+  (`WebGLShadowMap.js:432-438`). A surface that cuts its alpha keeps the bend in its own copy.
 - The lookup searches for blockers when the light has a `light_size` and a `shadow_blur`, and
   filters with the omni PCF otherwise (4.7.2 `light_storage.cpp:1199-1210`). Every area light
   pairs its receivers with soft shadows (4.7.2 `renderer_scene_cull.cpp:1795`).

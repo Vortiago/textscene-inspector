@@ -1,6 +1,6 @@
 /**
  * One sampler for every sun shadow, as Godot samples one directional shadow atlas for every
- * directional light (`scene_forward_clustered.glsl:2443`). three r186 declares a sampler, and so a
+ * directional light (`scene_forward_clustered.glsl:2443`). three r187 declares a sampler, and so a
  * texture unit, per sun shadow. `directionalShadow.md` beside this file has the design.
  */
 

@@ -348,8 +348,8 @@ describe('fitSceneDirectionalShadows fades', () => {
 
 /**
  * The lights `WebGLRenderer.projectObject` hands `WebGLLights.setup`: visible pre-order, a light
- * only where the camera's layers include it, and the children of any visible object (three r186
- * `WebGLRenderer.js:1859-1888`).
+ * only where the camera's layers include it, and the children of any visible object (three r187
+ * `WebGLRenderer.js:1872-1897`).
  */
 function threeRenderLights(
   object: THREE.Object3D,
@@ -476,7 +476,7 @@ describe('fitSceneDirectionalShadows atlas shares', () => {
   });
 
   it('asks three for the atlas’s own size from every share, so none resizes it (edge case)', () => {
-    // three resizes a map whose size no longer matches `mapSize` × the frame extents (r186
+    // three resizes a map whose size no longer matches `mapSize` × the frame extents (r187
     // `WebGLShadowMap.js:281-285`).
     const scene = new THREE.Scene();
     const lights = [

@@ -320,7 +320,7 @@ class ScratchOctmaps {
 /**
  * Half-float targets with no depth. Each filters linearly and clamps to its edge, as Godot's
  * samplers for the sky's octmaps do (`copy_effects.cpp:1155`, `:1366`). An array texture
- * magnifies by its nearest texel unless told otherwise (three r186 `DataArrayTexture.js:47`).
+ * magnifies by its nearest texel unless told otherwise (three r187 `DataArrayTexture.js:47`).
  */
 const TARGET_OPTIONS: THREE.RenderTargetOptions = {
   type: THREE.HalfFloatType,

@@ -1,28 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { CaptureRenderer } from '../testing/CaptureRenderer';
+import { testRenderer } from '../../testing/recordingWebGL';
 import { ENVIRONMENT_SWITCH } from './environmentSwitch';
 
-/** The environment terms three compiles a lit material's program from. `@types/three` lacks `envMapPMREM`. */
-interface EnvironmentParameters {
-  envMap?: unknown;
-  envMapPMREM?: unknown;
-}
+/** The parameters three compiles a program from. `@types/three` lacks `envMapPMREM`. */
+type CompiledParameters = THREE.WebGLProgramParametersWithUniforms & { envMapPMREM?: boolean };
 
 /** The parameters three compiles a lit material's program from, under the scene's environment. */
-async function compiledParameters(environment: THREE.Texture): Promise<EnvironmentParameters> {
-  const captured: { current: THREE.WebGLRenderer | null } = { current: null };
-  await ReactThreeTestRenderer.create(<CaptureRenderer captured={captured} />);
+async function compiledParameters(environment: THREE.Texture): Promise<CompiledParameters> {
+  const { renderer } = await testRenderer();
   const material = new THREE.MeshStandardMaterial();
-  let parameters: EnvironmentParameters | undefined;
+  let parameters: CompiledParameters | undefined;
   material.onBeforeCompile = (compiled) => {
     parameters = compiled;
   };
   const scene = new THREE.Scene();
   scene.environment = environment;
   scene.add(new THREE.Mesh(new THREE.BoxGeometry(), material));
-  captured.current!.compile(scene, new THREE.PerspectiveCamera());
+  renderer.compile(scene, new THREE.PerspectiveCamera());
   if (!parameters) throw new Error('expected three to compile the material, got no program');
   return parameters;
 }

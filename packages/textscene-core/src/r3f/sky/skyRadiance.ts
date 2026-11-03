@@ -28,7 +28,7 @@ const { layers: LAYERS, shown: SHOWN, rotation: ROTATION } = SKY_RADIANCE_UNIFOR
 
 /**
  * The array a reader samples the layers through. three never uploads it, as its version stays 0
- * (three r186 `WebGLTextures.js:626`), and binds whatever handle it holds on a renderer: the array
+ * (three r187 `WebGLTextures.js:653`), and binds whatever handle it holds on a renderer: the array
  * of the sky shown last, or three's empty array.
  */
 const skyLayersSlot = installedSlot(LAYERS, THREE.DataArrayTexture);
@@ -36,7 +36,7 @@ const skyLayersSlot = installedSlot(LAYERS, THREE.DataArrayTexture);
 /**
  * The shown sky's `ambient_light_sky_contribution`, its layers' border size, the scale from a
  * squared screen derivative to squared texels and its last mip, then the energy its radiance holds.
- * `UniformsUtils.cloneUniforms` keeps a typed array by reference (three r186
+ * `UniformsUtils.cloneUniforms` keeps a typed array by reference (three r187
  * `UniformsUtils.js:43-64`), so every material reads this buffer. After a dev server reloads this
  * module, it is the buffer the earlier evaluation installed.
  */
@@ -131,7 +131,7 @@ export class SkyRadiance {
    * `contribution` (`ambient_light_sky_contribution`), whether a surface `reflects` the sky, the
    * rotation and `energy`, the energy Godot bakes into the radiance:
    * `background_energy_multiplier` times the exposure that bakes it. Each material
-   * holds a uniform of its own (three r186 `UniformsUtils.js:24`), all on the one slot, so the slot
+   * holds a uniform of its own (three r187 `UniformsUtils.js:24`), all on the one slot, so the slot
    * takes the array's handle.
    */
   show(contribution: number, reflects: boolean, energy: number): void {
