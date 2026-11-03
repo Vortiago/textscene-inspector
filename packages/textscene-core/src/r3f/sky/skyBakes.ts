@@ -20,10 +20,11 @@ import {
 import { perObject } from '../../utils/perObject';
 import { holdUntilReleased } from '../useDisposeOnRelease';
 import { SkyRadiance } from './skyRadiance';
+import type { SkyBackground } from './skyBackground';
 
 /** A sky baked at one exposure: its background and the radiance its readers sample. */
 interface BakedSky {
-  background: THREE.Texture | null;
+  background: SkyBackground | null;
   radiance: SkyRadiance;
   /** Frees the background and the radiance layers. */
   dispose: () => void;

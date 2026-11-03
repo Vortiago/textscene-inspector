@@ -104,19 +104,19 @@ describe('buildSkyEnvironment radiance size', () => {
     return { rendered, hasPmrem: pmrem.mock.calls.length > 0, hasBackground: env!.background !== null };
   }
 
-  it('renders one cube for the background and the radiance at the default size', async () => {
-    expect(await cubeSizes(256)).toEqual({ rendered: [256], hasPmrem: false, hasBackground: true });
+  it('renders only the radiance cube, as the background draws the sky at each pixel', async () => {
+    expect(await cubeSizes(32)).toEqual({ rendered: [32], hasPmrem: false, hasBackground: true });
   });
 
-  it('renders the radiance at a smaller size on a cube of its own, so a mirror reads it as coarse as Godot', async () => {
-    expect(await cubeSizes(32)).toEqual({ rendered: [256, 32], hasPmrem: false, hasBackground: true });
+  it('renders the radiance at the default size', async () => {
+    expect(await cubeSizes(256)).toEqual({ rendered: [256], hasPmrem: false, hasBackground: true });
   });
 
   it('bakes a size above 256 at 256 (edge case)', async () => {
     expect(await cubeSizes(1024)).toEqual({ rendered: [256], hasPmrem: false, hasBackground: true });
   });
 
-  it('renders only the radiance cube for a sky that is not the background', async () => {
+  it('builds no background for a sky that is not the background', async () => {
     expect(await cubeSizes(32, false)).toEqual({ rendered: [32], hasPmrem: false, hasBackground: false });
   });
 });
@@ -180,11 +180,21 @@ describe('buildSkyEnvironment panorama wiring', () => {
     expect(sampled).toBeNull();
   });
 
-  it.each([
-    ['renders', true],
-    ['fails to render', false],
-  ])('frees its clone once the cube is done, when the sky %s', async (_label, renders) => {
+  it('draws the background from the panorama the radiance bakes from', async () => {
+    const { env, sampled } = await build(new THREE.Texture());
+    expect(env!.background!.material.uniforms.source_panorama!.value).toBe(sampled);
+  });
+
+  it('frees its clone with the environment, as the background samples it each frame', async () => {
     const shared = new THREE.Texture();
+    const { env, sampled } = await build(shared);
+    const disposed = vi.fn();
+    sampled!.addEventListener('dispose', disposed);
+    env!.dispose();
+    expect(disposed).toHaveBeenCalledOnce();
+  });
+
+  it('frees its clone when the sky fails to render (error case)', async () => {
     // The clone is made and freed inside the build, so a prototype spy is the
     // only place a test can see its disposal.
     const disposedTextures: THREE.Texture[] = [];
@@ -193,9 +203,9 @@ describe('buildSkyEnvironment panorama wiring', () => {
       disposedTextures.push(this);
       realDispose.call(this);
     });
-    const { env, sampled } = await build(shared, { renders });
-    expect(env === null).toBe(!renders);
-    expect(sampled).not.toBe(shared);
+    const shared = new THREE.Texture();
+    const { env, sampled } = await build(shared, { renders: false });
+    expect(env).toBeNull();
     expect(disposedTextures).toContain(sampled);
     expect(disposedTextures).not.toContain(shared);
   });

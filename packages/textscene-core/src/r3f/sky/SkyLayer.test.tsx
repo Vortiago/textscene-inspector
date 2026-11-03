@@ -25,6 +25,7 @@ import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 import { installSkyDebanding } from './skyDebanding';
 import { WorldExposureScope, usePublishCameraAttributes } from '../environment/worldExposure';
 import { drawAtExposure } from '../exposure/sceneExposure';
+import { SkyBackground } from './skyBackground';
 
 const bakes = vi.hoisted((): SkyEnvironmentInput[] => []);
 /** What the next bake returns on its renderer: null, as a headless renderer gives, unless a test sets it. */
@@ -97,8 +98,22 @@ function skyEnvironment(dispose: () => void = () => {}): (gl: THREE.WebGLRendere
     const target = new THREE.WebGLArrayRenderTarget(1, 1, 8);
     gl.initRenderTarget(target);
     const layers = { layout: skyOctmapLayout(32, 8), target };
-    return { background: new THREE.Texture(), layers, dispose };
+    return {
+      background: new SkyBackground('vec3 godotSky(vec3 eyedir) { return eyedir; }', {}, () => {}),
+      layers,
+      dispose,
+    };
   };
+}
+
+/** The sky background a render of `scene` drew, read before the render ends. */
+function drawnBackground(scene: THREE.Scene): SkyBackground | undefined {
+  return scene.children.find((child): child is SkyBackground => child instanceof SkyBackground);
+}
+
+/** The brightness of the sky background a render of `scene` drew, or null for none. */
+function drawnBackgroundIntensity(scene: THREE.Scene): number | null {
+  return (drawnBackground(scene)?.material.uniforms.backgroundIntensity!.value as number | undefined) ?? null;
 }
 
 interface Mounted {
@@ -410,6 +425,50 @@ describe('SkyLayer', () => {
   });
 });
 
+describe('SkyLayer background', () => {
+  beforeEach(() => {
+    built.next = skyEnvironment();
+  });
+
+  const camera = new THREE.PerspectiveCamera();
+
+  it('draws its sky behind the scene in each render, in place of a background of the scene', async () => {
+    const { scene } = await mount(
+      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+    );
+    fireSceneRender(scene, camera);
+    expect([scene.background, drawnBackground(scene)?.isSkyBackground]).toEqual([null, true]);
+  });
+
+  it('takes the sky out of the scene once the render ends, so no pass outside a render sees it', async () => {
+    const { scene } = await mount(
+      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+    );
+    fireSceneRender(scene, camera);
+    fireSceneRenderEnd(scene, camera);
+    expect(drawnBackground(scene)).toBeUndefined();
+  });
+
+  it('turns the sky by its rotation, as three turns a cube background', async () => {
+    const { scene } = await mount(
+      <ShownSkyLayer sky={panoramaSky} rotation={{ x: 0, y: Math.PI / 2, z: 0 }} resources={NO_RESOURCES} />
+    );
+    fireSceneRender(scene, camera);
+    const rotation = drawnBackground(scene)!.material.uniforms.backgroundRotation!.value as THREE.Matrix3;
+    const turned = new THREE.Vector3(1, 0, 0).applyMatrix3(rotation);
+    expect([turned.x, turned.y, turned.z].map((value) => Math.round(value))).toEqual([0, 0, 1]);
+  });
+
+  it('draws no sky in a render that shows a background of its own, as an interior capture does', async () => {
+    const { scene } = await mount(
+      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+    );
+    scene.background = new THREE.Color(0.3, 0.3, 0.3);
+    fireSceneRender(scene, camera);
+    expect(drawnBackground(scene)).toBeUndefined();
+  });
+});
+
 describe('SkyLayer debanding', () => {
   restoreShaderGlobalsAfterEach();
 
@@ -515,13 +574,15 @@ describe('SkyLayer under an exposure', () => {
   it('draws the background at the exposure', async () => {
     built.next = skyEnvironment();
     const { scene } = await mount(exposed(2, sky({ energyMultiplier: ENERGY })));
-    expect(scene.backgroundIntensity).toBeCloseTo(ENERGY * 2, 10);
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
+    expect(drawnBackgroundIntensity(scene)).toBeCloseTo(ENERGY * 2, 10);
   });
 
-  it('leaves the background alone when the sky paints none', async () => {
+  it('draws no background when the sky paints none', async () => {
     built.next = skyEnvironment();
     const { scene } = await mount(exposed(2, sky({ asBackground: false })));
-    expect(scene.backgroundIntensity).toBe(1);
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
+    expect(drawnBackground(scene)).toBeUndefined();
   });
 
   it('draws a declared light at its energy times the exposure', async () => {
@@ -575,26 +636,29 @@ describe('SkyLayer under an exposure', () => {
     it('draws the background at that exposure, and its own in its next render', async () => {
       built.next = skyEnvironment();
       const { scene } = await mount(exposed(2, sky({ energyMultiplier: ENERGY })));
-      const inside = drawnAt(scene, 3, () => scene.backgroundIntensity);
+      const inside = drawnAt(scene, 3, () => drawnBackgroundIntensity(scene));
       fireSceneRender(scene, camera);
 
       expect(inside).toBeCloseTo(ENERGY * 3, 10);
-      expect(scene.backgroundIntensity).toBeCloseTo(ENERGY * 2, 10);
+      expect(drawnBackgroundIntensity(scene)).toBeCloseTo(ENERGY * 2, 10);
     });
 
     it('draws at no exposure as at 1', async () => {
       built.next = skyEnvironment();
       const { scene } = await mount(exposed(2, sky({ energyMultiplier: ENERGY })));
       fireSceneRender(scene, camera);
-      const inside = drawnAt(scene, null, () => [scene.environmentIntensity, scene.backgroundIntensity]);
+      const inside = drawnAt(scene, null, () => [
+        scene.environmentIntensity,
+        drawnBackgroundIntensity(scene),
+      ]);
       expect(inside).toEqual([ENERGY * ENERGY * 2, ENERGY]);
     });
 
-    it('leaves the background alone when the sky paints none', async () => {
+    it('draws no background when the sky paints none', async () => {
       built.next = skyEnvironment();
       const { scene } = await mount(exposed(2, sky({ asBackground: false })));
-      const inside = drawAtExposure(scene, 3, () => scene.backgroundIntensity);
-      expect(inside).toBe(1);
+      const inside = drawnAt(scene, 3, () => drawnBackground(scene));
+      expect(inside).toBeUndefined();
     });
 
     it('stages nothing once the sky unmounts', async () => {
@@ -628,7 +692,8 @@ describe('SkyLayer under an exposure', () => {
   it('darkens the sky under an exposure of 0 (edge case)', async () => {
     built.next = skyEnvironment();
     const { scene } = await mount(exposed(0, sky({ energyMultiplier: ENERGY })));
-    expect([scene.environmentIntensity, scene.backgroundIntensity]).toEqual([0, 0]);
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
+    expect([scene.environmentIntensity, drawnBackgroundIntensity(scene)]).toEqual([0, 0]);
   });
 
   it('reads a sky in a world with no CameraAttributes as before', async () => {
@@ -636,7 +701,8 @@ describe('SkyLayer under an exposure', () => {
     const { scene } = await mount(
       <WorldExposureScope>{sky({ energyMultiplier: ENERGY })}</WorldExposureScope>
     );
-    expect([scene.environmentIntensity, scene.backgroundIntensity]).toEqual([ENERGY * ENERGY, ENERGY]);
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
+    expect([scene.environmentIntensity, drawnBackgroundIntensity(scene)]).toEqual([ENERGY * ENERGY, ENERGY]);
   });
 
   /**
@@ -758,7 +824,9 @@ describe('SkyLayer under an exposure', () => {
       const backgroundDrawnAt = (exposure: number) =>
         drawAtExposure(scene, exposure, () => {
           fireSceneRender(scene, camera);
-          return scene.background;
+          const drawn = drawnBackground(scene);
+          fireSceneRenderEnd(scene, camera);
+          return drawn;
         });
       backgroundDrawnAt(4);
       backgroundDrawnAt(3);

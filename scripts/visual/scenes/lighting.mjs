@@ -125,6 +125,8 @@ export const LIGHTING_SCENES = [
   // Locks the equirect V/U orientation, measured against Godot. The black grid
   // lines antialias.
   { name: 'sky-panorama', file: 'unit-sky-panorama.tscn' },
+  // The same panorama with `filter = false`, which samples the nearest texel: hard texel edges.
+  { name: 'sky-panorama-nearest', file: 'unit-sky-panorama-nearest.tscn' },
   // A PanoramaSkyMaterial .tres whose panorama is its own sub-resource. The header states why no
   // other golden shows it.
   { name: 'sky-panorama-tres', file: 'unit-sky-panorama-tres.tscn' },

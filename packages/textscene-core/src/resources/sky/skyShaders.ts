@@ -1,7 +1,8 @@
 /**
  * Godot's sky shaders from `scene/resources/3d/sky_material.cpp` (Godot 4.6),
- * ported to GLSL ES. `EYEDIR` and `LIGHTn_*` become a varying and uniforms,
- * `COLOR` becomes `gl_FragColor`. The maths is unchanged, not approximated.
+ * ported to GLSL ES. Each `sky()` becomes `vec3 godotSky(vec3 eyedir)`, which
+ * returns `COLOR` for `EYEDIR`, and `LIGHTn_*` become uniforms. The maths is
+ * unchanged, and `SKY_COORDS` keeps Godot's own approximations.
  *
  * Portions ported from Godot Engine, used under the MIT licence:
  *
@@ -32,10 +33,11 @@
 
 import type { SkyProperties } from './types';
 import { HENYEY_GREENSTEIN_GLSL } from '../../r3f/henyeyGreenstein';
+import { GODOT_SKY_COORDS_GLSL } from '../../godot/rendering/environment/skyCoords';
 
 /**
- * The sky draws on the inside of a unit cube, so the object-space position is
- * the eye direction, Godot's `EYEDIR`.
+ * The radiance bake draws the sky on the inside of a unit cube, so the
+ * object-space position is the eye direction, Godot's `EYEDIR`.
  */
 export const SKY_VERTEX_SHADER = /* glsl */ `
 varying vec3 vEyeDirection;
@@ -73,9 +75,7 @@ const sunDisk = (i: number) => `
     }
   }`;
 
-const PROCEDURAL_SKY_FRAGMENT_SHADER = /* glsl */ `
-varying vec3 vEyeDirection;
-
+const PROCEDURAL_SKY = /* glsl */ `
 uniform vec3 sky_top_color;
 uniform vec3 sky_horizon_color;
 uniform float inv_sky_curve;
@@ -87,48 +87,33 @@ uniform float inv_sun_curve;
 uniform float exposure;
 ${LIGHT_UNIFORMS}
 
-void main() {
-  vec3 eyedir = normalize(vEyeDirection);
+vec3 godotSky(vec3 eyedir) {
   float v_angle = clamp(eyedir.y, -1.0, 1.0);
   vec3 sky = mix(sky_top_color, sky_horizon_color, clamp(pow(1.0 - v_angle, inv_sky_curve), 0.0, 1.0));
 ${[0, 1, 2, 3].map(sunDisk).join('\n')}
 
   vec3 ground = mix(ground_bottom_color, ground_horizon_color, clamp(pow(1.0 + v_angle, inv_ground_curve), 0.0, 1.0));
 
-  gl_FragColor = vec4(mix(ground, sky, step(0.0, eyedir.y)) * exposure, 1.0);
+  return mix(ground, sky, step(0.0, eyedir.y)) * exposure;
 }
 `;
 
-const PANORAMA_SKY_FRAGMENT_SHADER = /* glsl */ `
-varying vec3 vEyeDirection;
-
+const PANORAMA_SKY = /* glsl */ `
 uniform sampler2D source_panorama;
 uniform bool has_panorama;
 uniform float exposure;
 
-const float INV_PI = 0.3183098861837907;
-const float INV_TWO_PI = 0.15915494309189535;
-
-void main() {
-  if (!has_panorama) {
-    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-    return;
-  }
-  vec3 eyedir = normalize(vEyeDirection);
-  // Godot's SKY_COORDS is the equirectangular projection of EYEDIR: u wraps
-  // atan(x,-z) into [0,1) so -Z maps to the texture's left edge (u=0), NOT its
-  // centre — a +0.5 instead offset the whole sky 180deg in azimuth. V uses
-  // acos(-y): the texture loads flipY=true (as the panorama-fixture measurement
-  // against real Godot confirms), so without the negation the sky renders
-  // upside-down. Verified pixel-for-pixel against Godot on unit-sky-panorama.
-  vec2 uv = vec2(fract(atan(eyedir.x, -eyedir.z) * INV_TWO_PI), acos(-eyedir.y) * INV_PI);
-  gl_FragColor = vec4(texture2D(source_panorama, uv).rgb * exposure, 1.0);
+${GODOT_SKY_COORDS_GLSL}
+vec3 godotSky(vec3 eyedir) {
+  // An unset panorama samples \`hint_default_black\`.
+  if (!has_panorama) return vec3(0.0);
+  // The panorama uploads with \`flipY\`, so its first row is v = 1.
+  vec2 coords = godotSkyCoords(eyedir);
+  return texture2D(source_panorama, vec2(coords.x, 1.0 - coords.y)).rgb * exposure;
 }
 `;
 
-const PHYSICAL_SKY_FRAGMENT_SHADER = /* glsl */ `
-varying vec3 vEyeDirection;
-
+const PHYSICAL_SKY = /* glsl */ `
 uniform float rayleigh;
 uniform vec3 rayleigh_color;
 uniform float mie;
@@ -148,13 +133,10 @@ const float rayleigh_zenith_size = 8.4e3;
 const float mie_zenith_size = 1.25e3;
 
 ${HENYEY_GREENSTEIN_GLSL}
-void main() {
-  vec3 eyedir = normalize(vEyeDirection);
-
+vec3 godotSky(vec3 eyedir) {
   if (!LIGHT0_ENABLED) {
     // No sun: Godot shows only the night sky, which we do not sample.
-    gl_FragColor = vec4(vec3(0.0) * exposure, 1.0);
-    return;
+    return vec3(0.0) * exposure;
   }
 
   float zenith_angle = clamp(dot(UP, normalize(LIGHT0_DIRECTION)), -1.0, 1.0);
@@ -198,17 +180,28 @@ void main() {
   vec3 L0 = (sun_energy * extinction) * sundisk * LIGHT0_COLOR;
 
   vec3 color = Lin + L0;
-  gl_FragColor = vec4(pow(color, vec3(1.0 / (1.2 + (1.2 * sun_fade)))) * exposure, 1.0);
+  return pow(color, vec3(1.0 / (1.2 + (1.2 * sun_fade)))) * exposure;
 }
 `;
 
-export function skyFragmentShader(sky: SkyProperties): string {
+/** GLSL that declares the uniforms of `sky` and defines `vec3 godotSky(vec3 eyedir)`, its `sky()`. */
+export function skyGlsl(sky: SkyProperties): string {
   switch (sky.kind) {
     case 'procedural':
-      return PROCEDURAL_SKY_FRAGMENT_SHADER;
+      return PROCEDURAL_SKY;
     case 'panorama':
-      return PANORAMA_SKY_FRAGMENT_SHADER;
+      return PANORAMA_SKY;
     case 'physical':
-      return PHYSICAL_SKY_FRAGMENT_SHADER;
+      return PHYSICAL_SKY;
   }
+}
+
+/** The radiance bake's fragment shader: `sky` at the eye direction of each texel. */
+export function skyFragmentShader(sky: SkyProperties): string {
+  return /* glsl */ `varying vec3 vEyeDirection;
+${skyGlsl(sky)}
+void main() {
+  gl_FragColor = vec4(godotSky(normalize(vEyeDirection)), 1.0);
+}
+`;
 }
