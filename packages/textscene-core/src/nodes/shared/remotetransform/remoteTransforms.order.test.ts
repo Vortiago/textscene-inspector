@@ -11,6 +11,7 @@ import { liveTreeOf } from '../../../r3f/liveSceneTree';
 import { TscnParser } from '../../../parser/TscnParser';
 import { liveGlobalTransform3D, nodesOnTheWayTo } from '../../../r3f/liveGlobalTransform';
 import { node2DLocalTransform } from '../../../r3f/node2dTransform';
+import type { Node2DProperties } from '../../base/node2d/types';
 import { TRANSFORM2D_IDENTITY, multiplyTransform2D } from '../../../godot/math/transform2d';
 import { applyRemoteTransforms } from './remoteTransforms';
 
@@ -27,7 +28,7 @@ function globalOrigin2D(content: string, path: string): number[] {
   const tree = liveTreeOfText(content);
   let global = TRANSFORM2D_IDENTITY;
   for (const node of nodesOnTheWayTo(tree, path, applyRemoteTransforms(tree)).values()) {
-    global = multiplyTransform2D(global, node2DLocalTransform(node.properties));
+    global = multiplyTransform2D(global, node2DLocalTransform(node.properties as Partial<Node2DProperties>));
   }
   return [global.tx, global.ty];
 }
