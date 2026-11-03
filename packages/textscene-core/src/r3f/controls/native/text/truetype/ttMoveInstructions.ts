@@ -9,12 +9,12 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { ftMulDiv, ftMulFix } from '../fontMetrics';
+import { FIXED_26_6_ONE, ftMulDiv, ftMulFix } from '../fontMetrics';
 import { toUint16 } from '../../../../../godot/variant/intWidth';
+import { TAG_TOUCH_BOTH, type GlyphZone } from '../glyphHinting';
 import { isOutside, mulFix14 } from './ttArithmetic';
 import type { ExecContext } from './ttExecContext';
 import { TWILIGHT_ZONE } from './ttGraphicsState';
-import { TAG_TOUCH_BOTH, type GlyphZone } from './ttZone';
 
 /** GC: the projection of a current point, or of an original one along the dual vector for an odd opcode. */
 export function getCoordinate(exc: ExecContext, a: number): void {
@@ -150,9 +150,8 @@ export function moveIndirectAbsolutePoint(exc: ExecContext, a: number): void {
   graphicsState.rp0 = graphicsState.rp1 = point;
 }
 
-/** The single width for a distance within its cut-in of it, with the distance's sign; else the distance. */
-function singleWidthOr(exc: ExecContext, distance: number, isWithinCutIn: boolean): number {
-  if (!isWithinCutIn) return distance;
+/** The single width, with the sign of `distance`. */
+function signedSingleWidth(exc: ExecContext, distance: number): number {
   const { singleWidthValue } = exc.graphicsState;
   return distance >= 0 ? singleWidthValue : 0 - singleWidthValue;
 }
@@ -179,13 +178,12 @@ export function moveDirectRelativePoint(exc: ExecContext, a: number): void {
   if (point < zp1.pointCount && graphicsState.rp0 < zp0.pointCount) {
     const { singleWidthValue, singleWidthCutIn } = graphicsState;
     let original = originalDistance(exc, zp1, point, zp0, graphicsState.rp0);
-    original = singleWidthOr(
-      exc,
-      original,
+    if (
       singleWidthCutIn > 0 &&
-        original < singleWidthValue + singleWidthCutIn &&
-        original > singleWidthValue - singleWidthCutIn
-    );
+      original < singleWidthValue + singleWidthCutIn &&
+      original > singleWidthValue - singleWidthCutIn
+    )
+      original = signedSingleWidth(exc, original);
     let distance = (opcode & RELATIVE_ROUND) !== 0 ? exc.round(original) : original;
     if ((opcode & RELATIVE_MINIMUM_DISTANCE) !== 0) distance = atLeastMinimum(exc, distance, original);
     exc.move(zp1, point, distance - currentDistance(exc, zp1, point, zp0, graphicsState.rp0));
@@ -206,11 +204,8 @@ export function moveIndirectRelativePoint(exc: ExecContext, a: number): void {
   if (point < zp1.pointCount && !isOutside(entry, exc.controlValues.length + 1) && rp0 < zp0.pointCount) {
     let controlValue = entry === 0 ? 0 : exc.controlValues[entry - 1]!;
     const { singleWidthValue, singleWidthCutIn } = graphicsState;
-    controlValue = singleWidthOr(
-      exc,
-      controlValue,
-      Math.abs(controlValue - singleWidthValue) < singleWidthCutIn
-    );
+    if (Math.abs(controlValue - singleWidthValue) < singleWidthCutIn)
+      controlValue = signedSingleWidth(exc, controlValue);
     // A twilight point starts at rp0's original place, moved by the value, as Microsoft's rasteriser does.
     if (graphicsState.gep1 === TWILIGHT_ZONE) {
       zp1.orgX[point] = zp1.curX[point] = zp0.orgX[rp0]! + mulFix14(controlValue, graphicsState.freeVector.x);
@@ -282,10 +277,10 @@ export function intersect(exc: ExecContext, a: number): void {
   const day = zp1.curY[a1]! - zp1.curY[a0]!;
   const dx = zp0.curX[b0]! - zp1.curX[a0]!;
   const dy = zp0.curY[b0]! - zp1.curY[a0]!;
-  const discriminant = ftMulDiv(dax, 0 - dby, 0x40) + ftMulDiv(day, dbx, 0x40);
-  const dotProduct = ftMulDiv(dax, dbx, 0x40) + ftMulDiv(day, dby, 0x40);
+  const discriminant = ftMulDiv(dax, 0 - dby, FIXED_26_6_ONE) + ftMulDiv(day, dbx, FIXED_26_6_ONE);
+  const dotProduct = ftMulDiv(dax, dbx, FIXED_26_6_ONE) + ftMulDiv(day, dby, FIXED_26_6_ONE);
   if (GRAZING_TANGENT_INVERSE * Math.abs(discriminant) > Math.abs(dotProduct)) {
-    const along = ftMulDiv(dx, 0 - dby, 0x40) + ftMulDiv(dy, dbx, 0x40);
+    const along = ftMulDiv(dx, 0 - dby, FIXED_26_6_ONE) + ftMulDiv(dy, dbx, FIXED_26_6_ONE);
     zp2.curX[point] = zp1.curX[a0]! + ftMulDiv(along, dax, discriminant);
     zp2.curY[point] = zp1.curY[a0]! + ftMulDiv(along, day, discriminant);
   } else {

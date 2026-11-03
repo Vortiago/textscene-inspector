@@ -10,33 +10,38 @@
  */
 
 import { ByteReader } from '../../../../resources/formats/binaryresource/byteReader';
+import { GLYPH_X_MIN_OFFSET, locaEntry, SHORT_LOCA_FORMAT } from './glyfFormat';
+import { HEAD_INDEX_TO_LOC_FORMAT_OFFSET, readLongMetricCount } from './sfntTables';
 
 /** The flags byte: bit 0 leaves out the proportional glyphs' bearings, bit 1 the monospaced glyphs'. */
 const NO_PROPORTIONAL_BEARINGS = 1;
 const NO_MONOSPACED_BEARINGS = 2;
 const RESERVED_FLAGS = 0xfc;
 
-/** `hhea`: numberOfHMetrics(2) at 34. */
-const HHEA_LONG_METRIC_COUNT_OFFSET = 34;
 /**
  * FreeType reads the glyph count of a plain `glyf` at offset 8 of `maxp`, which holds maxPoints, not
  * numGlyphs at 4. The loader matches it, so a font Godot fails to open fails here too.
  */
 const MAXP_GLYPH_COUNT_READ_OFFSET = 8;
-/** `head`: indexToLocFormat(2) at 50. */
-const HEAD_LOCA_FORMAT_OFFSET = 50;
-/** A glyph's header: numberOfContours(2), then xMin(2). */
-const GLYPH_X_MIN_OFFSET = 2;
+
+/** A table as the decoded WOFF2 stream stores it: its bytes, and where they start in the stream. */
+export interface DecodedTable {
+  readonly bytes: Uint8Array;
+  readonly offset: number;
+}
+
+/** A view of all of `bytes`, which throws on a read past their end. */
+function viewOf(bytes: Uint8Array): DataView {
+  return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+}
 
 /** `read_num_hmetrics`: the count of `(advance, bearing)` pairs in `hmtx`. Throws on an `hhea` too short. */
-export function longMetricCountOf(hhea: Uint8Array): number {
-  const header = ByteReader.bigEndian(hhea);
-  header.seek(HHEA_LONG_METRIC_COUNT_OFFSET);
-  return header.u16();
+function longMetricCountOf(hhea: Uint8Array): number {
+  return readLongMetricCount(viewOf(hhea), { offset: 0, length: hhea.length });
 }
 
 /** Where the tables `get_x_mins` reads start in the decoded stream. */
-export interface PlainGlyfOffsets {
+interface PlainGlyfOffsets {
   maxp: number;
   head: number;
   loca: number;
@@ -48,27 +53,59 @@ export interface PlainGlyfOffsets {
  * reads anywhere in the decoded stream, past a table's end too, and an empty glyph reads the header
  * of the glyph after it. Throws on a read past the stream.
  */
-export function plainGlyfXMins(decoded: Uint8Array, offsets: PlainGlyfOffsets): Int16Array {
-  const stream = ByteReader.bigEndian(decoded);
-  stream.seek(offsets.maxp + MAXP_GLYPH_COUNT_READ_OFFSET);
-  const glyphCount = stream.u16();
-  stream.seek(offsets.head + HEAD_LOCA_FORMAT_OFFSET);
-  const isLongLoca = stream.u16() !== 0;
-  let locaEntry = offsets.loca;
-  return Int16Array.from({ length: glyphCount }, () => {
-    stream.seek(locaEntry);
-    const glyphOffset = isLongLoca ? stream.u32() : stream.u16() * 2;
-    locaEntry += isLongLoca ? 4 : 2;
-    stream.seek(offsets.glyf + glyphOffset + GLYPH_X_MIN_OFFSET);
-    return stream.i16();
+function plainGlyfXMins(decoded: Uint8Array, offsets: PlainGlyfOffsets): Int16Array {
+  const stream = viewOf(decoded);
+  const glyphCount = stream.getUint16(offsets.maxp + MAXP_GLYPH_COUNT_READ_OFFSET, false);
+  const isLongLoca =
+    stream.getUint16(offsets.head + HEAD_INDEX_TO_LOC_FORMAT_OFFSET, false) !== SHORT_LOCA_FORMAT;
+  return Int16Array.from({ length: glyphCount }, (_, glyphIndex) => {
+    const glyphOffset = locaEntry(stream, offsets.loca, glyphIndex, isLongLoca);
+    return stream.getInt16(offsets.glyf + glyphOffset + GLYPH_X_MIN_OFFSET, false);
   });
+}
+
+/** The `xMin` of each glyph, from the rebuilt `glyf` or else the plain one. Throws without the tables. */
+function glyphXMinsOf(
+  decoded: Uint8Array,
+  stored: ReadonlyMap<string, DecodedTable>,
+  rebuiltXMins: Int16Array | null
+): Int16Array {
+  if (rebuiltXMins) return rebuiltXMins;
+  const offsetOf = (tag: string) => tableOf(stored, tag).offset;
+  return plainGlyfXMins(decoded, {
+    maxp: offsetOf('maxp'),
+    head: offsetOf('head'),
+    loca: offsetOf('loca'),
+    glyf: offsetOf('glyf'),
+  });
+}
+
+function tableOf(stored: ReadonlyMap<string, DecodedTable>, tag: string): DecodedTable {
+  const table = stored.get(tag);
+  if (!table) throw new Error(`expected the ${tag} table beside a transformed hmtx, got none`);
+  return table;
+}
+
+/**
+ * The plain `hmtx` of a WOFF2 font whose stored `hmtx` is transformed, with the side bearings it
+ * leaves out from the `xMins` of the rebuilt `glyf`, or of the plain one in `decoded`. Throws on a
+ * font without `hhea` or the tables the plain `xMins` read, or on a transform FreeType rejects.
+ */
+export function rebuiltHmtxOf(
+  decoded: Uint8Array,
+  stored: ReadonlyMap<string, DecodedTable>,
+  rebuiltXMins: Int16Array | null
+): Uint8Array {
+  const hmtx = tableOf(stored, 'hmtx');
+  const longMetricCount = longMetricCountOf(tableOf(stored, 'hhea').bytes);
+  return rebuildHmtx(hmtx.bytes, longMetricCount, glyphXMinsOf(decoded, stored, rebuiltXMins));
 }
 
 /**
  * `reconstruct_hmtx`: the plain `hmtx` of `longMetricCount` pairs and the bearings of the glyphs
  * after them. Throws, so the font does not open, on flags FreeType rejects or a stream too short.
  */
-export function rebuildHmtx(transformed: Uint8Array, longMetricCount: number, xMins: Int16Array): Uint8Array {
+function rebuildHmtx(transformed: Uint8Array, longMetricCount: number, xMins: Int16Array): Uint8Array {
   const glyphCount = xMins.length;
   const stream = ByteReader.bigEndian(transformed);
   const flags = stream.u8();

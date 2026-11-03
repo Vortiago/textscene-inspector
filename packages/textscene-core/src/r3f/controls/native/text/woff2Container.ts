@@ -9,8 +9,8 @@ import { exactly } from '../../../../resources/formats/binaryresource/compressed
 import { perObject } from '../../../../utils/perObject';
 import { loadBrotliDecoder } from './brotliDecoder';
 import { SCENE_FONT_TABLE_TAGS, sfntFileOfTables, type SfntFile } from './sfntTables';
-import { rebuildGlyfTables, type RebuiltGlyf } from './woff2Glyf';
-import { longMetricCountOf, plainGlyfXMins, rebuildHmtx } from './woff2Hmtx';
+import { rebuildGlyfTables } from './woff2Glyf';
+import { rebuiltHmtxOf, type DecodedTable } from './woff2Hmtx';
 
 export const WOFF2_SIGNATURE = 0x774f4632; // 'wOF2'
 const SFNT_COLLECTION_FLAVOR = 0x74746366; // 'ttcf'
@@ -131,12 +131,9 @@ function readDirectoryEntry(reader: ByteReader): DirectoryEntry {
   return { tag, isTransformed, storedLength: isTransformed ? readBase128(reader) : originalLength };
 }
 
-/** A table as the decoded stream stores it. */
-interface StoredTable {
-  bytes: Uint8Array;
-  /** Where the table starts in the decoded stream. */
-  offset: number;
-  isTransformed: boolean;
+/** A table as the decoded stream stores it, and whether the stream holds it transformed. */
+interface StoredTable extends DecodedTable {
+  readonly isTransformed: boolean;
 }
 
 interface DecodedStream {
@@ -176,24 +173,15 @@ function storedTablesOf({ entries, decoded }: DecodedStream): Map<string, Stored
   return stored;
 }
 
-/** The `xMin` of each glyph, from the rebuilt `glyf` or else the plain one. Throws on a font without the tables. */
-function glyphXMinsOf(
-  { decoded }: DecodedStream,
+/** The tables of `stored` that the stream holds plain, of those `tags` names. */
+function plainTablesOf(
   stored: ReadonlyMap<string, StoredTable>,
-  rebuilt: RebuiltGlyf | null
-): Int16Array {
-  if (rebuilt) return rebuilt.xMins;
-  const offsetOf = (tag: string) => {
-    const table = stored.get(tag);
-    if (!table) throw new Error(`expected a ${tag} table beside a transformed hmtx, got none`);
-    return table.offset;
-  };
-  return plainGlyfXMins(decoded, {
-    maxp: offsetOf('maxp'),
-    head: offsetOf('head'),
-    loca: offsetOf('loca'),
-    glyf: offsetOf('glyf'),
-  });
+  tags: readonly string[]
+): Map<string, Uint8Array> {
+  const tables = new Map<string, Uint8Array>();
+  for (const [tag, { bytes, isTransformed }] of stored)
+    if (!isTransformed && tags.includes(tag)) tables.set(tag, bytes);
+  return tables;
 }
 
 /**
@@ -206,26 +194,17 @@ export async function readWoff2Tables(
 ): Promise<SfntFile> {
   const stream = await decodedStreamOf(bytes);
   const stored = storedTablesOf(stream);
-  const tables = new Map<string, Uint8Array>();
-  for (const [tag, { bytes: tableBytes, isTransformed }] of stored)
-    if (!isTransformed && tags.includes(tag)) tables.set(tag, tableBytes);
+  const tables = plainTablesOf(stored, tags);
 
+  const isGlyfWanted = tags.includes('glyf');
+  const isHmtxRebuilt = stored.get('hmtx')?.isTransformed === true && tags.includes('hmtx');
   const glyf = stored.get('glyf');
-  const hmtx = stored.get('hmtx');
-  const isHmtxRebuilt = hmtx?.isTransformed === true && tags.includes('hmtx');
   const rebuilt =
-    glyf?.isTransformed && (tags.includes('glyf') || isHmtxRebuilt) ? rebuildGlyfTables(glyf.bytes) : null;
-  if (rebuilt && tags.includes('glyf')) {
+    glyf?.isTransformed && (isGlyfWanted || isHmtxRebuilt) ? rebuildGlyfTables(glyf.bytes) : null;
+  if (rebuilt && isGlyfWanted) {
     tables.set('glyf', rebuilt.glyf);
     tables.set('loca', rebuilt.loca);
   }
-  if (isHmtxRebuilt) {
-    const hhea = stored.get('hhea');
-    if (!hhea) throw new Error('expected an hhea table beside a transformed hmtx, got none');
-    tables.set(
-      'hmtx',
-      rebuildHmtx(hmtx.bytes, longMetricCountOf(hhea.bytes), glyphXMinsOf(stream, stored, rebuilt))
-    );
-  }
+  if (isHmtxRebuilt) tables.set('hmtx', rebuiltHmtxOf(stream.decoded, stored, rebuilt?.xMins ?? null));
   return sfntFileOfTables(tables);
 }

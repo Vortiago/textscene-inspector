@@ -9,8 +9,8 @@
 
 import { ftDivFix, ftMulFix } from '../fontMetrics';
 import { toUint16 } from '../../../../../godot/variant/intWidth';
-import type { ExecContext } from './ttExecContext';
-import { TAG_TOUCH_X, TAG_TOUCH_Y } from './ttZone';
+import { TAG_TOUCH_X, TAG_TOUCH_Y } from '../glyphHinting';
+import { IUP_X_DONE, IUP_Y_DONE, POST_IUP, type ExecContext } from './ttExecContext';
 
 /** One axis of the glyph zone: original, current and unscaled coordinates. */
 interface Axis {
@@ -35,11 +35,19 @@ function shiftByTouched(axis: Axis, first: number, last: number, touched: number
  */
 function interpolateBetween(axis: Axis, first: number, last: number, ref1: number, ref2: number): void {
   if (first > last || ref1 >= axis.pointCount || ref2 >= axis.pointCount) return;
-  const [low, high] = axis.orus[ref1]! > axis.orus[ref2]! ? [ref2, ref1] : [ref1, ref2];
   const { org, cur, orus } = axis;
-  const [orus1, orus2] = [orus[low]!, orus[high]!];
-  const [org1, org2] = [org[low]!, org[high]!];
-  const [cur1, cur2] = [cur[low]!, cur[high]!];
+  let low = ref1;
+  let high = ref2;
+  if (orus[ref1]! > orus[ref2]!) {
+    low = ref2;
+    high = ref1;
+  }
+  const orus1 = orus[low]!;
+  const orus2 = orus[high]!;
+  const org1 = org[low]!;
+  const org2 = org[high]!;
+  const cur1 = cur[low]!;
+  const cur2 = cur[high]!;
   const isSnap = cur1 === cur2 || orus1 === orus2;
   let scale: number | null = null;
   for (let point = first; point <= last; point++) {
@@ -77,9 +85,6 @@ function interpolateContour(axis: Axis, tags: Uint8Array, mask: number, first: n
   if (firstTouched > 0) interpolateBetween(axis, first, firstTouched - 1, lastTouched, firstTouched);
 }
 
-/** The backward compatibility value once IUP has run on both axes. */
-const POST_IUP = 0x7;
-
 /**
  * IUP[y] and IUP[x]. Backward compatibility records each axis it runs on, and once both have run
  * it ignores every later IUP.
@@ -87,7 +92,7 @@ const POST_IUP = 0x7;
 export function interpolateUntouchedPoints(exc: ExecContext): void {
   if (exc.backwardCompatibility === POST_IUP) return;
   const isX = (exc.opcode & 1) !== 0;
-  if (exc.backwardCompatibility) exc.backwardCompatibility |= isX ? 2 : 1;
+  if (exc.backwardCompatibility) exc.backwardCompatibility |= isX ? IUP_X_DONE : IUP_Y_DONE;
   const { pts } = exc;
   if (pts.contourCount === 0) return;
   const axis: Axis = isX

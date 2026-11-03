@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
 import type { GlyphContours } from './glyphContours';
-import { openFontOutlines, type SfntOutlines } from './sfntOutlines';
+import { openFontOutlines } from './sfntOutlines';
 import {
   buildTestFont,
+  charContours,
   cmapTable,
   fixtureFontBytes,
   headTable,
@@ -18,12 +19,6 @@ async function openSans() {
   const outlines = await openFontOutlines(fixtureFontBytes('open-sans-semibold-subset.ttf'));
   if (!outlines) throw new Error('the Open Sans fixture does not parse');
   return outlines;
-}
-
-function contoursOf(outlines: SfntOutlines, char: string, fontSizePx: number): GlyphContours {
-  const contours = outlines.glyphContours(outlines.glyphIndex(char.codePointAt(0)!), fontSizePx);
-  if (!contours) throw new Error(`no outline for ${char}`);
-  return contours;
 }
 
 const xs = (contours: GlyphContours) => contours.points.map((p) => p.x);
@@ -101,7 +96,7 @@ describe('openFontOutlines containers', () => {
 
 describe('openFontOutlines simple glyph', () => {
   it('reads the hinted points of H at 64 px that Godot measured, the y negated', async () => {
-    const contours = contoursOf(await openSans(), 'H', 64);
+    const contours = charContours(await openSans(), 'H', 64);
     // `font_get_glyph_contours` of this font at size 64 in Godot 4.6.3. The hints move the cap
     // height to a whole pixel and the crossbar with it, and no x at all.
     expect(xs(contours)).toEqual([
@@ -111,18 +106,18 @@ describe('openFontOutlines simple glyph', () => {
   });
 
   it('ends the one contour of H on its last point, every point on the curve', async () => {
-    const contours = contoursOf(await openSans(), 'H', 64);
+    const contours = charContours(await openSans(), 'H', 64);
     expect(contours.contourEnds).toEqual([11]);
     expect(tags(contours)).toEqual(new Array(12).fill(ContourPointTag.ON));
   });
 
   it('rounds each coordinate to a 26.6 fixed-point step as FreeType does', async () => {
     // 1345 design units at 16 px is 10.5078125, and FreeType's `FT_MulFix` rounds up to 673/64.
-    expect(xs(contoursOf(await openSans(), 'H', 16))[0]).toBe(10.515625);
+    expect(xs(charContours(await openSans(), 'H', 16))[0]).toBe(10.515625);
   });
 
   it('keeps the conic control points of o in Godot order, with the two contour ends', async () => {
-    const contours = contoursOf(await openSans(), 'o', 64);
+    const contours = charContours(await openSans(), 'o', 64);
     expect(contours.contourEnds).toEqual([13, 25]);
     expect(tags(contours)).toEqual([
       1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
@@ -130,12 +125,12 @@ describe('openFontOutlines simple glyph', () => {
   });
 
   it('reads three contours for g', async () => {
-    const contours = contoursOf(await openSans(), 'g', 64);
+    const contours = charContours(await openSans(), 'g', 64);
     expect([contours.points.length, contours.contourEnds]).toEqual([66, [42, 52, 65]]);
   });
 
   it('answers a fill-right orientation for a TrueType outline', async () => {
-    expect(contoursOf(await openSans(), 'o', 64).isFillRight).toBe(true);
+    expect(charContours(await openSans(), 'o', 64).isFillRight).toBe(true);
   });
 
   it('answers a fill-left orientation for outer contours wound counter-clockwise', async () => {
@@ -154,7 +149,7 @@ describe('openFontOutlines simple glyph', () => {
 
 describe('openFontOutlines composite glyph', () => {
   it('resolves é to the points of its components with Godot x and tags', async () => {
-    const contours = contoursOf(await openSans(), 'é', 16);
+    const contours = charContours(await openSans(), 'é', 16);
     // `font_get_glyph_contours` of this font at size 16 in Godot 4.6.3.
     expect(contours.contourEnds).toEqual([21, 28, 40]);
     expect(xs(contours)).toEqual([

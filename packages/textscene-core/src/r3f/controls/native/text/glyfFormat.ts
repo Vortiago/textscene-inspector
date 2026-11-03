@@ -4,8 +4,28 @@
  * "Composite Glyph Description").
  */
 
+import { toInt16 } from '../../../../godot/variant/intWidth';
+
 export const SHORT_LOCA_FORMAT = 0;
 export const LONG_LOCA_FORMAT = 1;
+
+/** A glyph's header: numberOfContours(2), then xMin, yMin, xMax and yMax(2 each). */
+export const GLYPH_HEADER_SIZE = 10;
+export const GLYPH_X_MIN_OFFSET = 2;
+export const GLYPH_Y_MAX_OFFSET = 8;
+
+/** The `glyf` offset of `loca` entry `index`: a long entry, or a short one, which counts words. */
+export function locaEntry(dv: DataView, locaOffset: number, index: number, isLongLoca: boolean): number {
+  return isLongLoca
+    ? dv.getUint32(locaOffset + index * 4, false)
+    : dv.getUint16(locaOffset + index * 2, false) * 2;
+}
+
+/** The `xMin` of a glyph's header, or 0 for a glyph of no bytes. */
+export function glyphXMin(glyph: Uint8Array): number {
+  if (glyph.length === 0) return 0;
+  return toInt16((glyph[GLYPH_X_MIN_OFFSET]! << 8) | glyph[GLYPH_X_MIN_OFFSET + 1]!);
+}
 
 // The point flags of a simple glyph.
 export const SIMPLE_ON_CURVE = 0x01;

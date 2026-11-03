@@ -11,7 +11,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { pixCeil, pixFloor, pixRound } from './ttArithmetic';
+import { pixCeil, pixFloor, pixRound } from '../fontMetrics';
 
 /** The `TT_Round_*` values of `GS.round_state` (`ttinterp.h`). */
 export const RoundState = {
@@ -49,16 +49,24 @@ function signed(distance: number, roundMagnitude: (magnitude: number) => number,
   return Math.min(0 - roundMagnitude(-distance), 0 - floor);
 }
 
-/** `Round_Super`: the threshold moves the step, and the period is a power of two. */
-function roundSuper(distance: number, { period, phase, threshold }: SuperRound): number {
-  const step = (magnitude: number) => Math.floor((magnitude + threshold - phase) / period) * period + phase;
-  return signed(distance, step, phase);
+/** `Round_Super`'s step of a magnitude: the threshold moves it, and the period is a power of two. */
+function superStep(magnitude: number, { period, phase, threshold }: SuperRound): number {
+  return Math.floor((magnitude + threshold - phase) / period) * period + phase;
 }
 
-/** `Round_Super_45`: as `roundSuper`, by a division that truncates toward zero. */
-function roundSuper45(distance: number, { period, phase, threshold }: SuperRound): number {
-  const step = (magnitude: number) => Math.trunc((magnitude + threshold - phase) / period) * period + phase;
-  return signed(distance, step, phase);
+/** `Round_Super_45`'s step: as `superStep`, by a division that truncates toward zero. */
+function superStep45(magnitude: number, { period, phase, threshold }: SuperRound): number {
+  return Math.trunc((magnitude + threshold - phase) / period) * period + phase;
+}
+
+/** `Round_Super` and `Round_Super_45`: as `signed`, by a super step, held to the phase. */
+function roundSuper(
+  distance: number,
+  step: (magnitude: number, superRound: SuperRound) => number,
+  superRound: SuperRound
+): number {
+  if (distance >= 0) return Math.max(step(distance, superRound), superRound.phase);
+  return Math.min(0 - step(-distance, superRound), 0 - superRound.phase);
 }
 
 /** `Round_To_Double_Grid`: to the nearest half pixel. */
@@ -87,9 +95,9 @@ export function roundDistance(distance: number, state: RoundStateValue, superRou
     case RoundState.OFF:
       return distance;
     case RoundState.SUPER:
-      return roundSuper(distance, superRound);
+      return roundSuper(distance, superStep, superRound);
     case RoundState.SUPER_45:
-      return roundSuper45(distance, superRound);
+      return roundSuper(distance, superStep45, superRound);
   }
 }
 

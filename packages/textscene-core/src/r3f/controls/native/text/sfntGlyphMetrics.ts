@@ -10,23 +10,30 @@
  */
 
 import { toInt16, toUint16 } from '../../../../godot/variant/intWidth';
-import { tableFits, type SfntFile, type TableRecord } from './sfntTables';
+import {
+  HHEA_ASCENDER_OFFSET,
+  HHEA_DESCENDER_OFFSET,
+  OS2_TYPO_ASCENDER_OFFSET,
+  OS2_TYPO_DESCENDER_OFFSET,
+  readLongMetricCount,
+  tableFits,
+  type SfntFile,
+  type TableRecord,
+} from './sfntTables';
 
-/** `hhea` and `vhea`: ascender(2) at 4, descender(2) at 6, numberOfHMetrics(2) at 34. */
-const METRICS_HEADER_ASCENDER_OFFSET = 4;
-const METRICS_HEADER_DESCENDER_OFFSET = 6;
-const METRICS_HEADER_COUNT_OFFSET = 34;
+/** The length of an `hhea` or `vhea` header through its count of long metrics. */
 const METRICS_HEADER_LENGTH = 36;
-/** `OS/2`: sTypoAscender(2) at 68, sTypoDescender(2) at 70. */
-const OS2_TYPO_ASCENDER_OFFSET = 68;
-const OS2_TYPO_DESCENDER_OFFSET = 70;
+/** The length of `OS/2` through sTypoDescender. */
 const OS2_TYPO_LENGTH = 72;
 
 /** One axis of a glyph's metrics in font units. */
 export interface GlyphAxisMetrics {
-  bearing: number;
-  advance: number;
+  readonly bearing: number;
+  readonly advance: number;
 }
+
+/** The metrics of a glyph past its table, or of a font without the table. */
+const NO_AXIS_METRICS: GlyphAxisMetrics = Object.freeze({ bearing: 0, advance: 0 });
 
 /** A glyph's horizontal and vertical metrics, which the phantom points mark. */
 export interface GlyphMetrics {
@@ -47,14 +54,14 @@ interface MetricsTable {
  */
 function axisMetrics({ dv, table, longMetricCount }: MetricsTable, glyphIndex: number): GlyphAxisMetrics {
   const end = table.offset + table.length;
-  if (longMetricCount === 0) return { bearing: 0, advance: 0 };
+  if (longMetricCount === 0) return NO_AXIS_METRICS;
   if (glyphIndex < longMetricCount) {
     const at = table.offset + 4 * glyphIndex;
-    if (at + 4 > end) return { bearing: 0, advance: 0 };
+    if (at + 4 > end) return NO_AXIS_METRICS;
     return { advance: dv.getUint16(at, false), bearing: dv.getInt16(at + 2, false) };
   }
   const lastLong = table.offset + 4 * (longMetricCount - 1);
-  if (lastLong + 2 > end) return { bearing: 0, advance: 0 };
+  if (lastLong + 2 > end) return NO_AXIS_METRICS;
   const bearingAt = lastLong + 4 + 2 * (glyphIndex - longMetricCount);
   return {
     advance: dv.getUint16(lastLong, false),
@@ -67,7 +74,7 @@ function metricsTable({ dv, tables }: SfntFile, headerTag: string, tableTag: str
   const header = tables.get(headerTag);
   const table = tables.get(tableTag);
   if (!header || !table || !tableFits(dv, header, METRICS_HEADER_LENGTH)) return null;
-  return { dv, table, longMetricCount: dv.getUint16(header.offset + METRICS_HEADER_COUNT_OFFSET, false) };
+  return { dv, table, longMetricCount: readLongMetricCount(dv, header) };
 }
 
 /** The ascender and descender that stand in for vertical metrics: `OS/2`'s typographic pair, or `hhea`'s. */
@@ -81,8 +88,8 @@ function emulatedVerticalExtent({ dv, tables }: SfntFile): { ascender: number; d
   const hhea = tables.get('hhea');
   if (hhea && tableFits(dv, hhea, METRICS_HEADER_LENGTH))
     return {
-      ascender: dv.getInt16(hhea.offset + METRICS_HEADER_ASCENDER_OFFSET, false),
-      descender: dv.getInt16(hhea.offset + METRICS_HEADER_DESCENDER_OFFSET, false),
+      ascender: dv.getInt16(hhea.offset + HHEA_ASCENDER_OFFSET, false),
+      descender: dv.getInt16(hhea.offset + HHEA_DESCENDER_OFFSET, false),
     };
   return { ascender: 0, descender: 0 };
 }
@@ -95,9 +102,8 @@ export function glyphMetricsReader(sfnt: SfntFile): (glyphIndex: number, yMax: n
   const horizontal = metricsTable(sfnt, 'hhea', 'hmtx');
   const vertical = metricsTable(sfnt, 'vhea', 'vmtx');
   const { ascender, descender } = emulatedVerticalExtent(sfnt);
-  const emptyAxis: GlyphAxisMetrics = { bearing: 0, advance: 0 };
   return (glyphIndex, yMax) => ({
-    horizontal: horizontal ? axisMetrics(horizontal, glyphIndex) : emptyAxis,
+    horizontal: horizontal ? axisMetrics(horizontal, glyphIndex) : NO_AXIS_METRICS,
     vertical: vertical
       ? axisMetrics(vertical, glyphIndex)
       : { bearing: toInt16(ascender - yMax), advance: toUint16(Math.abs(ascender - descender)) },

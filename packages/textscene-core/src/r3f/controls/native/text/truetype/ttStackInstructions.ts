@@ -8,9 +8,9 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { ftMulDiv } from '../fontMetrics';
+import { FIXED_26_6_ONE, ftMulDiv, pixCeil, pixFloor } from '../fontMetrics';
 import { toInt16 } from '../../../../../godot/variant/intWidth';
-import { mulDivNoRound, pixCeil, pixFloor } from './ttArithmetic';
+import { mulDivNoRound } from './ttArithmetic';
 import type { ExecContext } from './ttExecContext';
 
 /** Whether `count` more values would overflow the stack (`BOUNDS( L, stackSize + 1 - top )`). */
@@ -71,7 +71,9 @@ export function clear(exc: ExecContext): void {
 
 export function swap(exc: ExecContext, a: number): void {
   const { stack } = exc;
-  [stack[a], stack[a + 1]] = [stack[a + 1]!, stack[a]!];
+  const first = stack[a]!;
+  stack[a] = stack[a + 1]!;
+  stack[a + 1] = first;
 }
 
 export function depth(exc: ExecContext, a: number): void {
@@ -96,10 +98,10 @@ export function moveIndexed(exc: ExecContext, a: number): void {
 /** ROLL: the third value moves to the top. */
 export function roll(exc: ExecContext, a: number): void {
   const { stack } = exc;
-  const [c, b, top] = [stack[a]!, stack[a + 1]!, stack[a + 2]!];
-  stack[a + 2] = c;
-  stack[a + 1] = top;
-  stack[a] = b;
+  const third = stack[a]!;
+  stack[a] = stack[a + 1]!;
+  stack[a + 1] = stack[a + 2]!;
+  stack[a + 2] = third;
 }
 
 /** A binary instruction that sets its first argument from both. */
@@ -129,7 +131,7 @@ export const or = binary((left, right) => asNumber(left !== 0 || right !== 0));
 export const not = unary((value) => asNumber(value === 0));
 export const add = binary((left, right) => left + right);
 export const subtract = binary((left, right) => left - right);
-export const multiply = binary((left, right) => ftMulDiv(left, right, 64));
+export const multiply = binary((left, right) => ftMulDiv(left, right, FIXED_26_6_ONE));
 export const absolute = unary(Math.abs);
 export const negate = unary((value) => 0 - value);
 export const floor = unary(pixFloor);
@@ -141,14 +143,14 @@ export const minimum = binary(Math.min);
 export function divide(exc: ExecContext, a: number): void {
   const divisor = exc.stack[a + 1]!;
   if (divisor === 0) exc.fail('Divide_By_Zero');
-  else exc.stack[a] = mulDivNoRound(exc.stack[a]!, 64, divisor);
+  else exc.stack[a] = mulDivNoRound(exc.stack[a]!, FIXED_26_6_ONE, divisor);
 }
 
 /** ODD and EVEN: whether the value, rounded in the current state, is an odd or even pixel. */
 export function isOdd(exc: ExecContext, a: number): void {
-  exc.stack[a] = asNumber((exc.round(exc.stack[a]!) & 64) === 64);
+  exc.stack[a] = asNumber((exc.round(exc.stack[a]!) & FIXED_26_6_ONE) === FIXED_26_6_ONE);
 }
 
 export function isEven(exc: ExecContext, a: number): void {
-  exc.stack[a] = asNumber((exc.round(exc.stack[a]!) & 64) === 0);
+  exc.stack[a] = asNumber((exc.round(exc.stack[a]!) & FIXED_26_6_ONE) === 0);
 }

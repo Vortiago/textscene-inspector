@@ -1,7 +1,7 @@
 /**
  * The TrueType instructions that set and read the projection, dual projection and free vectors
  * (`ttinterp.c`, `Ins_SxyTCA` to `Ins_GFV` and `Ins_SDPVTL`). Each takes the stack index `a` of
- * its first argument, and sets a new vector rather than changing one in place.
+ * its first argument, and sets another vector rather than changing one in place.
  *
  * Portions ported from FreeType (FreeType Project License).
  * Copyright (C) 1996-2026 by David Turner, Robert Wilhelm, and Werner Lemberg.
@@ -9,13 +9,14 @@
  */
 
 import { toInt16, toUint16 } from '../../../../../godot/variant/intWidth';
+import type { GlyphZone } from '../glyphHinting';
 import { F2DOT14_ONE, unitVectorAlong, type UnitVector } from './ttArithmetic';
 import type { ExecContext } from './ttExecContext';
-import type { GlyphZone } from './ttZone';
+import { X_AXIS, Y_AXIS } from './ttGraphicsState';
 
-/** The unit vector along `(x, y)`, or `current` for the zero vector, which `Normalize` leaves as it is. */
-function normalised(current: UnitVector, x: number, y: number): UnitVector {
-  return unitVectorAlong(x, y) ?? current;
+/** The unit vector along `(x, y)`, or `previous` for the zero vector, which `Normalize` leaves as it is. */
+function normalised(previous: UnitVector, x: number, y: number): UnitVector {
+  return unitVectorAlong(x, y) ?? previous;
 }
 
 /**
@@ -23,7 +24,7 @@ function normalised(current: UnitVector, x: number, y: number): UnitVector {
  * counter-clockwise for an odd opcode. Two points at one place give the x axis, unturned.
  */
 function vectorBetween(
-  current: UnitVector,
+  previous: UnitVector,
   isPerpendicular: boolean,
   [fromX, fromY]: readonly [Float64Array, Float64Array],
   from: number,
@@ -32,17 +33,17 @@ function vectorBetween(
 ): UnitVector {
   const dx = fromX[from]! - toX[to]!;
   const dy = fromY[from]! - toY[to]!;
-  if (dx === 0 && dy === 0) return normalised(current, F2DOT14_ONE, 0);
-  return isPerpendicular ? normalised(current, 0 - dy, dx) : normalised(current, dx, dy);
+  if (dx === 0 && dy === 0) return normalised(previous, F2DOT14_ONE, 0);
+  return isPerpendicular ? normalised(previous, 0 - dy, dx) : normalised(previous, dx, dy);
 }
 
-const current = (zone: GlyphZone) => [zone.curX, zone.curY] as const;
-const original = (zone: GlyphZone) => [zone.orgX, zone.orgY] as const;
+const currentPoints = (zone: GlyphZone) => [zone.curX, zone.curY] as const;
+const originalPoints = (zone: GlyphZone) => [zone.orgX, zone.orgY] as const;
 
 /** SVTCA, SPVTCA and SFVTCA: the vectors along y for an even opcode, x for an odd one. */
 export function setVectorsToAxis(exc: ExecContext): void {
   const { opcode, graphicsState } = exc;
-  const axis: UnitVector = (opcode & 1) !== 0 ? { x: F2DOT14_ONE, y: 0 } : { x: 0, y: F2DOT14_ONE };
+  const axis = (opcode & 1) !== 0 ? X_AXIS : Y_AXIS;
   if (opcode < 4) graphicsState.projVector = graphicsState.dualVector = axis;
   if ((opcode & 2) === 0) graphicsState.freeVector = axis;
   exc.computeMoveVector();
@@ -56,7 +57,14 @@ function vectorToLine(exc: ExecContext, a: number, vector: UnitVector): UnitVect
   const from = toUint16(exc.stack[a]!);
   const to = toUint16(exc.stack[a + 1]!);
   if (to >= exc.zp2.pointCount || from >= exc.zp1.pointCount) return null;
-  return vectorBetween(vector, (exc.opcode & 1) !== 0, current(exc.zp1), from, current(exc.zp2), to);
+  return vectorBetween(
+    vector,
+    (exc.opcode & 1) !== 0,
+    currentPoints(exc.zp1),
+    from,
+    currentPoints(exc.zp2),
+    to
+  );
 }
 
 /** SPVTL: the projection and dual vectors along, or across, a line of two points. */
@@ -125,17 +133,17 @@ export function setDualProjectionVectorToLine(exc: ExecContext, a: number): void
   graphicsState.dualVector = vectorBetween(
     graphicsState.dualVector,
     isPerpendicular,
-    original(zp1),
+    originalPoints(zp1),
     from,
-    original(zp2),
+    originalPoints(zp2),
     to
   );
   graphicsState.projVector = vectorBetween(
     graphicsState.projVector,
     isPerpendicular && !isOriginalAtOnePlace,
-    current(zp1),
+    currentPoints(zp1),
     from,
-    current(zp2),
+    currentPoints(zp2),
     to
   );
   exc.computeMoveVector();

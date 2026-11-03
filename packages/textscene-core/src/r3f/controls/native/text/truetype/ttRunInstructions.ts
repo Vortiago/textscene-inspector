@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { ExecContext } from './ttExecContext';
+import { IUP_X_DONE, IUP_Y_DONE, type ExecContext } from './ttExecContext';
 import {
   callFunction,
   defineFunction,
@@ -77,12 +77,12 @@ const INSTRUCTION_RANGES: readonly (readonly [first: number, last: number, instr
   [0x0d, 0x0d, vectors.getFreeVector],
   [0x0e, 0x0e, vectors.setFreeVectorToProjectionVector],
   [0x0f, 0x0f, intersect],
-  [0x10, 0x10, state.setReferencePoint0],
-  [0x11, 0x11, state.setReferencePoint1],
-  [0x12, 0x12, state.setReferencePoint2],
-  [0x13, 0x13, state.setZonePointer0],
-  [0x14, 0x14, state.setZonePointer1],
-  [0x15, 0x15, state.setZonePointer2],
+  [0x10, 0x10, state.setReferencePoint(0)],
+  [0x11, 0x11, state.setReferencePoint(1)],
+  [0x12, 0x12, state.setReferencePoint(2)],
+  [0x13, 0x13, state.setZonePointer(0)],
+  [0x14, 0x14, state.setZonePointer(1)],
+  [0x15, 0x15, state.setZonePointer(2)],
   [0x16, 0x16, state.setZonePointers],
   [0x17, 0x17, state.setLoop],
   [0x18, 0x18, state.setRoundState(RoundState.GRID)],
@@ -233,29 +233,65 @@ function runInstructions(exc: ExecContext): string | null {
   }
 }
 
-/** The fewest LOOPCALL runs and negative jumps a program may make. */
+/**
+ * FreeType caps the twilight zone at twice the points and control values, but at least 30, so
+ * malformed bytecode runs fast and a font that `ttfautohint` hinted keeps its twilight segments.
+ */
+const MIN_TWILIGHT_POINT_LIMIT = 30;
+/** `twilight.n_points` is an `FT_UShort`. */
+const MAX_TWILIGHT_POINT_LIMIT = 0xffff;
+
+/** The twilight points a program may address, for a zone of `pointCount` points. */
+function twilightPointLimit(pointCount: number, controlValueCount: number): number {
+  return Math.min(
+    Math.max(MIN_TWILIGHT_POINT_LIMIT, 2 * (pointCount + controlValueCount)),
+    MAX_TWILIGHT_POINT_LIMIT
+  );
+}
+
+/**
+ * FreeType's heuristic loop limits: real bytecode loops over the points of a glyph, or over the
+ * control values in the control value program, and seldom does so. A glyph program may make 10
+ * runs a point and one every 10 control values, each at least 50. A program without points may
+ * make 300 and 22 a control value.
+ */
 const MIN_LOOP_CALLS = 50;
+const LOOP_CALLS_PER_POINT = 10;
+const CONTROL_VALUES_PER_LOOP_CALL = 10;
+const LOOP_CALLS_WITHOUT_POINTS = 300;
+const LOOP_CALLS_PER_CONTROL_VALUE = 22;
+/** FreeType assumes at most 100 control values a glyph, against a font of too many control values. */
+const MAX_CONTROL_VALUES_PER_GLYPH = 100;
+
+/** The LOOPCALL runs, and the negative jumps, a program may make on a zone of `pointCount` points. */
+function maxLoopCalls(pointCount: number, controlValueCount: number, glyphCount: number): number {
+  const loopCalls =
+    pointCount > 0
+      ? Math.max(MIN_LOOP_CALLS, LOOP_CALLS_PER_POINT * pointCount) +
+        Math.max(MIN_LOOP_CALLS, Math.trunc(controlValueCount / CONTROL_VALUES_PER_LOOP_CALL))
+      : LOOP_CALLS_WITHOUT_POINTS + LOOP_CALLS_PER_CONTROL_VALUE * controlValueCount;
+  return Math.min(loopCalls, MAX_CONTROL_VALUES_PER_GLYPH * glyphCount);
+}
 
 /** `TT_Run_Context`: the loop limits for the zone's size, and the run from the size's graphics state. */
 export function runContext(exc: ExecContext): string | null {
   exc.zp0 = exc.zp1 = exc.zp2 = exc.pts;
   const { pointCount } = exc.pts;
   const controlValueCount = exc.controlValues.length;
-  const twilightLimit = Math.min(Math.max(30, 2 * (pointCount + controlValueCount)), 0xffff);
+  const twilightLimit = twilightPointLimit(pointCount, controlValueCount);
   if (exc.twilight.pointCount > twilightLimit) exc.twilight.pointCount = twilightLimit;
 
   exc.loopCallCount = 0;
   exc.negativeJumpCount = 0;
-  const maxLoopCalls =
-    pointCount > 0
-      ? Math.max(MIN_LOOP_CALLS, 10 * pointCount) +
-        Math.max(MIN_LOOP_CALLS, Math.trunc(controlValueCount / 10))
-      : 300 + 22 * controlValueCount;
-  exc.maxLoopCallCount = exc.maxNegativeJumpCount = Math.min(maxLoopCalls, 100 * exc.face.glyphCount);
+  exc.maxLoopCallCount = exc.maxNegativeJumpCount = maxLoopCalls(
+    pointCount,
+    controlValueCount,
+    exc.face.glyphCount
+  );
 
   exc.graphicsState = { ...exc.sizeGraphicsState, roundState: RoundState.GRID };
   exc.computeMoveVector();
-  exc.backwardCompatibility &= ~0x3;
+  exc.backwardCompatibility &= ~(IUP_X_DONE | IUP_Y_DONE);
   exc.top = 0;
   exc.callTop = 0;
   return runInstructions(exc);

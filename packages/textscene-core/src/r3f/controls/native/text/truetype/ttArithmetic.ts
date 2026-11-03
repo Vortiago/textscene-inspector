@@ -1,6 +1,7 @@
 /**
  * The fixed-point arithmetic of FreeType's TrueType interpreter (`ttinterp.c`, `ftobjs.h`): 26.6
- * distances, 2.14 unit vectors, and the C casts an instruction applies to a stack value. A stack
+ * distances, 2.14 unit vectors, and the C casts an instruction applies to a stack value. The pixel
+ * rounding of 26.6 values (`FT_PIX_*`) lives in `fontMetrics.ts`, as the loader rounds with it too. A stack
  * value is FreeType's 64-bit `FT_Long`, which a double holds exactly at every size a font reaches.
  *
  * Portions ported from FreeType (FreeType Project License).
@@ -34,21 +35,6 @@ export function mulDivNoRound(a: number, b: number, c: number): number {
   const isNegative = (a < 0 !== b < 0) !== c < 0;
   const magnitude = c === 0 ? 0x7fffffff : Math.floor((Math.abs(a) * Math.abs(b)) / Math.abs(c));
   return isNegative ? -magnitude : magnitude;
-}
-
-/** `FT_PIX_FLOOR`: down to a whole pixel in 26.6. */
-export function pixFloor(value: number): number {
-  return Math.floor(value / 64) * 64;
-}
-
-/** `FT_PIX_ROUND`: to the nearest whole pixel in 26.6, half up. */
-export function pixRound(value: number): number {
-  return pixFloor(value + 32);
-}
-
-/** `FT_PIX_CEIL`: up to a whole pixel in 26.6. */
-export function pixCeil(value: number): number {
-  return pixFloor(value + 63);
 }
 
 /** `BOUNDSL( value, count )`: true for a value an unsigned cast puts outside `0 .. count - 1`. */

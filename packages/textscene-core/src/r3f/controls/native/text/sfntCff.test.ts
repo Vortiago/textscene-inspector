@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { contourText } from './sfntCff.testkit';
 import { openFontOutlines } from './sfntOutlines';
-import { fixtureFontBytes } from './sfntOutlines.testkit';
+import { charContours, fixtureFontBytes } from './sfntOutlines.testkit';
 
 /** Montserrat ExtraBold, 1000 units per em, as an OpenType-CFF file. */
 async function montserrat() {
@@ -12,10 +12,7 @@ async function montserrat() {
 
 /** What the glyph of `char` draws at `fontSizePx`: the points of each contour, a cubic control point after a `~`. */
 async function drawn(char: string, fontSizePx: number): Promise<string[]> {
-  const outlines = await montserrat();
-  const contours = outlines.glyphContours(outlines.glyphIndex(char.codePointAt(0)!), fontSizePx);
-  if (!contours) throw new Error(`no outline for ${char}`);
-  return contourText(contours);
+  return contourText(charContours(await montserrat(), char, fontSizePx));
 }
 
 // Every expectation is what `font_get_glyph_contours` of Godot 4.6.3 returned for this font.

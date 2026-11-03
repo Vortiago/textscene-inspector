@@ -2,17 +2,37 @@
  * Builds a tiny TrueType font in memory for the outline reader's tests: the tables `openFontOutlines`
  * reads (`head`, `maxp`, `cmap`, `loca`, `glyf`) and nothing else, so a test states the glyphs it
  * needs and no more. Every coordinate is a whole design unit, written as a 16-bit delta.
- * It also reads the font fixtures of `scenes/fixtures/fonts/`.
+ * It also reads the font fixtures of `scenes/fixtures/fonts/`, and the contours of a character.
  */
 
 import { join } from 'node:path';
 import { fileBytes } from '../../../../resources/testing/fileBytes';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
+import type { GlyphContours } from './glyphContours';
+import { openFontOutlines, type SfntOutlines } from './sfntOutlines';
 
 const FIXTURE_FONTS = join(import.meta.dirname, '../../../../../../../scenes/fixtures/fonts');
 
 export function fixtureFontBytes(name: string): ArrayBuffer {
   return fileBytes(join(FIXTURE_FONTS, name));
+}
+
+/** The contours of the glyph of `char` at `sizePx`. Throws for a character with no outline. */
+export function charContours(outlines: SfntOutlines, char: string, sizePx: number): GlyphContours {
+  const contours = outlines.glyphContours(outlines.glyphIndex(char.codePointAt(0)!), sizePx);
+  if (!contours) throw new Error(`expected an outline for ${char} at ${sizePx} px, got none`);
+  return contours;
+}
+
+/** The contours of `char` at `sizePx` in the font of `bytes`. Throws for a font that does not open. */
+export async function glyphContoursOf(
+  bytes: ArrayBuffer,
+  char: string,
+  sizePx: number
+): Promise<GlyphContours> {
+  const outlines = await openFontOutlines(bytes);
+  if (!outlines) throw new Error('expected a font with outlines, got none');
+  return charContours(outlines, char, sizePx);
 }
 
 /**

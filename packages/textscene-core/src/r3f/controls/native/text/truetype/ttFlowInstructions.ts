@@ -9,7 +9,13 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { CALL_STACK_SIZE, CodeRange, type Definition, type ExecContext } from './ttExecContext';
+import {
+  CALL_STACK_SIZE,
+  CodeRange,
+  type Definition,
+  type DefinitionTable,
+  type ExecContext,
+} from './ttExecContext';
 import { OPCODE_LENGTH } from './ttOpcodes';
 
 const OPCODE_IF = 0x58;
@@ -18,6 +24,9 @@ const OPCODE_EIF = 0x59;
 const OPCODE_FDEF = 0x2c;
 const OPCODE_ENDF = 0x2d;
 const OPCODE_IDEF = 0x89;
+/** The largest number an FDEF may give a function, and an IDEF an opcode. */
+const MAX_FUNCTION_NUMBER = 0xffff;
+const MAX_OPCODE = 0xff;
 
 /**
  * `SkipCode`: moves past the running instruction and reads the next one, without running it.
@@ -101,21 +110,20 @@ function skipDefinitionBody(exc: ExecContext, definition: Definition): void {
   }
 }
 
-/** The first of the `count` records that `matches`, or null. Indexed: CALL runs it on every call. */
+/** The first record in use that `matches`, or null. Indexed: CALL runs it on every call. */
 function findDefinition(
-  definitions: Definition[],
-  count: number,
+  { records, count }: DefinitionTable,
   matches: (definition: Definition) => boolean
 ): Definition | null {
-  for (let index = 0; index < count; index++) if (matches(definitions[index]!)) return definitions[index]!;
+  for (let index = 0; index < count; index++) if (matches(records[index]!)) return records[index]!;
   return null;
 }
 
-/** The record of `number` among the first `count`, or the next free one; null with no room left. */
-function definitionSlot(definitions: Definition[], count: number, number: number): Definition | null {
-  const found = findDefinition(definitions, count, (definition) => definition.opcode === number);
+/** The record in use that `number` names, or the next free one. Null with no room left. */
+function definitionSlot(table: DefinitionTable, number: number): Definition | null {
+  const found = findDefinition(table, (definition) => definition.opcode === number);
   if (found) return found;
-  return count < definitions.length ? definitions[count]! : null;
+  return table.count < table.records.length ? table.records[table.count]! : null;
 }
 
 /**
@@ -123,56 +131,73 @@ function definitionSlot(definitions: Definition[], count: number, number: number
  * `remainingCalls` counts the runs a LOOPCALL asks for.
  */
 function call(exc: ExecContext, definition: Definition, remainingCalls: number): void {
-  exc.callStack[exc.callTop++] = {
-    callerRange: exc.curRange,
-    callerIp: exc.ip + 1,
-    remainingCalls,
-    definition,
-  };
+  const record = exc.callStack[exc.callTop++]!;
+  record.callerRange = exc.curRange;
+  record.callerIp = exc.ip + 1;
+  record.remainingCalls = remainingCalls;
+  record.definition = definition;
   exc.gotoCodeRange(definition.range, definition.start);
 }
 
-/** FDEF: defines a function, numbered up to 16 bits, that only the font and control value programs may define. */
-export function defineFunction(exc: ExecContext, a: number): void {
+/**
+ * `Ins_FDEF` and `Ins_IDEF`: the record of `number` in `table`, active from the byte after the
+ * running instruction. FreeType counts a new record before it checks the number, so a number past
+ * `maxNumber` still takes one. Null, with the error set, in a glyph program, with no room left or
+ * for a number past `maxNumber`.
+ */
+function define(
+  exc: ExecContext,
+  table: DefinitionTable,
+  number: number,
+  maxNumber: number,
+  error: string
+): Definition | null {
   if (exc.iniRange === CodeRange.GLYPH) {
     exc.fail('DEF_In_Glyf_Bytecode');
-    return;
+    return null;
   }
-  const number = exc.stack[a]!;
-  const definition = definitionSlot(exc.functionDefinitions, exc.functionCount, number);
+  const definition = definitionSlot(table, number);
   if (!definition) {
-    exc.fail('Too_Many_Function_Defs');
-    return;
+    exc.fail(error);
+    return null;
   }
-  if (definition === exc.functionDefinitions[exc.functionCount]) exc.functionCount++;
-  if (number < 0 || number > 0xffff) {
-    exc.fail('Too_Many_Function_Defs');
-    return;
+  if (definition === table.records[table.count]) table.count++;
+  if (number < 0 || number > maxNumber) {
+    exc.fail(error);
+    return null;
   }
-  Object.assign(definition, { range: exc.curRange, opcode: number, start: exc.ip + 1, isActive: true });
+  definition.range = exc.curRange;
+  definition.opcode = number;
+  definition.start = exc.ip + 1;
+  definition.isActive = true;
+  return definition;
+}
+
+/** FDEF: defines a function, which only the font and control value programs may define. */
+export function defineFunction(exc: ExecContext, a: number): void {
+  const number = exc.stack[a]!;
+  const definition = define(
+    exc,
+    exc.functionDefinitions,
+    number,
+    MAX_FUNCTION_NUMBER,
+    'Too_Many_Function_Defs'
+  );
+  if (!definition) return;
   exc.maxFunction = Math.max(exc.maxFunction, number);
   skipDefinitionBody(exc, definition);
 }
 
 /** IDEF: defines what an opcode the interpreter does not know does. */
 export function defineInstruction(exc: ExecContext, a: number): void {
-  if (exc.iniRange === CodeRange.GLYPH) {
-    exc.fail('DEF_In_Glyf_Bytecode');
-    return;
-  }
-  const opcode = exc.stack[a]!;
-  const definition = definitionSlot(exc.instructionDefinitions, exc.instructionCount, opcode);
-  if (!definition) {
-    exc.fail('Too_Many_Instruction_Defs');
-    return;
-  }
-  if (definition === exc.instructionDefinitions[exc.instructionCount]) exc.instructionCount++;
-  if (opcode < 0 || opcode > 0xff) {
-    exc.fail('Too_Many_Instruction_Defs');
-    return;
-  }
-  Object.assign(definition, { range: exc.curRange, opcode, start: exc.ip + 1, isActive: true });
-  skipDefinitionBody(exc, definition);
+  const definition = define(
+    exc,
+    exc.instructionDefinitions,
+    exc.stack[a]!,
+    MAX_OPCODE,
+    'Too_Many_Instruction_Defs'
+  );
+  if (definition) skipDefinitionBody(exc, definition);
 }
 
 /** ENDF: runs the function again while its LOOPCALL count lasts, then returns to the caller. */
@@ -197,34 +222,48 @@ export function endFunction(exc: ExecContext): void {
  * record at `number` is tried before a search.
  */
 function definedFunction(exc: ExecContext, number: number): Definition | null {
-  if (number < 0 || number > exc.maxFunction || exc.functionDefinitions.length === 0) return null;
-  const isInOrder =
-    exc.maxFunction + 1 === exc.functionCount && exc.functionDefinitions[number]!.opcode === number;
+  const { functionDefinitions } = exc;
+  const { records } = functionDefinitions;
+  if (number < 0 || number > exc.maxFunction || records.length === 0) return null;
+  const isInOrder = exc.maxFunction + 1 === functionDefinitions.count && records[number]!.opcode === number;
   const definition = isInOrder
-    ? exc.functionDefinitions[number]!
-    : findDefinition(exc.functionDefinitions, exc.functionCount, (record) => record.opcode === number);
+    ? records[number]!
+    : findDefinition(functionDefinitions, (record) => record.opcode === number);
   return definition?.isActive ? definition : null;
+}
+
+/** Whether the call stack has room for a call, else false with Stack_Overflow set. */
+function hasCallRoom(exc: ExecContext): boolean {
+  return exc.callTop < CALL_STACK_SIZE || exc.fail('Stack_Overflow');
+}
+
+/** The function a CALL or LOOPCALL runs, or null, with the error set, for none or a full call stack. */
+function callableFunction(exc: ExecContext, number: number): Definition | null {
+  const definition = definedFunction(exc, number);
+  if (!definition) {
+    exc.fail('Invalid_Reference');
+    return null;
+  }
+  return hasCallRoom(exc) ? definition : null;
 }
 
 /** CALL: runs a function once. */
 export function callFunction(exc: ExecContext, a: number): void {
-  const definition = definedFunction(exc, exc.stack[a]!);
-  if (!definition) exc.fail('Invalid_Reference');
-  else if (exc.callTop >= CALL_STACK_SIZE) exc.fail('Stack_Overflow');
-  else call(exc, definition, 1);
+  const definition = callableFunction(exc, exc.stack[a]!);
+  if (definition) call(exc, definition, 1);
 }
 
-/** LOOPCALL: runs a function the count below its number of times, and counts every run against the loop limit. */
+/**
+ * LOOPCALL: runs a function the count below its number of times, and counts every run against the
+ * loop limit. A count of 0 or less runs nothing, but a full call stack is still an error.
+ */
 export function loopCallFunction(exc: ExecContext, a: number): void {
-  const definition = definedFunction(exc, exc.stack[a + 1]!);
+  const definition = callableFunction(exc, exc.stack[a + 1]!);
   const count = exc.stack[a]!;
-  if (!definition) exc.fail('Invalid_Reference');
-  else if (exc.callTop >= CALL_STACK_SIZE) exc.fail('Stack_Overflow');
-  else if (count > 0) {
-    call(exc, definition, count);
-    exc.loopCallCount += count;
-    if (exc.loopCallCount > exc.maxLoopCallCount) exc.fail('Execution_Too_Long');
-  }
+  if (!definition || count <= 0) return;
+  call(exc, definition, count);
+  exc.loopCallCount += count;
+  if (exc.loopCallCount > exc.maxLoopCallCount) exc.fail('Execution_Too_Long');
 }
 
 /**
@@ -234,10 +273,8 @@ export function loopCallFunction(exc: ExecContext, a: number): void {
 export function unknownOpcode(exc: ExecContext): void {
   const definition = findDefinition(
     exc.instructionDefinitions,
-    exc.instructionCount,
     (record) => (record.opcode & 0xff) === exc.opcode && record.isActive
   );
   if (!definition) exc.fail('Invalid_Opcode');
-  else if (exc.callTop >= CALL_STACK_SIZE) exc.fail('Stack_Overflow');
-  else call(exc, definition, 1);
+  else if (hasCallRoom(exc)) call(exc, definition, 1);
 }

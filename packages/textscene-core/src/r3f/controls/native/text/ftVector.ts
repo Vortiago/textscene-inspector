@@ -10,14 +10,13 @@
  */
 
 import type { Vector2 } from '../../../../godot/math/vector';
+import { toUint32 } from '../../../../godot/variant/intWidth';
 import { FIXED_16_16_ONE } from './fontMetrics';
 import { highestBit } from './glyphContours';
 
-const uint32 = (value: number): number => value >>> 0;
-
 /** The longer of two lengths plus half the shorter, `FT_Vector_NormLen`'s length estimate. */
 function estimatedLength(x: number, y: number): number {
-  return uint32(x > y ? x + (y >>> 1) : y + (x >>> 1));
+  return toUint32(x > y ? x + (y >>> 1) : y + (x >>> 1));
 }
 
 /**
@@ -29,8 +28,8 @@ function estimatedLength(x: number, y: number): number {
 export function ftVectorNormLen(vector: Vector2): number {
   const signX = vector.x < 0 ? -1 : 1;
   const signY = vector.y < 0 ? -1 : 1;
-  let x = uint32(Math.abs(vector.x));
-  let y = uint32(Math.abs(vector.y));
+  let x = toUint32(Math.abs(vector.x));
+  let y = toUint32(Math.abs(vector.y));
 
   if (x === 0) {
     if (y > 0) vector.y = signY * FIXED_16_16_ONE;
@@ -46,8 +45,8 @@ export function ftVectorNormLen(vector: Vector2): number {
   let shift = 31 - highestBit(length);
   shift -= 15 + (length >= 0xaaaaaaaa >>> shift ? 1 : 0);
   if (shift > 0) {
-    x = uint32(x << shift);
-    y = uint32(y << shift);
+    x = toUint32(x << shift);
+    y = toUint32(y << shift);
     length = estimatedLength(x, y);
   } else {
     x >>>= -shift;
@@ -60,8 +59,8 @@ export function ftVectorNormLen(vector: Vector2): number {
   let v: number;
   let step: number;
   do {
-    u = uint32((x | 0) + (Math.imul(x | 0, reciprocalMinusOne) >> 16));
-    v = uint32((y | 0) + (Math.imul(y | 0, reciprocalMinusOne) >> 16));
+    u = toUint32((x | 0) + (Math.imul(x | 0, reciprocalMinusOne) >> 16));
+    v = toUint32((y | 0) + (Math.imul(y | 0, reciprocalMinusOne) >> 16));
     step = Math.trunc(-((Math.imul(u, u) + Math.imul(v, v)) | 0) / 0x200);
     step = Math.trunc(Math.imul(step, (FIXED_16_16_ONE + reciprocalMinusOne) >> 8) / FIXED_16_16_ONE);
     reciprocalMinusOne += step;
@@ -70,10 +69,10 @@ export function ftVectorNormLen(vector: Vector2): number {
   vector.x = signX < 0 ? -u : u;
   vector.y = signY < 0 ? -v : v;
 
-  const norm = uint32(
+  const norm = toUint32(
     FIXED_16_16_ONE + Math.trunc(((Math.imul(u, x) + Math.imul(v, y)) | 0) / FIXED_16_16_ONE)
   );
-  return shift > 0 ? uint32(norm + (1 << (shift - 1))) >>> shift : uint32(norm << -shift);
+  return shift > 0 ? toUint32(norm + (1 << (shift - 1))) >>> shift : toUint32(norm << -shift);
 }
 
 /** `FT_TRIG_SCALE`: the CORDIC shrink factor, 0.858785336480436 in 0.32. */
@@ -119,10 +118,10 @@ export function ftVectorLength({ x, y }: Vector2): number {
   if (x === 0) return Math.abs(y);
   if (y === 0) return Math.abs(x);
   // `ft_trig_prenorm`: scale so that the larger component's highest bit is the safe one.
-  const highest = highestBit(uint32(Math.abs(x) | Math.abs(y)));
+  const highest = highestBit(toUint32(Math.abs(x) | Math.abs(y)));
   const shift = TRIG_SAFE_MSB - highest;
   const scaled = (value: number) => (shift >= 0 ? value * 2 ** shift : shiftRight(value, -shift));
   const length = trigDownscale(pseudoPolarisedLength(scaled(x), scaled(y)));
   if (shift > 0) return shiftRight(length + 2 ** (shift - 1), shift);
-  return uint32(length * 2 ** -shift);
+  return toUint32(length * 2 ** -shift);
 }

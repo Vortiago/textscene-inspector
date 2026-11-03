@@ -1,6 +1,6 @@
 /**
- * Fixed-width integer facts: the conversions `_to_int<T>` performs and the
- * per-slot width that selects them. `intReader.ts` reads a literal at that width.
+ * The widths of an integer Variant slot and the C integer casts that Godot's `_to_int<T>` and the
+ * font ports share. `intReader.ts` reads a literal at a slot's width.
  */
 
 /** `(int32_t)` of an integer Variant (`variant.h:436`, `variant.cpp:1495-1497`). */

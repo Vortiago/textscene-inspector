@@ -127,6 +127,21 @@ export function ftMulFix(a: number, b: number): number {
   return ftMulDiv(a, b, FIXED_16_16_ONE);
 }
 
+/** `FT_PIX_FLOOR`: down to a whole pixel in 26.6. */
+export function pixFloor(value: number): number {
+  return Math.floor(value / FIXED_26_6_ONE) * FIXED_26_6_ONE;
+}
+
+/** `FT_PIX_ROUND`: to the nearest whole pixel in 26.6, half up. */
+export function pixRound(value: number): number {
+  return pixFloor(value + FIXED_26_6_ONE / 2);
+}
+
+/** `FT_PIX_CEIL`: up to a whole pixel in 26.6. */
+export function pixCeil(value: number): number {
+  return pixFloor(value + FIXED_26_6_ONE - 1);
+}
+
 /**
  * The `FT_Size_Request` Godot issues: `FT_SIZE_REQUEST_TYPE_NOMINAL` at `width =
  * height = sz * 64` with zero resolutions (`text_server_adv.cpp:1500-1507`, `sz` at

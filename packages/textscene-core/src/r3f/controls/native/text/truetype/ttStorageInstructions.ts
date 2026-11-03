@@ -46,33 +46,6 @@ export function readControlValue(exc: ExecContext, a: number): void {
 /** DELTAP1 and DELTAC1 start at the delta base; the 2 and 3 forms 16 and 32 ppem above it. */
 const DELTA_PPEM_RANGE = 16;
 
-/**
- * `Ins_DELTAP` and `Ins_DELTAC`: the delta pairs the instruction pops below its count, nearest
- * first, each a target and an argument byte. Calls `apply` with the target and the 26.6 step of
- * each pair whose high nibble names the current ppem.
- */
-export function forEachDelta(
-  exc: ExecContext,
-  a: number,
-  apply: (target: number, step: number) => void
-): void {
-  let pairCount = exc.stack[a]!;
-  const pairsOnStack = Math.trunc(exc.newTop / 2);
-  if (pairCount < 0 || pairCount > pairsOnStack) pairCount = pairsOnStack;
-  exc.newTop -= 2 * pairCount;
-
-  const ppemInRange = exc.ppem - exc.graphicsState.deltaBase - DELTA_PPEM_RANGE * deltaForm(exc.opcode);
-  if ((ppemInRange & ~0xf) !== 0) return;
-  const stepUnit = 1 << (6 - exc.graphicsState.deltaShift);
-  for (let pair = 0; pair < pairCount; pair++) {
-    const target = exc.stack[a - 1 - 2 * pair]!;
-    const argument = exc.stack[a - 2 - 2 * pair]!;
-    if ((argument & 0xf0) !== ppemInRange << 4) continue;
-    const step = (argument & 0xf) - 8;
-    apply(target, (step >= 0 ? step + 1 : step) * stepUnit);
-  }
-}
-
 /** 0 for DELTAP1 and DELTAC1, 1 for the 2 forms, 2 for the 3 forms. */
 function deltaForm(opcode: number): number {
   switch (opcode) {
@@ -87,10 +60,45 @@ function deltaForm(opcode: number): number {
   }
 }
 
+/** The current ppem's place in the instruction's range of 16 ppem, which may lie outside it. */
+function ppemInDeltaRange(exc: ExecContext): number {
+  return exc.ppem - exc.graphicsState.deltaBase - DELTA_PPEM_RANGE * deltaForm(exc.opcode);
+}
+
+/**
+ * `Ins_DELTAP` and `Ins_DELTAC`: pops the delta pairs below the count, each a target and an
+ * argument byte, and answers how many there are. It answers 0 when the current ppem is outside
+ * the instruction's range, so no pair applies.
+ */
+export function popDeltaPairs(exc: ExecContext, a: number): number {
+  let pairCount = exc.stack[a]!;
+  const pairsOnStack = Math.trunc(exc.newTop / 2);
+  if (pairCount < 0 || pairCount > pairsOnStack) pairCount = pairsOnStack;
+  exc.newTop -= 2 * pairCount;
+  return (ppemInDeltaRange(exc) & ~0xf) === 0 ? pairCount : 0;
+}
+
+/** The target of delta pair `pair` below `a`, nearest first: a point or a control value. */
+export function deltaTarget(exc: ExecContext, a: number, pair: number): number {
+  return exc.stack[a - 1 - 2 * pair]!;
+}
+
+/** The 26.6 step of delta pair `pair` below `a`, or null for a pair whose high nibble names another ppem. */
+export function deltaStep(exc: ExecContext, a: number, pair: number): number | null {
+  const argument = exc.stack[a - 2 - 2 * pair]!;
+  if ((argument & 0xf0) !== ppemInDeltaRange(exc) << 4) return null;
+  const step = (argument & 0xf) - 8;
+  const stepUnit = 1 << (6 - exc.graphicsState.deltaShift);
+  return (step >= 0 ? step + 1 : step) * stepUnit;
+}
+
 /** DELTAC1 to DELTAC3: steps a control value at one ppem. */
 export function deltaControlValue(exc: ExecContext, a: number): void {
-  forEachDelta(exc, a, (index, step) => {
-    if (!isOutside(index, exc.controlValues.length))
+  const pairCount = popDeltaPairs(exc, a);
+  for (let pair = 0; pair < pairCount; pair++) {
+    const step = deltaStep(exc, a, pair);
+    const index = deltaTarget(exc, a, pair);
+    if (step !== null && !isOutside(index, exc.controlValues.length))
       exc.writeControlValue(index, exc.controlValues[index]! + step);
-  });
+  }
 }

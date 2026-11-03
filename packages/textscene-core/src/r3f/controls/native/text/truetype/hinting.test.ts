@@ -11,9 +11,10 @@ import {
   referencePoints,
   type ReferenceGlyph,
 } from '../glyphVariation.testkit';
+import { GLYPH_HEADER_SIZE, LONG_LOCA_FORMAT, locaEntry } from '../glyfFormat';
 import { openFontOutlines } from '../sfntOutlines';
-import { fixtureFontBytes } from '../sfntOutlines.testkit';
-import { openSfnt } from '../sfntTables';
+import { fixtureFontBytes, glyphContoursOf } from '../sfntOutlines.testkit';
+import { openSfnt, readIndexToLocFormat } from '../sfntTables';
 
 const hintedGlyphs = reference as ReferenceGlyph[];
 const cases = hintedGlyphs.map((glyph) => [referenceGlyphTitle(glyph), glyph] as const);
@@ -44,21 +45,16 @@ function patchedFont(patch: (bytes: Uint8Array, offsetOf: (tag: string) => numbe
 /** The offset in the font of a simple glyph's instructions: after the header, the contour ends and their length. */
 function glyphInstructionsOffset(font: ArrayBuffer, glyphIndex: number): number {
   const { dv, tables } = openSfnt(font)!;
-  const isLongLoca = dv.getInt16(tables.get('head')!.offset + 50, false) === 1;
-  const loca = tables.get('loca')!.offset;
+  const isLongLoca = readIndexToLocFormat(dv, tables.get('head')!) === LONG_LOCA_FORMAT;
   const glyph =
-    tables.get('glyf')!.offset +
-    (isLongLoca
-      ? dv.getUint32(loca + glyphIndex * 4, false)
-      : dv.getUint16(loca + glyphIndex * 2, false) * 2);
+    tables.get('glyf')!.offset + locaEntry(dv, tables.get('loca')!.offset, glyphIndex, isLongLoca);
   const contourCount = dv.getInt16(glyph, false);
-  return glyph + 10 + 2 * contourCount + 2;
+  return glyph + GLYPH_HEADER_SIZE + 2 * contourCount + 2;
 }
 
-async function hYs(font: ArrayBuffer, sizePx: number): Promise<number[]> {
-  const outlines = (await openFontOutlines(font))!;
-  const contours = outlines.glyphContours(outlines.glyphIndex('H'.codePointAt(0)!), sizePx)!;
-  return contours.points.map(({ y }) => y + 0);
+/** The y of each point of H at `sizePx`, with no negative zero. */
+async function pointYsOfH(font: ArrayBuffer, sizePx: number): Promise<number[]> {
+  return (await glyphContoursOf(font, 'H', sizePx)).points.map(({ y }) => y + 0);
 }
 
 describe('a TrueType program that fails', () => {
@@ -69,7 +65,7 @@ describe('a TrueType program that fails', () => {
       bytes.set(MOVE_THEN_FAIL, glyphInstructionsOffset(bytes.buffer as ArrayBuffer, hIndex))
     );
 
-    expect(await hYs(font, 64)).toEqual([
+    expect(await pointYsOfH(font, 64)).toEqual([
       0, 0, -21, -20.625, 0, 0, -45.6875, -45.6875, -27, -27, -45.6875, -45.6875,
     ]);
   });

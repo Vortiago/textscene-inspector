@@ -1,12 +1,68 @@
 /**
- * What the TrueType glyph loader (`sfntGlyf.ts`) asks of a hinter: FreeType's bytecode interpreter
- * (`truetype/`), which TextMesh loads on demand for a font that FreeType hints natively. A font
- * with neither a font program nor a control value program of more than 7 bytes goes to FreeType's
- * auto-hinter instead (`ftobjs.c`, `FT_Load_Glyph`).
+ * What the TrueType glyph loader (`sfntGlyf.ts`) asks of a hinter, and the glyph zone it hands it:
+ * FreeType's bytecode interpreter (`truetype/`), which TextMesh loads on demand for a font that
+ * FreeType hints natively. A font with neither a font program nor a control value program of more
+ * than 7 bytes goes to FreeType's auto-hinter instead (`ftobjs.c`, `FT_Load_Glyph`).
+ *
+ * Portions ported from FreeType (FreeType Project License).
+ * Copyright (C) 1996-2026 by David Turner, Robert Wilhelm, and Werner Lemberg.
+ * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { GlyphZone } from './truetype/ttZone';
 import type { SfntFile } from './sfntTables';
+
+/** `FT_CURVE_TAG_TOUCH_X`: an instruction has moved the point along x. */
+export const TAG_TOUCH_X = 0x08;
+/** `FT_CURVE_TAG_TOUCH_Y`: an instruction has moved the point along y. */
+export const TAG_TOUCH_Y = 0x10;
+export const TAG_TOUCH_BOTH = TAG_TOUCH_X | TAG_TOUCH_Y;
+
+/** The four phantom points that follow a glyph's own: left and right side bearing, top and bottom. */
+export const PHANTOM_POINT_COUNT = 4;
+
+/**
+ * A glyph zone of the TrueType interpreter (`TT_GlyphZoneRec`, `tttypes.h`): the points an
+ * instruction moves in 26.6, `org` before the instructions run, `cur` as they move, and `orus`
+ * unscaled, each with its touch flags. A glyph's zone ends in its four phantom points. The
+ * caller owns the arrays: the interpreter moves `cur` and `tags` in place.
+ */
+export interface GlyphZone {
+  /** The points an instruction may address. The twilight zone may cap this below its arrays' length. */
+  pointCount: number;
+  readonly contourCount: number;
+  readonly orgX: Float64Array;
+  readonly orgY: Float64Array;
+  readonly curX: Float64Array;
+  readonly curY: Float64Array;
+  readonly orusX: Float64Array;
+  readonly orusY: Float64Array;
+  readonly tags: Uint8Array;
+  /** The last point of each contour, numbered in the whole outline the zone is a part of. */
+  readonly contourEnds: ArrayLike<number>;
+  /** The number in the whole outline of the zone's point 0, which `contourEnds` count from. */
+  readonly firstPoint: number;
+}
+
+/** `tt_glyphzone_new`: a zone of `pointCount` points at the origin, untouched, with `contourEnds`. */
+export function newGlyphZone(
+  pointCount: number,
+  contourEnds: ArrayLike<number>,
+  firstPoint: number
+): GlyphZone {
+  return {
+    pointCount,
+    contourCount: contourEnds.length,
+    orgX: new Float64Array(pointCount),
+    orgY: new Float64Array(pointCount),
+    curX: new Float64Array(pointCount),
+    curY: new Float64Array(pointCount),
+    orusX: new Float64Array(pointCount),
+    orusY: new Float64Array(pointCount),
+    tags: new Uint8Array(pointCount),
+    contourEnds,
+    firstPoint,
+  };
+}
 
 /** The hinter of one glyph load, `tt_loader_init`'s execution context. */
 export interface GlyphLoadHinter {
@@ -23,7 +79,7 @@ export interface GlyphLoadHinter {
   hint(zone: GlyphZone, instructions: Uint8Array, isComposite: boolean): void;
 }
 
-/** The glyph loads of one font, each at a ppem. */
+/** The glyph loads of one font, each at a ppem and scale. */
 export interface GlyphHinting {
   /**
    * The hinter of one load at `ppem`, whose 16.16 `scale` takes font units to 26.6 pixels. Null

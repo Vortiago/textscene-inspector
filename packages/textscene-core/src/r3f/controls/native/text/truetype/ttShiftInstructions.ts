@@ -10,14 +10,14 @@
 
 import { ftMulDiv, ftMulFix } from '../fontMetrics';
 import { toUint16 } from '../../../../../godot/variant/intWidth';
+import { TAG_TOUCH_X, TAG_TOUCH_Y, type GlyphZone } from '../glyphHinting';
 import { mulFix14 } from './ttArithmetic';
-import type { ExecContext } from './ttExecContext';
-import { GLYPH_ZONE, TWILIGHT_ZONE } from './ttGraphicsState';
-import { forEachDelta } from './ttStorageInstructions';
-import { TAG_ON_CURVE, TAG_TOUCH_X, TAG_TOUCH_Y, type GlyphZone } from './ttZone';
+import { POST_IUP, type ExecContext } from './ttExecContext';
+import { GLYPH_ZONE, isAnyZoneTwilight, TWILIGHT_ZONE } from './ttGraphicsState';
+import { deltaStep, deltaTarget, popDeltaPairs } from './ttStorageInstructions';
 
-/** The backward compatibility value once IUP has run on both axes, which blocks every move. */
-const POST_IUP = 0x7;
+/** `FT_CURVE_TAG_ON`: the point is on the curve. */
+const TAG_ON_CURVE = 0x01;
 
 /** FLIPPT: turns each looped point between on and off the curve. */
 export function flipPoints(exc: ExecContext, a: number): void {
@@ -148,8 +148,7 @@ function isYMoveAllowed(exc: ExecContext, zone: GlyphZone, point: number): boole
  * compatibility lets only a y shift through, as for DELTAP, but every shift in the twilight zone.
  */
 export function shiftPointsByPixels(exc: ExecContext, a: number): void {
-  const { gep0, gep1, gep2 } = exc.graphicsState;
-  const isInTwilight = gep0 === TWILIGHT_ZONE || gep1 === TWILIGHT_ZONE || gep2 === TWILIGHT_ZONE;
+  const isInTwilight = isAnyZoneTwilight(exc.graphicsState);
   const count = exc.popLoop();
   if (count < 0) return;
   const distance = exc.stack[a]!;
@@ -165,22 +164,15 @@ export function shiftPointsByPixels(exc: ExecContext, a: number): void {
 }
 
 /**
- * The original distance of `point` of `zone` from the base along the dual vector: of the
- * original points in the twilight zone, else of the unscaled ones. FreeType leaves the unscaled
- * distance unscaled, as IP needs only its ratio, but for a zero range it moves by it.
+ * The coordinates IP measures original distances on: the original points in the twilight zone,
+ * else the unscaled ones. FreeType leaves the unscaled distance unscaled, as IP needs only its
+ * ratio, but for a zero range it moves by it.
  */
-function interpolationDistance(
-  exc: ExecContext,
+function originalCoordinatesOf(
   zone: GlyphZone,
-  point: number,
-  base: GlyphZone,
-  basePoint: number,
   isInTwilight: boolean
-): number {
-  const [x, y, baseX, baseY] = isInTwilight
-    ? [zone.orgX, zone.orgY, base.orgX, base.orgY]
-    : [zone.orusX, zone.orusY, base.orusX, base.orusY];
-  return exc.dualProject(x[point]! - baseX[basePoint]!, y[point]! - baseY[basePoint]!);
+): readonly [Float64Array, Float64Array] {
+  return isInTwilight ? [zone.orgX, zone.orgY] : [zone.orusX, zone.orusY];
 }
 
 /**
@@ -193,20 +185,20 @@ export function interpolatePoints(exc: ExecContext, a: number): void {
   const { zp0, zp1, zp2, graphicsState } = exc;
   const { rp1, rp2 } = graphicsState;
   if (rp1 < zp0.pointCount) {
-    const isInTwilight =
-      graphicsState.gep0 === TWILIGHT_ZONE ||
-      graphicsState.gep1 === TWILIGHT_ZONE ||
-      graphicsState.gep2 === TWILIGHT_ZONE;
+    const isInTwilight = isAnyZoneTwilight(graphicsState);
+    const [baseX, baseY] = originalCoordinatesOf(zp0, isInTwilight);
     let originalRange = 0;
     let currentRange = 0;
     if (rp2 < zp1.pointCount) {
-      originalRange = interpolationDistance(exc, zp1, rp2, zp0, rp1, isInTwilight);
+      const [rangeX, rangeY] = originalCoordinatesOf(zp1, isInTwilight);
+      originalRange = exc.dualProject(rangeX[rp2]! - baseX[rp1]!, rangeY[rp2]! - baseY[rp1]!);
       currentRange = exc.project(zp1.curX[rp2]! - zp0.curX[rp1]!, zp1.curY[rp2]! - zp0.curY[rp1]!);
     }
+    const [pointX, pointY] = originalCoordinatesOf(zp2, isInTwilight);
     for (let k = 0; k < count; k++) {
       const point = exc.stack[a - 1 - k]!;
       if (point < 0 || point >= zp2.pointCount) continue;
-      const original = interpolationDistance(exc, zp2, point, zp0, rp1, isInTwilight);
+      const original = exc.dualProject(pointX[point]! - baseX[rp1]!, pointY[point]! - baseY[rp1]!);
       const current = exc.project(zp2.curX[point]! - zp0.curX[rp1]!, zp2.curY[point]! - zp0.curY[rp1]!);
       let target = 0;
       if (original !== 0)
@@ -231,9 +223,11 @@ export function untouchPoint(exc: ExecContext, a: number): void {
 /** DELTAP1 to DELTAP3: moves a point of zp0 at one ppem, which backward compatibility allows as SHPIX does. */
 export function deltaPoint(exc: ExecContext, a: number): void {
   const { zp0 } = exc;
-  forEachDelta(exc, a, (target, step) => {
-    const point = toUint16(target);
-    if (point >= zp0.pointCount) return;
+  const pairCount = popDeltaPairs(exc, a);
+  for (let pair = 0; pair < pairCount; pair++) {
+    const step = deltaStep(exc, a, pair);
+    const point = toUint16(deltaTarget(exc, a, pair));
+    if (step === null || point >= zp0.pointCount) continue;
     if (!exc.backwardCompatibility || isYMoveAllowed(exc, zp0, point)) exc.move(zp0, point, step);
-  });
+  }
 }

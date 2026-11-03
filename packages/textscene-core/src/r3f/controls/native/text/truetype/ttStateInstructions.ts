@@ -19,18 +19,22 @@ import {
   superRoundOf,
   type RoundStateValue,
 } from './ttRounding';
-import type { GlyphZone } from './ttZone';
+import type { GlyphZone } from '../glyphHinting';
 
-export function setReferencePoint0(exc: ExecContext, a: number): void {
-  exc.graphicsState.rp0 = toUint16(exc.stack[a]!);
-}
+type Instruction = (exc: ExecContext, a: number) => void;
+/** The index of a reference point or zone pointer: 0, 1 or 2. */
+type PointerIndex = 0 | 1 | 2;
 
-export function setReferencePoint1(exc: ExecContext, a: number): void {
-  exc.graphicsState.rp1 = toUint16(exc.stack[a]!);
-}
+const REFERENCE_POINTS = ['rp0', 'rp1', 'rp2'] as const;
+const ZONE_POINTERS = ['zp0', 'zp1', 'zp2'] as const;
+const ZONE_NUMBERS = ['gep0', 'gep1', 'gep2'] as const;
 
-export function setReferencePoint2(exc: ExecContext, a: number): void {
-  exc.graphicsState.rp2 = toUint16(exc.stack[a]!);
+/** SRP0, SRP1 and SRP2, by the reference point each sets. */
+export function setReferencePoint(index: PointerIndex): Instruction {
+  const referencePoint = REFERENCE_POINTS[index];
+  return (exc, a) => {
+    exc.graphicsState[referencePoint] = toUint16(exc.stack[a]!);
+  };
 }
 
 /** The zone a zone pointer names, or null for a number that names none, which changes nothing. */
@@ -45,25 +49,16 @@ function zoneNumbered(exc: ExecContext, a: number): GlyphZone | null {
   }
 }
 
-export function setZonePointer0(exc: ExecContext, a: number): void {
-  const zone = zoneNumbered(exc, a);
-  if (!zone) return;
-  exc.zp0 = zone;
-  exc.graphicsState.gep0 = toUint16(exc.stack[a]!);
-}
-
-export function setZonePointer1(exc: ExecContext, a: number): void {
-  const zone = zoneNumbered(exc, a);
-  if (!zone) return;
-  exc.zp1 = zone;
-  exc.graphicsState.gep1 = toUint16(exc.stack[a]!);
-}
-
-export function setZonePointer2(exc: ExecContext, a: number): void {
-  const zone = zoneNumbered(exc, a);
-  if (!zone) return;
-  exc.zp2 = zone;
-  exc.graphicsState.gep2 = toUint16(exc.stack[a]!);
+/** SZP0, SZP1 and SZP2, by the zone pointer each sets. */
+export function setZonePointer(index: PointerIndex): Instruction {
+  const zonePointer = ZONE_POINTERS[index];
+  const zoneNumber = ZONE_NUMBERS[index];
+  return (exc, a) => {
+    const zone = zoneNumbered(exc, a);
+    if (!zone) return;
+    exc[zonePointer] = zone;
+    exc.graphicsState[zoneNumber] = toUint16(exc.stack[a]!);
+  };
 }
 
 /** SZPS: all three zone pointers. */
@@ -159,7 +154,7 @@ export function instructionControl(exc: ExecContext, a: number): void {
   if (exc.iniRange === CodeRange.CVT)
     exc.graphicsState.instructControl = (exc.graphicsState.instructControl & ~flag) | value;
   else if (exc.iniRange === CodeRange.GLYPH && selector === SELECTOR_NATIVE_CLEARTYPE)
-    exc.backwardCompatibility = (value & 4) ^ 4;
+    exc.setBackwardCompatibility(value);
 }
 
 /** `interpreter_version`: FreeType's default v40 interpreter. */
