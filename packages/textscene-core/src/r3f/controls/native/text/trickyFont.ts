@@ -160,8 +160,14 @@ const ID_TABLE_TAGS = ['cvt ', 'fpgm', 'prep'] as const;
 /** A PDF subset prefix: six capital letters and `+`, which FreeType skips when one follows. */
 const PDF_SUBSET_TAG = /^[A-Z]{6}\+(?=.)/;
 
+/** `tt_skip_pdffont_random_tag`: the family name after its PDF subset prefix, if it has one. */
+function withoutSubsetTag(familyName: string): string {
+  const tag = PDF_SUBSET_TAG.exec(familyName);
+  return tag ? familyName.slice(tag[0].length) : familyName;
+}
+
 function isTrickyFamily(familyName: string): boolean {
-  const name = familyName.replace(PDF_SUBSET_TAG, '');
+  const name = withoutSubsetTag(familyName);
   return TRICKY_FAMILY_NAMES.some((trickyName) => name.includes(trickyName));
 }
 
