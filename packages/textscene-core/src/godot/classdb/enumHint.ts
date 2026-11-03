@@ -6,7 +6,6 @@
  * first colon, and its value is the second colon-separated slice (`get_slicec(':', 1)`),
  * read as `String::to_int`, which answers 0 for text that is not a number.
  */
-
 export interface HintEnumEntry {
   readonly label: string;
   readonly value: number;

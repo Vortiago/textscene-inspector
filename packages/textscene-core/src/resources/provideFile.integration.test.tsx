@@ -144,6 +144,25 @@ describe.each(ROWS)('provideFile on the $bus bus', (row) => {
     await expectShown(shown, row.afterShown);
   });
 
+  it('registers the reload in the pending count, so a capture waiting on the load sees it come', async () => {
+    // The reload's refetch is real work a capture waits on: the count moves above
+    // zero through its window, so isSceneComplete moves and the shell posts the
+    // states again. A count that never moved left a host's reset unanswered.
+    const { provider, loader } = createHotReloadHarness();
+    provider.write(row.path, row.before);
+    const shown = mount(loader);
+    await expectShown(shown, row.beforeShown);
+
+    const moving: number[] = [];
+    const stopTracing = loader.subscribePending(() => moving.push(loader.pendingResourceCount));
+    provider.write(row.path, row.after);
+    provide(loader, row.path);
+    await expectShown(shown, row.afterShown);
+    stopTracing();
+
+    expect(moving.some((count) => count > 0)).toBe(true);
+  });
+
   it('loads a file that arrives after it was found missing', async () => {
     const { provider, loader } = createHotReloadHarness();
     const shown = mount(loader);
