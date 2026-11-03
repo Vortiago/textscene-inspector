@@ -164,7 +164,7 @@ describe('materialProgramInputs', () => {
 
     it('keys alphaHash even though its neighbour alphaTest is exempt', () => {
       // `Material.js:135` declares `alphaHash` as a plain field with no setter, so
-      // the exemption `alphaTest` earns at `:494-502` does not transfer.
+      // the exemption `alphaTest` earns at `:495-503` does not transfer.
       expect(keyOf({ alphaHash: true })).not.toBe(keyOf({ alphaHash: false }));
       expect(keyOf({ alphaHash: false })).toBe(keyOf({}));
     });

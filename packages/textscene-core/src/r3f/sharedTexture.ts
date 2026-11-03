@@ -60,8 +60,10 @@ export function leaveSlot(renderer: THREE.WebGLRenderer, slot: THREE.Texture, te
 }
 
 /**
- * Written only by `releasedOnUnmount`, and never cleared. These stay shared, not per renderer like a
- * pass, as a uniform getter and three's `UniformsLib` read them with no renderer at hand.
+ * Written only by `releasedOnUnmount`, and never cleared. three leaves a dispose listener that closes
+ * over each renderer that uploads a texture (r187 `WebGLTextures.js:780`), so a texture that outlives
+ * its canvas keeps that renderer reachable until the renderer's own dispose (`:391-414`). These stay shared, not per renderer like a pass, as a
+ * uniform getter and three's `UniformsLib` read them with no renderer at hand.
  */
 const releasedTextures = new Set<Pick<THREE.Texture, 'dispose'>>();
 

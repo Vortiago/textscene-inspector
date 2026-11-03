@@ -347,10 +347,9 @@ function withMips<T extends THREE.WebGLRenderTarget>(target: T): T {
 }
 
 /**
- * Every mip down to one texel, so a texture that filters between mips is complete: three sets no
- * `TEXTURE_MAX_LEVEL`. Only the first few are drawn, and each read clamps its lod to those. A render
- * target reads only the count (three r186 `WebGLTextures.js:2050-2054`), which the type of
- * `Texture.mipmaps` does not name.
+ * Every mip down to one texel. Only the first few are drawn, and each read clamps its lod to those.
+ * A render target reads only the count (three r187 `WebGLTextures.js:2122-2130`), which the type of
+ * `Texture.mipmaps` does not name, and caps `TEXTURE_MAX_LEVEL` at the last level (`:2293-2297`).
  */
 function fullMipChain(size: number): THREE.Texture['mipmaps'] {
   const levels = Array.from({ length: Math.floor(Math.log2(size)) + 1 }, () => ({}));
