@@ -8,10 +8,9 @@ import { useMemo } from 'react';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
 import { useLayoutDirectionEnv } from '../../../r3f/contexts/useLayoutDirectionEnv.js';
-import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree.js';
+import { useLiveTreeVersion, useProjectPhysicsClock } from '../../../r3f/useLiveSceneTree.js';
 import { collectControlRasterViewports, type ControlRasterViewport } from './controlRasterViewports.js';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources.js';
-import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext.js';
 
 export function useControlRasterViewports(
   nodes: readonly TscnNode[],
@@ -23,7 +22,7 @@ export function useControlRasterViewports(
   // The env `useBuildSolveTree` resolves its Controls against, so the direction handed to a
   // sub-viewport and its Controls' come from one source.
   const layoutDirectionEnv = useLayoutDirectionEnv();
-  const { physicsClock } = useProjectSettings();
+  const physicsClock = useProjectPhysicsClock();
 
   return useMemo(
     () =>

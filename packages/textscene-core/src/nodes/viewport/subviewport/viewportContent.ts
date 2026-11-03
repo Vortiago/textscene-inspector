@@ -13,6 +13,7 @@ import {
   type LiveLink,
   type LiveTree,
   type LiveTreeContext,
+  type LiveTreeSources,
 } from '../../../r3f/liveSceneTree.js';
 import { compositeCallPrefix } from '../../../godot/variant/variantParser.js';
 
@@ -191,8 +192,8 @@ export function resolveViewportSubtree(tree: LiveTree, viewport: LiveLink): Tscn
 export function resolveStandaloneViewportSubtree(
   node: TscnNode,
   externalResources: readonly TscnExternalResource[],
-  caches: Pick<LiveTreeContext, 'sceneCache' | 'physicsClock'>
+  sources: LiveTreeSources
 ): TscnNode {
-  const ctx: LiveTreeContext = { externalResources, internalResources: [], ...caches };
+  const ctx: LiveTreeContext = { externalResources, internalResources: [], ...sources };
   return { ...node, children: resolvedChildren(liveTreeOf(node.children, ctx)) };
 }

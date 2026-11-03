@@ -9,7 +9,7 @@
 import { useMemo } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
-import { applyRemoteTransforms, type RelayPoses } from '../nodes/shared/remotetransform/remoteTransforms.js';
+import { applyRemoteTransforms } from '../nodes/shared/remotetransform/remoteTransforms.js';
 import { resolveCsgPolygonPaths } from '../nodes/3d/csg/csgpolygon3d/csgPolygonPaths.js';
 import { joinPath } from '../utils/nodePath.js';
 import { sameEntries } from '../utils/sameEntries.js';
@@ -63,7 +63,7 @@ function mergedPatches(first: NodePatches, second: NodePatches): Map<string, Nod
 }
 
 /** The RemoteTransform pass over `tree`, run once for both passes below. */
-const relayPosesOf = perObject((tree: LiveTree): RelayPoses => applyRemoteTransforms(tree));
+const relayPosesOf = perObject(applyRemoteTransforms);
 
 /**
  * Every property patch of `tree`. The RemoteTransform pass runs before the CSGPolygon3D path pass,
@@ -74,12 +74,17 @@ export const liveNodePatches: LiveScenePass<NodePatch> = (tree) => {
   return keptPatches(previousNodePatches, tree, mergedPatches(placed, resolveCsgPolygonPaths(tree, placed)));
 };
 
-/** {@link liveNodePatches} with each mesh that draws behind its node moved to where Godot draws it. */
-export const liveDrawnPatches: LiveScenePass<NodePatch> = (tree) => {
+/**
+ * {@link liveNodePatches} with each mesh that draws behind its node moved to where Godot draws it.
+ * Only the nodes the drawn transforms touch take a new patch, so only they are kept a second time.
+ */
+const liveDrawnPatches: LiveScenePass<NodePatch> = (tree) => {
   const patches = liveScenePassResults(liveNodePatches, tree);
-  const { drawnLag } = relayPosesOf(tree);
-  if (drawnLag.size === 0) return patches;
-  return keptPatches(previousDrawnPatches, tree, mergedPatches(patches, drawnLag));
+  const { drawn } = relayPosesOf(tree);
+  if (drawn.size === 0) return patches;
+  const drawnOver = new Map<string, NodePatch>();
+  for (const [path, patch] of drawn) drawnOver.set(path, { ...patches.get(path), ...patch });
+  return new Map([...patches, ...keptPatches(previousDrawnPatches, tree, drawnOver)]);
 };
 
 /** {@link canTakePatch} by type, since each node asks on every render. Written only by it. */

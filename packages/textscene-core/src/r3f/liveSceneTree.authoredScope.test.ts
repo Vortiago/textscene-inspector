@@ -14,7 +14,7 @@ import {
   HOST_LEAF_PATH,
   scenesByPath,
 } from './testing/graftedScopeFixture';
-import { cachesOver, sceneCacheOver } from './liveSceneTree.testkit';
+import { sourcesOver, sceneCacheOver } from './liveSceneTree.testkit';
 import './nodes/index';
 
 describe('a node grafted into an instanced sub-scene', () => {
@@ -31,7 +31,7 @@ describe('a node grafted into an instanced sub-scene', () => {
   it('hands the raster-viewport scan the host scene’s pool for a grafted sub-viewport', () => {
     const [viewport] = collectControlRasterViewports(
       hostScene.nodes,
-      cachesOver(sceneCacheOver(scenesByPath)),
+      sourcesOver(sceneCacheOver(scenesByPath)),
       {
         externalResources: hostScene.externalResources,
         internalResources: hostScene.internalResources,

@@ -46,18 +46,22 @@ const CYCLE_CONSEQUENCES: Readonly<Record<CycleKind, string>> = {
 };
 
 /** The parsed scene as the relay walk reads it, a node's parent found by its `parent=` path. */
-const rawRelayView = perObject((scene: RawScene): RelayTreeView<RawNode> => ({
+const rawRelayView = (scene: RawScene): RelayTreeView<RawNode> => ({
   typeOf: (node) => node.type,
   rawPropertiesOf: (node) => node.rawProperties,
   childrenOf: (node) => node.children,
-  parentOf: (node) => parentIdentity(scene, node),
-  isSame: (node, other) => node === other,
+  isAtOrAbove: (upper, node) => {
+    for (let at: RawNode | null = node; at; at = parentIdentity(scene, at)) {
+      if (at === upper) return true;
+    }
+    return false;
+  },
   nodeAt: (from, literal) => {
     const path = extractNodePath(literal ?? '');
     const resolved = path ? resolveNodePath(scene, from, path) : null;
     return resolved?.status === 'found' ? resolved.node : null;
   },
-}));
+});
 
 /**
  * The relays of `scene` on a cycle that Godot runs, and how it runs it. A cycle that holds a relay

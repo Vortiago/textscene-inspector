@@ -26,6 +26,7 @@ import { sameElements } from '../utils/sameElements.js';
 import { subscribeToNothing } from '../utils/subscribeToNothing.js';
 import { NOTHING_CACHED } from './cacheSources.js';
 import { useProjectSettings } from './contexts/ProjectSettingsContext.js';
+import { projectPhysicsClock } from '../parser/projectSettingsParser.js';
 import type { PhysicsClock } from '../godot/scene/physicsTicks.js';
 
 /** The live-tree roots and the snapshot of the loader's caches they are walked over. */
@@ -171,13 +172,21 @@ interface LiveTreeInputs {
   physicsClock: PhysicsClock;
 }
 
+/**
+ * The project's physics clock, Godot's defaults without a project. Every live tree reads it
+ * (`LiveTreeContext.physicsClock`), and one settings object hands back one clock.
+ */
+export function useProjectPhysicsClock(): PhysicsClock {
+  return projectPhysicsClock(useProjectSettings().settings);
+}
+
 /** The scene graph in context, or null with none, the loader and the project's physics clock. */
 function useLiveTreeInputs(): LiveTreeInputs {
   // Optional so viewport-level readers (the preview lighting) work in the
   // empty-canvas and test-renderer cases, where no scene is mounted at all.
   const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
   const loader = useResourceLoader();
-  const { physicsClock } = useProjectSettings();
+  const physicsClock = useProjectPhysicsClock();
   return { sceneGraph, loader, physicsClock };
 }
 
@@ -270,10 +279,10 @@ export function useSeatedRoots(): readonly TscnNode[] | undefined {
 const NO_ROOTS: readonly TscnNode[] = [];
 
 /**
- * The tree over the caches of a loader, with no roots: a question about one node needs only the
- * caches. Every step question of a load tick shares it.
+ * The tree over the caches of a loader, with no roots, for each physics clock: a question about one
+ * node needs only the caches. Every step question of a load tick shares it.
  */
-const loaderTreesAt = perObject((physicsClock: PhysicsClock) =>
+const loaderTreesOf = perObject((physicsClock: PhysicsClock) =>
   valueAtLoadTick((loader) =>
     liveTreeOf(NO_ROOTS, {
       externalResources: [],
@@ -293,11 +302,11 @@ const loaderTreesAt = perObject((physicsClock: PhysicsClock) =>
  */
 export function useLiveStepOf(node: LiveNode, scope: SceneScope): LiveStep {
   const loader = useResourceLoader();
-  const { physicsClock } = useProjectSettings();
+  const physicsClock = useProjectPhysicsClock();
   const readsCaches = liveInstancePath(node, scope) !== null || glbPathOf(node) !== undefined;
   const watched = readsCaches ? loader : null;
   const readAt = useCallback(
-    (version: number) => loaderTreesAt(physicsClock)(watched, version).stepOf(node, scope),
+    (version: number) => loaderTreesOf(physicsClock)(watched, version).stepOf(node, scope),
     [physicsClock, watched, node, scope]
   );
   return useReadAtLoadTick(watched, readAt, Object.is);

@@ -36,7 +36,7 @@ import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 import { advanceFrameWithStubbedGl, withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
-import { cachesOver } from '../../../r3f/liveSceneTree.testkit';
+import { sourcesOver } from '../../../r3f/liveSceneTree.testkit';
 
 const GUI_SCENE = `[gd_scene format=3]
 
@@ -56,7 +56,7 @@ function parse(source: string): TscnScene {
 }
 
 function walk(scene: TscnScene) {
-  return collectControlRasterViewports(scene.nodes, cachesOver(), {
+  return collectControlRasterViewports(scene.nodes, sourcesOver(), {
     internalResources: scene.internalResources,
     externalResources: scene.externalResources,
   });

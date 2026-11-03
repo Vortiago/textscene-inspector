@@ -8,7 +8,7 @@
  * (`remote_transform_3d.cpp:35-36`), across an instance border too. Measured on Godot 4.6.3.
  */
 
-import { parentPathOf } from '../../../utils/nodePath.js';
+import { parentPathOf, relativeTo } from '../../../utils/nodePath.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
@@ -27,29 +27,28 @@ import type { PhysicsClock } from '../../../godot/scene/physicsTicks.js';
 import { perObject } from '../../../utils/perObject.js';
 import { localFromGlobal3D, moveTarget, type Push } from './relayPush.js';
 import type { RelayClass } from './relayRules.js';
-import { nodesAMoveReaches, relayOf, type RelayTreeView } from './relayTree.js';
+import { childrenAMoveCarries, nodesAMoveReaches, relayOf, type RelayTreeView } from './relayTree.js';
 
 /** Where the RemoteTransform pass leaves the nodes of a tree, by live path. */
 export interface RelayPoses {
   /** The properties each relay pushes onto its target: the node's own pose. */
   readonly placed: NodePatches;
   /**
-   * The transform of each mesh that draws behind its node, as Godot's renderer holds a pose the
-   * last notification gave it. Render lays it over `placed`. The node's properties never hold it.
+   * The transforms render lays over `placed`: a mesh that draws behind its node, as Godot's renderer
+   * holds the pose its last notification gave it, and each node below it that is no mesh, so it
+   * still stands at its own pose. The node's properties never hold them.
    */
-  readonly drawnLag: NodePatches;
+  readonly drawn: NodePatches;
 }
 
-const NO_POSES: RelayPoses = { placed: new Map(), drawnLag: new Map() };
+const NO_POSES: RelayPoses = { placed: new Map(), drawn: new Map() };
 
 /**
- * The poses every RemoteTransform of `tree` pushes onto its target, by the target's live path.
- * Godot pushes a relay each time a transform flush reaches it (`remote_transform_3d.cpp:118-126`,
- * `remote_transform_2d.cpp:127-136`), and a push queues every relay its target carries, so the
- * pass replays the flushes up to the frame the `ref:godot` harness captures. A chain settles in the
- * first flushes, and a relay cycle takes the pose of that frame. A target that is not a Node3D (for
- * a RemoteTransform3D) or a Node2D (for a RemoteTransform2D) takes nothing, as the cast fails
- * (`remote_transform_3d.cpp:54`).
+ * Where the relays of `tree` leave its nodes. Godot pushes a relay each time a transform flush
+ * reaches it (`remote_transform_3d.cpp:118-126`, `remote_transform_2d.cpp:127-136`), and a push
+ * queues every relay its target carries, so the pass replays the flushes up to the frame the
+ * `ref:godot` harness captures. A chain settles in the first flushes, and a relay cycle takes the
+ * pose of that frame. `relayOf` says which targets Godot refuses.
  */
 export function applyRemoteTransforms(tree: LiveTree): RelayPoses {
   const relays = relaysOf(tree);
@@ -75,14 +74,14 @@ export function applyRemoteTransforms(tree: LiveTree): RelayPoses {
   const flushes = harnessFlushes(tree.ctx.physicsClock);
   replayTransformFlushes(entered, flushes, (entry, queue) => {
     if (entry.kind === 'relay') push(entry, queue);
-    else entry.drawn = liveGlobalTransform3D(tree, entry.link.path, placed)!;
+    else entry.notified = liveGlobalTransform3D(tree, entry.link.path, placed)!;
   });
-  const drawnLag = drawnLagOf(
+  const drawn = drawnTransformsOf(
     entered.filter((entry): entry is Visual => entry.kind === 'visual'),
     tree,
     placed
   );
-  return { placed, drawnLag };
+  return { placed, drawn };
 }
 
 /** The flushes by the harness frame, once for each clock: a clock is one object per value pair. */
@@ -101,8 +100,8 @@ interface Relay extends Push {
 interface Visual {
   readonly kind: 'visual';
   readonly link: LiveLink;
-  /** Written by the replay on each notification. Absent until the first. */
-  drawn?: Transform3D;
+  /** The global pose its last notification handed the server. Written by the replay. Absent until the first. */
+  notified?: Transform3D;
 }
 
 /** What the replay keeps on the transform-change list: a relay, or a visual it can move. */
@@ -113,11 +112,7 @@ const liveRelayView = perObject((tree: LiveTree): RelayTreeView<LiveLink> => ({
   typeOf: (link) => link.step.node.type,
   rawPropertiesOf: (link) => link.step.node.rawProperties,
   childrenOf: (link) => tree.fold<void, LiveLink>(undefined, (child) => child, link),
-  parentOf: (link) => {
-    const parentPath = parentPathOf(link.path);
-    return parentPath === null ? null : tree.at(parentPath);
-  },
-  isSame: (link, other) => link.path === other.path,
+  isAtOrAbove: (upper, link) => relativeTo(upper.path, link.path) !== undefined,
   nodeAt: (from, literal) => {
     const path = resolveNodePathLiteral(from.path, literal, uniquePathsOfLiteral(literal, from.path, tree));
     return path === null ? null : tree.at(path);
@@ -213,23 +208,32 @@ function listenerOrVisualAt(link: LiveLink, listenerAt: Map<string, ListEntry>):
 }
 
 /**
- * The transform of each of `visuals` that a move it has not been notified of yet left away from
- * where its last notification drew it: its local transform under its parent's drawn pose, so each
- * child keeps its own.
+ * The local transforms render needs so each of `visuals` stands where its last notification drew
+ * it, and each Node3D below a moved one that is no visual stands at its node pose: a parent drawn
+ * elsewhere carries its children in render, but in Godot only the visual's own instance lags.
  */
-function drawnLagOf(visuals: readonly Visual[], tree: LiveTree, placed: NodePatches): NodePatches {
-  const drawnLag = new Map<string, NodePatch>();
+function drawnTransformsOf(visuals: readonly Visual[], tree: LiveTree, placed: NodePatches): NodePatches {
+  const drawn = new Map<string, NodePatch>();
   const drawnPoses = new Map(placed);
-  // Each pose is read after the visuals above it have moved, as a moved parent carries its children.
-  for (const { link, drawn } of visuals) {
-    if (!drawn || sameData(drawn, liveGlobalTransform3D(tree, link.path, drawnPoses))) continue;
+  const visualPaths = new Set(visuals.map(({ link }) => link.path));
+  const nodePose = (link: LiveLink): Transform3D => liveGlobalTransform3D(tree, link.path, placed)!;
+  const standAt = (link: LiveLink, global: Transform3D): boolean => {
+    if (sameData(global, liveGlobalTransform3D(tree, link.path, drawnPoses))) return false;
     const local = localFromGlobal3D(
-      drawn,
+      global,
       parentPathOf(link.path),
       nodesOnTheWayTo(tree, link.path, drawnPoses)
     );
-    drawnLag.set(link.path, { transform: local });
+    drawn.set(link.path, { transform: local });
     drawnPoses.set(link.path, { ...drawnPoses.get(link.path), transform: local });
+    return true;
+  };
+  // Each pose is read after the nodes above it have moved, as a moved parent carries its children.
+  for (const visual of visuals) {
+    if (!standAt(visual.link, visual.notified ?? nodePose(visual.link))) continue;
+    for (const child of childrenAMoveCarries(liveRelayView(tree), visual.link, 'Node3D')) {
+      if (!visualPaths.has(child.path)) standAt(child, nodePose(child));
+    }
   }
-  return drawnLag;
+  return drawn;
 }

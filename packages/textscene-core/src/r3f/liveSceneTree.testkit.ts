@@ -10,6 +10,7 @@ import {
   type CachedSceneSource,
   type LiveStep,
   type LiveTreeContext,
+  type LiveTreeSources,
   type SceneScope,
 } from './liveSceneTree';
 import { DEFAULT_PHYSICS_CLOCK } from '../godot/scene/physicsTicks';
@@ -21,13 +22,11 @@ export function liveNodeAt(path: string, roots: readonly TscnNode[], ctx: LiveTr
 }
 
 /**
- * The caches a live-tree builder reads, with `sceneCache` and Godot's default physics clock.
+ * The sources a live-tree builder reads: `sceneCache` and Godot's default physics clock.
  *
- * @canonical In tests, the caches and physics clock of a live-tree builder
+ * @canonical In tests, the scene cache and physics clock of a live-tree builder
  */
-export function cachesOver(
-  sceneCache: CachedSceneSource = NOTHING_CACHED
-): Pick<LiveTreeContext, 'sceneCache' | 'physicsClock'> {
+export function sourcesOver(sceneCache: CachedSceneSource = NOTHING_CACHED): LiveTreeSources {
   return { sceneCache, physicsClock: DEFAULT_PHYSICS_CLOCK };
 }
 
@@ -54,7 +53,7 @@ export function contextOver(
   return {
     externalResources: main.externalResources,
     internalResources: main.internalResources,
-    ...cachesOver(sceneCacheOver(scenes)),
+    ...sourcesOver(sceneCacheOver(scenes)),
     ...(glbs ? { glbCache: { getCached: (path: string) => glbs[path] } } : {}),
   };
 }
@@ -93,7 +92,7 @@ export function stepOver(
   const ctx: LiveTreeContext = {
     externalResources: scope.externalResources,
     internalResources: scope.internalResources,
-    ...cachesOver(sceneCache),
+    ...sourcesOver(sceneCache),
     ...(glbCache ? { glbCache } : {}),
   };
   return new LiveTree([], ctx).stepOf(node, scope);

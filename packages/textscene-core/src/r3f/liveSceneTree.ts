@@ -69,6 +69,9 @@ export interface LiveTreeContext {
   physicsClock: PhysicsClock;
 }
 
+/** What a builder of a context reads beside the root scene's pools: the scene cache and the project's physics clock. */
+export type LiveTreeSources = Pick<LiveTreeContext, 'sceneCache' | 'physicsClock'>;
+
 /** The scene cache of `ctx` as the walks over it read it: each path asked of the loader once. */
 const snapshotScenes = perObject((ctx: LiveTreeContext): CachedSceneSource => answeredOnce(ctx.sceneCache));
 

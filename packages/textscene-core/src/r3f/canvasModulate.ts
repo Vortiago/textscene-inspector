@@ -8,10 +8,9 @@
 import { createContext, useContext, useMemo } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import { liveTreeOf, type LiveTreeContext } from './liveSceneTree.js';
-import { useSharedLiveTree } from './useLiveSceneTree.js';
+import { useProjectPhysicsClock, useSharedLiveTree } from './useLiveSceneTree.js';
 import { canvasScopesOf } from './canvasScopes.js';
 import { NOTHING_CACHED } from './cacheSources.js';
-import { useProjectSettings } from './contexts/ProjectSettingsContext.js';
 import { perObject } from '../utils/perObject.js';
 import type { PhysicsClock } from '../godot/scene/physicsTicks.js';
 import { WHITE_MODULATE } from './canvasItemModulate.js';
@@ -35,7 +34,7 @@ const noScenesAt = perObject((physicsClock: PhysicsClock): LiveTreeContext => ({
  * in, whichever file declares it (`canvas_modulate.cpp:33-45`).
  */
 export function useCanvasModulateColor(nodes: readonly TscnNode[]): Rgba {
-  const { physicsClock } = useProjectSettings();
+  const physicsClock = useProjectPhysicsClock();
   const ctx = useSharedLiveTree()?.ctx ?? noScenesAt(physicsClock);
   return useMemo(() => canvasScopesOf(liveTreeOf(nodes, ctx)).modulate ?? WHITE_MODULATE, [nodes, ctx]);
 }

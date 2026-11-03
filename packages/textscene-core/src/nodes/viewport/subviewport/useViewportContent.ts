@@ -10,14 +10,13 @@ import { useMemo } from 'react';
 import type { TscnNode } from '../../../parser/types.js';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
-import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree.js';
+import { useLiveTreeVersion, useProjectPhysicsClock } from '../../../r3f/useLiveSceneTree.js';
 import {
   resolveStandaloneViewportSubtree,
   viewportContent,
   type ViewportContent,
 } from './viewportContent.js';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources.js';
-import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext.js';
 
 export function useViewportContent(node: TscnNode): ViewportContent {
   // The sub-viewport's children resolve their instance refs against the scene
@@ -27,7 +26,7 @@ export function useViewportContent(node: TscnNode): ViewportContent {
   const version = useLiveTreeVersion(loader);
   // No loader is mounted in the linter bundle or an isolated test.
   const sceneCache = loader?.scenes ?? NOTHING_CACHED;
-  const { physicsClock } = useProjectSettings();
+  const physicsClock = useProjectPhysicsClock();
 
   return useMemo(
     () =>

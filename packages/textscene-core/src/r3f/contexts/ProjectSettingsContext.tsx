@@ -11,7 +11,6 @@ import {
   projectThemeScale,
   projectViewportSize,
   projectMsaaModes,
-  projectPhysicsClock,
   DEFAULT_THEME_SCALE,
   DEFAULT_VIEWPORT_WIDTH,
   DEFAULT_VIEWPORT_HEIGHT,
@@ -19,7 +18,6 @@ import {
   type ProjectViewportSize,
   type MsaaModes,
 } from '../../parser/projectSettingsParser.js';
-import type { PhysicsClock } from '../../godot/scene/physicsTicks.js';
 import { PROJECT_FILE_PATH } from '../../godot/project/project.js';
 import type { FileEventBus } from '../../resources/FileEventBus.js';
 import { useResourceLoader } from '../../resources/useResource.js';
@@ -34,8 +32,6 @@ export interface ProjectSettingsValue {
   viewportSize: ProjectViewportSize;
   /** The root viewport's `rendering/anti_aliasing/quality/msaa_*`, or no MSAA without a project. */
   msaaModes: MsaaModes;
-  /** `physics/common/physics_ticks_per_second` and `physics_jitter_fix`, or Godot's defaults without a project. */
-  physicsClock: PhysicsClock;
 }
 
 const DEFAULT_VALUE: ProjectSettingsValue = {
@@ -46,7 +42,6 @@ const DEFAULT_VALUE: ProjectSettingsValue = {
     height: DEFAULT_VIEWPORT_HEIGHT,
   },
   msaaModes: projectMsaaModes(null),
-  physicsClock: projectPhysicsClock(null),
 };
 
 const ProjectSettingsContext = createContext<ProjectSettingsValue>(DEFAULT_VALUE);
@@ -117,7 +112,6 @@ export function ProjectSettingsProvider({ children, sceneKey }: ProjectSettingsP
       themeScale: projectThemeScale(settings),
       viewportSize: projectViewportSize(settings),
       msaaModes: projectMsaaModes(settings),
-      physicsClock: projectPhysicsClock(settings),
     }),
     [settings]
   );

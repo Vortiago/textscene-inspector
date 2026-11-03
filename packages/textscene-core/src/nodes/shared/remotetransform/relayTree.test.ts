@@ -31,8 +31,10 @@ function viewOver(all: readonly BareNode[]): RelayTreeView<BareNode> {
     typeOf: (n) => n.type,
     rawPropertiesOf: (n) => n.props ?? {},
     childrenOf: (n) => n.children,
-    parentOf: (n) => n.parent ?? null,
-    isSame: (n, other) => n === other,
+    isAtOrAbove: (upper, n) => {
+      for (let at: BareNode | undefined = n; at; at = at.parent) if (at === upper) return true;
+      return false;
+    },
     nodeAt: (_, literal) => all.find((n) => literal === `NodePath("${n.name}")`) ?? null,
   };
 }

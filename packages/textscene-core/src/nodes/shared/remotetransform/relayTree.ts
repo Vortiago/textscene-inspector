@@ -7,6 +7,7 @@
 
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { parseOptionalBool } from '../../../parser/valueParsers.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { RELAY_CLASSES, type RelayClass, type RemoteFlags } from './relayRules.js';
 
 /** What the walk reads of a tree whose nodes are `N`. */
@@ -15,8 +16,8 @@ export interface RelayTreeView<N> {
   /** The node's properties as written, which both parsers publish (`RawNode.rawProperties`). */
   rawPropertiesOf(node: N): Readonly<Record<string, string>>;
   childrenOf(node: N): readonly N[];
-  parentOf(node: N): N | null;
-  isSame(node: N, other: N): boolean;
+  /** Whether `upper` is `node` or one of its ancestors. */
+  isAtOrAbove(upper: N, node: N): boolean;
   /** The node the raw `NodePath("…")` value `literal` names from `from`, or null. */
   nodeAt(from: N, literal: string | undefined): N | null;
 }
@@ -58,14 +59,7 @@ function relayFlagsOf(props: Readonly<Record<string, string>>): RemoteFlags {
 
 /** Whether one node is the other or above it. */
 function isOnOneLine<N>(view: RelayTreeView<N>, node: N, other: N): boolean {
-  return isAtOrAbove(view, node, other) || isAtOrAbove(view, other, node);
-}
-
-function isAtOrAbove<N>(view: RelayTreeView<N>, upper: N, node: N): boolean {
-  for (let at: N | null = node; at !== null; at = view.parentOf(at)) {
-    if (view.isSame(at, upper)) return true;
-  }
-  return false;
+  return view.isAtOrAbove(node, other) || view.isAtOrAbove(other, node);
 }
 
 /**
@@ -76,14 +70,26 @@ function isAtOrAbove<N>(view: RelayTreeView<N>, upper: N, node: N): boolean {
  */
 export function nodesAMoveReaches<N>(view: RelayTreeView<N>, target: N, reached: RelayClass['reached']): N[] {
   const nodes: N[] = [];
-  const isReached = (child: N): boolean =>
-    descendsFromClass(view.typeOf(child), reached) &&
-    parseOptionalBool(view.rawPropertiesOf(child).top_level) !== true;
   const walk = (node: N): void => {
     if (reached === 'CanvasItem') nodes.push(node);
-    for (const child of view.childrenOf(node)) if (isReached(child)) walk(child);
+    for (const child of childrenAMoveCarries(view, node, reached)) walk(child);
     if (reached === 'Node3D') nodes.push(node);
   };
   walk(target);
   return nodes;
+}
+
+/** The children of `node` that a move of it carries: those of the `reached` family that are not `top_level`. */
+export function childrenAMoveCarries<N>(
+  view: RelayTreeView<N>,
+  node: N,
+  reached: RelayClass['reached']
+): N[] {
+  return view
+    .childrenOf(node)
+    .filter(
+      (child) =>
+        descendsFromClass(view.typeOf(child), reached) &&
+        boolSlotValue(view.rawPropertiesOf(child).top_level) !== true
+    );
 }

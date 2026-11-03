@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 import type { TscnNode } from '../parser/types';
 import { canvasScopesOf } from './canvasScopes';
 import { liveTreeOf } from './liveSceneTree';
-import { cachesOver } from './liveSceneTree.testkit';
+import { contextOver } from './liveSceneTree.testkit';
 
 /** One node of a tree under `Root`, named by its path. */
 interface Entry {
@@ -38,7 +38,7 @@ function treeOf(entries: readonly Entry[]) {
     byPath.get(parentPath)!.children.push(node);
   };
   for (const { path, type, properties } of entries) place(path, type, properties);
-  return liveTreeOf([root], { externalResources: [], internalResources: [], ...cachesOver() });
+  return liveTreeOf([root], contextOver({ externalResources: [], internalResources: [] }, {}));
 }
 
 /**

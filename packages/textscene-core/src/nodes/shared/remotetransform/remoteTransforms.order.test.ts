@@ -14,12 +14,15 @@ import { node2DLocalTransform } from '../../../r3f/node2dTransform';
 import type { Node2DProperties } from '../../base/node2d/types';
 import { TRANSFORM2D_IDENTITY, multiplyTransform2D } from '../../../godot/math/transform2d';
 import { applyRemoteTransforms } from './remoteTransforms';
-import { liveDrawnPatches } from '../../../r3f/liveNodePatches';
 
-/** The global origin of the Node3D at `path` where render draws it after the relays have run. */
+/**
+ * The global origin of the Node3D at `path` where render draws it after the relays have run. The
+ * pass writes only transforms, so a drawn transform replaces the placed one whole.
+ */
 function globalOrigin3D(content: string, path: string): number[] {
   const tree = liveTreeOfText(content);
-  const global = liveGlobalTransform3D(tree, path, liveDrawnPatches(tree));
+  const { placed, drawn } = applyRemoteTransforms(tree);
+  const global = liveGlobalTransform3D(tree, path, new Map([...placed, ...drawn]));
   if (!global) throw new Error(`expected a Node3D at ${path}`);
   return [global.origin.x, global.origin.y, global.origin.z];
 }
@@ -137,6 +140,7 @@ function cycle3D(relayATransform = 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0,
 [node name="Root" type="Node3D"]
 [node name="HolderA" type="Node3D" parent="."]
 [node name="Box" type="MeshInstance3D" parent="HolderA"]
+[node name="Marker" type="Marker3D" parent="HolderA/Box"]
 [node name="RelayA" type="RemoteTransform3D" parent="HolderA"]
 transform = ${relayATransform}
 remote_path = NodePath("../../HolderB")
@@ -183,6 +187,11 @@ describe('applyRemoteTransforms draws a relay cycle at the frame the ref:godot h
     // it (`visual_instance_3d.cpp:90-96`). Holder A moves in the last flush, so its box is queued
     // for a flush the harness frame does not run.
     expectCloseTo(globalOrigin3D(cycle3D(), 'Root/HolderA/Box'), [2881, 0, 3]);
+  });
+
+  it('draws a node that is no mesh, under a mesh that draws behind, at its own pose', () => {
+    // Only the mesh's server instance lags. The Marker3D below has none, so it stands at its node.
+    expectCloseTo(globalOrigin3D(cycle3D(), 'Root/HolderA/Box/Marker'), [2883, 0, 3]);
   });
 
   it('draws the mesh of a turned cycle a whole turn step behind its holder', () => {
