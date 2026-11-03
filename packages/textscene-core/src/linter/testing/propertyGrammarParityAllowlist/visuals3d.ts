@@ -59,6 +59,16 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'Every LightmapGI key but light_data and shadowmask_mode is a bake input, which the drawn frame never reads.',
   },
 
+  OccluderInstance3D: {
+    linterOnly: [
+      // Bake inputs: `OccluderInstance3D::bake_scene` reads them (occluder_instance_3d.cpp:744-747),
+      // and the frame reads only the occluder it holds.
+      'bake_mask',
+      'bake_simplification_distance',
+    ],
+    reason: 'Only occluder is read: it gives the selection box. The bake inputs are never drawn.',
+  },
+
   MeshInstance3D: {
     parserOnly: [
       // Deprecated: `scene/3d/visual_instance_3d.cpp` binds `gi_lightmap_scale`

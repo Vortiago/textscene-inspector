@@ -15,6 +15,7 @@ import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../shared/debugColor';
 import {
   describeGizmoToggle,
+  describeSelectionBox,
   describeInstantiatedGizmo,
   type GizmoNodeCase,
 } from '../../../../r3f/testing/gizmoContract';
@@ -91,6 +92,7 @@ const GIZMO_CASE: GizmoNodeCase = {
 };
 describeGizmoToggle('<SpringArm3D>', GIZMO_CASE);
 describeInstantiatedGizmo('<SpringArm3D>', GIZMO_CASE);
+describeSelectionBox('<SpringArm3D>', GIZMO_CASE, null);
 
 describe('<SpringArm3D> length line', () => {
   it.each([
