@@ -36,9 +36,15 @@ function lights(...declarations: CanvasLightDeclaration[]): ReadonlyMap<number, 
   return new Map(declarations.map((declaration, ordinal) => [ordinal, declaration]));
 }
 
-function placements(...items: [ItemPlacement, boolean][]): ReadonlyMap<string, PlacementDeclarations> {
+/** Each item as its placement, whether it is Light Only, and whether it is normal-mapped. */
+function placements(
+  ...items: [ItemPlacement, boolean, boolean?][]
+): ReadonlyMap<string, PlacementDeclarations> {
   return new Map(
-    items.map(([placement, hasLightOnly]) => [placementId(placement), { placement, hasLightOnly }])
+    items.map(([placement, hasLightOnly, hasNormalMap = false]) => [
+      placementId(placement),
+      { placement, hasLightOnly, hasNormalMap },
+    ])
   );
 }
 
@@ -262,6 +268,29 @@ describe('planLightLists', () => {
   it('does not tint a list on which the tinting light is unshadowed', () => {
     const tinting = light({ reach: key({ itemCullMask: 3 }), shadowItemCullMask: 2, tintsShadow: true });
     expect(planLightLists(lights(tinting), placements([ITEM, false]))[0]!.tintsShadow).toBe(false);
+  });
+
+  it('keeps no light apart while no normal-mapped item reads the list', () => {
+    expect(planLightLists(lights(light()), placements([ITEM, false]))[0]!.lightsApart).toBeNull();
+  });
+
+  it('keeps the lights apart for a normal-mapped item in the order Godot applies them', () => {
+    // `canvas.glsl:727` loops the directional lights by slot before `:768` loops the positional
+    // lights by sequence, whatever the ordinals.
+    const all = lights(
+      light({ sequence: 1 }),
+      light({ reach: directionalLightCullKey(0, 0), sequence: null, slot: 1 }),
+      light({ sequence: 0 }),
+      light({ reach: directionalLightCullKey(0, 0), sequence: null, slot: 0 })
+    );
+    const plans = planLightLists(all, placements([ITEM, false], [{ ...ITEM, z: 3 }, false, true]));
+    expect(plans[0]!.lightsApart?.map((entry) => entry.ordinal)).toEqual([3, 1, 2, 0]);
+  });
+
+  it('keeps apart only the lights on the list', () => {
+    const all = lights(light({ reach: key({ itemCullMask: 2 }) }), light());
+    const plans = planLightLists(all, placements([ITEM, false, true]));
+    expect(plans[0]!.lightsApart?.map((entry) => entry.ordinal)).toEqual([1]);
   });
 });
 

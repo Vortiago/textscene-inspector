@@ -15,7 +15,7 @@ import {
   type CanvasLightSlot,
 } from './lightPassContext';
 import { DEFAULT_LIGHT_CULL_KEY } from './lightCullKey';
-import type { CanvasLightDeclaration, ItemPlacement, PassMeshRole } from './itemLightList';
+import type { CanvasLightDeclaration, ItemPlacement, LitItemNeeds, PassMeshRole } from './itemLightList';
 import {
   useCapItemLights,
   usePassMeshRef,
@@ -32,7 +32,7 @@ function spyLighting() {
   const releaseMesh = vi.fn();
   const slot: CanvasLightSlot = { ordinal: 3, release };
   const registerLight = vi.fn((_declaration: CanvasLightDeclaration) => slot);
-  const registerItem = vi.fn((_placement: ItemPlacement, _lightOnly: boolean) => releaseItem);
+  const registerItem = vi.fn((_placement: ItemPlacement, _needs: LitItemNeeds) => releaseItem);
   const releaseCapped = vi.fn();
   const registerCappedItem = vi.fn((_item: CappedItem) => releaseCapped);
   const registerPassMesh = vi.fn(
@@ -132,10 +132,11 @@ describe('useRegisterCanvasLight2D', () => {
 
 describe('useRegisterLitItem', () => {
   const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, takenLights: null };
+  const PLAIN: LitItemNeeds = { lightOnly: false, normalMapped: false };
 
   it('survives a re-render at the same placement', () => {
     const { Wrap, registerItem, releaseItem } = spyLighting();
-    const { rerender } = renderHook(({ placement }) => useRegisterLitItem(placement, false), {
+    const { rerender } = renderHook(({ placement }) => useRegisterLitItem(placement, PLAIN), {
       wrapper: Wrap,
       initialProps: { placement: PLACEMENT },
     });
@@ -146,24 +147,35 @@ describe('useRegisterLitItem', () => {
 
   it('moves when the placement changes', () => {
     const { Wrap, registerItem, releaseItem } = spyLighting();
-    const { rerender } = renderHook(({ placement }) => useRegisterLitItem(placement, false), {
+    const { rerender } = renderHook(({ placement }) => useRegisterLitItem(placement, PLAIN), {
       wrapper: Wrap,
       initialProps: { placement: PLACEMENT },
     });
     rerender({ placement: { ...PLACEMENT, z: 2 } });
     expect(releaseItem).toHaveBeenCalledTimes(1);
-    expect(registerItem.mock.calls[1]).toEqual([{ ...PLACEMENT, z: 2 }, false]);
+    expect(registerItem.mock.calls[1]).toEqual([{ ...PLACEMENT, z: 2 }, PLAIN]);
   });
 
   it('moves when the cap hands it another light list', () => {
     const { Wrap, registerItem, releaseItem } = spyLighting();
-    const { rerender } = renderHook(({ placement }) => useRegisterLitItem(placement, false), {
+    const { rerender } = renderHook(({ placement }) => useRegisterLitItem(placement, PLAIN), {
       wrapper: Wrap,
       initialProps: { placement: PLACEMENT },
     });
     rerender({ placement: { ...PLACEMENT, takenLights: [0] } });
     expect(releaseItem).toHaveBeenCalledTimes(1);
-    expect(registerItem.mock.calls[1]).toEqual([{ ...PLACEMENT, takenLights: [0] }, false]);
+    expect(registerItem.mock.calls[1]).toEqual([{ ...PLACEMENT, takenLights: [0] }, PLAIN]);
+  });
+
+  it('declares again when the item gains a normal map', () => {
+    const { Wrap, registerItem, releaseItem } = spyLighting();
+    const { rerender } = renderHook(({ needs }) => useRegisterLitItem(PLACEMENT, needs), {
+      wrapper: Wrap,
+      initialProps: { needs: PLAIN },
+    });
+    rerender({ needs: { ...PLAIN, normalMapped: true } });
+    expect(releaseItem).toHaveBeenCalledTimes(1);
+    expect(registerItem.mock.calls[1]).toEqual([PLACEMENT, { ...PLAIN, normalMapped: true }]);
   });
 });
 

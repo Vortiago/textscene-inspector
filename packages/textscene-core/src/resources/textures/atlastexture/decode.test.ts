@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { atlasTextureLayout, decodeAtlasTexture } from './decode';
+import { atlasTextureLayout, atlasTextureOnSheet, decodeAtlasTexture } from './decode';
 
 describe('decodeAtlasTexture', () => {
   it('reads atlas, region, margin and filter_clip', () => {
@@ -131,5 +131,22 @@ describe('atlasTextureLayout', () => {
     expect(
       atlasTextureLayout(tex('Rect2(0, 0, 16, 16)', 'Rect2(0, 0, -32, 0)'), { width: 128, height: 128 })
     ).toBeNull();
+  });
+});
+
+describe('atlasTextureOnSheet', () => {
+  const CELL = decodeAtlasTexture({ region: 'Rect2(64, 32, 64, 32)', margin: 'Rect2(4, 2, 8, 4)' });
+
+  it('keeps the AtlasTexture on a sheet the size of its own', () => {
+    expect(atlasTextureOnSheet(CELL, { width: 256, height: 128 }, { width: 256, height: 128 })).toBe(CELL);
+  });
+
+  it('scales the region and margin to cover the same fraction of a sheet of another size', () => {
+    // A CanvasTexture's maps are sampled at the diffuse uv (`canvas.glsl:654`), whatever their size.
+    const half = atlasTextureOnSheet(CELL, { width: 256, height: 128 }, { width: 128, height: 128 });
+    expect([half.region, half.margin]).toEqual([
+      { x: 32, y: 32, width: 32, height: 32 },
+      { x: 2, y: 2, width: 4, height: 4 },
+    ]);
   });
 });

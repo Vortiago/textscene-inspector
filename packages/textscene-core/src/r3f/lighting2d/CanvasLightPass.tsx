@@ -20,13 +20,14 @@ import { CanvasLightSequenceProvider } from './useLightSequence.js';
 import { planLightLists, type LightListPlan, type PassMeshRole } from './itemLightList.js';
 import {
   CanvasLighting2DContext,
+  type ApartLight,
   type CanvasLighting2D,
   type CanvasLightList,
   type LightPassStep,
 } from './lightPassContext.js';
 import type { LightPassHost } from './lightPassHost.js';
 import { useLightRegistry, usePlacementRegistry } from './lightRegistry.js';
-import { useAccumulationTargets } from './lightAccumulationTargets.js';
+import { useAccumulationTargets, useLayeredAccumulationTargets } from './lightAccumulationTargets.js';
 import { createSeedMaterial, LightAccumulatorSeed } from './lightSeedQuad.js';
 import { renderLightLists, type AccumulationList, type PassMesh } from './lightAccumulationPass.js';
 import { capItemLights, type CappedItem } from './itemLightCap.js';
@@ -48,6 +49,16 @@ interface CanvasLightPassProps {
 /** The ids of the plans that `needs` a buffer. */
 function planIds(plans: readonly LightListPlan[], needs: (plan: LightListPlan) => boolean): string[] {
   return plans.filter(needs).map((plan) => plan.id);
+}
+
+/** The layer count of each plan that keeps its lights apart and `needs` the buffer. */
+function apartLayers(
+  plans: readonly LightListPlan[],
+  needs: (plan: LightListPlan) => boolean
+): ReadonlyMap<string, number> {
+  return new Map(
+    plans.flatMap((plan) => (plan.lightsApart && needs(plan) ? [[plan.id, plan.lightsApart.length]] : []))
+  );
 }
 
 /**
@@ -74,6 +85,24 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
   // adds nothing, so the tint pass runs only for a list a tinting light shadows.
   const lightOnlyTargets = useAccumulationTargets(planIds(plans, (plan) => plan.hasLightOnly));
   const shadowTintTargets = useAccumulationTargets(planIds(plans, (plan) => plan.tintsShadow));
+  // A normal term scales each light before it blends, so a normal-mapped item reads each light alone.
+  const apartTargets = useLayeredAccumulationTargets(apartLayers(plans, () => true));
+  const apartTintTargets = useLayeredAccumulationTargets(apartLayers(plans, (plan) => plan.tintsShadow));
+
+  // One per ordinal, kept for the canvas's life: ordinals are dense and reused, so the map stays as
+  // small as the most lights the canvas has held at once.
+  const apartLights = useRef(new Map<number, ApartLight>()).current;
+  const apartLight = useCallback(
+    (ordinal: number) => {
+      let light = apartLights.get(ordinal);
+      if (!light) {
+        light = { place: new THREE.Vector3(), mode: new THREE.Vector2() };
+        apartLights.set(ordinal, light);
+      }
+      return light;
+    },
+    [apartLights]
+  );
 
   // Read by the pass each frame, so a mesh needs no re-render of the provider to join it.
   const passMeshes = useRef(new Set<PassMesh>()).current;
@@ -123,8 +152,13 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
         target: targets.get(plan.id)!,
         lightOnlyTarget: lightOnlyTargets.get(plan.id) ?? null,
         shadowTintTarget: shadowTintTargets.get(plan.id) ?? null,
+        apart: plan.lightsApart && {
+          entries: plan.lightsApart,
+          target: apartTargets.get(plan.id)!,
+          shadowTintTarget: apartTintTargets.get(plan.id) ?? null,
+        },
       })),
-    [plans, targets, lightOnlyTargets, shadowTintTargets]
+    [plans, targets, lightOnlyTargets, shadowTintTargets, apartTargets, apartTintTargets]
   );
 
   const seedMaterial = useMemo(createSeedMaterial, []);
@@ -180,10 +214,16 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
     const lists = new Map<string, CanvasLightList>();
     plans.forEach((plan, index) => {
       const accumulation = accumulationLists[index]!;
+      const { apart } = accumulation;
       const list: CanvasLightList = {
         buffer: accumulation.target.texture,
         lightOnlyBuffer: accumulation.lightOnlyTarget?.texture ?? null,
         shadowTintBuffer: accumulation.shadowTintTarget?.texture ?? null,
+        apart: apart && {
+          buffer: apart.target.texture,
+          shadowTintBuffer: apart.shadowTintTarget?.texture ?? null,
+          lights: apart.entries.map((entry) => apartLight(entry.ordinal)),
+        },
       };
       for (const id of plan.placementIds) lists.set(id, list);
     });
@@ -193,6 +233,7 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
       registerLight,
       registerItem,
       registerCappedItem,
+      apartLight,
       registerPassMesh,
       registerPassStep,
     };
@@ -203,6 +244,7 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
     registerLight,
     registerItem,
     registerCappedItem,
+    apartLight,
     registerPassMesh,
     registerPassStep,
   ]);

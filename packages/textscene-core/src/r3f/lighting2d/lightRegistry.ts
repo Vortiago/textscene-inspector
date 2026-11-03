@@ -8,6 +8,7 @@ import {
   placementId,
   type CanvasLightDeclaration,
   type ItemPlacement,
+  type LitItemNeeds,
   type PlacementDeclarations,
 } from './itemLightList.js';
 import type { CanvasLightSlot } from './lightPassContext.js';
@@ -59,37 +60,45 @@ interface PlacementCount {
   placement: ItemPlacement;
   items: number;
   lightOnlyItems: number;
+  normalMappedItems: number;
+}
+
+function placementDeclarations(count: PlacementCount): PlacementDeclarations {
+  return {
+    placement: count.placement,
+    hasLightOnly: count.lightOnlyItems > 0,
+    hasNormalMap: count.normalMappedItems > 0,
+  };
 }
 
 /** The placements of the lit items by `placementId`, counted so each stands while an item holds it. */
 export function usePlacementRegistry(): [
   ReadonlyMap<string, PlacementDeclarations>,
-  (placement: ItemPlacement, lightOnly: boolean) => () => void,
+  (placement: ItemPlacement, needs: LitItemNeeds) => () => void,
 ] {
   const [placements, setPlacements] = useState<ReadonlyMap<string, PlacementDeclarations>>(() => new Map());
   const counts = useRef(new Map<string, PlacementCount>()).current;
 
   const publish = useCallback(() => {
     setPlacements((previous) => {
+      const next = new Map([...counts].map(([id, count]) => [id, placementDeclarations(count)]));
       const unchanged =
-        previous.size === counts.size &&
-        [...counts].every(([id, count]) => previous.get(id)?.hasLightOnly === count.lightOnlyItems > 0);
-      if (unchanged) return previous;
-      return new Map(
-        [...counts].map(([id, count]) => [
-          id,
-          { placement: count.placement, hasLightOnly: count.lightOnlyItems > 0 },
-        ])
-      );
+        previous.size === next.size &&
+        [...next].every(([id, declared]) => {
+          const held = previous.get(id);
+          return held?.hasLightOnly === declared.hasLightOnly && held.hasNormalMap === declared.hasNormalMap;
+        });
+      return unchanged ? previous : next;
     });
   }, [counts]);
 
   const declare = useCallback(
-    (placement: ItemPlacement, lightOnly: boolean) => {
+    (placement: ItemPlacement, { lightOnly, normalMapped }: LitItemNeeds) => {
       const id = placementId(placement);
-      const count = counts.get(id) ?? { placement, items: 0, lightOnlyItems: 0 };
+      const count = counts.get(id) ?? { placement, items: 0, lightOnlyItems: 0, normalMappedItems: 0 };
       count.items += 1;
       if (lightOnly) count.lightOnlyItems += 1;
+      if (normalMapped) count.normalMappedItems += 1;
       counts.set(id, count);
       publish();
 
@@ -101,6 +110,7 @@ export function usePlacementRegistry(): [
         released = true;
         count.items -= 1;
         if (lightOnly) count.lightOnlyItems -= 1;
+        if (normalMapped) count.normalMappedItems -= 1;
         if (count.items === 0) counts.delete(id);
         publish();
       };

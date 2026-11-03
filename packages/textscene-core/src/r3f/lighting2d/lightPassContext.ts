@@ -6,7 +6,7 @@
 
 import { createContext, useContext } from 'react';
 import * as THREE from 'three';
-import type { CanvasLightDeclaration, ItemPlacement, PassMeshRole } from './itemLightList.js';
+import type { CanvasLightDeclaration, ItemPlacement, LitItemNeeds, PassMeshRole } from './itemLightList.js';
 import type { CappedItem } from './itemLightCap.js';
 import type { CanvasClip } from './lightPassHost.js';
 
@@ -25,6 +25,37 @@ export interface CanvasLightList {
    * (`light_2d.h:58`) does not.
    */
   readonly shadowTintBuffer: THREE.Texture | null;
+  /** The lights kept apart for a normal-mapped item, or null while none reads the list. */
+  readonly apart: ApartLightBuffers | null;
+}
+
+/**
+ * Where a light kept apart sits and how it blends, which a normal-mapped item reads to shade it. The
+ * pass owns one per ordinal, and the light writes it ahead of every frame's draws, so an item
+ * binds these objects once and reads the light where it is.
+ */
+export interface ApartLight {
+  /**
+   * In the canvas's world frame, y up: a positional light's position, or a directional light's
+   * direction toward the light, in xy, and `Light2D.height` in z.
+   */
+  readonly place: THREE.Vector3;
+  /** x: 1 for a directional light, else 0. y: 1 for a MIX light, else 0. */
+  readonly mode: THREE.Vector2;
+}
+
+/**
+ * The lights of a list, each accumulated alone from a black seed into a layer of its own, in the
+ * order Godot applies them. A layer holds what the ordinary buffer would add for that light, so a
+ * normal-mapped item can scale each light by its own normal term before it blends.
+ */
+export interface ApartLightBuffers {
+  /** `light_color` with the shadow applied, premultiplied by its alpha, and the alpha. */
+  readonly buffer: THREE.Texture;
+  /** The albedo-free `shadow_color` term of each light, or null while no light tints. */
+  readonly shadowTintBuffer: THREE.Texture | null;
+  /** Each layer's light. */
+  readonly lights: readonly ApartLight[];
 }
 
 /** One light's place on the canvas, handed out by `registerLight`. */
@@ -54,10 +85,12 @@ export interface CanvasLighting2D {
   readonly resolution: THREE.Vector2;
   /** Declares a light on the canvas and gives it an ordinal. */
   registerLight(declaration: CanvasLightDeclaration): CanvasLightSlot;
-  /** Declares a lit item at `placement`. A Light Only item also needs the unmodulated buffer. */
-  registerItem(placement: ItemPlacement, lightOnly: boolean): () => void;
+  /** Declares a lit item at `placement`, and the buffers it reads besides the ordinary one. */
+  registerItem(placement: ItemPlacement, needs: LitItemNeeds): () => void;
   /** Hands an item to the per-item cap, which measures it while its placement is crowded. */
   registerCappedItem(item: CappedItem): () => void;
+  /** The place light `ordinal` writes for a normal-mapped item, the same object for the ordinal's life. */
+  apartLight(ordinal: number): ApartLight;
   /** Hands the pass one of light `ordinal`'s meshes, which it shows only in the passes `role` draws in. */
   registerPassMesh(mesh: THREE.Object3D, ordinal: number, role: PassMeshRole): () => void;
   /**
@@ -73,8 +106,9 @@ export const INERT_CANVAS_LIGHTING: CanvasLighting2D = {
   lists: new Map(),
   resolution: new THREE.Vector2(1, 1),
   registerLight: (_declaration: CanvasLightDeclaration) => ({ ordinal: 0, release: () => {} }),
-  registerItem: (_placement: ItemPlacement, _lightOnly: boolean) => () => {},
+  registerItem: (_placement: ItemPlacement, _needs: LitItemNeeds) => () => {},
   registerCappedItem: (_item: CappedItem) => () => {},
+  apartLight: (_ordinal: number) => ({ place: new THREE.Vector3(), mode: new THREE.Vector2() }),
   registerPassMesh: (_mesh: THREE.Object3D, _ordinal: number, _role: PassMeshRole) => () => {},
   registerPassStep: (_step: LightPassStep) => () => {},
 };

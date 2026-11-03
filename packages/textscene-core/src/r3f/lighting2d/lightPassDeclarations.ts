@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import type * as THREE from 'three';
 import { LIGHT_PASS_LAYER } from './lightPassLayers.js';
-import type { CanvasLightDeclaration, ItemPlacement, PassMeshRole } from './itemLightList.js';
+import type { CanvasLightDeclaration, ItemPlacement, LitItemNeeds, PassMeshRole } from './itemLightList.js';
 import { useCanvasLighting2D } from './lightPassContext.js';
 
 /**
@@ -54,15 +54,16 @@ export function useRegisterCanvasLight2D(
 }
 
 /**
- * Declares a lit item at `placement`, by value. A Light Only item asks for the unmodulated buffer.
+ * Declares a lit item at `placement`, by value, with the buffers it reads besides the ordinary one.
  * The cap hands `takenLights` as a new array only when they change, so its identity serves.
  */
-export function useRegisterLitItem(placement: ItemPlacement, lightOnly: boolean): void {
+export function useRegisterLitItem(placement: ItemPlacement, needs: LitItemNeeds): void {
   const { registerItem } = useCanvasLighting2D();
   const { lightMask, z, layer, takenLights } = placement;
+  const { lightOnly, normalMapped } = needs;
   useEffect(
-    () => registerItem({ lightMask, z, layer, takenLights }, lightOnly),
-    [registerItem, lightMask, z, layer, takenLights, lightOnly]
+    () => registerItem({ lightMask, z, layer, takenLights }, { lightOnly, normalMapped }),
+    [registerItem, lightMask, z, layer, takenLights, lightOnly, normalMapped]
   );
 }
 

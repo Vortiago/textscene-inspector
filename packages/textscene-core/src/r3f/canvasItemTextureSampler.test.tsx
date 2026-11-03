@@ -14,10 +14,12 @@ import {
   ViewportSamplerProvider,
   canvasItemViewSampler,
   inheritTextureSampler,
+  useCanvasTextureSampler,
   useInheritedTextureSampler,
   type AmbientTextureSampler,
 } from './canvasItemTextureSampler';
 import { applyViewSampler } from '../resources/textures/textureView';
+import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../godot/scene/canvasItem';
 
 // The root viewport takes its default from the project settings; nothing here needs the real provider's load.
 const projectSettingsMock = vi.hoisted(() => ({ settings: null as Record<string, string> | null }));
@@ -221,5 +223,39 @@ describe('canvasItemViewSampler', () => {
   it("writes the item's filter and repeat", () => {
     const { filter, wrap } = canvasItemViewSampler({ filter: NEAREST, repeat: REPEAT_MIRROR });
     expect([filter?.magFilter, wrap]).toEqual([THREE.NearestFilter, THREE.MirroredRepeatWrapping]);
+  });
+});
+
+describe('useCanvasTextureSampler', () => {
+  const ITEM = { filter: LINEAR, repeat: REPEAT_DISABLED };
+
+  function samplerOf(texture: Parameters<typeof useCanvasTextureSampler>[1]) {
+    return renderHook(() => useCanvasTextureSampler(ITEM, texture)).result.current;
+  }
+
+  it("lets the CanvasTexture's own filter and repeat win over the item's", () => {
+    // `texture_storage.cpp:737`: the canvas texture's filter unless it is DEFAULT.
+    expect(
+      samplerOf({
+        textureFilter: CanvasItemTextureFilter.NEAREST,
+        textureRepeat: CanvasItemTextureRepeat.MIRROR,
+      })
+    ).toEqual({
+      filter: NEAREST,
+      repeat: REPEAT_MIRROR,
+    });
+  });
+
+  it("keeps the item's sampler where the CanvasTexture inherits", () => {
+    expect(
+      samplerOf({
+        textureFilter: CanvasItemTextureFilter.PARENT_NODE,
+        textureRepeat: CanvasItemTextureRepeat.PARENT_NODE,
+      })
+    ).toBe(ITEM);
+  });
+
+  it("keeps the item's sampler with no CanvasTexture", () => {
+    expect(samplerOf(undefined)).toBe(ITEM);
   });
 });

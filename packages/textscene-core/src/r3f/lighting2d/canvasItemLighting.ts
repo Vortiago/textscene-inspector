@@ -24,7 +24,7 @@ import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMateria
 export const CANVAS_MODULATE_FLOOR = 1 / 255;
 
 /** Both directions: the item side encodes to compare and decodes to write back. */
-const TRANSFER_GLSL = GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL;
+export const TRANSFER_GLSL = GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL;
 
 /**
  * A `merge` part for `materialProgramInputs()`: the one material prop the
@@ -77,8 +77,11 @@ const midpoint = (a: number, b: number) => ((a + b) / 2).toFixed(1);
 const ABOVE_NORMAL = midpoint(CanvasItemMaterialLightMode.NORMAL, CanvasItemMaterialLightMode.UNSHADED);
 const ABOVE_UNSHADED = midpoint(CanvasItemMaterialLightMode.UNSHADED, CanvasItemMaterialLightMode.LIGHT_ONLY);
 
-const LIGHT_INJECTION = `bool unshaded = uLightMode > ${ABOVE_NORMAL} && uLightMode < ${ABOVE_UNSHADED};
-bool lightOnly = uLightMode > ${ABOVE_UNSHADED};
+/** The item's light mode, from `uLightMode`, as every lit item's program reads it. */
+export const LIGHT_MODE_GLSL = `bool unshaded = uLightMode > ${ABOVE_NORMAL} && uLightMode < ${ABOVE_UNSHADED};
+bool lightOnly = uLightMode > ${ABOVE_UNSHADED};`;
+
+const LIGHT_INJECTION = `${LIGHT_MODE_GLSL}
 // canvas.glsl:719: MODE_UNSHADED skips the canvas tint and the light loop,
 // so the fragment leaves as it arrived. So does an item no light reaches: the CPU already folded
 // the tint in, and the round trip through the two sRGB curves would only perturb it.

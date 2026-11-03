@@ -17,7 +17,11 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import type { TscnNode } from '../../../parser/types';
 import { createTextureFromBuffer } from '../../../resources/formats/image/textureProcessing';
 import { DEFAULT_TEXTURE_IMPORT } from '../../../godot/import/textureImport';
-import { CanvasLighting2DProvider } from '../../../r3f/lighting2d/CanvasLighting2D';
+import {
+  CanvasLighting2DProvider,
+  useCanvasLighting2D,
+  type CanvasLighting2D,
+} from '../../../r3f/lighting2d/CanvasLighting2D';
 import { LIGHT_PASS_LAYER } from '../../../r3f/lighting2d/lightPassLayers';
 
 // happy-dom never settles a real image load, so the decode hands back a bare
@@ -46,6 +50,13 @@ function node(raw: Record<string, string> = {}): TscnNode {
   };
 }
 
+/** What the light pass around the light publishes, read by a sibling of the light. */
+const seen: { lighting?: CanvasLighting2D } = {};
+function LightingProbe() {
+  seen.lighting = useCanvasLighting2D();
+  return null;
+}
+
 async function render(rootNode: TscnNode, tex = new THREE.Texture()) {
   const fake = createFakeResourceLoader();
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
@@ -63,6 +74,7 @@ async function render(rootNode: TscnNode, tex = new THREE.Texture()) {
         >
           <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
             <PointLight2D node={rootNode} />
+            <LightingProbe />
           </CanvasLighting2DProvider>
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
@@ -125,6 +137,18 @@ describe('PointLight2D Component', () => {
     // The opaque list sorts nearest-first, which reverses canvas order, and MIX
     // is the one mode whose result depends on that order.
     expect(lightMaterial(await render(node({ blend_mode: '2' }))).transparent).toBe(true);
+  });
+
+  it('places itself for a normal-mapped item: its origin, not its offset, and its height', async () => {
+    await render(node({ position: 'Vector2(576, 324)', offset: 'Vector2(30, 0)', height: '50.0' }));
+    const light = seen.lighting!.apartLight(0);
+    expect(light.place.toArray()).toEqual([576, -324, 50]);
+    expect(light.mode.toArray()).toEqual([0, 0]);
+  });
+
+  it('places itself as a MIX light', async () => {
+    await render(node({ blend_mode: '2' }));
+    expect(seen.lighting!.apartLight(0).mode.toArray()).toEqual([0, 1]);
   });
 
   it('draws no quad when enabled=false', async () => {

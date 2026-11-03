@@ -603,6 +603,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Directionallight2d Normal Map",
+    "file": "unit-directionallight2d-normal-map.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Directionallight2d Render Budget",
     "file": "unit-directionallight2d-render-budget.tscn",
     "category": "Other"
@@ -1685,6 +1690,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Pointlight2d Mix Shadow Color",
     "file": "unit-pointlight2d-mix-shadow-color.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Normal Map Height",
+    "file": "unit-pointlight2d-normal-map-height.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Normal Map Specular",
+    "file": "unit-pointlight2d-normal-map-specular.tscn",
     "category": "Other"
   },
   {

@@ -11,7 +11,8 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import { frameSizePx, frameUvWindow } from '../../../r3f/spriteFrame';
-import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { useCanvasTextureSampler, useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { useCanvasItemSurface } from '../../../r3f/useCanvasItemSurface';
 import { canvasMapProps, useWindowedCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -32,11 +33,13 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     texture: sourceTexture,
     size: reportedSize,
     missing: textureMissing,
+    canvasTexture,
   } = useTexture2D(props.texture, externalResources, internalResources);
 
   // With `texture_repeat` Disabled, an overrunning `region_rect` stretches its edge texels,
-  // where Sprite3D tiles.
-  const sampler = useNode2DTextureSampler(props);
+  // where Sprite3D tiles. A CanvasTexture's own filter and repeat win over the item's.
+  const sampler = useCanvasTextureSampler(useNode2DTextureSampler(props), canvasTexture?.texture);
+  const surface = useCanvasItemSurface(canvasTexture, sampler);
   // A driven `frame` overrides the authored `frame` and any authored
   // `frame_coords` (in Godot the two are the same value), so the animation wins.
   const frameWindow = useMemo(() => {
@@ -53,6 +56,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
+      surface={surface}
       body={({ color, opacity }, _material, pixelMaterial) =>
         // No texture draws nothing, as Godot's draw returns early (`sprite_2d.cpp:159`). The
         // placeholder is for a texture that is set but never draws.

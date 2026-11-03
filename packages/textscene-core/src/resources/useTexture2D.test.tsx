@@ -247,6 +247,69 @@ describe('useTexture2D — reference forms', () => {
     expect(result.current.missing).toBe(false);
   });
 
+  it('hands back the CanvasTexture it peeled, with the tables its references resolve in', () => {
+    const wrapped: TscnInternalResource[] = [
+      ...gradientResources,
+      {
+        id: 'CanvasTexture_a',
+        type: 'CanvasTexture',
+        data: {
+          diffuse_texture: 'SubResource("GradientTexture2D_a")',
+          normal_texture: 'SubResource("GradientTexture2D_a")',
+          specular_shininess: '0.5',
+        },
+      },
+    ];
+
+    const { result } = renderHook(() => useTexture2D('SubResource("CanvasTexture_a")', [], wrapped), {
+      wrapper: withLoader(),
+    });
+
+    expect(result.current.canvasTexture).toMatchObject({
+      texture: { normalTexture: 'SubResource("GradientTexture2D_a")', specularShininess: 0.5 },
+      externalResources: [],
+      internalResources: wrapped,
+    });
+  });
+
+  it("hands back the CanvasTexture an AtlasTexture's atlas names", () => {
+    // `atlas_texture.cpp:189`: the AtlasTexture draws its region through the CanvasTexture itself.
+    const atlased: TscnInternalResource[] = [
+      ...gradientResources,
+      {
+        id: 'CanvasTexture_a',
+        type: 'CanvasTexture',
+        data: {
+          diffuse_texture: 'SubResource("GradientTexture2D_a")',
+          normal_texture: 'SubResource("GradientTexture2D_a")',
+        },
+      },
+      {
+        id: 'AtlasTexture_a',
+        type: 'AtlasTexture',
+        data: { atlas: 'SubResource("CanvasTexture_a")', region: 'Rect2(0, 0, 8, 8)' },
+      },
+    ];
+
+    const { result } = renderHook(() => useTexture2D('SubResource("AtlasTexture_a")', [], atlased), {
+      wrapper: withLoader(),
+    });
+
+    expect(result.current.canvasTexture).toMatchObject({
+      texture: { normalTexture: 'SubResource("GradientTexture2D_a")' },
+      internalResources: atlased,
+      atlas: { reference: { id: 'AtlasTexture_a' }, sheetSize: { width: 16, height: 16 } },
+    });
+  });
+
+  it('hands back no CanvasTexture for a plain texture', () => {
+    const { result } = renderHook(
+      () => useTexture2D('SubResource("GradientTexture2D_a")', [], gradientResources),
+      { wrapper: withLoader() }
+    );
+    expect(result.current.canvasTexture).toBeUndefined();
+  });
+
   // A CanvasTexture's `diffuse_texture` can be an AtlasTexture. The atlas resolve against the
   // outer ref finds no atlas and hands back the whole sheet, so the unwrap runs first.
   it('crops an AtlasTexture that is reached through a CanvasTexture', () => {

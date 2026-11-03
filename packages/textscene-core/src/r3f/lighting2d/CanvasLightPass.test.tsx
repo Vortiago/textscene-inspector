@@ -11,6 +11,7 @@ import { CanvasLightPass } from './CanvasLightPass';
 import { useCanvasLighting2D, type CanvasLighting2D } from './lightPassContext';
 import { useRegisterCanvasLight2D, useRegisterLitItem, usePassMeshRef } from './lightPassDeclarations';
 import { DEFAULT_LIGHT_CULL_KEY } from './lightCullKey';
+import { placementId } from './itemLightList';
 import { fakeLightPassHost } from './testing/fakeLightPassHost';
 import type { LightPassHost } from './lightPassHost';
 import { useCanvasModulate } from '../canvasModulate';
@@ -25,8 +26,10 @@ interface Seen {
   lighting?: CanvasLighting2D;
 }
 
+const PLACEMENT = { lightMask: 1, z: 0, layer: 0, takenLights: null };
+
 /** A lamp the pass draws, and an item that reads it. */
-function Scene({ seen }: { seen: Seen }) {
+function Scene({ seen, normalMapped = false }: { seen: Seen; normalMapped?: boolean }) {
   seen.gl = useThree((state) => state.gl);
   seen.lighting = useCanvasLighting2D();
   const ordinal = useRegisterCanvasLight2D(true, {
@@ -36,7 +39,7 @@ function Scene({ seen }: { seen: Seen }) {
     tintsShadow: false,
   });
   const meshRef = usePassMeshRef<THREE.Mesh>(ordinal, 'lit');
-  useRegisterLitItem({ lightMask: 1, z: 0, layer: 0, takenLights: null }, false);
+  useRegisterLitItem(PLACEMENT, { lightOnly: false, normalMapped });
   return <mesh ref={meshRef} />;
 }
 
@@ -46,11 +49,11 @@ interface Draw {
   readonly size: [number, number];
 }
 
-async function mount(host: LightPassHost) {
+async function mount(host: LightPassHost, normalMapped = false) {
   const seen: Seen = {};
   const renderer = await ReactThreeTestRenderer.create(
     <CanvasLightPass host={host} canvasModulate={WHITE}>
-      <Scene seen={seen} />
+      <Scene seen={seen} normalMapped={normalMapped} />
     </CanvasLightPass>
   );
   await settleLoads();
@@ -93,6 +96,26 @@ describe('CanvasLightPass', () => {
     const { seen } = await mount(host);
     await drawsDuring(seen.gl!, () => host.run.current!());
     expect(seen.lighting!.resolution.toArray()).toEqual([300, 200]);
+  });
+
+  it('keeps no light apart while no normal-mapped item reads the list', async () => {
+    const { seen } = await mount(fakeLightPassHost(300, 200));
+    expect(seen.lighting!.lists.get(placementId(PLACEMENT))!.apart).toBeNull();
+  });
+
+  it('publishes a layer and a place per light for a normal-mapped item', async () => {
+    const { seen } = await mount(fakeLightPassHost(300, 200), true);
+    const { apart } = seen.lighting!.lists.get(placementId(PLACEMENT))!;
+    expect(apart!.buffer).toBeInstanceOf(THREE.DataArrayTexture);
+    expect(apart!.lights).toEqual([seen.lighting!.apartLight(0)]);
+  });
+
+  it('draws the layers of a normal-mapped item at the host size', async () => {
+    const host = fakeLightPassHost(300, 200);
+    const { seen } = await mount(host, true);
+    const draws = await drawsDuring(seen.gl!, () => host.run.current!());
+    // The list's ordinary buffer, then the light's own layer.
+    expect(draws.map((draw) => draw.size.join('x'))).toEqual(['300x200', '300x200']);
   });
 
   it('draws nothing on a frame the host does not run it', async () => {

@@ -21,7 +21,6 @@ import { unconfiguredViewportTexture } from './textures/viewporttexture/unconfig
 import { atlasTextureSize } from './textures/atlastexture/decode.js';
 import { imageSize, type ImageSize } from './formats/image/imagePixels.js';
 import {
-  resolveAtlasTexture,
   resolveAtlasTextureRef,
   type AtlasTextureReference,
 } from './textures/atlastexture/resolveAtlasTexture.js';
@@ -30,12 +29,13 @@ import {
   useViewportTextureSlot,
   type ViewportTextureView,
 } from './textures/viewporttexture/useViewportTextureSlot.js';
-import { useProceduralTexture, useProceduralTexturePins } from './useProceduralTexture.js';
+import { useProceduralTexture } from './useProceduralTexture.js';
+import { useAtlasTextureCrop } from './useAtlasTextureCrop.js';
 import { useResource } from './useResource.js';
 import { useTextureSources } from './useTextureSources.js';
 import { useParsedResourceSlot } from './useParsedResourceSlot.js';
-import { isLiveTarget } from '../r3f/liveTargets.js';
-import { useDisposeOnRelease } from '../r3f/useDisposeOnRelease.js';
+import { decodeCanvasTexture } from './textures/canvastexture/decode.js';
+import type { CanvasTextureData } from './textures/canvastexture/types.js';
 
 export interface Texture2DResult {
   /**
@@ -61,6 +61,23 @@ export interface Texture2DResult {
    * `get_image()` is null (`viewport.cpp:180-186`). `texture` then samples the placeholder.
    */
   hasNoImage?: true;
+  /** The CanvasTexture the slot names, directly or in its resource file. */
+  canvasTexture?: CanvasTextureSlot;
+}
+
+/** A CanvasTexture and the resource tables its texture references resolve in. */
+export interface CanvasTextureSlot {
+  texture: CanvasTextureData;
+  externalResources: readonly TscnExternalResource[];
+  internalResources: readonly TscnInternalResource[];
+  /** The AtlasTexture that draws a cell of this CanvasTexture, which cuts its maps alike. */
+  atlas?: CanvasTextureAtlas;
+}
+
+/** An AtlasTexture whose atlas is a CanvasTexture, and the size of the diffuse sheet it cuts. */
+export interface CanvasTextureAtlas {
+  reference: AtlasTextureReference;
+  sheetSize: ImageSize;
 }
 
 /**
@@ -82,25 +99,14 @@ export function useTexture2D(
   isHeldLocally: boolean = NODE_PROPERTY
 ): Texture2DResult {
   const slot = useTexture2DSlot(ref, externalResources, internalResources, view, isHeldLocally);
-
-  // A loaded sheet's crop is cache-owned and pinned while mounted, like the procedural texture, and
-  // a live target's is held. Keyed on the tables the atlas sits in, so a re-parse of the scene or of
-  // its resource file invalidates it, and on whether the sheet is live, which picks the crop.
   const { atlas, source, atlasResources } = slot;
-  const isLiveSheet = source !== null && isLiveTarget(source);
-  const cropped = useMemo(
-    () => (atlas ? resolveAtlasTexture(atlas, source, atlasResources) : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the resolver reads whether the sheet is live.
-    [atlas, source, atlasResources, isLiveSheet]
-  );
-  useProceduralTexturePins(cropped?.key ? [cropped.key] : []);
-  useDisposeOnRelease(cropped?.key === null ? cropped.texture : null);
-
+  const cropped = useAtlasTextureCrop(atlas, source, atlasResources);
   // A sheet still loading, or a zero-area region that Godot's `get_rect_region` also declines,
   // draws nothing and is no resource error.
-  const texture = atlas ? (cropped?.texture ?? null) : slot.result.texture;
+  const texture = atlas ? cropped : slot.result.texture;
   const size = useReportedSize(texture, atlas, slot.result);
-  return { ...slot.result, texture, size };
+  const { canvasTexture } = slot;
+  return canvasTexture ? { ...slot.result, texture, size, canvasTexture } : { ...slot.result, texture, size };
 }
 
 /**
@@ -172,6 +178,34 @@ interface Texture2DSlot {
   result: Texture2DResult;
   /** The slot, its resource file or its AtlasTexture's sheet is a CanvasTexture, which this peeled. */
   namesCanvasTexture: boolean;
+  /**
+   * The CanvasTexture the slot, its resource file or its AtlasTexture's atlas names, which the
+   * AtlasTexture draws through (`atlas_texture.cpp:189`). Godot refuses to nest one
+   * (`canvas_item.cpp:1787`), so there is at most one.
+   */
+  canvasTexture: CanvasTextureSlot | undefined;
+}
+
+function peeledCanvasTexture(
+  wrapper: TscnInternalResource | undefined,
+  externalResources: readonly TscnExternalResource[],
+  internalResources: readonly TscnInternalResource[]
+): CanvasTextureSlot | undefined {
+  if (!wrapper) return undefined;
+  return { texture: decodeCanvasTexture(wrapper.data), externalResources, internalResources };
+}
+
+/** The CanvasTexture an AtlasTexture's atlas names, once its diffuse sheet has a size. */
+function atlasCanvasTexture(
+  wrapper: TscnInternalResource | undefined,
+  reference: AtlasTextureReference | null,
+  sheetSize: ImageSize | undefined,
+  externalResources: readonly TscnExternalResource[],
+  internalResources: readonly TscnInternalResource[]
+): CanvasTextureSlot | undefined {
+  const slot = peeledCanvasTexture(wrapper, externalResources, internalResources);
+  if (!slot || !reference || !sheetSize) return undefined;
+  return { ...slot, atlas: { reference, sheetSize } };
 }
 
 function useTexture2DSlot(
@@ -237,7 +271,36 @@ function useTexture2DSlot(
   const source = unconfigured ?? viewport.texture ?? procedural.texture ?? loaded.value ?? null;
   const atlasResources = slot.internalResources;
   const namesCanvasTexture = [outer, inner, sheet].some((layer) => (layer?.wrappers.length ?? 0) > 0);
-  const peeled = { atlas, atlasResources, source, namesCanvasTexture };
+  const sheetSize = imageSize(source?.image);
+  const sheetWidth = sheetSize?.width;
+  const sheetHeight = sheetSize?.height;
+  const canvasTexture = useMemo(
+    () =>
+      peeledCanvasTexture(outer.wrappers[0], externalResources, internalResources) ??
+      peeledCanvasTexture(inner.wrappers[0], slot.externalResources, slot.internalResources) ??
+      atlasCanvasTexture(
+        sheet?.wrappers[0],
+        atlas,
+        sheetWidth === undefined || sheetHeight === undefined
+          ? undefined
+          : { width: sheetWidth, height: sheetHeight },
+        slot.externalResources,
+        slot.internalResources
+      ),
+    [
+      outer,
+      inner,
+      sheet,
+      atlas,
+      sheetWidth,
+      sheetHeight,
+      externalResources,
+      internalResources,
+      slot.externalResources,
+      slot.internalResources,
+    ]
+  );
+  const peeled = { atlas, atlasResources, source, namesCanvasTexture, canvasTexture };
 
   if (!ref) return { ...peeled, result: NOTHING };
   // Nothing to resolve: a resource file still loading or proved absent, or a wrapper with no texture.

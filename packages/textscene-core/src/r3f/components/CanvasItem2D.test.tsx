@@ -19,7 +19,7 @@ import {
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../canvasPaintOrder';
 import type { CanvasItemTint } from '../canvasItemModulate';
-import type { ItemPlacement } from '../lighting2d/itemLightList';
+import type { ItemPlacement, LitItemNeeds } from '../lighting2d/itemLightList';
 import {
   CanvasLighting2DContext,
   INERT_CANVAS_LIGHTING,
@@ -136,7 +136,7 @@ describe('CanvasItem2D', () => {
 
   describe('lighting', () => {
     function spiedLighting() {
-      const registerItem = vi.fn((_placement: ItemPlacement, _lightOnly: boolean) => () => {});
+      const registerItem = vi.fn((_placement: ItemPlacement, _needs: LitItemNeeds) => () => {});
       const value: CanvasLighting2D = { ...INERT_CANVAS_LIGHTING, registerItem };
       return { value, registerItem };
     }
@@ -149,7 +149,10 @@ describe('CanvasItem2D', () => {
           <CanvasItem2D node={node} props={node2DProps(node)} body={() => <mesh />} />
         </CanvasLighting2DContext.Provider>
       );
-      expect(registerItem).toHaveBeenCalledWith(expect.objectContaining({ z: 3 }), false);
+      expect(registerItem).toHaveBeenCalledWith(expect.objectContaining({ z: 3 }), {
+        lightOnly: false,
+        normalMapped: false,
+      });
     });
 
     it('declares no lit item with no pixels of its own', async () => {

@@ -18,6 +18,8 @@ import type { Rect2 } from '../../godot/math/rect2';
 
 interface Draw {
   readonly target: THREE.WebGLRenderTarget | null;
+  /** The layer of an array target the draw lands in. */
+  readonly layer: number;
   readonly seed: [number, number, number];
   readonly visible: string[];
   readonly cameraMask: number;
@@ -33,14 +35,18 @@ function passMesh(name: string, ordinal: number, role: PassMeshRole): PassMesh {
 
 function list(
   entries: LightListEntry[],
-  options: { lightOnly?: boolean; tint?: boolean; placementIds?: string[] } = {}
+  options: { lightOnly?: boolean; tint?: boolean; placementIds?: string[]; apart?: boolean } = {}
 ): AccumulationList {
+  const layers = () => new THREE.WebGLArrayRenderTarget(1, 1, entries.length);
   return {
     entries: new Map(entries.map((entry) => [entry.ordinal, entry])),
     placementIds: options.placementIds ?? ['uncapped'],
     target: new THREE.WebGLRenderTarget(1, 1),
     lightOnlyTarget: options.lightOnly ? new THREE.WebGLRenderTarget(1, 1) : null,
     shadowTintTarget: options.tint ? new THREE.WebGLRenderTarget(1, 1) : null,
+    apart: options.apart
+      ? { entries, target: layers(), shadowTintTarget: options.tint ? layers() : null }
+      : null,
   };
 }
 
@@ -54,11 +60,13 @@ function run(
   const seedMaterial = createSeedMaterial();
   const camera = new THREE.OrthographicCamera();
   let target: THREE.WebGLRenderTarget | null = null;
+  let layer = 0;
   const gl = {
     getDrawingBufferSize: (size: THREE.Vector2) => size.set(4, 2),
     getRenderTarget: () => target,
-    setRenderTarget: (next: THREE.WebGLRenderTarget | null) => {
+    setRenderTarget: (next: THREE.WebGLRenderTarget | null, activeLayer = 0) => {
       target = next;
+      layer = activeLayer;
     },
     clear: () => {},
     render: () => {
@@ -66,6 +74,7 @@ function run(
       const seed = seedMaterial.uniforms.uSeed!.value as THREE.Vector3;
       draws.push({
         target,
+        layer,
         seed: [seed.x, seed.y, seed.z],
         visible: meshes.filter(({ mesh }) => mesh.visible).map(({ mesh }) => mesh.name),
         cameraMask: camera.layers.mask,
@@ -131,6 +140,34 @@ describe('renderLightLists', () => {
       seed: [0, 0, 0],
       visible: ['volume', 'tint'],
     });
+  });
+
+  it('draws each light of a list kept apart alone, into its own layer, from a black seed', () => {
+    const apart = list([SHADOWED(1), SHADOWED(0)], { apart: true });
+    const pass = run([apart], [passMesh('a', 0, 'lit'), passMesh('b', 1, 'lit')]);
+    pass.run();
+    expect(pass.draws.slice(1)).toMatchObject([
+      { target: apart.apart!.target, layer: 0, seed: [0, 0, 0], visible: ['b'] },
+      { target: apart.apart!.target, layer: 1, seed: [0, 0, 0], visible: ['a'] },
+    ]);
+  });
+
+  it("draws each light kept apart into its own shadow_color layer, after the light's own layer", () => {
+    const apart = list([SHADOWED(0)], { apart: true, tint: true });
+    const meshes = [passMesh('volume', 0, 'volume'), passMesh('lit', 0, 'lit'), passMesh('tint', 0, 'tint')];
+    const pass = run([apart], meshes);
+    pass.run();
+    expect(pass.draws.slice(2)).toMatchObject([
+      { target: apart.apart!.target, layer: 0, visible: ['volume', 'lit'] },
+      { target: apart.apart!.shadowTintTarget, layer: 0, seed: [0, 0, 0], visible: ['volume', 'tint'] },
+    ]);
+  });
+
+  it('sizes the layers to the drawing buffer and keeps one per light', () => {
+    const apart = list([SHADOWED(0), SHADOWED(1)], { apart: true });
+    run([apart], [passMesh('a', 0, 'lit')]).run();
+    const { width, height, depth } = apart.apart!.target;
+    expect([width, height, depth]).toEqual([4, 2, 2]);
   });
 
   it('sizes every buffer to the drawing buffer', () => {

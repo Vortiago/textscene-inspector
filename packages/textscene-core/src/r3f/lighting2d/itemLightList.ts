@@ -164,10 +164,20 @@ export function placementId(item: ItemPlacement): string {
   return `${item.lightMask}|${item.z}|${item.layer}|${taken}`;
 }
 
-/** One placement the canvas holds a lit item at, and whether a Light Only item sits there. */
+/** What a lit item reads beyond its placement's ordinary accumulation. */
+export interface LitItemNeeds {
+  /** A Light Only item reads the accumulation seeded from white. */
+  readonly lightOnly: boolean;
+  /** A normal-mapped item reads each light apart. */
+  readonly normalMapped: boolean;
+}
+
+/** One placement the canvas holds a lit item at, and the kinds of item that sit there. */
 export interface PlacementDeclarations {
   readonly placement: ItemPlacement;
   readonly hasLightOnly: boolean;
+  /** Whether a normal-mapped item sits there, which reads each light apart. */
+  readonly hasNormalMap: boolean;
 }
 
 /** One list the pass accumulates, and the placements that read it. */
@@ -180,6 +190,25 @@ export interface LightListPlan {
   readonly hasLightOnly: boolean;
   /** Whether a light that tints its shadow shadows the list, so it needs the `shadow_color` buffer. */
   readonly tintsShadow: boolean;
+  /**
+   * The entries in the order Godot applies them, each accumulated alone, while a normal-mapped item
+   * reads the list. Null otherwise.
+   */
+  readonly lightsApart: readonly LightListEntry[] | null;
+}
+
+/**
+ * `entries` in the order `canvas.glsl` applies them: the directional lights by slot (`:727`), then
+ * the positional lights by sequence (`:768`).
+ */
+function applicationOrder(
+  lights: ReadonlyMap<number, CanvasLightDeclaration>,
+  entries: readonly LightListEntry[]
+): LightListEntry[] {
+  const byOrdinal = new Map(entries.map((entry) => [entry.ordinal, entry]));
+  return [...directionalListOrder(lights), ...positionalListOrder(lights)]
+    .map((ordinal) => byOrdinal.get(ordinal))
+    .filter((entry) => entry !== undefined);
 }
 
 /** The lists the canvas's lit placements take, one plan per distinct list, empty lists left out. */
@@ -188,7 +217,7 @@ export function planLightLists(
   placements: ReadonlyMap<string, PlacementDeclarations>
 ): LightListPlan[] {
   const plans = new Map<string, LightListPlan & { placementIds: string[] }>();
-  for (const [id, { placement, hasLightOnly }] of placements) {
+  for (const [id, { placement, hasLightOnly, hasNormalMap }] of placements) {
     const entries = itemLightList(lights, placement);
     if (entries.length === 0) continue;
     const listId = lightListId(entries);
@@ -198,9 +227,14 @@ export function planLightLists(
       placementIds: [],
       hasLightOnly: false,
       tintsShadow: entries.some((entry) => !entry.unshadowed && lights.get(entry.ordinal)!.tintsShadow),
+      lightsApart: null,
     };
     plan.placementIds.push(id);
-    plans.set(listId, { ...plan, hasLightOnly: plan.hasLightOnly || hasLightOnly });
+    plans.set(listId, {
+      ...plan,
+      hasLightOnly: plan.hasLightOnly || hasLightOnly,
+      lightsApart: plan.lightsApart ?? (hasNormalMap ? applicationOrder(lights, entries) : null),
+    });
   }
   return [...plans.values()];
 }

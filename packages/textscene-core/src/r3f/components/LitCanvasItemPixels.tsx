@@ -6,6 +6,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { LIT_ITEM_USER_DATA } from '../lighting2d/itemLightCap';
 import { useCanvasItemLighting, type CanvasItemLightingProps } from '../lighting2d/useCanvasItemLighting';
+import type { CanvasItemSurface } from '../lighting2d/normalMappedLighting';
 import { canvasItemFacing, type CanvasItemFacing } from '../canvasItemFacing';
 import {
   canvasItemBlendState,
@@ -50,12 +51,25 @@ interface LitCanvasItemPixelsProps {
   lightMask: number | undefined;
   /** The item's `z_final`, which a light's z window tests. */
   zFinal: number;
+  /** The normal and specular maps of the item's pixels, or null to light them flat. */
+  surface?: CanvasItemSurface | null;
   /** A render prop for a mesh that merges the pixel material itself, else leaves read the context. */
   children: ReactNode | ((pixelMaterial: CanvasItemPixelMaterial) => ReactNode);
 }
 
-export function LitCanvasItemPixels({ material, lightMask, zFinal, children }: LitCanvasItemPixelsProps) {
-  const { props: lighting, geometryRef } = useCanvasItemLighting(material, lightMask, zFinal);
+export function LitCanvasItemPixels({
+  material,
+  lightMask,
+  zFinal,
+  surface = null,
+  children,
+}: LitCanvasItemPixelsProps) {
+  const { props: lighting, geometryRef } = useCanvasItemLighting({
+    material,
+    lightMask,
+    effectiveZ: zFinal,
+    surface,
+  });
   const blendMode = material?.blendMode ?? CanvasItemMaterialBlendMode.MIX;
   const pixelMaterial = useMemo<CanvasItemPixelMaterial>(
     () => ({ ...canvasItemFacing(), ...canvasItemBlendState(blendMode), ...lighting }),

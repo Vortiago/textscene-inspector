@@ -14,6 +14,7 @@ import {
 import { resourceSliceRegistry } from './sliceRegistration.js';
 import { fileExtension } from './fileExtension.js';
 import { firstWith, lastWith } from '../utils/keyedLookup.js';
+import { CANVAS_TEXTURE_TYPE } from './textures/canvastexture/types.js';
 
 /**
  * The last `[ext_resource]` keeps an id: Godot's loader assigns `ext_resources[id]` per entry
@@ -158,7 +159,7 @@ export function peelCanvasTextures(
   let wrappers: TscnInternalResource[] | undefined;
   while (current) {
     const sub = resolveSubResourceRef(current, internalResources);
-    if (sub?.type !== 'CanvasTexture') return { ref: current, wrappers: wrappers ?? NO_WRAPPERS };
+    if (sub?.type !== CANVAS_TEXTURE_TYPE) return { ref: current, wrappers: wrappers ?? NO_WRAPPERS };
     if (wrappers?.includes(sub)) return { ref: undefined, wrappers };
     (wrappers ??= []).push(sub);
     current = sub.data.diffuse_texture;
