@@ -273,6 +273,7 @@ jobs:
           path: |
             apps/textscene-vscode/.test-workspace/
             apps/textscene-vscode/out/
+            /tmp/vscode-test-data/logs/
             scripts/vscode/output/csp-gate/
 
   vsix:
