@@ -12,6 +12,7 @@ import { installGodotLightFunction } from '../godotLightFunction.js';
 import { bestFitNormalsSlot, reflectionSlot, SSR_UNIFORM, ssrState } from './ssrUniforms.js';
 import { GODOT_ENCODE_NORMAL } from './bestFitNormals.js';
 import { UNLIT_DEFAULT_ROUGHNESS } from './unshadedRoughness.js';
+import { ROUGHNESS_FADE } from './ssrShaders.js';
 import { installUnlitVaryings, UNLIT_NORMAL_VARYING } from '../shaderPatch/unlitVaryings.js';
 
 const { reflection, bestFitNormals, state } = SSR_UNIFORM;
@@ -40,7 +41,7 @@ const SSR_FUNCTIONS = /* glsl */ `
 uniform highp sampler2D ${reflection};
 ${PREPASS_PARS}
 float godotSsrRoughnessFade( float roughness ) {
-	return smoothstep( 0.0, 1.0, 1.0 - clamp( ( roughness - 0.6 ) / ( 0.7 - 0.6 ), 0.0, 1.0 ) );
+	return smoothstep( 0.0, 1.0, 1.0 - clamp( ( roughness - ${ROUGHNESS_FADE.start} ) / ( ${ROUGHNESS_FADE.end} - ${ROUGHNESS_FADE.start} ), 0.0, 1.0 ) );
 }
 
 vec4 godotScreenSpaceReflection( float roughness ) {

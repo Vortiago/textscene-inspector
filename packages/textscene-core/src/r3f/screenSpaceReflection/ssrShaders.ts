@@ -528,48 +528,43 @@ void main() {
 const FILTER_WEIGHTS = `0.07130343198685299, 0.1315141208431224, 0.18987923288883812, 0.21460642856237303,
 	0.18987923288883812, 0.1315141208431224, 0.07130343198685299`;
 
-/**
- * One level of the reflection's roughness chain (`screen_space_reflection_filter.glsl`): the level
- * before, read bilinearly at this level's texels, then blurred by a 7-tap gaussian across, then
- * down, each tap weighted by its validity. Godot blurs a row it caches past the edge from the
- * clamped read there, so the pass blurs each row of the 7 itself.
- */
-export const FILTER_FRAGMENT = /* glsl */ `
-uniform highp sampler2D chain;
+/** The taps on each side of the roughness filter's centre. */
+export const FILTER_RADIUS = 3;
+
+/** Each tap weighted by its validity, more so at a deeper mip (`screen_space_reflection_filter.glsl:29-31`). */
+const FILTER_WEIGHT = /* glsl */ `
 uniform int mip_level;
 
 const float WEIGHTS[ 7 ] = float[ 7 ]( ${FILTER_WEIGHTS} );
 
-ivec2 screen_size;
-
 float get_weight( vec4 c ) {
 	return mix( clamp( float( mip_level ) * 0.2, 0.0, 1.0 ), 1.0, c.a );
 }
+`;
+
+/**
+ * The first half of one level of the reflection's roughness chain (`screen_space_reflection_filter.glsl`):
+ * the level before, read bilinearly at this level's texels, then blurred by a 7-tap gaussian across.
+ * Godot caches and blurs the rows past each edge from the clamped read there, so this pass draws
+ * those rows too, row `y` at row `y + FILTER_RADIUS`.
+ */
+export const FILTER_ACROSS_FRAGMENT = /* glsl */ `
+uniform highp sampler2D chain;
+${FILTER_WEIGHT}
+ivec2 screen_size;
 
 vec4 get_sample( ivec2 pixel_pos ) {
 	return textureLod( chain, ( vec2( pixel_pos ) + 0.5 ) / vec2( screen_size ), float( mip_level - 1 ) );
 }
 
-vec4 apply_gaus_horz( ivec2 pixel_pos ) {
-	vec4 c = vec4( 0.0 );
-	float w = 0.0;
-	for ( int i = 0; i < 7; i ++ ) {
-		vec4 tap = get_sample( pixel_pos + ivec2( i - 3, 0 ) );
-		float tap_weight = WEIGHTS[ i ] * get_weight( tap );
-		c += tap * tap_weight;
-		w += tap_weight;
-	}
-	return w > 0.0 ? c / w : vec4( 0.0 );
-}
-
 void main() {
-	ivec2 pixel_pos = ivec2( gl_FragCoord.xy );
+	ivec2 pixel_pos = ivec2( gl_FragCoord.xy ) - ivec2( 0, ${FILTER_RADIUS} );
 	screen_size = max( textureSize( chain, 0 ) >> mip_level, ivec2( 1 ) );
 
 	vec4 c = vec4( 0.0 );
 	float w = 0.0;
 	for ( int i = 0; i < 7; i ++ ) {
-		vec4 tap = apply_gaus_horz( pixel_pos + ivec2( 0, i - 3 ) );
+		vec4 tap = get_sample( pixel_pos + ivec2( i - 3, 0 ) );
 		float tap_weight = WEIGHTS[ i ] * get_weight( tap );
 		c += tap * tap_weight;
 		w += tap_weight;
@@ -579,9 +574,42 @@ void main() {
 `;
 
 /**
+ * The second half: the blur across, blurred by the same gaussian down (`:68-101`). Two passes of 7
+ * taps, where one pass would read 49 texels of the level before for each texel.
+ */
+export const FILTER_DOWN_FRAGMENT = /* glsl */ `
+uniform highp sampler2D across;
+${FILTER_WEIGHT}
+void main() {
+	ivec2 pixel_pos = ivec2( gl_FragCoord.xy );
+
+	vec4 c = vec4( 0.0 );
+	float w = 0.0;
+	for ( int i = 0; i < 7; i ++ ) {
+		vec4 tap = texelFetch( across, pixel_pos + ivec2( 0, i ), 0 );
+		float tap_weight = WEIGHTS[ i ] * get_weight( tap );
+		c += tap * tap_weight;
+		w += tap_weight;
+	}
+	gl_FragColor = w > 0.0 ? c / w : vec4( 0.0 );
+}
+`;
+
+/** The roughness from which the scene shows none of a reflection (`scene_forward_clustered.glsl:2204`). */
+export const ROUGHNESS_FADE = { start: 0.6, end: 0.7 } as const;
+
+/**
+ * A stored roughness from which the scene's own roughness is past the fade's end: a stored roughness
+ * is the scene's within half a step of its 127.
+ */
+const SHOWN_ROUGHNESS_LIMIT = `( ${ROUGHNESS_FADE.end} + 1.0 / 127.0 )`;
+
+/**
  * The half-size reflection at full size (`screen_space_reflection_resolve.glsl`): the four nearest
  * half-size texels at their filtered mip, the tone map undone, weighted by how close each one's
- * depth, normal and roughness come to this pixel's, and bilinearly.
+ * depth, normal and roughness come to this pixel's, and bilinearly. With `SKIPS_UNREFLECTED`, a
+ * pixel the scene shows no reflection at, on the background or past the fade, reads zero. Only a
+ * frame of one sample defines it: a pixel of several shows the reflection of every sample's surface.
  */
 export const RESOLVE_FRAGMENT = /* glsl */ `
 uniform highp sampler2D source_depth;
@@ -638,6 +666,13 @@ void main() {
 	vec4 normal_roughness = texelFetch( source_normal_roughness, threePixel, 0 );
 	vec3 normal = normalize( normal_roughness.xyz * 2.0 - 1.0 );
 	float roughness = storedRoughness( normal_roughness.w );
+
+	#ifdef SKIPS_UNREFLECTED
+		if ( depth == 0.0 || roughness >= ${SHOWN_ROUGHNESS_LIMIT} ) {
+			gl_FragColor = vec4( 0.0 );
+			return;
+		}
+	#endif
 
 	vec2 half_tex_coord = ( vec2( pixel_pos ) + 0.5 ) * 0.5;
 	vec2 bilinear_weights = fract( half_tex_coord );

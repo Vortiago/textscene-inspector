@@ -14,7 +14,8 @@ import type { ReflectionBuffers } from './reflectionBuffers.js';
 import {
   DEPTH_COPY_FRAGMENT,
   DOWNSAMPLE_FRAGMENT,
-  FILTER_FRAGMENT,
+  FILTER_ACROSS_FRAGMENT,
+  FILTER_DOWN_FRAGMENT,
   FULL_SIZE_FRAGMENT,
   HIZ_FRAGMENT,
   LAST_FRAME_FRAGMENT,
@@ -38,6 +39,17 @@ export interface TraceInputs {
 function multipleTargetPass(pass: THREE.ShaderMaterial): THREE.ShaderMaterial {
   pass.glslVersion = THREE.GLSL3;
   return pass;
+}
+
+function resolvePass(): THREE.ShaderMaterial {
+  return namedUniformPass('SsrResolve', RESOLVE_FRAGMENT, [
+    'source_depth',
+    'source_normal_roughness',
+    'source_depth_half',
+    'source_normal_roughness_half',
+    'source_color',
+    'source_mip_level',
+  ]);
 }
 
 /** One set of passes per renderer, as each pass is (`fullScreenPass.ts`). */
@@ -65,15 +77,10 @@ const passesOf = perObject((_renderer: THREE.WebGLRenderer) => ({
       'orthogonal',
     ])
   ),
-  filter: namedUniformPass('SsrFilter', FILTER_FRAGMENT, ['chain', 'mip_level']),
-  resolve: namedUniformPass('SsrResolve', RESOLVE_FRAGMENT, [
-    'source_depth',
-    'source_normal_roughness',
-    'source_depth_half',
-    'source_normal_roughness_half',
-    'source_color',
-    'source_mip_level',
-  ]),
+  filterAcross: namedUniformPass('SsrFilterAcross', FILTER_ACROSS_FRAGMENT, ['chain', 'mip_level']),
+  filterDown: namedUniformPass('SsrFilterDown', FILTER_DOWN_FRAGMENT, ['across', 'mip_level']),
+  resolve: resolvePass(),
+  resolveOneSample: Object.assign(resolvePass(), { defines: { SKIPS_UNREFLECTED: '' } }),
   fullSize: namedUniformPass('SsrFullSize', FULL_SIZE_FRAGMENT, ['source_color', 'source_mip_level']),
   lastFrame: namedUniformPass('SsrLastFrame', LAST_FRAME_FRAGMENT, ['frame', 'blockSize']),
 }));
@@ -192,8 +199,10 @@ function drawRoughnessChain(renderer: THREE.WebGLRenderer, passes: Passes, buffe
   const { chain } = buffers;
   renderer.copyTextureToTexture(buffers.trace.textures[0]!, chain.texture, null, null, 0, 0);
   for (let level = 1; level < buffers.mipCount; level++) {
+    const across = buffers.chainAcrossLevel(level);
     const target = buffers.chainLevel(level);
-    draw(renderer, passes.filter, { chain: chain.texture, mip_level: level }, target);
+    draw(renderer, passes.filterAcross, { chain: chain.texture, mip_level: level }, across);
+    draw(renderer, passes.filterDown, { across: across.texture, mip_level: level }, target);
     renderer.copyTextureToTexture(target.texture, chain.texture, null, null, 0, level);
   }
 }
@@ -211,7 +220,8 @@ function drawReflection(renderer: THREE.WebGLRenderer, passes: Passes, buffers: 
     source_depth_half: buffers.hiz.texture,
     source_normal_roughness_half: buffers.normalRoughness.texture,
   };
-  draw(renderer, passes.resolve, { ...color, ...halfSize }, buffers.reflection);
+  const resolve = buffers.resolved ? passes.resolve : passes.resolveOneSample;
+  draw(renderer, resolve, { ...color, ...halfSize }, buffers.reflection);
 }
 
 /**

@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { ssrMipCount, ssrTraceSize } from '../../godot/rendering/environment/screenSpaceReflection.js';
 import { createPassTarget } from '../environment/passTarget.js';
 import { reversedTexelRows, type TexelPlacement } from '../texelCopy.js';
+import { FILTER_RADIUS } from './ssrShaders.js';
 
 /**
  * What each mip of a chain from mip 1 renders into before it is copied into that mip, as WebGL reads
@@ -29,6 +30,9 @@ const HALF_FLOAT_LINEAR: THREE.RenderTargetOptions = {
   minFilter: THREE.LinearFilter,
   magFilter: THREE.LinearFilter,
 };
+
+/** The roughness filter's blur across, kept at the 32 bits Godot's shared cache holds it in. */
+const FLOAT_ACROSS: THREE.RenderTargetOptions = { ...NEAREST, type: THREE.FloatType };
 
 /** Godot's R32_SFLOAT depth pyramid. */
 const DEPTH_LEVEL: THREE.RenderTargetOptions = { ...NEAREST, type: THREE.FloatType, format: THREE.RedFormat };
@@ -73,6 +77,8 @@ export class ReflectionBuffers {
   /** The traced colour, blurred more at each mip by the roughness filter. */
   readonly chain: THREE.WebGLRenderTarget;
   private readonly chainLevels: LevelTargets;
+  /** Each mip of the chain from 1 blurred across, with the rows past each edge that the blur down reads. */
+  private readonly chainAcross: LevelTargets;
   /** The reflection at the world buffer's size, as the colour pass reads it. */
   readonly reflection: THREE.WebGLRenderTarget;
   /** The last frame, at the trace's size, cleared to zero before the first frame. */
@@ -103,6 +109,13 @@ export class ReflectionBuffers {
       minFilter: THREE.LinearMipmapLinearFilter,
     });
     this.chainLevels = levelTargets(trace.width, trace.height, this.mipCount, HALF_FLOAT_LINEAR);
+    this.chainAcross = levelTargets(
+      trace.width,
+      trace.height,
+      this.mipCount,
+      FLOAT_ACROSS,
+      2 * FILTER_RADIUS
+    );
     this.reflection = createPassTarget('SsrReflection', NEAREST);
     this.reflection.setSize(width, height);
     this.lastFrame = createPassTarget('SsrLastFrame', HALF_FLOAT_LINEAR);
@@ -142,6 +155,11 @@ export class ReflectionBuffers {
     return this.chainLevels[level - 1]!;
   }
 
+  /** The target the blur across of mip `level` of the roughness chain draws into, from 1. */
+  chainAcrossLevel(level: number): THREE.WebGLRenderTarget {
+    return this.chainAcross[level - 1]!;
+  }
+
   dispose(): void {
     for (const prepass of this.samplePrepasses) prepass.depthTexture?.dispose();
     for (const target of this.targets()) target.dispose();
@@ -150,7 +168,14 @@ export class ReflectionBuffers {
   private targets(): THREE.WebGLRenderTarget[] {
     const own = [this.hiz, this.normalRoughness, this.trace, this.chain, this.reflection, this.lastFrame];
     const resolved = this.resolved ? [this.resolved] : [];
-    return [...this.samplePrepasses, ...resolved, ...own, ...this.hizLevels, ...this.chainLevels];
+    return [
+      ...this.samplePrepasses,
+      ...resolved,
+      ...own,
+      ...this.hizLevels,
+      ...this.chainLevels,
+      ...this.chainAcross,
+    ];
   }
 }
 
@@ -197,14 +222,17 @@ function chainTarget(
   return target;
 }
 
+/** A target for each mip from 1 of a chain `width` by `height`, each `extraRows` taller than its mip. */
 function levelTargets(
   width: number,
   height: number,
   mipCount: number,
-  options: THREE.RenderTargetOptions
+  options: THREE.RenderTargetOptions,
+  extraRows = 0
 ): LevelTargets {
   return Array.from({ length: mipCount - 1 }, (_, index) => {
     const level = index + 1;
-    return new THREE.WebGLRenderTarget(Math.max(1, width >> level), Math.max(1, height >> level), options);
+    const rows = Math.max(1, height >> level) + extraRows;
+    return new THREE.WebGLRenderTarget(Math.max(1, width >> level), rows, options);
   });
 }
