@@ -2,7 +2,7 @@ diff --git a/dist/react-three-test-renderer.cjs.dev.js b/dist/react-three-test-r
 index 4034c77ba7d711a6f4f812a1d98efc9b8d1a3ff6..5d7e07a0fb85c526b7b2cc70b95f781ae5e3bc55 100644
 --- a/dist/react-three-test-renderer.cjs.dev.js
 +++ b/dist/react-three-test-renderer.cjs.dev.js
-@@ -571,7 +571,8 @@ class WebGL2RenderingContext {
+@@ -575,7 +575,8 @@ class WebGL2RenderingContext {
      this.drawingBufferHeight = canvas.height;
      for (const method of functions) {
        var _this$method;
@@ -16,7 +16,7 @@ diff --git a/dist/react-three-test-renderer.cjs.prod.js b/dist/react-three-test-
 index 4034c77ba7d711a6f4f812a1d98efc9b8d1a3ff6..5d7e07a0fb85c526b7b2cc70b95f781ae5e3bc55 100644
 --- a/dist/react-three-test-renderer.cjs.prod.js
 +++ b/dist/react-three-test-renderer.cjs.prod.js
-@@ -571,7 +571,8 @@ class WebGL2RenderingContext {
+@@ -575,7 +575,8 @@ class WebGL2RenderingContext {
      this.drawingBufferHeight = canvas.height;
      for (const method of functions) {
        var _this$method;
@@ -30,7 +30,7 @@ diff --git a/dist/react-three-test-renderer.esm.js b/dist/react-three-test-rende
 index c2d22106d84201c0ff85cdf57483773e39462d3a..31c660f5c8c962daf16aac46faa49040d8f5bdd6 100644
 --- a/dist/react-three-test-renderer.esm.js
 +++ b/dist/react-three-test-renderer.esm.js
-@@ -548,7 +548,8 @@ class WebGL2RenderingContext {
+@@ -552,7 +552,8 @@ class WebGL2RenderingContext {
      this.drawingBufferHeight = canvas.height;
      for (const method of functions) {
        var _this$method;

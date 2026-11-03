@@ -1,7 +1,7 @@
 /**
  * What `scene.environment` holds while a sky lights the scene. three compiles the environment
- * lighting that the sky lighting patch replaces only for a scene environment in the CubeUV layout
- * (three r186 `WebGLPrograms.js:60-64`, `lights_fragment_maps.glsl.js`). No program samples it:
+ * lighting that the sky lighting patch replaces only for a prefiltered (PMREM) scene environment
+ * (three r187 `WebGLPrograms.js:60-61,129`, `lights_fragment_maps.glsl.js`). No program samples it:
  * every reader of the sky samples the shown sky's radiance layers (`skyRadiance.ts`).
  */
 
@@ -9,15 +9,14 @@ import * as THREE from 'three';
 import { releasedOnUnmount } from '../sharedTexture';
 
 /**
- * The height of the smallest CubeUV layout three makes, from a cube of 16 (r186 `PMREMGenerator.js:289`).
- * A shorter one gives three's CubeUV defines a negative last mip, which fails to compile.
+ * three reads a prefiltered environment's size and last mip from its `mipmaps` (r187
+ * `WebGLPrograms.js:191,225-226`), as `PMREMGenerator` lists them. The switch never uploads, as
+ * three uploads a cube's `mipmaps` as pixel levels: its sampler binds no texture, which no program reads.
  */
-const CUBE_UV_HEIGHT = 4 * 16;
-
-function createEnvironmentSwitch(): THREE.DataTexture {
-  const environment = new THREE.DataTexture(new Uint8Array(4 * CUBE_UV_HEIGHT), 1, CUBE_UV_HEIGHT);
-  environment.mapping = THREE.CubeUVReflectionMapping;
-  environment.needsUpdate = true;
+function createEnvironmentSwitch(): THREE.CubeTexture {
+  const environment = new THREE.CubeTexture();
+  environment.isPMREMTexture = true;
+  environment.mipmaps = [{ width: 1, height: 1 } as THREE.CompressedTextureMipmap];
   return environment;
 }
 

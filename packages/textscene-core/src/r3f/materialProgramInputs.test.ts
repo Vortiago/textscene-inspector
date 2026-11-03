@@ -117,16 +117,16 @@ describe('materialProgramInputs', () => {
       ['combine', { combine: THREE.MixOperation }],
       ['dithering', { dithering: true }],
       ['the material fog flag', { fog: true }],
-      // The physical features, each a `> 0` boolean at `:140-145` and a layer
-      // bit of its own (`:509`, `:511`, `:527`, `:533`, `:577`, `:579`).
+      // The physical features, each a `> 0` boolean at three 0.187.0 `:140-147` and a layer
+      // bit of its own (`:527`, `:529`, `:545`, `:551`, `:553`, `:555`, `:599`, `:601`).
       ['clearcoat', { clearcoat: 0.5 }],
       ['sheen', { sheen: 0.5 }],
       ['anisotropy', { anisotropy: 0.5 }],
       ['transmission', { transmission: 0.5 }],
       ['iridescence', { iridescence: 0.5 }],
       ['dispersion', { dispersion: 0.5 }],
-      // three 0.186.0 `WebGLPrograms.js:143`, layer bit 24 at `:541-542`.
       ['retroreflectivity', { retroreflectivity: 0.5 }],
+      ['diffuseRoughness', { diffuseRoughness: 0.5 }],
       ['flatShading', { flatShading: true }],
     ];
 

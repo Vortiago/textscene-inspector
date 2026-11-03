@@ -40,16 +40,16 @@ catalog:
   react-dom: ^19.3
   '@types/react': ^19.3
   '@types/react-dom': ^19.3
-  '@react-three/fiber': ^9.8
-  '@react-three/drei': ^10.7
-  postprocessing: ^6.39.5
-  '@react-three/test-renderer': ^9.1
+  '@react-three/fiber': ^9.8.2
+  '@react-three/drei': ^10.7.9
+  postprocessing: ^6.39.6
+  '@react-three/test-renderer': ^9.1.1
   # NOTE: ^5 latest (5.2.0) declares peer vite ^4.2 || ^5 || ^6 || ^7 || ^8,
   # so it spans the vite 8 workspace pin. ^6.0 targets vite ^8 exclusively —
   # move there in its own bump if 5.x ever lags behind a vite major.
   '@vitejs/plugin-react': ^6.1
-  three: ^0.186
-  '@types/three': ^0.186
+  three: ^0.187
+  '@types/three': ^0.187
 
   # Procedural noise (NoiseTexture2D / FastNoiseLite). The official JS port of
   # the same upstream FastNoiseLite that Godot vendors in

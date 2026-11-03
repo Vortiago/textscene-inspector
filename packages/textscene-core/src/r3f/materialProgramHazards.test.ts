@@ -117,7 +117,7 @@ const DECLINED_TEXTURE_SLOTS: Readonly<Record<string, string>> = {
     'Godot binds no bump slot; three reads the term as `!!bumpMap && wireframe === false` (`:132`), so modelling it would key `wireframe` for a slot nothing can fill',
 };
 
-/** three 0.186.0, `WebGLPrograms.js:56-400`. Every field the program's identity is decided from. */
+/** three 0.187.0, `WebGLPrograms.js:54-409`. Every field the program's identity is decided from. */
 const BAKED_MATERIAL_FIELDS = [
   'alphaHash',
   'alphaMap',
@@ -136,6 +136,8 @@ const BAKED_MATERIAL_FIELDS = [
   'customProgramCacheKey',
   'defines',
   'depthPacking',
+  'diffuseRoughness',
+  'diffuseRoughnessMap',
   'dispersion',
   'displacementMap',
   'dithering',
@@ -187,7 +189,7 @@ const BAKED_MATERIAL_FIELDS = [
 ];
 
 /**
- * three 0.185.1, `WebGLRenderer.js:2388-2494`. A drift detector, not a proof: this
+ * three 0.187.0, `WebGLRenderer.js:2451-2559`. A drift detector, not a proof: this
  * `fog` is the scene's, re-checked only while `material.fog === true`, yet name
  * matching subtracts it. The factory keys `fog` anyway, which costs nothing.
  */
@@ -200,7 +202,6 @@ const RECHECKED_PARAMETERS = [
   'instancing',
   'instancingColor',
   'instancingMorph',
-  'lightProbeGrid',
   'lightsStateVersion',
   'morphColors',
   'morphNormals',
@@ -209,6 +210,7 @@ const RECHECKED_PARAMETERS = [
   'needsLights',
   'numClippingPlanes',
   'numIntersection',
+  'numLightProbeGrids',
   'outputColorSpace',
   'skinning',
   'toneMapping',
@@ -217,8 +219,8 @@ const RECHECKED_PARAMETERS = [
 ];
 
 /**
- * three 0.185.1, `Material.js:494-502` and `:1204-1208`. Subclass accessors are
- * not subtracted: `MeshPhysicalMaterial.js`'s six `> 0` crossings bump nothing on a
+ * three 0.187.0, `Material.js:495-503` and `:1246-1250`. Subclass accessors are
+ * not subtracted: `MeshPhysicalMaterial.js`'s `> 0` crossings bump nothing on a
  * `<meshStandardMaterial>`, which is why `PHYSICAL_FEATURES` is keyed.
  */
 const VERSION_BUMPING_ACCESSORS = ['alphaTest', 'needsUpdate'];

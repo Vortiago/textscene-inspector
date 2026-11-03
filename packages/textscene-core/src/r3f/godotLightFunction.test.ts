@@ -39,11 +39,15 @@ describe('the installed light function', () => {
     expect(sum).toContain('specularBRDF *= godotSpecularAmount;');
   });
 
-  it('drops the Fresnel weight from every diffuse line', () => {
+  it('drops the Fresnel weight from every Lambert diffuse line', () => {
     const patched = godotChunks()[CHUNK];
     expect(patched).not.toContain('* ( 1.0 - F )');
-    expect(patched).not.toContain('* ( 1.0 - singleScattering - multiScattering )');
-    expect(patched).not.toContain('* ( 1.0 - totalScatteringDielectric )');
+    // three's EON diffuse lines keep their weight: they compile only for `diffuseRoughness > 0`,
+    // which Godot has no property for.
+    expect(patched).not.toContain(
+      'BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - singleScattering - multiScattering )'
+    );
+    expect(patched).not.toContain('material.diffuseContribution * ( 1.0 - totalScatteringDielectric )');
   });
 
   it("defines Godot's light function before the direct light function calls it", () => {

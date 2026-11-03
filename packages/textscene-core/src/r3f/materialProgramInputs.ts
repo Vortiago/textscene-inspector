@@ -2,7 +2,7 @@
  * `materialProgramInputs()`: a material's props and its React `key` from one
  * merged object. three bakes slot presence and `defines` into the program at
  * first compile, so the key remounts a material whose program inputs or `attach` change.
- * A bare `:NNN` cites three 0.185.1's `WebGLPrograms.js`, where identity is decided.
+ * A bare `:NNN` cites three 0.187.0's `WebGLPrograms.js`, where identity is decided.
  */
 import * as THREE from 'three';
 import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
@@ -30,7 +30,7 @@ export interface ProgramShader {
 export interface ProgramInjection {
   /** Distinguishes this patched program from an unpatched one. */
   readonly cacheKey: string;
-  /** three calls it as a method of the material it compiles, with itself (`WebGLRenderer.js:2248`). */
+  /** three calls it as a method of the material it compiles, with itself (`WebGLRenderer.js:2272`). */
   readonly onBeforeCompile: (this: THREE.Material, shader: ProgramShader) => void;
 }
 
@@ -83,8 +83,8 @@ export interface MaterialProgram<P> {
 }
 
 /**
- * The `> 0` feature booleans (`:140-145`), each its own layer bit: a slider inside
- * the band stays a uniform and a crossing rebuilds, which the element-type switch
+ * The `> 0` feature booleans (`:140-147`), each its own layer bit (`:527-602`): a slider
+ * inside the band stays a uniform and a crossing rebuilds, which the element-type switch
  * misses when a second feature holds the upgrade.
  */
 const PHYSICAL_FEATURES = [
@@ -94,16 +94,15 @@ const PHYSICAL_FEATURES = [
   'transmission',
   'iridescence',
   'dispersion',
-  // three 0.186.0 added this one: `material.retroreflectivity > 0` at `WebGLPrograms.js:143`,
-  // layer bit 24 at `:541-542`.
   'retroreflectivity',
+  'diffuseRoughness',
 ] as const;
 
 type PhysicalFeature = (typeof PHYSICAL_FEATURES)[number];
 
 /**
  * Every `!! material.<slot>` presence term, keyed as its `…MapUv` term
- * (`:444-466`), with the feature three also requires (`:147-169`) or `null`. One
+ * (`:459-482`), with the feature three also requires (`:149-167`) or `null`. One
  * table, so no slot is added without its gate decided. It lists what three bakes,
  * bound here or not, except `bumpMap`: Godot binds no bump slot, and three reads
  * it as `!!bumpMap && wireframe === false` (`:132`), so keying it would key
@@ -128,6 +127,7 @@ const TEXTURE_SLOT_GATES: Readonly<Record<string, PhysicalFeature | null>> = {
   clearcoatMap: 'clearcoat',
   clearcoatNormalMap: 'clearcoat',
   clearcoatRoughnessMap: 'clearcoat',
+  diffuseRoughnessMap: 'diffuseRoughness',
   iridescenceMap: 'iridescence',
   iridescenceThicknessMap: 'iridescence',
   sheenColorMap: 'sheen',
@@ -316,9 +316,9 @@ function cacheKeyThunk(cacheKey: string): () => string {
 
 /**
  * Composed strings only: a patch's function identity never enters the key. Not
- * keyed, as `setProgram` re-checks them: `clippingPlanes` (`:354`, `WebGLRenderer.js:2456-2458`),
+ * keyed, as `setProgram` re-checks them: `clippingPlanes` (`:367`, `WebGLRenderer.js:2516-2518`),
  * and `envMap`, `vertexAlphas`, `vertexTangents`, scene `fog` and tone mapping
- * (`WebGLRenderer.js:2390-2494`).
+ * (`WebGLRenderer.js:2451-2559`).
  */
 function programKey(props: Record<string, unknown>, cacheKey: string): string {
   let key = '';
