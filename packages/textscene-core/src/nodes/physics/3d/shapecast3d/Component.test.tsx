@@ -3,7 +3,7 @@
  * the sweep line and offset wireframe ported from shape_cast_3d.cpp:498-515, the wireframe from
  * Shape3D::get_debug_mesh_lines. The node's own debug material never varies.
  */
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { ReactNode } from 'react';
@@ -55,11 +55,14 @@ const convexShape: TscnInternalResource = {
 };
 
 /**
- * The gizmo imports three's ConvexHull lazily for a convex shape, which reads a file the first
- * time. ConvexGeometry imports it as well, so this warm import leaves the gizmo's a cache hit,
- * which lands within the settle.
+ * The gizmo imports three's ConvexHull lazily for a convex shape. Under CI load that import outlasts
+ * the one timer tick of `settleLoads`, so the module lands late here on every run, and the hull test
+ * waits for the wireframe itself.
  */
-beforeAll(() => import('three/addons/geometries/ConvexGeometry.js'));
+vi.mock('three/addons/math/ConvexHull.js', async (importOriginal) => {
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  return importOriginal();
+});
 
 interface RenderOptions {
   selectedPath?: string | null;
@@ -343,17 +346,16 @@ describe('<ShapeCast3D> shape wireframe', () => {
       </SceneResourcesProvider>
     );
     const renderer = await ReactThreeTestRenderer.create(tree);
-    // Lets the hull's lazy import and its state land, then re-flushes so the fiber snapshot picks
-    // up the commit, as CollisionShape3D's hull test does.
-    await settleLoads();
-    await renderer.update(tree);
-
-    const lines = renderer.scene
-      .findAllByType('LineSegments')
-      .map((line) => line.instance as THREE.LineSegments);
-    // The unique pairs of the triangulated cube hull: the 12 boundary edges and the 6 face diagonals,
-    // which ConvexHullComputer copies one per canonical a < b pair (convex_hull.cpp:2269-2278).
-    const wire = await lineOf(lines, 36);
+    const castLinesNow = () =>
+      renderer.scene.findAllByType('LineSegments').map((line) => line.instance as THREE.LineSegments);
+    // The hull draws once its lazy import lands, so each try re-flushes the fiber snapshot. It holds
+    // the 12 boundary edges and the 6 face diagonals of the triangulated cube, which
+    // ConvexHullComputer copies one per canonical a < b pair (convex_hull.cpp:2269-2278).
+    const wire = await vi.waitFor(async () => {
+      await settleLoads();
+      await renderer.update(tree);
+      return lineOf(castLinesNow(), 36);
+    });
     for (let i = 0; i < wire.length; i += 3) {
       const [x, y, z] = [wire[i]!, wire[i + 1]!, wire[i + 2]!].map((v) => Number(v.toFixed(6))) as [
         number,
