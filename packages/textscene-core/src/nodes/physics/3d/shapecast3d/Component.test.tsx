@@ -10,7 +10,9 @@ import type { ReactNode } from 'react';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import { heading } from '../../../../parser/testing/parserKit';
 import { GizmoScene, lineMaterials, lineOpacities } from '../../../../r3f/testing/GizmoScene';
-import { settleLoads } from '../../../../r3f/testing/settleLoads';
+import { settlePendingLoads } from '../../../../r3f/testing/settleLoads';
+import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { INSTANTIATED_GIZMO_COLOUR, gizmoAlpha } from '../../../../r3f/gizmo/gizmoVariant';
@@ -55,9 +57,9 @@ const convexShape: TscnInternalResource = {
 };
 
 /**
- * The gizmo imports three's ConvexHull lazily for a convex shape. Under CI load that import outlasts
- * the one timer tick of `settleLoads`, so the module lands late here on every run, and the hull test
- * waits for the wireframe itself.
+ * The gizmo imports three's ConvexHull lazily for a convex shape, and under CI load that import
+ * outlasts a timer tick. The delay makes it late on every run, so the hull test proves it waits for
+ * the chunk itself.
  */
 vi.mock('three/addons/math/ConvexHull.js', async (importOriginal) => {
   await new Promise((resolve) => setTimeout(resolve, 20));
@@ -111,7 +113,10 @@ async function castLines(
   props: Record<string, string> = {},
   options: RenderOptions = {}
 ): Promise<THREE.LineSegments[]> {
-  const renderer = await renderCast(options.selectedPath ?? 'Cast', props, options);
+  return linesOf(await renderCast(options.selectedPath ?? 'Cast', props, options));
+}
+
+function linesOf(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>): THREE.LineSegments[] {
   return renderer.scene.findAllByType('LineSegments').map((line) => line.instance as THREE.LineSegments);
 }
 
@@ -333,29 +338,28 @@ describe('<ShapeCast3D> shape wireframe', () => {
   });
 
   it('draws the triangulated hull edges of a convex shape, every corner offset by the target', async () => {
+    const { loader } = createFakeResourceLoader();
     const tree = (
-      <SceneResourcesProvider internalResources={[convexShape]}>
-        <GizmoScene nodePath="Cast" selectedPath="Cast">
-          <ShapeCast3D
-            node={castNode({
-              shape: 'SubResource("ConvexPolygonShape3D_1")',
-              target_position: 'Vector3(0, -1, 0)',
-            })}
-          />
-        </GizmoScene>
-      </SceneResourcesProvider>
+      <ResourceLoaderProvider loader={loader}>
+        <SceneResourcesProvider internalResources={[convexShape]}>
+          <GizmoScene nodePath="Cast" selectedPath="Cast">
+            <ShapeCast3D
+              node={castNode({
+                shape: 'SubResource("ConvexPolygonShape3D_1")',
+                target_position: 'Vector3(0, -1, 0)',
+              })}
+            />
+          </GizmoScene>
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
     );
     const renderer = await ReactThreeTestRenderer.create(tree);
-    const castLinesNow = () =>
-      renderer.scene.findAllByType('LineSegments').map((line) => line.instance as THREE.LineSegments);
-    // The hull draws once its lazy import lands, so each try re-flushes the fiber snapshot. It holds
-    // the 12 boundary edges and the 6 face diagonals of the triangulated cube, which
+    await settlePendingLoads(loader);
+    // Re-flushes so the test renderer's fiber snapshot picks up the hull's commit. The hull wireframe
+    // holds the 12 boundary edges and the 6 face diagonals of the triangulated cube, which
     // ConvexHullComputer copies one per canonical a < b pair (convex_hull.cpp:2269-2278).
-    const wire = await vi.waitFor(async () => {
-      await settleLoads();
-      await renderer.update(tree);
-      return lineOf(castLinesNow(), 36);
-    });
+    await renderer.update(tree);
+    const wire = lineOf(linesOf(renderer), 36);
     for (let i = 0; i < wire.length; i += 3) {
       const [x, y, z] = [wire[i]!, wire[i + 1]!, wire[i + 2]!].map((v) => Number(v.toFixed(6))) as [
         number,

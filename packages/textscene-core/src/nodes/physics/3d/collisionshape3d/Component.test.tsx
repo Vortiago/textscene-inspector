@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionShape3D } from './Component';
@@ -6,7 +6,9 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ViewportModeProvider } from '../../../../r3f/contexts/ViewportModeContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { CollisionShape3DProperties } from './types';
-import { settleLoads } from '../../../../r3f/testing/settleLoads';
+import { settlePendingLoads } from '../../../../r3f/testing/settleLoads';
+import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 
 const boxShape: TscnInternalResource = {
   id: 'BoxShape3D_1',
@@ -52,12 +54,6 @@ async function render(
   );
 }
 
-/**
- * The gizmo `import()`s three's ConvexGeometry lazily, which reads a file the first time. Loading it
- * here first leaves the gizmo's import a cache hit, which lands within `settleLoads`'s one tick.
- */
-beforeAll(() => import('three/addons/geometries/ConvexGeometry.js'));
-
 describe('<CollisionShape3D> gizmo', () => {
   it('renders NO geometry when showCollisions is off (default)', async () => {
     const renderer = await render(false);
@@ -80,18 +76,21 @@ describe('<CollisionShape3D> gizmo', () => {
   });
 
   it('renders a convex-hull wireframe for ConvexPolygonShape3D (lazy ConvexGeometry)', async () => {
+    const { loader } = createFakeResourceLoader();
     const tree = (
-      <ViewportModeProvider initialShowCollisions>
-        <SceneResourcesProvider internalResources={[convexShape]}>
-          <CollisionShape3D node={makeNode({ shape: 'SubResource("ConvexPolygonShape3D_1")' })} />
-        </SceneResourcesProvider>
-      </ViewportModeProvider>
+      <ResourceLoaderProvider loader={loader}>
+        <ViewportModeProvider initialShowCollisions>
+          <SceneResourcesProvider internalResources={[convexShape]}>
+            <CollisionShape3D node={makeNode({ shape: 'SubResource("ConvexPolygonShape3D_1")' })} />
+          </SceneResourcesProvider>
+        </ViewportModeProvider>
+      </ResourceLoaderProvider>
     );
     const renderer = await ReactThreeTestRenderer.create(tree);
 
-    // Lets the hull's setState land, then re-flushes so the test renderer's fiber snapshot picks
+    // Lets the hull's lazy chunk land, then re-flushes so the test renderer's fiber snapshot picks
     // up the commit.
-    await settleLoads();
+    await settlePendingLoads(loader);
     await renderer.update(tree);
 
     const meshes = renderer.scene.findAll((n) => n.type === 'Mesh');
