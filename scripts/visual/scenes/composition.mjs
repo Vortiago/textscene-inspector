@@ -78,6 +78,14 @@ export const SCENE_COMPOSITION_SCENES = [
     file: 'unit-collision-shapes.tscn',
     collisions: true,
   },
+  // The one variable against `collision-shapes`: WorldBoundaryShape3D, drawn as Godot's square
+  // and normal ray in four planes, one with a non-unit normal. Thin lines, AA-sensitive.
+  {
+    name: 'collision-world-boundary',
+    file: 'unit-collision-world-boundary.tscn',
+    collisions: true,
+    camera: 'WorldBoundaryRoot/Camera',
+  },
   // Decal projects a local SVG checkerboard onto the floor its box intersects
   // (mixed per fragment), one plain and one tinted. The box gizmo
   // is a gizmo, which a capture draws only with `gizmos: true` (ADR-0056), so this is the runtime

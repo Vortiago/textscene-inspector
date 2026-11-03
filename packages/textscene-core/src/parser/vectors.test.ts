@@ -4,7 +4,7 @@
  * The `vec2Or` family in valueParsers.ts adds fallback-on-error.
  */
 import { describe, it, expect } from 'vitest';
-import { parseQuaternion, parseVector2, parseVector3 } from './vectors';
+import { parsePlane, parseQuaternion, parseVector2, parseVector3 } from './vectors';
 
 describe('parseVector2', () => {
   it('parses a standard vector', () => {
@@ -137,5 +137,19 @@ describe('parseVector2 on a Vector2i spelling', () => {
 describe('parseVector3 white space', () => {
   it('reads a literal with surrounding white space, which `get_token` skips (variant_parser.cpp:416-418)', () => {
     expect(parseVector3(' \tVector3(1, 2, 3) \t ')).toEqual({ x: 1, y: 2, z: 3 });
+  });
+});
+
+describe('parsePlane', () => {
+  it('reads the normal and the distance', () => {
+    expect(parsePlane('Plane(0, 1, 0, -3.5)')).toEqual({ normal: { x: 0, y: 1, z: 0 }, d: -3.5 });
+  });
+
+  it('throws on a missing component', () => {
+    expect(() => parsePlane('Plane(0, 1, 0)')).toThrow('Invalid Plane');
+  });
+
+  it('throws on a non-finite component', () => {
+    expect(() => parsePlane('Plane(1e999, 0, 0, 0)')).toThrow('Non-finite Plane');
   });
 });

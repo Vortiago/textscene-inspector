@@ -2013,6 +2013,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sky Panorama Nearest",
+    "file": "unit-sky-panorama-nearest.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sky Panorama Tres",
     "file": "unit-sky-panorama-tres.tscn",
     "category": "Other"
@@ -4036,6 +4041,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Collision Shapes",
     "file": "unit-collision-shapes.tscn",
+    "category": "Unit - Physics"
+  },
+  {
+    "name": "Collision World Boundary",
+    "file": "unit-collision-world-boundary.tscn",
     "category": "Unit - Physics"
   },
   {

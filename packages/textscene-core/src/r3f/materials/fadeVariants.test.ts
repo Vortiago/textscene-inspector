@@ -65,7 +65,7 @@ function discardCut(transparentFlag: boolean) {
 
 describe('cutBlends', () => {
   it('keeps the cut of the surface in both passes', () => {
-    const { unfaded, alphaPass } = cutBlends(discardCut(true));
+    const { unfaded, alphaPass } = cutBlends(discardCut(true), true);
     expect([unfaded, alphaPass]).toMatchObject([
       { alphaTest: 0.5, alphaHash: false },
       { alphaTest: 0.5, alphaHash: false },
@@ -73,22 +73,22 @@ describe('cutBlends', () => {
   });
 
   it('adds nothing to a cut surface in the opaque pass', () => {
-    expect(cutBlends(discardCut(true)).unfaded).not.toHaveProperty('blending');
+    expect(cutBlends(discardCut(true), true).unfaded).not.toHaveProperty('blending');
   });
 
   it('writes no depth in the alpha pass', () => {
-    expect(cutBlends(discardCut(true)).alphaPass).toMatchObject({
+    expect(cutBlends(discardCut(true), true).alphaPass).toMatchObject({
       transparent: true,
       depthWrite: false,
     });
   });
 
   it('writes alpha 1 past the cut in the alpha pass, as Godot does', () => {
-    expect(cutBlends(discardCut(true)).alphaPass.blending).toBe(THREE.NoBlending);
+    expect(cutBlends(discardCut(true), true).alphaPass.blending).toBe(THREE.NoBlending);
   });
 
   it('drops the texture alpha of a sprite without FLAG_TRANSPARENT in the alpha pass (edge case)', () => {
-    const { injection } = cutBlends(discardCut(false)).alphaPass;
+    const { injection } = cutBlends(discardCut(false), true).alphaPass;
     expect(patchedShader(injection!.onBeforeCompile, THREE.ShaderLib.basic.fragmentShader)).toContain(
       DROPS_ALBEDO_ALPHA
     );
