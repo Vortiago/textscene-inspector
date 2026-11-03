@@ -48,7 +48,7 @@ describe('installGodotScreenSpaceReflection', () => {
     installGodotScreenSpaceReflection();
     const fragment = THREE.ShaderLib.physical.fragmentShader;
     const output = fragment.indexOf(
-      'gl_FragColor = vec4( godotEncodeNormal( normal ) * 0.5 + 0.5, material.godotRoughness * ( 127.0 / 255.0 ) );'
+      'gl_FragColor = godotNormalRoughness( normal, material.godotRoughness );'
     );
 
     expect(output).toBeGreaterThan(fragment.indexOf('#include <lights_physical_fragment>'));
@@ -58,7 +58,15 @@ describe('installGodotScreenSpaceReflection', () => {
   it('writes the prepass output in the standard program as in the physical one', () => {
     installGodotScreenSpaceReflection();
 
-    expect(THREE.ShaderLib.standard.fragmentShader).toContain('godotEncodeNormal( normal )');
+    expect(THREE.ShaderLib.standard.fragmentShader).toContain(
+      'godotNormalRoughness( normal, material.godotRoughness )'
+    );
+  });
+
+  it("stores the roughness in Godot's static half, which every reader folds back", () => {
+    installGodotScreenSpaceReflection();
+
+    expect(THREE.ShaderLib.basic.fragmentShader).toContain('roughness * ( 127.0 / 255.0 )');
   });
 
   it('gives every lit material the shared reflection and its state', () => {
@@ -72,7 +80,9 @@ describe('installGodotScreenSpaceReflection', () => {
   it('writes an unshaded surface its interpolated normal, after its alpha cut and its roughness map read', () => {
     installGodotScreenSpaceReflection();
     const fragment = THREE.ShaderLib.basic.fragmentShader;
-    const output = fragment.indexOf(`godotEncodeNormal( ${UNLIT_NORMAL_VARYING} * godotUnlitFace )`);
+    const output = fragment.indexOf(
+      `godotNormalRoughness( ${UNLIT_NORMAL_VARYING} * godotUnlitFace, godotUnlitRoughness )`
+    );
 
     expect(output).toBeGreaterThan(fragment.indexOf('#include <alphahash_fragment>'));
     expect(output).toBeGreaterThan(fragment.indexOf('#include <specularmap_fragment>'));

@@ -17,16 +17,28 @@ import { installUnlitVaryings, UNLIT_NORMAL_VARYING } from '../shaderPatch/unlit
 const { reflection, bestFitNormals, state } = SSR_UNIFORM;
 
 /**
+ * What every program that writes the prepass reads: the state of the pass, and the encoded normal
+ * and roughness it writes. Godot marks a moving instance by writing one minus the stored roughness,
+ * which every reader folds back, so the static form stands for both.
+ */
+const PREPASS_PARS = /* glsl */ `
+uniform highp sampler2D ${bestFitNormals};
+uniform vec4 ${state};
+
+${GODOT_ENCODE_NORMAL}
+vec4 godotNormalRoughness( vec3 normal, float roughness ) {
+	return vec4( godotEncodeNormal( normal ) * 0.5 + 0.5, roughness * ( 127.0 / 255.0 ) );
+}
+`;
+
+/**
  * The fade keeps a reflection whole up to roughness 0.6 and none from 0.7, where the trace draws
  * nothing (`:2204`). The reflection holds Godot's rows, top row first, so the read flips three's
  * bottom-up row.
  */
 const SSR_FUNCTIONS = /* glsl */ `
 uniform highp sampler2D ${reflection};
-uniform highp sampler2D ${bestFitNormals};
-uniform vec4 ${state};
-
-${GODOT_ENCODE_NORMAL}
+${PREPASS_PARS}
 float godotSsrRoughnessFade( float roughness ) {
 	return smoothstep( 0.0, 1.0, 1.0 - clamp( ( roughness - 0.6 ) / ( 0.7 - 0.6 ), 0.0, 1.0 ) );
 }
@@ -41,12 +53,11 @@ vec4 godotScreenSpaceReflection( float roughness ) {
 
 /**
  * The prepass's output, once Godot's roughness is known. A surface the depth prepass draws from the
- * alpha pass cuts at its prepass threshold. Godot marks a moving instance by writing one minus the
- * stored roughness, which every reader folds back, so the static form stands for both.
+ * alpha pass cuts at its prepass threshold.
  */
 const NORMAL_ROUGHNESS_OUTPUT = /* glsl */ `if ( ${state}.x > 0.5 ) {
 		if ( diffuseColor.a < ${state}.z ) discard;
-		gl_FragColor = vec4( godotEncodeNormal( normal ) * 0.5 + 0.5, material.godotRoughness * ( 127.0 / 255.0 ) );
+		gl_FragColor = godotNormalRoughness( normal, material.godotRoughness );
 		return;
 	}
 	`;
@@ -61,7 +72,8 @@ const PREPASS_OUTPUT: TextEdit = {
 /**
  * An unshaded surface's output: its interpolated normal, turned to face a double-sided surface's
  * viewer (`DO_SIDE_CHECK`, `scene_forward_clustered.glsl:1263-1267`), and Godot's default roughness,
- * which `unshadedRoughness.ts` replaces with the material's own. `encode24` keeps only the direction, so the normal needs no normalising.
+ * which `unshadedRoughness.ts` replaces with the material's own. `encode24` keeps only the normal's
+ * direction, so the normal needs no normalising.
  */
 const UNSHADED_NORMAL_ROUGHNESS_OUTPUT = /* glsl */ `
 	if ( ${state}.x > 0.5 ) {
@@ -72,7 +84,7 @@ const UNSHADED_NORMAL_ROUGHNESS_OUTPUT = /* glsl */ `
 			float godotUnlitFace = 1.0;
 		#endif
 		${UNLIT_DEFAULT_ROUGHNESS}
-		gl_FragColor = vec4( godotEncodeNormal( ${UNLIT_NORMAL_VARYING} * godotUnlitFace ) * 0.5 + 0.5, godotUnlitRoughness * ( 127.0 / 255.0 ) );
+		gl_FragColor = godotNormalRoughness( ${UNLIT_NORMAL_VARYING} * godotUnlitFace, godotUnlitRoughness );
 		return;
 	}`;
 
@@ -83,10 +95,7 @@ const THREE_SPECULARMAP_FRAGMENT = '#include <specularmap_fragment>';
 const UNSHADED_PREPASS_FRAGMENT: readonly TextEdit[] = [
   {
     three: THREE_CLIPPING_PARS_FRAGMENT,
-    godot: `${THREE_CLIPPING_PARS_FRAGMENT}
-uniform highp sampler2D ${bestFitNormals};
-uniform vec4 ${state};
-${GODOT_ENCODE_NORMAL}`,
+    godot: `${THREE_CLIPPING_PARS_FRAGMENT}\n${PREPASS_PARS}`,
   },
   {
     three: THREE_SPECULARMAP_FRAGMENT,

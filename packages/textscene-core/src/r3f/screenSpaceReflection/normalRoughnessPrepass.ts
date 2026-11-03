@@ -15,11 +15,10 @@ import {
   type SampleLocation,
 } from '../../godot/rendering/msaaSampleLocations.js';
 import { perObject } from '../../utils/perObject.js';
-import { cameraFrustum } from '../cameraFrustum.js';
+import { drawSurface, visibleSurfaces, type Surface } from '../opaqueSurfaces.js';
 import { SSR_STATE, ssrState } from './ssrUniforms.js';
 
 /** Scratch for one prepass: three renders one scene at a time. */
-const frustum = new THREE.Frustum();
 const clearColor = new THREE.Color();
 const ndcOffset = new THREE.Matrix4();
 
@@ -27,7 +26,8 @@ const ndcOffset = new THREE.Matrix4();
  * Draws the prepass of each sample of the frame into its target of `prepasses`, through `camera`
  * moved so each pixel's centre lands on the sample's standard location. A surface's normal and
  * roughness are those at the sample, where a multisampled draw of Godot's reads them at the
- * pixel's centre: one value across a flat face.
+ * pixel's centre: one value across a flat face. The jitter stays under a pixel, so every sample
+ * draws the surfaces `camera` sees.
  */
 export function drawSamplePrepasses(
   renderer: THREE.WebGLRenderer,
@@ -35,14 +35,15 @@ export function drawSamplePrepasses(
   camera: THREE.Camera,
   prepasses: readonly THREE.WebGLRenderTarget[]
 ): void {
+  const surfaces = visibleSurfaces(scene, camera, isInOpaqueList);
   if (prepasses.length === 1) {
-    drawNormalRoughness(renderer, scene, camera, prepasses[0]!);
+    drawNormalRoughness(renderer, scene, camera, surfaces, prepasses[0]!);
     return;
   }
   const locations = standardSampleLocations(prepasses.length);
   prepasses.forEach((prepass, i) => {
     const jitter = sampleJitter(locations[i]!, prepass.width, prepass.height);
-    drawNormalRoughness(renderer, scene, jitteredCamera(camera, jitter, i), prepass);
+    drawNormalRoughness(renderer, scene, jitteredCamera(camera, jitter, i), surfaces, prepass);
   });
 }
 
@@ -68,29 +69,23 @@ function jitteredCamera(camera: THREE.Camera, jitter: SampleLocation, sample: nu
 }
 
 /**
- * Draws the prepass of every surface of `scene` that `camera` sees into `target`, cleared first to
- * Godot's clear of zero and the far plane (`render_forward_clustered.cpp:1916`).
+ * Draws the prepass of `surfaces` into `target`, cleared first to Godot's clear of zero and the
+ * far plane (`render_forward_clustered.cpp:1916`).
  */
 function drawNormalRoughness(
   renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
   camera: THREE.Camera,
+  surfaces: readonly Surface[],
   target: THREE.WebGLRenderTarget
 ): void {
   renderer.setRenderTarget(target);
   clearToZero(renderer);
-  cameraFrustum(camera, frustum);
   ssrState[SSR_STATE.drawsNormalRoughness] = 1;
   try {
-    scene.traverseVisible((object) => {
-      const mesh = object as THREE.Mesh;
-      if (!mesh.isMesh || !mesh.layers.test(camera.layers)) return;
-      if (mesh.frustumCulled && !frustum.intersectsObject(mesh)) return;
-      drawMesh(renderer, scene, camera, mesh);
-    });
+    for (const surface of surfaces) drawPrepassSurface(renderer, scene, camera, surface);
   } finally {
     ssrState[SSR_STATE.drawsNormalRoughness] = 0;
-    ssrState[SSR_STATE.prepassCut] = 0;
   }
 }
 
@@ -100,23 +95,6 @@ function clearToZero(renderer: THREE.WebGLRenderer): void {
   renderer.setClearColor(0x000000, 0);
   renderer.clear(true, true, false);
   renderer.setClearColor(clearColor, clearAlpha);
-}
-
-function drawMesh(
-  renderer: THREE.WebGLRenderer,
-  scene: THREE.Scene,
-  camera: THREE.Camera,
-  mesh: THREE.Mesh
-): void {
-  const { geometry, material } = mesh;
-  if (!Array.isArray(material)) {
-    if (isInOpaqueList(material)) drawSurface(renderer, scene, camera, mesh, material, null);
-    return;
-  }
-  for (const group of geometry.groups) {
-    const surface = material[group.materialIndex ?? 0];
-    if (surface && isInOpaqueList(surface)) drawSurface(renderer, scene, camera, mesh, surface, group);
-  }
 }
 
 /**
@@ -135,35 +113,25 @@ function writesNormalRoughness(material: THREE.Material): boolean {
   return isMeshBasicMaterial === true || isMeshStandardMaterial === true;
 }
 
-/**
- * One surface's prepass, between the object's own draw hooks, as three's colour draw runs them
- * (`WebGLRenderer.js:2158-2183`). A surface of the alpha pass writes unblended and cut.
- */
-function drawSurface(
+/** One surface's prepass through its own program. A surface of the alpha pass writes unblended and cut. */
+function drawPrepassSurface(
   renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
   camera: THREE.Camera,
-  mesh: THREE.Mesh,
-  surface: THREE.Material,
-  group: THREE.GeometryGroup | null
+  surface: Surface
 ): void {
-  const hookGroup = group as unknown as THREE.Group;
-  mesh.onBeforeRender(renderer, scene, camera, mesh.geometry, surface, hookGroup);
-  mesh.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, mesh.matrixWorld);
-  mesh.normalMatrix.getNormalMatrix(mesh.modelViewMatrix);
-  const { blending, depthWrite } = surface;
-  if (surface.transparent) {
-    surface.blending = THREE.NoBlending;
-    surface.depthWrite = true;
-    ssrState[SSR_STATE.prepassCut] = Math.max(surface.alphaTest, DEPTH_PREPASS_OPAQUE_THRESHOLD);
+  const { material } = surface;
+  const { blending, depthWrite } = material;
+  if (material.transparent) {
+    material.blending = THREE.NoBlending;
+    material.depthWrite = true;
+    ssrState[SSR_STATE.prepassCut] = Math.max(material.alphaTest, DEPTH_PREPASS_OPAQUE_THRESHOLD);
   }
   try {
-    // three takes a null group for a mesh of one material, typed as a group.
-    renderer.renderBufferDirect(camera, scene, mesh.geometry, surface, mesh, group as THREE.GeometryGroup);
+    drawSurface(renderer, scene, camera, surface, material);
   } finally {
-    surface.blending = blending;
-    surface.depthWrite = depthWrite;
+    material.blending = blending;
+    material.depthWrite = depthWrite;
     ssrState[SSR_STATE.prepassCut] = 0;
   }
-  mesh.onAfterRender(renderer, scene, camera, mesh.geometry, surface, hookGroup);
 }

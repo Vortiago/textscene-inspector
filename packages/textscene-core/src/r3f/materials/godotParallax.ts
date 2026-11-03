@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import type { IUniform, Material } from 'three';
 import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
 import { editedProgram } from '../shaderPatch/chunkPatch';
+import { UNLIT_NORMAL_VARYING } from '../shaderPatch/unlitVaryings';
 import { recordedOn } from './recordedOnMaterial';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import { readsUv1 } from './mapUvChannel';
@@ -218,7 +219,10 @@ varying vec3 vViewPosition;
 	varying vec3 vNormal;
 #endif`;
 
-const UNSHADED_VERTEX = `#include <project_vertex>
+/** Anchored on the unlit varyings' write, so a program without them fails to patch, not to compile. */
+const UNLIT_NORMAL_WRITE = `${UNLIT_NORMAL_VARYING} = transformedNormal;`;
+
+const UNSHADED_VERTEX = `${UNLIT_NORMAL_WRITE}
 vViewPosition = - mvPosition.xyz;
 #ifndef FLAT_SHADED
 	vNormal = normalize( transformedNormal );
@@ -235,7 +239,7 @@ const UNSHADED_PARALLAX_INPUTS: ProgramInjection = {
       {
         vertex: [
           { three: '#include <common>', godot: UNSHADED_VERTEX_PARS },
-          { three: '#include <project_vertex>', godot: UNSHADED_VERTEX },
+          { three: UNLIT_NORMAL_WRITE, godot: UNSHADED_VERTEX },
         ],
         fragment: [{ three: PARS_ANCHOR, godot: UNSHADED_FRAGMENT_PARS }],
       },

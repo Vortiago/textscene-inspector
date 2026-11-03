@@ -44,8 +44,7 @@ class WorldReflection {
   buffersFor(renderer: THREE.WebGLRenderer, shape: ReflectionShape): ReflectionBuffers {
     if (this.buffers?.fits(shape)) return this.buffers;
     this.release(renderer);
-    this.buffers = new ReflectionBuffers(shape);
-    this.buffers.allocate(renderer);
+    this.buffers = new ReflectionBuffers(renderer, shape);
     return this.buffers;
   }
 
@@ -145,14 +144,14 @@ export class SceneReflections {
     const { ssr, isHalfSize } = this.settings();
     const { width, height, samples } = target;
     const buffers = render.world.buffersFor(this.renderer, { width, height, samples, isHalfSize });
+    projection.multiplyMatrices(DEPTH_CORRECTION, camera.projectionMatrix);
+    inverseProjection.copy(projection).invert();
     const inputs = {
-      projection: projection.multiplyMatrices(DEPTH_CORRECTION, camera.projectionMatrix),
+      projection,
+      inverseProjection,
       reprojection: this.reprojectionOf(render.world, camera),
       isOrthogonal: (camera as THREE.OrthographicCamera).isOrthographicCamera === true,
-      maxSteps: ssr.maxSteps,
-      fadeIn: ssr.fadeIn,
-      fadeOut: ssr.fadeOut,
-      depthTolerance: ssr.depthTolerance,
+      ssr,
     };
     beginStep(this.renderer, 'Screen-space reflection');
     drawOffscreen(this.renderer, () => {
@@ -173,7 +172,7 @@ export class SceneReflections {
     reprojection
       .multiplyMatrices(world.lastProjection, world.lastView)
       .multiply(camera.matrixWorld)
-      .multiply(inverseProjection.copy(projection).invert());
+      .multiply(inverseProjection);
     world.lastProjection.copy(projection);
     world.lastView.copy(camera.matrixWorldInverse);
     return reprojection;

@@ -17,6 +17,10 @@ import {
 import { standardMaterial } from '../resources/materials/standardmaterial3d/testing/standardMaterial';
 import { BillboardMode } from '../godot/rendering/materials/billboardMode';
 import type { SurfaceBillboard } from '../resources/materials/standardmaterial3d/materialBag';
+import { installUnlitVaryings } from './shaderPatch/unlitVaryings';
+import { restoreShaderGlobalsAfterEach } from './testing/shaderPatches';
+
+restoreShaderGlobalsAfterEach();
 
 const PARTICLES: SurfaceBillboard = { mode: BillboardMode.BILLBOARD_PARTICLES, keepScale: false };
 
@@ -178,6 +182,7 @@ describe('the billboard normal of a StandardMaterial3D', () => {
   });
 
   it('turns the normal the unshaded parallax reads', () => {
+    installUnlitVaryings();
     const vertex = patchedVertex(
       standardMaterial({ shading_mode: '0', heightmap_enabled: 'true', billboard_mode: '1' })
     );

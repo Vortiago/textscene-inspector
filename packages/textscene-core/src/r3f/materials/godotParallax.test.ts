@@ -167,6 +167,7 @@ describe('bindHeightmap', () => {
 
 describe('unshadedParallaxInjection', () => {
   function patchedUnshaded(): ProgramShader {
+    installUnlitVaryings();
     const material = new THREE.MeshBasicMaterial();
     const shader: ProgramShader = {
       vertexShader: THREE.ShaderLib.basic.vertexShader,
@@ -185,7 +186,6 @@ describe('unshadedParallaxInjection', () => {
   });
 
   it('computes the normal once, over the unlit varyings that already compute it', () => {
-    installUnlitVaryings();
     const { vertexShader } = patchedUnshaded();
 
     expect(vertexShader.split('#include <beginnormal_vertex>')).toHaveLength(2);

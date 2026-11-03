@@ -10,14 +10,11 @@ import { DEPTH_PREPASS_OPAQUE_THRESHOLD } from '../../godot/rendering/opaquePrep
 import { opaquePrepassOf } from '../materials/opaquePrepass';
 import { surfaceDepthMaterial, syncSurfaceDepth } from '../materials/surfaceDepthMaterial';
 import { beginStep, endStep } from '../frameProfile/frameProfile';
-import { cameraFrustum } from '../cameraFrustum';
+import { drawSurface, visibleSurfaces } from '../opaqueSurfaces';
 import { createFirstOpaqueSentinel } from '../firstOpaqueSentinel';
 
 /** The material each surface's prepass copy starts from: depth, and no colour. */
 const PREPASS_BASE = new THREE.MeshDepthMaterial({ colorWrite: false });
-
-/** Scratch for one prepass: three renders one scene at a time. */
-const frustum = new THREE.Frustum();
 
 /** The sentinel that draws the depth prepass of every surface in its scene before three's opaque pass. */
 export function createDepthPrepassSentinel(): THREE.Mesh {
@@ -26,58 +23,21 @@ export function createDepthPrepassSentinel(): THREE.Mesh {
 
 /** Draws the depth prepass of every surface of `scene` that `camera` sees. */
 function drawDepthPrepass(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void {
-  cameraFrustum(camera, frustum);
   beginStep(renderer, 'Depth prepass');
-  scene.traverseVisible((object) => {
-    const mesh = object as THREE.Mesh;
-    if (!mesh.isMesh || !mesh.layers.test(camera.layers)) return;
-    if (mesh.frustumCulled && !frustum.intersectsObject(mesh)) return;
-    drawMeshPrepass(renderer, scene, camera, mesh);
-  });
+  for (const surface of visibleSurfaces(scene, camera, drawsPrepass)) {
+    drawSurface(renderer, scene, camera, surface, prepassMaterialOf(surface.material));
+  }
   endStep(renderer, 'Depth prepass');
-}
-
-function drawMeshPrepass(
-  renderer: THREE.WebGLRenderer,
-  scene: THREE.Scene,
-  camera: THREE.Camera,
-  mesh: THREE.Mesh
-): void {
-  const { geometry, material } = mesh;
-  if (!Array.isArray(material)) {
-    if (drawsPrepass(material)) drawSurfacePrepass(renderer, scene, camera, mesh, material, null);
-    return;
-  }
-  for (const group of geometry.groups) {
-    const surface = material[group.materialIndex ?? 0];
-    if (surface && drawsPrepass(surface)) drawSurfacePrepass(renderer, scene, camera, mesh, surface, group);
-  }
 }
 
 function drawsPrepass(material: THREE.Material): boolean {
   return material.visible && opaquePrepassOf(material).drawsPrepass;
 }
 
-/**
- * One surface's prepass, between the object's own draw hooks, which pose it and skip a draw its
- * range culls, as three's colour draw does (`WebGLRenderer.js:2158-2183`).
- */
-function drawSurfacePrepass(
-  renderer: THREE.WebGLRenderer,
-  scene: THREE.Scene,
-  camera: THREE.Camera,
-  mesh: THREE.Mesh,
-  surface: THREE.Material,
-  group: THREE.GeometryGroup | null
-): void {
-  const hookGroup = group as unknown as THREE.Group;
-  mesh.onBeforeRender(renderer, scene, camera, mesh.geometry, surface, hookGroup);
-  mesh.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, mesh.matrixWorld);
-  mesh.normalMatrix.getNormalMatrix(mesh.modelViewMatrix);
+/** The surface's depth copy, cut at its prepass threshold. */
+function prepassMaterialOf(surface: THREE.Material): THREE.Material {
   const depth = surfaceDepthMaterial(surface, PREPASS_BASE);
   syncSurfaceDepth(depth, surface, Math.max(surface.alphaTest, DEPTH_PREPASS_OPAQUE_THRESHOLD));
   depth.side = surface.side;
-  // three takes a null group for a mesh of one material, typed as a group.
-  renderer.renderBufferDirect(camera, scene, mesh.geometry, depth, mesh, group as THREE.GeometryGroup);
-  mesh.onAfterRender(renderer, scene, camera, mesh.geometry, surface, hookGroup);
+  return depth;
 }

@@ -6,6 +6,8 @@
 
 import * as THREE from 'three';
 import { ssrMipCount, ssrTraceSize } from '../../godot/rendering/environment/screenSpaceReflection.js';
+import { createPassTarget } from '../environment/passTarget.js';
+import { reversedTexelRows, type TexelPlacement } from '../texelCopy.js';
 
 /**
  * What each mip of a chain from mip 1 renders into before it is copied into that mip, as WebGL reads
@@ -50,10 +52,13 @@ export class ReflectionBuffers {
    * as WebGL reads no multisampled texture. One target for a frame of one sample.
    */
   readonly samplePrepasses: readonly THREE.WebGLRenderTarget[];
-  /** The samples resolved into one frame, as Godot resolves them. Null for a frame of one sample. */
-  readonly resolved: { depth: THREE.WebGLRenderTarget; normalRoughness: THREE.WebGLRenderTarget } | null;
-  /** The size the trace runs at: the world buffer's, or half of it. */
-  readonly traceSize: THREE.Vector2;
+  /**
+   * The samples resolved into one frame, as Godot resolves them: the depth, then the normal and
+   * roughness. Null for a frame of one sample.
+   */
+  readonly resolved: THREE.WebGLRenderTarget | null;
+  /** The frame's rows in Godot's order, which the trace reads at full size. */
+  readonly rowsReversed: TexelPlacement;
   readonly mipCount: number;
   /** The depth pyramid, nearest the camera of each block, one level per mip. */
   readonly hiz: THREE.WebGLRenderTarget;
@@ -72,23 +77,20 @@ export class ReflectionBuffers {
   readonly reflection: THREE.WebGLRenderTarget;
   /** The last frame, at the trace's size, cleared to zero before the first frame. */
   readonly lastFrame: THREE.WebGLRenderTarget;
-  readonly isHalfSize: boolean;
 
-  constructor(shape: ReflectionShape) {
+  /**
+   * Allocates every target a copy reads or writes. A copy into a target no draw has bound finds none
+   * of its levels, and a target first bound between a draw and its copy leaves its own texture on the
+   * active unit, which the copy then writes into: a feedback loop.
+   */
+  constructor(renderer: THREE.WebGLRenderer, shape: ReflectionShape) {
     const { width, height, samples, isHalfSize } = shape;
     this.shape = { ...shape };
-    this.isHalfSize = isHalfSize;
     const trace = ssrTraceSize({ width, height }, isHalfSize);
-    this.traceSize = new THREE.Vector2(trace.width, trace.height);
     this.mipCount = ssrMipCount(trace);
     this.samplePrepasses = Array.from({ length: Math.max(1, samples) }, () => prepassTarget(width, height));
-    this.resolved =
-      samples > 1
-        ? {
-            depth: new THREE.WebGLRenderTarget(width, height, DEPTH_LEVEL),
-            normalRoughness: new THREE.WebGLRenderTarget(width, height, NORMAL_ROUGHNESS),
-          }
-        : null;
+    this.resolved = samples > 1 ? resolvedTarget(width, height) : null;
+    this.rowsReversed = reversedTexelRows(width, height);
     this.hiz = chainTarget(trace.width, trace.height, {
       ...DEPTH_LEVEL,
       minFilter: THREE.NearestMipmapNearestFilter,
@@ -101,8 +103,13 @@ export class ReflectionBuffers {
       minFilter: THREE.LinearMipmapLinearFilter,
     });
     this.chainLevels = levelTargets(trace.width, trace.height, this.mipCount, HALF_FLOAT_LINEAR);
-    this.reflection = new THREE.WebGLRenderTarget(width, height, { ...NEAREST, type: THREE.HalfFloatType });
-    this.lastFrame = new THREE.WebGLRenderTarget(trace.width, trace.height, HALF_FLOAT_LINEAR);
+    this.reflection = createPassTarget('SsrReflection', NEAREST);
+    this.reflection.setSize(width, height);
+    this.lastFrame = createPassTarget('SsrLastFrame', HALF_FLOAT_LINEAR);
+    this.lastFrame.setSize(trace.width, trace.height);
+    for (const target of [this.hiz, this.chain, this.trace, ...this.hizLevels, ...this.chainLevels]) {
+      renderer.initRenderTarget(target);
+    }
   }
 
   fits(shape: ReflectionShape): boolean {
@@ -117,23 +124,12 @@ export class ReflectionBuffers {
 
   /** The frame's depth in three's form, 0 at the near plane, in three's rows. */
   get frameDepth(): THREE.Texture {
-    return this.resolved?.depth.texture ?? this.samplePrepasses[0]!.depthTexture!;
+    return this.resolved?.textures[0] ?? this.samplePrepasses[0]!.depthTexture!;
   }
 
   /** The frame's encoded normal and roughness, in three's rows. */
   get frameNormalRoughness(): THREE.Texture {
-    return this.resolved?.normalRoughness.texture ?? this.samplePrepasses[0]!.texture;
-  }
-
-  /**
-   * Allocates every target a copy reads or writes. A copy into a target no draw has bound finds none
-   * of its levels, and a target first bound between a draw and its copy leaves its own texture on the
-   * active unit, which the copy then writes into: a feedback loop.
-   */
-  allocate(renderer: THREE.WebGLRenderer): void {
-    for (const target of [this.hiz, this.chain, this.trace, ...this.hizLevels, ...this.chainLevels]) {
-      renderer.initRenderTarget(target);
-    }
+    return this.resolved?.textures[1] ?? this.samplePrepasses[0]!.texture;
   }
 
   /** The target mip `level` of the depth pyramid draws into, from 1. */
@@ -153,7 +149,7 @@ export class ReflectionBuffers {
 
   private targets(): THREE.WebGLRenderTarget[] {
     const own = [this.hiz, this.normalRoughness, this.trace, this.chain, this.reflection, this.lastFrame];
-    const resolved = this.resolved ? [this.resolved.depth, this.resolved.normalRoughness] : [];
+    const resolved = this.resolved ? [this.resolved] : [];
     return [...this.samplePrepasses, ...resolved, ...own, ...this.hizLevels, ...this.chainLevels];
   }
 }
@@ -162,6 +158,15 @@ export class ReflectionBuffers {
 function prepassTarget(width: number, height: number): THREE.WebGLRenderTarget {
   const target = new THREE.WebGLRenderTarget(width, height, { ...NORMAL_ROUGHNESS, depthBuffer: true });
   target.depthTexture = new THREE.DepthTexture(width, height, THREE.FloatType);
+  return target;
+}
+
+/** The resolve's R32F depth beside its RGBA8 normal and roughness, both drawn by one pass. */
+function resolvedTarget(width: number, height: number): THREE.WebGLRenderTarget {
+  const target = new THREE.WebGLRenderTarget(width, height, { ...NORMAL_ROUGHNESS, count: 2 });
+  const depth = target.textures[0]!;
+  depth.type = THREE.FloatType;
+  depth.format = THREE.RedFormat;
   return target;
 }
 

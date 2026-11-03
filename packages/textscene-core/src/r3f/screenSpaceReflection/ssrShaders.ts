@@ -53,7 +53,7 @@ const REC709_LUMINANCE = 'const vec3 rec709_luminance_weights = vec3( 0.2126, 0.
  * The frame's depth and normal and roughness from its samples, as Godot resolves a multisampled
  * prepass (`effects/resolve.glsl`, `MODE_RESOLVE_GI`): both of the one sample the rule below picks,
  * in three's rows and depth. Sample `i` is drawn into `depth<i>` and `normalRoughness<i>`, since
- * WebGL reads no multisampled texture. `writesNormal` picks the output, as the downsample's does.
+ * WebGL reads no multisampled texture. One draw writes both, one to each attachment.
  */
 export function sampleResolveFragment(samples: number): string {
   const indices = Array.from({ length: samples }, (_, index) => index);
@@ -69,8 +69,9 @@ export function sampleResolveFragment(samples: number): string {
   return /* glsl */ `
 #define SAMPLES ${samples}
 ${declarations}
-uniform bool writesNormal;
 ${GODOT_DEPTH}
+layout( location = 0 ) out highp vec4 resolvedDepth;
+layout( location = 1 ) out highp vec4 resolvedNormalRoughness;
 
 float threeDepthOf( int i, ivec2 pixel ) {
 	${depthReads}
@@ -116,7 +117,8 @@ int bestSample( ivec2 pixel ) {
 void main() {
 	ivec2 pixel = ivec2( gl_FragCoord.xy );
 	int best = bestSample( pixel );
-	gl_FragColor = writesNormal ? normalRoughnessOf( best, pixel ) : vec4( threeDepthOf( best, pixel ), 0.0, 0.0, 0.0 );
+	resolvedDepth = vec4( threeDepthOf( best, pixel ), 0.0, 0.0, 0.0 );
+	resolvedNormalRoughness = normalRoughnessOf( best, pixel );
 }
 `;
 }
@@ -130,16 +132,6 @@ void main() {
 	ivec2 pixel = ivec2( gl_FragCoord.xy );
 	int height = textureSize( depth, 0 ).y;
 	gl_FragColor = vec4( godotDepth( texelFetch( depth, threeTexel( pixel, height ), 0 ).x ), 0.0, 0.0, 0.0 );
-}
-`;
-
-/** The prepass's normal and roughness in Godot's rows, which the trace reads at full size. */
-export const NORMAL_ROUGHNESS_ROWS_FRAGMENT = /* glsl */ `
-uniform highp sampler2D normalRoughness;
-${THREE_ROW}
-void main() {
-	ivec2 pixel = ivec2( gl_FragCoord.xy );
-	gl_FragColor = texelFetch( normalRoughness, threeTexel( pixel, textureSize( normalRoughness, 0 ).y ), 0 );
 }
 `;
 

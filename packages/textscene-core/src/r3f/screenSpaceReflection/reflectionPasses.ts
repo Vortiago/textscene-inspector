@@ -7,7 +7,9 @@
 
 import * as THREE from 'three';
 import { perObject } from '../../utils/perObject.js';
-import { drawFullScreen, fullScreenPass } from '../fullScreenPass.js';
+import { drawFullScreen, namedUniformPass, releaseTextures, setUniforms } from '../fullScreenPass.js';
+import { copyTexels } from '../texelCopy.js';
+import type { ScreenSpaceReflection } from '../../resources/environment/types.js';
 import type { ReflectionBuffers } from './reflectionBuffers.js';
 import {
   DEPTH_COPY_FRAGMENT,
@@ -16,7 +18,6 @@ import {
   FULL_SIZE_FRAGMENT,
   HIZ_FRAGMENT,
   LAST_FRAME_FRAGMENT,
-  NORMAL_ROUGHNESS_ROWS_FRAGMENT,
   RESOLVE_FRAGMENT,
   sampleResolveFragment,
   TRACE_FRAGMENT,
@@ -26,25 +27,30 @@ import {
 export interface TraceInputs {
   /** Godot's projection of the camera, its depth corrected (`ss_effects.cpp:1489-1494`). */
   projection: THREE.Matrix4;
+  inverseProjection: THREE.Matrix4;
   /** From this frame's screen to the last frame's (`render_forward_clustered.cpp:1469-1476`). */
   reprojection: THREE.Matrix4;
   isOrthogonal: boolean;
-  maxSteps: number;
-  fadeIn: number;
-  fadeOut: number;
-  depthTolerance: number;
+  ssr: ScreenSpaceReflection;
 }
 
-/** A uniform for each name, its value unset until a draw writes it. */
-function uniformsOf(...names: string[]): Record<string, THREE.IUniform> {
-  return Object.fromEntries(names.map((name) => [name, { value: null }]));
+/** A pass whose outputs are its own, one per attachment of a multiple-target draw. */
+function multipleTargetPass(pass: THREE.ShaderMaterial): THREE.ShaderMaterial {
+  pass.glslVersion = THREE.GLSL3;
+  return pass;
 }
 
-function tracePass(): THREE.ShaderMaterial {
-  const pass = fullScreenPass(
-    'SsrTrace',
-    TRACE_FRAGMENT,
-    uniformsOf(
+/** One set of passes per renderer, as each pass is (`fullScreenPass.ts`). */
+const passesOf = perObject((_renderer: THREE.WebGLRenderer) => ({
+  depthCopy: namedUniformPass('SsrDepthCopy', DEPTH_COPY_FRAGMENT, ['depth']),
+  downsample: namedUniformPass('SsrDownsample', DOWNSAMPLE_FRAGMENT, [
+    'depth',
+    'normalRoughness',
+    'writesNormal',
+  ]),
+  hiz: namedUniformPass('SsrHiz', HIZ_FRAGMENT, ['pyramid', 'sourceLevel']),
+  trace: multipleTargetPass(
+    namedUniformPass('SsrTrace', TRACE_FRAGMENT, [
       'source_last_frame',
       'source_hiz',
       'source_normal_roughness',
@@ -56,44 +62,20 @@ function tracePass(): THREE.ShaderMaterial {
       'distance_fade',
       'curve_fade_in',
       'depth_tolerance',
-      'orthogonal'
-    )
-  );
-  // Its own outputs, one per attachment of the trace's target.
-  pass.glslVersion = THREE.GLSL3;
-  return pass;
-}
-
-/** One set of passes per renderer, as each pass is (`fullScreenPass.ts`). */
-const passesOf = perObject((_renderer: THREE.WebGLRenderer) => ({
-  depthCopy: fullScreenPass('SsrDepthCopy', DEPTH_COPY_FRAGMENT, uniformsOf('depth')),
-  normalRoughnessRows: fullScreenPass(
-    'SsrNormalRoughnessRows',
-    NORMAL_ROUGHNESS_ROWS_FRAGMENT,
-    uniformsOf('normalRoughness')
+      'orthogonal',
+    ])
   ),
-  downsample: fullScreenPass(
-    'SsrDownsample',
-    DOWNSAMPLE_FRAGMENT,
-    uniformsOf('depth', 'normalRoughness', 'writesNormal')
-  ),
-  hiz: fullScreenPass('SsrHiz', HIZ_FRAGMENT, uniformsOf('pyramid', 'sourceLevel')),
-  trace: tracePass(),
-  filter: fullScreenPass('SsrFilter', FILTER_FRAGMENT, uniformsOf('chain', 'mip_level')),
-  resolve: fullScreenPass(
-    'SsrResolve',
-    RESOLVE_FRAGMENT,
-    uniformsOf(
-      'source_depth',
-      'source_normal_roughness',
-      'source_depth_half',
-      'source_normal_roughness_half',
-      'source_color',
-      'source_mip_level'
-    )
-  ),
-  fullSize: fullScreenPass('SsrFullSize', FULL_SIZE_FRAGMENT, uniformsOf('source_color', 'source_mip_level')),
-  lastFrame: fullScreenPass('SsrLastFrame', LAST_FRAME_FRAGMENT, uniformsOf('frame', 'blockSize')),
+  filter: namedUniformPass('SsrFilter', FILTER_FRAGMENT, ['chain', 'mip_level']),
+  resolve: namedUniformPass('SsrResolve', RESOLVE_FRAGMENT, [
+    'source_depth',
+    'source_normal_roughness',
+    'source_depth_half',
+    'source_normal_roughness_half',
+    'source_color',
+    'source_mip_level',
+  ]),
+  fullSize: namedUniformPass('SsrFullSize', FULL_SIZE_FRAGMENT, ['source_color', 'source_mip_level']),
+  lastFrame: namedUniformPass('SsrLastFrame', LAST_FRAME_FRAGMENT, ['frame', 'blockSize']),
 }));
 
 type Passes = ReturnType<typeof passesOf>;
@@ -108,22 +90,22 @@ function sampleResolveOf(renderer: THREE.WebGLRenderer, samples: number): THREE.
   let resolve = resolves.get(samples);
   if (!resolve) {
     const names = Array.from({ length: samples }, (_, i) => [`depth${i}`, `normalRoughness${i}`]).flat();
-    resolve = fullScreenPass(
-      'SsrSampleResolve',
-      sampleResolveFragment(samples),
-      uniformsOf(...names, 'writesNormal')
-    );
+    resolve = multipleTargetPass(namedUniformPass('SsrSampleResolve', sampleResolveFragment(samples), names));
     resolves.set(samples, resolve);
   }
   return resolve;
 }
 
-/** Scratch for one trace, read when its draw uploads it. */
-const inverseProjection = new THREE.Matrix4();
-
-function set(pass: THREE.ShaderMaterial, values: Record<string, unknown>): THREE.ShaderMaterial {
-  for (const [name, value] of Object.entries(values)) pass.uniforms[name]!.value = value;
-  return pass;
+/** Draws `pass` into `target`, after which the pass holds none of the textures it read. */
+function draw(
+  renderer: THREE.WebGLRenderer,
+  pass: THREE.ShaderMaterial,
+  values: Record<string, unknown>,
+  target: THREE.WebGLRenderTarget
+): void {
+  setUniforms(pass, values);
+  drawFullScreen(renderer, pass, target);
+  releaseTextures(pass);
 }
 
 /**
@@ -147,41 +129,36 @@ export function traceReflection(
 /** One frame of the samples' prepasses, where the world buffer has more than one sample. */
 function resolveSamples(renderer: THREE.WebGLRenderer, buffers: ReflectionBuffers): void {
   if (!buffers.resolved) return;
-  const resolve = sampleResolveOf(renderer, buffers.samplePrepasses.length);
-  buffers.samplePrepasses.forEach((prepass, i) => {
-    resolve.uniforms[`depth${i}`]!.value = prepass.depthTexture;
-    resolve.uniforms[`normalRoughness${i}`]!.value = prepass.texture;
-  });
-  drawFullScreen(renderer, set(resolve, { writesNormal: false }), buffers.resolved.depth);
-  drawFullScreen(renderer, set(resolve, { writesNormal: true }), buffers.resolved.normalRoughness);
+  const values = Object.fromEntries(
+    buffers.samplePrepasses.flatMap((prepass, i) => [
+      [`depth${i}`, prepass.depthTexture],
+      [`normalRoughness${i}`, prepass.texture],
+    ])
+  );
+  draw(renderer, sampleResolveOf(renderer, buffers.samplePrepasses.length), values, buffers.resolved);
 }
 
-/** The depth and the normal and roughness the trace reads, at its size, in Godot's rows. */
+/**
+ * The depth and the normal and roughness the trace reads, at its size, in Godot's rows. At half
+ * size the R32F depth and the RGBA8 normal draw apart: the depth is the pyramid's own mip 0.
+ */
 function drawPyramidBase(renderer: THREE.WebGLRenderer, passes: Passes, buffers: ReflectionBuffers): void {
   const { hiz, normalRoughness, frameDepth: depth, frameNormalRoughness } = buffers;
-  if (!buffers.isHalfSize) {
-    drawFullScreen(renderer, set(passes.depthCopy, { depth }), hiz);
-    drawFullScreen(
-      renderer,
-      set(passes.normalRoughnessRows, { normalRoughness: frameNormalRoughness }),
-      normalRoughness
-    );
+  if (!buffers.shape.isHalfSize) {
+    draw(renderer, passes.depthCopy, { depth }, hiz);
+    copyTexels(renderer, frameNormalRoughness, normalRoughness, buffers.rowsReversed);
     return;
   }
-  const downsample = set(passes.downsample, { depth, normalRoughness: frameNormalRoughness });
-  drawFullScreen(renderer, set(downsample, { writesNormal: false }), hiz);
-  drawFullScreen(renderer, set(downsample, { writesNormal: true }), normalRoughness);
+  const source = { depth, normalRoughness: frameNormalRoughness };
+  draw(renderer, passes.downsample, { ...source, writesNormal: false }, hiz);
+  draw(renderer, passes.downsample, { ...source, writesNormal: true }, normalRoughness);
 }
 
 /** Each mip of the depth pyramid from the one before (`ss_effects.cpp:1563-1610`). */
 function drawPyramid(renderer: THREE.WebGLRenderer, passes: Passes, buffers: ReflectionBuffers): void {
   for (let level = 1; level < buffers.mipCount; level++) {
     const target = buffers.hizLevel(level);
-    drawFullScreen(
-      renderer,
-      set(passes.hiz, { pyramid: buffers.hiz.texture, sourceLevel: level - 1 }),
-      target
-    );
+    draw(renderer, passes.hiz, { pyramid: buffers.hiz.texture, sourceLevel: level - 1 }, target);
     renderer.copyTextureToTexture(target.texture, buffers.hiz.texture, null, null, 0, level);
   }
 }
@@ -192,21 +169,22 @@ function drawTrace(
   buffers: ReflectionBuffers,
   inputs: TraceInputs
 ): void {
-  const trace = set(passes.trace, {
+  const { ssr } = inputs;
+  const values = {
     source_last_frame: buffers.lastFrame.texture,
     source_hiz: buffers.hiz.texture,
     source_normal_roughness: buffers.normalRoughness.texture,
     projection: inputs.projection,
-    inv_projection: inverseProjection.copy(inputs.projection).invert(),
+    inv_projection: inputs.inverseProjection,
     reprojection: inputs.reprojection,
     mipmaps: buffers.mipCount,
-    num_steps: inputs.maxSteps,
-    distance_fade: inputs.fadeOut,
-    curve_fade_in: inputs.fadeIn,
-    depth_tolerance: inputs.depthTolerance,
+    num_steps: ssr.maxSteps,
+    distance_fade: ssr.fadeOut,
+    curve_fade_in: ssr.fadeIn,
+    depth_tolerance: ssr.depthTolerance,
     orthogonal: inputs.isOrthogonal,
-  });
-  drawFullScreen(renderer, trace, buffers.trace);
+  };
+  draw(renderer, passes.trace, values, buffers.trace);
 }
 
 /** The traced colour into the chain's base, then each mip blurred from the one before (`:1666-1690`). */
@@ -215,7 +193,7 @@ function drawRoughnessChain(renderer: THREE.WebGLRenderer, passes: Passes, buffe
   renderer.copyTextureToTexture(buffers.trace.textures[0]!, chain.texture, null, null, 0, 0);
   for (let level = 1; level < buffers.mipCount; level++) {
     const target = buffers.chainLevel(level);
-    drawFullScreen(renderer, set(passes.filter, { chain: chain.texture, mip_level: level }), target);
+    draw(renderer, passes.filter, { chain: chain.texture, mip_level: level }, target);
     renderer.copyTextureToTexture(target.texture, chain.texture, null, null, 0, level);
   }
 }
@@ -223,18 +201,17 @@ function drawRoughnessChain(renderer: THREE.WebGLRenderer, passes: Passes, buffe
 /** The reflection as the colour pass reads it: resolved from half size, or read at its mip. */
 function drawReflection(renderer: THREE.WebGLRenderer, passes: Passes, buffers: ReflectionBuffers): void {
   const color = { source_color: buffers.chain.texture, source_mip_level: buffers.trace.textures[1] };
-  if (!buffers.isHalfSize) {
-    drawFullScreen(renderer, set(passes.fullSize, color), buffers.reflection);
+  if (!buffers.shape.isHalfSize) {
+    draw(renderer, passes.fullSize, color, buffers.reflection);
     return;
   }
-  const resolve = set(passes.resolve, {
-    ...color,
+  const halfSize = {
     source_depth: buffers.frameDepth,
     source_normal_roughness: buffers.frameNormalRoughness,
     source_depth_half: buffers.hiz.texture,
     source_normal_roughness_half: buffers.normalRoughness.texture,
-  });
-  drawFullScreen(renderer, resolve, buffers.reflection);
+  };
+  draw(renderer, passes.resolve, { ...color, ...halfSize }, buffers.reflection);
 }
 
 /**
@@ -246,6 +223,6 @@ export function copyLastFrame(
   buffers: ReflectionBuffers,
   frame: THREE.Texture
 ): void {
-  const pass = set(passesOf(renderer).lastFrame, { frame, blockSize: buffers.isHalfSize ? 2 : 1 });
-  drawFullScreen(renderer, pass, buffers.lastFrame);
+  const blockSize = buffers.shape.isHalfSize ? 2 : 1;
+  draw(renderer, passesOf(renderer).lastFrame, { frame, blockSize }, buffers.lastFrame);
 }
