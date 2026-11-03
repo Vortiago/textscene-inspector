@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { occluderAabb } from './occluder';
 
-/** Every value below is measured in Godot 4.6.3 (`/mnt/project-files/aabb-1122/occluder-oracle.out.txt`). */
-/** Adding 0 turns the negative zero of `-size / 2` into 0. */
+/**
+ * Every value below is measured in Godot 4.6.3 (`/mnt/project-files/aabb-1122/occluder-oracle.out.txt`).
+ * Adding 0 turns the negative zero of `-size / 2` into 0.
+ */
 const corner = ({ x, y, z }: { x: number; y: number; z: number }) => [x + 0, y + 0, z + 0];
 
 describe('Occluder3D::get_aabb (occluder_instance_3d.cpp:50-58, 120)', () => {
@@ -90,11 +92,7 @@ describe('Occluder3D::get_aabb (occluder_instance_3d.cpp:50-58, 120)', () => {
   it('is the box of the vertices and the origin for an ArrayOccluder3D', () => {
     const aabb = occluderAabb({
       kind: 'array',
-      vertices: [
-        { x: 1, y: 2, z: 3 },
-        { x: 4, y: 5, z: 6 },
-        { x: 2, y: 3, z: 9 },
-      ],
+      vertices: [1, 2, 3, 4, 5, 6, 2, 3, 9],
     });
     expect(corner(aabb.position)).toEqual([0, 0, 0]);
     expect(corner(aabb.size)).toEqual([4, 5, 9]);

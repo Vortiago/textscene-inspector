@@ -14,7 +14,7 @@ export type OccluderShape =
   | { kind: 'quad'; size: Vector2 }
   | { kind: 'sphere'; radius: number }
   | { kind: 'polygon'; polygon: readonly Vector2[] }
-  | { kind: 'array'; vertices: readonly Vector3[] };
+  | { kind: 'array'; vertices: ArrayLike<number> };
 
 /** `SphereOccluder3D::RINGS` and `RADIAL_SEGMENTS` (`occluder_instance_3d.h:125-126`). */
 const SPHERE_RINGS = 7;
@@ -70,7 +70,7 @@ function shapeVertices(shape: OccluderShape): number[] {
     case 'polygon':
       return polygonVertices(shape.polygon);
     case 'array':
-      return shape.vertices.flatMap(({ x, y, z }) => [x, y, z]);
+      return Array.from(shape.vertices);
   }
 }
 
