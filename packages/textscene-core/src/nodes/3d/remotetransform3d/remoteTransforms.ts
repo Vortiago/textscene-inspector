@@ -1,7 +1,7 @@
 /**
  * The RemoteTransform pass. A RemoteTransform3D or RemoteTransform2D copies its own transform onto
- * the node its `remote_path` names on enter-tree (Godot's `_update_remote()`), so a static render
- * shows the target at the relay's transform. It is a description-level effect, not simulation, so
+ * the node its `remote_path` names (Godot's `_update_remote()`) each time a transform flush reaches
+ * it, so a static render shows the target where the `ref:godot` harness capture has it. It is a description-level effect, not simulation, so
  * ADR-0008 (what a node draws) does not govern it. It is a live scene pass (ADR-0060), as Godot
  * resolves the path with `get_node` on the live tree (`remote_transform_3d.cpp:35-36`), across an
  * instance border too. Semantics are measured on Godot 4.6.3.
@@ -15,7 +15,14 @@ import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { nodesOnTheWayTo } from '../../../r3f/liveGlobalTransform.js';
 import { uniquePathsOfLiteral } from '../../../r3f/nodePathUniqueNames.js';
 import type { NodePatch, NodePatches } from '../../../r3f/nodePatch.js';
-import { globalMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
+import { globalMatrix3D, localMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
+import { isTopLevelItem } from '../../../r3f/canvasPaintOrder.js';
+import {
+  HARNESS_FRAME,
+  replayTransformFlushes,
+  transformFlushesThrough,
+  type QueueTransformChange,
+} from '../../../godot/scene/transformFlushes.js';
 import { node2DLocalTransform } from '../../../r3f/node2dTransform.js';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types.js';
 import {
@@ -52,20 +59,108 @@ interface RelayProps {
 
 /**
  * The properties every RemoteTransform of `tree` pushes onto its target, by the target's live path.
- * A relay reads the transforms the relays before it, in tree order, have already pushed, as Godot's
- * enter-tree order applies a one-direction chain. A feedback loop between relays is not iterated
- * to a fixed point. A target that is not a Node3D (for a RemoteTransform3D) or a Node2D
- * (for a RemoteTransform2D) takes nothing, as the cast fails (`remote_transform_3d.cpp:54`).
+ * Godot pushes a relay each time a transform flush reaches it (`remote_transform_3d.cpp:118-126`,
+ * `remote_transform_2d.cpp:127-136`), and a push queues every relay its target carries, so the
+ * pass replays the flushes up to the frame the `ref:godot` harness captures. A chain settles in the
+ * first flushes, and a relay cycle takes the pose of that frame. A target that is not a Node3D (for
+ * a RemoteTransform3D) or a Node2D (for a RemoteTransform2D) takes nothing, as the cast fails
+ * (`remote_transform_3d.cpp:54`).
  */
 export function applyRemoteTransforms(tree: LiveTree): NodePatches {
+  const relays = relaysOf(tree);
   const placed = new Map<string, NodePatch>();
-  tree.fold<void, void>(undefined, (relay, _, descend) => {
-    const { type } = relay.step.node;
-    if (type === 'RemoteTransform3D') placeTarget3D(relay, tree, placed);
-    else if (type === 'RemoteTransform2D') placeTarget2D(relay, tree, placed);
+  if (relays.length === 0) return placed;
+
+  const queuedBy = relaysQueuedByAMoveOf(tree, relays);
+  const localRelayAt = new Map(relays.filter((r) => !r.flags.useGlobal).map((r) => [r.link.path, r]));
+  // Godot recurses without end through a ring of local relays and overflows its stack. The replay
+  // stops at the relay that is already pushing.
+  const pushing = new Set<Relay>();
+  const push = (relay: Relay, queue: QueueTransformChange<Relay>): void => {
+    if (pushing.has(relay) || !moveTarget(relay, tree, placed)) return;
+    pushing.add(relay);
+    for (const queued of queuedBy(relay.target)) queue(queued);
+    // A local relay pushes the moment its own local transform changes (`node_3d.cpp:398-400`,
+    // `canvas_item.h:173-178`).
+    const localTarget = localRelayAt.get(relay.target.path);
+    if (localTarget) push(localTarget, queue);
+    pushing.delete(relay);
+  };
+  replayTransformFlushes(relays.filter(isOnTheListAtEnterTree), transformFlushesThrough(HARNESS_FRAME), push);
+  return placed;
+}
+
+/** A RemoteTransform3D or RemoteTransform2D whose target Godot caches on enter-tree. */
+interface Relay {
+  readonly link: LiveLink;
+  readonly target: LiveLink;
+  readonly space: Space;
+  readonly flags: RemoteFlags;
+}
+
+type Space = 'Node3D' | 'Node2D';
+
+const SPACE_OF_RELAY: Readonly<Record<string, Space>> = {
+  RemoteTransform3D: 'Node3D',
+  RemoteTransform2D: 'Node2D',
+};
+
+/** Every relay of `tree` that can move its target, in tree order. */
+function relaysOf(tree: LiveTree): Relay[] {
+  const relays: Relay[] = [];
+  tree.fold<void, void>(undefined, (link, _, descend) => {
+    const space = SPACE_OF_RELAY[link.step.node.type];
+    const target = space ? remoteTargetOf(link, tree, space) : null;
+    if (space && target)
+      relays.push({ link, target, space, flags: readFlags(link.step.node.properties as RelayProps) });
     descend();
   });
-  return placed;
+  return relays;
+}
+
+/**
+ * Whether entering the tree puts `relay` on the transform-change list. A Node3D asks for transform
+ * notifications only in global coordinates (`remote_transform_3d.cpp:101-102`, `node_3d.cpp:94`),
+ * and every CanvasItem goes on the list (`canvas_item.cpp:365-367`).
+ */
+function isOnTheListAtEnterTree(relay: Relay): boolean {
+  return relay.space === 'Node2D' || relay.flags.useGlobal;
+}
+
+/** The relays a move of each target queues, cached by target, as {@link relaysQueuedBy} gives them. */
+function relaysQueuedByAMoveOf(tree: LiveTree, relays: readonly Relay[]): (target: LiveLink) => Relay[] {
+  // Only a relay in global coordinates asks for the notification.
+  const listenerAt = new Map(relays.filter((r) => r.flags.useGlobal).map((r) => [r.link.path, r]));
+  const queuedByTarget = new Map<string, Relay[]>();
+  return (target) => {
+    let queued = queuedByTarget.get(target.path);
+    if (!queued) {
+      queued = relaysQueuedBy(target, tree, listenerAt);
+      queuedByTarget.set(target.path, queued);
+    }
+    return queued;
+  };
+}
+
+/**
+ * The relays of `listenerAt` that a move of `target` queues, in the order Godot queues them: a
+ * Node3D queues its Node3D children's subtrees before itself (`node_3d.cpp:106-133`), a CanvasItem
+ * itself before its CanvasItem children's (`canvas_item.cpp:1069-1101`). A `top_level` child keeps
+ * its place, so the walk stops there.
+ */
+function relaysQueuedBy(target: LiveLink, tree: LiveTree, listenerAt: ReadonlyMap<string, Relay>): Relay[] {
+  const family = descendsFromClass(target.step.node.type, 'Node3D') ? 'Node3D' : 'CanvasItem';
+  const queued: Relay[] = [];
+  const reaches = (child: LiveLink): boolean =>
+    descendsFromClass(child.step.node.type, family) && !isTopLevelItem(child.step.node);
+  const walk = (link: LiveLink): void => {
+    const listener = listenerAt.get(link.path);
+    if (listener && family === 'CanvasItem') queued.push(listener);
+    tree.fold<void, void>(undefined, (child) => (reaches(child) ? walk(child) : undefined), link);
+    if (listener && family === 'Node3D') queued.push(listener);
+  };
+  walk(target);
+  return queued;
 }
 
 /**
@@ -102,57 +197,54 @@ function readFlags(props: RelayProps): RemoteFlags {
   };
 }
 
-/** What a relay places: its target, flags and the chains that carry both to the scene root. */
-interface Placement {
-  readonly target: LiveLink;
-  readonly flags: RemoteFlags;
-  readonly relayChain: Map<string, TscnNode>;
-  readonly targetChain: Map<string, TscnNode>;
-  readonly parentPath: string | null;
+function flagsAnyPart({ updatePosition, updateRotation, updateScale }: RemoteFlags): boolean {
+  return updatePosition || updateRotation || updateScale;
 }
 
-/** The placement of `relay` onto a `targetClass` node, or null where it drives nothing. */
-function placementOf(
-  relay: LiveLink,
-  tree: LiveTree,
-  placed: Map<string, NodePatch>,
-  targetClass: 'Node3D' | 'Node2D'
-): Placement | null {
-  const target = remoteTargetOf(relay, tree, targetClass);
-  if (!target) return null;
-
-  const flags = readFlags(relay.step.node.properties as RelayProps);
-  // With no part flagged, the 2D relay returns (`remote_transform_2d.cpp:55-57`) and the 3D relay
-  // writes the target's own transform back, so neither moves the target.
-  if (!(flags.updatePosition || flags.updateRotation || flags.updateScale)) return null;
-
-  return {
-    target,
-    flags,
-    relayChain: nodesOnTheWayTo(tree, relay.path, placed),
-    targetChain: nodesOnTheWayTo(tree, target.path, placed),
-    parentPath: parentPathOf(target.path),
-  };
+/** Moves `relay`'s target as `_update_remote` does, and whether Godot sets the target's transform. */
+function moveTarget(relay: Relay, tree: LiveTree, placed: Map<string, NodePatch>): boolean {
+  return relay.space === 'Node3D' ? moveTarget3D(relay, tree, placed) : moveTarget2D(relay, tree, placed);
 }
 
-function placeTarget3D(relay: LiveLink, tree: LiveTree, placed: Map<string, NodePatch>): void {
-  const placement = placementOf(relay, tree, placed, 'Node3D');
-  if (!placement) return;
-  const { target, flags, relayChain, targetChain, parentPath } = placement;
-  // A 3D relay in local coordinates pushes on a change of its own local transform, which a load
-  // does not make (measured on Godot 4.6.3), so the target stays where the scene puts it.
-  if (!flags.useGlobal) return;
+function moveTarget3D(relay: Relay, tree: LiveTree, placed: Map<string, NodePatch>): boolean {
+  // With no part flagged, the 3D relay sets the target's own transform back
+  // (`remote_transform_3d.cpp:71-97`), so the pose stays and the set still notifies.
+  if (!flagsAnyPart(relay.flags)) return true;
+  placed.set(relay.target.path, { transform: newTargetLocal3D(relay, tree, placed) });
+  return true;
+}
 
-  const desired = composeSelected3D(
+/** The local transform `relay` gives its target, from the poses the pass has placed so far. */
+function newTargetLocal3D({ link, target, flags }: Relay, tree: LiveTree, placed: NodePatches): Transform3D {
+  const relayChain = nodesOnTheWayTo(tree, link.path, placed);
+  const targetChain = nodesOnTheWayTo(tree, target.path, placed);
+  if (!flags.useGlobal) {
+    return composeSelected3D(
+      localTransform3D(targetChain.get(target.path)!),
+      localTransform3D(relayChain.get(link.path)!),
+      flags
+    );
+  }
+  const global = composeSelected3D(
     globalTransform3D(target.path, targetChain),
-    globalTransform3D(relay.path, relayChain),
+    globalTransform3D(link.path, relayChain),
     flags
   );
-  const parentGlobal = parentPath ? globalTransform3D(parentPath, targetChain) : identityTransform3D();
+  return localFromGlobal3D(global, parentPathOf(target.path), targetChain);
+}
 
-  placed.set(target.path, {
-    transform: multiplyTransform3D(affineInverseTransform3D(parentGlobal), desired),
-  });
+/** The local transform that puts a node under `parentPath` at `global` (`node_3d.cpp:413-420`). */
+function localFromGlobal3D(
+  global: Transform3D,
+  parentPath: string | null,
+  chain: Map<string, TscnNode>
+): Transform3D {
+  const parentGlobal = parentPath ? globalTransform3D(parentPath, chain) : identityTransform3D();
+  return multiplyTransform3D(affineInverseTransform3D(parentGlobal), global);
+}
+
+function localTransform3D(node: TscnNode): Transform3D {
+  return matrixToTransform3D(localMatrix3D(node));
 }
 
 function globalTransform3D(path: string, nodeByPath: Map<string, TscnNode>): Transform3D {
@@ -176,43 +268,46 @@ function composeSelected3D(target: Transform3D, relay: Transform3D, flags: Remot
   return { ...target, origin };
 }
 
-/** The target's local transform when the relay and the target meet in global coordinates. */
-function newLocalFromGlobals(relay: LiveLink, placement: Placement): Transform2DColumns {
-  const { target, flags, relayChain, targetChain, parentPath } = placement;
-  const desired = composeSelected2D(
-    globalTransform2D(target.path, targetChain),
-    globalTransform2D(relay.path, relayChain),
-    flags
-  );
-  const parentGlobal = parentPath ? globalTransform2D(parentPath, targetChain) : TRANSFORM2D_IDENTITY;
-  return multiplyTransform2D(affineInverseTransform2D(parentGlobal), desired);
-}
-
-/** The target's local transform when the relay and the target meet in local coordinates. */
-function newLocalFromLocals(
-  relay: LiveLink,
-  { target, flags, relayChain, targetChain }: Placement
-): Transform2DColumns {
-  return composeSelected2D(
-    localTransform2D(targetChain.get(target.path)!),
-    localTransform2D(relayChain.get(relay.path)!),
-    flags
-  );
-}
-
-function placeTarget2D(relay: LiveLink, tree: LiveTree, placed: Map<string, NodePatch>): void {
-  const placement = placementOf(relay, tree, placed, 'Node2D');
-  if (!placement) return;
-  const { target, flags } = placement;
-
-  // Unlike a 3D relay, a 2D relay in local coordinates pushes on load (measured on Godot 4.6.3).
-  const newLocal = flags.useGlobal
-    ? newLocalFromGlobals(relay, placement)
-    : newLocalFromLocals(relay, placement);
-
+function moveTarget2D(relay: Relay, tree: LiveTree, placed: Map<string, NodePatch>): boolean {
+  // With no part flagged, the 2D relay returns before it sets anything (`remote_transform_2d.cpp:63-65`).
+  if (!flagsAnyPart(relay.flags)) return false;
   // The parts Node2D reads from the matrix (`node_2d.cpp:127-133`), skew included.
-  const { position, rotation, scale, skew } = transform2DDecompose(newLocal);
-  placed.set(target.path, { position, rotation, scale, skew });
+  const { position, rotation, scale, skew } = transform2DDecompose(newTargetLocal2D(relay, tree, placed));
+  placed.set(relay.target.path, { position, rotation, scale, skew });
+  return true;
+}
+
+/** The local transform `relay` gives its target, from the poses the pass has placed so far. */
+function newTargetLocal2D(
+  { link, target, flags }: Relay,
+  tree: LiveTree,
+  placed: NodePatches
+): Transform2DColumns {
+  const relayChain = nodesOnTheWayTo(tree, link.path, placed);
+  const targetChain = nodesOnTheWayTo(tree, target.path, placed);
+  if (!flags.useGlobal) {
+    return composeSelected2D(
+      localTransform2D(targetChain.get(target.path)!),
+      localTransform2D(relayChain.get(link.path)!),
+      flags
+    );
+  }
+  const global = composeSelected2D(
+    globalTransform2D(target.path, targetChain),
+    globalTransform2D(link.path, relayChain),
+    flags
+  );
+  return localFromGlobal2D(global, parentPathOf(target.path), targetChain);
+}
+
+/** The local transform that puts a node under `parentPath` at `global` (`node_2d.cpp:384-392`). */
+function localFromGlobal2D(
+  global: Transform2DColumns,
+  parentPath: string | null,
+  chain: Map<string, TscnNode>
+): Transform2DColumns {
+  const parentGlobal = parentPath ? globalTransform2D(parentPath, chain) : TRANSFORM2D_IDENTITY;
+  return multiplyTransform2D(affineInverseTransform2D(parentGlobal), global);
 }
 
 function localTransform2D(node: TscnNode): Transform2DColumns {
