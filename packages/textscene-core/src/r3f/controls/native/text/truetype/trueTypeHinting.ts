@@ -27,6 +27,7 @@ import {
   tableBytes,
   type SfntFile,
 } from '../sfntTables';
+import { isTrickyFont } from '../trickyFont';
 import { CodeRange, ExecContext, type FaceBytecode } from './ttExecContext';
 import { INSTRUCT_CONTROL_NO_HINTING, saveProgramState } from './ttGraphicsState';
 import { runContext } from './ttRunInstructions';
@@ -66,6 +67,7 @@ function faceBytecodeOf(sfnt: SfntFile): FaceBytecode | null {
     maxTwilightPoints: Math.min(field(MAXP_TWILIGHT_OFFSET), MAX_TWILIGHT_POINTS),
     glyphCount,
     axisCount: readFvarAxisCount(sfnt),
+    isTricky: isTrickyFont(sfnt),
   };
 }
 
@@ -86,7 +88,7 @@ function runFontProgram(exc: ExecContext): string | null {
   exc.loadContext();
   exc.clearCodeRange(CodeRange.CVT);
   exc.clearCodeRange(CodeRange.GLYPH);
-  // The control value program starts from the default state, so the font program's state is not kept.
+  // The size keeps the font program's state only through a font without a control value program.
   return runProgram(exc, CodeRange.FONT, exc.face.fontProgram);
 }
 

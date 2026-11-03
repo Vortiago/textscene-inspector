@@ -22,6 +22,7 @@ import {
   INSTRUCT_CONTROL_DEFAULT_STATE,
   INSTRUCT_CONTROL_NATIVE_CLEARTYPE,
   type GraphicsState,
+  zeroedGraphicsState,
 } from './ttGraphicsState';
 import { roundDistance, type SuperRound } from './ttRounding';
 
@@ -78,6 +79,8 @@ export interface FaceBytecode {
   readonly glyphCount: number;
   /** The variation axes of the font, whose coordinates GETVARIATION pushes. */
   readonly axisCount: number;
+  /** A tricky font (`trickyFont.ts`) loads every glyph with backward compatibility off. */
+  readonly isTricky: boolean;
 }
 
 /** `FT_Long` values beyond the declared stack, half again or at least 128 (`tt_size_init_bytecode`). */
@@ -146,7 +149,7 @@ export class ExecContext {
 
   /** The size's graphics state, which each program starts from. */
   sizeGraphicsState = defaultGraphicsState();
-  graphicsState: GraphicsState = defaultGraphicsState();
+  graphicsState: GraphicsState = zeroedGraphicsState();
 
   readonly codeRanges: (Uint8Array | null)[] = [null, null, null];
   code: Uint8Array = new Uint8Array(0);
@@ -237,7 +240,9 @@ export class ExecContext {
     this.loadContext();
     if (this.sizeGraphicsState.instructControl & INSTRUCT_CONTROL_DEFAULT_STATE)
       this.sizeGraphicsState = defaultGraphicsState();
-    this.setBackwardCompatibility(this.sizeGraphicsState.instructControl);
+    // FreeType resets it for each load, and leaves it off for a tricky font (`tt_loader_init`).
+    if (this.face.isTricky) this.backwardCompatibility = 0;
+    else this.setBackwardCompatibility(this.sizeGraphicsState.instructControl);
   }
 
   /** Backward compatibility on, unless `instructControl` holds `INSTRUCT_CONTROL_NATIVE_CLEARTYPE`. */

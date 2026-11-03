@@ -74,6 +74,37 @@ export function defaultGraphicsState(): GraphicsState {
   };
 }
 
+const ZERO_VECTOR: UnitVector = Object.freeze({ x: 0, y: 0 });
+
+/**
+ * The state of a new context, which `TT_New_Context` allocates as zeros. A size without a control
+ * value program saves it, or the font program's state, as `tt_size_run_prep` saves the context's
+ * state with no run to reset it.
+ */
+export function zeroedGraphicsState(): GraphicsState {
+  return {
+    rp0: 0,
+    rp1: 0,
+    rp2: 0,
+    gep0: TWILIGHT_ZONE,
+    gep1: TWILIGHT_ZONE,
+    gep2: TWILIGHT_ZONE,
+    dualVector: ZERO_VECTOR,
+    projVector: ZERO_VECTOR,
+    freeVector: ZERO_VECTOR,
+    loop: 0,
+    roundState: RoundState.HALF_GRID,
+    minimumDistance: 0,
+    controlValueCutIn: 0,
+    singleWidthCutIn: 0,
+    singleWidthValue: 0,
+    deltaBase: 0,
+    deltaShift: 0,
+    isAutoFlip: false,
+    instructControl: 0,
+  };
+}
+
 /** Whether any zone pointer names the twilight zone, which has no unscaled points. */
 export function isAnyZoneTwilight({ gep0, gep1, gep2 }: GraphicsState): boolean {
   return gep0 === TWILIGHT_ZONE || gep1 === TWILIGHT_ZONE || gep2 === TWILIGHT_ZONE;

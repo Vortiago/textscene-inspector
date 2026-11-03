@@ -465,6 +465,54 @@ Each is licensed under the SIL Open Font License, Version 1.1 (OFL-1.1), whose f
 
 ---
 
+## DejaVu Sans font
+
+<https://dejavu-fonts.github.io>
+
+`scenes/fixtures/fonts/dejavu-sans-subset-tricky.ttf` is a subset of DejaVu Sans with no `fpgm` or `prep` table,
+renamed to the family "MingLiU Test" so that FreeType flags it as a tricky font. The tests of the tricky-font
+check read it. Its `name` table holds the full licence.
+
+DejaVu Sans is Copyright (c) 2003 by Bitstream, Inc. All Rights Reserved. Bitstream Vera is a trademark of
+Bitstream, Inc. Glyphs imported from Arev fonts are Copyright (c) 2006 by Tavmjong Bah. All Rights Reserved.
+DejaVu changes are in the public domain. It is licensed under the Bitstream Vera Fonts licence and the Arev
+Fonts licence, which allow a modified copy whose name contains neither "Bitstream", "Vera", "Tavmjong Bah" nor
+"Arev":
+
+> Permission is hereby granted, free of charge, to any person obtaining a copy of the fonts accompanying this
+> license ("Fonts") and associated documentation files (the "Font Software"), to reproduce and distribute the
+> Font Software, including without limitation the rights to use, copy, merge, publish, distribute, and/or sell
+> copies of the Font Software, and to permit persons to whom the Font Software is furnished to do so, subject
+> to the following conditions:
+>
+> The above copyright and trademark notices and this permission notice shall be included in all copies of one
+> or more of the Font Software typefaces.
+>
+> The Font Software may be modified, altered, or added to, and in particular the designs of glyphs or
+> characters in the Fonts may be modified and additional glyphs or characters may be added to the Fonts, only
+> if the fonts are renamed to names not containing either the words "Bitstream" or the word "Vera".
+>
+> This License becomes null and void to the extent applicable to Fonts or Font Software that has been modified
+> and is distributed under the "Bitstream Vera" names.
+>
+> The Font Software may be sold as part of a larger software package but no copy of one or more of the Font
+> Software typefaces may be sold by itself.
+>
+> THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+> LIMITED TO ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF
+> COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL BITSTREAM OR THE GNOME FOUNDATION BE LIABLE
+> FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR
+> CONSEQUENTIAL DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR
+> INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE.
+>
+> Except as contained in this notice, the names of Gnome, the Gnome Foundation, and Bitstream Inc., shall not
+> be used in advertising or otherwise to promote the sale, use or other dealings in this Font Software without
+> prior written authorization from the Gnome Foundation or Bitstream Inc., respectively.
+
+The Arev Fonts licence has the same terms, with "Tavmjong Bah" and "Arev" in place of "Bitstream" and "Vera".
+
+---
+
 ## Activision fast filter coefficients
 
 `packages/textscene-core/src/godot/rendering/environment/skyFastFilterCoefficients.ts` reproduces levels 0 to 5 of
@@ -575,11 +623,12 @@ charstring engine and its hinter of FreeType, because Godot reads the outlines o
 (`modules/text_server_adv/text_server_adv.cpp`). Godot vendors it as `thirdparty/freetype`.
 
 The files in `packages/textscene-core/src/r3f/controls/native/text/truetype/`, with `sfntGlyf.ts`,
-`sfntGlyphMetrics.ts`, `glyphHinting.ts`, `woff2Hmtx.ts` and the CORDIC vector length in `ftVector.ts`,
-port FreeType's TrueType glyph loader and its v40 bytecode interpreter (`src/truetype/ttgload.c`,
-`ttinterp.c` and `ttobjs.c`), its metrics reader (`src/sfnt/ttmtx.c`), its WOFF2 `hmtx` rebuild
-(`src/sfnt/sfwoff2.c`) and `FT_Vector_Length` (`src/base/fttrigon.c`), because Godot hints and reads the
-outlines of a TrueType font with them.
+`sfntGlyphMetrics.ts`, `glyphHinting.ts`, `trickyFont.ts`, `sfntFamilyName.ts`, `woff2Hmtx.ts` and the CORDIC
+vector length in `ftVector.ts`, port FreeType's TrueType glyph loader, its v40 bytecode interpreter and its list of
+tricky fonts (`src/truetype/ttgload.c`, `ttinterp.c` and `ttobjs.c`), its family name and metrics readers
+(`src/sfnt/sfobjs.c`, `ttload.c` and `ttmtx.c`), its WOFF2 `hmtx` rebuild (`src/sfnt/sfwoff2.c`)
+and `FT_Vector_Length` (`src/base/fttrigon.c`), because Godot hints and reads the outlines of a TrueType font
+with them.
 
 FreeType is by David Turner, Robert Wilhelm and Werner Lemberg, and the charstring engine is by Adobe. It is
 licensed under the FreeType Project License, separately from Godot's own MIT licence above.

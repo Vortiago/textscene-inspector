@@ -94,6 +94,7 @@ export const OUTLINE_TABLE_TAGS: readonly string[] = [
   'fpgm',
   'prep',
   'fvar',
+  'name',
 ];
 
 export interface TableRecord {

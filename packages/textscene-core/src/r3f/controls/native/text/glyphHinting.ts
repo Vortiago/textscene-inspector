@@ -3,7 +3,7 @@
  * FreeType's bytecode interpreter (`truetype/`), which TextMesh loads on demand for a font that
  * FreeType hints natively. A font with neither a font program nor a control value program of more
  * than 7 bytes goes to FreeType's auto-hinter instead (`ftobjs.c`, `FT_Load_Glyph`), whatever its
- * glyph programs hold.
+ * glyph programs hold, unless FreeType lists it as tricky (`trickyFont.ts`).
  *
  * Portions ported from FreeType (FreeType Project License).
  * Copyright (C) 1996-2026 by David Turner, Robert Wilhelm, and Werner Lemberg.
@@ -11,6 +11,7 @@
  */
 
 import type { SfntFile } from './sfntTables';
+import { isTrickyFont } from './trickyFont';
 
 /** `FT_CURVE_TAG_TOUCH_X`: an instruction has moved the point along x. */
 export const TAG_TOUCH_X = 0x08;
@@ -94,8 +95,12 @@ export interface GlyphHinting {
 const LARGEST_AUTOHINTED_CONTROL_VALUE_PROGRAM = 7;
 
 /** Whether FreeType runs the font's own TrueType hints rather than its auto-hinter. */
-export function isNativelyHinted({ tables }: SfntFile): boolean {
-  const fontProgramLength = tables.get('fpgm')?.length ?? 0;
-  const controlValueProgramLength = tables.get('prep')?.length ?? 0;
-  return fontProgramLength > 0 || controlValueProgramLength > LARGEST_AUTOHINTED_CONTROL_VALUE_PROGRAM;
+export function isNativelyHinted(sfnt: SfntFile): boolean {
+  const fontProgramLength = sfnt.tables.get('fpgm')?.length ?? 0;
+  const controlValueProgramLength = sfnt.tables.get('prep')?.length ?? 0;
+  return (
+    fontProgramLength > 0 ||
+    controlValueProgramLength > LARGEST_AUTOHINTED_CONTROL_VALUE_PROGRAM ||
+    isTrickyFont(sfnt)
+  );
 }
