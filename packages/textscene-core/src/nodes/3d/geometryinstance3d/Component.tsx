@@ -15,7 +15,7 @@ import { invisibleBase } from '../../../r3f/invisibleBase';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { TscnNode } from '../../../parser/types';
 import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
-import { FrameAabb } from '../../../r3f/components/FrameAabb';
+import { FrameAabb } from '../../../r3f/components/NodeAabb';
 
 /**
  * The box the node's base gives its instance, in node space, or null while it is unknown. The

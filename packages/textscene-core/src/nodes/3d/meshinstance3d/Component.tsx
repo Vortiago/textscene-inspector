@@ -41,7 +41,7 @@ import { useMeshSkin } from './useMeshSkin';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import { drawHookProps, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
-import { FramePoint } from '../../../r3f/components/FrameAabb';
+import { FramePoint } from '../../../r3f/components/NodeAabb';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { partsPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 

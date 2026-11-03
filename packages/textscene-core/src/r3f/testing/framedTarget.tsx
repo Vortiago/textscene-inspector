@@ -8,21 +8,24 @@ import { TscnParser } from '../../parser/TscnParser';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { frameSceneBounds } from '../frameSceneBounds';
 import { NodeTree } from './NodeTree';
+import { settleLoads } from './settleLoads';
 
 /** The `.tscn` text's first node, mounted through the registered components. */
-export async function renderScene(source: string) {
+export async function mountScene(source: string) {
   const scene = new TscnParser().parse(source);
   const root = scene.nodes[0]!;
-  return ReactThreeTestRenderer.create(
+  const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={scene.internalResources}>
       <NodeTree node={root} path={root.name} />
     </SceneResourcesProvider>
   );
+  await settleLoads();
+  return renderer;
 }
 
 /** The point `frameSceneBounds` aims the controls at for the scene. */
 export async function framedTarget(source: string): Promise<THREE.Vector3> {
-  const renderer = await renderScene(source);
+  const renderer = await mountScene(source);
   const controls = { target: new THREE.Vector3(), update: () => {} };
   frameSceneBounds(renderer.scene.instance, new THREE.PerspectiveCamera(70, 1, 0.1, 4000), controls);
   return controls.target;

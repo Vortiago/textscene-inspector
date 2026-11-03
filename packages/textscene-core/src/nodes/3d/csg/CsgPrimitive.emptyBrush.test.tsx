@@ -15,7 +15,7 @@ import './csgmesh3d/index.r3f';
 import './csgsphere3d/index.r3f';
 import '../../base/node3d/index.r3f';
 import { NodeTree } from '../../../r3f/testing/NodeTree';
-import { framedTarget, renderScene as render } from '../../../r3f/testing/framedTarget';
+import { framedTarget, mountScene as render } from '../../../r3f/testing/framedTarget';
 import { drawnMeshes } from '../testing/reactThreeTestInstance';
 
 const LONE_ROOT_SCENE = `[gd_scene format=3]

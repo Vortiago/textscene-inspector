@@ -13,7 +13,7 @@ import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/n
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
-import { FramePoint } from '../../../r3f/components/FrameAabb';
+import { FramePoint } from '../../../r3f/components/NodeAabb';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
 
 // This file imports nothing from the shaping engine, so the engine stays out of the

@@ -93,14 +93,18 @@ export function frameBoxOf(object: THREE.Object3D, target: THREE.Box3): THREE.Bo
   const aabb = object.userData[FRAME_AABB_KEY] as Aabb | undefined;
   if (!aabb) return null;
   object.updateWorldMatrix(true, false);
+  return worldBoxOf(object, aabb, target);
+}
+
+/** Writes `aabb`, in the space of `object`, to `target` as a world box. */
+function worldBoxOf(object: THREE.Object3D, aabb: Aabb, target: THREE.Box3): THREE.Box3 {
   copyAabb(target, aabb);
   return target.applyMatrix4(object.matrixWorld);
 }
 
 function unionExplicitBox(object: THREE.Object3D, aabb: Aabb, target: THREE.Box3): void {
   if (!hasSurface(aabb.size)) return;
-  copyAabb(_box, aabb);
-  target.union(_box.applyMatrix4(object.matrixWorld));
+  target.union(worldBoxOf(object, aabb, _box));
 }
 
 function unionOwnBox(object: THREE.Object3D, target: THREE.Box3): void {

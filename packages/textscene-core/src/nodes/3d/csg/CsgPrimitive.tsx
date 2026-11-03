@@ -22,7 +22,7 @@ import { hasFaces } from '../../../r3f/csg/csgRegistration';
 import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
 import { resolveMaterialSource } from '../../../r3f/materials/materialSource';
 import { useCsgGeometryContext } from '../../../r3f/csg/useCsgGeometryContext';
-import { FramePoint } from '../../../r3f/components/FrameAabb';
+import { FramePoint } from '../../../r3f/components/NodeAabb';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { livePlacement } from '../../../r3f/visibilityRange/placements';
 import { useLivePatchesBelow } from '../../../r3f/liveNodePatches';

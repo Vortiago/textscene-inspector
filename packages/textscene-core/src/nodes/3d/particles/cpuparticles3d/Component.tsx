@@ -10,7 +10,7 @@ import { sameTransform3D, type Transform3D } from '../../../../godot/math/transf
 import type { TscnNode } from '../../../../parser/types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { PluginGizmo, SelectedOnly } from '../../../../r3f/gizmo/PluginGizmo';
-import { FramePoint } from '../../../../r3f/components/FrameAabb';
+import { FramePoint } from '../../../../r3f/components/NodeAabb';
 import { realGlobalTransform3D } from '../../../../r3f/nodeTreeTransforms';
 import { useLazyModule } from '../../../../resources/useLazyModule';
 import { Node3D } from '../../../base/node3d/Component';
