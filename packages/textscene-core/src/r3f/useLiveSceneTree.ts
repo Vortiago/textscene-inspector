@@ -26,7 +26,6 @@ import { sameElements } from '../utils/sameElements.js';
 import { subscribeToNothing } from '../utils/subscribeToNothing.js';
 import { NOTHING_CACHED } from './cacheSources.js';
 import { useProjectSettings } from './contexts/ProjectSettingsContext.js';
-import { projectPhysicsClock } from '../parser/projectSettingsParser.js';
 import type { PhysicsClock } from '../godot/scene/physicsTicks.js';
 
 /** The live-tree roots and the snapshot of the loader's caches they are walked over. */
@@ -178,7 +177,7 @@ function useLiveTreeInputs(): LiveTreeInputs {
   // empty-canvas and test-renderer cases, where no scene is mounted at all.
   const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
   const loader = useResourceLoader();
-  const physicsClock = projectPhysicsClock(useProjectSettings().settings);
+  const { physicsClock } = useProjectSettings();
   return { sceneGraph, loader, physicsClock };
 }
 
@@ -274,8 +273,15 @@ const NO_ROOTS: readonly TscnNode[] = [];
  * The tree over the caches of a loader, with no roots: a question about one node needs only the
  * caches. Every step question of a load tick shares it.
  */
-const loaderTreeAt = valueAtLoadTick((loader) =>
-  liveTreeOf(NO_ROOTS, { externalResources: [], internalResources: [], ...loaderCaches(loader) })
+const loaderTreesAt = perObject((physicsClock: PhysicsClock) =>
+  valueAtLoadTick((loader) =>
+    liveTreeOf(NO_ROOTS, {
+      externalResources: [],
+      internalResources: [],
+      ...loaderCaches(loader),
+      physicsClock,
+    })
+  )
 );
 
 /**
@@ -287,11 +293,12 @@ const loaderTreeAt = valueAtLoadTick((loader) =>
  */
 export function useLiveStepOf(node: LiveNode, scope: SceneScope): LiveStep {
   const loader = useResourceLoader();
+  const { physicsClock } = useProjectSettings();
   const readsCaches = liveInstancePath(node, scope) !== null || glbPathOf(node) !== undefined;
   const watched = readsCaches ? loader : null;
   const readAt = useCallback(
-    (version: number) => loaderTreeAt(watched, version).stepOf(node, scope),
-    [watched, node, scope]
+    (version: number) => loaderTreesAt(physicsClock)(watched, version).stepOf(node, scope),
+    [physicsClock, watched, node, scope]
   );
   return useReadAtLoadTick(watched, readAt, Object.is);
 }

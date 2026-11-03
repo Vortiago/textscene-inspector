@@ -14,11 +14,12 @@ import { node2DLocalTransform } from '../../../r3f/node2dTransform';
 import type { Node2DProperties } from '../../base/node2d/types';
 import { TRANSFORM2D_IDENTITY, multiplyTransform2D } from '../../../godot/math/transform2d';
 import { applyRemoteTransforms } from './remoteTransforms';
+import { liveDrawnPatches } from '../../../r3f/liveNodePatches';
 
-/** The global origin of the Node3D at `path` after the relays have run. */
+/** The global origin of the Node3D at `path` where render draws it after the relays have run. */
 function globalOrigin3D(content: string, path: string): number[] {
   const tree = liveTreeOfText(content);
-  const global = liveGlobalTransform3D(tree, path, applyRemoteTransforms(tree));
+  const global = liveGlobalTransform3D(tree, path, liveDrawnPatches(tree));
   if (!global) throw new Error(`expected a Node3D at ${path}`);
   return [global.origin.x, global.origin.y, global.origin.z];
 }
@@ -27,7 +28,7 @@ function globalOrigin3D(content: string, path: string): number[] {
 function globalOrigin2D(content: string, path: string): number[] {
   const tree = liveTreeOfText(content);
   let global = TRANSFORM2D_IDENTITY;
-  for (const node of nodesOnTheWayTo(tree, path, applyRemoteTransforms(tree)).values()) {
+  for (const node of nodesOnTheWayTo(tree, path, applyRemoteTransforms(tree).placed).values()) {
     global = multiplyTransform2D(global, node2DLocalTransform(node.properties as Partial<Node2DProperties>));
   }
   return [global.tx, global.ty];
@@ -173,7 +174,7 @@ describe('applyRemoteTransforms draws a relay cycle at the frame the ref:godot h
       ...contextOver(main, {}),
       physicsClock: { ticksPerSecond: 120, jitterFix: 0.5 },
     });
-    const holderA = liveGlobalTransform3D(tree, 'Root/HolderA', applyRemoteTransforms(tree))!;
+    const holderA = liveGlobalTransform3D(tree, 'Root/HolderA', applyRemoteTransforms(tree).placed)!;
     expectCloseTo([holderA.origin.x, holderA.origin.y, holderA.origin.z], [2993, 0, 3]);
   });
 
@@ -210,7 +211,7 @@ remote_path = NodePath("../../HolderA")
   it('turns the holders of a cycle whose relay is turned 10° about Y as Godot does', () => {
     const turned = 'Transform3D(0.984807753, 0, -0.173648178, 0, 1, 0, 0.173648178, 0, 0.984807753, 1, 0, 0)';
     const tree = liveTreeOfText(cycle3D(turned));
-    const placed = applyRemoteTransforms(tree);
+    const { placed } = applyRemoteTransforms(tree);
     const holderA = liveGlobalTransform3D(tree, 'Root/HolderA', placed)!;
     const holderB = liveGlobalTransform3D(tree, 'Root/HolderB', placed)!;
     // Godot keeps 32-bit floats, so 1e-3, not the default precision.

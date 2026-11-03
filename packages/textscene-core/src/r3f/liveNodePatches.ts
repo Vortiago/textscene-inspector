@@ -1,36 +1,49 @@
 /**
  * The live scene passes that lay property values over nodes (ADR-0060): the RemoteTransform pass
- * moves its targets, then the CSGPolygon3D pass resolves its paths over the moved nodes. Render, the
- * CSG plan, the inspector and the Control layout read a node through these patches, since a
- * sub-scene's nodes are shared by every instance and a pass cannot write into one.
+ * moves its targets, then the CSGPolygon3D pass resolves its paths over the moved nodes. The CSG
+ * plan, the inspector and the Control layout read a node through these patches, since a sub-scene's
+ * nodes are shared by every instance and a pass cannot write into one. Render reads the drawn
+ * patches, which also move a mesh that draws behind its node to where Godot draws it.
  */
 
 import { useMemo } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
-import { applyRemoteTransforms } from '../nodes/shared/remotetransform/remoteTransforms.js';
+import { applyRemoteTransforms, type RelayPoses } from '../nodes/shared/remotetransform/remoteTransforms.js';
 import { resolveCsgPolygonPaths } from '../nodes/3d/csg/csgpolygon3d/csgPolygonPaths.js';
 import { joinPath } from '../utils/nodePath.js';
 import { sameEntries } from '../utils/sameEntries.js';
 import { sameData } from '../utils/sameData.js';
 import { perObject } from '../utils/perObject.js';
 import type { LiveTree } from './liveSceneTree.js';
-import { useLiveScenePass, useLiveScenePassSelection, type LiveScenePass } from './liveScenePass.js';
+import {
+  liveScenePassResults,
+  useLiveScenePass,
+  useLiveScenePassSelection,
+  type LiveScenePass,
+} from './liveScenePass.js';
 import { NO_PATCHES, patchedNode, type NodePatch, type NodePatches } from './nodePatch.js';
 
+/** The previous patch of each node of the live tree, at each live path, for one pass. */
+type PreviousPatches = (node: TscnNode) => Map<string, NodePatch>;
+
 /**
- * Written only by {@link keptPatches}: the previous patch of each node of the live tree, at each
- * live path. A sub-scene's node sits at every instance of it, so the path keys the entry. The
- * entries clear when nothing holds the node any more.
+ * Written only by {@link keptPatches}, one store for each pass. A sub-scene's node sits at every
+ * instance of it, so the path keys the entry. The entries clear when nothing holds the node any more.
  */
-const previousPatches = perObject(() => new Map<string, NodePatch>());
+const previousNodePatches: PreviousPatches = perObject(() => new Map<string, NodePatch>());
+const previousDrawnPatches: PreviousPatches = perObject(() => new Map<string, NodePatch>());
 
 /**
  * `patches`, each one replaced by the patch the node had before where the two hold the same
  * content, so a load that leaves a result as it was hands back the same patch. A node that
  * keeps its patch does not draw again.
  */
-function keptPatches(tree: LiveTree, patches: Map<string, NodePatch>): NodePatches {
+function keptPatches(
+  previousPatches: PreviousPatches,
+  tree: LiveTree,
+  patches: Map<string, NodePatch>
+): NodePatches {
   for (const [path, patch] of patches) {
     const node = tree.at(path)?.step.node;
     if (!node) continue;
@@ -49,13 +62,24 @@ function mergedPatches(first: NodePatches, second: NodePatches): Map<string, Nod
   return merged;
 }
 
+/** The RemoteTransform pass over `tree`, run once for both passes below. */
+const relayPosesOf = perObject((tree: LiveTree): RelayPoses => applyRemoteTransforms(tree));
+
 /**
- * Every patch of `tree`. The RemoteTransform pass runs before the CSGPolygon3D path pass, since a
- * path reads where the nodes ended up.
+ * Every property patch of `tree`. The RemoteTransform pass runs before the CSGPolygon3D path pass,
+ * since a path reads where the nodes ended up.
  */
 export const liveNodePatches: LiveScenePass<NodePatch> = (tree) => {
-  const transforms = applyRemoteTransforms(tree);
-  return keptPatches(tree, mergedPatches(transforms, resolveCsgPolygonPaths(tree, transforms)));
+  const { placed } = relayPosesOf(tree);
+  return keptPatches(previousNodePatches, tree, mergedPatches(placed, resolveCsgPolygonPaths(tree, placed)));
+};
+
+/** {@link liveNodePatches} with each mesh that draws behind its node moved to where Godot draws it. */
+export const liveDrawnPatches: LiveScenePass<NodePatch> = (tree) => {
+  const patches = liveScenePassResults(liveNodePatches, tree);
+  const { drawnLag } = relayPosesOf(tree);
+  if (drawnLag.size === 0) return patches;
+  return keptPatches(previousDrawnPatches, tree, mergedPatches(patches, drawnLag));
 };
 
 /** {@link canTakePatch} by type, since each node asks on every render. Written only by it. */
@@ -76,12 +100,26 @@ function canTakePatch(type: string): boolean {
 }
 
 /**
- * `node` as the live passes bind it at the live path `path`, and the same node where none does. A
- * null node or path, or a node that cannot take a patch, asks nothing, so it watches no load.
+ * `node` as `pass` binds it at the live path `path`, and the same node where it binds none. A null
+ * node or path, or a node that cannot take a patch, asks nothing, so it watches no load.
  */
-export function useLivePatchedNode<N extends TscnNode | null>(node: N, path: string | null): N {
-  const patch = useLiveScenePass(liveNodePatches, node && canTakePatch(node.type) ? path : null);
+function useNodeThrough<N extends TscnNode | null>(
+  pass: LiveScenePass<NodePatch>,
+  node: N,
+  path: string | null
+): N {
+  const patch = useLiveScenePass(pass, node && canTakePatch(node.type) ? path : null);
   return useMemo(() => (node ? patchedNode(node, patch) : node), [node, patch]);
+}
+
+/** `node` with the property values the live passes bind at the live path `path`, as the inspector shows it. */
+export function useLivePatchedNode<N extends TscnNode | null>(node: N, path: string | null): N {
+  return useNodeThrough(liveNodePatches, node, path);
+}
+
+/** `node` as render draws it at the live path `path`: {@link liveDrawnPatches} laid over it. */
+export function useLiveDrawnNode<N extends TscnNode | null>(node: N, path: string | null): N {
+  return useNodeThrough(liveDrawnPatches, node, path);
 }
 
 /** The live path of each node of `chain`, a run of nested nodes that starts below `basePath`. */
@@ -93,10 +131,10 @@ export function pathsAlong(chain: readonly TscnNode[], basePath: string): string
 }
 
 /**
- * `chain` as the live passes bind it, a run of nested nodes that starts below the live path
- * `basePath`. One subscription serves the run, and an empty run asks nothing.
+ * `chain` as render draws it, a run of nested nodes that starts below the live path `basePath`.
+ * One subscription serves the run, and an empty run asks nothing.
  */
-export function useLivePatchedChain(chain: readonly TscnNode[], basePath: string): readonly TscnNode[] {
+export function useLiveDrawnChain(chain: readonly TscnNode[], basePath: string): readonly TscnNode[] {
   const paths = useMemo(() => pathsAlong(chain, basePath), [chain, basePath]);
   const select = useMemo(
     () =>
@@ -108,7 +146,7 @@ export function useLivePatchedChain(chain: readonly TscnNode[], basePath: string
             ),
     [paths]
   );
-  const patches = useLiveScenePassSelection(liveNodePatches, select, sameEntries) ?? NO_PATCHES;
+  const patches = useLiveScenePassSelection(liveDrawnPatches, select, sameEntries) ?? NO_PATCHES;
   return useMemo(
     () => chain.map((node, index) => patchedNode(node, patches.get(paths[index]!))),
     [chain, paths, patches]

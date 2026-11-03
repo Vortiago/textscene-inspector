@@ -17,6 +17,7 @@ import {
   type ViewportContent,
 } from './viewportContent.js';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources.js';
+import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext.js';
 
 export function useViewportContent(node: TscnNode): ViewportContent {
   // The sub-viewport's children resolve their instance refs against the scene
@@ -26,13 +27,17 @@ export function useViewportContent(node: TscnNode): ViewportContent {
   const version = useLiveTreeVersion(loader);
   // No loader is mounted in the linter bundle or an isolated test.
   const sceneCache = loader?.scenes ?? NOTHING_CACHED;
+  const { physicsClock } = useProjectSettings();
 
   return useMemo(
-    () => viewportContent(resolveStandaloneViewportSubtree(node, externalResources, sceneCache)),
+    () =>
+      viewportContent(
+        resolveStandaloneViewportSubtree(node, externalResources, { sceneCache, physicsClock })
+      ),
     // `version` is an intentional cache-buster: it increments each time a
     // sub-scene finishes loading, which is when an instance child stops being
     // typeless. The value itself is not read in the callback.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [node, externalResources, sceneCache, version]
+    [node, externalResources, sceneCache, physicsClock, version]
   );
 }

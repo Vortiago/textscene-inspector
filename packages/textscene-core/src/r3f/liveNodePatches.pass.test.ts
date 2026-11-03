@@ -1,14 +1,17 @@
 /**
  * The patches of the live scene passes: the RemoteTransform pass runs before the CSGPolygon3D pass,
- * and a load that leaves a result as it was hands back the same patch.
+ * a load that leaves a result as it was hands back the same patch, and a mesh that draws behind its
+ * node keeps that lag out of its property values.
  */
 
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser';
 import type { TscnScene } from '../parser/types';
+import type { Transform3D } from '../godot/math/transform3d';
+import type { NodePatch } from './nodePatch';
 import { liveTreeOf } from './liveSceneTree';
 import { contextOver } from './liveSceneTree.testkit';
-import { liveNodePatches } from './liveNodePatches';
+import { liveDrawnPatches, liveNodePatches } from './liveNodePatches';
 import type { CSGPolygon3DResolvedPath } from '../nodes/3d/csg/csgpolygon3d/types';
 import '../nodes/3d/csg/csgpolygon3d/index';
 import '../nodes/3d/remotetransform3d/index';
@@ -34,6 +37,30 @@ remote_path = NodePath("../Track")
 `;
 
 const patchesOver = (main: TscnScene) => liveNodePatches(liveTreeOf(main.nodes, contextOver(main, {})));
+const drawnPatchesOver = (main: TscnScene) => liveDrawnPatches(liveTreeOf(main.nodes, contextOver(main, {})));
+
+/**
+ * A relay cycle whose box sits in HolderA. Godot 4.6.3 moved HolderA to x 2883 by the harness frame
+ * at the default physics clock, and drew the box at x 2881, two pushes behind its node.
+ */
+const CYCLE = `[gd_scene load_steps=2 format=3]
+[sub_resource type="BoxMesh" id="Box"]
+[node name="Root" type="Node3D"]
+[node name="HolderA" type="Node3D" parent="."]
+[node name="Box" type="MeshInstance3D" parent="HolderA"]
+mesh = SubResource("Box")
+[node name="RelayA" type="RemoteTransform3D" parent="HolderA"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+remote_path = NodePath("../../HolderB")
+[node name="HolderB" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+[node name="RelayB" type="RemoteTransform3D" parent="HolderB"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+remote_path = NodePath("../../HolderA")
+`;
+
+const originX = (patch: NodePatch | undefined): number | undefined =>
+  (patch?.transform as Transform3D | undefined)?.origin.x;
 
 describe('liveNodePatches', () => {
   it('runs the RemoteTransform pass before the path pass, which reads where the Path3D ended up', () => {
@@ -53,6 +80,13 @@ describe('liveNodePatches', () => {
     expect(second.get('Root/Poly')).toBe(first.get('Root/Poly'));
   });
 
+  it('keeps a mesh that draws behind its node at its own transform', () => {
+    const patches = patchesOver(new TscnParser().parse(CYCLE));
+
+    expect(originX(patches.get('Root/HolderA'))).toBeCloseTo(2883, 3);
+    expect(patches.has('Root/HolderA/Box')).toBe(false);
+  });
+
   it('hands back a new patch once the relay moves', () => {
     const main = new TscnParser().parse(SCENE);
     const before = patchesOver(main).get('Root/Track');
@@ -61,5 +95,14 @@ describe('liveNodePatches', () => {
 
     expect(after).not.toBe(before);
     expect(after).not.toEqual(before);
+  });
+});
+
+describe('liveDrawnPatches', () => {
+  it('moves a mesh that draws behind its node to where Godot draws it', () => {
+    const patches = drawnPatchesOver(new TscnParser().parse(CYCLE));
+
+    expect(originX(patches.get('Root/HolderA'))).toBeCloseTo(2883, 3);
+    expect(originX(patches.get('Root/HolderA/Box'))).toBeCloseTo(-2, 3);
   });
 });

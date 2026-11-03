@@ -28,7 +28,7 @@ import {
 import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from './node2dTransform.js';
 import { CanvasSpaceProvider, useCanvasSpace } from './canvasRootScope.js';
 import { joinPath } from '../utils/nodePath.js';
-import { pathsAlong, useLivePatchedChain } from './liveNodePatches.js';
+import { pathsAlong, useLiveDrawnChain } from './liveNodePatches.js';
 
 /**
  * Rebuild the `<group>` transforms of the y_sort_enabled ancestors an item was lifted
@@ -47,7 +47,7 @@ export function LiftedAncestors({
   children: ReactNode;
 }) {
   // The properties the live scene passes bind, such as the pose a RemoteTransform2D pushes.
-  const liftedPast = useLivePatchedChain(authoredLiftedPast, basePath);
+  const liftedPast = useLiveDrawnChain(authoredLiftedPast, basePath);
   // Flattening drops the ancestors' CanvasItem state. `visible` and `modulate` inherit
   // in Godot, so a hidden or tinted y-sorted container keeps hiding or tinting the
   // descendants lifted out of it, as its own body does through CanvasItem2D.

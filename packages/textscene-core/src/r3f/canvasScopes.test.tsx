@@ -4,9 +4,9 @@
  */
 import { describe, it, expect } from 'vitest';
 import type { TscnNode } from '../parser/types';
-import { NOTHING_CACHED } from './cacheSources';
 import { canvasScopesOf } from './canvasScopes';
 import { liveTreeOf } from './liveSceneTree';
+import { cachesOver } from './liveSceneTree.testkit';
 
 /** One node of a tree under `Root`, named by its path. */
 interface Entry {
@@ -38,7 +38,7 @@ function treeOf(entries: readonly Entry[]) {
     byPath.get(parentPath)!.children.push(node);
   };
   for (const { path, type, properties } of entries) place(path, type, properties);
-  return liveTreeOf([root], { externalResources: [], internalResources: [], sceneCache: NOTHING_CACHED });
+  return liveTreeOf([root], { externalResources: [], internalResources: [], ...cachesOver() });
 }
 
 /**

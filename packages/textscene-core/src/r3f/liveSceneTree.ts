@@ -62,8 +62,11 @@ export interface LiveTreeContext {
   internalResources: readonly TscnInternalResource[];
   sceneCache: CachedSceneSource;
   glbCache?: CachedGlbSource;
-  /** The project's physics clock, which paces a relay cycle (`remoteTransforms.ts`). Absent: Godot's default. */
-  physicsClock?: PhysicsClock;
+  /**
+   * The project's physics clock, which paces a relay cycle (`remoteTransforms.ts`). Required, so
+   * every builder of a context reads it from the project and no tree falls back to a default.
+   */
+  physicsClock: PhysicsClock;
 }
 
 /** The scene cache of `ctx` as the walks over it read it: each path asked of the loader once. */

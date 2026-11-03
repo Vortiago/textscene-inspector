@@ -14,7 +14,7 @@ import { collectControlRasterViewports, inheritedRtlAt } from './controlRasterVi
 import type { CachedSceneSource } from '../../../r3f/liveSceneTree';
 import '../../../r3f/nodes/index';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources';
-import { sceneCacheOver } from '../../../r3f/liveSceneTree.testkit';
+import { cachesOver, sceneCacheOver } from '../../../r3f/liveSceneTree.testkit';
 import { liveTreeOf } from '../../../r3f/liveSceneTree';
 import { LTR_LAYOUT_ENV } from '../../../godot/scene/control';
 
@@ -24,7 +24,7 @@ function parse(source: string): TscnScene {
 
 /** `collectControlRasterViewports` over a whole parsed scene, root scope. */
 function collect(scene: TscnScene, sceneCache: CachedSceneSource = NOTHING_CACHED) {
-  return collectControlRasterViewports(scene.nodes, sceneCache, {
+  return collectControlRasterViewports(scene.nodes, cachesOver(sceneCache), {
     internalResources: scene.internalResources,
     externalResources: scene.externalResources,
   });
@@ -145,7 +145,7 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
 `);
     const found = collectControlRasterViewports(
       host.nodes,
-      sceneCacheOver({ 'res://refused.tscn': refused }),
+      cachesOver(sceneCacheOver({ 'res://refused.tscn': refused })),
       {
         internalResources: host.internalResources,
         externalResources: host.externalResources,
@@ -196,7 +196,7 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
 
   it('returns nothing for an empty tree rather than throwing', () => {
     expect(
-      collectControlRasterViewports([], NOTHING_CACHED, {
+      collectControlRasterViewports([], cachesOver(), {
         internalResources: [],
         externalResources: [],
       })
@@ -321,7 +321,7 @@ describe('inheritedRtlAt — a sub-viewport that also holds 2D content', () => {
     const tree = liveTreeOf(scene.nodes, {
       internalResources: scene.internalResources,
       externalResources: scene.externalResources,
-      sceneCache: NOTHING_CACHED,
+      ...cachesOver(),
     });
     return inheritedRtlAt(tree, path, LTR_LAYOUT_ENV);
   }

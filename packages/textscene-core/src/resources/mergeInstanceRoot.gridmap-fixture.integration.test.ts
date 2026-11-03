@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { TscnParser } from '../parser/TscnParser';
 import { mergeInstanceRoot } from './mergeInstanceRoot';
 import { resolveInstancePath } from './SubResourceResolver';
-import { liveNodeAt, sceneCacheOver } from '../r3f/liveSceneTree.testkit';
+import { cachesOver, liveNodeAt, sceneCacheOver } from '../r3f/liveSceneTree.testkit';
 import { decodeGridMapCells, type GridMapCell } from '../nodes/3d/gridmap/cellData';
 import type { GridMapProperties } from '../nodes/3d/gridmap/types';
 import type { TscnNode, TscnScene } from '../parser/types';
@@ -96,7 +96,7 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
     const resolved = liveNodeAt('Stage/GridMap', stage.nodes, {
       externalResources: stage.externalResources,
       internalResources: stage.internalResources,
-      sceneCache,
+      ...cachesOver(sceneCache),
     });
     expect(resolved).not.toBeNull();
     expect(resolved!.type).toBe('GridMap');
@@ -121,7 +121,7 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
     const resolved = liveNodeAt('Game/Stage/GridMap', game.nodes, {
       externalResources: game.externalResources,
       internalResources: game.internalResources,
-      sceneCache,
+      ...cachesOver(sceneCache),
     });
     expect(resolved).not.toBeNull();
     expect(resolved!.type).toBe('GridMap');

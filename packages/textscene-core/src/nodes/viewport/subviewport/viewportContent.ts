@@ -10,7 +10,6 @@ import { is2DUIType } from '../../../r3f/controls/has2DUIContent.js';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry.js';
 import {
   liveTreeOf,
-  type CachedSceneSource,
   type LiveLink,
   type LiveTree,
   type LiveTreeContext,
@@ -192,8 +191,8 @@ export function resolveViewportSubtree(tree: LiveTree, viewport: LiveLink): Tscn
 export function resolveStandaloneViewportSubtree(
   node: TscnNode,
   externalResources: readonly TscnExternalResource[],
-  sceneCache: CachedSceneSource
+  caches: Pick<LiveTreeContext, 'sceneCache' | 'physicsClock'>
 ): TscnNode {
-  const ctx: LiveTreeContext = { externalResources, internalResources: [], sceneCache };
+  const ctx: LiveTreeContext = { externalResources, internalResources: [], ...caches };
   return { ...node, children: resolvedChildren(liveTreeOf(node.children, ctx)) };
 }

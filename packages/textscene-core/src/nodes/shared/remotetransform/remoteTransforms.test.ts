@@ -17,13 +17,13 @@ import { applyRemoteTransforms } from './remoteTransforms';
 
 /** What the pass binds in `content`'s live tree, with each scene of `scenes` loaded. */
 function placementsOf(content: string, scenes: Readonly<Record<string, string>> = {}): NodePatches {
-  return applyRemoteTransforms(liveTreeOfText(content, scenes));
+  return applyRemoteTransforms(liveTreeOfText(content, scenes)).placed;
 }
 
 /** The columns of the global basis and the origin of the node at `path`, after the relays have run. */
 function globalPoseOf(content: string, path: string): { columns: number[][]; origin: number[] } {
   const tree = liveTreeOfText(content);
-  const global = liveGlobalTransform3D(tree, path, applyRemoteTransforms(tree));
+  const global = liveGlobalTransform3D(tree, path, applyRemoteTransforms(tree).placed);
   if (!global) throw new Error(`expected a Node3D at ${path}`);
   const { basis_x: x, basis_y: y, basis_z: z, origin } = global;
   return {
