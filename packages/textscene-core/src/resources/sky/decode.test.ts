@@ -77,6 +77,7 @@ describe('decodeSkyMaterial — PanoramaSkyMaterial', () => {
     expect(sky).toEqual({
       kind: 'panorama',
       panorama: 'ExtResource("1_sky")',
+      filter: true,
       energy_multiplier: 1,
     });
   });
@@ -85,8 +86,13 @@ describe('decodeSkyMaterial — PanoramaSkyMaterial', () => {
     expect(decodeSkyMaterial('PanoramaSkyMaterial', {})).toEqual({
       kind: 'panorama',
       panorama: undefined,
+      filter: true,
       energy_multiplier: 1,
     });
+  });
+
+  it('decodes `filter = false` as nearest sampling (`sky_material.cpp:498-505`)', () => {
+    expect(decodeSkyMaterial('PanoramaSkyMaterial', { filter: 'false' })).toMatchObject({ filter: false });
   });
 });
 

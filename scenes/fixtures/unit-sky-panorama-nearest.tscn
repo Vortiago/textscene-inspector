@@ -1,0 +1,26 @@
+; The unit-sky-panorama scene with `filter = false`: the PanoramaSkyMaterial samples its texture at
+; the nearest texel, so each texel of the panorama draws as a hard-edged block about seven pixels
+; wide, where `filter = true` blends neighbouring texels.
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/panorama-equirect.png" id="1_pano"]
+
+[sub_resource type="PanoramaSkyMaterial" id="Pano_1"]
+panorama = ExtResource("1_pano")
+filter = false
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Pano_1")
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 2
+
+[node name="SkyPanoramaNearest" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="Camera" type="Camera3D" parent="."]
+fov = 90.0

@@ -32,6 +32,7 @@ import {
   useEnvironmentKey,
 } from '../environment/sceneEnvironment';
 import { debandSky } from './skyDebanding';
+import { showSkyBackground } from './skyBackground';
 import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
 import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
@@ -133,10 +134,6 @@ export function SkyLayer({
     const showAt = (drawn: number) => {
       radiance = bakes.at(update.baked?.exposure ?? drawn) ?? radiance;
       scene.environmentIntensity = bakedBrightness(drawn) * brightnessAt(drawn);
-      if (asBackground) {
-        scene.background = (bakes.at(drawn) ?? radiance).background;
-        scene.backgroundIntensity = brightnessAt(drawn);
-      }
     };
     // Each render shows the sky at the exposure it draws at, a staged draw too (`drawAtExposure`).
     const showForRender = () => {
@@ -144,33 +141,30 @@ export function SkyLayer({
       const isDirtied = noteSkyLights(gl, lightData, exposureScalesLights ? drawn : 1);
       stepSkyRadiance(update, plan, { exposure: drawn, brightness: brightnessAt(drawn) }, isDirtied);
       showAt(drawn);
+      // Only a background reads the bake at the drawn exposure: for a sky that paints none, the
+      // read would bake that exposure to no use.
+      if (asBackground) {
+        (bakes.at(drawn) ?? radiance).background?.drawIn(scene, brightnessAt(drawn), skyRotation);
+      }
       radiance.radiance.show(contributionRef.current, reflectsRef.current, bakedBrightness(drawn));
     };
-    const previousBackgroundRotation = new THREE.Euler();
     const stopRegistering = registerEnvironmentPart(scene, environment, () => {
       const previousEnvironment = scene.environment;
       const previousIntensity = scene.environmentIntensity;
-      const previousBackground = scene.background;
-      const previousBackgroundIntensity = scene.backgroundIntensity;
-      previousBackgroundRotation.copy(scene.backgroundRotation);
       scene.environment = ENVIRONMENT_SWITCH;
       // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
       const stopShowingRadiance = observeSceneCamera(scene, showForRender);
       const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
-      if (asBackground) scene.backgroundRotation.copy(skyRotation);
+      const stopShowingBackground = asBackground ? showSkyBackground(scene) : undefined;
       showAt(exposure);
       const stopDebanding = asBackground && isDebanded(sky.material) ? debandSky(gl, scene) : undefined;
       return () => {
         stopShowingRadiance();
         stopHidingRadiance();
+        stopShowingBackground?.();
         stopDebanding?.();
         scene.environment = previousEnvironment;
         scene.environmentIntensity = previousIntensity;
-        if (asBackground) {
-          scene.background = previousBackground;
-          scene.backgroundIntensity = previousBackgroundIntensity;
-          scene.backgroundRotation.copy(previousBackgroundRotation);
-        }
       };
     });
 
