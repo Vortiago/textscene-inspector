@@ -4,7 +4,7 @@
  */
 
 import { enumNamesByValue } from '../classdb/enumNames.js';
-import { centredAabb, type Aabb } from '../math/aabb.js';
+import { cubeAabb, type Aabb } from '../math/aabb.js';
 import { degToRad } from '../math/math.js';
 import { DirectionalLightSkyMode } from '../rendering/lights/directionalLightSkyMode.js';
 import { DirectionalShadowMode } from '../rendering/lights/directionalShadow.js';
@@ -82,11 +82,11 @@ const OmniShadowMode = {
 export const OMNI_LIGHT_3D_SHADOW_MODE_NAMES = enumNamesByValue(OmniShadowMode);
 
 /** `Light3D::get_aabb` of a directional light (`scene/3d/light_3d.cpp:158-159`). */
-export const DIRECTIONAL_LIGHT_3D_AABB: Aabb = centredAabb({ x: 2, y: 2, z: 2 });
+export const DIRECTIONAL_LIGHT_3D_AABB: Aabb = cubeAabb(1);
 
 /** `Light3D::get_aabb` of an omni light (`scene/3d/light_3d.cpp:161-162`): the cube round its range. */
 export function omniLight3DAabb(range: number): Aabb {
-  return centredAabb({ x: 2 * range, y: 2 * range, z: 2 * range });
+  return cubeAabb(range);
 }
 
 /**

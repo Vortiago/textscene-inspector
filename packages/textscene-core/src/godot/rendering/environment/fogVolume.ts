@@ -29,7 +29,7 @@ export function fogVolumeHasGizmo(shape: number): boolean {
  * WORLD, which has none.
  */
 export function fogVolumeAabb(shape: number, size: Vector3): Aabb {
-  return fogVolumeHasGizmo(shape) ? centredAabb(size) : EMPTY_AABB;
+  return shape === FogVolumeShape.WORLD ? EMPTY_AABB : centredAabb(size);
 }
 
 /** Each shape's name by the integer a `.tscn` stores, as a validator names it. */

@@ -5,7 +5,7 @@
  */
 
 import { useMemo, type ReactNode } from 'react';
-import { centredAabb, type Aabb } from '../../../../godot/math/aabb';
+import { centredAabb, cubeAabb, type Aabb } from '../../../../godot/math/aabb';
 import { NodeAabb } from '../../../../r3f/components/NodeAabb';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { PluginGizmo } from '../../../../r3f/gizmo/PluginGizmo';
@@ -18,9 +18,6 @@ import type { BoxVolumeProperties, SdfVolumeProperties, SphereVolumeProperties }
 type Kind = 'collision' | 'attractor';
 
 const colorOf = (kind: Kind) => (kind === 'collision' ? COLLISION_COLOR : ATTRACTOR_COLOR);
-
-/** `get_aabb` of the sphere nodes (`gpu_particles_collision_3d.cpp:84-86`, `:935-937`): the cube round the sphere. */
-const sphereAabb = (radius: number): Aabb => centredAabb({ x: radius * 2, y: radius * 2, z: radius * 2 });
 
 function volumeNode<P extends Node3DProperties>(
   aabbOf: (properties: P) => Aabb,
@@ -47,7 +44,7 @@ export const boxVolumeNode = (kind: Kind) =>
 
 export const sphereVolumeNode = (kind: Kind) =>
   volumeNode<SphereVolumeProperties>(
-    ({ radius }) => sphereAabb(radius),
+    ({ radius }) => cubeAabb(radius),
     ({ radius }) => <SphereVolumeGizmo radius={radius} color={colorOf(kind)} />
   );
 

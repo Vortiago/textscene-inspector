@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { godotMatrixWorld } from '../resources/formats/glb/skinnedMeshSpace';
 import { hasSurface, type Aabb } from '../godot/math/aabb';
+import { copyAabb } from './visibilityRange/placements';
 import { isEditorHelper, isNodeIcon } from './editorHelpers';
 
 const _box = /*@__PURE__*/ new THREE.Box3();
@@ -78,15 +79,16 @@ export function godotAabbUserData(aabb: Aabb): { godotAabb: Aabb } {
 
 function unionExplicitBox(object: THREE.Object3D, aabb: Aabb, target: THREE.Box3): void {
   if (!hasSurface(aabb.size)) return;
-  const { position, size } = aabb;
-  _box.min.set(position.x, position.y, position.z);
-  _box.max.set(position.x + size.x, position.y + size.y, position.z + size.z);
+  copyAabb(_box, aabb);
   target.union(_box.applyMatrix4(object.matrixWorld));
 }
 
 function unionOwnBox(object: THREE.Object3D, target: THREE.Box3): void {
   const explicit = object.userData[AABB_KEY] as Aabb | undefined;
-  if (explicit) return unionExplicitBox(object, explicit, target);
+  if (explicit) {
+    unionExplicitBox(object, explicit, target);
+    return;
+  }
   const bearing = object as BoundsBearing;
   const geometry = bearing.geometry;
   if (!geometry || isNodeIcon(object) || object.userData[BOXLESS_KEY] === true) return;
