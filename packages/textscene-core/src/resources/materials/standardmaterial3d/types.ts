@@ -245,6 +245,27 @@ export interface StandardMaterial3DData {
   refractionThickness: number;
   /** Slot → raw reference string, for the slots whose feature gate is on. */
   textureSlots: TextureSlotReferences;
+  /**
+   * `next_pass` as authored: a reference into the file's own tables, undefined when
+   * absent. Decode stops at the string, as `textureSlots` does; the renderer's
+   * `resolveNextPass` walks it.
+   */
+  nextPass: string | undefined;
+  /**
+   * `grow` (`material.cpp:973-974` emits the uniform, and `:1458-1461` the
+   * `VERTEX += NORMAL * grow;` line, only when it is on). Both are model space,
+   * which is why a scaled node scales the offset.
+   */
+  grows: boolean;
+  /** `grow_amount`, unclamped: `set_grow` (`material.cpp:2942`) bare assigns. */
+  growAmount: number;
+  /**
+   * The stencil read of `material.cpp:916-968`'s emitted block against
+   * `render_forward_clustered.cpp:4099-4114`'s check: a mode other than DISABLED, the
+   * READ bit set and a compare other than ALWAYS. A link that reads the stencil draws
+   * no coverage in this previewer, which requests no stencil buffer.
+   */
+  readsStencil: boolean;
 }
 
 /**
@@ -325,6 +346,14 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   refractionThickness: number;
   /** Slot → raw reference string, carried through for the loader's resolution. */
   textureSlots: TextureSlotReferences;
+  /** The raw `next_pass` reference, undefined when absent. */
+  nextPass: string | undefined;
+  /** `grow` on: the link's vertices move along their normals. */
+  grows: boolean;
+  /** `grow_amount`, model-space metres, unclamped. */
+  growAmount: number;
+  /** The link reads the stencil, so its draw is skipped without a stencil buffer. */
+  readsStencil: boolean;
 }
 
 /**

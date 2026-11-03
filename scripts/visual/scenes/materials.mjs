@@ -100,6 +100,12 @@ export const MATERIAL_SCENES = [
   // it replaced the surface. Muddied red over green: it composited, as it should. The fixture's
   // header says why the overlay is transparent, which puts it in the alpha pass.
   { name: 'meshinstance3d-material-overlay', file: 'unit-meshinstance3d-material-overlay.tscn' },
+  // A material's `next_pass`, which no other fixture sets: the chained sphere is at the origin, and
+  // the chain link draws one extra surface after it
+  // (`render_forward_clustered.cpp:4189`), an inverted-hull outline grown along the normals.
+  // The entry's camera pins both harnesses to the fixture's Camera3D at (0, 0, 3), fov 70.
+  // Godot 4.6.3: (477,378) rgb(255,162,0), (520,378) rgb(255,162,0), (571,378) rgb(0,0,255).
+  { name: 'material-next-pass', file: 'unit-material-next-pass.tscn', camera: 'MaterialNextPass/Camera3D' },
   // A `surface_material_override/0` as a scene `[sub_resource]` on a mesh
   // inside an instanced `.glb`, the only .glb scene. `unit-cube.glb` has no glTF
   // material, so a dropped override draws Godot's default grey and an applied

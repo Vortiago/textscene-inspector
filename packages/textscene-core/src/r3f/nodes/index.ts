@@ -23,12 +23,12 @@ import '../../nodes/3d/worldenvironment/index.r3f';
 import '../../nodes/physics/3d/staticbody3d/index.r3f';
 import '../../nodes/physics/3d/area3d/index.r3f';
 import '../../nodes/physics/3d/collisionshape3d/index.r3f';
-// Non-visual nodes: transform-only groups (ADR-0008).
-import '../../nodes/physics/3d/characterbody3d/index.r3f';
-import '../../nodes/physics/3d/rigidbody3d/index.r3f';
 import '../../nodes/physics/3d/raycast3d/index.r3f';
 import '../../nodes/physics/3d/shapecast3d/index.r3f';
 import '../../nodes/physics/3d/springarm3d/index.r3f';
+// Non-visual nodes: transform-only groups (ADR-0008).
+import '../../nodes/physics/3d/characterbody3d/index.r3f';
+import '../../nodes/physics/3d/rigidbody3d/index.r3f';
 import '../../nodes/physics/3d/animatablebody3d/index.r3f';
 import '../../nodes/physics/3d/physicalbone3d/index.r3f';
 import '../../nodes/physics/3d/vehiclebody3d/index.r3f';
