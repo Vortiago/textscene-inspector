@@ -38,16 +38,20 @@ fetch_cursor() {
   find_executable "$PWD/squashfs-root" cursor
 }
 
+# Windsurf is now published as devin-desktop. The windsurf package is an empty transition
+# package that depends on it, so the apt index is read for devin-desktop, with its names logged.
 fetch_windsurf() {
   local repo='https://windsurf-stable.codeiumdata.com/wVxQEIWkwPUEAGf3/apt'
-  local package
-  # The index lists every package the repository holds; keep the last stanza named windsurf.
-  package=$(curl -fsSL "$repo/dists/stable/main/binary-amd64/Packages" \
-    | awk '/^Package: /{name=$2} /^Filename: /{if (name == "windsurf") file=$2} END{print file}')
+  local index package executable
+  index=$(curl -fsSL "$repo/dists/stable/main/binary-amd64/Packages")
+  echo "packages in the index: $(echo "$index" | awk '/^Package: /{print $2}' | sort -u | tr '\n' ' ')" >&2
+  package=$(echo "$index" | awk '/^Package: /{name=$2} /^Filename: /{if (name == "devin-desktop") file=$2} END{print file}')
   echo "windsurf package: $package" >&2
   curl -fsSL -o windsurf.deb "$repo/$package"
   dpkg-deb -x windsurf.deb windsurf
-  find_executable "$PWD/windsurf" windsurf
+  executable=$(find_executable "$PWD/windsurf" devin)
+  [ -n "$executable" ] || executable=$(find_executable "$PWD/windsurf" windsurf)
+  echo "$executable"
 }
 
 case "$fork" in
