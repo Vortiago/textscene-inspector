@@ -10,11 +10,10 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('HeightMapShape3D', {
-  // height_map_shape_3d.cpp:356 hints "1,100,1,or_greater", so the ceiling is open and never
-  // warns. `set_map_width` (:156) ignores a value below one, so the floor only warns.
-  map_width: v.int('map_width', { min: 1, hinted: { min: 'height_map_shape_3d.cpp:356' } }),
-  // height_map_shape_3d.cpp:357 hints the same range; `set_map_depth` (:180) ignores below one.
-  map_depth: v.int('map_depth', { min: 1, hinted: { min: 'height_map_shape_3d.cpp:357' } }),
+  // height_map_shape_3d.cpp:356-357 hint "1,100,1,or_greater", so the ceiling is open and never
+  // warns. `set_map_width` (:156) and `set_map_depth` (:180) ignore a value below one: an error.
+  map_width: v.int('map_width', { min: 1, enforced: { min: 'height_map_shape_3d.cpp:156' } }),
+  map_depth: v.int('map_depth', { min: 1, enforced: { min: 'height_map_shape_3d.cpp:180' } }),
   // No hint (:358). `set_map_data` (:203-206) drops a count other than `map_width * map_depth`.
   map_data: v.packedFloat32Array('map_data', '0, 1, 2, 3'),
 });
