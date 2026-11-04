@@ -1,8 +1,8 @@
 /**
  * Fits every declared light in Godot's list of shadowed directional lights to the camera about to
  * render the scene, in its share of Godot's directional shadow atlas.
- * three r186 updates the world matrices before it calls `scene.onBeforeRender`, where this runs
- * (`WebGLRenderer.js:1663-1678`).
+ * three r187 updates the world matrices before it calls `scene.onBeforeRender`, where this runs
+ * (`WebGLRenderer.js:1667-1682`).
  */
 
 import * as THREE from 'three';

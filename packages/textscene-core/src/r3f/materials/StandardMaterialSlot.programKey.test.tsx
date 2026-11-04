@@ -1,7 +1,7 @@
 /**
  * `<StandardMaterialSlot>` keys its material on what three bakes into the program
- * (`WebGLPrograms.js:56` `getParameters`): a re-parse feeds new props to the same
- * element, and three re-derives only on a `version` bump or `WebGLRenderer.js:2388`'s
+ * (r187 `WebGLPrograms.js:54` `getParameters`): a re-parse feeds new props to the same
+ * element, and three re-derives only on a `version` bump or `WebGLRenderer.js:2451`'s
  * re-checks. A plain uniform must not rebuild.
  */
 import { describe, expect, it } from 'vitest';
@@ -42,8 +42,8 @@ async function rebuilds(
 
 /**
  * Six of the eight slots. `anisotropy_flowmap` is asserted separately: three gates it
- * on `HAS_ANISOTROPY` (`WebGLPrograms.js:147`), and only `MeshPhysicalMaterial`
- * declares `anisotropy` (`MeshPhysicalMaterial.js:353`). The heightmap is a uniform.
+ * on `HAS_ANISOTROPY` (r187 `WebGLPrograms.js:140`), and only `MeshPhysicalMaterial`
+ * declares `anisotropy` (`MeshPhysicalMaterial.js:379`). The heightmap is a uniform.
  */
 const TEXTURE_SLOTS: Array<keyof Maps> = [
   'albedo_texture',
@@ -120,22 +120,22 @@ describe('<StandardMaterialSlot> keeps the compiled material for a plain uniform
   });
 
   it('blend_mode on a material already in the alpha pass', async () => {
-    // `blending` reaches a program only through `opaque` (`WebGLPrograms.js:262`,
+    // `blending` reaches a program only through `opaque` (r187 `WebGLPrograms.js:272`,
     // its sole reference). With `transparent` already true the composite is
     // false either way; the blend equation itself is per-draw GL state.
     expect(await rebuilds(ALPHA, { ...ALPHA, blend_mode: '1' })).toBe(false);
   });
 
   it('alpha_scissor_threshold: three bumps `version` itself on the zero crossing', async () => {
-    // `Material.js:494-502`: the accessor makes alphaTest self-healing, so it is
+    // r187 `Material.js:495-503`: the accessor makes alphaTest self-healing, so it is
     // absent from the key.
     expect(await rebuilds({}, { transparency: '2', alpha_scissor_threshold: '0.3' })).toBe(false);
   });
 
   it('the anisotropy flowmap while anisotropy is still zero', async () => {
     // Not an omission: `MeshStandardMaterial` has no `anisotropy`
-    // (`MeshPhysicalMaterial.js:353`), so `HAS_ANISOTROPY` is false and the slot
-    // (`WebGLPrograms.js:147`) cannot be a program input here. Crossing zero
+    // (r187 `MeshPhysicalMaterial.js:379`), so `HAS_ANISOTROPY` is false and the slot
+    // (`WebGLPrograms.js:140`) cannot be a program input here. Crossing zero
     // switches the element type, which remounts on its own.
     expect(await rebuilds({}, {}, {}, { anisotropy_flowmap: new THREE.Texture() })).toBe(false);
   });

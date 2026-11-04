@@ -10,7 +10,7 @@ import { WORLD_CANVAS_LAYER } from '../lighting2d/canvasItemPlacement';
 
 /**
  * The `groupOrder` three sorts this object by: the nearest `Group` ancestor's
- * `renderOrder`, or 0 (`three/src/renderers/WebGLRenderer.js:1838-1840`). A canvas
+ * `renderOrder`, or 0 (r187 `three/src/renderers/WebGLRenderer.js:1881-1883`). A canvas
  * item's place lives there (`canvasPaintOrder.ts`), so `mesh.renderOrder` alone is
  * the less significant half.
  */
@@ -23,7 +23,7 @@ export function nearestGroupOrder(object: THREE.Object3D): number {
 
 /**
  * The key `reversePainterSortStable` (`WebGLRenderLists.js`) sorts by, smallest first:
- * `groupOrder` of the nearest `Group` (`WebGLRenderer.js:1838-1840`), `renderOrder`,
+ * `groupOrder` of the nearest `Group` (r187 `WebGLRenderer.js:1881-1883`), `renderOrder`,
  * and negated world z, since the ortho camera looks down -Z from z=1000. No 2D
  * material writes depth. The tests assert the order of the keys, not their encoding.
  */

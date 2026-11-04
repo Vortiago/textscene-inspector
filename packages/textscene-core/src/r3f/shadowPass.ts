@@ -1,6 +1,6 @@
 /**
- * The renderer's shadow pass. three r186 has no hook between its shadow pass and its draw
- * (`WebGLRenderer.js:1737-1752`), so the pass runs three's pass, then Godot's copy of each omni cube
+ * The renderer's shadow pass. three r187 has no hook between its shadow pass and its draw
+ * (`WebGLRenderer.js:1750-1765`), so the pass runs three's pass, then Godot's copy of each omni cube
  * into its two paraboloids (`render_forward_clustered.cpp:2722-2738`), then each spot light and split
  * sun, then each area light's paraboloid (`atlasDepthPass.ts`), then each reader of the maps, and
  * last writes the sun shadow terms and records the framebuffer height.
@@ -100,7 +100,7 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
     const copied = draws ? collected(lights, needsCopy) : NO_LIGHTS;
     const projected = draws ? collected(lights, isProjectedShadowLight) : NO_LIGHTS;
     const areas = draws ? collected(lights, isSlottedAreaLight) : NO_LIGHTS;
-    // Three's pass draws no map with none to draw (`WebGLShadowMap.js:94-97`).
+    // Three's pass draws no map with none to draw (r187 `WebGLShadowMap.js:94-97`).
     const isTimed = draws && lights.length > 0 && !isReading;
     if (isTimed) beginStep(renderer, 'Shadows');
     threePass.draw(lights, scene, camera);
@@ -157,7 +157,7 @@ function copyOmniShadows(
 
 /**
  * Whether three's pass draws anything this time, read before the pass, which clears `needsUpdate`
- * (`WebGLShadowMap.js:95`, `:170`, `:370`).
+ * (r187 `WebGLShadowMap.js:95`, `:170`, `:372`).
  */
 function passDraws(shadowMap: THREE.WebGLShadowMap): boolean {
   return shadowMap.enabled && (shadowMap.autoUpdate || shadowMap.needsUpdate);

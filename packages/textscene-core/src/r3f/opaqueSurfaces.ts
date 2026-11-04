@@ -50,7 +50,7 @@ function meshSurfaces(mesh: THREE.Mesh, isDrawn: (material: THREE.Material) => b
 
 /**
  * Draws `surface` with `drawn`, between its mesh's own draw hooks, which pose it and skip a draw its
- * range culls, as three's colour draw runs them (`WebGLRenderer.js:2158-2183`).
+ * range culls, as three's colour draw runs them (r187 `WebGLRenderer.js:2171-2196`).
  *
  * @canonical A draw of one surface outside three's render list
  */

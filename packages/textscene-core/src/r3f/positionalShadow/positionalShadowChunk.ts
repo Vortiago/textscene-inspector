@@ -1,5 +1,5 @@
 /**
- * Godot's omni, spot and area shadow lookups in three r186's chunks. Every positional shadow samples
+ * Godot's omni, spot and area shadow lookups in three r187's chunks. Every positional shadow samples
  * one atlas through one sampler, as Godot's do (`scene_forward_clustered_inc.glsl:372`), where three
  * binds a sampler per shadow. The lookups move the receiver as Godot's do
  * (`positionalShadowLookup.ts`). The area lookup defines `GODOT_AREA_SHADOW`, which the area light

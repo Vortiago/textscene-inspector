@@ -13,7 +13,7 @@ import { installedOr } from './shaderPatch/litUniform.js';
 type TextureClass = abstract new (...args: any[]) => THREE.Texture;
 
 /**
- * `cloneUniforms` clones a texture for each material (three r186 `UniformsUtils.js:28-39`). A
+ * `cloneUniforms` clones a texture for each material (three r187 `UniformsUtils.js:28-39`). A
  * clone would hold the pixels it was cloned with, or null for a render target's texture
  * (`UniformsUtils.js:32-35`). So a clone of a shared texture is the texture itself.
  *
@@ -61,9 +61,10 @@ export function leaveSlot(renderer: THREE.WebGLRenderer, slot: THREE.Texture, te
 
 /**
  * Written only by `releasedOnUnmount`, and never cleared. three leaves a dispose listener that closes
- * over each renderer that uploads a texture (r186 `WebGLTextures.js:719`), so a texture that outlives
- * its canvas keeps that renderer reachable. These stay shared, not per renderer like a pass, as a
- * uniform getter and three's `UniformsLib` read them with no renderer at hand.
+ * over each renderer that uploads a texture (r187 `WebGLTextures.js:780`), so a texture that outlives
+ * its canvas keeps that renderer reachable until the renderer's own dispose. These stay shared, not
+ * per renderer like a pass, as a uniform getter and three's `UniformsLib` read them with no renderer
+ * at hand.
  */
 const releasedTextures = new Set<Pick<THREE.Texture, 'dispose'>>();
 
@@ -80,7 +81,8 @@ export function releasedOnUnmount<T extends Pick<THREE.Texture, 'dispose'>>(text
 /**
  * Frees each `releasedOnUnmount` texture when the canvas it sits in unmounts. A dispose reaches every
  * renderer, so a live canvas would upload each texture again. Both apps show one canvas at a time,
- * so the canvas that follows uploads them once, as it would anyway.
+ * so the canvas that follows uploads them once, as it would anyway. The renderer's own dispose frees
+ * only its GL copies (r187 `WebGLTextures.js:391-414`), so this still frees each cache that frees its own.
  */
 export function SharedTextureRelease(): null {
   useEffect(

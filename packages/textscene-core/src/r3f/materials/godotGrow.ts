@@ -3,7 +3,7 @@
  * emits as `VERTEX += NORMAL * grow;` when `grow_enabled`, spliced where three declares
  * `transformed`. Both terms are model space, so the offset rides the raw `normal`
  * attribute before the model matrix, and a scaled node scales it. three declares
- * `attribute vec3 normal;` for every non-raw program (`WebGLProgram.js:626`), so one
+ * `attribute vec3 normal;` for every non-raw program (r187 `WebGLProgram.js:585`), so one
  * patch shape serves the basic, standard and physical classes.
  */
 

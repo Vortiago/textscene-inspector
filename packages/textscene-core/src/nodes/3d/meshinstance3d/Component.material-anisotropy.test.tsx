@@ -155,7 +155,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
 
   it('wires anisotropy_flowmap onto material.anisotropyMap, repacking Godot alpha-strength into three.js blue', async () => {
     // Godot's flowmap holds direction in R/G (128,128 = neutral) and strength in
-    // alpha (200). three@0.185 `anisotropyMap` reads strength from blue, so the
+    // alpha (200). three@0.187 `anisotropyMap` reads strength from blue, so the
     // map copies alpha into blue, asserted on the raw pixels of a `DataTexture`.
     const flow = new THREE.DataTexture(new Uint8Array([128, 128, 0, 200]), 1, 1, THREE.RGBAFormat);
     flow.needsUpdate = true;
