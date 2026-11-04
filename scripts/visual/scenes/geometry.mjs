@@ -179,6 +179,9 @@ export const GEOMETRY_SCENES = [
   { name: 'label3d-shadow', file: 'unit-label3d-shadow.tscn' },
   // The one variable: the `font` of a Label3D, with an outline ring under an embolden.
   { name: 'label3d-scene-font', file: 'unit-label3d-scene-font.tscn' },
+  // The one variable: how a Label3D lays its text out. Wrap at `width`, FILL, TOP and BOTTOM
+  // vertical alignment, `offset` and `uppercase`, seen through the scene's own camera.
+  { name: 'label3d-layout', file: 'unit-label3d-layout.tscn', camera: 'Root/Camera3D' },
   // The default font's glyph pages with a mip chain (`gui/theme/default_font_generate_mipmaps`), seen
   // small at a project mipmap bias of -1. A raster without the chain draws the same text sparkling.
   { name: 'label3d-glyph-mipmaps', file: 'label3d-glyph-mipmaps/unit-label3d-glyph-mipmaps.tscn' },

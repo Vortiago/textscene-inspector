@@ -3,7 +3,9 @@
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
 import type { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import type { Rgba } from '../../../godot/math/math';
-import type { HorizontalAlignment } from '../../../godot/math/alignment';
+import type { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
+import type { Vector2 } from '../../../godot/math/vector';
+import type { AutowrapMode } from '../../../godot/text/textServerEnums';
 import type { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 import type { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 import type { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
@@ -45,8 +47,29 @@ export interface Label3DProperties extends GeometryInstance3DProperties {
    */
   line_spacing: number;
 
-  /** Horizontal alignment of each line within the quad (default 1 = CENTER). */
+  /** Horizontal alignment of each line (default 1 = CENTER). FILL stretches each line to `width`. */
   horizontal_alignment: EnumValue<typeof HorizontalAlignment>;
+
+  /** Where the block of lines sits against the origin (`label_3d.h:108`, default CENTER). FILL acts as TOP. */
+  vertical_alignment: EnumValue<typeof VerticalAlignment>;
+
+  /** Shapes the text in upper case before it breaks the lines (`label_3d.h:111`, default false). */
+  uppercase: boolean;
+
+  /** Break width in px (`label_3d.h:116`, default 500). Zero or less wraps nothing. */
+  width: number;
+
+  /** How the text breaks at `width` (`label_3d.h:113`, default OFF). */
+  autowrap_mode: EnumValue<typeof AutowrapMode>;
+
+  /** `BREAK_TRIM_*` bits (`label_3d.h:114`, default: trim the spaces at both edges of a line). */
+  autowrap_trim_flags: number;
+
+  /** `JUSTIFICATION_*` bits that FILL reads (`label_3d.h:115`). */
+  justification_flags: number;
+
+  /** Moves every line by this many px, a positive y up (`label_3d.h:122`, default zero). */
+  offset: Vector2;
 
   /** Draw on top of everything regardless of depth (default false). */
   no_depth_test: boolean;

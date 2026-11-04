@@ -11,8 +11,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { lineStartOffset, VerticalAlignment } from '../../../godot/math/alignment';
-import type { EnumValue } from '../../../godot/classdb/enumNames';
+import { blockStartY, lineStartOffset } from '../../../godot/math/alignment';
 import { isZeroApprox, remapf } from '../../../godot/math/math';
 import { normalizedVector2, type Vector2 } from '../../../godot/math/vector';
 import {
@@ -81,23 +80,6 @@ const FRONT_NORMAL: Normal = [0, 0, 1];
 const BACK_NORMAL: Normal = [0, 0, -1];
 const FRONT_TANGENT: Tangent = [1, 0, 0, 1];
 const BACK_TANGENT: Tangent = [-1, 0, 0, 1];
-
-/** `vbegin` (`:3321-3336`): how far above the origin the first line's top sits. */
-function blockStartY(
-  alignment: EnumValue<typeof VerticalAlignment>,
-  blockHeight: number,
-  spacing: number
-): number {
-  switch (alignment) {
-    case VerticalAlignment.VERTICAL_ALIGNMENT_CENTER:
-      return (blockHeight - spacing) / 2;
-    case VerticalAlignment.VERTICAL_ALIGNMENT_BOTTOM:
-      return blockHeight - spacing;
-    default:
-      // TOP and FILL.
-      return 0;
-  }
-}
 
 type GlyphMeshes = Map<number, GlyphMeshData | null>;
 

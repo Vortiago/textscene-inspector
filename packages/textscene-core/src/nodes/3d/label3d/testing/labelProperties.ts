@@ -5,7 +5,12 @@ import type { Label3DProperties } from '../types';
 import { AlphaCutMode } from '../../../../godot/rendering/materials/alphaCut';
 import { BillboardMode } from '../../../../godot/rendering/materials/billboardMode';
 import { TextureFilter } from '../../../../godot/rendering/materials/textureFilter';
-import { HorizontalAlignment } from '../../../../godot/math/alignment';
+import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
+import {
+  AutowrapMode,
+  DEFAULT_AUTOWRAP_TRIM_FLAGS,
+  DEFAULT_JUSTIFICATION_FLAGS,
+} from '../../../../godot/text/textServerEnums';
 import { AlphaAntiAliasing } from '../../../../godot/rendering/materials/alphaAntialiasing';
 
 export function labelProperties(overrides: Partial<Label3DProperties> = {}): Label3DProperties {
@@ -22,6 +27,13 @@ export function labelProperties(overrides: Partial<Label3DProperties> = {}): Lab
     font_size: 32,
     line_spacing: 0,
     horizontal_alignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
+    vertical_alignment: VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
+    uppercase: false,
+    width: 500,
+    autowrap_mode: AutowrapMode.AUTOWRAP_OFF,
+    autowrap_trim_flags: DEFAULT_AUTOWRAP_TRIM_FLAGS,
+    justification_flags: DEFAULT_JUSTIFICATION_FLAGS,
+    offset: { x: 0, y: 0 },
     no_depth_test: false,
     render_priority: 0,
     outline_render_priority: -1,

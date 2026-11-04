@@ -9,7 +9,7 @@ renders_as: canvas-rasterised glyph quads, billboard-able
 
 # Label3D
 
-Draws a single line of text on a flat plane in 3D space. The previewer rasterises each label to a canvas texture, one texel per font pixel at `font_size` as Godot caches a glyph (`label_3d.cpp:345-350`). The font is the label's `font`, else the project theme's font for Label3D, else the project default font (`gui/theme/custom_font`), else the bundled font (`label_3d.cpp:812-850`). It maps the texture onto a transparent plane sized by `pixel_size`. It tints the plane by `modulate` and orients it by the node's `billboard` mode.
+Draws text on a flat plane in 3D space. The previewer breaks it at `width` as `autowrap_mode` says. It stretches each line to `width` under `HORIZONTAL_ALIGNMENT_FILL`, places the block by `vertical_alignment` and moves it by `offset` (`label_3d.cpp:483-606`). It rasterises each label to a canvas texture, one texel per font pixel at `font_size` as Godot caches a glyph (`label_3d.cpp:345-350`). The font is the label's `font`, else the project theme's font for Label3D, else the project default font (`gui/theme/custom_font`), else the bundled font (`label_3d.cpp:812-850`). It maps the texture onto a transparent plane sized by `pixel_size`. It tints the plane by `modulate` and orients it by the node's `billboard` mode.
 
 A label casts no shadow by default, as its constructor turns `cast_shadow` off (`label_3d.cpp:1090`). With it on, the glyphs cast when Godot files their surface in the shadow pass (`render_forward_clustered.cpp:4079-4089`). That pass takes a cut surface, or an `OPAQUE_PREPASS` one, with the depth test on. An `OPAQUE_PREPASS` surface blends uncut, writes its depth in a depth prepass cut at 0.99, and cuts its shadow at 0.1 (`render_forward_clustered.cpp:1791,2770`). A blended label, the default `alpha_cut`, casts nothing. The `label3d-shadow` golden pins this.
 
@@ -69,8 +69,6 @@ The glyph raster has a mip chain only when its font generates mipmaps and `textu
 
 ## Known limitations
 
-- **Approximated** `width` and `autowrap_mode` are not read, so a long label runs on one
-  line where Godot wraps it.
 - **Approximated** The glyph mip chain is per label raster, where Godot's is per glyph page, so a minified label differs slightly.
 - **Resource gap** A SystemFont draws as the bundled font, as the previewer has no bytes for the OS fonts.
 - **Approximated** Godot's font rasteriser differs from the browser's, so the glyph edges and the `outline_size` outline differ slightly from Godot's.

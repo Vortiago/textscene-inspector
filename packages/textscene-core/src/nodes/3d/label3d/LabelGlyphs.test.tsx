@@ -22,7 +22,8 @@ import type { Label3DProperties } from './types';
 import { labelProperties } from './testing/labelProperties';
 import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
 import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
-import { HorizontalAlignment } from '../../../godot/math/alignment';
+import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
+import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
@@ -486,19 +487,40 @@ describe('<LabelGlyphs>', () => {
     });
   });
 
-  describe('horizontal_alignment', () => {
-    it('FILL positions a line the same as CENTER (no per-line justification, width is unparsed)', async () => {
-      const center = await render(
-        labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER })
+  describe('autowrap_mode', () => {
+    it('breaks a line that passes width into one line-group per line', async () => {
+      const renderer = await render(
+        labelProperties({ text: 'aaa bbb ccc', width: 140, autowrap_mode: AutowrapMode.AUTOWRAP_WORD })
       );
-      const fill = await render(
-        labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_FILL })
-      );
-      const centerGroup = lineGroups(center)[0]!;
-      const fillGroup = lineGroups(fill)[0]!;
-      expect(fillGroup.position.x).toBeCloseTo(centerGroup.position.x, 6);
+      expect(lineGroups(renderer).length).toBe(2);
     });
+  });
 
+  describe('vertical_alignment and offset', () => {
+    it('hangs a TOP label below the origin, moved up by a positive offset y', async () => {
+      const renderer = await render(
+        labelProperties({
+          text: 'Hi',
+          vertical_alignment: VerticalAlignment.VERTICAL_ALIGNMENT_TOP,
+          offset: { x: 5, y: 10 },
+        })
+      );
+      const group = lineGroups(renderer)[0]!;
+      expect([group.position.x, group.position.y]).toEqual([5 - 33 / 2, 10]);
+    });
+  });
+
+  describe('horizontal_alignment', () => {
+    it('FILL stretches a line to width, centred on the origin (label_3d.cpp:538-557)', async () => {
+      const fill = await render(
+        labelProperties({
+          text: 'Hi Ho',
+          width: 300,
+          horizontal_alignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_FILL,
+        })
+      );
+      expect(lineGroups(fill)[0]!.position.x).toBe(-150);
+    });
     it('LEFT starts a line at x=0; RIGHT ends a line at x=0', async () => {
       const left = await render(
         labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT })
