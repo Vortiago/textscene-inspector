@@ -38,21 +38,18 @@ describe('overrunFlagsForBehavior', () => {
       trimWordOnly: false,
       addEllipsis: false,
       enforceEllipsis: false,
-      justificationAware: false,
     });
     expect(overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_CHAR)).toEqual({
       trim: true,
       trimWordOnly: false,
       addEllipsis: false,
       enforceEllipsis: false,
-      justificationAware: false,
     });
     expect(overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS_FORCE)).toEqual({
       trim: true,
       trimWordOnly: true,
       addEllipsis: true,
       enforceEllipsis: true,
-      justificationAware: false,
     });
   });
 });
@@ -139,28 +136,5 @@ describe('trimLineToWidth', () => {
       '●'
     );
     expect(result.text).toBe('AAAAAAAA...');
-  });
-
-  it('OVERRUN_JUSTIFICATION_AWARE skips trimming until fit_width_minimum_reached is true (text_server_adv.cpp:5964-5966)', () => {
-    const flags: OverrunTrimFlags = {
-      trim: true,
-      trimWordOnly: false,
-      addEllipsis: true,
-      enforceEllipsis: false,
-      justificationAware: true,
-    };
-    const untouched = trimLineToWidth(line('AAAAAAAAAA'), 50, flags, {
-      fontMetrics: OPEN_SANS_FONT_METRICS,
-      fontSizePx: FONT_SIZE_PX,
-      fitWidthMinimumReached: false,
-    });
-    expect(untouched.text).toBe('AAAAAAAAAA');
-
-    const trimmed = trimLineToWidth(line('AAAAAAAAAA'), 50, flags, {
-      fontMetrics: OPEN_SANS_FONT_METRICS,
-      fontSizePx: FONT_SIZE_PX,
-      fitWidthMinimumReached: true,
-    });
-    expect(trimmed.text).toBe('AAAA');
   });
 });

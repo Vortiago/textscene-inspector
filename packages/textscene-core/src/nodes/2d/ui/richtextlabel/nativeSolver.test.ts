@@ -46,6 +46,9 @@ const ALL_STYLES = [
 type StyledTextRun = ReturnType<typeof styledTextRuns>[number];
 
 /** A plain, white, left-aligned run of `text` at `fontSizePx`, with the fields a test cares about overridden. */
+/** What `parseRichTextLabel` fills for the two properties whose defaults are not `undefined`. */
+const PARSED_DEFAULTS = { justificationFlags: 163, clipContents: true };
+
 function textRun(fields: Pick<StyledTextRun, 'text' | 'fontSizePx'> & Partial<StyledTextRun>): StyledTextRun {
   return { bold: false, italic: false, underline: false, color: WHITE, alignment: 0, ...fields };
 }
@@ -314,6 +317,7 @@ describe('richTextLabelTextTheme', () => {
     const red = { r: 1, g: 0, b: 0, a: 1 };
     const props = {
       name: 'RTL',
+      ...PARSED_DEFAULTS,
       themeOverrideFontSizes: { normal_font_size: 20 },
     } as RichTextLabelProperties;
     const n = node({}, { colors: { default_color: red } });
@@ -324,7 +328,11 @@ describe('richTextLabelTextTheme', () => {
   });
 
   it("ignores Label's font_size and font_color keys", () => {
-    const props = { name: 'RTL', themeOverrideFontSizes: { font_size: 20 } } as RichTextLabelProperties;
+    const props = {
+      name: 'RTL',
+      ...PARSED_DEFAULTS,
+      themeOverrideFontSizes: { font_size: 20 },
+    } as RichTextLabelProperties;
     const n = node({}, { colors: { font_color: { r: 1, g: 0, b: 0, a: 1 } } });
     expect(richTextLabelTextTheme(n, props, { theme: nativeTheme(1) })).toEqual({
       fontSizePx: 16,
@@ -506,6 +514,7 @@ describe('styledTextRuns', () => {
         node({}),
         {
           name: 'RTL',
+          ...PARSED_DEFAULTS,
           text: '[b]x[/b]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: { bold_font_size: 24 },
@@ -522,6 +531,7 @@ describe('styledTextRuns', () => {
         node({}),
         {
           name: 'RTL',
+          ...PARSED_DEFAULTS,
           text: '[b]x[/b]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: { bold_font_size: NORMAL },
@@ -538,6 +548,7 @@ describe('styledTextRuns', () => {
         node({}),
         {
           name: 'RTL',
+          ...PARSED_DEFAULTS,
           text: '[b]x[/b][i]y[/i]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: { italics_font_size: 20 },
@@ -555,6 +566,7 @@ describe('styledTextRuns', () => {
         node({}),
         {
           name: 'RTL',
+          ...PARSED_DEFAULTS,
           text: '[b][i]x[/i][/b]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: { bold_font_size: 20, italics_font_size: 22, bold_italics_font_size: 30 },
@@ -617,6 +629,7 @@ describe('styledTextRuns', () => {
         node({}, { themeChain: [theme] }),
         {
           name: 'RTL',
+          ...PARSED_DEFAULTS,
           text: '[b]x[/b]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: { bold_font_size: 24 },
@@ -1640,5 +1653,19 @@ describe('RichTextLabel FILL justification', () => {
   it('fits no line when the flags skip a single line (34)', () => {
     const [width] = fittedWidths([fillRun('Wave rift over stone')], { flags: 34 });
     expect(width).toBeLessThan(300);
+  });
+});
+
+describe('layoutRichTextRuns run attribution', () => {
+  it('gives the paragraph terminator to the run that holds its "\\n", and the next line to the next run', () => {
+    const runs = [
+      textRun({ text: 'a\n', fontSizePx: FONT_SIZE }),
+      textRun({ text: 'b', fontSizePx: FONT_SIZE, bold: true }),
+    ];
+    const placements = layoutRichTextRuns(runs, shapeRuns(runs), { boxWidthPx: 0, boxHeightPx: 0 });
+    expect(placements.map((p) => [p.lineIndex, p.layout.lines[0]!.text])).toEqual([
+      [0, 'a​'],
+      [1, 'b'],
+    ]);
   });
 });

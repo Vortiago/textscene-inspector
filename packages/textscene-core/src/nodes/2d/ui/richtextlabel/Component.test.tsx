@@ -32,7 +32,9 @@ function solveNode(
   overrides: Partial<SolveNode> = {}
 ): SolveNode {
   const name = path.split('/').pop()!;
-  const tscnNode: TscnNode = controlNode(name, 'RichTextLabel', { name, ...properties });
+  // `parseRichTextLabel` fills these two defaults, which the painter reads as given.
+  const parsedDefaults = { justificationFlags: 163, clipContents: true };
+  const tscnNode: TscnNode = controlNode(name, 'RichTextLabel', { name, ...parsedDefaults, ...properties });
   return { ...emptySolveNode(), path, node: tscnNode, ...overrides };
 }
 

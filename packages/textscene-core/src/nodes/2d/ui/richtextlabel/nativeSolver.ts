@@ -27,7 +27,6 @@ import {
   type GlyphPlacement,
   type ShapeTextOptions,
   type TextLayoutResult,
-  PARAGRAPH_TERMINATOR,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { justifyParagraphs } from '../../../../r3f/controls/native/text/textJustify';
 import { faceOfStyle, resolveRichTextFaces, type RichTextFaces } from './styleFaces';
@@ -718,58 +717,37 @@ interface RunLineSegment {
   fontMetrics: FontMetrics;
 }
 
-/** Whether `glyphChar` shapes `sourceChar`: itself, or the paragraph terminator that shaping puts for a `\n`. */
-function isSourceOf(sourceChar: string, glyphChar: string): boolean {
-  return sourceChar === glyphChar || (sourceChar === '\n' && glyphChar === PARAGRAPH_TERMINATOR);
-}
-
 /**
- * Splits each shaped line back into its style runs. `shapeText` shapes the
- * whole paragraph once so line breaks see its full width, and this split is
- * not a Godot port. It also tells which font sizes land on each line.
+ * Splits each shaped line back into its style runs by each glyph's `sourceIndex`. `shapeText`
+ * shapes the whole text once so line breaks see its full width, and this split is not a Godot
+ * port. It also tells which font sizes land on each line.
  */
 function attributeRunsToLines(
   styledRuns: readonly StyledTextRun[],
   layout: TextLayoutResult
 ): RunLineSegment[][] {
-  const plainText = plainTextOf(styledRuns);
   const charRunIndex: number[] = [];
   styledRuns.forEach((run, runIdx) => {
     for (let i = 0; i < run.text.length; i++) charRunIndex.push(runIdx);
   });
-
-  let cursor = 0;
+  // A terminator glyph sits past the last character of its paragraph, on the separator itself.
+  const runOf = (glyph: GlyphPlacement): number => charRunIndex[glyph.sourceIndex!] ?? styledRuns.length - 1;
 
   return layout.lines.map((line) => {
     const segments: RunLineSegment[] = [];
-    let i = 0;
-    while (i < line.glyphs.length) {
-      // A mismatch at the cursor is an edge space `label.h:45`'s BREAK_TRIM default
-      // dropped, always whitespace. One forward pass cannot mis-attribute repeated text.
-      while (cursor < plainText.length && !isSourceOf(plainText[cursor]!, line.glyphs[i]!.char)) {
-        cursor++;
-      }
-      const runIdx = charRunIndex[cursor] ?? charRunIndex[charRunIndex.length - 1] ?? 0;
-      const start = i;
-      const textStart = cursor;
-      while (
-        i < line.glyphs.length &&
-        cursor < plainText.length &&
-        isSourceOf(plainText[cursor]!, line.glyphs[i]!.char) &&
-        charRunIndex[cursor] === runIdx
-      ) {
-        cursor++;
-        i++;
-      }
-      // No run or no glyph consumed means `layout` came from other text: break,
-      // or the loop never ends.
-      if (!styledRuns[runIdx] || i === start) break;
+    let start = 0;
+    while (start < line.glyphs.length) {
+      const runIndex = runOf(line.glyphs[start]!);
+      let end = start + 1;
+      while (end < line.glyphs.length && runOf(line.glyphs[end]!) === runIndex) end++;
+      const glyphs = line.glyphs.slice(start, end);
       segments.push({
-        runIndex: runIdx,
-        text: plainText.slice(textStart, cursor),
-        glyphs: line.glyphs.slice(start, i),
-        fontMetrics: line.glyphs[start]!.fontMetrics ?? layout.fontMetrics,
+        runIndex,
+        text: glyphs.map((g) => g.char).join(''),
+        glyphs,
+        fontMetrics: glyphs[0]!.fontMetrics ?? layout.fontMetrics,
       });
+      start = end;
     }
     return segments;
   });

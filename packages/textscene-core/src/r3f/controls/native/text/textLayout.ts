@@ -131,6 +131,8 @@ export interface GlyphPlacement {
    * glyph, so one running sum serves the line-break width check and placement.
    */
   advance: number;
+  /** Index of the character this glyph shapes in the text `shapeText` took. A paragraph terminator takes its separator's index. Absent on an ellipsis glyph. */
+  sourceIndex?: number;
   /** Atlas bitmap metadata, or `null` outside the baked charset or for a non-`'atlas'` `FontMetrics`. */
   glyph: OpenSansGlyph | null;
   /** The control character this glyph draws as a hex-code box (`draw_hex_code_box`), set only when `preserveControl` kept it. */
@@ -576,7 +578,7 @@ function shapedTextGetLineBreaks(
 }
 
 /** `String::chr(0x200B)`, the per-paragraph terminator `Label::_shape` appends (`label.cpp:164`). */
-export const PARAGRAPH_TERMINATOR = '\u200b';
+const PARAGRAPH_TERMINATOR = '\u200b';
 
 interface ShapedParagraph {
   text: string;
@@ -700,6 +702,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
           glyph: runStyle.faces[idx]!.kind === 'atlas' ? (OPEN_SANS_ATLAS_GLYPHS[ch] ?? null) : null,
           controlCodepoint: breakGlyphs[idx]!.controlCodepoint,
           emboldenGrowthPx: breakGlyphs[idx]!.emboldenGrowthPx || undefined,
+          sourceIndex: para.offset + idx,
           fontSizePx: runStyle.sizes[idx]!,
           fontMetrics: runStyle.faces[idx]!,
         });
