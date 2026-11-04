@@ -5,6 +5,8 @@ import type { Label3DProperties } from './types';
 import { formatColorRgba } from '../../../utils/colorParser';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 import { billboardName } from '../sprites/shared/billboardName';
+import { HORIZONTAL_ALIGNMENT_NAMES, VERTICAL_ALIGNMENT_NAMES } from '../../../godot/math/alignment';
+import { AUTOWRAP_MODE_NAMES } from '../../../godot/text/textServerEnums';
 
 export function formatLabel3DProperties(properties: Label3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
@@ -18,6 +20,20 @@ export function formatLabel3DProperties(properties: Label3DProperties): Property
   sections.push({
     title: 'Text',
     items: textItems,
+  });
+
+  sections.push({
+    title: 'Layout',
+    items: [
+      { label: 'Horizontal Alignment', value: HORIZONTAL_ALIGNMENT_NAMES[properties.horizontal_alignment]! },
+      { label: 'Vertical Alignment', value: VERTICAL_ALIGNMENT_NAMES[properties.vertical_alignment]! },
+      { label: 'Width', value: String(properties.width) },
+      { label: 'Autowrap Mode', value: AUTOWRAP_MODE_NAMES[properties.autowrap_mode]! },
+      { label: 'Autowrap Trim Flags', value: String(properties.autowrap_trim_flags) },
+      { label: 'Justification Flags', value: String(properties.justification_flags) },
+      { label: 'Uppercase', value: properties.uppercase ? 'On' : 'Off' },
+      { label: 'Offset', value: `${properties.offset.x}, ${properties.offset.y}` },
+    ],
   });
 
   const colorItems: PropertySection['items'] = [

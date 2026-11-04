@@ -1253,6 +1253,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label3d Layout",
+    "file": "unit-label3d-layout.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label3d Legible",
     "file": "unit-label3d-legible.tscn",
     "category": "Other"
