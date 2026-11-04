@@ -17,6 +17,7 @@ import {
   ssaoReadsBlurredFromPong,
   type SsaoBlurMode,
   type SsaoInterleaveMode,
+  type SsaoProjectSettings,
 } from '../../godot/rendering/environment/screenSpaceAmbientOcclusion.js';
 import type { PrepassBuffers } from '../screenSpaceEffects/prepassBuffers.js';
 import type { AdaptiveBuffers, OcclusionBuffers } from './occlusionBuffers.js';
@@ -27,18 +28,17 @@ import {
   GATHER_FRAGMENT,
   IMPORTANCE_FRAGMENT,
   INTERLEAVE_FRAGMENT,
-  LOAD_COUNTER_FRAGMENT,
+  LOAD_COUNTER_BLOCK_FRAGMENT,
+  LOAD_COUNTER_SUM_FRAGMENT,
 } from './ssaoShaders.js';
 
-/** The camera and the Environment's settings one occlusion reads, past the project's that shape its buffers. */
+/** The camera and the settings one occlusion reads. */
 export interface OcclusionInputs {
   /** The camera's projection, as Godot's `cam_projection`. */
   projection: THREE.Matrix4;
   ssao: ScreenSpaceAmbientOcclusion;
+  project: SsaoProjectSettings;
 }
-
-/** Godot's compute passes run in work groups of eight by eight (`local_size_x = 8`). */
-const WORK_GROUP_SIZE = 8;
 
 const SLICE_UNIFORMS = ['source0', 'source1', 'source2', 'source3'];
 
@@ -143,11 +143,14 @@ const passesOf = perObject((_renderer: THREE.WebGLRenderer) => ({
     processA: importancePass('SsaoImportanceA', 'PROCESS_MAPA'),
     processB: importancePass('SsaoImportanceB', 'PROCESS_MAPB'),
   },
-  loadCounter: namedUniformPass('SsaoLoadCounter', LOAD_COUNTER_FRAGMENT, [
-    'source_importance',
-    'half_screen_pixel_size',
-    'groups',
-  ]),
+  loadCounter: {
+    blocks: namedUniformPass('SsaoLoadCounterBlocks', LOAD_COUNTER_BLOCK_FRAGMENT, [
+      'source_importance',
+      'half_screen_pixel_size',
+      'groups',
+    ]),
+    sum: namedUniformPass('SsaoLoadCounter', LOAD_COUNTER_SUM_FRAGMENT, ['block_sums']),
+  },
 }));
 
 type Passes = ReturnType<typeof passesOf>;
@@ -218,9 +221,9 @@ function drawGather(
   passes: Passes,
   prepass: PrepassBuffers,
   buffers: OcclusionBuffers,
-  { projection, ssao }: OcclusionInputs
+  { projection, ssao, project }: OcclusionInputs
 ): void {
-  const { width, height, project } = buffers.shape;
+  const { width, height } = buffers.shape;
   const values: Record<string, unknown> = {
     ...ssaoGatherParameters(ssao, project, { width, height }, projection.elements),
     source_normal: prepass.frameNormalRoughness,
@@ -253,7 +256,7 @@ function drawImportance(
   renderer: THREE.WebGLRenderer,
   passes: Passes,
   buffers: OcclusionBuffers,
-  { importance, importancePong, loadCounter }: AdaptiveBuffers,
+  { importance, importancePong, groups, loadCounterBlocks, loadCounter }: AdaptiveBuffers,
   ssao: ScreenSpaceAmbientOcclusion
 ): void {
   const shared = {
@@ -279,14 +282,13 @@ function drawImportance(
     { ...shared, source_importance: importancePong.texture },
     importance
   );
-  const { width, height } = buffers.importanceSize;
-  const groups = [width, height].map((side) => Math.ceil(side / WORK_GROUP_SIZE) * WORK_GROUP_SIZE);
   const counter = {
     source_importance: importancePong.texture,
     half_screen_pixel_size: shared.half_screen_pixel_size,
     groups,
   };
-  drawPass(renderer, passes.loadCounter, counter, loadCounter);
+  drawPass(renderer, passes.loadCounter.blocks, counter, loadCounterBlocks);
+  drawPass(renderer, passes.loadCounter.sum, { block_sums: loadCounterBlocks.texture }, loadCounter);
 }
 
 /** The edge-aware blur, back and forth between the slices and the pong (`ss_effects.cpp:1316-1381`). */
@@ -294,9 +296,8 @@ function drawBlur(
   renderer: THREE.WebGLRenderer,
   passes: Passes,
   buffers: OcclusionBuffers,
-  { ssao }: OcclusionInputs
+  { ssao, project }: OcclusionInputs
 ): void {
-  const { project } = buffers.shape;
   const shared = {
     edge_sharpness: 1 - ssao.sharpness,
     half_screen_pixel_size: slicePixelSize(buffers),
@@ -319,9 +320,9 @@ function drawInterleave(
   renderer: THREE.WebGLRenderer,
   passes: Passes,
   buffers: OcclusionBuffers,
-  { ssao }: OcclusionInputs
+  { ssao, project }: OcclusionInputs
 ): void {
-  const { width, height, project } = buffers.shape;
+  const { width, height } = buffers.shape;
   const source = ssaoReadsBlurredFromPong(project.quality, project.blurPasses)
     ? buffers.pong
     : buffers.deinterleaved;

@@ -12,10 +12,18 @@ import {
   ssaoDepthLevelSize,
   ssaoGatheredSlices,
   SSAO_QUALITY,
+  type BufferSize,
   type SsaoDepthDownsample,
-  type SsaoProjectSettings,
+  type SsaoBufferSettings,
 } from '../../godot/rendering/environment/screenSpaceAmbientOcclusion.js';
 import { NEAREST_TARGET } from '../environment/passTarget.js';
+import { LOAD_COUNTER_BLOCK } from './ssaoShaders.js';
+
+/** Godot's compute passes run in work groups of eight by eight (`local_size_x = 8`). */
+const WORK_GROUP_SIZE = 8;
+
+/** The load counter counts every third invocation of each axis (`ssao_importance_map.glsl`). */
+const LOAD_COUNTER_STRIDE = 3;
 
 /** The four deinterleaved slices of each buffer (`ss_effects.cpp:1145-1149`). */
 const SLICE_COUNT = 4;
@@ -46,7 +54,7 @@ const SLICE: THREE.RenderTargetOptions = {
 /** Godot's R8_UNORM importance map and final occlusion, read through the default linear sampler. */
 const R8_LINEAR: THREE.RenderTargetOptions = { ...SLICE, format: THREE.RedFormat };
 
-/** The load counter's sum, which a 32-bit float holds exactly up to 2^24. */
+/** The load counter's sums, which a 32-bit float holds exactly up to 2^24. */
 const LOAD_COUNTER: THREE.RenderTargetOptions = {
   ...NEAREST_TARGET,
   type: THREE.FloatType,
@@ -57,27 +65,33 @@ const LOAD_COUNTER: THREE.RenderTargetOptions = {
 export interface OcclusionShape {
   width: number;
   height: number;
-  project: SsaoProjectSettings;
+  project: SsaoBufferSettings;
 }
 
-interface Size {
-  width: number;
-  height: number;
-}
-
-/** Ultra's importance map, its blur and its load counter of one texel. */
+/** Ultra's importance map, its blur, and its load counter of one texel with the block sums before it. */
 export class AdaptiveBuffers {
   readonly importance: THREE.WebGLRenderTarget;
   readonly importancePong: THREE.WebGLRenderTarget;
+  /** The map's size in whole work groups, times eight: every invocation the load counter counts. */
+  readonly groups: readonly [number, number];
+  readonly loadCounterBlocks: THREE.WebGLRenderTarget;
   readonly loadCounter = new THREE.WebGLRenderTarget(1, 1, LOAD_COUNTER);
 
-  constructor({ width, height }: Size) {
+  constructor({ width, height }: BufferSize) {
     this.importance = new THREE.WebGLRenderTarget(width, height, R8_LINEAR);
     this.importancePong = new THREE.WebGLRenderTarget(width, height, R8_LINEAR);
+    const [groupsX, groupsY] = [width, height].map(
+      (side) => Math.ceil(side / WORK_GROUP_SIZE) * WORK_GROUP_SIZE
+    );
+    this.groups = [groupsX!, groupsY!];
+    const blocks = this.groups.map((side) =>
+      Math.ceil(Math.ceil(side / LOAD_COUNTER_STRIDE) / LOAD_COUNTER_BLOCK)
+    );
+    this.loadCounterBlocks = new THREE.WebGLRenderTarget(blocks[0], blocks[1], LOAD_COUNTER);
   }
 
   get targets(): THREE.WebGLRenderTarget[] {
-    return [this.importance, this.importancePong, this.loadCounter];
+    return [this.importance, this.importancePong, this.loadCounterBlocks, this.loadCounter];
   }
 }
 
@@ -85,9 +99,7 @@ export class OcclusionBuffers {
   readonly shape: OcclusionShape;
   readonly downsample: SsaoDepthDownsample;
   /** The size of each slice, a half or a quarter of the world buffer's (`ss_effects.cpp:1098-1128`). */
-  readonly sliceSize: Size;
-  /** The size of Ultra's importance map, half a slice's. */
-  readonly importanceSize: Size;
+  readonly sliceSize: BufferSize;
   /** The slices the quality gathers, blurs and interleaves. */
   readonly slices: readonly number[];
   /** The slices' linear depth, one target per mip the downsample writes, by level. */
@@ -111,7 +123,6 @@ export class OcclusionBuffers {
     this.gatherDepths = Array.from({ length: SLICE_COUNT }, (_, slice) => this.gatherDepthOf(slice));
     const { buffer, half } = ssaoBufferSizes({ width, height }, project.isHalfSize);
     this.sliceSize = buffer;
-    this.importanceSize = half;
     this.slices = ssaoGatheredSlices(project.quality);
     this.deinterleaved = sliceTargets(buffer);
     this.pong = sliceTargets(buffer);
@@ -159,6 +170,6 @@ function depthLevelTargets(
   return levels;
 }
 
-function sliceTargets({ width, height }: Size): THREE.WebGLRenderTarget[] {
+function sliceTargets({ width, height }: BufferSize): THREE.WebGLRenderTarget[] {
   return Array.from({ length: SLICE_COUNT }, () => new THREE.WebGLRenderTarget(width, height, SLICE));
 }

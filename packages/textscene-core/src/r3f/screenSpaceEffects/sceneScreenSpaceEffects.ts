@@ -43,11 +43,20 @@ class WorldEffects {
     this.occlusion.release(renderer);
     this.prepass.release(renderer);
   }
+
+  /**
+   * Frees the buffers of each effect `render` draws none of. The layer stays on while either
+   * effect is on, so an effect its Environment turns off would otherwise keep its buffers.
+   */
+  releaseUnused(renderer: THREE.WebGLRenderer, { reflection, drawsOcclusion }: SceneRender): void {
+    if (!reflection) this.reflection.release(renderer);
+    if (!drawsOcclusion) this.occlusion.release(renderer);
+    if (!reflection && !drawsOcclusion) this.prepass.release(renderer);
+  }
 }
 
 /** One render of the scene. `world` is null for a render Godot runs no screen-space effect in. */
 interface SceneRender {
-  readonly camera: THREE.Camera;
   readonly target: THREE.WebGLRenderTarget | null;
   readonly world: WorldEffects | null;
   /** The reflection the render traces, or null for none: Godot traces none with a transparent background. */
@@ -85,7 +94,6 @@ export class SceneScreenSpaceEffects {
     const { reflection, occlusion, drawsDepthPrepass } = this.settings();
     const foldedOcclusion = world ? occlusion : null;
     this.renders.push({
-      camera,
       target,
       world,
       reflection: world && !drawsTransparentBackground(target!) ? reflection : null,
@@ -149,15 +157,20 @@ export class SceneScreenSpaceEffects {
    */
   private beginOpaque(scene: THREE.Scene, camera: THREE.Camera): void {
     const render = this.renders.at(-1);
-    if (!render?.world || (!render.reflection && !render.occlusion)) return;
+    if (!render?.world) return;
     if (!render.hasRun) this.run(render, render.world, scene, camera);
+    if (!render.reflection && !render.occlusion) return;
     render.isPastOpaque = false;
     this.show(render);
   }
 
-  /** Draws the prepass of `render` where an effect reads it, then its occlusion and its reflection, in Godot's order. */
+  /**
+   * Frees the buffers of each effect `render` draws none of, then draws its prepass where an effect
+   * reads it, and its occlusion and its reflection, in Godot's order.
+   */
   private run(render: SceneRender, world: WorldEffects, scene: THREE.Scene, camera: THREE.Camera): void {
     render.hasRun = true;
+    world.releaseUnused(this.renderer, render);
     const { reflection, occlusion, drawsOcclusion } = render;
     if (!drawsOcclusion && !reflection) return;
     const { width, height, samples } = render.target!;

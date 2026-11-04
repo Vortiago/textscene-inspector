@@ -908,12 +908,16 @@ void main() {
 }
 `;
 
+/** The side of the square of counted texels one fragment of the load counter's first pass sums. */
+export const LOAD_COUNTER_BLOCK = 16;
+
 /**
- * `PROCESS_MAPB`'s `atomicAdd` into the load counter, as one sum: every ninth texel's blurred
+ * `PROCESS_MAPB`'s `atomicAdd` into the load counter, in blocks: every ninth texel's blurred
  * importance, as 8 bits, over every invocation of Godot's eight-by-eight work groups, those past the
- * map's edge included. `groups` is the map's size in whole groups, times eight.
+ * map's edge included. `groups` is the map's size in whole groups, times eight. Each fragment sums
+ * one block, so no fragment loops over the whole map.
  */
-export const LOAD_COUNTER_FRAGMENT = /* glsl */ `
+export const LOAD_COUNTER_BLOCK_FRAGMENT = /* glsl */ `
 precision highp float;
 precision highp int;
 
@@ -925,12 +929,34 @@ uniform ivec2 groups;
 ${PROCESSED_IMPORTANCE}
 
 void main() {
+	ivec2 first = ivec2( gl_FragCoord.xy ) * ${LOAD_COUNTER_BLOCK} * 3;
 	float sum = 0.0;
-	for ( int y = 0; y < groups.y; y += 3 ) {
-		for ( int x = 0; x < groups.x; x += 3 ) {
+	for ( int j = 0; j < ${LOAD_COUNTER_BLOCK}; j ++ ) {
+		int y = first.y + j * 3;
+		if ( y >= groups.y ) break;
+		for ( int i = 0; i < ${LOAD_COUNTER_BLOCK}; i ++ ) {
+			int x = first.x + i * 3;
+			if ( x >= groups.x ) break;
 			float avg = processedImportance( ivec2( x, y ) );
 			sum += float( uint( clamp( avg, 0.0, 1.0 ) * 255.0 + 0.5 ) );
 		}
+	}
+	gl_FragColor = vec4( sum );
+}
+`;
+
+/** The load counter: the sum of the blocks' sums, exact, as each sum is a whole number below 2^24. */
+export const LOAD_COUNTER_SUM_FRAGMENT = /* glsl */ `
+precision highp float;
+precision highp int;
+
+uniform highp sampler2D block_sums;
+
+void main() {
+	ivec2 size = textureSize( block_sums, 0 );
+	float sum = 0.0;
+	for ( int y = 0; y < size.y; y ++ ) {
+		for ( int x = 0; x < size.x; x ++ ) sum += texelFetch( block_sums, ivec2( x, y ), 0 ).x;
 	}
 	gl_FragColor = vec4( sum );
 }

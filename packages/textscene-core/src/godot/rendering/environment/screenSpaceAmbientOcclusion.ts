@@ -36,6 +36,12 @@ export interface SsaoProjectSettings {
   isSsilHalfSize: boolean;
 }
 
+/** The project's settings that shape the buffers: the qualities and the half sizes. */
+export type SsaoBufferSettings = Pick<
+  SsaoProjectSettings,
+  'quality' | 'isHalfSize' | 'ssilQuality' | 'isSsilHalfSize'
+>;
+
 /** Each setting's `GLOBAL_DEF` (`servers/rendering/rendering_server.cpp:3756-3764`). */
 export const SSAO_PROJECT_DEFAULTS: SsaoProjectSettings = {
   quality: SSAO_QUALITY.MEDIUM,
@@ -60,7 +66,7 @@ export const SSAO_ENVIRONMENT_DEFAULTS = {
   aoChannelAffect: 0,
 } as const;
 
-interface BufferSize {
+export interface BufferSize {
   width: number;
   height: number;
 }
@@ -110,7 +116,7 @@ export interface SsaoDepthDownsample {
 }
 
 /** `SSEffects::downsample_depth`'s choice of shader and levels (`ss_effects.cpp:520-547`). */
-export function ssaoDepthDownsample(project: SsaoProjectSettings): SsaoDepthDownsample {
+export function ssaoDepthDownsample(project: SsaoBufferSettings): SsaoDepthDownsample {
   const { quality, ssilQuality, isHalfSize: isSsaoHalfSize, isSsilHalfSize } = project;
   let usesMips = quality > SSAO_QUALITY.MEDIUM || ssilQuality > SSAO_QUALITY.MEDIUM;
   let mode: SsaoDownsampleMode = 'plain';

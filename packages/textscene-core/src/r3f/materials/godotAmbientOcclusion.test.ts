@@ -178,4 +178,13 @@ describe('installGodotOcclusion', () => {
     expect(warningsOf(installGodotOcclusion)).toHaveLength(1);
     expect(THREE.ShaderChunk.aomap_pars_fragment).not.toContain(OCCLUSION_MIX);
   });
+
+  it("keeps the injection's masked sample on a three the patch fails on (error case)", () => {
+    THREE.ShaderChunk.aomap_fragment = THREE.ShaderChunk.aomap_fragment.replace('#ifdef USE_AOMAP', '#if 1');
+    let shader: ProgramShader | null = null;
+
+    warningsOf(() => (shader = patched(STANDARD_FRAGMENT, 1)));
+
+    expect(shader!.fragmentShader).toContain('dot( texture2D( aoMap, vAoMapUv ), godotAoTextureChannel )');
+  });
 });

@@ -39,9 +39,11 @@ export class WorldOcclusion {
     { ssao, project }: OcclusionSettings
   ): void {
     const { width, height } = prepass.shape;
-    const buffers = this.buffers.fit(renderer, { width, height, project });
+    const { quality, isHalfSize, ssilQuality, isSsilHalfSize } = project;
+    const shaping = { quality, isHalfSize, ssilQuality, isSsilHalfSize };
+    const buffers = this.buffers.fit(renderer, { width, height, project: shaping });
     beginStep(renderer, 'Screen-space ambient occlusion');
-    generateOcclusion(renderer, prepass, buffers, { projection: camera.projectionMatrix, ssao });
+    generateOcclusion(renderer, prepass, buffers, { projection: camera.projectionMatrix, ssao, project });
     endStep(renderer, 'Screen-space ambient occlusion');
   }
 
