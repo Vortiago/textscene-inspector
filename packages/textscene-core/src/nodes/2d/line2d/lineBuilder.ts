@@ -2,7 +2,7 @@
  * Builds the triangles of a Line2D stroke as Godot's `LineBuilder::build` does
  * (`scene/2d/line_builder.cpp:45-432`): one strip along the line, bevel and round joints and
  * round caps as extra triangles, and no area drawn twice. A pure function of numbers, in Godot's
- * space with Y down. `texture` is not built yet (#1206).
+ * space with Y down. `texture` and `texture_mode` are not built yet.
  */
 
 import { isZeroApprox, type Rgba } from '../../../godot/math/math';
