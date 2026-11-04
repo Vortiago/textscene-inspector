@@ -10,6 +10,7 @@ import type { ScreenSpaceReflection } from '../../resources/environment/types.js
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
 import { leaveSlot } from '../sharedTexture.js';
 import type { PrepassBuffers } from '../screenSpaceEffects/prepassBuffers.js';
+import { FittedBuffers } from '../screenSpaceEffects/fittedBuffers.js';
 import { ReflectionBuffers, type ReflectionShape } from './reflectionBuffers.js';
 import { copyLastFrame, traceReflection } from './reflectionPasses.js';
 import { ReflectionFrames } from './reflectionFrames.js';
@@ -34,7 +35,10 @@ const inverseProjection = new THREE.Matrix4();
 const reprojection = new THREE.Matrix4();
 
 export class WorldReflection {
-  private buffers: ReflectionBuffers | null = null;
+  private readonly buffers = new FittedBuffers(
+    (renderer, shape: ReflectionShape) => new ReflectionBuffers(renderer, shape),
+    (renderer, buffers) => leaveSlot(renderer, reflectionSlot, buffers.reflection.texture)
+  );
   /** Godot starts both at identity, over a last frame cleared to zero (`ss_effects.cpp:392`). */
   private readonly lastProjection = new THREE.Matrix4();
   private readonly lastView = new THREE.Matrix4();
@@ -42,7 +46,7 @@ export class WorldReflection {
 
   /** The reflection of the last trace, as the colour pass reads it. Null before the first. */
   get reflection(): THREE.Texture | null {
-    return this.buffers?.reflection.texture ?? null;
+    return this.buffers.current?.reflection.texture ?? null;
   }
 
   /** Traces the reflection of the frame `prepass` holds, seen through `camera`, at `settings`. */
@@ -53,7 +57,7 @@ export class WorldReflection {
     { ssr, isHalfSize }: ReflectionSettings
   ): void {
     const { width, height } = prepass.shape;
-    const buffers = this.buffersFor(renderer, { width, height, isHalfSize });
+    const buffers = this.buffers.fit(renderer, { width, height, isHalfSize });
     projection.multiplyMatrices(DEPTH_CORRECTION, camera.projectionMatrix);
     inverseProjection.copy(projection).invert();
     const inputs = {
@@ -73,23 +77,12 @@ export class WorldReflection {
    * more frame to reflect it. The caller restores the renderer's target.
    */
   finish(renderer: THREE.WebGLRenderer, frame: THREE.Texture): boolean {
-    copyLastFrame(renderer, this.buffers!, frame);
+    copyLastFrame(renderer, this.buffers.current!, frame);
     return this.frames.traced();
   }
 
-  /** Frees the buffers, first taking the slot off them: binding a deleted texture is an error. */
   release(renderer: THREE.WebGLRenderer): void {
-    if (!this.buffers) return;
-    leaveSlot(renderer, reflectionSlot, this.buffers.reflection.texture);
-    this.buffers.dispose();
-    this.buffers = null;
-  }
-
-  private buffersFor(renderer: THREE.WebGLRenderer, shape: ReflectionShape): ReflectionBuffers {
-    if (this.buffers?.fits(shape)) return this.buffers;
-    this.release(renderer);
-    this.buffers = new ReflectionBuffers(renderer, shape);
-    return this.buffers;
+    this.buffers.release(renderer);
   }
 
   /**

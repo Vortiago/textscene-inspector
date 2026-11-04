@@ -12,34 +12,30 @@ import {
   SURFACE_OCCLUSION,
 } from '../materials/godotAmbientOcclusion.js';
 import { installNormalRoughnessPrepass } from '../screenSpaceEffects/prepassChunk.js';
-import { SCREEN_SPACE_UNIFORM } from '../screenSpaceEffects/screenSpaceState.js';
-import { occlusionFold, occlusionSlot, SSAO_UNIFORM } from './ssaoUniforms.js';
+import { SCREEN_SPACE_READ } from '../screenSpaceEffects/screenSpaceState.js';
+import { occlusionFold, occlusionSlot, SSAO_FOLD_READ, SSAO_UNIFORM } from './ssaoUniforms.js';
 
 const { occlusion, fold } = SSAO_UNIFORM;
-const { state } = SCREEN_SPACE_UNIFORM;
 
 /**
- * The occlusion at the fragment's pixel, or Godot's black default. It holds Godot's rows, top row
- * first, so the read flips three's bottom-up row. It is full size, so Godot's linear read at the
- * pixel's centre is the texel.
+ * The occlusion at the fragment's pixel, or Godot's black default. It is full size, so Godot's
+ * linear read at the pixel's centre is the texel.
  */
 const SSAO_PARS = /* glsl */ `
 uniform highp sampler2D ${occlusion};
 uniform vec3 ${fold};
 float godotScreenSpaceOcclusion() {
-	if ( ${fold}.z < 0.5 ) return 0.0;
-	ivec2 pixel = ivec2( gl_FragCoord.xy );
-	pixel.y = textureSize( ${occlusion}, 0 ).y - 1 - pixel.y;
-	return texelFetch( ${occlusion}, pixel, 0 ).r;
+	if ( ${SSAO_FOLD_READ.hasOcclusion} < 0.5 ) return 0.0;
+	return texelFetch( ${occlusion}, godotResultTexel( ${occlusion} ), 0 ).r;
 }
 `;
 
 /** Only in a lit program while a render shows its occlusion: the alpha pass and a probe read none. */
 const SURFACE_FOLD = /* glsl */ `
 	#if defined( STANDARD )
-		if ( ${state}.w > 0.5 ) {
+		if ( ${SCREEN_SPACE_READ.showsOcclusion} > 0.5 ) {
 			ambientOcclusion = min( ambientOcclusion, godotScreenSpaceOcclusion() );
-			${LIGHT_AFFECT} = mix( ${LIGHT_AFFECT}, max( ${LIGHT_AFFECT}, ${fold}.x ), ${fold}.y );
+			${LIGHT_AFFECT} = mix( ${LIGHT_AFFECT}, max( ${LIGHT_AFFECT}, ${SSAO_FOLD_READ.lightAffect} ), ${SSAO_FOLD_READ.aoChannelAffect} );
 		}
 	#endif`;
 

@@ -48,6 +48,18 @@ export const SSAO_PROJECT_DEFAULTS: SsaoProjectSettings = {
   isSsilHalfSize: true,
 };
 
+/** The Environment's `ssao_*` defaults, past `ssao_enabled` (`scene/resources/environment.h:132-139`). */
+export const SSAO_ENVIRONMENT_DEFAULTS = {
+  radius: 1,
+  intensity: 2,
+  power: 1.5,
+  detail: 0.5,
+  horizon: 0.06,
+  sharpness: 0.98,
+  lightAffect: 0,
+  aoChannelAffect: 0,
+} as const;
+
 interface BufferSize {
   width: number;
   height: number;

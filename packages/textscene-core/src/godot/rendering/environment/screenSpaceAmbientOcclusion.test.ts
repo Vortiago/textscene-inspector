@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   SSAO_PROJECT_DEFAULTS,
   SSAO_ROTATION_MATRICES,
+  SSAO_ENVIRONMENT_DEFAULTS,
   SSAO_QUALITY,
   ssaoBlurModes,
   ssaoBufferSizes,
@@ -19,17 +20,6 @@ const project = (over: Partial<SsaoProjectSettings> = {}): SsaoProjectSettings =
   ...SSAO_PROJECT_DEFAULTS,
   ...over,
 });
-
-const ENVIRONMENT_DEFAULTS = {
-  radius: 1,
-  intensity: 2,
-  power: 1.5,
-  detail: 0.5,
-  horizon: 0.06,
-  sharpness: 0.98,
-  lightAffect: 0,
-  aoChannelAffect: 0,
-};
 
 /** A perspective projection, column-major, with `1 / tan` of each half field of view on its diagonal. */
 function perspective(xScale: number, yScale: number, near: number, far: number): number[] {
@@ -207,7 +197,7 @@ describe('ssaoGatherParameters', () => {
   const frame = { width: 955, height: 756 };
 
   it('fits the view rays to the field of view (ss_effects.cpp:1173-1178)', () => {
-    const parameters = ssaoGatherParameters(ENVIRONMENT_DEFAULTS, project(), frame, projection);
+    const parameters = ssaoGatherParameters(SSAO_ENVIRONMENT_DEFAULTS, project(), frame, projection);
     expect(parameters.NDC_to_view_mul[0]).toBeCloseTo(1.76, 6);
     expect(parameters.NDC_to_view_mul[1]).toBeCloseTo(-1.4, 6);
     expect(parameters.NDC_to_view_add[0]).toBeCloseTo(-0.88, 6);
@@ -215,7 +205,7 @@ describe('ssaoGatherParameters', () => {
   });
 
   it('steps a quarter-size texel at half size, and the gather quality one below the setting (:1165-1204)', () => {
-    const parameters = ssaoGatherParameters(ENVIRONMENT_DEFAULTS, project(), frame, projection);
+    const parameters = ssaoGatherParameters(SSAO_ENVIRONMENT_DEFAULTS, project(), frame, projection);
     expect(parameters.half_screen_pixel_size).toEqual([4 / 955, 4 / 756]);
     expect(parameters.half_screen_pixel_size_x025[0]).toBeCloseTo((4 / 955) * 0.75, 12);
     expect(parameters.quality).toBe(1);
@@ -223,16 +213,16 @@ describe('ssaoGatherParameters', () => {
   });
 
   it('fades out between the project distances and clamps the obscurance at 0.98 (:1193-1195)', () => {
-    const parameters = ssaoGatherParameters(ENVIRONMENT_DEFAULTS, project(), frame, projection);
+    const parameters = ssaoGatherParameters(SSAO_ENVIRONMENT_DEFAULTS, project(), frame, projection);
     expect(parameters.fade_out_mul).toBeCloseTo(-1 / 250, 12);
     expect(parameters.fade_out_add).toBeCloseTo(1.2, 12);
     expect(parameters.shadow_clamp).toBe(0.98);
   });
 
   it('widens the near limit at Low and shrinks the radius at Very Low (:1182-1190)', () => {
-    const medium = ssaoGatherParameters(ENVIRONMENT_DEFAULTS, project(), frame, projection);
+    const medium = ssaoGatherParameters(SSAO_ENVIRONMENT_DEFAULTS, project(), frame, projection);
     const veryLow = ssaoGatherParameters(
-      ENVIRONMENT_DEFAULTS,
+      SSAO_ENVIRONMENT_DEFAULTS,
       project({ quality: SSAO_QUALITY.VERY_LOW }),
       frame,
       projection
@@ -244,7 +234,7 @@ describe('ssaoGatherParameters', () => {
   });
 
   it("averages the importance map's every ninth texel over the importance map (:1200)", () => {
-    const parameters = ssaoGatherParameters(ENVIRONMENT_DEFAULTS, project(), frame, projection);
+    const parameters = ssaoGatherParameters(SSAO_ENVIRONMENT_DEFAULTS, project(), frame, projection);
     expect(parameters.load_counter_avg_div).toBeCloseTo(9 / (120 * 95 * 255), 15);
   });
 });

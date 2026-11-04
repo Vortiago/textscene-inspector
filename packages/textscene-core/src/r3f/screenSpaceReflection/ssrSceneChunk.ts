@@ -8,17 +8,15 @@ import { installChunkEdits } from '../shaderPatch/chunkPatch.js';
 import { installLitUniform } from '../shaderPatch/litUniform.js';
 import { installGodotIndirectSpecular } from '../godotIndirectSpecular.js';
 import { installNormalRoughnessPrepass } from '../screenSpaceEffects/prepassChunk.js';
-import { SCREEN_SPACE_UNIFORM } from '../screenSpaceEffects/screenSpaceState.js';
+import { SCREEN_SPACE_READ } from '../screenSpaceEffects/screenSpaceState.js';
 import { reflectionSlot, SSR_UNIFORM } from './ssrUniforms.js';
 import { ROUGHNESS_FADE } from './ssrShaders.js';
 
 const { reflection } = SSR_UNIFORM;
-const { state } = SCREEN_SPACE_UNIFORM;
 
 /**
  * The fade keeps a reflection whole up to `ROUGHNESS_FADE.start` and none from its end, where the
- * trace draws nothing (`:2204`). The reflection holds Godot's rows, top row first, so the read
- * flips three's bottom-up row. The caller checks that the render shows its reflection.
+ * trace draws nothing (`:2204`). The caller checks that the render shows its reflection.
  */
 const SSR_FUNCTIONS = /* glsl */ `
 uniform highp sampler2D ${reflection};
@@ -27,9 +25,7 @@ float godotSsrRoughnessFade( float roughness ) {
 }
 
 vec4 godotScreenSpaceReflection( float roughness ) {
-	ivec2 pixel = ivec2( gl_FragCoord.xy );
-	pixel.y = textureSize( ${reflection}, 0 ).y - 1 - pixel.y;
-	return texelFetch( ${reflection}, pixel, 0 ) * godotSsrRoughnessFade( roughness );
+	return texelFetch( ${reflection}, godotResultTexel( ${reflection} ), 0 ) * godotSsrRoughnessFade( roughness );
 }
 `;
 
@@ -40,7 +36,7 @@ vec4 godotScreenSpaceReflection( float roughness ) {
 const SSR_FOLD = /* glsl */ `
 #if defined( STANDARD )
 
-	if ( ${state}.y > 0.5 ) {
+	if ( ${SCREEN_SPACE_READ.showsReflection} > 0.5 ) {
 		vec4 godotSsr = godotScreenSpaceReflection( material.godotRoughness );
 		reflectedLight.indirectSpecular = reflectedLight.indirectSpecular * ( 1.0 - godotSsr.a ) + godotIndirectSpecular( godotSsr.rgb, material );
 	}

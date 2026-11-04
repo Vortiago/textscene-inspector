@@ -8,14 +8,12 @@
 import * as THREE from 'three';
 import { perObject } from '../../utils/perObject.js';
 import { drawPass, multipleTargetPass, namedUniformPass } from '../fullScreenPass.js';
+import { NEAREST_TARGET } from '../environment/passTarget.js';
 import { GODOT_DEPTH } from './frameGlsl.js';
 
 /** Godot's R8G8B8A8_UNORM normal and roughness. */
-const NORMAL_ROUGHNESS: THREE.RenderTargetOptions = {
-  depthBuffer: false,
-  generateMipmaps: false,
-  minFilter: THREE.NearestFilter,
-  magFilter: THREE.NearestFilter,
+export const NORMAL_ROUGHNESS: THREE.RenderTargetOptions = {
+  ...NEAREST_TARGET,
   type: THREE.UnsignedByteType,
 };
 
@@ -45,11 +43,6 @@ export class PrepassBuffers {
     this.shape = { ...shape };
     this.samplePrepasses = Array.from({ length: Math.max(1, samples) }, () => prepassTarget(width, height));
     this.resolved = samples > 1 ? resolvedTarget(width, height) : null;
-  }
-
-  fits(shape: PrepassShape): boolean {
-    const own = this.shape;
-    return own.width === shape.width && own.height === shape.height && own.samples === shape.samples;
   }
 
   /** The frame's depth in three's form, 0 at the near plane, in three's rows. */

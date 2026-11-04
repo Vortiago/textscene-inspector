@@ -8,15 +8,22 @@ import { installChunkEdits, type TextEdit } from '../shaderPatch/chunkPatch.js';
 import { FOG_UNIFORMS_MERGE, installMergedUniform } from '../shaderPatch/litUniform.js';
 import { installGodotLightFunction } from '../godotLightFunction.js';
 import { installUnlitVaryings, UNLIT_NORMAL_VARYING } from '../shaderPatch/unlitVaryings.js';
-import { bestFitNormalsSlot, SCREEN_SPACE_UNIFORM, screenSpaceState } from './screenSpaceState.js';
+import {
+  bestFitNormalsSlot,
+  SCREEN_SPACE_READ,
+  SCREEN_SPACE_UNIFORM,
+  screenSpaceState,
+} from './screenSpaceState.js';
 import { GODOT_ENCODE_NORMAL } from './bestFitNormals.js';
 import { UNLIT_DEFAULT_ROUGHNESS } from './unshadedRoughness.js';
+import { THREE_ROW } from './frameGlsl.js';
 
 const { bestFitNormals, state } = SCREEN_SPACE_UNIFORM;
 
 /**
- * What every program that writes the prepass reads: the state of the passes, and the encoded normal
- * and roughness it writes. Godot marks a moving instance by writing one minus the stored roughness,
+ * What every program that writes the prepass reads: the state of the passes, the encoded normal and
+ * roughness it writes, and the texel at the fragment's pixel of an effect's full-size result, which
+ * holds Godot's rows. Godot marks a moving instance by writing one minus the stored roughness,
  * which every reader folds back, so the static form stands for both.
  */
 const PREPASS_PARS = /* glsl */ `
@@ -27,14 +34,18 @@ ${GODOT_ENCODE_NORMAL}
 vec4 godotNormalRoughness( vec3 normal, float roughness ) {
 	return vec4( godotEncodeNormal( normal ) * 0.5 + 0.5, roughness * ( 127.0 / 255.0 ) );
 }
+${THREE_ROW}
+ivec2 godotResultTexel( highp sampler2D result ) {
+	return threeTexel( ivec2( gl_FragCoord.xy ), textureSize( result, 0 ).y );
+}
 `;
 
 /**
  * The prepass's output, once Godot's roughness is known. A surface the depth prepass draws from the
  * alpha pass cuts at its prepass threshold.
  */
-const NORMAL_ROUGHNESS_OUTPUT = /* glsl */ `if ( ${state}.x > 0.5 ) {
-		if ( diffuseColor.a < ${state}.z ) discard;
+const NORMAL_ROUGHNESS_OUTPUT = /* glsl */ `if ( ${SCREEN_SPACE_READ.drawsNormalRoughness} > 0.5 ) {
+		if ( diffuseColor.a < ${SCREEN_SPACE_READ.prepassCut} ) discard;
 		gl_FragColor = godotNormalRoughness( normal, material.godotRoughness );
 		return;
 	}
@@ -54,8 +65,8 @@ const PREPASS_OUTPUT: TextEdit = {
  * direction, so the normal needs no normalising.
  */
 const UNSHADED_NORMAL_ROUGHNESS_OUTPUT = /* glsl */ `
-	if ( ${state}.x > 0.5 ) {
-		if ( diffuseColor.a < ${state}.z ) discard;
+	if ( ${SCREEN_SPACE_READ.drawsNormalRoughness} > 0.5 ) {
+		if ( diffuseColor.a < ${SCREEN_SPACE_READ.prepassCut} ) discard;
 		#ifdef DOUBLE_SIDED
 			float godotUnlitFace = gl_FrontFacing ? 1.0 : - 1.0;
 		#else

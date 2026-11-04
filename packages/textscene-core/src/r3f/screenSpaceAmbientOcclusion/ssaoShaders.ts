@@ -53,11 +53,8 @@ ivec2 gatherOrigin( vec2 uv, ivec2 size ) {
 	return ivec2( floor( snappedTexelCoord( uv, size ) - 0.5 ) );
 }
 
-vec4 gatherMirrored( highp sampler2D source, vec2 uv ) {
-	ivec2 size = textureSize( source, 0 );
-	ivec2 i0 = gatherOrigin( uv, size );
-	ivec2 a = mirroredTexel( i0, size );
-	ivec2 b = mirroredTexel( i0 + 1, size );
+// The footprint between the wrapped texels \`a\`, of (i0, j0), and \`b\`, of (i1, j1).
+vec4 gatherBetween( highp sampler2D source, ivec2 a, ivec2 b ) {
 	return vec4(
 		texelFetch( source, ivec2( a.x, b.y ), 0 ).x,
 		texelFetch( source, b, 0 ).x,
@@ -66,17 +63,16 @@ vec4 gatherMirrored( highp sampler2D source, vec2 uv ) {
 	);
 }
 
+vec4 gatherMirrored( highp sampler2D source, vec2 uv ) {
+	ivec2 size = textureSize( source, 0 );
+	ivec2 i0 = gatherOrigin( uv, size );
+	return gatherBetween( source, mirroredTexel( i0, size ), mirroredTexel( i0 + 1, size ) );
+}
+
 vec4 gatherClamped( highp sampler2D source, vec2 uv ) {
 	ivec2 size = textureSize( source, 0 );
 	ivec2 i0 = gatherOrigin( uv, size );
-	ivec2 a = clampedTexel( i0, size );
-	ivec2 b = clampedTexel( i0 + 1, size );
-	return vec4(
-		texelFetch( source, ivec2( a.x, b.y ), 0 ).x,
-		texelFetch( source, b, 0 ).x,
-		texelFetch( source, ivec2( b.x, a.y ), 0 ).x,
-		texelFetch( source, a, 0 ).x
-	);
+	return gatherBetween( source, clampedTexel( i0, size ), clampedTexel( i0 + 1, size ) );
 }
 
 // The nearest texel of \`uv\` through the mirror sampler.
@@ -740,13 +736,6 @@ vec4 sliceAt( int index, vec2 uv ) {
 	return textureLod( source3, uv, 0.0 );
 }
 
-vec4 sliceTexel( int index, ivec2 texel ) {
-	if ( index == 0 ) return texelFetch( source0, texel, 0 );
-	if ( index == 1 ) return texelFetch( source1, texel, 0 );
-	if ( index == 2 ) return texelFetch( source2, texel, 0 );
-	return texelFetch( source3, texel, 0 );
-}
-
 void main() {
 	ivec2 id = ivec2( gl_FragCoord.xy );
 	vec2 invocation = vec2( id );
@@ -760,7 +749,16 @@ void main() {
 	int index_vertical = mx + ( 1 - my ) * 2;
 	int index_diagonal = ( 1 - mx ) + ( 1 - my ) * 2;
 
-	vec2 center_val = sliceTexel( index_center, ivec2( pix_pos / uvec2( size_modifier ) ) ).xy;
+	// Each pixel reads each slice once, so a read of every slice picks without a branch that
+	// diverges across the quad, where a branch on the slice would run all four reads per pick.
+	ivec2 slice_texel = ivec2( pix_pos / uvec2( size_modifier ) );
+	vec2 slice_vals[ 4 ] = vec2[ 4 ](
+		texelFetch( source0, slice_texel, 0 ).xy,
+		texelFetch( source1, slice_texel, 0 ).xy,
+		texelFetch( source2, slice_texel, 0 ).xy,
+		texelFetch( source3, slice_texel, 0 ).xy
+	);
+	vec2 center_val = slice_vals[ index_center ];
 
 	ao = center_val.x;
 
@@ -772,12 +770,20 @@ void main() {
 	float fmxe = ( edgesLRTB.y - edgesLRTB.x );
 	float fmye = ( edgesLRTB.w - edgesLRTB.z );
 
-	vec2 uv_horizontal = ( invocation + vec2( 0.5 ) + vec2( fmx + fmxe - 0.5, 0.5 - fmy ) ) * pixel_size;
-	float ao_horizontal = sliceAt( index_horizontal, uv_horizontal ).x;
-	vec2 uv_vertical = ( invocation + vec2( 0.5 ) + vec2( 0.5 - fmx, fmy - 0.5 + fmye ) ) * pixel_size;
-	float ao_vertical = sliceAt( index_vertical, uv_vertical ).x;
-	vec2 uv_diagonal = ( invocation + vec2( 0.5 ) + vec2( fmx - 0.5 + fmxe, fmy - 0.5 + fmye ) ) * pixel_size;
-	float ao_diagonal = sliceAt( index_diagonal, uv_diagonal ).x;
+	vec2 slice_uvs[ 4 ];
+	slice_uvs[ index_center ] = ( invocation + vec2( 0.5 ) ) * pixel_size;
+	slice_uvs[ index_horizontal ] = ( invocation + vec2( 0.5 ) + vec2( fmx + fmxe - 0.5, 0.5 - fmy ) ) * pixel_size;
+	slice_uvs[ index_vertical ] = ( invocation + vec2( 0.5 ) + vec2( 0.5 - fmx, fmy - 0.5 + fmye ) ) * pixel_size;
+	slice_uvs[ index_diagonal ] = ( invocation + vec2( 0.5 ) + vec2( fmx - 0.5 + fmxe, fmy - 0.5 + fmye ) ) * pixel_size;
+	vec4 slice_aos = vec4(
+		sliceAt( 0, slice_uvs[ 0 ] ).x,
+		sliceAt( 1, slice_uvs[ 1 ] ).x,
+		sliceAt( 2, slice_uvs[ 2 ] ).x,
+		sliceAt( 3, slice_uvs[ 3 ] ).x
+	);
+	float ao_horizontal = slice_aos[ index_horizontal ];
+	float ao_vertical = slice_aos[ index_vertical ];
+	float ao_diagonal = slice_aos[ index_diagonal ];
 
 	vec4 blendWeights;
 	blendWeights.x = 1.0;
@@ -855,13 +861,13 @@ uniform vec2 half_screen_pixel_size;
 uniform float intensity;
 uniform float power;
 
-${TEXEL_SAMPLING}
-
 #ifndef GENERATE_MAP
 ${PROCESSED_IMPORTANCE}
 #endif
 
 #ifdef GENERATE_MAP
+${TEXEL_SAMPLING}
+
 vec4 gatherSlice( int i, vec2 uv ) {
 	if ( i == 0 ) return gatherClamped( source0, uv );
 	if ( i == 1 ) return gatherClamped( source1, uv );

@@ -8,11 +8,6 @@
  */
 
 import * as THREE from 'three';
-import type {
-  ScreenSpaceAmbientOcclusion,
-  ScreenSpaceReflection,
-} from '../../resources/environment/types.js';
-import type { SsaoProjectSettings } from '../../godot/rendering/environment/screenSpaceAmbientOcclusion.js';
 import { probeCaptureOf } from '../reflectionProbe/captureCameras.js';
 import { drawOffscreen } from '../offscreen.js';
 import {
@@ -20,45 +15,33 @@ import {
   createLastOpaqueSentinel,
   type OpaqueSentinel,
 } from '../opaqueSentinel.js';
-import { showInSlot } from '../sharedTexture.js';
 import { drawsTransparentBackground } from '../environment/toneMapPass.js';
-import { WorldReflection } from '../screenSpaceReflection/worldReflection.js';
-import { reflectionSlot } from '../screenSpaceReflection/ssrUniforms.js';
-import { WorldOcclusion } from '../screenSpaceAmbientOcclusion/worldOcclusion.js';
-import { showOcclusion } from '../screenSpaceAmbientOcclusion/ssaoUniforms.js';
+import { WorldReflection, type ReflectionSettings } from '../screenSpaceReflection/worldReflection.js';
+import { hideReflection, showReflection } from '../screenSpaceReflection/ssrUniforms.js';
+import { WorldOcclusion, type OcclusionSettings } from '../screenSpaceAmbientOcclusion/worldOcclusion.js';
+import { hideOcclusion, showOcclusion } from '../screenSpaceAmbientOcclusion/ssaoUniforms.js';
+import { FittedBuffers } from './fittedBuffers.js';
 import { PrepassBuffers, type PrepassShape } from './prepassBuffers.js';
 import { drawNormalRoughnessPrepass } from './normalRoughnessPrepass.js';
-import { SCREEN_SPACE_STATE, screenSpaceState } from './screenSpaceState.js';
 
 /** What the effects read at each render. Each effect is null while its Environment turns it off. */
 export interface ScreenSpaceSettings {
-  ssr: ScreenSpaceReflection | null;
-  /** The project's `screen_space_reflection/half_size`. */
-  isHalfSizeReflection: boolean;
-  ssao: ScreenSpaceAmbientOcclusion | null;
-  ssaoProject: SsaoProjectSettings;
+  reflection: ReflectionSettings | null;
+  occlusion: OcclusionSettings | null;
   /** The project's `rendering/driver/depth_prepass/enable`, without which no occlusion is drawn. */
   drawsDepthPrepass: boolean;
 }
 
 /** One world buffer's effects, which live as long as the buffer. */
 class WorldEffects {
-  private prepass: PrepassBuffers | null = null;
+  readonly prepass = new FittedBuffers((_renderer, shape: PrepassShape) => new PrepassBuffers(shape));
   readonly reflection = new WorldReflection();
   readonly occlusion = new WorldOcclusion();
-
-  prepassFor(shape: PrepassShape): PrepassBuffers {
-    if (this.prepass?.fits(shape)) return this.prepass;
-    this.prepass?.dispose();
-    this.prepass = new PrepassBuffers(shape);
-    return this.prepass;
-  }
 
   release(renderer: THREE.WebGLRenderer): void {
     this.reflection.release(renderer);
     this.occlusion.release(renderer);
-    this.prepass?.dispose();
-    this.prepass = null;
+    this.prepass.release(renderer);
   }
 }
 
@@ -67,10 +50,10 @@ interface SceneRender {
   readonly camera: THREE.Camera;
   readonly target: THREE.WebGLRenderTarget | null;
   readonly world: WorldEffects | null;
-  /** Whether the render traces a reflection: Godot traces none with a transparent background. */
-  readonly tracesReflection: boolean;
+  /** The reflection the render traces, or null for none: Godot traces none with a transparent background. */
+  readonly reflection: ReflectionSettings | null;
   /** The occlusion the render folds in, or null for none. */
-  readonly ssao: ScreenSpaceAmbientOcclusion | null;
+  readonly occlusion: OcclusionSettings | null;
   /** Whether the render draws its occlusion, or folds Godot's black default in (`render_forward_clustered.cpp:2086`). */
   readonly drawsOcclusion: boolean;
   hasRun: boolean;
@@ -99,14 +82,14 @@ export class SceneScreenSpaceEffects {
   /** Starts a render of the scene through `camera` into `target`, null for the canvas. */
   readonly begin = (camera: THREE.Camera, target: THREE.WebGLRenderTarget | null): void => {
     const world = this.worldOf(camera, target);
-    const { ssr, ssao, drawsDepthPrepass } = this.settings();
-    const foldedOcclusion = world ? ssao : null;
+    const { reflection, occlusion, drawsDepthPrepass } = this.settings();
+    const foldedOcclusion = world ? occlusion : null;
     this.renders.push({
       camera,
       target,
       world,
-      tracesReflection: !!world && !!ssr && !drawsTransparentBackground(target!),
-      ssao: foldedOcclusion,
+      reflection: world && !drawsTransparentBackground(target!) ? reflection : null,
+      occlusion: foldedOcclusion,
       drawsOcclusion: !!foldedOcclusion && drawsDepthPrepass,
       hasRun: false,
       isPastOpaque: false,
@@ -120,7 +103,7 @@ export class SceneScreenSpaceEffects {
    */
   readonly end = (): void => {
     const render = this.renders.pop();
-    if (render?.hasRun && render.tracesReflection) this.finish(render);
+    if (render?.hasRun && render.reflection) this.finish(render);
     const outer = this.renders.at(-1);
     if (outer?.hasRun && !outer.isPastOpaque) this.show(outer);
     else hideEffects();
@@ -166,7 +149,7 @@ export class SceneScreenSpaceEffects {
    */
   private beginOpaque(scene: THREE.Scene, camera: THREE.Camera): void {
     const render = this.renders.at(-1);
-    if (!render?.world || (!render.tracesReflection && !render.ssao)) return;
+    if (!render?.world || (!render.reflection && !render.occlusion)) return;
     if (!render.hasRun) this.run(render, render.world, scene, camera);
     render.isPastOpaque = false;
     this.show(render);
@@ -175,24 +158,14 @@ export class SceneScreenSpaceEffects {
   /** Draws the prepass of `render` where an effect reads it, then its occlusion and its reflection, in Godot's order. */
   private run(render: SceneRender, world: WorldEffects, scene: THREE.Scene, camera: THREE.Camera): void {
     render.hasRun = true;
-    if (!render.drawsOcclusion && !render.tracesReflection) return;
-    const settings = this.settings();
+    const { reflection, occlusion, drawsOcclusion } = render;
+    if (!drawsOcclusion && !reflection) return;
     const { width, height, samples } = render.target!;
-    const prepass = world.prepassFor({ width, height, samples });
+    const prepass = world.prepass.fit(this.renderer, { width, height, samples });
     drawOffscreen(this.renderer, () => {
       drawNormalRoughnessPrepass(this.renderer, scene, camera, prepass);
-      if (render.drawsOcclusion) {
-        world.occlusion.generate(this.renderer, prepass, camera, {
-          ssao: render.ssao!,
-          project: settings.ssaoProject,
-        });
-      }
-      if (render.tracesReflection) {
-        world.reflection.trace(this.renderer, prepass, camera, {
-          ssr: settings.ssr!,
-          isHalfSize: settings.isHalfSizeReflection,
-        });
-      }
+      if (drawsOcclusion) world.occlusion.generate(this.renderer, prepass, camera, occlusion!);
+      if (reflection) world.reflection.trace(this.renderer, prepass, camera, reflection);
     });
   }
 
@@ -205,13 +178,10 @@ export class SceneScreenSpaceEffects {
   }
 
   private show(render: SceneRender): void {
-    const { world } = render;
-    if (render.tracesReflection) {
-      showInSlot(this.renderer, reflectionSlot, world!.reflection.reflection!);
-      screenSpaceState[SCREEN_SPACE_STATE.showsReflection] = 1;
-    }
-    if (!render.ssao) return;
-    showOcclusion(this.renderer, render.drawsOcclusion ? world!.occlusion.occlusion : null, render.ssao);
+    const { world, reflection, occlusion, drawsOcclusion } = render;
+    if (reflection) showReflection(this.renderer, world!.reflection.reflection!);
+    if (occlusion)
+      showOcclusion(this.renderer, drawsOcclusion ? world!.occlusion.occlusion : null, occlusion.ssao);
   }
 
   /** Copies the finished frame, and asks for the frame that first reads it. */
@@ -225,6 +195,6 @@ export class SceneScreenSpaceEffects {
 }
 
 function hideEffects(): void {
-  screenSpaceState[SCREEN_SPACE_STATE.showsReflection] = 0;
-  screenSpaceState[SCREEN_SPACE_STATE.showsOcclusion] = 0;
+  hideReflection();
+  hideOcclusion();
 }

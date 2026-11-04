@@ -104,11 +104,9 @@ const MATERIAL_LIGHT_AFFECT_UNIFORM: TextEdit = {
 /**
  * three's AO chunk inlined, as `onBeforeCompile` sees only the `#include`, with the channel mask
  * in place of the red sample and the material's light affect. Read at each compile, so it holds
- * the chunk as the shader patches leave it. The light affect it replaces is the occlusion patch's,
- * so it installs that patch first.
+ * the chunk as the shader patches leave it, the occlusion patch's light affect included.
  */
 function godotAoFragment(): string {
-  installGodotOcclusion();
   return editedChunk('aomap_fragment', MASKED_SAMPLE, MATERIAL_LIGHT_AFFECT_UNIFORM);
 }
 
@@ -140,6 +138,8 @@ function ambientOcclusionUniforms(material: Material): Record<string, IUniform> 
 export const GODOT_AMBIENT_OCCLUSION: ProgramInjection = {
   cacheKey: 'godot-ambient-occlusion',
   onBeforeCompile(shader) {
+    // The chunk's light affect is the occlusion patch's, so the patch goes in before the edit reads it.
+    installGodotOcclusion();
     Object.assign(shader.uniforms, ambientOcclusionUniforms(this));
     editedProgram(
       shader,

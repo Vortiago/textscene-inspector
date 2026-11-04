@@ -4,6 +4,19 @@
 
 import * as THREE from 'three';
 
+/**
+ * The options of a pass's own target that a shader reads only at whole texels: no depth, no mips,
+ * nearest filtering. A target read through a linear sampler sets its own filters over these.
+ *
+ * @canonical Render target options for a pass read at whole texels
+ */
+export const NEAREST_TARGET: Readonly<THREE.RenderTargetOptions> = {
+  depthBuffer: false,
+  generateMipmaps: false,
+  minFilter: THREE.NearestFilter,
+  magFilter: THREE.NearestFilter,
+};
+
 type PassTargetOptions = Pick<THREE.RenderTargetOptions, 'type' | 'minFilter' | 'magFilter'>;
 
 /**

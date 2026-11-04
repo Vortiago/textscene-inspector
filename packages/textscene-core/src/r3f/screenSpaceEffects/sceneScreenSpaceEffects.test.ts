@@ -1,27 +1,19 @@
 import * as THREE from 'three';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { OpaqueSentinel } from '../opaqueSentinel';
-import { SSAO_PROJECT_DEFAULTS } from '../../godot/rendering/environment/screenSpaceAmbientOcclusion';
+import {
+  SSAO_ENVIRONMENT_DEFAULTS,
+  SSAO_PROJECT_DEFAULTS,
+} from '../../godot/rendering/environment/screenSpaceAmbientOcclusion';
 import { SceneScreenSpaceEffects, type ScreenSpaceSettings } from './sceneScreenSpaceEffects';
 import { SCREEN_SPACE_STATE, screenSpaceState } from './screenSpaceState';
 import { occlusionFold } from '../screenSpaceAmbientOcclusion/ssaoUniforms';
 
-const SSAO = {
-  radius: 1,
-  intensity: 2,
-  power: 1.5,
-  detail: 0.5,
-  horizon: 0.06,
-  sharpness: 0.98,
-  lightAffect: 0.25,
-  aoChannelAffect: 0.5,
-};
+const SSAO = { ...SSAO_ENVIRONMENT_DEFAULTS, lightAffect: 0.25, aoChannelAffect: 0.5 };
 
 const SETTINGS: ScreenSpaceSettings = {
-  ssr: { maxSteps: 64, fadeIn: 0.15, fadeOut: 2, depthTolerance: 0.2 },
-  isHalfSizeReflection: true,
-  ssao: null,
-  ssaoProject: SSAO_PROJECT_DEFAULTS,
+  reflection: { ssr: { maxSteps: 64, fadeIn: 0.15, fadeOut: 2, depthTolerance: 0.2 }, isHalfSize: true },
+  occlusion: null,
   drawsDepthPrepass: true,
 };
 
@@ -69,7 +61,11 @@ describe('SceneScreenSpaceEffects', () => {
 
   it("folds Godot's black default in, drawing nothing, where the project turns the depth prepass off", () => {
     // `render_forward_clustered.cpp:2081-2086`, `:3529-3530`.
-    const settings = { ...SETTINGS, ssr: null, ssao: SSAO, drawsDepthPrepass: false };
+    const settings = {
+      reflection: null,
+      occlusion: { ssao: SSAO, project: SSAO_PROJECT_DEFAULTS },
+      drawsDepthPrepass: false,
+    };
     const { renderer, effects, camera } = begunRender(settings);
 
     reach(effects.firstSentinel, renderer, camera);

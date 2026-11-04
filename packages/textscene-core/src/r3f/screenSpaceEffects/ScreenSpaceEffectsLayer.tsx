@@ -37,7 +37,11 @@ export function ScreenSpaceEffectsLayer({ ssr, ssao }: ScreenSpaceEffectsLayerPr
   const ssaoProject = useMemo(() => projectAmbientOcclusionSettings(projectSettings), [projectSettings]);
   const drawsDepthPrepass = useMemo(() => projectDrawsDepthPrepass(projectSettings), [projectSettings]);
   // Read at each render, so a new setting reaches the next render with each buffer's history kept.
-  const current = { ssr, isHalfSizeReflection, ssao, ssaoProject, drawsDepthPrepass };
+  const current: ScreenSpaceSettings = {
+    reflection: ssr && { ssr, isHalfSize: isHalfSizeReflection },
+    occlusion: ssao && { ssao, project: ssaoProject },
+    drawsDepthPrepass,
+  };
   const settings = useRef<ScreenSpaceSettings>(current);
   settings.current = current;
 

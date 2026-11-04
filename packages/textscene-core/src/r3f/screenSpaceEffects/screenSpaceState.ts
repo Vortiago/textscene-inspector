@@ -27,8 +27,8 @@ export const screenSpaceState = installedOr(
 );
 
 /**
- * The components of {@link screenSpaceState}, which the programs read as x, y, z and w: 1 while the
- * normal-roughness prepass draws, 1 while a render shows its reflection, the alpha below which the
+ * The indices of the components of {@link screenSpaceState}: 1 while the normal-roughness prepass
+ * draws, 1 while a render shows its reflection, the alpha below which the
  * prepass cuts a surface, and 1 while a render shows its ambient occlusion.
  */
 export const SCREEN_SPACE_STATE = {
@@ -37,3 +37,18 @@ export const SCREEN_SPACE_STATE = {
   prepassCut: 2,
   showsOcclusion: 3,
 } as const;
+
+/** The GLSL read of each component of the vector uniform `uniform`, by the component's index. */
+export function componentReads<Name extends string>(
+  uniform: string,
+  indices: Readonly<Record<Name, number>>
+): Record<Name, string> {
+  const entries = Object.entries<number>(indices).map(([name, index]) => [
+    name,
+    `${uniform}.${'xyzw'[index]}`,
+  ]);
+  return Object.fromEntries(entries) as Record<Name, string>;
+}
+
+/** The GLSL read of each component of {@link screenSpaceState}. */
+export const SCREEN_SPACE_READ = componentReads(SCREEN_SPACE_UNIFORM.state, SCREEN_SPACE_STATE);
