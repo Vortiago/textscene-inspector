@@ -77,6 +77,8 @@ export function parseArgs(argv) {
   }
   if (!args.fixture) throw new Error('a fixture filename is required');
   if (args.lookAt && !args.camera) throw new Error('--look-at needs --camera');
+  // `ref:godot --2d --scene-camera` keeps the scene's Camera2D, which the previewer never looks through.
+  if (args.canvas2D && args.sceneCamera) throw new Error('--scene-camera needs a 3D capture, not --2d');
   return args;
 }
 
@@ -118,7 +120,7 @@ export function captureOurs({
 async function cameraPathOf(page, baseUrl, fixture, { camera, lookAt, sceneCamera }) {
   const url = fixtureFileUrl(baseUrl, fixture);
   if (camera) return addFreeCamera(page, url, { camera, lookAt: lookAt ?? undefined });
-  if (sceneCamera) return sceneCameraPath(await fixtureText(page, url), sceneCamera);
+  if (sceneCamera) return sceneCameraPath(await fixtureText(page, url), sceneCamera) ?? undefined;
   return undefined;
 }
 

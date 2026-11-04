@@ -27,8 +27,9 @@ Two flags cover the rest:
 - `--frame` (both harnesses) fits the scene's geometry bounds the way
   `frameSceneBounds.ts` does, the previewer's opt-in "frame on open", for a
   scene too large to read at distance 4.
-- `--scene-camera <path>` (both harnesses) renders through a scene's own
-  `Camera3D`, such as an orthographic one. It is off by default, because the
+- `--scene-camera [path]` (both harnesses) renders through a scene's own
+  `Camera3D`, such as an orthographic one. Without a path, both take the first
+  `Camera3D` in tree order. It is off by default, because the
   previewer ignores the scene camera too. Godot's editor keeps its free camera
   and draws the node as a frustum gizmo.
 

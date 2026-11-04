@@ -34,10 +34,12 @@ async function renderScene(sceneText: string): Promise<Renderer> {
 
 /** Waits until the area light of node `name` shows. */
 async function untilShown(renderer: Renderer, name: string): Promise<void> {
-  const node = (renderer.scene.instance as THREE.Scene).getObjectByName(name)!;
+  const node = (renderer.scene.instance as THREE.Scene).getObjectByName(name);
+  if (!node) throw new Error(`expected a node named ${name} in the scene, found none`);
   const light = node.children.find(
     (child): child is THREE.RectAreaLight => child instanceof THREE.RectAreaLight
-  )!;
+  );
+  if (!light) throw new Error(`expected a RectAreaLight under ${name}, found none`);
   await untilAreaLightShows(light);
 }
 
