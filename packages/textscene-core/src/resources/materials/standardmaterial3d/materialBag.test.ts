@@ -26,7 +26,7 @@ import { materialFromBag } from './build';
 import {
   UNSHADED_ROUGHNESS,
   unshadedRoughnessUserData,
-} from '../../../r3f/screenSpaceReflection/unshadedRoughness';
+} from '../../../r3f/screenSpaceEffects/unshadedRoughness';
 import { standardMaterial } from './testing/standardMaterial';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { parseStandardMaterial3DScalars } from './scalars';

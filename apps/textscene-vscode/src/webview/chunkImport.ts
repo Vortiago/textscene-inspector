@@ -5,6 +5,7 @@
  */
 
 import { warn } from '@textscene/core/logger';
+import { dropCachedResource } from './dropCachedResource';
 
 /** The global the rewritten chunk imports call. */
 export const CHUNK_IMPORTER = '__textsceneImportChunk';
@@ -22,6 +23,7 @@ export function setChunkFailureReporter(report: (error: string) => void): void {
  * keeps a failed import failed for its URL, so the second try adds a query, which VS Code's
  * resource loader ignores. The query does not reach the chunks it imports, so a cut one of
  * those fails again: that failure goes to the reporter, and rejects for the pane's error boundary.
+ * Both copies leave VS Code's resource cache first, so the new document the host loads reads the file.
  */
 export async function importChunk(specifier: string, base: string): Promise<unknown> {
   const url = new URL(specifier, base).href;
@@ -33,6 +35,7 @@ export async function importChunk(specifier: string, base: string): Promise<unkn
   try {
     return await import(/* @vite-ignore */ `${url}?reload=1`);
   } catch (error) {
+    await Promise.all([dropCachedResource(url), dropCachedResource(`${url}?reload=1`)]);
     reportChunkFailure?.(String(error));
     throw error;
   }

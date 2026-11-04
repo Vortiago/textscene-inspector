@@ -2435,3 +2435,39 @@ describe('useBuildSolveTree — a node grafted into an instanced sub-scene', () 
     expect(resolveInstancePath('ExtResource("2")', caption.resources.externalResources)).toBe(HOST_LEAF_PATH);
   });
 });
+
+describe("useBuildSolveTree places a Node2D above a Control with the project's physics clock", () => {
+  it('moves the Node2D of a relay cycle as far as the project ticks by the harness frame', async () => {
+    // Godot logged a cycle holder at x 2993 × 10 with `physics_ticks_per_second=120`.
+    const scene = new TscnParser().parse(`[gd_scene format=3]
+[node name="Root" type="Node2D"]
+[node name="HolderA" type="Node2D" parent="."]
+[node name="Caption" type="Label" parent="HolderA"]
+[node name="RelayA" type="RemoteTransform2D" parent="HolderA"]
+position = Vector2(10, 0)
+remote_path = NodePath("../../HolderB")
+[node name="HolderB" type="Node2D" parent="."]
+position = Vector2(0, 100)
+[node name="RelayB" type="RemoteTransform2D" parent="HolderB"]
+position = Vector2(10, 0)
+remote_path = NodePath("../../HolderA")
+`);
+    const loader = loaderServing({
+      'res://project.godot': 'config_version=5\n\n[physics]\n\ncommon/physics_ticks_per_second=120\n',
+    });
+
+    const { result } = renderHook(() => useBuildSolveTree(scene.nodes, [], []), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <ResourceLoaderProvider loader={loader}>
+          <ProjectSettingsProvider sceneKey="res://scene.tscn">{children}</ProjectSettingsProvider>
+        </ResourceLoaderProvider>
+      ),
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.tree[0]!.skippedAncestors!.transform.tx).toBeCloseTo(29930, 3);
+  });
+});

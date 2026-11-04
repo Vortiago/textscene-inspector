@@ -27,6 +27,10 @@ const FREED_OTHERWISE: Record<string, string> = {
     "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
   'r3f/screenSpaceReflection/ssrUniforms.ts':
     "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
+  'r3f/screenSpaceEffects/screenSpaceState.ts':
+    "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
+  'r3f/screenSpaceAmbientOcclusion/ssaoUniforms.ts':
+    "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
   'r3f/sky/environmentSwitch.ts':
     'The switch only turns on a program define. Its version stays 0, so no renderer uploads it.',
 };

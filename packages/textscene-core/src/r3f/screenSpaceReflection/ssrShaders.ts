@@ -6,34 +6,7 @@
  * a read of the frame three drew, and the scene's read of the result, turn the rows over.
  */
 
-/**
- * Godot's depth from a three depth texel: reversed, 1 at the near plane and 0 at the far plane and
- * the background. Godot's projection maps the same view depth to `1 - depth` (`Projection::set_depth_correction`).
- */
-const GODOT_DEPTH = /* glsl */ `
-float godotDepth( float threeDepth ) {
-	return 1.0 - threeDepth;
-}
-`;
-
-/** The texel of three's frame, whose rows run bottom-up, at Godot's pixel `pixel` of a frame `height` rows high. */
-const THREE_ROW = /* glsl */ `
-ivec2 threeTexel( ivec2 pixel, int height ) {
-	return ivec2( pixel.x, height - 1 - pixel.y );
-}
-`;
-
-/**
- * A texel fetch that reads zero outside the texture, as Vulkan's robust image access does where a
- * pass of Godot's reads past an edge. WebGL leaves such a fetch undefined.
- */
-const FETCH_OR_ZERO = /* glsl */ `
-vec4 fetchOrZero( highp sampler2D source, ivec2 texel, int level ) {
-	ivec2 size = textureSize( source, level );
-	if ( any( lessThan( texel, ivec2( 0 ) ) ) || any( greaterThanEqual( texel, size ) ) ) return vec4( 0.0 );
-	return texelFetch( source, texel, level );
-}
-`;
+import { FETCH_OR_ZERO, GODOT_DEPTH, THREE_ROW } from '../screenSpaceEffects/frameGlsl.js';
 
 /** Folds Godot's dynamic flag out of a stored roughness (`screen_space_reflection.glsl:114-118`). */
 const STORED_ROUGHNESS = /* glsl */ `
@@ -48,80 +21,6 @@ float storedRoughness( float stored ) {
 
 /** The Rec. 709 luminance the trace tone maps a reflection by, and the resolve undoes it by. */
 const REC709_LUMINANCE = 'const vec3 rec709_luminance_weights = vec3( 0.2126, 0.7152, 0.0722 );';
-
-/**
- * The frame's depth and normal and roughness from its samples, as Godot resolves a multisampled
- * prepass (`effects/resolve.glsl`, `MODE_RESOLVE_GI`): both of the one sample the rule below picks,
- * in three's rows and depth. Sample `i` is drawn into `depth<i>` and `normalRoughness<i>`, since
- * WebGL reads no multisampled texture. One draw writes both, one to each attachment.
- */
-export function sampleResolveFragment(samples: number): string {
-  const indices = Array.from({ length: samples }, (_, index) => index);
-  const declarations = indices
-    .map((i) => `uniform highp sampler2D depth${i};\nuniform highp sampler2D normalRoughness${i};`)
-    .join('\n');
-  const depthReads = indices
-    .map((i) => `if ( i == ${i} ) return texelFetch( depth${i}, pixel, 0 ).x;`)
-    .join('\n\t');
-  const normalReads = indices
-    .map((i) => `if ( i == ${i} ) return texelFetch( normalRoughness${i}, pixel, 0 );`)
-    .join('\n\t');
-  return /* glsl */ `
-#define SAMPLES ${samples}
-${declarations}
-${GODOT_DEPTH}
-layout( location = 0 ) out highp vec4 resolvedDepth;
-layout( location = 1 ) out highp vec4 resolvedNormalRoughness;
-
-float threeDepthOf( int i, ivec2 pixel ) {
-	${depthReads}
-	return 1.0;
-}
-
-vec4 normalRoughnessOf( int i, ivec2 pixel ) {
-	${normalReads}
-	return vec4( 0.0 );
-}
-
-// Two samples keep the one nearer the camera. Four or eight keep the depth fewest samples share,
-// the first of a tie, from each group of four, and of eight Godot's \`mix( best_index0,
-// best_index1, min_f0 < min_f1 )\` keeps the second group's when the first group's count is lower.
-int bestSample( ivec2 pixel ) {
-	float depths[ SAMPLES ];
-	for ( int i = 0; i < SAMPLES; i ++ ) depths[ i ] = godotDepth( threeDepthOf( i, pixel ) );
-#if SAMPLES == 2
-	return depths[ 0 ] < depths[ 1 ] ? 1 : 0;
-#elif SAMPLES == 4 || SAMPLES == 8
-	int best[ 2 ] = int[ 2 ]( 0, 4 );
-	float least[ 2 ] = float[ 2 ]( 1e20, 1e20 );
-	for ( int group = 0; group < SAMPLES / 4; group ++ ) {
-		for ( int i = group * 4; i < group * 4 + 4; i ++ ) {
-			float frequency = 0.0;
-			for ( int j = 0; j < SAMPLES; j ++ ) frequency += depths[ i ] == depths[ j ] ? 1.0 : 0.0;
-			if ( frequency < least[ group ] ) {
-				least[ group ] = frequency;
-				best[ group ] = i;
-			}
-		}
-	}
-#if SAMPLES == 4
-	return best[ 0 ];
-#else
-	return least[ 0 ] < least[ 1 ] ? best[ 1 ] : best[ 0 ];
-#endif
-#else
-	return 0;
-#endif
-}
-
-void main() {
-	ivec2 pixel = ivec2( gl_FragCoord.xy );
-	int best = bestSample( pixel );
-	resolvedDepth = vec4( threeDepthOf( best, pixel ), 0.0, 0.0, 0.0 );
-	resolvedNormalRoughness = normalRoughnessOf( best, pixel );
-}
-`;
-}
 
 /** The base of the depth pyramid at full size: three's depth as Godot's (`ss_effects.cpp:1553-1561`). */
 export const DEPTH_COPY_FRAGMENT = /* glsl */ `

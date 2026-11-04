@@ -1,0 +1,41 @@
+[gd_scene load_steps=5 format=3 uid="uid://unitremotetransform3dchain"]
+
+; The one variable: an early relay under a holder that a later relay in the file drives. Godot pushes
+; a relay again when its own global transform changes (remote_transform_3d.cpp:118-126), so the blue
+; box follows the moved holder to (1, 0, 1), not the authored holder to (-2, 0, 1). Every other
+; RemoteTransform golden has relays that no other relay moves, so none of them shows a regression in it.
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(6, 6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_part"]
+size = Vector3(0.6, 0.6, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_holder"]
+albedo_color = Color(0.25, 0.75, 0.3, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_target"]
+albedo_color = Color(0.2, 0.45, 0.9, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="D_Holder" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -1)
+mesh = SubResource("BoxMesh_part")
+surface_material_override/0 = SubResource("StandardMaterial3D_holder")
+
+[node name="EarlyRelay" type="RemoteTransform3D" parent="D_Holder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
+remote_path = NodePath("../../D_Target")
+
+[node name="D_Target" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_part")
+surface_material_override/0 = SubResource("StandardMaterial3D_target")
+
+[node name="LateRelay" type="RemoteTransform3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, -1)
+remote_path = NodePath("../D_Holder")

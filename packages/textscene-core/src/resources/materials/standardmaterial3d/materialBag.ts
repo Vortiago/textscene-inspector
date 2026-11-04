@@ -64,7 +64,7 @@ import {
   DEFAULT_ROUGHNESS,
   UNSHADED_ROUGHNESS,
   unshadedRoughnessUserData,
-} from '../../../r3f/screenSpaceReflection/unshadedRoughness';
+} from '../../../r3f/screenSpaceEffects/unshadedRoughness';
 import {
   TEXTURE_SLOTS,
   type MaterialBlendState,

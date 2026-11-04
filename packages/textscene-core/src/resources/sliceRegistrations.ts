@@ -52,6 +52,8 @@ import './shapes/rectangleshape2d/index.js';
 import './shapes/circleshape2d/index.js';
 import './shapes/capsuleshape2d/index.js';
 import './shapes/worldboundaryshape3d/index.js';
+import './shapes/heightmapshape3d/index.js';
+import './shapes/separationrayshape3d/index.js';
 
 // Curves + navigation
 import './curves/curve/index.js';

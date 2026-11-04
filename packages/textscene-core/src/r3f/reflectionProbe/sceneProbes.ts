@@ -30,12 +30,16 @@ import { visibleInTree } from '../visibleInTree.js';
 import { captureCameras, probeCaptureOf, probeFrame } from './captureCameras.js';
 import { stageCapture } from './captureStage.js';
 import { ProbeRows, type DrawnProbe } from './probeRows.js';
-import { atlasSlot, shownProbes } from './probeSlots.js';
+import { atlasSlot, NO_RENDER_EXPOSURE, shownProbes } from './probeSlots.js';
 import { isReflectionProbe, type ReflectionProbeObject } from './reflectionProbeObject.js';
+import { noteRealTimeProbes } from './realTimeCaptures.js';
 import { sameElements } from '../../utils/sameElements.js';
-import { exposureOfScene, worldExposureOfScene } from '../exposure/sceneExposure.js';
+import { followSceneExposure, worldExposureOfScene } from '../exposure/sceneExposure.js';
 import { drawAsWorld, ownEnvironmentChanges } from '../environment/sceneEnvironment.js';
-import { exposureOverBaked } from '../exposure/exposureOverBaked.js';
+
+function isRealTimeProbe({ probe }: ReflectionProbeObject): boolean {
+  return probe.updateMode === ReflectionProbeUpdateMode.ALWAYS;
+}
 
 /** What a probe's capture shows: changed, it captures again. */
 interface Capture {
@@ -83,11 +87,9 @@ export class SceneProbes {
   /**
    * The exposure each probe last captured at, written only by `capture`, and only while the world
    * holds attributes: a capture without exposure leaves it (`render_forward_clustered.cpp:1714-1716`). A
-   * probe is shown at the exposure over this one (`light_storage.cpp:1810-1814`).
+   * probe is shown at the exposure of each render over this one (`light_storage.cpp:1810-1814`).
    */
   private readonly bakedExposures = new WeakMap<ReflectionProbeObject, number>();
-  /** The exposure the packed rows were made for, so a change of exposure packs them again. */
-  private packedExposure: number | null = null;
   private readonly stopObserving: (() => void)[];
   /** The lights whose shadows a capture without shadows hid, put back once the render ends. */
   private readonly hiddenShadows: { shadow: THREE.LightShadow; intensity: number }[] = [];
@@ -102,6 +104,9 @@ export class SceneProbes {
     this.releaseSceneRows = held.release;
     this.stopObserving = [
       observeSceneCamera(scene, (camera) => this.show(camera)),
+      followSceneExposure(scene, (exposure) => {
+        shownProbes[3] = exposure ?? NO_RENDER_EXPOSURE;
+      }),
       // After the observers that write each light's shadow for the render.
       observeSceneCull(scene, (camera) => this.hideShadows(camera)),
       observeSceneRenderEnd(scene, () => this.endRender()),
@@ -120,25 +125,24 @@ export class SceneProbes {
       .filter(visibleInTree)
       .sort((a, b) => compareTreeOrder(a.treeOrder, b.treeOrder))
       .slice(0, REFLECTION_ATLAS_COUNT);
+    noteRealTimeProbes(this.scene, probes.filter(isRealTimeProbe).length);
     const atlas = this.atlasFor(probes);
     if (this.settledFrames < COMMIT_FRAMES_AFTER_SETTLE) return false;
     this.markCapturesStale(clearColor);
-    const stale = this.canCapture() ? probes.findIndex((probe, layer) => !this.isCaptured(probe, layer)) : -1;
+    const stale = probes.findIndex((probe, layer) => !this.isCaptured(probe, layer));
     if (stale !== -1) {
       beginStep(this.renderer, 'Reflection probes');
       this.capture(probes[stale]!, stale, atlas, clearColor);
       endStep(this.renderer, 'Reflection probes');
     }
     const captured = probes.filter((probe) => this.captures.has(probe));
-    const exposure = exposureOfScene(this.scene);
-    if (stale !== -1 || !sameElements(captured, this.packed) || exposure !== this.packedExposure) {
-      this.pack(captured, exposure);
-    }
+    if (stale !== -1 || !sameElements(captured, this.packed)) this.pack(captured);
     return stale !== -1;
   }
 
   dispose(): void {
     for (const stop of this.stopObserving) stop();
+    noteRealTimeProbes(this.scene, 0);
     this.probes.dispose();
     this.leaveSlots();
     this.atlas?.target.dispose();
@@ -146,20 +150,9 @@ export class SceneProbes {
     this.releaseSceneRows();
   }
 
-  /**
-   * A capture draws at the exposure of the world, not of the camera (`render_forward_clustered.cpp:1714-1716`).
-   * A camera that exposes the view at 0 leaves every light with no energy to rescale to the world's,
-   * so a capture waits for a camera that shows the world.
-   */
-  private canCapture(): boolean {
-    return exposureOfScene(this.scene) !== 0 || worldExposureOfScene(this.scene) === 0;
-  }
-
   /** The atlas for `probes`, made again with their count and layout, which drops every capture. */
   private atlasFor(probes: readonly ReflectionProbeObject[]): ReflectionAtlas {
-    const hasRealTimeProbe = probes.some(
-      ({ probe }) => probe.updateMode === ReflectionProbeUpdateMode.ALWAYS
-    );
+    const hasRealTimeProbe = probes.some(isRealTimeProbe);
     if (
       this.atlas &&
       this.atlasProbeCount === probes.length &&
@@ -233,8 +226,7 @@ export class SceneProbes {
         restore();
       }
     });
-    const radianceFilter =
-      probe.updateMode === ReflectionProbeUpdateMode.ALWAYS ? 'fast' : 'importance-sample';
+    const radianceFilter = isRealTimeProbe(object) ? 'fast' : 'importance-sample';
     bakeAtlasLayers(this.renderer, this.cube.texture, atlas, layer, radianceFilter);
     const { generation } = this;
     this.captures.set(object, { layer, generation, probe, matrixWorld: object.matrixWorld.clone() });
@@ -242,22 +234,19 @@ export class SceneProbes {
     if (worldExposure !== null) this.bakedExposures.set(object, worldExposure);
   }
 
-  /** Writes the rows of `probes` in Godot's order, shown at `exposure`, and uploads them. */
-  private pack(probes: readonly ReflectionProbeObject[], exposure: number | null): void {
+  /** Writes the rows of `probes` in Godot's order, and uploads them. */
+  private pack(probes: readonly ReflectionProbeObject[]): void {
     this.packed = probes;
-    this.packedExposure = exposure;
-    const drawn = reflectionProbeOrder(probes.map((object) => this.drawnProbe(object, exposure)));
+    const drawn = reflectionProbeOrder(probes.map((object) => this.drawnProbe(object)));
     if (this.rows.pack(drawn)) this.sceneRows.setProbes(this.rows);
   }
 
-  private drawnProbe(object: ReflectionProbeObject, exposure: number | null): DrawnProbe {
-    const worldToLocal = probeFrame(object.matrixWorld).invert();
-    const exposureNormalization = exposureOverBaked(exposure, this.bakedExposures.get(object) ?? 1);
+  private drawnProbe(object: ReflectionProbeObject): DrawnProbe {
     return {
       ...object.probe,
-      worldToLocal,
+      worldToLocal: probeFrame(object.matrixWorld).invert(),
       atlasLayer: this.captures.get(object)!.layer,
-      exposureNormalization,
+      capturedExposure: this.bakedExposures.get(object) ?? 1,
     };
   }
 

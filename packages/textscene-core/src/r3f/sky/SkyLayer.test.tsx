@@ -23,7 +23,10 @@ import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender'
 import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 import { installSkyDebanding } from './skyDebanding';
 import { WorldExposureScope, usePublishCameraAttributes } from '../environment/worldExposure';
-import { drawAtExposure } from '../exposure/sceneExposure';
+import { drawAtExposure, useSceneExposure } from '../exposure/sceneExposure';
+import { captureCameras } from '../reflectionProbe/captureCameras';
+import { stageCapture } from '../reflectionProbe/captureStage';
+import { noteRealTimeProbes } from '../reflectionProbe/realTimeCaptures';
 import { SkyBackground } from './skyBackground';
 import { noteLiveTargetDrawn } from '../liveTargets';
 import { publishedCanvasTarget } from '../liveTargets.testkit';
@@ -42,6 +45,9 @@ vi.mock('../../resources/sky/build', () => ({
 }));
 
 const NO_ROTATION = { x: 0, y: 0, z: 0 };
+
+/** The default clear colour an interior capture draws over. */
+const CLEAR_COLOR = new THREE.Color(0.3, 0.3, 0.3);
 
 /** The Environment each scene of these tests shows, which the sky belongs to. */
 const ENVIRONMENT = {};
@@ -698,6 +704,106 @@ describe('SkyLayer under an exposure', () => {
     );
     fireSceneRender(scene, new THREE.PerspectiveCamera());
     expect([scene.environmentIntensity, drawnBackgroundIntensity(scene)]).toEqual([ENERGY * ENERGY, ENERGY]);
+  });
+
+  /**
+   * A ONCE probe captures in the frame after the first view render, while the sky still filters its
+   * layers, so it reads the view's bake (`renderer_scene_cull.cpp:2862-2871`, `sky.cpp:1360-1367`).
+   * An ALWAYS probe draws its six faces at the world's exposure before the view in each frame, and
+   * each bakes the sky it finds dirty (`renderer_scene_cull.cpp:3755-3762`, `sky.cpp:1275`).
+   */
+  describe('drawn by a reflection probe capture', () => {
+    const view = new THREE.PerspectiveCamera();
+    const skyLight = (
+      <directionalLight userData={skyLightUserData({ drawsInSky: true, energy: 2, size: 0 })} />
+    );
+    const captureCamera = (isInterior = false) =>
+      captureCameras(new THREE.Matrix4(), NO_ROTATION, [10, 10, 10, 10, 10, 10], {
+        isInterior,
+        hasShadows: true,
+      })[0]!;
+    /** Holds a camera's exposure of 4 over a world at 1, as a Camera3D with its own attributes. */
+    function CameraAtFour() {
+      useSceneExposure(4, 1);
+      return null;
+    }
+    /** A view at 4 over a world at 1 whose sky has filtered every layer of its bake. */
+    async function viewedAtFour() {
+      built.next = skyEnvironment();
+      const mounted = await mount(
+        <>
+          <CameraAtFour />
+          {sky({ sky: proceduralSky, energyMultiplier: ENERGY })}
+          {skyLight}
+        </>
+      );
+      for (let render = 0; render < 10; render += 1) fireSceneRender(mounted.scene, view);
+      return mounted;
+    }
+    /** The ambient energy a capture through `camera` at the world's exposure of 1 reads. */
+    const capturedAmbient = (scene: THREE.Scene, camera = captureCamera()) =>
+      drawAtExposure(scene, 1, () => {
+        fireSceneRender(scene, camera);
+        return scene.environmentIntensity;
+      });
+    /** The ambient energy the view reads in the frame after `scene` notes one ALWAYS probe. */
+    function viewAmbientOverRealTimeProbe(scene: THREE.Scene) {
+      noteRealTimeProbes(scene, 1);
+      onTestFinished(() => noteRealTimeProbes(scene, 0));
+      fireSceneRender(scene, view);
+      return scene.environmentIntensity;
+    }
+
+    it("reads the view's bake in a ONCE capture at another exposure", async () => {
+      const { scene } = await viewedAtFour();
+
+      expect(capturedAmbient(scene)).toBeCloseTo(ENERGY * 4 * ENERGY, 10);
+    });
+
+    it('bakes no radiance for a capture at another exposure', async () => {
+      const { scene, advanceFrames } = await viewedAtFour();
+      const bakeCount = bakes.length;
+      capturedAmbient(scene);
+      await advanceFrames(1);
+      fireSceneRender(scene, view);
+
+      expect([bakes.length - bakeCount, scene.environmentIntensity]).toEqual([
+        1,
+        expect.closeTo(ENERGY * 4 * ENERGY * 4, 10),
+      ]);
+    });
+
+    it("reads, in a view over an ALWAYS probe, the bake its capture's renders made at the world's exposure", async () => {
+      const { scene } = await viewedAtFour();
+
+      expect(viewAmbientOverRealTimeProbe(scene)).toBeCloseTo(ENERGY * ENERGY * 4, 10);
+    });
+
+    it("reads the bake at the world's exposure in an ALWAYS capture", async () => {
+      const { scene } = await viewedAtFour();
+      viewAmbientOverRealTimeProbe(scene);
+
+      expect(capturedAmbient(scene)).toBeCloseTo(ENERGY * ENERGY, 10);
+    });
+
+    it("reads the view's own bake again once the ALWAYS probe leaves", async () => {
+      const { scene } = await viewedAtFour();
+      viewAmbientOverRealTimeProbe(scene);
+      noteRealTimeProbes(scene, 0);
+      for (let render = 0; render < 10; render += 1) fireSceneRender(scene, view);
+
+      expect(scene.environmentIntensity).toBeCloseTo(ENERGY * 4 * ENERGY * 4, 10);
+    });
+
+    it('shows no sky to an interior capture, which draws without the environment', async () => {
+      const { scene } = await viewedAtFour();
+      const restore = stageCapture(scene, { cullMask: 0xfffff, interior: true }, CLEAR_COLOR);
+      capturedAmbient(scene, captureCamera(true));
+      const shown = [scene.environmentIntensity, scene.background];
+      restore();
+
+      expect(shown).toEqual([0, CLEAR_COLOR]);
+    });
   });
 
   /**

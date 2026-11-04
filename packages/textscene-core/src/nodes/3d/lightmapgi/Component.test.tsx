@@ -18,6 +18,7 @@ import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { usePublishCameraAttributes } from '../../../r3f/environment/worldExposure';
 import { drawAtExposure } from '../../../r3f/exposure/sceneExposure';
+import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
 
 const ATLAS_PATH = 'res://bake.exr';
 const SHADOWMASK_PATH = 'res://bake_shadow.png';
@@ -90,35 +91,44 @@ const oneLayer = () => dataArrayTexture(new Uint16Array(4), 1, 1, 1);
 const oneMaskLayer = () => dataArrayTexture(new Uint8Array(1), 1, 1, 1);
 
 describe('<LightmapGI> exposure', () => {
-  const exposureScaleOf = async (bake: Bake) =>
-    (await mount(bake)).lightmaps.assignmentFor('Root/Floor')?.lightmap.exposureScale;
+  const CAMERA = new THREE.PerspectiveCamera();
+  /** The exposure scale of the floor's lightmap in a render of the scene. */
+  async function exposureScaleInRender(bake: Bake) {
+    const { lightmaps, scene } = await mount(bake);
+    fireSceneRender(scene, CAMERA);
+    return lightmaps.assignmentFor('Root/Floor')?.lightmap.exposureScale;
+  }
 
   it('reads the atlas at the world exposure over the exposure the bake ran at', async () => {
-    expect(await exposureScaleOf({ atlas: oneLayer(), exposureMultiplier: 2, bakedExposure: 4 })).toBe(0.5);
+    expect(await exposureScaleInRender({ atlas: oneLayer(), exposureMultiplier: 2, bakedExposure: 4 })).toBe(
+      0.5
+    );
   });
 
   it('reads the atlas at the world exposure when the bake ran at 1', async () => {
-    expect(await exposureScaleOf({ atlas: oneLayer(), exposureMultiplier: 3 })).toBe(3);
+    expect(await exposureScaleInRender({ atlas: oneLayer(), exposureMultiplier: 3 })).toBe(3);
   });
 
   it('reads the atlas at 1 without camera attributes, whatever the bake ran at (:1222-1227)', async () => {
-    expect(await exposureScaleOf({ atlas: oneLayer(), bakedExposure: 4 })).toBe(1);
+    expect(await exposureScaleInRender({ atlas: oneLayer(), bakedExposure: 4 })).toBe(1);
   });
 });
 
 describe('<LightmapGI> drawn at another exposure', () => {
-  /** The exposure scale of the floor's lightmap while the scene draws at `exposure`. */
+  const CAMERA = new THREE.PerspectiveCamera();
+  /** The exposure scale of the floor's lightmap in a render at `exposure`, and in the next render. */
   async function exposureScaleAt(bake: Bake, exposure: number | null) {
     const { lightmaps, scene } = await mount(bake);
-    const inside = drawAtExposure(
-      scene,
-      exposure,
-      () => lightmaps.assignmentFor('Root/Floor')?.lightmap.exposureScale
-    );
-    return { inside, after: lightmaps.assignmentFor('Root/Floor')?.lightmap.exposureScale };
+    const scale = () => lightmaps.assignmentFor('Root/Floor')?.lightmap.exposureScale;
+    const inside = drawAtExposure(scene, exposure, () => {
+      fireSceneRender(scene, CAMERA);
+      return scale();
+    });
+    fireSceneRender(scene, CAMERA);
+    return { inside, after: scale() };
   }
 
-  it('reads the atlas at that exposure over the exposure the bake ran at, and puts it back', async () => {
+  it('reads the atlas at that exposure over the exposure the bake ran at, and its own in the next render', async () => {
     const { inside, after } = await exposureScaleAt(
       { atlas: oneLayer(), exposureMultiplier: 2, bakedExposure: 4 },
       6

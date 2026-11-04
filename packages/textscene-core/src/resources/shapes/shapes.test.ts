@@ -18,6 +18,8 @@ import './rectangleshape2d';
 import './circleshape2d';
 import './capsuleshape2d';
 import './worldboundaryshape3d';
+import './heightmapshape3d';
+import './separationrayshape3d';
 
 /** Every shape type this package claims, with the slice folder that claims it. */
 const CLAIMS: readonly (readonly [string, string])[] = [
@@ -31,6 +33,8 @@ const CLAIMS: readonly (readonly [string, string])[] = [
   ['CircleShape2D', 'circleshape2d'],
   ['CapsuleShape2D', 'capsuleshape2d'],
   ['WorldBoundaryShape3D', 'worldboundaryshape3d'],
+  ['HeightMapShape3D', 'heightmapshape3d'],
+  ['SeparationRayShape3D', 'separationrayshape3d'],
 ];
 
 describe('collision-shape slice registrations', () => {

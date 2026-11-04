@@ -64,6 +64,12 @@ export function namedUniformPass(
   return fullScreenPass(name, fragmentShader, uniforms);
 }
 
+/** `pass`, made to declare its own outputs, one per attachment of a multiple-target draw. */
+export function multipleTargetPass(pass: THREE.ShaderMaterial): THREE.ShaderMaterial {
+  pass.glslVersion = THREE.GLSL3;
+  return pass;
+}
+
 /** Sets each uniform `values` names on `pass`, and throws for a name the pass does not declare. */
 export function setUniforms(pass: THREE.ShaderMaterial, values: Record<string, unknown>): void {
   for (const [name, value] of Object.entries(values)) {
@@ -71,6 +77,18 @@ export function setUniforms(pass: THREE.ShaderMaterial, values: Record<string, u
     if (!uniform) throw new Error(`expected a uniform of the pass, got ${name}`);
     uniform.value = value;
   }
+}
+
+/** Draws `pass` into `target`, reading `values`, after which the pass holds none of the textures it read. */
+export function drawPass(
+  renderer: THREE.WebGLRenderer,
+  pass: THREE.ShaderMaterial,
+  values: Record<string, unknown>,
+  target: THREE.WebGLRenderTarget
+): void {
+  setUniforms(pass, values);
+  drawFullScreen(renderer, pass, target);
+  releaseTextures(pass);
 }
 
 /** Lets go of the textures `pass` reads, as a pass outlives the targets a draw set. */

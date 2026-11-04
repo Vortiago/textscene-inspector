@@ -86,6 +86,30 @@ export const SCENE_COMPOSITION_SCENES = [
     collisions: true,
     camera: 'WorldBoundaryRoot/Camera',
   },
+  // The one variable against `collision-shapes`: HeightMapShape3D, drawn as Godot's grid edges
+  // and cell diagonals in three grids, negative heights included. Thin lines, AA-sensitive.
+  {
+    name: 'collision-height-map',
+    file: 'unit-collision-height-map.tscn',
+    collisions: true,
+    camera: 'HeightMapRoot/Camera',
+  },
+  // The one variable against `collision-shapes`: SeparationRayShape3D, drawn as Godot's single
+  // segment along +Z in three lengths. Thin lines, AA-sensitive.
+  {
+    name: 'collision-separation-ray',
+    file: 'unit-collision-separation-ray.tscn',
+    collisions: true,
+    camera: 'SeparationRayRoot/Camera',
+  },
+  // The other variable against `collision-shapes`: ConvexPolygonShape3D and ConcavePolygonShape3D,
+  // drawn as Godot's hull edges and soup edges, a prism, a cube and a shared-edge soup.
+  {
+    name: 'collision-polygon-shapes',
+    file: 'unit-collision-polygon-shapes.tscn',
+    collisions: true,
+    camera: 'PolygonRoot/Camera',
+  },
   // Decal projects a local SVG checkerboard onto the floor its box intersects
   // (mixed per fragment), one plain and one tinted. The box gizmo
   // is a gizmo, which a capture draws only with `gizmos: true` (ADR-0056), so this is the runtime

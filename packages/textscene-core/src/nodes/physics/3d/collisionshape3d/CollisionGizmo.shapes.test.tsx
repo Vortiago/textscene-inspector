@@ -1,82 +1,69 @@
 /**
- * Every Godot primitive Shape3D draws its own geometry, not a 1x1x1 wireframe box. Sizes come
- * from the class reference: CapsuleShape3D radius 0.5 / height 2.0 (full height, hemispheres
- * included), SphereShape3D radius 0.5, CylinderShape3D radius 0.5 / height 2.0, all on the Y axis.
+ * Every Shape3D the gizmo draws gets the lines of its Godot `get_debug_mesh_lines()`, not a three.js
+ * mesh and not a 1x1x1 box. The expected vertices are the Godot 4.6.3 `get_debug_mesh()` readings
+ * that `shapeDebugLines.test.ts` pins too.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionGizmo } from './CollisionGizmo';
 import type { TscnInternalResource } from '../../../../parser/types';
-import { shapeDebugLines } from '../../shared/shapeDebugLines';
+import { linePositions } from '../../../../r3f/testing/GizmoScene';
+import { settlePendingLoads } from '../../../../r3f/testing/settleLoads';
+import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { findMesh } from '../../../3d/testing/reactThreeTestInstance';
+import { godotDebugLinesFor, undirectedEdges } from '../../shared/godotDebugLines.testkit';
 
-async function geometryOf(shape: TscnInternalResource) {
-  const renderer = await ReactThreeTestRenderer.create(
-    <CollisionGizmo shape={shape} color={new THREE.Color(0x00ff88)} />
+/** Mounts the gizmo, lets its lazy hull chunk land, and returns the lines drawn, none when it draws none. */
+async function drawn(shape: TscnInternalResource) {
+  const { loader } = createFakeResourceLoader();
+  const gizmo = (
+    <ResourceLoaderProvider loader={loader}>
+      <CollisionGizmo shape={shape} color={new THREE.Color(0x00ff88)} />
+    </ResourceLoaderProvider>
   );
-  return findMesh(renderer.scene).geometry as unknown as {
-    type: string;
-    parameters: Record<string, number>;
-  };
+  const renderer = await ReactThreeTestRenderer.create(gizmo);
+  await settlePendingLoads(loader);
+  await renderer.update(gizmo);
+  const hasLines = renderer.scene.findAllByType('LineSegments').length > 0;
+  const positions = hasLines ? linePositions(renderer) : new Float32Array(0);
+  return { positions, meshCount: renderer.scene.findAllByType('Mesh').length };
 }
 
-function shape(type: string, data: Record<string, string> = {}): TscnInternalResource {
-  return { id: `${type}_1`, type, data };
-}
-
-describe('<CollisionGizmo> primitive shapes', () => {
-  it('draws a CapsuleShape3D at its authored radius and full height', async () => {
-    const geometry = await geometryOf(shape('CapsuleShape3D', { radius: '0.4', height: '1.8' }));
-    expect(geometry.type).toBe('CapsuleGeometry');
-    expect(geometry.parameters.radius).toBeCloseTo(0.4, 6);
-    // three's `height` param is the cylindrical middle section. Godot's height
-    // is the whole capsule, so middle = height - 2 x radius.
-    expect(geometry.parameters.height).toBeCloseTo(1.0, 6);
+describe.each([
+  'BoxShape3D',
+  'SphereShape3D',
+  'CylinderShape3D',
+  'CapsuleShape3D',
+  'WorldBoundaryShape3D',
+  'HeightMapShape3D',
+  'SeparationRayShape3D',
+])('<CollisionGizmo> %s', (type) => {
+  it.each(godotDebugLinesFor(type))('draws every vertex Godot draws for $name', async ({ shape, lines }) => {
+    const { positions, meshCount } = await drawn(shape);
+    expect(positions).toHaveLength(lines.length);
+    lines.forEach((value, index) => expect(positions[index]).toBeCloseTo(value, 4));
+    expect(meshCount).toBe(0);
   });
+});
 
-  it('uses Godot capsule defaults when the resource omits them', async () => {
-    const geometry = await geometryOf(shape('CapsuleShape3D'));
-    expect(geometry.parameters.radius).toBeCloseTo(0.5, 6);
-    expect(geometry.parameters.height).toBeCloseTo(1.0, 6);
+describe.each(['ConcavePolygonShape3D', 'ConvexPolygonShape3D'])('<CollisionGizmo> %s', (type) => {
+  it.each(godotDebugLinesFor(type))('draws every edge Godot draws for $name', async ({ shape, lines }) => {
+    const { positions, meshCount } = await drawn(shape);
+    expect(undirectedEdges(positions)).toEqual(undirectedEdges(lines));
+    expect(meshCount).toBe(0);
   });
+});
 
-  it('degenerates a too-short capsule to a sphere rather than inverting it', async () => {
-    const geometry = await geometryOf(shape('CapsuleShape3D', { radius: '1', height: '0.5' }));
-    expect(geometry.parameters.height).toBeCloseTo(0, 6);
-  });
-
-  it('draws a SphereShape3D at its radius', async () => {
-    const geometry = await geometryOf(shape('SphereShape3D', { radius: '1.25' }));
-    expect(geometry.type).toBe('SphereGeometry');
-    expect(geometry.parameters.radius).toBeCloseTo(1.25, 6);
-  });
-
-  it('draws a CylinderShape3D with equal caps and its full height', async () => {
-    const geometry = await geometryOf(shape('CylinderShape3D', { radius: '0.75', height: '3' }));
-    expect(geometry.type).toBe('CylinderGeometry');
-    expect(geometry.parameters.radiusTop).toBeCloseTo(0.75, 6);
-    expect(geometry.parameters.radiusBottom).toBeCloseTo(0.75, 6);
-    expect(geometry.parameters.height).toBeCloseTo(3, 6);
-  });
-
-  it('draws a WorldBoundaryShape3D as the square and normal ray Godot draws, not a box', async () => {
+describe('<CollisionGizmo> unknown shape', () => {
+  it('still falls back to a unit box for a genuinely unknown shape type', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CollisionGizmo
-        shape={shape('WorldBoundaryShape3D', { plane: 'Plane(1, 0, 0, 2.5)' })}
+        shape={{ id: 'NotAShape3D_1', type: 'NotAShape3D', data: {} }}
         color={new THREE.Color(0x00ff88)}
       />
     );
-    const [lines] = renderer.scene.findAll((n) => n.type === 'LineSegments');
-    const positions = (lines!.instance as THREE.LineSegments).geometry.getAttribute('position');
-    expect(Array.from(positions.array)).toEqual(
-      Array.from(shapeDebugLines(shape('WorldBoundaryShape3D', { plane: 'Plane(1, 0, 0, 2.5)' }))!)
-    );
-    expect(renderer.scene.findAll((n) => n.type === 'Mesh')).toHaveLength(0);
-  });
-
-  it('still falls back to a unit box for a genuinely unknown shape type', async () => {
-    const geometry = await geometryOf(shape('SeparationRayShape3D'));
-    expect(geometry.type).toBe('BoxGeometry');
+    expect((findMesh(renderer.scene).geometry as THREE.BufferGeometry).type).toBe('BoxGeometry');
   });
 });
