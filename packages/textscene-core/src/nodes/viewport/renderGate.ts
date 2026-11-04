@@ -119,7 +119,7 @@ export class TargetRenderState {
 
   /** Forgets every render: a new parse of the scene makes new viewports. */
   restart(): void {
-    this.hasRenderedOnce = false;
+    this.rearm();
     this.lastClearMode = null;
     this.isOnceClearPending = true;
     this.lastClearColor = null;

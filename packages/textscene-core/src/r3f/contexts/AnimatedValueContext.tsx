@@ -58,6 +58,9 @@ export function useAnimatedValueAt<T>(
 
 const NO_VISIBILITY: ReadonlyMap<string, boolean> = new Map();
 
+/** Joins paths into one effect key: a node name cannot hold a null character. */
+const NO_PATH_CHARACTER = '\0';
+
 /**
  * The `visible` an AnimationPlayer drives on the nodes at `paths`, by path: only the paths with a
  * driven value are in the map. It changes with a driven value, not with each frame of one.
@@ -65,15 +68,15 @@ const NO_VISIBILITY: ReadonlyMap<string, boolean> = new Map();
 export function useAnimatedVisibility(paths: readonly string[]): ReadonlyMap<string, boolean> {
   const registry = useAnimatedValueRegistry();
   const [visible, setVisible] = useState(NO_VISIBILITY);
-  const key = paths.join('\n');
+  const key = paths.join(NO_PATH_CHARACTER);
   useEffect(() => {
     setVisible(NO_VISIBILITY);
     const stops = key
-      .split('\n')
+      .split(NO_PATH_CHARACTER)
       .filter(Boolean)
       .map((path) =>
         registry.subscribe(animatedValueKey(path, 'visible'), (value) =>
-          setVisible((previous) => withVisibility(previous, path, value === null ? null : value[0] !== 0))
+          setVisible((previous) => withPushedVisible(previous, path, value))
         )
       );
     return () => stops.forEach((stop) => stop());
@@ -81,15 +84,19 @@ export function useAnimatedVisibility(paths: readonly string[]): ReadonlyMap<str
   return visible;
 }
 
-/** `visible` with `path` set to `isVisible`, or removed for null. The same map where nothing changes. */
-function withVisibility(
-  visible: ReadonlyMap<string, boolean>,
-  path: string,
-  isVisible: boolean | null
-): ReadonlyMap<string, boolean> {
-  if (visible.get(path) === (isVisible ?? undefined)) return visible;
-  const next = new Map(visible);
-  if (isVisible === null) next.delete(path);
-  else next.set(path, isVisible);
+/**
+ * `values` with `key` set to the `visible` a pushed tuple holds, or removed for a released one. The
+ * same map where nothing changes, so a steady push re-renders nothing.
+ */
+export function withPushedVisible<K>(
+  values: ReadonlyMap<K, boolean>,
+  key: K,
+  value: readonly number[] | null
+): ReadonlyMap<K, boolean> {
+  const visible = value === null ? undefined : value[0] !== 0;
+  if (values.get(key) === visible) return values;
+  const next = new Map(values);
+  if (visible === undefined) next.delete(key);
+  else next.set(key, visible);
   return next;
 }
