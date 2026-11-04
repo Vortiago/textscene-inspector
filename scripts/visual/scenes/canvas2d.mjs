@@ -553,6 +553,9 @@ export const CANVAS_2D_SCENES = [
   // `light_mask` on a Control. Godot 4.6.3 `--mode 2d`: (200,200) rgb(153,107,61) lit, (600,200)
   // rgb(102,76,51) the Masked ColorRect at its authored colour.
   { name: 'control-light-mask', file: 'unit-control-light-mask.tscn', mode: '2d' },
+  // `z_as_relative = false` on a Control. Godot 4.6.3 `--mode 2d`: the amber ColorRect draws under
+  // the teal one (z 1 against 3), and its Panel parent (z 5) over both. Mean 0.805/255 against it.
+  { name: 'control-z-as-relative', file: 'unit-control-z-as-relative.tscn', mode: '2d' },
   // A CanvasModulate tints native Controls. Godot 4.6.3 `--mode 2d`: (100,100) rgb(82,92,92).
   { name: 'control-canvas-modulate', file: 'unit-control-canvas-modulate.tscn', mode: '2d' },
   // A CanvasItemMaterial on a Control. Godot 4.6.3 `--mode 2d`: (100,100) rgb(204,102,51) unshaded,

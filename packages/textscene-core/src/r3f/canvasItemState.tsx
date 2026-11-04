@@ -77,13 +77,18 @@ export interface CanvasItemState {
 
 const NO_SKIPPED_ITEMS: SkippedCanvasItems = { modulate: WHITE_MODULATE, z: [] };
 
+/**
+ * The CanvasItem state of one item, under the ambient its parent published.
+ *
+ * @canonical The tint, z_final and draw-order key of a canvas item
+ */
 export function useCanvasItemState(fields: CanvasItemFields): CanvasItemState {
   const skipped = fields.skipped ?? NO_SKIPPED_ITEMS;
   const zFinal = useZFinal(fields, skipped.z);
   // The canvas tint reaches the item's own pixels when its light mode admits it, never what its
   // children inherit. The light injection divides this value back out, so both read this one hook.
   const canvasModulate = useCanvasModulateFor(fields.material);
-  const tint = useCanvasItemTint(useFoldedModulates(fields, skipped.modulate), canvasModulate);
+  const tint = useCanvasItemTint(useTintInputs(fields, skipped.modulate), canvasModulate);
   const layerRank = useLayerRank(useCanvasLayerIndex());
   const keyAt = useMemo(
     () => (sequence: number) => canvasRenderOrder({ layerRank, zFinal, sequence }),
@@ -110,8 +115,8 @@ function useZFinal(fields: CanvasItemFields, skippedZ: readonly CanvasItemZStep[
   );
 }
 
-/** The item's `modulate` with the skipped items' product folded in front of it, as the walk meets them. */
-function useFoldedModulates(
+/** The item's tint properties, its `modulate` with the skipped items' product folded in front, as the walk meets them. */
+function useTintInputs(
   fields: CanvasItemFields,
   skippedModulate: Rgba
 ): { modulate: Rgba; self_modulate: Rgba } {
@@ -155,6 +160,8 @@ export interface CanvasSlot {
  * The slots of the pieces an item draws after the pixels at `slot` and before the next slot, in
  * the order listed. Godot draws such a piece as an internal child item, which the tree here does
  * not list. Each piece's slot nests inside its parent's, so a piece can hand out pieces of its own.
+ *
+ * @canonical A draw-order key between a canvas item's key and the next
  */
 export function canvasSubOrders<const Piece extends string>(
   slot: number | CanvasSlot,
