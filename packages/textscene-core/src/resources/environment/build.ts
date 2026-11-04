@@ -8,6 +8,7 @@ import {
   type DepthFog,
   type EnvironmentProperties,
   type EnvironmentSettings,
+  type ScreenSpaceAmbientOcclusion,
   type ScreenSpaceReflection,
   type VolumetricFog,
 } from './types';
@@ -56,6 +57,7 @@ export function createEnvironmentSettings(
     skyRotation: properties.sky_rotation,
     volumetricFog: properties.volumetric_fog_enabled ? volumetricFogFor(properties) : null,
     ssr: properties.ssr_enabled ? ssrFor(properties) : null,
+    ssao: properties.ssao_enabled ? ssaoFor(properties) : null,
     adjustments: properties.adjustment_enabled ? adjustmentsFor(properties) : null,
     glow: properties.glow_enabled
       ? {
@@ -93,6 +95,19 @@ function ssrFor(properties: EnvironmentProperties): ScreenSpaceReflection {
     fadeIn: properties.ssr_fade_in,
     fadeOut: properties.ssr_fade_out,
     depthTolerance: properties.ssr_depth_tolerance,
+  };
+}
+
+function ssaoFor(properties: EnvironmentProperties): ScreenSpaceAmbientOcclusion {
+  return {
+    radius: properties.ssao_radius,
+    intensity: properties.ssao_intensity,
+    power: properties.ssao_power,
+    detail: properties.ssao_detail,
+    horizon: properties.ssao_horizon,
+    sharpness: properties.ssao_sharpness,
+    lightAffect: properties.ssao_light_affect,
+    aoChannelAffect: properties.ssao_ao_channel_affect,
   };
 }
 

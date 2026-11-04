@@ -11,6 +11,9 @@ import { warningsOf } from '../testing/logWarnings';
 import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 import { TextureChannel, textureChannelMask } from '../../godot/rendering/materials/textureChannel';
 
+// The injection installs the occlusion patch it edits, so every test puts the chunks back.
+restoreShaderGlobalsAfterEach();
+
 const AO_INCLUDE = '#include <aomap_fragment>';
 const TOTALS = 'vec3 totalDiffuse';
 const RED = textureChannelMask(TextureChannel.TEXTURE_CHANNEL_RED);
@@ -61,25 +64,24 @@ describe.each([
     }
   );
 
-  it("mixes from 1 toward the map's occlusion by the light affect", () => {
-    // `scene_forward_clustered.glsl:2213`.
+  it("starts Godot's light affect from the material's own (`scene_forward_clustered.glsl:1249`)", () => {
     expect(patched(fragmentShader, 1).fragmentShader).toContain(
-      'mix( 1.0, ambientOcclusion, godotAoLightAffect )'
+      'float godotLightAffect = godotAoLightAffect;'
     );
   });
 });
 
 describe('GODOT_AMBIENT_OCCLUSION on the MeshPhysicalMaterial fragment shader', () => {
-  const { fragmentShader } = patched(THREE.ShaderLib.physical.fragmentShader, 1);
+  const physicalFragment = () => patched(THREE.ShaderLib.physical.fragmentShader, 1).fragmentShader;
 
   it('scales the direct sheen term, which carries the rim Godot adds to the diffuse light', () => {
     // `scene_forward_lights_inc.glsl:163`.
-    expect(scalesBeforeTotals(fragmentShader, 'sheenSpecularDirect *=')).toBe(true);
+    expect(scalesBeforeTotals(physicalFragment(), 'sheenSpecularDirect *=')).toBe(true);
   });
 
   it('scales the direct clearcoat term, which Godot adds to the specular light', () => {
     // `scene_forward_lights_inc.glsl:185`.
-    expect(scalesBeforeTotals(fragmentShader, 'clearcoatSpecularDirect *=')).toBe(true);
+    expect(scalesBeforeTotals(physicalFragment(), 'clearcoatSpecularDirect *=')).toBe(true);
   });
 });
 
@@ -114,8 +116,6 @@ describe('the AO uniforms', () => {
 });
 
 describe('installGodotOcclusion', () => {
-  restoreShaderGlobalsAfterEach();
-
   it('declares the decals mix at the identity, ahead of the AO map uniforms', () => {
     installGodotOcclusion();
 
@@ -129,7 +129,17 @@ describe('installGodotOcclusion', () => {
     const chunk = THREE.ShaderChunk.aomap_fragment;
 
     expect(chunk.startsWith('#if 1\n')).toBe(true);
-    expect(chunk).toContain('float ambientOcclusion = 1.0;\n\t#ifdef USE_AOMAP\n\t\tambientOcclusion = (');
+    expect(chunk).toContain(
+      'float ambientOcclusion = 1.0;\n\tfloat godotLightAffect = 0.0;\n\t#ifdef USE_AOMAP\n\t\tambientOcclusion = ('
+    );
+  });
+
+  it('occludes the direct light by the light affect, 0 where the material sets none (`:2213`)', () => {
+    installGodotOcclusion();
+    const chunk = THREE.ShaderChunk.aomap_fragment;
+
+    expect(chunk).toContain('float godotLightAffect = 0.0;');
+    expect(chunk).toContain('mix( 1.0, ambientOcclusion, godotLightAffect )');
   });
 
   it("mixes the decals' ORM into the occlusion before anything scales by it", () => {
@@ -167,5 +177,14 @@ describe('installGodotOcclusion', () => {
 
     expect(warningsOf(installGodotOcclusion)).toHaveLength(1);
     expect(THREE.ShaderChunk.aomap_pars_fragment).not.toContain(OCCLUSION_MIX);
+  });
+
+  it("keeps the injection's masked sample on a three the patch fails on (error case)", () => {
+    THREE.ShaderChunk.aomap_fragment = THREE.ShaderChunk.aomap_fragment.replace('#ifdef USE_AOMAP', '#if 1');
+    let shader: ProgramShader | null = null;
+
+    warningsOf(() => (shader = patched(STANDARD_FRAGMENT, 1)));
+
+    expect(shader!.fragmentShader).toContain('dot( texture2D( aoMap, vAoMapUv ), godotAoTextureChannel )');
   });
 });

@@ -147,11 +147,11 @@ export function rewrittenThroughChunks(source: string, rewrite: (text: string) =
 }
 
 /**
- * three's chunk `name` as it stands now, the patches installed so far included, with `edit` applied,
- * as `editedShader`.
+ * three's chunk `name` as it stands now, the patches installed so far included, with `edits` applied
+ * in order, as `editedShader`.
  */
-export function editedChunk(name: ChunkName, edit: TextEdit): string {
-  return editedShader(THREE.ShaderChunk[name], [edit], `three's ${name}`);
+export function editedChunk(name: ChunkName, ...edits: TextEdit[]): string {
+  return editedShader(THREE.ShaderChunk[name], edits, `three's ${name}`);
 }
 
 /** The chunks with every edit applied in order, or null when one is missing, as `applyEdit`. */
@@ -173,8 +173,8 @@ export interface ChunkEditsPatch<Name extends ChunkName> {
   /** The chunk edits. A patch of program edits only leaves them out. */
   edits?: readonly ChunkEdit<Name>[];
   /**
-   * The text that proves the patch installed. An edit writes it, and that edit's chunk is checked, or
-   * its program's fragment shader, then its vertex shader, when no chunk edit writes it.
+   * The text that proves the patch installed. An edit or an added text writes it, and that chunk is
+   * checked, or the edit's program's fragment shader, then its vertex shader, when no chunk holds it.
    */
   mark: string;
   /** The patch's name in the warning, before "patch". */
@@ -228,11 +228,14 @@ function alternatives(items: readonly string[]): string {
   return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} or ${items.at(-1)}`;
 }
 
-/** The text of the chunk or program, the first of them, whose edit writes the mark. */
+/** The text of the chunk or program, the first of them, whose edit or added text writes the mark. */
 function markedText<Name extends ChunkName>(patch: ChunkEditsPatch<Name>): string {
-  const { edits = [], mark, fragmentShaders = {}, vertexShaders = {} } = patch;
+  const { edits = [], mark, fragmentShaders = {}, vertexShaders = {}, prepend = {}, append = {} } = patch;
   const chunkEdit = edits.find((edit) => edit.godot.includes(mark));
   if (chunkEdit) return THREE.ShaderChunk[chunkEdit.chunk];
+  const added = [...Object.entries(prepend), ...Object.entries(append)] as [ChunkName, string][];
+  const addedChunk = added.find(([, text]) => text.includes(mark));
+  if (addedChunk) return THREE.ShaderChunk[addedChunk[0]];
   const stages = [
     [fragmentShaders, 'fragmentShader'],
     [vertexShaders, 'vertexShader'],

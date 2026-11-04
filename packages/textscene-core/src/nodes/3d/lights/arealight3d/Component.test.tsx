@@ -28,6 +28,7 @@ import { BakeMode, LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 import { ltcTables } from '../../../../godot/rendering/lights/ltc';
 import { installGodotAreaLight } from '../../../../r3f/areaLight/areaLightChunk';
 import { snapshotShaderGlobals } from '../../../../r3f/testing/shaderPatches';
+import { untilAreaLightShows } from '../../../../r3f/testing/untilAreaLightShows';
 
 /** Where the atlas places a light that shows no texture. */
 function untexturedPlacement() {
@@ -119,7 +120,7 @@ describe('<AreaLight3D>', () => {
     const { lut1, lut2 } = ltcTables();
     const uniforms = THREE.UniformsLib as unknown as Record<string, THREE.DataTexture>;
 
-    await vi.waitFor(() => expect(light.visible).toBe(true));
+    await untilAreaLightShows(light);
     expect(uniforms.LTC_FLOAT_1!.image.data).toEqual(lut1);
     expect(uniforms.LTC_FLOAT_2!.image.data).toEqual(lut2);
     expect(uniforms.LTC_HALF_1!.image.data).toEqual(
@@ -135,7 +136,7 @@ describe('<AreaLight3D>', () => {
     const renderer = await ReactThreeTestRenderer.create(<FreshAreaLight3D node={makeNode()} />);
     const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
 
-    await vi.waitFor(() => expect(light.visible).toBe(true));
+    await untilAreaLightShows(light);
     expect(uniforms.LTC_FLOAT_1).toBe(threeTable);
   });
 
@@ -153,7 +154,7 @@ describe('<AreaLight3D>', () => {
 
     expect(light.visible).toBe(false);
     releaseTables();
-    await vi.waitFor(() => expect(light.visible).toBe(true));
+    await untilAreaLightShows(light);
   });
 
   it('maps area_size width to RectAreaLight width', async () => {

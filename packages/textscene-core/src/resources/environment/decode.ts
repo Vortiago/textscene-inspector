@@ -12,6 +12,7 @@ import { colorOr } from '../../utils/colorParser';
 import { boolSlotValue } from '../../godot/variant/variantBool.js';
 import { volumetricFogDetailSpread } from '../../godot/rendering/environment/volumetricFog.js';
 import { FogMode } from '../../godot/rendering/environment/depthFog.js';
+import { SSAO_ENVIRONMENT_DEFAULTS } from '../../godot/rendering/environment/screenSpaceAmbientOcclusion.js';
 import {
   depthFogDensityDefault,
   depthFogRange,
@@ -150,6 +151,25 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
     ssr_fade_in: Math.max(0, floatOr(properties.ssr_fade_in, 0.15, 'ssr_fade_in')),
     ssr_fade_out: Math.max(0, floatOr(properties.ssr_fade_out, 2.0, 'ssr_fade_out')),
     ssr_depth_tolerance: floatOr(properties.ssr_depth_tolerance, 0.5, 'ssr_depth_tolerance'),
+
+    // Screen-space ambient occlusion. No setter clamps (`environment.cpp:324-390`).
+    ssao_enabled: boolSlotValue(properties.ssao_enabled) === true,
+    ssao_radius: floatOr(properties.ssao_radius, SSAO_ENVIRONMENT_DEFAULTS.radius, 'ssao_radius'),
+    ssao_intensity: floatOr(properties.ssao_intensity, SSAO_ENVIRONMENT_DEFAULTS.intensity, 'ssao_intensity'),
+    ssao_power: floatOr(properties.ssao_power, SSAO_ENVIRONMENT_DEFAULTS.power, 'ssao_power'),
+    ssao_detail: floatOr(properties.ssao_detail, SSAO_ENVIRONMENT_DEFAULTS.detail, 'ssao_detail'),
+    ssao_horizon: floatOr(properties.ssao_horizon, SSAO_ENVIRONMENT_DEFAULTS.horizon, 'ssao_horizon'),
+    ssao_sharpness: floatOr(properties.ssao_sharpness, SSAO_ENVIRONMENT_DEFAULTS.sharpness, 'ssao_sharpness'),
+    ssao_light_affect: floatOr(
+      properties.ssao_light_affect,
+      SSAO_ENVIRONMENT_DEFAULTS.lightAffect,
+      'ssao_light_affect'
+    ),
+    ssao_ao_channel_affect: floatOr(
+      properties.ssao_ao_channel_affect,
+      SSAO_ENVIRONMENT_DEFAULTS.aoChannelAffect,
+      'ssao_ao_channel_affect'
+    ),
 
     // Glow.
     glow_enabled: boolSlotValue(properties.glow_enabled) === true,
