@@ -1,11 +1,14 @@
 /**
- * The auto-hinter's view of a `glyf` font (`AutofitFace`): its Unicode `cmap`, its `GSUB` and
- * `GPOS` tables, its italic style flag as FreeType's `sfobjs.c` sets it, and its glyphs in font
- * units.
+ * The auto-hinter's view of a font (`AutofitFace`): its Unicode `cmap`, its `GSUB` and `GPOS`
+ * tables, its italic style flag as FreeType's `sfobjs.c` sets it, and its glyphs in design units.
+ *
+ * Portions ported from FreeType (FreeType Project License).
+ * Copyright (C) 1996-2026 by David Turner, Robert Wilhelm, and Werner Lemberg.
+ * See THIRD-PARTY-NOTICES.md.
  */
 
+import type { UnscaledOutlines } from '../glyphContours';
 import { cmapCodePoints, cmapLookup } from '../sfntCmap';
-import { glyfSize, unscaledGlyphReader } from '../sfntGlyf';
 import { OS2_FS_SELECTION_OFFSET, OS2_TABLE_MIN_LENGTH, tableFits, type SfntFile } from '../sfntTables';
 import type { AutofitFace } from './afFace';
 import { readLayoutTable, type LayoutTable } from './openTypeLayout';
@@ -40,16 +43,14 @@ function layoutTableOf(sfnt: SfntFile, tag: 'GSUB' | 'GPOS'): LayoutTable | null
   return table ? readLayoutTable(sfnt.dv, table.offset, table.length, tag === 'GSUB') : null;
 }
 
-/** The face of a `glyf` font with a `cmap`, or null for another font. */
-export function sfntAutofitFace(sfnt: SfntFile): AutofitFace | null {
+/** The face of a font with `outlines` and a `cmap`, or null for a font without a readable `cmap`. */
+export function sfntAutofitFace(sfnt: SfntFile, outlines: UnscaledOutlines): AutofitFace | null {
   const cmap = sfnt.tables.get('cmap');
-  const size = glyfSize(sfnt);
-  const unscaledGlyph = unscaledGlyphReader(sfnt);
   const lookup = cmap && cmapLookup(sfnt.dv, cmap.offset);
-  if (!cmap || !size || !unscaledGlyph || !lookup) return null;
-  const { glyphCount } = size;
+  if (!cmap || !lookup) return null;
+  const { glyphCount } = outlines;
   return {
-    unitsPerEm: size.unitsPerEm,
+    unitsPerEm: outlines.unitsPerEm,
     glyphCount,
     isItalic: isItalicFace(sfnt),
     codePoints: cmapCodePoints(sfnt.dv, cmap.offset, glyphCount) ?? [],
@@ -59,6 +60,6 @@ export function sfntAutofitFace(sfnt: SfntFile): AutofitFace | null {
     },
     gsub: layoutTableOf(sfnt, 'GSUB'),
     gpos: layoutTableOf(sfnt, 'GPOS'),
-    unscaledGlyph,
+    unscaledGlyph: (glyph) => outlines.unscaledGlyph(glyph),
   };
 }

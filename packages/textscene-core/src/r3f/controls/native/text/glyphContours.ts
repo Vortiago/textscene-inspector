@@ -32,6 +32,16 @@ export interface GlyphContours {
   isFillRight: boolean;
 }
 
+/** A font's outlines as `FT_LOAD_NO_SCALE` loads them, which the auto-hinter hints from. */
+export interface UnscaledOutlines {
+  readonly unitsPerEm: number;
+  /** Whether a size rounds its ppem to whole pixels, as `head.flags` bit 3 asks of a TrueType font. */
+  readonly isPpemRounded: boolean;
+  readonly glyphCount: number;
+  /** The glyph's outline in design units, or null when FreeType fails to load it. */
+  unscaledGlyph(glyphIndex: number): ScaledOutline | null;
+}
+
 /** The scaled outline of a glyph at `fontSizePx` as the font loads it, or null for a glyph with no outline. */
 export type GlyphOutlineReader = (glyphIndex: number, fontSizePx: number) => ScaledOutline | null;
 

@@ -8,6 +8,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { toInt16 } from '../../../../../godot/variant/intWidth';
 import { ftDivFix, ftMulFix } from '../fontMetrics';
 import {
   Dimension,
@@ -16,7 +17,6 @@ import {
   PointFlag,
   divide,
   newEdge,
-  toShort,
   type AxisHints,
   type DimensionValue,
   type Edge,
@@ -122,11 +122,11 @@ const isRoundRun = (run: Run, flatThreshold: number): boolean =>
 
 function closeSegment(segment: Segment, run: Run, last: Point, flatThreshold: number): void {
   segment.last = last;
-  segment.pos = toShort((run.minPos + run.maxPos) >> 1);
-  segment.delta = toShort((run.maxPos - run.minPos) >> 1);
+  segment.pos = toInt16((run.minPos + run.maxPos) >> 1);
+  segment.delta = toInt16((run.maxPos - run.minPos) >> 1);
   if (isRoundRun(run, flatThreshold)) segment.flags |= EdgeFlag.ROUND;
-  segment.minCoord = toShort(run.minCoord);
-  segment.maxCoord = toShort(run.maxCoord);
+  segment.minCoord = toInt16(run.minCoord);
+  segment.maxCoord = toInt16(run.maxCoord);
   segment.height = segment.maxCoord - segment.minCoord;
 }
 
@@ -215,10 +215,10 @@ function walkContour(axis: AxisHints, last: Point, majorDir: number, flatThresho
       run = runOf(point);
       isOnEdge = true;
       if (point === point.prev) {
-        segment.pos = toShort(run.minPos);
+        segment.pos = toInt16(run.minPos);
         if (point.flags & PointFlag.CONTROL) segment.flags |= EdgeFlag.ROUND;
-        segment.minCoord = toShort(point.v);
-        segment.maxCoord = toShort(point.v);
+        segment.minCoord = toInt16(point.v);
+        segment.maxCoord = toInt16(point.v);
         segment.height = 0;
         isOnEdge = false;
         segment = null;
@@ -246,12 +246,12 @@ function mergeIntoPrevious(
   if (prevSegment.last.inDir === point.inDir) {
     mergeRun(run, prevRun);
     prevSegment.last = point;
-    prevSegment.pos = toShort((run.minPos + run.maxPos) >> 1);
-    prevSegment.delta = toShort((run.maxPos - run.minPos) >> 1);
+    prevSegment.pos = toInt16((run.minPos + run.maxPos) >> 1);
+    prevSegment.delta = toInt16((run.maxPos - run.minPos) >> 1);
     if (isRoundRun(run, flatThreshold)) prevSegment.flags |= EdgeFlag.ROUND;
     else prevSegment.flags &= ~EdgeFlag.ROUND;
-    prevSegment.minCoord = toShort(run.minCoord);
-    prevSegment.maxCoord = toShort(run.maxCoord);
+    prevSegment.minCoord = toInt16(run.minCoord);
+    prevSegment.maxCoord = toInt16(run.maxCoord);
     prevSegment.height = prevSegment.maxCoord - prevSegment.minCoord;
     // FreeType keeps the previous run's extent as it was, though the segment now spans both.
     return prevRun;
@@ -260,8 +260,8 @@ function mergeIntoPrevious(
     prevRun.minPos = Math.min(prevRun.minPos, run.minPos);
     prevRun.maxPos = Math.max(prevRun.maxPos, run.maxPos);
     prevSegment.last = point;
-    prevSegment.pos = toShort((prevRun.minPos + prevRun.maxPos) >> 1);
-    prevSegment.delta = toShort((prevRun.maxPos - prevRun.minPos) >> 1);
+    prevSegment.pos = toInt16((prevRun.minPos + prevRun.maxPos) >> 1);
+    prevSegment.delta = toInt16((prevRun.maxPos - prevRun.minPos) >> 1);
     return prevRun;
   }
   run.minPos = Math.min(run.minPos, prevRun.minPos);
@@ -278,11 +278,11 @@ function extendHeightToNeighbours(segment: Segment): void {
   const before = first.prev.v;
   const after = last.next.v;
   if (isAscending) {
-    if (before < first.v) segment.height = toShort(segment.height + ((first.v - before) >> 1));
-    if (after > last.v) segment.height = toShort(segment.height + ((after - last.v) >> 1));
+    if (before < first.v) segment.height = toInt16(segment.height + ((first.v - before) >> 1));
+    if (after > last.v) segment.height = toInt16(segment.height + ((after - last.v) >> 1));
   } else {
-    if (before > first.v) segment.height = toShort(segment.height + ((before - first.v) >> 1));
-    if (after < last.v) segment.height = toShort(segment.height + ((last.v - after) >> 1));
+    if (before > first.v) segment.height = toInt16(segment.height + ((before - first.v) >> 1));
+    if (after < last.v) segment.height = toInt16(segment.height + ((last.v - after) >> 1));
   }
 }
 

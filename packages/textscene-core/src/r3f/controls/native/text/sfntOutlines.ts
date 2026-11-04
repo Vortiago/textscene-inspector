@@ -3,8 +3,9 @@
  * character from `cmap` (`sfntCmap.ts`), and the points of that glyph from `glyf` (`sfntGlyf.ts`) or
  * from `CFF ` and `CFF2` (`sfntCff.ts`). A WOFF or WOFF2 opens through `fontContainer.ts`, which
  * hands the readers the plain tables. A TrueType font that FreeType hints natively loads the bytecode
- * interpreter (`truetype/trueTypeHinting.ts`) on demand, which hints each `glyf` outline, and any
- * other TrueType font loads the auto-hinter (`autofit/autoHinter.ts`) on demand.
+ * interpreter (`truetype/trueTypeHinting.ts`) on demand, which hints each `glyf` outline. Any
+ * other TrueType font, and any font that forces it, loads the auto-hinter (`autofit/autoHinter.ts`)
+ * on demand.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -47,41 +48,42 @@ function orOnRangeError<T>(read: () => T, fallback: T): T {
  * puts past the buffer. A `glyf` font without its own hints loads through the auto-hinter.
  */
 export function openFontOutlines(bytes: ArrayBuffer): Promise<SfntOutlines | null> {
-  return openOutlines(bytes, isNativelyHinted);
+  return openOutlines(bytes, (sfnt) => sfnt.tables.has('glyf') && !isNativelyHinted(sfnt));
 }
 
 /**
- * `openFontOutlines` for a `FontFile` with `force_autohinter` on: a `glyf` font loads through the
- * auto-hinter even with its own hints, unless it is tricky (`ftobjs.c`, `FT_Load_Glyph`).
+ * `openFontOutlines` for a `FontFile` with `force_autohinter` on: any font loads through the
+ * auto-hinter, even with its own hints, unless it is tricky (`ftobjs.c`, `FT_Load_Glyph`).
  */
 export function openAutoHintedFontOutlines(bytes: ArrayBuffer): Promise<SfntOutlines | null> {
-  return openOutlines(bytes, isTrickyFont);
+  return openOutlines(bytes, (sfnt) => !isTrickyFont(sfnt));
 }
 
 async function openOutlines(
   bytes: ArrayBuffer,
-  isHintedNatively: (sfnt: SfntFile) => boolean
+  isAutoHinted: (sfnt: SfntFile) => boolean
 ): Promise<SfntOutlines | null> {
   const sfnt = await openFontContainer(bytes, OUTLINE_TABLE_TAGS);
   if (!sfnt) return null;
-  const glyfReader = isHintedNatively(sfnt)
-    ? glyphOutlineReader(sfnt, await glyphHintingOf(sfnt))
-    : await autoHintedReaderOf(sfnt);
-  return readSfntOutlines(sfnt, glyfReader ?? cffOutlineReader(sfnt));
+  const outlineOf = isAutoHinted(sfnt) ? await autoHintedReaderOf(sfnt) : await nativeReaderOf(sfnt);
+  return readSfntOutlines(sfnt, outlineOf);
+}
+
+/** The reader of a font's outlines as its own hints place them: TrueType bytecode or CFF hints. */
+async function nativeReaderOf(sfnt: SfntFile): Promise<GlyphOutlineReader | null> {
+  return glyphOutlineReader(sfnt, await glyphHintingOf(sfnt)) ?? cffOutlineReader(sfnt);
 }
 
 /** The TrueType hinting of a natively hinted `glyf` font, or null for a font FreeType does not hint so. */
 async function glyphHintingOf(sfnt: SfntFile): Promise<GlyphHinting | null> {
-  if (!sfnt.tables.has('glyf')) return null;
+  if (!sfnt.tables.has('glyf') || !isNativelyHinted(sfnt)) return null;
   const { trueTypeHinting } = await import('./truetype/trueTypeHinting');
   return orOnRangeError(() => trueTypeHinting(sfnt), null);
 }
 
-/** The auto-hinted reader of a `glyf` font, or null for another font. */
 async function autoHintedReaderOf(sfnt: SfntFile): Promise<GlyphOutlineReader | null> {
-  if (!sfnt.tables.has('glyf')) return null;
-  const { autoHintedGlyfReader } = await import('./autofit/autoHinter');
-  return orOnRangeError(() => autoHintedGlyfReader(sfnt), null);
+  const { autoHintedReader } = await import('./autofit/autoHinter');
+  return orOnRangeError(() => autoHintedReader(sfnt), null);
 }
 
 function readSfntOutlines(sfnt: SfntFile, outlineOf: GlyphOutlineReader | null): SfntOutlines | null {

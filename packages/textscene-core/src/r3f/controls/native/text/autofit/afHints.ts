@@ -8,7 +8,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { ftDivFix, ftMulFix } from '../fontMetrics';
+import { toInt16 } from '../../../../../godot/variant/intWidth';
+import { FIXED_16_16_ONE, ftDivFix, ftMulFix } from '../fontMetrics';
 import { outlineOrientation, type ScaledOutline } from '../glyphContours';
 
 export const Dimension = { HORZ: 0, VERT: 1 } as const;
@@ -133,25 +134,17 @@ export interface GlyphHints {
   contourYMaxima: number[];
   readonly axis: readonly [AxisHints, AxisHints];
   scalerFlags: number;
-  otherFlags: number;
 }
-
-/** FreeType's `FT_Short`: the low 16 bits of `value`, signed. */
-export const toShort = (value: number): number => (value << 16) >> 16;
 
 /** C's integer division, which truncates toward zero. */
 export const divide = (dividend: number, divisor: number): number => Math.trunc(dividend / divisor);
 
-/** `FT_PIX_ROUND` on any integer, which `pixRound` limits to none. */
-export const pixRound = (value: number): number => Math.floor((value + 32) / 64) * 64;
-export const pixFloor = (value: number): number => Math.floor(value / 64) * 64;
-
 /** `af_glyph_hints_init`: empty hints at the identity scale. */
 export function newGlyphHints(unitsPerEm: number): GlyphHints {
   return {
-    xScale: 0x10000,
+    xScale: FIXED_16_16_ONE,
     xDelta: 0,
-    yScale: 0x10000,
+    yScale: FIXED_16_16_ONE,
     yDelta: 0,
     unitsPerEm,
     points: [],
@@ -163,7 +156,6 @@ export function newGlyphHints(unitsPerEm: number): GlyphHints {
       { segments: [], edges: [], majorDir: Direction.LEFT },
     ],
     scalerFlags: 0,
-    otherFlags: 0,
   };
 }
 
@@ -179,11 +171,13 @@ export function sortPositions(table: number[], count: number): void {
 
 /**
  * `af_sort_and_quantize_widths`: sorts `widths` and merges the ones within `threshold` of the
- * first of their run into their mean. Returns the widths left.
+ * first of their run into their mean. Returns the widths left. FreeType counts no widths as one,
+ * its zeroed first slot, so a standard glyph with no stem gives its axis a standard width of 0.
  */
 export function sortAndQuantizeWidths(widths: Width[], threshold: number): Width[] {
   const count = widths.length;
-  if (count <= 1) return widths;
+  if (count === 0) return [newWidth(0)];
+  if (count === 1) return widths;
   for (let i = 1; i < count; i++) {
     for (let j = i; j > 0; j--) {
       if (widths[j]!.org >= widths[j - 1]!.org) break;
@@ -330,8 +324,8 @@ function loadPoints(hints: GlyphHints, outline: ScaledOutline): Point[] {
   const pointCount = outline.x.length;
   const points: Point[] = [];
   for (let index = 0; index < pointCount; index++) {
-    const fx = toShort(outline.x[index]!);
-    const fy = toShort(outline.y[index]!);
+    const fx = toInt16(outline.x[index]!);
+    const fy = toInt16(outline.y[index]!);
     const ox = ftMulFix(outline.x[index]!, hints.xScale) + hints.xDelta;
     const oy = ftMulFix(outline.y[index]!, hints.yScale) + hints.yDelta;
     points.push({

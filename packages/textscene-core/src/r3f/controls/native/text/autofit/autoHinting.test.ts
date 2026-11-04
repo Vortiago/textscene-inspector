@@ -1,7 +1,9 @@
 /**
- * The outline of a glyph that FreeType's auto-hinter fits to the grid, as Godot loads it for a font
- * with no TrueType hints (`text_server_adv.cpp:3613`), against the contours of Godot 4.6.3 in
- * `autoHinting.godot.json`.
+ * The outline of a glyph that FreeType's auto-hinter fits to the grid, as Godot loads it
+ * (`text_server_adv.cpp:3613`), against the contours of Godot 4.6.3 in `autoHinting.godot.json`:
+ * a font with no TrueType hints, a hinted font with `force_autohinter` on, and a tricky font,
+ * which keeps FreeType's TrueType loader with it on. `autofit-scripts-test.ttf` maps glyphs of
+ * Noto Sans to han, Oriya and Armenian characters, for the CJK, Indic and dummy writing systems.
  */
 
 import { describe, expect, it } from 'vitest';

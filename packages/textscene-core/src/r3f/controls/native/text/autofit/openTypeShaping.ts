@@ -7,7 +7,7 @@
  * HarfBuzz's script shapers (Arabic joining, Indic reordering, mark positioning) are not ported:
  * a cluster of such a script shapes as the default shaper shapes it.
  *
- * Portions ported from HarfBuzz (MIT).
+ * Portions ported from HarfBuzz ("Old MIT" licence).
  * Copyright (C) 2007-2026 by Behdad Esfahbod and the HarfBuzz contributors.
  * See THIRD-PARTY-NOTICES.md.
  */
@@ -26,11 +26,12 @@ export interface ShapingFace {
   readonly gpos: LayoutTable | null;
 }
 
-/** HarfBuzz's features of the default shaper before `rvrn`'s pause, and after it (`hb-ot-shape.cc:329-376`). */
+/**
+ * HarfBuzz's features of the default shaper before `rvrn`'s pause, and after it, past the two of
+ * the text's direction (`hb-ot-shape.cc:329-376`).
+ */
 const FIRST_STAGE_FEATURES = ['rvrn'] as const;
 const DEFAULT_FEATURES = [
-  'ltra',
-  'ltrm',
   'rand',
   'abvm',
   'blwm',
@@ -47,6 +48,24 @@ const DEFAULT_FEATURES = [
   'liga',
   'rclt',
 ] as const;
+
+/** The scripts of the auto-hinter that HarfBuzz sets right to left (`hb_script_get_horizontal_direction`). */
+const RIGHT_TO_LEFT_SCRIPT_TAGS: ReadonlySet<string> = new Set([
+  'adlm',
+  'arab',
+  'avst',
+  'cprt',
+  'hebr',
+  'nko ',
+  'rohg',
+]);
+
+/** The features after `rvrn`'s pause for text of `scriptTags`, with `feature` on. */
+function shapingFeatures(scriptTags: readonly string[], feature: string | null): string[] {
+  const isRightToLeft = scriptTags.some((tag) => RIGHT_TO_LEFT_SCRIPT_TAGS.has(tag));
+  const directionFeatures = isRightToLeft ? ['rtla', 'rtlm'] : ['ltra', 'ltrm'];
+  return [...directionFeatures, ...DEFAULT_FEATURES, ...(feature ? [feature] : [])];
+}
 
 /** The default script HarfBuzz falls back on, then the two it tries after it (`hb_ot_layout_table_select_script`). */
 const FALLBACK_SCRIPT_TAGS = ['DFLT', 'dflt', 'latn'] as const;
@@ -79,7 +98,7 @@ function featureLookups(
   return [...lookups].sort((a, b) => a - b);
 }
 
-/** One stage of lookups, applied in index order; `isRandom` marks the lookups of `rand`. */
+/** One stage of lookups, applied in index order, and those of them that `rand` holds. */
 interface Stage {
   lookups: readonly number[];
   randomLookups: ReadonlySet<number>;
@@ -87,10 +106,12 @@ interface Stage {
 
 function stagesOf(table: LayoutTable, scriptTags: readonly string[], feature: string | null): Stage[] {
   const random = new Set(featureLookups(table, scriptTags, ['rand']));
-  const later = feature ? [...DEFAULT_FEATURES, feature] : [...DEFAULT_FEATURES];
   return [
     { lookups: featureLookups(table, scriptTags, FIRST_STAGE_FEATURES), randomLookups: new Set() },
-    { lookups: featureLookups(table, scriptTags, later), randomLookups: random },
+    {
+      lookups: featureLookups(table, scriptTags, shapingFeatures(scriptTags, feature)),
+      randomLookups: random,
+    },
   ];
 }
 
@@ -461,10 +482,8 @@ export function shapeCluster(
   };
   if (face.gsub) applyGsub(face.gsub, stagesOf(face.gsub, tags, feature), buffer);
   const shaped = buffer.glyphs.map((glyph): ShapedGlyph => ({ glyph, yOffset: 0 }));
-  if (face.gpos) {
-    const features = feature ? [...DEFAULT_FEATURES, feature] : [...DEFAULT_FEATURES];
-    applyGpos(face.gpos, featureLookups(face.gpos, tags, features), shaped);
-  }
+  if (face.gpos)
+    applyGpos(face.gpos, featureLookups(face.gpos, tags, shapingFeatures(tags, feature)), shaped);
   return shaped;
 }
 

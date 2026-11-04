@@ -10,7 +10,7 @@
  */
 
 import type { ScaledOutline } from '../glyphContours';
-import { ftMulDiv, pixRound } from '../fontMetrics';
+import { ftMulDiv, pixFloor, pixRound } from '../fontMetrics';
 import { GlyphStyle } from './afFace';
 import {
   alignEdgePoints,
@@ -48,7 +48,7 @@ const STRAIGHT_STEM_MIN = 56;
 /** The fitted width of a stem 3 px or narrower: whole pixels plus a fraction rounded to 0, 10/64, 54/64 or as it is. */
 function smallStemWidth(dist: number): number {
   const fraction = dist & 63;
-  const whole = dist & -64;
+  const whole = pixFloor(dist);
   if (fraction < 10) return whole + fraction;
   if (fraction < 32) return whole + 10;
   if (fraction < 54) return whole + 54;
@@ -80,7 +80,7 @@ function stemWidth(
   if (standard) {
     if (Math.abs(dist - standard.cur) < 40) return sign * Math.max(standard.cur, 48);
     if (dist < 3 * 64) dist = smallStemWidth(dist);
-    else dist = (dist - baseDeltaShift(width, baseDelta, metrics.scaler.ppem) + 32) & ~63;
+    else dist = pixRound(dist - baseDeltaShift(width, baseDelta, metrics.scaler.ppem));
   }
   return sign * dist;
 }
@@ -225,11 +225,14 @@ function crossExtent(edge: Edge): [min: number, max: number] {
 }
 
 /**
- * The distance from an edge to its serif, or 1000 for none, or for a serif whose span another
- * edge between them crosses, which FreeType hints as a lone edge.
+ * `af_latin_hint_edges`'s distance for no serif, or for a serif whose span another edge between
+ * them crosses. FreeType then hints the edge as a lone edge.
  */
+const NO_SERIF_DISTANCE = 1000;
+
+/** The distance from an edge to its serif, or `NO_SERIF_DISTANCE`. */
 function serifDistance(edges: readonly Edge[], edge: Edge): number {
-  if (!edge.serif) return 1000;
+  if (!edge.serif) return NO_SERIF_DISTANCE;
   let delta = edge.serif.opos - edge.opos;
   const [top, bottom] = delta < 0 ? [edge, edge.serif] : [edge.serif, edge];
   delta = Math.abs(delta);
@@ -240,7 +243,7 @@ function serifDistance(edges: readonly Edge[], edge: Edge): number {
   const maxPos = Math.max(topMax, bottomMax);
   for (let index = bottom.index + 1; index < top.index; index++) {
     const [eMin, eMax] = crossExtent(edges[index]!);
-    if (!((eMin < minPos && eMax < minPos) || (eMin > maxPos && eMax > maxPos))) return 1000;
+    if (!((eMin < minPos && eMax < minPos) || (eMin > maxPos && eMax > maxPos))) return NO_SERIF_DISTANCE;
   }
   return delta;
 }
@@ -258,13 +261,13 @@ function doneNeighbours(edges: readonly Edge[], edge: Edge): [Edge | null, Edge 
 
 /**
  * The edges no stem holds: a serif follows its base, the first lone edge rounds and anchors, and
- * the rest move in proportion between the done edges around them. Returns the anchor.
+ * the rest move in proportion between the done edges around them.
  */
 function hintLoneEdges(edges: readonly Edge[], anchor: Edge | null, isTopToBottom: boolean): void {
   for (const edge of edges) {
     if (edge.flags & EdgeFlag.DONE) continue;
     const delta = serifDistance(edges, edge);
-    if (edge.serif && delta === 1000) continue;
+    if (edge.serif && delta === NO_SERIF_DISTANCE) continue;
     if (delta < 64 + 16) edge.pos = edge.serif!.pos + (edge.opos - edge.serif!.opos);
     else if (!anchor) {
       edge.pos = pixRound(edge.opos);

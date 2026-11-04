@@ -233,7 +233,7 @@ function cjkStemWidth(metrics: CjkMetrics, dim: DimensionValue, width: number): 
 /** The fitted width of a stem under 3 px: whole pixels plus a fraction rounded to 10/64 or 54/64, or kept. */
 function cjkMediumStemWidth(dist: number): number {
   const fraction = dist & 63;
-  const whole = dist & -64;
+  const whole = pixFloor(dist);
   if (fraction < 10) return whole + fraction;
   if (fraction < 22) return whole + 10;
   if (fraction < 42) return whole + fraction;

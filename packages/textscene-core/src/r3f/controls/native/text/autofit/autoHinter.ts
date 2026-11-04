@@ -10,7 +10,8 @@
 
 import type { GlyphOutlineReader } from '../glyphContours';
 import { freeTypeTrueTypeSize, pixRound } from '../fontMetrics';
-import { glyfSize } from '../sfntGlyf';
+import { unscaledCffOutlines } from '../sfntCff';
+import { unscaledGlyfOutlines } from '../sfntGlyf';
 import type { SfntFile } from '../sfntTables';
 import type { AutofitFace } from './afFace';
 import { AutofitGlobals } from './afGlobals';
@@ -50,11 +51,11 @@ function autoHintedOutlineReader(face: AutofitFace, isPpemRounded: boolean): Gly
 }
 
 /**
- * The auto-hinted outline reader of a font's `glyf` outlines, or null for a font without them or
- * without a `cmap`.
+ * The auto-hinted outline reader of a font's `glyf` or CFF outlines, or null for a font without
+ * them or without a `cmap`.
  */
-export function autoHintedGlyfReader(sfnt: SfntFile): GlyphOutlineReader | null {
-  const face = sfntAutofitFace(sfnt);
-  const size = glyfSize(sfnt);
-  return face && size && autoHintedOutlineReader(face, size.isPpemRounded);
+export function autoHintedReader(sfnt: SfntFile): GlyphOutlineReader | null {
+  const outlines = unscaledGlyfOutlines(sfnt) ?? unscaledCffOutlines(sfnt);
+  const face = outlines && sfntAutofitFace(sfnt, outlines);
+  return face && autoHintedOutlineReader(face, outlines.isPpemRounded);
 }

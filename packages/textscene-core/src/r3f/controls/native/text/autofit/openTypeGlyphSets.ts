@@ -4,7 +4,7 @@
  * (`hb_ot_layout_lookup_collect_glyphs`), and whether a `GSUB` lookup substitutes one glyph on its
  * own (`hb_ot_layout_lookup_would_substitute`).
  *
- * Portions ported from HarfBuzz (MIT).
+ * Portions ported from HarfBuzz ("Old MIT" licence).
  * Copyright (C) 2007-2026 by Behdad Esfahbod and the HarfBuzz contributors.
  * See THIRD-PARTY-NOTICES.md.
  */

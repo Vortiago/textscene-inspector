@@ -12,12 +12,12 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { interpretCharstring } from './cffCharstring';
+import { interpretCharstring, interpretUnhintedCharstring } from './cffCharstring';
 import { applyFontMatrix, rescaledOutlineScale } from './cffFontMatrix';
 import type { CharstringContour } from './cffPen';
 import { openCff } from './cffTables';
-import { getFontOutlineScale } from './fontMetrics';
-import type { GlyphOutlineReader, ScaledOutline } from './glyphContours';
+import { FIXED_16_16_ONE, ftMulFix, getFontOutlineScale } from './fontMetrics';
+import type { GlyphOutlineReader, ScaledOutline, UnscaledOutlines } from './glyphContours';
 import { readHeadUnitsPerEm, type SfntFile } from './sfntTables';
 
 /** The divisor of the arithmetic shift right by 10 that `cff_builder_add_point` makes, from 16.16 to 26.6. */
@@ -79,4 +79,30 @@ export function cffOutlineReader(sfnt: SfntFile): GlyphOutlineReader | null {
     applyFontMatrix(outline, matrix);
     return outline;
   };
+}
+
+/**
+ * The CFF outlines as the auto-hinter loads them (`cff_slot_load` with `FT_LOAD_NO_SCALE`): each
+ * glyph unhinted in design units, through its font matrix, and scaled only for a font dict whose
+ * units per em differ from the Top DICT's. Null for a font with no readable CFF table or no `head`.
+ */
+export function unscaledCffOutlines(sfnt: SfntFile): UnscaledOutlines | null {
+  const unitsPerEm = readHeadUnitsPerEm(sfnt);
+  const font = unitsPerEm === 0 ? null : openCff(sfnt);
+  if (!font) return null;
+  const unscaledGlyph = (glyphIndex: number): ScaledOutline | null => {
+    const fontDict = font.fontDictOf(glyphIndex);
+    const contours = fontDict && interpretUnhintedCharstring(font, glyphIndex, fontDict.private);
+    if (!contours) return null;
+    const outline = scaledOutline(contours);
+    applyFontMatrix(outline, fontDict.matrix);
+    const scale = rescaledOutlineScale(FIXED_16_16_ONE, font.unitsPerEm, fontDict.matrix);
+    if (scale === FIXED_16_16_ONE) return outline;
+    return {
+      ...outline,
+      x: outline.x.map((x) => ftMulFix(x, scale)),
+      y: outline.y.map((y) => ftMulFix(y, scale)),
+    };
+  };
+  return { unitsPerEm, isPpemRounded: false, glyphCount: font.charStrings.count, unscaledGlyph };
 }

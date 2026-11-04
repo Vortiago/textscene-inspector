@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { ftMulDiv, ftMulFix, pixRound } from '../fontMetrics';
+import { ftMulDiv, ftMulFix, pixFloor, pixRound } from '../fontMetrics';
 import {
   clustersOf,
   newScaler,
@@ -164,7 +164,7 @@ function xHeightFittedScale(metrics: LatinMetrics, scale: number, dim: Dimension
   const blue = blues.find((candidate) => candidate.flags & LatinBlueFlag.ADJUSTMENT);
   if (!blue) return scale;
   const scaled = ftMulFix(blue.shoot.org, scale);
-  const fitted = (scaled + X_HEIGHT_ROUNDING_THRESHOLD) & ~63;
+  const fitted = pixFloor(scaled + X_HEIGHT_ROUNDING_THRESHOLD);
   if (scaled === fitted || dim !== Dimension.VERT) return scale;
   const newScale = ftMulDiv(scale, fitted, scaled);
   let maxHeight = metrics.unitsPerEm;

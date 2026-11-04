@@ -8,6 +8,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { FIXED_16_16_ONE } from '../fontMetrics';
 import type { ScaledOutline } from '../glyphContours';
 import { AUTOFIT_SCRIPTS } from './afScripts';
 import { AUTOFIT_STYLES, type AutofitStyle } from './afStyles';
@@ -60,7 +61,13 @@ export interface StyleMetrics {
   readonly scaler: Scaler;
 }
 
-export const newScaler = (): Scaler => ({ xScale: 0x10000, yScale: 0x10000, xDelta: 0, yDelta: 0, ppem: 0 });
+export const newScaler = (): Scaler => ({
+  xScale: FIXED_16_16_ONE,
+  yScale: FIXED_16_16_ONE,
+  xDelta: 0,
+  yDelta: 0,
+  ppem: 0,
+});
 
 /** The clusters of a blue or standard string: the runs between its spaces. */
 export const clustersOf = (characters: string): string[] =>

@@ -24,8 +24,15 @@ export async function buildFontResource(
   return decodeFont(resourceFilePath(path), type, properties, file.extResources, file.subResources, loadFont);
 }
 
-/** A raw font container's bytes. Text at a container path is no font, so it throws. */
-export function fontResourceFromContainer(path: string, data: FileData): FontFileResource {
+/**
+ * A raw font container's bytes, with the `[params]` of its import sidecar. Text at a container
+ * path is no font, so it throws.
+ */
+export function fontResourceFromContainer(
+  path: string,
+  data: FileData,
+  importParams: Record<string, string>
+): FontFileResource {
   if (typeof data === 'string') throw new Error(`${path} is text, not font bytes`);
-  return fontResourceFromBytes(path, data);
+  return fontResourceFromBytes(path, data, importParams);
 }

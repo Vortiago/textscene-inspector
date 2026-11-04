@@ -22,6 +22,7 @@ import {
   type GlyphOutlineReader,
   type Matrix2x2,
   type ScaledOutline,
+  type UnscaledOutlines,
 } from './glyphContours';
 import {
   newGlyphZone,
@@ -554,22 +555,14 @@ function loadedGlyph(
   return load;
 }
 
-/**
- * The reader of a font's `glyf` outlines as `FT_Load_Glyph` with `FT_LOAD_NO_SCALE` leaves them,
- * in font units and unhinted, which the auto-hinter loads, or null for a font without them.
- */
-export function unscaledGlyphReader(sfnt: SfntFile): ((glyphIndex: number) => ScaledOutline | null) | null {
+/** The `glyf` outlines as the auto-hinter loads them, unhinted in design units, or null for a font without them. */
+export function unscaledGlyfOutlines(sfnt: SfntFile): UnscaledOutlines | null {
   const font = glyfFont(sfnt);
   if (!font) return null;
-  return (glyphIndex) => loadedGlyph(font, glyphIndex, FIXED_16_16_ONE, null)?.outline() ?? null;
-}
-
-/** The ppem rounding and units per em of a font's `glyf` outlines, which the auto-hinter scales by. */
-export function glyfSize(
-  sfnt: SfntFile
-): { unitsPerEm: number; isPpemRounded: boolean; glyphCount: number } | null {
-  const font = glyfFont(sfnt);
-  return (
-    font && { unitsPerEm: font.unitsPerEm, isPpemRounded: font.isPpemRounded, glyphCount: font.glyphCount }
-  );
+  return {
+    unitsPerEm: font.unitsPerEm,
+    isPpemRounded: font.isPpemRounded,
+    glyphCount: font.glyphCount,
+    unscaledGlyph: (glyphIndex) => loadedGlyph(font, glyphIndex, FIXED_16_16_ONE, null)?.outline() ?? null,
+  };
 }

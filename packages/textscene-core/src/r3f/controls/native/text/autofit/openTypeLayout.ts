@@ -3,7 +3,7 @@
  * tables their subtables share, and HarfBuzz's `hb_ot_layout_collect_lookups`, which the
  * auto-hinter calls to find the lookups of a script and its features (`afshaper.c`).
  *
- * Portions ported from HarfBuzz (MIT).
+ * Portions ported from HarfBuzz ("Old MIT" licence).
  * Copyright (C) 2007-2026 by Behdad Esfahbod and the HarfBuzz contributors.
  * See THIRD-PARTY-NOTICES.md.
  */
