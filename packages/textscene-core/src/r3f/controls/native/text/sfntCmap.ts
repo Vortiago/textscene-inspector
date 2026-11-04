@@ -87,3 +87,48 @@ export function cmapLookup(dv: DataView, cmapOffset: number): ((codePoint: numbe
     dv.getUint16(subtable, false) === CMAP_FORMAT_SEGMENTED ? segmentedGlyphIndex : groupedGlyphIndex;
   return (codePoint) => read(dv, subtable, codePoint);
 }
+
+/** The code points of a format 4 subtable with a glyph, ascending. */
+function segmentedCodePoints(dv: DataView, subtable: number): number[] {
+  const segmentCount = dv.getUint16(subtable + 6, false) / 2;
+  const endCodes = subtable + 14;
+  const startCodes = endCodes + segmentCount * 2 + 2;
+  const codePoints: number[] = [];
+  for (let segment = 0; segment < segmentCount; segment++) {
+    const start = dv.getUint16(startCodes + segment * 2, false);
+    const end = dv.getUint16(endCodes + segment * 2, false);
+    for (let codePoint = start; codePoint <= end && codePoint < 0xffff; codePoint++)
+      if (segmentedGlyphIndex(dv, subtable, codePoint) !== 0) codePoints.push(codePoint);
+  }
+  return codePoints;
+}
+
+/** The code points of a format 12 subtable with a glyph below `glyphCount`, ascending. */
+function groupedCodePoints(dv: DataView, subtable: number, glyphCount: number): number[] {
+  const groupCount = dv.getUint32(subtable + 12, false);
+  const codePoints: number[] = [];
+  for (let group = 0; group < groupCount; group++) {
+    const at = subtable + 16 + group * 12;
+    const start = dv.getUint32(at, false);
+    const end = dv.getUint32(at + 4, false);
+    const startGlyph = dv.getUint32(at + 8, false);
+    const last = Math.min(end, start + glyphCount - 1 - startGlyph);
+    const first = startGlyph === 0 ? start + 1 : start;
+    for (let codePoint = first; codePoint <= last; codePoint++) codePoints.push(codePoint);
+  }
+  return codePoints;
+}
+
+/**
+ * The code points the best Unicode subtable maps to a glyph below `glyphCount`, ascending, as
+ * FreeType's `FT_Get_Next_Char` walks them, or null for a font with no subtable we read.
+ */
+export function cmapCodePoints(dv: DataView, cmapOffset: number, glyphCount: number): number[] | null {
+  const subtable = findCmapSubtable(dv, cmapOffset);
+  if (subtable === null) return null;
+  if (dv.getUint16(subtable, false) === CMAP_FORMAT_GROUPED)
+    return groupedCodePoints(dv, subtable, glyphCount);
+  return segmentedCodePoints(dv, subtable).filter(
+    (codePoint) => segmentedGlyphIndex(dv, subtable, codePoint) < glyphCount
+  );
+}

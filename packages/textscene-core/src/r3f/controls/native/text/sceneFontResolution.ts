@@ -76,3 +76,8 @@ export function fontGeneratesMipmaps(font: FontResource | null): boolean | undef
   const face = font.kind === 'system' ? font : (resolveFontFileBytes(font)?.leaf ?? font);
   return boolSlotValue(face.properties['generate_mipmaps']) ?? false;
 }
+
+/** `FontFile.force_autohinter` of `font`, which loads its glyphs through FreeType's auto-hinter. */
+export function fontForcesAutohinter(font: FontFileResource): boolean {
+  return boolSlotValue(font.properties['force_autohinter']) ?? false;
+}

@@ -14,7 +14,7 @@
  */
 
 import { ByteReader, ReadPastEndError } from '../../../../resources/formats/binaryresource/byteReader';
-import { freeTypeTrueTypeSize, ftMulFix, pixRound } from './fontMetrics';
+import { FIXED_16_16_ONE, freeTypeTrueTypeSize, ftMulFix, pixRound } from './fontMetrics';
 import { ftVectorLength } from './ftVector';
 import {
   transformOutline,
@@ -532,13 +532,44 @@ export function glyphOutlineReader(sfnt: SfntFile, hinting: GlyphHinting | null)
     const { scale, ppem } = freeTypeTrueTypeSize(font.unitsPerEm, fontSizePx, font.isPpemRounded);
     const hinter = hinting ? hinting.beginLoad(ppem, scale) : null;
     if (hinter === 'failed') return null;
-    const load = new GlyphLoad(font, scale, hinter);
-    try {
-      load.load(glyphIndex, 0);
-    } catch (error) {
-      if (!(error instanceof GlyphLoadError)) throw error;
-      return null;
-    }
-    return load.x.length > 0 ? load.outline() : null;
+    const load = loadedGlyph(font, glyphIndex, scale, hinter);
+    return load && load.x.length > 0 ? load.outline() : null;
   };
+}
+
+/** The glyph loaded at `scale`, or null when FreeType fails to load it. */
+function loadedGlyph(
+  font: GlyfFont,
+  glyphIndex: number,
+  scale: number,
+  hinter: GlyphLoadHinter | null
+): GlyphLoad | null {
+  const load = new GlyphLoad(font, scale, hinter);
+  try {
+    load.load(glyphIndex, 0);
+  } catch (error) {
+    if (!(error instanceof GlyphLoadError)) throw error;
+    return null;
+  }
+  return load;
+}
+
+/**
+ * The reader of a font's `glyf` outlines as `FT_Load_Glyph` with `FT_LOAD_NO_SCALE` leaves them,
+ * in font units and unhinted, which the auto-hinter loads, or null for a font without them.
+ */
+export function unscaledGlyphReader(sfnt: SfntFile): ((glyphIndex: number) => ScaledOutline | null) | null {
+  const font = glyfFont(sfnt);
+  if (!font) return null;
+  return (glyphIndex) => loadedGlyph(font, glyphIndex, FIXED_16_16_ONE, null)?.outline() ?? null;
+}
+
+/** The ppem rounding and units per em of a font's `glyf` outlines, which the auto-hinter scales by. */
+export function glyfSize(
+  sfnt: SfntFile
+): { unitsPerEm: number; isPpemRounded: boolean; glyphCount: number } | null {
+  const font = glyfFont(sfnt);
+  return (
+    font && { unitsPerEm: font.unitsPerEm, isPpemRounded: font.isPpemRounded, glyphCount: font.glyphCount }
+  );
 }
