@@ -13,16 +13,16 @@ packages:
 catalog:
   # Shared dev dependencies
   typescript: ^6.0.3
-  vitest: ^5.0.5
-  rimraf: ^6.1.3
+  vitest: ^5.1.0
+  rimraf: ^6.1.4
   '@vscode/test-electron': ^3.1.0
   '@vscode/test-web': ^0.0.81
-  '@vitest/ui': ^5.0.5
+  '@vitest/ui': ^5.1.0
   '@types/node': ^26.6.6
   vite: ^8.3.3
   esbuild: ^0.28.2
   happy-dom: ^21.0.3
-  jsdom: ^30
+  jsdom: ^30.1.3
 
   # Declaration bundling for @textscene/tscn: one .d.ts that imports nothing from the workspace.
   dts-bundle-generator: ^9.5.1
@@ -36,8 +36,8 @@ catalog:
   vscode-languageserver-textdocument: ^1.0.16
 
   # R3F migration (Phase 14, WI-R3F-1) — spike-validated pins
-  react: ^19.3
-  react-dom: ^19.3
+  react: ^19.3.1
+  react-dom: ^19.3.1
   '@types/react': ^19.3
   '@types/react-dom': ^19.3
   '@react-three/fiber': ^9.8.2
@@ -47,7 +47,7 @@ catalog:
   # NOTE: ^5 latest (5.2.0) declares peer vite ^4.2 || ^5 || ^6 || ^7 || ^8,
   # so it spans the vite 8 workspace pin. ^6.0 targets vite ^8 exclusively —
   # move there in its own bump if 5.x ever lags behind a vite major.
-  '@vitejs/plugin-react': ^6.1
+  '@vitejs/plugin-react': ^6.2.1
   three: ^0.187
   '@types/three': ^0.187
 
@@ -71,7 +71,7 @@ catalog:
   '@types/pngjs': ^6.0.5
 
   # The PR labeler test reads .github/labeler.yml and matches its globs as actions/labeler does.
-  minimatch: ^11.0.3
+  minimatch: ^11.0.4
   yaml: ^2.9.1
 
   # Real CSG boolean evaluation (ADR-0026). three-bvh-csg is used DIRECTLY rather
@@ -80,7 +80,7 @@ catalog:
   # three-mesh-bvh is a DIRECT dependency so pnpm satisfies the peer with this
   # version rather than resolving to drei's nested 0.8.3.
   three-bvh-csg: ^0.0.18
-  three-mesh-bvh: ^0.9.17
+  three-mesh-bvh: ^0.9.18
 
   # React Testing Library (WI-R3F-4) — DOM-level UI tests under jsdom
   '@testing-library/react': ^16.3.3
