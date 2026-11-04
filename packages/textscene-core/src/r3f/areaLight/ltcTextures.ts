@@ -1,7 +1,7 @@
 /**
  * Godot's LTC tables as the textures three binds to `ltc_1` and `ltc_2` for a scene with a rect
  * area light. three picks the float pair where the GPU filters float textures linearly
- * (`OES_texture_float_linear`), else the half-float pair (r186 `WebGLLights.js:471-485`).
+ * (`OES_texture_float_linear`), else the half-float pair (r187 `WebGLLights.js:471-485`).
  */
 
 import * as THREE from 'three';

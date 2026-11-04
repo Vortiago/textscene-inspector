@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { ssrMipCount, ssrTraceSize } from '../../godot/rendering/environment/screenSpaceReflection.js';
 import { createPassTarget, NEAREST_TARGET } from '../environment/passTarget.js';
 import { NORMAL_ROUGHNESS } from '../screenSpaceEffects/prepassBuffers.js';
+import { withMipLevels } from '../mipLevels.js';
 import { reversedTexelRows, type TexelPlacement } from '../texelCopy.js';
 import { FILTER_RADIUS } from './ssrShaders.js';
 
@@ -78,14 +79,14 @@ export class ReflectionBuffers {
     const trace = ssrTraceSize({ width, height }, isHalfSize);
     this.mipCount = ssrMipCount(trace);
     this.rowsReversed = reversedTexelRows(width, height);
-    this.hiz = chainTarget(trace.width, trace.height, {
+    this.hiz = chainTarget(trace, this.mipCount, {
       ...DEPTH_LEVEL,
       minFilter: THREE.NearestMipmapNearestFilter,
     });
     this.hizLevels = levelTargets(trace.width, trace.height, this.mipCount, DEPTH_LEVEL);
     this.normalRoughness = new THREE.WebGLRenderTarget(trace.width, trace.height, NORMAL_ROUGHNESS);
     this.trace = traceTarget(trace.width, trace.height);
-    this.chain = chainTarget(trace.width, trace.height, {
+    this.chain = chainTarget(trace, this.mipCount, {
       ...HALF_FLOAT_LINEAR,
       minFilter: THREE.LinearMipmapLinearFilter,
     });
@@ -142,20 +143,13 @@ function traceTarget(width: number, height: number): THREE.WebGLRenderTarget {
   return target;
 }
 
-/**
- * A texture with a level for every mip down to one texel, so a read across its mips finds it
- * complete: three sets no `TEXTURE_MAX_LEVEL`. Only Godot's mips are drawn, and every read keeps
- * to them. A render target reads only the count (three r186 `WebGLTextures.js:2070-2076`).
- */
+/** A chain of `mipCount` mips, `size` at mip 0, which a read reaches across its mips. */
 function chainTarget(
-  width: number,
-  height: number,
+  size: { width: number; height: number },
+  mipCount: number,
   options: THREE.RenderTargetOptions
 ): THREE.WebGLRenderTarget {
-  const target = new THREE.WebGLRenderTarget(width, height, options);
-  const levels = Math.floor(Math.log2(Math.max(width, height))) + 1;
-  target.texture.mipmaps = Array.from({ length: levels }, () => ({})) as unknown as THREE.Texture['mipmaps'];
-  return target;
+  return withMipLevels(new THREE.WebGLRenderTarget(size.width, size.height, options), mipCount);
 }
 
 /** A target for each mip from 1 of a chain `width` by `height`, each `extraRows` taller than its mip. */

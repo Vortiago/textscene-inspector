@@ -2,7 +2,7 @@
  * Draws spot lights, split suns and area lights into their atlases, through three's own shadow pass
  * with those lights alone. three's pass takes care of the casters' cull, their draw hooks and the slot's
  * viewport and clear. Its depth material is private, so each caster wears the atlas's depth material
- * as its own `customDepthMaterial` for the draw (`WebGLShadowMap.js:430-436`), which also writes the
+ * as its own `customDepthMaterial` for the draw (r187 `WebGLShadowMap.js:435-439`), which also writes the
  * depth into the atlas's colour for the blocker search.
  */
 

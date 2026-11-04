@@ -1,8 +1,8 @@
 /**
  * A `material-N` (N > 0) slot's key carries every baked program parameter an edit
  * can move, here the `opaque` composite and the side flags. A re-parse mutates the
- * compiled material, and three re-derives parameters (`WebGLPrograms.js:56`) only on
- * a `material.version` bump or `WebGLRenderer.js:2388`'s fixed re-checks.
+ * compiled material, and three re-derives parameters (r187 `WebGLPrograms.js:54`) only on
+ * a `material.version` bump or `WebGLRenderer.js:2451`'s fixed re-checks.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';

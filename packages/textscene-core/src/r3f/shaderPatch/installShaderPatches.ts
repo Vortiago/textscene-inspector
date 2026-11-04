@@ -27,6 +27,7 @@ import { installSkyDebanding } from '../sky/skyDebanding.js';
 import { installEmissionExposure } from '../exposure/emissionExposure.js';
 import { installGodotScreenSpaceReflection } from '../screenSpaceReflection/ssrSceneChunk.js';
 import { installGodotScreenSpaceAmbientOcclusion } from '../screenSpaceAmbientOcclusion/ssaoSceneChunk.js';
+import { installGodotRefraction } from '../refraction/godotRefraction.js';
 import { installUnlitVaryings } from './unlitVaryings.js';
 
 /**
@@ -49,6 +50,7 @@ const SHADER_PATCH_INSTALLS: readonly (() => unknown)[] = [
   installGodotReflectionProbes,
   installGodotScreenSpaceAmbientOcclusion,
   installGodotScreenSpaceReflection,
+  installGodotRefraction,
   installGodotDecals,
   installGodotSplitShadow,
   installDirectionalShadowAtlas,

@@ -21,7 +21,7 @@ export class AtlasSpotShadow extends ThreeSpotLightShadow implements SlottedShad
   /** The light's slot in the atlas of the viewport that renders now, or null for none. */
   slot: PositionalShadowSlot | null = null;
   opacity = 1;
-  /** The slot's rectangle in units of the slot, as three gives a viewport (`WebGLShadowMap.js:345-350`). */
+  /** The slot's rectangle in units of the slot, as three gives a viewport (r187 `WebGLShadowMap.js:347-352`). */
   private readonly slotRect = new THREE.Vector4(0, 0, 1, 1);
 
   constructor() {
@@ -38,7 +38,7 @@ export class AtlasSpotShadow extends ThreeSpotLightShadow implements SlottedShad
   }
 
   /**
-   * three calls this before it binds and clears the atlas (`WebGLShadowMap.js:291`). three's update
+   * three calls this before it binds and clears the atlas (r187 `WebGLShadowMap.js:291`). three's update
    * sets the projection. The camera then takes the light's axes, as Godot's does
    * (`renderer_scene_cull.cpp:2582`), and the matrix maps into the slot.
    */

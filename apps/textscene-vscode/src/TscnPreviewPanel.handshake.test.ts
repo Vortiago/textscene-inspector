@@ -6,8 +6,8 @@
  */
 import { describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
-import { TscnPreviewPanel } from './TscnPreviewPanel';
-import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } from './test-setup';
+import { openPreviewPanel, openReadyPreviewPanel, settle } from './previewPanel.testkit';
+import { createMockUri, createMockFileData, type MockWebview } from './test-setup';
 
 const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
 
@@ -20,17 +20,7 @@ function loadTscnContents(webview: MockWebview): string[] {
 
 describe('TscnPreviewPanel webview-ready handshake', () => {
   it('caches the initial loadTscn payload until the webview signals ready', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-
-    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
-
-    const extensionUri = createMockUri('/extension');
-    const resourceUri = createMockUri('/workspace/test.tscn');
-
-    TscnPreviewPanel.create(extensionUri, resourceUri);
-
-    // Let the constructor's async _loadTscnContent finish.
-    await new Promise<void>((r) => setTimeout(r, 10));
+    const { webview, triggerMessage } = await openPreviewPanel(MINIMAL_TSCN);
 
     const loadCallsBefore = webview.postMessage.mock.calls.filter(
       (call) => (call[0] as { type: string }).type === 'loadTscn'
@@ -47,17 +37,8 @@ describe('TscnPreviewPanel webview-ready handshake', () => {
   });
 
   it('posts subsequent loadTscn directly once the webview is ready', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-
-    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
-
-    const extensionUri = createMockUri('/extension');
-    const resourceUri = createMockUri('/workspace/test.tscn');
-
-    const panel = TscnPreviewPanel.create(extensionUri, resourceUri);
-
-    await new Promise<void>((r) => setTimeout(r, 10));
-    triggerMessage({ type: 'webviewReady' });
+    const { webview, panel } = await openReadyPreviewPanel(MINIMAL_TSCN);
+    const resourceUri = createMockUri('/workspace/scene.tscn');
 
     // Initial replay fired.
     webview.postMessage.mockClear();
@@ -66,7 +47,7 @@ describe('TscnPreviewPanel webview-ready handshake', () => {
     (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(updatedContent));
 
     panel.update(resourceUri);
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settle();
 
     // The second loadTscn fires at once, with no caching.
     const loadCalls = webview.postMessage.mock.calls.filter(
@@ -77,15 +58,8 @@ describe('TscnPreviewPanel webview-ready handshake', () => {
   });
 
   it('replays the current text on a remount ready, not only the first one', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-
-    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
-
-    const resourceUri = createMockUri('/workspace/test.tscn');
-    const panel = TscnPreviewPanel.create(createMockUri('/extension'), resourceUri);
-
-    await new Promise<void>((r) => setTimeout(r, 10));
-    triggerMessage({ type: 'webviewReady' });
+    const { webview, triggerMessage, panel } = await openReadyPreviewPanel(MINIMAL_TSCN);
+    const resourceUri = createMockUri('/workspace/scene.tscn');
     webview.postMessage.mockClear();
 
     // Moving the panel to another editor group remounts the React tree:
@@ -98,7 +72,7 @@ describe('TscnPreviewPanel webview-ready handshake', () => {
     // And the unchanged file re-read that follows stays a no-op, because the
     // remounted webview already holds this text.
     panel.update(resourceUri);
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settle();
 
     expect(loadTscnContents(webview)).toEqual([MINIMAL_TSCN]);
   });

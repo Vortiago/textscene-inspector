@@ -1,5 +1,5 @@
 /**
- * Godot's split selection, PCF and soft shadow in three r186's sun-light shadow lookup, which walks
+ * Godot's split selection, PCF and soft shadow in three r187's sun-light shadow lookup, which walks
  * two cascades and takes three's own five taps. Godot picks one of up to four splits by view depth,
  * blends into the next over its last tenth, and narrows a far split's filter
  * (`scene_forward_clustered.glsl:2403-2478`, the branch without soft shadows). It samples each split
@@ -68,7 +68,7 @@ const GODOT_SLOT_MATRIX = `
 /**
  * Godot's PCF of one split (`:2443`). Its pixel size is the atlas texel times `soft_shadow_scale`
  * times the split's blur factor, and `shadowMapSize` is the whole atlas
- * (`WebGLLights.js:305`, `splitShadow.ts`). It keeps three's test that leaves a receiver outside
+ * (r187 `WebGLLights.js:305`, `splitShadow.ts`). It keeps three's test that leaves a receiver outside
  * the atlas or past its far plane unshadowed (`getShadow`). `godotPcf` is the soft shadow filter,
  * which `installSoftShadowFilter` puts ahead of the sun block.
  */

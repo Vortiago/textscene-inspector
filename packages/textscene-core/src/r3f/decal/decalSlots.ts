@@ -25,7 +25,7 @@ export const SHOWN_LINEAR_MAGNIFICATION = 2;
 
 /**
  * The shown decals' count and the mipmap bias of the render. An array, not scalars: three caches a
- * scalar uniform by its value (r186 `WebGLUniforms.js:163-173`), and `cloneUniforms` keeps a typed
+ * scalar uniform by its value (r187 `WebGLUniforms.js:165-175`), and `cloneUniforms` keeps a typed
  * array by reference, so every material reads this buffer.
  */
 export const shownDecals = installedOr(DECAL_UNIFORMS.shown, Float32Array, () => new Float32Array(4));

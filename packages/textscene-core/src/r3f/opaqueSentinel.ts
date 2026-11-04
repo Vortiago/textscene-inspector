@@ -19,7 +19,7 @@ type Reach = (renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.C
 /**
  * A Group whose one mesh runs `reach` each time three reaches it in a render. three sorts the opaque
  * list by the nearest Group's `renderOrder` first (`WebGLRenderLists.js` `painterSortStable`), and
- * takes a Group's order only where the Group is in the camera's layers (`WebGLRenderer.js:1864-1870`).
+ * takes a Group's order only where the Group is in the camera's layers (r187 `WebGLRenderer.js:1877-1883`).
  * The mesh draws nothing of its own, casts nothing and takes no pick.
  */
 class OpaqueSentinel extends THREE.Group {

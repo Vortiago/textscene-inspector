@@ -1,7 +1,7 @@
 /**
  * Godot's Nearest with Mipmaps and Anisotropic filter samples a nearest mip chain with anisotropy
  * (`material_storage.cpp:2490-2506`). three writes `TEXTURE_MAX_ANISOTROPY_EXT` only under a linear
- * magnification filter (`WebGLTextures.js:695`), so this writes it onto the GPU texture itself.
+ * magnification filter (r187 `WebGLTextures.js:756`), so this writes it onto the GPU texture itself.
  */
 import { useContext, useEffect } from 'react';
 import * as THREE from 'three';
@@ -53,7 +53,7 @@ export function writeNearestAnisotropy(renderer: THREE.WebGLRenderer, texture: T
 /**
  * Written for a texture drawn inside a Canvas: at once when its storage exists, as a tiled
  * texture's does, and after each upload three makes. three calls `onUpdate` right after an upload
- * with the texture still bound (`WebGLTextures.js:1399`), so this starts no upload of its own.
+ * with the texture still bound (r187 `WebGLTextures.js:1461`), so this starts no upload of its own.
  */
 export function useNearestAnisotropy(texture: THREE.Texture | null): void {
   // The store is absent outside a Canvas, where no renderer exists.

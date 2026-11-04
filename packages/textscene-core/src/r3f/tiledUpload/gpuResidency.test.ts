@@ -3,9 +3,11 @@
  * and sampler settings, shared by every clone that matches, and frees it once the last
  * of them is disposed. A matching clone needs no upload of its own.
  */
+import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { GpuResidency } from './gpuResidency';
+import { GpuResidency, residencyKey } from './gpuResidency';
 
 function sheet(): THREE.DataTexture {
   return new THREE.DataTexture(new Uint8Array(16), 2, 2);
@@ -60,5 +62,41 @@ describe('GpuResidency', () => {
     residency.hold(texture);
     texture.dispose();
     expect(residency.isResident(texture)).toBe(false);
+  });
+});
+
+/** Every texture field three's `getTextureCacheKey` pushes, read from three's own source. */
+function threeCacheKeyFields(): string[] {
+  const source = readFileSync(
+    createRequire(import.meta.url).resolve('three/src/renderers/webgl/WebGLTextures.js'),
+    'utf8'
+  );
+  const body = source.split('function getTextureCacheKey(')[1]?.split('return array.join()')[0];
+  if (!body)
+    throw new Error('expected `getTextureCacheKey` in WebGLTextures.js, got none: re-anchor this parse');
+  return [...body.matchAll(/array\.push\(\s*texture\.([A-Za-z]+)/g)].map((match) => match[1]!);
+}
+
+/** `value` changed to another value of its own kind. */
+function changed(value: unknown): unknown {
+  if (typeof value === 'boolean') return !value;
+  if (typeof value === 'number') return value + 1;
+  if (typeof value === 'string') return `${value}-changed`;
+  return 1;
+}
+
+describe('residencyKey', () => {
+  it("moves with every field of three's texture cache key", () => {
+    const fields = threeCacheKeyFields();
+    const unkeyed = fields.filter((field) => {
+      const texture = sheet();
+      const before = residencyKey(texture);
+      const settings = texture as unknown as Record<string, unknown>;
+      settings[field] = changed(settings[field]);
+      return residencyKey(texture) === before;
+    });
+
+    expect(fields.length).toBeGreaterThanOrEqual(10);
+    expect(unkeyed, `add each to residencyKey: ${unkeyed.join(', ')}`).toEqual([]);
   });
 });
