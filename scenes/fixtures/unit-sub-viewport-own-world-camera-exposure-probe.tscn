@@ -1,0 +1,113 @@
+; One variable: the Camera3D of an own-world SubViewport at exposure_multiplier 0 over a world at 1
+; that holds a ONCE ReflectionProbe. Godot captures the probe at the world's exposure, so the camera
+; at 0 draws the whole view black, and a nested SubViewport at 1 draws the world and the probe lit
+; (`render_forward_clustered.cpp:1714-1716`, `light_storage.cpp:1810-1814`).
+
+[gd_scene format=3]
+
+[sub_resource type="CameraAttributesPractical" id="Attr_world"]
+exposure_multiplier = 1.0
+
+[sub_resource type="CameraAttributesPractical" id="Attr_view"]
+exposure_multiplier = 0.0
+
+[sub_resource type="CameraAttributesPractical" id="Attr_nested"]
+exposure_multiplier = 1.0
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0.2, 0.3, 0.5, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.4, 0.4, 0.4, 1)
+
+[sub_resource type="PlaneMesh" id="Plane_1"]
+size = Vector2(12, 12)
+
+[sub_resource type="SphereMesh" id="Sphere_1"]
+
+[sub_resource type="StandardMaterial3D" id="Grey_1"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+roughness = 1.0
+metallic_specular = 0.0
+
+[sub_resource type="StandardMaterial3D" id="Shiny_1"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+metallic = 1.0
+roughness = 0.2
+
+[sub_resource type="QuadMesh" id="Quad_1"]
+size = Vector2(1.6, 1.6)
+
+[sub_resource type="ViewportTexture" id="Tex_view"]
+viewport_path = NodePath("ViewA")
+
+[sub_resource type="ViewportTexture" id="Tex_nested"]
+viewport_path = NodePath("ViewA/Nested")
+
+[sub_resource type="StandardMaterial3D" id="Mat_view"]
+resource_local_to_scene = true
+shading_mode = 0
+albedo_texture = SubResource("Tex_view")
+
+[sub_resource type="StandardMaterial3D" id="Mat_nested"]
+resource_local_to_scene = true
+shading_mode = 0
+albedo_texture = SubResource("Tex_nested")
+
+[node name="Root" type="Node3D"]
+
+[node name="ViewA" type="SubViewport" parent="."]
+own_world_3d = true
+size = Vector2i(256, 256)
+render_target_update_mode = 4
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="ViewA"]
+environment = SubResource("Env_1")
+camera_attributes = SubResource("Attr_world")
+
+[node name="Sun" type="DirectionalLight3D" parent="ViewA"]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 3, 0)
+light_energy = 0.5
+
+[node name="Ground" type="MeshInstance3D" parent="ViewA"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+mesh = SubResource("Plane_1")
+surface_material_override/0 = SubResource("Grey_1")
+
+[node name="Ball" type="MeshInstance3D" parent="ViewA"]
+mesh = SubResource("Sphere_1")
+surface_material_override/0 = SubResource("Shiny_1")
+
+[node name="Probe" type="ReflectionProbe" parent="ViewA"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+update_mode = 0
+size = Vector3(10, 6, 10)
+ambient_mode = 1
+
+[node name="Camera3D" type="Camera3D" parent="ViewA"]
+transform = Transform3D(1, 0, 0, 0, 0.894427, 0.447214, 0, -0.447214, 0.894427, 0, 2, 4)
+fov = 70.0
+attributes = SubResource("Attr_view")
+
+[node name="Nested" type="SubViewport" parent="ViewA"]
+size = Vector2i(256, 256)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="ViewA/Nested"]
+transform = Transform3D(1, 0, 0, 0, 0.894427, 0.447214, 0, -0.447214, 0.894427, 0, 2, 4)
+fov = 70.0
+attributes = SubResource("Attr_nested")
+
+[node name="ScreenView" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 0)
+mesh = SubResource("Quad_1")
+surface_material_override/0 = SubResource("Mat_view")
+
+[node name="ScreenNested" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+mesh = SubResource("Quad_1")
+surface_material_override/0 = SubResource("Mat_nested")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+fov = 50.0

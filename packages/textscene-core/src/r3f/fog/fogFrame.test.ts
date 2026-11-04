@@ -25,7 +25,7 @@ function settings(properties: Record<string, string>): FogSettings {
 
 const camera = new THREE.PerspectiveCamera(75, 1, 0.05, 400);
 
-const NO_OBJECTS = { lights: [], casters: [], volumes: [] };
+const NO_OBJECTS = { lights: [], casters: [], volumes: [], exposure: 1 };
 
 function sun(intensity: number): THREE.DirectionalLight {
   const light = new THREE.DirectionalLight(0xffffff, intensity);
@@ -78,6 +78,7 @@ describe('prepareFog', () => {
       lights: [sun(Math.PI), lightOnly],
       casters: [],
       volumes: [],
+      exposure: 1,
     });
 
     expect(fogUniforms.sunDirections[1]).toBe(1);
@@ -85,6 +86,31 @@ describe('prepareFog', () => {
     expect(fogUniforms.sunSkyColors[3]).toBe(1);
     expect(fogUniforms.sunSurfaceColors[4]).toBeCloseTo(2, 5);
     expect(fogUniforms.sunSkyColors[7]).toBe(0);
+  });
+
+  it("writes the sky's sun at the exposure of the render, as the surfaces' light already is (sky.cpp:1086)", () => {
+    const skySun = sun(Math.PI);
+    skySun.userData = skyLightUserData({ drawsInSky: true, energy: 0.5, size: 0 });
+    prepareFog(renderer, new THREE.Scene(), camera, settings({ fog_enabled: 'true' }), volumePass(), {
+      lights: [skySun],
+      casters: [],
+      volumes: [],
+      exposure: 4,
+    });
+
+    expect(fogUniforms.sunSkyColors[0]).toBeCloseTo(0.5 * Math.PI * 4, 5);
+  });
+
+  it("writes the sky's sun of a light that declares none, such as a GLB light, at the exposure once", () => {
+    const exposedIntensity = Math.PI * 4;
+    prepareFog(renderer, new THREE.Scene(), camera, settings({ fog_enabled: 'true' }), volumePass(), {
+      lights: [sun(exposedIntensity)],
+      casters: [],
+      volumes: [],
+      exposure: 4,
+    });
+
+    expect(fogUniforms.sunSkyColors[0]).toBeCloseTo(exposedIntensity, 5);
   });
 
   it('prepares the volume only for a volumetric fog, and answers whether it settles', () => {

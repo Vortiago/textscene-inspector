@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react';
 import type { TscnNode } from '../../../parser/types';
-import type { Aabb } from '../../../godot/math/aabb';
+import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
 import { warn } from '../../../logger';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -15,12 +15,19 @@ import { resourceContentKey } from '../../../resources/resourceContentKey';
 import type { ScopedResource } from '../../../resources/scopedResource';
 import { useContentMemo } from '../../../resources/useContentMemo';
 
-/** The box in node space, or null while the MultiMesh or the mesh box it needs is unknown. */
+/**
+ * The box in node space, `AABB()` for a node with no MultiMesh (`multimesh_instance_3d.cpp:100-102`),
+ * or null while the MultiMesh or the mesh box it needs is unknown.
+ */
 export function useMultiMeshInstance3DAabb(node: TscnNode): Aabb | null {
   const scoped = useSubOrExtResource(node.rawProperties['multimesh'], useSceneResources());
   const multiMesh = useContentMemo(scoped, ownContentKey, readMultiMesh);
   const meshAabb = useMeshAabb(multiMesh?.mesh, scoped?.resources ?? NO_RESOURCES);
-  return useMemo(() => multiMesh && multiMeshAabb(multiMesh, meshAabb), [multiMesh, meshAabb]);
+  const hasMultiMesh = node.rawProperties['multimesh'] !== undefined;
+  return useMemo(() => {
+    if (multiMesh) return multiMeshAabb(multiMesh, meshAabb);
+    return hasMultiMesh ? null : EMPTY_AABB;
+  }, [multiMesh, meshAabb, hasMultiMesh]);
 }
 
 /** A MultiMesh reads no file, so its own content is the whole key. */

@@ -6,6 +6,7 @@
  */
 
 import {
+  emptyFrameAabb,
   undrawnGeometryInstanceWithGizmos,
   type GeometryInstanceGizmosProps,
 } from '../../geometryinstance3d/Component';
@@ -26,6 +27,8 @@ function Gizmos({ properties }: GeometryInstanceGizmosProps<GPUParticles3DProper
 
 export const GPUParticles3D = undrawnGeometryInstanceWithGizmos(
   useGPUParticles3DAabb,
+  // `GPUParticles3D::get_aabb` is `AABB()` (`gpu_particles_3d.cpp:40-42`), not the `visibility_aabb` it culls by.
+  emptyFrameAabb,
   Gizmos,
   'selected-only'
 );

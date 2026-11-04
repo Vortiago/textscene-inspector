@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { TscnSceneContents } from '../TscnCanvas';
 import { readDirectionalShadowDeclaration } from '../directionalShadow/declaration';
 import { directionalShadowBias } from '../../nodes/3d/lights/shared/shadowBias';
@@ -19,6 +19,7 @@ import { skyLightEnergy } from '../sky/skyLight';
 import { PREVIEW_SUN_ENERGY } from './godotPreviewLighting';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
+import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
 
 import '../nodes/index';
 
@@ -155,14 +156,21 @@ exposure_multiplier = 2.0
 camera_attributes = SubResource("CameraAttributesPractical_1")
 `;
 
-  const sunIntensity = async (sceneText: string) => {
+  /** The sun's intensity in a render of the scene of `sceneText`. */
+  const drawnSunIntensity = async (sceneText: string) => {
     const renderer = await render(sceneText);
-    return (renderer.scene.findByType('DirectionalLight').instance as THREE.DirectionalLight).intensity;
+    const scene = renderer.scene.instance as THREE.Scene;
+    const sun = renderer.scene.findByType('DirectionalLight').instance as THREE.DirectionalLight;
+    const camera = new THREE.PerspectiveCamera();
+    fireSceneRender(scene, camera);
+    const drawn = sun.intensity;
+    fireSceneRenderEnd(scene, camera);
+    return drawn;
   };
 
-  it('scales with the exposure of the world, as every light in the render does', async () => {
-    const plain = await sunIntensity(scene(MESH));
-    expect(await sunIntensity(scene(`${MESH}${EXPOSED_WORLD}`))).toBeCloseTo(plain * 2, 10);
+  it('draws at the exposure of the world, as every light in the render does', async () => {
+    const plain = await drawnSunIntensity(scene(MESH));
+    expect(await drawnSunIntensity(scene(`${MESH}${EXPOSED_WORLD}`))).toBeCloseTo(plain * 2, 10);
   });
 
   it('declares its own energy to the sky, which scales every disc by the exposure itself', async () => {

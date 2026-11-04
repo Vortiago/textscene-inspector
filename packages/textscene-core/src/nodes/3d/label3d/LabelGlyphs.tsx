@@ -125,7 +125,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   // `modulate` is authored sRGB. Godot decodes the vertex colour (`label_3d.cpp:428`)
   // through `FLAG_SRGB_VERTEX_COLOR` (`material.cpp:3048-3049`, `material.cpp:1218`).
   // Here the tint is baked as sRGB bytes that the texture's `SRGBColorSpace` decodes.
-  // `frameExcluded`: Godot's framing camera never sees shaped text (`LABEL3D_BOUNDS_PROXY`).
+  // `frameExcluded`: Godot's framing camera never sees shaped text (`FramePoint` in `label3d/Component.tsx`).
   return (
     <group>
       {placements.map((placement, index) => {

@@ -72,6 +72,11 @@ export const TILE_AND_TARGET_SCENES = [
   { name: 'remote-transform-2d-local', file: 'unit-remote-transform-2d-local.tscn', mode: '2d' },
   // A 3D relay in local coordinates pushes nothing on load, so the box stays where the scene puts it.
   { name: 'remote-transform-3d-local', file: 'unit-remote-transform-3d-local.tscn' },
+  // An early relay under a holder that a later relay drives pushes again, so its box follows the holder.
+  { name: 'remote-transform-3d-chain-order', file: 'unit-remote-transform-3d-chain-order.tscn' },
+  { name: 'remote-transform-2d-chain-order', file: 'unit-remote-transform-2d-chain-order.tscn', mode: '2d' },
+  // Two turned relays that drive each other's holders: the box stands where the harness frame has it.
+  { name: 'remote-transform-3d-cycle', file: 'unit-remote-transform-3d-cycle.tscn' },
 
   // ViewportTexture on a 3D material. The offscreen pass tonemaps like Godot's: the shared
   // environment applies inside the target and again on the consuming quad (curve squared). The
@@ -98,6 +103,19 @@ export const TILE_AND_TARGET_SCENES = [
   // A Camera3D's `attributes` at exposure_multiplier 2 in a shared-world SubViewport over a world with
   // none: the pass draws the light, the sphere and the colour background at its camera's exposure.
   { name: 'sub-viewport-camera-exposure', file: 'unit-sub-viewport-camera-exposure.tscn' },
+  // The same camera over a world at exposure 0: the pass lights the sphere at 2 while the canvas
+  // around it draws dark.
+  { name: 'sub-viewport-camera-exposure-dark-world', file: 'unit-sub-viewport-camera-exposure-dark-world.tscn' },
+  // An own-world SubViewport whose camera at exposure 0, then 0.5, views a world at 1 with a ONCE
+  // probe: the probe captures at the world's exposure, and a nested pass at 1 draws it lit.
+  {
+    name: 'sub-viewport-own-world-camera-exposure-probe',
+    file: 'unit-sub-viewport-own-world-camera-exposure-probe.tscn',
+  },
+  {
+    name: 'sub-viewport-own-world-camera-exposure-probe-half',
+    file: 'unit-sub-viewport-own-world-camera-exposure-probe-half.tscn',
+  },
   // Two shared-world SubViewports of a 2D canvas, whose cameras hold exposure 2 and 0.5: one frame
   // draws the one lit sphere at both.
   {

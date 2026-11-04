@@ -17,6 +17,7 @@ import { shownAmbientLights } from '../../../r3f/testing/ambientLights';
 import { textureTexel } from '../../../r3f/testing/backgroundTexel';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { ViewportPassStack } from './viewportPasses.testkit';
+import { fireSceneRender, fireSceneRenderEnd } from '../../../r3f/testing/fireSceneRender';
 
 import '../../../r3f/nodes/index';
 
@@ -182,11 +183,14 @@ async function drawFrame(source: string, workspace: '2d' | '3d'): Promise<Frame>
     await withStubbedGl(
       captured.current!,
       {
-        onRender: (bound, scene) => {
+        onRender: (bound, scene, camera) => {
           const name = bound?.texture.name;
           if (name?.endsWith('::world')) {
             passScene = scene as THREE.Scene;
-            worlds.set(name.replace('::world', ''), drawnEnvironmentOf(scene as THREE.Scene));
+            // The stubbed renderer draws nothing, so the render fires the scene's hooks as three's does.
+            fireSceneRender(scene, camera);
+            worlds.set(name.replace('::world', ''), drawnEnvironmentOf(passScene));
+            fireSceneRenderEnd(scene, camera);
           } else if (name?.endsWith('::target')) {
             toneMaps.set(name.replace('::target', ''), toneMapExposureOf(scene));
           }

@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+; The one variable: an early relay under a holder that a later relay in the file drives. Godot pushes
+; a relay again when its own global transform changes (remote_transform_2d.cpp:127-136), so the blue
+; square follows the moved holder to (400, 250), not the authored holder to (100, 250). Every other
+; RemoteTransform golden has relays that no other relay moves, so none of them shows a regression in it.
+
+[node name="Root" type="Node2D"]
+
+[node name="D_Holder" type="Polygon2D" parent="."]
+position = Vector2(100, 100)
+color = Color(0.25, 0.75, 0.3, 1)
+polygon = PackedVector2Array(-40, -40, 40, -40, 40, 40, -40, 40)
+
+[node name="EarlyRelay" type="RemoteTransform2D" parent="D_Holder"]
+position = Vector2(0, 150)
+remote_path = NodePath("../../D_Target")
+
+[node name="D_Target" type="Polygon2D" parent="."]
+color = Color(0.2, 0.45, 0.9, 1)
+polygon = PackedVector2Array(-40, -40, 40, -40, 40, 40, -40, 40)
+
+[node name="LateRelay" type="RemoteTransform2D" parent="."]
+position = Vector2(400, 100)
+remote_path = NodePath("../D_Holder")

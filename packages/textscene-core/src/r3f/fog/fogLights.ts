@@ -83,8 +83,9 @@ const row = new Float32Array(ROW_LENGTH);
 
 /**
  * The rows of every visible light the fog scatters, rewritten in place by each `pack`. three's
- * `intensity` is already Godot's `light_energy * PI` with its sign and distance fade
- * (`lightConstants.ts`), and its colour is linear, as in Godot's buffer.
+ * `intensity` is already Godot's `light_energy * PI` with its sign, its distance fade and the
+ * render's exposure (`lightConstants.ts`, `sceneExposure.ts`), and its colour is linear, as in
+ * Godot's buffer.
  */
 export class FogLightRows extends RowBuffer {
   /** Whether a row's shadow reads the directional atlas, and whether one reads the positional atlas. */

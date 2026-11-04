@@ -21,9 +21,11 @@ import { SkyLayer } from '../sky/SkyLayer';
 import { FogLayer } from '../fog/FogLayer';
 import { ScreenSpaceReflectionLayer } from '../screenSpaceReflection/ScreenSpaceReflectionLayer';
 import { clearColorTexture, foggedClearColorTexture } from './colorBackground';
-import { registerExposureStage, type ExposureStage } from '../exposure/sceneExposure';
+import { followSceneExposure } from '../exposure/sceneExposure';
 import { useExposureFactor } from './worldExposure';
 import { scaledRgb } from '../../utils/colorParser';
+import { LRUCache } from '../../resources/LRUCache';
+import { probeCaptureOf } from '../reflectionProbe/captureCameras';
 import {
   DrawnEnvironment,
   registerEnvironmentPart,
@@ -142,34 +144,36 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
   // A colour draws as a texture, not a clear, since three's clear skips the fog (`colorBackground.ts`).
   useEffect(() => {
     if (showsColor) {
+      // The textures of the factors the renders draw at, the latest last. Viewports of one world
+      // draw a few factors in each frame, and a factor no render drew lately is freed.
+      const colorTexture = hasFog ? foggedClearColorTexture : clearColorTexture;
+      const textures = new LRUCache<THREE.Texture>(KEPT_BACKGROUND_FACTORS, (_factor, texture) =>
+        texture.dispose()
+      );
       const textureAt = (factor: number) => {
-        const exposedColor = scaledRgb(backgroundColor, factor);
-        return hasFog ? foggedClearColorTexture(exposedColor) : clearColorTexture(exposedColor);
+        const key = String(factor);
+        const cached = textures.get(key);
+        if (cached) return cached;
+        const texture = colorTexture(scaledRgb(backgroundColor, factor));
+        textures.set(key, texture);
+        return texture;
       };
       const intensityAt = (factor: number) => (hasFog ? backgroundEnergy * factor : 1);
-      const heldTexture = textureAt(exposure);
-      // Kept for the next draw: a probe that captures each frame draws at the same exposure each time.
-      let stagedTexture: { factor: number; texture: THREE.Texture } | null = null;
-      const stage: ExposureStage = (target) => {
-        const factor = target ?? 1;
-        if (stagedTexture?.factor !== factor) {
-          stagedTexture?.texture.dispose();
-          stagedTexture = { factor, texture: textureAt(factor) };
-        }
-        return showBackground(scene, stagedTexture.texture, intensityAt(factor));
-      };
+      const showAt = (factor: number) => showBackground(scene, textureAt(factor), intensityAt(factor));
       const stopRegistering = registerEnvironmentPart(scene, environment, () => {
-        const restoreBackground = showBackground(scene, heldTexture, intensityAt(exposure));
-        const stopStaging = registerExposureStage(scene, stage);
+        const restoreBackground = showAt(exposure);
+        // An interior capture keeps the clear colour its stage drew (`captureStage.ts`).
+        const stopFollowing = followSceneExposure(scene, (drawn, camera) => {
+          if (!probeCaptureOf(camera)?.isInterior) showAt(drawn ?? 1);
+        });
         return () => {
-          stopStaging();
+          stopFollowing();
           restoreBackground();
         };
       });
       return () => {
         stopRegistering();
-        heldTexture.dispose();
-        stagedTexture?.texture.dispose();
+        textures.clear();
       };
     }
     if (mode === BackgroundMode.BG_SKY && !hasSky) {
@@ -187,6 +191,9 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
     return undefined;
   }, [scene, environment, showsColor, mode, backgroundColor, backgroundEnergy, exposure, hasSky, hasFog]);
 }
+
+/** The background factors kept drawn: a frame of a few viewports of one world draws at a few. */
+const KEPT_BACKGROUND_FACTORS = 4;
 
 const UNRESOLVED_SKY_COLOR = { r: 0.5, g: 0.6, b: 0.75 };
 

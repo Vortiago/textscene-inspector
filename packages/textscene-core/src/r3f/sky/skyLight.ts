@@ -40,6 +40,17 @@ export function skyLightEnergy(light: THREE.DirectionalLight): number | null {
   return sky.drawsInSky ? sky.energy : null;
 }
 
+/**
+ * The three intensity the sky reads from `light` in a render that has scaled every light's intensity
+ * by `exposure`, 0 for a light the sky skips. A declared energy takes the exposure here. A light that
+ * declares none, such as a GLB light, holds it in its intensity already.
+ */
+export function skyLightIntensityInRender(light: THREE.DirectionalLight, exposure: number): number {
+  const sky = declaration.read(light);
+  if (!sky) return light.intensity;
+  return sky.drawsInSky ? sky.energy * LIGHT_INTENSITY_SCALE * exposure : 0;
+}
+
 /** The sun disc size the sky reads from `light`. A light that declares none is a point sun. */
 export function skyLightSize(light: THREE.DirectionalLight): number {
   return declaration.read(light)?.size ?? 0;
