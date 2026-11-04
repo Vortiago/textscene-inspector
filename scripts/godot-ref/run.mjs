@@ -1451,11 +1451,11 @@ export async function importAssets({ run, restage }) {
   }
 }
 
-/** Why a stalled pass ended: the group killer's expiry, or a spawn failure. */
+/** Why a stalled pass ended: the group killer's expiry, or the spawn error (a missing binary or the backstop). */
 function stallReason(result) {
   return result.timedOut
-    ? `did not finish within ${ENGINE_TIMEOUT_S}s`
-    : `failed to spawn: ${result.error.message}`;
+    ? `did not finish within ${ENGINE_TIMEOUT_S}s and its process group was reaped`
+    : `failed: ${result.error.message}`;
 }
 
 function runGodot(args, { display, screen = null }) {
