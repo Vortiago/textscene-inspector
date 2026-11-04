@@ -47,6 +47,7 @@ import {
 } from './vscodeMockClasses.testkit';
 
 export const vscodeModuleMock = {
+  version: '1.106.0',
   Uri: mockUri,
   workspace: mockWorkspace,
   window: mockWindow,
