@@ -4,7 +4,7 @@
  */
 import * as THREE from 'three';
 import { EDITOR_CAMERA_FOV, editorCameraDirection } from './godotEditorCamera.js';
-import { computeWorldBoundingBox } from './bounds.js';
+import { computeWorldBoundingBox, frameBoxOf } from './bounds.js';
 import { isDrawable } from './drawable.js';
 import { isUnderEditorHelper } from './editorHelpers.js';
 import { degToRad } from '../godot/math/math.js';
@@ -41,18 +41,26 @@ export function frameSceneBounds(
   // light- or camera-only scenes (no mesh to frame) still get framed instead
   // of leaving the default camera pointed at an empty void.
   const meshBox = new THREE.Box3();
+  const nodeBoxScratch = new THREE.Box3();
   const gizmoBox = new THREE.Box3();
   let hasMesh = false;
   let hasGizmo = false;
   scene.traverse((obj) => {
     if (obj.userData?.tscnEmptyState) return;
     // A Label3D glyph mesh is skipped, so async mount timing cannot change the frame. Label3D frames
-    // by its zero-size `LABEL3D_BOUNDS_PROXY` alone, as Godot's reference camera does.
+    // by its zero-size `FramePoint` alone, as Godot's reference camera does.
     if (obj.userData?.tscnFrameExcluded) return;
+    // A node whose `get_aabb` Godot frames on, drawn or not, an empty one as the point it is.
+    const nodeBox = frameBoxOf(obj, nodeBoxScratch);
+    if (nodeBox) {
+      meshBox.union(nodeBox);
+      hasMesh = true;
+      return;
+    }
     // CSG contributor bounds proxies are INCLUDED: Godot counts a contributor's own
     // unevaluated brush too (modules/csg/csg_shape.cpp:470,507, reached recursively), so a
-    // subtracted solid enlarges its bounds on both sides. An invisible one the recursion
-    // never reached carries a zero-size proxy, so it lands here as the point Godot has.
+    // subtracted solid enlarges its bounds on both sides. A node with no solid frames as a
+    // `FramePoint` above.
     if (!isDrawable(obj)) return;
     const objBox = computeWorldBoundingBox(obj, new THREE.Box3());
     if (objBox.isEmpty() || !Number.isFinite(objBox.min.x)) return;

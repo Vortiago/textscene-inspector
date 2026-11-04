@@ -89,7 +89,7 @@ describe("frameSceneBounds — dimensionally flat scenes use Godot's own editor 
 });
 
 describe('frameSceneBounds — a bounds union with no extent', () => {
-  /** A node Godot never sized: the zero-size proxy CSG and Label3D both mount. */
+  /** A node Godot never sized: the zero-size bounds proxy a CSG shape mounts. */
   function pointProxy(x: number): THREE.Mesh {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(0, 0, 0), new THREE.MeshBasicMaterial());
     mesh.visible = false;

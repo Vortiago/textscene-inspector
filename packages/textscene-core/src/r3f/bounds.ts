@@ -77,10 +77,34 @@ export function godotAabbUserData(aabb: Aabb): { godotAabb: Aabb } {
   return { [AABB_KEY]: aabb };
 }
 
+const FRAME_AABB_KEY = 'godotFrameAabb';
+
+/**
+ * The userData of an object that stands for the `get_aabb` of its node, in the node's space, for the
+ * camera to frame on. Unlike {@link godotAabbUserData}, an empty box still frames, as the point it
+ * is, and the selection and hover boxes leave it out.
+ */
+export function frameAabbUserData(aabb: Aabb): { godotFrameAabb: Aabb } {
+  return { [FRAME_AABB_KEY]: aabb };
+}
+
+/** Writes the world box an object frames its node on to `target`, or returns null for an object that has none. */
+export function frameBoxOf(object: THREE.Object3D, target: THREE.Box3): THREE.Box3 | null {
+  const aabb = object.userData[FRAME_AABB_KEY] as Aabb | undefined;
+  if (!aabb) return null;
+  object.updateWorldMatrix(true, false);
+  return worldBoxOf(object, aabb, target);
+}
+
+/** Writes `aabb`, in the space of `object`, to `target` as a world box. */
+function worldBoxOf(object: THREE.Object3D, aabb: Aabb, target: THREE.Box3): THREE.Box3 {
+  copyAabb(target, aabb);
+  return target.applyMatrix4(object.matrixWorld);
+}
+
 function unionExplicitBox(object: THREE.Object3D, aabb: Aabb, target: THREE.Box3): void {
   if (!hasSurface(aabb.size)) return;
-  copyAabb(_box, aabb);
-  target.union(_box.applyMatrix4(object.matrixWorld));
+  target.union(worldBoxOf(object, aabb, _box));
 }
 
 function unionOwnBox(object: THREE.Object3D, target: THREE.Box3): void {

@@ -1279,7 +1279,8 @@ ${
     ? `	var bounds := _scene_bounds(target)
 	var span: float = maxf(maxf(bounds.size.x, bounds.size.y), bounds.size.z)
 	# A point (an empty particle AABB, a Label3D before its text shapes) has no span to fit, and a
-	# distance of 0 puts the camera inside it. frameSceneBounds.ts keeps the editor distance instead.
+	# distance of 0 puts the camera inside it. frameSceneBounds.ts keeps the camera's own distance,
+	# which is the editor distance on open.
 	if span > 0.0:
 		distance = (span / 2.0 / tan(deg_to_rad(FOV) / 2.0)) * ${FRAME_MARGIN}
 	var focus := bounds.get_center()`
