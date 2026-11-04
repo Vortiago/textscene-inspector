@@ -30,10 +30,11 @@ export interface UploadPacer {
 export const UNPACED: UploadPacer = { allowance: () => Infinity, markIssued: () => {} };
 
 /**
- * 8 MiB of 2 MiB bands on their way to the GPU at once. Under SwiftShader a write
- * blocked for 60 ms once about 14 MiB were outstanding, so this is half of that.
+ * 6 MiB of 2 MiB bands on their way to the GPU at once. Under SwiftShader a write blocked
+ * the main thread for 190 to 280 ms in about one 3D scene load in three with 8 MiB
+ * outstanding, and in none of 20 with 6 MiB.
  */
-const IN_FLIGHT_BANDS = 4;
+const IN_FLIGHT_BANDS = 3;
 
 /**
  * A starved GPU process can leave a fence unsignalled while frames keep ticking, and

@@ -53,7 +53,7 @@ second behind the main thread, so any call that reads GPU state back blocks for 
 three's `copyTextureToTexture` reads the unpack state once, so each band is instead one
 `texSubImage2D` over its own rows, with the unpack state set through three's cache. The
 bands still occupy memory shared with the GPU process until the GPU consumes them, and a
-write blocked for 60 ms at about 14 MiB outstanding. So at most 8 MiB is on its way at
+write blocked for 190–280 ms at 8 MiB outstanding. So at most 6 MiB is on its way at
 once, measured with a fence per frame.
 
 **A material slot binds a stand-in while its map arrives.** three bakes each slot's
