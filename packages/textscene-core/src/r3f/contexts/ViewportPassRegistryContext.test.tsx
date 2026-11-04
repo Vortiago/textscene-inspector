@@ -32,10 +32,9 @@ import {
   ViewportPassOrchestrator,
   useRegisterViewportPass,
   useViewportPassCycle,
-  type PassGate,
   type ViewportPass,
 } from './ViewportPassRegistryContext';
-import { TargetRenderState } from '../../nodes/viewport/renderGate';
+import { passGate, TargetRenderState } from '../../nodes/viewport/renderGate';
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../godot/scene/viewport';
 import { HierarchyProvider } from './HierarchyContext';
 import type { SceneGraph } from '../../core/SceneGraph';
@@ -305,17 +304,12 @@ describe('<ViewportPassOrchestrator> and the update mode', () => {
     options: { enclosingPath?: string | null; isSampled?: () => boolean } = {}
   ) {
     const state = new TargetRenderState();
-    const log = { renders: 0, restarts: 0 };
-    const gate: PassGate = {
-      updateMode,
-      enclosingPath: options.enclosingPath ?? null,
+    const log = { renders: 0 };
+    const gate = passGate(
+      { updateMode, enclosingPath: options.enclosingPath ?? null },
       state,
-      isSampled: options.isSampled ?? (() => false),
-      restart: () => {
-        log.restarts++;
-        state.restart();
-      },
-    };
+      options.isSampled
+    );
     const pass: ViewportPass = {
       dependsOn: [],
       gate,
@@ -397,24 +391,25 @@ describe('<ViewportPassOrchestrator> and the update mode', () => {
     expect(calls).toBe(2);
   });
 
-  it('restarts the count and the passes when a new scene graph arrives', async () => {
+  it('starts the count over when a new scene graph arrives, its first frame unloaded', async () => {
     const first = {} as SceneGraph;
     const second = {} as SceneGraph;
-    const once = gatedPass(ONCE);
-    const tree = (sceneGraph: SceneGraph) => (
+    const tree = (sceneGraph: SceneGraph, pass: ViewportPass) => (
       <HierarchyProvider value={{ sceneGraph, panelId: 'test' }}>
         <ViewportPassProvider>
-          <Registrar path="a" pass={once.pass} />
+          <Registrar path="a" pass={pass} />
           <ViewportPassOrchestrator />
         </ViewportPassProvider>
       </HierarchyProvider>
     );
-    const renderer = await ReactThreeTestRenderer.create(tree(first));
+    const renderer = await ReactThreeTestRenderer.create(tree(first, gatedPass(ONCE).pass));
     await renderer.advanceFrames(2, 16);
-    expect(once.log.renders).toBe(1);
-    await renderer.update(tree(second));
-    await renderer.advanceFrames(2, 16);
-    expect(once.log.restarts).toBe(1);
-    expect(once.log.renders).toBe(2);
+    // A new parse makes a new viewport, and so a new pass with a new render state.
+    const next = gatedPass(ONCE);
+    await renderer.update(tree(second, next.pass));
+    await renderer.advanceFrames(1, 16);
+    expect(next.log.renders).toBe(0);
+    await renderer.advanceFrames(1, 16);
+    expect(next.log.renders).toBe(1);
   });
 });

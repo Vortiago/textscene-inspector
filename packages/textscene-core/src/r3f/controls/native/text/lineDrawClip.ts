@@ -1,13 +1,41 @@
 /**
- * The glyph clip of `TextParagraph::draw`: one shaped line cut to the paragraph box, as
- * `TextServer::shaped_text_draw` cuts it.
+ * How `TextParagraph::draw` places one shaped line in the paragraph box: the alignment shift, and
+ * the glyph clip `TextServer::shaped_text_draw` cuts it with.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import type { TextLineLayout } from './textLayout';
+
+/**
+ * One line's x shift inside its box, as `TextParagraph::draw` applies it while the box has a width
+ * (`text_paragraph.cpp:888-921`). CENTER moves a line that fits by half the slack, floored, and a
+ * wider one to the trailing edge under RTL. RIGHT, and FILL under RTL, go to the trailing edge,
+ * which is negative for a wider line. `lineWidthPx` is `shaped_text_get_width`.
+ */
+export function textParagraphLineShiftPx(
+  lineWidthPx: number,
+  boxWidthPx: number,
+  alignment: number,
+  rtl: boolean
+): number {
+  if (boxWidthPx <= 0) return 0;
+  const trailingPx = boxWidthPx - lineWidthPx;
+  switch (alignment) {
+    case HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER:
+      if (lineWidthPx <= boxWidthPx) return Math.floor(trailingPx / 2);
+      return rtl ? trailingPx : 0;
+    case HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT:
+      return trailingPx;
+    case HorizontalAlignment.HORIZONTAL_ALIGNMENT_FILL:
+      return rtl ? trailingPx : 0;
+    default:
+      return 0;
+  }
+}
 
 /**
  * `TextParagraph::draw` passes `clip_l = max(0, -shiftPx)` and `clip_r = clip_l + boxWidthPx`

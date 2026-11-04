@@ -8,25 +8,21 @@ import {
   useRegisterViewportPass,
   type ViewportPass,
 } from '../../../r3f/contexts/ViewportPassRegistryContext.js';
-import { BLACK } from '../renderGate.js';
-import { useViewportRenderState } from './usePublishViewportPass.js';
+import { BLACK, passGate } from '../renderGate.js';
 import type { SubViewportProperties } from './types.js';
-import { useViewportGate } from './useViewportGate.js';
+import { useGatedViewport } from './useGatedViewport.js';
 import type { TscnNode } from '../../../parser/types.js';
 
 export function GateOnlyPass({ path, node }: { path: string; node: TscnNode }): null {
-  const properties = node.properties as SubViewportProperties;
-  const gate = useViewportGate(path, properties.render_target_update_mode);
+  const { gate, clearMode, renderState } = useGatedViewport(path, node.properties as SubViewportProperties);
   const register = useRegisterViewportPass();
-  const state = useViewportRenderState(gate.updateMode);
-  const clearMode = properties.render_target_clear_mode;
   const pass = useMemo<ViewportPass>(
     () => ({
       dependsOn: [],
-      render: () => void state.takeRender(clearMode, BLACK),
-      gate: { ...gate, state, isSampled: () => false, restart: () => state.restart() },
+      render: () => void renderState.takeRender(clearMode, BLACK),
+      gate: passGate(gate, renderState),
     }),
-    [gate, state, clearMode]
+    [gate, renderState, clearMode]
   );
   useEffect(() => register(path, pass), [register, path, pass]);
   return null;

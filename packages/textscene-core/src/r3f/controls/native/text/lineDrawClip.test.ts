@@ -1,10 +1,11 @@
 /**
- * `TextParagraph::draw` clips each line to `[clip_l, clip_l + width]` (`text_paragraph.cpp:925-930`):
+ * `TextParagraph::draw` shifts each line by its alignment (`text_paragraph.cpp:888-921`) and clips each line to `[clip_l, clip_l + width]` (`text_paragraph.cpp:925-930`):
  * `shaped_text_draw` skips a glyph that starts left of `clip_l` and stops at the first glyph whose
  * advance ends past `clip_r` (`text_server.cpp:1783-1808`).
  */
 import { describe, expect, it } from 'vitest';
-import { clipLineToDrawBox } from './lineDrawClip';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
+import { clipLineToDrawBox, textParagraphLineShiftPx } from './lineDrawClip';
 import type { TextLineLayout } from './textLayout';
 
 /** Ten glyphs `a`..`j`, each a 10 px advance at pen x 0, 10, 20, and so on. */
@@ -39,5 +40,22 @@ describe('clipLineToDrawBox', () => {
 
   it('returns the line itself when every glyph fits', () => {
     expect(clipLineToDrawBox(LINE, 100, 0)).toBe(LINE);
+  });
+});
+
+describe('textParagraphLineShiftPx', () => {
+  const { HORIZONTAL_ALIGNMENT_RIGHT, HORIZONTAL_ALIGNMENT_FILL } = HorizontalAlignment;
+
+  it('moves a RIGHT line to the trailing edge under LTR', () => {
+    expect(textParagraphLineShiftPx(30, 100, HORIZONTAL_ALIGNMENT_RIGHT, false)).toBe(70);
+  });
+
+  it('moves a FILL line to the trailing edge only under RTL', () => {
+    expect(textParagraphLineShiftPx(30, 100, HORIZONTAL_ALIGNMENT_FILL, false)).toBe(0);
+    expect(textParagraphLineShiftPx(30, 100, HORIZONTAL_ALIGNMENT_FILL, true)).toBe(70);
+  });
+
+  it('shifts nothing in a box with no width', () => {
+    expect(textParagraphLineShiftPx(30, 0, HORIZONTAL_ALIGNMENT_RIGHT, false)).toBe(0);
   });
 });

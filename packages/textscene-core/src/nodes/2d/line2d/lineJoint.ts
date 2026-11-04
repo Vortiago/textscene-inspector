@@ -9,6 +9,7 @@ import { CMP_EPSILON, isEqualApprox } from '../../../godot/math/math';
 import { storedReal as f } from '../../../godot/math/real';
 import {
   vector2Add,
+  vector2Cross,
   vector2Dot,
   vector2LengthSquared,
   vector2Scaled,
@@ -60,8 +61,8 @@ export function resolveJoint(input: JointInput): Joint {
 
   const along0 = vector2Scaled(normal0, halfWidth);
   const along1 = vector2Scaled(normal1, halfWidth);
-  const inner0 = isUp ? along0 : negated(along0);
-  const inner1 = isUp ? along1 : negated(along1);
+  const inner0 = isUp ? along0 : vector2Scaled(along0, -1);
+  const inner1 = isUp ? along1 : vector2Scaled(along1, -1);
 
   const crossing = segmentIntersection(
     vector2Add(pos0, inner0),
@@ -122,8 +123,6 @@ function exceedsSharpLimit(input: JointInput, cornerOut: Vector2): boolean {
   return f(miterSq / f(input.baseHalfWidthSq * widthFactorSq)) > input.sharpLimitSq;
 }
 
-const negated = ({ x, y }: Vector2): Vector2 => ({ x: -x, y: -y });
-
 /**
  * `Geometry2D::segment_intersects_segment` (`core/math/geometry_2d.h:188-225`): where segment A
  * crosses segment B, or null for segments that miss, run parallel or have a zero-length A.
@@ -148,8 +147,5 @@ function segmentIntersection(fromA: Vector2, toA: Vector2, fromB: Vector2, toB: 
 
 /** `point` with A's direction as the X axis and A's length as the unit. */
 function inSegmentFrame(point: Vector2, unit: Vector2): Vector2 {
-  return {
-    x: f(f(point.x * unit.x) + f(point.y * unit.y)),
-    y: f(f(point.y * unit.x) - f(point.x * unit.y)),
-  };
+  return { x: vector2Dot(point, unit), y: vector2Cross(unit, point) };
 }
