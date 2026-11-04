@@ -11,13 +11,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { declaredExports } from '@textscene/dev-kit';
 import { findForbiddenHostInputs } from '../../../scripts/check-bundle-size/hostBundles.mjs';
-import { packTarball, run } from '../../../scripts/packTarball.mjs';
+import { packTarball, run, typeCheck } from '../../../scripts/packTarball.mjs';
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(packageDir, '../..');
 const bundlePath = join(packageDir, 'dist', 'index.js');
 const metafilePath = join(packageDir, 'dist', 'index.meta.json');
-const tscBin = join(repoRoot, 'node_modules', '@typescript', 'native', 'bin', 'tsc');
 
 /** What a parser user needs: the parser and the shapes of the scene it returns. Core's internals stay out. */
 const PUBLIC_VALUE_EXPORTS = ['TscnParser'];
@@ -120,6 +119,6 @@ describe('@textscene/tscn tarball in a plain Node project', () => {
   // The consumer's declaration type-check loads the whole parser tree, near 5 s cold, so it carries
   // its own budget.
   it('ships declarations that type-check without @textscene/core', () => {
-    expect(() => run('node', [tscBin, '-p', '.'], consumerDir)).not.toThrow();
+    expect(() => typeCheck(consumerDir)).not.toThrow();
   }, 30000);
 });

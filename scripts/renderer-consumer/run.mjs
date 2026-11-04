@@ -5,13 +5,12 @@
  * and renders a fixture scene in headless Chromium. The app sets no `@textscene/source`
  * condition and no CSS-module support, so a bundle that needs either fails here.
  */
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { findPackageJSON } from 'node:module';
 import { preview } from 'vite';
 import { launchSwiftShaderBrowser } from '../showcase/browser.mjs';
-import { packTarball, run } from '../packTarball.mjs';
+import { installedVersion, packTarball, run, typeCheck } from '../packTarball.mjs';
 import { REPO_ROOT, attachDiagnostics, loggedErrors, previewPort } from '../visual/previewServer.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
 import { consumerManifest } from './consumerManifest.mjs';
@@ -26,12 +25,6 @@ const INK_FLOOR = 2000;
 /** Software GL draws the first frame slowly. */
 const RENDER_TIMEOUT_MS = 90_000;
 const POLL_INTERVAL_MS = 500;
-
-/** The version of `name` that the workspace package at `base` tests against. */
-function installedVersion(name, base) {
-  const manifestPath = findPackageJSON(name, join(REPO_ROOT, base, 'package.json'));
-  return JSON.parse(readFileSync(manifestPath, 'utf8')).version;
-}
 
 const versionsOf = (names, base) =>
   Object.fromEntries(names.map((name) => [name, installedVersion(name, base)]));
@@ -66,7 +59,7 @@ function writeConsumer(directory, tarballs) {
 /** Installs, type-checks and builds the app as a user does. */
 function buildConsumer(directory) {
   run('npm', ['install', '--no-audit', '--no-fund'], directory);
-  run('node', ['node_modules/typescript/bin/tsc', '-p', '.'], directory);
+  typeCheck(directory);
   run('node', ['node_modules/vite/bin/vite.js', 'build'], directory);
 }
 

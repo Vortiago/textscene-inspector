@@ -25,6 +25,9 @@ dts-bundle-generator support TypeScript 7, `typescript` can name TypeScript 7 ag
 
 - Keep TypeScript 6 for everything: the type check stays on the compiler that consumers move away
   from.
+- Keep `typescript` for TypeScript 7, and import the TypeScript 6 API by its own name: the ESLint
+  parser takes `typescript` as a peer dependency, and a pnpm override does not steer which package
+  a peer dependency resolves to.
 - Port our syntax scripts to the `typescript/unstable/*` API of TypeScript 7: the ESLint parser
   still needs TypeScript 6, so the repo keeps both, and the scripts depend on an API that can
   change in any release.
