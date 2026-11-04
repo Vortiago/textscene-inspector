@@ -12,9 +12,15 @@
 import type { ScaledOutline } from '../glyphContours';
 import { ftDivFix, ftMulFix, pixRound } from '../fontMetrics';
 import { clustersOf, newScaler, shapeStyleCluster, type FaceGlobals, type Scaler } from './afFace';
-import { Dimension, divide, newWidth, sortPositions, type DimensionValue } from './afHints';
+import { Dimension, divide, newWidth, type DimensionValue } from './afHints';
 import type { BlueZone } from './afLatinFeatures';
-import { initStandardWidths, type StandardWidthAxis, type StandardWidthMetrics } from './afLatinMetrics';
+import {
+  initStandardWidths,
+  newScaledAxis,
+  scaleBlueZones,
+  type ScaledAxis,
+  type StandardWidthMetrics,
+} from './afLatinMetrics';
 import { AUTOFIT_STYLES, type BlueString } from './afStyles';
 
 export const CjkBlueFlag = { ACTIVE: 1 << 0, TOP: 1 << 1 } as const;
@@ -22,31 +28,11 @@ export const CjkBlueFlag = { ACTIVE: 1 << 0, TOP: 1 << 1 } as const;
 /** `AF_BLUE_PROPERTY_CJK_TOP`. */
 const TOP_PROPERTY = 1 << 0;
 
-/** `AF_CJKAxisRec`. FreeType never scales its widths, so their `cur` stays 0. */
-export interface CjkAxis extends StandardWidthAxis {
-  scale: number;
-  delta: number;
-  blues: BlueZone[];
-  /** The scale and delta the axis last scaled from, or null before the first load. */
-  orgScale: number | null;
-  orgDelta: number;
-}
+export type CjkAxis = ScaledAxis<BlueZone>;
 
 export interface CjkMetrics extends StandardWidthMetrics {
   readonly axis: readonly [CjkAxis, CjkAxis];
 }
-
-const newCjkAxis = (): CjkAxis => ({
-  scale: 0,
-  delta: 0,
-  widths: [],
-  edgeDistanceThreshold: 0,
-  standardWidth: 0,
-  isExtraLight: false,
-  blues: [],
-  orgScale: null,
-  orgDelta: 0,
-});
 
 /** `af_indic_metrics_init`: the standard widths only. */
 export function initIndicMetrics(globals: FaceGlobals, styleIndex: number): CjkMetrics {
@@ -56,7 +42,7 @@ export function initIndicMetrics(globals: FaceGlobals, styleIndex: number): CjkM
     globals,
     scaler: newScaler(),
     unitsPerEm: globals.face.unitsPerEm,
-    axis: [newCjkAxis(), newCjkAxis()],
+    axis: [newScaledAxis<BlueZone>(), newScaledAxis<BlueZone>()],
   };
   initStandardWidths(metrics);
   return metrics;
@@ -112,8 +98,8 @@ function blueZoneOf(metrics: CjkMetrics, { characters, properties }: BlueString)
     (isFill ? fills : flats).push(verticalExtremum(outline, isTop));
   }
   if (fills.length === 0 && flats.length === 0) return null;
-  sortPositions(fills, fills.length);
-  sortPositions(flats, flats.length);
+  fills.sort((a, b) => a - b);
+  flats.sort((a, b) => a - b);
   const fill = fills[fills.length >> 1];
   const flat = flats[flats.length >> 1];
   let ref = fill ?? flat!;
@@ -130,16 +116,7 @@ function scaleCjkAxis(axis: CjkAxis, scale: number, delta: number): void {
   if (axis.orgScale === scale && axis.orgDelta === delta) return;
   axis.orgScale = axis.scale = scale;
   axis.orgDelta = axis.delta = delta;
-  for (const blue of axis.blues) {
-    blue.ref.cur = blue.ref.fit = ftMulFix(blue.ref.org, scale) + delta;
-    blue.shoot.cur = blue.shoot.fit = ftMulFix(blue.shoot.org, scale) + delta;
-    blue.flags &= ~CjkBlueFlag.ACTIVE;
-    const dist = ftMulFix(blue.ref.org - blue.shoot.org, scale);
-    if (dist > 48 || dist < -48) continue;
-    blue.ref.fit = pixRound(blue.ref.cur);
-    blue.shoot.fit = blue.ref.fit - overshootOf(blue, scale);
-    blue.flags |= CjkBlueFlag.ACTIVE;
-  }
+  scaleBlueZones(axis.blues, scale, delta, (blue) => overshootOf(blue, scale));
 }
 
 /** The fitted step from the reference to the overshoot: under half a pixel is none. */

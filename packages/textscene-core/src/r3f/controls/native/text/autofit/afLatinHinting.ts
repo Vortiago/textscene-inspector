@@ -14,11 +14,15 @@ import { ftMulDiv, pixFloor, pixRound } from '../fontMetrics';
 import { GlyphStyle } from './afFace';
 import {
   alignEdgePoints,
+  alignSerifEdge,
   alignStrongPoints,
   alignWeakPoints,
   Dimension,
   divide,
+  doneNeighbours,
   EdgeFlag,
+  evenlySpacedStems,
+  keepStemSpacing,
   reloadHints,
   saveHints,
   ScalerFlag,
@@ -26,20 +30,16 @@ import {
   type Edge,
   type GlyphHints,
 } from './afHints';
-import { adjustDiacritics, applyVerticalSeparation, type DiacriticAdjustment } from './afDiacritics';
+import {
+  applyVerticalSeparation,
+  avoidBaseBlues,
+  diacriticFlagsOf,
+  fitTildes,
+  type DiacriticAdjustment,
+} from './afDiacritics';
 import { computeBlueEdges, computeEdges, computeSegments, linkSegments } from './afLatinFeatures';
 import type { LatinMetrics } from './afLatinMetrics';
 import { AUTOFIT_SCRIPTS } from './afScripts';
-
-/** `af_latin_hints_init`: the scales of the hints, with no horizontal hinting for an italic face. */
-export function initLatinHints(hints: GlyphHints, metrics: LatinMetrics): void {
-  const [horizontal, vertical] = metrics.axis;
-  hints.xScale = horizontal.scale;
-  hints.xDelta = horizontal.delta;
-  hints.yScale = vertical.scale;
-  hints.yDelta = vertical.delta;
-  hints.scalerFlags = metrics.globals.face.isItalic ? ScalerFlag.NO_HORIZONTAL : 0;
-}
 
 /** Stems narrower than this, in 1/64 px, keep their width; a round edge's stem of less grows to 1 px. */
 const ROUND_STEM_MIN = 80;
@@ -193,45 +193,20 @@ function keepOrderAfter(edges: readonly Edge[], edge: Edge, isTopToBottom: boole
   if (edge.link && Math.abs(edge.link.pos - before.pos) > 16) edge.pos = before.pos;
 }
 
-/**
- * Three stems equally spaced, as in "m", stay equally spaced: the third moves to match the first
- * two when they are 6 or 12 edges and the spacings differ by less than 8 units.
- */
-function keepStemSpacing(edges: readonly Edge[]): void {
-  const count = edges.length;
-  if (count !== 6 && count !== 12) return;
-  const [edge1, edge2, edge3] = (count === 6 ? [0, 2, 4] : [1, 5, 9]).map((index) => edges[index]!) as [
-    Edge,
-    Edge,
-    Edge,
-  ];
-  const span = Math.abs(edge2.opos - edge1.opos - (edge3.opos - edge2.opos));
-  if (span >= 8) return;
-  const delta = edge3.pos - (2 * edge2.pos - edge1.pos);
-  edge3.pos -= delta;
-  if (edge3.link) edge3.link.pos -= delta;
-  if (count === 12) {
-    edges[8]!.pos -= delta;
-    edges[11]!.pos -= delta;
-  }
-  edge3.flags |= EdgeFlag.DONE;
-  if (edge3.link) edge3.link.flags |= EdgeFlag.DONE;
-}
-
 /** The lowest and highest cross-axis coordinate of the end points of an edge's first and last segments. */
 function crossExtent(edge: Edge): [min: number, max: number] {
   const values = [edge.first.first.v, edge.first.last.v, edge.last.first.v, edge.last.last.v];
   return [Math.min(...values), Math.max(...values)];
 }
 
-/**
- * `af_latin_hint_edges`'s distance for no serif, or for a serif whose span another edge between
- * them crosses. FreeType then hints the edge as a lone edge.
- */
+/** `af_latin_hint_edges`'s distance for an edge with no serif, which takes it past every serif test. */
 const NO_SERIF_DISTANCE = 1000;
 
-/** The distance from an edge to its serif, or `NO_SERIF_DISTANCE`. */
-function serifDistance(edges: readonly Edge[], edge: Edge): number {
+/**
+ * The distance from an edge to its serif, or null for a serif whose span another edge between them
+ * crosses, which FreeType skips (aflatin.c:4714-4720).
+ */
+function serifDistance(edges: readonly Edge[], edge: Edge): number | null {
   if (!edge.serif) return NO_SERIF_DISTANCE;
   let delta = edge.serif.opos - edge.opos;
   const [top, bottom] = delta < 0 ? [edge, edge.serif] : [edge.serif, edge];
@@ -243,20 +218,9 @@ function serifDistance(edges: readonly Edge[], edge: Edge): number {
   const maxPos = Math.max(topMax, bottomMax);
   for (let index = bottom.index + 1; index < top.index; index++) {
     const [eMin, eMax] = crossExtent(edges[index]!);
-    if (!((eMin < minPos && eMax < minPos) || (eMin > maxPos && eMax > maxPos))) return NO_SERIF_DISTANCE;
+    if (!((eMin < minPos && eMax < minPos) || (eMin > maxPos && eMax > maxPos))) return null;
   }
   return delta;
-}
-
-/** The nearest done edges before and after `edge`, or null at either end. */
-function doneNeighbours(edges: readonly Edge[], edge: Edge): [Edge | null, Edge | null] {
-  let before: Edge | null = null;
-  for (let index = edge.index - 1; index >= 0 && !before; index--)
-    if (edges[index]!.flags & EdgeFlag.DONE) before = edges[index]!;
-  let after: Edge | null = null;
-  for (let index = edge.index + 1; index < edges.length && !after; index++)
-    if (edges[index]!.flags & EdgeFlag.DONE) after = edges[index]!;
-  return [before, after];
 }
 
 /**
@@ -267,8 +231,8 @@ function hintLoneEdges(edges: readonly Edge[], anchor: Edge | null, isTopToBotto
   for (const edge of edges) {
     if (edge.flags & EdgeFlag.DONE) continue;
     const delta = serifDistance(edges, edge);
-    if (edge.serif && delta === NO_SERIF_DISTANCE) continue;
-    if (delta < 64 + 16) edge.pos = edge.serif!.pos + (edge.opos - edge.serif!.opos);
+    if (delta === null) continue;
+    if (delta < 64 + 16) alignSerifEdge(edge.serif!, edge);
     else if (!anchor) {
       edge.pos = pixRound(edge.opos);
       anchor = edge;
@@ -302,7 +266,7 @@ function keepOrderBefore(edges: readonly Edge[], edge: Edge, isTopToBottom: bool
 /** `af_latin_hint_edges`: fits the edges of `dim` to the pixel grid. */
 function hintEdges(hints: GlyphHints, metrics: LatinMetrics, dim: DimensionValue): void {
   const { edges } = hints.axis[dim];
-  const isTopToBottom = dim === Dimension.VERT && AUTOFIT_SCRIPTS[metrics.style.script]!.isTopToBottom;
+  const isTopToBottom = isTopToBottomAxis(metrics, dim);
   let anchor = dim === Dimension.VERT ? hintBlueEdges(metrics, edges) : null;
   let hasLoneEdges = false;
   for (const edge of edges) {
@@ -325,7 +289,8 @@ function hintEdges(hints: GlyphHints, metrics: LatinMetrics, dim: DimensionValue
     hintStem(metrics, dim, anchor, edge, edge2);
     keepOrderAfter(edges, edge, isTopToBottom);
   }
-  if (dim === Dimension.HORZ) keepStemSpacing(edges);
+  const stems = dim === Dimension.HORZ ? evenlySpacedStems(edges) : null;
+  if (stems) keepStemSpacing(edges, stems);
   if (hasLoneEdges || !anchor) hintLoneEdges(edges, anchor, isTopToBottom);
 }
 
@@ -352,37 +317,27 @@ export function applyLatinHints(
 ): void {
   reloadHints(hints, outline);
   const doesHorizontal = !(hints.scalerFlags & ScalerFlag.NO_HORIZONTAL);
-  const doesVertical = !(hints.scalerFlags & ScalerFlag.NO_VERTICAL);
-  const [horizontal, vertical] = metrics.axis;
-  if (doesHorizontal)
-    detectFeatures(hints, metrics, Dimension.HORZ, horizontal.widths, horizontal.edgeDistanceThreshold);
-  let adjustment: DiacriticAdjustment = { codePointFlags: 0, accentHeightLimit: 0 };
-  if (doesVertical) {
-    adjustment = adjustDiacritics(hints, metrics, glyph, () =>
-      detectFeatures(hints, metrics, Dimension.VERT, vertical.widths, vertical.edgeDistanceThreshold)
-    );
-    if (!(metrics.globals.glyphStyles[glyph]! & GlyphStyle.NONBASE))
-      computeBlueEdges(hints, vertical.blues, vertical.scale);
-  }
+  const vertical = metrics.axis[Dimension.VERT];
+  if (doesHorizontal) detectFeatures(hints, metrics, Dimension.HORZ);
+  const diacriticFlags = diacriticFlagsOf(metrics, glyph);
+  fitTildes(hints, diacriticFlags);
+  detectFeatures(hints, metrics, Dimension.VERT);
+  const adjustment = avoidBaseBlues(hints, metrics, diacriticFlags);
+  if (!(metrics.globals.glyphStyles[glyph]! & GlyphStyle.NONBASE))
+    computeBlueEdges(hints, vertical.blues, vertical.scale);
   if (doesHorizontal) hintAxis(hints, metrics, Dimension.HORZ, adjustment);
-  if (doesVertical) hintAxis(hints, metrics, Dimension.VERT, adjustment);
+  hintAxis(hints, metrics, Dimension.VERT, adjustment);
   saveHints(hints, outline);
 }
 
 /** `af_latin_hints_detect_features`: the segments, links and edges of `dim`. */
-function detectFeatures(
-  hints: GlyphHints,
-  metrics: LatinMetrics,
-  dim: DimensionValue,
-  widths: LatinMetrics['axis'][0]['widths'],
-  edgeDistanceThreshold: number
-): void {
+function detectFeatures(hints: GlyphHints, metrics: LatinMetrics, dim: DimensionValue): void {
+  const { widths, edgeDistanceThreshold } = metrics.axis[dim];
   computeSegments(hints, dim);
   linkSegments(hints, dim, widths);
-  computeEdges(
-    hints,
-    dim,
-    edgeDistanceThreshold,
-    dim === Dimension.VERT && AUTOFIT_SCRIPTS[metrics.style.script]!.isTopToBottom
-  );
+  computeEdges(hints, dim, edgeDistanceThreshold, isTopToBottomAxis(metrics, dim));
 }
+
+/** Whether `dim` is the vertical axis of a script written top to bottom. */
+const isTopToBottomAxis = (metrics: LatinMetrics, dim: DimensionValue): boolean =>
+  dim === Dimension.VERT && AUTOFIT_SCRIPTS[metrics.style.script]!.isTopToBottom;

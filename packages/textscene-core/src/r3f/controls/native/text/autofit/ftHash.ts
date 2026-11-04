@@ -10,7 +10,7 @@
 
 const INITIAL_SIZE = 241;
 
-export interface HashNode {
+interface HashNode {
   readonly key: number;
   data: number;
 }

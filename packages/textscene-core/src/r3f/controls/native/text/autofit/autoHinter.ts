@@ -14,7 +14,7 @@ import { unscaledCffOutlines } from '../sfntCff';
 import { unscaledGlyfOutlines } from '../sfntGlyf';
 import type { SfntFile } from '../sfntTables';
 import type { AutofitFace } from './afFace';
-import { AutofitGlobals } from './afGlobals';
+import { AutofitGlobals, initStyleHints } from './afGlobals';
 import { Dimension, ScalerFlag, type GlyphHints } from './afHints';
 import { sfntAutofitFace } from './sfntAutofitFace';
 
@@ -32,20 +32,19 @@ function hintedLeftBearingShift(hints: GlyphHints): number {
   return shift >= newLsb && oldLsb > 0 ? shift - 64 : shift;
 }
 
-/** The auto-hinted outline reader of `face`, whose sizes round their ppem as `isPpemRounded` says. */
-function autoHintedOutlineReader(face: AutofitFace, isPpemRounded: boolean): GlyphOutlineReader {
+function autoHintedOutlineReader(face: AutofitFace): GlyphOutlineReader {
   const globals = new AutofitGlobals(face);
   return (glyphIndex, fontSizePx) => {
     if (glyphIndex >= face.glyphCount) return null;
-    const { scale, ppem } = freeTypeTrueTypeSize(face.unitsPerEm, fontSizePx, isPpemRounded);
+    const { scale, ppem } = freeTypeTrueTypeSize(face.unitsPerEm, fontSizePx, face.isPpemRounded);
     const hinter = globals.hinterOf(glyphIndex);
     hinter.scale({ xScale: scale, yScale: scale, xDelta: 0, yDelta: 0, ppem });
-    hinter.initHints(globals.hints);
+    initStyleHints(globals.hints, hinter);
     const outline = face.unscaledGlyph(glyphIndex);
     if (!outline || outline.x.length === 0) return null;
     hinter.apply(glyphIndex, globals.hints, outline);
     const shift = hintedLeftBearingShift(globals.hints);
-    if (shift) outline.x = outline.x.map((x) => x - shift);
+    if (shift) for (let i = 0; i < outline.x.length; i++) outline.x[i] = outline.x[i]! - shift;
     return outline;
   };
 }
@@ -57,5 +56,5 @@ function autoHintedOutlineReader(face: AutofitFace, isPpemRounded: boolean): Gly
 export function autoHintedReader(sfnt: SfntFile): GlyphOutlineReader | null {
   const outlines = unscaledGlyfOutlines(sfnt) ?? unscaledCffOutlines(sfnt);
   const face = outlines && sfntAutofitFace(sfnt, outlines);
-  return face && autoHintedOutlineReader(face, outlines.isPpemRounded);
+  return face && autoHintedOutlineReader(face);
 }

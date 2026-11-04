@@ -26,10 +26,17 @@ import {
   reloadHints,
   sortAndQuantizeWidths,
   type DimensionValue,
+  type GlyphHints,
   type Width,
 } from './afHints';
 import { initLatinBlues, type LatinBlue } from './afLatinBlues';
-import { computeSegments, LatinBlueFlag, latinConstant, linkSegments } from './afLatinFeatures';
+import {
+  computeSegments,
+  LatinBlueFlag,
+  latinConstant,
+  linkSegments,
+  type BlueZone,
+} from './afLatinFeatures';
 import { reverseCharmapOf, type ReverseCharmap } from './afReverseCharmap';
 import { AUTOFIT_SCRIPTS } from './afScripts';
 import { AUTOFIT_STYLES } from './afStyles';
@@ -51,23 +58,17 @@ export interface StandardWidthMetrics extends StyleMetrics {
   readonly axis: readonly [StandardWidthAxis, StandardWidthAxis];
 }
 
-/** `AF_LatinAxisRec`. Only the vertical axis has blue zones. */
-export interface LatinAxis extends StandardWidthAxis {
+/** `AF_LatinAxisRec` and `AF_CJKAxisRec`: an axis that scales to each load. Only the vertical axis has blue zones. */
+export interface ScaledAxis<Blue extends BlueZone> extends StandardWidthAxis {
   scale: number;
   delta: number;
-  blues: LatinBlue[];
+  blues: Blue[];
   /** The scale and delta the axis last scaled from, or null before the first load. */
   orgScale: number | null;
   orgDelta: number;
 }
 
-export interface LatinMetrics extends StandardWidthMetrics {
-  readonly axis: readonly [LatinAxis, LatinAxis];
-  /** Set once the blue zones are found. */
-  reverseCharmap: ReverseCharmap;
-}
-
-const newLatinAxis = (): LatinAxis => ({
+export const newScaledAxis = <Blue extends BlueZone>(): ScaledAxis<Blue> => ({
   scale: 0,
   delta: 0,
   widths: [],
@@ -78,6 +79,37 @@ const newLatinAxis = (): LatinAxis => ({
   orgScale: null,
   orgDelta: 0,
 });
+
+/**
+ * Scales each blue zone. One of at most 3/4 px is active: its reference goes on the pixel grid and
+ * its overshoot `overshootOf` the reference away from it.
+ */
+export function scaleBlueZones<Blue extends BlueZone>(
+  blues: readonly Blue[],
+  scale: number,
+  delta: number,
+  overshootOf: (blue: Blue, dist: number) => number
+): void {
+  for (const blue of blues) {
+    blue.ref.cur = blue.ref.fit = ftMulFix(blue.ref.org, scale) + delta;
+    blue.shoot.cur = blue.shoot.fit = ftMulFix(blue.shoot.org, scale) + delta;
+    blue.flags &= ~BLUE_ACTIVE;
+    const dist = ftMulFix(blue.ref.org - blue.shoot.org, scale);
+    if (dist > 48 || dist < -48) continue;
+    blue.ref.fit = pixRound(blue.ref.cur);
+    blue.shoot.fit = blue.ref.fit - overshootOf(blue, dist);
+    blue.flags |= BLUE_ACTIVE;
+  }
+}
+
+/** `AF_LATIN_BLUE_ACTIVE` and `AF_CJK_BLUE_ACTIVE`, one bit. */
+const BLUE_ACTIVE = LatinBlueFlag.ACTIVE;
+
+export interface LatinMetrics extends StandardWidthMetrics {
+  readonly axis: readonly [ScaledAxis<LatinBlue>, ScaledAxis<LatinBlue>];
+  /** Set once the blue zones are found. */
+  reverseCharmap: ReverseCharmap;
+}
 
 /** The first glyph of the script's standard characters that shapes to one glyph, or 0 for none. */
 function standardGlyph(metrics: StyleMetrics): number {
@@ -110,15 +142,10 @@ export function initStandardWidths(metrics: StandardWidthMetrics): void {
       axis.widths.length > 0 ? axis.widths[0]!.org : latinConstant(metrics.unitsPerEm, 50);
     axis.edgeDistanceThreshold = divide(standardWidth, 5);
     axis.standardWidth = standardWidth;
-    axis.isExtraLight = false;
   }
 }
 
-function linkedWidths(
-  hints: ReturnType<typeof newGlyphHints>,
-  dim: DimensionValue,
-  unitsPerEm: number
-): Width[] {
+function linkedWidths(hints: GlyphHints, dim: DimensionValue, unitsPerEm: number): Width[] {
   computeSegments(hints, dim);
   linkSegments(hints, dim, []);
   const widths: Width[] = [];
@@ -141,7 +168,7 @@ export function initLatinMetrics(globals: FaceGlobals, styleIndex: number): Lati
     globals,
     scaler: newScaler(),
     unitsPerEm: globals.face.unitsPerEm,
-    axis: [newLatinAxis(), newLatinAxis()],
+    axis: [newScaledAxis<LatinBlue>(), newScaledAxis<LatinBlue>()],
     reverseCharmap: new Map(),
   };
   initStandardWidths(metrics);
@@ -159,13 +186,13 @@ const MAX_X_HEIGHT_FIT_MOVE = 128;
  * The vertical scale that puts the x-height blue on the pixel grid, as `af_latin_metrics_scale_dim`
  * fits it, or `scale` when the fit would move the font's tallest extent 2 px or more.
  */
-function xHeightFittedScale(metrics: LatinMetrics, scale: number, dim: DimensionValue): number {
+function xHeightFittedScale(metrics: LatinMetrics, scale: number): number {
   const { blues } = metrics.axis[Dimension.VERT];
   const blue = blues.find((candidate) => candidate.flags & LatinBlueFlag.ADJUSTMENT);
   if (!blue) return scale;
   const scaled = ftMulFix(blue.shoot.org, scale);
   const fitted = pixFloor(scaled + X_HEIGHT_ROUNDING_THRESHOLD);
-  if (scaled === fitted || dim !== Dimension.VERT) return scale;
+  if (scaled === fitted) return scale;
   const newScale = ftMulDiv(scale, fitted, scaled);
   let maxHeight = metrics.unitsPerEm;
   for (const { ascender, descender } of blues) maxHeight = Math.max(maxHeight, ascender, -descender);
@@ -181,7 +208,7 @@ function scaleLatinAxis(metrics: LatinMetrics, scaler: Scaler, dim: DimensionVal
   if (axis.orgScale === orgScale && axis.orgDelta === delta) return;
   axis.orgScale = orgScale;
   axis.orgDelta = delta;
-  const scale = xHeightFittedScale(metrics, orgScale, dim);
+  const scale = dim === Dimension.VERT ? xHeightFittedScale(metrics, orgScale) : orgScale;
   axis.scale = scale;
   axis.delta = delta;
   if (dim === Dimension.HORZ) [metrics.scaler.xScale, metrics.scaler.xDelta] = [scale, delta];
@@ -198,21 +225,9 @@ function snappedOvershoot(dist: number): number {
   return dist < 0 ? -snapped : snapped;
 }
 
-/**
- * Scales each blue zone; one of at most 3/4 px is active, its reference on the pixel grid. A
- * subscript zone that overlaps another active zone turns off.
- */
+/** Scales each blue zone. A subscript zone that overlaps another active zone turns off. */
 function scaleBlues(blues: readonly LatinBlue[], scale: number, delta: number): void {
-  for (const blue of blues) {
-    blue.ref.cur = blue.ref.fit = ftMulFix(blue.ref.org, scale) + delta;
-    blue.shoot.cur = blue.shoot.fit = ftMulFix(blue.shoot.org, scale) + delta;
-    blue.flags &= ~LatinBlueFlag.ACTIVE;
-    const dist = ftMulFix(blue.ref.org - blue.shoot.org, scale);
-    if (dist > 48 || dist < -48) continue;
-    blue.ref.fit = pixRound(blue.ref.cur);
-    blue.shoot.fit = blue.ref.fit - snappedOvershoot(dist);
-    blue.flags |= LatinBlueFlag.ACTIVE;
-  }
+  scaleBlueZones(blues, scale, delta, (_, dist) => snappedOvershoot(dist));
   const isActive = (blue: LatinBlue): boolean => (blue.flags & LatinBlueFlag.ACTIVE) !== 0;
   const isSubTop = (blue: LatinBlue): boolean => (blue.flags & LatinBlueFlag.SUB_TOP) !== 0;
   for (const blue of blues) {

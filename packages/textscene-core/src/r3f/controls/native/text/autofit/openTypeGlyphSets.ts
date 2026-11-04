@@ -12,12 +12,22 @@
 import { perObject } from '../../../../../utils/perObject';
 import {
   classCoverage,
-  classGlyphs,
+  type ContextRule,
+  countedU16Values,
+  type CoverageContextRule,
   coverageGlyphs,
   coverageIndex,
   glyphClass,
+  glyphsByClass,
   type LayoutTable,
+  readChainedSequenceContextFormat3,
+  readChainedSequenceRule,
+  readSequenceContextFormat3,
+  readSequenceRule,
+  singleSubstitute,
   type Subtable,
+  u16,
+  valueRecordSize,
 } from './openTypeLayout';
 
 const GsubType = {
@@ -40,65 +50,16 @@ const GposType = {
   CHAIN_CONTEXT: 8,
 } as const;
 
-const u16 = (dv: DataView, at: number): number => dv.getUint16(at, false);
-const u16Array = (dv: DataView, at: number, count: number): number[] =>
-  Array.from({ length: count }, (_, i) => u16(dv, at + 2 * i));
-
 /** The subtables at the offsets after the count at `at`, relative to `base`; a zero offset is none. */
 function offsetsAfterCount(dv: DataView, at: number, base: number): (number | null)[] {
-  return u16Array(dv, at + 2, u16(dv, at)).map((offset) => (offset === 0 ? null : base + offset));
+  return countedU16Values(dv, at).map((offset) => (offset === 0 ? null : base + offset));
 }
-
-/** A rule of a context or chained context subtable: the values after its first input, and its lookups. */
-interface ContextRule {
-  readonly inputCount: number;
-  readonly backtrackCount: number;
-  readonly lookaheadCount: number;
-  /** Glyphs, classes or coverage offsets, by the subtable's format. */
-  readonly input: readonly number[];
-  readonly lookups: readonly number[];
-}
-
-function readContextRule(dv: DataView, at: number): ContextRule {
-  const inputCount = u16(dv, at);
-  const lookupCount = u16(dv, at + 2);
-  const input = u16Array(dv, at + 4, Math.max(inputCount - 1, 0));
-  const records = at + 4 + 2 * input.length;
-  return {
-    inputCount,
-    backtrackCount: 0,
-    lookaheadCount: 0,
-    input,
-    lookups: lookupIndices(dv, records, lookupCount),
-  };
-}
-
-function readChainRule(dv: DataView, at: number): ContextRule {
-  const backtrackCount = u16(dv, at);
-  const inputAt = at + 2 + 2 * backtrackCount;
-  const inputCount = u16(dv, inputAt);
-  const input = u16Array(dv, inputAt + 2, Math.max(inputCount - 1, 0));
-  const lookaheadAt = inputAt + 2 + 2 * input.length;
-  const lookaheadCount = u16(dv, lookaheadAt);
-  const lookupAt = lookaheadAt + 2 + 2 * lookaheadCount;
-  return {
-    inputCount,
-    backtrackCount,
-    lookaheadCount,
-    input,
-    lookups: lookupIndices(dv, lookupAt + 2, u16(dv, lookupAt)),
-  };
-}
-
-/** The lookup index of each `SequenceLookupRecord` (sequence index, lookup index) at `at`. */
-const lookupIndices = (dv: DataView, at: number, count: number): number[] =>
-  Array.from({ length: count }, (_, i) => u16(dv, at + 4 * i + 2));
 
 /** The rule sets of a context or chained context subtable of format 1 or 2, by coverage index or class. */
 function ruleSets(dv: DataView, subtable: number, isChain: boolean): (ContextRule[] | null)[] {
   const format = u16(dv, subtable);
   const countAt = subtable + (format === 1 ? 4 : isChain ? 10 : 6);
-  const readRule = isChain ? readChainRule : readContextRule;
+  const readRule = isChain ? readChainedSequenceRule : readSequenceRule;
   return offsetsAfterCount(dv, countAt, subtable).map((set) =>
     set === null
       ? null
@@ -107,39 +68,15 @@ function ruleSets(dv: DataView, subtable: number, isChain: boolean): (ContextRul
 }
 
 /** The single rule of a context or chained context subtable of format 3, its values coverage offsets. */
-function coverageRule(
-  dv: DataView,
-  subtable: number,
-  isChain: boolean
-): { first: number; rule: ContextRule } {
-  if (!isChain) {
-    const inputCount = u16(dv, subtable + 2);
-    const coverages = u16Array(dv, subtable + 6, inputCount).map((offset) => subtable + offset);
-    const lookups = lookupIndices(dv, subtable + 6 + 2 * inputCount, u16(dv, subtable + 4));
-    return {
-      first: coverages[0]!,
-      rule: { inputCount, backtrackCount: 0, lookaheadCount: 0, input: coverages.slice(1), lookups },
-    };
-  }
-  const backtrackCount = u16(dv, subtable + 2);
-  const inputAt = subtable + 4 + 2 * backtrackCount;
-  const inputCount = u16(dv, inputAt);
-  const coverages = u16Array(dv, inputAt + 2, inputCount).map((offset) => subtable + offset);
-  const lookaheadAt = inputAt + 2 + 2 * inputCount;
-  const lookaheadCount = u16(dv, lookaheadAt);
-  const lookupAt = lookaheadAt + 2 + 2 * lookaheadCount;
-  const lookups = lookupIndices(dv, lookupAt + 2, u16(dv, lookupAt));
-  return {
-    first: coverages[0]!,
-    rule: { inputCount, backtrackCount, lookaheadCount, input: coverages.slice(1), lookups },
-  };
+function coverageRule(dv: DataView, subtable: number, isChain: boolean): CoverageContextRule {
+  return isChain ? readChainedSequenceContextFormat3(dv, subtable) : readSequenceContextFormat3(dv, subtable);
 }
 
 /** The coverage table that gates a `GSUB` subtable (`get_coverage`). */
 function gsubCoverage(dv: DataView, { type, offset }: Subtable): number {
   const isContext = type === GsubType.CONTEXT || type === GsubType.CHAIN_CONTEXT;
   if (isContext && u16(dv, offset) === 3)
-    return coverageRule(dv, offset, type === GsubType.CHAIN_CONTEXT).first;
+    return offset + coverageRule(dv, offset, type === GsubType.CHAIN_CONTEXT).first;
   return offset + u16(dv, offset + 2);
 }
 
@@ -147,15 +84,15 @@ function gsubCoverage(dv: DataView, { type, offset }: Subtable): number {
 function gsubOutput(dv: DataView, { type, offset }: Subtable): { glyphs: number[]; lookups: number[] } {
   const coverage = (): number[] => coverageGlyphs(dv, offset + u16(dv, offset + 2));
   const listsAfterCount = (at: number): number[] =>
-    offsetsAfterCount(dv, at, offset).flatMap((list) =>
-      list === null ? [] : u16Array(dv, list + 2, u16(dv, list))
-    );
+    offsetsAfterCount(dv, at, offset).flatMap((list) => (list === null ? [] : countedU16Values(dv, list)));
   switch (type) {
     case GsubType.SINGLE: {
-      if (u16(dv, offset) === 2)
-        return { glyphs: u16Array(dv, offset + 6, u16(dv, offset + 4)), lookups: [] };
-      const delta = u16(dv, offset + 4);
-      return { glyphs: coverage().map((glyph) => (glyph + delta) & 0xffff), lookups: [] };
+      // Format 2 puts out every substitute it lists, however many glyphs its coverage holds.
+      if (u16(dv, offset) === 2) return { glyphs: countedU16Values(dv, offset + 4), lookups: [] };
+      return {
+        glyphs: coverage().map((glyph, index) => singleSubstitute(dv, offset, glyph, index)),
+        lookups: [],
+      };
     }
     case GsubType.MULTIPLE:
     case GsubType.ALTERNATE:
@@ -174,13 +111,15 @@ function gsubOutput(dv: DataView, { type, offset }: Subtable): { glyphs: number[
     case GsubType.CHAIN_CONTEXT:
       return {
         glyphs: [],
-        lookups: contextRules(dv, offset, type === GsubType.CHAIN_CONTEXT).flatMap((rule) => rule.lookups),
+        lookups: contextRules(dv, offset, type === GsubType.CHAIN_CONTEXT).flatMap((rule) =>
+          rule.records.map((record) => record.lookupIndex)
+        ),
       };
     case GsubType.REVERSE_CHAIN: {
       const backtrackCount = u16(dv, offset + 4);
       const lookaheadAt = offset + 6 + 2 * backtrackCount;
       const substituteAt = lookaheadAt + 2 + 2 * u16(dv, lookaheadAt);
-      return { glyphs: u16Array(dv, substituteAt + 2, u16(dv, substituteAt)), lookups: [] };
+      return { glyphs: countedU16Values(dv, substituteAt), lookups: [] };
     }
     default:
       return { glyphs: [], lookups: [] };
@@ -188,7 +127,7 @@ function gsubOutput(dv: DataView, { type, offset }: Subtable): { glyphs: number[
 }
 
 function contextRules(dv: DataView, subtable: number, isChain: boolean): ContextRule[] {
-  if (u16(dv, subtable) === 3) return [coverageRule(dv, subtable, isChain).rule];
+  if (u16(dv, subtable) === 3) return [coverageRule(dv, subtable, isChain)];
   return ruleSets(dv, subtable, isChain).flatMap((set) => set ?? []);
 }
 
@@ -217,22 +156,17 @@ export function collectGsubOutput(table: LayoutTable, lookupIndex: number, outpu
 function contextInput(dv: DataView, subtable: number, isChain: boolean): number[] {
   const format = u16(dv, subtable);
   if (format === 3) {
-    const { first, rule } = coverageRule(dv, subtable, isChain);
-    return [first, ...rule.input].flatMap((coverage) => coverageGlyphs(dv, coverage));
+    const { first, input } = coverageRule(dv, subtable, isChain);
+    return [first, ...input].flatMap((coverage) => coverageGlyphs(dv, subtable + coverage));
   }
   const glyphs = coverageGlyphs(dv, subtable + u16(dv, subtable + 2));
   const sets = ruleSets(dv, subtable, isChain);
-  const inputClasses = format === 2 ? subtable + u16(dv, subtable + (isChain ? 6 : 4)) : null;
+  const classes = format === 2 ? glyphsByClass(dv, subtable + u16(dv, subtable + (isChain ? 6 : 4))) : null;
   const coveredSets = format === 1 ? sets.slice(0, glyphs.length) : sets;
   for (const rule of coveredSets.flatMap((set) => set ?? []))
-    for (const value of rule.input)
-      glyphs.push(...(inputClasses === null ? [value] : classGlyphs(dv, inputClasses, value)));
+    for (const value of rule.input) glyphs.push(...(classes ? (classes.get(value) ?? []) : [value]));
   return glyphs;
 }
-
-/** The size in bytes of a `GPOS` value record of `valueFormat`: two bytes for each bit set. */
-const valueRecordSize = (valueFormat: number): number =>
-  2 * [...valueFormat.toString(2)].filter((bit) => bit === '1').length;
 
 function gposInput(dv: DataView, { type, offset }: Subtable): number[] {
   const coverageAt = (field: number): number[] => coverageGlyphs(dv, offset + u16(dv, offset + field));
@@ -272,22 +206,30 @@ export function collectGposInput(table: LayoutTable, lookupIndex: number, input:
  * `hb_set_digest_t`: three 64-bit masks of the glyph bits at shifts 4, 0 and 6. A lookup answers
  * only for a glyph its digest may have, so a glyph the masks share passes too.
  */
-const DIGEST_SHIFTS = [4n, 0n, 6n] as const;
-const DIGEST_ALL = (1n << 64n) - 1n;
+const DIGEST_SHIFTS = [4, 0, 6] as const;
 
-function digestOf(glyphs: readonly number[]): bigint[] {
-  const masks = DIGEST_SHIFTS.map(() => 0n);
+/** The word of a digest's masks, two 32-bit words to a mask, that holds the bit of `glyph` at `shift`. */
+const digestWord = (glyph: number, shift: number, mask: number): number =>
+  2 * mask + (((glyph >>> shift) & 63) >>> 5);
+const digestBit = (glyph: number, shift: number): number => 1 << ((glyph >>> shift) & 31);
+
+function digestOf(glyphs: readonly number[]): Uint32Array {
+  const words = new Uint32Array(2 * DIGEST_SHIFTS.length);
   for (const glyph of glyphs)
-    DIGEST_SHIFTS.forEach((shift, i) => (masks[i]! |= 1n << ((BigInt(glyph) >> shift) & 63n)));
-  return masks.map((mask) => mask & DIGEST_ALL);
+    DIGEST_SHIFTS.forEach(
+      (shift, mask) => (words[digestWord(glyph, shift, mask)]! |= digestBit(glyph, shift))
+    );
+  return words;
 }
 
-const digestMayHave = (masks: readonly bigint[], glyph: number): boolean =>
-  DIGEST_SHIFTS.every((shift, i) => (masks[i]! & (1n << ((BigInt(glyph) >> shift) & 63n))) !== 0n);
+const digestMayHave = (words: Uint32Array, glyph: number): boolean =>
+  DIGEST_SHIFTS.every(
+    (shift, mask) => (words[digestWord(glyph, shift, mask)]! & digestBit(glyph, shift)) !== 0
+  );
 
 /** Whether a context rule of one input and, with zero context, no backtrack or lookahead, applies alone. */
 const isLoneRule = (rule: ContextRule): boolean =>
-  rule.inputCount === 1 && rule.backtrackCount === 0 && rule.lookaheadCount === 0;
+  rule.inputCount === 1 && rule.backtrack.length === 0 && rule.lookahead.length === 0;
 
 function subtableWouldSubstitute(dv: DataView, subtable: Subtable, glyph: number): boolean {
   const { type, offset } = subtable;
@@ -309,7 +251,7 @@ function subtableWouldSubstitute(dv: DataView, subtable: Subtable, glyph: number
     case GsubType.CHAIN_CONTEXT: {
       const isChain = type === GsubType.CHAIN_CONTEXT;
       const format = u16(dv, offset);
-      if (format === 3) return isLoneRule(coverageRule(dv, offset, isChain).rule);
+      if (format === 3) return isLoneRule(coverageRule(dv, offset, isChain));
       const index =
         format === 1
           ? coverageIndex(dv, coverage, glyph)

@@ -10,7 +10,7 @@
 
 import type { ScaledOutline } from '../glyphContours';
 import { clustersOf, GlyphStyle, NONE_STYLE, shapeStyleCluster } from './afFace';
-import { divide, newWidth, sortPositions } from './afHints';
+import { divide, newWidth } from './afHints';
 import { flatThresholdOf, LatinBlueFlag, type BlueZone } from './afLatinFeatures';
 import type { LatinMetrics } from './afLatinMetrics';
 import type { BlueString } from './afStyles';
@@ -40,7 +40,7 @@ const SEGMENT_HEIGHT_TOLERANCE = 5;
 /** A step less steep than 1 in 20 continues the extremum's segment. */
 const SEGMENT_SLOPE_LIMIT = 20;
 
-/** Whether the step from `from` to `to` leaves the flat run of points around height `y`. */
+/** Whether point `to` leaves the flat run of points around `(x, y)`. */
 function leavesRun(outline: ScaledOutline, to: number, y: number, x: number): boolean {
   const dist = Math.abs(outline.y[to]! - y);
   return dist > SEGMENT_HEIGHT_TOLERANCE && Math.abs(outline.x[to]! - x) <= SEGMENT_SLOPE_LIMIT * dist;
@@ -269,8 +269,8 @@ function blueZoneOf(metrics: LatinMetrics, blue: BlueString): LatinBlue | null {
     if (height) (height.isRound ? rounds : flats).push(height.y);
   }
   if (flats.length === 0 && rounds.length === 0) return null;
-  sortPositions(rounds, rounds.length);
-  sortPositions(flats, flats.length);
+  rounds.sort((a, b) => a - b);
+  flats.sort((a, b) => a - b);
   const roundMedian = rounds[rounds.length >> 1];
   const flatMedian = flats[flats.length >> 1];
   let ref = flatMedian ?? roundMedian!;
@@ -284,15 +284,10 @@ function blueZoneOf(metrics: LatinMetrics, blue: BlueString): LatinBlue | null {
 const isTopZone = (blue: LatinBlue): boolean =>
   (blue.flags & (LatinBlueFlag.TOP | LatinBlueFlag.SUB_TOP)) !== 0;
 
-/** `af_latin_sort_blue`: an insertion sort by each zone's reference, for a top zone, or overshoot. */
+/** `af_latin_sort_blue`: a stable sort by each zone's reference, for a top zone, or overshoot. */
 function sortedZones(blues: readonly LatinBlue[]): LatinBlue[] {
-  const sorted = [...blues];
   const key = (blue: LatinBlue): number => (isTopZone(blue) ? blue.ref.org : blue.shoot.org);
-  for (let i = 1; i < sorted.length; i++) {
-    for (let j = i; j > 0 && key(sorted[j]!) < key(sorted[j - 1]!); j--)
-      [sorted[j], sorted[j - 1]] = [sorted[j - 1]!, sorted[j]!];
-  }
-  return sorted;
+  return [...blues].sort((a, b) => key(a) - key(b));
 }
 
 /** Each zone's outer edge, the overshoot of a top zone or the reference of a bottom one, stops at the next zone's. */

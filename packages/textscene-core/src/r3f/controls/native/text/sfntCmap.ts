@@ -88,8 +88,8 @@ export function cmapLookup(dv: DataView, cmapOffset: number): ((codePoint: numbe
   return (codePoint) => read(dv, subtable, codePoint);
 }
 
-/** The code points of a format 4 subtable with a glyph, ascending. */
-function segmentedCodePoints(dv: DataView, subtable: number): number[] {
+/** The code points of a format 4 subtable with a glyph below `glyphCount`, ascending. */
+function segmentedCodePoints(dv: DataView, subtable: number, glyphCount: number): number[] {
   const segmentCount = dv.getUint16(subtable + 6, false) / 2;
   const endCodes = subtable + 14;
   const startCodes = endCodes + segmentCount * 2 + 2;
@@ -97,8 +97,10 @@ function segmentedCodePoints(dv: DataView, subtable: number): number[] {
   for (let segment = 0; segment < segmentCount; segment++) {
     const start = dv.getUint16(startCodes + segment * 2, false);
     const end = dv.getUint16(endCodes + segment * 2, false);
-    for (let codePoint = start; codePoint <= end && codePoint < 0xffff; codePoint++)
-      if (segmentedGlyphIndex(dv, subtable, codePoint) !== 0) codePoints.push(codePoint);
+    for (let codePoint = start; codePoint <= end && codePoint < 0xffff; codePoint++) {
+      const glyph = segmentedGlyphIndex(dv, subtable, codePoint);
+      if (glyph !== 0 && glyph < glyphCount) codePoints.push(codePoint);
+    }
   }
   return codePoints;
 }
@@ -128,7 +130,5 @@ export function cmapCodePoints(dv: DataView, cmapOffset: number, glyphCount: num
   if (subtable === null) return null;
   if (dv.getUint16(subtable, false) === CMAP_FORMAT_GROUPED)
     return groupedCodePoints(dv, subtable, glyphCount);
-  return segmentedCodePoints(dv, subtable).filter(
-    (codePoint) => segmentedGlyphIndex(dv, subtable, codePoint) < glyphCount
-  );
+  return segmentedCodePoints(dv, subtable, glyphCount);
 }

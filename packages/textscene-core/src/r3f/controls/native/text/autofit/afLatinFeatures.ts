@@ -16,6 +16,7 @@ import {
   EdgeFlag,
   PointFlag,
   divide,
+  indexEdges,
   newEdge,
   type AxisHints,
   type DimensionValue,
@@ -32,7 +33,7 @@ export const flatThresholdOf = (unitsPerEm: number): number => divide(unitsPerEm
 /** `AF_LATIN_CONSTANT`: `value` in font units at 2048 units per em, scaled to the face's. */
 export const latinConstant = (unitsPerEm: number, value: number): number => divide(value * unitsPerEm, 2048);
 
-/** A face with more segments than this on one axis gets none, as FreeType gives up on it. */
+/** A glyph with more segments than this on one axis gets none, as FreeType gives up on it. */
 const MAX_SEGMENTS = 1000;
 
 function newSegment(axis: AxisHints, dir: number, first: Point): Segment {
@@ -98,8 +99,14 @@ function runOf(point: Point): Run {
 function extendRun(run: Run, point: Point): void {
   run.minPos = Math.min(run.minPos, point.u);
   run.maxPos = Math.max(run.maxPos, point.u);
-  if (point.v < run.minCoord) [run.minCoord, run.minFlags] = [point.v, point.flags];
-  if (point.v > run.maxCoord) [run.maxCoord, run.maxFlags] = [point.v, point.flags];
+  if (point.v < run.minCoord) {
+    run.minCoord = point.v;
+    run.minFlags = point.flags;
+  }
+  if (point.v > run.maxCoord) {
+    run.maxCoord = point.v;
+    run.maxFlags = point.flags;
+  }
   if (point.flags & PointFlag.CONTROL) return;
   run.minOnCoord = Math.min(run.minOnCoord, point.v);
   run.maxOnCoord = Math.max(run.maxOnCoord, point.v);
@@ -245,14 +252,8 @@ function mergeIntoPrevious(
   axis.segments.pop();
   if (prevSegment.last.inDir === point.inDir) {
     mergeRun(run, prevRun);
-    prevSegment.last = point;
-    prevSegment.pos = toInt16((run.minPos + run.maxPos) >> 1);
-    prevSegment.delta = toInt16((run.maxPos - run.minPos) >> 1);
-    if (isRoundRun(run, flatThreshold)) prevSegment.flags |= EdgeFlag.ROUND;
-    else prevSegment.flags &= ~EdgeFlag.ROUND;
-    prevSegment.minCoord = toInt16(run.minCoord);
-    prevSegment.maxCoord = toInt16(run.maxCoord);
-    prevSegment.height = prevSegment.maxCoord - prevSegment.minCoord;
+    prevSegment.flags &= ~EdgeFlag.ROUND;
+    closeSegment(prevSegment, run, point, flatThreshold);
     // FreeType keeps the previous run's extent as it was, though the segment now spans both.
     return prevRun;
   }
@@ -334,7 +335,8 @@ function edgeThresholds(hints: GlyphHints, dim: DimensionValue, edgeDistanceThre
   };
 }
 
-function appendToEdge(edge: Edge, segment: Segment): void {
+/** Adds `segment` to the end of the edge's ring of segments. */
+export function appendToEdge(edge: Edge, segment: Segment): void {
   segment.edgeNext = edge.first;
   edge.last.edgeNext = segment;
   edge.last = segment;
@@ -378,9 +380,9 @@ export function computeEdges(
     const found = axis.edges.find((edge) => isNear(segment, edge));
     if (found) appendToEdge(found, segment);
   }
-  axis.edges.forEach((edge, index) => (edge.index = index));
+  indexEdges(axis);
   for (const edge of axis.edges) forEachEdgeSegment(edge, (segment) => (segment.edge = edge));
-  for (const edge of axis.edges) linkEdge(edge);
+  for (const edge of axis.edges) linkEdge(edge, (segment) => !!segment?.edge);
 }
 
 export function forEachEdgeSegment(edge: Edge, visit: (segment: Segment) => void): void {
@@ -391,20 +393,21 @@ export function forEachEdgeSegment(edge: Edge, visit: (segment: Segment) => void
   } while (segment !== edge.first);
 }
 
-/** Links `edge` to the edge of its segments' links, or of their serifs, and sets its roundness. */
-function linkEdge(edge: Edge): void {
+/**
+ * Links `edge` to the edge of its segments' links, or of their serifs, and sets its roundness. A
+ * link or serif counts when `isLinkable`: the Latin system needs it on an edge, the CJK one does not.
+ */
+export function linkEdge(edge: Edge, isLinkable: (segment: Segment | null) => boolean): void {
   let roundCount = 0;
   let straightCount = 0;
   forEachEdgeSegment(edge, (segment) => {
     if (segment.flags & EdgeFlag.ROUND) roundCount++;
     else straightCount++;
-    const isSerif = !!segment.serif?.edge && segment.serif.edge !== edge;
-    if (!segment.link?.edge && !isSerif) return;
+    const isSerif = isLinkable(segment.serif) && segment.serif!.edge !== edge;
+    if (!isLinkable(segment.link) && !isSerif) return;
     const seg2 = isSerif ? segment.serif! : segment.link!;
     let edge2 = isSerif ? edge.serif : edge.link;
-    if (edge2) {
-      if (Math.abs(segment.pos - seg2.pos) < Math.abs(edge.fpos - edge2.fpos)) edge2 = seg2.edge;
-    } else edge2 = seg2.edge;
+    if (!edge2 || Math.abs(segment.pos - seg2.pos) < Math.abs(edge.fpos - edge2.fpos)) edge2 = seg2.edge;
     if (isSerif) {
       edge.serif = edge2;
       edge2!.flags |= EdgeFlag.SERIF;

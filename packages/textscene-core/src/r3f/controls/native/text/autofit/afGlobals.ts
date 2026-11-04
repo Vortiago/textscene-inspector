@@ -17,10 +17,10 @@ import {
   type Scaler,
   type StyleMetrics,
 } from './afFace';
-import { newGlyphHints, reloadHints, saveHints, type GlyphHints } from './afHints';
-import { applyLatinHints, initLatinHints } from './afLatinHinting';
+import { newGlyphHints, reloadHints, saveHints, ScalerFlag, type GlyphHints } from './afHints';
+import { applyLatinHints } from './afLatinHinting';
 import { initLatinMetrics, scaleLatinMetrics } from './afLatinMetrics';
-import { applyCjkHints, initCjkHints } from './afCjkHinting';
+import { applyCjkHints } from './afCjkHinting';
 import { initCjkMetrics, initIndicMetrics, scaleCjkMetrics, type CjkMetrics } from './afCjkMetrics';
 import { AUTOFIT_SCRIPTS } from './afScripts';
 import { AUTOFIT_STYLES, type AutofitStyle } from './afStyles';
@@ -30,10 +30,24 @@ import { collectLookups } from './openTypeLayout';
 /** A style's metrics with its writing system's steps (`AF_WritingSystemClassRec`). */
 export interface StyleHinter {
   readonly metrics: StyleMetrics;
+  /** The `AF_SCALER_FLAG_*` bits the style's hints take. */
+  readonly scalerFlags: number;
   scale(scaler: Scaler): void;
-  initHints(hints: GlyphHints): void;
   /** Hints `outline`, which holds `glyph` in font units, in place, scaling it. */
   apply(glyph: number, hints: GlyphHints, outline: ScaledOutline): void;
+}
+
+/**
+ * `af_latin_hints_init` and its kin: the hints take the scales the style last scaled to, which the
+ * Latin system fits to the x-height, and the style's scaler flags.
+ */
+export function initStyleHints(hints: GlyphHints, hinter: StyleHinter): void {
+  const { xScale, xDelta, yScale, yDelta } = hinter.metrics.scaler;
+  hints.xScale = xScale;
+  hints.xDelta = xDelta;
+  hints.yScale = yScale;
+  hints.yDelta = yDelta;
+  hints.scalerFlags = hinter.scalerFlags;
 }
 
 /** The default script (`AF_CONFIG_OPTION_DEFAULT_SCRIPT`), and Godot's fallback style, CJK's. */
@@ -47,7 +61,8 @@ function latinHinter(globals: FaceGlobals, styleIndex: number): StyleHinter | nu
   return {
     metrics,
     scale: (scaler) => scaleLatinMetrics(metrics, scaler),
-    initHints: (hints) => initLatinHints(hints, metrics),
+    // An italic face has no horizontal hinting.
+    scalerFlags: metrics.globals.face.isItalic ? ScalerFlag.NO_HORIZONTAL : 0,
     apply: (glyph, hints, outline) => applyLatinHints(glyph, hints, outline, metrics),
   };
 }
@@ -57,7 +72,8 @@ function cjkSystemHinter(metrics: CjkMetrics): StyleHinter {
   return {
     metrics,
     scale: (scaler) => scaleCjkMetrics(metrics, scaler),
-    initHints: (hints) => initCjkHints(hints, metrics),
+    // The CJK systems leave the advance unhinted.
+    scalerFlags: ScalerFlag.NO_ADVANCE,
     apply: (_, hints, outline) => applyCjkHints(hints, outline, metrics),
   };
 }
@@ -73,13 +89,7 @@ function dummyHinter(globals: FaceGlobals, styleIndex: number): StyleHinter {
   return {
     metrics,
     scale: (scaler) => Object.assign(metrics.scaler, scaler),
-    initHints: (hints) => {
-      hints.xScale = metrics.scaler.xScale;
-      hints.yScale = metrics.scaler.yScale;
-      hints.xDelta = metrics.scaler.xDelta;
-      hints.yDelta = metrics.scaler.yDelta;
-      hints.scalerFlags = 0;
-    },
+    scalerFlags: 0,
     apply: (_, hints, outline) => {
       reloadHints(hints, outline);
       saveHints(hints, outline);
@@ -155,18 +165,16 @@ function assignLayoutCoverage(globals: FaceGlobals, styleIndex: number, isDefaul
   const features = style.coverage === null ? null : [style.coverage];
   const gsubLookups = collectLookups(face.gsub, scriptTags, features);
   if (gsubLookups.length === 0) return;
+  if (style.coverage !== null && !substitutesBlueCharacter(face, style, gsubLookups)) return;
   const glyphs = new Set<number>();
   for (const lookup of gsubLookups) collectGsubOutput(face.gsub, lookup, glyphs);
-  if (style.coverage !== null) {
-    if (!substitutesBlueCharacter(face, style, gsubLookups)) return;
-    if (face.gpos) {
-      const positioned = new Set<number>();
-      for (const lookup of collectLookups(face.gpos, scriptTags, features))
-        collectGposInput(face.gpos, lookup, positioned);
-      for (const glyph of positioned) glyphs.delete(glyph);
-    }
+  if (style.coverage !== null && face.gpos) {
+    const positioned = new Set<number>();
+    for (const lookup of collectLookups(face.gpos, scriptTags, features))
+      collectGposInput(face.gpos, lookup, positioned);
+    for (const glyph of positioned) glyphs.delete(glyph);
   }
-  for (const glyph of [...glyphs].sort((a, b) => a - b))
+  for (const glyph of glyphs)
     if (glyph < glyphStyles.length && glyphStyles[glyph] === GlyphStyle.UNASSIGNED)
       glyphStyles[glyph] = styleIndex;
 }

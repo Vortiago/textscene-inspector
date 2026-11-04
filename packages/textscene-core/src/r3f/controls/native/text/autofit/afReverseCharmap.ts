@@ -13,7 +13,15 @@ import { ADJUSTMENT_DATABASE } from './afAdjustmentDatabase';
 import type { StyleMetrics } from './afFace';
 import { AUTOFIT_SCRIPTS } from './afScripts';
 import { FtNumberHash } from './ftHash';
-import { collectLookups, coverageGlyphs, type LayoutTable, type Subtable } from './openTypeLayout';
+import {
+  collectLookups,
+  coverageGlyphs,
+  type LayoutTable,
+  singleSubstitute,
+  substituteList,
+  type Subtable,
+  u16,
+} from './openTypeLayout';
 
 /** The code point of each glyph the adjustment database reaches. */
 export type ReverseCharmap = ReadonlyMap<number, number>;
@@ -31,8 +39,6 @@ export function adjustmentFlagsOf(codePoint: number): number {
   }
   return 0;
 }
-
-const u16 = (dv: DataView, at: number): number => dv.getUint16(at, false);
 
 /**
  * `af_validate_lookup_table`: whether every subtable of the lookup is a single or alternate
@@ -102,13 +108,8 @@ function mapLookup(dv: DataView, subtables: readonly Subtable[], map: FtNumberHa
   for (const { type, offset } of subtables) {
     const glyphs = coverageGlyphs(dv, offset + u16(dv, offset + 2));
     glyphs.forEach((glyph, index) => {
-      if (type === 1 && u16(dv, offset) === 1)
-        insertSubstitute(map, glyph, (glyph + u16(dv, offset + 4)) % 0x10000);
-      else if (type === 1) insertSubstitute(map, glyph, u16(dv, offset + 6 + 2 * index));
-      else {
-        const set = offset + u16(dv, offset + 6 + 2 * index);
-        for (let i = 0; i < u16(dv, set); i++) insertSubstitute(map, glyph, u16(dv, set + 2 + 2 * i));
-      }
+      if (type === 1) insertSubstitute(map, glyph, singleSubstitute(dv, offset, glyph, index));
+      else for (const alternate of substituteList(dv, offset, index)) insertSubstitute(map, glyph, alternate);
     });
   }
 }

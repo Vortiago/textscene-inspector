@@ -50,8 +50,7 @@ export function sfntAutofitFace(sfnt: SfntFile, outlines: UnscaledOutlines): Aut
   if (!cmap || !lookup) return null;
   const { glyphCount } = outlines;
   return {
-    unitsPerEm: outlines.unitsPerEm,
-    glyphCount,
+    ...outlines,
     isItalic: isItalicFace(sfnt),
     codePoints: cmapCodePoints(sfnt.dv, cmap.offset, glyphCount) ?? [],
     glyphIndex: (codePoint) => {
@@ -60,6 +59,5 @@ export function sfntAutofitFace(sfnt: SfntFile, outlines: UnscaledOutlines): Aut
     },
     gsub: layoutTableOf(sfnt, 'GSUB'),
     gpos: layoutTableOf(sfnt, 'GPOS'),
-    unscaledGlyph: (glyph) => outlines.unscaledGlyph(glyph),
   };
 }

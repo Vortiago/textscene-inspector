@@ -8,7 +8,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-export type WritingSystem = 'dummy' | 'latin' | 'cjk' | 'indic';
+type WritingSystem = 'dummy' | 'latin' | 'cjk' | 'indic';
 
 /** A string of blue characters, clusters separated by spaces, and its `AF_BLUE_PROPERTY_*` bits. */
 export interface BlueString {

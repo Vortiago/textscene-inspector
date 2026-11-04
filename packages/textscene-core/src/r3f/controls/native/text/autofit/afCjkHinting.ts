@@ -18,12 +18,15 @@ import {
   divide,
   EdgeFlag,
   forEachSegmentPoint,
+  alignSerifEdge,
+  doneNeighbours,
+  evenlySpacedStems,
   indexEdges,
+  keepStemSpacing,
   newEdge,
   PointFlag,
   reloadHints,
   saveHints,
-  ScalerFlag,
   type DimensionValue,
   type Edge,
   type GlyphHints,
@@ -31,17 +34,13 @@ import {
   type Width,
 } from './afHints';
 import { CjkBlueFlag, type CjkMetrics } from './afCjkMetrics';
-import { computeSegments, forEachEdgeSegment, latinConstant } from './afLatinFeatures';
-
-/** `af_cjk_hints_init`: the scales of the hints. The CJK system leaves the advance unhinted. */
-export function initCjkHints(hints: GlyphHints, metrics: CjkMetrics): void {
-  const [horizontal, vertical] = metrics.axis;
-  hints.xScale = horizontal.scale;
-  hints.xDelta = horizontal.delta;
-  hints.yScale = vertical.scale;
-  hints.yDelta = vertical.delta;
-  hints.scalerFlags = ScalerFlag.NO_ADVANCE;
-}
+import {
+  appendToEdge,
+  computeSegments,
+  forEachEdgeSegment,
+  latinConstant,
+  linkEdge,
+} from './afLatinFeatures';
 
 /** `af_cjk_hints_compute_segments`: the Latin segments, round when no two on points follow each other. */
 function computeCjkSegments(hints: GlyphHints, dim: DimensionValue): void {
@@ -128,9 +127,7 @@ function computeCjkEdges(hints: GlyphHints, metrics: CjkMetrics, dim: DimensionV
   for (const segment of axis.segments) {
     const found = nearestEdge(axis.edges, segment, threshold);
     if (found) {
-      segment.edgeNext = found.first;
-      found.last.edgeNext = segment;
-      found.last = segment;
+      appendToEdge(found, segment);
       continue;
     }
     const edge = newEdge(axis, segment.pos, segment.dir, false, segment);
@@ -139,7 +136,7 @@ function computeCjkEdges(hints: GlyphHints, metrics: CjkMetrics, dim: DimensionV
   }
   indexEdges(axis);
   for (const edge of axis.edges) forEachEdgeSegment(edge, (segment) => (segment.edge = edge));
-  for (const edge of axis.edges) linkCjkEdge(edge);
+  for (const edge of axis.edges) linkEdge(edge, (segment) => !!segment);
 }
 
 /** The nearest edge of the segment's direction within `threshold`, whose segments' links lie near the segment's link. */
@@ -165,28 +162,6 @@ function areLinksNear(edge: Edge, link: Segment, threshold: number): boolean {
     segment = segment.edgeNext!;
   } while (segment !== edge.first);
   return true;
-}
-
-/** Links `edge` to the edge of its segments' links, or of their serifs, and sets its roundness. */
-function linkCjkEdge(edge: Edge): void {
-  let roundCount = 0;
-  let straightCount = 0;
-  forEachEdgeSegment(edge, (segment) => {
-    if (segment.flags & EdgeFlag.ROUND) roundCount++;
-    else straightCount++;
-    const isSerif = !!segment.serif && segment.serif.edge !== edge;
-    if (!segment.link && !isSerif) return;
-    const seg2 = isSerif ? segment.serif! : segment.link!;
-    let edge2 = isSerif ? edge.serif : edge.link;
-    if (!edge2 || Math.abs(segment.pos - seg2.pos) < Math.abs(edge.fpos - edge2.fpos)) edge2 = seg2.edge;
-    if (isSerif) {
-      edge.serif = edge2;
-      edge2!.flags |= EdgeFlag.SERIF;
-    } else edge.link = edge2;
-  });
-  edge.flags = EdgeFlag.NORMAL;
-  if (roundCount > 0 && roundCount >= straightCount) edge.flags |= EdgeFlag.ROUND;
-  if (edge.serif && edge.link) edge.serif = null;
 }
 
 /**
@@ -246,11 +221,6 @@ function alignCjkLinkedEdge(metrics: CjkMetrics, dim: DimensionValue, base: Edge
   stem.pos = base.pos + cjkStemWidth(metrics, dim, stem.opos - base.opos);
 }
 
-/** `af_cjk_align_serif_edge`. */
-function alignCjkSerifEdge(base: Edge, serif: Edge): void {
-  serif.pos = base.pos + (serif.opos - base.opos);
-}
-
 /**
  * `af_hint_normal_stem` with stems adjusting: fits the stem's width, centres it on its place moved
  * by `anchor`, and shifts it to the nearer whole pixel for both sides. Returns the shift.
@@ -275,23 +245,22 @@ const STEM_THRESHOLD = 64;
 
 /** The shift of a stem from `pos1`, `length` long, that puts the side nearer the grid on it. */
 function stemShift(pos1: number, length: number): number {
-  const threshold = STEM_THRESHOLD;
   const pos2 = pos1 + length;
   let dOff1 = pos1 - pixFloor(pos1);
   let dOff2 = pos2 - pixFloor(pos2);
   let uOff1 = 64 - dOff1;
   if (dOff1 === 0 || dOff2 === 0) return 0;
-  if (length <= threshold) {
+  if (length <= STEM_THRESHOLD) {
     if (dOff2 >= length) return 0;
     return uOff1 <= dOff2 ? uOff1 : -dOff2;
   }
   let offset = length & 63;
   if (offset < 32) {
     if (uOff1 <= offset || dOff2 <= offset) return 0;
-  } else offset = 64 - threshold;
-  dOff1 = threshold - uOff1;
+  } else offset = 64 - STEM_THRESHOLD;
+  dOff1 = STEM_THRESHOLD - uOff1;
   uOff1 -= offset;
-  let uOff2 = threshold - dOff2;
+  let uOff2 = STEM_THRESHOLD - dOff2;
   dOff2 -= offset;
   if (dOff1 <= uOff1) uOff1 = -dOff1;
   if (dOff2 <= uOff2) uOff2 = -dOff2;
@@ -357,44 +326,27 @@ function hintCjkStems(
   return skipped;
 }
 
-/**
- * Spaces three evenly spaced horizontal stems of a glyph of 6 or 12 edges evenly on the grid, as
- * `af_cjk_hint_edges` does for characters such as 三 and 川.
- */
+/** `af_cjk_hint_edges` keeps the stem spacing only for stems whose edges link to the next. */
 function keepCjkStemSpacing(edges: readonly Edge[]): void {
-  if (edges.length !== 6 && edges.length !== 12) return;
-  const [i1, i2, i3] = edges.length === 6 ? [0, 2, 4] : [1, 5, 9];
-  const [edge1, edge2, edge3] = [edges[i1]!, edges[i2]!, edges[i3]!];
-  const span = Math.abs(edge2.opos - edge1.opos - (edge3.opos - edge2.opos));
+  const stems = evenlySpacedStems(edges);
   const isLinkedToNext = (edge: Edge): boolean => edge.link === edges[edge.index + 1];
-  if (!isLinkedToNext(edge1) || !isLinkedToNext(edge2) || !isLinkedToNext(edge3) || span >= 8) return;
-  const delta = edge3.pos - (2 * edge2.pos - edge1.pos);
-  edge3.pos -= delta;
-  if (edge3.link) edge3.link.pos -= delta;
-  if (edges.length === 12) {
-    edges[8]!.pos -= delta;
-    edges[11]!.pos -= delta;
-  }
-  edge3.flags |= EdgeFlag.DONE;
-  if (edge3.link) edge3.link.flags |= EdgeFlag.DONE;
+  if (stems?.every(isLinkedToNext)) keepStemSpacing(edges, stems);
 }
 
 /** Fits the serifs left, then each edge left between the done edges around it. */
 function hintCjkLoneEdges(edges: readonly Edge[], skipped: number): void {
   for (const edge of edges) {
     if (edge.flags & EdgeFlag.DONE || !edge.serif) continue;
-    alignCjkSerifEdge(edge.serif, edge);
+    alignSerifEdge(edge.serif, edge);
     edge.flags |= EdgeFlag.DONE;
     skipped--;
   }
   if (skipped === 0) return;
-  const isDone = (other: Edge): boolean => (other.flags & EdgeFlag.DONE) !== 0;
   for (const edge of edges) {
-    if (isDone(edge)) continue;
-    const before = edges.slice(0, edge.index).reverse().find(isDone);
-    const after = edges.slice(edge.index + 1).find(isDone);
-    if (!before && after) alignCjkSerifEdge(after, edge);
-    else if (before && !after) alignCjkSerifEdge(before, edge);
+    if (edge.flags & EdgeFlag.DONE) continue;
+    const [before, after] = doneNeighbours(edges, edge);
+    if (!before && after) alignSerifEdge(after, edge);
+    else if (before && !after) alignSerifEdge(before, edge);
     else if (before && after) {
       edge.pos =
         after.fpos === before.fpos

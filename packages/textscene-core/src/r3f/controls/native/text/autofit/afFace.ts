@@ -9,20 +9,17 @@
  */
 
 import { FIXED_16_16_ONE } from '../fontMetrics';
-import type { ScaledOutline } from '../glyphContours';
+import type { UnscaledOutlines } from '../glyphContours';
 import { AUTOFIT_SCRIPTS } from './afScripts';
 import { AUTOFIT_STYLES, type AutofitStyle } from './afStyles';
 import { shapeCluster, type ShapedGlyph, type ShapingFace } from './openTypeShaping';
 
-export interface AutofitFace extends ShapingFace {
-  readonly unitsPerEm: number;
-  readonly glyphCount: number;
+/** The face's unscaled outlines with what the auto-hinter reads of its character map and style. */
+export interface AutofitFace extends ShapingFace, UnscaledOutlines {
   /** `FT_STYLE_FLAG_ITALIC`, from `OS/2` or `head`. */
   readonly isItalic: boolean;
   /** The code points the Unicode `cmap` maps, ascending, as `FT_Get_Next_Char` walks them. */
   readonly codePoints: readonly number[];
-  /** `FT_Load_Glyph` with `FT_LOAD_NO_SCALE`: the outline in font units, or null when FreeType fails to load it. */
-  unscaledGlyph(glyph: number): ScaledOutline | null;
 }
 
 /** `AF_ScalerRec`: the 16.16 scales and 26.6 offsets of one load, and the size's ppem. */

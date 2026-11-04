@@ -231,7 +231,7 @@ function alignTilde(hints: GlyphHints, contour: number, isTop: boolean): number 
 }
 
 /** The tilde steps of `af_latin_hints_apply`, before the vertical features. */
-function fitTildes(hints: GlyphHints, flags: number): void {
+export function fitTildes(hints: GlyphHints, flags: number): void {
   if (!(flags & (Adjust.TILDE_TOP | Adjust.TILDE_BOTTOM | Adjust.TILDE_TOP2 | Adjust.TILDE_BOTTOM2))) return;
   computeVerticalExtrema(hints);
   if (flags & Adjust.TILDE_TOP2) {
@@ -288,20 +288,17 @@ function accentHeightLimit(
   return ftMulFix(divide(metrics.unitsPerEm * 4, 10), metrics.scaler.yScale);
 }
 
-/**
- * The diacritic steps of `af_latin_hints_apply` around `detectVerticalFeatures`: tildes first, then
- * the blue zones the accent's edges must not take.
- */
-export function adjustDiacritics(
-  hints: GlyphHints,
-  metrics: LatinMetrics,
-  glyph: number,
-  detectVerticalFeatures: () => void
-): DiacriticAdjustment {
+/** The adjustment database's flags for the character of `glyph`, 0 for none. */
+export function diacriticFlagsOf(metrics: LatinMetrics, glyph: number): number {
   const codePoint = metrics.reverseCharmap.get(glyph);
-  const flags = codePoint === undefined ? 0 : adjustmentFlagsOf(codePoint);
-  fitTildes(hints, flags);
-  detectVerticalFeatures();
+  return codePoint === undefined ? 0 : adjustmentFlagsOf(codePoint);
+}
+
+/**
+ * The diacritic step of `af_latin_hints_apply` after the vertical features: the blue zones of the
+ * base glyph that the accent's edges must not take, and the accent's height limit.
+ */
+export function avoidBaseBlues(hints: GlyphHints, metrics: LatinMetrics, flags: number): DiacriticAdjustment {
   let limit = 0;
   const capital: ReturnType<typeof baseGlyphBlues> = flags ? baseGlyphBlues(metrics, true) : {};
   const small: ReturnType<typeof baseGlyphBlues> = flags ? baseGlyphBlues(metrics, false) : {};

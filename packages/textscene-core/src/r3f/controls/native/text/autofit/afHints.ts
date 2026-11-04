@@ -38,7 +38,8 @@ export const EdgeFlag = {
   NO_BLUE: 1 << 4,
 } as const;
 
-export const ScalerFlag = { NO_HORIZONTAL: 1, NO_VERTICAL: 2, NO_ADVANCE: 4 } as const;
+/** `AF_SCALER_FLAG_*`. Godot never sets `AF_SCALER_FLAG_NO_VERTICAL`, so the port has no such bit. */
+export const ScalerFlag = { NO_HORIZONTAL: 1, NO_ADVANCE: 4 } as const;
 
 /** `FT_CURVE_TAG_ON`, `FT_CURVE_TAG_CONIC` and `FT_CURVE_TAG_CUBIC`. */
 const CURVE_TAG_ON = 1;
@@ -109,7 +110,6 @@ export interface Edge {
   blueEdge: Width | null;
   link: Edge | null;
   serif: Edge | null;
-  score: number;
   first: Segment;
   last: Segment;
 }
@@ -159,16 +159,6 @@ export function newGlyphHints(unitsPerEm: number): GlyphHints {
   };
 }
 
-/** `af_sort_pos`: an insertion sort, ascending. */
-export function sortPositions(table: number[], count: number): void {
-  for (let i = 1; i < count; i++) {
-    for (let j = i; j > 0; j--) {
-      if (table[j]! >= table[j - 1]!) break;
-      [table[j], table[j - 1]] = [table[j - 1]!, table[j]!];
-    }
-  }
-}
-
 /**
  * `af_sort_and_quantize_widths`: sorts `widths` and merges the ones within `threshold` of the
  * first of their run into their mean. Returns the widths left. FreeType counts no widths as one,
@@ -178,12 +168,8 @@ export function sortAndQuantizeWidths(widths: Width[], threshold: number): Width
   const count = widths.length;
   if (count === 0) return [newWidth(0)];
   if (count === 1) return widths;
-  for (let i = 1; i < count; i++) {
-    for (let j = i; j > 0; j--) {
-      if (widths[j]!.org >= widths[j - 1]!.org) break;
-      [widths[j], widths[j - 1]] = [widths[j - 1]!, widths[j]!];
-    }
-  }
+  // A stable sort, as FreeType's insertion sort is.
+  widths.sort((a, b) => a.org - b.org);
   let curIndex = 0;
   let curValue = widths[curIndex]!.org;
   for (let i = 1; i < count; i++) {
@@ -237,7 +223,6 @@ export function newEdge(
     blueEdge: null,
     link: null,
     serif: null,
-    score: 0,
     first,
     last: first,
   };
@@ -250,18 +235,60 @@ export function indexEdges(axis: AxisHints): void {
   axis.edges.forEach((edge, index) => (edge.index = index));
 }
 
-/** `af_direction_compute`: the direction of `(dx, dy)`, or none when it is not within 1/14 of an axis. */
-export function directionOf(dx: number, dy: number): number {
-  let dir: number;
-  let longer: number;
-  let shorter: number;
-  if (dy >= dx) {
-    if (dy >= -dx) [dir, longer, shorter] = [Direction.UP, dy, dx];
-    else [dir, longer, shorter] = [Direction.LEFT, -dx, dy];
-  } else if (dy >= -dx) [dir, longer, shorter] = [Direction.RIGHT, dx, dy];
-  else [dir, longer, shorter] = [Direction.DOWN, -dy, dx];
-  return longer <= 14 * Math.abs(shorter) ? Direction.NONE : dir;
+/** The nearest done edges before and after `edge`, or null at either end. */
+export function doneNeighbours(edges: readonly Edge[], edge: Edge): [Edge | null, Edge | null] {
+  let before: Edge | null = null;
+  for (let index = edge.index - 1; index >= 0 && !before; index--)
+    if (edges[index]!.flags & EdgeFlag.DONE) before = edges[index]!;
+  let after: Edge | null = null;
+  for (let index = edge.index + 1; index < edges.length && !after; index++)
+    if (edges[index]!.flags & EdgeFlag.DONE) after = edges[index]!;
+  return [before, after];
 }
+
+/** `serif` keeps its distance from the hinted `base`. */
+export function alignSerifEdge(base: Edge, serif: Edge): void {
+  serif.pos = base.pos + (serif.opos - base.opos);
+}
+
+/**
+ * The first edges of the three stems of a horizontal axis of 6 or 12 edges whose two gaps differ by
+ * less than 8 font units, as `af_latin_hint_edges` and `af_cjk_hint_edges` test them, or null.
+ */
+export function evenlySpacedStems(edges: readonly Edge[]): [Edge, Edge, Edge] | null {
+  if (edges.length !== 6 && edges.length !== 12) return null;
+  const [i1, i2, i3] = edges.length === 6 ? [0, 2, 4] : [1, 5, 9];
+  const [edge1, edge2, edge3] = [edges[i1]!, edges[i2]!, edges[i3]!];
+  const span = Math.abs(edge2.opos - edge1.opos - (edge3.opos - edge2.opos));
+  return span < 8 ? [edge1, edge2, edge3] : null;
+}
+
+/** Moves the third of `stems` so that the hinted gaps match, with the edges that follow it. */
+export function keepStemSpacing(edges: readonly Edge[], [edge1, edge2, edge3]: [Edge, Edge, Edge]): void {
+  const delta = edge3.pos - (2 * edge2.pos - edge1.pos);
+  edge3.pos -= delta;
+  if (edge3.link) edge3.link.pos -= delta;
+  if (edges.length === 12) {
+    edges[8]!.pos -= delta;
+    edges[11]!.pos -= delta;
+  }
+  edge3.flags |= EdgeFlag.DONE;
+  if (edge3.link) edge3.link.flags |= EdgeFlag.DONE;
+}
+
+/** `af_direction_compute`: the direction of `(dx, dy)`, or none when it is not within 1/14 of an axis. */
+function directionOf(dx: number, dy: number): number {
+  if (dy >= dx) {
+    if (dy >= -dx) return axisDirection(Direction.UP, dy, dx);
+    return axisDirection(Direction.LEFT, -dx, dy);
+  }
+  if (dy >= -dx) return axisDirection(Direction.RIGHT, dx, dy);
+  return axisDirection(Direction.DOWN, -dy, dx);
+}
+
+/** `dir`, or none when the `shorter` component is more than 1/14 of the `longer`. */
+const axisDirection = (dir: number, longer: number, shorter: number): number =>
+  longer <= 14 * Math.abs(shorter) ? Direction.NONE : dir;
 
 /** `FT_HYPOT`: the length of a vector by the "alpha max plus beta min" estimate. */
 function approximateLength(x: number, y: number): number {
@@ -377,7 +404,6 @@ function contourStarts(points: readonly Point[], contourEnds: readonly number[])
  * `u` and `v` hold the offsets to the next and the previous strong point.
  */
 function computeDirections(hints: GlyphHints): void {
-  const { points } = hints;
   const nearLimit = nearLimitOf(hints.unitsPerEm);
   const nearLimit2 = 2 * nearLimit - 1;
   for (const contourStart of hints.contours) {
@@ -420,7 +446,6 @@ function computeDirections(hints: GlyphHints): void {
       outY = 0;
     } while (next !== first);
   }
-  void points;
 }
 
 /** A strong point with no direction either way that goes on in the same quadrant is weak. */
