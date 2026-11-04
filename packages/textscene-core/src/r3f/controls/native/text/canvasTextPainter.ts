@@ -26,6 +26,7 @@ import { injectProgram, injectViewportProgram } from '../../../materialProgramIn
 import { NO_OPAQUE_PREPASS } from '../../../materials/opaquePrepass';
 import { passBlendMaterialProps, type SurfaceBlend } from '../../../materials/surfaceBlend';
 import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
+import type { SurfaceShading } from '../../../materialFor2d';
 import type { Rgba } from '../../../../godot/math/math';
 
 /** Fixed vertical pad, CSS px, on every raster edge: anti-aliased ink can overshoot a glyph's ascent/descent box. The quad is this much taller than `layout.heightPx` on both edges. */
@@ -221,12 +222,6 @@ export function paintSceneFontCanvas(
   return canvas;
 }
 
-/** The PBR uniforms of a text run lit by the scene's 3D lights. */
-export interface TextShading {
-  metalness: number;
-  roughness: number;
-}
-
 interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
   map: THREE.Texture;
   /** Multiplies the raster's anti-aliasing alpha. The raster is opaque, so this is the only place `tint.a` applies. */
@@ -236,12 +231,12 @@ interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
   /** Omitted, it takes `canvasItemFacing()`'s side, like `createMsdfMaterial`. */
   side?: THREE.Side;
   clippingPlanes?: readonly THREE.Plane[];
-  /** The lit Control's blend state and light-list sampling, or omitted for an unlit run. `injection` wins: a Label3D blend run is never lit. */
+  /** The lit Control's blend state and light-list sampling, or omitted for an unlit run. `injection` wins: no 2D light reaches a Label3D blend run. */
   pixelMaterial?: CanvasItemPixelMaterial;
   /** The raster carries a mip chain and draws in 3D, so it samples at the viewport's mipmap bias. */
   mipmapped?: boolean;
   /** The PBR uniforms of a run lit by the scene's 3D lights, as a shaded Label3D. Omitted, unlit. */
-  shading?: TextShading;
+  shading?: SurfaceShading;
 }
 
 /**
@@ -252,8 +247,8 @@ interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
  * `SRGBColorSpace`: a glyph has no differing RGB pair to filter wrongly.
  */
 // `defines` is assigned after construction: `Material#setValues` skips, with a
-// warning, a key not already on the instance, and neither material declares
-// `defines`. `WebGLProgram` reads `material.defines` for every material type.
+// warning, a key not already on the instance, and `MeshBasicMaterial` declares no
+// `defines`. The merge keeps the `STANDARD` define `MeshStandardMaterial` declares.
 export function createCanvasTextMaterial(
   options: CanvasTextMaterialOptions
 ): THREE.MeshBasicMaterial | THREE.MeshStandardMaterial {
@@ -300,7 +295,7 @@ export function createCanvasTextMaterial(
     ? new THREE.MeshStandardMaterial({ ...parameters, ...shading })
     : new THREE.MeshBasicMaterial(parameters);
   if (map.colorSpace === THREE.NoColorSpace) {
-    material.defines = { ...CANVAS_SRGB_DEFINES };
+    material.defines = { ...material.defines, ...CANVAS_SRGB_DEFINES };
   }
   // An explicit `side` outranks the facing the pixel material carries.
   material.setValues(side === undefined ? pixelState : { ...pixelState, side });

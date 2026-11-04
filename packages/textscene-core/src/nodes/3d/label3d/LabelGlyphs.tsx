@@ -118,7 +118,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   // says whether a mipmapped sampler reads it.
   const mipmapped = font?.generatesMipmaps ?? false;
   // Both surfaces take one material (`label_3d.cpp:396`), so they share these props.
-  const material = {
+  const surfaceProps = {
     depthTest,
     side,
     textureFilter,
@@ -162,7 +162,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                   tint={properties.outline_modulate}
                   strokeWidthPx={strokeWidthPx}
                   renderOrder={outlineSurface.renderOrder}
-                  {...material}
+                  {...surfaceProps}
                   frameExcluded
                 />
               </group>
@@ -173,7 +173,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                 fontSizePx={properties.font_size}
                 tint={properties.modulate}
                 renderOrder={fillSurface.renderOrder}
-                {...material}
+                {...surfaceProps}
                 frameExcluded
               />
             </group>

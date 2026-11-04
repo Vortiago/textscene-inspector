@@ -214,7 +214,7 @@ describe('<LabelGlyphs>', () => {
       expect(normals).toEqual(Array.from({ length: normal.count }, () => [0, 0, 1]));
     });
 
-    it('flips the normal of a back face, as Godot does for a double-sided surface (scene_forward_clustered.glsl:1263-1266)', async () => {
+    it('draws a double-sided lit label in one pass, where the back face takes the flipped normal (scene_forward_clustered.glsl:1263-1266)', async () => {
       const material = meshOf(await render(labelProperties({ shaded: true, double_sided: true })))
         .material as THREE.Material;
       // Drawn both sides in one pass, three's lit fragment multiplies the normal by `faceDirection`.
