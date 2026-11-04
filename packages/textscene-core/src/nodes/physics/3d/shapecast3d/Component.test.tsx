@@ -61,11 +61,11 @@ const convexShape: TscnInternalResource = {
 };
 
 /**
- * The gizmo imports three's ConvexHull lazily for a convex shape, and under CI load that import
+ * The gizmo imports three's ConvexGeometry lazily for a convex shape, and under CI load that import
  * outlasts a timer tick. The delay makes it late on every run, so the hull test proves it waits for
  * the chunk itself.
  */
-vi.mock('three/addons/math/ConvexHull.js', async (importOriginal) => {
+vi.mock('three/addons/geometries/ConvexGeometry.js', async (importOriginal) => {
   await new Promise((resolve) => setTimeout(resolve, 20));
   return importOriginal();
 });
@@ -342,7 +342,7 @@ describe('<ShapeCast3D> shape wireframe', () => {
     );
   });
 
-  it('draws the triangulated hull edges of a convex shape, every corner offset by the target', async () => {
+  it('draws the 12 hull edges of a convex cube, every corner offset by the target', async () => {
     const { loader } = createFakeResourceLoader();
     const tree = (
       <ResourceLoaderProvider loader={loader}>
@@ -360,11 +360,10 @@ describe('<ShapeCast3D> shape wireframe', () => {
     );
     const renderer = await ReactThreeTestRenderer.create(tree);
     await settlePendingLoads(loader);
-    // Re-flushes so the test renderer's fiber snapshot picks up the hull's commit. The hull wireframe
-    // holds the 12 boundary edges and the 6 face diagonals of the triangulated cube, which
-    // ConvexHullComputer copies one per canonical a < b pair (convex_hull.cpp:2269-2278).
+    // Re-flushes so the test renderer's fiber snapshot picks up the hull's commit. The wireframe
+    // holds the cube's 12 edges and no face diagonal, as Godot's `get_debug_mesh()` gives.
     await renderer.update(tree);
-    const wire = lineOf(linesOf(renderer), 36);
+    const wire = lineOf(linesOf(renderer), 24);
     for (let i = 0; i < wire.length; i += 3) {
       const [x, y, z] = [wire[i]!, wire[i + 1]!, wire[i + 2]!].map((v) => Number(v.toFixed(6))) as [
         number,

@@ -4074,6 +4074,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Physics"
   },
   {
+    "name": "Collision Polygon Shapes",
+    "file": "unit-collision-polygon-shapes.tscn",
+    "category": "Unit - Physics"
+  },
+  {
     "name": "Collision Shapes",
     "file": "unit-collision-shapes.tscn",
     "category": "Unit - Physics"
