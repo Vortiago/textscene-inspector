@@ -48,18 +48,13 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Line2D: {
     renderGap: [
-      // The stroke appearance beyond its centreline: antialiasing, texture,
-      // gradient, width curve and caps. This draws a flat constant-width line.
+      // `antialiased` is read by no Godot draw (`Line2D::_draw`). The texture is not drawn yet.
       'antialiased',
-      'gradient',
       'texture',
       'texture_mode',
-      'width_curve',
-      'begin_cap_mode',
-      'end_cap_mode',
     ],
     reason:
-      'points is parsed and now validated too; the remaining seven are the stroke appearance the renderer does not implement.',
+      'points is parsed and now validated too; the remaining three are not drawn: Godot ignores antialiased, and the texture is pending.',
   },
 
   Polygon2D: {
