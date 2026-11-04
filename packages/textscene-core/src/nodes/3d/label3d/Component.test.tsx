@@ -13,6 +13,7 @@ import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext'
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
+import { frameBoxOf } from '../../../r3f/bounds';
 
 const Label3D = registeredComponent('Label3D');
 
@@ -81,48 +82,40 @@ describe('<Label3D>', () => {
     expect((scaled.instance as THREE.Group).scale.y).toBeCloseTo(0.02, 6);
   });
 
-  /** The proxy carries no `name`, so this finds it by its userData tag, scene-wide. */
-  function findProxyMesh(renderer: Awaited<ReturnType<typeof renderLabel>>): THREE.Mesh {
-    return renderer.scene.find((n) => (n.instance as THREE.Mesh).userData?.tscnBoundsProxy === true)
-      .instance as THREE.Mesh;
+  /** The frame point carries no `name`, so this finds it by its userData, scene-wide. */
+  function findFramePoint(renderer: Awaited<ReturnType<typeof renderLabel>>): THREE.Object3D {
+    return renderer.scene.find((n) => frameBoxOf(n.instance, new THREE.Box3()) !== null).instance;
   }
 
-  it('renders an invisible, zero-size bounds-proxy mesh at the node origin, so auto-framing sees the label before the lazy glyphs mount', async () => {
+  it('mounts a zero-size frame point at the node origin, so auto-framing sees the label before the lazy glyphs mount', async () => {
     // A point, not a text-sized box: Godot places its framing camera before
     // Label3D shapes text, so each label adds only its origin (Component.tsx).
     const renderer = await renderLabel(
       makeNode({ text: 'A somewhat long caption for this test', font_size: 32, pixel_size: 0.02 })
     );
-    const mesh = findProxyMesh(renderer);
-    expect(mesh.visible).toBe(false);
-    const geometry = mesh.geometry as unknown as {
-      parameters: { width: number; height: number; depth: number };
-    };
-    expect(geometry.parameters.width).toBe(0);
-    expect(geometry.parameters.height).toBe(0);
-    expect(geometry.parameters.depth).toBe(0);
+    const point = findFramePoint(renderer);
+    const box = frameBoxOf(point, new THREE.Box3())!;
+    expect(box.getSize(new THREE.Vector3()).length()).toBe(0);
 
     // A point has no extent to rotate, so it sits at the node's world position
     // inside the billboarded group.
-    const worldPos = new THREE.Vector3();
-    mesh.getWorldPosition(worldPos);
-    expect(worldPos.length()).toBeCloseTo(0, 6);
+    expect(box.min.length()).toBeCloseTo(0, 6);
   });
 
-  it('the bounds-proxy point stays at the node origin even after useBillboard rotates the label group', async () => {
+  it('the frame point stays at the node origin even after useBillboard rotates the label group', async () => {
     // A point is rotation-invariant: rotating its group never moves it off the
     // node's position.
     const renderer = await renderLabel(
       makeNode({ billboard: BillboardMode.BILLBOARD_ENABLED, text: 'Hello' })
     );
     const billboardGroup = renderer.scene.findByProps({ name: 'Label' }).instance as THREE.Group;
-    const mesh = findProxyMesh(renderer);
+    const point = findFramePoint(renderer);
     const worldPosBefore = new THREE.Vector3();
-    mesh.getWorldPosition(worldPosBefore);
+    point.getWorldPosition(worldPosBefore);
     billboardGroup.quaternion.set(0.2, 0.3, 0.4, Math.sqrt(1 - 0.2 ** 2 - 0.3 ** 2 - 0.4 ** 2));
     billboardGroup.updateMatrixWorld(true);
     const worldPosAfter = new THREE.Vector3();
-    mesh.getWorldPosition(worldPosAfter);
+    point.getWorldPosition(worldPosAfter);
     expect(worldPosAfter.distanceTo(worldPosBefore)).toBeCloseTo(0, 6);
   });
 

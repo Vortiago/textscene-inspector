@@ -17,13 +17,13 @@ import { applyRemoteTransforms } from './remoteTransforms';
 
 /** What the pass binds in `content`'s live tree, with each scene of `scenes` loaded. */
 function placementsOf(content: string, scenes: Readonly<Record<string, string>> = {}): NodePatches {
-  return applyRemoteTransforms(liveTreeOfText(content, scenes));
+  return applyRemoteTransforms(liveTreeOfText(content, scenes)).placed;
 }
 
 /** The columns of the global basis and the origin of the node at `path`, after the relays have run. */
 function globalPoseOf(content: string, path: string): { columns: number[][]; origin: number[] } {
   const tree = liveTreeOfText(content);
-  const global = liveGlobalTransform3D(tree, path, applyRemoteTransforms(tree));
+  const global = liveGlobalTransform3D(tree, path, applyRemoteTransforms(tree).placed);
   if (!global) throw new Error(`expected a Node3D at ${path}`);
   const { basis_x: x, basis_y: y, basis_z: z, origin } = global;
   return {
@@ -155,7 +155,7 @@ use_global_coordinates = false
     expect(placementsOf(content).has('Root/Target')).toBe(false);
   });
 
-  it('resolves a relay chain in document order (A drives B, B drives C)', () => {
+  it('carries a push on through a relay that another relay moves (A drives B, B drives C)', () => {
     // Relay A at +4 drives B. B, itself a relay at authored +1, is driven to +4, then B drives C,
     // so C ends at +4.
     const content = `[gd_scene format=3]

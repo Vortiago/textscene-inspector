@@ -11,9 +11,9 @@ import { LTR_LAYOUT_ENV, resolveLayoutRtl, type LayoutDirectionEnv } from '../..
 import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
 import {
   liveTreeOf,
-  type CachedSceneSource,
   type LiveTree,
   type LiveTreeContext,
+  type LiveTreeSources,
   type SceneScope,
 } from '../../../r3f/liveSceneTree.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
@@ -66,7 +66,7 @@ export function inheritedRtlAt(tree: LiveTree, path: string, env: LayoutDirectio
  */
 export function collectControlRasterViewports(
   roots: readonly TscnNode[],
-  sceneCache: CachedSceneSource,
+  sources: LiveTreeSources,
   scope: SceneScope,
   layoutDirectionEnv: LayoutDirectionEnv = LTR_LAYOUT_ENV
 ): ControlRasterViewport[] {
@@ -74,7 +74,7 @@ export function collectControlRasterViewports(
   const ctx: LiveTreeContext = {
     externalResources: scope.externalResources,
     internalResources: scope.internalResources,
-    sceneCache,
+    ...sources,
   };
 
   // The step decides instance-collapse and per-group resource scope, the same decision

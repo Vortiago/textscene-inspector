@@ -72,6 +72,11 @@ export const TILE_AND_TARGET_SCENES = [
   { name: 'remote-transform-2d-local', file: 'unit-remote-transform-2d-local.tscn', mode: '2d' },
   // A 3D relay in local coordinates pushes nothing on load, so the box stays where the scene puts it.
   { name: 'remote-transform-3d-local', file: 'unit-remote-transform-3d-local.tscn' },
+  // An early relay under a holder that a later relay drives pushes again, so its box follows the holder.
+  { name: 'remote-transform-3d-chain-order', file: 'unit-remote-transform-3d-chain-order.tscn' },
+  { name: 'remote-transform-2d-chain-order', file: 'unit-remote-transform-2d-chain-order.tscn', mode: '2d' },
+  // Two turned relays that drive each other's holders: the box stands where the harness frame has it.
+  { name: 'remote-transform-3d-cycle', file: 'unit-remote-transform-3d-cycle.tscn' },
 
   // ViewportTexture on a 3D material. The offscreen pass tonemaps like Godot's: the shared
   // environment applies inside the target and again on the consuming quad (curve squared). The
