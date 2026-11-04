@@ -18,7 +18,7 @@ import { flippedUvWindow } from '../../../r3f/uvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
 import { viewportProgramInputs } from '../../../r3f/materialProgramInputs';
-import { materialFor2d, SHADED_SCALARS } from '../../../r3f/materialFor2d';
+import { materialFor2d } from '../../../r3f/materialFor2d';
 import type { FadePass } from '../../../r3f/materials/fadeVariants';
 import { passBlendMaterialProps } from '../../../r3f/materials/surfaceBlend';
 import type { MaterialAttach } from '../../../r3f/materials/swappedMaterials';
@@ -64,7 +64,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // corners, so only an overrunning window tiles.
   const wrap = spriteWrapMode(sourceTexture ?? undefined, properties);
   const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
-  const { blends, joinsShadowPass, side, depthTest, textureFilter } = materialFor2d({
+  const { blends, joinsShadowPass, shading, side, depthTest, textureFilter } = materialFor2d({
     alphaCut: properties.alpha_cut,
     alphaScissorThreshold: properties.alpha_scissor_threshold,
     // `sprite_3d.cpp:286`: FLAG_TRANSPARENT off disables the whole switch.
@@ -75,6 +75,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     // DoubleSide by default: Godot's runtime shows a sprite quad from behind too.
     doubleSided: properties.double_sided,
     noDepthTest: properties.no_depth_test,
+    shaded: properties.shaded,
     textureFilter: properties.texture_filter,
     anisotropicFilteringLevel,
   });
@@ -188,9 +189,9 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         depthTest,
         side,
       },
-      merge: [properties.shaded ? SHADED_SCALARS : undefined],
+      merge: [shading],
     });
-    return properties.shaded ? (
+    return shading ? (
       <meshStandardMaterial key={program.key} {...program.props} />
     ) : (
       <meshBasicMaterial key={program.key} {...program.props} />

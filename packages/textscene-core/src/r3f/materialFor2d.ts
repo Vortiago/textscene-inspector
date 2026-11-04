@@ -18,7 +18,10 @@ import type { EnumValue } from '../godot/classdb/enumNames.js';
  * The PBR uniforms Sprite3D and Label3D set on their material (`sprite_3d.cpp:721-722`,
  * `label_3d.cpp:372-373`), which only a shaded surface reads.
  */
-export const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
+const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
+
+/** What a lit surface's `MeshStandardMaterial` takes. Absent, the surface draws unlit. */
+export type SurfaceShading = typeof SHADED_SCALARS;
 
 /** The flags `get_material_for_2d` reads, as the node stores them. */
 interface MaterialFor2dInput {
@@ -33,6 +36,8 @@ interface MaterialFor2dInput {
   /** Omitted means Godot's default, both faces. */
   doubleSided: boolean | undefined;
   noDepthTest: boolean;
+  /** `FLAG_SHADED`: `SHADING_MODE_PER_PIXEL` when set, else `SHADING_MODE_UNSHADED` (`material.cpp:3045`). */
+  shaded: boolean;
   /** `BaseMaterial3D::TextureFilter` ordinal. */
   textureFilter: EnumValue<typeof TextureFilter>;
   /** The viewport's anisotropic filtering level, which sets the anisotropic sampler rows. */
@@ -46,6 +51,8 @@ interface MaterialFor2d {
    */
   blends: FadeVariants<PassBlend>;
   joinsShadowPass: boolean;
+  /** The PBR uniforms of a lit surface, or undefined for an unlit one. A lit surface receives shadows. */
+  shading: SurfaceShading | undefined;
   side: THREE.Side;
   depthTest: boolean;
   textureFilter: TextureFilterState;
@@ -69,6 +76,7 @@ export function materialFor2d(input: MaterialFor2dInput): MaterialFor2d {
       alphaPass: { ...blends.alphaPass, alphaHashScale, antialiasing, opaquePrepass: prepasses.alphaPass },
     },
     joinsShadowPass: joinsShadowPass(cut, depthTest),
+    shading: input.shaded ? SHADED_SCALARS : undefined,
     side: input.doubleSided === false ? THREE.FrontSide : THREE.DoubleSide,
     depthTest,
     textureFilter: godotTextureFilterState(input.textureFilter, input.anisotropicFilteringLevel),

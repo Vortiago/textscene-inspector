@@ -100,7 +100,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   // Not memoised: `TextRun` keys its material off the blend's fields, not its identity, so a fresh
   // equal-valued one rebuilds nothing.
   const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
-  const { blends, joinsShadowPass, side, depthTest, textureFilter } = materialFor2d({
+  const { blends, joinsShadowPass, shading, side, depthTest, textureFilter } = materialFor2d({
     alphaCut: properties.alpha_cut,
     alphaScissorThreshold: properties.alpha_scissor_threshold,
     // Label3D's DrawFlags have no FLAG_TRANSPARENT (`label_3d.h:42-47`).
@@ -110,13 +110,24 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     alphaAntialiasingEdge: properties.alpha_antialiasing_edge,
     doubleSided: properties.double_sided,
     noDepthTest: properties.no_depth_test,
+    shaded: properties.shaded,
     textureFilter: properties.texture_filter,
     anisotropicFilteringLevel,
   });
   // The glyph pages carry a mip chain only for a font with `generate_mipmaps`; the filter row
   // says whether a mipmapped sampler reads it.
   const mipmapped = font?.generatesMipmaps ?? false;
-  const surfaceShadow = { ...shadow, castShadow: shadow.castShadow && joinsShadowPass };
+  // Both surfaces take one material (`label_3d.cpp:396`), so they share these props.
+  const material = {
+    depthTest,
+    side,
+    textureFilter,
+    mipmapped,
+    blends,
+    shadow: { ...shadow, castShadow: shadow.castShadow && joinsShadowPass },
+    layers: properties.layers,
+    shading,
+  };
 
   // `label_3d.cpp:401-405`: only an ALPHA_CUT_DISABLED surface is sorted by its
   // material's render priority. Any other mode bakes `priority * pixel_size` into
@@ -150,15 +161,8 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                   fontSizePx={properties.font_size}
                   tint={properties.outline_modulate}
                   strokeWidthPx={strokeWidthPx}
-                  depthTest={depthTest}
-                  side={side}
                   renderOrder={outlineSurface.renderOrder}
-                  textureFilter={textureFilter}
-                  mipmapped={mipmapped}
-                  blends={blends}
-                  shadow={surfaceShadow}
-                  layers={properties.layers}
-                  lit={properties.shaded}
+                  {...material}
                   frameExcluded
                 />
               </group>
@@ -168,15 +172,8 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                 layout={lineLayouts[index]!}
                 fontSizePx={properties.font_size}
                 tint={properties.modulate}
-                depthTest={depthTest}
-                side={side}
                 renderOrder={fillSurface.renderOrder}
-                textureFilter={textureFilter}
-                mipmapped={mipmapped}
-                blends={blends}
-                shadow={surfaceShadow}
-                layers={properties.layers}
-                lit={properties.shaded}
+                {...material}
                 frameExcluded
               />
             </group>

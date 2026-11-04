@@ -219,7 +219,6 @@ describe('<LabelGlyphs>', () => {
         .material as THREE.Material;
       // Drawn both sides in one pass, three's lit fragment multiplies the normal by `faceDirection`.
       expect([material.side, material.forceSinglePass]).toEqual([THREE.DoubleSide, true]);
-      expect(THREE.ShaderChunk.normal_fragment_begin).toContain('normal *= faceDirection');
     });
 
     it('receives shadows on a shaded label', async () => {

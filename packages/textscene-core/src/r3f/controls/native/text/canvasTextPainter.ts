@@ -26,7 +26,6 @@ import { injectProgram, injectViewportProgram } from '../../../materialProgramIn
 import { NO_OPAQUE_PREPASS } from '../../../materials/opaquePrepass';
 import { passBlendMaterialProps, type SurfaceBlend } from '../../../materials/surfaceBlend';
 import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
-import { SHADED_SCALARS } from '../../../materialFor2d';
 import type { Rgba } from '../../../../godot/math/math';
 
 /** Fixed vertical pad, CSS px, on every raster edge: anti-aliased ink can overshoot a glyph's ascent/descent box. The quad is this much taller than `layout.heightPx` on both edges. */
@@ -222,6 +221,12 @@ export function paintSceneFontCanvas(
   return canvas;
 }
 
+/** The PBR uniforms of a text run lit by the scene's 3D lights. */
+export interface TextShading {
+  metalness: number;
+  roughness: number;
+}
+
 interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
   map: THREE.Texture;
   /** Multiplies the raster's anti-aliasing alpha. The raster is opaque, so this is the only place `tint.a` applies. */
@@ -235,17 +240,16 @@ interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
   pixelMaterial?: CanvasItemPixelMaterial;
   /** The raster carries a mip chain and draws in 3D, so it samples at the viewport's mipmap bias. */
   mipmapped?: boolean;
-  /** Lit by the scene's 3D lights, as a shaded Label3D (`material.cpp:3045`). Omitted, unlit. */
-  lit?: boolean;
+  /** The PBR uniforms of a run lit by the scene's 3D lights, as a shaded Label3D. Omitted, unlit. */
+  shading?: TextShading;
 }
 
 /**
- * A `MeshBasicMaterial` for canvas-rasterised text, or a `MeshStandardMaterial` for a `lit` run,
- * with three's sRGB decode for
- * an `SRGBColorSpace` map. A `NoColorSpace` map gets the sRGB-multiply define
- * (`canvasSrgbMultiply.ts`) from its own tag, as `canvasMapProps` does,
- * so the tag and the define never apply apart. `TextRun.tsx` keeps its glyph
- * raster `SRGBColorSpace`: a glyph has no differing RGB pair to filter wrongly.
+ * A `MeshBasicMaterial` for canvas-rasterised text, or a `MeshStandardMaterial` for a lit run,
+ * with three's sRGB decode for an `SRGBColorSpace` map. A `NoColorSpace` map gets the
+ * sRGB-multiply define (`canvasSrgbMultiply.ts`) from its own tag, as `canvasMapProps` does, so
+ * the tag and the define never apply apart. `TextRun.tsx` keeps its glyph raster
+ * `SRGBColorSpace`: a glyph has no differing RGB pair to filter wrongly.
  */
 // `defines` is assigned after construction: `Material#setValues` skips, with a
 // warning, a key not already on the instance, and neither material declares
@@ -270,7 +274,7 @@ export function createCanvasTextMaterial(
     injection,
     pixelMaterial,
     mipmapped = false,
-    lit = false,
+    shading,
   } = options;
   const { injection: pixelInjection, ...pixelState } = pixelMaterial ?? {};
   const parameters = {
@@ -292,8 +296,8 @@ export function createCanvasTextMaterial(
     ...canvasItemFacing(side),
     clippingPlanes: [...clippingPlanes],
   };
-  const material = lit
-    ? new THREE.MeshStandardMaterial({ ...parameters, ...SHADED_SCALARS })
+  const material = shading
+    ? new THREE.MeshStandardMaterial({ ...parameters, ...shading })
     : new THREE.MeshBasicMaterial(parameters);
   if (map.colorSpace === THREE.NoColorSpace) {
     material.defines = { ...CANVAS_SRGB_DEFINES };

@@ -9,6 +9,30 @@ import { AlphaAntiAliasing } from '../godot/rendering/materials/alphaAntialiasin
 import { AlphaCutMode } from '../godot/rendering/materials/alphaCut';
 import { TextureFilter } from '../godot/rendering/materials/textureFilter';
 
+/** The `get_material_for_2d` fields a Label3D or Sprite3D stores (`label_3d.h:61-65`, `sprite_3d.h:89-94`). */
+export interface MaterialFor2dFields {
+  /** Transparency mode (default DISABLED). */
+  alpha_cut: EnumValue<typeof AlphaCutMode>;
+  /** Scissor cut used by `alpha_cut` DISCARD (default 0.5). */
+  alpha_scissor_threshold: number;
+  /** Grain of the `alpha_cut` HASH dither (default 1.0). */
+  alpha_hash_scale: number;
+  /** Alpha antialiasing of a DISCARD or HASH cut (default OFF). */
+  alpha_antialiasing_mode: EnumValue<typeof AlphaAntiAliasing>;
+  /** Where the antialiased cut's edge sits (default 0). */
+  alpha_antialiasing_edge: number;
+  /** Sampler filter for the texture (default LINEAR_WITH_MIPMAPS). */
+  texture_filter: EnumValue<typeof TextureFilter>;
+  /** `FLAG_DISABLE_DEPTH_TEST` → `render_mode depth_test_disabled` (`material.cpp:863`, default false). */
+  no_depth_test: boolean;
+  /** Visible from behind (default true → THREE.DoubleSide). */
+  double_sided: boolean;
+  /** `FLAG_FIXED_SIZE`: a depth-proportional rescale in the vertex shader (`material.cpp:1357`, default false). */
+  fixed_size: boolean;
+  /** `FLAG_SHADED`: lit by the scene's 3D lights, `SHADING_MODE_PER_PIXEL` (`material.cpp:3045`, default false). */
+  shaded: boolean;
+}
+
 const ALPHA_CUT_MODES = Object.values(AlphaCutMode);
 const TEXTURE_FILTERS = Object.values(TextureFilter);
 
@@ -18,7 +42,10 @@ const TEXTURE_FILTERS = Object.values(TextureFilter);
  * `sprite_3d.cpp:571-578`), and any but OFF ramps the edge. Both constructors leave `double_sided`
  * true and the other flags false (`sprite_3d.cpp:712-714`).
  */
-export function parseMaterialFor2dFields(properties: Record<string, string>, nodeType: string) {
+export function parseMaterialFor2dFields(
+  properties: Record<string, string>,
+  nodeType: string
+): MaterialFor2dFields {
   // Each read names its key in the source, not through a table: the parity scan scrapes them.
   const label = (key: string) => `${nodeType} ${key}`;
   return {
