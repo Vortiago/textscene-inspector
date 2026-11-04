@@ -10,6 +10,18 @@ export const CANVAS_2D_SCENES = [
   // (200,100), and (660,360) blue, the square at (600,300). Refused, both sit at the origin.
   { name: 'int-wrap-position', file: 'edge-int-wrap-position.tscn', mode: '2d' },
   { name: 'line-2d', file: 'unit-line2d.tscn', mode: '2d' },
+  // Line2D as Godot's LineBuilder builds it. Caps: NONE is background at (45,50), BOX white at (45,100)
+  // and (159,100), ROUND white at (41,150) and background at (42,142). A closed line ignores its caps.
+  { name: 'line-2d-caps', file: 'unit-line2d-caps.tscn', mode: '2d' },
+  // A half-alpha line is 166 on the whole stroke, inner corner included, for each joint mode. Quads
+  // that overlap there blend twice and read 211.
+  { name: 'line-2d-translucent-corners', file: 'unit-line2d-translucent-corners.tscn', mode: '2d' },
+  // A gradient colours each point: (253,0,2) at (51,50), (127,0,128) at (150,50) and 2 and 3 stops alike
+  // on two points, (126,129,0) at (100,150) and (0,254,1) at (150,150) on three. default_color is ignored.
+  { name: 'line-2d-gradient', file: 'unit-line2d-gradient.tscn', mode: '2d' },
+  // A width curve scales the width at each point. The ramp is 10 px lit at x=51 and 40 at x=249, and
+  // the bump on two points is 10 px throughout. A box cap takes its own end's factor.
+  { name: 'line-2d-width-curve', file: 'unit-line2d-width-curve.tscn', mode: '2d' },
   // A `true` literal in INT and FLOAT slots stores 1: frame 1 of a two-frame sheet, z_index 1 over a
   // later sibling, and rotation 1 rad. Godot probes: (230,160) white, (550,160) green and (900,324)
   // blue. Read as 0, the first is black, the second yellow and the bar lies flat.

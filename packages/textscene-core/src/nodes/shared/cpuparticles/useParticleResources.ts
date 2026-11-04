@@ -1,18 +1,10 @@
 /** The curves and colour ramps an emitter's simulation reads, resolved and loaded as a hook. */
 
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import type { Curve } from '../../../resources/curves/curve/types';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
-import { resolveGradient } from '../../../resources/textures/gradienttexture2d/decode';
-import { useLoadedFiles } from '../../../resources/useLoadedFiles';
-import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import type { ParticleParam } from './params';
-import {
-  paramCurveReferences,
-  particleFiles,
-  resolveParticleCurve,
-  resolveParticleCurves,
-} from './sceneResources';
+import { useReferencedResources } from '../../../resources/useReferencedResources';
+import { CPU_PARTICLES_PARAM_COUNT, type ParticleParam } from './params';
 
 /** The raw references an emitter names for its curves and ramps. */
 export interface ParticleResourceReferences {
@@ -32,38 +24,29 @@ export interface ParticleResources {
   colorInitialRamp: Gradient | null;
 }
 
+/** The `curve` reference of each parameter slot, always `CPU_PARTICLES_PARAM_COUNT` long. */
+function paramCurveReferences(params: readonly ParticleParam[]): Array<string | undefined> {
+  return Array.from({ length: CPU_PARTICLES_PARAM_COUNT }, (_, slot) => params[slot]?.curve);
+}
+
 /** The resources `references` name in the scene, which re-resolve as each `.tres` loads. */
 export function useParticleResources(references: ParticleResourceReferences): ParticleResources {
-  const pools = useSceneResources();
-  const { params, colorRamp, colorInitialRamp } = references;
-  // The strings, not the `scaleCurves` object: a caller builds that object on each render.
-  const scaleX = references.scaleCurves?.x;
-  const scaleY = references.scaleCurves?.y;
-  const scaleZ = references.scaleCurves?.z;
-  // Every named reference once, so the files to load and the resolve read one list.
-  const named = useMemo(
+  const { params, colorRamp, colorInitialRamp, scaleCurves } = references;
+  const { curves, gradients } = useReferencedResources(
+    [...paramCurveReferences(params), scaleCurves?.x, scaleCurves?.y, scaleCurves?.z],
+    [colorRamp, colorInitialRamp]
+  );
+  return useMemo(
     () => ({
-      scaleX,
-      scaleY,
-      scaleZ,
-      colorRamp,
-      colorInitialRamp,
+      curves: curves.slice(0, CPU_PARTICLES_PARAM_COUNT),
+      scaleCurves: {
+        x: curves[CPU_PARTICLES_PARAM_COUNT]!,
+        y: curves[CPU_PARTICLES_PARAM_COUNT + 1]!,
+        z: curves[CPU_PARTICLES_PARAM_COUNT + 2]!,
+      },
+      colorRamp: gradients[0]!,
+      colorInitialRamp: gradients[1]!,
     }),
-    [scaleX, scaleY, scaleZ, colorRamp, colorInitialRamp]
+    [curves, gradients]
   );
-  const planFiles = useCallback(
-    () => particleFiles([...paramCurveReferences(params), ...Object.values(named)], pools),
-    [params, named, pools]
-  );
-  const { loadedFile } = useLoadedFiles(planFiles);
-  return useMemo(() => {
-    const curve = (reference: string | undefined) => resolveParticleCurve(reference, pools, loadedFile);
-    const gradient = (reference: string | undefined) => resolveGradient(reference, pools, loadedFile);
-    return {
-      curves: resolveParticleCurves(params, pools, loadedFile),
-      scaleCurves: { x: curve(named.scaleX), y: curve(named.scaleY), z: curve(named.scaleZ) },
-      colorRamp: gradient(named.colorRamp),
-      colorInitialRamp: gradient(named.colorInitialRamp),
-    };
-  }, [params, named, pools, loadedFile]);
 }

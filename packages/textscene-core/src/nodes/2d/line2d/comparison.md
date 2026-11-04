@@ -9,8 +9,9 @@ renders_as: a stroked mesh polyline
 
 # Line2D
 
-Line2D strokes a chain of points at a fixed width. The previewer draws one flat quad per
-segment, with a joint wedge filling each interior corner.
+Line2D strokes a chain of points. The previewer builds the stroke as Godot's `LineBuilder`
+does. That gives the joints, the cap modes, the `gradient` and the `width_curve`. `antialiased` has no effect in Godot 4.6.3, since
+`Line2D::_draw` never reads it.
 
 ## Linting
 
@@ -42,11 +43,11 @@ Strict parsing format-checks these `Line2D` properties, plus 12 inherited from N
 <!-- lint:end -->
 
 `width` falls back to `10` and `sharp_limit` to `2` on a non-numeric value, `closed` to
-`false` and `round_precision` to `8`, each with a warning. `joint_mode` is read as a
+`false` and `round_precision` to `8`, each with a warning. A `round_precision` below 1 reads as 1,
+as Godot's setter does. `joint_mode` is read as a
 plain int, so an out-of-range value passes silently. A malformed `default_color` falls
 back to white with no warning, and malformed `points` warn and leave the line empty.
 
 ## Known limitations
 
-- **Approximated** `gradient`, `texture`, `width_curve`, the cap modes and `antialiased`
-  are not read, so the line draws in `default_color` at one width with flat ends.
+- **Approximated** `texture` and `texture_mode` are not read, so a textured line draws in `default_color`.

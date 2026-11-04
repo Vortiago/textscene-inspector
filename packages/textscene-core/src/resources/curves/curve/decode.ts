@@ -4,6 +4,9 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
+import type { SceneResources } from '../../../r3f/SceneResourcesContext';
+import { resolveReferencedResource } from '../../resolveReference';
+import type { LoadedFile } from '../../scopedResource';
 import { DEFAULT_BAKE_RESOLUTION, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
 import { settableIntOr } from '../../../parser/valueParsers';
 import { storedReal } from '../../../godot/math/real.js';
@@ -54,6 +57,18 @@ function decodeCurve(data: Record<string, string>): Curve {
 /** The `Curve` a resource holds, or null for no resource or one of another type. */
 export function decodeCurveResource(resource: TscnInternalResource | null): Curve | null {
   return resource?.type === 'Curve' ? decodeCurve(resource.data) : null;
+}
+
+/**
+ * The `Curve` that `ref` names: a SubResource, or an ExtResource once its `.tres` has loaded.
+ * Null for no reference, an unknown id, a file not loaded yet, or a resource of another type.
+ */
+export function resolveCurve(
+  ref: string | undefined,
+  pools: SceneResources,
+  loadedFile: LoadedFile
+): Curve | null {
+  return decodeCurveResource(resolveReferencedResource(ref, pools, loadedFile));
 }
 
 function parsePoints(value: string | undefined): CurvePoint[] {
