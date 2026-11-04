@@ -68,6 +68,19 @@ export function skipBecause(context: Context, reason: string): never {
   context.skip();
 }
 
+/** The variable that says the editor under test offers no language-model tools, as Cursor does (CI, 2026-11-04). */
+export const EDITOR_LACKS_LM_TOOLS_ENV = 'TEXTSCENE_EDITOR_LACKS_LM_TOOLS';
+
+/**
+ * Skips the suite on an editor that lists `vscode.lm` but throws "Language model tools are not
+ * available" on every call, as Cursor does.
+ */
+export function skipWhenEditorLacksLmTools(context: Context): void {
+  if (process.env[EDITOR_LACKS_LM_TOOLS_ENV] === '1') {
+    skipBecause(context, 'this editor offers no usable vscode.lm tools API, so no agent tool registers');
+  }
+}
+
 /** Whether the launcher started the window with `--disable-gpu`, which leaves no WebGL context. */
 export function launchedWithoutGpu(): boolean {
   const value = process.env[DISABLE_GPU_ENV];
@@ -126,6 +139,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
 
   suite('Agent tool answers', function () {
     suiteSetup(async function () {
+      skipWhenEditorLacksLmTools(this);
       await copyFixtureProject(projectDir);
       await vscode.extensions.getExtension(EXTENSION_ID)?.activate();
     });

@@ -1,0 +1,58 @@
+# Runs the extension-host integration suite on VS Code forks. VSCodium blocks the merge.
+# Cursor and Windsurf are proprietary and their download endpoints are not a stable API, so
+# their jobs report and never block.
+name: VS Code forks
+
+on:
+  pull_request:
+    paths:
+      - 'apps/textscene-vscode/**'
+      - 'scripts/vscode/forks/**'
+      - '.github/workflows/vscode-forks.yml'
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    name: Integration tests (${{ matrix.fork }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    continue-on-error: ${{ matrix.fork != 'vscodium' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        fork: [vscodium, cursor, windsurf]
+        include:
+          # Cursor lists vscode.lm but throws "Language model tools are not available" on
+          # every invoke, so the agent tool suites skip there (first fork run, 2026-11-04).
+          - fork: cursor
+            lacksLmTools: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+
+      - name: Download the fork
+        id: fork
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          executable=$(scripts/vscode/forks/fetch-fork.sh "${{ matrix.fork }}" "$RUNNER_TEMP/fork")
+          test -x "$executable" || { echo "::error::no executable found for ${{ matrix.fork }}"; exit 1; }
+          echo "executable=$executable" >> "$GITHUB_OUTPUT"
+
+      - run: xvfb-run -a pnpm --filter textscene-inspector test:integration
+        env:
+          TEXTSCENE_EDITOR_EXECUTABLE: ${{ steps.fork.outputs.executable }}
+          TEXTSCENE_EDITOR_LACKS_LM_TOOLS: ${{ matrix.lacksLmTools }}
+
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fork-test-results-${{ matrix.fork }}
+          path: |
+            apps/textscene-vscode/.test-workspace/
+            /tmp/vscode-test-data/logs/

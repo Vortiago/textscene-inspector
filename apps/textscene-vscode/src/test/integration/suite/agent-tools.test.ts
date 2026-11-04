@@ -15,6 +15,7 @@ import { extensionUnderTest, EXTENSION_ID } from '../../smokeProject/sceneEditor
 import {
   AGENT_TOOL_NAMES,
   contributedTools,
+  skipWhenEditorLacksLmTools,
   textOf,
 } from '../../languageFeatures/agentToolAnswersSuite.testkit';
 
@@ -38,7 +39,8 @@ const SCENE = [
 suite('Agent tools', () => {
   let scenePath: string;
 
-  suiteSetup(async () => {
+  suiteSetup(async function () {
+    skipWhenEditorLacksLmTools(this);
     writeGodotProject(PROJECT, { 'scene.tscn': SCENE });
     scenePath = path.join(godotProjectDir(PROJECT), 'scene.tscn');
     await vscode.extensions.getExtension(EXTENSION_ID)?.activate();
