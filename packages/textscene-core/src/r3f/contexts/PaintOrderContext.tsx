@@ -66,14 +66,19 @@ export function LayerRanksProvider({ value, children }: { value: readonly number
   return <LayerRankContext.Provider value={value}>{children}</LayerRankContext.Provider>;
 }
 
+/** This node's draw sequence: the first value of the run its subtree owns. */
+export function useNodePaintSequence(node: TscnNode): number {
+  const range = usePaintRange();
+  return useMemo(() => allocateNodePaintRange(range, node).self, [range, node]);
+}
+
 /**
- * The `renderOrder` of this canvas item's group, Godot's whole draw-order key.
- * A slice outside `<CanvasItem2D>` calls it too, so the order has one source.
- * The caller passes `effectiveZ`, already accumulated for the light cull.
+ * The `renderOrder` of a canvas item's group, Godot's whole draw-order key, for a slice that draws
+ * outside `<CanvasItem2D>` (`canvasItemState.tsx` gives it to every item that does). The caller
+ * passes `effectiveZ`, already accumulated for the light cull.
  */
 export function useCanvasItemRenderOrder(node: TscnNode, effectiveZ: number): number {
-  const range = usePaintRange();
   const layerRank = useLayerRank(useCanvasLayerIndex());
-  const sequence = useMemo(() => allocateNodePaintRange(range, node).self, [range, node]);
+  const sequence = useNodePaintSequence(node);
   return canvasRenderOrder({ layerRank, zFinal: effectiveZ, sequence });
 }

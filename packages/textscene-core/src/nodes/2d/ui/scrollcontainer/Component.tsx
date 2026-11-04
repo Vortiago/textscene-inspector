@@ -51,20 +51,20 @@ export function ScrollContainer({
           hint={layout.hints.topLeft}
           color={hintColor}
           opacity={tint.opacity}
-          chromeRenderOrder={subtreeChromeRenderOrder}
+          chromeSlot={subtreeChromeRenderOrder}
         />
         <ScrollHintChrome
           hint={layout.hints.bottomRight}
           color={hintColor}
           opacity={tint.opacity}
-          chromeRenderOrder={subtreeChromeRenderOrder}
+          chromeSlot={subtreeChromeRenderOrder}
         />
         <ScrollBarChrome
           bar={layout.horizontal}
           track={theme.widgets.scrollBar.scrollHorizontal}
           grabber={theme.widgets.scrollBar.grabber}
           color={tint.own}
-          chromeRenderOrder={subtreeChromeRenderOrder}
+          chromeSlot={subtreeChromeRenderOrder}
           snapToPixels={snapToPixels}
         />
         <ScrollBarChrome
@@ -72,7 +72,7 @@ export function ScrollContainer({
           track={theme.widgets.scrollBar.scrollVertical}
           grabber={theme.widgets.scrollBar.grabber}
           color={tint.own}
-          chromeRenderOrder={subtreeChromeRenderOrder}
+          chromeSlot={subtreeChromeRenderOrder}
           snapToPixels={snapToPixels}
         />
         {children}

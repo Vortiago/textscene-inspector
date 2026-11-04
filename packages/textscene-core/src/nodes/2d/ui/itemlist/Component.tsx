@@ -463,14 +463,14 @@ export function ItemList({
         hint={scrollBars.bottomHint}
         color={hintColor}
         opacity={tint.opacity}
-        chromeRenderOrder={renderOrder}
+        chromeSlot={renderOrder}
       />
       <ScrollBarChrome
         bar={scrollBars.horizontal}
         track={theme.widgets.scrollBar.scrollHorizontal}
         grabber={theme.widgets.scrollBar.grabber}
         color={tint.own}
-        chromeRenderOrder={renderOrder}
+        chromeSlot={renderOrder}
         snapToPixels={snapToPixels}
       />
       <ScrollBarChrome
@@ -478,7 +478,7 @@ export function ItemList({
         track={theme.widgets.scrollBar.scrollVertical}
         grabber={theme.widgets.scrollBar.grabber}
         color={tint.own}
-        chromeRenderOrder={renderOrder}
+        chromeSlot={renderOrder}
         snapToPixels={snapToPixels}
       />
       {children}

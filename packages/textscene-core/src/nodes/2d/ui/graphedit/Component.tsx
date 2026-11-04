@@ -53,11 +53,9 @@ import {
 } from './minimap';
 import { GraphEditMinimapChrome } from './MinimapChrome';
 import { minimapConnectionsOf } from './minimapConnections';
-import { graphEditScrollBars, type GraphEditScrollBar } from './scrollBars';
-import {
-  snappedControlOrigin,
-  type ControlDrawTransform,
-} from '../../../../r3f/controls/native/controlPixelSnap';
+import { graphEditScrollBars } from './scrollBars';
+import { ScrollBarChrome } from '../shared/ScrollChrome';
+import { canvasSubOrders } from '../../../../r3f/canvasItemState';
 import type { GraphEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 
@@ -157,48 +155,6 @@ function GridDotQuad({
         opacity={colorQuad.opacity}
         renderOrder={renderOrder}
       />
-    </CanvasItemGroup>
-  );
-}
-
-/** No bar has an authored rotation, scale or pivot: `set_anchor_and_offset` alone places each (`graph_edit.cpp:844-851`). */
-const SCROLL_BAR_DRAW_TRANSFORM: ControlDrawTransform = {
-  rotation: 0,
-  scale: { x: 1, y: 1 },
-  pivot: { x: 0, y: 0 },
-};
-
-/** One of GraphEdit's own scrollbars: `ScrollBar::_notification(NOTIFICATION_DRAW)`'s track then grabber (`scroll_bar.cpp:295-344`). */
-function ScrollBarChrome({
-  bar,
-  track,
-  grabber,
-  color,
-  renderOrder,
-  snapToPixels,
-}: {
-  bar: GraphEditScrollBar;
-  track: StyleBoxFlatData;
-  grabber: StyleBoxFlatData;
-  color: NativeControlComponentProps['tint']['own'];
-  renderOrder: number;
-  snapToPixels: boolean;
-}) {
-  if (!bar.visible) return null;
-  // Each bar is its own CanvasItem, so its translation is floored on its own
-  // (the PIXEL SNAP doc of `scrollcontainer/Component.tsx`).
-  const origin = snappedControlOrigin(bar.rect, SCROLL_BAR_DRAW_TRANSFORM, snapToPixels);
-  return (
-    <CanvasItemGroup position={[origin.x, -origin.y, 0]}>
-      <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={renderOrder} />
-      <CanvasItemGroup position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}>
-        <StyleBoxQuad
-          styleBox={grabber}
-          color={color}
-          rect={bar.grabberRect}
-          renderOrder={renderOrder + 0.05}
-        />
-      </CanvasItemGroup>
     </CanvasItemGroup>
   );
 }
@@ -308,6 +264,9 @@ export function GraphEdit({
   // (`graph_edit.cpp:3183`), so it paints after every GraphElement, in `top_layer`
   // child order (`:3210,3229,3329`): scrollbars, toolbar, minimap.
   const scrollBars = graphEditScrollBars(graphEditSize, bounds, scrollOffset, theme);
+  // `top_layer` is an `INTERNAL_MODE_BACK` child, drawn after every GraphElement (`graph_edit.cpp:3183`),
+  // and holds the bars, the menu panel and the minimap in that order (`:3211-3329`).
+  const topLayer = canvasSubOrders(subtreeChromeRenderOrder, ['scrollBars', 'toolbar', 'minimap']);
   const minimapPanelRect = minimapRect(graphEditSize, props);
   const minimapXform = minimapTransform({ x: minimapPanelRect.w, y: minimapPanelRect.h }, bounds);
 
@@ -370,7 +329,7 @@ export function GraphEdit({
           track={theme.widgets.scrollBar.scrollHorizontal}
           grabber={theme.widgets.scrollBar.grabber}
           color={tint.own}
-          renderOrder={subtreeChromeRenderOrder + 0.25}
+          chromeSlot={topLayer.scrollBars}
           snapToPixels={snapToPixels}
         />
         <ScrollBarChrome
@@ -378,7 +337,7 @@ export function GraphEdit({
           track={theme.widgets.scrollBar.scrollVertical}
           grabber={theme.widgets.scrollBar.grabber}
           color={tint.own}
-          renderOrder={subtreeChromeRenderOrder + 0.25}
+          chromeSlot={topLayer.scrollBars}
           snapToPixels={snapToPixels}
         />
 
@@ -391,7 +350,7 @@ export function GraphEdit({
             text={toolbarText}
             shape={shape}
             rtl={solveNode.rtl}
-            renderOrder={subtreeChromeRenderOrder + 0.5}
+            slot={topLayer.toolbar}
           />
         )}
 
@@ -411,7 +370,7 @@ export function GraphEdit({
             icons={solveNode.icons}
             theme={theme}
             tint={tint}
-            renderOrder={subtreeChromeRenderOrder + 0.75}
+            slot={topLayer.minimap}
           />
         )}
       </ControlClipProvider>

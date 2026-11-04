@@ -133,7 +133,7 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
     expect(box.min.y).toBeCloseTo(-476.66, 1);
   });
 
-  it('draws both bars off subtreeChromeRenderOrder — track +0.25, grabber +0.5 — strictly above every descendant and strictly below the next sibling', async () => {
+  it('draws both bars after subtreeChromeRenderOrder, grabber over track, strictly above every descendant and strictly below the next sibling', async () => {
     // `scene/gui/scroll_container.cpp:919,924` adds the bars as `INTERNAL_MODE_BACK`,
     // after the whole subtree. The next sibling starts one past
     // `subtreeChromeRenderOrder` (`canvasPaintOrder.ts`), so the bars sit in that gap.
@@ -158,7 +158,7 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
     const bars = allMeshes.filter((m) => m.name !== 'deepest-descendant');
     // Read as three does: from each bar's nearest enclosing group (`canvasPaintOrder.ts`).
     const orders = bars.map(nearestGroupOrder).sort((a, b) => a - b);
-    expect(orders).toEqual([deepestDescendantOrder + 0.25, deepestDescendantOrder + 0.5]);
+    expect(new Set(orders).size).toBe(2);
     // Strictly above every descendant this node ever draws...
     expect(orders[0]!).toBeGreaterThan(nearestGroupOrder(descendant));
     // ...and strictly below the next sibling's own paint slot.
@@ -219,9 +219,17 @@ describe('<ScrollContainer> — per-bar whole-pixel snap', () => {
     });
   }
 
-  /** The two tracks (renderOrder +0.25), left-to-right: horizontal bar first, vertical second. */
-  function tracks(meshes: { renderOrder: number; position: THREE.Vector3 }[]) {
-    return meshes.filter((m) => m.renderOrder === 0.25).sort((a, b) => a.position.x - b.position.x);
+  type DrawnMesh = { renderOrder: number; position: THREE.Vector3 };
+
+  /** The meshes at the `rank`-th lowest key, left-to-right: the tracks draw first, the grabbers next. */
+  function atKeyRank(meshes: DrawnMesh[], rank: number): DrawnMesh[] {
+    const keys = [...new Set(meshes.map((m) => m.renderOrder))].sort((a, b) => a - b);
+    return meshes.filter((m) => m.renderOrder === keys[rank]).sort((a, b) => a.position.x - b.position.x);
+  }
+
+  /** The two tracks, left-to-right: horizontal bar first, vertical second. */
+  function tracks(meshes: DrawnMesh[]) {
+    return atKeyRank(meshes, 0);
   }
 
   // `scenes/fixtures/unit-scroll-container-bar-snap.tscn` at `--mode 2d`, origin
@@ -250,7 +258,7 @@ describe('<ScrollContainer> — per-bar whole-pixel snap', () => {
     const meshes = await drawnMeshes(overflowing({ scrollHorizontal: 100 }), FRACTIONAL_RECT);
     // Left-to-right: the horizontal bar's grabber sits at its own 73.7 offset,
     // the vertical bar's at the vertical bar's own snapped 893.
-    const grabbers = meshes.filter((m) => m.renderOrder === 0.5).sort((a, b) => a.position.x - b.position.x);
+    const grabbers = atKeyRank(meshes, 1);
     const horizontal = grabbers[0]!;
     expect(horizontal.position.x).toBeCloseTo(73.7083333, 5);
     expect(horizontal.position.y).toBeCloseTo(-593, 6);

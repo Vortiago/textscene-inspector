@@ -25,6 +25,7 @@ import {
   tabHeaderHeight,
   tabbarStyleMargins,
 } from './nativeSolver';
+import { canvasSubOrders } from '../../../../r3f/canvasItemState';
 
 /** `default_theme.cpp:1223`: `theme->set_constant("side_margin", "TabContainer", round(8 * scale))`, the literal `nativeSolver.ts` uses for the minimum size. */
 const SIDE_MARGIN_LITERAL = 8;
@@ -40,7 +41,6 @@ export function TabContainer({
   subtreeChromeRenderOrder,
   measureText,
   snapToPixels,
-  effectiveZ,
 }: NativeControlComponentProps) {
   const props = painterView<TabContainerProperties>(solveNode);
   const tabsVisible = props.tabsVisible ?? true;
@@ -76,7 +76,9 @@ export function TabContainer({
   // Godot's default (`all_tabs_in_front === false`, `INTERNAL_MODE_BACK`) draws the strip
   // after every page, on top. This painter draws before its children, which is the `true`
   // case (`INTERNAL_MODE_FRONT`), so the default takes the subtree-chrome slot.
-  const stripRenderOrder = allTabsInFront ? renderOrder : subtreeChromeRenderOrder + 0.5;
+  const stripRenderOrder = allTabsInFront
+    ? renderOrder
+    : canvasSubOrders(subtreeChromeRenderOrder, ['tabBar']).tabBar.key;
 
   return (
     <>
@@ -109,7 +111,6 @@ export function TabContainer({
             theme={theme}
             renderOrder={stripRenderOrder}
             subtreeChromeRenderOrder={stripRenderOrder}
-            effectiveZ={effectiveZ}
             measureText={measureText}
             snapToPixels={snapToPixels}
             childRects={EMPTY_CHILD_RECTS}

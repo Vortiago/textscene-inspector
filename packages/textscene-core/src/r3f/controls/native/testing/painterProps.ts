@@ -8,10 +8,9 @@
 // project with no theme scale, as the `scenes/fixtures/` scenes resolve to.
 
 import { nativeTheme } from '../nativeTheme';
-import { WHITE_MODULATE } from '../../../canvasItemModulate';
+import { WHITE_MODULATE, type OwnPixelTint } from '../../../canvasItemModulate';
 import { godotColorToLinear } from '../../../godotColor';
 import type { NativeControlComponentProps } from '../../ControlComponentRegistry';
-import type { ControlOwnTint } from '../controlTint';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Rgba } from '../../../../godot/math/math';
 
@@ -21,24 +20,17 @@ const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
  * A composed own-pixel tint at an sRGB value, as the walker hands a painter.
  * `own` is already `modulate × self_modulate`, so a test states the product.
  */
-export function painterTint(own: Rgba = WHITE_MODULATE): ControlOwnTint {
+export function painterTint(own: Rgba = WHITE_MODULATE): OwnPixelTint {
   return { own, color: godotColorToLinear(own), opacity: own.a };
 }
 
 /**
  * The environment half of a painter's props: theme, measurer, child rects, the
- * post-subtree chrome draw order and this Control's own `z_final`.
+ * post-subtree chrome draw order and the snap.
  */
 export function painterEnv(): Pick<
   NativeControlComponentProps,
-  | 'theme'
-  | 'measureText'
-  | 'childRects'
-  | 'subtreeChromeRenderOrder'
-  | 'effectiveZ'
-  | 'snapToPixels'
-  | 'meta'
-  | 'tint'
+  'theme' | 'measureText' | 'childRects' | 'subtreeChromeRenderOrder' | 'snapToPixels' | 'meta' | 'tint'
 > {
   return {
     theme: nativeTheme(1),
@@ -49,7 +41,6 @@ export function painterEnv(): Pick<
     subtreeChromeRenderOrder: 0,
     // A Control with no `z_index`. A lit painter passes it to
     // `useCanvasItemLighting`, whose fallback reads the parent's z.
-    effectiveZ: 0,
     // The `Viewport::snap_controls_to_pixels` initialiser (`scene/main/viewport.h`).
     snapToPixels: true,
     meta: undefined,

@@ -578,6 +578,19 @@ describe('<ControlCanvasWalker>', () => {
       expect(zProbeReading(renderer)).toBe(8);
     });
 
+    it("restarts the chain at a Control's own z_index when z_as_relative is false (renderer_canvas_cull.cpp:433)", async () => {
+      controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
+      const probe = solveNode('A/B/Probe', 'ZProbe', {});
+      const b = solveNode('A/B', 'TestType', { anchorsPreset: 15, zIndex: 3, zAsRelative: false }, [probe]);
+      const a = solveNode('A', 'TestType', { anchorsPreset: 15, zIndex: 5 }, [b]);
+
+      const renderer = await ReactThreeTestRenderer.create(
+        <ControlCanvasWalker tree={[a]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      );
+
+      expect(zProbeReading(renderer)).toBe(3);
+    });
+
     it('reaches a Control nested inside a wrapsChildren painter (e.g. CanvasLayer) without losing accumulation', async () => {
       controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
       controlComponentRegistry.register({
@@ -690,29 +703,16 @@ describe('<ControlCanvasWalker>', () => {
       expect(zProbeReading(renderer)).toBe(3);
     });
 
-    it("hands a painter its OWN z_final by prop, where the ambient context is its parent's", async () => {
-      // These two disagree on purpose. `_cull_canvas_item` attaches an item at its
-      // own z (`servers/rendering/renderer_canvas_cull.cpp`), while the context
-      // seeds the descendants with the parent's. A painter on the lighting
-      // fallback would drop its own `z_index`.
-      const PropProbe: NativeControlComponent = ({ effectiveZ }) => (
-        <group name={`zprop:prop=${effectiveZ},ambient=${useEffectiveZ()}`} />
-      );
-      controlComponentRegistry.register({ typeName: 'PropProbe', Component: PropProbe });
-
-      const probe = solveNode('Root/Probe', 'PropProbe', { zIndex: 4 });
+    it("puts a painter in its own z_final, which a light's z window tests (renderer_canvas_cull.cpp:468)", async () => {
+      controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
+      const probe = solveNode('Root/Probe', 'ZProbe', { zIndex: 4 });
       const root = solveNode('Root', 'TestType', { anchorsPreset: 15, zIndex: 5 }, [probe]);
 
       const renderer = await ReactThreeTestRenderer.create(
         <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
       );
 
-      const name = renderer.scene
-        .findAllByType('Group')
-        .map((g) => g.instance)
-        .find((g) => g.name.startsWith('zprop:'))!.name;
-
-      expect(name).toBe('zprop:prop=9,ambient=5');
+      expect(zProbeReading(renderer)).toBe(9);
     });
   });
 

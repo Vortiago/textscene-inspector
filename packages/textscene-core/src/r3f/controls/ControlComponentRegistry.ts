@@ -11,7 +11,7 @@ import type { NativeTheme } from './native/nativeTheme';
 import type { TextMeasurer } from './native/solverRegistry';
 import type { Rect2 } from '../../godot/math/rect2';
 import type { SolveNode } from './native/solveTree';
-import type { ControlOwnTint } from './native/controlTint';
+import type { OwnPixelTint } from '../canvasItemModulate';
 import type { SealedHandoff } from './native/solveHandoff';
 
 /**
@@ -36,7 +36,7 @@ export interface NativeControlComponentProps {
    * Required, since an optional tint falls back to opaque white in silence. A test gets every
    * required prop from `painterEnv` (`native/testing/painterProps.ts`).
    */
-  tint: ControlOwnTint;
+  tint: OwnPixelTint;
   /**
    * Whether Controls in this viewport snap to whole pixels, as the walker resolved it. The project's
    * `gui/common/snap_controls_to_pixels` sets only the root window (`main/main.cpp`), and every other
@@ -65,16 +65,9 @@ export interface NativeControlComponentProps {
    * The key at the end of this node's contiguous run, for chrome that draws after the whole subtree
    * like Godot's `INTERNAL_MODE_BACK` children: ScrollContainer's bars (`scene/gui/scroll_container.cpp:919,924`),
    * and those of LineEdit, OptionButton, RichTextLabel and SplitContainer. The next sibling starts one
-   * past it, so add a fraction such as +0.25. Required, since a `renderOrder` fallback hides a bar.
+   * past it, so chrome takes its keys from `canvasSubOrders`. Required, since a `renderOrder` fallback hides a bar.
    */
   subtreeChromeRenderOrder: number;
-  /**
-   * The own clamped `z_final` (`accumulateCanvasItemZ`) that a 2D light's z window tests, since
-   * `_cull_canvas_item` passes the accumulated `p_z` on (`servers/rendering/renderer_canvas_cull.cpp`).
-   * Required though no painter reads it yet: `useCanvasItemLighting` falls back to `useEffectiveZ()`,
-   * the parent's z, so a lit painter passes this in, as `CanvasItem2D.tsx` does.
-   */
-  effectiveZ: number;
   /**
    * The **solve handoff** the Control's `ContainerLayoutFn` sealed (`SolvedControl.meta`), or
    * `undefined`. Only the producing slice's channel opens it (`native/solveHandoff.ts`). A painter

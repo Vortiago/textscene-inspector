@@ -65,6 +65,11 @@ export interface ControlProperties {
    */
   zIndex?: number;
   /**
+   * CanvasItem `z_as_relative`: whether `z_index` adds onto the parent's `z_final` or replaces it.
+   * Default `true` (`scene/main/canvas_item.h:102`).
+   */
+  zAsRelative?: boolean;
+  /**
    * CanvasItem `show_behind_parent`: the Control draws behind its parent. Default
    * `false` (`scene/main/canvas_item.h:113`, the `behind` field).
    */

@@ -77,6 +77,11 @@ must ration, so a tile batch's source offset is the batch's index.
 
 `CanvasLayer.layer` orders world content as well as Controls.
 
+A piece that an item draws as an internal child item, which the tree does not list, takes a
+**sub-order**: a key between the item's key and the next, from `canvasSubOrders`
+(`r3f/canvasItemState.tsx`). Each piece owns a slot nested in its parent's, so no piece passes the
+next piece or the next item. `subOrders.driftguard.test.ts` rejects a key with an offset added by hand.
+
 One limit stays: a legacy `TileMap`'s per-layer `z_index` orders its layers against each
 other but not against the node's siblings. Godot gives each layer its own `CanvasItem`,
 and the node draws as one canvas item here.

@@ -117,6 +117,7 @@ export function parseControl(heading: ParsedHeading, properties: Record<string, 
 
   // Never undefined, as in `node2d/parser.ts`: an unset Control holds these Godot defaults.
   result.zIndex = intOr(properties.z_index, 0);
+  result.zAsRelative = boolSlotValue(properties.z_as_relative) !== false;
   result.showBehindParent = boolSlotValue(properties.show_behind_parent) === true;
   result.topLevel = boolSlotValue(properties.top_level) === true;
   result.lightMask = intOr(properties.light_mask, 1, `${result.name || 'Control'}.light_mask`);

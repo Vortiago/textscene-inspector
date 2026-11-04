@@ -20,6 +20,7 @@ import { viewportSize } from '../../../viewport/subviewport/targetSize.js';
 import type { SubViewportContainerProperties } from './types.js';
 import { WHOLE_CANVAS_RANGE } from '../../../../r3f/canvasPaintOrder.js';
 import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts.js';
+import { canvasPieceSlot } from '../../../../r3f/canvasItemState';
 
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
@@ -30,8 +31,6 @@ interface ViewportSurfaceNativeProps {
   stretch: boolean;
   shrink: number;
   renderOrder: number;
-  /** Forwarded to `<ControlFallback>` on the cycle branch (`NativeControlComponentProps.effectiveZ`). */
-  effectiveZ: number;
   theme: NativeControlComponentProps['theme'];
   measureText: NativeControlComponentProps['measureText'];
   externalResources: readonly TscnExternalResource[];
@@ -60,7 +59,6 @@ function ViewportSurfaceNative({
   stretch,
   shrink,
   renderOrder,
-  effectiveZ,
   theme,
   measureText,
   externalResources,
@@ -152,7 +150,6 @@ function ViewportSurfaceNative({
           solveNode={fallbackSolveNode}
           rect={viewportRect}
           renderOrder={renderOrder}
-          effectiveZ={effectiveZ}
           // The cycle branch renders no subtree, so the fallback's slot is its subtree's last.
           subtreeChromeRenderOrder={renderOrder}
           theme={theme}
@@ -188,7 +185,6 @@ export function SubViewportContainer({
   tint,
   rect,
   renderOrder,
-  effectiveZ,
   theme,
   measureText,
 }: NativeControlComponentProps) {
@@ -213,11 +209,9 @@ export function SubViewportContainer({
           containerRect={rect}
           stretch={stretch}
           shrink={shrink}
-          effectiveZ={effectiveZ}
           tint={tint}
-          // Each successive viewport draws on top of the last (tree-order stacking), a fraction below
-          // the next paint index's slot, as a scrollbar grabber's `+0.5` does.
-          renderOrder={renderOrder + (index + 1) / 100}
+          // Each successive viewport draws on top of the last, in tree order (`subviewport_container.cpp:134-145`).
+          renderOrder={canvasPieceSlot(renderOrder, index, viewports.length).key}
           theme={theme}
           measureText={measureText}
           externalResources={externalResources}

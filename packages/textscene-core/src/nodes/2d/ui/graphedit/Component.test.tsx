@@ -17,6 +17,7 @@ import type { GraphNodeSlot } from '../graphnode/types';
 import '../graphnode/nativeSolver.js'; // registers GraphNode's MinimumSizeFn/ContainerLayoutFn
 import { GraphEdit } from './Component';
 import type { GraphEditConnection, GraphEditProperties } from './types';
+import { canvasSubOrders } from '../../../../r3f/canvasItemState';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 100, h: 100 };
 
@@ -227,11 +228,12 @@ describe('<GraphEdit> constructor chrome (graph_edit.cpp:3229-3340)', () => {
 
   // Chrome draws past `subtreeChromeRenderOrder`, because top_layer is INTERNAL_MODE_BACK
   // (graph_edit.cpp:3183), in top_layer child order: scrollbars, toolbar, minimap.
-  const TOOLBAR_BAND = 9.4;
-  const MINIMAP_BAND = 9.7;
+  const { toolbar, minimap } = canvasSubOrders(9, ['scrollBars', 'toolbar', 'minimap']);
+  const TOOLBAR_BAND = toolbar.key;
+  const MINIMAP_BAND = minimap.key;
 
   function band(renderer: Rendered, from: number, to = Infinity) {
-    return chromeMeshes(renderer.scene).filter((m) => m.renderOrder > from && m.renderOrder < to);
+    return chromeMeshes(renderer.scene).filter((m) => m.renderOrder >= from && m.renderOrder < to);
   }
 
   it('always draws both scrollbars, track and grabber, below the toolbar band (graph_edit.cpp:491-492)', async () => {
@@ -411,12 +413,17 @@ describe('<GraphEdit> minimap connection polylines', () => {
     );
   }
 
-  /** The one mesh drawn between the minimap's node rects and its camera rect. */
+  /**
+   * The mesh at the minimap's connections key: `_minimap_draw` draws the panel, the nodes, the
+   * connections, the camera and the resizer in that order (`graph_edit.cpp:1807-1892`).
+   */
   function polyline(renderer: Rendered): THREE.Mesh | undefined {
+    const { minimap } = canvasSubOrders(9, ['scrollBars', 'toolbar', 'minimap']);
+    const { connections } = canvasSubOrders(minimap, ['nodes', 'connections', 'camera', 'resizer']);
     return renderer.scene
       .findAllByType('Mesh')
       .map((m) => m.instance as THREE.Mesh)
-      .find((m) => Math.abs(m.renderOrder - (9 + 0.75 + 0.03)) < 1e-9);
+      .find((m) => m.renderOrder === connections.key);
   }
 
   it('draws one merged polyline mesh for every resolvable connection', async () => {
