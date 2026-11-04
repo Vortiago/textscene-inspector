@@ -1,7 +1,7 @@
 /**
  * `LanguageModelDataPart`, a binary part of a tool result such as a PNG the agent can look at.
- * It is stable from VS Code 1.106, and the pinned `@types/vscode` 1.105 predates it, so the
- * capture tool registers only on a host that has it (see `registerTscnTools`).
+ * It is stable from VS Code 1.106, and the pinned `@types/vscode` 1.105 predates it. The capture
+ * tool registers only on a host that returns one (see `hostReturnsImageParts`).
  */
 
 declare module 'vscode' {

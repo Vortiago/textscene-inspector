@@ -9,6 +9,7 @@ import { Linter } from '@textscene/core/linter';
 import type { LintResourceProvider } from '../LintResourceProvider';
 import type { PreviewCapture } from '../previewCaptureQueue';
 import { formatLintResult } from './formatLintResult';
+import { hostReturnsImageParts } from './imageResultSupport';
 import { formatMissingResources, missingResourcePaths } from './missingResources';
 import { formatSceneTree } from './sceneTree';
 import { readSceneText, resolveToolUri, type ScenePathToolInput } from './toolInput';
@@ -176,8 +177,8 @@ function whileEnabled<T>(tool: vscode.LanguageModelTool<T>): vscode.LanguageMode
 }
 
 /**
- * Registers the agent tools. The capture tool needs the image part of a tool result, stable
- * from VS Code 1.106, so it registers on its own guard.
+ * Registers the agent tools. The capture tool returns an image part, so it registers only on a
+ * host that converts one (see `hostReturnsImageParts`).
  */
 export function registerTscnTools(context: vscode.ExtensionContext, host: TscnToolHost): void {
   const register = <T>(id: string, tool: vscode.LanguageModelTool<T>) =>
@@ -188,7 +189,7 @@ export function registerTscnTools(context: vscode.ExtensionContext, host: TscnTo
     register(TOOL_IDS.openPreview, new TscnOpenPreviewTool(host)),
     register(TOOL_IDS.missingResources, sceneTextTool(missingResourcesAnswer(host))),
   ];
-  if (typeof vscode.LanguageModelDataPart?.image === 'function') {
+  if (hostReturnsImageParts()) {
     tools.push(register(TOOL_IDS.capture, new TscnCaptureTool(host)));
   }
   context.subscriptions.push(...tools);

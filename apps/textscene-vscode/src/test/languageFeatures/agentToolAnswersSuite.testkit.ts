@@ -9,6 +9,7 @@ import * as assert from 'assert';
 import type { Context } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { hostReturnsImageParts } from '../../tools/imageResultSupport';
 import { NOT_LOADED_ERROR, PING_INTERVAL_MS, WEBVIEW_LOAD_DEADLINE_MS } from '../../previewCaptureQueue';
 import { DISABLE_GPU_ENV } from '../integration/integrationLaunch';
 import { EXTENSION_ID, previewTabLabels, previewTabStates } from '../smokeProject/sceneEditor';
@@ -240,8 +241,8 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
     });
 
     test('the capture tool returns a PNG of the rendered preview', async function () {
-      if (typeof vscode.LanguageModelDataPart?.image !== 'function') {
-        skipBecause(this, 'this VS Code predates the image part, so the capture tool does not register');
+      if (!hostReturnsImageParts()) {
+        skipBecause(this, 'this VS Code cannot return an image part, so the capture tool does not register');
       }
       if (launchedWithoutGpu()) {
         skipBecause(this, 'the window launched with --disable-gpu, so the next test asserts the answer');
@@ -261,8 +262,8 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
     });
 
     test('the capture tool names the missing WebGL context in a window launched without a GPU', async function () {
-      if (typeof vscode.LanguageModelDataPart?.image !== 'function') {
-        skipBecause(this, 'this VS Code predates the image part, so the capture tool does not register');
+      if (!hostReturnsImageParts()) {
+        skipBecause(this, 'this VS Code cannot return an image part, so the capture tool does not register');
       }
       if (!launchedWithoutGpu()) {
         skipBecause(this, 'the window has a GPU, so the previous test asserts the image');
