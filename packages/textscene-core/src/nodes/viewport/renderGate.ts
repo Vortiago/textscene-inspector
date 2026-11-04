@@ -80,31 +80,48 @@ export interface RenderClear {
 export const BLACK = new THREE.Color(0, 0, 0);
 
 /**
- * The renders one target has had, which its clear mode and a ONCE update mode count. Written only
- * by `takeRender`. A new target makes a new state, as Godot's new target starts at (0, 0, 0, 0)
- * with its ONCE pending.
+ * The renders of one viewport, which a ONCE update mode and a ONCE clear mode spend. Godot keeps
+ * both on the viewport, not on its target: a resize makes a new target and leaves them spent
+ * (`renderer_viewport.cpp:920`, `:375`), and setting a mode again arms it. Written only by
+ * `takeRender`, `rearm` and `restart`. A new parse of the scene makes a new viewport, which starts
+ * at (0, 0, 0, 0) with both pending.
  */
 export class TargetRenderState {
-  private renders = 0;
+  private hasRenderedOnce = false;
+  private lastClearMode: number | null = null;
+  private isOnceClearPending = true;
   private lastClearColor: THREE.Color | null = null;
 
+  /** Whether the viewport has rendered since its update mode was last set. */
   get hasRendered(): boolean {
-    return this.renders > 0;
+    return this.hasRenderedOnce;
   }
 
   /** Counts a render under `clearMode` and answers what it clears. `projectClearColor` is linear. */
   takeRender(clearMode: number, projectClearColor: THREE.Color): RenderClear {
+    if (clearMode !== this.lastClearMode) {
+      this.lastClearMode = clearMode;
+      this.isOnceClearPending = true;
+    }
     const clears =
       clearMode === SubViewportClearMode.ALWAYS ||
-      (clearMode === SubViewportClearMode.ONCE && this.renders === 0);
-    this.renders++;
+      (clearMode === SubViewportClearMode.ONCE && this.isOnceClearPending);
+    if (clearMode === SubViewportClearMode.ONCE) this.isOnceClearPending = false;
+    this.hasRenderedOnce = true;
     if (clears) (this.lastClearColor ??= new THREE.Color()).copy(projectClearColor);
     return { clears, color: this.lastClearColor ?? BLACK };
   }
 
+  /** Arms a ONCE update mode again, as setting the update mode does (`viewport.cpp:5475-5478`). */
+  rearm(): void {
+    this.hasRenderedOnce = false;
+  }
+
   /** Forgets every render: a new parse of the scene makes new viewports. */
   restart(): void {
-    this.renders = 0;
+    this.hasRenderedOnce = false;
+    this.lastClearMode = null;
+    this.isOnceClearPending = true;
     this.lastClearColor = null;
   }
 }

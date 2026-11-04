@@ -8,7 +8,8 @@ import {
   useRegisterViewportPass,
   type ViewportPass,
 } from '../../../r3f/contexts/ViewportPassRegistryContext.js';
-import { BLACK, TargetRenderState } from '../renderGate.js';
+import { BLACK } from '../renderGate.js';
+import { useViewportRenderState } from './usePublishViewportPass.js';
 import type { SubViewportProperties } from './types.js';
 import { useViewportGate } from './useViewportGate.js';
 import type { TscnNode } from '../../../parser/types.js';
@@ -17,7 +18,7 @@ export function GateOnlyPass({ path, node }: { path: string; node: TscnNode }): 
   const properties = node.properties as SubViewportProperties;
   const gate = useViewportGate(path, properties.render_target_update_mode);
   const register = useRegisterViewportPass();
-  const state = useMemo(() => new TargetRenderState(), []);
+  const state = useViewportRenderState(gate.updateMode);
   const clearMode = properties.render_target_clear_mode;
   const pass = useMemo<ViewportPass>(
     () => ({

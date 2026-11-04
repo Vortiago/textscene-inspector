@@ -54,7 +54,7 @@ import { ViewportPassAttributes } from '../../../r3f/environment/worldExposure';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { fitToAspect, fittedAspect } from '../../3d/camera3d/projectionFit';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
-import { usePublishViewportPass, useTargetRenderState } from './usePublishViewportPass';
+import { usePublishViewportPass, useViewportRenderState } from './usePublishViewportPass';
 import { useViewportGate } from './useViewportGate';
 import { useCanvasPass } from './useCanvasPass';
 import type { SubViewportProperties } from './types';
@@ -132,9 +132,9 @@ export function OffscreenViewportPass({
     [kind, width, height, node.name]
   );
   useDisposeOnRelease(target);
-  const renderState = useTargetRenderState(target);
   const clearMode = properties.render_target_clear_mode;
   const gate = useViewportGate(path, properties.render_target_update_mode);
+  const renderState = useViewportRenderState(gate.updateMode);
   const drawsCanvasOverWorld = canvasOverWorld !== null;
   const msaaMode = viewportMsaaMode(properties, kind);
   // Written only by the stage below while it is mounted.

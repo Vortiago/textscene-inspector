@@ -55,3 +55,41 @@ export function useAnimatedValueAt<T>(
   }, [nodePath, registry, property]);
   return value;
 }
+
+const NO_VISIBILITY: ReadonlyMap<string, boolean> = new Map();
+
+/**
+ * The `visible` an AnimationPlayer drives on the nodes at `paths`, by path: only the paths with a
+ * driven value are in the map. It changes with a driven value, not with each frame of one.
+ */
+export function useAnimatedVisibility(paths: readonly string[]): ReadonlyMap<string, boolean> {
+  const registry = useAnimatedValueRegistry();
+  const [visible, setVisible] = useState(NO_VISIBILITY);
+  const key = paths.join('\n');
+  useEffect(() => {
+    setVisible(NO_VISIBILITY);
+    const stops = key
+      .split('\n')
+      .filter(Boolean)
+      .map((path) =>
+        registry.subscribe(animatedValueKey(path, 'visible'), (value) =>
+          setVisible((previous) => withVisibility(previous, path, value === null ? null : value[0] !== 0))
+        )
+      );
+    return () => stops.forEach((stop) => stop());
+  }, [registry, key]);
+  return visible;
+}
+
+/** `visible` with `path` set to `isVisible`, or removed for null. The same map where nothing changes. */
+function withVisibility(
+  visible: ReadonlyMap<string, boolean>,
+  path: string,
+  isVisible: boolean | null
+): ReadonlyMap<string, boolean> {
+  if (visible.get(path) === (isVisible ?? undefined)) return visible;
+  const next = new Map(visible);
+  if (isVisible === null) next.delete(path);
+  else next.set(path, isVisible);
+  return next;
+}

@@ -3,7 +3,7 @@
  * for the orchestrator, as one act: neither can exist without the other. It derives
  * `dependsOn` from the parsed tree itself, which the registry contexts do not read.
  */
-import { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
@@ -19,7 +19,7 @@ import { TargetRenderState } from '../renderGate.js';
 import { collectNestedViewportPaths } from './nestedViewportPaths.js';
 import { clearTarget } from './offscreenViewport.js';
 import { useTargetViews } from './targetViews.js';
-import type { ViewportGate } from './viewportGate.js';
+import type { UpdateGate } from './viewportGate.js';
 
 interface PublishViewportPassOptions {
   /** Dispatcher-absolute path of the sub-viewport publishing its content. */
@@ -33,7 +33,7 @@ interface PublishViewportPassOptions {
   /** `transparent_bg`: whether the target's image keeps alpha. */
   isTransparent: boolean;
   /** What the live tree says of the pass's update mode. */
-  gate: ViewportGate;
+  gate: UpdateGate;
   /** The renders of `target`, which `render` takes. */
   renderState: TargetRenderState;
   /**
@@ -43,10 +43,14 @@ interface PublishViewportPassOptions {
   render: () => void;
 }
 
-/** The renders of `target`. A new target starts with none, as Godot's new target holds (0, 0, 0, 0) with its ONCE pending. */
-export function useTargetRenderState(target: THREE.WebGLRenderTarget): TargetRenderState {
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- the state follows the target
-  return useMemo(() => new TargetRenderState(), [target]);
+/**
+ * The renders of one viewport, which a resize of its target leaves as they are (`renderer_viewport.cpp:920`).
+ * A new update mode arms a ONCE pass again (`viewport.cpp:5475-5478`).
+ */
+export function useViewportRenderState(updateMode: number): TargetRenderState {
+  const state = useMemo(() => new TargetRenderState(), []);
+  useEffect(() => state.rearm(), [state, updateMode]);
+  return state;
 }
 
 export function usePublishViewportPass({
@@ -64,9 +68,12 @@ export function usePublishViewportPass({
   const registerViewportPass = useRegisterViewportPass();
   const views = useTargetViews(target, isTransparent);
   // A layout effect, so a consumer that mounts beside this pass never samples the allocation's bytes.
-  // A target that has rendered keeps its bytes when `transparent_bg` changes.
+  // A new target holds (0, 0, 0, 0) whatever was rendered, and a rendered one keeps its bytes when
+  // `transparent_bg` changes.
+  const clearedTarget = useRef<THREE.WebGLRenderTarget | null>(null);
   useLayoutEffect(() => {
-    if (!renderState.hasRendered) clearTarget(gl, target, isTransparent);
+    if (clearedTarget.current !== target || !renderState.hasRendered) clearTarget(gl, target, isTransparent);
+    clearedTarget.current = target;
   }, [gl, target, isTransparent, renderState]);
 
   const entry = useMemo<ViewportTextureEntry>(

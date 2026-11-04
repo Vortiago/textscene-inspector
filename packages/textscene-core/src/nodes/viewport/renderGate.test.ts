@@ -110,6 +110,28 @@ describe('TargetRenderState', () => {
     expect(state.hasRendered).toBe(true);
   });
 
+  it('clears a ONCE clear again after the clear mode is set again', () => {
+    const state = new TargetRenderState();
+    state.takeRender(SubViewportClearMode.ONCE, projectColor);
+    expect(state.takeRender(SubViewportClearMode.ONCE, projectColor).clears).toBe(false);
+    state.takeRender(SubViewportClearMode.ALWAYS, projectColor);
+    expect(state.takeRender(SubViewportClearMode.ONCE, projectColor).clears).toBe(true);
+  });
+
+  it('keeps a spent ONCE update after the clear mode changes', () => {
+    const state = new TargetRenderState();
+    state.takeRender(SubViewportClearMode.ONCE, projectColor);
+    state.takeRender(SubViewportClearMode.ALWAYS, projectColor);
+    expect(state.hasRendered).toBe(true);
+  });
+
+  it('renders a spent ONCE update again after rearm', () => {
+    const state = new TargetRenderState();
+    state.takeRender(SubViewportClearMode.ALWAYS, projectColor);
+    state.rearm();
+    expect(state.hasRendered).toBe(false);
+  });
+
   it('starts over on restart, with its ONCE clear pending', () => {
     const state = new TargetRenderState();
     state.takeRender(SubViewportClearMode.ONCE, projectColor);

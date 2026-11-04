@@ -16,7 +16,7 @@ import {
   type GatedPass,
   type TargetRenderState,
 } from '../../nodes/viewport/renderGate.js';
-import type { ViewportGate } from '../../nodes/viewport/subviewport/viewportGate.js';
+import type { UpdateGate } from '../../nodes/viewport/subviewport/viewportGate.js';
 import { useOptionalHierarchy } from './HierarchyContext.js';
 import { useSceneAssetsSettled } from '../useSceneAssetsSettled.js';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
@@ -38,7 +38,7 @@ export interface ViewportPass {
 }
 
 /** What the orchestrator reads of a SubViewport to decide whether its pass renders. */
-export interface PassGate extends ViewportGate {
+export interface PassGate extends UpdateGate {
   /** The renders of the pass's target. The pass's `render` takes each one. */
   state: TargetRenderState;
   /** Whether a consumer samples the target now. */

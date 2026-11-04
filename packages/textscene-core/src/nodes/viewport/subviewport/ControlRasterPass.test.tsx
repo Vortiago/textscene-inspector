@@ -261,4 +261,50 @@ offset_bottom = 100.5
     );
     expect(seen.at(-1)).toBeNull();
   });
+
+  /** A WHEN_PARENT_VISIBLE viewport follows the pass of the viewport around it, so that pass registers. */
+  describe('a Control-only viewport inside another', () => {
+    const nested = (outerMode: number) => `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Outer" type="SubViewport" parent="."]
+render_target_update_mode = ${outerMode}
+size = Vector2i(64, 64)
+
+[node name="Panel" type="Panel" parent="Outer"]
+anchors_preset = 0
+offset_right = 64.0
+offset_bottom = 64.0
+
+[node name="Inner" type="SubViewport" parent="Outer"]
+render_target_update_mode = 3
+size = Vector2i(32, 32)
+
+[node name="InnerPanel" type="Panel" parent="Outer/Inner"]
+anchors_preset = 0
+offset_right = 32.0
+offset_bottom = 32.0
+`;
+
+    /** Whether a frame draws into the inner viewport's target. */
+    async function innerDraws(outerMode: number): Promise<boolean> {
+      const seen: (ViewportTextureEntry | null)[] = [];
+      const { renderer, gl } = await mount(parse(nested(outerMode)), seen, 'Root/Outer/Inner');
+      const inner = seen.at(-1)!.plain.texture;
+      let drew = false;
+      await advanceFrameWithStubbedGl(renderer, gl, (target) => {
+        if (target?.texture === inner) drew = true;
+      });
+      return drew;
+    }
+
+    it('renders with an ALWAYS outer viewport', async () => {
+      expect(await innerDraws(4)).toBe(true);
+    });
+
+    it('never renders under a DISABLED outer viewport', async () => {
+      expect(await innerDraws(0)).toBe(false);
+    });
+  });
 });

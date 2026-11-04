@@ -7,7 +7,7 @@ import { TscnParser } from '../../../parser/TscnParser';
 import { liveTreeOf } from '../../../r3f/liveSceneTree';
 import { contextOver } from '../../../r3f/liveSceneTree.testkit';
 import { SubViewportUpdateMode } from '../../../godot/scene/viewport';
-import { viewportGateAt } from './viewportGate';
+import { resolveGate, viewportGateAt } from './viewportGate';
 import '../../../r3f/nodes/index';
 
 const { DISABLED, ONCE, WHEN_VISIBLE, ALWAYS } = SubViewportUpdateMode;
@@ -17,13 +17,18 @@ function treeOf(source: string) {
   return liveTreeOf(scene.nodes, contextOver(scene, {}));
 }
 
+/** The gate of the viewport at `path` with no animated `visible` over it. */
+function resolved(tree: ReturnType<typeof treeOf>, path: string, authoredMode: number) {
+  return resolveGate(viewportGateAt(tree, path, authoredMode), new Map());
+}
+
 describe('viewportGateAt: update mode', () => {
   it('keeps the authored mode under a plain parent', () => {
     const tree = treeOf(`[node name="Root" type="Node"]
 
 [node name="View" type="SubViewport" parent="."]
 `);
-    expect(viewportGateAt(tree, 'Root/View', ONCE).updateMode).toBe(ONCE);
+    expect(resolved(tree, 'Root/View', ONCE).updateMode).toBe(ONCE);
   });
 
   it('forces ALWAYS under a visible SubViewportContainer, whatever the authored mode', () => {
@@ -33,7 +38,7 @@ describe('viewportGateAt: update mode', () => {
 
 [node name="View" type="SubViewport" parent="Booth"]
 `);
-    expect(viewportGateAt(tree, 'Root/Booth/View', DISABLED).updateMode).toBe(ALWAYS);
+    expect(resolved(tree, 'Root/Booth/View', DISABLED).updateMode).toBe(ALWAYS);
   });
 
   it('forces DISABLED under a SubViewportContainer with visible off', () => {
@@ -44,7 +49,7 @@ visible = false
 
 [node name="View" type="SubViewport" parent="Booth"]
 `);
-    expect(viewportGateAt(tree, 'Root/Booth/View', ALWAYS).updateMode).toBe(DISABLED);
+    expect(resolved(tree, 'Root/Booth/View', ALWAYS).updateMode).toBe(DISABLED);
   });
 
   it('forces DISABLED when an ancestor Control is hidden', () => {
@@ -57,7 +62,7 @@ visible = false
 
 [node name="View" type="SubViewport" parent="Panel/Booth"]
 `);
-    expect(viewportGateAt(tree, 'Root/Panel/Booth/View', ALWAYS).updateMode).toBe(DISABLED);
+    expect(resolved(tree, 'Root/Panel/Booth/View', ALWAYS).updateMode).toBe(DISABLED);
   });
 
   it('forces DISABLED under a container on a hidden CanvasLayer', () => {
@@ -70,7 +75,7 @@ visible = false
 
 [node name="View" type="SubViewport" parent="Layer/Booth"]
 `);
-    expect(viewportGateAt(tree, 'Root/Layer/Booth/View', ALWAYS).updateMode).toBe(DISABLED);
+    expect(resolved(tree, 'Root/Layer/Booth/View', ALWAYS).updateMode).toBe(DISABLED);
   });
 
   it('stops the visibility climb at a node that is no CanvasItem', () => {
@@ -83,7 +88,7 @@ visible = false
 
 [node name="View" type="SubViewport" parent="Plain/Booth"]
 `);
-    expect(viewportGateAt(tree, 'Root/Plain/Booth/View', DISABLED).updateMode).toBe(ALWAYS);
+    expect(resolved(tree, 'Root/Plain/Booth/View', DISABLED).updateMode).toBe(ALWAYS);
   });
 
   it('keeps the authored mode of a viewport nested in a viewport under a container', () => {
@@ -95,7 +100,7 @@ visible = false
 
 [node name="Inner" type="SubViewport" parent="Booth/Outer"]
 `);
-    expect(viewportGateAt(tree, 'Root/Booth/Outer/Inner', WHEN_VISIBLE).updateMode).toBe(WHEN_VISIBLE);
+    expect(resolved(tree, 'Root/Booth/Outer/Inner', WHEN_VISIBLE).updateMode).toBe(WHEN_VISIBLE);
   });
 });
 
@@ -110,10 +115,57 @@ describe('viewportGateAt: enclosing viewport', () => {
 `);
 
   it('is null at the root viewport', () => {
-    expect(viewportGateAt(tree, 'Root/Outer', ALWAYS).enclosingPath).toBeNull();
+    expect(resolved(tree, 'Root/Outer', ALWAYS).enclosingPath).toBeNull();
   });
 
   it('names the nearest SubViewport above, past plain nodes', () => {
-    expect(viewportGateAt(tree, 'Root/Outer/Group/Inner', ALWAYS).enclosingPath).toBe('Root/Outer');
+    expect(resolved(tree, 'Root/Outer/Group/Inner', ALWAYS).enclosingPath).toBe('Root/Outer');
+  });
+});
+
+describe('resolveGate: an animated visible', () => {
+  const tree = treeOf(`[node name="Root" type="Control"]
+
+[node name="Panel" type="Panel" parent="."]
+
+[node name="Booth" type="SubViewportContainer" parent="Panel"]
+
+[node name="View" type="SubViewport" parent="Panel/Booth"]
+`);
+  const gate = viewportGateAt(tree, 'Root/Panel/Booth/View', DISABLED);
+
+  it('hides the viewport while the container is animated to hidden', () => {
+    expect(resolveGate(gate, new Map([['Root/Panel/Booth', false]])).updateMode).toBe(DISABLED);
+  });
+
+  it('hides the viewport while an ancestor is animated to hidden', () => {
+    expect(resolveGate(gate, new Map([['Root/Panel', false]])).updateMode).toBe(DISABLED);
+  });
+
+  it('shows the viewport while a hidden ancestor is animated to visible', () => {
+    const hiddenTree = treeOf(`[node name="Root" type="Control"]
+
+[node name="Panel" type="Panel" parent="."]
+visible = false
+
+[node name="Booth" type="SubViewportContainer" parent="Panel"]
+
+[node name="View" type="SubViewport" parent="Panel/Booth"]
+`);
+    const hidden = viewportGateAt(hiddenTree, 'Root/Panel/Booth/View', ALWAYS);
+    expect(resolveGate(hidden, new Map([['Root/Panel', true]])).updateMode).toBe(ALWAYS);
+  });
+
+  it('ignores an animated visible above a node that is no CanvasItem', () => {
+    const plainTree = treeOf(`[node name="Root" type="Control"]
+
+[node name="Plain" type="Node" parent="."]
+
+[node name="Booth" type="SubViewportContainer" parent="Plain"]
+
+[node name="View" type="SubViewport" parent="Plain/Booth"]
+`);
+    const plain = viewportGateAt(plainTree, 'Root/Plain/Booth/View', DISABLED);
+    expect(resolveGate(plain, new Map([['Root', false]])).updateMode).toBe(ALWAYS);
   });
 });

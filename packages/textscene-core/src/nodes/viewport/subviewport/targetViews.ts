@@ -11,6 +11,7 @@ import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures.js';
 import { drawOffscreen } from '../../../r3f/offscreen.js';
 import { copyTexels, wholeTexels, type TexelPlacement, type TexelTransfer } from '../../../r3f/texelCopy.js';
 import {
+  hasHeldCopies,
   hasLiveCopies,
   noteLiveTargetDrawn,
   publishLiveTargets,
@@ -56,7 +57,7 @@ export function useTargetViews(target: THREE.WebGLRenderTarget, isTransparent: b
     return {
       plain,
       decoding,
-      isSampled: () => samplers.count > 0 || hasLiveCopies(plain.texture) || hasLiveCopies(decoding.texture),
+      isSampled: () => samplers.count > 0 || hasHeldCopies(plain.texture) || hasHeldCopies(decoding.texture),
       // One save and restore of the renderer for the views and every copy a reader holds, and none
       // for a pass with nothing to fill.
       fill: () => {

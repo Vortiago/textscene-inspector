@@ -448,7 +448,7 @@ What displays a **sub-viewport**'s render target (a `SubViewportContainer` or a 
 _Avoid_: "viewport container" for the concept. "render target" for the surface.
 
 **Pass gate** (`PassGate` in `r3f/contexts/ViewportPassRegistryContext.tsx`, `nodes/viewport/renderGate.ts`):
-What decides whether a **sub-viewport**'s pass renders in a frame: its effective `render_target_update_mode` (a `SubViewportContainer` parent replaces the authored mode), the viewport it sits in, and whether a consumer sampled its target. The same gate decides what a render clears, from `render_target_clear_mode` and the renders the target has had.
+What decides whether a **sub-viewport**'s pass renders in a frame: its effective `render_target_update_mode` (a `SubViewportContainer` parent replaces the authored mode), the viewport it sits in, and whether a mounted consumer sampled its target. The same gate decides what a render clears, from `render_target_clear_mode` and the renders the viewport has had.
 _Avoid_: "visibility cull". "throttle".
 
 **ViewportTextureRegistry**:

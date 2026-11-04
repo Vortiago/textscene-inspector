@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   fillLiveCopy,
+  hasHeldCopies,
   liveTargetCopy,
   liveTargetCrop,
   liveTargetDrawCount,
@@ -336,5 +337,27 @@ describe('liveTargetDrawCount', () => {
     const crop = held(liveTargetCrop(held(liveTargetCopy(target.texture)), CORNER_CELL));
     noteLiveTargetDrawn(target.texture);
     expect(liveTargetDrawCount(crop)).toBe(1);
+  });
+});
+
+describe('a target that readers sample', () => {
+  it('is sampled only while a reader holds a copy of it', () => {
+    const target = liveCanvasTarget();
+    const view = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    // A copy made in a render React discards is never held.
+    expect(hasHeldCopies(target.texture)).toBe(false);
+    const release = holdUntilReleased(view);
+    expect(hasHeldCopies(target.texture)).toBe(true);
+    release();
+    expect(hasHeldCopies(target.texture)).toBe(false);
+  });
+
+  it('is sampled through a copy that a held copy of a copy reads', () => {
+    const target = liveCanvasTarget();
+    const first = liveTargetCopy(target.texture);
+    const second = liveTargetCopy(first);
+    expect(hasHeldCopies(target.texture)).toBe(false);
+    withdrawals.push(holdUntilReleased(second));
+    expect(hasHeldCopies(target.texture)).toBe(true);
   });
 });

@@ -36,7 +36,7 @@ const NEEDS_NO_OVERLAY = new Map([
   ],
   [
     'nodes/viewport/subviewport/viewportGate.ts',
-    'Reads the type and `visible` of the nodes around a viewport, which no pass patches.',
+    'Reads the type and authored `visible` of the nodes around a viewport, which no pass patches. An animated `visible` comes through AnimatedValueContext.',
   ],
   [
     'nodes/viewport/subviewport/viewportContent.ts',
