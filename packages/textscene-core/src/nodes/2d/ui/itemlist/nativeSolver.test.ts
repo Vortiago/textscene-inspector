@@ -15,7 +15,6 @@ import type { ItemListProperties } from './types';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import {
   ICON_MODE_LEFT,
-  ICON_MODE_TOP,
   itemIconColor,
   itemIconDraw,
   itemIconPackedSize,
@@ -37,6 +36,9 @@ import type { Vector2 } from '../../../../godot/math/vector';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 
 const itemListMinimumSize = controlSolverRegistry.minimumSize('ItemList')!;
+
+/** `ItemList::ICON_MODE_TOP` (`item_list.h:43`). */
+const ICON_MODE_TOP = 0;
 
 function node(props: Partial<ItemListProperties> = {}): SolveNode {
   return {

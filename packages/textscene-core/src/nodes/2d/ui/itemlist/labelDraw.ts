@@ -18,7 +18,7 @@ import type { TextLayoutResult, TextLineLayout } from '../../../../r3f/controls/
  * line is LEFT under LTR and RIGHT under RTL (`item_list.cpp:1668,1670`), which goes negative for a
  * wider line. `lineWidthPx` is `shaped_text_get_width`, ceiled (`shapedTextSizeWidthPx`).
  */
-export function itemListLineShiftPx(
+function itemListLineShiftPx(
   lineWidthPx: number,
   boxWidthPx: number,
   wrapped: boolean,

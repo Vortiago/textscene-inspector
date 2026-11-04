@@ -19,7 +19,10 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { ItemList } from './Component';
-import { ICON_MODE_LEFT, ICON_MODE_TOP, ITEM_LIST_THEME_FONT_KEY, shapeItemListText } from './nativeSolver';
+import { ICON_MODE_LEFT, ITEM_LIST_THEME_FONT_KEY, shapeItemListText } from './nativeSolver';
+
+/** `ItemList::ICON_MODE_TOP` (`item_list.h:43`). */
+const ICON_MODE_TOP = 0;
 import type { ItemListProperties } from './types';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };

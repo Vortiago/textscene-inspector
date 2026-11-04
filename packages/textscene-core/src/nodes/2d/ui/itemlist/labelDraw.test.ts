@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { itemListLineShiftPx } from './labelDraw';
+import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { itemListDrawnLabel } from './labelDraw';
+
+/** The x shift of one glyph-less line of `lineWidthPx`, which no clip can cut. */
+function itemListLineShiftPx(
+  lineWidthPx: number,
+  boxWidthPx: number,
+  wrapped: boolean,
+  rtl: boolean
+): number {
+  const layout = { lines: [{ widthPx: lineWidthPx, glyphs: [] }] } as unknown as TextLayoutResult;
+  return itemListDrawnLabel(layout, boxWidthPx, wrapped, rtl)[0]!.shiftPx;
+}
 
 describe('itemListLineShiftPx', () => {
   it('centres a wrapped line, flooring the half (CENTER)', () => {

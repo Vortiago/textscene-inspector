@@ -18,9 +18,9 @@ Its label's pen is re-derived and lands at a different distance from the icon th
 left-to-right pen.
 
 Each label wraps and trims at the width its row has when drawn, as `ItemList` sets it again in its
-draw pass. A TOP-mode label breaks at the last glyph that fits, shows `max_text_lines` lines and ends
-the last in an ellipsis when lines hide, unless `text_overrun_behavior` is `OVERRUN_NO_TRIMMING`. The
-list clips its rows to its rect, unless the scene sets `clip_contents = false`.
+draw pass. A TOP-mode label breaks at the last glyph that fits and shows `max_text_lines` lines. When
+lines hide, the last visible line ends in an ellipsis, unless `text_overrun_behavior` is
+`OVERRUN_NO_TRIMMING`. The list clips its rows to its rect, unless the scene sets `clip_contents = false`.
 
 No row is drawn selected, hovered or under a cursor highlight. `selected`, the current
 index and a live hover or focus state are never part of a `.tscn`.

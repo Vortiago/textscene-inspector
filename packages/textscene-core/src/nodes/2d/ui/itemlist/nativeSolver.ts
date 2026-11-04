@@ -50,7 +50,7 @@ import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 // --- Enum literals ------------------------------------------------------
 
 /** `ItemList::IconMode` (`item_list.h:43-44`). */
-export const ICON_MODE_TOP = 0;
+const ICON_MODE_TOP = 0;
 export const ICON_MODE_LEFT = 1;
 
 // --- Theme font ----------------------------------------------------------
