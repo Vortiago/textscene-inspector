@@ -103,7 +103,7 @@ interface OverrunTrimOptions {
   fontSizePx: number;
   /** `Label.ellipsis_char` / `TextParagraph.ellipsis_char`; defaults to `DEFAULT_ELLIPSIS_CHAR`. */
   ellipsisChar?: string;
-  /** `sd->fit_width_minimum_reached` from a prior `fitLineToWidth`, read only when `flags.justificationAware`. */
+  /** `sd->fit_width_minimum_reached` which no caller produces yet, read only when `flags.justificationAware`. */
   fitWidthMinimumReached?: boolean;
 }
 

@@ -42,7 +42,5 @@ export function parseRichTextLabel(
   result.tabStopsPx = parseTabStops(properties.tab_stops);
   result.tabSize = parseOptionalInt(properties.tab_size);
   result.autowrapTrimFlags = parseOptionalInt(properties.autowrap_trim_flags, 'int64');
-  result.justificationFlags =
-    parseOptionalInt(properties.justification_flags, 'int64') ?? DEFAULT_JUSTIFICATION_FLAGS;
   return result;
 }

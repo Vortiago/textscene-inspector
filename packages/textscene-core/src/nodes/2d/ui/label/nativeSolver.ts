@@ -508,7 +508,7 @@ export function layoutLabelLines(
   horizontalAlignment: number | undefined,
   verticalAlignment: number | undefined,
   justificationFlags: number = DEFAULT_JUSTIFICATION_FLAGS,
-  // Feeds only the fit's 0.1*font_size shrink floor. The default is the theme's 16.
+  // The floor of a glyph with no own size, such as an ellipsis. The default is the theme's 16.
   fontSizePx: number = 16,
   options: LabelLayoutOptions = {}
 ): LabelLinePlacement[] {
