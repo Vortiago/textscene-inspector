@@ -42,7 +42,7 @@ import { AtlasDepthMaterial, ParaboloidDepthMaterial } from '../positionalShadow
 import { canvasItemLightingProps } from '../lighting2d/canvasItemLighting';
 import { LIGHTMAP_PROGRAM } from '../lightmap/lightmapProgram';
 import { TILE_TEXTURE_PADDING } from '../tileTexturePadding';
-import { UNSHADED_ROUGHNESS } from '../screenSpaceReflection/unshadedRoughness';
+import { UNSHADED_ROUGHNESS } from '../screenSpaceEffects/unshadedRoughness';
 import { HEIGHTMAP_DEFAULTS } from '../../resources/materials/standardmaterial3d/types';
 import { GODOT_FOG_PARS_CHUNK } from '../fog/fogChunks';
 import { INSTANCE_LAYERS_CHUNK } from '../instanceLayers/instanceLayersChunk';
@@ -166,7 +166,7 @@ const INJECTIONS: readonly InjectionCase[] = [
     unshadedParallaxInjection(HEIGHTMAP_DEFAULTS)
   ),
   injected(
-    'screenSpaceReflection/unshadedRoughness.ts',
+    'screenSpaceEffects/unshadedRoughness.ts',
     'unshaded roughness',
     ['basic'],
     () => UNSHADED_ROUGHNESS

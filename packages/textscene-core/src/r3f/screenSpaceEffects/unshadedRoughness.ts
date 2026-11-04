@@ -22,7 +22,7 @@ const ROUGHNESS_KEY = UNSHADED_ROUGHNESS_UNIFORM.roughness;
 /** Godot's default `roughness` (`material.cpp:3942`), which the prepass writes without the injection. */
 export const DEFAULT_ROUGHNESS = 1;
 
-/** The line of the prepass's unlit output (`ssrSceneChunk.ts`) that the injection replaces. */
+/** The line of the prepass's unlit output (`prepassChunk.ts`) that the injection replaces. */
 export const UNLIT_DEFAULT_ROUGHNESS = 'float godotUnlitRoughness = 1.0;';
 
 const UNLIT_ROUGHNESS = /* glsl */ `float godotUnlitRoughness = ${UNSHADED_ROUGHNESS_UNIFORM.roughness};

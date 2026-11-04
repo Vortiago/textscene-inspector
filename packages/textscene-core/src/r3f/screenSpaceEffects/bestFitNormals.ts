@@ -9,12 +9,12 @@ import { perObject } from '../../utils/perObject.js';
 import { drawFullScreen, fullScreenPass } from '../fullScreenPass.js';
 import { drawOffscreen } from '../offscreen.js';
 import { showInSlot } from '../sharedTexture.js';
-import { bestFitNormalsSlot, SSR_UNIFORM } from './ssrUniforms.js';
+import { bestFitNormalsSlot, SCREEN_SPACE_UNIFORM } from './screenSpaceState.js';
 
 /** Godot's table is 1024 texels square (`render_forward_clustered.cpp:5058-5061`). */
 const TABLE_SIZE = 1024;
 
-/** `encode24`, which reads the table through the slot `SSR_UNIFORM.bestFitNormals` declares. */
+/** `encode24`, which reads the table through the slot `SCREEN_SPACE_UNIFORM.bestFitNormals` declares. */
 export const GODOT_ENCODE_NORMAL = /* glsl */ `
 vec3 godotEncodeNormal( vec3 v ) {
 	vec3 vNormalUns = abs( v );
@@ -23,7 +23,7 @@ vec3 godotEncodeNormal( vec3 v ) {
 	vTexCoord /= maxNAbs;
 	vTexCoord = vTexCoord.x < vTexCoord.y ? vTexCoord.yx : vTexCoord.xy;
 	vTexCoord.y /= vTexCoord.x;
-	float fFittingScale = textureLod( ${SSR_UNIFORM.bestFitNormals}, vTexCoord, 0.0 ).r;
+	float fFittingScale = textureLod( ${SCREEN_SPACE_UNIFORM.bestFitNormals}, vTexCoord, 0.0 ).r;
 	return v / maxNAbs * fFittingScale;
 }
 `;

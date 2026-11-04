@@ -658,6 +658,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Environment Ssao",
+    "file": "unit-environment-ssao.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Environment Ssr",
     "file": "unit-environment-ssr.tscn",
     "category": "Other"
@@ -4076,6 +4081,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Collision Polygon Shapes",
     "file": "unit-collision-polygon-shapes.tscn",
+    "category": "Unit - Physics"
+  },
+  {
+    "name": "Collision Separation Ray",
+    "file": "unit-collision-separation-ray.tscn",
     "category": "Unit - Physics"
   },
   {

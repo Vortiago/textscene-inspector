@@ -38,6 +38,7 @@ describe.each([
   'CapsuleShape3D',
   'WorldBoundaryShape3D',
   'HeightMapShape3D',
+  'SeparationRayShape3D',
 ])('<CollisionGizmo> %s', (type) => {
   it.each(godotDebugLinesFor(type))('draws every vertex Godot draws for $name', async ({ shape, lines }) => {
     const { positions, meshCount } = await drawn(shape);
