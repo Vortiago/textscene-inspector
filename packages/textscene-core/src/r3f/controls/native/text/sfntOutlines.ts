@@ -23,6 +23,7 @@ import { variedContours } from './glyphVariation';
 import { isTrickyFont } from './trickyFont';
 import { openFontContainer } from './fontContainer';
 import { OUTLINE_TABLE_TAGS, type SfntFile } from './sfntTables';
+import { fontInstanceOf, type FontInstance } from './variation/fontInstance';
 
 export interface SfntOutlines {
   /** The glyph index `cmap` gives `codePoint`, or 0 for a character the font lacks. */
@@ -81,9 +82,22 @@ async function glyphHintingOf(sfnt: SfntFile): Promise<GlyphHinting | null> {
   return orOnRangeError(() => trueTypeHinting(sfnt), null);
 }
 
+/**
+ * The auto-hinter's reader. It hints the default instance only, so a variable font at another
+ * instance loads its varied outline unhinted until the auto-hinter follows the variation (#932).
+ */
 async function autoHintedReaderOf(sfnt: SfntFile): Promise<GlyphOutlineReader | null> {
   const { autoHintedReader } = await import('./autofit/autoHinter');
-  return orOnRangeError(() => autoHintedReader(sfnt), null);
+  const autoHinted = orOnRangeError(() => autoHintedReader(sfnt), null);
+  const unhinted = glyphOutlineReader(sfnt, null);
+  if (!autoHinted || !unhinted) return autoHinted;
+  return (glyphIndex, fontSizePx, instance) =>
+    instance ? unhinted(glyphIndex, fontSizePx, instance) : autoHinted(glyphIndex, fontSizePx);
+}
+
+/** The font at the axis values of `variation`, or null for the default instance. */
+function instanceOf(sfnt: SfntFile, variation: GlyphVariation | undefined): FontInstance | null {
+  return variation?.opentype?.size ? fontInstanceOf(sfnt, variation.opentype) : null;
 }
 
 function readSfntOutlines(sfnt: SfntFile, outlineOf: GlyphOutlineReader | null): SfntOutlines | null {
@@ -96,7 +110,7 @@ function readSfntOutlines(sfnt: SfntFile, outlineOf: GlyphOutlineReader | null):
     glyphIndex: (codePoint) => orOnRangeError(() => lookup(codePoint), 0),
     glyphContours: (glyphIndex, fontSizePx, variation) =>
       orOnRangeError(() => {
-        const outline = outlineOf(glyphIndex, fontSizePx);
+        const outline = outlineOf(glyphIndex, fontSizePx, instanceOf(sfnt, variation));
         return outline && variedContours(outline, fontSizePx, variation);
       }, null),
   };

@@ -13,6 +13,7 @@
  */
 
 import { FIXED_26_6_ONE } from '../fontMetrics';
+import type { FontInstance } from '../variation/fontInstance';
 import {
   PHANTOM_POINT_COUNT,
   newGlyphZone,
@@ -43,11 +44,14 @@ const MIN_FUNCTION_DEFS = 64;
 /** The twilight points FreeType allows, four phantom points short of 16 bits. */
 const MAX_TWILIGHT_POINTS = 0xffff - PHANTOM_POINT_COUNT;
 
-/** `tt_face_load_cvt`: the control values in font units. */
-function controlValuesOf(sfnt: SfntFile): Int16Array {
+/** `tt_face_load_cvt`: the control values in 26.6 font units. */
+function controlValuesOf(sfnt: SfntFile): Int32Array {
   const bytes = tableBytes(sfnt, 'cvt ');
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  return Int16Array.from({ length: bytes.length >> 1 }, (_, index) => view.getInt16(index * 2, false));
+  return Int32Array.from(
+    { length: bytes.length >> 1 },
+    (_, index) => view.getInt16(index * 2, false) * FIXED_26_6_ONE
+  );
 }
 
 /** The `maxp` limits and the programs of a font, or null for a font with no `maxp` that fits. */
@@ -56,6 +60,7 @@ function faceBytecodeOf(sfnt: SfntFile): FaceBytecode | null {
   if (glyphCount === null) return null;
   const field = (offset: number) => readMaxpVersion1Field(sfnt, offset) ?? 0;
   const functionDefs = readMaxpVersion1Field(sfnt, MAXP_FUNCTION_DEFS_OFFSET);
+  const axisCount = readFvarAxisCount(sfnt);
   return {
     fontProgram: tableBytes(sfnt, 'fpgm'),
     controlValueProgram: tableBytes(sfnt, 'prep'),
@@ -66,8 +71,19 @@ function faceBytecodeOf(sfnt: SfntFile): FaceBytecode | null {
     maxInstructionDefs: field(MAXP_INSTRUCTION_DEFS_OFFSET),
     maxTwilightPoints: Math.min(field(MAXP_TWILIGHT_OFFSET), MAX_TWILIGHT_POINTS),
     glyphCount,
-    axisCount: readFvarAxisCount(sfnt),
+    axisCount,
+    normalizedCoordinates: new Int32Array(axisCount),
     isTricky: isTrickyFont(sfnt),
+  };
+}
+
+/** The face as the instance leaves it: its varied control values, and the coordinates GETVARIATION pushes. */
+function faceBytecodeAt(face: FaceBytecode, instance: FontInstance | null): FaceBytecode {
+  if (!instance) return face;
+  return {
+    ...face,
+    controlValues: instance.controlValues ?? face.controlValues,
+    normalizedCoordinates: instance.normalized,
   };
 }
 
@@ -150,12 +166,13 @@ export function trueTypeHinting(sfnt: SfntFile): GlyphHinting | null {
   const face = faceBytecodeOf(sfnt);
   if (!face) return null;
   // FreeType's size is one request: a ppem and a scale, which two requests of one ppem may not share.
+  // A face holds one instance, so an instance is part of the key.
   const sizes = new Map<string, SizeHinting>();
   return {
-    beginLoad(ppem, scale) {
-      const key = `${ppem} ${scale}`;
+    beginLoad(ppem, scale, instance = null) {
+      const key = `${instance?.key ?? ''} ${ppem} ${scale}`;
       let size = sizes.get(key);
-      if (!size) sizes.set(key, (size = startSize(face, ppem, scale)));
+      if (!size) sizes.set(key, (size = startSize(faceBytecodeAt(face, instance), ppem, scale)));
       return size.error ? 'failed' : beginLoad(size);
     },
   };

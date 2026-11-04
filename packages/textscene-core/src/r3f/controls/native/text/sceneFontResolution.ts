@@ -6,6 +6,8 @@
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import { TRANSFORM2D_SLOT_RE, matchedFloat, parseGodotFloat } from '../../../../godot/variant/number';
 import { boolSlotValue } from '../../../../godot/variant/variantBool';
+import { dictNumberEntries } from '../../../../godot/variant/variantParser';
+import type { OpentypeCoordinates } from './fontMetrics';
 
 interface ResolvedFontBytes {
   /** Raw font bytes, ready for `new FontFace(name, bytes)`. */
@@ -63,6 +65,17 @@ export function fontVariationSkew(font: FontResource | null | undefined): number
   if (font?.kind !== 'variation') return 0;
   const match = TRANSFORM2D_SLOT_RE.exec(font.properties['variation_transform']?.trim() ?? '');
   return match ? matchedFloat(match[2]!) : 0;
+}
+
+/**
+ * `FontVariation.variation_opentype` of `font`: the axes keyed by tag (an int) or by name, in the order Godot applies
+ * them. Empty for any other font and for no dictionary. As for the
+ * embolden, a variation over a variation takes its own value (`font.cpp:3128-3131`).
+ */
+export function fontVariationOpentype(font: FontResource | null | undefined): OpentypeCoordinates {
+  const entries =
+    font?.kind === 'variation' ? dictNumberEntries(font.properties['variation_opentype'] ?? '') : null;
+  return new Map(entries ?? []);
 }
 
 /**

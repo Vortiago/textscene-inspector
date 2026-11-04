@@ -14,6 +14,7 @@
  */
 
 import { ByteReader, ReadPastEndError } from '../../../../resources/formats/binaryresource/byteReader';
+import { toInt16, toUint16 } from '../../../../godot/variant/intWidth';
 import { FIXED_16_16_ONE, freeTypeTrueTypeSize, ftMulFix, pixRound } from './fontMetrics';
 import { ftVectorLength } from './ftVector';
 import {
@@ -56,6 +57,9 @@ import {
 } from './glyfFormat';
 import { glyphMetricsReader, type GlyphMetrics } from './sfntGlyphMetrics';
 import { readGlyphCount, readIndexToLocFormat, readUnitsPerEm, tableFits, type SfntFile } from './sfntTables';
+import type { FontInstance } from './variation/fontInstance';
+import { variedGlyphPoints, type GlyphPoints, type VariedPoints } from './variation/gvar';
+import { InvalidTupleVariationsError } from './variation/tupleVariations';
 
 /** `head`: flags(2) at 16, whose bit 3 rounds the ppem, and the table through indexToLocFormat. */
 const HEAD_FLAGS_OFFSET = 16;
@@ -290,7 +294,9 @@ class GlyphLoad {
   constructor(
     private readonly font: GlyfFont,
     private readonly scale: number,
-    private readonly hinter: GlyphLoadHinter | null
+    private readonly hinter: GlyphLoadHinter | null,
+    /** The variable font's instance, or null for the default instance, which `IS_DEFAULT_INSTANCE` takes. */
+    private readonly instance: FontInstance | null
   ) {}
 
   /** `load_truetype_glyph`: appends the glyph's points, or throws the error that fails the load. */
@@ -302,14 +308,44 @@ class GlyphLoad {
     // `subarray` cuts a glyph that runs past the font short, so its read fails the load.
     const reader = ByteReader.bigEndian(this.font.bytes.subarray(start, start + length));
     const header = length === 0 ? EMPTY_GLYPH_HEADER : readHeader(reader);
-    this.phantoms = phantomPoints(header, this.font.metricsOf(glyphIndex, header.yMax));
+    this.phantoms = phantomPoints(header, this.metricsOf(glyphIndex, header.yMax));
     if (header.contourCount === 0) {
-      this.phantoms = this.scaled(this.phantoms);
+      this.phantoms = this.scaled(this.variedPhantoms(glyphIndex));
       return;
     }
     if (header.contourCount > 0)
-      this.loadSimple(readingGlyph('Invalid_Outline', () => readSimpleGlyph(reader, header.contourCount)));
+      this.loadSimple(
+        glyphIndex,
+        readingGlyph('Invalid_Outline', () => readSimpleGlyph(reader, header.contourCount))
+      );
     else this.loadComposite(glyphIndex, depth, reader, start, length);
+  }
+
+  /** `tt_get_metrics`: the glyph's metrics, its advances adjusted by `HVAR` and `VVAR` at the instance. */
+  private metricsOf(glyphIndex: number, yMax: number): GlyphMetrics {
+    const { horizontal, vertical } = this.font.metricsOf(glyphIndex, yMax);
+    if (!this.instance) return { horizontal, vertical };
+    const { advanceDelta } = this.instance;
+    return {
+      horizontal: {
+        ...horizontal,
+        advance: toUint16(horizontal.advance + advanceDelta.horizontal(glyphIndex)),
+      },
+      vertical: { ...vertical, advance: toUint16(vertical.advance + advanceDelta.vertical(glyphIndex)) },
+    };
+  }
+
+  /** `TT_Vary_Apply_Glyph_Deltas` on the glyph's points, which `points` gives in font units. */
+  private variedPoints(glyphIndex: number, points: GlyphPoints): VariedPoints {
+    const { glyphVariations, normalized, adjustedAdvances } = this.instance!;
+    return variedGlyphPoints(glyphVariations, normalized, glyphIndex, points, adjustedAdvances);
+  }
+
+  /** The phantom points of a glyph with no contour, moved by the instance's deltas, in whole font units. */
+  private variedPhantoms(glyphIndex: number): PhantomPoints {
+    if (!this.instance) return this.phantoms;
+    const { x, y } = this.variedPoints(glyphIndex, { ...this.phantoms, contourEnds: [] });
+    return { x, y };
   }
 
   private scaled({ x, y }: PhantomPoints): PhantomPoints {
@@ -320,9 +356,9 @@ class GlyphLoad {
   }
 
   /** `TT_Process_Simple_Glyph`: scales the glyph, hints it, and appends it with its contours renumbered. */
-  private loadSimple(glyph: SimpleGlyph): void {
-    const zone = this.simpleZone(glyph);
-    this.phantoms = zonePhantoms(zone);
+  private loadSimple(glyphIndex: number, glyph: SimpleGlyph): void {
+    const zone = this.instance ? this.variedSimpleZone(glyphIndex, glyph) : this.simpleZone(glyph);
+    this.phantoms = this.instance ? this.variedLoaderPhantoms(zone) : zonePhantoms(zone);
     if (this.hinter) this.hint(zone, glyph.instructions, false);
     this.append(zone, glyph.contourEnds);
   }
@@ -336,6 +372,45 @@ class GlyphLoad {
       this.place(zone, pointCount + phantom, this.phantoms.x[phantom]!, this.phantoms.y[phantom]!);
     zone.tags.set(tags);
     return zone;
+  }
+
+  /**
+   * The zone of a simple glyph at the instance (`TT_Process_Simple_Glyph`): the interpreter's unscaled points
+   * are the whole font units the deltas leave, and the scaled ones come from the deltas in 26.6, rounded once.
+   */
+  private variedSimpleZone(glyphIndex: number, { x, y, tags, contourEnds }: SimpleGlyph): GlyphZone {
+    const varied = this.variedPoints(glyphIndex, {
+      x: [...x, ...this.phantoms.x],
+      y: [...y, ...this.phantoms.y],
+      contourEnds,
+    });
+    const zone = newGlyphZone(varied.x.length, contourEnds, 0);
+    const scaleToPixels = (unrounded: number): number =>
+      Math.floor((ftMulFix(unrounded, this.scale) + 32) / 64);
+    for (let point = 0; point < varied.x.length; point++) {
+      zone.orusX[point] = varied.x[point]!;
+      zone.orusY[point] = varied.y[point]!;
+      zone.curX[point] = scaleToPixels(varied.unroundedX[point]!);
+      zone.curY[point] = scaleToPixels(varied.unroundedY[point]!);
+    }
+    zone.tags.set(tags);
+    return zone;
+  }
+
+  /**
+   * The phantom points the loader keeps once a varied glyph is scaled: the zone's, except that an
+   * advance an `HVAR` or `VVAR` table adjusts is scaled from its font units when the glyph is hinted.
+   */
+  private variedLoaderPhantoms(zone: GlyphZone): PhantomPoints {
+    const { x, y } = zonePhantoms(zone);
+    if (!this.hinter) return { x, y };
+    const { horizontal, vertical } = this.instance!.adjustedAdvances;
+    const scaled = (value: number): number => ftMulFix(value, this.scale);
+    if (horizontal) [x[0], x[1]] = [scaled(this.phantoms.x[0]!), scaled(this.phantoms.x[1]!)];
+    if (vertical)
+      for (const point of [2, 3])
+        [x[point], y[point]] = [scaled(this.phantoms.x[point]!), scaled(this.phantoms.y[point]!)];
+    return { x, y };
   }
 
   /** Puts `point` of `zone` at `(x, y)` in font units, and at its scaled place. */
@@ -381,6 +456,7 @@ class GlyphLoad {
     const { components, instructionsAt } = readingGlyph('Invalid_Composite', () =>
       readComponents(reader, this.font.glyphCount)
     );
+    if (this.instance) this.varyComponents(glyphIndex, components);
     this.phantoms = this.scaled(this.phantoms);
     const firstPoint = this.x.length;
     const firstContour = this.contourEnds.length;
@@ -394,6 +470,23 @@ class GlyphLoad {
     const last = components[components.length - 1]!;
     if (this.hinter && last.flags & COMPONENT_HAS_INSTRUCTIONS && this.x.length > firstPoint)
       this.hintComposite(firstPoint, firstContour, start + instructionsAt, byteLength);
+  }
+
+  /**
+   * The deltas of a composite: each component's offset, which `gvar` moves as a point of its own, and
+   * the phantom points, in whole font units (`load_truetype_glyph`, the composite branch).
+   */
+  private varyComponents(glyphIndex: number, components: Component[]): void {
+    const { x, y } = this.variedPoints(glyphIndex, {
+      x: [...components.map(({ arguments: [offset] }) => offset), ...this.phantoms.x],
+      y: [...components.map(({ arguments: [, offset] }) => offset), ...this.phantoms.y],
+      contourEnds: components.map((_, index) => index),
+    });
+    components.forEach((component, index) => {
+      if (component.flags & COMPONENT_ARGS_ARE_XY_VALUES)
+        component.arguments = [toInt16(x[index]!), toInt16(y[index]!)];
+    });
+    this.phantoms = { x: x.slice(components.length), y: y.slice(components.length) };
   }
 
   /**
@@ -529,11 +622,11 @@ function glyfFont(sfnt: SfntFile): GlyfFont | null {
 export function glyphOutlineReader(sfnt: SfntFile, hinting: GlyphHinting | null): GlyphOutlineReader | null {
   const font = glyfFont(sfnt);
   if (!font) return null;
-  return (glyphIndex, fontSizePx) => {
+  return (glyphIndex, fontSizePx, instance = null) => {
     const { scale, ppem } = freeTypeTrueTypeSize(font.unitsPerEm, fontSizePx, font.isPpemRounded);
-    const hinter = hinting ? hinting.beginLoad(ppem, scale) : null;
+    const hinter = hinting ? hinting.beginLoad(ppem, scale, instance) : null;
     if (hinter === 'failed') return null;
-    const load = loadedGlyph(font, glyphIndex, scale, hinter);
+    const load = loadedGlyph(font, glyphIndex, scale, hinter, instance);
     return load && load.x.length > 0 ? load.outline() : null;
   };
 }
@@ -543,13 +636,14 @@ function loadedGlyph(
   font: GlyfFont,
   glyphIndex: number,
   scale: number,
-  hinter: GlyphLoadHinter | null
+  hinter: GlyphLoadHinter | null,
+  instance: FontInstance | null
 ): GlyphLoad | null {
-  const load = new GlyphLoad(font, scale, hinter);
+  const load = new GlyphLoad(font, scale, hinter, instance);
   try {
     load.load(glyphIndex, 0);
   } catch (error) {
-    if (!(error instanceof GlyphLoadError)) throw error;
+    if (!(error instanceof GlyphLoadError || error instanceof InvalidTupleVariationsError)) throw error;
     return null;
   }
   return load;
@@ -563,6 +657,7 @@ export function unscaledGlyfOutlines(sfnt: SfntFile): UnscaledOutlines | null {
     unitsPerEm: font.unitsPerEm,
     isPpemRounded: font.isPpemRounded,
     glyphCount: font.glyphCount,
-    unscaledGlyph: (glyphIndex) => loadedGlyph(font, glyphIndex, FIXED_16_16_ONE, null)?.outline() ?? null,
+    unscaledGlyph: (glyphIndex) =>
+      loadedGlyph(font, glyphIndex, FIXED_16_16_ONE, null, null)?.outline() ?? null,
   };
 }

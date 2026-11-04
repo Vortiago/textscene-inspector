@@ -65,6 +65,8 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/controls/native/text/sfntGlyf.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) and FreeType's TrueType glyph loader |
 | `packages/textscene-core/src/r3f/controls/native/text/glyphContours.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) |
 | `packages/textscene-core/src/r3f/controls/native/text/sfntCff.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) and FreeType's outline scaling |
+| `packages/textscene-core/src/r3f/controls/native/text/variation/axisCoordinates.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_ensure_cache_for_size`, which writes the variations, and `_tag_to_name`) |
+| `packages/textscene-core/src/godot/text/openTypeNames.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_insert_feature` calls and `_tag_to_name`) |
 | `packages/textscene-core/src/r3f/controls/native/text/sfntCmap.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_index`) |
 | `packages/textscene-core/src/resources/meshes/boxmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`BoxMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/planemesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PlaneMesh::_create_mesh_array`) |
@@ -455,15 +457,16 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 ---
 
-## Montserrat and Recursive fonts
+## Montserrat, Recursive and Cascadia Code fonts
 
-<https://github.com/JulietaUla/Montserrat> and <https://github.com/arrowtype/recursive>
+<https://github.com/JulietaUla/Montserrat>, <https://github.com/arrowtype/recursive> and <https://github.com/microsoft/cascadia-code>
 
 The tests and goldens that read a font file's outlines use these fixture fonts:
 
 - `scenes/fixtures/fonts/montserrat-extra-bold.otf`: Montserrat Extra Bold, an OpenType-CFF font. Copyright (c) 2011-2015, Julieta Ulanovsky.
 - `scenes/fixtures/fonts/montserrat-semibold-subset.ttf`: a TrueType subset of Montserrat SemiBold. Copyright 2011 The Montserrat Project Authors (https://github.com/JulietaUla/Montserrat).
 - `scenes/fixtures/fonts/recursive-vf-subset.woff2`: a subset of the Recursive variable font, as the Godot demo `gui/bidi_and_font_features` ships it. Copyright 2019 The Recursive Project Authors (github.com/arrowtype/recursive).
+- `scenes/fixtures/fonts/cascadia-code-subset.ttf`: a subset of the Cascadia Code variable font, with its `wght` axis, its `gvar`, `cvar`, `avar` and `HVAR` tables and its hinting programs, and with a `post` table so that Chromium accepts it. Copyright (c) 2019 - Present, Microsoft Corporation, with Reserved Font Name 'Cascadia Code'.
 
 Each is licensed under the SIL Open Font License, Version 1.1 (OFL-1.1), whose full text the Open Sans section above holds.
 
@@ -649,6 +652,11 @@ tricky fonts (`src/truetype/ttgload.c`, `ttinterp.c` and `ttobjs.c`), its family
 (`src/sfnt/sfobjs.c`, `ttload.c` and `ttmtx.c`), its WOFF2 `hmtx` rebuild (`src/sfnt/sfwoff2.c`)
 and `FT_Vector_Length` (`src/base/fttrigon.c`), because Godot hints and reads the outlines of a TrueType font
 with them.
+
+The files in `packages/textscene-core/src/r3f/controls/native/text/variation/` port FreeType's TrueType variation
+tables (`src/truetype/ttgxvar.c`: `fvar`, `avar`, `gvar`, `cvar`, `HVAR`, `VVAR` and their item variation
+stores) and its `GETVARIATION` instruction (`src/truetype/ttinterp.c`), because Godot draws a `FontVariation`
+of a variable TrueType font with them.
 
 The files in `packages/textscene-core/src/r3f/controls/native/text/autofit/` whose names start with `af`, with
 `autoHinter.ts`, `ftHash.ts` and `sfntAutofitFace.ts`, port FreeType's auto-hinter (`src/autofit/`), its hash
