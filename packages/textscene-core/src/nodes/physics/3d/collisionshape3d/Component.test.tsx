@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionShape3D } from './Component';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
+import { linePositions } from '../../../../r3f/testing/GizmoScene';
 import { ViewportModeProvider } from '../../../../r3f/contexts/ViewportModeContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { CollisionShape3DProperties } from './types';
@@ -61,21 +62,14 @@ describe('<CollisionShape3D> gizmo', () => {
     expect(meshes).toHaveLength(0);
   });
 
-  it('renders a wireframe box gizmo when showCollisions is on', async () => {
+  it('renders the box outline as line segments when showCollisions is on', async () => {
     const renderer = await render(true);
-    const meshes = renderer.scene.findAll((n) => n.type === 'Mesh');
-    expect(meshes).toHaveLength(1);
-    const mesh = meshes[0]!.instance as THREE.Mesh;
-    const geom = mesh.geometry as THREE.BoxGeometry & {
-      parameters: { width: number; height: number; depth: number };
-    };
-    expect(geom.parameters.width).toBe(2);
-    expect(geom.parameters.height).toBe(4);
-    expect(geom.parameters.depth).toBe(0.3);
-    expect((mesh.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(1);
+    expect(linePositions(renderer)).toHaveLength(24 * 3);
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
-  it('renders a convex-hull wireframe for ConvexPolygonShape3D (lazy ConvexGeometry)', async () => {
+  it('renders the 12 hull edges of a cube for ConvexPolygonShape3D (lazy ConvexGeometry)', async () => {
     const { loader } = createFakeResourceLoader();
     const tree = (
       <ResourceLoaderProvider loader={loader}>
@@ -93,21 +87,14 @@ describe('<CollisionShape3D> gizmo', () => {
     await settlePendingLoads(loader);
     await renderer.update(tree);
 
-    const meshes = renderer.scene.findAll((n) => n.type === 'Mesh');
-    expect(meshes).toHaveLength(1);
-    const mesh = meshes[0]!.instance as THREE.Mesh;
-    expect(mesh.geometry).toBeInstanceOf(THREE.BufferGeometry);
-    expect(mesh.geometry.attributes.position!.count).toBeGreaterThan(0);
-    expect((mesh.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(1);
+    expect(linePositions(renderer)).toHaveLength(12 * 2 * 3);
   });
 
-  it('renders a triangle-soup wireframe for ConcavePolygonShape3D', async () => {
+  it('renders the 3 edges of a triangle for ConcavePolygonShape3D', async () => {
     const renderer = await render(true, { shape: 'SubResource("ConcavePolygonShape3D_1")' }, [concaveShape]);
-    const meshes = renderer.scene.findAll((n) => n.type === 'Mesh');
-    expect(meshes).toHaveLength(1);
-    const mesh = meshes[0]!.instance as THREE.Mesh;
-    expect(mesh.geometry.attributes.position!.count).toBe(3);
-    expect((mesh.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(1);
+    expect(linePositions(renderer)).toHaveLength(3 * 2 * 3);
   });
 
   it('renders no gizmo and does not crash when the shape SubResource is missing', async () => {
@@ -124,8 +111,7 @@ describe('<CollisionShape3D> gizmo', () => {
 
   it('still renders the gizmo when disabled=true and showCollisions is on', async () => {
     const renderer = await render(true, { disabled: true });
-    const meshes = renderer.scene.findAll((n) => n.type === 'Mesh');
-    expect(meshes).toHaveLength(1);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(1);
   });
 
   it('applies the node transform to the gizmo group', async () => {

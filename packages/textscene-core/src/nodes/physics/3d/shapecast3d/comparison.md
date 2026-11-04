@@ -52,4 +52,3 @@ The plugin passes the node's own debug material and no variant replaces it, so t
 
 - **Editor only** The gizmo draws for every sweep when the Gizmos toggle is on, which a capture keeps off.
 - **Approximated** A shape type the previewer does not decode draws no wireframe where Godot draws that shape's own lines.
-- **Approximated** A convex wireframe cuts coplanar hull faces along a diagonal QuickHull picks, which Godot's hull computer may pick differently.

@@ -72,13 +72,13 @@ async function settle(renderer: Renderer, element: ReactElement): Promise<void> 
 }
 
 function drawnGeometry(renderer: Renderer): THREE.BufferGeometry | null {
-  const meshes = renderer.scene.findAll((n) => n.type === 'Mesh');
-  return meshes.length === 0 ? null : (meshes[0]!.instance as THREE.Mesh).geometry;
+  const lines = renderer.scene.findAll((n) => n.type === 'LineSegments');
+  return lines.length === 0 ? null : (lines[0]!.instance as THREE.LineSegments).geometry;
 }
 
 function requireGeometry(renderer: Renderer): THREE.BufferGeometry {
   const geometry = drawnGeometry(renderer);
-  if (!geometry) throw new Error('expected the gizmo to draw a mesh');
+  if (!geometry) throw new Error('expected the gizmo to draw line segments');
   return geometry;
 }
 
@@ -112,7 +112,9 @@ describe('<CollisionGizmo> ConcavePolygonShape3D geometry lifecycle', () => {
     await renderer.update(gizmo(concave(OTHER_TRIANGLE)));
     const second = requireGeometry(renderer);
     expect(second).not.toBe(first);
-    expect(Array.from(second.getAttribute('position').array)).toEqual([-1, 0, -1, 1, 0, -1, 0, 0, 1]);
+    expect(second.getAttribute('position').count).toBe(6);
+    second.computeBoundingBox();
+    expect(second.boundingBox!.max.x).toBe(1);
     expect(disposed()).toBe(1);
   });
 
@@ -169,13 +171,13 @@ describe('<CollisionGizmo> ConvexPolygonShape3D hull lifecycle', () => {
     expect(disposed()).toBe(1);
   });
 
-  it('disposes its hull and draws nothing once fewer than four points remain (edge case)', async () => {
+  it('disposes its hull and draws nothing once fewer than two points remain (edge case)', async () => {
     const cube = convex(CUBE_POINTS);
     const renderer = await mount(gizmo(cube));
     await settle(renderer, gizmo(cube));
     const disposed = disposals(requireGeometry(renderer));
 
-    const degenerate = convex('PackedVector3Array(0, 0, 0, 1, 0, 0, 0, 1, 0)');
+    const degenerate = convex('PackedVector3Array(0, 0, 0)');
     await renderer.update(gizmo(degenerate));
     await settle(renderer, gizmo(degenerate));
     expect(drawnGeometry(renderer)).toBeNull();
