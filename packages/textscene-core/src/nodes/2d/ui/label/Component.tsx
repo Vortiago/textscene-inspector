@@ -16,12 +16,12 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   LABEL_PARAGRAPH_SEPARATOR,
-  LABEL_THEME_FONT_KEY,
   applyVisibleCharsReveal,
+  isLabelFontLoading,
   labelEffectiveTextTheme,
+  labelFontMetrics,
   labelOutlineTheme,
   labelPreShapeText,
   labelShadowTheme,
@@ -98,7 +98,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   // Read in the render body, not the `useMemo`: `peekSceneFontMetrics` reads a
   // WeakMap cache that a later async load fills in place, so each render must look.
   // The `useMemo` dependency on `fontMetrics` limits re-shaping to an identity change.
-  const fontMetrics = resolveNodeFontMetrics(solveNode, LABEL_THEME_FONT_KEY);
+  const fontMetrics = labelFontMetrics(solveNode);
   const layout = useMemo(() => {
     if (sharedLayout) return sharedLayout;
     const shaped = shapeText(text, {
@@ -211,6 +211,9 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   // Each `<TextRun>` takes `renderOrder` itself, since three never inherits it,
   // and sits in a `<CanvasItemGroup>`, since three reads the nearest group's order
   // first and a bare `<group>` resets it to zero (`r3f/canvasPaintOrder.ts`).
+  // A settings font that is still loading draws nothing, never the theme font (ADR-0059).
+  if (isLabelFontLoading(solveNode)) return <CanvasItemGroup ref={anchorRef} />;
+
   return (
     <CanvasItemGroup ref={anchorRef}>
       {hasShadow &&

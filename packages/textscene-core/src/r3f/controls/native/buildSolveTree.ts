@@ -81,7 +81,14 @@ import { scopeOf } from '../../../resources/liveNode';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
-import type { SkippedAncestors, SkippedMaterial, SolveNode, ThemedIconRef } from './solveTree';
+import {
+  LABEL_SETTINGS_FONT_LOADING,
+  type LabelSettingsFont,
+  type SkippedAncestors,
+  type SkippedMaterial,
+  type SolveNode,
+  type ThemedIconRef,
+} from './solveTree';
 import { ROOT_TEXTURE_SAMPLER, inheritTextureSampler } from '../../canvasItemTextureSampler';
 import { multiplyTransform2D } from '../../../godot/math/transform2d.js';
 import { liveNodePatches } from '../../liveNodePatches';
@@ -225,6 +232,14 @@ function resolveThemedIcons(
 }
 
 /** An uncached sub-scene the walk found: the path to request, and the ExtResource to register first (absent for a raw `res://` instance). */
+/** A Label's `label_settings` with the font it names. */
+interface OwnLabelSettings {
+  settings: LabelSettingsResource | null;
+  font: LabelSettingsFont;
+}
+
+const NO_LABEL_SETTINGS: OwnLabelSettings = { settings: null, font: null };
+
 interface PendingScene {
   path: string;
   ext: TscnExternalResource | null;
@@ -492,27 +507,43 @@ function buildForest(
   }
 
   /**
-   * A Label's own `label_settings` (`label.cpp:1121-1133`). An ExtResource `.tres` loads on the
-   * resource bus, and a SubResource decodes inline. Null until a `.tres` arrives, as Godot draws
-   * from the theme until the property holds a resource.
+   * A Label's own `label_settings` (`label.cpp:1121-1133`) and its font. An ExtResource `.tres`
+   * loads on the resource bus, and a SubResource decodes inline. Null until a `.tres` arrives, as
+   * Godot draws from the theme until the property holds a resource. The `font` resolves in the
+   * file that wrote the settings (ADR-0051): the `.tres`'s own tables, or the node's scope.
    */
   function resolveOwnLabelSettings(
     node: TscnNode,
     ext: readonly TscnExternalResource[],
     int: readonly TscnInternalResource[]
-  ): LabelSettingsResource | null {
+  ): OwnLabelSettings {
     const ref = (node.properties as Partial<LabelProperties>).labelSettings;
-    if (!ref) return null;
-    if (parseResourceReference(ref)?.type !== 'ExtResource') return resolveLabelSettings(ref, int);
+    if (!ref) return NO_LABEL_SETTINGS;
+    if (parseResourceReference(ref)?.type !== 'ExtResource') {
+      return withSettingsFont(resolveLabelSettings(ref, int), ext, int);
+    }
 
     const path = parsedResourcePath(ref, ext);
-    if (!path) return null;
+    if (!path) return NO_LABEL_SETTINGS;
     const cached = resourceCache.getCached(path);
     if (cached === undefined) {
       pendingResourceFiles.add(path);
-      return null;
+      return NO_LABEL_SETTINGS;
     }
-    return cached && labelSettingsFromResource(cached);
+    if (!cached) return NO_LABEL_SETTINGS;
+    return withSettingsFont(labelSettingsFromResource(cached), cached.extResources, cached.subResources);
+  }
+
+  function withSettingsFont(
+    settings: LabelSettingsResource | null,
+    ext: readonly TscnExternalResource[],
+    int: readonly TscnInternalResource[]
+  ): OwnLabelSettings {
+    if (!settings) return NO_LABEL_SETTINGS;
+    const stillLoading = new Set<string>();
+    const font = resolveInlineFontResource(settings.font, ext, int, fontCache, stillLoading);
+    for (const path of stillLoading) pendingFonts.add(path);
+    return { settings, font: stillLoading.size > 0 ? LABEL_SETTINGS_FONT_LOADING : font };
   }
 
   /**
@@ -833,6 +864,11 @@ function buildForest(
     // A canvas boundary IS the canvas every chain broken below it parents
     // to, so it adopts those; every other Control passes them further up.
     const isBoundary = controlSolverRegistry.isCanvasBoundary(collapsed.type);
+    const ownLabelSettings = resolveOwnLabelSettings(
+      collapsed,
+      ownScope.externalResources,
+      ownScope.internalResources
+    );
     const solved: SolveNode = {
       path,
       node: live,
@@ -854,11 +890,8 @@ function buildForest(
       textureSize: texture.size,
       textureSlots: texture.slots,
       fontOverrides: resolveFontOverrides(collapsed, ownScope.externalResources, ownScope.internalResources),
-      labelSettings: resolveOwnLabelSettings(
-        collapsed,
-        ownScope.externalResources,
-        ownScope.internalResources
-      ),
+      labelSettings: ownLabelSettings.settings,
+      labelSettingsFont: ownLabelSettings.font,
       colors: resolveThemedColors(collapsed, themeScope),
       constants: resolveThemedConstants(collapsed, themeScope),
       icons: themedIcons,

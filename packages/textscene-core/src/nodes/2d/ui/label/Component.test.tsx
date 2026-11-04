@@ -7,7 +7,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { LABEL_SETTINGS_FONT_LOADING, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
@@ -45,6 +45,14 @@ describe('<Label> (isolated painter contract)', () => {
   it('draws exactly one mesh for a single-line text', async () => {
     const renderer = await render({ text: 'AB' });
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
+  });
+
+  it('draws nothing while label_settings.font is still loading (ADR-0059)', async () => {
+    const node = { ...solveNode('L', { text: 'AB' }), labelSettingsFont: LABEL_SETTINGS_FONT_LOADING };
+    const renderer = await ReactThreeTestRenderer.create(
+      <Label {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 200, h: 200 }} renderOrder={5} />
+    );
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
   it('draws one mesh per line for an explicit hard break', async () => {
