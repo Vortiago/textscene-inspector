@@ -52,3 +52,20 @@ export function resolveTextTheme(
     color: n.colors[keys.colorKey] ?? defaults.color,
   };
 }
+
+export interface TextOutlineTheme {
+  /** `font_outline_color`, sRGB. Godot's default is opaque black (`default_theme.cpp`, for example `:162` for Button). */
+  color: Rgba;
+  /** `outline_size`, px. The default theme sets 0 for every type, so no outline draws until a scene sets it. */
+  sizePx: number;
+}
+
+const DEFAULT_OUTLINE_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
+
+/** The `font_outline_color` and `outline_size` theme items of a Control that draws its text through `Button`'s or `ProgressBar`'s outline pass. */
+export function resolveTextOutline(n: Pick<ShareNode, 'colors' | 'constants'>): TextOutlineTheme {
+  return {
+    color: n.colors['font_outline_color'] ?? DEFAULT_OUTLINE_COLOR,
+    sizePx: n.constants['outline_size'] ?? 0,
+  };
+}

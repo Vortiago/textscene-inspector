@@ -6,7 +6,7 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { LABEL_SETTINGS_FONT_LOADING, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry, type SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -24,7 +24,6 @@ import {
   labelMinimumSize,
   labelShapingWidthPx,
   labelUnwrappedShape,
-  LABEL_THEME_FONT_KEY,
   LABEL_LINE_SPACING_PX,
   labelTextTheme,
   layoutLabelLines,
@@ -35,11 +34,15 @@ import {
   labelEffectiveTextTheme,
   labelOutlineTheme,
   labelShadowTheme,
+  labelFontState,
 } from './nativeSolver';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { resolveLabelSettings } from '../../../../resources/styles/labelsettings/decode';
 import * as logger from '../../../../logger';
+import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
+import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
+import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
   AutowrapMode,
   VisibleCharactersBehavior,
@@ -637,7 +640,7 @@ describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-
   });
 });
 
-describe(`labelMinimumSize — resolves this Label's own theme font key ("${LABEL_THEME_FONT_KEY}", default_theme.cpp:381)`, () => {
+describe(`labelMinimumSize — resolves this Label's own theme font key ("font", default_theme.cpp:381)`, () => {
   // An unresolvable font's warn is the observable proof here (`resolveNodeFontMetrics.test.ts`).
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
@@ -649,7 +652,7 @@ describe(`labelMinimumSize — resolves this Label's own theme font key ("${LABE
 
   it('a theme_override_fonts/font local override is fed to the text engine, even for empty text (fontHeightPx is resolved unconditionally)', () => {
     const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n = { ...node({}), fontOverrides: { [LABEL_THEME_FONT_KEY]: systemFont } };
+    const n = { ...node({}), fontOverrides: { font: systemFont } };
     labelMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
@@ -659,6 +662,66 @@ describe(`labelMinimumSize — resolves this Label's own theme font key ("${LABE
     const n = { ...node({}), fontOverrides: { normal_font: systemFont } };
     labelMinimumSize(n, ctx());
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('labelMinimumSize — shapes in label_settings.font (label.cpp:112,349,473,523,758,913,978,1024)', () => {
+  const settingsFont: FontResource = {
+    kind: 'file',
+    bytes: new ArrayBuffer(1),
+    mimeType: 'font/otf',
+    fallbacks: [],
+    properties: {},
+  };
+  // Twice the bundled advances: a width that only the settings font can produce.
+  const WIDE_METRICS: FontMetrics = {
+    ...OPEN_SANS_FONT_METRICS,
+    getGlyphAdvanceUnits: (ch) => (OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits(ch) ?? 0) * 2,
+  };
+  const settings = resolveLabelSettings('SubResource("1")', [
+    { id: '1', type: 'LabelSettings', data: { font_size: '16' } },
+  ])!;
+
+  beforeEach(() => {
+    vi.spyOn(sceneFontLoader, 'peekSettledSceneFontMetrics').mockImplementation((font) =>
+      font === settingsFont ? WIDE_METRICS : OPEN_SANS_FONT_METRICS
+    );
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('takes the minimum width from the settings font advances, not the bundled font', () => {
+    const themeWidth = minSize(node({ text: 'AB' }, { labelSettings: settings }), ctx()).x;
+    const settingsWidth = minSize(
+      node({ text: 'AB' }, { labelSettings: settings, labelSettingsFont: settingsFont }),
+      ctx()
+    ).x;
+    expect(themeWidth).toBe(AB_SHAPED_WIDTH);
+    expect(settingsWidth).toBe(Math.ceil(AB_WIDTH * 2));
+  });
+
+  it('keeps the theme font for settings that name none', () => {
+    const n = node({ text: 'AB' }, { labelSettings: settings, labelSettingsFont: null });
+    expect(minSize(n, ctx()).x).toBe(AB_SHAPED_WIDTH);
+  });
+
+  it('shapes the shared layout in the settings font too', () => {
+    const n = node({ text: 'AB' }, { labelSettings: settings, labelSettingsFont: settingsFont });
+    expect(labelUnwrappedShape(n, nativeTheme(1))!.widthPx).toBeCloseTo(AB_WIDTH * 2, 5);
+  });
+
+  it('reports a font still loading, and shapes in the theme font meanwhile', () => {
+    const n = node(
+      { text: 'AB' },
+      { labelSettings: settings, labelSettingsFont: LABEL_SETTINGS_FONT_LOADING }
+    );
+    expect(labelFontState(n).isLoading).toBe(true);
+    expect(minSize(n, ctx()).x).toBe(AB_SHAPED_WIDTH);
+  });
+
+  it('reports no loading font for settings without one', () => {
+    expect(labelFontState(node({ text: 'AB' }, { labelSettings: settings })).isLoading).toBe(false);
   });
 });
 

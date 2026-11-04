@@ -128,6 +128,7 @@ function ViewportSurfaceNative({
       // so it carries no theme, as that walker gives a themeless root.
       fontOverrides: {},
       labelSettings: null,
+      labelSettingsFont: null,
       themeChain: [],
       projectFonts: NO_PROJECT_FONTS,
       colors: {},

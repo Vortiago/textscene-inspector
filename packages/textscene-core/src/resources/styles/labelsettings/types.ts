@@ -10,7 +10,7 @@ import type { Vector2 } from '../../../godot/math/vector';
 export interface LabelSettingsResource {
   /** `line_spacing`, real_t px. Godot default 3 (`label_settings.h:54`). */
   lineSpacing: number;
-  /** `font`: the raw resource-reference text, or undefined when unset. Godot default null. The previewer does not swap the font. */
+  /** `font`: the raw resource-reference text, or undefined when unset. Godot default null. `buildSolveTree` resolves it in the file that wrote the settings. */
   font?: string;
   /** `font_size`. Godot default `Font::DEFAULT_FONT_SIZE` = 16 (`label_settings.h:58`). */
   fontSize: number;

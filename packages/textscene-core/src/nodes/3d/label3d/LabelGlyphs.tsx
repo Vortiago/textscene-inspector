@@ -15,13 +15,8 @@ import { usePendingWhile } from '../../../resources/usePendingWhile';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 import { labelBillboardAabb } from '../../../godot/scene/billboard';
-import {
-  breakLabel3DLines,
-  justifyLabel3DLines,
-  label3DAabb,
-  layoutLabel3DLines,
-  outlineStrokeWidthPx,
-} from './glyphLayout';
+import { breakLabel3DLines, justifyLabel3DLines, label3DAabb, layoutLabel3DLines } from './glyphLayout';
+import { outlineStrokeWidthPx } from '../../../r3f/controls/native/text/textOutline';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import { type Label3DProperties } from './types';
 import { useLabel3DFont } from './useLabel3DFont';

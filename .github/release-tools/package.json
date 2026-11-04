@@ -7,6 +7,6 @@
     "ovsx": "1.3.0"
   },
   "overrides": {
-    "minimatch": "^11.0.1"
+    "minimatch": "^11.0.4"
   }
 }

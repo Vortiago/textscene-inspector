@@ -1238,6 +1238,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Settings Font",
+    "file": "unit-label-settings-font.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Visible Characters",
     "file": "unit-label-visible-characters.tscn",
     "category": "Other"
@@ -3538,6 +3543,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Button Autowrap",
     "file": "unit-button-autowrap.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Button Family Outline",
+    "file": "unit-button-family-outline.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
