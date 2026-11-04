@@ -1868,6 +1868,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Remote Transform 2d Chain Order",
+    "file": "unit-remote-transform-2d-chain-order.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Remote Transform 2d Instanced",
     "file": "unit-remote-transform-2d-instanced.tscn",
     "category": "Other"
@@ -1890,6 +1895,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Remote Transform 3d Ancestor",
     "file": "unit-remote-transform-3d-ancestor.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Remote Transform 3d Chain Order",
+    "file": "unit-remote-transform-3d-chain-order.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Remote Transform 3d Cycle",
+    "file": "unit-remote-transform-3d-cycle.tscn",
     "category": "Other"
   },
   {

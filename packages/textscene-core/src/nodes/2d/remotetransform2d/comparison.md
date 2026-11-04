@@ -13,6 +13,11 @@ RemoteTransform2D draws nothing and copies its transform onto the node `remote_p
 names. The previewer applies that over the live scene tree, so the target jumps to the
 relay's position, also across an instanced scene boundary.
 
+A relay pushes again each time its own global transform changes, so a relay chain
+settles as in Godot, whatever its order in the file. A relay cycle draws the
+frame that `pnpm ref:godot` captures, as `docs/comparison/README.md` explains, and the
+linter warns on each relay of the cycle.
+
 ## Linting
 
 <!-- lint:begin RemoteTransform2D -->
@@ -32,6 +37,7 @@ Strict parsing format-checks these `RemoteTransform2D` properties, plus 12 inher
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-remotetransform2d-remote-path` | `remotetransform2d-invalid-remote-path` | warning |
+|  | `remotetransform2d-relay-cycle` | warning |
 <!-- lint:end -->
 
 `remote_path` is stored as whatever string is present, with no NodePath check.
@@ -41,5 +47,4 @@ Strict parsing format-checks these `RemoteTransform2D` properties, plus 12 inher
 
 ## Known limitations
 
-- **Approximated** Relay chains resolve in document order, and a feedback loop is not
-  iterated to a fixed point.
+- **Needs runtime** A relay cycle moves on every frame in Godot, and the previewer shows one frame of that motion.

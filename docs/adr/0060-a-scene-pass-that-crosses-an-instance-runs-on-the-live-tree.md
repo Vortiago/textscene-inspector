@@ -26,7 +26,9 @@ pass is a `LiveScenePass`: a function of one `LiveTree` that returns a result pe
   that node where it is an instance root, then its owner's (`nodePathUniquePaths`, `node.cpp:1930-1938`).
 - A pass that drives properties returns a `NodePatch` per live node path: the property values laid
   over the node. `liveNodePatches` runs the RemoteTransform pass, then the CSGPolygon3D path pass over
-  its placements, and `useLivePatchedNode` hands a node its patch. A pass never writes into a node. `scripts/livePatchReaders.test.mjs` fails for a reader of a live node
+  its placements, and `useLivePatchedNode` hands a node its patch. Render reads `liveDrawnPatches`
+  through `useLiveDrawnNode`, which also moves a mesh that draws behind its node to where Godot draws
+  it, so the inspector shows the node's own pose. A pass never writes into a node. `scripts/livePatchReaders.test.mjs` fails for a reader of a live node
   that neither lays the patches over it nor states why its reads need no overlay.
 
 The Skeleton3D pass (`bindMeshesToSkeletons`) is a live pass. A Skeleton3D with no
