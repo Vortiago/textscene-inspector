@@ -16,11 +16,11 @@ outright. Without `label_settings`, it shapes in the theme's font and reads the 
 resolve. A paragraph adds its spacing once, after its last shown line: a line that autowrap breaks
 inside a paragraph does not.
 
-A Label draws its layers in Godot's order (`label.cpp:828-883`). The shadow ring and the shadow come
-first, then each stacked shadow and each stacked outline from the last index to the first, then the
-outline, then the fill. A ring is a stroked contour with a one-sided radius of `outline_size / 4` px
-(`text_server_adv.cpp:1383`). It draws on the canvas painter for the bundled font and a scene font
-alike (ADR-0040). The fill and the plain shadows draw on the painter their font takes.
+A Label draws its layers in Godot's order (`label.cpp:828-883`). The shadow ring and the shadow come first. Then
+each stacked shadow and each stacked outline draw from the last index to the first. The outline comes next, and the fill
+comes last. A ring is a stroked contour with a one-sided radius of `outline_size / 4` px (`text_server_adv.cpp:1383`).
+It draws on the canvas painter for the bundled font and a scene font alike (ADR-0040). The fill and the plain shadows
+draw on the painter their font takes.
 
 A `label_settings.font` resolves in the file that wrote the settings. A font that is loading draws
 nothing (`label.cpp:112`, ADR-0059).
