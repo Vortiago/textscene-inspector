@@ -101,7 +101,10 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   const effectLayers = useMemo(() => labelEffectLayers(solveNode), [solveNode]);
   const layers = useMemo(
     () => [
-      ...effectLayers.map((layer) => ({ ...layer, color: multiplyModulate(tint.own, layer.color) })),
+      ...effectLayers
+        .map((layer) => ({ ...layer, color: multiplyModulate(tint.own, layer.color) }))
+        // A layer the modulate makes invisible draws nothing, so it gets no mesh.
+        .filter((layer) => layer.color.a > 0),
       labelFillLayer(tintColor),
     ],
     [effectLayers, tint.own, tintColor]
