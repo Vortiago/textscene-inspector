@@ -23,6 +23,7 @@ const CONTEXT = 'LabelSettings';
 function decodeLabelSettings(data: Record<string, string>): LabelSettingsResource {
   return {
     lineSpacing: floatOr(data.line_spacing, 3, CONTEXT),
+    paragraphSpacing: floatOr(data.paragraph_spacing, 0, CONTEXT),
     font: data.font,
     fontSize: intOr(data.font_size, DEFAULT_FONT_SIZE, CONTEXT),
     fontColor: colorOr(data.font_color, DEFAULT_WHITE),

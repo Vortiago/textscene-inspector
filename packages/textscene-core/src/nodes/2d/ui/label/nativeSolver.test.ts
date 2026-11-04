@@ -15,6 +15,7 @@ import { panelContainerLayout, panelContainerMinimumSize } from '../panelcontain
 import { makeBoxContainerLayout, makeBoxContainerMinimumSize } from '../shared/boxContainerSolver';
 import type { LabelProperties } from './types';
 import {
+  clampAutowrapMode,
   shapeText,
   type TextLayoutResult,
   type TextLineLayout,
@@ -25,6 +26,7 @@ import {
   labelShapingWidthPx,
   labelUnwrappedShape,
   LABEL_LINE_SPACING_PX,
+  LABEL_PARAGRAPH_SEPARATOR,
   labelTextTheme,
   layoutLabelLines,
   labelVisibleLineRange,
@@ -803,9 +805,9 @@ describe('labelVisibleLineRange (label.cpp:344-361)', () => {
 describe('windowLabelLines', () => {
   const layout: TextLayoutResult = {
     lines: [
-      { text: 'a', glyphs: [], widthPx: 10 },
-      { text: 'b', glyphs: [], widthPx: 30 },
-      { text: 'c', glyphs: [], widthPx: 20 },
+      { text: 'a', glyphs: [], widthPx: 10, paragraphIndex: 0 },
+      { text: 'b', glyphs: [], widthPx: 30, paragraphIndex: 1 },
+      { text: 'c', glyphs: [], widthPx: 20, paragraphIndex: 2 },
     ],
     linePitchPx: 26,
     widthPx: 30,
@@ -815,14 +817,14 @@ describe('windowLabelLines', () => {
   };
 
   it('recomputes widthPx/heightPx over the KEPT lines only (happy path)', () => {
-    const windowed = windowLabelLines(layout, { start: 1, end: 3 });
+    const windowed = windowLabelLines(layout, { start: 1, end: 3 }, 0);
     expect(windowed.lines.map((l) => l.widthPx)).toEqual([30, 20]);
     expect(windowed.widthPx).toBe(30);
     expect(windowed.heightPx).toBe(52);
   });
 
   it('an empty range yields zero lines and zero height (edge case)', () => {
-    const windowed = windowLabelLines(layout, { start: 3, end: 3 });
+    const windowed = windowLabelLines(layout, { start: 3, end: 3 }, 0);
     expect(windowed.lines).toEqual([]);
     expect(windowed.heightPx).toBe(0);
     expect(windowed.widthPx).toBe(0);
@@ -855,6 +857,7 @@ function fakeLine(charCount: number): TextLineLayout {
     text: 'x'.repeat(charCount),
     glyphs: Array.from({ length: charCount }, (_, i) => ({ char: 'x', x: i, advance: 1, glyph: null })),
     widthPx: charCount,
+    paragraphIndex: 0,
   };
 }
 
@@ -932,16 +935,18 @@ describe('labelEffectiveTextTheme', () => {
   const themeResolved = { fontSizePx: 40, color: { r: 1, g: 0, b: 0, a: 1 } };
 
   it('falls back to the theme-resolved values absent label_settings (happy path)', () => {
-    expect(labelEffectiveTextTheme(themeResolved, null)).toEqual({
+    expect(labelEffectiveTextTheme(themeResolved, null, {})).toEqual({
       fontSizePx: 40,
       color: { r: 1, g: 0, b: 0, a: 1 },
       lineSpacingPx: LABEL_LINE_SPACING_PX,
+      paragraphSpacingPx: 0,
     });
   });
 
   it('a valid label_settings wins OUTRIGHT, even at its own class defaults, over a node-local theme override (error path)', () => {
     const settings = {
       lineSpacing: 3,
+      paragraphSpacing: 0,
       fontSize: 16,
       fontColor: { r: 1, g: 1, b: 1, a: 1 },
       outlineSize: 0,
@@ -950,16 +955,18 @@ describe('labelEffectiveTextTheme', () => {
       shadowColor: { r: 0, g: 0, b: 0, a: 0 },
       shadowOffset: { x: 1, y: 1 },
     };
-    expect(labelEffectiveTextTheme(themeResolved, settings)).toEqual({
+    expect(labelEffectiveTextTheme(themeResolved, settings, {})).toEqual({
       fontSizePx: 16,
       color: { r: 1, g: 1, b: 1, a: 1 },
       lineSpacingPx: 3,
+      paragraphSpacingPx: 0,
     });
   });
 
   it('truncates a fractional line_spacing toward zero — a real_t assigned into a C++ int (label.cpp:346)', () => {
     const settings = {
       lineSpacing: 3.7,
+      paragraphSpacing: 0,
       fontSize: 16,
       fontColor: { r: 1, g: 1, b: 1, a: 1 },
       outlineSize: 0,
@@ -968,7 +975,7 @@ describe('labelEffectiveTextTheme', () => {
       shadowColor: { r: 0, g: 0, b: 0, a: 0 },
       shadowOffset: { x: 1, y: 1 },
     };
-    expect(labelEffectiveTextTheme(themeResolved, settings).lineSpacingPx).toBe(3);
+    expect(labelEffectiveTextTheme(themeResolved, settings, {}).lineSpacingPx).toBe(3);
   });
 });
 
@@ -990,6 +997,7 @@ describe('labelOutlineTheme', () => {
   it('a valid label_settings wins OUTRIGHT over the node-local theme override (edge case)', () => {
     const labelSettings = {
       lineSpacing: 3,
+      paragraphSpacing: 0,
       fontSize: 16,
       fontColor: { r: 1, g: 1, b: 1, a: 1 },
       outlineSize: 5,
@@ -1030,6 +1038,7 @@ describe('labelShadowTheme', () => {
   it('a valid label_settings wins OUTRIGHT over the node-local theme override (edge case)', () => {
     const labelSettings = {
       lineSpacing: 3,
+      paragraphSpacing: 0,
       fontSize: 16,
       fontColor: { r: 1, g: 1, b: 1, a: 1 },
       outlineSize: 0,
@@ -1173,5 +1182,123 @@ describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
       rtl: false,
     });
     expect(rtlBehavior[0]!.glyphs.length).toBe(0);
+  });
+});
+
+describe('Label paragraph_spacing and the theme spacing constants (label.cpp:344-388, :517-617, :889)', () => {
+  // At font_size 20 the pitch is 31 (line_spacing 3) and the font height 28, measured from Godot 4.6.3.
+  const FONT_SIZE = 20;
+
+  function settingsFor(data: Record<string, string>) {
+    return resolveLabelSettings('SubResource("1")', [
+      { id: '1', type: 'LabelSettings', data: { font_size: String(FONT_SIZE), ...data } },
+    ]);
+  }
+
+  function spacedNode(props: Partial<LabelProperties>, overrides: Partial<SolveNode> = {}): SolveNode {
+    return node({ autowrapMode: 0, ...props }, overrides);
+  }
+
+  /** The Label painter's path: shape, window to the visible lines, then place. */
+  function placeLines(n: SolveNode, boxWidthPx: number, boxHeightPx: number): number[] {
+    const props = n.node.properties as LabelProperties;
+    const theme = labelEffectiveTextTheme(
+      labelTextTheme(n, props, { theme: nativeTheme(1) }),
+      n.labelSettings,
+      n.constants
+    );
+    const shaped = shapeText(props.text ?? '', {
+      fontSizePx: theme.fontSizePx,
+      boxWidthPx: labelShapingWidthPx(boxWidthPx),
+      autowrapMode: clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF),
+      lineSpacingPx: theme.lineSpacingPx,
+      paragraphSeparator: LABEL_PARAGRAPH_SEPARATOR,
+    });
+    const windowed = windowLabelLines(
+      shaped,
+      labelVisibleLineRange(shaped.lines.length, 0, undefined),
+      theme.paragraphSpacingPx
+    );
+    return layoutLabelLines(
+      windowed,
+      boxWidthPx,
+      boxHeightPx,
+      undefined,
+      props.verticalAlignment,
+      undefined,
+      FONT_SIZE,
+      {
+        lineSpacingPx: theme.lineSpacingPx,
+        paragraphSpacingPx: theme.paragraphSpacingPx,
+      }
+    ).map((p) => p.y);
+  }
+
+  it('paragraph_spacing 20.7 truncates to 20 and places three paragraphs at a pitch of 51', () => {
+    const n = spacedNode({ text: 'I\nI\nI' }, { labelSettings: settingsFor({ paragraph_spacing: '20.7' }) });
+    expect(placeLines(n, 200, 200)).toEqual([0, 51, 102]);
+  });
+
+  it('a negative paragraph_spacing of -10 places the same text at a pitch of 21', () => {
+    const n = spacedNode({ text: 'I\nI\nI' }, { labelSettings: settingsFor({ paragraph_spacing: '-10' }) });
+    expect(placeLines(n, 200, 200)).toEqual([0, 21, 42]);
+  });
+
+  it('CENTER subtracts the trailing line and paragraph spacing: first line top 135 in a 400 px box', () => {
+    const n = spacedNode(
+      { text: 'I\nI\nI', verticalAlignment: 1 },
+      { labelSettings: settingsFor({ paragraph_spacing: '20.7' }) }
+    );
+    expect(placeLines(n, 200, 400)[0]).toBe(135);
+  });
+
+  it('CENTER uses the settings line_spacing 10, not the constant 3', () => {
+    const n = spacedNode(
+      { text: 'I\nI', verticalAlignment: 1 },
+      { labelSettings: settingsFor({ line_spacing: '10' }) }
+    );
+    // Pitch 38, two lines: 76 - 10 = 66, (400 - 66) / 2 = 167.
+    expect(placeLines(n, 200, 400)[0]).toBe(167);
+  });
+
+  it('minimum height of "I\\nI" at paragraph_spacing 20.7 is 79', () => {
+    const n = spacedNode({ text: 'I\nI' }, { labelSettings: settingsFor({ paragraph_spacing: '20.7' }) });
+    expect(minSize(n, ctx()).y).toBe(79);
+  });
+
+  it('a line that autowrap breaks inside a paragraph keeps the plain pitch of 31', () => {
+    const n = spacedNode(
+      { text: 'I I\nI', autowrapMode: 1 },
+      { labelSettings: settingsFor({ paragraph_spacing: '20.7' }) }
+    );
+    // Width 8 breaks "I I" into two lines of one paragraph, then the paragraph gap of 20.
+    expect(placeLines(n, 8, 200)).toEqual([0, 31, 82]);
+  });
+
+  it('theme_override_constants line_spacing and paragraph_spacing apply without label_settings', () => {
+    const n = spacedNode({ text: 'I\nI' }, { constants: { line_spacing: 10, paragraph_spacing: 5 } });
+    const props = n.node.properties as LabelProperties;
+    const themeResolved = labelTextTheme(n, props, { theme: nativeTheme(1) });
+    expect(labelEffectiveTextTheme(themeResolved, null, n.constants)).toMatchObject({
+      lineSpacingPx: 10,
+      paragraphSpacingPx: 5,
+    });
+  });
+
+  it('label_settings replaces the theme constants outright', () => {
+    const constants = { line_spacing: 10, paragraph_spacing: 5 };
+    const themeResolved = { fontSizePx: 16, color: { r: 1, g: 1, b: 1, a: 1 } };
+    expect(labelEffectiveTextTheme(themeResolved, settingsFor({}), constants)).toMatchObject({
+      lineSpacingPx: 3,
+      paragraphSpacingPx: 0,
+    });
+  });
+
+  it('the theme defaults are line_spacing 3 and paragraph_spacing 0 (default_theme.cpp:392)', () => {
+    const themeResolved = { fontSizePx: 16, color: { r: 1, g: 1, b: 1, a: 1 } };
+    expect(labelEffectiveTextTheme(themeResolved, null, {})).toMatchObject({
+      lineSpacingPx: 3,
+      paragraphSpacingPx: 0,
+    });
   });
 });

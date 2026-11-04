@@ -57,7 +57,7 @@ const GLYPH_ICON_SIZE_PX = 8;
 const CURRENT_LINE_COLOR = { r: 0.25, g: 0.25, b: 0.26, a: 0.8 };
 
 /** The stand-in row for a buffer line with no shaped rows: an empty line measures no indent. */
-const EMPTY_ROW = { text: '', glyphs: [], widthPx: 0 };
+const EMPTY_ROW = { text: '', glyphs: [], widthPx: 0, paragraphIndex: 0 };
 
 /** `default_theme.cpp:481` (TextEdit) / `:527` (CodeEdit): `caret_width`, the same literal for both. Unscaled, like every constant here. */
 const CARET_WIDTH_PX = 1;
