@@ -119,7 +119,7 @@ float shadowFraction() {
 `;
 
 /**
- * The cookie quad's share of `canvas.glsl:502`, with the albedo in `C` (line 814) and `S` the shadow
+ * The cookie quad's share of `canvas.glsl:547`, with the albedo in `C` (line 814) and `S` the shadow
  * colour: `C·(1−s)·cookie.a·((1−s) + S.a·s)`. At the transparent default that is a (1−s)² falloff,
  * as Godot 4.6.3 shows: PCF5 over 0.25 steps 167/129/100/80/67/63 of 255, not (1−s)'s 167/146/…/64.
  */
