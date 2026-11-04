@@ -196,7 +196,6 @@ export function defineSharedAnswersSuite(projectDir: string): void {
     for (const answer of answers.highlights) {
       test(`highlights: ${answer.name}`, async () => {
         const { document, position } = await openAt(answer.at);
-        // VS Code 1.85 answers undefined, not an empty list, when no provider highlights anything.
         const highlights = await vscode.commands.executeCommand<vscode.DocumentHighlight[]>(
           'vscode.executeDocumentHighlights',
           document.uri,
