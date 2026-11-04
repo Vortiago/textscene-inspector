@@ -7,7 +7,8 @@
  */
 
 import * as THREE from 'three';
-import { drawFullScreen } from '../../r3f/fullScreenPass.js';
+import { drawFullScreen, releaseTextures, setUniforms } from '../../r3f/fullScreenPass.js';
+import { withMipLevels } from '../../r3f/mipLevels.js';
 import { drawOffscreen } from '../../r3f/offscreen.js';
 import { perObject } from '../../utils/perObject.js';
 import {
@@ -22,12 +23,12 @@ import { importanceSampleFilter } from './importanceSampleFilter.js';
 import type { LayerFilter } from './layerFilter.js';
 import { DOWNSAMPLE_FRAGMENT_SHADER, RADIANCE_OCTMAP_FRAGMENT_SHADER } from './skyLayerShaders.js';
 import { skyPass } from './skyPass.js';
-import { releaseTextures, setUniforms } from '../../r3f/fullScreenPass.js';
 import type { SkyBake } from './types.js';
 
 /**
  * An octmap array with a mip chain, laid out as `layout`: a sky's radiance layers or the
- * reflection atlas. A read clamps its lod to the mips the layout names, as Godot's texture ends there.
+ * reflection atlas. It holds only the mips the layout names, so a read's lod stops at the last, as
+ * Godot's texture ends there.
  */
 interface OctmapArray<Layout extends SkyOctmapLayout> {
   readonly layout: Layout;
@@ -75,7 +76,7 @@ function createOctmapArray<Layout extends SkyOctmapLayout>(
   depth: number
 ): OctmapArray<Layout> {
   const target = new THREE.WebGLArrayRenderTarget(layout.size, layout.size, depth, MIPMAPPED_TARGET_OPTIONS);
-  return { layout, target: withMips(target) };
+  return { layout, target: withMipLevels(target, 1 + layout.downsampledSizes.length) };
 }
 
 /** Lets go of the textures a bake set on `gl`'s passes, as the passes outlive it. */
@@ -187,7 +188,6 @@ function bakeFromChain(
       try {
         setUniforms(filter.passFor(gl), {
           chain: chain.texture,
-          lastMip: filter.chainSizes.length - 1,
           borderSize: layout.borderSize,
         });
         drawLayers({ octmap, scratch });
@@ -210,7 +210,7 @@ function downsampleChain(
   chainSizes: readonly number[],
   scratch: ScratchOctmaps
 ): THREE.WebGLRenderTarget {
-  const chain = chainTarget(chainSizes[0]!);
+  const chain = chainTarget(chainSizes);
   try {
     gl.initRenderTarget(chain);
     downsample(gl, octmap, chainSizes, borderSize, scratch, (mip, level) =>
@@ -321,7 +321,7 @@ class ScratchOctmaps {
 /**
  * Half-float targets with no depth. Each filters linearly and clamps to its edge, as Godot's
  * samplers for the sky's octmaps do (`copy_effects.cpp:1155`, `:1366`). An array texture
- * magnifies by its nearest texel unless told otherwise (three r186 `DataArrayTexture.js:47`).
+ * magnifies by its nearest texel unless told otherwise (three r187 `DataArrayTexture.js:47`).
  */
 const TARGET_OPTIONS: THREE.RenderTargetOptions = {
   type: THREE.HalfFloatType,
@@ -336,24 +336,8 @@ const MIPMAPPED_TARGET_OPTIONS: THREE.RenderTargetOptions = {
   minFilter: THREE.LinearMipmapLinearFilter,
 };
 
-/** The chain's octmap, `size` wide at its first mip, which a filter reads between mips. */
-function chainTarget(size: number): THREE.WebGLRenderTarget {
-  return withMips(new THREE.WebGLRenderTarget(size, size, MIPMAPPED_TARGET_OPTIONS));
-}
-
-/** `target` with a level for each mip, as it filters between them. */
-function withMips<T extends THREE.WebGLRenderTarget>(target: T): T {
-  target.texture.mipmaps = fullMipChain(target.width);
-  return target;
-}
-
-/**
- * Every mip down to one texel, so a texture that filters between mips is complete: three sets no
- * `TEXTURE_MAX_LEVEL`. Only the first few are drawn, and each read clamps its lod to those. A render
- * target reads only the count (three r186 `WebGLTextures.js:2050-2054`), which the type of
- * `Texture.mipmaps` does not name.
- */
-function fullMipChain(size: number): THREE.Texture['mipmaps'] {
-  const levels = Array.from({ length: Math.floor(Math.log2(size)) + 1 }, () => ({}));
-  return levels as unknown as THREE.Texture['mipmaps'];
+/** The chain's octmap, a mip for each of `sizes`, which a filter reads between mips. */
+function chainTarget(sizes: readonly number[]): THREE.WebGLRenderTarget {
+  const size = sizes[0]!;
+  return withMipLevels(new THREE.WebGLRenderTarget(size, size, MIPMAPPED_TARGET_OPTIONS), sizes.length);
 }

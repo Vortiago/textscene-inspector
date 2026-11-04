@@ -4,26 +4,15 @@
  * reason, and `pending` keeps it waiting. While a request waits, the panel pings the webview,
  * and only an unanswered ping ends it. The fake panel's `postMessage` is the only probe.
  */
-import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
-import * as vscode from 'vscode';
-import { TscnPreviewPanel } from './TscnPreviewPanel';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PING_INTERVAL_MS, WEBVIEW_LOAD_DEADLINE_MS } from './previewCaptureQueue';
-import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } from './test-setup';
+import { type MockWebview } from './test-setup';
+import { openPreviewPanel } from './previewPanel.testkit';
 
 const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
 const PNG = 'data:image/png;base64,AA==';
 
-async function openPanel(): Promise<{
-  panel: TscnPreviewPanel;
-  webview: MockWebview;
-  triggerMessage: (msg: unknown) => void;
-}> {
-  const { webview, triggerMessage } = setupMockPanel();
-  (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
-  const panel = TscnPreviewPanel.create(createMockUri('/extension'), createMockUri('/workspace/scene.tscn'));
-  await vi.waitFor(() => expect(vscode.workspace.fs.readFile).toHaveBeenCalled());
-  return { panel, webview, triggerMessage };
-}
+const openPanel = () => openPreviewPanel(MINIMAL_TSCN);
 
 function captureRequestIds(webview: MockWebview): string[] {
   return webview.postMessage.mock.calls

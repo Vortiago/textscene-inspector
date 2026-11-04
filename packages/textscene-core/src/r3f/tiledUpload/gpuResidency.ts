@@ -6,7 +6,7 @@
  */
 import type * as THREE from 'three';
 
-/** three's texture cache key, field for field, as three 0.186 builds it. */
+/** three's texture cache key, field for field (r187 `WebGLTextures.js:588-608`). */
 export function residencyKey(texture: THREE.Texture): string {
   return [
     texture.wrapS,
@@ -20,6 +20,7 @@ export function residencyKey(texture: THREE.Texture): string {
     texture.format,
     texture.type,
     texture.generateMipmaps,
+    texture.mipmapsAutoUpdate,
     texture.premultiplyAlpha,
     texture.flipY,
     texture.unpackAlignment,

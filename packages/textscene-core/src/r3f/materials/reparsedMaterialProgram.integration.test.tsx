@@ -1,7 +1,7 @@
 /**
  * A re-parse mutates props on a mounted material, as `NodeDispatcher` keys a node
- * on its name. three bakes program parameters at first compile (`WebGLPrograms.js:56`)
- * and re-derives on a `version` move or `WebGLRenderer.js:2388`'s re-checks, and neither
+ * on its name. three bakes program parameters at first compile (r187 `WebGLPrograms.js:54`)
+ * and re-derives on a `version` move or `WebGLRenderer.js:2451`'s re-checks, and neither
  * covers `transparent`, `blending`, `side`, `vertexColors` or slot presence.
  */
 import { describe, expect, it } from 'vitest';
@@ -94,9 +94,9 @@ alpha_cut = ${alphaCut}
 `;
 
 /**
- * An opaque→transparent edit leaves `#define OPAQUE` (`WebGLProgram.js:776`) baked,
+ * An opaque→transparent edit leaves `#define OPAQUE` (r187 `WebGLProgram.js:738`) baked,
  * and `opaque_fragment` forces `diffuseColor.a = 1.0`. FrontSide only: a transparent
- * DoubleSide material re-derives once per pass (`WebGLRenderer.js:2133-2141`), as a
+ * DoubleSide material re-derives once per pass (`WebGLRenderer.js:2178-2188`), as a
  * light-set change or an arriving env map also does, so the fault shows only sometimes.
  */
 describe('a re-parsed scene rebuilds materials whose baked program parameters moved', () => {

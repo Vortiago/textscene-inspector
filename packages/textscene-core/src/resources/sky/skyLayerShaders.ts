@@ -138,7 +138,6 @@ void main() {
  */
 const LAYER_FILTER_GLSL = /* glsl */ `
 uniform sampler2D chain;
-uniform float lastMip;
 uniform float borderSize;
 uniform float layerSize;
 ${OCTMAP_GLSL}
@@ -147,7 +146,7 @@ vec3 texelDirection() {
 }
 
 vec3 chainAt(vec3 direction, float lod) {
-  return textureLod(chain, vec3ToOctWithBorder(direction, borderSize), clamp(lod, 0.0, lastMip)).rgb;
+  return textureLod(chain, vec3ToOctWithBorder(direction, borderSize), lod).rgb;
 }
 `;
 

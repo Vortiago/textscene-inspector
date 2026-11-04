@@ -68,7 +68,7 @@ describe('surfaceDrawHooks — colour pass billboard', () => {
   });
 
   it('leaves the model-view three computed for the draw, not a stale one from before it', () => {
-    // three recomputes `modelViewMatrix` after the before-hook (`WebGLRenderer.js:2160`)
+    // three recomputes `modelViewMatrix` after the before-hook (r187 `WebGLRenderer.js:2173`)
     // and `normalMatrix` from it, so the pair must stay as the draw left them.
     const mesh = surfacesMesh();
     mesh.modelViewMatrix.makeScale(9, 9, 9);

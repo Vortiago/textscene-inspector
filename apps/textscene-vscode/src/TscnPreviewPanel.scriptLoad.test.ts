@@ -1,0 +1,120 @@
+/**
+ * A webview whose entry script fails to load posts `webviewLoadFailed`, since nothing of the
+ * bundle runs. The panel loads its document once more, and a second failure before a
+ * `webviewReady` ends every capture with the error instead of the load deadline.
+ */
+import { describe, expect, it } from 'vitest';
+import { openPreviewPanel } from './previewPanel.testkit';
+import { type MockWebview } from './test-setup';
+
+const CUT_SCRIPT_ERROR = 'SyntaxError: Unexpected end of input';
+
+const openPanel = () => openPreviewPanel('[gd_scene format=3]');
+
+function captureRequestCount(webview: MockWebview): number {
+  return webview.postMessage.mock.calls.filter((c) => (c[0] as { type: string }).type === 'capturePreview')
+    .length;
+}
+
+describe('TscnPreviewPanel script load failure', () => {
+  it('loads a new document once the first one reports its script failed', async () => {
+    const { webview, triggerMessage } = await openPanel();
+    const firstDocument = webview.html;
+
+    triggerMessage({ type: 'webviewLoadFailed', error: CUT_SCRIPT_ERROR });
+
+    expect(webview.html).toContain('<div id="r3f-root">');
+    expect(webview.html).not.toBe(firstDocument);
+  });
+
+  it('loads no third document when the second one fails too', async () => {
+    const { webview, triggerMessage } = await openPanel();
+    triggerMessage({ type: 'webviewLoadFailed', error: CUT_SCRIPT_ERROR });
+    const secondDocument = webview.html;
+
+    triggerMessage({ type: 'webviewLoadFailed', error: CUT_SCRIPT_ERROR });
+
+    expect(webview.html).toBe(secondDocument);
+  });
+
+  it('loads a new document again for a failure after a document that loaded', async () => {
+    const { webview, triggerMessage } = await openPanel();
+    triggerMessage({ type: 'webviewLoadFailed', error: CUT_SCRIPT_ERROR });
+    triggerMessage({ type: 'webviewReady' });
+    const loadedDocument = webview.html;
+
+    triggerMessage({ type: 'webviewLoadFailed', error: CUT_SCRIPT_ERROR });
+
+    expect(webview.html).not.toBe(loadedDocument);
+  });
+
+  it('answers a capture with the script error once the second document fails', async () => {
+    const { panel, triggerMessage } = await openPanel();
+    const captured = panel.capture();
+
+    triggerMessage({ type: 'webviewLoadFailed', error: CUT_SCRIPT_ERROR });
+    triggerMessage({ type: 'webviewLoadFailed', error: CUT_SCRIPT_ERROR });
+
+    await expect(captured).resolves.toEqual({
+      error: `The preview script failed to load: ${CUT_SCRIPT_ERROR}`,
+    });
+  });
+
+  it('posts no resource change to a document that failed after one that loaded', async () => {
+    const { panel, webview, triggerMessage } = await openPanel();
+    triggerMessage({ type: 'webviewReady' });
+    triggerMessage({ type: 'webviewLoadFailed', error: CUT_SCRIPT_ERROR });
+    webview.postMessage.mockClear();
+
+    panel.invalidateResource('res://tex.png');
+
+    expect(webview.postMessage).not.toHaveBeenCalled();
+  });
+
+  it('holds a capture for the next document when a document that could capture fails', async () => {
+    const { panel, webview, triggerMessage } = await openPanel();
+    triggerMessage({ type: 'webviewReady' });
+    triggerMessage({ type: 'previewCaptureReady' });
+    triggerMessage({ type: 'webviewLoadFailed', error: CUT_SCRIPT_ERROR });
+
+    void panel.capture();
+    expect(captureRequestCount(webview)).toBe(0);
+
+    triggerMessage({ type: 'webviewReady' });
+    triggerMessage({ type: 'previewCaptureReady' });
+    expect(captureRequestCount(webview)).toBe(1);
+  });
+
+  it('loads a new document when a chunk fails in a document that loaded', async () => {
+    const { webview, triggerMessage } = await openPanel();
+    triggerMessage({ type: 'webviewReady' });
+    const loadedDocument = webview.html;
+
+    triggerMessage({ type: 'chunkLoadFailed', error: CUT_SCRIPT_ERROR });
+
+    expect(webview.html).not.toBe(loadedDocument);
+  });
+
+  it('loads no new document for a chunk that fails again, so a broken build never loops', async () => {
+    const { webview, triggerMessage } = await openPanel();
+    triggerMessage({ type: 'webviewReady' });
+    triggerMessage({ type: 'chunkLoadFailed', error: CUT_SCRIPT_ERROR });
+    triggerMessage({ type: 'webviewReady' });
+    const reloadedDocument = webview.html;
+
+    triggerMessage({ type: 'chunkLoadFailed', error: CUT_SCRIPT_ERROR });
+
+    expect(webview.html).toBe(reloadedDocument);
+  });
+
+  it('holds a capture for the document that loads after a chunk failure', async () => {
+    const { panel, webview, triggerMessage } = await openPanel();
+    triggerMessage({ type: 'webviewReady' });
+    triggerMessage({ type: 'previewCaptureReady' });
+    triggerMessage({ type: 'chunkLoadFailed', error: CUT_SCRIPT_ERROR });
+
+    void panel.capture();
+
+    expect(captureRequestCount(webview)).toBe(0);
+  });
+});

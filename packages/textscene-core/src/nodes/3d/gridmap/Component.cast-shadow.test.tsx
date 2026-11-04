@@ -30,7 +30,7 @@ describe('<GridMap> per-tile mesh_cast_shadow', () => {
 
   it('keeps the tile material’s own cull for every other value', async () => {
     // `render_forward_clustered.cpp:395-411`: only DOUBLE_SIDED drops the cull, and
-    // every other value undoes three's acne flip (`WebGLShadowMap.js:51`).
+    // every other value undoes three's acne flip (r187 `WebGLShadowMap.js:51`).
     const tile = await renderTile('item/0/mesh_cast_shadow = 1');
     expect(depthSideOf(tile)).toBe(THREE.FrontSide);
   });

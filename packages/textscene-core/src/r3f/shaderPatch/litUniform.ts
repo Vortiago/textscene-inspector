@@ -15,7 +15,7 @@ interface UniformsMerge {
 }
 
 /**
- * The lit materials and `ShadowMaterial` merge `UniformsLib.lights` (r186 `ShaderLib.js:40`, `:65`,
+ * The lit materials and `ShadowMaterial` merge `UniformsLib.lights` (r187 `ShaderLib.js:40`, `:65`,
  * `:93`, `:119`, `:289`, and `physical` through `standard`).
  */
 const LIGHTS_MERGE: UniformsMerge = {

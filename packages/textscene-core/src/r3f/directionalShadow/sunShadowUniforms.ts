@@ -55,7 +55,7 @@ export function installSunShadowUniforms(): void {
 /**
  * Writes the terms of each split sun among `lights`, in their order. Pass the lights of three's
  * shadow pass, after it has updated the slot matrices: three lists every sun shadow in that order
- * (r186 `WebGLLights.js:289-325`). It runs on every pass, so it allocates no list of suns.
+ * (r187 `WebGLLights.js:289-325`). It runs on every pass, so it allocates no list of suns.
  */
 export function writeSunShadowUniforms(lights: readonly THREE.Light[]): void {
   const sunCount = lights.reduce((count, light) => (isSplitSun(light) ? count + 1 : count), 0);

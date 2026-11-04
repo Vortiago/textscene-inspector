@@ -105,7 +105,7 @@ class Profile implements FrameProfile {
     private readonly now: () => number
   ) {
     this.gpu = GpuTimer.create(renderer.getContext() as WebGL2RenderingContext);
-    // three zeroes the count at each render's start (`WebGLRenderer.js:1731`), so a frame of several
+    // three zeroes the count at each render's start (r187 `WebGLRenderer.js:1744`), so a frame of several
     // renders keeps only its last one's. The profile zeroes it per frame instead.
     this.wasAutoReset = renderer.info.autoReset;
     renderer.info.autoReset = false;

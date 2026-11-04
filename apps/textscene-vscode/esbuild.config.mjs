@@ -9,6 +9,7 @@ import cssModulesPlugin from 'esbuild-css-modules-plugin';
 import { globSync } from 'glob';
 import { resolve } from 'node:path';
 import { mergedFileInputs, writeBundledNotices } from '../../scripts/third-party-notices.mjs';
+import { chunkImportPlugin } from './src/bundler/chunkImportPlugin.mjs';
 import { textureWorkerPlugin } from './src/bundler/textureWorkerPlugin.mjs';
 
 const production = process.argv.includes('--production');
@@ -104,6 +105,7 @@ const webviewOptions = {
         workerMetafile = metafile;
       },
     }),
+    chunkImportPlugin(),
   ],
   loader: {
     '.css': 'css',

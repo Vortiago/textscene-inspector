@@ -14,7 +14,7 @@ export function atlasTargetOf(depth: unknown): THREE.WebGLRenderTarget | null {
 }
 
 /**
- * A shadow atlas as three builds a PCF shadow map (r186 `WebGLShadowMap.js:253-266`): the depth
+ * A shadow atlas as three builds a PCF shadow map (r187 `WebGLShadowMap.js:253-266`): the depth
  * texture `depth` describes, and its colour copy named after it.
  */
 export function createShadowAtlas(depth: AtlasDepth): THREE.WebGLRenderTarget {

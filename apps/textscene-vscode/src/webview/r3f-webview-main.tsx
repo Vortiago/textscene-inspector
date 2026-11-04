@@ -19,6 +19,7 @@ import { isHostToWebviewMessage, type WebviewToHostMessage } from '../protocol';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
 import { textureWorkerFactory } from './createTextureWorker';
 import { readInitialConfig, resolveInitialViewportMode } from './initialConfig';
+import { setChunkFailureReporter } from './chunkImport';
 
 // Read once at module load: `webviewHtml.ts` embeds `window.__TEXTSCENE_CONFIG__`
 // in a script tag before this module's entry, so the global is set by now.
@@ -184,6 +185,9 @@ export function mountR3FWebview(): void {
   }
   const vscode: VsCodeApi = acquireVsCodeApi();
   setLogAdapter(new WebviewLogAdapter(vscode));
+  setChunkFailureReporter((error) =>
+    vscode.postMessage({ type: 'chunkLoadFailed', error } satisfies WebviewToHostMessage)
+  );
 
   // Make the host fill the viewport so the canvas + sidebar layout
   // works inside the webview's full-bleed body.
