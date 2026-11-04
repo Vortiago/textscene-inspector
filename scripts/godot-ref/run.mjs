@@ -1428,6 +1428,30 @@ function hasGroupTimeout() {
   return groupTimeoutAvailable;
 }
 
+/** True when an engine pass ended without finishing: the group killer reaped it, or it never spawned. */
+export function enginePassStalled(result) {
+  return result.timedOut || result.error != null;
+}
+
+/**
+ * Imports the project's assets, which a render resolves only as `.godot/imported` artefacts.
+ * A stalled import leaves some of them missing, and the render would then save a picture of a
+ * scene without them as the reference. One retry runs in a clean copy of the project, and a
+ * second stall throws. A non-zero exit that is not a stall stays non-fatal: a scene with
+ * nothing to import is an ordinary case.
+ */
+export async function importAssets({ run, restage }) {
+  let result = run();
+  if (!enginePassStalled(result)) return;
+  await restage();
+  result = run();
+  if (!enginePassStalled(result)) return;
+  const why = result.timedOut
+    ? `did not finish within ${ENGINE_TIMEOUT_S}s on two tries`
+    : `failed to spawn on two tries: ${result.error.message}`;
+  throw new Error(`The Godot import pass ${why}.\n${result.stderr}`);
+}
+
 function runGodot(args, { display, screen = null }) {
   const plan = godotSpawnPlan(args, { display, screen, groupTimeout: hasGroupTimeout() });
   const result = spawnSync(plan.command, plan.argv, {
@@ -1531,7 +1555,6 @@ async function renderInto(
     renderingDriver,
   }
 ) {
-  await cp(root, work, { recursive: true, dereference: true });
   // Inside the scratch project, not beside the image: the mode and the drift report are read once,
   // not kept.
   const modeOut = join(work, '__ref_mode.txt');
@@ -1543,51 +1566,57 @@ async function renderInto(
     ? await readFile(join(root, 'project.godot'), 'utf8')
     : null;
   const canvas2DSize = projectViewportSizeFromIni(sourceIni);
-  // The root-window arm captures the window, so the window is the project-viewport rect. Every
-  // other arm keeps the 3D frame override.
-  await writeFile(
-    join(work, 'project.godot'),
-    projectConfig(sourceIni, {
-      ...(rootWindow ? { ...canvas2DSize, pinWindowToViewport: true } : { width, height }),
-      // Only a game instantiates an autoload (`main/main.cpp:4397`'s
-      // `if (!project_manager && !editor)`), so unlike a node script it has no `@tool` exception.
-      runScripts: !previews,
-    })
-  );
+  const stage = async () => {
+    await rm(work, { recursive: true, force: true });
+    await cp(root, work, { recursive: true, dereference: true });
+    // The root-window arm captures the window, so the window is the project-viewport rect. Every
+    // other arm keeps the 3D frame override.
+    await writeFile(
+      join(work, 'project.godot'),
+      projectConfig(sourceIni, {
+        ...(rootWindow ? { ...canvas2DSize, pinWindowToViewport: true } : { width, height }),
+        // Only a game instantiates an autoload (`main/main.cpp:4397`'s
+        // `if (!project_manager && !editor)`), so unlike a node script it has no `@tool` exception.
+        runScripts: !previews,
+      })
+    );
 
-  const resPath = `res://${relative(root, scenePath).split(sep).join('/')}`;
-  await writeFile(
-    join(work, '__ref_bootstrap.gd'),
-    bootstrapScript({
-      scenePath: resPath,
-      previews,
-      camera,
-      lookAt,
-      frame,
-      sceneCamera,
-      sceneCameraPath,
-      mode,
-      fovExplicit,
-      out: resolve(out),
-      boundsOut: boundsOut ? resolve(boundsOut) : null,
-      modeOut,
-      driftOut,
-      rendererOut,
-      fov,
-      particles,
-      canvas2DSize,
-    })
-  );
-  await writeFile(join(work, '__ref_main.tscn'), MAIN_SCENE);
+    const resPath = `res://${relative(root, scenePath).split(sep).join('/')}`;
+    await writeFile(
+      join(work, '__ref_bootstrap.gd'),
+      bootstrapScript({
+        scenePath: resPath,
+        previews,
+        camera,
+        lookAt,
+        frame,
+        sceneCamera,
+        sceneCameraPath,
+        mode,
+        fovExplicit,
+        out: resolve(out),
+        boundsOut: boundsOut ? resolve(boundsOut) : null,
+        modeOut,
+        driftOut,
+        rendererOut,
+        fov,
+        particles,
+        canvas2DSize,
+      })
+    );
+    await writeFile(join(work, '__ref_main.tscn'), MAIN_SCENE);
+  };
+  await stage();
 
   // Success means the file exists afterwards, and the default `out` path is reused, so a stale
   // image would pass for this run's result when Godot crashes or times out.
   await rm(resolve(out), { force: true });
   if (boundsOut) await rm(resolve(boundsOut), { force: true });
 
-  // A render resolves textures and meshes only as .godot/imported artefacts. A failed import is
-  // not fatal, since a scene with no importable assets has nothing to import.
-  runGodot(['--headless', '--path', work, '--import'], { display: false });
+  await importAssets({
+    run: () => runGodot(['--headless', '--path', work, '--import'], { display: false }),
+    restage: stage,
+  });
 
   const render = runGodot(renderArgv(work, { renderingDriver }), {
     display: true,
