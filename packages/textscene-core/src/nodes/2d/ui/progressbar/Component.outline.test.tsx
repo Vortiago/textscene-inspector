@@ -112,6 +112,7 @@ describe('<ProgressBar> bundled-font outline', () => {
 
     await renderBar();
 
+    await vi.waitFor(() => expect(scene.runs.length).toBeGreaterThan(0));
     expect(strokeRuns()).toHaveLength(0);
   });
 });
