@@ -1238,6 +1238,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Settings Font",
+    "file": "unit-label-settings-font.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Visible Characters",
     "file": "unit-label-visible-characters.tscn",
     "category": "Other"

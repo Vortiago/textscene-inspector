@@ -9,10 +9,15 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
-import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { defineShare } from '../../../../r3f/controls/native/solveHandoff';
+import {
+  LABEL_SETTINGS_FONT_LOADING,
+  type ShareNode,
+  type SolveNode,
+} from '../../../../r3f/controls/native/solveTree';
+import { getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { peekSettledSceneFontMetrics } from '../../../../r3f/controls/native/text/sceneFontLoader';
 import {
   clampAutowrapMode,
   shapeText,
@@ -42,11 +47,10 @@ import {
 const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
 
 /**
- * Label's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:381`).
- * {@link labelUnwrappedShape} and `Component.tsx`'s autowrap-on re-shape both pass it to
- * `resolveNodeFontMetrics`, so the two shape in the same font.
+ * Label's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:381`),
+ * which {@link labelFontState} falls back to.
  */
-export const LABEL_THEME_FONT_KEY = 'font';
+const LABEL_THEME_FONT_KEY = 'font';
 
 /**
  * `scene/theme/default_theme.cpp:392` sets Label's `line_spacing` to `Math::round(3 * scale)`,
@@ -86,11 +90,31 @@ interface LabelEffectiveTextTheme {
   lineSpacingPx: number;
 }
 
+interface LabelFontState {
+  metrics: FontMetrics;
+  /** True while the settings font is unresolved: its file loads, or its metrics parse (ADR-0059). */
+  isLoading: boolean;
+}
+
+/**
+ * The font the Label shapes and draws in: `settings->get_font()` when it is valid, else the theme
+ * font (`label.cpp:112,349,473,523,758,913,978,1024`). The solver and the painter both read this, so
+ * the solved rect fits the drawn glyphs. A font still loading answers with the theme font, and the
+ * painter draws nothing meanwhile. One peek serves both answers.
+ */
+export function labelFontState(n: ShareNode): LabelFontState {
+  const font = n.labelSettingsFont;
+  if (font === null) return { metrics: resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY), isLoading: false };
+  const settled = font === LABEL_SETTINGS_FONT_LOADING ? null : peekSettledSceneFontMetrics(font, n.path);
+  if (settled) return { metrics: settled, isLoading: false };
+  return { metrics: resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY), isLoading: true };
+}
+
 /**
  * A valid `label_settings` replaces the theme, never merges with it, for `font_size`
  * (label.cpp:186,759), `font_color` (`:761`) and `line_spacing` (`:346`), even where a field keeps
  * its class default. `get_line_spacing()` is a `real_t` stored in an `int`, so it truncates toward
- * zero. `font` (`:185`) is not ported: Label shapes in its theme font (`comparison.md`).
+ * zero. `font` (`:185`) is {@link labelFontState}.
  */
 export function labelEffectiveTextTheme(
   themeResolved: ResolvedTextTheme,
@@ -291,7 +315,7 @@ export const labelUnwrappedShape = defineShare<TextLayoutResult | null>((n, them
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx,
     uppercase: props.uppercase,
-    fontMetrics: resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY),
+    fontMetrics: labelFontState(n).metrics,
     paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
     tabStopsPx: props.tabStopsPx,
     autowrapTrimFlags: props.autowrapTrimFlags,
@@ -325,7 +349,7 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LabelProperties;
   const themeResolved = labelTextTheme(n, props, ctx);
   const { fontSizePx, lineSpacingPx } = labelEffectiveTextTheme(themeResolved, n.labelSettings);
-  const fontMetrics = resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY);
+  const fontMetrics = labelFontState(n).metrics;
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
   // `props.visibleCharacters` is already resolved (label.cpp:1285-1327). CHARS_BEFORE_SHAPING
   // truncates before shaping, so it runs before the empty-text gate. `uppercase` stays a `shapeText`

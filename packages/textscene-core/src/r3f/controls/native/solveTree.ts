@@ -18,6 +18,11 @@ import type { Transform2DColumns } from '../../../godot/math/transform2d.js';
 import type { Rgba } from '../../../godot/math/math.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 
+/** `labelSettingsFont` while its font file loads: a Label draws nothing in it yet (ADR-0059). */
+export const LABEL_SETTINGS_FONT_LOADING = 'loading';
+
+export type LabelSettingsFont = FontResource | null | typeof LABEL_SETTINGS_FONT_LOADING;
+
 /**
  * One resolved, unloaded theme icon: the raw Texture2D-valued ref plus the scope
  * it addresses. A `theme_override_icons/<name>` resolves in the node's scope, and
@@ -160,6 +165,12 @@ export interface SolveNode {
    * `fontOverrides`.
    */
   labelSettings: LabelSettingsResource | null;
+  /**
+   * The font `labelSettings.font` resolves to, in the file that wrote the settings, or `null` when
+   * there is none or it failed to load. {@link LABEL_SETTINGS_FONT_LOADING} while a load is in
+   * flight. Required, like `labelSettings`.
+   */
+  labelSettingsFont: LabelSettingsFont;
   /**
    * Resolved `theme`s of this node and its ancestor Controls, nearest first
    * (`scene/theme/theme_owner.cpp`'s `ThemeOwner::_get_next_owner_node`). A Control
