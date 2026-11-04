@@ -15,7 +15,7 @@
 import { interpretCharstring, interpretUnhintedCharstring } from './cffCharstring';
 import { applyFontMatrix, rescaledOutlineScale } from './cffFontMatrix';
 import type { CharstringContour } from './cffPen';
-import { openCff } from './cffTables';
+import { openCff, type CffFont } from './cffTables';
 import { FIXED_16_16_ONE, ftMulFix, getFontOutlineScale } from './fontMetrics';
 import type { GlyphOutlineReader, ScaledOutline, UnscaledOutlines } from './glyphContours';
 import { readHeadUnitsPerEm, type SfntFile } from './sfntTables';
@@ -56,12 +56,18 @@ function toFixed26_6(coordinate: number): number {
   return Math.floor(coordinate / FIXED_16_16_TO_26_6);
 }
 
+/** The CFF table of a font with a `head`, and the units per em `head` gives it, or null. */
+function cffFontOf(sfnt: SfntFile): { font: CffFont; headUnitsPerEm: number } | null {
+  const headUnitsPerEm = readHeadUnitsPerEm(sfnt);
+  const font = headUnitsPerEm === 0 ? null : openCff(sfnt);
+  return font && { font, headUnitsPerEm };
+}
+
 /** The glyph-outline reader of a font's CFF outlines, or null for a font with no readable `CFF ` or `CFF2` table or no `head`. */
 export function cffOutlineReader(sfnt: SfntFile): GlyphOutlineReader | null {
-  const headUnitsPerEm = readHeadUnitsPerEm(sfnt);
-  if (headUnitsPerEm === 0) return null;
-  const font = openCff(sfnt);
-  if (!font) return null;
+  const cff = cffFontOf(sfnt);
+  if (!cff) return null;
+  const { font, headUnitsPerEm } = cff;
 
   return (glyphIndex, fontSizePx) => {
     const fontDict = font.fontDictOf(glyphIndex);
@@ -87,9 +93,9 @@ export function cffOutlineReader(sfnt: SfntFile): GlyphOutlineReader | null {
  * units per em differ from the Top DICT's. Null for a font with no readable CFF table or no `head`.
  */
 export function unscaledCffOutlines(sfnt: SfntFile): UnscaledOutlines | null {
-  const unitsPerEm = readHeadUnitsPerEm(sfnt);
-  const font = unitsPerEm === 0 ? null : openCff(sfnt);
-  if (!font) return null;
+  const cff = cffFontOf(sfnt);
+  if (!cff) return null;
+  const { font, headUnitsPerEm } = cff;
   const unscaledGlyph = (glyphIndex: number): ScaledOutline | null => {
     const fontDict = font.fontDictOf(glyphIndex);
     const contours = fontDict && interpretUnhintedCharstring(font, glyphIndex, fontDict.private);
@@ -104,5 +110,10 @@ export function unscaledCffOutlines(sfnt: SfntFile): UnscaledOutlines | null {
       y: outline.y.map((y) => ftMulFix(y, scale)),
     };
   };
-  return { unitsPerEm, isPpemRounded: false, glyphCount: font.charStrings.count, unscaledGlyph };
+  return {
+    unitsPerEm: headUnitsPerEm,
+    isPpemRounded: false,
+    glyphCount: font.charStrings.count,
+    unscaledGlyph,
+  };
 }

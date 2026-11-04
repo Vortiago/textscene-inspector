@@ -212,7 +212,8 @@ function applyLigature(dv: DataView, offset: number, buffer: Buffer, at: number)
   for (let i = 0; i < u16(dv, set); i++) {
     const ligature = set + u16(dv, set + 2 + 2 * i);
     const componentCount = u16(dv, ligature + 2);
-    if (at + componentCount > buffer.glyphs.length) continue;
+    // A ligature of no components would insert its glyph and never consume one (`Ligature::apply`).
+    if (componentCount === 0 || at + componentCount > buffer.glyphs.length) continue;
     let isMatch = true;
     for (let c = 1; c < componentCount && isMatch; c++)
       isMatch = buffer.glyphs[at + c] === u16(dv, ligature + 4 + 2 * (c - 1));
@@ -355,7 +356,9 @@ function applyGsub(table: LayoutTable, stages: readonly Stage[], buffer: Buffer)
     for (const lookupIndex of lookups) {
       for (let at = 0; at < buffer.glyphs.length;) {
         const applied = applyLookupAt(table, lookupIndex, buffer, at, randomLookups.has(lookupIndex), 0);
-        at = applied ? Math.max(applied.next, at + 1) : at + 1;
+        // A deletion leaves `next` at `at`, on the glyph after the deleted one, which the lookup
+        // still visits. A subtable that does not advance shrinks the buffer, so the loop ends.
+        at = applied ? Math.max(applied.next, at) : at + 1;
       }
     }
   }

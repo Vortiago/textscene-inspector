@@ -1,7 +1,8 @@
 /**
  * Builds a tiny TrueType font in memory for the outline reader's tests: the tables `openFontOutlines`
  * cannot do without (`head`, `maxp`, `cmap`, `loca`, `glyf`) and nothing else, so a test states the
- * glyphs it needs and no more. With no metrics and no hinting programs, its glyphs load unhinted.
+ * glyphs it needs and no more. With no metrics and no hinting programs, its glyphs load through the
+ * auto-hinter, as Godot loads a TrueType font without hints.
  * Every coordinate is a whole design unit, written as a 16-bit delta.
  * It also reads the font fixtures of `scenes/fixtures/fonts/`, and the contours of a character.
  */

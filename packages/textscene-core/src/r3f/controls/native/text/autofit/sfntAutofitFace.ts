@@ -38,9 +38,19 @@ function isItalicFace(sfnt: SfntFile): boolean {
   );
 }
 
+/**
+ * The table `tag`, or null for none, or for one whose lists leave the file: HarfBuzz reads a table
+ * it cannot sanitise as empty.
+ */
 function layoutTableOf(sfnt: SfntFile, tag: 'GSUB' | 'GPOS'): LayoutTable | null {
   const table = sfnt.tables.get(tag);
-  return table ? readLayoutTable(sfnt.dv, table.offset, table.length, tag === 'GSUB') : null;
+  if (!table) return null;
+  try {
+    return readLayoutTable(sfnt.dv, table.offset, table.length, tag === 'GSUB');
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    return null;
+  }
 }
 
 /** The face of a font with `outlines` and a `cmap`, or null for a font without a readable `cmap`. */
