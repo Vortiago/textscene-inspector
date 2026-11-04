@@ -10,8 +10,9 @@ renders_as: a single-line text box
 # LineEdit
 
 LineEdit is a single-line text field. The previewer draws its stylebox, its `right_icon`
-or clear button, and its caret while `caret_force_displayed` is set. It draws one clipped
-run of text (the string, or the placeholder) in the colour its state calls for. `max_length`
+or clear button, and its caret while `caret_force_displayed` is set. It draws the glyphs
+of one text (the string, or the placeholder) that end inside the right margin, in the colour its
+state calls for. `max_length`
 truncates an over-long `text` the same way Godot does.
 
 ## Linting
