@@ -25,6 +25,46 @@ describe('formatLabel3DProperties', () => {
     ]);
   });
 
+  it('shows the layout properties in a Layout section, at Godot defaults when unset', () => {
+    const layout = section(formatLabel3DProperties(props()), 'Layout')!;
+    expect(layout.items).toEqual([
+      { label: 'Horizontal Alignment', value: 'HORIZONTAL_ALIGNMENT_CENTER' },
+      { label: 'Vertical Alignment', value: 'VERTICAL_ALIGNMENT_CENTER' },
+      { label: 'Width', value: '500' },
+      { label: 'Autowrap Mode', value: 'AUTOWRAP_OFF' },
+      { label: 'Autowrap Trim Flags', value: '192' },
+      { label: 'Justification Flags', value: '163' },
+      { label: 'Uppercase', value: 'Off' },
+      { label: 'Offset', value: '0, 0' },
+    ]);
+  });
+
+  it('reports the authored layout', () => {
+    const layout = section(
+      formatLabel3DProperties(
+        props({
+          horizontal_alignment: '3',
+          vertical_alignment: '2',
+          width: '120',
+          autowrap_mode: '3',
+          uppercase: 'true',
+          offset: 'Vector2(4, -6)',
+        })
+      ),
+      'Layout'
+    )!;
+    expect(layout.items).toEqual([
+      { label: 'Horizontal Alignment', value: 'HORIZONTAL_ALIGNMENT_FILL' },
+      { label: 'Vertical Alignment', value: 'VERTICAL_ALIGNMENT_BOTTOM' },
+      { label: 'Width', value: '120' },
+      { label: 'Autowrap Mode', value: 'AUTOWRAP_WORD_SMART' },
+      { label: 'Autowrap Trim Flags', value: '192' },
+      { label: 'Justification Flags', value: '163' },
+      { label: 'Uppercase', value: 'On' },
+      { label: 'Offset', value: '4, -6' },
+    ]);
+  });
+
   it('shows the authored text verbatim (quotes stripped by the parser)', () => {
     const text = section(formatLabel3DProperties(props({ text: '"Hello world"' })), 'Text')!;
     expect(text.items).toContainEqual({ label: 'Text', value: 'Hello world' });

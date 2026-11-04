@@ -5,12 +5,20 @@ import type { Label3DProperties } from './types';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor, colorOr } from '../../../utils/colorParser';
 import { parseMaterialFor2dFields } from '../../../parser/materialFor2dParser';
-import { enumOr, floatOr, intOr, parseOptionalInt } from '../../../parser/valueParsers';
+import { boolOr, enumOr, floatOr, intOr, parseOptionalInt, vec2Or } from '../../../parser/valueParsers';
 import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
-import { HorizontalAlignment } from '../../../godot/math/alignment';
+import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
+import {
+  AutowrapMode,
+  BREAK_TRIM_MASK,
+  DEFAULT_AUTOWRAP_TRIM_FLAGS,
+  DEFAULT_JUSTIFICATION_FLAGS,
+} from '../../../godot/text/textServerEnums';
+import { clampAutowrapMode } from '../../../r3f/controls/native/text/textLayout';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 
 const HORIZONTAL_ALIGNMENTS = Object.values(HorizontalAlignment);
+const VERTICAL_ALIGNMENTS = Object.values(VerticalAlignment);
 
 export function parseLabel3D(heading: ParsedHeading, properties: Record<string, string>): Label3DProperties {
   const baseProps = parseGeometryInstance3D(heading, properties);
@@ -45,6 +53,27 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
       HORIZONTAL_ALIGNMENTS,
       'horizontal_alignment'
     ),
+    // The setter refuses an index outside 0-3 (`label_3d.cpp:693`); FILL loads and acts as TOP.
+    vertical_alignment: enumOr(
+      properties.vertical_alignment,
+      VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
+      VERTICAL_ALIGNMENTS,
+      'vertical_alignment'
+    ),
+    uppercase: boolOr(properties.uppercase, false, 'uppercase'),
+    width: floatOr(properties.width, 500, 'width'),
+    autowrap_mode: clampAutowrapMode(parseOptionalInt(properties.autowrap_mode), AutowrapMode.AUTOWRAP_OFF),
+    // The BitField reads 64 bits, and the setter keeps `p_flags & BREAK_TRIM_MASK` (`label_3d.cpp:920`).
+    autowrap_trim_flags:
+      intOr(properties.autowrap_trim_flags, DEFAULT_AUTOWRAP_TRIM_FLAGS, 'autowrap_trim_flags', 'int64') &
+      BREAK_TRIM_MASK,
+    justification_flags: intOr(
+      properties.justification_flags,
+      DEFAULT_JUSTIFICATION_FLAGS,
+      'justification_flags',
+      'int64'
+    ),
+    offset: vec2Or(properties.offset, { x: 0, y: 0 }, 'offset'),
     render_priority: intOr(properties.render_priority, 0, 'render_priority'),
     outline_render_priority: intOr(properties.outline_render_priority, -1, 'outline_render_priority'),
     ...parseMaterialFor2dFields(properties, 'Label3D'),

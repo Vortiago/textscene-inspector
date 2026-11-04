@@ -15,7 +15,13 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { isTabChar, isWhitespace, type GlyphPlacement, type TextLineLayout } from './textLayout';
+import {
+  isTabChar,
+  isWhitespace,
+  shapedTextSizeWidthPx,
+  type GlyphPlacement,
+  type TextLineLayout,
+} from './textLayout';
 import { JustificationFlag } from '../../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 
@@ -146,4 +152,23 @@ export function justifyToLineIndex(lines: readonly TextLineLayout[], flags: numb
     }
   }
   return jstToLine;
+}
+
+/**
+ * The justified lines of a box that carries its own `width`: TextMesh (`primitive_meshes.cpp:3284-3304`)
+ * and Label3D (`label_3d.cpp:538-557`). Each fitted line grows or shrinks to `widthPx`, or to the
+ * widest line when `widthPx` is zero or less.
+ */
+export function justifyLinesToWidth(
+  lines: readonly TextLineLayout[],
+  widthPx: number,
+  flags: number,
+  fontSizePx: number
+): TextLineLayout[] {
+  const fitWidthPx =
+    widthPx > 0 ? widthPx : Math.max(0, ...lines.map((line) => shapedTextSizeWidthPx(line.widthPx)));
+  const toLine = justifyToLineIndex(lines, flags);
+  return lines.map((line, i) =>
+    i < toLine ? fitLineToWidth(line, fitWidthPx, flags, { fontSizePx }).line : line
+  );
 }

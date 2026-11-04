@@ -6,7 +6,7 @@
  */
 import { useMemo, type RefObject } from 'react';
 import * as THREE from 'three';
-import { shapeText, soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
+import { soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../r3f/controls/native/text/TextRun';
 import { NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
 import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
@@ -15,10 +15,16 @@ import { usePendingWhile } from '../../../resources/usePendingWhile';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 import { labelBillboardAabb } from '../../../godot/scene/billboard';
-import { label3DAabb, layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
+import {
+  breakLabel3DLines,
+  justifyLabel3DLines,
+  label3DAabb,
+  layoutLabel3DLines,
+  outlineStrokeWidthPx,
+} from './glyphLayout';
+import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import { type Label3DProperties } from './types';
 import { useLabel3DFont } from './useLabel3DFont';
-import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 
 export interface LabelGlyphsProps {
@@ -40,25 +46,36 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   const fontMetrics = font?.metrics;
   usePendingWhile(!fontMetrics);
 
-  const layout = useMemo(
+  // Each memo lists the fields it reads, so an unrelated property edit keeps the layout.
+  const { text, font_size, line_spacing, width, autowrap_mode, autowrap_trim_flags } = properties;
+  const { justification_flags, horizontal_alignment, vertical_alignment, uppercase } = properties;
+  const { x: offsetX, y: offsetY } = properties.offset;
+  // Width reaches the break only in a wrapping mode, so it is 0 otherwise: `shapeText` ignores it for OFF.
+  const breakWidth = autowrap_mode === AutowrapMode.AUTOWRAP_OFF ? 0 : width;
+  const broken = useMemo(
     () =>
-      // Godot breaks the paragraph on `\n` only: `width` is unparsed, so autowrap
-      // is off, and `shapeText` ignores `boxWidthPx` for OFF.
-      shapeText(properties.text, {
-        fontSizePx: properties.font_size,
-        boxWidthPx: 0,
-        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-        lineSpacingPx: properties.line_spacing,
-        fontMetrics,
-      }),
-    [properties.text, properties.font_size, properties.line_spacing, fontMetrics]
+      breakLabel3DLines(
+        { text, font_size, line_spacing, width: breakWidth, autowrap_mode, autowrap_trim_flags, uppercase },
+        fontMetrics
+      ),
+    [text, font_size, line_spacing, breakWidth, autowrap_mode, autowrap_trim_flags, uppercase, fontMetrics]
+  );
+  const layout = useMemo(
+    () => justifyLabel3DLines(broken, { font_size, width, justification_flags, horizontal_alignment }),
+    [broken, font_size, width, justification_flags, horizontal_alignment]
   );
 
   // One `<TextRun>` per line: Godot aligns each line by its own width
   // (`label_3d.cpp:588-599`).
   const placements = useMemo(
-    () => layoutLabel3DLines(layout, properties.horizontal_alignment, properties.line_spacing),
-    [layout, properties.horizontal_alignment, properties.line_spacing]
+    () =>
+      layoutLabel3DLines(layout, {
+        horizontal_alignment,
+        vertical_alignment,
+        line_spacing,
+        offset: { x: offsetX, y: offsetY },
+      }),
+    [layout, horizontal_alignment, vertical_alignment, line_spacing, offsetX, offsetY]
   );
 
   // Memoised: `TextRun` keys its geometry and material off this object's

@@ -55,27 +55,16 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Label3D: {
     renderGap: [
-      // Text shaping: the locale and BiDi settings the TextServer shapes
-      // glyphs by, and the case transform.
+      // Text shaping: the locale and BiDi settings the TextServer shapes glyphs by.
       'language',
       'text_direction',
       'structured_text_bidi_override',
       'structured_text_bidi_override_options',
-      'uppercase',
-      // Wrapping: this splits on a literal newline only, so the wrap mode, its
-      // trim flags, the justification flags and the wrap width are all unread.
-      'autowrap_mode',
-      'autowrap_trim_flags',
-      'justification_flags',
-      'width',
-      // Placement relative to the node origin.
-      'offset',
-      'vertical_alignment',
       // Material behaviour: lighting response.
       'shaded',
     ],
     reason:
-      'double_sided, alpha_hash_scale and the alpha antialiasing pair are the own properties both parsed and validated; everything else Label3D declares is a real render input the previewer does not read, so the whole set is a render gap rather than deliberate scope.',
+      'double_sided, alpha_hash_scale and the alpha antialiasing pair are the own properties both parsed and validated; the locale, BiDi and lighting properties are real render inputs the previewer does not read, so the set is a render gap rather than deliberate scope.',
   },
 
   // Navigation regions draw a translucent navmesh overlay here, mirroring the
