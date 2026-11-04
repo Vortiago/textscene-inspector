@@ -11,8 +11,8 @@ import { SceneProbes } from './sceneProbes';
 import { shownProbes } from './probeSlots';
 import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowTexels';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { useSceneExposure } from '../exposure/sceneExposure';
-import { observeSceneCamera } from '../sceneRenderCamera';
+import { drawAtExposure, useSceneExposure } from '../exposure/sceneExposure';
+import { observeSceneCamera, observeSceneCull } from '../sceneRenderCamera';
 import { useEffect, useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import {
@@ -104,14 +104,19 @@ async function probesIn(scene: THREE.Scene, ...probes: ReflectionProbeObject[]) 
   return { renderer, scene, sceneProbes, facesDrawn, settle };
 }
 
-/** The exposure normalisation of the first probe in the rows a render of `scene` shows. */
+/**
+ * The exposure normalisation of the first probe in a render of `scene`, as the shader reads it: the
+ * render's exposure in the shown slot over the captured one in the probe's row, 1 for a render
+ * with no exposure (`probeShaderChunk.ts`).
+ */
 function shownNormalisation(renderer: THREE.WebGLRenderer, scene: THREE.Scene): number {
   fireSceneRender(scene, new THREE.PerspectiveCamera());
   const packs = vi.mocked(renderer.initTexture).mock.calls;
   const packed = packs[packs.length - 1]![0] as THREE.DataTexture;
   const rows = packed.image.data as Float32Array;
-  const EXPOSURE_NORMALISATION_TEXEL = 7;
-  return rows[EXPOSURE_NORMALISATION_TEXEL * 4]!;
+  const CAPTURED_EXPOSURE_TEXEL = 7;
+  const exposure = shownProbes[3]!;
+  return exposure < 0 ? 1 : exposure / rows[CAPTURED_EXPOSURE_TEXEL * 4]!;
 }
 
 describe('SceneProbes.update', () => {
@@ -376,7 +381,8 @@ describe('SceneProbes exposure normalisation', () => {
       (mounted.scene.instance as THREE.Scene).add(light);
       vi.spyOn(probes.renderer, 'initTexture');
       const lightAtRender: number[] = [];
-      observeSceneCamera(mounted.scene.instance as THREE.Scene, () => lightAtRender.push(light.intensity));
+      // A cull, which runs after the render has applied its exposure.
+      observeSceneCull(mounted.scene.instance as THREE.Scene, () => lightAtRender.push(light.intensity));
       probes.settle();
       return { ...probes, lightAtRender, light };
     }
@@ -385,7 +391,7 @@ describe('SceneProbes exposure normalisation', () => {
       const { facesDrawn, lightAtRender } = await capturedUnder(4, 2);
       facesDrawn();
 
-      expect(new Set(lightAtRender)).toEqual(new Set([4]));
+      expect(new Set(lightAtRender)).toEqual(new Set([16]));
     });
 
     it('puts the lights back after the capture', async () => {
@@ -409,10 +415,17 @@ describe('SceneProbes exposure normalisation', () => {
       expect(shownNormalisation(renderer, scene)).toBe(4);
     });
 
-    it('waits while the camera exposes the view at 0, whose lights hold no energy to rescale (edge case)', async () => {
-      const { facesDrawn } = await capturedUnder(0, 2);
+    it("captures while the camera exposes the view at 0, its lights at the world's exposure (edge case)", async () => {
+      const { facesDrawn, lightAtRender } = await capturedUnder(0, 1);
 
-      expect(facesDrawn()).toBe(0);
+      expect([facesDrawn(), new Set(lightAtRender)]).toEqual([6, new Set([8])]);
+    });
+
+    it('shows a probe in a pass at 1 over a held 0.5 at 1 over the exposure it captured at', async () => {
+      const { renderer, scene, facesDrawn } = await capturedUnder(0.5, 2);
+      facesDrawn();
+
+      expect(drawAtExposure(scene, 1, () => shownNormalisation(renderer, scene))).toBe(0.5);
     });
 
     it('captures a view at 0 whose world holds 0 too', async () => {

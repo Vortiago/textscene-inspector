@@ -17,9 +17,8 @@ import { useResource } from '../../../resources/useResource';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { useOptionalExposureFactor } from '../../../r3f/environment/worldExposure';
 import { exposureOverBaked } from '../../../r3f/exposure/exposureOverBaked';
-import { registerExposureStage } from '../../../r3f/exposure/sceneExposure';
+import { followSceneExposure } from '../../../r3f/exposure/sceneExposure';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 import { useTreeOrder } from '../../../r3f/contexts/TreeOrderContext';
 import { assignedUsers, LightmapInstance, lightmapsOf } from '../../../r3f/lightmap/sceneLightmaps';
@@ -69,7 +68,6 @@ function BakedLightmap({
   const uniquePaths = useUniqueNamePaths(path);
   const order = useTreeOrder();
   const usesBicubicFilter = projectUsesLightmapBicubicFilter(useProjectSettings().settings);
-  const exposureScale = exposureOverBaked(useOptionalExposureFactor(), data.bakedExposure);
   const lightmapLoads = useLoadedTextures();
   const shadowmaskLoads = useLoadedTextures();
   const lightmapAtlas = useAtlas(data.lightmapTextures, lightmapLoads.loaded);
@@ -86,16 +84,12 @@ function BakedLightmap({
   const instance = useMemo(() => object && new LightmapInstance(object), [object]);
 
   useLayoutEffect(() => (instance ? lightmapsOf(scene).add(instance) : undefined), [scene, instance]);
-  // A draw at another exposure reads the atlas over the exposure the bake ran at, as the draw's own.
+  // Each render reads the atlas at its exposure over the exposure the bake ran at.
   useLayoutEffect(
     () =>
       instance
-        ? registerExposureStage(scene, (exposure) => {
-            const { exposureScale: shown } = instance;
+        ? followSceneExposure(scene, (exposure) => {
             instance.exposureScale = exposureOverBaked(exposure, data.bakedExposure);
-            return () => {
-              instance.exposureScale = shown;
-            };
           })
         : undefined,
     [scene, instance, data.bakedExposure]
@@ -109,7 +103,6 @@ function BakedLightmap({
     instance.usesSphericalHarmonics = data.usesSphericalHarmonics;
     instance.usesBicubicFilter = usesBicubicFilter;
     instance.bounds = data.bounds;
-    instance.exposureScale = exposureScale;
     lightmapsOf(scene).changed();
     invalidate();
   }, [
@@ -124,7 +117,6 @@ function BakedLightmap({
     maskedAtlas,
     shadowmaskMode,
     usesBicubicFilter,
-    exposureScale,
   ]);
 
   return (

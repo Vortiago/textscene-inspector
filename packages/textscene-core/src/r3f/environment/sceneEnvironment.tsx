@@ -132,7 +132,7 @@ function drawWithEnvironment<T>(scene: THREE.Scene, environment: Environment | n
 /**
  * Runs `draw` with `scene` set for `environment` at `exposure`, and puts the scene back after it. A
  * draw with what the scene holds changes nothing. The Environment goes on first, since its parts
- * register the exposure stages the draw runs.
+ * follow the exposure of each render of the draw (`followSceneExposure`).
  *
  * @canonical The Environment and the exposure a draw of a scene takes
  */

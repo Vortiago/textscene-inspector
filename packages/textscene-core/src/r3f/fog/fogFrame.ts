@@ -10,8 +10,7 @@ import { renderedDepthFogRange } from '../../godot/rendering/environment/depthFo
 import type { VolumetricFogProjectSettings } from '../../godot/rendering/environment/volumetricFog.js';
 import type { DepthFog, VolumetricFog } from '../../resources/environment/types.js';
 import { setGodotColorLinear } from '../godotColor.js';
-import { LIGHT_INTENSITY_SCALE } from '../lightConstants.js';
-import { skyLightEnergy } from '../sky/skyLight.js';
+import { skyLightIntensityInRender } from '../sky/skyLight.js';
 import { visibleInTree } from '../visibleInTree.js';
 import type { VolumetricFogPass } from './volumetricFogPass.js';
 import { shineDirection } from './fogLights.js';
@@ -35,11 +34,15 @@ export function captureFog(settings: FogSettings, isInterior: boolean): FogSetti
   return { ...settings, depth: isInterior ? null : settings.depth, volumetric: null };
 }
 
-/** The objects of a scene the fog reads: its lights, the meshes that may cast their shadows, and its FogVolumes. */
-interface FogObjects {
+/**
+ * What a render of a scene gives the fog: its lights, the meshes that may cast their shadows, its
+ * FogVolumes, and the exposure factor the render draws at, 1 with none.
+ */
+interface FogInputs {
   lights: readonly THREE.Light[];
   casters: readonly THREE.Mesh[];
   volumes: readonly FogVolumeObject[];
+  exposure: number;
 }
 
 /** Scratch for one render's depth fog colour. */
@@ -58,10 +61,10 @@ export function prepareFog(
   camera: THREE.Camera,
   settings: FogSettings,
   pass: VolumetricFogPass,
-  { lights, casters, volumes }: FogObjects
+  { lights, casters, volumes, exposure }: FogInputs
 ): boolean {
   writeDepthFog(settings.depth, camera);
-  writeSuns(lights);
+  writeSuns(lights, exposure);
   if (!settings.volumetric) return false;
   return pass.prepare(renderer, scene, camera, {
     fog: settings.volumetric,
@@ -96,9 +99,11 @@ function writeDepthFog(fog: DepthFog | null, camera: THREE.Camera): void {
 /**
  * Each visible directional light's direction towards it, and its colour times its energy as the
  * surfaces and the sky read it. Godot's surfaces skip a Sky Only light, which has no three
- * intensity, and its sky skips a Light Only one (`light_storage.cpp:631`, `sky.cpp:1069`).
+ * intensity, and its sky skips a Light Only one (`light_storage.cpp:631`, `sky.cpp:1069`). The
+ * render has scaled each intensity by `exposure` already. A declared sky energy takes it here
+ * (`sky.cpp:1085-1087`).
  */
-function writeSuns(lights: readonly THREE.Light[]): void {
+function writeSuns(lights: readonly THREE.Light[], exposure: number): void {
   const { sunDirections, sunSurfaceColors, sunSkyColors } = fogUniforms;
   sunSurfaceColors.fill(0);
   sunSkyColors.fill(0);
@@ -112,7 +117,7 @@ function writeSuns(lights: readonly THREE.Light[]): void {
     const { r, g, b } = sun.color;
     writeVec4(sunSurfaceColors, slot, r * sun.intensity, g * sun.intensity, b * sun.intensity, 1);
     // The sky's sun takes the intensity scale in its shader, as the surfaces' does in three.
-    const skyIntensity = (skyLightEnergy(sun) ?? 0) * LIGHT_INTENSITY_SCALE;
+    const skyIntensity = skyLightIntensityInRender(sun, exposure);
     if (skyIntensity !== 0)
       writeVec4(sunSkyColors, slot, r * skyIntensity, g * skyIntensity, b * skyIntensity, 1);
     slot++;
