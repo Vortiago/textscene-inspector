@@ -48,7 +48,10 @@ describe('<Label> (isolated painter contract)', () => {
   });
 
   it('draws nothing while label_settings.font is still loading (ADR-0059)', async () => {
-    const node = { ...solveNode('L', { text: 'AB' }), labelSettingsFont: LABEL_SETTINGS_FONT_LOADING };
+    const node: SolveNode = {
+      ...solveNode('L', { text: 'AB' }),
+      labelSettingsFont: LABEL_SETTINGS_FONT_LOADING,
+    };
     const renderer = await ReactThreeTestRenderer.create(
       <Label {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 200, h: 200 }} renderOrder={5} />
     );
