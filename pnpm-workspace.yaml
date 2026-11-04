@@ -18,6 +18,7 @@ catalog:
   '@vscode/test-electron': ^3.1.0
   '@vscode/test-web': ^0.0.81
   '@vitest/ui': ^5.1.0
+  '@vitest/coverage-v8': ^5.1.0
   '@types/node': ^26.6.6
   vite: ^8.3.3
   esbuild: ^0.28.2
@@ -44,9 +45,7 @@ catalog:
   '@react-three/drei': ^10.7.9
   postprocessing: ^6.39.6
   '@react-three/test-renderer': ^9.1.1
-  # NOTE: ^5 latest (5.2.0) declares peer vite ^4.2 || ^5 || ^6 || ^7 || ^8,
-  # so it spans the vite 8 workspace pin. ^6.0 targets vite ^8 exclusively —
-  # move there in its own bump if 5.x ever lags behind a vite major.
+  # ^6 targets vite ^8 exclusively, the workspace's vite pin.
   '@vitejs/plugin-react': ^6.2.1
   three: ^0.187
   '@types/three': ^0.187
@@ -76,7 +75,7 @@ catalog:
 
   # Real CSG boolean evaluation (ADR-0026). three-bvh-csg is used DIRECTLY rather
   # than via @react-three/csg, whose latest release hard-pins three-bvh-csg ^0.0.16
-  # and three-mesh-bvh ^0.6.8, both below what 0.0.18 requires against three 0.185.
+  # and three-mesh-bvh ^0.6.8, both below what three-bvh-csg requires of the pinned three.
   # three-mesh-bvh is a DIRECT dependency so pnpm satisfies the peer with this
   # version rather than resolving to drei's nested 0.8.3.
   three-bvh-csg: ^0.0.18

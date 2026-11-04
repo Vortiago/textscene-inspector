@@ -104,7 +104,7 @@
     "@types/node": "catalog:",
     "@typescript-eslint/eslint-plugin": "^8.72.1",
     "@typescript-eslint/parser": "^8.72.1",
-    "@vitest/coverage-v8": "^5.1.0",
+    "@vitest/coverage-v8": "catalog:",
     "@vitest/ui": "catalog:",
     "@vscode/test-electron": "catalog:",
     "@vscode/test-web": "catalog:",
