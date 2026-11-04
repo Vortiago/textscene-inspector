@@ -1,6 +1,6 @@
 /**
  * A mesh drawn once at each of several places, as Godot draws a MultiMesh. three draws any object
- * over an InstancedBufferGeometry instanced (`WebGLRenderer.js:1341-1346`), `THREE.Points` too, and
+ * over an InstancedBufferGeometry instanced (r187 `WebGLRenderer.js:1345-1350`), `THREE.Points` too, and
  * binds its `instanceMatrix` attribute (`WebGLBindingStates.js:169`). A points program declares it.
  */
 
@@ -72,7 +72,7 @@ export function instanceMatrices(geometry: THREE.BufferGeometry): THREE.Instance
 
 /**
  * Disposes `geometry` without the attributes it shares with `source`. Three frees each attribute
- * of a disposed geometry (`WebGLGeometries.js:8-37`), and the source's draws would read freed buffers.
+ * of a disposed geometry (r187 `WebGLGeometries.js:10-44`), and the source's draws would read freed buffers.
  */
 function releaseSharedInstances(geometry: THREE.BufferGeometry, source: THREE.BufferGeometry): void {
   for (const name of Object.keys(source.attributes)) geometry.deleteAttribute(name);

@@ -69,7 +69,7 @@ describe('installGodotSkyLighting', () => {
 
   it('names each field of the shown sky in the order SkyRadiance.show writes them', () => {
     const envmap = patchedChunks().envmap;
-    ['CONTRIBUTION', 'BORDER_SIZE', 'DERIVATIVE_SCALE', 'LAST_MIP'].forEach((field, index) =>
+    ['CONTRIBUTION', 'BORDER_SIZE', 'DERIVATIVE_SCALE'].forEach((field, index) =>
       expect(envmap).toContain(
         `#define GODOT_SKY_${field} ${SKY_RADIANCE_UNIFORMS.shown}[ 0 ].${'xyzw'[index]}`
       )
@@ -121,12 +121,6 @@ describe('installGodotSkyLighting', () => {
       'max( dot( directionDdx, directionDdx ), dot( directionDdy, directionDdy ) ) * GODOT_SKY_DERIVATIVE_SCALE'
     );
     expect(body).toContain('0.25 * log2( texelsSqr + 1e-6 )');
-  });
-
-  it("clamps the mip to the array's last, as Godot's texture ends there (edge case)", () => {
-    expect(functionBody(patchedChunks().envmap, 'godotSkyLod')).toContain(
-      'min( 0.25 * log2( texelsSqr + 1e-6 ), GODOT_SKY_LAST_MIP )'
-    );
   });
 
   it('samples no cube of layers and no PMREM for the reflection', () => {

@@ -69,7 +69,7 @@ function shadedKindOf(light: THREE.Light): ShadedLightKind | null {
   return null;
 }
 
-/** three's own sort: shadowed lights first, then lights with a map (r186 `WebGLLights.js:152-156`). */
+/** three's own sort: shadowed lights first, then lights with a map (r187 `WebGLLights.js:153-157`). */
 function shadowedAndTexturedFirst(a: THREE.Light, b: THREE.Light): number {
   const rank = (light: THREE.Light) => (light.castShadow ? 2 : 0) + ((light as THREE.SpotLight).map ? 1 : 0);
   return rank(b) - rank(a);
@@ -77,7 +77,7 @@ function shadowedAndTexturedFirst(a: THREE.Light, b: THREE.Light): number {
 
 /**
  * The lights three gives a slot when it renders through `camera`, in slot order: visible, on a
- * layer the camera sees, in tree order (r186 `WebGLRenderer.js:1860-1882`), then through three's
+ * layer the camera sees, in tree order (r187 `WebGLRenderer.js:1873-1891`), then through three's
  * stable sort (`WebGLLights.js:245`).
  */
 function renderedLights(lights: readonly SceneLight[], camera: THREE.Camera): THREE.Light[] {

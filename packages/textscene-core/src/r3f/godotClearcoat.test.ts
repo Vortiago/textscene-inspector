@@ -26,7 +26,7 @@ describe('installGodotClearcoat', () => {
     installGodotClearcoat();
     const setup = THREE.ShaderChunk.lights_physical_fragment;
 
-    expect(setup).not.toContain('material.clearcoatRoughness = max( material.clearcoatRoughness, 0.0525 );');
+    expect(setup).not.toContain('material.clearcoatRoughness = max( material.clearcoatRoughness, 0.045 );');
     expect(setup).not.toContain('material.clearcoatRoughness += geometryRoughness;');
   });
 

@@ -1,6 +1,6 @@
 /**
  * A positioning group inside a canvas item that keeps the item's canvas key. three
- * takes `groupOrder` from the nearest `Group` (`WebGLRenderer.js:1838-1840`), so a
+ * takes `groupOrder` from the nearest `Group` (r187 `WebGLRenderer.js:1881-1883`), so a
  * bare group resets the key to 0 and its pixels fall behind the background, while a
  * `mesh.renderOrder` test passes. `paintGroupConformance.test.ts` rejects a bare group.
  */

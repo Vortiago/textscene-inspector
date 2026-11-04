@@ -58,7 +58,7 @@ export function pointDrawOf(
 
 /**
  * three defines `USE_INSTANCING` and declares `instanceMatrix` only for an InstancedMesh
- * (`WebGLPrograms.js:209`), so instanced points declare both. Each instance branch of three's
+ * (r187 `WebGLPrograms.js:213`), so instanced points declare both. Each instance branch of three's
  * chunks and of the Godot patches then places, turns and billboards the points.
  */
 const GODOT_INSTANCED_POINTS: ProgramInjection = {
