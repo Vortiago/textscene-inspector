@@ -10,8 +10,8 @@ import { RESOURCE_CACHE_PREFIX } from './dropCachedResource';
 const NONCE_BYTES = 16;
 
 /**
- * A CSP nonce as hex, from `crypto.getRandomValues`. The module, not the global: Node 18, under the
- * `engines.vscode` floor, has no global `crypto`. The web build aliases the module to `webCrypto.browser.ts`.
+ * A CSP nonce as hex, from `crypto.getRandomValues`. The module, not the global: the web build
+ * aliases the module to `webCrypto.browser.ts`.
  */
 export function generateNonce(): string {
   const bytes = webcrypto.getRandomValues(new Uint8Array(NONCE_BYTES));

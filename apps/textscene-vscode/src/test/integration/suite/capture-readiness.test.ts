@@ -17,6 +17,7 @@ import {
   skipBecause,
   textOf,
 } from '../../languageFeatures/agentToolAnswersSuite.testkit';
+import { invokeSceneTool } from '../../invokeSceneTool';
 
 const PROJECT = 'capture-readiness';
 
@@ -99,7 +100,7 @@ suite('Capture readiness', () => {
     this.timeout(CAPTURE_TEST_TIMEOUT_MS);
     const scenePath = path.join(godotProjectDir(PROJECT), SCENE_FILE);
 
-    const result = await vscode.lm.invokeTool('textscene_capture', { input: { path: scenePath } });
+    const result = await invokeSceneTool('textscene_capture', scenePath);
     const image = imageOf(result);
 
     assert.ok(image, `expected an image part, found the text ${JSON.stringify(textOf(result))}`);

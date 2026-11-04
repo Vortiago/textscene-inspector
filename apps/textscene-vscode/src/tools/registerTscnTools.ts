@@ -124,9 +124,11 @@ class TscnCaptureTool implements vscode.LanguageModelTool<ScenePathToolInput> {
     if ('error' in capture) {
       return textResult(`The preview for ${uri.fsPath} did not return an image: ${capture.error}`);
     }
+    // The 1.105 typings admit no data part in a result, though the host accepts one.
+    const image = vscode.LanguageModelDataPart.image(pngBytesOf(capture.dataUrl), 'image/png');
     return new vscode.LanguageModelToolResult([
       new vscode.LanguageModelTextPart(`Rendered preview of ${uri.fsPath}.`),
-      vscode.LanguageModelDataPart.image(pngBytesOf(capture.dataUrl), 'image/png'),
+      image as unknown as vscode.LanguageModelTextPart,
     ]);
   }
 }
@@ -172,13 +174,10 @@ function whileEnabled<T>(tool: vscode.LanguageModelTool<T>): vscode.LanguageMode
 }
 
 /**
- * Registers the agent tools when VS Code has the API, which is newer than the extension's
- * `engines.vscode` floor. The capture tool needs the image part of a tool result, stable
+ * Registers the agent tools. The capture tool needs the image part of a tool result, stable
  * from VS Code 1.106, so it registers on its own guard.
  */
 export function registerTscnTools(context: vscode.ExtensionContext, host: TscnToolHost): void {
-  if (typeof vscode.lm?.registerTool !== 'function') return;
-
   const register = <T>(id: string, tool: vscode.LanguageModelTool<T>) =>
     vscode.lm.registerTool(id, whileEnabled(tool));
   const tools = [

@@ -107,17 +107,6 @@ describe('registerTscnTools', () => {
     expect(tools.map((tool) => tool.when)).toEqual(tools.map(() => 'config.textscene.agentTools.enabled'));
   });
 
-  it('registers nothing on a VS Code without the API', () => {
-    const original = vscodeMocks.lm.registerTool;
-    vscodeMocks.lm.registerTool = undefined;
-    try {
-      registerTscnTools(context(), host());
-      expect(original).not.toHaveBeenCalled();
-    } finally {
-      vscodeMocks.lm.registerTool = original;
-    }
-  });
-
   it('the scene tree tool returns the parsed hierarchy', async () => {
     vscodeMocks.workspace.fs.readFile.mockResolvedValue(
       createMockFileData('[node name="Root" type="Node3D"]')

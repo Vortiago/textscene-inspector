@@ -27,8 +27,7 @@ export async function runSuite(testsRoot: string): Promise<void> {
 }
 
 /**
- * Every `*.test.js` path under `dir`. A plain walk, not `glob`: glob 14 needs `tracingChannel`, which the
- * Node 18.15 of the oldest supported VS Code (1.85) lacks.
+ * Every `*.test.js` path under `dir`.
  */
 function testFilesUnder(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

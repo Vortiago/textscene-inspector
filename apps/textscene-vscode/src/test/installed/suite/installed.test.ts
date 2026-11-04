@@ -99,12 +99,9 @@ suite('Installed package', () => {
       assert.ok(contributed.includes(name), `${name} is contributed`);
     }
 
-    // The tools API is newer than the extension's engines floor. Below it, none registers.
-    if (vscode.lm?.tools) {
-      const registered = vscode.lm.tools.map((tool) => tool.name);
-      for (const name of AGENT_TOOL_NAMES) {
-        assert.ok(registered.includes(name), `${name} is registered`);
-      }
+    const registered = vscode.lm.tools.map((tool) => tool.name);
+    for (const name of AGENT_TOOL_NAMES) {
+      assert.ok(registered.includes(name), `${name} is registered`);
     }
   });
 });

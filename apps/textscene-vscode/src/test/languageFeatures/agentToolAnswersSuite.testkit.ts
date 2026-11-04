@@ -14,6 +14,7 @@ import { DISABLE_GPU_ENV } from '../integration/integrationLaunch';
 import { EXTENSION_ID, previewTabLabels, previewTabStates } from '../smokeProject/sceneEditor';
 import { waitFor } from '../waitFor';
 import { copyFixtureProject, removeFixtureProject } from './answers';
+import { invokeSceneTool } from '../invokeSceneTool';
 
 /** A lint or a tab update reaches the extension host well inside this on a loaded runner. */
 const SETTLE_TIMEOUT_MS = 10000;
@@ -37,8 +38,6 @@ const PNG_HEIGHT_OFFSET = 20;
  * R3F rethrows in render for the viewport's boundary to catch.
  */
 const NO_WEBGL_REASON = 'The viewport crashed: THREE.WebGLRenderer: Error creating WebGL context.';
-
-const NO_TOOLS_API = 'this VS Code predates vscode.lm.invokeTool, so no agent tool registers';
 
 /** Every agent tool the extension contributes and registers. */
 export const AGENT_TOOL_NAMES = [
@@ -118,8 +117,7 @@ export function imageOf(
 export function defineAgentToolAnswersSuite(projectDir: string): void {
   // Through `Uri.fsPath`, as the tools print it: it lowercases a Windows drive letter, and `path.join` does not.
   const scene = (file: string) => vscode.Uri.file(path.join(projectDir, file)).fsPath;
-  const invoke = async (tool: string, scenePath: string) =>
-    vscode.lm.invokeTool(tool, { input: { path: scenePath } });
+  const invoke = async (tool: string, scenePath: string) => invokeSceneTool(tool, scenePath);
   const invokeCapture = async (scenePath: string) => {
     const result = await invoke('textscene_capture', scenePath);
     assertWebviewLoaded(result);
@@ -128,7 +126,6 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
 
   suite('Agent tool answers', function () {
     suiteSetup(async function () {
-      if (typeof vscode.lm?.invokeTool !== 'function') skipBecause(this, NO_TOOLS_API);
       await copyFixtureProject(projectDir);
       await vscode.extensions.getExtension(EXTENSION_ID)?.activate();
     });
