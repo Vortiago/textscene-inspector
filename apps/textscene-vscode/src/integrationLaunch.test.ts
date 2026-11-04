@@ -14,8 +14,10 @@ import {
   gpuLaunch,
   integrationLaunchOptions,
   integrationLaunchPaths,
+  assertNoFailedTests,
   editorBuild,
   launchIntegrationTests,
+  SUITE_RESULT_FILE_ENV,
   SUITE_STARTED_MARKER_ENV,
   vscodeTestVersion,
   type IntegrationLaunchOptions,
@@ -32,6 +34,7 @@ function fakePaths(
     workspaceRoot,
     userDataDir: '/tmp/vscode-test-data',
     suiteStartedMarker,
+    suiteResultFile: '/nonexistent/suite-result',
   };
 }
 
@@ -64,9 +67,10 @@ describe('integrationLaunchPaths', () => {
     expect(integrationLaunchOptions(paths, 'darwin', '1').launchArgs).toContain('--disable-gpu');
   });
 
-  it('names the start marker and the GPU launch to the suite through the extension host environment', () => {
+  it('names the start marker, the result file and the GPU launch to the suite through the extension host environment', () => {
     expect(integrationLaunchOptions(paths, 'darwin', undefined).extensionTestsEnv).toEqual({
       [SUITE_STARTED_MARKER_ENV]: paths.suiteStartedMarker,
+      [SUITE_RESULT_FILE_ENV]: paths.suiteResultFile,
       [DISABLE_GPU_ENV]: '0',
     });
   });
@@ -124,6 +128,35 @@ describe('editorBuild', () => {
     expect(editorBuild('/opt/codium/codium', '1.105.0')).toEqual({
       vscodeExecutablePath: '/opt/codium/codium',
     });
+  });
+});
+
+describe('assertNoFailedTests', () => {
+  const withResult = (contents: string | null, check: (file: string) => void) => {
+    const dir = mkdtempSync(join(tmpdir(), 'tsi-result-'));
+    const file = join(dir, 'result');
+    try {
+      if (contents !== null) writeFileSync(file, contents);
+      check(file);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  it('accepts a suite that recorded no failures', () => {
+    withResult('0', (file) => expect(() => assertNoFailedTests(file)).not.toThrow());
+  });
+
+  it('rejects a suite that recorded failures, which a fork editor can exit 0 on', () => {
+    withResult('16', (file) =>
+      expect(() => assertNoFailedTests(file)).toThrow('expected 0 failed tests, found 16')
+    );
+  });
+
+  it('rejects a run that recorded no result, so a silent exit is not a pass', () => {
+    withResult(null, (file) =>
+      expect(() => assertNoFailedTests(file)).toThrow(`expected the suite result at ${file}, found none`)
+    );
   });
 });
 

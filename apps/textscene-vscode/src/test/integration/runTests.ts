@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { runTests } from '@vscode/test-electron';
 import {
+  assertNoFailedTests,
   EDITOR_EXECUTABLE_ENV,
   editorBuild,
   integrationLaunchPaths,
@@ -37,6 +38,7 @@ async function main() {
       launch: (options) =>
         runTests({ ...options, ...editorBuild(process.env[EDITOR_EXECUTABLE_ENV], version) }),
     });
+    assertNoFailedTests(paths.suiteResultFile);
     // An aborted VS Code download leaves its `tar` children alive, and they hold the event
     // loop open after the suite passes until CI cancels the job.
     process.exit(0);

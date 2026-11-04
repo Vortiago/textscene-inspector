@@ -38,7 +38,18 @@ const PNG_HEIGHT_OFFSET = 20;
  */
 const NO_WEBGL_REASON = 'The viewport crashed: THREE.WebGLRenderer: Error creating WebGL context.';
 
-const NO_TOOLS_API = 'this VS Code predates vscode.lm.invokeTool, so no agent tool registers';
+const NO_TOOLS_API = 'this editor offers no usable vscode.lm tools API, so no agent tool registers';
+
+/** The variable that says the editor under test offers no language-model tools, as Cursor does (CI, 2026-11-04). */
+export const EDITOR_LACKS_LM_TOOLS_ENV = 'TEXTSCENE_EDITOR_LACKS_LM_TOOLS';
+
+/**
+ * Whether the editor can invoke language-model tools. Older VS Code has no `invokeTool`, and
+ * Cursor has it but throws "Language model tools are not available" on every call.
+ */
+export function hasInvokableTools(): boolean {
+  return typeof vscode.lm?.invokeTool === 'function' && process.env[EDITOR_LACKS_LM_TOOLS_ENV] !== '1';
+}
 
 /** Every agent tool the extension contributes and registers. */
 export const AGENT_TOOL_NAMES = [
@@ -128,7 +139,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
 
   suite('Agent tool answers', function () {
     suiteSetup(async function () {
-      if (typeof vscode.lm?.invokeTool !== 'function') skipBecause(this, NO_TOOLS_API);
+      if (!hasInvokableTools()) skipBecause(this, NO_TOOLS_API);
       await copyFixtureProject(projectDir);
       await vscode.extensions.getExtension(EXTENSION_ID)?.activate();
     });

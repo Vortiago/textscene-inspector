@@ -26,6 +26,11 @@ jobs:
       fail-fast: false
       matrix:
         fork: [vscodium, cursor, windsurf]
+        include:
+          # Cursor lists vscode.lm but throws "Language model tools are not available" on
+          # every invoke, so the agent tool suites skip there (first fork run, 2026-11-04).
+          - fork: cursor
+            lacksLmTools: '1'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
@@ -42,6 +47,7 @@ jobs:
       - run: xvfb-run -a pnpm --filter textscene-inspector test:integration
         env:
           TEXTSCENE_EDITOR_EXECUTABLE: ${{ steps.fork.outputs.executable }}
+          TEXTSCENE_EDITOR_LACKS_LM_TOOLS: ${{ matrix.lacksLmTools }}
 
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

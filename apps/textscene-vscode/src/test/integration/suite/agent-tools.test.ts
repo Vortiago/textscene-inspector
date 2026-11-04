@@ -15,6 +15,7 @@ import { extensionUnderTest, EXTENSION_ID } from '../../smokeProject/sceneEditor
 import {
   AGENT_TOOL_NAMES,
   contributedTools,
+  hasInvokableTools,
   skipBecause,
   textOf,
 } from '../../languageFeatures/agentToolAnswersSuite.testkit';
@@ -38,7 +39,7 @@ const SCENE = [
 
 /** Skips a test on a VS Code below the tools API. */
 function skipWithoutToolsApi(context: Context): never {
-  skipBecause(context, 'this VS Code predates the vscode.lm tools API');
+  skipBecause(context, 'this editor offers no usable vscode.lm tools API');
 }
 
 suite('Agent tools', () => {
@@ -62,7 +63,7 @@ suite('Agent tools', () => {
 
   test('VS Code lists the registered agent tools', function () {
     // The tools API is newer than the extension's engines floor. Below it, none registers.
-    if (!vscode.lm?.tools) skipWithoutToolsApi(this);
+    if (!hasInvokableTools() || !vscode.lm?.tools) skipWithoutToolsApi(this);
     const names = vscode.lm.tools.map((tool) => tool.name);
 
     for (const name of AGENT_TOOL_NAMES) {
@@ -71,7 +72,7 @@ suite('Agent tools', () => {
   });
 
   test('the scene-tree tool returns the node hierarchy', async function () {
-    if (typeof vscode.lm?.invokeTool !== 'function') skipWithoutToolsApi(this);
+    if (!hasInvokableTools()) skipWithoutToolsApi(this);
 
     const result = await vscode.lm.invokeTool('textscene_scene_tree', { input: { path: scenePath } });
 
@@ -79,7 +80,7 @@ suite('Agent tools', () => {
   });
 
   test("the scene-tree tool reads an open editor's unsaved edits, as the Problems panel does", async function () {
-    if (typeof vscode.lm?.invokeTool !== 'function') skipWithoutToolsApi(this);
+    if (!hasInvokableTools()) skipWithoutToolsApi(this);
     const document = await vscode.workspace.openTextDocument(scenePath);
     const editor = await vscode.window.showTextDocument(document);
     try {
@@ -100,7 +101,7 @@ suite('Agent tools', () => {
   });
 
   test('the lint tool returns a finding for a dangling reference', async function () {
-    if (typeof vscode.lm?.invokeTool !== 'function') skipWithoutToolsApi(this);
+    if (!hasInvokableTools()) skipWithoutToolsApi(this);
 
     const result = await vscode.lm.invokeTool('textscene_lint', { input: { path: scenePath } });
 
@@ -108,7 +109,7 @@ suite('Agent tools', () => {
   });
 
   test('the missing-resources tool answers for the scene', async function () {
-    if (typeof vscode.lm?.invokeTool !== 'function') skipWithoutToolsApi(this);
+    if (!hasInvokableTools()) skipWithoutToolsApi(this);
 
     const result = await vscode.lm.invokeTool('textscene_missing_resources', { input: { path: scenePath } });
 
@@ -116,7 +117,7 @@ suite('Agent tools', () => {
   });
 
   test('the open-preview tool opens the preview', async function () {
-    if (typeof vscode.lm?.invokeTool !== 'function') skipWithoutToolsApi(this);
+    if (!hasInvokableTools()) skipWithoutToolsApi(this);
 
     const result = await vscode.lm.invokeTool('textscene_open_preview', { input: { path: scenePath } });
 
