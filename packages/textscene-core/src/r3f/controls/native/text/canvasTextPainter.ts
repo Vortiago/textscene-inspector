@@ -26,6 +26,7 @@ import { injectProgram, injectViewportProgram } from '../../../materialProgramIn
 import { NO_OPAQUE_PREPASS } from '../../../materials/opaquePrepass';
 import { passBlendMaterialProps, type SurfaceBlend } from '../../../materials/surfaceBlend';
 import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
+import { SHADED_SCALARS } from '../../../materialFor2d';
 import type { Rgba } from '../../../../godot/math/math';
 
 /** Fixed vertical pad, CSS px, on every raster edge: anti-aliased ink can overshoot a glyph's ascent/descent box. The quad is this much taller than `layout.heightPx` on both edges. */
@@ -234,19 +235,24 @@ interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
   pixelMaterial?: CanvasItemPixelMaterial;
   /** The raster carries a mip chain and draws in 3D, so it samples at the viewport's mipmap bias. */
   mipmapped?: boolean;
+  /** Lit by the scene's 3D lights, as a shaded Label3D (`material.cpp:3045`). Omitted, unlit. */
+  lit?: boolean;
 }
 
 /**
- * A `MeshBasicMaterial` for canvas-rasterised text, with three's sRGB decode for
+ * A `MeshBasicMaterial` for canvas-rasterised text, or a `MeshStandardMaterial` for a `lit` run,
+ * with three's sRGB decode for
  * an `SRGBColorSpace` map. A `NoColorSpace` map gets the sRGB-multiply define
  * (`canvasSrgbMultiply.ts`) from its own tag, as `canvasMapProps` does,
  * so the tag and the define never apply apart. `TextRun.tsx` keeps its glyph
  * raster `SRGBColorSpace`: a glyph has no differing RGB pair to filter wrongly.
  */
 // `defines` is assigned after construction: `Material#setValues` skips, with a
-// warning, a key not already on the instance, and `MeshBasicMaterial` declares no
+// warning, a key not already on the instance, and neither material declares
 // `defines`. `WebGLProgram` reads `material.defines` for every material type.
-export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): THREE.MeshBasicMaterial {
+export function createCanvasTextMaterial(
+  options: CanvasTextMaterialOptions
+): THREE.MeshBasicMaterial | THREE.MeshStandardMaterial {
   const {
     map,
     opacity,
@@ -264,9 +270,10 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     injection,
     pixelMaterial,
     mipmapped = false,
+    lit = false,
   } = options;
   const { injection: pixelInjection, ...pixelState } = pixelMaterial ?? {};
-  const material = new THREE.MeshBasicMaterial({
+  const parameters = {
     map,
     opacity,
     depthTest,
@@ -284,7 +291,10 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     // constructor declares, so `setValues` assigns it from this object.
     ...canvasItemFacing(side),
     clippingPlanes: [...clippingPlanes],
-  });
+  };
+  const material = lit
+    ? new THREE.MeshStandardMaterial({ ...parameters, ...SHADED_SCALARS })
+    : new THREE.MeshBasicMaterial(parameters);
   if (map.colorSpace === THREE.NoColorSpace) {
     material.defines = { ...CANVAS_SRGB_DEFINES };
   }

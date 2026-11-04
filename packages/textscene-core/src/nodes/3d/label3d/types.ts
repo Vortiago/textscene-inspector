@@ -38,6 +38,9 @@ export interface Label3DProperties extends GeometryInstance3DProperties {
   /** Visible from behind (Godot default true → THREE.DoubleSide). */
   double_sided: boolean;
 
+  /** Lit by the scene's 3D lights, `SHADING_MODE_PER_PIXEL` (`material.cpp:3045`, default false). */
+  shaded: boolean;
+
   /** Glyph size in Godot pixels; drives the quad's world size (default 32). */
   font_size: number;
 

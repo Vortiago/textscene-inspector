@@ -121,6 +121,12 @@ export interface TextRunProps {
    */
   mipmapped?: boolean;
   /**
+   * Lights the run with the scene's 3D lights and lets it receive their shadows, as a shaded
+   * Label3D (`material.cpp:3045`). The quad faces +Z (`label_3d.cpp:422-423`). Canvas runs only:
+   * the MSDF atlas serves Controls, which draw unlit. Omitted, unlit.
+   */
+  lit?: boolean;
+  /**
    * The `BaseMaterial3D::Transparency` this surface paints in, from a 3D caller's
    * `alpha_cut` (`label_3d.cpp:386-393`), in each pass its GeometryInstance3D's fade can draw it
    * in. Canvas runs inside a GeometryInstance3D drawer only. Omitted, it paints
@@ -142,6 +148,13 @@ export interface TextRunProps {
   frameExcluded?: boolean;
 }
 
+/** The normal +Z on each of `vertexCount` vertices. */
+function quadFacingPlusZ(vertexCount: number): THREE.BufferAttribute {
+  const normals = new Float32Array(vertexCount * 3);
+  for (let i = 0; i < vertexCount; i++) normals[i * 3 + 2] = 1;
+  return new THREE.BufferAttribute(normals, 3);
+}
+
 /**
  * One built run: its geometry, and on the canvas path the per-instance texture this component
  * disposes. Each canvas that unmounts releases the shared atlas. `paint` builds a material for the run,
@@ -161,6 +174,8 @@ interface TextRunLook {
   side: THREE.Side | undefined;
   /** The lit Control around the run, or undefined for a run drawn unlit such as Label3D's. */
   pixelMaterial: CanvasItemPixelMaterial | undefined;
+  /** Lit by the scene's 3D lights: `TextRunProps.lit`. */
+  lit: boolean;
 }
 
 /**
@@ -178,7 +193,7 @@ function buildTextRun(
   outlineColor: Rgba | undefined,
   outlineWidthPx: number
 ): BuiltTextRun {
-  const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
+  const { tint, clippingPlanes, depthTest, side, pixelMaterial, lit } = look;
   const skew = layout.fontMetrics.skew ?? 0;
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
@@ -187,6 +202,7 @@ function buildTextRun(
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
+    if (lit) geo.setAttribute('normal', quadFacingPlusZ(positions.length / 3));
 
     const canvas = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, strokeWidthPx);
     const texture = new THREE.CanvasTexture(canvas);
@@ -211,6 +227,7 @@ function buildTextRun(
         side,
         pixelMaterial,
         mipmapped,
+        lit,
         ...blend,
       });
     return { geometry: geo, paint, ownedTexture: texture };
@@ -261,6 +278,7 @@ export function TextRun({
   frameExcluded,
   outlineColor,
   outlineWidthPx = 0,
+  lit = false,
 }: TextRunProps) {
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
@@ -272,7 +290,7 @@ export function TextRun({
       buildTextRun(
         layout,
         fontSizePx,
-        { tint, clippingPlanes, depthTest, side, pixelMaterial },
+        { tint, clippingPlanes, depthTest, side, pixelMaterial, lit },
         strokeWidthPx,
         textureFilter,
         mipmapped,
@@ -301,6 +319,7 @@ export function TextRun({
       outlineColor?.b,
       outlineColor?.a,
       outlineWidthPx,
+      lit,
     ]
   );
   const material = usePaintedMaterial(run, blends?.unfaded);
@@ -352,6 +371,7 @@ export function TextRun({
         renderOrder={renderOrder}
         userData={userData}
         castShadow={shadow?.castShadow}
+        receiveShadow={lit}
         onBeforeRender={shadow?.onBeforeRender}
         onAfterRender={shadow?.onAfterRender}
         onBeforeShadow={shadow?.onBeforeShadow}

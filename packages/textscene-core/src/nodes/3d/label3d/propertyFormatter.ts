@@ -15,6 +15,7 @@ export function formatLabel3DProperties(properties: Label3DProperties): Property
     { label: 'Text', value: properties.text || '(empty)' },
     { label: 'Pixel Size', value: properties.pixel_size.toFixed(4) },
     { label: 'Billboard', value: billboardName(properties.billboard) },
+    { label: 'Shaded', value: properties.shaded ? 'On' : 'Off' },
   ];
 
   sections.push({

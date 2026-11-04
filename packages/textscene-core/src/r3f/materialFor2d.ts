@@ -14,6 +14,12 @@ import { godotTextureFilterState, type TextureFilterState } from '../resources/t
 import type { PassBlend } from './materials/surfaceBlend';
 import type { EnumValue } from '../godot/classdb/enumNames.js';
 
+/**
+ * The PBR uniforms Sprite3D and Label3D set on their material (`sprite_3d.cpp:721-722`,
+ * `label_3d.cpp:372-373`), which only a shaded surface reads.
+ */
+export const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
+
 /** The flags `get_material_for_2d` reads, as the node stores them. */
 interface MaterialFor2dInput {
   /** `SpriteBase3D::AlphaCutMode` or `Label3D::AlphaCutMode`: two C++ enums, same members. */

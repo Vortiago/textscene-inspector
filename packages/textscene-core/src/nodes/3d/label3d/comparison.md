@@ -11,6 +11,8 @@ renders_as: canvas-rasterised glyph quads, billboard-able
 
 Draws text on a flat plane in 3D space. The previewer breaks it at `width` as `autowrap_mode` says. It stretches each line to `width` under `HORIZONTAL_ALIGNMENT_FILL`, places the block by `vertical_alignment` and moves it by `offset` (`label_3d.cpp:483-606`). It rasterises each label to a canvas texture, one texel per font pixel at `font_size` as Godot caches a glyph (`label_3d.cpp:345-350`). The font is the label's `font`, else the project theme's font for Label3D, else the project default font (`gui/theme/custom_font`), else the bundled font (`label_3d.cpp:812-850`). It maps the texture onto a transparent plane sized by `pixel_size`. It tints the plane by `modulate` and orients it by the node's `billboard` mode.
 
+A label is unlit by default. With `shaded` on, the scene's lights light its fill and outline, as Godot's `SHADING_MODE_PER_PIXEL` does (`material.cpp:3045`), and the label receives shadows. The plane faces +Z (`label_3d.cpp:422-423`). A double-sided label flips the normal of its back face (`scene_forward_clustered.glsl:1263-1266`), so its back is lit as its front. The `label3d-shaded` golden pins this.
+
 A label casts no shadow by default, as its constructor turns `cast_shadow` off (`label_3d.cpp:1090`). With it on, the glyphs cast when Godot files their surface in the shadow pass (`render_forward_clustered.cpp:4079-4089`). That pass takes a cut surface, or an `OPAQUE_PREPASS` one, with the depth test on. An `OPAQUE_PREPASS` surface blends uncut, writes its depth in a depth prepass cut at 0.99, and cuts its shadow at 0.1 (`render_forward_clustered.cpp:1791,2770`). A blended label, the default `alpha_cut`, casts nothing. The `label3d-shadow` golden pins this.
 
 ## Linting

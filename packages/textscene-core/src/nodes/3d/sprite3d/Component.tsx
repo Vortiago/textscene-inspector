@@ -18,7 +18,7 @@ import { flippedUvWindow } from '../../../r3f/uvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
 import { viewportProgramInputs } from '../../../r3f/materialProgramInputs';
-import { materialFor2d } from '../../../r3f/materialFor2d';
+import { materialFor2d, SHADED_SCALARS } from '../../../r3f/materialFor2d';
 import type { FadePass } from '../../../r3f/materials/fadeVariants';
 import { passBlendMaterialProps } from '../../../r3f/materials/surfaceBlend';
 import type { MaterialAttach } from '../../../r3f/materials/swappedMaterials';
@@ -36,9 +36,6 @@ import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placem
 import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
 import { clamp } from '../../../godot/math/math';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
-
-/** The sprite material's own PBR uniforms (`sprite_3d.cpp:721-722`). */
-const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
 
 export function Sprite3D({ node, children }: NodeComponentProps) {
   const spriteRef = useRef<THREE.Object3D | null>(null);

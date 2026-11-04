@@ -177,6 +177,56 @@ describe('<LabelGlyphs>', () => {
     expect((meshOf(double).material as THREE.Material).side).toBe(THREE.DoubleSide);
   });
 
+  describe('shaded', () => {
+    // `get_material_for_2d` sets `SHADING_MODE_PER_PIXEL` for a shaded label and
+    // `SHADING_MODE_UNSHADED` otherwise (`material.cpp:3045`), for the fill and outline alike.
+    const outlined = { outline_size: 12, outline_modulate: { r: 0, g: 0, b: 0, a: 1 } };
+    const runMaterials = async (shaded: boolean) =>
+      (await render(labelProperties({ ...outlined, shaded }))).scene
+        .findAllByType('Mesh')
+        .map((m) => (m.instance as THREE.Mesh).material as THREE.Material);
+
+    it('draws both runs of an unshaded label unlit', async () => {
+      expect((await runMaterials(false)).map((m) => m.type)).toEqual([
+        'MeshBasicMaterial',
+        'MeshBasicMaterial',
+      ]);
+    });
+
+    it("draws both runs of a shaded label lit, at the label material's metallic and roughness", async () => {
+      // `material_set_param(..., "metallic", 0.0)` and `"roughness", 1.0` (`label_3d.cpp:372-373`).
+      const materials = (await runMaterials(true)) as THREE.MeshStandardMaterial[];
+      expect(materials.map((m) => [m.type, m.metalness, m.roughness])).toEqual([
+        ['MeshStandardMaterial', 0, 1],
+        ['MeshStandardMaterial', 0, 1],
+      ]);
+      expect(materials.every((m) => m.map !== null)).toBe(true);
+    });
+
+    it('gives the lit quad the normal +Z on every vertex (label_3d.cpp:422-423)', async () => {
+      const mesh = meshOf(await render(labelProperties({ shaded: true })));
+      const normal = mesh.geometry.getAttribute('normal');
+      const normals = Array.from({ length: normal.count }, (_, i) => [
+        normal.getX(i),
+        normal.getY(i),
+        normal.getZ(i),
+      ]);
+      expect(normals).toEqual(Array.from({ length: normal.count }, () => [0, 0, 1]));
+    });
+
+    it('flips the normal of a back face, as Godot does for a double-sided surface (scene_forward_clustered.glsl:1263-1266)', async () => {
+      const material = meshOf(await render(labelProperties({ shaded: true, double_sided: true })))
+        .material as THREE.Material;
+      // Drawn both sides in one pass, three's lit fragment multiplies the normal by `faceDirection`.
+      expect([material.side, material.forceSinglePass]).toEqual([THREE.DoubleSide, true]);
+      expect(THREE.ShaderChunk.normal_fragment_begin).toContain('normal *= faceDirection');
+    });
+
+    it('receives shadows on a shaded label', async () => {
+      expect(meshOf(await render(labelProperties({ shaded: true }))).receiveShadow).toBe(true);
+    });
+  });
+
   describe('outline pass', () => {
     // Godot emits the outline glyphs as their own surfaces before the fill
     // (`label_3d.cpp:610-621`), both `TRANSPARENCY_ALPHA` (`:386`) on one cached

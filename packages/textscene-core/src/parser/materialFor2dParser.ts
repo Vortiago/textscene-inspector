@@ -44,5 +44,6 @@ export function parseMaterialFor2dFields(properties: Record<string, string>, nod
     no_depth_test: boolOr(properties.no_depth_test, false, label('no_depth_test')),
     double_sided: boolOr(properties.double_sided, true, label('double_sided')),
     fixed_size: boolOr(properties.fixed_size, false, label('fixed_size')),
+    shaded: boolOr(properties.shaded, false, label('shaded')),
   };
 }

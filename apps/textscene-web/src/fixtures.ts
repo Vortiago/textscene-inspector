@@ -1263,6 +1263,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label3d Shaded",
+    "file": "unit-label3d-shaded.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label3d Shadow",
     "file": "unit-label3d-shadow.tscn",
     "category": "Other"
