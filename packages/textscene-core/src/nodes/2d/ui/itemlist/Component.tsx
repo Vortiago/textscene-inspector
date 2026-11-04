@@ -38,9 +38,7 @@ import {
   itemIconPackedSize,
   itemListGuideColor,
   itemListGuideLines,
-  itemListDrawnLabel,
   itemListIconSlotKey,
-  itemListLabelIsDrawn,
   itemListLineTextWidthPx,
   itemListMaxColumnWidth,
   itemListMinimumShapeWidthPx,
@@ -53,11 +51,11 @@ import {
   itemTextColor,
   itemTextDrawOffset,
   isItemListTextWrapped,
-  type DrawnLabelLine,
   packItemListRows,
   pickItemListPanelStyleBox,
   shapeItemListText,
 } from './nativeSolver';
+import { itemListDrawnLabel, itemListLabelIsDrawn, type DrawnLabelLine } from './labelDraw';
 import type { ItemListItem, ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
@@ -283,106 +281,106 @@ export function ItemList({
   // (`style_box.cpp:87-89`), never `contentMarginSize`'s summed pair.
   const origin: Vector2 = { x: panelBox.contentMargin.left, y: panelBox.contentMargin.top };
 
-  const rowGeometries: RowGeometry[] = useMemo(
-    () =>
-      rows.map((r, index) => {
-        const packedRect = packed.items[index]!.rect;
-        // Both centring passes read `rect_cache.SIZE` (`item_list.cpp:1553,1556,1649`),
-        // never its position, and a `Rect2` satisfies `Vector2` structurally.
-        const packedSize: Vector2 = { x: packedRect.w, y: packedRect.h };
-        const naturalSize = solveNode.textureSlots[itemListIconSlotKey(index)] ?? null;
-        const iconDraw = itemIconDraw(
-          r.hasIcon,
-          iconMode,
-          r.iconSize,
-          naturalSize,
-          fixedIconSizeSet,
-          packedSize,
-          hSeparation,
-          vSeparation,
-          iconMargin
-        );
-        const textOffset = itemTextDrawOffset(
-          iconMode,
-          iconDraw.textOffsetContribution,
-          packedSize,
-          r.minimumLayout?.heightPx ?? 0,
-          hSeparation,
-          vSeparation
-        );
-        // Every RTL branch works in control coordinates; the row group keeps
-        // its LTR origin, so each piece comes back relative to it.
-        const rowOriginX = origin.x + packedRect.x;
-        const wrapped = isItemListTextWrapped(iconMode, maxTextLines);
-        const textWidthPx = wrapped
-          ? itemListWrappedTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems)
-          : itemListLineTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems);
-        const textBoxX = wrapped
-          ? itemListMirrorX(rowOriginX + textOffset.x, textWidthPx, rect.w, rtl)
-          : itemListRowTextX(
-              {
-                ltrX: rowOriginX + textOffset.x,
-                itemRectWidthPx: packedRect.w,
-                iconWidthPx: r.iconSize.x,
-                controlWidthPx: rect.w,
-                contentWidthPx: contentWidth,
-                wraparoundItems,
-                hSeparation,
-              },
-              rtl
-            );
-        const isLabelDrawn = itemListLabelIsDrawn({
-          wrapped,
-          fixedColumnWidth,
-          itemRectWidthPx: packedRect.w,
-          iconWidthPx: r.iconSize.x,
-          contentWidthPx: contentWidth,
-          wraparoundItems,
-          hSeparation,
-        });
-        const layout = isLabelDrawn
-          ? shapeItemListText({ ...textShape, text: r.item.text ?? '', widthPx: textWidthPx })
-          : null;
-        const label = layout
-          ? { layout, lines: itemListDrawnLabel(layout, textWidthPx, wrapped, rtl) }
-          : null;
-        return {
-          item: r.item,
-          disabled: r.disabled,
-          hasIcon: r.hasIcon,
-          iconNaturalSize: naturalSize,
-          fixedIconSizeSet,
-          iconDraw,
-          label,
-          textX: textBoxX - rowOriginX,
-          textY: textOffset.y,
-          iconX: iconDraw.rect
-            ? itemListMirrorX(rowOriginX + iconDraw.rect.x, iconDraw.rect.w, rect.w, rtl) - rowOriginX
-            : 0,
-          rect: packedRect,
-          textColor: itemTextColor(baseFontColor, r.disabled),
-        };
-      }),
-    [
-      rows,
-      packed,
-      iconMode,
-      maxTextLines,
-      fixedColumnWidth,
-      textShape,
-      fixedIconSizeSet,
-      hSeparation,
-      vSeparation,
-      iconMargin,
-      solveNode,
-      baseFontColor,
-      origin.x,
-      rect.w,
-      contentWidth,
-      wraparoundItems,
-      rtl,
-    ]
-  );
+  const rowGeometries: RowGeometry[] = useMemo(() => {
+    const minimumShapeWidthPx = itemListMinimumShapeWidthPx(fixedColumnWidth);
+    // The minimum-size pass already shaped the label at this width, so it is not shaped twice.
+    const shapeLabelAt = (r: RowContent, widthPx: number) =>
+      widthPx === minimumShapeWidthPx
+        ? r.minimumLayout
+        : shapeItemListText({ ...textShape, text: r.item.text ?? '', widthPx });
+    return rows.map((r, index) => {
+      const packedRect = packed.items[index]!.rect;
+      // Both centring passes read `rect_cache.SIZE` (`item_list.cpp:1553,1556,1649`),
+      // never its position, and a `Rect2` satisfies `Vector2` structurally.
+      const packedSize: Vector2 = { x: packedRect.w, y: packedRect.h };
+      const naturalSize = solveNode.textureSlots[itemListIconSlotKey(index)] ?? null;
+      const iconDraw = itemIconDraw(
+        r.hasIcon,
+        iconMode,
+        r.iconSize,
+        naturalSize,
+        fixedIconSizeSet,
+        packedSize,
+        hSeparation,
+        vSeparation,
+        iconMargin
+      );
+      const textOffset = itemTextDrawOffset(
+        iconMode,
+        iconDraw.textOffsetContribution,
+        packedSize,
+        r.minimumLayout?.heightPx ?? 0,
+        hSeparation,
+        vSeparation
+      );
+      // Every RTL branch works in control coordinates; the row group keeps
+      // its LTR origin, so each piece comes back relative to it.
+      const rowOriginX = origin.x + packedRect.x;
+      const wrapped = isItemListTextWrapped(iconMode, maxTextLines);
+      const textWidthPx = wrapped
+        ? itemListWrappedTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems)
+        : itemListLineTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems);
+      const textBoxX = wrapped
+        ? itemListMirrorX(rowOriginX + textOffset.x, textWidthPx, rect.w, rtl)
+        : itemListRowTextX(
+            {
+              ltrX: rowOriginX + textOffset.x,
+              itemRectWidthPx: packedRect.w,
+              iconWidthPx: r.iconSize.x,
+              controlWidthPx: rect.w,
+              contentWidthPx: contentWidth,
+              wraparoundItems,
+              hSeparation,
+            },
+            rtl
+          );
+      const isLabelDrawn = itemListLabelIsDrawn({
+        wrapped,
+        fixedColumnWidth,
+        itemRectWidthPx: packedRect.w,
+        iconWidthPx: r.iconSize.x,
+        contentWidthPx: contentWidth,
+        wraparoundItems,
+        hSeparation,
+      });
+      const layout = isLabelDrawn ? shapeLabelAt(r, textWidthPx) : null;
+      const label = layout ? { layout, lines: itemListDrawnLabel(layout, textWidthPx, wrapped, rtl) } : null;
+      return {
+        item: r.item,
+        disabled: r.disabled,
+        hasIcon: r.hasIcon,
+        iconNaturalSize: naturalSize,
+        fixedIconSizeSet,
+        iconDraw,
+        label,
+        textX: textBoxX - rowOriginX,
+        textY: textOffset.y,
+        iconX: iconDraw.rect
+          ? itemListMirrorX(rowOriginX + iconDraw.rect.x, iconDraw.rect.w, rect.w, rtl) - rowOriginX
+          : 0,
+        rect: packedRect,
+        textColor: itemTextColor(baseFontColor, r.disabled),
+      };
+    });
+  }, [
+    rows,
+    packed,
+    iconMode,
+    maxTextLines,
+    fixedColumnWidth,
+    textShape,
+    fixedIconSizeSet,
+    hSeparation,
+    vSeparation,
+    iconMargin,
+    solveNode,
+    baseFontColor,
+    origin.x,
+    rect.w,
+    contentWidth,
+    wraparoundItems,
+    rtl,
+  ]);
 
   const rowsAndChildren = (
     <>
