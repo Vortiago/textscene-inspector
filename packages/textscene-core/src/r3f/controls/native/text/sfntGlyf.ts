@@ -341,6 +341,11 @@ class GlyphLoad {
     return variedGlyphPoints(glyphVariations, normalized, glyphIndex, points, adjustedAdvances);
   }
 
+  /** Whether the glyph loads in font units, which the auto-hinter does, as `scale` 1.0 says. */
+  private get isUnscaled(): boolean {
+    return this.scale === FIXED_16_16_ONE;
+  }
+
   /** The phantom points of a glyph with no contour, moved by the instance's deltas, in whole font units. */
   private variedPhantoms(glyphIndex: number): PhantomPoints {
     if (!this.instance) return this.phantoms;
@@ -390,8 +395,9 @@ class GlyphLoad {
     for (let point = 0; point < varied.x.length; point++) {
       zone.orusX[point] = varied.x[point]!;
       zone.orusY[point] = varied.y[point]!;
-      zone.curX[point] = scaleToPixels(varied.unroundedX[point]!);
-      zone.curY[point] = scaleToPixels(varied.unroundedY[point]!);
+      // An unscaled load (`FT_LOAD_NO_SCALE`) keeps the whole font units the deltas leave.
+      zone.curX[point] = this.isUnscaled ? varied.x[point]! : scaleToPixels(varied.unroundedX[point]!);
+      zone.curY[point] = this.isUnscaled ? varied.y[point]! : scaleToPixels(varied.unroundedY[point]!);
     }
     zone.tags.set(tags);
     return zone;
@@ -649,8 +655,11 @@ function loadedGlyph(
   return load;
 }
 
-/** The `glyf` outlines as the auto-hinter loads them, unhinted in design units, or null for a font without them. */
-export function unscaledGlyfOutlines(sfnt: SfntFile): UnscaledOutlines | null {
+/**
+ * The `glyf` outlines as the auto-hinter loads them, unhinted in design units, or null for a font without them.
+ * `instance` is the variable font's instance, or null for the default one.
+ */
+export function unscaledGlyfOutlines(sfnt: SfntFile, instance: FontInstance | null): UnscaledOutlines | null {
   const font = glyfFont(sfnt);
   if (!font) return null;
   return {
@@ -658,6 +667,6 @@ export function unscaledGlyfOutlines(sfnt: SfntFile): UnscaledOutlines | null {
     isPpemRounded: font.isPpemRounded,
     glyphCount: font.glyphCount,
     unscaledGlyph: (glyphIndex) =>
-      loadedGlyph(font, glyphIndex, FIXED_16_16_ONE, null, null)?.outline() ?? null,
+      loadedGlyph(font, glyphIndex, FIXED_16_16_ONE, null, instance)?.outline() ?? null,
   };
 }

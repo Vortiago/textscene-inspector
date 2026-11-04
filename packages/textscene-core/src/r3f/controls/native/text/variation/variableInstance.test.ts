@@ -30,19 +30,13 @@ describe('glyph contours of a variable font at an instance', () => {
 });
 
 describe('glyph contours of an auto-hinted variable font at an instance', () => {
-  /** Godot auto-hints a font without bytecode (#932); the reader draws it unhinted, within two pixels at 400 px (the blue-zone snaps measured up to 1.2). */
-  const AUTO_HINT_TOLERANCE_PX = 2;
-
   it.each(autoHinted.map((glyph) => [referenceGlyphTitle(glyph), glyph] as const))(
-    'stay within two pixels of Godot for %s',
+    'match Godot for %s',
     async (_, glyph) => {
       const contours = await readerContours(glyph);
 
+      expect(referencePoints(contours.points)).toEqual(glyph.points);
       expect(contours.contourEnds).toEqual(glyph.contourEnds);
-      contours.points.forEach(({ x, y }, index) => {
-        expect(Math.abs(x - glyph.points[index]![0])).toBeLessThanOrEqual(AUTO_HINT_TOLERANCE_PX);
-        expect(Math.abs(y - glyph.points[index]![1])).toBeLessThanOrEqual(AUTO_HINT_TOLERANCE_PX);
-      });
     }
   );
 });

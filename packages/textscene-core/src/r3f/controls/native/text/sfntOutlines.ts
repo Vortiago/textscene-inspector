@@ -82,17 +82,10 @@ async function glyphHintingOf(sfnt: SfntFile): Promise<GlyphHinting | null> {
   return orOnRangeError(() => trueTypeHinting(sfnt), null);
 }
 
-/**
- * The auto-hinter's reader. It hints the default instance only, so a variable font at another
- * instance loads its varied outline unhinted until the auto-hinter follows the variation (#932).
- */
+/** The auto-hinter's reader, which hints a variable font at the instance that its glyphs and blue zones follow. */
 async function autoHintedReaderOf(sfnt: SfntFile): Promise<GlyphOutlineReader | null> {
   const { autoHintedReader } = await import('./autofit/autoHinter');
-  const autoHinted = orOnRangeError(() => autoHintedReader(sfnt), null);
-  const unhinted = glyphOutlineReader(sfnt, null);
-  if (!autoHinted || !unhinted) return autoHinted;
-  return (glyphIndex, fontSizePx, instance) =>
-    instance ? unhinted(glyphIndex, fontSizePx, instance) : autoHinted(glyphIndex, fontSizePx);
+  return orOnRangeError(() => autoHintedReader(sfnt), null);
 }
 
 /** The font at the axis values of `variation`, or null for the default instance. */
