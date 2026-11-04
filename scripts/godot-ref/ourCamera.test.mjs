@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parseArgs } from './capture-ours.mjs';
-import { freeCameraPath, lookAtTransformText, OUR_CAMERA_NAME, withFreeCamera } from './ourCamera.mjs';
+import {
+  freeCameraPath,
+  lookAtTransformText,
+  OUR_CAMERA_NAME,
+  sceneCameraPath,
+  withFreeCamera,
+} from './ourCamera.mjs';
 
 describe('lookAtTransformText', () => {
   it('keeps the basis identity for a camera on +Z looking at the origin', () => {
@@ -43,7 +49,29 @@ describe('freeCameraPath', () => {
   });
 });
 
+describe('sceneCameraPath', () => {
+  const text = '[gd_scene format=3]\n\n[node name="World" type="Node3D"]\n';
+
+  it('puts the root node before a path below it, as the previewer reports a camera', () => {
+    expect(sceneCameraPath(text, 'Rig/Camera')).toBe('World/Rig/Camera');
+  });
+
+  it('keeps a path that already starts at the root, as `ref:godot` takes both', () => {
+    expect(sceneCameraPath(text, 'World/Camera')).toBe('World/Camera');
+  });
+});
+
 describe('ref:ours camera flags', () => {
+  it("reads --scene-camera's node path", () => {
+    expect(parseArgs(['a.tscn', '--scene-camera', 'Camera']).sceneCamera).toBe('Camera');
+  });
+
+  it('refuses --scene-camera beside --camera, which picks another camera', () => {
+    expect(() => parseArgs(['a.tscn', '--scene-camera', 'Camera', '--camera', '0,0,2'])).toThrow(
+      '--scene-camera and --camera pick different cameras'
+    );
+  });
+
   it('reads --camera and --look-at as three numbers each', () => {
     const args = parseArgs(['a.tscn', '--camera', '0,0,2', '--look-at', '0,1,0']);
 

@@ -32,11 +32,24 @@ export function lookAtTransformText(camera, lookAt) {
   return `Transform3D(${[...rows, ...camera].map((n) => +n.toFixed(6)).join(', ')})`;
 }
 
-/** The path the previewer reports for the free camera: the root node's name, then the camera's. */
-export function freeCameraPath(sceneText) {
+function rootName(sceneText) {
   const root = /^\[node name="([^"]+)"(?![^\]]*parent=)/m.exec(sceneText);
   if (!root) throw new Error('expected a root [node name="..."] in the scene text, found none');
-  return `${root[1]}/${OUR_CAMERA_NAME}`;
+  return root[1];
+}
+
+/** The path the previewer reports for the free camera: the root node's name, then the camera's. */
+export function freeCameraPath(sceneText) {
+  return `${rootName(sceneText)}/${OUR_CAMERA_NAME}`;
+}
+
+/**
+ * The path the previewer reports for the scene's own camera at `path`. `ref:godot --scene-camera`
+ * takes a path below the root or one that starts at it, so this takes both.
+ */
+export function sceneCameraPath(sceneText, path) {
+  const root = rootName(sceneText);
+  return path.startsWith(`${root}/`) ? path : `${root}/${path}`;
 }
 
 /** `sceneText` with a Camera3D appended to its root, at the pose and fov of `ref:godot`. */

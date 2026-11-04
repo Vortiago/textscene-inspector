@@ -73,4 +73,13 @@ describe('SceneScreenSpaceEffects', () => {
     expect(screenSpaceState[SCREEN_SPACE_STATE.showsOcclusion]).toBe(1);
     expect(Array.from(occlusionFold)).toEqual([0.25, 0.5, 0]);
   });
+
+  it('traces no reflection where the project turns the depth prepass off, as Godot draws none', () => {
+    // Godot's trace reads the prepass's normal and roughness (`render_forward_clustered.cpp:1609-1610`).
+    const { renderer, effects, camera } = begunRender({ ...SETTINGS, drawsDepthPrepass: false });
+
+    reach(effects.firstSentinel, renderer, camera);
+
+    expect(screenSpaceState[SCREEN_SPACE_STATE.showsReflection]).toBe(0);
+  });
 });

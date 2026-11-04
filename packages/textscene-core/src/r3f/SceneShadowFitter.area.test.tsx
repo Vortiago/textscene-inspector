@@ -2,7 +2,7 @@
  * The light pass's area light uniforms as the hosts mount it: inside `<TscnSceneContents>`, written
  * for each AreaLight3D before every render. `renderThrough` plays the part of `WebGLRenderer.render`.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnSceneContents } from './TscnCanvas';
@@ -29,6 +29,18 @@ async function renderScene(sceneText: string): Promise<Renderer> {
       </SelectionProvider>
     </HierarchyProvider>
   );
+}
+
+/**
+ * Waits until the area light of node `name` shows. A light hides until Godot's LTC tables load, an
+ * import whose time varies with the module cache, so a render before it gives the light no slot.
+ */
+async function untilShown(renderer: Renderer, name: string): Promise<void> {
+  const node = (renderer.scene.instance as THREE.Scene).getObjectByName(name)!;
+  const light = node.children.find(
+    (child): child is THREE.RectAreaLight => child instanceof THREE.RectAreaLight
+  )!;
+  await vi.waitFor(() => expect(light.visible).toBe(true));
 }
 
 function renderThrough(renderer: Renderer): void {
@@ -63,6 +75,7 @@ area_attenuation = 2.0
 light_specular = 0.25
 `)
     );
+    await untilShown(renderer, 'Area');
     renderThrough(renderer);
     expect([...areaLightFalloffs().subarray(0, 3)]).toEqual([4, 2, 0.5]);
   });
@@ -78,6 +91,7 @@ area_range = 1.0
 area_range = 8.0
 `)
     );
+    await untilShown(renderer, 'Shown');
     renderThrough(renderer);
     expect(areaLightFalloffs()[0]).toBe(8);
   });

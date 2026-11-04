@@ -27,9 +27,10 @@ Two flags cover the rest:
 - `--frame` (both harnesses) fits the scene's geometry bounds the way
   `frameSceneBounds.ts` does, the previewer's opt-in "frame on open", for a
   scene too large to read at distance 4.
-- `--scene-camera` (Godot side) renders through a scene's own `Camera3D`. It is
-  off by default, because the previewer ignores the scene camera too. Godot's
-  editor keeps its free camera and draws the node as a frustum gizmo.
+- `--scene-camera <path>` (both harnesses) renders through a scene's own
+  `Camera3D`, such as an orthographic one. It is off by default, because the
+  previewer ignores the scene camera too. Godot's editor keeps its free camera
+  and draws the node as a frustum gizmo.
 
 Bounds are geometry-first and load-bearing only for `--frame`. They exclude
 `Light3D`, a `VisualInstance3D`, because a sun 5 units above a flat plane would
@@ -137,7 +138,7 @@ in order of preference:
 3. **Content that does not fit at the editor camera**: first move or scale the
    elements toward the origin, if that does not distort what the fixture tests.
    Only if that is not viable, author one or more `Camera3D` nodes and capture
-   from them (Godot with `--scene-camera`, ours by activating that camera). A
+   from them (`--scene-camera` on both sides). A
    camera is the fallback, because both renderers ignore scene cameras by
    default and a camera makes the two sides depend on agreeing again.
 4. **A node whose whole point is motion** (AnimationPlayer, and anything it

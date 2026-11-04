@@ -5,12 +5,13 @@
  * filename in `fixtures.ts`, so run `pnpm generate:fixtures` after adding one:
  *   pnpm ref:ours unit-light-transport-direct.tscn --probe 320,200 --patch 5
  * `--camera x,y,z [--look-at x,y,z]` replaces the editor orbit, as it does for `ref:godot`.
+ * `--scene-camera <path>` looks through the scene's own Camera3D, as `ref:godot --scene-camera` does.
  */
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { probePixels, vec3 } from './run.mjs';
-import { freeCameraPath, withFreeCamera } from './ourCamera.mjs';
+import { freeCameraPath, sceneCameraPath, withFreeCamera } from './ourCamera.mjs';
 import { launchGodotComparisonBrowser } from '../showcase/browser.mjs';
 import {
   createCaptureContext,
@@ -30,6 +31,7 @@ export function parseArgs(argv) {
     canvas2D: false,
     camera: null,
     lookAt: null,
+    sceneCamera: null,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -55,6 +57,9 @@ export function parseArgs(argv) {
       case '--look-at':
         args.lookAt = vec3('--look-at', argv[++i]);
         break;
+      case '--scene-camera':
+        args.sceneCamera = argv[++i];
+        break;
       case '--probe': {
         const raw = argv[++i];
         const parts = String(raw).split(',').map(Number);
@@ -71,6 +76,7 @@ export function parseArgs(argv) {
   }
   if (!args.fixture) throw new Error('a fixture filename is required');
   if (args.lookAt && !args.camera) throw new Error('--look-at needs --camera');
+  if (args.sceneCamera && args.camera) throw new Error('--scene-camera and --camera pick different cameras');
   return args;
 }
 
@@ -81,6 +87,7 @@ export function captureOurs({
   canvas2DFrame = null,
   camera = null,
   lookAt = null,
+  sceneCamera = null,
 }) {
   return withPreviewBrowser(
     { ...previewPort('parity'), launchBrowser: launchGodotComparisonBrowser },
@@ -90,9 +97,7 @@ export function captureOurs({
       // a scene too large to read at distance 4.
       const context = await createCaptureContext(browser, { frameOnOpen: frame, canvas2D, canvas2DFrame });
       const page = await context.newPage();
-      const cameraPath = camera
-        ? await addFreeCamera(page, baseUrl, fixture, { camera, lookAt: lookAt ?? undefined })
-        : undefined;
+      const cameraPath = await cameraPathOf(page, baseUrl, fixture, { camera, lookAt, sceneCamera });
       const { target, reason: targetReason } = await openScene(page, baseUrl, fixture, {
         canvas2D,
         camera: cameraPath,
@@ -106,11 +111,27 @@ export function captureOurs({
   );
 }
 
+/** The camera to open the scene through, or undefined for the editor orbit. */
+async function cameraPathOf(page, baseUrl, fixture, { camera, lookAt, sceneCamera }) {
+  if (sceneCamera) return sceneCameraPath(await fixtureText(page, baseUrl, fixture), sceneCamera);
+  if (!camera) return undefined;
+  return addFreeCamera(page, baseUrl, fixture, { camera, lookAt: lookAt ?? undefined });
+}
+
+function fixtureUrl(baseUrl, fixture) {
+  return `${baseUrl.replace(/\/$/, '')}/fixtures/${fixture}`;
+}
+
+async function fixtureText(page, baseUrl, fixture) {
+  return (await page.request.get(fixtureUrl(baseUrl, fixture))).text();
+}
+
 /** Serves the fixture with a Camera3D at the pose, and answers the path to open the scene through. */
 async function addFreeCamera(page, baseUrl, fixture, pose) {
-  const url = `${baseUrl.replace(/\/$/, '')}/fixtures/${fixture}`;
-  const sceneText = await (await page.request.get(url)).text();
-  await page.route(url, (route) => route.fulfill({ body: withFreeCamera(sceneText, pose) }));
+  const sceneText = await fixtureText(page, baseUrl, fixture);
+  await page.route(fixtureUrl(baseUrl, fixture), (route) =>
+    route.fulfill({ body: withFreeCamera(sceneText, pose) })
+  );
   return freeCameraPath(sceneText);
 }
 

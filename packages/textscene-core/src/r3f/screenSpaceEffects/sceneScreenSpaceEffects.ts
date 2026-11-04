@@ -28,7 +28,7 @@ import { drawNormalRoughnessPrepass } from './normalRoughnessPrepass.js';
 export interface ScreenSpaceSettings {
   reflection: ReflectionSettings | null;
   occlusion: OcclusionSettings | null;
-  /** The project's `rendering/driver/depth_prepass/enable`, without which no occlusion is drawn. */
+  /** The project's `rendering/driver/depth_prepass/enable`, without which neither effect is drawn. */
   drawsDepthPrepass: boolean;
 }
 
@@ -59,7 +59,11 @@ class WorldEffects {
 interface SceneRender {
   readonly target: THREE.WebGLRenderTarget | null;
   readonly world: WorldEffects | null;
-  /** The reflection the render traces, or null for none: Godot traces none with a transparent background. */
+  /**
+   * The reflection the render traces, or null for none. Godot traces none with a transparent
+   * background, and draws none with no depth prepass, as the trace reads the prepass's normal and
+   * roughness before the opaque pass (`render_forward_clustered.cpp:1609-1610`, `:2150`).
+   */
   readonly reflection: ReflectionSettings | null;
   /** The occlusion the render folds in, or null for none. */
   readonly occlusion: OcclusionSettings | null;
@@ -96,7 +100,7 @@ export class SceneScreenSpaceEffects {
     this.renders.push({
       target,
       world,
-      reflection: world && !drawsTransparentBackground(target!) ? reflection : null,
+      reflection: world && drawsDepthPrepass && !drawsTransparentBackground(target!) ? reflection : null,
       occlusion: foldedOcclusion,
       drawsOcclusion: !!foldedOcclusion && drawsDepthPrepass,
       hasRun: false,
