@@ -46,12 +46,13 @@ import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_LOWER_COLOR } from '../../../../godot/scene/theme';
 import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
+import { ItemListIconMode } from '../../../../godot/scene/gui';
 
 // --- Enum literals ------------------------------------------------------
 
 /** `ItemList::IconMode` (`item_list.h:43-44`). */
-const ICON_MODE_TOP = 0;
-export const ICON_MODE_LEFT = 1;
+const { ICON_MODE_TOP, ICON_MODE_LEFT } = ItemListIconMode;
+export { ICON_MODE_LEFT };
 
 // --- Theme font ----------------------------------------------------------
 

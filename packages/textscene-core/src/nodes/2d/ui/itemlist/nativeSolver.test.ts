@@ -32,13 +32,11 @@ import {
   packItemListRows,
   shapeItemListText,
 } from './nativeSolver';
+import { ItemListIconMode } from '../../../../godot/scene/gui';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 
 const itemListMinimumSize = controlSolverRegistry.minimumSize('ItemList')!;
-
-/** `ItemList::ICON_MODE_TOP` (`item_list.h:43`). */
-const ICON_MODE_TOP = 0;
 
 function node(props: Partial<ItemListProperties> = {}): SolveNode {
   return {
@@ -63,7 +61,7 @@ function topTextItem(textHeight: number) {
     iconSize: { x: 0, y: 0 },
     hasText: true,
     textSize: { x: 10, y: textHeight },
-    iconMode: ICON_MODE_TOP,
+    iconMode: ItemListIconMode.ICON_MODE_TOP,
     maxTextLines: 1,
     fixedColumnWidth: 0,
   };
@@ -93,7 +91,8 @@ describe('shapeItemListText — wrapping (item_list.cpp:37-55)', () => {
 
   it('wraps only TOP icon mode with max_text_lines > 0 (happy path)', () => {
     expect(
-      shapeItemListText({ ...wrapInput, iconMode: ICON_MODE_TOP, maxTextLines: 2 })!.lines.length
+      shapeItemListText({ ...wrapInput, iconMode: ItemListIconMode.ICON_MODE_TOP, maxTextLines: 2 })!.lines
+        .length
     ).toBeGreaterThan(1);
   });
 
@@ -104,9 +103,9 @@ describe('shapeItemListText — wrapping (item_list.cpp:37-55)', () => {
   });
 
   it('never wraps TOP icon mode with max_text_lines <= 0 (edge case)', () => {
-    expect(shapeItemListText({ ...wrapInput, iconMode: ICON_MODE_TOP, maxTextLines: 0 })!.lines).toHaveLength(
-      1
-    );
+    expect(
+      shapeItemListText({ ...wrapInput, iconMode: ItemListIconMode.ICON_MODE_TOP, maxTextLines: 0 })!.lines
+    ).toHaveLength(1);
   });
 });
 
@@ -396,7 +395,7 @@ describe('shapeItemListText — against TextParagraph (text_paragraph.cpp:225-26
       text,
       fontSizePx: 16,
       fontMetrics: OPEN_SANS_FONT_METRICS,
-      iconMode: top ? ICON_MODE_TOP : ICON_MODE_LEFT,
+      iconMode: top ? ItemListIconMode.ICON_MODE_TOP : ICON_MODE_LEFT,
       maxTextLines: max,
       widthPx: width,
       overrunBehavior: overrun,
@@ -476,7 +475,7 @@ describe('itemMinimumSize', () => {
         iconSize: { x: 16, y: 16 },
         hasText: true,
         textSize: { x: 40, y: 20 },
-        iconMode: ICON_MODE_TOP,
+        iconMode: ItemListIconMode.ICON_MODE_TOP,
         maxTextLines: 2,
         fixedColumnWidth: 0,
       },
@@ -621,7 +620,14 @@ describe('packItemListRows', () => {
 
 describe('itemTextDrawOffset', () => {
   it('TOP mode centres the pen at half separation past the icon offset (happy path)', () => {
-    const offset = itemTextDrawOffset(ICON_MODE_TOP, { x: 0, y: 20 }, { x: 100, y: 50 }, 10, 4, 6);
+    const offset = itemTextDrawOffset(
+      ItemListIconMode.ICON_MODE_TOP,
+      { x: 0, y: 20 },
+      { x: 100, y: 50 },
+      10,
+      4,
+      6
+    );
     expect(offset).toEqual({ x: 2, y: 23 });
   });
 
@@ -655,7 +661,7 @@ describe('itemListGuideLines', () => {
   });
 
   it('never draws in TOP icon mode, even with separators (error path)', () => {
-    expect(itemListGuideLines(ICON_MODE_TOP, [24, 48], 100)).toEqual([]);
+    expect(itemListGuideLines(ItemListIconMode.ICON_MODE_TOP, [24, 48], 100)).toEqual([]);
   });
 
   it('no separators means no lines (edge case)', () => {
@@ -762,8 +768,8 @@ describe('itemListLineTextWidthPx / itemListWrappedTextWidthPx', () => {
 });
 
 /**
- * `TextParagraph::draw`'s per-line shift (`text_paragraph.cpp:888-921`): CENTER for a wrapped label,
- * RIGHT for an RTL single line, LEFT (no shift) otherwise, each only while the box has a width.
+ * `max_column_width` is the widest minimum width before `h_separation` joins it (`item_list.cpp:1786-1790`),
+ * and `same_column_width` adds the separation once (`:1826`).
  */
 describe('itemListMaxColumnWidth', () => {
   it('is the widest item width less the separation each width already carries', () => {

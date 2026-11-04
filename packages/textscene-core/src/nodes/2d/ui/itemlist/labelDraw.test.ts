@@ -13,6 +13,10 @@ function itemListLineShiftPx(
   return itemListDrawnLabel(layout, boxWidthPx, wrapped, rtl)[0]!.shiftPx;
 }
 
+/**
+ * `TextParagraph::draw`'s per-line shift (`text_paragraph.cpp:888-921`): CENTER for a wrapped label,
+ * RIGHT for an RTL single line, LEFT (no shift) otherwise, each only while the box has a width.
+ */
 describe('itemListLineShiftPx', () => {
   it('centres a wrapped line, flooring the half (CENTER)', () => {
     expect(itemListLineShiftPx(20, 50, true, false)).toBe(15);
@@ -38,8 +42,3 @@ describe('itemListLineShiftPx', () => {
     expect(itemListLineShiftPx(30, -4, true, false)).toBe(0);
   });
 });
-
-/**
- * `max_column_width` is the widest minimum width before `h_separation` joins it (`item_list.cpp:1786-1790`),
- * and `same_column_width` adds the separation once (`:1826`).
- */

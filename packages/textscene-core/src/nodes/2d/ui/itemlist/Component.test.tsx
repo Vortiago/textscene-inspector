@@ -19,10 +19,9 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { ItemList } from './Component';
+import { ItemListIconMode } from '../../../../godot/scene/gui';
 import { ICON_MODE_LEFT, ITEM_LIST_THEME_FONT_KEY, shapeItemListText } from './nativeSolver';
 
-/** `ItemList::ICON_MODE_TOP` (`item_list.h:43`). */
-const ICON_MODE_TOP = 0;
 import type { ItemListProperties } from './types';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
@@ -306,7 +305,7 @@ describe('<ItemList> — labels fit their draw width', () => {
   // A 64 px list holds a 56 px panel content width, so a TOP row's box is `56 - 2` px wide (`:1629-1632`).
   it('re-wraps a TOP label at the row width, ending the last visible line in an ellipsis', async () => {
     const renderer = await renderList(
-      { items: [{ text: 'Long word another' }], iconMode: ICON_MODE_TOP, maxTextLines: 2 },
+      { items: [{ text: 'Long word another' }], iconMode: ItemListIconMode.ICON_MODE_TOP, maxTextLines: 2 },
       { x: 0, y: 0, w: 64, h: 100 }
     );
     expect(findTextMeshes(renderer.scene)).toHaveLength(2);
@@ -316,7 +315,7 @@ describe('<ItemList> — labels fit their draw width', () => {
     const renderer = await renderList(
       {
         items: [{ text: 'Supercalifragilistic' }],
-        iconMode: ICON_MODE_TOP,
+        iconMode: ItemListIconMode.ICON_MODE_TOP,
         maxTextLines: 2,
         fixedColumnWidth: 56,
       },
