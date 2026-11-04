@@ -19,8 +19,8 @@ import {
   isTabChar,
   isWhitespace,
   shapedTextSizeWidthPx,
-  type GlyphPlacement,
   startsParagraph,
+  type GlyphPlacement,
   type TextLineLayout,
 } from './textLayout';
 import { JustificationFlag } from '../../../../godot/text/textServerEnums';
