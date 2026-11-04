@@ -17,7 +17,7 @@ import {
   installInstanceLayers,
 } from '../instanceLayers/instanceLayersChunk.js';
 import { installSceneRows, SCENE_ROWS_CHUNK } from '../sceneRows/sceneRowsChunk.js';
-import { atlasSlot, REFLECTION_PROBE_UNIFORMS, shownProbes } from './probeSlots.js';
+import { atlasSlot, NO_RENDER_EXPOSURE, REFLECTION_PROBE_UNIFORMS, shownProbes } from './probeSlots.js';
 
 type ProbeChunk = 'lights_physical_pars_fragment' | 'lights_fragment_end';
 
@@ -26,7 +26,8 @@ const { atlas, probes } = REFLECTION_PROBE_UNIFORMS;
 /**
  * The probe functions, all in world space: Godot's are in view space through a matrix that folds in
  * the camera (`light_storage.cpp:1824-1825`), which gives the same local space. `probes` holds the
- * count, the atlas's border size and its last layer, past which a read would leave Godot's layers.
+ * count, the atlas's border size, its last layer, past which a read would leave Godot's layers, and
+ * the exposure of the render.
  */
 const REFLECTION_PROBE_GLSL = /* glsl */ `
 uniform highp sampler2DArray ${atlas};
@@ -45,6 +46,11 @@ float godotProbeAxisBlend( float position, float extent, float blendDistance ) {
 
 float godotBoxExit( float position, float direction, float extent ) {
 	return direction > 0.0 ? ( extent - position ) / direction : ( - extent - position ) / direction;
+}
+
+float godotProbeExposureNormalization( int index ) {
+	float exposure = ${probes}[ 0 ].w;
+	return exposure == ${glslFloat(NO_RENDER_EXPOSURE)} ? 1.0 : exposure / godotProbeTexel( index, 7 ).x;
 }
 
 vec3 godotProbeAtlasRead( vec3 direction, float layer, float lod ) {
@@ -74,7 +80,7 @@ void godotReflectionProbe( int index, vec4 flags, vec3 position, vec3 reflectVec
 			float exit = min( min( godotBoxExit( localPosition.x, direction.x, extents.x ), godotBoxExit( localPosition.y, direction.y, extents.y ) ), godotBoxExit( localPosition.z, direction.z, extents.z ) );
 			localReflect = localPosition + direction * exit - offset.xyz;
 		}
-		float exposureNormalization = godotProbeTexel( index, 7 ).x;
+		float exposureNormalization = godotProbeExposureNormalization( index );
 		float weight = max( 0.0, blend - reflection.a );
 		vec3 colour = godotProbeAtlasRead( localReflect, flags.w, sqrt( roughness ) * ${glslFloat(MAX_ROUGHNESS_LOD)} ) * exposureNormalization * offset.w;
 		reflection += vec4( colour * weight, weight );
@@ -85,7 +91,7 @@ void godotReflectionProbe( int index, vec4 flags, vec3 position, vec3 reflectVec
 	if ( mode == ${ReflectionProbeAmbientMode.DISABLED} ) return;
 	vec3 colour = probeAmbient.rgb;
 	if ( mode == ${ReflectionProbeAmbientMode.ENVIRONMENT} ) {
-		float exposureNormalization = godotProbeTexel( index, 7 ).x;
+		float exposureNormalization = godotProbeExposureNormalization( index );
 		vec3 localNormal = vec3( dot( toLocalX.xyz, normal ), dot( toLocalY.xyz, normal ), dot( toLocalZ.xyz, normal ) );
 		colour = godotProbeAtlasRead( localNormal, flags.w, ${glslFloat(MAX_ROUGHNESS_LOD)} ) * exposureNormalization;
 	}

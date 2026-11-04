@@ -31,7 +31,9 @@ import {
   projectViewportSize,
   projectVolumetricFogSettings,
   projectAmbientOcclusionSettings,
+  projectPhysicsClock,
 } from './projectSettingsParser';
+import { DEFAULT_PHYSICS_CLOCK } from '../godot/scene/physicsTicks';
 import { VOLUMETRIC_FOG_DEFAULTS } from '../godot/rendering/environment/volumetricFog';
 import {
   SSAO_PROJECT_DEFAULTS,
@@ -760,5 +762,44 @@ describe('projectDefaultFontGeneratesMipmaps', () => {
 
   it('keeps the default for a malformed value (edge case)', () => {
     expect(projectDefaultFontGeneratesMipmaps({ [KEY]: 'sharp' })).toBe(false);
+  });
+});
+
+describe('projectPhysicsClock', () => {
+  const TICKS = 'physics/common/physics_ticks_per_second';
+  const JITTER = 'physics/common/physics_jitter_fix';
+
+  it('reads both settings from a project.godot', () => {
+    const settings = parseProjectSettings(
+      `[physics]\n\ncommon/physics_ticks_per_second=120\ncommon/physics_jitter_fix=0.25\n`
+    );
+
+    expect(projectPhysicsClock(settings)).toEqual({ ticksPerSecond: 120, jitterFix: 0.25 });
+  });
+
+  it("is Godot's default clock with no project or no key (main.cpp:2173,2175)", () => {
+    expect(projectPhysicsClock(null)).toBe(DEFAULT_PHYSICS_CLOCK);
+    expect(projectPhysicsClock({ 'physics/other': '1' })).toBe(DEFAULT_PHYSICS_CLOCK);
+  });
+
+  it('keeps the default rate for a rate the setter refuses (engine.cpp:47-51)', () => {
+    expect(projectPhysicsClock({ [TICKS]: '0' }).ticksPerSecond).toBe(60);
+    expect(projectPhysicsClock({ [TICKS]: '-30' }).ticksPerSecond).toBe(60);
+    expect(projectPhysicsClock({ [TICKS]: 'fast' }).ticksPerSecond).toBe(60);
+  });
+
+  it('passes a rate past the 1..1000 hint through, as the setter does not clamp it', () => {
+    expect(projectPhysicsClock({ [TICKS]: '2000' }).ticksPerSecond).toBe(2000);
+  });
+
+  it('raises a negative jitter fix to 0, as the setter does (engine.cpp:75-80)', () => {
+    expect(projectPhysicsClock({ [JITTER]: '-1' }).jitterFix).toBe(0);
+    expect(projectPhysicsClock({ [JITTER]: '3' }).jitterFix).toBe(3);
+  });
+
+  it('hands back one clock for equal values, so an edit to another setting keeps every cache keyed on it', () => {
+    expect(projectPhysicsClock({ [TICKS]: '30' })).toBe(
+      projectPhysicsClock({ [TICKS]: '30', 'other/key': '1' })
+    );
   });
 });

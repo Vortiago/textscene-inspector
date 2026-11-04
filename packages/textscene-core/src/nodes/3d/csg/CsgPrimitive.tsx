@@ -22,6 +22,7 @@ import { hasFaces } from '../../../r3f/csg/csgRegistration';
 import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
 import { resolveMaterialSource } from '../../../r3f/materials/materialSource';
 import { useCsgGeometryContext } from '../../../r3f/csg/useCsgGeometryContext';
+import { FramePoint } from '../../../r3f/components/NodeAabb';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { livePlacement } from '../../../r3f/visibilityRange/placements';
 import { useLivePatchesBelow } from '../../../r3f/liveNodePatches';
@@ -29,16 +30,23 @@ import type { CSGShape3DProperties } from './types';
 
 const NO_PATHS: ReadonlySet<string> = new Set();
 
-/**
- * Marks the invisible bounds proxy, which `frameSceneBounds` counts: Godot's AABB for a visible
- * contributor is its unevaluated brush (`modules/csg/csg_shape.cpp:470,507`). A node with no brush,
- * an open one, an invisible one the recursion never reached or one with no shape, gets a zero-size
- * proxy, the point Godot has for it. A combiner root frames on it while the library loads.
- */
+/** Marks the invisible mesh that stands for a brush's box. */
 const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
-/** The point an empty brush bounds to: a skipped node's, an open one's or a shape that builds nothing. */
-const EMPTY_BRUSH = <boxGeometry args={[0, 0, 0]} />;
+/**
+ * What `frameSceneBounds` counts for a node that draws no solid: Godot's AABB for a visible
+ * contributor is its unevaluated brush (`modules/csg/csg_shape.cpp:470,507`), and a node with no
+ * brush, an open one, an invisible one the recursion never reached or one with no shape has the
+ * empty box, a point. A combiner root frames on it while the library loads.
+ */
+function BrushBounds({ geometry }: { geometry: ReactNode }) {
+  if (!geometry) return <FramePoint />;
+  return (
+    <mesh visible={false} userData={CSG_BOUNDS_PROXY}>
+      {geometry}
+    </mesh>
+  );
+}
 
 interface CsgPrimitiveProps {
   node: TscnNode;
@@ -171,9 +179,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
     // Godot's editor, but `bounds.ts` keys on `.geometry` alone.
     return (
       <group {...transform}>
-        <mesh visible={false} userData={CSG_BOUNDS_PROXY}>
-          {geometry ?? EMPTY_BRUSH}
-        </mesh>
+        <BrushBounds geometry={geometry} />
         {scope}
       </group>
     );
@@ -220,11 +226,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   // It still publishes what it skipped: absorbing nothing is not skipping nothing.
   return (
     <group {...transform}>
-      {ownMesh || (
-        <mesh visible={false} userData={CSG_BOUNDS_PROXY}>
-          {EMPTY_BRUSH}
-        </mesh>
-      )}
+      {ownMesh || <FramePoint />}
       {scope}
     </group>
   );

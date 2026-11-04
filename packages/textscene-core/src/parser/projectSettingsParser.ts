@@ -15,6 +15,7 @@ import { dataDirectoryPath, extensionListPath } from '../godot/project/project.j
 import { isLocaleRightToLeft } from '../godot/text/textServer.js';
 import type { LayoutDirectionEnv } from '../godot/scene/control.js';
 import { DEFAULT_CLEAR_COLOR } from '../godot/rendering/rendering.js';
+import { DEFAULT_PHYSICS_CLOCK, type PhysicsClock } from '../godot/scene/physicsTicks.js';
 import { unquoteLiteral } from './utils.js';
 import { colorOr } from '../utils/colorParser.js';
 import { perObject } from '../utils/perObject.js';
@@ -482,4 +483,41 @@ export function projectDataDirectoryPath(settings: ProjectSettings | null): stri
 /** The `res://` path of the project's GDExtension list, in the data directory the project names. */
 export function projectExtensionListPath(settings: ProjectSettings | null): string {
   return extensionListPath(usesHiddenDataDirectory(settings));
+}
+
+/**
+ * Written only by {@link physicsClockOf}: one clock for each pair of values, so a project edit that
+ * leaves both settings alone keeps the clock, and every live tree keyed on it.
+ */
+const physicsClocks = new Map<string, PhysicsClock>([
+  [clockKey(DEFAULT_PHYSICS_CLOCK), DEFAULT_PHYSICS_CLOCK],
+]);
+
+function clockKey({ ticksPerSecond, jitterFix }: PhysicsClock): string {
+  return `${ticksPerSecond}/${jitterFix}`;
+}
+
+/** Read once for each settings object. */
+const physicsClockOf = perObject((settings: ProjectSettings): PhysicsClock => {
+  const rate = parseOptionalInt(settings['physics/common/physics_ticks_per_second']);
+  // The setter refuses a rate of 0 or less and keeps the default (`engine.cpp:47-51`).
+  const ticksPerSecond = rate !== undefined && rate > 0 ? rate : DEFAULT_PHYSICS_CLOCK.ticksPerSecond;
+  // The setter raises a negative fix to 0 (`engine.cpp:75-80`).
+  const jitterFix = Math.max(
+    parseOptionalFloat(settings['physics/common/physics_jitter_fix']) ?? DEFAULT_PHYSICS_CLOCK.jitterFix,
+    0
+  );
+  const clock = { ticksPerSecond, jitterFix };
+  const known = physicsClocks.get(clockKey(clock));
+  if (known) return known;
+  physicsClocks.set(clockKey(clock), clock);
+  return clock;
+});
+
+/**
+ * `physics/common/physics_ticks_per_second` and `physics_jitter_fix`, which pace the physics ticks
+ * and so the transform flushes a scene runs by a frame (`main.cpp:4801-4806`).
+ */
+export function projectPhysicsClock(settings: ProjectSettings | null): PhysicsClock {
+  return settings ? physicsClockOf(settings) : DEFAULT_PHYSICS_CLOCK;
 }

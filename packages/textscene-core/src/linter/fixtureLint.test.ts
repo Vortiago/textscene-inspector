@@ -32,6 +32,11 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason:
       'a Godot 3 file; the single advisory IS the fixture, and the errors its pre-4.0 spellings would otherwise draw are what the suppression exists to withhold',
   },
+  'unit-remote-transform-3d-cycle.tscn': {
+    rules: ['remotetransform3d-relay-cycle'],
+    reason:
+      'the ring of relays IS the fixture, held so the pose of the harness frame can be measured against Godot',
+  },
   'unit-unsupported-nodes.tscn': {
     rules: ['collisionobject3d-needs-collision-shape'],
     reason: 'exists to show unsupported types; the Area3D has no shape on purpose',

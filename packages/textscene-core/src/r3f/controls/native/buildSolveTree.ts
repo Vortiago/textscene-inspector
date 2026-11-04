@@ -17,7 +17,7 @@ import type { Node2DProperties } from '../../../nodes/base/node2d/types';
 import { perObject } from '../../../utils/perObject';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
-import type { ProjectSettings } from '../../../parser/projectSettingsParser';
+import { projectPhysicsClock, type ProjectSettings } from '../../../parser/projectSettingsParser';
 import {
   findExtResource,
   findSubResource,
@@ -448,7 +448,12 @@ function buildForest(
   const readViewportSize = recordingSizes(viewportTargetSize, viewportSizeReads);
 
   const sceneCache: CachedSceneSource = loader ? recordingReads(loader.scenes, recordRead) : NOTHING_CACHED;
-  const ctx: LiveTreeContext = { externalResources, internalResources, sceneCache };
+  const ctx: LiveTreeContext = {
+    externalResources,
+    internalResources,
+    sceneCache,
+    physicsClock: projectPhysicsClock(projectSettings),
+  };
   const tree = liveTreeOf(nodes, ctx);
   const textureCache = loader ? recordingReads(loader.textures, recordRead) : NOTHING_CACHED;
   const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;

@@ -5,18 +5,17 @@
  * still leave that point to frame on.
  */
 import { describe, expect, it } from 'vitest';
-import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../../parser/TscnParser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { EmptyShapesProvider, useIsEmptyShape } from '../../../r3f/contexts/EmptyShapesContext';
-import { frameSceneBounds } from '../../../r3f/frameSceneBounds';
 import './csgbox3d/index.r3f';
 import './csgcombiner3d/index.r3f';
 import './csgmesh3d/index.r3f';
 import './csgsphere3d/index.r3f';
 import '../../base/node3d/index.r3f';
 import { NodeTree } from '../../../r3f/testing/NodeTree';
+import { framedTarget, mountScene as render } from '../../../r3f/testing/framedTarget';
 import { drawnMeshes } from '../testing/reactThreeTestInstance';
 
 const LONE_ROOT_SCENE = `[gd_scene format=3]
@@ -98,16 +97,6 @@ mesh = SubResource("Quad")
 const OPEN_LONE_ROOT_SCENE = sceneWithOpenMesh('Node3D', '0, 4, 0');
 const OPEN_CONTRIBUTOR_SCENE = sceneWithOpenMesh('CSGCombiner3D', '8, 0, 0');
 
-async function render(source: string) {
-  const scene = new TscnParser().parse(source);
-  const root = scene.nodes[0]!;
-  return ReactThreeTestRenderer.create(
-    <SceneResourcesProvider internalResources={scene.internalResources}>
-      <NodeTree node={root} path={root.name} />
-    </SceneResourcesProvider>
-  );
-}
-
 /** Whether the inspector would show Godot's empty-shape warning, for each path asked. */
 async function emptyShapes(source: string, paths: string[]): Promise<Record<string, boolean>> {
   const seen: Record<string, boolean> = {};
@@ -128,13 +117,6 @@ async function emptyShapes(source: string, paths: string[]): Promise<Record<stri
     </EmptyShapesProvider>
   );
   return seen;
-}
-
-async function framedTarget(source: string): Promise<THREE.Vector3> {
-  const renderer = await render(source);
-  const controls = { target: new THREE.Vector3(), update: () => {} };
-  frameSceneBounds(renderer.scene.instance, new THREE.PerspectiveCamera(70, 1, 0.1, 4000), controls);
-  return controls.target;
 }
 
 describe('a CSG node with an empty brush', () => {

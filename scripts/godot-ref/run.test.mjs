@@ -37,6 +37,8 @@ import {
   RENDER_QUIET_FRAMES,
   RENDER_QUIET_MSEC,
   RENDER_WAIT_MAX_FRAMES,
+  NEVER_SETTLES_CAPTURE_FRAME,
+  CONVERGENCE_FRAMES,
   renderArgv,
   renderingDeviceMessage,
   renderingMethodFallbackMessage,
@@ -48,6 +50,7 @@ import {
   renderReference,
   ROOT_ONLY_VIEWPORT_PROPERTIES,
   rootOnlyDriftMessage,
+  harnessWarnings,
 } from './run.mjs';
 
 const REPO_ROOT = join(import.meta.dirname, '..', '..');
@@ -1025,12 +1028,26 @@ describe('the reference renders on a fixed clock', () => {
   });
 });
 
+describe('harnessWarnings', () => {
+  it('keeps the warnings the bootstrap prints, from all the engine writes to stderr', () => {
+    const stderr = [
+      'WARNING: All audio drivers failed, falling back to the dummy driver.',
+      'godot-ref: the picture did not settle, so it is captured as it stands',
+      '     at: initialize (servers/audio/audio_server.cpp:247)',
+    ].join('\n');
+
+    expect(harnessWarnings(stderr)).toEqual([
+      'godot-ref: the picture did not settle, so it is captured as it stands',
+    ]);
+  });
+});
+
 describe('the render wait fits inside the render pass', () => {
   it('quits after more frames than the longest fog convergence and its quiet window draw', () => {
     const argv = renderArgv('/tmp/work');
     const quitAfter = Number(argv[argv.indexOf('--quit-after') + 1]);
 
-    expect(quitAfter).toBeGreaterThan(RENDER_WAIT_MAX_FRAMES);
+    expect(quitAfter).toBeGreaterThan(NEVER_SETTLES_CAPTURE_FRAME);
   });
 
   it('cycles over the jitters the previewer averages', async () => {
@@ -1045,7 +1062,31 @@ describe('the render wait fits inside the render pass', () => {
     expect(bootstrap()).toContain(`const FOG_HISTORY_MAX_CYCLES := ${FOG_HISTORY_MAX_CYCLES}`);
     expect(bootstrap()).toContain(`const RENDER_QUIET_FRAMES := ${RENDER_QUIET_FRAMES}`);
     expect(bootstrap()).toContain(`const RENDER_QUIET_MSEC := ${RENDER_QUIET_MSEC}`);
-    expect(bootstrap()).toContain(`const RENDER_WAIT_MAX_FRAMES := ${RENDER_WAIT_MAX_FRAMES}`);
+    expect(bootstrap()).toContain(`const NEVER_SETTLES_CAPTURE_FRAME := ${NEVER_SETTLES_CAPTURE_FRAME}`);
+    expect(bootstrap()).toContain(`const CONVERGENCE_FRAMES := ${CONVERGENCE_FRAMES}`);
+  });
+
+  it('captures a scene that never settles at the frame and frame rate core replays relay cycles to', async () => {
+    const { HARNESS_CAPTURE } =
+      await import('../../packages/textscene-core/src/godot/scene/transformFlushes.ts');
+
+    expect(HARNESS_CAPTURE).toEqual({ frame: NEVER_SETTLES_CAPTURE_FRAME, fixedFps: REFERENCE_FIXED_FPS });
+  });
+
+  it('ends the wait at that process frame, so frames spent before it do not move the capture', () => {
+    // Process frames count from 0, so the last wait frame is one less than the frames drawn.
+    expect(NEVER_SETTLES_CAPTURE_FRAME).toBe(CONVERGENCE_FRAMES + RENDER_WAIT_MAX_FRAMES - 1);
+    const wait = bootstrap().split('func _await_rendered')[1].split('\nfunc ')[0];
+    expect(wait).toMatch(/while Engine\.get_process_frames\(\) < NEVER_SETTLES_CAPTURE_FRAME:/);
+  });
+
+  it('holds the quiet window only while every global transform holds still', () => {
+    // A paused tree still runs transform notifications, so a relay cycle moves its nodes on every
+    // frame, after the picture has lost them.
+    const wait = bootstrap().split('func _await_rendered')[1].split('\nfunc ')[0];
+
+    expect(wait).toMatch(/var now_transforms := _global_transforms\(movers\)/);
+    expect(wait).toMatch(/if repeats and now_pending == pending and now_transforms == transforms:/);
   });
 });
 

@@ -13,18 +13,12 @@ import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/n
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
+import { FramePoint } from '../../../r3f/components/NodeAabb';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
 
 // This file imports nothing from the shaping engine, so the engine stays out of the
 // static closure `r3f/nodes/index.ts` pulls eagerly.
 const LabelGlyphs = lazy(() => import('./LabelGlyphs'));
-
-/**
- * Marks the invisible bounds proxy, like `CsgPrimitive.tsx`'s `CSG_BOUNDS_PROXY`.
- * `frameSceneBounds.ts` unions mesh AABBs, and the lazy glyphs can land after
- * `CameraFit`'s last retry, so without a synchronous stand-in the fit ignores the label.
- */
-const LABEL3D_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
 export function Label3D({ node, children }: NodeComponentProps) {
   const { showLabels } = useViewportMode();
@@ -65,13 +59,11 @@ export function Label3D({ node, children }: NodeComponentProps) {
             <LabelGlyphs nodeRef={groupRef} properties={properties} />
           </PendingSuspense>
         </group>
-        {/* A point, not a text-sized box: Godot's `_place_camera` runs before Label3D
-            shapes text. Its `_scene_bounds()` measured size [3.0, 4.0, 3.0] then and
-            [4.938, 7.445, 4.938] after `_settle()` (the `label_3d.cpp:625-638` cube),
-            and only the first camera reproduces `--frame`. Rotation cannot move a point. */}
-        <mesh visible={false} userData={LABEL3D_BOUNDS_PROXY}>
-          <boxGeometry args={[0, 0, 0]} />
-        </mesh>
+        {/* A point, not a text-sized box: Godot's `_place_camera` runs before Label3D shapes text,
+            when its `_scene_bounds()` holds the label's position alone. `frameSceneBounds.ts` unions
+            drawn geometry, and the lazy glyphs can land after `CameraFit`'s last retry. Rotation
+            cannot move a point. */}
+        <FramePoint />
       </group>
       {/* Descendants sit in a sibling group with the same transform: `billboard`
           rewrites the label group's world matrix every frame, and in Godot it is a

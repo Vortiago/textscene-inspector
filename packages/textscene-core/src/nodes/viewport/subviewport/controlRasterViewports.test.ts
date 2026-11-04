@@ -13,8 +13,7 @@ import { repoRoot } from '../../../parser/testing/parserKit';
 import { collectControlRasterViewports, inheritedRtlAt } from './controlRasterViewports';
 import type { CachedSceneSource } from '../../../r3f/liveSceneTree';
 import '../../../r3f/nodes/index';
-import { NOTHING_CACHED } from '../../../r3f/cacheSources';
-import { sceneCacheOver } from '../../../r3f/liveSceneTree.testkit';
+import { contextOver, sourcesOver, sceneCacheOver } from '../../../r3f/liveSceneTree.testkit';
 import { liveTreeOf } from '../../../r3f/liveSceneTree';
 import { LTR_LAYOUT_ENV } from '../../../godot/scene/control';
 
@@ -23,8 +22,8 @@ function parse(source: string): TscnScene {
 }
 
 /** `collectControlRasterViewports` over a whole parsed scene, root scope. */
-function collect(scene: TscnScene, sceneCache: CachedSceneSource = NOTHING_CACHED) {
-  return collectControlRasterViewports(scene.nodes, sceneCache, {
+function collect(scene: TscnScene, sceneCache?: CachedSceneSource) {
+  return collectControlRasterViewports(scene.nodes, sourcesOver(sceneCache), {
     internalResources: scene.internalResources,
     externalResources: scene.externalResources,
   });
@@ -145,7 +144,7 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
 `);
     const found = collectControlRasterViewports(
       host.nodes,
-      sceneCacheOver({ 'res://refused.tscn': refused }),
+      sourcesOver(sceneCacheOver({ 'res://refused.tscn': refused })),
       {
         internalResources: host.internalResources,
         externalResources: host.externalResources,
@@ -170,7 +169,7 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
 
 [node name="Panel" type="Panel" parent="Pending/Own"]
 `);
-    const found = collect(host, NOTHING_CACHED);
+    const found = collect(host);
     expect(found.map((v) => v.path)).toEqual(['World/Pending/Own']);
     expect(found[0]!.externalResources).toBe(host.externalResources);
   });
@@ -196,7 +195,7 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
 
   it('returns nothing for an empty tree rather than throwing', () => {
     expect(
-      collectControlRasterViewports([], NOTHING_CACHED, {
+      collectControlRasterViewports([], sourcesOver(), {
         internalResources: [],
         externalResources: [],
       })
@@ -318,11 +317,7 @@ layout_direction = 3
 
 describe('inheritedRtlAt — a sub-viewport that also holds 2D content', () => {
   function rtlAt(scene: TscnScene, path: string): boolean | null {
-    const tree = liveTreeOf(scene.nodes, {
-      internalResources: scene.internalResources,
-      externalResources: scene.externalResources,
-      sceneCache: NOTHING_CACHED,
-    });
+    const tree = liveTreeOf(scene.nodes, contextOver(scene, {}));
     return inheritedRtlAt(tree, path, LTR_LAYOUT_ENV);
   }
 
