@@ -2,25 +2,27 @@
  * A suspended subtree counts as one pending load, so a reader that waits for the loader to settle
  * waits for a lazy chunk too.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { lazy, type ComponentType } from 'react';
 import { ResourceLoader } from './ResourceLoader';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
 import { PendingSuspense } from './PendingSuspense';
 
-/** A lazy component and the resolver that lands its chunk. */
+/**
+ * A lazy component and the resolver that lands its chunk. The chunk lands when the test finishes at
+ * the latest, since the test setup waits for every lazy import before the file ends.
+ */
 function deferredChunk(): { Chunk: ComponentType; land: () => Promise<void> } {
   let resolve: (module: { default: ComponentType }) => void = () => {};
   const loaded = new Promise<{ default: ComponentType }>((r) => (resolve = r));
   const Chunk = lazy(() => loaded);
-  return {
-    Chunk,
-    land: async () => {
-      resolve({ default: () => <span data-testid="landed" /> });
-      await loaded;
-    },
+  const land = async () => {
+    resolve({ default: () => <span data-testid="landed" /> });
+    await loaded;
   };
+  onTestFinished(() => act(land));
+  return { Chunk, land };
 }
 
 function mount(loader: ResourceLoader, Chunk: ComponentType) {
