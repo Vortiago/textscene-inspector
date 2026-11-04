@@ -47,7 +47,7 @@ const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_
 
 /**
  * Label's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:381`),
- * which {@link labelFontMetrics} falls back to.
+ * which {@link labelFontState} falls back to.
  */
 export const LABEL_THEME_FONT_KEY = 'font';
 
@@ -113,7 +113,7 @@ export function labelFontState(n: ShareNode): LabelFontState {
  * A valid `label_settings` replaces the theme, never merges with it, for `font_size`
  * (label.cpp:186,759), `font_color` (`:761`) and `line_spacing` (`:346`), even where a field keeps
  * its class default. `get_line_spacing()` is a `real_t` stored in an `int`, so it truncates toward
- * zero. `font` (`:185`) is {@link labelFontMetrics}.
+ * zero. `font` (`:185`) is {@link labelFontState}.
  */
 export function labelEffectiveTextTheme(
   themeResolved: ResolvedTextTheme,
