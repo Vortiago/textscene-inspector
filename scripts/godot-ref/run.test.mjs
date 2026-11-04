@@ -285,6 +285,16 @@ describe('projectConfig', () => {
     expect(ini).toMatch(/anti_aliasing\/quality\/msaa_3d=2/);
   });
 
+  it('imports on one thread, because the parallel font import deadlocks', () => {
+    const ini = projectConfig(null, { width: 640, height: 480 });
+    expect(ini).toMatch(/\[editor\]\s+import\/use_multiple_threads=false/);
+  });
+
+  it('overrides a source project that turns threaded import on', () => {
+    const ini = projectConfig('[editor]\nimport/use_multiple_threads=true', { width: 640, height: 480 });
+    expect(ini).not.toMatch(/use_multiple_threads=true/);
+  });
+
   it('pins the viewport size so a reference render is reproducible', () => {
     const ini = projectConfig(null, { width: 640, height: 480 });
     expect(ini).toMatch(/window\/size\/viewport_width=640/);

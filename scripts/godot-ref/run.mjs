@@ -541,6 +541,8 @@ export function projectConfig(sourceIni, { width, height, pinWindowToViewport = 
     // `frame_post_draw` await and ends "produced no image (exit 0)" with an empty stderr. Godot
     // recommends it for UI projects, which a Control scene often comes from.
     /^run\/low_processor_mode\s*=/,
+    // Set below, so a source project cannot turn threaded import back on.
+    /^import\/use_multiple_threads\s*=/,
   ];
 
   // A window override or a fullscreen `window/size/mode` makes the stretch transform scale the
@@ -572,6 +574,12 @@ export function projectConfig(sourceIni, { width, height, pinWindowToViewport = 
     '[display]',
     `window/size/viewport_width=${width}`,
     `window/size/viewport_height=${height}`,
+    '',
+    // Godot 4.6.3 imports fonts on worker threads, and about one whole-tree import in five
+    // deadlocks there with a 0-byte `.fontdata` temporary and every thread in a futex wait.
+    // Measured on `scenes/fixtures`: 5 hangs in 15 threaded imports, 0 in 20 single-thread ones.
+    '[editor]',
+    'import/use_multiple_threads=false',
     '',
     kept,
     '',

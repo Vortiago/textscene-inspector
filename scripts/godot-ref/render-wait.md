@@ -64,3 +64,8 @@ draw the scene without the assets the import did not reach, and save that pictur
 The harness retries once in a clean copy of the project, then throws, and `pnpm ref:diff` lists the
 scene as unmeasured. A non-zero exit that is not a timeout stays non-fatal, because a project with
 nothing to import is an ordinary case.
+
+Godot 4.6.3 imports fonts on worker threads, and about one whole-tree import in five deadlocks
+there: a 0-byte `.fontdata` temporary stays behind and every thread waits on a futex. The generated
+`project.godot` sets `editor/import/use_multiple_threads=false`, which measured 0 hangs in 20
+imports of `scenes/fixtures`, against 5 hangs in 15 with threads. A good import takes 6 to 10 s.
