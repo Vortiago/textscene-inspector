@@ -13,7 +13,7 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
@@ -74,6 +74,7 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const hasText = text.length > 0;
   const { fontSizePx, color: baseFontColor } = checkButtonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   // Read inside the render body, not the `useMemo` below: Label's Component.tsx
   // gives the reason.
@@ -116,10 +117,11 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
       </CanvasItemGroup>
       {content.textOffset && layout && (
         <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
-          <TextRun
+          <OutlinedTextRun
             layout={layout}
             fontSizePx={fontSizePx}
             tint={tintedFontColor}
+            outline={textOutline}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />

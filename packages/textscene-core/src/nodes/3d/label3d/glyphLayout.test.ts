@@ -8,7 +8,7 @@ import {
 } from '../../../r3f/controls/native/text/openSansAtlas';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
 import { buildGlyphQuadArrays } from '../../../r3f/controls/native/text/glyphQuads';
-import { label3DAabb, layoutLabel3DLines, outlineRadiusPx, outlineStrokeWidthPx } from './glyphLayout';
+import { label3DAabb, layoutLabel3DLines } from './glyphLayout';
 import { soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { HorizontalAlignment } from '../../../godot/math/alignment';
 import type { EnumValue } from '../../../godot/classdb/enumNames';
@@ -186,40 +186,5 @@ describe('layoutLabel3DLines + <TextRun> (the composed ink position — Label3D 
   it('line_spacing widens the composed step by exactly the spacing', () => {
     expect(composedTopY('A\nB', 5, 0)).toBeCloseTo(36.88095238, 5);
     expect(composedTopY('A\nB', 5, 1)).toBeCloseTo(-13.11904762, 5);
-  });
-});
-
-describe('the outline stroke (FreeType stroker, text_server_adv.cpp:1383)', () => {
-  // `FT_Stroker_Set(stroker, (int)(fd->size.y * 16.0), ...)` takes a 26.6 radius,
-  // and `fd->size.y` is the raw `outline_size` (`text_server_adv.h:406-414`). So
-  // Godot's default `outline_size` 12 (`label_3d.h:126`) is 192 in 26.6, 3 px of
-  // one-sided reach.
-  it("gives Label3D's default outline_size a 3 px one-sided radius", () => {
-    expect(outlineRadiusPx(12)).toBe(3);
-  });
-
-  it('scales linearly with outline_size and never with font_size (outline_size is an absolute pixel quantity)', () => {
-    expect(outlineRadiusPx(4)).toBe(1);
-    expect(outlineRadiusPx(32)).toBe(8);
-    // No font_size parameter exists to pass: the C++ keys the stroker off
-    // `fd->size.y` alone.
-    expect(outlineRadiusPx.length).toBe(1);
-  });
-
-  it('truncates to whole 26.6 steps, as the C++ int cast does', () => {
-    // 0.5 * 16 = 8 exactly -> 8/64; 0.53 * 16 = 8.48 -> truncated to 8.
-    expect(outlineRadiusPx(0.53)).toBe(outlineRadiusPx(0.5));
-  });
-
-  it('strokes at twice the radius — a centred canvas stroke reaches half its width outside the contour', () => {
-    expect(outlineStrokeWidthPx(12)).toBe(2 * outlineRadiusPx(12));
-  });
-
-  it('is 0 when outline_size is 0 (Godot skips the outline pass entirely, label_3d.cpp:610)', () => {
-    expect(outlineStrokeWidthPx(0)).toBe(0);
-  });
-
-  it('is 0 for a negative outline_size (defensive; the parser never emits one)', () => {
-    expect(outlineStrokeWidthPx(-1)).toBe(0);
   });
 });

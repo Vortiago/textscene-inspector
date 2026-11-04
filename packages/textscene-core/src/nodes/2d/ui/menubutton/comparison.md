@@ -47,6 +47,11 @@ MenuButton's default theme registers `font_disabled_color` as `Color(1, 1, 1, 0.
 Button's `control_font_disabled_color` (`Color(0.875, 0.875, 0.875, 0.5)`). It is the one
 default this slice does not inherit from Button.
 
+MenuButton draws the theme text outline, `font_outline_color` and `outline_size`, as Godot
+does (`button.cpp:458-462`). A ring of `outline_size / 4` px sits under the fill. No ring
+draws at an `outline_size` of 0 or a zero alpha. The ring strokes on the canvas painter for the
+bundled font too (ADR-0040).
+
 ## Known limitations
 
 - **Approximated** Under `layout_direction = 3` or `text_direction = 2`, the label's glyphs

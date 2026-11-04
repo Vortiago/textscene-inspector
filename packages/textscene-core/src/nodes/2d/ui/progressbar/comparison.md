@@ -41,6 +41,9 @@ The lenient parser reads `fill_mode`, `show_percentage`, `indeterminate` and
 outside 0-3 draws as `FILL_BEGIN_TO_END`: `set_fill_mode`'s `ERR_FAIL_INDEX` refuses
 the out-of-range write, so the node keeps its class-default mode.
 
+The percentage's outline is a ring of `outline_size / 4` px under the fill. It strokes on the
+canvas painter for the bundled font too (ADR-0040), as it does in the Button family.
+
 ## Known limitations
 
 - **Approximated** `indeterminate` never animates, so the previewer always draws Godot's

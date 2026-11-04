@@ -15,7 +15,7 @@ import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import {
   clampAutowrapMode,
   shapedTextSizeWidthPx,
@@ -55,6 +55,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   const hasText = text.length > 0;
   const { fontSizePx, color: baseFontColor } = buttonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, BUTTON_THEME_FONT_KEY);
   // Pass 1, unwrapped: what the icon's own reservation is measured against. It is the
@@ -181,6 +182,12 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
     fontSizePx,
   ]);
 
+  // One layout object per row, so a row's runs keep their meshes across renders.
+  const lineLayouts = useMemo(
+    () => trimmedLayout?.lines.map((line) => soloLineLayout(line, trimmedLayout)) ?? [],
+    [trimmedLayout]
+  );
+
   return (
     <>
       {!props.flat && (
@@ -218,10 +225,11 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
               0,
             ]}
           >
-            <TextRun
-              layout={soloLineLayout(line, trimmedLayout)}
+            <OutlinedTextRun
+              layout={lineLayouts[i]!}
               fontSizePx={fontSizePx}
               tint={tintedFontColor}
+              outline={textOutline}
               clippingPlanes={clippingPlanes}
               renderOrder={renderOrder}
             />
