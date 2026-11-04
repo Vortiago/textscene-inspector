@@ -283,6 +283,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Canvas Item Sub Mul Alpha",
+    "file": "unit-canvas-item-sub-mul-alpha.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Canvas Light Render Budget",
     "file": "unit-canvas-light-render-budget.tscn",
     "category": "Other"
@@ -2310,6 +2315,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Subviewport Edge On Pixel Centre",
     "file": "unit-subviewport-edge-on-pixel-centre.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Subviewport Opaque Alpha",
+    "file": "unit-subviewport-opaque-alpha.tscn",
     "category": "Other"
   },
   {

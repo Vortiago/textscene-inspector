@@ -554,8 +554,12 @@ export const CANVAS_2D_SCENES = [
   // rgb(102,76,51) the Masked ColorRect at its authored colour.
   { name: 'control-light-mask', file: 'unit-control-light-mask.tscn', mode: '2d' },
   // `z_as_relative = false` on a Control. Godot 4.6.3 `--mode 2d`: the amber ColorRect draws under
-  // the teal one (z 1 against 3), and its Panel parent (z 5) over both. Mean 0.805/255 against it.
+  // the teal one (z 1 against 3), and its Panel parent (z 5) over both. Mean 0.805/255 against it,
+  // all from the default clear 0.3 at the half step 76.5 (Godot 76, ours 77). Item pixels match.
   { name: 'control-z-as-relative', file: 'unit-control-z-as-relative.tscn', mode: '2d' },
+  // SUB and MUL blends that lower the canvas alpha. Godot 4.6.3 `--mode 2d`: (200,150) rgb(55,79,61)
+  // Sub, (200,450) rgb(53,45,30) Mul, both opaque. Mean 0.027/255 against it.
+  { name: 'canvas-item-sub-mul-alpha', file: 'unit-canvas-item-sub-mul-alpha.tscn', mode: '2d' },
   // A CanvasModulate tints native Controls. Godot 4.6.3 `--mode 2d`: (100,100) rgb(82,92,92).
   { name: 'control-canvas-modulate', file: 'unit-control-canvas-modulate.tscn', mode: '2d' },
   // A CanvasItemMaterial on a Control. Godot 4.6.3 `--mode 2d`: (100,100) rgb(204,102,51) unshaded,
@@ -718,6 +722,9 @@ export const CANVAS_2D_SCENES = [
   // (`pnpm ref:diff`: 1/255). A frame whose row 0 is the canvas bottom draws rows 101-196.
   { name: 'canvas-edge-on-pixel-centre', file: 'unit-canvas-edge-on-pixel-centre.tscn', mode: '2d' },
   { name: 'subviewport-edge-on-pixel-centre', file: 'unit-subviewport-edge-on-pixel-centre.tscn', mode: '2d' },
+  // SUB and MUL items in an opaque SubViewport over yellow. Godot 4.6.3 `--mode 2d`: the container
+  // shows the viewport opaque, with no yellow through it. Mean 0.000/255 against it.
+  { name: 'subviewport-opaque-alpha', file: 'unit-subviewport-opaque-alpha.tscn', mode: '2d' },
   { name: 'subviewport-control-edge-on-pixel-centre', file: 'unit-subviewport-control-edge-on-pixel-centre.tscn', mode: '2d' },
   // The one variable: a Control promoted past a non-Control ancestor, one facet
   // per scene. The walk resets the whole chain at a broken CanvasItem link, so

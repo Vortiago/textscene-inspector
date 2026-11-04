@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
 import { takeOutputLikeDrawingBuffer } from '../../../r3f/outputTarget';
+import { fillAlphaWithOne } from '../../../r3f/opaqueAlpha';
 import { markSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { pinColorSpace } from '../../../resources/textures/textureView';
 import { BLACK } from '../renderGate';
@@ -114,11 +115,18 @@ export function renderToOffscreenTarget(
     gl.setClearColor(options.clearColor, options.transparentBg ? 0 : 1);
     if (options.keepsColor) gl.autoClearColor = false;
     options.draw();
+    if (!options.transparentBg) fillOpaqueTargetAlpha(gl, options.target);
   } finally {
     gl.setRenderTarget(previousTarget);
     gl.setClearColor(PREVIOUS_CLEAR_COLOR, previousAlpha);
     gl.autoClearColor = previousAutoClearColor;
   }
+}
+
+/** `draw` may bind another target last, such as its frame, so the fill binds `target` again then. */
+function fillOpaqueTargetAlpha(gl: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget): void {
+  if (gl.getRenderTarget() !== target) gl.setRenderTarget(target);
+  fillAlphaWithOne(gl);
 }
 
 /**

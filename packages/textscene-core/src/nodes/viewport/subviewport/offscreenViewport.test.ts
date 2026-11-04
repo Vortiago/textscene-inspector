@@ -13,6 +13,7 @@ import {
   godotCanvasPosition,
   orthoFrameForCamera2D,
   orthoFrameForSize,
+  renderToOffscreenTarget,
   cameraAtPath,
   selectViewportCamera2D,
   viewportAspect,
@@ -456,27 +457,36 @@ describe('viewportMsaaMode', () => {
   });
 });
 
-describe('clearTarget', () => {
-  /** A renderer that records the clear colour and alpha in force at each clear. */
-  function recordingRenderer() {
-    const clears: { rgb: number[]; alpha: number }[] = [];
-    let alpha = 1;
-    const colour = new THREE.Color();
-    const gl = {
-      getRenderTarget: () => null,
-      getClearAlpha: () => alpha,
-      getClearColor: (into: THREE.Color) => into.copy(colour),
-      setClearColor: (next: THREE.Color, nextAlpha: number) => {
-        colour.copy(next);
-        alpha = nextAlpha;
-      },
-      setRenderTarget: () => {},
-      clear: () => clears.push({ rgb: colour.toArray(), alpha }),
-      autoClearColor: true,
-    } as unknown as THREE.WebGLRenderer;
-    return { gl, clears };
-  }
+/** A renderer that records the clear colour and alpha in force at each clear, and each raw colour mask. */
+function recordingRenderer() {
+  const clears: { rgb: number[]; alpha: number }[] = [];
+  const colorMasks: boolean[][] = [];
+  let alpha = 1;
+  const colour = new THREE.Color();
+  const context = {
+    COLOR_BUFFER_BIT: 0x4000,
+    colorMask: (...mask: boolean[]) => colorMasks.push(mask),
+    clearColor: () => {},
+    clear: () => {},
+  };
+  const gl = {
+    getRenderTarget: () => null,
+    getClearAlpha: () => alpha,
+    getClearColor: (into: THREE.Color) => into.copy(colour),
+    setClearColor: (next: THREE.Color, nextAlpha: number) => {
+      colour.copy(next);
+      alpha = nextAlpha;
+    },
+    setRenderTarget: () => {},
+    clear: () => clears.push({ rgb: colour.toArray(), alpha }),
+    getContext: () => context,
+    state: { buffers: { color: { reset: () => {} } } },
+    autoClearColor: true,
+  } as unknown as THREE.WebGLRenderer;
+  return { gl, clears, colorMasks };
+}
 
+describe('clearTarget', () => {
   it('clears an opaque target to opaque black, which a consumer samples as black', () => {
     const { gl, clears } = recordingRenderer();
     clearTarget(gl, createCanvasTarget(4, 4, 't'), false);
@@ -487,5 +497,28 @@ describe('clearTarget', () => {
     const { gl, clears } = recordingRenderer();
     clearTarget(gl, createCanvasTarget(4, 4, 't'), true);
     expect(clears).toEqual([{ rgb: [0, 0, 0], alpha: 0 }]);
+  });
+});
+
+describe('renderToOffscreenTarget', () => {
+  const ALPHA_ONLY = [false, false, false, true];
+
+  function colorMasksAfterDraw(transparentBg: boolean) {
+    const { gl, colorMasks } = recordingRenderer();
+    renderToOffscreenTarget(gl, {
+      target: createCanvasTarget(4, 4, 't'),
+      clearColor: new THREE.Color(),
+      transparentBg,
+      draw: () => {},
+    });
+    return colorMasks;
+  }
+
+  it("fills an opaque target's alpha with 1 after the draw, as Godot samples it", () => {
+    expect(colorMasksAfterDraw(false)).toContainEqual(ALPHA_ONLY);
+  });
+
+  it("keeps the alpha a transparent target's draw wrote", () => {
+    expect(colorMasksAfterDraw(true)).toEqual([]);
   });
 });
