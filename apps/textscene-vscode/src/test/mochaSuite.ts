@@ -13,7 +13,10 @@ export async function runSuite(testsRoot: string): Promise<void> {
     timeout: 20000,
   });
 
-  globSync('**/*.test.js', { cwd: testsRoot, absolute: true }).forEach((file) => mocha.addFile(file));
+  // Sorted: glob lists in no fixed order, and the suites run in the order added.
+  globSync('**/*.test.js', { cwd: testsRoot, absolute: true })
+    .sort()
+    .forEach((file) => mocha.addFile(file));
 
   return new Promise((resolve, reject) => {
     mocha.run((failures) => {
