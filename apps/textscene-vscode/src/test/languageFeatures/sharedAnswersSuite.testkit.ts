@@ -278,11 +278,7 @@ export function defineSharedAnswersSuite(projectDir: string): void {
           content: committed.getText(),
         });
         const position = cursorIn(document, answer.at);
-        const actions = await quickFixesAt(
-          document.uri,
-          new vscode.Range(position, position),
-          (fixes) => fixes.length === answer.titles.length
-        );
+        const actions = await quickFixesAt(document.uri, new vscode.Range(position, position));
 
         assert.deepStrictEqual(
           actions.map((action) => action.title),
