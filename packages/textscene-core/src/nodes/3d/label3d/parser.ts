@@ -14,10 +14,10 @@ import {
   DEFAULT_AUTOWRAP_TRIM_FLAGS,
   DEFAULT_JUSTIFICATION_FLAGS,
 } from '../../../godot/text/textServerEnums';
-import { clampAutowrapMode } from '../../../r3f/controls/native/text/textLayout';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 
 const HORIZONTAL_ALIGNMENTS = Object.values(HorizontalAlignment);
+const AUTOWRAP_MODES = Object.values(AutowrapMode);
 const VERTICAL_ALIGNMENTS = Object.values(VerticalAlignment);
 
 export function parseLabel3D(heading: ParsedHeading, properties: Record<string, string>): Label3DProperties {
@@ -62,7 +62,12 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
     ),
     uppercase: boolOr(properties.uppercase, false, 'uppercase'),
     width: floatOr(properties.width, 500, 'width'),
-    autowrap_mode: clampAutowrapMode(parseOptionalInt(properties.autowrap_mode), AutowrapMode.AUTOWRAP_OFF),
+    autowrap_mode: enumOr(
+      properties.autowrap_mode,
+      AutowrapMode.AUTOWRAP_OFF,
+      AUTOWRAP_MODES,
+      'autowrap_mode'
+    ),
     // The BitField reads 64 bits, and the setter keeps `p_flags & BREAK_TRIM_MASK` (`label_3d.cpp:920`).
     autowrap_trim_flags:
       intOr(properties.autowrap_trim_flags, DEFAULT_AUTOWRAP_TRIM_FLAGS, 'autowrap_trim_flags', 'int64') &
