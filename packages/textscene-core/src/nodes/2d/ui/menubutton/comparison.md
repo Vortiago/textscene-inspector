@@ -54,6 +54,7 @@ bundled font too (ADR-0040).
 
 ## Known limitations
 
+- **Not drawn** The outline ring of a BMFont (`.fnt`, `.font`), which has no outline glyph set here (ADR-0064).
 - **Approximated** Under `layout_direction = 3` or `text_direction = 2`, the label's glyphs
   keep left-to-right order for a right-to-left script or trailing punctuation, though
   `layout_direction = 3` swaps the label, icon and chrome.

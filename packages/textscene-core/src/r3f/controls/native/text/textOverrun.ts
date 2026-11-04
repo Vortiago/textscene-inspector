@@ -8,6 +8,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { isBitmapFontMetrics } from './bitmapFontMetrics';
 import { OPEN_SANS_ATLAS_GLYPHS } from './openSansAtlas';
 import { getFontEmboldenedAdvancePx, getFontEmboldenGrowthPx, type FontMetrics } from './fontMetrics';
 import { isWhitespace, type GlyphPlacement, type TextLineLayout } from './textLayout';
@@ -107,8 +108,9 @@ interface OverrunTrimOptions {
   fitWidthMinimumReached?: boolean;
 }
 
-/** Whether the font has a bitmap for `ch`: the baked charset for `'atlas'` metrics, always true for a `'canvas'` font. */
+/** Whether the font has a glyph for `ch`: the baked charset for `'atlas'` metrics, the glyph table for a BMFont, always true for a `'canvas'` font. */
 function hasGlyphInk(fontMetrics: FontMetrics, ch: string): boolean {
+  if (isBitmapFontMetrics(fontMetrics)) return fontMetrics.glyphOf(ch) !== undefined;
   return fontMetrics.kind !== 'atlas' || ch in OPEN_SANS_ATLAS_GLYPHS;
 }
 

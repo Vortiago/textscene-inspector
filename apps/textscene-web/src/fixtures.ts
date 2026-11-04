@@ -1198,6 +1198,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Bmfont",
+    "file": "unit-label-bmfont.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Font Variation Bundled Embolden",
     "file": "unit-label-font-variation-bundled-embolden.tscn",
     "category": "Other"

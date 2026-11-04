@@ -47,6 +47,7 @@ no substitution.
 
 ## Known limitations
 
+- **Not drawn** The outline ring of a BMFont (`.fnt`, `.font`), which has no outline glyph set here (ADR-0064).
 - **Approximated** A `theme_override_fonts/font` scene font takes its underline position
   and thickness from the vendored Open Sans metrics, because no scene font carries baked
   underline data.

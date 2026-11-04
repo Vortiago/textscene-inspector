@@ -18,12 +18,56 @@ export interface FontFileResource {
   mimeType: string | undefined;
   /** Other Fonts to try, in order: usually the one real face behind a `.tres` wrapper. */
   fallbacks: FontResource[];
+  /** The decoded BMFont of a `.fnt` or `.font` file. Absent for a font that draws from outlines. */
+  bitmap?: BitmapFont;
   /**
    * Every other declared property (`msdf_*`, `subpixel_positioning`, `cache/*`, …), raw. A raw font
    * file holds the `[params]` of its import sidecar instead, as Godot's importer sets them on the
    * FontFile: a string literal decoded, and import-only keys such as `compress` with them.
    */
   properties: Record<string, string>;
+}
+
+/**
+ * One glyph of a BMFont, in the pixels of the fixed size (`scene/resources/font.cpp:1985-2020`).
+ * `offsetY` is already measured from the baseline, upward negative: the file's `yoffset` less `base`.
+ */
+export interface BitmapGlyph {
+  /** The glyph's rectangle in its page image, px from the top left. */
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  offsetX: number;
+  offsetY: number;
+  /** A negative advance in the file is already `width + 1`. */
+  advance: number;
+  /** Index into `BitmapFont.fills`, or -1 for a glyph that draws no ink. */
+  fillIndex: number;
+}
+
+/** The glyph fill of a page image, RGBA8 with the top row first, as Godot's converter leaves it. */
+export interface BitmapFill {
+  width: number;
+  height: number;
+  data: Uint8ClampedArray | Uint8Array;
+}
+
+/** A BMFont `FontFile` (`FontFile::_load_bitmap_font`). */
+export interface BitmapFont {
+  fixedSize: number;
+  /** `common base`, px at the fixed size. */
+  ascent: number;
+  /** `common lineHeight - base`, px at the fixed size. */
+  descent: number;
+  /** By Unicode codepoint, after the OEM charset mapping. */
+  glyphs: ReadonlyMap<number, BitmapGlyph>;
+  /** By `kerningKey(first, second)`, px at the fixed size. */
+  kerning: ReadonlyMap<number, number>;
+  /** By `BitmapGlyph.fillIndex`. An index no page filled is undefined. */
+  fills: readonly (BitmapFill | undefined)[];
+  /** A `TextServer::FixedSizeScaleMode`, from the import sidecar's `scaling_mode`. */
+  scaleMode: number;
 }
 
 /**

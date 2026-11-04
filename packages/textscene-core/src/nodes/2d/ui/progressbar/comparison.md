@@ -49,6 +49,7 @@ ink to 5 px of 1477 at size 48 with `outline_size 16`.
 
 ## Known limitations
 
+- **Not drawn** The outline ring of a BMFont (`.fnt`, `.font`), which has no outline glyph set here (ADR-0064).
 - **Approximated** `indeterminate` never animates, so the previewer always draws Godot's
   static frame (the bar centred in the control), whatever `editor_preview_indeterminate`
   says.

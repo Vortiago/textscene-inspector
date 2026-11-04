@@ -20,6 +20,17 @@ export const AutowrapMode = {
 export const AUTOWRAP_MODE_NAMES = enumNamesByValue(AutowrapMode);
 
 /**
+ * `TextServer::FixedSizeScaleMode` (`servers/text/text_server.h:224-228`): how a fixed-size (bitmap)
+ * font draws at a size other than its own. The BMFont importer offers all three
+ * (`resource_importer_bmfont.cpp:67`).
+ */
+export const FixedSizeScaleMode = {
+  FIXED_SIZE_SCALE_DISABLE: 0,
+  FIXED_SIZE_SCALE_INTEGER_ONLY: 1,
+  FIXED_SIZE_SCALE_ENABLED: 2,
+} as const;
+
+/**
  * `TextServer::ContourPointTag` (`servers/text/text_server.h:194-198`): the tag in the `z` of each point
  * `font_get_glyph_contours` returns. FreeType's `FT_CURVE_TAG` of the point is the value, so a
  * conic control point is 0.

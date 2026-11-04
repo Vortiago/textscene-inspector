@@ -13,6 +13,7 @@
 import { OPEN_SANS_ATLAS_GLYPHS, type OpenSansGlyph } from './openSansAtlas';
 import { round as godotRound } from '../../../../godot/math/math';
 import { hexCodeBoxAdvanceSize } from './hexCodeBox';
+import { isBitmapFontMetrics } from './bitmapFontMetrics';
 import {
   fontUsesSubpixelPositioning,
   getFontAscentPx,
@@ -331,6 +332,11 @@ function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: 
   return getFontKerningAdjustmentPx(metrics, a, b, fontSizePx);
 }
 
+/** Whether `face` is a BMFont with no glyph for `ch`, a tab aside: Godot then draws `ch` as a hex-code box. */
+function lacksBitmapGlyph(face: FontMetrics, ch: string): boolean {
+  return isBitmapFontMetrics(face) && !isTabChar(ch) && !face.glyphOf(ch);
+}
+
 /**
  * One glyph per character, plus the zero-advance whitespace terminator Label appends
  * (`label.cpp:164`). `style` sets the size and face of each character.
@@ -363,6 +369,11 @@ function toBreakGlyphs(text: string, style: RunStyle, preserveControl = false): 
         // (`text_server_adv.cpp:6844`): zero width.
         advance = 0;
       }
+    } else if (lacksBitmapGlyph(faces[i]!, ch)) {
+      // A BMFont lacks the character and has no system fallback (`resource_importer_bmfont.cpp:79`):
+      // the shaper keeps the invalid character as a hex-code box (`text_server_adv.cpp:6835-6890`).
+      advance = hexCodeBoxAdvanceSize(sizes[i]!, cp).x;
+      controlCodepoint = cp;
     } else {
       const embolden = faces[i]!.embolden ?? 0;
       advance = glyphAdvancePx(ch, sizes[i]!, faces[i]!) + getFontExtraAdvancePx(embolden, sizes[i]!);
@@ -410,7 +421,7 @@ function roundAdvancesToWholePixels(glyphs: BreakGlyph[], text: string, style: R
     const sizePx = style.sizes[i]!;
     // `adv_rem` is local to `_shape_run` (`:7011`), so a new run starts it at zero.
     if (startsNewRun(style, i)) advanceRemainder = 0;
-    if (fontUsesSubpixelPositioning(sizePx)) continue;
+    if (fontUsesSubpixelPositioning(sizePx, style.faces[i])) continue;
     const cp = text[i]!.codePointAt(0)!;
     // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
     if (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp)) advanceRemainder = 0;

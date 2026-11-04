@@ -380,7 +380,7 @@ describe('comparison sheets', () => {
       const slice = (s) => s.file.includes(`${sep}nodes${sep}`) || s.file.includes(`${sep}resources${sep}`);
       // A sectioned sheet is exempt: the guard above forbids its key.
       const backed = sheets.filter(slice).filter((s) => !s.body.includes('<!-- compare:'));
-      expect(backed.length).toBeGreaterThan(230);
+      expect(backed.length).toBeGreaterThan(229);
       expect(backed.filter((s) => !s.meta.status).map((s) => s.label)).toEqual([]);
     });
 

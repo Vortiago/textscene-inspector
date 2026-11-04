@@ -9,7 +9,7 @@ import { fontResourceFromBytes } from '../../formats/dynamicfont/fontBytes';
 import type { LoadedSection } from '../../resourceSection';
 import { resourceFilePath } from '../../subResourcePath';
 import { decodeFont } from './decode';
-import type { FontFileResource, FontLoaderFn, FontResource } from './types';
+import type { BitmapFont, FontFileResource, FontLoaderFn, FontResource } from './types';
 
 /**
  * The `FontResource` that `section`, loaded from `path`, decodes to. A scene's own inline
@@ -35,4 +35,22 @@ export function fontResourceFromContainer(
 ): FontFileResource {
   if (typeof data === 'string') throw new Error(`${path} is text, not font bytes`);
   return fontResourceFromBytes(path, data, importParams);
+}
+
+/**
+ * A BMFont `FontFile`: no bytes, since the glyphs draw from the page fills. `importParams` are the
+ * `[params]` of its import sidecar.
+ */
+export function fontResourceFromBitmap(
+  bitmap: BitmapFont,
+  importParams: Record<string, string>
+): FontFileResource {
+  return {
+    kind: 'file',
+    bytes: undefined,
+    mimeType: undefined,
+    fallbacks: [],
+    properties: importParams,
+    bitmap,
+  };
 }

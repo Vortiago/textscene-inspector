@@ -226,6 +226,8 @@ interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
   map: THREE.Texture;
   /** Multiplies the raster's anti-aliasing alpha. The raster is opaque, so this is the only place `tint.a` applies. */
   opacity: number;
+  /** The linear colour that multiplies the map. Omitted, white: a canvas raster has its tint baked in. A BMFont page does not. */
+  color?: THREE.ColorRepresentation;
   /** `false` by default, like `createMsdfMaterial`. */
   depthTest?: boolean;
   /** Omitted, it takes `canvasItemFacing()`'s side, like `createMsdfMaterial`. */
@@ -255,6 +257,7 @@ export function createCanvasTextMaterial(
   const {
     map,
     opacity,
+    color,
     depthTest = false,
     side,
     clippingPlanes = [],
@@ -275,6 +278,7 @@ export function createCanvasTextMaterial(
   const parameters = {
     map,
     opacity,
+    ...(color !== undefined && { color }),
     depthTest,
     ...passBlendMaterialProps({
       transparent,

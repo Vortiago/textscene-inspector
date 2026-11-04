@@ -1,7 +1,7 @@
 /**
  * The font resource processor, on the shared `createResourceProcessor` loop. It routes
  * by path: a raw font container loads as bytes, and anything else reads the owning
- * file's cached parse. It addresses a **Sub-resource path** (`res://file.tres::SubId`)
+ * file's cached parse. A BMFont descriptor loads with its page images. It addresses a **Sub-resource path** (`res://file.tres::SubId`)
  * and loads other fonts: a font's `base_font`/`fallbacks`.
  */
 
@@ -13,8 +13,13 @@ import {
   type ResourceProcessor,
 } from '../createResourceProcessor';
 import type { DependencyGraph } from '../dependencyGraph';
-import { buildFontResource, fontResourceFromContainer } from '../fonts/font/loadFont';
+import { buildFontResource, fontResourceFromBitmap, fontResourceFromContainer } from '../fonts/font/loadFont';
 import { isFontContainerPath } from '../formats/dynamicfont/fontBytes';
+import { isBmfontPath } from '../formats/bmfont/extensions';
+import { loadBitmapFont } from '../formats/bmfont/loadBitmapFont';
+import type { PageImage } from '../formats/bmfont/pageFill';
+import { decodeImagePixels, getMimeType } from '../formats/image/textureProcessing';
+import { imageSourceFormat } from '../../godot/import/imageSourceFormat';
 import type { FontResource } from '../fonts/font/types';
 import type { SectionLoaderFn } from '../resourceSection';
 import { FONT_SUB_RESOURCE_TYPES } from '../fonts/font/decode';
@@ -66,6 +71,30 @@ export function createFontProcessor(
     return sidecar?.params ?? {};
   };
 
+  /** A BMFont page: its bytes, decoded to pixels, with the format Godot's image loader gives the file. Records the page as a read of `font`, so a change to it reloads the font. */
+  const readPageImage =
+    (font: string) =>
+    async (page: string): Promise<PageImage> => {
+      dependencies.record({ busType: 'font', key: font }, page);
+      const data = await readFile(page);
+      if (typeof data === 'string') throw new Error(`${page} is text, not an image`);
+      const mimeType = getMimeType(page);
+      return {
+        pixels: await decodeImagePixels(data, mimeType, eventBus.getThreeManager()),
+        source: imageSourceFormat(new Uint8Array(data), mimeType),
+      };
+    };
+
+  /** A `.fnt` or `.font` file as a BMFont `FontFile`. The descriptor is text or binary, so a provider's string is encoded back to bytes. */
+  const loadBitmap = async (path: string): Promise<FontResource> => {
+    const [data, importParams] = await Promise.all([readFile(path), importParamsOf(path)]);
+    const bytes = typeof data === 'string' ? (new TextEncoder().encode(data).buffer as ArrayBuffer) : data;
+    return fontResourceFromBitmap(
+      await loadBitmapFont(path, bytes, readPageImage(path), importParams),
+      importParams
+    );
+  };
+
   /**
    * `ResourceLoader.peerLoad` plus the cycle check, which is why it is not that
    * method. It requests through this processor, since a Font depends only on Fonts.
@@ -110,12 +139,14 @@ export function createFontProcessor(
     // address goes to the parse, which fails a `.ttf` or a `.tscn` at once. The peer
     // loader is bound to the address being built, so every wait it parks on is
     // recorded against its own requester.
-    loadDirectly: async (path) =>
-      isFontContainerPath(path)
+    loadDirectly: async (path) => {
+      if (isBmfontPath(path)) return loadBitmap(path);
+      return isFontContainerPath(path)
         ? fontResourceFromContainer(path, ...(await Promise.all([readFile(path), importParamsOf(path)])))
         : buildFontResource(path, await loadSection(path, FONT_SUB_RESOURCE_TYPES), (address) =>
             loadFont(path, address)
-          ),
+          );
+    },
   });
 
   return processor;

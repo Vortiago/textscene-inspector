@@ -146,6 +146,10 @@ _Avoid_: "config file" for a `.tscn`. A general settings store.
 The font that the **Project settings** name in `gui/theme/custom_font`. A font lookup that no theme answers ends at it, before the bundled Open Sans. A path that does not load keeps the bundled font and is a **Missing resource**.
 _Avoid_: "custom font", which a node's `theme_override_fonts` also is. "fallback font" for the bundled one.
 
+**BMFont**:
+A bitmap font a `FontFile` loads from an AngelCode `.fnt` or `.font` descriptor and the page images it names. Each glyph is a rectangle of a page, drawn at the font's fixed size and scaled to the requested size by its scale mode.
+_Avoid_: "sprite font", "pixel font".
+
 **Project fonts** (`resources/fonts/font/projectFonts.ts`):
 The two files the **Project settings** name for every font lookup: the project theme (`gui/theme/custom`) and the **Project default font**. The Control solve tree, TextMesh and Label3D each resolve them from one source.
 _Avoid_: "theme context", which Godot's `ThemeContext` also names.

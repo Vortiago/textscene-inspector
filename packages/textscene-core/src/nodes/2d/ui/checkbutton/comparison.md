@@ -39,6 +39,7 @@ bundled font too (ADR-0040).
 
 ## Known limitations
 
+- **Not drawn** The outline ring of a BMFont (`.fnt`, `.font`), which has no outline glyph set here (ADR-0064).
 - **Not drawn** Button's inherited `icon` property (distinct from the toggle glyph) is
   parsed but never drawn.
 - **Approximated** Under `layout_direction = 3` or `text_direction = 2`, the label's glyphs

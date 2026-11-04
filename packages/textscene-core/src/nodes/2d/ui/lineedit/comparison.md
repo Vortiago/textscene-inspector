@@ -81,6 +81,7 @@ clipped to the margins (`:1512-1545`).
 
 ## Known limitations
 
+- **Not drawn** The outline ring of a BMFont (`.fnt`, `.font`), which has no outline glyph set here (ADR-0064).
 - **Not drawn** The right-to-left hit region of `_is_over_clear_button`
   (line_edit.cpp:1175) and the direction-aware caret markers (:1590-1601), which need
   pointer or focus state.

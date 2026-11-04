@@ -43,6 +43,21 @@ export function resolveFontFileBytes(font: FontResource | null | undefined): Res
 }
 
 /**
+ * The first `FontFile` with a decoded BMFont that `font` reaches, by the same walk as
+ * `resolveFontFileBytes`. Null for a font that draws from outlines.
+ */
+export function resolveBitmapFont(font: FontResource | null | undefined): FontFileResource | null {
+  if (!font || font.kind === 'system') return null;
+  if (font.kind === 'variation') return resolveBitmapFont(font.baseFont);
+  if (font.bitmap) return font;
+  for (const fallback of font.fallbacks) {
+    const resolved = resolveBitmapFont(fallback);
+    if (resolved) return resolved;
+  }
+  return null;
+}
+
+/**
  * `FontVariation.variation_embolden` of `font`, 0 for any other font or a value that is not a
  * number. A variation over a variation takes its own value: `find_variation` links a new face
  * with this variation's embolden to the base's first face (`font.cpp:3128-3131`).
