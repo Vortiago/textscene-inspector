@@ -9,9 +9,9 @@ import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import { isGlyphVaried, type FontMetrics, type GlyphVariation } from './fontMetrics';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
-import { resolveFontFileBytes } from './sceneFontResolution';
+import { fontForcesAutohinter, resolveFontFileBytes } from './sceneFontResolution';
 import { createSettledPeek } from './settledChannel';
-import { openFontOutlines, type SfntOutlines } from './sfntOutlines';
+import { openAutoHintedFontOutlines, openFontOutlines, type SfntOutlines } from './sfntOutlines';
 
 /** Undefined while the load runs. Null is a font that holds no outlines this reader opens. */
 type PeekedOutlines = SfntOutlines | null | undefined;
@@ -54,7 +54,8 @@ export function peekSceneFontOutlines(font: FontResource | null | undefined): Pe
   if (!font) return peekBundledOutlines();
   const resolved = resolveFontFileBytes(font);
   if (!resolved) return endsWithoutBase(font) ? peekBundledOutlines() : null;
-  return peekOutlines(resolved.leaf, () => settledOutlines(() => openFontOutlines(resolved.bytes)));
+  const open = fontForcesAutohinter(resolved.leaf) ? openAutoHintedFontOutlines : openFontOutlines;
+  return peekOutlines(resolved.leaf, () => settledOutlines(() => open(resolved.bytes)));
 }
 
 /**

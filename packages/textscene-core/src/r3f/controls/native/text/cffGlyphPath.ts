@@ -50,15 +50,19 @@ export class GlyphPath {
   private isMovePending = true;
   private isClosing = false;
 
-  /** `hintOrigin` is the y where a `seac` accent starts, which the stems of the accent are relative to. */
+  /**
+   * `hintOrigin` is the y where a `seac` accent starts, which the stems of the accent are relative
+   * to. `isHinted` false draws y by the scale alone.
+   */
   constructor(
     private readonly pen: DevicePen,
     private readonly hints: GlyphHints,
     private readonly blues: BlueZones,
-    private readonly hintOrigin: number
+    private readonly hintOrigin: number,
+    isHinted: boolean
   ) {
-    this.initialMap = new HintMap(blues);
-    this.hintMap = new HintMap(blues, this.initialMap);
+    this.initialMap = HintMap.initial(blues, isHinted);
+    this.hintMap = HintMap.on(this.initialMap);
     this.firstHintMap = this.hintMap.clone();
   }
 
@@ -119,7 +123,7 @@ export class GlyphPath {
    * stems of one counter group keep together when hint groups later pull them apart.
    */
   lockCounterStems(counterMask: HintMask): void {
-    new HintMap(this.blues, this.initialMap).build(this.hints, counterMask, 0);
+    HintMap.on(this.initialMap).build(this.hints, counterMask, 0);
   }
 
   /** Starts a contour if a move waits. */

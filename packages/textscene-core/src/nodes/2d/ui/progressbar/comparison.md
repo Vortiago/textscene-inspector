@@ -49,5 +49,5 @@ canvas painter for the bundled font too (ADR-0040), as it does in the Button fam
 - **Approximated** `indeterminate` never animates, so the previewer always draws Godot's
   static frame (the bar centred in the control), whatever `editor_preview_indeterminate`
   says.
-- **Approximated** An emboldened glyph that Godot hints with its CFF hinter or its auto-hinter follows the unhinted contour, a fraction of a pixel off Godot's.
+- **Approximated** An emboldened glyph follows FreeType's normal hinting, not the font's light hinting that Godot rasterises with, so it is a fraction of a pixel off.
 - **Resource gap** A SystemFont has no bytes to read, so it draws the glyph as it stands, where Godot emboldens or shears it.

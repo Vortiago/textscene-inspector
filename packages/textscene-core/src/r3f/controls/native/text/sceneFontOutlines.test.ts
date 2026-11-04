@@ -5,7 +5,9 @@ import { fontWork, sceneFontSettleCount } from './settledChannel';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { peekGlyphOutlines, peekSceneFontOutlines } from './sceneFontOutlines';
-import { fixtureFontBytes, fontFile } from './sfntOutlines.testkit';
+import { charContours, fixtureFontBytes, fontFile } from './sfntOutlines.testkit';
+import autoHintedReference from './autofit/autoHinting.godot.json';
+import { referencePoints, type ReferenceGlyph } from './glyphVariation.testkit';
 
 const woffOfOpenSans = () =>
   fontFile(woffFromSfnt(fixtureFontBytes('open-sans-semibold-subset.ttf'), { compress: true }));
@@ -23,6 +25,24 @@ describe('peekSceneFontOutlines', () => {
 
     const outlines = await settledOutlines(font);
     expect(outlines?.glyphIndex(0x48)).toBe(20);
+  });
+
+  it('loads a FontFile with `force_autohinter` on through the auto-hinter, as Godot does', async () => {
+    const font = {
+      ...fontFile(fixtureFontBytes('open-sans-semibold-subset.ttf')),
+      properties: { force_autohinter: 'true' },
+    };
+    const godot = (autoHintedReference as ReferenceGlyph[]).find(
+      (glyph) =>
+        glyph.forceAutohinter &&
+        glyph.font === 'open-sans-semibold-subset.ttf' &&
+        glyph.char === 'H' &&
+        glyph.sizePx === 16
+    )!;
+
+    const outlines = (await settledOutlines(font))!;
+
+    expect(referencePoints(charContours(outlines, 'H', 16).points)).toEqual(godot.points);
   });
 
   it('counts a settled load once, so a reader that built without the outlines reads them again', async () => {

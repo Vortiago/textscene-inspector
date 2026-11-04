@@ -7,7 +7,7 @@
 import plainReference from './ftEmbolden.godot.json';
 import type { ContourTag, GlyphContours, ScaledOutline } from './glyphContours';
 import type { GlyphVariation } from './fontMetrics';
-import { openFontOutlines } from './sfntOutlines';
+import { openAutoHintedFontOutlines, openFontOutlines } from './sfntOutlines';
 import { fixtureFontBytes } from './sfntOutlines.testkit';
 
 export interface ReferenceGlyph {
@@ -17,6 +17,8 @@ export interface ReferenceGlyph {
   embolden: number;
   /** The shear of `variation_transform`. Absent is 0. */
   skew?: number;
+  /** `FontFile.force_autohinter`. Absent is off. */
+  forceAutohinter?: boolean;
   contourEnds: number[];
   isFillRight: boolean;
   /** `[x, y, tag]` as Godot's `font_get_glyph_contours` returns them. */
@@ -24,7 +26,8 @@ export interface ReferenceGlyph {
 }
 
 export const referenceGlyphTitle = (glyph: ReferenceGlyph): string =>
-  `${glyph.font} ${glyph.char} at ${glyph.sizePx} px, embolden ${glyph.embolden}, skew ${glyph.skew ?? 0}`;
+  `${glyph.font} ${glyph.char} at ${glyph.sizePx} px, embolden ${glyph.embolden}, skew ${glyph.skew ?? 0}` +
+  (glyph.forceAutohinter ? ', auto-hinter forced' : '');
 
 /** The reference of the same glyph with neither embolden nor skew: Godot's hinted outline before either runs. */
 export function plainReferenceGlyph(glyph: ReferenceGlyph): ReferenceGlyph {
@@ -44,7 +47,8 @@ export const variationOf = ({ embolden, skew }: ReferenceGlyph): GlyphVariation 
 
 /** The contours the reader gives the font of `glyph` for its character, size and variation. */
 export async function readerContours(glyph: ReferenceGlyph): Promise<GlyphContours> {
-  const outlines = (await openFontOutlines(fixtureFontBytes(glyph.font)))!;
+  const open = glyph.forceAutohinter ? openAutoHintedFontOutlines : openFontOutlines;
+  const outlines = (await open(fixtureFontBytes(glyph.font)))!;
   return outlines.glyphContours(
     outlines.glyphIndex(glyph.char.codePointAt(0)!),
     glyph.sizePx,

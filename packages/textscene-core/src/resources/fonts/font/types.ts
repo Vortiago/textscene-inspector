@@ -18,7 +18,11 @@ export interface FontFileResource {
   mimeType: string | undefined;
   /** Other Fonts to try, in order: usually the one real face behind a `.tres` wrapper. */
   fallbacks: FontResource[];
-  /** Every other declared property (`msdf_*`, `subpixel_positioning`, `cache/*`, …), raw. */
+  /**
+   * Every other declared property (`msdf_*`, `subpixel_positioning`, `cache/*`, …), raw. A raw font
+   * file holds the `[params]` of its import sidecar instead, as Godot's importer sets them on the
+   * FontFile: a string literal decoded, and import-only keys such as `compress` with them.
+   */
   properties: Record<string, string>;
 }
 

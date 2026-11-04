@@ -3490,6 +3490,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Text Mesh Autohint",
+    "file": "unit-text-mesh-autohint.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Text Mesh Cff",
     "file": "unit-text-mesh-cff.tscn",
     "category": "Unit - Primitive Meshes"

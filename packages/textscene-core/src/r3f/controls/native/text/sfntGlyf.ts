@@ -14,7 +14,7 @@
  */
 
 import { ByteReader, ReadPastEndError } from '../../../../resources/formats/binaryresource/byteReader';
-import { freeTypeTrueTypeSize, ftMulFix, pixRound } from './fontMetrics';
+import { FIXED_16_16_ONE, freeTypeTrueTypeSize, ftMulFix, pixRound } from './fontMetrics';
 import { ftVectorLength } from './ftVector';
 import {
   transformOutline,
@@ -22,6 +22,7 @@ import {
   type GlyphOutlineReader,
   type Matrix2x2,
   type ScaledOutline,
+  type UnscaledOutlines,
 } from './glyphContours';
 import {
   newGlyphZone,
@@ -532,13 +533,36 @@ export function glyphOutlineReader(sfnt: SfntFile, hinting: GlyphHinting | null)
     const { scale, ppem } = freeTypeTrueTypeSize(font.unitsPerEm, fontSizePx, font.isPpemRounded);
     const hinter = hinting ? hinting.beginLoad(ppem, scale) : null;
     if (hinter === 'failed') return null;
-    const load = new GlyphLoad(font, scale, hinter);
-    try {
-      load.load(glyphIndex, 0);
-    } catch (error) {
-      if (!(error instanceof GlyphLoadError)) throw error;
-      return null;
-    }
-    return load.x.length > 0 ? load.outline() : null;
+    const load = loadedGlyph(font, glyphIndex, scale, hinter);
+    return load && load.x.length > 0 ? load.outline() : null;
+  };
+}
+
+/** The glyph loaded at `scale`, or null when FreeType fails to load it. */
+function loadedGlyph(
+  font: GlyfFont,
+  glyphIndex: number,
+  scale: number,
+  hinter: GlyphLoadHinter | null
+): GlyphLoad | null {
+  const load = new GlyphLoad(font, scale, hinter);
+  try {
+    load.load(glyphIndex, 0);
+  } catch (error) {
+    if (!(error instanceof GlyphLoadError)) throw error;
+    return null;
+  }
+  return load;
+}
+
+/** The `glyf` outlines as the auto-hinter loads them, unhinted in design units, or null for a font without them. */
+export function unscaledGlyfOutlines(sfnt: SfntFile): UnscaledOutlines | null {
+  const font = glyfFont(sfnt);
+  if (!font) return null;
+  return {
+    unitsPerEm: font.unitsPerEm,
+    isPpemRounded: font.isPpemRounded,
+    glyphCount: font.glyphCount,
+    unscaledGlyph: (glyphIndex) => loadedGlyph(font, glyphIndex, FIXED_16_16_ONE, null)?.outline() ?? null,
   };
 }

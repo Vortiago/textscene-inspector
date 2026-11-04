@@ -29,6 +29,8 @@ export const PRIMITIVE_SCENES = [
   { name: 'text-mesh-woff2', file: 'unit-text-mesh-woff2.tscn' },
   // The same font at small sizes, where the font's hints snap the outline to whole pixels.
   { name: 'text-mesh-hinting', file: 'unit-text-mesh-hinting.tscn' },
+  // The same sizes under a font with no hints, which FreeType's auto-hinter snaps to whole pixels.
+  { name: 'text-mesh-autohint', file: 'unit-text-mesh-autohint.tscn' },
   // The same scene with no `font`, which draws Godot's default font, and again in a project whose
   // `gui/theme/custom_font` names a CFF font.
   { name: 'text-mesh-default-font', file: 'unit-text-mesh-default-font.tscn' },

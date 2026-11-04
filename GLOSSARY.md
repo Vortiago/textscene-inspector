@@ -154,6 +154,14 @@ _Avoid_: "theme context", which Godot's `ThemeContext` also names.
 The font a RichTextLabel draws a `[b]`, `[i]` or `[b][i]` span in: the theme's `bold_font`, `italics_font` or `bold_italics_font`. Where no theme sets the key, it is a `FontVariation` over the **Project default font** with embolden 1.2, skew 0.2, or both.
 _Avoid_: "synthetic bold" for a face a theme sets.
 
+**Glyph hinting** (`r3f/controls/native/text/sfntOutlines.ts`):
+How a glyph's outline is fitted to the pixel grid at its font size before TextMesh tessellates it, as FreeType does when Godot loads it. A TrueType font with its own hinting programs runs them, a CFF font uses its charstring hints, and any other TrueType font goes through the **Auto-hinter**.
+_Avoid_: "font smoothing" or "antialiasing", which act on the rasterised glyph.
+
+**Auto-hinter** (`r3f/controls/native/text/autofit/`):
+FreeType's hinter that finds a glyph's stems and blue zones from the outline alone, per script. It takes a TrueType font with no font program and a control value program of at most 7 bytes, and any font that is not tricky when its `FontFile` sets `force_autohinter`.
+_Avoid_: "autohint" as a verb for the native TrueType hinter.
+
 **Asset re-import**:
 What the previewer does in place of Godot's import pipeline: it loads the source asset (`.gltf`, `.glb`, `.obj`) and re-derives the scene from it.
 ADR-0028 holds the decision and the allowlist of **Import sidecar** parameters it honours.

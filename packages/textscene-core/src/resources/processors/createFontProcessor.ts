@@ -5,7 +5,7 @@
  * and loads other fonts: a font's `base_font`/`fallbacks`.
  */
 
-import type { FileData } from '../FileEventBus';
+import type { FileData, FileEventBus } from '../FileEventBus';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import {
   createResourceProcessor,
@@ -18,14 +18,16 @@ import { isFontContainerPath } from '../formats/dynamicfont/fontBytes';
 import type { FontResource } from '../fonts/font/types';
 import type { SectionLoaderFn } from '../resourceSection';
 import { FONT_SUB_RESOURCE_TYPES } from '../fonts/font/decode';
+import { readImportSidecar } from './readImportSidecar';
 
 export function createFontProcessor(
   eventBus: ResourceEventBus,
   loadSection: SectionLoaderFn,
   /** A raw font container's bytes. Rejects when the file is missing. */
   readFile: (path: string) => Promise<FileData>,
-  /** Records each font a font reads, so a change to that file reloads the reader. */
-  dependencies: DependencyGraph
+  /** Records each font a font reads, and a raw font's read of its sidecar, so a change to that file reloads the reader. */
+  dependencies: DependencyGraph,
+  fileEventBus: FileEventBus | undefined
 ): ResourceProcessor<FontResource> {
   // Assigned once `createResourceProcessor` returns, below. `loadDirectly` only
   // ever runs after a `.request()` call, always after this function has
@@ -51,6 +53,17 @@ export function createFontProcessor(
       for (const edge of waitingFor.get(next)?.keys() ?? []) stack.push(edge);
     }
     return false;
+  };
+
+  /** The `[params]` of a raw font's `.import` sidecar, which Godot's importer sets on the FontFile. */
+  const importParamsOf = async (path: string): Promise<Record<string, string>> => {
+    const sidecar = await readImportSidecar({
+      assetPath: path,
+      dependent: { busType: 'font', key: path },
+      fileEventBus,
+      dependencies,
+    });
+    return sidecar?.params ?? {};
   };
 
   /**
@@ -99,7 +112,7 @@ export function createFontProcessor(
     // recorded against its own requester.
     loadDirectly: async (path) =>
       isFontContainerPath(path)
-        ? fontResourceFromContainer(path, await readFile(path))
+        ? fontResourceFromContainer(path, ...(await Promise.all([readFile(path), importParamsOf(path)])))
         : buildFontResource(path, await loadSection(path, FONT_SUB_RESOURCE_TYPES), (address) =>
             loadFont(path, address)
           ),

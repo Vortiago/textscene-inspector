@@ -9,7 +9,7 @@ renders_as: one THREE.BufferGeometry of the glyph outlines, with front, back and
 
 # TextMesh
 
-A PrimitiveMesh that builds a flat or deep surface from the outlines of a font's glyphs. The previewer reads the outlines from a TrueType or OpenType-CFF font in a plain, WOFF or WOFF2 file and tessellates them as Godot does. It runs a TrueType font's own hinting programs at the font size, as FreeType does. The font is the mesh's `font`, else the project theme's font for TextMesh, else the project default font (`gui/theme/custom_font`), else the bundled font (`primitive_meshes.cpp:3779-3809`). The 2D text controls and this mesh lay out lines with one shaper. A MeshInstance3D, a GridMap cell and a CSGMesh3D show their loading state until the font file and its metrics arrive, then draw the text.
+A PrimitiveMesh that builds a flat or deep surface from the outlines of a font's glyphs. The previewer reads the outlines from a TrueType or OpenType-CFF font in a plain, WOFF or WOFF2 file and tessellates them as Godot does. It hints each glyph at the font size as FreeType does. A TrueType font runs its own hinting programs, and a CFF font follows its charstring hints. A TrueType font without its own hints, or a font with `force_autohinter` on, goes through FreeType's auto-hinter. The font is the mesh's `font`, else the project theme's font for TextMesh, else the project default font (`gui/theme/custom_font`), else the bundled font (`primitive_meshes.cpp:3779-3809`). The 2D text controls and this mesh lay out lines with one shaper. A MeshInstance3D, a GridMap cell and a CSGMesh3D show their loading state until the font file and its metrics arrive, then draw the text.
 
 ## Linting
 
@@ -46,7 +46,7 @@ The lenient parser clamps `font_size` to 1-127, `pixel_size` to 0.0001-128 and `
 
 ## Known limitations
 
-- **Approximated** A glyph that Godot hints with its CFF hinter or its auto-hinter draws unhinted, so its stems and height differ by under a pixel.
+- **Approximated** An auto-hinted Malayalam, Kannada or Sinhala glyph can differ by up to a pixel, as the previewer lacks HarfBuzz's Indic and USE shapers.
 - **Resource gap** A TextMesh with a SystemFont draws a wireframe box that the node's details name, as the previewer has no OS font bytes.
 - **Approximated** A character the font lacks draws as a hex-code box, where Godot first tries the font's fallbacks and the system fonts.
 - **Approximated** Text direction, language and the structured text override are ignored, so right-to-left text and ligatures draw in logical order.

@@ -74,6 +74,20 @@ describe('createFontProcessor', () => {
     expect(processor.getCached('res://fonts/Xolonium-Regular.ttf')).toBe(resource);
   });
 
+  it("takes a raw font's import params from its sidecar, as Godot's importer sets them on the FontFile", async () => {
+    const { processor, eventBus } = setup({
+      'res://fonts/x.ttf': new ArrayBuffer(8),
+      'res://fonts/x.ttf.import':
+        '[remap]\n\nimporter="font_data_dynamic"\n\n[params]\n\nforce_autohinter=true\n',
+    });
+
+    const loaded = eventBus.once<FontResource>('font', 'loaded', 'res://fonts/x.ttf', 2000);
+    processor.request('res://fonts/x.ttf');
+    const resource = (await loaded) as FontFileResource;
+
+    expect(resource.properties).toEqual({ force_autohinter: 'true' });
+  });
+
   it("fails a raw font with the provider's reason, not a bare not-found", async () => {
     const provider: ResourceProvider = {
       loadResource: vi.fn(async () => {
