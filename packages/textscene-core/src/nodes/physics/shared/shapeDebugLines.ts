@@ -182,32 +182,40 @@ function worldBoundaryDebugLines({ normal, d }: Plane): Float32Array {
   return vertices;
 }
 
+/** Two ends of three floats each. */
+const SEGMENT_FLOATS = 6;
+
 /**
  * `HeightMapShape3D::get_debug_mesh_lines` (`height_map_shape_3d.cpp:37-83`): the grid centred on the
  * origin, one unit between samples. Each sample draws the edge to its +x neighbour, the edge to its
  * +z neighbour and, inside the grid, the cell diagonal. Positions accumulate in float, as Godot's do.
  */
 function heightMapDebugLines({ width, depth, heights }: HeightMapShape3DProperties): Float32Array {
-  const points: number[] = [];
-  const segment = (from: Vector3, to: Vector3) => points.push(from.x, from.y, from.z, to.x, to.y, to.z);
+  const segments = (width - 1) * depth + width * (depth - 1) + (width - 1) * (depth - 1);
+  const points = new Float32Array(segments * SEGMENT_FLOATS);
+  let written = 0;
+  const segment = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number) => {
+    points.set([x0, y0, z0, x1, y1, z1], written);
+    written += SEGMENT_FLOATS;
+  };
   let z = storedReal((depth - 1) * -0.5);
   for (let row = 0; row < depth; row += 1) {
+    const nextZ = storedReal(z + 1);
     let x = storedReal((width - 1) * -0.5);
     for (let column = 0; column < width; column += 1) {
       const sample = row * width + column;
+      const nextX = storedReal(x + 1);
       const hasNextColumn = column !== width - 1;
       const hasNextRow = row !== depth - 1;
-      const here = { x, y: heights[sample]!, z };
-      const nextColumn = () => ({ x: storedReal(x + 1), y: heights[sample + 1]!, z });
-      const nextRow = () => ({ x, y: heights[sample + width]!, z: storedReal(z + 1) });
-      if (hasNextColumn) segment(here, nextColumn());
-      if (hasNextRow) segment(here, nextRow());
-      if (hasNextColumn && hasNextRow) segment(nextColumn(), nextRow());
-      x = storedReal(x + 1);
+      if (hasNextColumn) segment(x, heights[sample]!, z, nextX, heights[sample + 1]!, z);
+      if (hasNextRow) segment(x, heights[sample]!, z, x, heights[sample + width]!, nextZ);
+      if (hasNextColumn && hasNextRow)
+        segment(nextX, heights[sample + 1]!, z, x, heights[sample + width]!, nextZ);
+      x = nextX;
     }
-    z = storedReal(z + 1);
+    z = nextZ;
   }
-  return new Float32Array(points);
+  return points;
 }
 
 /**
