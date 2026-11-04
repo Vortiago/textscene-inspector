@@ -5,7 +5,7 @@
  * mode the strip also holds one UV per vertex: `u` along the line and `v` 0 on the up side, 1 on the down.
  */
 
-import type { Rgba } from '../../../godot/math/math';
+import { lerpf, type Rgba } from '../../../godot/math/math';
 import { storedReal as f } from '../../../godot/math/real';
 import {
   vector2Add,
@@ -125,13 +125,12 @@ export function newArc(
 ): void {
   const radius = vector2Length(begin);
   const hub = strip.vertices.length;
-  pushVertex(strip, center, color, pointInRect(uvRect, { x: 0.5, y: 0.5 }));
+  pushVertex(strip, center, color, strip.uvs && pointInRect(uvRect, { x: 0.5, y: 0.5 }));
   const angles = arcAngles(angleOf(begin), angleDelta, roundPrecision);
   // The UV circle starts at the top of the rectangle and sweeps in step with the arc.
-  const uvAngles = arcAngles(UV_ARC_START, angleDelta, roundPrecision);
+  const uvAngles = strip.uvs ? arcAngles(UV_ARC_START, angleDelta, roundPrecision) : null;
   angles.forEach((angle, i) => {
-    const { x, y } = unitVector(uvAngles[i]!);
-    const uv = pointInRect(uvRect, { x: f(0.5 * f(x + 1)), y: f(0.5 * f(y + 1)) });
+    const uv = uvAngles && uvOnCircle(uvRect, uvAngles[i]!);
     pushVertex(strip, pointOnArc(center, angle, radius), color, uv);
   });
   for (let i = 0; i < angles.length - 1; i++) strip.indices.push(hub, hub + 1 + i, hub + 2 + i);
@@ -142,15 +141,18 @@ const UV_ARC_START = f(-Math.PI / 2);
 
 /** `interpolate(rect, at)` of `line_builder.cpp:36`: `lerp(from, from + size, at)` on each axis. */
 function pointInRect({ x, y, width, height }: UvRect, at: Vector2): Vector2 {
-  return {
-    x: f(x + f(f(f(x + width) - x) * at.x)),
-    y: f(y + f(f(f(y + height) - y) * at.y)),
-  };
+  return { x: lerpf(x, f(x + width), at.x), y: lerpf(y, f(y + height), at.y) };
+}
+
+/** The point of the circle inscribed in `rect` at `angle`, with the unit circle mapped to `0.5 * (v + 1)`. */
+function uvOnCircle(rect: UvRect, angle: number): Vector2 {
+  const { x, y } = unitVector(angle);
+  return pointInRect(rect, { x: f(0.5 * f(x + 1)), y: f(0.5 * f(y + 1)) });
 }
 
 function pushPair(strip: Strip, up: Vector2, down: Vector2, color: Rgba | null, uvx: number): void {
-  pushVertex(strip, up, color, { x: uvx, y: 0 });
-  pushVertex(strip, down, color, { x: uvx, y: 1 });
+  pushVertex(strip, up, color, strip.uvs && { x: uvx, y: 0 });
+  pushVertex(strip, down, color, strip.uvs && { x: uvx, y: 1 });
 }
 
 function pushVertex(strip: Strip, point: Vector2, color: Rgba | null, uv: Vector2 | null): void {

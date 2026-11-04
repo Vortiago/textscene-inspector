@@ -15,6 +15,7 @@ import { godotColorToLinear } from '../../../r3f/godotColor';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { bottomUpV } from '../../../godot/math/uv';
 import { storedReal } from '../../../godot/math/real';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
@@ -39,6 +40,7 @@ export function Line2D({ node, children }: NodeComponentProps) {
   );
   const texture = useCanvas2DTexture(resolvedTexture, useNode2DTextureSampler(props));
   // `Size2::aspect` of the texture, and 1 without one (`line_builder.h:51`).
+  const hasTexture = texture !== null;
   const tileAspect = size && size.height !== 0 ? storedReal(size.width / size.height) : 1;
 
   const strokeColors = useMemo(() => gradient && strokeGradient(gradient), [gradient]);
@@ -70,7 +72,7 @@ export function Line2D({ node, children }: NodeComponentProps) {
       textureMode,
       tileAspect,
     });
-    return stroke && toGeometry(stroke);
+    return stroke && toGeometry(stroke, hasTexture);
   }, [
     points,
     width,
@@ -84,6 +86,7 @@ export function Line2D({ node, children }: NodeComponentProps) {
     widthFactorAt,
     textureMode,
     tileAspect,
+    hasTexture,
   ]);
   useDisposeOnRelease(geometry);
 
@@ -154,7 +157,10 @@ function LineMesh({
 }
 
 /** Godot's downward Y is negated here, as for every canvas item. */
-function toGeometry({ vertices, colors, uvs, indices }: LineStroke): THREE.BufferGeometry {
+function toGeometry(
+  { vertices, colors, uvs, indices }: LineStroke,
+  hasTexture: boolean
+): THREE.BufferGeometry {
   const positions = new Float32Array((vertices.length / 2) * 3);
   for (let i = 0; i < vertices.length / 2; i++) {
     positions[i * 3] = vertices[i * 2]!;
@@ -164,7 +170,9 @@ function toGeometry({ vertices, colors, uvs, indices }: LineStroke): THREE.Buffe
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   // Four wide, so three defines `USE_COLOR_ALPHA` and an authored alpha draws.
   if (colors) geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4));
-  geometry.setAttribute('uv', new THREE.BufferAttribute(threeUvs(uvs, vertices.length / 2), 2));
+  if (uvs || hasTexture) {
+    geometry.setAttribute('uv', new THREE.BufferAttribute(threeUvs(uvs, vertices.length / 2), 2));
+  }
   geometry.setIndex(indices);
   return geometry;
 }
@@ -177,7 +185,7 @@ function threeUvs(uvs: Float32Array | null, vertexCount: number): Float32Array {
   const out = new Float32Array(vertexCount * 2);
   for (let i = 0; i < vertexCount; i++) {
     out[i * 2] = uvs ? uvs[i * 2]! : 0;
-    out[i * 2 + 1] = uvs ? 1 - uvs[i * 2 + 1]! : 1;
+    out[i * 2 + 1] = bottomUpV(uvs ? uvs[i * 2 + 1]! : 0);
   }
   return out;
 }
