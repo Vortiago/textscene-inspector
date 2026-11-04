@@ -59,6 +59,20 @@ describe('sceneCameraPath', () => {
   it('keeps a path that already starts at the root, as `ref:godot` takes both', () => {
     expect(sceneCameraPath(text, 'World/Camera')).toBe('World/Camera');
   });
+
+  it('keeps the root itself (edge case)', () => {
+    expect(sceneCameraPath(text, 'World')).toBe('World');
+  });
+
+  it('picks the first Camera3D in tree order without a path, as `ref:godot` does', () => {
+    const scene = `${text}\n[node name="Rig" type="Node3D" parent="."]\n\n[node name="Eye" type="Camera3D" parent="Rig"]\n\n[node name="Other" type="Camera3D" parent="."]\n`;
+
+    expect(sceneCameraPath(scene, true)).toBe('World/Rig/Eye');
+  });
+
+  it('refuses a scene with no Camera3D when no path names one (error case)', () => {
+    expect(() => sceneCameraPath(text, true)).toThrow('expected a Camera3D in the scene, found none');
+  });
 });
 
 describe('ref:ours camera flags', () => {
@@ -66,10 +80,8 @@ describe('ref:ours camera flags', () => {
     expect(parseArgs(['a.tscn', '--scene-camera', 'Camera']).sceneCamera).toBe('Camera');
   });
 
-  it('refuses --scene-camera beside --camera, which picks another camera', () => {
-    expect(() => parseArgs(['a.tscn', '--scene-camera', 'Camera', '--camera', '0,0,2'])).toThrow(
-      '--scene-camera and --camera pick different cameras'
-    );
+  it('reads --scene-camera without a path, as `ref:godot` does', () => {
+    expect(parseArgs(['a.tscn', '--scene-camera', '--probe', '1,2']).sceneCamera).toBe(true);
   });
 
   it('reads --camera and --look-at as three numbers each', () => {

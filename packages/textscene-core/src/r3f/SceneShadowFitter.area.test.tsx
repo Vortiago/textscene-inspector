@@ -2,7 +2,7 @@
  * The light pass's area light uniforms as the hosts mount it: inside `<TscnSceneContents>`, written
  * for each AreaLight3D before every render. `renderThrough` plays the part of `WebGLRenderer.render`.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnSceneContents } from './TscnCanvas';
@@ -13,6 +13,7 @@ import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
 import { AREA_LIGHT_FALLOFFS, installAreaLightUniforms } from './areaLight/areaLightFalloff';
 import { litUniformArray } from './testing/litUniformArray';
+import { untilAreaLightShows } from './testing/untilAreaLightShows';
 
 import './nodes/index';
 
@@ -31,16 +32,13 @@ async function renderScene(sceneText: string): Promise<Renderer> {
   );
 }
 
-/**
- * Waits until the area light of node `name` shows. A light hides until Godot's LTC tables load, an
- * import whose time varies with the module cache, so a render before it gives the light no slot.
- */
+/** Waits until the area light of node `name` shows. */
 async function untilShown(renderer: Renderer, name: string): Promise<void> {
   const node = (renderer.scene.instance as THREE.Scene).getObjectByName(name)!;
   const light = node.children.find(
     (child): child is THREE.RectAreaLight => child instanceof THREE.RectAreaLight
   )!;
-  await vi.waitFor(() => expect(light.visible).toBe(true));
+  await untilAreaLightShows(light);
 }
 
 function renderThrough(renderer: Renderer): void {

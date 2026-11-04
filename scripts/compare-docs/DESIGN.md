@@ -138,9 +138,9 @@ in order of preference:
 3. **Content that does not fit at the editor camera**: first move or scale the
    elements toward the origin, if that does not distort what the fixture tests.
    Only if that is not viable, author one or more `Camera3D` nodes and capture
-   from them (`--scene-camera` on both sides). A
-   camera is the fallback, because both renderers ignore scene cameras by
-   default and a camera makes the two sides depend on agreeing again.
+   from them with `--scene-camera` on both sides. A camera is the fallback,
+   because both renderers ignore scene cameras by default and a camera makes
+   the two sides depend on agreeing again.
 4. **A node whose whole point is motion** (AnimationPlayer, and anything it
    drives): capture a short GIF of it on both sides rather than a still, so the
    sheet shows the animation playing.

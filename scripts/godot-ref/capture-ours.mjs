@@ -5,7 +5,7 @@
  * filename in `fixtures.ts`, so run `pnpm generate:fixtures` after adding one:
  *   pnpm ref:ours unit-light-transport-direct.tscn --probe 320,200 --patch 5
  * `--camera x,y,z [--look-at x,y,z]` replaces the editor orbit, as it does for `ref:godot`.
- * `--scene-camera <path>` looks through the scene's own Camera3D, as `ref:godot --scene-camera` does.
+ * `--scene-camera [path]` looks through the scene's own Camera3D, as `ref:godot --scene-camera` does.
  */
 
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -57,8 +57,9 @@ export function parseArgs(argv) {
       case '--look-at':
         args.lookAt = vec3('--look-at', argv[++i]);
         break;
+      // As `ref:godot` takes it: an optional path, the first Camera3D without one.
       case '--scene-camera':
-        args.sceneCamera = argv[++i];
+        args.sceneCamera = argv[i + 1] && !String(argv[i + 1]).startsWith('--') ? argv[++i] : true;
         break;
       case '--probe': {
         const raw = argv[++i];
@@ -76,7 +77,6 @@ export function parseArgs(argv) {
   }
   if (!args.fixture) throw new Error('a fixture filename is required');
   if (args.lookAt && !args.camera) throw new Error('--look-at needs --camera');
-  if (args.sceneCamera && args.camera) throw new Error('--scene-camera and --camera pick different cameras');
   return args;
 }
 
@@ -111,27 +111,29 @@ export function captureOurs({
   );
 }
 
-/** The camera to open the scene through, or undefined for the editor orbit. */
+/**
+ * The camera to open the scene through, or undefined for the editor orbit. `--camera` overrides
+ * every other choice, as in `ref:godot`.
+ */
 async function cameraPathOf(page, baseUrl, fixture, { camera, lookAt, sceneCamera }) {
-  if (sceneCamera) return sceneCameraPath(await fixtureText(page, baseUrl, fixture), sceneCamera);
-  if (!camera) return undefined;
-  return addFreeCamera(page, baseUrl, fixture, { camera, lookAt: lookAt ?? undefined });
+  const url = fixtureFileUrl(baseUrl, fixture);
+  if (camera) return addFreeCamera(page, url, { camera, lookAt: lookAt ?? undefined });
+  if (sceneCamera) return sceneCameraPath(await fixtureText(page, url), sceneCamera);
+  return undefined;
 }
 
-function fixtureUrl(baseUrl, fixture) {
+function fixtureFileUrl(baseUrl, fixture) {
   return `${baseUrl.replace(/\/$/, '')}/fixtures/${fixture}`;
 }
 
-async function fixtureText(page, baseUrl, fixture) {
-  return (await page.request.get(fixtureUrl(baseUrl, fixture))).text();
+async function fixtureText(page, url) {
+  return (await page.request.get(url)).text();
 }
 
-/** Serves the fixture with a Camera3D at the pose, and answers the path to open the scene through. */
-async function addFreeCamera(page, baseUrl, fixture, pose) {
-  const sceneText = await fixtureText(page, baseUrl, fixture);
-  await page.route(fixtureUrl(baseUrl, fixture), (route) =>
-    route.fulfill({ body: withFreeCamera(sceneText, pose) })
-  );
+/** Serves the fixture at `url` with a Camera3D at the pose, and answers the path to open the scene through. */
+async function addFreeCamera(page, url, pose) {
+  const sceneText = await fixtureText(page, url);
+  await page.route(url, (route) => route.fulfill({ body: withFreeCamera(sceneText, pose) }));
   return freeCameraPath(sceneText);
 }
 
@@ -143,6 +145,7 @@ async function main() {
     console.error(error.message);
     console.error('Usage: pnpm ref:ours <fixture.tscn> [--out file.png]');
     console.error('       [--probe x,y] [--patch n] [--frame] [--2d] [--camera x,y,z] [--look-at x,y,z]');
+    console.error('       [--scene-camera [path]]');
     process.exit(2);
   }
 

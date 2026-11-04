@@ -44,12 +44,21 @@ export function freeCameraPath(sceneText) {
 }
 
 /**
- * The path the previewer reports for the scene's own camera at `path`. `ref:godot --scene-camera`
- * takes a path below the root or one that starts at it, so this takes both.
+ * The path the previewer reports for the scene's own camera at `path`, or for the first Camera3D in
+ * tree order where `path` is true. `ref:godot --scene-camera` takes a path below the root or one
+ * that starts at it, so this takes both.
  */
 export function sceneCameraPath(sceneText, path) {
   const root = rootName(sceneText);
-  return path.startsWith(`${root}/`) ? path : `${root}/${path}`;
+  if (path === true) return firstCameraPath(sceneText, root);
+  return path === root || path.startsWith(`${root}/`) ? path : `${root}/${path}`;
+}
+
+function firstCameraPath(sceneText, root) {
+  const camera = /^\[node name="([^"]+)" type="Camera3D" parent="([^"]+)"/m.exec(sceneText);
+  if (!camera) throw new Error('expected a Camera3D in the scene, found none');
+  const [, name, parent] = camera;
+  return parent === '.' ? `${root}/${name}` : `${root}/${parent}/${name}`;
 }
 
 /** `sceneText` with a Camera3D appended to its root, at the pose and fov of `ref:godot`. */
