@@ -1002,7 +1002,7 @@ describe('an expired engine pass is reaped as a process group', () => {
 
 /**
  * A stalled import leaves assets unimported, and the render would save a picture without them as
- * the reference (#1242).
+ * the reference.
  */
 describe('a stalled import pass is never rendered over', () => {
   const pass = (fields) => ({ status: 0, error: null, timedOut: false, stdout: '', stderr: '', ...fields });
