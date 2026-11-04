@@ -17,11 +17,10 @@ import {
   SCROLL_HINT_VERTICAL_HEIGHT,
   scrollBarGrabberGeometry,
   scrollBarGrabberRect,
-  scrollBarMinimumSize,
   type ScrollBarPlacement,
   type ScrollHintPlacement,
 } from '../shared/scrollBarSolver';
-import { itemListMirrorX, type ItemListScrollRange } from './nativeSolver';
+import { itemListBarMinimums, itemListMirrorX, type ItemListScrollRange } from './nativeSolver';
 
 interface ItemListScrollBarsInput {
   /** The control's `get_size()`. */
@@ -96,8 +95,9 @@ function bottomHintPlacement(
 
 export function itemListScrollBars(input: ItemListScrollBarsInput): ItemListScrollBars {
   const { size, margins, rtl, theme } = input;
-  const verticalMin = input.vertical.visible ? scrollBarMinimumSize(true, theme) : { x: 0, y: 0 };
-  const horizontalMin = input.horizontal.visible ? scrollBarMinimumSize(false, theme) : { x: 0, y: 0 };
+  const minimums = itemListBarMinimums(theme);
+  const verticalWidth = input.vertical.visible ? minimums.verticalWidth : 0;
+  const horizontalHeight = input.horizontal.visible ? minimums.horizontalHeight : 0;
 
   // Left-to-right anchors (`:1373-1379`). The margins swap under RTL (`:1368-1369`), then each
   // bar's rect mirrors whole, since `Control::_size_changed` mirrors an anchored child (`control.cpp:1785-1787`).
@@ -105,17 +105,17 @@ export function itemListScrollBars(input: ItemListScrollBarsInput): ItemListScro
   const rightMargin = rtl ? margins.left : margins.right;
 
   const verticalRect: Rect2 = {
-    x: itemListMirrorX(size.x - verticalMin.x - rightMargin, verticalMin.x, size.x, rtl),
+    x: itemListMirrorX(size.x - verticalWidth - rightMargin, verticalWidth, size.x, rtl),
     y: margins.top,
-    w: verticalMin.x,
-    h: size.y - horizontalMin.y - margins.bottom - margins.top,
+    w: verticalWidth,
+    h: size.y - horizontalHeight - margins.bottom - margins.top,
   };
-  const horizontalWidth = size.x - rightMargin - verticalMin.x - leftMargin;
+  const horizontalWidth = size.x - rightMargin - verticalWidth - leftMargin;
   const horizontalRect: Rect2 = {
     x: itemListMirrorX(leftMargin, horizontalWidth, size.x, rtl),
-    y: size.y - horizontalMin.y - margins.bottom,
+    y: size.y - horizontalHeight - margins.bottom,
     w: horizontalWidth,
-    h: horizontalMin.y,
+    h: horizontalHeight,
   };
 
   return {

@@ -281,7 +281,8 @@ export function ItemList({
   // `base_ofs = theme_cache.panel_style->get_offset()` (`item_list.cpp:1429`):
   // `StyleBox::get_offset()` is `Point2(get_margin(LEFT), get_margin(TOP))`
   // (`style_box.cpp:87-89`), never `contentMarginSize`'s summed pair.
-  const origin: Vector2 = { x: panelBox.contentMargin.left, y: panelBox.contentMargin.top };
+  const panelMargins = panelBox.contentMargin;
+  const origin: Vector2 = { x: panelMargins.left, y: panelMargins.top };
 
   // The draw `width` (`item_list.cpp:1385-1389`): a visible vertical bar takes its width off.
   const barWidth = packed.vertical.visible ? verticalBarMinWidth : 0;
@@ -308,7 +309,6 @@ export function ItemList({
       ),
     [iconMode, packed.separators, drawClip, contentWidth, rtl, barWidth]
   );
-  const panelMargins = panelBox.contentMargin;
   const scrollBars = useMemo(
     () =>
       itemListScrollBars({
