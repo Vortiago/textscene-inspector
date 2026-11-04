@@ -1,4 +1,7 @@
-; Each SubViewport clear mode, with canvas content and with 3D content. The content is red at alpha
+; One variable: `render_target_clear_mode`. Every other scene leaves it at ALWAYS, so no other scene
+; shows a target that keeps its bytes between renders. The three content kinds share the fixture
+; because each clears through its own code (the canvas frame and the 3D background), and the
+; mode reaches both. This scene shows each mode, with canvas content and with 3D content. The content is red at alpha
 ; 0.25 over the left half of a 32x32 target, sampled by a 100x100 TextureRect, and a viewport
 ; renders every frame. ALWAYS clears every render. NEVER draws the canvas over the bytes of the
 ; renders before, so it builds up toward the colour. ONCE clears the first render and then acts as

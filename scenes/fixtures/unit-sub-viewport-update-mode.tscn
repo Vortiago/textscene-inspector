@@ -1,4 +1,6 @@
-; Each SubViewport update mode, and what it does to a consumer. Every sub-viewport is 32x32 with a red
+; One variable: `render_target_update_mode`. No other scene shows a viewport that does not render:
+; they are all sampled or ALWAYS, so a pass that ignores the mode draws them alike. This scene
+; shows each mode, and what it does to a consumer. Every sub-viewport is 32x32 with a red
 ; left half, sampled by a 100x100 TextureRect. Row 1: DISABLED shows black, ONCE, WHEN_VISIBLE,
 ; WHEN_PARENT_VISIBLE and ALWAYS show red. Row 2: a DISABLED parent stops its WHEN_PARENT_VISIBLE
 ; child, and not its WHEN_VISIBLE or ALWAYS ones. Row 3: a ONCE parent renders on frame 1, before a
