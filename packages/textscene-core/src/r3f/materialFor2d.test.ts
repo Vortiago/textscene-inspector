@@ -22,6 +22,7 @@ const DEFAULTS: MaterialFor2dInput = {
   alphaAntialiasingEdge: 0,
   doubleSided: true,
   noDepthTest: false,
+  shaded: false,
   textureFilter: TextureFilter.LINEAR_WITH_MIPMAPS,
   anisotropicFilteringLevel: 2,
 };
@@ -160,5 +161,16 @@ describe('materialFor2d sampler', () => {
         anisotropicFilteringLevel: 4,
       }).textureFilter.anisotropy
     ).toBe(16);
+  });
+});
+
+describe('materialFor2d shading', () => {
+  // `set_shading_mode(p_shaded ? SHADING_MODE_PER_PIXEL : SHADING_MODE_UNSHADED)` (`material.cpp:3045`).
+  it('leaves an unshaded surface unlit', () => {
+    expect(materialWith({ shaded: false }).shading).toBeUndefined();
+  });
+
+  it("lights a shaded surface at the 2D material's metallic 0 and roughness 1 (label_3d.cpp:372-373)", () => {
+    expect(materialWith({ shaded: true }).shading).toEqual({ metalness: 0, roughness: 1 });
   });
 });

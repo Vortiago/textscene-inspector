@@ -124,7 +124,7 @@ export function fitLineToWidth(
   const fitWidthMinimumReached = Math.floor(widthPx) < Math.floor(finalWidthPx);
 
   return {
-    line: { text: line.text, glyphs: outGlyphs, widthPx: finalWidthPx },
+    line: { ...line, glyphs: outGlyphs, widthPx: finalWidthPx },
     fitWidthMinimumReached,
   };
 }

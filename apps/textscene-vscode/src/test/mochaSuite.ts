@@ -1,8 +1,9 @@
 /** The mocha run that each extension host suite's `run()` hands its own directory to. */
 import * as fs from 'fs';
 import * as path from 'path';
+import { globSync } from 'glob';
 import Mocha from 'mocha';
-import { SUITE_STARTED_MARKER_ENV } from './integration/integrationLaunch';
+import { SUITE_RESULT_FILE_ENV, SUITE_STARTED_MARKER_ENV } from './integration/integrationLaunch';
 
 /** Runs every `*.test.js` under `testsRoot`, and rejects when a test fails. */
 export async function runSuite(testsRoot: string): Promise<void> {
@@ -13,10 +14,15 @@ export async function runSuite(testsRoot: string): Promise<void> {
     timeout: 20000,
   });
 
-  testFilesUnder(testsRoot).forEach((file) => mocha.addFile(file));
+  // Joined to `testsRoot`, not `absolute: true`: glob uppercases a Windows drive letter, and the
+  // tests compare `__dirname` paths with the lowercase `Uri.fsPath`. Sorted: glob has no fixed order.
+  globSync('**/*.test.js', { cwd: testsRoot })
+    .sort()
+    .forEach((file) => mocha.addFile(path.join(testsRoot, file)));
 
   return new Promise((resolve, reject) => {
     mocha.run((failures) => {
+      recordFailures(failures);
       if (failures > 0) {
         reject(new Error(`${failures} tests failed.`));
       } else {
@@ -26,20 +32,14 @@ export async function runSuite(testsRoot: string): Promise<void> {
   });
 }
 
-/**
- * Every `*.test.js` path under `dir`. A plain walk, not `glob`: glob 14 needs `tracingChannel`, which the
- * Node 18.15 of the oldest supported VS Code (1.85) lacks.
- */
-function testFilesUnder(dir: string): string[] {
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const entryPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) return testFilesUnder(entryPath);
-    return entry.name.endsWith('.test.js') ? [entryPath] : [];
-  });
-}
-
 /** Tells the launcher that a test may run from here on, so it never relaunches. */
 function markSuiteStarted(): void {
   const marker = process.env[SUITE_STARTED_MARKER_ENV];
   if (marker) fs.writeFileSync(marker, '');
+}
+
+/** Tells the launcher how many tests failed, for an editor whose exit code hides it. */
+function recordFailures(failures: number): void {
+  const file = process.env[SUITE_RESULT_FILE_ENV];
+  if (file) fs.writeFileSync(file, String(failures));
 }

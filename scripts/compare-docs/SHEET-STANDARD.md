@@ -131,7 +131,10 @@ What the fixture sets and what the two images show. Fold any limitation in here.
 
 - Marker attributes: `image=` (required, the basename), `status=` (see below),
   `fixture=` (optional, the live `?fixture=` deep link), `particles=` (optional,
-  seconds).
+  seconds), `camera=` (optional, a Camera3D node path).
+- `camera=` makes both sides look through that scene Camera3D for this section only.
+  It overrides the sheet's `camera:` frontmatter, so one section can use its
+  fixture's camera without moving the others.
 - `particles=` is for a section whose subject is a CPUParticles emitter that
   authors no `preprocess`. The Godot editor animates particles, so a paused
   reference render draws frame 0 while the previewer draws its substituted

@@ -841,6 +841,7 @@ describe('lineEditDrawnLine: the glyphs the draw loop keeps (line_edit.cpp:1512-
   const line = (
     advances: number[]
   ): import('../../../../r3f/controls/native/text/textLayout').TextLineLayout => ({
+    paragraphIndex: 0,
     text: advances.map((_, i) => String.fromCharCode(97 + i)).join(''),
     widthPx: advances.reduce((a, b) => a + b, 0),
     glyphs: advances.map((advance, i) => ({

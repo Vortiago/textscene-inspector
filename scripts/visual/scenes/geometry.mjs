@@ -177,6 +177,9 @@ export const GEOMETRY_SCENES = [
   // depth prepass cast, and a blended surface or one with no depth test casts nothing.
   { name: 'sprite3d-shadow', file: 'unit-sprite3d-shadow.tscn' },
   { name: 'label3d-shadow', file: 'unit-label3d-shadow.tscn' },
+  // The one variable: `shaded`. An unshaded label, a shaded label and a shaded back face under one
+  // coloured sun at N·L = 0.5.
+  { name: 'label3d-shaded', file: 'unit-label3d-shaded.tscn', camera: 'Root/Camera3D' },
   // The one variable: the `font` of a Label3D, with an outline ring under an embolden.
   { name: 'label3d-scene-font', file: 'unit-label3d-scene-font.tscn' },
   // The one variable: how a Label3D lays its text out. Wrap at `width`, FILL, TOP and BOTTOM

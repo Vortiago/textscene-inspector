@@ -64,7 +64,7 @@ export interface ShapeTextOptions {
   uppercase?: boolean;
   /**
    * The theme `line_spacing`, px. Required, because it is a per-control constant: Label 3
-   * (`LABEL_LINE_SPACING_PX`), Button-family and LineEdit 0, RichTextLabel `line_separation` 0
+   * (`labelEffectiveTextTheme`), Button-family and LineEdit 0, RichTextLabel `line_separation` 0
    * (`default_theme.cpp:1217`), Label3D its authored `line_spacing`. A miss is a 1-3 px shift.
    */
   lineSpacingPx: number;
@@ -144,6 +144,11 @@ export interface TextLineLayout {
    * engine reports (`shaped_text_get_size`) goes through `shapedTextSizeWidthPx`.
    */
   widthPx: number;
+  /**
+   * Which paragraph of the source text this line belongs to, counted from 0. A line that autowrap
+   * breaks inside a paragraph shares its index, so Label adds `paragraph_spacing` where it changes.
+   */
+  paragraphIndex: number;
 }
 
 /**
@@ -163,7 +168,7 @@ export interface TextLayoutResult {
   linePitchPx: number;
   /** The widest line's `widthPx`. */
   widthPx: number;
-  /** `lines.length * linePitchPx`. */
+  /** `lines.length * linePitchPx`, plus the `paragraph_spacing` of each paragraph where Label windows the lines (`windowLabelLines`). */
   heightPx: number;
   /**
    * `getFontAscentPx(fontMetrics, fontSizePx)`: the baseline, measured down from the line top. Both
@@ -618,7 +623,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
   const linePitchPx = getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx);
 
   const lines: TextLineLayout[] = [];
-  for (const para of splitParagraphs(transformed, paragraphSeparator)) {
+  for (const [paragraphIndex, para] of splitParagraphs(transformed, paragraphSeparator).entries()) {
     // The terminator is in the shaped text but not the source, so the per-character closures, keyed
     // into the whole text, are offset back, and the index past the paragraph's end takes the last value.
     const sourceIndex = (i: number): number => para.offset + Math.max(0, Math.min(i, para.text.length - 1));
@@ -676,7 +681,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
         });
         penX += advance;
       }
-      lines.push({ text: paraText.slice(start, clampedEnd), glyphs, widthPx: penX });
+      lines.push({ text: paraText.slice(start, clampedEnd), glyphs, widthPx: penX, paragraphIndex });
     }
   }
 

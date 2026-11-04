@@ -1,8 +1,8 @@
 /**
  * The MSDF quad shader for every glyph mesh (`TextRun.tsx`): msdfgen's median-of-3
  * decode against the vendored atlas (`openSansAtlas.ts`), antialiased with `fwidth`,
- * a `distanceBias` that emboldens synthesised bold without a re-bake, and an optional
- * outline pass. It paints 2D Control text at the bundled font.
+ * and a `distanceBias` that emboldens synthesised bold without a re-bake. It paints 2D Control
+ * text at the bundled font. Its outline is a stroked ring on the canvas painter (ADR-0040).
  */
 // Godot's default project font is not MSDF (`servers/text/text_server.cpp:2386`,
 // `scene/theme/theme_db.cpp:59`). Its MSDF branch is `scene/resources/material.cpp:1639-1656`,
@@ -36,9 +36,6 @@ uniform vec3 uColor;
 uniform float uOpacity;
 uniform float uDistanceBias;
 uniform float uPxRange;
-uniform vec3 uOutlineColor;
-uniform float uOutlineOpacity;
-uniform float uOutlineWidthPx;
 varying vec2 vUv;
 #include <clipping_planes_pars_fragment>
 
@@ -56,26 +53,14 @@ void main() {
   vec3 msd = texture2D(uMap, vUv).rgb;
   float m = median(msd.r, msd.g, msd.b);
   float spr = screenPxRange();
-  // \`spr * signedDistance\` is already a SCREEN-px measure (the fill
-  // threshold below is exactly that, offset by half a pixel), so widening the
-  // filled region by \`uOutlineWidthPx\` screen px is a plain add here --
-  // done per-fragment so it tracks the actual on-screen scale, not a
-  // px-range/bake-size ratio computed once in JS.
   float signedDistancePx = spr * (m - 0.5 + uDistanceBias);
   // The field clamps to 0 beyond half its range. A bias reads that flat 0 as a point inside the edge
   // and fills the whole glyph quad, so the fill fades out where the field is empty.
   float inRange = smoothstep(0.0, 0.04, m);
   float fillCoverage = clamp(signedDistancePx + 0.5, 0.0, 1.0) * inRange;
-  vec3 rgb = uColor;
-  float alpha = fillCoverage * uOpacity;
-  if (uOutlineWidthPx > 0.0) {
-    float outlineCoverage = clamp(signedDistancePx + uOutlineWidthPx + 0.5, 0.0, 1.0);
-    rgb = mix(uOutlineColor, uColor, fillCoverage);
-    alpha = mix(outlineCoverage * uOutlineOpacity, uOpacity, fillCoverage);
-  }
   // \`clipping_planes_fragment\` reads \`diffuseColor.a\` under ALPHA_TO_COVERAGE
   // and discards outright otherwise, so the value has to exist either way.
-  vec4 diffuseColor = vec4(rgb, alpha);
+  vec4 diffuseColor = vec4(uColor, fillCoverage * uOpacity);
   #include <clipping_planes_fragment>
   gl_FragColor = diffuseColor;
   // The tone curve, then the encode — the pair, and the order, every built-in
@@ -117,22 +102,6 @@ interface MsdfMaterialOptions {
    * Label3D's does. The injection patches the `main` and `colorspace_fragment` anchors below.
    */
   pixelMaterial?: CanvasItemPixelMaterial;
-  // Godot's MSDF outline (`servers/rendering/renderer_rd/shaders/canvas.glsl:606-623`)
-  // reads an MTSDF alpha channel (`msdf_sample.a`) this `"msdf"` atlas lacks, so this
-  // uses two median thresholds of one field, msdfgen's technique. For an opaque
-  // outline colour it looks the same as Godot's two draws.
-  /**
-   * A second fill at a threshold `widthPx` screen px outward, composited behind
-   * the fill, like Godot's larger outline glyph drawn first (`label.cpp:876-878`).
-   * Omitted, the shader draws no outline.
-   */
-  outline?: {
-    /** LINEAR rgb, same convention as `color`. */
-    color: { r: number; g: number; b: number };
-    opacity: number;
-    /** Screen px the fill threshold expands by. `0` is equivalent to omitting `outline` entirely. */
-    widthPx: number;
-  };
 }
 
 export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMaterial {
@@ -146,7 +115,6 @@ export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMa
     depthTest = false,
     side,
     pixelMaterial,
-    outline,
   } = options;
   const { injection, ...pixelState } = pixelMaterial ?? {};
   const material = new THREE.ShaderMaterial({
@@ -158,11 +126,6 @@ export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMa
       uOpacity: { value: opacity },
       uDistanceBias: { value: distanceBias },
       uPxRange: { value: pxRange },
-      uOutlineColor: {
-        value: new THREE.Vector3(outline?.color.r ?? 0, outline?.color.g ?? 0, outline?.color.b ?? 0),
-      },
-      uOutlineOpacity: { value: outline?.opacity ?? 0 },
-      uOutlineWidthPx: { value: outline?.widthPx ?? 0 },
     },
     transparent: true,
     depthWrite: false,

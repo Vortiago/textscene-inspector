@@ -514,5 +514,6 @@ export function textEditColorRunLine(run: TextEditGlyphColorRun): TextLineLayout
     text: run.glyphs.map((glyph) => glyph.char).join(''),
     glyphs: run.glyphs,
     widthPx,
+    paragraphIndex: 0,
   };
 }

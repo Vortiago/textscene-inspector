@@ -583,7 +583,12 @@ function soloRunLayout(
   // `x`, and a canvas raster sized to the span alone would clip a run that starts mid-line.
   const lastGlyph = glyphs.at(-1);
   const widthPx = lastGlyph ? lastGlyph.x + lastGlyph.advance : 0;
-  return soloLineLayout({ text, glyphs, widthPx }, parentLayout, lineAscentPx, fontMetrics);
+  return soloLineLayout(
+    { text, glyphs, widthPx, paragraphIndex: 0 },
+    parentLayout,
+    lineAscentPx,
+    fontMetrics
+  );
 }
 
 /**

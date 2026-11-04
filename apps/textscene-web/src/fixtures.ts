@@ -1223,6 +1223,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Paragraph Spacing",
+    "file": "unit-label-paragraph-spacing.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Rtl Alignment",
     "file": "unit-label-rtl-alignment.tscn",
     "category": "Other"
@@ -1243,6 +1248,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Stacked Effects",
+    "file": "unit-label-stacked-effects.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Visible Characters",
     "file": "unit-label-visible-characters.tscn",
     "category": "Other"
@@ -1260,6 +1270,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Label3d Scene Font",
     "file": "unit-label3d-scene-font.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label3d Shaded",
+    "file": "unit-label3d-shaded.tscn",
     "category": "Other"
   },
   {

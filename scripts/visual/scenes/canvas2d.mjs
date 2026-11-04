@@ -239,6 +239,10 @@ export const CANVAS_2D_SCENES = [
   // the offset is zero and Godot's int conversion of it is a no-op, so nothing
   // else draws the CENTER/BOTTOM/FILL branches.
   { name: 'label-valign', file: 'unit-label-2d-valign.tscn', mode: '2d' },
+  // The one variable: `paragraph_spacing` and `line_spacing`, from `label_settings` and from the
+  // theme constants. Godot 4.6.3 `--mode 2d` ink rows at font size 20: 28, 79, 130 (pitch 51) and
+  // 28, 49, 70 (pitch 21). Every other Label keeps the default spacing of 3 and 0.
+  { name: 'label-paragraph-spacing', file: 'unit-label-paragraph-spacing.tscn', mode: '2d' },
   // The one variable: a Theme `.tres`'s `default_font`/`default_font_size`, set
   // through `theme =` on the root Control. Two Labels with no font override, one
   // two hops down past a themeless Control, resolve it by the ancestor walk.
@@ -713,11 +717,10 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-control-anchor-parent-plain-node.tscn',
     mode: '2d',
   },
-  // The one variable: a second coverage threshold on the glyph field, drawn as
-  // an outline and as an offset pass behind the fill. Other text scenes draw the
-  // fill alone. Godot 4.6.3 `--mode 2d`: mean 0.372 of 255, MSDF stem
-  // antialiasing along the outline edge.
+  // The one variable: a theme outline, a stroked ring on the canvas painter behind the fill.
+  // Other text scenes draw the fill alone. `label-stacked-effects` adds the stacked arrays.
   { name: 'label-outline', file: 'unit-label-outline.tscn', mode: '2d' },
+  { name: 'label-stacked-effects', file: 'unit-label-stacked-effects.tscn', mode: '2d' },
   // The one variable: a `label_settings` loaded from its own `.tres` file, which beats the
   // node-local theme overrides as an inline one does.
   { name: 'label-label-settings-tres', file: 'unit-label-label-settings-tres.tscn', mode: '2d' },

@@ -15,15 +15,14 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { OutlineRingRun, textLayerRenderOrder } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { TextRun, type TextRunProps } from '../../../../r3f/controls/native/text/TextRun';
 import {
   LABEL_PARAGRAPH_SEPARATOR,
   applyVisibleCharsReveal,
   labelEffectiveTextTheme,
   labelFontState,
-  labelOutlineTheme,
   labelPreShapeText,
-  labelShadowTheme,
   labelShapingWidthPx,
   labelTextTheme,
   labelUnwrappedShape,
@@ -32,6 +31,7 @@ import {
   windowLabelLines,
   type LabelLinePlacement,
 } from './nativeSolver';
+import { labelEffectLayers, labelFillLayer, type LabelEffectLayer } from './effectLayers';
 import type { LabelProperties } from './types';
 import {
   AutowrapMode,
@@ -53,28 +53,54 @@ function useSoloLineLayouts(placements: LabelLinePlacement[], layout: TextLayout
   );
 }
 
+type LayerRunsProps = Pick<TextRunProps, 'fontSizePx' | 'clippingPlanes' | 'renderOrder'> & {
+  layer: LabelEffectLayer;
+  placements: LabelLinePlacement[];
+  lineLayouts: TextLayoutResult[];
+};
+
+/** One layer on every line. A ring strokes on the canvas painter, a plain layer draws on the painter of its font. */
+function LayerRuns({ layer, placements, lineLayouts, ...run }: LayerRunsProps) {
+  return placements.map((placement, index) => (
+    <CanvasItemGroup
+      key={index}
+      position={[placement.x + layer.offset.x, -(placement.y + layer.offset.y), 0]}
+    >
+      {layer.kind === 'ring' ? (
+        <OutlineRingRun {...run} layout={lineLayouts[index]!} tint={layer.color} sizePx={layer.ringSizePx} />
+      ) : (
+        <TextRun {...run} layout={lineLayouts[index]!} tint={layer.color} />
+      )}
+    </CanvasItemGroup>
+  ));
+}
+
 export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LabelProperties>(solveNode);
   const themeResolved = useMemo(() => labelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
   const labelSettings = solveNode.labelSettings;
   // A valid `label_settings` beats the theme outright: see its own doc.
   const textTheme = useMemo(
-    () => labelEffectiveTextTheme(themeResolved, labelSettings),
-    [themeResolved, labelSettings]
+    () => labelEffectiveTextTheme(themeResolved, labelSettings, solveNode.constants),
+    [themeResolved, labelSettings, solveNode.constants]
   );
 
   // Composed in sRGB: `TextRun` converts its `tint` once, internally.
   const tintColor = multiplyModulate(tint.own, textTheme.color);
 
-  // label.cpp:762-767,876-878: the outline draws over the fill at the same pen
-  // position, so `<TextRun>` composites both in one pass. The shadow draws behind,
-  // at its own offset, colour and outline size.
-  const outlineTheme = useMemo(() => labelOutlineTheme(solveNode), [solveNode]);
-  const shadowTheme = useMemo(() => labelShadowTheme(solveNode), [solveNode]);
-  const outlineColor = multiplyModulate(tint.own, outlineTheme.color);
-  const shadowColor = multiplyModulate(tint.own, shadowTheme.color);
-  const hasOutline = outlineTheme.size > 0 && outlineColor.a !== 0;
-  const hasShadow = shadowColor.a > 0;
+  // label.cpp:828-883: the shadows and rings draw behind the fill, each with its own colour, and
+  // the Label's modulate tints every layer as it tints the fill.
+  const effectLayers = useMemo(() => labelEffectLayers(solveNode), [solveNode]);
+  const layers = useMemo(
+    () => [
+      ...effectLayers
+        .map((layer) => ({ ...layer, color: multiplyModulate(tint.own, layer.color) }))
+        // A layer the modulate makes invisible draws nothing, so it gets no mesh.
+        .filter((layer) => layer.color.a > 0),
+      labelFillLayer(tintColor),
+    ],
+    [effectLayers, tint.own, tintColor]
+  );
   const inheritedClippingPlanes = useControlClipPlanes();
   // `clip_text` scissors this Label's own drawn ink to its rect
   // (`label.cpp:733-734`'s `canvas_item_set_clip`): always called (hooks run
@@ -112,12 +138,13 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       autowrapTrimFlags: props.autowrapTrimFlags,
     });
     const range = labelVisibleLineRange(shaped.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible);
-    return windowLabelLines(shaped, range);
+    return windowLabelLines(shaped, range, textTheme.paragraphSpacingPx);
   }, [
     sharedLayout,
     text,
     textTheme.fontSizePx,
     textTheme.lineSpacingPx,
+    textTheme.paragraphSpacingPx,
     rect.w,
     autowrapMode,
     props.uppercase,
@@ -148,7 +175,11 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
         props.verticalAlignment,
         effectiveJustificationFlags,
         textTheme.fontSizePx,
-        { rtl: solveNode.rtl }
+        {
+          rtl: solveNode.rtl,
+          lineSpacingPx: textTheme.lineSpacingPx,
+          paragraphSpacingPx: textTheme.paragraphSpacingPx,
+        }
       ),
     [
       layout,
@@ -158,6 +189,8 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       props.verticalAlignment,
       effectiveJustificationFlags,
       textTheme.fontSizePx,
+      textTheme.lineSpacingPx,
+      textTheme.paragraphSpacingPx,
       solveNode.rtl,
     ]
   );
@@ -210,40 +243,21 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   // A settings font that is still loading draws nothing, never the theme font (ADR-0059).
   if (isFontLoading) return <CanvasItemGroup ref={anchorRef} />;
 
-  // Each `<TextRun>` takes `renderOrder` itself, since three never inherits it,
-  // and sits in a `<CanvasItemGroup>`, since three reads the nearest group's order
-  // first and a bare `<group>` resets it to zero (`r3f/canvasPaintOrder.ts`).
+  // Each run takes `renderOrder` itself, since three never inherits it, and sits in a
+  // `<CanvasItemGroup>`, since three reads the nearest group's order first and a bare `<group>`
+  // resets it to zero (`r3f/canvasPaintOrder.ts`).
   return (
     <CanvasItemGroup ref={anchorRef}>
-      {hasShadow &&
-        revealedPlacements.map((placement, index) => (
-          <CanvasItemGroup
-            key={`shadow-${index}`}
-            position={[placement.x + shadowTheme.offset.x, -(placement.y + shadowTheme.offset.y), 0]}
-          >
-            <TextRun
-              layout={lineLayouts[index]!}
-              fontSizePx={textTheme.fontSizePx}
-              tint={shadowColor}
-              outlineColor={shadowColor}
-              outlineWidthPx={shadowTheme.size}
-              clippingPlanes={clippingPlanes}
-              renderOrder={renderOrder}
-            />
-          </CanvasItemGroup>
-        ))}
-      {revealedPlacements.map((placement, index) => (
-        <CanvasItemGroup key={index} position={[placement.x, -placement.y, 0]}>
-          <TextRun
-            layout={lineLayouts[index]!}
-            fontSizePx={textTheme.fontSizePx}
-            tint={tintColor}
-            outlineColor={hasOutline ? outlineColor : undefined}
-            outlineWidthPx={hasOutline ? outlineTheme.size : 0}
-            clippingPlanes={clippingPlanes}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
+      {layers.map((layer, layerIndex) => (
+        <LayerRuns
+          key={layerIndex}
+          layer={layer}
+          placements={revealedPlacements}
+          lineLayouts={lineLayouts}
+          fontSizePx={textTheme.fontSizePx}
+          clippingPlanes={clippingPlanes}
+          renderOrder={textLayerRenderOrder(renderOrder, layerIndex, layers.length)}
+        />
       ))}
     </CanvasItemGroup>
   );
