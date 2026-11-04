@@ -245,11 +245,12 @@ interface ItemTextShapeInput {
  */
 export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult | null {
   if (input.text.length === 0) return null;
+  const wrapped = isItemListTextWrapped(input.iconMode, input.maxTextLines);
   const layout = shapeText(input.text, {
     fontSizePx: input.fontSizePx,
     boxWidthPx: input.widthPx,
     autowrapMode: itemListAutowrapMode(input.iconMode, input.maxTextLines),
-    breakMandatory: isItemListTextWrapped(input.iconMode, input.maxTextLines),
+    breakMandatory: wrapped,
     lineSpacingPx: itemListLineSeparationForShaping(input),
     fontMetrics: input.fontMetrics,
   });
@@ -264,7 +265,7 @@ export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult |
       fontSizePx: input.fontSizePx,
     });
 
-  const lines = isItemListTextWrapped(input.iconMode, input.maxTextLines)
+  const lines = wrapped
     ? withHiddenLinesEllipsis(layout.lines, input.maxTextLines, (line) =>
         trim(line, { ...overrunFlags, enforceEllipsis: true })
       )

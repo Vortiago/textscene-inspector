@@ -71,7 +71,6 @@ interface RowContent {
   disabled: boolean;
   hasIcon: boolean;
   iconSize: Vector2;
-  hasText: boolean;
   textSize: Vector2;
   minimumLayout: TextLayoutResult | null;
 }
@@ -207,7 +206,6 @@ export function ItemList({
       const iconSize = itemIconPackedSize(hasIcon, naturalSize, props.fixedIconSize, iconScale);
 
       const text = item.text ?? '';
-      const hasText = text.length > 0;
       const minimumLayout = shapeItemListText({
         ...textShape,
         text,
@@ -217,7 +215,7 @@ export function ItemList({
         ? { x: shapedTextSizeWidthPx(minimumLayout.widthPx), y: minimumLayout.heightPx }
         : { x: 0, y: 0 };
 
-      return { item, disabled, hasIcon, iconSize, hasText, textSize, minimumLayout };
+      return { item, disabled, hasIcon, iconSize, textSize, minimumLayout };
     });
   }, [items, textShape, fixedColumnWidth, iconScale, props.fixedIconSize, solveNode]);
 
@@ -228,7 +226,7 @@ export function ItemList({
           {
             hasIcon: r.hasIcon,
             iconSize: r.iconSize,
-            hasText: r.hasText,
+            hasText: r.minimumLayout !== null,
             textSize: r.textSize,
             iconMode,
             maxTextLines,
