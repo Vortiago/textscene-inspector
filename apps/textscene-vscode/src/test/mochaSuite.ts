@@ -1,5 +1,6 @@
 /** The mocha run that each extension host suite's `run()` hands its own directory to. */
 import * as fs from 'fs';
+import * as path from 'path';
 import { globSync } from 'glob';
 import Mocha from 'mocha';
 import { SUITE_STARTED_MARKER_ENV } from './integration/integrationLaunch';
@@ -13,10 +14,11 @@ export async function runSuite(testsRoot: string): Promise<void> {
     timeout: 20000,
   });
 
-  // Sorted: glob lists in no fixed order, and the suites run in the order added.
-  globSync('**/*.test.js', { cwd: testsRoot, absolute: true })
+  // Joined to `testsRoot`, not `absolute: true`: glob uppercases a Windows drive letter, and the
+  // tests compare `__dirname` paths with the lowercase `Uri.fsPath`. Sorted: glob has no fixed order.
+  globSync('**/*.test.js', { cwd: testsRoot })
     .sort()
-    .forEach((file) => mocha.addFile(file));
+    .forEach((file) => mocha.addFile(path.join(testsRoot, file)));
 
   return new Promise((resolve, reject) => {
     mocha.run((failures) => {
