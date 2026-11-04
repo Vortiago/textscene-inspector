@@ -305,6 +305,8 @@ export const CANVAS_2D_SCENES = [
   // the slice's sheet records. A span-layout change moves them here.
   { name: 'richtext-label-bbcode', file: 'unit-rich-text-label.tscn', mode: '2d' },
   { name: 'button-states', file: 'unit-button-states.tscn', mode: '2d' },
+  // The one variable: the theme text outline of Button, CheckBox, CheckButton, OptionButton and MenuButton.
+  { name: 'button-family-outline', file: 'unit-button-family-outline.tscn', mode: '2d' },
   // The one variable: a Theme item keyed on BaseButton, which a Button finds only by walking its
   // ClassDB chain. Every other themed golden keys its items on the node's own class.
   { name: 'control-theme-base-class', file: 'unit-control-theme-base-class.tscn', mode: '2d' },

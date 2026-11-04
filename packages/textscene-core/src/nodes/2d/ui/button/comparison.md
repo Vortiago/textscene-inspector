@@ -50,6 +50,11 @@ Button's own keys, `text`, `disabled`, `flat`, `alignment`, `icon`, `icon_alignm
 no warning. The three alignments go through `parseOptionalInt`, so a malformed value
 becomes `undefined` and the render default applies.
 
+Button draws the theme text outline, `font_outline_color` and `outline_size`, as Godot
+does (`button.cpp:458-462`). A ring of `outline_size / 4` px sits under the fill. No ring
+draws at an `outline_size` of 0 or a zero alpha. The ring strokes on the canvas painter for the
+bundled font too (ADR-0040).
+
 ## Known limitations
 
 - **Approximated** Under `layout_direction = 3` or `text_direction = 2`, the label's glyphs

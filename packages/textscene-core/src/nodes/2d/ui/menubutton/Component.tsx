@@ -15,7 +15,7 @@ import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
@@ -45,6 +45,7 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
   // `tint.own` goes raw to `<StyleBoxQuad>`'s `color` and multiplies each font and icon colour before
   // its one sRGB-to-linear conversion, as Button's painter does.
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   // The solve-handoff share the minimum-size solver also reads, as in Button's painter.
   const layout: TextLayoutResult | null = menuButtonLabelShape(solveNode, theme);
@@ -122,10 +123,11 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
       )}
       {content.text && layout && (
         <CanvasItemGroup position={[content.text.offset.x, -content.text.offset.y, 0]}>
-          <TextRun
+          <OutlinedTextRun
             layout={layout}
             fontSizePx={fontSizePx}
             tint={tintedFontColor}
+            outline={textOutline}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />

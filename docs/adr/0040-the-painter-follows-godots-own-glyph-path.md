@@ -3,6 +3,9 @@
 - Status: Accepted. **Supersedes ADR-0034.**
 - Amended by ADR-0042: the webview CSP now grants `worker-src blob:`. The MSDF finding
   below stands, because runtime MSDF generation also needs `connect-src`, which stays closed.
+- Amended for 2D Controls: the outline ring of Button, CheckBox, CheckButton, OptionButton,
+  MenuButton and ProgressBar draws on painter B for the bundled font too, through
+  `OutlinedTextRun`. Their fill stays on painter A.
 - Related: ADR-0037 (Control nodes render natively in the canvas: the 2D text this
   decision leaves on the atlas is that decision's text), ADR-0026 (comparison sheets live
   in their slice: the per-node limitations below are recorded there too).

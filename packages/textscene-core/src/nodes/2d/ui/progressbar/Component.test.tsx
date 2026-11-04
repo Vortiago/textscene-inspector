@@ -37,7 +37,7 @@ describe('<ProgressBar>', () => {
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(3); // background + fill + "50%"
   });
 
-  it("composites font_outline_color/outline_size into the percent text's SAME mesh (the bundled font is MSDF, no contour to stroke)", async () => {
+  it("keeps the atlas outline off the percent text's mesh: the outline is a stroked ring on its own run", async () => {
     const n = {
       ...solveNode({ value: 50 }),
       colors: { font_outline_color: { r: 1, g: 0, b: 0, a: 1 } },
@@ -46,12 +46,11 @@ describe('<ProgressBar>', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ProgressBar {...painterEnv()} solveNode={n} rect={RECT} renderOrder={0} />
     );
-    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(3); // background + fill + "50%" (no extra outline mesh)
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     const textMat = meshes
       .map((m) => m.material as THREE.ShaderMaterial)
       .find((m) => m.uniforms?.uOutlineWidthPx !== undefined)!;
-    expect(textMat.uniforms.uOutlineWidthPx!.value).toBeGreaterThan(0);
+    expect(textMat.uniforms.uOutlineWidthPx!.value).toBe(0);
   });
 
   it('draws no outline with the default outline_size of 0, even for an explicit font_outline_color', async () => {

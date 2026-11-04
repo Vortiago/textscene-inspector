@@ -22,6 +22,7 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { fitLineToWidth, justifyToLineIndex } from '../../../../r3f/controls/native/text/textJustify';
 import {
+  resolveTextOutline,
   resolveTextTheme,
   type ResolvedTextTheme,
   type TextThemeDefaults,
@@ -109,8 +110,6 @@ export function labelEffectiveTextTheme(
   };
 }
 
-/** `default_theme.cpp:386`: Label's `font_outline_color` defaults to opaque black. */
-const LABEL_DEFAULT_OUTLINE_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 /** `default_theme.cpp:385`: Label's `font_shadow_color` defaults to transparent, so a Label draws no shadow until a scene sets it. */
 const LABEL_DEFAULT_SHADOW_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 0 };
 /**
@@ -129,10 +128,8 @@ interface LabelOutlineTheme {
 export function labelOutlineTheme(n: SolveNode): LabelOutlineTheme {
   const settings = n.labelSettings;
   if (settings) return { size: settings.outlineSize, color: settings.outlineColor };
-  return {
-    size: n.constants['outline_size'] ?? 0,
-    color: n.colors['font_outline_color'] ?? LABEL_DEFAULT_OUTLINE_COLOR,
-  };
+  const { color, sizePx } = resolveTextOutline(n);
+  return { size: sizePx, color };
 }
 
 interface LabelShadowTheme {
