@@ -8,9 +8,10 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { CLEAN_SCENE } from '../../smokeProject/scenes';
 import { extensionUnderTest, openSceneAndActivate } from '../../smokeProject/sceneEditor';
-import { contributedTools, skipBecause } from '../../languageFeatures/agentToolAnswersSuite.testkit';
+import { contributedTools } from '../../languageFeatures/agentToolAnswersSuite.testkit';
 import { hoverText } from '../../languageFeatures/sharedAnswersSuite.testkit';
 import { TOOLS_OFF_SETTINGS } from '../installedLaunch';
+import { invokeSceneTool } from '../../invokeSceneTool';
 
 const TOOL_PREFIX = 'textscene_';
 
@@ -40,15 +41,9 @@ suite('Installed package with the agent tools off', function () {
   });
 
   test('invoking a tool fails while the setting is off', async function () {
-    if (typeof vscode.lm?.invokeTool !== 'function') {
-      skipBecause(this, 'this VS Code predates vscode.lm.invokeTool');
-    }
-
     const scene = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0]!.uri, CLEAN_SCENE).fsPath;
 
-    await assert.rejects(async () =>
-      vscode.lm.invokeTool('textscene_scene_tree', { input: { path: scene } })
-    );
+    await assert.rejects(async () => invokeSceneTool('textscene_scene_tree', scene));
   });
 
   test('the editor features still answer: hover names a node class', async () => {

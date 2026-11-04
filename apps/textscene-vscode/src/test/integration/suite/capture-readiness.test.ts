@@ -8,6 +8,7 @@ import * as assert from 'assert';
 import * as path from 'path';
 import { PNG } from 'pngjs';
 import * as vscode from 'vscode';
+import { hostReturnsImageParts } from '../../../tools/imageResultSupport';
 import { godotProjectDir, removeGodotProject, writeGodotProject } from '../helpers/godotProjectHelpers';
 import { EXTENSION_ID } from '../../smokeProject/sceneEditor';
 import {
@@ -17,6 +18,7 @@ import {
   skipBecause,
   textOf,
 } from '../../languageFeatures/agentToolAnswersSuite.testkit';
+import { invokeSceneTool } from '../../invokeSceneTool';
 
 const PROJECT = 'capture-readiness';
 
@@ -80,8 +82,8 @@ function meanLumaStep(png: PNG): number {
 
 suite('Capture readiness', () => {
   suiteSetup(async function () {
-    if (typeof vscode.LanguageModelDataPart?.image !== 'function') {
-      skipBecause(this, 'this VS Code predates the image part, so the capture tool does not register');
+    if (!hostReturnsImageParts()) {
+      skipBecause(this, 'this VS Code cannot return an image part, so the capture tool does not register');
     }
     if (launchedWithoutGpu()) {
       skipBecause(this, 'the window launched with --disable-gpu, so the preview has no WebGL to capture');
@@ -99,7 +101,7 @@ suite('Capture readiness', () => {
     this.timeout(CAPTURE_TEST_TIMEOUT_MS);
     const scenePath = path.join(godotProjectDir(PROJECT), SCENE_FILE);
 
-    const result = await vscode.lm.invokeTool('textscene_capture', { input: { path: scenePath } });
+    const result = await invokeSceneTool('textscene_capture', scenePath);
     const image = imageOf(result);
 
     assert.ok(image, `expected an image part, found the text ${JSON.stringify(textOf(result))}`);

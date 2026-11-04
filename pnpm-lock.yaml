@@ -242,9 +242,6 @@ importers:
       wawoff2:
         specifier: 'catalog:'
         version: 2.0.1
-      ws:
-        specifier: ^8.22.1
-        version: 8.22.1
       yaml:
         specifier: 'catalog:'
         version: 2.9.1
@@ -442,8 +439,8 @@ importers:
         specifier: 'catalog:'
         version: 19.3.0(@types/react@19.3.0)
       '@types/vscode':
-        specifier: ~1.85.0
-        version: 1.85.0
+        specifier: ~1.105.0
+        version: 1.105.0
       '@typescript/native':
         specifier: 'catalog:'
         version: typescript@7.0.2
@@ -1565,8 +1562,8 @@ packages:
   '@types/three@0.187.0':
     resolution: {integrity: sha512-v+vKNarUtk4n2QRZ4+CN5ygMM0ARUjXjIQl0R/unMUfmStFeVqGbgqarbrpoGTXRZoulSH16ePrVJVxPJEbMUA==}
 
-  '@types/vscode@1.85.0':
-    resolution: {integrity: sha512-CF/RBon/GXwdfmnjZj0WTUMZN5H6YITOfBCP4iEZlOtVQXuzw6t7Le7+cR+7JzdMrnlm7Mfp49Oj2TuSXIWo3g==}
+  '@types/vscode@1.105.0':
+    resolution: {integrity: sha512-Lotk3CTFlGZN8ray4VxJE7axIyLZZETQJVWi/lYoUVQuqfRxlQhVOfoejsD2V3dVXPSbS15ov5ZyowMAzgUqcw==}
 
   '@types/webxr@0.5.24':
     resolution: {integrity: sha512-h8fgEd/DpoS9CBrjEQXR+dIDraopAEfu4wYVNY2tEPwk60stPWhvZMf4Foo5FakuQ7HFZoa8WceaWFervK2Ovg==}
@@ -5200,7 +5197,7 @@ snapshots:
       fflate: 0.8.3
       meshoptimizer: 1.1.1
 
-  '@types/vscode@1.85.0': {}
+  '@types/vscode@1.105.0': {}
 
   '@types/webxr@0.5.24': {}
 
