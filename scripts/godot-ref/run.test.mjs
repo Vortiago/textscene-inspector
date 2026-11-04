@@ -25,12 +25,14 @@ import {
   EDITOR_CAMERA_DIRECTION,
   EDITOR_CAMERA_DISTANCE,
   EDITOR_FOV,
+  enginePassStalled,
   ENGINE_KILL_AFTER_S,
   ENGINE_TIMEOUT_S,
   FOG_HISTORY_MAX_CYCLES,
   FOG_JITTER_CYCLE_FRAMES,
   FRAME_MARGIN,
   godotSpawnPlan,
+  importAssets,
   PARTICLES_PROCESS_DEFAULT,
   parseArgs,
   REFERENCE_FIXED_FPS,
@@ -170,6 +172,19 @@ describe('projectConfig — an autoload is a script too', () => {
   });
 });
 
+describe('bootstrapScript — the random generator is seeded', () => {
+  /**
+   * A GPUParticles3D without `use_fixed_seed` draws its seed from `Math::rand()` on entering the
+   * tree (`gpu_particles_3d.cpp:438-439`), which Godot seeds from the clock. Two runs of one scene
+   * then drew a different burst, 18% of the picture apart.
+   */
+  it('seeds the global generator before the scene loads', () => {
+    const gd = bootstrap({ previews: true });
+    expect(gd).toMatch(/\n\tseed\(\d+\)\n/);
+    expect(gd.indexOf('\tseed(')).toBeLessThan(gd.indexOf('load(SCENE_PATH)'));
+  });
+});
+
 describe('bootstrapScript — a non-tool script never runs under previews', () => {
   /**
    * Like the editor, the default pauses the tree first, stops AnimationPlayers, never steps
@@ -281,6 +296,16 @@ describe('projectConfig', () => {
   it('keeps the source project’s other rendering settings', () => {
     const ini = projectConfig(withDefaultEnv, { width: 400, height: 300 });
     expect(ini).toMatch(/anti_aliasing\/quality\/msaa_3d=2/);
+  });
+
+  it('imports on one thread, because the parallel font import deadlocks', () => {
+    const ini = projectConfig(null, { width: 640, height: 480 });
+    expect(ini).toMatch(/\[editor\]\s+import\/use_multiple_threads=false/);
+  });
+
+  it('overrides a source project that turns threaded import on', () => {
+    const ini = projectConfig('[editor]\nimport/use_multiple_threads=true', { width: 640, height: 480 });
+    expect(ini).not.toMatch(/use_multiple_threads=true/);
   });
 
   it('pins the viewport size so a reference render is reproducible', () => {
@@ -995,6 +1020,51 @@ describe('an expired engine pass is reaped as a process group', () => {
     });
     expect(plan.command).toBe('xvfb-run');
     expect(plan.argv).not.toContain('timeout');
+  });
+});
+
+/**
+ * A stalled import leaves assets unimported, and the render would save a picture without them as
+ * the reference.
+ */
+describe('a stalled import pass is never rendered over', () => {
+  const pass = (fields) => ({ status: 0, error: null, timedOut: false, stdout: '', stderr: '', ...fields });
+  const stalledPass = pass({ status: 124, timedOut: true, stderr: 'importing fonts' });
+
+  it.each([124, 137])('classifies exit %i as stalled', (status) => {
+    expect(enginePassStalled(pass({ status, timedOut: true }))).toBe(true);
+  });
+
+  it('classifies a spawn error as stalled', () => {
+    expect(enginePassStalled(pass({ status: null, error: new Error('spawn godot ENOENT') }))).toBe(true);
+  });
+
+  it('classifies a plain non-zero exit as done', () => {
+    expect(enginePassStalled(pass({ status: 1 }))).toBe(false);
+  });
+
+  it('throws naming the import pass, the timeout and stderr after two stalls', async () => {
+    let runs = 0;
+    await expect(importAssets({ run: () => (runs++, stalledPass), restage: async () => {} })).rejects.toThrow(
+      new RegExp(`import pass did not finish within ${ENGINE_TIMEOUT_S}s[\\s\\S]*importing fonts`)
+    );
+    expect(runs).toBe(2);
+  });
+
+  it('restages a clean project before the second try', async () => {
+    const events = [];
+    const results = [stalledPass, pass()];
+    await importAssets({
+      run: () => (events.push('run'), results.shift()),
+      restage: async () => events.push('restage'),
+    });
+    expect(events).toEqual(['run', 'restage', 'run']);
+  });
+
+  it('does not retry a plain non-zero exit', async () => {
+    let runs = 0;
+    await importAssets({ run: () => (runs++, pass({ status: 1 })), restage: async () => {} });
+    expect(runs).toBe(1);
   });
 });
 
