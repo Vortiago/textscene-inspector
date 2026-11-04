@@ -49,6 +49,8 @@ export interface ItemListProperties extends ControlProperties {
   fixedIconSize?: { x: number; y: number };
   /** `TextServer::OverrunBehavior`. Godot default 3 (OVERRUN_TRIM_ELLIPSIS). */
   textOverrunBehavior?: number;
+  /** `Control::clip_contents`. ItemList's constructor sets true (`item_list.cpp:2482`), so only an authored `false` unclips. */
+  clipContents?: boolean;
   /** Rows 0..`itemCount-1`, dense: `items[i]` is `{}` for an index no `item_i/*` key names. */
   items: ItemListItem[];
 }

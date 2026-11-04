@@ -22,7 +22,8 @@ import {
   itemListGuideColor,
   itemListGuideLines,
   itemListMirrorX,
-  itemListRightAlignOffsetPx,
+  itemListLineShiftPx,
+  itemListMaxColumnWidth,
   itemListRowTextX,
   itemListLineTextWidthPx,
   itemListWrappedTextWidthPx,
@@ -30,11 +31,11 @@ import {
   itemMinimumSize,
   itemTextColor,
   itemTextDrawOffset,
-  itemTextLineCenterOffset,
   packItemListRows,
   shapeItemListText,
 } from './nativeSolver';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 
 const itemListMinimumSize = controlSolverRegistry.minimumSize('ItemList')!;
 
@@ -85,7 +86,7 @@ describe('shapeItemListText — wrapping (item_list.cpp:37-55)', () => {
     text: 'AA AA AA',
     fontSizePx: 16,
     fontMetrics: OPEN_SANS_FONT_METRICS,
-    fixedColumnWidth: 30,
+    widthPx: 30,
     overrunBehavior: 0,
   };
 
@@ -116,24 +117,292 @@ describe('shapeItemListText — overrun trim (item_list.h:131 default OVERRUN_TR
     maxTextLines: 1,
   };
 
-  it('trims to fixedColumnWidth by default, appending an ellipsis (matches text_overrun.test.ts derivation)', () => {
-    const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', fixedColumnWidth: 100 });
+  it('trims to the shape width by default, appending an ellipsis (matches text_overrun.test.ts derivation)', () => {
+    const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', widthPx: 100 });
     expect(layout!.lines[0]!.text).toBe('AAAAAAAA…');
   });
 
-  it('is a no-op with no fixedColumnWidth — nothing to trim against (unconstrained shape width)', () => {
-    const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', fixedColumnWidth: 0 });
+  it('is a no-op at an unconstrained shape width — nothing to trim against', () => {
+    const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', widthPx: 0 });
     expect(layout!.lines[0]!.text).toBe('AAAAAAAAAAAA');
   });
 
-  it('OVERRUN_NO_TRIMMING (0) leaves the text untrimmed even with a fixedColumnWidth', () => {
+  it('OVERRUN_NO_TRIMMING (0) leaves the text untrimmed at a constrained width', () => {
     const layout = shapeItemListText({
       ...baseInput,
       text: 'AAAAAAAAAAAA',
-      fixedColumnWidth: 100,
+      widthPx: 100,
       overrunBehavior: 0,
     });
     expect(layout!.lines[0]!.text).toBe('AAAAAAAAAAAA');
+  });
+});
+
+/**
+ * Measured through `TextParagraph` with `ItemList::_shape_text`'s break flags, overrun behaviour and
+ * `max_lines_visible` (Godot 4.6.3, `item_list.cpp:37-55`), at the width each pass hands `set_width`.
+ * Widths are `shaped_text_get_width`, ceiled. Heights are one 23 px line each at 16 px Open Sans.
+ */
+describe('shapeItemListText — against TextParagraph (text_paragraph.cpp:225-266)', () => {
+  const LINE_HEIGHT_PX = 23;
+  const cases = [
+    // A word wider than the box breaks at the last glyph that fits (BREAK_GRAPHEME_BOUND wins).
+    {
+      name: 'breaks a long word per glyph',
+      text: 'Supercalifragilistic',
+      top: true,
+      overrun: 3,
+      max: 3,
+      width: 56,
+      lines: ['Superc', 'alifragi', 'listic'],
+      widths: [54, 54, 36],
+    },
+    // Three lines show, the fourth hides, so the last shown line ends in an ellipsis.
+    {
+      name: 'ends the last visible line in an ellipsis',
+      text: 'Healing potion bottle',
+      top: true,
+      overrun: 3,
+      max: 3,
+      width: 56,
+      lines: ['Healin', 'g potio', 'n bot…'],
+      widths: [50, 54, 54],
+    },
+    {
+      name: 'hides lines past max_text_lines',
+      text: 'Supercalifragilistic',
+      top: true,
+      overrun: 3,
+      max: 2,
+      width: 56,
+      lines: ['Superc', 'alifra…'],
+      widths: [54, 54],
+    },
+    {
+      name: 'a single visible line ends in the ellipsis',
+      text: 'Healing potion bottle',
+      top: true,
+      overrun: 3,
+      max: 1,
+      width: 56,
+      lines: ['Heali…'],
+      widths: [53],
+    },
+    {
+      name: 'OVERRUN_NO_TRIMMING hides lines without an ellipsis',
+      text: 'Supercalifragilistic',
+      top: true,
+      overrun: 0,
+      max: 2,
+      width: 56,
+      lines: ['Superc', 'alifragi'],
+      widths: [54, 54],
+    },
+    {
+      name: 'OVERRUN_TRIM_CHAR keeps the hidden-line cut without an ellipsis',
+      text: 'Healing potion bottle',
+      top: true,
+      overrun: 1,
+      max: 2,
+      width: 56,
+      lines: ['Healin', 'g potio'],
+      widths: [50, 54],
+    },
+    {
+      name: 'OVERRUN_TRIM_WORD_ELLIPSIS cuts at a word',
+      text: 'Healing potion bottle',
+      top: true,
+      overrun: 4,
+      max: 2,
+      width: 56,
+      lines: ['Healin', 'g po …'],
+      widths: [50, 50],
+    },
+    {
+      name: 'OVERRUN_TRIM_ELLIPSIS_FORCE',
+      text: 'Healing potion bottle',
+      top: true,
+      overrun: 5,
+      max: 2,
+      width: 56,
+      lines: ['Healin', 'g pot…'],
+      widths: [50, 53],
+    },
+    {
+      name: 're-wraps at a narrower width than the text',
+      text: 'Long word another',
+      top: true,
+      overrun: 3,
+      max: 2,
+      width: 54,
+      lines: ['Long', 'word…'],
+      widths: [38, 53],
+    },
+    {
+      name: 'trims edge spaces at a break',
+      text: 'AA   BB   CC',
+      top: true,
+      overrun: 3,
+      max: 3,
+      width: 30,
+      lines: ['AA', 'BB', 'CC'],
+      widths: [22, 22, 21],
+    },
+    {
+      name: 'breaks at a mandatory newline unconstrained',
+      text: 'AB\nCD',
+      top: true,
+      overrun: 3,
+      max: 3,
+      width: -1,
+      lines: ['AB', 'CD'],
+      widths: [22, 22],
+    },
+    {
+      name: 'keeps a LEFT label on one line across a newline',
+      text: 'AB\nCD',
+      top: false,
+      overrun: 3,
+      max: 1,
+      width: -1,
+      lines: ['AB\nCD'],
+      widths: [43],
+    },
+    {
+      name: 'draws a fitting LEFT label whole under OVERRUN_TRIM_ELLIPSIS_FORCE',
+      text: 'Short',
+      top: false,
+      overrun: 5,
+      max: 1,
+      width: 70,
+      lines: ['Short'],
+      widths: [42],
+    },
+    {
+      name: 'draws a fitting LEFT label whole under OVERRUN_TRIM_WORD_ELLIPSIS_FORCE',
+      text: 'Short',
+      top: false,
+      overrun: 6,
+      max: 1,
+      width: 70,
+      lines: ['Short'],
+      widths: [42],
+    },
+    {
+      name: 'cuts an overflowing LEFT label under 6 characters without an ellipsis',
+      text: 'Short',
+      top: false,
+      overrun: 3,
+      max: 1,
+      width: 30,
+      lines: ['Sho'],
+      widths: [29],
+    },
+    {
+      name: 'ends an overflowing short LEFT label in an ellipsis under OVERRUN_TRIM_ELLIPSIS_FORCE',
+      text: 'Short',
+      top: false,
+      overrun: 5,
+      max: 1,
+      width: 30,
+      lines: ['S…'],
+      widths: [22],
+    },
+    {
+      name: 'ends an overflowing short LEFT label in a word ellipsis under OVERRUN_TRIM_WORD_ELLIPSIS_FORCE',
+      text: 'A bc',
+      top: false,
+      overrun: 6,
+      max: 1,
+      width: 20,
+      lines: ['…'],
+      widths: [17],
+    },
+    {
+      name: 'trims a LEFT label with an ellipsis',
+      text: 'A very long item name',
+      top: false,
+      overrun: 3,
+      max: 1,
+      width: 70,
+      lines: ['A very l…'],
+      widths: [70],
+    },
+    {
+      name: 'trims a LEFT label per char',
+      text: 'A very long item name',
+      top: false,
+      overrun: 1,
+      max: 1,
+      width: 70,
+      lines: ['A very lo'],
+      widths: [67],
+    },
+    {
+      name: 'trims a LEFT label per word',
+      text: 'A very long item name',
+      top: false,
+      overrun: 2,
+      max: 1,
+      width: 70,
+      lines: ['A very'],
+      widths: [48],
+    },
+    {
+      name: 'forces the LEFT ellipsis',
+      text: 'A very long item name',
+      top: false,
+      overrun: 5,
+      max: 1,
+      width: 70,
+      lines: ['A very l…'],
+      widths: [70],
+    },
+    {
+      name: 'leaves a LEFT label whole at OVERRUN_NO_TRIMMING',
+      text: 'A very long item name',
+      top: false,
+      overrun: 0,
+      max: 1,
+      width: 70,
+      lines: ['A very long item name'],
+      widths: [173],
+    },
+    {
+      name: 'leaves a LEFT label whole at zero width',
+      text: 'A very long item name',
+      top: false,
+      overrun: 3,
+      max: 1,
+      width: 0,
+      lines: ['A very long item name'],
+      widths: [173],
+    },
+    {
+      name: 'leaves a LEFT label whole at negative width',
+      text: 'A very long item name',
+      top: false,
+      overrun: 3,
+      max: 1,
+      width: -8,
+      lines: ['A very long item name'],
+      widths: [173],
+    },
+  ];
+
+  it.each(cases)('$name', ({ text, top, overrun, max, width, lines, widths }) => {
+    const layout = shapeItemListText({
+      text,
+      fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      iconMode: top ? ICON_MODE_TOP : ICON_MODE_LEFT,
+      maxTextLines: max,
+      widthPx: width,
+      overrunBehavior: overrun,
+    })!;
+    expect(layout.lines.map((line) => line.text)).toEqual(lines);
+    expect(layout.lines.map((line) => shapedTextSizeWidthPx(line.widthPx))).toEqual(widths);
+    expect(layout.heightPx).toBe(lines.length * LINE_HEIGHT_PX);
   });
 });
 
@@ -349,7 +618,7 @@ describe('packItemListRows', () => {
   });
 });
 
-describe('itemTextDrawOffset / itemTextLineCenterOffset', () => {
+describe('itemTextDrawOffset', () => {
   it('TOP mode centres the pen at half separation past the icon offset (happy path)', () => {
     const offset = itemTextDrawOffset(ICON_MODE_TOP, { x: 0, y: 20 }, { x: 100, y: 50 }, 10, 4, 6);
     expect(offset).toEqual({ x: 2, y: 23 });
@@ -358,11 +627,6 @@ describe('itemTextDrawOffset / itemTextLineCenterOffset', () => {
   it('LEFT mode vertically centres the text block within the item rect (error path)', () => {
     const offset = itemTextDrawOffset(ICON_MODE_LEFT, { x: 20, y: 0 }, { x: 100, y: 50 }, 20, 4, 6);
     expect(offset).toEqual({ x: 22, y: 15 });
-  });
-
-  it('itemTextLineCenterOffset floors a wider box at zero, never negative (edge case)', () => {
-    expect(itemTextLineCenterOffset(50, 80)).toBe(0);
-    expect(itemTextLineCenterOffset(50, 20)).toBe(15);
   });
 });
 
@@ -496,17 +760,56 @@ describe('itemListLineTextWidthPx / itemListWrappedTextWidthPx', () => {
   });
 });
 
-describe('itemListRightAlignOffsetPx', () => {
-  // text_paragraph.cpp:888,916-921: HORIZONTAL_ALIGNMENT_RIGHT shifts the
-  // line by `width - line_width`, and only while `width > 0`.
-  it('pushes a short line to the right edge of its box', () => {
-    expect(itemListRightAlignOffsetPx(78, 30)).toBe(48);
+/**
+ * `TextParagraph::draw`'s per-line shift (`text_paragraph.cpp:888-921`): CENTER for a wrapped label,
+ * RIGHT for an RTL single line, LEFT (no shift) otherwise, each only while the box has a width.
+ */
+describe('itemListLineShiftPx', () => {
+  it('centres a wrapped line, flooring the half (CENTER)', () => {
+    expect(itemListLineShiftPx(20, 50, true, false)).toBe(15);
+    expect(itemListLineShiftPx(20, 51, true, false)).toBe(15);
+  });
+  it('leaves a wrapped line wider than its box at the origin under LTR', () => {
+    expect(itemListLineShiftPx(80, 50, true, false)).toBe(0);
+  });
+  it('pulls a wrapped line wider than its box to the trailing edge under RTL', () => {
+    expect(itemListLineShiftPx(80, 50, true, true)).toBe(-30);
+  });
+  it('does not shift a single line under LTR (LEFT)', () => {
+    expect(itemListLineShiftPx(30, 78, false, false)).toBe(0);
+  });
+  it('pushes a short single line to the right edge of its box under RTL (RIGHT)', () => {
+    expect(itemListLineShiftPx(30, 78, false, true)).toBe(48);
+  });
+  it('goes negative for a single line wider than its box under RTL, as the engine does', () => {
+    expect(itemListLineShiftPx(78, 30, false, true)).toBe(-48);
   });
   it('is zero for a box of zero or negative width', () => {
-    expect(itemListRightAlignOffsetPx(0, 30)).toBe(0);
-    expect(itemListRightAlignOffsetPx(-4, 30)).toBe(0);
+    expect(itemListLineShiftPx(30, 0, false, true)).toBe(0);
+    expect(itemListLineShiftPx(30, -4, true, false)).toBe(0);
   });
-  it('goes negative for a line wider than its box, exactly as the engine does', () => {
-    expect(itemListRightAlignOffsetPx(30, 78)).toBe(-48);
+});
+
+/**
+ * `max_column_width` is the widest minimum width before `h_separation` joins it (`item_list.cpp:1786-1790`),
+ * and `same_column_width` adds the separation once (`:1826`).
+ */
+describe('itemListMaxColumnWidth', () => {
+  it('is the widest item width less the separation each width already carries', () => {
+    expect(
+      itemListMaxColumnWidth(
+        [
+          { x: 34, y: 10 },
+          { x: 20, y: 10 },
+        ],
+        4
+      )
+    ).toBe(30);
+  });
+  it('subtracts nothing for a negative separation, which adds nothing', () => {
+    expect(itemListMaxColumnWidth([{ x: 34, y: 10 }], -4)).toBe(34);
+  });
+  it('is zero without items', () => {
+    expect(itemListMaxColumnWidth([], 4)).toBe(0);
   });
 });

@@ -16,8 +16,10 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { ItemList } from './Component';
-import { ICON_MODE_LEFT, ITEM_LIST_THEME_FONT_KEY, shapeItemListText } from './nativeSolver';
+import { ICON_MODE_LEFT, ICON_MODE_TOP, ITEM_LIST_THEME_FONT_KEY, shapeItemListText } from './nativeSolver';
 import type { ItemListProperties } from './types';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
@@ -230,7 +232,7 @@ describe('<ItemList> — RTL', () => {
 
   // item_list.cpp:1664-1668: the LTR pen is 4 + (16 + 4) + 2 = 26; the RTL
   // pen is `200 - 104 + 16 - 26 + 4` = 90, and the line is then right-aligned
-  // inside its own `104 - 22` wide box (text_paragraph.cpp:916-921).
+  // inside its own `104 - 22` wide box by the ceiled line width (text_paragraph.cpp:886,916-921).
   it('moves the row label to Godot own RTL pen, right-aligned in its box', async () => {
     const node = solveNode(RTL_ITEMS, false, { item_0: { x: 16, y: 16 } });
     const shaped = shapeItemListText({
@@ -239,12 +241,15 @@ describe('<ItemList> — RTL', () => {
       fontMetrics: resolveNodeFontMetrics(node, ITEM_LIST_THEME_FONT_KEY),
       iconMode: ICON_MODE_LEFT,
       maxTextLines: 1,
-      fixedColumnWidth: 100,
+      widthPx: 100,
     })!;
     const ltr = await renderWithIconLoaded(RTL_ITEMS);
     const rtl = await renderWithIconLoaded(RTL_ITEMS, true);
     expect(absoluteX(findTextMeshes(ltr.scene)[0]!)).toBeCloseTo(26, 5);
-    expect(absoluteX(findTextMeshes(rtl.scene)[0]!)).toBeCloseTo(90 + (82 - shaped.widthPx), 5);
+    expect(absoluteX(findTextMeshes(rtl.scene)[0]!)).toBeCloseTo(
+      90 + (82 - shapedTextSizeWidthPx(shaped.widthPx)),
+      5
+    );
   });
 });
 
@@ -275,3 +280,102 @@ describe('<ItemList> — row-relative vertical placement', () => {
     expect(absoluteY(findTextMeshes(renderer.scene)[0]!.parent!)).toBeCloseTo(4 + 2, 5);
   });
 });
+
+/** `TextRun`'s widest glyph edge, in the row's own pixels: the drawn width of one label line. */
+function drawnTextRightEdge(mesh: THREE.Mesh): number {
+  mesh.geometry.computeBoundingBox();
+  return mesh.geometry.boundingBox!.max.x;
+}
+
+function renderList(properties: Partial<ItemListProperties>, rect: Rect2, children?: React.ReactNode) {
+  return ReactThreeTestRenderer.create(
+    <ItemList {...painterEnv()} solveNode={solveNode(properties)} rect={rect} renderOrder={0}>
+      {children}
+    </ItemList>
+  );
+}
+
+/**
+ * The draw pass sets each label's width again (`item_list.cpp:1625-1661`), so a label wraps and
+ * trims at the width its row has, not at the width the minimum-size pass gave it.
+ */
+describe('<ItemList> — labels fit their draw width', () => {
+  // A 64 px list holds a 56 px panel content width, so a TOP row's box is `56 - 2` px wide (`:1629-1632`).
+  it('re-wraps a TOP label at the row width, ending the last visible line in an ellipsis', async () => {
+    const renderer = await renderList(
+      { items: [{ text: 'Long word another' }], iconMode: ICON_MODE_TOP, maxTextLines: 2 },
+      { x: 0, y: 0, w: 64, h: 100 }
+    );
+    expect(findTextMeshes(renderer.scene)).toHaveLength(2);
+  });
+
+  it('shows at most max_text_lines lines of a label wrapped at fixed_column_width', async () => {
+    const renderer = await renderList(
+      {
+        items: [{ text: 'Supercalifragilistic' }],
+        iconMode: ICON_MODE_TOP,
+        maxTextLines: 2,
+        fixedColumnWidth: 56,
+      },
+      RECT
+    );
+    expect(findTextMeshes(renderer.scene)).toHaveLength(2);
+  });
+
+  // 80 px list, 72 px content: the label box is `177 - 2 - (177 - 72)` = 70 px (`:1657-1661`).
+  it('trims a LEFT label at the row width', async () => {
+    const renderer = await renderList(
+      { items: [{ text: 'A very long item name' }], iconMode: ICON_MODE_LEFT },
+      { x: 0, y: 0, w: 80, h: 100 }
+    );
+    expect(drawnTextRightEdge(findTextMeshes(renderer.scene)[0]!)).toBeLessThanOrEqual(71);
+  });
+
+  // `:1676-1688`: a fixed-width column draws no label once its icon and separation fill it.
+  it('draws no LEFT label in a fixed_column_width the icon fills', async () => {
+    const renderer = await renderWithIconLoaded({
+      items: [{ text: 'Sword', icon: 'ExtResource("1")' }],
+      fixedColumnWidth: 10,
+    });
+    expect(findTextMeshes(renderer.scene)).toHaveLength(0);
+  });
+});
+
+/** `ItemList`'s constructor calls `set_clip_contents(true)` (`item_list.cpp:2482`). */
+describe('<ItemList> — clip_contents', () => {
+  it('clips every label to the list rect', async () => {
+    const renderer = await renderList({ items: [{ text: 'Sword' }] }, RECT);
+    for (const mesh of findTextMeshes(renderer.scene)) {
+      expect((mesh.material as THREE.ShaderMaterial).clippingPlanes).toHaveLength(4);
+    }
+  });
+
+  it('clips every icon to the list rect', async () => {
+    const renderer = await renderWithIconLoaded({ items: [{ text: 'Sword', icon: 'ExtResource("1")' }] });
+    expect((findIconMeshes(renderer.scene)[0]!.material as THREE.Material).clippingPlanes).toHaveLength(4);
+  });
+
+  it('clips its children to the list rect', async () => {
+    let planes: readonly THREE.Plane[] = [];
+    await renderList({ items: [] }, RECT, <ClipProbe onPlanes={(captured) => (planes = captured)} />);
+    expect(planes).toHaveLength(4);
+  });
+
+  it('draws unclipped under an authored clip_contents = false', async () => {
+    let planes: readonly THREE.Plane[] = [];
+    const renderer = await renderList(
+      { items: [{ text: 'Sword' }], clipContents: false },
+      RECT,
+      <ClipProbe onPlanes={(captured) => (planes = captured)} />
+    );
+    expect(planes).toHaveLength(0);
+    expect(
+      (findTextMeshes(renderer.scene)[0]!.material as THREE.ShaderMaterial).clippingPlanes ?? []
+    ).toHaveLength(0);
+  });
+});
+
+function ClipProbe({ onPlanes }: { onPlanes: (planes: readonly THREE.Plane[]) => void }) {
+  onPlanes(useControlClipPlanes());
+  return null;
+}

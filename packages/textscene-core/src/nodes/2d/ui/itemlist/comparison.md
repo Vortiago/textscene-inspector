@@ -17,6 +17,11 @@ packed separator. A right-to-left list mirrors each row's icon inside the list's
 Its label's pen is re-derived and lands at a different distance from the icon than the
 left-to-right pen.
 
+Each label wraps and trims at the width its row has when drawn, as `ItemList` sets it again in its
+draw pass. A TOP-mode label breaks at the last glyph that fits, shows `max_text_lines` lines and ends
+the last in an ellipsis when lines hide, unless `text_overrun_behavior` is `OVERRUN_NO_TRIMMING`. The
+list clips its rows to its rect, unless the scene sets `clip_contents = false`.
+
 No row is drawn selected, hovered or under a cursor highlight. `selected`, the current
 index and a live hover or focus state are never part of a `.tscn`.
 
@@ -81,22 +86,10 @@ Godot's `ERR_FAIL_COND_V` does before `clear()` runs.
 - **Not drawn** `custom_bg_color`/`custom_fg_color`/`icon_modulate`/`icon_region`/
   `icon_transposed` are real `Item` members that a `.tscn` cannot author, since none is a
   `PropertyListHelper`-registered leaf.
-- **Approximated** A TOP-icon-mode, multi-line label wraps at word boundaries only, so a
-  long word overflows its column where Godot breaks it mid-word.
-- **Approximated** A row's text is shaped once, at its `auto_width`/`auto_height` width,
-  so a column of another width keeps lines that Godot re-wraps.
-- **Approximated** `max_text_lines` reserves a row's text height but does not cap its
-  lines, where Godot collapses the tail into an ellipsis on the last visible line.
 - **Approximated** A right-to-left script draws in logical order, since the previewer has
   no bidirectional pass, though every layout branch of `is_layout_rtl()` is ported.
 - **Not drawn** Both scrollbars, along with the row-guide shift and narrower packing that
   a right-to-left vertical scrollbar causes (`item_list.cpp:1454-1458`, `:1862-1864`).
-- **Approximated** A right-to-left, CENTER-aligned TOP-mode line wider than its box stays
-  at the box origin, where Godot pulls it to the trailing edge
-  (`text_paragraph.cpp:907-914`).
 - **Needs runtime** The right-to-left arms of `get_item_at_position`
   (`item_list.cpp:1975,1986`) and `is_pos_at_end_of_items` (`:2021-2023`) answer mouse
   hits under a live cursor, which a static preview does not have.
-- **Approximated** `text_overrun_behavior` trims each row at its minimum-size width
-  (`fixed_column_width`, or unconstrained when unset), so a row narrower at draw time is
-  not re-trimmed.

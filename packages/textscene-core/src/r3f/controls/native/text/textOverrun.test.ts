@@ -38,6 +38,7 @@ describe('overrunFlagsForBehavior', () => {
       trimWordOnly: false,
       addEllipsis: false,
       enforceEllipsis: false,
+      shortStringEllipsis: false,
       justificationAware: false,
     });
     expect(overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_CHAR)).toEqual({
@@ -45,13 +46,15 @@ describe('overrunFlagsForBehavior', () => {
       trimWordOnly: false,
       addEllipsis: false,
       enforceEllipsis: false,
+      shortStringEllipsis: false,
       justificationAware: false,
     });
     expect(overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS_FORCE)).toEqual({
       trim: true,
       trimWordOnly: true,
       addEllipsis: true,
-      enforceEllipsis: true,
+      enforceEllipsis: false,
+      shortStringEllipsis: true,
       justificationAware: false,
     });
   });
@@ -90,7 +93,7 @@ describe('trimLineToWidth', () => {
     // width (84.625) plus the ellipsis budget (13, truncated) fits 100.
     const result = trim('AAAAAAAAAAAA', 100, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS));
     expect(result.text).toBe('AAAAAAAA…');
-    expect(result.widthPx).toBeCloseTo(8 * 10.578125 + 13.0625, 10);
+    expect(result.widthPx).toBeCloseTo(8 * 10.578125 + 13, 10);
   });
 
   it('draws the ellipsis of an emboldened face with the widened advance and the outline growth', () => {
@@ -115,20 +118,36 @@ describe('trimLineToWidth', () => {
     // "AAAAAA BBBBBB": every mid-word B index is skipped (not a soft break);
     // the space at index 6 is the first index >= 6 that both is a soft break
     // and whose width-after-removal (63.46875) plus the word-aware ellipsis
-    // budget (17 = ellipsis 13.0625 + space 4.15625, truncated) fits 90.
+    // budget (17 = ellipsis 13.0625 + space 4.15625, truncated) fits 90, and the width counts all 17 (`:6152`).
     const result = trim(
       'AAAAAA BBBBBB',
       90,
       overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS)
     );
     expect(result.text).toBe('AAAAAA …');
-    expect(result.widthPx).toBeCloseTo(6 * 10.578125 + 4.15625 + 13.0625, 10);
+    expect(result.widthPx).toBeCloseTo(6 * 10.578125 + 17, 10);
   });
 
   it('ENFORCE_ELLIPSIS appends the ellipsis even when the line already fits, drawing every original glyph (text_server_adv.cpp:5958,6065-6067; text_server.cpp:1768-1777 trim_pos<0)', () => {
-    const result = trim('AAAA', 200, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE));
+    const flags = {
+      ...overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS),
+      enforceEllipsis: true,
+    };
+    const result = trim('AAAA', 200, flags);
     expect(result.text).toBe('AAAA…');
-    expect(result.widthPx).toBeCloseTo(4 * 10.578125 + 13.0625, 10);
+    expect(result.widthPx).toBeCloseTo(4 * 10.578125 + 13, 10);
+  });
+
+  it('a FORCE behaviour leaves a line that fits untouched, as only ENFORCE_ELLIPSIS passes the fit test (text_server_adv.cpp:5958; text_server.cpp:2407-2425)', () => {
+    const result = trim('AAAA', 200, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE));
+    expect(result.text).toBe('AAAA');
+  });
+
+  it('a FORCE behaviour ends an overflowing short string in an ellipsis, where the plain behaviour keeps its 6 character floor', () => {
+    const ellipsis = trim('AAAAA', 40, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS));
+    const forced = trim('AAAAA', 40, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE));
+    expect(ellipsis.text.endsWith('…')).toBe(false);
+    expect(forced.text.endsWith('…')).toBe(true);
   });
 
   it('a custom ellipsis char outside the vendored charset falls back to three dots (text_server_adv.cpp:6007-6046 found_el_char)', () => {
@@ -147,6 +166,7 @@ describe('trimLineToWidth', () => {
       trimWordOnly: false,
       addEllipsis: true,
       enforceEllipsis: false,
+      shortStringEllipsis: false,
       justificationAware: true,
     };
     const untouched = trimLineToWidth(line('AAAAAAAAAA'), 50, flags, {
