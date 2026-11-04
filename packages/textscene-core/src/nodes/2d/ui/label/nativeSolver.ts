@@ -49,7 +49,7 @@ const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_
  * Label's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:381`),
  * which {@link labelFontState} falls back to.
  */
-export const LABEL_THEME_FONT_KEY = 'font';
+const LABEL_THEME_FONT_KEY = 'font';
 
 /**
  * `scene/theme/default_theme.cpp:392` sets Label's `line_spacing` to `Math::round(3 * scale)`,

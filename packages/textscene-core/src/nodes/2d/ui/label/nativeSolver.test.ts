@@ -24,7 +24,6 @@ import {
   labelMinimumSize,
   labelShapingWidthPx,
   labelUnwrappedShape,
-  LABEL_THEME_FONT_KEY,
   LABEL_LINE_SPACING_PX,
   labelTextTheme,
   layoutLabelLines,
@@ -641,7 +640,7 @@ describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-
   });
 });
 
-describe(`labelMinimumSize — resolves this Label's own theme font key ("${LABEL_THEME_FONT_KEY}", default_theme.cpp:381)`, () => {
+describe(`labelMinimumSize — resolves this Label's own theme font key ("font", default_theme.cpp:381)`, () => {
   // An unresolvable font's warn is the observable proof here (`resolveNodeFontMetrics.test.ts`).
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
@@ -653,7 +652,7 @@ describe(`labelMinimumSize — resolves this Label's own theme font key ("${LABE
 
   it('a theme_override_fonts/font local override is fed to the text engine, even for empty text (fontHeightPx is resolved unconditionally)', () => {
     const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n = { ...node({}), fontOverrides: { [LABEL_THEME_FONT_KEY]: systemFont } };
+    const n = { ...node({}), fontOverrides: { font: systemFont } };
     labelMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
