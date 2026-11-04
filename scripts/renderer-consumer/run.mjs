@@ -5,13 +5,12 @@
  * and renders a fixture scene in headless Chromium. The app sets no `@textscene/source`
  * condition and no CSS-module support, so a bundle that needs either fails here.
  */
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { findPackageJSON } from 'node:module';
 import { preview } from 'vite';
 import { launchSwiftShaderBrowser } from '../showcase/browser.mjs';
-import { packTarball, run } from '../packTarball.mjs';
+import { installedVersion, packTarball, run } from '../packTarball.mjs';
 import { REPO_ROOT, attachDiagnostics, loggedErrors, previewPort } from '../visual/previewServer.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
 import { consumerManifest } from './consumerManifest.mjs';
@@ -26,12 +25,6 @@ const INK_FLOOR = 2000;
 /** Software GL draws the first frame slowly. */
 const RENDER_TIMEOUT_MS = 90_000;
 const POLL_INTERVAL_MS = 500;
-
-/** The version of `name` that the workspace package at `base` tests against. */
-function installedVersion(name, base) {
-  const manifestPath = findPackageJSON(name, join(REPO_ROOT, base, 'package.json'));
-  return JSON.parse(readFileSync(manifestPath, 'utf8')).version;
-}
 
 const versionsOf = (names, base) =>
   Object.fromEntries(names.map((name) => [name, installedVersion(name, base)]));
@@ -56,7 +49,8 @@ function writeConsumer(directory, tarballs) {
     peers: peerDependencies,
     tools: {
       ...versionsOf(['@types/react', '@types/react-dom', '@types/three'], 'packages/textscene-core'),
-      ...versionsOf(['vite', '@vitejs/plugin-react', 'typescript'], 'apps/textscene-web'),
+      ...versionsOf(['vite', '@vitejs/plugin-react'], 'apps/textscene-web'),
+      typescript: installedVersion('@typescript/native', 'apps/textscene-web'),
     },
   });
   writeFileSync(join(directory, 'package.json'), JSON.stringify(manifest, null, 2));

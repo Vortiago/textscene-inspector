@@ -14,14 +14,13 @@ import { isBuiltin } from 'node:module';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { declaredExports } from '@textscene/dev-kit';
 import { findForbiddenHostInputs } from '../../../scripts/check-bundle-size/hostBundles.mjs';
-import { packTarball, run } from '../../../scripts/packTarball.mjs';
+import { packTarball, run, typeCheck } from '../../../scripts/packTarball.mjs';
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(packageDir, '../..');
 const distDir = join(packageDir, 'dist');
 const bundlePath = join(distDir, 'index.js');
 const metafilePath = join(distDir, 'build.meta.json');
-const tscBin = join(repoRoot, 'node_modules', 'typescript', 'bin', 'tsc');
 
 /** What a linting consumer needs: the run, the formatters and the `res://` root factory. */
 const PUBLIC_VALUE_EXPORTS = [
@@ -215,6 +214,6 @@ describe('@textscene/linter tarball in a plain Node project', () => {
   });
 
   it('ships declarations that type-check without @textscene/core', () => {
-    expect(() => run('node', [tscBin, '-p', '.'], consumerDir)).not.toThrow();
+    expect(() => typeCheck(consumerDir)).not.toThrow();
   });
 });
