@@ -1,8 +1,8 @@
 /**
  * Sprite3D's material is mounted, so a `.tscn` re-parse feeds new props to the same
  * `THREE.MeshBasicMaterial`. three bakes program parameters at the first compile
- * (`WebGLPrograms.js:56`) and re-derives only on a `material.version` bump or a fixed re-check
- * (`WebGLRenderer.js:2388`), so the key carries the `opaque` composite and the side flags.
+ * (r187 `WebGLPrograms.js:54`) and re-derives only on a `material.version` bump or a fixed re-check
+ * (`WebGLRenderer.js:2451`), so the key carries the `opaque` composite and the side flags.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -54,7 +54,7 @@ function makeNode(overrides: Partial<Sprite3DProperties>): TscnNode {
     flip_h: false,
     flip_v: false,
     // Single-sided: Godot's `double_sided` default renders a transparent sprite twice
-    // (`WebGLRenderer.js:2133-2141`), and that per-pass `needsUpdate` would hide the staleness
+    // (r187 `WebGLRenderer.js:2178-2188`), and that per-pass `needsUpdate` would hide the staleness
     // these cases pin.
     double_sided: false,
     transparent: true,
@@ -102,13 +102,13 @@ describe('<Sprite3D> rebuilds its material when a baked program parameter moves'
 
   it('alpha_cut DISCARD → HASH, which nothing in three re-derives for us', async () => {
     // The isolating case: the sprite is opaque either side, so `alphaHash` is the only parameter
-    // that moves, and `Material.js:134` is a plain field.
+    // that moves, and r187 `Material.js:135` is a plain field.
     expect(await rebuilds(OPAQUE_CUT, { alpha_cut: AlphaCutMode.HASH })).toBe(true);
   });
 
   it('alpha_cut DISABLED → DISCARD leaves the blended pass', async () => {
     // `scene_shader_forward_clustered.cpp:252` puts a scissored surface in the
-    // opaque list, so the `opaque` composite (`WebGLPrograms.js:262`) moves.
+    // opaque list, so the `opaque` composite (r187 `WebGLPrograms.js:272`) moves.
     expect(await rebuilds({}, OPAQUE_CUT)).toBe(true);
   });
 });
@@ -125,7 +125,7 @@ describe('<Sprite3D> keeps the compiled material for a plain uniform', () => {
   });
 
   it('alpha_scissor_threshold 0 → 0.5: three bumps `version` itself', async () => {
-    // Only `alphaTest` moves here, and `Material.js:494-502` bumps `version` on that zero crossing,
+    // Only `alphaTest` moves here, and r187 `Material.js:495-503` bumps `version` on that zero crossing,
     // which is why it is not in the key.
     expect(await rebuilds({ ...OPAQUE_CUT, alpha_scissor_threshold: 0 }, OPAQUE_CUT)).toBe(false);
   });

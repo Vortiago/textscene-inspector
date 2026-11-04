@@ -16,7 +16,7 @@ export const REFLECTION_PROBE_UNIFORMS = {
 
 /**
  * The texture a lit material samples the atlas through. three never uploads it, as its version
- * stays 0 (three r186 `WebGLTextures.js:626`), and binds whatever handle it holds: the shown
+ * stays 0 (three r187 `WebGLTextures.js:653`), and binds whatever handle it holds: the shown
  * scene's, or three's empty texture.
  */
 export const atlasSlot = installedSlot(REFLECTION_PROBE_UNIFORMS.atlas, THREE.DataArrayTexture);
@@ -27,7 +27,7 @@ export const NO_RENDER_EXPOSURE = -1;
 /**
  * The shown probes' count, the atlas's border size, its last layer, and the exposure of the render,
  * `NO_RENDER_EXPOSURE` for none. Arrays, not scalars: three
- * caches a scalar uniform by its value (r186 `WebGLUniforms.js:163-173`), and `cloneUniforms` keeps a
+ * caches a scalar uniform by its value (r187 `WebGLUniforms.js:165-175`), and `cloneUniforms` keeps a
  * typed array by reference, so every material reads these buffers. After a dev server reloads this
  * module, it is the buffer the earlier evaluation installed.
  */

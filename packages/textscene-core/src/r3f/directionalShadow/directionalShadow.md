@@ -53,10 +53,10 @@ So the lists ignore layers, and every render of a steady scene gets the same lis
 
 Lists per camera would cost more where two cameras differ. Each render would attach or release a
 split sun and move every share of the atlas. three keys a program by `NUM_SUN_LIGHT_SHADOWS`
-(r186 `WebGLPrograms.js:483`) and keeps each program a material compiled (`WebGLRenderer.js:2201-2223`).
+(r187 `WebGLPrograms.js:494`) and keeps each program a material compiled (`WebGLRenderer.js:2224-2247`).
 So the first change compiles every lit material again, and each later change switches every
 material's program and uploads its uniforms again, since the lights' state version moves
-(`WebGLLights.js:493-545`).
+(r187 `WebGLLights.js:493-545`).
 
 ## The port
 
@@ -143,7 +143,7 @@ for each split it samples:
   The renderer's shadow pass records that framebuffer's height before each draw
   (`../shadowPass.ts`), and `TscnCanvas` mounts it beside this fitter.
 - The pixel size is one texel of the whole atlas times `soft_shadow_scale` and the split's blur
-  factor. three uploads a sun shadow's map size as the atlas's size (`WebGLLights.js:305`).
+  factor. three uploads a sun shadow's map size as the atlas's size (r187 `WebGLLights.js:305`).
 
 The kernel, the turn and the PCF are one GLSL block in `../shadowFilter/softShadowFilter.ts`,
 which the omni and spot lookups share. `installSoftShadowFilter` puts it in
@@ -190,9 +190,9 @@ surface with its size term, `1 - cos` of the angle (`light_storage.cpp:670`,
 
 ## The three.js design
 
-three r186's WebGL renderer draws a shadow with several viewports only for a light on its sun path
-(`isSunLight`). `WebGLShadowMap.js:287-358` renders one viewport per slot into one map, and
-`WebGLLights.js:289-327` uploads one matrix and one vec4 per slot. So every light in the shadow list
+three r187's WebGL renderer draws a shadow with several viewports only for a light on its sun path
+(`isSunLight`). `WebGLShadowMap.js:287-362` renders one viewport per slot into one map, and
+`WebGLLights.js:289-326` uploads one matrix and one vec4 per slot. So every light in the shadow list
 shades through three parts, whatever its split count:
 
 - `SplitSunLight` (`splitSun.ts`), a child of the declared light on the sun path. The fitter
@@ -230,29 +230,29 @@ binding (`light_storage.cpp:2572-2621`, `scene_forward_clustered_inc.glsl:374`).
 `WebGLRenderTarget` of 4096 texels square holds every share (`shadowAtlas.ts`):
 
 - Each `DirectionalSplitShadow` holds the atlas as its `map` from construction. three builds a map
-  only for a shadow that has none (r186 `WebGLShadowMap.js:203`), so every shadow keeps it.
+  only for a shadow that has none (r187 `WebGLShadowMap.js:203`), so every shadow keeps it.
 - `mapSize` is one split's rectangle, and the frame extents are the atlas over that rectangle. So
   every shadow asks three for the atlas's own size, and three never resizes it
-  (`WebGLShadowMap.js:281-285`). Each slot's viewport and matrix place the split at its texels in
+  (r187 `WebGLShadowMap.js:281-285`). Each slot's viewport and matrix place the split at its texels in
   the atlas.
-- three binds and clears a shadow's whole map before it draws the shadow (`:338-339`). Before
+- three binds and clears a shadow's whole map before it draws the shadow (`:340-341`). Before
   that, it asks the shadow for its matrices (`:291`), where the shadow sets the atlas's scissor to
-  its own share. three binds a target with the target's scissor (`WebGLRenderer.js:3040-3071`), so
+  its own share. three binds a target with the target's scissor (r187 `WebGLRenderer.js:3067-3097`), so
   each light clears and draws only its share.
 - `shadowAtlasChunk.ts` replaces three's array of sun shadow samplers with one sampler,
   `directionalShadowAtlas`, in `shadowmap_pars_fragment`, `lights_fragment_begin` and
   `shadowmask_pars_fragment`. It gives every lit `ShaderLib` entry and `UniformsLib.lights` that
   uniform. three no longer finds a `sunShadowMap` uniform in the program, so it binds no unit for
-  it (`WebGLRenderer.js:2657-2661`).
-- `cloneUniforms` clones a texture for each material (`UniformsUtils.js:28-39`). The atlas's
+  it (r187 `WebGLRenderer.js:2668-2672`).
+- `cloneUniforms` clones a texture for each material (r187 `UniformsUtils.js:28-39`). The atlas's
   depth texture answers a clone with itself, so every material samples the one atlas.
 - A `ShaderMaterial` with `lights: true` that does not merge `UniformsLib.lights` lacks the
   uniform. It samples three's empty shadow texture, which shadows nothing
-  (`WebGLUniforms.js:571-584`).
+  (r187 `WebGLUniforms.js:586-598`).
 - A shadow lets go of the atlas when its sun is removed. The last holder frees the atlas's GPU
   memory, and three builds it again at the next shadow pass that draws into it.
 - The atlas holds three's PCF map: a 24-bit depth texture that compares less-or-equal
-  with linear filtering (`WebGLShadowMap.js:253-266`). `TscnCanvas` asks for that type with
+  with linear filtering (r187 `WebGLShadowMap.js:253-266`). `TscnCanvas` asks for that type with
   `shadows="percentage"`, and it never reverses the depth buffer.
 - `splitShadow.test.ts` reads three's shadow pass and `setRenderTarget`, and fails on a release
   that changes what the atlas relies on.
@@ -268,10 +268,10 @@ To count a program's units, call `getActiveUniform` on each uniform of a linked 
 ### The other designs
 
 - A cap on the shadowed suns, tied to the material's own sampler count, drops shadows that Godot
-  draws. three also sets up one light state per render (`WebGLLights.js:221-549`), so a cap that
+  draws. three also sets up one light state per render (r187 `WebGLLights.js:221-549`), so a cap that
   differs between materials needs a light list per material.
 - A depth texture array, one layer per light, sampled through one `sampler2DArrayShadow`. three
-  r186 draws a light's shadow only into a 2D or a cube target, so it needs a shadow pass of its
+  r187 draws a light's shadow only into a 2D or a cube target, so it needs a shadow pass of its
   own. Each layer is the full atlas, so eight lights take eight times the memory.
 - A copy of each light's own map into an atlas after the shadow pass. It samples one texture, but
   it keeps every texel twice, about 256 MiB, and adds a copy pass to each render.
@@ -294,7 +294,7 @@ The shadow pass culls casters against each split's box, so a split draws only th
 its own box, as Godot's does. The extra draw calls are the casters that fall in more than one
 split's box. A slot past the last split culls every caster three tests against a frustum, so one
 split draws as many calls as three's own directional shadow. A caster with `frustumCulled` off
-skips that test (`WebGLShadowMap.js:526`), so it draws into every slot, and into an undrawn one
+skips that test (r187 `WebGLShadowMap.js:528`), so it draws into every slot, and into an undrawn one
 at no size. The fit costs microseconds in every mode, far below the draw. Most of it is the one
 walk of the scene that finds the lights.
 
@@ -339,7 +339,7 @@ A sun with one or two splits costs the same as one with four. A program compiled
 shadow's define adds two vec4 per sun shadow: the direction towards the light with the angle, and
 the four slots' range starts. The slot rows give the box sizes. The rows marked soft have the
 define. A slot count that varied by scene would need a define three's program key does not hold
-(`WebGLPrograms.js:476-483`), so a material would reuse a program compiled for another count.
+(r187 `WebGLPrograms.js:487-494`), so a material would reuse a program compiled for another count.
 
 ## Where it differs from Godot
 
@@ -356,7 +356,7 @@ define. A slot count that varied by scene would need a define three's program ke
   moves out, three's range is longer, so the fitter divides the declared bias by the same
   factor. The bias then holds the same size in world units.
 - **Normal bias direction.** three moves the lookup along the whole world normal
-  (`shadowmap_vertex.glsl.js:35`). Godot scales the normal by `1 - max(0, -N·L)`, which is 1 on a
+  (r187 `shadowmap_vertex.glsl.js:35`). Godot scales the normal by `1 - max(0, -N·L)`, which is 1 on a
   lit face, and removes its component along the light (`scene_forward_clustered.glsl:2301-2307`).
   So its offset is never longer than three's. The offset is two texels. In Truck Town, even a zero
   normal bias changes only acne and shadow edges one pixel wide, not the extent of a shadow.

@@ -1,6 +1,6 @@
 /**
  * Applies one Godot `Environment` to its world, authored or the editor preview's (ADR-0025):
- * background, sky, flat ambient, depth fog and volumetric fog. Each part writes the scene only while
+ * background, sky, flat ambient, depth fog, volumetric fog and screen-space reflection. Each part writes the scene only while
  * its Environment is on it (`sceneEnvironment.tsx`) and restores what it found, because the renderer
  * and scene outlive an environment. The tonemap, the glow and the colour adjustments run in each
  * viewport's tonemap pass (`toneMapPass.ts`).
@@ -19,6 +19,7 @@ import { useDraws3D } from './draws3D';
 import { useViewportMode } from '../contexts/ViewportModeContext';
 import { SkyLayer } from '../sky/SkyLayer';
 import { FogLayer } from '../fog/FogLayer';
+import { ScreenSpaceReflectionLayer } from '../screenSpaceReflection/ScreenSpaceReflectionLayer';
 import { clearColorTexture, foggedClearColorTexture } from './colorBackground';
 import { followSceneExposure } from '../exposure/sceneExposure';
 import { useExposureFactor } from './worldExposure';
@@ -80,6 +81,7 @@ function EnvironmentParts({ settings, sky, panorama }: EnvironmentLayerProps) {
   return (
     <>
       {hasFog && <FogLayer depth={settings.fog} volumetric={settings.volumetricFog} />}
+      {draws3D && settings.ssr && <ScreenSpaceReflectionLayer ssr={settings.ssr} />}
       {sky && (showsSky || skyAmbient || reflectsSky) && (
         <SkyLayer
           sky={sky}

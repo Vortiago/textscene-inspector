@@ -30,7 +30,7 @@ export interface ToneMapPass {
   /**
    * Renders `scene` into `worldBuffer`, cleared by the render itself, and leaves the renderer as it
    * found it. Three applies the clear colour in the bound target's colour space only inside a
-   * render's own clear (`WebGLBackground.js:53`), so a clear before it writes the canvas's sRGB value.
+   * render's own clear (r187 `WebGLBackground.js:53`), so a clear before it writes the canvas's sRGB value.
    */
   drawWorld: (scene: THREE.Scene, camera: THREE.Camera) => void;
   /** Tonemaps what `worldBuffer` holds into the target, and leaves the renderer as it found it. */
@@ -50,6 +50,14 @@ export interface ToneMapPassOptions {
   usesDebanding: boolean;
   /** The name the buffer's texture carries. */
   name: string;
+}
+
+/** Written only by `useToneMapPass`, while its viewport keeps a transparent background. */
+const transparentWorldBuffers = new WeakSet<THREE.WebGLRenderTarget>();
+
+/** Whether `worldBuffer` is the world buffer of a viewport with a transparent background. */
+export function drawsTransparentBackground(worldBuffer: THREE.WebGLRenderTarget): boolean {
+  return transparentWorldBuffers.has(worldBuffer);
 }
 
 /** The tonemap effect reads no time, since a frame draws at its settled luminance. */
@@ -77,6 +85,7 @@ export function useToneMapPass(options: ToneMapPassOptions): ToneMapPass {
     glowMap: passToneMap.glowMap,
   });
   const worldBuffer = useWorldBuffer(msaaMode, width, height, name);
+  useTransparentWorldBuffer(worldBuffer, transparentBackground);
   const gl = useThree((state) => state.gl);
   const pass = useEffectPass(effect, width, height);
   return useMemo(() => {
@@ -92,6 +101,20 @@ export function useToneMapPass(options: ToneMapPassOptions): ToneMapPass {
       toneMap: () => drawOffscreen(gl, toneMapDraw),
     };
   }, [gl, pass, worldBuffer, target]);
+}
+
+/** Marks `worldBuffer` while `transparentBackground` holds. */
+function useTransparentWorldBuffer(
+  worldBuffer: THREE.WebGLRenderTarget,
+  transparentBackground: boolean
+): void {
+  useLayoutEffect(() => {
+    if (!transparentBackground) return undefined;
+    transparentWorldBuffers.add(worldBuffer);
+    return () => {
+      transparentWorldBuffers.delete(worldBuffer);
+    };
+  }, [worldBuffer, transparentBackground]);
 }
 
 /** The world buffer, resized in place as the viewport resizes. */

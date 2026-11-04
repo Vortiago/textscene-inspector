@@ -6,21 +6,11 @@
  */
 import { afterEach, describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
-import { TscnPreviewPanel } from './TscnPreviewPanel';
 import { MAX_READ_BYTES } from './readWorkspaceFile';
-import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } from './test-setup';
+import { openReadyPreviewPanel } from './previewPanel.testkit';
+import { createMockUri, createMockFileData, type MockWebview } from './test-setup';
 
 const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
-
-async function createReadyPanel(
-  triggerMessage: (msg: { type: string; [key: string]: unknown }) => void
-): Promise<TscnPreviewPanel> {
-  (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
-  const panel = TscnPreviewPanel.create(createMockUri('/extension'), createMockUri('/workspace/scene.tscn'));
-  await new Promise<void>((r) => setTimeout(r, 10));
-  triggerMessage({ type: 'webviewReady' });
-  return panel;
-}
 
 interface ResourceLoadedMessage {
   type: 'resourceLoaded';
@@ -59,8 +49,7 @@ function decodeBase64ToBytes(base64: string): Uint8Array {
 
 describe('TscnPreviewPanel loadResource — binary encoding', () => {
   it('base64-round-trips a binary resource crossing multiple 8KB chunk boundaries', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { webview, triggerMessage } = await openReadyPreviewPanel(MINIMAL_TSCN);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
@@ -90,8 +79,7 @@ describe('TscnPreviewPanel loadResource — binary encoding', () => {
   });
 
   it('base64-round-trips a binary resource smaller than one chunk', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { webview, triggerMessage } = await openReadyPreviewPanel(MINIMAL_TSCN);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
@@ -114,8 +102,7 @@ describe('TscnPreviewPanel loadResource — binary encoding', () => {
   });
 
   it('loads a text resource as a plain (non-base64) string with isBinary: false', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { webview, triggerMessage } = await openReadyPreviewPanel(MINIMAL_TSCN);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
@@ -144,8 +131,7 @@ describe('TscnPreviewPanel loadResource — error paths', () => {
   });
 
   it('posts resourceLoadError, and reads none of it, for a resource over the size limit', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { webview, triggerMessage } = await openReadyPreviewPanel(MINIMAL_TSCN);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
@@ -174,8 +160,7 @@ describe('TscnPreviewPanel loadResource — error paths', () => {
   });
 
   it('posts resourceLoadError "No workspace folder found" when the resource has no owning workspace', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { webview, triggerMessage } = await openReadyPreviewPanel(MINIMAL_TSCN);
     // `vi.clearAllMocks()` (test-setup's afterEach) clears calls but not a
     // `mockReturnValue`, so this pins its own and runs in any order.
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue(undefined);
@@ -196,8 +181,7 @@ describe('TscnPreviewPanel loadResource — error paths', () => {
   });
 
   it('posts resourceLoadError when the read fails', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
+    const { webview, triggerMessage } = await openReadyPreviewPanel(MINIMAL_TSCN);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });

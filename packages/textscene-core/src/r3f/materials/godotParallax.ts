@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import type { IUniform, Material } from 'three';
 import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
 import { editedProgram } from '../shaderPatch/chunkPatch';
+import { UNLIT_NORMAL_VARYING } from '../shaderPatch/unlitVaryings';
 import { recordedOn } from './recordedOnMaterial';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import { readsUv1 } from './mapUvChannel';
@@ -209,8 +210,8 @@ vGodotHeightmapUv = ( godotHeightmapTransform * vec3( uv, 1.0 ) ).xy;`;
 
 /**
  * What three's unshaded program lacks of what the parallax reads: the view position, and the
- * normal its fragment program declares but its vertex program never writes. The normal chunks run
- * only where neither an environment map nor skinning has run them already.
+ * normal its fragment program declares but its vertex program never writes. `transformedNormal` is
+ * the one the unlit varyings compute (`unlitVaryings.ts`).
  */
 const UNSHADED_VERTEX_PARS = `#include <common>
 varying vec3 vViewPosition;
@@ -218,14 +219,12 @@ varying vec3 vViewPosition;
 	varying vec3 vNormal;
 #endif`;
 
-const UNSHADED_VERTEX = `#include <project_vertex>
+/** Anchored on the unlit varyings' write, so a program without them fails to patch, not to compile. */
+const UNLIT_NORMAL_WRITE = `${UNLIT_NORMAL_VARYING} = transformedNormal;`;
+
+const UNSHADED_VERTEX = `${UNLIT_NORMAL_WRITE}
 vViewPosition = - mvPosition.xyz;
 #ifndef FLAT_SHADED
-	#if ! defined( USE_ENVMAP ) && ! defined( USE_SKINNING )
-		#include <beginnormal_vertex>
-		#include <morphnormal_vertex>
-		#include <defaultnormal_vertex>
-	#endif
 	vNormal = normalize( transformedNormal );
 #endif`;
 
@@ -240,7 +239,7 @@ const UNSHADED_PARALLAX_INPUTS: ProgramInjection = {
       {
         vertex: [
           { three: '#include <common>', godot: UNSHADED_VERTEX_PARS },
-          { three: '#include <project_vertex>', godot: UNSHADED_VERTEX },
+          { three: UNLIT_NORMAL_WRITE, godot: UNSHADED_VERTEX },
         ],
         fragment: [{ three: PARS_ANCHOR, godot: UNSHADED_FRAGMENT_PARS }],
       },

@@ -77,6 +77,24 @@ export type WebviewReadyMessage = {
   type: 'webviewReady';
 };
 
+/**
+ * The import of the page's entry script failed to fetch, parse or run, so `webviewReady`
+ * never comes. The page's own bootstrap posts this with the import's error.
+ */
+export type WebviewLoadFailedMessage = {
+  type: 'webviewLoadFailed';
+  error: string;
+};
+
+/**
+ * A code-split chunk failed at its URL and at a fresh one, as when a chunk it imports came
+ * cut short. Only a new document fetches that chunk again.
+ */
+export type ChunkLoadFailedMessage = {
+  type: 'chunkLoadFailed';
+  error: string;
+};
+
 /** Double-click in the scene tree: jump the editor to the node line. */
 export type JumpToNodeMessage = {
   type: 'jumpToNode';
@@ -152,6 +170,8 @@ export type CapturePongMessage = {
 
 export type WebviewToHostMessage =
   | WebviewReadyMessage
+  | WebviewLoadFailedMessage
+  | ChunkLoadFailedMessage
   | JumpToNodeMessage
   | CopyNodePathMessage
   | LoadResourceMessage

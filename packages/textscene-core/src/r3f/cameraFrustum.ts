@@ -7,7 +7,7 @@ const viewProjection = new THREE.Matrix4();
 
 /**
  * Writes `camera`'s frustum into `target` and returns it. three updates the camera's matrices
- * before `onBeforeRender` (r186 `WebGLRenderer.js:1663-1678`), so a render hook reads them current.
+ * before `onBeforeRender` (r187 `WebGLRenderer.js:1667-1682`), so a render hook reads them current.
  */
 export function cameraFrustum(camera: THREE.Camera, target: THREE.Frustum): THREE.Frustum {
   viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);

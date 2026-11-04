@@ -105,7 +105,7 @@ function ParticlePart({ source, draw }: { source: THREE.BufferGeometry; draw: Pa
 
 /**
  * Each instanced draw gets its own matrices back before r3f disposes it: three frees a
- * disposed InstancedMesh's matrices (`WebGLObjects.js:78`), which the part's other
+ * disposed InstancedMesh's matrices (r187 `WebGLObjects.js:78`), which the part's other
  * draws read. Memoise the returned ref beside the geometry, so a re-render keeps it.
  */
 function sharesInstanceMatrices(geometry: THREE.InstancedBufferGeometry) {

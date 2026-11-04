@@ -6,6 +6,7 @@
 
 import * as vscode from 'vscode';
 import { PROJECT_FILE_NAME } from '@textscene/core/godot';
+import { error as logError, warn } from '@textscene/core/logger';
 import type { HostToWebviewMessage } from './protocol';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
 import { buildPanelHtml } from './panelHtml';
@@ -45,6 +46,10 @@ export class TscnPreviewPanel {
   private _webviewReady = false;
   /** Set by `dispose()`. `_webviewReady` stays true after it, so it is not this. */
   private _disposed = false;
+  /** Set by a `webviewLoadFailed`, which loads the document once more. Cleared by `webviewReady`. */
+  private _hasReloadedDocument = false;
+  /** Set by the first `chunkLoadFailed`, and never cleared, so a chunk failure reloads once per panel. */
+  private _hasReloadedForChunk = false;
 
   /**
    * Cached per panel, so the `res://` root walk and the served `fsPath -> res://`
@@ -88,7 +93,7 @@ export class TscnPreviewPanel {
     this._extensionUri = extensionUri;
     this._currentResource = resource;
 
-    this._panel.webview.html = buildPanelHtml(this._panel.webview, this._extensionUri);
+    this._loadDocument();
 
     this._loadTscnContent(resource);
 
@@ -97,6 +102,7 @@ export class TscnPreviewPanel {
     const handlers: WebviewMessageHandlers = {
       webviewReady: (_msg) => {
         this._webviewReady = true;
+        this._hasReloadedDocument = false;
         this._captures.webviewLoaded();
         // Every remount, such as a move to another editor group, posts ready with
         // an empty tree. Replay always, so a ready webview holds the current text:
@@ -105,6 +111,12 @@ export class TscnPreviewPanel {
         if (this._previousContent !== undefined) {
           this._postMessageToWebview({ type: 'loadTscn', content: this._previousContent });
         }
+      },
+      webviewLoadFailed: (msg) => {
+        this._handleFailedLoad(msg.error);
+      },
+      chunkLoadFailed: (msg) => {
+        this._handleFailedChunkLoad(msg.error);
       },
       jumpToNode: (msg) => {
         void jumpToNodeDefinition(this._currentResource, msg.nodeName, msg.path, this._panel.viewColumn);
@@ -257,6 +269,51 @@ export class TscnPreviewPanel {
       return;
     }
     this._postMessageToWebview({ type: 'resourceChanged', path: resPath });
+  }
+
+  /** Sets a new document, which VS Code loads in place of the current one. */
+  private _loadDocument(): void {
+    this._panel.webview.html = buildPanelHtml(this._panel.webview, this._extensionUri);
+  }
+
+  /**
+   * VS Code's webview resource loader can end a script's transfer early, and the page
+   * then never runs. A new document fetches the script again. A second failure
+   * before a `webviewReady` ends every capture with the error, so no reload loops.
+   */
+  private _handleFailedLoad(error: string): void {
+    const reason = `The preview script failed to load: ${error}`;
+    if (!this._hasReloadedDocument) {
+      this._hasReloadedDocument = true;
+      warn(`${reason}. The preview loads again.`);
+      this._reloadDocument();
+      return;
+    }
+    logError(reason);
+    this._captures.setState({ kind: 'unavailable', reason });
+  }
+
+  /**
+   * A chunk failed in a document that runs, so its pane shows the error. A new document
+   * fetches the chunk and each chunk it imports again. That happens once per panel, since a
+   * `webviewReady` comes before each chunk failure and a broken build would reload forever.
+   */
+  private _handleFailedChunkLoad(error: string): void {
+    const reason = `A preview chunk failed to load: ${error}`;
+    if (this._hasReloadedForChunk) {
+      logError(reason);
+      return;
+    }
+    this._hasReloadedForChunk = true;
+    warn(`${reason}. The preview loads again.`);
+    this._reloadDocument();
+  }
+
+  /** The current document has no listener, so posts and captures wait for the next `webviewReady`. */
+  private _reloadDocument(): void {
+    this._webviewReady = false;
+    this._captures.webviewLoading();
+    this._loadDocument();
   }
 
   private async _loadTscnContent(resource: vscode.Uri) {

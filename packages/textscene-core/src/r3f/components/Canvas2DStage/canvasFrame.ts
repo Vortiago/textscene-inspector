@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { copyTexels, type TexelPlacement, type TexelTransfer } from '../../texelCopy';
+import { copyTexels, reversedTexelRows, type TexelPlacement, type TexelTransfer } from '../../texelCopy';
 import { takeOutputLikeDrawingBuffer } from '../../outputTarget';
 import { beginStep, endStep } from '../../frameProfile/frameProfile';
 
@@ -31,13 +31,13 @@ function copyToTarget(
 
 /**
  * RGBA8 storage under an sRGB tag. Taking output like the drawing buffer, three encodes each
- * fragment to the tag's space (`WebGLPrograms.js:213`), so the frame holds what the drawing buffer
+ * fragment to the tag's space (r187 `WebGLPrograms.js:217`), so the frame holds what the drawing buffer
  * would hold and items blend in the same space. The default sRGB format, SRGB8_ALPHA8, would blend
  * in linear.
  */
 class CanvasFrame extends THREE.WebGLRenderTarget {
   private readonly outputSize = new THREE.Vector2();
-  private placement: TexelPlacement = reversedRows(1, 1);
+  private placement: TexelPlacement = reversedTexelRows(1, 1);
 
   constructor() {
     super(1, 1, { depthBuffer: true, stencilBuffer: false });
@@ -88,13 +88,9 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
   rowsReversed(): TexelPlacement {
     const [, , width, height] = this.placement.bounds;
     if (width !== this.width || height !== this.height)
-      this.placement = reversedRows(this.width, this.height);
+      this.placement = reversedTexelRows(this.width, this.height);
     return this.placement;
   }
-}
-
-function reversedRows(width: number, height: number): TexelPlacement {
-  return { offsetX: 0, offsetY: height - 1, rowStep: -1, bounds: [0, 0, width, height] };
 }
 
 /** The factory `useMultisampledTarget` takes for a 2D canvas frame. */

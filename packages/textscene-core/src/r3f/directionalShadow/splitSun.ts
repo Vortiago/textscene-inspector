@@ -1,7 +1,7 @@
 /**
  * The light that shades for a declared directional light in Godot's shadow list. three draws a
  * shadow with several splits only on its sun path (`isSunLight`), which reads the direction from
- * the world position (`WebGLLights.js:566-571`), not from a target. So the fitter hangs this light
+ * the world position (r187 `WebGLLights.js:566-571`), not from a target. So the fitter hangs this light
  * under the declared one, points it by its world matrix, and hides the declared light.
  */
 
@@ -10,10 +10,10 @@ import { hideLight, ownLayerMask, showLight } from './hiddenLight.js';
 import { DirectionalSplitShadow } from './splitShadow.js';
 
 export class SplitSunLight extends THREE.Light {
-  /** The flag `WebGLLights` reads to put a light on the sun path (`WebGLLights.js:289`, `:566`). */
+  /** The flag `WebGLLights` reads to put a light on the sun path (r187 `WebGLLights.js:289`, `:566`). */
   readonly isSunLight = true;
 
-  /** `WebGLLights` caches by `id`, and shapes a new entry by this string (`WebGLLights.js:24`, `:100`). */
+  /** `WebGLLights` caches by `id`, and shapes a new entry by this string (r187 `WebGLLights.js:24`, `:100`). */
   override readonly type: string = 'SunLight';
 
   readonly shadow = new DirectionalSplitShadow();
@@ -97,7 +97,7 @@ function releaseRemovedLight(event: { target: THREE.Object3D }): void {
 
 /**
  * Copies what the declared light shades with, and points the sun as three points the declared
- * light: from its target towards its position (`WebGLLights.js:575-582`).
+ * light: from its target towards its position (r187 `WebGLLights.js:575-582`).
  */
 export function followDeclaredLight(
   sun: SplitSunLight,

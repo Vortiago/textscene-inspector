@@ -40,7 +40,7 @@ export class AtlasOmniShadow extends ThreePointLightShadow implements Paraboloid
    * Gives the shadow a cube of `faceSize` texels a side. The copy reads its depth at each texel,
    * which a depth texture allows only unfiltered and uncompared (OpenGL ES 3.0 §3.8.13), so three's
    * own cube, which compares, does not serve. three builds a map only for a shadow that has none
-   * (`WebGLShadowMap.js:203`), and never resizes a cube (`:281`).
+   * (r187 `WebGLShadowMap.js:203`), and never resizes a cube (`:281`).
    */
   fitCube(faceSize: number): void {
     this.mapSize.set(faceSize, faceSize);
@@ -59,7 +59,7 @@ export class AtlasOmniShadow extends ThreePointLightShadow implements Paraboloid
     depth.minFilter = THREE.NearestFilter;
     depth.magFilter = THREE.NearestFilter;
     // three's types give a cube target a 2D depth texture, where its renderer takes a cube one
-    // (`WebGLShadowMap.js:249`).
+    // (r187 `WebGLShadowMap.js:249`).
     cube.depthTexture = depth as unknown as THREE.DepthTexture;
     this.map = cube;
   }
@@ -72,7 +72,7 @@ export class AtlasOmniShadow extends ThreePointLightShadow implements Paraboloid
   /**
    * Writes `pointShadowMatrix`: Godot's world-to-light transform (`light_storage.cpp:989-991`) above,
    * and in the bottom row, which a light-space position never needs, the paraboloids' rect. three
-   * overwrites it in its pass (`WebGLShadowMap.js:320`), so the shadow pass writes it after.
+   * overwrites it in its pass (r187 `WebGLShadowMap.js:322`), so the shadow pass writes it after.
    */
   writeLookupMatrix(light: THREE.Object3D): void {
     lightPoseMatrix(light, this.matrix).invert();

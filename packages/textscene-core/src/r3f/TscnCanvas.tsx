@@ -126,7 +126,7 @@ export function TscnCanvas() {
   return (
     <div className={styles.root}>
       {/* Without `shadows`, a `shadow_enabled = true` light casts nothing. `percentage`
-          selects `THREE.PCFShadowMap`, the soft-shadow type three 0.186 draws. `soft`
+          selects `THREE.PCFShadowMap`, the soft-shadow type three 0.187 draws. `soft`
           selects the removed `PCFSoftShadowMap`, which three falls back from with a warning. */}
       {/* Godot's editor opens every scene at the same fixed orbit and 70-degree
           FOV (godotEditorCamera.ts). Framing is F there and opt-in here. */}

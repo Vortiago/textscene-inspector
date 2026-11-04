@@ -151,7 +151,7 @@ describe('DirectionalSplitShadow.setSplits', () => {
   });
 
   it('asks three for the atlas’s own size from any share, so three never resizes it (edge case)', () => {
-    // three resizes a map whose size no longer matches `mapSize` × the frame extents (r186
+    // three resizes a map whose size no longer matches `mapSize` × the frame extents (r187
     // `WebGLShadowMap.js:281-285`).
     const shadow = new DirectionalSplitShadow();
     for (const splitCount of [1, 2, 4]) {
@@ -163,7 +163,7 @@ describe('DirectionalSplitShadow.setSplits', () => {
   });
 
   it('writes back the split size three shrank, when the layout is unchanged (edge case)', () => {
-    // three shrinks `mapSize` when the atlas exceeds `MAX_TEXTURE_SIZE` (r186 `WebGLShadowMap.js:180-198`).
+    // three shrinks `mapSize` when the atlas exceeds `MAX_TEXTURE_SIZE` (r187 `WebGLShadowMap.js:180-198`).
     const shadow = new DirectionalSplitShadow();
     shadow.setSplits(4, SECOND_OF_TWO);
     shadow.mapSize.set(512, 1024);
@@ -283,7 +283,7 @@ describe('DirectionalSplitShadow.updateMatrices', () => {
   });
 
   it('culls a caster from an undrawn slot without reading its bounds (edge case)', () => {
-    // three's shadow pass asks each caster through `intersectsObject` (r186 `Mesh.js:228`).
+    // three's shadow pass asks each caster through `intersectsObject` (r187 `Mesh.js:236`).
     const shadow = fittedShadow(viewingCamera(), 2);
     const caster = new THREE.Mesh(new THREE.BoxGeometry());
     const bounds = vi.spyOn(caster.geometry, 'computeBoundingSphere');
@@ -329,7 +329,7 @@ describe('DirectionalSplitShadow share of the atlas', () => {
   });
 
   it('scales the scissor with a map size three shrank to fit the GPU (edge case)', () => {
-    // three shrinks `mapSize` when the atlas exceeds `MAX_TEXTURE_SIZE` (r186 `WebGLShadowMap.js:180-198`).
+    // three shrinks `mapSize` when the atlas exceeds `MAX_TEXTURE_SIZE` (r187 `WebGLShadowMap.js:180-198`).
     const shadow = new DirectionalSplitShadow();
     shadow.setSplits(4, SECOND_OF_TWO);
     shadow.mapSize.set(512, 1024);

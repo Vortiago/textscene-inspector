@@ -30,8 +30,8 @@ export interface DeclaredLight<Light extends THREE.Light, Declaration> extends S
 export type DeclaredDirectionalLight = DeclaredLight<THREE.DirectionalLight, DirectionalShadowDeclaration>;
 
 /**
- * Every light in the scene, in the pre-order three's `projectObject` visits them (r186
- * `WebGLRenderer.js:1860-1888`), each marked by whether the render reaches it.
+ * Every light in the scene, in the pre-order three's `projectObject` visits them (r187
+ * `WebGLRenderer.js:1873-1897`), each marked by whether the render reaches it.
  */
 export function sceneLights(scene: THREE.Object3D): SceneLight[] {
   const lights: SceneLight[] = [];

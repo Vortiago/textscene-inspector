@@ -16,7 +16,7 @@ export const EMISSION_EXPOSURE_FACTOR = `${EXPOSURE_UNIFORM}[ 0 ]`;
 /**
  * The factor the next render scales its emission by. A one-element array, not a number:
  * `UniformsUtils.cloneUniforms` copies a number for each material and keeps a typed array by
- * reference (three r186 `UniformsUtils.js:43-64`), so every material reads this buffer. After a dev
+ * reference (three r187 `UniformsUtils.js:43-64`), so every material reads this buffer. After a dev
  * server reloads this module, it is the buffer the earlier evaluation installed.
  */
 export const EMISSION_EXPOSURE = installedOr(EXPOSURE_UNIFORM, Float32Array, () => Float32Array.of(1));

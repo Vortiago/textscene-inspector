@@ -24,6 +24,6 @@ export function fitPositionalShadow(
   // Each lookup spreads it in its own units (`positionalShadowLookup.ts`).
   shadow.radius = declaration.softShadowRadius;
   // three builds the projection only with a map it builds itself, or when the far plane moves
-  // (`WebGLShadowMap.js:277`, `:304-309`), and the atlas gives every shadow its map.
+  // (r187 `WebGLShadowMap.js:277`, `:306-311`), and the atlas gives every shadow its map.
   shadow.camera.updateProjectionMatrix();
 }
