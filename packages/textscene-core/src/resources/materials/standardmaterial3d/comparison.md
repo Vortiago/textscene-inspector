@@ -153,7 +153,7 @@ A 40 px point that draws shadows only hangs under an omni light, above a floor t
 
 ## Next pass
 
-<!-- compare: image=material-next-pass status=done fixture=unit-material-next-pass.tscn -->
+<!-- compare: image=material-next-pass status=done fixture=unit-material-next-pass.tscn camera=MaterialNextPass/Camera3D -->
 
 A material's `next_pass` draws one extra surface after its own. Every link draws after the links before it, as the chain walk runs (`render_forward_clustered.cpp:4183-4201`). The fixture's pass culls front faces, so its back faces draw a rim round the sphere. Unshaded blue with `grow = true` offsets each vertex by `grow_amount = 0.03` along its normal (`material.cpp:1458-1461`), in model space before the node's transform. The rim therefore sits outside the orange edge. The link resolves against the starting material's own tables and decodes through the one bag derivation. Every surface owner mounts the chain the same way: MeshInstance3D, CPUParticles3D, CSG, GridMap and the GLB surface override. Each link shares the base draw's geometry and draws unpicked one past the draw it covers. Each link casts nothing, since the surface's own draw casts the geometry once. A GLB link reads the holder's own draw state: its instances, its culling, its visual layers and its per-surface hooks.
 
