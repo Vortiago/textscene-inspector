@@ -41,7 +41,10 @@ fetch_cursor() {
 fetch_windsurf() {
   local repo='https://windsurf-stable.codeiumdata.com/wVxQEIWkwPUEAGf3/apt'
   local package
-  package=$(curl -fsSL "$repo/dists/stable/main/binary-amd64/Packages" | awk '/^Filename: /{file=$2} END{print file}')
+  # The index lists every package the repository holds; keep the last stanza named windsurf.
+  package=$(curl -fsSL "$repo/dists/stable/main/binary-amd64/Packages" \
+    | awk '/^Package: /{name=$2} /^Filename: /{if (name == "windsurf") file=$2} END{print file}')
+  echo "windsurf package: $package" >&2
   curl -fsSL -o windsurf.deb "$repo/$package"
   dpkg-deb -x windsurf.deb windsurf
   find_executable "$PWD/windsurf" windsurf
