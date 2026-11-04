@@ -14,8 +14,8 @@ import {
   type ReferenceGlyph,
 } from '../glyphVariation.testkit';
 
-const instances = reference as ReferenceGlyph[];
-const autoHinted = autoHintedReference as ReferenceGlyph[];
+const instances = reference as unknown as ReferenceGlyph[];
+const autoHinted = autoHintedReference as unknown as ReferenceGlyph[];
 
 describe('glyph contours of a variable font at an instance', () => {
   it.each(instances.map((glyph) => [referenceGlyphTitle(glyph), glyph] as const))(

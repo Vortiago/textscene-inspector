@@ -20,7 +20,7 @@ export interface ReferenceGlyph {
   /** `FontFile.force_autohinter`. Absent is off. */
   forceAutohinter?: boolean;
   /** The `variation_opentype` axes: a numeric key is a tag, any other key a name. */
-  opentype?: Record<string, number>;
+  opentype?: Readonly<Record<string, number | undefined>>;
   contourEnds: number[];
   isFillRight: boolean;
   /** `[x, y, tag]` as Godot's `font_get_glyph_contours` returns them. */
@@ -46,9 +46,13 @@ export function plainReferenceGlyph(glyph: ReferenceGlyph): ReferenceGlyph {
   return plain;
 }
 
-const opentypeOf = (record: Record<string, number> | undefined): OpentypeCoordinates | undefined =>
+const opentypeOf = (record: ReferenceGlyph['opentype']): OpentypeCoordinates | undefined =>
   record &&
-  new Map(Object.entries(record).map(([key, value]) => [/^\d+$/.test(key) ? Number(key) : key, value]));
+  new Map(
+    Object.entries(record).flatMap(([key, value]) =>
+      value === undefined ? [] : [[/^\d+$/.test(key) ? Number(key) : key, value] as const]
+    )
+  );
 
 export const variationOf = ({ embolden, skew, opentype }: ReferenceGlyph): GlyphVariation => ({
   embolden,
