@@ -1,8 +1,9 @@
-; The one variable: the outline_size of a ProgressBar percentage in the bundled font, at 16 px and
-; 48 px. Its ring is a stroked contour of radius outline_size / 4 px, drawn before the text
-; (`progress_bar.cpp:180-181`). The bundled font keeps a fill on the atlas and strokes the ring on the canvas
-; painter (ADR-0040); the atlas field holds only about 2.3 px of outline at size 48, so a ring of 4 px
-; at size 16 or 48 and of 16 px at size 48 shows whether the ring is the stroke or a filled quad.
+; The one variable: the outline_size of a ProgressBar percentage in the bundled font, at font sizes 16 and 48.
+; The ring is a stroked contour of radius outline_size / 4 px, drawn before the text
+; (`progress_bar.cpp:180-181`). The bundled font keeps the fill on the atlas and strokes the ring on the canvas
+; painter (ADR-0040). The atlas field holds only about 2.3 px of outline at size 48, so an outline_size of 16 shows
+; whether the ring is a stroke or a filled quad. `progress-bar-outline-variation` sets a scene font, which strokes its
+; own ring, and `progress-bar-embolden-fill` sets no outline, so neither draws a bundled-font ring.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitprogressbarbundledoutline"]
 
