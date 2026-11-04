@@ -66,7 +66,7 @@ const GPOS_EXTENSION = 9;
 export const u16 = (dv: DataView, at: number): number => dv.getUint16(at, false);
 
 /** The `count` 16-bit values from `at`. */
-export function u16Values(dv: DataView, at: number, count: number): number[] {
+function u16Values(dv: DataView, at: number, count: number): number[] {
   return Array.from({ length: count }, (_, i) => u16(dv, at + 2 * i));
 }
 
