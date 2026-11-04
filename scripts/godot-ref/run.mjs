@@ -1442,14 +1442,20 @@ export function enginePassStalled(result) {
  */
 export async function importAssets({ run, restage }) {
   let result = run();
-  if (!enginePassStalled(result)) return;
-  await restage();
-  result = run();
-  if (!enginePassStalled(result)) return;
-  const why = result.timedOut
-    ? `did not finish within ${ENGINE_TIMEOUT_S}s on two tries`
-    : `failed to spawn on two tries: ${result.error.message}`;
-  throw new Error(`The Godot import pass ${why}.\n${result.stderr}`);
+  if (enginePassStalled(result)) {
+    await restage();
+    result = run();
+  }
+  if (enginePassStalled(result)) {
+    throw new Error(`The Godot import pass ${stallReason(result)} on two tries.\n${result.stderr}`);
+  }
+}
+
+/** Why a stalled pass ended: the group killer's expiry, or a spawn failure. */
+function stallReason(result) {
+  return result.timedOut
+    ? `did not finish within ${ENGINE_TIMEOUT_S}s`
+    : `failed to spawn: ${result.error.message}`;
 }
 
 function runGodot(args, { display, screen = null }) {
@@ -1625,11 +1631,7 @@ async function renderInto(
   if (!existsSync(resolve(out))) {
     // A bare "produced no image" with an empty stderr would hide the spawn error, and an expiry's
     // exit code would read as a crash.
-    const why = render.timedOut
-      ? `\nThe engine did not finish within ${ENGINE_TIMEOUT_S}s and its process group was reaped.`
-      : render.error
-        ? `\n${render.error.message}`
-        : '';
+    const why = enginePassStalled(render) ? `\nThe engine ${stallReason(render)}.` : '';
     throw new Error(
       `Godot produced no image for ${basename(scenePath)} (exit ${render.status}).${why}\n${render.stdout}\n${render.stderr}`
     );
