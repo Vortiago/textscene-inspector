@@ -188,6 +188,7 @@ import '../resources/shapes/capsuleshape2d/linterValidators.js';
 import '../resources/shapes/capsuleshape3d/linterValidators.js';
 import '../resources/shapes/cylindershape3d/linterValidators.js';
 import '../resources/shapes/worldboundaryshape3d/linterValidators.js';
+import '../resources/shapes/heightmapshape3d/linterValidators.js';
 import '../resources/shapes/separationrayshape3d/linterValidators.js';
 import '../nodes/2d/tiles/tilemaplayer/index.linter.js';
 import '../nodes/2d/tiles/tilemap/index.linter.js';

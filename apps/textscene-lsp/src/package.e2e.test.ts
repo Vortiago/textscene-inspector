@@ -10,18 +10,16 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { findPackageJSON } from 'node:module';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { declaredExports } from '@textscene/dev-kit';
 import { findForbiddenHostInputs } from '../../../scripts/check-bundle-size/hostBundles.mjs';
-import { packTarball, run } from '../../../scripts/packTarball.mjs';
+import { installedVersion, packTarball, run, typeCheck } from '../../../scripts/packTarball.mjs';
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(packageDir, '../..');
 const distDir = join(packageDir, 'dist');
 const bundlePath = join(distDir, 'index.js');
 const metafilePath = join(distDir, 'build.meta.json');
-const tscBin = join(repoRoot, 'node_modules', 'typescript', 'bin', 'tsc');
 
 /** What an LSP host needs: the translation from core's language features to the protocol shapes. */
 const PUBLIC_VALUE_EXPORTS = [
@@ -72,15 +70,6 @@ export function diagnosticOf(diagnostic: Diagnostic, document: TextDocument) {
   return toLspDiagnostic(diagnostic, document);
 }
 `;
-
-/** The version of `name` that the workspace package at `base` tests against. */
-function installedVersion(name: string, base: string): string {
-  const manifestPath = findPackageJSON(name, join(repoRoot, base, 'package.json'));
-  if (manifestPath === undefined) {
-    throw new Error(`expected ${name} installed for ${base}, found none`);
-  }
-  return JSON.parse(readFileSync(manifestPath, 'utf8')).version;
-}
 
 /** The translation names the vscode types, whose declarations read the Node builtins, so a strict
  * consumer installs @types/node, and it pins the versions the lsp app tests against. */
@@ -230,6 +219,6 @@ describe('@textscene/lsp tarball in a plain Node project', () => {
   });
 
   it('ships declarations that type-check without @textscene/core', () => {
-    expect(() => run('node', [tscBin, '-p', '.'], consumerDir)).not.toThrow();
+    expect(() => typeCheck(consumerDir)).not.toThrow();
   });
 });

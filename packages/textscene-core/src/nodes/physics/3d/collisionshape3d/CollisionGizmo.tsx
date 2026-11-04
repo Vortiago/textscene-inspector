@@ -25,6 +25,7 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
     case 'SphereShape3D':
     case 'CylinderShape3D':
     case 'WorldBoundaryShape3D':
+    case 'HeightMapShape3D':
     case 'SeparationRayShape3D':
     case 'ConcavePolygonShape3D':
       return <ShapeLines shape={shape} color={color} />;

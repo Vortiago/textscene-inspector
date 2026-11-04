@@ -4064,6 +4064,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Basic Nodes"
   },
   {
+    "name": "Collision Height Map",
+    "file": "unit-collision-height-map.tscn",
+    "category": "Unit - Physics"
+  },
+  {
     "name": "Collision Polygon 2d",
     "file": "unit-collision-polygon-2d.tscn",
     "category": "Unit - Physics"
