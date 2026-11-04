@@ -59,4 +59,10 @@ describe('useReferencedResources', () => {
     rerender();
     expect(result.current).toBe(first);
   });
+
+  it('answers one entry per reference, and none for an empty list', () => {
+    const { result } = renderHook(() => useReferencedResources([], [undefined, undefined]), { wrapper });
+    expect(result.current.curves).toEqual([]);
+    expect(result.current.gradients).toEqual([null, null]);
+  });
 });

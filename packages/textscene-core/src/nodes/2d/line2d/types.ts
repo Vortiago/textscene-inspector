@@ -27,7 +27,7 @@ export interface Line2DProperties extends Node2DProperties {
   /** `LineCapMode` of the first and the last point: NONE (0), BOX (1) or ROUND (2). Default NONE. */
   beginCapMode: number;
   endCapMode: number;
-  /** The raw `gradient` reference, for `useLineResources` to resolve. With one set, `default_color` is ignored. */
+  /** The raw `gradient` reference, for `useReferencedResources` to resolve. With one set, `default_color` is ignored. */
   gradient: string | undefined;
   /** The raw `width_curve` reference. The curve scales `width` along the line. */
   widthCurve: string | undefined;

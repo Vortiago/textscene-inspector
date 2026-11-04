@@ -216,6 +216,15 @@ describe('buildLineStroke', () => {
     });
   });
 
+  it('closes a closed line whose width curve is 0 at the start without a NaN vertex', () => {
+    const built = stroke([0, 0, 100, 0, 100, 100, 0, 100], {
+      closed: true,
+      jointMode: LineJointMode.BEVEL,
+      widthFactorAt: (offset) => offset,
+    });
+    expect(Array.from(built.vertices).every(Number.isFinite)).toBe(true);
+  });
+
   it('closes a closed SHARP line on its start vertices, with no joint triangles', () => {
     const built = stroke([0, 0, 100, 0, 100, 100, 0, 100], { closed: true });
     // Godot's first quad is degenerate, since the strip has no vertices to start from, then 4 more.

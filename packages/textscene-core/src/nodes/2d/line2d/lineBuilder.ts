@@ -246,6 +246,7 @@ class StrokeWalk {
 
   /** The colour and the width factor at the distance walked, which is null and 1 where none is read. */
   private advanceAlongLine(): Rgba | null {
+    if (!this.needsDistance) return null;
     const { gradient, widthFactorAt } = this.options;
     const offset = f(this.distance / this.totalDistance);
     if (widthFactorAt) this.widthFactor = widthFactorAt(offset);
@@ -254,7 +255,8 @@ class StrokeWalk {
 
   private firstJointOf(joint: Joint): FirstJoint {
     const center = vector2Scaled(vector2Add(joint.up1, joint.down1), 0.5);
-    const weight = f(1 / this.widthFactor);
+    // A width factor of 0 gives the zero-width limit, where Godot's 1 / 0 gives an infinite weight and NaN.
+    const weight = this.widthFactor === 0 ? 0 : f(1 / this.widthFactor);
     return {
       up: vector2Lerp(center, joint.up1, weight),
       down: vector2Lerp(center, joint.down1, weight),

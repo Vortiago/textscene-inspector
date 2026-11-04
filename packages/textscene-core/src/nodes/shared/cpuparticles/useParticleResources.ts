@@ -32,18 +32,21 @@ function paramCurveReferences(params: readonly ParticleParam[]): Array<string | 
 /** The resources `references` name in the scene, which re-resolve as each `.tres` loads. */
 export function useParticleResources(references: ParticleResourceReferences): ParticleResources {
   const { params, colorRamp, colorInitialRamp, scaleCurves } = references;
-  const slotCount = CPU_PARTICLES_PARAM_COUNT;
   const { curves, gradients } = useReferencedResources(
     [...paramCurveReferences(params), scaleCurves?.x, scaleCurves?.y, scaleCurves?.z],
     [colorRamp, colorInitialRamp]
   );
   return useMemo(
     () => ({
-      curves: curves.slice(0, slotCount),
-      scaleCurves: { x: curves[slotCount]!, y: curves[slotCount + 1]!, z: curves[slotCount + 2]! },
+      curves: curves.slice(0, CPU_PARTICLES_PARAM_COUNT),
+      scaleCurves: {
+        x: curves[CPU_PARTICLES_PARAM_COUNT]!,
+        y: curves[CPU_PARTICLES_PARAM_COUNT + 1]!,
+        z: curves[CPU_PARTICLES_PARAM_COUNT + 2]!,
+      },
       colorRamp: gradients[0]!,
       colorInitialRamp: gradients[1]!,
     }),
-    [curves, gradients, slotCount]
+    [curves, gradients]
   );
 }

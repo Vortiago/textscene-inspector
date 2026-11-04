@@ -47,6 +47,7 @@ export function useReferencedResources(curveRefs: References, gradientRefs: Refe
   );
 }
 
-/** A reference holds no newline, so a joined list keys the same references. */
-const keyOf = (refs: References) => refs.map((ref) => ref ?? '').join('\n');
-const fromKey = (key: string): Array<string | undefined> => key.split('\n').map((ref) => ref || undefined);
+/** A JSON list keys the same references, and tells an empty list from one reference that names nothing. */
+const keyOf = (refs: References) => JSON.stringify(refs.map((ref) => ref ?? null));
+const fromKey = (key: string): Array<string | undefined> =>
+  (JSON.parse(key) as Array<string | null>).map((ref) => ref ?? undefined);

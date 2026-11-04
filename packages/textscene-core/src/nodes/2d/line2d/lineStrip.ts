@@ -110,7 +110,9 @@ export function newArc(
 
 function pushVertex(strip: Strip, point: Vector2, color: Rgba | null): void {
   strip.vertices.push(point);
-  if (strip.colors && color) strip.colors.push(color);
+  if (!strip.colors) return;
+  if (!color) throw new Error(`expected a colour for a vertex of a gradient strip, got ${color}`);
+  strip.colors.push(color);
 }
 
 /**
