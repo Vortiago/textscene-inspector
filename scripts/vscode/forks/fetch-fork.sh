@@ -10,16 +10,21 @@ dir="$2"
 mkdir -p "$dir"
 cd "$dir"
 
-# Prints the executable called $2 under $1, or the layout on stderr when there is none.
-# An AppImage nests its binary under usr/share/<name>/, four levels down.
+# Prints the first executable under $1 named like one of the remaining arguments, or the
+# layout on stderr when there is none. An AppImage or deb nests its binary under
+# usr/share/<name>/, four levels down.
 find_executable() {
-  local found
-  found=$(find "$1" -maxdepth 5 -type f -name "$2" -perm -u+x | head -n 1)
-  if [ -z "$found" ]; then
-    echo "no executable named $2 under $1; layout:" >&2
-    find "$1" -maxdepth 3 | head -n 60 >&2
-  fi
-  echo "$found"
+  local root="$1" name found
+  shift
+  for name in "$@"; do
+    found=$(find "$root" -maxdepth 5 -type f -name "$name" -perm -u+x | head -n 1)
+    if [ -n "$found" ]; then
+      echo "$found"
+      return
+    fi
+  done
+  echo "no executable named $* under $root; layout:" >&2
+  find "$root" -maxdepth 4 | head -n 80 >&2
 }
 
 fetch_vscodium() {
@@ -42,16 +47,14 @@ fetch_cursor() {
 # package that depends on it, so the apt index is read for devin-desktop, with its names logged.
 fetch_windsurf() {
   local repo='https://windsurf-stable.codeiumdata.com/wVxQEIWkwPUEAGf3/apt'
-  local index package executable
+  local index package
   index=$(curl -fsSL "$repo/dists/stable/main/binary-amd64/Packages")
   echo "packages in the index: $(echo "$index" | awk '/^Package: /{print $2}' | sort -u | tr '\n' ' ')" >&2
   package=$(echo "$index" | awk '/^Package: /{name=$2} /^Filename: /{if (name == "devin-desktop") file=$2} END{print file}')
   echo "windsurf package: $package" >&2
   curl -fsSL -o windsurf.deb "$repo/$package"
   dpkg-deb -x windsurf.deb windsurf
-  executable=$(find_executable "$PWD/windsurf" devin)
-  [ -n "$executable" ] || executable=$(find_executable "$PWD/windsurf" windsurf)
-  echo "$executable"
+  find_executable "$PWD/windsurf" devin-desktop devin windsurf
 }
 
 case "$fork" in
