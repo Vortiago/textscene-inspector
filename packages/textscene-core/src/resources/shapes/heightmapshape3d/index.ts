@@ -5,3 +5,4 @@ import { registerGenericResourceSlice } from '../../sliceRegistration';
 registerGenericResourceSlice('heightmapshape3d', ['HeightMapShape3D']);
 
 export { decodeHeightMapShape3D } from './decode';
+export type { HeightMapShape3DProperties } from './types';

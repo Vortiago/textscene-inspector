@@ -40,8 +40,9 @@ describe('decodeHeightMapShape3D', () => {
   });
 
   // `set_map_data` returns without copying unless the size matches (`:203-206`).
-  it('ignores heights whose count is not width x depth', () => {
+  it('ignores heights whose count is not width x depth, naming both counts', () => {
     expect(decoded({ map_data: 'PackedFloat32Array(1, 2, 3)' }).heights).toEqual([0, 0, 0, 0]);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('expected 4 heights'));
   });
 
   it('ignores heights that come before the width that makes them fit', () => {

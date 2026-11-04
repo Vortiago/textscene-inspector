@@ -36,7 +36,12 @@ function withDepth(grid: HeightMapShape3DProperties, text: string): HeightMapSha
 function withHeights(grid: HeightMapShape3DProperties, text: string): HeightMapShape3DProperties {
   try {
     const heights = parsePackedFloat32Array(text);
-    if (heights.length !== grid.heights.length) return grid;
+    if (heights.length !== grid.heights.length) {
+      warn(
+        `HeightMapShape3D map_data: expected ${grid.heights.length} heights for a ${grid.width} x ${grid.depth} grid, got ${heights.length}`
+      );
+      return grid;
+    }
     return { ...grid, heights: Float32Array.from(heights) };
   } catch (error) {
     warn(`HeightMapShape3D map_data: ${error instanceof Error ? error.message : String(error)}`);

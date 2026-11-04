@@ -22,10 +22,12 @@ import { decodeBoxShape3D } from '../../../resources/shapes/boxshape3d';
 import { decodeCapsuleShape3D } from '../../../resources/shapes/capsuleshape3d';
 import { decodeConcavePolygonShape3D } from '../../../resources/shapes/concavepolygonshape3d';
 import { decodeCylinderShape3D } from '../../../resources/shapes/cylindershape3d';
-import { decodeHeightMapShape3D } from '../../../resources/shapes/heightmapshape3d';
+import {
+  decodeHeightMapShape3D,
+  type HeightMapShape3DProperties,
+} from '../../../resources/shapes/heightmapshape3d';
 import { decodeSphereShape3D } from '../../../resources/shapes/sphereshape3d';
 import { decodeWorldBoundaryShape3D } from '../../../resources/shapes/worldboundaryshape3d';
-import type { HeightMapShape3DProperties } from '../../../resources/shapes/heightmapshape3d/types';
 import type { TscnInternalResource } from '../../../parser/types';
 
 /**
