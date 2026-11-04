@@ -11,7 +11,7 @@ import { PendingSuspense } from './PendingSuspense';
 
 /**
  * A lazy component and the resolver that lands its chunk. The chunk lands when the test finishes at
- * the latest, since the test setup waits for every lazy import before the file ends.
+ * the latest, since the test setup fails a file that ends with a lazy import still loading.
  */
 function deferredChunk(): { Chunk: ComponentType; land: () => Promise<void> } {
   let resolve: (module: { default: ComponentType }) => void = () => {};
