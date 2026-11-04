@@ -6,6 +6,9 @@
 
 import type { lazy } from 'react';
 
+/** Below Vitest's 10 s hook timeout, so a stuck import fails with this module's message. */
+const SETTLE_TIMEOUT_MS = 8000;
+
 /** Written only by `trackedLazy`'s loads. An entry clears when its import lands or fails. */
 const loadingImports = new Set<Promise<unknown>>();
 
@@ -23,7 +26,24 @@ export function trackedLazy(reactLazy: typeof lazy): typeof lazy {
   return (load) => reactLazy(() => tracked(load));
 }
 
-/** Waits until every tracked import has landed or failed. */
+/**
+ * Waits until every tracked import has landed or failed. Throws when one still loads after
+ * {@link SETTLE_TIMEOUT_MS}, as a test that holds a chunk back must land it before the file ends.
+ *
+ * `settlePendingLoads` waits only for the chunks a loader counts.
+ *
+ * @canonical In tests, every React.lazy import a test file started
+ */
 export async function settleLazyImports(): Promise<void> {
-  await Promise.allSettled(loadingImports);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<'timed out'>((resolve) => {
+    timer = setTimeout(() => resolve('timed out'), SETTLE_TIMEOUT_MS);
+  });
+  const outcome = await Promise.race([Promise.allSettled(loadingImports), timedOut]);
+  clearTimeout(timer);
+  if (outcome === 'timed out') {
+    throw new Error(
+      `expected every React.lazy import to land within ${SETTLE_TIMEOUT_MS} ms, found ${loadingImports.size} still loading`
+    );
+  }
 }

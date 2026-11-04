@@ -4,9 +4,12 @@
 
 import { lazy, Suspense, type ComponentType } from 'react';
 import { render } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { ErrorBoundary } from '../r3f/components/ErrorBoundary';
 import { settleLazyImports, trackedLazy } from './lazyImports';
+
+/** React's own `lazy`, past the tracked one the test setup gives every test file. */
+const { lazy: untrackedLazy } = await vi.importActual<typeof import('react')>('react');
 
 /** A module that lands after `ms`, and records that it landed. */
 function slowModule(ms: number): {
@@ -22,15 +25,21 @@ function slowModule(ms: number): {
   return { load, hasLanded: () => hasLanded };
 }
 
+/** Renders `Chunk` so it suspends, and draws nothing if its import fails. */
+function renderSuspended(Chunk: ComponentType): void {
+  render(
+    <ErrorBoundary fallback={() => null}>
+      <Suspense fallback={null}>
+        <Chunk />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
 describe('settleLazyImports', () => {
   it('waits for an import a render started', async () => {
     const slow = slowModule(50);
-    const Slow = trackedLazy(lazy)(slow.load);
-    render(
-      <Suspense fallback={null}>
-        <Slow />
-      </Suspense>
-    );
+    renderSuspended(trackedLazy(untrackedLazy)(slow.load));
 
     await settleLazyImports();
 
@@ -38,26 +47,31 @@ describe('settleLazyImports', () => {
   });
 
   it('settles an import that fails', async () => {
-    const Failing = trackedLazy(lazy)(() => Promise.reject(new Error('expected failure')));
-    render(
-      <ErrorBoundary fallback={() => null}>
-        <Suspense fallback={null}>
-          <Failing />
-        </Suspense>
-      </ErrorBoundary>
-    );
+    renderSuspended(trackedLazy(untrackedLazy)(() => Promise.reject(new Error('expected failure'))));
 
     await expect(settleLazyImports()).resolves.toBeUndefined();
   });
 
+  it('fails, naming the count, when an import still loads at the time limit', async () => {
+    let land: (module: { default: ComponentType }) => void = () => {};
+    renderSuspended(
+      trackedLazy(untrackedLazy)(() => new Promise<{ default: ComponentType }>((resolve) => (land = resolve)))
+    );
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+      land({ default: () => null });
+    });
+
+    const settled = expect(settleLazyImports()).rejects.toThrow('found 1 still loading');
+    await vi.runAllTimersAsync();
+
+    await settled;
+  });
+
   it('tracks the lazy every test file imports from react', async () => {
     const slow = slowModule(50);
-    const Slow = lazy(slow.load);
-    render(
-      <Suspense fallback={null}>
-        <Slow />
-      </Suspense>
-    );
+    renderSuspended(lazy(slow.load));
 
     await settleLazyImports();
 

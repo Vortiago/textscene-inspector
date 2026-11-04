@@ -21,7 +21,8 @@ import { settleLazyImports, trackedLazy } from './src/testing/lazyImports.js';
 
 vi.mock('react', async (importOriginal) => {
   const react = await importOriginal<typeof import('react')>();
-  return { ...react, default: react, lazy: trackedLazy(react.lazy) };
+  const mocked = { ...react, lazy: trackedLazy(react.lazy) };
+  return { ...mocked, default: mocked };
 });
 afterAll(settleLazyImports);
 
