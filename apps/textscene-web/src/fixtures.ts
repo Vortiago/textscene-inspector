@@ -1168,6 +1168,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Item List Wrap Trim",
+    "file": "unit-item-list-wrap-trim.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Item List",
     "file": "unit-item-list.tscn",
     "category": "Other"

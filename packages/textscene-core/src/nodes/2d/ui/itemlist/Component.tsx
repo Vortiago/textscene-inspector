@@ -5,7 +5,6 @@
  * `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
 import { useMemo } from 'react';
-import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -14,7 +13,11 @@ import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import {
+  ControlClipProvider,
+  useControlClipPlanes,
+  useWorldClipPlanes,
+} from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
@@ -28,7 +31,6 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SceneScope } from '../../../../parser/types';
 import {
   ICON_MODE_LEFT,
-  ICON_MODE_TOP,
   ITEM_LIST_DEFAULT_MAX_COLUMNS,
   ITEM_LIST_THEME_FONT_KEY,
   itemIconColor,
@@ -38,8 +40,9 @@ import {
   itemListGuideLines,
   itemListIconSlotKey,
   itemListLineTextWidthPx,
+  itemListMaxColumnWidth,
+  itemListMinimumShapeWidthPx,
   itemListMirrorX,
-  itemListRightAlignOffsetPx,
   itemListRowTextX,
   itemListSeparation,
   itemListTextTheme,
@@ -47,24 +50,27 @@ import {
   itemMinimumSize,
   itemTextColor,
   itemTextDrawOffset,
-  itemTextLineCenterOffset,
+  isItemListTextWrapped,
   packItemListRows,
   pickItemListPanelStyleBox,
   shapeItemListText,
 } from './nativeSolver';
+import { itemListDrawnLabel, itemListLabelIsDrawn, type DrawnLabelLine } from './labelDraw';
 import type { ItemListItem, ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 
-/** Pass 1: this row's own icon/text size contribution: what `packItemListRows` needs, before rects exist. */
+/**
+ * Pass 1: this row's own icon/text size contribution: what `packItemListRows` needs, before rects
+ * exist. `minimumLayout` is the label shaped at the minimum-size width (`item_list.cpp:1763-1766`).
+ */
 interface RowContent {
   item: ItemListItem;
   disabled: boolean;
   hasIcon: boolean;
   iconSize: Vector2;
-  hasText: boolean;
   textSize: Vector2;
-  textLayout: TextLayoutResult | null;
+  minimumLayout: TextLayoutResult | null;
 }
 
 /** Pass 2: this row's fully-resolved, plain-data geometry: everything but the async icon load. */
@@ -75,15 +81,13 @@ interface RowGeometry {
   iconNaturalSize: Vector2 | null;
   fixedIconSizeSet: boolean;
   iconDraw: ReturnType<typeof itemIconDraw>;
-  textLayout: TextLayoutResult | null;
+  /** The label shaped again at its draw width (`item_list.cpp:1625-1661`), or `null` when the row draws none. */
+  label: { layout: TextLayoutResult; lines: DrawnLabelLine[] } | null;
   /** Row-relative pen x, already through the RTL branch of `item_list.cpp:1639-1670`. */
   textX: number;
   textY: number;
   /** Row-relative icon x, already mirrored (`item_list.cpp:1582-1584`). */
   iconX: number;
-  /** The width `text_buf->set_width()` gets, and the box CENTER/RIGHT alignment works inside. */
-  textWidthPx: number;
-  iconMode: number;
   rect: Rect2;
   textColor: Rgba;
 }
@@ -93,7 +97,6 @@ interface ItemListRowProps {
   origin: Vector2;
   tint: Rgba;
   renderOrder: number;
-  clippingPlanes: readonly THREE.Plane[];
   fontSizePx: number;
   resources: SceneScope;
 }
@@ -103,29 +106,8 @@ interface ItemListRowProps {
  * site: React forbids a varying hook count. `tint` multiplies the font and icon
  * colour before the one sRGB-to-linear conversion.
  */
-function ItemListRow({
-  geometry,
-  origin,
-  tint,
-  renderOrder,
-  clippingPlanes,
-  fontSizePx,
-  resources,
-}: ItemListRowProps) {
-  const {
-    item,
-    disabled,
-    hasIcon,
-    iconDraw,
-    textLayout,
-    textX,
-    textY,
-    iconX,
-    textWidthPx,
-    iconMode,
-    rect,
-    textColor,
-  } = geometry;
+function ItemListRow({ geometry, origin, tint, renderOrder, fontSizePx, resources }: ItemListRowProps) {
+  const { item, disabled, hasIcon, iconDraw, label, textX, textY, iconX, rect, textColor } = geometry;
 
   const { texture: iconSource } = useTexture2D(
     item.icon,
@@ -133,6 +115,8 @@ function ItemListRow({
     resources.internalResources
   );
   const iconTexture = useOwnerCanvas2DTexture(iconSource);
+  // Inside the list's own `ControlClipProvider`, so a row clips to the list rect.
+  const clippingPlanes = useControlClipPlanes();
 
   const iconColorSrgb = useMemo(() => tintColor(itemIconColor(disabled), tint), [disabled, tint]);
   const iconColorLinear = useGodotLinearColor(iconColorSrgb);
@@ -152,42 +136,33 @@ function ItemListRow({
           />
         </CanvasItemGroup>
       )}
-      {textLayout &&
-        (iconMode === ICON_MODE_LEFT ? (
-          <CanvasItemGroup position={[textX, -textY, 0]}>
+      {label &&
+        label.lines.map(({ line, shiftPx }, index) => (
+          <CanvasItemGroup
+            key={index}
+            position={[textX + shiftPx, -(textY + index * label.layout.linePitchPx), 0]}
+          >
             <TextRun
-              layout={textLayout}
+              layout={soloLineLayout(line, label.layout)}
               fontSizePx={fontSizePx}
               tint={tintedTextColor}
               clippingPlanes={clippingPlanes}
               renderOrder={renderOrder}
             />
           </CanvasItemGroup>
-        ) : (
-          textLayout.lines.map((line, index) => (
-            <CanvasItemGroup
-              key={index}
-              position={[
-                textX + itemTextLineCenterOffset(textWidthPx, shapedTextSizeWidthPx(line.widthPx)),
-                -(textY + index * textLayout.linePitchPx),
-                0,
-              ]}
-            >
-              <TextRun
-                layout={soloLineLayout(line, textLayout)}
-                fontSizePx={fontSizePx}
-                tint={tintedTextColor}
-                clippingPlanes={clippingPlanes}
-                renderOrder={renderOrder}
-              />
-            </CanvasItemGroup>
-          ))
         ))}
     </CanvasItemGroup>
   );
 }
 
-export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
+export function ItemList({
+  solveNode,
+  tint,
+  rect,
+  renderOrder,
+  theme,
+  children,
+}: NativeControlComponentProps) {
   const props = painterView<ItemListProperties>(solveNode);
   const items = props.items;
 
@@ -211,7 +186,15 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // move (`item_list.cpp:1582-1584,1639-1641,1664-1668`).
   const rtl = solveNode.rtl;
 
-  const clippingPlanes = useControlClipPlanes();
+  // `set_clip_contents(true)` (`item_list.cpp:2482`) clips to the list rect, scrollbars aside.
+  const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
+  const { anchorRef, clip } = useWorldClipPlanes(ownRect);
+  const clipsContents = props.clipContents !== false;
+
+  const textShape = useMemo(
+    () => ({ fontSizePx, fontMetrics, iconMode, maxTextLines, overrunBehavior: props.textOverrunBehavior }),
+    [fontSizePx, fontMetrics, iconMode, maxTextLines, props.textOverrunBehavior]
+  );
 
   const rows: RowContent[] = useMemo(() => {
     return items.map((item, index) => {
@@ -221,36 +204,18 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       const iconSize = itemIconPackedSize(hasIcon, naturalSize, props.fixedIconSize, iconScale);
 
       const text = item.text ?? '';
-      const hasText = text.length > 0;
-      const textLayout = hasText
-        ? shapeItemListText({
-            text,
-            fontSizePx,
-            fontMetrics,
-            iconMode,
-            maxTextLines,
-            fixedColumnWidth,
-            overrunBehavior: props.textOverrunBehavior,
-          })
-        : null;
-      const textSize = textLayout
-        ? { x: shapedTextSizeWidthPx(textLayout.widthPx), y: textLayout.heightPx }
+      const minimumLayout = shapeItemListText({
+        ...textShape,
+        text,
+        widthPx: itemListMinimumShapeWidthPx(fixedColumnWidth),
+      });
+      const textSize = minimumLayout
+        ? { x: shapedTextSizeWidthPx(minimumLayout.widthPx), y: minimumLayout.heightPx }
         : { x: 0, y: 0 };
 
-      return { item, disabled, hasIcon, iconSize, hasText, textSize, textLayout };
+      return { item, disabled, hasIcon, iconSize, textSize, minimumLayout };
     });
-  }, [
-    items,
-    fontSizePx,
-    fontMetrics,
-    iconMode,
-    maxTextLines,
-    fixedColumnWidth,
-    iconScale,
-    props.fixedIconSize,
-    props.textOverrunBehavior,
-    solveNode,
-  ]);
+  }, [items, textShape, fixedColumnWidth, iconScale, props.fixedIconSize, solveNode]);
 
   const itemSizes = useMemo(
     () =>
@@ -259,7 +224,7 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           {
             hasIcon: r.hasIcon,
             iconSize: r.iconSize,
-            hasText: r.hasText,
+            hasText: r.minimumLayout !== null,
             textSize: r.textSize,
             iconMode,
             maxTextLines,
@@ -271,7 +236,7 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
     [rows, iconMode, maxTextLines, fixedColumnWidth, theme]
   );
 
-  const maxColumnWidth = itemSizes.reduce((max, s) => Math.max(max, s.x), 0);
+  const maxColumnWidth = itemListMaxColumnWidth(itemSizes, hSeparation);
   const contentWidth = rect.w - panelMargin.x;
 
   const packed = useMemo(
@@ -316,98 +281,109 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // (`style_box.cpp:87-89`), never `contentMarginSize`'s summed pair.
   const origin: Vector2 = { x: panelBox.contentMargin.left, y: panelBox.contentMargin.top };
 
-  const rowGeometries: RowGeometry[] = useMemo(
-    () =>
-      rows.map((r, index) => {
-        const packedRect = packed.items[index]!.rect;
-        // Both centring passes read `rect_cache.SIZE` (`item_list.cpp:1553,1556,1649`),
-        // never its position, and a `Rect2` satisfies `Vector2` structurally.
-        const packedSize: Vector2 = { x: packedRect.w, y: packedRect.h };
-        const naturalSize = solveNode.textureSlots[itemListIconSlotKey(index)] ?? null;
-        const iconDraw = itemIconDraw(
-          r.hasIcon,
-          iconMode,
-          r.iconSize,
-          naturalSize,
-          fixedIconSizeSet,
-          packedSize,
-          hSeparation,
-          vSeparation,
-          iconMargin
-        );
-        const textOffset = itemTextDrawOffset(
-          iconMode,
-          iconDraw.textOffsetContribution,
-          packedSize,
-          r.textLayout?.heightPx ?? 0,
-          hSeparation,
-          vSeparation
-        );
-        // Every RTL branch works in control coordinates; the row group keeps
-        // its LTR origin, so each piece comes back relative to it.
-        const rowOriginX = origin.x + packedRect.x;
-        const wrapped = iconMode === ICON_MODE_TOP;
-        const textWidthPx = wrapped
-          ? itemListWrappedTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems)
-          : itemListLineTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems);
-        const textBoxX = wrapped
-          ? itemListMirrorX(rowOriginX + textOffset.x, textWidthPx, rect.w, rtl)
-          : itemListRowTextX(
-              {
-                ltrX: rowOriginX + textOffset.x,
-                itemRectWidthPx: packedRect.w,
-                iconWidthPx: r.iconSize.x,
-                controlWidthPx: rect.w,
-                contentWidthPx: contentWidth,
-                wraparoundItems,
-                hSeparation,
-              },
-              rtl
-            );
-        // A non-wrapped item is a single line (`BREAK_NONE`), so the paragraph's
-        // own width is that line's (`item_list.cpp:1668`, alignment RIGHT).
-        const rightAlign =
-          !wrapped && rtl ? itemListRightAlignOffsetPx(textWidthPx, r.textLayout?.widthPx ?? 0) : 0;
-        return {
-          item: r.item,
-          disabled: r.disabled,
-          hasIcon: r.hasIcon,
-          iconNaturalSize: naturalSize,
-          fixedIconSizeSet,
-          iconDraw,
-          textLayout: r.textLayout,
-          textX: textBoxX + rightAlign - rowOriginX,
-          textY: textOffset.y,
-          iconX: iconDraw.rect
-            ? itemListMirrorX(rowOriginX + iconDraw.rect.x, iconDraw.rect.w, rect.w, rtl) - rowOriginX
-            : 0,
-          textWidthPx,
-          iconMode,
-          rect: packedRect,
-          textColor: itemTextColor(baseFontColor, r.disabled),
-        };
-      }),
-    [
-      rows,
-      packed,
-      iconMode,
-      fixedIconSizeSet,
-      hSeparation,
-      vSeparation,
-      iconMargin,
-      solveNode,
-      baseFontColor,
-      origin.x,
-      rect.w,
-      contentWidth,
-      wraparoundItems,
-      rtl,
-    ]
-  );
+  const rowGeometries: RowGeometry[] = useMemo(() => {
+    const minimumShapeWidthPx = itemListMinimumShapeWidthPx(fixedColumnWidth);
+    // The minimum-size pass already shaped the label at this width, so it is not shaped twice.
+    const shapeLabelAt = (r: RowContent, widthPx: number) =>
+      widthPx === minimumShapeWidthPx
+        ? r.minimumLayout
+        : shapeItemListText({ ...textShape, text: r.item.text ?? '', widthPx });
+    return rows.map((r, index) => {
+      const packedRect = packed.items[index]!.rect;
+      // Both centring passes read `rect_cache.SIZE` (`item_list.cpp:1553,1556,1649`),
+      // never its position, and a `Rect2` satisfies `Vector2` structurally.
+      const packedSize: Vector2 = { x: packedRect.w, y: packedRect.h };
+      const naturalSize = solveNode.textureSlots[itemListIconSlotKey(index)] ?? null;
+      const iconDraw = itemIconDraw(
+        r.hasIcon,
+        iconMode,
+        r.iconSize,
+        naturalSize,
+        fixedIconSizeSet,
+        packedSize,
+        hSeparation,
+        vSeparation,
+        iconMargin
+      );
+      const textOffset = itemTextDrawOffset(
+        iconMode,
+        iconDraw.textOffsetContribution,
+        packedSize,
+        r.minimumLayout?.heightPx ?? 0,
+        hSeparation,
+        vSeparation
+      );
+      // Every RTL branch works in control coordinates; the row group keeps
+      // its LTR origin, so each piece comes back relative to it.
+      const rowOriginX = origin.x + packedRect.x;
+      const wrapped = isItemListTextWrapped(iconMode, maxTextLines);
+      const textWidthPx = wrapped
+        ? itemListWrappedTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems)
+        : itemListLineTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems);
+      const textBoxX = wrapped
+        ? itemListMirrorX(rowOriginX + textOffset.x, textWidthPx, rect.w, rtl)
+        : itemListRowTextX(
+            {
+              ltrX: rowOriginX + textOffset.x,
+              itemRectWidthPx: packedRect.w,
+              iconWidthPx: r.iconSize.x,
+              controlWidthPx: rect.w,
+              contentWidthPx: contentWidth,
+              wraparoundItems,
+              hSeparation,
+            },
+            rtl
+          );
+      const isLabelDrawn = itemListLabelIsDrawn({
+        wrapped,
+        fixedColumnWidth,
+        itemRectWidthPx: packedRect.w,
+        iconWidthPx: r.iconSize.x,
+        contentWidthPx: contentWidth,
+        wraparoundItems,
+        hSeparation,
+      });
+      const layout = isLabelDrawn ? shapeLabelAt(r, textWidthPx) : null;
+      const label = layout ? { layout, lines: itemListDrawnLabel(layout, textWidthPx, wrapped, rtl) } : null;
+      return {
+        item: r.item,
+        disabled: r.disabled,
+        hasIcon: r.hasIcon,
+        iconNaturalSize: naturalSize,
+        fixedIconSizeSet,
+        iconDraw,
+        label,
+        textX: textBoxX - rowOriginX,
+        textY: textOffset.y,
+        iconX: iconDraw.rect
+          ? itemListMirrorX(rowOriginX + iconDraw.rect.x, iconDraw.rect.w, rect.w, rtl) - rowOriginX
+          : 0,
+        rect: packedRect,
+        textColor: itemTextColor(baseFontColor, r.disabled),
+      };
+    });
+  }, [
+    rows,
+    packed,
+    iconMode,
+    maxTextLines,
+    fixedColumnWidth,
+    textShape,
+    fixedIconSizeSet,
+    hSeparation,
+    vSeparation,
+    iconMargin,
+    solveNode,
+    baseFontColor,
+    origin.x,
+    rect.w,
+    contentWidth,
+    wraparoundItems,
+    rtl,
+  ]);
 
-  return (
+  const rowsAndChildren = (
     <>
-      <StyleBoxQuad styleBox={panelBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
       {guideLines.map((line, index) => (
         <CanvasItemGroup key={`guide-${index}`} position={[origin.x, -(origin.y + line.y), 0]}>
           <ControlQuad
@@ -426,11 +402,22 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           origin={origin}
           tint={tint.own}
           renderOrder={renderOrder}
-          clippingPlanes={clippingPlanes}
           fontSizePx={fontSizePx}
           resources={solveNode.resources}
         />
       ))}
+      {children}
     </>
+  );
+
+  return (
+    <CanvasItemGroup ref={anchorRef}>
+      <StyleBoxQuad styleBox={panelBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
+      {clipsContents ? (
+        <ControlClipProvider value={clip}>{rowsAndChildren}</ControlClipProvider>
+      ) : (
+        rowsAndChildren
+      )}
+    </CanvasItemGroup>
   );
 }

@@ -889,6 +889,7 @@ export const CANVAS_2D_SCENES = [
   // division leaves a remainder: an even width makes the RTL row match the LTR.
   { name: 'item-list-rtl', file: 'unit-item-list-rtl.tscn', mode: '2d' },
   { name: 'item-list-rtl-icon-top', file: 'unit-item-list-rtl-icon-top.tscn', mode: '2d' },
+  { name: 'item-list-wrap-trim', file: 'unit-item-list-wrap-trim.tscn', mode: '2d' },
   { name: 'tree-rtl', file: 'unit-tree-rtl.tscn', mode: '2d' },
   { name: 'hslider-rtl', file: 'unit-hslider-rtl.tscn', mode: '2d' },
   { name: 'progress-bar-rtl', file: 'unit-progress-bar-rtl.tscn', mode: '2d' },

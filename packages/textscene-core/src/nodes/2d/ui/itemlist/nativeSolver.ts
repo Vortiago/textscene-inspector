@@ -28,11 +28,16 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import {
+  overrunFlagsForBehavior,
+  trimLineToWidth,
+  type OverrunTrimFlags,
+} from '../../../../r3f/controls/native/text/textOverrun';
 import {
   shapeText,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
+  type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { ItemListProperties } from './types';
@@ -41,12 +46,13 @@ import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_LOWER_COLOR } from '../../../../godot/scene/theme';
 import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
+import { ItemListIconMode } from '../../../../godot/scene/gui';
 
 // --- Enum literals ------------------------------------------------------
 
 /** `ItemList::IconMode` (`item_list.h:43-44`). */
-export const ICON_MODE_TOP = 0;
-export const ICON_MODE_LEFT = 1;
+const { ICON_MODE_TOP, ICON_MODE_LEFT } = ItemListIconMode;
+export { ICON_MODE_LEFT };
 
 // --- Theme font ----------------------------------------------------------
 
@@ -195,24 +201,28 @@ function adjustToMaxSize(size: Vector2, maxSize: Vector2): Rect2 {
 // --- Per-item text shaping --------------------------------------------------
 
 /**
- * `_shape_text` (`item_list.cpp:37-55`): TOP icon mode with `max_text_lines > 0`
- * wraps at word, grapheme and mandatory breaks; else one line. The text engine
- * has only `AutowrapMode.AUTOWRAP_WORD`, so an unbreakable word overflows its column where
- * Godot breaks it mid-word (`comparison.md`).
+ * `_shape_text` (`item_list.cpp:37-55`): TOP icon mode with `max_text_lines > 0` breaks at word and
+ * grapheme bounds, else one line. `BREAK_GRAPHEME_BOUND` marks every glyph a safe break after
+ * `BREAK_WORD_BOUND` marked a word (`text_server.cpp:1155-1176`), so the break lands at the last glyph
+ * that fits, which is `AUTOWRAP_ARBITRARY`.
  */
 function itemListAutowrapMode(iconMode: number, maxTextLines: number): EnumValue<typeof AutowrapMode> {
-  return iconMode === ICON_MODE_TOP && maxTextLines > 0
-    ? AutowrapMode.AUTOWRAP_WORD
+  return isItemListTextWrapped(iconMode, maxTextLines)
+    ? AutowrapMode.AUTOWRAP_ARBITRARY
     : AutowrapMode.AUTOWRAP_OFF;
 }
 
+/** TOP mode with `max_text_lines > 0`: the only label Godot wraps (`item_list.cpp:49,1766`). */
+export function isItemListTextWrapped(iconMode: number, maxTextLines: number): boolean {
+  return iconMode === ICON_MODE_TOP && maxTextLines > 0;
+}
+
 /**
- * The width `text_buf->set_width()` is called with during the MINSIZE pass
- * (`item_list.cpp:1763-1766`): `fixed_column_width` when set, else
- * unconstrained (Godot's `-1`, this engine's `0`). Text is not shaped again at the
- * final column width (`item_list.cpp:1628-1634,1657-1661`), so a wider fitted column is approximate.
+ * The width `text_buf->set_width()` gets in the MINSIZE pass (`item_list.cpp:1763-1766`):
+ * `fixed_column_width` when set, else unconstrained (Godot's `-1`, this engine's `0`). The draw pass
+ * hands `shapeItemListText` its own width (`:1625-1661`).
  */
-function itemListShapeWidth(fixedColumnWidth: number): number {
+export function itemListMinimumShapeWidthPx(fixedColumnWidth: number): number {
   return fixedColumnWidth > 0 ? fixedColumnWidth : 0;
 }
 
@@ -222,46 +232,63 @@ interface ItemTextShapeInput {
   fontMetrics: Parameters<typeof shapeText>[1]['fontMetrics'];
   iconMode: number;
   maxTextLines: number;
-  fixedColumnWidth: number;
+  /** The `set_width()` argument. `<= 0` is unconstrained: no wrap and no trim. */
+  widthPx: number;
   /** `TextServer::OverrunBehavior`. Godot default 3 (OVERRUN_TRIM_ELLIPSIS, `item_list.h:131`). */
   overrunBehavior?: number;
 }
 
 /**
- * Shapes one item's text, or `null` for an item with none. The minsize pass
- * (`item_list.cpp:1763-1766`) and the draw pass (`:1621-1661`) both read the
- * trimmed size after `text_buf->set_width`, so the overrun trim applies here, to
- * each line, as `TextParagraph::_shape_lines` does (`text_paragraph.cpp:257-270`).
+ * Shapes one item's text at `widthPx`, or `null` for an item with none, as `TextParagraph::_shape_lines`
+ * does (`text_paragraph.cpp:225-266`). A wrapped label shows `max_text_lines` lines, and when lines
+ * hide, the last shown line ends in an ellipsis unless the behaviour is `OVERRUN_NO_TRIMMING`. A
+ * single-line label trims that one line to the width.
  */
 export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult | null {
   if (input.text.length === 0) return null;
-  const widthPx = itemListShapeWidth(input.fixedColumnWidth);
+  const wrapped = isItemListTextWrapped(input.iconMode, input.maxTextLines);
   const layout = shapeText(input.text, {
     fontSizePx: input.fontSizePx,
-    boxWidthPx: widthPx,
+    boxWidthPx: input.widthPx,
     autowrapMode: itemListAutowrapMode(input.iconMode, input.maxTextLines),
+    breakMandatory: wrapped,
     lineSpacingPx: itemListLineSeparationForShaping(input),
     fontMetrics: input.fontMetrics,
   });
   const overrunFlags = overrunFlagsForBehavior(
     input.overrunBehavior ?? OverrunBehavior.OVERRUN_TRIM_ELLIPSIS
   );
-  if (!overrunFlags.trim || widthPx <= 0) return layout;
-
-  const trimmedLines = layout.lines.map((line) =>
-    // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to
-    // the vendored atlas font when the caller passes none, and the trim must
-    // agree with whichever metrics actually shaped these glyphs.
-    trimLineToWidth(line, widthPx, overrunFlags, {
+  // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to the vendored atlas font
+  // when the caller passes none, and the trim must agree with the metrics that shaped these glyphs.
+  const trim = (line: TextLineLayout, flags: OverrunTrimFlags) =>
+    trimLineToWidth(line, input.widthPx, flags, {
       fontMetrics: layout.fontMetrics,
       fontSizePx: input.fontSizePx,
-    })
-  );
+    });
+
+  const lines = wrapped
+    ? withHiddenLinesEllipsis(layout.lines, input.maxTextLines, (line) =>
+        trim(line, { ...overrunFlags, enforceEllipsis: true })
+      )
+    : layout.lines.map((line) => trim(line, overrunFlags));
   return {
     ...layout,
-    lines: trimmedLines,
-    widthPx: trimmedLines.reduce((max, l) => Math.max(max, l.widthPx), 0),
+    lines,
+    widthPx: lines.reduce((max, l) => Math.max(max, l.widthPx), 0),
+    heightPx: lines.length * layout.linePitchPx,
   };
+}
+
+/** The first `maxLines` lines, the last one passed through `trimLast` when any line hides (`text_paragraph.cpp:229-261`). */
+function withHiddenLinesEllipsis(
+  lines: readonly TextLineLayout[],
+  maxLines: number,
+  trimLast: (line: TextLineLayout) => TextLineLayout
+): TextLineLayout[] {
+  if (lines.length <= maxLines) return [...lines];
+  const visible = lines.slice(0, maxLines);
+  visible[maxLines - 1] = trimLast(visible[maxLines - 1]!);
+  return visible;
 }
 
 /**
@@ -326,6 +353,15 @@ function itemContentMinSize(
 
   if (input.fixedColumnWidth > 0) x = input.fixedColumnWidth;
   return { x, y };
+}
+
+/**
+ * `max_column_width` (`item_list.cpp:1786-1790`): the widest minimum width before `h_separation`
+ * joins it. `sameColumnWidth` adds the separation back once (`:1826`), so the packer takes this,
+ * not the widest `itemMinimumSize`.
+ */
+export function itemListMaxColumnWidth(itemSizes: readonly Vector2[], hSeparation: number): number {
+  return itemSizes.reduce((max, size) => Math.max(max, size.x - Math.max(0, hSeparation)), 0);
 }
 
 /** The full per-item minsize, including h/v separation (`item_list.cpp:1789-1790`). */
@@ -497,7 +533,7 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
             fontMetrics,
             iconMode,
             maxTextLines,
-            fixedColumnWidth,
+            widthPx: itemListMinimumShapeWidthPx(fixedColumnWidth),
             overrunBehavior: props.textOverrunBehavior,
           })
         : null;
@@ -510,7 +546,8 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
     );
   });
 
-  const maxColumnWidth = itemSizes.reduce((max, s) => Math.max(max, s.x), 0);
+  const hSeparation = itemListSeparation(ctx.theme);
+  const maxColumnWidth = itemListMaxColumnWidth(itemSizes, hSeparation);
   const packed = packItemListRows({
     itemSizes,
     maxColumnWidth,
@@ -519,7 +556,7 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
     fitSize: Number.POSITIVE_INFINITY,
     wraparoundItems: props.wraparoundItems !== false,
     autoWidth: props.autoWidth === true,
-    hSeparation: itemListSeparation(ctx.theme),
+    hSeparation,
     availableHeight: Number.POSITIVE_INFINITY,
   });
 
@@ -608,11 +645,6 @@ export function itemTextDrawOffset(
     x: iconOffset.x + Math.max(hSeparation, 0) / 2,
     y: iconOffset.y + (itemRectSize.y - textLineHeightTotal) / 2,
   };
-}
-
-/** One line's own horizontal offset under `HORIZONTAL_ALIGNMENT_CENTER` (TOP icon mode only: LEFT mode never centres, `_shape_text`'s own alignment call site). */
-export function itemTextLineCenterOffset(centerWidth: number, lineWidthCeiled: number): number {
-  return Math.max(0, centerWidth - lineWidthCeiled) / 2;
 }
 
 // --- Per-item colour: item_list.cpp:1568-1571,1607-1622, minus selected/hovered ---
@@ -730,14 +762,4 @@ export function itemListWrappedTextWidthPx(
   const w = itemRectWidthPx - textOffsetX * 2;
   if (wraparoundItems && w + textOffsetX > contentWidthPx) return contentWidthPx - textOffsetX;
   return w;
-}
-
-/**
- * `HORIZONTAL_ALIGNMENT_RIGHT`'s own per-line shift, `width - line_width`,
- * applied only while the box has a positive width
- * (`TextParagraph::draw`, `text_paragraph.cpp:888,916-921`). `lineWidthPx`
- * is the raw pen extent (`shaped_text_get_width`), never the ceiled size.
- */
-export function itemListRightAlignOffsetPx(textWidthPx: number, lineWidthPx: number): number {
-  return textWidthPx > 0 ? textWidthPx - lineWidthPx : 0;
 }
