@@ -84,14 +84,6 @@ export interface TextRunProps {
   /** Godot colour, sRGB. `.a` is opacity, and `.r/.g/.b` are converted to linear for the shader. */
   tint: Rgba;
   /**
-   * Godot colour, sRGB, for `createMsdfMaterial`'s outline pass. `.a` is the
-   * outline's opacity, apart from `tint.a`. Omitted, no outline. Atlas runs
-   * only: a canvas raster has no distance field to threshold again.
-   */
-  outlineColor?: Rgba;
-  /** Screen px the outline's threshold expands past the glyph edge. 0 or an absent `outlineColor` draws no outline. */
-  outlineWidthPx?: number;
-  /**
    * Paint order for this run's mesh. A prop, since a wrapping `<group renderOrder>`
    * cascade resets at any intermediate group without one.
    */
@@ -174,9 +166,7 @@ function buildTextRun(
   look: TextRunLook,
   strokeWidthPx: number,
   textureFilter: TextureFilterState,
-  mipmapped: boolean,
-  outlineColor: Rgba | undefined,
-  outlineWidthPx: number
+  mipmapped: boolean
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
   const skew = layout.fontMetrics.skew ?? 0;
@@ -223,11 +213,6 @@ function buildTextRun(
   geo.setIndex(new THREE.BufferAttribute(indices, 1));
 
   const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
-  let outline: { color: { r: number; g: number; b: number }; opacity: number; widthPx: number } | undefined;
-  if (outlineColor && outlineWidthPx > 0) {
-    const [or, og, ob] = sRGBToLinearRGB(outlineColor.r, outlineColor.g, outlineColor.b);
-    outline = { color: { r: or, g: og, b: ob }, opacity: outlineColor.a, widthPx: outlineWidthPx };
-  }
   const options = {
     map: getAtlasTexture(),
     color: { r, g, b },
@@ -238,7 +223,6 @@ function buildTextRun(
     depthTest,
     side,
     pixelMaterial,
-    outline,
   };
   // The atlas painter has no blend modes: only a canvas run takes `blends`.
   return { geometry: geo, paint: () => createMsdfMaterial(options) };
@@ -259,8 +243,6 @@ export function TextRun({
   shadow,
   layers,
   frameExcluded,
-  outlineColor,
-  outlineWidthPx = 0,
 }: TextRunProps) {
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
@@ -275,12 +257,10 @@ export function TextRun({
         { tint, clippingPlanes, depthTest, side, pixelMaterial },
         strokeWidthPx,
         textureFilter,
-        mipmapped,
-        outlineColor,
-        outlineWidthPx
+        mipmapped
       ),
-    // `tint` and `outlineColor` are compared by their fields, not by identity: a caller
-    // that re-creates an equal object every render must not rebuild the mesh.
+    // `tint` is compared by its fields, not by identity: a caller that re-creates an equal
+    // object every render must not rebuild the mesh.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- per-field comparison, as above.
     [
       layout,
@@ -296,11 +276,6 @@ export function TextRun({
       strokeWidthPx,
       textureFilter,
       mipmapped,
-      outlineColor?.r,
-      outlineColor?.g,
-      outlineColor?.b,
-      outlineColor?.a,
-      outlineWidthPx,
     ]
   );
   const material = usePaintedMaterial(run, blends?.unfaded);

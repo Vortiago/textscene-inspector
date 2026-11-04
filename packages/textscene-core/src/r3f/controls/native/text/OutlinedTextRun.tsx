@@ -2,7 +2,7 @@
  * `<OutlinedTextRun>`: a `<TextRun>` that draws the theme text outline of `Button`, `ProgressBar`
  * and the Controls that share their pass (`button.cpp:458-462`): a stroked ring, then the fill.
  */
-import { lazy, Suspense, useMemo } from 'react';
+import { lazy, useMemo } from 'react';
 import { multiplyModulate } from '../../../canvasItemModulate';
 import type { Rgba } from '../../../../godot/math/math';
 import { outlineStrokeWidthPx } from './textOutline';
@@ -10,6 +10,7 @@ import { resolveTextOutline, type TextOutlineTheme } from '../textTheme';
 import type { ShareNode } from '../solveTree';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { TextRun, type TextRunProps } from './TextRun';
+import { PendingSuspense } from '../../../../resources/PendingSuspense';
 
 // The bundled font bytes load with the ring, not with every Control.
 const BundledOutlineRing = lazy(() => import('./BundledOutlineRing'));
@@ -30,6 +31,28 @@ export function useTintedTextOutline(
   return useMemo(() => ({ color: multiplyModulate(color, ownTint), sizePx }), [color, sizePx, ownTint]);
 }
 
+type OutlineRingRunProps = Pick<
+  TextRunProps,
+  'layout' | 'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder'
+> & {
+  /** `outline_size` in px. */
+  sizePx: number;
+};
+
+/**
+ * One stroked outline ring, without the fill (ADR-0040). A canvas face strokes its own ring. The
+ * bundled atlas face strokes it on the bundled canvas face, and its pass waits for that face.
+ */
+export function OutlineRingRun({ sizePx, ...run }: OutlineRingRunProps) {
+  const ring = { ...run, strokeWidthPx: outlineStrokeWidthPx(sizePx) };
+  if (isCanvasFontMetrics(run.layout.fontMetrics)) return <TextRun {...ring} />;
+  return (
+    <PendingSuspense>
+      <BundledOutlineRing {...ring} />
+    </PendingSuspense>
+  );
+}
+
 type OutlinedTextRunProps = Pick<
   TextRunProps,
   'layout' | 'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder'
@@ -40,23 +63,17 @@ type OutlinedTextRunProps = Pick<
 
 export function OutlinedTextRun({ layout, outline, renderOrder = 0, ...run }: OutlinedTextRunProps) {
   const hasRing = outline.sizePx > 0 && outline.color.a > 0;
-  const ring = {
-    ...run,
-    layout,
-    tint: outline.color,
-    strokeWidthPx: outlineStrokeWidthPx(outline.sizePx),
-    renderOrder,
-  };
   return (
     <>
-      {hasRing &&
-        (isCanvasFontMetrics(layout.fontMetrics) ? (
-          <TextRun {...ring} />
-        ) : (
-          <Suspense fallback={null}>
-            <BundledOutlineRing {...ring} />
-          </Suspense>
-        ))}
+      {hasRing && (
+        <OutlineRingRun
+          {...run}
+          layout={layout}
+          tint={outline.color}
+          sizePx={outline.sizePx}
+          renderOrder={renderOrder}
+        />
+      )}
       <TextRun {...run} layout={layout} renderOrder={hasRing ? renderOrder + FILL_ABOVE_RING : renderOrder} />
     </>
   );

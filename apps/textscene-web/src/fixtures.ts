@@ -1248,6 +1248,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Stacked Effects",
+    "file": "unit-label-stacked-effects.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Visible Characters",
     "file": "unit-label-visible-characters.tscn",
     "category": "Other"

@@ -8,7 +8,7 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { colorOr } from '../../../utils/colorParser';
 import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
-import type { LabelSettingsResource } from './types';
+import type { LabelSettingsResource, StackedOutline, StackedShadow } from './types';
 import type { Rgba } from '../../../godot/math/math';
 
 /** `label_settings.h:59,62`: both colour fields' default. */
@@ -17,7 +17,39 @@ const DEFAULT_WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 const DEFAULT_TRANSPARENT: Rgba = { r: 0, g: 0, b: 0, a: 0 };
 /** `Font::DEFAULT_FONT_SIZE` (`core/io/resource.h`'s font default, mirrored at `label_settings.h:58`). */
 const DEFAULT_FONT_SIZE = 16;
+/** `core/math/color.h:251`: `Color()` is opaque black, the default colour of a stacked element. */
+const DEFAULT_BLACK: Rgba = { r: 0, g: 0, b: 0, a: 1 };
+const DEFAULT_STACKED_SHADOW_OFFSET = { x: 1, y: 1 };
 const CONTEXT = 'LabelSettings';
+
+/**
+ * The elements `0..count-1` of the array `prefix` names. A count of 0 or less holds none, and an
+ * element property at or past the count is never read (`label_settings.cpp:255-262,290-296`).
+ */
+function decodeStacked<T>(
+  data: Record<string, string>,
+  prefix: string,
+  readElement: (property: (name: string) => string | undefined) => T
+): T[] {
+  const count = intOr(data[`${prefix}_count`], 0, CONTEXT);
+  return Array.from({ length: Math.max(count, 0) }, (_, index) =>
+    readElement((name) => data[`${prefix}_${index}/${name}`])
+  );
+}
+
+function decodeStackedOutline(property: (name: string) => string | undefined): StackedOutline {
+  return { size: intOr(property('size'), 0, CONTEXT), color: colorOr(property('color'), DEFAULT_BLACK) };
+}
+
+/** The offset is a `Vector2i`: the setter truncates each component toward zero (`label_settings.cpp:359-365`). */
+function decodeStackedShadow(property: (name: string) => string | undefined): StackedShadow {
+  const offset = vec2Or(property('offset'), DEFAULT_STACKED_SHADOW_OFFSET, CONTEXT);
+  return {
+    offset: { x: Math.trunc(offset.x), y: Math.trunc(offset.y) },
+    color: colorOr(property('color'), DEFAULT_BLACK),
+    outlineSize: intOr(property('outline_size'), 0, CONTEXT),
+  };
+}
 
 /** An absent or malformed field falls back to the class default, not a warning for the whole resource. */
 function decodeLabelSettings(data: Record<string, string>): LabelSettingsResource {
@@ -32,6 +64,8 @@ function decodeLabelSettings(data: Record<string, string>): LabelSettingsResourc
     shadowSize: intOr(data.shadow_size, 1, CONTEXT),
     shadowColor: colorOr(data.shadow_color, DEFAULT_TRANSPARENT),
     shadowOffset: vec2Or(data.shadow_offset, { x: 1, y: 1 }, CONTEXT),
+    stackedOutlines: decodeStacked(data, 'stacked_outline', decodeStackedOutline),
+    stackedShadows: decodeStacked(data, 'stacked_shadow', decodeStackedShadow),
   };
 }
 

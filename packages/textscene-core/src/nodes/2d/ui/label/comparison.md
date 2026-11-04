@@ -16,6 +16,12 @@ outright. Without `label_settings`, it shapes in the theme's font and reads the 
 resolve. A paragraph adds its spacing once, after its last shown line: a line that autowrap breaks
 inside a paragraph does not.
 
+A Label draws its layers in Godot's order (`label.cpp:828-883`). The shadow ring and the shadow come
+first, then each stacked shadow and each stacked outline from the last index to the first, then the
+outline, then the fill. A ring is a stroked contour with a one-sided radius of `outline_size / 4` px
+(`text_server_adv.cpp:1383`). It draws on the canvas painter for the bundled font and a scene font
+alike (ADR-0040). The fill and the plain shadows draw on the painter their font takes.
+
 A `label_settings.font` resolves in the file that wrote the settings. A font that is loading draws
 nothing (`label.cpp:112`, ADR-0059).
 
@@ -92,8 +98,6 @@ is already applied. Every real Godot save guarantees that, since `text` is the f
   `text_overrun_behavior` puts the ellipsis after the last kept glyph, where Godot
   re-justifies the line.
 - **Approximated** An embolden above about 1.4 over the bundled font differs from FreeType, since the atlas rounds corners and holds limited growth.
-- **Not drawn** The stacked-outline and stacked-shadow arrays of `label_settings`, while
-  its single outline and shadow and the theme's own draw.
 - **Approximated** A non-default `visible_characters_behavior` counts glyphs as a proxy
   for Godot's indices, so the reveal count drifts by one per trimmed line-edge space past
   the first.

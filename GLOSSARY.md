@@ -376,6 +376,11 @@ The two-phase pass that computes every Control's `Rect2` before anything paints:
 It is a line-by-line port of Godot 4.6.3's `scene/gui/control.cpp` (ADR-0037).
 _Avoid_: "layout solve".
 
+**Label effect layer** (`nodes/2d/ui/label/effectLayers.ts`):
+One shadow, stacked shadow, stacked outline or outline that a Label draws behind its fill, in Godot's order.
+A ring layer strokes the glyph contour. A plain layer draws the glyphs at an offset.
+_Avoid_: "effect pass", "decoration".
+
 **Painter view** (`r3f/controls/native/solveTree.ts`'s `painterView`/`PainterView`):
 The node properties a native Control painter may see: all except `modulate` and `selfModulate`, which **ControlCanvasWalker** has already applied.
 `painterViewConformance.test.ts` forbids a painter to read them from `solveNode.node.properties`.

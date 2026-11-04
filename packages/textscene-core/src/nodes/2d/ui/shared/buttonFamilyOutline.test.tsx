@@ -23,7 +23,6 @@ import { OptionButton } from '../optionbutton/Component';
 interface RunProps {
   layout: { fontMetrics: { kind: string } };
   strokeWidthPx?: number;
-  outlineColor?: Rgba;
   renderOrder?: number;
 }
 
@@ -118,7 +117,6 @@ describe.each(CONTROLS)('<%s> theme text outline', (type, Control) => {
       expect(strokeRuns()[0]!.layout.fontMetrics.kind).toBe('canvas');
       expect(strokeRuns()[0]!.renderOrder).toBeLessThan(fillRun().renderOrder!);
       expect(fillRun().layout.fontMetrics.kind).toBe('atlas');
-      expect(fillRun().outlineColor).toBeUndefined();
     });
 
     it('draws no ring at outline_size 0', async () => {

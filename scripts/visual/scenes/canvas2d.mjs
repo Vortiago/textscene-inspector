@@ -717,11 +717,10 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-control-anchor-parent-plain-node.tscn',
     mode: '2d',
   },
-  // The one variable: a second coverage threshold on the glyph field, drawn as
-  // an outline and as an offset pass behind the fill. Other text scenes draw the
-  // fill alone. Godot 4.6.3 `--mode 2d`: mean 0.372 of 255, MSDF stem
-  // antialiasing along the outline edge.
+  // The one variable: a theme outline, a stroked ring on the canvas painter behind the fill.
+  // Other text scenes draw the fill alone. `label-stacked-effects` adds the stacked arrays.
   { name: 'label-outline', file: 'unit-label-outline.tscn', mode: '2d' },
+  { name: 'label-stacked-effects', file: 'unit-label-stacked-effects.tscn', mode: '2d' },
   // The one variable: a `label_settings` loaded from its own `.tres` file, which beats the
   // node-local theme overrides as an inline one does.
   { name: 'label-label-settings-tres', file: 'unit-label-label-settings-tres.tscn', mode: '2d' },
