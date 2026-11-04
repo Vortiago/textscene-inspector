@@ -15,7 +15,7 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
-import { OutlineRingRun } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { OutlineRingRun, textLayerRenderOrder } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { TextRun, type TextRunProps } from '../../../../r3f/controls/native/text/TextRun';
 import {
   LABEL_PARAGRAPH_SEPARATOR,
@@ -51,14 +51,6 @@ function useSoloLineLayouts(placements: LabelLinePlacement[], layout: TextLayout
     () => placements.map((placement) => soloLineLayout(placement.line, layout)),
     [placements, layout]
   );
-}
-
-/**
- * A layer's render order: its draw index spread over the one unit below the next Control, so
- * the layers keep Godot's order without a layer reaching the Control that follows.
- */
-function layerRenderOrder(renderOrder: number, index: number, count: number): number {
-  return renderOrder + index / count;
 }
 
 type LayerRunsProps = Pick<TextRunProps, 'fontSizePx' | 'clippingPlanes' | 'renderOrder'> & {
@@ -264,7 +256,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
           lineLayouts={lineLayouts}
           fontSizePx={textTheme.fontSizePx}
           clippingPlanes={clippingPlanes}
-          renderOrder={layerRenderOrder(renderOrder, layerIndex, layers.length)}
+          renderOrder={textLayerRenderOrder(renderOrder, layerIndex, layers.length)}
         />
       ))}
     </CanvasItemGroup>

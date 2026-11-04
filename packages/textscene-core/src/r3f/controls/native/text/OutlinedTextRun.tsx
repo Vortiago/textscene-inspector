@@ -16,11 +16,13 @@ import { PendingSuspense } from '../../../../resources/PendingSuspense';
 const BundledOutlineRing = lazy(() => import('./BundledOutlineRing'));
 
 /**
- * The fill draws above the stroked ring. Two runs of one renderOrder sort by creation, and the
- * ring's mesh can be created after the fill's. Less than the step between two Controls' render
- * orders, so the fill stays below the next Control.
+ * The render order of layer `index` of `count` stacked text layers: the layers spread over the
+ * one unit below the next Control's order, so they keep their draw order, which three does not
+ * keep for two runs of one order, and none reaches the Control that follows.
  */
-const FILL_ABOVE_RING = 0.05;
+export function textLayerRenderOrder(renderOrder: number, index: number, count: number): number {
+  return renderOrder + index / count;
+}
 
 /** The outline theme of `n` multiplied by the Control's own tint, in sRGB, as `<TextRun>` converts it once. */
 export function useTintedTextOutline(
@@ -31,10 +33,9 @@ export function useTintedTextOutline(
   return useMemo(() => ({ color: multiplyModulate(color, ownTint), sizePx }), [color, sizePx, ownTint]);
 }
 
-type OutlineRingRunProps = Pick<
-  TextRunProps,
-  'layout' | 'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder'
-> & {
+type RunLookProps = Pick<TextRunProps, 'layout' | 'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder'>;
+
+type OutlineRingRunProps = RunLookProps & {
   /** `outline_size` in px. */
   sizePx: number;
 };
@@ -53,16 +54,14 @@ export function OutlineRingRun({ sizePx, ...run }: OutlineRingRunProps) {
   );
 }
 
-type OutlinedTextRunProps = Pick<
-  TextRunProps,
-  'layout' | 'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder'
-> & {
+type OutlinedTextRunProps = RunLookProps & {
   /** Already tinted. No outline draws at a size of 0 or a zero alpha (`button.cpp:460`). */
   outline: TextOutlineTheme;
 };
 
 export function OutlinedTextRun({ layout, outline, renderOrder = 0, ...run }: OutlinedTextRunProps) {
   const hasRing = outline.sizePx > 0 && outline.color.a > 0;
+  const layerCount = hasRing ? 2 : 1;
   return (
     <>
       {hasRing && (
@@ -71,10 +70,14 @@ export function OutlinedTextRun({ layout, outline, renderOrder = 0, ...run }: Ou
           layout={layout}
           tint={outline.color}
           sizePx={outline.sizePx}
-          renderOrder={renderOrder}
+          renderOrder={textLayerRenderOrder(renderOrder, 0, layerCount)}
         />
       )}
-      <TextRun {...run} layout={layout} renderOrder={hasRing ? renderOrder + FILL_ABOVE_RING : renderOrder} />
+      <TextRun
+        {...run}
+        layout={layout}
+        renderOrder={textLayerRenderOrder(renderOrder, layerCount - 1, layerCount)}
+      />
     </>
   );
 }
