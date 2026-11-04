@@ -3831,6 +3831,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Z As Relative",
+    "file": "unit-control-z-as-relative.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Grid Container Rtl",
     "file": "unit-grid-container-rtl.tscn",
     "category": "Unit - 2D UI Controls"
