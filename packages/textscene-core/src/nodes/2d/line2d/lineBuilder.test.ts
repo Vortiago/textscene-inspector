@@ -78,7 +78,10 @@ describe('buildLineStroke', () => {
   describe('corners', () => {
     // The L's outer corner is at (110, -10) and its inner corner at (90, 10): 100 x 20 + 90 x 20 + 10 x 10.
     it('shares one edge at a SHARP corner, so no area is drawn twice', () => {
-      expect(totalArea(stroke(CORNER))).toBeCloseTo(4000, 4);
+      const built = stroke(CORNER);
+      expect(totalArea(built)).toBeCloseTo(4000, 4);
+      // Two quads that share the corner edge are 6 vertices, not 8.
+      expect(built.vertices.length / 2).toBe(6);
     });
 
     it('cuts the outer corner with one triangle at a BEVEL corner', () => {
@@ -94,13 +97,12 @@ describe('buildLineStroke', () => {
       expect(totalArea(built)).toBeCloseTo(3950 - 50 + fan, 3);
     });
 
-    it('falls back to BEVEL past sharp_limit', () => {
-      // A hairpin: the miter is far past 2 half-widths.
-      const hairpin = [0, 0, 100, 0, 0, 5];
-      expect(totalArea(stroke(hairpin, { sharpLimit: 2 }))).toBeCloseTo(
-        totalArea(stroke(hairpin, { jointMode: LineJointMode.BEVEL })),
-        6
-      );
+    it('falls back to BEVEL past sharp_limit, and keeps the miter within it', () => {
+      // An acute corner of 13 degrees: the miter is far past 2 half-widths.
+      const hairpin = [0, 0, 100, 0, 10, 20];
+      const bevel = stroke(hairpin, { jointMode: LineJointMode.BEVEL });
+      expect(stroke(hairpin, { sharpLimit: 2 })).toEqual(bevel);
+      expect(stroke(hairpin, { sharpLimit: 1000 })).not.toEqual(bevel);
     });
   });
 

@@ -83,15 +83,9 @@ export function stripAddArc(
 ): void {
   const begin = vector2Sub(strip.vertices[strip.lastIndex[opposite(orientation)]]!, center);
   const radius = vector2Length(begin);
-  const steps = arcStepCount(angleDelta, roundPrecision);
-  const step = signedStep(angleDelta, roundPrecision);
-
-  let angle = angleOf(begin);
-  const endAngle = f(angle + angleDelta);
-  for (let i = 0; i < steps; i++, angle = f(angle + step)) {
+  for (const angle of arcAngles(begin, angleDelta, roundPrecision)) {
     stripAddTri(strip, pointOnArc(center, angle, radius), orientation);
   }
-  stripAddTri(strip, pointOnArc(center, endAngle, radius), orientation);
 }
 
 /**
@@ -107,19 +101,11 @@ export function newArc(
   color: Rgba | null
 ): void {
   const radius = vector2Length(begin);
-  const steps = arcStepCount(angleDelta, roundPrecision);
-  const step = signedStep(angleDelta, roundPrecision);
-
   const hub = strip.vertices.length;
   pushVertex(strip, center, color);
-  let angle = angleOf(begin);
-  const endAngle = f(angle + angleDelta);
-  for (let i = 0; i < steps; i++, angle = f(angle + step)) {
-    pushVertex(strip, pointOnArc(center, angle, radius), color);
-  }
-  pushVertex(strip, pointOnArc(center, endAngle, radius), color);
-
-  for (let i = 0; i < steps; i++) strip.indices.push(hub, hub + 1 + i, hub + 2 + i);
+  const angles = arcAngles(begin, angleDelta, roundPrecision);
+  for (const angle of angles) pushVertex(strip, pointOnArc(center, angle, radius), color);
+  for (let i = 0; i < angles.length - 1; i++) strip.indices.push(hub, hub + 1 + i, hub + 2 + i);
 }
 
 function pushVertex(strip: Strip, point: Vector2, color: Rgba | null): void {
@@ -127,14 +113,21 @@ function pushVertex(strip: Strip, point: Vector2, color: Rgba | null): void {
   if (strip.colors && color) strip.colors.push(color);
 }
 
-/** The steps of one arc, as `abs(angle_delta) / angle_step` rounds up in the loop condition. */
-function arcStepCount(angleDelta: number, roundPrecision: number): number {
-  return f(Math.abs(angleDelta) / f(PI / roundPrecision));
-}
-
-function signedStep(angleDelta: number, roundPrecision: number): number {
+/**
+ * The angles of an arc's vertices from `begin` through `angleDelta`: one per `angle_step` while the
+ * loop condition `i < abs(angle_delta) / angle_step` holds, then the exact end angle
+ * (`line_builder.cpp:505-532`). Steps accumulate in float, as Godot's `t += angle_step` does.
+ */
+function arcAngles(begin: Vector2, angleDelta: number, roundPrecision: number): number[] {
   const step = f(PI / roundPrecision);
-  return angleDelta < 0 ? -step : step;
+  const steps = f(Math.abs(angleDelta) / step);
+  const signedStep = angleDelta < 0 ? -step : step;
+
+  const start = angleOf(begin);
+  const angles: number[] = [];
+  for (let i = 0, angle = start; i < steps; i++, angle = f(angle + signedStep)) angles.push(angle);
+  angles.push(f(start + angleDelta));
+  return angles;
 }
 
 /** `Vector2(1, 0).angle_to(vector)`: the angle of `vector` from the X axis. */

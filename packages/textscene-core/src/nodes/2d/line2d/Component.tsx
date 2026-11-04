@@ -18,11 +18,13 @@ import { bakedCurveSampler } from '../../../resources/curves/curve/bakedSample';
 import { buildLineStroke, type LineStroke } from './lineBuilder';
 import { strokeGradient } from './strokeResources';
 import type { Line2DProperties } from './types';
-import { useLineResources } from './useLineResources';
+import { useReferencedResources } from '../../../resources/useReferencedResources';
 
 export function Line2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Line2DProperties;
-  const { gradient, widthCurve } = useLineResources(props.gradient, props.widthCurve);
+  const { curves, gradients } = useReferencedResources([props.widthCurve], [props.gradient]);
+  const widthCurve = curves[0] ?? null;
+  const gradient = gradients[0] ?? null;
 
   const strokeColors = useMemo(() => gradient && strokeGradient(gradient), [gradient]);
   // Baked once per curve, not per rebuild: the bake samples the curve `bake_resolution` times.
