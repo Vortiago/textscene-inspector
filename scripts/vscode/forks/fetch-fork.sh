@@ -18,7 +18,7 @@ find_executable() {
   local root="$1" name found
   shift
   for name in "$@"; do
-    found=$(find "$root" -maxdepth 5 -type f -name "$name" -perm -u+x -not -path '*/bin/*' | head -n 1)
+    found=$(find "$root" -maxdepth 5 -type f -name "$name" -perm -u+x -not -path "$root/*/bin/*" | head -n 1)
     if [ -n "$found" ]; then
       echo "$found"
       return

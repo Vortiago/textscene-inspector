@@ -163,6 +163,8 @@ export interface IntegrationLaunchDeps {
  */
 export async function launchIntegrationTests(deps: IntegrationLaunchDeps): Promise<void> {
   deps.prepareWorkspace(deps.paths.workspaceRoot);
+  // A result left by an earlier run must not pass a run that records none.
+  fs.rmSync(deps.paths.suiteResultFile, { force: true });
   await relaunchIfHostExitsEarly(deps.paths.suiteStartedMarker, () =>
     deps.launch(integrationLaunchOptions(deps.paths))
   );

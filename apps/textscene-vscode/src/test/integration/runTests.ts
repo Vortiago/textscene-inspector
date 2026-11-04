@@ -28,8 +28,8 @@ async function main() {
   console.log('Extension Tests Path:', paths.extensionTestsPath);
   console.log('Test Workspace:', paths.workspaceRoot);
   console.log('User Data Dir:', paths.userDataDir);
-  console.log('VS Code Version:', version);
-  console.log('Editor executable:', process.env[EDITOR_EXECUTABLE_ENV] ?? 'downloaded VS Code');
+  const editorExecutable = process.env[EDITOR_EXECUTABLE_ENV];
+  console.log(editorExecutable ? `Editor executable: ${editorExecutable}` : `VS Code Version: ${version}`);
 
   try {
     await launchIntegrationTests({

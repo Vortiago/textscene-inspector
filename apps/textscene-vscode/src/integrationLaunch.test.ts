@@ -168,6 +168,27 @@ describe('the extension manifest', () => {
 });
 
 describe('launchIntegrationTests', () => {
+  it('removes a result left by an earlier run before the host launches', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'tsi-stale-'));
+    const suiteResultFile = join(dir, 'result');
+    writeFileSync(suiteResultFile, '0');
+    let existedAtLaunch: boolean | null = null;
+
+    try {
+      await launchIntegrationTests({
+        paths: { ...fakePaths(join(dir, 'ws')), suiteResultFile },
+        prepareWorkspace: () => {},
+        launch: async () => {
+          existedAtLaunch = existsSync(suiteResultFile);
+        },
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+
+    expect(existedAtLaunch).toBe(false);
+  });
+
   it('populates the workspace before the host launches, never after', async () => {
     const calls: string[] = [];
     await launchIntegrationTests({
