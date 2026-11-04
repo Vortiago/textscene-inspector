@@ -1833,6 +1833,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Reflection Probe Always Camera Exposure Sky",
+    "file": "unit-reflection-probe-always-camera-exposure-sky.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Reflection Probe Always",
     "file": "unit-reflection-probe-always.tscn",
     "category": "Other"
@@ -1850,6 +1855,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Reflection Probe Camera Environment",
     "file": "unit-reflection-probe-camera-environment.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Reflection Probe Camera Exposure Sky",
+    "file": "unit-reflection-probe-camera-exposure-sky.tscn",
     "category": "Other"
   },
   {
@@ -4064,6 +4074,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Physics"
   },
   {
+    "name": "Collision Polygon Shapes",
+    "file": "unit-collision-polygon-shapes.tscn",
+    "category": "Unit - Physics"
+  },
+  {
     "name": "Collision Shapes",
     "file": "unit-collision-shapes.tscn",
     "category": "Unit - Physics"
@@ -4496,6 +4511,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Camera Exposure Dark World",
+    "file": "unit-sub-viewport-camera-exposure-dark-world.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Camera Exposure",
     "file": "unit-sub-viewport-camera-exposure.tscn",
     "category": "Unit - Viewports"
@@ -4593,6 +4613,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Msaa",
     "file": "unit-sub-viewport-msaa.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Own World Camera Exposure Probe Half",
+    "file": "unit-sub-viewport-own-world-camera-exposure-probe-half.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Own World Camera Exposure Probe",
+    "file": "unit-sub-viewport-own-world-camera-exposure-probe.tscn",
     "category": "Unit - Viewports"
   },
   {

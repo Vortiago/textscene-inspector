@@ -33,17 +33,17 @@ export interface DrawnProbe {
   boxProjection: boolean;
   atlasLayer: number;
   /**
-   * What the capture and the ambient it gives scale by: the exposure the scene renders with over the
-   * one the probe captured at, or 1 with no exposure (`light_storage.cpp:1810-1814`).
+   * The exposure the probe captured at, 1 for a capture with none. A render shows the capture and
+   * the ambient it gives at its own exposure over this one (`light_storage.cpp:1810-1814`).
    */
-  exposureNormalization: number;
+  capturedExposure: number;
 }
 
 /**
  * The rows of the drawn probes, rewritten in place by each `pack`. The texels of one probe: the
  * world-to-local matrix's rows, the half size and the blend distance, the origin offset and the
  * intensity, the ambient and its mode, then the mask, the box projection and the atlas layer, then
- * the exposure normalisation. The mask goes in two 16-bit halves, as a float holds 24 bits exactly.
+ * the captured exposure. The mask goes in two 16-bit halves, as a float holds 24 bits exactly.
  */
 export class ProbeRows extends RowBuffer {
   /** The row being packed, as wide as a decal's, whose extra texels stay zero. */
@@ -80,5 +80,5 @@ function setProbeTexels(row: Float32Array, probe: DrawnProbe): void {
     probe.boxProjection ? 1 : 0,
     probe.atlasLayer
   );
-  setTexel(row, 7, probe.exposureNormalization, 0, 0, 0);
+  setTexel(row, 7, probe.capturedExposure, 0, 0, 0);
 }

@@ -5,11 +5,7 @@
  */
 
 import { useMemo } from 'react';
-import * as THREE from 'three';
 import type { TscnInternalResource } from '../../../../parser/types';
-import { memoisedImport } from '../../../../resources/memoisedImport';
-import { useLazyModule } from '../../../../resources/useLazyModule';
-import { decodeConvexPolygonShape3D } from '../../../../resources/shapes/convexpolygonshape3d';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { warn } from '../../../../logger';
 import type { Rgba } from '../../../../godot/math/math.js';
@@ -17,12 +13,7 @@ import type { Vector3 } from '../../../../godot/math/vector.js';
 import { castTargetLine } from '../../shared/castTarget';
 import { useCastGizmoLook, type CastGizmoLook } from '../../shared/castGizmoLook';
 import { shapeDebugLines } from '../../shared/shapeDebugLines';
-
-/** The one place the gizmo imports three's convex hull, and lazily, as CollisionShape3D's is. */
-const loadConvexHull = memoisedImport(() => import('three/addons/math/ConvexHull.js'));
-
-/** A tetrahedron's four corners are the fewest points that enclose a volume. */
-const MIN_HULL_POINTS = 4;
+import { useConvexDebugLines } from '../../shared/useConvexDebugLines';
 
 interface ShapeCastGizmoProps {
   /** The effective `target_position`, Godot's default when unauthored. */
@@ -79,57 +70,9 @@ function SyncWireframe({ shape, target, look }: WireframeGizmoProps & { shape: T
   return <Wireframe wire={wire} target={target} look={look} />;
 }
 
-/**
- * The wireframe of a convex shape: the hull's face outlines, through the lazy ConvexHull, as
- * CollisionShape3D hulls load off the initial paint too. Nothing draws while it loads.
- */
+/** The wireframe of a convex shape, which draws once the lazy hull builder loads. */
 function ConvexHullWireframe({ shape, target, look }: WireframeGizmoProps & { shape: TscnInternalResource }) {
-  const hull = useLazyModule(loadConvexHull);
-  const edges = useMemo(() => buildHullEdges(shape, hull), [hull, shape]);
-  return <Wireframe wire={edges} target={target} look={look} />;
-}
-
-/** The hull's face outlines from `ConvexPolygonShape3D::get_debug_mesh_lines` port, or null while loading or for a thin cloud. */
-function buildHullEdges(
-  shape: TscnInternalResource,
-  hull: Awaited<ReturnType<typeof loadConvexHull>> | null
-): Float32Array | null {
-  if (!hull) return null;
-  const { ConvexHull } = hull;
-  try {
-    const points = decodeConvexPolygonShape3D(shape.data).points;
-    const vertices: THREE.Vector3[] = [];
-    for (let i = 0; i + 2 < points.length; i += 3) {
-      vertices.push(new THREE.Vector3(points[i]!, points[i + 1]!, points[i + 2]!));
-    }
-    if (vertices.length < MIN_HULL_POINTS) return null;
-    const built = new ConvexHull().setFromPoints(vertices);
-    // ConvexHullComputer copies one edge per canonical pair of the triangulated hull
-    // (convex_hull.cpp:2275-2283), so the face loops dedup by an either-order pair key.
-    const seen = new Set<string>();
-    const outline: number[] = [];
-    for (const face of built.faces) {
-      let edge = face.edge;
-      do {
-        const vertex = edge.head().point;
-        const next = edge.next.head().point;
-        const key = `${vertex.x},${vertex.y},${vertex.z}|${next.x},${next.y},${next.z}`;
-        const mirrored = `${next.x},${next.y},${next.z}|${vertex.x},${vertex.y},${vertex.z}`;
-        if (!seen.has(key) && !seen.has(mirrored)) {
-          seen.add(key);
-          outline.push(vertex.x, vertex.y, vertex.z, next.x, next.y, next.z);
-        }
-        edge = edge.next;
-      } while (edge !== face.edge);
-    }
-    return outline.length === 0 ? null : new Float32Array(outline);
-  } catch (error) {
-    // A hull the engine refuses, four coplanar points among them, draws nothing here either.
-    warn(
-      `[ShapeCast3D] Failed to build convex hull gizmo: ${error instanceof Error ? error.message : String(error)}`
-    );
-    return null;
-  }
+  return <Wireframe wire={useConvexDebugLines(shape)} target={target} look={look} />;
 }
 
 /** The built wireframe at the sweep's end: each vertex plus the whole target. */

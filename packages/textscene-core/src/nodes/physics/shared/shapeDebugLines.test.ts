@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { shapeDebugLines } from './shapeDebugLines';
+import { godotDebugLinesFor, undirectedEdges } from './godotDebugLines.testkit';
 import { degToRadf } from '../../../godot/math/math.js';
 import type { TscnInternalResource } from '../../../parser/types';
 
@@ -79,177 +80,24 @@ describe('shapeDebugLines', () => {
   });
 });
 
-/** Plane `[nx, ny, nz, d]` and the 10 vertices (5 segments) Godot draws for it. */
-const GODOT_WORLD_BOUNDARY_LINES: readonly (readonly [string, number[], number[]])[] = [
-  [
-    'the default plane',
-    [0, 1, 0, 0],
-    [
-      10, 0, -10, 10, 0, 10, 10, 0, 10, -10, 0, 10, -10, 0, 10, -10, 0, -10, -10, 0, -10, 10, 0, -10, 0, 0, 0,
-      0, 3, 0,
-    ],
-  ],
-  [
-    'an x normal with an offset',
-    [1, 0, 0, 2.5],
-    [
-      2.5, 10, 10, 2.5, 10, -10, 2.5, 10, -10, 2.5, -10, -10, 2.5, -10, -10, 2.5, -10, 10, 2.5, -10, 10, 2.5,
-      10, 10, 2.5, 0, 0, 5.5, 0, 0,
-    ],
-  ],
-  [
-    'a non-unit normal',
-    [0, 2, 0, -1],
-    [
-      10, -2, -10, 10, -2, 10, 10, -2, 10, -10, -2, 10, -10, -2, 10, -10, -2, -10, -10, -2, -10, 10, -2, -10,
-      0, -2, 0, 0, 4, 0,
-    ],
-  ],
-  [
-    'a tilted unit normal',
-    [0.6, 0.8, 0, 1.5],
-    [
-      8.9, -4.8, -10, 8.9, -4.8, 10, 8.9, -4.8, 10, -7.1, 7.2, 10, -7.1, 7.2, 10, -7.1, 7.2, -10, -7.1, 7.2,
-      -10, 8.9, -4.8, -10, 0.9, 1.2, 0, 2.7, 3.6, 0,
-    ],
-  ],
-  [
-    'a unit normal with three components',
-    [0.2, 0.3, -0.9, 0.7],
-    [
-      9.95023, -9.88997, -1.95286, 9.95023, 9.08369, 4.3717, 9.95023, 9.08369, 4.3717, -9.67023, 10.31,
-      0.69286, -9.67023, 10.31, 0.69286, -9.67023, -8.66369, -5.6317, -9.67023, -8.66369, -5.6317, 9.95023,
-      -9.88997, -1.95286, 0.14, 0.21, -0.63, 0.74, 1.11, -3.33,
-    ],
-  ],
-  [
-    'a normal near the x axis (the other perpendicular seed)',
-    [0.995, 0.1, 0, 1],
-    [
-      -0.00501, 10.0499, 10, -0.00501, 10.0499, -10, -0.00501, 10.0499, -10, 1.99501, -9.84987, -10, 1.99501,
-      -9.84987, -10, 1.99501, -9.84987, 10, 1.99501, -9.84987, 10, -0.00501, 10.0499, 10, 0.995, 0.1, 0, 3.98,
-      0.4, 0,
-    ],
-  ],
-  [
-    'a zero normal, which Godot normalises to zero rather than NaN',
-    [0, 0, 0, 5],
-    [10, 0, 0, 10, 0, 0, 10, 0, 0, -10, 0, 0, -10, 0, 0, -10, 0, 0, -10, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0],
-  ],
-];
-
-/** Seven planes measured against Godot 4.6.3: `get_debug_mesh()` read back after `plane` is set. */
-describe('worldBoundaryDebugLines', () => {
-  it.each(GODOT_WORLD_BOUNDARY_LINES)('matches Godot for %s', (_name, [nx, ny, nz, d], expected) => {
-    const wire = shapeDebugLines({
-      id: 'a',
-      type: 'WorldBoundaryShape3D',
-      data: { plane: `Plane(${nx}, ${ny}, ${nz}, ${d})` },
-    })!;
-    expect(wire).toHaveLength(expected.length);
-    expected.forEach((value, index) => expect(wire[index]).toBeCloseTo(value, 4));
+/** Every shape type measured against Godot 4.6.3 through `get_debug_mesh()`. */
+describe.each([
+  'BoxShape3D',
+  'SphereShape3D',
+  'CylinderShape3D',
+  'CapsuleShape3D',
+  'WorldBoundaryShape3D',
+  'HeightMapShape3D',
+])('%s debug lines', (type) => {
+  it.each(godotDebugLinesFor(type))('match Godot for $name', ({ shape, lines }) => {
+    const wire = shapeDebugLines(shape)!;
+    expect(wire).toHaveLength(lines.length);
+    lines.forEach((value, index) => expect(wire[index]).toBeCloseTo(value, 4));
   });
 });
 
-/**
- * Measured on Godot 4.6.3: a `.tres` loaded through `ResourceLoader`, then `get_debug_mesh()` read
- * back. Each row is one segment, `[x0, y0, z0, x1, y1, z1]`.
- */
-const GODOT_HEIGHT_MAP_SEGMENTS: readonly (readonly [string, Record<string, string>, number[][]])[] = [
-  [
-    'the default 2 x 2 grid',
-    {},
-    [
-      [-0.5, 0, -0.5, 0.5, 0, -0.5],
-      [-0.5, 0, -0.5, -0.5, 0, 0.5],
-      [0.5, 0, -0.5, -0.5, 0, 0.5],
-      [0.5, 0, -0.5, 0.5, 0, 0.5],
-      [-0.5, 0, 0.5, 0.5, 0, 0.5],
-    ],
-  ],
-  [
-    'a 3 x 2 grid',
-    { map_width: '3', map_depth: '2', map_data: 'PackedFloat32Array(0, 1, 2, 3, 4, 5)' },
-    [
-      [-1, 0, -0.5, 0, 1, -0.5],
-      [-1, 0, -0.5, -1, 3, 0.5],
-      [0, 1, -0.5, -1, 3, 0.5],
-      [0, 1, -0.5, 1, 2, -0.5],
-      [0, 1, -0.5, 0, 4, 0.5],
-      [1, 2, -0.5, 0, 4, 0.5],
-      [1, 2, -0.5, 1, 5, 0.5],
-      [-1, 3, 0.5, 0, 4, 0.5],
-      [0, 4, 0.5, 1, 5, 0.5],
-    ],
-  ],
-  [
-    'negative, fractional and large heights',
-    { map_width: '3', map_depth: '3', map_data: 'PackedFloat32Array(0, -1, 2, 0.5, 250, -3, 1.25, 0, 7)' },
-    [
-      [-1, 0, -1, 0, -1, -1],
-      [-1, 0, -1, -1, 0.5, 0],
-      [0, -1, -1, -1, 0.5, 0],
-      [0, -1, -1, 1, 2, -1],
-      [0, -1, -1, 0, 250, 0],
-      [1, 2, -1, 0, 250, 0],
-      [1, 2, -1, 1, -3, 0],
-      [-1, 0.5, 0, 0, 250, 0],
-      [-1, 0.5, 0, -1, 1.25, 1],
-      [0, 250, 0, -1, 1.25, 1],
-      [0, 250, 0, 1, -3, 0],
-      [0, 250, 0, 0, 0, 1],
-      [1, -3, 0, 0, 0, 1],
-      [1, -3, 0, 1, 7, 1],
-      [-1, 1.25, 1, 0, 0, 1],
-      [0, 0, 1, 1, 7, 1],
-    ],
-  ],
-  [
-    'a 4 x 3 grid',
-    { map_width: '4', map_depth: '3', map_data: 'PackedFloat32Array(0, 0, 1, 1, 0, 2, 2, 1, 0, 0, 1, 3)' },
-    [
-      [-1.5, 0, -1, -0.5, 0, -1],
-      [-1.5, 0, -1, -1.5, 0, 0],
-      [-0.5, 0, -1, -1.5, 0, 0],
-      [-0.5, 0, -1, 0.5, 1, -1],
-      [-0.5, 0, -1, -0.5, 2, 0],
-      [0.5, 1, -1, -0.5, 2, 0],
-      [0.5, 1, -1, 1.5, 1, -1],
-      [0.5, 1, -1, 0.5, 2, 0],
-      [1.5, 1, -1, 0.5, 2, 0],
-      [1.5, 1, -1, 1.5, 1, 0],
-      [-1.5, 0, 0, -0.5, 2, 0],
-      [-1.5, 0, 0, -1.5, 0, 1],
-      [-0.5, 2, 0, -1.5, 0, 1],
-      [-0.5, 2, 0, 0.5, 2, 0],
-      [-0.5, 2, 0, -0.5, 0, 1],
-      [0.5, 2, 0, -0.5, 0, 1],
-      [0.5, 2, 0, 1.5, 1, 0],
-      [0.5, 2, 0, 0.5, 1, 1],
-      [1.5, 1, 0, 0.5, 1, 1],
-      [1.5, 1, 0, 1.5, 3, 1],
-      [-1.5, 0, 1, -0.5, 0, 1],
-      [-0.5, 0, 1, 0.5, 1, 1],
-      [0.5, 1, 1, 1.5, 3, 1],
-    ],
-  ],
-  [
-    'a single column',
-    { map_width: '1', map_depth: '4', map_data: 'PackedFloat32Array(0, 1, -1, 2)' },
-    [
-      [0, 0, -1.5, 0, 1, -0.5],
-      [0, 1, -0.5, 0, -1, 0.5],
-      [0, -1, 0.5, 0, 2, 1.5],
-    ],
-  ],
-  // A 1 x 1 grid has no cell edge to draw.
-  ['a single sample', { map_width: '1', map_depth: '1', map_data: 'PackedFloat32Array(5)' }, []],
-];
-
-describe('heightMapDebugLines', () => {
-  it.each(GODOT_HEIGHT_MAP_SEGMENTS)('matches Godot for %s', (_name, data, expected) => {
-    const wire = shapeDebugLines({ id: 'a', type: 'HeightMapShape3D', data })!;
-    // `+ 0` turns a negative zero positive: the measured values went through JSON, which drops its sign.
-    expect(Array.from(wire, (value) => value + 0)).toEqual(expected.flat());
+describe('ConcavePolygonShape3D debug lines', () => {
+  it.each(godotDebugLinesFor('ConcavePolygonShape3D'))('match Godot for $name', ({ shape, lines }) => {
+    expect(undirectedEdges(shapeDebugLines(shape)!)).toEqual(undirectedEdges(lines));
   });
 });

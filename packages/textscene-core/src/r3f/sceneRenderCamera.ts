@@ -1,8 +1,9 @@
 /**
  * Reports the camera and the target each render of a scene uses, and the end of each render. A
  * sub-viewport's pass camera never enters the R3F store, so only the render sees it, and
- * `scene.onBeforeRender` runs before the render list, so content moves that frame. A cull runs
- * after every other observer, so it reads the content and the shadow fit that render places.
+ * `scene.onBeforeRender` runs before the render list, so content moves that frame. The exposure
+ * runs after every observer, so it scales each light energy an observer wrote for the render. A cull
+ * runs last, so it reads the content and the shadow fit that render places.
  */
 
 import * as THREE from 'three';
@@ -21,6 +22,8 @@ type AfterRender = THREE.Object3D['onAfterRender'];
 interface SceneHook {
   observers: Set<SceneCameraObserver>;
   /** Run after every observer. */
+  exposers: Set<SceneCameraObserver>;
+  /** Run after every exposer. */
   cullers: Set<SceneCameraObserver>;
   /** Run once the render has drawn the scene. */
   finishers: Set<() => void>;
@@ -75,6 +78,11 @@ export function observeSceneCamera(scene: THREE.Scene, observer: SceneCameraObse
   return observeIn(scene, observer, (hook) => hook.observers);
 }
 
+/** {@link observeSceneCamera}, for the exposure, which runs after every observer and before the cull. */
+export function observeSceneExposure(scene: THREE.Scene, exposer: SceneCameraObserver): () => void {
+  return observeIn(scene, exposer, (hook) => hook.exposers);
+}
+
 /** {@link observeSceneCamera}, for an observer that runs after every other one. */
 export function observeSceneCull(scene: THREE.Scene, culler: SceneCameraObserver): () => void {
   return observeIn(scene, culler, (hook) => hook.cullers);
@@ -96,7 +104,8 @@ function observeIn<Observer>(
     const current = hooks.get(scene);
     if (!current) return;
     listOf(current).delete(observer);
-    if (current.observers.size > 0 || current.cullers.size > 0 || current.finishers.size > 0) return;
+    const lists = [current.observers, current.exposers, current.cullers, current.finishers];
+    if (lists.some((list) => list.size > 0)) return;
     scene.onBeforeRender = current.previous;
     scene.onAfterRender = current.previousAfter;
     hooks.delete(scene);
@@ -106,6 +115,7 @@ function observeIn<Observer>(
 function installHook(scene: THREE.Scene): SceneHook {
   const hook: SceneHook = {
     observers: new Set(),
+    exposers: new Set(),
     cullers: new Set(),
     finishers: new Set(),
     previous: scene.onBeforeRender,
@@ -118,6 +128,7 @@ function installHook(scene: THREE.Scene): SceneHook {
     const camera = args[2];
     const target = (args[3] as unknown as THREE.WebGLRenderTarget | null) ?? null;
     for (const fn of hook.observers) fn(camera, target);
+    for (const fn of hook.exposers) fn(camera, target);
     for (const fn of hook.cullers) fn(camera, target);
   };
   const chainedAfter: AfterRender = function chainedOnAfterRender(this: THREE.Object3D, ...args) {

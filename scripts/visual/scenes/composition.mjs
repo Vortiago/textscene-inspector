@@ -94,6 +94,14 @@ export const SCENE_COMPOSITION_SCENES = [
     collisions: true,
     camera: 'HeightMapRoot/Camera',
   },
+  // The other variable against `collision-shapes`: ConvexPolygonShape3D and ConcavePolygonShape3D,
+  // drawn as Godot's hull edges and soup edges, a prism, a cube and a shared-edge soup.
+  {
+    name: 'collision-polygon-shapes',
+    file: 'unit-collision-polygon-shapes.tscn',
+    collisions: true,
+    camera: 'PolygonRoot/Camera',
+  },
   // Decal projects a local SVG checkerboard onto the floor its box intersects
   // (mixed per fragment), one plain and one tinted. The box gizmo
   // is a gizmo, which a capture draws only with `gizmos: true` (ADR-0056), so this is the runtime
