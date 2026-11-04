@@ -26,6 +26,7 @@ import {
   paintSceneFontCanvas,
   createCanvasTextMaterial,
 } from './canvasTextPainter';
+import type { SurfaceShading } from '../../../materialFor2d';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import type { TextLayoutResult } from './textLayout';
 import { hexCodeBoxRects } from './hexCodeBox';
@@ -113,6 +114,12 @@ export interface TextRunProps {
    */
   mipmapped?: boolean;
   /**
+   * The PBR uniforms that light the run with the scene's 3D lights and let it receive their shadows,
+   * as a shaded Label3D (`material.cpp:3045`). The quad faces +Z (`label_3d.cpp:422-423`). Canvas
+   * runs only: the MSDF atlas serves Controls, which draw unlit. Omitted, unlit.
+   */
+  shading?: SurfaceShading;
+  /**
    * The `BaseMaterial3D::Transparency` this surface paints in, from a 3D caller's
    * `alpha_cut` (`label_3d.cpp:386-393`), in each pass its GeometryInstance3D's fade can draw it
    * in. Canvas runs inside a GeometryInstance3D drawer only. Omitted, it paints
@@ -134,6 +141,13 @@ export interface TextRunProps {
   frameExcluded?: boolean;
 }
 
+/** The normal +Z on each of `vertexCount` vertices, which only a lit material reads. */
+function quadFacingPlusZ(vertexCount: number): THREE.BufferAttribute {
+  const normals = new Float32Array(vertexCount * 3);
+  for (let i = 0; i < vertexCount; i++) normals[i * 3 + 2] = 1;
+  return new THREE.BufferAttribute(normals, 3);
+}
+
 /**
  * One built run: its geometry, and on the canvas path the per-instance texture this component
  * disposes. Each canvas that unmounts releases the shared atlas. `paint` builds a material for the run,
@@ -141,7 +155,7 @@ export interface TextRunProps {
  */
 interface BuiltTextRun {
   geometry: THREE.BufferGeometry;
-  paint: (blend: SurfaceBlend | undefined) => THREE.Material;
+  paint: (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) => THREE.Material;
   ownedTexture?: THREE.Texture;
 }
 
@@ -151,7 +165,7 @@ interface TextRunLook {
   clippingPlanes: readonly THREE.Plane[] | undefined;
   depthTest: boolean | undefined;
   side: THREE.Side | undefined;
-  /** The lit Control around the run, or undefined for a run drawn unlit such as Label3D's. */
+  /** The lit Control around the run, or undefined for a run no 2D light reaches, such as Label3D's. */
   pixelMaterial: CanvasItemPixelMaterial | undefined;
 }
 
@@ -177,6 +191,8 @@ function buildTextRun(
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
+    // On every run, so toggling the shading rebuilds the material alone, not the raster.
+    geo.setAttribute('normal', quadFacingPlusZ(positions.length / 3));
 
     const canvas = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, strokeWidthPx);
     const texture = new THREE.CanvasTexture(canvas);
@@ -192,7 +208,7 @@ function buildTextRun(
     texture.wrapT = THREE.ClampToEdgeWrapping;
 
     const opacity = tint.a;
-    const paint = (blend: SurfaceBlend | undefined) =>
+    const paint = (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) =>
       createCanvasTextMaterial({
         map: texture,
         opacity,
@@ -201,6 +217,7 @@ function buildTextRun(
         side,
         pixelMaterial,
         mipmapped,
+        shading,
         ...blend,
       });
     return { geometry: geo, paint, ownedTexture: texture };
@@ -243,6 +260,7 @@ export function TextRun({
   shadow,
   layers,
   frameExcluded,
+  shading,
 }: TextRunProps) {
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
@@ -278,8 +296,8 @@ export function TextRun({
       mipmapped,
     ]
   );
-  const material = usePaintedMaterial(run, blends?.unfaded);
-  const alphaPassMaterial = useAlphaPassMaterial(run, blends?.alphaPass);
+  const material = usePaintedMaterial(run, blends?.unfaded, shading);
+  const alphaPassMaterial = useAlphaPassMaterial(run, blends?.alphaPass, shading);
   const meshRef = useRef<THREE.Mesh | null>(null);
   useLayoutEffect(() => {
     const mesh = meshRef.current;
@@ -327,6 +345,7 @@ export function TextRun({
         renderOrder={renderOrder}
         userData={userData}
         castShadow={shadow?.castShadow}
+        receiveShadow={shading !== undefined}
         onBeforeRender={shadow?.onBeforeRender}
         onAfterRender={shadow?.onAfterRender}
         onBeforeShadow={shadow?.onBeforeShadow}
@@ -358,30 +377,41 @@ function AtlasPending(): null {
 }
 
 /** The run's material for `blend`. */
-function usePaintedMaterial(run: BuiltTextRun, blend: SurfaceBlend | undefined): THREE.Material {
-  return useOwnedMaterial(run, blend, () => run.paint(blend));
+function usePaintedMaterial(
+  run: BuiltTextRun,
+  blend: SurfaceBlend | undefined,
+  shading: SurfaceShading | undefined
+): THREE.Material {
+  return useOwnedMaterial(run, blend, shading, () => run.paint(blend, shading));
 }
 
 /** The run's alpha-pass material, or null for a run that never fades. */
-function useAlphaPassMaterial(run: BuiltTextRun, blend: SurfaceBlend | undefined): THREE.Material | null {
-  return useOwnedMaterial(run, blend, () => (blend ? run.paint(blend) : null));
+function useAlphaPassMaterial(
+  run: BuiltTextRun,
+  blend: SurfaceBlend | undefined,
+  shading: SurfaceShading | undefined
+): THREE.Material | null {
+  return useOwnedMaterial(run, blend, shading, () => (blend ? run.paint(blend, shading) : null));
 }
 
 /**
- * The material `paint` builds, rebuilt only when `run` or a field of `blend` changes, and disposed
- * on replacement: R3F does not dispose a material passed as a prop.
+ * The material `paint` builds, rebuilt only when `run`, `shading` or a field of `blend` changes, and
+ * disposed on replacement: R3F does not dispose a material passed as a prop.
  */
 function useOwnedMaterial<M extends THREE.Material | null>(
   run: BuiltTextRun,
   blend: SurfaceBlend | undefined,
+  shading: SurfaceShading | undefined,
   paint: () => M
 ): M {
   const material = useMemo(
     () => paint(),
-    // `blend` is compared by its fields, as `run` is above.
+    // `blend` and `shading` are compared by their fields, as `run` is above.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- per-field comparison.
     [
       run,
+      shading?.metalness,
+      shading?.roughness,
       blend?.transparent,
       blend?.depthWrite,
       blend?.alphaTest,

@@ -24,6 +24,7 @@ export function labelProperties(overrides: Partial<Label3DProperties> = {}): Lab
     outline_size: 0,
     outline_modulate: { r: 0, g: 0, b: 0, a: 1 },
     double_sided: true,
+    shaded: false,
     font_size: 32,
     line_spacing: 0,
     horizontal_alignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,

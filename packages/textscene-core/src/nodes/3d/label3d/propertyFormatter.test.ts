@@ -22,7 +22,13 @@ describe('formatLabel3DProperties', () => {
       { label: 'Text', value: '(empty)' },
       { label: 'Pixel Size', value: '0.0050' },
       { label: 'Billboard', value: 'Disabled' },
+      { label: 'Shaded', value: 'Off' },
     ]);
+  });
+
+  it('shows an authored shaded flag', () => {
+    const text = section(formatLabel3DProperties(props({ shaded: 'true' })), 'Text')!;
+    expect(text.items).toContainEqual({ label: 'Shaded', value: 'On' });
   });
 
   it('shows the layout properties in a Layout section, at Godot defaults when unset', () => {

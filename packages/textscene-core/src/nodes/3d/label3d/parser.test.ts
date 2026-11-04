@@ -67,6 +67,11 @@ describe('Label3D Parser', () => {
       });
     });
 
+    it('reads shaded, off by default as the constructor leaves FLAG_SHADED (label_3d.cpp:1081-1082)', () => {
+      expect(parseLabel3D(heading('Label3D', { name: 'Label' }), {}).shaded).toBe(false);
+      expect(parseLabel3D(heading('Label3D', { name: 'Label' }), { shaded: 'true' }).shaded).toBe(true);
+    });
+
     it('keeps FILL as a vertical_alignment, which the setter accepts (label_3d.cpp:693)', () => {
       const props = parseLabel3D(heading('Label3D', { name: 'Label' }), { vertical_alignment: '3' });
       expect(props.vertical_alignment).toBe(VerticalAlignment.VERTICAL_ALIGNMENT_FILL);

@@ -60,11 +60,9 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'text_direction',
       'structured_text_bidi_override',
       'structured_text_bidi_override_options',
-      // Material behaviour: lighting response.
-      'shaded',
     ],
     reason:
-      'double_sided, alpha_hash_scale and the alpha antialiasing pair are the own properties both parsed and validated; the locale, BiDi and lighting properties are real render inputs the previewer does not read, so the set is a render gap rather than deliberate scope.',
+      'double_sided, alpha_hash_scale and the alpha antialiasing pair are the own properties both parsed and validated; the locale and BiDi properties are real render inputs the previewer does not read, so the set is a render gap rather than deliberate scope.',
   },
 
   // Navigation regions draw a translucent navmesh overlay here, mirroring the
