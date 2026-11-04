@@ -117,9 +117,8 @@ export function imageOf(
 export function defineAgentToolAnswersSuite(projectDir: string): void {
   // Through `Uri.fsPath`, as the tools print it: it lowercases a Windows drive letter, and `path.join` does not.
   const scene = (file: string) => vscode.Uri.file(path.join(projectDir, file)).fsPath;
-  const invoke = async (tool: string, scenePath: string) => invokeSceneTool(tool, scenePath);
   const invokeCapture = async (scenePath: string) => {
-    const result = await invoke('textscene_capture', scenePath);
+    const result = await invokeSceneTool('textscene_capture', scenePath);
     assertWebviewLoaded(result);
     return result;
   };
@@ -138,7 +137,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
     test('the lint tool reports a finding with its line, severity, message, rule and node', async () => {
       const missing = scene('missing.tscn');
 
-      const text = textOf(await invoke('textscene_lint', missing));
+      const text = textOf(await invokeSceneTool('textscene_lint', missing));
 
       assert.strictEqual(
         text,
@@ -157,7 +156,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
           .getDiagnostics(uri)
           .filter((diagnostic) => diagnostic.source === 'tscn-lint')
           .map((diagnostic) => `${diagnostic.range.start.line + 1}:${String(diagnostic.code)}`);
-      const text = textOf(await invoke('textscene_lint', uri.fsPath));
+      const text = textOf(await invokeSceneTool('textscene_lint', uri.fsPath));
       const toolFindings = [...text.matchAll(/^ {2}line (\d+): \[\w+\] .* \(([a-z0-9-]+)\)/gm)].map(
         (match) => `${match[1]}:${match[2]}`
       );
@@ -175,14 +174,14 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
     test('the lint tool reports no findings for a clean scene', async () => {
       const main = scene('main.tscn');
 
-      assert.strictEqual(textOf(await invoke('textscene_lint', main)), `${main}: no findings.`);
+      assert.strictEqual(textOf(await invokeSceneTool('textscene_lint', main)), `${main}: no findings.`);
     });
 
     test('the scene-tree tool returns the node hierarchy with each type', async () => {
       const main = scene('main.tscn');
 
       assert.strictEqual(
-        textOf(await invoke('textscene_scene_tree', main)),
+        textOf(await invokeSceneTool('textscene_scene_tree', main)),
         [
           `${main}:`,
           '  Scene (Node3D)',
@@ -197,7 +196,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
       const missing = scene('missing.tscn');
 
       assert.strictEqual(
-        textOf(await invoke('textscene_missing_resources', missing)),
+        textOf(await invokeSceneTool('textscene_missing_resources', missing)),
         `${missing}: 1 missing resource(s):\n  res://textures/missing.png`
       );
     });
@@ -206,7 +205,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
       const main = scene('main.tscn');
 
       assert.strictEqual(
-        textOf(await invoke('textscene_missing_resources', main)),
+        textOf(await invokeSceneTool('textscene_missing_resources', main)),
         `${main}: every referenced resource is present.`
       );
     });
@@ -216,21 +215,21 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
       const relative = path.relative(folder, scene('missing.tscn')).split(path.sep).join('/');
 
       assert.strictEqual(
-        textOf(await invoke('textscene_missing_resources', relative)),
-        textOf(await invoke('textscene_missing_resources', scene('missing.tscn')))
+        textOf(await invokeSceneTool('textscene_missing_resources', relative)),
+        textOf(await invokeSceneTool('textscene_missing_resources', scene('missing.tscn')))
       );
     });
 
     test('a tool refuses a path that is not a .tscn scene, and names it', async () => {
       const notAScene = scene('project.godot');
 
-      await assert.rejects(invoke('textscene_scene_tree', notAScene), (error: Error) =>
+      await assert.rejects(invokeSceneTool('textscene_scene_tree', notAScene), (error: Error) =>
         error.message.includes(`Expected a .tscn scene, got '${notAScene}'`)
       );
     });
 
     test('the open-preview tool opens a preview tab for the scene', async () => {
-      const text = textOf(await invoke('textscene_open_preview', scene('main.tscn')));
+      const text = textOf(await invokeSceneTool('textscene_open_preview', scene('main.tscn')));
 
       assert.strictEqual(text, `Opened the TextScene preview for ${scene('main.tscn')}.`);
       await waitFor(

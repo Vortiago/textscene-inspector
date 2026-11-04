@@ -1,6 +1,6 @@
 /** The mocha run that each extension host suite's `run()` hands its own directory to. */
 import * as fs from 'fs';
-import * as path from 'path';
+import { globSync } from 'glob';
 import Mocha from 'mocha';
 import { SUITE_STARTED_MARKER_ENV } from './integration/integrationLaunch';
 
@@ -13,7 +13,7 @@ export async function runSuite(testsRoot: string): Promise<void> {
     timeout: 20000,
   });
 
-  testFilesUnder(testsRoot).forEach((file) => mocha.addFile(file));
+  globSync('**/*.test.js', { cwd: testsRoot, absolute: true }).forEach((file) => mocha.addFile(file));
 
   return new Promise((resolve, reject) => {
     mocha.run((failures) => {
@@ -23,17 +23,6 @@ export async function runSuite(testsRoot: string): Promise<void> {
         resolve();
       }
     });
-  });
-}
-
-/**
- * Every `*.test.js` path under `dir`.
- */
-function testFilesUnder(dir: string): string[] {
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const entryPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) return testFilesUnder(entryPath);
-    return entry.name.endsWith('.test.js') ? [entryPath] : [];
   });
 }
 

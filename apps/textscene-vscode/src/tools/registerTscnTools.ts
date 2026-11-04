@@ -125,11 +125,13 @@ class TscnCaptureTool implements vscode.LanguageModelTool<ScenePathToolInput> {
       return textResult(`The preview for ${uri.fsPath} did not return an image: ${capture.error}`);
     }
     // The 1.105 typings admit no data part in a result, though the host accepts one.
-    const image = vscode.LanguageModelDataPart.image(pngBytesOf(capture.dataUrl), 'image/png');
-    return new vscode.LanguageModelToolResult([
+    const content: unknown[] = [
       new vscode.LanguageModelTextPart(`Rendered preview of ${uri.fsPath}.`),
-      image as unknown as vscode.LanguageModelTextPart,
-    ]);
+      vscode.LanguageModelDataPart.image(pngBytesOf(capture.dataUrl), 'image/png'),
+    ];
+    return new vscode.LanguageModelToolResult(
+      content as ConstructorParameters<typeof vscode.LanguageModelToolResult>[0]
+    );
   }
 }
 
