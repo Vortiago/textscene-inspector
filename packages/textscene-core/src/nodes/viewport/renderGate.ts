@@ -5,6 +5,7 @@
  */
 import * as THREE from 'three';
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../godot/scene/viewport';
+import type { UpdateGate } from './subviewport/viewportGate.js';
 
 /** One pass as the gate sees it. */
 export interface GatedPass {
@@ -13,8 +14,8 @@ export interface GatedPass {
   updateMode: number;
   /** The viewport this pass sits in, null for the root viewport. */
   enclosingId: string | null;
-  /** Whether the target has rendered since it was made. */
-  hasRendered: boolean;
+  /** The renders of the target, read when the gate decides a frame. */
+  state: { readonly hasRendered: boolean };
 }
 
 /** What the gate knows of a frame beyond its passes. */
@@ -49,7 +50,7 @@ export function renderingPassIds(passes: readonly GatedPass[], frame: GateFrame)
       case SubViewportUpdateMode.DISABLED:
         return false;
       case SubViewportUpdateMode.ONCE:
-        return frame.index >= 1 && !pass.hasRendered;
+        return frame.index >= 1 && !pass.state.hasRendered;
       case SubViewportUpdateMode.WHEN_VISIBLE:
         return frame.sampledIds.has(pass.id);
       case SubViewportUpdateMode.WHEN_PARENT_VISIBLE: {
@@ -83,8 +84,8 @@ export const BLACK = new THREE.Color(0, 0, 0);
  * The renders of one viewport, which a ONCE update mode and a ONCE clear mode spend. Godot keeps
  * both on the viewport, not on its target: a resize makes a new target and leaves them spent
  * (`renderer_viewport.cpp:920`, `:375`), and setting a mode again arms it. Written only by
- * `takeRender`, `rearm` and `restart`. A new parse of the scene makes a new viewport, which starts
- * at (0, 0, 0, 0) with both pending.
+ * `takeRender` and `rearm`. A new parse of the scene makes a new viewport, and so a new state,
+ * which starts at (0, 0, 0, 0) with both pending.
  */
 export class TargetRenderState {
   private hasRenderedOnce = false;
@@ -116,27 +117,43 @@ export class TargetRenderState {
   rearm(): void {
     this.hasRenderedOnce = false;
   }
+}
 
-  /** Forgets every render: a new parse of the scene makes new viewports. */
-  restart(): void {
-    this.rearm();
-    this.lastClearMode = null;
-    this.isOnceClearPending = true;
-    this.lastClearColor = null;
-  }
+/** What the orchestrator reads of a SubViewport to decide whether its pass renders. */
+export interface PassGate extends UpdateGate {
+  /** The renders of the pass's target. The pass's `render` takes each one. */
+  state: TargetRenderState;
+  /** Whether a consumer samples the target now. */
+  isSampled(): boolean;
+}
+
+/** The gate of a pass with `gate`'s mode, whose `render` takes `state`. */
+export function passGate(
+  gate: UpdateGate,
+  state: TargetRenderState,
+  isSampled: () => boolean = () => false
+): PassGate {
+  return { ...gate, state, isSampled };
 }
 
 /**
- * The frame count and the sampled marks of the passes one orchestrator drives. Written only by the
- * orchestrator's frame.
+ * The frame count and the sampled marks of the passes one orchestrator drives, for one scene.
+ * Written only by the orchestrator.
  */
 export class GateClock {
   private index = 0;
   private readonly sampled = new Set<string>();
 
+  /**
+   * `startsUnloaded` makes the first frame count as unloaded, for a clock made for a new scene:
+   * its assets have not registered as pending yet.
+   */
+  constructor(private startsUnloaded = false) {}
+
   /** Starts a frame. The count runs only while the scene is loaded, so frame 1 follows the load. */
   begin(isLoaded: boolean): GateFrame {
-    if (isLoaded) this.index++;
+    if (isLoaded && !this.startsUnloaded) this.index++;
+    this.startsUnloaded = false;
     return { index: this.index, sampledIds: this.sampled };
   }
 
@@ -153,10 +170,5 @@ export class GateClock {
   /** Forgets the marks of passes that are gone, so a mark never outlives its pass. */
   prune(isRegistered: (id: string) => boolean): void {
     for (const id of this.sampled) if (!isRegistered(id)) this.sampled.delete(id);
-  }
-
-  restart(): void {
-    this.index = 0;
-    this.sampled.clear();
   }
 }

@@ -30,8 +30,9 @@ export function useViewportGate(path: string, authoredMode: number): UpdateGate 
 
 /** `gate` with the animated `visible` laid over it. */
 export function useResolvedGate(gate: ViewportGate): UpdateGate {
-  const animated = useAnimatedVisibility(gate.visibilityChain?.map((link) => link.path) ?? []);
-  const { updateMode, enclosingPath } = resolveGate(gate, animated);
+  const chainPaths = useMemo(() => gate.visibilityChain?.map((link) => link.path) ?? [], [gate]);
+  const animated = useAnimatedVisibility(chainPaths);
+  const { updateMode, enclosingPath } = useMemo(() => resolveGate(gate, animated), [gate, animated]);
   // The primitives key the object, so a change that moves neither keeps the pass registered.
   return useMemo(() => ({ updateMode, enclosingPath }), [updateMode, enclosingPath]);
 }

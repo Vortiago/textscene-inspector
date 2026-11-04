@@ -16,7 +16,8 @@ import { createCanvasTarget, renderToOffscreenTarget, viewportMsaaMode } from '.
 import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
 import { useCanvasPass } from './useCanvasPass.js';
 import { useResolvedGate } from './useViewportGate.js';
-import { usePublishViewportPass, useViewportRenderState } from './usePublishViewportPass.js';
+import { usePublishViewportPass } from './usePublishViewportPass.js';
+import { useViewportRenderState } from './useGatedViewport.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
 import { viewportSize, viewportTargetSize } from './targetSize.js';
 import type { SubViewportProperties } from './types.js';

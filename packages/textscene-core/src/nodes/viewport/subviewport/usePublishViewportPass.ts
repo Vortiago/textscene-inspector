@@ -15,7 +15,7 @@ import {
   usePublishViewportTexture,
   type ViewportTextureEntry,
 } from '../../../r3f/contexts/ViewportTextureContext.js';
-import { TargetRenderState } from '../renderGate.js';
+import { passGate, type TargetRenderState } from '../renderGate.js';
 import { collectNestedViewportPaths } from './nestedViewportPaths.js';
 import { clearTarget } from './offscreenViewport.js';
 import { useTargetViews } from './targetViews.js';
@@ -43,16 +43,6 @@ interface PublishViewportPassOptions {
   render: () => void;
 }
 
-/**
- * The renders of one viewport, which a resize of its target leaves as they are (`renderer_viewport.cpp:920`).
- * A new update mode arms a ONCE pass again (`viewport.cpp:5475-5478`).
- */
-export function useViewportRenderState(updateMode: number): TargetRenderState {
-  const state = useMemo(() => new TargetRenderState(), []);
-  useEffect(() => state.rearm(), [state, updateMode]);
-  return state;
-}
-
 export function usePublishViewportPass({
   path,
   node,
@@ -68,8 +58,8 @@ export function usePublishViewportPass({
   const registerViewportPass = useRegisterViewportPass();
   const views = useTargetViews(target, isTransparent);
   // A layout effect, so a consumer that mounts beside this pass never samples the allocation's bytes.
-  // A new target holds (0, 0, 0, 0) whatever was rendered, and a rendered one keeps its bytes when
-  // `transparent_bg` changes.
+  // A new target, or a new scene's render state, holds (0, 0, 0, 0) whatever was rendered, and a
+  // rendered one keeps its bytes when `transparent_bg` changes.
   const clearedTarget = useRef<THREE.WebGLRenderTarget | null>(null);
   useLayoutEffect(() => {
     if (clearedTarget.current !== target || !renderState.hasRendered) clearTarget(gl, target, isTransparent);
@@ -91,17 +81,9 @@ export function usePublishViewportPass({
     () => ({
       dependsOn,
       render: renderViews,
-      gate: {
-        ...gate,
-        state: renderState,
-        isSampled: views.isSampled,
-        restart: (renderer) => {
-          renderState.restart();
-          clearTarget(renderer, target, isTransparent);
-        },
-      },
+      gate: passGate(gate, renderState, views.isSampled),
     }),
-    [dependsOn, renderViews, gate, renderState, views, target, isTransparent]
+    [dependsOn, renderViews, gate, renderState, views]
   );
   useEffect(() => registerViewportPass(path, viewportPass), [registerViewportPass, path, viewportPass]);
 }

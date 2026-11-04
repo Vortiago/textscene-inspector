@@ -9,8 +9,12 @@ import { GateClock, renderingPassIds, TargetRenderState, type GatedPass } from '
 
 const { DISABLED, ONCE, WHEN_VISIBLE, WHEN_PARENT_VISIBLE, ALWAYS } = SubViewportUpdateMode;
 
-function pass(id: string, updateMode: number, extra: Partial<GatedPass> = {}): GatedPass {
-  return { id, updateMode, enclosingId: null, hasRendered: false, ...extra };
+function pass(
+  id: string,
+  updateMode: number,
+  { enclosingId = null, hasRendered = false }: { enclosingId?: string | null; hasRendered?: boolean } = {}
+): GatedPass {
+  return { id, updateMode, enclosingId, state: { hasRendered } };
 }
 
 function rendering(passes: GatedPass[], index: number, sampled: string[] = []): string[] {
@@ -132,10 +136,8 @@ describe('TargetRenderState', () => {
     expect(state.hasRendered).toBe(false);
   });
 
-  it('starts over on restart, with its ONCE clear pending', () => {
+  it('starts with its ONCE update and its ONCE clear pending', () => {
     const state = new TargetRenderState();
-    state.takeRender(SubViewportClearMode.ONCE, projectColor);
-    state.restart();
     expect(state.hasRendered).toBe(false);
     expect(state.takeRender(SubViewportClearMode.ONCE, projectColor).clears).toBe(true);
   });
@@ -165,13 +167,18 @@ describe('GateClock', () => {
     expect(clock.begin(true).sampledIds.has('a')).toBe(false);
   });
 
-  it('forgets the count and the marks on restart', () => {
+  it('counts the first frame of a clock that starts unloaded as unloaded', () => {
+    const clock = new GateClock(true);
+    expect(clock.begin(true).index).toBe(0);
+    expect(clock.begin(true).index).toBe(1);
+  });
+
+  it('forgets the marks of passes that are gone on prune', () => {
     const clock = new GateClock();
     clock.begin(true);
     clock.mark('a');
-    clock.restart();
-    const frame = clock.begin(true);
-    expect(frame.index).toBe(1);
-    expect(frame.sampledIds.has('a')).toBe(false);
+    clock.mark('b');
+    clock.prune((id) => id === 'b');
+    expect([...clock.begin(true).sampledIds]).toEqual(['b']);
   });
 });
