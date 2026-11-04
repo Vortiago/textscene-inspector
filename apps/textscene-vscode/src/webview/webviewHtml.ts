@@ -4,6 +4,7 @@
  */
 
 import { webcrypto } from 'node:crypto';
+import { RESOURCE_CACHE_PREFIX } from './dropCachedResource';
 
 /** The bytes of a CSP nonce: 128 bits, the least the CSP specification recommends. */
 const NONCE_BYTES = 16;
@@ -58,11 +59,15 @@ function scriptLiteral(value: unknown): string {
 
 /**
  * Imports the entry script, and tells the host when the import fails, such as on a cut-off
- * copy (`webviewLoadFailed`). An entry that throws after it acquired the API leaves none to
- * acquire, so that error goes to the console instead of being replaced by the acquire's.
+ * copy (`webviewLoadFailed`). The failed copy leaves VS Code's resource cache first, or the
+ * new document the host loads would get it again (`dropCachedResource`). An entry that threw
+ * after it acquired the API leaves none to acquire, so that error goes to the console
+ * instead of being replaced by the acquire's.
  */
 function entryLoader(scriptUri: string): string {
-  return `import(${scriptLiteral(scriptUri)}).catch((error) => { try { acquireVsCodeApi().postMessage({ type: 'webviewLoadFailed', error: String(error) }); } catch { console.error(error); } });`;
+  const dropCachedEntry = `Promise.resolve().then(() => caches.keys()).then((names) => Promise.all(names.filter((name) => name.startsWith(${scriptLiteral(RESOURCE_CACHE_PREFIX)})).map((name) => caches.open(name).then((cache) => cache.delete(${scriptLiteral(scriptUri)}))))).catch(() => {})`;
+  const reportFailure = `try { acquireVsCodeApi().postMessage({ type: 'webviewLoadFailed', error: String(error) }); } catch { console.error(error); }`;
+  return `import(${scriptLiteral(scriptUri)}).catch((error) => ${dropCachedEntry}.then(() => { ${reportFailure} }));`;
 }
 
 export function generateWebviewHtml(options: WebviewHtmlOptions): string {

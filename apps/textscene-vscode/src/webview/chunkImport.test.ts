@@ -7,7 +7,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setLogAdapter } from '@textscene/core/logger';
 import { CHUNK_IMPORTER, importChunk, setChunkFailureReporter } from './chunkImport';
 
@@ -44,6 +44,7 @@ describe('importChunk', () => {
   afterEach(() => {
     setLogAdapter(null);
     setChunkFailureReporter(() => {});
+    vi.unstubAllGlobals();
     for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true });
   });
 
@@ -90,6 +91,22 @@ describe('importChunk', () => {
 
     expect(reported).toHaveLength(1);
     expect(reported[0]).toContain('missing.mjs?reload=1');
+  });
+
+  it('drops both copies of a chunk that fails at both URLs from the resource cache', async () => {
+    const deleted: string[] = [];
+    vi.stubGlobal('caches', {
+      keys: async () => ['vscode-resource-cache-6'],
+      open: async () => ({ delete: async (url: string) => deleted.push(url) }),
+    });
+    const base = emptyDirectory() + 'webview.js';
+
+    await importChunk('./missing.mjs', base).catch(() => {});
+
+    expect(deleted.map((url) => url.replace(base.replace('webview.js', ''), ''))).toEqual([
+      'missing.mjs',
+      'missing.mjs?reload=1',
+    ]);
   });
 
   it('reports nothing for a chunk that loads', async () => {
