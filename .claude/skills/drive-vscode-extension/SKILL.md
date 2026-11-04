@@ -57,7 +57,7 @@ The gate derives each twin at run time (`sceneText.mjs`), so it cannot drift fro
 the fixture.
 
 `TEXTSCENE_VSCODE_VERSION` picks the VS Code build, as in the extension's own
-suites: `stable` when unset, the `engines.vscode` floor (1.85.0) for `min`. CI
+suites: `stable` when unset, the `engines.vscode` floor (1.105.0) for `min`. CI
 runs the gate on both.
 
 Each run must show:
@@ -89,11 +89,6 @@ The gate runs no layout commands, because each `palette()` call is a fuzzy match
   `downloadAndUnzipVSCode` into the same cache. The CLI does not download: it
   takes the cached build of the requested version, the newest for `stable`, and
   fails fast when there is none.
-- **VS Code 1.85 refuses one of Playwright's attach calls.** Its Electron 25
-  answers `Browser.setDownloadBehavior` with "Browser context management is not
-  supported", and `connectOverCDP` drops the connection. The driver then attaches
-  through `cdpRelay.mjs`, a local relay that answers that call and passes the
-  rest through.
 - **`xvfb-run`** wraps the launch when `--headed` is absent. Software GL is
   mandatory under it: without `--no-sandbox --disable-gpu-sandbox` and
   `SWIFTSHADER_GL_ARGS` (from `scripts/showcase/browser.mjs`), every WebGL

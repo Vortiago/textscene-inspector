@@ -31,7 +31,6 @@ import {
   installCaptureStateProbe,
   waitForCaptureSettled,
 } from './captureState.mjs';
-import { isRefusedAttachCall, startCdpRelay } from './cdpRelay.mjs';
 import {
   VSCODE_VERSION_ENV,
   vscodeTestVersion,
@@ -69,7 +68,7 @@ function requestedVscodeVersion() {
   return vscodeTestVersion(process.env[VSCODE_VERSION_ENV], manifest.engines.vscode);
 }
 
-/** Orders `1.85.0` before `1.140.0`, which a string sort reverses. */
+/** Orders `1.105.0` before `1.140.0`, which a string sort reverses. */
 function compareVersions(a, b) {
   const [pa, pb] = [a, b].map((version) => version.split('.').map(Number));
   for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
@@ -80,7 +79,7 @@ function compareVersions(a, b) {
 }
 
 /**
- * Picks from the cached build directories (`vscode-linux-x64-1.85.0`) the one for
+ * Picks from the cached build directories (`vscode-linux-x64-1.105.0`) the one for
  * `version`: that exact build, or the newest for `stable`. `null` when none fits.
  *
  * @param {string[]} entries directory names under `.vscode-test`
@@ -243,27 +242,6 @@ async function waitForCdp(port, timeoutMs) {
     await sleep(400);
   }
   throw new Error(`CDP never came up on port ${port}: ${lastError?.message ?? 'timeout'}`);
-}
-
-/**
- * Attaches Playwright to the CDP endpoint on `port`. A build that refuses one of
- * Playwright's attach calls, as VS Code 1.85 does, is attached through a relay
- * that answers the call, so the driver also measures the `engines.vscode` floor.
- */
-async function connectOverCdp(port, emit) {
-  try {
-    return { browser: await chromium.connectOverCDP(`http://127.0.0.1:${port}`) };
-  } catch (error) {
-    if (!isRefusedAttachCall(error)) throw error;
-  }
-  const relay = await startCdpRelay(port);
-  emit(`CDP attach refused a call, so attaching through a relay on port ${relay.port}`);
-  try {
-    return { browser: await chromium.connectOverCDP(`http://127.0.0.1:${relay.port}`), relay };
-  } catch (error) {
-    await relay.close();
-    throw error;
-  }
 }
 
 /**
@@ -482,13 +460,12 @@ export async function driveScene(options) {
 
   const { child, log } = launchVscode({ binary, scene, workspace, userDataDir, port, headed, verbose });
   let browser;
-  let relay;
   try {
     const version = await waitForCdp(port, 90_000);
     report.browser = version.Browser;
     emit(`CDP up: ${version.Browser}`);
 
-    ({ browser, relay } = await connectOverCdp(port, emit));
+    browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
     const page = await findWorkbenchPage(browser, 60_000);
     emit(`workbench page: ${page.url().slice(0, 80)}…`);
     // Listeners first, so nothing logged during workbench startup is missed.
@@ -671,7 +648,6 @@ export async function driveScene(options) {
     // Close the CDP connection before killing VS Code: Playwright treats a
     // vanished target as a crash and throws over the top of the real error.
     if (browser) await browser.close().catch(() => {});
-    await relay?.close();
     await stopVscode(child, userDataDir);
     rmSync(userDataDir, { recursive: true, force: true });
   }

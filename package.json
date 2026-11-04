@@ -127,7 +127,6 @@
     "vite": "catalog:",
     "vitest": "catalog:",
     "wawoff2": "catalog:",
-    "ws": "^8.22.1",
     "yaml": "catalog:"
   },
   "pnpm": {

@@ -173,9 +173,7 @@ suite('Language Features', () => {
     const typo = await openProjectDocument(PROJECT, 'typo.tscn');
     const line = lineStartingWith(typo, 'mash =');
     const offersMesh = (action: vscode.CodeAction) => action.title.includes('mesh');
-    const actions = await quickFixesAt(typo.uri, new vscode.Range(line, 0, line, 4), (fixes) =>
-      fixes.some(offersMesh)
-    );
+    const actions = await quickFixesAt(typo.uri, new vscode.Range(line, 0, line, 4));
 
     const fix = actions.find(offersMesh);
     const titles = actions.map((action) => action.title).join(', ');

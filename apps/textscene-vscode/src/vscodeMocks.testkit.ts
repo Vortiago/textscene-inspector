@@ -84,7 +84,7 @@ export const mockEnv: any = {
   clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
 };
 
-/** `vscode.lm`: `registerTool` only, which the tools feature-detect. */
+/** `vscode.lm`: `registerTool` only. */
 export const mockLm: any = {
   registerTool: vi.fn(() => ({ dispose: vi.fn() })),
 };
