@@ -512,6 +512,21 @@ const ENGINE_TEST_TIMEOUT_MS = 2 * 2 * (ENGINE_TIMEOUT_S + ENGINE_KILL_AFTER_S) 
 describe.skipIf(!hasEngine)('renderReference (real Godot)', { timeout: ENGINE_TEST_TIMEOUT_MS }, () => {
   // On a tmpfs /tmp each render's output stays in RAM after every suite run.
   const scratch = [];
+  /**
+   * Per channel, not a mean: a mean under 1 passes with thousands of channels off by 200. The two
+   * PNGs must be the same size.
+   */
+  const worstChannelDelta = async (pathA, pathB) => {
+    const a = PNG.sync.read(await readFile(pathA)).data;
+    const b = PNG.sync.read(await readFile(pathB)).data;
+    expect(b.length).toBe(a.length);
+    let worst = 0;
+    for (let i = 0; i < a.length; i++) worst = Math.max(worst, Math.abs(a[i] - b[i]));
+    return worst;
+  };
+  /** The rasteriser's 1/255 blend-rounding floor. */
+  const ROUNDING_FLOOR = 1;
+
   const scratchDir = async () => {
     const dir = await mkdtemp(join(tmpdir(), 'godot-ref-'));
     scratch.push(dir);
@@ -687,15 +702,48 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', { timeout: ENGINE_TE
       lookAt: focus,
     });
 
-    const a = PNG.sync.read(await readFile(framed)).data;
-    const c = PNG.sync.read(await readFile(derived)).data;
-    expect(c.length).toBe(a.length);
-    let worst = 0;
-    for (let i = 0; i < a.length; i++) worst = Math.max(worst, Math.abs(a[i] - c[i]));
-    // Per channel, not a mean: a mean under 1 passes with thousands of channels off by 200. The
-    // allowance is the rasteriser's 1/255 blend-rounding floor, and it measures 0 here.
-    expect(worst).toBeLessThanOrEqual(1);
+    expect(await worstChannelDelta(framed, derived)).toBeLessThanOrEqual(ROUNDING_FLOOR);
   });
+
+  /**
+   * A CPUParticles3D reports an empty AABB and a Label3D only its position before its text shapes,
+   * so the bounds are a point. `frameSceneBounds.ts` keeps the editor camera's distance for a point
+   * and re-points at it. A scene framed on a point at the origin therefore equals the unframed
+   * editor camera, and a distance of 0 would put the camera inside the point, looking at the sky.
+   */
+  it.each([
+    // The particles are saturated yellow; the sky and ground are near grey.
+    [
+      'a CPUParticles3D',
+      'unit-cpuparticles3d-row.tscn',
+      (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b) > 100,
+    ],
+    // The text is white; the brightest sky is about 205.
+    [
+      'a Label3D',
+      'label3d-glyph-mipmaps/unit-label3d-glyph-mipmaps.tscn',
+      (r, g, b) => Math.min(r, g, b) > 245,
+    ],
+  ])(
+    'frames %s, whose bounds are a point at the origin, at the editor camera distance',
+    async (_, fixture, isContent) => {
+      const dir = await scratchDir();
+      const scene = join(REPO_ROOT, 'scenes/fixtures', fixture);
+      const framed = join(dir, 'framed.png');
+      const editor = join(dir, 'editor.png');
+      await renderReference({ scene, out: framed, width: 160, height: 120, frame: true });
+      await renderReference({ scene, out: editor, width: 160, height: 120 });
+
+      // Two empty skies would also be equal, so the frame must hold the content itself.
+      const { data } = PNG.sync.read(await readFile(framed));
+      let contentPixels = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        if (isContent(data[i], data[i + 1], data[i + 2])) contentPixels++;
+      }
+      expect(contentPixels).toBeGreaterThan(0);
+      expect(await worstChannelDelta(framed, editor)).toBeLessThanOrEqual(ROUNDING_FLOOR);
+    }
+  );
 
   /**
    * The 2D path end to end: a Node2D scene comes back as the project-viewport rectangle that the

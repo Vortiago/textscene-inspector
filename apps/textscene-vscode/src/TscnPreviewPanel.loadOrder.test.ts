@@ -5,8 +5,8 @@
  */
 import { describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
-import { TscnPreviewPanel } from './TscnPreviewPanel';
-import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } from './test-setup';
+import { createMockUri, createMockFileData, type MockWebview } from './test-setup';
+import { openReadyPreviewPanel, settle } from './previewPanel.testkit';
 
 const FIRST_TSCN = '[gd_scene format=3]\n[node name="First" type="Node3D"]';
 const STALE_TSCN = '[gd_scene format=3]\n[node name="Stale" type="Node3D"]';
@@ -46,25 +46,10 @@ function postedScenes(webview: MockWebview): string[] {
     .map((m) => m.content as string);
 }
 
-const settle = (): Promise<void> => new Promise<void>((r) => setTimeout(r, 10));
-
-async function createReadyPanel(
-  triggerMessage: (msg: unknown) => void,
-  resource = createMockUri('/workspace/scene.tscn')
-): Promise<TscnPreviewPanel> {
-  (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(FIRST_TSCN));
-  const panel = TscnPreviewPanel.create(createMockUri('/extension'), resource);
-  await settle();
-  triggerMessage({ type: 'webviewReady' });
-  await settle();
-  return panel;
-}
-
 describe('TscnPreviewPanel overlapping scene reads', () => {
   it('posts only the latest read when an earlier read finishes after it', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
+    const { webview, panel } = await openReadyPreviewPanel(FIRST_TSCN);
     const resource = createMockUri('/workspace/scene.tscn');
-    const panel = await createReadyPanel(triggerMessage, resource);
     webview.postMessage.mockClear();
     const [staleRead, latestRead] = queueTwoReads();
 
@@ -79,9 +64,8 @@ describe('TscnPreviewPanel overlapping scene reads', () => {
   });
 
   it('keeps the latest text for the ready replay after a stale read finishes', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
+    const { webview, triggerMessage, panel } = await openReadyPreviewPanel(FIRST_TSCN);
     const resource = createMockUri('/workspace/scene.tscn');
-    const panel = await createReadyPanel(triggerMessage, resource);
     const [staleRead, latestRead] = queueTwoReads();
 
     panel.update(resource);
@@ -97,9 +81,8 @@ describe('TscnPreviewPanel overlapping scene reads', () => {
   });
 
   it('raises no error for a superseded read that fails after the latest read succeeds', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
+    const { webview, panel } = await openReadyPreviewPanel(FIRST_TSCN);
     const resource = createMockUri('/workspace/scene.tscn');
-    const panel = await createReadyPanel(triggerMessage, resource);
     webview.postMessage.mockClear();
     const showError = vscode.window.showErrorMessage as Mock;
     showError.mockClear();
@@ -117,9 +100,8 @@ describe('TscnPreviewPanel overlapping scene reads', () => {
   });
 
   it('drops the previous document read when update() switches documents mid-read', async () => {
-    const { webview, triggerMessage } = setupMockPanel();
+    const { webview, panel } = await openReadyPreviewPanel(FIRST_TSCN);
     const resource = createMockUri('/workspace/scene.tscn');
-    const panel = await createReadyPanel(triggerMessage, resource);
     webview.postMessage.mockClear();
     const [oldDocumentRead, newDocumentRead] = queueTwoReads();
 

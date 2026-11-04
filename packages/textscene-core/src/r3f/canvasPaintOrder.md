@@ -22,7 +22,7 @@ that follow it.
 three orders transparent meshes by `groupOrder`, then `renderOrder`
 (`three/src/renderers/webgl/WebGLRenderLists.js`), and every 2D material here writes no depth.
 `groupOrder` is the `renderOrder` of the nearest enclosing `Group`
-(`WebGLRenderer.js:1838-1840`). So an item's wrapper group carries this key, and the meshes
+(r187 `WebGLRenderer.js:1881-1883`). So an item's wrapper group carries this key, and the meshes
 inside it keep a small `renderOrder` for private layering.
 
 ## Ranges

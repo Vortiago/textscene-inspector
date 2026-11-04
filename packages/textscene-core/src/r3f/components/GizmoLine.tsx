@@ -76,7 +76,7 @@ export function GizmoLine({
   }, [positions, colors]);
   useDisposeOnRelease(geometry);
   const hasColors = colors !== undefined;
-  // `vertexColors` is a program input (`WebGLPrograms.js:308`), and a gizmo that
+  // `vertexColors` is a program input (r187 `WebGLPrograms.js:319`), and a gizmo that
   // gains or loses its colour attribute would otherwise keep the first program.
   const program = useMemo(
     () =>

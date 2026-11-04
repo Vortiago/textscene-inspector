@@ -2,7 +2,8 @@
  * `materialProgramInputs()`: the key and the merged props from the same bag. A
  * material compiled before its texture resolved samples nothing for life, while
  * `map` reads back fine. `materialFactoryConformance.test.ts` gates the source and
- * `nodes/2d/polygon2d/Component.texture.test.tsx` drives a late texture end to end.
+ * `nodes/2d/polygon2d/Component.texture.test.tsx` drives a late texture end to end. A bare
+ * `:NNN` cites three 0.187.0's `WebGLPrograms.js`.
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -86,7 +87,7 @@ describe('materialProgramInputs', () => {
   });
 
   it('separates two defines that differ only in VALUE', () => {
-    // `WebGLPrograms.js:415-420` pushes each define's name and its value.
+    // `WebGLPrograms.js:426-433` pushes each define's name and its value.
     expect(keyOf({ defines: { STEPS: '4' } })).not.toBe(keyOf({ defines: { STEPS: '8' } }));
   });
 
@@ -104,12 +105,12 @@ describe('materialProgramInputs', () => {
 
   describe('the parameters three bakes', () => {
     const cases: [name: string, changed: object][] = [
-      // The `opaque` composite, `WebGLPrograms.js:262`, one term at a time.
+      // The `opaque` composite, `WebGLPrograms.js:272`, one term at a time.
       ['transparent', { transparent: true }],
       ['blending, on an opaque material', { blending: THREE.CustomBlending }],
-      // Both a term of `opaque` and a parameter of its own (`:213`, layer `:589`).
+      // Both a term of `opaque` and a parameter of its own (`:218`, layer `:611`).
       ['alphaToCoverage', { alphaToCoverage: true }],
-      // `:172` `HAS_ALPHAHASH`, published at `:266`, layer `:530`.
+      // `:175` `HAS_ALPHAHASH`, published at `:276`, layer `:547`.
       ['alphaHash', { alphaHash: true }],
       ['side', { side: THREE.DoubleSide }],
       ['vertexColors', { vertexColors: true }],
@@ -117,16 +118,15 @@ describe('materialProgramInputs', () => {
       ['combine', { combine: THREE.MixOperation }],
       ['dithering', { dithering: true }],
       ['the material fog flag', { fog: true }],
-      // The physical features, each a `> 0` boolean at `:140-145` and a layer
-      // bit of its own (`:509`, `:511`, `:527`, `:533`, `:577`, `:579`).
+      // The physical features, each a layer bit of its own (`PHYSICAL_FEATURES`).
       ['clearcoat', { clearcoat: 0.5 }],
       ['sheen', { sheen: 0.5 }],
       ['anisotropy', { anisotropy: 0.5 }],
       ['transmission', { transmission: 0.5 }],
       ['iridescence', { iridescence: 0.5 }],
       ['dispersion', { dispersion: 0.5 }],
-      // three 0.186.0 `WebGLPrograms.js:143`, layer bit 24 at `:541-542`.
       ['retroreflectivity', { retroreflectivity: 0.5 }],
+      ['diffuseRoughness', { diffuseRoughness: 0.5 }],
       ['flatShading', { flatShading: true }],
     ];
 
@@ -136,7 +136,7 @@ describe('materialProgramInputs', () => {
       });
 
     it('separates BackSide from FrontSide as well as DoubleSide', () => {
-      // `doubleSided` and `flipSided` are two independent layers (`:569`, `:570`).
+      // `doubleSided` and `flipSided` are two independent layers (`:591`, `:593`).
       expect(keyOf({ side: THREE.BackSide })).not.toBe(keyOf({ side: THREE.FrontSide }));
       expect(keyOf({ side: THREE.BackSide })).not.toBe(keyOf({ side: THREE.DoubleSide }));
     });
@@ -149,13 +149,13 @@ describe('materialProgramInputs', () => {
     });
 
     it('keys flatShading only while the material is not wireframe', () => {
-      // `:317`: `material.wireframe === false && material.flatShading === true`.
+      // `:328`: `material.wireframe === false && material.flatShading === true`.
       expect(keyOf({ flatShading: true, wireframe: true })).toBe(keyOf({ wireframe: true }));
     });
 
     it('keys anisotropyMap only once anisotropy has crossed zero', () => {
-      // `:147` gates the slot on `HAS_ANISOTROPY`, and only `MeshPhysicalMaterial`
-      // declares `anisotropy` (`MeshPhysicalMaterial.js:353`), so on any other
+      // `:149` gates the slot on `HAS_ANISOTROPY`, and only `MeshPhysicalMaterial`
+      // declares `anisotropy` (`MeshPhysicalMaterial.js:379`), so on any other
       // material the flowmap is not a program input.
       const flowmap = texture(THREE.NoColorSpace);
       expect(keyOf({ anisotropyMap: flowmap })).toBe(keyOf({}));
@@ -163,8 +163,8 @@ describe('materialProgramInputs', () => {
     });
 
     it('keys alphaHash even though its neighbour alphaTest is exempt', () => {
-      // `Material.js:134` declares `alphaHash` as a plain field with no setter, so
-      // the exemption `alphaTest` earns at `:494-502` does not transfer.
+      // `Material.js:135` declares `alphaHash` as a plain field with no setter, so
+      // the exemption `alphaTest` earns at `:495-503` does not transfer.
       expect(keyOf({ alphaHash: true })).not.toBe(keyOf({ alphaHash: false }));
       expect(keyOf({ alphaHash: false })).toBe(keyOf({}));
     });
@@ -172,14 +172,14 @@ describe('materialProgramInputs', () => {
 
   describe('the parameters three does NOT bake into a key', () => {
     it('leaves alphaTest alone — the setter bumps version on the zero crossing', () => {
-      // `Material.js:494-502`: `alphaTest` is a program input that re-derives
+      // `Material.js:495-503`: `alphaTest` is a program input that re-derives
       // itself, so a remount would waste the program three rebuilds anyway.
       expect(keyOf({ alphaTest: 0.5 })).toBe(keyOf({ alphaTest: 0 }));
     });
 
     it('leaves blending alone once the material is already transparent', () => {
       // `blending`'s only reference in `WebGLPrograms` is inside `opaque`
-      // (`:262`), which `transparent: true` has already decided. A canvas item
+      // (`:272`), which `transparent: true` has already decided. A canvas item
       // edited between MIX and ADD is per-draw GL state, not a new program.
       const transparent = { transparent: true };
       expect(keyOf({ ...transparent, blending: THREE.CustomBlending })).toBe(
@@ -196,13 +196,13 @@ describe('materialProgramInputs', () => {
 
     it('leaves wireframe alone on a material with no bumpMap and no flatShading', () => {
       // `wireframe` reaches a program only through `HAS_BUMPMAP` (`:132`) and
-      // `flatShading` (`:317`), neither of which a flat canvas material has.
+      // `flatShading` (`:328`), neither of which a flat canvas material has.
       expect(keyOf({ wireframe: true })).toBe(keyOf({ wireframe: false }));
     });
 
     it('leaves clippingPlanes alone — `setProgram` re-checks the plane count', () => {
-      // `numClippingPlanes` is a program parameter (`:354`), but
-      // `WebGLRenderer.js:2456-2458` compares it every draw and rebuilds, so a
+      // `numClippingPlanes` is a program parameter (`:367`), but
+      // `WebGLRenderer.js:2516-2518` compares it every draw and rebuilds, so a
       // Control moving in or out of a clipped ancestor self-heals.
       const plane = new THREE.Plane();
       expect(keyOf({ clippingPlanes: [plane] })).toBe(keyOf({ clippingPlanes: [] }));

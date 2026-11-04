@@ -1,7 +1,7 @@
 /**
  * The values every fog program and the background read. Each is one object, so every material's
  * uniform clone reads it: `cloneUniforms`
- * passes a typed array by reference and clones a texture (three r186 `UniformsUtils.js:28-39`).
+ * passes a typed array by reference and clones a texture (three r187 `UniformsUtils.js:28-39`).
  */
 
 import * as THREE from 'three';
@@ -12,7 +12,7 @@ import { installedUniformValue } from '../shaderPatch/litUniform.js';
 /**
  * The volume the fog pass integrates into. It is no render target's texture in three's eyes, so it
  * reaches each material's clone. Until a pass draws it, three binds its empty 3D texture in its
- * place (`WebGLState.js:952`).
+ * place (r187 `WebGLState.js:953`).
  */
 class FogVolumeTexture extends sharedTexture(THREE.Data3DTexture) {
   constructor() {

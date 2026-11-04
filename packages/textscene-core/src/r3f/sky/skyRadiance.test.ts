@@ -64,13 +64,13 @@ describe('SkyRadiance', () => {
     expect(recording.uploads()).toBe(bakedUploads);
   });
 
-  it("shows the sky's share of the ambient, its border size, its derivative scale and its last mip", async () => {
+  it("shows the sky's share of the ambient, its border size, and its derivative scale", async () => {
     const { renderer } = await testRenderer();
 
     radianceOf(renderer, 256).show(0.25, true, 1);
 
     // One over `4 * pixel_size * pixel_size` at a pixel size of 1/256.
-    expect(Array.from(shownSky.subarray(0, 4))).toEqual([0.25, Math.fround(0.8), 256 ** 2 / 4, 6]);
+    expect(Array.from(shownSky.subarray(0, 3))).toEqual([0.25, Math.fround(0.8), 256 ** 2 / 4]);
   });
 
   it('shows the layout of the sky shown last (edge case)', async () => {
@@ -79,7 +79,7 @@ describe('SkyRadiance', () => {
 
     radianceOf(renderer, 32).show(1, true, 1);
 
-    expect([shownSky[2], shownSky[3]]).toEqual([32 ** 2 / 4, 3]);
+    expect(shownSky[2]).toBe(32 ** 2 / 4);
   });
 
   it('leaves the readers sampling none of its array when hidden, as it is freed next (error case)', async () => {

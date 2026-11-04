@@ -1,6 +1,6 @@
 /**
  * Frees a shadow map three no longer renders. three builds a light's map when it has none
- * (r186 `WebGLShadowMap.js:203`), and resizes it when `mapSize` × `getFrameExtents()` changes
+ * (r187 `WebGLShadowMap.js:203`), and resizes it when `mapSize` × `getFrameExtents()` changes
  * (`:281-285`). A light hidden from the render keeps its map until something frees it.
  */
 

@@ -33,7 +33,7 @@ const PNG_WIDTH_OFFSET = 16;
 const PNG_HEIGHT_OFFSET = 20;
 
 /**
- * Three's error for a canvas with no WebGL 2 context (`WebGLRenderer.js`, three 0.186), which
+ * Three's error for a canvas with no WebGL 2 context (`WebGLRenderer.js`, three 0.187), which
  * R3F rethrows in render for the viewport's boundary to catch.
  */
 const NO_WEBGL_REASON = 'The viewport crashed: THREE.WebGLRenderer: Error creating WebGL context.';

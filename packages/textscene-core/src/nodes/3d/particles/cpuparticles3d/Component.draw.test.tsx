@@ -59,7 +59,7 @@ describe('<CPUParticles3D> draw', () => {
     expect(Array.from(colors.array.slice(0, 4))).toEqual([1, 0.5, 0, 1]);
   });
 
-  // three frees a disposed InstancedMesh's matrices (`WebGLObjects.js:78`), which the draw kept reads.
+  // three frees a disposed InstancedMesh's matrices (r187 `WebGLObjects.js:78`), which the draw kept reads.
   it('gives a removed overlay its own matrices back, so its dispose frees none the draw reads', async () => {
     const renderer = await render({ ...ROW_OF_FOUR, material_overlay: 'SubResource("Overlay")' });
     const [drawn, overlay] = renderer.scene

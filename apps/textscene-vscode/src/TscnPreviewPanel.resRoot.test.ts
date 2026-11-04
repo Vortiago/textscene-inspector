@@ -8,12 +8,11 @@ import { describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
 import { forgetProjectFiles } from './resRoot';
-import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } from './test-setup';
+import { createMockUri, type MockWebview } from './test-setup';
+import { openReadyPreviewPanel, settle } from './previewPanel.testkit';
 
 const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
 const SCENE = '/workspace/game/scene.tscn';
-
-const settle = (): Promise<void> => new Promise<void>((r) => setTimeout(r, 10));
 
 /** Finds `project.godot` in exactly these directories. Every other file exists. */
 function projectFilesIn(...dirs: string[]): void {
@@ -26,20 +25,17 @@ function projectFilesIn(...dirs: string[]): void {
 }
 
 /** A ready panel on `SCENE` that has served `res://textures/wood.png`. */
-async function createPanelServingTexture(triggerMessage: (msg: unknown) => void): Promise<TscnPreviewPanel> {
-  (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
+async function openPanelServingTexture() {
   (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({ uri: createMockUri('/workspace') });
-  const panel = TscnPreviewPanel.create(createMockUri('/extension'), createMockUri(SCENE));
-  await settle();
-  triggerMessage({ type: 'webviewReady' });
-  triggerMessage({
+  const opened = await openReadyPreviewPanel(MINIMAL_TSCN, SCENE);
+  opened.triggerMessage({
     type: 'loadResource',
     path: 'res://textures/wood.png',
     resourceType: 'Texture2D',
     requestId: 'r1',
   });
   await settle();
-  return panel;
+  return opened;
 }
 
 /** A `project.godot` event as the extension relays it: its own listener forgets the shared answers first. */
@@ -67,8 +63,7 @@ async function fsPathOfNextLoad(triggerMessage: (msg: unknown) => void, resPath:
 describe('TscnPreviewPanel res:// root', () => {
   it("reads a loose scene's res:// path under the scene's own directory, not the workspace root", async () => {
     projectFilesIn();
-    const { triggerMessage } = setupMockPanel();
-    await createPanelServingTexture(triggerMessage);
+    const { triggerMessage } = await openPanelServingTexture();
 
     expect(await fsPathOfNextLoad(triggerMessage, 'res://textures/wood.png')).toBe(
       '/workspace/game/textures/wood.png'
@@ -77,8 +72,7 @@ describe('TscnPreviewPanel res:// root', () => {
 
   it('re-fetches every served resource under a project.godot created above a loose scene', async () => {
     projectFilesIn();
-    const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createPanelServingTexture(triggerMessage);
+    const { webview, triggerMessage, panel } = await openPanelServingTexture();
     projectFilesIn('/workspace');
 
     await projectFileEvent(panel, '/workspace/project.godot');
@@ -91,8 +85,7 @@ describe('TscnPreviewPanel res:// root', () => {
 
   it("falls back to the scene's own directory once the project.godot is deleted", async () => {
     projectFilesIn('/workspace');
-    const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createPanelServingTexture(triggerMessage);
+    const { webview, triggerMessage, panel } = await openPanelServingTexture();
     projectFilesIn();
 
     await projectFileEvent(panel, '/workspace/project.godot');
@@ -105,8 +98,7 @@ describe('TscnPreviewPanel res:// root', () => {
 
   it('keeps the provider and re-fetches nothing for a project.godot that moves no root', async () => {
     projectFilesIn('/workspace/game');
-    const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createPanelServingTexture(triggerMessage);
+    const { webview, triggerMessage, panel } = await openPanelServingTexture();
     projectFilesIn('/workspace/game', '/workspace/other');
 
     await projectFileEvent(panel, '/workspace/other/project.godot');
@@ -119,8 +111,7 @@ describe('TscnPreviewPanel res:// root', () => {
 
   it('treats a file only named like project.godot as an ordinary dependency', async () => {
     projectFilesIn();
-    const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createPanelServingTexture(triggerMessage);
+    const { webview, panel } = await openPanelServingTexture();
     projectFilesIn('/workspace/game');
 
     await panel.handleDependencyChange(createMockUri('/workspace/game/project.godot.bak'));

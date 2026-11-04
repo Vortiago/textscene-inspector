@@ -33,7 +33,7 @@ export function Compositor() {
   return <SubscriberStep step="Compositor" priority={COMPOSITOR_PRIORITY} />;
 }
 
-/** The canvas's size in device pixels, floored as three floors its drawing buffer (`WebGLRenderer.js:711`). */
+/** The canvas's size in device pixels, floored as three floors its drawing buffer (r187 `WebGLRenderer.js:713`). */
 function useDrawingBufferSize(): { width: number; height: number } {
   const size = useThree((state) => state.size);
   const dpr = useThree((state) => state.viewport.dpr);

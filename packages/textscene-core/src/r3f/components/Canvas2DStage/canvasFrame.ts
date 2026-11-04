@@ -31,7 +31,7 @@ function copyToTarget(
 
 /**
  * RGBA8 storage under an sRGB tag. Taking output like the drawing buffer, three encodes each
- * fragment to the tag's space (`WebGLPrograms.js:213`), so the frame holds what the drawing buffer
+ * fragment to the tag's space (r187 `WebGLPrograms.js:217`), so the frame holds what the drawing buffer
  * would hold and items blend in the same space. The default sRGB format, SRGB8_ALPHA8, would blend
  * in linear.
  */

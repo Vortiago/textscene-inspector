@@ -1,5 +1,5 @@
 /**
- * An `UploadRenderer` that keeps three 0.186's texture cache: one GPU storage per
+ * An `UploadRenderer` that keeps three r187's texture cache: one GPU storage per
  * source and cache key, shared by every texture bound to it, and freed when the
  * last of them is disposed (`WebGLTextures.initTexture`, `deallocateTexture`). It
  * records which rows each storage holds, so a test can ask what a drawn texture

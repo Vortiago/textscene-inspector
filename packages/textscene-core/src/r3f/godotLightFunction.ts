@@ -2,7 +2,7 @@
  * Godot's light function in three's physical lighting chunks: Godot's diffuse in the material's
  * `diffuse_mode` and Godot's GGX specular, both on Godot's limited roughness. Godot adds a diffuse
  * with no Fresnel weight (Godot 4.6.3 `scene_forward_lights_inc.glsl:215` and
- * `scene_forward_clustered.glsl:2165`), where three r186 weights it by what the specular reflects.
+ * `scene_forward_clustered.glsl:2165`), where three weights it by what the specular reflects.
  */
 
 import { editedShader, installChunkEdits, type ChunkEdit, type TextEdit } from './shaderPatch/chunkPatch.js';
@@ -40,7 +40,7 @@ vec3 godotDndv = dFdy( normal );
 
 /**
  * The roughness Godot's light functions and sky reflection read: the limiter at its project
- * defaults, with no floor. three's own `material.roughness` floors at 0.0525 and stays for the
+ * defaults, with no floor. three's own `material.roughness` keeps three's floor and stays for the
  * terms the patches leave to three. Godot snaps a roughness below 1e-8 to 0, where GGX would
  * divide by a collapsed alpha (`scene_forward_clustered.glsl:1667-1671`).
  */
@@ -271,8 +271,7 @@ const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
   },
   {
     chunk: CHUNK,
-    three:
-      'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - F );',
+    three: 'reflectedLight.directDiffuse += irradiance * diffuseBRDF * ( 1.0 - F );',
     godot: DIRECT_DIFFUSE,
   },
   {

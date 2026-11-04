@@ -1,7 +1,7 @@
 /**
  * The layers of the instance each draw belongs to, for the masks that test them: the reflection
  * probes' and the decals' (`instanceLayersChunk.ts`). three uploads a material's uniforms only when
- * the material or the program changes (r186 `WebGLRenderer.js:2572-2577`), so a draw that changes
+ * the material or the program changes (r187 `WebGLRenderer.js:2596-2601`), so a draw that changes
  * the layers has it upload them again.
  */
 
@@ -42,8 +42,8 @@ export function restoreInstanceLayers(): void {
 }
 
 /**
- * Setting the target it already draws to clears the renderer's current material (r186
- * `WebGLRenderer.js:3099`), so the next draw uploads its material's uniforms.
+ * Setting the target it already draws to clears the renderer's current material (r187
+ * `WebGLRenderer.js:3125`), so the next draw uploads its material's uniforms.
  */
 function uploadAgain(renderer: THREE.WebGLRenderer): void {
   renderer.setRenderTarget(

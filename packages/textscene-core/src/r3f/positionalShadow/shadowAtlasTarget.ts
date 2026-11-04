@@ -95,7 +95,7 @@ function fitToHolders(): void {
  * Points `shadow` at `slot` of the atlas, and writes the slot's rectangle, in units of the slot as
  * three gives a viewport, into `slotRect`. `mapSize` is the slot and the frame extents are the atlas
  * over the slot, so three asks for the atlas's own size and never resizes it
- * (`WebGLShadowMap.js:172-176`, `:281-285`, `:345-350`).
+ * (r187 `WebGLShadowMap.js:172-176`, `:281-285`, `:347-352`).
  */
 export function drawIntoAtlasSlot(
   shadow: THREE.LightShadow & LightShadowInternals,
