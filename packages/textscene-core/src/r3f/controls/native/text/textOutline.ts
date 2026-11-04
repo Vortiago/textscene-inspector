@@ -16,7 +16,8 @@ function outlineRadiusPx(outlineSizePx: number): number {
 /**
  * The canvas stroke width for that radius: a canvas stroke is centred on the
  * path, like `FT_Glyph_Stroke`'s both-borders annulus (`text_server_adv.cpp:
- * 1392`). `0` when Godot skips the outline pass (`label_3d.cpp:610`, `button.cpp:460`: a size above 0 and a non-zero alpha).
+ * 1392`). `0` for a size of 0 or less, where Godot skips the outline pass (`label_3d.cpp:610`,
+ * `button.cpp:460`). The caller checks the alpha half of that gate.
  */
 export function outlineStrokeWidthPx(outlineSizePx: number): number {
   if (outlineSizePx <= 0) return 0;
