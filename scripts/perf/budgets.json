@@ -158,14 +158,14 @@
     }
   },
   "demo-2d-lights-and-shadows": {
-    "drawCalls": 42,
+    "drawCalls": 46,
     "steps": {
       "2D lights": {
         "drawCalls": 10,
         "runs": 1
       },
       "Scene draw": {
-        "drawCalls": 31,
+        "drawCalls": 35,
         "runs": 1
       },
       "Canvas copy": {
