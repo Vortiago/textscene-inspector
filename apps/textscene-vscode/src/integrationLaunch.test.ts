@@ -14,6 +14,7 @@ import {
   gpuLaunch,
   integrationLaunchOptions,
   integrationLaunchPaths,
+  editorBuild,
   launchIntegrationTests,
   SUITE_STARTED_MARKER_ENV,
   vscodeTestVersion,
@@ -110,6 +111,19 @@ describe('vscodeTestVersion', () => {
     expect(() => vscodeTestVersion('min', '>=1.85.0 <2.0.0')).toThrow(
       'expected engines.vscode as ^major.minor.patch, got >=1.85.0 <2.0.0'
     );
+  });
+});
+
+describe('editorBuild', () => {
+  it('downloads the named VS Code version when no editor executable is given', () => {
+    expect(editorBuild(undefined, '1.105.0')).toEqual({ version: '1.105.0' });
+    expect(editorBuild('', '1.105.0')).toEqual({ version: '1.105.0' });
+  });
+
+  it('runs a VS Code fork from its executable and downloads nothing', () => {
+    expect(editorBuild('/opt/codium/codium', '1.105.0')).toEqual({
+      vscodeExecutablePath: '/opt/codium/codium',
+    });
   });
 });
 

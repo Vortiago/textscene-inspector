@@ -23,6 +23,12 @@ export const DISABLE_GPU_ENV = 'TEXTSCENE_DISABLE_GPU';
 export const VSCODE_VERSION_ENV = 'TEXTSCENE_VSCODE_VERSION';
 
 /**
+ * The variable that names the executable of a VS Code fork, such as VSCodium or Cursor.
+ * With it set, the suite runs on that editor and downloads no VS Code.
+ */
+export const EDITOR_EXECUTABLE_ENV = 'TEXTSCENE_EDITOR_EXECUTABLE';
+
+/**
  * The value of `VSCODE_VERSION_ENV` that names the oldest VS Code the manifest
  * accepts, so CI tests the `engines.vscode` floor without repeating its number.
  */
@@ -39,6 +45,14 @@ export function vscodeTestVersion(requested: string | undefined, enginesRange: s
   const floor = /^\^(\d+\.\d+\.\d+)$/.exec(enginesRange)?.[1];
   if (!floor) throw new Error(`expected engines.vscode as ^major.minor.patch, got ${enginesRange}`);
   return floor;
+}
+
+/** What `runTests` runs on: a fork's own executable, or a VS Code version it downloads. */
+export function editorBuild(
+  editorExecutable: string | undefined,
+  version: string
+): { vscodeExecutablePath: string } | { version: string } {
+  return editorExecutable ? { vscodeExecutablePath: editorExecutable } : { version };
 }
 
 /** The subset of `@vscode/test-electron`'s options this runner supplies. */

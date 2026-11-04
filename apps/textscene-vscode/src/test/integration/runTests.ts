@@ -7,6 +7,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { runTests } from '@vscode/test-electron';
 import {
+  EDITOR_EXECUTABLE_ENV,
+  editorBuild,
   integrationLaunchPaths,
   launchIntegrationTests,
   VSCODE_VERSION_ENV,
@@ -26,12 +28,14 @@ async function main() {
   console.log('Test Workspace:', paths.workspaceRoot);
   console.log('User Data Dir:', paths.userDataDir);
   console.log('VS Code Version:', version);
+  console.log('Editor executable:', process.env[EDITOR_EXECUTABLE_ENV] ?? 'downloaded VS Code');
 
   try {
     await launchIntegrationTests({
       paths,
       prepareWorkspace: setupTestWorkspace,
-      launch: (options) => runTests({ ...options, version }),
+      launch: (options) =>
+        runTests({ ...options, ...editorBuild(process.env[EDITOR_EXECUTABLE_ENV], version) }),
     });
     // An aborted VS Code download leaves its `tar` children alive, and they hold the event
     // loop open after the suite passes until CI cancels the job.
