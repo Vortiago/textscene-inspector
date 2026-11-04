@@ -20,14 +20,14 @@ function rangeFloor(range: string): string | null {
 
 describe('rangeFloor', () => {
   it('reads the floor of a caret, a tilde and a bare version', () => {
-    expect(rangeFloor('^1.85.0')).toBe('1.85');
-    expect(rangeFloor('~1.85.3')).toBe('1.85');
+    expect(rangeFloor('^1.105.0')).toBe('1.105');
+    expect(rangeFloor('~1.105.3')).toBe('1.105');
     expect(rangeFloor('1.138.0')).toBe('1.138');
   });
 
   it('refuses a range whose floor it cannot read', () => {
     expect(rangeFloor('*')).toBeNull();
-    expect(rangeFloor('>=1.85.0 <2')).toBeNull();
+    expect(rangeFloor('>=1.105.0 <2')).toBeNull();
     expect(rangeFloor('catalog:')).toBeNull();
   });
 });
