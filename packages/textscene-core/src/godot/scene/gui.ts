@@ -91,7 +91,7 @@ export const ItemListIconMode = {
 export const ITEM_LIST_ICON_MODE_NAMES = enumNamesByValue(ItemListIconMode);
 
 /** `ItemList::ScrollHintMode` (`item_list.h:54-57`), in declaration order. */
-const ItemListScrollHintMode = {
+export const ItemListScrollHintMode = {
   SCROLL_HINT_MODE_DISABLED: 0,
   SCROLL_HINT_MODE_BOTH: 1,
   SCROLL_HINT_MODE_TOP: 2,

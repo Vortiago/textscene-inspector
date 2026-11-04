@@ -19,8 +19,11 @@ import {
   itemIconDraw,
   itemIconPackedSize,
   itemListGuideColor,
+  itemListDrawClip,
   itemListGuideLines,
   itemListMirrorX,
+  itemListRowsInClip,
+  itemListSeparatorsInClip,
   itemListMaxColumnWidth,
   itemListRowTextX,
   itemListLineTextWidthPx,
@@ -34,6 +37,7 @@ import {
 } from './nativeSolver';
 import { ItemListIconMode } from '../../../../godot/scene/gui';
 import type { Vector2 } from '../../../../godot/math/vector';
+import type { ItemListScrollRange } from './nativeSolver';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 
 const itemListMinimumSize = controlSolverRegistry.minimumSize('ItemList')!;
@@ -518,6 +522,26 @@ describe('itemMinimumSize', () => {
   });
 });
 
+/** The default theme's vertical scrollbar minimum width (`scrollBarMinimumSize(true, theme).x`). */
+const VERTICAL_BAR_MIN_WIDTH = 8;
+
+function packInput(overrides: Partial<Parameters<typeof packItemListRows>[0]>) {
+  return {
+    itemSizes: [],
+    maxColumnWidth: 0,
+    sameColumnWidth: false,
+    maxColumns: 1,
+    fitSize: Number.POSITIVE_INFINITY,
+    verticalBarMinWidth: VERTICAL_BAR_MIN_WIDTH,
+    rtl: false,
+    wraparoundItems: true,
+    autoWidth: false,
+    hSeparation: 4,
+    availableHeight: Number.POSITIVE_INFINITY,
+    ...overrides,
+  };
+}
+
 describe('packItemListRows', () => {
   const FOUR_ITEMS: Vector2[] = [
     { x: 20, y: 10 },
@@ -533,6 +557,8 @@ describe('packItemListRows', () => {
       sameColumnWidth: false,
       maxColumns: 2,
       fitSize: Number.POSITIVE_INFINITY,
+      verticalBarMinWidth: VERTICAL_BAR_MIN_WIDTH,
+      rtl: false,
       wraparoundItems: true,
       autoWidth: false,
       hSeparation: 4,
@@ -556,6 +582,8 @@ describe('packItemListRows', () => {
       sameColumnWidth: false,
       maxColumns: 0,
       fitSize: 25, // fits exactly one 20-wide item, not two
+      verticalBarMinWidth: VERTICAL_BAR_MIN_WIDTH,
+      rtl: false,
       wraparoundItems: true,
       autoWidth: false,
       hSeparation: 4,
@@ -573,6 +601,8 @@ describe('packItemListRows', () => {
       sameColumnWidth: false,
       maxColumns: 0,
       fitSize: 25,
+      verticalBarMinWidth: VERTICAL_BAR_MIN_WIDTH,
+      rtl: false,
       wraparoundItems: true,
       autoWidth: true,
       hSeparation: 4,
@@ -593,6 +623,8 @@ describe('packItemListRows', () => {
       sameColumnWidth: true,
       maxColumns: 2,
       fitSize: Number.POSITIVE_INFINITY,
+      verticalBarMinWidth: VERTICAL_BAR_MIN_WIDTH,
+      rtl: false,
       wraparoundItems: true,
       autoWidth: false,
       hSeparation: 4,
@@ -609,12 +641,64 @@ describe('packItemListRows', () => {
       sameColumnWidth: false,
       maxColumns: 1,
       fitSize: Number.POSITIVE_INFINITY,
+      verticalBarMinWidth: VERTICAL_BAR_MIN_WIDTH,
+      rtl: false,
       wraparoundItems: true,
       autoWidth: false,
       hSeparation: 4,
       availableHeight: 10,
     });
-    expect(result.verticalScrollbarVisible).toBe(true);
+    expect(result.vertical.visible).toBe(true);
+  });
+
+  // item_list.cpp:1854-1885 -- page = 80 less the panel's 8 px of vertical margin.
+  const rows = (count: number): Vector2[] => Array.from({ length: count }, () => ({ x: 40, y: 23 }));
+
+  it('shows the vertical bar for six 23 px rows in an 80 px list (happy path)', () => {
+    const result = packItemListRows(packInput({ itemSizes: rows(6), availableHeight: 72 }));
+    expect(result.vertical).toEqual({ visible: true, min: 0, max: 138, page: 72 });
+  });
+
+  it('hides the vertical bar for three rows in the same list (error path)', () => {
+    const result = packItemListRows(packInput({ itemSizes: rows(3), availableHeight: 72 }));
+    expect(result.vertical).toEqual({ visible: false, min: 0, max: 72, page: 72 });
+  });
+
+  it('shows the horizontal bar only without wraparound_items and with wider content (item_list.cpp:1856-1860)', () => {
+    const wide = { itemSizes: rows(4), maxColumns: 0, fitSize: 100, availableHeight: 72 };
+    const unwrapped = packItemListRows(packInput({ ...wide, wraparoundItems: false }));
+    expect(unwrapped.horizontal).toEqual({ visible: true, min: 0, max: 160, page: 100 });
+    const wrapped = packItemListRows(packInput({ ...wide, wraparoundItems: true }));
+    expect(wrapped.horizontal.visible).toBe(false);
+  });
+
+  it('mirrors the horizontal range under RTL without wraparound_items (item_list.cpp:1891-1893)', () => {
+    const result = packItemListRows(
+      packInput({ itemSizes: rows(4), maxColumns: 0, fitSize: 100, wraparoundItems: false, rtl: true })
+    );
+    expect(result.horizontal).toEqual({ visible: true, min: -60, max: 100, page: 100 });
+  });
+
+  describe('fit_size trim (item_list.cpp:1862-1863)', () => {
+    // Five 40 px items at max_columns 0. The first attempt overflows at 85 px and settles on two
+    // columns; the second attempt then runs at 85 - 8 = 77 px, where two columns no longer fit.
+    const sizes: Vector2[] = Array.from({ length: 5 }, () => ({ x: 40, y: 10 }));
+    const columnsOf = (overrides: Partial<Parameters<typeof packItemListRows>[0]>) =>
+      packItemListRows(packInput({ itemSizes: sizes, maxColumns: 0, fitSize: 85, ...overrides })).items.map(
+        (i) => i.column
+      );
+
+    it('takes the bar width off when the page holds the content', () => {
+      expect(columnsOf({ availableHeight: 100 })).toEqual([0, 0, 0, 0, 0]);
+    });
+
+    it('takes the bar width off under RTL even when the content overflows', () => {
+      expect(columnsOf({ availableHeight: 5, rtl: true })).toEqual([0, 0, 0, 0, 0]);
+    });
+
+    it('keeps fit_size when LTR content overflows the page', () => {
+      expect(columnsOf({ availableHeight: 5 })).toEqual([0, 1, 0, 1, 0]);
+    });
   });
 });
 
@@ -654,18 +738,61 @@ describe('itemListGuideLines', () => {
   // item_list.cpp:1447-1458 -- one hairline per row-packing separator, spanning
   // the panel's own content width, only outside TOP icon mode.
   it('one line per separator, spanning contentWidth, in LEFT icon mode (happy path)', () => {
-    expect(itemListGuideLines(ICON_MODE_LEFT, [24, 48], 100)).toEqual([
-      { y: 24, width: 100 },
-      { y: 48, width: 100 },
+    expect(itemListGuideLines(ICON_MODE_LEFT, [24, 48], 100, 0)).toEqual([
+      { y: 24, width: 100, x: 0 },
+      { y: 48, width: 100, x: 0 },
     ]);
   });
 
+  it('ends before a visible vertical bar, whose width the caller takes off contentWidth (item_list.cpp:1387-1389)', () => {
+    expect(itemListGuideLines(ICON_MODE_LEFT, [24], 92, 0)).toEqual([{ y: 24, width: 92, x: 0 }]);
+  });
+
+  it('starts past a visible vertical bar under RTL (item_list.cpp:1454-1455)', () => {
+    expect(itemListGuideLines(ICON_MODE_LEFT, [24], 92, 8)).toEqual([{ y: 24, width: 92, x: 8 }]);
+  });
+
   it('never draws in TOP icon mode, even with separators (error path)', () => {
-    expect(itemListGuideLines(ItemListIconMode.ICON_MODE_TOP, [24, 48], 100)).toEqual([]);
+    expect(itemListGuideLines(ItemListIconMode.ICON_MODE_TOP, [24, 48], 100, 0)).toEqual([]);
   });
 
   it('no separators means no lines (edge case)', () => {
-    expect(itemListGuideLines(ICON_MODE_LEFT, [], 100)).toEqual([]);
+    expect(itemListGuideLines(ICON_MODE_LEFT, [], 100, 0)).toEqual([]);
+  });
+});
+
+describe('itemListDrawClip and what it keeps (item_list.cpp:1431-1441,1451,1493-1500)', () => {
+  const panelOffset = { x: 4, y: 4 };
+  const fits: ItemListScrollRange = { visible: false, min: 0, max: 0, page: 112 };
+
+  it('is the control size, moved by the panel offset into the content space (happy path)', () => {
+    expect(itemListDrawClip({ x: 120, y: 80 }, panelOffset, fits, true)).toEqual({
+      x: -4,
+      y: -4,
+      w: 120,
+      h: 80,
+    });
+  });
+
+  it('widens by what the horizontal bar scrolls without wraparound_items (edge case)', () => {
+    const scrolls: ItemListScrollRange = { visible: true, min: 0, max: 160, page: 112 };
+    expect(itemListDrawClip({ x: 120, y: 80 }, panelOffset, scrolls, false).w).toBe(168);
+    expect(itemListDrawClip({ x: 120, y: 80 }, panelOffset, scrolls, true).w).toBe(120);
+  });
+
+  it('keeps the rows that reach into the clip and drops the rest, a row that only touches its edge included (error path)', () => {
+    const clip = { x: -4, y: -4, w: 120, h: 80 }; // content space: the list ends at y 76
+    const rows = [
+      { rect: { x: 0, y: 0, w: 100, h: 23 } },
+      { rect: { x: 0, y: 69, w: 100, h: 23 } },
+      { rect: { x: 0, y: 76, w: 100, h: 23 } },
+    ];
+    expect(itemListRowsInClip(rows, clip)).toEqual([rows[0], rows[1]]);
+  });
+
+  it('keeps the separators up to the clip bottom, one on it included', () => {
+    const clip = { x: -4, y: -4, w: 120, h: 80 };
+    expect(itemListSeparatorsInClip([23, 46, 76, 77], clip)).toEqual([23, 46, 76]);
   });
 });
 
@@ -697,6 +824,34 @@ describe('itemListMinimumSize', () => {
   it('contributes zero text size when no measurer is wired, never throwing (edge case)', () => {
     const n = node({ autoWidth: true, autoHeight: true, items: [{ text: 'Sword' }] });
     expect(() => itemListMinimumSize(n, ctx(false))).not.toThrow();
+  });
+
+  describe('scrollbar terms from the tentative rect (item_list.cpp:1883,1903)', () => {
+    const sixRows = Array.from({ length: 6 }, () => ({ text: 'Sword' }));
+    const withRect = (rect: { x: number; y: number; w: number; h: number }): SolveContext => ({
+      ...ctx(),
+      tentativeRect: () => rect,
+    });
+
+    it('auto_width adds the vertical bar width once the list overflows its height', () => {
+      const n = node({ autoWidth: true, items: sixRows });
+      const free = itemListMinimumSize(n, ctx());
+      const overflowing = itemListMinimumSize(n, withRect({ x: 0, y: 0, w: 120, h: 40 }));
+      expect(overflowing.x - free.x).toBe(8);
+    });
+
+    it('auto_width adds nothing while the rows fit the height', () => {
+      const n = node({ autoWidth: true, items: sixRows });
+      const roomy = itemListMinimumSize(n, withRect({ x: 0, y: 0, w: 120, h: 400 }));
+      expect(roomy.x).toBe(itemListMinimumSize(n, ctx()).x);
+    });
+
+    it('auto_height adds the horizontal bar height when wraparound_items is off and the rows are wider than the list', () => {
+      const n = node({ autoHeight: true, wraparoundItems: false, maxColumns: 0, items: sixRows });
+      const free = itemListMinimumSize(n, ctx());
+      const narrow = itemListMinimumSize(n, withRect({ x: 0, y: 0, w: 60, h: 100 }));
+      expect(narrow.y - free.y).toBe(8);
+    });
   });
 });
 

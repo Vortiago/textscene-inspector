@@ -140,7 +140,7 @@ export interface ScrollBarPlacement {
  * 24x32 at scale 1. Only the extent across each fade is read (`get_height()` at
  * `scroll_container.cpp:627,636`, `get_width()` at `:643,652`): the other axis is anchored.
  */
-const SCROLL_HINT_VERTICAL_HEIGHT = 24;
+export const SCROLL_HINT_VERTICAL_HEIGHT = 24;
 const SCROLL_HINT_HORIZONTAL_WIDTH = 24;
 
 /** One `scroll_hint_*` TextureRect that `_update_scroll_hints` left visible. */

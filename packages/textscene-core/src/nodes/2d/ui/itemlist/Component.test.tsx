@@ -381,3 +381,52 @@ function ClipProbe({ onPlanes }: { onPlanes: (planes: readonly THREE.Plane[]) =>
   onPlanes(useControlClipPlanes());
   return null;
 }
+
+describe('<ItemList> — scrollbars', () => {
+  const sixRows = Array.from({ length: 6 }, () => ({ text: 'Sword' }));
+  const twoRows = sixRows.slice(0, 2);
+
+  /** A track and a grabber per visible bar, over the panel's own chrome mesh. */
+  const chromeMeshCount = async (properties: Partial<ItemListProperties>) =>
+    findChromeMeshes((await renderList(properties, RECT)).scene).length;
+
+  /** A guide line is the only 1 px tall `<ControlQuad>` of a list without icons. */
+  const guideLineWidths = async (properties: Partial<ItemListProperties>) => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <ItemList {...painterEnv()} solveNode={solveNode(properties)} rect={RECT} renderOrder={0} />
+    );
+    return findIconMeshes(renderer.scene)
+      .map((m) => (m.geometry as unknown as { parameters: { width: number; height: number } }).parameters)
+      .filter((p) => p.height === 1)
+      .map((p) => p.width);
+  };
+
+  it('draws the vertical bar for rows past the list height', async () => {
+    expect(await chromeMeshCount({ items: sixRows })).toBe(3);
+  });
+
+  it('draws no bar while the rows fit', async () => {
+    expect(await chromeMeshCount({ items: twoRows })).toBe(1);
+  });
+
+  it('draws the horizontal bar only without wraparound_items and with wider rows', async () => {
+    const wide = { items: twoRows, maxColumns: 0, fixedColumnWidth: 120 };
+    expect(await chromeMeshCount({ ...wide, wraparoundItems: false })).toBe(3);
+    expect(await chromeMeshCount({ ...wide, wraparoundItems: true })).toBe(1);
+  });
+
+  it('draws only the rows that reach into the list, even with clip_contents = false (item_list.cpp:1493-1500)', async () => {
+    const renderer = await renderList({ items: sixRows, clipContents: false }, RECT);
+    // 100 px less the panel's 8 px holds four 23 px rows and the top of a fifth.
+    const drawn = findTextMeshes(renderer.scene).length;
+    expect(drawn).toBeGreaterThan(0);
+    expect(drawn).toBeLessThan(sixRows.length);
+  });
+
+  it('ends the guide lines before a visible vertical bar', async () => {
+    const withoutBar = await guideLineWidths({ items: twoRows });
+    const withBar = await guideLineWidths({ items: sixRows });
+    expect(withoutBar.length).toBeGreaterThan(0);
+    expect(withBar[0]).toBe(withoutBar[0]! - 8);
+  });
+});

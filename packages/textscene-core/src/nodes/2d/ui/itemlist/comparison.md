@@ -22,6 +22,13 @@ draw pass. A TOP-mode label breaks at the last glyph that fits and shows `max_te
 lines hide, the last visible line ends in an ellipsis, unless `text_overrun_behavior` is
 `OVERRUN_NO_TRIMMING`. The list clips its rows to its rect, unless the scene sets `clip_contents = false`.
 
+The vertical scrollbar shows when the rows are taller than the list. The horizontal scrollbar shows when
+`wraparound_items` is off and the rows are wider. Each grabber sits at the start, since a `.tscn` stores no
+scroll value. A visible vertical scrollbar narrows the guide lines and the label widths. With
+`scroll_hint_mode` BOTH or BOTTOM, a fade covers the bottom edge while rows continue below. The top fade
+never shows, since it needs a scroll value above 1. `auto_width` and `auto_height` add the scrollbar size
+to the minimum size. The list draws only the rows that reach into its rect, also under `clip_contents = false`.
+
 No row is drawn selected, hovered or under a cursor highlight. `selected`, the current
 index and a live hover or focus state are never part of a `.tscn`.
 
@@ -78,8 +85,6 @@ Godot's `ERR_FAIL_COND_V` does before `clear()` runs.
 
 ## Known limitations
 
-- **Not drawn** The scroll-hint icon (`scroll_hint_mode`), which needs a live scroll
-  position that no static file has.
 - **Not drawn** The `focus` StyleBox and every selected, hovered or cursor row
   background, since hover, focus, `selected` and the current index are not `.tscn`
   properties.
@@ -88,8 +93,6 @@ Godot's `ERR_FAIL_COND_V` does before `clear()` runs.
   `PropertyListHelper`-registered leaf.
 - **Approximated** A right-to-left script draws in logical order, since the previewer has
   no bidirectional pass, though every layout branch of `is_layout_rtl()` is ported.
-- **Not drawn** Both scrollbars, along with the row-guide shift and narrower packing that
-  a right-to-left vertical scrollbar causes (`item_list.cpp:1454-1458`, `:1862-1864`).
 - **Needs runtime** The right-to-left arms of `get_item_at_position`
   (`item_list.cpp:1975,1986`) and `is_pos_at_end_of_items` (`:2021-2023`) answer mouse
   hits under a live cursor, which a static preview does not have.

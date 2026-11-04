@@ -1,0 +1,146 @@
+/**
+ * The painter pieces ScrollContainer and ItemList share: one scrollbar (track and grabber) and one
+ * `scroll_hint_*` fade, drawn from a placement a native solver computed.
+ */
+import { useMemo } from 'react';
+import * as THREE from 'three';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
+import {
+  snappedControlOrigin,
+  type ControlDrawTransform,
+} from '../../../../r3f/controls/native/controlPixelSnap';
+import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
+import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { useOptionalIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { SCROLL_HINT_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { applyUvWindow, flippedUvWindow, FULL_UV_WINDOW } from '../../../../r3f/uvWindow';
+import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import type { Rgba } from '../../../../godot/math/math';
+import type { ScrollBarPlacement, ScrollHintPlacement } from '../scrollcontainer/nativeSolver';
+
+/**
+ * `scroll_hint_vertical_color` and `scroll_hint_horizontal_color`: `Color(0, 0, 0)`
+ * (`default_theme.cpp:669-670`), set as the hint's `modulate`
+ * (`scroll_container.cpp:622,631,640,650`). Only the texture's alpha ramp shows.
+ */
+export const SCROLL_HINT_MODULATE = new THREE.Color(0, 0, 0);
+
+/**
+ * A hint draws above what `chromeRenderOrder` names and below both scrollbars
+ * (`scroll_container.cpp:905-924`). A bare `chromeRenderOrder` would tie with
+ * that item, and three would put the fade under an opaque one.
+ */
+const SCROLL_HINT_RENDER_ORDER_OFFSET = 0.125;
+
+/**
+ * One visible `scroll_hint_*` TextureRect, stretched across its rect as one
+ * quad (`scroll_container.cpp:905-912`). `STRETCH_TILE` (`:751-752`) draws the
+ * same pixels, since each gradient is uniform along its tiling axis.
+ */
+export function ScrollHintChrome({
+  hint,
+  color,
+  opacity,
+  chromeRenderOrder,
+}: {
+  hint: ScrollHintPlacement | null;
+  color: THREE.Color;
+  opacity: number;
+  chromeRenderOrder: number;
+}) {
+  const loaded = useOptionalIconTexture(
+    hint === null ? null : hint.vertical ? SCROLL_HINT_ICONS.vertical : SCROLL_HINT_ICONS.horizontal
+  );
+  // `set_flip_h`/`set_flip_v` (`:629-630,647-648`) become a negative UV repeat.
+  // Each hook instance has its own texture, so the two hints never share a flip.
+  const flipH = hint?.flipH === true;
+  const flipV = hint?.flipV === true;
+  // A memo, not an effect: three refreshes `mapTransform` only when the
+  // material changes, so a flip applied after mount never reaches the GPU.
+  const texture = useMemo(() => {
+    if (!loaded) return null;
+    applyUvWindow(loaded, flippedUvWindow(FULL_UV_WINDOW, flipH, flipV));
+    return loaded;
+  }, [loaded, flipH, flipV]);
+
+  if (!hint || !texture) return null;
+  const renderOrder = chromeRenderOrder + SCROLL_HINT_RENDER_ORDER_OFFSET;
+  return (
+    <CanvasItemGroup position={[hint.rect.x, -hint.rect.y, 0]} renderOrder={renderOrder}>
+      <ControlQuad
+        renderOrder={renderOrder}
+        width={hint.rect.w}
+        height={hint.rect.h}
+        color={color}
+        opacity={opacity}
+        map={texture}
+      />
+    </CanvasItemGroup>
+  );
+}
+
+/**
+ * A ScrollBar's `ControlDrawTransform`. `_update_scrollbar_position` places the
+ * bars through `set_anchor_and_offset` alone, so they carry no rotation, scale
+ * or pivot.
+ */
+const SCROLL_BAR_DRAW_TRANSFORM: ControlDrawTransform = {
+  rotation: 0,
+  scale: { x: 1, y: 1 },
+  pivot: { x: 0, y: 0 },
+};
+
+interface ScrollBarChromeProps {
+  bar: ScrollBarPlacement;
+  track: StyleBoxFlatData;
+  grabber: StyleBoxFlatData;
+  /** Raw sRGB, which `<StyleBoxQuad>` composes into `track` and `grabber`. */
+  color: Rgba;
+  /**
+   * The key of the last item the chrome paints over, so it sits at fractions below the next
+   * sibling. ScrollContainer passes `subtreeChromeRenderOrder`: its bars are `INTERNAL_MODE_BACK`
+   * children (`scroll_container.cpp:919,924`) that paint after every descendant. ItemList passes
+   * its own `renderOrder`: its bars are `INTERNAL_MODE_FRONT` children (`item_list.cpp:2472,2476`)
+   * that paint over its rows and under its regular children.
+   */
+  chromeRenderOrder: number;
+  /** The walker's `gui/common/snap_controls_to_pixels`, the only value correct inside a SubViewport. */
+  snapToPixels: boolean;
+}
+
+/**
+ * One scrollbar's track and grabber. Each bar is its own CanvasItem
+ * (`scene/gui/scroll_container.cpp:919,924`), so it snaps through
+ * `snappedControlOrigin` apart from the container, while `bar.rect` stays at
+ * full precision for the reservation arithmetic.
+ */
+export function ScrollBarChrome({
+  bar,
+  track,
+  grabber,
+  color,
+  chromeRenderOrder,
+  snapToPixels,
+}: ScrollBarChromeProps) {
+  if (!bar.visible) return null;
+  const origin = snappedControlOrigin(bar.rect, SCROLL_BAR_DRAW_TRANSFORM, snapToPixels);
+  // A group carries the position. `StyleBoxQuad` takes only the size and flips y.
+  // The grabber is no node (`scene/gui/scroll_bar.cpp:326-344`): it draws
+  // unrounded inside the bar's canvas item and inherits the bar's snap.
+  return (
+    <CanvasItemGroup position={[origin.x, -origin.y, 0]} renderOrder={chromeRenderOrder + 0.25}>
+      <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={chromeRenderOrder + 0.25} />
+      <CanvasItemGroup
+        position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}
+        renderOrder={chromeRenderOrder + 0.5}
+      >
+        <StyleBoxQuad
+          styleBox={grabber}
+          color={color}
+          rect={bar.grabberRect}
+          renderOrder={chromeRenderOrder + 0.5}
+        />
+      </CanvasItemGroup>
+    </CanvasItemGroup>
+  );
+}

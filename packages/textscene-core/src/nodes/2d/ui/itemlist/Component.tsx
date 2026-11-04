@@ -1,7 +1,7 @@
 /**
  * `<ItemList>`, the native (WebGL canvas) painter for `NOTIFICATION_DRAW`
- * (`scene/gui/item_list.cpp:1367-1729`): the panel, the guide lines, then each
- * row's icon and label, limited to what a `.tscn` can show (`nativeSolver.ts`).
+ * (`scene/gui/item_list.cpp:1367-1729`): the panel, the guide lines, each
+ * row's icon and label, the scroll hint, then the scrollbars, limited to what a `.tscn` can show (`nativeSolver.ts`).
  * `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
 import { useMemo } from 'react';
@@ -37,13 +37,16 @@ import {
   itemIconDraw,
   itemIconPackedSize,
   itemListGuideColor,
+  itemListDrawClip,
   itemListGuideLines,
   itemListIconSlotKey,
   itemListLineTextWidthPx,
   itemListMaxColumnWidth,
   itemListMinimumShapeWidthPx,
   itemListMirrorX,
+  itemListRowsInClip,
   itemListRowTextX,
+  itemListSeparatorsInClip,
   itemListSeparation,
   itemListTextTheme,
   itemListWrappedTextWidthPx,
@@ -55,10 +58,20 @@ import {
   pickItemListPanelStyleBox,
   shapeItemListText,
 } from './nativeSolver';
+import { ScrollBarChrome, ScrollHintChrome, SCROLL_HINT_MODULATE } from '../shared/ScrollChrome';
+import { scrollBarMinimumSize } from '../shared/scrollBarSolver';
+import { itemListScrollBars } from './scrollBars';
 import { itemListDrawnLabel, itemListLabelIsDrawn, type DrawnLabelLine } from './labelDraw';
 import type { ItemListItem, ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
+
+/**
+ * `draw_line` without a width is a two-point line: Vulkan lights the pixel within half a pixel of
+ * it, and on a tie the one before it. A 1 px quad centred on the line covers that pixel (ADR-0057;
+ * measured on a guide line, Godot draws it one row above the separator's Y).
+ */
+const GUIDE_LINE_CENTRE_OFFSET_PX = 0.5;
 
 /**
  * Pass 1: this row's own icon/text size contribution: what `packItemListRows` needs, before rects
@@ -161,6 +174,7 @@ export function ItemList({
   rect,
   renderOrder,
   theme,
+  snapToPixels,
   children,
 }: NativeControlComponentProps) {
   const props = painterView<ItemListProperties>(solveNode);
@@ -237,7 +251,8 @@ export function ItemList({
   );
 
   const maxColumnWidth = itemListMaxColumnWidth(itemSizes, hSeparation);
-  const contentWidth = rect.w - panelMargin.x;
+  const pageWidth = rect.w - panelMargin.x;
+  const verticalBarMinWidth = useMemo(() => scrollBarMinimumSize(true, theme).x, [theme]);
 
   const packed = useMemo(
     () =>
@@ -246,7 +261,9 @@ export function ItemList({
         maxColumnWidth,
         sameColumnWidth: props.sameColumnWidth === true,
         maxColumns: props.maxColumns ?? ITEM_LIST_DEFAULT_MAX_COLUMNS,
-        fitSize: contentWidth,
+        fitSize: pageWidth,
+        verticalBarMinWidth,
+        rtl,
         wraparoundItems,
         autoWidth: props.autoWidth === true,
         hSeparation,
@@ -257,7 +274,9 @@ export function ItemList({
       maxColumnWidth,
       props.sameColumnWidth,
       props.maxColumns,
-      contentWidth,
+      pageWidth,
+      verticalBarMinWidth,
+      rtl,
       rect.h,
       panelMargin.y,
       wraparoundItems,
@@ -266,20 +285,56 @@ export function ItemList({
     ]
   );
 
-  const guideLines = useMemo(
-    () => itemListGuideLines(iconMode, packed.separators, contentWidth),
-    [iconMode, packed.separators, contentWidth]
+  // `base_ofs = theme_cache.panel_style->get_offset()` (`item_list.cpp:1429`):
+  // `StyleBox::get_offset()` is `Point2(get_margin(LEFT), get_margin(TOP))`
+  // (`style_box.cpp:87-89`), never `contentMarginSize`'s summed pair.
+  const origin: Vector2 = { x: panelBox.contentMargin.left, y: panelBox.contentMargin.top };
+
+  // The draw `width` (`item_list.cpp:1385-1389`): a visible vertical bar takes its width off.
+  const barWidth = packed.vertical.visible ? verticalBarMinWidth : 0;
+  const contentWidth = pageWidth - barWidth;
+
+  // Only what reaches into the list is drawn, which `clip_contents = false` makes visible.
+  const drawClip = useMemo(
+    () =>
+      itemListDrawClip(
+        { x: rect.w, y: rect.h },
+        { x: origin.x, y: origin.y },
+        packed.horizontal,
+        wraparoundItems
+      ),
+    [rect.w, rect.h, origin.x, origin.y, packed.horizontal, wraparoundItems]
   );
+  const guideLines = useMemo(
+    () =>
+      itemListGuideLines(
+        iconMode,
+        itemListSeparatorsInClip(packed.separators, drawClip),
+        contentWidth,
+        rtl ? barWidth : 0
+      ),
+    [iconMode, packed.separators, drawClip, contentWidth, rtl, barWidth]
+  );
+  const panelMargins = panelBox.contentMargin;
+  const scrollBars = useMemo(
+    () =>
+      itemListScrollBars({
+        size: { x: rect.w, y: rect.h },
+        margins: panelMargins,
+        vertical: packed.vertical,
+        horizontal: packed.horizontal,
+        rtl,
+        theme,
+        scrollHintMode: props.scrollHintMode ?? 0,
+      }),
+    [rect.w, rect.h, panelMargins, packed, rtl, theme, props.scrollHintMode]
+  );
+  const hintColor = useMemo(() => tint.color.clone().multiply(SCROLL_HINT_MODULATE), [tint.color]);
   const guideColorSrgb = useMemo(
     () => tintColor(itemListGuideColor(solveNode), tint.own),
     [solveNode, tint.own]
   );
   const guideColorLinear = useGodotLinearColor(guideColorSrgb);
-
-  // `base_ofs = theme_cache.panel_style->get_offset()` (`item_list.cpp:1429`):
-  // `StyleBox::get_offset()` is `Point2(get_margin(LEFT), get_margin(TOP))`
-  // (`style_box.cpp:87-89`), never `contentMarginSize`'s summed pair.
-  const origin: Vector2 = { x: panelBox.contentMargin.left, y: panelBox.contentMargin.top };
 
   const rowGeometries: RowGeometry[] = useMemo(() => {
     const minimumShapeWidthPx = itemListMinimumShapeWidthPx(fixedColumnWidth);
@@ -382,10 +437,15 @@ export function ItemList({
     rtl,
   ]);
 
+  const visibleRows = useMemo(() => itemListRowsInClip(rowGeometries, drawClip), [rowGeometries, drawClip]);
+
   const rowsAndChildren = (
     <>
       {guideLines.map((line, index) => (
-        <CanvasItemGroup key={`guide-${index}`} position={[origin.x, -(origin.y + line.y), 0]}>
+        <CanvasItemGroup
+          key={`guide-${index}`}
+          position={[origin.x + line.x, -(origin.y + line.y - GUIDE_LINE_CENTRE_OFFSET_PX), 0]}
+        >
           <ControlQuad
             renderOrder={renderOrder}
             width={line.width}
@@ -395,7 +455,7 @@ export function ItemList({
           />
         </CanvasItemGroup>
       ))}
-      {rowGeometries.map((geometry, index) => (
+      {visibleRows.map((geometry, index) => (
         <ItemListRow
           key={index}
           geometry={geometry}
@@ -406,6 +466,28 @@ export function ItemList({
           resources={solveNode.resources}
         />
       ))}
+      <ScrollHintChrome
+        hint={scrollBars.bottomHint}
+        color={hintColor}
+        opacity={tint.opacity}
+        chromeRenderOrder={renderOrder}
+      />
+      <ScrollBarChrome
+        bar={scrollBars.horizontal}
+        track={theme.widgets.scrollBar.scrollHorizontal}
+        grabber={theme.widgets.scrollBar.grabber}
+        color={tint.own}
+        chromeRenderOrder={renderOrder}
+        snapToPixels={snapToPixels}
+      />
+      <ScrollBarChrome
+        bar={scrollBars.vertical}
+        track={theme.widgets.scrollBar.scrollVertical}
+        grabber={theme.widgets.scrollBar.grabber}
+        color={tint.own}
+        chromeRenderOrder={renderOrder}
+        snapToPixels={snapToPixels}
+      />
       {children}
     </>
   );
