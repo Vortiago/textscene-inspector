@@ -20,7 +20,7 @@ import {
   pickLineEditStyleBox,
   resolveLineEditStyleState,
   layoutLineEditContent,
-  lineEditDrawnLine,
+  lineEditDrawnLayout,
 } from '../lineedit/nativeSolver';
 import { resolveRangeValue } from '../shared/range';
 import { SPIN_BOX_ICONS } from './icons';
@@ -100,10 +100,7 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   // The field's LineEdit draws no clip: it drops each glyph that ends past `ofs_max` (`line_edit.cpp:1512-1545`).
   const clippingPlanes = useControlClipPlanes();
   const drawnLayout: TextLayoutResult = useMemo(
-    () => ({
-      ...textLayout,
-      lines: textLayout.lines.map((line) => lineEditDrawnLine(line, content.textOffset.x, content.ofsMaxPx)),
-    }),
+    () => lineEditDrawnLayout(textLayout, content.textOffset.x, content.ofsMaxPx),
     [textLayout, content.textOffset.x, content.ofsMaxPx]
   );
 

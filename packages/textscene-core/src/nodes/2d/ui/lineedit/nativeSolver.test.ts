@@ -18,7 +18,7 @@ import {
   lineEditTextTheme,
   resolveLineEditTextState,
   layoutLineEditContent,
-  lineEditDrawnLine,
+  lineEditDrawnLayout,
   lineEditRightIconSize,
   lineEditCaretRect,
   lineEditTextureSlots,
@@ -27,6 +27,7 @@ import {
   LINE_EDIT_THEME_FONT_KEY,
   EXPAND_MODE_ORIGINAL_SIZE,
 } from './nativeSolver';
+import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 // line_edit.h:85-89 numbers ExpandMode from EXPAND_MODE_ORIGINAL_SIZE = 0.
@@ -849,8 +850,16 @@ describe('lineEditDrawnLine: the glyphs the draw loop keeps (line_edit.cpp:1512-
       glyph: null,
     })),
   });
+  const layoutOf = (advances: number[]) => ({
+    lines: [line(advances)],
+    linePitchPx: 20,
+    widthPx: advances.reduce((a, b) => a + b, 0),
+    heightPx: 20,
+    baselineOffsetPx: 15,
+    fontMetrics: OPEN_SANS_FONT_METRICS,
+  });
   const drawn = (advances: number[], penX: number, ofsMax: number) =>
-    lineEditDrawnLine(line(advances), penX, ofsMax).glyphs.map((g) => g.char);
+    lineEditDrawnLayout(layoutOf(advances), penX, ofsMax).lines[0]!.glyphs.map((g) => g.char);
 
   it('keeps every glyph of a line that ends inside ofs_max', () => {
     expect(drawn([10, 10, 10], 4, 34)).toEqual(['a', 'b', 'c']);
@@ -869,6 +878,6 @@ describe('lineEditDrawnLine: the glyphs the draw loop keeps (line_edit.cpp:1512-
   });
 
   it('keeps the line width the alignment used', () => {
-    expect(lineEditDrawnLine(line([10, 10, 10]), 4, 20).widthPx).toBe(30);
+    expect(lineEditDrawnLayout(layoutOf([10, 10, 10]), 4, 20).lines[0]!.widthPx).toBe(30);
   });
 });

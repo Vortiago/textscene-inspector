@@ -23,6 +23,7 @@ import {
   shapeText,
   shapedTextSizeWidthPx,
   type GlyphPlacement,
+  type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
 import {
@@ -385,10 +386,18 @@ export function layoutLineEditContent(input: LineEditContentInput): LineEditCont
 /**
  * The glyphs `NOTIFICATION_DRAW` draws, fill and outline ring alike (`line_edit.cpp:1512-1545`): a glyph
  * whose advance box ends past `ofs_max` is dropped whole, not clipped. The walk stops there, and at a
- * glyph that ends on `ofs_max`, since the pen has reached it. The left test `ceil(ofs.x) >= x_ofs` always holds without a `scroll_offset`.
- * The result keeps `line.widthPx`, the width the alignment used.
+ * glyph that ends on `ofs_max`, since the pen has reached it. The left test `ceil(ofs.x) >= x_ofs`
+ * always holds without a `scroll_offset`. Each line keeps its `widthPx`, the width the alignment used.
  */
-export function lineEditDrawnLine(line: TextLineLayout, penXPx: number, ofsMaxPx: number): TextLineLayout {
+export function lineEditDrawnLayout(
+  layout: TextLayoutResult,
+  penXPx: number,
+  ofsMaxPx: number
+): TextLayoutResult {
+  return { ...layout, lines: layout.lines.map((line) => drawnLine(line, penXPx, ofsMaxPx)) };
+}
+
+function drawnLine(line: TextLineLayout, penXPx: number, ofsMaxPx: number): TextLineLayout {
   const glyphs: GlyphPlacement[] = [];
   for (const glyph of line.glyphs) {
     const endX = penXPx + glyph.x + glyph.advance;

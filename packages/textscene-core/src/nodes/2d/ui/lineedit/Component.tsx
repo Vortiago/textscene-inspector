@@ -26,7 +26,7 @@ import {
   lineEditTextTheme,
   layoutLineEditContent,
   lineEditCaretRect,
-  lineEditDrawnLine,
+  lineEditDrawnLayout,
   lineEditRightIconSize,
   pickLineEditStyleBox,
   resolveLineEditStyleState,
@@ -140,11 +140,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // clip an enclosing ScrollContainer sets applies.
   const clippingPlanes = useControlClipPlanes();
   const drawnLayout: TextLayoutResult | null = useMemo(
-    () =>
-      layout && {
-        ...layout,
-        lines: layout.lines.map((line) => lineEditDrawnLine(line, content.textOffset.x, content.ofsMaxPx)),
-      },
+    () => layout && lineEditDrawnLayout(layout, content.textOffset.x, content.ofsMaxPx),
     [layout, content.textOffset.x, content.ofsMaxPx]
   );
 
