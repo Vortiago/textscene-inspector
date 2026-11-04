@@ -3075,6 +3075,26 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Line2d Caps",
+    "file": "unit-line2d-caps.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Line2d Gradient",
+    "file": "unit-line2d-gradient.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Line2d Translucent Corners",
+    "file": "unit-line2d-translucent-corners.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Line2d Width Curve",
+    "file": "unit-line2d-width-curve.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Line2d",
     "file": "unit-line2d.tscn",
     "category": "Unit - 2D Canvas"

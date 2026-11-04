@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseTresFile } from '../parser/parsedResource';
 import type { SceneResources } from '../r3f/SceneResourcesContext';
-import { referencedFilePath, resolveReference } from './resolveReference';
+import { referencedFilePath, referencedFilePaths, resolveReference } from './resolveReference';
 import { loadedFilesOf, NO_FILES } from './testing/loadedFiles';
 
 const CURVE_PATH = 'res://fade.tres';
@@ -60,5 +60,16 @@ describe('resolveReference', () => {
     expect(resolveReference('SubResource("missing")', SCENE, files)).toBeNull();
     expect(resolveReference('ExtResource("9")', SCENE, files)).toBeNull();
     expect(resolveReference('ExtResource("2_scene")', SCENE, files)).toBeNull();
+  });
+});
+
+describe('referencedFilePaths', () => {
+  it('names the .tres each reference loads from, in order and with repeats', () => {
+    const refs = ['ExtResource("1_curve")', 'SubResource("inline")', undefined, 'ExtResource("1_curve")'];
+    expect(referencedFilePaths(refs, SCENE)).toEqual([CURVE_PATH, CURVE_PATH]);
+  });
+
+  it('names no file for SubResource references or none', () => {
+    expect(referencedFilePaths(['SubResource("inline")', undefined], SCENE)).toEqual([]);
   });
 });

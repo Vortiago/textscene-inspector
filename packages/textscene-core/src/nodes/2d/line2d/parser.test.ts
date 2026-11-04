@@ -61,4 +61,25 @@ describe('parseLine2D', () => {
     });
     expect(props.points.length).toBe(0);
   });
+
+  it('parses the cap modes, defaulting to NONE', () => {
+    const capped = parseLine2D(heading('Line2D', { name: 'L' }), { begin_cap_mode: '1', end_cap_mode: '2' });
+    expect([capped.beginCapMode, capped.endCapMode]).toEqual([1, 2]);
+
+    const bare = parseLine2D(heading('Line2D', { name: 'L' }), {});
+    expect([bare.beginCapMode, bare.endCapMode]).toEqual([0, 0]);
+  });
+
+  it('keeps the gradient and width_curve references raw, and unset when absent', () => {
+    const named = parseLine2D(heading('Line2D', { name: 'L' }), {
+      gradient: 'SubResource("Gradient_a")',
+      width_curve: 'ExtResource("2_curve")',
+    });
+    expect(named.gradient).toBe('SubResource("Gradient_a")');
+    expect(named.widthCurve).toBe('ExtResource("2_curve")');
+
+    const bare = parseLine2D(heading('Line2D', { name: 'L' }), {});
+    expect(bare.gradient).toBeUndefined();
+    expect(bare.widthCurve).toBeUndefined();
+  });
 });
