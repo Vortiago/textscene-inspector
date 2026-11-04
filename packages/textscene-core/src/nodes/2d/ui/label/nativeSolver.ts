@@ -118,12 +118,10 @@ export function labelFontState(n: ShareNode): LabelFontState {
 }
 
 /**
- * A valid `label_settings` replaces the theme, never merges with it, for `font_size`
- * (label.cpp:186,759), `font_color` (`:761`), `line_spacing` (`:346`) and `paragraph_spacing`
- * (`:347`), even where a field keeps its class default. The two spacings are `real_t` stored in an
- * `int`, so they truncate toward zero. Without settings they are the node's theme constants
- * (`constants`, already resolved through its overrides and the Theme chain). `font` (`:185`) is
- * {@link labelFontState}.
+ * A valid `label_settings` replaces the theme, never merges with it, for `font_size` (label.cpp:186,759),
+ * `font_color` (`:761`), `line_spacing` (`:346`) and `paragraph_spacing` (`:347`), even at a class default.
+ * The two spacings are `real_t` stored in an `int`, so they truncate toward zero. Without settings they
+ * are `constants`, resolved through the node's overrides and the Theme chain. `font` is {@link labelFontState}.
  */
 export function labelEffectiveTextTheme(
   themeResolved: ResolvedTextTheme,
@@ -227,9 +225,15 @@ export function labelVisibleLineRange(
   return { start, end };
 }
 
-/** How many paragraphs `lines` touch. A paragraph adds its spacing only when it shows a line (`label.cpp:364-383`). */
+/** Whether `lines[index]` is the first shown line of its paragraph. A paragraph adds its spacing only when it shows a line (`label.cpp:364-383`). */
+function startsParagraph(lines: readonly TextLineLayout[], index: number): boolean {
+  return index === 0 || lines[index]!.paragraphIndex !== lines[index - 1]!.paragraphIndex;
+}
+
 function countParagraphs(lines: readonly TextLineLayout[]): number {
-  return lines.filter((line, i) => i === 0 || line.paragraphIndex !== lines[i - 1]!.paragraphIndex).length;
+  let count = 0;
+  for (let i = 0; i < lines.length; i++) if (startsParagraph(lines, i)) count++;
+  return count;
 }
 
 /**
@@ -375,7 +379,8 @@ function labelMinimumHeightPx(
 export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LabelProperties;
   const themeResolved = labelTextTheme(n, props, ctx);
-  const { fontSizePx, ...spacing } = labelEffectiveTextTheme(themeResolved, n.labelSettings, n.constants);
+  const spacing = labelEffectiveTextTheme(themeResolved, n.labelSettings, n.constants);
+  const { fontSizePx } = spacing;
   const fontMetrics = labelFontState(n).metrics;
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
   // `props.visibleCharacters` is already resolved (label.cpp:1285-1327). CHARS_BEFORE_SHAPING
@@ -488,6 +493,7 @@ function horizontalOffsetPx(
  * The paragraph direction follows `text_direction`, default `TEXT_DIRECTION_AUTO` (`label.h:70`),
  * which infers LTR for Latin text (`:179`, `text_server_adv.cpp:7241-7247`). FILL's own arm
  * (`:472`) is unreachable while `text_direction` is unmodelled (`comparison.md`).
+ * The spacings default to Label's theme defaults, which the Graph titlebar's title Label uses.
  */
 interface LabelLayoutOptions extends Partial<LabelSpacing> {
   /** `is_layout_rtl()` (`SolveNode.rtl`). Defaults `false`. */
@@ -552,7 +558,7 @@ export function layoutLabelLines(
   const fitWidthPx = labelShapingWidthPx(boxWidthPx);
 
   return layout.lines.map((line, lineIndex) => {
-    if (lineIndex > 0 && line.paragraphIndex !== layout.lines[lineIndex - 1]!.paragraphIndex) {
+    if (lineIndex > 0 && startsParagraph(layout.lines, lineIndex)) {
       paragraphGapsAbovePx += paragraphSpacingPx;
     }
     const y = vbeginPx + lineIndex * effectivePitchPx + paragraphGapsAbovePx;

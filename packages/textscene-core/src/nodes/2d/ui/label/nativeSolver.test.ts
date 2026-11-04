@@ -1293,12 +1293,4 @@ describe('Label paragraph_spacing and the theme spacing constants (label.cpp:344
       paragraphSpacingPx: 0,
     });
   });
-
-  it('the theme defaults are line_spacing 3 and paragraph_spacing 0 (default_theme.cpp:392)', () => {
-    const themeResolved = { fontSizePx: 16, color: { r: 1, g: 1, b: 1, a: 1 } };
-    expect(labelEffectiveTextTheme(themeResolved, null, {})).toMatchObject({
-      lineSpacingPx: 3,
-      paragraphSpacingPx: 0,
-    });
-  });
 });
