@@ -1,6 +1,6 @@
 /**
  * Godot's `Shape3D::get_debug_mesh_lines()` for the shapes the previewer decodes, as flat segment
- * ends the ShapeCast3D gizmo draws (shape_cast_3d.cpp:502-507,
+ * ends the CollisionShape3D and ShapeCast3D gizmos draw (shape_cast_3d.cpp:502-507,
  * shape_cast_3d_gizmo_plugin.cpp:63-67). The circles read the engine's float trig.
  */
 

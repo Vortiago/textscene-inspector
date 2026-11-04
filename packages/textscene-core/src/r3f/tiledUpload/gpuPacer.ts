@@ -6,6 +6,9 @@
  * memory within a few frames, and a later call would block until the GPU freed some.
  * So at most a window of bands is on its way at once: each frame's bands sit behind a
  * fence and leave the window once the GPU has passed it.
+ *
+ * A fence the GPU is slow to signal must not stop the upload for good: a window that
+ * has neither drained nor taken a band for `STALL_MS` gives up on its oldest frame.
  */
 
 /** A marker behind the commands issued so far. `isDone` never waits for the GPU. */
@@ -32,6 +35,13 @@ export const UNPACED: UploadPacer = { allowance: () => Infinity, markIssued: () 
  */
 const IN_FLIGHT_BANDS = 4;
 
+/**
+ * A starved GPU process can leave a fence unsignalled while frames keep ticking, and
+ * the texture work never ends. Half a second is long enough that a healthy GPU has
+ * drained the window first.
+ */
+const STALL_MS = 500;
+
 interface IssuedFrame {
   fence: GpuFence;
   bands: number;
@@ -41,16 +51,24 @@ export class GpuPacer implements UploadPacer {
   /** Oldest first. Written by `markIssued`, trimmed by `allowance` as fences pass. */
   private readonly inFlight: IssuedFrame[] = [];
 
-  constructor(private readonly fence: () => GpuFence) {}
+  /** When the window last drained or took a band, in `now` milliseconds. */
+  private lastProgressAt = 0;
+
+  constructor(
+    private readonly fence: () => GpuFence,
+    private readonly now: () => number = () => performance.now()
+  ) {}
 
   allowance(): number {
     this.dropPassed();
+    if (this.isStalled()) this.expireOldest();
     const onTheirWay = this.inFlight.reduce((sum, frame) => sum + frame.bands, 0);
     return Math.max(0, IN_FLIGHT_BANDS - onTheirWay);
   }
 
   markIssued(bands: number): void {
     this.inFlight.push({ fence: this.fence(), bands });
+    this.lastProgressAt = this.now();
   }
 
   /** Frees every fence still on its way, as the canvas that issued them goes. */
@@ -58,11 +76,22 @@ export class GpuPacer implements UploadPacer {
     this.release(this.inFlight.length);
   }
 
+  private isStalled(): boolean {
+    return this.inFlight.length > 0 && this.now() - this.lastProgressAt >= STALL_MS;
+  }
+
+  /** Gives up on the oldest frame's fence, so the window stays bounded however long the GPU stalls. */
+  private expireOldest(): void {
+    this.release(1);
+    this.lastProgressAt = this.now();
+  }
+
   /** The GPU runs commands in order, so a passed fence has passed every earlier one too. */
   private dropPassed(): void {
     for (let index = this.inFlight.length - 1; index >= 0; index--) {
       if (!this.inFlight[index]!.fence.isDone()) continue;
       this.release(index + 1);
+      this.lastProgressAt = this.now();
       return;
     }
   }

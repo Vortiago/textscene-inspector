@@ -58,8 +58,21 @@ export const FOG_HISTORY_MAX_CYCLES = 48;
 export const RENDER_QUIET_FRAMES = 150;
 export const RENDER_QUIET_MSEC = 2000;
 
-/** The most frames the render wait draws: the longest fog convergence, then the quiet window. */
+/**
+ * Process frames `_converge` draws before the render wait, so an import lands, the first draw
+ * completes and shaped text measures. The tree is paused, so they carry no simulated time.
+ */
+export const CONVERGENCE_FRAMES = 6;
+
+/** The longest fog convergence, then the quiet window: the frames the render wait allows. */
 export const RENDER_WAIT_MAX_FRAMES = FOG_HISTORY_MAX_CYCLES * FOG_JITTER_CYCLE_FRAMES + RENDER_QUIET_FRAMES;
+
+/**
+ * The process frame the render wait ends at when the scene never settles. It counts from the frame
+ * the scene enters, so a reflection probe's frames shorten the wait, not move the capture. The
+ * previewer's `HARNESS_CAPTURE` draws a relay cycle at this frame.
+ */
+export const NEVER_SETTLES_CAPTURE_FRAME = CONVERGENCE_FRAMES + RENDER_WAIT_MAX_FRAMES - 1;
 
 /**
  * `--quit-after`: a backstop for a bootstrap that never quits. It sits above the render wait's
@@ -669,6 +682,14 @@ func _apply_preview_lighting(target: Node) -> void:
 		world_env.environment = env
 		add_child(world_env)`;
 
+/** What the bootstrap prints on stderr to warn about a capture, before each warning. */
+const HARNESS_WARNING_PREFIX = 'godot-ref: ';
+
+/** The lines of the engine's output that the bootstrap wrote to warn about its capture. */
+export function harnessWarnings(output) {
+  return output.split('\n').filter((line) => line.startsWith(HARNESS_WARNING_PREFIX));
+}
+
 /**
  * The bootstrap scene's script: it instantiates the target scene, picks its 2D or 3D path and
  * writes one settled frame. `simSeconds` (`SETTLE_SIM_SECONDS`) is a parameter only so a test can
@@ -736,7 +757,8 @@ const FOG_JITTER_CYCLE_FRAMES := ${FOG_JITTER_CYCLE_FRAMES}
 const FOG_HISTORY_MAX_CYCLES := ${FOG_HISTORY_MAX_CYCLES}
 const RENDER_QUIET_FRAMES := ${RENDER_QUIET_FRAMES}
 const RENDER_QUIET_MSEC := ${RENDER_QUIET_MSEC}
-const RENDER_WAIT_MAX_FRAMES := ${RENDER_WAIT_MAX_FRAMES}
+const NEVER_SETTLES_CAPTURE_FRAME := ${NEVER_SETTLES_CAPTURE_FRAME}
+const CONVERGENCE_FRAMES := ${CONVERGENCE_FRAMES}
 
 # Set by a refusal inside the render, so the ONE quit() below carries a non-zero
 # exit code. A mid-walk quit() would be reset to 0 by that same call.
@@ -1035,16 +1057,15 @@ func _advance_particles(node: Node) -> void:
 	for child in node.get_children():
 		_advance_particles(child)
 
-# CONVERGENCE, not the settle contract — do not "align" this count with
-# anything on the previewer side. These frames exist so the picture stops
-# moving: an import lands, the first draw completes, shaped text finally
-# measures. They carry no simulated time, because the tree is paused before the
-# scene exists, so no number of them moves the instant being captured. Our side
-# reaches the same standstill by a different route (screenshots until two are
-# byte-identical) and that asymmetry is correct — a stopping test has no
-# semantics to share.
+# CONVERGENCE: these frames exist so the picture stops moving. An import lands,
+# the first draw completes and shaped text measures. They carry no simulated
+# time, because the tree is paused before the scene exists. Transform
+# notifications still run in them, so a relay cycle moves, but the render wait
+# ends a scene that never settles at NEVER_SETTLES_CAPTURE_FRAME, whatever this
+# count is. Our side reaches the same standstill by screenshots until two are
+# byte-identical.
 func _converge(source: Viewport) -> void:
-	for _i in 6:
+	for _i in CONVERGENCE_FRAMES:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	await _await_reflection_probe_captures(source)
@@ -1064,9 +1085,10 @@ func _await_reflection_probe_captures(source: Viewport) -> void:
 	for _frame in probes.size() * maxi(layers, COMPATIBILITY_PROBE_FRAMES):
 		await RenderingServer.frame_post_draw
 
-# Draws on until the picture and the renderer's pending work have held still for
-# RENDER_QUIET_FRAMES frames and RENDER_QUIET_MSEC milliseconds in a row. The time scale stays 0 after the wait: the process quits
-# once it has saved. The Godot source behind each kind of pending work is in render-wait.md.
+# Draws on until the picture, the renderer's pending work and every global transform have held
+# still for RENDER_QUIET_FRAMES frames and RENDER_QUIET_MSEC milliseconds in a row. The time scale
+# stays 0 after the wait: the process quits once it has saved. The Godot source behind each kind of
+# pending work is in render-wait.md.
 func _await_rendered(source: Viewport) -> void:
 	var period := FOG_JITTER_CYCLE_FRAMES if _has_fog_history(source) else 1
 	if not PREVIEWS and period == 1:
@@ -1074,14 +1096,17 @@ func _await_rendered(source: Viewport) -> void:
 	Engine.time_scale = 0.0
 	var pictures: Array[PackedByteArray] = []
 	var pending := _pending_work()
+	var movers := _transformed_nodes(source)
+	var transforms := _global_transforms(movers)
 	var quiet := 0
 	var quiet_since := Time.get_ticks_msec()
-	for _frame in RENDER_WAIT_MAX_FRAMES:
+	while Engine.get_process_frames() < NEVER_SETTLES_CAPTURE_FRAME:
 		await RenderingServer.frame_post_draw
 		var picture := source.get_texture().get_image().get_data()
 		var now_pending := _pending_work()
+		var now_transforms := _global_transforms(movers)
 		var repeats := pictures.size() == period and picture == pictures[0]
-		if repeats and now_pending == pending:
+		if repeats and now_pending == pending and now_transforms == transforms:
 			quiet += 1
 		else:
 			quiet = 0
@@ -1089,10 +1114,27 @@ func _await_rendered(source: Viewport) -> void:
 		if quiet >= RENDER_QUIET_FRAMES and Time.get_ticks_msec() - quiet_since >= RENDER_QUIET_MSEC:
 			return
 		pending = now_pending
+		transforms = now_transforms
 		pictures.append(picture)
 		if pictures.size() > period:
 			pictures.pop_front()
-	printerr("godot-ref: the picture did not settle, so it is captured as it stands")
+	printerr("${HARNESS_WARNING_PREFIX}the picture did not settle, so it is captured as it stands")
+
+# Every Node3D and CanvasItem the captured viewport holds, whose global transforms the wait reads.
+func _transformed_nodes(source: Viewport) -> Array[Node]:
+	var nodes: Array[Node] = []
+	for node in source.find_children("*", "", true, false):
+		if node is Node3D or node is CanvasItem:
+			nodes.append(node)
+	return nodes
+
+# The global transform of each node, in order. A transform that still moves in a paused tree comes
+# from a notification loop such as a relay cycle, which the picture misses once it leaves the view.
+func _global_transforms(nodes: Array[Node]) -> Array:
+	var transforms := []
+	for node in nodes:
+		transforms.append(node.global_transform if node is Node3D else (node as CanvasItem).get_global_transform())
+	return transforms
 
 # What the renderer has queued or allocated, which changes while work is still pending.
 func _pending_work() -> Array[int]:
@@ -1237,7 +1279,8 @@ ${
     ? `	var bounds := _scene_bounds(target)
 	var span: float = maxf(maxf(bounds.size.x, bounds.size.y), bounds.size.z)
 	# A point (an empty particle AABB, a Label3D before its text shapes) has no span to fit, and a
-	# distance of 0 puts the camera inside it. frameSceneBounds.ts keeps the editor distance instead.
+	# distance of 0 puts the camera inside it. frameSceneBounds.ts keeps the camera's own distance,
+	# which is the editor distance on open.
 	if span > 0.0:
 		distance = (span / 2.0 / tan(deg_to_rad(FOV) / 2.0)) * ${FRAME_MARGIN}
 	var focus := bounds.get_center()`
@@ -1599,7 +1642,9 @@ async function renderInto(
   // Marked, so a caller that follows the message to `--mode 2d-root` need not match on its prose.
   if (drift) await refuse(drift, { rootOnlyDrift: true });
 
-  return { workDir: work, out: resolve(out), mode: rendered };
+  // Both streams: `xvfb-run` hands the engine's `printerr` on through its stdout.
+  const warnings = harnessWarnings(`${render.stdout}\n${render.stderr}`);
+  return { workDir: work, out: resolve(out), mode: rendered, warnings };
 }
 
 async function main() {
@@ -1627,7 +1672,8 @@ async function main() {
   const out = args.out ?? join(import.meta.dirname, 'output', `${basename(args.scene, '.tscn')}.png`);
   await mkdir(dirname(out), { recursive: true });
   const boundsOut = args.emitBounds ? out.replace(/\.png$/, '.bounds.json') : null;
-  const { out: written, mode } = await renderReference({ ...args, out, boundsOut });
+  const { out: written, mode, warnings } = await renderReference({ ...args, out, boundsOut });
+  for (const warning of warnings) console.warn(warning);
   console.log(`Rendered ${written}${mode ? ` (${mode})` : ''}`);
   if (boundsOut && existsSync(boundsOut)) console.log(`Bounds ${boundsOut}`);
 

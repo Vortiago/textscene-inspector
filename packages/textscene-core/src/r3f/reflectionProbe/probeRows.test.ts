@@ -17,7 +17,7 @@ const PROBE: DrawnProbe = {
   reflectionMask: 0xffff_ffff,
   boxProjection: true,
   atlasLayer: 3,
-  exposureNormalization: 0.5,
+  capturedExposure: 0.5,
 };
 
 /** The rows `probes` pack into. */
@@ -60,7 +60,7 @@ describe('ProbeRows.pack', () => {
     expect(texel(packed(PROBE), 0, 6)).toEqual([0xffff, 0xffff, 1, 3]);
   });
 
-  it('packs the exposure normalisation in its own texel after the mask (light_storage.cpp:1810-1814)', () => {
+  it('packs the exposure the probe captured at in its own texel after the mask (light_storage.cpp:1810-1814)', () => {
     expect(texel(packed(PROBE), 0, 7)).toEqual([0.5, 0, 0, 0]);
   });
 

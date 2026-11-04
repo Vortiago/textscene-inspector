@@ -11,6 +11,8 @@ renders_as: nothing (a transform-only group that drives its target)
 
 Pushes its own transform onto the node its `remote_path` names and has no visual of its own. The previewer applies the drive over the live scene tree. The visible cube is the driven target sitting at the relay's position, also across an instanced scene boundary. A relay with `use_global_coordinates = false` pushes nothing when the scene loads, as in Godot.
 
+A relay pushes again each time its own global transform changes, so a relay chain settles as in Godot, whatever its order in the file. A relay cycle draws the frame that `pnpm ref:godot` captures, as `docs/comparison/README.md` explains, and the linter warns on each relay of the cycle.
+
 ## Linting
 
 <!-- lint:begin RemoteTransform3D -->
@@ -29,11 +31,11 @@ Strict parsing format-checks these `RemoteTransform3D` properties, plus 17 inher
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-remotetransform3d-remote-path` | `remotetransform3d-invalid-remote-path` | warning |
+|  | `remotetransform3d-relay-cycle` | warning |
 <!-- lint:end -->
 
 `remote_path` is copied verbatim when present, with no NodePath validation. A malformed literal that strict rejects still parses and drives whatever target string was written. The `update_*` and `use_global_coordinates` flags use `parseOptionalBool`, so anything but the literal `"true"` becomes `false` silently.
 
 ## Known limitations
 
-- **Approximated** Relay chains resolve in document order, and a feedback loop is not
-  iterated to a fixed point.
+- **Needs runtime** A relay cycle moves on every frame in Godot, and the previewer shows one frame of that motion.

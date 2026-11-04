@@ -15,6 +15,7 @@ import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { ViewportPassStack } from './viewportPasses.testkit';
+import { fireSceneRender, fireSceneRenderEnd } from '../../../r3f/testing/fireSceneRender';
 
 import '../../../r3f/nodes/index';
 
@@ -106,13 +107,11 @@ function lampOf(scene: THREE.Object3D): THREE.PointLight {
 }
 
 /**
- * The lamp's energy at the render of each viewport's world buffer, as a multiple of the energy it
- * holds once the frame is over, which is the exposure the canvas around it draws at.
+ * The lamp's energy in the render of each viewport's world buffer, as a multiple of the energy it
+ * holds outside a render. The stubbed renderer draws nothing, so each render fires the scene's hooks
+ * as three's `render` does.
  */
-async function passEnergies(
-  source: string,
-  workspace: '2d' | '3d'
-): Promise<{ held: number; passes: Map<string, number> }> {
+async function passExposures(source: string, workspace: '2d' | '3d'): Promise<Map<string, number>> {
   const parsed = new TscnParser().parse(source);
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const World = workspace === '2d' ? CanvasWorldScope : RootWorldScope;
@@ -131,11 +130,13 @@ async function passEnergies(
     await withStubbedGl(
       captured.current!,
       {
-        onRender: (bound, scene) => {
+        onRender: (bound, scene, camera) => {
           const name = bound?.texture.name;
           if (!name?.endsWith('::world')) return;
           lamp = lampOf(scene);
+          fireSceneRender(scene, camera);
           passes.set(name.replace('::world', ''), lamp.intensity);
+          fireSceneRenderEnd(scene, camera);
         },
       },
       () => renderer.advanceFrames(1, 16)
@@ -143,7 +144,7 @@ async function passEnergies(
     expect(passes.size).toBeGreaterThan(1);
   });
   const held = lamp!.intensity;
-  return { held, passes: new Map([...passes].map(([name, energy]) => [name, energy / held])) };
+  return new Map([...passes].map(([name, energy]) => [name, energy / held]));
 }
 
 function RootWorldScope({ children }: { children: React.ReactNode }) {
@@ -156,24 +157,22 @@ function RootWorldScope({ children }: { children: React.ReactNode }) {
 
 describe('<SubViewport> exposure', () => {
   it('draws an inline pass at the attributes of its own camera', async () => {
-    const { passes } = await passEnergies(INLINE, '3d');
-    // The viewer's camera holds 4, so the frame around the pass draws at 4.
-    expect(passes.get('Bright')).toBeCloseTo(2 / 4);
+    const passes = await passExposures(INLINE, '3d');
+    expect(passes.get('Bright')).toBeCloseTo(2);
   });
 
   it("draws an inline pass whose camera holds none at the world's own attributes", async () => {
-    const { passes } = await passEnergies(INLINE, '3d');
-    expect(passes.get('Plain')).toBeCloseTo(0.5 / 4);
+    const passes = await passExposures(INLINE, '3d');
+    expect(passes.get('Plain')).toBeCloseTo(0.5);
   });
 
   it('draws a nested viewport at its own camera and the outer one at its own', async () => {
-    const { passes } = await passEnergies(NESTED, '3d');
-    expect(passes.get('Outer')).toBeCloseTo(2 / 4);
-    expect(passes.get('Inner')).toBeCloseTo(0.25 / 4);
+    const passes = await passExposures(NESTED, '3d');
+    expect([passes.get('Outer'), passes.get('Inner')]).toEqual([expect.closeTo(2), expect.closeTo(0.25)]);
   });
 
   it('draws each shared-world viewport of a 2D canvas at its own exposure', async () => {
-    const { passes } = await passEnergies(CANVAS, '2d');
-    expect(passes.get('Bright')! / passes.get('Dim')!).toBeCloseTo(2 / 0.5);
+    const passes = await passExposures(CANVAS, '2d');
+    expect([passes.get('Bright'), passes.get('Dim')]).toEqual([expect.closeTo(2), expect.closeTo(0.5)]);
   });
 });

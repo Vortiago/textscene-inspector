@@ -30,6 +30,7 @@ import type { Sprite3DProperties } from './types';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
+import { FramePoint } from '../../../r3f/components/NodeAabb';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
@@ -168,7 +169,9 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   if (!displayedTexture) {
     return (
       <>
-        <group ref={spriteRef} name={node.name} {...node3dGroupSpread(transform)} />
+        <group ref={spriteRef} name={node.name} {...node3dGroupSpread(transform)}>
+          <FramePoint />
+        </group>
         {subtree}
       </>
     );

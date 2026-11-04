@@ -288,8 +288,8 @@ describe('Lights: sign, shadow opacity and distance fade', () => {
       fireSceneRenderFrom(scene, 12);
       return lamp.intensity;
     });
-    // A fade of 0.5, and an exposure of 2 over the 4 the scene holds.
-    expect(inside).toBeCloseTo(0.5 * 0.5 * LIGHT_INTENSITY_SCALE, 6);
+    // A fade of 0.5, at the exposure of 2 the draw sets.
+    expect(inside).toBeCloseTo(0.5 * 2 * LIGHT_INTENSITY_SCALE, 6);
   });
 
   it('leaves a light whole while distance_fade_enabled is off', async () => {
