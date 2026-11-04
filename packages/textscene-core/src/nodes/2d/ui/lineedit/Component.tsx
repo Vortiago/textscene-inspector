@@ -1,8 +1,8 @@
 /**
- * `<LineEdit>`, the native painter: `normal` or `read_only` chrome unless `flat`, one clipped run of the
- * text `lineEditDisplayText` picks in its state's colour, the active icon, and the caret while
- * `caret_force_displayed`, since a static preview never focuses and `_validate_caret_can_draw()`'s other
- * branch never fires. It draws no selection or IME. `ControlCanvasWalker` owns `visible`, `children` and the transform.
+ * `<LineEdit>`, the native painter: `normal` or `read_only` chrome unless `flat`, the glyphs of the text
+ * `lineEditDisplayText` picks that end inside `ofs_max`, in its state's colour over its theme outline ring,
+ * the active icon, and the caret while `caret_force_displayed`, since a static preview never focuses and
+ * `_validate_caret_can_draw()`'s other branch never fires. It draws no selection or IME. `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -11,9 +11,9 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
-import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { shapeText, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -26,6 +26,7 @@ import {
   lineEditTextTheme,
   layoutLineEditContent,
   lineEditCaretRect,
+  lineEditDrawnLine,
   lineEditRightIconSize,
   pickLineEditStyleBox,
   resolveLineEditStyleState,
@@ -63,6 +64,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // `<StyleBoxQuad>`'s `color`, and each font, icon and caret colour multiplies it before its one
   // sRGB-to-linear conversion, as `Button` does.
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   // `lineSpacingPx: 0`, not the shared 3: `layout.heightPx` stands in for `shaped_text_get_size(text_rid).y`,
   // bare ascent plus descent, in the vertical centring. LineEdit sets no `line_spacing` (`lineEditMinimumSize`),
@@ -133,11 +135,18 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
     [rect.w, rect.h, baseStyleBox.contentMargin, props.alignment, layout, hasIcon, iconSize.x, solveNode.rtl]
   );
 
-  // Only this run clips, to `contentRect` (`ofs_max`/`x_ofs`'s box, `line_edit.cpp:1392-1485`), since
-  // `clip_contents` is not modelled generically. The planes merge onto the inherited clip, so an enclosing
-  // ScrollContainer only narrows, and with no children no `ControlClipProvider` is needed. The icon stays
-  // unclipped, as Godot draws it inside the margin.
-  const { anchorRef, clippingPlanes } = useWorldClipPlanes(content.contentRect);
+  // Godot sets no clip on the text: the draw loop drops each glyph that ends past `ofs_max`
+  // (`line_edit.cpp:1512-1545`), so the ink and the outline ring may reach past the margin. Only the
+  // clip an enclosing ScrollContainer sets applies.
+  const clippingPlanes = useControlClipPlanes();
+  const drawnLayout: TextLayoutResult | null = useMemo(
+    () =>
+      layout && {
+        ...layout,
+        lines: layout.lines.map((line) => lineEditDrawnLine(line, content.textOffset.x, content.ofsMaxPx)),
+      },
+    [layout, content.textOffset.x, content.ofsMaxPx]
+  );
 
   // Both hooks run in a fixed order and each shows nothing on an absent input (`useNodeIcon`).
   // `right_icon` loads in its own scope and is retagged `NoColorSpace` for the 2D canvas
@@ -206,16 +215,17 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   );
 
   return (
-    <CanvasItemGroup ref={anchorRef}>
+    <CanvasItemGroup>
       {!props.flat && (
         <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
       )}
-      {layout && (
+      {drawnLayout && (
         <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
-          <TextRun
-            layout={layout}
+          <OutlinedTextRun
+            layout={drawnLayout}
             fontSizePx={fontSizePx}
             tint={tintedFontColor}
+            outline={textOutline}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />

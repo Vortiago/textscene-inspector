@@ -729,6 +729,8 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-lineedit-control-chars.tscn',
     mode: '2d',
   },
+  // The one variable: the theme text outline of LineEdit, at outline_size 4, 8 and 16.
+  { name: 'lineedit-outline', file: 'unit-lineedit-outline.tscn', mode: '2d' },
   // The one variable: where a canvas root sits. A CanvasItem under a non-canvas
   // parent, or with `top_level`, parents at the canvas, which sets its transform,
   // anchors, tint and draw order. The Control and Node2D walks reach it

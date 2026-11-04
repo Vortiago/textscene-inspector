@@ -18,6 +18,7 @@ import {
   lineEditTextTheme,
   resolveLineEditTextState,
   layoutLineEditContent,
+  lineEditDrawnLine,
   lineEditRightIconSize,
   lineEditCaretRect,
   lineEditTextureSlots,
@@ -467,10 +468,10 @@ describe('lineEditTextTheme — font_color / font_uneditable_color / font_placeh
   });
 });
 
-describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs (line_edit.cpp:1392-1427)', () => {
+describe('layoutLineEditContent — NOTIFICATION_DRAW x_ofs/y_ofs (line_edit.cpp:1392-1427)', () => {
   const MARGIN = { left: 4, top: 4, right: 4, bottom: 4 };
 
-  it('LEFT (default): x_ofs is exactly the left margin, content rect is the rect inset by all four margins', () => {
+  it('LEFT (default): x_ofs is exactly the left margin', () => {
     const result = layoutLineEditContent({
       rectSize: { x: 200, y: 30 },
       styleMargin: MARGIN,
@@ -478,7 +479,6 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       textWidthPx: 50,
       textHeightPx: 23,
     });
-    expect(result.contentRect).toEqual({ x: 4, y: 4, w: 192, h: 22 });
     expect(result.textOffset.x).toBe(4);
     // y_ofs = style->get_offset().y + (y_area - text_height) / 2 (line_edit.cpp:1427), truncated
     // toward zero on assignment to `int y_ofs`: trunc(4 + (22 - 23) / 2) = trunc(3.5) = 3.
@@ -563,19 +563,7 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
     expect(result.textOffset.x).toBe(4);
   });
 
-  it('clamps the content rect at zero rather than going negative when margins exceed the rect', () => {
-    const result = layoutLineEditContent({
-      rectSize: { x: 4, y: 4 },
-      styleMargin: MARGIN,
-      alignment: 0,
-      textWidthPx: 0,
-      textHeightPx: 0,
-    });
-    expect(result.contentRect.w).toBe(0);
-    expect(result.contentRect.h).toBe(0);
-  });
-
-  it('without an icon, ofsMaxPx is width minus the right margin, and content rect width matches it', () => {
+  it('without an icon, ofsMaxPx is width minus the right margin', () => {
     const result = layoutLineEditContent({
       rectSize: { x: 200, y: 30 },
       styleMargin: MARGIN,
@@ -584,14 +572,13 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
       textHeightPx: 23,
     });
     expect(result.ofsMaxPx).toBe(196);
-    expect(result.contentRect.w).toBe(192);
   });
 });
 
 describe('layoutLineEditContent — right_icon/clear-button inset (line_edit.cpp:1444-1485)', () => {
   const MARGIN = { left: 4, top: 4, right: 4, bottom: 4 };
 
-  it('LEFT: an icon narrows ofsMaxPx/content width but never moves x_ofs off the left margin', () => {
+  it('LEFT: an icon narrows ofsMaxPx but never moves x_ofs off the left margin', () => {
     const result = layoutLineEditContent({
       rectSize: { x: 200, y: 30 },
       styleMargin: MARGIN,
@@ -603,7 +590,6 @@ describe('layoutLineEditContent — right_icon/clear-button inset (line_edit.cpp
     });
     expect(result.textOffset.x).toBe(4);
     expect(result.ofsMaxPx).toBe(176); // trunc(200-4-20)
-    expect(result.contentRect.w).toBe(172);
   });
 
   it("CENTER: an icon's width is subtracted from the centring budget too", () => {
@@ -790,8 +776,7 @@ describe('layoutLineEditContent — RTL layout (line_edit.cpp:1397-1421,1455-148
     expect(result.textOffset.x).toBe(83);
   });
 
-  it('moves the clip band to the far side of the icon under RTL, keeping its LTR width', () => {
-    // The drawn band is [x_ofs, ofs_max] (:1481-1483,1541): LTR [4, 180], RTL [20, 196].
+  it('keeps ofs_max at the right margin under RTL, where the icon sits on the left', () => {
     const ltr = layoutLineEditContent({
       rectSize: BOX,
       styleMargin: MARGIN,
@@ -811,9 +796,9 @@ describe('layoutLineEditContent — RTL layout (line_edit.cpp:1397-1421,1455-148
       iconWidthPx: 16,
       rtl: true,
     });
-    expect(ltr.contentRect.x).toBe(4);
-    expect(rtl.contentRect.x).toBe(20);
-    expect(rtl.contentRect.w).toBe(ltr.contentRect.w);
+    // `ofs_max -= icon width` only while `!rtl` (:1481-1483).
+    expect(ltr.ofsMaxPx).toBe(180);
+    expect(rtl.ofsMaxPx).toBe(196);
   });
 });
 
@@ -848,5 +833,42 @@ describe('lineEditCaretRect — RTL layout (line_edit.cpp:1560-1584)', () => {
 
   it('real text still rides the pen x under RTL — the fallback is gated on using_placeholder (:1555)', () => {
     expect(lineEditCaretRect({ ...BASE, alignment: 0, isPlaceholder: false, rtl: true }).x).toBe(146);
+  });
+});
+
+describe('lineEditDrawnLine: the glyphs the draw loop keeps (line_edit.cpp:1512-1545)', () => {
+  const line = (
+    advances: number[]
+  ): import('../../../../r3f/controls/native/text/textLayout').TextLineLayout => ({
+    text: advances.map((_, i) => String.fromCharCode(97 + i)).join(''),
+    widthPx: advances.reduce((a, b) => a + b, 0),
+    glyphs: advances.map((advance, i) => ({
+      char: String.fromCharCode(97 + i),
+      x: advances.slice(0, i).reduce((a, b) => a + b, 0),
+      advance,
+      glyph: null,
+    })),
+  });
+  const drawn = (advances: number[], penX: number, ofsMax: number) =>
+    lineEditDrawnLine(line(advances), penX, ofsMax).glyphs.map((g) => g.char);
+
+  it('keeps every glyph of a line that ends inside ofs_max', () => {
+    expect(drawn([10, 10, 10], 4, 34)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('drops a glyph whole when its advance box ends past ofs_max', () => {
+    expect(drawn([10, 10, 10], 4, 33)).toEqual(['a', 'b']);
+  });
+
+  it('keeps a glyph that ends exactly on ofs_max, and stops the walk there', () => {
+    expect(drawn([10, 10, 10], 4, 24)).toEqual(['a', 'b']);
+  });
+
+  it('stops at the first dropped glyph, since its advance already carries the pen past ofs_max', () => {
+    expect(drawn([10, 30, 4], 0, 36)).toEqual(['a']);
+  });
+
+  it('keeps the line width the alignment used', () => {
+    expect(lineEditDrawnLine(line([10, 10, 10]), 4, 20).widthPx).toBe(30);
   });
 });

@@ -72,6 +72,12 @@ through the optional-int reader, so a malformed or out-of-range value left-align
 silently. `secret` and `flat` become `false` for any value that does not read as `true`.
 An empty `secret_character` falls back to the bullet, as Godot does.
 
+LineEdit draws the theme text outline, `font_outline_color` and `outline_size`, as Godot does
+(`line_edit.cpp:1512-1519`). A ring of `outline_size / 4` px sits under the fill. No ring draws at
+an `outline_size` of 0 or a zero alpha. The ring strokes on the canvas painter for the bundled font
+too (ADR-0040). Like the fill, the ring drops each glyph that ends past `ofs_max` and is not
+clipped to the margins (`:1512-1545`).
+
 ## Known limitations
 
 - **Not drawn** The right-to-left hit region of `_is_over_clear_button`
