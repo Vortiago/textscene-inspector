@@ -56,7 +56,8 @@ function writeConsumer(directory, tarballs) {
     peers: peerDependencies,
     tools: {
       ...versionsOf(['@types/react', '@types/react-dom', '@types/three'], 'packages/textscene-core'),
-      ...versionsOf(['vite', '@vitejs/plugin-react', 'typescript'], 'apps/textscene-web'),
+      ...versionsOf(['vite', '@vitejs/plugin-react'], 'apps/textscene-web'),
+      typescript: installedVersion('@typescript/native', 'apps/textscene-web'),
     },
   });
   writeFileSync(join(directory, 'package.json'), JSON.stringify(manifest, null, 2));

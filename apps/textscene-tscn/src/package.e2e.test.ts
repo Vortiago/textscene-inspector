@@ -17,7 +17,7 @@ const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(packageDir, '../..');
 const bundlePath = join(packageDir, 'dist', 'index.js');
 const metafilePath = join(packageDir, 'dist', 'index.meta.json');
-const tscBin = join(repoRoot, 'node_modules', 'typescript', 'bin', 'tsc');
+const tscBin = join(repoRoot, 'node_modules', '@typescript', 'native', 'bin', 'tsc');
 
 /** What a parser user needs: the parser and the shapes of the scene it returns. Core's internals stay out. */
 const PUBLIC_VALUE_EXPORTS = ['TscnParser'];

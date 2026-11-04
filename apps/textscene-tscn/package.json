@@ -53,10 +53,10 @@
     "@textscene/core": "workspace:*",
     "@textscene/dev-kit": "workspace:*",
     "@types/node": "catalog:",
+    "@typescript/native": "catalog:",
     "dts-bundle-generator": "catalog:",
     "esbuild": "catalog:",
     "rimraf": "catalog:",
-    "typescript": "catalog:",
     "vitest": "catalog:"
   }
 }

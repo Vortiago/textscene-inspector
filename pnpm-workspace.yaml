@@ -12,7 +12,10 @@ packages:
 # Use "catalog:" in package.json to reference these versions
 catalog:
   # Shared dev dependencies
-  typescript: ^6.0.3
+  # TypeScript 7 runs `tsc`. It ships no JavaScript compiler API, so `typescript` names the
+  # TypeScript 6 API, which the ESLint parser, dts-bundle-generator and our syntax scripts import.
+  '@typescript/native': npm:typescript@^7.0.2
+  typescript: npm:@typescript/typescript6@^6.0.2
   vitest: ^5.0.5
   rimraf: ^6.1.3
   '@vscode/test-electron': ^3.1.0

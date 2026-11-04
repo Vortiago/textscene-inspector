@@ -21,7 +21,7 @@ const repoRoot = resolve(packageDir, '../..');
 const distDir = join(packageDir, 'dist');
 const bundlePath = join(distDir, 'index.js');
 const metafilePath = join(distDir, 'build.meta.json');
-const tscBin = join(repoRoot, 'node_modules', 'typescript', 'bin', 'tsc');
+const tscBin = join(repoRoot, 'node_modules', '@typescript', 'native', 'bin', 'tsc');
 
 /** What an LSP host needs: the translation from core's language features to the protocol shapes. */
 const PUBLIC_VALUE_EXPORTS = [
