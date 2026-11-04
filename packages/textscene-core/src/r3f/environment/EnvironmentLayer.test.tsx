@@ -1,11 +1,11 @@
-/** The background, the fog and the screen-space reflection one Environment draws into its world's scene. */
+/** The background, the fog and the screen-space effects one Environment draws into its world's scene. */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { EnvironmentLayer } from './EnvironmentLayer';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
-import { SSR_STATE, ssrState } from '../screenSpaceReflection/ssrUniforms';
+import { SCREEN_SPACE_STATE, screenSpaceState } from '../screenSpaceEffects/screenSpaceState';
 
 /** `showFog` is the viewport's Fog toggle. */
 interface MountOptions {
@@ -62,21 +62,24 @@ describe('<EnvironmentLayer> fog', () => {
   });
 });
 
-describe('<EnvironmentLayer> screen-space reflection', () => {
-  it('mounts the trace of an Environment that enables it', async () => {
-    const { scene } = await mountLayer({ ssr_enabled: 'true' });
-    expect(scene.getObjectByName('ScreenSpaceReflection')).toBeDefined();
+describe('<EnvironmentLayer> screen-space effects', () => {
+  const EFFECTS = 'ScreenSpaceEffects';
+
+  it.each(['ssr_enabled', 'ssao_enabled'])('mounts the effects of an Environment with %s', async (key) => {
+    const { scene } = await mountLayer({ [key]: 'true' });
+    expect(scene.getObjectByName(EFFECTS)).toBeDefined();
   });
 
-  it('mounts no trace for an Environment without one, so no surface reads a reflection', async () => {
-    const { scene } = await mountLayer({});
-    expect(scene.getObjectByName('ScreenSpaceReflection')).toBeUndefined();
-    expect(ssrState[SSR_STATE.showsReflection]).toBe(0);
+  it('mounts no pass for an Environment without either, so no surface reads one', async () => {
+    const { scene } = await mountLayer({ ssao_enabled: 'false' });
+    expect(scene.getObjectByName(EFFECTS)).toBeUndefined();
+    expect(screenSpaceState[SCREEN_SPACE_STATE.showsReflection]).toBe(0);
+    expect(screenSpaceState[SCREEN_SPACE_STATE.showsOcclusion]).toBe(0);
   });
 
-  it('takes the trace off the scene on unmount', async () => {
-    const { scene, unmount } = await mountLayer({ ssr_enabled: 'true' });
+  it('takes the effects off the scene on unmount', async () => {
+    const { scene, unmount } = await mountLayer({ ssao_enabled: 'true' });
     await unmount();
-    expect(scene.getObjectByName('ScreenSpaceReflection')).toBeUndefined();
+    expect(scene.getObjectByName(EFFECTS)).toBeUndefined();
   });
 });

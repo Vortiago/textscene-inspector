@@ -612,6 +612,18 @@ _Avoid_: "SSR pass", "mirror reflection", which a planar mirror or a **Reflectio
 The finished colour of a world buffer's last render, which the next **screen-space reflection** reads, so a still scene shows its reflection from the second frame on.
 _Avoid_: "previous frame", "frame before", "history buffer".
 
+**Normal-roughness prepass** (`r3f/screenSpaceEffects/normalRoughnessPrepass.ts`):
+The draw of each opaque surface's depth, view normal and roughness before the colour pass, which every **screen-space effect** of a render reads, as Godot's depth prepass writes them.
+_Avoid_: "G-buffer", "normal pass".
+
+**Screen-space effect**:
+A pass that reads the **normal-roughness prepass** of a render and shows its result to that render's opaque surfaces: the **screen-space reflection** and the **screen-space ambient occlusion**.
+_Avoid_: "post effect", which runs on the finished frame.
+
+**Screen-space ambient occlusion**:
+The Environment's `ssao_*` occlusion: Godot's port of Intel's ASSAO, which darkens each opaque surface by how much of the frame's depth around it blocks its ambient light.
+_Avoid_: "SSAO pass", "AO" alone, which is also the material's own `ao_texture`.
+
 **Depth fog**:
 The Environment's `fog_*` fog, which fades a surface towards the fog colour with its distance from the camera.
 _Avoid_: "screen-space fog". Bare "fog" where **volumetric fog** is on too.

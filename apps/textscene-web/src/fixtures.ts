@@ -658,6 +658,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Environment Ssao",
+    "file": "unit-environment-ssao.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Environment Ssr",
     "file": "unit-environment-ssr.tscn",
     "category": "Other"

@@ -29,18 +29,49 @@ const THREE_AO_GATE = '#ifdef USE_AOMAP';
 const THREE_AO_SAMPLE =
   'float ambientOcclusion = ( texture2D( aoMap, vAoMapUv ).r - 1.0 ) * aoMapIntensity + 1.0;';
 
+/**
+ * The global that holds Godot's `ao_light_affect`: the share of the occlusion the direct light
+ * takes. 0 where the material sets none (`:1249`).
+ */
+export const LIGHT_AFFECT = 'godotLightAffect';
+
+const MATERIAL_LIGHT_AFFECT = `float ${LIGHT_AFFECT} = 0.0;`;
+
+/** The last statement that writes the surface's own `ao`, after which the screen-space one folds in. */
+export const SURFACE_OCCLUSION = `ambientOcclusion = ambientOcclusion * ${OCCLUSION_MIX}.x + ${OCCLUSION_MIX}.y;`;
+
 /** Godot's `ao` before the surface's own terms read it: 1 where there is no AO map (`:1248`). */
 const GODOT_AO_SAMPLE = `float ambientOcclusion = 1.0;
+	${MATERIAL_LIGHT_AFFECT}
 	#ifdef USE_AOMAP
 		ambientOcclusion = ( texture2D( aoMap, vAoMapUv ).r - 1.0 ) * aoMapIntensity + 1.0;
 	#endif
-	ambientOcclusion = ambientOcclusion * ${OCCLUSION_MIX}.x + ${OCCLUSION_MIX}.y;`;
+	${SURFACE_OCCLUSION}`;
+
+/**
+ * Godot's occlusion of the direct light (`:2213`, `:2944-2945`). Sheen carries Godot's rim, which
+ * Godot adds to the diffuse light, and clearcoat goes to the specular light
+ * (`scene_forward_lights_inc.glsl:163,185`), so both take it too. At an affect of 0 the factor is
+ * exactly 1.
+ */
+const DIRECT_OCCLUSION = /* glsl */ `
+	float godotDirectOcclusion = mix( 1.0, ambientOcclusion, ${LIGHT_AFFECT} );
+	reflectedLight.directDiffuse *= godotDirectOcclusion;
+	reflectedLight.directSpecular *= godotDirectOcclusion;
+	#ifdef USE_CLEARCOAT
+		clearcoatSpecularDirect *= godotDirectOcclusion;
+	#endif
+	#ifdef USE_SHEEN
+		sheenSpecularDirect *= godotDirectOcclusion;
+	#endif
+`;
 
 /**
  * Makes `ambientOcclusion` exist for every surface, with the decals' ORM mix in it, as Godot's `ao`
- * does. three scales the indirect light by it only for a surface with an AO map. At 1 each
- * statement of the chunk multiplies by exactly 1, so a surface with no AO map and no decal draws
- * the same bits. True when the chunks hold the edit. A second call changes nothing.
+ * does, and occludes the direct light by its `ao_light_affect`. three scales the indirect light by
+ * it only for a surface with an AO map. At 1 each statement of the chunk multiplies by exactly 1,
+ * so a surface with no AO map and no decal draws the same bits. True when the chunks hold the edit.
+ * A second call changes nothing.
  */
 export function installGodotOcclusion(): boolean {
   return installChunkEdits({
@@ -53,6 +84,7 @@ export function installGodotOcclusion(): boolean {
       { chunk: 'aomap_fragment', three: THREE_AO_GATE, godot: '#if 1' },
       { chunk: 'aomap_fragment', three: THREE_AO_SAMPLE, godot: GODOT_AO_SAMPLE },
     ],
+    append: { aomap_fragment: DIRECT_OCCLUSION },
     mark: OCCLUSION_MIX,
     patch: 'occlusion',
   });
@@ -63,29 +95,21 @@ const MASKED_SAMPLE: TextEdit = {
   godot: 'dot( texture2D( aoMap, vAoMapUv ), godotAoTextureChannel )',
 };
 
-/**
- * Sheen carries Godot's rim, which Godot adds to the diffuse light, and clearcoat goes to the
- * specular light (`scene_forward_lights_inc.glsl:163,185`), so both take the direct factor too.
- */
-const DIRECT_OCCLUSION = /* glsl */ `
-	float godotDirectOcclusion = mix( 1.0, ambientOcclusion, godotAoLightAffect );
-	reflectedLight.directDiffuse *= godotDirectOcclusion;
-	reflectedLight.directSpecular *= godotDirectOcclusion;
-	#ifdef USE_CLEARCOAT
-		clearcoatSpecularDirect *= godotDirectOcclusion;
-	#endif
-	#ifdef USE_SHEEN
-		sheenSpecularDirect *= godotDirectOcclusion;
-	#endif
-`;
+/** The material's own `ao_light_affect`, in place of none. */
+const MATERIAL_LIGHT_AFFECT_UNIFORM: TextEdit = {
+  three: MATERIAL_LIGHT_AFFECT,
+  godot: `float ${LIGHT_AFFECT} = godotAoLightAffect;`,
+};
 
 /**
  * three's AO chunk inlined, as `onBeforeCompile` sees only the `#include`, with the channel mask
- * in place of the red sample, and the direct occlusion after it. Read at each compile, so it holds
- * the chunk as the shader patches leave it.
+ * in place of the red sample and the material's light affect. Read at each compile, so it holds
+ * the chunk as the shader patches leave it. The light affect it replaces is the occlusion patch's,
+ * so it installs that patch first.
  */
 function godotAoFragment(): string {
-  return `${editedChunk('aomap_fragment', MASKED_SAMPLE)}${DIRECT_OCCLUSION}`;
+  installGodotOcclusion();
+  return editedChunk('aomap_fragment', MASKED_SAMPLE, MATERIAL_LIGHT_AFFECT_UNIFORM);
 }
 
 const GODOT_AO_PARS = `${AO_PARS_CHUNK}

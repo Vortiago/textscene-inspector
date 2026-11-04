@@ -19,7 +19,7 @@ import { useDraws3D } from './draws3D';
 import { useViewportMode } from '../contexts/ViewportModeContext';
 import { SkyLayer } from '../sky/SkyLayer';
 import { FogLayer } from '../fog/FogLayer';
-import { ScreenSpaceReflectionLayer } from '../screenSpaceReflection/ScreenSpaceReflectionLayer';
+import { ScreenSpaceEffectsLayer } from '../screenSpaceEffects/ScreenSpaceEffectsLayer';
 import { clearColorTexture, foggedClearColorTexture } from './colorBackground';
 import { registerExposureStage, type ExposureStage } from '../exposure/sceneExposure';
 import { useExposureFactor } from './worldExposure';
@@ -79,7 +79,9 @@ function EnvironmentParts({ settings, sky, panorama }: EnvironmentLayerProps) {
   return (
     <>
       {hasFog && <FogLayer depth={settings.fog} volumetric={settings.volumetricFog} />}
-      {draws3D && settings.ssr && <ScreenSpaceReflectionLayer ssr={settings.ssr} />}
+      {draws3D && (settings.ssr || settings.ssao) && (
+        <ScreenSpaceEffectsLayer ssr={settings.ssr} ssao={settings.ssao} />
+      )}
       {sky && (showsSky || skyAmbient || reflectsSky) && (
         <SkyLayer
           sky={sky}

@@ -1,0 +1,56 @@
+; The variable: ssao_enabled. A corner of two walls and a floor, with a cube in it, lit only by a
+; white ambient light, so every shade is the screen-space occlusion: it darkens the seams and the
+; ground around the cube. No other golden enables SSAO: with it off every face draws one grey.
+[gd_scene format=3]
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0.3, 0.3, 0.3, 1)
+ambient_light_source = 2
+ambient_light_color = Color(1, 1, 1, 1)
+ambient_light_energy = 1.0
+ssao_enabled = true
+
+[sub_resource type="BoxMesh" id="Floor_1"]
+size = Vector3(4, 0.1, 4)
+
+[sub_resource type="BoxMesh" id="WallBack_1"]
+size = Vector3(4, 2, 0.1)
+
+[sub_resource type="BoxMesh" id="WallLeft_1"]
+size = Vector3(0.1, 2, 4)
+
+[sub_resource type="BoxMesh" id="Cube_1"]
+size = Vector3(0.6, 0.6, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="Mat_1"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="Corner" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.8660254, 0, -0.8660254, 0.5, 0, 3, 0)
+light_energy = 0
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, 0)
+mesh = SubResource("Floor_1")
+surface_material_override/0 = SubResource("Mat_1")
+
+[node name="WallBack" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -1.05)
+mesh = SubResource("WallBack_1")
+surface_material_override/0 = SubResource("Mat_1")
+
+[node name="WallLeft" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.05, 1, 0)
+mesh = SubResource("WallLeft_1")
+surface_material_override/0 = SubResource("Mat_1")
+
+[node name="Cube" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.3, -0.5)
+mesh = SubResource("Cube_1")
+surface_material_override/0 = SubResource("Mat_1")

@@ -19,6 +19,7 @@ import {
   projectCanvasTextureDefaults,
   projectClearColor,
   projectTransparentBackground,
+  projectDrawsDepthPrepass,
   projectTracesHalfSizeReflections,
   projectGlowUsesBicubicUpscale,
   projectUsesLightmapBicubicFilter,
@@ -29,8 +30,13 @@ import {
   projectTextureMipmapBias,
   projectViewportSize,
   projectVolumetricFogSettings,
+  projectAmbientOcclusionSettings,
 } from './projectSettingsParser';
 import { VOLUMETRIC_FOG_DEFAULTS } from '../godot/rendering/environment/volumetricFog';
+import {
+  SSAO_PROJECT_DEFAULTS,
+  SSAO_QUALITY,
+} from '../godot/rendering/environment/screenSpaceAmbientOcclusion';
 
 /** The head of the real demo project, verbatim, comments and wrap included. */
 const GUI_IN_3D = `; Engine configuration file.
@@ -210,6 +216,56 @@ describe('projectVolumetricFogSettings', () => {
   });
 });
 
+describe('projectAmbientOcclusionSettings', () => {
+  it("gives Godot's defaults with no project (rendering_server.cpp:3756-3764)", () => {
+    expect(projectAmbientOcclusionSettings(null)).toEqual({
+      quality: SSAO_QUALITY.MEDIUM,
+      isHalfSize: true,
+      adaptiveTarget: 0.5,
+      blurPasses: 2,
+      fadeoutFrom: 50,
+      fadeoutTo: 300,
+      ssilQuality: SSAO_QUALITY.MEDIUM,
+      isSsilHalfSize: true,
+    });
+    expect(projectAmbientOcclusionSettings({})).toEqual(SSAO_PROJECT_DEFAULTS);
+  });
+
+  it('reads every SSAO setting, and the SSIL settings that shape its depth buffer', () => {
+    const settings = {
+      'rendering/environment/ssao/quality': '4',
+      'rendering/environment/ssao/half_size': 'false',
+      'rendering/environment/ssao/adaptive_target': '0.8',
+      'rendering/environment/ssao/blur_passes': '5',
+      'rendering/environment/ssao/fadeout_from': '10.0',
+      'rendering/environment/ssao/fadeout_to': '80.0',
+      'rendering/environment/ssil/quality': '0',
+      'rendering/environment/ssil/half_size': 'false',
+    };
+    expect(projectAmbientOcclusionSettings(settings)).toEqual({
+      quality: SSAO_QUALITY.ULTRA,
+      isHalfSize: false,
+      adaptiveTarget: 0.8,
+      blurPasses: 5,
+      fadeoutFrom: 10,
+      fadeoutTo: 80,
+      ssilQuality: SSAO_QUALITY.VERY_LOW,
+      isSsilHalfSize: false,
+    });
+  });
+
+  it('keeps the default for a malformed value or a quality outside the enum (error path)', () => {
+    const settings = {
+      'rendering/environment/ssao/quality': '9',
+      'rendering/environment/ssao/half_size': 'maybe',
+      'rendering/environment/ssao/adaptive_target': 'x',
+      'rendering/environment/ssao/blur_passes': 'two',
+      'rendering/environment/ssil/quality': '-1',
+    };
+    expect(projectAmbientOcclusionSettings(settings)).toEqual(SSAO_PROJECT_DEFAULTS);
+  });
+});
+
 describe('projectTransparentBackground', () => {
   it('reads a transparent root', () => {
     expect(projectTransparentBackground({ 'rendering/viewport/transparent_background': 'true' })).toBe(true);
@@ -239,6 +295,23 @@ describe('projectTracesHalfSizeReflections', () => {
 
   it('keeps the default for a malformed value (error path)', () => {
     expect(projectTracesHalfSizeReflections({ [KEY]: 'nope' })).toBe(true);
+  });
+});
+
+describe('projectDrawsDepthPrepass', () => {
+  const KEY = 'rendering/driver/depth_prepass/enable';
+
+  it('draws the depth prepass by default, as rendering_server.cpp:3746 registers it', () => {
+    expect(projectDrawsDepthPrepass(null)).toBe(true);
+    expect(projectDrawsDepthPrepass({})).toBe(true);
+  });
+
+  it('draws none when the project turns the prepass off', () => {
+    expect(projectDrawsDepthPrepass({ [KEY]: 'false' })).toBe(false);
+  });
+
+  it('keeps the default for a malformed value (error path)', () => {
+    expect(projectDrawsDepthPrepass({ [KEY]: 'nope' })).toBe(true);
   });
 });
 

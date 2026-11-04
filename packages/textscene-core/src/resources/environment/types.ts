@@ -115,6 +115,24 @@ export interface EnvironmentProperties {
   /** How far behind a surface, in metres, a ray still counts as a hit. */
   ssr_depth_tolerance: number;
 
+  // Screen-space ambient occlusion
+  ssao_enabled: boolean;
+  /** How far, in metres, a surface occludes the surfaces around it. */
+  ssao_radius: number;
+  ssao_intensity: number;
+  /** The exponent the occlusion is raised to. */
+  ssao_power: number;
+  /** The weight of the occlusion from each pixel's four neighbours. */
+  ssao_detail: number;
+  /** The angle, as a cosine, below which an occluder occludes nothing. */
+  ssao_horizon: number;
+  /** How far the blur keeps from an edge, 0-1. */
+  ssao_sharpness: number;
+  /** The share of the direct light the occlusion darkens, gated by `ssao_ao_channel_affect`. */
+  ssao_light_affect: number;
+  /** How far the occlusion takes over a material's `ao_light_affect`, 0-1. */
+  ssao_ao_channel_affect: number;
+
   // Glow, a compositor post-process: a peak-channel bright pass over a weighted mip
   // pyramid, blended back around the tone curve. The editor preview environment
   // enables it, which is why emissive materials bloom in Godot's editor.
@@ -225,6 +243,21 @@ export interface ScreenSpaceReflection {
   depthTolerance: number;
 }
 
+/**
+ * Screen-space ambient occlusion: each opaque surface darkens its ambient light by the depth and
+ * the normals around it in the frame (`ss_effects.cpp:1130`).
+ */
+export interface ScreenSpaceAmbientOcclusion {
+  radius: number;
+  intensity: number;
+  power: number;
+  detail: number;
+  horizon: number;
+  sharpness: number;
+  lightAffect: number;
+  aoChannelAffect: number;
+}
+
 /** `createEnvironmentSettings`'s output: one Environment as the render layer applies it. */
 export interface EnvironmentSettings {
   background: {
@@ -285,6 +318,8 @@ export interface EnvironmentSettings {
   volumetricFog: VolumetricFog | null;
   /** Null when disabled. */
   ssr: ScreenSpaceReflection | null;
+  /** Null when disabled. */
+  ssao: ScreenSpaceAmbientOcclusion | null;
   /** The colour adjustments the tone-map pass applies after the curve, null when disabled. */
   adjustments: EnvironmentAdjustments | null;
   /**

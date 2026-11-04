@@ -25,6 +25,12 @@ import {
   type VolumetricFogProjectSettings,
 } from '../godot/rendering/environment/volumetricFog.js';
 import { MSAA_DISABLED } from '../godot/rendering/msaa.js';
+import {
+  SSAO_PROJECT_DEFAULTS,
+  SSAO_QUALITIES,
+  type SsaoProjectSettings,
+  type SsaoQuality,
+} from '../godot/rendering/environment/screenSpaceAmbientOcclusion.js';
 import type { Rgba } from '../godot/math/math.js';
 import { GlowUpscaleMode } from '../godot/rendering/environment/glow.js';
 import { LIGHTMAP_BICUBIC_FILTER_DEFAULT } from '../godot/scene/lightmapGi.js';
@@ -243,6 +249,28 @@ export function projectVolumetricFogSettings(settings: ProjectSettings | null): 
   };
 }
 
+/**
+ * The `rendering/environment/ssao/*` settings, and the `ssil/quality` and `ssil/half_size` that
+ * shape the depth buffer SSAO reads (`ss_effects.cpp:151-180`, `:520-547`).
+ */
+export function projectAmbientOcclusionSettings(settings: ProjectSettings | null): SsaoProjectSettings {
+  const defaults = SSAO_PROJECT_DEFAULTS;
+  const quality = (key: string, fallback: SsaoQuality): SsaoQuality =>
+    enumOr(settings?.[key], fallback, SSAO_QUALITIES, key);
+  const flag = (key: string, fallback: boolean): boolean => boolSlotValue(settings?.[key]) ?? fallback;
+  const real = (key: string, fallback: number): number => parseOptionalFloat(settings?.[key]) ?? fallback;
+  return {
+    quality: quality('rendering/environment/ssao/quality', defaults.quality),
+    isHalfSize: flag('rendering/environment/ssao/half_size', defaults.isHalfSize),
+    adaptiveTarget: real('rendering/environment/ssao/adaptive_target', defaults.adaptiveTarget),
+    blurPasses: parseOptionalInt(settings?.['rendering/environment/ssao/blur_passes']) ?? defaults.blurPasses,
+    fadeoutFrom: real('rendering/environment/ssao/fadeout_from', defaults.fadeoutFrom),
+    fadeoutTo: real('rendering/environment/ssao/fadeout_to', defaults.fadeoutTo),
+    ssilQuality: quality('rendering/environment/ssil/quality', defaults.ssilQuality),
+    isSsilHalfSize: flag('rendering/environment/ssil/half_size', defaults.isSsilHalfSize),
+  };
+}
+
 /** The `Viewport.MSAA` modes of a viewport's 2D and 3D buffers. */
 export interface MsaaModes {
   msaa2D: number;
@@ -356,6 +384,14 @@ export function projectUsesDebanding(settings: ProjectSettings | null): boolean 
  */
 export function projectTracesHalfSizeReflections(settings: ProjectSettings | null): boolean {
   return boolSlotValue(settings?.['rendering/environment/screen_space_reflection/half_size']) ?? true;
+}
+
+/**
+ * `rendering/driver/depth_prepass/enable`. Without the prepass Godot runs no screen-space ambient
+ * occlusion (`render_forward_clustered.cpp:2081-2086`).
+ */
+export function projectDrawsDepthPrepass(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['rendering/driver/depth_prepass/enable']) ?? true;
 }
 
 /**
