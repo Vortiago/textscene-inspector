@@ -67,7 +67,8 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
       );
     }
     case 'WorldBoundaryShape3D':
-      return <WorldBoundaryLines shape={shape} color={color} />;
+    case 'HeightMapShape3D':
+      return <ShapeLines shape={shape} color={color} />;
     case 'ConcavePolygonShape3D':
       return <TriangleSoupWire shapeData={data} color={color} />;
     case 'ConvexPolygonShape3D':
@@ -98,8 +99,8 @@ const MIN_TRIANGLE_SOUP_FLOATS = 3 * 3;
 /** A tetrahedron's four corners: the fewest points that enclose a volume. */
 const MIN_CONVEX_HULL_POINTS = 4;
 
-/** Godot draws a world boundary as lines, not a wireframe mesh: a square and a normal ray. */
-function WorldBoundaryLines({ shape, color }: { shape: TscnInternalResource; color: THREE.Color }) {
+/** The lines of Godot's `get_debug_mesh_lines()`, drawn for a shape Godot draws as lines, not a wireframe mesh. */
+function ShapeLines({ shape, color }: { shape: TscnInternalResource; color: THREE.Color }) {
   const positions = useMemo(() => shapeDebugLines(shape), [shape]);
   return positions && <GizmoLine positions={positions} color={color} />;
 }

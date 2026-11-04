@@ -150,3 +150,106 @@ describe('worldBoundaryDebugLines', () => {
     expected.forEach((value, index) => expect(wire[index]).toBeCloseTo(value, 4));
   });
 });
+
+/**
+ * Measured on Godot 4.6.3: a `.tres` loaded through `ResourceLoader`, then `get_debug_mesh()` read
+ * back. Each row is one segment, `[x0, y0, z0, x1, y1, z1]`.
+ */
+const GODOT_HEIGHT_MAP_SEGMENTS: readonly (readonly [string, Record<string, string>, number[][]])[] = [
+  [
+    'the default 2 x 2 grid',
+    {},
+    [
+      [-0.5, 0, -0.5, 0.5, 0, -0.5],
+      [-0.5, 0, -0.5, -0.5, 0, 0.5],
+      [0.5, 0, -0.5, -0.5, 0, 0.5],
+      [0.5, 0, -0.5, 0.5, 0, 0.5],
+      [-0.5, 0, 0.5, 0.5, 0, 0.5],
+    ],
+  ],
+  [
+    'a 3 x 2 grid',
+    { map_width: '3', map_depth: '2', map_data: 'PackedFloat32Array(0, 1, 2, 3, 4, 5)' },
+    [
+      [-1, 0, -0.5, 0, 1, -0.5],
+      [-1, 0, -0.5, -1, 3, 0.5],
+      [0, 1, -0.5, -1, 3, 0.5],
+      [0, 1, -0.5, 1, 2, -0.5],
+      [0, 1, -0.5, 0, 4, 0.5],
+      [1, 2, -0.5, 0, 4, 0.5],
+      [1, 2, -0.5, 1, 5, 0.5],
+      [-1, 3, 0.5, 0, 4, 0.5],
+      [0, 4, 0.5, 1, 5, 0.5],
+    ],
+  ],
+  [
+    'negative, fractional and large heights',
+    { map_width: '3', map_depth: '3', map_data: 'PackedFloat32Array(0, -1, 2, 0.5, 250, -3, 1.25, 0, 7)' },
+    [
+      [-1, 0, -1, 0, -1, -1],
+      [-1, 0, -1, -1, 0.5, 0],
+      [0, -1, -1, -1, 0.5, 0],
+      [0, -1, -1, 1, 2, -1],
+      [0, -1, -1, 0, 250, 0],
+      [1, 2, -1, 0, 250, 0],
+      [1, 2, -1, 1, -3, 0],
+      [-1, 0.5, 0, 0, 250, 0],
+      [-1, 0.5, 0, -1, 1.25, 1],
+      [0, 250, 0, -1, 1.25, 1],
+      [0, 250, 0, 1, -3, 0],
+      [0, 250, 0, 0, 0, 1],
+      [1, -3, 0, 0, 0, 1],
+      [1, -3, 0, 1, 7, 1],
+      [-1, 1.25, 1, 0, 0, 1],
+      [0, 0, 1, 1, 7, 1],
+    ],
+  ],
+  [
+    'a 4 x 3 grid',
+    { map_width: '4', map_depth: '3', map_data: 'PackedFloat32Array(0, 0, 1, 1, 0, 2, 2, 1, 0, 0, 1, 3)' },
+    [
+      [-1.5, 0, -1, -0.5, 0, -1],
+      [-1.5, 0, -1, -1.5, 0, 0],
+      [-0.5, 0, -1, -1.5, 0, 0],
+      [-0.5, 0, -1, 0.5, 1, -1],
+      [-0.5, 0, -1, -0.5, 2, 0],
+      [0.5, 1, -1, -0.5, 2, 0],
+      [0.5, 1, -1, 1.5, 1, -1],
+      [0.5, 1, -1, 0.5, 2, 0],
+      [1.5, 1, -1, 0.5, 2, 0],
+      [1.5, 1, -1, 1.5, 1, 0],
+      [-1.5, 0, 0, -0.5, 2, 0],
+      [-1.5, 0, 0, -1.5, 0, 1],
+      [-0.5, 2, 0, -1.5, 0, 1],
+      [-0.5, 2, 0, 0.5, 2, 0],
+      [-0.5, 2, 0, -0.5, 0, 1],
+      [0.5, 2, 0, -0.5, 0, 1],
+      [0.5, 2, 0, 1.5, 1, 0],
+      [0.5, 2, 0, 0.5, 1, 1],
+      [1.5, 1, 0, 0.5, 1, 1],
+      [1.5, 1, 0, 1.5, 3, 1],
+      [-1.5, 0, 1, -0.5, 0, 1],
+      [-0.5, 0, 1, 0.5, 1, 1],
+      [0.5, 1, 1, 1.5, 3, 1],
+    ],
+  ],
+  [
+    'a single column',
+    { map_width: '1', map_depth: '4', map_data: 'PackedFloat32Array(0, 1, -1, 2)' },
+    [
+      [0, 0, -1.5, 0, 1, -0.5],
+      [0, 1, -0.5, 0, -1, 0.5],
+      [0, -1, 0.5, 0, 2, 1.5],
+    ],
+  ],
+  // A 1 x 1 grid has no cell edge to draw.
+  ['a single sample', { map_width: '1', map_depth: '1', map_data: 'PackedFloat32Array(5)' }, []],
+];
+
+describe('heightMapDebugLines', () => {
+  it.each(GODOT_HEIGHT_MAP_SEGMENTS)('matches Godot for %s', (_name, data, expected) => {
+    const wire = shapeDebugLines({ id: 'a', type: 'HeightMapShape3D', data })!;
+    // `+ 0` turns a negative zero positive: the measured values went through JSON, which drops its sign.
+    expect(Array.from(wire, (value) => value + 0)).toEqual(expected.flat());
+  });
+});

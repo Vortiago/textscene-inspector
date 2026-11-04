@@ -22,8 +22,10 @@ import { decodeBoxShape3D } from '../../../resources/shapes/boxshape3d';
 import { decodeCapsuleShape3D } from '../../../resources/shapes/capsuleshape3d';
 import { decodeConcavePolygonShape3D } from '../../../resources/shapes/concavepolygonshape3d';
 import { decodeCylinderShape3D } from '../../../resources/shapes/cylindershape3d';
+import { decodeHeightMapShape3D } from '../../../resources/shapes/heightmapshape3d';
 import { decodeSphereShape3D } from '../../../resources/shapes/sphereshape3d';
 import { decodeWorldBoundaryShape3D } from '../../../resources/shapes/worldboundaryshape3d';
+import type { HeightMapShape3DProperties } from '../../../resources/shapes/heightmapshape3d/types';
 import type { TscnInternalResource } from '../../../parser/types';
 
 /**
@@ -181,6 +183,34 @@ function worldBoundaryDebugLines({ normal, d }: Plane): Float32Array {
 }
 
 /**
+ * `HeightMapShape3D::get_debug_mesh_lines` (`height_map_shape_3d.cpp:37-83`): the grid centred on the
+ * origin, one unit between samples. Each sample draws the edge to its +x neighbour, the edge to its
+ * +z neighbour and, inside the grid, the cell diagonal. Positions accumulate in float, as Godot's do.
+ */
+function heightMapDebugLines({ width, depth, heights }: HeightMapShape3DProperties): Float32Array {
+  const points: number[] = [];
+  const segment = (from: Vector3, to: Vector3) => points.push(from.x, from.y, from.z, to.x, to.y, to.z);
+  let z = storedReal((depth - 1) * -0.5);
+  for (let row = 0; row < depth; row += 1) {
+    let x = storedReal((width - 1) * -0.5);
+    for (let column = 0; column < width; column += 1) {
+      const sample = row * width + column;
+      const hasNextColumn = column !== width - 1;
+      const hasNextRow = row !== depth - 1;
+      const here = { x, y: heights[sample]!, z };
+      const nextColumn = () => ({ x: storedReal(x + 1), y: heights[sample + 1]!, z });
+      const nextRow = () => ({ x, y: heights[sample + width]!, z: storedReal(z + 1) });
+      if (hasNextColumn) segment(here, nextColumn());
+      if (hasNextRow) segment(here, nextRow());
+      if (hasNextColumn && hasNextRow) segment(nextColumn(), nextRow());
+      x = storedReal(x + 1);
+    }
+    z = storedReal(z + 1);
+  }
+  return new Float32Array(points);
+}
+
+/**
  * The wireframe of a shape the previewer decodes synchronously. Null for `ConvexPolygonShape3D`,
  * whose lazy hull draws it, and for a type without a port, which the caller warns about.
  *
@@ -202,6 +232,8 @@ export function shapeDebugLines(shape: TscnInternalResource): Float32Array | nul
     }
     case 'WorldBoundaryShape3D':
       return worldBoundaryDebugLines(decodeWorldBoundaryShape3D(shape.data).plane);
+    case 'HeightMapShape3D':
+      return heightMapDebugLines(decodeHeightMapShape3D(shape.data));
     case 'ConcavePolygonShape3D':
       return concaveDebugLines(decodeConcavePolygonShape3D(shape.data).data);
     default:
