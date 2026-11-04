@@ -10,6 +10,18 @@ dir="$2"
 mkdir -p "$dir"
 cd "$dir"
 
+# Prints the executable called $2 under $1, or the layout on stderr when there is none.
+# An AppImage nests its binary under usr/share/<name>/, four levels down.
+find_executable() {
+  local found
+  found=$(find "$1" -maxdepth 5 -type f -name "$2" -perm -u+x | head -n 1)
+  if [ -z "$found" ]; then
+    echo "no executable named $2 under $1; layout:" >&2
+    find "$1" -maxdepth 3 | head -n 60 >&2
+  fi
+  echo "$found"
+}
+
 fetch_vscodium() {
   gh release download --repo VSCodium/vscodium --pattern 'VSCodium-linux-x64-*.tar.gz' --output vscodium.tar.gz
   tar -xzf vscodium.tar.gz
@@ -23,7 +35,7 @@ fetch_cursor() {
   curl -fsSL -A 'Mozilla/5.0' -o cursor.AppImage "$url"
   chmod +x cursor.AppImage
   ./cursor.AppImage --appimage-extract > /dev/null
-  find "$PWD/squashfs-root" -maxdepth 3 -type f -name cursor -perm -u+x | head -n 1
+  find_executable "$PWD/squashfs-root" cursor
 }
 
 fetch_windsurf() {
@@ -31,7 +43,7 @@ fetch_windsurf() {
   url=$(curl -fsSL 'https://windsurf-stable.codeiumdata.com/api/update/linux-x64/stable/latest' | jq -r .url)
   curl -fsSL -o windsurf.tar.gz "$url"
   tar -xzf windsurf.tar.gz
-  find "$PWD" -maxdepth 3 -type f -name windsurf -perm -u+x | head -n 1
+  find_executable "$PWD" windsurf
 }
 
 case "$fork" in
