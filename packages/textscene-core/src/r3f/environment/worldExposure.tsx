@@ -136,7 +136,7 @@ export function WorldAttributesExposure({ children }: { children: ReactNode }) {
  * The exposure of a viewport that shares its parent's world. The world's CameraAttributes group and
  * its cameras are the parent's, keyed by its scenario (`world_environment.cpp:87-93`), so a node
  * inside publishes to the parent's. The scene holds the world's exposure for every viewport that
- * draws it, so its lights read the world's and each pass draws at its own (`ViewportPassAttributes`).
+ * draws it, and each pass draws at its own (`ViewportPassAttributes`).
  */
 export function SharedWorldExposureScope({ children }: { children: ReactNode }) {
   const factor = attributesOf(cameraAttributes.useChosen())?.exposureMultiplier ?? null;
@@ -185,7 +185,7 @@ const PassCameraContext = createContext<WorldCamera | null>(null);
  * Gives `children`, the tonemap stage of the viewport pass at `path`, the attributes the pass draws
  * with: those of the camera it elects, else the world's own. The world elects the camera once, from
  * what the cameras publish, and the pass draws through it (`usePassCameraPath`). A pass in a shared
- * world draws at the attributes over the exposure its scene holds (`drawAtExposure`).
+ * world draws at the exposure of those attributes, whatever its scene holds (`drawAtExposure`).
  *
  * @canonical The attributes a viewport pass draws with
  */

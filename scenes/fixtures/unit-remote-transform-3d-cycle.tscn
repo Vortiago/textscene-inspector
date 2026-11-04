@@ -1,0 +1,38 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitremotetransform3dcycle"]
+
+; The one variable: two relays that drive each other's holders, one of them turned 10 degrees. Godot
+; pushes the pair on every transform flush without end (remote_transform_3d.cpp:118-126), and draws the
+; box where its last notification before the ref:godot harness frame left it (visual_instance_3d.cpp:90-96).
+; Every other RemoteTransform golden settles in the first flushes, so none of them shows a regression in it.
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(6, 6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_part"]
+size = Vector3(0.4, 0.4, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_box"]
+albedo_color = Color(0.2, 0.45, 0.9, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="HolderA" type="Node3D" parent="."]
+
+[node name="Box" type="MeshInstance3D" parent="HolderA"]
+mesh = SubResource("BoxMesh_part")
+surface_material_override/0 = SubResource("StandardMaterial3D_box")
+
+[node name="RelayA" type="RemoteTransform3D" parent="HolderA"]
+transform = Transform3D(0.9848078, 0, -0.1736482, 0, 1, 0, 0.1736482, 0, 0.9848078, 0.5, 0, 0)
+remote_path = NodePath("../../HolderB")
+
+[node name="HolderB" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)
+
+[node name="RelayB" type="RemoteTransform3D" parent="HolderB"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0, 0)
+remote_path = NodePath("../../HolderA")

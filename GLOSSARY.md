@@ -31,6 +31,7 @@ _Avoid_: reading a node's merge, scope or children in separate calls.
 **Live tree snapshot** (`LiveTreeContext` in `r3f/liveSceneTree.ts`, shared by `useSharedLiveTree`):
 One read of the loader's scene cache that every question over the **Live scene tree** shares until the next scene or GLB load.
 It reads each scene path once, composes each inherited sub-scene once, and holds the one tree and owner walk that every path question asks.
+It also carries the project's **Physics clock**, so one snapshot answers for one project.
 _Avoid_: a live tree or a context per consumer, per question.
 
 **Authored scope** (`LiveNode.scope`, read through `scopeOf` and `LiveTree.stepOf`):
@@ -46,6 +47,23 @@ _Avoid_: writing a pass's result into a node. A pass that runs before the sub-sc
 **Node patch** (`NodePatch`, `r3f/nodePatch.ts`, ADR-0060):
 The property values a **Live scene pass** lays over one node of the **Live scene tree**, found by the node's live path. `patchedNode` returns the node with its patch over its properties.
 _Avoid_: a pass mutating a node it was handed.
+
+**Transform flush** (`replayTransformFlushes` in `godot/scene/transformFlushes.ts`):
+One walk of Godot's transform-change list, which sends `NOTIFICATION_TRANSFORM_CHANGED` to each node queued since the last walk. Godot runs three in each process frame and two in each physics tick.
+A RemoteTransform pushes each time a flush reaches it, so the RemoteTransform pass replays flushes, not the file order.
+_Avoid_: "update", "tick" for a flush.
+
+**Harness frame** (`HARNESS_CAPTURE` in `godot/scene/transformFlushes.ts`):
+The process frame at which `pnpm ref:godot` captures a scene whose transforms never hold still. The previewer draws such a scene at this frame, so both sides show the same pose.
+_Avoid_: "last frame", "the capture time".
+
+**Relay cycle** (`relayCycles.ts` in `nodes/shared/remotetransform/`):
+RemoteTransform relays whose pushes lead back to the first. When the cycle holds a relay in global coordinates, Godot pushes it on every **Transform flush** without end, so the previewer draws the **Harness frame**. A cycle of local relays recurses inside one push, and Godot overflows its stack. The linter warns on each relay of either kind.
+_Avoid_: "ring", "feedback loop".
+
+**Physics clock** (`PhysicsClock` in `godot/scene/physicsTicks.ts`):
+The two **Project settings** that pace physics ticks: `physics_ticks_per_second` and `physics_jitter_fix`. With the harness's fixed frame rate, they decide how many **Transform flushes** run by the **Harness frame**.
+_Avoid_: "tick rate" alone, since the jitter fix moves ticks too.
 
 **Instance name table** (`resources/instanceNameTable.ts`):
 An instance root's `%Name` table, which the merge composes as instantiate builds it: the sub-scene's own names, then each host `unique_name_in_owner` setting at its heading, in file order.
@@ -569,8 +587,12 @@ The `exposure_multiplier` of the CameraAttributes that a world renders with. A w
 _Avoid_: "exposure" alone, which `tonemap_exposure` also names. "Brightness".
 
 **Pass attributes** (`ViewportPassAttributes` in `r3f/environment/worldExposure.tsx`):
-The CameraAttributes a viewport pass draws with: those of the camera it elects, else those of its world. A world holds one **Exposure factor** for its lights, and a pass draws the world at the factor of its own **Pass attributes**, so two viewports of one world draw one frame at two exposures.
+The CameraAttributes a viewport pass draws with: those of the camera it elects, else those of its world. A light holds its energy, and a pass draws the world at the **Exposure factor** of its own **Pass attributes**, so two viewports of one world draw one frame at two exposures.
 _Avoid_: "viewport exposure", "camera exposure".
+
+**Exposure follower** (`followSceneExposure` in `r3f/exposure/sceneExposure.ts`):
+A consumer that writes its state for the **Exposure factor** of each render of a scene, such as the sky, a lightmap or the probe rows. A draw at another factor shows it too, so no consumer reads a held factor at render time.
+_Avoid_: "exposure stage", "exposure listener".
 
 **Pass Environment** (`ViewportPassEnvironment` in `r3f/environment/WorldEnvironmentScope.tsx`):
 The Environment a viewport pass draws with: that of the camera it elects, else its world's own. A world's scene shows one Environment, and a pass puts its own **Pass Environment** on the scene for its draw only, so two viewports of one world draw one frame with two backgrounds.
@@ -615,6 +637,18 @@ _Avoid_: "SSR pass", "mirror reflection", which a planar mirror or a **Reflectio
 **Last frame**:
 The finished colour of a world buffer's last render, which the next **screen-space reflection** reads, so a still scene shows its reflection from the second frame on.
 _Avoid_: "previous frame", "frame before", "history buffer".
+
+**Normal-roughness prepass** (`r3f/screenSpaceEffects/normalRoughnessPrepass.ts`):
+The draw of each opaque surface's depth, view normal and roughness before the colour pass, which every **screen-space effect** of a render reads, as Godot's depth prepass writes them.
+_Avoid_: "G-buffer", "normal pass".
+
+**Screen-space effect**:
+A pass that reads the **normal-roughness prepass** of a render and shows its result to that render's opaque surfaces: the **screen-space reflection** and the **screen-space ambient occlusion**.
+_Avoid_: "post effect", which runs on the finished frame.
+
+**Screen-space ambient occlusion**:
+The Environment's `ssao_*` occlusion: Godot's port of Intel's ASSAO, which darkens each opaque surface by how much of the frame's depth around it blocks its ambient light.
+_Avoid_: "SSAO pass", "AO" alone, which is also the material's own `ao_texture`.
 
 **Depth fog**:
 The Environment's `fog_*` fog, which fades a surface towards the fog colour with its distance from the camera.

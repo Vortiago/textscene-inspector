@@ -8,21 +8,24 @@
 import { createContext, useContext, useMemo } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import { liveTreeOf, type LiveTreeContext } from './liveSceneTree.js';
-import { useSharedLiveTree } from './useLiveSceneTree.js';
+import { useProjectPhysicsClock, useSharedLiveTree } from './useLiveSceneTree.js';
 import { canvasScopesOf } from './canvasScopes.js';
 import { NOTHING_CACHED } from './cacheSources.js';
+import { perObject } from '../utils/perObject.js';
+import type { PhysicsClock } from '../godot/scene/physicsTicks.js';
 import { WHITE_MODULATE } from './canvasItemModulate.js';
 import { CANVAS_MODULATE_FLOOR } from './lighting2d/canvasItemLighting.js';
 import { type CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types.js';
 import type { Rgba } from '../godot/math/math.js';
 import { CanvasItemMaterialLightMode } from '../godot/scene/canvasItemMaterial.js';
 
-/** The sub-scenes the loader holds, which is none before a scene graph exists. */
-const NO_SCENES: LiveTreeContext = {
+/** The sub-scenes the loader holds, which is none before a scene graph exists, for each physics clock. */
+const noScenesAt = perObject((physicsClock: PhysicsClock): LiveTreeContext => ({
   externalResources: [],
   internalResources: [],
   sceneCache: NOTHING_CACHED,
-};
+  physicsClock,
+}));
 
 /**
  * The canvas-wide tint for the nodes of one canvas, white with no visible CanvasModulate. It reads
@@ -31,7 +34,8 @@ const NO_SCENES: LiveTreeContext = {
  * in, whichever file declares it (`canvas_modulate.cpp:33-45`).
  */
 export function useCanvasModulateColor(nodes: readonly TscnNode[]): Rgba {
-  const ctx = useSharedLiveTree()?.ctx ?? NO_SCENES;
+  const physicsClock = useProjectPhysicsClock();
+  const ctx = useSharedLiveTree()?.ctx ?? noScenesAt(physicsClock);
   return useMemo(() => canvasScopesOf(liveTreeOf(nodes, ctx)).modulate ?? WHITE_MODULATE, [nodes, ctx]);
 }
 

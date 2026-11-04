@@ -3,6 +3,7 @@
  * one warning for `remote_path` absent, naming no node, or naming a non-Node2D.
  * An absent path is the empty `NodePath()`, and `has_node()` on it is false, so
  * absence is the trigger. `resolveNodePath` declines only a walk into another file.
+ * A second arm warns on a relay in a relay cycle (`relayCycles.ts`).
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -11,9 +12,11 @@ import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../li
 import { extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
+import { relayCycleArm, relayCycleDiagnostics } from '../../shared/remotetransform/relayCycles.js';
 
 const arms = {
   invalidRemotePath: groundedArm('remotetransform2d-invalid-remote-path', { kind: 'configuration-warning' }),
+  relayCycle: relayCycleArm('remotetransform2d-relay-cycle', 'remote_transform_2d.cpp:127-136'),
 } as const satisfies RuleArms<string>;
 
 function warn(node: RuleContext['node'], detail: string): Diagnostic[] {
@@ -53,12 +56,15 @@ const remoteTransform2DPathRule: LintRule = {
   meta: {
     name: 'valid-remotetransform2d-remote-path',
     description:
-      'Warns when RemoteTransform2D has no remote_path, or remote_path resolves to no node or a non-Node2D node',
+      'Warns when RemoteTransform2D has no remote_path, or remote_path resolves to no node or a non-Node2D node, and on a relay in a relay cycle',
     category: 'validation',
     applicableNodeTypes: ['RemoteTransform2D'],
     emits: armEmits(arms),
   },
-  check: checkRemoteTransform2D,
+  check: (context) => [
+    ...checkRemoteTransform2D(context),
+    ...relayCycleDiagnostics(arms.relayCycle, context),
+  ],
 };
 
 ruleRegistry.register(remoteTransform2DPathRule);

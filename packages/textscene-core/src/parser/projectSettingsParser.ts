@@ -15,6 +15,7 @@ import { dataDirectoryPath, extensionListPath } from '../godot/project/project.j
 import { isLocaleRightToLeft } from '../godot/text/textServer.js';
 import type { LayoutDirectionEnv } from '../godot/scene/control.js';
 import { DEFAULT_CLEAR_COLOR } from '../godot/rendering/rendering.js';
+import { DEFAULT_PHYSICS_CLOCK, type PhysicsClock } from '../godot/scene/physicsTicks.js';
 import { unquoteLiteral } from './utils.js';
 import { colorOr } from '../utils/colorParser.js';
 import { perObject } from '../utils/perObject.js';
@@ -25,6 +26,12 @@ import {
   type VolumetricFogProjectSettings,
 } from '../godot/rendering/environment/volumetricFog.js';
 import { MSAA_DISABLED } from '../godot/rendering/msaa.js';
+import {
+  SSAO_PROJECT_DEFAULTS,
+  SSAO_QUALITIES,
+  type SsaoProjectSettings,
+  type SsaoQuality,
+} from '../godot/rendering/environment/screenSpaceAmbientOcclusion.js';
 import type { Rgba } from '../godot/math/math.js';
 import { GlowUpscaleMode } from '../godot/rendering/environment/glow.js';
 import { LIGHTMAP_BICUBIC_FILTER_DEFAULT } from '../godot/scene/lightmapGi.js';
@@ -243,6 +250,28 @@ export function projectVolumetricFogSettings(settings: ProjectSettings | null): 
   };
 }
 
+/**
+ * The `rendering/environment/ssao/*` settings, and the `ssil/quality` and `ssil/half_size` that
+ * shape the depth buffer SSAO reads (`ss_effects.cpp:151-180`, `:520-547`).
+ */
+export function projectAmbientOcclusionSettings(settings: ProjectSettings | null): SsaoProjectSettings {
+  const defaults = SSAO_PROJECT_DEFAULTS;
+  const quality = (key: string, fallback: SsaoQuality): SsaoQuality =>
+    enumOr(settings?.[key], fallback, SSAO_QUALITIES, key);
+  const flag = (key: string, fallback: boolean): boolean => boolSlotValue(settings?.[key]) ?? fallback;
+  const real = (key: string, fallback: number): number => parseOptionalFloat(settings?.[key]) ?? fallback;
+  return {
+    quality: quality('rendering/environment/ssao/quality', defaults.quality),
+    isHalfSize: flag('rendering/environment/ssao/half_size', defaults.isHalfSize),
+    adaptiveTarget: real('rendering/environment/ssao/adaptive_target', defaults.adaptiveTarget),
+    blurPasses: parseOptionalInt(settings?.['rendering/environment/ssao/blur_passes']) ?? defaults.blurPasses,
+    fadeoutFrom: real('rendering/environment/ssao/fadeout_from', defaults.fadeoutFrom),
+    fadeoutTo: real('rendering/environment/ssao/fadeout_to', defaults.fadeoutTo),
+    ssilQuality: quality('rendering/environment/ssil/quality', defaults.ssilQuality),
+    isSsilHalfSize: flag('rendering/environment/ssil/half_size', defaults.isSsilHalfSize),
+  };
+}
+
 /** The `Viewport.MSAA` modes of a viewport's 2D and 3D buffers. */
 export interface MsaaModes {
   msaa2D: number;
@@ -359,6 +388,14 @@ export function projectTracesHalfSizeReflections(settings: ProjectSettings | nul
 }
 
 /**
+ * `rendering/driver/depth_prepass/enable`. Without the prepass Godot runs no screen-space ambient
+ * occlusion (`render_forward_clustered.cpp:2081-2086`).
+ */
+export function projectDrawsDepthPrepass(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['rendering/driver/depth_prepass/enable']) ?? true;
+}
+
+/**
  * `rendering/viewport/transparent_background`, which the root viewport takes
  * (`scene/main/scene_tree.cpp:2085-2086`). A transparent root clears to `Color(0, 0, 0, 0)`, not
  * the clear colour (`renderer_viewport.cpp:371`).
@@ -446,4 +483,41 @@ export function projectDataDirectoryPath(settings: ProjectSettings | null): stri
 /** The `res://` path of the project's GDExtension list, in the data directory the project names. */
 export function projectExtensionListPath(settings: ProjectSettings | null): string {
   return extensionListPath(usesHiddenDataDirectory(settings));
+}
+
+/**
+ * Written only by {@link physicsClockOf}: one clock for each pair of values, so a project edit that
+ * leaves both settings alone keeps the clock, and every live tree keyed on it.
+ */
+const physicsClocks = new Map<string, PhysicsClock>([
+  [clockKey(DEFAULT_PHYSICS_CLOCK), DEFAULT_PHYSICS_CLOCK],
+]);
+
+function clockKey({ ticksPerSecond, jitterFix }: PhysicsClock): string {
+  return `${ticksPerSecond}/${jitterFix}`;
+}
+
+/** Read once for each settings object. */
+const physicsClockOf = perObject((settings: ProjectSettings): PhysicsClock => {
+  const rate = parseOptionalInt(settings['physics/common/physics_ticks_per_second']);
+  // The setter refuses a rate of 0 or less and keeps the default (`engine.cpp:47-51`).
+  const ticksPerSecond = rate !== undefined && rate > 0 ? rate : DEFAULT_PHYSICS_CLOCK.ticksPerSecond;
+  // The setter raises a negative fix to 0 (`engine.cpp:75-80`).
+  const jitterFix = Math.max(
+    parseOptionalFloat(settings['physics/common/physics_jitter_fix']) ?? DEFAULT_PHYSICS_CLOCK.jitterFix,
+    0
+  );
+  const clock = { ticksPerSecond, jitterFix };
+  const known = physicsClocks.get(clockKey(clock));
+  if (known) return known;
+  physicsClocks.set(clockKey(clock), clock);
+  return clock;
+});
+
+/**
+ * `physics/common/physics_ticks_per_second` and `physics_jitter_fix`, which pace the physics ticks
+ * and so the transform flushes a scene runs by a frame (`main.cpp:4801-4806`).
+ */
+export function projectPhysicsClock(settings: ProjectSettings | null): PhysicsClock {
+  return settings ? physicsClockOf(settings) : DEFAULT_PHYSICS_CLOCK;
 }

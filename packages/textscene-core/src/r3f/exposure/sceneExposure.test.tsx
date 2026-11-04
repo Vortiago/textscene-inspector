@@ -1,20 +1,14 @@
 /**
- * A scene writes its world's factor for each render it takes and puts it back when the render ends,
- * so a scene with no exposure never draws with another's.
+ * Each render of a scene applies the exposure it draws at, and puts back what it found when the
+ * render ends, so a scene never draws with another's exposure.
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { EMISSION_EXPOSURE } from './emissionExposure';
-import {
-  drawAtExposure,
-  drawnExposureRatio,
-  exposureOfScene,
-  registerExposureStage,
-  useSceneExposure,
-  worldExposureOfScene,
-} from './sceneExposure';
+import { drawAtExposure, followSceneExposure, useSceneExposure, worldExposureOfScene } from './sceneExposure';
 import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
+import { observeSceneCamera } from '../sceneRenderCamera';
 
 function Exposed({ factor, world = factor }: { factor: number | null; world?: number | null }) {
   useSceneExposure(factor, world);
@@ -33,56 +27,46 @@ async function mount(factor: number | null) {
   return { renderer, scene: sceneOf(renderer) };
 }
 
+/** The emission factor inside a render of `scene`, which ends before this answers. */
+function emissionInRender(scene: THREE.Scene): number {
+  fireSceneRender(scene, CAMERA);
+  const inside = EMISSION_EXPOSURE[0]!;
+  fireSceneRenderEnd(scene, CAMERA);
+  return inside;
+}
+
 describe('useSceneExposure', () => {
   it('writes the factor into the emission uniform for a render of the scene', async () => {
     const { scene } = await mount(2);
-    fireSceneRender(scene, CAMERA);
-    expect(EMISSION_EXPOSURE[0]).toBe(2);
+    expect(emissionInRender(scene)).toBe(2);
   });
 
   it('puts the factor 1 back when the render ends', async () => {
     const { scene } = await mount(2);
-    fireSceneRender(scene, CAMERA);
-    fireSceneRenderEnd(scene, CAMERA);
+    emissionInRender(scene);
     expect(EMISSION_EXPOSURE[0]).toBe(1);
   });
 
   it('writes a factor of 0, which darkens the emission to nothing (edge case)', async () => {
     const { scene } = await mount(0);
-    fireSceneRender(scene, CAMERA);
-    expect(EMISSION_EXPOSURE[0]).toBe(0);
+    expect(emissionInRender(scene)).toBe(0);
   });
 
   it('writes a new factor from the next render on', async () => {
     const { renderer, scene } = await mount(2);
     await renderer.update(<Exposed factor={6} />);
-    fireSceneRender(scene, CAMERA);
-    expect(EMISSION_EXPOSURE[0]).toBe(6);
+    expect(emissionInRender(scene)).toBe(6);
   });
 
-  it('writes nothing for a scene that holds no exposure', async () => {
+  it("leaves three's own render hook on a scene that holds no exposure", async () => {
     const { scene } = await mount(null);
-    EMISSION_EXPOSURE[0] = 5;
-    fireSceneRender(scene, CAMERA);
-    expect(EMISSION_EXPOSURE[0]).toBe(5);
-    EMISSION_EXPOSURE[0] = 1;
+    expect(scene.onBeforeRender).toBe(THREE.Object3D.prototype.onBeforeRender);
   });
 
   it('stops writing when the world unmounts', async () => {
     const { renderer, scene } = await mount(2);
     await renderer.update(null);
-    fireSceneRender(scene, CAMERA);
-    expect(EMISSION_EXPOSURE[0]).toBe(1);
-  });
-
-  it('answers the factor of a scene for a probe capture to compare', async () => {
-    const { scene } = await mount(3);
-    expect(exposureOfScene(scene)).toBe(3);
-  });
-
-  it('answers null for a scene with no exposure', async () => {
-    const { scene } = await mount(null);
-    expect(exposureOfScene(scene)).toBeNull();
+    expect(emissionInRender(scene)).toBe(1);
   });
 
   it('keeps the factor of a world that still holds the scene when another unmounts', async () => {
@@ -93,7 +77,7 @@ describe('useSceneExposure', () => {
       </>
     );
     await renderer.update(<Exposed key="kept" factor={3} />);
-    expect(exposureOfScene(sceneOf(renderer))).toBe(3);
+    expect(emissionInRender(sceneOf(renderer))).toBe(3);
   });
 });
 
@@ -109,13 +93,96 @@ describe('worldExposureOfScene', () => {
   });
 });
 
+/** What `light` holds inside a render of `scene`, and after the render ends. */
+function intensityInRender(scene: THREE.Scene, light: THREE.Light): [number, number] {
+  fireSceneRender(scene, CAMERA);
+  const inside = light.intensity;
+  fireSceneRenderEnd(scene, CAMERA);
+  return [inside, light.intensity];
+}
+
+describe('lights in a render', () => {
+  it('draws each light at its energy times the exposure, and holds its energy outside the render', async () => {
+    const { scene } = await mount(2);
+    const point = new THREE.PointLight(0xffffff, 8);
+    scene.add(point);
+    expect(intensityInRender(scene, point)).toEqual([16, 8]);
+    scene.remove(point);
+  });
+
+  it('draws a light added after the world mounts', async () => {
+    const { scene } = await mount(2);
+    fireSceneRender(scene, CAMERA);
+    fireSceneRenderEnd(scene, CAMERA);
+    const sun = new THREE.DirectionalLight(0xffffff, 3);
+    scene.add(sun);
+    expect(intensityInRender(scene, sun)).toEqual([6, 3]);
+    scene.remove(sun);
+  });
+
+  it('keeps the sign of a negative light (edge case)', async () => {
+    const { scene } = await mount(2);
+    const point = new THREE.PointLight(0xffffff, -8);
+    scene.add(point);
+    expect(intensityInRender(scene, point)).toEqual([-16, -8]);
+    scene.remove(point);
+  });
+
+  it('leaves the flat ambient alone, which Godot does not scale', async () => {
+    const { scene } = await mount(2);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambient);
+    expect(intensityInRender(scene, ambient)).toEqual([0.5, 0.5]);
+    scene.remove(ambient);
+  });
+
+  it('draws a light at its energy in a world with no exposure', async () => {
+    const { scene } = await mount(null);
+    const point = new THREE.PointLight(0xffffff, 8);
+    scene.add(point);
+    expect(intensityInRender(scene, point)).toEqual([8, 8]);
+    scene.remove(point);
+  });
+
+  it('draws no light under an exposure of 0 (edge case)', async () => {
+    const { scene } = await mount(0);
+    const point = new THREE.PointLight(0xffffff, 8);
+    scene.add(point);
+    expect(intensityInRender(scene, point)).toEqual([0, 8]);
+    scene.remove(point);
+  });
+
+  it('scales the energy once when a render never ended', async () => {
+    const { scene } = await mount(2);
+    const point = new THREE.PointLight(0xffffff, 8);
+    scene.add(point);
+    fireSceneRender(scene, CAMERA);
+    expect(intensityInRender(scene, point)).toEqual([16, 8]);
+    scene.remove(point);
+  });
+
+  it('scales the energy an observer wrote for the render, such as a distance fade', async () => {
+    const { scene } = await mount(2);
+    const point = new THREE.PointLight(0xffffff, 8);
+    scene.add(point);
+    const stop = observeSceneCamera(scene, () => {
+      point.intensity = 4;
+    });
+    expect(intensityInRender(scene, point)[0]).toBe(8);
+    stop();
+    scene.remove(point);
+  });
+});
+
 describe('drawAtExposure', () => {
   /** The emission factor a render fired inside `drawAtExposure` writes. */
   function emissionDrawnAt(scene: THREE.Scene, exposure: number | null): number {
-    return drawAtExposure(scene, exposure, () => {
-      fireSceneRender(scene, CAMERA);
-      return EMISSION_EXPOSURE[0]!;
-    });
+    return drawAtExposure(scene, exposure, () => emissionInRender(scene));
+  }
+
+  /** What `light` holds in a render fired inside `drawAtExposure`. */
+  function intensityDrawnAt(scene: THREE.Scene, light: THREE.Light, exposure: number | null): number {
+    return drawAtExposure(scene, exposure, () => intensityInRender(scene, light)[0]);
   }
 
   it('draws the emission at the given exposure instead of the one the scene holds', async () => {
@@ -133,17 +200,10 @@ describe('drawAtExposure', () => {
     expect(emissionDrawnAt(scene, 3)).toBe(3);
   });
 
-  it('puts the emission factor 1 back after the draw', async () => {
-    const { scene } = await mount(4);
-    emissionDrawnAt(scene, 2);
-    expect(EMISSION_EXPOSURE[0]).toBe(1);
-  });
-
   it('draws the next render of the scene at the exposure it holds again', async () => {
     const { scene } = await mount(4);
     emissionDrawnAt(scene, 2);
-    fireSceneRender(scene, CAMERA);
-    expect(EMISSION_EXPOSURE[0]).toBe(4);
+    expect(emissionInRender(scene)).toBe(4);
   });
 
   it('answers what the draw answers', async () => {
@@ -151,124 +211,76 @@ describe('drawAtExposure', () => {
     expect(drawAtExposure(scene, 2, () => 'drawn')).toBe('drawn');
   });
 
-  it('puts everything back when the draw throws', async () => {
+  it('draws each light at its energy times the given exposure, whatever the scene holds', async () => {
     const { scene } = await mount(4);
-    const light = new THREE.PointLight(0xffffff, 8);
-    scene.add(light);
+    const point = new THREE.PointLight(0xffffff, 8);
+    scene.add(point);
+    expect([intensityDrawnAt(scene, point, 2), point.intensity]).toEqual([16, 8]);
+    scene.remove(point);
+  });
+
+  it('lights each light at its energy times 2 at 2 over a held exposure of 0', async () => {
+    const { scene } = await mount(0);
+    const point = new THREE.PointLight(0xffffff, 8);
+    scene.add(point);
+    expect(intensityDrawnAt(scene, point, 2)).toBe(16);
+    scene.remove(point);
+  });
+
+  it('draws each light at its energy for a null exposure', async () => {
+    const { scene } = await mount(4);
+    const point = new THREE.PointLight(0xffffff, 8);
+    scene.add(point);
+    expect(intensityDrawnAt(scene, point, null)).toBe(8);
+    scene.remove(point);
+  });
+
+  it('draws the held exposure again once the draw throws', async () => {
+    const { scene } = await mount(4);
     expect(() =>
       drawAtExposure(scene, 2, () => {
         throw new Error('draw failed');
       })
     ).toThrow('draw failed');
-    expect(light.intensity).toBe(8);
-    expect(EMISSION_EXPOSURE[0]).toBe(1);
-    scene.remove(light);
+    expect(emissionInRender(scene)).toBe(4);
+  });
+});
+
+describe('followSceneExposure', () => {
+  /** The exposures `follow` sees in a render of `scene`, drawn by `draw`. */
+  function followed(scene: THREE.Scene, draw: (render: () => void) => void): (number | null)[] {
+    const seen: (number | null)[] = [];
+    const stop = followSceneExposure(scene, (exposure) => seen.push(exposure));
+    draw(() => fireSceneRender(scene, CAMERA));
+    stop();
+    return seen;
+  }
+
+  it('runs a follower in each render with the exposure the scene holds', async () => {
+    const { scene } = await mount(3);
+    expect(followed(scene, (render) => render())).toEqual([3]);
   });
 
-  it('puts everything back when a stage throws', async () => {
-    const { scene } = await mount(4);
-    const light = new THREE.PointLight(0xffffff, 8);
-    scene.add(light);
-    const stopStage = registerExposureStage(scene, () => {
-      throw new Error('stage failed');
-    });
-    expect(() => drawAtExposure(scene, 2, () => 'drawn')).toThrow('stage failed');
-    stopStage();
-    expect(light.intensity).toBe(8);
-    expect(EMISSION_EXPOSURE[0]).toBe(1);
-    expect(drawnExposureRatio(scene)).toBe(1);
-    scene.remove(light);
+  it('runs a follower with null in a world that holds no exposure', async () => {
+    const { scene } = await mount(null);
+    expect(followed(scene, (render) => render())).toEqual([null]);
   });
 
-  it('answers the ratio of the drawn exposure to the held one inside a draw only', async () => {
-    const { scene } = await mount(4);
-    const inside = drawAtExposure(scene, 2, () => drawnExposureRatio(scene));
-    expect([inside, drawnExposureRatio(scene)]).toEqual([0.5, 1]);
+  it('runs a follower with the exposure a draw at another exposure draws at', async () => {
+    const { scene } = await mount(3);
+    expect(followed(scene, (render) => drawAtExposure(scene, 0.5, render))).toEqual([0.5]);
   });
 
-  describe('lights', () => {
-    it('scales each light by the given exposure over the held one, and puts it back', async () => {
-      const { scene } = await mount(4);
-      const point = new THREE.PointLight(0xffffff, 8);
-      const sun = new THREE.DirectionalLight(0xffffff, 12);
-      scene.add(point, sun);
-      const inside = drawAtExposure(scene, 2, () => [point.intensity, sun.intensity]);
-      expect(inside).toEqual([4, 6]);
-      expect([point.intensity, sun.intensity]).toEqual([8, 12]);
-      scene.remove(point, sun);
-    });
-
-    it('leaves the flat ambient alone, which Godot does not scale', async () => {
-      const { scene } = await mount(4);
-      const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-      scene.add(ambient);
-      const inside = drawAtExposure(scene, 2, () => ambient.intensity);
-      expect(inside).toBe(0.5);
-      scene.remove(ambient);
-    });
-
-    it('scales a light of a scene with no exposure as if it held 1', async () => {
-      const { scene } = await mount(null);
-      const point = new THREE.PointLight(0xffffff, 8);
-      scene.add(point);
-      const inside = drawAtExposure(scene, 2, () => point.intensity);
-      expect(inside).toBe(16);
-      scene.remove(point);
-    });
-
-    it('keeps a light at the energy it has under a held exposure of 0, which gives no ratio', async () => {
-      const { scene } = await mount(0);
-      const point = new THREE.PointLight(0xffffff, 0);
-      scene.add(point);
-      const inside = drawAtExposure(scene, 2, () => point.intensity);
-      expect(inside).toBe(0);
-      scene.remove(point);
-    });
-
-    it('scales a light to 1 over the held exposure for a null exposure', async () => {
-      const { scene } = await mount(4);
-      const point = new THREE.PointLight(0xffffff, 8);
-      scene.add(point);
-      const inside = drawAtExposure(scene, null, () => point.intensity);
-      expect(inside).toBe(2);
-      scene.remove(point);
-    });
+  it('runs a follower of a scene with no world for a draw at another exposure', () => {
+    const scene = new THREE.Scene();
+    expect(followed(scene, (render) => drawAtExposure(scene, 2, render))).toEqual([2]);
   });
 
-  describe('stages', () => {
-    it('runs each registered stage with the exposure, and runs what it returns after the draw', async () => {
-      const { scene } = await mount(4);
-      const events: string[] = [];
-      registerExposureStage(scene, (exposure) => {
-        events.push(`stage ${exposure}`);
-        return () => events.push('restore');
-      });
-      drawAtExposure(scene, 2, () => events.push('draw'));
-      expect(events).toEqual(['stage 2', 'draw', 'restore']);
-    });
-
-    it('runs no stage once it is unregistered', async () => {
-      const { scene } = await mount(4);
-      const stage = vi.fn(() => () => {});
-      registerExposureStage(scene, stage)();
-      drawAtExposure(scene, 2, () => {});
-      expect(stage).not.toHaveBeenCalled();
-    });
-
-    it('runs no stage and changes no light when the exposure is the held one', async () => {
-      const { scene } = await mount(4);
-      const stage = vi.fn(() => () => {});
-      registerExposureStage(scene, stage);
-      drawAtExposure(scene, 4, () => {});
-      expect(stage).not.toHaveBeenCalled();
-    });
-
-    it('runs no stage when neither the scene nor the draw holds an exposure', async () => {
-      const { scene } = await mount(null);
-      const stage = vi.fn(() => () => {});
-      registerExposureStage(scene, stage);
-      drawAtExposure(scene, null, () => {});
-      expect(stage).not.toHaveBeenCalled();
-    });
+  it('runs a follower no more once it stops', async () => {
+    const { scene } = await mount(3);
+    const follower = vi.fn();
+    followSceneExposure(scene, follower)();
+    fireSceneRender(scene, CAMERA);
+    expect(follower).not.toHaveBeenCalled();
   });
 });

@@ -2,7 +2,7 @@
  * Godot's normal-roughness prepass (`PASS_MODE_DEPTH_NORMAL_ROUGHNESS`,
  * `render_forward_clustered.cpp:1893-1905`): before the colour pass, every surface of the opaque
  * list writes its depth and its encoded view normal and roughness. Each surface draws through its own
- * program, which `ssrSceneChunk.ts` gives the prepass's output, so its cut, its billboard and its
+ * program, which `prepassChunk.ts` gives the prepass's output, so its cut, its billboard and its
  * skin place it as its colour draw does.
  */
 
@@ -16,11 +16,31 @@ import {
 } from '../../godot/rendering/msaaSampleLocations.js';
 import { perObject } from '../../utils/perObject.js';
 import { drawSurface, visibleSurfaces, type Surface } from '../opaqueSurfaces.js';
-import { SSR_STATE, ssrState } from './ssrUniforms.js';
+import { beginStep, endStep } from '../frameProfile/frameProfile.js';
+import { SCREEN_SPACE_STATE, screenSpaceState } from './screenSpaceState.js';
+import { showBestFitNormals } from './bestFitNormals.js';
+import { resolveSamples, type PrepassBuffers } from './prepassBuffers.js';
 
 /** Scratch for one prepass: three renders one scene at a time. */
 const clearColor = new THREE.Color();
 const ndcOffset = new THREE.Matrix4();
+
+/**
+ * Draws the prepass of `camera`'s view of `scene` into `buffers`: each sample of the frame into its
+ * own target, then the samples resolved into one frame. The caller restores the renderer's target.
+ */
+export function drawNormalRoughnessPrepass(
+  renderer: THREE.WebGLRenderer,
+  scene: THREE.Scene,
+  camera: THREE.Camera,
+  buffers: PrepassBuffers
+): void {
+  beginStep(renderer, 'Normal-roughness prepass');
+  showBestFitNormals(renderer);
+  drawSamplePrepasses(renderer, scene, camera, buffers.samplePrepasses);
+  resolveSamples(renderer, buffers);
+  endStep(renderer, 'Normal-roughness prepass');
+}
 
 /**
  * Draws the prepass of each sample of the frame into its target of `prepasses`, through `camera`
@@ -29,7 +49,7 @@ const ndcOffset = new THREE.Matrix4();
  * pixel's centre: one value across a flat face. The jitter stays under a pixel, so every sample
  * draws the surfaces `camera` sees.
  */
-export function drawSamplePrepasses(
+function drawSamplePrepasses(
   renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
   camera: THREE.Camera,
@@ -81,11 +101,11 @@ function drawNormalRoughness(
 ): void {
   renderer.setRenderTarget(target);
   clearToZero(renderer);
-  ssrState[SSR_STATE.drawsNormalRoughness] = 1;
+  screenSpaceState[SCREEN_SPACE_STATE.drawsNormalRoughness] = 1;
   try {
     for (const surface of surfaces) drawPrepassSurface(renderer, scene, camera, surface);
   } finally {
-    ssrState[SSR_STATE.drawsNormalRoughness] = 0;
+    screenSpaceState[SCREEN_SPACE_STATE.drawsNormalRoughness] = 0;
   }
 }
 
@@ -125,13 +145,16 @@ function drawPrepassSurface(
   if (material.transparent) {
     material.blending = THREE.NoBlending;
     material.depthWrite = true;
-    ssrState[SSR_STATE.prepassCut] = Math.max(material.alphaTest, DEPTH_PREPASS_OPAQUE_THRESHOLD);
+    screenSpaceState[SCREEN_SPACE_STATE.prepassCut] = Math.max(
+      material.alphaTest,
+      DEPTH_PREPASS_OPAQUE_THRESHOLD
+    );
   }
   try {
     drawSurface(renderer, scene, camera, surface, material);
   } finally {
     material.blending = blending;
     material.depthWrite = depthWrite;
-    ssrState[SSR_STATE.prepassCut] = 0;
+    screenSpaceState[SCREEN_SPACE_STATE.prepassCut] = 0;
   }
 }

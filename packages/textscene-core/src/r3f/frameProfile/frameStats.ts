@@ -7,6 +7,8 @@ export const RENDER_STEPS = [
   '2D lights',
   'Scene draw',
   'Depth prepass',
+  'Normal-roughness prepass',
+  'Screen-space ambient occlusion',
   'Screen-space reflection',
   'Shadows',
   'Fog',

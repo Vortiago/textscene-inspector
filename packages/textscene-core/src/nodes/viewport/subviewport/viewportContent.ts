@@ -10,10 +10,10 @@ import { is2DUIType } from '../../../r3f/controls/has2DUIContent.js';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry.js';
 import {
   liveTreeOf,
-  type CachedSceneSource,
   type LiveLink,
   type LiveTree,
   type LiveTreeContext,
+  type LiveTreeSources,
 } from '../../../r3f/liveSceneTree.js';
 import { compositeCallPrefix } from '../../../godot/variant/variantParser.js';
 
@@ -192,8 +192,8 @@ export function resolveViewportSubtree(tree: LiveTree, viewport: LiveLink): Tscn
 export function resolveStandaloneViewportSubtree(
   node: TscnNode,
   externalResources: readonly TscnExternalResource[],
-  sceneCache: CachedSceneSource
+  sources: LiveTreeSources
 ): TscnNode {
-  const ctx: LiveTreeContext = { externalResources, internalResources: [], sceneCache };
+  const ctx: LiveTreeContext = { externalResources, internalResources: [], ...sources };
   return { ...node, children: resolvedChildren(liveTreeOf(node.children, ctx)) };
 }
