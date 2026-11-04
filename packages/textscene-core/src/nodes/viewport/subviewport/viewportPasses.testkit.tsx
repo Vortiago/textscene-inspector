@@ -16,6 +16,14 @@ import {
 } from '../../../r3f/contexts/ViewportPassRegistryContext';
 import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureContext';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
+import {
+  AnimatedValueProvider,
+  animatedValueKey,
+  useAnimatedValueRegistry,
+  type AnimatedValueRegistry,
+} from '../../../r3f/contexts/AnimatedValueContext';
+import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
+import { buildSceneGraph, tscnSceneToParsedScene } from '../../../core/SceneGraph';
 
 /** The light cookie the SubViewport lighting tests seed. */
 export const COOKIE = 'res://light.png';
@@ -57,6 +65,8 @@ export interface PassDraw {
   background: THREE.Scene['background'];
   /** Whether the renderer cleared the colour of its target at the start of this draw. */
   clearsColor: boolean;
+  /** The colour the renderer cleared or painted the background with, as sRGB hex. */
+  clearColor: string;
   /** The names of the objects above each mesh this draw reaches: visible, and on the camera's layers. */
   reached: string[];
 }
@@ -73,38 +83,101 @@ function meshesReached(scene: THREE.Object3D, camera: THREE.Camera): string[] {
   return [...names];
 }
 
-/** The scenes one frame of `tscn` draws, in order, each with the target bound at that moment. */
-export async function drawsOf(tscn: string): Promise<PassDraw[]> {
-  const parsed = new TscnParser().parse(tscn);
+/** Writes the animated value registry into `captured`. */
+function CaptureAnimatedValues({ captured }: { captured: { current: AnimatedValueRegistry | null } }) {
+  captured.current = useAnimatedValueRegistry();
+  return null;
+}
+
+/** Pushes `visible` to the node at `path`, as an AnimationPlayer track does. */
+export function driveVisible(registry: AnimatedValueRegistry, path: string, isVisible: boolean): void {
+  registry.set(animatedValueKey(path, 'visible'), [isVisible ? 1 : 0]);
+}
+
+/** What a test does to the scene between frames. */
+export interface FrameControls {
+  animated: AnimatedValueRegistry;
+  /** Mounts the nodes of `tscn` over the ones mounted, as an edit to the scene does. */
+  replaceScene(tscn: string): Promise<void>;
+}
+
+/**
+ * The scenes each of `frames` frames of `tscn` draws, in order, each with the target bound at that
+ * moment. `beforeFrame` runs before each frame.
+ */
+export async function framesOf(
+  tscn: string,
+  frames: number,
+  beforeFrame: (frame: number, controls: FrameControls) => void | Promise<void> = () => {}
+): Promise<PassDraw[][]> {
   const fake = createFakeResourceLoader();
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
-  const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      <ViewportModeProvider initialShowPreviewEnvironment={false}>
-        <ViewportPassStack captured={captured}>
-          <CanvasWorldScope>
-            <NodeDispatcher nodes={parsed.nodes} />
-          </CanvasWorldScope>
-        </ViewportPassStack>
-      </ViewportModeProvider>
-    </SceneStack>
+  const animated: { current: AnimatedValueRegistry | null } = { current: null };
+  const parsedFirst = new TscnParser().parse(tscn);
+  const sceneGraph = buildSceneGraph(
+    tscnSceneToParsedScene(
+      'res://test.tscn',
+      parsedFirst.nodes,
+      parsedFirst.externalResources,
+      parsedFirst.internalResources
+    )
   );
-  await settleLoads();
-  const draws: PassDraw[] = [];
-  await withStubbedGl(
-    captured.current!,
-    {
-      onRender: (bound, scene, camera) =>
-        draws.push({
-          scene,
-          camera,
-          bound,
-          background: (scene as THREE.Scene).background,
-          clearsColor: captured.current!.autoClearColor,
-          reached: meshesReached(scene, camera),
-        }),
+  const treeOf = (source: string) => {
+    const parsed = new TscnParser().parse(source);
+    return (
+      <HierarchyProvider value={{ sceneGraph, panelId: 'test' }}>
+        <AnimatedValueProvider>
+          <CaptureAnimatedValues captured={animated} />
+          <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
+            <ViewportModeProvider initialShowPreviewEnvironment={false}>
+              <ViewportPassStack captured={captured}>
+                <CanvasWorldScope>
+                  <NodeDispatcher nodes={parsed.nodes} />
+                </CanvasWorldScope>
+              </ViewportPassStack>
+            </ViewportModeProvider>
+          </SceneStack>
+        </AnimatedValueProvider>
+      </HierarchyProvider>
+    );
+  };
+  const renderer = await ReactThreeTestRenderer.create(treeOf(tscn));
+  const controls: FrameControls = {
+    get animated() {
+      return animated.current!;
     },
-    () => renderer.advanceFrames(1, 16)
-  );
-  return draws;
+    replaceScene: async (source) => {
+      await ReactThreeTestRenderer.act(async () => renderer.update(treeOf(source)));
+      await settleLoads();
+    },
+  };
+  await settleLoads();
+  const perFrame: PassDraw[][] = [];
+  for (let frame = 0; frame < frames; frame++) {
+    const draws: PassDraw[] = [];
+    await ReactThreeTestRenderer.act(async () => beforeFrame(frame, controls));
+    await withStubbedGl(
+      captured.current!,
+      {
+        onRender: (bound, scene, camera) =>
+          draws.push({
+            scene,
+            camera,
+            bound,
+            background: (scene as THREE.Scene).background,
+            clearsColor: captured.current!.autoClearColor,
+            clearColor: captured.current!.getClearColor(new THREE.Color()).getHexString(),
+            reached: meshesReached(scene, camera),
+          }),
+      },
+      () => renderer.advanceFrames(1, 16)
+    );
+    perFrame.push(draws);
+  }
+  return perFrame;
+}
+
+/** The scenes one frame of `tscn` draws, in order, each with the target bound at that moment. */
+export async function drawsOf(tscn: string): Promise<PassDraw[]> {
+  return (await framesOf(tscn, 1))[0]!;
 }

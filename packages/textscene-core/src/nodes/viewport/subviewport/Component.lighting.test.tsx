@@ -38,6 +38,7 @@ polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)
 texture = ExtResource("1")
 
 [node name="Viewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(200, 150)
 
 [node name="Floor" type="Polygon2D" parent="Viewport"]

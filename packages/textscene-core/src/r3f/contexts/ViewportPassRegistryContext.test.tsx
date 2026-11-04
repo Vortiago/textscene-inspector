@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
 import { useEffect, type ReactNode } from 'react';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { readableLiveTarget } from '../liveTargets.testkit';
 import {
   decalAtlasRect,
@@ -32,8 +32,13 @@ import {
   ViewportPassOrchestrator,
   useRegisterViewportPass,
   useViewportPassCycle,
+  type PassGate,
   type ViewportPass,
 } from './ViewportPassRegistryContext';
+import { TargetRenderState } from '../../nodes/viewport/renderGate';
+import { SubViewportClearMode, SubViewportUpdateMode } from '../../godot/scene/viewport';
+import { HierarchyProvider } from './HierarchyContext';
+import type { SceneGraph } from '../../core/SceneGraph';
 
 /** Registers `pass` at `path` for the lifetime of this component. */
 function Registrar({ path, pass }: { path: string; pass: ViewportPass }) {
@@ -290,3 +295,126 @@ function decalAtlasTexel(texture: THREE.Texture): number[] {
   const offset = (Math.round(rect.y * height) * width + Math.round(rect.x * width)) * 4;
   return [...(atlas.mipmaps[0] as unknown as { data: Uint8Array }).data.subarray(offset, offset + 4)];
 }
+
+describe('<ViewportPassOrchestrator> and the update mode', () => {
+  const { DISABLED, ONCE, WHEN_VISIBLE, WHEN_PARENT_VISIBLE, ALWAYS } = SubViewportUpdateMode;
+
+  /** A gated pass whose render counts and takes its render, as a pass component does. */
+  function gatedPass(
+    updateMode: number,
+    options: { enclosingPath?: string | null; isSampled?: () => boolean } = {}
+  ) {
+    const state = new TargetRenderState();
+    const log = { renders: 0, restarts: 0 };
+    const gate: PassGate = {
+      updateMode,
+      enclosingPath: options.enclosingPath ?? null,
+      state,
+      isSampled: options.isSampled ?? (() => false),
+      restart: () => {
+        log.restarts++;
+        state.restart();
+      },
+    };
+    const pass: ViewportPass = {
+      dependsOn: [],
+      gate,
+      render: () => {
+        log.renders++;
+        state.takeRender(SubViewportClearMode.ALWAYS, new THREE.Color());
+      },
+    };
+    return { pass, log };
+  }
+
+  async function rendersPerFrame(modes: ReturnType<typeof gatedPass>[], frames: number): Promise<number[][]> {
+    const renderer = await mount(
+      <>
+        {modes.map(({ pass }, i) => (
+          <Registrar key={i} path={`p${i}`} pass={pass} />
+        ))}
+      </>
+    );
+    const seen: number[][] = [];
+    for (let frame = 0; frame < frames; frame++) {
+      await renderer.advanceFrames(1, 16);
+      seen.push(modes.map(({ log }) => log.renders));
+    }
+    return seen;
+  }
+
+  it('never renders a DISABLED pass', async () => {
+    const seen = await rendersPerFrame([gatedPass(DISABLED)], 3);
+    expect(seen).toEqual([[0], [0], [0]]);
+  });
+
+  it('renders a ONCE pass on frame 1 only', async () => {
+    const seen = await rendersPerFrame([gatedPass(ONCE)], 3);
+    expect(seen).toEqual([[1], [1], [1]]);
+  });
+
+  it('renders an ALWAYS pass on every frame', async () => {
+    const seen = await rendersPerFrame([gatedPass(ALWAYS)], 3);
+    expect(seen).toEqual([[1], [2], [3]]);
+  });
+
+  it('starts a WHEN_VISIBLE pass one frame after its target is first sampled', async () => {
+    const seen = await rendersPerFrame([gatedPass(WHEN_VISIBLE, { isSampled: () => true })], 3);
+    expect(seen).toEqual([[0], [1], [2]]);
+  });
+
+  it('never renders a WHEN_VISIBLE pass that nothing samples', async () => {
+    const seen = await rendersPerFrame([gatedPass(WHEN_VISIBLE)], 3);
+    expect(seen).toEqual([[0], [0], [0]]);
+  });
+
+  it('renders a WHEN_PARENT_VISIBLE pass in the frames its enclosing pass renders', async () => {
+    const outer = gatedPass(ONCE);
+    const inner = gatedPass(WHEN_PARENT_VISIBLE, { enclosingPath: 'p0' });
+    const seen = await rendersPerFrame([outer, inner], 3);
+    expect(seen).toEqual([
+      [1, 1],
+      [1, 1],
+      [1, 1],
+    ]);
+  });
+
+  it('skips a WHEN_PARENT_VISIBLE pass under a DISABLED pass', async () => {
+    const seen = await rendersPerFrame(
+      [gatedPass(DISABLED), gatedPass(WHEN_PARENT_VISIBLE, { enclosingPath: 'p0' })],
+      2
+    );
+    expect(seen).toEqual([
+      [0, 0],
+      [0, 0],
+    ]);
+  });
+
+  it('renders a pass without a gate on every frame', async () => {
+    let calls = 0;
+    const renderer = await mount(<Registrar path="a" pass={{ dependsOn: [], render: () => calls++ }} />);
+    await renderer.advanceFrames(2, 16);
+    expect(calls).toBe(2);
+  });
+
+  it('restarts the count and the passes when a new scene graph arrives', async () => {
+    const first = {} as SceneGraph;
+    const second = {} as SceneGraph;
+    const once = gatedPass(ONCE);
+    const tree = (sceneGraph: SceneGraph) => (
+      <HierarchyProvider value={{ sceneGraph, panelId: 'test' }}>
+        <ViewportPassProvider>
+          <Registrar path="a" pass={once.pass} />
+          <ViewportPassOrchestrator />
+        </ViewportPassProvider>
+      </HierarchyProvider>
+    );
+    const renderer = await ReactThreeTestRenderer.create(tree(first));
+    await renderer.advanceFrames(2, 16);
+    expect(once.log.renders).toBe(1);
+    await renderer.update(tree(second));
+    await renderer.advanceFrames(2, 16);
+    expect(once.log.restarts).toBe(1);
+    expect(once.log.renders).toBe(2);
+  });
+});

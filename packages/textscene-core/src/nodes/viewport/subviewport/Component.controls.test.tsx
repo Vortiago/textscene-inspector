@@ -39,6 +39,7 @@ polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)
 [node name="Root" type="Node2D"]
 
 [node name="View" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(200, 150)
 
 ${order === 'control-first' ? control + '\n' + world : world + '\n' + control}`;
@@ -89,6 +90,7 @@ const WIDE_SCENE = `[gd_scene format=3]
 [node name="Root" type="Node2D"]
 
 [node name="View" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(20000, 100)
 
 [node name="Panel" type="ColorRect" parent="View"]
@@ -144,6 +146,7 @@ function scene3d(size: string, nodes: string): string {
 [node name="Root" type="Node2D"]
 
 [node name="View" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(${size})
 
 [node name="Camera3D" type="Camera3D" parent="View"]

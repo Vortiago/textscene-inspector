@@ -7,6 +7,7 @@ import * as THREE from 'three';
 
 import {
   applyOrthoFrame,
+  clearTarget,
   createCanvasTarget,
   createSceneTarget,
   godotCanvasPosition,
@@ -452,5 +453,39 @@ describe('viewportMsaaMode', () => {
 
   it('keeps Disabled at the defaults (edge case)', () => {
     expect(viewportMsaaMode({ msaa_2d: 0, msaa_3d: 0 }, '3d')).toBe(0);
+  });
+});
+
+describe('clearTarget', () => {
+  /** A renderer that records the clear colour and alpha in force at each clear. */
+  function recordingRenderer() {
+    const clears: { rgb: number[]; alpha: number }[] = [];
+    let alpha = 1;
+    const colour = new THREE.Color();
+    const gl = {
+      getRenderTarget: () => null,
+      getClearAlpha: () => alpha,
+      getClearColor: (into: THREE.Color) => into.copy(colour),
+      setClearColor: (next: THREE.Color, nextAlpha: number) => {
+        colour.copy(next);
+        alpha = nextAlpha;
+      },
+      setRenderTarget: () => {},
+      clear: () => clears.push({ rgb: colour.toArray(), alpha }),
+      autoClearColor: true,
+    } as unknown as THREE.WebGLRenderer;
+    return { gl, clears };
+  }
+
+  it('clears an opaque target to opaque black, which a consumer samples as black', () => {
+    const { gl, clears } = recordingRenderer();
+    clearTarget(gl, createCanvasTarget(4, 4, 't'), false);
+    expect(clears).toEqual([{ rgb: [0, 0, 0], alpha: 1 }]);
+  });
+
+  it('clears a transparent target to (0, 0, 0, 0)', () => {
+    const { gl, clears } = recordingRenderer();
+    clearTarget(gl, createCanvasTarget(4, 4, 't'), true);
+    expect(clears).toEqual([{ rgb: [0, 0, 0], alpha: 0 }]);
   });
 });

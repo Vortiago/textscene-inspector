@@ -568,6 +568,21 @@ export const CANVAS_2D_SCENES = [
   // (240,240) rgb(51,51,229) Plate over Under, (260,260) rgb(229,25,25) Under, on a CanvasLayer
   // below the world's canvas, over the quad all the same.
   { name: 'sub-viewport-3d-canvas-item', file: 'unit-sub-viewport-3d-canvas-item.tscn', mode: '2d' },
+  // Each SubViewport update mode, sampled by a 100x100 TextureRect. Godot 4.6.3 `--mode 2d`:
+  // (45,70) rgb(0,0,0) DISABLED, (165,70), (285,70), (405,70) and (525,70) rgb(255,0,0) ONCE,
+  // WHEN_VISIBLE, WHEN_PARENT_VISIBLE and ALWAYS. (45,190) rgb(0,0,0) a WHEN_PARENT_VISIBLE child
+  // under a DISABLED parent, (165,190) and (285,190) rgb(255,0,0) its WHEN_VISIBLE and ALWAYS
+  // siblings. (45,310) rgb(0,0,0) a ONCE parent that samples a WHEN_VISIBLE child, (165,310)
+  // rgb(255,0,0) one that samples an ALWAYS child. (525,190) rgb(0,0,0) a hidden container's child,
+  // (645,190) rgb(255,0,0) a visible container's child.
+  { name: 'sub-viewport-update-mode', file: 'unit-sub-viewport-update-mode.tscn', mode: '2d' },
+  // Each SubViewport clear mode with a red 0.25 alpha veil over the left half. Godot 4.6.3
+  // `--mode 2d`, canvas on an opaque target: (45,70) rgb(121,57,57) ALWAYS, (165,70) rgb(253,0,0)
+  // NEVER over (215,70) rgb(0,0,0), (285,70) rgb(253,1,1) ONCE. On a transparent target over white:
+  // (45,190) rgb(207,191,191), (165,190) and (285,190) rgb(253,2,2). 3D on an opaque target:
+  // (45,310) rgb(150,66,66) ALWAYS, (165,310) rgb(137,0,0) NEVER over (215,310) rgb(0,0,0), (285,310)
+  // rgb(150,66,66) ONCE.
+  { name: 'sub-viewport-clear-mode', file: 'unit-sub-viewport-clear-mode.tscn', mode: '2d' },
   // A 3D viewport under the Canvas background mode draws the layers up to the max layer behind its
   // 3D render. Godot 4.6.3 `--mode 2d`: (120,100) rgb(25,127,25) Ground, (120,250) rgb(152,50,50)
   // Under, (162,200) rgb(255,102,0) the quad over Under, (200,180) rgb(133,72,137) Plate over the quad.

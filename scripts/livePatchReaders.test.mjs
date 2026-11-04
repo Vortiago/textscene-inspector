@@ -35,6 +35,10 @@ const NEEDS_NO_OVERLAY = new Map([
     'Reads the type and the Control layout direction, which no pass patches.',
   ],
   [
+    'nodes/viewport/subviewport/viewportGate.ts',
+    'Reads the type and authored `visible` of the nodes around a viewport, which no pass patches. An animated `visible` comes through AnimatedValueContext.',
+  ],
+  [
     'nodes/viewport/subviewport/viewportContent.ts',
     'Reads the type of each node to classify the content, never a pose.',
   ],
