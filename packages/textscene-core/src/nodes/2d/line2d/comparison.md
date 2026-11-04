@@ -1,7 +1,7 @@
 ---
 type: Line2D
 category: 2D
-status: limitation
+status: done
 fixture: unit-line2d.tscn
 image: unit-line2d
 renders_as: a stroked mesh polyline
@@ -10,8 +10,9 @@ renders_as: a stroked mesh polyline
 # Line2D
 
 Line2D strokes a chain of points. The previewer builds the stroke as Godot's `LineBuilder`
-does. That gives the joints, the cap modes, the `gradient` and the `width_curve`. `antialiased` has no effect in Godot 4.6.3, since
-`Line2D::_draw` never reads it.
+does. That gives the joints, the cap modes, the `gradient`, the `width_curve` and the UVs of the
+`texture`. The texture samples with the `texture_filter` and `texture_repeat` of the item. `antialiased` has
+no effect in Godot 4.6.3, since `Line2D::_draw` never reads it.
 
 ## Linting
 
@@ -47,7 +48,3 @@ Strict parsing format-checks these `Line2D` properties, plus 12 inherited from N
 as Godot's setter does. `joint_mode` is read as a
 plain int, so an out-of-range value passes silently. A malformed `default_color` falls
 back to white with no warning, and malformed `points` warn and leave the line empty.
-
-## Known limitations
-
-- **Approximated** `texture` and `texture_mode` are not read, so a textured line draws in `default_color`.

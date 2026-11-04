@@ -55,3 +55,17 @@ The `point-cull-front` calibration scene queues thirteen pipelines, and the old 
 cull-front point. A window of 30 frames passed on a quiet machine and failed on all four of four runs
 at once. A window of 150 frames passed on all four. The milliseconds cover a scene whose frames are
 quick, so that 150 of them end before the compile does.
+
+## The import pass
+
+Before the render pass, `renderInto` runs `godot --headless --import` so every texture, font and
+mesh exists as a `.godot/imported` artefact. An import that times out is fatal: the render would
+draw the scene without the assets the import did not reach, and save that picture as the reference.
+The harness retries once in a clean copy of the project, then throws, and `pnpm ref:diff` lists the
+scene as unmeasured. A non-zero exit that is not a timeout stays non-fatal, because a project with
+nothing to import is an ordinary case.
+
+Godot 4.6.3 imports fonts on worker threads, and about one whole-tree import in five deadlocks
+there: a 0-byte `.fontdata` temporary stays behind and every thread waits on a futex. The generated
+`project.godot` sets `editor/import/use_multiple_threads=false`, which measured 0 hangs in 20
+imports of `scenes/fixtures`, against 5 hangs in 15 with threads. A good import takes 6 to 10 s.

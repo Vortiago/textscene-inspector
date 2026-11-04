@@ -155,10 +155,6 @@ export function renderLightLists({
   const render = (target: THREE.WebGLRenderTarget, seedRgb: readonly [number, number, number], layer = 0) => {
     seed.set(seedRgb[0], seedRgb[1], seedRgb[2]);
     gl.setRenderTarget(target, layer);
-    // One clear per pass, not per light: each light stamps its own ref, so last frame's stamps
-    // are the only ones that could be mistaken for this frame's. Leaving them would make a light
-    // that has stopped casting keep the hole it cut.
-    gl.clear(false, false, true);
     gl.render(scene, camera);
     // Only visibility changes between the passes, so the first render's world matrices hold.
     scene.matrixWorldAutoUpdate = false;

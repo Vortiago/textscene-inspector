@@ -20,6 +20,7 @@ import {
 import { createMsdfMaterial } from './controls/native/text/msdfMaterial';
 import { createCanvasTextMaterial } from './controls/native/text/canvasTextPainter';
 import { createLightQuadMaterial, createShadowColorQuadMaterial } from './lighting2d/lightQuad';
+import { shadowSampling } from './lighting2d/testing/shadowSampling';
 
 /**
  * The 2D canvas alone, since a double-sided translucent 3D shell needs the split:
@@ -156,7 +157,8 @@ describe('Imperatively built canvas materials', () => {
     expect(cookie.forceSinglePass).toBe(true);
     expect(cookie.side).toBe(THREE.DoubleSide);
 
-    const tint = createShadowColorQuadMaterial({ cookie: texture(), blendMode: 0, shadowColor: white });
+    const shadow = shadowSampling({ shadowColor: white });
+    const tint = createShadowColorQuadMaterial({ cookie: texture(), blendMode: 0, shadow });
     expect(tint.forceSinglePass).toBe(true);
     expect(tint.side).toBe(THREE.DoubleSide);
   });

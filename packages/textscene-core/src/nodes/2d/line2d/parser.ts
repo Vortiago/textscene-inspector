@@ -9,7 +9,7 @@ import { parseColor } from '../../../utils/colorParser';
 import { boolOr, floatOr, intOr, packedOr } from '../../../parser/valueParsers';
 import { NO_FLOATS, parsePackedVector2Array } from '../../../resources/shapes/packedArray';
 import type { Line2DProperties } from './types';
-import { LineCapMode, LineJointMode } from '../../../godot/scene/line2d.js';
+import { LineCapMode, LineJointMode, LineTextureMode } from '../../../godot/scene/line2d.js';
 
 export function parseLine2D(heading: ParsedHeading, properties: Record<string, string>): Line2DProperties {
   const base = parseNode2D(heading, properties);
@@ -35,6 +35,8 @@ export function parseLine2D(heading: ParsedHeading, properties: Record<string, s
     roundPrecision: Math.max(1, intOr(properties.round_precision, 8)),
     beginCapMode: intOr(properties.begin_cap_mode, LineCapMode.NONE),
     endCapMode: intOr(properties.end_cap_mode, LineCapMode.NONE),
+    texture: properties.texture,
+    textureMode: intOr(properties.texture_mode, LineTextureMode.NONE),
     gradient: properties.gradient,
     widthCurve: properties.width_curve,
   };

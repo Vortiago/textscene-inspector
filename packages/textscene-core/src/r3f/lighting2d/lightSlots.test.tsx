@@ -1,7 +1,6 @@
 /**
- * Ordinal allocation on a canvas. Lights of any reach can share an item's list buffer and its
- * 8-bit stencil, so the ordinal keeps their shadow stamps apart: distinct on the canvas and dense
- * for 255 values.
+ * Ordinal allocation on a canvas. Lights of any reach can share an item's list buffer, so the
+ * ordinal names each light apart: distinct on the canvas and dense.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -90,7 +89,7 @@ describe('useRegisterCanvasLight2D', () => {
     expect(late.at(-1)).toBe(1);
   });
 
-  it('gives null until the light is declared, so no stencil ref derives from a guess', async () => {
+  it('gives null until the light is declared, so no light is named by a guess', async () => {
     const seen: (number | null)[] = [];
     await mount(<Light seen={seen} />);
     expect(seen[0]).toBeNull();

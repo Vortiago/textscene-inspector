@@ -15,7 +15,7 @@ import { CanvasLighting2DProvider } from './CanvasLighting2D';
 import { CanvasLightPass } from './CanvasLightPass';
 import { fakeLightPassHost } from './testing/fakeLightPassHost';
 import type { CanvasClip, LightPassHost } from './lightPassHost';
-import type { Quad2, ShadowCasterEdges } from './shadowVolumes';
+import type { Quad2, ShadowCasterEdges } from './shadowCasterEdges';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 

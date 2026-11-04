@@ -19,7 +19,8 @@ import {
   shadowColorContributes,
   type ShadowSampling,
 } from '../../../r3f/lighting2d/lightQuad';
-import { buildShadowPolarMap, shadowMapZFarInv } from '../../../r3f/lighting2d/shadowPolarMap';
+import { buildShadowPolarMap } from '../../../r3f/lighting2d/shadowPolarMap';
+import { createShadowPoseUniforms, writeShadowPose } from '../../../r3f/lighting2d/shadowSampling';
 import { useLightSequence } from '../../../r3f/lighting2d/useLightSequence';
 import { lightDrawSequence } from '../../../r3f/lighting2d/lightSequence';
 import { usePassMeshRef, useRegisterCanvasLight2D } from '../../../r3f/lighting2d/CanvasLighting2D';
@@ -27,17 +28,16 @@ import type { PassMeshRole } from '../../../r3f/lighting2d/itemLightList';
 import { DEFAULT_LIGHT_CULL_KEY, type LightCullKey } from '../../../r3f/lighting2d/lightCullKey';
 import { useLightShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
 import { useShadowLightPose } from '../../../r3f/lighting2d/shadowLightPose';
-import { litQuadRenderOrder, ShadowVolumeMask } from '../../../r3f/lighting2d/ShadowVolumeMask';
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { useLightQuadMaterials, type LightQuadMaterials } from './useLightQuadMaterials';
 import { placePositionalLight, useApartLightOrigin } from '../../../r3f/lighting2d/apartLight';
 import type { Rgba } from '../../../godot/math/math';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
-import { Light2DBlendMode, Light2DShadowFilter } from '../../../godot/scene/light2d.js';
+import { Light2DBlendMode, type Light2DShadowFilter } from '../../../godot/scene/light2d.js';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** The quads a light draws besides its lit quad, each only when its material exists. */
 const OPTIONAL_ROLES = [
-  'shade',
   'tint',
   'fade',
   'unshadowed',
@@ -87,10 +87,9 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   // Godot's default shadow_color is transparent (`light_2d.h:58`), so the extra albedo-free pass
   // runs only for the rare light that tints its shadow.
   const tintsShadow = casts && shadowColorContributes(props.shadow_color, props.shadow_filter);
-  // Two jobs, two numbers: `ordinal` keeps the shadow stencil stamps of one pass apart (dense,
-  // reused on unmount), while `sequence` is this light's position in the canvas light list, which
-  // is what Godot applies lights in (`renderer_canvas_render_rd.cpp:2365-2384`) and what
-  // order-dependent MIX depends on.
+  // Two jobs, two numbers: `ordinal` names the light to the pass (dense, reused on unmount), while
+  // `sequence` is this light's position in the canvas light list, which is what Godot applies
+  // lights in (`renderer_canvas_render_rd.cpp:2365-2384`) and what order-dependent MIX depends on.
   const listed = useLightSequence();
   const ordinal = useRegisterCanvasLight2D(lights, {
     reach,
@@ -144,8 +143,7 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
 
 /**
  * The cookie quad, the unshadowed quad and the `shadow_color` quad share this component, so their
- * geometry and offset cannot drift. Only their role and material differ. Complementary stencil
- * tests keep the cookie and `shadow_color` quads off each other's pixels, and the pass draws the
+ * geometry and offset cannot drift. Only their role and material differ. The pass draws the
  * unshadowed quad only for a list on which the light is unshadowed.
  */
 function LightQuad({
@@ -178,9 +176,8 @@ function LightQuad({
       ref={meshRef}
       position={[offset.x, -offset.y, 0]}
       material={material}
-      // Explicit rather than left to three's depth sort, because the volume mask
-      // has to land between this quad and the previous light's.
-      renderOrder={litQuadRenderOrder(sequence)}
+      // Explicit rather than left to three's depth sort: MIX depends on the light order.
+      renderOrder={sequence}
     >
       <planeGeometry args={[width, height]} />
     </mesh>
@@ -211,15 +208,15 @@ function QuadMesh({
   blendMode: number;
   /** `Light2D.shadow_color`: what this light contributes where it is blocked. */
   shadowColor: Rgba;
-  /** `Light2D.shadow_filter`: NONE picks the stencil, PCF5/PCF13 the polar map. */
-  shadowFilter: number;
+  /** `Light2D.shadow_filter`: the taps the polar map is read with. */
+  shadowFilter: EnumValue<typeof Light2DShadowFilter>;
   /** `Light2D.shadow_filter_smooth`: how wide the PCF taps spread the boundary. */
   shadowFilterSmooth: number;
   /** Whether the light casts with a visible `shadow_color`. */
   tintsShadow: boolean;
   /** Whether an item the light reaches can miss `shadow_item_cull_mask`. */
   reachesUnshadowedItem: boolean;
-  /** This light's ordinal on the canvas, its stencil ref, or null while undeclared. */
+  /** This light's ordinal on the canvas, or null while undeclared. */
   ordinal: number | null;
   /** This light's place in the canvas light list, which is its draw order. */
   sequence: number;
@@ -233,19 +230,11 @@ function QuadMesh({
   // the tree: the world matrix it needs does not exist before that.
   const [quad, setQuad] = useState<THREE.Mesh | null>(null);
   const light = useShadowLightPose(quad, casters.length > 0);
-  const shadowed = !!light && casters.length > 0;
-  // `shadow_filter` picks the mechanism. NONE stencils: the volumes stamp and the
-  // cookie draws only where they did not, as Godot's transparent default
-  // `shadow_color` adds nothing there. PCF5/PCF13 sample the polar map through
-  // Godot's tap kernel, for its stepped penumbra.
-  const filtered = shadowed && shadowFilter !== Light2DShadowFilter.NONE;
 
-  // Built only for a filtered light, so an unfiltered one runs none of that path.
-  // It is a pure function of the pose and the casters, so it rebuilds exactly
-  // when the volumes do.
+  // A pure function of the pose and the casters, so it rebuilds exactly when either moves.
   const bins = useMemo(
-    () => (filtered && light ? buildShadowPolarMap(light, casters) : null),
-    [filtered, light, casters]
+    () => (light && casters.length > 0 ? buildShadowPolarMap(light, casters) : null),
+    [light, casters]
   );
 
   // The texture outlives each rebuild: both quad materials hold its identity in
@@ -267,33 +256,28 @@ function QuadMesh({
   // the GL object back instead of holding it for the session.
   useDisposeOnRelease(shadowMap);
 
-  const sampling = useMemo<ShadowSampling | undefined>(() => {
-    if (!shadowMap || !light) return undefined;
-    const [m00, m01, m02, m10, m11, m12] = light.worldToLocal;
-    return {
-      map: shadowMap,
-      // Anything the parser admits that is not NONE takes the wider kernel only
-      // at PCF13; `shadow_filter` is a three-value enum, so this is exhaustive.
-      filter:
-        shadowFilter === Light2DShadowFilter.PCF13 ? Light2DShadowFilter.PCF13 : Light2DShadowFilter.PCF5,
-      smooth: shadowFilterSmooth,
-      worldToLocal: new THREE.Matrix3().set(m00, m01, m02, m10, m11, m12, 0, 0, 1),
-      zFarInv: shadowMapZFarInv(light.radius),
-      shadowColor,
-    };
-  }, [shadowMap, light, shadowFilter, shadowFilterSmooth, shadowColor]);
+  // Written at commit beside the map refill, so a moving light updates the uniforms its
+  // materials already hold instead of rebuilding them.
+  const [pose] = useState(createShadowPoseUniforms);
+  useLayoutEffect(() => {
+    if (light) writeShadowPose(pose, light);
+  }, [pose, light]);
+
+  const sampling = useMemo<ShadowSampling | undefined>(
+    () =>
+      shadowMap
+        ? { map: shadowMap, filter: shadowFilter, smooth: shadowFilterSmooth, pose, shadowColor }
+        : undefined,
+    [shadowMap, shadowFilter, shadowFilterSmooth, pose, shadowColor]
+  );
 
   const materials = useLightQuadMaterials({
     cookie,
     color,
     energy,
     blendMode,
-    shadowColor,
     tintsShadow,
-    shadowed,
-    filtered,
     sampling,
-    ordinal,
     drawsUnshadowed: casters.length > 0 && reachesUnshadowedItem,
   });
 
@@ -301,9 +285,6 @@ function QuadMesh({
 
   return (
     <>
-      {shadowed && !filtered && ordinal !== null && (
-        <ShadowVolumeMask light={light} casters={casters} ordinal={ordinal} sequence={sequence} />
-      )}
       <LightQuad role="lit" onMesh={setQuad} material={materials.lit} {...shape} />
       {OPTIONAL_ROLES.map(
         (role) =>

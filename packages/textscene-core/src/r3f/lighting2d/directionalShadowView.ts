@@ -18,7 +18,7 @@ import {
 import { createDirectionalShadowTexture, writeDirectionalShadowMap } from './directionalLightQuad';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { perObject } from '../../utils/perObject.js';
-import type { Quad2, ShadowCasterEdges } from './shadowVolumes';
+import type { Quad2, ShadowCasterEdges } from './shadowCasterEdges';
 import { useCanvasLighting2D, type LightPassStep } from './lightPassContext';
 import type { CanvasClip } from './lightPassHost';
 import type { Rect2 } from '../../godot/math/rect2';

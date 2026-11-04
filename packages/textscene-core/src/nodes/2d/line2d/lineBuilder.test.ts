@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { LineCapMode, LineJointMode } from '../../../godot/scene/line2d.js';
+import { LineCapMode, LineJointMode, LineTextureMode } from '../../../godot/scene/line2d.js';
 import type { Rgba } from '../../../godot/math/math';
 import { buildLineStroke, type LineStroke, type LineStrokeOptions } from './lineBuilder';
 
@@ -18,6 +18,8 @@ const OPTIONS = {
   endCapMode: LineCapMode.NONE,
   gradient: null,
   widthFactorAt: null,
+  textureMode: LineTextureMode.NONE,
+  tileAspect: 1,
 } satisfies Omit<LineStrokeOptions, 'points'>;
 
 function stroke(points: number[], overrides: Partial<LineStrokeOptions> = {}): LineStroke {
@@ -213,6 +215,123 @@ describe('buildLineStroke', () => {
         },
       });
       expect(seen).toEqual([0, 0.25, 1]);
+    });
+  });
+
+  describe('texture', () => {
+    /** The `[u, v]` of each vertex, which the stroke builds in Godot's texel space (v 0 on the up side). */
+    const uvPairs = (built: LineStroke) => {
+      expect(built.uvs).not.toBeNull();
+      return Array.from({ length: built.uvs!.length / 2 }, (_, i) => [
+        built.uvs![i * 2]!,
+        built.uvs![i * 2 + 1]!,
+      ]);
+    };
+
+    it('writes no UVs for NONE', () => {
+      expect(stroke([0, 0, 100, 0]).uvs).toBeNull();
+    });
+
+    it('runs u from 0 to length over width times tile_aspect for TILE', () => {
+      // 100 / (20 * 2) = 2.5.
+      const built = stroke([0, 0, 100, 0], { textureMode: LineTextureMode.TILE, tileAspect: 2 });
+      expect(uvPairs(built)).toEqual([
+        [0, 0],
+        [0, 1],
+        [2.5, 0],
+        [2.5, 1],
+      ]);
+    });
+
+    it('runs u from 0 to 1 for STRETCH, whatever the tile_aspect', () => {
+      const built = stroke([0, 0, 100, 0], { textureMode: LineTextureMode.STRETCH, tileAspect: 2 });
+      expect(uvPairs(built)).toEqual([
+        [0, 0],
+        [0, 1],
+        [1, 0],
+        [1, 1],
+      ]);
+    });
+
+    it('measures a corner by the distance walked, as TILE and STRETCH', () => {
+      // Segments of 100 and 100: the corner is at 100 / 20 = 5 tiles, and at 1/2 of the stretch.
+      const tile = uvPairs(stroke(CORNER, { textureMode: LineTextureMode.TILE }));
+      expect([tile[2], tile[3], tile[4], tile[5]]).toEqual([
+        [5, 0],
+        [5, 1],
+        [10, 0],
+        [10, 1],
+      ]);
+      const stretch = uvPairs(stroke(CORNER, { textureMode: LineTextureMode.STRETCH }));
+      expect([stretch[2], stretch[3], stretch[4], stretch[5]]).toEqual([
+        [0.5, 0],
+        [0.5, 1],
+        [1, 0],
+        [1, 1],
+      ]);
+    });
+
+    it('copies the UV of the opposite strip vertex to a BEVEL vertex (line_builder.cpp:468-472)', () => {
+      // The turn opens downward, so the bevel vertex takes the UV of the last up vertex: (5, 0).
+      const built = stroke(CORNER, { jointMode: LineJointMode.BEVEL, textureMode: LineTextureMode.TILE });
+      expect(uvPairs(built)[4]).toEqual([5, 0]);
+    });
+
+    it('adds the BOX cap half-widths to the distance, starting u at 0', () => {
+      // Distance 10 + 100 + 10 = 120 at the end: 120 / 20 = 6.
+      const built = stroke([0, 0, 100, 0], {
+        textureMode: LineTextureMode.TILE,
+        beginCapMode: LineCapMode.BOX,
+        endCapMode: LineCapMode.BOX,
+      });
+      expect(uvPairs(built)).toEqual([
+        [0, 0],
+        [0, 1],
+        [6, 0],
+        [6, 1],
+      ]);
+    });
+
+    describe('ROUND caps', () => {
+      // Width 16, tile_aspect 2: a cap is a square of 0.5 tiles, centred on u 0.25 at the start
+      // and on 136 / 32 = 4.25 at the end (the half-width 8 plus 128).
+      const capUvs = () =>
+        uvPairs(
+          stroke([0, 0, 128, 0], {
+            width: 16,
+            textureMode: LineTextureMode.TILE,
+            tileAspect: 2,
+            beginCapMode: LineCapMode.ROUND,
+            endCapMode: LineCapMode.ROUND,
+          })
+        );
+      // The begin cap is its hub and 9 arc vertices, then the strip.
+      const ARC_VERTICES = 10;
+
+      it('gives the hub the centre of the cap rectangle', () => {
+        expect(capUvs()[0]).toEqual([0.25, 0.5]);
+      });
+
+      it('starts the strip at the cap’s u, so the texture continues from the cap', () => {
+        const uvs = capUvs();
+        expect(uvs[ARC_VERTICES]).toEqual([0.25, 0]);
+        expect(uvs[ARC_VERTICES + 1]).toEqual([0.25, 1]);
+      });
+
+      it('sweeps the arc over the top to the bottom of the rectangle', () => {
+        const uvs = capUvs();
+        expect(uvs[1]![0]).toBeCloseTo(0.25, 6);
+        expect(uvs[1]![1]).toBeCloseTo(0, 6);
+        expect(uvs[ARC_VERTICES - 1]![1]).toBeCloseTo(1, 6);
+      });
+
+      it('puts the end cap on the rectangle centred on the end quad', () => {
+        const uvs = capUvs();
+        const last = uvs[uvs.length - 1]!;
+        expect(last[0]).toBeCloseTo(4.25, 6);
+        expect(last[1]).toBeCloseTo(1, 6);
+        expect(uvs[uvs.length - 2 - 9 - 1]![0]).toBeCloseTo(4.25, 6);
+      });
     });
   });
 

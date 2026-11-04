@@ -1748,6 +1748,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Pointlight2d Shadow None Bins",
+    "file": "unit-pointlight2d-shadow-none-bins.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d Shadow Pcf Color",
     "file": "unit-pointlight2d-shadow-pcf-color.tscn",
     "category": "Other"
@@ -1755,6 +1760,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Pointlight2d Shadow Pcf13",
     "file": "unit-pointlight2d-shadow-pcf13.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Shadow Pcf5 Bins",
+    "file": "unit-pointlight2d-shadow-pcf5-bins.tscn",
     "category": "Other"
   },
   {
@@ -3087,6 +3097,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Line2d Gradient",
     "file": "unit-line2d-gradient.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Line2d Texture Clamp",
+    "file": "unit-line2d-texture-clamp.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Line2d Texture Stretch",
+    "file": "unit-line2d-texture-stretch.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Line2d Texture Tile",
+    "file": "unit-line2d-texture-tile.tscn",
     "category": "Unit - 2D Canvas"
   },
   {

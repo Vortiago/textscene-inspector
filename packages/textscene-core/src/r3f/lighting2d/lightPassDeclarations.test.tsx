@@ -1,7 +1,7 @@
 /**
  * The declarations a light, an item and a light mesh make to the pass. A light rebuilds its
- * declaration object each render, and re-declaring would hand it a new ordinal, its stencil ref
- * with it, so each declaration holds while its values hold.
+ * declaration object each render, and re-declaring would hand it a new ordinal, so each
+ * declaration holds while its values hold.
  */
 
 import { describe, expect, it, vi } from 'vitest';

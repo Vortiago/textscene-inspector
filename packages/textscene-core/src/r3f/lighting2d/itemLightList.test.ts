@@ -315,14 +315,13 @@ describe('drawsInPass', () => {
   const escaping = { ordinal: 0, unshadowed: true };
 
   it('draws a light absent from the list in no pass', () => {
-    for (const role of ['volume', 'lit', 'shade', 'tint', 'fade', 'unshadowed', 'unshadowedFade'] as const) {
+    for (const role of ['lit', 'tint', 'fade', 'unshadowed', 'unshadowedFade'] as const) {
       expect(drawsInPass(undefined, role, 'light')).toBe(false);
       expect(drawsInPass(undefined, role, 'tint')).toBe(false);
     }
   });
 
-  it('draws the volumes and the lit quad in the light pass for a shadowed item', () => {
-    expect(drawsInPass(shadowed, 'volume', 'light')).toBe(true);
+  it('draws the lit quad in the light pass for a shadowed item', () => {
     expect(drawsInPass(shadowed, 'lit', 'light')).toBe(true);
     expect(drawsInPass(shadowed, 'unshadowed', 'light')).toBe(false);
     expect(drawsInPass(shadowed, 'tint', 'light')).toBe(false);
@@ -330,22 +329,13 @@ describe('drawsInPass', () => {
 
   it('draws only the unshadowed quad in the light pass for an escaping item', () => {
     expect(drawsInPass(escaping, 'unshadowed', 'light')).toBe(true);
-    expect(drawsInPass(escaping, 'volume', 'light')).toBe(false);
     expect(drawsInPass(escaping, 'lit', 'light')).toBe(false);
   });
 
-  it('draws the volumes and the tint quad in the tint pass, for a shadowed item only', () => {
-    expect(drawsInPass(shadowed, 'volume', 'tint')).toBe(true);
+  it('draws the tint quad in the tint pass, for a shadowed item only', () => {
     expect(drawsInPass(shadowed, 'tint', 'tint')).toBe(true);
     expect(drawsInPass(shadowed, 'lit', 'tint')).toBe(false);
     expect(drawsInPass(escaping, 'tint', 'tint')).toBe(false);
-    expect(drawsInPass(escaping, 'volume', 'tint')).toBe(false);
-  });
-
-  it("draws the shade quad, the shadow_color's alpha, in the light pass of a shadowed item", () => {
-    expect(drawsInPass(shadowed, 'shade', 'light')).toBe(true);
-    expect(drawsInPass(shadowed, 'shade', 'tint')).toBe(false);
-    expect(drawsInPass(escaping, 'shade', 'light')).toBe(false);
   });
 
   it('draws the fade quad, the lit alpha, in the tint pass of a shadowed item', () => {

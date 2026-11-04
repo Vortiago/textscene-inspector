@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { globSync } from 'glob';
 import Mocha from 'mocha';
-import { SUITE_STARTED_MARKER_ENV } from './integration/integrationLaunch';
+import { SUITE_RESULT_FILE_ENV, SUITE_STARTED_MARKER_ENV } from './integration/integrationLaunch';
 
 /** Runs every `*.test.js` under `testsRoot`, and rejects when a test fails. */
 export async function runSuite(testsRoot: string): Promise<void> {
@@ -22,6 +22,7 @@ export async function runSuite(testsRoot: string): Promise<void> {
 
   return new Promise((resolve, reject) => {
     mocha.run((failures) => {
+      recordFailures(failures);
       if (failures > 0) {
         reject(new Error(`${failures} tests failed.`));
       } else {
@@ -35,4 +36,10 @@ export async function runSuite(testsRoot: string): Promise<void> {
 function markSuiteStarted(): void {
   const marker = process.env[SUITE_STARTED_MARKER_ENV];
   if (marker) fs.writeFileSync(marker, '');
+}
+
+/** Tells the launcher how many tests failed, for an editor whose exit code hides it. */
+function recordFailures(failures: number): void {
+  const file = process.env[SUITE_RESULT_FILE_ENV];
+  if (file) fs.writeFileSync(file, String(failures));
 }

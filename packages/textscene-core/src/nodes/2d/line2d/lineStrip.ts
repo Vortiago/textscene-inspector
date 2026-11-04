@@ -1,10 +1,11 @@
 /**
  * The triangle strip Godot's `LineBuilder` grows (`scene/2d/line_builder.cpp:434-598`): a pair of
  * vertices on each side of the line, joined to the next pair by a quad, plus the triangles of a
- * bevel, a round joint and a round cap. Every number is a `float`, as Godot's are.
+ * bevel, a round joint and a round cap. Every number is a `float`, as Godot's are. With a texture
+ * mode the strip also holds one UV per vertex: `u` along the line and `v` 0 on the up side, 1 on the down.
  */
 
-import type { Rgba } from '../../../godot/math/math';
+import { lerpf, type Rgba } from '../../../godot/math/math';
 import { storedReal as f } from '../../../godot/math/real';
 import {
   vector2Add,
@@ -24,36 +25,56 @@ const opposite = (orientation: Orientation): Orientation => (orientation === UP 
 /** `Math::PI` as the `float` every angle of `LineBuilder` holds. */
 const PI = f(Math.PI);
 
+/** A `Rect2` in UV space: the square a round cap takes from the texture. */
+export interface UvRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /**
- * The strip so far. `colors` holds one entry per vertex with a gradient and is null without one.
- * Written only by the functions of this module, and read once by `buildLineStroke`.
+ * The strip so far. `colors` holds one entry per vertex with a gradient and `uvs` one with a texture
+ * mode; each is null without one. Written only by the functions of this module, and read once by
+ * `buildLineStroke`.
  */
 export interface Strip {
   readonly vertices: Vector2[];
   readonly colors: Rgba[] | null;
+  readonly uvs: Vector2[] | null;
   readonly indices: number[];
   /** The vertex each side of the strip last reached. Both start at 0, as `_last_index` does. */
   readonly lastIndex: [number, number];
 }
 
-export function createStrip(hasColors: boolean): Strip {
-  return { vertices: [], colors: hasColors ? [] : null, indices: [], lastIndex: [0, 0] };
+export function createStrip(hasColors: boolean, hasUvs: boolean): Strip {
+  return {
+    vertices: [],
+    colors: hasColors ? [] : null,
+    uvs: hasUvs ? [] : null,
+    indices: [],
+    lastIndex: [0, 0],
+  };
 }
 
 /** Starts a strip at the pair `up` and `down`, with no quad to the vertices before. */
-export function stripBegin(strip: Strip, up: Vector2, down: Vector2, color: Rgba | null): void {
+export function stripBegin(strip: Strip, up: Vector2, down: Vector2, color: Rgba | null, uvx: number): void {
   const first = strip.vertices.length;
-  pushVertex(strip, up, color);
-  pushVertex(strip, down, color);
+  pushPair(strip, up, down, color, uvx);
   strip.lastIndex[UP] = first;
   strip.lastIndex[DOWN] = first + 1;
 }
 
 /** Joins the last pair to a new pair `up` and `down` with one quad. */
-export function stripAddQuad(strip: Strip, up: Vector2, down: Vector2, color: Rgba | null): void {
+export function stripAddQuad(
+  strip: Strip,
+  up: Vector2,
+  down: Vector2,
+  color: Rgba | null,
+  uvx: number
+): void {
   const first = strip.vertices.length;
-  pushVertex(strip, up, color);
-  pushVertex(strip, down, color);
+  pushPair(strip, up, down, color, uvx);
   const { lastIndex } = strip;
   strip.indices.push(lastIndex[UP], first + 1, lastIndex[DOWN], lastIndex[UP], first, first + 1);
   lastIndex[UP] = first;
@@ -62,13 +83,14 @@ export function stripAddQuad(strip: Strip, up: Vector2, down: Vector2, color: Rg
 
 /**
  * Adds the triangle of the last vertex of each side and the new vertex `point`, which replaces the
- * last vertex of the side opposite `orientation`. A bevel is one such triangle.
+ * last vertex of the side opposite `orientation` and takes its UV: a joint is one slice of the texture.
+ * A bevel is one such triangle.
  */
 export function stripAddTri(strip: Strip, point: Vector2, orientation: Orientation): void {
   const first = strip.vertices.length;
   const { colors, lastIndex } = strip;
-  pushVertex(strip, point, colors && colors[colors.length - 1]!);
   const other = opposite(orientation);
+  pushVertex(strip, point, colors && colors[colors.length - 1]!, strip.uvs && strip.uvs[lastIndex[other]]!);
   strip.indices.push(lastIndex[other], first, lastIndex[orientation]);
   lastIndex[other] = first;
 }
@@ -83,14 +105,14 @@ export function stripAddArc(
 ): void {
   const begin = vector2Sub(strip.vertices[strip.lastIndex[opposite(orientation)]]!, center);
   const radius = vector2Length(begin);
-  for (const angle of arcAngles(begin, angleDelta, roundPrecision)) {
+  for (const angle of arcAngles(angleOf(begin), angleDelta, roundPrecision)) {
     stripAddTri(strip, pointOnArc(center, angle, radius), orientation);
   }
 }
 
 /**
  * Adds a fan of triangles around `center` that shares no vertex with the strip: a round cap, from
- * `begin` through `angleDelta`.
+ * `begin` through `angleDelta`. Its UVs are the circle inscribed in `uvRect`, undistorted.
  */
 export function newArc(
   strip: Strip,
@@ -98,34 +120,63 @@ export function newArc(
   begin: Vector2,
   angleDelta: number,
   roundPrecision: number,
-  color: Rgba | null
+  color: Rgba | null,
+  uvRect: UvRect
 ): void {
   const radius = vector2Length(begin);
   const hub = strip.vertices.length;
-  pushVertex(strip, center, color);
-  const angles = arcAngles(begin, angleDelta, roundPrecision);
-  for (const angle of angles) pushVertex(strip, pointOnArc(center, angle, radius), color);
+  pushVertex(strip, center, color, strip.uvs && pointInRect(uvRect, { x: 0.5, y: 0.5 }));
+  const angles = arcAngles(angleOf(begin), angleDelta, roundPrecision);
+  // The UV circle starts at the top of the rectangle and sweeps in step with the arc.
+  const uvAngles = strip.uvs ? arcAngles(UV_ARC_START, angleDelta, roundPrecision) : null;
+  angles.forEach((angle, i) => {
+    const uv = uvAngles && uvOnCircle(uvRect, uvAngles[i]!);
+    pushVertex(strip, pointOnArc(center, angle, radius), color, uv);
+  });
   for (let i = 0; i < angles.length - 1; i++) strip.indices.push(hub, hub + 1 + i, hub + 2 + i);
 }
 
-function pushVertex(strip: Strip, point: Vector2, color: Rgba | null): void {
+/** `-PI / 2`: where the UV circle of a round cap starts, at the top of its rectangle. */
+const UV_ARC_START = f(-Math.PI / 2);
+
+/** `interpolate(rect, at)` of `line_builder.cpp:36`: `lerp(from, from + size, at)` on each axis. */
+function pointInRect({ x, y, width, height }: UvRect, at: Vector2): Vector2 {
+  return { x: lerpf(x, f(x + width), at.x), y: lerpf(y, f(y + height), at.y) };
+}
+
+/** The point of the circle inscribed in `rect` at `angle`, with the unit circle mapped to `0.5 * (v + 1)`. */
+function uvOnCircle(rect: UvRect, angle: number): Vector2 {
+  const { x, y } = unitVector(angle);
+  return pointInRect(rect, { x: f(0.5 * f(x + 1)), y: f(0.5 * f(y + 1)) });
+}
+
+function pushPair(strip: Strip, up: Vector2, down: Vector2, color: Rgba | null, uvx: number): void {
+  pushVertex(strip, up, color, strip.uvs && { x: uvx, y: 0 });
+  pushVertex(strip, down, color, strip.uvs && { x: uvx, y: 1 });
+}
+
+function pushVertex(strip: Strip, point: Vector2, color: Rgba | null, uv: Vector2 | null): void {
   strip.vertices.push(point);
-  if (!strip.colors) return;
-  if (!color) throw new Error(`expected a colour for a vertex of a gradient strip, got ${color}`);
-  strip.colors.push(color);
+  if (strip.colors) {
+    if (!color) throw new Error(`expected a colour for a vertex of a gradient strip, got ${color}`);
+    strip.colors.push(color);
+  }
+  if (strip.uvs) {
+    if (!uv) throw new Error(`expected a UV for a vertex of a textured strip, got ${uv}`);
+    strip.uvs.push(uv);
+  }
 }
 
 /**
- * The angles of an arc's vertices from `begin` through `angleDelta`: one per `angle_step` while the
+ * The angles of an arc's vertices from `start` through `angleDelta`: one per `angle_step` while the
  * loop condition `i < abs(angle_delta) / angle_step` holds, then the exact end angle
  * (`line_builder.cpp:505-532`). Steps accumulate in float, as Godot's `t += angle_step` does.
  */
-function arcAngles(begin: Vector2, angleDelta: number, roundPrecision: number): number[] {
+function arcAngles(start: number, angleDelta: number, roundPrecision: number): number[] {
   const step = f(PI / roundPrecision);
   const steps = f(Math.abs(angleDelta) / step);
   const signedStep = angleDelta < 0 ? -step : step;
 
-  const start = angleOf(begin);
   const angles: number[] = [];
   for (let i = 0, angle = start; i < steps; i++, angle = f(angle + signedStep)) angles.push(angle);
   angles.push(f(start + angleDelta));
@@ -137,6 +188,10 @@ function angleOf({ x, y }: Vector2): number {
   return f(Math.atan2(y, x));
 }
 
+function unitVector(angle: number): Vector2 {
+  return { x: f(Math.cos(angle)), y: f(Math.sin(angle)) };
+}
+
 function pointOnArc(center: Vector2, angle: number, radius: number): Vector2 {
-  return vector2Add(center, vector2Scaled({ x: f(Math.cos(angle)), y: f(Math.sin(angle)) }, radius));
+  return vector2Add(center, vector2Scaled(unitVector(angle), radius));
 }

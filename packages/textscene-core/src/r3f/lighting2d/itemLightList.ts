@@ -266,22 +266,19 @@ export function planLightLists(
 }
 
 /**
- * What a light mesh is to the pass. A light's `volume` stencil and `lit` quad draw its authored
- * shadow, `tint` adds its `shadow_color`, and `unshadowed` is its quad without the shadow. Each
- * light writes both buffers over its whole reach with one alpha, so a MIX light scales both: `shade`
- * carries the tint's alpha into the light pass, and `fade` and `unshadowedFade` the lit alpha into
- * the tint pass.
+ * What a light mesh is to the pass. A light's `lit` quad draws its authored shadow, `tint` adds its
+ * `shadow_color`, and `unshadowed` is its quad without the shadow. Each light writes both buffers
+ * over its whole reach with one alpha, so a MIX light scales both: `fade` and `unshadowedFade`
+ * carry the lit alpha into the tint pass of a light whose tint quad does not.
  */
-export type PassMeshRole = 'volume' | 'lit' | 'shade' | 'tint' | 'fade' | 'unshadowed' | 'unshadowedFade';
+export type PassMeshRole = 'lit' | 'tint' | 'fade' | 'unshadowed' | 'unshadowedFade';
 
 /** `light` accumulates `S`, from either seed. `tint` accumulates the albedo-free `shadow_color`. */
 export type PassKind = 'light' | 'tint';
 
 /** The entry a role draws for, by its `unshadowed` flag, and the passes it draws in. */
 const ROLE_PASSES: Readonly<Record<PassMeshRole, { unshadowed: boolean; kinds: readonly PassKind[] }>> = {
-  volume: { unshadowed: false, kinds: ['light', 'tint'] },
   lit: { unshadowed: false, kinds: ['light'] },
-  shade: { unshadowed: false, kinds: ['light'] },
   tint: { unshadowed: false, kinds: ['tint'] },
   fade: { unshadowed: false, kinds: ['tint'] },
   unshadowed: { unshadowed: true, kinds: ['light'] },
