@@ -22,6 +22,7 @@ import {
   clampAutowrapMode,
   shapeText,
   shapedTextSizeWidthPx,
+  startsParagraph,
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
@@ -223,11 +224,6 @@ export function labelVisibleLineRange(
   const start = Math.min(Math.max(0, linesSkipped), totalLines);
   const end = Math.max(start, Math.min(totalLines, linesVisible + linesSkipped));
   return { start, end };
-}
-
-/** Whether `lines[index]` is the first shown line of its paragraph. A paragraph adds its spacing only when it shows a line (`label.cpp:364-383`). */
-function startsParagraph(lines: readonly TextLineLayout[], index: number): boolean {
-  return index === 0 || lines[index]!.paragraphIndex !== lines[index - 1]!.paragraphIndex;
 }
 
 function countParagraphs(lines: readonly TextLineLayout[]): number {

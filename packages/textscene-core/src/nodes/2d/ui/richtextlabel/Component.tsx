@@ -126,6 +126,7 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
   const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
   const { anchorRef, clippingPlanes: ownClippingPlanes, clip } = useWorldClipPlanes(ownRect);
   const clipContents = props.clipContents ?? true;
+  const justificationFlags = props.justificationFlags ?? DEFAULT_JUSTIFICATION_FLAGS;
   const clippingPlanes = clipContents ? ownClippingPlanes : inheritedClippingPlanes;
 
   // A styled run reads its own theme font-size key, never `normal_font_size`.
@@ -178,7 +179,7 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
         horizontalAlignment: props.horizontalAlignment,
         verticalAlignment: props.verticalAlignment,
         justification: {
-          flags: props.justificationFlags ?? DEFAULT_JUSTIFICATION_FLAGS,
+          flags: justificationFlags,
           fontSizePx: textTheme.fontSizePx,
         },
       }),
@@ -189,7 +190,7 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
       rect.h,
       props.horizontalAlignment,
       props.verticalAlignment,
-      props.justificationFlags,
+      justificationFlags,
       textTheme.fontSizePx,
     ]
   );

@@ -23,6 +23,7 @@ import {
   shapeText,
   shapedTextSizeWidthPx,
   soloLineLayout,
+  startsParagraph,
   type GlyphPlacement,
   type ShapeTextOptions,
   type TextLayoutResult,
@@ -925,14 +926,17 @@ export function layoutRichTextRuns(
     segments[0] ? styledRuns[segments[0].runIndex]!.alignment : (alignment?.horizontalAlignment ?? H_LEFT);
 
   const unfittedPerLine = attributeRunsToLines(styledRuns, unfittedLayout);
-  const layout = alignment?.justification
-    ? fitFilledParagraphs(
-        unfittedLayout,
-        (firstLineIndex) => alignmentOfLine(unfittedPerLine[firstLineIndex]!) === H_FILL,
-        boxWidthPx,
-        alignment.justification
-      )
-    : unfittedLayout;
+  const isFilled = (firstLineIndex: number): boolean =>
+    alignmentOfLine(unfittedPerLine[firstLineIndex]!) === H_FILL;
+  // A label with no FILL paragraph keeps its layout object, so it skips the second attribution.
+  let hasFilledParagraph = false;
+  for (let i = 0; i < unfittedLayout.lines.length; i++) {
+    if (startsParagraph(unfittedLayout.lines, i) && isFilled(i)) hasFilledParagraph = true;
+  }
+  const layout =
+    alignment?.justification && hasFilledParagraph
+      ? fitFilledParagraphs(unfittedLayout, isFilled, boxWidthPx, alignment.justification)
+      : unfittedLayout;
   // Fitting moves glyphs and keeps their text, so the second attribution reads the same runs.
   const perLine = layout === unfittedLayout ? unfittedPerLine : attributeRunsToLines(styledRuns, layout);
   const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);

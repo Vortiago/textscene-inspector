@@ -27,7 +27,12 @@ export function parseRichTextLabel(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): RichTextLabelProperties {
-  const result: RichTextLabelProperties = { ...parseControl(heading, properties) };
+  const result: RichTextLabelProperties = {
+    ...parseControl(heading, properties),
+    justificationFlags:
+      parseOptionalInt(properties.justification_flags, 'int64') ?? DEFAULT_JUSTIFICATION_FLAGS,
+    clipContents: boolSlotValue(properties.clip_contents) ?? true,
+  };
   if (properties.text !== undefined) result.text = unquoteString(properties.text);
   result.bbcodeEnabled = boolSlotValue(properties.bbcode_enabled) === true;
   result.fitContent = boolSlotValue(properties.fit_content) === true;
@@ -39,6 +44,5 @@ export function parseRichTextLabel(
   result.autowrapTrimFlags = parseOptionalInt(properties.autowrap_trim_flags, 'int64');
   result.justificationFlags =
     parseOptionalInt(properties.justification_flags, 'int64') ?? DEFAULT_JUSTIFICATION_FLAGS;
-  result.clipContents = boolSlotValue(properties.clip_contents) ?? true;
   return result;
 }

@@ -20,6 +20,7 @@ import {
   isWhitespace,
   shapedTextSizeWidthPx,
   type GlyphPlacement,
+  startsParagraph,
   type TextLineLayout,
 } from './textLayout';
 import { JustificationFlag } from '../../../../godot/text/textServerEnums';
@@ -191,11 +192,12 @@ export function justifyParagraphs(
   let first = 0;
   while (first < lines.length) {
     let end = first + 1;
-    while (end < lines.length && lines[end]!.paragraphIndex === lines[first]!.paragraphIndex) end++;
-    const paragraph = lines.slice(first, end);
-    justified.push(
-      ...(isFilled(first) ? justifyParagraph(paragraph, widthPx, flags, fontSizePx) : paragraph)
-    );
+    while (end < lines.length && !startsParagraph(lines, end)) end++;
+    if (isFilled(first)) {
+      justified.push(...justifyParagraph(lines.slice(first, end), widthPx, flags, fontSizePx));
+    } else {
+      for (let i = first; i < end; i++) justified.push(lines[i]!);
+    }
     first = end;
   }
   return justified;

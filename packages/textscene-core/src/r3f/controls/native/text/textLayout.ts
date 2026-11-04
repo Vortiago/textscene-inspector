@@ -159,6 +159,11 @@ export interface TextLineLayout {
   paragraphIndex: number;
 }
 
+/** Whether `lines[index]` is the first shown line of its paragraph, where `paragraphIndex` changes. */
+export function startsParagraph(lines: readonly TextLineLayout[], index: number): boolean {
+  return index === 0 || lines[index]!.paragraphIndex !== lines[index - 1]!.paragraphIndex;
+}
+
 /**
  * `_shaped_text_get_size` reports `Size2(sd->width, ascent + descent).ceil()`
  * (`modules/text_server_adv/text_server_adv.cpp:7524-7537`), and `shaped_text_get_width` ceils the
