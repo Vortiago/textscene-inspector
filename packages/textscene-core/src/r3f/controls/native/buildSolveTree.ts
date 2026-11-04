@@ -231,7 +231,6 @@ function resolveThemedIcons(
   return mergeThemedRecord(themeScope, local, iconRefsOfTheme);
 }
 
-/** An uncached sub-scene the walk found: the path to request, and the ExtResource to register first (absent for a raw `res://` instance). */
 /** A Label's `label_settings` with the font it names. */
 interface OwnLabelSettings {
   settings: LabelSettingsResource | null;
@@ -240,6 +239,7 @@ interface OwnLabelSettings {
 
 const NO_LABEL_SETTINGS: OwnLabelSettings = { settings: null, font: null };
 
+/** An uncached sub-scene the walk found: the path to request, and the ExtResource to register first (absent for a raw `res://` instance). */
 interface PendingScene {
   path: string;
   ext: TscnExternalResource | null;

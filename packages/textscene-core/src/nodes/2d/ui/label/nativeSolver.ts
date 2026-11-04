@@ -96,17 +96,21 @@ interface LabelEffectiveTextTheme {
  * painter draws nothing meanwhile ({@link isLabelFontLoading}).
  */
 export function labelFontMetrics(n: ShareNode): FontMetrics {
+  return settledSettingsFontMetrics(n) ?? resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY);
+}
+
+/** Null when the Label names no settings font, or the font is not settled yet. */
+function settledSettingsFontMetrics(n: ShareNode): FontMetrics | null {
   const font = n.labelSettingsFont;
-  const settled =
-    font === null || font === LABEL_SETTINGS_FONT_LOADING ? null : peekSettledSceneFontMetrics(font, n.path);
-  return settled ?? resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY);
+  if (font === null || font === LABEL_SETTINGS_FONT_LOADING) return null;
+  return peekSettledSceneFontMetrics(font, n.path);
 }
 
 /** True while the settings font is unresolved: either its file loads, or its metrics parse (ADR-0059). */
 export function isLabelFontLoading(n: ShareNode): boolean {
   const font = n.labelSettingsFont;
   if (font === LABEL_SETTINGS_FONT_LOADING) return true;
-  return font !== null && peekSettledSceneFontMetrics(font, n.path) === null;
+  return font !== null && settledSettingsFontMetrics(n) === null;
 }
 
 /**

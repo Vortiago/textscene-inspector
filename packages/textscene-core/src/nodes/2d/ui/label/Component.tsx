@@ -208,12 +208,12 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
 
   const lineLayouts = useSoloLineLayouts(revealedPlacements, layout);
 
-  // Each `<TextRun>` takes `renderOrder` itself, since three never inherits it,
-  // and sits in a `<CanvasItemGroup>`, since three reads the nearest group's order
-  // first and a bare `<group>` resets it to zero (`r3f/canvasPaintOrder.ts`).
   // A settings font that is still loading draws nothing, never the theme font (ADR-0059).
   if (isLabelFontLoading(solveNode)) return <CanvasItemGroup ref={anchorRef} />;
 
+  // Each `<TextRun>` takes `renderOrder` itself, since three never inherits it,
+  // and sits in a `<CanvasItemGroup>`, since three reads the nearest group's order
+  // first and a bare `<group>` resets it to zero (`r3f/canvasPaintOrder.ts`).
   return (
     <CanvasItemGroup ref={anchorRef}>
       {hasShadow &&
