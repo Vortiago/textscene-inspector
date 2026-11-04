@@ -42,6 +42,7 @@ export function solveNode(): Pick<
   | 'parentVisibleInTree'
   | 'fontOverrides'
   | 'labelSettings'
+  | 'labelSettingsFont'
   | 'themeChain'
   | 'projectFonts'
   | 'colors'
@@ -64,6 +65,7 @@ export function solveNode(): Pick<
     parentVisibleInTree: true,
     fontOverrides: NO_FONT_OVERRIDES,
     labelSettings: null,
+    labelSettingsFont: null,
     themeChain: NO_THEME_CHAIN,
     projectFonts: NO_PROJECT_FONTS,
     colors: NO_COLORS,

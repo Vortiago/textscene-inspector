@@ -721,6 +721,9 @@ export const CANVAS_2D_SCENES = [
   // The one variable: a `label_settings` loaded from its own `.tres` file, which beats the
   // node-local theme overrides as an inline one does.
   { name: 'label-label-settings-tres', file: 'unit-label-label-settings-tres.tscn', mode: '2d' },
+  // The one variable: `label_settings.font`. Godot 4.6.3 `--mode 2d`: the settings-font Label
+  // inks x 22-430, rows 26-67.
+  { name: 'label-settings-font', file: 'unit-label-settings-font.tscn', mode: '2d' },
   // The one variable: a control character reaching the shaper. Elsewhere it
   // advances zero, so only a field that opts into the hex box shows whether its
   // geometry and its advance agree. Godot 4.6.3 `--mode 2d`: mean 0.037 of 255.
