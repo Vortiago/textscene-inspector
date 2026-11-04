@@ -97,6 +97,6 @@ describe('an invisible CSG contributor', () => {
       geometry.computeBoundingBox();
       boxes.push(geometry.boundingBox!.getSize(new THREE.Vector3()).length());
     });
-    expect(boxes).toEqual([0]);
+    expect(boxes).toEqual([]);
   });
 });

@@ -35,9 +35,11 @@ Bounds are geometry-first and load-bearing only for `--frame`. They exclude
 `Light3D`, a `VisualInstance3D`, because a sun 5 units above a flat plane would
 otherwise move the centre by 3 units.
 
-Bounds that are a point, such as a lone CPUParticles3D (an empty AABB) or a
-lone Label3D (its position before the text shapes), have no span to fit. Both
-harnesses keep the editor camera's distance and re-point at the point.
+A GeometryInstance3D with an empty AABB, such as a CPUParticles3D, adds a point
+at its node origin to the bounds, in both harnesses. Bounds that are one point,
+such as a lone CPUParticles3D or a lone Label3D (its position before the text
+shapes), have no span to fit. Both harnesses keep the editor camera's distance
+and re-point at the point.
 
 The viewport navigates like Godot's editor rather than like a web viewer
 (ADR-0029, `GodotEditorControls.tsx`, maths in `godotEditorCursor.ts`). Left-drag
