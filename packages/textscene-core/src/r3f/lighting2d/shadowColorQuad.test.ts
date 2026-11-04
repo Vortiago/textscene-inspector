@@ -7,11 +7,19 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { createShadowColorQuadMaterial, shadowColorContributes } from './lightQuad';
-import { litQuadStencilProps, shadowColorQuadStencilProps } from './ShadowVolumeMask';
-import { Light2DBlendMode } from '../../godot/scene/light2d';
-import { Light2DShadowFilter } from '../../godot/scene/light2d.js';
+import { Light2DBlendMode, Light2DShadowFilter } from '../../godot/scene/light2d';
+import { shadowSampling } from './testing/shadowSampling';
 
 const BLUE = { r: 0.15, g: 0.35, b: 1, a: 1 };
+
+/** The tint quad of a NONE light that casts `BLUE`. */
+function tintQuad(blendMode: number = Light2DBlendMode.ADD) {
+  return createShadowColorQuadMaterial({
+    cookie: new THREE.Texture(),
+    blendMode,
+    shadow: shadowSampling({ filter: Light2DShadowFilter.NONE, shadowColor: BLUE }),
+  });
+}
 
 describe('shadowColorContributes', () => {
   it('is false at the Light2D default, so no quad is drawn for an ordinary shadow', () => {
@@ -38,72 +46,34 @@ describe('shadowColorContributes', () => {
 
 describe('createShadowColorQuadMaterial', () => {
   it("takes the cookie's alpha through the edge fade, so it matches the lit quad's coverage", () => {
-    const mat = createShadowColorQuadMaterial({
-      cookie: new THREE.Texture(),
-      shadowColor: BLUE,
-      blendMode: Light2DBlendMode.ADD,
-    });
+    const mat = tintQuad();
     expect(mat.fragmentShader).toContain('sampleCookie(vLightUv)');
     expect(mat.uniforms.uCookieEdgeFade!.value).toBe(1);
   });
 
   it('emits shadow_color.rgb with no cookie rgb, no light colour and no energy', () => {
-    const mat = createShadowColorQuadMaterial({
-      cookie: new THREE.Texture(),
-      shadowColor: BLUE,
-      blendMode: Light2DBlendMode.ADD,
-    });
+    const mat = tintQuad();
     // Godot 4.6.3, `unit-lightoccluder2d-shadow-color.tscn` (surface 0.25, light (1, 0.55, 0.2) at
     // energy 1.5, shadow (0.15, 0.35, 1, 1)): rgb(79, 101, 171) over unlit 63 divides to one cookie
     // alpha per channel, 0.418 / 0.426 / 0.424, so energy and the warm colour are absent. The
     // cookie gives alpha only.
-    expect(mat.fragmentShader).toContain('vec4(uShadowColor.rgb, uShadowColor.a * cookie.a)');
+    expect(mat.fragmentShader).toContain(
+      'vec4(uShadowColor.rgb * s, cookie.a * ((1.0 - s) + s * uShadowColor.a))'
+    );
     expect(mat.fragmentShader).not.toContain('uEnergy');
     expect(mat.fragmentShader).not.toContain('cookie.rgb');
   });
 
   it('carries the shadow colour as a straight sRGB uniform', () => {
-    const mat = createShadowColorQuadMaterial({
-      cookie: new THREE.Texture(),
-      shadowColor: BLUE,
-      blendMode: Light2DBlendMode.ADD,
-    });
-    const v = mat.uniforms.uShadowColor!.value as THREE.Vector4;
+    const v = tintQuad().uniforms.uShadowColor!.value as THREE.Vector4;
     expect([v.x, v.y, v.z, v.w]).toEqual([0.15, 0.35, 1, 1]);
   });
 
   it('blends into the accumulator exactly as the lit quad does', () => {
     // `mix` replaces the light term in place, so `light_blend_compute` still runs on it: a shadow
     // under a SUB light subtracts.
-    const sub = createShadowColorQuadMaterial({
-      cookie: new THREE.Texture(),
-      shadowColor: BLUE,
-      blendMode: Light2DBlendMode.SUB,
-    });
+    const sub = tintQuad(Light2DBlendMode.SUB);
     expect(sub.blendEquation).toBe(THREE.ReverseSubtractEquation);
     expect(sub.blendSrc).toBe(THREE.SrcAlphaFactor);
-  });
-});
-
-describe('shadowColorQuadStencilProps', () => {
-  it('covers exactly where the lit quad does not', () => {
-    const ordinal = 3;
-    const lit = litQuadStencilProps(ordinal);
-    const shadowed = shadowColorQuadStencilProps(ordinal);
-
-    // Same ref, opposite test: together they partition the light's rect, so the pair is a `mix`,
-    // not a double count or a gap.
-    expect(shadowed.stencilRef).toBe(lit.stencilRef);
-    expect(lit.stencilFunc).toBe(THREE.NotEqualStencilFunc);
-    expect(shadowed.stencilFunc).toBe(THREE.EqualStencilFunc);
-  });
-
-  it('reads the stamp without disturbing it', () => {
-    // The volumes are stamped once per light and both quads test them. A quad that wrote back
-    // would corrupt the ref for whichever draws second.
-    const props = shadowColorQuadStencilProps(1);
-    expect(props.stencilFail).toBe(THREE.KeepStencilOp);
-    expect(props.stencilZFail).toBe(THREE.KeepStencilOp);
-    expect(props.stencilZPass).toBe(THREE.KeepStencilOp);
   });
 });

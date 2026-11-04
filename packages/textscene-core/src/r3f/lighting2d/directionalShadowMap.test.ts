@@ -11,7 +11,7 @@ import {
   ndcToShadowTransform,
   type DirectionalShadowView,
 } from './directionalShadowMap';
-import { type OccluderCullMode, type Quad2, type ShadowCasterEdges } from './shadowVolumes';
+import { type OccluderCullMode, type Quad2, type ShadowCasterEdges } from './shadowCasterEdges';
 import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
 
 /**

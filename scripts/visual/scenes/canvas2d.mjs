@@ -89,8 +89,7 @@ export const CANVAS_2D_SCENES = [
   // `shadow_item_cull_mask & occluder.light_mask`: one occluder casts, its twin
   // is culled by the same light.
   { name: 'lightoccluder2d-shadow-mask', file: 'unit-lightoccluder2d-shadow-mask.tscn', mode: '2d' },
-  // Two shadowed lights in one accumulation pass: each must clear the stencil
-  // before it stamps, or the first light's volume also cuts the second's.
+  // Two shadowed lights in one accumulation pass, each reading its own map.
   { name: 'lightoccluder2d-two-lights', file: 'unit-lightoccluder2d-two-lights.tscn', mode: '2d' },
   // `shadow_filter`, which every occluder fixture above leaves at NONE, gives a stepped penumbra.
   // The occluder's top sits at the light's y, so a vertical probe crosses the umbra edge square on.
@@ -101,6 +100,10 @@ export const CANVAS_2D_SCENES = [
   { name: 'pointlight2d-shadow-pcf13', file: 'unit-pointlight2d-shadow-pcf13.tscn', mode: '2d' },
   // The colour fixture pins the fractional tint the two accumulators split.
   { name: 'pointlight2d-shadow-pcf-color', file: 'unit-pointlight2d-shadow-pcf-color.tscn', mode: '2d' },
+  // Far from the light a polar bin spans several pixels: NONE's edge is a staircase of bins, and
+  // a PCF5 tap one bin wide mixes two bins, which shifts the edge by half a bin.
+  { name: 'pointlight2d-shadow-none-bins', file: 'unit-pointlight2d-shadow-none-bins.tscn', mode: '2d' },
+  { name: 'pointlight2d-shadow-pcf5-bins', file: 'unit-pointlight2d-shadow-pcf5-bins.tscn', mode: '2d' },
   // Godot 4.6.3 at x=800: 63 on the receiving panel, 132 on the escaping one, which
   // shadow_item_cull_mask leaves lit.
   { name: 'pointlight2d-shadow-item-mask', file: 'unit-pointlight2d-shadow-item-mask.tscn', mode: '2d' },

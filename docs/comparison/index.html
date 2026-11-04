@@ -3884,14 +3884,14 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>Under PCF5 or PCF13 Godot averages taps offset in angle around the light, so the same occluder casts a stepped penumbra that widens with distance. The filter belongs to the light, so the PointLight2D sheet shows it.</p></div>
+        <div class="prose"><p>Under PCF5 or PCF13 Godot averages taps offset in angle around the light, so the same occluder casts a stepped penumbra that widens with distance. The filter belongs to the light, so the PointLight2D sheet shows it, with the unfiltered staircase of bins far from the light.</p></div>
       </section><div class="prose"><h3>Linting</h3>
 <p>Strict parsing format-checks these <code>LightOccluder2D</code> properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>occluder</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>occluder_light_mask</code></td><td>32-bit layer mask (layers 1-32)</td><td></td></tr><tr><td><code>sdf_collision</code></td><td>true or false</td><td></td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-canvasitem-clip-ancestry</code> (type-family match)</td><td><code>canvasitem-ancestor-clips-children</code></td><td>warning</td></tr><tr><td></td><td><code>canvasitem-ancestor-is-canvasgroup</code></td><td>warning</td></tr><tr><td><code>valid-lightoccluder2d-occluder</code></td><td><code>lightoccluder2d-requires-occluder</code></td><td>warning</td></tr></tbody></table></div>
 <p>Strict rejects a non-numeric <code>light_mask</code> or <code>occluder_light_mask</code>. The lenient parser warns and falls back to <code>1</code> for either, and an unparseable <code>sdf_collision</code> falls back to <code>true</code>. <code>occluder</code> is copied through with no reference check.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Shader missing</strong> <code>sdf_collision</code> has no effect, since no signed-distance field is built for particle collision or SDF-lit materials.</li><li><strong>Editor only</strong> The occluder outline draws when the Gizmos toggle is on, so a still render shows none, as Godot's runtime does.</li><li><strong>Approximated</strong> Under a <code>shadow_filter</code> a tap lands in one of 2048 polar bins, so a boundary at a glancing angle can sit one bin from Godot's.</li></ul></div>
+<ul><li><strong>Shader missing</strong> <code>sdf_collision</code> has no effect, since no signed-distance field is built for particle collision or SDF-lit materials.</li><li><strong>Editor only</strong> The occluder outline draws when the Gizmos toggle is on, so a still render shows none, as Godot's runtime does.</li></ul></div>
     </article>
     <article class="sheet" data-type="LimitAngularVelocityModifier3D" hidden>
       <header class="sheet-head">
@@ -5350,7 +5350,41 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p><code>shadow_filter = PCF5</code> or <code>PCF13</code> averages taps offset in angle across Godot's polar shadow map, so the boundary is a stepped ramp that widens with distance. The previewer builds the same map and taps it in the light's fragment shader (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0030-2d-shadow-penumbra-polar-map.md" target="_blank" rel="noopener">ADR-0030</a>).</p></div>
+        <div class="prose"><p><code>shadow_filter = PCF5</code> or <code>PCF13</code> averages taps offset in angle across Godot's polar shadow map, so the boundary is a stepped ramp that widens with distance. The previewer builds the same map and taps it in the light's fragment shader, as Godot's Vulkan renderer does (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0064-every-shadowed-pointlight2d-samples-the-polar-map.md" target="_blank" rel="noopener">ADR-0064</a>).</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>An unfiltered shadow edge far from its light</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-pointlight2d-shadow-none-bins-godot.png" alt="Godot render of An unfiltered shadow edge far from its light">
+          <img class="img-ours" src="images/unit-pointlight2d-shadow-none-bins-ours.png" alt="Our render of An unfiltered shadow edge far from its light">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p><code>shadow_filter = NONE</code> reads one polar bin per pixel (<code>canvas.glsl:507-510</code>), so the edge of the shadow is a staircase of bins. Each bin spans more pixels further from the light, so the steps grow along the edge.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>One PCF5 tap per bin, far from its light</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-pointlight2d-shadow-pcf5-bins-godot.png" alt="Godot render of One PCF5 tap per bin, far from its light">
+          <img class="img-ours" src="images/unit-pointlight2d-shadow-pcf5-bins-ours.png" alt="Our render of One PCF5 tap per bin, far from its light">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>At <code>shadow_filter_smooth = 0</code> the five PCF5 taps are one bin apart. Each tap mixes two neighbouring bins by how far past the first one it lands (<code>canvas.glsl:392-399</code>), which shifts the edge by half a bin.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Shadow receivers: shadow_item_cull_mask</h3><span class="status st-done">Done</span></div>
@@ -5526,9 +5560,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>height</code></td><td>float &gt;= 0</td><td>warning below</td></tr><tr><td><code>offset</code></td><td>Vector2(x, y), or the Vector2i spelling Godot converts</td><td></td></tr><tr><td><code>texture</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>texture_scale</code></td><td>float 0.01-50, never exactly 0</td><td>warning</td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-canvasitem-clip-ancestry</code> (type-family match)</td><td><code>canvasitem-ancestor-clips-children</code></td><td>warning</td></tr><tr><td></td><td><code>canvasitem-ancestor-is-canvasgroup</code></td><td>warning</td></tr><tr><td><code>valid-pointlight2d-ranges</code></td><td><code>pointlight2d-requires-texture</code></td><td>warning</td></tr><tr><td></td><td><code>pointlight2d-inverted-z-range</code></td><td>info</td></tr><tr><td></td><td><code>pointlight2d-inverted-layer-range</code></td><td>info</td></tr></tbody></table></div>
 <p>The linter warns (<code>resource-type-excluded-by-hint</code>) when <code>texture</code> holds a class its hint excludes, such as an <code>AtlasTexture</code>. Godot's editor never offers such a class, and the setter keeps it with a debug warning (<code>light_2d.cpp:396-405</code>).</p>
-<p><code>enabled</code> falls back to <code>true</code>, <code>energy</code> and <code>texture_scale</code> to <code>1.0</code>, <code>height</code> to <code>0</code>, <code>offset</code> to <code>(0, 0)</code> and <code>blend_mode</code> to <code>0</code> (ADD), each with a warning. <code>color</code> falls back to opaque white silently. <code>texture</code> is stored with no reference check.</p>
-<h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> Under a <code>shadow_filter</code>, a step of the penumbra can sit one polar bin from Godot's, so its stepped edge shifts slightly in places.</li></ul></div>
+<p><code>enabled</code> falls back to <code>true</code>, <code>energy</code> and <code>texture_scale</code> to <code>1.0</code>, <code>height</code> to <code>0</code>, <code>offset</code> to <code>(0, 0)</code> and <code>blend_mode</code> to <code>0</code> (ADD), each with a warning. <code>color</code> falls back to opaque white silently. <code>texture</code> is stored with no reference check.</p></div>
     </article>
     <article class="sheet" data-type="Polygon2D" hidden>
       <header class="sheet-head">

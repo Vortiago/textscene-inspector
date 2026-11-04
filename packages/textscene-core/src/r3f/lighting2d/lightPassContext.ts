@@ -59,7 +59,7 @@ export type ApartPlacer = (place: THREE.Vector3) => void;
 export interface CanvasLightSlot {
   /**
    * The light's index on the canvas: dense and reused on withdrawal. It names the light in every
-   * list, and its stencil ref keeps its shadow stamps apart from every other light's.
+   * list.
    */
   readonly ordinal: number;
   /** Withdraws the light and frees the ordinal. Idempotent. */
