@@ -1,6 +1,6 @@
 /**
- * Packs a package as a publish does, so a test installs the files a user would get, and runs the
- * commands that build, pack and use it.
+ * The steps of a test that installs a package as a user does: it runs the commands that build and
+ * pack the package, names the tool versions the consumer pins, and type-checks the consumer.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -51,7 +51,13 @@ function tscPath() {
   return join(dirname(manifestPath), JSON.parse(readFileSync(manifestPath, 'utf8')).bin.tsc);
 }
 
-/** Type-checks the TypeScript project in `cwd` with the `tsc` a consumer runs, and throws on an error. */
+/**
+ * Type-checks the TypeScript project in `cwd` with the `tsc` a consumer runs, and returns what it
+ * prints. It throws, with the output, on a type error.
+ *
+ * @param {string} cwd
+ * @returns {string}
+ */
 export function typeCheck(cwd) {
   return run('node', [tscPath(), '-p', '.'], cwd);
 }

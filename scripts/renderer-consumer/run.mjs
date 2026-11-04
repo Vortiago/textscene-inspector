@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { preview } from 'vite';
 import { launchSwiftShaderBrowser } from '../showcase/browser.mjs';
-import { installedVersion, packTarball, run, typeCheck } from '../packTarball.mjs';
+import { installedVersion, packTarball, run } from '../packTarball.mjs';
 import { REPO_ROOT, attachDiagnostics, loggedErrors, previewPort } from '../visual/previewServer.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
 import { consumerManifest } from './consumerManifest.mjs';
@@ -59,7 +59,7 @@ function writeConsumer(directory, tarballs) {
 /** Installs, type-checks and builds the app as a user does. */
 function buildConsumer(directory) {
   run('npm', ['install', '--no-audit', '--no-fund'], directory);
-  typeCheck(directory);
+  run('node', ['node_modules/typescript/bin/tsc', '-p', '.'], directory);
   run('node', ['node_modules/vite/bin/vite.js', 'build'], directory);
 }
 
