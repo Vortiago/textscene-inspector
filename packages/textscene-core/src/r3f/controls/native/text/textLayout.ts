@@ -91,6 +91,12 @@ export interface ShapeTextOptions {
    */
   paragraphSeparator?: string;
   /**
+   * Whether the paragraph after the last separator also ends with the ZERO WIDTH SPACE. Default
+   * true, as Label does. RichTextLabel adds one only for a `\n` item (`rich_text_label.cpp:626-644`),
+   * so its last paragraph has none.
+   */
+  terminateLastParagraph?: boolean;
+  /**
    * `Label.tab_stops` and `TextParagraph.tab_stops`, px, applied twice as `Label::_shape` does
    * (`label.cpp:196-198,228-230`): over the paragraph before line breaking, so the aligned advance
    * decides the wrap, then per line from its own pen origin. Undefined or empty is a no-op.
@@ -131,6 +137,8 @@ export interface GlyphPlacement {
   controlCodepoint?: number;
   /** How far the embolden grows this glyph's outline at its own size, px. Absent for a glyph with none. */
   emboldenGrowthPx?: number;
+  /** This glyph's own size, px: the base of `fitLineToWidth`'s space-shrink floor, `gl.font_size` in Godot (`text_server_adv.cpp:5659`). Absent on an ellipsis glyph `textOverrun` appends. */
+  fontSizePx?: number;
   /** The face `shapeText` shaped this glyph in. Absent on an ellipsis glyph `textOverrun` appends, which takes the layout's. */
   fontMetrics?: FontMetrics;
 }
@@ -563,7 +571,7 @@ function shapedTextGetLineBreaks(
 }
 
 /** `String::chr(0x200B)`, the per-paragraph terminator `Label::_shape` appends (`label.cpp:164`). */
-const PARAGRAPH_TERMINATOR = '\u200b';
+export const PARAGRAPH_TERMINATOR = '\u200b';
 
 interface ShapedParagraph {
   text: string;
@@ -577,16 +585,21 @@ interface ShapedParagraph {
  * lines. With no separator the text is one unterminated paragraph, as Label3D
  * (`label_3d.cpp:485,530`) and `TextParagraph` shape it, where a blank line collapses.
  */
-function splitParagraphs(text: string, separator: string | undefined): ShapedParagraph[] {
+function splitParagraphs(
+  text: string,
+  separator: string | undefined,
+  terminateLastParagraph: boolean
+): ShapedParagraph[] {
   if (separator === undefined || separator === '') {
     return [{ text, offset: 0, terminated: false }];
   }
   const out: ShapedParagraph[] = [];
   let offset = 0;
-  for (const part of text.split(separator)) {
-    out.push({ text: part, offset, terminated: true });
+  const parts = text.split(separator);
+  parts.forEach((part, i) => {
+    out.push({ text: part, offset, terminated: terminateLastParagraph || i < parts.length - 1 });
     offset += part.length + separator.length;
-  }
+  });
   return out;
 }
 
@@ -602,6 +615,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     fontMetricsAt,
     fontMetrics = OPEN_SANS_FONT_METRICS,
     paragraphSeparator,
+    terminateLastParagraph = true,
     tabStopsPx,
     autowrapTrimFlags,
     trimIndent = false,
@@ -623,7 +637,11 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
   const linePitchPx = getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx);
 
   const lines: TextLineLayout[] = [];
-  for (const [paragraphIndex, para] of splitParagraphs(transformed, paragraphSeparator).entries()) {
+  for (const [paragraphIndex, para] of splitParagraphs(
+    transformed,
+    paragraphSeparator,
+    terminateLastParagraph
+  ).entries()) {
     // The terminator is in the shaped text but not the source, so the per-character closures, keyed
     // into the whole text, are offset back, and the index past the paragraph's end takes the last value.
     const sourceIndex = (i: number): number => para.offset + Math.max(0, Math.min(i, para.text.length - 1));
@@ -677,6 +695,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
           glyph: runStyle.faces[idx]!.kind === 'atlas' ? (OPEN_SANS_ATLAS_GLYPHS[ch] ?? null) : null,
           controlCodepoint: breakGlyphs[idx]!.controlCodepoint,
           emboldenGrowthPx: breakGlyphs[idx]!.emboldenGrowthPx || undefined,
+          fontSizePx: runStyle.sizes[idx]!,
           fontMetrics: runStyle.faces[idx]!,
         });
         penX += advance;

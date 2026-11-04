@@ -4,6 +4,7 @@ import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { RichTextLabelProperties } from './types';
 import { parseControl } from '../control/parser';
+import { DEFAULT_JUSTIFICATION_FLAGS } from '../../../../godot/text/textServerEnums';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
 import { floatElements } from '../../../../resources/shapes/packedArray';
@@ -36,5 +37,8 @@ export function parseRichTextLabel(
   result.tabStopsPx = parseTabStops(properties.tab_stops);
   result.tabSize = parseOptionalInt(properties.tab_size);
   result.autowrapTrimFlags = parseOptionalInt(properties.autowrap_trim_flags, 'int64');
+  result.justificationFlags =
+    parseOptionalInt(properties.justification_flags, 'int64') ?? DEFAULT_JUSTIFICATION_FLAGS;
+  result.clipContents = boolSlotValue(properties.clip_contents) ?? true;
   return result;
 }

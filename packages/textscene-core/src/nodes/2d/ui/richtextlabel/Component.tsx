@@ -11,7 +11,11 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
-import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import {
+  ControlClipProvider,
+  useControlClipPlanes,
+  useWorldClipPlanes,
+} from '../../../../r3f/controls/native/controlClipping';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useWindowedCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { useResolvedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
@@ -32,6 +36,7 @@ import {
 } from './nativeSolver';
 import { resolveRichTextFaces } from './styleFaces';
 import type { RichTextLabelProperties } from './types';
+import { DEFAULT_JUSTIFICATION_FLAGS } from '../../../../godot/text/textServerEnums';
 import type { Rgba } from '../../../../godot/math/math';
 
 interface ImageLike {
@@ -115,7 +120,13 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
     [solveNode, props, theme]
   );
 
-  const clippingPlanes = useControlClipPlanes();
+  // `clip_contents` clips to the control's own rect, merged onto the inherited clip
+  // (`control.cpp:3948`). The hook runs whatever the flag, as hooks must.
+  const inheritedClippingPlanes = useControlClipPlanes();
+  const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
+  const { anchorRef, clippingPlanes: ownClippingPlanes, clip } = useWorldClipPlanes(ownRect);
+  const clipContents = props.clipContents ?? true;
+  const clippingPlanes = clipContents ? ownClippingPlanes : inheritedClippingPlanes;
 
   // A styled run reads its own theme font-size key, never `normal_font_size`.
   const runs = useMemo(
@@ -158,7 +169,7 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
 
   // The alignment property and the `[center]`/`[right]`/`[left]`/`[fill]` tags
   // (`rich_text_label.cpp:5681-5696`) resolve through one `_find_alignment`
-  // port. FILL positions like LEFT: `comparison.md` records the justification gap.
+  // port. A FILL paragraph fits the text rect by `justification_flags`.
   const placements = useMemo(
     () =>
       layoutRichTextRuns(runs, layout, {
@@ -166,12 +177,26 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
         boxHeightPx: rect.h,
         horizontalAlignment: props.horizontalAlignment,
         verticalAlignment: props.verticalAlignment,
+        justification: {
+          flags: props.justificationFlags ?? DEFAULT_JUSTIFICATION_FLAGS,
+          fontSizePx: textTheme.fontSizePx,
+        },
       }),
-    [runs, layout, rect.w, rect.h, props.horizontalAlignment, props.verticalAlignment]
+    [
+      runs,
+      layout,
+      rect.w,
+      rect.h,
+      props.horizontalAlignment,
+      props.verticalAlignment,
+      props.justificationFlags,
+      textTheme.fontSizePx,
+    ]
   );
   const underlineMetrics = useMemo(() => richTextUnderlineMetrics(runs), [runs]);
 
-  return (
+  // A `ControlQuad` reads the clip from context, a `TextRun` from its prop.
+  const body = (
     <>
       {placements.map((placement, index) => {
         const y = placement.lineTopPx;
@@ -226,5 +251,10 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
         );
       })}
     </>
+  );
+  return (
+    <CanvasItemGroup ref={anchorRef}>
+      {clipContents ? <ControlClipProvider value={clip}>{body}</ControlClipProvider> : body}
+    </CanvasItemGroup>
   );
 }

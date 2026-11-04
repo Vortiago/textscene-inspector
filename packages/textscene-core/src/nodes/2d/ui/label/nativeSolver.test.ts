@@ -515,6 +515,20 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
     expect(placements[0]!.line.widthPx).toBeCloseTo(200, 6);
     expect(placements[1]!.line.widthPx).toBeCloseTo(naturalWidth, 6);
   });
+
+  // `Label::_shape` counts `jst_to_line` inside each paragraph (`label.cpp:304-319`), so a paragraph
+  // of one line is fitted (`DO_NOT_SKIP_SINGLE_LINE`), whichever paragraph it is.
+  it('horizontal FILL (3), two single-line paragraphs: both lines fit the box', () => {
+    const layout = shapeText('A B\nA B', {
+      fontSizePx: FONT_SIZE,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      paragraphSeparator: '\n',
+    });
+    const placements = layoutLabelLines(layout, 200, 200, 3, undefined);
+    expect(placements.map((p) => p.line.widthPx)).toEqual([200, 200]);
+  });
 });
 
 /**

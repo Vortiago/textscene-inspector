@@ -216,7 +216,7 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
   });
 
   it('is transparent, non-depth-writing, and every material spreads the shared clip planes hook (edge: empty list)', async () => {
-    const renderer = await render({ text: 'plain [b]bold[/b]', bbcodeEnabled: true });
+    const renderer = await render({ text: 'plain [b]bold[/b]', bbcodeEnabled: true, clipContents: false });
     for (const mesh of meshesOf(renderer)) {
       const mat = mesh.material as THREE.ShaderMaterial;
       expect(mat.transparent).toBe(true);
@@ -387,6 +387,42 @@ describe('<RichTextLabel> — [img]', () => {
     const geometry = mesh.geometry as THREE.PlaneGeometry;
     expect(geometry.parameters.width).toBe(40);
     expect(geometry.parameters.height).toBe(20);
+  });
+
+  // `clip_contents` clips every glyph, image and underline to the control's own rect
+  // (`control.cpp:3948`), and RichTextLabel's constructor turns it on (`rich_text_label.cpp:8225`).
+  describe('clip_contents', () => {
+    const TEXT = `[u]Hi[/u] [img=40x20]${IMG}[/img]`;
+
+    async function clipPlaneCounts(properties: Record<string, unknown>): Promise<number[]> {
+      const fake = createFakeResourceLoader();
+      fake.textures.seed(IMG, fakeTexture(64, 64));
+      const renderer = await ReactThreeTestRenderer.create(
+        <ResourceLoaderProvider loader={fake.loader}>
+          <SceneResourcesProvider internalResources={[]} externalResources={[]}>
+            <RichTextLabel
+              {...painterEnv()}
+              solveNode={solveNode('RTL', { text: TEXT, bbcodeEnabled: true, ...properties })}
+              rect={{ x: 0, y: 0, w: 300, h: 200 }}
+              renderOrder={5}
+            />
+          </SceneResourcesProvider>
+        </ResourceLoaderProvider>
+      );
+      return renderer.scene
+        .findAllByType('Mesh')
+        .map((m) => ((m.instance as THREE.Mesh).material as THREE.Material).clippingPlanes?.length ?? 0);
+    }
+
+    it('gives the text, the underline and the image the label’s own four planes by default', async () => {
+      const counts = await clipPlaneCounts({});
+      expect(counts.length).toBeGreaterThanOrEqual(3);
+      expect(new Set(counts)).toEqual(new Set([4]));
+    });
+
+    it('gives them the inherited planes, none here, with clipContents false', async () => {
+      expect(new Set(await clipPlaneCounts({ clipContents: false }))).toEqual(new Set([0]));
+    });
   });
 
   it('draws it at its natural size when the value form is a lone width and only a REGION is also present (aspect from the region, not the texture)', async () => {

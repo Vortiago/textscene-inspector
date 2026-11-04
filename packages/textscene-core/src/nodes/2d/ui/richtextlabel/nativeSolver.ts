@@ -26,7 +26,9 @@ import {
   type GlyphPlacement,
   type ShapeTextOptions,
   type TextLayoutResult,
+  PARAGRAPH_TERMINATOR,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { justifyParagraphs } from '../../../../r3f/controls/native/text/textJustify';
 import { faceOfStyle, resolveRichTextFaces, type RichTextFaces } from './styleFaces';
 import {
   resolveTextTheme,
@@ -530,6 +532,8 @@ export function shapeRichText(
     fontMetrics: faces.normal,
     tabStopsPx: richTextTabStopsPx(tabStopsPx, tabSize, faces.normal, fontSizePx),
     autowrapTrimFlags,
+    paragraphSeparator: '\n',
+    terminateLastParagraph: false,
   });
 }
 
@@ -713,6 +717,11 @@ interface RunLineSegment {
   fontMetrics: FontMetrics;
 }
 
+/** Whether `glyphChar` shapes `sourceChar`: itself, or the paragraph terminator that shaping puts for a `\n`. */
+function isSourceOf(sourceChar: string, glyphChar: string): boolean {
+  return sourceChar === glyphChar || (sourceChar === '\n' && glyphChar === PARAGRAPH_TERMINATOR);
+}
+
 /**
  * Splits each shaped line back into its style runs. `shapeText` shapes the
  * whole paragraph once so line breaks see its full width, and this split is
@@ -736,7 +745,7 @@ function attributeRunsToLines(
     while (i < line.glyphs.length) {
       // A mismatch at the cursor is an edge space `label.h:45`'s BREAK_TRIM default
       // dropped, always whitespace. One forward pass cannot mis-attribute repeated text.
-      while (cursor < plainText.length && plainText[cursor] !== line.glyphs[i]!.char) {
+      while (cursor < plainText.length && !isSourceOf(plainText[cursor]!, line.glyphs[i]!.char)) {
         cursor++;
       }
       const runIdx = charRunIndex[cursor] ?? charRunIndex[charRunIndex.length - 1] ?? 0;
@@ -745,7 +754,7 @@ function attributeRunsToLines(
       while (
         i < line.glyphs.length &&
         cursor < plainText.length &&
-        plainText[cursor] === line.glyphs[i]!.char &&
+        isSourceOf(plainText[cursor]!, line.glyphs[i]!.char) &&
         charRunIndex[cursor] === runIdx
       ) {
         cursor++;
@@ -865,12 +874,39 @@ function richTextVerticalOffsets(
   }
 }
 
+/** What `fitLineToWidth` reads of the control: `justification_flags` and the size behind its space-shrink floor. */
+interface RichTextJustification {
+  flags: number;
+  fontSizePx: number;
+}
+
 /** The box a paragraph aligns inside, plus the node's own two alignment properties. */
 interface RichTextAlignment {
   boxWidthPx: number;
   boxHeightPx: number;
   horizontalAlignment?: number;
   verticalAlignment?: number;
+  /** Absent leaves FILL paragraphs unfitted. */
+  justification?: RichTextJustification;
+}
+
+/**
+ * The layout with every FILL paragraph fitted to the text rect (`text_paragraph.cpp:234-292`).
+ * `_shape_line` takes an `int p_width` (`rich_text_label.h:672`), so the fit width truncates.
+ */
+function fitFilledParagraphs(
+  layout: TextLayoutResult,
+  isFilled: (firstLineIndex: number) => boolean,
+  boxWidthPx: number,
+  justification: RichTextJustification
+): TextLayoutResult {
+  const lines = justifyParagraphs(layout.lines, {
+    widthPx: Math.trunc(boxWidthPx),
+    flags: justification.flags,
+    fontSizePx: justification.fontSizePx,
+    isFilled,
+  });
+  return { ...layout, lines };
 }
 
 /**
@@ -880,13 +916,27 @@ interface RichTextAlignment {
  */
 export function layoutRichTextRuns(
   styledRuns: readonly StyledTextRun[],
-  layout: TextLayoutResult,
+  unfittedLayout: TextLayoutResult,
   alignment?: RichTextAlignment
 ): RichTextRunPlacement[] {
-  const perLine = attributeRunsToLines(styledRuns, layout);
+  const boxWidthPx = alignment?.boxWidthPx ?? 0;
+  // A paragraph tag cannot open mid-line, so the first segment's stack is the line's.
+  const alignmentOfLine = (segments: readonly RunLineSegment[]): number =>
+    segments[0] ? styledRuns[segments[0].runIndex]!.alignment : (alignment?.horizontalAlignment ?? H_LEFT);
+
+  const unfittedPerLine = attributeRunsToLines(styledRuns, unfittedLayout);
+  const layout = alignment?.justification
+    ? fitFilledParagraphs(
+        unfittedLayout,
+        (firstLineIndex) => alignmentOfLine(unfittedPerLine[firstLineIndex]!) === H_FILL,
+        boxWidthPx,
+        alignment.justification
+      )
+    : unfittedLayout;
+  // Fitting moves glyphs and keeps their text, so the second attribution reads the same runs.
+  const perLine = layout === unfittedLayout ? unfittedPerLine : attributeRunsToLines(styledRuns, layout);
   const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);
 
-  const boxWidthPx = alignment?.boxWidthPx ?? 0;
   // `get_content_height`'s sum of each line's ascent+descent, not `layout.heightPx`,
   // a count times one pitch that mixed sizes make wrong.
   const lastLine = lineMetrics[lineMetrics.length - 1];
@@ -901,14 +951,10 @@ export function layoutRichTextRuns(
   const placements: RichTextRunPlacement[] = [];
   perLine.forEach((segments, lineIndex) => {
     const { topPx, ascentPx, textAscentPx, textDescentPx } = lineMetrics[lineIndex]!;
-    // A paragraph tag cannot open mid-line, so the first segment's stack is the line's.
-    const lineAlignment = segments[0]
-      ? styledRuns[segments[0].runIndex]!.alignment
-      : (alignment?.horizontalAlignment ?? H_LEFT);
     const lineOffsetXPx = richTextHorizontalOffsetPx(
       shapedTextSizeWidthPx(layout.lines[lineIndex]?.widthPx ?? 0),
       boxWidthPx,
-      lineAlignment
+      alignmentOfLine(segments)
     );
     for (const segment of segments) {
       const run = styledRuns[segment.runIndex]!;

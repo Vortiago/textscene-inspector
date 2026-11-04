@@ -25,7 +25,7 @@ import {
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { fitLineToWidth, justifyToLineIndex } from '../../../../r3f/controls/native/text/textJustify';
+import { justifyParagraphs } from '../../../../r3f/controls/native/text/textJustify';
 import {
   resolveTextOutline,
   resolveTextTheme,
@@ -512,7 +512,7 @@ export function layoutLabelLines(
   horizontalAlignment: number | undefined,
   verticalAlignment: number | undefined,
   justificationFlags: number = DEFAULT_JUSTIFICATION_FLAGS,
-  // Feeds only `fitLineToWidth`'s 0.1*font_size shrink floor. The default is the theme's 16.
+  // Feeds only the fit's 0.1*font_size shrink floor. The default is the theme's 16.
   fontSizePx: number = 16,
   options: LabelLayoutOptions = {}
 ): LabelLinePlacement[] {
@@ -552,25 +552,24 @@ export function layoutLabelLines(
   // `ofs.y += paragraph_spacing` after each paragraph's last shown line (`label.cpp:889`).
   let paragraphGapsAbovePx = 0;
   const isFill = (horizontalAlignment ?? H_LEFT) === H_FILL;
-  const jstToLine = isFill ? justifyToLineIndex(layout.lines, justificationFlags) : 0;
   // `_shape` justifies at the truncated `int width` it broke the lines at (`label.cpp:297,331`),
   // not the raw `get_size()` that `_get_line_rect` reads.
-  const fitWidthPx = labelShapingWidthPx(boxWidthPx);
+  const lines = isFill
+    ? justifyParagraphs(layout.lines, {
+        widthPx: labelShapingWidthPx(boxWidthPx),
+        flags: justificationFlags,
+        fontSizePx,
+      })
+    : layout.lines;
 
-  return layout.lines.map((line, lineIndex) => {
-    if (lineIndex > 0 && startsParagraph(layout.lines, lineIndex)) {
+  return lines.map((line, lineIndex) => {
+    if (lineIndex > 0 && startsParagraph(lines, lineIndex)) {
       paragraphGapsAbovePx += paragraphSpacingPx;
     }
     const y = vbeginPx + lineIndex * effectivePitchPx + paragraphGapsAbovePx;
-    if (isFill) {
-      const justified =
-        lineIndex < jstToLine
-          ? fitLineToWidth(line, fitWidthPx, justificationFlags, { fontSizePx }).line
-          : line;
-      return { x: 0, y, line: justified };
-    }
+    if (isFill) return { x: 0, y, line };
     // `_get_line_rect` aligns against the ceiled `TS->shaped_text_get_size(rid)` (`label.cpp:478`),
-    // not the raw pen advance `fitLineToWidth` needs.
+    // not the raw pen advance the fit needs.
     return {
       x: horizontalOffsetPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, horizontalAlignment, rtl),
       y,

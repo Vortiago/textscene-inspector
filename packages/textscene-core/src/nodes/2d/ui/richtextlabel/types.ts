@@ -28,4 +28,8 @@ export interface RichTextLabelProperties extends ControlProperties {
   tabSize?: number;
   /** `TextServer::LineBreakFlag`'s BREAK_TRIM_* subset. Undefined means Godot's default (`rich_text_label.h:558`, Label's pair), `shapeText`'s default. */
   autowrapTrimFlags?: number;
+  /** `TextServer::JustificationFlag` bit mask, stored as authored (`rich_text_label.cpp:7276-7289`). Default 163 (`rich_text_label.h:582`). */
+  justificationFlags?: number;
+  /** While true, the control's own rect clips its drawing. RichTextLabel's constructor sets it (`rich_text_label.cpp:8225`), unlike Control. */
+  clipContents?: boolean;
 }

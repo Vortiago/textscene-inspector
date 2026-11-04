@@ -12,6 +12,16 @@ renders_as: a run of shaped text with per-span styling
 RichTextLabel lays out a run of rich text. With `bbcode_enabled` the previewer styles a
 subset of BBCode inline (ADR-0003).
 
+Each `\n` ends a paragraph (`rich_text_label.cpp:4016-4053`). Under FILL, from `horizontal_alignment` or a
+`[fill]` tag, the previewer fits the lines of each paragraph to the text rect by `justification_flags`
+(`text_paragraph.cpp:234-292`). The default flags, 163, skip the last line of a paragraph and fit a
+single-line paragraph (`rich_text_label.h:582`). The fit width is the control's width truncated to a whole
+pixel (`rich_text_label.h:672`).
+
+While `clip_contents` is true, its default for this node (`rich_text_label.cpp:8225`), the control's own rect
+clips every glyph, image and underline (`control.cpp:3948`). `fit_content` grows the control to its text, so
+nothing is cut.
+
 ## Linting
 
 <!-- lint:begin RichTextLabel -->
@@ -70,12 +80,8 @@ string against `true`, so an absent property or any other value silently resolve
 - **Approximated** A `[b]` run on the bundled font grows the MSDF edge by the embolden, since the atlas
   has no formula for FreeType's outline growth.
 - **Approximated** An embolden above about 1.4 over the bundled font differs from FreeType, since the atlas rounds corners and holds limited growth.
-- **Approximated** Fill alignment is not justified, so a filled paragraph keeps a ragged
-  right edge instead of stretching to the box.
 - **Not drawn** `[p dir=]` and the right-to-left arms of `_draw_line`
   (rich_text_label.cpp:987-1014), which Godot reaches only off the default `text_direction`.
 - **Not drawn** The right-to-left scrollbar offset (:988-996,2093-2100), the loading bar's
   right-to-left fill (:2580-2588) and the reveal end of `VC_GLYPHS_AUTO` (:944-945), since
   none of their inputs is drawn.
-- **Not drawn** The clip to `_get_text_rect()` (rich_text_label.cpp:158,2594), so a line
-  wider than its own box hangs past the control's edge, where Godot cuts it.

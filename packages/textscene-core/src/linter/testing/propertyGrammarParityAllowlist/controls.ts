@@ -72,10 +72,6 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'progress_bar_delay',
     ],
     renderGap: [
-      // HORIZONTAL_ALIGNMENT_FILL places a line at its origin without stretching
-      // it: `fitLineToWidth` (`textJustify.ts`) is not wired in, since
-      // `layoutRichTextRuns` would need run boundaries on the justified line.
-      'justification_flags',
       // BiDi and locale: our shaper runs left-to-right only.
       'language',
       'structured_text_bidi_override',
