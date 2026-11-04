@@ -3085,6 +3085,21 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Line2d Texture Clamp",
+    "file": "unit-line2d-texture-clamp.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Line2d Texture Stretch",
+    "file": "unit-line2d-texture-stretch.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Line2d Texture Tile",
+    "file": "unit-line2d-texture-tile.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Line2d Translucent Corners",
     "file": "unit-line2d-translucent-corners.tscn",
     "category": "Unit - 2D Canvas"

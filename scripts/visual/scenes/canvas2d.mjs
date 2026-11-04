@@ -22,6 +22,14 @@ export const CANVAS_2D_SCENES = [
   // A width curve scales the width at each point. The ramp is 10 px lit at x=51 and 40 at x=249, and
   // the bump on two points is 10 px throughout. A box cap takes its own end's factor.
   { name: 'line-2d-width-curve', file: 'unit-line2d-width-curve.tscn', mode: '2d' },
+  // A TILE texture is 16 px of red then 16 of blue per tile (32 x 16, tile_aspect 2, width 16), repeated
+  // where texture_repeat is Enabled: x=50..65 red and 66..81 blue. A round cap's square starts the strip
+  // at u 0.25, so the cap line reads red 16, blue 16 from x=292 to x=435, ending on red.
+  { name: 'line-2d-texture-tile', file: 'unit-line2d-texture-tile.tscn', mode: '2d' },
+  // At the default texture_repeat TILE clamps: red 16 then blue 112. NONE reads the top-left texel, red for 128 px.
+  { name: 'line-2d-texture-clamp', file: 'unit-line2d-texture-clamp.tscn', mode: '2d' },
+  // STRETCH is red 63 px, a 2 px blend and blue 63. A (0.5, 1, 1) default_color gives (128,0,0) and (0,0,255).
+  { name: 'line-2d-texture-stretch', file: 'unit-line2d-texture-stretch.tscn', mode: '2d' },
   // A `true` literal in INT and FLOAT slots stores 1: frame 1 of a two-frame sheet, z_index 1 over a
   // later sibling, and rotation 1 rad. Godot probes: (230,160) white, (550,160) green and (900,324)
   // blue. Read as 0, the first is black, the second yellow and the bar lies flat.
