@@ -142,9 +142,6 @@ describe('buildSkyEnvironment panorama wiring', () => {
       sampled = mesh.material.uniforms.source_panorama!.value as THREE.Texture;
       if (!renders) throw new Error('no WebGL context');
     });
-    vi.spyOn(THREE.PMREMGenerator.prototype, 'fromCubemap').mockReturnValue(
-      new THREE.WebGLRenderTarget(1, 1)
-    );
     const env = buildSkyEnvironment(renderer, { sky, lights: [], panorama, asBackground: true, energy: 1 });
     return { env, sampled: sampled as THREE.Texture | null };
   }
@@ -227,9 +224,6 @@ describe('buildSkyEnvironment panorama wiring', () => {
       sampled = mesh.material.uniforms.source_panorama!.value as THREE.Texture;
       boundBeforeCube = [...bound];
     });
-    vi.spyOn(THREE.PMREMGenerator.prototype, 'fromCubemap').mockReturnValue(
-      new THREE.WebGLRenderTarget(1, 1)
-    );
     const sky = defaultSky('PanoramaSkyMaterial');
     buildSkyEnvironment(renderer, {
       sky,

@@ -1,6 +1,6 @@
 /**
  * One sampler for every sun shadow, as Godot samples one directional shadow atlas for every
- * directional light (`scene_forward_clustered.glsl:2443`). three r186 declares a sampler, and so a
+ * directional light (`scene_forward_clustered.glsl:2443`). three r187 declares a sampler, and so a
  * texture unit, per sun shadow. `directionalShadow.md` beside this file has the design.
  */
 
@@ -17,7 +17,7 @@ import {
 type AtlasChunkName = 'shadowmap_pars_fragment' | 'lights_fragment_begin' | 'shadowmask_pars_fragment';
 
 /**
- * three's per-shadow sampler, of the type a shadow map type takes (`shadowmap_pars_fragment.glsl.js:24-28`),
+ * three's per-shadow sampler, of the type a shadow map type takes (r187 `shadowmap_pars_fragment.glsl.js:24-28`),
  * declared for the one atlas instead. One sampler, not a cap on suns tied to the material's own
  * samplers: a cap drops shadows Godot draws, and three sets up one light state for every material in
  * a render.

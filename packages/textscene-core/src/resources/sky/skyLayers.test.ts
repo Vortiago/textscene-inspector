@@ -81,6 +81,35 @@ describe('bakeSkyLayers', () => {
     expect(drawn).toEqual(expected);
   });
 
+  it.each([
+    ['an importance-sampled', IMPORTANCE_SAMPLED, 4],
+    ['a real-time', FAST, 7],
+  ])("holds only the mips %s sky's layers draw", async (_kind, bake, mips) => {
+    const { renderer } = await testRenderer();
+
+    const { texture } = bakeSkyLayers(renderer, radianceCube(renderer), bake, 0).target;
+
+    expect(texture.mipmaps).toHaveLength(mips);
+  });
+
+  it.each([
+    ['importance-sampling', IMPORTANCE_SAMPLED, 3],
+    ['fast', FAST, 5],
+  ])('holds only the mips the %s filter reads in its chain', async (_kind, bake, mips) => {
+    const { renderer } = await testRenderer();
+    const chains: THREE.WebGLRenderTarget[] = [];
+    const initRenderTarget = renderer.initRenderTarget.bind(renderer);
+    vi.spyOn(renderer, 'initRenderTarget').mockImplementation((target) => {
+      if (!(target instanceof THREE.WebGLArrayRenderTarget) && target.texture.mipmaps.length > 0)
+        chains.push(target);
+      initRenderTarget(target);
+    });
+
+    bakeSkyLayers(renderer, radianceCube(renderer), bake, 0);
+
+    expect(chains.map((chain) => chain.texture.mipmaps.length)).toEqual([mips]);
+  });
+
   it('filters with linear reads between mips, clamped to the edge', async () => {
     const { renderer } = await testRenderer();
 
@@ -166,8 +195,12 @@ describe('createReflectionAtlas', () => {
     expect([atlas.target.width, atlas.target.height, atlas.target.depth]).toEqual([768, 768, 3]);
   });
 
-  it("holds every mip down to one texel past Godot's layers, so the texture is complete (edge case)", () => {
-    expect(createReflectionAtlas(reflectionAtlasLayout(false), 1).target.texture.mipmaps).toHaveLength(10);
+  it("holds only Godot's layers as mips, as three caps the texture's last level there", () => {
+    const layout = reflectionAtlasLayout(false);
+
+    const { mipmaps } = createReflectionAtlas(layout, 1).target.texture;
+
+    expect(mipmaps).toHaveLength(1 + layout.downsampledSizes.length);
   });
 
   it('magnifies linearly, as a read below mip 0 does in Godot', () => {

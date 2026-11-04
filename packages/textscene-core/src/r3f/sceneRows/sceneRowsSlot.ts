@@ -1,7 +1,7 @@
 /**
  * The texture every program samples the scene rows through (`sceneRowsChunk.ts`). Each scene with
  * probes or decals shows its own before each of its renders. three never uploads it, as its version
- * stays 0 (three r186 `WebGLTextures.js:626`), and binds whatever handle it holds: the shown scene's,
+ * stays 0 (three r187 `WebGLTextures.js:620`), and binds whatever handle it holds: the shown scene's,
  * or three's empty texture.
  */
 

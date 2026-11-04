@@ -6,7 +6,7 @@ import { nearestGroupOrder } from './testing/paintOrder';
 
 const CAMERA = new THREE.PerspectiveCamera();
 
-/** three's own list as its JavaScript has it: its types lack the camera `push` takes (`WebGLRenderLists.js:122`). */
+/** three's own list as its JavaScript has it: its types lack the camera `push` takes (r187 `WebGLRenderLists.js:122`). */
 interface RenderList {
   init(): void;
   push(

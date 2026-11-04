@@ -1,7 +1,7 @@
 /**
  * three's per-group draw hooks, replayed without a GL context: the colour pass as
- * `WebGLRenderer.renderObject` runs it (`WebGLRenderer.js:2158-2183`) and the shadow pass
- * as `WebGLShadowMap.renderObject` does (`WebGLShadowMap.js:518-570`). The GL draw becomes
+ * `WebGLRenderer.renderObject` runs it (r187 `WebGLRenderer.js:2168-2198`) and the shadow pass
+ * as `WebGLShadowMap.renderObject` does (`WebGLShadowMap.js:520-582`). The GL draw becomes
  * a probe, which reads the state three would use at that instant.
  */
 
@@ -70,7 +70,7 @@ export function drawColourGroup<T>(
   return seen;
 }
 
-/** `WebGLShadowMap.js:51`: the depth material's acne-mitigating side flip. */
+/** r187 `WebGLShadowMap.js:51`: the depth material's acne-mitigating side flip. */
 const SHADOW_SIDE: Record<number, THREE.Side> = {
   [THREE.FrontSide]: THREE.BackSide,
   [THREE.BackSide]: THREE.FrontSide,
@@ -119,7 +119,7 @@ function shadowState(
 
 /**
  * One shadow-pass draw. three sets `modelViewMatrix` once per object before its group loop
- * (`WebGLShadowMap.js:528`), and hands each hook the renderer, the object, the main camera and
+ * (r187 `WebGLShadowMap.js:530`), and hands each hook the renderer, the object, the main camera and
  * the light's.
  */
 export function drawShadowGroup<T>(

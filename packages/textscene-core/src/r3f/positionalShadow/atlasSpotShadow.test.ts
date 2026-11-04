@@ -92,7 +92,7 @@ describe('AtlasSpotShadow.updateMatrices', () => {
   });
 
   it('scales the scissor with a map size three shrank to fit the GPU (edge case)', () => {
-    // three shrinks `mapSize` when the atlas exceeds `MAX_TEXTURE_SIZE` (r186 `WebGLShadowMap.js:180-198`).
+    // three shrinks `mapSize` when the atlas exceeds `MAX_TEXTURE_SIZE` (r187 `WebGLShadowMap.js:180-198`).
     const shadow = new AtlasSpotShadow();
     shadow.place({ x: 2048, y: 1024, size: 1024, paraboloidStep: null });
     shadow.mapSize.set(512, 512);

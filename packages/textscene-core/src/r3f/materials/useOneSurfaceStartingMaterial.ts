@@ -6,8 +6,8 @@ import * as THREE from 'three';
 
 /**
  * The material of a surface another draw owns. three skips a draw group whose material is
- * invisible, in the colour pass (`WebGLRenderer.js:1948`) and the shadow pass
- * (`WebGLShadowMap.js:542`). Shared by every draw and never disposed.
+ * invisible, in the colour pass (r187 `WebGLRenderer.js:1961`) and the shadow pass
+ * (`WebGLShadowMap.js:544`). Shared by every draw and never disposed.
  */
 export const OTHER_DRAWS_SURFACE = new THREE.MeshBasicMaterial({ visible: false });
 

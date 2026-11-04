@@ -88,7 +88,7 @@ const GODOT_INDIRECT_UNDER_COAT = /* glsl */ `#if defined( USE_CLEARCOAT ) && de
 const CLEARCOAT_EDITS: readonly ChunkEdit<ClearcoatChunk>[] = [
   {
     chunk: 'lights_physical_fragment',
-    three: 'material.clearcoatRoughness = max( material.clearcoatRoughness, 0.0525 );',
+    three: 'material.clearcoatRoughness = max( material.clearcoatRoughness, 0.045 );',
     godot: '',
   },
   {

@@ -21,6 +21,7 @@ import {
   longTasksAfterFirstReply,
   longTasksDuringTextureWork,
   runAgainIfStalled,
+  waitForTextureWorkToClear,
 } from './textureWorkProbe.mjs';
 
 /* global window */
@@ -135,14 +136,11 @@ async function runLongTaskScenario(browser, baseUrl, fixture, initScripts) {
     fixture,
     initScripts
   );
-  await page.waitForFunction(
-    () => {
-      const probe = window.__textureWorkProbe;
-      return probe.statusAttached.length > 0 && probe.statusDetached.length === probe.statusAttached.length;
-    },
-    undefined,
-    { timeout: TEXTURE_WORK_WAIT_MS }
-  );
+  await waitForTextureWorkToClear(page, {
+    statusTestId: TEXTURE_WORK_STATUS_TESTID,
+    timeoutMs: TEXTURE_WORK_WAIT_MS,
+    diagnostics,
+  });
   const settled = await settleCanvas(page, canvas);
   const probe = await page.evaluate(() => window.__textureWorkProbe);
   await context.close();

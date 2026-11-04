@@ -25,7 +25,7 @@ interface SoftShadowSearch {
  */
 const sceneSearches = new Map<THREE.Object3D, SoftShadowSearch>();
 
-/** three's own test for a material that reads the lights (r186 `WebGLRenderer.js:2855-2861`). */
+/** three's own test for a material that reads the lights (r187 `WebGLRenderer.js:2881-2887`). */
 function readsLights(material: THREE.Material): boolean {
   const flags = material as THREE.Material & {
     isMeshLambertMaterial?: boolean;

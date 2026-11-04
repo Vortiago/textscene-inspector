@@ -46,6 +46,10 @@ describe('integrationLaunchPaths', () => {
     expect(integrationLaunchOptions(paths).launchArgs[0]).toBe(paths.workspaceRoot);
   });
 
+  it("prints every page's console to stderr, so a webview's script error reaches the job log", () => {
+    expect(integrationLaunchOptions(paths).launchArgs).toContain('--enable-logging=stderr');
+  });
+
   it('launches without the GPU on Linux, where the suite runs under Xvfb', () => {
     expect(integrationLaunchOptions(paths, 'linux').launchArgs).toContain('--disable-gpu');
   });

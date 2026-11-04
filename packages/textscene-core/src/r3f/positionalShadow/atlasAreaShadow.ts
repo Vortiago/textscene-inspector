@@ -86,7 +86,7 @@ export class AtlasAreaShadow extends AreaShadowBase implements ParaboloidShadow 
   range = 0;
   /** `area_size`. */
   readonly size = new THREE.Vector2();
-  /** The slot's rectangle in units of the slot, as three gives a viewport (`WebGLShadowMap.js:345-350`). */
+  /** The slot's rectangle in units of the slot, as three gives a viewport (r187 `WebGLShadowMap.js:347-352`). */
   private readonly slotViewport = new THREE.Vector4(0, 0, 1, 1);
 
   constructor() {
@@ -104,7 +104,7 @@ export class AtlasAreaShadow extends AreaShadowBase implements ParaboloidShadow 
   }
 
   /**
-   * three calls this before it binds and clears the atlas (`WebGLShadowMap.js:291`). The camera takes
+   * three calls this before it binds and clears the atlas (r187 `WebGLShadowMap.js:291`). The camera takes
    * the light's pose, the clear stays in the slot, and the casters are those in the light's volume.
    */
   override updateMatrices(light: THREE.Object3D): void {

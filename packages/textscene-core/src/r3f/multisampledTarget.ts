@@ -34,8 +34,8 @@ export function useMultisampledTarget<Target extends THREE.WebGLRenderTarget>(
 }
 
 /**
- * Three's `getInternalFormat` for an RGBA texture (`WebGLTextures.js:129`). A target that takes output
- * like the drawing buffer stores an 8-bit sRGB tag linear (`:2120`), so such a target is linear or
+ * Three's `getInternalFormat` for an RGBA texture (r187 `WebGLTextures.js:132`). A target that takes output
+ * like the drawing buffer stores an 8-bit sRGB tag linear (`:2172`), so such a target is linear or
  * pins its format, as `CanvasFrame` pins RGBA8.
  */
 function colourStorage(texture: THREE.Texture): ColourStorage {

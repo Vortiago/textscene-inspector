@@ -11,8 +11,11 @@ import { backgroundCube } from '../shaderPatch/backgroundPrograms.js';
 import { observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { worldToSky } from './skyRotation.js';
 
-/** The texel three's cube background reads for a material with no cube, which the sky replaces. */
-const THREE_NO_CUBE_TEXEL = 'vec4 texColor = vec4( 0.0, 0.0, 0.0, 1.0 );';
+/**
+ * The texel three's cube background reads from a cube that is not a PMREM, which the sky replaces.
+ * The material defines no `ENVMAP_TYPE_PMREM`, so this is the line it compiles.
+ */
+const THREE_CUBE_TEXEL = 'vec4 texColor = textureCube( envMap, backgroundRotation * vWorldDirection );';
 
 /** The sky at the pixel's ray, turned by the sky's orientation as three turns its cube. */
 const GODOT_SKY_TEXEL =
@@ -41,7 +44,7 @@ export class SkyBackground extends THREE.Mesh<THREE.BoxGeometry, THREE.ShaderMat
         vertexShader: program.vertexShader,
         fragmentShader: `${skyGlsl}\n${editedShader(
           program.fragmentShader,
-          [{ three: THREE_NO_CUBE_TEXEL, godot: GODOT_SKY_TEXEL }],
+          [{ three: THREE_CUBE_TEXEL, godot: GODOT_SKY_TEXEL }],
           'backgroundCube_frag'
         )}`,
         side: THREE.BackSide,

@@ -12,4 +12,4 @@ export interface LayerFilter {
 }
 
 /** The uniforms of the filter passes that `skyLayers` sets, for the chain and the texel. */
-export const LAYER_FILTER_UNIFORMS = ['chain', 'lastMip', 'borderSize', 'layerSize'] as const;
+export const LAYER_FILTER_UNIFORMS = ['chain', 'borderSize', 'layerSize'] as const;

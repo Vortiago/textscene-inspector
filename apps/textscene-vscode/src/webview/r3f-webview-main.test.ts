@@ -367,4 +367,15 @@ describe('capture state reporting', () => {
       { type: 'previewCaptured', requestId: 'c5', dataUrl: 'data:image/png;base64,AA==' },
     ]);
   });
+
+  it('tells the host about a chunk that failed at both URLs, so the host loads a new document', async () => {
+    const { vscodeApi } = await mountFresh();
+    const { importChunk } = await import('./chunkImport');
+
+    await importChunk('./missing.mjs', import.meta.url).catch(() => {});
+
+    expect(postedMessages(vscodeApi).filter((m) => m.type === 'chunkLoadFailed')).toEqual([
+      { type: 'chunkLoadFailed', error: expect.stringContaining('missing.mjs?reload=1') },
+    ]);
+  });
 });

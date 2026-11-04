@@ -144,7 +144,7 @@ const THREE_AREA_LOOP = '#if ( NUM_RECT_AREA_LIGHTS > 0 ) && defined( RE_Direct_
 /**
  * A program without the positional shadow lookups reads every area light as lit. The lookup's index
  * is `UNROLLED_LOOP_INDEX`, which three writes into each copy of the unrolled loop, where it rewrites
- * only a bracketed `i` (r186 `WebGLProgram.js:297-298`).
+ * only a bracketed `i` (r187 `WebGLProgram.js:285-286`).
  */
 const UNSHADOWED_AREA_LIGHT = `#ifndef GODOT_AREA_SHADOW
 	#define GODOT_AREA_SHADOW( index ) 1.0

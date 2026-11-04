@@ -2,8 +2,8 @@
  * The grow line of a grown StandardMaterial3D, at the vertex stage of the derived bag:
  * `material.cpp:1458-1461` emits `VERTEX += NORMAL * grow;` when `grow_enabled`, both
  * terms model space, so the offset lands on the raw `normal` attribute before the model
- * matrix — which is why a scaled node scales it. three 0.186 declares
- * `attribute vec3 normal;` for every non-raw program (`WebGLProgram.js:626`), so the
+ * matrix, which is why a scaled node scales it. three 0.187 declares
+ * `attribute vec3 normal;` for every non-raw program (`WebGLProgram.js:585`), so the
  * basic and the physical class take the same patch.
  */
 import { describe, expect, it } from 'vitest';
