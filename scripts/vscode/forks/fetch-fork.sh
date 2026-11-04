@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Downloads a VS Code fork for Linux x64 into $2 and prints its Electron executable on stdout.
 # Usage: fetch-fork.sh <vscodium|cursor|windsurf> <directory>
-# Only VSCodium (MIT) has a stable public release page. The Cursor and Windsurf download
-# endpoints are the vendors' own update APIs; a vendor change fails the fork's CI job only.
+# Only VSCodium (MIT) has a stable public release page. Cursor uses its download API and
+# Windsurf its apt repository, unpacked without root; a vendor change fails the fork's CI job only.
 set -euo pipefail
 
 fork="$1"
@@ -39,11 +39,12 @@ fetch_cursor() {
 }
 
 fetch_windsurf() {
-  local url
-  url=$(curl -fsSL 'https://windsurf-stable.codeiumdata.com/api/update/linux-x64/stable/latest' | jq -r .url)
-  curl -fsSL -o windsurf.tar.gz "$url"
-  tar -xzf windsurf.tar.gz
-  find_executable "$PWD" windsurf
+  local repo='https://windsurf-stable.codeiumdata.com/wVxQEIWkwPUEAGf3/apt'
+  local package
+  package=$(curl -fsSL "$repo/dists/stable/main/binary-amd64/Packages" | awk '/^Filename: /{file=$2} END{print file}')
+  curl -fsSL -o windsurf.deb "$repo/$package"
+  dpkg-deb -x windsurf.deb windsurf
+  find_executable "$PWD/windsurf" windsurf
 }
 
 case "$fork" in
