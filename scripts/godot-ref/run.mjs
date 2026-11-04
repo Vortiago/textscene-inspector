@@ -790,6 +790,9 @@ func _ready() -> void:
 	# authored pose is the whole point. --no-previews asks for true RUNTIME
 	# semantics, and a runtime that never steps physics is not a runtime — a
 	# body is supposed to fall there.
+	# A fixed seed, because a GPUParticles3D without use_fixed_seed takes its seed from
+	# Math::rand() (gpu_particles_3d.cpp:438-439), and Godot seeds that from the clock.
+	seed(0)
 	if PREVIEWS:
 		get_tree().paused = true
 	_write_renderer()

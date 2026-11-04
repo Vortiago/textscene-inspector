@@ -172,6 +172,19 @@ describe('projectConfig — an autoload is a script too', () => {
   });
 });
 
+describe('bootstrapScript — the random generator is seeded', () => {
+  /**
+   * A GPUParticles3D without `use_fixed_seed` draws its seed from `Math::rand()` on entering the
+   * tree (`gpu_particles_3d.cpp:438-439`), which Godot seeds from the clock. Two runs of one scene
+   * then drew a different burst, 18% of the picture apart.
+   */
+  it('seeds the global generator before the scene loads', () => {
+    const gd = bootstrap({ previews: true });
+    expect(gd).toMatch(/\n\tseed\(\d+\)\n/);
+    expect(gd.indexOf('\tseed(')).toBeLessThan(gd.indexOf('load(SCENE_PATH)'));
+  });
+});
+
 describe('bootstrapScript — a non-tool script never runs under previews', () => {
   /**
    * Like the editor, the default pauses the tree first, stops AnimationPlayers, never steps

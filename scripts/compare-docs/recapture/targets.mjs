@@ -29,33 +29,44 @@ function particleSeconds(raw, file) {
 }
 
 /**
- * Every (image, fixture, camera, particles) the sheets reference: the legacy
- * pair and the sections. A sheet's `camera:` is looked through on both sides.
+ * The (image, target) pairs one sheet asks for: its frontmatter pair and its section markers. A
+ * marker's `camera=` overrides the sheet's `camera:` for its own image, so one image can look
+ * through a scene's Camera3D without moving the others in the sheet.
  */
+export function sheetTargets(text, file) {
+  const parsed = parseFrontmatter(text);
+  if (!parsed) return [];
+  const { meta } = parsed;
+  const camera = meta.camera || '';
+  const particles = particleSeconds(meta.particles, file);
+  const targets = [];
+  // The frontmatter pair and the section markers are both sources, or the header's image stops
+  // being re-rendered. Sections come last, so one may override the header for a shared name.
+  if (meta.visual !== 'false' && meta.image && meta.fixture) {
+    // A no-visual sheet renders a "draws nothing" note, not its image.
+    targets.push([meta.image, { fixture: meta.fixture, camera, particles }]);
+  }
+  for (const attrs of parseCompareMarkers(parsed.body)) {
+    if (attrs.image && attrs.fixture) {
+      targets.push([
+        attrs.image,
+        {
+          fixture: attrs.fixture,
+          camera: attrs.camera ?? camera,
+          particles: attrs.particles === undefined ? particles : particleSeconds(attrs.particles, file),
+        },
+      ]);
+    }
+  }
+  return targets;
+}
+
+/** Every (image, fixture, camera, particles) the sheets reference. */
 export function collectTargets() {
   const byImage = new Map();
   for (const file of collectSheetFiles()) {
-    const text = readFileSync(file, 'utf8');
-    const parsed = parseFrontmatter(text);
-    if (!parsed) continue;
-    const { meta } = parsed;
-    const camera = meta.camera || '';
-    const particles = particleSeconds(meta.particles, file);
-    // The frontmatter pair and the section markers are both sources, or the
-    // header's image stops being re-rendered. Sections apply last, so one may
-    // override the header for a shared name.
-    if (meta.visual !== 'false' && meta.image && meta.fixture) {
-      // A no-visual sheet renders a "draws nothing" note, not its image.
-      byImage.set(meta.image, { fixture: meta.fixture, camera, particles });
-    }
-    for (const attrs of parseCompareMarkers(parsed.body)) {
-      if (attrs.image && attrs.fixture) {
-        byImage.set(attrs.image, {
-          fixture: attrs.fixture,
-          camera,
-          particles: attrs.particles === undefined ? particles : particleSeconds(attrs.particles, file),
-        });
-      }
+    for (const [image, target] of sheetTargets(readFileSync(file, 'utf8'), file)) {
+      byImage.set(image, target);
     }
   }
   return [...byImage.entries()]
