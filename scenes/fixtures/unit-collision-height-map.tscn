@@ -1,0 +1,42 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitcollisionheightmap"]
+
+; The one variable against `unit-collision-shapes`: HeightMapShape3D, which Godot draws as the
+; grid's edges and cell diagonals, centred on the origin with one unit between samples
+; (height_map_shape_3d.cpp:37-83), not as a wireframe mesh. The three grids differ by size and
+; heights, negative ones included; `unit-collision-shapes` shows no height map, so a regression
+; in this draw moves only this scene. The camera frames all three.
+
+[sub_resource type="HeightMapShape3D" id="Saddle"]
+map_data = PackedFloat32Array(0, 1, 1, 0)
+
+[sub_resource type="HeightMapShape3D" id="Hills"]
+map_width = 5
+map_depth = 4
+map_data = PackedFloat32Array(0, 0.5, 1, 0.5, 0, 0.5, 1.5, 2.5, 1.5, 0.5, 0, 1, -1, 1, 0, -0.5, 0, 0.5, 0, -0.5)
+
+[sub_resource type="HeightMapShape3D" id="Ridge"]
+map_width = 3
+map_depth = 3
+map_data = PackedFloat32Array(0, 2, 0, 0, 3, -1, 0, 2, 0)
+
+[node name="HeightMapRoot" type="Node3D"]
+
+[node name="Bodies" type="StaticBody3D" parent="."]
+
+[node name="Saddle" type="CollisionShape3D" parent="Bodies"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 0)
+shape = SubResource("Saddle")
+debug_color = Color(1, 1, 0, 1)
+
+[node name="Hills" type="CollisionShape3D" parent="Bodies"]
+shape = SubResource("Hills")
+debug_color = Color(1, 0.2, 0.2, 1)
+
+[node name="Ridge" type="CollisionShape3D" parent="Bodies"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 0)
+shape = SubResource("Ridge")
+debug_color = Color(0.2, 0.5, 1, 1)
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.8838, 0.4678, 0, -0.4678, 0.8838, 0, 5, 8.5)
+current = true

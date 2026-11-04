@@ -36,6 +36,24 @@ async function runEntryLoader(
   await run(acquireVsCodeApi, (url: string) => import(/* @vite-ignore */ url));
 }
 
+/**
+ * A Cache API with a VS Code resource cache and another cache, recording each `delete(url)` in
+ * `events`. Only the resource cache may lose an entry.
+ */
+function fakeCaches(events: string[]) {
+  const named = (name: string) => ({
+    delete: async (url: string) => {
+      if (name.startsWith('vscode-resource-cache-')) events.push(`delete ${url}`);
+      else events.push(`wrong cache ${name}`);
+      return true;
+    },
+  });
+  return {
+    keys: async () => ['vscode-resource-cache-6', 'other-cache'],
+    open: async (name: string) => named(name),
+  };
+}
+
 describe('the entry loader', () => {
   it('reports an entry script that fails to parse, with the error', async () => {
     const postMessage = vi.fn();
@@ -50,6 +68,19 @@ describe('the entry loader', () => {
       type: 'webviewLoadFailed',
       error: expect.stringContaining('SyntaxError'),
     });
+  });
+
+  it('drops the failed entry from the resource cache before it reports, so the next document loads the file', async () => {
+    const events: string[] = [];
+    vi.stubGlobal('caches', fakeCaches(events));
+    const html = generateWebviewHtml({
+      ...BASE_OPTIONS,
+      scriptUri: 'data:text/javascript,export const cut = (',
+    });
+
+    await runEntryLoader(html, () => ({ postMessage: () => events.push('report') }));
+
+    expect(events).toEqual([`delete ${'data:text/javascript,export const cut = ('}`, 'report']);
   });
 
   it('reports nothing for an entry script that runs', async () => {

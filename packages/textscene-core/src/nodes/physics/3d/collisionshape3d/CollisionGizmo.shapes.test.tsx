@@ -37,6 +37,7 @@ describe.each([
   'CylinderShape3D',
   'CapsuleShape3D',
   'WorldBoundaryShape3D',
+  'HeightMapShape3D',
   'SeparationRayShape3D',
 ])('<CollisionGizmo> %s', (type) => {
   it.each(godotDebugLinesFor(type))('draws every vertex Godot draws for $name', async ({ shape, lines }) => {
@@ -59,7 +60,7 @@ describe('<CollisionGizmo> unknown shape', () => {
   it('still falls back to a unit box for a genuinely unknown shape type', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CollisionGizmo
-        shape={{ id: 'HeightMapShape3D_1', type: 'HeightMapShape3D', data: {} }}
+        shape={{ id: 'NotAShape3D_1', type: 'NotAShape3D', data: {} }}
         color={new THREE.Color(0x00ff88)}
       />
     );

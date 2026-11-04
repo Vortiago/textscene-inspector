@@ -87,6 +87,7 @@ describe.each([
   'CylinderShape3D',
   'CapsuleShape3D',
   'WorldBoundaryShape3D',
+  'HeightMapShape3D',
   'SeparationRayShape3D',
 ])('%s debug lines', (type) => {
   it.each(godotDebugLinesFor(type))('match Godot for $name', ({ shape, lines }) => {
