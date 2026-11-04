@@ -20,7 +20,14 @@ import type {
   SolveContext,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
-import { scrollBarGrabberGeometry, scrollBarMinimumSize } from '../shared/scrollBarSolver';
+import {
+  SCROLL_HINT_HORIZONTAL_WIDTH,
+  SCROLL_HINT_VERTICAL_HEIGHT,
+  scrollBarGrabberGeometry,
+  scrollBarMinimumSize,
+  type ScrollBarPlacement,
+  type ScrollHintPlacement,
+} from '../shared/scrollBarSolver';
 import type { ScrollContainerProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
@@ -125,33 +132,6 @@ export const scrollContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const margins = scrollContainerMargins(n, ctx.theme);
   return { x: x + margins.left + margins.right, y: y + margins.top + margins.bottom };
 };
-
-export interface ScrollBarPlacement {
-  /** `ScrollBar::is_visible()` per `_update_scrollbars` (`scroll_container.cpp:592-593`). */
-  visible: boolean;
-  /** This bar's own rect, relative to the ScrollContainer's own top-left (`_update_scrollbar_position`). */
-  rect: Rect2;
-  /** The grabber StyleBox's rect, relative to THIS bar's own top-left (`scroll_bar.cpp`'s `NOTIFICATION_DRAW`). */
-  grabberRect: Rect2;
-}
-
-/**
- * `scroll_hint_vertical.svg`/`scroll_hint_horizontal.svg` (`scene/theme/icons/`) are 32x24 and
- * 24x32 at scale 1. Only the extent across each fade is read (`get_height()` at
- * `scroll_container.cpp:627,636`, `get_width()` at `:643,652`): the other axis is anchored.
- */
-const SCROLL_HINT_VERTICAL_HEIGHT = 24;
-const SCROLL_HINT_HORIZONTAL_WIDTH = 24;
-
-/** One `scroll_hint_*` TextureRect that `_update_scroll_hints` left visible. */
-export interface ScrollHintPlacement {
-  /** This hint's rect relative to the ScrollContainer's own top-left, as the anchors compute it. A vertical hint is twice the container wide (`scroll_container.cpp:625`), cut back by the clip. */
-  rect: Rect2;
-  /** `true` for the `scroll_hint_vertical` icon (the fade runs down the rect), `false` for `scroll_hint_horizontal`. */
-  vertical: boolean;
-  flipH: boolean;
-  flipV: boolean;
-}
 
 /** Both hint nodes' states after `_update_scroll_hints` (`scroll_container.cpp:606-658`); `null` where `set_visible(false)` was called. */
 interface ScrollContainerHints {

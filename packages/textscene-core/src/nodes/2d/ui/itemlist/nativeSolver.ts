@@ -39,7 +39,8 @@ import {
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
-import type { Rect2 } from '../../../../godot/math/rect2';
+import { rect2Intersects, type Rect2 } from '../../../../godot/math/rect2';
+import { scrollBarMinimumSize } from '../shared/scrollBarSolver';
 import type { ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
@@ -385,11 +386,15 @@ interface ItemListPackInput {
   /** `<= 0` means unbounded (`item_list.cpp:1804-1807`). Godot's own class default is 1, not 0: callers pass `maxColumns ?? 1`. */
   maxColumns: number;
   /**
-   * `size.x - panel_style->get_minimum_size().width` (`item_list.cpp:1798`), without the unported
-   * scrollbar adjustment (`:1798-1801,1862-1864`). Only a pass with more than one column,
-   * `wraparound_items` and no `auto_width` reads it.
+   * `size.x - panel_style->get_minimum_size().width` (`item_list.cpp:1798`). It is also the
+   * horizontal page (`:1853`). The `:1799-1801` widening reads a scrollbar only `!wraparound_items`
+   * uses, and that case never reads `fitSize`.
    */
   fitSize: number;
+  /** The vertical scrollbar's minimum width (`scroll_bar_v_minwidth`, `item_list.cpp:1738`). */
+  verticalBarMinWidth: number;
+  /** `is_layout_rtl()`. */
+  rtl: boolean;
   wraparoundItems: boolean;
   autoWidth: boolean;
   hSeparation: number;
@@ -411,8 +416,16 @@ interface ItemListPackResult {
   contentWidth: number;
   /** `ofs.y + max_h`, post row-height backfill: the packed content's own total height. */
   contentHeight: number;
-  /** `scroll_bar_v_max > scroll_bar_v_page` (`item_list.cpp:1877-1889`): informational; this codebase draws no scrollbar. */
-  verticalScrollbarVisible: boolean;
+  vertical: ItemListScrollRange;
+  horizontal: ItemListScrollRange;
+}
+
+/** One scrollbar's `Range` after `force_update_list_size`; `visible` is its `show()` or `hide()` (`item_list.cpp:1877-1905`). */
+export interface ItemListScrollRange {
+  visible: boolean;
+  min: number;
+  max: number;
+  page: number;
 }
 
 /**
@@ -422,6 +435,7 @@ interface ItemListPackResult {
  */
 export function packItemListRows(input: ItemListPackInput): ItemListPackResult {
   const n = input.itemSizes.length;
+  let fitSize = input.fitSize;
   let currentColumns = input.maxColumns > 0 ? input.maxColumns : 0x7fffffff;
 
   for (;;) {
@@ -437,12 +451,7 @@ export function packItemListRows(input: ItemListPackInput): ItemListPackResult {
     const separators: number[] = [];
 
     for (let i = 0; i < n; i++) {
-      if (
-        currentColumns > 1 &&
-        sizes[i]!.x + ofsX > input.fitSize &&
-        !input.autoWidth &&
-        input.wraparoundItems
-      ) {
+      if (currentColumns > 1 && sizes[i]!.x + ofsX > fitSize && !input.autoWidth && input.wraparoundItems) {
         currentColumns = Math.max(col, 1);
         allFit = false;
         break;
@@ -469,13 +478,28 @@ export function packItemListRows(input: ItemListPackInput): ItemListPackResult {
       }
     }
 
+    const verticalPage = Math.max(0, input.availableHeight);
+    const verticalMax = Math.max(verticalPage, ofsY + maxH);
+    const horizontalPage = Math.max(0, input.fitSize);
+    const horizontalMax = input.wraparoundItems ? 0 : Math.max(horizontalPage, maxW);
+
+    // Port the condition as written (`item_list.cpp:1862-1864`): the bar's width comes off on a
+    // pass whose content fits, or under RTL, not on one that overflows.
+    if (verticalPage >= verticalMax || input.rtl) fitSize -= input.verticalBarMinWidth;
+
     if (!allFit) continue;
 
     // Backfill the final (possibly partial) row's height (item_list.cpp:1866-1869).
     for (let j = n - 1; j >= 0 && col > 0; j--, col--) sizes[j]!.y = maxH;
 
-    const page = Math.max(0, input.availableHeight);
-    const max = Math.max(page, ofsY + maxH);
+    // RTL without wrap mirrors the horizontal range so its value 0 is the far end (`:1891-1893`).
+    const mirrorsHorizontal = input.rtl && !input.wraparoundItems;
+    const horizontal: ItemListScrollRange = {
+      visible: horizontalMax > horizontalPage,
+      min: mirrorsHorizontal ? -(horizontalMax - horizontalPage) : 0,
+      max: mirrorsHorizontal ? horizontalPage : horizontalMax,
+      page: horizontalPage,
+    };
 
     return {
       items: positions.map((p, i) => ({
@@ -485,9 +509,18 @@ export function packItemListRows(input: ItemListPackInput): ItemListPackResult {
       separators,
       contentWidth: maxW,
       contentHeight: ofsY + maxH,
-      verticalScrollbarVisible: max > page,
+      vertical: { visible: verticalMax > verticalPage, min: 0, max: verticalMax, page: verticalPage },
+      horizontal,
     };
   }
+}
+
+/** The two scrollbars' minimum sizes, each read once per solve or draw: width of the vertical bar, height of the horizontal one. */
+export function itemListBarMinimums(theme: NativeTheme): { verticalWidth: number; horizontalHeight: number } {
+  return {
+    verticalWidth: scrollBarMinimumSize(true, theme).x,
+    horizontalHeight: scrollBarMinimumSize(false, theme).y,
+  };
 }
 
 // --- Minimum size: ItemList::get_minimum_size (item_list.cpp:2136-2146) ----
@@ -496,10 +529,10 @@ export function packItemListRows(input: ItemListPackInput): ItemListPackResult {
 export const ITEM_LIST_DEFAULT_MAX_COLUMNS = 1;
 
 /**
- * Godot's `get_minimum_size()` reads `auto_width_value`/`auto_height_value` from
- * the last draw, converging over frames; `SolveContext` solves once, so this packs
- * once with infinite `fitSize` and `availableHeight`. Exact under `auto_width` or
- * `max_columns > 0`; approximate for `auto_height` with `max_columns` 0 and no `auto_width`.
+ * Godot's `get_minimum_size()` reads `auto_width_value`/`auto_height_value` from the last draw,
+ * converging over frames. The first solve pass packs at unbounded `fitSize` and `availableHeight`;
+ * the second reads the first pass' rect (`tentativeRect`, `registerSizeDependentMinimum`), which
+ * is the one frame of convergence that decides the scrollbar terms (`item_list.cpp:1883,1903`).
  */
 const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ItemListProperties;
@@ -548,27 +581,35 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const hSeparation = itemListSeparation(ctx.theme);
   const maxColumnWidth = itemListMaxColumnWidth(itemSizes, hSeparation);
+  const panelMin = contentMarginSize(pickItemListPanelStyleBox(n.styleBoxes, ctx.theme));
+  const tentative = ctx.tentativeRect?.(n);
+  const barMinimums = itemListBarMinimums(ctx.theme);
   const packed = packItemListRows({
     itemSizes,
     maxColumnWidth,
     sameColumnWidth: props.sameColumnWidth === true,
     maxColumns: props.maxColumns ?? ITEM_LIST_DEFAULT_MAX_COLUMNS,
-    fitSize: Number.POSITIVE_INFINITY,
+    fitSize: tentative ? tentative.w - panelMin.x : Number.POSITIVE_INFINITY,
+    verticalBarMinWidth: barMinimums.verticalWidth,
+    rtl: n.rtl,
     wraparoundItems: props.wraparoundItems !== false,
     autoWidth: props.autoWidth === true,
     hSeparation,
-    availableHeight: Number.POSITIVE_INFINITY,
+    availableHeight: tentative ? Math.max(0, tentative.h - panelMin.y) : Number.POSITIVE_INFINITY,
   });
 
-  const panelBox = pickItemListPanelStyleBox(n.styleBoxes, ctx.theme);
-  const panelMin = contentMarginSize(panelBox);
-
-  if (props.autoWidth) minSize.x = packed.contentWidth + panelMin.x;
-  if (props.autoHeight) minSize.y = packed.contentHeight + panelMin.y;
+  if (props.autoWidth) {
+    minSize.x = packed.contentWidth + panelMin.x + (packed.vertical.visible ? barMinimums.verticalWidth : 0);
+  }
+  if (props.autoHeight) {
+    minSize.y =
+      packed.contentHeight + panelMin.y + (packed.horizontal.visible ? barMinimums.horizontalHeight : 0);
+  }
   return minSize;
 };
 
 controlSolverRegistry.registerMinimumSize('ItemList', itemListMinimumSize);
+controlSolverRegistry.registerSizeDependentMinimum('ItemList');
 controlSolverRegistry.registerTextureSlots('ItemList', itemListTextureSlots);
 
 // --- Draw-time per-item geometry (item_list.cpp:1536-1691) ----------------
@@ -672,22 +713,49 @@ export function itemListGuideColor(n: Pick<SolveNode, 'colors'>): Rgba {
 interface ItemListGuideLine {
   /** Content-relative Y: the caller adds the panel's own offset (`origin`, `item_list.cpp:1429`). */
   y: number;
-  /** Spans the panel's own content width, from its content origin (`item_list.cpp:1455-1457`). */
+  /** From the panel's left content edge: the vertical bar's width under RTL, else 0 (`item_list.cpp:1454-1457`). */
+  x: number;
+  /** The draw `width` (`item_list.cpp:1385-1389`), already less a visible vertical bar. */
   width: number;
 }
 
 /**
- * `item_list.cpp:1446-1459`'s separator draw without the scroll clip: nothing is
- * scrolled out of view. RTL moves a separator only while the vertical scrollbar
- * shows (`:1454-1458`), and none is drawn, so both directions share one span.
+ * `item_list.cpp:1446-1459`'s separator draw without the scroll clip: a `.tscn` stores no scroll
+ * value, so no separator is scrolled out of view.
  */
 export function itemListGuideLines(
   iconMode: number,
   separators: readonly number[],
-  contentWidth: number
+  width: number,
+  startX: number
 ): ItemListGuideLine[] {
   if (iconMode === ICON_MODE_TOP) return [];
-  return separators.map((y) => ({ y, width: contentWidth }));
+  return separators.map((y) => ({ y, x: startX, width }));
+}
+
+/**
+ * `const Rect2 clip(-base_ofs, size)` (`item_list.cpp:1431-1441`) in the packed content's space,
+ * with a zero scroll. `size.width` grows by the horizontal range's scroll span only without
+ * `wraparound_items`.
+ */
+export function itemListDrawClip(
+  size: Vector2,
+  panelOffset: Vector2,
+  horizontal: ItemListScrollRange,
+  wraparoundItems: boolean
+): Rect2 {
+  const scrollSpan = wraparoundItems ? 0 : horizontal.max - horizontal.page;
+  return { x: -panelOffset.x, y: -panelOffset.y, w: size.x + scrollSpan, h: size.y };
+}
+
+/** The rows `NOTIFICATION_DRAW` draws: each must intersect `clip` (`item_list.cpp:1493-1500`). */
+export function itemListRowsInClip<Row extends { rect: Rect2 }>(rows: readonly Row[], clip: Rect2): Row[] {
+  return rows.filter((row) => rect2Intersects(clip, row.rect));
+}
+
+/** The separators `NOTIFICATION_DRAW` draws: it stops at the first one below `clip` (`item_list.cpp:1451`). */
+export function itemListSeparatorsInClip(separators: readonly number[], clip: Rect2): number[] {
+  return separators.filter((y) => y <= clip.y + clip.h);
 }
 
 // --- RTL draw geometry: item_list.cpp:1582-1584,1629-1641,1657-1668 -------
