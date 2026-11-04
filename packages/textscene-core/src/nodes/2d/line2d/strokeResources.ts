@@ -1,7 +1,5 @@
-/** Adapts a decoded `Gradient` and `Curve` to the samplers `buildLineStroke` takes. */
+/** Adapts a decoded `Gradient` to the colours `buildLineStroke` takes. */
 
-import { bakedCurveSampler } from '../../../resources/curves/curve/bakedSample';
-import type { Curve } from '../../../resources/curves/curve/types';
 import { sampleGradientColor } from '../../../resources/textures/gradienttexture2d/sample';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 import type { StrokeGradient } from './lineBuilder';
@@ -17,9 +15,4 @@ export function strokeGradient(gradient: Gradient): StrokeGradient {
     last: stops[stops.length - 1]?.color ?? BLACK,
     colorAt: (offset) => sampleGradientColor(gradient, offset),
   };
-}
-
-/** `Curve.sample_baked` of `curve`, which answers 0 for a curve with no point. */
-export function strokeWidthFactor(curve: Curve): (offset: number) => number {
-  return bakedCurveSampler(curve);
 }

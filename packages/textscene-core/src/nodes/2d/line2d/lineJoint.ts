@@ -56,13 +56,12 @@ export interface Joint {
 export function resolveJoint(input: JointInput): Joint {
   const { pos0, pos1, pos2, normal0, normal1, halfWidth } = input;
   const orientation = vector2Dot(normal0, input.forward1) > 0 ? UP : DOWN;
+  const isUp = orientation === UP;
 
-  let inner0 = vector2Scaled(normal0, halfWidth);
-  let inner1 = vector2Scaled(normal1, halfWidth);
-  if (orientation === DOWN) {
-    inner0 = negated(inner0);
-    inner1 = negated(inner1);
-  }
+  const along0 = vector2Scaled(normal0, halfWidth);
+  const along1 = vector2Scaled(normal1, halfWidth);
+  const inner0 = isUp ? along0 : negated(along0);
+  const inner1 = isUp ? along1 : negated(along1);
 
   const crossing = segmentIntersection(
     vector2Add(pos0, inner0),
@@ -72,7 +71,7 @@ export function resolveJoint(input: JointInput): Joint {
   );
   const cornerIn = crossing ?? vector2Add(pos1, inner0);
   const cornerOut = crossing ? vector2Sub(vector2Scaled(pos1, 2), cornerIn) : vector2Sub(pos1, inner0);
-  const [cornerUp, cornerDown] = orientation === UP ? [cornerIn, cornerOut] : [cornerOut, cornerIn];
+  const [cornerUp, cornerDown] = isUp ? [cornerIn, cornerOut] : [cornerOut, cornerIn];
 
   if (!crossing) {
     // No crossing: SHARP has no fallback of its own, so it bevels.
@@ -83,8 +82,8 @@ export function resolveJoint(input: JointInput): Joint {
       jointMode,
       up1: cornerUp,
       down1: cornerDown,
-      nextUp0: vector2Add(pos1, vector2Scaled(normal1, halfWidth)),
-      nextDown0: vector2Sub(pos1, vector2Scaled(normal1, halfWidth)),
+      nextUp0: vector2Add(pos1, along1),
+      nextDown0: vector2Sub(pos1, along1),
     };
   }
 
@@ -102,27 +101,17 @@ export function resolveJoint(input: JointInput): Joint {
     };
   }
 
-  const along0 = vector2Scaled(normal0, halfWidth);
-  const along1 = vector2Scaled(normal1, halfWidth);
-  return orientation === UP
-    ? {
-        orientation,
-        isIntersecting: true,
-        jointMode,
-        up1: cornerUp,
-        down1: vector2Sub(pos1, along0),
-        nextUp0: cornerUp,
-        nextDown0: vector2Sub(pos1, along1),
-      }
-    : {
-        orientation,
-        isIntersecting: true,
-        jointMode,
-        up1: vector2Add(pos1, along0),
-        down1: cornerDown,
-        nextUp0: vector2Add(pos1, along1),
-        nextDown0: cornerDown,
-      };
+  // A bevel or a round joint keeps the inner crossing and starts the outer side at the corner point.
+  const outerSide = (along: Vector2) => (isUp ? vector2Sub(pos1, along) : vector2Add(pos1, along));
+  return {
+    orientation,
+    isIntersecting: true,
+    jointMode,
+    up1: isUp ? cornerUp : outerSide(along0),
+    down1: isUp ? outerSide(along0) : cornerDown,
+    nextUp0: isUp ? cornerUp : outerSide(along1),
+    nextDown0: isUp ? outerSide(along1) : cornerDown,
+  };
 }
 
 /** A miter longer than `sharp_limit` half-widths bevels instead (`line_builder.cpp:247-252`). */

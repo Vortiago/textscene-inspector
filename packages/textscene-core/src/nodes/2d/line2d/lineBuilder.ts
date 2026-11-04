@@ -19,6 +19,7 @@ import {
   vector2Sub,
   type Vector2,
 } from '../../../godot/math/vector';
+import type { Line2DProperties } from './types';
 import { LineCapMode, LineJointMode } from '../../../godot/scene/line2d.js';
 import { resolveJoint, type Joint } from './lineJoint';
 import {
@@ -41,21 +42,22 @@ export interface StrokeGradient {
   colorAt: (offset: number) => Rgba;
 }
 
-export interface LineStrokeOptions {
-  /** Flat `[x0, y0, x1, y1, …]` in Godot's space. */
-  points: Float32Array;
-  width: number;
-  closed: boolean;
-  jointMode: number;
-  sharpLimit: number;
-  roundPrecision: number;
-  beginCapMode: number;
-  endCapMode: number;
+export type LineStrokeOptions = Pick<
+  Line2DProperties,
+  | 'points'
+  | 'width'
+  | 'closed'
+  | 'jointMode'
+  | 'sharpLimit'
+  | 'roundPrecision'
+  | 'beginCapMode'
+  | 'endCapMode'
+> & {
   /** Null draws one colour, which the caller owns: `default_color` is not part of the stroke. */
   gradient: StrokeGradient | null;
   /** `Curve.sample_baked` of `width_curve` for an offset from 0 to 1, or null for a constant width. */
   widthFactorAt: ((offset: number) => number) | null;
-}
+};
 
 export interface LineStroke {
   /** Flat `[x, y, …]`. */
@@ -133,8 +135,8 @@ class StrokeWalk {
 
   run(): void {
     if (!this.wrapsAround) this.addBeginCap();
-    if (!this.addJoints() || this.wrapsAround) return;
-    this.addEndSegment();
+    this.addJoints();
+    if (!this.wrapsAround) this.addEndSegment();
   }
 
   finish(): LineStroke | null {
@@ -189,10 +191,9 @@ class StrokeWalk {
   }
 
   /**
-   * The quad and the joint at every interior point, and at every point of a closed line. Returns
-   * false when a closed line has closed already.
+   * The quad and the joint at every interior point, and at every point of a closed line.
    */
-  private addJoints(): boolean {
+  private addJoints(): void {
     const { points, wrapsAround } = this;
     const count = points.length;
     // A closed line starts with a walk from its last point that draws nothing, so its first joint is right.
@@ -203,7 +204,7 @@ class StrokeWalk {
       const pos1 = points[i === -1 ? count - 1 : i % count]!;
       const pos2 = points[(i + 1) % count]!;
       if (i >= 1) this.distance = f(this.distance + vector2DistanceTo(this.pos0, pos1));
-      const color1 = this.sampleAlongLine();
+      const color1 = this.advanceAlongLine();
 
       const forward1 = normalizedVector2(vector2Sub(pos2, pos1));
       const normal1 = vector2Orthogonal(forward1);
@@ -236,16 +237,15 @@ class StrokeWalk {
         const up = vector2Lerp(center, first.up, this.widthFactor);
         const down = vector2Lerp(center, first.down, this.widthFactor);
         stripAddQuad(this.strip, up, down, color1);
-        return false;
+        return;
       }
       stripAddQuad(this.strip, joint.up1, joint.down1, color1);
       this.addJointTriangles(joint, pos1, isClosingJoint, color1);
     }
-    return true;
   }
 
   /** The colour and the width factor at the distance walked, which is null and 1 where none is read. */
-  private sampleAlongLine(): Rgba | null {
+  private advanceAlongLine(): Rgba | null {
     const { gradient, widthFactorAt } = this.options;
     const offset = f(this.distance / this.totalDistance);
     if (widthFactorAt) this.widthFactor = widthFactorAt(offset);

@@ -5,9 +5,8 @@
  * THREE of its own.
  */
 
-import { resolveCurve } from '../../../resources/curves/curve/decode';
 import type { Curve } from '../../../resources/curves/curve/types';
-import { referencedFilePath } from '../../../resources/resolveReference';
+import { resolveCurve } from '../../../resources/curves/curve/decode';
 import type { LoadedFile } from '../../../resources/scopedResource';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { CPU_PARTICLES_PARAM_COUNT, type ParticleParam } from './params';
@@ -15,20 +14,6 @@ import { CPU_PARTICLES_PARAM_COUNT, type ParticleParam } from './params';
 /** The `curve` reference of each parameter slot, always `CPU_PARTICLES_PARAM_COUNT` long. */
 export function paramCurveReferences(params: readonly ParticleParam[]): Array<string | undefined> {
   return Array.from({ length: CPU_PARTICLES_PARAM_COUNT }, (_, slot) => params[slot]?.curve);
-}
-
-/** The `.tres` files the emitter's curve and ramp `references` load from. */
-export function particleFiles(references: readonly (string | undefined)[], pools: SceneResources): string[] {
-  return references.flatMap((ref) => referencedFilePath(ref, pools) ?? []);
-}
-
-/** The `Curve` a reference names, or null for none, a missing one and another type. */
-export function resolveParticleCurve(
-  ref: string | undefined,
-  pools: SceneResources,
-  loadedFile: LoadedFile
-): Curve | null {
-  return resolveCurve(ref, pools, loadedFile);
 }
 
 /**
@@ -41,5 +26,5 @@ export function resolveParticleCurves(
   pools: SceneResources,
   loadedFile: LoadedFile
 ): Array<Curve | null> {
-  return paramCurveReferences(params).map((ref) => resolveParticleCurve(ref, pools, loadedFile));
+  return paramCurveReferences(params).map((ref) => resolveCurve(ref, pools, loadedFile));
 }

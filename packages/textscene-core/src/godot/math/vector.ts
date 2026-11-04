@@ -107,7 +107,7 @@ export function vector2Orthogonal({ x, y }: Vector2): Vector2 {
  * @canonical The distance between two Vector2 in float32
  */
 export function vector2DistanceTo(a: Vector2, b: Vector2): number {
-  return f(Math.sqrt(f(f(f(a.x - b.x) * f(a.x - b.x)) + f(f(a.y - b.y) * f(a.y - b.y)))));
+  return vector2Length(vector2Sub(a, b));
 }
 
 /**

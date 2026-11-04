@@ -11,6 +11,11 @@ export function referencedFilePath(ref: string | undefined, pools: SceneResource
   return parsedResourcePath(ref, pools.externalResources);
 }
 
+/** The files `refs` load from, one per reference that names a `.tres`, in order and with repeats. */
+export function referencedFilePaths(refs: readonly (string | undefined)[], pools: SceneResources): string[] {
+  return refs.flatMap((ref) => referencedFilePath(ref, pools) ?? []);
+}
+
 /** {@link resolveReference}, for a caller that needs only the resource and not its tables. */
 export function resolveReferencedResource(
   ref: string | undefined,

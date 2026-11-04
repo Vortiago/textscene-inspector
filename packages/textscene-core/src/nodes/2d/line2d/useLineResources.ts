@@ -3,14 +3,14 @@
 import { useCallback, useMemo } from 'react';
 import { resolveCurve } from '../../../resources/curves/curve/decode';
 import type { Curve } from '../../../resources/curves/curve/types';
-import { referencedFilePath } from '../../../resources/resolveReference';
+import { referencedFilePaths } from '../../../resources/resolveReference';
 import { resolveGradient } from '../../../resources/textures/gradienttexture2d/decode';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 import { useLoadedFiles } from '../../../resources/useLoadedFiles';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 
 /** What the references resolve to, each null for none, a missing one, or a file still loading. */
-export interface LineResources {
+interface LineResources {
   gradient: Gradient | null;
   widthCurve: Curve | null;
 }
@@ -22,7 +22,7 @@ export function useLineResources(
 ): LineResources {
   const pools = useSceneResources();
   const planFiles = useCallback(
-    () => [gradientRef, widthCurveRef].flatMap((ref) => referencedFilePath(ref, pools) ?? []),
+    () => referencedFilePaths([gradientRef, widthCurveRef], pools),
     [gradientRef, widthCurveRef, pools]
   );
   const { loadedFile } = useLoadedFiles(planFiles);

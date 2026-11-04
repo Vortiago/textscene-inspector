@@ -3,7 +3,8 @@ import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { NO_RESOURCES, type SceneResources } from '../../../r3f/SceneResourcesContext';
 import { loadedFilesOf, NO_FILES } from '../../../resources/testing/loadedFiles';
-import { paramCurveReferences, particleFiles, resolveParticleCurves } from './sceneResources';
+import { referencedFilePaths } from '../../../resources/resolveReference';
+import { paramCurveReferences, resolveParticleCurves } from './sceneResources';
 import { CPU_PARTICLES_PARAM_COUNT, type ParticleParam } from './params';
 import { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
@@ -99,7 +100,7 @@ describe('resolveParticleCurves', () => {
   });
 });
 
-describe('particleFiles', () => {
+describe('referencedFilePaths', () => {
   it('names the .tres each curve slot and ramp loads from', () => {
     const curves = paramCurveReferences(
       params({
@@ -107,7 +108,7 @@ describe('particleFiles', () => {
         [CPUParticlesParameter.DAMPING]: 'ExtResource("7_curve")',
       })
     );
-    const files = particleFiles(
+    const files = referencedFilePaths(
       [...curves, 'ExtResource("8_ramp")', 'SubResource("2")'],
       sceneOf([GRADIENT])
     );
@@ -115,8 +116,8 @@ describe('particleFiles', () => {
   });
 
   it('names no file for SubResource references or none', () => {
-    expect(particleFiles([...paramCurveReferences(params()), undefined], sceneOf([CURVE, GRADIENT]))).toEqual(
-      []
-    );
+    expect(
+      referencedFilePaths([...paramCurveReferences(params()), undefined], sceneOf([CURVE, GRADIENT]))
+    ).toEqual([]);
   });
 });

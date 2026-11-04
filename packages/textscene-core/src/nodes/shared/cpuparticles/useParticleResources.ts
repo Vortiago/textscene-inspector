@@ -3,16 +3,13 @@
 import { useCallback, useMemo } from 'react';
 import type { Curve } from '../../../resources/curves/curve/types';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
+import { resolveCurve } from '../../../resources/curves/curve/decode';
+import { referencedFilePaths } from '../../../resources/resolveReference';
 import { resolveGradient } from '../../../resources/textures/gradienttexture2d/decode';
 import { useLoadedFiles } from '../../../resources/useLoadedFiles';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { ParticleParam } from './params';
-import {
-  paramCurveReferences,
-  particleFiles,
-  resolveParticleCurve,
-  resolveParticleCurves,
-} from './sceneResources';
+import { paramCurveReferences, resolveParticleCurves } from './sceneResources';
 
 /** The raw references an emitter names for its curves and ramps. */
 export interface ParticleResourceReferences {
@@ -52,12 +49,12 @@ export function useParticleResources(references: ParticleResourceReferences): Pa
     [scaleX, scaleY, scaleZ, colorRamp, colorInitialRamp]
   );
   const planFiles = useCallback(
-    () => particleFiles([...paramCurveReferences(params), ...Object.values(named)], pools),
+    () => referencedFilePaths([...paramCurveReferences(params), ...Object.values(named)], pools),
     [params, named, pools]
   );
   const { loadedFile } = useLoadedFiles(planFiles);
   return useMemo(() => {
-    const curve = (reference: string | undefined) => resolveParticleCurve(reference, pools, loadedFile);
+    const curve = (reference: string | undefined) => resolveCurve(reference, pools, loadedFile);
     const gradient = (reference: string | undefined) => resolveGradient(reference, pools, loadedFile);
     return {
       curves: resolveParticleCurves(params, pools, loadedFile),

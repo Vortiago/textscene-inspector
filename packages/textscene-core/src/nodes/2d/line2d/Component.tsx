@@ -14,10 +14,9 @@ import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemMo
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
-import type { Curve } from '../../../resources/curves/curve/types';
-import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
+import { bakedCurveSampler } from '../../../resources/curves/curve/bakedSample';
 import { buildLineStroke, type LineStroke } from './lineBuilder';
-import { strokeGradient, strokeWidthFactor } from './strokeResources';
+import { strokeGradient } from './strokeResources';
 import type { Line2DProperties } from './types';
 import { useLineResources } from './useLineResources';
 
@@ -25,7 +24,36 @@ export function Line2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Line2DProperties;
   const { gradient, widthCurve } = useLineResources(props.gradient, props.widthCurve);
 
-  const geometry = useMemo(() => lineGeometry(props, gradient, widthCurve), [props, gradient, widthCurve]);
+  const strokeColors = useMemo(() => gradient && strokeGradient(gradient), [gradient]);
+  // Baked once per curve, not per rebuild: the bake samples the curve `bake_resolution` times.
+  const widthFactorAt = useMemo(() => widthCurve && bakedCurveSampler(widthCurve), [widthCurve]);
+  const { points, width, closed, jointMode, sharpLimit, roundPrecision, beginCapMode, endCapMode } = props;
+  const geometry = useMemo(() => {
+    const stroke = buildLineStroke({
+      points,
+      width,
+      closed,
+      jointMode,
+      sharpLimit,
+      roundPrecision,
+      beginCapMode,
+      endCapMode,
+      gradient: strokeColors,
+      widthFactorAt,
+    });
+    return stroke && toGeometry(stroke);
+  }, [
+    points,
+    width,
+    closed,
+    jointMode,
+    sharpLimit,
+    roundPrecision,
+    beginCapMode,
+    endCapMode,
+    strokeColors,
+    widthFactorAt,
+  ]);
   useDisposeOnRelease(geometry);
 
   return (
@@ -88,20 +116,6 @@ function LineMesh({
       <meshBasicMaterial key={program.key} {...program.props} />
     </mesh>
   );
-}
-
-/** The stroke of `props` as a three geometry, or null where Godot draws nothing. */
-function lineGeometry(
-  props: Line2DProperties,
-  gradient: Gradient | null,
-  widthCurve: Curve | null
-): THREE.BufferGeometry | null {
-  const stroke = buildLineStroke({
-    ...props,
-    gradient: gradient && strokeGradient(gradient),
-    widthFactorAt: widthCurve && strokeWidthFactor(widthCurve),
-  });
-  return stroke && toGeometry(stroke);
 }
 
 /** Godot's downward Y is negated here, as for every canvas item. */
