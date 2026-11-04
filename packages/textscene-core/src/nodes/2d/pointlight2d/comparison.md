@@ -80,7 +80,24 @@ HUD panel.
 
 `shadow_filter = PCF5` or `PCF13` averages taps offset in angle across Godot's polar
 shadow map, so the boundary is a stepped ramp that widens with distance. The previewer
-builds the same map and taps it in the light's fragment shader (ADR-0030).
+builds the same map and taps it in the light's fragment shader, as Godot's Vulkan renderer
+does (ADR-0064).
+
+## An unfiltered shadow edge far from its light
+
+<!-- compare: image=unit-pointlight2d-shadow-none-bins status=done fixture=unit-pointlight2d-shadow-none-bins.tscn -->
+
+`shadow_filter = NONE` reads one polar bin per pixel (`canvas.glsl:507-510`), so the edge of
+the shadow is a staircase of bins. Each bin spans more pixels further from the light, so the
+steps grow along the edge.
+
+## One PCF5 tap per bin, far from its light
+
+<!-- compare: image=unit-pointlight2d-shadow-pcf5-bins status=done fixture=unit-pointlight2d-shadow-pcf5-bins.tscn -->
+
+At `shadow_filter_smooth = 0` the five PCF5 taps are one bin apart. Each tap mixes two
+neighbouring bins by how far past the first one it lands (`canvas.glsl:392-399`), which
+shifts the edge by half a bin.
 
 ## Shadow receivers: shadow_item_cull_mask
 
@@ -191,8 +208,3 @@ The linter warns (`resource-type-excluded-by-hint`) when `texture` holds a class
 `enabled` falls back to `true`, `energy` and `texture_scale` to `1.0`, `height` to `0`,
 `offset` to `(0, 0)` and `blend_mode` to `0` (ADD), each with a warning. `color` falls back to opaque
 white silently. `texture` is stored with no reference check.
-
-## Known limitations
-
-- **Approximated** Under a `shadow_filter`, a step of the penumbra can sit one polar bin
-  from Godot's, so its stepped edge shifts slightly in places.

@@ -11,10 +11,10 @@
  */
 
 import * as THREE from 'three';
-import { accumulationState } from './lightQuad.js';
+import { accumulationState, shadowColorUniform } from './lightQuad.js';
 import { FULL_SCREEN_VERTEX } from '../fullScreenPass.js';
 import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap.js';
-import { shadowPixelSize } from './shadowSampling.js';
+import { SHADOW_TAPS, shadowPixelSize } from './shadowTaps.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
 import type { Rgba } from '../../godot/math/math.js';
 import type { Light2DShadowFilter } from '../../godot/scene/light2d.js';
@@ -48,13 +48,11 @@ void main() {
 `;
 
 /**
- * `light_shadow_compute`'s kernels (`canvas.glsl:498-540`) over `texture_shadow` (`:392-399`). The
- * map is one row of nearest texels, so a texel is read at its centre. `SHADOW_FILTER` 0 is
- * NEAREST's single texel, 1 and 2 the PCF5 and PCF13 taps.
+ * The light's taps (`shadowTaps.ts`) over its map, one row of nearest texels read at their centres.
+ * The map clamps at its ends.
  */
 const SHADOW_SAMPLE = /* glsl */ `
 uniform sampler2D uShadowMap;
-uniform float uShadowPixelSize;
 varying vec2 vShadow;
 
 // An empty bin never shadows. The camera can show past the viewport's far edge, where depth
@@ -63,27 +61,9 @@ float shadowTexel(float texel) {
   float binDepth = texture2D(uShadowMap, vec2((clamp(texel, 0.0, ${glslFloat(SHADOW_MAP_BINS - 1)}) + 0.5) / ${glslFloat(SHADOW_MAP_BINS)}, 0.5)).r;
   return binDepth >= float(${SHADOW_MAP_FAR}) ? ${EMPTY_BIN_DEPTH} : binDepth;
 }
-
-float textureShadow(float u, float depth) {
-  float scaled = u * ${glslFloat(SHADOW_MAP_BINS)};
-  float texel = floor(scaled);
-  return mix(step(shadowTexel(texel - 1.0), depth), step(shadowTexel(texel), depth), scaled - texel);
-}
-
+${SHADOW_TAPS}
 float shadowFraction() {
-  float u = vShadow.x;
-  float depth = vShadow.y;
-#if SHADOW_FILTER == 0
-  return step(shadowTexel(floor(u * ${glslFloat(SHADOW_MAP_BINS)})), depth);
-#elif SHADOW_FILTER == 2
-  float shadow = 0.0;
-  for (int tap = -6; tap <= 6; tap++) shadow += textureShadow(u + uShadowPixelSize * float(tap), depth);
-  return shadow / 13.0;
-#else
-  float shadow = 0.0;
-  for (int tap = -2; tap <= 2; tap++) shadow += textureShadow(u + uShadowPixelSize * float(tap), depth);
-  return shadow / 5.0;
-#endif
+  return shadowTaps(vShadow.x, vShadow.y);
 }
 `;
 
@@ -144,12 +124,11 @@ interface DirectionalLightQuadOptions {
 }
 
 function shadowUniforms(shadow: DirectionalShadowSampling): Record<string, THREE.IUniform> {
-  const { r, g, b, a } = shadow.shadowColor;
   return {
     uShadowMap: { value: shadow.map },
     uShadowPixelSize: { value: shadowPixelSize(shadow.smooth) },
     uNdcToShadow: { value: shadow.ndcToShadow },
-    uShadowColor: { value: new THREE.Vector4(r, g, b, a) },
+    uShadowColor: { value: shadowColorUniform(shadow.shadowColor) },
   };
 }
 

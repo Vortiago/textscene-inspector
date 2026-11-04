@@ -15,10 +15,8 @@ function createAccumulationTarget(
   layers: number | null
 ): THREE.WebGLRenderTarget {
   // NoColorSpace writes the raw sRGB-space value.
-  // The stencil carries the shadows, and three's default of off renders silently as no shadows.
-  // WebGL2 allocates one DEPTH24_STENCIL8 attachment beside the colour, so the depth buffer comes
-  // along unused: the pass draws with `depthTest` off.
-  const options = { type, depthBuffer: true, stencilBuffer: true };
+  // The pass draws with `depthTest` off and samples its shadows, so it needs no depth or stencil.
+  const options = { type, depthBuffer: false, stencilBuffer: false };
   const rt =
     layers === null
       ? new THREE.WebGLRenderTarget(1, 1, options)

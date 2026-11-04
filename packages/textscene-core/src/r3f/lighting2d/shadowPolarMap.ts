@@ -1,8 +1,6 @@
 /**
- * Godot's per-light 2D shadow map, a 1D polar depth buffer, built on the CPU.
- * PCF5 and PCF13 average five or thirteen angular taps into a penumbra that a
- * binary stencil cannot represent, so a filtered light samples this map
- * (`lightQuad.ts`) and an unfiltered one keeps `shadowVolumes.ts`.
+ * Godot's per-light 2D shadow map, a 1D polar depth buffer, built on the CPU. Every shadowed
+ * PointLight2D samples it per fragment with Godot's taps (`shadowTaps.ts`).
  */
 
 /*
@@ -11,7 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { edgeCastsShadow, lightRectTest, type LightRect, type ShadowCasterEdges } from './shadowVolumes';
+import { edgeCastsShadow, lightRectTest, type LightRect, type ShadowCasterEdges } from './shadowCasterEdges';
 
 /**
  * Texels in one light's map: the `rendering/2d/shadow_atlas/size` row (project
@@ -56,12 +54,12 @@ export interface ShadowPolarLight {
    * the light's rotation and scale reach the map, and `offset` does not.
    */
   readonly worldToLocal: ArrayLike<number>;
-  /** The light's `rect_cache` in previewer world space, for the cull `buildShadowVolumes` shares. */
+  /** The light's `rect_cache` in previewer world space, which culls the occluders. */
   rect: LightRect;
   /**
    * Godot's `radius_cache`: `local_rect.size.length()` (`renderer_viewport.cpp:485`),
    * the full diagonal of the cookie's rect in light-local units. It sets only the
-   * near and far clips and the normalisation, not the `shadowVolumes.ts` reach.
+   * near and far clips and the normalisation.
    */
   readonly radius: number;
 }
@@ -125,8 +123,7 @@ function binRay(index: number, out: { x: number; y: number }): void {
 /**
  * The map for one light: `SHADOW_MAP_BINS` normalised axis distances, and
  * `SHADOW_MAP_FAR` where nothing casts. `casters` are world-space occluders
- * narrowed by `shadow_item_cull_mask`, and the shared `lightRectTest` cull
- * keeps this map and `buildShadowVolumes` on one occluder set.
+ * narrowed by `shadow_item_cull_mask`, and `lightRectTest` drops those outside the light's rect.
  */
 export function buildShadowPolarMap(
   light: ShadowPolarLight,
@@ -168,7 +165,7 @@ export function buildShadowPolarMap(
       const lay = m10 * wax + m11 * way + m12;
       const lbx = m00 * wbx + m01 * wby + m02;
       const lby = m10 * wbx + m11 * wby + m12;
-      if (!edgeCastsShadow(lax, lay, lbx, lby, 0, 0, cullMode)) continue;
+      if (!edgeCastsShadow(lax, lay, lbx, lby, cullMode)) continue;
 
       // Godot's Y-down local space, where the quadrant rule is stated. A
       // half-ported sign puts the penumbra on the wrong side of a rotated light.

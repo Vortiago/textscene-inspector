@@ -21,8 +21,7 @@ function freeOrdinal(taken: ReadonlyMap<number, unknown>): number {
 }
 
 /**
- * The declared lights by ordinal. The lowest free ordinal is reused, so ordinals stay dense for the
- * 8-bit stencil, which keeps each light's shadow stamps apart in a pass.
+ * The declared lights by ordinal. The lowest free ordinal is reused, so ordinals stay dense.
  */
 export function useLightRegistry(): [
   ReadonlyMap<number, CanvasLightDeclaration>,

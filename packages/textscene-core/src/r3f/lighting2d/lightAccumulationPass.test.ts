@@ -89,7 +89,6 @@ function run(
       target = next;
       layer = activeLayer;
     },
-    clear: () => {},
     render: () => {
       onRender?.();
       const seed = seedMaterial.uniforms.uSeed!.value as THREE.Vector3;
@@ -152,15 +151,15 @@ describe('renderLightLists', () => {
     });
   });
 
-  it('draws the shadow_color buffer from black with the volumes and tint quads alone', () => {
+  it('draws the shadow_color buffer from black with the tint quads alone', () => {
     const tinted = list([SHADOWED(0)], { tint: true });
-    const meshes = [passMesh('volume', 0, 'volume'), passMesh('lit', 0, 'lit'), passMesh('tint', 0, 'tint')];
+    const meshes = [passMesh('lit', 0, 'lit'), passMesh('tint', 0, 'tint')];
     const pass = run([tinted], meshes);
     pass.run();
     expect(pass.draws[1]).toMatchObject({
       target: tinted.shadowTintTarget,
       seed: [0, 0, 0],
-      visible: ['volume', 'tint'],
+      visible: ['tint'],
     });
   });
 
@@ -176,12 +175,12 @@ describe('renderLightLists', () => {
 
   it("draws each light kept apart into its own shadow_color layer, after the light's own layer", () => {
     const apart = list([SHADOWED(0)], { apartTintLayers: [0], tint: true });
-    const meshes = [passMesh('volume', 0, 'volume'), passMesh('lit', 0, 'lit'), passMesh('tint', 0, 'tint')];
+    const meshes = [passMesh('lit', 0, 'lit'), passMesh('tint', 0, 'tint')];
     const pass = run([apart], meshes);
     pass.run();
     expect(pass.draws.slice(2)).toMatchObject([
-      { target: apart.apart!.target, layer: 0, visible: ['volume', 'lit'] },
-      { target: apart.apart!.shadowTintTarget, layer: 0, seed: [0, 0, 0], visible: ['volume', 'tint'] },
+      { target: apart.apart!.target, layer: 0, visible: ['lit'] },
+      { target: apart.apart!.shadowTintTarget, layer: 0, seed: [0, 0, 0], visible: ['tint'] },
     ]);
   });
 

@@ -18,7 +18,7 @@ import {
   type OccluderCullMode,
   type Quad2,
   type ShadowCasterEdges,
-} from './shadowVolumes';
+} from './shadowCasterEdges';
 import { normalizedVector2, type Vector2 } from '../../godot/math/vector.js';
 import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
 

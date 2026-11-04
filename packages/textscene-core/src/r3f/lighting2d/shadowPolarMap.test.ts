@@ -10,7 +10,7 @@ import {
   buildShadowPolarMap,
   type ShadowPolarLight,
 } from './shadowPolarMap';
-import { type LightRect, type OccluderCullMode, type ShadowCasterEdges } from './shadowVolumes';
+import { type LightRect, type OccluderCullMode, type ShadowCasterEdges } from './shadowCasterEdges';
 import { worldEdges } from './testing/worldEdges';
 import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
 
@@ -256,11 +256,10 @@ describe('buildShadowPolarMap', () => {
     expect(map[binOf(0.125)]).toBeCloseTo(100 / ZFAR, 6);
   });
 
-  it('drops an occluder whose bounds miss the light rect, as the stencil path does', () => {
+  it('drops an occluder whose bounds miss the light rect', () => {
     // Godot culls occluders against `rect_cache` before the shadow map is drawn
     // at all, so an occluder inside the far plane but outside the cookie's own
-    // extent casts nothing. Both mechanisms must answer this the same way or a
-    // light's shadow would change shape at `shadow_filter = NONE`.
+    // extent casts nothing.
     const rect: LightRect = { minX: -200, minY: -200, maxX: 200, maxY: 200 };
     const outside = buildShadowPolarMap({ worldToLocal: [1, 0, 0, 0, 1, 0], radius: RADIUS, rect }, [
       segment(400, -50, 400, 50),
@@ -284,9 +283,7 @@ describe('buildShadowPolarMap', () => {
   });
 
   it('honours cull_mode by the edge winding relative to the light', () => {
-    // Same edge, both windings, under both culling modes. This is the test
-    // `edgeCastsShadow` already answers for the stencil path; the polar map must
-    // answer it identically or a filtered light would shadow from the far side.
+    // Same edge, both windings, under both culling modes, as `edgeCastsShadow` answers it.
     const forward = segment(100, -50, 100, 50, OccluderPolygon2DCullMode.CLOCKWISE);
     const reversed = segment(100, 50, 100, -50, OccluderPolygon2DCullMode.CLOCKWISE);
     const bin = binOf(0.125);
@@ -330,5 +327,91 @@ describe('buildShadowPolarMap', () => {
       segment(100, 0, 200, 0),
     ]);
     expect([...degenerate].every((v) => v === SHADOW_MAP_FAR)).toBe(true);
+  });
+});
+
+/**
+ * Whether NONE's single tap shadows the +X-quadrant fragment `(dx, dyUp)` from the light: it reads
+ * the one bin `tex_ofs` floors to and steps against it (`canvas.glsl:507-510`). z_far divides both
+ * sides, so the test is the axis distance against the bin's.
+ */
+function noneTapShadows(map: Float32Array, dx: number, dyUp: number): boolean {
+  const depth = map[Math.floor(plusXCoord(dx, dyUp) * SHADOW_MAP_BINS)]!;
+  return depth <= dx / (1000 * 1.1);
+}
+
+/** Flat `[ax,ay, bx,by, …]` for a closed ring of points. */
+function ring(points: readonly (readonly [number, number])[]): number[] {
+  return points.flatMap((a, i) => {
+    const b = points[(i + 1) % points.length]!;
+    return [a[0], a[1], b[0], b[1]];
+  });
+}
+
+/**
+ * Pinned against Godot 4.6.3: an 80×80 square at Godot (576,324) wound (-40,-40) (40,-40) (40,40)
+ * (-40,40), once per `cull_mode`, through `pnpm ref:godot … --probe 560,324 --probe 576,324
+ * --probe 610,324 --probe 700,324`. Godot reads 63 (shadowed) at the three interior probes under
+ * cull_mode 0 and 1, and 111 / 106 / 97 (lit) under cull_mode 2.
+ */
+describe('cull_mode against measured Godot', () => {
+  const SQUARE = [
+    [136, 40],
+    [216, 40],
+    [216, -40],
+    [136, -40],
+  ] as const;
+  const INSIDE = [160, 176, 210];
+
+  function mapUnder(cullMode: OccluderCullMode, points: readonly (readonly [number, number])[] = SQUARE) {
+    return buildShadowPolarMap(lightAt(0, 0, 1000), [worldEdges(ring(points), cullMode)]);
+  }
+
+  it('shadows the square interior under CULL_DISABLED and CULL_CLOCKWISE for this winding', () => {
+    for (const mode of [OccluderPolygon2DCullMode.DISABLED, OccluderPolygon2DCullMode.CLOCKWISE] as const) {
+      for (const dx of INSIDE)
+        expect(noneTapShadows(mapUnder(mode), dx, 0), `mode ${mode} at ${dx}`).toBe(true);
+    }
+  });
+
+  it('leaves the square interior lit under CULL_COUNTER_CLOCKWISE for this winding', () => {
+    const map = mapUnder(OccluderPolygon2DCullMode.COUNTER_CLOCKWISE);
+    for (const dx of INSIDE) expect(noneTapShadows(map, dx, 0)).toBe(false);
+  });
+
+  it('shadows behind the square in every cull mode', () => {
+    // Godot (700,324) reads 63 in all three modes.
+    for (const mode of [
+      OccluderPolygon2DCullMode.DISABLED,
+      OccluderPolygon2DCullMode.CLOCKWISE,
+      OccluderPolygon2DCullMode.COUNTER_CLOCKWISE,
+    ] as const) {
+      expect(noneTapShadows(mapUnder(mode), 300, 0)).toBe(true);
+    }
+  });
+
+  it('reverses which interior a winding mode shadows when the polygon is reversed', () => {
+    const map = mapUnder(OccluderPolygon2DCullMode.CLOCKWISE, [...SQUARE].reverse());
+    for (const dx of INSIDE) expect(noneTapShadows(map, dx, 0)).toBe(false);
+  });
+});
+
+/**
+ * Pinned against Godot 4.6.3 (`scripts/godot-ref/reference/unit-lightoccluder2d-shadow.png`): a
+ * light at Godot (400,324) and an open occluder from (576,224) to (576,424), probed with
+ * `pnpm ref:godot scenes/fixtures/unit-lightoccluder2d-shadow.tscn --probe 620,198 --probe 620,199
+ * --probe 620,448 --probe 620,449`. Godot reads 97 lit, 63 shadowed, 63 shadowed and 96 lit.
+ */
+describe('the NONE boundary against measured Godot', () => {
+  const map = buildShadowPolarMap(lightAt(0, 0, 1000), [segment(176, 100, 176, -100)]);
+
+  it('puts Godot pixel (620,198) outside the shadow and (620,199) inside', () => {
+    expect(noneTapShadows(map, 220.5, 125.5)).toBe(false);
+    expect(noneTapShadows(map, 220.5, 124.5)).toBe(true);
+  });
+
+  it('mirrors the same step on the other boundary', () => {
+    expect(noneTapShadows(map, 220.5, -124.5)).toBe(true);
+    expect(noneTapShadows(map, 220.5, -125.5)).toBe(false);
   });
 });
