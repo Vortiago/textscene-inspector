@@ -48,13 +48,10 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Line2D: {
     renderGap: [
-      // `antialiased` is read by no Godot draw (`Line2D::_draw`). The texture is not drawn yet.
+      // `antialiased` is read by no Godot draw (`Line2D::_draw`).
       'antialiased',
-      'texture',
-      'texture_mode',
     ],
-    reason:
-      'points is parsed and now validated too; the remaining three are not drawn: Godot ignores antialiased, and the texture is pending.',
+    reason: 'Godot 4.6.3 ignores antialiased, so there is nothing to draw.',
   },
 
   Polygon2D: {

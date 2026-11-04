@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { parseLine2D } from './parser';
+import { LineTextureMode } from '../../../godot/scene/line2d.js';
 import { heading } from '../../../parser/testing/parserKit';
 
 describe('parseLine2D', () => {
@@ -81,5 +82,18 @@ describe('parseLine2D', () => {
     const bare = parseLine2D(heading('Line2D', { name: 'L' }), {});
     expect(bare.gradient).toBeUndefined();
     expect(bare.widthCurve).toBeUndefined();
+  });
+
+  it('keeps the texture reference raw and reads texture_mode, unset and NONE by default', () => {
+    const textured = parseLine2D(heading('Line2D', { name: 'L' }), {
+      texture: 'ExtResource("1_tex")',
+      texture_mode: '2',
+    });
+    expect(textured.texture).toBe('ExtResource("1_tex")');
+    expect(textured.textureMode).toBe(LineTextureMode.STRETCH);
+
+    const bare = parseLine2D(heading('Line2D', { name: 'L' }), {});
+    expect(bare.texture).toBeUndefined();
+    expect(bare.textureMode).toBe(LineTextureMode.NONE);
   });
 });

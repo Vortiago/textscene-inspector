@@ -26,7 +26,7 @@ export const LineCapMode = {
 export const LINE_CAP_MODE_NAMES = enumNamesByValue(LineCapMode);
 
 /** `Line2D::LineTextureMode` (`line_2d.h:52-56`), as the integers `texture_mode` stores. */
-const LineTextureMode = {
+export const LineTextureMode = {
   NONE: 0,
   TILE: 1,
   STRETCH: 2,

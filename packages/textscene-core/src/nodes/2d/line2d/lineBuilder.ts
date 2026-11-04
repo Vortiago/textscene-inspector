@@ -2,7 +2,7 @@
  * Builds the triangles of a Line2D stroke as Godot's `LineBuilder::build` does
  * (`scene/2d/line_builder.cpp:45-432`): one strip along the line, bevel and round joints and
  * round caps as extra triangles, and no area drawn twice. A pure function of numbers, in Godot's
- * space with Y down. `texture` and `texture_mode` are not built yet.
+ * space with Y down. With a `texture_mode` it also gives the UVs, in the texture's own space (v 0 on top).
  */
 
 import { isZeroApprox, type Rgba } from '../../../godot/math/math';
@@ -20,7 +20,7 @@ import {
   type Vector2,
 } from '../../../godot/math/vector';
 import type { Line2DProperties } from './types';
-import { LineCapMode, LineJointMode } from '../../../godot/scene/line2d.js';
+import { LineCapMode, LineJointMode, LineTextureMode } from '../../../godot/scene/line2d.js';
 import { resolveJoint, type Joint } from './lineJoint';
 import {
   createStrip,
@@ -52,11 +52,14 @@ export type LineStrokeOptions = Pick<
   | 'roundPrecision'
   | 'beginCapMode'
   | 'endCapMode'
+  | 'textureMode'
 > & {
   /** Null draws one colour, which the caller owns: `default_color` is not part of the stroke. */
   gradient: StrokeGradient | null;
   /** `Curve.sample_baked` of `width_curve` for an offset from 0 to 1, or null for a constant width. */
   widthFactorAt: ((offset: number) => number) | null;
+  /** The texture's width over its height (`Size2::aspect`), and 1 without a texture (`line_builder.h:51`). */
+  tileAspect: number;
 };
 
 export interface LineStroke {
@@ -64,16 +67,19 @@ export interface LineStroke {
   vertices: Float32Array;
   /** Flat `[r, g, b, a, …]`, one colour per vertex, or null without a gradient. */
   colors: Float32Array | null;
+  /** Flat `[u, v, …]`, one per vertex, or null for `texture_mode` NONE. */
+  uvs: Float32Array | null;
   indices: number[];
 }
 
 /**
  * The stroke of the line, or null where Godot draws nothing: fewer than 2 points, a width of 0
- * (`line_2d.cpp:275`), a zero total length under a gradient or a curve (`line_builder.cpp:115`).
+ * (`line_2d.cpp:275`), a texture aspect of 0 or less (`line_builder.cpp:55`), a zero total length
+ * where the distance is read (`line_builder.cpp:115`).
  */
 export function buildLineStroke(options: LineStrokeOptions): LineStroke | null {
   const points = toPoints(options.points);
-  if (points.length < 2 || options.width === 0) return null;
+  if (points.length < 2 || options.width === 0 || options.tileAspect <= 0) return null;
 
   const walk = new StrokeWalk(options, points);
   if (walk.hasZeroLength) return null;
@@ -112,12 +118,14 @@ class StrokeWalk {
   private color0: Rgba | null;
   private distance = 0;
   private widthFactor = 1;
+  /** The `u` of the pair the walk last passed, which the next pair of a texture mode overwrites. */
+  private uvx = 0;
 
   constructor(
     private readonly options: LineStrokeOptions,
     private readonly points: Vector2[]
   ) {
-    this.strip = createStrip(options.gradient !== null);
+    this.strip = createStrip(options.gradient !== null, options.textureMode !== LineTextureMode.NONE);
     this.halfWidth = f(options.width / 2);
     this.wrapsAround = options.closed && points.length > 2;
     this.widthFactor = options.widthFactorAt ? options.widthFactorAt(0) : 1;
@@ -140,18 +148,20 @@ class StrokeWalk {
   }
 
   finish(): LineStroke | null {
-    const { vertices, colors, indices } = this.strip;
+    const { vertices, colors, uvs, indices } = this.strip;
     if (indices.length === 0) return null;
     return {
       vertices: Float32Array.from(vertices.flatMap(({ x, y }) => [x, y])),
       colors: colors && Float32Array.from(colors.flatMap(({ r, g, b, a }) => [r, g, b, a])),
+      uvs: uvs && Float32Array.from(uvs.flatMap(({ x, y }) => [x, y])),
       indices,
     };
   }
 
-  /** The distance along the line is read by a gradient and a width curve only. */
+  /** The distance along the line is read by a gradient, a width curve and the TILE and STRETCH UVs only. */
   private get needsDistance(): boolean {
-    return this.options.gradient !== null || this.options.widthFactorAt !== null;
+    const { gradient, widthFactorAt, textureMode } = this.options;
+    return gradient !== null || widthFactorAt !== null || textureMode !== LineTextureMode.NONE;
   }
 
   private get modifiedHalfWidth(): number {
@@ -178,16 +188,53 @@ class StrokeWalk {
   private addBeginCap(): void {
     const { beginCapMode, roundPrecision } = this.options;
     const reach = this.modifiedHalfWidth;
+    let uvx = 0;
     if (beginCapMode === LineCapMode.BOX) {
       const back = vector2Scaled(this.forward0, reach);
       this.up0 = vector2Sub(this.up0, back);
       this.down0 = vector2Sub(this.down0, back);
       this.distance = reach;
     } else if (beginCapMode === LineCapMode.ROUND) {
-      newArc(this.strip, this.pos0, vector2Sub(this.up0, this.pos0), -Math.PI, roundPrecision, this.color0);
+      uvx = this.beginCapUvx();
+      const uvRect = { x: 0, y: 0, width: f(uvx * 2), height: 1 };
+      const begin = vector2Sub(this.up0, this.pos0);
+      newArc(this.strip, this.pos0, begin, -Math.PI, roundPrecision, this.color0, uvRect);
       this.distance = reach;
     }
-    stripBegin(this.strip, this.up0, this.down0, this.color0);
+    stripBegin(this.strip, this.up0, this.down0, this.color0, uvx);
+  }
+
+  /** The `u` of the distance walked: tiles of `width * tile_aspect` for TILE, the share of the line for STRETCH. */
+  private uvxAtDistance(): number {
+    const { textureMode, tileAspect, width } = this.options;
+    if (textureMode === LineTextureMode.TILE) return f(this.distance / f(f(width) * tileAspect));
+    if (textureMode === LineTextureMode.STRETCH) return f(this.distance / this.totalDistance);
+    return 0;
+  }
+
+  /**
+   * The `u` where a round begin cap ends and the strip starts (`line_builder.cpp:142-146`). TILE is
+   * half the cap's square, so the square is as wide as the line is across. STRETCH is the whole of
+   * that width, and the rectangle doubles it: Godot's own choice, which the port keeps.
+   */
+  private beginCapUvx(): number {
+    const { textureMode, tileAspect } = this.options;
+    if (textureMode === LineTextureMode.TILE) return f(f(this.widthFactor * 0.5) / tileAspect);
+    if (textureMode === LineTextureMode.STRETCH) return this.stretchedLineWidth();
+    return 0;
+  }
+
+  /** The `u` span of a round end cap's rectangle (`line_builder.cpp:372-376`). */
+  private endCapUvWidth(): number {
+    const { textureMode, tileAspect } = this.options;
+    if (textureMode === LineTextureMode.TILE) return f(this.widthFactor / tileAspect);
+    if (textureMode === LineTextureMode.STRETCH) return this.stretchedLineWidth();
+    return 0;
+  }
+
+  /** The line's width at the current factor, as a share of the line's length. */
+  private stretchedLineWidth(): number {
+    return f(f(f(this.options.width) * this.widthFactor) / this.totalDistance);
   }
 
   /**
@@ -221,6 +268,7 @@ class StrokeWalk {
         sharpLimitSq: f(this.options.sharpLimit * this.options.sharpLimit),
         jointMode: this.options.jointMode,
       });
+      this.uvx = this.uvxAtDistance();
       this.color0 = color1;
       this.pos0 = pos1;
       this.normal0 = normal1;
@@ -236,10 +284,10 @@ class StrokeWalk {
         const center = vector2Scaled(vector2Add(first.up, first.down), 0.5);
         const up = vector2Lerp(center, first.up, this.widthFactor);
         const down = vector2Lerp(center, first.down, this.widthFactor);
-        stripAddQuad(this.strip, up, down, color1);
+        stripAddQuad(this.strip, up, down, color1, this.uvx);
         return;
       }
-      stripAddQuad(this.strip, joint.up1, joint.down1, color1);
+      stripAddQuad(this.strip, joint.up1, joint.down1, color1, this.uvx);
       this.addJointTriangles(joint, pos1, isClosingJoint, color1);
     }
   }
@@ -278,7 +326,7 @@ class StrokeWalk {
       }
     }
     // The joint is too corrupted to reuse, so the strip starts again at the fallback points.
-    if (!joint.isIntersecting) stripBegin(this.strip, this.up0, this.down0, color);
+    if (!joint.isIntersecting) stripBegin(this.strip, this.up0, this.down0, color, this.uvx);
   }
 
   private addRoundJoint(center: Vector2, begin: Vector2, end: Vector2, orientation: Orientation): void {
@@ -293,6 +341,7 @@ class StrokeWalk {
     const { endCapMode, gradient, roundPrecision } = this.options;
     const pos1 = this.points[this.points.length - 1]!;
     const color = gradient?.last ?? null;
+    if (this.needsDistance) this.distance = f(this.distance + vector2DistanceTo(this.pos0, pos1));
     if (this.options.widthFactorAt) this.widthFactor = this.options.widthFactorAt(1);
 
     const reach = vector2Scaled(this.normal0, this.modifiedHalfWidth);
@@ -302,10 +351,14 @@ class StrokeWalk {
       const forward = vector2Scaled(this.forward0, this.modifiedHalfWidth);
       up1 = vector2Add(up1, forward);
       down1 = vector2Add(down1, forward);
+      this.distance = f(this.distance + this.modifiedHalfWidth);
     }
-    stripAddQuad(this.strip, up1, down1, color);
+    const uvx = this.uvxAtDistance();
+    stripAddQuad(this.strip, up1, down1, color, uvx);
     if (endCapMode === LineCapMode.ROUND) {
-      newArc(this.strip, pos1, vector2Sub(up1, pos1), Math.PI, roundPrecision, color);
+      const width = this.endCapUvWidth();
+      const uvRect = { x: f(uvx - f(0.5 * width)), y: 0, width, height: 1 };
+      newArc(this.strip, pos1, vector2Sub(up1, pos1), Math.PI, roundPrecision, color, uvRect);
     }
   }
 }
