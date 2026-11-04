@@ -9,13 +9,17 @@ renders_as: a shaped text run on the canvas
 
 # Label
 
-Label is the 2D UI text node. The previewer shapes the string in the font, size, colour and
-line spacing of its `label_settings`, which override the theme outright, or in the theme's font
-without them, and draws the glyphs on the canvas. A `label_settings.font` resolves in the file
-that wrote the settings, and a font that is loading draws nothing (`label.cpp:112`, ADR-0059).
-A Label whose themes name no font draws the project's `gui/theme/custom_font`, as Godot does (`theme_db.cpp`, `default_theme.cpp:1371-1373`). A path
-that does not load keeps the bundled font, with a warning and a missing-resource row. It
-honours the alignment, case, wrap, line-window and partial-reveal settings.
+Label is the 2D UI text node. The previewer draws the string on the canvas. It shapes the string in
+the font, size, colour and line spacing of `label_settings`, which override the theme outright. Without
+`label_settings`, it shapes in the theme's font.
+
+A `label_settings.font` resolves in the file that wrote the settings. A font that is loading draws
+nothing (`label.cpp:112`, ADR-0059).
+
+A Label whose themes name no font draws the project's `gui/theme/custom_font`, as Godot does
+(`theme_db.cpp`, `default_theme.cpp:1371-1373`). A path that does not load keeps the bundled font,
+with a warning and a missing-resource row. It honours the alignment, case, wrap, line-window and
+partial-reveal settings.
 
 ## Linting
 
