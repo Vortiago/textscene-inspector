@@ -1,4 +1,4 @@
-/** Line2D: a stroked polyline drawn as mesh quads (extends Node2D). */
+/** Line2D: a stroked polyline drawn as Godot's `LineBuilder` builds it (extends Node2D). */
 
 import type { Node2DProperties } from '../../base/node2d/types';
 import type { Rgba } from '../../../godot/math/math';
@@ -12,7 +12,7 @@ export interface Line2DProperties extends Node2DProperties {
   defaultColor: Rgba;
   /**
    * Whether to close the polyline back to the first vertex (default false).
-   * When closed, one extra quad is emitted from last point → first point.
+   * A closed line of more than 2 points joins its last point to its first and ignores both caps.
    */
   closed: boolean;
   /**
@@ -24,4 +24,11 @@ export interface Line2DProperties extends Node2DProperties {
   sharpLimit: number;
   /** Triangles per ROUND joint. Default 8. */
   roundPrecision: number;
+  /** `LineCapMode` of the first and the last point: NONE (0), BOX (1) or ROUND (2). Default NONE. */
+  beginCapMode: number;
+  endCapMode: number;
+  /** The raw `gradient` reference, for `useLineResources` to resolve. With one set, `default_color` is ignored. */
+  gradient: string | undefined;
+  /** The raw `width_curve` reference. The curve scales `width` along the line. */
+  widthCurve: string | undefined;
 }

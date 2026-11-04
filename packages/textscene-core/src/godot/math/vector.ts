@@ -74,6 +74,52 @@ export function vector2Scaled({ x, y }: Vector2, factor: number): Vector2 {
 }
 
 /**
+ * `Vector2::dot` (`core/math/vector2.h`) in `real_t` float.
+ *
+ * @canonical A Vector2 dot product in float32
+ */
+export function vector2Dot(a: Vector2, b: Vector2): number {
+  return f(f(a.x * b.x) + f(a.y * b.y));
+}
+
+/**
+ * `Vector2::cross` (`core/math/vector2.h`) in `real_t` float: the z of the 3D cross product.
+ *
+ * @canonical A Vector2 cross product in float32
+ */
+export function vector2Cross(a: Vector2, b: Vector2): number {
+  return f(f(a.x * b.y) - f(a.y * b.x));
+}
+
+/**
+ * `Vector2::orthogonal` (`core/math/vector2.h:177-179`): `(y, -x)`, the vector turned a quarter
+ * clockwise on a screen whose Y runs down.
+ *
+ * @canonical A Vector2 turned a quarter turn
+ */
+export function vector2Orthogonal({ x, y }: Vector2): Vector2 {
+  return { x: y, y: -x };
+}
+
+/**
+ * `Vector2::distance_to` (`core/math/vector2.cpp:72-74`) in `real_t` float.
+ *
+ * @canonical The distance between two Vector2 in float32
+ */
+export function vector2DistanceTo(a: Vector2, b: Vector2): number {
+  return f(Math.sqrt(f(f(f(a.x - b.x) * f(a.x - b.x)) + f(f(a.y - b.y) * f(a.y - b.y)))));
+}
+
+/**
+ * `Vector2::lerp` (`core/math/vector2.cpp:273-278`): `Math::lerp` of each axis, see {@link lerpf}.
+ *
+ * @canonical A Vector2 linear interpolation in float32
+ */
+export function vector2Lerp(from: Vector2, to: Vector2, weight: number): Vector2 {
+  return { x: lerpf(from.x, to.x, weight), y: lerpf(from.y, to.y, weight) };
+}
+
+/**
  * `Vector2::normalize` (`core/math/vector2.cpp:52-59`) in `real_t` float: a zero vector stays zero.
  *
  * @canonical A unit vector

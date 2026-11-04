@@ -5,9 +5,9 @@
  * THREE of its own.
  */
 
-import { decodeCurveResource } from '../../../resources/curves/curve/decode';
+import { resolveCurve } from '../../../resources/curves/curve/decode';
 import type { Curve } from '../../../resources/curves/curve/types';
-import { referencedFilePath, resolveReferencedResource } from '../../../resources/resolveReference';
+import { referencedFilePath } from '../../../resources/resolveReference';
 import type { LoadedFile } from '../../../resources/scopedResource';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { CPU_PARTICLES_PARAM_COUNT, type ParticleParam } from './params';
@@ -28,7 +28,7 @@ export function resolveParticleCurve(
   pools: SceneResources,
   loadedFile: LoadedFile
 ): Curve | null {
-  return decodeCurveResource(resolveReferencedResource(ref, pools, loadedFile));
+  return resolveCurve(ref, pools, loadedFile);
 }
 
 /**
