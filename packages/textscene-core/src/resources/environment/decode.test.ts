@@ -370,3 +370,69 @@ describe('decodeEnvironment — screen-space reflections', () => {
     expect(r.ssr_fade_out).toBe(0);
   });
 });
+
+describe('decodeEnvironment — screen-space ambient occlusion', () => {
+  it("carries Godot's SSAO defaults (environment.h:131-139)", () => {
+    const r = decodeEnvironment({});
+    expect(r.ssao_enabled).toBe(false);
+    expect(r.ssao_radius).toBe(1);
+    expect(r.ssao_intensity).toBe(2);
+    expect(r.ssao_power).toBe(1.5);
+    expect(r.ssao_detail).toBe(0.5);
+    expect(r.ssao_horizon).toBe(0.06);
+    expect(r.ssao_sharpness).toBe(0.98);
+    expect(r.ssao_light_affect).toBe(0);
+    expect(r.ssao_ao_channel_affect).toBe(0);
+  });
+
+  it('reads the authored SSAO properties', () => {
+    const r = decodeEnvironment({
+      ssao_enabled: 'true',
+      ssao_radius: '4.0',
+      ssao_intensity: '3.5',
+      ssao_power: '3.0',
+      ssao_detail: '0.0',
+      ssao_horizon: '0.5',
+      ssao_sharpness: '0.25',
+      ssao_light_affect: '1.0',
+      ssao_ao_channel_affect: '0.75',
+    });
+    expect(r.ssao_enabled).toBe(true);
+    expect(r.ssao_radius).toBe(4);
+    expect(r.ssao_intensity).toBe(3.5);
+    expect(r.ssao_power).toBe(3);
+    expect(r.ssao_detail).toBe(0);
+    expect(r.ssao_horizon).toBe(0.5);
+    expect(r.ssao_sharpness).toBe(0.25);
+    expect(r.ssao_light_affect).toBe(1);
+    expect(r.ssao_ao_channel_affect).toBe(0.75);
+  });
+
+  it('falls back to the defaults on malformed SSAO literals, never NaN (error path)', () => {
+    const r = decodeEnvironment({
+      ssao_radius: 'wide',
+      ssao_intensity: 'x',
+      ssao_power: 'y',
+      ssao_detail: 'z',
+      ssao_horizon: '?',
+      ssao_sharpness: '-',
+      ssao_light_affect: 'a',
+      ssao_ao_channel_affect: 'b',
+    });
+    expect(r.ssao_radius).toBe(1);
+    expect(r.ssao_intensity).toBe(2);
+    expect(r.ssao_power).toBe(1.5);
+    expect(r.ssao_detail).toBe(0.5);
+    expect(r.ssao_horizon).toBe(0.06);
+    expect(r.ssao_sharpness).toBe(0.98);
+    expect(r.ssao_light_affect).toBe(0);
+    expect(r.ssao_ao_channel_affect).toBe(0);
+  });
+
+  it('keeps a value past the inspector hint, as every SSAO setter assigns it bare (edge case)', () => {
+    // `environment.cpp:324-390`: no setter clamps.
+    const r = decodeEnvironment({ ssao_radius: '32.0', ssao_intensity: '-1.0' });
+    expect(r.ssao_radius).toBe(32);
+    expect(r.ssao_intensity).toBe(-1);
+  });
+});

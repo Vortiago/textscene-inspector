@@ -129,6 +129,37 @@ describe('createEnvironmentSettings', () => {
     expect(settings.ssr).toEqual({ maxSteps: 32, fadeIn: 0.5, fadeOut: 4, depthTolerance: 0.05 });
   });
 
+  it('has no screen-space ambient occlusion while ssao_enabled is off', () => {
+    expect(createEnvironmentSettings(base({ ssao_radius: 4 }), DEFAULT_CLEAR_COLOR).ssao).toBeNull();
+  });
+
+  it('carries the screen-space ambient occlusion while ssao_enabled is on', () => {
+    const settings = createEnvironmentSettings(
+      base({
+        ssao_enabled: true,
+        ssao_radius: 4,
+        ssao_intensity: 3,
+        ssao_power: 2.5,
+        ssao_detail: 0.25,
+        ssao_horizon: 0.5,
+        ssao_sharpness: 0.1,
+        ssao_light_affect: 0.75,
+        ssao_ao_channel_affect: 0.5,
+      }),
+      DEFAULT_CLEAR_COLOR
+    );
+    expect(settings.ssao).toEqual({
+      radius: 4,
+      intensity: 3,
+      power: 2.5,
+      detail: 0.25,
+      horizon: 0.5,
+      sharpness: 0.1,
+      lightAffect: 0.75,
+      aoChannelAffect: 0.5,
+    });
+  });
+
   it('has no volumetric fog while volumetric_fog_enabled is off', () => {
     expect(createEnvironmentSettings(base(), DEFAULT_CLEAR_COLOR).volumetricFog).toBeNull();
   });

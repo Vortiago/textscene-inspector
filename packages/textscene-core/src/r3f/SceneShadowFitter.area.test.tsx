@@ -13,6 +13,7 @@ import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
 import { AREA_LIGHT_FALLOFFS, installAreaLightUniforms } from './areaLight/areaLightFalloff';
 import { litUniformArray } from './testing/litUniformArray';
+import { untilAreaLightShows } from './testing/untilAreaLightShows';
 
 import './nodes/index';
 
@@ -29,6 +30,17 @@ async function renderScene(sceneText: string): Promise<Renderer> {
       </SelectionProvider>
     </HierarchyProvider>
   );
+}
+
+/** Waits until the area light of node `name` shows. */
+async function untilShown(renderer: Renderer, name: string): Promise<void> {
+  const node = (renderer.scene.instance as THREE.Scene).getObjectByName(name);
+  if (!node) throw new Error(`expected a node named ${name} in the scene, found none`);
+  const light = node.children.find(
+    (child): child is THREE.RectAreaLight => child instanceof THREE.RectAreaLight
+  );
+  if (!light) throw new Error(`expected a RectAreaLight under ${name}, found none`);
+  await untilAreaLightShows(light);
 }
 
 function renderThrough(renderer: Renderer): void {
@@ -63,6 +75,7 @@ area_attenuation = 2.0
 light_specular = 0.25
 `)
     );
+    await untilShown(renderer, 'Area');
     renderThrough(renderer);
     expect([...areaLightFalloffs().subarray(0, 3)]).toEqual([4, 2, 0.5]);
   });
@@ -78,6 +91,7 @@ area_range = 1.0
 area_range = 8.0
 `)
     );
+    await untilShown(renderer, 'Shown');
     renderThrough(renderer);
     expect(areaLightFalloffs()[0]).toBe(8);
   });
