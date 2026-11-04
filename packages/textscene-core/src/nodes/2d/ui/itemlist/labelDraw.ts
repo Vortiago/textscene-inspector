@@ -7,27 +7,21 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { clipLineToDrawBox } from '../../../../r3f/controls/native/text/lineDrawClip';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
+import {
+  clipLineToDrawBox,
+  textParagraphLineShiftPx,
+} from '../../../../r3f/controls/native/text/lineDrawClip';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { TextLayoutResult, TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 
 /**
- * One line's x shift inside its box, as `TextParagraph::draw` applies it while the box has a width
- * (`text_paragraph.cpp:888-921`). A wrapped label is CENTER: a line that fits moves by half the slack,
- * floored, and a wider one stays put under LTR and moves to the trailing edge under RTL. A single
- * line is LEFT under LTR and RIGHT under RTL (`item_list.cpp:1668,1670`), which goes negative for a
- * wider line. `lineWidthPx` is `shaped_text_get_width`, ceiled (`shapedTextSizeWidthPx`).
+ * The alignment ItemList gives its label's paragraph: CENTER for a wrapped label, and for a single
+ * line LEFT under LTR and RIGHT under RTL (`item_list.cpp:1668,1670`).
  */
-function itemListLineShiftPx(
-  lineWidthPx: number,
-  boxWidthPx: number,
-  wrapped: boolean,
-  rtl: boolean
-): number {
-  if (boxWidthPx <= 0) return 0;
-  if (!wrapped) return rtl ? boxWidthPx - lineWidthPx : 0;
-  if (lineWidthPx <= boxWidthPx) return Math.floor((boxWidthPx - lineWidthPx) / 2);
-  return rtl ? boxWidthPx - lineWidthPx : 0;
+function itemListLabelAlignment(wrapped: boolean, rtl: boolean): number {
+  if (wrapped) return HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER;
+  return rtl ? HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT : HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT;
 }
 
 /** A label line, cut to its box, with its x shift from the box origin. */
@@ -46,8 +40,10 @@ export function itemListDrawnLabel(
   wrapped: boolean,
   rtl: boolean
 ): DrawnLabelLine[] {
+  const alignment = itemListLabelAlignment(wrapped, rtl);
   return layout.lines.map((line) => {
-    const shiftPx = itemListLineShiftPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, wrapped, rtl);
+    // `lineWidthPx` is `shaped_text_get_width`, ceiled.
+    const shiftPx = textParagraphLineShiftPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, alignment, rtl);
     return { line: clipLineToDrawBox(line, boxWidthPx, shiftPx), shiftPx };
   });
 }

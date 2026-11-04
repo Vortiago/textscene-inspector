@@ -5,18 +5,25 @@
  * supplies `dependsOn`: the orchestrator never inspects scene content. A pass with a `gate` renders
  * by its update mode, as Godot's `draw_viewports` decides (`renderer_viewport.cpp:769-813`).
  */
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useFrame } from '@react-three/fiber';
-import type * as THREE from 'three';
 import * as logger from '../../logger.js';
 import { orderViewportPasses, type ViewportPassCycle } from '../../nodes/viewport/passOrder.js';
 import {
   GateClock,
   renderingPassIds,
   type GatedPass,
-  type TargetRenderState,
+  type PassGate,
 } from '../../nodes/viewport/renderGate.js';
-import type { UpdateGate } from '../../nodes/viewport/subviewport/viewportGate.js';
 import { useOptionalHierarchy } from './HierarchyContext.js';
 import { useSceneAssetsSettled } from '../useSceneAssetsSettled.js';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
@@ -35,16 +42,6 @@ export interface ViewportPass {
   render: () => void;
   /** What decides whether the pass renders. A pass without one renders every frame. */
   gate?: PassGate;
-}
-
-/** What the orchestrator reads of a SubViewport to decide whether its pass renders. */
-export interface PassGate extends UpdateGate {
-  /** The renders of the pass's target. The pass's `render` takes each one. */
-  state: TargetRenderState;
-  /** Whether a consumer samples the target now. */
-  isSampled(): boolean;
-  /** Starts the target over, as a new parse of the scene makes a new one. */
-  restart(gl: THREE.WebGLRenderer): void;
 }
 
 /** Publishes a pass at `path` and returns the cleanup. */
@@ -169,63 +166,48 @@ export function ViewportPassOrchestrator(): null {
   useTextureAtlasFrame();
   const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
   const { isSettled: isLoaded } = useSceneAssetsSettled();
-  const clock = useRef(new GateClock()).current;
-  // The scene graph the clock counts for. A new parse makes new viewports, which restart the count.
-  const clockGraph = useRef(sceneGraph);
+  const clock = useSceneGateClock(sceneGraph);
+  const gated = useMemo(() => gatedPassesOf(passes), [passes]);
+  useEffect(() => clock.prune((id) => passes.has(id)), [clock, passes]);
 
   useFrame(({ gl }) => {
     updateTextureAtlases(gl);
-    // The first frame of a new scene counts as unloaded: its assets have not registered as pending yet.
-    const isRestarting = clockGraph.current !== sceneGraph;
-    if (isRestarting) {
-      clockGraph.current = sceneGraph;
-      restartGate(clock, passes, gl);
+    const frame = clock.begin(isLoaded);
+    if (order.length === 0) return;
+    beginStep(gl, 'SubViewports');
+    const rendering = renderingPassIds(gated, frame);
+    for (const id of order) {
+      const pass = passes.get(id);
+      if (!pass || cycles.has(id)) continue;
+      if (pass.gate && !rendering.has(id)) continue;
+      pass.render();
+      clock.spend(id);
     }
-    const frame = clock.begin(isLoaded && !isRestarting);
-    if (order.length > 0) {
-      beginStep(gl, 'SubViewports');
-      const gated = gatedPassesOf(passes);
-      const rendering = gated.length > 0 ? renderingPassIds(gated, frame) : null;
-      for (const id of order) {
-        const pass = passes.get(id);
-        if (!pass || cycles.has(id)) continue;
-        if (pass.gate && !rendering?.has(id)) continue;
-        pass.render();
-        clock.spend(id);
-      }
-      endStep(gl, 'SubViewports');
-    }
+    endStep(gl, 'SubViewports');
     markSampled(clock, passes);
   });
 
   return null;
 }
 
-function restartGate(
-  clock: GateClock,
-  passes: ReadonlyMap<string, ViewportPass>,
-  gl: THREE.WebGLRenderer
-): void {
-  clock.restart();
-  for (const { gate } of passes.values()) gate?.restart(gl);
+/**
+ * The clock of the scene `sceneGraph` holds. A new parse makes new viewports, which start the count
+ * over, and the first frame of a new scene counts as unloaded.
+ */
+function useSceneGateClock(sceneGraph: unknown): GateClock {
+  const [mountedGraph] = useState(sceneGraph);
+  return useMemo(() => new GateClock(sceneGraph !== mountedGraph), [sceneGraph, mountedGraph]);
 }
 
 function gatedPassesOf(passes: ReadonlyMap<string, ViewportPass>): GatedPass[] {
   const gated: GatedPass[] = [];
   for (const [id, { gate }] of passes) {
-    if (gate) {
-      gated.push({
-        id,
-        updateMode: gate.updateMode,
-        enclosingId: gate.enclosingPath,
-        hasRendered: gate.state.hasRendered,
-      });
-    }
+    if (gate)
+      gated.push({ id, updateMode: gate.updateMode, enclosingId: gate.enclosingPath, state: gate.state });
   }
   return gated;
 }
 
 function markSampled(clock: GateClock, passes: ReadonlyMap<string, ViewportPass>): void {
   for (const [id, { gate }] of passes) if (gate?.isSampled()) clock.mark(id);
-  clock.prune((id) => passes.has(id));
 }
