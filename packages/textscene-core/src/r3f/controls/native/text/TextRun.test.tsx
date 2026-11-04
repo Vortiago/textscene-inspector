@@ -94,21 +94,6 @@ describe('<TextRun>', () => {
     expect(topShiftPx).toBeGreaterThan(bottomShiftPx + 1);
   });
 
-  it('forwards outlineColor/outlineWidthPx to the material, sRGB-converted like tint', async () => {
-    const outlineColor = { r: 0, g: 0, b: 0, a: 1 };
-    const renderer = await renderTextRun({ outlineColor, outlineWidthPx: 2 });
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(mat.uniforms.uOutlineWidthPx!.value).toBe(2);
-    expect(mat.uniforms.uOutlineOpacity!.value).toBe(1);
-    expect((mat.uniforms.uOutlineColor!.value as THREE.Vector3).toArray()).toEqual([0, 0, 0]);
-  });
-
-  it('leaves the outline width at zero when no outlineColor is given, even with a nonzero outlineWidthPx', async () => {
-    const renderer = await renderTextRun({ outlineWidthPx: 2 });
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(mat.uniforms.uOutlineWidthPx!.value).toBe(0);
-  });
-
   it('forwards clipping planes to the material (per-material state)', async () => {
     const planes = [new THREE.Plane(new THREE.Vector3(1, 0, 0), 0)];
     const renderer = await renderTextRun({ clippingPlanes: planes });

@@ -954,6 +954,8 @@ describe('labelEffectiveTextTheme', () => {
       shadowSize: 1,
       shadowColor: { r: 0, g: 0, b: 0, a: 0 },
       shadowOffset: { x: 1, y: 1 },
+      stackedOutlines: [],
+      stackedShadows: [],
     };
     expect(labelEffectiveTextTheme(themeResolved, settings, {})).toEqual({
       fontSizePx: 16,
@@ -974,6 +976,8 @@ describe('labelEffectiveTextTheme', () => {
       shadowSize: 1,
       shadowColor: { r: 0, g: 0, b: 0, a: 0 },
       shadowOffset: { x: 1, y: 1 },
+      stackedOutlines: [],
+      stackedShadows: [],
     };
     expect(labelEffectiveTextTheme(themeResolved, settings, {}).lineSpacingPx).toBe(3);
   });
@@ -1005,6 +1009,8 @@ describe('labelOutlineTheme', () => {
       shadowSize: 1,
       shadowColor: { r: 0, g: 0, b: 0, a: 0 },
       shadowOffset: { x: 1, y: 1 },
+      stackedOutlines: [],
+      stackedShadows: [],
     };
     const n = node({}, { constants: { outline_size: 3 }, labelSettings });
     expect(labelOutlineTheme(n)).toEqual({ size: 5, color: { r: 0, g: 1, b: 0, a: 1 } });
@@ -1046,6 +1052,8 @@ describe('labelShadowTheme', () => {
       shadowSize: 7,
       shadowColor: { r: 0, g: 0, b: 0, a: 0.9 },
       shadowOffset: { x: 3, y: 3 },
+      stackedOutlines: [],
+      stackedShadows: [],
     };
     const n = node({}, { constants: { shadow_outline_size: 2 }, labelSettings });
     expect(labelShadowTheme(n)).toEqual({

@@ -11,6 +11,7 @@ import { peekGlyphOutlines } from './sceneFontOutlines';
 import type { TextLayoutResult } from './textLayout';
 import { TextRun, type TextRunProps } from './TextRun';
 import { useSceneFontSettleCount } from './useSceneFontSettleCount';
+import { usePendingWhile } from '../../../../resources/usePendingWhile';
 
 type BundledOutlineRingProps = Pick<
   TextRunProps,
@@ -42,6 +43,7 @@ export default function BundledOutlineRing({ layout, ...run }: BundledOutlineRin
   // eslint-disable-next-line react-hooks/exhaustive-deps -- see above.
   const face = useMemo(() => bundledRingFace(layout.fontMetrics), [layout.fontMetrics, settleCount]);
   const ringLayout = useMemo(() => (face ? { ...layout, fontMetrics: face } : null), [layout, face]);
+  usePendingWhile(!ringLayout);
   if (!ringLayout) return null;
   return <TextRun {...run} layout={ringLayout} />;
 }

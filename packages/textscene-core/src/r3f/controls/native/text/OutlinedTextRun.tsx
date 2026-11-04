@@ -2,7 +2,7 @@
  * `<OutlinedTextRun>`: a `<TextRun>` that draws the theme text outline of `Button`, `ProgressBar`
  * and the Controls that share their pass (`button.cpp:458-462`): a stroked ring, then the fill.
  */
-import { lazy, Suspense, useMemo } from 'react';
+import { lazy, useMemo } from 'react';
 import { multiplyModulate } from '../../../canvasItemModulate';
 import type { Rgba } from '../../../../godot/math/math';
 import { outlineStrokeWidthPx } from './textOutline';
@@ -10,16 +10,19 @@ import { resolveTextOutline, type TextOutlineTheme } from '../textTheme';
 import type { ShareNode } from '../solveTree';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { TextRun, type TextRunProps } from './TextRun';
+import { PendingSuspense } from '../../../../resources/PendingSuspense';
 
 // The bundled font bytes load with the ring, not with every Control.
 const BundledOutlineRing = lazy(() => import('./BundledOutlineRing'));
 
 /**
- * The fill draws above the stroked ring. Two runs of one renderOrder sort by creation, and the
- * ring's mesh can be created after the fill's. Less than the step between two Controls' render
- * orders, so the fill stays below the next Control.
+ * The render order of layer `index` of `count` stacked text layers: the layers spread over the
+ * one unit below the next Control's order, so they keep their draw order, which three does not
+ * keep for two runs of one order, and none reaches the Control that follows.
  */
-const FILL_ABOVE_RING = 0.05;
+export function textLayerRenderOrder(renderOrder: number, index: number, count: number): number {
+  return renderOrder + index / count;
+}
 
 /** The outline theme of `n` multiplied by the Control's own tint, in sRGB, as `<TextRun>` converts it once. */
 export function useTintedTextOutline(
@@ -30,34 +33,51 @@ export function useTintedTextOutline(
   return useMemo(() => ({ color: multiplyModulate(color, ownTint), sizePx }), [color, sizePx, ownTint]);
 }
 
-type OutlinedTextRunProps = Pick<
-  TextRunProps,
-  'layout' | 'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder'
-> & {
+type RunLookProps = Pick<TextRunProps, 'layout' | 'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder'>;
+
+type OutlineRingRunProps = RunLookProps & {
+  /** `outline_size` in px. */
+  sizePx: number;
+};
+
+/**
+ * One stroked outline ring, without the fill (ADR-0040). A canvas face strokes its own ring. The
+ * bundled atlas face strokes it on the bundled canvas face, and its pass waits for that face.
+ */
+export function OutlineRingRun({ sizePx, ...run }: OutlineRingRunProps) {
+  const ring = { ...run, strokeWidthPx: outlineStrokeWidthPx(sizePx) };
+  if (isCanvasFontMetrics(run.layout.fontMetrics)) return <TextRun {...ring} />;
+  return (
+    <PendingSuspense>
+      <BundledOutlineRing {...ring} />
+    </PendingSuspense>
+  );
+}
+
+type OutlinedTextRunProps = RunLookProps & {
   /** Already tinted. No outline draws at a size of 0 or a zero alpha (`button.cpp:460`). */
   outline: TextOutlineTheme;
 };
 
 export function OutlinedTextRun({ layout, outline, renderOrder = 0, ...run }: OutlinedTextRunProps) {
   const hasRing = outline.sizePx > 0 && outline.color.a > 0;
-  const ring = {
-    ...run,
-    layout,
-    tint: outline.color,
-    strokeWidthPx: outlineStrokeWidthPx(outline.sizePx),
-    renderOrder,
-  };
+  const layerCount = hasRing ? 2 : 1;
   return (
     <>
-      {hasRing &&
-        (isCanvasFontMetrics(layout.fontMetrics) ? (
-          <TextRun {...ring} />
-        ) : (
-          <Suspense fallback={null}>
-            <BundledOutlineRing {...ring} />
-          </Suspense>
-        ))}
-      <TextRun {...run} layout={layout} renderOrder={hasRing ? renderOrder + FILL_ABOVE_RING : renderOrder} />
+      {hasRing && (
+        <OutlineRingRun
+          {...run}
+          layout={layout}
+          tint={outline.color}
+          sizePx={outline.sizePx}
+          renderOrder={textLayerRenderOrder(renderOrder, 0, layerCount)}
+        />
+      )}
+      <TextRun
+        {...run}
+        layout={layout}
+        renderOrder={textLayerRenderOrder(renderOrder, layerCount - 1, layerCount)}
+      />
     </>
   );
 }

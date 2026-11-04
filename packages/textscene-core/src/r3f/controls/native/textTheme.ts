@@ -62,7 +62,7 @@ export interface TextOutlineTheme {
 
 const DEFAULT_OUTLINE_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 
-/** The `font_outline_color` and `outline_size` theme items of a Control that draws its text through `Button`'s or `ProgressBar`'s outline pass. */
+/** The `font_outline_color` and `outline_size` theme items of a Control that draws its text through `OutlinedTextRun` or a Label's effect layers. */
 export function resolveTextOutline(n: Pick<ShareNode, 'colors' | 'constants'>): TextOutlineTheme {
   return {
     color: n.colors['font_outline_color'] ?? DEFAULT_OUTLINE_COLOR,
