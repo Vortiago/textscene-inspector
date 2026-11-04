@@ -41,8 +41,11 @@ The lenient parser reads `fill_mode`, `show_percentage`, `indeterminate` and
 outside 0-3 draws as `FILL_BEGIN_TO_END`: `set_fill_mode`'s `ERR_FAIL_INDEX` refuses
 the out-of-range write, so the node keeps its class-default mode.
 
-The percentage's outline is a ring of `outline_size / 4` px under the fill. It strokes on the
-canvas painter for the bundled font too (ADR-0040), as it does in the Button family.
+The percentage's outline is a stroked contour ring with a one-sided radius of `outline_size / 4` px
+(`text_server_adv.cpp:1383`), drawn before the text (`progress_bar.cpp:180-181`). It draws on the
+canvas painter (painter B) for the bundled font and a scene font alike (ADR-0040). The bundled font
+keeps the percentage fill on the atlas. The golden `progress-bar-bundled-outline` matches Godot's ring
+ink to 5 px of 1477 at size 48 with `outline_size 16`.
 
 ## Known limitations
 

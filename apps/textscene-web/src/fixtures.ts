@@ -1828,6 +1828,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Progress Bar Bundled Outline",
+    "file": "unit-progress-bar-bundled-outline.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Progress Bar Embolden Fill",
     "file": "unit-progress-bar-embolden-fill.tscn",
     "category": "Other"
