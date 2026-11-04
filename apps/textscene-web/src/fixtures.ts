@@ -1423,6 +1423,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Lineedit Outline",
+    "file": "unit-lineedit-outline.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Lineedit Right Icon",
     "file": "unit-lineedit-right-icon.tscn",
     "category": "Other"

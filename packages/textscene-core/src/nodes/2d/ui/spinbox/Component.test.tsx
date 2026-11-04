@@ -1,5 +1,5 @@
 /**
- * `<SpinBox>` render contract: LineEdit-style field chrome, one clipped run of formatted text and
+ * `<SpinBox>` render contract: LineEdit-style field chrome, one run of formatted text and
  * the stepper icons, with no button background without a `theme_override_styles/*` override (both
  * are `StyleBoxEmpty` by default). It asserts structure, tint and render order, not pixels.
  */
