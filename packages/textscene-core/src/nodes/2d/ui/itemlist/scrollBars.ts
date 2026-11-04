@@ -14,15 +14,13 @@ import { ItemListScrollHintMode } from '../../../../godot/scene/gui';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
+  SCROLL_HINT_VERTICAL_HEIGHT,
   scrollBarGrabberGeometry,
   scrollBarGrabberRect,
   scrollBarMinimumSize,
-} from '../shared/scrollBarSolver';
-import {
-  SCROLL_HINT_VERTICAL_HEIGHT,
   type ScrollBarPlacement,
   type ScrollHintPlacement,
-} from '../scrollcontainer/nativeSolver';
+} from '../shared/scrollBarSolver';
 import { itemListMirrorX, type ItemListScrollRange } from './nativeSolver';
 
 interface ItemListScrollBarsInput {

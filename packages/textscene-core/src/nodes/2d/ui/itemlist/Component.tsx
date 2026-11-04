@@ -12,7 +12,7 @@ import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { HAIRLINE_CENTRE_OFFSET_PX, ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import {
   ControlClipProvider,
   useControlClipPlanes,
@@ -37,6 +37,7 @@ import {
   itemIconDraw,
   itemIconPackedSize,
   itemListGuideColor,
+  itemListBarMinimums,
   itemListDrawClip,
   itemListGuideLines,
   itemListIconSlotKey,
@@ -59,19 +60,11 @@ import {
   shapeItemListText,
 } from './nativeSolver';
 import { ScrollBarChrome, ScrollHintChrome, SCROLL_HINT_MODULATE } from '../shared/ScrollChrome';
-import { scrollBarMinimumSize } from '../shared/scrollBarSolver';
 import { itemListScrollBars } from './scrollBars';
 import { itemListDrawnLabel, itemListLabelIsDrawn, type DrawnLabelLine } from './labelDraw';
 import type { ItemListItem, ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-
-/**
- * `draw_line` without a width is a two-point line: Vulkan lights the pixel within half a pixel of
- * it, and on a tie the one before it. A 1 px quad centred on the line covers that pixel (ADR-0057;
- * measured on a guide line, Godot draws it one row above the separator's Y).
- */
-const GUIDE_LINE_CENTRE_OFFSET_PX = 0.5;
 
 /**
  * Pass 1: this row's own icon/text size contribution: what `packItemListRows` needs, before rects
@@ -252,7 +245,7 @@ export function ItemList({
 
   const maxColumnWidth = itemListMaxColumnWidth(itemSizes, hSeparation);
   const pageWidth = rect.w - panelMargin.x;
-  const verticalBarMinWidth = useMemo(() => scrollBarMinimumSize(true, theme).x, [theme]);
+  const verticalBarMinWidth = useMemo(() => itemListBarMinimums(theme).verticalWidth, [theme]);
 
   const packed = useMemo(
     () =>
@@ -444,7 +437,7 @@ export function ItemList({
       {guideLines.map((line, index) => (
         <CanvasItemGroup
           key={`guide-${index}`}
-          position={[origin.x + line.x, -(origin.y + line.y - GUIDE_LINE_CENTRE_OFFSET_PX), 0]}
+          position={[origin.x + line.x, -(origin.y + line.y - HAIRLINE_CENTRE_OFFSET_PX), 0]}
         >
           <ControlQuad
             renderOrder={renderOrder}
@@ -455,9 +448,9 @@ export function ItemList({
           />
         </CanvasItemGroup>
       ))}
-      {visibleRows.map((geometry, index) => (
+      {visibleRows.map((geometry) => (
         <ItemListRow
-          key={index}
+          key={`${geometry.rect.x},${geometry.rect.y}`}
           geometry={geometry}
           origin={origin}
           tint={tint.own}

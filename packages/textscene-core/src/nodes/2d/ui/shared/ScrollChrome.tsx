@@ -16,7 +16,7 @@ import { SCROLL_HINT_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { applyUvWindow, flippedUvWindow, FULL_UV_WINDOW } from '../../../../r3f/uvWindow';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rgba } from '../../../../godot/math/math';
-import type { ScrollBarPlacement, ScrollHintPlacement } from '../scrollcontainer/nativeSolver';
+import type { ScrollBarPlacement, ScrollHintPlacement } from './scrollBarSolver';
 
 /**
  * `scroll_hint_vertical_color` and `scroll_hint_horizontal_color`: `Color(0, 0, 0)`

@@ -14,6 +14,16 @@ import { materialProgramInputs } from '../../materialProgramInputs';
 import type { MaterialAttach } from '../../materials/swappedMaterials';
 import { FadedMaterials } from '../../materials/FadedMaterials';
 
+/** The thickness of a `draw_line` without a width, in Godot px: one hairline pixel. */
+export const HAIRLINE_THICKNESS_PX = 1;
+
+/**
+ * `draw_line` without a width is a two-point line, not a quad (`renderer_canvas_cull.cpp:754-763`).
+ * Vulkan lights the pixel within half a pixel of it, and on a tie the one before it. A quad whose
+ * top edge sits this far above the line covers that pixel under the top-left tie rule (ADR-0057).
+ */
+export const HAIRLINE_CENTRE_OFFSET_PX = HAIRLINE_THICKNESS_PX / 2;
+
 interface ControlQuadProps {
   width: number;
   height: number;

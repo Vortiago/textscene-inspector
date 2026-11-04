@@ -515,6 +515,14 @@ export function packItemListRows(input: ItemListPackInput): ItemListPackResult {
   }
 }
 
+/** The two scrollbars' minimum sizes, each read once per solve or draw: width of the vertical bar, height of the horizontal one. */
+export function itemListBarMinimums(theme: NativeTheme): { verticalWidth: number; horizontalHeight: number } {
+  return {
+    verticalWidth: scrollBarMinimumSize(true, theme).x,
+    horizontalHeight: scrollBarMinimumSize(false, theme).y,
+  };
+}
+
 // --- Minimum size: ItemList::get_minimum_size (item_list.cpp:2136-2146) ----
 
 /** Godot's own class default (`item_list.h:142`): callers pass this, not `?? 0`, when `maxColumns` is unset. */
@@ -575,14 +583,14 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
   const maxColumnWidth = itemListMaxColumnWidth(itemSizes, hSeparation);
   const panelMin = contentMarginSize(pickItemListPanelStyleBox(n.styleBoxes, ctx.theme));
   const tentative = ctx.tentativeRect?.(n);
-  const verticalBarMinWidth = scrollBarMinimumSize(true, ctx.theme).x;
+  const barMinimums = itemListBarMinimums(ctx.theme);
   const packed = packItemListRows({
     itemSizes,
     maxColumnWidth,
     sameColumnWidth: props.sameColumnWidth === true,
     maxColumns: props.maxColumns ?? ITEM_LIST_DEFAULT_MAX_COLUMNS,
     fitSize: tentative ? tentative.w - panelMin.x : Number.POSITIVE_INFINITY,
-    verticalBarMinWidth,
+    verticalBarMinWidth: barMinimums.verticalWidth,
     rtl: n.rtl,
     wraparoundItems: props.wraparoundItems !== false,
     autoWidth: props.autoWidth === true,
@@ -591,13 +599,11 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
   });
 
   if (props.autoWidth) {
-    minSize.x = packed.contentWidth + panelMin.x + (packed.vertical.visible ? verticalBarMinWidth : 0);
+    minSize.x = packed.contentWidth + panelMin.x + (packed.vertical.visible ? barMinimums.verticalWidth : 0);
   }
   if (props.autoHeight) {
     minSize.y =
-      packed.contentHeight +
-      panelMin.y +
-      (packed.horizontal.visible ? scrollBarMinimumSize(false, ctx.theme).y : 0);
+      packed.contentHeight + panelMin.y + (packed.horizontal.visible ? barMinimums.horizontalHeight : 0);
   }
   return minSize;
 };
