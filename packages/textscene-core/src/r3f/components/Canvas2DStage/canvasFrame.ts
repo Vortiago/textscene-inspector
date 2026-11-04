@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { copyTexels, reversedTexelRows, type TexelPlacement, type TexelTransfer } from '../../texelCopy';
 import { takeOutputLikeDrawingBuffer } from '../../outputTarget';
 import { beginStep, endStep } from '../../frameProfile/frameProfile';
+import { drawOffscreen } from '../../offscreen';
 
 /**
  * Copies `frame` to the target, each texel to the pixel under it from the frame's row
@@ -73,6 +74,30 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
       throw error;
     }
     copyToTarget(gl, this, previous, transfer);
+  }
+
+  /** Draws `scene` as a render that clears, or over the target's bytes as one that does not. */
+  draw(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, clears: boolean): void {
+    if (clears) this.render(gl, scene, camera);
+    else this.renderOverTarget(gl, scene, camera);
+  }
+
+  /**
+   * Draws `scene` over the bytes the bound target holds, as a canvas draws over a target that is
+   * never cleared (`renderer_canvas_render_rd.cpp:2276-2283`). The frame takes those bytes first,
+   * and its depth is the only thing the render clears. The target must hold sRGB bytes.
+   */
+  private renderOverTarget(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void {
+    const target = gl.getRenderTarget();
+    this.sizeLike(gl, target);
+    if (target) drawOffscreen(gl, () => copyTexels(gl, target.texture, this, this.rowsReversed()));
+    const clearsColor = gl.autoClearColor;
+    gl.autoClearColor = false;
+    try {
+      this.render(gl, scene, camera);
+    } finally {
+      gl.autoClearColor = clearsColor;
+    }
   }
 
   /** The copy neither scales nor filters, so the frame is as large as the output it copies to. */

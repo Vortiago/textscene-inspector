@@ -48,11 +48,12 @@ ${GLOW}
 [node name="Root" type="Node3D"]
 ${rootGlows ? glowingEnvironment('RootEnvironment', '.') : ''}
 [node name="Viewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 own_world_3d = ${ownWorld}
 
 [node name="Camera3D" type="Camera3D" parent="Viewport"]
 ${viewportGlows ? glowingEnvironment('ViewportEnvironment', 'Viewport') : ''}
-${witness ? '[node name="Witness" type="SubViewport" parent="."]\n\n[node name="Camera3D" type="Camera3D" parent="Witness"]\n' : ''}`;
+${witness ? '[node name="Witness" type="SubViewport" parent="."]\nrender_target_update_mode = 4\n\n[node name="Camera3D" type="Camera3D" parent="Witness"]\n' : ''}`;
 }
 
 /**
@@ -67,10 +68,12 @@ ${GLOW}
 [node name="Root" type="Node2D"]
 
 [node name="First" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="First"]
 ${glowingEnvironment('FirstEnvironment', 'First')}
 [node name="Viewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="Viewport"]
 
@@ -85,6 +88,7 @@ ${GLOW}
 [node name="Root" type="Node2D"]
 
 [node name="Viewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="Viewport"]
 ${glowingEnvironment('ViewportEnvironment', 'Viewport')}`;

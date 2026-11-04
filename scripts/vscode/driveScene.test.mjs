@@ -25,14 +25,14 @@ describe('isWebviewUrl', () => {
 });
 
 describe('pickCachedBuild', () => {
-  const entries = ['vscode-linux-x64-1.85.0', 'vscode-linux-x64-1.140.0', 'vscode-linux-x64-1.9.0'];
+  const entries = ['vscode-linux-x64-1.105.0', 'vscode-linux-x64-1.140.0', 'vscode-linux-x64-1.9.0'];
 
   it('takes the newest build for stable, by number and not by string', () => {
     expect(pickCachedBuild(entries, 'stable')).toBe('vscode-linux-x64-1.140.0');
   });
 
   it('takes the exact build for a version', () => {
-    expect(pickCachedBuild(entries, '1.85.0')).toBe('vscode-linux-x64-1.85.0');
+    expect(pickCachedBuild(entries, '1.105.0')).toBe('vscode-linux-x64-1.105.0');
   });
 
   it('returns null when the version is not cached', () => {

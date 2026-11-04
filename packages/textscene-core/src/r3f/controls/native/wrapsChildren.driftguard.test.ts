@@ -11,10 +11,16 @@ import { controlComponentRegistry } from '../ControlComponentRegistry';
 
 /**
  * `CanvasLayer` and its subclass `ParallaxBackground` (`parallax_background.h:34`) publish a draw-order
- * band and a modulate scope. `ScrollContainer` and `GraphEdit` publish clip planes, as both set
+ * band and a modulate scope. `ScrollContainer`, `GraphEdit` and `ItemList` publish clip planes, as each sets
  * `clip_contents`. A chrome-only painter does not wrap, so the walker places its children as siblings.
  */
-const WRAPS_CHILDREN = new Set(['CanvasLayer', 'ParallaxBackground', 'ScrollContainer', 'GraphEdit']);
+const WRAPS_CHILDREN = new Set([
+  'CanvasLayer',
+  'ParallaxBackground',
+  'ScrollContainer',
+  'GraphEdit',
+  'ItemList',
+]);
 
 describe('wrapsChildren ↔ ControlComponentRegistry drift guard', () => {
   it('every scope-establishing type declares it on its real registration', () => {

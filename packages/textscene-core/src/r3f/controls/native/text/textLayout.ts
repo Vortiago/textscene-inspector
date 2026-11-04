@@ -103,6 +103,12 @@ export interface ShapeTextOptions {
    */
   autowrapTrimFlags?: number;
   /**
+   * `BREAK_MANDATORY`: a hard break starts a new line. It defaults to true, as every `Label` sets it.
+   * `ItemList` leaves it off for a single-line label (`BREAK_NONE`, `item_list.cpp:48`), so a newline
+   * stays inside its one line at zero width.
+   */
+  breakMandatory?: boolean;
+  /**
    * `TextServer::shaped_text_set_preserve_control`: keeps a control character as a hex-code box glyph
    * (`text/hexCodeBox.ts`) instead of dropping it at zero width. Only the `draw_control_chars` property
    * of `LineEdit` and `TextEdit` sets it.
@@ -215,13 +221,15 @@ interface BreakFlags {
    * WORD overflows.
    */
   adaptive: boolean;
+  /** BREAK_MANDATORY: a hard-break glyph ends the line. */
+  mandatory: boolean;
 }
 
 /**
  * `Label::_shape()`'s mode-to-flags map (`scene/gui/label.cpp` ~209-225), each mode with
  * `BREAK_MANDATORY` too. OFF sets no soft flag, so only hard breaks start a line.
  */
-function breakFlagsForAutowrap(mode: EnumValue<typeof AutowrapMode>): BreakFlags {
+function breakFlagsForAutowrap(mode: EnumValue<typeof AutowrapMode>): Omit<BreakFlags, 'mandatory'> {
   switch (mode) {
     case AutowrapMode.AUTOWRAP_ARBITRARY:
       return { wordBound: false, graphemeBound: true, adaptive: false };
@@ -496,8 +504,7 @@ function shapedTextGetLineBreaks(
       continue;
     }
 
-    // BREAK_MANDATORY is always on, whatever the autowrap mode.
-    if (g.isHardBreak) {
+    if (flags.mandatory && g.isHardBreak) {
       const curSafeBrk = i;
       let startPos = prevSafeBreak;
       let endPos = i;
@@ -601,11 +608,12 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     autowrapTrimFlags,
     trimIndent = false,
     preserveControl = false,
+    breakMandatory = true,
   } = options;
   const hasTabStops = !!tabStopsPx && tabStopsPx.length > 0;
   // Uppercase before indices are assigned, so a `fontSizePxAt` keyed on the transformed text lines up.
   const transformed = uppercase ? text.toUpperCase() : text;
-  const flags = breakFlagsForAutowrap(autowrapMode);
+  const flags = { ...breakFlagsForAutowrap(autowrapMode), mandatory: breakMandatory };
   const trim = {
     start: autowrapTrimFlags === undefined ? true : (autowrapTrimFlags & BREAK_TRIM_START_EDGE_SPACES) !== 0,
     end: autowrapTrimFlags === undefined ? true : (autowrapTrimFlags & BREAK_TRIM_END_EDGE_SPACES) !== 0,

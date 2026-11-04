@@ -19,6 +19,8 @@ import {
 import { parentPathOf } from '../../../utils/nodePath.js';
 import { isViewportBoundary } from './viewportBoundary.js';
 import { resolveViewportSubtree, viewportContentKind } from './viewportContent.js';
+import type { SubViewportProperties } from './types.js';
+import { viewportGateAt, type ViewportGate } from './viewportGate.js';
 
 /** A sub-viewport whose target is produced by rasterising a Control subtree. */
 export interface ControlRasterViewport extends SceneScope {
@@ -33,6 +35,8 @@ export interface ControlRasterViewport extends SceneScope {
    * pass cannot see from the viewport's children.
    */
   inheritedRtl: boolean | null;
+  /** What the tree says of the viewport's update mode: its container, and the viewport around it. */
+  gate: ViewportGate;
 }
 
 /**
@@ -89,7 +93,14 @@ export function collectControlRasterViewports(
       isViewportBoundary(step.node.type) &&
       viewportContentKind(resolveViewportSubtree(tree, link)) === 'dom'
     ) {
-      found.push({ path, node: step.node, inheritedRtl, ...step.scope });
+      const { render_target_update_mode: authoredMode } = step.node.properties as SubViewportProperties;
+      found.push({
+        path,
+        node: step.node,
+        inheritedRtl,
+        gate: viewportGateAt(tree, path, authoredMode),
+        ...step.scope,
+      });
     }
 
     descend(rtlBelow(step.node, inheritedRtl, layoutDirectionEnv));

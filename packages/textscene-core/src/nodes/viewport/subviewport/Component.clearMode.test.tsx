@@ -1,0 +1,91 @@
+/**
+ * A SubViewport clears its target by `render_target_clear_mode` (`renderer_viewport.cpp:373-378`).
+ * A canvas pass that does not clear draws over the bytes of the render before. A 3D pass repaints
+ * its whole target, over opaque black where no clear ever set the colour (`renderer_scene_render_rd.cpp:1464-1469`).
+ */
+import { describe, expect, it } from 'vitest';
+import { framesOf, type PassDraw } from './viewportPasses.testkit';
+
+import '../../../r3f/nodes/index';
+import '../../../r3f/controls/index';
+
+const CANVAS_VIEWPORT = (clearMode: number) => `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="View" type="SubViewport" parent="."]
+size = Vector2i(32, 32)
+render_target_update_mode = 4
+render_target_clear_mode = ${clearMode}
+
+[node name="Shape" type="Polygon2D" parent="View"]
+color = Color(1, 0, 0, 0.25)
+polygon = PackedVector2Array(0, 0, 16, 0, 16, 32)
+`;
+
+const WORLD_VIEWPORT = (clearMode: number) => `[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="View" type="SubViewport" parent="."]
+own_world_3d = true
+size = Vector2i(32, 32)
+render_target_update_mode = 4
+render_target_clear_mode = ${clearMode}
+
+[node name="Camera3D" type="Camera3D" parent="View"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+current = true
+
+[node name="Box" type="MeshInstance3D" parent="View"]
+mesh = SubResource("BoxMesh_1")
+`;
+
+/** The draw into the `View` pass in each frame. */
+async function viewDrawsByFrame(tscn: string, frames: number): Promise<PassDraw[]> {
+  const perFrame = await framesOf(tscn, frames);
+  return perFrame.map((draws) => draws.find((draw) => draw.scene.name === 'View::offscreen')!);
+}
+
+const ALWAYS = 0;
+const NEVER = 1;
+const ONCE = 2;
+
+describe('a canvas SubViewport and its clear mode', () => {
+  it('clears the colour on every render under ALWAYS', async () => {
+    const draws = await viewDrawsByFrame(CANVAS_VIEWPORT(ALWAYS), 3);
+    expect(draws.map((draw) => draw.clearsColor)).toEqual([true, true, true]);
+  });
+
+  it('clears no colour under NEVER, so the canvas draws over the target', async () => {
+    const draws = await viewDrawsByFrame(CANVAS_VIEWPORT(NEVER), 3);
+    expect(draws.map((draw) => draw.clearsColor)).toEqual([false, false, false]);
+  });
+
+  it('clears the first render only under ONCE', async () => {
+    const draws = await viewDrawsByFrame(CANVAS_VIEWPORT(ONCE), 3);
+    expect(draws.map((draw) => draw.clearsColor)).toEqual([true, false, false]);
+  });
+});
+
+describe('a 3D SubViewport and its clear mode', () => {
+  const PROJECT_CLEAR = '4d4d4d';
+  const BLACK = '000000';
+
+  it('paints the project clear colour under ALWAYS', async () => {
+    const [draw] = await viewDrawsByFrame(WORLD_VIEWPORT(ALWAYS), 1);
+    expect(draw!.clearColor).toBe(PROJECT_CLEAR);
+  });
+
+  it('paints opaque black under NEVER, as no clear ever set the colour', async () => {
+    const draws = await viewDrawsByFrame(WORLD_VIEWPORT(NEVER), 2);
+    expect(draws.map((draw) => draw.clearColor)).toEqual([BLACK, BLACK]);
+  });
+
+  it('keeps the colour of the one clear under ONCE', async () => {
+    const draws = await viewDrawsByFrame(WORLD_VIEWPORT(ONCE), 2);
+    expect(draws.map((draw) => draw.clearColor)).toEqual([PROJECT_CLEAR, PROJECT_CLEAR]);
+  });
+});

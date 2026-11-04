@@ -5,12 +5,7 @@ import * as vscode from 'vscode';
 import type { PreviewCapture } from '../previewCaptureQueue';
 import type { TscnToolHost } from './registerTscnTools';
 import { registerTscnTools, TOOL_IDS } from './registerTscnTools';
-import {
-  createMockFileData,
-  createMockUri,
-  MockLanguageModelDataPart,
-  vscode as vscodeMocks,
-} from '../test-setup';
+import { createMockFileData, createMockUri, vscode as vscodeMocks } from '../test-setup';
 
 const manifest = JSON.parse(readFileSync(join(import.meta.dirname, '..', '..', 'package.json'), 'utf8')) as {
   contributes: { languageModelTools: { when?: string }[] };
@@ -80,17 +75,14 @@ describe('registerTscnTools', () => {
     expect(ctx.subscriptions).toHaveLength(5);
   });
 
-  it('registers no capture tool on a VS Code without the image part', () => {
-    // The module mock and this export share the one class, so its static method is the
-    // same object `registerTscnTools` sees.
-    const image = MockLanguageModelDataPart.image;
-    (MockLanguageModelDataPart as { image?: unknown }).image = undefined;
+  it('registers no capture tool on a VS Code whose host fails on an image part', () => {
+    vscodeMocks.version = '1.105.0';
     try {
       registerTscnTools(context(), host());
       const ids = vscodeMocks.lm.registerTool.mock.calls.map((call: unknown[]) => call[0]);
       expect(ids).not.toContain(TOOL_IDS.capture);
     } finally {
-      (MockLanguageModelDataPart as { image?: unknown }).image = image;
+      vscodeMocks.version = '1.106.0';
     }
   });
 
@@ -105,17 +97,6 @@ describe('registerTscnTools', () => {
   it('hides every contributed tool behind the setting', () => {
     const tools = manifest.contributes.languageModelTools;
     expect(tools.map((tool) => tool.when)).toEqual(tools.map(() => 'config.textscene.agentTools.enabled'));
-  });
-
-  it('registers nothing on a VS Code without the API', () => {
-    const original = vscodeMocks.lm.registerTool;
-    vscodeMocks.lm.registerTool = undefined;
-    try {
-      registerTscnTools(context(), host());
-      expect(original).not.toHaveBeenCalled();
-    } finally {
-      vscodeMocks.lm.registerTool = original;
-    }
   });
 
   it('the scene tree tool returns the parsed hierarchy', async () => {

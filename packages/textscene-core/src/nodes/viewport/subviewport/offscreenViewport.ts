@@ -9,6 +9,7 @@ import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
 import { takeOutputLikeDrawingBuffer } from '../../../r3f/outputTarget';
 import { markSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { pinColorSpace } from '../../../resources/textures/textureView';
+import { BLACK } from '../renderGate';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
 import type { Rect2 } from '../../../godot/math/rect2';
@@ -260,4 +261,22 @@ export function orthoFrameForSize(size: Vector2): OrthoFrame {
     bottom: -height / 2,
     position: [width / 2, -height / 2, 1000],
   };
+}
+
+/**
+ * Sets every texel of `target` to what a Godot target holds before its first render: (0, 0, 0, 0),
+ * which a consumer of an opaque target samples as black (`transparentBg` false). The target takes
+ * opaque black there, which draws the same.
+ */
+export function clearTarget(
+  gl: THREE.WebGLRenderer,
+  target: THREE.WebGLRenderTarget,
+  transparentBg: boolean
+): void {
+  renderToOffscreenTarget(gl, {
+    target,
+    clearColor: BLACK,
+    transparentBg,
+    draw: () => gl.clear(true, true, true),
+  });
 }
