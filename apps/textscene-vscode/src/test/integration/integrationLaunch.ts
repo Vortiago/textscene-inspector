@@ -12,6 +12,9 @@ import * as path from 'path';
 /** The variable that names the suite's start marker inside the extension host. */
 export const SUITE_STARTED_MARKER_ENV = 'TEXTSCENE_SUITE_STARTED_MARKER';
 
+/** The variable that names the file where the suite records how many tests failed. */
+export const SUITE_RESULT_FILE_ENV = 'TEXTSCENE_SUITE_RESULT_FILE';
+
 /**
  * The variable that says whether the window launches with `--disable-gpu`. A developer sets
  * it to `1` to launch any platform that way. The launcher always passes the suite `1` or
@@ -21,6 +24,12 @@ export const DISABLE_GPU_ENV = 'TEXTSCENE_DISABLE_GPU';
 
 /** The variable that picks the VS Code build the suite runs on. */
 export const VSCODE_VERSION_ENV = 'TEXTSCENE_VSCODE_VERSION';
+
+/**
+ * The variable that names the executable of a VS Code fork, such as VSCodium or Cursor.
+ * With it set, the suite runs on that editor and downloads no VS Code.
+ */
+export const EDITOR_EXECUTABLE_ENV = 'TEXTSCENE_EDITOR_EXECUTABLE';
 
 /**
  * The value of `VSCODE_VERSION_ENV` that names the oldest VS Code the manifest
@@ -41,6 +50,14 @@ export function vscodeTestVersion(requested: string | undefined, enginesRange: s
   return floor;
 }
 
+/** What `runTests` runs on: a fork's own executable, or a VS Code version it downloads. */
+export function editorBuild(
+  editorExecutable: string | undefined,
+  version: string
+): { vscodeExecutablePath: string } | { version: string } {
+  return editorExecutable ? { vscodeExecutablePath: editorExecutable } : { version };
+}
+
 /** The subset of `@vscode/test-electron`'s options this runner supplies. */
 export interface IntegrationLaunchOptions {
   extensionDevelopmentPath: string;
@@ -57,6 +74,8 @@ export interface IntegrationLaunchPaths {
   userDataDir: string;
   /** The suite writes this file as it starts, so the launcher knows a test may have run. */
   suiteStartedMarker: string;
+  /** The suite writes its failed-test count here when it ends. */
+  suiteResultFile: string;
 }
 
 /**
@@ -72,6 +91,7 @@ export function integrationLaunchPaths(runnerDir: string): IntegrationLaunchPath
     // A short user-data path: macOS caps an IPC socket path at 103 characters.
     userDataDir: path.join(os.tmpdir(), 'vscode-test-data'),
     suiteStartedMarker: path.join(os.tmpdir(), 'vscode-test-suite-started'),
+    suiteResultFile: path.join(os.tmpdir(), 'vscode-test-suite-result'),
   };
 }
 
@@ -117,7 +137,11 @@ export function integrationLaunchOptions(
       // that never loads shows its script error in the job log.
       '--enable-logging=stderr',
     ],
-    extensionTestsEnv: { [SUITE_STARTED_MARKER_ENV]: paths.suiteStartedMarker, ...gpu.extensionTestsEnv },
+    extensionTestsEnv: {
+      [SUITE_STARTED_MARKER_ENV]: paths.suiteStartedMarker,
+      [SUITE_RESULT_FILE_ENV]: paths.suiteResultFile,
+      ...gpu.extensionTestsEnv,
+    },
   };
 }
 
@@ -139,9 +163,23 @@ export interface IntegrationLaunchDeps {
  */
 export async function launchIntegrationTests(deps: IntegrationLaunchDeps): Promise<void> {
   deps.prepareWorkspace(deps.paths.workspaceRoot);
+  // A result left by an earlier run must not pass a run that records none.
+  fs.rmSync(deps.paths.suiteResultFile, { force: true });
   await relaunchIfHostExitsEarly(deps.paths.suiteStartedMarker, () =>
     deps.launch(integrationLaunchOptions(deps.paths))
   );
+}
+
+/**
+ * Throws unless `suiteResultFile` records zero failed tests. Cursor's window exits 0 after a
+ * run of 16 failed tests (CI, 2026-11-04), so the exit code alone is not the verdict.
+ */
+export function assertNoFailedTests(suiteResultFile: string): void {
+  if (!fs.existsSync(suiteResultFile)) {
+    throw new Error(`expected the suite result at ${suiteResultFile}, found none`);
+  }
+  const failed = fs.readFileSync(suiteResultFile, 'utf8').trim();
+  if (failed !== '0') throw new Error(`expected 0 failed tests, found ${failed}`);
 }
 
 /**
