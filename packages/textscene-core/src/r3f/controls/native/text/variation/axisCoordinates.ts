@@ -11,7 +11,7 @@
  */
 
 import { OPENTYPE_NAME_BY_TAG } from '../../../../../godot/text/openTypeNames';
-import { ftDivFix, ftMulDiv, type OpentypeCoordinates } from '../fontMetrics';
+import { FIXED_16_16_ONE, ftDivFix, ftMulDiv, type OpentypeCoordinates } from '../fontMetrics';
 import type { AxisSegment, AxisVariations } from './avar';
 import { tagString, type FvarAxis } from './fvar';
 import { itemDelta, mappedItem } from './itemVariationStore';
@@ -27,7 +27,7 @@ const asFloat = Math.fround;
 
 /** `CLAMP(value * 65536.0, minimum, maximum)` assigned to an `FT_Fixed`, which truncates. */
 function clampedFixed(value: number, axis: FvarAxis): number {
-  const scaled = asFloat(value) * 0x10000;
+  const scaled = asFloat(value) * FIXED_16_16_ONE;
   if (Number.isNaN(scaled)) return axis.defaultValue;
   return Math.trunc(scaled < axis.minimum ? axis.minimum : scaled > axis.maximum ? axis.maximum : scaled);
 }
@@ -52,11 +52,11 @@ export function designCoordinates(axes: readonly FvarAxis[], opentype: OpentypeC
 function normalizedInRange(coordinate: number, axis: FvarAxis): number {
   if (coordinate > axis.defaultValue)
     return coordinate >= axis.maximum
-      ? 0x10000
+      ? FIXED_16_16_ONE
       : ftDivFix(coordinate - axis.defaultValue, axis.maximum - axis.defaultValue);
   if (coordinate < axis.defaultValue)
     return coordinate <= axis.minimum
-      ? -0x10000
+      ? -FIXED_16_16_ONE
       : ftDivFix(coordinate - axis.defaultValue, axis.defaultValue - axis.minimum);
   return 0;
 }
@@ -86,11 +86,10 @@ export function normalizedCoordinates(
   if (!avar?.store) return normalized;
 
   // The store reads the half-normalised coordinates, which every axis then replaces at once.
-  const halfNormalized = Int32Array.from(normalized);
-  normalized.forEach((value, axis) => {
-    const [outer, inner] = mappedItem(avar.axisMap, axis);
-    const delta = itemDelta(avar.store!, outer, inner, halfNormalized) | 0;
-    normalized[axis] = Math.max(-0x10000, Math.min(0x10000, value + delta * 4));
+  const { store, axisMap } = avar;
+  return normalized.map((value, axis) => {
+    const [outer, inner] = mappedItem(axisMap, axis);
+    const delta = itemDelta(store, outer, inner, normalized) | 0;
+    return Math.max(-FIXED_16_16_ONE, Math.min(FIXED_16_16_ONE, value + delta * 4));
   });
-  return normalized;
 }

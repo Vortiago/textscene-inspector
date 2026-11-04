@@ -45,7 +45,7 @@ const MIN_FUNCTION_DEFS = 64;
 const MAX_TWILIGHT_POINTS = 0xffff - PHANTOM_POINT_COUNT;
 
 /** `tt_face_load_cvt`: the control values in 26.6 font units. */
-function controlValuesOf(sfnt: SfntFile): Int32Array {
+export function controlValuesOf(sfnt: SfntFile): Int32Array {
   const bytes = tableBytes(sfnt, 'cvt ');
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   return Int32Array.from(

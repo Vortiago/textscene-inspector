@@ -9,12 +9,16 @@
 
 import { ftMulFix } from '../fontMetrics';
 import { fixedToFdot6 } from './fixedPoint';
-import { InvalidTupleVariationsError, activeTuples, readPackedDeltas } from './tupleVariations';
+import {
+  InvalidTupleVariationsError,
+  TUPLE_COUNT_MASK,
+  activeTuples,
+  readPackedDeltas,
+} from './tupleVariations';
 import type { SfntFile } from '../sfntTables';
 
 const CVAR_VERSION = 0x00010000;
 const CVAR_HEADER_SIZE = 8;
-const TUPLE_COUNT_MASK = 0x0fff;
 
 /**
  * The control values of the font at the normalised coordinates, in 26.6 font units, or null when the
@@ -58,14 +62,10 @@ export function variedControlValues(
       points === 'all' ? controlValues.length : points.length
     );
     if (!run) continue;
-    if (points === 'all') {
-      for (let index = 0; index < controlValues.length; index++)
-        deltas[index]! += ftMulFix(run.deltas[index]!, apply);
-      continue;
-    }
-    points.forEach((index, entry) => {
+    for (let entry = 0; entry < run.deltas.length; entry++) {
+      const index = points === 'all' ? entry : points[entry]!;
       if (index < controlValues.length) deltas[index]! += ftMulFix(run.deltas[entry]!, apply);
-    });
+    }
   }
   return Int32Array.from(controlValues, (value, index) => value + fixedToFdot6(deltas[index]!));
 }

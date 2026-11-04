@@ -25,7 +25,7 @@ interface ItemVariationData {
   readonly regionIndices: readonly number[];
   readonly wordDeltaCount: number;
   readonly hasLongWords: boolean;
-  readonly deltaSets: Uint8Array;
+  readonly deltaSets: DataView;
 }
 
 export interface ItemVariationStore {
@@ -63,6 +63,10 @@ function readRegions(reader: ByteReader, axisCount: number, regionCount: number)
   );
 }
 
+function dataViewOf(bytes: Uint8Array): DataView {
+  return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+}
+
 function readItemVariationData(reader: ByteReader, regionCount: number): ItemVariationData | null {
   const itemCount = reader.u16();
   const wordCountField = reader.u16();
@@ -80,7 +84,7 @@ function readItemVariationData(reader: ByteReader, regionCount: number): ItemVar
     regionIndices,
     wordDeltaCount,
     hasLongWords,
-    deltaSets: reader.take(itemCount * bytesPerItem),
+    deltaSets: dataViewOf(reader.take(itemCount * bytesPerItem)),
   };
 }
 
@@ -150,16 +154,14 @@ export function itemDelta(
 
   const bytesPerDelta = data.hasLongWords ? 2 : 1;
   const itemSize = (data.wordDeltaCount + data.regionIndices.length) * bytesPerDelta;
-  const view = new DataView(data.deltaSets.buffer, data.deltaSets.byteOffset, data.deltaSets.byteLength);
   let at = itemSize * innerIndex;
   let sum = 0;
-  data.regionIndices.forEach((regionIndex, master) => {
-    const isWord = master < data.wordDeltaCount;
-    const width = (isWord ? 2 : 1) * bytesPerDelta;
-    const scalar = regionScalar(store.regions[regionIndex]!, normalized);
-    if (scalar !== 0) sum += readDelta(view, at, width) * scalar;
+  for (let master = 0; master < data.regionIndices.length; master++) {
+    const width = (master < data.wordDeltaCount ? 2 : 1) * bytesPerDelta;
+    const scalar = regionScalar(store.regions[data.regionIndices[master]!]!, normalized);
+    if (scalar !== 0) sum += readDelta(data.deltaSets, at, width) * scalar;
     at += width;
-  });
+  }
   return Math.floor((sum + 0x8000) / 0x10000);
 }
 

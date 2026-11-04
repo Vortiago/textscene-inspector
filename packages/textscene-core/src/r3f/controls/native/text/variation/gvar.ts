@@ -9,11 +9,12 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { ftDivFix, ftMulFix } from '../fontMetrics';
+import { FIXED_26_6_ONE, ftDivFix, ftMulFix } from '../fontMetrics';
 import { tableFits, type SfntFile } from '../sfntTables';
 import { fdot14ToFixed, fixedToFdot6, fixedToInt, intToFixed } from './fixedPoint';
 import {
   InvalidTupleVariationsError,
+  TUPLE_COUNT_MASK,
   activeTuples,
   readPackedDeltas,
   type TuplePoints,
@@ -24,7 +25,6 @@ const GVAR_HEADER_SIZE = 20;
 const GVAR_VERSION = 0x00010000;
 const LONG_OFFSETS = 1;
 /** `Fixed 26.6` of a font unit: a point at 64 times its value. */
-const FDOT6_ONE = 64;
 
 /** The `gvar` of a font, read for its header. */
 export interface GlyphVariations {
@@ -210,6 +210,89 @@ function tupleDeltas(
   return x && y ? { x: x.deltas, y: y.deltas } : null;
 }
 
+/** The sum of the tuple deltas that apply to a glyph, in 16.16, one run for each axis. */
+type AccumulatedDeltas = readonly [Float64Array, Float64Array];
+
+/** One tuple's deltas, each scaled by `apply`, added to `accumulated` at the points it names. */
+function accumulateTuple(
+  accumulated: AccumulatedDeltas,
+  apply: number,
+  points: TuplePoints,
+  deltas: { x: Int32Array; y: Int32Array },
+  { x, y, contourEnds }: GlyphPoints
+): void {
+  const pointCount = x.length;
+  if (points === 'all') {
+    for (let point = 0; point < pointCount; point++) {
+      accumulated[0][point]! += ftMulFix(deltas.x[point]!, apply);
+      accumulated[1][point]! += ftMulFix(deltas.y[point]!, apply);
+    }
+    return;
+  }
+  const original = [Float64Array.from(x, intToFixed), Float64Array.from(y, intToFixed)] as const;
+  const varied = [Float64Array.from(original[0]), Float64Array.from(original[1])] as const;
+  const hasDelta = new Uint8Array(pointCount);
+  points.forEach((point, index) => {
+    if (point >= pointCount) return;
+    hasDelta[point] = 1;
+    varied[0][point]! += ftMulFix(deltas.x[index]!, apply);
+    varied[1][point]! += ftMulFix(deltas.y[index]!, apply);
+  });
+  // The phantom points follow the contours' last point, so no contour reaches them.
+  interpolateDeltas(contourEnds, original, varied, hasDelta);
+  for (let point = 0; point < pointCount; point++) {
+    accumulated[0][point]! += varied[0][point]! - original[0][point]!;
+    accumulated[1][point]! += varied[1][point]! - original[1][point]!;
+  }
+}
+
+/** The tuples of glyph `glyphIndex` that apply to `normalized`, summed into `accumulated`. */
+function accumulateGlyphDeltas(
+  table: GlyphVariations,
+  normalized: Int32Array,
+  glyphIndex: number,
+  glyph: GlyphPoints,
+  accumulated: AccumulatedDeltas
+): void {
+  const dataStart = table.glyphOffsets[glyphIndex];
+  const dataEnd = table.glyphOffsets[glyphIndex + 1];
+  if (dataStart === undefined || dataEnd === undefined || dataStart === dataEnd) return;
+  const dataSize = dataEnd - dataStart;
+  if (dataEnd > table.bytes.length)
+    throw new InvalidTupleVariationsError('glyph variation data past the font');
+  const tupleCount = ((table.bytes[dataStart]! << 8) | table.bytes[dataStart + 1]!) & TUPLE_COUNT_MASK;
+  const dataOffset = (table.bytes[dataStart + 2]! << 8) | table.bytes[dataStart + 3]!;
+  if (dataOffset > dataSize || tupleCount * 4 > dataSize)
+    throw new InvalidTupleVariationsError('invalid glyph variation array header');
+
+  const tuples = activeTuples(
+    {
+      bytes: table.bytes,
+      headerAt: dataStart,
+      dataStart,
+      limit: dataEnd,
+      sharedTuples: table.sharedTuples,
+      axisCount: table.axisCount,
+    },
+    normalized
+  );
+  for (const { apply, points, deltasAt } of tuples) {
+    const deltas = tupleDeltas(table, points, deltasAt, dataEnd, glyph.x.length);
+    if (deltas && points) accumulateTuple(accumulated, apply, points, deltas, glyph);
+  }
+}
+
+/** The advances that HVAR or VVAR adjust already must not move again by the phantom deltas. */
+function clearAdjustedPhantoms(accumulated: AccumulatedDeltas, adjusted: AdjustedAdvances): void {
+  const phantomStart = accumulated[0].length - 4;
+  const phantoms = [adjusted.horizontal, adjusted.horizontal, adjusted.vertical, adjusted.vertical];
+  phantoms.forEach((isAdjusted, offset) => {
+    if (!isAdjusted) return;
+    accumulated[0][phantomStart + offset] = 0;
+    accumulated[1][phantomStart + offset] = 0;
+  });
+}
+
 /**
  * `TT_Vary_Apply_Glyph_Deltas`: the points of glyph `glyphIndex` at the normalised coordinates. A glyph
  * with no variation data, and a font with no `gvar` (a null table), keep their points. It throws {@link InvalidTupleVariationsError} for a table
@@ -219,75 +302,23 @@ export function variedGlyphPoints(
   table: GlyphVariations | null,
   normalized: Int32Array,
   glyphIndex: number,
-  { x, y, contourEnds }: GlyphPoints,
+  glyph: GlyphPoints,
   adjusted: AdjustedAdvances
 ): VariedPoints {
-  const pointCount = x.length;
-  const accumulated = [new Float64Array(pointCount), new Float64Array(pointCount)] as const;
-  const dataStart = table?.glyphOffsets[glyphIndex];
-  const dataEnd = table?.glyphOffsets[glyphIndex + 1];
-  if (table && dataStart !== undefined && dataEnd !== undefined && dataStart !== dataEnd) {
-    const dataSize = dataEnd - dataStart;
-    if (dataEnd > table.bytes.length)
-      throw new InvalidTupleVariationsError('glyph variation data past the font');
-    const tupleCount = ((table.bytes[dataStart]! << 8) | table.bytes[dataStart + 1]!) & 0x0fff;
-    const dataOffset = (table.bytes[dataStart + 2]! << 8) | table.bytes[dataStart + 3]!;
-    if (dataOffset > dataSize || tupleCount * 4 > dataSize)
-      throw new InvalidTupleVariationsError('invalid glyph variation array header');
-
-    const tuples = activeTuples(
-      {
-        bytes: table.bytes,
-        headerAt: dataStart,
-        dataStart,
-        limit: dataEnd,
-        sharedTuples: table.sharedTuples,
-        axisCount: table.axisCount,
-      },
-      normalized
-    );
-    const original = [Float64Array.from(x, intToFixed), Float64Array.from(y, intToFixed)] as const;
-    for (const { apply, points, deltasAt } of tuples) {
-      const deltas = tupleDeltas(table, points, deltasAt, dataEnd, pointCount);
-      if (!deltas || !points) continue;
-      if (points === 'all') {
-        for (let point = 0; point < pointCount; point++) {
-          accumulated[0][point]! += ftMulFix(deltas.x[point]!, apply);
-          accumulated[1][point]! += ftMulFix(deltas.y[point]!, apply);
-        }
-        continue;
-      }
-      const varied = [Float64Array.from(original[0]), Float64Array.from(original[1])] as const;
-      const hasDelta = new Uint8Array(pointCount);
-      points.forEach((point, index) => {
-        if (point >= pointCount) return;
-        hasDelta[point] = 1;
-        varied[0][point]! += ftMulFix(deltas.x[index]!, apply);
-        varied[1][point]! += ftMulFix(deltas.y[index]!, apply);
-      });
-      // The phantom points follow the contours' last point, so no contour reaches them.
-      interpolateDeltas(contourEnds, original, varied, hasDelta);
-      for (let point = 0; point < pointCount; point++) {
-        accumulated[0][point]! += varied[0][point]! - original[0][point]!;
-        accumulated[1][point]! += varied[1][point]! - original[1][point]!;
-      }
-    }
-  }
-
-  // The advances that HVAR or VVAR adjust already must not move again by the phantom deltas.
-  const phantomStart = pointCount - 4;
-  const fixedPhantoms = [
-    ...(adjusted.horizontal ? [phantomStart, phantomStart + 1] : []),
-    ...(adjusted.vertical ? [phantomStart + 2, phantomStart + 3] : []),
-  ];
-  for (const point of fixedPhantoms) {
-    accumulated[0][point] = 0;
-    accumulated[1][point] = 0;
-  }
+  const { x, y } = glyph;
+  const accumulated = [new Float64Array(x.length), new Float64Array(y.length)] as const;
+  if (table) accumulateGlyphDeltas(table, normalized, glyphIndex, glyph, accumulated);
+  clearAdjustedPhantoms(accumulated, adjusted);
   return {
     x: Array.from(x, (value, point) => value + fixedToInt(accumulated[0][point]!)),
     y: Array.from(y, (value, point) => value + fixedToInt(accumulated[1][point]!)),
-    unroundedX: Array.from(x, (value, point) => value * FDOT6_ONE + fixedToFdot6(accumulated[0][point]!)),
-    unroundedY: Array.from(y, (value, point) => value * FDOT6_ONE + fixedToFdot6(accumulated[1][point]!)),
+    unroundedX: Array.from(
+      x,
+      (value, point) => value * FIXED_26_6_ONE + fixedToFdot6(accumulated[0][point]!)
+    ),
+    unroundedY: Array.from(
+      y,
+      (value, point) => value * FIXED_26_6_ONE + fixedToFdot6(accumulated[1][point]!)
+    ),
   };
 }

@@ -11,7 +11,8 @@
 
 import { perObject } from '../../../../../utils/perObject';
 import { opentypeKey, type OpentypeCoordinates } from '../fontMetrics';
-import { tableBytes, tableFits, type SfntFile } from '../sfntTables';
+import { tableFits, type SfntFile } from '../sfntTables';
+import { controlValuesOf } from '../truetype/trueTypeHinting';
 import { designCoordinates, normalizedCoordinates } from './axisCoordinates';
 import { readAvar, type AxisVariations } from './avar';
 import { variedControlValues } from './cvar';
@@ -50,7 +51,6 @@ export interface FontInstance {
 
 /** What a font holds of variation, which every instance of it reads. */
 interface VariationFace {
-  readonly sfnt: SfntFile;
   readonly axes: readonly FvarAxis[];
   readonly avar: AxisVariations | null;
   readonly glyphVariations: GlyphVariations | null | 'invalid';
@@ -79,7 +79,6 @@ const variationFaceOf = perObject((sfnt: SfntFile): VariationFace | null => {
   const axes = readFvarAxes(sfnt);
   if (!axes) return null;
   return {
-    sfnt,
     axes,
     avar: readAvar(sfnt, axes.length),
     glyphVariations: readGlyphVariations(sfnt, axes.length),
@@ -92,19 +91,12 @@ const variationFaceOf = perObject((sfnt: SfntFile): VariationFace | null => {
   };
 });
 
-/** `tt_face_load_cvt`: the `cvt ` table in 26.6. */
-function controlValuesOf(sfnt: SfntFile): Int32Array {
-  const bytes = tableBytes(sfnt, 'cvt ');
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  return Int32Array.from({ length: bytes.length >> 1 }, (_, index) => view.getInt16(index * 2, false) * 64);
-}
-
 function advanceDeltaOf(
   variations: AdvanceVariations | null,
   normalized: Int32Array
 ): (glyphIndex: number) => number {
+  if (!variations) return () => 0;
   return (glyphIndex) => {
-    if (!variations) return 0;
     const [outer, inner] = mappedItem(variations.widthMap, glyphIndex);
     return itemDelta(variations.store, outer, inner, normalized);
   };
