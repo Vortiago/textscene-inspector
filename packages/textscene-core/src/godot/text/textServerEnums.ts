@@ -63,7 +63,7 @@ export const JustificationFlag = {
   DO_NOT_SKIP_SINGLE_LINE: 1 << 7,
 } as const;
 
-/** The `jst_flags` default of `Label` (`label.h:46`) and of `TextMesh` (`primitive_meshes.h:585`). */
+/** The `jst_flags` default of `Label` (`label.h:46`), `Label3D` (`label_3d.h:115`) and `TextMesh` (`primitive_meshes.h:585`). */
 export const DEFAULT_JUSTIFICATION_FLAGS =
   JustificationFlag.WORD_BOUND |
   JustificationFlag.KASHIDA |
@@ -99,6 +99,10 @@ const LineBreakFlag = {
   TRIM_START_EDGE_SPACES: 1 << 6,
   TRIM_END_EDGE_SPACES: 1 << 7,
 } as const;
+
+/** The `autowrap_trim_flags` default of `Label` (`label.h:45`) and `Label3D` (`label_3d.h:114`). */
+export const DEFAULT_AUTOWRAP_TRIM_FLAGS =
+  LineBreakFlag.TRIM_START_EDGE_SPACES | LineBreakFlag.TRIM_END_EDGE_SPACES;
 
 /**
  * `BREAK_TRIM_MASK` (servers/text/text_server.h:120), shared with its bound:
