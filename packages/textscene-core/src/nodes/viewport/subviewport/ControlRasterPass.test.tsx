@@ -43,6 +43,7 @@ const GUI_SCENE = `[gd_scene format=3]
 [node name="Root" type="Node3D"]
 
 [node name="SubViewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(320, 240)
 
 [node name="Panel" type="Panel" parent="SubViewport"]
@@ -147,6 +148,7 @@ describe('<ControlRasterPasses>', () => {
 [node name="Root" type="Node3D"]
 
 [node name="SubViewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(320, 240)
 
 [node name="Bar" type="ColorRect" parent="SubViewport"]

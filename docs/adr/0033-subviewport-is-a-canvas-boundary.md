@@ -38,6 +38,12 @@ CanvasItem descendants, 2D world and Control UI, draw nowhere in the parent. Its
 descendants draw as through a plain `Node` unless `own_world_3d`. A **viewport surface**
 displays its target: a `SubViewportContainer`, or a `ViewportTexture` consumer.
 
+**The update mode and the clear mode gate the pass.** The orchestrator renders a pass by
+`render_target_update_mode` as `RendererViewport::draw_viewports` does (`renderer_viewport.cpp:769-813`),
+and a render clears by `render_target_clear_mode` (`:373-378`). A `SubViewportContainer` replaces the
+mode of its child. The inline draw of a shared-world 3D subtree in the parent view is no pass, so no
+mode touches it.
+
 **The registration carries the rule, not new dispatcher branches.** `SubViewport`
 registers with neither `canvasItem` nor `container`, so `PlainNode`'s workspace rules pass
 it through in the 3D workspace and drop its subtree in the 2D one. That is the measured
@@ -160,8 +166,6 @@ which display real content.
     and no corpus scene does it. `gui_in_3d` only looks like one: its `TextureRect`
     carries `ExtResource("2")` = `res://icon.webp`, while the quad's material carries
     `SubResource("2")` = the ViewportTexture. Same number, two id namespaces.
-  - `render_target_update_mode` does not gate rendering. The previewer derives the target
-    from the scene, so there is no per-frame update to skip.
   - The resolved tree decides which rasteriser owns a target, so an `instance=` child
     that has not loaded is classified provisionally and re-classified when its sub-scene
     lands. A cyclic sub-scene reference stops the resolver at 32 levels.

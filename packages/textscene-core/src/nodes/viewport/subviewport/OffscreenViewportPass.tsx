@@ -54,7 +54,8 @@ import { ViewportPassAttributes } from '../../../r3f/environment/worldExposure';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { fitToAspect, fittedAspect } from '../../3d/camera3d/projectionFit';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
-import { usePublishViewportPass } from './usePublishViewportPass';
+import { usePublishViewportPass, useTargetRenderState } from './usePublishViewportPass';
+import { useViewportGate } from './useViewportGate';
 import { useCanvasPass } from './useCanvasPass';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
@@ -131,6 +132,9 @@ export function OffscreenViewportPass({
     [kind, width, height, node.name]
   );
   useDisposeOnRelease(target);
+  const renderState = useTargetRenderState(target);
+  const clearMode = properties.render_target_clear_mode;
+  const gate = useViewportGate(path, properties.render_target_update_mode);
   const drawsCanvasOverWorld = canvasOverWorld !== null;
   const msaaMode = viewportMsaaMode(properties, kind);
   // Written only by the stage below while it is mounted.
@@ -242,6 +246,7 @@ export function OffscreenViewportPass({
     // A 3D pass waits for its stage, which mounts before the frame that first publishes the target.
     const toneMap = kind === '3d' ? toneMapStage.current : null;
     if (kind === '3d' && !toneMap) return;
+    const clear = renderState.takeRender(clearMode, clearColor);
     const camera = toneMap ? cameraAtPath(passScene, toneMap.cameraPath) : orthoCamera;
     const exposure = toneMap?.exposure ?? null;
     if (canvasScene) frameCanvas(canvasScene);
@@ -260,7 +265,7 @@ export function OffscreenViewportPass({
     try {
       renderToOffscreenTarget(gl, {
         target: toneMap ? toneMap.worldBuffer : target,
-        clearColor,
+        clearColor: clear.color,
         transparentBg,
         keepsColor,
         // No camera is not an error: Godot renders the clear colour and nothing else.
@@ -276,7 +281,7 @@ export function OffscreenViewportPass({
             renderWithMipmapBias(mipmapBias, () =>
               renderWithShadowAtlas(shadowAtlas, () =>
                 kind === '2d'
-                  ? frame.render(gl, passScene, camera)
+                  ? frame.draw(gl, passScene, camera, clear.clears)
                   : drawWith(passScene, toneMap!.environment, exposure, () =>
                       backdrop
                         ? drawOverBackground(passScene, backdrop.texture, () => gl.render(passScene, camera))
@@ -312,6 +317,8 @@ export function OffscreenViewportPass({
     renderCanvas,
     backdropTarget,
     canvasLayers,
+    renderState,
+    clearMode,
   ]);
 
   // Consumers sample the texture directly. The ordered driver runs every
@@ -324,6 +331,8 @@ export function OffscreenViewportPass({
     width,
     height,
     isTransparent: transparentBg,
+    gate,
+    renderState,
     render: renderPass,
   });
 

@@ -6,7 +6,7 @@ renders_as: an offscreen render target, plus a boundary that scopes its canvas s
 
 # SubViewport
 
-A Viewport that renders its subtree into an offscreen target for a `ViewportTexture` to sample (ADR-0033). It draws nothing itself. Its Node3D descendants still draw in the parent's 3D view unless `own_world_3d` is set, and its CanvasItem descendants draw only in the target. A Control-only subtree renders through its own WebGL pass. Each target keeps its own positional shadow atlas, sized by `positional_shadow_atlas_size` and the four `positional_shadow_atlas_quad_*` keys, as each Godot viewport does. `msaa_3d` multisamples a 3D target and `msaa_2d` the frame that a canvas target is drawn through (ADR-0057). Each takes the closest count at or below the mode that the device supports for the target's own colour storage, as Godot's driver does (`rendering_device_driver_vulkan.cpp:1999`). `texture_mipmap_bias` sets the mip level offset of the 3D materials that the target renders, and an unset value takes the project's (`viewport.cpp:4904-4911`, `:5383`). `anisotropic_filtering_level` sets the anisotropy of the textures that only the target draws, and an unset value takes the project's (`viewport.cpp:5384`). A ViewportTexture on a `.glb` surface override resolves its `viewport_path` from the GLB instance, its local scene in Godot (`packed_scene.cpp:707`).
+A Viewport that renders its subtree into an offscreen target for a `ViewportTexture` to sample (ADR-0033). It draws nothing itself. Its Node3D descendants still draw in the parent's 3D view unless `own_world_3d` is set, and its CanvasItem descendants draw only in the target. A Control-only subtree renders through its own WebGL pass. Each target keeps its own positional shadow atlas, sized by `positional_shadow_atlas_size` and the four `positional_shadow_atlas_quad_*` keys, as each Godot viewport does. `msaa_3d` multisamples a 3D target and `msaa_2d` the frame that a canvas target is drawn through (ADR-0057). Each takes the closest count at or below the mode that the device supports for the target's own colour storage, as Godot's driver does (`rendering_device_driver_vulkan.cpp:1999`). `texture_mipmap_bias` sets the mip level offset of the 3D materials that the target renders, and an unset value takes the project's (`viewport.cpp:4904-4911`, `:5383`). `anisotropic_filtering_level` sets the anisotropy of the textures that only the target draws, and an unset value takes the project's (`viewport.cpp:5384`). A pass renders by its `render_target_update_mode` and clears by its `render_target_clear_mode` (see the two sections below). A ViewportTexture on a `.glb` surface override resolves its `viewport_path` from the GLB instance, its local scene in Godot (`packed_scene.cpp:707`).
 
 ## Offscreen target
 
@@ -27,6 +27,18 @@ Every Texture2D slot resolves a `ViewportTexture` the same way: a material slot,
 <!-- compare: image=unit-sub-viewport-3d-canvas-item status=done fixture=unit-sub-viewport-3d-canvas-item.tscn -->
 
 A quad, a translucent Polygon2D and an opaque one share a SubViewport, and a CanvasLayer below the world's canvas holds a third. Godot draws the 3D render first and every canvas over it, so the CanvasLayer's polygon covers the quad and sits under the opaque Polygon2D.
+
+## Update mode
+
+<!-- compare: image=unit-sub-viewport-update-mode status=done fixture=unit-sub-viewport-update-mode.tscn -->
+
+Every sub-viewport is 32x32 with a red left half, and a 100x100 TextureRect shows it. A DISABLED viewport never renders, so its target holds (0, 0, 0, 0), which an opaque target shows as black. ONCE renders on the first frame after the scene loads. WHEN_VISIBLE renders from the frame after a consumer samples its target. WHEN_PARENT_VISIBLE renders in the frames its enclosing viewport renders, so a DISABLED parent stops it and not its WHEN_VISIBLE or ALWAYS siblings. A ONCE parent that samples a WHEN_VISIBLE child shows black where the child is, as the child has not rendered yet (`renderer_viewport.cpp:769-813`). A SubViewportContainer replaces the mode of its child: ALWAYS while the container is visible in the tree, DISABLED while it is not (`subviewport_container.cpp:116-128`). A viewport that holds nothing still gates the viewports inside it.
+
+## Clear mode
+
+<!-- compare: image=unit-sub-viewport-clear-mode status=done fixture=unit-sub-viewport-clear-mode.tscn -->
+
+A red veil of alpha 0.25 covers the left half of each target. ALWAYS clears every render. NEVER draws a canvas over the bytes of the renders before, so the veil builds up toward its own colour. ONCE clears the first render and then acts as NEVER. A 3D render repaints the whole target, over opaque black where no clear set the colour, and `transparent_bg` still gives a transparent background (`renderer_viewport.cpp:373-378`, `renderer_scene_render_rd.cpp:1464-1469`). A 3D pass under ONCE keeps the clear colour of its one clear. The fixture shows a canvas on an opaque target, a canvas on a transparent target over white, and 3D content on an opaque target.
 
 ## ViewportTexture outside the local scene
 
@@ -56,7 +68,6 @@ Strict and lenient parsing diverge only on out-of-range enums. The lenient parse
 
 ## Known limitations
 
-- **Approximated** `render_target_update_mode` and `render_target_clear_mode` do not gate the pass, so the target is re-rendered and cleared every frame.
 - **Approximated** A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.
 - **Approximated** `use_hdr_2d` is not read, so an HDR canvas composites differently.
 - **Needs runtime** A viewport whose camera or world is assigned by script shows only its clear colour in 3D, and frames from the origin in 2D.

@@ -7,6 +7,7 @@
 
 import { lazy, useMemo, type ReactNode } from 'react';
 import { OffscreenViewportPass } from './OffscreenViewportPass';
+import { GateOnlyPass } from './GateOnlyPass';
 
 import type { TscnNode } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -139,6 +140,7 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
             {rendersInline ? null : contents}
           </OffscreenViewportPass>
         ) : null}
+        {kind === 'empty' ? <GateOnlyPass node={node} path={path} /> : null}
         {rendersInline ? (
           <World2DLightingBoundary canvasModulate={canvasModulate}>{contents}</World2DLightingBoundary>
         ) : null}

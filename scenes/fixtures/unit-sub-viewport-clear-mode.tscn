@@ -1,0 +1,253 @@
+; Each SubViewport clear mode, with canvas content and with 3D content. The content is red at alpha
+; 0.25 over the left half of a 32x32 target, sampled by a 100x100 TextureRect, and a viewport
+; renders every frame. ALWAYS clears every render. NEVER draws the canvas over the bytes of the
+; renders before, so it builds up toward the colour. ONCE clears the first render and then acts as
+; NEVER. A 3D render repaints its target over opaque black where no clear set the colour
+; (`renderer_scene_render_rd.cpp:1464-1469`). Rows: canvas on an opaque target, canvas on a
+; transparent target over white, 3D on an opaque target. Measured with Godot 4.6.3 `--mode 2d`.
+
+[gd_scene format=3]
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+size = Vector2(1, 2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 0, 0, 0.25)
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_1"]
+viewport_path = NodePath("CanvasOpaqueAlways")
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_2"]
+viewport_path = NodePath("CanvasOpaqueNever")
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_3"]
+viewport_path = NodePath("CanvasOpaqueOnce")
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_4"]
+viewport_path = NodePath("CanvasTransparentAlways")
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_5"]
+viewport_path = NodePath("CanvasTransparentNever")
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_6"]
+viewport_path = NodePath("CanvasTransparentOnce")
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_7"]
+viewport_path = NodePath("WorldAlways")
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_8"]
+viewport_path = NodePath("WorldNever")
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_9"]
+viewport_path = NodePath("WorldOnce")
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+offset_top = 130.0
+offset_right = 400.0
+offset_bottom = 250.0
+color = Color(1, 1, 1, 1)
+
+[node name="CanvasOpaqueAlways" type="SubViewport" parent="."]
+transparent_bg = false
+size = Vector2i(32, 32)
+render_target_update_mode = 4
+render_target_clear_mode = 0
+
+[node name="Veil" type="ColorRect" parent="CanvasOpaqueAlways"]
+offset_right = 16.0
+offset_bottom = 32.0
+color = Color(1, 0, 0, 0.25)
+
+[node name="CanvasOpaqueAlwaysView" type="TextureRect" parent="."]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 120.0
+offset_bottom = 120.0
+texture = SubResource("ViewportTexture_1")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="CanvasOpaqueNever" type="SubViewport" parent="."]
+transparent_bg = false
+size = Vector2i(32, 32)
+render_target_update_mode = 4
+render_target_clear_mode = 1
+
+[node name="Veil" type="ColorRect" parent="CanvasOpaqueNever"]
+offset_right = 16.0
+offset_bottom = 32.0
+color = Color(1, 0, 0, 0.25)
+
+[node name="CanvasOpaqueNeverView" type="TextureRect" parent="."]
+offset_left = 140.0
+offset_top = 20.0
+offset_right = 240.0
+offset_bottom = 120.0
+texture = SubResource("ViewportTexture_2")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="CanvasOpaqueOnce" type="SubViewport" parent="."]
+transparent_bg = false
+size = Vector2i(32, 32)
+render_target_update_mode = 4
+render_target_clear_mode = 2
+
+[node name="Veil" type="ColorRect" parent="CanvasOpaqueOnce"]
+offset_right = 16.0
+offset_bottom = 32.0
+color = Color(1, 0, 0, 0.25)
+
+[node name="CanvasOpaqueOnceView" type="TextureRect" parent="."]
+offset_left = 260.0
+offset_top = 20.0
+offset_right = 360.0
+offset_bottom = 120.0
+texture = SubResource("ViewportTexture_3")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="CanvasTransparentAlways" type="SubViewport" parent="."]
+transparent_bg = true
+size = Vector2i(32, 32)
+render_target_update_mode = 4
+render_target_clear_mode = 0
+
+[node name="Veil" type="ColorRect" parent="CanvasTransparentAlways"]
+offset_right = 16.0
+offset_bottom = 32.0
+color = Color(1, 0, 0, 0.25)
+
+[node name="CanvasTransparentAlwaysView" type="TextureRect" parent="."]
+offset_left = 20.0
+offset_top = 140.0
+offset_right = 120.0
+offset_bottom = 240.0
+texture = SubResource("ViewportTexture_4")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="CanvasTransparentNever" type="SubViewport" parent="."]
+transparent_bg = true
+size = Vector2i(32, 32)
+render_target_update_mode = 4
+render_target_clear_mode = 1
+
+[node name="Veil" type="ColorRect" parent="CanvasTransparentNever"]
+offset_right = 16.0
+offset_bottom = 32.0
+color = Color(1, 0, 0, 0.25)
+
+[node name="CanvasTransparentNeverView" type="TextureRect" parent="."]
+offset_left = 140.0
+offset_top = 140.0
+offset_right = 240.0
+offset_bottom = 240.0
+texture = SubResource("ViewportTexture_5")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="CanvasTransparentOnce" type="SubViewport" parent="."]
+transparent_bg = true
+size = Vector2i(32, 32)
+render_target_update_mode = 4
+render_target_clear_mode = 2
+
+[node name="Veil" type="ColorRect" parent="CanvasTransparentOnce"]
+offset_right = 16.0
+offset_bottom = 32.0
+color = Color(1, 0, 0, 0.25)
+
+[node name="CanvasTransparentOnceView" type="TextureRect" parent="."]
+offset_left = 260.0
+offset_top = 140.0
+offset_right = 360.0
+offset_bottom = 240.0
+texture = SubResource("ViewportTexture_6")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="WorldAlways" type="SubViewport" parent="."]
+own_world_3d = true
+size = Vector2i(32, 32)
+render_target_update_mode = 4
+render_target_clear_mode = 0
+
+[node name="Camera3D" type="Camera3D" parent="WorldAlways"]
+projection = 1
+size = 2.0
+current = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+
+[node name="Veil" type="MeshInstance3D" parent="WorldAlways"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0, 0)
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("StandardMaterial3D_1")
+
+[node name="WorldAlwaysView" type="TextureRect" parent="."]
+offset_left = 20.0
+offset_top = 260.0
+offset_right = 120.0
+offset_bottom = 360.0
+texture = SubResource("ViewportTexture_7")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="WorldNever" type="SubViewport" parent="."]
+own_world_3d = true
+size = Vector2i(32, 32)
+render_target_update_mode = 4
+render_target_clear_mode = 1
+
+[node name="Camera3D" type="Camera3D" parent="WorldNever"]
+projection = 1
+size = 2.0
+current = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+
+[node name="Veil" type="MeshInstance3D" parent="WorldNever"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0, 0)
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("StandardMaterial3D_1")
+
+[node name="WorldNeverView" type="TextureRect" parent="."]
+offset_left = 140.0
+offset_top = 260.0
+offset_right = 240.0
+offset_bottom = 360.0
+texture = SubResource("ViewportTexture_8")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="WorldOnce" type="SubViewport" parent="."]
+own_world_3d = true
+size = Vector2i(32, 32)
+render_target_update_mode = 4
+render_target_clear_mode = 2
+
+[node name="Camera3D" type="Camera3D" parent="WorldOnce"]
+projection = 1
+size = 2.0
+current = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+
+[node name="Veil" type="MeshInstance3D" parent="WorldOnce"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0, 0)
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("StandardMaterial3D_1")
+
+[node name="WorldOnceView" type="TextureRect" parent="."]
+offset_left = 260.0
+offset_top = 260.0
+offset_right = 360.0
+offset_bottom = 360.0
+texture = SubResource("ViewportTexture_9")
+expand_mode = 1
+stretch_mode = 0

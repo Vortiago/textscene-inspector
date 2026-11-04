@@ -395,7 +395,7 @@ An item's position in Godot's single pre-order walk of the canvas, the third and
 _Avoid_: "paint index".
 
 **Canvas frame** (`Canvas2DStage/canvasFrame.ts`):
-The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057).
+The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057). Under `render_target_clear_mode` NEVER it takes the bytes of the target first and draws over them.
 _Avoid_: "MSAA frame".
 
 **Frame AABB** (`r3f/components/FrameAabb.tsx`):
@@ -446,6 +446,10 @@ _Avoid_: "background canvas".
 **Viewport surface**:
 What displays a **sub-viewport**'s render target (a `SubViewportContainer` or a `ViewportTexture` consumer), and the one place its canvas subtree is dispatched.
 _Avoid_: "viewport container" for the concept. "render target" for the surface.
+
+**Pass gate** (`PassGate` in `r3f/contexts/ViewportPassRegistryContext.tsx`, `nodes/viewport/renderGate.ts`):
+What decides whether a **sub-viewport**'s pass renders in a frame: its effective `render_target_update_mode` (a `SubViewportContainer` parent replaces the authored mode), the viewport it sits in, and whether a consumer sampled its target. The same gate decides what a render clears, from `render_target_clear_mode` and the renders the target has had.
+_Avoid_: "visibility cull". "throttle".
 
 **ViewportTextureRegistry**:
 The `nodePath → { texture, size }` lookup that a **sub-viewport** publishes its render target into and every **viewport surface** resolves against.

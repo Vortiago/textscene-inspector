@@ -31,6 +31,7 @@ const scene = (viewportProps: string) => `[gd_scene format=3]
 [node name="Root" type="Node3D"]
 
 [node name="Viewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 own_world_3d = true
 ${viewportProps}
 

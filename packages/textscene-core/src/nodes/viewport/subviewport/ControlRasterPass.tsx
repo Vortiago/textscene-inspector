@@ -15,7 +15,7 @@ import { ViewportControls } from './ViewportControls.js';
 import { createCanvasTarget, renderToOffscreenTarget, viewportMsaaMode } from './offscreenViewport.js';
 import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
 import { useCanvasPass } from './useCanvasPass.js';
-import { usePublishViewportPass } from './usePublishViewportPass.js';
+import { usePublishViewportPass, useTargetRenderState } from './usePublishViewportPass.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
 import { viewportSize, viewportTargetSize } from './targetSize.js';
 import type { SubViewportProperties } from './types.js';
@@ -40,10 +40,10 @@ export function ControlRasterPasses({ viewports }: ControlRasterPassesProps) {
 }
 
 function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
-  const { path, node, inheritedRtl, internalResources, externalResources } = viewport;
+  const { path, node, inheritedRtl, internalResources, externalResources, gate } = viewport;
 
   const properties = node.properties as SubViewportProperties;
-  const { size, transparent_bg: transparentBg } = properties;
+  const { size, transparent_bg: transparentBg, render_target_clear_mode: clearMode } = properties;
   const forcedRect = useViewportRect(path);
   const { x: width, y: height } = viewportTargetSize(size, forcedRect);
   const { x: layoutWidth, y: layoutHeight } = viewportSize(size, forcedRect);
@@ -71,14 +71,16 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const canvasModulate = useCanvasModulateColor(node.children);
   const controlsSize = useMemo(() => ({ x: layoutWidth, y: layoutHeight }), [layoutWidth, layoutHeight]);
 
+  const renderState = useTargetRenderState(target);
   const renderPass = useCallback(() => {
+    const clear = renderState.takeRender(clearMode, clearColor);
     renderToOffscreenTarget(gl, {
       target,
-      clearColor,
+      clearColor: clear.color,
       transparentBg,
-      draw: () => frame.render(gl, portalScene, camera),
+      draw: () => frame.draw(gl, portalScene, camera, clear.clears),
     });
-  }, [gl, target, frame, clearColor, transparentBg, portalScene, camera]);
+  }, [gl, target, frame, clearColor, clearMode, renderState, transparentBg, portalScene, camera]);
 
   usePublishViewportPass({
     path,
@@ -87,6 +89,8 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
     width,
     height,
     isTransparent: transparentBg,
+    gate,
+    renderState,
     render: renderPass,
   });
 

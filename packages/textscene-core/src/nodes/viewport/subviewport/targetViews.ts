@@ -32,6 +32,8 @@ interface PassView extends TargetView {
 interface PassTargetViews {
   plain: PassView;
   decoding: PassView;
+  /** Whether a consumer samples either view now. */
+  isSampled(): boolean;
   /** Runs after each render of the pass: counts a draw of both views, then fills each reader's copy. */
   fill(): void;
   dispose(): void;
@@ -42,11 +44,19 @@ export function useTargetViews(target: THREE.WebGLRenderTarget, isTransparent: b
   const gl = useThree((state) => state.gl);
   const views = useMemo(() => {
     const holdsBytes = holdsSrgbBytes(target.texture);
-    const plain = holdsBytes ? ownStorageView(target.texture) : plainCopy(gl, target);
-    const decoding = holdsBytes ? decodingCopy(gl, target) : ownStorageView(target.texture);
+    const samplers = { count: 0 };
+    const plain = countingSamplers(
+      holdsBytes ? ownStorageView(target.texture) : plainCopy(gl, target),
+      samplers
+    );
+    const decoding = countingSamplers(
+      holdsBytes ? decodingCopy(gl, target) : ownStorageView(target.texture),
+      samplers
+    );
     return {
       plain,
       decoding,
+      isSampled: () => samplers.count > 0 || hasLiveCopies(plain.texture) || hasLiveCopies(decoding.texture),
       // One save and restore of the renderer for the views and every copy a reader holds, and none
       // for a pass with nothing to fill.
       fill: () => {
@@ -71,6 +81,30 @@ export function useTargetViews(target: THREE.WebGLRenderTarget, isTransparent: b
     [views, gl, isTransparent]
   );
   return views;
+}
+
+/**
+ * `view` that counts the consumers holding it into `samplers`. Godot marks a target used when a
+ * consumer samples it (`texture_storage.cpp:728`), and a held view is that consumer.
+ */
+function countingSamplers(view: PassView, samplers: { count: number }): PassView {
+  return {
+    texture: view.texture,
+    retain: () => {
+      samplers.count++;
+      const release = view.retain();
+      let isReleased = false;
+      return () => {
+        if (isReleased) return;
+        isReleased = true;
+        samplers.count--;
+        release();
+      };
+    },
+    isFilled: () => view.isFilled(),
+    fill: () => view.fill(),
+    dispose: () => view.dispose(),
+  };
 }
 
 /** The view of a target whose storage is that view already, so it needs no copy. */

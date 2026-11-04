@@ -4531,6 +4531,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Clear Mode",
+    "file": "unit-sub-viewport-clear-mode.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Container 2d Content",
     "file": "unit-sub-viewport-container-2d-content.tscn",
     "category": "Unit - Viewports"
@@ -4693,6 +4698,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Texture",
     "file": "unit-sub-viewport-texture.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Update Mode",
+    "file": "unit-sub-viewport-update-mode.tscn",
     "category": "Unit - Viewports"
   },
   {
