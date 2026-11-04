@@ -59,8 +59,8 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   const labelSettings = solveNode.labelSettings;
   // A valid `label_settings` beats the theme outright: see its own doc.
   const textTheme = useMemo(
-    () => labelEffectiveTextTheme(themeResolved, labelSettings),
-    [themeResolved, labelSettings]
+    () => labelEffectiveTextTheme(themeResolved, labelSettings, solveNode.constants),
+    [themeResolved, labelSettings, solveNode.constants]
   );
 
   // Composed in sRGB: `TextRun` converts its `tint` once, internally.
@@ -112,12 +112,13 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       autowrapTrimFlags: props.autowrapTrimFlags,
     });
     const range = labelVisibleLineRange(shaped.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible);
-    return windowLabelLines(shaped, range);
+    return windowLabelLines(shaped, range, textTheme.paragraphSpacingPx);
   }, [
     sharedLayout,
     text,
     textTheme.fontSizePx,
     textTheme.lineSpacingPx,
+    textTheme.paragraphSpacingPx,
     rect.w,
     autowrapMode,
     props.uppercase,
@@ -148,7 +149,11 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
         props.verticalAlignment,
         effectiveJustificationFlags,
         textTheme.fontSizePx,
-        { rtl: solveNode.rtl }
+        {
+          rtl: solveNode.rtl,
+          lineSpacingPx: textTheme.lineSpacingPx,
+          paragraphSpacingPx: textTheme.paragraphSpacingPx,
+        }
       ),
     [
       layout,
@@ -158,6 +163,8 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       props.verticalAlignment,
       effectiveJustificationFlags,
       textTheme.fontSizePx,
+      textTheme.lineSpacingPx,
+      textTheme.paragraphSpacingPx,
       solveNode.rtl,
     ]
   );

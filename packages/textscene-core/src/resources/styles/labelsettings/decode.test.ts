@@ -15,6 +15,7 @@ describe('the LabelSettings body resolveLabelSettings decodes', () => {
   it('reads every field at an authored value (happy path)', () => {
     const result = decode({
       line_spacing: '5.5',
+      paragraph_spacing: '7.25',
       font: 'ExtResource("1_font")',
       font_size: '24',
       font_color: 'Color(1, 0, 0, 1)',
@@ -26,6 +27,7 @@ describe('the LabelSettings body resolveLabelSettings decodes', () => {
     });
     expect(result).toEqual({
       lineSpacing: 5.5,
+      paragraphSpacing: 7.25,
       font: 'ExtResource("1_font")',
       fontSize: 24,
       fontColor: { r: 1, g: 0, b: 0, a: 1 },
@@ -38,10 +40,11 @@ describe('the LabelSettings body resolveLabelSettings decodes', () => {
   });
 
   it('falls back to the class defaults absent every field (edge case)', () => {
-    // label_settings.h:54,58-59,61-62,64-66.
+    // label_settings.h:54-55,58-59,61-62,64-66.
     const result = decode({});
     expect(result).toEqual({
       lineSpacing: 3,
+      paragraphSpacing: 0,
       font: undefined,
       fontSize: 16,
       fontColor: { r: 1, g: 1, b: 1, a: 1 },

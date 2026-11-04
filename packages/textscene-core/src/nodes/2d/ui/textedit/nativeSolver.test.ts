@@ -309,6 +309,7 @@ describe('textEditCaretRect (text_edit.cpp:926-927,945-947,1858-1877)', () => {
  */
 describe('textEditWrapIndentPx (text_edit.cpp:190-217,1363)', () => {
   const ROW = {
+    paragraphIndex: 0,
     text: '    ab',
     widthPx: 0,
     glyphs: [
@@ -346,6 +347,7 @@ describe('textEditWrapIndentPx (text_edit.cpp:190-217,1363)', () => {
         { char: 'a', x: 32, advance: 9, glyph: null },
         { char: 'b', x: 41, advance: 9, glyph: null },
       ],
+      paragraphIndex: 0,
     };
     expect(textEditWrapIndentPx(tabbed, '\tab', 1000)).toBe(32);
   });

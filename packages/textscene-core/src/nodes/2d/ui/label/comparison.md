@@ -10,8 +10,11 @@ renders_as: a shaped text run on the canvas
 # Label
 
 Label is the 2D UI text node. The previewer draws the string on the canvas. It shapes the string in
-the font, size, colour and line spacing of `label_settings`, which override the theme outright. Without
-`label_settings`, it shapes in the theme's font.
+the font, size, colour, line spacing and paragraph spacing of `label_settings`, which override the theme
+outright. Without `label_settings`, it shapes in the theme's font and reads the `line_spacing` and
+`paragraph_spacing` theme constants, which the node's `theme_override_constants` and the Theme chain
+resolve. A paragraph adds its spacing once, after its last shown line: a line that autowrap breaks
+inside a paragraph does not.
 
 A `label_settings.font` resolves in the file that wrote the settings. A font that is loading draws
 nothing (`label.cpp:112`, ADR-0059).
@@ -89,7 +92,6 @@ is already applied. Every real Godot save guarantees that, since `text` is the f
   `text_overrun_behavior` puts the ellipsis after the last kept glyph, where Godot
   re-justifies the line.
 - **Approximated** An embolden above about 1.4 over the bundled font differs from FreeType, since the atlas rounds corners and holds limited growth.
-- **Not drawn** `label_settings.paragraph_spacing`.
 - **Not drawn** The stacked-outline and stacked-shadow arrays of `label_settings`, while
   its single outline and shadow and the theme's own draw.
 - **Approximated** A non-default `visible_characters_behavior` counts glyphs as a proxy

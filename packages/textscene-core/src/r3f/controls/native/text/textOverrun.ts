@@ -257,5 +257,6 @@ export function trimLineToWidth(
     text: finalGlyphs.map((g) => g.char).join(''),
     glyphs: finalGlyphs,
     widthPx: penX,
+    paragraphIndex: line.paragraphIndex,
   };
 }

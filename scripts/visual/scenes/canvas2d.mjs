@@ -239,6 +239,10 @@ export const CANVAS_2D_SCENES = [
   // the offset is zero and Godot's int conversion of it is a no-op, so nothing
   // else draws the CENTER/BOTTOM/FILL branches.
   { name: 'label-valign', file: 'unit-label-2d-valign.tscn', mode: '2d' },
+  // The one variable: `paragraph_spacing` and `line_spacing`, from `label_settings` and from the
+  // theme constants. Godot 4.6.3 `--mode 2d` ink rows at font size 20: 28, 79, 130 (pitch 51) and
+  // 28, 49, 70 (pitch 21). Every other Label keeps the default spacing of 3 and 0.
+  { name: 'label-paragraph-spacing', file: 'unit-label-paragraph-spacing.tscn', mode: '2d' },
   // The one variable: a Theme `.tres`'s `default_font`/`default_font_size`, set
   // through `theme =` on the root Control. Two Labels with no font override, one
   // two hops down past a themeless Control, resolve it by the ancestor walk.

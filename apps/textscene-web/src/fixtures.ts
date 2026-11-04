@@ -1223,6 +1223,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Paragraph Spacing",
+    "file": "unit-label-paragraph-spacing.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Rtl Alignment",
     "file": "unit-label-rtl-alignment.tscn",
     "category": "Other"

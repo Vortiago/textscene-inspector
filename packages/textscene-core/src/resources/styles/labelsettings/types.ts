@@ -2,7 +2,7 @@
  * Godot's `LabelSettings` (`scene/resources/label_settings.h`): the font,
  * colour, outline, shadow and spacing a Label's `label_settings` overrides its
  * theme with. Only the scalar fields `Label::_shape` and `NOTIFICATION_DRAW` read.
- * `paragraph_spacing` and the stacked arrays (`label_settings.cpp:92-111`) are not decoded.
+ * The stacked arrays (`label_settings.cpp:92-111`) are not decoded.
  */
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
@@ -10,6 +10,8 @@ import type { Vector2 } from '../../../godot/math/vector';
 export interface LabelSettingsResource {
   /** `line_spacing`, real_t px. Godot default 3 (`label_settings.h:54`). */
   lineSpacing: number;
+  /** `paragraph_spacing`, real_t px. Godot default 0 (`label_settings.h:55`). */
+  paragraphSpacing: number;
   /** `font`: the raw resource-reference text, or undefined when unset. Godot default null. `buildSolveTree` resolves it in the file that wrote the settings. */
   font?: string;
   /** `font_size`. Godot default `Font::DEFAULT_FONT_SIZE` = 16 (`label_settings.h:58`). */
