@@ -7,16 +7,15 @@
  */
 
 import * as assert from 'assert';
-import type { Context } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { invokeSceneTool } from '../../invokeSceneTool';
 import { godotProjectDir, removeGodotProject, writeGodotProject } from '../helpers/godotProjectHelpers';
 import { extensionUnderTest, EXTENSION_ID } from '../../smokeProject/sceneEditor';
 import {
   AGENT_TOOL_NAMES,
   contributedTools,
-  hasInvokableTools,
-  skipBecause,
+  skipWhenEditorLacksLmTools,
   textOf,
 } from '../../languageFeatures/agentToolAnswersSuite.testkit';
 
@@ -37,15 +36,11 @@ const SCENE = [
   '',
 ].join('\n');
 
-/** Skips a test on a VS Code below the tools API. */
-function skipWithoutToolsApi(context: Context): never {
-  skipBecause(context, 'this editor offers no usable vscode.lm tools API');
-}
-
 suite('Agent tools', () => {
   let scenePath: string;
 
-  suiteSetup(async () => {
+  suiteSetup(async function () {
+    skipWhenEditorLacksLmTools(this);
     writeGodotProject(PROJECT, { 'scene.tscn': SCENE });
     scenePath = path.join(godotProjectDir(PROJECT), 'scene.tscn');
     await vscode.extensions.getExtension(EXTENSION_ID)?.activate();
@@ -62,8 +57,6 @@ suite('Agent tools', () => {
   });
 
   test('VS Code lists the registered agent tools', function () {
-    // The tools API is newer than the extension's engines floor. Below it, none registers.
-    if (!hasInvokableTools() || !vscode.lm?.tools) skipWithoutToolsApi(this);
     const names = vscode.lm.tools.map((tool) => tool.name);
 
     for (const name of AGENT_TOOL_NAMES) {
@@ -72,15 +65,12 @@ suite('Agent tools', () => {
   });
 
   test('the scene-tree tool returns the node hierarchy', async function () {
-    if (!hasInvokableTools()) skipWithoutToolsApi(this);
-
-    const result = await vscode.lm.invokeTool('textscene_scene_tree', { input: { path: scenePath } });
+    const result = await invokeSceneTool('textscene_scene_tree', scenePath);
 
     assert.ok(textOf(result).includes('Box (MeshInstance3D)'), `scene tree: ${textOf(result)}`);
   });
 
   test("the scene-tree tool reads an open editor's unsaved edits, as the Problems panel does", async function () {
-    if (!hasInvokableTools()) skipWithoutToolsApi(this);
     const document = await vscode.workspace.openTextDocument(scenePath);
     const editor = await vscode.window.showTextDocument(document);
     try {
@@ -91,7 +81,7 @@ suite('Agent tools', () => {
         )
       );
 
-      const result = await vscode.lm.invokeTool('textscene_scene_tree', { input: { path: scenePath } });
+      const result = await invokeSceneTool('textscene_scene_tree', scenePath);
 
       assert.ok(document.isDirty, 'the edit is unsaved');
       assert.ok(textOf(result).includes('Unsaved (Node3D)'), `scene tree: ${textOf(result)}`);
@@ -101,25 +91,19 @@ suite('Agent tools', () => {
   });
 
   test('the lint tool returns a finding for a dangling reference', async function () {
-    if (!hasInvokableTools()) skipWithoutToolsApi(this);
-
-    const result = await vscode.lm.invokeTool('textscene_lint', { input: { path: scenePath } });
+    const result = await invokeSceneTool('textscene_lint', scenePath);
 
     assert.ok(/\[(error|warning|info)\]/.test(textOf(result)), `lint: ${textOf(result)}`);
   });
 
   test('the missing-resources tool answers for the scene', async function () {
-    if (!hasInvokableTools()) skipWithoutToolsApi(this);
-
-    const result = await vscode.lm.invokeTool('textscene_missing_resources', { input: { path: scenePath } });
+    const result = await invokeSceneTool('textscene_missing_resources', scenePath);
 
     assert.ok(textOf(result).includes('scene.tscn'), `missing resources: ${textOf(result)}`);
   });
 
   test('the open-preview tool opens the preview', async function () {
-    if (!hasInvokableTools()) skipWithoutToolsApi(this);
-
-    const result = await vscode.lm.invokeTool('textscene_open_preview', { input: { path: scenePath } });
+    const result = await invokeSceneTool('textscene_open_preview', scenePath);
 
     assert.ok(textOf(result).includes('Opened the TextScene preview'), `open preview: ${textOf(result)}`);
   });

@@ -9,11 +9,13 @@ import * as assert from 'assert';
 import type { Context } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { hostReturnsImageParts } from '../../tools/imageResultSupport';
 import { NOT_LOADED_ERROR, PING_INTERVAL_MS, WEBVIEW_LOAD_DEADLINE_MS } from '../../previewCaptureQueue';
 import { DISABLE_GPU_ENV } from '../integration/integrationLaunch';
 import { EXTENSION_ID, previewTabLabels, previewTabStates } from '../smokeProject/sceneEditor';
 import { waitFor } from '../waitFor';
 import { copyFixtureProject, removeFixtureProject } from './answers';
+import { invokeSceneTool } from '../invokeSceneTool';
 
 /** A lint or a tab update reaches the extension host well inside this on a loaded runner. */
 const SETTLE_TIMEOUT_MS = 10000;
@@ -37,19 +39,6 @@ const PNG_HEIGHT_OFFSET = 20;
  * R3F rethrows in render for the viewport's boundary to catch.
  */
 const NO_WEBGL_REASON = 'The viewport crashed: THREE.WebGLRenderer: Error creating WebGL context.';
-
-const NO_TOOLS_API = 'this editor offers no usable vscode.lm tools API, so no agent tool registers';
-
-/** The variable that says the editor under test offers no language-model tools, as Cursor does (CI, 2026-11-04). */
-export const EDITOR_LACKS_LM_TOOLS_ENV = 'TEXTSCENE_EDITOR_LACKS_LM_TOOLS';
-
-/**
- * Whether the editor can invoke language-model tools. Older VS Code has no `invokeTool`, and
- * Cursor has it but throws "Language model tools are not available" on every call.
- */
-export function hasInvokableTools(): boolean {
-  return typeof vscode.lm?.invokeTool === 'function' && process.env[EDITOR_LACKS_LM_TOOLS_ENV] !== '1';
-}
 
 /** Every agent tool the extension contributes and registers. */
 export const AGENT_TOOL_NAMES = [
@@ -77,6 +66,19 @@ export function contributedTools(extension: vscode.Extension<unknown>): readonly
 export function skipBecause(context: Context, reason: string): never {
   console.log(`    skipped: ${reason}`);
   context.skip();
+}
+
+/** The variable that says the editor under test offers no language-model tools, as Cursor does (CI, 2026-11-04). */
+export const EDITOR_LACKS_LM_TOOLS_ENV = 'TEXTSCENE_EDITOR_LACKS_LM_TOOLS';
+
+/**
+ * Skips the suite on an editor that lists `vscode.lm` but throws "Language model tools are not
+ * available" on every call, as Cursor does.
+ */
+export function skipWhenEditorLacksLmTools(context: Context): void {
+  if (process.env[EDITOR_LACKS_LM_TOOLS_ENV] === '1') {
+    skipBecause(context, 'this editor offers no usable vscode.lm tools API, so no agent tool registers');
+  }
 }
 
 /** Whether the launcher started the window with `--disable-gpu`, which leaves no WebGL context. */
@@ -129,17 +131,15 @@ export function imageOf(
 export function defineAgentToolAnswersSuite(projectDir: string): void {
   // Through `Uri.fsPath`, as the tools print it: it lowercases a Windows drive letter, and `path.join` does not.
   const scene = (file: string) => vscode.Uri.file(path.join(projectDir, file)).fsPath;
-  const invoke = async (tool: string, scenePath: string) =>
-    vscode.lm.invokeTool(tool, { input: { path: scenePath } });
   const invokeCapture = async (scenePath: string) => {
-    const result = await invoke('textscene_capture', scenePath);
+    const result = await invokeSceneTool('textscene_capture', scenePath);
     assertWebviewLoaded(result);
     return result;
   };
 
   suite('Agent tool answers', function () {
     suiteSetup(async function () {
-      if (!hasInvokableTools()) skipBecause(this, NO_TOOLS_API);
+      skipWhenEditorLacksLmTools(this);
       await copyFixtureProject(projectDir);
       await vscode.extensions.getExtension(EXTENSION_ID)?.activate();
     });
@@ -152,7 +152,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
     test('the lint tool reports a finding with its line, severity, message, rule and node', async () => {
       const missing = scene('missing.tscn');
 
-      const text = textOf(await invoke('textscene_lint', missing));
+      const text = textOf(await invokeSceneTool('textscene_lint', missing));
 
       assert.strictEqual(
         text,
@@ -171,7 +171,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
           .getDiagnostics(uri)
           .filter((diagnostic) => diagnostic.source === 'tscn-lint')
           .map((diagnostic) => `${diagnostic.range.start.line + 1}:${String(diagnostic.code)}`);
-      const text = textOf(await invoke('textscene_lint', uri.fsPath));
+      const text = textOf(await invokeSceneTool('textscene_lint', uri.fsPath));
       const toolFindings = [...text.matchAll(/^ {2}line (\d+): \[\w+\] .* \(([a-z0-9-]+)\)/gm)].map(
         (match) => `${match[1]}:${match[2]}`
       );
@@ -189,14 +189,14 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
     test('the lint tool reports no findings for a clean scene', async () => {
       const main = scene('main.tscn');
 
-      assert.strictEqual(textOf(await invoke('textscene_lint', main)), `${main}: no findings.`);
+      assert.strictEqual(textOf(await invokeSceneTool('textscene_lint', main)), `${main}: no findings.`);
     });
 
     test('the scene-tree tool returns the node hierarchy with each type', async () => {
       const main = scene('main.tscn');
 
       assert.strictEqual(
-        textOf(await invoke('textscene_scene_tree', main)),
+        textOf(await invokeSceneTool('textscene_scene_tree', main)),
         [
           `${main}:`,
           '  Scene (Node3D)',
@@ -211,7 +211,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
       const missing = scene('missing.tscn');
 
       assert.strictEqual(
-        textOf(await invoke('textscene_missing_resources', missing)),
+        textOf(await invokeSceneTool('textscene_missing_resources', missing)),
         `${missing}: 1 missing resource(s):\n  res://textures/missing.png`
       );
     });
@@ -220,7 +220,7 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
       const main = scene('main.tscn');
 
       assert.strictEqual(
-        textOf(await invoke('textscene_missing_resources', main)),
+        textOf(await invokeSceneTool('textscene_missing_resources', main)),
         `${main}: every referenced resource is present.`
       );
     });
@@ -230,21 +230,21 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
       const relative = path.relative(folder, scene('missing.tscn')).split(path.sep).join('/');
 
       assert.strictEqual(
-        textOf(await invoke('textscene_missing_resources', relative)),
-        textOf(await invoke('textscene_missing_resources', scene('missing.tscn')))
+        textOf(await invokeSceneTool('textscene_missing_resources', relative)),
+        textOf(await invokeSceneTool('textscene_missing_resources', scene('missing.tscn')))
       );
     });
 
     test('a tool refuses a path that is not a .tscn scene, and names it', async () => {
       const notAScene = scene('project.godot');
 
-      await assert.rejects(invoke('textscene_scene_tree', notAScene), (error: Error) =>
+      await assert.rejects(invokeSceneTool('textscene_scene_tree', notAScene), (error: Error) =>
         error.message.includes(`Expected a .tscn scene, got '${notAScene}'`)
       );
     });
 
     test('the open-preview tool opens a preview tab for the scene', async () => {
-      const text = textOf(await invoke('textscene_open_preview', scene('main.tscn')));
+      const text = textOf(await invokeSceneTool('textscene_open_preview', scene('main.tscn')));
 
       assert.strictEqual(text, `Opened the TextScene preview for ${scene('main.tscn')}.`);
       await waitFor(
@@ -255,8 +255,8 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
     });
 
     test('the capture tool returns a PNG of the rendered preview', async function () {
-      if (typeof vscode.LanguageModelDataPart?.image !== 'function') {
-        skipBecause(this, 'this VS Code predates the image part, so the capture tool does not register');
+      if (!hostReturnsImageParts()) {
+        skipBecause(this, 'this VS Code cannot return an image part, so the capture tool does not register');
       }
       if (launchedWithoutGpu()) {
         skipBecause(this, 'the window launched with --disable-gpu, so the next test asserts the answer');
@@ -276,8 +276,8 @@ export function defineAgentToolAnswersSuite(projectDir: string): void {
     });
 
     test('the capture tool names the missing WebGL context in a window launched without a GPU', async function () {
-      if (typeof vscode.LanguageModelDataPart?.image !== 'function') {
-        skipBecause(this, 'this VS Code predates the image part, so the capture tool does not register');
+      if (!hostReturnsImageParts()) {
+        skipBecause(this, 'this VS Code cannot return an image part, so the capture tool does not register');
       }
       if (!launchedWithoutGpu()) {
         skipBecause(this, 'the window has a GPU, so the previous test asserts the image');

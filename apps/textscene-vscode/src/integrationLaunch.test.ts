@@ -98,22 +98,22 @@ describe('gpuLaunch', () => {
 
 describe('vscodeTestVersion', () => {
   it('runs on the latest stable VS Code when nothing names a version', () => {
-    expect(vscodeTestVersion(undefined, '^1.85.0')).toBe('stable');
-    expect(vscodeTestVersion('', '^1.85.0')).toBe('stable');
+    expect(vscodeTestVersion(undefined, '^1.105.0')).toBe('stable');
+    expect(vscodeTestVersion('', '^1.105.0')).toBe('stable');
   });
 
   it('resolves min to the floor of the engines.vscode range', () => {
-    expect(vscodeTestVersion('min', '^1.85.0')).toBe('1.85.0');
+    expect(vscodeTestVersion('min', '^1.105.0')).toBe('1.105.0');
   });
 
   it('passes an explicit version or channel through unchanged', () => {
-    expect(vscodeTestVersion('1.90.2', '^1.85.0')).toBe('1.90.2');
-    expect(vscodeTestVersion('insiders', '^1.85.0')).toBe('insiders');
+    expect(vscodeTestVersion('1.90.2', '^1.105.0')).toBe('1.90.2');
+    expect(vscodeTestVersion('insiders', '^1.105.0')).toBe('insiders');
   });
 
   it('refuses min when the engines range has no single floor', () => {
-    expect(() => vscodeTestVersion('min', '>=1.85.0 <2.0.0')).toThrow(
-      'expected engines.vscode as ^major.minor.patch, got >=1.85.0 <2.0.0'
+    expect(() => vscodeTestVersion('min', '>=1.105.0 <2.0.0')).toThrow(
+      'expected engines.vscode as ^major.minor.patch, got >=1.105.0 <2.0.0'
     );
   });
 });
