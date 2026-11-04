@@ -4079,6 +4079,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Physics"
   },
   {
+    "name": "Collision Separation Ray",
+    "file": "unit-collision-separation-ray.tscn",
+    "category": "Unit - Physics"
+  },
+  {
     "name": "Collision Shapes",
     "file": "unit-collision-shapes.tscn",
     "category": "Unit - Physics"

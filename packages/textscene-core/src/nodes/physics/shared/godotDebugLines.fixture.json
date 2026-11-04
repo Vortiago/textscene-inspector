@@ -2301,5 +2301,41 @@
     "lines": [],
     "name": "two identical points",
     "type": "ConvexPolygonShape3D"
+  },
+  {
+    "name": "the default length",
+    "type": "SeparationRayShape3D",
+    "data": {},
+    "lines": [0, 0, 0, 0, 0, 1]
+  },
+  {
+    "name": "the smallest inspector length",
+    "type": "SeparationRayShape3D",
+    "data": { "length": "0.001" },
+    "lines": [0, 0, 0, 0, 0, 0.001]
+  },
+  {
+    "name": "a fractional length",
+    "type": "SeparationRayShape3D",
+    "data": { "length": "0.5" },
+    "lines": [0, 0, 0, 0, 0, 0.5]
+  },
+  {
+    "name": "a long authored length",
+    "type": "SeparationRayShape3D",
+    "data": { "length": "250" },
+    "lines": [0, 0, 0, 0, 0, 250]
+  },
+  {
+    "name": "a zero length",
+    "type": "SeparationRayShape3D",
+    "data": { "length": "0" },
+    "lines": [0, 0, 0, 0, 0, 0]
+  },
+  {
+    "name": "a negative length",
+    "type": "SeparationRayShape3D",
+    "data": { "length": "-3" },
+    "lines": [0, 0, 0, 0, 0, -3]
   }
 ]

@@ -86,6 +86,14 @@ export const SCENE_COMPOSITION_SCENES = [
     collisions: true,
     camera: 'WorldBoundaryRoot/Camera',
   },
+  // The one variable against `collision-shapes`: SeparationRayShape3D, drawn as Godot's single
+  // segment along +Z in three lengths. Thin lines, AA-sensitive.
+  {
+    name: 'collision-separation-ray',
+    file: 'unit-collision-separation-ray.tscn',
+    collisions: true,
+    camera: 'SeparationRayRoot/Camera',
+  },
   // The other variable against `collision-shapes`: ConvexPolygonShape3D and ConcavePolygonShape3D,
   // drawn as Godot's hull edges and soup edges, a prism, a cube and a shared-edge soup.
   {

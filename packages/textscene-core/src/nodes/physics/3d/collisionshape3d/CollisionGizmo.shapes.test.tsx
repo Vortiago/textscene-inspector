@@ -31,20 +31,21 @@ async function drawn(shape: TscnInternalResource) {
   return { positions, meshCount: renderer.scene.findAllByType('Mesh').length };
 }
 
-describe.each(['BoxShape3D', 'SphereShape3D', 'CylinderShape3D', 'CapsuleShape3D', 'WorldBoundaryShape3D'])(
-  '<CollisionGizmo> %s',
-  (type) => {
-    it.each(godotDebugLinesFor(type))(
-      'draws every vertex Godot draws for $name',
-      async ({ shape, lines }) => {
-        const { positions, meshCount } = await drawn(shape);
-        expect(positions).toHaveLength(lines.length);
-        lines.forEach((value, index) => expect(positions[index]).toBeCloseTo(value, 4));
-        expect(meshCount).toBe(0);
-      }
-    );
-  }
-);
+describe.each([
+  'BoxShape3D',
+  'SphereShape3D',
+  'CylinderShape3D',
+  'CapsuleShape3D',
+  'WorldBoundaryShape3D',
+  'SeparationRayShape3D',
+])('<CollisionGizmo> %s', (type) => {
+  it.each(godotDebugLinesFor(type))('draws every vertex Godot draws for $name', async ({ shape, lines }) => {
+    const { positions, meshCount } = await drawn(shape);
+    expect(positions).toHaveLength(lines.length);
+    lines.forEach((value, index) => expect(positions[index]).toBeCloseTo(value, 4));
+    expect(meshCount).toBe(0);
+  });
+});
 
 describe.each(['ConcavePolygonShape3D', 'ConvexPolygonShape3D'])('<CollisionGizmo> %s', (type) => {
   it.each(godotDebugLinesFor(type))('draws every edge Godot draws for $name', async ({ shape, lines }) => {
@@ -58,7 +59,7 @@ describe('<CollisionGizmo> unknown shape', () => {
   it('still falls back to a unit box for a genuinely unknown shape type', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CollisionGizmo
-        shape={{ id: 'SeparationRayShape3D_1', type: 'SeparationRayShape3D', data: {} }}
+        shape={{ id: 'HeightMapShape3D_1', type: 'HeightMapShape3D', data: {} }}
         color={new THREE.Color(0x00ff88)}
       />
     );

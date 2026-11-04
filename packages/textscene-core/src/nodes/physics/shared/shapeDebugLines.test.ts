@@ -81,16 +81,20 @@ describe('shapeDebugLines', () => {
 });
 
 /** Every shape type measured against Godot 4.6.3 through `get_debug_mesh()`. */
-describe.each(['BoxShape3D', 'SphereShape3D', 'CylinderShape3D', 'CapsuleShape3D', 'WorldBoundaryShape3D'])(
-  '%s debug lines',
-  (type) => {
-    it.each(godotDebugLinesFor(type))('match Godot for $name', ({ shape, lines }) => {
-      const wire = shapeDebugLines(shape)!;
-      expect(wire).toHaveLength(lines.length);
-      lines.forEach((value, index) => expect(wire[index]).toBeCloseTo(value, 4));
-    });
-  }
-);
+describe.each([
+  'BoxShape3D',
+  'SphereShape3D',
+  'CylinderShape3D',
+  'CapsuleShape3D',
+  'WorldBoundaryShape3D',
+  'SeparationRayShape3D',
+])('%s debug lines', (type) => {
+  it.each(godotDebugLinesFor(type))('match Godot for $name', ({ shape, lines }) => {
+    const wire = shapeDebugLines(shape)!;
+    expect(wire).toHaveLength(lines.length);
+    lines.forEach((value, index) => expect(wire[index]).toBeCloseTo(value, 4));
+  });
+});
 
 describe('ConcavePolygonShape3D debug lines', () => {
   it.each(godotDebugLinesFor('ConcavePolygonShape3D'))('match Godot for $name', ({ shape, lines }) => {
