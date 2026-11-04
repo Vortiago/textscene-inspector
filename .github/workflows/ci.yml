@@ -240,7 +240,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # macOS runners queue for 15 minutes or more and never failed alone on a defect of macOS,
+        # so they run on a push to main only. A pull request runs Linux and Windows.
+        os: ${{ fromJSON(github.ref == 'refs/heads/main' && '["ubuntu-latest", "macos-latest", "windows-latest"]' || '["ubuntu-latest", "windows-latest"]') }}
         vscode: [stable]
         # `min` is the floor of engines.vscode, the oldest VS Code the marketplace
         # installs the extension on. An API newer than the floor fails here only.
