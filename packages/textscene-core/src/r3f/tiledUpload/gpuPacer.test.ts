@@ -8,7 +8,7 @@ import { manualClock } from '../frameProfile/frameProfile.testkit';
 import { GpuPacer, type GpuFence } from './gpuPacer';
 
 /** The bands the pacer lets be on their way to the GPU at once. */
-const IN_FLIGHT_BANDS = 4;
+const IN_FLIGHT_BANDS = 3;
 
 /** A fence per call, each done only when the test says so, and each counting its disposals. */
 function fakeFences() {
