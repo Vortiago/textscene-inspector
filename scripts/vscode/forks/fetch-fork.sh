@@ -12,12 +12,13 @@ cd "$dir"
 
 # Prints the first executable under $1 named like one of the remaining arguments, or the
 # layout on stderr when there is none. An AppImage or deb nests its binary under
-# usr/share/<name>/, four levels down.
+# usr/share/<name>/, four levels down. A bin/ directory holds the CLI wrapper script, which
+# exits 0 without opening a window, so the search skips it (Cursor, CI 2026-11-04).
 find_executable() {
   local root="$1" name found
   shift
   for name in "$@"; do
-    found=$(find "$root" -maxdepth 5 -type f -name "$name" -perm -u+x | head -n 1)
+    found=$(find "$root" -maxdepth 5 -type f -name "$name" -perm -u+x -not -path '*/bin/*' | head -n 1)
     if [ -n "$found" ]; then
       echo "$found"
       return
