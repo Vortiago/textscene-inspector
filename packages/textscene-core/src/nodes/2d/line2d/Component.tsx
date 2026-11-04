@@ -41,7 +41,7 @@ export function Line2D({ node, children }: NodeComponentProps) {
   const texture = useCanvas2DTexture(resolvedTexture, useNode2DTextureSampler(props));
   // `Size2::aspect` of the texture, and 1 without one (`line_builder.h:51`).
   const hasTexture = texture !== null;
-  const tileAspect = size && size.height !== 0 ? storedReal(size.width / size.height) : 1;
+  const tileAspect = size ? storedReal(size.width / size.height) : 1;
 
   const strokeColors = useMemo(() => gradient && strokeGradient(gradient), [gradient]);
   // Baked once per curve, not per rebuild: the bake samples the curve `bake_resolution` times.

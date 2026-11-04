@@ -14,6 +14,10 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import type { ParsedHeading } from '../../../parser/utils';
 import type { TscnNode } from '../../../parser/types';
+import {
+  UNSET_VIEWPORT_TEXTURE,
+  UNSET_VIEWPORT_TEXTURE_REF,
+} from '../../../resources/textures/viewporttexture/unsetViewportTexture.testkit';
 
 const TEXTURE_PATH = 'res://stripes.png';
 const TEXTURE_WIDTH = 64;
@@ -122,5 +126,19 @@ describe('<Line2D> texture', () => {
     const { color, map } = strokeMesh(rendered).material as THREE.MeshBasicMaterial;
     expect(map).not.toBeNull();
     expect([color.r, color.g, color.b]).toEqual([1, 0, 0]);
+  });
+
+  it('takes Godot’s NaN aspect from a texture that reports size 0, so TILE reads u as NaN', async () => {
+    // 0 / 0 is NaN, which `tile_aspect <= 0` lets through (`line_builder.cpp:55`) and which
+    // Godot's `Size2::aspect` gives for a ViewportTexture that was never set up.
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
+        <SceneResourcesProvider internalResources={[UNSET_VIEWPORT_TEXTURE]} externalResources={[]}>
+          <Line2D node={lineNode({ texture: UNSET_VIEWPORT_TEXTURE_REF, texture_mode: TILE })} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    await settleLoads();
+    expect(endU(renderer.scene.findByType('Mesh').instance as THREE.Mesh)).toBeNaN();
   });
 });
