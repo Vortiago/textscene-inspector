@@ -89,28 +89,24 @@ interface LabelEffectiveTextTheme {
   lineSpacingPx: number;
 }
 
+interface LabelFontState {
+  metrics: FontMetrics;
+  /** True while the settings font is unresolved: its file loads, or its metrics parse (ADR-0059). */
+  isLoading: boolean;
+}
+
 /**
  * The font the Label shapes and draws in: `settings->get_font()` when it is valid, else the theme
- * font (`label.cpp:112,349,473,523,758,913,978,1024`). The solver and the painter both call this, so
+ * font (`label.cpp:112,349,473,523,758,913,978,1024`). The solver and the painter both read this, so
  * the solved rect fits the drawn glyphs. A font still loading answers with the theme font, and the
- * painter draws nothing meanwhile ({@link isLabelFontLoading}).
+ * painter draws nothing meanwhile. One peek serves both answers.
  */
-export function labelFontMetrics(n: ShareNode): FontMetrics {
-  return settledSettingsFontMetrics(n) ?? resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY);
-}
-
-/** Null when the Label names no settings font, or the font is not settled yet. */
-function settledSettingsFontMetrics(n: ShareNode): FontMetrics | null {
+export function labelFontState(n: ShareNode): LabelFontState {
   const font = n.labelSettingsFont;
-  if (font === null || font === LABEL_SETTINGS_FONT_LOADING) return null;
-  return peekSettledSceneFontMetrics(font, n.path);
-}
-
-/** True while the settings font is unresolved: either its file loads, or its metrics parse (ADR-0059). */
-export function isLabelFontLoading(n: ShareNode): boolean {
-  const font = n.labelSettingsFont;
-  if (font === LABEL_SETTINGS_FONT_LOADING) return true;
-  return font !== null && settledSettingsFontMetrics(n) === null;
+  if (font === null) return { metrics: resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY), isLoading: false };
+  const settled = font === LABEL_SETTINGS_FONT_LOADING ? null : peekSettledSceneFontMetrics(font, n.path);
+  if (settled) return { metrics: settled, isLoading: false };
+  return { metrics: resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY), isLoading: true };
 }
 
 /**
@@ -322,7 +318,7 @@ export const labelUnwrappedShape = defineShare<TextLayoutResult | null>((n, them
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx,
     uppercase: props.uppercase,
-    fontMetrics: labelFontMetrics(n),
+    fontMetrics: labelFontState(n).metrics,
     paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
     tabStopsPx: props.tabStopsPx,
     autowrapTrimFlags: props.autowrapTrimFlags,
@@ -356,7 +352,7 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LabelProperties;
   const themeResolved = labelTextTheme(n, props, ctx);
   const { fontSizePx, lineSpacingPx } = labelEffectiveTextTheme(themeResolved, n.labelSettings);
-  const fontMetrics = labelFontMetrics(n);
+  const fontMetrics = labelFontState(n).metrics;
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
   // `props.visibleCharacters` is already resolved (label.cpp:1285-1327). CHARS_BEFORE_SHAPING
   // truncates before shaping, so it runs before the empty-text gate. `uppercase` stays a `shapeText`

@@ -35,7 +35,7 @@ import {
   labelEffectiveTextTheme,
   labelOutlineTheme,
   labelShadowTheme,
-  isLabelFontLoading,
+  labelFontState,
 } from './nativeSolver';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { FontResource } from '../../../../resources/fonts/font/types';
@@ -717,12 +717,12 @@ describe('labelMinimumSize — shapes in label_settings.font (label.cpp:112,349,
       { text: 'AB' },
       { labelSettings: settings, labelSettingsFont: LABEL_SETTINGS_FONT_LOADING }
     );
-    expect(isLabelFontLoading(n)).toBe(true);
+    expect(labelFontState(n).isLoading).toBe(true);
     expect(minSize(n, ctx()).x).toBe(AB_SHAPED_WIDTH);
   });
 
   it('reports no loading font for settings without one', () => {
-    expect(isLabelFontLoading(node({ text: 'AB' }, { labelSettings: settings }))).toBe(false);
+    expect(labelFontState(node({ text: 'AB' }, { labelSettings: settings })).isLoading).toBe(false);
   });
 });
 
