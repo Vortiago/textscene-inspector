@@ -493,9 +493,9 @@ function horizontalOffsetPx(
  * The paragraph direction follows `text_direction`, default `TEXT_DIRECTION_AUTO` (`label.h:70`),
  * which infers LTR for Latin text (`:179`, `text_server_adv.cpp:7241-7247`). FILL's own arm
  * (`:472`) is unreachable while `text_direction` is unmodelled (`comparison.md`).
- * The spacings default to Label's theme defaults, which the Graph titlebar's title Label uses.
  */
 interface LabelLayoutOptions extends Partial<LabelSpacing> {
+  // The spacings default to Label's theme defaults, which the Graph titlebar's title Label uses.
   /** `is_layout_rtl()` (`SolveNode.rtl`). Defaults `false`. */
   rtl?: boolean;
 }
