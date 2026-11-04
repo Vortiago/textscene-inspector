@@ -31,7 +31,7 @@ import {
   windowLabelLines,
   type LabelLinePlacement,
 } from './nativeSolver';
-import { labelEffectLayers, type LabelEffectLayer } from './effectLayers';
+import { labelEffectLayers, labelFillLayer, type LabelEffectLayer } from './effectLayers';
 import type { LabelProperties } from './types';
 import {
   AutowrapMode,
@@ -52,8 +52,6 @@ function useSoloLineLayouts(placements: LabelLinePlacement[], layout: TextLayout
     [placements, layout]
   );
 }
-
-const FILL_OFFSET = { x: 0, y: 0 };
 
 /**
  * A layer's render order: its draw index spread over the one unit below the next Control, so
@@ -104,7 +102,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   const layers = useMemo(
     () => [
       ...effectLayers.map((layer) => ({ ...layer, color: multiplyModulate(tint.own, layer.color) })),
-      { kind: 'plain' as const, color: tintColor, offset: FILL_OFFSET, ringSizePx: 0 },
+      labelFillLayer(tintColor),
     ],
     [effectLayers, tint.own, tintColor]
   );

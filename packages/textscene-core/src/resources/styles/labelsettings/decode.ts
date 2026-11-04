@@ -7,7 +7,7 @@ import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { colorOr } from '../../../utils/colorParser';
-import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
+import { floatOr, intOr, vec2Or, vec2iOr } from '../../../parser/valueParsers';
 import type { LabelSettingsResource, StackedOutline, StackedShadow } from './types';
 import type { Rgba } from '../../../godot/math/math';
 
@@ -19,7 +19,8 @@ const DEFAULT_TRANSPARENT: Rgba = { r: 0, g: 0, b: 0, a: 0 };
 const DEFAULT_FONT_SIZE = 16;
 /** `core/math/color.h:251`: `Color()` is opaque black, the default colour of a stacked element. */
 const DEFAULT_BLACK: Rgba = { r: 0, g: 0, b: 0, a: 1 };
-const DEFAULT_STACKED_SHADOW_OFFSET = { x: 1, y: 1 };
+/** `label_settings.h:66` and `:48`: the shadow and each stacked shadow default to `(1, 1)`. */
+const DEFAULT_SHADOW_OFFSET = { x: 1, y: 1 };
 const CONTEXT = 'LabelSettings';
 
 /**
@@ -43,9 +44,9 @@ function decodeStackedOutline(property: (name: string) => string | undefined): S
 
 /** The offset is a `Vector2i`: the setter truncates each component toward zero (`label_settings.cpp:359-365`). */
 function decodeStackedShadow(property: (name: string) => string | undefined): StackedShadow {
-  const offset = vec2Or(property('offset'), DEFAULT_STACKED_SHADOW_OFFSET, CONTEXT);
+  const offset = vec2iOr(property('offset'), DEFAULT_SHADOW_OFFSET, CONTEXT);
   return {
-    offset: { x: Math.trunc(offset.x), y: Math.trunc(offset.y) },
+    offset,
     color: colorOr(property('color'), DEFAULT_BLACK),
     outlineSize: intOr(property('outline_size'), 0, CONTEXT),
   };
@@ -63,7 +64,7 @@ function decodeLabelSettings(data: Record<string, string>): LabelSettingsResourc
     outlineColor: colorOr(data.outline_color, DEFAULT_WHITE),
     shadowSize: intOr(data.shadow_size, 1, CONTEXT),
     shadowColor: colorOr(data.shadow_color, DEFAULT_TRANSPARENT),
-    shadowOffset: vec2Or(data.shadow_offset, { x: 1, y: 1 }, CONTEXT),
+    shadowOffset: vec2Or(data.shadow_offset, DEFAULT_SHADOW_OFFSET, CONTEXT),
     stackedOutlines: decodeStacked(data, 'stacked_outline', decodeStackedOutline),
     stackedShadows: decodeStacked(data, 'stacked_shadow', decodeStackedShadow),
   };

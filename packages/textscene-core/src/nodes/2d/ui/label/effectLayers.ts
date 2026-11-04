@@ -29,6 +29,11 @@ function plain(color: Rgba, offset: Vector2): LabelEffectLayer {
   return { kind: 'plain', color, offset, ringSizePx: 0 };
 }
 
+/** The fill: the last layer, in the Label's own colour at no offset. */
+export function labelFillLayer(color: Rgba): LabelEffectLayer {
+  return plain(color, NO_OFFSET);
+}
+
 /** `label.cpp:829-836`: the shadow ring needs a non-zero alpha, the shadow itself a positive one. */
 function baseShadowLayers(n: SolveNode): LabelEffectLayer[] {
   const { size, color, offset } = labelShadowTheme(n);
