@@ -31,3 +31,15 @@ export function clearDiagnostics(diagnostics) {
 export function loggedErrors({ consoleErrors, pageErrors }) {
   return [...consoleErrors, ...pageErrors];
 }
+
+/**
+ * The logged errors for a failure message, each labelled with its source, then every failed
+ * request with its URL and network error. A `TypeError: Failed to fetch` names no URL itself.
+ */
+export function errorReport({ consoleErrors, pageErrors, failedRequests }) {
+  return [
+    ...consoleErrors.map((error) => `console error: ${error}`),
+    ...pageErrors.map((error) => `page error: ${error}`),
+    ...failedRequests.map(({ url, failure }) => `failed request: ${url} (${failure ?? 'no error text'})`),
+  ].join(' | ');
+}

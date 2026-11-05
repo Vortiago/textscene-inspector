@@ -394,6 +394,16 @@ _Avoid_: "z order", "z offset".
 An item's position in Godot's single pre-order walk of the canvas, the third and weakest term of **canvas paint order**.
 _Avoid_: "paint index".
 
+**CanvasItem state** (`r3f/canvasItemState.tsx`):
+What one canvas item draws with and passes down, whatever its node type: its tint, `z_final`, draw-order key, material, texture sampler and light mask.
+A Node2D-family item and a Control resolve it the same way, because Godot culls both in one walk.
+_Avoid_: "Control tint", "item context".
+
+**Sub-order**:
+A key between a canvas item's key and the next one, for a piece the item draws as an internal child item that the scene tree does not list, such as a scrollbar or a toolbar.
+Each piece owns a slot inside its parent's, so a piece can hand out sub-orders of its own.
+_Avoid_: "render-order offset", "fraction".
+
 **Canvas frame** (`Canvas2DStage/canvasFrame.ts`):
 The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057). Under `render_target_clear_mode` NEVER it takes the bytes of the target first and draws over them.
 _Avoid_: "MSAA frame".

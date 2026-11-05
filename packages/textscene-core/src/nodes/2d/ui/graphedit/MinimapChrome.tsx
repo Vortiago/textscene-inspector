@@ -37,6 +37,7 @@ import type { MinimapTransform, GraphScrollBounds, MinimapElement } from './mini
 import { minimapCameraRect, minimapNodeRect } from './minimap';
 import type { Rgba } from '../../../../godot/math/math';
 import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
+import { canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemState';
 
 /** `draw_polyline_colors(points, colors, 0.5, lines_antialiased)` (`graph_edit.cpp:1611`). */
 const MINIMAP_LINE_WIDTH = 0.5;
@@ -152,8 +153,11 @@ interface GraphEditMinimapProps {
   icons: NativeControlComponentProps['solveNode']['icons'];
   theme: NativeControlComponentProps['theme'];
   tint: NativeControlComponentProps['tint'];
-  renderOrder: number;
+  slot: CanvasSlot;
 }
+
+/** What `GraphEdit::_minimap_draw` draws after its panel, in order (`graph_edit.cpp:1807-1892`). */
+const MINIMAP_PIECES = ['nodes', 'connections', 'camera', 'resizer'] as const;
 
 export function GraphEditMinimapChrome({
   rect,
@@ -170,8 +174,9 @@ export function GraphEditMinimapChrome({
   icons,
   theme,
   tint,
-  renderOrder,
+  slot,
 }: GraphEditMinimapProps) {
+  const pieces = canvasSubOrders(slot, MINIMAP_PIECES);
   const scale = theme.contentMargin / DEFAULT_CONTENT_MARGIN;
   // `minimap->set_modulate(Color(1, 1, 1, minimap_opacity))` (`:3330`) multiplies every draw
   // inside the minimap, so it folds into each sRGB colour before the linear conversion.
@@ -201,16 +206,15 @@ export function GraphEditMinimapChrome({
   );
   const resizerOpacity = modulated.a * RESIZER_COLOR.a;
 
-  const resizerRenderOrder = renderOrder + 0.06;
   const cameraRect = minimapCameraRect(transform, bounds, scrollOffset, graphEditSize);
 
   return (
-    <CanvasItemGroup position={[rect.x, -rect.y, 0]} renderOrder={renderOrder}>
+    <CanvasItemGroup position={[rect.x, -rect.y, 0]} renderOrder={slot.key}>
       <StyleBoxQuad
         styleBox={panelStyle}
         color={modulated}
         rect={{ x: 0, y: 0, w: rect.w, h: rect.h }}
-        renderOrder={renderOrder}
+        renderOrder={slot.key}
       />
 
       {elements.map((element) => {
@@ -222,7 +226,7 @@ export function GraphEditMinimapChrome({
               styleBox={style}
               color={modulated}
               rect={{ x: 0, y: 0, w: nodeRect.w, h: nodeRect.h }}
-              renderOrder={renderOrder + 0.02}
+              renderOrder={pieces.nodes.key}
             />
           </CanvasItemGroup>
         );
@@ -235,7 +239,7 @@ export function GraphEditMinimapChrome({
         curvature={curvature}
         antialiased={connectionLinesAntialiased}
         lineTint={modulated}
-        renderOrder={renderOrder + 0.03}
+        renderOrder={pieces.connections.key}
       />
 
       <CanvasItemGroup position={[cameraRect.x, -cameraRect.y, 0]}>
@@ -243,19 +247,19 @@ export function GraphEditMinimapChrome({
           styleBox={cameraStyle}
           color={modulated}
           rect={{ x: 0, y: 0, w: cameraRect.w, h: cameraRect.h }}
-          renderOrder={renderOrder + 0.04}
+          renderOrder={pieces.camera.key}
         />
       </CanvasItemGroup>
 
       {resizerTexture && (
-        <CanvasItemGroup renderOrder={resizerRenderOrder}>
+        <CanvasItemGroup renderOrder={pieces.resizer.key}>
           <ControlQuad
             width={GRAPH_EDIT_ICON_SIZE}
             height={GRAPH_EDIT_ICON_SIZE}
             color={resizerColor}
             opacity={resizerOpacity}
             map={resizerTexture}
-            renderOrder={resizerRenderOrder}
+            renderOrder={pieces.resizer.key}
           />
         </CanvasItemGroup>
       )}

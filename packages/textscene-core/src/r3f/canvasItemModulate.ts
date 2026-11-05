@@ -27,14 +27,11 @@ export function multiplyModulate(a: Rgba, b: Rgba): Rgba {
   return { r: a.r * b.r, g: a.g * b.g, b: a.b * b.b, a: a.a * b.a };
 }
 
-export interface CanvasItemTint {
-  /** Ancestor modulate × this node's `modulate`, for the child context. */
-  inherited: Rgba;
-  /**
-   * `inherited` × `self_modulate` in sRGB, before the canvas tint, for a body whose child items
-   * each decide whether the canvas tint reaches them, as a tile layer's do.
-   */
-  self: Rgba;
+/**
+ * The tint of a canvas item's own pixels: the type a Control painter is handed. It names no value
+ * the descendants inherit, so no painter can re-enter the modulate chain.
+ */
+export interface OwnPixelTint {
   /**
    * The sRGB own-pixel product, `self` × the own multiplier, for a body that composes a further
    * tint before the one conversion to linear.
@@ -44,6 +41,16 @@ export interface CanvasItemTint {
   color: THREE.Color;
   /** Own-pixel opacity, `own.a`. */
   opacity: number;
+}
+
+export interface CanvasItemTint extends OwnPixelTint {
+  /** Ancestor modulate × this node's `modulate`, for the child context. */
+  inherited: Rgba;
+  /**
+   * `inherited` × `self_modulate` in sRGB, before the canvas tint, for a body whose child items
+   * each decide whether the canvas tint reaches them, as a tile layer's do.
+   */
+  self: Rgba;
 }
 
 /** Resolve a CanvasItem's modulate/self_modulate into a material tint + child-context value. */
@@ -63,5 +70,6 @@ export function useCanvasItemTint(
   );
   const own = useMemo(() => multiplyModulate(self, ownMultiplier), [self, ownMultiplier]);
   const color = useGodotLinearColor(own);
-  return { inherited, self, own, color, opacity: own.a };
+  // Memoised as a whole: a Control painter takes it as a prop and memoises on it.
+  return useMemo(() => ({ inherited, self, own, color, opacity: own.a }), [inherited, self, own, color]);
 }

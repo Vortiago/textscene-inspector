@@ -9,22 +9,13 @@ import { useContext, useMemo, type ReactNode } from 'react';
 import type * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
-import {
-  Modulate2DContext,
-  multiplyModulate,
-  useParentModulate,
-  WHITE_MODULATE,
-} from './canvasItemModulate.js';
+import { multiplyModulate, WHITE_MODULATE } from './canvasItemModulate.js';
 import {
   TextureSampler2DContext,
   inheritTextureSampler,
   type AmbientTextureSampler,
 } from './canvasItemTextureSampler.js';
-import {
-  EffectiveZProvider,
-  accumulateCanvasItemZ,
-  useEffectiveZ,
-} from './lighting2d/canvasItemPlacement.js';
+import { SkippedCanvasItemsScope, type SkippedCanvasItems } from './canvasItemState.js';
 import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from './node2dTransform.js';
 import { CanvasSpaceProvider, useCanvasSpace } from './canvasRootScope.js';
 import { joinPath } from '../utils/nodePath.js';
@@ -51,26 +42,14 @@ export function LiftedAncestors({
   // Flattening drops the ancestors' CanvasItem state. `visible` and `modulate` inherit
   // in Godot, so a hidden or tinted y-sorted container keeps hiding or tinting the
   // descendants lifted out of it, as its own body does through CanvasItem2D.
-  const parentModulate = useParentModulate();
-  const parentSampler = useContext(TextureSampler2DContext);
   // The same goes for the z the lights are culled against: `z_index` accumulates
   // down the tree, so an item lifted out of two nested containers has to be told
   // what those containers contributed before it adds its own.
-  const parentEffectiveZ = useEffectiveZ();
+  const skipped = useMemo(() => liftedCanvasItems(liftedPast), [liftedPast]);
+  const parentSampler = useContext(TextureSampler2DContext);
   // The restored groups are real transforms in the rendered tree, so a canvas
   // root below them has to cancel them too (`canvasRootScope.tsx`).
   const ambient = useCanvasSpace();
-  const liftedZ = useMemo(
-    () =>
-      liftedPast.reduce((z, ancestor) => {
-        const props = ancestor.properties as Partial<Node2DProperties>;
-        return accumulateCanvasItemZ(z, {
-          z_index: props.z_index ?? 0,
-          z_as_relative: props.z_as_relative,
-        });
-      }, parentEffectiveZ),
-    [liftedPast, parentEffectiveZ]
-  );
 
   const liftedSpace = useMemo(
     () =>
@@ -110,20 +89,6 @@ export function LiftedAncestors({
     );
   }
 
-  // Only `modulate` inherits, not `self_modulate`. A colour, so it applies outside the
-  // groups. Memoised for identity: the fold feeds a context, and a fresh object would
-  // re-render every consumer in the lifted subtree. With no ancestors it returns
-  // `parentModulate` itself.
-  const inherited = useMemo(
-    () =>
-      liftedPast.reduce(
-        (acc, a) =>
-          multiplyModulate(acc, (a.properties as Partial<Node2DProperties>).modulate ?? WHITE_MODULATE),
-        parentModulate
-      ),
-    [liftedPast, parentModulate]
-  );
-
   // The filter and repeat inherit too, innermost ancestor last so that it wins, as in the tree.
   const inheritedSampler = useMemo(
     () =>
@@ -135,14 +100,24 @@ export function LiftedAncestors({
   );
 
   return (
-    <Modulate2DContext.Provider value={inherited}>
+    <SkippedCanvasItemsScope skipped={skipped}>
       <TextureSampler2DContext.Provider value={inheritedSampler}>
-        <EffectiveZProvider value={liftedZ}>
-          <CanvasSpaceProvider value={liftedSpace}>{wrapped}</CanvasSpaceProvider>
-        </EffectiveZProvider>
+        <CanvasSpaceProvider value={liftedSpace}>{wrapped}</CanvasSpaceProvider>
       </TextureSampler2DContext.Provider>
-    </Modulate2DContext.Provider>
+    </SkippedCanvasItemsScope>
   );
+}
+
+/**
+ * The lifted ancestors' `modulate` and z steps, outermost first. Only `modulate` inherits, not
+ * `self_modulate`, so it applies outside the restored groups.
+ */
+function liftedCanvasItems(liftedPast: readonly TscnNode[]): SkippedCanvasItems {
+  const props = liftedPast.map((ancestor) => ancestor.properties as Partial<Node2DProperties>);
+  return {
+    modulate: props.reduce((acc, p) => multiplyModulate(acc, p.modulate ?? WHITE_MODULATE), WHITE_MODULATE),
+    z: props.map((p) => ({ zIndex: p.z_index ?? 0, zAsRelative: p.z_as_relative !== false })),
+  };
 }
 
 /** The item's true path in the scene tree, including the levels it was lifted past. */

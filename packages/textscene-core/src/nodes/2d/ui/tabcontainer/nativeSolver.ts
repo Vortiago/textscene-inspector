@@ -37,6 +37,7 @@ import {
   resolveNodeFont,
   resolveNodeFontSizePx,
 } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { parseControlCanvasItem } from '../control/parser';
 import type { TabBarProperties, TabBarTabProperties } from '../tabbar/types';
 import type { TabContainerProperties, TabContainerTabOverride } from './types';
 
@@ -135,7 +136,8 @@ function internalTabBarThemeConstants(
 /**
  * A synthetic `SolveNode` for TabContainer's internal `TabBar`, with the scope of `n`. The bar is no
  * scene node (`memnew`d at `tab_container.cpp:1280`), and type `'TabBar'` reaches `tabBarMinimumSize`.
- * `tabCloseDisplayPolicy` is `SHOW_NEVER` and `maxTabWidth` 0, since TabContainer exposes neither.
+ * `tabCloseDisplayPolicy` is `SHOW_NEVER` and `maxTabWidth` 0, since TabContainer exposes neither,
+ * and its CanvasItem fields hold the Godot defaults.
  */
 export function buildInternalTabBarNode(
   n: SolveNode,
@@ -145,6 +147,7 @@ export function buildInternalTabBarNode(
 ): SolveNode {
   const barProps: TabBarProperties = {
     name: n.node.name,
+    ...parseControlCanvasItem({}, n.node.name),
     tabs: derivedTabs,
     currentTab: tabContainerCurrentTab(props, derivedTabs.length),
     tabAlignment: props.tabAlignment,

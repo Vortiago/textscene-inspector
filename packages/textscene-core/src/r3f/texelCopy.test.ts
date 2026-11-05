@@ -1,7 +1,13 @@
 /** The one texel copy pass: a placement per draw, and the sRGB transfer a view copy needs. */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { copyTexels, reversedTexelRows, wholeTexels, type TexelTransfer } from './texelCopy';
+import {
+  copyTexels,
+  reversedTexelRows,
+  viewportTransfer,
+  wholeTexels,
+  type TexelTransfer,
+} from './texelCopy';
 
 /** A renderer that keeps the uniforms and fragment of each pass it draws, read during the draw. */
 function passRecorder() {
@@ -53,6 +59,14 @@ describe('copyTexels', () => {
     expect(copyWith('encode').drawn.fragment).toContain('sRGBTransferOETF');
   });
 
+  it('writes alpha 1 and keeps the colour for an opaque copy', () => {
+    expect(copyWith('opaque').drawn.fragment).toContain('vec4( texel.rgb, 1.0 )');
+  });
+
+  it('decodes each texel and writes alpha 1 for an opaque copy into sRGB storage', () => {
+    expect(copyWith('decode-opaque').drawn.fragment).toContain('vec4( sRGBTransferEOTF( texel ).rgb, 1.0 )');
+  });
+
   it("reads the source's edge texel for a placed texel past the source, as a clamped sampler does", () => {
     expect(copyWith().drawn.fragment).toContain('clamp( at, ivec2( 0 ), textureSize( source, 0 ) - 1 )');
   });
@@ -65,5 +79,18 @@ describe('copyTexels', () => {
 describe('reversedTexelRows', () => {
   it('reads each row from its mirror row, across the whole source', () => {
     expect(reversedTexelRows(4, 3)).toEqual({ offsetX: 0, offsetY: 2, rowStep: -1, bounds: [0, 0, 4, 3] });
+  });
+});
+
+describe('viewportTransfer', () => {
+  it('keeps the alpha a transparent viewport wrote', () => {
+    expect([viewportTransfer('none', true), viewportTransfer('decode', true)]).toEqual(['none', 'decode']);
+  });
+
+  it('writes alpha 1 for an opaque viewport, keeping the colour transfer', () => {
+    expect([viewportTransfer('none', false), viewportTransfer('decode', false)]).toEqual([
+      'opaque',
+      'decode-opaque',
+    ]);
   });
 });

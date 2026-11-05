@@ -53,11 +53,9 @@ import {
 } from './minimap';
 import { GraphEditMinimapChrome } from './MinimapChrome';
 import { minimapConnectionsOf } from './minimapConnections';
-import { graphEditScrollBars, type GraphEditScrollBar } from './scrollBars';
-import {
-  snappedControlOrigin,
-  type ControlDrawTransform,
-} from '../../../../r3f/controls/native/controlPixelSnap';
+import { graphEditScrollBars } from './scrollBars';
+import { ScrollBarChrome } from '../shared/ScrollChrome';
+import { canvasSubOrders } from '../../../../r3f/canvasItemState';
 import type { GraphEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 
@@ -161,47 +159,11 @@ function GridDotQuad({
   );
 }
 
-/** No bar has an authored rotation, scale or pivot: `set_anchor_and_offset` alone places each (`graph_edit.cpp:844-851`). */
-const SCROLL_BAR_DRAW_TRANSFORM: ControlDrawTransform = {
-  rotation: 0,
-  scale: { x: 1, y: 1 },
-  pivot: { x: 0, y: 0 },
-};
-
-/** One of GraphEdit's own scrollbars: `ScrollBar::_notification(NOTIFICATION_DRAW)`'s track then grabber (`scroll_bar.cpp:295-344`). */
-function ScrollBarChrome({
-  bar,
-  track,
-  grabber,
-  color,
-  renderOrder,
-  snapToPixels,
-}: {
-  bar: GraphEditScrollBar;
-  track: StyleBoxFlatData;
-  grabber: StyleBoxFlatData;
-  color: NativeControlComponentProps['tint']['own'];
-  renderOrder: number;
-  snapToPixels: boolean;
-}) {
-  if (!bar.visible) return null;
-  // Each bar is its own CanvasItem, so its translation is floored on its own
-  // (the PIXEL SNAP doc of `scrollcontainer/Component.tsx`).
-  const origin = snappedControlOrigin(bar.rect, SCROLL_BAR_DRAW_TRANSFORM, snapToPixels);
-  return (
-    <CanvasItemGroup position={[origin.x, -origin.y, 0]}>
-      <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={renderOrder} />
-      <CanvasItemGroup position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}>
-        <StyleBoxQuad
-          styleBox={grabber}
-          color={color}
-          rect={bar.grabberRect}
-          renderOrder={renderOrder + 0.05}
-        />
-      </CanvasItemGroup>
-    </CanvasItemGroup>
-  );
-}
+/**
+ * The pieces of `top_layer`, an `INTERNAL_MODE_BACK` child drawn after every GraphElement
+ * (`graph_edit.cpp:3183`), in its child order (`:3211-3329`).
+ */
+const GRAPH_EDIT_TOP_LAYER = ['scrollBars', 'toolbar', 'minimap'] as const;
 
 export function GraphEdit({
   solveNode,
@@ -209,7 +171,8 @@ export function GraphEdit({
   rect,
   theme,
   renderOrder,
-  subtreeChromeRenderOrder,
+  chromeSlot,
+  layerSlot,
   childRects,
   measureText,
   snapToPixels,
@@ -304,10 +267,8 @@ export function GraphEdit({
     graphEditSize,
     theme
   );
-  // The chrome is `INTERNAL_MODE_*` children of `top_layer`, which is `INTERNAL_MODE_BACK`
-  // (`graph_edit.cpp:3183`), so it paints after every GraphElement, in `top_layer`
-  // child order (`:3210,3229,3329`): scrollbars, toolbar, minimap.
   const scrollBars = graphEditScrollBars(graphEditSize, bounds, scrollOffset, theme);
+  const topLayer = canvasSubOrders(chromeSlot, GRAPH_EDIT_TOP_LAYER);
   const minimapPanelRect = minimapRect(graphEditSize, props);
   const minimapXform = minimapTransform({ x: minimapPanelRect.w, y: minimapPanelRect.h }, bounds);
 
@@ -318,9 +279,6 @@ export function GraphEdit({
   // The walker hands the children over (`wrapsChildren`): the clip reaches them only inside the provider.
   const { anchorRef, clip } = useWorldClipPlanes(ownRect);
 
-  // Connections draw at this node's `renderOrder`, behind every GraphElement. Godot puts
-  // `connections_layer` above the grid and below the GraphFrames and GraphNodes
-  // (`graph_edit.cpp:717`): see `comparison.md`.
   return (
     <CanvasItemGroup ref={anchorRef}>
       <ControlClipProvider value={clip}>
@@ -351,17 +309,19 @@ export function GraphEdit({
             <GridDotQuad key={`M${i}`} dot={dot} colorQuad={majorColor} renderOrder={renderOrder} />
           ))}
 
-        {connections.map((connection, i) => (
-          <ConnectionLine
-            key={i}
-            connection={connection}
-            curvature={curvature}
-            lineWidth={lineWidth}
-            rimColor={rimColor}
-            tintOwn={tint.own}
-            renderOrder={renderOrder}
-          />
-        ))}
+        <CanvasItemGroup renderOrder={layerSlot.key}>
+          {connections.map((connection, i) => (
+            <ConnectionLine
+              key={i}
+              connection={connection}
+              curvature={curvature}
+              lineWidth={lineWidth}
+              rimColor={rimColor}
+              tintOwn={tint.own}
+              renderOrder={layerSlot.key}
+            />
+          ))}
+        </CanvasItemGroup>
 
         {children}
 
@@ -370,7 +330,7 @@ export function GraphEdit({
           track={theme.widgets.scrollBar.scrollHorizontal}
           grabber={theme.widgets.scrollBar.grabber}
           color={tint.own}
-          renderOrder={subtreeChromeRenderOrder + 0.25}
+          chromeSlot={topLayer.scrollBars}
           snapToPixels={snapToPixels}
         />
         <ScrollBarChrome
@@ -378,7 +338,7 @@ export function GraphEdit({
           track={theme.widgets.scrollBar.scrollVertical}
           grabber={theme.widgets.scrollBar.grabber}
           color={tint.own}
-          renderOrder={subtreeChromeRenderOrder + 0.25}
+          chromeSlot={topLayer.scrollBars}
           snapToPixels={snapToPixels}
         />
 
@@ -391,7 +351,7 @@ export function GraphEdit({
             text={toolbarText}
             shape={shape}
             rtl={solveNode.rtl}
-            renderOrder={subtreeChromeRenderOrder + 0.5}
+            slot={topLayer.toolbar}
           />
         )}
 
@@ -411,7 +371,7 @@ export function GraphEdit({
             icons={solveNode.icons}
             theme={theme}
             tint={tint}
-            renderOrder={subtreeChromeRenderOrder + 0.75}
+            slot={topLayer.minimap}
           />
         )}
       </ControlClipProvider>

@@ -22,6 +22,7 @@ import {
   OPTION_BUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlProps } from '../control/testing/controlProps';
 
 const A_ADVANCE = 1354 * (16 / 2048); // 10.578125
 // 'B' is 1350 design units, not 'A''s 1354.
@@ -169,10 +170,10 @@ describe('optionButtonTextTheme', () => {
   });
 
   it('a theme_override_colors/font_color override wins over the default', () => {
-    const props: OptionButtonProperties = {
+    const props: OptionButtonProperties = controlProps({
       name: 'O',
       themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
-    };
+    });
     expect(optionButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({
       r: 1,
       g: 0,

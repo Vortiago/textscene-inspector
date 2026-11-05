@@ -92,6 +92,8 @@ import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
 import {
   allocatePaintRange,
   canvasRootRanges,
+  internalBackRoom,
+  listedChildOrder,
   internalFrontRoom,
   isCanvasLayerType,
   isTopLevelItem,
@@ -743,6 +745,8 @@ function buildForest(
     const allocated = allocatePaintRange(paintRange, inlineChildren, {
       sortsChildren: sortsChildren(collapsed),
       frontRoom: internalFrontRoom(collapsed),
+      backRoom: internalBackRoom(collapsed),
+      listedOrder: listedChildOrder(collapsed, inlineChildren),
     });
     const injectedChildren = groups.filter(isInjected).flatMap((g) => g.children);
     const injectedRanges = allocatePaintRange(allocated.tail, injectedChildren).children;
@@ -839,6 +843,8 @@ function buildForest(
       children: isBoundary ? [...children, ...childHoisted] : children,
       paintRange,
       paintSequence: allocated.self,
+      backSequence: allocated.back.base,
+      layerSequence: allocated.layer,
       // A CanvasLayer draws on its own canvas (`canvas_item.cpp:263-267`), and a
       // top_level Control's item parents at the canvas (`canvas_item.cpp:565-571`),
       // so no skipped ancestor composes onto either. A merely hoisted Control's

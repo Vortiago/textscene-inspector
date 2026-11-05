@@ -15,6 +15,7 @@ import type { ControlProperties } from '../control/types';
 import type { TabContainerProperties } from './types';
 import { TabContainer } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { wholeKeySlot } from '../../../../r3f/canvasItemState';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const THEME = nativeTheme(1);
@@ -115,7 +116,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
     expect(findTextMeshes(renderer.scene)).toHaveLength(0);
   });
 
-  it("all_tabs_in_front flips the strip from the subtree-chrome slot to this node's own paint slot", async () => {
+  it("all_tabs_in_front flips the strip from the chrome slot to a piece of this node's own key", async () => {
     const behind = await ReactThreeTestRenderer.create(
       <TabContainer
         {...painterEnv()}
@@ -123,7 +124,8 @@ describe('<TabContainer> (isolated painter contract)', () => {
         rect={RECT}
         theme={THEME}
         renderOrder={5}
-        subtreeChromeRenderOrder={9}
+        slot={wholeKeySlot(5)}
+        chromeSlot={wholeKeySlot(9)}
       />
     );
     const front = await ReactThreeTestRenderer.create(
@@ -133,14 +135,17 @@ describe('<TabContainer> (isolated painter contract)', () => {
         rect={RECT}
         theme={THEME}
         renderOrder={5}
-        subtreeChromeRenderOrder={9}
+        slot={wholeKeySlot(5)}
+        chromeSlot={wholeKeySlot(9)}
       />
     );
     const stripMesh = (scene: Rendered['scene']) => findTextMeshes(scene)[0]!;
-    // Default (false): the strip draws at the subtree-chrome slot (9.5), after the
-    // current page, as Godot's INTERNAL_MODE_BACK does. true: this node's paint slot (5).
-    expect(stripMesh(behind.scene).renderOrder).toBeCloseTo(9.5, 5);
-    expect(stripMesh(front.scene).renderOrder).toBe(5);
+    // Default (false): the strip draws inside the chrome slot (9), after the current page, as
+    // Godot's INTERNAL_MODE_BACK does. true: INTERNAL_MODE_FRONT, after this node's own pixels (5)
+    // and before its first page (6).
+    const inSlot = (order: number, key: number) => key < order && order < key + 1;
+    expect(inSlot(stripMesh(behind.scene).renderOrder, 9)).toBe(true);
+    expect(inSlot(stripMesh(front.scene).renderOrder, 5)).toBe(true);
   });
 });
 

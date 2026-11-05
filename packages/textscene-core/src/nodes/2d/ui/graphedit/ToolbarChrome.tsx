@@ -1,7 +1,7 @@
 /**
  * `<GraphEditToolbarChrome>`: paints the `menu_panel` row the `GraphEdit` constructor builds
  * (`scene/gui/graph_edit.cpp:3229-3324`) from the geometry of `toolbar.ts`. The row is chrome
- * of `top_layer` (`:3183`), so `renderOrder` is the caller's `subtreeChromeRenderOrder` band.
+ * of `top_layer` (`:3183`), so it draws in the slot the caller hands out after its subtree.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -33,6 +33,7 @@ import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxF
 import { graphEditMenuPanelStyleBox, type GraphEditToolbar, type ToolbarItem } from './toolbar';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
+import { canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemState';
 
 /** The `font_color` of `Label` (`default_theme.cpp:384`): opaque white, where other controls use grey. */
 const LABEL_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
@@ -65,7 +66,7 @@ interface GraphEditToolbarProps {
   shape: (text: string) => TextLayoutResult;
   /** The `SpinBox` buttons block sits on the trailing edge (`spin_box.cpp:403,409`). */
   rtl: boolean;
-  renderOrder: number;
+  slot: CanvasSlot;
 }
 
 interface ButtonIconProps {
@@ -159,6 +160,9 @@ function ToolbarText({
   );
 }
 
+/** Each item is a child item of `menu_hbox` (`graph_edit.cpp:3235-3321`): its box draws before its content. */
+const TOOLBAR_ITEM_PIECES = ['boxes', 'content'] as const;
+
 export function GraphEditToolbarChrome({
   toolbar,
   icons,
@@ -167,8 +171,9 @@ export function GraphEditToolbarChrome({
   text,
   shape,
   rtl,
-  renderOrder,
+  slot,
 }: GraphEditToolbarProps) {
+  const items = canvasSubOrders(slot, TOOLBAR_ITEM_PIECES);
   const panelStyle = useMemo(() => graphEditMenuPanelStyleBox(theme), [theme]);
   const pressedStyle = useMemo(() => flatButtonPressedStyleBox(theme.widgets.button.pressed), [theme]);
   const labelColor = useMemo(() => multiplyModulate(tint.own, LABEL_FONT_COLOR), [tint.own]);
@@ -192,12 +197,12 @@ export function GraphEditToolbarChrome({
   const lineEditInsetX = theme.widgets.lineEdit.normal.contentMargin.left;
 
   return (
-    <CanvasItemGroup position={[panelRect.x, -panelRect.y, 0]} renderOrder={renderOrder}>
+    <CanvasItemGroup position={[panelRect.x, -panelRect.y, 0]} renderOrder={slot.key}>
       <StyleBoxQuad
         styleBox={panelStyle}
         color={tint.own}
         rect={{ x: 0, y: 0, w: panelRect.w, h: panelRect.h }}
-        renderOrder={renderOrder}
+        renderOrder={slot.key}
       />
 
       {toolbar.items.map((item) => {
@@ -210,7 +215,7 @@ export function GraphEditToolbarChrome({
               fontSizePx={theme.fontSize}
               tint={labelColor}
               clippingPlanes={clippingPlanes}
-              renderOrder={renderOrder + 0.05}
+              renderOrder={items.content.key}
               centred
             />
           );
@@ -225,7 +230,7 @@ export function GraphEditToolbarChrome({
                     styleBox={pressedStyle}
                     color={tint.own}
                     rect={{ x: 0, y: 0, w: item.rect.w, h: item.rect.h }}
-                    renderOrder={renderOrder + 0.05}
+                    renderOrder={items.boxes.key}
                   />
                 </CanvasItemGroup>
               )}
@@ -235,7 +240,7 @@ export function GraphEditToolbarChrome({
                 contentMargin={theme.contentMargin}
                 tint={tint}
                 rtl={rtl}
-                renderOrder={renderOrder + 0.1}
+                renderOrder={items.content.key}
               />
             </CanvasItemGroup>
           );
@@ -254,7 +259,7 @@ export function GraphEditToolbarChrome({
                 styleBox={theme.widgets.lineEdit.normal}
                 color={tint.own}
                 rect={{ x: 0, y: 0, w: fieldRect.w, h: fieldRect.h }}
-                renderOrder={renderOrder + 0.05}
+                renderOrder={items.boxes.key}
               />
             </CanvasItemGroup>
             <ToolbarText
@@ -263,30 +268,30 @@ export function GraphEditToolbarChrome({
               fontSizePx={theme.fontSize}
               tint={fieldColor}
               clippingPlanes={clippingPlanes}
-              renderOrder={renderOrder + 0.1}
+              renderOrder={items.content.key}
               inset={lineEditInsetX}
             />
             {spinUpTexture && (
-              <CanvasItemGroup position={[upPos.x, -upPos.y, 0]} renderOrder={renderOrder + 0.1}>
+              <CanvasItemGroup position={[upPos.x, -upPos.y, 0]} renderOrder={items.content.key}>
                 <ControlQuad
                   width={SPIN_BOX_ARROW_ICON_SIZE.x}
                   height={SPIN_BOX_ARROW_ICON_SIZE.y}
                   color={arrowColor}
                   opacity={tint.opacity}
                   map={spinUpTexture}
-                  renderOrder={renderOrder + 0.1}
+                  renderOrder={items.content.key}
                 />
               </CanvasItemGroup>
             )}
             {spinDownTexture && (
-              <CanvasItemGroup position={[downPos.x, -downPos.y, 0]} renderOrder={renderOrder + 0.1}>
+              <CanvasItemGroup position={[downPos.x, -downPos.y, 0]} renderOrder={items.content.key}>
                 <ControlQuad
                   width={SPIN_BOX_ARROW_ICON_SIZE.x}
                   height={SPIN_BOX_ARROW_ICON_SIZE.y}
                   color={arrowColor}
                   opacity={tint.opacity}
                   map={spinDownTexture}
-                  renderOrder={renderOrder + 0.1}
+                  renderOrder={items.content.key}
                 />
               </CanvasItemGroup>
             )}

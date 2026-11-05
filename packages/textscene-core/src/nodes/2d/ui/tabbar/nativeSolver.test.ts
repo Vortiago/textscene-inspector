@@ -22,6 +22,7 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { TabBarProperties } from './types';
+import { controlProps } from '../control/testing/controlProps';
 
 describe('resolveTabDrawState', () => {
   it('picks selected for the current tab', () => {
@@ -336,11 +337,11 @@ describe('tabBarMinimumSize — a themed "close" icon widens both axes (tab_bar.
   }
 
   function node(overrides: Partial<SolveNode> = {}): SolveNode {
-    const props: TabBarProperties = {
+    const props: TabBarProperties = controlProps({
       name: 'T',
       tabs: [{ title: '', tooltip: '', disabled: false }],
       tabCloseDisplayPolicy: 2, // ALWAYS
-    };
+    });
     return {
       ...solveNode(),
       path: 'T',
@@ -405,11 +406,11 @@ describe('tabBarMinimumSize — the tab buffer is shaped at theme_cache.font_siz
   }
 
   function node(props: Partial<TabBarProperties> = {}): SolveNode {
-    const properties: TabBarProperties = {
+    const properties: TabBarProperties = controlProps({
       name: 'T',
       tabs: [{ title: 'Map', tooltip: '', disabled: false }],
       ...props,
-    };
+    });
     return {
       ...solveNode(),
       path: 'T',

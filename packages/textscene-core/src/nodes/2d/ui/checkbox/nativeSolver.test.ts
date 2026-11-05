@@ -23,6 +23,7 @@ import {
   CHECKBOX_THEME_FONT_KEY,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlProps } from '../control/testing/controlProps';
 
 // 'A' advances 1354 design units and 'B' 1350, so at 16px 'A' is 10.578125 and 'AB' 21.125.
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
@@ -104,10 +105,10 @@ describe('checkBoxTextTheme', () => {
   });
 
   it('a theme_override_colors/font_pressed_color override wins over the default', () => {
-    const props: CheckBoxProperties = {
+    const props: CheckBoxProperties = controlProps({
       name: 'C',
       themeOverrideColors: { font_pressed_color: { r: 1, g: 0, b: 0, a: 1 } },
-    };
+    });
     expect(checkBoxTextTheme(node(props), props, 'pressed', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 });

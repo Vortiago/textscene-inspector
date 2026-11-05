@@ -77,9 +77,15 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
   }
 
   /** Draws `scene` as a render that clears, or over the target's bytes as one that does not. */
-  draw(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, clears: boolean): void {
-    if (clears) this.render(gl, scene, camera);
-    else this.renderOverTarget(gl, scene, camera);
+  draw(
+    gl: THREE.WebGLRenderer,
+    scene: THREE.Scene,
+    camera: THREE.Camera,
+    clears: boolean,
+    transfer: TexelTransfer = 'none'
+  ): void {
+    if (clears) this.render(gl, scene, camera, transfer);
+    else this.renderOverTarget(gl, scene, camera, transfer);
   }
 
   /**
@@ -87,14 +93,19 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
    * never cleared (`renderer_canvas_render_rd.cpp:2276-2283`). The frame takes those bytes first,
    * and its depth is the only thing the render clears. The target must hold sRGB bytes.
    */
-  private renderOverTarget(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void {
+  private renderOverTarget(
+    gl: THREE.WebGLRenderer,
+    scene: THREE.Scene,
+    camera: THREE.Camera,
+    transfer: TexelTransfer
+  ): void {
     const target = gl.getRenderTarget();
     this.sizeLike(gl, target);
     if (target) drawOffscreen(gl, () => copyTexels(gl, target.texture, this, this.rowsReversed()));
     const clearsColor = gl.autoClearColor;
     gl.autoClearColor = false;
     try {
-      this.render(gl, scene, camera);
+      this.render(gl, scene, camera, transfer);
     } finally {
       gl.autoClearColor = clearsColor;
     }

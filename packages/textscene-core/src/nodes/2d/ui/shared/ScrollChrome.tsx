@@ -5,6 +5,7 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
+import { canvasSubOrder, canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemState';
 import {
   snappedControlOrigin,
   type ControlDrawTransform,
@@ -26,11 +27,15 @@ import type { ScrollBarPlacement, ScrollHintPlacement } from './scrollBarSolver'
 export const SCROLL_HINT_MODULATE = new THREE.Color(0, 0, 0);
 
 /**
- * A hint draws above what `chromeRenderOrder` names and below both scrollbars
- * (`scroll_container.cpp:905-924`). A bare `chromeRenderOrder` would tie with
- * that item, and three would put the fade under an opaque one.
+ * The pieces of a scroll chrome in its slot: a hint draws above what the slot names and below both
+ * scrollbars (`scroll_container.cpp:905-924`). A bare slot key would tie with that item, and three
+ * would put the fade under an opaque one.
  */
-const SCROLL_HINT_RENDER_ORDER_OFFSET = 0.125;
+const SCROLL_CHROME_PIECES = ['hints', 'bars'] as const;
+
+function scrollChromeOrders(chromeSlot: CanvasSlot) {
+  return canvasSubOrders(chromeSlot, SCROLL_CHROME_PIECES);
+}
 
 /**
  * One visible `scroll_hint_*` TextureRect, stretched across its rect as one
@@ -41,12 +46,13 @@ export function ScrollHintChrome({
   hint,
   color,
   opacity,
-  chromeRenderOrder,
+  chromeSlot,
 }: {
   hint: ScrollHintPlacement | null;
   color: THREE.Color;
   opacity: number;
-  chromeRenderOrder: number;
+  /** See `ScrollBarChromeProps.chromeSlot`. */
+  chromeSlot: CanvasSlot;
 }) {
   const loaded = useOptionalIconTexture(
     hint === null ? null : hint.vertical ? SCROLL_HINT_ICONS.vertical : SCROLL_HINT_ICONS.horizontal
@@ -64,7 +70,7 @@ export function ScrollHintChrome({
   }, [loaded, flipH, flipV]);
 
   if (!hint || !texture) return null;
-  const renderOrder = chromeRenderOrder + SCROLL_HINT_RENDER_ORDER_OFFSET;
+  const renderOrder = scrollChromeOrders(chromeSlot).hints.key;
   return (
     <CanvasItemGroup position={[hint.rect.x, -hint.rect.y, 0]} renderOrder={renderOrder}>
       <ControlQuad
@@ -97,13 +103,13 @@ interface ScrollBarChromeProps {
   /** Raw sRGB, which `<StyleBoxQuad>` composes into `track` and `grabber`. */
   color: Rgba;
   /**
-   * The key of the last item the chrome paints over, so it sits at fractions below the next
-   * sibling. ScrollContainer passes `subtreeChromeRenderOrder`: its bars are `INTERNAL_MODE_BACK`
-   * children (`scroll_container.cpp:919,924`) that paint after every descendant. ItemList passes
-   * its own `renderOrder`: its bars are `INTERNAL_MODE_FRONT` children (`item_list.cpp:2472,2476`)
-   * that paint over its rows and under its regular children.
+   * The slot the chrome draws inside, below the next sibling. ScrollContainer passes its
+   * `chromeSlot`: its bars are `INTERNAL_MODE_BACK` children (`scroll_container.cpp:919,924`) that
+   * paint after every descendant. ItemList passes its own key's slot: its bars are
+   * `INTERNAL_MODE_FRONT` children (`item_list.cpp:2472,2476`) that paint over its rows and under
+   * its regular children.
    */
-  chromeRenderOrder: number;
+  chromeSlot: CanvasSlot;
   /** The walker's `gui/common/snap_controls_to_pixels`, the only value correct inside a SubViewport. */
   snapToPixels: boolean;
 }
@@ -119,27 +125,21 @@ export function ScrollBarChrome({
   track,
   grabber,
   color,
-  chromeRenderOrder,
+  chromeSlot,
   snapToPixels,
 }: ScrollBarChromeProps) {
   if (!bar.visible) return null;
+  const bars = scrollChromeOrders(chromeSlot).bars;
+  const grabberKey = canvasSubOrder(bars).key;
   const origin = snappedControlOrigin(bar.rect, SCROLL_BAR_DRAW_TRANSFORM, snapToPixels);
   // A group carries the position. `StyleBoxQuad` takes only the size and flips y.
   // The grabber is no node (`scene/gui/scroll_bar.cpp:326-344`): it draws
   // unrounded inside the bar's canvas item and inherits the bar's snap.
   return (
-    <CanvasItemGroup position={[origin.x, -origin.y, 0]} renderOrder={chromeRenderOrder + 0.25}>
-      <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={chromeRenderOrder + 0.25} />
-      <CanvasItemGroup
-        position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}
-        renderOrder={chromeRenderOrder + 0.5}
-      >
-        <StyleBoxQuad
-          styleBox={grabber}
-          color={color}
-          rect={bar.grabberRect}
-          renderOrder={chromeRenderOrder + 0.5}
-        />
+    <CanvasItemGroup position={[origin.x, -origin.y, 0]} renderOrder={bars.key}>
+      <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={bars.key} />
+      <CanvasItemGroup position={[bar.grabberRect.x, -bar.grabberRect.y, 0]} renderOrder={grabberKey}>
+        <StyleBoxQuad styleBox={grabber} color={color} rect={bar.grabberRect} renderOrder={grabberKey} />
       </CanvasItemGroup>
     </CanvasItemGroup>
   );

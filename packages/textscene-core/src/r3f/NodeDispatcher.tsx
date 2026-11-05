@@ -332,7 +332,7 @@ function PlainNode({
         <VisibilityParentScope node={node} path={path}>
           {/* paint-order-safe: the selection wrapper, outside the item's own group,
             which `<CanvasItem2D>` renders nearer to every mesh. A type that draws
-            without that ritual takes its key from `useCanvasItemRenderOrder`. */}
+            without that ritual takes its key from `useCanvasKeyOfNode`. */}
           <group ref={wrapperRef} visible={!isHidden}>
             {/* Inside the eye-toggle group: a top_level canvas root drops its
               ancestors' transform and tint but not their visibility. A root whose

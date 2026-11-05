@@ -13,6 +13,7 @@ import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
 import type { PaintRange } from '../../canvasPaintOrder';
 import type { AmbientTextureSampler } from '../../canvasItemTextureSampler';
+import type { SkippedCanvasItems } from '../../canvasItemState';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Transform2DColumns } from '../../../godot/math/transform2d.js';
 import type { Rgba } from '../../../godot/math/math.js';
@@ -34,22 +35,15 @@ export interface ThemedIconRef {
  * The accumulated `CanvasItem` state of the non-Control ancestors a promoted
  * Control was walked past: the facets `_render_canvas_item_tree` re-seeds for a
  * canvas root (`renderer_canvas_cull.cpp:70-83`), as one value because one break resets all.
- * Visibility follows the scene tree instead: {@link SolveNode.parentVisibleInTree}.
+ * Visibility follows the scene tree instead: {@link SolveNode.parentVisibleInTree}. Its `modulate`
+ * and `z` are what `useCanvasItemState` folds.
  */
-export interface SkippedAncestors {
+export interface SkippedAncestors extends SkippedCanvasItems {
   /**
    * Composed `Transform2D`, outermost first (`transform_2d.cpp:198-218`). Never decomposed:
    * composed ancestors can shear, which rotation and scale cannot represent.
    */
   transform: Transform2DColumns;
-  /** Componentwise product of each skipped ancestor's `modulate`; `self_modulate` never propagates (`renderer_canvas_cull.cpp`). */
-  modulate: Rgba;
-  /**
-   * Each skipped ancestor's `z_index`/`z_as_relative`, outermost first. A list,
-   * not a sum: `p_z = CLAMP(p_z + ci->z_index, …)` clamps at every step and
-   * `z_relative == false` restarts (`renderer_canvas_cull.cpp:430-434`). The walker folds it.
-   */
-  z: readonly CanvasItemZStep[];
   /**
    * The `texture_filter` and `texture_repeat` the skipped ancestors name, the innermost winning
    * (`canvas_item.cpp:1625-1699`). Unnamed where none does: the walker lays the ancestors above them
@@ -67,12 +61,6 @@ export interface SkippedAncestors {
  */
 export type SkippedMaterial =
   { kind: 'own'; ref: string; resources: SceneScope } | { kind: 'inherit' } | { kind: 'none' };
-
-/** One CanvasItem's contribution to `p_z` (`renderer_canvas_cull.cpp:430-434`). */
-interface CanvasItemZStep {
-  zIndex: number;
-  zAsRelative: boolean;
-}
 
 /**
  * One Control or 2D-UI node in the live, collapsed scene tree (instance roots
@@ -100,6 +88,16 @@ export interface SolveNode {
    * `show_behind_parent` children and before the rest.
    */
   paintSequence: number;
+  /**
+   * The draw-sequence value of this node's back pieces, such as a ScrollContainer's bars: after
+   * its whole subtree, which Godot's `INTERNAL_MODE_BACK` children follow (`internalBackRoom`).
+   */
+  backSequence: number;
+  /**
+   * The draw-sequence value of the listed layer this node adds itself, GraphEdit's connections
+   * (`listedChildOrder`), or `paintSequence` with none.
+   */
+  layerSequence: number;
   /**
    * What the non-Control `CanvasItem` ancestors this node promoted past contribute,
    * or `null` for none. Non-null tells the solver that `data.parent_canvas_item`

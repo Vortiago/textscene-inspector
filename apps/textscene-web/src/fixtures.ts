@@ -283,6 +283,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Canvas Item Sub Mul Alpha",
+    "file": "unit-canvas-item-sub-mul-alpha.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Canvas Light Render Budget",
     "file": "unit-canvas-light-render-budget.tscn",
     "category": "Other"
@@ -960,6 +965,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Graph Edit Arrange Button Hidden",
     "file": "unit-graph-edit-arrange-button-hidden.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Frame Order",
+    "file": "unit-graph-edit-frame-order.tscn",
     "category": "Other"
   },
   {
@@ -2310,6 +2320,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Subviewport Edge On Pixel Centre",
     "file": "unit-subviewport-edge-on-pixel-centre.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Subviewport Opaque Alpha",
+    "file": "unit-subviewport-opaque-alpha.tscn",
     "category": "Other"
   },
   {
@@ -3828,6 +3843,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Control Transform Modulate",
     "file": "unit-control-transform-modulate.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Z As Relative",
+    "file": "unit-control-z-as-relative.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

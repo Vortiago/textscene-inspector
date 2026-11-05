@@ -35,15 +35,16 @@ import {
 } from './nativeSolver';
 import type { ProgressBarProperties } from './types';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { canvasSubOrder } from '../../../../r3f/canvasItemState';
 
-/**
- * The percentage draws above its stroked outline, as `progress_bar.cpp:180` draws it. Two runs of one
- * renderOrder sort by creation, and the stroke's mesh can be created after the fill's. Less than the
- * step between two Controls' render orders, so the percentage stays below the next Control.
- */
-const PERCENT_ABOVE_OUTLINE = 0.05;
-
-export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
+export function ProgressBar({
+  solveNode,
+  tint,
+  rect,
+  theme,
+  renderOrder,
+  slot,
+}: NativeControlComponentProps) {
   const props = painterView<ProgressBarProperties>(solveNode);
   const clippingPlanes = useControlClipPlanes();
 
@@ -147,7 +148,9 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
             outlineColor={drawMsdfOutline ? tintedOutlineColor : undefined}
             outlineWidthPx={drawMsdfOutline ? outlineRadiusPx(outlineSize) : 0}
             clippingPlanes={clippingPlanes}
-            renderOrder={drawCanvasOutline ? renderOrder + PERCENT_ABOVE_OUTLINE : renderOrder}
+            // The percentage draws above its stroked outline, as `progress_bar.cpp:180` draws it. Two
+            // runs of one key sort by creation, and the stroke's mesh can be created after the fill's.
+            renderOrder={drawCanvasOutline ? canvasSubOrder(slot).key : renderOrder}
           />
         </CanvasItemGroup>
       )}

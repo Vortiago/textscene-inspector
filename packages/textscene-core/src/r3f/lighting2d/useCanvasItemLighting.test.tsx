@@ -9,7 +9,6 @@ import { describe, it, expect, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import { act, renderHook } from '@testing-library/react';
-import { type CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 import { useCanvasItemLighting } from './useCanvasItemLighting';
 import {
   CanvasLighting2DContext,
@@ -21,11 +20,9 @@ import { placementId, type ItemPlacement, type LitItemRead } from './itemLightLi
 import type { ApartLightBuffers } from './lightPassContext';
 import type { CanvasItemSurface } from './normalMappedLighting';
 import type { CappedItem } from './itemLightCap';
-import {
-  CanvasItemMaterialLightMode,
-  CanvasItemMaterialBlendMode,
-} from '../../godot/scene/canvasItemMaterial';
+import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
+import { canvasItemMaterial } from '../testing/canvasItemMaterial';
 
 type LightMode = EnumValue<typeof CanvasItemMaterialLightMode>;
 
@@ -70,17 +67,6 @@ function surface(overrides: Partial<CanvasItemSurface> = {}): CanvasItemSurface 
   return { normalMap: new THREE.Texture(), specularMap: null, specular: null, ...overrides };
 }
 
-function material(lightMode: EnumValue<typeof CanvasItemMaterialLightMode>): CanvasItemMaterialProperties {
-  return {
-    blendMode: CanvasItemMaterialBlendMode.MIX,
-    lightMode,
-    particlesAnimation: false,
-    particlesAnimHFrames: 1,
-    particlesAnimVFrames: 1,
-    particlesAnimLoop: false,
-  };
-}
-
 /** The uniform objects the hook bound, read back off the injection it returns. */
 function boundUniforms({ props }: ReturnType<typeof useCanvasItemLighting>) {
   const shader = {
@@ -95,7 +81,8 @@ function boundUniforms({ props }: ReturnType<typeof useCanvasItemLighting>) {
 describe('useCanvasItemLighting', () => {
   it("returns the SAME props object when an item's light_mode changes", () => {
     const { result, rerender } = renderHook(
-      ({ mode }: { mode: LightMode }) => useCanvasItemLighting({ material: material(mode) }),
+      ({ mode }: { mode: LightMode }) =>
+        useCanvasItemLighting({ zFinal: 0, material: canvasItemMaterial(mode) }),
       { initialProps: { mode: CanvasItemMaterialLightMode.NORMAL as LightMode } }
     );
 
@@ -115,7 +102,7 @@ describe('useCanvasItemLighting', () => {
   it('publishes the light mode into the uniforms it already bound', () => {
     const { result, rerender } = renderHook(
       ({ mode }: { mode: EnumValue<typeof CanvasItemMaterialLightMode> | null }) =>
-        useCanvasItemLighting({ material: mode === null ? null : material(mode) }),
+        useCanvasItemLighting({ zFinal: 0, material: mode === null ? null : canvasItemMaterial(mode) }),
       {
         initialProps: {
           mode: CanvasItemMaterialLightMode.NORMAL as EnumValue<typeof CanvasItemMaterialLightMode> | null,
@@ -144,7 +131,11 @@ describe('useCanvasItemLighting reads its light list', () => {
     const { wrapper, registerItem } = lighting(list());
     renderHook(
       () =>
-        useCanvasItemLighting({ material: material(CanvasItemMaterialLightMode.LIGHT_ONLY), lightMask: 1 }),
+        useCanvasItemLighting({
+          zFinal: 0,
+          material: canvasItemMaterial(CanvasItemMaterialLightMode.LIGHT_ONLY),
+          lightMask: 1,
+        }),
       { wrapper }
     );
     expect(registerItem).toHaveBeenCalledWith(PLACEMENT, 'lightOnly');
@@ -153,7 +144,9 @@ describe('useCanvasItemLighting reads its light list', () => {
   it('binds the buffer of the list at its placement, and is lit', () => {
     const published = list();
     const { wrapper } = lighting(published);
-    const { result } = renderHook(() => useCanvasItemLighting({ material: null, lightMask: 1 }), { wrapper });
+    const { result } = renderHook(() => useCanvasItemLighting({ zFinal: 0, material: null, lightMask: 1 }), {
+      wrapper,
+    });
     const bound = boundUniforms(result.current);
     expect(bound.uLightList!.value).toBe(published.buffer);
     expect(bound.uShadowTint!.value).toBe(published.shadowTintBuffer);
@@ -165,7 +158,11 @@ describe('useCanvasItemLighting reads its light list', () => {
     const { wrapper } = lighting(published);
     const { result } = renderHook(
       () =>
-        useCanvasItemLighting({ material: material(CanvasItemMaterialLightMode.LIGHT_ONLY), lightMask: 1 }),
+        useCanvasItemLighting({
+          zFinal: 0,
+          material: canvasItemMaterial(CanvasItemMaterialLightMode.LIGHT_ONLY),
+          lightMask: 1,
+        }),
       {
         wrapper,
       }
@@ -176,7 +173,9 @@ describe('useCanvasItemLighting reads its light list', () => {
   it('stays unlit at a placement no light reaches', () => {
     const published = list();
     const { wrapper } = lighting(published);
-    const { result } = renderHook(() => useCanvasItemLighting({ material: null, lightMask: 2 }), { wrapper });
+    const { result } = renderHook(() => useCanvasItemLighting({ zFinal: 0, material: null, lightMask: 2 }), {
+      wrapper,
+    });
     const bound = boundUniforms(result.current);
     expect(bound.uLit!.value).toBe(0);
     expect(bound.uLightList!.value).not.toBe(published.buffer);
@@ -184,7 +183,9 @@ describe('useCanvasItemLighting reads its light list', () => {
 
   it('stays unlit while the pass draws no ordinary buffer for its list', () => {
     const { wrapper } = lighting({ ...list(), buffer: null });
-    const { result } = renderHook(() => useCanvasItemLighting({ material: null, lightMask: 1 }), { wrapper });
+    const { result } = renderHook(() => useCanvasItemLighting({ zFinal: 0, material: null, lightMask: 1 }), {
+      wrapper,
+    });
     expect(boundUniforms(result.current).uLit!.value).toBe(0);
   });
 });
@@ -192,7 +193,7 @@ describe('useCanvasItemLighting reads its light list', () => {
 describe('useCanvasItemLighting with a normal map', () => {
   it('declares a normal-mapped item, which reads each light apart', () => {
     const { wrapper, registerItem } = lighting(list());
-    renderHook(() => useCanvasItemLighting({ material: null, lightMask: 1, surface: surface() }), {
+    renderHook(() => useCanvasItemLighting({ zFinal: 0, material: null, lightMask: 1, surface: surface() }), {
       wrapper,
     });
     expect(registerItem).toHaveBeenCalledWith(PLACEMENT, 'apart');
@@ -203,7 +204,8 @@ describe('useCanvasItemLighting with a normal map', () => {
     renderHook(
       () =>
         useCanvasItemLighting({
-          material: material(CanvasItemMaterialLightMode.UNSHADED),
+          zFinal: 0,
+          material: canvasItemMaterial(CanvasItemMaterialLightMode.UNSHADED),
           lightMask: 1,
           surface: surface(),
         }),
@@ -217,7 +219,7 @@ describe('useCanvasItemLighting with a normal map', () => {
     const maps = surface();
     const { wrapper } = lighting(list(apart));
     const { result } = renderHook(
-      () => useCanvasItemLighting({ material: null, lightMask: 1, surface: maps }),
+      () => useCanvasItemLighting({ zFinal: 0, material: null, lightMask: 1, surface: maps }),
       { wrapper }
     );
     const bound = boundUniforms(result.current);
@@ -230,7 +232,7 @@ describe('useCanvasItemLighting with a normal map', () => {
   it('keeps the ordinary program while its list keeps no light apart', () => {
     const { wrapper } = lighting(list());
     const { result } = renderHook(
-      () => useCanvasItemLighting({ material: null, lightMask: 1, surface: surface() }),
+      () => useCanvasItemLighting({ zFinal: 0, material: null, lightMask: 1, surface: surface() }),
       { wrapper }
     );
     expect(boundUniforms(result.current).uLightList).toBeDefined();
@@ -240,7 +242,7 @@ describe('useCanvasItemLighting with a normal map', () => {
     const { wrapper } = lighting(list(apartLights()));
     const maps = surface({ specular: { r: 1, g: 0.5, b: 0, a: 0.5 } });
     const { result } = renderHook(
-      () => useCanvasItemLighting({ material: null, lightMask: 1, surface: maps }),
+      () => useCanvasItemLighting({ zFinal: 0, material: null, lightMask: 1, surface: maps }),
       { wrapper }
     );
     const bound = boundUniforms(result.current);
@@ -253,7 +255,7 @@ describe('useCanvasItemLighting with a normal map', () => {
   it('leaves specular off while the shininess leaves it off', () => {
     const { wrapper } = lighting(list(apartLights()));
     const { result } = renderHook(
-      () => useCanvasItemLighting({ material: null, lightMask: 1, surface: surface() }),
+      () => useCanvasItemLighting({ zFinal: 0, material: null, lightMask: 1, surface: surface() }),
       { wrapper }
     );
     expect(boundUniforms(result.current).uUsesSpecular!.value).toBe(0);
@@ -264,7 +266,9 @@ describe('useCanvasItemLighting under the per-item cap', () => {
   /** Mounts an item and returns the entry it handed the cap. */
   function mountCapped(published: CanvasLightList, placement: ItemPlacement) {
     const { wrapper, registerItem, registerCappedItem } = lighting(published, placement);
-    const hook = renderHook(() => useCanvasItemLighting({ material: null, lightMask: 1 }), { wrapper });
+    const hook = renderHook(() => useCanvasItemLighting({ zFinal: 0, material: null, lightMask: 1 }), {
+      wrapper,
+    });
     const capped = registerCappedItem.mock.calls.at(-1)![0];
     return { ...hook, capped, registerItem };
   }
@@ -283,10 +287,13 @@ describe('useCanvasItemLighting under the per-item cap', () => {
 
   it('drops the light list it was handed when its placement changes', () => {
     const { wrapper, registerItem, registerCappedItem } = lighting(list());
-    const hook = renderHook(({ lightMask }) => useCanvasItemLighting({ material: null, lightMask }), {
-      wrapper,
-      initialProps: { lightMask: 1 },
-    });
+    const hook = renderHook(
+      ({ lightMask }) => useCanvasItemLighting({ zFinal: 0, material: null, lightMask }),
+      {
+        wrapper,
+        initialProps: { lightMask: 1 },
+      }
+    );
     act(() => registerCappedItem.mock.calls.at(-1)![0].take([0, 2]));
     hook.rerender({ lightMask: 2 });
     expect(registerItem).toHaveBeenLastCalledWith({ ...PLACEMENT, lightMask: 2, takenLights: null }, 'plain');

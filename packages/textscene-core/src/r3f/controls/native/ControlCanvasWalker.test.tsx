@@ -20,6 +20,7 @@ import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../../godot/rendering/r
 import { Modulate2DContext, useParentModulate } from '../../canvasItemModulate';
 import { ROOT_TEXTURE_SAMPLER, useResolvedTextureSampler } from '../../canvasItemTextureSampler';
 import { solveNode as emptySolveNode } from './testing/solveNode';
+import { controlProps } from '../../../nodes/2d/ui/control/testing/controlProps';
 
 /** The world canvas's rank, derived, never hardcoded: only a rank's order means
  * anything, and the spacing for undeclared layers moves the value. */
@@ -54,7 +55,7 @@ function solveNode(
   children: SolveNode[] = []
 ): SolveNode {
   const name = path.split('/').pop()!;
-  const tscnNode: TscnNode = controlNode(name, type, { name, ...properties });
+  const tscnNode: TscnNode = controlNode(name, type, controlProps({ name, ...properties }));
   return { ...emptySolveNode(), path, node: tscnNode, children };
 }
 
@@ -407,16 +408,16 @@ describe('<ControlCanvasWalker>', () => {
     expect(lines.some((l) => l.renderOrder >= worldFloor)).toBe(true);
   });
 
-  it("hands the painter subtreeChromeRenderOrder from the END of its own draw-sequence run — the deepest descendant's own renderOrder, one less than the next sibling's", async () => {
+  it('hands the painter a chromeSlot at its own back slot, after its deepest descendant and before the next sibling', async () => {
+    // A real Control type, since only a Control holds a back slot (`internalBackRoom`). The
+    // registry clears after each test.
     controlComponentRegistry.register({
-      typeName: 'TestOrderType',
-      Component: ({ subtreeChromeRenderOrder }) => (
-        <group name="order-probe" renderOrder={subtreeChromeRenderOrder ?? -1} />
-      ),
+      typeName: 'Panel',
+      Component: ({ chromeSlot }) => <group name="order-probe" renderOrder={chromeSlot.key} />,
     });
     const grandchild = solveNode('Root/Child/Grandchild', 'TestType', { anchorsPreset: 15 });
     const child = solveNode('Root/Child', 'TestType', { anchorsPreset: 15 }, [grandchild]);
-    const root = solveNode('Root', 'TestOrderType', { anchorsPreset: 15 }, [child]);
+    const root = solveNode('Root', 'Panel', { anchorsPreset: 15 }, [child]);
     const sibling = solveNode('Sibling', 'TestType', { anchorsPreset: 15 });
 
     const renderer = await ReactThreeTestRenderer.create(
@@ -436,16 +437,11 @@ describe('<ControlCanvasWalker>', () => {
     const lines = renderer.scene
       .findAllByType('LineSegments')
       .map((l) => l.instance as { renderOrder: number });
-    // Root's run covers Root, Child and Grandchild; the next sibling starts one
-    // past its end. So the chrome slot is the run's LAST value, which is both
-    // the deepest descendant's own and exactly one below the sibling's.
+    // Root, Child and Grandchild take 1 to 3, the back slot 4, and the sibling 5.
     const at = (sequence: number) => canvasRenderOrder({ layerRank: WORLD_RANK, zFinal: 0, sequence });
-    const grandchildOrder = at(3);
-    const siblingOrder = at(4);
-    expect(lines.some((l) => l.renderOrder === grandchildOrder)).toBe(true);
-    expect(lines.some((l) => l.renderOrder === siblingOrder)).toBe(true);
-    expect(probe.renderOrder).toBe(grandchildOrder);
-    expect(probe.renderOrder).toBe(siblingOrder - 1);
+    expect(lines.some((l) => l.renderOrder === at(3))).toBe(true);
+    expect(lines.some((l) => l.renderOrder === at(5))).toBe(true);
+    expect(probe.renderOrder).toBe(at(4));
   });
 
   it('leaves every Control group at z=0 regardless of CanvasLayer nesting — paint order comes from renderOrder alone', async () => {
@@ -578,6 +574,19 @@ describe('<ControlCanvasWalker>', () => {
       expect(zProbeReading(renderer)).toBe(8);
     });
 
+    it("restarts the chain at a Control's own z_index when z_as_relative is false (renderer_canvas_cull.cpp:433)", async () => {
+      controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
+      const probe = solveNode('A/B/Probe', 'ZProbe', {});
+      const b = solveNode('A/B', 'TestType', { anchorsPreset: 15, zIndex: 3, zAsRelative: false }, [probe]);
+      const a = solveNode('A', 'TestType', { anchorsPreset: 15, zIndex: 5 }, [b]);
+
+      const renderer = await ReactThreeTestRenderer.create(
+        <ControlCanvasWalker tree={[a]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      );
+
+      expect(zProbeReading(renderer)).toBe(3);
+    });
+
     it('reaches a Control nested inside a wrapsChildren painter (e.g. CanvasLayer) without losing accumulation', async () => {
       controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
       controlComponentRegistry.register({
@@ -690,29 +699,16 @@ describe('<ControlCanvasWalker>', () => {
       expect(zProbeReading(renderer)).toBe(3);
     });
 
-    it("hands a painter its OWN z_final by prop, where the ambient context is its parent's", async () => {
-      // These two disagree on purpose. `_cull_canvas_item` attaches an item at its
-      // own z (`servers/rendering/renderer_canvas_cull.cpp`), while the context
-      // seeds the descendants with the parent's. A painter on the lighting
-      // fallback would drop its own `z_index`.
-      const PropProbe: NativeControlComponent = ({ effectiveZ }) => (
-        <group name={`zprop:prop=${effectiveZ},ambient=${useEffectiveZ()}`} />
-      );
-      controlComponentRegistry.register({ typeName: 'PropProbe', Component: PropProbe });
-
-      const probe = solveNode('Root/Probe', 'PropProbe', { zIndex: 4 });
+    it("puts a painter in its own z_final, which a light's z window tests (renderer_canvas_cull.cpp:468)", async () => {
+      controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
+      const probe = solveNode('Root/Probe', 'ZProbe', { zIndex: 4 });
       const root = solveNode('Root', 'TestType', { anchorsPreset: 15, zIndex: 5 }, [probe]);
 
       const renderer = await ReactThreeTestRenderer.create(
         <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
       );
 
-      const name = renderer.scene
-        .findAllByType('Group')
-        .map((g) => g.instance)
-        .find((g) => g.name.startsWith('zprop:'))!.name;
-
-      expect(name).toBe('zprop:prop=9,ambient=5');
+      expect(zProbeReading(renderer)).toBe(9);
     });
   });
 

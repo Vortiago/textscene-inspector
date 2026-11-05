@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { describe, expect, it } from 'vitest';
-import { attachDiagnostics, clearDiagnostics, loggedErrors } from './pageDiagnostics.mjs';
+import { attachDiagnostics, clearDiagnostics, errorReport, loggedErrors } from './pageDiagnostics.mjs';
 
 /** A Playwright page's `on`, with handlers the test drives. */
 function fakePage() {
@@ -52,6 +52,14 @@ describe('loggedErrors', () => {
     emitConsole(page, 'warning', 'a warning');
     page.emit('requestfailed', { url: () => 'http://h/a.png', failure: () => null });
     expect(loggedErrors(diagnostics)).toEqual([]);
+  });
+});
+
+describe('errorReport', () => {
+  it('says a failed request carried no error text, rather than printing undefined', () => {
+    const diagnostics = { consoleErrors: [], consoleWarnings: [], pageErrors: [], failedRequests: [] };
+    diagnostics.failedRequests.push({ url: 'http://h/a.png', failure: undefined });
+    expect(errorReport(diagnostics)).toBe('failed request: http://h/a.png (no error text)');
   });
 });
 
