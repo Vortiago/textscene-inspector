@@ -149,10 +149,15 @@ function skinObjectsOf(mesh: THREE.Mesh, drawn: readonly (THREE.Object3D | null)
   return { skeleton, bones, watched: [mesh, ...frames, skeleton, ...bones] };
 }
 
+/** Written only by {@link canvasTransform}, and read back before it returns. */
+const scratchMatrix = new THREE.Matrix4();
+
 /** The node's global transform in Godot pixels: its world matrix within the frame of its canvas. */
 function canvasTransform(object: THREE.Object3D): Transform2DColumns {
   const frame = canvasFrameOf(object);
-  const matrix = frame ? frame.matrixWorld.clone().invert().multiply(object.matrixWorld) : object.matrixWorld;
+  const matrix = frame
+    ? scratchMatrix.copy(frame.matrixWorld).invert().multiply(object.matrixWorld)
+    : object.matrixWorld;
   return transform2DFromThreeMatrix(matrix);
 }
 
