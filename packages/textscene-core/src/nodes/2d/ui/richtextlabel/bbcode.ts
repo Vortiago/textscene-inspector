@@ -263,12 +263,6 @@ const STYLING_TAGS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Tags whose line has height with no text in it: a list item draws its bullet. Any other item with
- * nothing in it leaves a line of no height (measured in Godot 4.6.3), so it needs no break after it.
- */
-const LIST_TAGS: ReadonlySet<string> = new Set(['ol', 'ul']);
-
-/**
  * What a self-closing tag adds to the surrounding run, or `null` when `name`
  * is not one. `[char=hex]` is `String::chr(value.hex_to_int())` (`:5623-5626`),
  * and an unparseable or out-of-range value adds nothing.
@@ -643,7 +637,6 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
     lineFirstItemTags ??= [...stack];
     // `[img]` opens a tag but no item (`:6145`): its loaded image sets the flags where it is added.
     if (!STYLING_TAGS.has(tag.name) && tag.name !== 'img') lineHasLayout = true;
-    if (LIST_TAGS.has(tag.name)) lineHasHeight = true;
   }
 
   /** `add_hr`: a paragraph item, so the line of the text before ends, then the rule on the new line. */

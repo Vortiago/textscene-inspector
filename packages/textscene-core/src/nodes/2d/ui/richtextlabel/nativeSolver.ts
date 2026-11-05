@@ -832,11 +832,14 @@ function lineMetricsOf(
   const paragraphAscentPx = layout.baselineOffsetPx;
   const paragraphDescentPx = layout.linePitchPx - layout.baselineOffsetPx;
   const zeroHeightParagraphs = zeroHeightParagraphsOf(styledRuns);
+  const endsInBreak = styledRuns.at(-1)?.text.endsWith('\n') ?? false;
 
   let topPx = 0;
   return perLine.map((segments, lineIndex) => {
-    // An empty text buffer has no ascent or descent (measured in Godot 4.6.3).
-    if (zeroHeightParagraphs.has(layout.lines[lineIndex]!.paragraphIndex)) {
+    // An empty text buffer has no ascent or descent (measured in Godot 4.6.3). So has the line after
+    // a final `\n`, which holds no item at all: `a\n` is one line tall.
+    const isEmptyTrailingLine = segments.length === 0 && lineIndex === perLine.length - 1 && endsInBreak;
+    if (isEmptyTrailingLine || zeroHeightParagraphs.has(layout.lines[lineIndex]!.paragraphIndex)) {
       return { topPx, ascentPx: 0, descentPx: 0, textAscentPx: 0, textDescentPx: 0 };
     }
     // Text first: `_realign` measures every image against these values, and an

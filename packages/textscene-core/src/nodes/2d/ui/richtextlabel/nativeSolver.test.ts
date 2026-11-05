@@ -2067,6 +2067,28 @@ describe('RichTextLabel lists and indents', () => {
   });
 });
 
+describe('richTextLabelMinimumSize height of a final line break', () => {
+  const heightOf = (text: string) =>
+    richTextLabelMinimumSize(node({ text, bbcodeEnabled: true, fitContent: true, autowrapMode: 0 }), ctx()).y;
+
+  // `get_content_height` measured in Godot 4.6.3: the line after a final `\n` holds no item, so it has no height.
+  it('gives `a\n` the height of one line', () => {
+    expect(heightOf('a\n')).toBe(heightOf('a'));
+  });
+
+  it('keeps the height of a blank line between two others', () => {
+    expect(heightOf('a\n\nb')).toBe(3 * heightOf('a'));
+  });
+
+  it('gives a list of two items the height of two lines, as each item ends in a `\n`', () => {
+    expect(heightOf('[ul]a\nb[/ul]')).toBe(2 * heightOf('a'));
+  });
+
+  it('gives the empty first line of a list that a paragraph tag follows no height', () => {
+    expect(heightOf('[ul][center]one\ntwo[/center][/ul]')).toBe(2 * heightOf('a'));
+  });
+});
+
 describe('richTextLabelMinimumSize with a list', () => {
   it('counts the inset and the widest marker in the content width (`:7513-7518`)', () => {
     const props = { text: '[ul]a[/ul]', bbcodeEnabled: true, fitContent: true, autowrapMode: 0 };
