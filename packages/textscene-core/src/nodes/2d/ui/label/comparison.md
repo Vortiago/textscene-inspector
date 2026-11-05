@@ -156,7 +156,7 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 - **Approximated** A FILL-aligned Label with autowrap OFF and a trimming
   `text_overrun_behavior` puts the ellipsis after the last kept glyph of a line that still
   trims, where Godot re-justifies the line with `JUSTIFICATION_CONSTRAIN_ELLIPSIS`
-  (`label.cpp:325`).
+  (`label.cpp:325`, #1318).
 - **Approximated** An embolden above about 1.4 over the bundled font differs from FreeType, since the atlas rounds corners and holds limited growth.
 - **Not drawn** The doubled-backslash escapes of `paragraph_separator`, so a literal
   `"\\n"` stays two characters where Godot's `String::c_unescape()` (label.cpp:158) makes
