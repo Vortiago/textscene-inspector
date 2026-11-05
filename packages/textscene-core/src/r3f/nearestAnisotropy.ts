@@ -62,7 +62,8 @@ export function useNearestAnisotropy(texture: THREE.Texture | null): void {
     if (!texture || !renderer) return;
     const writeToBound = boundWriter(renderer, texture);
     if (!writeToBound) return;
-    const release = holdUploadWriter(texture, () => boundWriter(renderer, texture)?.());
+    const writeFresh = () => boundWriter(renderer, texture)?.();
+    const release = holdUploadWriter(texture, writeFresh);
     const storage = handleOf(renderer, texture).__webglTexture;
     if (storage) writeToStorage(renderer, storage, writeToBound);
     return release;
@@ -81,7 +82,7 @@ interface UploadWriter {
  * Written only by `holdUploadWriter`: one writer for each texture, however many runs share it, so
  * an upload writes once, through the first live hold. The last hold to let go clears the entry.
  */
-// eslint-disable-next-line no-restricted-syntax -- it counts holders, and the last release deletes the entry
+// eslint-disable-next-line no-restricted-syntax -- it keeps the live holds, and the last release deletes the entry
 const uploadWriters = new WeakMap<THREE.Texture, UploadWriter>();
 
 /** Wraps `onUpdate` of `texture` so an upload writes through the first live hold. */
@@ -90,17 +91,17 @@ function wrapUpload(texture: THREE.Texture): UploadWriter {
   const holds = new Set<() => void>();
   const wrapper: THREE.Texture['onUpdate'] = (uploaded) => {
     previous?.(uploaded);
-    holds.values().next().value?.();
+    const [firstHold] = holds;
+    firstHold?.();
   };
   texture.onUpdate = wrapper;
-  const writer = { holds, previous, wrapper };
-  uploadWriters.set(texture, writer);
-  return writer;
+  return { holds, previous, wrapper };
 }
 
 /** Opens a hold on the upload writer of `texture` and returns the release. `write` reads the texture afresh. */
 function holdUploadWriter(texture: THREE.Texture, write: () => void): () => void {
   const held = uploadWriters.get(texture) ?? wrapUpload(texture);
+  uploadWriters.set(texture, held);
   held.holds.add(write);
   return () => {
     held.holds.delete(write);
