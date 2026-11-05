@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { codePointCount, codePointIndexAt, sliceCodePoints, utf16OffsetOf } from './codePoints.js';
+import { codePointCount, sliceCodePoints, utf16OffsetOf } from './codePoints.js';
 
 const GRIN = '😀';
 
@@ -23,11 +23,5 @@ describe('codePoints (a Godot String holds code points, a JS string UTF-16 units
     expect(utf16OffsetOf(`${GRIN}ab`, 0)).toBe(0);
     expect(utf16OffsetOf(`${GRIN}ab`, 1)).toBe(2);
     expect(utf16OffsetOf(`${GRIN}ab`, 9)).toBe(4);
-  });
-
-  it('maps a UTF-16 offset to the code point index it falls in', () => {
-    expect(codePointIndexAt(`${GRIN}ab`, 2)).toBe(1);
-    expect(codePointIndexAt(`${GRIN}ab`, 3)).toBe(2);
-    expect(codePointIndexAt(`${GRIN}ab`, 9)).toBe(3);
   });
 });

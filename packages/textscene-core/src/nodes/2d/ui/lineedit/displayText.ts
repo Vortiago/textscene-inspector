@@ -34,7 +34,7 @@ export function lineEditDisplayText(
     const raw = props.secretCharacter ?? DEFAULT_SECRET_CHARACTER;
     // `secret_character.left(1)` takes one character, and an empty override falls back to the bullet
     // instead of erasing the echo. Both sides count code points, so a surrogate pair echoes once.
-    const echo = raw === '' ? DEFAULT_SECRET_CHARACTER : [...raw][0]!;
+    const echo = raw === '' ? DEFAULT_SECRET_CHARACTER : sliceCodePoints(raw, 1);
     return { text: echo.repeat(codePointCount(text)), isPlaceholder: false };
   }
   return { text, isPlaceholder: false };

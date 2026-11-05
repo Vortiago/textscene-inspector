@@ -18,6 +18,7 @@ import {
   arrayLiteralBody,
 } from '../../../godot/variant/variantParser.js';
 import { unquoteString } from '../../../parser/utils.js';
+import { codePointCount } from '../../../godot/string/codePoints.js';
 import { valueCode } from './codes.js';
 
 /**
@@ -89,7 +90,7 @@ export const scalarCombinators = {
       if (text === null) {
         return propertyError(key, line, `Property '${name}' must be a quoted string, got: ${value}`, format);
       }
-      const characters = [...text].length;
+      const characters = codePointCount(text);
       if (characters > 1) {
         return propertyError(
           key,
