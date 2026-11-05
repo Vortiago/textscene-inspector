@@ -42,7 +42,7 @@ import {
 } from '../../../../r3f/controls/native/text/openSansMetrics';
 import {
   getFontAscentPx,
-  getFontEmboldenedAdvancePx,
+  getFontTabWidthPx,
   getFontLinePitchPx,
   type FontMetrics,
 } from '../../../../r3f/controls/native/text/fontMetrics';
@@ -299,18 +299,16 @@ function wrapForImageObject(base: FontMetrics): FontMetrics {
 const DEFAULT_TAB_SIZE = 4;
 
 /**
- * The stops of a paragraph with no `tab_stops`: one stop of `max(1, tab_size * space_advance)`
- * (`_find_tab_stops`, `rich_text_label.cpp:479-482`). `SPACING_SPACE` is 0 for
- * every loaded font. `tab_size <= 0` disables tab alignment (`:479`).
+ * The stops of a paragraph with no `tab_stops`: one stop of `tab_size` spaces
+ * (`_find_tab_stops`, `rich_text_label.cpp:479-482`). `tab_size <= 0` disables tab alignment (`:479`).
  */
 function richTextDefaultTabStopsPx(
-  tabSize: number | undefined,
+  tabSize: number,
   fontMetrics: FontMetrics,
   fontSizePx: number
 ): readonly number[] {
-  const size = tabSize ?? DEFAULT_TAB_SIZE;
-  if (size <= 0) return [];
-  return [Math.max(1, size * getFontEmboldenedAdvancePx(fontMetrics, ' ', fontSizePx))];
+  if (tabSize <= 0) return [];
+  return [getFontTabWidthPx(fontMetrics, tabSize, fontSizePx)];
 }
 
 /**
@@ -607,14 +605,15 @@ function fontMetricsAtFromRuns(
   return (charIndex) => faceAt(charIndex) ?? faces.normal;
 }
 
+/** The run a character of the concatenated text is in (`runAtFromRuns`). */
+type RunAt = (charIndex: number) => StyledTextRun | undefined;
+
 /**
  * The run a character of the concatenated text is in, found by its start among the runs' starts: a
  * lookup once per paragraph or line needs no table as long as the text. Past the end it is the last
  * run, and undefined for no runs.
  */
-function runAtFromRuns(
-  styledRuns: readonly StyledTextRun[]
-): (charIndex: number) => StyledTextRun | undefined {
+function runAtFromRuns(styledRuns: readonly StyledTextRun[]): RunAt {
   // An empty run holds no character, so only the others take part.
   const runs = styledRuns.filter((run) => run.text.length > 0);
   const starts: number[] = [];
@@ -634,9 +633,6 @@ function runAtFromRuns(
     return runs[low];
   };
 }
-
-/** The run a paragraph starting at a character takes its options from (`runAtFromRuns`). */
-type RunAt = (charIndex: number) => StyledTextRun | undefined;
 
 /**
  * The per-paragraph `paragraphBidiAt` for `shapeText`: each paragraph takes the options of the run
@@ -680,9 +676,10 @@ export function shapeRichText(
   faces: RichTextFaces,
   options: RichTextShapeOptions
 ): RichTextLayout {
-  const { fontSizePx, boxWidthPx, autowrapMode, tabSize, autowrapTrimFlags } = options;
+  const { fontSizePx, boxWidthPx, autowrapMode, autowrapTrimFlags } = options;
+  const tabSize = options.tabSize ?? DEFAULT_TAB_SIZE;
   const runAt = runAtFromRuns(styledRuns);
-  const listings = paragraphListings(styledRuns, { faces, tabSize: tabSize ?? DEFAULT_TAB_SIZE });
+  const listings = paragraphListings(styledRuns, { faces, tabSize });
   const layout = shapeText(plainTextOf(styledRuns), {
     fontSizePx,
     boxWidthPx,
@@ -982,7 +979,8 @@ function richTextHorizontalOffsetPx(
   alignment: number,
   isRtl: boolean
 ): number {
-  // `_draw_line` takes the width less the scrollbar's, which the caller passes as `boxWidthPx`.
+  // `_draw_line` takes the width less the scrollbar's and the paragraph's inset, which the caller
+  // passes as `boxWidthPx`.
   switch (alignment) {
     case HORIZONTAL_ALIGNMENT_CENTER:
       // Floored as Godot floors the glyph (`text_server_adv.cpp:4084`), which absorbs

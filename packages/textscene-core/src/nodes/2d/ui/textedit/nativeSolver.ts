@@ -12,7 +12,7 @@
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
-  getFontEmboldenedAdvancePx,
+  getFontTabWidthPx,
   getFontLinePitchPx,
   type FontMetrics,
 } from '../../../../r3f/controls/native/text/fontMetrics';
@@ -268,8 +268,7 @@ export const TEXT_EDIT_DEFAULT_TAB_SIZE = 4;
 
 /**
  * `Text::invalidate_cache` (`text_edit.cpp:348-352`, and `invalidate_all_lines`, `:394-398`): one
- * repeating stop of `MAX(1, (space width + get_spacing(SPACING_SPACE)) * tab_size)`. The spacing is
- * 0 for every font here (`richTextDefaultTabStopsPx`, `../richtextlabel/nativeSolver.ts`).
+ * repeating stop of `MAX(1, (space width + get_spacing(SPACING_SPACE)) * tab_size)`.
  */
 export function textEditTabStopsPx(
   tabSize: number | undefined,
@@ -279,7 +278,7 @@ export function textEditTabStopsPx(
   const size = tabSize ?? TEXT_EDIT_DEFAULT_TAB_SIZE;
   // `tab_size <= 0` skips tab alignment, and `[]` is `shapeText`'s no-op input.
   if (size <= 0) return [];
-  return [Math.max(1, size * getFontEmboldenedAdvancePx(fontMetrics, ' ', fontSizePx))];
+  return [getFontTabWidthPx(fontMetrics, size, fontSizePx)];
 }
 
 /**
