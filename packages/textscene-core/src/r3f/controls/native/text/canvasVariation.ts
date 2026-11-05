@@ -8,6 +8,7 @@ import type { GlyphContours } from './glyphContours';
 import { traceGlyphContours } from './glyphPath';
 import type { SfntOutlines } from './sfntOutlines';
 import type { TextLayoutResult } from './textLayout';
+import { recentlyRead } from '../../../../utils/recentlyRead';
 import { perObject } from '../../../../utils/perObject';
 
 /** The largest outline growth over the glyphs of `layout`, px. 0 for a layout with no embolden. */
@@ -46,8 +47,8 @@ const MAX_CACHED_FACES = 8;
  * The contours read so far, by font, then by size and variation, then by glyph. A repaint at a new
  * tint, such as a modulate animation, reads none again.
  */
-const readContours = perObject(
-  (_outlines: SfntOutlines) => new Map<string, Map<number, GlyphContours | null>>()
+const readContours = perObject((_outlines: SfntOutlines) =>
+  recentlyRead<string, Map<number, GlyphContours | null>>(MAX_CACHED_FACES)
 );
 
 /**
@@ -61,15 +62,7 @@ export function variedContoursReader(
 ): (char: string) => GlyphContours | null {
   const byFace = readContours(outlines);
   const faceKey = `${fontSizePx}/${variationKey(variation)}`;
-  // A hit moves the face to the newest place, so the face dropped at the cap is the least recently read.
-  let glyphs = byFace.get(faceKey);
-  byFace.delete(faceKey);
-  if (!glyphs) {
-    if (byFace.size >= MAX_CACHED_FACES) byFace.delete(byFace.keys().next().value!);
-    glyphs = new Map();
-  }
-  byFace.set(faceKey, glyphs);
-  const read = glyphs;
+  const read = byFace(faceKey, () => new Map());
   const byChar = new Map<string, GlyphContours | null>();
   return (char) => {
     const known = byChar.get(char);
