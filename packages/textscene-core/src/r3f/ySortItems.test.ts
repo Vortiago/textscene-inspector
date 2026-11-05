@@ -61,13 +61,24 @@ describe('collectSortRootRows', () => {
       prop,
     ]);
     const item = collectSortRootRows(layer);
-    expect([item?.kind, item?.tileData?.tileSetRef, item?.sortY, item?.isSortRootRows]).toEqual([
+    expect([item?.kind, item?.tileData?.tileSetRef, item?.sortY]).toEqual([
       'tileGroup',
       'ExtResource("1")',
       0,
-      true,
     ]);
     expect(item?.node?.children).toEqual([]);
+  });
+
+  it("draws the rows as a child canvas item, with none of the layer's transform", () => {
+    const layer = node('Ground', 'TileMapLayer', {
+      y_sort_enabled: true,
+      position: { x: 30, y: 40 },
+      z_index: 3,
+    });
+    expect(collectSortRootRows(layer)?.node?.properties).toMatchObject({
+      position: { x: 0, y: 0 },
+      z_index: 0,
+    });
   });
 
   it.each([

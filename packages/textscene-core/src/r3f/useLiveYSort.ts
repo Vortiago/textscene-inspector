@@ -8,7 +8,7 @@ import type { Object3D } from 'three';
 import { useOnMixerPose } from './contexts/AnimatedValueContext.js';
 import { useOptionalSelection } from './contexts/SelectionContext.js';
 import { trackTargetFinder } from './animation/trackTargets.js';
-import { liveSortY, type GroupAt } from './ySortLiveItems.js';
+import { liveGroupChain, sortYOfChain, type GroupAt } from './ySortLiveItems.js';
 import { compareYSortItems } from './ySortOrder.js';
 import { ySortItemId, type YSortItem } from './ySortItems.js';
 
@@ -39,37 +39,55 @@ export function useLiveYSort(items: readonly YSortItem[], basePath: string): rea
   const ys = live.items === items ? live.ys : NO_YS;
   /** Written only by the pose listener: the group found for each path, until it detaches. */
   const groups = useRef(new Map<string, Object3D>());
-  /** Written only by the pose listener: what it last read and rendered, until `items` change. */
+  /**
+   * Written only by the pose listener, until `items` change: each item's group chain, the sort y
+   * read at the last pose that moved it, and the draw order last rendered.
+   */
   const pose = useMemo(
-    () => ({ items, ys: new Map<string, number>(), order: null as string | null }),
+    () => ({
+      items,
+      chains: new Map<string, Object3D[]>(),
+      ys: new Map<string, number>(),
+      order: null as string | null,
+    }),
     [items]
   );
 
-  const onPose = useCallback(() => {
-    if (!selection) return;
-    const groupAt = cachedGroupAt(selection.nodeObjectMap, groups.current);
-    const read = new Map<string, number>();
-    let moved = false;
-    for (const item of items) {
-      const y = liveSortY(item, basePath, groupAt);
-      if (y === null) continue;
-      const id = ySortItemId(item);
-      read.set(id, y);
-      moved ||= y !== (pose.ys.get(id) ?? item.sortY);
-    }
-    // Sorted only when some y moved: the frames of a held pose cost a read of each group.
-    if (!moved) return;
-    pose.ys = read;
-    pose.order ??= drawOrder(items, NO_YS);
-    const order = drawOrder(items, read);
-    if (order === pose.order) return;
-    pose.order = order;
-    setLive({ items, ys: read });
-  }, [selection, items, basePath, pose]);
+  /** `posed` holds the uuids a pose moved. Null reads every item, as the first read does. */
+  const onPose = useCallback(
+    (posed: ReadonlySet<string> | null) => {
+      if (!selection) return;
+      const groupAt = cachedGroupAt(selection.nodeObjectMap, groups.current);
+      const read = new Map(pose.ys);
+      let moved = false;
+      for (const item of items) {
+        const id = ySortItemId(item);
+        let chain: Object3D[] | null | undefined = pose.chains.get(id);
+        if (!chain || chain.some((group) => !group.parent)) {
+          chain = liveGroupChain(item, basePath, groupAt);
+          if (chain) pose.chains.set(id, chain);
+        }
+        // A pose that moved none of the item's groups leaves its y as it was read.
+        if (!chain || (posed && !chain.some((group) => posed.has(group.uuid)))) continue;
+        const y = sortYOfChain(chain);
+        read.set(id, y);
+        moved ||= y !== (pose.ys.get(id) ?? item.sortY);
+      }
+      // Sorted only when some y moved: the frames of a held pose cost a read of each moved group.
+      if (!moved) return;
+      pose.ys = read;
+      pose.order ??= drawOrder(items, NO_YS);
+      const order = drawOrder(items, read);
+      if (order === pose.order) return;
+      pose.order = order;
+      setLive({ items, ys: read });
+    },
+    [selection, items, basePath, pose]
+  );
   useOnMixerPose(onPose);
   // New items drop the poses read for the old ones, and a paused mixer announces no pose to read
-  // them again, so the items read the groups once as they arrive.
-  useEffect(onPose, [onPose]);
+  // them again, so the items read every group once as they arrive.
+  useEffect(() => onPose(null), [onPose]);
 
   return useMemo(() => withLiveYs(items, ys), [items, ys]);
 }

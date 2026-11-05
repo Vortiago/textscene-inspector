@@ -15,6 +15,7 @@ import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/Ani
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useIsSelected } from '../../../r3f/hooks/useIsSelected';
 import { useAnnounceMixerPose } from '../../../r3f/contexts/AnimatedValueContext';
+import { drivenUuids } from '../../../r3f/animation/drivenUuids';
 import { useAnimationDriver, type BoundClips } from '../../../r3f/contexts/AnimationDriverContext';
 import { useRebindKey } from '../../../r3f/animation/useRebindKey';
 import { useUniqueNamePaths } from '../../../r3f/useUniqueNames';
@@ -167,7 +168,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
         // blend program drives N weighted actions with their own timeScale and weight, and Godot
         // has no single loop mode for a blend tree or state machine preview.
         mixer.update(delta * transport.playbackSpeed);
-        announceMixerPose();
+        announceMixerPose(drivenUuids(actions));
         if (dominant) transport.reportTime(actions.get(dominant.clip)?.time ?? 0);
         break;
       }
@@ -180,7 +181,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
           seekAction(action, transport.time, { weight, timeScale });
         }
         mixer.update(0);
-        announceMixerPose();
+        announceMixerPose(drivenUuids(actions));
         break;
       }
       case 'hold-paused': {
@@ -190,7 +191,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
       case 'stop-and-restore': {
         mixer.stopAllAction();
         restoreSnapshot(snapshotRef.current);
-        announceMixerPose();
+        announceMixerPose(drivenUuids(actions));
         break;
       }
       case 'none': {

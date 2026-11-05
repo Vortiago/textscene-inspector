@@ -8,6 +8,7 @@ import { useFrame } from '@react-three/fiber';
 import type { AnimationAction, AnimationMixer } from 'three';
 import type { PlayState } from '../contexts/AnimationTransportContext';
 import { useAnnounceMixerPose } from '../contexts/AnimatedValueContext';
+import { drivenUuids } from './drivenUuids';
 import { stepPlayback } from './stepPlayback';
 import { startAction, seekAction } from './actionHelpers';
 
@@ -91,7 +92,7 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
           if (mixerRebuilt) action.time = transportTime;
         }
         mixer.update(delta * speedScale);
-        announceMixerPose();
+        announceMixerPose(drivenUuids(actionsRef.current));
         if (action) params.reportTime(action.time);
         break;
       }
@@ -99,7 +100,7 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
         if (action) {
           seekAction(action, transportTime);
           mixer.update(0);
-          announceMixerPose();
+          announceMixerPose(drivenUuids(actionsRef.current));
         }
         break;
       }
@@ -112,7 +113,7 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
       case 'stop-and-restore': {
         mixer.stopAllAction();
         params.restore();
-        announceMixerPose();
+        announceMixerPose(drivenUuids(actionsRef.current));
         break;
       }
       case 'none': {

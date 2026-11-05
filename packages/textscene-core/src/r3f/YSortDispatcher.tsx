@@ -127,11 +127,7 @@ function SortedChildren({
           return (
             <PaintRangeProvider key={`tg-${item.node.name}-${ySortItemId(item)}`} value={range}>
               <LiftedAncestors liftedPast={item.liftedPast} basePath={basePath}>
-                <NodePathProvider
-                  path={
-                    item.isSortRootRows ? basePath : liftedPath(basePath, item.liftedPast, item.node.name)
-                  }
-                >
+                <NodePathProvider path={liftedPath(basePath, item.liftedPast, item.node.name)}>
                   <Renderer item={item} node={item.node} />
                 </NodePathProvider>
               </LiftedAncestors>

@@ -20,15 +20,7 @@ import { useIsHiddenInEditor } from '../../../../r3f/canvasItemVisible.js';
 
 export function TileGroupRenderer({ item, node: authored }: { item: YSortItem; node: TscnNode }): ReactNode {
   const path = useNodePath();
-  const live = useLiveDrawnNode(authored, path);
-  // A row of a layer that roots its own sort draws below the group the layer's component placed.
-  const node = useMemo(
-    () =>
-      item.isSortRootRows
-        ? { ...live, properties: childCanvasItemProperties(live.properties as TileMapLayerProperties) }
-        : live,
-    [item.isSortRootRows, live]
-  );
+  const node = useLiveDrawnNode(authored, path);
   const props = node.properties as TileMapLayerProperties;
   const { model, status } = useTileSetModel(props.tile_set);
   // The y-sort pass gives the row's drawable cells. An item the pass left whole, because its
@@ -76,6 +68,11 @@ export function TileGroupRenderer({ item, node: authored }: { item: YSortItem; n
 }
 
 /** What the y-sort pass needs to know about this layer to decompose it per row. */
+/** The layer as its own rows draw it: below the group the layer's component placed. */
+export function asRootRowsNode(node: TscnNode): TscnNode {
+  return { ...node, properties: childCanvasItemProperties(node.properties as TileMapLayerProperties) };
+}
+
 export function describeYSortLayer(node: TscnNode): YSortGroupDescription {
   const props = node.properties as TileMapLayerProperties;
   return {

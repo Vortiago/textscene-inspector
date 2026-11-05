@@ -67,12 +67,6 @@ export interface YSortItem {
    * makes a name unique among siblings only), and folding would merge their identities.
    */
   groupIndex?: number;
-  /**
-   * Set on the rows of a y_sort_enabled TileMapLayer that roots its own sort. Such a row is a child
-   * canvas item of the layer, drawn inside the group the layer's own component already placed, at
-   * the layer's own path.
-   */
-  isSortRootRows?: true;
 }
 
 /**
@@ -140,9 +134,8 @@ export function collectSortRootRows(node: TscnNode): YSortItem | null {
     treeOrder: 0,
     kind: 'tileGroup',
     tileData: { tileSetRef: group.describe(node).tileSetRef, toSortRoot: Y_SORT_ROOT.toSortRoot },
-    node: ownBodyOf(node),
+    node: ownBodyOf(group.asRootRows(node)),
     liftedPast: [],
-    isSortRootRows: true,
   };
 }
 

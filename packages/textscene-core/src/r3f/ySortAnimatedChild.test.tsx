@@ -2,7 +2,7 @@
  * A child that an AnimationPlayer moves across a tile row re-sorts with the rows on the frame the
  * mixer moves it, as Godot's per-frame y-sort does (`renderer_canvas_cull.cpp:110-170`).
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { FakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
@@ -155,5 +155,17 @@ describe('a child that an AnimationPlayer moves past a sibling in a y-sorted Nod
     await ReactThreeTestRenderer.act(async () => renderer.advanceFrames(1, 0.5));
 
     expect(namesInDrawOrder(sceneRoot(renderer), ['Mover', 'Fixed'])).toEqual(['Fixed', 'Mover']);
+  });
+
+  it('reads only the groups the clip moves', async () => {
+    const { renderer } = await mountWithPlayer(NODE_SCENE, 'World/Player', { workspace: '2d' });
+    await settleLoads();
+    const fixed = sceneRoot(renderer).getObjectByName('Fixed')!;
+    const updateMatrix = vi.spyOn(fixed, 'updateMatrix');
+
+    await play();
+    await ReactThreeTestRenderer.act(async () => renderer.advanceFrames(3, 0.1));
+
+    expect(updateMatrix).not.toHaveBeenCalled();
   });
 });

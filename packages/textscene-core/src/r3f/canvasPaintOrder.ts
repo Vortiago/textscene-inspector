@@ -164,9 +164,9 @@ export function internalFrontRoom(node: TscnNode): number {
     layers?: readonly unknown[];
     y_sort_enabled?: boolean;
   };
-  // A y-sorted TileMap hands its layers to the y-sort pass, which splits each into a group per
-  // tile row once the tileset loads, so the layers draw from a reserve like a TileMapLayer's.
-  return ySorted ? DYNAMIC_CHILD_RESERVE : (layers?.length ?? 0);
+  // A y-sorted layer splits into a group per tile row once its tileset loads, so it draws from
+  // a reserve, as `reservesRoom` gives a TileMapLayer.
+  return (layers?.length ?? 0) * (ySorted ? DYNAMIC_CHILD_RESERVE : 1);
 }
 
 /**
