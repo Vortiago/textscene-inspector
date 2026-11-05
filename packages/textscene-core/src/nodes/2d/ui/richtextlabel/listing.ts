@@ -11,7 +11,7 @@
  */
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import type { Rgba } from '../../../../godot/math/math';
-import { getFontEmboldenedAdvancePx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { getFontTabWidthPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
   shapeText,
   shapedTextSizeWidthPx,
@@ -335,7 +335,7 @@ function marginPx(frames: readonly IndentFrame[], context: ListingContext): numb
   let margin = 0;
   for (const frame of frames) {
     const face = faceOfStyle(context.faces, frame);
-    margin += Math.max(1, context.tabSize * getFontEmboldenedAdvancePx(face, ' ', frame.fontSizePx));
+    margin += getFontTabWidthPx(face, context.tabSize, frame.fontSizePx);
   }
   return Math.trunc(margin);
 }
