@@ -221,7 +221,7 @@ describe('textMeshFont on a BMFont', () => {
   function bitmapSurface(text: string) {
     const font = textMeshFont(textMeshWith({}, loaded(bitmapFontFile())));
     if (font.status !== 'ready') throw new Error(`expected a ready font, got ${font.status}`);
-    return buildTextMeshSurface(decodeTextMesh({ text: `"${text}"`, font_size: '16' }), font.face);
+    return buildTextMeshSurface(decodeTextMesh({ text: `"${text}"`, font_size: '16' }), '', font.face);
   }
 
   it('builds no glyph surface: a font with no FreeType face has no contours (`text_server_adv.cpp:3613`)', () => {

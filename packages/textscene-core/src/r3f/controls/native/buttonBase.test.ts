@@ -137,6 +137,7 @@ const BASE_INPUT: ButtonContentInput = {
   iconNaturalSize: null,
   hasText: true,
   textNaturalSize: { x: 50, y: 26 },
+  isTextRtl: false,
   rtl: false,
 };
 
@@ -194,16 +195,25 @@ describe('layoutButtonContent — the paragraph box the alignment measures again
     expect(text!.offset.x).toBeCloseTo(34.75, 10);
   });
 
-  it('CENTER does not shift an OVERFLOWING line at all (text_paragraph.cpp:902)', () => {
-    // length 200 > text_buf_width 112, so the centring arm is skipped entirely
-    // and the else-branch needs an RTL inferred direction this shaper never
-    // produces. Only the style margin is left.
+  it('CENTER does not shift an OVERFLOWING left-to-right line at all (text_paragraph.cpp:902)', () => {
+    // length 200 > text_buf_width 112, so the centring arm is skipped. Only the style margin is left.
     const { text } = layoutButtonContent({
       ...BASE_INPUT,
       textAlignment: HORIZONTAL_ALIGNMENT_CENTER,
       textNaturalSize: { x: 200, y: 26 },
     });
     expect(text!.offset.x).toBe(4);
+  });
+
+  it('CENTER ends an OVERFLOWING right-to-left line at the trailing edge (text_paragraph.cpp:908-910)', () => {
+    // 112 - 200 = -88, after the style margin 4.
+    const { text } = layoutButtonContent({
+      ...BASE_INPUT,
+      textAlignment: HORIZONTAL_ALIGNMENT_CENTER,
+      textNaturalSize: { x: 200, y: 26 },
+      isTextRtl: true,
+    });
+    expect(text!.offset.x).toBe(-84);
   });
 
   it('RIGHT hugs the CEILED width, not the raw drawable (text_paragraph.cpp:916-922)', () => {

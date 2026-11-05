@@ -31,7 +31,7 @@ import {
 import type { SurfaceShading } from '../../../materialFor2d';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { isBitmapFontMetrics, type BitmapFontMetrics } from './bitmapFontMetrics';
-import { buildBitmapQuads, createSheetTexture } from './bitmapTextPainter';
+import { bitmapFloorsPen, buildBitmapQuads, createSheetTexture } from './bitmapTextPainter';
 import type { FillSheet } from '../../../../resources/fonts/font/types';
 import { perObject } from '../../../../utils/perObject';
 import { GLYPH_DRAWER_RULES, type GlyphDrawer } from './glyphDrawer';
@@ -379,9 +379,9 @@ export function TextRunMesh({
   // run and a run that keeps its pen read no phase, so a move never rebuilds them.
   const itemOrigin = useCanvasItemOrigin();
   const { fontMetrics } = layout;
-  const readsPhase =
-    (isCanvasFontMetrics(fontMetrics) || isBitmapFontMetrics(fontMetrics)) &&
-    snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, fontMetrics);
+  const readsPhase = isBitmapFontMetrics(fontMetrics)
+    ? bitmapFloorsPen(glyphDrawer, fontSizePx, fontMetrics)
+    : isCanvasFontMetrics(fontMetrics) && snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, fontMetrics);
   const { x: phaseX, y: phaseY } = readsPhase ? originPhase(itemOrigin) : VECTOR2_ZERO;
   if (blends && !swapped)
     throw new Error('expected blends only inside a GeometryInstance3D drawer, got none');

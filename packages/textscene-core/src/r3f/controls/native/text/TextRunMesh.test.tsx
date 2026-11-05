@@ -77,24 +77,34 @@ describe('<TextRunMesh> on the canvas painter', () => {
 });
 
 describe('<TextRunMesh> over a BMFont', () => {
+  const bitmapLayout = shapeText('H', {
+    fontSizePx: 16,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 3,
+    fontMetrics: testBitmapMetrics(),
+  });
+  const at = (x: number) => (
+    <CanvasItemProvider value={0}>
+      <CanvasItemGroup position={[x, -1.75, 0]}>
+        <TextRunMesh layout={bitmapLayout} fontSizePx={16} tint={{ r: 1, g: 1, b: 1, a: 1 }} />
+      </CanvasItemGroup>
+    </CanvasItemProvider>
+  );
+  const meshOf = (renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>) =>
+    renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh;
+
   it('floors its glyph at the canvas position of its item', async () => {
-    const bitmapLayout = shapeText('H', {
-      fontSizePx: 16,
-      boxWidthPx: 0,
-      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-      lineSpacingPx: 3,
-      fontMetrics: testBitmapMetrics(),
-    });
-    const renderer = await ReactThreeTestRenderer.create(
-      <CanvasItemProvider value={0}>
-        <CanvasItemGroup position={[2.25, -1.75, 0]}>
-          <TextRunMesh layout={bitmapLayout} fontSizePx={16} tint={{ r: 1, g: 1, b: 1, a: 1 }} />
-        </CanvasItemGroup>
-      </CanvasItemProvider>
-    );
-    const mesh = renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh;
-    const position = mesh.geometry.getAttribute('position');
+    const position = meshOf(await ReactThreeTestRenderer.create(at(2.25))).geometry.getAttribute('position');
     // `H` sits 1 px right of its pen and 4 px below the line top (`bitmapTextPainter.test.ts`).
     expect([position.getX(0), position.getY(0)]).toEqual([1 - 0.25, -(4 - 0.75)]);
+  });
+
+  it('keeps its page texture when the run moves by a fraction of a pixel', async () => {
+    const renderer = await ReactThreeTestRenderer.create(at(2.25));
+    const page = () => (meshOf(renderer).material as THREE.MeshBasicMaterial).map;
+    const before = page();
+    await renderer.update(at(2.5));
+    expect(page()).toBe(before);
   });
 });

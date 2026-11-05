@@ -54,7 +54,7 @@ describe('buildBitmapQuads', () => {
   });
 
   it('floors the pen at its canvas position, so a run at x 0.5 draws half a pixel left of its origin', () => {
-    // text_server_adv.cpp:4082-4085 floors `p_pos`, which is the canvas position, at scale 1.
+    // text_server_adv.cpp:4082-4084 floors `p_pos`, which is the canvas position, at scale 1.
     const { positions } = quadsFor('H', 16, undefined, { originPhasePx: { x: 0.5, y: 0 } });
 
     expect(rectOf(positions, 0)[0]).toBe(0.5);
@@ -65,6 +65,21 @@ describe('buildBitmapQuads', () => {
     const { positions } = quadsFor('H', 16, undefined, { originPhasePx: { x: 0, y: 0.5 } });
 
     expect(rectOf(positions, 0)[1]).toBe(3.5);
+  });
+
+  it('keeps the pen of a scaled glyph off the floor, whatever its canvas position', () => {
+    // text_server_adv.cpp:4082 floors only at scale 1.0.
+    const { positions } = quadsFor('H', 24, undefined, { originPhasePx: { x: 0.5, y: 0.5 } });
+
+    expect(rectOf(positions, 0).slice(0, 2)).toEqual([1.5, 6]);
+  });
+
+  it('floors the pen under the disabled mode at any size, as its glyphs keep scale 1', () => {
+    const { positions } = quadsFor('H', 24.5, FixedSizeScaleMode.FIXED_SIZE_SCALE_DISABLE, {
+      originPhasePx: { x: 0.5, y: 0 },
+    });
+
+    expect(rectOf(positions, 0)[0]).toBe(0.5);
   });
 
   it('draws no quad for a space, whose rectangle is empty', () => {

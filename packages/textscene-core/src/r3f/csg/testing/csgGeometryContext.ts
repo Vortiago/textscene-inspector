@@ -24,5 +24,6 @@ export function csgGeometryContext({
     loadedFile: (path) => files[path],
     loadedFont: (path) => fonts[path],
     projectFonts,
+    locale: '',
   };
 }

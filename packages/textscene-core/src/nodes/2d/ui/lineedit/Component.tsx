@@ -5,6 +5,7 @@
  * `_validate_caret_can_draw()`'s other branch never fires. It draws no selection or IME. `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
 import { useMemo } from 'react';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -14,7 +15,7 @@ import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
-import { shapeText, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
@@ -35,11 +36,11 @@ import {
   LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR,
   LINE_EDIT_DEFAULT_CARET_COLOR,
   EXPAND_MODE_ORIGINAL_SIZE,
+  shapeLineEditText,
 } from './nativeSolver';
 import type { LineEditProperties } from './types';
 import { type Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 const DEFAULT_CARET_WIDTH_PX = 1;
 
@@ -72,19 +73,12 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // the `useMemo` below, for the reason Label's Component.tsx gives.
   const fontMetrics = resolveNodeFontMetrics(solveNode, LINE_EDIT_THEME_FONT_KEY);
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
+  const bidi = useControlBidiOptions(props, solveNode);
+  const { drawControlChars } = props;
   const layout: TextLayoutResult | null = useMemo(
     () =>
-      hasText
-        ? shapeText(text, {
-            fontSizePx,
-            boxWidthPx: 0,
-            autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-            lineSpacingPx: 0,
-            fontMetrics,
-            preserveControl: props.drawControlChars,
-          })
-        : null,
-    [hasText, text, fontSizePx, fontMetrics, props.drawControlChars]
+      hasText ? shapeLineEditText(text, { drawControlChars }, { ...bidi, fontSizePx, fontMetrics }) : null,
+    [hasText, text, fontSizePx, fontMetrics, drawControlChars, bidi]
   );
 
   // Icon: which one draws, its resolved size
