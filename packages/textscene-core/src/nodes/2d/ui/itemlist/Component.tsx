@@ -17,7 +17,12 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import {
+  OutlinedTextRun,
+  TextOutlineRing,
+  useTintedTextOutline,
+} from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import type { TextOutlineTheme } from '../../../../r3f/controls/native/textTheme';
 import {
   shapedTextSizeWidthPx,
   soloLineLayout,
@@ -27,8 +32,8 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SceneScope } from '../../../../parser/types';
 import {
-  ICON_MODE_LEFT,
-  ICON_MODE_TOP,
+  isItemTextFillDrawn,
+  isItemTextWrapped,
   ITEM_LIST_DEFAULT_MAX_COLUMNS,
   ITEM_LIST_THEME_FONT_KEY,
   itemIconColor,
@@ -50,8 +55,10 @@ import {
   itemTextLineCenterOffset,
   packItemListRows,
   pickItemListPanelStyleBox,
-  shapeItemListText,
+  shapeItemText,
+  trimItemListText,
 } from './nativeSolver';
+import { ItemListIconMode } from '../../../../godot/scene/gui';
 import type { ItemListItem, ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
@@ -64,7 +71,8 @@ interface RowContent {
   iconSize: Vector2;
   hasText: boolean;
   textSize: Vector2;
-  textLayout: TextLayoutResult | null;
+  /** Untrimmed: the draw pass trims it at its own width (`trimItemListText`). */
+  shapedText: TextLayoutResult | null;
 }
 
 /** Pass 2: this row's fully-resolved, plain-data geometry: everything but the async icon load. */
@@ -83,7 +91,12 @@ interface RowGeometry {
   iconX: number;
   /** The width `text_buf->set_width()` gets, and the box CENTER/RIGHT alignment works inside. */
   textWidthPx: number;
-  iconMode: number;
+  /** One layout per line of wrapped `textLayout`, so each line keeps its meshes across renders. Empty for a single line. */
+  lineLayouts: TextLayoutResult[];
+  /** Read for a single line only: false where the row hides its fill and draws the outline alone (`item_list.cpp:1672-1688`). */
+  isTextFillDrawn: boolean;
+  /** `isItemTextWrapped`: a centred paragraph, drawn line by line, or one line. */
+  isTextWrapped: boolean;
   rect: Rect2;
   textColor: Rgba;
 }
@@ -92,6 +105,8 @@ interface ItemListRowProps {
   geometry: RowGeometry;
   origin: Vector2;
   tint: Rgba;
+  /** Tinted by the list, not by the item: `draw_outline` takes the theme colour (`item_list.cpp:1643`). */
+  outline: TextOutlineTheme;
   renderOrder: number;
   clippingPlanes: readonly THREE.Plane[];
   fontSizePx: number;
@@ -107,6 +122,7 @@ function ItemListRow({
   geometry,
   origin,
   tint,
+  outline,
   renderOrder,
   clippingPlanes,
   fontSizePx,
@@ -122,7 +138,9 @@ function ItemListRow({
     textY,
     iconX,
     textWidthPx,
-    iconMode,
+    lineLayouts,
+    isTextFillDrawn,
+    isTextWrapped,
     rect,
     textColor,
   } = geometry;
@@ -137,6 +155,7 @@ function ItemListRow({
   const iconColorSrgb = useMemo(() => tintColor(itemIconColor(disabled), tint), [disabled, tint]);
   const iconColorLinear = useGodotLinearColor(iconColorSrgb);
   const tintedTextColor = useMemo(() => tintColor(textColor, tint), [textColor, tint]);
+  const run = { fontSizePx, outline, clippingPlanes, renderOrder };
 
   return (
     <CanvasItemGroup position={[origin.x + rect.x, -(origin.y + rect.y), 0]}>
@@ -153,15 +172,13 @@ function ItemListRow({
         </CanvasItemGroup>
       )}
       {textLayout &&
-        (iconMode === ICON_MODE_LEFT ? (
+        (!isTextWrapped ? (
           <CanvasItemGroup position={[textX, -textY, 0]}>
-            <TextRun
-              layout={textLayout}
-              fontSizePx={fontSizePx}
-              tint={tintedTextColor}
-              clippingPlanes={clippingPlanes}
-              renderOrder={renderOrder}
-            />
+            {isTextFillDrawn ? (
+              <OutlinedTextRun {...run} layout={textLayout} tint={tintedTextColor} />
+            ) : (
+              <TextOutlineRing {...run} layout={textLayout} />
+            )}
           </CanvasItemGroup>
         ) : (
           textLayout.lines.map((line, index) => (
@@ -178,13 +195,7 @@ function ItemListRow({
                 0,
               ]}
             >
-              <TextRun
-                layout={soloLineLayout(line, textLayout)}
-                fontSizePx={fontSizePx}
-                tint={tintedTextColor}
-                clippingPlanes={clippingPlanes}
-                renderOrder={renderOrder}
-              />
+              <OutlinedTextRun {...run} layout={lineLayouts[index]!} tint={tintedTextColor} />
             </CanvasItemGroup>
           ))
         ))}
@@ -196,7 +207,7 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const props = painterView<ItemListProperties>(solveNode);
   const items = props.items;
 
-  const iconMode = props.iconMode ?? ICON_MODE_LEFT;
+  const iconMode = props.iconMode ?? ItemListIconMode.ICON_MODE_LEFT;
   const maxTextLines = props.maxTextLines ?? 1;
   const fixedColumnWidth = props.fixedColumnWidth ?? 0;
   const iconScale = props.iconScale ?? 1;
@@ -217,6 +228,7 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const rtl = solveNode.rtl;
 
   const clippingPlanes = useControlClipPlanes();
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   const rows: RowContent[] = useMemo(() => {
     return items.map((item, index) => {
@@ -227,23 +239,18 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
 
       const text = item.text ?? '';
       const hasText = text.length > 0;
-      const textLayout = hasText
-        ? shapeItemListText({
-            text,
-            fontSizePx,
-            fontMetrics,
-            iconMode,
-            maxTextLines,
-            fixedColumnWidth,
-            overrunBehavior: props.textOverrunBehavior,
-            locale: solveNode.locale,
-          })
-        : null;
-      const textSize = textLayout
-        ? { x: shapedTextSizeWidthPx(textLayout.widthPx), y: textLayout.heightPx }
-        : { x: 0, y: 0 };
+      const { shaped: shapedText, minimumSize: textSize } = shapeItemText({
+        text,
+        fontSizePx,
+        fontMetrics,
+        iconMode,
+        maxTextLines,
+        fixedColumnWidth,
+        overrunBehavior: props.textOverrunBehavior,
+        locale: solveNode.locale,
+      });
 
-      return { item, disabled, hasIcon, iconSize, hasText, textSize, textLayout };
+      return { item, disabled, hasIcon, iconSize, hasText, textSize, shapedText };
     });
   }, [
     items,
@@ -341,18 +348,18 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           vSeparation,
           iconMargin
         );
+        const wrapped = isItemTextWrapped(iconMode, maxTextLines);
         const textOffset = itemTextDrawOffset(
-          iconMode,
+          wrapped,
           iconDraw.textOffsetContribution,
           packedSize,
-          r.textLayout?.heightPx ?? 0,
+          r.shapedText?.heightPx ?? 0,
           hSeparation,
           vSeparation
         );
         // Every RTL branch works in control coordinates; the row group keeps
         // its LTR origin, so each piece comes back relative to it.
         const rowOriginX = origin.x + packedRect.x;
-        const wrapped = iconMode === ICON_MODE_TOP;
         const textWidthPx = wrapped
           ? itemListWrappedTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems)
           : itemListLineTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems);
@@ -370,10 +377,18 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
               },
               rtl
             );
+        const textLayout =
+          r.shapedText &&
+          trimItemListText(r.shapedText, textWidthPx, {
+            fontSizePx,
+            overrunBehavior: props.textOverrunBehavior,
+            iconMode,
+            maxTextLines,
+          });
         // A non-wrapped item is a single line (`BREAK_NONE`), so the paragraph's
         // own width is that line's (`item_list.cpp:1668`, alignment RIGHT).
         const rightAlign =
-          !wrapped && rtl ? itemListRightAlignOffsetPx(textWidthPx, r.textLayout?.widthPx ?? 0) : 0;
+          !wrapped && rtl ? itemListRightAlignOffsetPx(textWidthPx, textLayout?.widthPx ?? 0) : 0;
         return {
           item: r.item,
           disabled: r.disabled,
@@ -381,14 +396,24 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           iconNaturalSize: naturalSize,
           fixedIconSizeSet,
           iconDraw,
-          textLayout: r.textLayout,
+          textLayout,
           textX: textBoxX + rightAlign - rowOriginX,
           textY: textOffset.y,
           iconX: iconDraw.rect
             ? itemListMirrorX(rowOriginX + iconDraw.rect.x, iconDraw.rect.w, rect.w, rtl) - rowOriginX
             : 0,
           textWidthPx,
-          iconMode,
+          lineLayouts:
+            wrapped && textLayout ? textLayout.lines.map((line) => soloLineLayout(line, textLayout)) : [],
+          isTextFillDrawn: isItemTextFillDrawn({
+            fixedColumnWidth,
+            wraparoundItems,
+            rowWidthPx: packedRect.w,
+            contentWidthPx: contentWidth,
+            iconWidthPx: r.iconSize.x,
+            hSeparation,
+          }),
+          isTextWrapped: wrapped,
           rect: packedRect,
           textColor: itemTextColor(baseFontColor, r.disabled),
         };
@@ -407,6 +432,10 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       rect.w,
       contentWidth,
       wraparoundItems,
+      fixedColumnWidth,
+      maxTextLines,
+      fontSizePx,
+      props.textOverrunBehavior,
       rtl,
     ]
   );
@@ -431,6 +460,7 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           geometry={geometry}
           origin={origin}
           tint={tint.own}
+          outline={textOutline}
           renderOrder={renderOrder}
           clippingPlanes={clippingPlanes}
           fontSizePx={fontSizePx}

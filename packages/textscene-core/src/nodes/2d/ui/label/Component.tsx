@@ -15,7 +15,11 @@ import {
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import {
+  overrunFlagsForBehavior,
+  trimFilledLineToWidth,
+  trimLineToWidth,
+} from '../../../../r3f/controls/native/text/textOverrun';
 import { OutlineRingRun, textLayerRenderOrder } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { TextRun, type TextRunProps } from '../../../../r3f/controls/native/text/TextRun';
@@ -179,12 +183,11 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   const trimLine = useMemo(() => {
     if (autowrapMode !== AutowrapMode.AUTOWRAP_OFF || !overrunFlags.trim) return undefined;
     const widthPx = labelShapingWidthPx(rect.w);
-    return (line: TextLineLayout) =>
-      trimLineToWidth(line, widthPx, overrunFlags, {
-        fontMetrics,
-        fontSizePx: textTheme.fontSizePx,
-        ellipsisChar: props.ellipsisChar,
-      });
+    const options = { fontMetrics, fontSizePx: textTheme.fontSizePx, ellipsisChar: props.ellipsisChar };
+    return (line: TextLineLayout, refitFlags?: number) =>
+      refitFlags === undefined
+        ? trimLineToWidth(line, widthPx, overrunFlags, options)
+        : trimFilledLineToWidth(line, widthPx, overrunFlags, { ...options, justificationFlags: refitFlags });
   }, [autowrapMode, overrunFlags, rect.w, fontMetrics, textTheme.fontSizePx, props.ellipsisChar]);
 
   // Godot aligns each line by its own width (`Label::_get_line_rect`), so each line

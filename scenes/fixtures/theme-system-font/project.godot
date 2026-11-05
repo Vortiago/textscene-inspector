@@ -1,0 +1,15 @@
+; A res:// root of its own, because `gui/theme/custom` and `gui/theme/custom_font` are PROJECT
+; settings. The project theme's default_font is a SystemFont whose name no OS font matches: it skips
+; itself and draws the project font.
+
+config_version=5
+
+[application]
+
+config/name="Theme system font"
+config/features=PackedStringArray("4.6")
+
+[gui]
+
+theme/custom="res://theme.tres"
+theme/custom_font="res://fonts/montserrat-extra-bold.otf"

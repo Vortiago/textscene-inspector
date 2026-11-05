@@ -49,6 +49,7 @@ import { useSharedLiveTree } from '../../useLiveSceneTree';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { resolveInlineFontResource } from '../../../resources/fonts/font/decode';
 import { resolveProjectFonts } from '../../../resources/fonts/font/projectFonts';
+import { NO_DEFAULT_FONTS, withDefaultFonts } from '../../../resources/fonts/font/defaultFont';
 import type { FontCacheReader, FontResource } from '../../../resources/fonts/font/types';
 import { resolveInlineThemeResource } from '../../../resources/styles/theme/decode';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
@@ -116,12 +117,17 @@ interface UseBuildSolveTreeResult {
   generation: number;
 }
 
+/** A LabelSettings font with the default fonts under it, as a theme font takes them, once it has loaded. */
+function withSettingsDefaultFonts(font: LabelSettingsFont, scope: ThemeResolutionScope): LabelSettingsFont {
+  return font === LABEL_SETTINGS_FONT_LOADING ? font : withDefaultFonts(font, scope.defaultFonts);
+}
+
 /** No ancestor or project theme: `mergeThemedRecord` returns the seed unchanged. */
 const NO_THEME_SCOPE: ThemeResolutionScope = {
   typeChain: [],
   searchOrder: [],
   projectDefaultFont: null,
-  variationBaseFont: null,
+  defaultFonts: NO_DEFAULT_FONTS,
 };
 
 /**
@@ -892,7 +898,7 @@ function buildForest(
       textureSlots: texture.slots,
       fontOverrides: resolveFontOverrides(collapsed, ownScope.externalResources, ownScope.internalResources),
       labelSettings: ownLabelSettings.settings,
-      labelSettingsFont: ownLabelSettings.font,
+      labelSettingsFont: withSettingsDefaultFonts(ownLabelSettings.font, themeScope),
       colors: resolveThemedColors(collapsed, themeScope),
       constants: resolveThemedConstants(collapsed, themeScope),
       icons: themedIcons,

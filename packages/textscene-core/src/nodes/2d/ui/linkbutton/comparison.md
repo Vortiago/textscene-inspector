@@ -45,13 +45,18 @@ Strict parsing format-checks these `LinkButton` properties, plus 10 inherited fr
 `language` and the structured-text-bidi pair. The label shapes in its own direction, language
 and override (`link_button.cpp:35-48`).
 
+LinkButton draws the theme text outline, `font_outline_color` and `outline_size`, as Godot
+does (`link_button.cpp:294-301`). A ring of `outline_size / 4` px sits under the fill. No ring
+draws at an `outline_size` of 0 or a zero alpha. A trimmed AUTO line whose paragraph resolves right-to-left trims its ring by that
+direction, with the ellipsis first. Its fill draws the glyphs that trim drops, from the visual
+left, as Godot's set-direction draw does (`text_server.cpp:1740-1935`). A line set RTL draws
+its ring and its fill alike.
+
 A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
 outline ring (ADR-0064).
 
 ## Known limitations
 
-- **Not drawn** The text outline (`outline_size`, `font_outline_color`) that
-  `link_button.cpp:294-301` draws under the text.
 - **Approximated** A `theme_override_fonts/font` scene font takes its underline position
   and thickness from the vendored Open Sans metrics, because no scene font carries baked
   underline data.

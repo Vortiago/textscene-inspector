@@ -5,13 +5,13 @@
  * not a line pitch, since it sets no `line_spacing`. Measured: a `content_margin` 6 button is 35.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import type { ButtonProperties } from './types';
 import {
@@ -341,7 +341,7 @@ describe('buttonIconColor — icon_normal_color / icon_disabled_color (default_t
 
 describe(`buttonMinimumSize — resolves this Button's own theme font key ("${BUTTON_THEME_FONT_KEY}", default_theme.cpp:152)`, () => {
   // Without a DOM, `peekSceneFontMetrics` always answers the bundled default, so a
-  // resolved value cannot be observed. It warns for an unresolvable font (a SystemFont),
+  // resolved value cannot be observed. It warns for an unresolvable font (a FontFile with no bytes),
   // which proves the lookup found something.
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
@@ -352,15 +352,18 @@ describe(`buttonMinimumSize — resolves this Button's own theme font key ("${BU
   });
 
   it("a theme_override_fonts/font local override is fed to the text engine (proven by peekSceneFontMetrics's own warn)", () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { [BUTTON_THEME_FONT_KEY]: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n: SolveNode = {
+      ...node({ text: 'A' }),
+      fontOverrides: { [BUTTON_THEME_FONT_KEY]: unresolvableFont },
+    };
     buttonMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('a local override under a different key is not consulted', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { normal_font: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { normal_font: unresolvableFont } };
     buttonMinimumSize(n, ctx());
     expect(warnSpy).not.toHaveBeenCalled();
   });

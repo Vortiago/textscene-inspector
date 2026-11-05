@@ -42,4 +42,4 @@ A `mesh` that is an open brush adds nothing to the solid, as in Godot. A PlaneMe
 
 ## Known limitations
 
-- **Resource gap** A TextMesh with a SystemFont adds nothing to the solid, and the node's details name the type.
+- **Resource gap** A SystemFont always draws the default font, as Godot does when no OS font matches its names, where Godot draws a matching OS font.

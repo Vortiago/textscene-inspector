@@ -5,7 +5,8 @@ import { fontWork, sceneFontSettleCount } from './settledChannel';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { peekGlyphOutlines, peekSceneFontOutlines } from './sceneFontOutlines';
-import { charContours, fixtureFontBytes, fontFile } from './sfntOutlines.testkit';
+import { FACELESS_FONT, findDrawnFace } from './sceneFontResolution';
+import { charContours, fixtureFontBytes, fontFile, systemFont } from './sfntOutlines.testkit';
 import autoHintedReference from './autofit/autoHinting.godot.json';
 import { referencePoints, type ReferenceGlyph } from './glyphVariation.testkit';
 
@@ -18,6 +19,10 @@ async function settledOutlines(font: FontResource | null) {
 }
 
 describe('peekSceneFontOutlines', () => {
+  it('lacks every glyph for a font with no face, so a TextMesh draws each as its fallback quad', () => {
+    expect(peekSceneFontOutlines(FACELESS_FONT)?.glyphIndex('H'.codePointAt(0)!)).toBe(0);
+  });
+
   it('answers undefined while a WOFF decompresses, then its outlines', async () => {
     const font = woffOfOpenSans();
 
@@ -85,12 +90,6 @@ describe('peekSceneFontOutlines', () => {
     expect(await settledOutlines(fontFile(new ArrayBuffer(8)))).toBeNull();
   });
 
-  it('answers null for a SystemFont, which has no bytes to read', () => {
-    const font: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-
-    expect(peekSceneFontOutlines(font)).toBeNull();
-  });
-
   it('reads the face behind a FontVariation', async () => {
     const base = woffOfOpenSans();
     const variation: FontResource = { kind: 'variation', baseFont: base, properties: {} };
@@ -109,6 +108,16 @@ describe('peekSceneFontOutlines', () => {
 
     expect(await settledOutlines(variation)).toBe(await settledOutlines(null));
   });
+
+  it('reads the bundled Open Sans for a SystemFont, as Godot does when no OS font matches its names', async () => {
+    const font = systemFont();
+
+    expect(await settledOutlines(font)).toBe(await settledOutlines(null));
+  });
+
+  it('answers null for a font file with no bytes and no fallback', () => {
+    expect(peekSceneFontOutlines(fontFile(undefined, []))).toBeNull();
+  });
 });
 
 describe('peekGlyphOutlines', () => {
@@ -121,15 +130,15 @@ describe('peekGlyphOutlines', () => {
   it('answers null for a face with no embolden and no skew, whose text follows the glyph as it is', () => {
     const font = woffOfOpenSans();
 
-    expect(peekGlyphOutlines(font, canvasFace, {})).toBeNull();
-    expect(peekGlyphOutlines(font, canvasFace, { embolden: 0, skew: 0 })).toBeNull();
+    expect(peekGlyphOutlines(findDrawnFace(font), canvasFace, {})).toBeNull();
+    expect(peekGlyphOutlines(findDrawnFace(font), canvasFace, { embolden: 0, skew: 0 })).toBeNull();
     expect(peekSceneFontOutlines(font)).toBeUndefined();
   });
 
   it('answers null for an atlas face, which has no contour to follow', () => {
     const font = woffOfOpenSans();
 
-    expect(peekGlyphOutlines(font, OPEN_SANS_FONT_METRICS, { embolden: 1 })).toBeNull();
+    expect(peekGlyphOutlines(findDrawnFace(font), OPEN_SANS_FONT_METRICS, { embolden: 1 })).toBeNull();
     expect(peekSceneFontOutlines(font)).toBeUndefined();
   });
 
@@ -139,9 +148,9 @@ describe('peekGlyphOutlines', () => {
   ])('answers the outlines of the font once %s canvas face has loaded them', async (_, variation) => {
     const font = woffOfOpenSans();
 
-    expect(peekGlyphOutlines(font, canvasFace, variation)).toBeUndefined();
+    expect(peekGlyphOutlines(findDrawnFace(font), canvasFace, variation)).toBeUndefined();
 
     const outlines = await settledOutlines(font);
-    expect(peekGlyphOutlines(font, canvasFace, variation)).toBe(outlines);
+    expect(peekGlyphOutlines(findDrawnFace(font), canvasFace, variation)).toBe(outlines);
   });
 });

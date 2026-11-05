@@ -6,8 +6,7 @@
  * `AFTER_LAST_TAB`. Without `TRIM_EDGE_SPACES` it skips the break spaces at the ends of a line, as
  * `shaped_text_fit_to_width` does. The other flags do nothing here:
  * - `KASHIDA` fires only on elongation glyphs (Arabic tatweel runs), which the Latin shaper never tags.
- * - `CONSTRAIN_ELLIPSIS` is not wired. It needs a Label with autowrap off, `HORIZONTAL_ALIGNMENT_FILL`
- *   and a trimming `text_overrun_behavior` (the label slice's `comparison.md`).
+ * - `CONSTRAIN_ELLIPSIS` is `fitTrimmedGlyphsToWidth`, which the overrun trim of a filled Label line calls.
  * - The `SKIP_LAST_LINE` flags and `DO_NOT_SKIP_SINGLE_LINE` decide which lines a caller fits at all,
  *   so they are the caller's business, and `justifyToLineIndex` answers it for one paragraph.
  *
@@ -39,6 +38,11 @@ function isBreakSpace(glyphs: readonly GlyphPlacement[], i: number): boolean {
 
 interface FitLineOptions {
   fontSizePx: number;
+  /**
+   * `JUSTIFICATION_CONSTRAIN_ELLIPSIS` (`:5573-5583`): the glyph index the overrun trim cut at.
+   * The fit then spans the glyphs from the start to it, or from it to the end on an RTL line.
+   */
+  trimPos?: number;
 }
 
 /**
@@ -71,6 +75,11 @@ function fitLineToWidth(
         }
       }
     }
+  }
+
+  if (options.trimPos !== undefined) {
+    if (line.isRtl) startPos = options.trimPos;
+    else endPos = options.trimPos;
   }
 
   let justificationWidthPx = line.widthPx;
@@ -121,6 +130,22 @@ function fitLineToWidth(
   });
 
   return { ...line, glyphs: outGlyphs, widthPx: line.widthPx + cumulativeShiftPx };
+}
+
+/**
+ * The glyphs of `line` fitted again to `widthPx` after the overrun trim cut at `trimPos`, with
+ * `JUSTIFICATION_CONSTRAIN_ELLIPSIS` (`label.cpp:325`). `trimmedWidthPx` is the kept advance plus the
+ * ellipsis (`width_trimmed`, `:5580`), which the spaces grow to fill up to `widthPx`.
+ */
+export function fitTrimmedGlyphsToWidth(
+  line: TextLineLayout,
+  trim: { trimPos: number; trimmedWidthPx: number },
+  widthPx: number,
+  flags: number,
+  fontSizePx: number
+): GlyphPlacement[] {
+  const lineAtTrimmedWidth = { ...line, widthPx: trim.trimmedWidthPx };
+  return fitLineToWidth(lineAtTrimmedWidth, widthPx, flags, { fontSizePx, trimPos: trim.trimPos }).glyphs;
 }
 
 /** `TS->shaped_text_has_visible_chars` reduced to this engine's charset: any glyph whose own character is not whitespace. */

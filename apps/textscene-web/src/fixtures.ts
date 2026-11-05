@@ -338,6 +338,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Code Edit Empty Gutter",
+    "file": "unit-code-edit-empty-gutter.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Code Edit Guidelines",
     "file": "unit-code-edit-guidelines.tscn",
     "category": "Other"
@@ -1235,6 +1240,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Label Fill Paragraphs",
     "file": "unit-label-fill-paragraphs.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Fill Trim",
+    "file": "unit-label-fill-trim.tscn",
     "category": "Other"
   },
   {
@@ -2453,6 +2463,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Text Edit Overflow",
+    "file": "unit-text-edit-overflow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Text Edit Placeholder",
+    "file": "unit-text-edit-placeholder.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Text Edit Rtl",
     "file": "unit-text-edit-rtl.tscn",
     "category": "Other"
@@ -2465,6 +2485,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Text Edit",
     "file": "unit-text-edit.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Text Outline Link Foldable Item List",
+    "file": "unit-text-outline-link-foldable-item-list.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Text Outline Set Direction",
+    "file": "unit-text-outline-set-direction.tscn",
     "category": "Other"
   },
   {
@@ -2764,6 +2794,18 @@ export const fixtures: Fixture[] = [
     "root": "alpha-antialiasing"
   },
   {
+    "name": "Custom Font System Font 3d",
+    "file": "custom-font-system-font/unit-custom-font-system-font-3d.tscn",
+    "category": "Other",
+    "root": "custom-font-system-font"
+  },
+  {
+    "name": "Custom Font System Font Label",
+    "file": "custom-font-system-font/unit-custom-font-system-font-label.tscn",
+    "category": "Other",
+    "root": "custom-font-system-font"
+  },
+  {
     "name": "Debanding",
     "file": "debanding/unit-debanding.tscn",
     "category": "Other",
@@ -2816,6 +2858,12 @@ export const fixtures: Fixture[] = [
     "file": "subviewport-snap-off/unit-subviewport-snap-off.tscn",
     "category": "Other",
     "root": "subviewport-snap-off"
+  },
+  {
+    "name": "Theme System Font",
+    "file": "theme-system-font/unit-theme-system-font.tscn",
+    "category": "Other",
+    "root": "theme-system-font"
   },
   {
     "name": "Touch Screen Button",
@@ -3602,6 +3650,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Text Mesh Hinting",
     "file": "unit-text-mesh-hinting.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh System Font",
+    "file": "unit-text-mesh-system-font.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

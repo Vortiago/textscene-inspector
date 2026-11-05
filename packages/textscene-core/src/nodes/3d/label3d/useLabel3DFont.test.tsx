@@ -12,13 +12,14 @@ import { testBitmapMetrics } from '../../../r3f/controls/native/text/bitmapFontM
  */
 async function importModules() {
   vi.resetModules();
-  const [settings, fontMetrics, resources, loading, serving, hook] = await Promise.all([
+  const [settings, fontMetrics, resources, loading, serving, hook, noFace] = await Promise.all([
     import('../../../r3f/contexts/ProjectSettingsContext'),
     import('../../../r3f/controls/native/text/openSansCanvasFontMetrics'),
     import('../../../r3f/SceneResourcesContext'),
     import('../../../resources/ResourceLoaderContext'),
     import('../../../resources/testing/servingResourceLoader'),
     import('./useLabel3DFont'),
+    import('../../../r3f/controls/native/text/noFaceMetrics'),
   ]);
   return {
     ProjectSettingsProvider: settings.ProjectSettingsProvider,
@@ -27,6 +28,7 @@ async function importModules() {
     ResourceLoaderProvider: loading.ResourceLoaderProvider,
     loaderServing: serving.loaderServing,
     useLabel3DFont: hook.useLabel3DFont,
+    NO_FACE_METRICS: noFace.NO_FACE_METRICS,
   };
 }
 
@@ -38,9 +40,21 @@ vi.mock('../../../r3f/controls/native/text/bundledFontLoader', () => ({
   peekBundledCanvasFontMetrics: () => bundled.metrics,
 }));
 
+const BOLD_VARIATION =
+  '[gd_resource type="FontVariation" format=3]\n\n[resource]\nvariation_embolden = 2.0\n';
+
+/** The project theme's `default_font` is a bare FontVariation, which skips itself and takes the bundled font. */
 const PROJECT_FONT_FILES = {
+  'res://project.godot': 'config_version=5\n\n[gui]\n\ntheme/custom="res://theme.tres"\n',
+  'res://theme.tres':
+    '[gd_resource type="Theme" load_steps=2 format=3]\n\n[ext_resource type="FontVariation" path="res://bold.tres" id="1"]\n\n[resource]\ndefault_font = ExtResource("1")\n',
+  'res://bold.tres': BOLD_VARIATION,
+};
+
+/** A bare FontVariation as `custom_font` is every default it tries, so it draws no face. */
+const FACELESS_PROJECT_FILES = {
   'res://project.godot': 'config_version=5\n\n[gui]\n\ntheme/custom_font="res://bold.tres"\n',
-  'res://bold.tres': '[gd_resource type="FontVariation" format=3]\n\n[resource]\nvariation_embolden = 2.0\n',
+  'res://bold.tres': BOLD_VARIATION,
 };
 
 const OWN_FONT: TscnInternalResource = {
@@ -140,6 +154,14 @@ describe('useLabel3DFont metrics', () => {
     const { result } = renderMetrics('SubResource("own")', PROJECT_FONT_FILES);
 
     await settledMetrics(result, { kind: 'canvas', embolden: 1 });
+  });
+
+  // `label_3d.cpp:344-358, 601-606`: a glyph with no font RID has no texture, and the box holds hex-code boxes.
+  it('is the hex-code box metrics for a font with no face, with no wait for the bundled font', async () => {
+    bundled.metrics = undefined;
+    const { result } = renderMetrics(undefined, FACELESS_PROJECT_FILES);
+
+    await vi.waitFor(() => expect(result.current?.metrics).toBe(modules.NO_FACE_METRICS));
   });
 
   it('is undefined while the project font loads', async () => {
