@@ -109,6 +109,10 @@ describe('canvasGlyphPenXPx', () => {
   it('keeps the pen of a fractional size, which skips the floor as `scale != 1.0`', () => {
     expect(canvasGlyphPenXPx(10.6, 28.5)).toBe(10.6);
   });
+
+  it('keeps the pen of a face scaled off its own size, which skips the floor as `scale != 1.0`', () => {
+    expect(canvasGlyphPenXPx(10.6, 28, { pxPerUnit: () => 2 })).toBe(10.6);
+  });
 });
 
 describe('getFontAscentPx / getFontLinePitchPx', () => {

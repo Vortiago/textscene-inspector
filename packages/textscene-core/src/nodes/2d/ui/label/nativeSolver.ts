@@ -562,6 +562,22 @@ interface LabelLayoutOptions extends Partial<LabelSpacing> {
 }
 
 /**
+ * Whether `_shape` leaves a fitted line untrimmed: with autowrap off, FILL trims with
+ * `OVERRUN_JUSTIFICATION_AWARE` (`label.cpp:322-325`), which returns early unless the fit hit the
+ * smallest spaces, `floor(width) < floor(justified width)` (`text_server_adv.cpp:5660,5947`). A line
+ * the fit skipped is the same object as its shaped line, and trims as usual.
+ */
+function isJustificationAwareTrimSkipped(
+  fitted: TextLineLayout,
+  shaped: TextLineLayout,
+  widthPx: number,
+  isAutowrapped: boolean
+): boolean {
+  if (isAutowrapped || fitted === shaped) return false;
+  return Math.floor(widthPx) >= Math.floor(fitted.widthPx);
+}
+
+/**
  * Per-line placement for `horizontal_alignment` and `vertical_alignment` (`_get_line_rect`'s x,
  * `get_layout_data`'s vbegin and vsep, `label.cpp:592-617`). Godot aligns each line by its own
  * width, which one merged `<TextRun>` cannot express, so each placement is for its own `<TextRun>`.
@@ -615,16 +631,23 @@ export function layoutLabelLines(
   // `ofs.y += paragraph_spacing` after each paragraph's last shown line (`label.cpp:889`).
   let paragraphGapsAbovePx = 0;
   const isFill = (horizontalAlignment ?? H_LEFT) === H_FILL;
+  const shapingWidthPx = labelShapingWidthPx(boxWidthPx);
   // `_shape` justifies at the truncated `int width` it broke the lines at (`label.cpp:297,331`),
   // not the raw `get_size()` that `_get_line_rect` reads.
   const fitted = isFill
     ? justifyParagraphs(layout.lines, {
-        widthPx: labelShapingWidthPx(boxWidthPx),
+        widthPx: shapingWidthPx,
         flags: justificationFlags,
         fontSizePx,
       })
     : layout.lines;
-  const lines = trimLine ? fitted.map(trimLine) : fitted;
+  const lines = trimLine
+    ? fitted.map((line, index) =>
+        isJustificationAwareTrimSkipped(line, layout.lines[index]!, shapingWidthPx, isAutowrapped)
+          ? line
+          : trimLine(line)
+      )
+    : fitted;
 
   return lines.map((line, lineIndex) => {
     if (lineIndex > 0 && startsParagraph(lines, lineIndex)) {

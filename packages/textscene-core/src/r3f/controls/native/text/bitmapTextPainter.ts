@@ -13,6 +13,7 @@
 import * as THREE from 'three';
 import type { FillSheet } from '../../../../resources/fonts/font/types';
 import type { BitmapFontMetrics } from './bitmapFontMetrics';
+import { fontIsScaled } from './fontMetrics';
 import type { GlyphPlacement, TextLayoutResult } from './textLayout';
 
 /** A texture of the sheet, one for each run so that its filter state is the run's own. The bytes are shared. */
@@ -46,15 +47,16 @@ function inkedGlyph(placement: GlyphPlacement, metrics: BitmapFontMetrics, sheet
 
 /**
  * The quads of `layout`, drawn at `fontSizePx` over `sheet`: the glyph sheet, or the outline sheet
- * for an outline pass. A pen position floors when the glyph is not scaled
- * (`text_server_adv.cpp:4084-4087`). A BMFont adds no subpixel shift: `FontFile::reset_state` sets
+ * for an outline pass. A pen floors at its canvas position, `penOriginXPx` plus its x, when the
+ * glyph is not scaled (`text_server_adv.cpp:4082-4085`). A BMFont adds no subpixel shift: `FontFile::reset_state` sets
  * `SUBPIXEL_POSITIONING_DISABLED` (`font.cpp:1433`) and `_load_bitmap_font` starts with it.
  */
 export function buildBitmapQuads(
   layout: TextLayoutResult,
   metrics: BitmapFontMetrics,
   fontSizePx: number,
-  sheet: FillSheet
+  sheet: FillSheet,
+  penOriginXPx = 0
 ): BitmapQuads {
   const placements = layout.lines.flatMap((line, lineIndex) =>
     line.glyphs.map((placement) => ({ placement, lineIndex }))
@@ -64,6 +66,7 @@ export function buildBitmapQuads(
   const uvs = new Float32Array(inkedCount * 4 * 2);
   const indices = new Uint32Array(inkedCount * 6);
   const scale = metrics.pxPerUnit(fontSizePx);
+  const floorsPen = !fontIsScaled(fontSizePx, metrics);
   const sheetWidthInverse = 1 / sheet.width;
   const sheetHeightInverse = 1 / sheet.height;
 
@@ -73,8 +76,8 @@ export function buildBitmapQuads(
     if (!glyph) continue;
     const rowOffset = sheet.rowOffsets[glyph.fillIndex]!;
     const baselinePx = lineIndex * layout.linePitchPx + layout.baselineOffsetPx;
-    const originX = scale === 1 ? Math.floor(placement.x) : placement.x;
-    const originY = scale === 1 ? Math.floor(baselinePx) : baselinePx;
+    const originX = floorsPen ? Math.floor(penOriginXPx + placement.x) - penOriginXPx : placement.x;
+    const originY = floorsPen ? Math.floor(baselinePx) : baselinePx;
     const left = originX + glyph.offsetX * scale;
     const top = originY + glyph.offsetY * scale;
     const right = left + glyph.width * scale;
