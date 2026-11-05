@@ -247,7 +247,7 @@ describe('spinBoxDisplayText with a locale (spin_box.cpp:91-93)', () => {
   });
 });
 
-describe('shapeSpinBoxFieldText (the inner LineEdit is AUTO, line_edit.h:144, with no language)', () => {
+describe('shapeSpinBoxFieldText', () => {
   function visual(text: string, locale: string): string {
     return visualChars(
       shapeSpinBoxFieldText(text, { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS }, locale).lines[0]!
