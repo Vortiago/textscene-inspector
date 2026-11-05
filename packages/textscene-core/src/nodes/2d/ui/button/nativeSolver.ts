@@ -41,7 +41,7 @@ import { AutowrapMode } from '../../../../godot/text/textServerEnums';
  * {@link buttonLabelShape} reads it, and this module and `Component.tsx` both call that, so the
  * two agree on the font.
  */
-export const BUTTON_THEME_FONT_KEY = 'font';
+const BUTTON_THEME_FONT_KEY = 'font';
 
 /**
  * One `font_size` key for every draw state (`default_theme.cpp:153`), but a colour key per
