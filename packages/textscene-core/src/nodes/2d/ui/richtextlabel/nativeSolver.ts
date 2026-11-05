@@ -62,10 +62,11 @@ import {
 } from './bbcode';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-import { AutowrapMode, TextDirection } from '../../../../godot/text/textServerEnums';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import {
   controlBidiOptions,
+  isDrawnRtl,
   type TextBidiOptions,
 } from '../../../../r3f/controls/native/text/textBidiOptions';
 import {
@@ -294,17 +295,15 @@ function wrapForImageObject(base: FontMetrics): FontMetrics {
 }
 
 /**
- * `tab_stops`, else one stop of `max(1, tab_size * space_advance)`
+ * The stops of a paragraph with no `tab_stops`: one stop of `max(1, tab_size * space_advance)`
  * (`_find_tab_stops`, `rich_text_label.cpp:479-482`). `SPACING_SPACE` is 0 for
  * every loaded font. `tab_size <= 0` disables tab alignment (`:479`).
  */
-function richTextTabStopsPx(
-  tabStopsPx: readonly number[],
+function richTextDefaultTabStopsPx(
   tabSize: number | undefined,
   fontMetrics: FontMetrics,
   fontSizePx: number
 ): readonly number[] {
-  if (tabStopsPx.length > 0) return tabStopsPx;
   const size = tabSize ?? 4;
   if (size <= 0) return [];
   return [Math.max(1, size * getFontEmboldenedAdvancePx(fontMetrics, ' ', fontSizePx))];
@@ -615,24 +614,29 @@ function runAtFromRuns(
   };
 }
 
+/** The run a paragraph starting at a character takes its options from (`runAtFromRuns`). */
+type RunAt = (charIndex: number) => StyledTextRun | undefined;
+
 /**
  * The per-paragraph `paragraphBidiAt` for `shapeText`: each paragraph takes the options of the run
  * its first character is in, as a line reads them from its first item (`rich_text_label.cpp:598-599`).
  */
-function paragraphBidiAtFromRuns(
-  styledRuns: readonly StyledTextRun[]
-): (paragraphStart: number) => TextBidiOptions {
-  const runAt = runAtFromRuns(styledRuns);
+function paragraphBidiAtFromRuns(runAt: RunAt): (paragraphStart: number) => TextBidiOptions {
   return (paragraphStart) => runAt(paragraphStart)?.bidi ?? {};
 }
 
-/** The per-paragraph `tabStopsPxAt` for `shapeText`: each paragraph takes the stops of the run it starts in. */
+/**
+ * The per-paragraph `tabStopsPxAt` for `shapeText`: each paragraph takes the stops of the run it
+ * starts in, and a paragraph with none takes `defaultStopsPx`.
+ */
 function tabStopsPxAtFromRuns(
-  styledRuns: readonly StyledTextRun[],
-  resolve: (stopsPx: readonly number[]) => readonly number[]
+  runAt: RunAt,
+  defaultStopsPx: readonly number[]
 ): (paragraphStart: number) => readonly number[] {
-  const runAt = runAtFromRuns(styledRuns);
-  return (paragraphStart) => resolve(runAt(paragraphStart)?.tabStopsPx ?? []);
+  return (paragraphStart) => {
+    const stopsPx = runAt(paragraphStart)?.tabStopsPx ?? [];
+    return stopsPx.length > 0 ? stopsPx : defaultStopsPx;
+  };
 }
 
 /** What `shapeRichText` takes from the control: the paragraph's box, and the three properties that shape it. */
@@ -651,6 +655,7 @@ export function shapeRichText(
   options: RichTextShapeOptions
 ): TextLayoutResult {
   const { fontSizePx, boxWidthPx, autowrapMode, tabSize, autowrapTrimFlags } = options;
+  const runAt = runAtFromRuns(styledRuns);
   return shapeText(plainTextOf(styledRuns), {
     fontSizePx,
     boxWidthPx,
@@ -660,13 +665,11 @@ export function shapeRichText(
     fontSizePxAt: fontSizePxAtFromRuns(styledRuns),
     fontMetricsAt: fontMetricsAtFromRuns(styledRuns, faces),
     fontMetrics: faces.normal,
-    tabStopsPxAt: tabStopsPxAtFromRuns(styledRuns, (stops) =>
-      richTextTabStopsPx(stops, tabSize, faces.normal, fontSizePx)
-    ),
+    tabStopsPxAt: tabStopsPxAtFromRuns(runAt, richTextDefaultTabStopsPx(tabSize, faces.normal, fontSizePx)),
     autowrapTrimFlags,
     paragraphSeparator: '\n',
     terminateLastParagraph: false,
-    paragraphBidiAt: paragraphBidiAtFromRuns(styledRuns),
+    paragraphBidiAt: paragraphBidiAtFromRuns(runAt),
   });
 }
 
@@ -944,7 +947,7 @@ function richTextHorizontalOffsetPx(
   alignment: number,
   isRtl: boolean
 ): number {
-  // `_draw_line` skips the scrollbar width here, and this control draws no scrollbar.
+  // `_draw_line` takes the width less the scrollbar's, which the caller passes as `boxWidthPx`.
   switch (alignment) {
     case HORIZONTAL_ALIGNMENT_CENTER:
       // Floored as Godot floors the glyph (`text_server_adv.cpp:4084`), which absorbs
@@ -1091,7 +1094,7 @@ export function layoutRichTextRuns(
       shapedTextSizeWidthPx(layout.lines[lineIndex]?.widthPx ?? 0),
       boxWidthPx,
       alignmentOfLine(lineIndex),
-      paragraphRunOf(lineIndex)?.bidi.direction === TextDirection.TEXT_DIRECTION_RTL
+      isDrawnRtl(paragraphRunOf(lineIndex)?.bidi ?? {})
     );
     for (const segment of segments) {
       const run = styledRuns[segment.runIndex]!;

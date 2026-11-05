@@ -1,8 +1,8 @@
 /**
  * RichTextLabel's vertical scrollbar: it shows when `scroll_active` holds and the text is taller
  * than the rect, and the text then wraps beside it (`_update_scroll_exceeds`,
- * `scene/gui/rich_text_label.cpp:3801-3830`). Only the top of the text is in frame, so the bar
- * never scrolls.
+ * `scene/gui/rich_text_label.cpp:3801-3830`). The bar sits at the top, or at the foot of the text
+ * under `scroll_following`.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

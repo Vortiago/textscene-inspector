@@ -269,7 +269,7 @@ export const TEXT_EDIT_DEFAULT_TAB_SIZE = 4;
 /**
  * `Text::invalidate_cache` (`text_edit.cpp:348-352`, and `invalidate_all_lines`, `:394-398`): one
  * repeating stop of `MAX(1, (space width + get_spacing(SPACING_SPACE)) * tab_size)`. The spacing is
- * 0 for every font here (`richTextTabStopsPx`, `../richtextlabel/nativeSolver.ts`).
+ * 0 for every font here (`richTextDefaultTabStopsPx`, `../richtextlabel/nativeSolver.ts`).
  */
 export function textEditTabStopsPx(
   tabSize: number | undefined,
