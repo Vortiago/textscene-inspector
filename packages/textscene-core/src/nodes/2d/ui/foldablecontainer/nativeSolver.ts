@@ -33,7 +33,7 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
-import { controlBidiOptions, trimsAtVisualLeft } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { controlBidiOptions, isDrawnRtl } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { FoldableContainerProperties } from './types';
 import { TITLE_POSITION_BOTTOM, TITLE_POSITION_TOP } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -176,8 +176,8 @@ export interface FoldableContainerTitleMetrics {
   color: Rgba;
   /** The shaped title text, or `null` for an empty title or before a measurer exists. */
   layout: TextLayoutResult | null;
-  /** Whether a trimmed title keeps its visual right part and draws the ellipsis at the left (`trimsAtVisualLeft`). */
-  isTrimmedAtVisualLeft: boolean;
+  /** Whether the title draws right to left, from its set direction (`isDrawnRtl`). */
+  isDrawnRtl: boolean;
   /**
    * `title_minimum_size` (`foldable_container.cpp:441-478`): the minimum size of the title bar. It has
    * no `title_controls` term: `add_title_bar_control` is a method with no `ADD_PROPERTY`
@@ -263,7 +263,7 @@ function foldableContainerTitleMetrics(
     fontSizePx,
     color,
     layout,
-    isTrimmedAtVisualLeft: trimsAtVisualLeft(bidi),
+    isDrawnRtl: isDrawnRtl(bidi),
     size: { x: width, y: height },
   };
 }

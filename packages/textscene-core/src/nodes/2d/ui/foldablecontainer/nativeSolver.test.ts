@@ -270,11 +270,10 @@ describe('foldableContainerTitleShape direction', () => {
     expect(visualTitle({ title: '123!', language: 'he' })).toBe('!123');
   });
 
-  // Measured in Godot 4.6.3 (`unit-title-text-direction`): an RTL title draws the ellipsis at the left,
-  // and an AUTO Hebrew title keeps its visual left part.
-  it('trims at the visual left only when the title direction is RTL', () => {
+  // `shaped_text_draw` reads the set direction, so an AUTO Hebrew title draws left to right.
+  it('draws right to left only when the title direction is RTL', () => {
     const rtl = titleShape(node({ title: 'Hello!', titleTextDirection: 2, language: '' }));
     const autoHebrew = titleShape(node({ title: 'שלום', titleTextDirection: 0, language: '' }));
-    expect([rtl.isTrimmedAtVisualLeft, autoHebrew.isTrimmedAtVisualLeft]).toEqual([true, false]);
+    expect([rtl.isDrawnRtl, autoHebrew.isDrawnRtl]).toEqual([true, false]);
   });
 });

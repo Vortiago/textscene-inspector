@@ -58,10 +58,9 @@ export function controlBidiOptions(props: BidiProperties, env: ControlTextEnv): 
 }
 
 /**
- * Whether a `TextParagraph` control trims a line at its visual left: its set direction is RTL.
- * Measured in Godot 4.6.3 (`unit-button-text-direction`): an RTL Button draws the ellipsis at the
- * left, and an AUTO Hebrew Button keeps its visual left part and draws the ellipsis at the right.
+ * Whether `shaped_text_draw` draws a `TextParagraph` control's line right to left: it reads the set
+ * direction (`shaped_text_get_direction`), so an AUTO line that infers RTL draws as LTR.
  */
-export function trimsAtVisualLeft(options: TextBidiOptions): boolean {
+export function isDrawnRtl(options: TextBidiOptions): boolean {
   return options.direction === TextDirection.TEXT_DIRECTION_RTL;
 }

@@ -61,7 +61,10 @@ outline ring (ADR-0064).
 The label shapes in its own `text_direction` and `language` (`button.cpp:564-569`). INHERITED
 takes the layout direction, and an empty `language` takes the project locale.
 
+A trimmed label cuts by its inferred direction and draws by its set direction, as
+`shaped_text_draw` does. An AUTO Hebrew label so keeps its visual left part, and its outline
+draws the other part (`shaped_text_draw_outline`).
+
 ## Known limitations
 
-
-- An AUTO Hebrew label with an ellipsis fills its 188 px row, where Godot keeps about 140 px.
+None known.

@@ -208,6 +208,22 @@ describe('trimLineToWidth — a right-to-left line (text_server_adv.cpp:6053-611
     expect(result.glyphs).toEqual([]);
   });
 
+  it('draws the glyphs the cut removed when an AUTO line infers RTL (`text_server.cpp` shaped_text_draw)', () => {
+    const full = line(HEBREW);
+    const flags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+    const options = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX, isRtl: true };
+    const rtl = trimLineToWidth(full, full.widthPx * 0.75, flags, options);
+    const auto = trimLineToWidth(full, full.widthPx * 0.75, flags, { ...options, isDrawnRtl: false });
+    const keptCount = rtl.glyphs.length - 1;
+    const removedCount = full.glyphs.length - keptCount;
+    expect(auto.glyphs.map((glyph) => glyph.sourceIndex)).toEqual([
+      ...full.glyphs.slice(0, removedCount).map((glyph) => glyph.sourceIndex),
+      undefined,
+    ]);
+    expect(auto.glyphs.at(-1)!.char).toBe('…');
+    expect(auto.widthPx).toBeCloseTo(rtl.widthPx, 9);
+  });
+
   it('keeps the left-to-right trim over the visual order without the option', () => {
     const full = line(HEBREW);
     const result = trimLineToWidth(

@@ -4,7 +4,7 @@
  * comes only from `disabled`: a static viewer has no hover, pressed or focus.
  * `ControlCanvasWalker` owns `visible`, the children and the transform.
  */
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { sizeWithArea } from '../../../../resources/textures/textureSize';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -24,7 +24,7 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
-import { trimsAtVisualLeft } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { isDrawnRtl } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
@@ -159,11 +159,8 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
     () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
     [props.overrunBehavior]
   );
-  const isTrimmedAtVisualLeft = trimsAtVisualLeft(useControlBidiOptions(props, solveNode));
-  const trimmedLayout: TextLayoutResult | null = useMemo(() => {
-    // The TextServer trims a wrapped buffer per row. This single-line
-    // trim would collapse it to its first row, so it stands down there.
-    if (!layout || !overrunFlags.trim || layout.lines.length > 1) return layout;
+  const isLineDrawnRtl = isDrawnRtl(useControlBidiOptions(props, solveNode));
+  const trimWidthPx = useMemo(() => {
     const customElementWidth = rect.w - baseStyleBox.contentMargin.left - baseStyleBox.contentMargin.right;
     const iconReserve =
       content.icon &&
@@ -173,31 +170,46 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
         : 0;
     // button.cpp:424 `text_buf_width = ceil(MAX(1, drawable_size_remained.width))`. The icon's
     // computed reservation, `content.icon.rect.w`, keeps this in step with `layoutButtonContent`.
-    const trimWidthPx = Math.ceil(Math.max(1, customElementWidth - iconReserve));
-    const trimmedLine = trimLineToWidth(layout.lines[0]!, trimWidthPx, overrunFlags, {
-      fontMetrics,
-      fontSizePx,
-      isRtl: isTrimmedAtVisualLeft,
-    });
-    return soloLineLayout(trimmedLine, layout);
+    return Math.ceil(Math.max(1, customElementWidth - iconReserve));
   }, [
-    layout,
-    overrunFlags,
     rect.w,
     baseStyleBox.contentMargin,
     content.icon,
     props.iconAlignment,
     solveNode.constants,
     theme.separation,
-    fontMetrics,
-    fontSizePx,
-    isTrimmedAtVisualLeft,
   ]);
+  // The fill reads the set direction and the outline the inferred one (`shaped_text_draw` and
+  // `shaped_text_draw_outline`), so an AUTO Hebrew label trims to two different shapes.
+  const trimFirstLine = useCallback(
+    (isLineDrawnRtlNow: boolean): TextLayoutResult | null => {
+      // The TextServer trims a wrapped buffer per row. This single-line
+      // trim would collapse it to its first row, so it stands down there.
+      if (!layout || !overrunFlags.trim || layout.lines.length > 1) return layout;
+      const trimmedLine = trimLineToWidth(layout.lines[0]!, trimWidthPx, overrunFlags, {
+        fontMetrics,
+        fontSizePx,
+        isRtl: infersRtl(layout),
+        isDrawnRtl: isLineDrawnRtlNow,
+      });
+      return soloLineLayout(trimmedLine, layout);
+    },
+    [layout, overrunFlags, trimWidthPx, fontMetrics, fontSizePx]
+  );
+  const trimmedLayout = useMemo(() => trimFirstLine(isLineDrawnRtl), [trimFirstLine, isLineDrawnRtl]);
+  const trimmedOutlineLayout = useMemo(
+    () => (isLineDrawnRtl === infersRtl(layout) ? trimmedLayout : trimFirstLine(infersRtl(layout))),
+    [trimFirstLine, trimmedLayout, isLineDrawnRtl, layout]
+  );
 
   // One layout object per row, so a row's runs keep their meshes across renders.
   const lineLayouts = useMemo(
     () => trimmedLayout?.lines.map((line) => soloLineLayout(line, trimmedLayout)) ?? [],
     [trimmedLayout]
+  );
+  const outlineLineLayouts = useMemo(
+    () => trimmedOutlineLayout?.lines.map((line) => soloLineLayout(line, trimmedOutlineLayout)) ?? [],
+    [trimmedOutlineLayout]
   );
 
   return (
@@ -245,6 +257,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
           >
             <OutlinedTextRun
               layout={lineLayouts[i]!}
+              outlineLayout={outlineLineLayouts[i]}
               fontSizePx={fontSizePx}
               tint={tintedFontColor}
               outline={textOutline}

@@ -96,11 +96,16 @@ interface OverrunTrimOptions {
   /** `Label.ellipsis_char` / `TextParagraph.ellipsis_char`; defaults to `DEFAULT_ELLIPSIS_CHAR`. */
   ellipsisChar?: string;
   /**
-   * `sd->para_direction == DIRECTION_RTL` (`text_server_adv.cpp:6053`): cut at the visual left, keep
-   * the logical start, and draw the ellipsis first. Label passes its line's inferred direction. A
-   * `TextParagraph` control passes `trimsAtVisualLeft`: an AUTO paragraph keeps the visual left part.
+   * `sd->para_direction == DIRECTION_RTL` (`text_server_adv.cpp:6053`): the cut walks from the visual
+   * left and keeps the logical start. Callers pass the line's inferred direction.
    */
   isRtl?: boolean;
+  /**
+   * `shaped_text_get_direction == DIRECTION_RTL` in `shaped_text_draw` (`text_server.cpp`), which reads
+   * the set direction, not the inferred one. Defaults to `isRtl`. An AUTO line that infers RTL passes
+   * false: it then draws the glyphs left of the cut, then the ellipsis.
+   */
+  isDrawnRtl?: boolean;
 }
 
 /** Where the trim loop stopped: the cut position and the ellipsis position, -1 for none. */
@@ -196,18 +201,34 @@ export function trimLineToWidth(
 
   // `trim_pos < 0` draws every glyph uncut (`text_server.cpp:1768-1777`): only `enforceEllipsis` on a
   // line that fits reaches it. `draw_text` puts an RTL line's ellipsis first, its glyphs reversed (`label.h:200-210`).
-  const finalGlyphs = isRtl
-    ? placeFrom(0, [...ellipsis.reverse(), ...(trimPos < 0 ? glyphs : glyphs.slice(trimPos))])
+  const isDrawnRtl = options.isDrawnRtl ?? isRtl;
+  const finalGlyphs = isDrawnRtl
+    ? placeFrom(0, [...[...ellipsis].reverse(), ...(trimPos < 0 ? glyphs : glyphs.slice(trimPos))])
     : keptWithEllipsis(trimPos < 0 ? glyphs : glyphs.slice(0, trimPos), ellipsis);
-  const last = finalGlyphs.at(-1);
   return {
     text: line.text,
     glyphs: finalGlyphs,
-    widthPx: last ? last.x + last.advance : 0,
+    widthPx: isRtl
+      ? trimmedWidthPx([...glyphs.slice(Math.max(0, trimPos)), ...ellipsis])
+      : drawnWidthPx(finalGlyphs),
     paragraphIndex: line.paragraphIndex,
     paragraphStart: line.paragraphStart,
     isRtl: line.isRtl,
   };
+}
+
+/**
+ * `width_trimmed` (`text_server_adv.cpp:6152`), the width alignment reads: the glyphs the cut keeps
+ * plus the ellipsis. An AUTO line that infers RTL keeps the right part but draws the left part.
+ */
+function trimmedWidthPx(glyphs: ReadonlyArray<Pick<GlyphPlacement, 'advance'>>): number {
+  return glyphs.reduce((sum, glyph) => sum + glyph.advance, 0);
+}
+
+/** The right edge of the last placed glyph. */
+function drawnWidthPx(glyphs: readonly GlyphPlacement[]): number {
+  const last = glyphs.at(-1);
+  return last ? last.x + last.advance : 0;
 }
 
 /** `glyphs` laid out from `penX`, each at the end of the one on its left. */

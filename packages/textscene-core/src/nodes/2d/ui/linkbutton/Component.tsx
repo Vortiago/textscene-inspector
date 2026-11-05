@@ -15,7 +15,7 @@ import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
-import { trimsAtVisualLeft } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { isDrawnRtl } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
@@ -57,25 +57,18 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
     () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
     [props.overrunBehavior]
   );
-  const isTrimmedAtVisualLeft = trimsAtVisualLeft(useControlBidiOptions(props, solveNode));
+  const isLineDrawnRtl = isDrawnRtl(useControlBidiOptions(props, solveNode));
   const layout: TextLayoutResult | null = useMemo(() => {
     if (!unshapedLayout || !overrunFlags.trim) return unshapedLayout;
     const trimmedLine = trimLineToWidth(unshapedLayout.lines[0]!, Math.max(1, rect.w), overrunFlags, {
       fontMetrics,
       fontSizePx,
       ellipsisChar: props.ellipsisChar,
-      isRtl: isTrimmedAtVisualLeft,
+      isRtl: unshapedLayout.lines[0]!.isRtl === true,
+      isDrawnRtl: isLineDrawnRtl,
     });
     return soloLineLayout(trimmedLine, unshapedLayout);
-  }, [
-    unshapedLayout,
-    overrunFlags,
-    rect.w,
-    fontMetrics,
-    fontSizePx,
-    props.ellipsisChar,
-    isTrimmedAtVisualLeft,
-  ]);
+  }, [unshapedLayout, overrunFlags, rect.w, fontMetrics, fontSizePx, props.ellipsisChar, isLineDrawnRtl]);
 
   // `link_button.cpp:289-303`: the paragraph origin, which RTL moves to the far edge. The underline
   // starts from the same x.

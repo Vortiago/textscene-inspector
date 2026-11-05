@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { controlBidiOptions, textBidiOptions, trimsAtVisualLeft } from './textBidiOptions';
+import { controlBidiOptions, textBidiOptions, isDrawnRtl } from './textBidiOptions';
 
 const AUTO = 0;
 const LTR = 1;
@@ -40,10 +40,10 @@ describe('textBidiOptions', () => {
   });
 });
 
-describe('trimsAtVisualLeft', () => {
-  it('trims at the visual left only when the set direction is RTL', () => {
-    expect(trimsAtVisualLeft({ direction: RTL })).toBe(true);
-    expect(trimsAtVisualLeft({ direction: AUTO })).toBe(false);
-    expect(trimsAtVisualLeft({ direction: LTR })).toBe(false);
+describe('isDrawnRtl', () => {
+  it('draws right to left only when the set direction is RTL', () => {
+    expect(isDrawnRtl({ direction: RTL })).toBe(true);
+    expect(isDrawnRtl({ direction: AUTO })).toBe(false);
+    expect(isDrawnRtl({ direction: LTR })).toBe(false);
   });
 });

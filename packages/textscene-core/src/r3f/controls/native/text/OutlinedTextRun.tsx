@@ -11,6 +11,7 @@ import type { ShareNode } from '../solveTree';
 import { isBitmapFontMetrics } from './bitmapFontMetrics';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { TextRun, type TextRunProps } from './TextRun';
+import type { TextLayoutResult } from './textLayout';
 import { PendingSuspense } from '../../../../resources/PendingSuspense';
 
 // The bundled font bytes load with the ring, not with every Control.
@@ -60,9 +61,17 @@ export function OutlineRingRun({ sizePx, ...run }: OutlineRingRunProps) {
 type OutlinedTextRunProps = RunLookProps & {
   /** Already tinted. No outline draws at a size of 0 or a zero alpha (`button.cpp:460`). */
   outline: TextOutlineTheme;
+  /** The ring's own shape when it differs from the fill's, as a trimmed AUTO line's does. Defaults to `layout`. */
+  outlineLayout?: TextLayoutResult;
 };
 
-export function OutlinedTextRun({ layout, outline, renderOrder = 0, ...run }: OutlinedTextRunProps) {
+export function OutlinedTextRun({
+  layout,
+  outlineLayout = layout,
+  outline,
+  renderOrder = 0,
+  ...run
+}: OutlinedTextRunProps) {
   const hasRing = outline.sizePx > 0 && outline.color.a > 0;
   const layerCount = hasRing ? 2 : 1;
   return (
@@ -70,7 +79,7 @@ export function OutlinedTextRun({ layout, outline, renderOrder = 0, ...run }: Ou
       {hasRing && (
         <OutlineRingRun
           {...run}
-          layout={layout}
+          layout={outlineLayout}
           tint={outline.color}
           sizePx={outline.sizePx}
           renderOrder={textLayerRenderOrder(renderOrder, 0, layerCount)}

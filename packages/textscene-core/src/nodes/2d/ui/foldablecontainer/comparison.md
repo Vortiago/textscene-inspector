@@ -46,12 +46,11 @@ Strict parsing format-checks these `FoldableContainer` properties, plus 53 inher
 `parser.ts` reads the own keys that change what draws: `folded`, `title`,
 `title_alignment`, `title_position`, `title_text_overrun_behavior`, `title_text_direction`
 and `language`. The title shapes in its direction and language (`foldable_container.cpp:487-499`),
-and an RTL title trims at its visual left. `foldable_group` is behaviour, not pixels, and stays
+and a trimmed title cuts and draws as `shaped_text_draw` does. `foldable_group` is behaviour, not pixels, and stays
 unread. A malformed `folded` becomes `false`. A malformed `title_alignment`,
 `title_position` or `title_text_overrun_behavior` becomes `undefined`, and the render
 default (LEFT / TOP / no trimming) applies.
 
 ## Known limitations
 
-- **Approximated** A trimmed AUTO title in a right-to-left script keeps one more space before
-  the ellipsis than Godot does.
+None known.
