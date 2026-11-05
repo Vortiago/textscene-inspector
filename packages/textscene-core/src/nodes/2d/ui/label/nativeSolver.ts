@@ -525,12 +525,16 @@ interface LabelLayoutOptions extends Partial<LabelSpacing> {
   rtl?: boolean;
   /** `autowrap_mode != AUTOWRAP_OFF`, the gate of FILL's RTL arm (`label.cpp:473`). Defaults `false`. */
   isAutowrapped?: boolean;
-  /**
-   * The overrun trim `_shape` runs on each line after the fit, before `_get_line_rect` aligns it
-   * (`label.cpp:319-330`). `refitFlags` is set for a line FILL fitted first, which `_shape` fits again
-   * with these `justification_flags` after the trim (`label.cpp:325`).
-   */
-  trimLine?: (line: TextLineLayout, refitFlags?: number) => TextLineLayout;
+  /** The overrun trim `_shape` runs on each line after the fit, before `_get_line_rect` aligns it (`label.cpp:319-330`). */
+  trim?: LineTrim;
+}
+
+/** The two overrun trims of `_shape` with autowrap off (`label.cpp:319-330`). */
+export interface LineTrim {
+  /** Trims a line that FILL did not fit first. */
+  line: (line: TextLineLayout) => TextLineLayout;
+  /** Trims a line FILL fitted, then fits it again with `justificationFlags` (`label.cpp:325`). */
+  filledLine: (line: TextLineLayout, justificationFlags: number) => TextLineLayout;
 }
 
 /**
@@ -560,7 +564,7 @@ export function layoutLabelLines(
   const {
     rtl = false,
     isAutowrapped = false,
-    trimLine,
+    trim,
     lineSpacingPx = LABEL_LINE_SPACING_PX,
     paragraphSpacingPx = LABEL_PARAGRAPH_SPACING_PX,
   } = options;
@@ -607,11 +611,11 @@ export function layoutLabelLines(
     : layout.lines;
   // With autowrap off, FILL trims `OVERRUN_JUSTIFICATION_AWARE` (`label.cpp:322-325`).
   const isTrimJustificationAware = isFill && !isAutowrapped;
-  const lines = trimLine
+  const lines = trim
     ? fitted.map((line, index) => {
         const shaped = layout.lines[index]!;
-        if (!isTrimJustificationAware || line === shaped) return trimLine(line);
-        return isFitAboveMinimum(line, shapingWidthPx) ? line : trimLine(line, justificationFlags);
+        if (!isTrimJustificationAware || line === shaped) return trim.line(line);
+        return isFitAboveMinimum(line, shapingWidthPx) ? line : trim.filledLine(line, justificationFlags);
       })
     : fitted;
 
