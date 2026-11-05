@@ -548,6 +548,11 @@ export const CHAINED_SEQUENCE_CONTEXT: ContextReader = {
   readFormat3: readChainedSequenceContextFormat3,
 };
 
+/** The reader of a context subtable, chained when `isChain`. */
+export function contextReaderOf(isChain: boolean): ContextReader {
+  return isChain ? CHAINED_SEQUENCE_CONTEXT : SEQUENCE_CONTEXT;
+}
+
 /**
  * The size in bytes of a `GPOS` value record of `valueFormat`: two bytes for each bit set, the
  * reserved bits too, as HarfBuzz counts them (`ValueFormat::get_len`).

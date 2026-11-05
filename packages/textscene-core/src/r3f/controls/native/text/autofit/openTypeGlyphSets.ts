@@ -12,8 +12,8 @@
 import { perObject } from '../../../../../utils/perObject';
 import {
   classCoverage,
-  CHAINED_SEQUENCE_CONTEXT,
   type ContextReader,
+  contextReaderOf,
   type ContextRule,
   countedU16Values,
   coverageGlyphs,
@@ -27,7 +27,6 @@ import {
   valueRecordSize,
   GposType,
   GsubType,
-  SEQUENCE_CONTEXT,
 } from './openTypeLayout';
 
 /** The subtables at the offsets after the count at `at`, relative to `base`; a zero offset is none. */
@@ -44,11 +43,6 @@ function ruleSets(dv: DataView, subtable: number, reader: ContextReader): (Conte
       ? null
       : offsetsAfterCount(dv, set, set).flatMap((rule) => (rule === null ? [] : [reader.readRule(dv, rule)]))
   );
-}
-
-/** The reader of a context subtable, chained when `isChain`. */
-function contextReaderOf(isChain: boolean): ContextReader {
-  return isChain ? CHAINED_SEQUENCE_CONTEXT : SEQUENCE_CONTEXT;
 }
 
 /** The offset of the input `ClassDef` of a context subtable of format 2. */

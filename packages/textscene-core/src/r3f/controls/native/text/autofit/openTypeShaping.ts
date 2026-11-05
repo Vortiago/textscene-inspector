@@ -15,8 +15,8 @@
 
 import { perObject } from '../../../../../utils/perObject';
 import {
-  CHAINED_SEQUENCE_CONTEXT,
   type ContextReader,
+  contextReaderOf,
   type ContextRule,
   coverageIndex,
   DEFAULT_FEATURES,
@@ -27,7 +27,6 @@ import {
   languageFeatures,
   type LayoutTable,
   pairValueRecords,
-  SEQUENCE_CONTEXT,
   singleSubstitute,
   substituteList,
   type Subtable,
@@ -280,7 +279,7 @@ function applyContext(
     subtable.offset,
     buffer.glyphs,
     at,
-    subtable.type === GsubType.CHAIN_CONTEXT ? CHAINED_SEQUENCE_CONTEXT : SEQUENCE_CONTEXT
+    contextReaderOf(subtable.type === GsubType.CHAIN_CONTEXT)
   );
   if (!rule) return null;
   let end = at + 1 + rule.input.length;
