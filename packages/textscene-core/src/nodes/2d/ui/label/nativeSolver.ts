@@ -42,6 +42,7 @@ import type { Rgba } from '../../../../godot/math/math';
 import {
   AutowrapMode,
   OverrunBehavior,
+  StructuredTextParser,
   TextDirection,
   VisibleCharactersBehavior,
   DEFAULT_JUSTIFICATION_FLAGS,
@@ -218,13 +219,17 @@ export function labelBidiOptions(
   >,
   n: Pick<ShareNode, 'rtl' | 'locale'>
 ): LabelBidiOptions {
-  const { textDirection, structuredTextBidiOverride, structuredTextBidiOverrideOptions } = props;
+  const { textDirection, language, structuredTextBidiOverride, structuredTextBidiOverrideOptions } = props;
   const inheritedDirection = n.rtl ? TextDirection.TEXT_DIRECTION_RTL : TextDirection.TEXT_DIRECTION_LTR;
   return {
     direction: textDirection === TextDirection.TEXT_DIRECTION_INHERITED ? inheritedDirection : textDirection,
-    language: props.language || n.locale,
-    bidiOverride: (paragraph) =>
-      parseStructuredText(structuredTextBidiOverride, structuredTextBidiOverrideOptions, paragraph),
+    language: language || n.locale,
+    // DEFAULT's one INHERITED range over the whole paragraph is what no override shapes.
+    bidiOverride:
+      structuredTextBidiOverride === StructuredTextParser.STRUCTURED_TEXT_DEFAULT
+        ? undefined
+        : (paragraph) =>
+            parseStructuredText(structuredTextBidiOverride, structuredTextBidiOverrideOptions, paragraph),
   };
 }
 

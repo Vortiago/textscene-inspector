@@ -12,21 +12,15 @@
 import bidiFactory, { type EmbeddingLevels } from 'bidi-js';
 import { TextDirection } from '../../../../godot/text/textServerEnums';
 import { isLocaleRightToLeft } from '../../../../godot/text/textServer';
+import type { StructuredTextRange } from '../../../../godot/text/structuredText';
 
 const bidi = bidiFactory();
-
-/** `[start, end)` of a paragraph and the `TextDirection` its own bidi pass runs at, as `shaped_text_set_bidi_override` takes it. */
-export interface BidiOverrideRange {
-  start: number;
-  end: number;
-  direction: number;
-}
 
 export interface ParagraphBidiOptions {
   /** `TextDirection`. AUTO by default, Godot's default for every Control, Label3D and TextMesh. */
   direction?: number;
   /** Absent or empty runs the whole paragraph as one INHERITED range (`text_server_adv.cpp:7258-7262`). */
-  overrides?: readonly BidiOverrideRange[];
+  overrides?: readonly StructuredTextRange[];
   /** The language of the text, else the locale: it sets the direction of a text with no strong character. */
   language?: string;
 }
@@ -36,6 +30,8 @@ export interface ParagraphBidi {
   readonly isRtl: boolean;
   /** The embedding level of each character. An odd level is right-to-left. */
   readonly levels: Uint8Array;
+  /** Whether every character is at level 0, so the visual order is the logical one and no glyph mirrors. */
+  readonly isLeftToRight: boolean;
   /** The indices of `[start, end)` in visual order, left to right: each range reordered on its own, the ranges in logical order. */
   visualOrder(start: number, end: number): number[];
   /** The override range of each character, which shapes as its own runs. -1 for a character no range covers, which has no glyph. */
@@ -52,9 +48,15 @@ interface ResolvedRange {
   embedding: EmbeddingLevels;
 }
 
-const LTR = 'ltr';
-const RTL = 'rtl';
-type BaseDirection = typeof LTR | typeof RTL;
+type BaseDirection = 'ltr' | 'rtl';
+
+/**
+ * A right-to-left letter (Hebrew, Arabic, Syriac, Thaana, NKo and their presentation forms, and the
+ * astral right-to-left blocks) or an explicit embedding, override or isolate control. Text without one
+ * at an LTR paragraph direction resolves to level 0 everywhere, so it skips the bidi pass.
+ */
+const RAISES_LEVEL =
+  /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF\u200F\u202A-\u202E\u2066-\u2069\u{10800}-\u{10FFF}\u{1E800}-\u{1EFFF}]/u;
 
 /**
  * `ubidi_getBaseDirection`: the direction of the first strong character, L or R or AL, else null.
@@ -63,9 +65,16 @@ type BaseDirection = typeof LTR | typeof RTL;
 function firstStrongDirection(text: string): BaseDirection | null {
   for (const char of text) {
     const type = bidi.getBidiCharTypeName(char);
-    if (type === 'L') return LTR;
-    if (type === 'R' || type === 'AL') return RTL;
+    if (type === 'L') return 'ltr';
+    if (type === 'R' || type === 'AL') return 'rtl';
   }
+  return null;
+}
+
+/** The direction LTR and RTL fix, else null for AUTO and INHERITED, which the text decides. */
+function explicitDirection(direction: number): BaseDirection | null {
+  if (direction === TextDirection.TEXT_DIRECTION_LTR) return 'ltr';
+  if (direction === TextDirection.TEXT_DIRECTION_RTL) return 'rtl';
   return null;
 }
 
@@ -74,14 +83,11 @@ function firstStrongDirection(text: string): BaseDirection | null {
  * character, else the language: Label passes its `language`, else the locale (`label.cpp:139`).
  */
 function paragraphDirection(text: string, direction: number, language: string): BaseDirection {
-  switch (direction) {
-    case TextDirection.TEXT_DIRECTION_LTR:
-      return LTR;
-    case TextDirection.TEXT_DIRECTION_RTL:
-      return RTL;
-    default:
-      return firstStrongDirection(text) ?? (isLocaleRightToLeft(language) ? RTL : LTR);
-  }
+  return (
+    explicitDirection(direction) ??
+    firstStrongDirection(text) ??
+    (isLocaleRightToLeft(language) ? 'rtl' : 'ltr')
+  );
 }
 
 /**
@@ -90,16 +96,8 @@ function paragraphDirection(text: string, direction: number, language: string): 
  * `UBIDI_DEFAULT_*` finds no strong character in any part of it.
  */
 function rangeDirection(text: string, direction: number, paragraph: BaseDirection): BaseDirection {
-  switch (direction) {
-    case TextDirection.TEXT_DIRECTION_LTR:
-      return LTR;
-    case TextDirection.TEXT_DIRECTION_RTL:
-      return RTL;
-    case TextDirection.TEXT_DIRECTION_AUTO:
-      return firstStrongDirection(text) ?? paragraph;
-    default:
-      return paragraph;
-  }
+  if (direction === TextDirection.TEXT_DIRECTION_INHERITED) return paragraph;
+  return explicitDirection(direction) ?? firstStrongDirection(text) ?? paragraph;
 }
 
 /**
@@ -107,10 +105,10 @@ function rangeDirection(text: string, direction: number, paragraph: BaseDirectio
  * (`text_server_adv.cpp:7258-7262`). A character outside every range is not shaped, so it has no
  * glyph: Godot's LIST parser leaves its first part out this way (`text_server.cpp:2194-2205`).
  */
-function shapedRanges(length: number, overrides: readonly BidiOverrideRange[]): BidiOverrideRange[] {
+function shapedRanges(length: number, overrides: readonly StructuredTextRange[]): StructuredTextRange[] {
   if (overrides.length === 0)
     return [{ start: 0, end: length, direction: TextDirection.TEXT_DIRECTION_INHERITED }];
-  const ranges: BidiOverrideRange[] = [];
+  const ranges: StructuredTextRange[] = [];
   let shapedEnd = 0;
   for (const range of overrides) {
     const start = Math.max(range.start, shapedEnd);
@@ -122,10 +120,49 @@ function shapedRanges(length: number, overrides: readonly BidiOverrideRange[]): 
   return ranges;
 }
 
+/** `[start, end)` in logical order. */
+function logicalOrder(start: number, end: number): number[] {
+  return Array.from({ length: end - start }, (_v, k) => start + k);
+}
+
+/** A paragraph at level 0 throughout: one range, logical order, no mirror. */
+function leftToRightParagraph(text: string): ParagraphBidi {
+  return {
+    isRtl: false,
+    isLeftToRight: true,
+    levels: new Uint8Array(text.length),
+    rangeIds: new Int32Array(text.length),
+    visualOrder: logicalOrder,
+    glyphChar: (index) => text[index]!,
+  };
+}
+
+/** Reverses `values[first..last]`, both ends included. */
+function reverseInPlace(values: number[], first: number, last: number): void {
+  for (let low = first, high = last; low < high; low++, high--) {
+    [values[low], values[high]] = [values[high]!, values[low]!];
+  }
+}
+
+/**
+ * `[from, to)` of one range in visual order, offset to paragraph indices. `ubidi_setLine` (`:5359`):
+ * rule L1 resets the line's own trailing whitespace, then L2 reverses each segment in turn.
+ */
+function rangeVisualOrder(range: ResolvedRange, from: number, to: number): number[] {
+  const order = logicalOrder(range.start + from, range.start + to);
+  for (const [first, last] of bidi.getReorderSegments(range.text, range.embedding, from, to - 1)) {
+    reverseInPlace(order, first! - from, last! - from);
+  }
+  return order;
+}
+
 /** Resolves the levels of `text`, one bidi pass per override range, and answers its visual order. */
 export function resolveParagraphBidi(text: string, options: ParagraphBidiOptions = {}): ParagraphBidi {
   const { direction = TextDirection.TEXT_DIRECTION_AUTO, overrides = [], language = '' } = options;
   const paragraph = paragraphDirection(text, direction, language);
+  if (paragraph === 'ltr' && overrides.length === 0 && !RAISES_LEVEL.test(text))
+    return leftToRightParagraph(text);
+
   const levels = new Uint8Array(text.length);
   const rangeIds = new Int32Array(text.length).fill(-1);
   const ranges: ResolvedRange[] = shapedRanges(text.length, overrides).map(
@@ -142,10 +179,7 @@ export function resolveParagraphBidi(text: string, options: ParagraphBidiOptions
     ranges.flatMap((range) => {
       const from = Math.max(start, range.start) - range.start;
       const to = Math.min(end, range.end) - range.start;
-      if (from >= to) return [];
-      // `ubidi_setLine` (`:5359`): rule L1 resets the line's own trailing whitespace, then L2 reorders.
-      const order = bidi.getReorderedIndices(range.text, range.embedding, from, to - 1);
-      return order.slice(from, to).map((index) => index + range.start);
+      return from < to ? rangeVisualOrder(range, from, to) : [];
     });
 
   const glyphChar = (index: number): string => {
@@ -153,5 +187,5 @@ export function resolveParagraphBidi(text: string, options: ParagraphBidiOptions
     return levels[index]! % 2 === 1 ? (bidi.getMirroredCharacter(char) ?? char) : char;
   };
 
-  return { isRtl: paragraph === RTL, levels, rangeIds, visualOrder, glyphChar };
+  return { isRtl: paragraph === 'rtl', isLeftToRight: false, levels, rangeIds, visualOrder, glyphChar };
 }

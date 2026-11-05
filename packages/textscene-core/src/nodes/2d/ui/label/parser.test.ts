@@ -189,5 +189,19 @@ describe('parseLabel', () => {
       });
       expect(p.structuredTextBidiOverrideOptions).toEqual(['\\', 'a"b']);
     });
+
+    it('drops a trailing comma, as Godot loads one element from `[","]`', () => {
+      const p = parseLabel(heading('Label', { name: 'T' }), {
+        structured_text_bidi_override_options: '[",",]',
+      });
+      expect(p.structuredTextBidiOverrideOptions).toEqual([',']);
+    });
+
+    it('reads the options of a typed Array literal', () => {
+      const p = parseLabel(heading('Label', { name: 'T' }), {
+        structured_text_bidi_override_options: 'Array[String]([","])',
+      });
+      expect(p.structuredTextBidiOverrideOptions).toEqual([',']);
+    });
   });
 });

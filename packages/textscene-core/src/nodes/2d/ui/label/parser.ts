@@ -1,16 +1,17 @@
 /** Parses a Label: the Control properties plus its text, alignment and reveal state. */
 
 import { type ParsedHeading, unquoteString, unquoteStringName } from '../../../../parser/utils';
-import { parseOptionalFloat, parseOptionalInt } from '../../../../parser/valueParsers';
+import { parseOptionalFloat, parseOptionalInt, settableIntOr } from '../../../../parser/valueParsers';
 import type { LabelProperties } from './types';
 import { parseControl } from '../control/parser';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import {
   JACKETED_STRING_RE,
+  arrayLiteralBody,
   packedArrayBody,
   packedArrayForms,
 } from '../../../../godot/variant/variantParser.js';
-import { splitTopLevel } from '../../../../godot/string/string.js';
+import { dropTrailingComma, splitTopLevel } from '../../../../godot/string/string.js';
 import { StructuredTextParser, TextDirection } from '../../../../godot/text/textServerEnums';
 import { floatElements } from '../../../../resources/shapes/packedArray';
 import { SizeFlags } from '../../../../godot/scene/control';
@@ -34,20 +35,22 @@ function parseTabStops(value: string | undefined): number[] | undefined {
  * element is a string to `is_string()` (`text_server.cpp:2192`). Any other element keeps its place as null.
  */
 function parseStructuredTextOptions(value: string | undefined): (string | null)[] {
-  const body = value?.trim().match(/^\[([\s\S]*)\]$/)?.[1];
-  if (body === undefined) return [];
-  return splitTopLevel(body).map((element) => {
+  const body = value === undefined ? null : arrayLiteralBody(value);
+  if (body === null) return [];
+  return dropTrailingComma(splitTopLevel(body)).map((element) => {
     const trimmed = element.trim();
-    return JACKETED_STRING_RE.test(trimmed) ? unquoteStringName(trimmed.replace(/^@/, '&')) : null;
+    return JACKETED_STRING_RE.test(trimmed) ? unquoteString(trimmed) : null;
   });
 }
 
 /** `Label::set_text_direction` refuses a value outside -1..3 (`label.cpp:1140`), so the default stays. */
 function parseTextDirection(value: string | undefined): number {
-  const direction = parseOptionalInt(value);
-  return direction !== undefined && direction >= -1 && direction <= TextDirection.TEXT_DIRECTION_INHERITED
-    ? direction
-    : TextDirection.TEXT_DIRECTION_AUTO;
+  return settableIntOr(
+    value,
+    TextDirection.TEXT_DIRECTION_AUTO,
+    { min: -1, max: TextDirection.TEXT_DIRECTION_INHERITED },
+    'Label.text_direction'
+  );
 }
 
 /**

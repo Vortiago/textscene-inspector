@@ -142,17 +142,8 @@ describe('trimLineToWidth', () => {
 describe('trimLineToWidth — a right-to-left line (text_server_adv.cpp:6053-6114, label.h:198-241)', () => {
   const HEBREW = 'אבגדהוזחטיכל';
 
-  function rtlLine() {
-    return shapeText(HEBREW, {
-      fontSizePx: FONT_SIZE_PX,
-      boxWidthPx: 0,
-      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-      lineSpacingPx: 0,
-    }).lines[0]!;
-  }
-
   function trimRtl(widthPx: number, behavior: number) {
-    return trimLineToWidth(rtlLine(), widthPx, overrunFlagsForBehavior(behavior), {
+    return trimLineToWidth(line(HEBREW), widthPx, overrunFlagsForBehavior(behavior), {
       fontMetrics: OPEN_SANS_FONT_METRICS,
       fontSizePx: FONT_SIZE_PX,
       isRtl: true,
@@ -160,7 +151,7 @@ describe('trimLineToWidth — a right-to-left line (text_server_adv.cpp:6053-611
   }
 
   it('cuts at the visual left and keeps the logical start', () => {
-    const full = rtlLine();
+    const full = line(HEBREW);
     const result = trimRtl(full.widthPx / 2, OverrunBehavior.OVERRUN_TRIM_CHAR);
     const sources = result.glyphs.map((glyph) => glyph.sourceIndex);
     expect(sources.at(-1)).toBe(0);
@@ -169,7 +160,7 @@ describe('trimLineToWidth — a right-to-left line (text_server_adv.cpp:6053-611
   });
 
   it('draws the ellipsis at the visual left of the kept glyphs', () => {
-    const full = rtlLine();
+    const full = line(HEBREW);
     const result = trimRtl(full.widthPx * 0.75, OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
     expect(result.glyphs[0]!.char).toBe('…');
     expect(result.glyphs[0]!.x).toBe(0);
@@ -184,14 +175,14 @@ describe('trimLineToWidth — a right-to-left line (text_server_adv.cpp:6053-611
   });
 
   it('puts the ellipsis first when it is enforced on a line that fits', () => {
-    const full = rtlLine();
+    const full = line(HEBREW);
     const result = trimRtl(full.widthPx + 100, OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE);
     expect(result.glyphs[0]!.char).toBe('…');
     expect(result.glyphs.length).toBe(full.glyphs.length + 1);
   });
 
   it('keeps the left-to-right trim over the visual order without the option', () => {
-    const full = rtlLine();
+    const full = line(HEBREW);
     const result = trimLineToWidth(
       full,
       full.widthPx * 0.75,

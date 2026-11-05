@@ -30,17 +30,27 @@ const IDENTIFIER_START = /[\p{XID_Start}_]/u;
 /** `is_unicode_identifier_continue` (`core/string/char_range.inc:733`). */
 const IDENTIFIER_CONTINUE = /\p{XID_Continue}/u;
 
+/** Adds the AUTO range `[start, end)`, unless it is empty. */
+function pushAuto(ranges: StructuredTextRange[], start: number, end: number): void {
+  if (start !== end) ranges.push({ start, end, direction: AUTO });
+}
+
+/** Adds the LTR range of the one separator character at `index`. */
+function pushSeparator(ranges: StructuredTextRange[], index: number): void {
+  ranges.push({ start: index, end: index + 1, direction: LTR });
+}
+
 /** The URI and FILE arms: an AUTO range between separators, an LTR range of one character on each. */
 function splitAtSeparators(text: string, separators: ReadonlySet<string>): StructuredTextRange[] {
   const ranges: StructuredTextRange[] = [];
   let prev = 0;
   for (let i = 0; i < text.length; i++) {
     if (!separators.has(text[i]!)) continue;
-    if (prev !== i) ranges.push({ start: prev, end: i, direction: AUTO });
-    ranges.push({ start: i, end: i + 1, direction: LTR });
+    pushAuto(ranges, prev, i);
+    pushSeparator(ranges, i);
     prev = i + 1;
   }
-  if (prev !== text.length) ranges.push({ start: prev, end: text.length, direction: AUTO });
+  pushAuto(ranges, prev, text.length);
   return ranges;
 }
 
@@ -53,16 +63,17 @@ function splitEmail(text: string): StructuredTextRange[] {
     const char = text[i]!;
     if (char === '@' && isLocal) {
       isLocal = false;
+      // The local part pushes even when it is empty.
       ranges.push({ start: prev, end: i, direction: AUTO });
-      ranges.push({ start: i, end: i + 1, direction: LTR });
+      pushSeparator(ranges, i);
       prev = i + 1;
     } else if (!isLocal && char === '.') {
-      if (prev !== i) ranges.push({ start: prev, end: i, direction: AUTO });
-      ranges.push({ start: i, end: i + 1, direction: LTR });
+      pushAuto(ranges, prev, i);
+      pushSeparator(ranges, i);
       prev = i + 1;
     }
   }
-  if (prev !== text.length) ranges.push({ start: prev, end: text.length, direction: AUTO });
+  pushAuto(ranges, prev, text.length);
   return ranges;
 }
 
@@ -89,9 +100,6 @@ function splitList(text: string, options: readonly unknown[]): StructuredTextRan
  */
 function splitGdscript(text: string): StructuredTextRange[] {
   const ranges: StructuredTextRange[] = [];
-  const pushAuto = (start: number, end: number): void => {
-    if (start !== end) ranges.push({ start, end, direction: AUTO });
-  };
   let quote: string | null = null;
   let isInIdentifier = false;
   let prev = 0;
@@ -101,34 +109,34 @@ function splitGdscript(text: string): StructuredTextRange[] {
       if (char === '\\') {
         i++;
       } else if (char === quote) {
-        pushAuto(prev, i);
+        pushAuto(ranges, prev, i);
         prev = i + 1;
-        ranges.push({ start: i, end: i + 1, direction: LTR });
+        pushSeparator(ranges, i);
         quote = null;
       }
     } else if (isInIdentifier) {
       if (!IDENTIFIER_CONTINUE.test(char)) {
-        pushAuto(prev, i);
+        pushAuto(ranges, prev, i);
         prev = i;
         isInIdentifier = false;
       }
     } else if (IDENTIFIER_START.test(char)) {
-      pushAuto(prev, i);
+      pushAuto(ranges, prev, i);
       prev = i;
       isInIdentifier = true;
     } else if (char === '"' || char === "'") {
-      pushAuto(prev, i);
+      pushAuto(ranges, prev, i);
       prev = i + 1;
-      ranges.push({ start: i, end: i + 1, direction: LTR });
+      pushSeparator(ranges, i);
       quote = char;
     } else if (char === '#') {
-      pushAuto(prev, i);
+      pushAuto(ranges, prev, i);
       prev = text.length;
       ranges.push({ start: i, end: text.length, direction: AUTO });
       break;
     }
   }
-  if (prev < text.length) ranges.push({ start: prev, end: text.length, direction: AUTO });
+  if (prev < text.length) pushAuto(ranges, prev, text.length);
   return ranges;
 }
 

@@ -58,12 +58,17 @@ function fitLineToWidth(
   let startPos = 0;
   let endPos = glyphs.length - 1;
 
-  // :5547-5570
+  // :5547-5570: the logically last tab is the visually last one, or the visually first on an RTL line.
   if (flags & JustificationFlag.AFTER_LAST_TAB) {
-    for (let i = glyphs.length - 1; i >= 0; i--) {
-      if (isTabChar(glyphs[i]!.char)) {
-        startPos = i;
-        break;
+    if (line.isRtl) {
+      const firstTab = glyphs.findIndex((glyph) => isTabChar(glyph.char));
+      if (firstTab >= 0) endPos = firstTab;
+    } else {
+      for (let i = glyphs.length - 1; i >= 0; i--) {
+        if (isTabChar(glyphs[i]!.char)) {
+          startPos = i;
+          break;
+        }
       }
     }
   }

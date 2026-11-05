@@ -25,6 +25,17 @@ describe('resolveParagraphBidi', () => {
     expect(resolveParagraphBidi('abc שלום def').isRtl).toBe(false);
   });
 
+  it('resolves an LTR Latin paragraph to level 0 throughout, in logical order', () => {
+    const bidi = resolveParagraphBidi('Hello (world) 123');
+    expect(bidi.isLeftToRight).toBe(true);
+    expect(bidi.visualOrder(6, 13)).toEqual([6, 7, 8, 9, 10, 11, 12]);
+    expect(bidi.glyphChar(6)).toBe('(');
+  });
+
+  it('runs the bidi pass on an RTL Latin paragraph, whose levels are not all 0', () => {
+    expect(resolveParagraphBidi('Hello!', { direction: TEXT_DIRECTION_RTL }).isLeftToRight).toBe(false);
+  });
+
   it('puts the `!` of an RTL Latin paragraph first', () => {
     expect(visualText('Hello!', TEXT_DIRECTION_RTL)).toBe('!Hello');
     expect(resolveParagraphBidi('Hello!', { direction: TEXT_DIRECTION_RTL }).isRtl).toBe(true);

@@ -28,7 +28,8 @@ import { tabAlignAdvances } from './textTabStops';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { localeLanguage } from '../../../../godot/text/textServer';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
-import { resolveParagraphBidi, type BidiOverrideRange, type ParagraphBidi } from './bidi';
+import { resolveParagraphBidi } from './bidi';
+import type { StructuredTextRange } from '../../../../godot/text/structuredText';
 
 /**
  * Narrows a parsed `autowrap_mode` to the enum, else returns `fallback`, as leniently as
@@ -73,7 +74,7 @@ export interface ShapeTextOptions {
    * The override ranges of one paragraph's text, its terminator included, as Label passes
    * `structured_text_parser(...)` per paragraph (`label.cpp:195`). Each range runs the bidi algorithm on its own.
    */
-  bidiOverride?: (paragraph: string) => readonly BidiOverrideRange[];
+  bidiOverride?: (paragraph: string) => readonly StructuredTextRange[];
   /**
    * The language of the text, else the locale, as Label passes `language` or `_get_locale()`
    * (`label.cpp:139`): it upper-cases and sets the direction of a text with no strong character.
@@ -414,7 +415,7 @@ function unshapedGlyph(index: number): BreakGlyph {
  * (`label.cpp:164`). `chars` are the characters the glyphs draw, mirrored where the level is odd,
  * and `style` sets the size, face and level of each.
  */
-function toBreakGlyphs(chars: readonly string[], style: RunStyle, preserveControl = false): BreakGlyph[] {
+function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveControl = false): BreakGlyph[] {
   const { sizes, faces } = style;
   const glyphs: BreakGlyph[] = [];
   for (let i = 0; i < chars.length; i++) {
@@ -490,15 +491,14 @@ function toBreakGlyphs(chars: readonly string[], style: RunStyle, preserveContro
  * `text_server_adv.h:344,618`), so each prefix sum stays within half a pixel. It walks a run in
  * HarfBuzz's glyph order, which is reverse logical order for a right-to-left run. Mutates `glyphs`.
  */
-function roundAdvancesToWholePixels(glyphs: BreakGlyph[], chars: readonly string[], style: RunStyle): void {
+function roundAdvancesToWholePixels(glyphs: BreakGlyph[], chars: ArrayLike<string>, style: RunStyle): void {
   for (const [start, end] of runRanges(style, chars.length)) {
     // `adv_rem` is local to `_shape_run` (`:7011`), so each run starts it at zero.
     let advanceRemainder = 0;
-    const order = Array.from({ length: end - start }, (_v, k) =>
-      isRtlRun(style, start) ? end - 1 - k : start + k
-    );
-    for (const i of order) {
-      if (fontUsesSubpixelPositioning(style.sizes[i]!)) continue;
+    // A run has one size, so its first character answers for all of them.
+    if (fontUsesSubpixelPositioning(style.sizes[start]!)) continue;
+    const step = isRtlRun(style, start) ? -1 : 1;
+    for (let i = step > 0 ? start : end - 1; i >= start && i < end; i += step) {
       const cp = chars[i]!.codePointAt(0)!;
       // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
       if (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp)) advanceRemainder = 0;
@@ -688,7 +688,7 @@ function splitParagraphs(
  * `TS->string_to_upper(text, lang)` (`label.cpp:153`): ICU's casing for the language subtag of a
  * Godot locale (`tr_TR` casts as `tr`). An empty or unknown language takes the root rules.
  */
-function toUpperCase(text: string, language: string): string {
+function upperCaseFor(text: string, language: string): string {
   const subtag = localeLanguage(language);
   if (subtag === '') return text.toUpperCase();
   try {
@@ -697,24 +697,6 @@ function toUpperCase(text: string, language: string): string {
     // A subtag that is no BCP 47 language: ICU falls back to the root locale for it.
     return text.toUpperCase();
   }
-}
-
-/** The glyphs of `[start, end)` placed at their pen x in visual order, `advanceAt` giving each character's advance. */
-function placeLineGlyphs(
-  start: number,
-  end: number,
-  bidi: ParagraphBidi,
-  advanceAt: (index: number) => number,
-  glyphAt: (index: number, x: number, advance: number) => GlyphPlacement
-): { glyphs: GlyphPlacement[]; widthPx: number } {
-  let penX = 0;
-  const glyphs = bidi.visualOrder(start, end).map((index) => {
-    const advance = advanceAt(index);
-    const glyph = glyphAt(index, penX, advance);
-    penX += advance;
-    return glyph;
-  });
-  return { glyphs, widthPx: penX };
 }
 
 /** Shapes `text` into lines and per-glyph placements at `options.fontSizePx`, against `options.fontMetrics` (default `OPEN_SANS_FONT_METRICS`). */
@@ -740,7 +722,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
   } = options;
   const hasTabStops = !!tabStopsPx && tabStopsPx.length > 0;
   // Uppercase before indices are assigned, so a `fontSizePxAt` keyed on the transformed text lines up.
-  const transformed = uppercase ? toUpperCase(text, language) : text;
+  const transformed = uppercase ? upperCaseFor(text, language) : text;
   const flags = breakFlagsForAutowrap(autowrapMode);
   const trim = {
     start: autowrapTrimFlags === undefined ? true : (autowrapTrimFlags & BREAK_TRIM_START_EDGE_SPACES) !== 0,
@@ -764,7 +746,9 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     const sourceIndex = (i: number): number => para.offset + Math.max(0, Math.min(i, para.text.length - 1));
     const paraText = para.terminated ? para.text + PARAGRAPH_TERMINATOR : para.text;
     const bidi = resolveParagraphBidi(paraText, { direction, overrides: bidiOverride?.(paraText), language });
-    const chars = Array.from({ length: paraText.length }, (_v, i) => bidi.glyphChar(i));
+    const chars: ArrayLike<string> = bidi.isLeftToRight
+      ? paraText
+      : Array.from({ length: paraText.length }, (_v, i) => bidi.glyphChar(i));
     const runStyle: RunStyle = {
       sizes: Array.from({ length: paraText.length }, (_v, i) =>
         fontSizePxAt ? fontSizePxAt(sourceIndex(i)) : fontSizePx
@@ -803,12 +787,12 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
             tabStopsPx!
           )
         : null;
-      const { glyphs, widthPx } = placeLineGlyphs(
-        start,
-        clampedEnd,
-        bidi,
-        (idx) => (lineAdvances ? lineAdvances[idx - start]! : breakGlyphs[idx]!.advance),
-        (idx, x, advance) => ({
+      let penX = 0;
+      const glyphs = bidi.visualOrder(start, clampedEnd).map((idx): GlyphPlacement => {
+        const advance = lineAdvances ? lineAdvances[idx - start]! : breakGlyphs[idx]!.advance;
+        const x = penX;
+        penX += advance;
+        return {
           char: chars[idx]!,
           x,
           advance,
@@ -819,12 +803,12 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
           sourceIndex: para.offset + idx,
           fontSizePx: runStyle.sizes[idx]!,
           fontMetrics: runStyle.faces[idx]!,
-        })
-      );
+        };
+      });
       lines.push({
         text: paraText.slice(start, clampedEnd),
         glyphs,
-        widthPx,
+        widthPx: penX,
         paragraphIndex,
         isRtl: bidi.isRtl,
       });
