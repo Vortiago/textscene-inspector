@@ -4,6 +4,7 @@
  * `rich_text_label.cpp:7401-7430,7892-7948`).
  */
 
+import { utf16OffsetOf } from '../../../../godot/string/codePoints';
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type { GlyphPlacement, TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import { perObject } from '../../../../utils/perObject';
@@ -101,7 +102,9 @@ export function resolveRichTextVisibleChars(
 
 interface VisibleCharsBudget {
   behavior: number;
-  /** Final resolved `visible_chars`, the budget of CHARS_AFTER_SHAPING. */
+  /** The text the lines were shaped from. It maps a glyph's UTF-16 `sourceIndex` to the code point count Godot budgets, and only CHARS_AFTER_SHAPING reads it. */
+  text: string;
+  /** Final resolved `visible_chars` in code points, the budget of CHARS_AFTER_SHAPING. */
   visibleChars: number | undefined;
   /** Final resolved `visible_ratio`, the budget of the GLYPHS_* behaviours. */
   visibleRatio: number | undefined;
@@ -124,7 +127,7 @@ export function applyVisibleCharsReveal(
 ): TextLineLayout[] {
   if (budget.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return [...lines];
   if (budget.behavior === VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING) {
-    return revealCharacters(lines, budget.visibleChars);
+    return revealCharacters(lines, budget.text, budget.visibleChars);
   }
   return revealGlyphs(lines, budget);
 }
@@ -135,11 +138,17 @@ export function applyVisibleCharsReveal(
  */
 function revealCharacters(
   lines: readonly TextLineLayout[],
+  text: string,
   visibleChars: number | undefined
 ): TextLineLayout[] {
   if (visibleChars === undefined || visibleChars < 0) return [...lines];
+  // Glyph source indices are UTF-16 offsets; the budget counts code points.
+  const visibleEnd = utf16OffsetOf(text, visibleChars);
+  // `paragraphStart - 1 <= visibleChars` in code points is `paragraphStart <= ellipsisEnd`, the offset
+  // of code point `visibleChars + 1`.
+  const ellipsisEnd = utf16OffsetOf(text, visibleChars + 1);
   return lines.map((line) => {
-    const isEllipsisShown = (line.paragraphStart ?? 0) - 1 <= visibleChars;
+    const isEllipsisShown = (line.paragraphStart ?? 0) <= ellipsisEnd;
     const { tails, lastIndexOf } = ligatureClusters(line.glyphs);
     let isLigatureShown = false;
     return {
@@ -148,7 +157,7 @@ function revealCharacters(
         if (tails.has(glyph)) return isLigatureShown;
         if (glyph.sourceIndex === undefined) return isEllipsisShown;
         // A ligature's `end` is its last character's, so it shows whole or not at all.
-        isLigatureShown = (lastIndexOf.get(glyph) ?? glyph.sourceIndex) < visibleChars;
+        isLigatureShown = (lastIndexOf.get(glyph) ?? glyph.sourceIndex) < visibleEnd;
         return isLigatureShown;
       }),
     };

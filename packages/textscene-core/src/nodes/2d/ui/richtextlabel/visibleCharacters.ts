@@ -8,6 +8,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { codePointCount, utf16OffsetOf, utf16WidthAt } from '../../../../godot/string/codePoints';
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type {
   GlyphPlacement,
@@ -55,9 +56,12 @@ export function richTextReveal(
 /** The runs as the text Godot counts: each run's text and the newlines a paragraph tag added to it. */
 type CountedRun = Pick<StyledTextRun, 'text' | 'implicitBreaks'>;
 
-/** `get_total_character_count` of the runs: each character and `[img]`, and none for the newline a paragraph tag adds. */
+const joinedText = (runs: readonly CountedRun[]): string => runs.map((run) => run.text).join('');
+
+/** `get_total_character_count` of the runs: each code point and `[img]`, and none for the newline a paragraph tag adds. */
 export function countedCharacters(runs: readonly CountedRun[]): number {
-  return runs.reduce((total, run) => total + run.text.length - (run.implicitBreaks?.length ?? 0), 0);
+  const implicitCount = runs.reduce((total, run) => total + (run.implicitBreaks?.length ?? 0), 0);
+  return codePointCount(joinedText(runs)) - implicitCount;
 }
 
 /** The indices in the runs' joined text of the newlines Godot counts no character for (`BBCodeRun.implicitBreaks`). */
@@ -85,6 +89,7 @@ export function revealedGlyphs(
   const counted = countedLayoutOf(layout, runs);
   const shownLines = applyVisibleCharsReveal(counted.lines, {
     behavior: reveal.behavior,
+    text: counted.text,
     visibleChars: reveal.characters,
     visibleRatio: reveal.ratio,
     totalCharacters: counted.totalCharacters,
@@ -112,9 +117,10 @@ export function isPrefixShown(
 ): boolean {
   if (reveal.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return true;
   if (reveal.behavior === VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING) {
-    const { skippedBefore } = countedLayoutOf(layout, runs);
+    const { skippedBefore, text } = countedLayoutOf(layout, runs);
     const paragraphStart = line.paragraphStart!;
-    return paragraphStart - (skippedBefore?.[paragraphStart] ?? 0) <= reveal.characters;
+    // The character offset is in code points, the glyph indices in UTF-16 units of `text`.
+    return paragraphStart - (skippedBefore?.[paragraphStart] ?? 0) <= utf16OffsetOf(text, reveal.characters);
   }
   const firstGlyph = line.glyphs[0];
   return firstGlyph === undefined || (revealed?.has(firstGlyph) ?? true);
@@ -123,6 +129,8 @@ export function isPrefixShown(
 /** A layout as the budget counts it: Godot's character indices, and the glyph each counted glyph copies. */
 interface CountedLayout {
   lines: readonly TextLineLayout[];
+  /** The text the glyph indices count over: the runs' text less the implicit newlines. */
+  text: string;
   /** Absent when no glyph needed a copy. */
   originals?: Map<GlyphPlacement, GlyphPlacement>;
   /** For each text index, the implicit newlines before it. Absent when the text has none. */
@@ -139,15 +147,19 @@ function countedLayoutOf(layout: TextLayoutResult, runs: readonly CountedRun[]):
   if (cached) return cached;
   const implicit = implicitBreakIndices(runs);
   const totalCharacters = countedCharacters(runs);
+  const joined = joinedText(runs);
   if (implicit.size === 0) {
-    const counted = { lines: layout.lines, totalCharacters };
+    const counted = { lines: layout.lines, text: joined, totalCharacters };
     countedLayouts.set(layout, counted);
     return counted;
   }
   // The glyph a budget sees carries Godot's character index: the index in the text less the
   // implicit newlines before it.
-  const textLength = runs.reduce((total, run) => total + run.text.length, 0);
-  const skippedBefore = implicitBreaksBefore(textLength, implicit);
+  const skippedBefore = implicitBreaksBefore(joined.length, implicit);
+  const text = joined
+    .split('')
+    .filter((_, index) => !implicit.has(index))
+    .join('');
   const originals = new Map<GlyphPlacement, GlyphPlacement>();
   const lines = layout.lines.map((line) => ({
     ...line,
@@ -164,7 +176,7 @@ function countedLayoutOf(layout: TextLayoutResult, runs: readonly CountedRun[]):
         return counted;
       }),
   }));
-  const counted = { lines, originals, skippedBefore, totalCharacters };
+  const counted = { lines, text, originals, skippedBefore, totalCharacters };
   countedLayouts.set(layout, counted);
   return counted;
 }
@@ -198,7 +210,7 @@ export function truncateRunsToCharacters(
     let length = 0;
     while (length < run.text.length && remaining > 0) {
       if (!implicit.has(runStart + length)) remaining--;
-      length++;
+      length += utf16WidthAt(run.text, length);
     }
     if (length < run.text.length) isCut = true;
     kept.push(length === run.text.length ? run : cutRun(run, length));

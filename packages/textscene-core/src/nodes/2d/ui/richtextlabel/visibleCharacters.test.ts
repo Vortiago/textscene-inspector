@@ -10,7 +10,12 @@ import { visualChars } from '../../../../r3f/controls/native/text/textLayout.tes
 import { AutowrapMode, VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type { StyledTextRun } from './nativeSolver';
 import { IMAGE_OBJECT_CHAR } from './bbcode';
-import { revealedGlyphs, richTextReveal, truncateRunsToCharacters } from './visibleCharacters';
+import {
+  countedCharacters,
+  revealedGlyphs,
+  richTextReveal,
+  truncateRunsToCharacters,
+} from './visibleCharacters';
 
 const { VC_CHARS_BEFORE_SHAPING, VC_CHARS_AFTER_SHAPING, VC_GLYPHS_AUTO, VC_GLYPHS_LTR, VC_GLYPHS_RTL } =
   VisibleCharactersBehavior;
@@ -63,6 +68,25 @@ describe('revealedGlyphs', () => {
     expect(
       shown('Hello world', { behavior: VC_CHARS_AFTER_SHAPING, characters: 5, ratio: 5 / 11, rtl: false })
     ).toEqual(['Hello']);
+  });
+
+  // A Godot `String` holds code points, so `😀` is one character where the JS string holds two units.
+  it('counts an astral character as one under CHARS_AFTER_SHAPING', () => {
+    expect(
+      shown('😀ab', { behavior: VC_CHARS_AFTER_SHAPING, characters: 2, ratio: 2 / 3, rtl: false })
+    ).toEqual(['😀a']);
+  });
+
+  it('counts an astral character as one glyph under GLYPHS_LTR', () => {
+    expect(shown('😀ab', { behavior: VC_GLYPHS_LTR, characters: 2, ratio: 0.7, rtl: false })).toEqual([
+      '😀a',
+    ]);
+  });
+
+  it('counts an astral character and an implicit break together', () => {
+    expect(
+      shown('😀\nab', { behavior: VC_CHARS_AFTER_SHAPING, characters: 2, ratio: 0.5, rtl: false }, 0, [2])
+    ).toEqual(['😀', 'a']);
   });
 
   it('counts the newline as one character (:645)', () => {
@@ -127,6 +151,12 @@ describe('revealedGlyphs', () => {
   });
 });
 
+describe('countedCharacters', () => {
+  it('counts an astral character as one, and no character for an implicit break', () => {
+    expect(countedCharacters([{ text: '😀a' }, { text: '\nb', implicitBreaks: [0] }])).toBe(3);
+  });
+});
+
 describe('richTextReveal', () => {
   it('is undefined while visible_characters is unset or -1', () => {
     expect(richTextReveal({ visibleCharacters: undefined }, false, 0)).toBeUndefined();
@@ -166,6 +196,10 @@ describe('truncateRunsToCharacters (:668-671)', () => {
       'ab',
       'c',
     ]);
+  });
+
+  it('cuts after an astral character, which counts one', () => {
+    expect(truncateRunsToCharacters([run('😀ab')], 2).map((r) => r.text)).toEqual(['😀a']);
   });
 
   it('drops every run at zero', () => {

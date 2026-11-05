@@ -103,6 +103,11 @@ describe('parseRichTextLabel', () => {
       expect(p.scrollFollowingVisibleCharacters).toBe(false);
     });
 
+    it('counts an astral character as one when it derives visible_ratio', () => {
+      const p = parseRichTextLabel(heading, { text: '"😀ab"', visible_characters: '1' });
+      expect(p.visibleRatio).toBeCloseTo(1 / 3, 6);
+    });
+
     it('derives visible_ratio from visible_characters over the text length', () => {
       const p = parseRichTextLabel(heading, { text: '"Hello"', visible_characters: '2' });
       expect(p.visibleCharacters).toBe(2);

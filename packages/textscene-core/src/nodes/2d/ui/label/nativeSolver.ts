@@ -37,6 +37,7 @@ import {
   type TextThemeProps,
 } from '../../../../r3f/controls/native/textTheme';
 import type { LabelProperties } from './types';
+import { sliceCodePoints } from '../../../../godot/string/codePoints.js';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import {
@@ -269,7 +270,7 @@ export function labelPreShapeText(
     VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING
   )
     return text;
-  return text.slice(0, visibleChars);
+  return sliceCodePoints(text, visibleChars);
 }
 
 /**

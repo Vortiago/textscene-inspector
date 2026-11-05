@@ -94,7 +94,12 @@ async function openOutlines(
  */
 async function kerningReaderOf(sfnt: SfntFile): Promise<InstanceKerningReader | null> {
   if (!sfnt.tables.has('GPOS') || !sfnt.tables.has('fvar')) return null;
-  return (await import('./variation/instanceKerning')).instanceKerningReader;
+  try {
+    return (await import('./variation/instanceKerning')).instanceKerningReader;
+  } catch {
+    // Kerning only refines the advances: a chunk that fails to load (offline, after a deploy) must not take the outlines with it.
+    return null;
+  }
 }
 
 /** The kerning of a pair of characters at one instance, or null for a character the font has no glyph for. */
@@ -113,11 +118,14 @@ function instanceKerningOf(
 ): SfntOutlines['kerningAtInstance'] {
   if (!kerningReader) return undefined;
   // Read when an instance first asks. Null is a font with no pair kerning, read only once.
-  const kerningAtOf = perObject((font: SfntFile) => orOnRangeError(() => kerningReader(font), null));
-  // Kept with its instance, which `fontInstanceOf` bounds.
+  let kerningAtOf: ReturnType<InstanceKerningReader> | undefined;
+  // `??=` would read again for the null of a font without pair kerning.
+  const kerningAt = () =>
+    kerningAtOf === undefined ? (kerningAtOf = orOnRangeError(() => kerningReader(sfnt), null)) : kerningAtOf;
+  // Kept with its instance, and so for as long as the layout's opentype wrapper that asks for it lives.
   const pairsAt = perObject((instance: FontInstance): CharacterKerning | null => {
-    const kerningAt = kerningAtOf(sfnt);
-    return kerningAt && keptPairs(glyphIndex, kerningAt(instance.normalized));
+    const kerningAtInstance = kerningAt();
+    return kerningAtInstance && keptPairs(glyphIndex, kerningAtInstance(instance.normalized));
   });
   return (leftCodePoint, rightCodePoint, opentype) => {
     const instance = instanceAt(opentype);

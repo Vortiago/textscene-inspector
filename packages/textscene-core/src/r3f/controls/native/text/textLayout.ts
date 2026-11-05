@@ -237,6 +237,8 @@ export function shapedTextSizeWidthPx(widthPx: number): number {
 }
 
 export interface TextLayoutResult {
+  /** The text the lines were shaped from, after `uppercase`. A glyph's `sourceIndex` is a UTF-16 offset into it. */
+  shapedText: string;
   lines: TextLineLayout[];
   /** `getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx)`, one pitch for every line. */
   linePitchPx: number;
@@ -277,6 +279,7 @@ export function soloLineLayout(
   heightPx: number = parent.linePitchPx
 ): TextLayoutResult {
   return {
+    shapedText: parent.shapedText,
     lines: [line],
     linePitchPx: parent.linePitchPx,
     widthPx: line.widthPx,
@@ -994,7 +997,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
   const heightPx = lines.length * linePitchPx;
   const baselineOffsetPx = getFontAscentPx(fontMetrics, fontSizePx);
 
-  return { lines, linePitchPx, widthPx, heightPx, baselineOffsetPx, fontMetrics };
+  return { shapedText: transformed, lines, linePitchPx, widthPx, heightPx, baselineOffsetPx, fontMetrics };
 }
 
 /** The width of the widest of `lines`, or 0 for none. */

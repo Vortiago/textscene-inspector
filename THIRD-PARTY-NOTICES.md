@@ -947,8 +947,9 @@ SOFTWARE.
 `openTypeLayout.ts`, `openTypeGlyphSets.ts` and `openTypeShaping.ts`, in
 `packages/textscene-core/src/r3f/controls/native/text/autofit/`, port HarfBuzz's reading of the `GSUB` and
 `GPOS` tables, its glyph closure and its default shaper, because FreeType's auto-hinter shapes its blue
-characters and finds the glyphs of each style with HarfBuzz in Godot. Godot vendors it as
-`thirdparty/harfbuzz`. HarfBuzz is licensed under the "Old MIT" licence, separately from Godot's own MIT
+characters and finds the glyphs of each style with HarfBuzz in Godot. `openTypeGdef.ts` in the same
+directory ports its `GDEF` glyph properties and lookup flags, and `variation/instanceKerning.ts` ports its
+pair kerning at a variable-font instance. Godot vendors it as `thirdparty/harfbuzz`. HarfBuzz is licensed under the "Old MIT" licence, separately from Godot's own MIT
 licence above.
 
 ```

@@ -94,6 +94,7 @@ describe('layoutLabel3DLines', () => {
     // exercise the function directly against a synthesized empty result.
     const placements = layoutLabel3DLines(
       {
+        shapedText: '',
         lines: [],
         linePitchPx: getFontLinePitchPx(OPEN_SANS_METRICS, FONT_SIZE, 3),
         widthPx: 0,

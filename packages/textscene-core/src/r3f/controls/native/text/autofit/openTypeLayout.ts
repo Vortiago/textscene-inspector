@@ -533,7 +533,7 @@ export interface ContextReader {
 }
 
 /** A `SequenceContext` subtable: one `ClassDef` serves all three sequences. */
-export const SEQUENCE_CONTEXT: ContextReader = {
+const SEQUENCE_CONTEXT: ContextReader = {
   classDefFields: [4, 4, 4],
   classSetCountField: 6,
   readRule: readSequenceRule,
@@ -541,12 +541,17 @@ export const SEQUENCE_CONTEXT: ContextReader = {
 };
 
 /** A `ChainedSequenceContext` subtable. */
-export const CHAINED_SEQUENCE_CONTEXT: ContextReader = {
+const CHAINED_SEQUENCE_CONTEXT: ContextReader = {
   classDefFields: [4, 6, 8],
   classSetCountField: 10,
   readRule: readChainedSequenceRule,
   readFormat3: readChainedSequenceContextFormat3,
 };
+
+/** The reader of a context subtable, chained when `isChain`. */
+export function contextReaderOf(isChain: boolean): ContextReader {
+  return isChain ? CHAINED_SEQUENCE_CONTEXT : SEQUENCE_CONTEXT;
+}
 
 /**
  * The size in bytes of a `GPOS` value record of `valueFormat`: two bytes for each bit set, the

@@ -10,6 +10,7 @@ import { DEFAULT_JUSTIFICATION_FLAGS } from '../../../../godot/text/textServerEn
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
 import { floatElements } from '../../../../resources/shapes/packedArray';
+import { codePointCount } from '../../../../godot/string/codePoints';
 import { countedCharacters } from './visibleCharacters';
 import { resolveRichTextVisibleChars } from '../shared/visibleChars';
 import { parseBBCodeRuns } from './bbcode';
@@ -30,7 +31,7 @@ function parseTabStops(value: string | undefined): number[] | undefined {
 
 /** `get_total_character_count` (`rich_text_label.cpp:7999-8014`): each text character, newline and `[img]` counts one, and a tag or a paragraph tag's line end none. */
 function characterCount({ text = '', bbcodeEnabled }: RichTextLabelProperties): number {
-  if (!bbcodeEnabled) return text.length;
+  if (!bbcodeEnabled) return codePointCount(text);
   return countedCharacters(parseBBCodeRuns(text));
 }
 

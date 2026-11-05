@@ -26,6 +26,7 @@ function defaultFontLine(text: string): TextLineLayout {
 
 const glyphBudget = (visibleRatio: number) => ({
   behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+  text: '',
   visibleChars: undefined,
   visibleRatio,
 });
@@ -79,6 +80,7 @@ describe('applyVisibleCharsReveal ligatures', () => {
   it('shows a ligature whole or not at all after shaping, by its last character', () => {
     const afterShaping = (visibleChars: number) => ({
       behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+      text: 'abffi',
       visibleChars,
       visibleRatio: undefined,
     });
