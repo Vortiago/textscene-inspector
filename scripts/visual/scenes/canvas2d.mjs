@@ -883,6 +883,15 @@ export const CANVAS_2D_SCENES = [
   { name: 'code-edit-rtl', file: 'unit-code-edit-rtl.tscn', mode: '2d' },
   { name: 'rich-text-label-rtl', file: 'unit-rich-text-label-rtl.tscn', mode: '2d' },
   { name: 'spin-box-rtl', file: 'unit-spin-box-rtl.tscn', mode: '2d' },
+  // Each text Control's own paragraph direction, language and structured override, as the label-bidi
+  // scenes hold them for a Label: the button family, the editors, RichTextLabel paragraphs, the
+  // TabBar, MenuBar and FoldableContainer titles, and ItemList items.
+  { name: 'button-text-direction', file: 'unit-button-text-direction.tscn', mode: '2d' },
+  { name: 'line-edit-text-direction', file: 'unit-line-edit-text-direction.tscn', mode: '2d' },
+  { name: 'text-edit-text-direction', file: 'unit-text-edit-text-direction.tscn', mode: '2d' },
+  { name: 'rich-text-label-text-direction', file: 'unit-rich-text-label-text-direction.tscn', mode: '2d' },
+  { name: 'title-text-direction', file: 'unit-title-text-direction.tscn', mode: '2d' },
+  { name: 'item-list-text-direction', file: 'unit-item-list-text-direction.tscn', mode: '2d' },
   // Lists, ranges and the picker. The Tree scene is 100px wide so the column
   // division leaves a remainder: an even width makes the RTL row match the LTR.
   { name: 'item-list-rtl', file: 'unit-item-list-rtl.tscn', mode: '2d' },
