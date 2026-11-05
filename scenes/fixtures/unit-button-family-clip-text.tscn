@@ -1,7 +1,7 @@
 ; The one variable: clip_text on a box narrower than its label. CheckBox, CheckButton, OptionButton
 ; and MenuButton draw their label through Button::_notification, so TextParagraph::draw cuts each
 ; line to the paragraph box (text_paragraph.cpp:925-931) and clip_text zeroes the text's width in the
-; minimum size (button.cpp:492-494). Each box is narrower than "alpha bravo" plus its icon.
+; minimum size (button.cpp:493-495). Each box is narrower than "alpha bravo" plus its icon.
 
 [gd_scene format=3 uid="uid://unit_button_family_clip_text"]
 

@@ -105,7 +105,7 @@ export function shapeButtonLabel(
  * The ascent is a whole pixel, so the floor moves ahead of it. Unfloored, a half
  * pixel lands on a boundary WebGL resolves upward, a row above Godot.
  */
-export function centredTextTopPx(boxHeightPx: number, textHeightPx: number, topInsetPx: number): number {
+function centredTextTopPx(boxHeightPx: number, textHeightPx: number, topInsetPx: number): number {
   return Math.floor((boxHeightPx - textHeightPx) / 2 + topInsetPx);
 }
 
@@ -313,8 +313,31 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
   };
 }
 
+/**
+ * The label box of a Button-family Control that reserves `reservedPx` (its check, toggle or arrow plus
+ * `h_separation`) on one side, as `_internal_margin` does (`button.cpp:247-260`). Under RTL the
+ * reservation changes sides at the caller and the alignment swaps here (`button.cpp:271-275`).
+ */
+export function reservedLabelBox(input: {
+  rectSize: Vector2;
+  margin: { left: number; top: number; right: number; bottom: number };
+  reservedPx: number;
+  isReservedOnLeft: boolean;
+  textHeightPx: number;
+  textAlignment: number;
+  rtl: boolean;
+}): ButtonLabelBox {
+  const { rectSize, margin, reservedPx, isReservedOnLeft, textHeightPx, textAlignment, rtl } = input;
+  return {
+    leftPx: margin.left + (isReservedOnLeft ? reservedPx : 0),
+    topPx: centredTextTopPx(rectSize.y - margin.top - margin.bottom, textHeightPx, margin.top),
+    widthPx: rectSize.x - margin.left - margin.right - reservedPx,
+    alignment: rtl ? swapAlignmentSide(textAlignment) : textAlignment,
+  };
+}
+
 /** `button.cpp:266-275`: LEFT and RIGHT trade places under RTL, and any other value stays. */
-export function swapAlignmentSide(alignment: number): number {
+function swapAlignmentSide(alignment: number): number {
   if (alignment === H_RIGHT) return H_LEFT;
   if (alignment === H_LEFT) return H_RIGHT;
   return alignment;

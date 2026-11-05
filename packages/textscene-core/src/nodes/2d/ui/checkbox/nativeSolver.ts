@@ -18,9 +18,8 @@ import type {
 import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
-  centredTextTopPx,
   fitIconSize,
-  swapAlignmentSide,
+  reservedLabelBox,
   tintColor,
   type ButtonLabelBox,
 } from '../../../../r3f/controls/native/buttonBase';
@@ -275,14 +274,15 @@ export function layoutCheckBoxContent(input: CheckBoxContentInput): CheckBoxCont
   };
   if (!hasText) return { iconPosition, labelBox: null };
 
-  const reserved = iconSize.x + hSeparation;
-  // `rtl` moves the reservation to SIDE_RIGHT (`:98-100`) and the icon to the right margin (`:129`),
-  // and the alignment swaps sides (`button.cpp:271-275`).
-  const labelBox: ButtonLabelBox = {
-    leftPx: rtl ? margin : margin + reserved,
-    topPx: centredTextTopPx(rectSize.y - 2 * margin, textHeightPx, margin),
-    widthPx: rectSize.x - 2 * margin - reserved,
-    alignment: rtl ? swapAlignmentSide(textAlignment) : textAlignment,
-  };
+  // `rtl` moves the reservation to SIDE_RIGHT (`:98-100`) and the icon to the right margin (`:129`).
+  const labelBox = reservedLabelBox({
+    rectSize,
+    margin: { left: margin, top: margin, right: margin, bottom: margin },
+    reservedPx: iconSize.x + hSeparation,
+    isReservedOnLeft: !rtl,
+    textHeightPx,
+    textAlignment,
+    rtl,
+  });
   return { iconPosition, labelBox };
 }

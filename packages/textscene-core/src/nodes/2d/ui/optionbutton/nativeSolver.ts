@@ -19,10 +19,9 @@ import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistr
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
-  centredTextTopPx,
   pickButtonStyleBox,
   resolveButtonDrawState,
-  swapAlignmentSide,
+  reservedLabelBox,
   tintColor,
   type ButtonDrawState,
   type ButtonLabelBox,
@@ -211,15 +210,16 @@ export function layoutOptionButtonContent(input: OptionButtonContentInput): Opti
     h: arrowSize.y,
   };
 
-  const reserved = arrowSize.x + hSeparation;
-  // Under `rtl` the reservation moves to SIDE_LEFT and the alignment swaps sides (`button.cpp:271-275`),
-  // so only that arm reads `h_separation`.
-  const labelBox: ButtonLabelBox = {
-    leftPx: styleMargin.left + (rtl ? reserved : 0),
-    topPx: centredTextTopPx(rectSize.y - styleMargin.top - styleMargin.bottom, textHeightPx, styleMargin.top),
-    widthPx: rectSize.x - styleMargin.left - styleMargin.right - reserved,
-    alignment: rtl ? swapAlignmentSide(textAlignment) : textAlignment,
-  };
+  // Under `rtl` the reservation moves to SIDE_LEFT, so only that arm reads `h_separation`.
+  const labelBox = reservedLabelBox({
+    rectSize,
+    margin: styleMargin,
+    reservedPx: arrowSize.x + hSeparation,
+    isReservedOnLeft: rtl,
+    textHeightPx,
+    textAlignment,
+    rtl,
+  });
 
   return { arrowRect, labelBox };
 }

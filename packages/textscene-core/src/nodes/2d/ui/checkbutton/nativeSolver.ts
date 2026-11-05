@@ -18,9 +18,8 @@ import type {
 import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
-  centredTextTopPx,
   fitIconSize,
-  swapAlignmentSide,
+  reservedLabelBox,
   tintColor,
   type ButtonLabelBox,
 } from '../../../../r3f/controls/native/buttonBase';
@@ -299,12 +298,14 @@ export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckB
   };
   if (!hasText) return { iconPosition, labelBox: null };
 
-  const reserved = iconSize.x + hSeparation;
-  const labelBox: ButtonLabelBox = {
-    leftPx: marginX + (rtl ? reserved : 0),
-    topPx: centredTextTopPx(rectSize.y - 2 * marginY, textHeightPx, marginY),
-    widthPx: rectSize.x - 2 * marginX - reserved,
-    alignment: rtl ? swapAlignmentSide(textAlignment) : textAlignment,
-  };
+  const labelBox = reservedLabelBox({
+    rectSize,
+    margin: { left: marginX, top: marginY, right: marginX, bottom: marginY },
+    reservedPx: iconSize.x + hSeparation,
+    isReservedOnLeft: rtl,
+    textHeightPx,
+    textAlignment,
+    rtl,
+  });
   return { iconPosition, labelBox };
 }

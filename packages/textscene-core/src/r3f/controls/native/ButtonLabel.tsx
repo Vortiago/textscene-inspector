@@ -19,17 +19,21 @@ interface ButtonLabelProps extends Pick<
 /** @canonical A Button-family label drawn in its paragraph box, each line shifted and cut */
 export function ButtonLabel({ layout, box, ...runProps }: ButtonLabelProps) {
   const drawnLines = useMemo(
-    () => buttonDrawnLabel(layout.lines, box.widthPx, box.alignment),
-    [layout.lines, box.widthPx, box.alignment]
+    () =>
+      buttonDrawnLabel(layout.lines, box.widthPx, box.alignment).map(({ line, offsetXPx }) => ({
+        lineLayout: soloLineLayout(line, layout),
+        offsetXPx,
+      })),
+    [layout, box.widthPx, box.alignment]
   );
   return (
     <>
-      {drawnLines.map(({ line, offsetXPx }, i) => (
+      {drawnLines.map(({ lineLayout, offsetXPx }, i) => (
         <CanvasItemGroup
           key={i}
           position={[box.leftPx + offsetXPx, -(box.topPx + i * layout.linePitchPx), 0]}
         >
-          <TextRun layout={soloLineLayout(line, layout)} {...runProps} />
+          <TextRun layout={lineLayout} {...runProps} />
         </CanvasItemGroup>
       ))}
     </>
