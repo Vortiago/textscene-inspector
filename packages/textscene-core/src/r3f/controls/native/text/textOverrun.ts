@@ -11,7 +11,13 @@
  */
 import { OPEN_SANS_ATLAS_GLYPHS } from './openSansAtlas';
 import { getFontEmboldenedAdvancePx, getFontEmboldenGrowthPx, type FontMetrics } from './fontMetrics';
-import { isWhitespace, type GlyphPlacement, type TextLineLayout } from './textLayout';
+import {
+  isWhitespace,
+  soloLineLayout,
+  type GlyphPlacement,
+  type TextLayoutResult,
+  type TextLineLayout,
+} from './textLayout';
 import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 /**
@@ -38,6 +44,20 @@ const NO_TRIM_FLAGS: OverrunTrimFlags = {
   shortStringEllipsis: false,
   justificationAware: false,
 };
+
+/** The properties that make a narrower box cut or trim the text instead of growing (`button.cpp:493-495`, `label.cpp:993-995`). */
+export interface TextClipProperties {
+  clipText?: boolean;
+  overrunBehavior?: number;
+}
+
+/** `clip_text` or a trimming overrun behaviour: the text's width no longer sets the minimum size. */
+export function isTextWidthClipped(props: TextClipProperties): boolean {
+  return (
+    props.clipText === true ||
+    (props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING) !== OverrunBehavior.OVERRUN_NO_TRIMMING
+  );
+}
 
 /** `TextServer::get_overrun_flags_from_behavior` (`text_server.cpp:2399-2432`). */
 export function overrunFlagsForBehavior(behavior: number | undefined): OverrunTrimFlags {
@@ -108,7 +128,7 @@ const DEFAULT_ELLIPSIS_CHAR = '…';
 /** `ell_min_characters` (`text_server_adv.cpp:6049`): below this many kept characters, a plain cut replaces the ellipsis. */
 const ELL_MIN_CHARACTERS = 6;
 
-interface OverrunTrimOptions {
+export interface OverrunTrimOptions {
   fontMetrics: FontMetrics;
   /** The font size of the last glyph, which Godot reads (`text_server_adv.cpp:5981`): the line size, or its trailing run size. */
   fontSizePx: number;
@@ -327,4 +347,20 @@ function placeEllipsis(
     penX += advance;
     return placed;
   });
+}
+
+/**
+ * A one-line paragraph trimmed to `widthPx`, as `TextLine::draw` or a one-row `TextParagraph::draw`
+ * trims it. Returns `layout` itself when nothing is cut, so a memo downstream holds.
+ */
+export function trimSoloLine(
+  layout: TextLayoutResult,
+  flags: OverrunTrimFlags,
+  widthPx: number,
+  options: OverrunTrimOptions
+): TextLayoutResult {
+  if (!flags.trim) return layout;
+  const line = layout.lines[0]!;
+  const trimmedLine = trimLineToWidth(line, widthPx, flags, options);
+  return trimmedLine === line && layout.lines.length === 1 ? layout : soloLineLayout(trimmedLine, layout);
 }

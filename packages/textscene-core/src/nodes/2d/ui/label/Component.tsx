@@ -36,7 +36,6 @@ import {
 import type { LabelProperties } from './types';
 import {
   AutowrapMode,
-  OverrunBehavior,
   VisibleCharactersBehavior,
   JustificationFlag,
   DEFAULT_JUSTIFICATION_FLAGS,
@@ -167,10 +166,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   // width, whatever clip_text says. The autowrap-ON branch (`:269-301`) trims only
   // the line `max_lines_visible` hides, which is not modelled
   // (`LabelProperties.overrunBehavior`).
-  const overrunFlags = useMemo(
-    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
-    [props.overrunBehavior]
-  );
+  const overrunFlags = useMemo(() => overrunFlagsForBehavior(props.overrunBehavior), [props.overrunBehavior]);
   const trimmedPlacements = useMemo(() => {
     if (autowrapMode !== AutowrapMode.AUTOWRAP_OFF || !overrunFlags.trim) return placements;
     const widthPx = labelShapingWidthPx(rect.w);

@@ -17,16 +17,20 @@ import { drawnLinesInBox, textParagraphLineShiftPx } from './text/lineDrawClip';
 import {
   shapeText,
   shapedTextSizeWidthPx,
-  soloLineLayout,
   type TextLayoutResult,
   type TextLineLayout,
 } from './text/textLayout';
-import { overrunFlagsForBehavior, trimLineToWidth } from './text/textOverrun';
+import {
+  isTextWidthClipped,
+  overrunFlagsForBehavior,
+  trimSoloLine,
+  type TextClipProperties,
+} from './text/textOverrun';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { type Rgba } from '../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
 import type { Vector2 } from '../../../godot/math/vector';
-import { AutowrapMode, OverrunBehavior } from '../../../godot/text/textServerEnums';
+import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 // --- Draw-state + StyleBox chrome ------------------------------------------
@@ -350,20 +354,6 @@ function swapAlignmentSide(alignment: number): number {
   return alignment;
 }
 
-/** The properties that make a narrower box cut or trim the label instead of growing (`button.cpp:493-495`). */
-interface TextClipProperties {
-  clipText?: boolean;
-  overrunBehavior?: number;
-}
-
-/** `clip_text` or a trimming overrun behaviour: the label's width no longer sets the minimum size. */
-export function isTextWidthClipped(props: TextClipProperties): boolean {
-  return (
-    props.clipText === true ||
-    (props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING) !== OverrunBehavior.OVERRUN_NO_TRIMMING
-  );
-}
-
 /**
  * A Button-family label's width contribution to the minimum size: the ceiled shaped width, or 0 when
  * {@link isTextWidthClipped}, since a narrower box cuts or trims the label.
@@ -436,12 +426,9 @@ export function trimButtonLabel(
   drawableWidthPx: number,
   fontSizePx: number
 ): TextLayoutResult {
-  const flags = overrunFlagsForBehavior(overrunBehavior);
-  if (!flags.trim || layout.lines.length !== 1) return layout;
-  const line = layout.lines[0]!;
-  const trimmedLine = trimLineToWidth(line, textBufWidthPx(drawableWidthPx), flags, {
+  if (layout.lines.length !== 1) return layout;
+  return trimSoloLine(layout, overrunFlagsForBehavior(overrunBehavior), textBufWidthPx(drawableWidthPx), {
     fontMetrics: layout.fontMetrics,
     fontSizePx,
   });
-  return trimmedLine === line ? layout : soloLineLayout(trimmedLine, layout);
 }

@@ -8,6 +8,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -32,7 +33,6 @@ import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import {
   AutowrapMode,
-  OverrunBehavior,
   VisibleCharactersBehavior,
   DEFAULT_JUSTIFICATION_FLAGS,
 } from '../../../../godot/text/textServerEnums';
@@ -375,11 +375,7 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // The max of the ceils is the ceil of the max, so the widest raw line converts once.
   // `clip_text` or an overrun behaviour other than NO_TRIMMING drops the width floor to 1
   // (label.cpp:993-995), since a narrower box trims the text.
-  const overrunBehavior = props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING;
-  const widthPx =
-    props.clipText || overrunBehavior !== OverrunBehavior.OVERRUN_NO_TRIMMING
-      ? 1
-      : shapedTextSizeWidthPx(windowed.widthPx);
+  const widthPx = isTextWidthClipped(props) ? 1 : shapedTextSizeWidthPx(windowed.widthPx);
   return { x: widthPx, y: height };
 };
 
