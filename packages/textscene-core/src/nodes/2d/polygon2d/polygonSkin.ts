@@ -9,9 +9,10 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { storedReal as f } from '../../../godot/math/real.js';
 import {
-  affineInverseTransform2D,
-  transform2DXform,
+  affineInverseTransform2DInto,
+  mutableTransform2D,
   type Transform2DColumns,
 } from '../../../godot/math/transform2d.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
@@ -102,9 +103,29 @@ export function skinnedPoints(
   boneMatrices: readonly (Transform2DColumns | undefined)[],
   skeletonToMesh: Transform2DColumns
 ): Vector2[] {
-  const meshToSkeleton = affineInverseTransform2D(skeletonToMesh);
-  return points.map((point, vertex) => {
-    const local = transform2DXform(meshToSkeleton, point);
+  const out = points.map(() => ({ x: 0, y: 0 }));
+  return skinnedPointsInto(out, points, influences, boneMatrices, skeletonToMesh);
+}
+
+/** Written only by {@link skinnedPointsInto}, and read back before it returns. */
+const meshToSkeleton = mutableTransform2D();
+
+/**
+ * {@link skinnedPoints} written into `out`, one point per point of `points`, for a render that
+ * allocates nothing. The caller owns `out` and reads it before the next call.
+ */
+export function skinnedPointsInto(
+  out: Vector2[],
+  points: readonly Vector2[],
+  influences: VertexInfluences,
+  boneMatrices: readonly (Transform2DColumns | undefined)[],
+  skeletonToMesh: Transform2DColumns
+): Vector2[] {
+  const toSkeleton = affineInverseTransform2DInto(meshToSkeleton, skeletonToMesh);
+  points.forEach((point, vertex) => {
+    // `transform2DXform` in float32, inline so the local point is no object.
+    const localX = f(f(f(toSkeleton.a * point.x) + f(toSkeleton.c * point.y)) + toSkeleton.tx);
+    const localY = f(f(f(toSkeleton.b * point.x) + f(toSkeleton.d * point.y)) + toSkeleton.ty);
     let x = 0;
     let y = 0;
     let homogeneous = 0;
@@ -115,15 +136,12 @@ export function skinnedPoints(
       const matrix = boneMatrices[influences.bones[index]!];
       homogeneous += weight;
       if (!matrix) continue;
-      const moved = xform(matrix, local.x, local.y, 1);
-      x += weight * moved.x;
-      y += weight * moved.y;
+      x += weight * (matrix.a * localX + matrix.c * localY + matrix.tx);
+      y += weight * (matrix.b * localX + matrix.d * localY + matrix.ty);
     }
-    return xform(skeletonToMesh, x, y, homogeneous);
+    const moved = out[vertex]!;
+    moved.x = skeletonToMesh.a * x + skeletonToMesh.c * y + skeletonToMesh.tx * homogeneous;
+    moved.y = skeletonToMesh.b * x + skeletonToMesh.d * y + skeletonToMesh.ty * homogeneous;
   });
-}
-
-/** `t` applied to the homogeneous point `(x, y, w)`: the origin counts `w` times. */
-function xform(t: Transform2DColumns, x: number, y: number, w: number): Vector2 {
-  return { x: t.a * x + t.c * y + t.tx * w, y: t.b * x + t.d * y + t.ty * w };
+  return out;
 }

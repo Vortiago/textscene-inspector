@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { TRANSFORM2D_IDENTITY, type Transform2DColumns } from '../../../godot/math/transform2d';
-import { skinnedPoints, vertexInfluences } from './polygonSkin';
+import { skinnedPoints, skinnedPointsInto, vertexInfluences } from './polygonSkin';
 
 const QUARTER_TURN: Transform2DColumns = { a: 0, b: 1, c: -1, d: 0, tx: 0, ty: 0 };
 
@@ -108,5 +108,17 @@ describe('skinnedPoints', () => {
     const [point] = skinnedPoints([{ x: 40, y: 30 }], influences, [QUARTER_TURN], translation(5, 5));
     expect(point!.x).toBeCloseTo(5, 4);
     expect(point!.y).toBeCloseTo(5, 4);
+  });
+});
+
+describe('skinnedPointsInto', () => {
+  it('writes the points skinnedPoints returns into the buffer it is given', () => {
+    const influences = vertexInfluences(1, [{ bone: 0, weights: [1] }]);
+    const out = [{ x: 0, y: 0 }];
+
+    expect(skinnedPointsInto(out, [{ x: 40, y: 30 }], influences, [QUARTER_TURN], translation(5, 5))).toBe(
+      out
+    );
+    expect(out).toEqual(skinnedPoints([{ x: 40, y: 30 }], influences, [QUARTER_TURN], translation(5, 5)));
   });
 });

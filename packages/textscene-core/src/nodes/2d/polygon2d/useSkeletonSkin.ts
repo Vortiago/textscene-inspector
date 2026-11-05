@@ -20,7 +20,7 @@ import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext.js'
 import { lookupDrawnObjects, type DrawnObjects } from '../../../r3f/drawnObjects.js';
 import { transform2DFromThreeMatrixInto, writeGodotPointAsThree } from '../../../r3f/node2dTransform.js';
 import { observeSceneCamera } from '../../../r3f/sceneRenderCamera.js';
-import { skinnedPoints } from './polygonSkin.js';
+import { skinnedPointsInto } from './polygonSkin.js';
 import type { PolygonSkeletonBinding } from './skeletonBinding.js';
 
 /**
@@ -75,6 +75,8 @@ class MeshSkin {
   private readonly skeletonGlobal = mutableTransform2D();
   private readonly skeletonInverse = mutableTransform2D();
   private readonly skeletonToMesh = mutableTransform2D();
+  /** Written only by `skinned`, and read by `write` in the same render. */
+  private readonly skinnedBuffer: Vector2[];
 
   constructor(
     private readonly mesh: THREE.Mesh,
@@ -88,6 +90,7 @@ class MeshSkin {
     this.writtenAt = new Float64Array(terms).fill(NaN);
     this.readAt = new Float64Array(terms);
     this.boneMatrices = binding.bonePaths.map(() => mutableTransform2D());
+    this.skinnedBuffer = this.restPoints.map(() => ({ x: 0, y: 0 }));
   }
 
   update(): void {
@@ -135,13 +138,19 @@ class MeshSkin {
       canvasTransformInto(this.skeletonToMesh, this.mesh)
     );
     multiplyTransform2DInto(this.skeletonToMesh, meshInverse, this.skeletonGlobal);
-    return skinnedPoints(this.restPoints, this.binding.influences, this.boneMatrices, this.skeletonToMesh);
+    return skinnedPointsInto(
+      this.skinnedBuffer,
+      this.restPoints,
+      this.binding.influences,
+      this.boneMatrices,
+      this.skeletonToMesh
+    );
   }
 
   private write(points: readonly Vector2[]): void {
     const position = this.geometry.getAttribute('position') as THREE.BufferAttribute;
     const array = position.array as Float32Array;
-    points.forEach((point, i) => writeGodotPointAsThree(array, i * 3, point.x, point.y));
+    for (let i = 0; i < points.length; i++) writeGodotPointAsThree(array, i * 3, points[i]!.x, points[i]!.y);
     position.needsUpdate = true;
     this.geometry.computeBoundingSphere();
     if (this.geometry.boundingBox) this.geometry.computeBoundingBox();
