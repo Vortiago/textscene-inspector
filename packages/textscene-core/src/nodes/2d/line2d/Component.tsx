@@ -125,14 +125,14 @@ function LineMesh({
 }) {
   const vertexColors = geometry.hasAttribute('color');
   const canvasSpace = useCanvasColorSpace();
-  const arrayColor = useArrayColorOf();
+  const toArrayLinear = useArrayColorOf();
   // With a gradient `default_color` is ignored: the vertices carry the colour and the node's tint
   // multiplies on top (`line_builder.cpp:120-124`). Without one, `default_color` is the one array
   // colour (`line_2d.cpp:306-310`).
   const { fill, opacity } = useMemo(() => {
-    const arrayColour = vertexColors ? WHITE_MODULATE : color;
-    return { fill: arrayColor(tint.own, arrayColour), opacity: tint.own.a * arrayColour.a };
-  }, [tint.own, color, vertexColors, arrayColor]);
+    const arrayColor = vertexColors ? WHITE_MODULATE : color;
+    return { fill: toArrayLinear(tint.own, arrayColor), opacity: tint.own.a * arrayColor.a };
+  }, [tint.own, color, vertexColors, toArrayLinear]);
 
   const program = materialProgramInputs({
     props: {

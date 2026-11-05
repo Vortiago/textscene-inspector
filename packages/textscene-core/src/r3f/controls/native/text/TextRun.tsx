@@ -162,12 +162,10 @@ interface TextRunLook {
   side: THREE.Side | undefined;
   /** The lit Control around the run, or undefined for a run drawn unlit such as Label3D's. */
   pixelMaterial: CanvasItemPixelMaterial | undefined;
-  /** `tint` as the item draws it, in linear (`useItemLinearColor`). */
+  /** `tint` as the item draws it, in linear (`useItemLinearColor`), for the atlas painter. */
   linearTint: THREE.Color;
   /** The outline colour as the item draws it, in linear. */
   linearOutline: THREE.Color;
-  /** Whether the run draws in a linear canvas, where the raster is white and the material carries the tint. */
-  isLinearCanvas: boolean;
 }
 
 /**
@@ -185,8 +183,7 @@ function buildTextRun(
   outlineColor: Rgba | undefined,
   outlineWidthPx: number
 ): BuiltTextRun {
-  const { tint, clippingPlanes, depthTest, side, pixelMaterial, linearTint, linearOutline, isLinearCanvas } =
-    look;
+  const { tint, clippingPlanes, depthTest, side, pixelMaterial, linearTint, linearOutline } = look;
   const skew = layout.fontMetrics.skew ?? 0;
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
@@ -196,10 +193,7 @@ function buildTextRun(
     geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
 
-    // Godot's glyph is a white coverage mask that the rect modulate tints (`text_server_adv.cpp`
-    // `rasterize_bitmap`). A linear canvas converts that modulate unclamped, so the material carries it.
-    const rasterTint = isLinearCanvas ? WHITE_MODULATE : tint;
-    const canvas = paintSceneFontCanvas(layout, fontSizePx, rasterTint, skew, canvasLayout, strokeWidthPx);
+    const canvas = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, strokeWidthPx);
     const texture = new THREE.CanvasTexture(canvas);
     // `SRGBColorSpace`, not the 2D-canvas rule's `NoColorSpace`: measured, `NoColorSpace` dips
     // 5/255 below the backdrop at a glyph edge, where Godot draws a monotonic ramp. `textRun.md`
@@ -216,7 +210,6 @@ function buildTextRun(
     const paint = (blend: SurfaceBlend | undefined) =>
       createCanvasTextMaterial({
         map: texture,
-        color: isLinearCanvas ? linearTint : undefined,
         opacity,
         clippingPlanes,
         depthTest,
@@ -277,6 +270,13 @@ export function TextRun({
   const linearTint = useItemLinearColor(tint);
   const linearOutline = useItemLinearColor(outlineColor ?? WHITE_MODULATE);
   const isLinearCanvas = useCanvasColorSpace().isLinear;
+  const isCanvasRun = isCanvasFontMetrics(layout.fontMetrics);
+  // Godot's glyph is a white coverage mask that the rect modulate tints (`text_server_adv.cpp`
+  // `rasterize_bitmap`). A linear canvas converts that modulate unclamped, so a white raster takes
+  // the tint on its material, and a tint change repaints nothing.
+  const rasterColor = isCanvasRun && isLinearCanvas ? linearTint : null;
+  const builtTint = rasterColor ? { ...WHITE_MODULATE, a: tint.a } : tint;
+  const atlasTint = isCanvasRun ? null : linearTint;
   if (blends && !swapped)
     throw new Error('expected blends only inside a GeometryInstance3D drawer, got none');
 
@@ -285,7 +285,7 @@ export function TextRun({
       buildTextRun(
         layout,
         fontSizePx,
-        { tint, clippingPlanes, depthTest, side, pixelMaterial, linearTint, linearOutline, isLinearCanvas },
+        { tint: builtTint, clippingPlanes, depthTest, side, pixelMaterial, linearTint, linearOutline },
         strokeWidthPx,
         textureFilter,
         mipmapped,
@@ -298,17 +298,16 @@ export function TextRun({
     [
       layout,
       fontSizePx,
-      tint.r,
-      tint.g,
-      tint.b,
-      tint.a,
+      builtTint.r,
+      builtTint.g,
+      builtTint.b,
+      builtTint.a,
       clippingPlanes,
       depthTest,
       side,
       pixelMaterial,
-      linearTint,
+      atlasTint,
       linearOutline,
-      isLinearCanvas,
       strokeWidthPx,
       textureFilter,
       mipmapped,
@@ -321,6 +320,7 @@ export function TextRun({
   );
   const material = usePaintedMaterial(run, blends?.unfaded);
   const alphaPassMaterial = useAlphaPassMaterial(run, blends?.alphaPass);
+  useRasterColor(rasterColor, material, alphaPassMaterial);
   const meshRef = useRef<THREE.Mesh | null>(null);
   useLayoutEffect(() => {
     const mesh = meshRef.current;
@@ -394,6 +394,19 @@ function AtlasPending(): null {
 }
 
 /** The run's material for `blend`. */
+/** Sets the colour a white canvas raster multiplies by on each of its materials, or leaves them white. */
+function useRasterColor(
+  color: THREE.Color | null,
+  material: THREE.Material,
+  alphaPassMaterial: THREE.Material | null
+): void {
+  useLayoutEffect(() => {
+    if (!color) return;
+    for (const painted of [material, alphaPassMaterial])
+      if (painted instanceof THREE.MeshBasicMaterial) painted.color.copy(color);
+  }, [color, material, alphaPassMaterial]);
+}
+
 function usePaintedMaterial(run: BuiltTextRun, blend: SurfaceBlend | undefined): THREE.Material {
   return useOwnedMaterial(run, blend, () => run.paint(blend));
 }

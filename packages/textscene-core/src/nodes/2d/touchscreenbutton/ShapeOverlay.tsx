@@ -6,13 +6,13 @@
 
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
+import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { CollisionGizmo2D } from '../../physics/2d/collisionshape2d/CollisionGizmo2D';
 import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../physics/shared/debugColor';
 import type { TouchScreenButtonProperties } from './types';
-import { useItemLinearColor } from '../../../r3f/canvasItemModulate';
 
 export function ShapeOverlay({ props }: { props: TouchScreenButtonProperties }) {
   const sceneResources = useSceneResources();
@@ -23,7 +23,7 @@ export function ShapeOverlay({ props }: { props: TouchScreenButtonProperties }) 
     sceneResources.externalResources,
     sceneResources.internalResources
   );
-  const color = useItemLinearColor(DEFAULT_COLLISION_DEBUG_COLOR);
+  const color = useGodotLinearColor(DEFAULT_COLLISION_DEBUG_COLOR);
 
   if (!showCollisions || !props.shape_visible || !shape) return null;
 

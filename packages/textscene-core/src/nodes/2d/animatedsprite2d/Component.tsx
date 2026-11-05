@@ -140,9 +140,9 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const frame = frameCount > 0 ? Math.min(Math.max(rawFrame, 0), frameCount - 1) : 0;
   const frameRef = currentAnim?.frames[frame] ?? null;
 
+  const canvasSpace = useCanvasColorSpace();
   // A frame's ids are scoped to its SpriteFrames' home, so the frame resolves
   // against those pools: the scene's, or the .tres's.
-  const canvasSpace = useCanvasColorSpace();
   const {
     texture: frameTexture,
     size: frameSize,
