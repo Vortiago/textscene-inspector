@@ -59,10 +59,12 @@ export async function decodeFont(
     return address ? loadFont(address) : null;
   };
 
-  const fallbacks = await Promise.all(extractResourceRefs(properties['fallbacks'] ?? '').map(resolveRef));
-  const baseFont = resourceType === 'FontVariation' ? await resolveRef(properties['base_font']) : null;
   if (!FONT_SUB_RESOURCE_TYPES.has(resourceType))
     throw new Error(`Unsupported font resource type: ${resourceType}`);
+  const [fallbacks, baseFont] = await Promise.all([
+    Promise.all(extractResourceRefs(properties['fallbacks'] ?? '').map(resolveRef)),
+    resourceType === 'FontVariation' ? resolveRef(properties['base_font']) : null,
+  ]);
   return fontResourceOf(resourceType, properties, nonNull(fallbacks), baseFont);
 }
 

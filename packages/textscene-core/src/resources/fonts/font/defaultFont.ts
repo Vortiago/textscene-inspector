@@ -31,8 +31,17 @@ export const NO_DEFAULT_FONTS: DefaultFonts = { variation: [null], system: [null
  * metrics cache keyed on it keeps its hits. The theme lookup builds one `DefaultFonts` per project.
  */
 const resolvedOver = perObject((defaults: DefaultFonts) =>
-  perObject((font: FontResource) => replaceDefaults(font, defaults, 0))
+  perObject((font: FontResource) => replaceDefaults(font, { defaults, resolved: new Map() }, 0))
 );
+
+/**
+ * One walk of a font graph over its defaults. `resolved` holds each font the walk has finished, so
+ * a default whose fallbacks reach it again resolves once, not once per path to it.
+ */
+interface Resolution {
+  readonly defaults: DefaultFonts;
+  readonly resolved: Map<FontResource, FontResource>;
+}
 
 /** `Font::_is_base_cyclic` (`font.cpp:152-169`): whether `candidate` is `font`, or its `base_font` chain reaches it. */
 function isBaseCyclic(candidate: FontResource | null, font: FontResource): boolean {
@@ -50,26 +59,34 @@ function isBaseCyclic(candidate: FontResource | null, font: FontResource): boole
 function defaultOf(
   font: FontResource,
   candidates: readonly (FontResource | null)[],
-  defaults: DefaultFonts,
+  resolution: Resolution,
   depth: number
 ): FontResource | null {
   const index = candidates.findIndex((candidate) => !isBaseCyclic(candidate, font));
   if (index < 0 || depth >= MAX_FALLBACK_DEPTH) return FACELESS_FONT;
   const chosen = candidates[index]!;
-  return chosen && replaceDefaults(chosen, defaults, depth + 1);
+  return chosen && replaceDefaults(chosen, resolution, depth + 1);
 }
 
 /** `font` itself where nothing under it changes, so an untouched branch keeps its identity. */
-function replaceDefaults(font: FontResource, defaults: DefaultFonts, depth: number): FontResource {
-  const fallbacks = font.fallbacks.map((fallback) => replaceDefaults(fallback, defaults, depth));
+function replaceDefaults(font: FontResource, resolution: Resolution, depth: number): FontResource {
+  let replaced = resolution.resolved.get(font);
+  if (!replaced) resolution.resolved.set(font, (replaced = replaceDefaultsOnce(font, resolution, depth)));
+  return replaced;
+}
+
+/** {@link replaceDefaults} for a font the walk has not finished. */
+function replaceDefaultsOnce(font: FontResource, resolution: Resolution, depth: number): FontResource {
+  const fallbacks = font.fallbacks.map((fallback) => replaceDefaults(fallback, resolution, depth));
   const changed = fallbacks.some((fallback, i) => fallback !== font.fallbacks[i]);
   if (font.kind === 'file') return changed ? { ...font, fallbacks } : font;
+  const { defaults } = resolution;
   const candidates = font.kind === 'system' ? defaults.system : defaults.variation;
   // A SystemFont's own `base_font` is the OS font, and none matches.
   const baseFont =
     font.kind === 'variation' && font.baseFont
-      ? replaceDefaults(font.baseFont, defaults, depth)
-      : defaultOf(font, candidates, defaults, depth);
+      ? replaceDefaults(font.baseFont, resolution, depth)
+      : defaultOf(font, candidates, resolution, depth);
   return changed || baseFont !== font.baseFont ? { ...font, baseFont, fallbacks } : font;
 }
 

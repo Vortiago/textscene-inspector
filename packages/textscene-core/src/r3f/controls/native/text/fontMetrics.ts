@@ -397,13 +397,12 @@ export function firstFaceWithGlyph(face: FontMetrics, ch: string): FontMetrics |
 }
 
 /** One wrapper per face and fallback list, so a layout memoised on the face keeps its hits. */
-const fallbacksOf = perObject((_face: FontMetrics) => new Map<string, FontMetrics>());
+const fallbackWrappersOf = perObject((_face: FontMetrics) => new Map<string, FontMetrics>());
 
 /**
  * `face` with `fallbacks` as the rest of its **Fallback chain**. A face in the list twice, or the
  * face itself, is tried once, where it first stands.
  */
-
 export function withFallbacks<Metrics extends FontMetrics>(
   face: Metrics,
   fallbacks: readonly FontMetrics[]
@@ -411,7 +410,7 @@ export function withFallbacks<Metrics extends FontMetrics>(
   if (fallbacks.length === 0) return face;
   const distinct = [...new Set(fallbacks)].filter((fallback) => fallback !== face);
   if (distinct.length === 0) return face;
-  const byList = fallbacksOf(face);
+  const byList = fallbackWrappersOf(face);
   const key = distinct.map(identityKey).join(',');
   let wrapped = byList.get(key);
   if (!wrapped) byList.set(key, (wrapped = Object.create(face, { fallbacks: { value: distinct } })));

@@ -160,4 +160,13 @@ describe('withDefaultFonts — a default that is the font itself (`_is_base_cycl
     const defaults = { ...DEFAULTS, system: [second, first] };
     expect(findDrawnFace(withDefaultFonts(first, defaults))).toBe(NO_FACE);
   });
+
+  it('resolves a default whose SystemFont fallbacks each take it again once, not once per path', () => {
+    const variationDefault: FontVariationResource = {
+      ...variation(null),
+      fallbacks: [systemFont(), systemFont()],
+    };
+    const defaults = { variation: [variationDefault], system: [variationDefault] };
+    expect(findDrawnFace(withDefaultFonts(variationDefault, defaults))).toBe(NO_FACE);
+  });
 });

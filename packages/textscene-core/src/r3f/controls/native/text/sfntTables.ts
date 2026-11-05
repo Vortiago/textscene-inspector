@@ -71,8 +71,11 @@ const MAXP_GLYPH_COUNT_LENGTH = 6;
 const MAXP_VERSION_1 = 0x10000;
 const MAXP_VERSION_1_LENGTH = 32;
 
-/** The tables the scene-font loader reads: this module's and the `cmap`. A compressed container decompresses these and no others. */
-export const SCENE_FONT_TABLE_TAGS: readonly string[] = ['head', 'hhea', 'OS/2', 'fvar', 'cmap'];
+/**
+ * The tables the scene-font loader reads: this module's, and the `cmap` and `maxp` that tell which
+ * characters have a glyph. A compressed container decompresses these and no others.
+ */
+export const SCENE_FONT_TABLE_TAGS: readonly string[] = ['head', 'hhea', 'OS/2', 'fvar', 'cmap', 'maxp'];
 
 /**
  * The tables an outline reader uses (`sfntOutlines.ts`), for the container readers to decompress:

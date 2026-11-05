@@ -8,7 +8,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { SfntFile } from './sfntTables';
+import { readGlyphCount, type SfntFile } from './sfntTables';
 
 /** `cmap` platform and encoding of each Unicode subtable, best first, as HarfBuzz ranks them (`hb-ot-cmap-table.hh`). */
 const CMAP_SUBTABLE_RANK: readonly (readonly [platform: number, encoding: number])[] = [
@@ -137,19 +137,23 @@ export function cmapCodePoints(dv: DataView, cmapOffset: number, glyphCount: num
 
 /**
  * Whether `sfnt` maps a character to a glyph other than `.notdef`, which `_font_has_char` asks
- * FreeType. A font with no `cmap` subtable this module reads answers true, so its text keeps it.
+ * FreeType. `FT_Get_Char_Index` answers 0 for an index at or past `maxp.numGlyphs`. A font with no
+ * `cmap` subtable this module reads answers true, so its text keeps it.
  */
-export function sfntHasGlyph({ dv, tables }: SfntFile): (ch: string) => boolean {
-  const cmap = tables.get('cmap');
-  const lookup = cmap ? orOnRangeError(() => cmapLookup(dv, cmap.offset), null) : null;
+export function sfntHasGlyph(sfnt: SfntFile): (ch: string) => boolean {
+  const cmap = sfnt.tables.get('cmap');
+  const lookup = cmap ? orOnRangeError(() => cmapLookup(sfnt.dv, cmap.offset), null) : null;
   if (!lookup) return () => true;
+  const glyphCount = readGlyphCount(sfnt) ?? Infinity;
   // One answer per code point: the shaper asks for each character on every pass.
   const answers = new Map<number, boolean>();
   return (ch) => {
     const codePoint = ch.codePointAt(0)!;
     let answer = answers.get(codePoint);
-    if (answer === undefined)
-      answers.set(codePoint, (answer = orOnRangeError(() => lookup(codePoint), 1) !== 0));
+    if (answer === undefined) {
+      const glyphIndex = orOnRangeError(() => lookup(codePoint), 1);
+      answers.set(codePoint, (answer = glyphIndex !== 0 && glyphIndex < glyphCount));
+    }
     return answer;
   };
 }
