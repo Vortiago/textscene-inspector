@@ -1,8 +1,8 @@
 /**
  * The font resource processor, on the shared `createResourceProcessor` loop. It routes
  * by path: a raw font container loads as bytes, and anything else reads the owning
- * file's cached parse. A BMFont descriptor loads with its page images. It addresses a **Sub-resource path** (`res://file.tres::SubId`)
- * and loads other fonts: a font's `base_font`/`fallbacks`.
+ * file's cached parse, and a BMFont descriptor loads with its page images. It addresses a
+ * **Sub-resource path** (`res://file.tres::SubId`) and loads other fonts: a font's `base_font`/`fallbacks`.
  */
 
 import type { FileData, FileEventBus } from '../FileEventBus';

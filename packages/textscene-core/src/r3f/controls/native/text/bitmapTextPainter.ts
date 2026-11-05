@@ -27,7 +27,9 @@ export interface FillSheet {
 
 /** `fills` stacked in index order into a sheet as wide as the widest fill. */
 function stackFills(fills: readonly (BitmapFill | undefined)[]): FillSheet {
-  const width = Math.max(1, ...fills.map((fill) => fill?.width ?? 0));
+  // Array.from, not map: `fills` is sparse when a page id skips an index, and map keeps the holes,
+  // which spread into Math.max as undefined and give NaN.
+  const width = Math.max(1, ...Array.from(fills, (fill) => fill?.width ?? 0));
   const rowOffsets: (number | undefined)[] = [];
   let height = 0;
   for (const fill of fills) {

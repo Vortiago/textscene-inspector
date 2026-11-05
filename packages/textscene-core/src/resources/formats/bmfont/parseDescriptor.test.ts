@@ -93,4 +93,12 @@ describe('parseDescriptor', () => {
 
     expect(() => parseDescriptor(bytes.buffer)).toThrowError(/Version 2.*should be 3/);
   });
+
+  it('names the block and the missing bytes of a truncated binary descriptor', () => {
+    const whole = new Uint8Array(binaryDescriptor());
+
+    expect(() => parseDescriptor(whole.slice(0, whole.length - 3).buffer)).toThrowError(
+      /block \d needs \d+ bytes, but only \d+ remain/
+    );
+  });
 });

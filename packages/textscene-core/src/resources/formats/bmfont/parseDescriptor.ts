@@ -253,6 +253,11 @@ function parseBinary(bytes: ArrayBuffer, builder: DescriptorBuilder): void {
     const type = view.getUint8(position);
     const size = view.getUint32(position + 1, true);
     const body = position + 5;
+    if (body + size > bytes.byteLength) {
+      throw new Error(
+        `BMFont block ${type} needs ${size} bytes, but only ${bytes.byteLength - body} remain.`
+      );
+    }
     const reader = BINARY_BLOCK_READERS[type];
     if (!reader) throw new Error(`Invalid BMFont block type ${type}.`);
     reader(view, body, size, builder);

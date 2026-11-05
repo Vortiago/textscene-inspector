@@ -39,6 +39,15 @@ describe('sheetOf', () => {
     ...sheet.data.slice((row * sheet.width + x) * 4, (row * sheet.width + x) * 4 + 4),
   ];
 
+  it('keeps a finite width when a page id skips an index', () => {
+    const sparse = sheetOf({
+      ...testBitmapFont(),
+      fills: [undefined, { width: 3, height: 1, data: new Uint8Array(12) }],
+    });
+
+    expect(sparse.width).toBe(3);
+  });
+
   it('stacks the fills top to bottom in one sheet as wide as the widest', () => {
     expect([sheet.width, sheet.height]).toEqual([4, 5]);
     expect(sheet.rowOffsets).toEqual([0, undefined, 2]);
