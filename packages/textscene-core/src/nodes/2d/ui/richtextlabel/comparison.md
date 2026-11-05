@@ -28,6 +28,18 @@ the bar to the left edge and starts every line after it (`:990-996`). `scroll_fo
 to its foot (`:3827-3828`). A line that starts below the rect or ends above it is never drawn
 (`:973,978-981`), whether or not the control clips.
 
+`visible_characters` and `visible_ratio` derive each other in file order, in single precision
+(`rich_text_label.cpp:7401-7430,7892-7948`). Before Shaping, the default, shapes only the shown prefix
+for drawing, so the paragraph the count ends in wraps again as it grows (`:668-671`). After Shaping and
+the Glyphs behaviours keep the full wrap and skip glyphs (`:943-947,1466`). The glyph budget counts every
+character of the text, including an edge space that a wrap trims (`:8017-8033`). The line a paragraph tag
+ends counts no character (`:4097-4103`).
+
+`scroll_following_visible_characters` runs as the scene loads, before any line exists, so it scrolls to
+the scroll bar's default max, 100, and shows the bar over text that fits (`:2659-2667,5209-5221`).
+`scroll_active` false hides the bar and keeps the scroll. `scroll_following` scrolls the same way
+without the bar (`:3827-3830`).
+
 A `[b]` run and any embolden over the bundled font draw on the canvas painter, which emboldens the
 outline as FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0040). The run draws nothing until the
 bundled face loads, and draws on the atlas without its embolden where the face cannot register.
@@ -92,7 +104,4 @@ string against `true`, so an absent property or any other value silently resolve
 - **Approximated** `[hr]` does not start a line of its own, though Godot pushes a paragraph for it.
 - **Approximated** A `[p]` after an empty styling tag starts a new line, where
   `_find_layout_subitem` (:3712-3727) skips the empty tag.
-- **Not drawn** The loading bar's right-to-left fill (:2580-2588) and the reveal end of
-  `VC_GLYPHS_AUTO` (:944-945), since neither input is drawn.
-- **Not drawn** `scroll_following_visible_characters`, which scrolls to the last revealed line
-  (:2659-2667,5213-5221), since `visible_characters` is not drawn.
+- **Not drawn** The loading bar's right-to-left fill (:2580-2588), since the loading bar is not drawn.

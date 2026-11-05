@@ -34,16 +34,20 @@ import {
   RICH_TEXT_LABEL_DEFAULT_AUTOWRAP,
   layoutRichTextRuns,
   richTextLabelTextTheme,
+  richTextContentHeightPx,
   richTextUnderlineMetrics,
   shapeRichText,
   styledTextRuns,
   underlineRectPx,
   type RichTextImagePlacement,
+  type StyledTextRun,
 } from './nativeSolver';
 import { resolveRichTextFaces } from './styleFaces';
 import { shapeBesideScrollBar } from './scrollBar';
+import { richTextReveal, truncateRunsToCharacters, type RichTextReveal } from './visibleCharacters';
 import type { RichTextLabelProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
+import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { ResolvedTextTheme } from '../../../../r3f/controls/native/textTheme';
@@ -136,7 +140,8 @@ function useShapedRichText(
   props: RichTextLabelProperties,
   rect: Rect2,
   theme: NativeTheme,
-  textTheme: ResolvedTextTheme
+  textTheme: ResolvedTextTheme,
+  reveal: RichTextReveal | undefined
 ) {
   const runsAt = useCallback(
     (wrapWidthPx: number) =>
@@ -156,9 +161,10 @@ function useShapedRichText(
       h: rect.h,
       scrollActive: props.scrollActive,
       scrollFollowing: props.scrollFollowing,
+      scrollFollowingVisibleCharacters: props.scrollFollowingVisibleCharacters,
       rtl,
     }),
-    [rect.w, rect.h, props.scrollActive, props.scrollFollowing, rtl]
+    [rect.w, rect.h, props.scrollActive, props.scrollFollowing, props.scrollFollowingVisibleCharacters, rtl]
   );
 
   return useMemo(
@@ -166,19 +172,24 @@ function useShapedRichText(
       shapeBesideScrollBar(
         (wrapWidthPx) => {
           const runs = wrapWidthPx === rect.w ? runsAtRectWidth : runsAt(wrapWidthPx);
-          const layout = shapeRichText(
-            runs,
-            { normal, bold, italic, boldItalic },
-            {
-              fontSizePx: textTheme.fontSizePx,
-              boxWidthPx: wrapWidthPx,
-              autowrapMode,
-              tabStopsPx: props.tabStopsPx,
-              tabSize: props.tabSize,
-              autowrapTrimFlags: props.autowrapTrimFlags,
-            }
-          );
-          return { runs, layout };
+          const shape = (shapedRuns: StyledTextRun[]) =>
+            shapeRichText(
+              shapedRuns,
+              { normal, bold, italic, boldItalic },
+              {
+                fontSizePx: textTheme.fontSizePx,
+                boxWidthPx: wrapWidthPx,
+                autowrapMode,
+                tabStopsPx: props.tabStopsPx,
+                tabSize: props.tabSize,
+                autowrapTrimFlags: props.autowrapTrimFlags,
+              }
+            );
+          const layout = shape(runs);
+          // Before Shaping draws a prefix shaped on its own, so a typewriter reveal wraps as it grows.
+          if (reveal?.behavior !== VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return { runs, layout };
+          const shownRuns = truncateRunsToCharacters(runs, reveal.characters);
+          return { runs, layout, shown: { runs: shownRuns, layout: shape(shownRuns) } };
         },
         box,
         theme
@@ -198,6 +209,7 @@ function useShapedRichText(
       props.tabSize,
       props.autowrapTrimFlags,
       theme,
+      reveal,
     ]
   );
 }
@@ -219,12 +231,18 @@ function RichTextBody({
   );
 
   const { justificationFlags } = props;
-  const { runs, layout, wrapWidthPx, textOriginXPx, scrollOffsetPx, scrollBar } = useShapedRichText(
+  const { visibleCharacters, visibleRatio, visibleCharactersBehavior } = props;
+  const reveal = useMemo(
+    () => richTextReveal({ visibleCharacters, visibleRatio, visibleCharactersBehavior }, solveNode.rtl),
+    [visibleCharacters, visibleRatio, visibleCharactersBehavior, solveNode.rtl]
+  );
+  const { runs, layout, shown, wrapWidthPx, textOriginXPx, scrollOffsetPx, scrollBar } = useShapedRichText(
     solveNode,
     props,
     rect,
     theme,
-    textTheme
+    textTheme,
+    reveal
   );
 
   // The alignment property and the `[center]`/`[right]`/`[left]`/`[fill]` tags
@@ -232,7 +250,7 @@ function RichTextBody({
   // port. A FILL paragraph fits the text rect by `justification_flags`.
   const placements = useMemo(
     () =>
-      layoutRichTextRuns(runs, layout, {
+      layoutRichTextRuns(shown?.runs ?? runs, shown?.layout ?? layout, {
         boxWidthPx: wrapWidthPx,
         boxHeightPx: rect.h,
         scrollOffsetPx,
@@ -242,10 +260,17 @@ function RichTextBody({
           flags: justificationFlags,
           fontSizePx: textTheme.fontSizePx,
         },
+        reveal,
+        fullText: shown && {
+          heightPx: richTextContentHeightPx(runs, layout),
+          lineCount: layout.lines.length,
+        },
       }),
     [
       runs,
       layout,
+      shown,
+      reveal,
       wrapWidthPx,
       rect.h,
       scrollOffsetPx,

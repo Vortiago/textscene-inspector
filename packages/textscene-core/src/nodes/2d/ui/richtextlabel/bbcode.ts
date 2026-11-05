@@ -28,6 +28,12 @@ export const IMAGE_OBJECT_CHAR = '\ufffc';
 interface BBCodeRun {
   text: string;
   tags: readonly OpenBBCodeTag[];
+  /**
+   * Indices in `text` of the newlines a paragraph tag adds to end a line that holds items
+   * (`rich_text_label.cpp:4097-4103`). Godot starts a new `Line` there with no `ITEM_NEWLINE`, so
+   * these count no character. Absent when there are none.
+   */
+  implicitBreaks?: number[];
   /** Set only on the single-U+FFFC run for an `[img]` (`rich_text_label.cpp:6145`'s `add_image`), never alongside real text. */
   image?: ParsedImgTag;
 }
@@ -484,8 +490,14 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
     else if (added.length > 0) lineHasLayout = true;
   }
 
+  // Indices in `pending` of the newlines that `push` adds, which `flush` hands to the run.
+  let pendingBreaks: number[] = [];
+
   function push(tag: OpenBBCodeTag): void {
-    if (PARAGRAPH_TAGS.has(tag.name) && lineHasLayout) append('\n');
+    if (PARAGRAPH_TAGS.has(tag.name) && lineHasLayout) {
+      append('\n');
+      pendingBreaks.push(pending.length - 1);
+    }
     flush();
     stack.push(tag);
     // `[img]` opens a tag but no item (`:6145`): its loaded image sets the flag where it is added.
@@ -498,8 +510,17 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
     // bracket or `[hr]` never splits it into separate meshes. An image run
     // never merges: its `text` is the object placeholder a painter keys off.
     const previous = runs[runs.length - 1];
-    if (previous && !previous.image && sameTags(previous.tags, stack)) previous.text += pending;
-    else runs.push({ text: pending, tags: [...stack] });
+    const breaks = pendingBreaks;
+    pendingBreaks = [];
+    if (previous && !previous.image && sameTags(previous.tags, stack)) {
+      if (breaks.length > 0) {
+        previous.implicitBreaks ??= [];
+        for (const index of breaks) previous.implicitBreaks.push(previous.text.length + index);
+      }
+      previous.text += pending;
+    } else {
+      runs.push({ text: pending, tags: [...stack], ...(breaks.length > 0 && { implicitBreaks: breaks }) });
+    }
     pending = '';
   }
 

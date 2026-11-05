@@ -1,10 +1,11 @@
 /** Parses a Label: the Control properties plus its text, alignment and reveal state. */
 
 import { type ParsedHeading, unquoteString, unquoteStringName } from '../../../../parser/utils';
-import { parseOptionalFloat, parseOptionalInt } from '../../../../parser/valueParsers';
+import { parseOptionalInt } from '../../../../parser/valueParsers';
 import { parseTextDirectionProperties } from '../../../../parser/textDirectionParser';
 import { parseStructuredTextOverride } from '../../../../parser/structuredTextOverrideParser';
 import type { LabelProperties } from './types';
+import { resolveVisibleChars } from '../shared/visibleChars';
 import { parseControl } from '../control/parser';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
@@ -31,64 +32,6 @@ function parseTabStops(value: string | undefined): number[] | undefined {
  * defaults to `SIZE_FILL`, so this applies only when the scene sets no `size_flags_vertical`.
  */
 const LABEL_DEFAULT_V_SIZE_FLAGS = SizeFlags.SHRINK_CENTER;
-
-interface VisibleCharsState {
-  visibleChars: number;
-  visibleRatio: number;
-}
-
-/** `Label`'s own construction defaults (label.h:75-76). */
-const DEFAULT_VISIBLE_CHARS_STATE: VisibleCharsState = { visibleChars: -1, visibleRatio: 1 };
-
-/** `Label::set_visible_characters` (label.cpp:1285-1299): a no-op when `p_amount` matches the current field, else re-derives both fields from the current text length. */
-function applySetVisibleCharacters(
-  state: VisibleCharsState,
-  amount: number,
-  totalChars: number
-): VisibleCharsState {
-  if (state.visibleChars === amount) return state;
-  if (amount === -1 || totalChars === 0) return { visibleChars: amount, visibleRatio: 1 };
-  return { visibleChars: amount, visibleRatio: amount / totalChars };
-}
-
-/** `Label::set_visible_ratio` (label.cpp:1305-1323): a no-op when `p_ratio` matches the current field. */
-function applySetVisibleRatio(
-  state: VisibleCharsState,
-  ratio: number,
-  totalChars: number
-): VisibleCharsState {
-  if (state.visibleRatio === ratio) return state;
-  if (ratio >= 1) return { visibleChars: -1, visibleRatio: 1 };
-  if (ratio < 0) return { visibleChars: 0, visibleRatio: 0 };
-  return { visibleChars: Math.trunc(totalChars * ratio), visibleRatio: ratio };
-}
-
-/**
- * `visible_characters` and `visible_ratio` derive each other, and each setter runs only when its own
- * field changes (label.cpp:1286,1306), so the last one written wins. Godot applies `_set` in file order
- * (packed_scene.cpp:492), which the raw property bag keeps. `text` counts as applied first, as every
- * Godot save writes it first (`ADD_PROPERTY`, label.cpp:1431), even in a hand-edited file.
- */
-function resolveVisibleChars(
-  properties: Record<string, string>,
-  textLength: number
-): VisibleCharsState | undefined {
-  const rawChars = properties.visible_characters;
-  const rawRatio = properties.visible_ratio;
-  if (rawChars === undefined && rawRatio === undefined) return undefined;
-
-  let state = DEFAULT_VISIBLE_CHARS_STATE;
-  for (const key of Object.keys(properties)) {
-    if (key === 'visible_characters') {
-      const amount = parseOptionalInt(rawChars);
-      if (amount !== undefined) state = applySetVisibleCharacters(state, amount, textLength);
-    } else if (key === 'visible_ratio') {
-      const ratio = parseOptionalFloat(rawRatio);
-      if (ratio !== undefined) state = applySetVisibleRatio(state, ratio, textLength);
-    }
-  }
-  return state;
-}
 
 export function parseLabel(heading: ParsedHeading, properties: Record<string, string>): LabelProperties {
   const result: LabelProperties = {
@@ -123,7 +66,7 @@ export function parseLabel(heading: ParsedHeading, properties: Record<string, st
   result.linesSkipped = parseOptionalInt(properties.lines_skipped);
   result.maxLinesVisible = parseOptionalInt(properties.max_lines_visible);
   if (properties.label_settings !== undefined) result.labelSettings = properties.label_settings.trim();
-  const visibleState = resolveVisibleChars(properties, (result.text ?? '').length);
+  const visibleState = resolveVisibleChars(properties, () => (result.text ?? '').length);
   if (visibleState) {
     result.visibleCharacters = visibleState.visibleChars;
     result.visibleRatio = visibleState.visibleRatio;

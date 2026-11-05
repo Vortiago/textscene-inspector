@@ -945,6 +945,26 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(auto[1]!.glyphs.length).toBe(0);
   });
 
+  it('multiplies the ratio and the glyph count in single precision, as `total_glyphs * visible_ratio` does', () => {
+    // 30/44 in double precision times 44 is 29.999999999999996, which truncates to 29. Godot's float ratio gives 30.
+    const [line] = applyVisibleCharsReveal([fakeLine(44)], {
+      behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+      visibleChars: 30,
+      visibleRatio: 30 / 44,
+    });
+    expect(line!.glyphs.length).toBe(30);
+  });
+
+  it('budgets by the total glyph count it is given when that differs from the lines', () => {
+    const [line] = applyVisibleCharsReveal([fakeLine(4)], {
+      behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+      visibleChars: undefined,
+      visibleRatio: 0.5,
+      totalGlyphs: 6,
+    });
+    expect(line!.glyphs.length).toBe(3);
+  });
+
   it('VC_GLYPHS_RTL reveals GLYPHS from the BACK — the opposite end from LTR/AUTO (error path)', () => {
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_RTL,

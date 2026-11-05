@@ -1,0 +1,140 @@
+; One RichTextLabel per scroll_following_visible_characters case. The setter runs as the scene loads,
+; before any line is shaped, so it scrolls to the bar's default max, 100, whatever visible_characters
+; says (rich_text_label.cpp:5209-5221), and the bar shows for it even over text that fits
+; (:2659-2667). scroll_active = false hides the bar but not the scroll. NoFollow keeps the top.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="PartialBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 190.0
+offset_bottom = 80.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Partial" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 190.0
+offset_bottom = 80.0
+text = "Wave rift over quiet stone and amber light across the sleeping harbour at the end of day, again and again until the lamps go out"
+scroll_following_visible_characters = true
+visible_characters = 60
+
+[node name="AllBox" type="ColorRect" parent="."]
+offset_left = 210.0
+offset_top = 20.0
+offset_right = 380.0
+offset_bottom = 80.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="All" type="RichTextLabel" parent="."]
+offset_left = 210.0
+offset_top = 20.0
+offset_right = 380.0
+offset_bottom = 80.0
+text = "Wave rift over quiet stone and amber light across the sleeping harbour at the end of day, again and again until the lamps go out"
+scroll_following_visible_characters = true
+
+[node name="FitsBox" type="ColorRect" parent="."]
+offset_left = 400.0
+offset_top = 20.0
+offset_right = 570.0
+offset_bottom = 80.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Fits" type="RichTextLabel" parent="."]
+offset_left = 400.0
+offset_top = 20.0
+offset_right = 570.0
+offset_bottom = 80.0
+text = "Wave rift over quiet stone and amber light"
+scroll_following_visible_characters = true
+visible_characters = 20
+
+[node name="NoBarBox" type="ColorRect" parent="."]
+offset_left = 590.0
+offset_top = 20.0
+offset_right = 760.0
+offset_bottom = 80.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="NoBar" type="RichTextLabel" parent="."]
+offset_left = 590.0
+offset_top = 20.0
+offset_right = 760.0
+offset_bottom = 80.0
+text = "Wave rift over quiet stone and amber light across the sleeping harbour at the end of day, again and again until the lamps go out"
+scroll_following_visible_characters = true
+scroll_active = false
+visible_characters = 90
+
+[node name="AfterShapingBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 150.0
+offset_right = 190.0
+offset_bottom = 210.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="AfterShaping" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 150.0
+offset_right = 190.0
+offset_bottom = 210.0
+text = "Wave rift over quiet stone and amber light across the sleeping harbour at the end of day, again and again until the lamps go out"
+scroll_following_visible_characters = true
+visible_characters = 90
+visible_characters_behavior = 1
+
+[node name="NoFollowBox" type="ColorRect" parent="."]
+offset_left = 210.0
+offset_top = 150.0
+offset_right = 380.0
+offset_bottom = 210.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="NoFollow" type="RichTextLabel" parent="."]
+offset_left = 210.0
+offset_top = 150.0
+offset_right = 380.0
+offset_bottom = 210.0
+text = "Wave rift over quiet stone and amber light across the sleeping harbour at the end of day, again and again until the lamps go out"
+visible_characters = 90
+
+[node name="FollowingNoBarBox" type="ColorRect" parent="."]
+offset_left = 400.0
+offset_top = 150.0
+offset_right = 570.0
+offset_bottom = 210.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="FollowingNoBar" type="RichTextLabel" parent="."]
+offset_left = 400.0
+offset_top = 150.0
+offset_right = 570.0
+offset_bottom = 210.0
+text = "Wave rift over quiet stone and amber light across the sleeping harbour at the end of day, again and again until the lamps go out"
+scroll_following = true
+scroll_active = false
+
+[node name="BothFollowingBox" type="ColorRect" parent="."]
+offset_left = 590.0
+offset_top = 150.0
+offset_right = 760.0
+offset_bottom = 210.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="BothFollowing" type="RichTextLabel" parent="."]
+offset_left = 590.0
+offset_top = 150.0
+offset_right = 760.0
+offset_bottom = 210.0
+text = "Wave rift over quiet stone and amber light across the sleeping harbour at the end of day, again and again until the lamps go out"
+scroll_following = true
+scroll_following_visible_characters = true
+visible_characters = 5

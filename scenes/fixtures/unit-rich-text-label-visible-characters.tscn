@@ -1,0 +1,135 @@
+; One RichTextLabel per visible_characters case, over the same 44-character text. Before Shaping
+; (the default) shapes only the shown prefix, so its second line wraps again as the count grows
+; (rich_text_label.cpp:668-671). After Shaping and the Glyphs behaviours keep the full wrap and skip
+; glyphs (:943-947,1466). The last two labels cut the second paragraph of BBCode text and show nothing at 0.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Before5Box" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 190.0
+offset_bottom = 130.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Before5" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 190.0
+offset_bottom = 130.0
+text = "Hello world, this is a long line that wraps."
+visible_characters = 5
+
+[node name="Before30Box" type="ColorRect" parent="."]
+offset_left = 210.0
+offset_top = 20.0
+offset_right = 380.0
+offset_bottom = 130.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Before30" type="RichTextLabel" parent="."]
+offset_left = 210.0
+offset_top = 20.0
+offset_right = 380.0
+offset_bottom = 130.0
+text = "Hello world, this is a long line that wraps."
+visible_characters = 30
+
+[node name="After30Box" type="ColorRect" parent="."]
+offset_left = 400.0
+offset_top = 20.0
+offset_right = 570.0
+offset_bottom = 130.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="After30" type="RichTextLabel" parent="."]
+offset_left = 400.0
+offset_top = 20.0
+offset_right = 570.0
+offset_bottom = 130.0
+text = "Hello world, this is a long line that wraps."
+visible_characters = 30
+visible_characters_behavior = 1
+
+[node name="GlyphsAuto30Box" type="ColorRect" parent="."]
+offset_left = 590.0
+offset_top = 20.0
+offset_right = 760.0
+offset_bottom = 130.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="GlyphsAuto30" type="RichTextLabel" parent="."]
+offset_left = 590.0
+offset_top = 20.0
+offset_right = 760.0
+offset_bottom = 130.0
+text = "Hello world, this is a long line that wraps."
+visible_characters = 30
+visible_characters_behavior = 2
+
+[node name="GlyphsRtl30Box" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 150.0
+offset_right = 190.0
+offset_bottom = 260.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="GlyphsRtl30" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 150.0
+offset_right = 190.0
+offset_bottom = 260.0
+text = "Hello world, this is a long line that wraps."
+visible_characters = 30
+visible_characters_behavior = 4
+
+[node name="RatioBox" type="ColorRect" parent="."]
+offset_left = 210.0
+offset_top = 150.0
+offset_right = 380.0
+offset_bottom = 260.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Ratio" type="RichTextLabel" parent="."]
+offset_left = 210.0
+offset_top = 150.0
+offset_right = 380.0
+offset_bottom = 260.0
+text = "Hello world, this is a long line that wraps."
+visible_ratio = 0.5
+
+[node name="ZeroBox" type="ColorRect" parent="."]
+offset_left = 400.0
+offset_top = 150.0
+offset_right = 570.0
+offset_bottom = 260.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Zero" type="RichTextLabel" parent="."]
+offset_left = 400.0
+offset_top = 150.0
+offset_right = 570.0
+offset_bottom = 260.0
+text = "Hello world, this is a long line that wraps."
+visible_characters = 0
+
+[node name="ParagraphsBox" type="ColorRect" parent="."]
+offset_left = 590.0
+offset_top = 150.0
+offset_right = 760.0
+offset_bottom = 260.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Paragraphs" type="RichTextLabel" parent="."]
+offset_left = 590.0
+offset_top = 150.0
+offset_right = 760.0
+offset_bottom = 260.0
+bbcode_enabled = true
+text = "[b]One[/b] two three\n[color=red]Four five six[/color] seven"
+visible_characters = 22

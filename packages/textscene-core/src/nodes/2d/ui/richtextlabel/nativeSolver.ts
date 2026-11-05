@@ -67,6 +67,7 @@ import {
   type TextBidiOptions,
 } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { paragraphAlignment, paragraphBidiOptions } from './paragraph';
+import { revealedGlyphs, type RichTextReveal } from './visibleCharacters';
 
 /** RichTextLabel reads `theme_override_font_sizes/normal_font_size` and `theme_override_colors/default_color`, not Label's `font_size` and `font_color`. */
 const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
@@ -335,6 +336,8 @@ export interface StyledTextRun {
   fontSizePx: number;
   /** The paragraph's `HorizontalAlignment` (`paragraphAlignment`). */
   alignment: number;
+  /** `BBCodeRun.implicitBreaks`: the newlines in `text` that Godot counts no character for. */
+  implicitBreaks?: number[];
   /** The paragraph's direction, language and override (`paragraphBidiOptions`), INHERITED resolved. */
   bidi: TextBidiOptions;
   /**
@@ -461,6 +464,7 @@ export function styledTextRuns(
       ),
       alignment: paragraphAlignment(run.tags, props.horizontalAlignment),
       bidi: paragraphBidiOptions(run.tags, props, n),
+      implicitBreaks: run.implicitBreaks,
     });
   }
   return styled;
@@ -778,6 +782,14 @@ interface RunLineSegment {
   fontMetrics: FontMetrics;
 }
 
+/** The segment's glyphs that `revealed` keeps, or null when it keeps none. */
+function withGlyphs(segment: RunLineSegment, revealed: ReadonlySet<GlyphPlacement>): RunLineSegment | null {
+  const glyphs = segment.glyphs.filter((glyph) => revealed.has(glyph));
+  if (glyphs.length === segment.glyphs.length) return segment;
+  if (glyphs.length === 0) return null;
+  return { ...segment, glyphs, text: glyphs.map((glyph) => glyph.char).join('') };
+}
+
 /**
  * Splits each shaped line back into its style runs by each glyph's `sourceIndex`. `shapeText`
  * shapes the whole text once so line breaks see its full width, and this split is not a Godot
@@ -905,6 +917,13 @@ interface RichTextAlignment {
   scrollOffsetPx?: number;
   /** Absent leaves FILL paragraphs unfitted. */
   justification?: RichTextJustification;
+  /** Absent shows every glyph. */
+  reveal?: RichTextReveal;
+  /**
+   * The whole text's height and line count, when `layout` holds only its shown prefix (Before
+   * Shaping). Godot aligns by the full text (`:1619-1652`). Absent means `layout` is the whole text.
+   */
+  fullText?: { heightPx: number; lineCount: number };
 }
 
 /**
@@ -962,11 +981,13 @@ export function layoutRichTextRuns(
   const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);
 
   const { vbeginPx, vsepPx } = richTextVerticalOffsets(
-    contentHeightOf(lineMetrics),
+    alignment?.fullText?.heightPx ?? contentHeightOf(lineMetrics),
     alignment?.boxHeightPx ?? 0,
     alignment?.verticalAlignment,
-    layout.lines.length
+    alignment?.fullText?.lineCount ?? layout.lines.length
   );
+  // Line metrics above count every glyph, shown or not: a hidden glyph still takes its line's height.
+  const revealed = alignment?.reveal && revealedGlyphs(layout, styledRuns, alignment.reveal);
 
   const placements: RichTextRunPlacement[] = [];
   perLine.forEach((segments, lineIndex) => {
@@ -984,7 +1005,9 @@ export function layoutRichTextRuns(
       alignmentOfLine(lineIndex),
       paragraphRunOf(lineIndex)?.bidi.direction === TextDirection.TEXT_DIRECTION_RTL
     );
-    for (const segment of segments) {
+    for (const shownSegment of segments) {
+      const segment = revealed ? withGlyphs(shownSegment, revealed) : shownSegment;
+      if (!segment) continue;
       const run = styledRuns[segment.runIndex]!;
       const lineTopPx = Math.floor(exactTopPx);
       placements.push({

@@ -45,6 +45,7 @@ import {
   DEFAULT_JUSTIFICATION_FLAGS,
 } from '../../../../godot/text/textServerEnums';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { truncatedShare } from '../shared/visibleChars';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
@@ -277,6 +278,8 @@ interface VisibleCharsBudget {
   visibleChars: number | undefined;
   /** Final resolved `visible_ratio`, the budget of the GLYPHS_* behaviours. */
   visibleRatio: number | undefined;
+  /** Total glyphs when it is not the lines' count: RichTextLabel counts each paragraph's glyphs, trimmed edge spaces included (`rich_text_label.cpp:8017-8033`). */
+  totalGlyphs?: number;
   /** `is_layout_rtl()` (`SolveNode.rtl`), which picks the end GLYPHS_AUTO trims from (`label.cpp:779-780`). Defaults `false`. */
   rtl?: boolean;
 }
@@ -322,8 +325,8 @@ function revealCharacters(
 /** The GLYPHS behaviours: `visible_ratio * total_glyphs` glyphs, counted in visual order across lines. */
 function revealGlyphs(lines: readonly TextLineLayout[], budget: VisibleCharsBudget): TextLineLayout[] {
   if (budget.visibleRatio === undefined || budget.visibleRatio >= 1) return [...lines];
-  const totalGlyphs = lines.reduce((sum, l) => sum + l.glyphs.length, 0);
-  const limit = Math.trunc(totalGlyphs * Math.max(0, budget.visibleRatio));
+  const totalGlyphs = budget.totalGlyphs ?? lines.reduce((sum, l) => sum + l.glyphs.length, 0);
+  const limit = truncatedShare(totalGlyphs, Math.max(0, budget.visibleRatio));
   const fromEnd =
     budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_RTL ||
     (budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_AUTO && budget.rtl === true);
