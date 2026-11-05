@@ -51,16 +51,16 @@ export function parsePolygon2D(
     vertexColors,
     // class_polygon2d.html: texture_offset (0,0), texture_scale (1,1),
     // texture_rotation 0.
-    textureOffset: vec2Or(properties.texture_offset, { x: 0, y: 0 }, base.name || 'Polygon2D'),
-    textureScale: vec2Or(properties.texture_scale, { x: 1, y: 1 }, base.name || 'Polygon2D'),
-    textureRotation: floatOr(properties.texture_rotation, 0, 'Polygon2D'),
+    textureOffset: vec2Or(properties.texture_offset, { x: 0, y: 0 }, at('texture_offset')),
+    textureScale: vec2Or(properties.texture_scale, { x: 1, y: 1 }, at('texture_scale')),
+    textureRotation: floatOr(properties.texture_rotation, 0, at('texture_rotation')),
     // class_polygon2d.html: internal_vertex_count 0, invert_enabled false,
     // invert_border 100.
-    internalVertexCount: intOr(properties.internal_vertex_count, 0, 'Polygon2D'),
-    invertEnabled: boolOr(properties.invert_enabled, false),
-    invertBorder: floatOr(properties.invert_border, 100, 'Polygon2D'),
+    internalVertexCount: intOr(properties.internal_vertex_count, 0, at('internal_vertex_count')),
+    invertEnabled: boolOr(properties.invert_enabled, false, at('invert_enabled')),
+    invertBorder: floatOr(properties.invert_border, 100, at('invert_border')),
     color: properties.color ? parseColor(properties.color) : { r: 1, g: 1, b: 1, a: 1 },
-    offset: vec2Or(properties.offset, { x: 0, y: 0 }, base.name || 'Polygon2D'),
+    offset: vec2Or(properties.offset, { x: 0, y: 0 }, at('offset')),
     bones: packedOr(properties.bones, parseBones, [], at('bones')),
   };
 

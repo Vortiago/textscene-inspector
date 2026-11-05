@@ -18,7 +18,7 @@ import {
 import { useCanvasModulateFor } from './canvasModulate';
 import { TextureSampler2DContext, type CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import { canvasKeyAtZ, canvasRenderOrder } from './canvasPaintOrder';
-import { useLayerRank, useNodePaintSequence } from './contexts/PaintOrderContext';
+import { useLayerRank, useNodePaintSequence, usePaintRange } from './contexts/PaintOrderContext';
 import type { TscnNode } from '../parser/types';
 import type { Node2DProperties } from '../nodes/base/node2d/types';
 import { CanvasItemMaterialProvider } from './components/canvasItemMaterialContext';
@@ -110,6 +110,28 @@ export function useCanvasItemState(fields: CanvasItemFields): CanvasItemState {
  */
 export function useCanvasKeyOfNode(node: TscnNode, own: CanvasItemZStep): number {
   return useCanvasKeyAt(useZFinal(own))(useNodePaintSequence(node));
+}
+
+/** The keys a canvas item's run spans, `[from, to)`, at its layer and `z_final`, and its own key. */
+export interface CanvasRunKeys {
+  own: number;
+  from: number;
+  to: number;
+}
+
+/**
+ * The keys of `node`'s own run, from the node and its own z step, as `useCanvasItemState` keys
+ * the node and its descendants at the node's `z_final`.
+ */
+export function useCanvasRunKeysOfNode(node: TscnNode, own: CanvasItemZStep): CanvasRunKeys {
+  const keyAt = useCanvasKeyAt(useZFinal(own));
+  const sequence = useNodePaintSequence(node);
+  const { base, size } = usePaintRange();
+  // Past the last key, not at `base + size`: the encoding saturates a sequence at the stride's end.
+  return useMemo(
+    () => ({ own: keyAt(sequence), from: keyAt(base), to: keyAt(base + size - 1) + 1 }),
+    [keyAt, sequence, base, size]
+  );
 }
 
 /** Where a canvas item draws: its draw-order key and its `z_final`. */

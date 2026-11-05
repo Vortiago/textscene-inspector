@@ -50,6 +50,15 @@ export function canvasColorSpaceOf(usesHdr: boolean): CanvasColorSpace {
   return usesHdr ? LINEAR_CANVAS : SRGB_CANVAS;
 }
 
+/**
+ * The `defines` of a material whose vertex colours carry an instance colour. An sRGB canvas
+ * multiplies them as sRGB numbers (`canvas.glsl:189`). A linear canvas multiplies the instance colour
+ * raw (`canvas.glsl:255`), so three's linear multiply holds there.
+ */
+export function instanceColorDefines(space: CanvasColorSpace): Readonly<Record<string, string>> | undefined {
+  return space.isLinear ? undefined : CANVAS_SRGB_DEFINES;
+}
+
 /** Written only by a SubViewport pass that draws a linear canvas. The root canvas is sRGB. */
 const CanvasColorSpaceContext = createContext<CanvasColorSpace>(SRGB_CANVAS);
 CanvasColorSpaceContext.displayName = 'CanvasColorSpaceContext';

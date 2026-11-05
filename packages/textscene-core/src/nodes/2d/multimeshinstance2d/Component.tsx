@@ -9,17 +9,14 @@ import { MultiMeshTransformFormat } from '../../../godot/scene/multiMesh';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasMeshItem } from '../../../r3f/components/CanvasMeshItem';
 import { useMeshContent } from '../../../r3f/meshes/meshContent';
-import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useMultiMeshData } from '../../../resources/meshes/multimesh/useMultiMeshData';
-import { useResourceResolution, useSubOrExtResource } from '../../../resources/useSubOrExtResource';
+import { useReferencedMultiMesh } from '../../../resources/meshes/multimesh/useMultiMeshData';
+import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 import type { MultiMeshInstance2DProperties } from './types';
 
 export function MultiMeshInstance2D({ node, children }: NodeComponentProps) {
   const props = node.properties as MultiMeshInstance2DProperties;
-  const scoped = useSubOrExtResource(props.multimesh, useSceneResources());
-  const multiMesh = useMultiMeshData(scoped);
-  // The mesh is a reference in the MultiMesh's own tables, which a file's MultiMesh keeps apart.
-  const content = useMeshContent(useResourceResolution(multiMesh?.mesh, scoped?.resources ?? NO_RESOURCES));
+  const { multiMesh, resources } = useReferencedMultiMesh(props.multimesh);
+  const content = useMeshContent(useResourceResolution(multiMesh?.mesh, resources));
   const draws =
     multiMesh?.transformFormat === MultiMeshTransformFormat.TRANSFORM_2D &&
     multiMesh.instances.length > 0 &&

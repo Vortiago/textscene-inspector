@@ -206,7 +206,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [BoxContainer](../../packages/textscene-core/src/nodes/2d/ui/boxcontainer/comparison.md): children laid out along its own `vertical`-chosen axis
 - [Button](../../packages/textscene-core/src/nodes/2d/ui/button/comparison.md): a StyleBox quad with a centred text run
 - [Camera2D](../../packages/textscene-core/src/nodes/2d/camera2d/comparison.md): a 2D view frame with no drawn geometry
-- [CanvasGroup](../../packages/textscene-core/src/nodes/2d/canvasgroup/comparison.md): nothing yet, Godot composites its children into one offscreen buffer, the previewer does not
+- [CanvasGroup](../../packages/textscene-core/src/nodes/2d/canvasgroup/comparison.md): its children drawn into one buffer, composited by one rect
 - [CanvasLayer](../../packages/textscene-core/src/nodes/2d/ui/canvaslayer/comparison.md): a full-rect passthrough layer hosting Control children
 - [CanvasModulate](../../packages/textscene-core/src/nodes/2d/canvasmodulate/comparison.md): a colour multiply applied to the whole canvas
 - [CenterContainer](../../packages/textscene-core/src/nodes/2d/ui/centercontainer/comparison.md): a rect centred inside its own

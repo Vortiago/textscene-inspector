@@ -303,6 +303,36 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Canvas Group Material",
+    "file": "unit-canvas-group-material.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Canvas Group Modulate",
+    "file": "unit-canvas-group-modulate.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Canvas Group Nested",
+    "file": "unit-canvas-group-nested.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Canvas Group Self Modulate",
+    "file": "unit-canvas-group-self-modulate.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Canvas Group Y Sort",
+    "file": "unit-canvas-group-y-sort.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Canvas Group Z Escape",
+    "file": "unit-canvas-group-z-escape.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Canvas Group",
     "file": "unit-canvas-group.tscn",
     "category": "Other"
@@ -3454,6 +3484,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tile Map Layer Untextured Source",
     "file": "unit-tile-map-layer-untextured-source.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Y Sort Animated Child",
+    "file": "unit-tile-map-layer-y-sort-animated-child.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Y Sort Children",
+    "file": "unit-tile-map-layer-y-sort-children.tscn",
     "category": "Unit - 2D Canvas"
   },
   {

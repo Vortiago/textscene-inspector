@@ -5,7 +5,7 @@
  * stable context re-renders only the target whose value changes.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNodePath } from './NodePathContext';
 import { createPushStoreContext, type PushStore } from './pushStore';
 
@@ -19,6 +19,13 @@ export type AnimatedValueRegistry = PushStore<readonly number[]>;
 export function animatedValueKey(nodePath: string, property: string): string {
   return `${nodePath}:${property}`;
 }
+
+/**
+ * The registry key a driver writes after its mixer moves the scene's objects. A pass that reads
+ * the transforms drawn, such as the y-sort, listens to it instead of racing the mixer's frame.
+ * Node paths are never empty, so no node's property takes this key.
+ */
+const MIXER_POSED_KEY = animatedValueKey('', 'posed');
 
 const { Provider: AnimatedValueProvider, useStore: useAnimatedValueRegistry } =
   createPushStoreContext<readonly number[]>('AnimatedValueContext');
@@ -99,4 +106,39 @@ export function withPushedVisible<K>(
   if (visible === undefined) next.delete(key);
   else next.set(key, visible);
   return next;
+}
+
+/** Written only by the announcer, just before it notifies: the uuids the latest pose moved. */
+// eslint-disable-next-line no-restricted-syntax -- a handoff written by the announcer, not a cache built on ask.
+const latestPosed = new WeakMap<AnimatedValueRegistry, ReadonlySet<string>>();
+const NOTHING_POSED: ReadonlySet<string> = new Set();
+
+/**
+ * The function a driver calls after its mixer has moved the scene's objects, with the uuids of the
+ * objects its actions drive, so a listener skips a pose that moved nothing it reads.
+ */
+export function useAnnounceMixerPose(): (posed: ReadonlySet<string>) => void {
+  const registry = useAnimatedValueRegistry();
+  const poses = useRef(0);
+  return useCallback(
+    (posed) => {
+      latestPosed.set(registry, posed);
+      registry.set(MIXER_POSED_KEY, [++poses.current]);
+    },
+    [registry]
+  );
+}
+
+/** Calls `listener` after each pose a driver's mixer writes. `listener` is read through a ref. */
+export function useOnMixerPose(listener: (posed: ReadonlySet<string>) => void): void {
+  const registry = useAnimatedValueRegistry();
+  const listenerRef = useRef(listener);
+  listenerRef.current = listener;
+  useEffect(
+    () =>
+      registry.subscribe(MIXER_POSED_KEY, () =>
+        listenerRef.current(latestPosed.get(registry) ?? NOTHING_POSED)
+      ),
+    [registry]
+  );
 }

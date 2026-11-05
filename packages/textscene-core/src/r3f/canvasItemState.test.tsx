@@ -16,12 +16,14 @@ import {
   ownAndBackSlots,
   wholeKeySlot,
   useCanvasItemState,
+  useCanvasRunKeysOfNode,
   type CanvasItemFields,
   type SkippedCanvasItems,
 } from './canvasItemState';
 import { Modulate2DContext, useParentModulate } from './canvasItemModulate';
 import { CanvasModulateContext } from './canvasModulate';
-import { canvasRenderOrder, layerRankOf, layerRanks } from './canvasPaintOrder';
+import { WHOLE_CANVAS_RANGE, canvasRenderOrder, layerRankOf, layerRanks } from './canvasPaintOrder';
+import { PaintRangeProvider } from './contexts/PaintOrderContext';
 import { EffectiveZProvider, useEffectiveZ } from './lighting2d/canvasItemPlacement';
 import { useResolvedTextureSampler } from './canvasItemTextureSampler';
 import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
@@ -251,5 +253,23 @@ describe('CanvasItemChildScope', () => {
       )
     );
     expect(inherited).toBe(own);
+  });
+});
+
+describe('useCanvasRunKeysOfNode', () => {
+  it('ends a run over the whole canvas past its last key, which the key encoding saturates at', () => {
+    const node = { name: 'Group', type: 'CanvasGroup', properties: {}, rawProperties: {}, children: [] };
+    const { result } = renderHook(() => useCanvasRunKeysOfNode(node, { zIndex: 0, zAsRelative: true }), {
+      wrapper: ({ children }) => (
+        <PaintRangeProvider value={WHOLE_CANVAS_RANGE}>{children}</PaintRangeProvider>
+      ),
+    });
+    const lastKey = canvasRenderOrder({
+      layerRank: layerRankOf(layerRanks([]), 0),
+      zFinal: 0,
+      sequence: WHOLE_CANVAS_RANGE.size - 1,
+    });
+
+    expect(result.current.to).toBe(lastKey + 1);
   });
 });

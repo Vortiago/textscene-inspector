@@ -4,6 +4,8 @@ import { warn } from '../../../logger.js';
 import { resourceContentKey } from '../../resourceContentKey.js';
 import type { ScopedResource } from '../../scopedResource.js';
 import { useContentMemo } from '../../useContentMemo.js';
+import { NO_RESOURCES, useSceneResources, type SceneResources } from '../../../r3f/SceneResourcesContext.js';
+import { useSubOrExtResource } from '../../useSubOrExtResource.js';
 import { decodeMultiMesh } from './decode.js';
 import type { DecodedMultiMesh } from './types.js';
 
@@ -27,6 +29,19 @@ function readMultiMesh({ resource }: ScopedResource): DecodedMultiMesh | null {
  * `scoped` as a decoded MultiMesh, or null for none, another type or a MultiMesh this cannot read.
  * The same object while the content holds.
  */
-export function useMultiMeshData(scoped: ScopedResource | null): DecodedMultiMesh | null {
+function useMultiMeshData(scoped: ScopedResource | null): DecodedMultiMesh | null {
   return useContentMemo(scoped, ownContentKey, readMultiMesh);
+}
+
+/** The MultiMesh a node references, and the tables its own `mesh` reference resolves in. */
+export interface ReferencedMultiMesh {
+  multiMesh: DecodedMultiMesh | null;
+  /** The MultiMesh's own tables, which a file's MultiMesh keeps apart from the scene's. */
+  resources: SceneResources;
+}
+
+/** The MultiMesh `ref` names in the scene's resources, as {@link useMultiMeshData} decodes it. */
+export function useReferencedMultiMesh(ref: string | undefined): ReferencedMultiMesh {
+  const scoped = useSubOrExtResource(ref, useSceneResources());
+  return { multiMesh: useMultiMeshData(scoped), resources: scoped?.resources ?? NO_RESOURCES };
 }

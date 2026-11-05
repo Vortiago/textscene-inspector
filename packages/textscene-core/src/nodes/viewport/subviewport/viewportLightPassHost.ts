@@ -14,7 +14,7 @@ import { orthoViewRect } from './offscreenViewport';
  * Godot's `clip_rect`, `Rect2(0, 0, size)` in screen pixels (`renderer_viewport.cpp:390`), seen
  * from the canvas: the part of it the camera frames, and the pixels the camera gives each unit.
  */
-function clipOfCamera(camera: THREE.OrthographicCamera, size: Vector2): CanvasClip {
+export function clipOfCamera(camera: THREE.OrthographicCamera, size: Vector2): CanvasClip {
   const rect = orthoViewRect(camera, { x: 0, y: 0, w: 0, h: 0 });
   return { rect, scale: { x: size.x / rect.w, y: size.y / rect.h } };
 }
