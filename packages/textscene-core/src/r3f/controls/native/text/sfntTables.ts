@@ -79,8 +79,8 @@ export const SCENE_FONT_TABLE_TAGS: readonly string[] = ['head', 'hhea', 'OS/2',
 
 /**
  * The tables an outline reader uses (`sfntOutlines.ts`), for the container readers to decompress:
- * the outlines, the metrics that place a TrueType glyph's phantom points, its hinting programs, and
- * the layout tables the auto-hinter reads.
+ * the outlines, the metrics that place a TrueType glyph's phantom points, its hinting programs, the
+ * layout tables the auto-hinter reads, and the `GPOS` and `GDEF` tables of the kerning at an instance.
  */
 export const OUTLINE_TABLE_TAGS: readonly string[] = [
   'head',
@@ -107,6 +107,7 @@ export const OUTLINE_TABLE_TAGS: readonly string[] = [
   'name',
   'GSUB',
   'GPOS',
+  'GDEF',
 ];
 
 export interface TableRecord {

@@ -68,6 +68,22 @@ import's `fallbacks` (`resource_importer_dynamic_font.cpp:192`, `resource_import
 the base's for a `FontVariation` with none (`font.cpp:2926-2945`). The `label-font-fallbacks` golden
 pins this.
 
+## Variable fonts
+
+<!-- compare: image=unit-label-font-variation-instance status=done fixture=unit-label-font-variation-instance.tscn -->
+
+A `FontVariation` over a variable font draws the instance that its `variation_opentype` names, as Godot sets
+the axes on FreeType and HarfBuzz (`text_server_adv.cpp:1915-1950`). The glyphs fill and stroke from the outlines
+at the instance. They follow the `fvar`, `avar`, `gvar` and `cvar` tables. Each advance follows `HVAR`, or the
+phantom points that `gvar` moves in a font without `HVAR`. The pair kerning follows the `GPOS` `kern` feature
+with its deltas at the instance. A `FontVariation` over another takes its own axis values alone (`font.cpp:3120-3131`).
+
+## Kerning at a variable-font instance
+
+<!-- compare: image=unit-label-font-variation-kerning status=done fixture=unit-label-font-variation-kerning.tscn -->
+
+Recursive at `MONO` 0.5 kerns each pair by half its kerning at the default instance, as Godot does.
+
 ## Linting
 
 <!-- lint:begin Label -->
@@ -160,6 +176,10 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 ## Known limitations
 
 - **Not drawn** Arabic letters draw in their isolated forms, since the shaper does not join them.
+- **Approximated** At an instance, a variable font keeps its default glyphs where its `GSUB` feature variations swap them.
+- **Approximated** At an instance, the `GPOS` kerning reads the pair lookups of every script, where Godot reads those of each script run.
+- **Approximated** At an instance, the `GPOS` kerning reads the default language system of each script, where Godot reads the system of the text's language.
+- **Approximated** At an instance, the `GPOS` kerning pairs adjacent characters only, where Godot also kerns across a glyph that a lookup flag skips.
 - **Approximated** A scene font's glyphs draw with the browser's hinting, not FreeType's light
   hinting (`font.h:203`, `text_server_adv.cpp:1276-1277`), so a cap can sit 1 px lower here.
 - **Not drawn** The `fallbacks` of a BMFont: a missing character draws as a hex-code box (`text_server_adv.cpp:6810-6928`, #1298).

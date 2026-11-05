@@ -46,9 +46,22 @@ the bar to the left edge and starts every line after it (`:990-996`). `scroll_fo
 to its foot (`:3827-3828`). A line that starts below the rect or ends above it is never drawn
 (`:973,978-981`), whether or not the control clips.
 
+`[font_size=N]` sizes its text when N is above 0, over the size of an enclosing `[b]` or `[i]` (`rich_text_label.cpp:639-641`).
+Line height and wrapping follow. `[outline_size=N]` and `[outline_color=C]` draw a ring under the glyphs, and a negative
+size draws none (`:6367-6371`, `:1198-1202`). The theme's `outline_size` and `font_outline_color` are the defaults the tags
+override. The ring takes the alpha of the run's colour (`:1457`).
+A list marker takes the size and outline of its item (`_add_list_prefixes`, `:342-358`, `:1020-1021`).
+The golden `rich-text-label-font-size-outline` shows each tag.
+
 A `[b]` run and any embolden over the bundled font draw on the canvas painter, which emboldens the
 outline as FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0040). The run draws nothing until the
 bundled face loads, and draws on the atlas without its embolden where the face cannot register.
+
+A `FontVariation` over a variable font draws the instance that its `variation_opentype` names, as Godot sets
+the axes on FreeType and HarfBuzz (`text_server_adv.cpp:1915-1950`). The glyphs fill and stroke from the outlines
+at the instance. They follow the `fvar`, `avar`, `gvar` and `cvar` tables. Each advance follows `HVAR`, or the
+phantom points that `gvar` moves in a font without `HVAR`. The pair kerning follows the `GPOS` `kern` feature
+with its deltas at the instance. A `FontVariation` over another takes its own axis values alone (`font.cpp:3120-3131`).
 
 ## Linting
 
@@ -103,6 +116,7 @@ string against `true`, so an absent property or any other value silently resolve
 
 ## Known limitations
 
+- **Approximated** At an instance, a variable font keeps its default glyphs where its `GSUB` feature variations swap them.
 - **Approximated** Only a subset of BBCode tags is styled, and a tag outside it renders as
   plain text.
 - **Not drawn** `localize_numeral_system`, which writes the numbers of an `[ol]` in the digits of the

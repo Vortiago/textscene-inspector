@@ -21,6 +21,14 @@ A label casts no shadow by default, as its constructor turns `cast_shadow` off (
 
 A label in a BMFont draws each glyph as a quad over its page image at `pixel_size` (`label_3d.cpp:345-350`). The quad takes the glyph's offset and size. The label skips a glyph whose page rectangle is 2 px or less in either direction, and a character the font lacks (`:357-360`). The pen still advances past it. Its material decodes the page and the modulate and multiplies them in linear (`material.cpp:969,1218`). Any `outline_size` above 0 draws the font's outline set (`text_server_adv.h:406-414`). The `label3d-bmfont` golden pins this.
 
+## Variable fonts
+
+A `FontVariation` over a variable font draws the instance that its `variation_opentype` names, as Godot sets
+the axes on FreeType and HarfBuzz (`text_server_adv.cpp:1915-1950`). The glyphs and the outline draw from the outlines
+at the instance. They follow the `fvar`, `avar`, `gvar` and `cvar` tables. Each advance follows `HVAR`, or the
+phantom points that `gvar` moves in a font without `HVAR`. The pair kerning follows the `GPOS` `kern` feature
+with its deltas at the instance. A `FontVariation` over another takes its own axis values alone (`font.cpp:3120-3131`).
+
 ## Linting
 
 <!-- lint:begin Label3D -->
@@ -80,7 +88,8 @@ The glyph raster has a mip chain only when its font generates mipmaps and `textu
 - **Approximated** The glyph mip chain is per label raster, where Godot's is per glyph page, so a minified label differs slightly.
 - **Resource gap** A SystemFont always draws the default font, as Godot does when no OS font matches its names, where Godot draws a matching OS font.
 - **Approximated** Godot's font rasteriser differs from the browser's, so the glyph edges and the `outline_size` outline differ slightly from Godot's.
-- **Approximated** An emboldened glyph follows FreeType's normal hinting, not the font's light hinting that Godot rasterises with, so it is a fraction of a pixel off.
+- **Approximated** An emboldened glyph, or one at a variable font's instance, follows FreeType's normal hinting, where Godot rasterises with light hinting.
+- **Approximated** At an instance, a variable font keeps its default glyphs where its `GSUB` feature variations swap them.
 - **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
 - **Approximated** A line with a hex-code box keeps the ascent of a BMFont, where Godot grows it to fit the box (#1324).

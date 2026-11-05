@@ -15,6 +15,7 @@ import { blockStartY, lineStartOffset } from '../../../godot/math/alignment';
 import { isZeroApprox, remapf } from '../../../godot/math/math';
 import { normalizedVector2, type Vector2 } from '../../../godot/math/vector';
 import {
+  drawnOpentype,
   variationKey,
   withFallbacks,
   type FontMetrics,
@@ -28,6 +29,7 @@ import {
   type GlyphPlacement,
 } from '../../../r3f/controls/native/text/textLayout';
 import { perObject } from '../../../utils/perObject';
+import { recentlyRead } from '../../../utils/recentlyRead';
 import type { GodotSurface } from '../godotSurface';
 import { SurfaceWriter } from '../primitivemesh/surfaceWriter';
 import { buildGlyphMeshData, type ContourInfo, type ContourVertex, type GlyphMeshData } from './glyphMesh';
@@ -94,25 +96,22 @@ const BACK_TANGENT: Tangent = [-1, 0, 0, 1];
 
 type GlyphMeshes = Map<number, GlyphMeshData | null>;
 
+/** The settings kept per font. A slider drag makes one per value, so the least recently read go. */
+const MAX_CACHED_SETTINGS_PER_FONT = 8;
+
 /**
  * The glyph mesh data of one font by its `font_size`, `pixel_size`, `curve_step` and variation, then
  * by codepoint. Godot clears its cache when one of the first three changes (`:3043-3060`); the
  * embolden and skew change the contours, so they key it too. The cache belongs to the font, so two
  * meshes of one font at two sizes do not discard each other's glyphs on every edit.
  */
-const glyphMeshCaches = perObject<SfntOutlines, Map<string, GlyphMeshes>>(() => new Map());
+const glyphMeshCaches = perObject((_outlines: SfntOutlines) =>
+  recentlyRead<string, GlyphMeshes>(MAX_CACHED_SETTINGS_PER_FONT)
+);
 
-/** The settings kept per font. A slider drag makes one per value, so the oldest go. */
-const MAX_CACHED_SETTINGS_PER_FONT = 8;
-
-/** The cache of `settings`, made if it is new, and the most recent of its font. */
+/** The cache of `settings`, made if it is new. */
 function cachedGlyphMeshes(outlines: SfntOutlines, settings: string): GlyphMeshes {
-  const byFont = glyphMeshCaches(outlines);
-  const meshes = byFont.get(settings) ?? new Map();
-  byFont.delete(settings);
-  byFont.set(settings, meshes);
-  if (byFont.size > MAX_CACHED_SETTINGS_PER_FONT) byFont.delete(byFont.keys().next().value!);
-  return meshes;
+  return glyphMeshCaches(outlines)(settings, () => new Map());
 }
 
 /** Each glyph's mesh data, built once per font and settings, so a keystroke in `text` triangulates only the glyphs it adds. */
@@ -121,7 +120,11 @@ function glyphMeshes(
   face: TextMeshFace
 ): (codepoint: number) => GlyphMeshData | null {
   const { outlines } = face;
-  const variation: GlyphVariation = { embolden: face.embolden, skew: face.skew, opentype: face.opentype };
+  const variation: GlyphVariation = {
+    embolden: face.embolden,
+    skew: face.skew,
+    opentype: drawnOpentype(face),
+  };
   const meshes = cachedGlyphMeshes(
     outlines,
     `${properties.fontSize}|${properties.pixelSize}|${properties.curveStep}|${variationKey(variation)}`

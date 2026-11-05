@@ -11,6 +11,7 @@
  */
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import type { Rgba } from '../../../../godot/math/math';
+import type { TextOutlineTheme } from '../../../../r3f/controls/native/textTheme';
 import { getFontTabWidthPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
   shapeText,
@@ -26,6 +27,7 @@ import {
   type OpenBBCodeTag,
 } from './bbcode';
 import { faceOfStyle, type RichTextFaces } from './styleFaces';
+import { markerFontSizeOf, outlineSizeOf, tagFontSizePx } from './runStyle';
 import type { StyledTextRun } from './nativeSolver';
 
 /** `ItemList`'s default bullet (`rich_text_label.cpp:7593`). */
@@ -39,12 +41,13 @@ export interface IndentFrame {
   fontSizePx: number;
 }
 
-/** The font and colour of a list marker, as `formatting_items` give them in `_add_list_prefixes`. */
+/** The font, colour and outline of a list marker, as `formatting_items` give them in `_add_list_prefixes`. */
 export interface MarkerStyle {
   bold: boolean;
   italic: boolean;
   fontSizePx: number;
   color: Rgba;
+  outline: TextOutlineTheme;
 }
 
 /** What a run inside an indent or a list tells the layout. Absent on every other run. */
@@ -67,6 +70,8 @@ export interface RunListingInputs {
   /** `BBCodeRun.openedAtStart`. */
   openedAtStart: readonly OpenBBCodeTag[] | undefined;
   defaultColor: Rgba;
+  /** The control's `outline_size` and `font_outline_color`, which a marker takes where no tag sets them (`:1020-1021`). */
+  themeOutline: TextOutlineTheme;
   /** The run font size of a `[b]` and `[i]` state (`resolveRunFontSizePx`). */
   fontSizePxOf: (bold: boolean, italic: boolean) => number;
 }
@@ -81,7 +86,9 @@ function indentFramesOf(
     const enclosing = tags.slice(0, index);
     const bold = hasOpenTag(enclosing, 'b');
     const italic = hasOpenTag(enclosing, 'i');
-    frames.push({ tag, bold, italic, fontSizePx: fontSizePxOf(bold, italic) });
+    // `_find_margin` reads the nearest `[font_size]` over the font's size (`:3419-3433`).
+    const fontSizePx = tagFontSizePx(enclosing) ?? fontSizePxOf(bold, italic);
+    frames.push({ tag, bold, italic, fontSizePx });
   });
   return frames;
 }
@@ -90,25 +97,82 @@ function colorOf(value: string | undefined, fallback: Rgba): Rgba | undefined {
   return value === undefined ? undefined : resolveBBColor(value, fallback);
 }
 
-function styleOf(bold: boolean, italic: boolean, color: Rgba, inputs: RunListingInputs): MarkerStyle {
-  return { bold, italic, fontSizePx: inputs.fontSizePxOf(bold, italic), color };
+/** The tags of `formatting`, each reduced to the one value a marker takes from the items that set it. */
+interface MarkerFormatting {
+  /** The `[font_size]` the marker takes, if any (`item_font_size`). */
+  fontSizePx: number | undefined;
+  /** The `[color]` the marker takes, if any (`prefix_color`). */
+  color: Rgba | undefined;
+  /** The `[outline_size]` and `[outline_color]` it takes, if any (`prefix_outline_size`, `prefix_outline_color`). */
+  outlineSizePx: number | undefined;
+  outlineColor: Rgba | undefined;
 }
 
 /**
- * The text item's parents all format the marker, and each colour overwrites the last, so the
- * outermost colour wins (`rich_text_label.cpp:342-349`).
+ * What `_add_list_prefixes` reads from `formatting_items_info`, one value per kind. `pick` chooses
+ * among the tags of a kind: the last one wins where each item overwrites the last.
+ */
+function markerFormatting(
+  tags: readonly OpenBBCodeTag[],
+  pick: (tags: readonly OpenBBCodeTag[], name: string) => string | undefined,
+  defaultColor: Rgba
+): MarkerFormatting {
+  const sizeValue = pick(tags, 'outline_size');
+  return {
+    fontSizePx: markerFontSizeOf(pick(tags, 'font_size')),
+    color: colorOf(pick(tags, 'color'), defaultColor),
+    outlineSizePx: sizeValue === undefined ? undefined : outlineSizeOf(sizeValue),
+    outlineColor: colorOf(pick(tags, 'outline_color'), defaultColor),
+  };
+}
+
+/** The outermost tag's value: a text row's parents are walked inward to outward, so the outermost overwrites last. */
+function outermostValue(tags: readonly OpenBBCodeTag[], name: string): string | undefined {
+  return tags.find((tag) => tag.name === name)?.value;
+}
+
+/**
+ * A marker without its own colour or outline takes them from the line's first item
+ * (`_find_color`, `_find_outline_size`, `_find_outline_color`, `:1019-1021`), through `lineTags`.
+ * A text row passes none, since its own tags are the line's. The outline colour falls to the
+ * control's base colour there, not the theme's outline colour.
+ */
+function styleOf(
+  bold: boolean,
+  italic: boolean,
+  formatting: MarkerFormatting,
+  lineTags: readonly OpenBBCodeTag[] | undefined,
+  inputs: RunListingInputs
+): MarkerStyle {
+  const { defaultColor, themeOutline } = inputs;
+  const line = lineTags && markerFormatting(lineTags, lastTagValue, defaultColor);
+  return {
+    bold,
+    italic,
+    fontSizePx: formatting.fontSizePx ?? inputs.fontSizePxOf(bold, italic),
+    color: formatting.color ?? line?.color ?? defaultColor,
+    outline: {
+      sizePx: formatting.outlineSizePx ?? line?.outlineSizePx ?? themeOutline.sizePx,
+      color: formatting.outlineColor ?? line?.outlineColor ?? defaultColor,
+    },
+  };
+}
+
+/**
+ * The text item's parents all format the marker, and each colour, size and outline overwrites the
+ * last, so the outermost wins (`rich_text_label.cpp:342-358`).
  */
 function textRowMarkerStyle(inputs: RunListingInputs): MarkerStyle {
   const { tags, defaultColor } = inputs;
-  const color = colorOf(tags.find((tag) => tag.name === 'color')?.value, defaultColor) ?? defaultColor;
-  return styleOf(hasOpenTag(tags, 'b'), hasOpenTag(tags, 'i'), color, inputs);
+  const formatting = markerFormatting(tags, outermostValue, defaultColor);
+  return styleOf(hasOpenTag(tags, 'b'), hasOpenTag(tags, 'i'), formatting, undefined, inputs);
 }
 
 /**
  * An empty line has no text item, so the marker takes the formatting items opened at its first
- * character (`:312-321`). Each overwrites the last, so the innermost colour wins, and the colour of
- * the line's own tags (`_find_color`) fills in. A `[b]` or `[i]` opened there makes a font item with the
- * other open style folded in.
+ * character (`:312-321`). Each overwrites the last, so the innermost wins, and the tags of the
+ * line itself (`_find_color` and its siblings) fill in the colour and outline. A `[b]` or `[i]`
+ * opened there makes a font item with the other open style folded in.
  */
 function emptyRowMarkerStyle(
   inputs: RunListingInputs,
@@ -117,13 +181,10 @@ function emptyRowMarkerStyle(
 ): MarkerStyle {
   const { tags, defaultColor } = inputs;
   const opensFont = openedHere.some((tag) => tag.name === 'b' || tag.name === 'i');
-  const color =
-    colorOf(lastTagValue(openedHere, 'color'), defaultColor) ??
-    colorOf(lastTagValue(lineTags, 'color'), defaultColor) ??
-    defaultColor;
+  const formatting = markerFormatting(openedHere, lastTagValue, defaultColor);
   return opensFont
-    ? styleOf(hasOpenTag(tags, 'b'), hasOpenTag(tags, 'i'), color, inputs)
-    : styleOf(false, false, color, inputs);
+    ? styleOf(hasOpenTag(tags, 'b'), hasOpenTag(tags, 'i'), formatting, lineTags, inputs)
+    : styleOf(false, false, formatting, lineTags, inputs);
 }
 
 /** The listing of the run `inputs` describe, or `undefined` when no indent or list is open. */
@@ -140,8 +201,6 @@ export function runListing(inputs: RunListingInputs): RunListing | undefined {
     emptyRowMarkerLater: emptyRowMarkerStyle(inputs, [], tags),
   };
 }
-
-// ── Markers ──
 
 /** `RichTextLabel::ListType`, with the options a tag carries. */
 type ListKind =
@@ -226,8 +285,6 @@ function markerText(kinds: readonly ListKind[], indexes: readonly number[]): str
   return `${marker} `;
 }
 
-// ── Paragraphs ──
-
 /** What the layout takes from a paragraph in an indent or a list. */
 export interface ParagraphListing {
   /** The paragraph's left inset, px: its margin plus the widest marker of its list (`l.indent`, `:472`). */
@@ -243,6 +300,7 @@ export interface ListMarker {
   /** The size `TextParagraph::get_size()` reports: the ceiled width. */
   widthPx: number;
   color: Rgba;
+  outline: TextOutlineTheme;
 }
 
 type ListingRun = Pick<StyledTextRun, 'text' | 'listing' | 'bidi'>;
@@ -342,8 +400,10 @@ function marginPx(frames: readonly IndentFrame[], context: ListingContext): numb
 
 function shapeMarker(text: string, row: Row, faces: RichTextFaces): ListMarker {
   const style = rowMarkerStyle(row);
+  // A size of 0 or less shapes no glyphs, so the marker has no width and draws nothing.
+  const shapedText = style.fontSizePx > 0 ? text : '';
   const direction = row.run.bidi.direction;
-  const layout = shapeText(text, {
+  const layout = shapeText(shapedText, {
     fontSizePx: style.fontSizePx,
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,
@@ -358,6 +418,7 @@ function shapeMarker(text: string, row: Row, faces: RichTextFaces): ListMarker {
     fontSizePx: style.fontSizePx,
     widthPx: shapedTextSizeWidthPx(layout.widthPx),
     color: style.color,
+    outline: style.outline,
   };
 }
 
@@ -385,7 +446,7 @@ export function paragraphListings(
 
   /** `_find_list`'s index of `list` for a line at or below `row`: the lines of the list up to it, plus one. */
   const indexOf = (list: OpenBBCodeTag, row: number): number =>
-    1 + (rowsOfList.get(list) ?? []).filter((rowIndex) => rowIndex <= row).length;
+    1 + countAtOrBelow(rowsOfList.get(list) ?? [], row);
 
   // `_add_list_prefixes` shapes a list's markers on its first line, so a list whose first line sits
   // outside it (a styling tag opens that line) has none and a zero marker width.
@@ -415,4 +476,16 @@ export function paragraphListings(
     });
   });
   return listings;
+}
+
+/** The count of `ascending` at or below `value`, by binary search: a nested list asks once per row. */
+function countAtOrBelow(ascending: readonly number[], value: number): number {
+  let low = 0;
+  let high = ascending.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (ascending[middle]! <= value) low = middle + 1;
+    else high = middle;
+  }
+  return low;
 }

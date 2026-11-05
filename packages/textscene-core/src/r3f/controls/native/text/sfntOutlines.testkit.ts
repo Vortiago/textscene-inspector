@@ -119,6 +119,12 @@ export class ByteWriter {
     return this.u16(value >>> 16).u16(value & 0xffff);
   }
 
+  /** A four-character table, script, feature or axis tag. */
+  tag(name: string): this {
+    for (const char of name) this.u8(char.charCodeAt(0));
+    return this;
+  }
+
   raw(other: ByteWriter | readonly number[]): this {
     this.bytes.push(...(other instanceof ByteWriter ? other.bytes : other));
     return this;
@@ -270,8 +276,7 @@ export function sfntFileBytes(
     .u16(0);
   let offset = sfntStart + directorySize;
   for (const [tag, table] of tables) {
-    for (const char of tag) out.u8(char.charCodeAt(0));
-    out.u32(0).u32(offset).u32(table.length);
+    out.tag(tag).u32(0).u32(offset).u32(table.length);
     offset += Math.ceil(table.length / 4) * 4;
   }
   for (const [, table] of tables) out.raw(table).pad4();

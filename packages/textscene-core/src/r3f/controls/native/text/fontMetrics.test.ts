@@ -17,6 +17,8 @@ import {
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
   withOutlines,
+  drawnOpentype,
+  type OpentypeCoordinates,
   withVariation,
   type FontMetrics,
 } from './fontMetrics';
@@ -165,6 +167,62 @@ describe('withVariation', () => {
   it('returns one object per face, embolden and skew, so a layout memoised on it keeps its hits', () => {
     expect(withVariation(METRICS, { embolden: 1.2 })).toBe(withVariation(METRICS, { embolden: 1.2 }));
     expect(withVariation(METRICS, { embolden: 1.2 })).not.toBe(withVariation(METRICS, { skew: 1.2 }));
+  });
+});
+
+describe('withVariation at a variable-font instance', () => {
+  const WGHT = 0x77676874;
+  const BOLD = new Map([[WGHT, 700]]);
+  const REGULAR = new Map([[WGHT, 400]]);
+  /** At the font's units per em, a kerning in px equals the kerning in design units. */
+  const UNIT_SIZE_PX = METRICS.unitsPerEm;
+  /**
+   * Outlines whose default instance is wght 400, with A at glyph 1, V at glyph 2 and no glyph for any
+   * other character. Like the real outlines, they kern nothing at the default instance.
+   */
+  const glyphIndex = (codePoint: number) => ({ A: 1, V: 2 })[String.fromCodePoint(codePoint)] ?? 0;
+  const drawsInstance = (opentype: OpentypeCoordinates) => opentype.get(WGHT) !== 400;
+  const variableOutlines = {
+    glyphIndex,
+    glyphContours: () => null,
+    drawsInstance,
+    kerningAtInstance: (leftCodePoint: number, rightCodePoint: number, opentype: OpentypeCoordinates) => {
+      const [left, right] = [glyphIndex(leftCodePoint), glyphIndex(rightCodePoint)];
+      return !drawsInstance(opentype) || left === 0 || right === 0 ? null : left * 10 + right;
+    },
+  };
+  const kerningPx = (face: FontMetrics, a: string, b: string) =>
+    getFontKerningAdjustmentPx(face, a, b, UNIT_SIZE_PX);
+
+  it('kerns a pair by the GPOS kerning of the instance', () => {
+    const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    expect(kerningPx(face, 'A', 'V')).toBe(12);
+  });
+
+  it('keeps the kerning of the face for a character the font has no glyph for', () => {
+    const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    expect(kerningPx(face, 'A', 'x')).toBe(0);
+  });
+
+  it('draws axis values at the default instance as the font itself, with its own kerning', () => {
+    const face = withVariation(METRICS, { opentype: REGULAR, outlines: variableOutlines });
+    expect(drawnOpentype(face)).toBeUndefined();
+    expect(kerningPx(face, 'A', 'V')).toBe(-256);
+  });
+
+  // A TextMesh reads its outlines apart from its metrics, so a face may first settle without them.
+  it('keeps the axis values of a face without outlines, so outlines added later draw the instance', () => {
+    const settled = withVariation(METRICS, { opentype: BOLD, outlines: null });
+    expect(kerningPx(withOutlines(settled, variableOutlines), 'A', 'V')).toBe(12);
+  });
+
+  // A `FontVariation` over another finds its face at its own axis values (`font.cpp:3120-3131`), as
+  // the bold that the default theme makes of a project font does (`default_theme.cpp:1393-1394`).
+  it('drops the instance under a variation of its own that sets no axis', () => {
+    const atInstance = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    const bold = withVariation(atInstance, { embolden: 1.2 });
+    expect(drawnOpentype(bold)).toBeUndefined();
+    expect(kerningPx(bold, 'A', 'V')).toBe(-256);
   });
 });
 

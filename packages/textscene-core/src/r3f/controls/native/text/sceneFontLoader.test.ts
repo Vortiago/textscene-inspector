@@ -10,7 +10,7 @@ import { fontWork, onSceneFontSettled, sceneFontSettleCount } from './settledCha
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { FACELESS_FONT } from './sceneFontResolution';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
-import { getFontAscentPx, getFontLinePitchPx } from './fontMetrics';
+import { drawnOpentype, getFontAscentPx, getFontGlyphAdvancePx, getFontLinePitchPx } from './fontMetrics';
 import * as logger from '../../../../logger';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 
@@ -449,7 +449,11 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
     });
     const { fontFile: freshFontFile, fixtureFontBytes } = await import('./sfntOutlines.testkit');
     const mod = await import('./sceneFontLoader');
-    return { ...mod, ttf: () => freshFontFile(fixtureFontBytes('open-sans-semibold-subset.ttf')) };
+    return {
+      ...mod,
+      ttf: () => freshFontFile(fixtureFontBytes('open-sans-semibold-subset.ttf')),
+      recursive: () => freshFontFile(fixtureFontBytes('recursive-vf-subset.woff2')),
+    };
   }
 
   const emboldened = (base: FontResource): FontResource => ({
@@ -480,6 +484,35 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
 
     const face = peek(font, 'Root/Ink') as CanvasFontMetrics;
     expect(face.getGlyphInkUnits?.('A')).toEqual({ left: 30, right: 470 });
+  });
+
+  /** Recursive's face under a `FontVariation` at `MONO` = `mono`, once its outlines settle. */
+  async function settledAtMono(mono: number) {
+    const { peekSettledSceneFontMetrics: peek, recursive } = await loaderWithFontDoor();
+    const font: FontResource = {
+      kind: 'variation',
+      baseFont: recursive(),
+      fallbacks: [],
+      properties: { variation_opentype: `{\n1297043023: ${mono}\n}` },
+    };
+    peek(font, 'Root/Label');
+    await vi.waitFor(() => expect(peek(font, 'Root/Label')).not.toBeNull());
+    return peek(font, 'Root/Label')!;
+  }
+
+  it('settles a variable font at an instance on its outlines, which its text and advances follow', async () => {
+    const face = await settledAtMono(1);
+
+    expect(drawnOpentype(face)).toEqual(new Map([[1297043023, 1]]));
+    // Recursive's `MONO` instance advances every glyph 600 of 1000 units, where `m` measures 500 at the default.
+    expect(getFontGlyphAdvancePx(face, 'm', 10)).toBe(6);
+  });
+
+  it('keeps a variable font at its default instance on the measured advances', async () => {
+    const face = await settledAtMono(0);
+
+    expect(drawnOpentype(face)).toBeUndefined();
+    expect(getFontGlyphAdvancePx(face, 'm', 10)).toBe(5);
   });
 
   it('settles a plain canvas face at once, with no outlines to wait for', async () => {

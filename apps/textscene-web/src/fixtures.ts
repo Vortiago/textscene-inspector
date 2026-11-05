@@ -1268,6 +1268,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Font Variation Instance",
+    "file": "unit-label-font-variation-instance.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Font Variation Kerning",
+    "file": "unit-label-font-variation-kerning.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Label Settings Tres",
     "file": "unit-label-label-settings-tres.tscn",
     "category": "Other"
@@ -4101,6 +4111,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Rich Text Label Fill",
     "file": "unit-rich-text-label-fill.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Font Size Outline",
+    "file": "unit-rich-text-label-font-size-outline.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

@@ -28,27 +28,9 @@ import {
   type Subtable,
   u16,
   valueRecordSize,
+  GposType,
+  GsubType,
 } from './openTypeLayout';
-
-const GsubType = {
-  SINGLE: 1,
-  MULTIPLE: 2,
-  ALTERNATE: 3,
-  LIGATURE: 4,
-  CONTEXT: 5,
-  CHAIN_CONTEXT: 6,
-  REVERSE_CHAIN: 8,
-} as const;
-const GposType = {
-  SINGLE: 1,
-  PAIR: 2,
-  CURSIVE: 3,
-  MARK_TO_BASE: 4,
-  MARK_TO_LIGATURE: 5,
-  MARK_TO_MARK: 6,
-  CONTEXT: 7,
-  CHAIN_CONTEXT: 8,
-} as const;
 
 /** The subtables at the offsets after the count at `at`, relative to `base`; a zero offset is none. */
 function offsetsAfterCount(dv: DataView, at: number, base: number): (number | null)[] {

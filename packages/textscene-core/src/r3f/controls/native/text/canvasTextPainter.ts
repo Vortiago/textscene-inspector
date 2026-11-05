@@ -19,6 +19,7 @@ import {
 } from './canvasVariation';
 import {
   canvasGlyphPenXPx,
+  drawnOpentype,
   fontIsScaled,
   isGlyphVaried,
   type FontMetrics,
@@ -222,8 +223,8 @@ export interface CanvasTextPaintOptions {
  * Draws `layout`, shaped against a `'canvas'`-kind `FontMetrics`, glyph by glyph
  * at each `GlyphPlacement.x`.
  * `skew` shears each line's ink about its own baseline. With the `outlines` its metrics carry, the ring of
- * an emboldened or sheared glyph strokes the changed contour, so a shear does not shear its width,
- * and the fill of an emboldened glyph fills it.
+ * an emboldened, sheared or varied glyph strokes the changed contour, so a shear does not shear its
+ * width, and the fill of an emboldened or varied glyph fills it.
  */
 // Happy-dom has no 2D context, so under vitest the canvas stays blank. The pixels
 // are a golden-image concern, so a unit test reads the calls, not the pixels.
@@ -271,11 +272,14 @@ export function paintSceneFontCanvas(
 
   const baselineOffsetPx = layout.baselineOffsetPx;
   const embolden = metrics.embolden ?? 0;
-  const variation: GlyphVariation = { embolden, skew };
-  // The ring of a varied face strokes the contours, and the fill of an emboldened one fills them. They carry their own shear.
-  const followsContours = stroked ? isGlyphVaried(variation) : embolden !== 0;
+  const opentype = drawnOpentype(metrics);
+  const variation: GlyphVariation = { embolden, skew, opentype };
+  // The ring of a varied face strokes the contours, and the fill of a face varied by more than a shear
+  // fills them. They carry their own shear.
+  const followsContours = isGlyphVaried(stroked ? variation : { embolden, opentype });
   const contourOutlines = followsContours ? (metrics.outlines ?? null) : null;
   const contoursOf = contourOutlines && variedContoursReader(contourOutlines, fontSizePx, variation);
+  const isShapeVaried = isGlyphVaried({ skew, opentype });
 
   const paintGlyphText = (char: string, penX: number, baselineY: number, growthPx: number | undefined) => {
     if (stroked) ctx.strokeText(char, penX, baselineY);
@@ -311,8 +315,8 @@ export function paintSceneFontCanvas(
       const penX =
         canvasLayout.offsetXPx +
         (snapsGlyphs ? canvasGlyphPenXPx(originPhasePx.x + gp.x, fontSizePx, metrics) : gp.x);
-      // A glyph shaped with no growth, in a layout that is not sheared, stays on its plain ring.
-      const hasVariedGlyph = skew !== 0 || gp.emboldenGrowthPx;
+      // A glyph shaped with no growth, in a layout that is not sheared or at an instance, stays on its plain ring.
+      const hasVariedGlyph = gp.emboldenGrowthPx || isShapeVaried;
       const contours = contoursOf && hasVariedGlyph ? contoursOf(gp.char) : null;
       if (contours) (stroked ? strokeContours : fillContours)(ctx, contours, penX, baselineY);
       else if (contourOutlines && skew !== 0)
