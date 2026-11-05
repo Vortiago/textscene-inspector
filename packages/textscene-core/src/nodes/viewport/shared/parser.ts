@@ -16,6 +16,11 @@ import {
 } from '../../../godot/scene/viewport';
 import type { ViewportProperties } from './types';
 
+/** The node a parse warning names: its class and its name. */
+export function viewportParseContext(heading: ParsedHeading, name: string): string {
+  return `${heading.attributes.type ?? 'Viewport'} ${name || '(unnamed)'}`;
+}
+
 export function parseViewport(
   heading: ParsedHeading,
   properties: Record<string, string>
@@ -24,7 +29,7 @@ export function parseViewport(
   // writes one, and carrying the base parser's field would let a malformed scene
   // put a transform on something that cannot have one.
   const { transform: _transform, ...baseProperties } = parseNode(heading, properties);
-  const context = `${heading.attributes.type ?? 'Viewport'} ${baseProperties.name || '(unnamed)'}`;
+  const context = viewportParseContext(heading, baseProperties.name);
 
   return {
     ...baseProperties,

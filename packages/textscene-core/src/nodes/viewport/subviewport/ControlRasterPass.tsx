@@ -56,7 +56,6 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const { transparent_bg: transparentBg, render_target_clear_mode: clearMode } = properties;
   const sizes = viewportPassSizes(node, useViewportRect(path));
   const { x: width, y: height } = sizes.target;
-  const { x: layoutWidth, y: layoutHeight } = sizes.layout;
 
   const gl = useThree((state) => state.gl);
   const clearColor = useProjectClearColor();
@@ -85,7 +84,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   );
 
   const canvasModulate = useCanvasModulateColor(node.children);
-  const controlsSize = useStableVector2({ x: layoutWidth, y: layoutHeight });
+  const controlsSize = useStableVector2(sizes.layout);
 
   const renderState = useViewportRenderState(gate.updateMode);
   const renderPass = useCallback(() => {

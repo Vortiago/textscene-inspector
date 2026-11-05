@@ -239,7 +239,7 @@ export function trimLineToWidth(
   }
   const finalGlyphs = isRtl
     ? [
-        ...placeEllipsis(ellipsis.reverse(), 0, fontMetrics),
+        ...placeEllipsis([...ellipsis].reverse(), 0, fontMetrics),
         ...shiftGlyphs(kept, advanceOf(ellipsis) - keptStartPx),
       ]
     : [...shiftGlyphs(kept, -keptStartPx), ...placeEllipsis(ellipsis, keptWidthPx, fontMetrics)];
@@ -286,8 +286,10 @@ function findTrimPosition(
   for (let step = 0; step < steps; step++) {
     const i = isRtl ? step : count - 1 - step;
     const gp = glyphs[i]!;
+    // A left-to-right step drops glyph i before the fit test, a right-to-left step after it.
     if (!isRtl) width -= gp.advance;
-    const aboveMinCharThreshold = (isRtl ? count - 1 - i : i) >= ELL_MIN_CHARACTERS;
+    // The glyphs the cut keeps on the reading side, the same count in either direction.
+    const aboveMinCharThreshold = count - 1 - step >= ELL_MIN_CHARACTERS;
     if (!aboveMinCharThreshold && lastValidCutWithoutEl !== -1) {
       trimPos = lastValidCutWithoutEl;
       ellipsisPos = -1;

@@ -319,6 +319,8 @@ interface Ancestry {
    * windows that still reach this forest's embedder.
    */
   windowsOnly: boolean;
+  /** The forest's window root (`ForestStart.contentRoot`): a Control here, never a viewport boundary. */
+  isContentRoot: boolean;
 }
 
 /**
@@ -429,6 +431,16 @@ interface ForestStart {
   contentRoot: TscnNode | null;
   /** The theme owners above the forest, nearest first (`viewportThemeOwners`). */
   themeOwners: readonly ThemeOwner[];
+}
+
+/** Walks below a node only for the windows that reach this forest's embedder. It adds no Control here. */
+function descendForWindows(
+  step: LiveStep,
+  descend: (ancestry: Ancestry) => WalkResult[],
+  ancestry: Ancestry
+): WalkResult {
+  if (mayHoldWindowBelow(step)) descend(ancestry);
+  return NOTHING_WALKED;
 }
 
 /**
@@ -719,9 +731,13 @@ function buildForest(
     if (isEmbeddableWindow(live)) {
       windows.push(windowSolveNode(live, path, step.scope, themeChain, hidden, ancestry.inheritedRtl));
     }
-    if (embedsSubwindows(live) || !mayHoldWindowBelow(step)) return NOTHING_WALKED;
-    descend({ ...ancestry, themeChain, ancestorHidden: hidden, windowsOnly: true });
-    return NOTHING_WALKED;
+    if (embedsSubwindows(live)) return NOTHING_WALKED;
+    return descendForWindows(step, descend, {
+      ...ancestry,
+      themeChain,
+      ancestorHidden: hidden,
+      windowsOnly: true,
+    });
   }
 
   /** A node's theme items by name, each resolved through `themeScope`, overrides first. */
@@ -793,7 +809,7 @@ function buildForest(
       inheritedRtl,
       childVisibility,
     } = ancestry;
-    const isContentRoot = node === contentRoot || step.node === contentRoot;
+    const { isContentRoot } = ancestry;
     // A viewport owns its own World2D (ADR-0033): its Control subtree draws in its own target. The
     // collapsed type, since an instance's own node has none when its sub-scene root is the viewport.
     if (isViewportBoundary(step.node.type) && !isContentRoot) return walkViewport(link, ancestry, descend);
@@ -835,9 +851,12 @@ function buildForest(
     const nodeThemeChain = isControl ? withOwnTheme(collapsed, ownScope, themeChain) : [];
     const hidden = ancestorHidden || hiddenNodePaths.has(path);
     if (ancestry.windowsOnly) {
-      if (!mayHoldWindowBelow(step)) return NOTHING_WALKED;
-      descend({ ...ancestry, themeChain: nodeThemeChain, ancestorHidden: hidden, inheritedRtl: rtl });
-      return NOTHING_WALKED;
+      return descendForWindows(step, descend, {
+        ...ancestry,
+        themeChain: nodeThemeChain,
+        ancestorHidden: hidden,
+        inheritedRtl: rtl,
+      });
     }
 
     // The world walk's allocation, from the same function, so the two walks'
@@ -913,6 +932,7 @@ function buildForest(
             inheritedRtl: rtl,
             childVisibility: writtenChildVisibility,
             windowsOnly: false,
+            isContentRoot: false,
           })
         )
       : { nodes: [], hoisted: [] };
@@ -989,6 +1009,7 @@ function buildForest(
         inheritedRtl,
         childVisibility: undefined,
         windowsOnly: false,
+        isContentRoot: contentRoot !== null,
       },
       walk
     )
@@ -1021,11 +1042,6 @@ export function useBuildSolveTree(
   return useSolveForest(nodes, externalResources, internalResources, start);
 }
 
-/** A viewport's forest, and whether it is rooted at the window itself rather than at its children. */
-export interface UseBuildViewportTreeResult extends UseBuildSolveTreeResult {
-  isWindowForest: boolean;
-}
-
 /**
  * The Control forest a viewport draws on its canvas: a SubViewport's children, or a window rooted
  * at itself (`ForestStart.contentRoot`).
@@ -1036,17 +1052,14 @@ export function useBuildViewportTree(
   internalResources: readonly TscnInternalResource[],
   themeOwners: readonly ThemeOwner[],
   inheritedRtl: boolean | null = null
-): UseBuildViewportTreeResult {
+): UseBuildSolveTreeResult {
   const contentRoot = isEmbeddedWindow(viewport.type) ? viewport : null;
   const nodes = useMemo(() => (contentRoot ? [contentRoot] : viewport.children), [contentRoot, viewport]);
   const start = useMemo(
     () => ({ inheritedRtl, contentRoot, themeOwners }),
     [inheritedRtl, contentRoot, themeOwners]
   );
-  return {
-    ...useSolveForest(nodes, externalResources, internalResources, start),
-    isWindowForest: !!contentRoot,
-  };
+  return useSolveForest(nodes, externalResources, internalResources, start);
 }
 
 function useSolveForest(

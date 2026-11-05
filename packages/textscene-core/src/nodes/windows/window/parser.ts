@@ -15,7 +15,7 @@ import {
   type WindowSizeWrite,
 } from '../../../godot/scene/window';
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../../godot/scene/viewport';
-import { parseViewport } from '../../viewport/shared/parser';
+import { parseViewport, viewportParseContext } from '../../viewport/shared/parser';
 import { parseThemeOwnerFields } from '../../2d/ui/control/themeOwnerParser';
 import { DEFAULT_CONTENT_SCALE, type ContentScale } from './contentScale';
 import type { WindowProperties } from './types';
@@ -67,7 +67,7 @@ function parseTransparentBackground(
 export function parseWindow(heading: ParsedHeading, properties: Record<string, string>): WindowProperties {
   const viewport = parseViewport(heading, properties);
   const defaults = windowClassDefaults(heading.attributes.type ?? 'Window');
-  const context = `${heading.attributes.type ?? 'Window'} ${viewport.name || '(unnamed)'}`;
+  const context = viewportParseContext(heading, viewport.name);
   const visible = boolOr(properties.visible, defaults.visible, context);
 
   return {

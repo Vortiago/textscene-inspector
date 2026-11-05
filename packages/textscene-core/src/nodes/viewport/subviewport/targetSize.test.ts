@@ -12,34 +12,34 @@ import { parseWindow } from '../../windows/window/parser';
 import { viewportPassSizes, viewportSize } from './targetSize';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 
-function viewportTargetSize(size: Vector2, forced: ViewportRect | null): Vector2 {
+function targetOf(size: Vector2, forced: ViewportRect | null): Vector2 {
   const node = { name: 'View', type: 'SubViewport', children: [], properties: { size } };
   return viewportPassSizes(node as unknown as TscnNode, forced).target;
 }
 
 describe('viewportPassSizes: the target', () => {
   it('keeps the authored size when no container forces one', () => {
-    expect(viewportTargetSize({ x: 399, y: 480 }, null)).toEqual({ x: 399, y: 480 });
+    expect(targetOf({ x: 399, y: 480 }, null)).toEqual({ x: 399, y: 480 });
   });
 
   it('prefers the forced rect over the authored size', () => {
-    expect(viewportTargetSize({ x: 399, y: 480 }, { x: 572, y: 648 })).toEqual({ x: 572, y: 648 });
+    expect(targetOf({ x: 399, y: 480 }, { x: 572, y: 648 })).toEqual({ x: 572, y: 648 });
   });
 
   it('floors each axis at 2, as Godot does for a viewport', () => {
-    expect(viewportTargetSize({ x: 1, y: -40 }, null)).toEqual({ x: 2, y: 2 });
-    expect(viewportTargetSize({ x: 300, y: 300 }, { x: 40, y: 0 })).toEqual({ x: 40, y: 2 });
+    expect(targetOf({ x: 1, y: -40 }, null)).toEqual({ x: 2, y: 2 });
+    expect(targetOf({ x: 300, y: 300 }, { x: 40, y: 0 })).toEqual({ x: 40, y: 2 });
   });
 
   it('caps each axis at the largest texture WebGL allocates', () => {
-    expect(viewportTargetSize({ x: 2000000000, y: MAX_TEXTURE_EXTENT }, null)).toEqual({
+    expect(targetOf({ x: 2000000000, y: MAX_TEXTURE_EXTENT }, null)).toEqual({
       x: MAX_TEXTURE_EXTENT,
       y: MAX_TEXTURE_EXTENT,
     });
   });
 
   it('gives a non-finite axis the 2-pixel floor', () => {
-    expect(viewportTargetSize({ x: Number.NaN, y: Number.POSITIVE_INFINITY }, null)).toEqual({ x: 2, y: 2 });
+    expect(targetOf({ x: Number.NaN, y: Number.POSITIVE_INFINITY }, null)).toEqual({ x: 2, y: 2 });
   });
 });
 

@@ -6,7 +6,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { boolOr, enumOr, vec2iOr } from '../../../parser/valueParsers';
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../../godot/scene/viewport';
-import { parseViewport } from '../shared/parser';
+import { parseViewport, viewportParseContext } from '../shared/parser';
 import type { SubViewportProperties } from './types';
 
 const UPDATE_MODES = Object.values(SubViewportUpdateMode);
@@ -17,7 +17,7 @@ export function parseSubViewport(
   properties: Record<string, string>
 ): SubViewportProperties {
   const viewport = parseViewport(heading, properties);
-  const context = `SubViewport ${viewport.name || '(unnamed)'}`;
+  const context = viewportParseContext(heading, viewport.name);
 
   return {
     ...viewport,
