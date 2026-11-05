@@ -32,5 +32,10 @@ draws the same set.
 ## Consequences
 
 A character the descriptor lacks draws a hex-code box, where Godot draws it from the font's
-`fallbacks`. No font kind has a per-glyph fallback search yet. Label3D and TextMesh read the same
-font in a later change.
+`fallbacks`. No font kind has a per-glyph fallback search yet.
+
+A Label3D draws a BMFont with the same painter under its own rules (`glyphDrawer.ts`): it keeps the
+pen, skips a glyph whose page rectangle is 2 px or less and draws no hex-code box
+(`label_3d.cpp:333-360`). Its material multiplies the page by the modulate in linear. A TextMesh
+reads no outlines from a BMFont (`bitmapFontOutlines.ts`), so it draws only the hex-code box of a
+character the font lacks.

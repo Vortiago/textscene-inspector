@@ -16,6 +16,7 @@ import { litPixelMaterial } from '../../../lighting2d/testing/litPixelMaterial';
 import { AutowrapMode, ContourPointTag } from '../../../../godot/text/textServerEnums';
 import type { GlyphContours } from './glyphContours';
 import type { SfntOutlines } from './sfntOutlines';
+import type { GlyphDrawer } from './glyphDrawer';
 import type { Vector2 } from '../../../../godot/math/vector';
 
 const CANVAS_METRICS = createRuntimeFontMetrics({
@@ -152,14 +153,14 @@ function paintRecording(
   {
     skew = 0,
     outlines = null,
-    quantisesPen,
+    glyphDrawer,
     originPhasePx,
     fontSizePx = 16,
   }: {
     fontSizePx?: number;
     skew?: number;
     outlines?: SfntOutlines | null;
-    quantisesPen?: boolean;
+    glyphDrawer?: GlyphDrawer;
     originPhasePx?: Vector2;
   } = {}
 ) {
@@ -198,7 +199,7 @@ function paintRecording(
     canvasLayout,
     {
       strokeWidthPx,
-      quantisesPen,
+      glyphDrawer,
       originPhasePx,
     }
   );
@@ -278,7 +279,7 @@ describe('paintSceneFontCanvas — pen', () => {
 
   it('keeps the pen of a Label3D, whose mesh places each glyph where it is', () => {
     const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, {
-      quantisesPen: false,
+      glyphDrawer: 'label3D',
       originPhasePx: { x: 0.3, y: 0.6 },
     });
     expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 10.6);
@@ -287,7 +288,7 @@ describe('paintSceneFontCanvas — pen', () => {
   it('keeps the baseline of a Label3D', () => {
     const layout = fractionalPenLayout();
     const { calls, canvasLayout } = paintRecording(layout, 0, {
-      quantisesPen: false,
+      glyphDrawer: 'label3D',
       originPhasePx: { x: 0.3, y: 0.6 },
     });
     expect(calls.filter((c) => c.op === 'fillText')[0]!.args[2]).toBe(

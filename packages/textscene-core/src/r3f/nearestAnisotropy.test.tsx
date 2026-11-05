@@ -66,6 +66,22 @@ describe('useNearestAnisotropy', () => {
     expect(gl.texParameterf).toHaveBeenCalled();
   });
 
+  it('writes once per upload and restores the callback when hooks on a shared texture unmount in any order', () => {
+    const { gl, wrapper } = fakeCanvasRenderer({ isAllocated: false });
+    const texture = textureWith();
+    const original = vi.fn();
+    texture.onUpdate = original;
+    const first = renderHook(() => useNearestAnisotropy(texture), { wrapper });
+    const second = renderHook(() => useNearestAnisotropy(texture), { wrapper });
+
+    texture.onUpdate!(texture);
+    expect(gl.texParameterf).toHaveBeenCalledTimes(1);
+    first.unmount();
+    second.unmount();
+
+    expect(texture.onUpdate).toBe(original);
+  });
+
   it('writes nothing on a GPU without the anisotropic extension', () => {
     const { gl, wrapper } = fakeCanvasRenderer({ isAllocated: true, hasAnisotropyExtension: false });
     const texture = textureWith();
