@@ -39,11 +39,14 @@ import {
   underlineRectPx,
   type RichTextImagePlacement,
   type RichTextRunPlacement,
+  type StyledTextRun,
 } from './nativeSolver';
 import { resolveRichTextFaces } from './styleFaces';
 import { shapeBesideScrollBar } from './scrollBar';
+import { countedCharacters, richTextReveal, truncateRunsToCharacters } from './visibleCharacters';
 import type { RichTextLabelProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
+import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { ResolvedTextTheme, TextOutlineTheme } from '../../../../r3f/controls/native/textTheme';
@@ -194,50 +197,90 @@ function useShapedRichText(
       h: rect.h,
       scrollActive: props.scrollActive,
       scrollFollowing: props.scrollFollowing,
+      scrollFollowingVisibleCharacters: props.scrollFollowingVisibleCharacters,
       rtl,
     }),
-    [rect.w, rect.h, props.scrollActive, props.scrollFollowing, rtl]
+    [rect.w, rect.h, props.scrollActive, props.scrollFollowing, props.scrollFollowingVisibleCharacters, rtl]
   );
 
-  return useMemo(
-    () =>
-      shapeBesideScrollBar(
-        (wrapWidthPx) => {
-          const runs = wrapWidthPx === rect.w ? runsAtRectWidth : runsAt(wrapWidthPx);
-          const layout = shapeRichText(
-            runs,
-            { normal, bold, italic, boldItalic },
-            {
-              fontSizePx: textTheme.fontSizePx,
-              boxWidthPx: wrapWidthPx,
-              autowrapMode,
-              tabSize: props.tabSize,
-              autowrapTrimFlags: props.autowrapTrimFlags,
-              localizeNumeralSystem: props.localizeNumeralSystem,
-            }
-          );
-          return { runs, layout };
-        },
-        box,
-        theme
+  const shapeAtWidth = useCallback(
+    (shapedRuns: StyledTextRun[], boxWidthPx: number) =>
+      shapeRichText(
+        shapedRuns,
+        { normal, bold, italic, boldItalic },
+        {
+          fontSizePx: textTheme.fontSizePx,
+          boxWidthPx,
+          autowrapMode,
+          tabSize: props.tabSize,
+          autowrapTrimFlags: props.autowrapTrimFlags,
+          localizeNumeralSystem: props.localizeNumeralSystem,
+        }
       ),
     [
-      runsAt,
-      runsAtRectWidth,
-      rect.w,
       normal,
       bold,
       italic,
       boldItalic,
       textTheme.fontSizePx,
-      box,
       autowrapMode,
       props.tabSize,
       props.autowrapTrimFlags,
       props.localizeNumeralSystem,
-      theme,
     ]
   );
+
+  const shaped = useMemo(
+    () =>
+      shapeBesideScrollBar(
+        (wrapWidthPx) => {
+          const runs = wrapWidthPx === rect.w ? runsAtRectWidth : runsAt(wrapWidthPx);
+          return { runs, layout: shapeAtWidth(runs, wrapWidthPx) };
+        },
+        box,
+        theme
+      ),
+    [runsAt, runsAtRectWidth, rect.w, shapeAtWidth, box, theme]
+  );
+
+  const { visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior } = props;
+  const totalCharacters = useMemo(() => countedCharacters(shaped.runs), [shaped.runs]);
+  const reveal = useMemo(
+    () =>
+      richTextReveal(
+        { visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior },
+        rtl,
+        totalCharacters
+      ),
+    [visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior, rtl, totalCharacters]
+  );
+
+  // Before Shaping draws a prefix shaped on its own, so a typewriter reveal wraps as it grows. Only
+  // this prefix depends on the reveal: the full shape above, which the heights and the bar read, does not.
+  const isBeforeShaping = reveal?.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING;
+  const fullText = useMemo(
+    () =>
+      isBeforeShaping
+        ? {
+            heightPx: shaped.contentHeightPx,
+            lineCount: shaped.layout.lines.length,
+          }
+        : undefined,
+    [isBeforeShaping, shaped]
+  );
+  const shown = useMemo(() => {
+    if (!reveal || !isBeforeShaping) return undefined;
+    const { runs, layout, wrapWidthPx } = shaped;
+    const shownRuns = truncateRunsToCharacters(runs, reveal.characters);
+    // A cut that keeps the text whole returns the same runs, so its layout is reused.
+    const isUncut = shownRuns === runs;
+    return {
+      runs: shownRuns,
+      layout: isUncut ? layout : shapeAtWidth(shownRuns, wrapWidthPx),
+    };
+  }, [shaped, reveal, isBeforeShaping, shapeAtWidth]);
+
+  return { ...shaped, shown, fullText, reveal };
 }
 
 /** The lines and images of a RichTextLabel, and its scrollbar. A `ControlQuad` reads its clip from context, a `TextRun` from `clippingPlanes`. */
@@ -256,27 +299,35 @@ function RichTextBody({
     [solveNode, props, theme]
   );
 
-  const { runs, layout, wrapWidthPx, textOriginXPx, scrollOffsetPx, scrollBar } = useShapedRichText(
-    solveNode,
-    props,
-    rect,
-    theme,
-    textTheme
-  );
+  const { runs, layout, shown, fullText, reveal, wrapWidthPx, textOriginXPx, scrollOffsetPx, scrollBar } =
+    useShapedRichText(solveNode, props, rect, theme, textTheme);
 
   // The alignment property and the `[center]`/`[right]`/`[left]`/`[fill]` tags
   // (`rich_text_label.cpp:5681-5696`) resolve through one `_find_alignment`
   // port. A FILL paragraph fits the text rect by `justification_flags`.
   const placements = useMemo(
     () =>
-      layoutRichTextRuns(runs, layout, {
+      layoutRichTextRuns(shown?.runs ?? runs, shown?.layout ?? layout, {
         boxWidthPx: wrapWidthPx,
         boxHeightPx: rect.h,
         scrollOffsetPx,
         horizontalAlignment: props.horizontalAlignment,
         verticalAlignment: props.verticalAlignment,
+        reveal,
+        fullText,
       }),
-    [runs, layout, wrapWidthPx, rect.h, scrollOffsetPx, props.horizontalAlignment, props.verticalAlignment]
+    [
+      runs,
+      layout,
+      shown,
+      fullText,
+      reveal,
+      wrapWidthPx,
+      rect.h,
+      scrollOffsetPx,
+      props.horizontalAlignment,
+      props.verticalAlignment,
+    ]
   );
 
   return (

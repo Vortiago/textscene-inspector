@@ -5,14 +5,14 @@
  */
 
 /** UTF-16 units that the code point at `offset` takes: 2 for an astral character, else 1. */
-function widthAt(text: string, offset: number): number {
+export function utf16WidthAt(text: string, offset: number): number {
   return text.codePointAt(offset)! > 0xffff ? 2 : 1;
 }
 
 /** Code points in `text`. A lone surrogate counts one, as `String` stores it. */
 export function codePointCount(text: string): number {
   let count = 0;
-  for (let offset = 0; offset < text.length; offset += widthAt(text, offset)) count++;
+  for (let offset = 0; offset < text.length; offset += utf16WidthAt(text, offset)) count++;
   return count;
 }
 
@@ -20,7 +20,7 @@ export function codePointCount(text: string): number {
 export function utf16OffsetOf(text: string, index: number): number {
   let offset = 0;
   for (let seen = 0; seen < index && offset < text.length; seen++) {
-    offset += widthAt(text, offset);
+    offset += utf16WidthAt(text, offset);
   }
   return offset;
 }

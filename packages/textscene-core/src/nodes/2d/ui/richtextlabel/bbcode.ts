@@ -32,6 +32,12 @@ interface BBCodeRun {
   text: string;
   tags: readonly OpenBBCodeTag[];
   /**
+   * Indices in `text` of the newlines a paragraph tag adds to end a line that holds items
+   * (`rich_text_label.cpp:4097-4103`). Godot starts a new `Line` there with no `ITEM_NEWLINE`, so
+   * these count no character. Absent when there are none.
+   */
+  implicitBreaks?: number[];
+  /**
    * Set only when a line starts at this run's first character and its first item leaves an indent or a
    * list of `tags` out: the tags open at that item (`Line::from`). A styling tag that opens the line before
    * a list is that item (`rich_text_label.cpp:4096-4103`). A line that starts later in the run has all of `tags`.
@@ -577,6 +583,8 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
   let lineHasHeight = false;
   // Whether the current line holds an item `_find_layout_subitem` counts, with or without height.
   let lineHasLayout = false;
+  // Indices in `pending` of the newlines a paragraph tag adds, which `flush` hands to the run.
+  let pendingBreaks: number[] = [];
   // `after_list_open_tag` and `after_list_close_tag` (`:5317-5318`).
   let afterListOpen = false;
   let afterListClose = false;
@@ -620,11 +628,12 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
   function endLineForParagraph(): void {
     if (lineHasHeight) {
       append('\n');
+      pendingBreaks.push(pending.length - 1);
       return;
     }
     if (!lineHasLayout) return;
     flush();
-    runs.push({ text: '\n', tags: [...stack], zeroHeightBreak: true });
+    runs.push({ text: '\n', tags: [...stack], zeroHeightBreak: true, implicitBreaks: [0] });
     lineHasLayout = false;
     startLine();
   }
@@ -655,6 +664,8 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
     // bracket never splits it into separate meshes. An image or rule run never
     // merges: its `text` is the object placeholder a painter keys off.
     const previous = runs[runs.length - 1];
+    const breaks = pendingBreaks;
+    pendingBreaks = [];
     const startsAtMarkedPoint = pendingStartTags || pendingOpenedAtStart;
     if (
       previous &&
@@ -664,11 +675,16 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
       !startsAtMarkedPoint &&
       sameTags(previous.tags, stack)
     ) {
+      if (breaks.length > 0) {
+        previous.implicitBreaks ??= [];
+        for (const index of breaks) previous.implicitBreaks.push(previous.text.length + index);
+      }
       previous.text += pending;
     } else {
       runs.push({
         text: pending,
         tags: [...stack],
+        ...(breaks.length > 0 && { implicitBreaks: breaks }),
         ...(pendingStartTags && { startTags: pendingStartTags }),
         ...(pendingOpenedAtStart && { openedAtStart: pendingOpenedAtStart }),
       });

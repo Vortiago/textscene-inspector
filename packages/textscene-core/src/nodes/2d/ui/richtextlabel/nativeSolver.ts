@@ -77,6 +77,7 @@ import {
   paragraphJustificationFlags,
   paragraphTabStopsPx,
 } from './paragraph';
+import { isPrefixShown, revealedGlyphs, type RichTextReveal } from './visibleCharacters';
 import { tagFontSizePx, tagOutline } from './runStyle';
 import { paragraphListings, runListing, type ParagraphListing, type RunListing } from './listing';
 import { countAtOrBelow } from '../../../../utils/countAtOrBelow';
@@ -393,6 +394,8 @@ export interface StyledTextRun {
   outline: TextOutlineTheme;
   /** The paragraph's `HorizontalAlignment` (`paragraphAlignment`). */
   alignment: number;
+  /** `BBCodeRun.implicitBreaks`: the newlines in `text` that Godot counts no character for. */
+  implicitBreaks?: number[];
   /** The paragraph's direction, language and override (`paragraphBidiOptions`), INHERITED resolved. */
   bidi: TextBidiOptions;
   /** Set only on a run inside an `[indent]`, `[ul]` or `[ol]` (`listing.ts`). */
@@ -553,6 +556,7 @@ export function styledTextRuns(
       listing,
       ...paragraphShapeOptions(run.tags, props),
       zeroHeightBreak: run.zeroHeightBreak,
+      implicitBreaks: run.implicitBreaks,
     });
   }
   return styled;
@@ -953,6 +957,14 @@ interface RunLineSegment {
   glyphs: GlyphPlacement[];
 }
 
+/** The segment's glyphs that `revealed` keeps, or null when it keeps none. */
+function withGlyphs(segment: RunLineSegment, revealed: ReadonlySet<GlyphPlacement>): RunLineSegment | null {
+  const glyphs = segment.glyphs.filter((glyph) => revealed.has(glyph));
+  if (glyphs.length === segment.glyphs.length) return segment;
+  if (glyphs.length === 0) return null;
+  return { ...segment, glyphs, text: glyphs.map((glyph) => glyph.char).join('') };
+}
+
 /**
  * Splits each shaped line back into its style runs by each glyph's `sourceIndex`. `shapeText`
  * shapes the whole text once so line breaks see its full width, and this split is not a Godot
@@ -1072,6 +1084,13 @@ interface RichTextAlignment {
   verticalAlignment?: number;
   /** How far the scroll value has moved the text up (`vofs`, `rich_text_label.cpp:1613`). Absent is 0. */
   scrollOffsetPx?: number;
+  /** Absent shows every glyph. */
+  reveal?: RichTextReveal;
+  /**
+   * The whole text's height and line count, when `layout` holds only its shown prefix (Before
+   * Shaping). Godot aligns by the full text (`:1619-1652`). Absent means `layout` is the whole text.
+   */
+  fullText?: { heightPx: number; lineCount: number };
 }
 
 /**
@@ -1126,11 +1145,13 @@ export function layoutRichTextRuns(
   const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);
 
   const { vbeginPx, vsepPx } = richTextVerticalOffsets(
-    contentHeightOf(lineMetrics),
+    alignment?.fullText?.heightPx ?? contentHeightOf(lineMetrics),
     alignment?.boxHeightPx ?? 0,
     alignment?.verticalAlignment,
-    layout.lines.length
+    alignment?.fullText?.lineCount ?? layout.lines.length
   );
+  // Line metrics above count every glyph, shown or not: a hidden glyph still takes its line's height.
+  const revealed = alignment?.reveal && revealedGlyphs(layout, styledRuns, alignment.reveal);
 
   const placements: RichTextRunPlacement[] = [];
   perLine.forEach((segments, lineIndex) => {
@@ -1149,10 +1170,13 @@ export function layoutRichTextRuns(
     const lineOffsetXPx =
       (isRtl ? 0 : indentPx) +
       richTextHorizontalOffsetPx(lineWidthPx, boxWidthPx - indentPx, alignmentOfLine(lineIndex), isRtl);
+    const line = layout.lines[lineIndex]!;
     const marker = startsParagraph(layout.lines, lineIndex)
-      ? layout.listings?.get(layout.lines[lineIndex]!.paragraphStart!)?.marker
+      ? layout.listings?.get(line.paragraphStart!)?.marker
       : undefined;
-    if (marker) {
+    const isMarkerShown =
+      !marker || !alignment?.reveal || isPrefixShown(layout, styledRuns, alignment.reveal, line, revealed);
+    if (marker && isMarkerShown) {
       placements.push({
         lineIndex,
         lineTopPx: Math.floor(exactTopPx),
@@ -1165,7 +1189,9 @@ export function layoutRichTextRuns(
         layout: marker.layout,
       });
     }
-    for (const segment of segments) {
+    for (const shownSegment of segments) {
+      const segment = revealed ? withGlyphs(shownSegment, revealed) : shownSegment;
+      if (!segment) continue;
       const run = styledRuns[segment.runIndex]!;
       const lineTopPx = Math.floor(exactTopPx);
       placements.push({

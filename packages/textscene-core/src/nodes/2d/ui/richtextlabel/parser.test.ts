@@ -92,4 +92,76 @@ describe('parseRichTextLabel', () => {
     expect(p.language).toBe('he');
     expect(p.structuredTextBidiOverride).toBe(2);
   });
+
+  describe('visible_characters, visible_ratio and the follow flag (rich_text_label.cpp:7401-7430,7892-7948)', () => {
+    const heading = h({ name: 'T', type: 'RichTextLabel' });
+
+    it('defaults to every character shown, the Before Shaping behaviour and no follow', () => {
+      const p = parseRichTextLabel(heading, { text: '"Hello"' });
+      expect(p.visibleCharacters).toBeUndefined();
+      expect(p.visibleCharactersBehavior).toBeUndefined();
+      expect(p.scrollFollowingVisibleCharacters).toBe(false);
+    });
+
+    it('counts an astral character as one when it derives visible_ratio', () => {
+      const p = parseRichTextLabel(heading, { text: '"😀ab"', visible_characters: '1' });
+      expect(p.visibleRatio).toBeCloseTo(1 / 3, 6);
+    });
+
+    it('derives visible_ratio from visible_characters over the text length', () => {
+      const p = parseRichTextLabel(heading, { text: '"Hello"', visible_characters: '2' });
+      expect(p.visibleCharacters).toBe(2);
+      expect(p.visibleRatio).toBe(0.4);
+    });
+
+    it('derives visible_characters from visible_ratio, truncated', () => {
+      const p = parseRichTextLabel(heading, { text: '"Hello"', visible_ratio: '0.5' });
+      expect(p.visibleCharacters).toBe(2);
+    });
+
+    it('marks a label whose ratio was written last, for the render to count again', () => {
+      expect(parseRichTextLabel(heading, { text: '"Hello"', visible_ratio: '0.5' }).visibleRatioDrives).toBe(
+        true
+      );
+      expect(
+        parseRichTextLabel(heading, { text: '"Hello"', visible_characters: '2' }).visibleRatioDrives
+      ).toBeUndefined();
+    });
+
+    it('counts the characters BBCode draws, not its tags', () => {
+      const p = parseRichTextLabel(heading, {
+        text: '"[b]One[/b] two"',
+        bbcode_enabled: 'true',
+        visible_ratio: '0.5',
+      });
+      expect(p.visibleCharacters).toBe(3);
+    });
+
+    it('counts an [img] as one character and a newline as one', () => {
+      const p = parseRichTextLabel(heading, {
+        text: '"a\\n[img]res://i.png[/img]b"',
+        bbcode_enabled: 'true',
+        visible_ratio: '0.5',
+      });
+      expect(p.visibleCharacters).toBe(2);
+    });
+
+    it('counts no character for the line a paragraph tag ends', () => {
+      const p = parseRichTextLabel(heading, {
+        text: '"ab[p]cd[/p]"',
+        bbcode_enabled: 'true',
+        visible_ratio: '0.5',
+      });
+      expect(p.visibleCharacters).toBe(2);
+    });
+
+    it('reads visible_characters_behavior and scroll_following_visible_characters', () => {
+      const p = parseRichTextLabel(heading, {
+        visible_characters_behavior: '3',
+        scroll_following_visible_characters: 'true',
+      });
+      expect(p.visibleCharactersBehavior).toBe(3);
+      expect(p.scrollFollowingVisibleCharacters).toBe(true);
+    });
+  });
 });

@@ -4190,6 +4190,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Rich Text Label Visible Characters Follow",
+    "file": "unit-rich-text-label-visible-characters-follow.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Visible Characters",
+    "file": "unit-rich-text-label-visible-characters.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Rich Text Label",
     "file": "unit-rich-text-label.tscn",
     "category": "Unit - 2D UI Controls"

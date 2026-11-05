@@ -56,6 +56,7 @@ function solveNode(
     clipContents: true,
     scrollActive: true,
     scrollFollowing: false,
+    scrollFollowingVisibleCharacters: false,
   };
   const tscnNode: TscnNode = controlNode(name, 'RichTextLabel', { name, ...parsedDefaults, ...properties });
   return { ...emptySolveNode(), path, node: tscnNode, ...overrides };
@@ -622,5 +623,52 @@ describe('<RichTextLabel> scrollbar (rich_text_label.cpp:3801-3830)', () => {
   it('draws no bar when the text fits the rect', async () => {
     const { tracks } = await barMeshes({}, { x: 0, y: 0, w: 160, h: 80 });
     expect(tracks).toHaveLength(0);
+  });
+});
+
+describe('<RichTextLabel> visible_characters (rich_text_label.cpp:943-947,668-671)', () => {
+  const TEXT = 'Hello world';
+
+  /** The text meshes, one per drawn line and run: `renderOrder` 5 is the node's, and the bar draws above it. */
+  async function textMeshCount(properties: Record<string, unknown>, rect: Rect2) {
+    const renderer = await render({ text: TEXT, ...properties }, rect);
+    return meshesOf(renderer).filter((m) => m.renderOrder === 5).length;
+  }
+
+  it('draws no mesh at zero characters', async () => {
+    expect(await textMeshCount({ visibleCharacters: 0 }, { x: 0, y: 0, w: 300, h: 100 })).toBe(0);
+  });
+
+  it('draws the whole text at -1 characters', async () => {
+    expect(await textMeshCount({ visibleCharacters: -1 }, { x: 0, y: 0, w: 75, h: 100 })).toBe(2);
+  });
+
+  // `Hello wor` fits the 75px rect on one line and `Hello world` does not. Before Shaping shapes only
+  // the prefix, so it keeps one line. After Shaping wraps the whole text and hides glyphs, so "wor" stays on line two.
+  it('wraps the shown prefix again under Before Shaping and not under After Shaping', async () => {
+    const rect = { x: 0, y: 0, w: 75, h: 100 };
+    expect(await textMeshCount({ visibleCharacters: 9, visibleCharactersBehavior: 0 }, rect)).toBe(1);
+    expect(await textMeshCount({ visibleCharacters: 9, visibleCharactersBehavior: 1 }, rect)).toBe(2);
+  });
+
+  // The parser counted 12 characters (an `[img]` Godot never loaded included), the text draws 11. A ratio written
+  // last takes the characters it draws: 11 * 0.82 is 9, so one line. Without the ratio, 12 shows everything.
+  it('derives the characters of a ratio from the text it draws', async () => {
+    const rect = { x: 0, y: 0, w: 75, h: 100 };
+    const staleCount = { visibleCharacters: 12, visibleRatio: 0.82 };
+    expect(await textMeshCount({ ...staleCount, visibleRatioDrives: true }, rect)).toBe(1);
+    expect(await textMeshCount(staleCount, rect)).toBe(2);
+  });
+
+  // `unit-rich-text-label-visible-characters-follow.tscn`: the bar shows over text that fits.
+  it('shows the bar over text that fits when scroll_following_visible_characters is set', async () => {
+    const renderer = await render(
+      { text: TEXT, scrollFollowingVisibleCharacters: true },
+      { x: 0, y: 0, w: 300, h: 100 }
+    );
+    const tracks = meshesOf(renderer).filter(
+      (m) => m.renderOrder === 5 + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET
+    );
+    expect(tracks).toHaveLength(1);
   });
 });
