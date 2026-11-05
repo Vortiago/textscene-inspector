@@ -802,6 +802,12 @@ describe('shapeText — tab_stops (ShapeTextOptions.tabStopsPx, label.cpp:196-19
     });
   });
 
+  it('gives a tab that no stop aligns no advance, so the next glyph sits against the last (measured, Godot 4.6.3)', () => {
+    const [a, tab, b] = shapeText('A\tB', opts).lines[0]!.glyphs;
+    expect(tab!.advance).toBe(0);
+    expect(b!.x).toBe(a!.x + a!.advance);
+  });
+
   it('no stops is a no-op, matching every caller before this option existed', () => {
     const withoutOption = shapeText('A\tB', opts);
     const withEmptyStops = shapeText('A\tB', { ...opts, tabStopsPx: [] });

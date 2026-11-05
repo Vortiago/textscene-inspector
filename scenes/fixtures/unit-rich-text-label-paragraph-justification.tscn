@@ -1,0 +1,136 @@
+; One variable: the justification_flags option of a [p] tag (rich_text_label.cpp:5758-5782). A [p]
+; with options starts from no flags when jst is set, and takes the node's flags otherwise. Each cell
+; fills one three-line paragraph at the same width. No other scene sets jst on a [p].
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="NodeFlagsBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 280.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="NodeFlags" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 280.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "[p align=f]Wave rift over stone and amber light across the sleeping harbour at the end of day[/p]"
+
+[node name="WordBox" type="ColorRect" parent="."]
+offset_left = 300.0
+offset_top = 10.0
+offset_right = 560.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Word" type="RichTextLabel" parent="."]
+offset_left = 300.0
+offset_top = 10.0
+offset_right = 560.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "[p align=f jst=w]Wave rift over stone and amber light across the sleeping harbour at the end of day[/p]"
+
+[node name="KashidaBox" type="ColorRect" parent="."]
+offset_left = 580.0
+offset_top = 10.0
+offset_right = 840.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Kashida" type="RichTextLabel" parent="."]
+offset_left = 580.0
+offset_top = 10.0
+offset_right = 840.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "[p align=f jst=k]Wave rift over stone and amber light across the sleeping harbour at the end of day[/p]"
+
+[node name="SkipLastBox" type="ColorRect" parent="."]
+offset_left = 860.0
+offset_top = 10.0
+offset_right = 1120.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="SkipLast" type="RichTextLabel" parent="."]
+offset_left = 860.0
+offset_top = 10.0
+offset_right = 1120.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "[p align=f justification_flags=word,skip_last]Wave rift over stone and amber light across the sleeping harbour at the end of day[/p]"
+
+[node name="SingleLineBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 170.0
+offset_right = 280.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="SingleLine" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 170.0
+offset_right = 280.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "[p align=f jst=w]Wave rift over stone[/p]"
+
+[node name="SingleLineKeptBox" type="ColorRect" parent="."]
+offset_left = 300.0
+offset_top = 170.0
+offset_right = 560.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="SingleLineKept" type="RichTextLabel" parent="."]
+offset_left = 300.0
+offset_top = 170.0
+offset_right = 560.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "[p align=f jst=w,sl,ns]Wave rift over stone[/p]"
+
+[node name="NoFlagsBox" type="ColorRect" parent="."]
+offset_left = 580.0
+offset_top = 170.0
+offset_right = 840.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="NoFlags" type="RichTextLabel" parent="."]
+offset_left = 580.0
+offset_top = 170.0
+offset_right = 840.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "[p align=f jst=]Wave rift over stone and amber light across the sleeping harbour at the end of day[/p]"
+
+[node name="TwoParagraphsBox" type="ColorRect" parent="."]
+offset_left = 860.0
+offset_top = 170.0
+offset_right = 1120.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="TwoParagraphs" type="RichTextLabel" parent="."]
+offset_left = 860.0
+offset_top = 170.0
+offset_right = 1120.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "[p align=f jst=w]Wave rift over stone and amber light[/p][p align=f]and the tide turns again at dusk[/p]"
