@@ -64,8 +64,7 @@ type LayerRunsProps = Pick<TextRunProps, 'fontSizePx' | 'clippingPlanes' | 'rend
 /** One layer on every line. A ring strokes on the canvas painter, a plain layer draws on the painter of its font. */
 function LayerRuns({ layer, placements, lineLayouts, ...run }: LayerRunsProps) {
   return placements.map((placement, index) => {
-    // A ring and a fill round their pens at the same canvas position, so the ring stays on its glyph.
-    // One `ofs.x` per line feeds every draw_text pass (`label.cpp:796-797`).
+    // One `ofs.x` per line feeds the ring and the fill alike (`label.cpp:796-797`).
     const penOriginXPx = placement.x + layer.offset.x;
     return (
       <CanvasItemGroup key={index} position={[penOriginXPx, -(placement.y + layer.offset.y), 0]}>
