@@ -86,8 +86,9 @@ export function shapeBesideScrollBar(
   const wrapWidthPx = box.w - barWidthPx;
   const beside = shapeAt(wrapWidthPx);
   const contentHeightPx = richTextContentHeightPx(beside.runs, beside.layout);
-  // `set_value(total_height)` (`:3827-3828`), which `Range` clamps to `max - page` (`range.cpp:192-194`).
-  const scrollOffsetPx = box.scrollFollowing ? contentHeightPx - box.h : 0;
+  // `set_value(total_height)` (`:3827-3828`), which `Range` clamps to `max - page`, then to `min`
+  // (`range.cpp:192-196`). A `%` image narrows beside the bar, so the text there can be shorter than the rect.
+  const scrollOffsetPx = box.scrollFollowing ? Math.max(0, contentHeightPx - box.h) : 0;
   return {
     ...beside,
     wrapWidthPx,
