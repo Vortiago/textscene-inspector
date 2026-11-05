@@ -460,7 +460,7 @@ const KEEPS_ITS_FACE = /^[\p{Cc}\p{Cn}\p{Cs}\p{Zl}\p{Zp}\p{Zs}\p{Default_Ignorab
  */
 function glyphFace(face: FontMetrics, ch: string): FontMetrics {
   // `hasGlyph` first: most characters are in `face`, and the property test costs more.
-  if (!face.fallbacks || ch === '' || face.hasGlyph(ch) || KEEPS_ITS_FACE.test(ch)) return face;
+  if (!face.fallbacks || face.hasGlyph(ch) || KEEPS_ITS_FACE.test(ch)) return face;
   return firstFaceWithGlyph(face, ch) ?? face;
 }
 
@@ -471,8 +471,7 @@ function glyphFace(face: FontMetrics, ch: string): FontMetrics {
 function glyphFaces(spanFaces: readonly FontMetrics[], chars: ArrayLike<string>): FontMetrics[] {
   const faces: FontMetrics[] = [];
   for (let i = 0; i < spanFaces.length; i++) {
-    const isSecondUnit = chars[i] === '' && i > 0;
-    faces.push(isSecondUnit ? faces[i - 1]! : glyphFace(spanFaces[i]!, chars[i]!));
+    faces.push(chars[i] === '' ? faces[i - 1]! : glyphFace(spanFaces[i]!, chars[i]!));
   }
   return faces;
 }
@@ -626,8 +625,10 @@ function roundFaceRun(
       stretch.push(i);
       continue;
     }
-    if (stretch.length > 0) roundFaceRun(glyphs, chars, style, stretch, chain, depth + 1);
-    stretch = [];
+    if (stretch.length > 0) {
+      roundFaceRun(glyphs, chars, style, stretch, chain, depth + 1);
+      stretch = [];
+    }
     // The second unit of a surrogate pair has no glyph to round: rounding its 0 advance would move
     // the remainder of a whole half pixel into it.
     if (usesSubpixel || chars[i] === '') continue;

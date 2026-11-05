@@ -52,13 +52,13 @@ function wholeRasterPx(cssPx: number): number {
 }
 
 interface CanvasTextCanvasLayout {
-  /** `HTMLCanvasElement#width`: the drawn width (`drawnWidthPx`) from the first glyph, plus both pads and the origin phase, rounded up to a whole pixel. */
+  /** `HTMLCanvasElement#width`: the drawn extent (`drawnExtentPx`), plus both pads and the origin phase, rounded up to a whole pixel. */
   canvasWidthPx: number;
   /** `HTMLCanvasElement#height`: `layout.heightPx` plus twice `offsetYPx`, rounded up to a whole pixel. */
   canvasHeightPx: number;
   /**
    * Where the unpadded content box (x=0 in `layout`) sits in the raster, CSS px: the shear and stroke
-   * reach, mirrored on the right, less the whole pixels before the first glyph (`firstGlyphXPx`).
+   * reach, mirrored on the right, less the whole pixels before the first glyph (`drawnExtentPx`).
    */
   offsetXPx: number;
   /** Top padding, CSS px: `CANVAS_TEXT_VERTICAL_PAD_PX` plus any outline-stroke reach. */
@@ -89,10 +89,11 @@ export function computeCanvasTextCanvasLayout(
   // between two screen pixels, and the linear filter thins every edge.
   const padXPx = Math.ceil(shearPadPx + strokePadPx + emboldenPadPx);
   const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + Math.ceil(strokePadPx + emboldenPadPx);
-  const inkLeftPx = Math.floor(firstGlyphXPx(layout));
+  const { startPx, endPx } = drawnExtentPx(layout);
+  const inkLeftPx = Math.floor(startPx);
   return {
     // The quad sits `originPhasePx.x` left of the run origin, so the content reaches that much further right.
-    canvasWidthPx: wholeRasterPx(drawnWidthPx(layout) - inkLeftPx + 2 * padXPx + originPhasePx.x),
+    canvasWidthPx: wholeRasterPx(endPx - inkLeftPx + 2 * padXPx + originPhasePx.x),
     canvasHeightPx: wholeRasterPx(layout.heightPx + 2 * offsetYPx),
     offsetXPx: padXPx - inkLeftPx,
     offsetYPx,
@@ -100,25 +101,23 @@ export function computeCanvasTextCanvasLayout(
 }
 
 /**
- * The pen x of the leftmost glyph, or 0 for one at or left of the origin. The run of a fallback face
- * keeps its glyphs at their places on the line (`faceLayouts.ts`), so its raster starts there and
- * does not span the text of the other faces.
+ * The pen x of the leftmost glyph, at 0 or right of it, and the end of the rightmost. The run of a
+ * fallback face keeps its glyphs at their places on the line (`faceLayouts.ts`), so its raster spans
+ * them alone. The end may pass `layout.widthPx`, as a trimmed AUTO right-to-left fill does. A layout
+ * with no glyph spans its width.
  */
-function firstGlyphXPx(layout: TextLayoutResult): number {
-  const lineStarts = layout.lines.flatMap((line) => line.glyphs.slice(0, 1).map((glyph) => glyph.x));
-  return lineStarts.length === 0 ? 0 : Math.max(0, Math.min(...lineStarts));
-}
-
-/**
- * The end of the rightmost glyph, which may draw past `layout.widthPx`, as a trimmed AUTO
- * right-to-left fill does, or stop short of it, as the run of a fallback face does. A layout with no
- * glyph keeps its width.
- */
-function drawnWidthPx(layout: TextLayoutResult): number {
-  const lineEnds = layout.lines.flatMap((line) =>
-    line.glyphs.slice(-1).map((glyph) => glyph.x + glyph.advance)
-  );
-  return lineEnds.length === 0 ? layout.widthPx : Math.max(...lineEnds);
+function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: number } {
+  let startPx = Infinity;
+  let endPx = -Infinity;
+  for (const { glyphs } of layout.lines) {
+    const [first, last] = [glyphs[0], glyphs.at(-1)];
+    if (!first || !last) continue;
+    startPx = Math.min(startPx, first.x);
+    endPx = Math.max(endPx, last.x + last.advance);
+  }
+  return endPx === -Infinity
+    ? { startPx: 0, endPx: layout.widthPx }
+    : { startPx: Math.max(0, startPx), endPx };
 }
 
 /** The `GlyphQuadArrays` shape `buildGlyphQuadArrays` produces, always exactly one quad. */
@@ -129,11 +128,10 @@ interface CanvasTextQuadArrays {
 }
 
 /**
- * One quad spanning the padded raster, placed so the unpadded content box is
- * `[0, layout.widthPx] x [0, layout.heightPx]` in `buildGlyphQuadArrays`'s
- * convention (Godot px, +Y down, negated to three's Y-up). A neighbouring run
- * lines up as if the padding did not exist. The quad moves back by `originPhasePx`, so its texels
- * land on the item's whole pixels.
+ * One quad spanning the padded raster, placed so the layout origin is at x = 0 in
+ * `buildGlyphQuadArrays`'s convention (Godot px, +Y down, negated to three's Y-up). The quad
+ * covers the ink from the first glyph's whole pixel to the last glyph's end. It moves back by
+ * `originPhasePx`, so its texels land on the item's whole pixels.
  */
 export function buildCanvasTextQuadArrays(
   canvasLayout: CanvasTextCanvasLayout,
