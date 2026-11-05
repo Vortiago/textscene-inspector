@@ -29,7 +29,7 @@ import {
   pickButtonStyleBox,
   tintColor,
   layoutButtonContent,
-  buttonTextAlignShiftPx,
+  buttonDrawnLabel,
   swapAlignmentSide,
 } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
@@ -181,6 +181,11 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
     fontSizePx,
   ]);
 
+  const drawnLabel = useMemo(
+    () => (trimmedLayout ? buttonDrawnLabel(trimmedLayout.lines, content.drawableSize.x, textAlignment) : []),
+    [trimmedLayout, content.drawableSize.x, textAlignment]
+  );
+
   return (
     <>
       {!props.flat && (
@@ -200,20 +205,12 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
       )}
       {content.text !== null &&
         trimmedLayout &&
-        trimmedLayout.lines.map((line, i) => (
-          // `TextParagraph::draw` aligns each line on its own (`text_paragraph.cpp:887-922`),
-          // so shorter rows re-centre. `content.text.offset.x` carries the widest row's
-          // shift, so it is backed out and each row's own put in its place.
+        drawnLabel.map(({ line, offsetXPx }, i) => (
+          // `TextParagraph::draw` shifts and cuts each line on its own (`text_paragraph.cpp:887-931`).
           <CanvasItemGroup
             key={i}
             position={[
-              content.text!.offset.x -
-                buttonTextAlignShiftPx(naturalSize(trimmedLayout).x, content.drawableSize.x, textAlignment) +
-                buttonTextAlignShiftPx(
-                  shapedTextSizeWidthPx(line.widthPx),
-                  content.drawableSize.x,
-                  textAlignment
-                ),
+              content.text!.boxLeftPx + offsetXPx,
               -(content.text!.offset.y + i * trimmedLayout.linePitchPx),
               0,
             ]}
