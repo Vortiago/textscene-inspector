@@ -63,7 +63,30 @@ const NO_REQUIRED_FEATURE = 0xffff;
 const GSUB_EXTENSION = 7;
 const GPOS_EXTENSION = 9;
 
+/** The lookup types of `GSUB`. */
+export const GsubType = {
+  SINGLE: 1,
+  MULTIPLE: 2,
+  ALTERNATE: 3,
+  LIGATURE: 4,
+  CONTEXT: 5,
+  CHAIN_CONTEXT: 6,
+  REVERSE_CHAIN: 8,
+} as const;
+/** The lookup types of `GPOS`. */
+export const GposType = {
+  SINGLE: 1,
+  PAIR: 2,
+  CURSIVE: 3,
+  MARK_TO_BASE: 4,
+  MARK_TO_LIGATURE: 5,
+  MARK_TO_MARK: 6,
+  CONTEXT: 7,
+  CHAIN_CONTEXT: 8,
+} as const;
+
 export const u16 = (dv: DataView, at: number): number => dv.getUint16(at, false);
+export const i16 = (dv: DataView, at: number): number => dv.getInt16(at, false);
 
 /** The `count` 16-bit values from `at`. */
 function u16Values(dv: DataView, at: number, count: number): number[] {
@@ -402,6 +425,63 @@ export function valueRecordSize(valueFormat: number): number {
   let size = 0;
   for (let bits = valueFormat; bits !== 0; bits &= bits - 1) size += 2;
   return size;
+}
+
+/**
+ * One value record of a `GPOS` pair subtable: where it starts, its format, and the table its device
+ * offsets count from, a `PairSet` in format 1 and the subtable in format 2.
+ */
+export interface PairValueRecord {
+  readonly at: number;
+  readonly base: number;
+  readonly format: number;
+}
+
+/** The first value record of the pair set at `pairSet` for `right`, or null for a glyph it does not list. */
+function pairSetRecord(dv: DataView, pairSet: number, right: number, recordSize: number): number | null {
+  const count = u16(dv, pairSet);
+  for (let i = 0; i < count; i++) {
+    const record = pairSet + 2 + i * (2 + recordSize);
+    if (u16(dv, record) === right) return record + 2;
+  }
+  return null;
+}
+
+/**
+ * The two value records the pair subtable at `subtable` gives `left` and `right` (`PairPosFormat1`,
+ * `PairPosFormat2`), or null for a pair it does not hold.
+ */
+export function pairValueRecords(
+  dv: DataView,
+  subtable: number,
+  left: number,
+  right: number
+): [PairValueRecord, PairValueRecord] | null {
+  const leftIndex = coverageIndex(dv, subtable + u16(dv, subtable + 2), left);
+  if (leftIndex < 0) return null;
+  const format1 = u16(dv, subtable + 4);
+  const format2 = u16(dv, subtable + 6);
+  const size1 = valueRecordSize(format1);
+  const recordSize = size1 + valueRecordSize(format2);
+  let at: number | null;
+  let base = subtable;
+  if (u16(dv, subtable) === 1) {
+    base = subtable + u16(dv, subtable + 10 + 2 * leftIndex);
+    at = pairSetRecord(dv, base, right, recordSize);
+  } else {
+    const leftClass = glyphClass(dv, subtable + u16(dv, subtable + 8), left);
+    const rightClass = glyphClass(dv, subtable + u16(dv, subtable + 10), right);
+    const rightClassCount = u16(dv, subtable + 14);
+    at =
+      leftClass < u16(dv, subtable + 12) && rightClass < rightClassCount
+        ? subtable + 16 + (leftClass * rightClassCount + rightClass) * recordSize
+        : null;
+  }
+  if (at === null) return null;
+  return [
+    { at, base, format: format1 },
+    { at: at + size1, base, format: format2 },
+  ];
 }
 
 /**

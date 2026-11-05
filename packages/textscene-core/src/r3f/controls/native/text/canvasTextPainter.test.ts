@@ -488,12 +488,14 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
 /** `MONO` at 1: Recursive's monospace instance. */
 const MONO_INSTANCE: OpentypeCoordinates = new Map([[1297043023, 1]]);
 
-/** Outlines whose axis values draw a non-default instance, or the default where `isDefault`. */
-function variableOutlinesStub(isDefault: boolean) {
+/** Outlines whose axis values draw an instance other than the default where `drawsInstance` answers so. */
+function variableOutlinesStub(drawsInstance: () => boolean) {
   const { outlines, glyphContours } = outlinesStub();
-  const instanceAt = () => (isDefault ? null : { kerningUnits: null });
-  return { outlines: { ...outlines, instanceAt } satisfies SfntOutlines, glyphContours };
+  return { outlines: { ...outlines, drawsInstance } satisfies SfntOutlines, glyphContours };
 }
+
+const instanceOutlinesStub = () => variableOutlinesStub(() => true);
+const defaultInstanceOutlinesStub = () => variableOutlinesStub(() => false);
 
 /** `text` shaped against the canvas face at `MONO_INSTANCE`, which carries `outlines` as the font loader hands it to a run. */
 function instanceLayoutFor(text: string, outlines: SfntOutlines) {
@@ -512,7 +514,7 @@ describe('paintSceneFontCanvas — a variable font at an instance', () => {
   afterEach(() => vi.restoreAllMocks());
 
   it('fills the outline of a glyph at a non-default instance from its pen, in place of the text', () => {
-    const { outlines, glyphContours } = variableOutlinesStub(false);
+    const { outlines, glyphContours } = instanceOutlinesStub();
     const layout = instanceLayoutFor('A', outlines);
     const { calls, canvasLayout } = paintRecording(layout, 0);
 
@@ -532,14 +534,14 @@ describe('paintSceneFontCanvas — a variable font at an instance', () => {
   });
 
   it('strokes the outline of a glyph at a non-default instance', () => {
-    const { outlines } = variableOutlinesStub(false);
+    const { outlines } = instanceOutlinesStub();
     const { calls } = paintRecording(instanceLayoutFor('A', outlines), 4);
 
     expect(calls.at(-1)!.op).toBe('stroke');
   });
 
   it('fills the text of a glyph at the default instance', () => {
-    const { outlines, glyphContours } = variableOutlinesStub(true);
+    const { outlines, glyphContours } = defaultInstanceOutlinesStub();
     const { calls } = paintRecording(instanceLayoutFor('A', outlines), 0);
 
     expect(glyphContours).not.toHaveBeenCalled();
@@ -547,7 +549,7 @@ describe('paintSceneFontCanvas — a variable font at an instance', () => {
   });
 
   it('fills the text of a glyph the font has no outline for at an instance', () => {
-    const { outlines } = variableOutlinesStub(false);
+    const { outlines } = instanceOutlinesStub();
     const empty: SfntOutlines = { ...outlines, glyphContours: () => null };
     const { calls } = paintRecording(instanceLayoutFor('A', empty), 0);
 

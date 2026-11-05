@@ -18,7 +18,11 @@ import {
   type CoverageContextRule,
   coverageIndex,
   glyphClass,
+  GposType,
+  GsubType,
+  i16,
   type LayoutTable,
+  pairValueRecords,
   readChainedSequenceContextFormat3,
   readChainedSequenceRule,
   readSequenceContextFormat3,
@@ -85,8 +89,6 @@ function shapingFeatures(scriptTags: readonly string[], feature: string | null):
 
 /** The default script HarfBuzz falls back on, then the two it tries after it (`hb_ot_layout_table_select_script`). */
 const FALLBACK_SCRIPT_TAGS = ['DFLT', 'dflt', 'latn'] as const;
-
-const i16 = (dv: DataView, at: number): number => dv.getInt16(at, false);
 
 /** The lookups of `features` under the first script of `scriptTags` the table has, its default language. */
 function featureLookups(
@@ -297,7 +299,13 @@ function applyContext(
   at: number,
   depth: number
 ): Applied | null {
-  const rule = matchingRule(table.dv, subtable.offset, buffer.glyphs, at, subtable.type === 6);
+  const rule = matchingRule(
+    table.dv,
+    subtable.offset,
+    buffer.glyphs,
+    at,
+    subtable.type === GsubType.CHAIN_CONTEXT
+  );
   if (!rule) return null;
   let end = at + 1 + rule.input.length;
   for (const { sequenceIndex, lookupIndex } of rule.records) {
@@ -319,16 +327,16 @@ function applySubtable(
 ): Applied | null {
   const { dv } = table;
   switch (subtable.type) {
-    case 1:
+    case GsubType.SINGLE:
       return applySingle(dv, subtable.offset, buffer, at);
-    case 2:
+    case GsubType.MULTIPLE:
       return applyMultiple(dv, subtable.offset, buffer, at);
-    case 3:
+    case GsubType.ALTERNATE:
       return applyAlternate(dv, subtable.offset, buffer, at, isRandom);
-    case 4:
+    case GsubType.LIGATURE:
       return applyLigature(dv, subtable.offset, buffer, at);
-    case 5:
-    case 6:
+    case GsubType.CONTEXT:
+    case GsubType.CHAIN_CONTEXT:
       return applyContext(table, subtable, buffer, at, depth);
     default:
       return null;
@@ -387,30 +395,10 @@ function applySinglePosition(dv: DataView, offset: number, glyph: ShapedGlyph): 
 }
 
 function applyPairPosition(dv: DataView, offset: number, first: ShapedGlyph, second: ShapedGlyph): boolean {
-  const index = coverageIndex(dv, offset + u16(dv, offset + 2), first.glyph);
-  if (index < 0) return false;
-  const format1 = u16(dv, offset + 4);
-  const format2 = u16(dv, offset + 6);
-  const size1 = valueRecordSize(format1);
-  const size2 = valueRecordSize(format2);
-  let record: number | null = null;
-  if (u16(dv, offset) === 1) {
-    const set = offset + u16(dv, offset + 10 + 2 * index);
-    for (let i = 0; i < u16(dv, set) && record === null; i++) {
-      const at = set + 2 + i * (2 + size1 + size2);
-      if (u16(dv, at) === second.glyph) record = at + 2;
-    }
-  } else {
-    const class1 = glyphClass(dv, offset + u16(dv, offset + 8), first.glyph);
-    const class2 = glyphClass(dv, offset + u16(dv, offset + 10), second.glyph);
-    const class1Count = u16(dv, offset + 12);
-    const class2Count = u16(dv, offset + 14);
-    if (class1 < class1Count && class2 < class2Count)
-      record = offset + 16 + (class1 * class2Count + class2) * (size1 + size2);
-  }
-  if (record === null) return false;
-  adjust(first, dv, record, format1);
-  adjust(second, dv, record + size1, format2);
+  const records = pairValueRecords(dv, offset, first.glyph, second.glyph);
+  if (!records) return false;
+  adjust(first, dv, records[0].at, records[0].format);
+  adjust(second, dv, records[1].at, records[1].format);
   return true;
 }
 
@@ -421,9 +409,9 @@ function applyGpos(table: LayoutTable, lookups: readonly number[], shaped: Shape
       for (const { type, offset } of table.lookups[lookupIndex]?.subtables ?? []) {
         const next = shaped[at + 1];
         const isApplied =
-          type === 1
+          type === GposType.SINGLE
             ? applySinglePosition(dv, offset, shaped[at]!)
-            : type === 2 && next
+            : type === GposType.PAIR && next
               ? applyPairPosition(dv, offset, shaped[at]!, next)
               : false;
         if (isApplied) break;

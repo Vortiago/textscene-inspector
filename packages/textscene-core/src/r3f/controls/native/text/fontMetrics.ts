@@ -7,7 +7,6 @@
 
 import { perObject } from '../../../../utils/perObject';
 import type { SfntOutlines } from './sfntOutlines';
-import type { PairKerningReader } from './variation/instanceKerning';
 
 /**
  * Which glyph-painting path a `FontMetrics` pairs with, since shaping is
@@ -334,33 +333,6 @@ const variationsOf = perObject(
   (_face: FontMetrics) => new Map<string, Map<FontMetrics['outlines'], FontMetrics>>()
 );
 
-/** The face each wrapper of `withVariation` wraps. Written only by `withVariation`, as it makes the wrapper. */
-// eslint-disable-next-line no-restricted-syntax -- the face is known when the wrapper is made, and perObject computes from its key alone.
-const faceOfWrapper = new WeakMap<FontMetrics, FontMetrics>();
-
-/**
- * The kerning of `face` with the `GPOS` kerning of an instance, `kerningUnits`, that `outlines` read.
- * Each pair reads the font once. A pair with a character the font has no glyph for keeps the face's
- * own kerning.
- */
-function instanceKerning(
-  face: FontMetrics,
-  outlines: SfntOutlines,
-  kerningUnits: PairKerningReader
-): FontMetrics['getKerningAdjustmentUnits'] {
-  const kernings = new Map<string, number>();
-  return (a, b) => {
-    const key = `${a}\0${b}`;
-    if (!kernings.has(key)) {
-      const left = outlines.glyphIndex(a.codePointAt(0)!);
-      const right = outlines.glyphIndex(b.codePointAt(0)!);
-      const isRead = left !== 0 && right !== 0;
-      kernings.set(key, isRead ? kerningUnits(left, right) : face.getKerningAdjustmentUnits(a, b));
-    }
-    return kernings.get(key)!;
-  };
-}
-
 /**
  * `metrics` with a `FontVariation`'s `embolden`, `skew` and `opentype` set, and the `outlines` its text follows.
  * The wrapper reads every other field through the face, so a live getter stays live. With no variation
@@ -379,26 +351,21 @@ export function withVariation<Metrics extends FontMetrics>(
     outlines = metrics.outlines,
   }: GlyphVariation & Pick<FontMetrics, 'outlines'>
 ): Metrics {
-  const face = (faceOfWrapper.get(metrics) ?? metrics) as Metrics;
-  const shaped = isInstanced(opentype) ? outlines?.instanceAt?.(opentype) : null;
-  const instance = shaped ? opentype : undefined;
-  const kerning = outlines && shaped?.kerningUnits && instanceKerning(face, outlines, shaped.kerningUnits);
-  if (!outlines && !isGlyphVaried({ embolden, skew, opentype: instance })) return face;
-  const byVariation = variationsOf(face);
+  const instance = isInstanced(opentype) && outlines?.drawsInstance?.(opentype) ? opentype : undefined;
+  if (!outlines && !isGlyphVaried({ embolden, skew, opentype: instance })) return metrics;
+  const byVariation = variationsOf(metrics);
   const key = variationKey({ embolden, skew, opentype: instance });
   let byOutlines = byVariation.get(key);
   if (!byOutlines) byVariation.set(key, (byOutlines = new Map()));
   let wrapped = byOutlines.get(outlines);
   if (!wrapped) {
-    wrapped = Object.create(face, {
+    wrapped = Object.create(metrics, {
       embolden: { value: embolden },
       skew: { value: skew },
       opentype: { value: instance },
       ...(outlines !== undefined && { outlines: { value: outlines } }),
-      ...(kerning && { getKerningAdjustmentUnits: { value: kerning } }),
-    }) as Metrics;
+    }) as FontMetrics;
     byOutlines.set(outlines, wrapped);
-    faceOfWrapper.set(wrapped, face);
   }
   return wrapped as Metrics;
 }
@@ -453,14 +420,29 @@ export function getFontEmboldenStrength(embolden: number, fontSizePx: number): n
   return Math.trunc(Math.fround(Math.fround(embolden) * fontSizePx * FIXED_26_6_ONE) / 16);
 }
 
-/** `metrics.getKerningAdjustmentUnits(a, b)` scaled to `fontSizePx`. `0` short-circuits without a scale. */
+/**
+ * The kerning of `a` and `b` scaled to `fontSizePx`: the `GPOS` kerning of the instance at the face's
+ * `variation_opentype`, else `metrics.getKerningAdjustmentUnits(a, b)`. `0` short-circuits without a scale.
+ */
 export function getFontKerningAdjustmentPx(
   metrics: FontMetrics,
   a: string,
   b: string,
   fontSizePx: number
 ): number {
-  const units = metrics.getKerningAdjustmentUnits(a, b);
+  const units = instanceKerningUnits(metrics, a, b) ?? metrics.getKerningAdjustmentUnits(a, b);
   if (units === 0) return 0;
   return unitsToPx(units, metrics, fontSizePx);
+}
+
+/**
+ * The kerning in design units of `a` and `b` at the axis values of the face's `variation_opentype`,
+ * or null for a face at its default instance and a character with no glyph: the default kerning stands.
+ */
+function instanceKerningUnits(metrics: FontMetrics, a: string, b: string): number | null {
+  const { outlines, opentype } = metrics;
+  if (!outlines?.kerningAtInstance || !isInstanced(opentype)) return null;
+  const left = outlines.glyphIndex(a.codePointAt(0)!);
+  const right = outlines.glyphIndex(b.codePointAt(0)!);
+  return left === 0 || right === 0 ? null : outlines.kerningAtInstance(left, right, opentype);
 }

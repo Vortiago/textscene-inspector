@@ -426,19 +426,21 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
     expect(peek(font, 'Root/Bold')?.outlines?.glyphIndex(0x48)).toBeGreaterThan(0);
   });
 
-  const atInstance = (base: FontResource, mono: number): FontResource => ({
-    kind: 'variation',
-    baseFont: base,
-    properties: { variation_opentype: `{\n1297043023: ${mono}\n}` },
-  });
+  /** Recursive's face under a `FontVariation` at `MONO` = `mono`, once its outlines settle. */
+  async function settledAtMono(mono: number) {
+    const { peekSettledSceneFontMetrics: peek, recursive } = await loaderWithFontDoor();
+    const font: FontResource = {
+      kind: 'variation',
+      baseFont: recursive(),
+      properties: { variation_opentype: `{\n1297043023: ${mono}\n}` },
+    };
+    peek(font, 'Root/Label');
+    await vi.waitFor(() => expect(peek(font, 'Root/Label')).not.toBeNull());
+    return peek(font, 'Root/Label')!;
+  }
 
   it('settles a variable font at an instance on its outlines, which its text and advances follow', async () => {
-    const { peekSettledSceneFontMetrics: peek, recursive } = await loaderWithFontDoor();
-    const font = atInstance(recursive(), 1);
-
-    peek(font, 'Root/Mono');
-    await vi.waitFor(() => expect(peek(font, 'Root/Mono')).not.toBeNull());
-    const face = peek(font, 'Root/Mono')!;
+    const face = await settledAtMono(1);
 
     expect(face.opentype).toEqual(new Map([[1297043023, 1]]));
     // Recursive's `MONO` instance advances every glyph 600 of 1000 units, where `m` measures 500 at the default.
@@ -446,12 +448,7 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
   });
 
   it('keeps a variable font at its default instance on the measured advances', async () => {
-    const { peekSettledSceneFontMetrics: peek, recursive } = await loaderWithFontDoor();
-    const font = atInstance(recursive(), 0);
-
-    peek(font, 'Root/Default');
-    await vi.waitFor(() => expect(peek(font, 'Root/Default')).not.toBeNull());
-    const face = peek(font, 'Root/Default')!;
+    const face = await settledAtMono(0);
 
     expect(face.opentype).toBeUndefined();
     expect(getFontGlyphAdvancePx(face, 'm', 10)).toBe(5);

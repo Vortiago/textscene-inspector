@@ -238,9 +238,9 @@ export function paintSceneFontCanvas(
   const embolden = metrics.embolden ?? 0;
   const { opentype } = metrics;
   const variation: GlyphVariation = { embolden, skew, opentype };
-  // The ring of a varied face strokes the contours, and the fill of an emboldened face, or of one at
-  // an instance, fills them. They carry their own shear.
-  const followsContours = stroked ? isGlyphVaried(variation) : embolden !== 0 || opentype !== undefined;
+  // The ring of a varied face strokes the contours, and the fill of a face varied by more than a shear
+  // fills them. They carry their own shear.
+  const followsContours = isGlyphVaried(stroked ? variation : { embolden, opentype });
   const contourOutlines = followsContours ? (metrics.outlines ?? null) : null;
   const contoursOf = contourOutlines && variedContoursReader(contourOutlines, fontSizePx, variation);
 
@@ -279,7 +279,7 @@ export function paintSceneFontCanvas(
         canvasLayout.offsetXPx +
         (snapsGlyphs ? canvasGlyphPenXPx(originPhasePx.x + gp.x, fontSizePx, metrics) : gp.x);
       // A glyph shaped with no growth, in a layout that is not sheared or at an instance, stays on its plain ring.
-      const hasVariedGlyph = skew !== 0 || gp.emboldenGrowthPx || opentype;
+      const hasVariedGlyph = gp.emboldenGrowthPx || isGlyphVaried({ skew, opentype });
       const contours = contoursOf && hasVariedGlyph ? contoursOf(gp.char) : null;
       if (contours) (stroked ? strokeContours : fillContours)(ctx, contours, penX, baselineY);
       else if (contourOutlines && skew !== 0)

@@ -171,30 +171,32 @@ describe('withVariation at a variable-font instance', () => {
   const WGHT = 0x77676874;
   const BOLD = new Map([[WGHT, 700]]);
   const REGULAR = new Map([[WGHT, 400]]);
+  /** At the font's units per em, a kerning in px equals the kerning in design units. */
+  const UNIT_SIZE_PX = METRICS.unitsPerEm;
   /** Outlines whose default instance is wght 400, with A at glyph 1, V at glyph 2 and no glyph for any other character. */
   const variableOutlines = {
     glyphIndex: (codePoint: number) => ({ A: 1, V: 2 })[String.fromCodePoint(codePoint)] ?? 0,
     glyphContours: () => null,
-    instanceAt: (opentype: ReadonlyMap<number | string, number>) =>
-      opentype.get(WGHT) === 400
-        ? null
-        : { kerningUnits: (left: number, right: number) => left * 10 + right },
+    drawsInstance: (opentype: ReadonlyMap<number | string, number>) => opentype.get(WGHT) !== 400,
+    kerningAtInstance: (left: number, right: number) => left * 10 + right,
   };
+  const kerningPx = (face: FontMetrics, a: string, b: string) =>
+    getFontKerningAdjustmentPx(face, a, b, UNIT_SIZE_PX);
 
   it('kerns a pair by the GPOS kerning of the instance', () => {
     const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
-    expect(face.getKerningAdjustmentUnits('A', 'V')).toBe(12);
+    expect(kerningPx(face, 'A', 'V')).toBe(12);
   });
 
   it('keeps the kerning of the face for a character the font has no glyph for', () => {
     const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
-    expect(face.getKerningAdjustmentUnits('A', 'x')).toBe(METRICS.getKerningAdjustmentUnits('A', 'x'));
+    expect(kerningPx(face, 'A', 'x')).toBe(0);
   });
 
   it('drops axis values that draw the default instance, so the face draws as the font itself', () => {
     const face = withVariation(METRICS, { opentype: REGULAR, outlines: variableOutlines });
     expect(face.opentype).toBeUndefined();
-    expect(face.getKerningAdjustmentUnits('A', 'V')).toBe(-256);
+    expect(kerningPx(face, 'A', 'V')).toBe(-256);
   });
 
   // A `FontVariation` over another finds its face at its own axis values (`font.cpp:3120-3131`), as
@@ -203,7 +205,7 @@ describe('withVariation at a variable-font instance', () => {
     const atInstance = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
     const bold = withVariation(atInstance, { embolden: 1.2 });
     expect(bold.opentype).toBeUndefined();
-    expect(bold.getKerningAdjustmentUnits('A', 'V')).toBe(-256);
+    expect(kerningPx(bold, 'A', 'V')).toBe(-256);
   });
 });
 

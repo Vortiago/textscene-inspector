@@ -11,12 +11,14 @@
 
 import {
   collectLookups,
-  coverageIndex,
-  glyphClass,
+  GposType,
+  i16,
+  pairValueRecords,
   readLayoutTable,
   u16,
   valueRecordSize,
   type LayoutTable,
+  type PairValueRecord,
 } from '../autofit/openTypeLayout';
 import { tableFits, type SfntFile } from '../sfntTables';
 import { readFvarAxes } from './fvar';
@@ -25,27 +27,12 @@ import { itemDeltaFixed, readItemVariationStore, type ItemVariationStore } from 
 /** The kerning of a pair of glyphs in design units, with the fraction of its deltas. */
 export type PairKerningReader = (left: number, right: number) => number;
 
-const PAIR_ADJUSTMENT = 2;
 const VALUE_X_ADVANCE = 0x4;
 const VALUE_X_ADVANCE_DEVICE = 0x40;
-/** The value-record fields before the x advance: the x and y placements. */
-const FIELDS_BEFORE_X_ADVANCE = 0x3;
-/** The value-record fields before the x advance device: the placements, the advances and the placement devices. */
-const FIELDS_BEFORE_X_ADVANCE_DEVICE = 0x3f;
 const VARIATION_INDEX_FORMAT = 0x8000;
 /** `GDEF` 1.3 keeps the offset of its item variation store at this byte. */
 const GDEF_VARIATION_STORE_OFFSET = 14;
 const GDEF_VERSION_1_3_MINOR = 3;
-
-/**
- * One value record of a pair subtable: where it starts, its format, and the table its device offsets
- * count from, a `PairSet` in format 1 and the subtable in format 2.
- */
-interface ValueRecord {
-  readonly at: number;
-  readonly base: number;
-  readonly format: number;
-}
 
 /** The `GDEF` item variation store, or null for a font whose `GDEF` holds none. */
 function gdefVariationStore(sfnt: SfntFile, axisCount: number): ItemVariationStore | null {
@@ -65,52 +52,8 @@ function kernLookups(table: LayoutTable): number[] {
   return collectLookups({ ...table, featureSubstitutions: [] }, scripts, ['kern']);
 }
 
-/** The first value record of the pair set at `pairSet` for `right`, or null for a glyph it does not list. */
-function pairSetRecord(dv: DataView, pairSet: number, right: number, recordSize: number): number | null {
-  const count = u16(dv, pairSet);
-  for (let i = 0; i < count; i++) {
-    const record = pairSet + 2 + i * (2 + recordSize);
-    if (u16(dv, record) === right) return record + 2;
-  }
-  return null;
-}
-
-/** The two value records the pair subtable at `subtable` gives `left` and `right`, or null for a pair it does not hold. */
-function pairValueRecords(
-  dv: DataView,
-  subtable: number,
-  left: number,
-  right: number
-): [ValueRecord, ValueRecord] | null {
-  const leftIndex = coverageIndex(dv, subtable + u16(dv, subtable + 2), left);
-  if (leftIndex < 0) return null;
-  const format1 = u16(dv, subtable + 4);
-  const format2 = u16(dv, subtable + 6);
-  const size1 = valueRecordSize(format1);
-  const recordSize = size1 + valueRecordSize(format2);
-  let at: number | null;
-  let base = subtable;
-  if (u16(dv, subtable) === 1) {
-    base = subtable + u16(dv, subtable + 10 + 2 * leftIndex);
-    at = pairSetRecord(dv, base, right, recordSize);
-  } else {
-    const leftClass = glyphClass(dv, subtable + u16(dv, subtable + 8), left);
-    const rightClass = glyphClass(dv, subtable + u16(dv, subtable + 10), right);
-    const rightClassCount = u16(dv, subtable + 14);
-    at =
-      leftClass < u16(dv, subtable + 12) && rightClass < rightClassCount
-        ? subtable + 16 + (leftClass * rightClassCount + rightClass) * recordSize
-        : null;
-  }
-  if (at === null) return null;
-  return [
-    { at, base, format: format1 },
-    { at: at + size1, base, format: format2 },
-  ];
-}
-
-/** The number of bytes of the fields of `format` that `fields` selects. */
-const fieldBytes = (format: number, fields: number): number => valueRecordSize(format & fields);
+/** Where the field `flag` of a value record of `format` starts: after every field of a lower flag. */
+const fieldOffset = (format: number, flag: number): number => valueRecordSize(format & (flag - 1));
 
 /**
  * The x advance a value record adds, in design units: its own, and the delta of its device table at
@@ -118,14 +61,14 @@ const fieldBytes = (format: number, fields: number): number => valueRecordSize(f
  */
 function xAdvanceUnits(
   dv: DataView,
-  { at, base, format }: ValueRecord,
+  { at, base, format }: PairValueRecord,
   store: ItemVariationStore | null,
   normalized: Int32Array
 ): number {
   let units = 0;
-  if (format & VALUE_X_ADVANCE) units += dv.getInt16(at + fieldBytes(format, FIELDS_BEFORE_X_ADVANCE), false);
+  if (format & VALUE_X_ADVANCE) units += i16(dv, at + fieldOffset(format, VALUE_X_ADVANCE));
   if (!(format & VALUE_X_ADVANCE_DEVICE) || !store) return units;
-  const deviceOffset = u16(dv, at + fieldBytes(format, FIELDS_BEFORE_X_ADVANCE_DEVICE));
+  const deviceOffset = u16(dv, at + fieldOffset(format, VALUE_X_ADVANCE_DEVICE));
   if (deviceOffset === 0) return units;
   const device = base + deviceOffset;
   if (u16(dv, device + 4) !== VARIATION_INDEX_FORMAT) return units;
@@ -144,7 +87,7 @@ export function instanceKerningReader(
   if (!gpos || !axes) return null;
   const table = readLayoutTable(sfnt.dv, gpos.offset, gpos.length, false);
   const pairSubtables = kernLookups(table).map((lookup) =>
-    (table.lookups[lookup]?.subtables ?? []).filter((subtable) => subtable.type === PAIR_ADJUSTMENT)
+    (table.lookups[lookup]?.subtables ?? []).filter((subtable) => subtable.type === GposType.PAIR)
   );
   if (pairSubtables.every((subtables) => subtables.length === 0)) return null;
   const store = gdefVariationStore(sfnt, axes.length);
