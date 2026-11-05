@@ -1,6 +1,7 @@
 /**
  * The font a TextMesh builds from, as far as it has loaded: the outlines it extrudes and
  * the metrics that shape its lines. The font file, its outlines and its metrics all arrive after the scene.
+ * A BMFont shapes from its descriptor and has no outlines (`bitmapFontOutlines.ts`), so only a hex-code box draws.
  */
 
 import { peekSettledSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';

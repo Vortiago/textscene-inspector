@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
 import { NO_PROJECT_FONTS, type ProjectFonts } from '../../fonts/font/projectFonts';
@@ -13,6 +13,10 @@ import {
   woffFontFile,
 } from './textMeshFont.testkit';
 import { textMeshFont, textMeshFontFiles, textMeshFontKey } from './textMeshFont';
+import { bitmapFontFile } from '../../../r3f/controls/native/text/bitmapFontMetrics.testkit';
+import { buildTextMeshSurface } from './build';
+import { decodeTextMesh } from './decode';
+import { settledPeek } from '../../../r3f/testing/settleFontWork';
 
 const loaded = (font: FontFileResource = trueTypeFontFile()) => ({ [FONT_PATH]: font });
 
@@ -35,16 +39,14 @@ const withoutFont = (projectFonts: ProjectFonts = NO_PROJECT_FONTS) => ({
 
 /** The ready face of `mesh`, once its outlines and metrics have settled. */
 async function readyFace(mesh: ReturnType<typeof textMeshWith>) {
-  await vi.waitFor(() => expect(textMeshFont(mesh).status).toBe('ready'));
-  const font = textMeshFont(mesh);
+  const font = await settledPeek(() => textMeshFont(mesh));
   if (font.status !== 'ready') throw new Error('expected a ready font');
   return font.face;
 }
 
 /** The outlines a font settles to, which tells the font a chain chose. */
 async function outlinesOf(font: FontResource) {
-  await vi.waitFor(() => expect(peekSceneFontOutlines(font)).not.toBeUndefined());
-  return peekSceneFontOutlines(font);
+  return settledPeek(() => peekSceneFontOutlines(font));
 }
 
 describe('textMeshFont', () => {
@@ -64,7 +66,7 @@ describe('textMeshFont', () => {
     const notAnSfnt = { ...trueTypeFontFile(), bytes: new ArrayBuffer(8) };
     const mesh = textMeshWith({}, loaded(notAnSfnt));
 
-    await vi.waitFor(() => expect(textMeshFont(mesh)).toEqual({ status: 'unreadable' }));
+    expect(await settledPeek(() => textMeshFont(mesh))).toEqual({ status: 'unreadable' });
   });
 
   it('draws the bundled Open Sans for a SystemFont, as Godot does when no OS font matches its names', async () => {
@@ -77,9 +79,7 @@ describe('textMeshFont', () => {
     const mesh = textMeshWith({}, loaded());
     expect(textMeshFont(mesh)).toEqual({ status: 'awaitingFont' });
 
-    await vi.waitFor(() => expect(textMeshFont(mesh).status).toBe('ready'));
-
-    const font = textMeshFont(mesh);
+    const font = await settledPeek(() => textMeshFont(mesh));
     if (font.status !== 'ready') throw new Error('expected a ready font');
     expect(font.face.outlines.glyphIndex(0x48)).toBeGreaterThan(0);
   });
@@ -87,9 +87,7 @@ describe('textMeshFont', () => {
   it('is ready with the outlines of an OpenType-CFF font', async () => {
     const mesh = textMeshWith({}, loaded(openTypeFontFile()));
 
-    await vi.waitFor(() => expect(textMeshFont(mesh).status).toBe('ready'));
-
-    const font = textMeshFont(mesh);
+    const font = await settledPeek(() => textMeshFont(mesh));
     if (font.status !== 'ready') throw new Error('expected a ready font');
     expect(font.face.outlines.glyphIndex(0x48)).toBeGreaterThan(0);
   });
@@ -101,16 +99,14 @@ describe('textMeshFont', () => {
     const mesh = textMeshWith({}, loaded(containerFile()));
     expect(textMeshFont(mesh)).toEqual({ status: 'awaitingFont' });
 
-    await vi.waitFor(() => expect(textMeshFont(mesh).status).toBe('ready'));
-
-    const font = textMeshFont(mesh);
+    const font = await settledPeek(() => textMeshFont(mesh));
     if (font.status !== 'ready') throw new Error('expected a ready font');
     expect(font.face.outlines.glyphIndex(0x48)).toBeGreaterThan(0);
   });
 
   it('keeps a ready font for the same mesh object', async () => {
     const mesh = textMeshWith({}, loaded());
-    await vi.waitFor(() => expect(textMeshFont(mesh).status).toBe('ready'));
+    await settledPeek(() => textMeshFont(mesh));
 
     expect(textMeshFont(mesh)).toBe(textMeshFont(mesh));
   });
@@ -201,7 +197,7 @@ describe('textMeshFontKey', () => {
   it('tells a font that awaits its outlines and metrics from one that is ready', async () => {
     const mesh = textMeshWith({}, loaded());
     const awaiting = textMeshFontKey(textMeshFont(mesh));
-    await vi.waitFor(() => expect(textMeshFont(mesh).status).toBe('ready'));
+    await settledPeek(() => textMeshFont(mesh));
 
     expect(textMeshFontKey(textMeshFont(mesh))).not.toBe(awaiting);
   });
@@ -211,9 +207,7 @@ describe('textMeshFontKey', () => {
     const first = textMeshWith({}, loaded(file));
     const second = textMeshWith({ text: '"Other"' }, loaded(file));
     const reloaded = textMeshWith({}, loaded(trueTypeFontFile()));
-    await vi.waitFor(() => {
-      for (const mesh of [first, second, reloaded]) expect(textMeshFont(mesh).status).toBe('ready');
-    });
+    await settledPeek(() => [first, second, reloaded].map(textMeshFont));
 
     expect(textMeshFontKey(textMeshFont(first))).toBe(textMeshFontKey(textMeshFont(second)));
     expect(textMeshFontKey(textMeshFont(reloaded))).not.toBe(textMeshFontKey(textMeshFont(first)));
@@ -236,5 +230,22 @@ describe('textMeshFontFiles', () => {
     const mesh = { ...textMeshWith(), resource: { id: 't', type: 'TextMesh', data: {} } };
 
     expect(textMeshFontFiles(mesh, () => undefined)).toEqual([]);
+  });
+});
+
+describe('textMeshFont on a BMFont', () => {
+  /** The surface a TextMesh of `text` builds over the test BMFont at its fixed size. */
+  function bitmapSurface(text: string) {
+    const font = textMeshFont(textMeshWith({}, loaded(bitmapFontFile())));
+    if (font.status !== 'ready') throw new Error(`expected a ready font, got ${font.status}`);
+    return buildTextMeshSurface(decodeTextMesh({ text: `"${text}"`, font_size: '16' }), '', font.face);
+  }
+
+  it('builds no glyph surface: a font with no FreeType face has no contours (`text_server_adv.cpp:3613`)', () => {
+    expect(Array.from(bitmapSurface('Hi AV').indices)).toEqual([0, 0, 0]);
+  });
+
+  it('builds the hex-code box quad of a character the font lacks, as for any font', () => {
+    expect(bitmapSurface('HzH').positions.length / 3).toBe(4);
   });
 });

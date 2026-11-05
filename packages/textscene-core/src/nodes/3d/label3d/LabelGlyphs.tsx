@@ -1,7 +1,7 @@
 /**
  * Label3D's glyph-drawing pass, `React.lazy`-loaded so the font stays out of the
- * initial bundle. Shaped with `'canvas'` metrics, not MSDF: Godot's default font is
- * not MSDF (`servers/text/text_server.cpp:2386`, read by `scene/theme/theme_db.cpp:59`),
+ * initial bundle. Shaped with `'canvas'` metrics, or `'bitmap'` for a BMFont, not MSDF: Godot's
+ * default font is not MSDF (`servers/text/text_server.cpp:2386`, read by `scene/theme/theme_db.cpp:59`),
  * and a distance field cannot reach as far as the FreeType outline.
  */
 import { useMemo, type RefObject } from 'react';
@@ -20,7 +20,6 @@ import { outlineStrokeWidthPx } from '../../../r3f/controls/native/text/textOutl
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import { type Label3DProperties } from './types';
 import { useLabel3DFont } from './useLabel3DFont';
-import { isCanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { useLayoutDirectionEnv } from '../../../r3f/contexts/useLayoutDirectionEnv';
 import { textBidiOptions } from '../../../r3f/controls/native/text/textBidiOptions';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
@@ -145,7 +144,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   const mipmapped = font?.generatesMipmaps ?? false;
   // Both surfaces take one material (`label_3d.cpp:396`), so they share these props.
   const surfaceProps = {
-    quantisesPen: false,
+    glyphDrawer: 'label3D' as const,
     depthTest,
     side,
     textureFilter,
@@ -170,11 +169,12 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
 
   // Nothing renders before the family registers: `ctx.fillText` against an
   // unregistered one rasterises a system font, frame-stable, so no golden catches it.
-  if (!fontMetrics || !isCanvasFontMetrics(fontMetrics)) return null;
+  if (!fontMetrics) return null;
 
   // `modulate` is authored sRGB. Godot decodes the vertex colour (`label_3d.cpp:428`)
   // through `FLAG_SRGB_VERTEX_COLOR` (`material.cpp:3048-3049`, `material.cpp:1218`).
-  // Here the tint is baked as sRGB bytes that the texture's `SRGBColorSpace` decodes.
+  // A canvas run bakes the tint as sRGB bytes that the texture's `SRGBColorSpace` decodes, and a
+  // BMFont run multiplies the decoded page by the linear tint.
   // `frameExcluded`: Godot's framing camera never sees shaped text (`FramePoint` in `label3d/Component.tsx`).
   return (
     <group>

@@ -32,6 +32,9 @@ import type { SurfaceShading } from '../../../materialFor2d';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { isBitmapFontMetrics, type BitmapFontMetrics } from './bitmapFontMetrics';
 import { bitmapFloorsPen, buildBitmapQuads, createSheetTexture } from './bitmapTextPainter';
+import type { FillSheet } from '../../../../resources/fonts/font/types';
+import { perObject } from '../../../../utils/perObject';
+import { GLYPH_DRAWER_RULES, type GlyphDrawer } from './glyphDrawer';
 import type { TextLayoutResult } from './textLayout';
 import { hexCodeBoxRects } from './hexCodeBox';
 import { buildGlyphQuadArrays, type GlyphQuadArrays } from './glyphQuads';
@@ -50,8 +53,7 @@ import { useSwappedMaterials } from '../../../materials/swappedMaterials';
 import { usePendingWhile } from '../../../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../../../shadowCasting';
 import type { Rgba } from '../../../../godot/math/math';
-import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
-import type { FillSheet } from '../../../../resources/fonts/font/types';
+import { VECTOR2_ZERO } from '../../../../godot/math/vector';
 import { useDisposeOnRelease } from '../../../useDisposeOnRelease';
 import { useNearestAnisotropy } from '../../../nearestAnisotropy';
 
@@ -108,12 +110,12 @@ export interface TextRunProps {
    */
   strokeWidthPx?: number;
   /**
-   * Places each glyph as a canvas item draws it, at the run's place in the item (`useCanvasItemOrigin`):
-   * the pen on its subpixel step and the baseline on a whole pixel (`text_server_adv.cpp:4074-4084`).
-   * Label3D passes false, as its mesh keeps the pen (`label_3d.cpp:347`). Canvas runs only: the MSDF
-   * atlas keeps the pen too.
+   * The Godot code that draws the glyphs, `'canvasItem'` by default (`glyphDrawer.ts`). A canvas item
+   * places each glyph at the run's place in the item (`useCanvasItemOrigin`): the pen on its subpixel
+   * step and the baseline on a whole pixel (`text_server_adv.cpp:4074-4084`). Label3D passes `'label3D'`,
+   * whose mesh keeps both, skips small glyphs and draws no hex-code box. The MSDF atlas keeps the pen too.
    */
-  quantisesPen?: boolean;
+  glyphDrawer?: GlyphDrawer;
   /**
    * The raster texture's sampler: Label3D's `texture_filter` (`label_3d.h:140`). The default is
    * Godot's default filter. A mipmapped row samples a mip chain only where `mipmapped` built one.
@@ -162,14 +164,14 @@ function quadFacingPlusZ(vertexCount: number): THREE.BufferAttribute {
 }
 
 /**
- * One built run: its geometry, and on the canvas path the per-instance texture this component
- * disposes. Each canvas that unmounts releases the shared atlas. `paint` builds a material for the run,
- * one for each pass a GeometryInstance3D's fade can draw it in.
+ * One built run: its geometry, and on the canvas and BMFont paths the texture this component holds
+ * and the last holder disposes. The atlas is shared and never disposed. `paint` builds a material
+ * for the run, one for each pass a GeometryInstance3D's fade can draw it in.
  */
 interface BuiltTextRun {
   geometry: THREE.BufferGeometry;
   paint: (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) => THREE.Material;
-  ownedTexture?: THREE.Texture;
+  heldTexture?: THREE.Texture;
 }
 
 /** What both painters' materials read, apart from the blend. */
@@ -182,6 +184,22 @@ interface TextRunLook {
   pixelMaterial: CanvasItemPixelMaterial | undefined;
 }
 
+/** How a run samples the raster it owns: its filter row, and whether a mip chain is built for it. */
+interface RasterSampling {
+  textureFilter: TextureFilterState;
+  mipmapped: boolean;
+}
+
+/**
+ * Writes `sampling` onto an owned raster. No chain unless the caller asks: Godot builds one only
+ * for a font with `generate_mipmaps` (`text_server_adv.cpp:3121`), and a raster rebuilt on every
+ * text or size change is costly to mipmap.
+ */
+function sampleRaster(texture: THREE.Texture, { textureFilter, mipmapped }: RasterSampling): void {
+  texture.generateMipmaps = mipmapped;
+  applyTextureFilterState(texture, textureFilter);
+}
+
 /** The geometry of merged glyph quads. A lit run reads the normal, so a caller adds it. */
 function quadGeometry({ positions, uvs, indices }: GlyphQuadArrays): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
@@ -192,96 +210,93 @@ function quadGeometry({ positions, uvs, indices }: GlyphQuadArrays): THREE.Buffe
 }
 
 /**
- * A BMFont run: one quad for each glyph over a texture of the font's page fills, drawn as a Control
- * draws any texture. The tint multiplies the page colour, as Godot's modulate does for a font with
- * no FreeType face (`text_server_adv.cpp:4045`). An outline pass draws the font's outline set, at
- * the glyph's own rectangle, for every outline size (`text_server_adv.h:406-414`, `font.cpp:1712-1717`).
- * A positive `strokeWidthPx` is that outline pass.
+ * Written only by `sheetTexture`: one texture for each sheet, sampling and colour space, which every
+ * run of the sheet shares, as Godot shares a font's page texture. Each run holds it through
+ * `useDisposeOnRelease`: the last run to let go disposes it, and three uploads it again for a later run.
+ */
+const sheetTextures = perObject((_sheet: FillSheet) => new Map<string, THREE.DataTexture>());
+
+/** The shared texture of `sheet`, decoded from sRGB when its material multiplies in linear. */
+function sheetTexture(
+  sheet: FillSheet,
+  sampling: RasterSampling,
+  multipliesInLinear: boolean
+): THREE.DataTexture {
+  const { magFilter, minFilter, generateMipmaps, anisotropy } = sampling.textureFilter;
+  const key = [
+    multipliesInLinear,
+    sampling.mipmapped,
+    magFilter,
+    minFilter,
+    generateMipmaps,
+    anisotropy,
+  ].join('|');
+  const textures = sheetTextures(sheet);
+  let texture = textures.get(key);
+  if (!texture) {
+    texture = createSheetTexture(sheet);
+    if (multipliesInLinear) texture.colorSpace = THREE.SRGBColorSpace;
+    sampleRaster(texture, sampling);
+    textures.set(key, texture);
+  }
+  return texture;
+}
+
+/**
+ * A BMFont run: one quad for each glyph over a texture of the font's page fills. The tint multiplies
+ * the page colour as Godot's modulate does for a font with no FreeType face (`text_server_adv.cpp:4045`),
+ * in sRGB for a Control and in linear for a Label3D (`glyphDrawer.ts`). A positive `strokeWidthPx`
+ * draws the outline set at the glyph's own rectangle (`text_server_adv.h:406-414`, `font.cpp:1712-1717`).
  */
 function buildBitmapRun(
   layout: TextLayoutResult,
   metrics: BitmapFontMetrics,
   fontSizePx: number,
   look: TextRunLook,
-  texture: BitmapSheetTexture,
-  originPhasePx: Readonly<Vector2> | undefined
+  sampling: RasterSampling,
+  { strokeWidthPx = 0, glyphDrawer = 'canvasItem', originPhasePx }: CanvasTextPaintOptions
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
-  const quads = buildBitmapQuads(layout, metrics, fontSizePx, texture.sheet, originPhasePx);
+  const isOutlinePass = strokeWidthPx > 0;
+  const sheet = isOutlinePass ? metrics.bitmap.outlineSheet : metrics.bitmap.sheet;
+  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet, { glyphDrawer, originPhasePx });
   const geometry = quadGeometry(quads);
   geometry.setAttribute('normal', quadFacingPlusZ(quads.positions.length / 3));
+  const { multipliesInLinear } = GLYPH_DRAWER_RULES[glyphDrawer];
+  const texture = sheetTexture(sheet, sampling, multipliesInLinear);
   const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
   const paint = (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) =>
     createCanvasTextMaterial({
-      map: texture.texture,
+      map: texture,
       color: new THREE.Color(r, g, b),
       opacity: tint.a,
       clippingPlanes,
       depthTest,
       side,
       pixelMaterial,
+      mipmapped: sampling.mipmapped,
       shading,
       ...blend,
     });
-  return { geometry, paint };
-}
-
-/** A BMFont page sheet on the GPU. It outlives a run, so a pen move rebuilds the quads alone. */
-interface BitmapSheetTexture {
-  sheet: FillSheet;
-  texture: THREE.DataTexture;
-}
-
-/**
- * The texture of the sheet a BMFont run samples: the outline sheet for an outline pass, which a
- * positive `strokeWidthPx` marks. Undefined for every other face.
- */
-function useBitmapSheetTexture(
-  metrics: TextLayoutResult['fontMetrics'],
-  strokeWidthPx: number,
-  textureFilter: TextureFilterState
-): BitmapSheetTexture | undefined {
-  const sheet = isBitmapFontMetrics(metrics)
-    ? strokeWidthPx > 0
-      ? metrics.bitmap.outlineSheet
-      : metrics.bitmap.sheet
-    : undefined;
-  const sheetTexture = useMemo(() => {
-    if (!sheet) return undefined;
-    const texture = createSheetTexture(sheet);
-    applyTextureFilterState(texture, textureFilter);
-    return { sheet, texture };
-  }, [sheet, textureFilter]);
-  useDisposeOnRelease(sheetTexture?.texture);
-  useNearestAnisotropy(sheetTexture?.texture ?? null);
-  return sheetTexture;
+  return { geometry, paint, heldTexture: texture };
 }
 
 /**
  * Dispatches on `layout.fontMetrics.kind`, so no slice's `Component.tsx` branches. The face sets the
- * shear (`FontMetrics.skew`). The atlas branch ignores `canvasPaint`. A BMFont run draws over
- * `bitmapSheet` and reads its origin phase as a canvas run does.
+ * shear (`FontMetrics.skew`). The atlas branch ignores `canvasPaint`. A BMFont run reads its
+ * stroke width as its outline pass, and its origin phase as a canvas run does.
  */
 function buildTextRun(
   layout: TextLayoutResult,
   fontSizePx: number,
   look: TextRunLook,
   canvasPaint: CanvasTextPaintOptions,
-  textureFilter: TextureFilterState,
-  mipmapped: boolean,
-  bitmapSheet: BitmapSheetTexture | undefined
+  sampling: RasterSampling
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
   const skew = layout.fontMetrics.skew ?? 0;
-  if (isBitmapFontMetrics(layout.fontMetrics) && bitmapSheet) {
-    return buildBitmapRun(
-      layout,
-      layout.fontMetrics,
-      fontSizePx,
-      look,
-      bitmapSheet,
-      canvasPaint.originPhasePx
-    );
+  if (isBitmapFontMetrics(layout.fontMetrics)) {
+    return buildBitmapRun(layout, layout.fontMetrics, fontSizePx, look, sampling, canvasPaint);
   }
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(
@@ -302,10 +317,7 @@ function buildTextRun(
     // 5/255 below the backdrop at a glyph edge, where Godot draws a monotonic ramp. `textRun.md`
     // gives the engine lines, and why a raster split into coverage plus colour would reopen this.
     texture.colorSpace = THREE.SRGBColorSpace;
-    // No chain unless the caller asks: Godot's default font generates none
-    // (`text_server.cpp:2387`), and a raster rebuilt on every text or size change is costly to mipmap.
-    texture.generateMipmaps = mipmapped;
-    applyTextureFilterState(texture, textureFilter);
+    sampleRaster(texture, sampling);
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
 
@@ -318,11 +330,11 @@ function buildTextRun(
         depthTest,
         side,
         pixelMaterial,
-        mipmapped,
+        mipmapped: sampling.mipmapped,
         shading,
         ...blend,
       });
-    return { geometry: geo, paint, ownedTexture: texture };
+    return { geometry: geo, paint, heldTexture: texture };
   }
 
   const geo = quadGeometry(buildGlyphQuadArrays(layout, fontSizePx, skew));
@@ -352,7 +364,7 @@ export function TextRunMesh({
   depthTest,
   side,
   strokeWidthPx = 0,
-  quantisesPen = true,
+  glyphDrawer = 'canvasItem',
   textureFilter = godotTextureFilterState(undefined),
   mipmapped = false,
   blends,
@@ -364,14 +376,12 @@ export function TextRunMesh({
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
   // The run memo keys by the phase, so a run that moves by whole pixels keeps its raster. An atlas
-  // run and a run that keeps its pen read no phase, so a move never rebuilds them. A BMFont pen
-  // floors in every caller, Label3D too, wherever `bitmapFloorsPen` holds.
+  // run and a run that keeps its pen read no phase, so a move never rebuilds them.
   const itemOrigin = useCanvasItemOrigin();
   const { fontMetrics } = layout;
-  const bitmapSheet = useBitmapSheetTexture(fontMetrics, strokeWidthPx, textureFilter);
   const readsPhase = isBitmapFontMetrics(fontMetrics)
-    ? bitmapFloorsPen(fontSizePx, fontMetrics)
-    : isCanvasFontMetrics(fontMetrics) && snapsGlyphsToItemPixels(quantisesPen, fontSizePx, fontMetrics);
+    ? bitmapFloorsPen(glyphDrawer, fontSizePx, fontMetrics)
+    : isCanvasFontMetrics(fontMetrics) && snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, fontMetrics);
   const { x: phaseX, y: phaseY } = readsPhase ? originPhase(itemOrigin) : VECTOR2_ZERO;
   if (blends && !swapped)
     throw new Error('expected blends only inside a GeometryInstance3D drawer, got none');
@@ -382,10 +392,8 @@ export function TextRunMesh({
         layout,
         fontSizePx,
         { tint, clippingPlanes, depthTest, side, pixelMaterial },
-        { strokeWidthPx, quantisesPen, originPhasePx: { x: phaseX, y: phaseY } },
-        textureFilter,
-        mipmapped,
-        bitmapSheet
+        { strokeWidthPx, glyphDrawer, originPhasePx: { x: phaseX, y: phaseY } },
+        { textureFilter, mipmapped }
       ),
     // `tint` is compared by its fields, not by identity: a caller that re-creates an equal
     // object every render must not rebuild the mesh.
@@ -402,12 +410,11 @@ export function TextRunMesh({
       side,
       pixelMaterial,
       strokeWidthPx,
-      quantisesPen,
+      glyphDrawer,
       phaseX,
       phaseY,
       textureFilter,
       mipmapped,
-      bitmapSheet,
     ]
   );
   const material = usePaintedMaterial(run, blends?.unfaded, shading);
@@ -427,13 +434,17 @@ export function TextRunMesh({
   // R3F does not dispose a geometry or material passed as a prop, so both leak
   // on every rebuild without this, and a Label re-shapes on every rect or font change.
   useDisposeOnRelease(run.geometry);
-  // The canvas path's raster texture is fresh per rebuild, unlike the shared atlas.
-  useDisposeOnRelease(run.ownedTexture);
-  useNearestAnisotropy(run.ownedTexture ?? null);
+  // A canvas raster is fresh per rebuild, and a BMFont sheet texture is shared by its runs.
+  useDisposeOnRelease(run.heldTexture);
+  useNearestAnisotropy(run.heldTexture ?? null);
 
   // `draw_hex_code_box` (`text_server.cpp:771-812`) draws in its caller's colour:
   // this run's `tint`, converted to linear once as for every `ControlQuad`.
-  const hexBoxRects = useMemo(() => collectHexCodeBoxRects(layout, fontSizePx), [layout, fontSizePx]);
+  const hexBoxRects = useMemo(
+    () =>
+      GLYPH_DRAWER_RULES[glyphDrawer].drawsHexCodeBoxes ? collectHexCodeBoxRects(layout, fontSizePx) : [],
+    [glyphDrawer, layout, fontSizePx]
+  );
   const hexBoxColor = useMemo(() => {
     const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
     return new THREE.Color(r, g, b);
@@ -449,8 +460,8 @@ export function TextRunMesh({
 
   return (
     <>
-      {/* A canvas or BMFont run owns its texture. Only an atlas run waits for the atlas. */}
-      {!run.ownedTexture && !bitmapSheet && <AtlasPending />}
+      {/* A canvas run owns its texture. Only an atlas run waits for the atlas. */}
+      {!run.heldTexture && <AtlasPending />}
       <mesh
         ref={meshRef}
         geometry={run.geometry}

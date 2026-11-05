@@ -8,11 +8,13 @@ import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import { isGlyphVaried, type FontMetrics, type GlyphVariation } from './fontMetrics';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
+import { bitmapFontOutlines } from './bitmapFontOutlines';
 import {
   BUNDLED_FACE,
   NO_FACE,
   findDrawnFace,
   fontForcesAutohinter,
+  hasBitmap,
   type DrawnFace,
 } from './sceneFontResolution';
 import { createSettledPeek } from './settledChannel';
@@ -52,8 +54,9 @@ function peekBundledOutlines(): PeekedOutlines {
 }
 
 /**
- * The outlines of `font`, starting their load on the first peek. A chain of fonts with no glyphs, a
- * BMFont, and bytes that hold no outlines this reader opens, are null.
+ * The outlines of `font`, starting their load on the first peek. A chain of fonts with no glyphs, and
+ * bytes that hold no outlines this reader opens, are null. A BMFont has glyphs with no contours
+ * (`bitmapFontOutlines.ts`).
  *
  * @canonical Glyph outlines of a scene font in any container, from its font resource
  */
@@ -65,6 +68,7 @@ export function peekSceneFontOutlines(font: FontResource | null | undefined): Pe
 function peekFaceOutlines(face: DrawnFace): PeekedOutlines {
   if (face === BUNDLED_FACE) return peekBundledOutlines();
   if (face === NO_FACE) return NO_OUTLINES;
+  if (face && hasBitmap(face)) return bitmapFontOutlines(face.bitmap);
   const bytes = face?.bytes;
   if (!face || !bytes) return null;
   const open = fontForcesAutohinter(face) ? openAutoHintedFontOutlines : openFontOutlines;

@@ -3,6 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
 import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
+import { testBitmapMetrics } from '../../../r3f/controls/native/text/bitmapFontMetrics.testkit';
 
 /**
  * The modules under test, imported again after each `vi.resetModules()`: the outlines of the bundled
@@ -196,6 +197,20 @@ describe('useLabel3DFont outlines', () => {
     await settle();
 
     expect(result.current?.metrics).toBe(bundled.metrics);
+  });
+
+  it('is the bitmap face of a BMFont, which draws from its page images and not the bundled font', async () => {
+    const bitmap = testBitmapMetrics();
+    vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
+      ...(await importOriginal<object>()),
+      peekSettledSceneFontMetrics: () => bitmap,
+    }));
+    modules = await importModules();
+    const { result } = renderMetrics('SubResource("plain")');
+
+    await settle();
+
+    expect(result.current?.metrics).toBe(bitmap);
   });
 
   it.each([

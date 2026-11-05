@@ -34,6 +34,7 @@ import { passBlendMaterialProps, type SurfaceBlend } from '../../../materials/su
 import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
 import type { SurfaceShading } from '../../../materialFor2d';
 import type { Rgba } from '../../../../godot/math/math';
+import { GLYPH_DRAWER_RULES, type GlyphDrawer } from './glyphDrawer';
 import { fposmodp } from '../../../../godot/math/math';
 import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
 
@@ -133,11 +134,11 @@ export function buildCanvasTextQuadArrays(
  * draws off that branch, as Label3D's mesh does.
  */
 export function snapsGlyphsToItemPixels(
-  quantisesPen: boolean,
+  glyphDrawer: GlyphDrawer,
   fontSizePx: number,
   metrics: Pick<FontMetrics, 'pxPerUnit'>
 ): boolean {
-  return quantisesPen && !fontIsScaled(fontSizePx, metrics);
+  return GLYPH_DRAWER_RULES[glyphDrawer].roundsPen && !fontIsScaled(fontSizePx, metrics);
 }
 
 /**
@@ -163,10 +164,10 @@ export interface CanvasTextPaintOptions {
   /** A positive width paints the outline ring instead of the fill, as Godot's separate outline surface (`label_3d.cpp:610-615`). */
   strokeWidthPx?: number;
   /**
-   * Places each glyph as a canvas item draws it: the pen on its subpixel step (`canvasGlyphPenXPx`)
-   * and the baseline floored to a whole pixel. False for Label3D, whose mesh keeps the pen (`label_3d.cpp:347`).
+   * The Godot code that draws the glyphs, `'canvasItem'` by default: a canvas item puts the pen on its
+   * subpixel step (`canvasGlyphPenXPx`) and floors the baseline. A Label3D mesh keeps both (`glyphDrawer.ts`).
    */
-  quantisesPen?: boolean;
+  glyphDrawer?: GlyphDrawer;
   /** The `originPhase` of the run's place in its canvas item, which the pen and the baseline include. Zero by default. */
   originPhasePx?: Readonly<Vector2>;
 }
@@ -186,7 +187,7 @@ export function paintSceneFontCanvas(
   tint: Rgba,
   skew: number,
   canvasLayout: CanvasTextCanvasLayout,
-  { strokeWidthPx = 0, quantisesPen = true, originPhasePx = VECTOR2_ZERO }: CanvasTextPaintOptions = {}
+  { strokeWidthPx = 0, glyphDrawer = 'canvasItem', originPhasePx = VECTOR2_ZERO }: CanvasTextPaintOptions = {}
 ): HTMLCanvasElement {
   const metrics = layout.fontMetrics;
   if (!isCanvasFontMetrics(metrics)) {
@@ -250,7 +251,7 @@ export function paintSceneFontCanvas(
   };
 
   // The raster starts at the whole item pixel at or before the run origin, where its quad sits.
-  const snapsGlyphs = snapsGlyphsToItemPixels(quantisesPen, fontSizePx, metrics);
+  const snapsGlyphs = snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, metrics);
   layout.lines.forEach((line, lineIndex) => {
     const lineBaselinePx = lineIndex * layout.linePitchPx + baselineOffsetPx;
     const baselineY =
