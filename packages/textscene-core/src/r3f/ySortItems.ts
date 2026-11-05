@@ -158,51 +158,25 @@ export function collectYSortedItems(
     const isYSort = props.y_sort_enabled === true;
 
     const group = isYSort ? nodeComponentRegistry.getYSortGroup(child.type) : undefined;
-    if (group && nodeComponentRegistry.isCanvasItem(child.type)) {
-      const layer = group.describe(child);
-      items.push({
-        sortY: key.sortY,
-        effectiveZ: key.effectiveZ,
-        treeOrder: order++,
-        kind: 'tileGroup',
-        tileData: { tileSetRef: layer.tileSetRef, toSortRoot: key.toSortRoot },
-        node: child,
-        liftedPast,
-      });
-      // A y-sorted layer merges its children into this sort, as any y_sort_enabled child does.
-      const subItems = collectYSortedItems(child, key, order, [...liftedPast, child], childPoses);
-      items.push(...subItems);
-      order += subItems.length;
-      continue;
-    }
-
-    if (isYSort) {
-      // Godot sorts a y_sort_enabled node alongside the subtree it merges in: the
-      // node is appended first, then descended into. Without the append, the
-      // node's own pixels are lost.
-      items.push({
-        sortY: key.sortY,
-        effectiveZ: key.effectiveZ,
-        treeOrder: order++,
-        kind: 'node',
-        node: ownBodyOf(child),
-        liftedPast,
-      });
-      // Its descendants sort against the child's accumulated transform and z-index
-      // bucket, not the sort root's: Godot threads `ysort_xform` and `abs_z` through.
-      const subItems = collectYSortedItems(child, key, order, [...liftedPast, child], childPoses);
-      items.push(...subItems);
-      order += subItems.length;
-    } else {
-      items.push({
-        sortY: key.sortY,
-        effectiveZ: key.effectiveZ,
-        treeOrder: order++,
-        kind: 'node',
-        node: child,
-        liftedPast,
-      });
-    }
+    const isTileGroup = group !== undefined && nodeComponentRegistry.isCanvasItem(child.type);
+    items.push({
+      sortY: key.sortY,
+      effectiveZ: key.effectiveZ,
+      treeOrder: order++,
+      kind: isTileGroup ? 'tileGroup' : 'node',
+      ...(isTileGroup && {
+        tileData: { tileSetRef: group.describe(child).tileSetRef, toSortRoot: key.toSortRoot },
+      }),
+      // A y_sort_enabled node draws only its body: its children are items of their own below.
+      node: isYSort && !isTileGroup ? ownBodyOf(child) : child,
+      liftedPast,
+    });
+    if (!isYSort) continue;
+    // Godot appends a y_sort_enabled node first, then merges its subtree into this sort. The
+    // descendants sort against the child's `ysort_xform` and `abs_z`, not the sort root's.
+    const subItems = collectYSortedItems(child, key, order, [...liftedPast, child], childPoses);
+    items.push(...subItems);
+    order += subItems.length;
   }
   return items;
 }
