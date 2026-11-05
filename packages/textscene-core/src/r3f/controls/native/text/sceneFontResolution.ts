@@ -3,7 +3,7 @@
  * kinds recurse through `fallbacks` and `base_font`, and a `SystemFont` never resolves, since the
  * previewer cannot load bytes for OS family names.
  */
-import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
+import type { BitmapFont, FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import { TRANSFORM2D_SLOT_RE, matchedFloat, parseGodotFloat } from '../../../../godot/variant/number';
 import { boolSlotValue } from '../../../../godot/variant/variantBool';
 import { dictNumberEntries } from '../../../../godot/variant/variantParser';
@@ -17,31 +17,39 @@ interface ResolvedFontBytes {
 }
 
 /**
- * Depth first: `FontVariation` to `baseFont`, `FontFile` to its `bytes`, else the first
- * `fallbacks` entry that resolves. Returns `null` for no authored font (the theme default) and
- * for a branch with no loadable bytes.
+ * Depth first: `FontVariation` to `baseFont`, `FontFile` to itself when `accepts` it, else the first
+ * `fallbacks` entry that resolves. Null for no authored font (the theme default), a `SystemFont`,
+ * which never resolves, and a branch no file of which `accepts`.
  */
-export function resolveFontFileBytes(font: FontResource | null | undefined): ResolvedFontBytes | null {
-  if (!font) return null;
-
-  switch (font.kind) {
-    case 'system':
-      return null;
-
-    case 'variation':
-      return resolveFontFileBytes(font.baseFont);
-
-    case 'file': {
-      if (font.bytes) {
-        return { bytes: font.bytes, leaf: font };
-      }
-      for (const fallback of font.fallbacks) {
-        const resolved = resolveFontFileBytes(fallback);
-        if (resolved) return resolved;
-      }
-      return null;
-    }
+function findFontFile<Found extends FontFileResource>(
+  font: FontResource | null | undefined,
+  accepts: (file: FontFileResource) => file is Found
+): Found | null {
+  if (!font || font.kind === 'system') return null;
+  if (font.kind === 'variation') return findFontFile(font.baseFont, accepts);
+  if (accepts(font)) return font;
+  for (const fallback of font.fallbacks) {
+    const found = findFontFile(fallback, accepts);
+    if (found) return found;
   }
+  return null;
+}
+
+type FileWithBytes = FontFileResource & { bytes: ArrayBuffer };
+type FileWithBitmap = FontFileResource & { bitmap: BitmapFont };
+
+const hasBytes = (file: FontFileResource): file is FileWithBytes => Boolean(file.bytes);
+const hasBitmap = (file: FontFileResource): file is FileWithBitmap => file.bitmap !== undefined;
+
+/** The first font file with bytes that `font` reaches. Null for no authored font and for a branch with no loadable bytes. */
+export function resolveFontFileBytes(font: FontResource | null | undefined): ResolvedFontBytes | null {
+  const leaf = findFontFile(font, hasBytes);
+  return leaf && { bytes: leaf.bytes, leaf };
+}
+
+/** The decoded BMFont of the first font file that has one, by the same walk. Null for a font that draws from outlines. */
+export function resolveBitmapFont(font: FontResource | null | undefined): BitmapFont | null {
+  return findFontFile(font, hasBitmap)?.bitmap ?? null;
 }
 
 /**

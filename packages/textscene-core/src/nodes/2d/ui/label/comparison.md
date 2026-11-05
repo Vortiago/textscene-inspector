@@ -1,7 +1,6 @@
 ---
 type: Label
 category: 2D
-status: limitation
 fixture: unit-label-2d.tscn
 image: unit-label-2d
 renders_as: a shaped text run on the canvas
@@ -30,8 +29,32 @@ nothing (`label.cpp:112`, ADR-0059).
 
 A Label whose themes name no font draws the project's `gui/theme/custom_font`, as Godot does
 (`theme_db.cpp`, `default_theme.cpp:1371-1373`). A path that does not load keeps the bundled font,
-with a warning and a missing-resource row. It honours the alignment, case, wrap, line-window and
+with a warning and a missing-resource row. A BMFont (`.fnt`, `.font`) works in all of those places (ADR-0064).
+A descriptor or page that fails to load gives a missing-resource row and keeps the bundled font. It honours the alignment, case, wrap, line-window and
 partial-reveal settings.
+
+## BMFont
+
+<!-- compare: image=unit-label-bmfont status=limitation fixture=unit-label-bmfont.tscn -->
+
+A `.fnt` or `.font` font draws each glyph as a rectangle of its page image (`text_server_adv.cpp:4072-4108`).
+The size scales it from the fixed size. The scene shows fixed size, double, one and a half times, a
+`font_color` tint and a missing glyph, which draws a hex-code box.
+
+## BMFont outline
+
+<!-- compare: image=unit-label-bmfont-outline status=done fixture=unit-label-bmfont-outline.tscn -->
+
+A BMFont with an outline set draws it behind the fill for every `outline_size` above 0. A fixed-size
+font caps the outline size at 1 for its cache (`text_server_adv.h:406-414`), so the ring scales with the
+glyph, not with `outline_size`.
+
+## BMFont scaling
+
+<!-- compare: image=unit-label-bmfont-scaling status=done fixture=unit-label-bmfont-scaling.tscn -->
+
+The import sidecar's `scaling_mode` sets how a size off the fixed size scales the glyphs
+(`text_server_adv.cpp:4093-4104`). Integer rounds the ratio, and Disabled keeps the fixed size.
 
 ## Linting
 
@@ -93,6 +116,7 @@ is already applied. Every real Godot save guarantees that, since `text` is the f
 
 ## Known limitations
 
+- **Not drawn** The `fallbacks` of a BMFont: a missing character draws as a hex-code box (`text_server_adv.cpp:6810-6928`, #1298).
 - **Approximated** A wrapping Label inside a ScrollContainer can read one line short when
   the wrap is what makes the scrollbar appear.
 - **Not drawn** `BREAK_TRIM_INDENT` (an `autowrap_trim_flags` bit): a wrapped

@@ -8,6 +8,7 @@ import type { Rgba } from '../../../../godot/math/math';
 import { outlineStrokeWidthPx } from './textOutline';
 import { resolveTextOutline, type TextOutlineTheme } from '../textTheme';
 import type { ShareNode } from '../solveTree';
+import { isBitmapFontMetrics } from './bitmapFontMetrics';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { TextRun, type TextRunProps } from './TextRun';
 import { PendingSuspense } from '../../../../resources/PendingSuspense';
@@ -41,12 +42,14 @@ type OutlineRingRunProps = RunLookProps & {
 };
 
 /**
- * One stroked outline ring, without the fill (ADR-0040). A canvas face strokes its own ring. The
- * bundled atlas face strokes it on the bundled canvas face, and its pass waits for that face.
+ * One stroked outline ring, without the fill (ADR-0040). A canvas face strokes its own ring. A
+ * BMFont draws its outline set. The bundled atlas face strokes it on the bundled canvas face, and
+ * its pass waits for that face.
  */
 export function OutlineRingRun({ sizePx, ...run }: OutlineRingRunProps) {
   const ring = { ...run, strokeWidthPx: outlineStrokeWidthPx(sizePx) };
-  if (isCanvasFontMetrics(run.layout.fontMetrics)) return <TextRun {...ring} />;
+  const { fontMetrics } = run.layout;
+  if (isCanvasFontMetrics(fontMetrics) || isBitmapFontMetrics(fontMetrics)) return <TextRun {...ring} />;
   return (
     <PendingSuspense>
       <BundledOutlineRing {...ring} />
