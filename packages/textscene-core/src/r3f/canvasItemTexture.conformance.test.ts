@@ -1,7 +1,7 @@
 /**
  * A canvas item that draws a texture loads it through `useCanvasItemTexture` and hands the result's
  * `canvasTexture` to `CanvasItem2D`. Loading it any other way leaves its CanvasTexture maps out of
- * the lighting, which is how Line2D drew a normal-mapped texture flat (#1219).
+ * the lighting, which is how Line2D drew a normal-mapped texture flat.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
