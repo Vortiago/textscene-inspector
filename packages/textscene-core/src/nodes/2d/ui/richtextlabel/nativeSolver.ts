@@ -817,6 +817,8 @@ export function richTextContentHeightPx(
  */
 function zeroHeightParagraphsOf(styledRuns: readonly StyledTextRun[]): ReadonlySet<number> {
   const paragraphs = new Set<number>();
+  const endsInBreak = styledRuns.at(-1)?.text.endsWith('\n') ?? false;
+  if (!endsInBreak && !styledRuns.some((run) => run.zeroHeightBreak)) return paragraphs;
   let paragraphIndex = 0;
   for (const run of styledRuns) {
     for (let at = run.text.indexOf('\n'); at >= 0; at = run.text.indexOf('\n', at + 1)) {
@@ -824,7 +826,7 @@ function zeroHeightParagraphsOf(styledRuns: readonly StyledTextRun[]): ReadonlyS
       paragraphIndex++;
     }
   }
-  if (styledRuns.at(-1)?.text.endsWith('\n')) paragraphs.add(paragraphIndex);
+  if (endsInBreak) paragraphs.add(paragraphIndex);
   return paragraphs;
 }
 
