@@ -7,7 +7,7 @@ import {
   originPhase,
   paintSceneFontCanvas,
 } from './canvasTextPainter';
-import { withVariation, type OpentypeCoordinates } from './fontMetrics';
+import { getFontAscentPx, withVariation, type OpentypeCoordinates } from './fontMetrics';
 import { shapeText } from './textLayout';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { patchedFragment } from '../../../testing/patchedFragment';
@@ -67,6 +67,15 @@ describe('computeCanvasTextCanvasLayout', () => {
     expect(canvasLayout.offsetXPx).toBe(-inkLeftPx);
     expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx + reachPx + 1 - inkLeftPx));
     expect(contentOriginOnQuad(canvasLayout).x).toBeCloseTo(0, 6);
+  });
+
+  // A fallback face's run draws at the line's baseline, which another face's ascent can set.
+  it("reaches the ascent of the glyph's own face, not the line's baseline offset", () => {
+    const layout = layoutFor('AB');
+    const lowBaseline = { ...layout, baselineOffsetPx: 1 };
+    const glyph = layout.lines[0]!.glyphs[0]!;
+    const inkLeftPx = Math.floor(-getFontAscentPx(glyph.fontMetrics, glyph.fontSizePx) - 2);
+    expect(computeCanvasTextCanvasLayout(lowBaseline, 0).offsetXPx).toBe(-inkLeftPx);
   });
 
   // A trimmed AUTO right-to-left fill draws past the trimmed width it reports (text_server.cpp:1744).

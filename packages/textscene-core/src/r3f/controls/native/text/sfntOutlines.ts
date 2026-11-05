@@ -186,7 +186,7 @@ function instanceAdvanceReader(sfnt: SfntFile): SfntOutlines['advanceAtInstance'
   return (glyphIndex, fontSizePx, opentype) => {
     const byGlyph = kept(opentype)(fontSizePx, () => new Map());
     if (byGlyph.has(glyphIndex)) return byGlyph.get(glyphIndex)!;
-    const instance = fontInstanceOf(sfnt, opentype);
+    const instance = orOnRangeError(() => fontInstanceOf(sfnt, opentype), null);
     readers ??= instanceAdvanceReaders(sfnt);
     const advance = instance && orOnRangeError(() => readers!(instance, glyphIndex, fontSizePx), null);
     byGlyph.set(glyphIndex, advance);

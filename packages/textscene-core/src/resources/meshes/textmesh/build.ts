@@ -154,8 +154,9 @@ function glyphMeshesByFace(
   fallbacks: readonly TextMeshFace[]
 ): (glyph: GlyphPlacement) => GlyphMeshData | null {
   const meshesOf = perObject((glyphFace: TextMeshFace) => glyphMeshes(properties, glyphFace));
+  const fallbackFaces = new Map<FontMetrics, TextMeshFace>(fallbacks.map((fallback) => [fallback, fallback]));
   return (glyph) => {
-    const glyphFace = fallbacks.find((fallback) => fallback === glyph.fontMetrics) ?? face;
+    const glyphFace = fallbackFaces.get(glyph.fontMetrics) ?? face;
     return meshesOf(glyphFace)(glyph.char.codePointAt(0)!);
   };
 }

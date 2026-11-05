@@ -21,6 +21,7 @@ import {
   canvasGlyphPenXPx,
   drawnOpentype,
   fontIsScaled,
+  getFontAscentPx,
   isGlyphVaried,
   type FontMetrics,
   type GlyphVariation,
@@ -118,9 +119,12 @@ const INK_SLACK_RIGHT_PX = 1;
 function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: number } {
   let startPx = Infinity;
   let endPx = -Infinity;
+  const measuresInk = new Map<FontMetrics, boolean>();
   for (const { glyphs } of layout.lines) {
     for (const glyph of glyphs) {
-      const { leftPx, rightPx } = glyphReachPx(glyph, layout.baselineOffsetPx);
+      const face = glyph.fontMetrics;
+      if (!measuresInk.has(face)) measuresInk.set(face, facesMeasuredInkIsDrawn(face));
+      const { leftPx, rightPx } = glyphReachPx(glyph, measuresInk.get(face)!);
       startPx = Math.min(startPx, glyph.x - leftPx - INK_SLACK_LEFT_PX);
       endPx = Math.max(endPx, glyph.x + rightPx + INK_SLACK_RIGHT_PX);
     }
@@ -128,16 +132,23 @@ function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: numb
   return startPx === Infinity ? { startPx: 0, endPx: layout.widthPx } : { startPx, endPx };
 }
 
+/** Whether `face` draws the ink it measures: `measureText` measures the default instance alone. */
+function facesMeasuredInkIsDrawn(face: FontMetrics): boolean {
+  return isCanvasFontMetrics(face) && !drawnOpentype(face);
+}
+
 /**
- * How far `glyph`'s ink reaches left of its pen and right of it, px, its pen box included. A face that
- * measures no ink takes `ascentPx` on each side: the ascent bounds the reach of any glyph. So does a
- * face drawn at an instance, since `measureText` measures the default instance.
+ * How far `glyph`'s ink reaches left of its pen and right of it, px, its pen box included. A glyph
+ * with no drawn measured ink takes its face's ascent on each side: the ascent bounds the reach of
+ * any glyph of the face.
  */
-function glyphReachPx(glyph: GlyphPlacement, ascentPx: number): { leftPx: number; rightPx: number } {
+function glyphReachPx(glyph: GlyphPlacement, measuresInk: boolean): { leftPx: number; rightPx: number } {
   const face = glyph.fontMetrics;
-  const hasMeasuredInk = isCanvasFontMetrics(face) && !drawnOpentype(face);
-  const ink = hasMeasuredInk ? face.getGlyphInkUnits?.(glyph.char) : undefined;
-  if (!ink) return { leftPx: ascentPx, rightPx: glyph.advance + ascentPx };
+  const ink = measuresInk && isCanvasFontMetrics(face) ? face.getGlyphInkUnits?.(glyph.char) : undefined;
+  if (!ink) {
+    const ascentPx = getFontAscentPx(face, glyph.fontSizePx);
+    return { leftPx: ascentPx, rightPx: glyph.advance + ascentPx };
+  }
   const pxPerUnit = glyph.fontSizePx / face.unitsPerEm;
   return {
     leftPx: Math.max(0, ink.left * pxPerUnit),
