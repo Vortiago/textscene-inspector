@@ -9,14 +9,12 @@ import { peekBundledCanvasFontMetrics } from './bundledFontLoader';
 import { withVariation, type FontMetrics } from './fontMetrics';
 import { peekGlyphOutlines } from './sceneFontOutlines';
 import type { TextLayoutResult } from './textLayout';
-import { TextRun, type TextRunProps } from './TextRun';
+import { TextRun } from './TextRun';
 import { useSceneFontSettleCount } from './useSceneFontSettleCount';
+import type { RunLookProps } from './OutlinedTextRun';
 import { usePendingWhile } from '../../../../resources/usePendingWhile';
 
-type BundledOutlineRingProps = Pick<
-  TextRunProps,
-  'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder'
-> & {
+type BundledOutlineRingProps = Omit<RunLookProps, 'layout'> & {
   /** Shaped on the atlas face, whose baked advances the canvas face reads too. */
   layout: TextLayoutResult;
   strokeWidthPx: number;

@@ -217,7 +217,7 @@ export function paintSceneFontCanvas(
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
       const penX =
         canvasLayout.offsetXPx +
-        (quantisesPen ? canvasGlyphPenXPx(penOriginXPx + gp.x, fontSizePx) - penOriginXPx : gp.x);
+        (quantisesPen ? canvasGlyphPenXPx(penOriginXPx + gp.x, fontSizePx, metrics) - penOriginXPx : gp.x);
       // A glyph shaped with no growth, in a layout that is not sheared, stays on its plain ring.
       const hasVariedGlyph = skew !== 0 || gp.emboldenGrowthPx;
       const contours = contoursOf && hasVariedGlyph ? contoursOf(gp.char) : null;

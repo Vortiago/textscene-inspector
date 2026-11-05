@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { fontFile } from './sfntOutlines.testkit';
+import { testBitmapFont } from './bitmapFontMetrics.testkit';
 import {
   fontGeneratesMipmaps,
   fontVariationOpentype,
   fontVariationSkew,
+  resolveBitmapFont,
   resolveFontFileBytes,
 } from './sceneFontResolution';
+import { fontResourceFromBitmap } from '../../../../resources/fonts/font/loadFont';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 
 describe('resolveFontFileBytes', () => {
@@ -74,6 +77,19 @@ describe('resolveFontFileBytes', () => {
     const result = resolveFontFileBytes(variation);
     expect(result!.bytes).toBe(bytes);
     expect(result!.leaf).toBe(realFace);
+  });
+});
+
+describe('resolveBitmapFont', () => {
+  it('finds a BMFont fallback behind a bytes-less wrapper', () => {
+    const bitmap = testBitmapFont();
+    const wrapper = fontFile(undefined, [fontResourceFromBitmap(bitmap, {})]);
+    expect(resolveBitmapFont(wrapper)).toBe(bitmap);
+  });
+
+  it('keeps a BMFont fallback behind a primary file with bytes, which draws instead', () => {
+    const primary = fontFile(new ArrayBuffer(4), [fontResourceFromBitmap(testBitmapFont(), {})]);
+    expect(resolveBitmapFont(primary)).toBeNull();
   });
 });
 

@@ -193,6 +193,7 @@ function quadGeometry({ positions, uvs, indices }: GlyphQuadArrays): THREE.Buffe
  * draws any texture. The tint multiplies the page colour, as Godot's modulate does for a font with
  * no FreeType face (`text_server_adv.cpp:4045`). An outline pass draws the font's outline set, at
  * the glyph's own rectangle, for every outline size (`text_server_adv.h:406-414`, `font.cpp:1712-1717`).
+ * A positive `strokeWidthPx` is that outline pass.
  */
 function buildBitmapRun(
   layout: TextLayoutResult,
@@ -200,11 +201,12 @@ function buildBitmapRun(
   fontSizePx: number,
   look: TextRunLook,
   textureFilter: TextureFilterState,
-  isOutlinePass: boolean
+  { strokeWidthPx = 0, penOriginXPx = 0 }: CanvasTextPaintOptions
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
+  const isOutlinePass = strokeWidthPx > 0;
   const sheet = isOutlinePass ? metrics.bitmap.outlineSheet : metrics.bitmap.sheet;
-  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet);
+  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet, penOriginXPx);
   const geometry = quadGeometry(quads);
   geometry.setAttribute('normal', quadFacingPlusZ(quads.positions.length / 3));
   const texture = createSheetTexture(sheet);
@@ -242,14 +244,7 @@ function buildTextRun(
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
   const skew = layout.fontMetrics.skew ?? 0;
   if (isBitmapFontMetrics(layout.fontMetrics)) {
-    return buildBitmapRun(
-      layout,
-      layout.fontMetrics,
-      fontSizePx,
-      look,
-      textureFilter,
-      (canvasPaint.strokeWidthPx ?? 0) > 0
-    );
+    return buildBitmapRun(layout, layout.fontMetrics, fontSizePx, look, textureFilter, canvasPaint);
   }
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, canvasPaint.strokeWidthPx);
