@@ -880,9 +880,14 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     }
   }
 
-  const widthPx = lines.reduce((max, l) => Math.max(max, l.widthPx), 0);
+  const widthPx = widestLineWidthPx(lines);
   const heightPx = lines.length * linePitchPx;
   const baselineOffsetPx = getFontAscentPx(fontMetrics, fontSizePx);
 
   return { lines, linePitchPx, widthPx, heightPx, baselineOffsetPx, fontMetrics };
+}
+
+/** The width of the widest of `lines`, or 0 for none. */
+export function widestLineWidthPx(lines: readonly TextLineLayout[]): number {
+  return lines.reduce((max, line) => Math.max(max, line.widthPx), 0);
 }
