@@ -71,15 +71,14 @@ describe.each([
   { name: 'autowrap_mode = AUTOWRAP_WORD wraps the label', properties: { autowrapMode: 2 }, width: 60 },
   { name: 'OVERRUN_TRIM_WORD trims the label to whole words', properties: { overrunBehavior: 2 }, width: 80 },
   {
-    name: 'OVERRUN_TRIM_WORD_ELLIPSIS trims the label to whole words',
-    properties: { overrunBehavior: 4 },
+    name: 'OVERRUN_TRIM_ELLIPSIS trims the label with an ellipsis',
+    properties: { overrunBehavior: 3 },
     width: 80,
   },
 ])('<MenuButton> $name as <Button> does', ({ properties, width }) => {
   it('draws the same glyphs', async () => {
     const props = { text: 'alpha bravo', ...properties };
     const asButton = await glyphQuadCount(Button, 'Button', props, width);
-    expect(await glyphQuadCount(MenuButton, 'MenuButton', props, width)).toBe(asButton);
     expect(await glyphQuadCount(MenuButton, 'MenuButton', props, width)).toBe(asButton);
   });
 });
