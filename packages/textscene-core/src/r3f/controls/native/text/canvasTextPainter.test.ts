@@ -124,6 +124,28 @@ describe('computeCanvasTextCanvasLayout', () => {
     expect(canvasLayout.canvasWidthPx).toBe(21);
   });
 
+  // `measureText` measures the default instance, which the outlines of another instance can pass.
+  it('reaches one ascent past the glyphs of a face drawn at an instance, whose measured ink is the default', () => {
+    const measured = createRuntimeFontMetrics({
+      hasGlyph: () => true,
+      scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
+      measureWidthUnits: (text) => text.length * 500,
+      measureInkUnits: () => ({ left: 0, right: 500 }),
+      cssFontFamily: 'scene-font-instance-ink-test',
+    });
+    const { outlines } = instanceOutlinesStub();
+    const layout = shapeText('jj', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      fontMetrics: withVariation(measured, { opentype: MONO_INSTANCE, outlines }),
+      lineSpacingPx: 0,
+    });
+    const reachPx = layout.baselineOffsetPx;
+    const inkLeftPx = Math.floor(-reachPx - 2);
+    expect(computeCanvasTextCanvasLayout(layout, 0).offsetXPx).toBe(-inkLeftPx);
+  });
+
   // The rows above the baseline run up to the vertical pad, and shear furthest there. A stroke
   // widens that pad past `CANVAS_TEXT_VERTICAL_PAD_PX`, so its top row shears further.
   it('pads a sheared raster by the shear of its top row', () => {

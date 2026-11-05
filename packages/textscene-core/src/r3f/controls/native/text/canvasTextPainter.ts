@@ -130,11 +130,13 @@ function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: numb
 
 /**
  * How far `glyph`'s ink reaches left of its pen and right of it, px, its pen box included. A face that
- * measures no ink takes `ascentPx` on each side: the ascent bounds the reach of any glyph.
+ * measures no ink takes `ascentPx` on each side: the ascent bounds the reach of any glyph. So does a
+ * face drawn at an instance, since `measureText` measures the default instance.
  */
 function glyphReachPx(glyph: GlyphPlacement, ascentPx: number): { leftPx: number; rightPx: number } {
   const face = glyph.fontMetrics;
-  const ink = isCanvasFontMetrics(face) ? face.getGlyphInkUnits?.(glyph.char) : undefined;
+  const hasMeasuredInk = isCanvasFontMetrics(face) && !drawnOpentype(face);
+  const ink = hasMeasuredInk ? face.getGlyphInkUnits?.(glyph.char) : undefined;
   if (!ink) return { leftPx: ascentPx, rightPx: glyph.advance + ascentPx };
   const pxPerUnit = glyph.fontSizePx / face.unitsPerEm;
   return {
