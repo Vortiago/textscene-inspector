@@ -63,3 +63,6 @@ takes the layout direction, and an empty `language` takes the project locale.
 
 ## Known limitations
 
+
+- An AUTO Hebrew label with an ellipsis keeps more text than Godot. In `unit-button-text-direction`
+  Godot keeps about 140 px of the 188 px row, and the preview fills the row.
