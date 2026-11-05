@@ -202,16 +202,15 @@ function letterNumeral(number: number, capitalise: boolean): string {
   return digits.join('');
 }
 
-function numberSegment(index: number, language: string | undefined): string {
-  return language === undefined ? String(index) : formatNumber(String(index), language);
-}
-
 /**
  * `_get_prefix` (`:242-270`). `kinds` and `indexes` run innermost list first. A bullet ends the walk,
- * and stands alone when no number came before it. A plain number takes the digits of `language`
- * when `language` is given (`:255-258`).
+ * and stands alone when no number came before it. `writeNumber` writes a plain number (`:255-258`).
  */
-function markerText(kinds: readonly ListKind[], indexes: readonly number[], language?: string): string {
+function markerText(
+  kinds: readonly ListKind[],
+  indexes: readonly number[],
+  writeNumber: (number: number) => string
+): string {
   let marker = '';
   let segments = 0;
   for (const [position, kind] of kinds.entries()) {
@@ -222,7 +221,7 @@ function markerText(kinds: readonly ListKind[], indexes: readonly number[], lang
     const index = indexes[position]!;
     const segment =
       kind.type === 'numbers'
-        ? numberSegment(index, language)
+        ? writeNumber(index)
         : kind.type === 'letters'
           ? letterNumeral(index, kind.capitalise)
           : romanNumeral(index, kind.capitalise);
@@ -407,8 +406,10 @@ export function paragraphListings(
     let widestMarkerPx = 0;
     [firstRow, ...(rowsOfList.get(list) ?? [])].forEach((rowIndex, position) => {
       const row = rows[rowIndex]!;
-      const language = context.localizeNumeralSystem ? row.run.bidi.language : undefined;
-      const text = markerText(kinds, [position + 1, ...outerIndexes], language);
+      const { language } = row.run.bidi;
+      const writeNumber = (number: number) =>
+        context.localizeNumeralSystem ? formatNumber(String(number), language ?? '') : String(number);
+      const text = markerText(kinds, [position + 1, ...outerIndexes], writeNumber);
       const marker = shapeMarker(text, row, context.faces);
       markers.set(rowIndex, marker);
       widestMarkerPx = Math.max(widestMarkerPx, marker.widthPx);

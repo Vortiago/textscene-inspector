@@ -102,7 +102,7 @@ export function parseControl(heading: ParsedHeading, properties: Record<string, 
     `${result.name || 'Control'}.layout_direction`
   );
   result.growVertical = parseOptionalFloat(properties.grow_vertical);
-  result.localizeNumeralSystem = boolSlotValue(properties.localize_numeral_system) ?? true;
+  result.localizeNumeralSystem = boolSlotValue(properties.localize_numeral_system);
   result.sizeFlagsHorizontal = parseOptionalFloat(properties.size_flags_horizontal);
   result.sizeFlagsVertical = parseOptionalFloat(properties.size_flags_vertical);
   result.sizeFlagsStretchRatio = parseOptionalFloat(properties.size_flags_stretch_ratio);
