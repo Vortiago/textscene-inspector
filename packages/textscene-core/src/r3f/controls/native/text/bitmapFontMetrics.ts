@@ -30,7 +30,7 @@ export function isBitmapFontMetrics(metrics: FontMetrics | undefined): metrics i
  * enabled mode, its rounding under the integer-only mode and 1 under the disabled mode
  * (`text_server_adv.cpp:2907-2912,3052-3057`). A size equal to the fixed size is 1 in every mode.
  */
-export function bitmapScale(scaleMode: number, fixedSize: number, fontSizePx: number): number {
+function bitmapScale(scaleMode: number, fixedSize: number, fontSizePx: number): number {
   if (fontSizePx === fixedSize || scaleMode === FixedSizeScaleMode.FIXED_SIZE_SCALE_DISABLE) return 1;
   const ratio = fontSizePx / fixedSize;
   return scaleMode === FixedSizeScaleMode.FIXED_SIZE_SCALE_ENABLED ? ratio : godotRound(ratio);

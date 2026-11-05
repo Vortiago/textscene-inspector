@@ -10,7 +10,7 @@ import { basename } from 'node:path';
 /**
  * The importers whose sidecars the previewer reads (ADR-0028): a scene's re-import options, a
  * texture's format and mip chain, and the slices of a 3D texture or a texture array, such as a
- * lightmap atlas. `import-sidecar-allowlist.test.mjs` asserts it against the importers core names.
+ * lightmap atlas, and a BMFont's scale mode. `import-sidecar-allowlist.test.mjs` asserts it against the importers core names.
  */
 export const READ_IMPORTERS = new Set([
   'scene',
@@ -18,6 +18,7 @@ export const READ_IMPORTERS = new Set([
   'texture',
   '3d_texture',
   '2d_array_texture',
+  'font_data_bmfont',
 ]);
 
 /** Copies the tree at `src` to `dest` without what the prune drops, and returns the file count. */
