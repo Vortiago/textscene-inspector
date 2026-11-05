@@ -9,7 +9,7 @@
  * `outline_size` unscaled (`text_server_adv.h:406-414`), and `FT_Stroker_Set`
  * (`text_server_adv.cpp:1383`) takes 26.6 fixed point, so `font_size` plays no part.
  */
-function outlineRadiusPx(outlineSizePx: number): number {
+export function outlineRadiusPx(outlineSizePx: number): number {
   return Math.trunc(outlineSizePx * 16) / 64;
 }
 
