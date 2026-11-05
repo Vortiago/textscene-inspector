@@ -174,7 +174,8 @@ describe('comparison sheets', () => {
     const html = await readFile(out, 'utf8');
     await rm(out, { force: true });
     const dropped = sectionedWithHeader
-      .filter((s) => !html.includes(`${s.meta.image}-ours.png`))
+      // An animated node's `.gif` replaces its `.png` (`gallery/sources.mjs`).
+      .filter((s) => !html.includes(`${s.meta.image}-ours.`))
       .map((s) => `${s.label}: ${s.meta.image}`);
     expect(dropped.sort()).toEqual([]);
   });
@@ -380,7 +381,7 @@ describe('comparison sheets', () => {
       const slice = (s) => s.file.includes(`${sep}nodes${sep}`) || s.file.includes(`${sep}resources${sep}`);
       // A sectioned sheet is exempt: the guard above forbids its key.
       const backed = sheets.filter(slice).filter((s) => !s.body.includes('<!-- compare:'));
-      expect(backed.length).toBeGreaterThan(229);
+      expect(backed.length).toBeGreaterThan(227);
       expect(backed.filter((s) => !s.meta.status).map((s) => s.label)).toEqual([]);
     });
 

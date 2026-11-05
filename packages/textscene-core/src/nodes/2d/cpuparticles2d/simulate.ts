@@ -58,7 +58,6 @@ import { degToRad, degToRadf, lerpf, multiplyColor, TAU } from '../../../godot/m
 import { storedColor, storedReal as f, storedTransform2D, storedVector2 } from '../../../godot/math/real.js';
 import {
   TRANSFORM2D_IDENTITY,
-  affineInverseTransform2D,
   multiplyTransform2D,
   transform2DBasisXform,
   transform2DXform,
@@ -95,9 +94,8 @@ export interface ParticleSimInput {
   colorRamp: Gradient | null;
   colorInitialRamp: Gradient | null;
   /**
-   * The emitter's world transform in Godot 2D pixel space, used only when
-   * `local_coords` is false: Godot spawns in global space and draws with an
-   * identity transform, so the pose maps back through this transform's inverse.
+   * The emitter's canvas transform in Godot 2D pixel space, used only when
+   * `local_coords` is false: Godot spawns in canvas space, and the pose stays there.
    */
   emissionTransform: Transform2DColumns;
 }
@@ -653,12 +651,11 @@ function sampledScale(input: ParticleSimInput, tv: number): { x: number; y: numb
 }
 
 /**
- * `_update_particle_data_buffer`: the live particles in draw order, mapped back
- * into the emitter node's local space.
+ * `_update_particle_data_buffer`: the live particles in draw order. A global-coords pose stays in
+ * canvas space: the `inv_emission_transform` it applies is never assigned, so it is the identity
+ * (`cpu_particles_2d.cpp:1192-1194`, `cpu_particles_2d.h:142`).
  */
 function collectPose(state: SimState, props: CPUParticles2DProperties): RenderedParticle[] {
-  const inverse = affineInverseTransform2D(state.emissionXform);
-
   const order = state.particles.map((_, index) => index);
   if (props.draw_order === CPUParticles2DDrawOrder.LIFETIME) {
     // SortLifetime compares `time > time`, so oldest first.
@@ -672,7 +669,7 @@ function collectPose(state: SimState, props: CPUParticles2DProperties): Rendered
     // point. Omitting it draws the same nothing for a fraction of the vertices.
     if (!p.active) continue;
     pose.push({
-      transform: multiplyTransform2D(inverse, p.transform),
+      transform: p.transform,
       color: p.color,
       anim: p.custom[2],
       age: p.time,

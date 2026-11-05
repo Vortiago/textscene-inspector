@@ -40,6 +40,15 @@ birth.
 
 A scaled emitter's particles do not scale with it by default, in Godot as here.
 
+## Normal map
+<!-- compare: image=unit-cpuparticles2d-normal-map status=done fixture=unit-cpuparticles2d-normal-map.tscn -->
+
+A CanvasTexture's `normal_texture` and `specular_texture` shade the particles under PointLight2D and
+DirectionalLight2D, and its own `texture_filter` and `texture_repeat` win over the emitter's. A
+particle's own `angle` does not turn the normal. With `local_coords = false`, the default, Godot
+draws the particles at the canvas transform (`renderer_canvas_cull.cpp:267`). So the emitter's
+rotation does not turn the normal either, and Global stays lit from the right. Local turns it with the emitter.
+
 
 ## No preprocess
 <!-- compare: image=unit-cpuparticles2d-unpreprocessed status=done fixture=unit-cpuparticles2d-unpreprocessed.tscn particles=0.95 -->

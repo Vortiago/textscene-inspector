@@ -10,7 +10,9 @@ import { useFrame } from '@react-three/fiber';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { frameSizePx, WHOLE_FRAME } from '../../../r3f/spriteFrame';
-import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { useCanvasTextureSampler, useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { CanvasItemSurfaceSource } from '../../../r3f/canvasItemSurface';
+import type { CanvasItemSurface } from '../../../r3f/lighting2d/normalMappedLighting';
 import { canvasMapProps, useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
@@ -145,6 +147,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     texture: frameTexture,
     size: frameSize,
     missing: frameMissing,
+    canvasTexture,
   } = useTexture2D(
     frameRef ?? undefined,
     resolved?.externalResources ?? NO_EXTERNAL_RESOURCES,
@@ -154,9 +157,11 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   );
 
   // `useCanvas2DTexture` clones each frame texture with the item's sampler and disposes the clone
-  // once it no longer draws, so playback leaks no GPU texture.
-  const sampler = useNode2DTextureSampler(props);
+  // once it no longer draws, so playback leaks no GPU texture. A CanvasTexture frame's own filter
+  // and repeat win over the item's.
+  const sampler = useCanvasTextureSampler(useNode2DTextureSampler(props), canvasTexture?.texture);
   const displayedTexture = useCanvas2DTexture(frameTexture, sampler);
+  const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
   const { width, height } = useMemo(() => frameSizePx(frameSize, WHOLE_FRAME), [frameSize]);
 
   // No SpriteFrames, no animation or no frame texture draws nothing (`animated_sprite_2d.cpp:270-278`),
@@ -168,37 +173,45 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const cgy = props.offset.y + (props.centered ? 0 : height / 2);
   const meshScale: [number, number, number] = [props.flip_h ? -1 : 1, props.flip_v ? -1 : 1, 1];
 
+  // A fragment either way, so the item keeps its place when the source mounts. The source takes
+  // the maps of the frame it draws, so a frame with no normal map lights flat.
   return (
-    <CanvasItem2D
-      node={node}
-      props={props}
-      body={({ color, opacity }, _material, pixelMaterial) => {
-        if (showPlaceholder) return <MissingResourcePlaceholder shape="plane" name={node.name} />;
-        if (!displayedTexture) return null;
+    <>
+      <CanvasItem2D
+        node={node}
+        props={props}
+        surface={surface}
+        body={({ color, opacity }, _material, pixelMaterial) => {
+          if (showPlaceholder) return <MissingResourcePlaceholder shape="plane" name={node.name} />;
+          if (!displayedTexture) return null;
 
-        // Constant while a clip plays, since each frame's clone decodes alike, so
-        // this remounts when the map appears, not per frame.
-        const program = materialProgramInputs({
-          props: {
-            ...canvasMapProps(displayedTexture),
-            color,
-            opacity,
-            transparent: true,
-            depthWrite: false,
-          },
-          merge: [pixelMaterial],
-        });
+          // Constant while a clip plays, since each frame's clone decodes alike, so
+          // this remounts when the map appears, not per frame.
+          const program = materialProgramInputs({
+            props: {
+              ...canvasMapProps(displayedTexture),
+              color,
+              opacity,
+              transparent: true,
+              depthWrite: false,
+            },
+            merge: [pixelMaterial],
+          });
 
-        return (
-          <mesh position={[cgx, -cgy, 0]} scale={meshScale}>
-            <planeGeometry args={[width, height]} />
-            <meshBasicMaterial key={program.key} {...program.props} />
-          </mesh>
-        );
-      }}
-    >
-      {children}
-    </CanvasItem2D>
+          return (
+            <mesh position={[cgx, -cgy, 0]} scale={meshScale}>
+              <planeGeometry args={[width, height]} />
+              <meshBasicMaterial key={program.key} {...program.props} />
+            </mesh>
+          );
+        }}
+      >
+        {children}
+      </CanvasItem2D>
+      {canvasTexture?.texture.normalTexture && (
+        <CanvasItemSurfaceSource slot={canvasTexture} sampler={sampler} onSurface={setSurface} />
+      )}
+    </>
   );
 }
 

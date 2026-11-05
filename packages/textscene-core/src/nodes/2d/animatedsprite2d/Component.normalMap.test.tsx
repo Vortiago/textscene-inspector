@@ -1,0 +1,61 @@
+/**
+ * An AnimatedSprite2D whose frame is a CanvasTexture: it declares itself normal-mapped while the
+ * drawn frame's CanvasTexture names a normal map (`canvas.glsl:652-665`), and samples with the
+ * CanvasTexture's own filter where it names one (`texture_storage.cpp:737`).
+ */
+import { describe, it, expect } from 'vitest';
+import * as THREE from 'three';
+import { parseAnimatedSprite2D } from './parser';
+import { AnimatedSprite2D } from './Component';
+import {
+  CANVAS_TEXTURE_REF,
+  FLAT_GREY_REF,
+  canvasTexture,
+  renderLitItem,
+} from '../../../r3f/testing/canvasTextureLighting';
+import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+
+const SPRITE_FRAMES: TscnInternalResource = {
+  id: 'sf',
+  type: 'SpriteFrames',
+  data: {
+    animations: `[{"frames": [{"duration": 1.0, "texture": ${CANVAS_TEXTURE_REF}}], "loop": true, "name": &"default", "speed": 5.0}]`,
+  },
+};
+
+function animatedSprite(): TscnNode {
+  const heading = { type: 'node', attributes: { type: 'AnimatedSprite2D', name: 'A' } };
+  return {
+    rawProperties: {},
+    name: 'A',
+    type: 'AnimatedSprite2D',
+    children: [],
+    properties: parseAnimatedSprite2D(heading, { sprite_frames: 'SubResource("sf")' }),
+  };
+}
+
+async function render(wrapper: TscnInternalResource) {
+  const { renderer, registerItem } = await renderLitItem(<AnimatedSprite2D node={animatedSprite()} />, [
+    SPRITE_FRAMES,
+    wrapper,
+  ]);
+  const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+  return { registerItem, map: (mesh.material as THREE.MeshBasicMaterial).map! };
+}
+
+describe('AnimatedSprite2D with a CanvasTexture frame', () => {
+  it("declares itself normal-mapped while the frame's CanvasTexture names a normal map", async () => {
+    const { registerItem } = await render(canvasTexture({ normal_texture: FLAT_GREY_REF }));
+    expect(registerItem).toHaveBeenLastCalledWith(expect.anything(), 'apart');
+  });
+
+  it("declares no normal map while the frame's CanvasTexture names none", async () => {
+    const { registerItem } = await render(canvasTexture({}));
+    expect(registerItem).toHaveBeenLastCalledWith(expect.anything(), 'plain');
+  });
+
+  it("samples the frame with the CanvasTexture's own filter", async () => {
+    const { map } = await render(canvasTexture({ texture_filter: '1' }));
+    expect([map.magFilter, map.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
+  });
+});

@@ -569,15 +569,15 @@ describe('simulateFrozenPose', () => {
     }
   });
 
-  it('undoes the emitter transform when `local_coords` is false', () => {
-    // A doubled emitter scale must not double the particle quads: Godot draws a
-    // global-coords emitter with an identity canvas transform.
+  it('keeps a global-coords pose in canvas space, where the emitter scale does not reach the quad', () => {
+    // Godot draws a global-coords emitter at the canvas transform and never assigns the
+    // `inv_emission_transform` it applies (`cpu_particles_2d.cpp:1192-1194`).
     const emissionTransform = { a: 2, b: 0, c: 0, d: 2, tx: 0, ty: 0 };
     const global = simulateFrozenPose(
       input({ props: props({ amount: '4', local_coords: 'false' }), emissionTransform })
     );
     for (const particle of global) {
-      expect(Math.hypot(particle.transform.a, particle.transform.b)).toBeCloseTo(0.5, 5);
+      expect(Math.hypot(particle.transform.a, particle.transform.b)).toBeCloseTo(1, 5);
     }
   });
 
@@ -603,7 +603,7 @@ describe('simulateFrozenPose', () => {
 
 // The expected values come from Godot 4.6.3 running the single-particle path of
 // `_particles_process` through its own float `Vector2` maths
-// (/mnt/project-files/cpuparticles2d-995/oracle.gd), as the issue measured: a double
+// (/mnt/project-files/canvas-normals-718/particle-oracle.gd), as the issue measured: a double
 // simulation gives 0.44721360 for the first case, Godot 0.44721353.
 describe('the simulation in real_t float (cpu_particles_2d.cpp:765-1112)', () => {
   const FRAME_STEPS = { thirty: '0.52', sixty: '0.66' };
@@ -766,12 +766,12 @@ describe('the simulation in real_t float (cpu_particles_2d.cpp:765-1112)', () =>
         emission
       );
       expect(transform).toEqual({
-        a: storedReal(0.622425079346),
-        b: storedReal(-0.225816890597),
-        c: storedReal(0.169076949358),
-        d: storedReal(0.452776670456),
-        tx: storedReal(24.101068496704),
-        ty: storedReal(56.402324676514),
+        a: storedReal(0.990091860294),
+        b: storedReal(-0.140421256423),
+        c: storedReal(0.140421256423),
+        d: storedReal(0.990091860294),
+        tx: storedReal(35.551021575928),
+        ty: storedReal(117.605186462402),
       });
     });
 
@@ -788,12 +788,12 @@ describe('the simulation in real_t float (cpu_particles_2d.cpp:765-1112)', () =>
         emission
       );
       expect(transform).toEqual({
-        a: storedReal(0.148423105478),
-        b: storedReal(0.459989339113),
-        c: storedReal(-0.627670764923),
-        d: storedReal(0.210736349225),
-        tx: storedReal(-22.462873458862),
-        ty: storedReal(18.141859054565),
+        a: storedReal(0.107637323439),
+        b: storedReal(0.994190216064),
+        c: storedReal(-0.994190216064),
+        d: storedReal(0.107637323439),
+        tx: storedReal(-24.729776382446),
+        ty: storedReal(17.802280426025),
       });
     });
   });
