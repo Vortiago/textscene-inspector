@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { decodeArrayMeshTres } from '../testing/decodeArrayMeshTres';
 import type { ArrayMeshData } from './arraymesh/types';
 import {
+  geometryDrawsLines,
   geometryDrawsPoints,
   godotSurfaceParts,
   godotSurfacesGeometry,
@@ -349,5 +350,62 @@ describe('godotTriangleVertices', () => {
   it('drops the vertices of an incomplete triangle', () => {
     const geometry = godotSurfacesGeometry([quad([0, 1, 2, 3])]);
     expect(Array.from(godotTriangleVertices(geometry))).toEqual([0, 1, 2]);
+  });
+});
+
+describe('godotSurfacesGeometry vertex colours', () => {
+  const RED_GREEN_BLUE = new Uint8Array([255, 0, 0, 255, 0, 255, 0, 127, 0, 0, 255, 255]);
+
+  it('carries the stored RGBA8 bytes as a normalised four-wide colour attribute', () => {
+    const geo = godotSurfacesGeometry([triangle({ colors: RED_GREEN_BLUE })]);
+    const color = geo.getAttribute('color') as THREE.BufferAttribute;
+
+    expect(color.itemSize).toBe(4);
+    expect(color.normalized).toBe(true);
+    expect(Array.from(color.array)).toEqual(Array.from(RED_GREEN_BLUE));
+  });
+
+  it('adds no colour attribute for surfaces that carry none', () => {
+    expect(godotSurfacesGeometry([triangle()]).hasAttribute('color')).toBe(false);
+  });
+
+  it('reads white for a surface with no colour beside one that has colours', () => {
+    const geo = godotSurfacesGeometry([triangle({ colors: RED_GREEN_BLUE }), triangle({ surfaceIndex: 1 })]);
+
+    expect(Array.from(geo.getAttribute('color').array).slice(12)).toEqual(Array(12).fill(255));
+  });
+});
+
+describe('godotSurfacesGeometry of lines surfaces', () => {
+  const SEGMENTS = triangle({ isLines: true, indices: new Uint32Array([0, 1, 1, 2]) });
+
+  it('keeps the segments in order, with no winding to swap', () => {
+    const geo = godotSurfacesGeometry([SEGMENTS]);
+
+    expect(Array.from(geo.getIndex()!.array)).toEqual([0, 1, 1, 2]);
+  });
+
+  it('flags the geometry as lines, and no other', () => {
+    expect(geometryDrawsLines(godotSurfacesGeometry([SEGMENTS]))).toBe(true);
+    expect(geometryDrawsLines(godotSurfacesGeometry([triangle()]))).toBe(false);
+  });
+
+  it('computes no normals, which a segment has none of', () => {
+    expect(godotSurfacesGeometry([SEGMENTS]).hasAttribute('normal')).toBe(false);
+  });
+
+  it('draws the lines of a mesh after its triangles and points, as a part of their own', () => {
+    const parts = godotSurfaceParts([
+      SEGMENTS,
+      triangle({ surfaceIndex: 1, isPoints: true }),
+      triangle({ surfaceIndex: 2 }),
+    ]);
+
+    expect(parts.map((part) => part.surfaces.map((surface) => surface.surfaceIndex))).toEqual([
+      [2],
+      [1],
+      [0],
+    ]);
+    expect(parts.map((part) => geometryDrawsLines(part.geometry))).toEqual([false, false, true]);
   });
 });

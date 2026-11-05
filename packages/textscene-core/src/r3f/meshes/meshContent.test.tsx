@@ -14,7 +14,9 @@ import { useResourceResolution } from '../../resources/useSubOrExtResource';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { UndrawnMeshesProvider, useUndrawnMeshTypes } from '../contexts/UndrawnMeshesContext';
 import { fixtureFontBytes } from '../controls/native/text/sfntOutlines.testkit';
-import { arrayMeshPath, useMeshContent } from './meshContent';
+import { wallQuadSurfaces } from '../../resources/testing/arrayMeshSurfaces';
+import { geometryDrawsLines } from '../../resources/meshes/godotSurface';
+import { arrayMeshPath, useCanvasMeshContent, useMeshContent } from './meshContent';
 
 const BOX: TscnInternalResource = { id: 'box', type: 'BoxMesh', data: {} };
 const RESOURCES: SceneResources = {
@@ -235,5 +237,47 @@ describe('useMeshContent for a property that holds no mesh', () => {
       useMeshContent(useResourceResolution('SubResource("gone")', SCENE))
     );
     expect(result.current).toEqual({ kind: 'unresolved' });
+  });
+});
+
+describe('an ArrayMesh with line surfaces', () => {
+  const LINES = { primitive: 1 };
+  const TRIANGLES_AND_LINES: TscnInternalResource = {
+    id: 'mixed',
+    type: 'ArrayMesh',
+    data: { _surfaces: wallQuadSurfaces({}, LINES) },
+  };
+  const LINES_ONLY: TscnInternalResource = {
+    id: 'lines',
+    type: 'ArrayMesh',
+    data: { _surfaces: wallQuadSurfaces(LINES) },
+  };
+  const SCENE: SceneResources = {
+    internalResources: [TRIANGLES_AND_LINES, LINES_ONLY],
+    externalResources: [],
+  };
+
+  function partsDrawnAsLines(ref: string, useContent: typeof useMeshContent | typeof useCanvasMeshContent) {
+    const { result } = renderHook(() => useContent(useResourceResolution(ref, SCENE)));
+    const content = result.current;
+    return content.kind === 'surfaced'
+      ? content.mesh.parts.map((part) => geometryDrawsLines(part.geometry))
+      : content.kind;
+  }
+
+  it('leaves its lines out of a world draw, which draws none', () => {
+    expect(partsDrawnAsLines('SubResource("mixed")', useMeshContent)).toEqual([false]);
+  });
+
+  it('draws a mesh of only lines as unresolved in the world, as it did before lines decoded', () => {
+    expect(partsDrawnAsLines('SubResource("lines")', useMeshContent)).toBe('unresolved');
+  });
+
+  it('keeps its lines, after its triangles, for the canvas', () => {
+    expect(partsDrawnAsLines('SubResource("mixed")', useCanvasMeshContent)).toEqual([false, true]);
+  });
+
+  it('draws a mesh of only lines on the canvas', () => {
+    expect(partsDrawnAsLines('SubResource("lines")', useCanvasMeshContent)).toEqual([true]);
   });
 });

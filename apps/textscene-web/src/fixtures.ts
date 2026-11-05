@@ -3445,6 +3445,21 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Mesh Instance 2d Meshes",
+    "file": "unit-mesh-instance-2d-meshes.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Mesh Instance 2d Normal Map",
+    "file": "unit-mesh-instance-2d-normal-map.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Mesh Instance 2d Primitives",
+    "file": "unit-mesh-instance-2d-primitives.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Mesh Instance 2d",
     "file": "unit-mesh-instance-2d.tscn",
     "category": "Unit - Primitive Meshes"

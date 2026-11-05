@@ -7,7 +7,7 @@ renders_as: one merged THREE.BufferGeometry with a draw group per surface
 
 # ArrayMesh
 
-A baked mesh whose surfaces are base64 `PackedByteArray` blobs laid out by a `format` bitfield. The previewer decodes both the plain and the compressed layout. It merges the triangle surfaces into one `BufferGeometry` and the points surfaces into another, each with a draw group per surface. A mesh of both draws both. A points surface draws as `THREE.Points` at the material's point size. A surface's TEX_UV2 becomes the mesh's UV2, and a compressed UV2 re-expands by `uv_scale`'s z and w as in Godot (`rendering_server.cpp:1581-1582`).
+A baked mesh whose surfaces are base64 `PackedByteArray` blobs laid out by a `format` bitfield. The previewer decodes both the plain and the compressed layout. It merges the triangle, points and line surfaces into one `BufferGeometry` each, with a draw group per surface. A surface with 2D vertices (`ARRAY_FLAG_USE_2D_VERTICES`) reads its positions with z = 0, and a surface's vertex colours read as the stored RGBA8 bytes. A MeshInstance2D draws all three kinds, and a world draw leaves the lines out. A mesh of triangles and points draws both. A points surface draws as `THREE.Points` at the material's point size. A surface's TEX_UV2 becomes the mesh's UV2, and a compressed UV2 re-expands by `uv_scale`'s z and w as in Godot (`rendering_server.cpp:1581-1582`).
 
 ## Linting
 
@@ -23,7 +23,7 @@ The lenient parser never rejects a mesh property. An unreadable `subdivide_width
 
 ## Known limitations
 
-- **Not drawn** A LINES or LINE_STRIP surface of an ArrayMesh is skipped, since only triangle, triangle strip and points surfaces are decoded.
+- **Not drawn** A LINES or LINE_STRIP surface of an ArrayMesh draws on the 2D canvas, and a MeshInstance3D leaves it out.
 - **Approximated** Blend shapes, LODs and skins are ignored, so a skinned mesh renders in its rest pose.
 - **Approximated** A compressed surface with a normal but no tangent is decoded by symmetry and is not measured against Godot.
 - **Approximated** A `.tres` whose every surface is undecodable is listed in the missing-resources panel even though the file is present.

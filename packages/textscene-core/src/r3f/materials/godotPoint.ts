@@ -101,6 +101,20 @@ const GODOT_POINT_SHADOW_SIZE = pointSizeInjection('godot-point-shadow-size', {
   [POINT_SIZE_KEY]: POINT_SIZE_UNIFORMS[POINT_SIZE_KEY],
 });
 
+/**
+ * What a mesh material of the 2D canvas takes to draw a point as one of Godot's pixels
+ * (`canvas.glsl:268,300`: `point_size = 1.0`), on a canvas of `pixelRatio`. three leaves
+ * `gl_PointSize` unwritten for a `MeshBasicMaterial`.
+ *
+ * @canonical The size of a point on the 2D canvas
+ */
+export function canvasPointSize(pixelRatio: number): {
+  injection: ProgramInjection;
+  userData: Record<string, number>;
+} {
+  return { injection: GODOT_POINT_SIZE, userData: { [POINT_PIXEL_RATIO_KEY]: pixelRatio } };
+}
+
 const MAP_PARS_CHUNK = '#include <map_pars_fragment>';
 
 /**
