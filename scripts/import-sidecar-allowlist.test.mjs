@@ -161,7 +161,7 @@ const MUST_BE_DEFAULT = new Map([
   ['scale_mesh', 'Vector3(1, 1, 1)'],
   ['offset_mesh', 'Vector3(0, 0, 0)'],
   ['generate_lightmap_uv2', 'false'],
-  // A BMFont's fallback fonts: no font kind here searches them per glyph (#1298).
+  // A BMFont's fallback fonts: no font kind here searches them per glyph.
   ['fallbacks', '[]'],
 ]);
 
