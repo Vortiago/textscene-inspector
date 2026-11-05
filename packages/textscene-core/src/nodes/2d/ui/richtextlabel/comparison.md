@@ -19,12 +19,12 @@ single-line paragraph (`rich_text_label.h:582`). The fit width is the control's 
 pixel (`rich_text_label.h:672`).
 
 `[indent]`, `[ul]` and `[ol]` inset each line they hold by `tab_size` spaces of the font around them
-(`_find_margin`, `rich_text_label.cpp:3407-3460`). A `[ul]` or `[ol]` line also draws its marker: the
-`bullet` option or `•` for `[ul]`, and for `[ol]` its number in the `type` option (`1`, `a`, `A`, `i`, `I`).
-The marker takes the item's font and the outermost colour of the item, and sits right-aligned in the
-inset, which is as wide as the widest marker of the list (`:242-372,1017-1039`). A nested `[ol]` writes the
-outer number first, as `1.a.`, and a bullet ends the number (`:242-270`). A list ends its last item with a
-newline, and an empty list holds one empty item (`:5326-5345,5415-5424`).
+(`_find_margin`, `rich_text_label.cpp:3407-3460`). A `[ul]` or `[ol]` line also draws a marker. The marker is
+the `bullet` option or `•` for `[ul]`, and for `[ol]` the number in the `type` option (`1`, `a`, `A`, `i`, `I`).
+It takes the font of the item and the outermost colour of the item. It sits right-aligned in the inset, which
+is as wide as the widest marker of the list (`:242-372,1017-1039`). A nested `[ol]` writes the outer number
+first, as `1.a.`, and a bullet ends the number (`:242-270`). A list ends its last item with a newline, and an
+empty list holds one empty item (`:5326-5345,5415-5424`).
 
 While `clip_contents` is true, its default for this node (`rich_text_label.cpp:8225`), the control's own rect
 clips every glyph, image and underline (`control.cpp:3948`). `fit_content` grows the control to its text, so
