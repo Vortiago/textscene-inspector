@@ -11,8 +11,8 @@ renders_as: a StyleBox quad with a centred text run
 
 Button is Godot's clickable text control. The previewer paints the StyleBox its state
 calls for and centres the label on it, wrapping it to the box where `autowrap_mode`
-asks for it. Each label line is cut to the paragraph box as `TextParagraph::draw` cuts it,
-so `clip_text` and a wrapped word wider than the box stay inside it.
+asks for it. `TextParagraph::draw` cuts each label line to the paragraph box. The previewer
+does the same, so a word wider than the box stays inside it.
 
 ## Linting
 
