@@ -15,11 +15,8 @@ import {
   type CanvasFontMetrics,
 } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { peekSettledSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
-import {
-  NO_FACE,
-  findDrawnFace,
-  fontGeneratesMipmaps,
-} from '../../../r3f/controls/native/text/sceneFontResolution';
+import { fontGeneratesMipmaps } from '../../../r3f/controls/native/text/sceneFontResolution';
+import { NO_FACE_METRICS } from '../../../r3f/controls/native/text/noFaceMetrics';
 import { useSceneFontSettleCount } from '../../../r3f/controls/native/text/useSceneFontSettleCount';
 import { resolveFontReference } from '../../../resources/fonts/font/resolveFontReference';
 import { fontForNode } from '../../../resources/styles/theme/lookup';
@@ -65,7 +62,7 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
     return {
       metrics,
       generatesMipmaps: fontGeneratesMipmaps(font) ?? projectDefaultFontGeneratesMipmaps(settings),
-      drawsGlyphs: findDrawnFace(font) !== NO_FACE,
+      drawsGlyphs: settled !== NO_FACE_METRICS,
     };
   };
   const label3DFont = isLoading ? undefined : settledFont();

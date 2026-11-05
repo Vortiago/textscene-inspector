@@ -73,7 +73,7 @@ describe('peekSceneFontMetrics', () => {
 });
 
 describe('peekSettledSceneFontMetrics — a font with no face', () => {
-  // `text_server_adv.cpp:6886-6889`: the line holds a hex-code box, 15 cells of `round(size / 15)` px.
+  // `text_server_adv.cpp:6894-6895`: the line holds a hex-code box, 15 cells of `round(size / 15)` px.
   it('holds a hex-code box line: 0.85 of the box above the baseline, 0.15 below', () => {
     const metrics = peekSettledSceneFontMetrics(FACELESS_FONT, 'Label')!;
     expect([getFontAscentPx(metrics, 56), getFontLinePitchPx(metrics, 56, 0)]).toEqual([51, 60]);
