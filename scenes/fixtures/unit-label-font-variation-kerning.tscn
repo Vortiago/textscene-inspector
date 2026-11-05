@@ -3,7 +3,8 @@
 ; The one variable: a `FontVariation` whose `variation_opentype` sets the `MONO` axis of Recursive to
 ; 0.5 (tag 1297043023). Its `GPOS` kerning moves with the axis: each pair kerns half as much as at the
 ; default instance. The top Label draws the font itself and the lower Label the instance, both at 64 px,
-; with the same pairs.
+; with the same pairs. The other goldens of a variable font off its defaults draw no kerned pair at the
+; instance, so none of them shows a kerning regression.
 
 [ext_resource type="FontFile" path="res://fonts/recursive-vf-subset.woff2" id="1_font"]
 
