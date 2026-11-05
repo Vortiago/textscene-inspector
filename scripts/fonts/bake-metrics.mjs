@@ -51,6 +51,10 @@ const EXTRA_CODEPOINTS = [
   0x201d, // Double curly quotes: common prose punctuation.
 ];
 
+// The arrows U+2190 to U+2193 are not baked: Open Sans SemiBold has no glyph for them, and Godot draws
+// them from a host font (Carlito Bold in the reference container, which differs per host). A scene
+// that needs them names a font with arrows, as the `control-font-arrows` golden does.
+
 const CHARSET = [];
 for (let cp = CHARSET_START; cp <= CHARSET_END; cp++) CHARSET.push(String.fromCodePoint(cp));
 for (let cp = LATIN1_SUPPLEMENT_START; cp <= LATIN1_SUPPLEMENT_END; cp++) {
