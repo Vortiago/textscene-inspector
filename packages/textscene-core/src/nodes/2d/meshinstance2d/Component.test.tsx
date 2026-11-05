@@ -159,6 +159,24 @@ describe('MeshInstance2D', () => {
   });
 });
 
+describe('MeshInstance2D under a particles_animation material', () => {
+  const FLIPBOOK = subResource('CanvasItemMaterial', 'Flip', {
+    particles_animation: 'true',
+    particles_anim_h_frames: '2',
+    particles_anim_v_frames: '1',
+  });
+
+  it('shrinks to one cell and shows cell 0, for it has no custom data (canvas.glsl:139)', async () => {
+    const { geometry } = drawn(
+      await render({ mesh: 'SubResource("Quad")', material: 'SubResource("Flip")' }, [QUAD, FLIPBOOK])
+    );
+
+    expect(corners(geometry)).toEqual({ min: [-25, -50, 0], max: [25, 50, 0] });
+    const u = Array.from(geometry.getAttribute('uv').array).filter((_, i) => i % 2 === 0);
+    expect([Math.min(...u), Math.max(...u)]).toEqual([0, 0.5]);
+  });
+});
+
 describe('MeshInstance2D with an ArrayMesh of other primitives', () => {
   const POINTS = { primitive: 0 };
   const LINES = { primitive: 1 };

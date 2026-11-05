@@ -76,3 +76,13 @@ describe('menuButtonTextTheme', () => {
     expect(resolved.color).toEqual({ r: 0, g: 1, b: 0, a: 1 });
   });
 });
+
+describe('menuButtonMinimumSize — clip_text zeroes the text width (button.cpp:493-495)', () => {
+  it('keeps the margin and the text height, and drops the text width', () => {
+    expect(minSize(node({ text: 'AB', clipText: true }), ctx())).toEqual({ x: 8, y: 8 + FONT_HEIGHT });
+  });
+
+  it('keeps the whole text width without clip_text', () => {
+    expect(minSize(node({ text: 'AB', clipText: false }), ctx()).x).toBe(8 + AB_SHAPED_WIDTH);
+  });
+});

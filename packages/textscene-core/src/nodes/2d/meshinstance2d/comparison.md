@@ -11,7 +11,8 @@ renders_as: a THREE.Mesh, THREE.Points or THREE.LineSegments per surface kind
 
 MeshInstance2D draws a Mesh on the canvas, textured through `texture`. The previewer draws each
 surface at its vertices' x and y, with y down, and multiplies the texel, the vertex colour and the
-modulate. The surfaces' own materials never apply.
+modulate. The surfaces' own materials never apply. With a CanvasItemMaterial that sets
+`particles_animation`, the mesh shrinks to one cell and shows cell 0.
 
 ## Linting
 

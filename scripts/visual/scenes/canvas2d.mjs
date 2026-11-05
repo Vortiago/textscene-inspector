@@ -953,6 +953,10 @@ export const CANVAS_2D_SCENES = [
   { name: 'button-autowrap', file: 'unit-button-autowrap.tscn', mode: '2d' },
   // A Button label line wider than its paragraph box.
   { name: 'button-clip-text', file: 'unit-button-clip-text.tscn', mode: '2d' },
+  // A CheckBox, CheckButton, OptionButton and MenuButton label wider than its paragraph box.
+  { name: 'button-family-clip-text', file: 'unit-button-family-clip-text.tscn', mode: '2d' },
+  // A MenuButton label wrapped by autowrap_mode and trimmed by text_overrun_behavior.
+  { name: 'menu-button-wrap-trim', file: 'unit-menu-button-wrap-trim.tscn', mode: '2d' },
   // A Polygon2D below a plain Node below a hidden Node2D: its visibility comes from the Window.
   { name: 'canvas-root-visibility', file: 'unit-canvas-root-visibility.tscn', mode: '2d' },
 
@@ -987,4 +991,14 @@ export const CANVAS_2D_SCENES = [
   // Points, lines and a line strip are one pixel wide. A point at (60,60) lands on pixel (59,59), and
   // the line of 100 px at (250,59)..(349,59) is white. A point or a line reads its texture at the UV.
   { name: 'mesh-instance-2d-primitives', file: 'unit-mesh-instance-2d-primitives.tscn', mode: '2d' },
+
+  // MultiMeshInstance2D draws a mesh once for each instance, under its transform and colour. Godot 4.6.3
+  // `--mode 2d` probes: the identity instance reads (51,102,204) at (40,40) and the quarter turn reads
+  // (204,0,0) at (140,40) and (230,0,0) at (160,60). The half-alpha scaled instance reads (64,89,140) at
+  // (280,60). `visible_instance_count = 2` hides the last two, and a 3D transform format draws nothing.
+  { name: 'multi-mesh-instance-2d', file: 'unit-multi-mesh-instance-2d-instances.tscn', mode: '2d' },
+  // A particles_animation material cuts each instance to one cell of a 2x1 sheet at the cell's width: z 0
+  // reads (51,102,204) at (90,90), and z 0.5 reads (230,204,51) at (240,90). A MeshInstance2D under the
+  // same material shows cell 0 at that width, (51,102,204) at (440,90).
+  { name: 'multi-mesh-instance-2d-flipbook', file: 'unit-multi-mesh-instance-2d-flipbook.tscn', mode: '2d' },
 ];

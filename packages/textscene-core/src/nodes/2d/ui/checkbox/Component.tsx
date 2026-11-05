@@ -13,11 +13,9 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { CHECK_BOX_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import {
-  shapedTextSizeWidthPx,
-  type TextLayoutResult,
-} from '../../../../r3f/controls/native/text/textLayout';
+import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
+import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   checkBoxDrawnIconSize,
@@ -79,14 +77,11 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
         hSeparation: checkBoxHSeparation(solveNode.constants, { theme }),
         hasText,
         rtl: solveNode.rtl,
-        // The ceiled width, not the raw pen advance: Godot's draw path reads the same
-        // `text_buf->get_size()` as the minimum size (`scene/gui/button.cpp:343,349`). The
-        // height sums independently ceiled ascent and descent and an integral spacing.
-        textNaturalSize: layout
-          ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
-          : { x: 0, y: 0 },
+        // The height sums independently ceiled ascent and descent and an integral spacing.
+        textHeightPx: layout?.heightPx ?? 0,
+        textAlignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
       }),
-    [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout, solveNode.rtl]
+    [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout, props.alignment, solveNode.rtl]
   );
 
   // The icon colour is opaque white in both states (`default_theme.cpp:312-313`), and
@@ -103,16 +98,15 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           map={iconTexture}
         />
       </CanvasItemGroup>
-      {content.textOffset && layout && (
-        <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
-          <TextRun
-            layout={layout}
-            fontSizePx={fontSizePx}
-            tint={tintedFontColor}
-            clippingPlanes={clippingPlanes}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
+      {content.labelBox && layout && (
+        <ButtonLabel
+          layout={layout}
+          box={content.labelBox}
+          fontSizePx={fontSizePx}
+          tint={tintedFontColor}
+          clippingPlanes={clippingPlanes}
+          renderOrder={renderOrder}
+        />
       )}
     </>
   );
