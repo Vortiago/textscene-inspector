@@ -4,7 +4,7 @@
  * focused border and A, always on top, draws last.
  */
 import { describe, expect, it } from 'vitest';
-import { rootEmbedsSubwindows, subwindowStack, type StackedWindow } from './embedding';
+import { subwindowStack, type StackedWindow } from './embedding';
 
 const window = (name: string, flags: Partial<StackedWindow> = {}): StackedWindow => ({
   name,
@@ -41,16 +41,5 @@ describe('subwindowStack', () => {
 
   it('focuses nothing when every window refuses focus', () => {
     expect(subwindowStack([window('A', { unfocusable: true })]).focused).toBeNull();
-  });
-});
-
-describe('rootEmbedsSubwindows — `display/window/subwindows/embed_subwindows`', () => {
-  it('embeds by default (`project_settings.cpp:1756`)', () => {
-    expect(rootEmbedsSubwindows(null)).toBe(true);
-    expect(rootEmbedsSubwindows({})).toBe(true);
-  });
-
-  it('leaves the windows native when the project turns it off', () => {
-    expect(rootEmbedsSubwindows({ 'display/window/subwindows/embed_subwindows': 'false' })).toBe(false);
   });
 });

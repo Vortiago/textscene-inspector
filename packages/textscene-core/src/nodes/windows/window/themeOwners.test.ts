@@ -43,4 +43,14 @@ describe('viewportThemeOwners', () => {
 [node name="Viewport" type="SubViewport" parent="."]`;
     expect(ownerNames(scene, 'Root/Viewport')).toEqual([]);
   });
+
+  it('answers the same array while the owners stay the same, so a forest keyed on it holds', () => {
+    const parsed = new TscnParser().parse(`[gd_scene format=3]
+[node name="Root" type="Control"]
+[node name="Dialog" type="Window" parent="."]`);
+    const scope = { externalResources: [], internalResources: [] };
+    // A new tree, as each live-tree load builds, over the same scene and resources.
+    const treeOf = () => liveTreeOf(parsed.nodes, { ...scope, ...sourcesOver() });
+    expect(viewportThemeOwners(treeOf(), 'Root/Dialog')).toBe(viewportThemeOwners(treeOf(), 'Root/Dialog'));
+  });
 });

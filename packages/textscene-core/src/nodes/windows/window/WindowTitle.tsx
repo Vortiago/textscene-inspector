@@ -3,7 +3,7 @@
  * title space with an ellipsis and centred over the window in the `title_height` band
  * (`viewport.cpp:363-379`). The outline draws first, under the text, as a stroked ring (ADR-0040).
  */
-import { lazy, useMemo } from 'react';
+import { lazy, useMemo, type ComponentProps } from 'react';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
@@ -85,7 +85,7 @@ export function WindowTitle({
   }, [props.title, fontSizePx, fontMetrics, space]);
 
   if (!layout) return null;
-  const origin = titleOrigin({ x: 0, y: 0, w: width, h: 0 }, titleHeight, {
+  const origin = titleOrigin(width, titleHeight, {
     x: shapedTextSizeWidthPx(layout.widthPx),
     y: layout.heightPx,
   });
@@ -95,28 +95,38 @@ export function WindowTitle({
 
   return (
     <CanvasItemGroup position={[origin.x, -origin.y, 0]}>
-      {hasOutline && isCanvasFontMetrics(layout.fontMetrics) ? (
-        <TextRun
+      {hasOutline ? (
+        <TitleOutline
           layout={layout}
+          font={font}
           fontSizePx={fontSizePx}
           tint={outlineColor}
-          strokeWidthPx={outlineStrokeWidthPx(outlineSize)}
+          outlineSize={outlineSize}
           renderOrder={slot.key}
         />
       ) : null}
-      {hasOutline && !isCanvasFontMetrics(layout.fontMetrics) ? (
-        <PendingSuspense>
-          <TitleOutlineRing
-            layout={layout}
-            font={font}
-            fontSizePx={fontSizePx}
-            tint={outlineColor}
-            outlineSize={outlineSize}
-            renderOrder={slot.key}
-          />
-        </PendingSuspense>
-      ) : null}
       <TextRun layout={layout} fontSizePx={fontSizePx} tint={color} renderOrder={textKey} />
     </CanvasItemGroup>
+  );
+}
+
+/** The outline ring: a canvas face strokes its own glyphs, and an atlas face takes the bundled canvas face. */
+function TitleOutline(props: ComponentProps<typeof TitleOutlineRing>) {
+  if (!isCanvasFontMetrics(props.layout.fontMetrics)) {
+    return (
+      <PendingSuspense>
+        <TitleOutlineRing {...props} />
+      </PendingSuspense>
+    );
+  }
+  const { layout, fontSizePx, tint, outlineSize, renderOrder } = props;
+  return (
+    <TextRun
+      layout={layout}
+      fontSizePx={fontSizePx}
+      tint={tint}
+      strokeWidthPx={outlineStrokeWidthPx(outlineSize)}
+      renderOrder={renderOrder}
+    />
   );
 }

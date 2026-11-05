@@ -5,11 +5,10 @@
 import type { NativeControlComponentProps } from '../../../r3f/controls/ControlComponentRegistry';
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { StyleBoxQuad } from '../../../r3f/controls/native/StyleBoxQuad';
-import { popupPanelShadowInsets, popupPanelStyle } from './contentLayout';
+import { popupPanelBox } from './contentLayout';
 
 export function PopupPanelChrome({ solveNode, rect, theme, tint, renderOrder }: NativeControlComponentProps) {
-  const style = popupPanelStyle(solveNode, theme);
-  const insets = popupPanelShadowInsets(style, solveNode.rtl);
+  const { style, insets } = popupPanelBox(solveNode, theme);
   const panelSize = {
     x: 0,
     y: 0,

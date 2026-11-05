@@ -26,6 +26,7 @@ import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { useViewportTargetSlot } from '../../../resources/textures/viewporttexture/useViewportTextureSlot';
 import { InitialPosition, centredWindowPosition } from '../../../godot/scene/window';
 import { viewportSize } from '../../viewport/subviewport/targetSize';
+import { imageSize } from '../../../resources/formats/image/imagePixels';
 import { closeIconOrigin } from './decoration';
 import { WindowTitle } from './WindowTitle';
 import { windowThemeDefaults, type WindowThemeDefaults } from './theme';
@@ -133,8 +134,8 @@ interface WindowDecorationProps {
 
 /** The pixel size of a loaded icon, or the vendored icon's own until it loads. */
 function iconSize(texture: THREE.Texture | null): Vector2 {
-  const image = texture?.image as { width?: number; height?: number } | undefined;
-  return { x: image?.width ?? TAB_BAR_ICON_SIZE, y: image?.height ?? TAB_BAR_ICON_SIZE };
+  const size = imageSize(texture?.image);
+  return size ? { x: size.width, y: size.height } : { x: TAB_BAR_ICON_SIZE, y: TAB_BAR_ICON_SIZE };
 }
 
 function WindowDecoration({
@@ -159,7 +160,7 @@ function WindowDecoration({
   const closeTexture = useNodeIcon(solveNode.icons.close, TAB_BAR_ICONS.close);
   const closeSize = iconSize(closeTexture);
   const rect: Rect2 = { x: 0, y: 0, w: size.x, h: size.y };
-  const closeOrigin = closeIconOrigin(rect, offsets);
+  const closeOrigin = closeIconOrigin(size.x, offsets);
 
   return (
     <>

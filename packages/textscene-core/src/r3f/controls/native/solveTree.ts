@@ -6,6 +6,7 @@
 
 import type { SceneScope, TscnNode } from '../../../parser/types';
 import { perObject } from '../../../utils/perObject';
+import { parentPathOf } from '../../../utils/nodePath';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { ProjectFonts } from '../../../resources/fonts/font/projectFonts';
 import type { FontResource } from '../../../resources/fonts/font/types';
@@ -187,7 +188,7 @@ export function isLaidOutChild(parent: SolveNode, child: SolveNode): boolean {
 
 /** Whether `child` is a `get_child(i)` of `parent` in the scene, wherever its canvas item parents. */
 export function isSceneChild(parent: SolveNode, child: SolveNode): boolean {
-  return child.path.slice(0, child.path.lastIndexOf('/')) === parent.path;
+  return parentPathOf(child.path) === parent.path;
 }
 
 /** A `SolveNode` minus the sortable child list: what a share's callback sees (`solveHandoff.ts`). */

@@ -31,6 +31,10 @@ const NEEDS_NO_OVERLAY = new Map([
     'Asks whether the node a body path names is a Node3D, by type. The pose comes from the drawn objects.',
   ],
   [
+    'nodes/windows/window/themeOwners.ts',
+    'Reads the type and the `theme` of the nodes above a window, which no pass patches.',
+  ],
+  [
     'nodes/viewport/subviewport/controlRasterViewports.ts',
     'Reads the type and the Control layout direction, which no pass patches.',
   ],

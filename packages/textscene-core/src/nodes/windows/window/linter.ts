@@ -16,6 +16,7 @@ import type { Vector2 } from '../../../godot/math/vector.js';
 import {
   clampLimitSize,
   ContentScaleStretch,
+  isWindowSizeKey,
   replayWindowSize,
   validMaxSize,
   type WindowSizeWrite,
@@ -65,8 +66,6 @@ function checkMaxBelowMin(node: RuleContext['node'], rawProps: Record<string, st
   ];
 }
 
-const SIZE_KEYS: ReadonlySet<string> = new Set(['size', 'min_size', 'max_size']);
-
 /**
  * The file's `size` and the one Godot holds after it applies the `size`, `min_size` and
  * `max_size` lines in order, or `null` when `size` is absent or one of them holds no int32.
@@ -76,11 +75,11 @@ function replaySize(rawProps: Record<string, string>): { written: Vector2; loade
   const writes: WindowSizeWrite[] = [];
   let written: Vector2 | null = null;
   for (const [key, raw] of Object.entries(rawProps)) {
-    if (!SIZE_KEYS.has(key)) continue;
+    if (!isWindowSizeKey(key)) continue;
     const value = matchVector2i(raw);
     if (!value) return null;
     if (key === 'size') written = value;
-    writes.push({ key: key as WindowSizeWrite['key'], value });
+    writes.push({ key, value });
   }
   return written ? { written, loaded: replayWindowSize(writes) } : null;
 }

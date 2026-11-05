@@ -77,8 +77,13 @@ import {
 } from '../../liveSceneTree';
 import { NOTHING_CACHED, recordingReads } from '../../cacheSources';
 import { scopeOf } from '../../../resources/liveNode';
-import { isEmbeddedWindow, isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
-import type { ViewportProperties } from '../../../nodes/viewport/shared/types';
+import {
+  embedsSubwindows,
+  isEmbeddableWindow,
+  isEmbeddedWindow,
+  isViewportBoundary,
+  mayHoldWindow,
+} from '../../../nodes/viewport/subviewport/viewportBoundary';
 import type { WindowProperties } from '../../../nodes/windows/window/types';
 import type { ThemeOwner } from '../../../nodes/windows/window/themeOwners';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
@@ -692,21 +697,37 @@ function buildForest(
    * none (`window.cpp`). A native window draws outside the game frame, so it is left out.
    */
   function walkViewport(
-    { step, path }: LiveLink,
+    link: LiveLink,
     ancestry: Ancestry,
     descend: (ancestry: Ancestry) => WalkResult[]
   ): WalkResult {
+    const { step, path } = link;
     const live = step.node;
     const hidden = ancestry.ancestorHidden || hiddenNodePaths.has(path);
     const isWindow = isEmbeddedWindow(live.type);
     // Theme inheritance stops at a viewport that is no Window, as at any non-Control.
     const themeChain = isWindow ? withOwnTheme(live, step.scope, ancestry.themeChain) : [];
-    if (isWindow && !(live.properties as WindowProperties).force_native) {
+    if (isEmbeddableWindow(live)) {
       windows.push(windowSolveNode(live, path, step.scope, themeChain, hidden, ancestry.inheritedRtl));
     }
-    if ((live.properties as ViewportProperties).gui_embed_subwindows) return NOTHING_WALKED;
+    if (embedsSubwindows(live) || !link.raw.children.some(mayHoldWindow)) return NOTHING_WALKED;
     descend({ ...ancestry, themeChain, ancestorHidden: hidden, windowsOnly: true });
     return NOTHING_WALKED;
+  }
+
+  /** A node's theme items by name, each resolved through `themeScope`, overrides first. */
+  function themeItems(
+    node: TscnNode,
+    scope: SceneScope,
+    themeScope: ReturnType<typeof themeResolutionScope>
+  ): Pick<SolveNode, 'styleBoxes' | 'fontOverrides' | 'colors' | 'constants' | 'icons'> {
+    return {
+      styleBoxes: resolveStyleBoxes(node, scope, themeScope),
+      fontOverrides: resolveFontOverrides(node, scope.externalResources, scope.internalResources),
+      colors: resolveThemedColors(node, themeScope),
+      constants: resolveThemedConstants(node, themeScope),
+      icons: resolveThemedIcons(node, scope, themeScope),
+    };
   }
 
   /**
@@ -736,14 +757,10 @@ function buildForest(
       parentVisibleInTree: true,
       rtl: inheritedRtl ?? layoutDirectionEnv.rootRtl,
       hidden,
-      styleBoxes: resolveStyleBoxes(window, scope, themeScope),
+      ...themeItems(window, scope, themeScope),
       textureSize: null,
       textureSlots: EMPTY_TEXTURE_SLOTS,
-      fontOverrides: resolveFontOverrides(window, scope.externalResources, scope.internalResources),
       labelSettings: null,
-      colors: resolveThemedColors(window, themeScope),
-      constants: resolveThemedConstants(window, themeScope),
-      icons: resolveThemedIcons(window, scope, themeScope),
       resources: scope,
       themeChain,
       projectFonts,
@@ -808,6 +825,7 @@ function buildForest(
     const nodeThemeChain = isControl ? withOwnTheme(collapsed, ownScope, themeChain) : [];
     const hidden = ancestorHidden || hiddenNodePaths.has(path);
     if (ancestry.windowsOnly) {
+      if (!node.children.some(mayHoldWindow)) return NOTHING_WALKED;
       descend({ ...ancestry, themeChain: nodeThemeChain, ancestorHidden: hidden, inheritedRtl: rtl });
       return NOTHING_WALKED;
     }
@@ -898,13 +916,13 @@ function buildForest(
       nodeThemeChain,
       projectFonts
     );
-    const themedIcons = resolveThemedIcons(collapsed, ownScope, themeScope);
+    const items = themeItems(collapsed, ownScope, themeScope);
     const texture = resolveTextureSize(
       collapsed,
       path,
       ownScope.externalResources,
       ownScope.internalResources,
-      themedIcons
+      items.icons
     );
     // A canvas boundary IS the canvas every chain broken below it parents
     // to, so it adopts those; every other Control passes them further up.
@@ -928,18 +946,14 @@ function buildForest(
       parentVisibleInTree,
       rtl: rtl ?? layoutDirectionEnv.rootRtl,
       hidden,
-      styleBoxes: resolveStyleBoxes(collapsed, ownScope, themeScope),
+      ...items,
       textureSize: texture.size,
       textureSlots: texture.slots,
-      fontOverrides: resolveFontOverrides(collapsed, ownScope.externalResources, ownScope.internalResources),
       labelSettings: resolveOwnLabelSettings(
         collapsed,
         ownScope.externalResources,
         ownScope.internalResources
       ),
-      colors: resolveThemedColors(collapsed, themeScope),
-      constants: resolveThemedConstants(collapsed, themeScope),
-      icons: themedIcons,
       resources: ownScope,
       themeChain: nodeThemeChain,
       projectFonts,

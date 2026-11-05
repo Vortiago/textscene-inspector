@@ -8,9 +8,26 @@ import { embeddedWindowSize } from '../../../godot/scene/window';
 import { createSolveContext, solveControlTree } from '../../../r3f/controls/native/controlRectSolver';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
-import type { TextMeasurer } from '../../../r3f/controls/native/solverRegistry';
+import {
+  controlSolverRegistry,
+  type SolveContext,
+  type TextMeasurer,
+} from '../../../r3f/controls/native/solverRegistry';
 import { windowContentsMinimumSize } from './contentsMinimumSize';
 import type { WindowProperties } from './types';
+
+/**
+ * A subclass's registered minimum, such as PopupPanel's, reads no rect. The base rule reads each
+ * child's position, so it lays the Controls out at the loaded size first.
+ */
+function contentsMinimumSize(window: SolveNode, ctx: SolveContext): Vector2 {
+  if (controlSolverRegistry.minimumSize(window.node.type)) return ctx.combinedMinimumSize(window);
+  const { size } = window.node.properties as WindowProperties;
+  return windowContentsMinimumSize(
+    window,
+    solveControlTree([window], { x: 0, y: 0, w: size.x, h: size.y }, ctx)
+  );
+}
 
 /**
  * The size `window` takes once its Controls are ready. Godot wraps at `NOTIFICATION_READY`, after
@@ -25,7 +42,9 @@ export function wrappedWindowSize(
   const loaded = props.size;
   const sizing = { minSize: props.min_size, maxSize: props.max_size, wrapControls: props.wrap_controls };
   if (!sizing.wrapControls) return embeddedWindowSize(loaded, sizing, loaded);
-  const viewport = { x: 0, y: 0, w: loaded.x, h: loaded.y };
-  const solved = solveControlTree([window], viewport, createSolveContext(theme, measureText));
-  return embeddedWindowSize(loaded, sizing, windowContentsMinimumSize(window, solved, theme));
+  return embeddedWindowSize(
+    loaded,
+    sizing,
+    contentsMinimumSize(window, createSolveContext(theme, measureText))
+  );
 }

@@ -56,7 +56,7 @@ export const WINDOW_CONTENT_SCALE_ASPECT_NAMES = enumNamesByValue(ContentScaleAs
 export const WINDOW_CONTENT_SCALE_STRETCH_NAMES = enumNamesByValue(ContentScaleStretch);
 
 /** The flags a Window class's constructor sets, which a scene line overrides. */
-export interface WindowClassDefaults {
+interface WindowClassDefaults {
   visible: boolean;
   wrapControls: boolean;
   borderless: boolean;
@@ -73,14 +73,12 @@ const WINDOW_DEFAULTS: WindowClassDefaults = {
 
 /**
  * Each constructor's own flags, keyed by the class that sets them: `Popup::Popup()`
- * (`popup.cpp:215-225`), `PopupPanel::PopupPanel()` (`popup.cpp:430`) and
- * `AcceptDialog::AcceptDialog()` (`dialogs.cpp:465-470`).
+ * (`popup.cpp:215-225`) and `PopupPanel::PopupPanel()` (`popup.cpp:430`).
  */
 const CLASS_DEFAULTS: Readonly<Record<string, WindowClassDefaults>> = {
   Window: WINDOW_DEFAULTS,
   Popup: { visible: false, wrapControls: true, borderless: true, transparent: false },
   PopupPanel: { visible: false, wrapControls: true, borderless: true, transparent: true },
-  AcceptDialog: { visible: false, wrapControls: true, borderless: false, transparent: false },
 };
 
 /** The defaults of `type`, from the nearest class in its chain that sets its own. */
@@ -89,7 +87,7 @@ export function windowClassDefaults(type: string): WindowClassDefaults {
 }
 
 /** `window.h:105,126`: `size = Size2i(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE)`. */
-export const DEFAULT_WINDOW_SIZE: Vector2 = { x: 100, y: 100 };
+const DEFAULT_WINDOW_SIZE: Vector2 = { x: 100, y: 100 };
 
 /** One write of a size line, in file order. */
 export interface WindowSizeWrite {
@@ -97,8 +95,15 @@ export interface WindowSizeWrite {
   value: Vector2;
 }
 
+const SIZE_KEYS: ReadonlySet<string> = new Set<WindowSizeWrite['key']>(['size', 'min_size', 'max_size']);
+
+/** Whether a property key is one of the size lines `replayWindowSize` applies. */
+export function isWindowSizeKey(key: string): key is WindowSizeWrite['key'] {
+  return SIZE_KEYS.has(key);
+}
+
 /** The limits that clamp a window's size. A `maxSize` of `(0, 0)` sets no maximum. */
-export interface WindowSizeLimits {
+interface WindowSizeLimits {
   minSize: Vector2;
   maxSize: Vector2;
 }
@@ -120,7 +125,7 @@ export function validMaxSize({ minSize, maxSize }: WindowSizeLimits): Vector2 | 
 }
 
 /** `_update_window_size`'s clamp (`window.cpp:1183-1196`): the floor, then a valid cap. */
-export function clampWindowSize(size: Vector2, floor: Vector2, limits: WindowSizeLimits): Vector2 {
+function clampWindowSize(size: Vector2, floor: Vector2, limits: WindowSizeLimits): Vector2 {
   const floored = { x: Math.max(size.x, floor.x), y: Math.max(size.y, floor.y) };
   const cap = validMaxSize(limits);
   return cap ? { x: Math.min(floored.x, cap.x), y: Math.min(floored.y, cap.y) } : floored;
@@ -144,7 +149,7 @@ export function replayWindowSize(writes: Iterable<WindowSizeWrite>): Vector2 {
 }
 
 /** What an embedded window's final size reads beside its loaded size. */
-export interface EmbeddedWindowSizing extends WindowSizeLimits {
+interface EmbeddedWindowSizing extends WindowSizeLimits {
   wrapControls: boolean;
 }
 
@@ -177,6 +182,6 @@ export function centredWindowPosition(embedderSize: Vector2, size: Vector2): Vec
 }
 
 /** C++ `int / 2`: truncated toward zero, and never a negative zero. */
-function halfOfInt(value: number): number {
+export function halfOfInt(value: number): number {
   return Math.trunc(value / 2) || 0;
 }

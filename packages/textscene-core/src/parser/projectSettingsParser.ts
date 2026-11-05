@@ -388,6 +388,14 @@ export function projectTracesHalfSizeReflections(settings: ProjectSettings | nul
 }
 
 /**
+ * `display/window/subwindows/embed_subwindows`, which `main/main.cpp` hands the root window: whether
+ * it embeds its windows. It does by default (`project_settings.cpp:1756`).
+ */
+export function projectEmbedsSubwindows(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['display/window/subwindows/embed_subwindows']) ?? true;
+}
+
+/**
  * `rendering/driver/depth_prepass/enable`. Without the prepass Godot runs no screen-space ambient
  * occlusion (`render_forward_clustered.cpp:2081-2086`).
  */

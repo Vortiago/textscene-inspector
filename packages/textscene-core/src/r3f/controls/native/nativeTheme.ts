@@ -84,6 +84,8 @@ const LINE_EDIT_READ_ONLY_BORDER_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 0.3 };
  */
 interface NativeThemeWidgets {
   panel: StyleBoxFlatData;
+  /** PopupPanel's `panel`, `make_flat_stylebox(style_normal_color)` (`default_theme.cpp:726`). */
+  popupPanel: StyleBoxFlatData;
   button: {
     normal: StyleBoxFlatData;
     hover: StyleBoxFlatData;
@@ -181,6 +183,7 @@ export function nativeTheme(scale: number): NativeTheme {
     widgets: {
       // default_theme.cpp:134: make_flat_stylebox(style_normal_color, 0, 0, 0, 0).
       panel: flatStyleBox(STYLE_FILL.normal, ZERO_SIDES, scaled.cornerRadius),
+      popupPanel: flatStyleBox(STYLE_FILL.normal, buttonMargin, scaled.cornerRadius),
       button: {
         // default_theme.cpp:138-141: make_flat_stylebox(color), every default arg.
         normal: flatStyleBox(STYLE_FILL.normal, buttonMargin, scaled.cornerRadius),

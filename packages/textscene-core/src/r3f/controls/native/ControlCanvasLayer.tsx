@@ -10,6 +10,7 @@ import type { TscnNode } from '../../../parser/types';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { useGameViewportRect } from '../../gameViewportRect.js';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
+import { projectEmbedsSubwindows } from '../../../parser/projectSettingsParser';
 import { useBuildSolveTree } from './buildSolveTree';
 import { nativeTheme } from './nativeTheme';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
@@ -18,7 +19,6 @@ import { canvasLayerRanks } from '../../canvasPaintOrder';
 import { LayerRanksProvider } from '../../contexts/PaintOrderContext';
 import { measureText } from './text/measurer';
 import { EmbeddedWindows } from '../../../nodes/windows/window/EmbeddedWindows';
-import { rootEmbedsSubwindows } from '../../../nodes/windows/window/embedding';
 
 interface ControlCanvasLayerProps {
   nodes: readonly TscnNode[];
@@ -55,6 +55,7 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
   // inherit them, and a different layer set would order Controls against the
   // world wrongly.
   const ranks = useMemo(() => canvasLayerRanks(rootNodes), [rootNodes]);
+  const embedderSize = useMemo(() => ({ x: viewport.w, y: viewport.h }), [viewport.w, viewport.h]);
 
   return (
     <CanvasModulateContext.Provider value={canvasModulate}>
@@ -67,13 +68,8 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
           measurer={measureText}
         />
         {/* A window the root does not embed is a native one, drawn outside the game frame. */}
-        {rootEmbedsSubwindows(settings) ? (
-          <EmbeddedWindows
-            windows={windows}
-            embedderSize={{ x: viewport.w, y: viewport.h }}
-            forestPath=""
-            theme={theme}
-          />
+        {projectEmbedsSubwindows(settings) ? (
+          <EmbeddedWindows windows={windows} embedderSize={embedderSize} forestPath="" theme={theme} />
         ) : null}
       </LayerRanksProvider>
     </CanvasModulateContext.Provider>

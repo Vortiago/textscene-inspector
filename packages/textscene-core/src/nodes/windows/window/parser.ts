@@ -9,6 +9,7 @@ import { boolOr, intOr, parseOptionalVector2i, vec2iOr } from '../../../parser/v
 import {
   clampLimitSize,
   InitialPosition,
+  isWindowSizeKey,
   replayWindowSize,
   windowClassDefaults,
   type WindowSizeWrite,
@@ -19,15 +20,14 @@ import { parseThemeOwnerFields } from '../../2d/ui/control/parser';
 import type { WindowProperties } from './types';
 
 const ORIGIN = { x: 0, y: 0 };
-const SIZE_KEYS: ReadonlySet<string> = new Set(['size', 'min_size', 'max_size']);
 
 /** The size lines in file order, a malformed one skipped as the lenient parse skips any bad value. */
 function sizeWrites(properties: Record<string, string>): WindowSizeWrite[] {
   const writes: WindowSizeWrite[] = [];
   for (const [key, raw] of Object.entries(properties)) {
-    if (!SIZE_KEYS.has(key)) continue;
+    if (!isWindowSizeKey(key)) continue;
     const value = parseOptionalVector2i(raw);
-    if (value) writes.push({ key: key as WindowSizeWrite['key'], value });
+    if (value) writes.push({ key, value });
   }
   return writes;
 }

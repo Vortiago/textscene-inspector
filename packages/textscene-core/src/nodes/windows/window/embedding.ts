@@ -10,17 +10,6 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { boolSlotValue } from '../../../godot/variant/variantBool';
-import type { ProjectSettings } from '../../../parser/projectSettingsParser';
-
-/** `display/window/subwindows/embed_subwindows`, which `main/main.cpp` hands the root window. */
-const EMBED_SUBWINDOWS_SETTING = 'display/window/subwindows/embed_subwindows';
-
-/** Whether the root window embeds its windows. It does by default (`project_settings.cpp:1756`). */
-export function rootEmbedsSubwindows(settings: ProjectSettings | null): boolean {
-  return boolSlotValue(settings?.[EMBED_SUBWINDOWS_SETTING]) !== false;
-}
-
 /** A window as the stack reads it. `parent` is its nearest visible ancestor window in the stack. */
 export interface StackedWindow {
   unfocusable: boolean;
@@ -29,7 +18,7 @@ export interface StackedWindow {
   parent: StackedWindow | null;
 }
 
-export interface SubwindowStack<T extends StackedWindow> {
+interface SubwindowStack<T extends StackedWindow> {
   /** Back to front. */
   order: T[];
   /** The window `gui.subwindow_focused` names, or `null` when none took focus. */

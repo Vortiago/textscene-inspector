@@ -72,6 +72,12 @@ describe('nativeTheme', () => {
       });
     });
 
+    it('PopupPanel: make_flat_stylebox(style_normal_color) with the default margin — default_theme.cpp:726', () => {
+      const { popupPanel } = nativeTheme(1).widgets;
+      expect(popupPanel.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
+      expect(popupPanel.contentMargin).toEqual({ left: 4, top: 4, right: 4, bottom: 4 });
+    });
+
     it('Button normal/hover/pressed/disabled: make_flat_stylebox(color) with every default arg — default_theme.cpp:138-141', () => {
       const theme = nativeTheme(1);
       const shared = {

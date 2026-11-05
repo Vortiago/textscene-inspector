@@ -284,9 +284,10 @@ function dispatchChildren(
 
   // A child the layout does not place stays free against the rect `parentAnchorableRect` gives
   // it: zero for a promoted one, the boundary's own for one a canvas boundary adopted.
-  const laidOut = n.children.filter((child) => isLaidOutChild(n, child));
-  for (const child of n.children.filter((child) => !laidOut.includes(child))) {
-    solveFree(child, rect, origin, viewport, ctx, out);
+  const laidOut: SolveNode[] = [];
+  for (const child of n.children) {
+    if (isLaidOutChild(n, child)) laidOut.push(child);
+    else solveFree(child, rect, origin, viewport, ctx, out);
   }
 
   const childEntries = laidOut.map((child) => ({

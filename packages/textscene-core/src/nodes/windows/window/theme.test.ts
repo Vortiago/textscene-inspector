@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import { STYLE_FILL } from '../../../godot/scene/theme';
-import { popupPanelDefaultStyle, windowThemeDefaults } from './theme';
+import { windowThemeDefaults } from './theme';
 
 describe('windowThemeDefaults — the default theme’s Window items (`default_theme.cpp:672-688`)', () => {
   it('borders a focused window with the popup colour and an unfocused one with the popup hover colour', () => {
@@ -33,13 +33,5 @@ describe('windowThemeDefaults — the default theme’s Window items (`default_t
     const defaults = windowThemeDefaults(nativeTheme(1));
     expect(defaults.titleOutlineSize).toBe(0);
     expect(defaults.titleOutlineModulate).toEqual({ r: 0, g: 0, b: 0, a: 1 });
-  });
-});
-
-describe('popupPanelDefaultStyle — PopupPanel’s `panel` (`default_theme.cpp:726`)', () => {
-  it('fills with the normal style colour inside the default margin', () => {
-    const style = popupPanelDefaultStyle(nativeTheme(1));
-    expect(style.bgColor).toEqual(STYLE_FILL.normal);
-    expect(style.contentMargin).toEqual({ left: 4, top: 4, right: 4, bottom: 4 });
   });
 });

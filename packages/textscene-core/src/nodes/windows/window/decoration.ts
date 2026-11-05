@@ -1,5 +1,5 @@
 /**
- * Where an embedder draws a window's title and close icon around its rect, as
+ * Where an embedder draws a window's title and close icon, from the window's top-left, as
  * `Viewport::_sub_window_update` places them (`scene/main/viewport.cpp:342-401`). Every input is the
  * window's own theme item, so the painter and its tests read one formula.
  *
@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rect2 } from '../../../godot/math/rect2';
+import { halfOfInt } from '../../../godot/scene/window';
 import type { Vector2 } from '../../../godot/math/vector';
 
 /** The width a title may take: what the border's margins and the close offset leave (`:363`). */
@@ -24,17 +24,14 @@ export function titleSpace(
  * The top-left of the title line: centred over the window, and centred in the `title_height` band
  * above it (`:368-369`). Both halves land in an `int`, which truncates toward zero.
  */
-export function titleOrigin(rect: Rect2, titleHeight: number, textSize: Vector2): Vector2 {
-  return {
-    x: rect.x + (Math.trunc((rect.w - textSize.x) / 2) || 0),
-    y: rect.y + (Math.trunc((-titleHeight - textSize.y) / 2) || 0),
-  };
+export function titleOrigin(width: number, titleHeight: number, textSize: Vector2): Vector2 {
+  return { x: halfOfInt(width - textSize.x), y: halfOfInt(-titleHeight - textSize.y) };
 }
 
 /** The top-left of the close icon, hung from the window's top-right corner (`:382-384`). */
 export function closeIconOrigin(
-  rect: Rect2,
+  width: number,
   { closeHOffset, closeVOffset }: { closeHOffset: number; closeVOffset: number }
 ): Vector2 {
-  return { x: rect.x + rect.w - closeHOffset, y: rect.y - closeVOffset };
+  return { x: width - closeHOffset, y: -closeVOffset };
 }
