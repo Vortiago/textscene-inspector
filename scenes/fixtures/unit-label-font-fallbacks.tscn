@@ -1,13 +1,12 @@
 [gd_scene load_steps=6 format=3]
 
 ; The one variable: a character the font lacks, which draws from the first font of its fallback
-; chain that has it. Montserrat holds basic Latin only. Its fallbacks are Noto Sans (sharp s, AE,
-; O with stroke, H with stroke, L with stroke, eth) and then DejaVu Sans for the Hebrew, which Noto
-; Sans lacks. The rows set the chain on a raw font's import at 16 px and 32 px, on a FontVariation,
-; and on a RichTextLabel. The BMFont row's import falls back from an outline font that holds H and
-; i to the block font for A and V.
+; chain that has it. Montserrat holds basic Latin only. Its FontVariation falls back to Noto Sans
+; (sharp s, AE, O with stroke, H with stroke, L with stroke, eth) and then DejaVu Sans for the
+; Hebrew, which Noto Sans lacks. The rows draw it at 16 px and 32 px, through a FontVariation with
+; no fallbacks of its own, which takes its base's, and in a RichTextLabel. The BMFont row's import
+; falls back from an outline font that holds H and i to the block font for A and V.
 
-[ext_resource type="FontFile" path="res://fonts/montserrat-semibold-fallbacks.ttf" id="1_imported"]
 [ext_resource type="FontFile" path="res://fonts/montserrat-semibold-subset.ttf" id="2_plain"]
 [ext_resource type="FontFile" path="res://fonts/noto-sans-regular-subset.ttf" id="3_noto"]
 [ext_resource type="FontFile" path="res://fonts/dejavu-sans-bidi-subset.ttf" id="4_dejavu"]
@@ -17,38 +16,41 @@
 base_font = ExtResource("2_plain")
 fallbacks = Array[Font]([ExtResource("3_noto"), ExtResource("4_dejavu")])
 
+[sub_resource type="FontVariation" id="FontVariation_inherited"]
+base_font = SubResource("FontVariation_chain")
+
 [node name="Root" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="Imported" type="Label" parent="."]
+[node name="Small" type="Label" parent="."]
 layout_mode = 0
 offset_left = 20.0
 offset_top = 20.0
 offset_right = 600.0
 offset_bottom = 50.0
-theme_override_fonts/font = ExtResource("1_imported")
+theme_override_fonts/font = SubResource("FontVariation_chain")
 theme_override_font_sizes/font_size = 16
 text = "Straße ÆØ Ħal Łoð שלום AVA"
 
-[node name="ImportedLarge" type="Label" parent="."]
+[node name="Large" type="Label" parent="."]
 layout_mode = 0
 offset_left = 20.0
 offset_top = 60.0
 offset_right = 760.0
 offset_bottom = 110.0
-theme_override_fonts/font = ExtResource("1_imported")
+theme_override_fonts/font = SubResource("FontVariation_chain")
 theme_override_font_sizes/font_size = 32
 text = "Straße ÆØ Ħal שלום"
 
-[node name="Variation" type="Label" parent="."]
+[node name="Inherited" type="Label" parent="."]
 layout_mode = 0
 offset_left = 20.0
 offset_top = 130.0
 offset_right = 760.0
 offset_bottom = 180.0
-theme_override_fonts/font = SubResource("FontVariation_chain")
+theme_override_fonts/font = SubResource("FontVariation_inherited")
 theme_override_font_sizes/font_size = 32
 text = "Straße ÆØ Ħal שלום"
 

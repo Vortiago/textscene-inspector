@@ -63,7 +63,7 @@ The import sidecar's `scaling_mode` sets how a size off the fixed size scales th
 <!-- compare: image=unit-label-font-fallbacks status=done fixture=unit-label-font-fallbacks.tscn -->
 
 A character the font lacks draws from the first font of its **Fallback chain** that has it, with that
-font's advance and kerning (`text_server_adv.cpp:7111-7170`). The chain is the font's `fallbacks`, its
+font's advance and kerning (`text_server_adv.cpp:7111-7170`). The chain is the font's `fallbacks`, a font
 import's `fallbacks` (`resource_importer_dynamic_font.cpp:192`, `resource_importer_bmfont.cpp:98`), or
 the base's for a `FontVariation` with none (`font.cpp:2926-2945`). The `label-font-fallbacks` golden
 pins this.
