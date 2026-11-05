@@ -111,7 +111,7 @@ describe('useLabel3DFont metrics', () => {
     const { result } = renderMetrics(undefined);
 
     await vi.waitFor(() =>
-      expect(result.current?.metrics.cssFontFamily).toBe(bundled.metrics!.cssFontFamily)
+      expect(result.current?.metrics).toMatchObject({ cssFontFamily: bundled.metrics!.cssFontFamily })
     );
   });
 
