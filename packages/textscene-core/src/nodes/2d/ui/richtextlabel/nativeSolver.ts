@@ -728,7 +728,7 @@ export interface RichTextImagePlacement {
   heightPx: number;
 }
 
-/** One line and style run for one `<TextRun>`, or an `[img]` when `image` is set, which leaves the text fields unused. */
+/** One line and style run for one `<OutlinedTextRun>`, or an `[img]` when `image` is set, which leaves the text fields unused. */
 export interface RichTextRunPlacement {
   lineIndex: number;
   /** The line's top from the control's top: `RichTextLineMetrics.topPx` plus the `vertical_alignment` shift (`richTextVerticalOffsets`). */

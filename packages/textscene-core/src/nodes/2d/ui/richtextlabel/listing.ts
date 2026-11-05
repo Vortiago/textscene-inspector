@@ -118,13 +118,11 @@ function markerFormatting(
   defaultColor: Rgba
 ): MarkerFormatting {
   const sizeValue = pick(tags, 'outline_size');
-  const outlineColorValue = pick(tags, 'outline_color');
-  const fontSizeValue = pick(tags, 'font_size');
   return {
-    fontSizePx: markerFontSizeOf(fontSizeValue),
+    fontSizePx: markerFontSizeOf(pick(tags, 'font_size')),
     color: colorOf(pick(tags, 'color'), defaultColor),
     outlineSizePx: sizeValue === undefined ? undefined : outlineSizeOf(sizeValue),
-    outlineColor: colorOf(outlineColorValue, defaultColor),
+    outlineColor: colorOf(pick(tags, 'outline_color'), defaultColor),
   };
 }
 
@@ -134,27 +132,28 @@ function outermostValue(tags: readonly OpenBBCodeTag[], name: string): string | 
 }
 
 /**
- * A marker without its own outline takes the outline of the line's first item (`_find_outline_size`,
- * `_find_outline_color`, `:1020-1021`). The colour falls to the control's base colour there, not the
- * theme's outline colour.
+ * A marker without its own colour or outline takes them from the line's first item
+ * (`_find_color`, `_find_outline_size`, `_find_outline_color`, `:1019-1021`), through `lineTags`.
+ * A text row passes none, since its own tags are the line's. The outline colour falls to the
+ * control's base colour there, not the theme's outline colour.
  */
 function styleOf(
   bold: boolean,
   italic: boolean,
   formatting: MarkerFormatting,
-  lineTags: readonly OpenBBCodeTag[],
+  lineTags: readonly OpenBBCodeTag[] | undefined,
   inputs: RunListingInputs
 ): MarkerStyle {
   const { defaultColor, themeOutline } = inputs;
-  const line = markerFormatting(lineTags, lastTagValue, defaultColor);
+  const line = lineTags && markerFormatting(lineTags, lastTagValue, defaultColor);
   return {
     bold,
     italic,
     fontSizePx: formatting.fontSizePx ?? inputs.fontSizePxOf(bold, italic),
-    color: formatting.color ?? line.color ?? defaultColor,
+    color: formatting.color ?? line?.color ?? defaultColor,
     outline: {
-      sizePx: formatting.outlineSizePx ?? line.outlineSizePx ?? themeOutline.sizePx,
-      color: formatting.outlineColor ?? line.outlineColor ?? defaultColor,
+      sizePx: formatting.outlineSizePx ?? line?.outlineSizePx ?? themeOutline.sizePx,
+      color: formatting.outlineColor ?? line?.outlineColor ?? defaultColor,
     },
   };
 }
@@ -166,7 +165,7 @@ function styleOf(
 function textRowMarkerStyle(inputs: RunListingInputs): MarkerStyle {
   const { tags, defaultColor } = inputs;
   const formatting = markerFormatting(tags, outermostValue, defaultColor);
-  return styleOf(hasOpenTag(tags, 'b'), hasOpenTag(tags, 'i'), formatting, tags, inputs);
+  return styleOf(hasOpenTag(tags, 'b'), hasOpenTag(tags, 'i'), formatting, undefined, inputs);
 }
 
 /**
@@ -406,9 +405,9 @@ function marginPx(frames: readonly IndentFrame[], context: ListingContext): numb
 function shapeMarker(text: string, row: Row, faces: RichTextFaces): ListMarker {
   const style = rowMarkerStyle(row);
   // A size of 0 or less shapes no glyphs, so the marker has no width and draws nothing.
-  const shapedString = style.fontSizePx > 0 ? text : '';
+  const shapedText = style.fontSizePx > 0 ? text : '';
   const direction = row.run.bidi.direction;
-  const layout = shapeText(shapedString, {
+  const layout = shapeText(shapedText, {
     fontSizePx: style.fontSizePx,
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,
