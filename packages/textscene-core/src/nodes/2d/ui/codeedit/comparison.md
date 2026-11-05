@@ -75,6 +75,8 @@ one-digit gutter (`code_edit.cpp:3863-3880`).
 
 ## Known limitations
 
+- **Not drawn** `localize_numeral_system`, which writes the line numbers in the digits of the
+  control's language, since the parser reads the property and the gutter draws ASCII digits.
 - **Not drawn** The main gutter reserves its width but draws no bookmark, breakpoint or
   executing-line icon, since a `.tscn` cannot set that per-line state
   (`code_edit.cpp:1419-1503`).

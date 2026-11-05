@@ -52,6 +52,8 @@ outline ring (ADR-0064).
 
 ## Known limitations
 
+- **Not drawn** `localize_numeral_system`, which writes the percentage in the digits of the
+  control's language, since the parser reads the property and the bar draws ASCII digits.
 - **Approximated** `indeterminate` never animates, so the previewer always draws Godot's
   static frame (the bar centred in the control), whatever `editor_preview_indeterminate`
   says.

@@ -48,6 +48,8 @@ keys `value`/`min_value`/`max_value`/`step`/`page`/`exp_edit`/`rounded`/`allow_g
 
 ## Known limitations
 
+- **Not drawn** `localize_numeral_system`, which writes the value in the digits of the
+  control's language, since the parser reads the property and the field draws ASCII digits.
 - **Not drawn** Hover, pressed and drag draw states for either arrow button: a static
   preview reaches none of them.
 - **Not drawn** `up_down_buttons_separator`, whose rect takes the zero

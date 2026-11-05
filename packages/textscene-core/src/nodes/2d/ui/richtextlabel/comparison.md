@@ -35,9 +35,9 @@ It takes the font of the item and the outermost colour of the item. It sits righ
 is as wide as the widest marker of the list (`:242-372,1017-1039`). A nested `[ol]` writes the outer number
 first, as `1.a.`, and a bullet ends the number (`:242-270`). While `localize_numeral_system` is true, its
 default (`control.h:293`), an `[ol]` writes each plain number in the digits of the item's language, the innermost
-`[lang]` or `[p]` language, else `language`, else the locale (`:255-258`, `TranslationServer::format_number`). A letter or
-roman numeral keeps its letters. A list ends its last item with a newline, and an
-empty list holds one empty item (`:5326-5345,5415-5424`).
+`[lang]` or `[p]` language, else `language`, else the locale (`:255-258,3557`, `TranslationServer::format_number`). A
+language with no number system keeps the ASCII digits. A letter or roman numeral keeps its letters. A list ends its last
+item with a newline, and an empty list holds one empty item (`:5326-5345,5415-5424`).
 
 While `clip_contents` is true, its default for this node (`rich_text_label.cpp:8225`), the control's own rect
 clips every glyph, image and underline (`control.cpp:3948`). `fit_content` grows the control to its text, so
