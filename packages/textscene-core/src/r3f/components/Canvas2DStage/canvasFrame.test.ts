@@ -113,7 +113,7 @@ describe('createCanvasFrame', () => {
     const release = registerCanvasGroup(groupScene, {
       window: { own: 0, from: 0, to: 1 },
       buffer,
-      fit: () => null,
+      fit: () => new THREE.Box3(),
     });
     const frame = multisampledFrame(0);
 

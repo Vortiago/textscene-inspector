@@ -50,11 +50,11 @@ function groupNode(props: Record<string, string> = {}): TscnNode {
   };
 }
 
-/** A 100x100 square at Godot (0, 0)-(100, 100) under a wrapper at `key`, as a child item draws. */
-function ChildSquare({ keyed = CHILD_KEY }: { keyed?: number }) {
+/** A 100x100 square at Godot (x, 0)-(x + 100, 100) under a wrapper at `key`, as a child item draws. */
+function ChildSquare({ keyed = CHILD_KEY, x = 0 }: { keyed?: number; x?: number }) {
   return (
     <group renderOrder={keyed}>
-      <mesh position={[50, -50, 0]} geometry={new THREE.PlaneGeometry(100, 100)} />
+      <mesh position={[x + 50, -50, 0]} geometry={new THREE.PlaneGeometry(100, 100)} />
     </group>
   );
 }
@@ -66,10 +66,16 @@ function ModulateReader() {
 
 const MATERIAL: TscnInternalResource = { id: 'Add', type: 'CanvasItemMaterial', data: { blend_mode: '1' } };
 
+interface Canvas {
+  lighting?: CanvasLighting2D;
+  /** The camera the frame draws through, the default ortho one framing (-1, -1)-(1, 1). */
+  camera?: THREE.OrthographicCamera;
+}
+
 async function renderGroup(
   props: Record<string, string> = {},
   child: ReactNode = <ChildSquare />,
-  lighting: CanvasLighting2D = LIGHTING
+  { lighting = LIGHTING, camera = new THREE.OrthographicCamera() }: Canvas = {}
 ) {
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={[MATERIAL]} externalResources={[]}>
@@ -91,21 +97,20 @@ async function renderGroup(
     clear: () => {},
     render: () => {},
   } as unknown as THREE.WebGLRenderer;
-  drawCanvasGroups(gl, scene, new THREE.OrthographicCamera(), { width: 64, height: 64 }, () => {});
+  drawCanvasGroups(gl, scene, camera, { width: 64, height: 64 }, () => {});
   return { renderer, scene };
 }
 
-/** The group's rect meshes: the composite, whose material is a ShaderMaterial, and the plain one. */
 /** Whether `object` carries the tag of a group's rect mesh. */
 function isCanvasGroupRect(object: THREE.Object3D): boolean {
   return Object.entries(canvasGroupRectTag()).every(([key, value]) => object.userData[key] === value);
 }
 
+/** The group's rect meshes: the composite, whose material is a ShaderMaterial, and the plain one. */
 function rects(scene: THREE.Object3D) {
   const meshes: THREE.Mesh[] = [];
   scene.traverse((object) => {
-    if ((object as THREE.Mesh).isMesh && object.userData.tscnCanvasGroupRect)
-      meshes.push(object as THREE.Mesh);
+    if ((object as THREE.Mesh).isMesh && isCanvasGroupRect(object)) meshes.push(object as THREE.Mesh);
   });
   const composite = meshes.find((mesh) => (mesh.material as THREE.ShaderMaterial).isShaderMaterial)!;
   const plain = meshes.find((mesh) => mesh !== composite)!;
@@ -134,11 +139,21 @@ describe('<CanvasGroup>', () => {
 
   it('fits the rect in the clip of the frame camera where no light pass frames the canvas', async () => {
     // The default camera frames 2 units over the 64-pixel frame, so the 10-pixel margin is 10/32.
-    const { scene } = await renderGroup({}, <ChildSquare />, INERT_CANVAS_LIGHTING);
+    const { scene } = await renderGroup({}, <ChildSquare />, { lighting: INERT_CANVAS_LIGHTING });
     const { composite } = rects(scene);
 
     expect(composite.visible).toBe(true);
     expect(composite.scale.toArray()).toEqual([100.625, 100.625, 1]);
+  });
+
+  it("composites a child past Godot's viewport that the panned stage shows, as it draws outside a group", async () => {
+    const camera = new THREE.OrthographicCamera(-100, 100, 100, -100);
+    camera.position.set(3050, -50, 0);
+    const { scene } = await renderGroup({}, <ChildSquare x={3000} />, { camera });
+    const { composite } = rects(scene);
+
+    expect(composite.visible).toBe(true);
+    expect(composite.position.toArray()).toEqual([3050, -50, 0]);
   });
 
   it('fits the rect to the children alone at fit_margin 0', async () => {

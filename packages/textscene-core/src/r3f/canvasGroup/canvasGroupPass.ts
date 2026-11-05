@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { canvasKeyOf, drawCanvasKeys } from '../canvasKeyWindow';
 import type { CanvasRunKeys } from '../canvasItemState';
 import { isNodeIcon } from '../editorHelpers';
-import { drawableLocalBox, isDrawable } from '../drawable';
+import { drawableLocalBox, isDrawable, type Drawable } from '../drawable';
 import { BLACK } from '../../nodes/viewport/renderGate';
 import { drawOffscreen } from '../offscreen';
 import { perObject } from '../../utils/perObject';
@@ -88,13 +88,17 @@ export function drawCanvasGroups(
   }
   scene.updateMatrixWorld();
   const entries = [...groups];
-  const outermost = fitGroups(entries, drawnBoxes(scene, camera, entries), frameClipOf(camera, frame));
+  const { outermost, drawing } = fitGroups(
+    entries,
+    drawnBoxes(scene, camera, entries),
+    frameClipOf(camera, frame)
+  );
   const previousAutoUpdate = scene.matrixWorldAutoUpdate;
   beginStep(gl, 'Canvas groups');
   try {
     // Only layers change between the buffer draws, and `fit` updates each rect it moves.
     scene.matrixWorldAutoUpdate = false;
-    for (const group of outermost) fillBuffer(gl, scene, camera, group, frame);
+    for (const group of outermost) if (drawing.has(group)) fillBuffer(gl, scene, camera, group, frame);
   } finally {
     scene.matrixWorldAutoUpdate = previousAutoUpdate;
     endStep(gl, 'Canvas groups');
@@ -111,15 +115,23 @@ function frameClipOf(
   return ortho.isOrthographicCamera ? clipOfCamera(ortho, { x: width, y: height }) : null;
 }
 
+/** The groups `fitGroups` answers. */
+interface FittedGroups {
+  /** The groups inside no other group's window, whose items the frame leaves out. */
+  outermost: CanvasGroupEntry[];
+  /** The groups whose `fit` answered a rect. A group that draws nothing needs no buffer. */
+  drawing: ReadonlySet<CanvasGroupEntry>;
+}
+
 /**
  * Fits every group, the innermost first, so an enclosing group merges the rect of each group inside
- * it, and answers the outermost groups.
+ * it.
  */
 function fitGroups(
   groups: readonly CanvasGroupEntry[],
   drawn: ReadonlyMap<CanvasGroupEntry, THREE.Box3[]>,
   frameClip: CanvasClip | null
-): CanvasGroupEntry[] {
+): FittedGroups {
   const enclosing = new Map(
     groups.map((inner) => [
       inner,
@@ -128,11 +140,14 @@ function fitGroups(
   );
   const around = (group: CanvasGroupEntry) => enclosing.get(group)!;
   const innermostFirst = [...groups].sort((a, b) => around(b).length - around(a).length);
+  const drawing = new Set<CanvasGroupEntry>();
   for (const group of innermostFirst) {
     const rect = group.fit(drawn.get(group)!, around(group).length > 0, frameClip);
-    if (rect) for (const outer of around(group)) drawn.get(outer)!.push(rect);
+    if (!rect) continue;
+    drawing.add(group);
+    for (const outer of around(group)) drawn.get(outer)!.push(rect);
   }
-  return groups.filter((group) => around(group).length === 0);
+  return { outermost: groups.filter((group) => around(group).length === 0), drawing };
 }
 
 /**
@@ -148,18 +163,25 @@ function drawnBoxes(
   const visit = (object: THREE.Object3D, inherited: number): void => {
     if (!object.visible || isNodeIcon(object) || isCanvasGroupRect(object)) return;
     const key = canvasKeyOf(object, inherited);
-    const collecting = groups.filter((group) => collects(group.window, key));
-    const box = collecting.length > 0 && camera.layers.test(object.layers) ? worldBox(object) : null;
-    if (box) for (const group of collecting) drawn.get(group)!.push(box);
+    if (isDrawable(object) && camera.layers.test(object.layers)) listBox(object, key);
     for (const child of object.children) visit(child, key);
+  };
+  // A loop, not `.filter`: no array per object per frame. The first collecting group measures the box.
+  const listBox = (object: Drawable, key: number): void => {
+    let box: THREE.Box3 | null | undefined;
+    for (const group of groups) {
+      if (!collects(group.window, key)) continue;
+      box ??= worldBox(object);
+      if (!box) return;
+      drawn.get(group)!.push(box);
+    }
   };
   visit(scene, 0);
   return drawn;
 }
 
 /** The bounds of a drawable object's geometry, its instances included, in world space. */
-function worldBox(object: THREE.Object3D): THREE.Box3 | null {
-  if (!isDrawable(object)) return null;
+function worldBox(object: Drawable): THREE.Box3 | null {
   const local = drawableLocalBox(object);
   return local.isEmpty() ? null : local.clone().applyMatrix4(object.matrixWorld);
 }

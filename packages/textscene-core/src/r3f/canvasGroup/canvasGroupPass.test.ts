@@ -53,8 +53,11 @@ function item(scene: THREE.Object3D, key: number, x: number): THREE.Mesh {
   return mesh;
 }
 
+/** The rect a group's `fit` answers, as a group that draws something does. */
+const FITTED = new THREE.Box3(new THREE.Vector3(-1, -1, 0), new THREE.Vector3(1, 1, 0));
+
 function entry(window: CanvasGroupEntry['window'], buffer: Target): CanvasGroupEntry {
-  return { window, buffer, fit: vi.fn(() => null) };
+  return { window, buffer, fit: vi.fn(() => FITTED) };
 }
 
 const camera = new THREE.OrthographicCamera();
@@ -118,6 +121,18 @@ describe('drawCanvasGroups', () => {
     drawCanvasGroups(gl, scene, camera, FRAME, () => {});
 
     expect([buffer.width, buffer.height]).toEqual([64, 32]);
+  });
+
+  it('draws no buffer for a group whose fit answers no rect, as it draws nothing', () => {
+    const scene = new THREE.Scene();
+    const meshes = { grouped: item(scene, 11, 0) };
+    const buffer = new THREE.WebGLRenderTarget(1, 1);
+    register(scene, { ...entry(WINDOW, buffer), fit: () => null });
+    const { gl, draws } = recordingRenderer(meshes);
+
+    drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
+
+    expect(draws).toEqual([{ target: null, seen: [] }]);
   });
 
   it('groups an item that draws behind the group, whose key is below the group key', () => {

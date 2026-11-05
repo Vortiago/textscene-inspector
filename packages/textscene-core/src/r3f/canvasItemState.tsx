@@ -127,8 +127,9 @@ export function useCanvasRunKeysOfNode(node: TscnNode, own: CanvasItemZStep): Ca
   const keyAt = useCanvasKeyAt(useZFinal(own));
   const sequence = useNodePaintSequence(node);
   const { base, size } = usePaintRange();
+  // Past the last key, not at `base + size`: the encoding saturates a sequence at the stride's end.
   return useMemo(
-    () => ({ own: keyAt(sequence), from: keyAt(base), to: keyAt(base + size) }),
+    () => ({ own: keyAt(sequence), from: keyAt(base), to: keyAt(base + size - 1) + 1 }),
     [keyAt, sequence, base, size]
   );
 }

@@ -109,7 +109,7 @@ function GroupRect({ window, tint, material, pixelMaterial, fitMargin, clearMarg
           if (plain.current) plain.current.visible = false;
           // A canvas with no light pass, such as an inline SubViewport's, takes the frame's own clip.
           const framed = clip.current ?? frameClip;
-          const pixels = framed && fittedRect(drawn, framed, fitMargin);
+          const pixels = framed && fittedRect(drawn, framed, frameClip, fitMargin);
           if (!pixels) return null;
           const shown = nested || !readsBuffer ? plain.current : composite.current;
           if (shown) placeRect(shown, worldBoxOfCanvasPixels(pixels, framed));
@@ -129,15 +129,17 @@ function GroupRect({ window, tint, material, pixelMaterial, fitMargin, clearMarg
     },
     merge: [pixelMaterial],
   });
+  // Hidden until the pass fits them: a canvas drawn without the pass shows no unit square.
   return (
     <>
       <mesh
         ref={composite}
+        visible={false}
         geometry={UNIT_SQUARE}
         material={compositeMaterial}
         userData={canvasGroupRectTag()}
       />
-      <mesh ref={plain} geometry={UNIT_SQUARE} userData={canvasGroupRectTag()}>
+      <mesh ref={plain} visible={false} geometry={UNIT_SQUARE} userData={canvasGroupRectTag()}>
         <meshBasicMaterial key={program.key} {...program.props} />
       </mesh>
     </>
@@ -159,12 +161,32 @@ function useClip(): { current: CanvasClip | null } {
 }
 
 /** The composite rect over `drawn`, in canvas pixels, or null when the group draws nothing. */
-function fittedRect(drawn: readonly THREE.Box3[], clip: CanvasClip, fitMargin: number): Rect2 | null {
+function fittedRect(
+  drawn: readonly THREE.Box3[],
+  clip: CanvasClip,
+  frameClip: CanvasClip | null,
+  fitMargin: number
+): Rect2 | null {
   return compositeRect(
     drawn.map((box) => canvasPixelRect(box, clip)),
-    clipPixelRect(clip),
+    shownPixelRect(clip, frameClip),
     fitMargin
   );
+}
+
+const shownBox = new THREE.Box3();
+
+/**
+ * The part of the canvas the frame shows, in `clip`'s pixels, which lists the items the group
+ * fits. It is the clip in a SubViewport. The root stage shows a panned view past Godot's viewport,
+ * and an item there draws as it does outside any group.
+ */
+function shownPixelRect(clip: CanvasClip, frameClip: CanvasClip | null): Rect2 {
+  if (!frameClip) return clipPixelRect(clip);
+  const { x, y, w, h } = frameClip.rect;
+  shownBox.min.set(x, y, 0);
+  shownBox.max.set(x + w, y + h, 0);
+  return canvasPixelRect(shownBox, clip);
 }
 
 const toLocal = new THREE.Matrix4();
