@@ -27,20 +27,23 @@ export interface DefaultFonts {
 export const NO_DEFAULT_FONTS: DefaultFonts = { variation: [null], system: [null] };
 
 /**
- * Keyed by the defaults, then by font, so a font answers one object per `DefaultFonts` and a
- * metrics cache keyed on it keeps its hits. The theme lookup builds one `DefaultFonts` per project.
+ * One `Resolution` per defaults, so a font answers one object per `DefaultFonts` wherever a walk
+ * reaches it, and a metrics cache keyed on it keeps its hits. The theme lookup builds one
+ * `DefaultFonts` per project.
  */
-const resolvedOver = perObject((defaults: DefaultFonts) =>
-  perObject((font: FontResource) => replaceDefaults(font, { defaults, resolved: new Map() }, 0))
-);
+const resolutionOver = perObject((defaults: DefaultFonts): Resolution => ({
+  defaults,
+  resolved: new WeakMap(),
+}));
 
 /**
- * One walk of a font graph over its defaults. `resolved` holds each font the walk has finished, so
- * a default whose fallbacks reach it again resolves once, not once per path to it.
+ * The walks of font graphs over one set of defaults. `resolved` holds each font a walk has
+ * finished, so a default that two fonts or two paths reach resolves once. Only a cycle walks past
+ * `MAX_FALLBACK_DEPTH`, and there the first walk to finish a font answers for the later ones.
  */
 interface Resolution {
   readonly defaults: DefaultFonts;
-  readonly resolved: Map<FontResource, FontResource>;
+  readonly resolved: WeakMap<FontResource, FontResource>;
 }
 
 /** `Font::_is_base_cyclic` (`font.cpp:152-169`): whether `candidate` is `font`, or its `base_font` chain reaches it. */
@@ -99,7 +102,7 @@ export function withDefaultFonts(font: FontResource | null, defaults: DefaultFon
   // No default changes a font, so the cache would answer `font` itself.
   if (!font || defaults === NO_DEFAULT_FONTS || (hasOwnGlyphs(font) && font.fallbacks.length === 0))
     return font;
-  return resolvedOver(defaults)(font);
+  return replaceDefaults(font, resolutionOver(defaults), 0);
 }
 
 const hasOwnGlyphs = (font: FontResource): boolean => font.kind === 'file' && hasGlyphs(font);
