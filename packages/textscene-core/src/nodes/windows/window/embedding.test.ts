@@ -6,7 +6,11 @@
 import { describe, expect, it } from 'vitest';
 import { subwindowStack, type StackedWindow } from './embedding';
 
-const window = (name: string, flags: Partial<StackedWindow> = {}): StackedWindow => ({
+interface NamedWindow extends StackedWindow {
+  name: string;
+}
+
+const window = (name: string, flags: Partial<StackedWindow> = {}): NamedWindow => ({
   name,
   unfocusable: false,
   alwaysOnTop: false,
