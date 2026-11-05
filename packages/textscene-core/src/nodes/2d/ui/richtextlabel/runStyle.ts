@@ -9,12 +9,12 @@ import { lastTagValue, resolveBBColor, type OpenBBCodeTag } from './bbcode';
 
 /** The innermost `[font_size=N]`, or `undefined` for none or an `N` of 0 or less (`font_size_it->font_size > 0`). */
 export function tagFontSizePx(tags: readonly OpenBBCodeTag[]): number | undefined {
-  const value = lastTagValue(tags, 'font_size');
-  return value === undefined ? undefined : fontSizeOf(value);
+  return fontSizeOf(lastTagValue(tags, 'font_size'));
 }
 
-/** A `[font_size=N]` payload, or `undefined` for an `N` of 0 or less. */
-export function fontSizeOf(value: string): number | undefined {
+/** A `[font_size=N]` payload, or `undefined` for none or an `N` of 0 or less. */
+export function fontSizeOf(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
   const sizePx = stringToInt(value);
   return sizePx > 0 ? sizePx : undefined;
 }
@@ -32,11 +32,11 @@ export function tagOutline(
   tags: readonly OpenBBCodeTag[],
   themeOutline: TextOutlineTheme,
   defaultColor: Rgba
-): { outlineSizePx: number; outlineColor: Rgba } {
+): TextOutlineTheme {
   const sizeValue = lastTagValue(tags, 'outline_size');
   const colorValue = lastTagValue(tags, 'outline_color');
   return {
-    outlineSizePx: sizeValue === undefined ? themeOutline.sizePx : outlineSizeOf(sizeValue),
-    outlineColor: colorValue === undefined ? themeOutline.color : resolveBBColor(colorValue, defaultColor),
+    sizePx: sizeValue === undefined ? themeOutline.sizePx : outlineSizeOf(sizeValue),
+    color: colorValue === undefined ? themeOutline.color : resolveBBColor(colorValue, defaultColor),
   };
 }

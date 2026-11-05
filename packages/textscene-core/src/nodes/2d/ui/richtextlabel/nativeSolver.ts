@@ -396,10 +396,8 @@ export interface StyledTextRun {
   color: Rgba;
   /** This run's font size, px (`resolveRunFontSizePx`): `normal_font_size` for a plain run. */
   fontSizePx: number;
-  /** The run's `outline_size`, px: the innermost `[outline_size]`, else the theme's (`_find_outline_size`, `rich_text_label.cpp:3326`). */
-  outlineSizePx: number;
-  /** The run's outline colour: the innermost `[outline_color]`, else the theme's (`_find_outline_color`, `:3575`). */
-  outlineColor: Rgba;
+  /** The run's outline: the innermost `[outline_size]` and `[outline_color]`, else the theme's (`_find_outline_size`, `rich_text_label.cpp:3326`; `_find_outline_color`, `:3575`). */
+  outline: TextOutlineTheme;
   /** The paragraph's `HorizontalAlignment` (`paragraphAlignment`). */
   alignment: number;
   /** The paragraph's direction, language and override (`paragraphBidiOptions`), INHERITED resolved. */
@@ -499,7 +497,7 @@ export function styledTextRuns(
             underline: false,
             color: defaultColor,
             fontSizePx: normalFontSizePx,
-            ...tagOutline([], themeOutline, defaultColor),
+            outline: themeOutline,
             alignment: paragraphAlignment([], props.horizontalAlignment),
             bidi: controlBidiOptions(props, n),
             ...paragraphShapeOptions([], props),
@@ -535,7 +533,7 @@ export function styledTextRuns(
         color: image.spec.color,
         // Carries the object width: `imageObjectFontMetrics`.
         fontSizePx: image.sizePx.x,
-        ...tagOutline([], themeOutline, defaultColor),
+        outline: themeOutline,
         alignment: paragraphAlignment(run.tags, props.horizontalAlignment),
         bidi: paragraphBidiOptions(run.tags, props, n),
         listing,
@@ -556,7 +554,7 @@ export function styledTextRuns(
       color: colorValue !== undefined ? resolveBBColor(colorValue, defaultColor) : defaultColor,
       // `_shape_line` reads the size item after the font item (`rich_text_label.cpp:639-641`).
       fontSizePx: tagFontSizePx(run.tags) ?? fontSizePxOf(bold, italic),
-      ...tagOutline(run.tags, themeOutline, defaultColor),
+      outline: tagOutline(run.tags, themeOutline, defaultColor),
       alignment: paragraphAlignment(run.tags, props.horizontalAlignment),
       bidi: paragraphBidiOptions(run.tags, props, n),
       listing,
@@ -739,7 +737,7 @@ export interface RichTextRunPlacement {
   lineOffsetXPx: number;
   underline: boolean;
   color: Rgba;
-  /** The run's outline ring, in the run's own colour space before the control tint: `outlineSizePx` and `outlineColor`. */
+  /** The run's outline ring, in the run's own colour space before the control tint: its size and colour. */
   outline: TextOutlineTheme;
   /** The run's font size, px, for its glyphs. The baseline is the line's: `layout.baselineOffsetPx`. */
   fontSizePx: number;
@@ -766,13 +764,13 @@ function soloRunLayout(
   // `x`, and a canvas raster sized to the span alone would clip a run that starts mid-line.
   const lastGlyph = glyphs.at(-1);
   const widthPx = lastGlyph ? lastGlyph.x + lastGlyph.advance : 0;
-  const solo = soloLineLayout(
+  return soloLineLayout(
     { text, glyphs, widthPx, paragraphIndex: 0 },
     parentLayout,
     lineAscentPx,
-    fontMetrics
+    fontMetrics,
+    Math.max(parentLayout.linePitchPx, lineHeightPx)
   );
-  return { ...solo, heightPx: Math.max(solo.heightPx, lineHeightPx) };
 }
 
 /**
@@ -1172,7 +1170,7 @@ export function layoutRichTextRuns(
         lineOffsetXPx,
         underline: run.underline,
         color: run.color,
-        outline: { sizePx: run.outlineSizePx, color: run.outlineColor },
+        outline: run.outline,
         fontSizePx: run.fontSizePx,
         layout: soloRunLayout(segment, layout, ascentPx, ascentPx + descentPx),
         image: run.image

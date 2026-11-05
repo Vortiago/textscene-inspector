@@ -121,7 +121,7 @@ function markerFormatting(
   const outlineColorValue = pick(tags, 'outline_color');
   const fontSizeValue = pick(tags, 'font_size');
   return {
-    fontSizePx: fontSizeValue === undefined ? undefined : fontSizeOf(fontSizeValue),
+    fontSizePx: fontSizeOf(fontSizeValue),
     color: colorOf(pick(tags, 'color'), defaultColor),
     outlineSizePx: sizeValue === undefined ? undefined : outlineSizeOf(sizeValue),
     outlineColor: colorOf(outlineColorValue, defaultColor),

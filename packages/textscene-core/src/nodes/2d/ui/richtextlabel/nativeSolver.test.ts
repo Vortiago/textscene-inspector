@@ -77,8 +77,7 @@ function textRun(fields: Pick<StyledTextRun, 'text' | 'fontSizePx'> & Partial<St
     italic: false,
     underline: false,
     color: WHITE,
-    outlineSizePx: 0,
-    outlineColor: { r: 0, g: 0, b: 0, a: 1 },
+    outline: { sizePx: 0, color: { r: 0, g: 0, b: 0, a: 1 } },
     alignment: 0,
     bidi: NO_BIDI,
     justificationFlags: PARSED_DEFAULTS.justificationFlags,
@@ -1988,34 +1987,34 @@ describe('styledTextRuns: [font_size], [outline_size] and [outline_color]', () =
   describe('[outline_size] and [outline_color] (rich_text_label.cpp:3326-3338, :3575-3588, :6154-6159, :6367-6371)', () => {
     it('draws no outline by default: the theme outline_size is 0 and the colour is black', () => {
       const [run] = runsOf('x');
-      expect(run!.outlineSizePx).toBe(0);
-      expect(run!.outlineColor).toEqual(BLACK);
+      expect(run!.outline.sizePx).toBe(0);
+      expect(run!.outline.color).toEqual(BLACK);
     });
 
     it('sets the size inside the tag only', () => {
       const runs = runsOf('a[outline_size=3]b[/outline_size]c');
-      expect(runs.map((run) => run.outlineSizePx)).toEqual([0, 3, 0]);
+      expect(runs.map((run) => run.outline.sizePx)).toEqual([0, 3, 0]);
     });
 
     it('clamps a negative size to 0 (`push_outline_size(MAX(0, fnt_size))`)', () => {
       const [run] = runsOf('[outline_size=-4]x[/outline_size]', {}, { constants: { outline_size: 2 } });
-      expect(run!.outlineSizePx).toBe(0);
+      expect(run!.outline.sizePx).toBe(0);
     });
 
     it('starts from the theme outline_size and font_outline_color', () => {
       const [run] = runsOf('x', {}, { constants: { outline_size: 2 }, colors: { font_outline_color: RED } });
-      expect(run!.outlineSizePx).toBe(2);
-      expect(run!.outlineColor).toEqual(RED);
+      expect(run!.outline.sizePx).toBe(2);
+      expect(run!.outline.color).toEqual(RED);
     });
 
     it('sets the colour inside the tag, innermost first', () => {
       const runs = runsOf('[outline_color=red]a[outline_color=#00ff00]b[/outline_color]c[/outline_color]d');
-      expect(runs.map((run) => run.outlineColor)).toEqual([RED, { r: 0, g: 1, b: 0, a: 1 }, RED, BLACK]);
+      expect(runs.map((run) => run.outline.color)).toEqual([RED, { r: 0, g: 1, b: 0, a: 1 }, RED, BLACK]);
     });
 
     it('falls back to the control default colour for a value that is not a colour (`Color::from_string(value, default_color)`)', () => {
       const [run] = runsOf('[outline_color=nonsense]x[/outline_color]');
-      expect(run!.outlineColor).toEqual(WHITE);
+      expect(run!.outline.color).toEqual(WHITE);
     });
   });
 });
