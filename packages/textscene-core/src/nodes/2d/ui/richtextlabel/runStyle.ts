@@ -20,7 +20,7 @@ function fontSizeOf(value: string | undefined): number | undefined {
 }
 
 /** A `[outline_size=N]` payload: a negative size is 0 (`push_outline_size(MAX(0, n))`, `:6370`). */
-export function outlineSizeOf(value: string): number {
+function outlineSizeOf(value: string): number {
   return Math.max(0, stringToInt(value));
 }
 
@@ -34,19 +34,35 @@ export function markerFontSizeOf(value: string | undefined): number | undefined 
   return sizePx === -1 ? undefined : sizePx;
 }
 
-/**
- * The outline of a run: the innermost `[outline_size]` and `[outline_color]`, each over the theme's.
- * An unreadable colour is `defaultColor` (`:6155`).
- */
+/** Chooses one value among the open tags of a kind, or `undefined` for none. */
+export type TagValuePick = (tags: readonly OpenBBCodeTag[], name: string) => string | undefined;
+
+/** The `[outline_size]` and `[outline_color]` that `pick` finds, each `undefined` where no tag sets it. */
+export interface TagOutline {
+  sizePx: number | undefined;
+  color: Rgba | undefined;
+}
+
+/** The outline tags of `tags` as `pick` chooses them. An unreadable colour is `defaultColor` (`:6155`). */
+export function tagOutlineOf(
+  tags: readonly OpenBBCodeTag[],
+  pick: TagValuePick,
+  defaultColor: Rgba
+): TagOutline {
+  const sizeValue = pick(tags, 'outline_size');
+  const colorValue = pick(tags, 'outline_color');
+  return {
+    sizePx: sizeValue === undefined ? undefined : outlineSizeOf(sizeValue),
+    color: colorValue === undefined ? undefined : resolveBBColor(colorValue, defaultColor),
+  };
+}
+
+/** The outline of a run: the innermost `[outline_size]` and `[outline_color]`, each over the theme's. */
 export function tagOutline(
   tags: readonly OpenBBCodeTag[],
   themeOutline: TextOutlineTheme,
   defaultColor: Rgba
 ): TextOutlineTheme {
-  const sizeValue = lastTagValue(tags, 'outline_size');
-  const colorValue = lastTagValue(tags, 'outline_color');
-  return {
-    sizePx: sizeValue === undefined ? themeOutline.sizePx : outlineSizeOf(sizeValue),
-    color: colorValue === undefined ? themeOutline.color : resolveBBColor(colorValue, defaultColor),
-  };
+  const { sizePx, color } = tagOutlineOf(tags, lastTagValue, defaultColor);
+  return { sizePx: sizePx ?? themeOutline.sizePx, color: color ?? themeOutline.color };
 }

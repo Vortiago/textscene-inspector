@@ -17,6 +17,7 @@ import {
   scrollBarMinimumSize,
   type ScrollBarPlacement,
 } from '../shared/scrollBarSolver';
+import { clampRangeValue } from '../shared/range';
 import { richTextContentHeightPx, type RichTextLayout, type StyledTextRun } from './nativeSolver';
 
 /** The text shaped at one wrap width. */
@@ -86,9 +87,11 @@ export function shapeBesideScrollBar(
   const wrapWidthPx = box.w - barWidthPx;
   const beside = shapeAt(wrapWidthPx);
   const contentHeightPx = richTextContentHeightPx(beside.runs, beside.layout);
-  // `set_value(total_height)` (`:3827-3828`), which `Range` clamps to `max - page`, then to `min`
-  // (`range.cpp:192-196`). A `%` image narrows beside the bar, so the text there can be shorter than the rect.
-  const scrollOffsetPx = box.scrollFollowing ? Math.max(0, contentHeightPx - box.h) : 0;
+  // `set_value(total_height)` (`:3827-3828`). A `%` image narrows beside the bar, so the text
+  // there can be shorter than the rect, and the clamp to `min` holds it at 0.
+  const scrollOffsetPx = box.scrollFollowing
+    ? clampRangeValue(contentHeightPx, 0, contentHeightPx, box.h)
+    : 0;
   return {
     ...beside,
     wrapWidthPx,

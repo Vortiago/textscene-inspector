@@ -21,6 +21,7 @@ import {
   ValueFormat,
   type LayoutTable,
   type PairValueRecord,
+  type Subtable,
 } from '../autofit/openTypeLayout';
 import { gdefOf, glyphPropsReader, lookupMatcher, type LookupGlyph } from '../autofit/openTypeGdef';
 import { FIXED_16_16_ONE } from '../fontMetrics';
@@ -59,6 +60,27 @@ function kernLookups(table: LayoutTable): number[] {
   return [...lookups].sort((a, b) => a - b);
 }
 
+/** A kerning lookup's flag, and the pair subtables it holds. */
+interface PairLookup {
+  props: number;
+  subtables: readonly Subtable[];
+}
+
+/**
+ * The kerning lookups that hold a pair subtable, each with its pair subtables only. A function of
+ * its own, so the reader's closure keeps these and not the whole `GPOS` table.
+ */
+function pairLookupsOf(table: LayoutTable): PairLookup[] {
+  const pairLookups: PairLookup[] = [];
+  for (const index of kernLookups(table)) {
+    const lookup = table.lookups[index];
+    if (!lookup) continue;
+    const subtables = lookup.subtables.filter((subtable) => subtable.type === GposType.PAIR);
+    if (subtables.length > 0) pairLookups.push({ props: lookup.props, subtables });
+  }
+  return pairLookups;
+}
+
 /**
  * The x advance a value record adds, in design units: its own, and the delta of its device table at
  * `normalized` when that table is a `VariationIndex`. A hinting device adds nothing: `hb-ft` sets no
@@ -90,18 +112,15 @@ export function instanceKerningReader(
   const table = sfntGpos(sfnt);
   const axes = readFvarAxes(sfnt);
   if (!table || !axes) return null;
-  const pairLookups = kernLookups(table).map((index) => {
-    const lookup = table.lookups[index];
-    const subtables = (lookup?.subtables ?? []).filter((subtable) => subtable.type === GposType.PAIR);
-    return { props: lookup?.props ?? 0, subtables };
-  });
-  if (pairLookups.every(({ subtables }) => subtables.length === 0)) return null;
+  const pairLookups = pairLookupsOf(table);
+  if (pairLookups.length === 0) return null;
   const store = gdefVariationStore(sfnt, axes.length);
   const propsOf = glyphPropsReader(sfnt);
   const matches = lookupMatcher(sfnt);
   const { dv } = sfnt;
   return (normalized) => (left, right) => {
-    const [leftProps, rightProps] = [propsOf(left), propsOf(right)];
+    const leftProps = propsOf(left);
+    const rightProps = propsOf(right);
     let units = 0;
     for (const { props, subtables } of pairLookups) {
       // A lookup kerns neither glyph that its flag skips: it skips the left one, and pairs the left one past the right one.
@@ -109,7 +128,9 @@ export function instanceKerningReader(
       for (const { offset } of subtables) {
         const records = pairValueRecords(dv, offset, left.glyph, right.glyph);
         if (!records) continue;
-        units += records.reduce((sum, record) => sum + xAdvanceUnits(dv, record, store, normalized), 0);
+        let pairUnits = 0;
+        for (const record of records) pairUnits += xAdvanceUnits(dv, record, store, normalized);
+        units += pairUnits;
         break;
       }
     }

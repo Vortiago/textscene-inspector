@@ -121,11 +121,11 @@ function instanceKerningOf(
   kerningReader: InstanceKerningReader | null
 ): SfntOutlines['kerningAtInstance'] {
   if (!kerningReader) return undefined;
-  // Undefined until an instance first asks. Null is a font with no pair kerning, read only once.
-  let kerningAt: ReturnType<InstanceKerningReader> | undefined;
+  // Read when an instance first asks. Null is a font with no pair kerning, read only once.
+  const kerningOf = perObject((font: SfntFile) => orOnRangeError(() => kerningReader(font), null));
   // Kept with its instance, which `fontInstanceOf` bounds.
   const pairsAt = perObject((instance: FontInstance): CharacterKerning | null => {
-    if (kerningAt === undefined) kerningAt = orOnRangeError(() => kerningReader(sfnt), null);
+    const kerningAt = kerningOf(sfnt);
     return kerningAt && keptPairs(glyphIndex, kerningAt(instance.normalized));
   });
   // Equal axis values share one instance, and so one kept pair for each pair.
@@ -138,22 +138,24 @@ function instanceKerningOf(
   };
 }
 
-/** `kerningOf` for characters, with the answer for each pair kept by left, then right character. */
+/** Past the last code point, so `left * CODE_POINT_LIMIT + right` names one pair, well inside 2^53. */
+const CODE_POINT_LIMIT = 0x110000;
+
+/** `kerningOf` for characters, with the answer for each pair kept by its pair of code points. */
 function keptPairs(
   glyphIndex: (codePoint: number) => number,
   kerningOf: PairKerningReader
 ): CharacterKerning {
-  const kept = new Map<number, Map<number, number | null>>();
+  const kept = new Map<number, number | null>();
   return (leftCodePoint, rightCodePoint) => {
-    let byRight = kept.get(leftCodePoint);
-    if (!byRight) kept.set(leftCodePoint, (byRight = new Map()));
-    const known = byRight.get(rightCodePoint);
+    const pair = leftCodePoint * CODE_POINT_LIMIT + rightCodePoint;
+    const known = kept.get(pair);
     if (known !== undefined) return known;
     const left = { glyph: glyphIndex(leftCodePoint), codePoint: leftCodePoint };
     const right = { glyph: glyphIndex(rightCodePoint), codePoint: rightCodePoint };
     const units =
       left.glyph === 0 || right.glyph === 0 ? null : orOnRangeError(() => kerningOf(left, right), 0);
-    byRight.set(rightCodePoint, units);
+    kept.set(pair, units);
     return units;
   };
 }
@@ -194,7 +196,7 @@ function instanceAdvanceReader(sfnt: SfntFile): SfntOutlines['advanceAtInstance'
   );
 
   return (glyphIndex, fontSizePx, opentype) => {
-    const byGlyph = kept(opentype)(fontSizePx, () => new Map());
+    const byGlyph = kept(opentype)(fontSizePx, newAdvancesByGlyph);
     if (byGlyph.has(glyphIndex)) return byGlyph.get(glyphIndex)!;
     const instance = fontInstanceOf(sfnt, opentype);
     readers ??= instanceAdvanceReaders(sfnt);
@@ -203,6 +205,9 @@ function instanceAdvanceReader(sfnt: SfntFile): SfntOutlines['advanceAtInstance'
     return advance;
   };
 }
+
+/** Built once, not per read: `recentlyRead` calls it only for a size it does not keep. */
+const newAdvancesByGlyph = (): Map<number, number | null> => new Map();
 
 /** A font size animation passes through many sizes, so the advances of this many sizes of one instance are kept. */
 const MAX_KEPT_SIZES = 8;
