@@ -485,6 +485,12 @@ The tests and goldens of the auto-hinter read these fixture fonts:
 - `scenes/fixtures/fonts/autofit-scripts-test.ttf`: the same subset with copies of its glyphs mapped to han,
   Oriya, Armenian and Arabic characters, renamed to the family "Autofit Scripts Test".
 
+The bidi goldens read this fixture font:
+
+- `scenes/fixtures/fonts/noto-sans-adlam-unjoined-subset.ttf`: the Adlam subset of Noto Sans Adlam Unjoined
+  Regular, as the `@fontsource/noto-sans-adlam-unjoined` package ships it. Copyright 2022 The Noto Project
+  Authors (github.com/notofonts/adlam).
+
 Each is licensed under the SIL Open Font License, Version 1.1 (OFL-1.1), whose full text the Open Sans section
 above holds.
 

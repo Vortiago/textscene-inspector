@@ -1193,6 +1193,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Astral Rtl",
+    "file": "unit-label-astral-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Autowrap In Container",
     "file": "unit-label-autowrap-in-container.tscn",
     "category": "Other"

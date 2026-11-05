@@ -871,6 +871,7 @@ export const CANVAS_2D_SCENES = [
   { name: 'label-bidi-alignment', file: 'unit-label-bidi-alignment.tscn', mode: '2d' },
   { name: 'label-structured-text', file: 'unit-label-structured-text.tscn', mode: '2d' },
   { name: 'label-language', file: 'unit-label-language.tscn', mode: '2d' },
+  { name: 'label-astral-rtl', file: 'unit-label-astral-rtl.tscn', mode: '2d' },
   { name: 'line-edit-rtl', file: 'unit-line-edit-rtl.tscn', mode: '2d' },
   { name: 'text-edit-rtl', file: 'unit-text-edit-rtl.tscn', mode: '2d' },
   { name: 'code-edit-rtl', file: 'unit-code-edit-rtl.tscn', mode: '2d' },

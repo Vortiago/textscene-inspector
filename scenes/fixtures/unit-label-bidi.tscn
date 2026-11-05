@@ -1,7 +1,7 @@
 ; One variable: the paragraph direction of a Label, through `text_direction` (label.cpp:178-181)
 ; and the inferred direction of AUTO (text_server_adv.cpp:7231-7256). Each row reorders by the
-; Unicode bidirectional algorithm and mirrors a paired character at an odd level. No other fixture
-; holds a right-to-left character, so none of them moves.
+; Unicode bidirectional algorithm and mirrors a paired character at an odd level. Only the Label
+; bidi fixtures hold a right-to-left character, so no other fixture moves.
 
 [gd_scene load_steps=3 format=3]
 

@@ -7,6 +7,10 @@ import { describe, expect, it } from 'vitest';
 import { resolveParagraphBidi } from './bidi';
 import { TextDirection } from '../../../../godot/text/textServerEnums';
 
+/** Two Adlam capital letters, a right-to-left script outside the Basic Multilingual Plane. */
+const ADLAM_ALIF = '\u{1E900}';
+const ADLAM_DAALI = '\u{1E901}';
+
 const { TEXT_DIRECTION_AUTO, TEXT_DIRECTION_LTR, TEXT_DIRECTION_RTL, TEXT_DIRECTION_INHERITED } =
   TextDirection;
 
@@ -15,7 +19,7 @@ function visualText(text: string, direction: number, start = 0, end = text.lengt
   const bidi = resolveParagraphBidi(text, { direction, language });
   return bidi
     .visualOrder(start, end)
-    .map((index) => bidi.glyphChar(index))
+    .map((index) => bidi.glyphChars[index])
     .join('');
 }
 
@@ -29,7 +33,7 @@ describe('resolveParagraphBidi', () => {
     const bidi = resolveParagraphBidi('Hello (world) 123');
     expect(bidi.isLeftToRight).toBe(true);
     expect(bidi.visualOrder(6, 13)).toEqual([6, 7, 8, 9, 10, 11, 12]);
-    expect(bidi.glyphChar(6)).toBe('(');
+    expect(bidi.glyphChars[6]).toBe('(');
   });
 
   it('runs the bidi pass on an RTL Latin paragraph, whose levels are not all 0', () => {
@@ -86,7 +90,7 @@ describe('resolveParagraphBidi', () => {
     expect(
       bidi
         .visualOrder(0, text.length)
-        .map((index) => bidi.glyphChar(index))
+        .map((index) => bidi.glyphChars[index])
         .join('')
     ).toBe('םולש/abc');
   });
@@ -117,8 +121,24 @@ describe('resolveParagraphBidi', () => {
 
   it('mirrors only a character at an odd level', () => {
     const bidi = resolveParagraphBidi('(a) (ש)', { direction: TEXT_DIRECTION_LTR });
-    expect([0, 2, 4, 6].map((index) => bidi.glyphChar(index))).toEqual(['(', ')', '(', ')']);
+    expect([0, 2, 4, 6].map((index) => bidi.glyphChars[index])).toEqual(['(', ')', '(', ')']);
     const rtl = resolveParagraphBidi('(ש)', { direction: TEXT_DIRECTION_RTL });
-    expect([0, 2].map((index) => rtl.glyphChar(index))).toEqual([')', '(']);
+    expect([0, 2].map((index) => rtl.glyphChars[index])).toEqual([')', '(']);
+  });
+
+  it('resolves both units of an astral right-to-left letter to its own level', () => {
+    const bidi = resolveParagraphBidi(`a ${ADLAM_ALIF} b`, { direction: TEXT_DIRECTION_LTR });
+    expect(Array.from(bidi.levels)).toEqual([0, 0, 1, 1, 0, 0]);
+  });
+
+  it('reverses an astral right-to-left word and keeps each letter whole', () => {
+    expect(visualText(`${ADLAM_ALIF}${ADLAM_DAALI} abc`, TEXT_DIRECTION_AUTO)).toBe(
+      `abc ${ADLAM_DAALI}${ADLAM_ALIF}`
+    );
+  });
+
+  it('draws an astral letter at its first unit and no glyph at its second', () => {
+    const bidi = resolveParagraphBidi(`a${ADLAM_ALIF}`, { direction: TEXT_DIRECTION_LTR });
+    expect([1, 2].map((index) => bidi.glyphChars[index])).toEqual([ADLAM_ALIF, '']);
   });
 });

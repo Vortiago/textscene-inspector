@@ -402,7 +402,10 @@ function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: 
   return getFontKerningAdjustmentPx(metrics, a, b, fontSizePx);
 }
 
-/** A character outside every bidi override range: Godot shapes no glyph for it, so it has no width and no break. */
+/**
+ * A unit with no glyph of its own: a character outside every bidi override range, which Godot does
+ * not shape, or the second unit of a surrogate pair. It has no width and no break.
+ */
 function unshapedGlyph(index: number): BreakGlyph {
   return {
     start: index,
@@ -424,7 +427,7 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
   const { sizes, faces } = style;
   const glyphs: BreakGlyph[] = [];
   for (let i = 0; i < chars.length; i++) {
-    if (style.rangeIds[i]! < 0) {
+    if (style.rangeIds[i]! < 0 || chars[i] === '') {
       glyphs.push(unshapedGlyph(i));
       continue;
     }
@@ -472,10 +475,13 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
   // whole-pixel round: a GPOS pair is already inside HarfBuzz's `x_advance` when
   // `text_server_adv.cpp:7077` reads it. The pair stays logical, as the font defines it. Where
   // HarfBuzz quantises the pair is not pinned, as the vendored font has no kerning.
-  for (let i = 0; i + 1 < chars.length; i++) {
-    if (startsNewRun(style, i + 1) || style.rangeIds[i]! < 0) continue;
-    const visualLeft = isRtlRun(style, i) ? i + 1 : i;
-    glyphs[visualLeft]!.advance += kerningAdjustmentPx(chars[i]!, chars[i + 1]!, sizes[i]!, faces[i]!);
+  for (let i = 0; i < chars.length; i++) {
+    if (chars[i] === '' || style.rangeIds[i]! < 0) continue;
+    // A surrogate pair's glyph char holds both units, so its length steps over the second.
+    const next = i + chars[i]!.length;
+    if (next >= chars.length || startsNewRun(style, next)) continue;
+    const visualLeft = isRtlRun(style, i) ? next : i;
+    glyphs[visualLeft]!.advance += kerningAdjustmentPx(chars[i]!, chars[next]!, sizes[i]!, faces[i]!);
   }
   roundAdvancesToWholePixels(glyphs, chars, style);
   glyphs.push({
@@ -504,7 +510,7 @@ function roundAdvancesToWholePixels(glyphs: BreakGlyph[], chars: ArrayLike<strin
     if (fontUsesSubpixelPositioning(style.sizes[start]!)) continue;
     const step = isRtlRun(style, start) ? -1 : 1;
     for (let i = step > 0 ? start : end - 1; i >= start && i < end; i += step) {
-      const cp = chars[i]!.codePointAt(0)!;
+      const cp = chars[i]!.codePointAt(0) ?? 0;
       // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
       if (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp)) advanceRemainder = 0;
       const fullAdvance = advanceRemainder + glyphs[i]!.advance;
@@ -751,9 +757,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     const sourceIndex = (i: number): number => para.offset + Math.max(0, Math.min(i, para.text.length - 1));
     const paraText = para.terminated ? para.text + PARAGRAPH_TERMINATOR : para.text;
     const bidi = resolveParagraphBidi(paraText, { direction, overrides: bidiOverride?.(paraText), language });
-    const chars: ArrayLike<string> = bidi.isLeftToRight
-      ? paraText
-      : Array.from({ length: paraText.length }, (_v, i) => bidi.glyphChar(i));
+    const chars = bidi.glyphChars;
     const runStyle: RunStyle = {
       sizes: Array.from({ length: paraText.length }, (_v, i) =>
         fontSizePxAt ? fontSizePxAt(sourceIndex(i)) : fontSizePx
@@ -795,23 +799,27 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
           )
         : null;
       let penX = 0;
-      const glyphs = bidi.visualOrder(start, clampedEnd).map((idx): GlyphPlacement => {
-        const advance = lineAdvances ? lineAdvances[idx - start]! : breakGlyphs[idx]!.advance;
-        const x = penX;
-        penX += advance;
-        return {
-          char: chars[idx]!,
-          x,
-          advance,
-          // Atlas bitmaps exist only for the font `openSansAtlas.ts` bakes.
-          glyph: runStyle.faces[idx]!.kind === 'atlas' ? (OPEN_SANS_ATLAS_GLYPHS[chars[idx]!] ?? null) : null,
-          controlCodepoint: breakGlyphs[idx]!.controlCodepoint,
-          emboldenGrowthPx: breakGlyphs[idx]!.emboldenGrowthPx || undefined,
-          sourceIndex: para.offset + idx,
-          fontSizePx: runStyle.sizes[idx]!,
-          fontMetrics: runStyle.faces[idx]!,
-        };
-      });
+      const glyphs = bidi
+        .visualOrder(start, clampedEnd)
+        .filter((idx) => chars[idx] !== '')
+        .map((idx): GlyphPlacement => {
+          const advance = lineAdvances ? lineAdvances[idx - start]! : breakGlyphs[idx]!.advance;
+          const x = penX;
+          penX += advance;
+          return {
+            char: chars[idx]!,
+            x,
+            advance,
+            // Atlas bitmaps exist only for the font `openSansAtlas.ts` bakes.
+            glyph:
+              runStyle.faces[idx]!.kind === 'atlas' ? (OPEN_SANS_ATLAS_GLYPHS[chars[idx]!] ?? null) : null,
+            controlCodepoint: breakGlyphs[idx]!.controlCodepoint,
+            emboldenGrowthPx: breakGlyphs[idx]!.emboldenGrowthPx || undefined,
+            sourceIndex: para.offset + idx,
+            fontSizePx: runStyle.sizes[idx]!,
+            fontMetrics: runStyle.faces[idx]!,
+          };
+        });
       lines.push({
         text: paraText.slice(start, clampedEnd),
         glyphs,

@@ -36,8 +36,11 @@ export interface ParagraphBidi {
   visualOrder(start: number, end: number): number[];
   /** The override range of each character, which shapes as its own runs. -1 for a character no range covers, which has no glyph. */
   readonly rangeIds: Int32Array;
-  /** The character the glyph at `index` draws: its mirrored pair at an odd level, as HarfBuzz draws an RTL run. */
-  glyphChar(index: number): string;
+  /**
+   * The character each glyph draws, one entry per UTF-16 unit: its mirrored pair at an odd level, as
+   * HarfBuzz draws an RTL run. A surrogate pair draws its code point at the first unit and '' at the second.
+   */
+  readonly glyphChars: ArrayLike<string>;
 }
 
 /** One override range with the levels of its own bidi pass, indexed from the range start. */
@@ -57,6 +60,56 @@ type BaseDirection = 'ltr' | 'rtl';
  */
 const RAISES_LEVEL =
   /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF\u200F\u202A-\u202E\u2066-\u2069\u{10800}-\u{10FFF}\u{1E800}-\u{1EFFF}]/u;
+
+const SURROGATE = /[\uD800-\uDFFF]/;
+
+/**
+ * A BMP character of each bidi type an astral character can have, other than L. bidi-js reads one
+ * UTF-16 unit at a time and types a lone surrogate L, so an astral R letter would resolve as L.
+ */
+const BMP_CHAR_OF_BIDI_TYPE: Readonly<Record<string, string>> = {
+  R: '\u05D0',
+  AL: '\u0627',
+  EN: '0',
+  ES: '+',
+  ET: '#',
+  AN: '\u0660',
+  CS: ',',
+  NSM: '\u0300',
+  BN: '\u00AD',
+  ON: '!',
+};
+
+/**
+ * `text` with each astral character replaced by two BMP units of its own bidi type, so the levels
+ * match ICU's, which reads a surrogate pair as one code point. The UTF-16 indices do not change.
+ */
+function bidiTypedText(text: string): string {
+  if (!SURROGATE.test(text)) return text;
+  return Array.from(text, (char) => {
+    if (char.length === 1) return char;
+    const bmpChar = BMP_CHAR_OF_BIDI_TYPE[bidi.getBidiCharTypeName(char)];
+    return bmpChar ? bmpChar + bmpChar : char;
+  }).join('');
+}
+
+/** The character the glyph at `index` draws: a whole surrogate pair at its first unit, '' at its second. */
+function unitGlyphChar(text: string, index: number): string {
+  const codePoint = text.codePointAt(index)!;
+  if (codePoint > 0xffff) return String.fromCodePoint(codePoint);
+  const isSecondUnit =
+    codePoint >= 0xdc00 && codePoint <= 0xdfff && (text.codePointAt(index - 1) ?? 0) > 0xffff;
+  return isSecondUnit ? '' : text[index]!;
+}
+
+/** The glyph characters of `text`, mirrored where `isMirrored` says so. The text itself when it has no surrogate pair and no mirror. */
+function glyphCharsOf(text: string, isMirrored?: (index: number) => boolean): ArrayLike<string> {
+  if (!isMirrored && !SURROGATE.test(text)) return text;
+  return Array.from({ length: text.length }, (_v, index) => {
+    const char = unitGlyphChar(text, index);
+    return isMirrored?.(index) && char.length === 1 ? (bidi.getMirroredCharacter(char) ?? char) : char;
+  });
+}
 
 /**
  * `ubidi_getBaseDirection`: the direction of the first strong character, L or R or AL, else null.
@@ -133,7 +186,7 @@ function leftToRightParagraph(text: string): ParagraphBidi {
     levels: new Uint8Array(text.length),
     rangeIds: new Int32Array(text.length),
     visualOrder: logicalOrder,
-    glyphChar: (index) => text[index]!,
+    glyphChars: glyphCharsOf(text),
   };
 }
 
@@ -165,9 +218,10 @@ export function resolveParagraphBidi(text: string, options: ParagraphBidiOptions
 
   const levels = new Uint8Array(text.length);
   const rangeIds = new Int32Array(text.length).fill(-1);
+  const typedText = bidiTypedText(text);
   const ranges: ResolvedRange[] = shapedRanges(text.length, overrides).map(
     ({ start, end, direction }, rangeId) => {
-      const rangeText = text.slice(start, end);
+      const rangeText = typedText.slice(start, end);
       const embedding = bidi.getEmbeddingLevels(rangeText, rangeDirection(rangeText, direction, paragraph));
       levels.set(embedding.levels, start);
       rangeIds.fill(rangeId, start, end);
@@ -182,10 +236,6 @@ export function resolveParagraphBidi(text: string, options: ParagraphBidiOptions
       return from < to ? rangeVisualOrder(range, from, to) : [];
     });
 
-  const glyphChar = (index: number): string => {
-    const char = text[index]!;
-    return levels[index]! % 2 === 1 ? (bidi.getMirroredCharacter(char) ?? char) : char;
-  };
-
-  return { isRtl: paragraph === 'rtl', isLeftToRight: false, levels, rangeIds, visualOrder, glyphChar };
+  const glyphChars = glyphCharsOf(text, (index) => levels[index]! % 2 === 1);
+  return { isRtl: paragraph === 'rtl', isLeftToRight: false, levels, rangeIds, visualOrder, glyphChars };
 }

@@ -111,6 +111,8 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
   has no glyph, as the first part of a LIST. CUSTOM needs a script, so it gives no range.
 - Each line reorders on its own after the line break (`text_server_adv.cpp:5350-5420`), and a
   character at an odd level draws its mirrored pair.
+- An astral character, such as an Adlam letter, takes its own direction. ICU reads its surrogate
+  pair as one code point.
 - FILL with autowrap puts the lines of a right-to-left paragraph at the right edge
   (`label.cpp:472-478`). LEFT, CENTER and RIGHT read the layout direction only.
 - The overrun trim of a right-to-left line keeps its logical start and draws the ellipsis at
@@ -119,8 +121,6 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 ## Known limitations
 
 - **Not drawn** Arabic letters draw in their isolated forms, since the shaper does not join them.
-- **Approximated** An astral right-to-left script, such as Adlam, keeps its logical order, since the
-  bidi library classifies each UTF-16 unit on its own.
 - **Approximated** A scene font's glyphs draw with the browser's hinting, not FreeType's light
   hinting (`font.h:203`, `text_server_adv.cpp:1276-1277`), so a cap can sit 1 px lower here.
 - **Approximated** A wrapping Label inside a ScrollContainer can read one line short when

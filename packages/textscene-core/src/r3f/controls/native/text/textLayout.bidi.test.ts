@@ -10,6 +10,10 @@ import type { FontMetrics } from './fontMetrics';
 import { AutowrapMode, StructuredTextParser, TextDirection } from '../../../../godot/text/textServerEnums';
 import { parseStructuredText } from '../../../../godot/text/structuredText';
 
+const ADLAM_ALIF = '\u{1E900}';
+const ADLAM_DAALI = '\u{1E901}';
+const MATHEMATICAL_BOLD_A = '\u{1D400}';
+
 const BASE: ShapeTextOptions = {
   fontSizePx: 16,
   boxWidthPx: 0,
@@ -154,5 +158,20 @@ describe('shapeText — language', () => {
 
   it('upper-cases with the root rules without a language', () => {
     expect(firstLine('istanbul', { uppercase: true }).text).toBe('ISTANBUL');
+  });
+
+  it('draws an astral right-to-left word in visual order, one glyph per letter', () => {
+    const line = firstLine(`${ADLAM_ALIF}${ADLAM_DAALI} abc`);
+    expect(visualChars(line)).toBe(`abc ${ADLAM_DAALI}${ADLAM_ALIF}`);
+    expect(line.glyphs.map((glyph) => glyph.sourceIndex)).toEqual([5, 6, 7, 4, 2, 0]);
+    expectContiguousPen(line);
+  });
+
+  it('draws an astral left-to-right letter as one glyph', () => {
+    const line = firstLine(`${MATHEMATICAL_BOLD_A}b`);
+    expect(line.glyphs.map((glyph) => [glyph.char, glyph.sourceIndex])).toEqual([
+      [MATHEMATICAL_BOLD_A, 0],
+      ['b', 2],
+    ]);
   });
 });
