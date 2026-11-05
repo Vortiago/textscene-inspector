@@ -36,7 +36,7 @@ export function canvasInstancesGeometry(
   const vertexColor = canvas.getAttribute('color');
   const index = canvas.getIndex();
   const vertexCount = position.count;
-  const hasColors = vertexColor || instances.some((instance) => instance.color);
+  const hasColors = vertexColor !== undefined || instances.some((instance) => instance.color);
 
   const positions = new Float32Array(instances.length * vertexCount * 3);
   const uvs = uv ? new Float32Array(instances.length * vertexCount * 2) : null;
@@ -73,8 +73,10 @@ export function canvasInstancesGeometry(
   // itemSize 4 makes three define USE_COLOR_ALPHA, which carries the per-instance alpha.
   if (colorValues) merged.setAttribute('color', new THREE.BufferAttribute(colorValues, 4));
   const ranges = surfaceRanges(geometry, index ? index.count : vertexCount);
-  // A single unindexed surface needs no index: its vertices already run in instance order.
-  if (index || ranges.length > 1) {
+  // A single unindexed surface over every vertex needs no index: its vertices already run in instance order.
+  const isWholeUnindexedSurface =
+    !index && ranges.length === 1 && ranges[0]!.start === 0 && ranges[0]!.count === vertexCount;
+  if (!isWholeUnindexedSurface) {
     merged.setIndex(
       new THREE.BufferAttribute(surfaceMajorIndex(index, ranges, instances.length, vertexCount), 1)
     );
