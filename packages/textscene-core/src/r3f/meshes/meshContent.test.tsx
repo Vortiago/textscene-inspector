@@ -16,7 +16,7 @@ import { UndrawnMeshesProvider, useUndrawnMeshTypes } from '../contexts/UndrawnM
 import { fixtureFontBytes } from '../controls/native/text/sfntOutlines.testkit';
 import { wallQuadSurfaces } from '../../resources/testing/arrayMeshSurfaces';
 import { geometryPrimitive } from '../../resources/meshes/godotSurface';
-import { arrayMeshPath, useInstancedMeshContent, useMeshContent } from './meshContent';
+import { arrayMeshPath, useMeshContent } from './meshContent';
 
 const BOX: TscnInternalResource = { id: 'box', type: 'BoxMesh', data: {} };
 const RESOURCES: SceneResources = {
@@ -257,8 +257,8 @@ describe('an ArrayMesh with line surfaces', () => {
     externalResources: [],
   };
 
-  function primitivesOf(useContent: typeof useMeshContent, ref: string) {
-    const { result } = renderHook(() => useContent(useResourceResolution(ref, SCENE)));
+  function primitivesOf(ref: string) {
+    const { result } = renderHook(() => useMeshContent(useResourceResolution(ref, SCENE)));
     const content = result.current;
     return content.kind === 'surfaced'
       ? content.mesh.parts.map((part) => geometryPrimitive(part.geometry))
@@ -266,18 +266,10 @@ describe('an ArrayMesh with line surfaces', () => {
   }
 
   it('draws its lines after its triangles', () => {
-    expect(primitivesOf(useMeshContent, 'SubResource("mixed")')).toEqual(['triangles', 'lines']);
+    expect(primitivesOf('SubResource("mixed")')).toEqual(['triangles', 'lines']);
   });
 
   it('draws a mesh of only lines', () => {
-    expect(primitivesOf(useMeshContent, 'SubResource("lines")')).toEqual(['lines']);
-  });
-
-  it('leaves its lines out of an instanced draw', () => {
-    expect(primitivesOf(useInstancedMeshContent, 'SubResource("mixed")')).toEqual(['triangles']);
-  });
-
-  it('draws a mesh of only lines as unresolved in an instanced draw', () => {
-    expect(primitivesOf(useInstancedMeshContent, 'SubResource("lines")')).toBe('unresolved');
+    expect(primitivesOf('SubResource("lines")')).toEqual(['lines']);
   });
 });

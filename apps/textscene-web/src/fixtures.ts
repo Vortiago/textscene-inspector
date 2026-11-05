@@ -208,6 +208,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Array Mesh Lines Cpuparticles3d",
+    "file": "unit-array-mesh-lines-cpuparticles3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Array Mesh Lines Gridmap",
+    "file": "unit-array-mesh-lines-gridmap.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Array Mesh Lines Materials",
     "file": "unit-array-mesh-lines-materials.tscn",
     "category": "Other"

@@ -34,6 +34,8 @@ export const GEOMETRY_SCENES = [
   // A DIRECTED_POINTS CPUParticles3D: a column of boxes above its one point, turned into the point's
   // normal frame and coloured from `emission_colors`.
   { name: 'cpuparticles3d-directed-points', file: 'unit-cpuparticles3d-directed-points.tscn' },
+  // The particles draw an ArrayMesh lines surface, one set of segments at each of four particles.
+  { name: 'array-mesh-lines-cpuparticles3d', file: 'unit-array-mesh-lines-cpuparticles3d.tscn' },
   // Points whose emission projects by world triplanar: each particle takes its own colour.
   { name: 'cpuparticles3d-triplanar-points', file: 'unit-cpuparticles3d-triplanar-points.tscn' },
   // An ArrayMesh triangle-strip surface, read as triangles as Godot reads it.

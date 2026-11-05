@@ -17,6 +17,8 @@ export const PRIMITIVE_SCENES = [
   { name: 'array-mesh-lines-materials', file: 'unit-array-mesh-lines-materials.tscn' },
   { name: 'point-mesh', file: 'unit-point-mesh.tscn' },
   { name: 'point-mesh-gridmap', file: 'unit-point-mesh-gridmap.tscn' },
+  // An ArrayMesh lines surface as a MeshLibrary item, at four cells, one turned a half turn about Y.
+  { name: 'array-mesh-lines-gridmap', file: 'unit-array-mesh-lines-gridmap.tscn' },
   { name: 'prism-mesh', file: 'unit-prism-mesh.tscn' },
   { name: 'prism-mesh-texture-uv', file: 'unit-prism-mesh-texture-uv.tscn' },
   { name: 'quadmesh', file: 'unit-quadmesh.tscn' },

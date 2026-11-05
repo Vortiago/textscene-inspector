@@ -22,10 +22,10 @@ const POINTS_AT_INSTANCES_KEY = 'godotPointsAtInstances';
 const PROJECT_CHUNK = '#include <project_vertex>';
 
 /**
- * Where a points surface's points sit: in the node's own mesh, or at each instance of a GridMap's
+ * Where a points or lines surface's primitives sit: in the node's own mesh, or at each instance of a GridMap's
  * cells or a CPUParticles3D's particles (`sharedInstances.ts`).
  */
-export type PointPlacement = 'mesh' | 'instances';
+export type ListedPlacement = 'mesh' | 'instances';
 
 /** How a material draws the points of a points surface. */
 export interface PointDraw {
@@ -38,14 +38,14 @@ export interface PointDraw {
   pixelRatio: number;
   /** `use_point_size` is on: the albedo map is read across the point's square, not at the UV. */
   samplesAlbedoAtPointCoord: boolean;
-  placement: PointPlacement;
+  placement: ListedPlacement;
 }
 
 /** `scalars` as a points draw on a canvas of `pixelRatio`, or Godot's default surface for none. */
 export function pointDrawOf(
   scalars: StandardMaterial3DScalars | null,
   pixelRatio: number,
-  placement: PointPlacement
+  placement: ListedPlacement
 ): PointDraw {
   const pointSize = scalars?.usesPointSize ? scalars.pointSize : undefined;
   return {
@@ -58,11 +58,11 @@ export function pointDrawOf(
 
 /**
  * three defines `USE_INSTANCING` and declares `instanceMatrix` only for an InstancedMesh
- * (r187 `WebGLPrograms.js:213`), so instanced points declare both. Each instance branch of three's
- * chunks and of the Godot patches then places, turns and billboards the points.
+ * (r187 `WebGLPrograms.js:213`), so instanced points and lines declare both. Each instance branch of three's
+ * chunks and of the Godot patches then places, turns and billboards the points or lines.
  */
-const GODOT_INSTANCED_POINTS: ProgramInjection = {
-  cacheKey: 'godot-instanced-points',
+const GODOT_INSTANCED_LISTED: ProgramInjection = {
+  cacheKey: 'godot-instanced-listed',
   onBeforeCompile(shader) {
     shader.vertexShader = `#define USE_INSTANCING
 attribute mat4 ${INSTANCE_MATRIX_ATTRIBUTE};
@@ -174,9 +174,31 @@ function pointBag(bag: StandardMaterialBag, draw: PointDraw): StandardMaterialBa
       bag.injection,
       GODOT_POINT_SIZE,
       readsMap ? GODOT_POINT_COORD_ALBEDO : undefined,
-      isAtInstances ? GODOT_INSTANCED_POINTS : undefined,
+      isAtInstances ? GODOT_INSTANCED_LISTED : undefined,
     ]),
   };
+}
+
+/** Each bag's form for lines at instances, filled only by `withLineDraw`. */
+const lineForms = bagForms();
+
+/**
+ * `bag` as a material for a lines surface at `placement`, or `bag` itself for lines in the mesh,
+ * which draw as any surface does. Lines at instances declare the instance matrix in both passes.
+ */
+export function withLineDraw(
+  bag: StandardMaterialBag,
+  placement: ListedPlacement | undefined
+): StandardMaterialBag {
+  if (placement !== 'instances') return bag;
+  return lineForms(bag, placement, () => ({
+    ...bag,
+    props: {
+      ...bag.props,
+      userData: withDepthInjection(bag.props.userData ?? {}, 'beforeCut', GODOT_INSTANCED_LISTED),
+    },
+    injection: composeInjections([bag.injection, GODOT_INSTANCED_LISTED]),
+  }));
 }
 
 const GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD = composeInjections([
@@ -190,5 +212,5 @@ const GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD = composeInjections([
  */
 function pointShadowSizeInjection(readsMap: boolean, isAtInstances: boolean): ProgramInjection {
   const size = readsMap ? GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD : GODOT_POINT_SHADOW_SIZE;
-  return isAtInstances ? composeInjections([size, GODOT_INSTANCED_POINTS])! : size;
+  return isAtInstances ? composeInjections([size, GODOT_INSTANCED_LISTED])! : size;
 }

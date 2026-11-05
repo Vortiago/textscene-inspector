@@ -6,8 +6,8 @@
 
 import { useLayoutEffect } from 'react';
 import * as THREE from 'three';
-import type { PointPlacement } from '../materials/godotPoint';
-import { geometryPrimitive } from '../../resources/meshes/godotSurface';
+import type { ListedPlacement } from '../materials/godotPoint';
+import { geometryPrimitive, type SurfacePrimitive } from '../../resources/meshes/godotSurface';
 
 /** The attribute that holds each place's matrix, the name three's instanced programs read. */
 export const INSTANCE_MATRIX_ATTRIBUTE = 'instanceMatrix';
@@ -91,10 +91,23 @@ export function useSharedInstances(geometry: THREE.BufferGeometry, source: THREE
   }, [geometry, source]);
 }
 
-/** Where `geometry`'s points sit: at instances, or in the mesh. Undefined for triangles and lines. */
-export function pointPlacementOf(geometry: THREE.BufferGeometry): PointPlacement | undefined {
-  if (geometryPrimitive(geometry) !== 'points') return undefined;
-  return (geometry as THREE.InstancedBufferGeometry).isInstancedBufferGeometry ? 'instances' : 'mesh';
+/** The `SurfaceMaterialSlot` props that say where a surface of `primitive` sits. None for triangles. */
+export function listedSlot(
+  primitive: SurfacePrimitive,
+  placement: ListedPlacement
+): { points?: ListedPlacement; lines?: ListedPlacement } {
+  if (primitive === 'points') return { points: placement };
+  if (primitive === 'lines') return { lines: placement };
+  return {};
+}
+
+/** The slot props for `geometry`'s points or lines, at instances when `sharedInstances` built it. */
+export function listedSlotOf(geometry: THREE.BufferGeometry): {
+  points?: ListedPlacement;
+  lines?: ListedPlacement;
+} {
+  const isInstanced = (geometry as THREE.InstancedBufferGeometry).isInstancedBufferGeometry;
+  return listedSlot(geometryPrimitive(geometry), isInstanced ? 'instances' : 'mesh');
 }
 
 /**
@@ -113,34 +126,35 @@ export function instancesBounds(
 }
 
 /**
- * Scratch for `raycastInstancedPoints`, overwritten by every call. The points hold
- * `NO_GEOMETRY` between calls, so a released draw's instance buffers are not kept alive.
+ * Scratch for `raycastInstanced`, overwritten by every call. Each holds `NO_GEOMETRY` between
+ * calls, so a released draw's instance buffers are not kept alive.
  */
 const NO_GEOMETRY = new THREE.BufferGeometry();
-const instancePoints = new THREE.Points(NO_GEOMETRY);
+const instanceScratch = { points: new THREE.Points(NO_GEOMETRY), lines: new THREE.LineSegments(NO_GEOMETRY) };
 const instanceLocal = new THREE.Matrix4();
 const instanceWorld = new THREE.Matrix4();
 const instanceHits: THREE.Intersection[] = [];
 
 /**
- * `THREE.Points.raycast` at each instance, as `InstancedMesh.raycast` tests each of its own: the
- * points' own raycast reads the source positions alone.
+ * `THREE.Points.raycast` or `THREE.LineSegments.raycast` at each instance, as `InstancedMesh.raycast`
+ * tests each of its own: their own raycast reads the source positions alone.
  */
-export function raycastInstancedPoints(
-  this: THREE.Points,
+export function raycastInstanced(
+  this: THREE.Points | THREE.LineSegments,
   raycaster: THREE.Raycaster,
   intersects: THREE.Intersection[]
 ): void {
   const geometry = this.geometry as THREE.InstancedBufferGeometry;
   const matrices = instanceMatrices(geometry);
-  // `Points.raycast` reads no material, so the scratch takes only the geometry.
-  instancePoints.geometry = geometry;
+  // Neither raycast reads a material, so the scratch takes only the geometry.
+  const scratch = (this as THREE.Points).isPoints ? instanceScratch.points : instanceScratch.lines;
+  scratch.geometry = geometry;
   for (let instanceId = 0; instanceId < geometry.instanceCount; instanceId++) {
     instanceLocal.fromArray(matrices.array, instanceId * MATRIX_FLOATS);
-    instancePoints.matrixWorld = instanceWorld.multiplyMatrices(this.matrixWorld, instanceLocal);
-    instancePoints.raycast(raycaster, instanceHits);
+    scratch.matrixWorld = instanceWorld.multiplyMatrices(this.matrixWorld, instanceLocal);
+    scratch.raycast(raycaster, instanceHits);
     for (const hit of instanceHits) intersects.push({ ...hit, instanceId, object: this });
     instanceHits.length = 0;
   }
-  instancePoints.geometry = NO_GEOMETRY;
+  scratch.geometry = NO_GEOMETRY;
 }

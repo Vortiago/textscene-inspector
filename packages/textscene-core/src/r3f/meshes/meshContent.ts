@@ -11,11 +11,7 @@ import type { TscnInternalResource } from '../../parser/types';
 import { warn } from '../../logger';
 import { projectPrimitiveMeshTexelSize } from '../../parser/projectSettingsParser';
 import { decodeSceneArrayMesh } from '../../resources/meshes/arraymesh/decode';
-import {
-  geometryPrimitive,
-  godotSurfaceParts,
-  type SurfacePrimitive,
-} from '../../resources/meshes/godotSurface';
+import { godotSurfaceParts, type SurfacePrimitive } from '../../resources/meshes/godotSurface';
 import {
   meshKind,
   primitiveMaterialAddress,
@@ -82,32 +78,6 @@ const UNRESOLVED: MeshContent = { kind: 'unresolved' };
 const NONE: MeshContent = { kind: 'none' };
 const LOADING: MeshContent = { kind: 'loading' };
 const EMPTY: MeshContent = { kind: 'empty' };
-
-/**
- * `useMeshContent` for a draw that places a mesh at many instances, a GridMap's cells or a
- * CPUParticles3D's particles. Their materials and batches draw triangles and points, so a mesh of
- * only lines is unresolved there.
- *
- * @canonical Mesh content for an instanced draw
- */
-export function useInstancedMeshContent(
-  resolution: ResourceResolution,
-  isHeldLocally: boolean = NODE_PROPERTY
-): MeshContent {
-  const content = useMeshContent(resolution, isHeldLocally);
-  const mesh = content.kind === 'surfaced' ? content.mesh : null;
-  const withoutLines = useMemo(() => mesh && meshWithoutLines(mesh), [mesh]);
-  if (content.kind !== 'surfaced' || withoutLines === mesh) return content;
-  return withoutLines ? { kind: 'surfaced', mesh: withoutLines } : UNRESOLVED;
-}
-
-/** `mesh` without its line parts, `mesh` itself when it has none, or null when only lines are left. */
-function meshWithoutLines(mesh: SurfacedMesh): SurfacedMesh | null {
-  const parts = mesh.parts.filter((part) => geometryPrimitive(part.geometry) !== 'lines');
-  if (parts.length === mesh.parts.length) return mesh;
-  const kept = nonEmpty(parts);
-  return kept && { parts: kept };
-}
 
 /** The path the ArrayMesh processor decodes, for an ArrayMesh with a path. Null for any other mesh. */
 export function arrayMeshPath({ scoped, resourcePath }: ResourceResolution): string | null {
