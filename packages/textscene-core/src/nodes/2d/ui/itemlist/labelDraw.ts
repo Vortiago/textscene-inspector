@@ -8,12 +8,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
-import {
-  clipLineToDrawBox,
-  textParagraphLineShiftPx,
-} from '../../../../r3f/controls/native/text/lineDrawClip';
-import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
-import type { TextLayoutResult, TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { drawnLinesInBox, type DrawnLine } from '../../../../r3f/controls/native/text/lineDrawClip';
+import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 
 /**
  * The alignment ItemList gives its label's paragraph: CENTER for a wrapped label, and for a single
@@ -24,28 +20,16 @@ function itemListLabelAlignment(wrapped: boolean, rtl: boolean): number {
   return rtl ? HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT : HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT;
 }
 
-/** A label line, cut to its box, with its x shift from the box origin. */
-export interface DrawnLabelLine {
-  line: TextLineLayout;
-  shiftPx: number;
-}
-
 /**
- * The label as `TextParagraph::draw` paints it at `boxWidthPx`: each line shifted by its alignment
- * and cut to the box (`clipLineToDrawBox`). `layout` supplies the pitch and baseline.
+ * The label as `TextParagraph::draw` paints it at `boxWidthPx`. `layout` supplies the lines.
  */
 export function itemListDrawnLabel(
   layout: TextLayoutResult,
   boxWidthPx: number,
   wrapped: boolean,
   rtl: boolean
-): DrawnLabelLine[] {
-  const alignment = itemListLabelAlignment(wrapped, rtl);
-  return layout.lines.map((line) => {
-    // `lineWidthPx` is `shaped_text_get_width`, ceiled.
-    const shiftPx = textParagraphLineShiftPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, alignment, rtl);
-    return { line: clipLineToDrawBox(line, boxWidthPx, shiftPx), shiftPx };
-  });
+): DrawnLine[] {
+  return drawnLinesInBox(layout.lines, boxWidthPx, itemListLabelAlignment(wrapped, rtl), rtl);
 }
 
 interface ItemListLabelDrawInput {

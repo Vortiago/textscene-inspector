@@ -61,7 +61,8 @@ import {
 } from './nativeSolver';
 import { ScrollBarChrome, ScrollHintChrome, SCROLL_HINT_MODULATE } from '../shared/ScrollChrome';
 import { itemListScrollBars } from './scrollBars';
-import { itemListDrawnLabel, itemListLabelIsDrawn, type DrawnLabelLine } from './labelDraw';
+import { itemListDrawnLabel, itemListLabelIsDrawn } from './labelDraw';
+import type { DrawnLine } from '../../../../r3f/controls/native/text/lineDrawClip';
 import type { ItemListItem, ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
@@ -88,7 +89,7 @@ interface RowGeometry {
   fixedIconSizeSet: boolean;
   iconDraw: ReturnType<typeof itemIconDraw>;
   /** The label shaped again at its draw width (`item_list.cpp:1625-1661`), or `null` when the row draws none. */
-  label: { layout: TextLayoutResult; lines: DrawnLabelLine[] } | null;
+  label: { layout: TextLayoutResult; lines: DrawnLine[] } | null;
   /** Row-relative pen x, already through the RTL branch of `item_list.cpp:1639-1670`. */
   textX: number;
   textY: number;

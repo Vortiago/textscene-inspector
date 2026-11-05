@@ -3641,6 +3641,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Button Clip Text",
+    "file": "unit-button-clip-text.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Button Icon Gradienttexture",
     "file": "unit-button-icon-gradienttexture.tscn",
     "category": "Unit - 2D UI Controls"
