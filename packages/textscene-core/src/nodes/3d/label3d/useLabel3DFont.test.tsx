@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
 import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { testBitmapMetrics } from '../../../r3f/controls/native/text/bitmapFontMetrics.testkit';
@@ -102,12 +102,19 @@ function renderMetrics(
   });
 }
 
-/** An emboldened face waits for the bundled font's bytes, which load as their own chunk. */
+/**
+ * An emboldened face waits for the bundled font's bytes and hinters, which `vi.resetModules` makes
+ * each test evaluate again: 140 ms alone, and past the default 1 s under a loaded pre-push run.
+ */
+const CHUNK_LOAD_TIMEOUT_MS = 5000;
+
 function settledMetrics(
   result: { current: ReturnType<typeof modules.useLabel3DFont> },
   expected: Record<string, unknown>
 ) {
-  return vi.waitFor(() => expect(result.current?.metrics).toMatchObject(expected));
+  return vi.waitFor(() => expect(result.current?.metrics).toMatchObject(expected), {
+    timeout: CHUNK_LOAD_TIMEOUT_MS,
+  });
 }
 
 async function settle() {
@@ -124,6 +131,16 @@ async function settleThrowawayFontLoad() {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
 }
+
+// An emboldened face loads the bundled bytes and both hinters as their own chunks: about 230 ms to
+// transform cold. Transforming them once here leaves each test only their evaluation.
+beforeAll(async () => {
+  await Promise.all([
+    import('../../../r3f/controls/native/text/bundledFontBytes'),
+    import('../../../r3f/controls/native/text/truetype/trueTypeHinting'),
+    import('../../../r3f/controls/native/text/autofit/autoHinter'),
+  ]);
+});
 
 beforeEach(async () => {
   modules = await importModules();
@@ -232,8 +249,9 @@ describe('useLabel3DFont outlines', () => {
     expect(result.current).toBeUndefined();
 
     // The bundled font's bytes load as their own chunk, so a fixed count of ticks can end before they arrive.
-    await vi.waitFor(() =>
-      expect(result.current?.metrics.outlines?.glyphIndex('A'.codePointAt(0)!)).toBeGreaterThan(0)
+    await vi.waitFor(
+      () => expect(result.current?.metrics.outlines?.glyphIndex('A'.codePointAt(0)!)).toBeGreaterThan(0),
+      { timeout: CHUNK_LOAD_TIMEOUT_MS }
     );
   });
 });
