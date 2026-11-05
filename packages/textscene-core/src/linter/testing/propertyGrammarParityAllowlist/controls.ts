@@ -34,15 +34,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'virtual_keyboard_show_on_focus',
       'virtual_keyboard_type',
     ],
-    renderGap: [
-      // BiDi and locale: this Control does not pass its own direction to the shaper yet.
-      'language',
-      'structured_text_bidi_override',
-      'structured_text_bidi_override_options',
-      'text_direction',
-    ],
-    reason:
-      'Carets, selection, clipboard and virtual-keyboard behaviour have no frozen-frame surface; BiDi and locale change the frame and are not implemented yet.',
+    reason: 'Carets, selection, clipboard and virtual-keyboard behaviour have no frozen-frame surface.',
   },
 
   RichTextLabel: {
@@ -180,15 +172,8 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'scroll_vertical',
       'scroll_past_end_of_file',
     ],
-    renderGap: [
-      // BiDi and locale: this Control does not pass its own direction to the shaper yet.
-      'language',
-      'structured_text_bidi_override',
-      'structured_text_bidi_override_options',
-      'text_direction',
-    ],
     reason:
-      'Carets, selection, clipboard, word boundaries and virtual keyboards have no frozen-frame surface, and an authored scroll offset is snapped away before the first draw; BiDi changes the frame and is not implemented yet.',
+      'Carets, selection, clipboard, word boundaries and virtual keyboards have no frozen-frame surface, and an authored scroll offset is snapped away before the first draw.',
   },
 
   CodeEdit: {

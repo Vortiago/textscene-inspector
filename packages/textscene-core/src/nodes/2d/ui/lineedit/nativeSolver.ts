@@ -16,8 +16,9 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
-import type { SolveNode, ThemedIconRef } from '../../../../r3f/controls/native/solveTree';
-import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import type { ShareNode, SolveNode, ThemedIconRef } from '../../../../r3f/controls/native/solveTree';
+import { getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
+import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   shapeText,
@@ -195,6 +196,27 @@ export const lineEditTextureSlots: TextureSlotsFn = (
 };
 
 /**
+ * `LineEdit::_shape` (`line_edit.cpp:3104-3112`): the shown string, the text or the placeholder, in
+ * `text_direction`, `language` and the structured override, with no wrap and no `line_spacing`.
+ * The minimum size and the painter both read it.
+ */
+export function shapeLineEditText(
+  n: ShareNode,
+  text: string,
+  font: { fontSizePx: number; fontMetrics: FontMetrics }
+): TextLayoutResult {
+  const props = n.node.properties as LineEditProperties;
+  return shapeText(text, {
+    ...font,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 0,
+    preserveControl: props.drawControlChars,
+    ...controlBidiOptions(props, n),
+  });
+}
+
+/**
  * `LineEdit::get_minimum_size` (`line_edit.cpp:2443-2477`): `minimum_character_width` em widths of
  * 'W', widened to `full_width + caret_width` with `expand_to_text_length`, plus the widest icon, by
  * `min_size.height = MAX(shaped height, font->get_height(font_size))`, plus the larger of the `normal`
@@ -228,16 +250,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
     // `lineEditDisplayText` gives the painter, so an empty field sizes to its placeholder.
     const { text: displayed } = lineEditDisplayText(props);
     const fullWidthPx = displayed.length
-      ? shapedTextSizeWidthPx(
-          shapeText(displayed, {
-            fontSizePx,
-            boxWidthPx: 0,
-            autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-            lineSpacingPx: 0,
-            fontMetrics,
-            preserveControl: props.drawControlChars,
-          }).widthPx
-        )
+      ? shapedTextSizeWidthPx(shapeLineEditText(n, displayed, { fontSizePx, fontMetrics }).widthPx)
       : 0;
     const caretWidthPx = n.constants['caret_width'] ?? DEFAULT_CARET_WIDTH;
     width = Math.max(width, fullWidthPx + caretWidthPx);

@@ -18,6 +18,10 @@ import {
 } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
+  controlBidiOptions,
+  type TextBidiOptions,
+} from '../../../../r3f/controls/native/text/textBidiOptions';
+import {
   clampAutowrapMode,
   shapeText,
   shapedTextSizeWidthPx,
@@ -116,23 +120,44 @@ interface TextEditLineLayout {
   startRow: number;
 }
 
+/** What each buffer line shapes with, beyond its text. */
+interface TextEditShapeOptions {
+  fontSizePx: number;
+  fontMetrics: FontMetrics;
+  /** `LineWrappingMode`. Only `LINE_WRAPPING_BOUNDARY` (1) wraps. */
+  wrapMode?: number;
+  autowrapMode?: number;
+  wrapWidthPx?: number;
+  tabStopsPx?: number[];
+  /** `draw_control_chars`. */
+  preserveControl?: boolean;
+  /** `indent_wrapped_lines`: adds `BREAK_TRIM_INDENT` (`text_edit.cpp:285-287`). */
+  indentWrappedLines?: boolean;
+  /** Every line's direction, language and override ranges (`text_edit.cpp:3394-3401`). */
+  bidi?: TextBidiOptions;
+}
+
 /**
- * Shapes each buffer line on its own, as each `TextEdit::Text` `Line` owns a `TextParagraph`.
- * Only `LINE_WRAPPING_BOUNDARY` (1) wraps (`_update_wrap_at_column`, `text_edit.cpp:8536-8586`).
- * `indentWrappedLines` adds `BREAK_TRIM_INDENT` (`:285-287`), which narrows each row past the
- * leading whitespace. {@link textEditWrapIndentPx} is the matching draw-side step-in.
+ * Shapes each buffer line on its own, as each `TextEdit::Text` `Line` owns a `TextParagraph`, so an
+ * AUTO line infers its own direction and the structured parser runs per line (`text_edit.cpp:297-324`).
+ * Only `LINE_WRAPPING_BOUNDARY` wraps (`_update_wrap_at_column`, `:8536-8586`). `indentWrappedLines`
+ * narrows each row past the leading whitespace. {@link textEditWrapIndentPx} is the matching draw-side step-in.
  */
 export function shapeTextEditLines(
   lines: readonly string[],
-  fontSizePx: number,
-  wrapMode: number | undefined,
-  autowrapMode: number | undefined,
-  wrapWidthPx: number,
-  fontMetrics: Parameters<typeof shapeText>[1]['fontMetrics'],
-  tabStopsPx: number[] = [],
-  preserveControl = false,
-  indentWrappedLines = false
+  options: TextEditShapeOptions
 ): TextEditLineLayout[] {
+  const {
+    fontSizePx,
+    fontMetrics,
+    wrapMode,
+    autowrapMode,
+    wrapWidthPx = 0,
+    tabStopsPx = [],
+    preserveControl = false,
+    indentWrappedLines = false,
+    bidi,
+  } = options;
   const mode =
     wrapMode === 1
       ? clampAutowrapMode(autowrapMode, AutowrapMode.AUTOWRAP_WORD_SMART)
@@ -147,9 +172,8 @@ export function shapeTextEditLines(
       fontMetrics,
       tabStopsPx,
       preserveControl,
-      // `Text::_shape_line` sets `BREAK_TRIM_INDENT` from the same flag
-      // (`text_edit.cpp:285-287`).
       trimIndent: indentWrappedLines,
+      ...bidi,
     });
     const entry: TextEditLineLayout = { layout, startRow: row };
     row += layout.lines.length;
@@ -265,16 +289,16 @@ export function textEditMinimumSizeWith(
   const effectiveWrapMode = rectWidthPx === undefined ? 0 : props.wrapMode;
 
   const lines = (props.text ?? '').split('\n');
-  const lineLayouts = shapeTextEditLines(
-    lines,
+  const lineLayouts = shapeTextEditLines(lines, {
     fontSizePx,
-    effectiveWrapMode,
-    props.autowrapMode,
-    wrapWidthPx,
     fontMetrics,
-    textEditTabStopsPx(tabSize, fontMetrics, fontSizePx),
-    props.drawControlChars
-  );
+    wrapMode: effectiveWrapMode,
+    autowrapMode: props.autowrapMode,
+    wrapWidthPx,
+    tabStopsPx: textEditTabStopsPx(tabSize, fontMetrics, fontSizePx),
+    preserveControl: props.drawControlChars,
+    bidi: controlBidiOptions(props, n),
+  });
   const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
   const content = textEditContentSize(
     lineLayouts,

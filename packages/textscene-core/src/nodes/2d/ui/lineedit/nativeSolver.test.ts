@@ -14,6 +14,7 @@ import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import type { LineEditProperties } from './types';
 import {
+  shapeLineEditText,
   lineEditMinimumSize,
   lineEditTextTheme,
   resolveLineEditTextState,
@@ -880,5 +881,32 @@ describe('lineEditDrawnLine: the glyphs the draw loop keeps (line_edit.cpp:1512-
 
   it('keeps the line width the alignment used', () => {
     expect(lineEditDrawnLayout(layoutOf([10, 10, 10]), 4, 20).lines[0]!.widthPx).toBe(30);
+  });
+});
+
+describe('shapeLineEditText — direction, language and structured override (line_edit.cpp:3104-3112)', () => {
+  /** The shaped line's glyph characters, left to right. */
+  function visual(props: Partial<LineEditProperties>, overrides: Partial<SolveNode> = {}): string {
+    const n = { ...node(props), ...overrides };
+    return shapeLineEditText(n, props.text ?? '', { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS })
+      .lines[0]!.glyphs.map((glyph) => glyph.char)
+      .join('');
+  }
+
+  it('shapes an RTL paragraph with `!` at the visual left', () => {
+    expect(visual({ text: 'Hello!', textDirection: 2 })).toBe('!Hello');
+  });
+
+  it('shapes an INHERITED paragraph at the layout direction', () => {
+    expect(visual({ text: 'Hello!', textDirection: 3 }, { rtl: true })).toBe('!Hello');
+    expect(visual({ text: 'Hello!', textDirection: 0 }, { rtl: true })).toBe('Hello!');
+  });
+
+  it('takes a neutral paragraph from the language', () => {
+    expect(visual({ text: '123!', textDirection: 0, language: 'he' })).toBe('!123');
+  });
+
+  it('keeps the FILE segments in logical order, left to right', () => {
+    expect(visual({ text: 'שלום/abc', textDirection: 2, structuredTextBidiOverride: 2 })).toBe('םולש/abc');
   });
 });
