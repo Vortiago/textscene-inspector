@@ -83,7 +83,12 @@ A piece that an item draws as an internal child item, which the tree does not li
 next piece or the next item. `subOrders.driftguard.test.ts` rejects a key with an offset added by hand.
 A Control's `INTERNAL_MODE_BACK` pieces, such as a ScrollContainer's bars, draw from one sequence
 value held after its whole subtree (`internalBackRoom`), so a nested Control's back pieces never
-tie with its parent's.
+tie with its parent's. A squeezed range with no sequence for that value splits the Control's own key
+in two, own pieces first (`ownAndBackSlots`).
+A parent that moves its own children draws them in the order it leaves them (`listedChildOrder`).
+GraphEdit moves each GraphFrame to index 0 and its `connections_layer` to the index after the frames
+(`graph_edit.cpp:714-717`), so the connections take one sequence value between the frames and the
+GraphNodes (`internalLayerRoom`).
 
 One limit stays: a legacy `TileMap`'s per-layer `z_index` orders its layers against each
 other but not against the node's siblings. Godot gives each layer its own `CanvasItem`,

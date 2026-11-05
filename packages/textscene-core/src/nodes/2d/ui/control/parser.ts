@@ -2,7 +2,7 @@
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { unquoteStringName } from '../../../../parser/utils';
-import type { ControlProperties } from './types';
+import type { ControlCanvasItemFields, ControlProperties } from './types';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
 import {
   intOr,
@@ -75,8 +75,38 @@ function parseThemeTypeVariation(value: string | undefined): string | undefined 
   return name === '' ? undefined : name;
 }
 
+/**
+ * The CanvasItem fields, never undefined, as in `node2d/parser.ts`: an unset Control holds the Godot
+ * defaults. An internal Control with no scene node, such as TabContainer's bar, reads them from `{}`.
+ */
+export function parseControlCanvasItem(
+  properties: Record<string, string>,
+  name: string
+): ControlCanvasItemFields {
+  const label = name || 'Control';
+  return {
+    zIndex: intOr(properties.z_index, 0),
+    zAsRelative: boolSlotValue(properties.z_as_relative) !== false,
+    showBehindParent: boolSlotValue(properties.show_behind_parent) === true,
+    topLevel: boolSlotValue(properties.top_level) === true,
+    lightMask: intOr(properties.light_mask, 1, `${label}.light_mask`),
+    useParentMaterial: boolSlotValue(properties.use_parent_material) === true,
+    textureFilter: intOr(
+      properties.texture_filter,
+      CanvasItemTextureFilter.PARENT_NODE,
+      `${label}.texture_filter`
+    ),
+    textureRepeat: intOr(
+      properties.texture_repeat,
+      CanvasItemTextureRepeat.PARENT_NODE,
+      `${label}.texture_repeat`
+    ),
+  };
+}
+
 export function parseControl(heading: ParsedHeading, properties: Record<string, string>): ControlProperties {
-  const result: ControlProperties = { name: heading.attributes.name || '' };
+  const name = heading.attributes.name || '';
+  const result: ControlProperties = { name, ...parseControlCanvasItem(properties, name) };
 
   if (heading.attributes.parent) result.parent = heading.attributes.parent;
   if (heading.attributes.instance) result.instance = heading.attributes.instance;
@@ -115,24 +145,7 @@ export function parseControl(heading: ParsedHeading, properties: Record<string, 
   result.pivotOffset = parseOptionalVector2(properties.pivot_offset);
   result.pivotOffsetRatio = parseOptionalVector2(properties.pivot_offset_ratio);
 
-  // Never undefined, as in `node2d/parser.ts`: an unset Control holds these Godot defaults.
-  result.zIndex = intOr(properties.z_index, 0);
-  result.zAsRelative = boolSlotValue(properties.z_as_relative) !== false;
-  result.showBehindParent = boolSlotValue(properties.show_behind_parent) === true;
-  result.topLevel = boolSlotValue(properties.top_level) === true;
-  result.lightMask = intOr(properties.light_mask, 1, `${result.name || 'Control'}.light_mask`);
   if (properties.material !== undefined) result.materialPath = properties.material;
-  result.useParentMaterial = boolSlotValue(properties.use_parent_material) === true;
-  result.textureFilter = intOr(
-    properties.texture_filter,
-    CanvasItemTextureFilter.PARENT_NODE,
-    `${result.name || 'Control'}.texture_filter`
-  );
-  result.textureRepeat = intOr(
-    properties.texture_repeat,
-    CanvasItemTextureRepeat.PARENT_NODE,
-    `${result.name || 'Control'}.texture_repeat`
-  );
 
   Object.assign(result, parseThemeOverrides(properties));
 

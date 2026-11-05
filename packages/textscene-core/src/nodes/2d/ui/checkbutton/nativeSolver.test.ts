@@ -22,6 +22,7 @@ import {
   checkButtonDrawnIconSize,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlProps } from '../control/testing/controlProps';
 
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
 const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
@@ -95,10 +96,10 @@ describe('checkButtonTextTheme', () => {
   });
 
   it('a theme_override_colors/font_color override wins over the default', () => {
-    const props: CheckButtonProperties = {
+    const props: CheckButtonProperties = controlProps({
       name: 'CB',
       themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
-    };
+    });
     expect(checkButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({
       r: 1,
       g: 0,
@@ -147,7 +148,7 @@ describe('checkButtonIconColor (default_theme.cpp:352-353)', () => {
   });
 
   it('a theme_override_colors/button_checked_color override (already folded into n.colors) wins when checked', () => {
-    const props: CheckButtonProperties = { name: 'CB', buttonPressed: true };
+    const props: CheckButtonProperties = controlProps({ name: 'CB', buttonPressed: true });
     expect(checkButtonIconColor(props, { button_checked_color: { r: 0, g: 1, b: 0, a: 1 } })).toEqual({
       r: 0,
       g: 1,

@@ -28,6 +28,7 @@ import {
   CanvasItemChildScope,
   SkippedCanvasItemsScope,
   useCanvasItemState,
+  ownAndBackSlots,
   wholeKeySlot,
   type CanvasItemState,
 } from '../../canvasItemState';
@@ -109,7 +110,7 @@ function useControlMaterial(
   solveNode: SolveNode,
   props: ControlProperties
 ): CanvasItemMaterialProperties | null {
-  const useParentMaterial = props.useParentMaterial === true;
+  const useParentMaterial = props.useParentMaterial;
   const skipped = solveNode.skippedAncestors?.material;
   const ownOrAmbient = useResolvedCanvasItemMaterial(
     { ref: props.materialPath, useParentMaterial },
@@ -132,8 +133,8 @@ function useControlState(solveNode: SolveNode, props: ControlProperties): Canvas
   return useCanvasItemState({
     modulate: props.modulate ?? WHITE_MODULATE,
     selfModulate: props.selfModulate ?? WHITE_MODULATE,
-    zIndex: props.zIndex ?? 0,
-    zAsRelative: props.zAsRelative !== false,
+    zIndex: props.zIndex,
+    zAsRelative: props.zAsRelative,
     material: useControlMaterial(solveNode, props),
     // Own-or-ambient, not multiplicative: neither property has a self-only layer,
     // so one fold serves this painter and the descendants.
@@ -175,11 +176,12 @@ function ControlItemGroup({
   const props = controlProps(solveNode);
   const state = useControlState(solveNode, props);
   const { key: renderOrder, tint } = state;
-  const slot = useMemo(() => wholeKeySlot(renderOrder), [renderOrder]);
   // For chrome drawn after the whole subtree (Godot's `INTERNAL_MODE_BACK`), from the
   // sequence value the allocator holds after it (`internalBackRoom`).
   const backKey = state.keyAt(solveNode.backSequence);
-  const chromeSlot = useMemo(() => wholeKeySlot(backKey), [backKey]);
+  const { slot, chromeSlot } = useMemo(() => ownAndBackSlots(renderOrder, backKey), [renderOrder, backKey]);
+  const layerKey = state.keyAt(solveNode.layerSequence);
+  const layerSlot = useMemo(() => wholeKeySlot(layerKey), [layerKey]);
   // `is_visible_in_tree()` is `visible && parent_visible_in_tree` (`canvas_item.cpp:62-64`).
   // Both halves come from the solve, which read `hiddenNodePaths`: a skipped
   // Node2D mounts no group, and a hoisted `top_level` or chain-broken Control is a
@@ -250,6 +252,7 @@ function ControlItemGroup({
         slot={slot}
         tint={tint}
         chromeSlot={chromeSlot}
+        layerSlot={layerSlot}
         theme={theme}
         measureText={measureText}
         snapToPixels={snapToPixels}

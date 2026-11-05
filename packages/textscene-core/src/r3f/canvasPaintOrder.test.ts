@@ -396,3 +396,32 @@ describe('a node with no back room', () => {
     expect(allocateNodePaintRange(range, layer).back.base).toBe(range.base + range.size - 1);
   });
 });
+
+describe("GraphEdit's listed children", () => {
+  // `add_child_notify` moves each GraphFrame to index 0 and `connections_layer` to the index after the
+  // frames (`graph_edit.cpp:714-717`). GraphNodes keep their scene order after it.
+  const children = [
+    node('Source', 'GraphNode'),
+    node('FrameA', 'GraphFrame'),
+    node('Sink', 'GraphNode'),
+    node('FrameB', 'GraphFrame'),
+  ];
+  const graphEdit = node('Graph', 'GraphEdit', children);
+
+  it('holds one value for the connection layer', () => {
+    const emptyGraph = node('Graph', 'GraphEdit');
+    const emptyPanel = node('Panel', 'Panel');
+    expect(paintRangeSize(emptyGraph) - paintRangeSize(emptyPanel)).toBe(1);
+  });
+
+  it('draws the frames in reverse scene order, then the connection layer, then the GraphNodes', () => {
+    const allocated = allocateNodePaintRange(WHOLE_CANVAS_RANGE, graphEdit);
+    const [source, frameA, sink, frameB] = allocated.children.map((range) => range.base);
+    expect(allocated.self < frameB! && frameB! < frameA!).toBe(true);
+    expect(frameA! < allocated.layer && allocated.layer < source! && source! < sink!).toBe(true);
+  });
+
+  it('gives a parent with no connection layer its own sequence as the layer', () => {
+    expect(allocateNodePaintRange(WHOLE_CANVAS_RANGE, node('Panel', 'Panel')).layer).toBe(0);
+  });
+});

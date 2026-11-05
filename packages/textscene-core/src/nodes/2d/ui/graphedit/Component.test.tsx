@@ -15,8 +15,7 @@ import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/contro
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { GraphNodeSlot } from '../graphnode/types';
 import '../graphnode/nativeSolver.js'; // registers GraphNode's MinimumSizeFn/ContainerLayoutFn
-import { GRAPH_EDIT_TOP_LAYER, GraphEdit } from './Component';
-import { MINIMAP_PIECES } from './MinimapChrome';
+import { GraphEdit } from './Component';
 import type { GraphEditConnection, GraphEditProperties } from './types';
 import { canvasSubOrders, wholeKeySlot } from '../../../../r3f/canvasItemState';
 
@@ -28,6 +27,11 @@ function ClipProbe({ onPlanes }: { onPlanes: (planes: readonly THREE.Plane[]) =>
 }
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
+
+/** `top_layer`'s children, an `INTERNAL_MODE_BACK` node, in child order (`graph_edit.cpp:3183`, `:3211-3329`). */
+const TOP_LAYER_ORDER = ['scrollBars', 'toolbar', 'minimap'] as const;
+/** What `_minimap_draw` draws after its panel, in order (`graph_edit.cpp:1807-1892`). */
+const MINIMAP_DRAW_ORDER = ['nodes', 'connections', 'camera', 'resizer'] as const;
 
 function graphEdit(properties: Partial<GraphEditProperties> = {}, children: SolveNode[] = []): SolveNode {
   const node: TscnNode = {
@@ -179,6 +183,24 @@ describe('<GraphEdit> connections (graph_edit.cpp:1614-1660 _update_connections)
     expect(chromeMeshes(renderer.scene)).toHaveLength(2 + SCROLL_BAR_MESHES);
   });
 
+  it('draws the connections at the layer slot, over the GraphFrames and under the GraphNodes (graph_edit.cpp:714-717)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <GraphEdit
+        {...painterEnv()}
+        childRects={childRects}
+        solveNode={graphEdit({ showGrid: false, connections }, [source, sink])}
+        rect={{ x: 0, y: 0, w: 400, h: 100 }}
+        renderOrder={0}
+        layerSlot={wholeKeySlot(7)}
+      />
+    );
+    const ribbons: THREE.Mesh[] = [];
+    renderer.scene.instance.traverse((object) => {
+      if ((object as THREE.Mesh).isMesh && object.renderOrder === 7) ribbons.push(object as THREE.Mesh);
+    });
+    expect(ribbons.map(nearestGroupOrder)).toEqual([7]);
+  });
+
   it('draws nothing extra when an endpoint node is missing', async () => {
     const dangling: GraphEditConnection[] = [
       { fromNode: 'Source', fromPort: 0, toNode: 'Nowhere', toPort: 0 },
@@ -229,7 +251,7 @@ describe('<GraphEdit> constructor chrome (graph_edit.cpp:3229-3340)', () => {
 
   // Chrome draws inside `chromeSlot`, because top_layer is INTERNAL_MODE_BACK
   // (graph_edit.cpp:3183), in top_layer child order: scrollbars, toolbar, minimap.
-  const { toolbar, minimap } = canvasSubOrders(wholeKeySlot(9), GRAPH_EDIT_TOP_LAYER);
+  const { toolbar, minimap } = canvasSubOrders(wholeKeySlot(9), TOP_LAYER_ORDER);
   const TOOLBAR_BAND = toolbar.key;
   const MINIMAP_BAND = minimap.key;
 
@@ -419,8 +441,8 @@ describe('<GraphEdit> minimap connection polylines', () => {
    * connections, the camera and the resizer in that order (`graph_edit.cpp:1807-1892`).
    */
   function polyline(renderer: Rendered): THREE.Mesh | undefined {
-    const { minimap } = canvasSubOrders(wholeKeySlot(9), GRAPH_EDIT_TOP_LAYER);
-    const { connections } = canvasSubOrders(minimap, MINIMAP_PIECES);
+    const { minimap } = canvasSubOrders(wholeKeySlot(9), TOP_LAYER_ORDER);
+    const { connections } = canvasSubOrders(minimap, MINIMAP_DRAW_ORDER);
     return renderer.scene
       .findAllByType('Mesh')
       .map((m) => m.instance as THREE.Mesh)

@@ -24,6 +24,7 @@ import {
   spinBoxMinimumSize,
   spinBoxWidestButtonIconWidth,
 } from './nativeSolver';
+import { controlProps } from '../control/testing/controlProps';
 
 // At font size 16 with no theme in the chain: 'W' advances 1936*(16/2048) = 15.125
 // (`openSansMetrics.ts`'s hmtx), and the line is ceil(2189*16/2048) + ceil(600*16/2048) = 23 with
@@ -140,27 +141,29 @@ describe('formatGodotNumber', () => {
 
 describe('spinBoxDisplayText', () => {
   it('wraps the formatted value in prefix/suffix, space-separated (happy path)', () => {
-    expect(spinBoxDisplayText({ name: 'S', prefix: '$', suffix: 'kg', step: 0.25 }, 5.5)).toBe('$ 5.5 kg');
+    expect(spinBoxDisplayText(controlProps({ name: 'S', prefix: '$', suffix: 'kg', step: 0.25 }), 5.5)).toBe(
+      '$ 5.5 kg'
+    );
   });
 
   it('omits an absent prefix/suffix entirely, not as an empty wrap (error path)', () => {
-    expect(spinBoxDisplayText({ name: 'S' }, 5)).toBe('5');
+    expect(spinBoxDisplayText(controlProps({ name: 'S' }), 5)).toBe('5');
   });
 
   it('falls back to step=1 (Range default) when unset (edge case)', () => {
-    expect(spinBoxDisplayText({ name: 'S' }, 5.5)).toBe('6'); // step_decimals(1) = 0, so String::num rounds with %.0lf
+    expect(spinBoxDisplayText(controlProps({ name: 'S' }), 5.5)).toBe('6'); // step_decimals(1) = 0, so String::num rounds with %.0lf
   });
 });
 
 describe('spinBoxUpButtonState / spinBoxDownButtonState', () => {
   it('disables both buttons together when not editable (happy path)', () => {
-    const props: SpinBoxProperties = { name: 'S', editable: false, minValue: 0, maxValue: 10 };
+    const props: SpinBoxProperties = controlProps({ name: 'S', editable: false, minValue: 0, maxValue: 10 });
     expect(spinBoxUpButtonState(props, 5)).toBe('disabled');
     expect(spinBoxDownButtonState(props, 5)).toBe('disabled');
   });
 
   it('disables only the button whose bound the value has reached (error path)', () => {
-    const props: SpinBoxProperties = { name: 'S', minValue: 0, maxValue: 10 };
+    const props: SpinBoxProperties = controlProps({ name: 'S', minValue: 0, maxValue: 10 });
     expect(spinBoxUpButtonState(props, 10)).toBe('disabled');
     expect(spinBoxDownButtonState(props, 10)).toBe('normal');
     expect(spinBoxUpButtonState(props, 0)).toBe('normal');
@@ -168,13 +171,13 @@ describe('spinBoxUpButtonState / spinBoxDownButtonState', () => {
   });
 
   it('stays enabled at the bound when allow_greater/allow_lesser lifts it (edge case)', () => {
-    const props: SpinBoxProperties = {
+    const props: SpinBoxProperties = controlProps({
       name: 'S',
       minValue: 0,
       maxValue: 10,
       allowGreater: true,
       allowLesser: true,
-    };
+    });
     expect(spinBoxUpButtonState(props, 10)).toBe('normal');
     expect(spinBoxDownButtonState(props, 0)).toBe('normal');
   });

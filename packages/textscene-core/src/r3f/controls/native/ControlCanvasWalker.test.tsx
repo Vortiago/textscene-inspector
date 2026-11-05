@@ -20,6 +20,7 @@ import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../../godot/rendering/r
 import { Modulate2DContext, useParentModulate } from '../../canvasItemModulate';
 import { ROOT_TEXTURE_SAMPLER, useResolvedTextureSampler } from '../../canvasItemTextureSampler';
 import { solveNode as emptySolveNode } from './testing/solveNode';
+import { controlProps } from '../../../nodes/2d/ui/control/testing/controlProps';
 
 /** The world canvas's rank, derived, never hardcoded: only a rank's order means
  * anything, and the spacing for undeclared layers moves the value. */
@@ -54,7 +55,7 @@ function solveNode(
   children: SolveNode[] = []
 ): SolveNode {
   const name = path.split('/').pop()!;
-  const tscnNode: TscnNode = controlNode(name, type, { name, ...properties });
+  const tscnNode: TscnNode = controlNode(name, type, controlProps({ name, ...properties }));
   return { ...emptySolveNode(), path, node: tscnNode, children };
 }
 

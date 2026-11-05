@@ -968,6 +968,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Graph Edit Frame Order",
+    "file": "unit-graph-edit-frame-order.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Graph Edit Grid Buttons Hidden",
     "file": "unit-graph-edit-grid-buttons-hidden.tscn",
     "category": "Other"

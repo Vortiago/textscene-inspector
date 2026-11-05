@@ -45,6 +45,7 @@ import {
   VisibleCharactersBehavior,
   JustificationFlag,
 } from '../../../../godot/text/textServerEnums';
+import { controlProps } from '../control/testing/controlProps';
 
 const minSize = labelMinimumSize;
 
@@ -383,7 +384,7 @@ describe("labelShapingWidthPx (label.cpp:581's `int width = get_size().width - s
 describe('labelTextTheme', () => {
   it('reads the font_size and font_color overrides', () => {
     const red = { r: 1, g: 0, b: 0, a: 1 };
-    const props = { name: 'L', themeOverrideFontSizes: { font_size: 20 } } as LabelProperties;
+    const props = controlProps({ name: 'L', themeOverrideFontSizes: { font_size: 20 } });
     const resolved = labelTextTheme(node({}, { colors: { font_color: red } }), props, {
       theme: nativeTheme(1),
     });
@@ -397,7 +398,7 @@ describe('labelTextTheme', () => {
   });
 
   it("ignores RichTextLabel's normal_font_size and default_color keys (edge case)", () => {
-    const props = { name: 'L', themeOverrideFontSizes: { normal_font_size: 20 } } as LabelProperties;
+    const props = controlProps({ name: 'L', themeOverrideFontSizes: { normal_font_size: 20 } });
     const n = node({}, { colors: { default_color: { r: 1, g: 0, b: 0, a: 1 } } });
     expect(labelTextTheme(n, props, { theme: nativeTheme(1) })).toEqual({
       fontSizePx: 16,

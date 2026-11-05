@@ -34,6 +34,7 @@ import {
 import type { SplitContainerProperties } from './splitContainer';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { SizeFlags } from '../../../../godot/scene/control';
+import { controlProps } from '../control/testing/controlProps';
 
 /**
  * The two-child case of `computeSplitDraggerPositions`: one boundary and the deprecated singular
@@ -318,7 +319,7 @@ describe('resolveSplitSeparation', () => {
   const THEME = { separation: 12, grabberExtent: 8 };
 
   function separationProps(overrides: Partial<SplitContainerProperties> = {}): SplitContainerProperties {
-    return { name: 'Split', ...overrides };
+    return controlProps({ name: 'Split', ...overrides });
   }
 
   it('uses the theme default (12) when nothing overrides it', () => {
@@ -341,7 +342,7 @@ describe('resolveSplitSeparation', () => {
 });
 
 function props(overrides: Partial<SplitContainerProperties> = {}): SplitContainerProperties {
-  return { name: 'Split', ...overrides };
+  return controlProps({ name: 'Split', ...overrides });
 }
 
 describe('isSplitGrabberVisible', () => {

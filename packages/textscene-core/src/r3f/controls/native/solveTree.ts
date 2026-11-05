@@ -94,6 +94,11 @@ export interface SolveNode {
    */
   backSequence: number;
   /**
+   * The draw-sequence value of the listed layer this node adds itself, GraphEdit's connections
+   * (`listedChildOrder`), or `paintSequence` with none.
+   */
+  layerSequence: number;
+  /**
    * What the non-Control `CanvasItem` ancestors this node promoted past contribute,
    * or `null` for none. Non-null tells the solver that `data.parent_canvas_item`
    * is not a Control (`isPromotedControl`).

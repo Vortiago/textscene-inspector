@@ -163,7 +163,7 @@ function GridDotQuad({
  * The pieces of `top_layer`, an `INTERNAL_MODE_BACK` child drawn after every GraphElement
  * (`graph_edit.cpp:3183`), in its child order (`:3211-3329`).
  */
-export const GRAPH_EDIT_TOP_LAYER = ['scrollBars', 'toolbar', 'minimap'] as const;
+const GRAPH_EDIT_TOP_LAYER = ['scrollBars', 'toolbar', 'minimap'] as const;
 
 export function GraphEdit({
   solveNode,
@@ -172,6 +172,7 @@ export function GraphEdit({
   theme,
   renderOrder,
   chromeSlot,
+  layerSlot,
   childRects,
   measureText,
   snapToPixels,
@@ -278,9 +279,6 @@ export function GraphEdit({
   // The walker hands the children over (`wrapsChildren`): the clip reaches them only inside the provider.
   const { anchorRef, clip } = useWorldClipPlanes(ownRect);
 
-  // Connections draw at this node's `renderOrder`, behind every GraphElement. Godot puts
-  // `connections_layer` above the grid and below the GraphFrames and GraphNodes
-  // (`graph_edit.cpp:717`): see `comparison.md`.
   return (
     <CanvasItemGroup ref={anchorRef}>
       <ControlClipProvider value={clip}>
@@ -311,17 +309,19 @@ export function GraphEdit({
             <GridDotQuad key={`M${i}`} dot={dot} colorQuad={majorColor} renderOrder={renderOrder} />
           ))}
 
-        {connections.map((connection, i) => (
-          <ConnectionLine
-            key={i}
-            connection={connection}
-            curvature={curvature}
-            lineWidth={lineWidth}
-            rimColor={rimColor}
-            tintOwn={tint.own}
-            renderOrder={renderOrder}
-          />
-        ))}
+        <CanvasItemGroup renderOrder={layerSlot.key}>
+          {connections.map((connection, i) => (
+            <ConnectionLine
+              key={i}
+              connection={connection}
+              curvature={curvature}
+              lineWidth={lineWidth}
+              rimColor={rimColor}
+              tintOwn={tint.own}
+              renderOrder={layerSlot.key}
+            />
+          ))}
+        </CanvasItemGroup>
 
         {children}
 

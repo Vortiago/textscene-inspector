@@ -28,6 +28,7 @@ import {
 import { withVariation } from '../../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { TextEditProperties } from './types';
+import { controlProps } from '../control/testing/controlProps';
 
 const THEME = nativeTheme(1);
 
@@ -148,7 +149,7 @@ describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () =>
   });
 
   it('adds the gutter band width into the width', () => {
-    const props: TextEditProperties = { name: 'T', text: 'a', fitContentWidth: true };
+    const props: TextEditProperties = controlProps({ name: 'T', text: 'a', fitContentWidth: true });
     const box = THEME.widgets.lineEdit.normal;
     const withoutGutter = textEditMinimumSizeWith(node(props), ctx(), props, box, 0).x;
     expect(textEditMinimumSizeWith(node(props), ctx(), props, box, 5).x).toBe(withoutGutter + 5);

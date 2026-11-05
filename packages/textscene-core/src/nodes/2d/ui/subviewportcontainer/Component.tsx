@@ -112,6 +112,7 @@ function ViewportSurfaceNative({
       paintRange: WHOLE_CANVAS_RANGE,
       paintSequence: WHOLE_CANVAS_RANGE.base,
       backSequence: lastPaintSequence(WHOLE_CANVAS_RANGE),
+      layerSequence: WHOLE_CANVAS_RANGE.base,
       // The SubViewport itself, not a scene node the outliner can hide.
       hidden: false,
       // A Viewport is neither a CanvasItem nor a CanvasLayer, so the `parent_visible_in_tree` climb
@@ -155,6 +156,7 @@ function ViewportSurfaceNative({
           slot={slot}
           // The cycle branch renders no subtree, so the fallback's chrome takes its own slot.
           chromeSlot={slot}
+          layerSlot={slot}
           theme={theme}
           // Threaded for the contract; the outline is a diagnostic and
           // deliberately draws in its own colour, untinted.

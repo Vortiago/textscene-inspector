@@ -13,6 +13,7 @@ import {
   canvasPieceSlot,
   canvasSubOrder,
   canvasSubOrders,
+  ownAndBackSlots,
   wholeKeySlot,
   useCanvasItemState,
   type CanvasItemFields,
@@ -163,6 +164,18 @@ describe('canvasSubOrders', () => {
     const below = canvasSubOrders(KEY_40, ['a', 'b']);
     const above = canvasSubOrders(wholeKeySlot(41), ['a', 'b']);
     expect(below.b.key < above.a.key).toBe(true);
+  });
+});
+
+describe('ownAndBackSlots', () => {
+  it('gives the back slot its own key when the range holds one', () => {
+    expect(ownAndBackSlots(40, 45)).toEqual({ slot: wholeKeySlot(40), chromeSlot: wholeKeySlot(45) });
+  });
+
+  it('draws the back slot after every own piece when a squeezed range gives both one key', () => {
+    const { slot, chromeSlot } = ownAndBackSlots(40, 40);
+    const lastOwnPiece = canvasPieceSlot(slot, 2, 3);
+    expect(40 < slot.key && lastOwnPiece.key < chromeSlot.key && chromeSlot.key < 41).toBe(true);
   });
 });
 

@@ -76,6 +76,12 @@ export interface NativeControlComponentProps {
    */
   chromeSlot: CanvasSlot;
   /**
+   * The slot of the listed layer the Control adds itself: GraphEdit's `connections_layer`, which
+   * draws after the GraphFrames and before the GraphNodes (`graph_edit.cpp:714-717`). Every other
+   * Control gets its own `slot`.
+   */
+  layerSlot: CanvasSlot;
+  /**
    * The **solve handoff** the Control's `ContainerLayoutFn` sealed (`SolvedControl.meta`), or
    * `undefined`. Only the producing slice's channel opens it (`native/solveHandoff.ts`). A painter
    * pure in `(node, theme)` calls its solver's share instead. Required, so a painter that needs it

@@ -172,6 +172,31 @@ export function internalBackRoom(node: TscnNode): number {
   return isControlType(node.type) ? 1 : 0;
 }
 
+/**
+ * How many values a listed child the parent adds itself takes: one for GraphEdit's
+ * `connections_layer` (`graph_edit.cpp:3189-3190`). `listedChildOrder` places it.
+ */
+function internalLayerRoom(node: TscnNode): number {
+  return node.type === 'GraphEdit' ? 1 : 0;
+}
+
+/** Marks the parent's own listed layer in a `listedChildOrder`. */
+const LISTED_LAYER = -1;
+
+/**
+ * The order `parent` draws `children` in, as indices into `children`, with `LISTED_LAYER` where its
+ * own layer draws, or `undefined` for scene order. GraphEdit moves each GraphFrame to index 0 and
+ * `connections_layer` to the index after the frames (`graph_edit.cpp:714-717`). So the frames draw
+ * in reverse scene order, then the connections, then the other children in scene order.
+ */
+export function listedChildOrder(parent: TscnNode, children: readonly TscnNode[]): number[] | undefined {
+  if (internalLayerRoom(parent) === 0) return undefined;
+  const isFrame = children.map((child) => descendsFromClass(child.type, 'GraphFrame'));
+  const indices = children.map((_, index) => index);
+  const frames = indices.filter((index) => isFrame[index]).reverse();
+  return [...frames, LISTED_LAYER, ...indices.filter((index) => !isFrame[index])];
+}
+
 /** Filled by `isControlType` and never cleared: a class's chain is fixed. */
 const controlTypes = new Map<string, boolean>();
 
@@ -192,7 +217,10 @@ function isControlType(type: string): boolean {
  */
 export function paintRangeSize(node: TscnNode): number {
   let size =
-    (reservesRoom(node) ? DYNAMIC_CHILD_RESERVE : 1) + internalFrontRoom(node) + internalBackRoom(node);
+    (reservesRoom(node) ? DYNAMIC_CHILD_RESERVE : 1) +
+    internalFrontRoom(node) +
+    internalBackRoom(node) +
+    internalLayerRoom(node);
   for (const child of node.children) size += paintRangeSize(child);
   // A canvas root nested under this item draws after its whole subtree, from
   // room held at the end of its run.
@@ -316,6 +344,8 @@ interface AllocatedPaintRange {
   front: PaintRange;
   /** One range per child, positionally matching the `children` passed in. */
   children: PaintRange[];
+  /** The sequence the parent's own listed layer draws at (`listedChildOrder`), or `self` with none. */
+  layer: number;
   /**
    * The run the parent's internal back children draw from (`internalBackRoom`), last of all. With
    * no back room it is empty and starts at the run's last value, never at the next sibling's first.
@@ -343,29 +373,34 @@ interface PaintRangeLayout {
   frontRoom?: number;
   /** Values the parent's internal back children take (`internalBackRoom`). */
   backRoom?: number;
+  /** The draw order of the children and the parent's own listed layer (`listedChildOrder`). */
+  listedOrder?: readonly number[];
 }
 
 /**
  * Splits `range` between its node and the children, in draw order.
  * `_cull_canvas_item` (lines 477-490) visits the `show_behind_parent` children,
- * then the node, then the other children, each group in index order. Internal
+ * then the node, then the other children, each group in index order, which `listedOrder` gives when the parent moves its children. Internal
  * front children have the lowest indices, so they draw first of the others, and internal back
  * children the highest, so they draw last.
  */
 export function allocatePaintRange(
   range: PaintRange,
   children: readonly TscnNode[],
-  { sortsChildren = false, frontRoom = 0, backRoom = 0 }: PaintRangeLayout = {}
+  { sortsChildren = false, frontRoom = 0, backRoom = 0, listedOrder }: PaintRangeLayout = {}
 ): AllocatedPaintRange {
+  const order = listedOrder ?? children.map((_, index) => index);
+  const layerRoom = order.includes(LISTED_LAYER) ? 1 : 0;
   // A `y_sort_enabled` parent takes `_collect_ysort_children` instead, so it has
   // no behind split. With one, its sequence moves past `range.base` and the
   // y-sort pass overruns into the next sibling's range.
   const behind = children.map((child) => !sortsChildren && drawsBehindParent(child));
   // Fitted with the children, since a squeezed range shrinks the front as well.
-  const fitted = fitToRange([frontRoom, backRoom, ...children.map(paintRangeSize)], range.size);
+  const fitted = fitToRange([frontRoom, backRoom, layerRoom, ...children.map(paintRangeSize)], range.size);
   const frontSize = frontRoom > 0 ? fitted[0]! : 0;
   const backSize = backRoom > 0 ? fitted[1]! : 0;
-  const sizes = fitted.slice(2);
+  const layerSize = layerRoom > 0 ? fitted[2]! : 0;
+  const sizes = fitted.slice(3);
   const end = range.base + range.size - backSize;
 
   let cursor = range.base;
@@ -378,21 +413,22 @@ export function allocatePaintRange(
     return { base, size: taken };
   };
 
-  for (let i = 0; i < children.length; i++) {
-    if (!behind[i]) continue;
-    allocated[i] = take(sizes[i]!);
+  for (const i of order) {
+    if (i !== LISTED_LAYER && behind[i]) allocated[i] = take(sizes[i]!);
   }
   const self = Math.min(cursor, Math.max(range.base, end - 1));
   cursor = self + 1;
   const front = take(frontSize);
-  for (let i = 0; i < children.length; i++) {
-    if (behind[i]) continue;
-    allocated[i] = take(sizes[i]!);
+  let layer = self;
+  for (const i of order) {
+    if (i === LISTED_LAYER) layer = take(layerSize).base;
+    else if (!behind[i]) allocated[i] = take(sizes[i]!);
   }
   return {
     self,
     front,
     children: allocated,
+    layer,
     back: { base: backSize > 0 ? end : lastPaintSequence(range), size: backSize },
     tail: { base: Math.min(cursor, end), size: Math.max(0, end - cursor) },
   };
@@ -404,6 +440,7 @@ export function allocateNodePaintRange(range: PaintRange, node: TscnNode): Alloc
     sortsChildren: (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true,
     frontRoom: internalFrontRoom(node),
     backRoom: internalBackRoom(node),
+    listedOrder: listedChildOrder(node, node.children),
   });
 }
 

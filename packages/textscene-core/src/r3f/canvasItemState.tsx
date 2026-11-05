@@ -216,3 +216,17 @@ export function canvasSubOrder(slot: CanvasSlot): CanvasSlot {
 export function wholeKeySlot(key: number): CanvasSlot {
   return { key, span: 1 };
 }
+
+/**
+ * A Control's own slot and the slot of its `INTERNAL_MODE_BACK` chrome. A squeezed range can give the
+ * back room no sequence past the own one, and then both share the own key, own pieces first, since
+ * Godot draws the back children after the item (`scroll_container.cpp:919,924`).
+ */
+export function ownAndBackSlots(
+  ownKey: number,
+  backKey: number
+): { slot: CanvasSlot; chromeSlot: CanvasSlot } {
+  const own = wholeKeySlot(ownKey);
+  if (backKey !== ownKey) return { slot: own, chromeSlot: wholeKeySlot(backKey) };
+  return { slot: canvasPieceSlot(own, 0, 2), chromeSlot: canvasPieceSlot(own, 1, 2) };
+}

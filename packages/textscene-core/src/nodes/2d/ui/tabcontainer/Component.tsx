@@ -111,6 +111,7 @@ export function TabContainer({
             renderOrder={stripSlot.key}
             slot={stripSlot}
             chromeSlot={stripSlot}
+            layerSlot={stripSlot}
             measureText={measureText}
             snapToPixels={snapToPixels}
             childRects={EMPTY_CHILD_RECTS}

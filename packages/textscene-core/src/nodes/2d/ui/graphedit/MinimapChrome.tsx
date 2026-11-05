@@ -157,7 +157,7 @@ interface GraphEditMinimapProps {
 }
 
 /** What `GraphEdit::_minimap_draw` draws after its panel, in order (`graph_edit.cpp:1807-1892`). */
-export const MINIMAP_PIECES = ['nodes', 'connections', 'camera', 'resizer'] as const;
+const MINIMAP_PIECES = ['nodes', 'connections', 'camera', 'resizer'] as const;
 
 export function GraphEditMinimapChrome({
   rect,
