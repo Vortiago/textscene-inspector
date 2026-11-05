@@ -10,7 +10,13 @@
  */
 import { OPEN_SANS_ATLAS_GLYPHS } from './openSansAtlas';
 import { getFontEmboldenedAdvancePx, getFontEmboldenGrowthPx, type FontMetrics } from './fontMetrics';
-import { isWhitespace, type GlyphPlacement, type TextLayoutResult, type TextLineLayout } from './textLayout';
+import {
+  isWhitespace,
+  widestLineWidthPx,
+  type GlyphPlacement,
+  type TextLayoutResult,
+  type TextLineLayout,
+} from './textLayout';
 import { fitTrimmedGlyphsToWidth } from './textJustify';
 import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
@@ -340,7 +346,7 @@ export function trimLayoutToWidth(
   options: TextBufferTrimOptions
 ): TextLayoutResult {
   const lines = layout.lines.map((line) => trimTextBufferLineToWidth(line, widthPx, flags, options));
-  return { ...layout, lines, widthPx: lines.reduce((max, line) => Math.max(max, line.widthPx), 0) };
+  return { ...layout, lines, widthPx: widestLineWidthPx(lines) };
 }
 
 /** The right edge of the last placed glyph. */

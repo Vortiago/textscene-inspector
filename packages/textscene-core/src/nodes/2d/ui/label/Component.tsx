@@ -133,7 +133,8 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   const bidiOptions = useControlBidiOptions(props, solveNode);
   const layout = useMemo(() => {
     if (sharedLayout) return sharedLayout;
-    const shaped = shapeText(text, {
+    // A loading font draws nothing, so its layout shapes no text.
+    const shaped = shapeText(isFontLoading ? '' : text, {
       fontSizePx: textTheme.fontSizePx,
       boxWidthPx: labelShapingWidthPx(rect.w),
       autowrapMode,
@@ -149,6 +150,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     return windowLabelLines(shaped, range, textTheme.paragraphSpacingPx);
   }, [
     sharedLayout,
+    isFontLoading,
     text,
     textTheme.fontSizePx,
     textTheme.lineSpacingPx,
