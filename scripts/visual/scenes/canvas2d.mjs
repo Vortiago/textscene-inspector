@@ -895,6 +895,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'line-edit-rtl', file: 'unit-line-edit-rtl.tscn', mode: '2d' },
   { name: 'text-edit-rtl', file: 'unit-text-edit-rtl.tscn', mode: '2d' },
   { name: 'text-edit-placeholder', file: 'unit-text-edit-placeholder.tscn', mode: '2d' },
+  { name: 'text-edit-overflow', file: 'unit-text-edit-overflow.tscn', mode: '2d' },
+  { name: 'code-edit-empty-gutter', file: 'unit-code-edit-empty-gutter.tscn', mode: '2d' },
   { name: 'code-edit-rtl', file: 'unit-code-edit-rtl.tscn', mode: '2d' },
   { name: 'rich-text-label-rtl', file: 'unit-rich-text-label-rtl.tscn', mode: '2d' },
   { name: 'spin-box-rtl', file: 'unit-spin-box-rtl.tscn', mode: '2d' },

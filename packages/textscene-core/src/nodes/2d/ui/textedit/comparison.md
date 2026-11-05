@@ -106,6 +106,10 @@ that breaks at its own newlines and at the wrap width. It paints at
 the node's direction and language but never `structured_text_bidi_override`
 (`text_edit.cpp:3348-3351`). `fit_content_*` measures its rows and widest row.
 
+A row wider than the text band drops each glyph whose advance box crosses `xmargin_beg` or
+`xmargin_end`. The glyph goes whole, not clipped. The walk stops at the end margin
+(`text_edit.cpp:1724-1738`), so a `draw_tabs` icon past that glyph is not drawn.
+
 `indent_size` (`CodeEdit` only, `set_tab_size`) re-aligns every tab glyph to a
 repeating stop `indent_size` space-widths wide (`nativeSolver.ts`'s
 `textEditTabStopsPx`). A bare `TextEdit` has no `.tscn` property for it and

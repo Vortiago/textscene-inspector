@@ -43,6 +43,7 @@ import {
   textEditRowOriginXPx,
   textEditRowStartIndices,
   textEditRowColorRuns,
+  textEditDrawnGlyphs,
   textEditColorRunLine,
   textEditGlyphColorAt,
   textEditTabStopsPx,
@@ -280,22 +281,23 @@ export function TextEditBody({
           const row = startRow + rowInLine;
           const rowTopPx = textEditRowTextTopPx(rowBandTopPx(row), rowHeightPx, textHeightPx);
           const rowStartIndex = rowStartIndices?.[rowInLine] ?? 0;
-          const runs = textEditRowColorRuns(line.glyphs, rowStartIndex, spans, baseFontColor);
+          const rowOriginXPx = textEditRowOriginXPx(
+            band.xMarginBeginPx,
+            rect.w,
+            line.widthPx,
+            solveNode.rtl,
+            rowInLine > firstIndentRow ? wrapIndentPx : 0
+          );
+          // Godot drops each glyph that crosses a margin and stops walking at the end one (`:1724-1738`).
+          const drawn = textEditDrawnGlyphs(
+            line.glyphs,
+            rowOriginXPx,
+            band.xMarginBeginPx,
+            band.xMarginEndPx
+          );
+          const runs = textEditRowColorRuns(line.glyphs, rowStartIndex, spans, baseFontColor, drawn);
           return (
-            <CanvasItemGroup
-              key={`${lineIndex}-${rowInLine}`}
-              position={[
-                textEditRowOriginXPx(
-                  band.xMarginBeginPx,
-                  rect.w,
-                  line.widthPx,
-                  solveNode.rtl,
-                  rowInLine > firstIndentRow ? wrapIndentPx : 0
-                ),
-                -rowTopPx,
-                0,
-              ]}
-            >
+            <CanvasItemGroup key={`${lineIndex}-${rowInLine}`} position={[rowOriginXPx, -rowTopPx, 0]}>
               {runs.map((run, runIndex) => (
                 <TextRun
                   key={runIndex}
@@ -308,6 +310,8 @@ export function TextEditBody({
               ))}
               {(props.drawTabs || props.drawSpaces) &&
                 line.glyphs.map((glyph, glyphIndex) => {
+                  // The icons draw before the margin test, but only for a glyph the walk reaches.
+                  if (glyphIndex >= drawn.length) return null;
                   if (props.drawTabs && glyph.char === '\t') {
                     // The per-glyph highlighted colour tints its icon, not a
                     // fixed font_color (text_edit.cpp:1674,1714).

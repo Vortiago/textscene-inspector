@@ -25,12 +25,15 @@ import {
   textEditWrapIndentPx,
   textEditFirstIndentRow,
   textEditDrawnLines,
+  textEditDrawnGlyphs,
+  textEditRowColorRuns,
 } from './nativeSolver';
 import { withVariation } from '../../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { TextEditProperties } from './types';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { StructuredTextParser } from '../../../../godot/text/textServerEnums';
+import type { GlyphPlacement } from '../../../../r3f/controls/native/text/textLayout';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const THEME = nativeTheme(1);
@@ -491,5 +494,42 @@ describe('shapeTextEditLines — direction, language and structured override (te
   it('runs the structured parser on each line on its own (text_edit.cpp:297-324)', () => {
     const file = { textDirection: 2, structuredTextBidiOverride: 2 };
     expect(visual(['שלום/abc', 'a/שלום'], file)).toEqual(['םולש/abc', 'a/םולש']);
+  });
+});
+
+describe('textEditDrawnGlyphs', () => {
+  // Three 10 px glyphs at pen x 0, 10 and 20.
+  const glyphs = [0, 10, 20].map((x) => ({ x, advance: 10 })) as GlyphPlacement[];
+
+  it('draws every glyph whose advance box lies between the margins (text_edit.cpp:1724)', () => {
+    expect(textEditDrawnGlyphs(glyphs, 4, 4, 34)).toEqual([true, true, true]);
+  });
+
+  it('drops a glyph that crosses the end margin whole, and stops the walk (:1736-1738)', () => {
+    expect(textEditDrawnGlyphs(glyphs, 4, 4, 33)).toEqual([true, true, false]);
+  });
+
+  it('keeps a glyph that ends on the end margin, then stops the walk', () => {
+    expect(textEditDrawnGlyphs(glyphs, 4, 4, 24)).toEqual([true, true]);
+  });
+
+  it('drops a glyph that starts before the begin margin and keeps walking', () => {
+    expect(textEditDrawnGlyphs(glyphs, -5, 0, 100)).toEqual([false, true, true]);
+  });
+});
+
+describe('textEditRowColorRuns — culled glyphs', () => {
+  const glyphs = [0, 10, 20].map((x) => ({ x, advance: 10, char: 'a' })) as GlyphPlacement[];
+  const colour = { r: 1, g: 1, b: 1, a: 1 };
+
+  it('omits a glyph the cull dropped and keeps the others at their own index', () => {
+    const [run] = textEditRowColorRuns(glyphs, 0, undefined, colour, [true, false, true]);
+    expect(run!.glyphs.map((glyph) => glyph.x)).toEqual([0, 20]);
+  });
+
+  it('still yields one empty run when every glyph is dropped, so the row keeps its TextRun', () => {
+    expect(textEditRowColorRuns(glyphs, 0, undefined, colour, [false, false, false])).toEqual([
+      { glyphs: [], color: colour },
+    ]);
   });
 });

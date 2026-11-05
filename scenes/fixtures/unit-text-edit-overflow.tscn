@@ -1,0 +1,34 @@
+; One variable: a row wider than the box. Godot drops each glyph whose advance box crosses `xmargin_end`
+; (or `xmargin_beg` under RTL) whole, and stops the walk there (text_edit.cpp:1724-1738), so no half glyph
+; shows at the edge. `Ltr` and `Rtl` (`layout_direction = 3`) overflow one long line, and `Tabs` ends in a
+; tab with `draw_tabs` that the walk never reaches. No other fixture overflows a TextEdit row.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Ltr" type="TextEdit" parent="."]
+layout_mode = 1
+offset_top = 16.0
+offset_right = 230.0
+offset_bottom = 76.0
+text = "Wave rift over quiet stone and amber water"
+
+[node name="Rtl" type="TextEdit" parent="."]
+layout_mode = 1
+layout_direction = 3
+offset_top = 92.0
+offset_right = 230.0
+offset_bottom = 152.0
+text = "Wave rift over quiet stone and amber water"
+
+[node name="Tabs" type="TextEdit" parent="."]
+layout_mode = 1
+offset_top = 168.0
+offset_right = 230.0
+offset_bottom = 228.0
+text = "Wave rift over quiet stone and amber\twater"
+draw_tabs = true

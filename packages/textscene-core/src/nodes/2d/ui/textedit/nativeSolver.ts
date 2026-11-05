@@ -537,20 +537,44 @@ interface TextEditGlyphColorRun {
 }
 
 /**
+ * Which glyphs of one row `NOTIFICATION_DRAW` draws (`text_edit.cpp:1724`): a glyph whose advance box
+ * starts before `xmargin_beg` or ends past `xmargin_end` is dropped whole, not clipped. The walk stops
+ * after the first glyph whose pen reaches `xmargin_end` (`:1736-1738`), so the array ends there and a
+ * later glyph, with its tab or space icon, is not visited. `charMarginPx` is the row's pen origin.
+ */
+export function textEditDrawnGlyphs(
+  rowGlyphs: readonly GlyphPlacement[],
+  charMarginPx: number,
+  xMarginBeginPx: number,
+  xMarginEndPx: number
+): boolean[] {
+  const drawn: boolean[] = [];
+  for (const glyph of rowGlyphs) {
+    const startX = charMarginPx + glyph.x;
+    const endX = startX + glyph.advance;
+    drawn.push(startX >= xMarginBeginPx && endX <= xMarginEndPx);
+    if (endX >= xMarginEndPx) break;
+  }
+  return drawn;
+}
+
+/**
  * Groups one wrapped row's glyphs into same-colour runs, one `<TextRun>` each. `spans` covers
- * the whole buffer line, and `rowStartIndex` is this row's offset (`textEditRowStartIndices`). No
- * highlighter, or an empty row, yields one `fallbackColor` run, so every row renders a `<TextRun>`.
+ * the whole buffer line, and `rowStartIndex` is this row's offset (`textEditRowStartIndices`). A glyph
+ * `isDrawn` marks false, or one past its end, is left out but keeps its index for the colour lookup.
+ * No highlighter, or an empty row, yields one `fallbackColor` run, so every row renders a `<TextRun>`.
  */
 export function textEditRowColorRuns(
   rowGlyphs: readonly GlyphPlacement[],
   rowStartIndex: number,
   spans: readonly CodeHighlighterColorSpan[] | undefined,
-  fallbackColor: Rgba
+  fallbackColor: Rgba,
+  isDrawn?: readonly boolean[]
 ): TextEditGlyphColorRun[] {
-  if (rowGlyphs.length === 0) return [{ glyphs: [], color: fallbackColor }];
   const runs: TextEditGlyphColorRun[] = [];
   let current: TextEditGlyphColorRun | undefined;
   rowGlyphs.forEach((glyph, k) => {
+    if (isDrawn && !isDrawn[k]) return;
     const color = spans ? colorAt(spans, rowStartIndex + k, fallbackColor) : fallbackColor;
     if (current && sameColor(current.color, color)) {
       current.glyphs.push(glyph);
@@ -559,7 +583,7 @@ export function textEditRowColorRuns(
       runs.push(current);
     }
   });
-  return runs;
+  return runs.length > 0 ? runs : [{ glyphs: [], color: fallbackColor }];
 }
 
 /** One colour run's glyphs as a `TextLineLayout`, `soloLineLayout`'s input, so a run renders through the same `<TextRun>` path as a whole row. */

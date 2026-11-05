@@ -14,9 +14,9 @@ import {
 import type { CodeEditProperties } from './types';
 
 describe('codeEditGutterBand line-number digits', () => {
-  // code_edit.cpp:3875: MAX(line_numbers_min_digits, std::log10(lc) + 1).
+  // code_edit.cpp:3875: MAX(line_numbers_min_digits, std::log10(lc) + 1), run by `text_set`.
   function digits(lineCount: number, gutterLineNumbersMinDigits?: number): number {
-    const props = { gutterLineNumbersMinDigits } as CodeEditProperties;
+    const props = { text: '', gutterLineNumbersMinDigits } as CodeEditProperties;
     return codeEditGutterBand(props, 24, 8, lineCount).lineNumberDigits;
   }
 
@@ -29,6 +29,27 @@ describe('codeEditGutterBand line-number digits', () => {
   });
   it('honours an explicit gutters_line_numbers_min_digits override', () => {
     expect(digits(1, 1)).toBe(1);
+  });
+});
+
+describe('codeEditGutterBand line-number digits before any text change', () => {
+  // `line_number_digits` starts at 1 (code_edit.h:113) and only `_text_changed` (code_edit.cpp:3875) or a
+  // changed `line_numbers_min_digits` (:1536-1550) recomputes it, so a CodeEdit never given text keeps 1.
+  function untouchedDigits(props: Partial<CodeEditProperties>): number {
+    return codeEditGutterBand(props as CodeEditProperties, 24, 8, 1).lineNumberDigits;
+  }
+
+  it('keeps the constructor digit count for a CodeEdit with no text property', () => {
+    expect(untouchedDigits({})).toBe(1);
+  });
+  it('recomputes once a text property, even an empty one, is assigned (text_edit.cpp:4006)', () => {
+    expect(untouchedDigits({ text: '' })).toBe(3);
+  });
+  it('recomputes for a min-digits setter that changes the value', () => {
+    expect(untouchedDigits({ gutterLineNumbersMinDigits: 5 })).toBe(5);
+  });
+  it('ignores a min-digits setter that repeats the default, which returns early', () => {
+    expect(untouchedDigits({ gutterLineNumbersMinDigits: 3 })).toBe(1);
   });
 });
 
@@ -84,7 +105,7 @@ describe('codeEditGutterBand', () => {
 
   it('the line-number gutter costs (digits+1) char-0 widths', () => {
     const band = codeEditGutterBand(
-      { gutterDrawLineNumbers: true } as CodeEditProperties,
+      { gutterDrawLineNumbers: true, text: '' } as CodeEditProperties,
       rowHeightPx,
       charWidth0Px,
       1
@@ -99,7 +120,18 @@ describe('codeEditGutterBand', () => {
       charWidth0Px,
       1
     );
-    expect(band.foldWidthPx).toBeCloseTo(rowHeightPx / 1.2, 6);
+    expect(band.foldWidthPx).toBe(20);
+  });
+
+  it('truncates each gutter width into the int set_gutter_width takes (text_edit.h:1120)', () => {
+    const band = codeEditGutterBand(
+      { text: '', gutterDrawLineNumbers: true, gutterDrawFoldGutter: true } as CodeEditProperties,
+      25,
+      9.1,
+      1
+    );
+    expect(band.lineNumberWidthPx).toBe(36);
+    expect(band.foldWidthPx).toBe(20);
   });
 
   it('carries gutter_padding even with every gutter off — the latch never opens (text_edit.cpp:8969-8971)', () => {

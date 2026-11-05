@@ -68,6 +68,11 @@ delimiter arrays decide which lines can fold. `indent_size` widens every tab sto
 the doc of `indentSize`). The strict linter format-checks the completion and brace-pair
 members, and this parser never reads them, because none of them changes the picture.
 
+The line-number gutter is `(digits + 1)` zero advances wide, cut to a whole pixel as
+`set_gutter_width` takes it. `digits` starts at 1 and `text_set` or a changed
+`gutters_line_numbers_min_digits` recomputes it, so a CodeEdit with no `text` property keeps the
+one-digit gutter (`code_edit.cpp:3863-3880`).
+
 ## Known limitations
 
 - **Not drawn** The main gutter reserves its width but draws no bookmark, breakpoint or

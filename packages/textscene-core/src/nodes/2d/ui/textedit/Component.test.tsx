@@ -464,3 +464,38 @@ describe('<TextEdit> — placeholder_text', () => {
     expect(x(rtl[0]!)).toBeGreaterThan(x(ltr[0]!));
   });
 });
+
+describe('<TextEdit> — glyphs past the end margin', () => {
+  afterEach(() => controlSolverRegistry.clear());
+
+  const glyphCount = (scene: Rendered['scene']) =>
+    findTextMeshes(scene).reduce(
+      (sum, mesh) => sum + (mesh.geometry as THREE.BufferGeometry).attributes.position!.count / 4,
+      0
+    );
+
+  async function render(text: string) {
+    return ReactThreeTestRenderer.create(
+      <TextEdit {...painterEnv()} solveNode={solveNode({ text })} rect={RECT} renderOrder={0} />
+    );
+  }
+
+  it('drops the glyphs of an overflowing row that Godot skips (text_edit.cpp:1724)', async () => {
+    const fits = 'abcdefghij';
+    expect(glyphCount((await render(fits)).scene)).toBe(fits.length);
+    expect(glyphCount((await render(fits.repeat(10))).scene)).toBeLessThan(fits.length * 10);
+  });
+
+  it('draws no tab icon past the glyph where the walk stops', async () => {
+    const text = `${'a'.repeat(60)}\t`;
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text, drawTabs: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(findPlainQuads(renderer.scene)).toHaveLength(0);
+  });
+});
