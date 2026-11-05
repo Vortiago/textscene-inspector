@@ -142,6 +142,24 @@ describe('<TabContainer> (isolated painter contract)', () => {
     expect(stripMesh(behind.scene).renderOrder).toBeCloseTo(9.5, 5);
     expect(stripMesh(front.scene).renderOrder).toBe(5);
   });
+
+  // three sorts by the nearest group's renderOrder before the mesh's own, so a strip text left in
+  // the container's group draws under its own tab StyleBox.
+  it('puts the strip text in a group at the subtree-chrome slot, as its tab StyleBox is', async () => {
+    const behind = await ReactThreeTestRenderer.create(
+      <TabContainer
+        {...painterEnv()}
+        solveNode={solveNode({ currentTab: 0, allTabsInFront: false }, [page('A')])}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={5}
+        subtreeChromeRenderOrder={9}
+      />
+    );
+    let parent = findTextMeshes(behind.scene)[0]!.parent;
+    while (parent && !(parent as THREE.Group).isGroup) parent = parent.parent;
+    expect(parent!.renderOrder).toBeCloseTo(9.5, 5);
+  });
 });
 
 describe('<TabContainer> panel band', () => {
