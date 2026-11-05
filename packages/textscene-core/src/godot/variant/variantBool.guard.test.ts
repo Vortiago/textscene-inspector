@@ -19,7 +19,6 @@ const src = resolve(dirname(fileURLToPath(import.meta.url)), '../..'); // .../sr
  */
 const NOT_A_BOOL_SLOT: Record<string, string> = {
   'r3f/components/SceneTreeViewer/SceneTreeViewer.tsx': 'aria-expanded, a DOM attribute',
-  'r3f/internalTextLabel.tsx': 'the VITEST environment variable',
   'nodes/animation/animationplayer/keyframeValues.ts': 'an untyped Variant keyframe value',
   'godot/variant/variantBool.ts': 'the definition itself',
   'r3f/controls/native/text/fontFaceDoor.ts': 'the VITEST environment variable',

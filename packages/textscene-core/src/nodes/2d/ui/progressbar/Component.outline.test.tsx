@@ -1,5 +1,5 @@
 /**
- * The canvas outline of a `<ProgressBar>` percentage draws beneath the percentage. `<TextRun>` is
+ * The canvas outline of a `<ProgressBar>` percentage draws beneath the percentage. `<TextRunMesh>` is
  * stubbed to read the props the painter hands it.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -39,8 +39,8 @@ vi.mock('../../../../r3f/controls/native/text/sceneFontLoader', async (importOri
 vi.mock('../../../../r3f/controls/native/text/bundledFontLoader', () => ({
   peekBundledCanvasFontMetrics: () => scene.bundled,
 }));
-vi.mock('../../../../r3f/controls/native/text/TextRun', () => ({
-  TextRun: (props: RunProps) => {
+vi.mock('../../../../r3f/controls/native/text/TextRunMesh', () => ({
+  TextRunMesh: (props: RunProps) => {
     scene.runs.push(props);
     return null;
   },

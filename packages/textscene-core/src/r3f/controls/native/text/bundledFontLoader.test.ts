@@ -1,10 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
-/** Waits until the registration a peek started has settled: the bytes chunk loads first. */
-async function settleLoads(): Promise<void> {
-  const { fontWork } = await import('./settledChannel');
-  await vi.waitFor(() => expect(fontWork.pending()).toBe(0));
-}
+import { settleFontWork } from '../../../testing/settleFontWork';
 
 /**
  * `fillText` with an unregistered family paints a system font that passes the visual harness's
@@ -67,7 +62,7 @@ describe('bundled font registration gate', () => {
     installFontFace();
     const { peekBundledCanvasFontMetrics } = await freshModule();
     expect(peekBundledCanvasFontMetrics()).toBeUndefined();
-    await settleLoads();
+    await settleFontWork();
   });
 
   it('hands out canvas metrics for the registered family once registration resolves, and peeks the same object after', async () => {
@@ -75,7 +70,7 @@ describe('bundled font registration gate', () => {
     const { peekBundledCanvasFontMetrics } = await freshModule();
 
     peekBundledCanvasFontMetrics();
-    await settleLoads();
+    await settleFontWork();
     const metrics = peekBundledCanvasFontMetrics();
     expect(metrics?.kind).toBe('canvas');
     expect(FakeFontFace.instances).toHaveLength(1);
@@ -89,7 +84,7 @@ describe('bundled font registration gate', () => {
     installFontFace();
     const { peekBundledCanvasFontMetrics } = await freshModule();
     peekBundledCanvasFontMetrics();
-    await settleLoads();
+    await settleFontWork();
 
     const source = FakeFontFace.instances[0]?.source;
     expect(source).toBeInstanceOf(ArrayBuffer);
@@ -102,7 +97,7 @@ describe('bundled font registration gate', () => {
 
     peekBundledCanvasFontMetrics();
     peekBundledCanvasFontMetrics();
-    await settleLoads();
+    await settleFontWork();
     expect(peekBundledCanvasFontMetrics()).toBe(peekBundledCanvasFontMetrics());
     expect(FakeFontFace.instances).toHaveLength(1);
   });
@@ -115,7 +110,7 @@ describe('bundled font registration gate', () => {
     const off = onSceneFontSettled(listener);
     try {
       peekBundledCanvasFontMetrics();
-      await settleLoads();
+      await settleFontWork();
       expect(listener).toHaveBeenCalledTimes(1);
     } finally {
       off();
@@ -128,7 +123,7 @@ describe('bundled font registration gate', () => {
     const { peekBundledCanvasFontMetrics, logger } = await freshModule();
 
     peekBundledCanvasFontMetrics();
-    await settleLoads();
+    await settleFontWork();
     expect(peekBundledCanvasFontMetrics()).toBeNull();
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('bad font bytes'));
   });
@@ -142,7 +137,7 @@ describe('bundled font registration gate', () => {
     const off = onSceneFontSettled(listener);
     try {
       peekBundledCanvasFontMetrics();
-      await settleLoads();
+      await settleFontWork();
       expect(peekBundledCanvasFontMetrics()).toBeNull();
       expect(listener).toHaveBeenCalledTimes(1);
     } finally {
@@ -155,7 +150,7 @@ describe('bundled font registration gate', () => {
     const { peekBundledCanvasFontMetrics, logger } = await freshModule();
 
     peekBundledCanvasFontMetrics();
-    await settleLoads();
+    await settleFontWork();
     expect(peekBundledCanvasFontMetrics()).toBeNull();
     // The door's diagnosis, not the catch's: an absent environment is not broken font bytes.
     expect(logger.warn).toHaveBeenCalledWith(
@@ -170,7 +165,7 @@ describe('bundled font registration gate', () => {
     const { peekBundledCanvasFontMetrics } = await import('./bundledFontLoader');
 
     peekBundledCanvasFontMetrics();
-    await settleLoads();
+    await settleFontWork();
     expect(peekBundledCanvasFontMetrics()).toBeNull();
     expect(warn).not.toHaveBeenCalled();
   });

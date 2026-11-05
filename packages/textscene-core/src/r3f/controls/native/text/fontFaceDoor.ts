@@ -6,7 +6,7 @@
 /**
  * happy-dom has neither `FontFace` nor a 2D canvas context, so under vitest a loader settles on its
  * fallback before any DOM font API. The skip is deliberate, so it does not warn.
- * `r3f/internalTextLabel.tsx` uses the same detection.
+ * `r3f/internalTextLabel.tsx` skips drei's `<Text>` on it too.
  */
 export const IS_VITEST = (() => {
   const proc = (globalThis as { process?: { env?: { VITEST?: string } } }).process;

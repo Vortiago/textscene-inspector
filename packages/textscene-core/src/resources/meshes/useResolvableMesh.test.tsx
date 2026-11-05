@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { parseTresFile } from '../../parser/parsedResource';
-import { createSettledPeek, fontWork } from '../../r3f/controls/native/text/settledChannel';
+import { createSettledPeek } from '../../r3f/controls/native/text/settledChannel';
+import { settleFontWork } from '../../r3f/testing/settleFontWork';
 import { NO_RESOURCES } from '../../r3f/SceneResourcesContext';
 import type { ScopedResource } from '../scopedResource';
 import { createFakeResourceLoader } from '../testing/createFakeResourceLoader';
@@ -13,7 +14,7 @@ import { useResolvableMesh } from './useResolvableMesh';
 /** Settles a font load no mesh reads, which wakes every settled listener. */
 async function settleAnUnrelatedFontLoad(): Promise<void> {
   createSettledPeek<object, null>()({}, () => Promise.resolve(null));
-  await vi.waitFor(() => expect(fontWork.pending()).toBe(0));
+  await settleFontWork();
 }
 
 const CURVE_PATH = 'res://grow.tres';

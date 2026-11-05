@@ -12,11 +12,11 @@ import * as logger from '../../../../logger';
 /** Fixed, unlike a scene font's counter-suffixed name: there is exactly one bundled font and it is registered exactly once. */
 const BUNDLED_FAMILY = 'tscn-bundled-open-sans-semibold';
 
-/** The one registration, keyed by `BUNDLED`. Null is a registration that failed, and it is not retried. */
-const peekRegistration = createSettledPeek<object, CanvasFontMetrics | null>();
-
 /** The cache key of the bundled font, which has no resource. */
 const BUNDLED = {};
+
+/** The one registration, keyed by `BUNDLED`. Null is a registration that failed, and it is not retried. */
+const peekRegistration = createSettledPeek<object, CanvasFontMetrics | null>();
 
 /** Settles on null when the font cannot register: under vitest at once, elsewhere after a warning. */
 async function registerBundledFont(): Promise<CanvasFontMetrics | null> {

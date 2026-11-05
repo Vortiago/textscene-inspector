@@ -1,5 +1,5 @@
 /**
- * The canvas-2D glyph painter, `TextRun.tsx`'s second path beside the MSDF atlas.
+ * The canvas-2D glyph painter, `TextRunMesh.tsx`'s second path beside the MSDF atlas.
  * It serves a runtime-loaded scene font, which has no bake, and the bundled font
  * where FreeType semantics are needed, such as Label3D's stroked outline. It runs
  * for `TextLayoutResult.fontMetrics.kind === 'canvas'`.
@@ -259,7 +259,7 @@ interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
  * A `MeshBasicMaterial` for canvas-rasterised text, or a `MeshStandardMaterial` for a lit run,
  * with three's sRGB decode for an `SRGBColorSpace` map. A `NoColorSpace` map gets the
  * sRGB-multiply define (`canvasSrgbMultiply.ts`) from its own tag, as `canvasMapProps` does, so
- * the tag and the define never apply apart. `TextRun.tsx` keeps its glyph raster
+ * the tag and the define never apply apart. `TextRunMesh.tsx` keeps its glyph raster
  * `SRGBColorSpace`: a glyph has no differing RGB pair to filter wrongly.
  */
 // `defines` is assigned after construction: `Material#setValues` skips, with a

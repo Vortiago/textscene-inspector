@@ -1,5 +1,5 @@
 /**
- * The MSDF quad shader for every glyph mesh (`TextRun.tsx`): msdfgen's median-of-3
+ * The MSDF quad shader for every glyph mesh (`TextRunMesh.tsx`): msdfgen's median-of-3
  * decode against the vendored atlas (`openSansAtlas.ts`), antialiased with `fwidth`. It paints 2D
  * Control text at the bundled font. An embolden and an outline ring draw on the canvas painter (ADR-0040).
  */

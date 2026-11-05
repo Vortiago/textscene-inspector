@@ -1,5 +1,5 @@
 /**
- * The outline rings and shadows of a `<Label>` (`label.cpp:828-883`). `<TextRun>` is stubbed to
+ * The outline rings and shadows of a `<Label>` (`label.cpp:828-883`). `<TextRunMesh>` is stubbed to
  * read the props the painter hands it, in draw order.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -29,9 +29,9 @@ const scene = vi.hoisted(() => ({ bundled: undefined as FontMetrics | undefined 
 vi.mock('../../../../r3f/controls/native/text/bundledFontLoader', () => ({
   peekBundledCanvasFontMetrics: () => scene.bundled,
 }));
-vi.mock('../../../../r3f/controls/native/text/TextRun', () => ({
+vi.mock('../../../../r3f/controls/native/text/TextRunMesh', () => ({
   // A mesh in the scene graph stands for the run, so the runs read back in draw order, once each.
-  TextRun: (props: RunProps) => <mesh userData={{ run: props }} />,
+  TextRunMesh: (props: RunProps) => <mesh userData={{ run: props }} />,
 }));
 
 const RECT = { x: 0, y: 0, w: 200, h: 60 };

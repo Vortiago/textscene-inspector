@@ -147,7 +147,7 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
       const textMat = text.material as THREE.ShaderMaterial;
       const textColor = textMat.uniforms.uColor!.value as THREE.Vector3;
       const textOpacity = textMat.uniforms.uOpacity!.value as number;
-      // The text run's uColor is already linear (TextRun.tsx), and three converts
+      // The text run's uColor is already linear (TextRunMesh.tsx), and three converts
       // ControlQuad's sRGB colour on upload, so both compare against the same
       // expectation as the text-run case below.
       const expected = expectedLinear(0xe0 / 255, 0xa0 / 255, 0x30 / 255);

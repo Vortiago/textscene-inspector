@@ -1,6 +1,6 @@
 # TextRun engine notes
 
-The reasoning behind two values in `TextRun.tsx`, too long for a code comment. Every cite is
+The reasoning behind two values in `TextRunMesh.tsx`, too long for a code comment. Every cite is
 Godot 4.6.3 source.
 
 ## The bake anchor (`bakeAnchorPx`)

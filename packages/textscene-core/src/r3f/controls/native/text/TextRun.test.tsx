@@ -80,6 +80,14 @@ describe('<TextRun>', () => {
     expect(geometry.getAttribute('position').count).toBe(4);
   });
 
+  it('strokes an outline ring of an atlas face on the bundled canvas face, as a stroked contour', async () => {
+    bundled.metrics = createOpenSansCanvasFontMetrics('bundled-textrun-ring-test');
+    const renderer = await renderTextRun({ strokeWidthPx: 2 });
+    await vi.waitFor(() => expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1));
+    const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
+    expect(geometry.getAttribute('position').count).toBe(4);
+  });
+
   it('draws nothing for an emboldened atlas face while the bundled canvas face loads', async () => {
     bundled.metrics = undefined;
     const renderer = await renderTextRun({ layout: emboldenedLayout(1.2) });
@@ -248,7 +256,7 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
       'a CONSTANT colour channel (`text_server_adv.cpp` `rasterize_bitmap`, `FT_PIXEL_MODE_GRAY`: ' +
       '`wr[ofs+0] = 255` always, only `wr[ofs+1]` -- alpha, never sRGB-encoded -- varies), so the ' +
       "byte-vs-decoded-first blend order this file's sibling fixes correct for icons/sprites is, " +
-      "for Godot's OWN text rendering, never even in play. `TextRun.tsx`'s own doc has the full " +
+      "for Godot's OWN text rendering, never even in play. `TextRunMesh.tsx`'s own doc has the full " +
       'derivation. This pins the decision against a future change that "completes the pattern" by ' +
       'copying the icon/sprite retag here without re-measuring.',
     async () => {
