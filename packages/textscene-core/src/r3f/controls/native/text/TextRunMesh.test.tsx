@@ -49,6 +49,24 @@ describe('<TextRunMesh> on the canvas painter', () => {
     expect(y).toBeCloseTo(offsetYPx + 0.75, 6);
   });
 
+  it('keeps its raster when the run moves by whole pixels, as the paint reads the phase alone', async () => {
+    const at = (x: number) => (
+      <CanvasItemProvider value={0}>
+        <CanvasItemGroup position={[x, -1.75, 0]}>
+          <TextRunMesh layout={layout} fontSizePx={16} tint={{ r: 1, g: 1, b: 1, a: 1 }} />
+        </CanvasItemGroup>
+      </CanvasItemProvider>
+    );
+    const renderer = await ReactThreeTestRenderer.create(at(2.25));
+    const raster = () => {
+      const mesh = renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh;
+      return (mesh.material as THREE.MeshBasicMaterial).map;
+    };
+    const before = raster();
+    await renderer.update(at(5.25));
+    expect(raster()).toBe(before);
+  });
+
   it('keeps the quad of a Label3D run at its origin', async () => {
     const [x, y] = await quadTopLeft(false);
     expect(x).toBeCloseTo(-offsetXPx, 6);

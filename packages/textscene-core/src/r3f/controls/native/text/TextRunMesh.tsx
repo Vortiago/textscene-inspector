@@ -24,7 +24,7 @@ import {
   buildCanvasTextQuadArrays,
   paintSceneFontCanvas,
   createCanvasTextMaterial,
-  itemPixelSnap,
+  originPhase,
   type CanvasTextPaintOptions,
 } from './canvasTextPainter';
 import type { SurfaceShading } from '../../../materialFor2d';
@@ -49,6 +49,7 @@ import { useSwappedMaterials } from '../../../materials/swappedMaterials';
 import { usePendingWhile } from '../../../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../../../shadowCasting';
 import type { Rgba } from '../../../../godot/math/math';
+import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
 import { useDisposeOnRelease } from '../../../useDisposeOnRelease';
 import { useNearestAnisotropy } from '../../../nearestAnisotropy';
 
@@ -251,8 +252,13 @@ function buildTextRun(
     );
   }
   if (isCanvasFontMetrics(layout.fontMetrics)) {
-    const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, canvasPaint.strokeWidthPx);
-    const quads = buildCanvasTextQuadArrays(canvasLayout, itemPixelSnap(canvasPaint));
+    const canvasLayout = computeCanvasTextCanvasLayout(
+      layout,
+      skew,
+      canvasPaint.strokeWidthPx,
+      canvasPaint.originPhasePx
+    );
+    const quads = buildCanvasTextQuadArrays(canvasLayout, canvasPaint.originPhasePx);
     const geo = quadGeometry(quads);
     const { positions } = quads;
     // On every run, so toggling the shading rebuilds the material alone, not the raster.
@@ -304,6 +310,16 @@ function buildTextRun(
   return { geometry: geo, paint: () => createMsdfMaterial(options) };
 }
 
+/**
+ * The `originPhase` of the run's place in its canvas item, or zero for a run that keeps its pen.
+ * Keyed by the phase, so a run that moves by whole pixels keeps its raster.
+ */
+function useOriginPhase(quantisesPen: boolean): Readonly<Vector2> {
+  const itemOrigin = useCanvasItemOrigin();
+  const { x, y } = quantisesPen ? originPhase(itemOrigin) : VECTOR2_ZERO;
+  return useMemo(() => ({ x, y }), [x, y]);
+}
+
 /** Draws `props.layout` on the painter its face's `kind` names. `TextRun.tsx` routes a run here. */
 export function TextRunMesh({
   layout,
@@ -325,7 +341,7 @@ export function TextRunMesh({
 }: TextRunProps) {
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
-  const itemOrigin = useCanvasItemOrigin();
+  const originPhasePx = useOriginPhase(quantisesPen);
   if (blends && !swapped)
     throw new Error('expected blends only inside a GeometryInstance3D drawer, got none');
 
@@ -335,7 +351,7 @@ export function TextRunMesh({
         layout,
         fontSizePx,
         { tint, clippingPlanes, depthTest, side, pixelMaterial },
-        { strokeWidthPx, quantisesPen, itemOriginPx: itemOrigin },
+        { strokeWidthPx, quantisesPen, originPhasePx },
         textureFilter,
         mipmapped
       ),
@@ -355,7 +371,7 @@ export function TextRunMesh({
       pixelMaterial,
       strokeWidthPx,
       quantisesPen,
-      itemOrigin,
+      originPhasePx,
       textureFilter,
       mipmapped,
     ]

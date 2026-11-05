@@ -58,5 +58,5 @@ packed atlas samples distinct regions too. A packed atlas would also repack on e
 
 Godot draws a glyph at scale 1 at the floored `cpos` (`text_server_adv.cpp:4082-4084`), in the
 canvas item's own coordinates. `useCanvasItemOrigin` gives a run its place in those coordinates.
-The quad moves back to the whole pixel at or before that place (`itemPixelSnap`), each pen rounds
+The quad moves back to the whole pixel at or before that place (`originPhase`), each pen rounds
 past it, and each baseline floors. Label3D keeps its pen, as its mesh places each glyph.

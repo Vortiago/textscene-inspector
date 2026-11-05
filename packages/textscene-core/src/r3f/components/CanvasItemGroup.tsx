@@ -6,6 +6,7 @@
  */
 import { createContext, forwardRef, useContext, useMemo, type ComponentProps, type ReactNode } from 'react';
 import type * as THREE from 'three';
+import { VECTOR2_ZERO, type Vector2 } from '../../godot/math/vector';
 
 /** Exactly what R3F's intrinsic `<group>` accepts. */
 type GroupProps = ComponentProps<'group'>;
@@ -14,13 +15,7 @@ const CanvasKeyContext = createContext(0);
 CanvasKeyContext.displayName = 'CanvasKeyContext';
 
 /** A point in the item's own coordinates, Godot px with +Y down. */
-export interface CanvasItemPoint {
-  x: number;
-  y: number;
-}
-
-const ITEM_START: CanvasItemPoint = { x: 0, y: 0 };
-const CanvasOriginContext = createContext(ITEM_START);
+const CanvasOriginContext = createContext<Readonly<Vector2>>(VECTOR2_ZERO);
 CanvasOriginContext.displayName = 'CanvasOriginContext';
 
 /**
@@ -36,7 +31,7 @@ export function useCanvasItemKey(): number {
  * `<CanvasItemGroup>` positions since the item began. Godot floors a glyph's origin in these
  * coordinates (`text_server_adv.cpp:4082-4084`).
  */
-export function useCanvasItemOrigin(): CanvasItemPoint {
+export function useCanvasItemOrigin(): Readonly<Vector2> {
   return useContext(CanvasOriginContext);
 }
 
@@ -44,7 +39,7 @@ export function useCanvasItemOrigin(): CanvasItemPoint {
 export function CanvasItemProvider({ value, children }: { value: number; children: ReactNode }) {
   return (
     <CanvasKeyContext.Provider value={value}>
-      <CanvasOriginContext.Provider value={ITEM_START}>{children}</CanvasOriginContext.Provider>
+      <CanvasOriginContext.Provider value={VECTOR2_ZERO}>{children}</CanvasOriginContext.Provider>
     </CanvasKeyContext.Provider>
   );
 }
@@ -52,20 +47,22 @@ export function CanvasItemProvider({ value, children }: { value: number; childre
 /**
  * The item point a group at `position` moves its children to. Only the translation counts: the one
  * rotated and scaled group inside an item is `ControlCanvasWalker`'s pivot pair, whose two
- * positions cancel.
+ * positions cancel. A number sets every component, as three's `setScalar` does.
  */
-function useOriginPast(position: GroupProps['position']): CanvasItemPoint {
+function useOriginPast(position: GroupProps['position']): Readonly<Vector2> {
   const origin = useCanvasItemOrigin();
-  const [dx, dy] =
-    !position || typeof position === 'number'
-      ? [0, 0]
-      : 'isVector3' in position
-        ? [position.x, position.y]
-        : position;
+  const [dx, dy] = translationOf(position);
   const x = origin.x + dx;
   const y = origin.y - dy;
   // Keyed by the numbers, as a tuple `position` is a new array on every render.
   return useMemo(() => ({ x, y }), [x, y]);
+}
+
+function translationOf(position: GroupProps['position']): readonly [number, number] {
+  if (position === undefined) return [0, 0];
+  if (typeof position === 'number') return [position, position];
+  if ('isVector3' in position) return [position.x, position.y];
+  return [position[0], position[1]];
 }
 
 /**

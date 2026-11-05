@@ -4,6 +4,7 @@ import {
   computeCanvasTextCanvasLayout,
   buildCanvasTextQuadArrays,
   createCanvasTextMaterial,
+  originPhase,
   paintSceneFontCanvas,
 } from './canvasTextPainter';
 import { withVariation } from './fontMetrics';
@@ -15,6 +16,7 @@ import { litPixelMaterial } from '../../../lighting2d/testing/litPixelMaterial';
 import { AutowrapMode, ContourPointTag } from '../../../../godot/text/textServerEnums';
 import type { GlyphContours } from './glyphContours';
 import type { SfntOutlines } from './sfntOutlines';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 const CANVAS_METRICS = createRuntimeFontMetrics({
   scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
@@ -54,11 +56,17 @@ function contentOriginOnQuad(canvasLayout: ReturnType<typeof computeCanvasTextCa
 }
 
 describe('computeCanvasTextCanvasLayout', () => {
-  it('with no skew, pads the width only by the column a floored item origin moves the content into', () => {
+  it('with no skew, pads only for anti-aliasing overshoot: canvas content area equals the layout box', () => {
     const layout = layoutFor('AB');
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
-    expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx + 1));
+    expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx));
     expect(canvasLayout.offsetXPx).toBe(0);
+  });
+
+  it('widens by the origin phase, which carries the content that far right of the quad', () => {
+    const layout = layoutFor('AB');
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0, 0, { x: 0.25, y: 0 });
+    expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx + 0.25));
   });
 
   it('a nonzero skew widens the canvas symmetrically to fit the sheared ink, and offsets content by the same pad', () => {
@@ -68,7 +76,7 @@ describe('computeCanvasTextCanvasLayout', () => {
     expect(skewed.canvasWidthPx).toBeGreaterThan(straight.canvasWidthPx);
     expect(skewed.offsetXPx).toBeGreaterThan(0);
     // Symmetric: padding added equally left/right.
-    expect(skewed.canvasWidthPx).toBe(Math.ceil(layout.widthPx + 2 * skewed.offsetXPx + 1));
+    expect(skewed.canvasWidthPx).toBe(Math.ceil(layout.widthPx + 2 * skewed.offsetXPx));
   });
 
   // A fractional pad puts each texel between two screen pixels, and the linear filter then thins
@@ -137,12 +145,12 @@ function paintRecording(
     skew = 0,
     outlines = null,
     quantisesPen,
-    itemOriginPx,
+    originPhasePx,
   }: {
     skew?: number;
     outlines?: SfntOutlines | null;
     quantisesPen?: boolean;
-    itemOriginPx?: { x: number; y: number };
+    originPhasePx?: Vector2;
   } = {}
 ) {
   const calls: Call[] = [];
@@ -175,7 +183,7 @@ function paintRecording(
   paintSceneFontCanvas(carrying(layout, skew, outlines), 16, { r: 1, g: 1, b: 1, a: 1 }, skew, canvasLayout, {
     strokeWidthPx,
     quantisesPen,
-    itemOriginPx,
+    originPhasePx,
   });
   return { calls, canvasLayout };
 }
@@ -223,7 +231,7 @@ describe('paintSceneFontCanvas — pen', () => {
 
   it('rounds the pen where it sits in the canvas item, past the whole pixel the quad starts on', () => {
     const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, {
-      itemOriginPx: { x: 0.3, y: 0 },
+      originPhasePx: { x: 0.3, y: 0 },
     });
     // 0.3 + 10.6 = 10.9 rounds to the quarter step 11, and the quad starts at the floored origin 0.
     expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 11);
@@ -232,7 +240,7 @@ describe('paintSceneFontCanvas — pen', () => {
   // `text_server_adv.cpp:4082-4084`: a glyph at scale 1 draws at the floored `cpos.y`.
   it('puts the baseline on the whole pixel a canvas item floors it to, its run origin included', () => {
     const layout = layoutFor('A\nB', 0.5);
-    const { calls, canvasLayout } = paintRecording(layout, 0, { itemOriginPx: { x: 0, y: 0.6 } });
+    const { calls, canvasLayout } = paintRecording(layout, 0, { originPhasePx: { x: 0, y: 0.6 } });
     // The second baseline sits 17.5 + 13 px down, which the origin carries to 31.1 and the floor to 31.
     expect(layout.linePitchPx + layout.baselineOffsetPx).toBeCloseTo(30.5, 9);
     expect(calls.filter((c) => c.op === 'fillText')[1]!.args[2]).toBe(canvasLayout.offsetYPx + 31);
@@ -241,7 +249,7 @@ describe('paintSceneFontCanvas — pen', () => {
   it('keeps the pen of a Label3D, whose mesh places each glyph where it is', () => {
     const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, {
       quantisesPen: false,
-      itemOriginPx: { x: 0.3, y: 0.6 },
+      originPhasePx: { x: 0.3, y: 0.6 },
     });
     expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 10.6);
   });
@@ -250,7 +258,7 @@ describe('paintSceneFontCanvas — pen', () => {
     const layout = fractionalPenLayout();
     const { calls, canvasLayout } = paintRecording(layout, 0, {
       quantisesPen: false,
-      itemOriginPx: { x: 0.3, y: 0.6 },
+      originPhasePx: { x: 0.3, y: 0.6 },
     });
     expect(calls.filter((c) => c.op === 'fillText')[0]!.args[2]).toBe(
       canvasLayout.offsetYPx + layout.baselineOffsetPx
@@ -467,6 +475,12 @@ describe('the outline surface overlays the fill surface exactly', () => {
       expect(origin.x).toBeCloseTo(0, 6);
       expect(origin.y).toBeCloseTo(0, 6);
     }
+  });
+});
+
+describe('originPhase', () => {
+  it('measures a negative place from the whole pixel below it, where Godot floors it', () => {
+    expect(originPhase({ x: -0.25, y: 2.75 })).toEqual({ x: 0.75, y: 0.75 });
   });
 });
 
