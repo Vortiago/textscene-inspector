@@ -434,6 +434,85 @@ describe('parseBBCodeRuns paragraph breaks', () => {
   });
 });
 
+// `rich_text_label.cpp:5326-5345,5399-5450`: the first newline after a list tag is dropped, a
+// list that holds nothing gets one empty item, and every list ends its last item with a newline.
+describe('parseBBCodeRuns lists', () => {
+  it('ends the last item of a list with a newline', () => {
+    expect(parseBBCodeRuns('[ul]a\nb[/ul]').map((run) => run.text)).toEqual(['a\nb\n']);
+  });
+
+  it('keeps one newline when the text already ends with it', () => {
+    expect(parseBBCodeRuns('[ul]a\n[/ul]').map((run) => run.text)).toEqual(['a\n']);
+  });
+
+  it('drops the first newline after the list tag', () => {
+    expect(parseBBCodeRuns('[ol]\na[/ol]').map((run) => run.text)).toEqual(['a\n']);
+  });
+
+  it('gives an empty list one empty item', () => {
+    expect(parseBBCodeRuns('[ul][/ul]').map((run) => run.text)).toEqual(['\n']);
+  });
+
+  it('gives a list that opens at the end of the text one empty item', () => {
+    expect(parseBBCodeRuns('a[ul]').map((run) => run.text)).toEqual(['a\n', '\n']);
+  });
+
+  it('gives each list of a nest its own empty item, and ends the innermost only', () => {
+    expect(parseBBCodeRuns('[ul][ul][/ul][/ul]').map((run) => run.text)).toEqual(['\n', '\n']);
+  });
+
+  it('keeps two lists apart even where their tags match', () => {
+    const runs = parseBBCodeRuns('[ul]a[/ul][ul]b[/ul]');
+    expect(runs.map((run) => run.text)).toEqual(['a\n', 'b\n']);
+    expect(runs[0]!.tags[0]).not.toBe(runs[1]!.tags[0]);
+  });
+
+  it('opens [ul bullet=...] with the bullet read as Godot reads it, after the first =', () => {
+    const [run] = parseBBCodeRuns('[ul bullet=* ]a[/ul]');
+    expect(run!.tags[0]).toMatchObject({ name: 'ul', value: '* ' });
+  });
+
+  it.each([
+    '[ul foo]a[/ul]',
+    '[ul=1]a[/ul]',
+    '[ol type=x]a[/ol]',
+    '[ol bullet=x]a[/ol]',
+    '[indent=2]a[/indent]',
+  ])('draws %s as text, as only the exact forms open a list or an indent (`:5702-5742`)', (source) => {
+    expect(parseBBCodeRuns(source)).toEqual([{ text: source, tags: [] }]);
+  });
+
+  it.each(['[ol type=1]', '[ol type=a]', '[ol type=A]', '[ol type=i]', '[ol type=I]'])(
+    'opens %s',
+    (source) => {
+      expect(parseBBCodeRuns(`${source}a[/ol]`)[0]!.tags[0]).toMatchObject({ name: 'ol' });
+    }
+  );
+
+  it('records the tags a line starts with when a styling tag opens the list on its line', () => {
+    // `[color]` is the line's first item and `_find_layout_subitem` skips it, so the line's
+    // `from` is the colour, not the list (`:3712-3727`, `:4096-4103`).
+    const [run] = parseBBCodeRuns('[color=red][ul]a[/ul][/color]');
+    expect(run!.tags.map((tag) => tag.name)).toEqual(['color', 'ul']);
+    expect(run!.startTags!.map((tag) => tag.name)).toEqual(['color']);
+  });
+
+  it('records no start tags when the line starts in the full stack', () => {
+    const [run] = parseBBCodeRuns('[ul]a[/ul]');
+    expect(run!.startTags).toBeUndefined();
+  });
+
+  it('records the tags opened since the last character, the closed ones included, inside a list', () => {
+    const runs = parseBBCodeRuns('[ul]a\n[color=blue][/color]\n[/ul]');
+    expect(runs.map((run) => run.text)).toEqual(['a\n', '\n']);
+    expect(runs[1]!.openedAtStart!.map((tag) => tag.name)).toEqual(['color']);
+  });
+
+  it('records no opened tags outside a list or indent', () => {
+    expect(parseBBCodeRuns('a[color=blue][/color]b')[0]!.openedAtStart).toBeUndefined();
+  });
+});
+
 /** `[hr]` is `add_hr` (`rich_text_label.cpp:4159-4199`): its own paragraph item, then an image item. */
 describe('parseBBCodeRuns [hr]', () => {
   const RULE: ParsedRuleTag = {
