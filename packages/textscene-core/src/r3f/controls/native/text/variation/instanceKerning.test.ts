@@ -10,7 +10,8 @@ import reference from './instanceKerning.godot.json';
 import { fixtureFontBytes } from '../sfntOutlines.testkit';
 import { openFontOutlines, type SfntOutlines } from '../sfntOutlines';
 import { createRuntimeFontMetrics } from '../runtimeFontMetrics';
-import { getFontKerningAdjustmentPx, withVariation, type OpentypeCoordinates } from '../fontMetrics';
+import { getFontKerningAdjustmentPx, withVariation } from '../fontMetrics';
+import { opentypeOf } from '../glyphVariation.testkit';
 
 interface ReferenceKerning {
   font: string;
@@ -20,7 +21,9 @@ interface ReferenceKerning {
   kerning: Record<string, number>;
 }
 
-const rows = (reference as ReferenceKerning[]).filter((row) => Object.keys(row.opentype).length > 0);
+const rows = (reference as unknown as ReferenceKerning[]).filter(
+  (row) => Object.keys(row.opentype).length > 0
+);
 
 const RECURSIVE = 'recursive-vf-subset.woff2';
 
@@ -35,9 +38,6 @@ const canvasFace = createRuntimeFontMetrics({
   measureWidthUnits: (text) => (text.length === 2 ? 1000 + MEASURED_KERNING_UNITS : 500),
   cssFontFamily: 'variable-font-test',
 });
-
-const opentypeOf = (record: Record<string, number>): OpentypeCoordinates =>
-  new Map(Object.entries(record).map(([key, value]) => [/^\d+$/.test(key) ? Number(key) : key, value]));
 
 async function recursiveOutlines(): Promise<SfntOutlines> {
   const outlines = await openFontOutlines(fixtureFontBytes(RECURSIVE));
