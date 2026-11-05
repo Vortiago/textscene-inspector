@@ -150,6 +150,10 @@ _Avoid_: "custom font", which a node's `theme_override_fonts` also is. "fallback
 A bitmap font a `FontFile` loads from an AngelCode `.fnt` or `.font` descriptor and the page images it names. Each glyph is a rectangle of a page, drawn at the font's fixed size and scaled to the requested size by its scale mode.
 _Avoid_: "sprite font", "pixel font".
 
+**Fallback chain** (`fallbackChain` in `r3f/controls/native/text/sceneFontResolution.ts`):
+The faces a font tries for each glyph, in order: its own face, then each of its `fallbacks` and theirs, depth first (`Font::_update_rids`). The shaper draws a character from the first face that has it. A character no face has stays in the first face.
+_Avoid_: "fallback font" for the bundled Open Sans, which is the **Project default font**'s last resort.
+
 **Project fonts** (`resources/fonts/font/projectFonts.ts`):
 The two files the **Project settings** name for every font lookup: the project theme (`gui/theme/custom`) and the **Project default font**. The Control solve tree, TextMesh and Label3D each resolve them from one source.
 _Avoid_: "theme context", which Godot's `ThemeContext` also names.

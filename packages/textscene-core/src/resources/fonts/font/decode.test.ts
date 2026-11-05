@@ -57,13 +57,21 @@ describe('decodeFont', () => {
     expect(resource).toEqual({
       kind: 'system',
       fontNames: ['sans-serif'],
+      baseFont: null,
+      fallbacks: [],
       properties: { resource_name: '"MySystemFont"' },
     });
   });
 
   it('decodes a SystemFont with an empty font_names list when the property is absent', async () => {
     const resource = await decodeFont('res://x.tres', 'SystemFont', {}, [], [], NO_OP_LOADER);
-    expect(resource).toEqual({ kind: 'system', fontNames: [], properties: {} });
+    expect(resource).toEqual({
+      kind: 'system',
+      fontNames: [],
+      baseFont: null,
+      fallbacks: [],
+      properties: {},
+    });
   });
 
   it('decodes a FontVariation with no base_font (theme default) as baseFont: null', async () => {
@@ -75,7 +83,12 @@ describe('decodeFont', () => {
       [],
       NO_OP_LOADER
     );
-    expect(resource).toEqual({ kind: 'variation', baseFont: null, properties: { spacing_glyph: '-8' } });
+    expect(resource).toEqual({
+      kind: 'variation',
+      baseFont: null,
+      fallbacks: [],
+      properties: { spacing_glyph: '-8' },
+    });
   });
 
   it('recurses into an ExtResource base_font via loadFont', async () => {
@@ -98,11 +111,17 @@ describe('decodeFont', () => {
     );
 
     expect(loadFont).toHaveBeenCalledWith('res://fonts/base.otf');
-    expect(resource).toEqual({ kind: 'variation', baseFont: loaded, properties: {} });
+    expect(resource).toEqual({ kind: 'variation', baseFont: loaded, fallbacks: [], properties: {} });
   });
 
   it('recurses into a SubResource base_font as a res://self::id address', async () => {
-    const loaded: FontResource = { kind: 'system', fontNames: ['monospace'], properties: {} };
+    const loaded: FontResource = {
+      kind: 'system',
+      fontNames: ['monospace'],
+      baseFont: null,
+      fallbacks: [],
+      properties: {},
+    };
     const loadFont = vi.fn(async (address: string) =>
       address === 'res://scene.tscn::SystemFont_x' ? loaded : null
     );
@@ -117,7 +136,7 @@ describe('decodeFont', () => {
     );
 
     expect(loadFont).toHaveBeenCalledWith('res://scene.tscn::SystemFont_x');
-    expect(resource).toEqual({ kind: 'variation', baseFont: loaded, properties: {} });
+    expect(resource).toEqual({ kind: 'variation', baseFont: loaded, fallbacks: [], properties: {} });
   });
 
   it('resolves a FontFile with no fallbacks (bytes-less-only case never keeps a fallback list)', async () => {
@@ -180,7 +199,7 @@ describe('decodeFont', () => {
       loadFont
     );
     expect(loadFont).not.toHaveBeenCalled();
-    expect(resource).toEqual({ kind: 'variation', baseFont: null, properties: {} });
+    expect(resource).toEqual({ kind: 'variation', baseFont: null, fallbacks: [], properties: {} });
   });
 });
 
@@ -235,7 +254,13 @@ describe('resolveInlineFontResource', () => {
       NOTHING_CACHED,
       pending
     );
-    expect(resolved).toEqual({ kind: 'system', fontNames: ['sans-serif'], properties: {} });
+    expect(resolved).toEqual({
+      kind: 'system',
+      fontNames: ['sans-serif'],
+      baseFont: null,
+      fallbacks: [],
+      properties: {},
+    });
     expect(pending.size).toBe(0);
   });
 
@@ -257,7 +282,12 @@ describe('resolveInlineFontResource', () => {
       cache,
       pending
     );
-    expect(resolved).toEqual({ kind: 'variation', baseFont: FONT_A, properties: { spacing_glyph: '-8' } });
+    expect(resolved).toEqual({
+      kind: 'variation',
+      baseFont: FONT_A,
+      fallbacks: [],
+      properties: { spacing_glyph: '-8' },
+    });
   });
 
   it('a FontVariation with no base_font resolves to a null baseFont', () => {
@@ -269,7 +299,7 @@ describe('resolveInlineFontResource', () => {
       NOTHING_CACHED,
       pending
     );
-    expect(resolved).toEqual({ kind: 'variation', baseFont: null, properties: {} });
+    expect(resolved).toEqual({ kind: 'variation', baseFont: null, fallbacks: [], properties: {} });
   });
 
   it('decodes a scene-inline FontFile, resolving every fallback', () => {
@@ -319,5 +349,29 @@ describe('resolveInlineFontResource', () => {
   it('returns null for an absent or malformed ref', () => {
     expect(resolveInlineFontResource(undefined, [], [], NOTHING_CACHED, new Set())).toBeNull();
     expect(resolveInlineFontResource('not-a-ref', [], [], NOTHING_CACHED, new Set())).toBeNull();
+  });
+});
+
+// `fallbacks` is a property of `Font` (`font.cpp:101`), so every Font kind reads it.
+describe('the fallbacks of a FontVariation and a SystemFont', () => {
+  const extResources = [{ id: '1', path: 'res://fonts/good.ttf', type: 'FontFile' }];
+  const loadGood: FontLoaderFn = async (address) => (address === 'res://fonts/good.ttf' ? FONT_A : null);
+  const FALLBACKS = { fallbacks: 'Array[Font]([ExtResource("1")])' };
+
+  it.each(['FontVariation', 'SystemFont'])('loads the fallbacks of a %s file', async (type) => {
+    const resource = await decodeFont('res://x.tres', type, FALLBACKS, extResources, [], loadGood);
+    expect(resource).toMatchObject({ fallbacks: [FONT_A], properties: {} });
+  });
+
+  it.each(['FontVariation', 'SystemFont'])('resolves the fallbacks of a scene-inline %s', (type) => {
+    const cache = { getCached: (address: string) => (address === 'res://fonts/good.ttf' ? FONT_A : null) };
+    const resolved = resolveInlineFontResource(
+      'SubResource("Font_1")',
+      extResources,
+      [{ id: 'Font_1', type, data: FALLBACKS }],
+      cache,
+      new Set()
+    );
+    expect(resolved).toMatchObject({ fallbacks: [FONT_A], properties: {} });
   });
 });

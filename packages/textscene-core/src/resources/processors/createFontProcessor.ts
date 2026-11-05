@@ -2,7 +2,8 @@
  * The font resource processor, on the shared `createResourceProcessor` loop. It routes
  * by path: a raw font container loads as bytes, and anything else reads the owning
  * file's cached parse, and a BMFont descriptor loads with its page images. It addresses a
- * **Sub-resource path** (`res://file.tres::SubId`) and loads other fonts: a font's `base_font`/`fallbacks`.
+ * **Sub-resource path** (`res://file.tres::SubId`) and loads other fonts: a font's `base_font`/`fallbacks`, and
+ * the `fallbacks` import param of a raw font or a BMFont.
  */
 
 import type { FileData, FileEventBus } from '../FileEventBus';
@@ -20,7 +21,8 @@ import { loadBitmapFont } from '../formats/bmfont/loadBitmapFont';
 import type { PageImage } from '../formats/bmfont/pageFill';
 import { decodeImagePixels, getMimeType } from '../formats/image/textureProcessing';
 import { imageSourceFormat } from '../../godot/import/imageSourceFormat';
-import type { FontResource } from '../fonts/font/types';
+import type { FontFileResource, FontResource } from '../fonts/font/types';
+import { pathResourcePathsIn } from '../../godot/variant/resourceRef';
 import type { SectionLoaderFn } from '../resourceSection';
 import { FONT_SUB_RESOURCE_TYPES } from '../fonts/font/decode';
 import { readImportSidecar } from './readImportSidecar';
@@ -86,13 +88,30 @@ export function createFontProcessor(
     };
 
   /** A `.fnt` or `.font` file as a BMFont `FontFile`. The descriptor is text or binary, so a provider's string is encoded back to bytes. */
-  const loadBitmap = async (path: string): Promise<FontResource> => {
+  const loadBitmap = async (path: string): Promise<FontFileResource> => {
     const [data, importParams] = await Promise.all([readFile(path), importParamsOf(path)]);
     const bytes = typeof data === 'string' ? (new TextEncoder().encode(data).buffer as ArrayBuffer) : data;
     return fontResourceFromBitmap(
       await loadBitmapFont(path, bytes, readPageImage(path), importParams),
       importParams
     );
+  };
+
+  /** A raw font container as a `FontFile`, with the `[params]` of its sidecar. */
+  const loadContainer = async (path: string): Promise<FontFileResource> =>
+    fontResourceFromContainer(path, ...(await Promise.all([readFile(path), importParamsOf(path)])));
+
+  /**
+   * `font` with the fonts its `fallbacks` import param names loaded as its fallbacks, as both importers
+   * set them (`resource_importer_dynamic_font.cpp:192`, `resource_importer_bmfont.cpp:98`).
+   */
+  const withImportedFallbacks = async (path: string, font: FontFileResource): Promise<FontFileResource> => {
+    const { fallbacks: fallbacksParam, ...properties } = font.properties;
+    if (fallbacksParam === undefined) return font;
+    const loaded = await Promise.all(
+      pathResourcePathsIn(fallbacksParam).map((address) => loadFont(path, address))
+    );
+    return { ...font, fallbacks: loaded.filter((fallback) => fallback !== null), properties };
   };
 
   /**
@@ -140,12 +159,11 @@ export function createFontProcessor(
     // loader is bound to the address being built, so every wait it parks on is
     // recorded against its own requester.
     loadDirectly: async (path) => {
-      if (isBmfontPath(path)) return loadBitmap(path);
-      return isFontContainerPath(path)
-        ? fontResourceFromContainer(path, ...(await Promise.all([readFile(path), importParamsOf(path)])))
-        : buildFontResource(path, await loadSection(path, FONT_SUB_RESOURCE_TYPES), (address) =>
-            loadFont(path, address)
-          );
+      if (isBmfontPath(path)) return withImportedFallbacks(path, await loadBitmap(path));
+      if (isFontContainerPath(path)) return withImportedFallbacks(path, await loadContainer(path));
+      return buildFontResource(path, await loadSection(path, FONT_SUB_RESOURCE_TYPES), (address) =>
+        loadFont(path, address)
+      );
     },
   });
 

@@ -6,24 +6,27 @@
 import { describe, expect, it } from 'vitest';
 import type { GlyphPlacement, TextLineLayout } from './textLayout';
 import { justifyLinesToWidth, justifyParagraphs } from './textJustify';
+import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { JustificationFlag } from '../../../../godot/text/textServerEnums';
 
 const FONT_SIZE_PX = 16;
 
 /** One line fitted alone: a single-line paragraph under flags with no skip bit. */
-function fitLine(
-  line: TextLineLayout,
-  widthPx: number,
-  flags: number,
-  { fontSizePx }: { fontSizePx: number }
-): { line: TextLineLayout } {
-  return { line: justifyLinesToWidth([line], widthPx, flags, fontSizePx)[0]! };
+function fitLine(line: TextLineLayout, widthPx: number, flags: number): TextLineLayout {
+  return justifyLinesToWidth([line], widthPx, flags)[0]!;
 }
 
 function mkLine(entries: Array<[char: string, advance: number]>): TextLineLayout {
   let x = 0;
   const glyphs: GlyphPlacement[] = entries.map(([char, advance]) => {
-    const g = { char, x, advance, glyph: null };
+    const g = {
+      char,
+      x,
+      advance,
+      glyph: null,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      fontSizePx: FONT_SIZE_PX,
+    };
     x += advance;
     return g;
   });
@@ -37,10 +40,10 @@ describe('fitLineToWidth', () => {
       [' ', 4.15625],
       ['A', 10.578125],
     ]);
-    const result = fitLine(line, 35.3125, JustificationFlag.WORD_BOUND, { fontSizePx: FONT_SIZE_PX });
-    expect(result.line.glyphs[1]!.advance).toBeCloseTo(14.15625, 10);
-    expect(result.line.glyphs[2]!.x).toBeCloseTo(24.734375, 10);
-    expect(result.line.widthPx).toBeCloseTo(35.3125, 10);
+    const fitted = fitLine(line, 35.3125, JustificationFlag.WORD_BOUND);
+    expect(fitted.glyphs[1]!.advance).toBeCloseTo(14.15625, 10);
+    expect(fitted.glyphs[2]!.x).toBeCloseTo(24.734375, 10);
+    expect(fitted.widthPx).toBeCloseTo(35.3125, 10);
   });
 
   it('WORD_BOUND SHRINKS an overflowing line, floored at 0.1 * font_size per space (text_server_adv.cpp:5657-5661)', () => {
@@ -49,10 +52,10 @@ describe('fitLineToWidth', () => {
       [' ', 4.15625],
       ['A', 10.578125],
     ]);
-    const result = fitLine(line, 20, JustificationFlag.WORD_BOUND, { fontSizePx: FONT_SIZE_PX });
+    const fitted = fitLine(line, 20, JustificationFlag.WORD_BOUND);
     // delta = (20 - 25.3125) / 1 = -5.3125; 4.15625 - 5.3125 = -1.15625, floored to 0.1*16 = 1.6.
-    expect(result.line.glyphs[1]!.advance).toBeCloseTo(1.6, 10);
-    expect(result.line.widthPx).toBeCloseTo(22.75625, 10);
+    expect(fitted.glyphs[1]!.advance).toBeCloseTo(1.6, 10);
+    expect(fitted.widthPx).toBeCloseTo(22.75625, 10);
   });
 
   it('TRIM_EDGE_SPACES zeroes a leading and trailing space, excluding them from the space count (text_server_adv.cpp:5588-5599)', () => {
@@ -61,13 +64,11 @@ describe('fitLineToWidth', () => {
       ['A', 10.578125],
       [' ', 4.15625],
     ]);
-    const result = fitLine(line, 30, JustificationFlag.WORD_BOUND | JustificationFlag.TRIM_EDGE_SPACES, {
-      fontSizePx: FONT_SIZE_PX,
-    });
-    expect(result.line.glyphs[0]!.advance).toBe(0);
-    expect(result.line.glyphs[2]!.advance).toBe(0);
+    const fitted = fitLine(line, 30, JustificationFlag.WORD_BOUND | JustificationFlag.TRIM_EDGE_SPACES);
+    expect(fitted.glyphs[0]!.advance).toBe(0);
+    expect(fitted.glyphs[2]!.advance).toBe(0);
     // No interior space survives to stretch, so the line collapses to just 'A'.
-    expect(result.line.widthPx).toBeCloseTo(10.578125, 10);
+    expect(fitted.widthPx).toBeCloseTo(10.578125, 10);
   });
 
   describe('without TRIM_EDGE_SPACES, a wrapped line keeps its edge spaces and skips the break spaces (text_server_adv.cpp:5600-5607)', () => {
@@ -78,10 +79,10 @@ describe('fitLineToWidth', () => {
         ['B', 10],
         [' ', 4],
       ]);
-      const result = fitLine(line, 40, JustificationFlag.WORD_BOUND, { fontSizePx: FONT_SIZE_PX });
+      const fitted = fitLine(line, 40, JustificationFlag.WORD_BOUND);
       // The slack is 40 - 28, all for the one inner space: the trailing break space keeps its 4.
-      expect(result.line.glyphs.map((glyph) => glyph.advance)).toEqual([10, 16, 10, 4]);
-      expect(result.line.widthPx).toBe(40);
+      expect(fitted.glyphs.map((glyph) => glyph.advance)).toEqual([10, 16, 10, 4]);
+      expect(fitted.widthPx).toBe(40);
     });
 
     it('does not stretch a line whose only space is its break space', () => {
@@ -89,8 +90,8 @@ describe('fitLineToWidth', () => {
         ['A', 10],
         [' ', 4],
       ]);
-      const result = fitLine(line, 40, JustificationFlag.WORD_BOUND, { fontSizePx: FONT_SIZE_PX });
-      expect(result.line.glyphs.map((glyph) => glyph.advance)).toEqual([10, 4]);
+      const fitted = fitLine(line, 40, JustificationFlag.WORD_BOUND);
+      expect(fitted.glyphs.map((glyph) => glyph.advance)).toEqual([10, 4]);
     });
 
     it('leaves a leading break space out of the space count too', () => {
@@ -100,8 +101,8 @@ describe('fitLineToWidth', () => {
         [' ', 4],
         ['B', 10],
       ]);
-      const result = fitLine(line, 40, JustificationFlag.WORD_BOUND, { fontSizePx: FONT_SIZE_PX });
-      expect(result.line.glyphs.map((glyph) => glyph.advance)).toEqual([4, 10, 16, 10]);
+      const fitted = fitLine(line, 40, JustificationFlag.WORD_BOUND);
+      expect(fitted.glyphs.map((glyph) => glyph.advance)).toEqual([4, 10, 16, 10]);
     });
 
     it('counts a space that is not the last of its run, since a break follows only the last', () => {
@@ -110,8 +111,8 @@ describe('fitLineToWidth', () => {
         [' ', 4],
         [' ', 4],
       ]);
-      const result = fitLine(line, 40, JustificationFlag.WORD_BOUND, { fontSizePx: FONT_SIZE_PX });
-      expect(result.line.glyphs.map((glyph) => glyph.advance)).toEqual([10, 26, 4]);
+      const fitted = fitLine(line, 40, JustificationFlag.WORD_BOUND);
+      expect(fitted.glyphs.map((glyph) => glyph.advance)).toEqual([10, 26, 4]);
     });
   });
 
@@ -124,15 +125,13 @@ describe('fitLineToWidth', () => {
       [' ', 2],
       ['C', 5],
     ]);
-    const result = fitLine(line, 32, JustificationFlag.WORD_BOUND | JustificationFlag.AFTER_LAST_TAB, {
-      fontSizePx: FONT_SIZE_PX,
-    });
+    const fitted = fitLine(line, 32, JustificationFlag.WORD_BOUND | JustificationFlag.AFTER_LAST_TAB);
     // The space BEFORE the tab (index 0) is untouched...
-    expect(result.line.glyphs[0]!.advance).toBe(2);
+    expect(fitted.glyphs[0]!.advance).toBe(2);
     // ...only the one AFTER it (index 4) absorbs the whole 10px of slack.
-    expect(result.line.glyphs[4]!.advance).toBe(12);
-    expect(result.line.glyphs[5]!.x).toBe(27);
-    expect(result.line.widthPx).toBe(32);
+    expect(fitted.glyphs[4]!.advance).toBe(12);
+    expect(fitted.glyphs[5]!.x).toBe(27);
+    expect(fitted.widthPx).toBe(32);
   });
 
   it('AFTER_LAST_TAB on a right-to-left line justifies only the run before the visually first tab', () => {
@@ -148,17 +147,15 @@ describe('fitLineToWidth', () => {
       ]),
       isRtl: true,
     };
-    const result = fitLine(line, 32, JustificationFlag.WORD_BOUND | JustificationFlag.AFTER_LAST_TAB, {
-      fontSizePx: FONT_SIZE_PX,
-    });
-    expect(result.line.glyphs[1]!.advance).toBe(12);
-    expect(result.line.glyphs[5]!.advance).toBe(2);
+    const fitted = fitLine(line, 32, JustificationFlag.WORD_BOUND | JustificationFlag.AFTER_LAST_TAB);
+    expect(fitted.glyphs[1]!.advance).toBe(12);
+    expect(fitted.glyphs[5]!.advance).toBe(2);
   });
 
   it('a line with no glyphs is returned unchanged (edge)', () => {
     const line: TextLineLayout = { text: '', glyphs: [], widthPx: 0, paragraphIndex: 0 };
-    const result = fitLine(line, 50, JustificationFlag.WORD_BOUND, { fontSizePx: FONT_SIZE_PX });
-    expect(result.line).toBe(line);
+    const fitted = fitLine(line, 50, JustificationFlag.WORD_BOUND);
+    expect(fitted).toBe(line);
   });
 });
 
@@ -174,17 +171,8 @@ describe('fitLineToWidth space-shrink floor (text_server_adv.cpp:5659)', () => {
   it('floors a space at a tenth of its own font size', () => {
     const base = line();
     const glyphs = base.glyphs.map((g) => (g.char === ' ' ? { ...g, fontSizePx: 40 } : g));
-    const fitted = fitLine({ ...base, glyphs }, 10, JustificationFlag.WORD_BOUND, {
-      fontSizePx: FONT_SIZE_PX,
-    }).line;
+    const fitted = fitLine({ ...base, glyphs }, 10, JustificationFlag.WORD_BOUND);
     expect(fitted.glyphs[1]!.advance).toBe(4);
-  });
-
-  it('floors a space with no size of its own at a tenth of the caller size', () => {
-    const fitted = fitLine(line(), 10, JustificationFlag.WORD_BOUND, {
-      fontSizePx: FONT_SIZE_PX,
-    }).line;
-    expect(fitted.glyphs[1]!.advance).toBe(1.6);
   });
 });
 
@@ -201,7 +189,7 @@ describe('which lines of a paragraph the flags fit', () => {
 
   /** Per line of one paragraph: whether it stretched to the fit width. */
   function fitted(lines: TextLineLayout[], flags: number): boolean[] {
-    return justifyParagraphs(lines, { widthPx: FIT_WIDTH_PX, flags, fontSizePx: FONT_SIZE_PX }).map(
+    return justifyParagraphs(lines, { widthPx: FIT_WIDTH_PX, flags }).map(
       (line) => line.widthPx === FIT_WIDTH_PX
     );
   }
@@ -261,7 +249,7 @@ describe('justifyParagraphs', () => {
   const twoWords = (paragraphIndex: number): TextLineLayout =>
     inParagraph(paragraphIndex, ['A', 10], [' ', 4], ['A', 10]);
   const widthsOf = (lines: readonly TextLineLayout[]): number[] => lines.map((l) => l.widthPx);
-  const options = { widthPx: FIT_WIDTH_PX, flags: 163, fontSizePx: FONT_SIZE_PX };
+  const options = { widthPx: FIT_WIDTH_PX, flags: 163 };
 
   it('fits the first line of each paragraph and skips the last line of each', () => {
     const lines = [twoWords(0), twoWords(0), twoWords(1), twoWords(1)];

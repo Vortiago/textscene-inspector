@@ -204,7 +204,6 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
         props.horizontalAlignment,
         props.verticalAlignment,
         effectiveJustificationFlags,
-        textTheme.fontSizePx,
         {
           rtl: solveNode.rtl,
           isAutowrapped: autowrapMode !== AutowrapMode.AUTOWRAP_OFF,
@@ -220,7 +219,6 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       props.horizontalAlignment,
       props.verticalAlignment,
       effectiveJustificationFlags,
-      textTheme.fontSizePx,
       textTheme.lineSpacingPx,
       textTheme.paragraphSpacingPx,
       solveNode.rtl,

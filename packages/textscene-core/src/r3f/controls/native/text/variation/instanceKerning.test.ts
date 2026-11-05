@@ -38,6 +38,7 @@ const UNITS_PER_EM = 1000;
 const UNIT_SIZE_PX = UNITS_PER_EM;
 
 const canvasFace = createRuntimeFontMetrics({
+  hasGlyph: () => true,
   scalars: { unitsPerEm: UNITS_PER_EM, ascent: 800, descent: 200 },
   measureWidthUnits: (text) => (text.length === 2 ? 1000 + MEASURED_KERNING_UNITS : 500),
   cssFontFamily: 'variable-font-test',

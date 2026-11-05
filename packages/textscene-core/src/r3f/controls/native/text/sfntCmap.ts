@@ -8,6 +8,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { readGlyphCount, type SfntFile } from './sfntTables';
+
 /** `cmap` platform and encoding of each Unicode subtable, best first, as HarfBuzz ranks them (`hb-ot-cmap-table.hh`). */
 const CMAP_SUBTABLE_RANK: readonly (readonly [platform: number, encoding: number])[] = [
   [3, 10],
@@ -38,7 +40,7 @@ function findCmapSubtable(dv: DataView, cmapOffset: number): number | null {
 }
 
 /** Binary search for the first of `count` ascending entries whose end is at or above `target`. */
-function firstEndAtOrAbove(count: number, endAt: (index: number) => number, target: number): number {
+export function firstEndAtOrAbove(count: number, endAt: (index: number) => number, target: number): number {
   let low = 0;
   let high = count;
   while (low < high) {
@@ -131,4 +133,46 @@ export function cmapCodePoints(dv: DataView, cmapOffset: number, glyphCount: num
   if (dv.getUint16(subtable, false) === CMAP_FORMAT_GROUPED)
     return groupedCodePoints(dv, subtable, glyphCount);
   return segmentedCodePoints(dv, subtable, glyphCount);
+}
+
+/**
+ * Whether `sfnt` maps a character to a glyph other than `.notdef`, which `_font_has_char` asks
+ * FreeType. `FT_Get_Char_Index` answers 0 for an index at or past `maxp.numGlyphs`. A font with no
+ * `cmap` subtable this module reads answers true, so its text keeps it.
+ */
+export function sfntHasGlyph(sfnt: SfntFile): (ch: string) => boolean {
+  const glyphIndexOf = sfntGlyphIndex(sfnt);
+  if (!glyphIndexOf) return () => true;
+  const glyphCount = readGlyphCount(sfnt) ?? Infinity;
+  // One answer per code point: the shaper asks for each character on every pass.
+  const answers = new Map<number, boolean>();
+  return (ch) => {
+    const codePoint = ch.codePointAt(0)!;
+    let answer = answers.get(codePoint);
+    if (answer === undefined) {
+      const glyphIndex = glyphIndexOf(codePoint);
+      answers.set(codePoint, (answer = glyphIndex !== 0 && glyphIndex < glyphCount));
+    }
+    return answer;
+  };
+}
+
+/**
+ * The glyph index of a code point through the `cmap` of `sfnt`, 0 for none or for a read a malformed
+ * table sends past the end. Null for a font with no subtable this module reads.
+ */
+export function sfntGlyphIndex(sfnt: SfntFile): ((codePoint: number) => number) | null {
+  const cmap = sfnt.tables.get('cmap');
+  const lookup = cmap ? orOnRangeError(() => cmapLookup(sfnt.dv, cmap.offset), null) : null;
+  return lookup && ((codePoint) => orOnRangeError(() => lookup(codePoint), 0));
+}
+
+/** `read()`, or `fallback` where a malformed table sends it past the end of the bytes. */
+export function orOnRangeError<T>(read: () => T, fallback: T): T {
+  try {
+    return read();
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    return fallback;
+  }
 }

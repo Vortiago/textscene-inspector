@@ -882,6 +882,8 @@ function fakeLine(charCount: number, firstSourceIndex = 0): TextLineLayout {
       x: i,
       advance: 1,
       glyph: null,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      fontSizePx: 16,
       sourceIndex: firstSourceIndex + i,
     })),
     widthPx: charCount,
@@ -919,7 +921,14 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
 
   it('VC_CHARS_AFTER_SHAPING hides the ellipsis of a paragraph that starts past the budget, plus one', () => {
     // An ellipsis glyph's `end` is -1 (`text_server.h:628`), so `-1 + para_start > visible_chars` hides it.
-    const ellipsis = { char: '…', x: 0, advance: 1, glyph: null };
+    const ellipsis = {
+      char: '…',
+      x: 0,
+      advance: 1,
+      glyph: null,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      fontSizePx: 16,
+    };
     const withEllipsis = (paragraphStart: number): TextLineLayout => ({
       ...fakeLine(0),
       glyphs: [ellipsis],
@@ -1177,7 +1186,7 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
   }
 
   function originAt(alignment: number, rtl: boolean): number {
-    return layoutLabelLines(lineOfWidth(70), 200, 100, alignment, undefined, undefined, FONT_SIZE, {
+    return layoutLabelLines(lineOfWidth(70), 200, 100, alignment, undefined, undefined, {
       rtl,
     })[0]!.x;
   }
@@ -1207,18 +1216,9 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
     // `if (rtl && autowrap_mode != AUTOWRAP_OFF)` reads `shaped_text_get_inferred_direction` (:470),
     // not `rtl_layout` (:471). `text_direction` defaults to TEXT_DIRECTION_AUTO (`label.h:70`), so `:179`
     // hands the TextServer DIRECTION_AUTO and a Latin paragraph infers LTR (`text_server_adv.cpp:7241-7247`).
-    const placements = layoutLabelLines(
-      lineOfWidth(70),
-      200,
-      100,
-      3,
-      undefined,
-      UNJUSTIFIED_FLAGS,
-      FONT_SIZE,
-      {
-        rtl: true,
-      }
-    );
+    const placements = layoutLabelLines(lineOfWidth(70), 200, 100, 3, undefined, UNJUSTIFIED_FLAGS, {
+      rtl: true,
+    });
     expect(placements[0]!.x).toBe(0);
   });
 });
@@ -1232,7 +1232,7 @@ describe('layoutLabelLines — the overrun trim (label.cpp:302-332)', () => {
       lineSpacingPx: 3,
     });
     const trimTo60 = (line: TextLineLayout): TextLineLayout => ({ ...line, widthPx: 60 });
-    const [placement] = layoutLabelLines(layout, 100, 40, 2, undefined, undefined, 16, {
+    const [placement] = layoutLabelLines(layout, 100, 40, 2, undefined, undefined, {
       trim: { line: trimTo60, filledLine: trimTo60 },
     });
     expect(placement!.line.widthPx).toBe(60);
@@ -1250,7 +1250,7 @@ describe('layoutLabelLines — the justification-aware trim of FILL with autowra
   const naturalWidthPx = layout.lines[0]!.widthPx;
   const markTrimmed = (line: TextLineLayout): TextLineLayout => ({ ...line, text: `${line.text}…` });
   const fillAt = (boxWidthPx: number) =>
-    layoutLabelLines(layout, boxWidthPx, 40, 3, undefined, JustificationFlag.WORD_BOUND, 16, {
+    layoutLabelLines(layout, boxWidthPx, 40, 3, undefined, JustificationFlag.WORD_BOUND, {
       trim: { line: markTrimmed, filledLine: markTrimmed },
     })[0]!.line;
 
@@ -1276,7 +1276,7 @@ describe('layoutLabelLines — the trimmed FILL line fitted again with CONSTRAIN
   const trimOptions = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 };
   const ellipsisFlags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
   const filledLineAt = (justificationFlags: number) =>
-    layoutLabelLines(layout, BOX_WIDTH_PX, 40, 3, undefined, justificationFlags, 16, {
+    layoutLabelLines(layout, BOX_WIDTH_PX, 40, 3, undefined, justificationFlags, {
       trim: {
         line: (line) => trimLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, trimOptions),
         filledLine: (line, filledFlags) =>
@@ -1311,7 +1311,7 @@ describe('layoutLabelLines — the inferred paragraph direction (label.cpp:470-4
       lineSpacingPx: 3,
     });
     const lines = layout.lines.map((line) => ({ ...line, widthPx: 70, isRtl }));
-    return layoutLabelLines({ ...layout, lines }, 200, 100, 3, undefined, UNJUSTIFIED_FLAGS, FONT_SIZE, {
+    return layoutLabelLines({ ...layout, lines }, 200, 100, 3, undefined, UNJUSTIFIED_FLAGS, {
       rtl,
       isAutowrapped,
     })[0]!.x;
@@ -1336,7 +1336,7 @@ describe('layoutLabelLines — the inferred paragraph direction (label.cpp:470-4
       autowrapMode: AutowrapMode.AUTOWRAP_WORD_SMART,
       lineSpacingPx: 3,
     });
-    const placements = layoutLabelLines(layout, 100, 100, 3, undefined, undefined, FONT_SIZE, {
+    const placements = layoutLabelLines(layout, 100, 100, 3, undefined, undefined, {
       isAutowrapped: true,
     });
     const last = placements.at(-1)!;
@@ -1419,7 +1419,6 @@ describe('Label paragraph_spacing and the theme spacing constants (label.cpp:344
       undefined,
       props.verticalAlignment,
       undefined,
-      FONT_SIZE,
       {
         lineSpacingPx: theme.lineSpacingPx,
         paragraphSpacingPx: theme.paragraphSpacingPx,

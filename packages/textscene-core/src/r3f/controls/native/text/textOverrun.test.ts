@@ -128,6 +128,19 @@ describe('trimLineToWidth', () => {
     expect(ellipsis.emboldenGrowthPx).toBeCloseTo(1.2, 10);
   });
 
+  // A canvas raster scales the measured ink of a glyph by its own size (`canvasTextPainter.ts`).
+  it('sizes the space and the ellipsis it appends at the trim size', () => {
+    const result = trim(
+      'AAAAAA BBBBBB',
+      90,
+      overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS)
+    );
+    expect(result.glyphs.slice(-2).map(({ char, fontSizePx }) => [char, fontSizePx])).toEqual([
+      [' ', FONT_SIZE_PX],
+      ['…', FONT_SIZE_PX],
+    ]);
+  });
+
   it('TRIM_WORD_ELLIPSIS only cuts at a space, inserting one before the ellipsis (text_server_adv.cpp:6081-6091,6124-6135)', () => {
     // "AAAAAA BBBBBB": every mid-word B index is skipped (not a soft break);
     // the space at index 6 is the first index >= 6 that both is a soft break
@@ -373,5 +386,33 @@ describe('trimFilledLineToWidth — the fit after the trim, JUSTIFICATION_CONSTR
     const last = filled.glyphs.at(-1)!;
     expect(filled.glyphs[0]!.char).toBe('…');
     expect(last.x + last.advance).toBeCloseTo(WIDTH_PX + (ELLIPSIS_ADVANCE_PX - ELLIPSIS_WIDTH_PX), 9);
+  });
+});
+
+// :5984-6036: the dots and the space come from the last glyph's font, else the first font of the span that has them.
+describe('trimLineToWidth — the ellipsis from a fallback chain', () => {
+  const ELLIPSIS_ONLY = { ...OPEN_SANS_FONT_METRICS, hasGlyph: (ch: string) => ch === '…' };
+  const NO_ELLIPSIS = { ...OPEN_SANS_FONT_METRICS, hasGlyph: (ch: string) => ch !== '…' };
+
+  function trimIn(fontMetrics: typeof OPEN_SANS_FONT_METRICS) {
+    const shaped = shapeText('AAAAAAAAAAAA', {
+      fontSizePx: FONT_SIZE_PX,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      fontMetrics,
+    }).lines[0]!;
+    const flags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+    return trimLineToWidth(shaped, 100, flags, { fontMetrics, fontSizePx: FONT_SIZE_PX });
+  }
+
+  it('draws the ellipsis from the first fallback that has it', () => {
+    const glyphs = trimIn({ ...NO_ELLIPSIS, fallbacks: [ELLIPSIS_ONLY] }).glyphs;
+    expect(glyphs.at(-1)!.char).toBe('…');
+    expect(glyphs.at(-1)!.fontMetrics).toBe(ELLIPSIS_ONLY);
+  });
+
+  it('draws three dots where no font of the chain has the ellipsis', () => {
+    expect(drawnText(trimIn({ ...NO_ELLIPSIS, fallbacks: [NO_ELLIPSIS] })).endsWith('...')).toBe(true);
   });
 });

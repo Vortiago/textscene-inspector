@@ -59,37 +59,48 @@ export async function decodeFont(
     return address ? loadFont(address) : null;
   };
 
-  switch (resourceType) {
+  if (!FONT_SUB_RESOURCE_TYPES.has(resourceType))
+    throw new Error(`Unsupported font resource type: ${resourceType}`);
+  const [fallbacks, baseFont] = await Promise.all([
+    Promise.all(extractResourceRefs(properties['fallbacks'] ?? '').map(resolveRef)),
+    resourceType === 'FontVariation' ? resolveRef(properties['base_font']) : null,
+  ]);
+  return fontResourceOf(
+    resourceType,
+    properties,
+    fallbacks.filter((font) => font !== null),
+    baseFont
+  );
+}
+
+/**
+ * The `FontResource` of a Font body of type `type`, one of {@link FONT_SUB_RESOURCE_TYPES}, with its
+ * Font-valued properties already resolved. Both decode paths end here.
+ */
+function fontResourceOf(
+  type: string,
+  properties: Record<string, string>,
+  fallbacks: FontResource[],
+  baseFont: FontResource | null
+): FontResource {
+  const { fallbacks: _fallbacks, ...rest } = properties;
+  switch (type) {
     case 'SystemFont': {
-      const { font_names, ...rest } = properties;
+      const { font_names, ...systemRest } = rest;
       return {
         kind: 'system',
         fontNames: font_names !== undefined ? parsePackedStringArray(font_names) : [],
-        properties: rest,
+        baseFont: null,
+        fallbacks,
+        properties: systemRest,
       };
     }
-
     case 'FontVariation': {
-      const { base_font, ...rest } = properties;
-      const baseFont = await resolveRef(base_font);
-      return { kind: 'variation', baseFont, properties: rest };
+      const { base_font: _baseFont, ...variationRest } = rest;
+      return { kind: 'variation', baseFont, fallbacks, properties: variationRest };
     }
-
-    case 'FontFile': {
-      const { fallbacks, ...rest } = properties;
-      const fallbackRefs = fallbacks !== undefined ? extractResourceRefs(fallbacks) : [];
-      const resolved = await Promise.all(fallbackRefs.map((ref) => resolveRef(ref)));
-      return {
-        kind: 'file',
-        bytes: undefined,
-        mimeType: undefined,
-        fallbacks: resolved.filter((f): f is FontResource => f !== null),
-        properties: rest,
-      };
-    }
-
     default:
-      throw new Error(`Unsupported font resource type: ${resourceType}`);
+      return { kind: 'file', bytes: undefined, mimeType: undefined, fallbacks, properties: rest };
   }
 }
 
@@ -143,28 +154,12 @@ export function resolveInlineFontResource(
       nowVisiting
     );
 
-  switch (sub.type) {
-    case 'SystemFont': {
-      const { font_names, ...rest } = sub.data;
-      return {
-        kind: 'system',
-        fontNames: font_names !== undefined ? parsePackedStringArray(font_names) : [],
-        properties: rest,
-      };
-    }
-    case 'FontVariation': {
-      const { base_font, ...rest } = sub.data;
-      return { kind: 'variation', baseFont: resolveNested(base_font), properties: rest };
-    }
-    case 'FontFile': {
-      const { fallbacks, ...rest } = sub.data;
-      const refs = fallbacks !== undefined ? extractResourceRefs(fallbacks) : [];
-      const resolved = refs.map(resolveNested).filter((f): f is FontResource => f !== null);
-      return { kind: 'file', bytes: undefined, mimeType: undefined, fallbacks: resolved, properties: rest };
-    }
-    default:
-      // Not a Font sub-resource type: the gate the file-backed path applies through
-      // `subResourceTypeGate(FONT_SUB_RESOURCE_TYPES)`.
-      return null;
-  }
+  // Not a Font sub-resource type: the gate the file-backed path applies through
+  // `subResourceTypeGate(FONT_SUB_RESOURCE_TYPES)`.
+  if (!FONT_SUB_RESOURCE_TYPES.has(sub.type)) return null;
+  const fallbacks = extractResourceRefs(sub.data['fallbacks'] ?? '')
+    .map(resolveNested)
+    .filter((font) => font !== null);
+  const baseFont = sub.type === 'FontVariation' ? resolveNested(sub.data['base_font']) : null;
+  return fontResourceOf(sub.type, sub.data, fallbacks, baseFont);
 }
