@@ -16,9 +16,12 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
-import type { ShareNode, SolveNode, ThemedIconRef } from '../../../../r3f/controls/native/solveTree';
+import type { SolveNode, ThemedIconRef } from '../../../../r3f/controls/native/solveTree';
 import { getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
-import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
+import {
+  controlBidiOptions,
+  type TextBidiOptions,
+} from '../../../../r3f/controls/native/text/textBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   shapeText,
@@ -201,18 +204,16 @@ export const lineEditTextureSlots: TextureSlotsFn = (
  * The minimum size and the painter both read it.
  */
 export function shapeLineEditText(
-  n: ShareNode,
   text: string,
-  font: { fontSizePx: number; fontMetrics: FontMetrics }
+  options: { fontSizePx: number; fontMetrics: FontMetrics; preserveControl?: boolean; bidi: TextBidiOptions }
 ): TextLayoutResult {
-  const props = n.node.properties as LineEditProperties;
+  const { bidi, ...font } = options;
   return shapeText(text, {
     ...font,
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx: 0,
-    preserveControl: props.drawControlChars,
-    ...controlBidiOptions(props, n),
+    ...bidi,
   });
 }
 
@@ -250,7 +251,14 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
     // `lineEditDisplayText` gives the painter, so an empty field sizes to its placeholder.
     const { text: displayed } = lineEditDisplayText(props);
     const fullWidthPx = displayed.length
-      ? shapedTextSizeWidthPx(shapeLineEditText(n, displayed, { fontSizePx, fontMetrics }).widthPx)
+      ? shapedTextSizeWidthPx(
+          shapeLineEditText(displayed, {
+            fontSizePx,
+            fontMetrics,
+            preserveControl: props.drawControlChars,
+            bidi: controlBidiOptions(props, n),
+          }).widthPx
+        )
       : 0;
     const caretWidthPx = n.constants['caret_width'] ?? DEFAULT_CARET_WIDTH;
     width = Math.max(width, fullWidthPx + caretWidthPx);

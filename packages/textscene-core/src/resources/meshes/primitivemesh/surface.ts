@@ -10,6 +10,7 @@ import { vec2iOr } from '../../../parser/valueParsers';
 import { storedReal } from '../../../godot/math/real';
 import { perObject } from '../../../utils/perObject';
 import { parseLanguage } from '../../../parser/textDirectionParser';
+import { shapingLanguage } from '../../../r3f/controls/native/text/textBidiOptions';
 import type { Vector2 } from '../../../godot/math/vector';
 import { resourceContentKey } from '../../resourceContentKey';
 import { referencedFilePath, resolveReference, resolveReferencedResource } from '../../resolveReference';
@@ -223,7 +224,9 @@ function readReferencesKey(mesh: ResolvableResource): string {
       const named = resolveReference(resource.data[property], resources, loadedFile);
       return named ? resourceContentKey(named.resource) : 'missing';
     }),
-    ...(font ? [textMeshFontKey(font), parseLanguage(resource.data['language']) || mesh.locale] : []),
+    ...(font
+      ? [textMeshFontKey(font), shapingLanguage(parseLanguage(resource.data['language']), mesh.locale)]
+      : []),
   ].join('|');
 }
 

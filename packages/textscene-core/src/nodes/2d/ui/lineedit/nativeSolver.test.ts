@@ -13,6 +13,7 @@ import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxF
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import type { LineEditProperties } from './types';
+import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import {
   shapeLineEditText,
   lineEditMinimumSize,
@@ -890,8 +891,11 @@ describe('shapeLineEditText — direction, language and structured override (lin
   function visual(props: Partial<LineEditProperties>, overrides: Partial<SolveNode> = {}): string {
     const n = { ...node(props), ...overrides };
     return visualChars(
-      shapeLineEditText(n, props.text ?? '', { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS })
-        .lines[0]!
+      shapeLineEditText(props.text ?? '', {
+        fontSizePx: 16,
+        fontMetrics: OPEN_SANS_FONT_METRICS,
+        bidi: controlBidiOptions(n.node.properties as LineEditProperties, n),
+      }).lines[0]!
     );
   }
 

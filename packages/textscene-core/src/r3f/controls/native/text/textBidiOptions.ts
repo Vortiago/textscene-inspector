@@ -22,6 +22,11 @@ export interface ControlTextEnv {
   locale: string;
 }
 
+/** The language text shapes in: its own, else the locale, as `language.is_empty() ? _get_locale() : language` (`label_3d.cpp:483`). */
+export function shapingLanguage(language: string | undefined, locale: string): string {
+  return language || locale;
+}
+
 /**
  * For a node with no layout direction, Label3D and TextMesh: the direction goes through as it is, so
  * the text server reads INHERITED as AUTO (`text_server_adv.cpp:7240-7241`). An empty `language`
@@ -36,7 +41,7 @@ export function textBidiOptions(props: BidiProperties, locale: string): TextBidi
   } = props;
   return {
     direction: textDirection,
-    language: language || locale,
+    language: shapingLanguage(language, locale),
     // DEFAULT's one INHERITED range over the whole paragraph is what no override shapes.
     bidiOverride:
       structuredTextBidiOverride === undefined ||

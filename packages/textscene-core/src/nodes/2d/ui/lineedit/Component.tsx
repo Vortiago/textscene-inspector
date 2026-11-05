@@ -5,6 +5,7 @@
  * `_validate_caret_can_draw()`'s other branch never fires. It draws no selection or IME. `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
 import { useMemo } from 'react';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -72,9 +73,11 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // the `useMemo` below, for the reason Label's Component.tsx gives.
   const fontMetrics = resolveNodeFontMetrics(solveNode, LINE_EDIT_THEME_FONT_KEY);
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
+  const bidi = useControlBidiOptions(props, solveNode);
+  const preserveControl = props.drawControlChars;
   const layout: TextLayoutResult | null = useMemo(
-    () => (hasText ? shapeLineEditText(solveNode, text, { fontSizePx, fontMetrics }) : null),
-    [hasText, text, fontSizePx, fontMetrics, solveNode]
+    () => (hasText ? shapeLineEditText(text, { fontSizePx, fontMetrics, preserveControl, bidi }) : null),
+    [hasText, text, fontSizePx, fontMetrics, preserveControl, bidi]
   );
 
   // Icon: which one draws, its resolved size
