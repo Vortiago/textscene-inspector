@@ -3,22 +3,9 @@
  * `V` and a space on one RGBA page, and the kerning pair `A V` of -3.
  */
 
-export const TEXT_DESCRIPTOR = [
-  'info face="Test" size=16 bold=0 italic=0 charset="" unicode=1 stretchH=100 smooth=0 aa=1 padding=0,0,0,0 spacing=0,0 outline=0',
-  'common lineHeight=20 base=16 scaleW=64 scaleH=32 pages=1 packed=0 alphaChnl=0 redChnl=0 greenChnl=0 blueChnl=0',
-  'page id=0 file="bmfont.png"',
-  'chars count=5',
-  'char id=32 x=0 y=0 width=0 height=0 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=15',
-  'char id=72 x=0 y=0 width=8 height=12 xoffset=1 yoffset=4 xadvance=10 page=0 chnl=15',
-  'char id=105 x=8 y=0 width=2 height=12 xoffset=1 yoffset=4 xadvance=4 page=0 chnl=15',
-  'char id=65 x=16 y=0 width=8 height=12 xoffset=0 yoffset=4 xadvance=9 page=0 chnl=15',
-  'char id=86 x=24 y=0 width=8 height=12 xoffset=0 yoffset=4 xadvance=9 page=0 chnl=15',
-  'kernings count=1',
-  'kerning first=65 second=86 amount=-3',
-  '',
-].join('\n');
+import { ByteWriter } from '../binaryresource/testing/binaryResourceBytes';
 
-/** The glyphs of `TEXT_DESCRIPTOR` as `[id, x, y, width, height, xoffset, yoffset, xadvance]`. */
+/** The glyphs as `[id, x, y, width, height, xoffset, yoffset, xadvance]`. */
 const GLYPH_ROWS = [
   [32, 0, 0, 0, 0, 0, 0, 5],
   [72, 0, 0, 8, 12, 1, 4, 10],
@@ -27,33 +14,24 @@ const GLYPH_ROWS = [
   [86, 24, 0, 8, 12, 0, 4, 9],
 ] as const;
 
-/** A little-endian byte writer, so a descriptor reads as the layout it has. */
-class ByteWriter {
-  private readonly bytes: number[] = [];
-  u8(value: number): this {
-    this.bytes.push(value & 0xff);
-    return this;
-  }
-  u16(value: number): this {
-    return this.u8(value).u8(value >> 8);
-  }
-  u32(value: number): this {
-    return this.u16(value).u16(value >>> 16);
-  }
-  text(value: string): this {
-    for (const char of value) this.u8(char.charCodeAt(0));
-    return this;
-  }
-  get length(): number {
-    return this.bytes.length;
-  }
-  toBytes(): number[] {
-    return this.bytes;
-  }
-}
+const charLine = ([id, x, y, width, height, xoffset, yoffset, xadvance]: (typeof GLYPH_ROWS)[number]) =>
+  `char id=${id} x=${x} y=${y} width=${width} height=${height} xoffset=${xoffset} yoffset=${yoffset} xadvance=${xadvance} page=0 chnl=15`;
 
-function block(type: number, body: ByteWriter): number[] {
-  return new ByteWriter().u8(type).u32(body.length).toBytes().concat(body.toBytes());
+export const TEXT_DESCRIPTOR = [
+  'info face="Test" size=16 bold=0 italic=0 charset="" unicode=1 stretchH=100 smooth=0 aa=1 padding=0,0,0,0 spacing=0,0 outline=0',
+  'common lineHeight=20 base=16 scaleW=64 scaleH=32 pages=1 packed=0 alphaChnl=0 redChnl=0 greenChnl=0 blueChnl=0',
+  'page id=0 file="bmfont.png"',
+  `chars count=${GLYPH_ROWS.length}`,
+  ...GLYPH_ROWS.map(charLine),
+  'kernings count=1',
+  'kerning first=65 second=86 amount=-3',
+  '',
+].join('\n');
+
+const utf8 = (text: string): Uint8Array => new TextEncoder().encode(text);
+
+function block(type: number, body: ByteWriter): Uint8Array {
+  return new ByteWriter().u8(type).u32(body.length).raw(body.bytes()).bytes();
 }
 
 /** The `common` settings that decide how a page image is read: red, green, blue and alpha channel values. */
@@ -76,7 +54,7 @@ export function binaryDescriptor({
     .u32(0)
     .u16(0)
     .u8(0)
-    .text('Test')
+    .raw(utf8('Test'))
     .u8(0);
   const common = new ByteWriter()
     .u16(20)
@@ -89,14 +67,14 @@ export function binaryDescriptor({
     .u8(channels[0])
     .u8(channels[1])
     .u8(channels[2]);
-  const pages = new ByteWriter().text('bmfont.png').u8(0);
+  const pages = new ByteWriter().raw(utf8('bmfont.png')).u8(0);
   const chars = new ByteWriter();
   for (const [id, x, y, width, height, xoffset, yoffset, xadvance] of GLYPH_ROWS) {
     chars.u32(id).u16(x).u16(y).u16(width).u16(height).u16(xoffset).u16(yoffset).u16(xadvance).u8(0).u8(15);
   }
   const kerning = new ByteWriter().u32(65).u32(86).u16(-3);
   const bytes = [
-    ...new ByteWriter().text('BMF').u8(3).toBytes(),
+    ...new ByteWriter().raw(utf8('BMF')).u8(3).bytes(),
     ...block(1, info),
     ...block(2, common),
     ...block(3, pages),

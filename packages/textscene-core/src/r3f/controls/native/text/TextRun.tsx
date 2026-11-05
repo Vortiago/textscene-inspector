@@ -28,10 +28,9 @@ import {
 } from './canvasTextPainter';
 import type { SurfaceShading } from '../../../materialFor2d';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
-import { isBitmapFontMetrics } from './bitmapFontMetrics';
-import { buildBitmapQuads, createSheetTexture, sheetOf } from './bitmapTextPainter';
+import { isBitmapFontMetrics, type BitmapFontMetrics } from './bitmapFontMetrics';
+import { buildBitmapQuads, createSheetTexture } from './bitmapTextPainter';
 import type { TextLayoutResult } from './textLayout';
-import type { BitmapFont } from '../../../../resources/fonts/font/types';
 import { hexCodeBoxRects } from './hexCodeBox';
 import { buildGlyphQuadArrays, type GlyphQuadArrays } from './glyphQuads';
 import { OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
@@ -184,20 +183,23 @@ function quadGeometry({ positions, uvs, indices }: GlyphQuadArrays): THREE.Buffe
 /**
  * A BMFont run: one quad for each glyph over a texture of the font's page fills, drawn as a Control
  * draws any texture. The tint multiplies the page colour, as Godot's modulate does for a font with
- * no FreeType face (`text_server_adv.cpp:4045`).
+ * no FreeType face (`text_server_adv.cpp:4045`). An outline pass draws the font's outline set, at
+ * the glyph's own rectangle, for every outline size (`text_server_adv.h:406-414`, `font.cpp:1712-1717`).
  */
 function buildBitmapRun(
   layout: TextLayoutResult,
-  bitmap: BitmapFont,
+  metrics: BitmapFontMetrics,
   fontSizePx: number,
   look: TextRunLook,
-  textureFilter: TextureFilterState
+  textureFilter: TextureFilterState,
+  isOutlinePass: boolean
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
-  const quads = buildBitmapQuads(layout, bitmap, fontSizePx);
+  const sheet = isOutlinePass ? metrics.bitmap.outlineSheet : metrics.bitmap.sheet;
+  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet);
   const geometry = quadGeometry(quads);
   geometry.setAttribute('normal', quadFacingPlusZ(quads.positions.length / 3));
-  const texture = createSheetTexture(sheetOf(bitmap));
+  const texture = createSheetTexture(sheet);
   applyTextureFilterState(texture, textureFilter);
   const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
   const paint = (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) =>
@@ -218,7 +220,8 @@ function buildBitmapRun(
 /**
  * Dispatches on `layout.fontMetrics.kind`, so no slice's `Component.tsx` branches. The face sets the
  * shear (`FontMetrics.skew`). `strokeWidthPx` is canvas-only, and the embolden's distance bias
- * (`msdfDistanceBias`) atlas-only. Each branch ignores the other's.
+ * (`msdfDistanceBias`) atlas-only. Each branch ignores the other's, except that a BMFont run reads
+ * a positive stroke width as its outline pass.
  */
 function buildTextRun(
   layout: TextLayoutResult,
@@ -231,7 +234,7 @@ function buildTextRun(
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
   const skew = layout.fontMetrics.skew ?? 0;
   if (isBitmapFontMetrics(layout.fontMetrics)) {
-    return buildBitmapRun(layout, layout.fontMetrics.bitmap, fontSizePx, look, textureFilter);
+    return buildBitmapRun(layout, layout.fontMetrics, fontSizePx, look, textureFilter, strokeWidthPx > 0);
   }
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);

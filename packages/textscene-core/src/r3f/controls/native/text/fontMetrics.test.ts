@@ -74,17 +74,17 @@ describe('getFontGlyphAdvancePx', () => {
 
 describe('fontUsesSubpixelPositioning', () => {
   it('is true at and below SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE — every Godot theme default sits here', () => {
-    expect(fontUsesSubpixelPositioning(16)).toBe(true);
-    expect(fontUsesSubpixelPositioning(20)).toBe(true);
+    expect(fontUsesSubpixelPositioning(16, {})).toBe(true);
+    expect(fontUsesSubpixelPositioning(20, {})).toBe(true);
   });
 
   it('is false above it, which is where Godot starts rounding advances to whole pixels', () => {
-    expect(fontUsesSubpixelPositioning(21)).toBe(false);
-    expect(fontUsesSubpixelPositioning(28)).toBe(false);
+    expect(fontUsesSubpixelPositioning(21, {})).toBe(false);
+    expect(fontUsesSubpixelPositioning(28, {})).toBe(false);
   });
 
   it("is true for a FRACTIONAL size at any magnitude — Godot's own int64_t size API cannot express one, and `scale != 1.0` is the branch it would take", () => {
-    expect(fontUsesSubpixelPositioning(28.5)).toBe(true);
+    expect(fontUsesSubpixelPositioning(28.5, {})).toBe(true);
   });
 });
 

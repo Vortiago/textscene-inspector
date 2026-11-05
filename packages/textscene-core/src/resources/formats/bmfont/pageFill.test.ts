@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ImageSourceFormat } from '../../../godot/import/imageSourceFormat';
 import { parseDescriptor } from './parseDescriptor';
-import { decodePageFills, type PageImage } from './pageFill';
+import { decodePageFills, decodePageOutlineFills, type PageImage } from './pageFill';
 import { binaryDescriptor, textDescriptor } from './descriptor.testkit';
 
 const encode = (text: string): ArrayBuffer => new TextEncoder().encode(text).buffer as ArrayBuffer;
@@ -137,5 +137,54 @@ describe('decodePageFills', () => {
     expect(() =>
       decodePageFills(textPage({ channels: [0, 0, 0, 0] }), imageOf([0, 0, 0, 0, 0, 0, 0, 0], null))
     ).toThrowError(/Unsupported BMFont texture format/);
+  });
+});
+
+/** The outline fills Godot stores under the cache key `(size, 1)` (`font.cpp:623-880,1930-1936`). */
+describe('decodePageOutlineFills', () => {
+  it('reads the outline channel of a monochrome page that holds glyph and outline', () => {
+    const fills = decodePageOutlineFills(
+      textPage({ channels: [0, 1, 3, 3], outline: 1 }),
+      imageOf([9, 8, 0, 0, 7, 6, 0, 0])
+    );
+
+    expect(fillBytes(fills, 0)).toEqual([255, 255, 255, 8, 255, 255, 255, 6]);
+  });
+
+  it('keeps the lower half of a 4-bit monochrome channel, doubled, as the outline', () => {
+    const fills = decodePageOutlineFills(
+      textPage({ channels: [2, 3, 3, 3], outline: 1 }),
+      imageOf([0x90, 0, 0, 0, 0x20, 0, 0, 0])
+    );
+
+    expect(fillBytes(fills, 0)).toEqual([255, 255, 255, 0, 255, 255, 255, 0x40]);
+  });
+
+  it('keeps the lower half of a 4-bit RGBA page, doubled, as the outline', () => {
+    const fills = decodePageOutlineFills(
+      textPage({ channels: [2, 2, 2, 2], outline: 1 }),
+      imageOf([0x80, 0x7f, 0xff, 0x00, 0x10, 0x90, 0x20, 0xc0])
+    );
+
+    expect(fillBytes(fills, 0)).toEqual([0, 0xfe, 0, 0, 0x20, 0, 0x40, 0]);
+  });
+
+  it('splits a packed 4-bit page into four outline fills', () => {
+    const fills = decodePageOutlineFills(
+      textPage({ packed: true, channels: [2, 2, 2, 2], outline: 1 }),
+      imageOf([0x20, 0x10, 0x0f, 0x00, 0x08, 0x0f, 0x10, 0x01])
+    );
+
+    expect([...fills.keys()]).toEqual([0, 1, 2, 3]);
+    expect(fillBytes(fills, 0)).toEqual([255, 255, 255, 0, 255, 255, 255, 0x10]);
+    expect(fillBytes(fills, 2)).toEqual([255, 255, 255, 0x1e, 255, 255, 255, 0]);
+  });
+
+  it.each([
+    ['an RGBA colour page', { channels: [0, 0, 0, 0] }],
+    ['a packed 8-bit page', { packed: true, channels: [0, 0, 0, 0] }],
+    ['a monochrome page with no outline', { channels: [3, 3, 3, 0] }],
+  ] as const)('is empty for %s', (_name, settings) => {
+    expect(decodePageOutlineFills(textPage(settings), imageOf([1, 2, 3, 4, 5, 6, 7, 8])).size).toBe(0);
   });
 });

@@ -212,10 +212,10 @@ const SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE = 20;
 // `int64_t` API cannot express, takes the subpixel branch.
 export function fontUsesSubpixelPositioning(
   fontSizePx: number,
-  metrics?: Pick<FontMetrics, 'pxPerUnit'>
+  metrics: Pick<FontMetrics, 'pxPerUnit'>
 ): boolean {
   // A fixed-size font scaled off its own size has `scale != 1.0`, the other disjunct.
-  const isScaled = (metrics?.pxPerUnit?.(fontSizePx) ?? 1) !== 1;
+  const isScaled = (metrics.pxPerUnit?.(fontSizePx) ?? 1) !== 1;
   return isScaled || !Number.isInteger(fontSizePx) || fontSizePx <= SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE;
 }
 

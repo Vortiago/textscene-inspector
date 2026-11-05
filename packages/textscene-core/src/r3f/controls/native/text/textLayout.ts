@@ -421,7 +421,7 @@ function roundAdvancesToWholePixels(glyphs: BreakGlyph[], text: string, style: R
     const sizePx = style.sizes[i]!;
     // `adv_rem` is local to `_shape_run` (`:7011`), so a new run starts it at zero.
     if (startsNewRun(style, i)) advanceRemainder = 0;
-    if (fontUsesSubpixelPositioning(sizePx, style.faces[i])) continue;
+    if (fontUsesSubpixelPositioning(sizePx, style.faces[i] ?? {})) continue;
     const cp = text[i]!.codePointAt(0)!;
     // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
     if (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp)) advanceRemainder = 0;

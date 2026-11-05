@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { AutowrapMode, FixedSizeScaleMode } from '../../../../godot/text/textServerEnums';
 import { testBitmapFont, testBitmapMetrics } from './bitmapFontMetrics.testkit';
-import { buildBitmapQuads, sheetOf } from './bitmapTextPainter';
+import { buildBitmapQuads } from './bitmapTextPainter';
 import { shapeText } from './textLayout';
 
 function quadsFor(text: string, fontSizePx: number, scaleMode?: number) {
@@ -17,7 +17,7 @@ function quadsFor(text: string, fontSizePx: number, scaleMode?: number) {
     lineSpacingPx: 3,
     fontMetrics,
   });
-  return buildBitmapQuads(layout, fontMetrics.bitmap, fontSizePx);
+  return buildBitmapQuads(layout, fontMetrics, fontSizePx, fontMetrics.bitmap.sheet);
 }
 
 /** The left, top, right and bottom of quad `index`, in Godot px with Y down. */
@@ -26,37 +26,13 @@ function rectOf(positions: Float32Array, index: number): [number, number, number
   return [positions[at]!, -positions[at + 1]!, positions[at + 3]!, -positions[at + 7]!];
 }
 
-describe('sheetOf', () => {
-  const sheet = sheetOf({
-    ...testBitmapFont(),
-    fills: [
-      { width: 4, height: 2, data: new Uint8Array(4 * 2 * 4).fill(1) },
-      undefined,
-      { width: 2, height: 3, data: new Uint8Array(2 * 3 * 4).fill(2) },
-    ],
-  });
-  const texel = (x: number, row: number): number[] => [
-    ...sheet.data.slice((row * sheet.width + x) * 4, (row * sheet.width + x) * 4 + 4),
-  ];
+describe('the sheets of a font', () => {
+  it('holds the outline fills apart from the glyph fills, so an outline pass draws from them', () => {
+    const outlineFill = { width: 2, height: 2, data: new Uint8Array(2 * 2 * 4).fill(9) };
+    const font = testBitmapFont(undefined, [outlineFill]);
 
-  it('keeps a finite width when a page id skips an index', () => {
-    const sparse = sheetOf({
-      ...testBitmapFont(),
-      fills: [undefined, { width: 3, height: 1, data: new Uint8Array(12) }],
-    });
-
-    expect(sparse.width).toBe(3);
-  });
-
-  it('stacks the fills top to bottom in one sheet as wide as the widest', () => {
-    expect([sheet.width, sheet.height]).toEqual([4, 5]);
-    expect(sheet.rowOffsets).toEqual([0, undefined, 2]);
-    expect(texel(3, 1)).toEqual([1, 1, 1, 1]);
-    expect(texel(1, 2)).toEqual([2, 2, 2, 2]);
-  });
-
-  it('leaves the width a narrower fill does not cover clear', () => {
-    expect(texel(2, 3)).toEqual([0, 0, 0, 0]);
+    expect([...font.outlineSheet.data.slice(0, 4)]).toEqual([9, 9, 9, 9]);
+    expect([...font.sheet.data.slice(0, 4)]).toEqual([255, 255, 255, 255]);
   });
 });
 
@@ -92,5 +68,22 @@ describe('buildBitmapQuads', () => {
 
     // Fill 0 is 64 x 32: i is x 8, y 0, 2 x 12.
     expect([uvs[0], uvs[1], uvs[2], uvs[5]]).toEqual([8 / 64, 0, 10 / 64, 12 / 32]);
+  });
+});
+
+describe('buildBitmapQuads over an outline sheet', () => {
+  it('draws no quad for a font with no outline fills', () => {
+    const fontMetrics = testBitmapMetrics();
+    const layout = shapeText('Hi', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics,
+    });
+
+    expect(buildBitmapQuads(layout, fontMetrics, 16, fontMetrics.bitmap.outlineSheet).indices).toHaveLength(
+      0
+    );
   });
 });

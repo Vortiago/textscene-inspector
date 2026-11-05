@@ -50,7 +50,7 @@ let familyCounter = 0;
 const peekMetrics = createSettledPeek<FontFileResource, FontMetrics>();
 
 /** One `BitmapFontMetrics` for each decoded BMFont, so a layout memoised on its identity keeps its hits. */
-const bitmapMetricsOf = perObject((leaf: FontFileResource) => createBitmapFontMetrics(leaf.bitmap!));
+const bitmapMetricsOf = perObject(createBitmapFontMetrics);
 
 /** Warns once per unresolvable resource, not per call: the peek runs on every solve pass, and the failure belongs to the resource. */
 function warnUnresolvable(font: FontResource, nodePath: string): void {
@@ -179,9 +179,8 @@ export function peekSettledSceneFontMetrics(
 
   // A BMFont is decoded by the time its resource settles, so it needs no load of its own. Only the
   // embolden of a variation reaches it: FreeType shears and emboldens an outline, and it has none.
-  const bitmapLeaf = resolveBitmapFont(font);
-  if (bitmapLeaf)
-    return withVariation(bitmapMetricsOf(bitmapLeaf), { embolden: fontVariationEmbolden(font) });
+  const bitmap = resolveBitmapFont(font);
+  if (bitmap) return withVariation(bitmapMetricsOf(bitmap), { embolden: fontVariationEmbolden(font) });
 
   const resolved = resolveFontFileBytes(font);
   if (!resolved) {

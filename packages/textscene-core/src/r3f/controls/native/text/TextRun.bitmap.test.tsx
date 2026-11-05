@@ -60,4 +60,24 @@ describe('<TextRun> over a BMFont', () => {
     expect(run.geometry.getAttribute('position').count).toBe(2 * 4);
     expect(renderer.scene.findAllByType('Mesh').length).toBeGreaterThan(1);
   });
+
+  it('draws the outline fills when a stroke width asks for the outline pass', async () => {
+    const outlineFill = { width: 64, height: 32, data: new Uint8Array(64 * 32 * 4).fill(7) };
+    const fontMetrics = testBitmapMetrics(undefined, [outlineFill]);
+    const layout = shapeText('H', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics,
+    });
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextRun layout={layout} fontSizePx={16} tint={{ r: 1, g: 1, b: 1, a: 1 }} strokeWidthPx={4} />
+    );
+    const run = renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh;
+    const map = (run.material as THREE.MeshBasicMaterial).map as THREE.DataTexture;
+
+    expect(run.geometry.getAttribute('position').count).toBe(4);
+    expect(map.image.data?.[0]).toBe(7);
+  });
 });

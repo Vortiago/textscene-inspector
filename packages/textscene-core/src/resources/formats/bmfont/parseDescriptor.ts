@@ -386,12 +386,16 @@ function textEncoding(keys: Map<string, string>): number {
   return OEM_ENCODING_BY_CHARSET_NAME[charset.toUpperCase()] ?? NO_OEM_ENCODING;
 }
 
+/** The line types the text loader reads (`font.cpp:1796-2030`). */
+const TEXT_LINE_TYPES: ReadonlySet<string> = new Set(['info', 'common', 'page', 'char', 'kerning']);
+
 function parseText(text: string, builder: DescriptorBuilder): void {
   for (const rawLine of text.split('\n')) {
-    const line = rawLine.replace(/\r/g, '').split('\0')[0]!;
-    const space = line.indexOf(' ');
-    const type = space === -1 ? line : line.slice(0, space);
-    const keys = parseKeys(line, space + 1);
+    const space = rawLine.indexOf(' ');
+    const type = space === -1 ? rawLine : rawLine.slice(0, space);
+    // `chars` and `kernings` lines, and any other type the loader ignores, build no key map.
+    if (!TEXT_LINE_TYPES.has(type)) continue;
+    const keys = parseKeys(rawLine.replace(/\r/g, '').split('\0')[0]!, space + 1);
     switch (type) {
       case 'info':
         builder.setInfo({

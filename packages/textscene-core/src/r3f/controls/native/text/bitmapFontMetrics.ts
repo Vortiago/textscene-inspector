@@ -17,6 +17,8 @@ export interface BitmapFontMetrics extends FontMetrics {
   readonly bitmap: BitmapFont;
   /** The glyph of a character, or undefined when the font lacks it: Godot then draws a hex-code box. */
   glyphOf(ch: string): BitmapGlyph | undefined;
+  /** `bitmapScale` at a size: always present on a bitmap face. */
+  pxPerUnit(fontSizePx: number): number;
 }
 
 export function isBitmapFontMetrics(metrics: FontMetrics | undefined): metrics is BitmapFontMetrics {

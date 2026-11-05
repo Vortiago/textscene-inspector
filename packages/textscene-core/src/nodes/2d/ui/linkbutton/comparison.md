@@ -45,9 +45,11 @@ Strict parsing format-checks these `LinkButton` properties, plus 10 inherited fr
 `text_direction` and the structured-text-bidi pair go into the untyped property bag with
 no substitution.
 
+A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
+outline ring (ADR-0064).
+
 ## Known limitations
 
-- **Not drawn** The outline ring of a BMFont (`.fnt`, `.font`), which has no outline glyph set here (ADR-0064).
 - **Approximated** A `theme_override_fonts/font` scene font takes its underline position
   and thickness from the vendored Open Sans metrics, because no scene font carries baked
   underline data.

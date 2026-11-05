@@ -276,6 +276,10 @@ export const CANVAS_2D_SCENES = [
   },
   // The one variable: a BMFont `.fnt` font at its fixed size, double, one and a half times, tinted, and with a missing glyph.
   { name: 'label-bmfont', file: 'unit-label-bmfont.tscn', mode: '2d' },
+  // The one variable: a BMFont's outline set, which Godot draws for any `outline_size` above 0.
+  { name: 'label-bmfont-outline', file: 'unit-label-bmfont-outline.tscn', mode: '2d' },
+  // The one variable: a BMFont's import `scaling_mode`, Integer and Disabled, at sizes off the fixed size.
+  { name: 'label-bmfont-scaling', file: 'unit-label-bmfont-scaling.tscn', mode: '2d' },
   // The one variable: `FontVariation.variation_embolden` over a scene font at 0, 1.2 and 2.0, which
   // grows the outline and widens each advance, as the bold of a RichTextLabel does.
   { name: 'label-font-variation-embolden', file: 'unit-label-font-variation-embolden.tscn', mode: '2d' },

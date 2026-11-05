@@ -8,7 +8,8 @@ import { FixedSizeScaleMode } from '../../../godot/text/textServerEnums';
 import { slotInt } from '../../../godot/variant/intSlots';
 import { getBaseDir, pathJoin } from '../../../godot/string/string';
 import type { BitmapFill, BitmapFont } from '../../fonts/font/types';
-import { decodePageFills, type PageImage } from './pageFill';
+import { stackFills } from './fillSheet';
+import { decodePageFills, decodePageOutlineFills, type PageImage } from './pageFill';
 import { parseDescriptor } from './parseDescriptor';
 
 /** Reads and decodes the page image at a path. Rejects when the file is missing or does not decode. */
@@ -25,6 +26,15 @@ function bitmapScaleMode(importParams: Record<string, string>): number {
   );
 }
 
+/** Spreads the per-page maps of fills into one array by fill index. */
+function fillArrayOf(pageFills: readonly Map<number, BitmapFill>[]): (BitmapFill | undefined)[] {
+  const fills: (BitmapFill | undefined)[] = [];
+  for (const pageFill of pageFills) {
+    for (const [index, fill] of pageFill) fills[index] = fill;
+  }
+  return fills;
+}
+
 export async function loadBitmapFont(
   descriptorPath: string,
   descriptorBytes: ArrayBuffer,
@@ -32,22 +42,20 @@ export async function loadBitmapFont(
   importParams: Record<string, string>
 ): Promise<BitmapFont> {
   const descriptor = parseDescriptor(descriptorBytes);
-  const fills: (BitmapFill | undefined)[] = [];
-  const pageFills = await Promise.all(
-    descriptor.pages.map(async (page) =>
-      decodePageFills(page, await readPage(pathJoin(getBaseDir(descriptorPath), page.file)))
-    )
+  const decoded = await Promise.all(
+    descriptor.pages.map(async (page) => {
+      const image = await readPage(pathJoin(getBaseDir(descriptorPath), page.file));
+      return { glyph: decodePageFills(page, image), outline: decodePageOutlineFills(page, image) };
+    })
   );
-  for (const pageFill of pageFills) {
-    for (const [index, fill] of pageFill) fills[index] = fill;
-  }
   return {
     fixedSize: descriptor.fixedSize,
     ascent: descriptor.ascent,
     descent: descriptor.descent,
     glyphs: descriptor.glyphs,
     kerning: descriptor.kerning,
-    fills,
+    sheet: stackFills(fillArrayOf(decoded.map((page) => page.glyph))),
+    outlineSheet: stackFills(fillArrayOf(decoded.map((page) => page.outline))),
     scaleMode: bitmapScaleMode(importParams),
   };
 }

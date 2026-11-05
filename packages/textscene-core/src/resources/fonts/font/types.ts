@@ -42,7 +42,7 @@ export interface BitmapGlyph {
   offsetY: number;
   /** A negative advance in the file is already `width + 1`. */
   advance: number;
-  /** Index into `BitmapFont.fills`, or -1 for a glyph that draws no ink. */
+  /** Index into the fills of `BitmapFont.sheet`, or -1 for a glyph that draws no ink. */
   fillIndex: number;
 }
 
@@ -51,6 +51,15 @@ export interface BitmapFill {
   width: number;
   height: number;
   data: Uint8ClampedArray | Uint8Array;
+}
+
+/** Fills stacked top to bottom into one RGBA8 image, top row first. */
+export interface FillSheet {
+  width: number;
+  height: number;
+  data: Uint8Array;
+  /** The sheet row each fill starts at, by fill index; undefined for an index no page filled. */
+  rowOffsets: readonly (number | undefined)[];
 }
 
 /** A BMFont `FontFile` (`FontFile::_load_bitmap_font`). */
@@ -64,8 +73,10 @@ export interface BitmapFont {
   glyphs: ReadonlyMap<number, BitmapGlyph>;
   /** By `kerningKey(first, second)`, px at the fixed size. */
   kerning: ReadonlyMap<number, number>;
-  /** By `BitmapGlyph.fillIndex`. An index no page filled is undefined. */
-  fills: readonly (BitmapFill | undefined)[];
+  /** The glyph fills of every page, stacked. A glyph's `fillIndex` names its row offset. */
+  sheet: FillSheet;
+  /** The outline set Godot draws for any outline size, stacked the same way. Blank when the layout has none. */
+  outlineSheet: FillSheet;
   /** A `TextServer::FixedSizeScaleMode`, from the import sidecar's `scaling_mode`. */
   scaleMode: number;
 }

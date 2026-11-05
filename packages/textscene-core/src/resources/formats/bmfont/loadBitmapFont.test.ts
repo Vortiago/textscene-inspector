@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { FixedSizeScaleMode } from '../../../godot/text/textServerEnums';
-import { binaryDescriptor, TEXT_DESCRIPTOR } from './descriptor.testkit';
+import { binaryDescriptor, TEXT_DESCRIPTOR, textDescriptor } from './descriptor.testkit';
 import { loadBitmapFont } from './loadBitmapFont';
 import type { PageImage } from './pageFill';
 
@@ -18,7 +18,8 @@ describe('loadBitmapFont', () => {
     const font = await loadBitmapFont('res://fonts/test.fnt', textBytes, readPage, {});
 
     expect(readPage).toHaveBeenCalledExactlyOnceWith('res://fonts/bmfont.png');
-    expect(font.fills[font.glyphs.get(0x48)!.fillIndex]?.width).toBe(64);
+    expect(font.sheet.rowOffsets[font.glyphs.get(0x48)!.fillIndex]).toBe(0);
+    expect(font.sheet.width).toBe(64);
     expect(font.ascent).toBe(16);
   });
 
@@ -44,6 +45,28 @@ describe('loadBitmapFont', () => {
     await expect(loadBitmapFont('res://fonts/test.fnt', textBytes, async () => rgb, {})).rejects.toThrowError(
       /Unsupported BMFont texture format in bmfont.png/
     );
+  });
+});
+
+describe('loadBitmapFont outline set', () => {
+  const outlined = new TextEncoder().encode(textDescriptor({ channels: [0, 1, 3, 3], outline: 1 }))
+    .buffer as ArrayBuffer;
+  const page: PageImage = {
+    pixels: { width: 64, height: 32, data: new Uint8Array(64 * 32 * 4).fill(1) },
+    source: 'RGBA8',
+  };
+
+  it('keeps the outline fills of a page that holds glyph and outline', async () => {
+    const font = await loadBitmapFont('res://fonts/test.fnt', outlined, async () => page, {});
+
+    expect(font.outlineSheet.width).toBe(64);
+    expect(font.outlineSheet.rowOffsets[0]).toBe(0);
+  });
+
+  it('has no outline fills for a page with no outline set', async () => {
+    const font = await loadBitmapFont('res://fonts/test.fnt', textBytes, async () => PAGE, {});
+
+    expect(font.outlineSheet.rowOffsets).toHaveLength(0);
   });
 });
 

@@ -48,7 +48,7 @@ describe('createFontProcessor on a BMFont', () => {
     expect(font.kind).toBe('file');
     expect(font.bytes).toBeUndefined();
     expect(font.bitmap?.fixedSize).toBe(16);
-    expect(font.bitmap?.fills[0]?.width).toBe(64);
+    expect(font.bitmap?.sheet.width).toBe(64);
     expect(decode).toHaveBeenCalledWith(page, 'image/png', expect.anything());
   });
 

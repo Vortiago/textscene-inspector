@@ -71,7 +71,7 @@ export function hexCodeBoxRects(fontSizePx: number, codepoint: number): HexCodeB
   const { byteWidth, spacer, cellPx } = hexCodeBoxCells(fontSizePx, codepoint);
   const sizeX = (4 + 3 * byteWidth + spacer) * cellPx;
   const sizeY = 15 * cellPx;
-  const originY = -sizeY * 0.85;
+  const originY = -Math.trunc(sizeY * 0.85);
 
   const rects: HexCodeBoxRect[] = [
     { x: 0, y: originY, w: cellPx, h: sizeY },

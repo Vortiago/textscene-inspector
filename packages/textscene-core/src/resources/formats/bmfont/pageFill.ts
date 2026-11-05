@@ -26,37 +26,32 @@ const BLUE = 2;
 const ALPHA = 3;
 const CHANNELS_PER_TEXEL = 4;
 
-/** A white texel with `alpha`: Godot's `FORMAT_LA8` with a constant 255 luminance. */
-function whiteWithAlpha(alphas: Uint8Array | number[], width: number, height: number): BitmapFill {
+/**
+ * White texels whose alpha is `channel` of `pixels` through `toAlpha`: Godot's `FORMAT_LA8` with a
+ * constant 255 luminance.
+ */
+function whiteWithAlpha(
+  { width, height, data: source }: ImagePixels,
+  channel: number,
+  toAlpha: (value: number) => number
+): BitmapFill {
   const data = new Uint8Array(width * height * CHANNELS_PER_TEXEL);
   for (let texel = 0; texel < width * height; texel++) {
-    data.fill(255, texel * CHANNELS_PER_TEXEL, texel * CHANNELS_PER_TEXEL + ALPHA);
-    data[texel * CHANNELS_PER_TEXEL + ALPHA] = alphas[texel]!;
+    const at = texel * CHANNELS_PER_TEXEL;
+    data.fill(255, at, at + ALPHA);
+    data[at + ALPHA] = toAlpha(source[at + channel]!);
   }
   return { width, height, data };
 }
 
-/** The values of one channel of `image`: a greyscale page holds its grey in every channel. */
-function channelOf({ pixels }: PageImage, channel: number): number[] {
-  const values: number[] = [];
-  for (let texel = 0; texel < pixels.width * pixels.height; texel++) {
-    values.push(pixels.data[texel * CHANNELS_PER_TEXEL + channel]!);
-  }
-  return values;
-}
+const keep = (value: number): number => value;
 
 /**
  * A page of one channel, white with the channel as alpha (`_convert_mono_8bit`, `_convert_mono_4bit`).
  * A greyscale page holds its grey in the red channel.
  */
-function mono(
-  image: PageImage,
-  channel: number,
-  toAlpha: (value: number) => number = (value) => value
-): BitmapFill {
-  const { width, height } = image.pixels;
-  const values = channelOf(image, image.source === 'Lum8' ? RED : channel);
-  return whiteWithAlpha(values.map(toAlpha), width, height);
+function mono(image: PageImage, channel: number, toAlpha = keep): BitmapFill {
+  return whiteWithAlpha(image.pixels, image.source === 'Lum8' ? RED : channel, toAlpha);
 }
 
 /** `value` kept only above `threshold` (`_convert_mono_4bit`, `_convert_rgba_4bit`). */
@@ -81,14 +76,19 @@ function packed(
   pageId: number,
   toAlpha: (value: number) => number
 ): Map<number, BitmapFill> {
-  const { width, height } = image.pixels;
   return new Map(
     [RED, GREEN, BLUE, ALPHA].map((channel) => [
       pageId * 4 + channel,
-      whiteWithAlpha(channelOf(image, channel).map(toAlpha), width, height),
+      whiteWithAlpha(image.pixels, channel, toAlpha),
     ])
   );
 }
+
+/** The outline half of a 4-bit value: kept below the glyph threshold, doubled (`_convert_mono_4bit`, `_convert_rgba_4bit`). */
+const lowerHalfDoubled = (value: number): number => (value > 0x7f ? 0 : value * 2);
+
+/** The outline half of a packed 4-bit value (`_convert_packed_4bit`). */
+const packedOutlineHalf = (value: number): number => (value > 0x0f ? 0 : value * 2);
 
 function unsupported(file: string): Error {
   return new Error(`Unsupported BMFont texture format in ${file}.`);
@@ -160,4 +160,29 @@ export function decodePageFills(page: BmfontPage, image: PageImage): Map<number,
   const { layout } = page;
   if (layout.packed) return packedFills(layout, image, page);
   return new Map([[page.id, unpackedFill(layout, image, page)]]);
+}
+
+/**
+ * The outline fills of `page`, which Godot stores under the cache key `(size, 1)` and draws for
+ * every outline size of a fixed-size font (`text_server_adv.h:406-414`). Empty for a layout with
+ * no outline set. Call it after {@link decodePageFills}, which refuses the layouts Godot refuses.
+ */
+export function decodePageOutlineFills(page: BmfontPage, image: PageImage): Map<number, BitmapFill> {
+  const { layout } = page;
+  const { channels, outline } = layout;
+  if (outline <= 0) return new Map();
+  if (layout.packed) {
+    return channels[ALPHA] === 2 ? packed(image, page.id, packedOutlineHalf) : new Map();
+  }
+  if (channels.every((channel) => channel === 2)) {
+    const { width, height, data } = image.pixels;
+    return new Map([[page.id, { width, height, data: Uint8Array.from(data, lowerHalfDoubled) }]]);
+  }
+  if (layout.firstGlyphChannel >= 0 && layout.firstOutlineChannel >= 0) {
+    return new Map([[page.id, mono(image, layout.firstOutlineChannel)]]);
+  }
+  if (layout.firstCombinedChannel >= 0) {
+    return new Map([[page.id, mono(image, layout.firstCombinedChannel, lowerHalfDoubled)]]);
+  }
+  return new Map();
 }

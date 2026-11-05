@@ -79,9 +79,11 @@ an `outline_size` of 0 or a zero alpha. The ring strokes on the canvas painter f
 too (ADR-0040). Like the fill, the ring drops each glyph that ends past `ofs_max` and is not
 clipped to the margins (`:1512-1545`).
 
+A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
+outline ring (ADR-0064).
+
 ## Known limitations
 
-- **Not drawn** The outline ring of a BMFont (`.fnt`, `.font`), which has no outline glyph set here (ADR-0064).
 - **Not drawn** The right-to-left hit region of `_is_over_clear_button`
   (line_edit.cpp:1175) and the direction-aware caret markers (:1590-1601), which need
   pointer or focus state.

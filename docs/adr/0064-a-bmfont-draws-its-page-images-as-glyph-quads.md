@@ -25,7 +25,12 @@ mesh. It floors the pen position when the scale is 1, as `font_draw_glyph` does,
 subpixel shift, because a BMFont `FontFile` resets to `SUBPIXEL_POSITIONING_DISABLED`
 (`font.cpp:1433`).
 
+An outline pass draws the font's outline set at the glyph's own rectangle. A fixed-size font caps
+the outline size at 1 for its cache (`text_server_adv.h:406-414`), so every `outline_size` above 0
+draws the same set.
+
 ## Consequences
 
-The outline set of a BMFont is not drawn, so its outline ring draws nothing. Label3D and TextMesh
-read the same font in a later change.
+A character the descriptor lacks draws a hex-code box, where Godot draws it from the font's
+`fallbacks`. No font kind has a per-glyph fallback search yet. Label3D and TextMesh read the same
+font in a later change.
