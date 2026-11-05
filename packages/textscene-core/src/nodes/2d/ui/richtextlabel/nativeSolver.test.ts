@@ -1183,7 +1183,7 @@ describe('layoutRichTextRuns', () => {
     }
   });
 
-  it('carries the underline flag through per placement, independent of bold/color', () => {
+  it("carries the paragraph's underline metrics on an underlined placement only", () => {
     const runs = [
       textRun({ text: 'plain', fontSizePx: FONT_SIZE }),
       textRun({ text: 'ULINE', underline: true, fontSizePx: FONT_SIZE }),
@@ -1191,8 +1191,8 @@ describe('layoutRichTextRuns', () => {
     const layout = shape('plainULINE');
     const placements = layoutRichTextRuns(runs, layout);
     expect(placements).toHaveLength(2);
-    expect(placements[0]!.underline).toBe(false);
-    expect(placements[1]!.underline).toBe(true);
+    expect(placements[0]!.underline).toBeNull();
+    expect(placements[1]!.underline).toEqual(richTextUnderlineMetrics(runs)(0));
   });
 
   it('a single run whose text WRAPS across two lines produces one placement per line, in its face on both', () => {

@@ -624,16 +624,7 @@ function runAtFromRuns(styledRuns: readonly StyledTextRun[]): RunAt {
     starts.push(start);
     start += run.text.length;
   }
-  return (charIndex) => {
-    let low = 0;
-    let high = starts.length - 1;
-    while (low < high) {
-      const middle = (low + high + 1) >> 1;
-      if (starts[middle]! <= charIndex) low = middle;
-      else high = middle - 1;
-    }
-    return runs[low];
-  };
+  return (charIndex) => runs[Math.max(0, countAtOrBelow(starts, charIndex) - 1)];
 }
 
 /**
@@ -730,7 +721,8 @@ export interface RichTextRunPlacement {
   lineTopPx: number;
   /** The line's left offset, per line since each aligns by its own width (`richTextHorizontalOffsetPx`). */
   lineOffsetXPx: number;
-  underline: boolean;
+  /** The paragraph's underline position and thickness for an `[u]` run, else null. */
+  underline: RichTextUnderlineMetrics | null;
   color: Rgba;
   /** The run's outline ring, in the run's own colour space before the control tint: its size and colour. */
   outline: TextOutlineTheme;
@@ -913,18 +905,19 @@ export function richTextUnderlineMetrics(
 ): (sourceIndex: number) => RichTextUnderlineMetrics {
   const paragraphs: RichTextUnderlineMetrics[] = [{ positionPx: 0, thicknessPx: 0 }];
   const paragraphStarts: number[] = [0];
-  let sourceIndex = 0;
+  let runStart = 0;
   for (const run of styledRuns) {
+    let segmentStart = runStart;
     run.text.split('\n').forEach((segment, i) => {
       if (i > 0) {
-        paragraphStarts.push(sourceIndex);
+        paragraphStarts.push(segmentStart);
         paragraphs.push({ positionPx: 0, thicknessPx: 0 });
       }
       if (segment.length > 0 && !run.image)
         widenUnderline(paragraphs[paragraphs.length - 1]!, run.fontSizePx);
-      sourceIndex += segment.length + 1;
+      segmentStart += segment.length + 1;
     });
-    sourceIndex -= 1;
+    runStart += run.text.length;
   }
   return (index) => paragraphs[countAtOrBelow(paragraphStarts, index) - 1]!;
 }
@@ -1112,6 +1105,7 @@ export function layoutRichTextRuns(
   const boxWidthPx = alignment?.boxWidthPx ?? 0;
   // Every line of a paragraph aligns as its first item does (`rich_text_label.cpp:598-599`).
   const runAt = runAtFromRuns(styledRuns);
+  const underlineAt = richTextUnderlineMetrics(styledRuns);
   const paragraphRunOf = (lineIndex: number): StyledTextRun | undefined =>
     runAt(unfittedLayout.lines[lineIndex]?.paragraphStart ?? 0);
   const alignmentOfLine = (lineIndex: number): number =>
@@ -1167,7 +1161,7 @@ export function layoutRichTextRuns(
         lineTopPx: Math.floor(exactTopPx),
         // Beside the text, on the side it starts from (`:1021-1038`).
         lineOffsetXPx: isRtl ? lineOffsetXPx + lineWidthPx : lineOffsetXPx - marker.widthPx,
-        underline: false,
+        underline: null,
         color: marker.color,
         outline: marker.outline,
         fontSizePx: marker.fontSizePx,
@@ -1181,7 +1175,7 @@ export function layoutRichTextRuns(
         lineIndex,
         lineTopPx,
         lineOffsetXPx,
-        underline: run.underline,
+        underline: run.underline ? underlineAt(layout.lines[lineIndex]?.paragraphStart ?? 0) : null,
         color: run.color,
         outline: run.outline,
         fontSizePx: run.fontSizePx,

@@ -327,12 +327,15 @@ export function variationKey({ embolden = 0, skew = 0, opentype }: GlyphVariatio
 }
 
 /**
- * The wrappers of one face, by embolden, skew and axis values, then by outlines: one each, so a layout memoised on
- * `FontMetrics` identity keeps its hits. Each wrapper holds its `opentype`, which keys the kept instances and
- * kerning, so a `variation_opentype` animation drops the wrapper read least recently past this count.
+ * Each wrapper holds its `opentype`, which keys the kept instances and kerning, so a `variation_opentype`
+ * animation drops the wrapper read least recently past this count.
  */
 const MAX_KEPT_VARIATIONS = 32;
 
+/**
+ * The wrappers of one face, by embolden, skew and axis values, then by outlines: one each, so a layout memoised on
+ * `FontMetrics` identity keeps its hits.
+ */
 const variationsOf = perObject((_face: FontMetrics) =>
   recentlyRead<string, Map<FontMetrics['outlines'], FontMetrics>>(MAX_KEPT_VARIATIONS)
 );

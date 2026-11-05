@@ -34,7 +34,6 @@ import {
   RICH_TEXT_LABEL_DEFAULT_AUTOWRAP,
   layoutRichTextRuns,
   richTextLabelTextTheme,
-  richTextUnderlineMetrics,
   shapeRichText,
   styledTextRuns,
   underlineRectPx,
@@ -291,7 +290,6 @@ function RichTextBody({
       textTheme.fontSizePx,
     ]
   );
-  const underlineMetricsAt = useMemo(() => richTextUnderlineMetrics(runs), [runs]);
 
   return (
     <>
@@ -327,7 +325,7 @@ function RichTextBody({
             ? underlineRectPx(
                 placement.layout.lines[0]!.glyphs,
                 placement.layout.baselineOffsetPx,
-                underlineMetricsAt(layout.lines[placement.lineIndex]?.paragraphStart ?? 0)
+                placement.underline
               )
             : null;
           return (
