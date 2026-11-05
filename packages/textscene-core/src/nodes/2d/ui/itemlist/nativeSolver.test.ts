@@ -30,6 +30,7 @@ import {
   itemListSeparation,
   itemMinimumSize,
   itemTextColor,
+  isItemTextWrapped,
   itemTextDrawOffset,
   itemTextLineCenterOffset,
   packItemListRows,
@@ -113,16 +114,16 @@ describe('shapeItemListText — wrapping (item_list.cpp:37-55)', () => {
 describe('trimItemListText — overrun trim (item_list.h:131 default OVERRUN_TRIM_ELLIPSIS)', () => {
   const FONT_SIZE_PX = 16;
 
-  function trimmedChars(widthPx: number, overrunBehavior?: number): string {
+  function trimmedChars(widthPx: number, overrunBehavior?: number, iconMode = ICON_MODE_LEFT): string {
+    const shape = { iconMode, maxTextLines: 1 };
     const shaped = shapeItemListText({
+      ...shape,
       text: 'AAAAAAAAAAAA',
       fontSizePx: FONT_SIZE_PX,
       fontMetrics: OPEN_SANS_FONT_METRICS,
-      iconMode: ICON_MODE_LEFT,
-      maxTextLines: 1,
       fixedColumnWidth: 0,
     })!;
-    const layout = trimItemListText(shaped, widthPx, { fontSizePx: FONT_SIZE_PX, overrunBehavior });
+    const layout = trimItemListText(shaped, widthPx, { ...shape, fontSizePx: FONT_SIZE_PX, overrunBehavior });
     return layout.lines[0]!.glyphs.map((glyph) => glyph.char).join('');
   }
 
@@ -138,6 +139,11 @@ describe('trimItemListText — overrun trim (item_list.h:131 default OVERRUN_TRI
 
   it('OVERRUN_NO_TRIMMING (0) leaves the text untrimmed', () => {
     expect(trimmedChars(100, OverrunBehavior.OVERRUN_NO_TRIMMING)).toBe('AAAAAAAAAAAA');
+  });
+
+  // text_paragraph.cpp:228-262: an autowrapped paragraph trims only a line that hides the next.
+  it('leaves wrapped TOP-mode text untrimmed', () => {
+    expect(trimmedChars(100, undefined, ICON_MODE_TOP)).toBe('AAAAAAAAAAAA');
   });
 });
 
@@ -354,13 +360,13 @@ describe('packItemListRows', () => {
 });
 
 describe('itemTextDrawOffset / itemTextLineCenterOffset', () => {
-  it('TOP mode centres the pen at half separation past the icon offset (happy path)', () => {
-    const offset = itemTextDrawOffset(ICON_MODE_TOP, { x: 0, y: 20 }, { x: 100, y: 50 }, 10, 4, 6);
+  it('wrapped text centres the pen at half separation past the icon offset (happy path)', () => {
+    const offset = itemTextDrawOffset(true, { x: 0, y: 20 }, { x: 100, y: 50 }, 10, 4, 6);
     expect(offset).toEqual({ x: 2, y: 23 });
   });
 
-  it('LEFT mode vertically centres the text block within the item rect (error path)', () => {
-    const offset = itemTextDrawOffset(ICON_MODE_LEFT, { x: 20, y: 0 }, { x: 100, y: 50 }, 20, 4, 6);
+  it('a single line vertically centres the text block within the item rect (error path)', () => {
+    const offset = itemTextDrawOffset(false, { x: 20, y: 0 }, { x: 100, y: 50 }, 20, 4, 6);
     expect(offset).toEqual({ x: 22, y: 15 });
   });
 
@@ -540,5 +546,20 @@ describe('isItemTextFillDrawn', () => {
     expect(
       isItemTextFillDrawn({ ...ROW, contentWidthPx: 0, fixedColumnWidth: 0, wraparoundItems: false })
     ).toBe(true);
+  });
+});
+
+// item_list.cpp:1624: only TOP mode with max_text_lines above 0 draws the wrapped paragraph.
+describe('isItemTextWrapped', () => {
+  it('wraps TOP-mode text with max_text_lines above 0', () => {
+    expect(isItemTextWrapped(ICON_MODE_TOP, 2)).toBe(true);
+  });
+
+  it('draws TOP-mode text with max_text_lines 0 as a single line', () => {
+    expect(isItemTextWrapped(ICON_MODE_TOP, 0)).toBe(false);
+  });
+
+  it('draws LEFT-mode text as a single line', () => {
+    expect(isItemTextWrapped(ICON_MODE_LEFT, 2)).toBe(false);
   });
 });

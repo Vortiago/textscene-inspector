@@ -204,9 +204,15 @@ function adjustToMaxSize(size: Vector2, maxSize: Vector2): Rect2 {
  * Godot breaks it mid-word (`comparison.md`).
  */
 function itemListAutowrapMode(iconMode: number, maxTextLines: number): EnumValue<typeof AutowrapMode> {
-  return iconMode === ICON_MODE_TOP && maxTextLines > 0
-    ? AutowrapMode.AUTOWRAP_WORD
-    : AutowrapMode.AUTOWRAP_OFF;
+  return isItemTextWrapped(iconMode, maxTextLines) ? AutowrapMode.AUTOWRAP_WORD : AutowrapMode.AUTOWRAP_OFF;
+}
+
+/**
+ * Whether an item's text wraps and draws as a centred paragraph: TOP icon mode with
+ * `max_text_lines > 0` (`item_list.cpp:48,1624`). Any other item draws one line.
+ */
+export function isItemTextWrapped(iconMode: number, maxTextLines: number): boolean {
+  return iconMode === ICON_MODE_TOP && maxTextLines > 0;
 }
 
 /**
@@ -246,7 +252,7 @@ export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult |
   });
 }
 
-interface ItemTextTrimOptions {
+interface ItemTextTrimOptions extends Pick<ItemTextShapeInput, 'iconMode' | 'maxTextLines'> {
   fontSizePx: number;
   /** `TextServer::OverrunBehavior`. Godot default 3 (OVERRUN_TRIM_ELLIPSIS, `item_list.h:131`). */
   overrunBehavior?: number;
@@ -256,7 +262,8 @@ interface ItemTextTrimOptions {
  * `text_buf->set_width(widthPx)`: the overrun trim of each line, as `TextParagraph::_shape_lines`
  * does (`text_paragraph.cpp:257-270`). The minsize pass trims at `itemListShapeWidth`
  * (`item_list.cpp:1763-1766`), the draw pass at the row's text width (`:1632,1661`). A width of 0
- * or less trims nothing.
+ * or less trims nothing, and wrapped text trims nothing: Godot trims only a line that hides the
+ * next (`:228-262`), and this engine hides no line.
  */
 export function trimItemListText(
   layout: TextLayoutResult,
@@ -266,7 +273,9 @@ export function trimItemListText(
   const overrunFlags = overrunFlagsForBehavior(
     options.overrunBehavior ?? OverrunBehavior.OVERRUN_TRIM_ELLIPSIS
   );
-  if (!overrunFlags.trim || widthPx <= 0) return layout;
+  if (!overrunFlags.trim || widthPx <= 0 || isItemTextWrapped(options.iconMode, options.maxTextLines)) {
+    return layout;
+  }
 
   const trimmedLines = layout.lines.map((line) =>
     trimTextBufferLineToWidth(line, widthPx, overrunFlags, {
@@ -286,7 +295,7 @@ interface ItemTextShape {
   shaped: TextLayoutResult | null;
   /**
    * The text size the minsize pass reads (`item_list.cpp:1763-1766`): `shaped` trimmed at
-   * `itemListShapeWidth`, `{ widthPx: ceiled, heightPx }`, or zero for an item with no text.
+   * `itemListShapeWidth`, its width ceiled, or zero for an item with no text.
    */
   minimumSize: Vector2;
 }
@@ -609,19 +618,19 @@ export function itemIconDraw(
 
 /**
  * `item_list.cpp:1606-1691`'s LTR pen origin, before the RTL branches
- * (`itemListRowTextX`/`itemListMirrorX`) move it. TOP mode centres
- * (`HORIZONTAL_ALIGNMENT_CENTER`); LEFT mode is a single line, aligned LEFT
- * under LTR and RIGHT under RTL (`:1668,1670`).
+ * (`itemListRowTextX`/`itemListMirrorX`) move it. Wrapped text (`isItemTextWrapped`) centres
+ * (`HORIZONTAL_ALIGNMENT_CENTER`). A single line is aligned LEFT under LTR and RIGHT under RTL
+ * (`:1668,1670`).
  */
 export function itemTextDrawOffset(
-  iconMode: number,
+  isWrapped: boolean,
   iconOffset: Vector2,
   itemRectSize: Vector2,
   textLineHeightTotal: number,
   hSeparation: number,
   vSeparation: number
 ): Vector2 {
-  if (iconMode === ICON_MODE_TOP) {
+  if (isWrapped) {
     return {
       x: iconOffset.x + Math.max(hSeparation, 0) / 2,
       y: iconOffset.y + Math.max(vSeparation, 0) / 2,

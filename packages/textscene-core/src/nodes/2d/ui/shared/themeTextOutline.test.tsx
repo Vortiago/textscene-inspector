@@ -176,15 +176,22 @@ describe.each(TRIMMED)(
       vi.spyOn(sceneFontLoader, 'peekSceneFontMetrics').mockReturnValue(TEST_SCENE_FONT_METRICS);
     });
 
-    // text_server.cpp:1840 reads the inferred direction, :1744 the set AUTO one.
-    it('strokes the ring by the inferred direction, the ellipsis first, and fills from the visual left', async () => {
-      await render(
+    const renderTrimmed = () =>
+      render(
         Control,
         outlined(type, { font_outline_color: RED }, { outline_size: OUTLINE_SIZE }, HEBREW, properties),
         rect
       );
 
+    // text_server.cpp:1840 reads the inferred direction for the ring.
+    it('strokes the ring by the inferred direction, the ellipsis first', async () => {
+      await renderTrimmed();
       expect(drawnChars(strokeRuns()[0]!).startsWith('…')).toBe(true);
+    });
+
+    // text_server.cpp:1744 reads the set AUTO direction for the fill.
+    it('fills from the visual left', async () => {
+      await renderTrimmed();
       expect(drawnChars(fillRun()).startsWith('ל')).toBe(true);
     });
   }

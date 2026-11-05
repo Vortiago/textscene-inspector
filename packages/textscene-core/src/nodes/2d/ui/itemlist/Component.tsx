@@ -33,8 +33,8 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SceneScope } from '../../../../parser/types';
 import {
   ICON_MODE_LEFT,
-  ICON_MODE_TOP,
   isItemTextFillDrawn,
+  isItemTextWrapped,
   ITEM_LIST_DEFAULT_MAX_COLUMNS,
   ITEM_LIST_THEME_FONT_KEY,
   itemIconColor,
@@ -91,11 +91,12 @@ interface RowGeometry {
   iconX: number;
   /** The width `text_buf->set_width()` gets, and the box CENTER/RIGHT alignment works inside. */
   textWidthPx: number;
-  /** One layout per line of `textLayout`, so a TOP-mode line keeps its meshes across renders. */
+  /** One layout per line of wrapped `textLayout`, so each line keeps its meshes across renders. Empty for a single line. */
   lineLayouts: TextLayoutResult[];
-  /** Read in LEFT mode only: false where the row hides its fill and draws the outline alone (`item_list.cpp:1672-1688`). */
+  /** Read for a single line only: false where the row hides its fill and draws the outline alone (`item_list.cpp:1672-1688`). */
   isTextFillDrawn: boolean;
-  iconMode: number;
+  /** `isItemTextWrapped`: a centred paragraph, drawn line by line, or one line. */
+  isTextWrapped: boolean;
   rect: Rect2;
   textColor: Rgba;
 }
@@ -139,7 +140,7 @@ function ItemListRow({
     textWidthPx,
     lineLayouts,
     isTextFillDrawn,
-    iconMode,
+    isTextWrapped,
     rect,
     textColor,
   } = geometry;
@@ -171,7 +172,7 @@ function ItemListRow({
         </CanvasItemGroup>
       )}
       {textLayout &&
-        (iconMode === ICON_MODE_LEFT ? (
+        (!isTextWrapped ? (
           <CanvasItemGroup position={[textX, -textY, 0]}>
             {isTextFillDrawn ? (
               <OutlinedTextRun {...run} layout={textLayout} tint={tintedTextColor} />
@@ -341,8 +342,9 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           vSeparation,
           iconMargin
         );
+        const wrapped = isItemTextWrapped(iconMode, maxTextLines);
         const textOffset = itemTextDrawOffset(
-          iconMode,
+          wrapped,
           iconDraw.textOffsetContribution,
           packedSize,
           r.shapedText?.heightPx ?? 0,
@@ -352,7 +354,6 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
         // Every RTL branch works in control coordinates; the row group keeps
         // its LTR origin, so each piece comes back relative to it.
         const rowOriginX = origin.x + packedRect.x;
-        const wrapped = iconMode === ICON_MODE_TOP;
         const textWidthPx = wrapped
           ? itemListWrappedTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems)
           : itemListLineTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems);
@@ -375,6 +376,8 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           trimItemListText(r.shapedText, textWidthPx, {
             fontSizePx,
             overrunBehavior: props.textOverrunBehavior,
+            iconMode,
+            maxTextLines,
           });
         // A non-wrapped item is a single line (`BREAK_NONE`), so the paragraph's
         // own width is that line's (`item_list.cpp:1668`, alignment RIGHT).
@@ -394,7 +397,8 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
             ? itemListMirrorX(rowOriginX + iconDraw.rect.x, iconDraw.rect.w, rect.w, rtl) - rowOriginX
             : 0,
           textWidthPx,
-          lineLayouts: textLayout ? textLayout.lines.map((line) => soloLineLayout(line, textLayout)) : [],
+          lineLayouts:
+            wrapped && textLayout ? textLayout.lines.map((line) => soloLineLayout(line, textLayout)) : [],
           isTextFillDrawn: isItemTextFillDrawn({
             fixedColumnWidth,
             wraparoundItems,
@@ -403,7 +407,7 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
             iconWidthPx: r.iconSize.x,
             hSeparation,
           }),
-          iconMode,
+          isTextWrapped: wrapped,
           rect: packedRect,
           textColor: itemTextColor(baseFontColor, r.disabled),
         };
@@ -423,6 +427,7 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       contentWidth,
       wraparoundItems,
       fixedColumnWidth,
+      maxTextLines,
       fontSizePx,
       props.textOverrunBehavior,
       rtl,
