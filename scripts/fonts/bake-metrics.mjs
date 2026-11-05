@@ -40,6 +40,8 @@ const LATIN1_SUPPLEMENT_END = 0xff;
 const LATIN1_SUPPLEMENT_EXCLUDE = new Set([0xad]);
 
 // Punctuation outside both ranges, each baked for its own reason.
+// The arrows U+2190 to U+2193 are not baked: Open Sans SemiBold has no glyph for them, and Godot
+// draws them from a host font. A scene that needs them names a font that holds them.
 const EXTRA_CODEPOINTS = [
   0x2022, // BULLET: LineEdit's default `secret_character` (`line_edit.cpp:3094`: `secret_character.is_empty() ? U"•" : ...`).
   0x2026, // HORIZONTAL ELLIPSIS: Label's default overrun character (`label.cpp:294`, also :299/:324/:328: `(el_char.length() > 0) ? el_char[0] : 0x2026`).
@@ -50,10 +52,6 @@ const EXTRA_CODEPOINTS = [
   0x201c,
   0x201d, // Double curly quotes: common prose punctuation.
 ];
-
-// The arrows U+2190 to U+2193 are not baked: Open Sans SemiBold has no glyph for them, and Godot draws
-// them from a host font (Carlito Bold in the reference container, which differs per host). A scene
-// that needs them names a font with arrows, as the `control-font-arrows` golden does.
 
 const CHARSET = [];
 for (let cp = CHARSET_START; cp <= CHARSET_END; cp++) CHARSET.push(String.fromCodePoint(cp));

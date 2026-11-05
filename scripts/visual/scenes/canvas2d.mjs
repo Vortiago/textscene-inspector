@@ -248,8 +248,7 @@ export const CANVAS_2D_SCENES = [
   // two hops down past a themeless Control, resolve it by the ancestor walk.
   // Every other Control golden draws the bundled MSDF atlas.
   { name: 'control-scene-font-theme', file: 'unit-control-scene-font-theme.tscn', mode: '2d' },
-  // The one variable: the arrows U+2190 to U+2193 from a scene font that holds them. The bundled
-  // font holds none, and Godot takes those from a host font, so only a scene font gives a golden.
+  // The one variable: the arrows U+2190 to U+2193 from a scene font, as the bundled font has none.
   { name: 'control-font-arrows', file: 'unit-control-font-arrows.tscn', mode: '2d' },
   // The one variable: a variable `.woff2` font drawn at its `fvar` defaults. Its metrics come
   // from its own tables, which `fontContainer.ts` decompresses. No same-face `.woff2`/`.otf`
