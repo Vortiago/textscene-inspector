@@ -32,7 +32,7 @@ const face: TextMeshFace = withOutlines(OPEN_SANS_FONT_METRICS, outlines);
 /** A TextMesh at `font_size` 64 with depth 0.05, the properties of `raw` over those defaults, built. */
 function surfaceOf(text: string, raw: Record<string, string> = {}): GodotSurface {
   const properties = decodeTextMesh({ text: `"${text}"`, font_size: String(FONT_SIZE), ...raw });
-  return buildTextMeshSurface(properties, face);
+  return buildTextMeshSurface(properties, '', face);
 }
 
 /** The mesh data of `char` as the TextMesh builds it at the defaults of `surfaceOf`. */
@@ -325,7 +325,7 @@ describe('buildTextMeshSurface font variation', () => {
       font_size: String(FONT_SIZE),
       horizontal_alignment: LEFT,
     });
-    return extent(axis(buildTextMeshSurface(properties, faceOf(variation)), 0)).max;
+    return extent(axis(buildTextMeshSurface(properties, '', faceOf(variation)), 0)).max;
   };
 
   it.each([
@@ -357,7 +357,11 @@ describe('buildTextMeshSurface glyph reuse', () => {
   }
 
   const build = (text: string, face: TextMeshFace, raw: Record<string, string> = {}) =>
-    buildTextMeshSurface(decodeTextMesh({ text: `"${text}"`, font_size: String(FONT_SIZE), ...raw }), face);
+    buildTextMeshSurface(
+      decodeTextMesh({ text: `"${text}"`, font_size: String(FONT_SIZE), ...raw }),
+      '',
+      face
+    );
 
   it('reads the outline of a glyph once across builds of one font, so a keystroke adds only its own glyph', () => {
     const { face: counted, contoursRead } = countingFace();

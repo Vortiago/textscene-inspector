@@ -185,7 +185,12 @@ function ItemListRow({
             <CanvasItemGroup
               key={index}
               position={[
-                textX + itemTextLineCenterOffset(textWidthPx, shapedTextSizeWidthPx(line.widthPx)),
+                textX +
+                  itemTextLineCenterOffset(
+                    textWidthPx,
+                    shapedTextSizeWidthPx(line.widthPx),
+                    line.isRtl === true
+                  ),
                 -(textY + index * textLayout.linePitchPx),
                 0,
               ]}
@@ -242,6 +247,7 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
         maxTextLines,
         fixedColumnWidth,
         overrunBehavior: props.textOverrunBehavior,
+        locale: solveNode.locale,
       });
 
       return { item, disabled, hasIcon, iconSize, hasText, textSize, shapedText };

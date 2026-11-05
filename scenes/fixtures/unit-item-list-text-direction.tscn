@@ -1,0 +1,42 @@
+; One variable: a right-to-left item. An item is AUTO (item_list.h:74), so Hebrew infers RTL, and the
+; trim of an AUTO item keeps the visual left part.
+
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://fonts/dejavu-sans-bidi-subset.ttf" id="1_font"]
+
+[sub_resource type="Theme" id="Theme_1"]
+default_font = ExtResource("1_font")
+default_font_size = 28
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.1, 0.12, 0.18, 1)
+
+; Each Hebrew word reverses and `!` goes to the visual left.
+[node name="Hebrew" type="ItemList" parent="."]
+offset_left = 400.0
+offset_top = 20.0
+offset_right = 700.0
+offset_bottom = 80.0
+item_count = 1
+item_0/text = "שלום עולם!"
+
+; The trim keeps the visual left part and draws the ellipsis at the right.
+[node name="Trimmed" type="ItemList" parent="."]
+offset_left = 500.0
+offset_top = 100.0
+offset_right = 700.0
+offset_bottom = 160.0
+fixed_column_width = 150
+text_overrun_behavior = 3
+item_count = 1
+item_0/text = "שלום עולם שלום עולם"

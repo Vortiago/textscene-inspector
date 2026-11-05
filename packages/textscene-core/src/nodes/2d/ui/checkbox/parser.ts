@@ -2,6 +2,7 @@
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import type { CheckBoxProperties } from './types';
+import { parseTextDirectionProperties } from '../../../../parser/textDirectionParser';
 import { parseControl } from '../control/parser';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
@@ -9,7 +10,10 @@ export function parseCheckBox(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): CheckBoxProperties {
-  const result: CheckBoxProperties = { ...parseControl(heading, properties) };
+  const result: CheckBoxProperties = {
+    ...parseControl(heading, properties),
+    ...parseTextDirectionProperties(properties, 'CheckBox'),
+  };
   if (properties.text !== undefined) result.text = unquoteString(properties.text);
   result.buttonPressed = boolSlotValue(properties.button_pressed) === true;
   result.disabled = boolSlotValue(properties.disabled) === true;

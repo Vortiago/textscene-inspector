@@ -60,12 +60,17 @@ left, as Godot's set-direction draw does (`text_server.cpp:1740-1935`).
 A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
 outline ring (ADR-0064).
 
+The label shapes in its own `text_direction` and `language` (`button.cpp:564-569`). INHERITED
+takes the layout direction, and an empty `language` takes the project locale.
+
+A trimmed label cuts by its inferred direction and draws by its set direction, as
+`shaped_text_draw` does. An AUTO Hebrew label so keeps its visual left part, and its outline
+draws the other part (`shaped_text_draw_outline`).
+
 A fractional width centres the label at a fractional offset. A font on the canvas painter then
 draws on the Button's whole pixels: its pen rounds and its baseline floors in the Button's own
 coordinates. Godot floors a glyph's origin the same way (`text_server_adv.cpp:4082-4084`).
 
 ## Known limitations
 
-- **Approximated** Under `layout_direction = 3` or `text_direction = 2`, the label's glyphs
-  keep left-to-right order for a right-to-left script or trailing punctuation, though
-  `layout_direction = 3` swaps the label, icon and chrome.
+None known.

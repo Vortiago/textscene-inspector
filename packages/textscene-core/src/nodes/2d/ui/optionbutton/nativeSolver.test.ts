@@ -171,6 +171,8 @@ describe('optionButtonTextTheme', () => {
   it('a theme_override_colors/font_color override wins over the default', () => {
     const props: OptionButtonProperties = {
       name: 'O',
+      textDirection: 0,
+      language: '',
       themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
     };
     expect(optionButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({

@@ -1,6 +1,8 @@
 import type { ControlProperties } from '../control/types';
+import type { TextDirectionProperties } from '../../../../godot/text/paragraphDirection';
 
-export interface ButtonProperties extends ControlProperties {
+/** The label shapes in `text_direction` and `language`, else the locale (`button.cpp:564-569`). */
+export interface ButtonProperties extends ControlProperties, TextDirectionProperties {
   /** Button label text. */
   text?: string;
   /** Disabled buttons render dimmed and non-interactive. */

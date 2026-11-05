@@ -14,7 +14,7 @@ import {
   trimTextBufferLineToWidth,
   type OverrunTrimFlags,
 } from './textOverrun';
-import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { AutowrapMode, OverrunBehavior, TextDirection } from '../../../../godot/text/textServerEnums';
 
 const FONT_SIZE_PX = 16;
 /** Twelve Hebrew letters: an AUTO paragraph that resolves right-to-left. */
@@ -100,7 +100,8 @@ describe('trimLineToWidth', () => {
     // width (84.625) plus the ellipsis budget (13, truncated) fits 100.
     const result = trim('AAAAAAAAAAAA', 100, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS));
     expect(drawnText(result)).toBe('AAAAAAAA…');
-    expect(result.widthPx).toBeCloseTo(8 * 10.578125 + 13.0625, 10);
+    // `width_trimmed` adds the truncated `int ellipsis_width` (`text_server_adv.cpp:6044,6152`).
+    expect(result.widthPx).toBeCloseTo(8 * 10.578125 + 13, 10);
   });
 
   it('draws the ellipsis of an emboldened face with the widened advance and the outline growth', () => {
@@ -132,13 +133,13 @@ describe('trimLineToWidth', () => {
       overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS)
     );
     expect(drawnText(result)).toBe('AAAAAA …');
-    expect(result.widthPx).toBeCloseTo(6 * 10.578125 + 4.15625 + 13.0625, 10);
+    expect(result.widthPx).toBeCloseTo(6 * 10.578125 + 17, 10);
   });
 
   it('ENFORCE_ELLIPSIS appends the ellipsis even when the line already fits, drawing every original glyph (text_server_adv.cpp:5958,6065-6067; text_server.cpp:1768-1777 trim_pos<0)', () => {
     const result = trim('AAAA', 200, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE));
     expect(drawnText(result)).toBe('AAAA…');
-    expect(result.widthPx).toBeCloseTo(4 * 10.578125 + 13.0625, 10);
+    expect(result.widthPx).toBeCloseTo(4 * 10.578125 + 13, 10);
   });
 
   it('a custom ellipsis char outside the vendored charset falls back to three dots (text_server_adv.cpp:6007-6046 found_el_char)', () => {
@@ -194,7 +195,8 @@ describe('trimLineToWidth — a right-to-left line (text_server_adv.cpp:6053-611
       expect(glyph.x).toBeCloseTo(penX, 9);
       penX += glyph.advance;
     }
-    expect(result.widthPx).toBeCloseTo(penX, 9);
+    const dots = result.glyphs[0]!.advance;
+    expect(result.widthPx).toBeCloseTo(penX - dots + Math.trunc(dots), 9);
     expect(result.widthPx).toBeLessThanOrEqual(full.widthPx * 0.75);
   });
 
@@ -211,11 +213,44 @@ describe('trimLineToWidth — a right-to-left line (text_server_adv.cpp:6053-611
     const result = trimRtl(firstGlyph.advance + 0.5, OverrunBehavior.OVERRUN_TRIM_CHAR);
     expect(result.glyphs).toEqual([]);
   });
+
+  // `width_trimmed = width + (ellipsis_pos != -1 ? ellipsis_width : 0)` (`text_server_adv.cpp:6152`).
+  it('gives a trimmed line the width Godot aligns by: the kept advance plus the truncated ellipsis', () => {
+    const full = line(HEBREW);
+    const result = trimRtl(full.widthPx * 0.75, OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+    const [dots, ...kept] = result.glyphs;
+    const keptPx = kept.reduce((sum, glyph) => sum + glyph.advance, 0);
+    expect(result.widthPx).toBeCloseTo(keptPx + Math.trunc(dots!.advance), 9);
+  });
+
+  it('keeps the last glyph in the width when an RTL cut finds no place, as the loop stops before it', () => {
+    const full = line(HEBREW);
+    const result = trimRtl(1, OverrunBehavior.OVERRUN_TRIM_CHAR);
+    expect(result.widthPx).toBeCloseTo(full.glyphs.at(-1)!.advance, 9);
+  });
+
+  it('cuts a Hebrew line set LTR from the visual right, as its paragraph direction is LTR', () => {
+    const full = shapeText(HEBREW, {
+      fontSizePx: FONT_SIZE_PX,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      direction: TextDirection.TEXT_DIRECTION_LTR,
+    }).lines[0]!;
+    const result = trimLineToWidth(
+      full,
+      full.widthPx * 0.75,
+      overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS),
+      { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX }
+    );
+    expect(result.glyphs.at(-1)!.char).toBe('…');
+    expect(result.glyphs[0]!.sourceIndex).toBe(HEBREW.length - 1);
+  });
 });
 
 describe('trimTextBufferLineToWidth — an AUTO line whose paragraph resolved right-to-left (text_server.cpp:1740-1935)', () => {
   const ELLIPSIS = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
-  const OPTIONS = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX };
+  const OPTIONS = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX, isDrawnRtl: false };
 
   function trimBuffer(widthPx: number) {
     return trimTextBufferLineToWidth(line(HEBREW), widthPx, ELLIPSIS, OPTIONS);
@@ -250,10 +285,20 @@ describe('trimTextBufferLineToWidth — an AUTO line whose paragraph resolved ri
 
   it('reports the width of the right-to-left trim, which both draws place by', () => {
     const full = line(HEBREW);
-    const result = trimBuffer(full.widthPx * 0.75);
-    const outline = result.outlineGlyphs!;
-    const last = outline.at(-1)!;
-    expect(result.widthPx).toBeCloseTo(last.x + last.advance, 9);
+    const inferred = trimLineToWidth(full, full.widthPx * 0.75, ELLIPSIS, OPTIONS);
+    expect(trimBuffer(full.widthPx * 0.75).widthPx).toBe(inferred.widthPx);
+  });
+
+  // A set RTL direction is the paragraph direction too, so the fill draws as the outline does.
+  it('draws one glyph set for a line set RTL', () => {
+    const full = line(HEBREW);
+    const result = trimTextBufferLineToWidth(full, full.widthPx * 0.75, ELLIPSIS, {
+      ...OPTIONS,
+      isDrawnRtl: true,
+    });
+    expect(result.outlineGlyphs).toBeUndefined();
+    expect(result.glyphs[0]!.char).toBe('…');
+    expect(result).toEqual(trimLineToWidth(full, full.widthPx * 0.75, ELLIPSIS, OPTIONS));
   });
 
   it('draws one glyph set for a left-to-right line', () => {

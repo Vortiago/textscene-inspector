@@ -19,6 +19,7 @@ import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   layoutOptionButtonContent,
@@ -58,9 +59,10 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
 
   // Read in the render body, not the `useMemo` below, for the reason Label's Component.tsx gives.
   const fontMetrics = resolveNodeFontMetrics(solveNode, OPTION_BUTTON_THEME_FONT_KEY);
+  const bidi = useControlBidiOptions(props, solveNode);
   const layout: TextLayoutResult | null = useMemo(
-    () => (hasText ? shapeButtonLabel(text, fontSizePx, fontMetrics) : null),
-    [hasText, text, fontSizePx, fontMetrics]
+    () => (hasText ? shapeButtonLabel(text, { fontSizePx, fontMetrics, bidi }) : null),
+    [hasText, text, fontSizePx, fontMetrics, bidi]
   );
 
   // Content layout: text and arrow placement within the solved rect

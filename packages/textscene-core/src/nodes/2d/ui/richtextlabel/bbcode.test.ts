@@ -62,7 +62,7 @@ describe('parseBBCodeRuns', () => {
     // `[wave]` is a real `rich_text_label.cpp:6412` tag: Godot consumes it, and
     // `get_parsed_text()` is "keep".
     const runs = parseBBCodeRuns('[wave amp=50]keep[/wave]');
-    expect(runs).toEqual([{ text: 'keep', tags: [{ name: 'wave' }] }]);
+    expect(runs).toEqual([{ text: 'keep', tags: [{ name: 'wave', options: new Map([['amp', '50']]) }] }]);
   });
 
   it('renders a tag Godot does NOT recognise as literal text, brackets and all', () => {
@@ -84,9 +84,14 @@ describe('parseBBCodeRuns', () => {
     ]);
   });
 
-  it('lowercases tag names', () => {
-    const runs = parseBBCodeRuns('[B]x[/B]');
-    expect(runs[0]!.tags).toEqual([{ name: 'b' }]);
+  it('draws an upper-case tag as text, as Godot compares tag names exactly', () => {
+    // `rich_text_label.cpp:5452`: `tag == "b"`, so `[B]` is no tag.
+    expect(parseBBCodeRuns('[B]x[/B]')).toEqual([{ text: '[B]x[/B]', tags: [] }]);
+  });
+
+  it('draws a tag whose name a tab follows as text, as only a space starts its options', () => {
+    // `rich_text_label.cpp:5358`: `_split_unquoted(tag, ' ')`, so `b\tx` is the whole name.
+    expect(parseBBCodeRuns('[b\tx]y')).toEqual([{ text: '[b\tx]y', tags: [] }]);
   });
 
   it('emits no run for text between two adjacent tags', () => {
@@ -360,5 +365,54 @@ describe('resolveBBColor', () => {
 
   it("falls back for an unrecognised name (Color::from_string's own fallback contract, color.cpp:450-456), not white", () => {
     expect(resolveBBColor('not-a-real-color-name', FALLBACK)).toEqual(FALLBACK);
+  });
+});
+
+describe('parseBBCodeRuns paragraph options', () => {
+  it('keeps the space-separated options of a tag, unquoted (`rich_text_label.cpp:5357-5382`)', () => {
+    const [run] = parseBBCodeRuns('[p dir=rtl lang="he"]x[/p]');
+    expect(run!.tags[0]!.options).toEqual(
+      new Map([
+        ['dir', 'rtl'],
+        ['lang', 'he'],
+      ])
+    );
+  });
+
+  it('gives a bare tag no options', () => {
+    const [run] = parseBBCodeRuns('[p]x[/p]');
+    expect(run!.tags[0]!.options).toBeUndefined();
+  });
+});
+
+// `push_paragraph` adds its item with `p_ensure_newline` (`rich_text_label.cpp:4718,4096-4103`): a line
+// that already holds a text, an image or a non-styling item ends there.
+describe('parseBBCodeRuns paragraph breaks', () => {
+  it('ends the line before a paragraph tag that follows text', () => {
+    expect(parseBBCodeRuns('a[p]b[/p]').map((run) => run.text)).toEqual(['a\n', 'b']);
+  });
+
+  it('ends the line between two paragraphs', () => {
+    expect(parseBBCodeRuns('[center]a[/center][right]b[/right]').map((run) => run.text)).toEqual([
+      'a',
+      '\n',
+      'b',
+    ]);
+  });
+
+  it('adds no break at the start of the text or after a newline', () => {
+    expect(parseBBCodeRuns('[p]a[/p]\n[p]b[/p]').map((run) => run.text)).toEqual(['a', '\n', 'b']);
+  });
+
+  it('adds no break after a styling tag alone (`_find_layout_subitem`, `:3712-3727`)', () => {
+    expect(parseBBCodeRuns('[b][p]x[/p][/b]').map((run) => run.text)).toEqual(['x']);
+  });
+
+  it('ends a line that holds only an empty paragraph', () => {
+    expect(parseBBCodeRuns('[p][/p][p]x[/p]').map((run) => run.text)).toEqual(['\n', 'x']);
+  });
+
+  it('adds no break after an [img] with no path, which adds no item (`:6145`)', () => {
+    expect(parseBBCodeRuns('[img][/img][p]x[/p]').map((run) => run.text)).toEqual(['x']);
   });
 });

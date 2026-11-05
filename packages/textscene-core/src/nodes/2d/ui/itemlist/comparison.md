@@ -97,9 +97,6 @@ left, as Godot's set-direction draw does (`text_server.cpp:1740-1935`).
   lines, where Godot collapses the tail into an ellipsis on the last visible line.
 - **Not drawn** Both scrollbars, along with the row-guide shift and narrower packing that
   a right-to-left vertical scrollbar causes (`item_list.cpp:1454-1458`, `:1862-1864`).
-- **Approximated** A right-to-left, CENTER-aligned TOP-mode line wider than its box stays
-  at the box origin, where Godot pulls it to the trailing edge
-  (`text_paragraph.cpp:907-914`).
 - **Needs runtime** The right-to-left arms of `get_item_at_position`
   (`item_list.cpp:1975,1986`) and `is_pos_at_end_of_items` (`:2021-2023`) answer mouse
   hits under a live cursor, which a static preview does not have.

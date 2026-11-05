@@ -39,6 +39,7 @@ import {
 } from './nativeSolver';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const itemListMinimumSize = controlSolverRegistry.minimumSize('ItemList')!;
 
@@ -84,12 +85,28 @@ describe('itemListSeparation / line_separation', () => {
   });
 });
 
+describe('shapeItemListText — direction (item_list.h:73-74)', () => {
+  it('takes the direction of neutral text from the locale (`item_list.cpp:45`)', () => {
+    const layout = shapeItemListText({
+      text: '123!',
+      fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      fixedColumnWidth: 0,
+      iconMode: ICON_MODE_LEFT,
+      maxTextLines: 1,
+      locale: 'he',
+    });
+    expect(visualChars(layout!.lines[0]!)).toBe('!123');
+  });
+});
+
 describe('shapeItemListText — wrapping (item_list.cpp:37-55)', () => {
   const wrapInput = {
     text: 'AA AA AA',
     fontSizePx: 16,
     fontMetrics: OPEN_SANS_FONT_METRICS,
     fixedColumnWidth: 30,
+    locale: '',
   };
 
   it('wraps only TOP icon mode with max_text_lines > 0 (happy path)', () => {
@@ -122,6 +139,7 @@ describe('trimItemListText — overrun trim (item_list.h:131 default OVERRUN_TRI
       fontSizePx: FONT_SIZE_PX,
       fontMetrics: OPEN_SANS_FONT_METRICS,
       fixedColumnWidth: 0,
+      locale: '',
     })!;
     const layout = trimItemListText(shaped, widthPx, { ...shape, fontSizePx: FONT_SIZE_PX, overrunBehavior });
     return layout.lines[0]!.glyphs.map((glyph) => glyph.char).join('');
@@ -144,6 +162,23 @@ describe('trimItemListText — overrun trim (item_list.h:131 default OVERRUN_TRI
   // text_paragraph.cpp:228-262: an autowrapped paragraph trims only a line that hides the next.
   it('leaves wrapped TOP-mode text untrimmed', () => {
     expect(trimmedChars(100, undefined, ICON_MODE_TOP)).toBe('AAAAAAAAAAAA');
+  });
+
+  // `unit-item-list-text-direction` in Godot 4.6.3: the fill keeps the visual left part.
+  it('keeps the visual left part of an AUTO Hebrew item and ends in the ellipsis', () => {
+    const shape = { iconMode: ICON_MODE_LEFT, maxTextLines: 1 };
+    const shaped = shapeItemListText({
+      ...shape,
+      text: 'שלום עולם רחב מאוד',
+      fontSizePx: FONT_SIZE_PX,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      fixedColumnWidth: 0,
+      locale: '',
+    })!;
+    const chars = visualChars(
+      trimItemListText(shaped, shaped.widthPx * 0.75, { ...shape, fontSizePx: FONT_SIZE_PX }).lines[0]!
+    );
+    expect([chars[0], chars.at(-1)]).toEqual(['ד', '…']);
   });
 });
 
@@ -370,9 +405,18 @@ describe('itemTextDrawOffset / itemTextLineCenterOffset', () => {
     expect(offset).toEqual({ x: 22, y: 15 });
   });
 
-  it('itemTextLineCenterOffset floors a wider box at zero, never negative (edge case)', () => {
-    expect(itemTextLineCenterOffset(50, 80)).toBe(0);
-    expect(itemTextLineCenterOffset(50, 20)).toBe(15);
+  it('itemTextLineCenterOffset centres a line no wider than its box', () => {
+    expect(itemTextLineCenterOffset(50, 20, false)).toBe(15);
+    expect(itemTextLineCenterOffset(50, 20, true)).toBe(15);
+  });
+
+  // `TextParagraph::draw` CENTER (`text_paragraph.cpp:900-913`).
+  it('itemTextLineCenterOffset keeps a wider LTR line at the origin', () => {
+    expect(itemTextLineCenterOffset(50, 80, false)).toBe(0);
+  });
+
+  it('itemTextLineCenterOffset moves a wider RTL line to the trailing edge', () => {
+    expect(itemTextLineCenterOffset(50, 80, true)).toBe(-30);
   });
 });
 

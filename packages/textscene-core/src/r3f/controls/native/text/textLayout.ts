@@ -82,6 +82,14 @@ export interface ShapeTextOptions {
    */
   language?: string;
   /**
+   * The direction, language and override of each paragraph, keyed by the source index it starts at:
+   * a RichTextLabel line reads them from its first item (`rich_text_label.cpp:3507-3558`). A field it
+   * leaves out takes `direction`, `language` or `bidiOverride`.
+   */
+  paragraphBidiAt?: (
+    paragraphStart: number
+  ) => Partial<Pick<ShapeTextOptions, 'direction' | 'language' | 'bidiOverride'>>;
+  /**
    * The theme `line_spacing`, px. Required, because it is a per-control constant: Label 3
    * (`labelEffectiveTextTheme`), Button-family and LineEdit 0, RichTextLabel `line_separation` 0
    * (`default_theme.cpp:1217`), Label3D its authored `line_spacing`. A miss is a 1-3 px shift.
@@ -232,6 +240,11 @@ export interface TextLayoutResult {
    * MSDF atlas and canvas painters, so an omitted value would put a scene font on the atlas path.
    */
   fontMetrics: FontMetrics;
+}
+
+/** Whether the first line of `layout` infers RTL, as a one-paragraph control's text reads it. False for no layout. */
+export function infersRtl(layout: TextLayoutResult | null): boolean {
+  return layout?.lines[0]?.isRtl === true;
 }
 
 /**
@@ -738,6 +751,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     direction,
     bidiOverride,
     language = '',
+    paragraphBidiAt,
     lineSpacingPx,
     fontSizePxAt,
     fontMetricsAt,
@@ -774,7 +788,12 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     // into the whole text, are offset back, and the index past the paragraph's end takes the last value.
     const sourceIndex = (i: number): number => para.offset + Math.max(0, Math.min(i, para.text.length - 1));
     const paraText = para.terminated ? para.text + PARAGRAPH_TERMINATOR : para.text;
-    const bidi = resolveParagraphBidi(paraText, { direction, overrides: bidiOverride?.(paraText), language });
+    const paragraphBidi = { direction, language, bidiOverride, ...paragraphBidiAt?.(para.offset) };
+    const bidi = resolveParagraphBidi(paraText, {
+      direction: paragraphBidi.direction,
+      overrides: paragraphBidi.bidiOverride?.(paraText),
+      language: paragraphBidi.language,
+    });
     const chars = bidi.glyphChars;
     const runStyle: RunStyle = {
       sizes: Array.from({ length: paraText.length }, (_v, i) =>

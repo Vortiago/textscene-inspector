@@ -9,16 +9,18 @@ import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSa
 import { buildGlyphQuadArrays } from '../../../r3f/controls/native/text/glyphQuads';
 import { label3DAabb, layoutLabel3DLines, breakLabel3DLines, justifyLabel3DLines } from './glyphLayout';
 import { labelProperties } from './testing/labelProperties';
+import { textBidiOptions } from '../../../r3f/controls/native/text/textBidiOptions';
 import { soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
 import type { EnumValue } from '../../../godot/classdb/enumNames';
 import { AutowrapMode, JustificationFlag } from '../../../godot/text/textServerEnums';
 import type { Label3DProperties } from './types';
+import { visualChars } from '../../../r3f/controls/native/text/textLayout.testkit';
 
 const FONT_SIZE = 32;
 
 function shapeLabel3DLinesForTest(properties: Label3DProperties) {
-  return justifyLabel3DLines(breakLabel3DLines(properties), properties);
+  return justifyLabel3DLines(breakLabel3DLines(properties, {}), properties);
 }
 
 function props(overrides: Partial<Label3DProperties> = {}): Label3DProperties {
@@ -361,5 +363,39 @@ describe('a fractional line width', () => {
     const layout = fractionalLayout();
     const placements = place(layout, HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT, 0);
     expect(label3DAabb(placements, layout.linePitchPx, 1).size.x).toBe(11);
+  });
+});
+
+describe('breakLabel3DLines — direction, language and structured override (label_3d.cpp:479-494)', () => {
+  /** The first line's glyph characters, left to right. */
+  function visual(overrides: Partial<Label3DProperties>, locale = ''): string {
+    const properties = props(overrides);
+    return visualChars(
+      breakLabel3DLines(properties, textBidiOptions(properties, locale), OPEN_SANS_FONT_METRICS).lines[0]!
+    );
+  }
+
+  it('shapes an RTL paragraph with `!` at the visual left', () => {
+    expect(visual({ text: 'Hello!', textDirection: 2 })).toBe('!Hello');
+  });
+
+  it('reads the value 3 as AUTO, as a node with no layout direction passes it through', () => {
+    expect(visual({ text: 'Hello!', textDirection: 3 })).toBe('Hello!');
+  });
+
+  it('takes a neutral paragraph from the language, else from the locale', () => {
+    expect(visual({ text: '123!', language: 'he' })).toBe('!123');
+    expect(visual({ text: '123!' }, 'he')).toBe('!123');
+  });
+
+  it('upper-cases in the case map of the language, else of the locale', () => {
+    expect(visual({ text: 'istanbul', uppercase: true, language: 'tr' })).toBe('İSTANBUL');
+    expect(visual({ text: 'istanbul', uppercase: true }, 'tr')).toBe('İSTANBUL');
+  });
+
+  it('keeps each FILE segment in logical order, left to right, under the structured override', () => {
+    const path = 'שלום/עולם/abc.txt';
+    expect(visual({ text: path, textDirection: 2, structuredTextBidiOverride: 2 })).toBe('םולש/םלוע/abc.txt');
+    expect(visual({ text: path, textDirection: 2 })).toBe('abc.txt/םלוע/םולש');
   });
 });

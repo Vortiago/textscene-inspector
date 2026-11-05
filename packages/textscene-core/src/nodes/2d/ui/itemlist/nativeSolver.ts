@@ -28,10 +28,7 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import {
-  overrunFlagsForBehavior,
-  trimTextBufferLineToWidth,
-} from '../../../../r3f/controls/native/text/textOverrun';
+import { overrunFlagsForBehavior, trimLayoutToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import {
   shapeText,
   shapedTextSizeWidthPx,
@@ -42,7 +39,8 @@ import type { ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_LOWER_COLOR } from '../../../../godot/scene/theme';
-import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { AutowrapMode, OverrunBehavior, TextDirection } from '../../../../godot/text/textServerEnums';
+import { isDrawnRtl, textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 import { hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
 
@@ -234,7 +232,15 @@ interface ItemTextShapeInput {
   iconMode: number;
   maxTextLines: number;
   fixedColumnWidth: number;
+  /** The control's `_get_locale()`, which an item's empty `language` takes (`item_list.cpp:45`). */
+  locale: string;
 }
+
+/** An item's own `text_direction` and `language` (`item_list.h:73-74`), which no scene changes. */
+const ITEM_BIDI = { textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: '' };
+
+/** An AUTO item draws its fill left to right, whatever direction its text infers. */
+const IS_ITEM_DRAWN_RTL = isDrawnRtl(textBidiOptions(ITEM_BIDI, ''));
 
 /**
  * Shapes one item's text, untrimmed, or `null` for an item with none. The minsize pass and the
@@ -245,6 +251,7 @@ interface ItemTextShapeInput {
 export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult | null {
   if (input.text.length === 0) return null;
   return shapeText(input.text, {
+    ...textBidiOptions(ITEM_BIDI, input.locale),
     fontSizePx: input.fontSizePx,
     boxWidthPx: itemListShapeWidth(input.fixedColumnWidth),
     autowrapMode: itemListAutowrapMode(input.iconMode, input.maxTextLines),
@@ -278,17 +285,13 @@ export function trimItemListText(
     return layout;
   }
 
-  const trimmedLines = layout.lines.map((line) =>
-    trimTextBufferLineToWidth(line, widthPx, overrunFlags, {
-      fontMetrics: layout.fontMetrics,
-      fontSizePx: options.fontSizePx,
-    })
-  );
-  return {
-    ...layout,
-    lines: trimmedLines,
-    widthPx: trimmedLines.reduce((max, l) => Math.max(max, l.widthPx), 0),
-  };
+  // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to the vendored atlas
+  // font when the caller passes none, and the trim must agree with the metrics that shaped the glyphs.
+  return trimLayoutToWidth(layout, widthPx, overrunFlags, {
+    fontMetrics: layout.fontMetrics,
+    fontSizePx: options.fontSizePx,
+    isDrawnRtl: IS_ITEM_DRAWN_RTL,
+  });
 }
 
 interface ItemTextShape {
@@ -535,6 +538,7 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
             maxTextLines,
             fixedColumnWidth,
             overrunBehavior: props.textOverrunBehavior,
+            locale: n.locale,
           }).minimumSize
         : { x: 0, y: 0 };
     return itemMinimumSize(
@@ -643,9 +647,18 @@ export function itemTextDrawOffset(
   };
 }
 
-/** One line's own horizontal offset under `HORIZONTAL_ALIGNMENT_CENTER` (TOP icon mode only: LEFT mode never centres, `_shape_text`'s own alignment call site). */
-export function itemTextLineCenterOffset(centerWidth: number, lineWidthCeiled: number): number {
-  return Math.max(0, centerWidth - lineWidthCeiled) / 2;
+/**
+ * One line's own horizontal offset under `HORIZONTAL_ALIGNMENT_CENTER` (TOP icon mode only: LEFT mode
+ * never centres, `_shape_text`'s own alignment call site). A line wider than its box stays at the
+ * origin, or ends at the trailing edge when it infers RTL (`text_paragraph.cpp:900-913`).
+ */
+export function itemTextLineCenterOffset(
+  centerWidth: number,
+  lineWidthCeiled: number,
+  isRtl: boolean
+): number {
+  if (lineWidthCeiled <= centerWidth) return (centerWidth - lineWidthCeiled) / 2;
+  return isRtl ? centerWidth - lineWidthCeiled : 0;
 }
 
 // --- Per-item colour: item_list.cpp:1568-1571,1607-1622, minus selected/hovered ---

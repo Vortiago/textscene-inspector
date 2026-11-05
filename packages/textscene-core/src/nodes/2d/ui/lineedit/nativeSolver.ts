@@ -17,7 +17,11 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode, ThemedIconRef } from '../../../../r3f/controls/native/solveTree';
-import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
+import {
+  controlBidiOptions,
+  type TextBidiOptions,
+} from '../../../../r3f/controls/native/text/textBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   shapeText,
@@ -195,6 +199,25 @@ export const lineEditTextureSlots: TextureSlotsFn = (
 };
 
 /**
+ * `LineEdit::_shape` (`line_edit.cpp:3104-3112`): the shown string, the text or the placeholder, in
+ * `text_direction`, `language` and the structured override, with no wrap and no `line_spacing`.
+ * The minimum size and the painter both read it.
+ */
+export function shapeLineEditText(
+  text: string,
+  props: Pick<LineEditProperties, 'drawControlChars'>,
+  options: TextBidiOptions & { fontSizePx: number; fontMetrics: FontMetrics }
+): TextLayoutResult {
+  return shapeText(text, {
+    ...options,
+    preserveControl: props.drawControlChars,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 0,
+  });
+}
+
+/**
  * `LineEdit::get_minimum_size` (`line_edit.cpp:2443-2477`): `minimum_character_width` em widths of
  * 'W', widened to `full_width + caret_width` with `expand_to_text_length`, plus the widest icon, by
  * `min_size.height = MAX(shaped height, font->get_height(font_size))`, plus the larger of the `normal`
@@ -229,14 +252,8 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
     const { text: displayed } = lineEditDisplayText(props);
     const fullWidthPx = displayed.length
       ? shapedTextSizeWidthPx(
-          shapeText(displayed, {
-            fontSizePx,
-            boxWidthPx: 0,
-            autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-            lineSpacingPx: 0,
-            fontMetrics,
-            preserveControl: props.drawControlChars,
-          }).widthPx
+          shapeLineEditText(displayed, props, { ...controlBidiOptions(props, n), fontSizePx, fontMetrics })
+            .widthPx
         )
       : 0;
     const caretWidthPx = n.constants['caret_width'] ?? DEFAULT_CARET_WIDTH;

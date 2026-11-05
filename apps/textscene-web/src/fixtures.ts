@@ -1168,6 +1168,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Item List Text Direction",
+    "file": "unit-item-list-text-direction.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Item List",
     "file": "unit-item-list.tscn",
     "category": "Other"
@@ -1333,6 +1338,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label3d Text Direction",
+    "file": "unit-label3d-text-direction.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label3d",
     "file": "unit-label3d.tscn",
     "category": "Other"
@@ -1475,6 +1485,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Line Edit Rtl",
     "file": "unit-line-edit-rtl.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Line Edit Text Direction",
+    "file": "unit-line-edit-text-direction.tscn",
     "category": "Other"
   },
   {
@@ -2433,6 +2448,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Text Edit Text Direction",
+    "file": "unit-text-edit-text-direction.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Text Edit",
     "file": "unit-text-edit.tscn",
     "category": "Other"
@@ -2470,6 +2490,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Timer",
     "file": "unit-timer.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Title Text Direction",
+    "file": "unit-title-text-direction.tscn",
     "category": "Other"
   },
   {
@@ -3575,6 +3600,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Text Mesh Text Direction",
+    "file": "unit-text-mesh-text-direction.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Text Mesh Triangulation Failure",
     "file": "unit-text-mesh-triangulation-failure.tscn",
     "category": "Unit - Primitive Meshes"
@@ -3653,6 +3683,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Button States",
     "file": "unit-button-states.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Button Text Direction",
+    "file": "unit-button-text-direction.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -3993,6 +4028,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Rich Text Label Style Fonts",
     "file": "unit-rich-text-label-style-fonts.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Text Direction",
+    "file": "unit-rich-text-label-text-direction.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

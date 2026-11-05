@@ -9,6 +9,8 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { vec2iOr } from '../../../parser/valueParsers';
 import { storedReal } from '../../../godot/math/real';
 import { perObject } from '../../../utils/perObject';
+import { parseLanguage } from '../../../parser/textDirectionParser';
+import { shapingLanguage } from '../../../r3f/controls/native/text/textBidiOptions';
 import type { Vector2 } from '../../../godot/math/vector';
 import { resourceContentKey } from '../../resourceContentKey';
 import { referencedFilePath, resolveReference, resolveReferencedResource } from '../../resolveReference';
@@ -59,6 +61,8 @@ interface BuildInput {
   references: Readonly<Record<string, TscnInternalResource | null>>;
   /** The font of a type that declares `font`, null for any other. */
   font: TextMeshFont | null;
+  /** The project's `_get_locale()`. */
+  locale: string;
 }
 
 /** A type's `lightmap_size_hint` once Godot's loader has set its properties in file order. */
@@ -143,8 +147,8 @@ const TYPES: Record<string, PrimitiveMeshType> = {
   // No face to extrude without a font, so the build gives none: `isDrawablePrimitiveMesh` tells that
   // from a mesh that is empty. TextMesh writes no UV2 and keeps the authored lightmap size hint.
   TextMesh: {
-    build: ({ data, font }) =>
-      font?.status === 'ready' ? buildTextMeshSurface(decodeTextMesh(data), font.face) : null,
+    build: ({ data, font, locale }) =>
+      font?.status === 'ready' ? buildTextMeshSurface(decodeTextMesh(data), locale, font.face) : null,
     font: { files: textMeshFontFiles, read: textMeshFont },
     lightmapSizeHint: authoredLightmapSizeHint('TextMesh'),
   },
@@ -203,8 +207,8 @@ export function isDrawablePrimitiveMesh(mesh: ResolvableResource): boolean {
 }
 
 /**
- * A key over the content of each resource the mesh's build reads, and over its font, empty for a
- * type that reads none. A resource that is not there, or not loaded, is part of the key as missing.
+ * A key over the content of each resource the mesh's build reads, and over its font and the language
+ * it shapes in, empty for a type that reads none. A resource that is not there, or not loaded, is part of the key as missing.
  * A mesh object holds its resources and its lookups for good, so a key is read once per object. A
  * mesh whose font awaits its outlines or metrics is read each time: its key moves when they settle.
  */
@@ -220,7 +224,9 @@ function readReferencesKey(mesh: ResolvableResource): string {
       const named = resolveReference(resource.data[property], resources, loadedFile);
       return named ? resourceContentKey(named.resource) : 'missing';
     }),
-    ...(font ? [textMeshFontKey(font)] : []),
+    ...(font
+      ? [textMeshFontKey(font), shapingLanguage(parseLanguage(resource.data['language']), mesh.locale)]
+      : []),
   ].join('|');
 }
 
@@ -268,7 +274,13 @@ function buildSurface(mesh: ResolvableResource, texelSize: number): GodotSurface
       resolveReferencedResource(resource.data[property], resources, loadedFile),
     ])
   );
-  const built = type.build({ data: resource.data, uv2Padding, references, font: primitiveMeshFont(mesh) });
+  const built = type.build({
+    data: resource.data,
+    uv2Padding,
+    references,
+    font: primitiveMeshFont(mesh),
+    locale: mesh.locale,
+  });
   if (!built) return null;
   const surface =
     base.addUv2 && type.lightmapSizeHint
