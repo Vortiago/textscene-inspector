@@ -2653,6 +2653,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Window Content Scale Unknown",
+    "file": "unit-window-content-scale-unknown.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Window Content Scale",
     "file": "unit-window-content-scale.tscn",
     "category": "Other"

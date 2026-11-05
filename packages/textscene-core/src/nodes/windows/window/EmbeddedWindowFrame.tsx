@@ -88,7 +88,10 @@ export function EmbeddedWindowFrame({
   });
   const slots = canvasSubOrders(wholeKeySlot(key), ['title', 'close', 'bars', 'content'] as const);
   const { texture } = useViewportTargetSlot(path, null, 'plain');
-  const { drawRect } = windowContentScale({ x: rect.w, y: rect.h }, props.content_scale);
+  const { drawRect } = useMemo(
+    () => windowContentScale({ x: rect.w, y: rect.h }, props.content_scale),
+    [rect.w, rect.h, props.content_scale]
+  );
   // `vr != r`: the target leaves part of the window, which `Color()` fills opaque black (`viewport.cpp:397-399`).
   const hasBars = drawRect.x !== 0 || drawRect.y !== 0 || drawRect.w !== rect.w || drawRect.h !== rect.h;
 

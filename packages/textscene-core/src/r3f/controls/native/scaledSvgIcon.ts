@@ -4,7 +4,9 @@
  * own times the scale, rounded (`image_loader_svg.cpp:92-93`).
  */
 
-const SVG_DATA_PREFIX = 'data:image/svg+xml;base64,';
+import { svgDataUrl } from './themeIcons';
+
+const SVG_DATA_PREFIX = svgDataUrl('');
 
 /** The icon's pixel size at `scale`, from its authored size. */
 export function scaledIconSize(authoredPx: number, scale: number): number {
@@ -36,5 +38,5 @@ export function scaledSvgDataUrl(dataUrl: string, scale: number): string {
   scaled = withAttribute(scaled, 'height', String(scaledIconSize(height, scale)));
   if (!/\sviewBox=/.test(tag)) scaled = withAttribute(scaled, 'viewBox', `0 0 ${width} ${height}`);
   const end = root.index + tag.length;
-  return SVG_DATA_PREFIX + btoa(svg.slice(0, root.index) + scaled + svg.slice(end));
+  return svgDataUrl(btoa(svg.slice(0, root.index) + scaled + svg.slice(end)));
 }

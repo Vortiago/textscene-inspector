@@ -134,6 +134,13 @@ function isSoftBreakGlyph(gp: GlyphPlacement): boolean {
   return isWhitespace(gp.char.codePointAt(0)!);
 }
 
+/** One glyph of the ellipsis: a space before it under word trim, then each dot. */
+interface EllipsisGlyph {
+  char: string;
+  advance: number;
+  emboldenGrowthPx?: number;
+}
+
 /**
  * Port of `TextServer::shaped_text_overrun_trim_to_width` (`text_server_adv.cpp:5935-6154`). Returns
  * `line` unchanged when nothing needs trimming (`:5958-5966`), else a new layout whose glyphs, text
@@ -203,7 +210,7 @@ export function trimLineToWidth(
     kept.length > 0 ? kept[kept.length - 1]!.x + kept[kept.length - 1]!.advance - keptStartPx : 0;
 
   // :6123-6149. `text_server.cpp:1757-1766` draws a right-to-left ellipsis first, its buffer reversed.
-  const ellipsis: { char: string; advance: number; emboldenGrowthPx?: number }[] = [];
+  const ellipsis: EllipsisGlyph[] = [];
   if (flags.addEllipsis && (ellipsisPos > 0 || alwaysEllipsis)) {
     if (flags.trimWordOnly && ellipsisPos > 0) ellipsis.push({ char: ' ', advance: whitespaceAdvancePx });
     for (let r = 0; r < dotRepeat; r++) {
@@ -254,7 +261,9 @@ function findTrimPosition(
   if (alwaysEllipsis && width + ellipsisWidthPx <= widthPx) {
     return { trimPos: -1, ellipsisPos: isRtl ? 0 : count };
   }
-  for (let step = 0; step < count; step++) {
+  // `glyphs_to` (`:6062`): a right-to-left search stops before the last glyph, so it never keeps that glyph alone.
+  const steps = isRtl ? count - 1 : count;
+  for (let step = 0; step < steps; step++) {
     const i = isRtl ? step : count - 1 - step;
     const gp = glyphs[i]!;
     if (!isRtl) width -= gp.advance;
@@ -301,7 +310,7 @@ function shiftGlyphs(glyphs: readonly GlyphPlacement[], dx: number): GlyphPlacem
 
 /** The ellipsis glyphs in draw order, from `startPx`. */
 function placeEllipsis(
-  ellipsis: readonly { char: string; advance: number; emboldenGrowthPx?: number }[],
+  ellipsis: readonly EllipsisGlyph[],
   startPx: number,
   fontMetrics: FontMetrics
 ): GlyphPlacement[] {

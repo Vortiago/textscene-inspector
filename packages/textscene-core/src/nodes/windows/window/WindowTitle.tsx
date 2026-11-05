@@ -1,7 +1,8 @@
 /**
  * An embedded window's title: one `TextLine` in `title_font` at `title_font_size`, trimmed to the
- * title space with an ellipsis at its end in the window's direction, and centred over the window in the `title_height` band
- * (`viewport.cpp:363-379`). The outline draws first, under the text, as a stroked ring (ADR-0040).
+ * title space with an ellipsis at its end in the window's direction, and centred over the window in
+ * the `title_height` band (`viewport.cpp:363-379`). The outline draws first, under the text, as a
+ * stroked ring (ADR-0040).
  */
 import { lazy, useMemo, type ComponentProps } from 'react';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';

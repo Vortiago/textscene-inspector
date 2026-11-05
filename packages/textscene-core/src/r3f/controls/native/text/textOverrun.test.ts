@@ -212,6 +212,10 @@ describe('trimLineToWidth in a right-to-left paragraph', () => {
     expect(rtlTrim('AAAAAAAAAAAA', 40, ELLIPSIS).text).toBe('AAA');
   });
 
+  it('never keeps the last glyph alone, as the search stops before it (`:6062`)', () => {
+    expect(rtlTrim('AAAAAAAAAAAA', 15, ELLIPSIS).text).toBe('');
+  });
+
   it('measures the kept glyphs plus the ellipsis (`:6152`)', () => {
     const result = rtlTrim('AAAAAAAAAAAA', 100, ELLIPSIS);
     expect(result.text).toBe('…AAAAAAAA');

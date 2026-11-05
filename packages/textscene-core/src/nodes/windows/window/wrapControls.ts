@@ -31,9 +31,13 @@ function contentsMinimumSize(window: SolveNode, ctx: SolveContext): Vector2 {
   );
 }
 
-/** `get_contents_minimum_size() * get_content_scale_factor()` (`window.cpp:2250`): the raw factor, never floored. */
+/**
+ * `get_contents_minimum_size() * get_content_scale_factor()` (`window.cpp:2250`). The factor is the
+ * one an integer stretch floors in `_update_viewport_size` (`:1240-1249`), which runs before READY.
+ */
 function scaledContentsMinimumSize(window: SolveNode, ctx: SolveContext): Vector2 {
-  const { factor } = (window.node.properties as WindowProperties).content_scale;
+  const { size, content_scale } = window.node.properties as WindowProperties;
+  const factor = windowContentScale(size, content_scale).canvasScale;
   const minimum = contentsMinimumSize(window, ctx);
   return { x: minimum.x * factor, y: minimum.y * factor };
 }

@@ -60,6 +60,20 @@ describe('wrappedWindowSize', () => {
     expect(wrappedWindowSize(window, THEME, null)).toEqual({ x: 240, y: 220 });
   });
 
+  it('scales by the factor an integer stretch floors (`window.cpp:1240-1249`)', () => {
+    const window = windowNode(
+      'Window',
+      {
+        size: 'Vector2i(100, 100)',
+        wrap_controls: 'true',
+        content_scale_stretch: '1',
+        content_scale_factor: '2.5',
+      },
+      [placed(20, 30, { x: 100, y: 80 })]
+    );
+    expect(wrappedWindowSize(window, THEME, null)).toEqual({ x: 240, y: 220 });
+  });
+
   it('ignores the Controls of a window that does not wrap', () => {
     const window = windowNode('Window', { size: 'Vector2i(100, 100)' }, [placed(20, 30, { x: 400, y: 280 })]);
     expect(wrappedWindowSize(window, THEME, null)).toEqual({ x: 100, y: 100 });

@@ -116,4 +116,10 @@ describe('windowContentScale', () => {
     const scale = { ...UNSCALED, stretch: ContentScaleStretch.INTEGER, factor: 0.5 };
     expect(windowContentScale(WINDOW, scale).canvasScale).toBe(1);
   });
+
+  it('shows nothing for a mode outside the enum, so the bars fill the window', () => {
+    const scale = windowContentScale(WINDOW, { ...UNSCALED, mode: 3, size: DESIGN });
+    expect(scale.renderSize).toEqual({ x: 0, y: 0 });
+    expect(scale.drawRect).toEqual({ x: 0, y: 0, w: 0, h: 0 });
+  });
 });

@@ -8,7 +8,7 @@ import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import { VIEWPORT_MIN_SIZE } from '../../../godot/rendering/viewport.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 import type { TscnNode } from '../../../parser/types.js';
-import { windowContentScale } from '../../windows/window/contentScale.js';
+import { windowContentScale, type ContentScale } from '../../windows/window/contentScale.js';
 import type { WindowProperties } from '../../windows/window/types.js';
 import { isEmbeddedWindow } from './viewportBoundary.js';
 import type { SubViewportProperties } from './types.js';
@@ -25,11 +25,10 @@ export function viewportSize(authored: Vector2, forced: ViewportRect | null): Ve
 }
 
 /**
- * The render target `viewportSize` allocates. Godot leaves the ceiling to the GPU driver, but a
+ * The render target a viewport of `size` allocates. Godot leaves the ceiling to the GPU driver, but a
  * file Godot opens can hand `THREE.WebGLRenderTarget` a 2000000000-pixel axis.
  */
-function viewportTargetSize(authored: Vector2, forced: ViewportRect | null): Vector2 {
-  const size = viewportSize(authored, forced);
+function cappedTargetSize(size: Vector2): Vector2 {
   return { x: Math.min(MAX_TEXTURE_EXTENT, size.x), y: Math.min(MAX_TEXTURE_EXTENT, size.y) };
 }
 
@@ -48,21 +47,24 @@ export interface ViewportPassSizes {
   view: Vector2;
 }
 
+/** A SubViewport's content: drawn 1:1, as a window with every `content_scale_*` key unset. */
+const UNSCALED: ContentScale = { mode: 0, aspect: 0, stretch: 0, size: { x: 0, y: 0 }, factor: 1 };
+
+function contentScaleOf(node: TscnNode): ContentScale {
+  return isEmbeddedWindow(node.type) ? (node.properties as WindowProperties).content_scale : UNSCALED;
+}
+
 /**
- * A SubViewport renders, lays out and shows its `size`. An embedded window renders and lays out by
- * its content scale (`contentScale.ts`), and its canvas draws scaled by the factor, so the target
- * shows its pixels over the factor in canvas units (`window.cpp:1362-1367`).
+ * A viewport renders and lays out by its content scale (`contentScale.ts`), and its canvas draws
+ * scaled by the factor, so the target shows its pixels over the factor in canvas units
+ * (`window.cpp:1362-1367`).
  */
 export function viewportPassSizes(node: TscnNode, forced: ViewportRect | null): ViewportPassSizes {
-  const properties = node.properties as SubViewportProperties;
-  const size = viewportSize(properties.size, forced);
-  if (!isEmbeddedWindow(node.type)) {
-    return { target: viewportTargetSize(properties.size, forced), layout: size, view: size };
-  }
-  const scale = windowContentScale(size, (properties as WindowProperties).content_scale);
+  const size = viewportSize((node.properties as SubViewportProperties).size, forced);
+  const scale = windowContentScale(size, contentScaleOf(node));
   const render = viewportSize(scale.renderSize, null);
   return {
-    target: viewportTargetSize(scale.renderSize, null),
+    target: cappedTargetSize(render),
     layout: scale.layoutSize,
     view: { x: render.x / scale.canvasScale, y: render.y / scale.canvasScale },
   };

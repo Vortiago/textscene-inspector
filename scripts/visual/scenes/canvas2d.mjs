@@ -1014,6 +1014,8 @@ export const CANVAS_2D_SCENES = [
   // content_scale_*: factor, canvas items, viewport, expand, integer and keep-height, with black bars.
   // Max 92, mean 0.385.
   { name: 'window-content-scale', file: 'unit-window-content-scale.tscn', mode: '2d' },
+  // A content_scale_mode outside the enum leaves the target empty: black content. Max 92, mean 0.318.
+  { name: 'window-content-scale-unknown', file: 'unit-window-content-scale-unknown.tscn', mode: '2d' },
 
   // MeshInstance2D draws a mesh through the canvas. Godot 4.6.3 `--mode 2d` probes: the textured QuadMesh
   // shows its texture upside down, (75,75) blue and (75,125) red, and the PlaneMesh at (100,300) draws
