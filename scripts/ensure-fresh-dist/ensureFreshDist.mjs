@@ -5,16 +5,13 @@
  * half done. After this build, the nested builds find dist current and write nothing.
  */
 
-import { execFileSync } from 'node:child_process';
-import { stalenessMessage } from '../distFreshness.mjs';
+import { execSync } from 'node:child_process';
+import { BUILD, stalenessMessage } from '../distFreshness.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 
-/** Runs the core build with its output visible, so a type error reaches the developer. */
+/** Runs the build that the staleness message names. A type error stops the run, with its output visible. */
 export function buildCore() {
-  execFileSync('pnpm', ['--filter', '@textscene/core', 'build'], {
-    cwd: REPO_ROOT,
-    stdio: 'inherit',
-  });
+  execSync(BUILD, { cwd: REPO_ROOT, stdio: 'inherit' });
 }
 
 /**

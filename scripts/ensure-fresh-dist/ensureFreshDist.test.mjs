@@ -67,3 +67,10 @@ describe('ensureFreshDist', () => {
     expect(() => ensureFreshDist(core, build)).toThrow(/dist predates src\/index\.ts/);
   });
 });
+
+describe('the root vitest config', () => {
+  it('builds core before the demo corpora vendor and before any project runs', async () => {
+    const { default: config } = await import('../../vitest.config.ts');
+    expect(config.test.globalSetup[0]).toBe('scripts/ensure-fresh-dist/vitestGlobalSetup.mjs');
+  });
+});
