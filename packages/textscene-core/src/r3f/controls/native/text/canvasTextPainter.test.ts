@@ -54,10 +54,10 @@ function contentOriginOnQuad(canvasLayout: ReturnType<typeof computeCanvasTextCa
 }
 
 describe('computeCanvasTextCanvasLayout', () => {
-  it('with no skew, pads only for anti-aliasing overshoot: canvas content area equals the layout box', () => {
+  it('with no skew, pads the width only by the column a floored item origin moves the content into', () => {
     const layout = layoutFor('AB');
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
-    expect(canvasLayout.canvasWidthPx).toBeCloseTo(layout.widthPx, 6);
+    expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx + 1));
     expect(canvasLayout.offsetXPx).toBe(0);
   });
 
@@ -68,7 +68,7 @@ describe('computeCanvasTextCanvasLayout', () => {
     expect(skewed.canvasWidthPx).toBeGreaterThan(straight.canvasWidthPx);
     expect(skewed.offsetXPx).toBeGreaterThan(0);
     // Symmetric: padding added equally left/right.
-    expect(skewed.canvasWidthPx - layout.widthPx).toBeCloseTo(2 * skewed.offsetXPx, 6);
+    expect(skewed.canvasWidthPx).toBe(Math.ceil(layout.widthPx + 2 * skewed.offsetXPx + 1));
   });
 
   // A fractional pad puts each texel between two screen pixels, and the linear filter then thins
@@ -137,8 +137,13 @@ function paintRecording(
     skew = 0,
     outlines = null,
     quantisesPen,
-    penOriginXPx,
-  }: { skew?: number; outlines?: SfntOutlines | null; quantisesPen?: boolean; penOriginXPx?: number } = {}
+    itemOriginPx,
+  }: {
+    skew?: number;
+    outlines?: SfntOutlines | null;
+    quantisesPen?: boolean;
+    itemOriginPx?: { x: number; y: number };
+  } = {}
 ) {
   const calls: Call[] = [];
   let matrix = new DOMMatrix();
@@ -170,7 +175,7 @@ function paintRecording(
   paintSceneFontCanvas(carrying(layout, skew, outlines), 16, { r: 1, g: 1, b: 1, a: 1 }, skew, canvasLayout, {
     strokeWidthPx,
     quantisesPen,
-    penOriginXPx,
+    itemOriginPx,
   });
   return { calls, canvasLayout };
 }
@@ -216,18 +221,40 @@ describe('paintSceneFontCanvas — pen', () => {
     expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 10.5);
   });
 
-  it('rounds the pen where it sits in the canvas item, its run origin included', () => {
-    const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, { penOriginXPx: 0.3 });
-    // 0.3 + 10.6 = 10.9 rounds to the quarter step 11, which is 10.7 past the run origin.
-    expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBeCloseTo(
-      canvasLayout.offsetXPx + 10.7,
-      9
-    );
+  it('rounds the pen where it sits in the canvas item, past the whole pixel the quad starts on', () => {
+    const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, {
+      itemOriginPx: { x: 0.3, y: 0 },
+    });
+    // 0.3 + 10.6 = 10.9 rounds to the quarter step 11, and the quad starts at the floored origin 0.
+    expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 11);
+  });
+
+  // `text_server_adv.cpp:4082-4084`: a glyph at scale 1 draws at the floored `cpos.y`.
+  it('puts the baseline on the whole pixel a canvas item floors it to, its run origin included', () => {
+    const layout = layoutFor('A\nB', 0.5);
+    const { calls, canvasLayout } = paintRecording(layout, 0, { itemOriginPx: { x: 0, y: 0.6 } });
+    // The second baseline sits 17.5 + 13 px down, which the origin carries to 31.1 and the floor to 31.
+    expect(layout.linePitchPx + layout.baselineOffsetPx).toBeCloseTo(30.5, 9);
+    expect(calls.filter((c) => c.op === 'fillText')[1]!.args[2]).toBe(canvasLayout.offsetYPx + 31);
   });
 
   it('keeps the pen of a Label3D, whose mesh places each glyph where it is', () => {
-    const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, { quantisesPen: false });
+    const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, {
+      quantisesPen: false,
+      itemOriginPx: { x: 0.3, y: 0.6 },
+    });
     expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 10.6);
+  });
+
+  it('keeps the baseline of a Label3D', () => {
+    const layout = fractionalPenLayout();
+    const { calls, canvasLayout } = paintRecording(layout, 0, {
+      quantisesPen: false,
+      itemOriginPx: { x: 0.3, y: 0.6 },
+    });
+    expect(calls.filter((c) => c.op === 'fillText')[0]!.args[2]).toBe(
+      canvasLayout.offsetYPx + layout.baselineOffsetPx
+    );
   });
 });
 
@@ -463,10 +490,17 @@ describe('buildCanvasTextQuadArrays', () => {
     const trX = arrays.positions[3]!;
     const blY = arrays.positions[2 * 3 + 1]!;
     expect(tlX).toBeCloseTo(-canvasLayout.offsetXPx, 6);
-    expect(trX).toBeCloseTo(layout.widthPx + canvasLayout.offsetXPx, 6);
+    expect(trX).toBeCloseTo(canvasLayout.canvasWidthPx - canvasLayout.offsetXPx, 6);
     // Y is negated (three-local Y-up); top edge y = -(-offsetYPx) = offsetYPx (above the content box).
     expect(tlY).toBeCloseTo(canvasLayout.offsetYPx, 6);
     expect(blY).toBeCloseTo(-(canvasLayout.canvasHeightPx - canvasLayout.offsetYPx), 6);
+  });
+
+  it('moves back to the whole pixel at or before a fractional item origin, so each texel lands on a pixel', () => {
+    const canvasLayout = computeCanvasTextCanvasLayout(layoutFor('AB'), 0);
+    const arrays = buildCanvasTextQuadArrays(canvasLayout, { x: 0.25, y: 0.75 });
+    expect(arrays.positions[0]).toBeCloseTo(-canvasLayout.offsetXPx - 0.25, 6);
+    expect(arrays.positions[1]).toBeCloseTo(canvasLayout.offsetYPx + 0.75, 6);
   });
 
   it('UVs cover the full [0,1] texture with flipY convention (top edge v=1)', () => {

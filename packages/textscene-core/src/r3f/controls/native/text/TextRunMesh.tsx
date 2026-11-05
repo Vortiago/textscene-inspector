@@ -24,6 +24,7 @@ import {
   buildCanvasTextQuadArrays,
   paintSceneFontCanvas,
   createCanvasTextMaterial,
+  itemPixelSnap,
   type CanvasTextPaintOptions,
 } from './canvasTextPainter';
 import type { SurfaceShading } from '../../../materialFor2d';
@@ -34,7 +35,7 @@ import type { TextLayoutResult } from './textLayout';
 import { hexCodeBoxRects } from './hexCodeBox';
 import { buildGlyphQuadArrays, type GlyphQuadArrays } from './glyphQuads';
 import { OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
-import { CanvasItemGroup } from '../../../components/CanvasItemGroup';
+import { CanvasItemGroup, useCanvasItemOrigin } from '../../../components/CanvasItemGroup';
 import { ControlQuad } from '../controlQuad';
 import {
   applyTextureFilterState,
@@ -104,12 +105,12 @@ export interface TextRunProps {
    */
   strokeWidthPx?: number;
   /**
-   * Rounds each glyph pen as a canvas item draws it (`canvasGlyphPenXPx`). Label3D passes false, as
-   * its mesh keeps the pen (`label_3d.cpp:347`). Canvas runs only: the MSDF atlas keeps the pen too.
+   * Places each glyph as a canvas item draws it, at the run's place in the item (`useCanvasItemOrigin`):
+   * the pen on its subpixel step and the baseline on a whole pixel (`text_server_adv.cpp:4074-4084`).
+   * Label3D passes false, as its mesh keeps the pen (`label_3d.cpp:347`). Canvas runs only: the MSDF
+   * atlas keeps the pen too.
    */
   quantisesPen?: boolean;
-  /** Where the run's x 0 sits in its canvas item, which a rounded pen includes (`text_server_adv.cpp:4074-4084`). Canvas runs only. */
-  penOriginXPx?: number;
   /**
    * The raster texture's sampler: Label3D's `texture_filter` (`label_3d.h:140`). The default is
    * Godot's default filter. A mipmapped row samples a mip chain only where `mipmapped` built one.
@@ -251,7 +252,7 @@ function buildTextRun(
   }
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, canvasPaint.strokeWidthPx);
-    const quads = buildCanvasTextQuadArrays(canvasLayout);
+    const quads = buildCanvasTextQuadArrays(canvasLayout, itemPixelSnap(canvasPaint));
     const geo = quadGeometry(quads);
     const { positions } = quads;
     // On every run, so toggling the shading rebuilds the material alone, not the raster.
@@ -314,7 +315,6 @@ export function TextRunMesh({
   side,
   strokeWidthPx = 0,
   quantisesPen = true,
-  penOriginXPx = 0,
   textureFilter = godotTextureFilterState(undefined),
   mipmapped = false,
   blends,
@@ -325,6 +325,7 @@ export function TextRunMesh({
 }: TextRunProps) {
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
+  const itemOrigin = useCanvasItemOrigin();
   if (blends && !swapped)
     throw new Error('expected blends only inside a GeometryInstance3D drawer, got none');
 
@@ -334,7 +335,7 @@ export function TextRunMesh({
         layout,
         fontSizePx,
         { tint, clippingPlanes, depthTest, side, pixelMaterial },
-        { strokeWidthPx, quantisesPen, penOriginXPx },
+        { strokeWidthPx, quantisesPen, itemOriginPx: itemOrigin },
         textureFilter,
         mipmapped
       ),
@@ -354,7 +355,7 @@ export function TextRunMesh({
       pixelMaterial,
       strokeWidthPx,
       quantisesPen,
-      penOriginXPx,
+      itemOrigin,
       textureFilter,
       mipmapped,
     ]

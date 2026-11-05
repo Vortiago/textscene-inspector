@@ -71,12 +71,7 @@ function LayerRuns({ layer, placements, lineLayouts, ...run }: LayerRunsProps) {
       {layer.kind === 'ring' ? (
         <OutlineRingRun {...run} layout={lineLayouts[index]!} tint={layer.color} sizePx={layer.ringSizePx} />
       ) : (
-        <TextRun
-          {...run}
-          layout={lineLayouts[index]!}
-          tint={layer.color}
-          penOriginXPx={placement.x + layer.offset.x}
-        />
+        <TextRun {...run} layout={lineLayouts[index]!} tint={layer.color} />
       )}
     </CanvasItemGroup>
   ));

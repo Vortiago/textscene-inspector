@@ -34,11 +34,29 @@ The scene-font canvas texture is `SRGBColorSpace`, not the 2D-canvas rule's `NoC
 ## The scene-font raster runs on the CPU
 
 `paintSceneFontCanvas` asks for `willReadFrequently`, which keeps the 2D canvas on Chromium's CPU
-rasteriser. That rasteriser computes exact-area coverage, as FreeType's does.
+rasteriser. That rasteriser computes exact-area coverage, as FreeType's smooth rasteriser does
+for Godot's `FT_RENDER_MODE_NORMAL` (`text_server_adv.cpp:1323`). Chromium's GPU raster samples
+coverage instead, and no canvas option changes how it anti-aliases. So only the CPU raster can
+draw Godot's outline.
 
+- Measured with 60 slanted stems 0.6 px wide on lavapipe, the GPU raster puts down 3 coverage
+  levels and the CPU raster 140. On SwiftShader, which has no GPU raster, both put down 140.
 - Measured against Godot with hinting off on both sides, every embolden row from 8 px to 128 px
-  is within 2% on the CPU raster.
-- On the GPU raster, the 8 px rows lose 2.4% of the ink, and a stem near zero width loses more.
-- The cost is the upload of each raster, once per text change. Measured for a 640 x 80 px raster
-  on lavapipe, the CPU canvas takes 4.8 ms to upload where the GPU canvas takes 0.15 ms. On
-  SwiftShader, which rasterises both on the CPU, both take 0.6 ms.
+  is within 2% on the CPU raster. On the GPU raster, the 8 px rows lose 2.4% of the ink.
+- The cost is the paint and upload of each raster, once per text change. For a 640 x 80 px raster
+  of filled contours on lavapipe, the CPU canvas takes 3.2 ms and the GPU canvas 0.15 ms. On
+  SwiftShader both take 0.5 ms.
+
+## Each canvas run owns its raster
+
+A run is one mesh and one draw call on every painter, so a shared raster would save a texture bind
+and no draw call. Measured on lavapipe, 200 runs of 640 x 80 px draw a frame in 31 ms with a raster
+each and 26 ms with one raster for all. That is 0.025 ms for each run, and an upper bound, as a
+packed atlas samples distinct regions too. A packed atlas would also repack on every text change.
+
+## The canvas raster sits on whole item pixels
+
+Godot draws a glyph at scale 1 at the floored `cpos` (`text_server_adv.cpp:4082-4084`), in the
+canvas item's own coordinates. `useCanvasItemOrigin` gives a run its place in those coordinates.
+The quad moves back to the whole pixel at or before that place (`itemPixelSnap`), each pen rounds
+past it, and each baseline floors. Label3D keeps its pen, as its mesh places each glyph.

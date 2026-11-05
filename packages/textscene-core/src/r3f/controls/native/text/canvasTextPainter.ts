@@ -28,6 +28,7 @@ import { passBlendMaterialProps, type SurfaceBlend } from '../../../materials/su
 import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
 import type { SurfaceShading } from '../../../materialFor2d';
 import type { Rgba } from '../../../../godot/math/math';
+import type { CanvasItemPoint } from '../../../components/CanvasItemGroup';
 
 /** Fixed vertical pad, CSS px, on every raster edge: anti-aliased ink can overshoot a glyph's ascent/descent box. The quad is this much taller than `layout.heightPx` on both edges. */
 const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
@@ -43,7 +44,7 @@ function wholeRasterPx(cssPx: number): number {
 }
 
 interface CanvasTextCanvasLayout {
-  /** `HTMLCanvasElement#width`: `layout.widthPx` plus twice `offsetXPx`, rounded up to a whole pixel. */
+  /** `HTMLCanvasElement#width`: `layout.widthPx` plus twice `offsetXPx` plus 1, rounded up to a whole pixel. */
   canvasWidthPx: number;
   /** `HTMLCanvasElement#height`: `layout.heightPx` plus twice `offsetYPx`, rounded up to a whole pixel. */
   canvasHeightPx: number;
@@ -77,12 +78,16 @@ export function computeCanvasTextCanvasLayout(
   const offsetXPx = Math.ceil(shearPadPx + strokePadPx + emboldenPadPx);
   const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + Math.ceil(strokePadPx + emboldenPadPx);
   return {
-    canvasWidthPx: wholeRasterPx(layout.widthPx + 2 * offsetXPx),
+    // One column more: a quad on a floored item origin carries its content up to 1 px right.
+    canvasWidthPx: wholeRasterPx(layout.widthPx + 2 * offsetXPx + 1),
     canvasHeightPx: wholeRasterPx(layout.heightPx + 2 * offsetYPx),
     offsetXPx,
     offsetYPx,
   };
 }
+
+const ITEM_ORIGIN: CanvasItemPoint = { x: 0, y: 0 };
+const NO_SNAP: CanvasItemPoint = { x: 0, y: 0 };
 
 /** The `GlyphQuadArrays` shape `buildGlyphQuadArrays` produces, always exactly one quad. */
 interface CanvasTextQuadArrays {
@@ -95,15 +100,19 @@ interface CanvasTextQuadArrays {
  * One quad spanning the padded raster, placed so the unpadded content box is
  * `[0, layout.widthPx] x [0, layout.heightPx]` in `buildGlyphQuadArrays`'s
  * convention (Godot px, +Y down, negated to three's Y-up). A neighbouring run
- * lines up as if the padding did not exist.
+ * lines up as if the padding did not exist. `snapPx` moves the quad back by the fraction
+ * `itemPixelSnap` names, so its texels land on the item's whole pixels.
  */
-export function buildCanvasTextQuadArrays(canvasLayout: CanvasTextCanvasLayout): CanvasTextQuadArrays {
-  const left = -canvasLayout.offsetXPx;
+export function buildCanvasTextQuadArrays(
+  canvasLayout: CanvasTextCanvasLayout,
+  snapPx: CanvasItemPoint = NO_SNAP
+): CanvasTextQuadArrays {
+  const left = -canvasLayout.offsetXPx - snapPx.x;
   // The whole canvas, not `layout.widthPx + offsetXPx`: the rounding slack sits
   // on this edge, and the quad must span it or the raster samples stretched.
-  const right = canvasLayout.canvasWidthPx - canvasLayout.offsetXPx;
-  const top = -canvasLayout.offsetYPx;
-  const bottom = canvasLayout.canvasHeightPx - canvasLayout.offsetYPx;
+  const right = left + canvasLayout.canvasWidthPx;
+  const top = -canvasLayout.offsetYPx - snapPx.y;
+  const bottom = top + canvasLayout.canvasHeightPx;
 
   // Vertex order TL, TR, BL, BR, as in buildGlyphQuadArrays.
   const positions = new Float32Array([left, -top, 0, right, -top, 0, left, -bottom, 0, right, -bottom, 0]);
@@ -111,6 +120,19 @@ export function buildCanvasTextQuadArrays(canvasLayout: CanvasTextCanvasLayout):
   const uvs = new Float32Array([0, 1, 1, 1, 0, 0, 1, 0]);
   const indices = new Uint32Array([2, 3, 0, 3, 1, 0]);
   return { positions, uvs, indices };
+}
+
+/**
+ * How far past the whole item pixel at or before it a run's origin sits: the distance its quad moves
+ * back, so the raster draws texel-aligned as Godot draws a glyph (`text_server_adv.cpp:4082-4084`).
+ * Zero for a run that keeps its pen, as Label3D's mesh.
+ */
+export function itemPixelSnap({
+  quantisesPen = true,
+  itemOriginPx = ITEM_ORIGIN,
+}: CanvasTextPaintOptions): CanvasItemPoint {
+  if (!quantisesPen) return NO_SNAP;
+  return { x: itemOriginPx.x - Math.floor(itemOriginPx.x), y: itemOriginPx.y - Math.floor(itemOriginPx.y) };
 }
 
 /**
@@ -126,10 +148,13 @@ function opaqueCssColor(tint: Pick<Rgba, 'r' | 'g' | 'b'>): string {
 export interface CanvasTextPaintOptions {
   /** A positive width paints the outline ring instead of the fill, as Godot's separate outline surface (`label_3d.cpp:610-615`). */
   strokeWidthPx?: number;
-  /** Rounds each pen as a canvas item draws a glyph (`canvasGlyphPenXPx`). False for Label3D, whose mesh keeps the pen (`label_3d.cpp:347`). */
+  /**
+   * Places each glyph as a canvas item draws it: the pen on its subpixel step (`canvasGlyphPenXPx`)
+   * and the baseline floored to a whole pixel. False for Label3D, whose mesh keeps the pen (`label_3d.cpp:347`).
+   */
   quantisesPen?: boolean;
-  /** Where the run's x 0 sits in its canvas item, which the rounded pen includes. 0 by default. */
-  penOriginXPx?: number;
+  /** Where the run's origin sits in its canvas item, which the pen and the baseline include. The item origin by default. */
+  itemOriginPx?: CanvasItemPoint;
 }
 
 /**
@@ -147,7 +172,7 @@ export function paintSceneFontCanvas(
   tint: Rgba,
   skew: number,
   canvasLayout: CanvasTextCanvasLayout,
-  { strokeWidthPx = 0, quantisesPen = true, penOriginXPx = 0 }: CanvasTextPaintOptions = {}
+  { strokeWidthPx = 0, quantisesPen = true, itemOriginPx = ITEM_ORIGIN }: CanvasTextPaintOptions = {}
 ): HTMLCanvasElement {
   const metrics = layout.fontMetrics;
   if (!isCanvasFontMetrics(metrics)) {
@@ -210,9 +235,15 @@ export function paintSceneFontCanvas(
     ctx.restore();
   };
 
+  // The raster starts at the whole item pixel at or before the run origin, where its quad sits.
+  const snap = itemPixelSnap({ quantisesPen, itemOriginPx });
+  const rasterOriginX = itemOriginPx.x - snap.x;
+  const rasterOriginY = itemOriginPx.y - snap.y;
   layout.lines.forEach((line, lineIndex) => {
-    const lineTopPx = lineIndex * layout.linePitchPx;
-    const baselineY = canvasLayout.offsetYPx + lineTopPx + baselineOffsetPx;
+    const lineBaselinePx = lineIndex * layout.linePitchPx + baselineOffsetPx;
+    const baselineY =
+      canvasLayout.offsetYPx +
+      (quantisesPen ? Math.floor(itemOriginPx.y + lineBaselinePx) - rasterOriginY : lineBaselinePx);
 
     ctx.save();
     // A contour line draws under the identity transform, so its stroke keeps its width in every direction.
@@ -221,7 +252,7 @@ export function paintSceneFontCanvas(
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
       const penX =
         canvasLayout.offsetXPx +
-        (quantisesPen ? canvasGlyphPenXPx(penOriginXPx + gp.x, fontSizePx) - penOriginXPx : gp.x);
+        (quantisesPen ? canvasGlyphPenXPx(itemOriginPx.x + gp.x, fontSizePx) - rasterOriginX : gp.x);
       // A glyph shaped with no growth, in a layout that is not sheared, stays on its plain ring.
       const hasVariedGlyph = skew !== 0 || gp.emboldenGrowthPx;
       const contours = contoursOf && hasVariedGlyph ? contoursOf(gp.char) : null;

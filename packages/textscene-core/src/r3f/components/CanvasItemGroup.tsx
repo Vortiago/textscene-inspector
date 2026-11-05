@@ -1,10 +1,10 @@
 /**
- * A positioning group inside a canvas item that keeps the item's canvas key. three
- * takes `groupOrder` from the nearest `Group` (r187 `WebGLRenderer.js:1881-1883`), so a
+ * A positioning group inside a canvas item that keeps the item's canvas key and its local origin.
+ * three takes `groupOrder` from the nearest `Group` (r187 `WebGLRenderer.js:1881-1883`), so a
  * bare group resets the key to 0 and its pixels fall behind the background, while a
  * `mesh.renderOrder` test passes. `paintGroupConformance.test.ts` rejects a bare group.
  */
-import { createContext, forwardRef, useContext, type ComponentProps, type ReactNode } from 'react';
+import { createContext, forwardRef, useContext, useMemo, type ComponentProps, type ReactNode } from 'react';
 import type * as THREE from 'three';
 
 /** Exactly what R3F's intrinsic `<group>` accepts. */
@@ -12,6 +12,16 @@ type GroupProps = ComponentProps<'group'>;
 
 const CanvasKeyContext = createContext(0);
 CanvasKeyContext.displayName = 'CanvasKeyContext';
+
+/** A point in the item's own coordinates, Godot px with +Y down. */
+export interface CanvasItemPoint {
+  x: number;
+  y: number;
+}
+
+const ITEM_START: CanvasItemPoint = { x: 0, y: 0 };
+const CanvasOriginContext = createContext(ITEM_START);
+CanvasOriginContext.displayName = 'CanvasOriginContext';
 
 /**
  * The enclosing canvas item's draw-order key, published where an item's wrapper
@@ -21,8 +31,41 @@ export function useCanvasItemKey(): number {
   return useContext(CanvasKeyContext);
 }
 
-export function CanvasItemKeyProvider({ value, children }: { value: number; children: ReactNode }) {
-  return <CanvasKeyContext.Provider value={value}>{children}</CanvasKeyContext.Provider>;
+/**
+ * Where this point of the tree sits in the enclosing item's own coordinates: the sum of the
+ * `<CanvasItemGroup>` positions since the item began. Godot floors a glyph's origin in these
+ * coordinates (`text_server_adv.cpp:4082-4084`).
+ */
+export function useCanvasItemOrigin(): CanvasItemPoint {
+  return useContext(CanvasOriginContext);
+}
+
+/** Starts a canvas item: publishes its draw-order key, and its own coordinates begin at 0 here. */
+export function CanvasItemProvider({ value, children }: { value: number; children: ReactNode }) {
+  return (
+    <CanvasKeyContext.Provider value={value}>
+      <CanvasOriginContext.Provider value={ITEM_START}>{children}</CanvasOriginContext.Provider>
+    </CanvasKeyContext.Provider>
+  );
+}
+
+/**
+ * The item point a group at `position` moves its children to. Only the translation counts: the one
+ * rotated and scaled group inside an item is `ControlCanvasWalker`'s pivot pair, whose two
+ * positions cancel.
+ */
+function useOriginPast(position: GroupProps['position']): CanvasItemPoint {
+  const origin = useCanvasItemOrigin();
+  const [dx, dy] =
+    !position || typeof position === 'number'
+      ? [0, 0]
+      : 'isVector3' in position
+        ? [position.x, position.y]
+        : position;
+  const x = origin.x + dx;
+  const y = origin.y - dy;
+  // Keyed by the numbers, as a tuple `position` is a new array on every render.
+  return useMemo(() => ({ x, y }), [x, y]);
 }
 
 /**
@@ -37,9 +80,12 @@ export const CanvasItemGroup = forwardRef<THREE.Group, GroupProps>(function Canv
 ) {
   const inherited = useCanvasItemKey();
   const canvasKey = renderOrder ?? inherited;
+  const origin = useOriginPast(props.position);
   return (
     <group ref={ref} renderOrder={canvasKey} {...props}>
-      <CanvasKeyContext.Provider value={canvasKey}>{children}</CanvasKeyContext.Provider>
+      <CanvasKeyContext.Provider value={canvasKey}>
+        <CanvasOriginContext.Provider value={origin}>{children}</CanvasOriginContext.Provider>
+      </CanvasKeyContext.Provider>
     </group>
   );
 });
