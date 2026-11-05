@@ -15,21 +15,14 @@ import {
   scrollBarGrabberGeometry,
   scrollBarGrabberRect,
   scrollBarMinimumSize,
+  type ScrollBarPlacement,
 } from '../shared/scrollBarSolver';
 import type { GraphScrollBounds } from './minimap';
 import type { Vector2 } from '../../../../godot/math/vector';
 
-export interface GraphEditScrollBar {
-  visible: boolean;
-  /** The bar's own rect in GraphEdit's local space. */
-  rect: Rect2;
-  /** The grabber's rect, relative to the bar's own origin. */
-  grabberRect: Rect2;
-}
-
 interface GraphEditScrollBars {
-  horizontal: GraphEditScrollBar;
-  vertical: GraphEditScrollBar;
+  horizontal: ScrollBarPlacement;
+  vertical: ScrollBarPlacement;
 }
 
 /** `Range::get_as_ratio()`'s own CLAMP (`range.cpp:308-324`); neither bar is ever `exp_edit`. */

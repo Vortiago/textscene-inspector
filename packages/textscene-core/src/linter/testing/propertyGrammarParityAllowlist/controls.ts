@@ -55,10 +55,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'meta_underlined',
       // Custom BBCode effect resources, which change how their spans draw.
       'custom_effects',
-      // Scroll state decides which part of a long document is on screen, and
-      // whether a scrollbar is drawn beside it.
-      'scroll_active',
-      'scroll_following',
+      // The scroll position that follows `visible_characters`.
       'scroll_following_visible_characters',
       // The typewriter reveal, as on Label.
       'visible_characters',
@@ -66,7 +63,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'visible_ratio',
     ],
     reason:
-      'Shaping, BiDi, selection and threaded layout have no frozen-frame surface; document alignment, span underlines, custom effects, scroll position and the visible-character reveal all change the frame and are not implemented yet.',
+      'Shaping, BiDi, selection and threaded layout have no frozen-frame surface; document alignment, span underlines, custom effects, the scroll position that follows the reveal and the visible-character reveal all change the frame and are not implemented yet.',
   },
 
   ScrollContainer: {

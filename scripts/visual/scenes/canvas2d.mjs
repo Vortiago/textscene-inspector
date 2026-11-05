@@ -923,6 +923,9 @@ export const CANVAS_2D_SCENES = [
   { name: 'rich-text-label-fractional-box', file: 'unit-rich-text-label-fractional-box.tscn', mode: '2d' },
   { name: 'rich-text-label-fill', file: 'unit-rich-text-label-fill.tscn', mode: '2d' },
   { name: 'rich-text-label-clip', file: 'unit-rich-text-label-clip.tscn', mode: '2d' },
+  { name: 'rich-text-label-scrollbar', file: 'unit-rich-text-label-scrollbar.tscn', mode: '2d' },
+  { name: 'rich-text-label-scrollbar-rtl', file: 'unit-rich-text-label-scrollbar-rtl.tscn', mode: '2d' },
+  { name: 'rich-text-label-scrollbar-following', file: 'unit-rich-text-label-scrollbar-following.tscn', mode: '2d' },
   { name: 'label-fill-paragraphs', file: 'unit-label-fill-paragraphs.tscn', mode: '2d' },
   // Each scene below moves one property no other scene authors. Godot 4.6.3
   // `--mode 2d`: 0.005 to 0.342 of 255.

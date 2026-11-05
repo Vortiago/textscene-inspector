@@ -36,6 +36,8 @@ export function parseRichTextLabel(
     justificationFlags:
       parseOptionalInt(properties.justification_flags, 'int64') ?? DEFAULT_JUSTIFICATION_FLAGS,
     clipContents: boolSlotValue(properties.clip_contents) ?? true,
+    scrollActive: boolSlotValue(properties.scroll_active) ?? true,
+    scrollFollowing: boolSlotValue(properties.scroll_following) === true,
   };
   if (properties.text !== undefined) result.text = unquoteString(properties.text);
   result.bbcodeEnabled = boolSlotValue(properties.bbcode_enabled) === true;

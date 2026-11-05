@@ -49,11 +49,8 @@ import {
 } from './minimap';
 import { GraphEditMinimapChrome } from './MinimapChrome';
 import { minimapConnectionsOf } from './minimapConnections';
-import { graphEditScrollBars, type GraphEditScrollBar } from './scrollBars';
-import {
-  snappedControlOrigin,
-  type ControlDrawTransform,
-} from '../../../../r3f/controls/native/controlPixelSnap';
+import { graphEditScrollBars } from './scrollBars';
+import { ScrollBarChrome, SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET } from '../shared/ScrollBarChrome';
 import type { GraphEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 
@@ -162,48 +159,6 @@ function GridDotQuad({
         opacity={colorQuad.opacity}
         renderOrder={renderOrder}
       />
-    </CanvasItemGroup>
-  );
-}
-
-/** No bar has an authored rotation, scale or pivot: `set_anchor_and_offset` alone places each (`graph_edit.cpp:844-851`). */
-const SCROLL_BAR_DRAW_TRANSFORM: ControlDrawTransform = {
-  rotation: 0,
-  scale: { x: 1, y: 1 },
-  pivot: { x: 0, y: 0 },
-};
-
-/** One of GraphEdit's own scrollbars: `ScrollBar::_notification(NOTIFICATION_DRAW)`'s track then grabber (`scroll_bar.cpp:295-344`). */
-function ScrollBarChrome({
-  bar,
-  track,
-  grabber,
-  color,
-  renderOrder,
-  snapToPixels,
-}: {
-  bar: GraphEditScrollBar;
-  track: StyleBoxFlatData;
-  grabber: StyleBoxFlatData;
-  color: NativeControlComponentProps['tint']['own'];
-  renderOrder: number;
-  snapToPixels: boolean;
-}) {
-  if (!bar.visible) return null;
-  // Each bar is its own CanvasItem, so its translation is floored on its own
-  // (the PIXEL SNAP doc of `scrollcontainer/Component.tsx`).
-  const origin = snappedControlOrigin(bar.rect, SCROLL_BAR_DRAW_TRANSFORM, snapToPixels);
-  return (
-    <CanvasItemGroup position={[origin.x, -origin.y, 0]}>
-      <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={renderOrder} />
-      <CanvasItemGroup position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}>
-        <StyleBoxQuad
-          styleBox={grabber}
-          color={color}
-          rect={bar.grabberRect}
-          renderOrder={renderOrder + 0.05}
-        />
-      </CanvasItemGroup>
     </CanvasItemGroup>
   );
 }
@@ -375,7 +330,8 @@ export function GraphEdit({
           track={theme.widgets.scrollBar.scrollHorizontal}
           grabber={theme.widgets.scrollBar.grabber}
           color={tint.own}
-          renderOrder={subtreeChromeRenderOrder + 0.25}
+          renderOrder={subtreeChromeRenderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET}
+          grabberRenderOrder={subtreeChromeRenderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET + 0.05}
           snapToPixels={snapToPixels}
         />
         <ScrollBarChrome
@@ -383,7 +339,8 @@ export function GraphEdit({
           track={theme.widgets.scrollBar.scrollVertical}
           grabber={theme.widgets.scrollBar.grabber}
           color={tint.own}
-          renderOrder={subtreeChromeRenderOrder + 0.25}
+          renderOrder={subtreeChromeRenderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET}
+          grabberRenderOrder={subtreeChromeRenderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET + 0.05}
           snapToPixels={snapToPixels}
         />
 

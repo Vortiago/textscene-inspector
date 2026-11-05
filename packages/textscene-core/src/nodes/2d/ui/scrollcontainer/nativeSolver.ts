@@ -20,7 +20,11 @@ import type {
   SolveContext,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
-import { scrollBarGrabberGeometry, scrollBarMinimumSize } from '../shared/scrollBarSolver';
+import {
+  scrollBarGrabberGeometry,
+  scrollBarMinimumSize,
+  type ScrollBarPlacement,
+} from '../shared/scrollBarSolver';
 import type { ScrollContainerProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
@@ -125,15 +129,6 @@ export const scrollContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const margins = scrollContainerMargins(n, ctx.theme);
   return { x: x + margins.left + margins.right, y: y + margins.top + margins.bottom };
 };
-
-export interface ScrollBarPlacement {
-  /** `ScrollBar::is_visible()` per `_update_scrollbars` (`scroll_container.cpp:592-593`). */
-  visible: boolean;
-  /** This bar's own rect, relative to the ScrollContainer's own top-left (`_update_scrollbar_position`). */
-  rect: Rect2;
-  /** The grabber StyleBox's rect, relative to THIS bar's own top-left (`scroll_bar.cpp`'s `NOTIFICATION_DRAW`). */
-  grabberRect: Rect2;
-}
 
 /**
  * `scroll_hint_vertical.svg`/`scroll_hint_horizontal.svg` (`scene/theme/icons/`) are 32x24 and

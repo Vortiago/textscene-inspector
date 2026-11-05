@@ -4026,6 +4026,21 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Rich Text Label Scrollbar Following",
+    "file": "unit-rich-text-label-scrollbar-following.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Scrollbar Rtl",
+    "file": "unit-rich-text-label-scrollbar-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Scrollbar",
+    "file": "unit-rich-text-label-scrollbar.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Rich Text Label Style Fonts",
     "file": "unit-rich-text-label-style-fonts.tscn",
     "category": "Unit - 2D UI Controls"

@@ -37,6 +37,9 @@ import { visualChars } from '../../../../r3f/controls/native/text/textLayout.tes
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
+/** A box height above every text here, so no line starts below it. */
+const TALL_BOX_PX = 1000;
+
 const ALL_STYLES = [
   { bold: false, italic: false },
   { bold: true, italic: false },
@@ -51,6 +54,8 @@ type StyledTextRun = ReturnType<typeof styledTextRuns>[number];
 const PARSED_DEFAULTS = {
   justificationFlags: 163,
   clipContents: true,
+  scrollActive: true,
+  scrollFollowing: false,
   textDirection: 0,
   language: '',
   structuredTextBidiOverride: 0,
@@ -1485,7 +1490,7 @@ describe('RichTextLabel paragraph alignment', () => {
     // "Threat level" at 16px shapes to a ceiled line width of 92 (`textLayout.test.ts`).
     function offsetX(alignment: number, boxWidthPx: number): number {
       const { runs, layout } = singleRun('Threat level', alignment);
-      return layoutRichTextRuns(runs, layout, { boxWidthPx, boxHeightPx: 0 })[0]!.lineOffsetXPx;
+      return layoutRichTextRuns(runs, layout, { boxWidthPx, boxHeightPx: TALL_BOX_PX })[0]!.lineOffsetXPx;
     }
 
     it('leaves LEFT at the box origin', () => {
@@ -1567,6 +1572,26 @@ describe('RichTextLabel paragraph alignment', () => {
       expect(lineTops('A', 3, 300)).toEqual([0]);
     });
 
+    // A 160x40 label with `clip_contents` false and `scroll_active` false draws two of its lines,
+    // tops 0 and 23: the third starts at 46, below the box (`pnpm ref:godot`).
+    it('draws no line whose top is at or below the bottom of the box (rich_text_label.cpp:973)', () => {
+      expect(lineTops('A\nB\nC', 0, 40)).toEqual([0, 23]);
+      expect(lineTops('A\nB\nC', 0, 46)).toEqual([0, 23]);
+      expect(lineTops('A\nB\nC', 0, 46.5)).toEqual([0, 23, 46]);
+    });
+
+    // A 160x40 label with `scroll_following` shows 69 - 40 = 29 rows up: the first line, rows -29
+    // to -6, is gone, and the others start at -6 and 17.
+    it('shifts every line up by the scroll offset and skips a line that ends above the box (rich_text_label.cpp:978-981)', () => {
+      const { runs, layout } = singleRun('A\nB\nC', 0);
+      const placements = layoutRichTextRuns(runs, layout, {
+        boxWidthPx: 0,
+        boxHeightPx: 40,
+        scrollOffsetPx: 29,
+      });
+      expect(placements.map((p) => p.lineTopPx)).toEqual([-6, 17]);
+    });
+
     it('stays TOP-aligned when the text is TALLER than its box, whatever the alignment', () => {
       // `:1630`'s `text_rect.size.y > total_height` guard. Label has none and
       // pulls its text upward here.
@@ -1625,7 +1650,7 @@ describe('RichTextLabel FILL justification', () => {
     const layout = shapeRuns(runs, { boxWidthPx, autowrapMode });
     const placements = layoutRichTextRuns(runs, layout, {
       boxWidthPx,
-      boxHeightPx: 0,
+      boxHeightPx: TALL_BOX_PX,
       justification: { flags, fontSizePx: FONT_SIZE },
     });
     const widths: number[] = [];
@@ -1682,7 +1707,7 @@ describe('layoutRichTextRuns run attribution', () => {
       textRun({ text: 'a\n', fontSizePx: FONT_SIZE }),
       textRun({ text: 'b', fontSizePx: FONT_SIZE, bold: true }),
     ];
-    const placements = layoutRichTextRuns(runs, shapeRuns(runs), { boxWidthPx: 0, boxHeightPx: 0 });
+    const placements = layoutRichTextRuns(runs, shapeRuns(runs), { boxWidthPx: 0, boxHeightPx: TALL_BOX_PX });
     expect(placements.map((p) => [p.lineIndex, p.layout.lines[0]!.text])).toEqual([
       [0, 'a​'],
       [1, 'b'],
@@ -1725,7 +1750,8 @@ describe('RichTextLabel paragraph direction', () => {
     // "Threat level" at 16px shapes to a ceiled line width of 92 (`textLayout.test.ts`).
     function offsetX(alignment: number, direction: number, text = 'Threat level'): number {
       const runs = [textRun({ text, fontSizePx: FONT_SIZE, alignment, bidi: { direction } })];
-      return layoutRichTextRuns(runs, shapeRuns(runs), { boxWidthPx: 200, boxHeightPx: 0 })[0]!.lineOffsetXPx;
+      return layoutRichTextRuns(runs, shapeRuns(runs), { boxWidthPx: 200, boxHeightPx: TALL_BOX_PX })[0]!
+        .lineOffsetXPx;
     }
 
     it('starts an RTL LEFT or FILL line at the right edge', () => {
@@ -1753,7 +1779,7 @@ describe('RichTextLabel paragraph direction', () => {
       textRun({ text: 'Threat level', fontSizePx: FONT_SIZE, alignment: 0 }),
     ];
     const layout = shapeRuns(runs, { boxWidthPx: 100, autowrapMode: AutowrapMode.AUTOWRAP_WORD_SMART });
-    const placements = layoutRichTextRuns(runs, layout, { boxWidthPx: 100, boxHeightPx: 0 });
+    const placements = layoutRichTextRuns(runs, layout, { boxWidthPx: 100, boxHeightPx: TALL_BOX_PX });
     expect(placements.map((p) => [p.lineIndex, p.lineOffsetXPx])).toEqual([
       [0, 4],
       [1, 4],
