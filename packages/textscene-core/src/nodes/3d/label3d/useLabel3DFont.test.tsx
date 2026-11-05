@@ -116,10 +116,13 @@ async function settle() {
   });
 }
 
-/** Settles one throwaway load, which wakes every reader of the font settle count. */
-async function notifySceneFontSettled() {
+/** Settles one throwaway load inside `act`, which wakes every reader of the font settle count. */
+async function settleThrowawayFontLoad() {
   const { createSettledPeek } = await import('../../../r3f/controls/native/text/settledChannel');
-  createSettledPeek<object, null>()({}, async () => null);
+  await act(async () => {
+    createSettledPeek<object, null>()({}, async () => null);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 }
 
 beforeEach(async () => {
@@ -355,8 +358,7 @@ describe('useLabel3DFont mip chain while a chain face reloads', () => {
       { font: null, metrics: bundled.metrics },
       { font: mipmappedFont, metrics: fallback },
     ];
-    await notifySceneFontSettled();
-    await settle();
+    await settleThrowawayFontLoad();
 
     expect(result.current?.fallbackMipmaps.get(fallback)).toBe(true);
   });

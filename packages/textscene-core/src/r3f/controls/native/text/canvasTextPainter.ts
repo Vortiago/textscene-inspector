@@ -101,7 +101,15 @@ export function computeCanvasTextCanvasLayout(
 }
 
 /**
- * The span of the ink of the glyphs, their pen boxes and the pen snap included, as Godot draws each
+ * Whole pixels past a glyph's reach that its drawn ink can land. The painter floors a pen by up to
+ * 1 px (`canvasGlyphPenXPx`) or rounds it a quarter pixel right, and a hinted outline grid-fits under
+ * half a pixel past its measured box: 1.5 px on the left, 0.75 px on the right.
+ */
+const INK_SLACK_LEFT_PX = 2;
+const INK_SLACK_RIGHT_PX = 1;
+
+/**
+ * The span of the ink of the glyphs, their pen boxes, the pen snap and the hinting included, as Godot draws each
  * glyph quad whole wherever its side bearing reaches (#1376). The run of a fallback face keeps its
  * glyphs at their places on the line (`faceLayouts.ts`), so its raster spans them alone. A layout
  * with no glyph spans its width.
@@ -118,14 +126,6 @@ function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: numb
   }
   return startPx === Infinity ? { startPx: 0, endPx: layout.widthPx } : { startPx, endPx };
 }
-
-/**
- * Whole pixels past a glyph's reach that its drawn ink can land. The painter floors a pen by up to
- * 1 px (`canvasGlyphPenXPx`) or rounds it a quarter pixel right, and a hinted outline grid-fits under
- * half a pixel past its measured box: 1.5 px on the left, 0.75 px on the right.
- */
-const INK_SLACK_LEFT_PX = 2;
-const INK_SLACK_RIGHT_PX = 1;
 
 /**
  * How far `glyph`'s ink reaches left of its pen and right of it, px, its pen box included. A face that

@@ -1081,16 +1081,15 @@ export function layoutRichTextRuns(
   const isFilled = (firstLineIndex: number): boolean =>
     alignmentOfLine(firstLineIndex) === HORIZONTAL_ALIGNMENT_FILL;
   // A label with no FILL paragraph keeps its layout object, so it skips the second attribution.
-  let hasFilledParagraph = false;
-  for (let i = 0; i < unfittedLayout.lines.length; i++) {
-    if (startsParagraph(unfittedLayout.lines, i) && isFilled(i)) hasFilledParagraph = true;
-  }
+  const hasFilledParagraph = unfittedLayout.lines.some(
+    (_, i) => startsParagraph(unfittedLayout.lines, i) && isFilled(i)
+  );
   const flagsOf = (firstLineIndex: number): number => paragraphRunOf(firstLineIndex)?.justificationFlags ?? 0;
   const layout = hasFilledParagraph
     ? fitFilledParagraphs(unfittedLayout, isFilled, flagsOf, boxWidthPx)
     : unfittedLayout;
   // Fitting moves glyphs and keeps their text, so the second attribution reads the same runs.
-  const perLine = layout === unfittedLayout ? unfittedPerLine : attributeRunsToLines(styledRuns, layout);
+  const perLine = hasFilledParagraph ? attributeRunsToLines(styledRuns, layout) : unfittedPerLine;
   const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);
 
   const { vbeginPx, vsepPx } = richTextVerticalOffsets(

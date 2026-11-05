@@ -1900,6 +1900,11 @@ describe('RichTextLabel paragraph direction', () => {
       expect(offsetX(0, RTL)).toBe(108);
     });
 
+    // `_shape_line` fits the line to the box (`text_paragraph.cpp:250-253`), so it fills the box from 0.
+    it('fits an RTL FILL line to the box, which starts it at the left edge', () => {
+      expect(offsetX(3, RTL)).toBe(0);
+    });
+
     // A line with no space has nothing to fit, so FILL keeps the origin LEFT takes.
     it('starts an RTL FILL line where an RTL LEFT line starts', () => {
       expect(offsetX(3, RTL, 'Threat')).toBe(offsetX(0, RTL, 'Threat'));
