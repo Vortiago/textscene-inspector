@@ -4104,6 +4104,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Rich Text Label Font Size Outline",
+    "file": "unit-rich-text-label-font-size-outline.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Rich Text Label Fractional Box",
     "file": "unit-rich-text-label-fractional-box.tscn",
     "category": "Unit - 2D UI Controls"

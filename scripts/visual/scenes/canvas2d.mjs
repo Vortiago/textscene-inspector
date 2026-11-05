@@ -955,6 +955,7 @@ export const CANVAS_2D_SCENES = [
   { name: 'rich-text-label-scrollbar-rtl', file: 'unit-rich-text-label-scrollbar-rtl.tscn', mode: '2d' },
   { name: 'rich-text-label-scrollbar-following', file: 'unit-rich-text-label-scrollbar-following.tscn', mode: '2d' },
   { name: 'rich-text-label-hr', file: 'unit-rich-text-label-hr.tscn', mode: '2d' },
+  { name: 'rich-text-label-font-size-outline', file: 'unit-rich-text-label-font-size-outline.tscn', mode: '2d' },
   { name: 'rich-text-label-paragraph-justification', file: 'unit-rich-text-label-paragraph-justification.tscn', mode: '2d' },
   { name: 'rich-text-label-paragraph-tab-stops', file: 'unit-rich-text-label-paragraph-tab-stops.tscn', mode: '2d' },
   { name: 'rich-text-label-empty-styling-before-paragraph', file: 'unit-rich-text-label-empty-styling-before-paragraph.tscn', mode: '2d' },
