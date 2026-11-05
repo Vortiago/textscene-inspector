@@ -14,7 +14,12 @@ import { multiplyModulate } from '../../canvasItemModulate';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
 import { drawnLinesInBox, textParagraphLineShiftPx } from './text/lineDrawClip';
-import { shapeText, type TextLayoutResult, type TextLineLayout } from './text/textLayout';
+import {
+  shapeText,
+  shapedTextSizeWidthPx,
+  type TextLayoutResult,
+  type TextLineLayout,
+} from './text/textLayout';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { type Rgba } from '../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
@@ -105,7 +110,7 @@ export function shapeButtonLabel(
  * The ascent is a whole pixel, so the floor moves ahead of it. Unfloored, a half
  * pixel lands on a boundary WebGL resolves upward, a row above Godot.
  */
-export function centredTextTopPx(boxHeightPx: number, textHeightPx: number, topInsetPx: number): number {
+function centredTextTopPx(boxHeightPx: number, textHeightPx: number, topInsetPx: number): number {
   return Math.floor((boxHeightPx - textHeightPx) / 2 + topInsetPx);
 }
 
@@ -148,9 +153,23 @@ interface ButtonTextLayout {
   boxLeftPx: number;
 }
 
+/** The paragraph box a Button-family label draws in, local to the control, Godot px. */
+export interface ButtonLabelBox {
+  /** The box's left edge before alignment: the margins and whatever the icon or the check reserves. */
+  leftPx: number;
+  /** The first line's top. */
+  topPx: number;
+  /** `drawable_size_remained.width` (`button.cpp:428`), before the ceiling. */
+  widthPx: number;
+  /** `align_rtl_checked`, the alignment after the RTL side swap (`button.cpp:271-275`). */
+  alignment: number;
+}
+
 interface ButtonContentLayout {
   icon: ButtonIconLayout | null;
   text: ButtonTextLayout | null;
+  /** The label's paragraph box, `null` without text. `<ButtonLabel>` draws the label in it. */
+  labelBox: ButtonLabelBox | null;
   /** `drawable_size_remained` (`button.cpp:332-352,428`): the label's box after margins and the icon. A wrapping label re-shapes at `Math::ceil(MAX(1, drawableSize.x))`. */
   drawableSize: Vector2;
 }
@@ -285,14 +304,56 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     textLayout = { offset: { x: textOffsetX, y: textOffsetY }, boxLeftPx };
   }
 
-  return { icon: iconLayout, text: textLayout, drawableSize: { x: drawableWidth, y: drawableHeight } };
+  const labelBox = textLayout && {
+    leftPx: textLayout.boxLeftPx,
+    topPx: textLayout.offset.y,
+    widthPx: drawableWidth,
+    alignment: textAlign,
+  };
+  return {
+    icon: iconLayout,
+    text: textLayout,
+    labelBox,
+    drawableSize: { x: drawableWidth, y: drawableHeight },
+  };
+}
+
+/**
+ * The label box of a Button-family Control that reserves `reservedPx` (its check, toggle or arrow plus
+ * `h_separation`) on one side, as `_internal_margin` does (`button.cpp:247-260`). Under RTL the
+ * reservation changes sides at the caller and the alignment swaps here (`button.cpp:271-275`).
+ */
+export function reservedLabelBox(input: {
+  rectSize: Vector2;
+  margin: { left: number; top: number; right: number; bottom: number };
+  reservedPx: number;
+  isReservedOnLeft: boolean;
+  textHeightPx: number;
+  textAlignment: number;
+  rtl: boolean;
+}): ButtonLabelBox {
+  const { rectSize, margin, reservedPx, isReservedOnLeft, textHeightPx, textAlignment, rtl } = input;
+  return {
+    leftPx: margin.left + (isReservedOnLeft ? reservedPx : 0),
+    topPx: centredTextTopPx(rectSize.y - margin.top - margin.bottom, textHeightPx, margin.top),
+    widthPx: rectSize.x - margin.left - margin.right - reservedPx,
+    alignment: rtl ? swapAlignmentSide(textAlignment) : textAlignment,
+  };
 }
 
 /** `button.cpp:266-275`: LEFT and RIGHT trade places under RTL, and any other value stays. */
-export function swapAlignmentSide(alignment: number): number {
+function swapAlignmentSide(alignment: number): number {
   if (alignment === H_RIGHT) return H_LEFT;
   if (alignment === H_LEFT) return H_RIGHT;
   return alignment;
+}
+
+/**
+ * A Button-family label's width contribution to the minimum size: the ceiled shaped width, or 0 under
+ * `clip_text` (`button.cpp:493-495`), since a narrower box cuts the label.
+ */
+export function textMinimumWidthPx(measuredWidthPx: number, isClipText: boolean | undefined): number {
+  return isClipText ? 0 : shapedTextSizeWidthPx(measuredWidthPx);
 }
 
 /** `button.cpp:428,432`: the paragraph box width, the drawable width ceiled to a whole pixel. */
@@ -317,11 +378,7 @@ function textBoxOffsetPx(drawableWidthPx: number, alignment: number): number {
  * which this shaper never produces.
  * @param contentWidthPx `shaped_text_get_width`, ceiled (`text_server_adv.cpp:7561-7570`).
  */
-export function buttonTextAlignShiftPx(
-  contentWidthPx: number,
-  drawableWidthPx: number,
-  alignment: number
-): number {
+function buttonTextAlignShiftPx(contentWidthPx: number, drawableWidthPx: number, alignment: number): number {
   return (
     textBoxOffsetPx(drawableWidthPx, alignment) +
     textParagraphLineShiftPx(contentWidthPx, textBufWidthPx(drawableWidthPx), alignment, false)
@@ -336,7 +393,7 @@ export interface ButtonDrawnLine {
 
 /**
  * The label lines as `TextParagraph::draw` paints them in the Button's paragraph box, so
- * an overlong line or wrapped word stays inside it. Only `<Button>` calls it so far.
+ * an overlong line or wrapped word stays inside it. `<ButtonLabel>` calls it.
  */
 export function buttonDrawnLabel(
   lines: readonly TextLineLayout[],

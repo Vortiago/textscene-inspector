@@ -953,6 +953,10 @@ export const CANVAS_2D_SCENES = [
   { name: 'button-autowrap', file: 'unit-button-autowrap.tscn', mode: '2d' },
   // A Button label line wider than its paragraph box.
   { name: 'button-clip-text', file: 'unit-button-clip-text.tscn', mode: '2d' },
+  // A CheckBox, CheckButton, OptionButton and MenuButton label wider than its paragraph box.
+  { name: 'button-family-clip-text', file: 'unit-button-family-clip-text.tscn', mode: '2d' },
+  // A MenuButton label wrapped by autowrap_mode and trimmed by text_overrun_behavior.
+  { name: 'menu-button-wrap-trim', file: 'unit-menu-button-wrap-trim.tscn', mode: '2d' },
   // A Polygon2D below a plain Node below a hidden Node2D: its visibility comes from the Window.
   { name: 'canvas-root-visibility', file: 'unit-canvas-root-visibility.tscn', mode: '2d' },
 

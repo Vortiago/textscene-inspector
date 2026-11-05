@@ -97,7 +97,7 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
     expect(result).toEqual({ x: 8, y: 8 });
   });
 
-  it('clip_text zeroes the text width contribution, leaving only the margin (button.cpp:492-494)', () => {
+  it('clip_text zeroes the text width contribution, leaving only the margin (button.cpp:493-495)', () => {
     const result = minSize(node({ text: 'AB', clipText: true }), ctx());
     expect(result.x).toBe(8);
     expect(result.y).toBe(8 + FONT_HEIGHT);

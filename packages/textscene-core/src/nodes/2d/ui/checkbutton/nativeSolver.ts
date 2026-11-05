@@ -18,11 +18,11 @@ import type {
 import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
-  buttonTextAlignShiftPx,
-  centredTextTopPx,
   fitIconSize,
-  swapAlignmentSide,
+  reservedLabelBox,
+  textMinimumWidthPx,
   tintColor,
+  type ButtonLabelBox,
 } from '../../../../r3f/controls/native/buttonBase';
 import {
   resolveTextTheme,
@@ -33,7 +33,6 @@ import {
 import type { CheckButtonIcons } from '../../../../r3f/controls/native/themeIcons';
 import { CHECK_BUTTON_ICON_NATURAL_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { CheckButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
@@ -209,9 +208,6 @@ export function checkButtonCheckVOffset(constants: SolveNode['constants']): numb
   return constants.check_v_offset ?? 0;
 }
 
-/** CheckButton's default text alignment is LEFT (`check_button.cpp:169`), over Button's CENTER. A scene's `alignment` still wins. */
-export const CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT = 0;
-
 /**
  * `CheckButton::get_minimum_size` (`check_button.cpp:64-79`): Button's text-only floor plus the icon's
  * width, and `h_separation` only with text. Not `buttonMinimumSize`, whose flat stylebox is Button's:
@@ -232,7 +228,8 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   // extent. The icon and separation are added outside the ceil (`check_button.cpp:66-77`).
   const measured =
     hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
-  const textSize = { x: shapedTextSizeWidthPx(measured.x), y: measured.y };
+  // `clip_text` zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
+  const textSize = { x: textMinimumWidthPx(measured.x, props.clipText), y: measured.y };
 
   const iconSize = fitIconSize(
     checkButtonIconNaturalSize(n, state === 'disabled', n.rtl),
@@ -256,10 +253,10 @@ interface CheckButtonContentInput {
   checkVOffset: number;
   hSeparation: number;
   hasText: boolean;
+  /** The shaped label's height, ignored when `hasText` is false. */
+  textHeightPx: number;
   /** Text `alignment` (`HorizontalAlignment`). CheckButton's default is LEFT. */
   textAlignment: number;
-  /** The shaped text's natural (unwrapped) size, ignored when `hasText` is false. */
-  textNaturalSize: Vector2;
   /** `Control::is_layout_rtl()` (`SolveNode.rtl`): moves the toggle to the left edge and swaps the label's alignment side. */
   rtl: boolean;
 }
@@ -267,8 +264,8 @@ interface CheckButtonContentInput {
 interface CheckButtonContentLayout {
   /** The icon's top-left, local to the control's own top-left, Godot px. */
   iconPosition: Vector2;
-  /** The text paragraph's box top-left, local Godot px. `null` when there is no text. */
-  textOffset: Vector2 | null;
+  /** The label's paragraph box. `null` when there is no text. */
+  labelBox: ButtonLabelBox | null;
 }
 
 /**
@@ -286,8 +283,8 @@ export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckB
     checkVOffset,
     hSeparation,
     hasText,
+    textHeightPx,
     textAlignment,
-    textNaturalSize,
     rtl,
   } = input;
 
@@ -296,18 +293,16 @@ export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckB
     x: rtl ? marginX : rectSize.x - (iconSize.x + marginX),
     y: (rectSize.y - iconSize.y) / 2 + checkVOffset,
   };
+  if (!hasText) return { iconPosition, labelBox: null };
 
-  let textOffset: Vector2 | null = null;
-  if (hasText) {
-    const reserved = iconSize.x + hSeparation;
-    const textBoxWidth = rectSize.x - 2 * marginX - reserved;
-    const customElementHeight = rectSize.y - 2 * marginY;
-    const align = rtl ? swapAlignmentSide(textAlignment) : textAlignment;
-    const shiftX = buttonTextAlignShiftPx(textNaturalSize.x, textBoxWidth, align);
-    const x = marginX + (rtl ? reserved : 0) + shiftX;
-    const y = centredTextTopPx(customElementHeight, textNaturalSize.y, marginY);
-    textOffset = { x, y };
-  }
-
-  return { iconPosition, textOffset };
+  const labelBox = reservedLabelBox({
+    rectSize,
+    margin: { left: marginX, top: marginY, right: marginX, bottom: marginY },
+    reservedPx: iconSize.x + hSeparation,
+    isReservedOnLeft: rtl,
+    textHeightPx,
+    textAlignment,
+    rtl,
+  });
+  return { iconPosition, labelBox };
 }
