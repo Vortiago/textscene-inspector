@@ -125,7 +125,8 @@ function defaultFontCandidates(
   const themed = projectTheme
     ? nativeTypeChain(fontClass).map((type) => fontInTheme(projectTheme, type, 'font'))
     : [];
-  return [...themed.filter((found) => found !== undefined), projectDefaultFont];
+  // A theme with a `default_font` answers it for every type: one entry is enough.
+  return [...new Set([...themed.filter((found) => found !== undefined), projectDefaultFont])];
 }
 
 /** Stands in for a null project theme or project font as a cache key. */

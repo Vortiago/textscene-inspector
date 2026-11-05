@@ -32,6 +32,16 @@ describe('findDrawnFace', () => {
     expect(findDrawnFace(variationOver(FACELESS_FONT))).toBe(NO_FACE);
   });
 
+  // `font.cpp:104-116`: a fallback with no RID adds none, so the next fallback draws.
+  it('passes a fallback with no face, and draws the next', () => {
+    const leaf = fontFile(new ArrayBuffer(4));
+    expect(findDrawnFace(fontFile(undefined, [FACELESS_FONT, leaf]))).toBe(leaf);
+  });
+
+  it('is no face for a file whose every fallback has no face', () => {
+    expect(findDrawnFace(fontFile(undefined, [FACELESS_FONT]))).toBe(NO_FACE);
+  });
+
   it('is a FontFile that carries its own bytes, or a BMFont', () => {
     const leaf = fontFile(new ArrayBuffer(4));
     const bitmap = fontResourceFromBitmap(testBitmapFont(), {});

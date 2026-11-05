@@ -43,18 +43,21 @@ export type DrawnFace = FileWithBytes | FileWithBitmap | typeof BUNDLED_FACE | t
 /**
  * Depth first: `FontVariation` to `baseFont`, `FontFile` to itself when it has glyphs, else the first
  * `fallbacks` entry that draws. A font with no face of its own stops the walk at the bundled face, as
- * its RID draws before the next fallback (`font.cpp:104-116`).
+ * its RID draws before the next fallback (`font.cpp:104-116`). A fallback with no face has no RID,
+ * so the walk passes it, and a chain of only those draws `NO_FACE`.
  */
 export function findDrawnFace(font: FontResource | null | undefined): DrawnFace {
   if (!font || font.kind === 'system') return BUNDLED_FACE;
   if (font.kind === 'variation') return findDrawnFace(font.baseFont);
   if (font === FACELESS_FONT) return NO_FACE;
   if (hasGlyphs(font)) return font;
+  let isFacelessChain = false;
   for (const fallback of font.fallbacks) {
     const face = findDrawnFace(fallback);
-    if (face) return face;
+    if (face === NO_FACE) isFacelessChain = true;
+    else if (face) return face;
   }
-  return null;
+  return isFacelessChain ? NO_FACE : null;
 }
 
 /**

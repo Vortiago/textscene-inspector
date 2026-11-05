@@ -10,6 +10,7 @@ import type { FontFileResource, FontResource } from './types';
 import { perObject } from '../../../utils/perObject';
 import {
   FACELESS_FONT,
+  NO_FACE,
   findDrawnFace,
   hasGlyphs,
 } from '../../../r3f/controls/native/text/sceneFontResolution';
@@ -80,7 +81,7 @@ function replaceDefaults(font: FontResource, defaults: DefaultFonts, depth: numb
   }
 }
 
-/** Up to the first fallback that draws: the walk never reaches the fallbacks after it. */
+/** Up to the first fallback that draws a face: the walk passes one with no face, and never reaches the fallbacks after a face. */
 function withFallbackDefaults(
   font: FontFileResource,
   defaults: DefaultFonts,
@@ -89,7 +90,8 @@ function withFallbackDefaults(
   const fallbacks = [...font.fallbacks];
   for (const [i, fallback] of fallbacks.entries()) {
     fallbacks[i] = replaceDefaults(fallback, defaults, depth);
-    if (findDrawnFace(fallbacks[i])) break;
+    const face = findDrawnFace(fallbacks[i]);
+    if (face && face !== NO_FACE) break;
   }
   return fallbacks.every((fallback, i) => fallback === font.fallbacks[i]) ? font : { ...font, fallbacks };
 }
@@ -101,6 +103,7 @@ function withFallbackDefaults(
  */
 export function withDefaultFonts(font: FontResource | null, defaults: DefaultFonts): FontResource | null {
   // A file with its own glyphs draws them, and the walk never reaches its fallbacks.
-  if (!font || (font.kind === 'file' && hasGlyphs(font))) return font;
+  // No default changes a font, so the cache would answer `font` itself.
+  if (!font || defaults === NO_DEFAULT_FONTS || (font.kind === 'file' && hasGlyphs(font))) return font;
   return resolvedOver(defaults)(font);
 }
