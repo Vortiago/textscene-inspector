@@ -180,27 +180,15 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
     [props.overrunBehavior]
   );
-  const trims = useMemo(() => {
+  const trimLine = useMemo(() => {
     if (autowrapMode !== AutowrapMode.AUTOWRAP_OFF || !overrunFlags.trim) return undefined;
     const widthPx = labelShapingWidthPx(rect.w);
     const options = { fontMetrics, fontSizePx: textTheme.fontSizePx, ellipsisChar: props.ellipsisChar };
-    return {
-      trimLine: (line: TextLineLayout) => trimLineToWidth(line, widthPx, overrunFlags, options),
-      trimFilledLine: (line: TextLineLayout) =>
-        trimFilledLineToWidth(line, widthPx, overrunFlags, {
-          ...options,
-          justificationFlags: effectiveJustificationFlags,
-        }),
-    };
-  }, [
-    autowrapMode,
-    overrunFlags,
-    rect.w,
-    fontMetrics,
-    textTheme.fontSizePx,
-    props.ellipsisChar,
-    effectiveJustificationFlags,
-  ]);
+    return (line: TextLineLayout, refitFlags?: number) =>
+      refitFlags === undefined
+        ? trimLineToWidth(line, widthPx, overrunFlags, options)
+        : trimFilledLineToWidth(line, widthPx, overrunFlags, { ...options, justificationFlags: refitFlags });
+  }, [autowrapMode, overrunFlags, rect.w, fontMetrics, textTheme.fontSizePx, props.ellipsisChar]);
 
   // Godot aligns each line by its own width (`Label::_get_line_rect`), so each line
   // gets its own box top here, and `<TextRun>` anchors it at the baseline.
@@ -217,7 +205,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
         {
           rtl: solveNode.rtl,
           isAutowrapped: autowrapMode !== AutowrapMode.AUTOWRAP_OFF,
-          ...trims,
+          trimLine,
           lineSpacingPx: textTheme.lineSpacingPx,
           paragraphSpacingPx: textTheme.paragraphSpacingPx,
         }
@@ -234,7 +222,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       textTheme.paragraphSpacingPx,
       solveNode.rtl,
       autowrapMode,
-      trims,
+      trimLine,
     ]
   );
 

@@ -1273,25 +1273,16 @@ describe('layoutLabelLines — the trimmed FILL line fitted again with CONSTRAIN
   const BOX_WIDTH_PX = 100;
   const ELLIPSIS_WIDTH_PX = 13;
   const trimOptions = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 };
+  const ellipsisFlags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
   const filledLineAt = (justificationFlags: number) =>
     layoutLabelLines(layout, BOX_WIDTH_PX, 40, 3, undefined, justificationFlags, 16, {
-      trimLine: (line) =>
-        trimLineToWidth(
-          line,
-          BOX_WIDTH_PX,
-          overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS),
-          trimOptions
-        ),
-      trimFilledLine: (line) =>
-        trimFilledLineToWidth(
-          line,
-          BOX_WIDTH_PX,
-          overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS),
-          {
-            ...trimOptions,
-            justificationFlags,
-          }
-        ),
+      trimLine: (line, refitFlags) =>
+        refitFlags === undefined
+          ? trimLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, trimOptions)
+          : trimFilledLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, {
+              ...trimOptions,
+              justificationFlags: refitFlags,
+            }),
     })[0]!.line;
 
   it('stretches the kept spaces so the ellipsis ends at the box width', () => {

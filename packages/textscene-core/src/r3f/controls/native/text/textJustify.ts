@@ -144,8 +144,8 @@ export function fitTrimmedGlyphsToWidth(
   flags: number,
   fontSizePx: number
 ): GlyphPlacement[] {
-  const untrimmed = { ...line, widthPx: trim.trimmedWidthPx };
-  return fitLineToWidth(untrimmed, widthPx, flags, { fontSizePx, trimPos: trim.trimPos }).glyphs;
+  const lineAtTrimmedWidth = { ...line, widthPx: trim.trimmedWidthPx };
+  return fitLineToWidth(lineAtTrimmedWidth, widthPx, flags, { fontSizePx, trimPos: trim.trimPos }).glyphs;
 }
 
 /** `TS->shaped_text_has_visible_chars` reduced to this engine's charset: any glyph whose own character is not whitespace. */

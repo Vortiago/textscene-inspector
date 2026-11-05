@@ -526,9 +526,11 @@ interface LabelLayoutOptions extends Partial<LabelSpacing> {
   /** `autowrap_mode != AUTOWRAP_OFF`, the gate of FILL's RTL arm (`label.cpp:473`). Defaults `false`. */
   isAutowrapped?: boolean;
   /** The overrun trim `_shape` runs on each line after the fit, before `_get_line_rect` aligns it (`label.cpp:319-330`). */
-  trimLine?: (line: TextLineLayout) => TextLineLayout;
-  /** `trimLine` for a line FILL fitted first, which `_shape` fits again after the trim (`label.cpp:325`). */
-  trimFilledLine?: (line: TextLineLayout) => TextLineLayout;
+  /**
+   * `refitFlags` is set for a line FILL fitted first, which `_shape` fits again with these
+   * `justification_flags` after the trim (`label.cpp:325`).
+   */
+  trimLine?: (line: TextLineLayout, refitFlags?: number) => TextLineLayout;
 }
 
 /**
@@ -559,7 +561,6 @@ export function layoutLabelLines(
     rtl = false,
     isAutowrapped = false,
     trimLine,
-    trimFilledLine,
     lineSpacingPx = LABEL_LINE_SPACING_PX,
     paragraphSpacingPx = LABEL_PARAGRAPH_SPACING_PX,
   } = options;
@@ -610,7 +611,7 @@ export function layoutLabelLines(
     ? fitted.map((line, index) => {
         const shaped = layout.lines[index]!;
         if (!isTrimJustificationAware || line === shaped) return trimLine(line);
-        return isFitAboveMinimum(line, shapingWidthPx) ? line : (trimFilledLine ?? trimLine)(line);
+        return isFitAboveMinimum(line, shapingWidthPx) ? line : trimLine(line, justificationFlags);
       })
     : fitted;
 
