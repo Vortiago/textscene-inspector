@@ -43,8 +43,9 @@ function readTextMeshFont({
   // The settled metrics are keyed by the resolved font file, and the name only labels a failure.
   const faces = peekSettledChainFaces(font, `TextMesh ${resource.id}`);
   // Peeked before the metrics settle, so a font with no outlines is unreadable at once.
-  if (peekSceneFontOutlines(faces?.[0]?.font ?? font) === null) return UNREADABLE;
-  const [face, ...fallbacks] = faces?.map(faceWithOutlines) ?? [undefined];
+  if (!faces) return peekSceneFontOutlines(font) === null ? UNREADABLE : AWAITING_FONT;
+  const [face, ...fallbacks] = faces.map(faceWithOutlines);
+  if (face === null) return UNREADABLE;
   if (!face || fallbacks.includes(undefined)) return AWAITING_FONT;
   const readable = fallbacks.filter((fallback): fallback is TextMeshFace => fallback !== null);
   return { status: 'ready', chain: [face, ...readable] };

@@ -403,6 +403,20 @@ describe('scene font in an environment with no font door', () => {
     await settleLoads();
     expect(peekChain(font, 'Root/NoDom')).toEqual([{ font, metrics: bundled }]);
   });
+
+  it('keeps the embolden of a FontVariation over a face that fails to load', async () => {
+    const { peekSceneFontMetrics: peek } = await loaderWithoutVitestGuard();
+
+    const font: FontResource = {
+      kind: 'variation',
+      baseFont: fontFile(new ArrayBuffer(4)),
+      fallbacks: [],
+      properties: { variation_embolden: '1.2' },
+    };
+    peek(font, 'Root/NoDom');
+    await settleLoads();
+    expect(peek(font, 'Root/NoDom').embolden).toBe(1.2);
+  });
 });
 
 describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canvas face follows', () => {

@@ -94,6 +94,20 @@ describe('shapeText — a fallback chain', () => {
     expect([first!.advance, second!.advance]).toEqual([17, 16]);
   });
 
+  // Godot marks a grapheme cluster valid only when every glyph of it is, and shapes a failed
+  // cluster again whole in the next font (`text_server_adv.cpp:7119-7139`).
+  it('draws a whole cluster from the first font that has every character of it', () => {
+    const marks = faceOf({ e: 1024, '́': 0 });
+    const glyphs = glyphsOf('é', { ...faceOf({ e: 1024 }), fallbacks: [marks] });
+    expect(glyphs.map((glyph) => glyph.fontMetrics)).toEqual([marks, marks]);
+  });
+
+  it('keeps a cluster that no font of the chain has whole in the face', () => {
+    const latin = { ...faceOf({ e: 1024 }), fallbacks: [faceOf({ '́': 0 })] };
+    const glyphs = glyphsOf('é', latin);
+    expect(glyphs.map((glyph) => glyph.fontMetrics)).toEqual([latin, latin]);
+  });
+
   it("starts the fallback's own rounding remainder at zero", () => {
     const [, han] = glyphsOf('A一', { ...faceOf({ A: 1056 }), fallbacks: [faceOf({ 一: 1056 })] }, 32);
     expect(han!.advance).toBe(17);

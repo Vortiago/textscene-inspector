@@ -23,7 +23,6 @@ import {
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
   fallbackChainOf,
-  firstFaceWithGlyph,
   type FontMetrics,
 } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
@@ -453,27 +452,45 @@ function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: 
  */
 const KEEPS_ITS_FACE = /^[\p{Cc}\p{Cn}\p{Cs}\p{Zl}\p{Zp}\p{Zs}\p{Default_Ignorable_Code_Point}]/u;
 
-/**
- * The face of the **Fallback chain** that draws `ch`: `face` where it has the glyph, else the first of
- * its `fallbacks` that has it, as Godot shapes each run of invalid glyphs again in the next font
- * (`text_server_adv.cpp:7132-7170`). A character that no font of the chain has stays in `face`.
- */
-function glyphFace(face: FontMetrics, ch: string): FontMetrics {
-  // `hasGlyph` first: most characters are in `face`, and the property test costs more.
-  if (!face.fallbacks || face.hasGlyph(ch) || KEEPS_ITS_FACE.test(ch)) return face;
-  return firstFaceWithGlyph(face, ch) ?? face;
-}
+const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 
 /**
- * The face each character of a paragraph draws in (`glyphFace`). The second unit of a surrogate pair
- * takes the face of its first, so the pair stays in one run for the kerning and the whole-pixel round.
+ * The face each character of a paragraph draws in. Godot marks a grapheme cluster valid only when
+ * every glyph of it is, and shapes each run of invalid clusters again in the next font
+ * (`text_server_adv.cpp:7119-7170`). So a cluster draws whole in the first face of its span's
+ * **Fallback chain** that has all of it, and stays in the span's face where none has.
  */
-function glyphFaces(spanFaces: readonly FontMetrics[], chars: ArrayLike<string>): FontMetrics[] {
+function glyphFaces(
+  text: string,
+  spanFaces: readonly FontMetrics[],
+  chars: ArrayLike<string>
+): FontMetrics[] {
   const faces: FontMetrics[] = [];
-  for (let i = 0; i < spanFaces.length; i++) {
-    faces.push(chars[i] === '' ? faces[i - 1]! : glyphFace(spanFaces[i]!, chars[i]!));
+  for (const { index, segment } of GRAPHEMES.segment(text)) {
+    for (let start = index, end = index + segment.length; start < end;) {
+      // A span boundary splits a cluster, as Godot shapes each span on its own.
+      let stop = start + 1;
+      while (stop < end && spanFaces[stop] === spanFaces[start]) stop++;
+      const face = clusterFace(spanFaces[start]!, chars, start, stop);
+      for (; start < stop; start++) faces.push(face);
+    }
   }
   return faces;
+}
+
+function clusterFace(face: FontMetrics, chars: ArrayLike<string>, start: number, end: number): FontMetrics {
+  if (!face.fallbacks || drawsCluster(face, chars, start, end)) return face;
+  return fallbackChainOf(face).find((entry) => drawsCluster(entry, chars, start, end)) ?? face;
+}
+
+/** Whether `face` has a glyph for every character of `chars[start, end)` that needs one (`KEEPS_ITS_FACE`). */
+function drawsCluster(face: FontMetrics, chars: ArrayLike<string>, start: number, end: number): boolean {
+  for (let i = start; i < end; i++) {
+    const ch = chars[i]!;
+    // `hasGlyph` first: most characters are in the face, and the property test costs more.
+    if (ch !== '' && !face.hasGlyph(ch) && !KEEPS_ITS_FACE.test(ch)) return false;
+  }
+  return true;
 }
 
 /** Whether `face` is a BMFont with no glyph for `ch`, a tab aside: Godot then draws `ch` as a hex-code box. */
@@ -899,7 +916,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       sizes: Array.from({ length: paraText.length }, (_v, i) =>
         fontSizePxAt ? fontSizePxAt(sourceIndex(i)) : fontSizePx
       ),
-      faces: spanFaces.some((face) => face.fallbacks) ? glyphFaces(spanFaces, chars) : spanFaces,
+      faces: spanFaces.some((face) => face.fallbacks) ? glyphFaces(paraText, spanFaces, chars) : spanFaces,
       spanFaces,
       levels: bidi.levels,
       rangeIds: bidi.rangeIds,

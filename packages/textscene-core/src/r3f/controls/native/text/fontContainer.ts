@@ -1,7 +1,8 @@
 /**
  * Opens a scene font's bytes into the `SfntFile` its table readers take, whichever container holds
  * them: a plain sfnt, a WOFF or a WOFF2. A compressed container decompresses only the tables the
- * readers need, so the file opens with `head`, `hhea`, `OS/2`, `fvar` and `cmap` and no outlines.
+ * readers need, so the file opens with `head`, `hhea`, `OS/2`, `fvar`, `cmap` and `maxp` and no
+ * outlines.
  */
 
 import { openSfnt, SCENE_FONT_TABLE_TAGS, type SfntFile } from './sfntTables';

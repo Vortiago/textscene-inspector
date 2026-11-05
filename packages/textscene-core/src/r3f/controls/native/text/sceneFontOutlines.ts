@@ -29,6 +29,9 @@ type PeekedOutlines = SfntOutlines | null | undefined;
  */
 const peekOutlines = createSettledPeek<object, SfntOutlines | null>();
 
+/** {@link peekOutlines} for a face with `force_autohinter`: the bytes alone do not tell the two readers apart. */
+const peekAutoHintedOutlines = createSettledPeek<object, SfntOutlines | null>();
+
 /** The cache key of the bundled font, which has no resource. */
 const BUNDLED = {};
 
@@ -74,8 +77,9 @@ function peekFaceOutlines(face: DrawnFace): PeekedOutlines {
   if (face && hasBitmap(face)) return bitmapFontOutlines(face.bitmap);
   const bytes = face?.bytes;
   if (!face || !bytes) return null;
-  const open = fontForcesAutohinter(face) ? openAutoHintedFontOutlines : openFontOutlines;
-  return peekOutlines(bytes, () => settledOutlines(() => open(bytes)));
+  if (fontForcesAutohinter(face))
+    return peekAutoHintedOutlines(bytes, () => settledOutlines(() => openAutoHintedFontOutlines(bytes)));
+  return peekOutlines(bytes, () => settledOutlines(() => openFontOutlines(bytes)));
 }
 
 /**
