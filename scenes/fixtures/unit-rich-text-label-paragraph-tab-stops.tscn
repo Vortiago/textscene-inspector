@@ -1,0 +1,140 @@
+; One variable: the tab_stops option of a [p] tag (rich_text_label.cpp:5783-5789). It splits on , and ;
+; into floats. A bare [p] has no stops, so its tabs use tab_size, and a [p] with other options takes
+; the node's stops. No other scene sets tab_stops on a [p].
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="OptionBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 280.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Option" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 280.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "[p tab_stops=40,120]a\tb\tc\td[/p]"
+
+[node name="SemicolonBox" type="ColorRect" parent="."]
+offset_left = 300.0
+offset_top = 10.0
+offset_right = 560.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Semicolon" type="RichTextLabel" parent="."]
+offset_left = 300.0
+offset_top = 10.0
+offset_right = 560.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "[p tab_stops=\"30;90;5\"]a\tb\tc\td[/p]"
+
+[node name="NodeStopsBox" type="ColorRect" parent="."]
+offset_left = 580.0
+offset_top = 10.0
+offset_right = 840.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="NodeStops" type="RichTextLabel" parent="."]
+offset_left = 580.0
+offset_top = 10.0
+offset_right = 840.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "a\tb\tc\td"
+tab_stops = PackedFloat32Array(60)
+
+[node name="BareParagraphBox" type="ColorRect" parent="."]
+offset_left = 860.0
+offset_top = 10.0
+offset_right = 1120.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="BareParagraph" type="RichTextLabel" parent="."]
+offset_left = 860.0
+offset_top = 10.0
+offset_right = 1120.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "[p]a\tb\tc\td[/p]"
+tab_stops = PackedFloat32Array(60)
+
+[node name="OtherOptionsBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 170.0
+offset_right = 280.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="OtherOptions" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 170.0
+offset_right = 280.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "[p align=l]a\tb\tc\td[/p]"
+tab_stops = PackedFloat32Array(60)
+
+[node name="OverrideBox" type="ColorRect" parent="."]
+offset_left = 300.0
+offset_top = 170.0
+offset_right = 560.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Override" type="RichTextLabel" parent="."]
+offset_left = 300.0
+offset_top = 170.0
+offset_right = 560.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "[p tab_stops=25]a\tb\tc\td[/p]"
+tab_stops = PackedFloat32Array(60)
+
+[node name="EmptyPieceBox" type="ColorRect" parent="."]
+offset_left = 580.0
+offset_top = 170.0
+offset_right = 840.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="EmptyPiece" type="RichTextLabel" parent="."]
+offset_left = 580.0
+offset_top = 170.0
+offset_right = 840.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "[p tab_stops=\"20,,50\"]a\tb\tc\td[/p]"
+
+[node name="WrappedBox" type="ColorRect" parent="."]
+offset_left = 860.0
+offset_top = 170.0
+offset_right = 1120.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Wrapped" type="RichTextLabel" parent="."]
+offset_left = 860.0
+offset_top = 170.0
+offset_right = 1120.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "[p tab_stops=50]aaaa\tbbbb\tcccc\tdddd\teeee[/p]"

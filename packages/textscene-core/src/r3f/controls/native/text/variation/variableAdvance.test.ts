@@ -3,7 +3,7 @@
  * the default advance plus the `HVAR` delta through FreeType's and HarfBuzz's fixed-point chain, or the
  * phantom points that `gvar` moves in a font with no `HVAR`.
  * It is checked against the advance that Godot 4.6.3 shapes for each character alone
- * (`variableAdvance.godot.json` and `variableAdvanceNoHvar.godot.json`, from `/mnt/project-files/variable-font-1297/oracle.gd`).
+ * (`variableAdvance.godot.json` and `variableAdvanceNoHvar.godot.json`, from `scripts/fonts/variable-advance-oracle/`).
  */
 
 import { describe, expect, it } from 'vitest';
