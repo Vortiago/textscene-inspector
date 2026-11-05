@@ -4,8 +4,8 @@ TextScene Inspector is MIT licensed (see `LICENSE`). It additionally contains, a
 distributes, material from the third parties below.
 
 Runtime npm dependencies are not enumerated here; each carries its own licence in its
-published package. FastNoiseLite and the Brotli decoder are the exceptions, since their
-packages keep the licence in a source comment that a bundler strips.
+published package. FastNoiseLite, the Brotli decoder and bidi-js are the exceptions, since
+their packages keep the licence in a source comment that a bundler strips, or beside the code.
 
 ---
 
@@ -161,10 +161,12 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/resources/formats/bmfont/parseDescriptor.ts` | `scene/resources/font.cpp` (`FontFile::_load_bitmap_font`'s text and binary descriptor reader and `_oem_to_unicode`) |
 | `packages/textscene-core/src/resources/formats/bmfont/pageFill.ts` | `scene/resources/font.cpp` (`FontFile::_load_bitmap_font`'s page channel layouts and `_convert_*` page converters) |
 | `packages/textscene-core/src/r3f/controls/native/text/hexCodeBox.ts` | `servers/text/text_server.cpp` (`TextServer::get_hex_code_box_size`, `TextServer::draw_hex_code_box`, `TextServer::_draw_hex_code_box_number`) |
-| `packages/textscene-core/src/r3f/controls/native/text/textLayout.ts` | `scene/gui/label.cpp` (`Label::_shape`'s autowrap flag mapping) and `servers/text/text_server.cpp` (`TextServer::shaped_text_get_line_breaks`'s width accumulation, safe-break bookkeeping and edge-space trimming) |
+| `packages/textscene-core/src/r3f/controls/native/text/textLayout.ts` | `scene/gui/label.cpp` (`Label::_shape`'s autowrap flag mapping, language and uppercase) and `servers/text/text_server.cpp` (`TextServer::shaped_text_get_line_breaks`'s width accumulation, safe-break bookkeeping and edge-space trimming) |
 | `packages/textscene-core/src/r3f/controls/native/text/textOverrun.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_shaped_text_overrun_trim_to_width`) and `servers/text/text_server.cpp` (`TextServer::get_overrun_flags_from_behavior`, `shaped_text_draw`'s trim/ellipsis consumption) |
 | `packages/textscene-core/src/r3f/controls/native/text/textJustify.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_shaped_text_fit_to_width`), `scene/gui/label.cpp` (`Label::_shape`'s choice of the lines to justify) and `scene/resources/3d/primitive_meshes.cpp` (`TextMesh`'s same choice) |
 | `packages/textscene-core/src/r3f/controls/native/text/textTabStops.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_shaped_text_tab_align`) |
+| `packages/textscene-core/src/r3f/controls/native/text/bidi.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_shape_substr`'s per-line reorder, `_shaped_text_shape`'s paragraph direction and override ranges, `_is_locale_right_to_left`) |
+| `packages/textscene-core/src/godot/text/structuredText.ts` | `servers/text/text_server.cpp` (`TextServer::parse_structured_text`) and `scene/gui/control.cpp` (`Control::structured_text_parser`) |
 | `packages/textscene-core/src/nodes/3d/label3d/glyphLayout.ts` | `scene/3d/label_3d.cpp` (`Label3D::_shape`'s per-line vertical origin for `VERTICAL_ALIGNMENT_*`) |
 | `packages/textscene-core/src/godot/math/alignment.ts` | `scene/3d/label_3d.cpp` (`Label3D::_shape`'s horizontal line offset) and `scene/resources/3d/primitive_meshes.cpp` (`TextMesh::_generate_glyph_mesh_data`'s), with `FILL` falling through to `CENTER` |
 | `packages/textscene-core/src/nodes/2d/ui/aspectratiocontainer/nativeSolver.ts` | `scene/gui/aspect_ratio_container.cpp` (`AspectRatioContainer::get_minimum_size` and `_notification`'s `NOTIFICATION_SORT_CHILDREN` ratio/stretch-mode/alignment math, including its proportional-TextureRect skip) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
@@ -486,6 +488,12 @@ The tests and goldens of the auto-hinter read these fixture fonts:
 - `scenes/fixtures/fonts/autofit-scripts-test.ttf`: the same subset with copies of its glyphs mapped to han,
   Oriya, Armenian and Arabic characters, renamed to the family "Autofit Scripts Test".
 
+The bidi goldens read this fixture font:
+
+- `scenes/fixtures/fonts/noto-sans-adlam-unjoined-subset.ttf`: the Adlam subset of Noto Sans Adlam Unjoined
+  Regular, as the `@fontsource/noto-sans-adlam-unjoined` package ships it. Copyright 2022 The Noto Project
+  Authors (github.com/notofonts/adlam).
+
 Each is licensed under the SIL Open Font License, Version 1.1 (OFL-1.1), whose full text the Open Sans section
 above holds.
 
@@ -498,6 +506,10 @@ above holds.
 `scenes/fixtures/fonts/dejavu-sans-subset-tricky.ttf` is a subset of DejaVu Sans with no `fpgm` or `prep` table,
 renamed to the family "MingLiU Test" so that FreeType flags it as a tricky font. The tests of the tricky-font
 check read it. Its `name` table holds the full licence.
+
+`scenes/fixtures/fonts/dejavu-sans-bidi-subset.ttf` is a subset of DejaVu Sans with its Latin, digits,
+punctuation, U+0130, U+2026, Hebrew and Arabic letters, and its `GSUB`, `GPOS` and hinting tables. The
+bidirectional Label fixtures draw with it. Its `name` table holds the full licence.
 
 DejaVu Sans is Copyright (c) 2003 by Bitstream, Inc. All Rights Reserved. Bitstream Vera is a trademark of
 Bitstream, Inc. Glyphs imported from Arev fonts are Copyright (c) 2006 by Tavmjong Bah. All Rights Reserved.
@@ -998,6 +1010,42 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+```
+
+---
+
+## bidi-js
+
+<https://github.com/lojjic/bidi-js>
+
+The `bidi-js` npm package (1.1.0) implements the Unicode Bidirectional Algorithm. The previewer uses
+it to put the glyphs of a right-to-left or mixed-direction text in visual order, as Godot's ICU does.
+The package ships its licence beside its code, not in it, so a bundle that holds the package carries
+the notice here. It is licensed MIT, separately from Godot's own MIT licence above.
+
+```
+Copyright (c) 2021 Jason Johnston
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
 ---

@@ -11,6 +11,7 @@ import {
   ftDivFix,
   ftMulDiv,
   fontUsesSubpixelPositioning,
+  canvasGlyphPenXPx,
   getFontAscentPx,
   getFontGlyphAdvancePx,
   getFontKerningAdjustmentPx,
@@ -85,6 +86,28 @@ describe('fontUsesSubpixelPositioning', () => {
 
   it("is true for a FRACTIONAL size at any magnitude — Godot's own int64_t size API cannot express one, and `scale != 1.0` is the branch it would take", () => {
     expect(fontUsesSubpixelPositioning(28.5, {})).toBe(true);
+  });
+});
+
+describe('canvasGlyphPenXPx', () => {
+  it('floors the pen to a whole pixel above 20 px', () => {
+    expect(canvasGlyphPenXPx(680.6, 28)).toBe(680);
+    expect(canvasGlyphPenXPx(10.99, 21)).toBe(10);
+  });
+
+  it('rounds the pen to a half pixel, a quarter early, from 17 to 20 px', () => {
+    expect(canvasGlyphPenXPx(10.2, 20)).toBe(10);
+    expect(canvasGlyphPenXPx(10.3, 20)).toBe(10.5);
+    expect(canvasGlyphPenXPx(10.8, 17)).toBe(11);
+  });
+
+  it('rounds the pen to a quarter pixel, an eighth early, at 16 px and below', () => {
+    expect(canvasGlyphPenXPx(10.6, 16)).toBe(10.5);
+    expect(canvasGlyphPenXPx(10.65, 16)).toBe(10.75);
+  });
+
+  it('keeps the pen of a fractional size, which skips the floor as `scale != 1.0`', () => {
+    expect(canvasGlyphPenXPx(10.6, 28.5)).toBe(10.6);
   });
 });
 

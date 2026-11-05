@@ -135,6 +135,26 @@ describe('fitLineToWidth', () => {
     expect(result.line.widthPx).toBe(32);
   });
 
+  it('AFTER_LAST_TAB on a right-to-left line justifies only the run before the visually first tab', () => {
+    // Visual order: the logically last tab is the leftmost glyph that is a tab.
+    const line = {
+      ...mkLine([
+        ['C', 5],
+        [' ', 2],
+        ['B', 5],
+        ['\t', 3],
+        ['A', 5],
+        [' ', 2],
+      ]),
+      isRtl: true,
+    };
+    const result = fitLine(line, 32, JustificationFlag.WORD_BOUND | JustificationFlag.AFTER_LAST_TAB, {
+      fontSizePx: FONT_SIZE_PX,
+    });
+    expect(result.line.glyphs[1]!.advance).toBe(12);
+    expect(result.line.glyphs[5]!.advance).toBe(2);
+  });
+
   it('a line with no glyphs is returned unchanged (edge)', () => {
     const line: TextLineLayout = { text: '', glyphs: [], widthPx: 0, paragraphIndex: 0 };
     const result = fitLine(line, 50, JustificationFlag.WORD_BOUND, { fontSizePx: FONT_SIZE_PX });
