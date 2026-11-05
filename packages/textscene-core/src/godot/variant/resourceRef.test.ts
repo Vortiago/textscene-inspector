@@ -81,8 +81,6 @@ describe('resourceRef', () => {
   });
 });
 
-// The text loader sets no `rp.func`, so `Resource(…)` takes the generic branch
-// (`variant_parser.cpp:1123-1185`) and loads by path.
 describe('pathResourcePathsIn', () => {
   it('reads the path of each Resource literal in an Array, in order', () => {
     const value = '[Resource("res://a.ttf"), Resource ( "uid://b3x" , "res://b.fnt" )]';
@@ -93,8 +91,16 @@ describe('pathResourcePathsIn', () => {
   it('skips a literal that names only a uid, which nothing here resolves', () => {
     expect(pathResourcePathsIn('[Resource("uid://b3x"), Resource("res://a.ttf")]')).toEqual(['res://a.ttf']);
   });
+
+  it('reads no id from an ExtResource or a SubResource, whose argument is not a path', () => {
+    expect(
+      pathResourcePathsIn('[ExtResource("1_abc"), SubResource("Font_x"), Resource("res://a.ttf")]')
+    ).toEqual(['res://a.ttf']);
+  });
 });
 
+// The text loader sets no `rp.func`, so `Resource(…)` takes the generic branch
+// (`variant_parser.cpp:1123-1185`) and loads by path.
 describe('isPathResourceLiteral', () => {
   it.each([
     'Resource("res://a.tres")',

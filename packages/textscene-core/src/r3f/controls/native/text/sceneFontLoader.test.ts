@@ -286,6 +286,18 @@ describe('fontWork', () => {
     expect(fontWork.pending()).toBe(0);
   });
 
+  it('counts one load for a font and a copy of it with other fallbacks, which share its bytes', async () => {
+    const leaf = fontFile(new ArrayBuffer(4));
+    const copy = { ...leaf, fallbacks: [systemFont()] };
+
+    peekSettledSceneFontMetrics(leaf, 'Root/N');
+    peekSettledSceneFontMetrics(copy, 'Root/O');
+    expect(fontWork.pending()).toBe(1);
+    await settleLoads();
+
+    expect(fontWork.pending()).toBe(0);
+  });
+
   it('ends the work of a load whose settled listener throws, so a capture is not held for good', async () => {
     const off = onSceneFontSettled(() => {
       throw new Error('listener failed');

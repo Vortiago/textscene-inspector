@@ -703,6 +703,19 @@ describe('shapeText — glyph advances vs real Godot (text_server_adv.cpp:6936,7
     expect(layout.widthPx).toBe(257);
     expect(shapedTextSizeWidthPx(layout.widthPx)).toBe(257);
   });
+
+  it('size 32: the second unit of a surrogate pair rounds nothing, so the remainder carries to the next glyph', () => {
+    // 1056 units at 32 px over a 2048-unit em is 16.5 px: 17, then 16 with the carried -0.5.
+    const face: FontMetrics = { ...OPEN_SANS_FONT_METRICS, getGlyphAdvanceUnits: () => 1056 };
+    const layout = shapeText('😀😀', {
+      fontSizePx: 32,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics: face,
+    });
+    expect(layout.lines[0]!.glyphs.map((g) => g.advance)).toEqual([17, 16]);
+  });
 });
 
 // `Label::_shape` splits on `paragraph_separator` first, keeping empty entries, and ends each

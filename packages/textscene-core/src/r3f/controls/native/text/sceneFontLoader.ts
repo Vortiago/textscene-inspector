@@ -26,7 +26,7 @@ import {
 import { createBitmapFontMetrics } from './bitmapFontMetrics';
 import { NO_FACE_METRICS } from './noFaceMetrics';
 import { perObject } from '../../../../utils/perObject';
-import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
+import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import { warnOnce } from '../../../../utils/warnOnce';
 import { createSettledPeek } from './settledChannel';
@@ -45,10 +45,11 @@ const SYNTHETIC_UNITS_PER_EM = 1000;
 let familyCounter = 0;
 
 /**
- * Keyed by the resolved leaf `FontFileResource`, so nodes that share a font share one load. Null is a
- * load that failed: the face draws the bundled default.
+ * Keyed by the bytes of the resolved leaf `FontFileResource`, so nodes that share a font share one
+ * load, and so does each copy `withDefaultFonts` makes of a leaf whose fallbacks take a default. Null
+ * is a load that failed: the face draws the bundled default.
  */
-const peekMetrics = createSettledPeek<FontFileResource, FontMetrics | null>();
+const peekMetrics = createSettledPeek<ArrayBuffer, FontMetrics | null>();
 
 /**
  * Written only by `peekSettledSceneFontMetrics`, once the whole chain of a font has settled. Never
@@ -221,7 +222,7 @@ function peekFace(font: FontResource, nodePath: string): FontMetrics | typeof MI
   if (hasBitmap(face))
     return withVariation(bitmapMetricsOf(face.bitmap), { embolden: fontVariationEmbolden(font) });
 
-  const metrics = peekMetrics(face, () => loadSceneFontMetrics(face.bytes, nodePath));
+  const metrics = peekMetrics(face.bytes, () => loadSceneFontMetrics(face.bytes, nodePath));
   if (metrics === undefined) return null;
   if (metrics === null) return MISSING_FACE;
   const variation = fontVariation(font);

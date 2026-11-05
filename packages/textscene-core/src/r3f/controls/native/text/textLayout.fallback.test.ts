@@ -83,6 +83,17 @@ describe('shapeText — a fallback chain', () => {
     expect([first!.advance, last!.advance]).toEqual([17, 16]);
   });
 
+  it('kerns a pair of astral characters that a fallback draws, as one run', () => {
+    const emoji = faceOf({ '😀': 1024 }, { '😀😀': -512 });
+    const [first] = glyphsOf('😀😀', { ...LATIN, fallbacks: [emoji] });
+    expect(first!.advance).toBe(4);
+  });
+
+  it("carries the fallback's rounding remainder across a surrogate pair", () => {
+    const [first, second] = glyphsOf('😀😀', { ...LATIN, fallbacks: [faceOf({ '😀': 1056 })] }, 32);
+    expect([first!.advance, second!.advance]).toEqual([17, 16]);
+  });
+
   it("starts the fallback's own rounding remainder at zero", () => {
     const [, han] = glyphsOf('A一', { ...faceOf({ A: 1056 }), fallbacks: [faceOf({ 一: 1056 })] }, 32);
     expect(han!.advance).toBe(17);

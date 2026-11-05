@@ -23,7 +23,10 @@ import { openAutoHintedFontOutlines, openFontOutlines, type SfntOutlines } from 
 /** Undefined while the load runs. Null is a font that holds no outlines this reader opens. */
 type PeekedOutlines = SfntOutlines | null | undefined;
 
-/** Keyed by the leaf `FontFileResource`, as the metrics are, so a reloaded file is read again and a shared one once. */
+/**
+ * Keyed by the bytes of the leaf `FontFileResource`, as the metrics are, so a reloaded file is read
+ * again, and a shared one or a copy of it (`withDefaultFonts`) once.
+ */
 const peekOutlines = createSettledPeek<object, SfntOutlines | null>();
 
 /** The cache key of the bundled font, which has no resource. */
@@ -72,7 +75,7 @@ function peekFaceOutlines(face: DrawnFace): PeekedOutlines {
   const bytes = face?.bytes;
   if (!face || !bytes) return null;
   const open = fontForcesAutohinter(face) ? openAutoHintedFontOutlines : openFontOutlines;
-  return peekOutlines(face, () => settledOutlines(() => open(bytes)));
+  return peekOutlines(bytes, () => settledOutlines(() => open(bytes)));
 }
 
 /**

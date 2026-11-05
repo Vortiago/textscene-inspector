@@ -710,8 +710,8 @@ interface RichTextRunPlacement {
 }
 
 /**
- * Keeps the parent's `linePitchPx` (`soloLineLayout`) and takes the run's own face, since `TextRun`
- * picks atlas or canvas painting, and the shear, from `layout.fontMetrics`. `baselineOffsetPx` is
+ * Keeps the parent's `linePitchPx` (`soloLineLayout`) and takes the face of the run's first glyph,
+ * since `TextRun` picks atlas or canvas painting, and the shear, from `layout.fontMetrics`. `baselineOffsetPx` is
  * the line's ascent, applied once per line (`rich_text_label.cpp:1055`'s `off.y += l_ascent`),
  * so mixed sizes share it.
  */

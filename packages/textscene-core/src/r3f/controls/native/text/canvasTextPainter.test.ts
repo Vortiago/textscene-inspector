@@ -73,6 +73,27 @@ describe('computeCanvasTextCanvasLayout', () => {
     expect(computeCanvasTextCanvasLayout(narrowed, 0).canvasWidthPx).toBeCloseTo(16, 6);
   });
 
+  // A fallback face's own run starts where its first glyph is on the line (`faceLayouts.ts`).
+  it('starts the raster at the whole pixel of the first glyph, and keeps the content box at the quad origin', () => {
+    const layout = layoutFor('AB');
+    const line = layout.lines[0]!;
+    const shifted = { ...layout, lines: [{ ...line, glyphs: line.glyphs.slice(1) }] };
+    const inkLeftPx = Math.floor(line.glyphs[1]!.x);
+    const canvasLayout = computeCanvasTextCanvasLayout(shifted, 0);
+    expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx - inkLeftPx));
+    expect(contentOriginOnQuad(canvasLayout).x).toBeCloseTo(0, 6);
+  });
+
+  it('ends the raster at the end of the last glyph, short of the layout width', () => {
+    const layout = layoutFor('AB');
+    const line = layout.lines[0]!;
+    const first = line.glyphs[0]!;
+    const shortened = { ...layout, lines: [{ ...line, glyphs: [first] }] };
+    expect(computeCanvasTextCanvasLayout(shortened, 0).canvasWidthPx).toBe(
+      Math.ceil(first.x + first.advance)
+    );
+  });
+
   it('widens by the origin phase, which carries the content that far right of the quad', () => {
     const layout = layoutFor('AB');
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0, 0, { x: 0.25, y: 0 });

@@ -52,11 +52,14 @@ function wholeRasterPx(cssPx: number): number {
 }
 
 interface CanvasTextCanvasLayout {
-  /** `HTMLCanvasElement#width`: the drawn width (`drawnWidthPx`) plus twice `offsetXPx` and the origin phase, rounded up to a whole pixel. */
+  /** `HTMLCanvasElement#width`: the drawn width (`drawnWidthPx`) from the first glyph, plus both pads and the origin phase, rounded up to a whole pixel. */
   canvasWidthPx: number;
   /** `HTMLCanvasElement#height`: `layout.heightPx` plus twice `offsetYPx`, rounded up to a whole pixel. */
   canvasHeightPx: number;
-  /** Left padding, CSS px: where the unpadded content box (x=0 in `layout`) sits in the raster. Shear reach plus stroke reach, mirrored on the right. */
+  /**
+   * Where the unpadded content box (x=0 in `layout`) sits in the raster, CSS px: the shear and stroke
+   * reach, mirrored on the right, less the whole pixels before the first glyph (`firstGlyphXPx`).
+   */
   offsetXPx: number;
   /** Top padding, CSS px: `CANVAS_TEXT_VERTICAL_PAD_PX` plus any outline-stroke reach. */
   offsetYPx: number;
@@ -84,26 +87,38 @@ export function computeCanvasTextCanvasLayout(
   const emboldenPadPx = maxEmboldenGrowthPx(layout);
   // Whole pixels, as Godot draws a glyph texture texel-aligned: a fractional pad puts each texel
   // between two screen pixels, and the linear filter thins every edge.
-  const offsetXPx = Math.ceil(shearPadPx + strokePadPx + emboldenPadPx);
+  const padXPx = Math.ceil(shearPadPx + strokePadPx + emboldenPadPx);
   const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + Math.ceil(strokePadPx + emboldenPadPx);
+  const inkLeftPx = Math.floor(firstGlyphXPx(layout));
   return {
     // The quad sits `originPhasePx.x` left of the run origin, so the content reaches that much further right.
-    canvasWidthPx: wholeRasterPx(drawnWidthPx(layout) + 2 * offsetXPx + originPhasePx.x),
+    canvasWidthPx: wholeRasterPx(drawnWidthPx(layout) - inkLeftPx + 2 * padXPx + originPhasePx.x),
     canvasHeightPx: wholeRasterPx(layout.heightPx + 2 * offsetYPx),
-    offsetXPx,
+    offsetXPx: padXPx - inkLeftPx,
     offsetYPx,
   };
 }
 
 /**
- * `layout.widthPx`, or the end of a glyph that reaches past it: a layout's width is where Godot
- * places it, and its glyphs may draw past that, as a trimmed AUTO right-to-left fill does.
+ * The pen x of the leftmost glyph, or 0 for one at or left of the origin. The run of a fallback face
+ * keeps its glyphs at their places on the line (`faceLayouts.ts`), so its raster starts there and
+ * does not span the text of the other faces.
+ */
+function firstGlyphXPx(layout: TextLayoutResult): number {
+  const lineStarts = layout.lines.flatMap((line) => line.glyphs.slice(0, 1).map((glyph) => glyph.x));
+  return lineStarts.length === 0 ? 0 : Math.max(0, Math.min(...lineStarts));
+}
+
+/**
+ * The end of the rightmost glyph, which may draw past `layout.widthPx`, as a trimmed AUTO
+ * right-to-left fill does, or stop short of it, as the run of a fallback face does. A layout with no
+ * glyph keeps its width.
  */
 function drawnWidthPx(layout: TextLayoutResult): number {
-  return layout.lines.reduce((widthPx, line) => {
-    const last = line.glyphs.at(-1);
-    return last ? Math.max(widthPx, last.x + last.advance) : widthPx;
-  }, layout.widthPx);
+  const lineEnds = layout.lines.flatMap((line) =>
+    line.glyphs.slice(-1).map((glyph) => glyph.x + glyph.advance)
+  );
+  return lineEnds.length === 0 ? layout.widthPx : Math.max(...lineEnds);
 }
 
 /** The `GlyphQuadArrays` shape `buildGlyphQuadArrays` produces, always exactly one quad. */

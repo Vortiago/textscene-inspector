@@ -456,6 +456,19 @@ function glyphFace(face: FontMetrics, ch: string): FontMetrics {
   return firstFaceWithGlyph(face, ch) ?? face;
 }
 
+/**
+ * The face each character of a paragraph draws in (`glyphFace`). The second unit of a surrogate pair
+ * takes the face of its first, so the pair stays in one run for the kerning and the whole-pixel round.
+ */
+function glyphFaces(spanFaces: readonly FontMetrics[], chars: ArrayLike<string>): FontMetrics[] {
+  const faces: FontMetrics[] = [];
+  for (let i = 0; i < spanFaces.length; i++) {
+    const isSecondUnit = chars[i] === '' && i > 0;
+    faces.push(isSecondUnit ? faces[i - 1]! : glyphFace(spanFaces[i]!, chars[i]!));
+  }
+  return faces;
+}
+
 /** Whether `face` is a BMFont with no glyph for `ch`, a tab aside: Godot then draws `ch` as a hex-code box. */
 function lacksBitmapGlyph(face: FontMetrics, ch: string): boolean {
   return isBitmapFontMetrics(face) && !isTabChar(ch) && !face.glyphOf(ch);
@@ -607,8 +620,10 @@ function roundFaceRun(
     }
     if (stretch.length > 0) roundFaceRun(glyphs, chars, style, stretch, chain, depth + 1);
     stretch = [];
-    if (usesSubpixel) continue;
-    const cp = chars[i]!.codePointAt(0) ?? 0;
+    // The second unit of a surrogate pair has no glyph to round: rounding its 0 advance would move
+    // the remainder of a whole half pixel into it.
+    if (usesSubpixel || chars[i] === '') continue;
+    const cp = chars[i]!.codePointAt(0)!;
     // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
     if (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp)) advanceRemainder = 0;
     const fullAdvance = advanceRemainder + glyphs[i]!.advance;
@@ -871,9 +886,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       sizes: Array.from({ length: paraText.length }, (_v, i) =>
         fontSizePxAt ? fontSizePxAt(sourceIndex(i)) : fontSizePx
       ),
-      faces: spanFaces.some((face) => face.fallbacks)
-        ? spanFaces.map((face, i) => glyphFace(face, chars[i]!))
-        : spanFaces,
+      faces: spanFaces.some((face) => face.fallbacks) ? glyphFaces(spanFaces, chars) : spanFaces,
       spanFaces,
       levels: bidi.levels,
       rangeIds: bidi.rangeIds,
