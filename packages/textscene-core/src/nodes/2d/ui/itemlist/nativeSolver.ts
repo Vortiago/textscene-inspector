@@ -43,12 +43,11 @@ import { AutowrapMode, OverrunBehavior, TextDirection } from '../../../../godot/
 import { isDrawnRtl, textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 import { hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
+import { ItemListIconMode } from '../../../../godot/scene/gui';
 
 // --- Enum literals ------------------------------------------------------
 
-/** `ItemList::IconMode` (`item_list.h:43-44`). */
-export const ICON_MODE_TOP = 0;
-export const ICON_MODE_LEFT = 1;
+const { ICON_MODE_TOP, ICON_MODE_LEFT } = ItemListIconMode;
 
 // --- Theme font ----------------------------------------------------------
 
@@ -248,7 +247,7 @@ const IS_ITEM_DRAWN_RTL = isDrawnRtl(textBidiOptions(ITEM_BIDI, ''));
  * `shapeText` spaces no lines: `force_update_list_size` adds a flat
  * `line_separation * max_text_lines` (`item_list.cpp:1772`), which `itemContentMinSize` adds.
  */
-export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult | null {
+function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult | null {
   if (input.text.length === 0) return null;
   return shapeText(input.text, {
     ...textBidiOptions(ITEM_BIDI, input.locale),

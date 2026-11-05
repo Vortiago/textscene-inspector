@@ -2463,6 +2463,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Text Outline Set Direction",
+    "file": "unit-text-outline-set-direction.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Texture Button",
     "file": "unit-texture-button.tscn",
     "category": "Other"

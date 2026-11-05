@@ -340,6 +340,8 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-text-outline-link-foldable-item-list.tscn',
     mode: '2d',
   },
+  // The same outline on rows set LTR and RTL, where the ring and the fill trim alike.
+  { name: 'text-outline-set-direction', file: 'unit-text-outline-set-direction.tscn', mode: '2d' },
   // The one variable: a Theme item keyed on BaseButton, which a Button finds only by walking its
   // ClassDB chain. Every other themed golden keys its items on the node's own class.
   { name: 'control-theme-base-class', file: 'unit-control-theme-base-class.tscn', mode: '2d' },

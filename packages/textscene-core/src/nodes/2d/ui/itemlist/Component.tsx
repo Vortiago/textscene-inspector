@@ -32,7 +32,6 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SceneScope } from '../../../../parser/types';
 import {
-  ICON_MODE_LEFT,
   isItemTextFillDrawn,
   isItemTextWrapped,
   ITEM_LIST_DEFAULT_MAX_COLUMNS,
@@ -59,6 +58,7 @@ import {
   shapeItemText,
   trimItemListText,
 } from './nativeSolver';
+import { ItemListIconMode } from '../../../../godot/scene/gui';
 import type { ItemListItem, ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
@@ -207,7 +207,7 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const props = painterView<ItemListProperties>(solveNode);
   const items = props.items;
 
-  const iconMode = props.iconMode ?? ICON_MODE_LEFT;
+  const iconMode = props.iconMode ?? ItemListIconMode.ICON_MODE_LEFT;
   const maxTextLines = props.maxTextLines ?? 1;
   const fixedColumnWidth = props.fixedColumnWidth ?? 0;
   const iconScale = props.iconScale ?? 1;

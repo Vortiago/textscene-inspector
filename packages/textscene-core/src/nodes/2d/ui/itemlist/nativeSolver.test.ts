@@ -14,8 +14,6 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import type { ItemListProperties } from './types';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import {
-  ICON_MODE_LEFT,
-  ICON_MODE_TOP,
   itemIconColor,
   itemIconDraw,
   itemIconPackedSize,
@@ -34,9 +32,12 @@ import {
   itemTextDrawOffset,
   itemTextLineCenterOffset,
   packItemListRows,
-  shapeItemListText,
   trimItemListText,
+  shapeItemText,
 } from './nativeSolver';
+import { ItemListIconMode } from '../../../../godot/scene/gui';
+
+const { ICON_MODE_TOP, ICON_MODE_LEFT } = ItemListIconMode;
 import type { Vector2 } from '../../../../godot/math/vector';
 import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
@@ -85,9 +86,9 @@ describe('itemListSeparation / line_separation', () => {
   });
 });
 
-describe('shapeItemListText — direction (item_list.h:73-74)', () => {
+describe('shapeItemText — direction (item_list.h:73-74)', () => {
   it('takes the direction of neutral text from the locale (`item_list.cpp:45`)', () => {
-    const layout = shapeItemListText({
+    const layout = shapeItemText({
       text: '123!',
       fontSizePx: 16,
       fontMetrics: OPEN_SANS_FONT_METRICS,
@@ -95,12 +96,12 @@ describe('shapeItemListText — direction (item_list.h:73-74)', () => {
       iconMode: ICON_MODE_LEFT,
       maxTextLines: 1,
       locale: 'he',
-    });
+    }).shaped;
     expect(visualChars(layout!.lines[0]!)).toBe('!123');
   });
 });
 
-describe('shapeItemListText — wrapping (item_list.cpp:37-55)', () => {
+describe('shapeItemText — wrapping (item_list.cpp:37-55)', () => {
   const wrapInput = {
     text: 'AA AA AA',
     fontSizePx: 16,
@@ -111,36 +112,40 @@ describe('shapeItemListText — wrapping (item_list.cpp:37-55)', () => {
 
   it('wraps only TOP icon mode with max_text_lines > 0 (happy path)', () => {
     expect(
-      shapeItemListText({ ...wrapInput, iconMode: ICON_MODE_TOP, maxTextLines: 2 })!.lines.length
+      shapeItemText({ ...wrapInput, iconMode: ICON_MODE_TOP, maxTextLines: 2 }).shaped!.lines.length
     ).toBeGreaterThan(1);
   });
 
   it('never wraps LEFT icon mode, whatever max_text_lines (error path)', () => {
     expect(
-      shapeItemListText({ ...wrapInput, iconMode: ICON_MODE_LEFT, maxTextLines: 2 })!.lines
+      shapeItemText({ ...wrapInput, iconMode: ICON_MODE_LEFT, maxTextLines: 2 }).shaped!.lines
     ).toHaveLength(1);
   });
 
   it('never wraps TOP icon mode with max_text_lines <= 0 (edge case)', () => {
-    expect(shapeItemListText({ ...wrapInput, iconMode: ICON_MODE_TOP, maxTextLines: 0 })!.lines).toHaveLength(
-      1
-    );
+    expect(
+      shapeItemText({ ...wrapInput, iconMode: ICON_MODE_TOP, maxTextLines: 0 }).shaped!.lines
+    ).toHaveLength(1);
   });
 });
 
 describe('trimItemListText — overrun trim (item_list.h:131 default OVERRUN_TRIM_ELLIPSIS)', () => {
   const FONT_SIZE_PX = 16;
 
-  function trimmedChars(widthPx: number, overrunBehavior?: number, iconMode = ICON_MODE_LEFT): string {
+  function trimmedChars(
+    widthPx: number,
+    overrunBehavior?: number,
+    iconMode: number = ICON_MODE_LEFT
+  ): string {
     const shape = { iconMode, maxTextLines: 1 };
-    const shaped = shapeItemListText({
+    const shaped = shapeItemText({
       ...shape,
       text: 'AAAAAAAAAAAA',
       fontSizePx: FONT_SIZE_PX,
       fontMetrics: OPEN_SANS_FONT_METRICS,
       fixedColumnWidth: 0,
       locale: '',
-    })!;
+    }).shaped!;
     const layout = trimItemListText(shaped, widthPx, { ...shape, fontSizePx: FONT_SIZE_PX, overrunBehavior });
     return layout.lines[0]!.glyphs.map((glyph) => glyph.char).join('');
   }
@@ -167,14 +172,14 @@ describe('trimItemListText — overrun trim (item_list.h:131 default OVERRUN_TRI
   // `unit-item-list-text-direction` in Godot 4.6.3: the fill keeps the visual left part.
   it('keeps the visual left part of an AUTO Hebrew item and ends in the ellipsis', () => {
     const shape = { iconMode: ICON_MODE_LEFT, maxTextLines: 1 };
-    const shaped = shapeItemListText({
+    const shaped = shapeItemText({
       ...shape,
       text: 'שלום עולם רחב מאוד',
       fontSizePx: FONT_SIZE_PX,
       fontMetrics: OPEN_SANS_FONT_METRICS,
       fixedColumnWidth: 0,
       locale: '',
-    })!;
+    }).shaped!;
     const chars = visualChars(
       trimItemListText(shaped, shaped.widthPx * 0.75, { ...shape, fontSizePx: FONT_SIZE_PX }).lines[0]!
     );
