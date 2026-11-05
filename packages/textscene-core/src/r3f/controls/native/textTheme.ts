@@ -14,7 +14,7 @@ export interface TextThemeKeys {
   colorKey: string;
 }
 
-interface TextThemeProps {
+export interface TextThemeProps {
   themeOverrideFontSizes?: Record<string, number>;
 }
 

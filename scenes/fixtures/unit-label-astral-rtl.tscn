@@ -1,0 +1,56 @@
+; One variable: an astral right-to-left script, Adlam, whose letters are surrogate pairs. ICU reads
+; each pair as one code point (text_server_adv.cpp:7258-7300), so the Adlam runs reorder as a BMP
+; right-to-left script does. The unjoined font draws each letter in its isolated form.
+
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://fonts/noto-sans-adlam-unjoined-subset.ttf" id="1_font"]
+
+[sub_resource type="Theme" id="Theme_1"]
+default_font = ExtResource("1_font")
+default_font_size = 28
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.1, 0.12, 0.18, 1)
+
+; AUTO infers RTL from the first Adlam letter: the words swap and `!` goes to the visual left.
+[node name="AdlamAuto" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 540.0
+offset_bottom = 64.0
+text = "𞤀𞤣𞤤𞤢𞤥 𞤆𞤵𞤤𞤢𞤪!"
+
+; LTR: `!` stays last and each Adlam word reverses in place.
+[node name="AdlamLtr" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 84.0
+offset_right = 540.0
+offset_bottom = 128.0
+text = "𞤀𞤣𞤤𞤢𞤥 𞤆𞤵𞤤𞤢𞤪!"
+text_direction = 1
+
+; AUTO infers LTR from `A`: the Latin words stay, the Adlam word reverses.
+[node name="MixedAuto" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 148.0
+offset_right = 540.0
+offset_bottom = 192.0
+text = "AB 𞤀𞤣𞤤𞤢𞤥 BA"
+
+; AUTO infers RTL: both parentheses mirror.
+[node name="MirrorAuto" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 212.0
+offset_right = 540.0
+offset_bottom = 256.0
+text = "(𞤀𞤣𞤤𞤢𞤥)"

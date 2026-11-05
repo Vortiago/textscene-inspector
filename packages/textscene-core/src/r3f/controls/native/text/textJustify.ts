@@ -1,7 +1,8 @@
 /**
  * Line justification, a port of `TextServer::shaped_text_fit_to_width`
- * (`modules/text_server_adv/text_server_adv.cpp:5531-5686`) scoped to what a Latin font with no
- * kashida elongation glyphs and no BiDi reaches. It ports `WORD_BOUND`, `TRIM_EDGE_SPACES` and
+ * (`modules/text_server_adv/text_server_adv.cpp:5531-5686`) scoped to what a font with no kashida
+ * elongation glyphs reaches. It walks a line's glyphs in visual order, as `sd->glyphs` holds them
+ * after `_shape_substr` (`:5350-5420`). It ports `WORD_BOUND`, `TRIM_EDGE_SPACES` and
  * `AFTER_LAST_TAB`. Without `TRIM_EDGE_SPACES` it skips the break spaces at the ends of a line, as
  * `shaped_text_fit_to_width` does. The other flags do nothing here:
  * - `KASHIDA` fires only on elongation glyphs (Arabic tatweel runs), which the Latin shaper never tags.
@@ -57,12 +58,17 @@ function fitLineToWidth(
   let startPos = 0;
   let endPos = glyphs.length - 1;
 
-  // :5547-5570
+  // :5547-5570: the logically last tab is the visually last one, or the visually first on an RTL line.
   if (flags & JustificationFlag.AFTER_LAST_TAB) {
-    for (let i = glyphs.length - 1; i >= 0; i--) {
-      if (isTabChar(glyphs[i]!.char)) {
-        startPos = i;
-        break;
+    if (line.isRtl) {
+      const firstTab = glyphs.findIndex((glyph) => isTabChar(glyph.char));
+      if (firstTab >= 0) endPos = firstTab;
+    } else {
+      for (let i = glyphs.length - 1; i >= 0; i--) {
+        if (isTabChar(glyphs[i]!.char)) {
+          startPos = i;
+          break;
+        }
       }
     }
   }

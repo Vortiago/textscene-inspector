@@ -871,13 +871,20 @@ export const CANVAS_2D_SCENES = [
   { name: 'check-button-rtl', file: 'unit-check-button-rtl.tscn', mode: '2d' },
   { name: 'optionbutton-rtl', file: 'unit-optionbutton-rtl.tscn', mode: '2d' },
   { name: 'link-button-rtl', file: 'unit-link-button-rtl.tscn', mode: '2d' },
-  // The text family places runs on the resolved direction without reordering
-  // them. Two pin an absence: Godot does not mirror a FILL label or a
-  // RichTextLabel line, since those arms read the paragraph direction, dead at
-  // `text_direction`'s AUTO default.
+  // The text family places runs on the resolved layout direction. Two pin an
+  // absence: a Latin paragraph infers LTR at `text_direction`'s AUTO default, so
+  // Godot mirrors neither a FILL label nor a RichTextLabel line, whose arms read
+  // the paragraph direction.
   { name: 'label-rtl-alignment', file: 'unit-label-rtl-alignment.tscn', mode: '2d' },
   { name: 'label-rtl-fill-autowrap', file: 'unit-label-rtl-fill-autowrap.tscn', mode: '2d' },
   { name: 'label-rtl-visible-chars-auto', file: 'unit-label-rtl-visible-chars-auto.tscn', mode: '2d' },
+  // A Label's own paragraph direction: the bidirectional reorder, the arms that read the inferred
+  // direction, the structured override and the language.
+  { name: 'label-bidi', file: 'unit-label-bidi.tscn', mode: '2d' },
+  { name: 'label-bidi-alignment', file: 'unit-label-bidi-alignment.tscn', mode: '2d' },
+  { name: 'label-structured-text', file: 'unit-label-structured-text.tscn', mode: '2d' },
+  { name: 'label-language', file: 'unit-label-language.tscn', mode: '2d' },
+  { name: 'label-astral-rtl', file: 'unit-label-astral-rtl.tscn', mode: '2d' },
   { name: 'line-edit-rtl', file: 'unit-line-edit-rtl.tscn', mode: '2d' },
   { name: 'text-edit-rtl', file: 'unit-text-edit-rtl.tscn', mode: '2d' },
   { name: 'code-edit-rtl', file: 'unit-code-edit-rtl.tscn', mode: '2d' },

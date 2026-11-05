@@ -131,6 +131,8 @@ export interface SolveNode {
    * The rect solve (`control.cpp:1785-1787`), containers and painters read it.
    */
   rtl: boolean;
+  /** `Control::_get_locale()`: the project's `LayoutDirectionEnv.applicationLocale`, as no node sets its own. */
+  locale: string;
   /**
    * Resolved StyleBoxes by `get_theme_stylebox(name, type)` name: a
    * `theme_override_styles/*` wins unconditionally, else an ancestor or project

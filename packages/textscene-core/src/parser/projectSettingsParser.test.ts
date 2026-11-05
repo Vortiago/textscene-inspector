@@ -451,6 +451,7 @@ describe('projectLayoutDirectionEnv', () => {
       rootRtl: false,
       applicationLocaleRtl: false,
       systemLocaleRtl: false,
+      applicationLocale: '',
     });
   });
 
@@ -495,6 +496,12 @@ describe('projectLayoutDirectionEnv', () => {
         'internationalization/rendering/root_node_layout_direction': '3',
       }).rootRtl
     ).toBe(false);
+  });
+
+  it('keeps the trimmed test locale, which Label shapes its casing and neutral text with', () => {
+    expect(
+      projectLayoutDirectionEnv({ 'internationalization/locale/test': ' tr_TR ' }).applicationLocale
+    ).toBe('tr_TR');
   });
 
   it('leaves the system-locale answer false — the host locale is not in the scene', () => {

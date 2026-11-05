@@ -57,6 +57,9 @@ catalogs:
     '@vscode/test-web':
       specifier: ^0.0.81
       version: 0.0.81
+    bidi-js:
+      specifier: 1.1.0
+      version: 1.1.0
     brotli:
       specifier: 2.1.0
       version: 2.1.0
@@ -313,6 +316,9 @@ importers:
 
   apps/textscene-renderer:
     dependencies:
+      bidi-js:
+        specifier: 'catalog:'
+        version: 1.1.0
       brotli:
         specifier: 'catalog:'
         version: 2.1.0
@@ -535,6 +541,9 @@ importers:
       '@react-three/fiber':
         specifier: 'catalog:'
         version: 9.8.2(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(three@0.187.0)
+      bidi-js:
+        specifier: 'catalog:'
+        version: 1.1.0
       brotli:
         specifier: 'catalog:'
         version: 2.1.0
@@ -2030,9 +2039,6 @@ packages:
   basic-auth@2.0.1:
     resolution: {integrity: sha512-NF+epuEdnUYVlGuhaxbbq+dvJttwLnGY+YixlXlME5KpQ5W3CnXA5cVTneY3SPbPDRkcjMbifrwmFYcClgOZeg==}
     engines: {node: '>= 0.8'}
-
-  bidi-js@1.0.3:
-    resolution: {integrity: sha512-RKshQI1R3YQ+n9YJz2QQ147P66ELpa1FQEg20Dk8oW9t2KgLbpDLLp9aGZ7y8WHSshDknG0bknqGw5/tyCs5tw==}
 
   bidi-js@1.1.0:
     resolution: {integrity: sha512-fX1Onk0tdVPC7obPWB5EbJ1z7NVhLq4m2xZLq2YXBkxzMXIGRpNMU88n0EPgWseKl12J7zXs7qrDxPK4sRs2fg==}
@@ -5647,10 +5653,6 @@ snapshots:
     dependencies:
       safe-buffer: 5.1.2
 
-  bidi-js@1.0.3:
-    dependencies:
-      require-from-string: 2.0.2
-
   bidi-js@1.1.0:
     dependencies:
       require-from-string: 2.0.2
@@ -7459,7 +7461,7 @@ snapshots:
 
   troika-three-text@0.52.4(three@0.187.0):
     dependencies:
-      bidi-js: 1.0.3
+      bidi-js: 1.1.0
       three: 0.187.0
       troika-three-utils: 0.52.4(three@0.187.0)
       troika-worker-utils: 0.52.0

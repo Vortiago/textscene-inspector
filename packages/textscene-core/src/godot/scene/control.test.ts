@@ -37,6 +37,7 @@ describe('resolveLayoutRtl — the deterministic arms', () => {
       rootRtl: true,
       applicationLocaleRtl: true,
       systemLocaleRtl: true,
+      applicationLocale: 'he',
     };
     expect(resolveLayoutRtl(LayoutDirection.LTR, true, rtlEverywhere)).toBe(false);
     expect(resolveLayoutRtl(LayoutDirection.RTL, false, LTR_LAYOUT_ENV)).toBe(true);

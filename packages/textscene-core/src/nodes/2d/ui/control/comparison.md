@@ -116,10 +116,7 @@ renderer applies its own default. `theme_override_styles/*` is stored unparsed.
   machine locale.
 - **Approximated** A Control below a `Window` inherits its direction from the Control
   above that Window, where Godot takes the Window's own `layout_direction`.
-- **Approximated** Text is always shaped left-to-right, so a `Label`, `Button` title or
-  `ItemList` row in a right-to-left script draws its characters in code-point order.
-- **Approximated** A widget's per-node `text_direction` is not read, so a value other than
-  its AUTO default (`label.h:70`, `line_edit.h:144`, `text_edit.h:327`,
-  `rich_text_label.h:615`) has no effect.
+- **Approximated** A widget's per-node `text_direction` is not read, except on Label, so its text
+  shapes at the AUTO default (`line_edit.h:144`, `text_edit.h:327`, `rich_text_label.h:615`).
 - **Needs runtime** The direction also drives hit-testing, keyboard and drag in TabBar,
   Tree, ItemList, the sliders and the text controls, which a frozen frame never exercises.

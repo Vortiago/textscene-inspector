@@ -885,6 +885,7 @@ function buildForest(
       // this one (`SolveNode.parentVisibleInTree`).
       parentVisibleInTree,
       rtl: rtl ?? layoutDirectionEnv.rootRtl,
+      locale: layoutDirectionEnv.applicationLocale,
       hidden,
       styleBoxes: resolveStyleBoxes(collapsed, ownScope, themeScope),
       textureSize: texture.size,

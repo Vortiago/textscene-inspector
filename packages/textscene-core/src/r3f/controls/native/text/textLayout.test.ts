@@ -788,6 +788,16 @@ describe('shapeText — tab_stops (ShapeTextOptions.tabStopsPx, label.cpp:196-19
     expect(layout.lines[1]!.glyphs[1]!.advance).toBeCloseTo(4.421875, 10);
   });
 
+  it('aligns the tab after an astral character, and leaves every other advance as it was', () => {
+    const plain = shapeText('\u{1F600}\tB', opts).lines[0]!.glyphs;
+    const aligned = shapeText('\u{1F600}\tB', { ...opts, tabStopsPx: [40] }).lines[0]!.glyphs;
+    const tabIndex = aligned.findIndex((glyph) => glyph.char === '\t');
+    expect(aligned[tabIndex + 1]!.x).toBeCloseTo(40, 10);
+    aligned.forEach((glyph, i) => {
+      if (i !== tabIndex) expect(glyph.advance).toBe(plain[i]!.advance);
+    });
+  });
+
   it('no stops is a no-op, matching every caller before this option existed', () => {
     const withoutOption = shapeText('A\tB', opts);
     const withEmptyStops = shapeText('A\tB', { ...opts, tabStopsPx: [] });

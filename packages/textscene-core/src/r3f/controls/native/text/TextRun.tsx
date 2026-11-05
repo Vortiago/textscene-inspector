@@ -24,6 +24,7 @@ import {
   buildCanvasTextQuadArrays,
   paintSceneFontCanvas,
   createCanvasTextMaterial,
+  type CanvasTextPaintOptions,
 } from './canvasTextPainter';
 import type { SurfaceShading } from '../../../materialFor2d';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
@@ -103,6 +104,13 @@ export interface TextRunProps {
    * positions. The default 0 fills. Canvas runs only: MSDF has no contour.
    */
   strokeWidthPx?: number;
+  /**
+   * Rounds each glyph pen as a canvas item draws it (`canvasGlyphPenXPx`). Label3D passes false, as
+   * its mesh keeps the pen (`label_3d.cpp:347`). Canvas runs only: the MSDF atlas keeps the pen too.
+   */
+  quantisesPen?: boolean;
+  /** Where the run's x 0 sits in its canvas item, which a rounded pen includes (`text_server_adv.cpp:4074-4084`). Canvas runs only. */
+  penOriginXPx?: number;
   /**
    * The raster texture's sampler: Label3D's `texture_filter` (`label_3d.h:140`). The default is
    * Godot's default filter. A mipmapped row samples a mip chain only where `mipmapped` built one.
@@ -219,31 +227,38 @@ function buildBitmapRun(
 
 /**
  * Dispatches on `layout.fontMetrics.kind`, so no slice's `Component.tsx` branches. The face sets the
- * shear (`FontMetrics.skew`). `strokeWidthPx` is canvas-only, and the atlas branch ignores it, except
+ * shear (`FontMetrics.skew`). `canvasPaint` is canvas-only, and the atlas branch ignores it, except
  * that a BMFont run reads a positive stroke width as its outline pass.
  */
 function buildTextRun(
   layout: TextLayoutResult,
   fontSizePx: number,
   look: TextRunLook,
-  strokeWidthPx: number,
+  canvasPaint: CanvasTextPaintOptions,
   textureFilter: TextureFilterState,
   mipmapped: boolean
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
   const skew = layout.fontMetrics.skew ?? 0;
   if (isBitmapFontMetrics(layout.fontMetrics)) {
-    return buildBitmapRun(layout, layout.fontMetrics, fontSizePx, look, textureFilter, strokeWidthPx > 0);
+    return buildBitmapRun(
+      layout,
+      layout.fontMetrics,
+      fontSizePx,
+      look,
+      textureFilter,
+      (canvasPaint.strokeWidthPx ?? 0) > 0
+    );
   }
   if (isCanvasFontMetrics(layout.fontMetrics)) {
-    const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, canvasPaint.strokeWidthPx);
     const quads = buildCanvasTextQuadArrays(canvasLayout);
     const geo = quadGeometry(quads);
     const { positions } = quads;
     // On every run, so toggling the shading rebuilds the material alone, not the raster.
     geo.setAttribute('normal', quadFacingPlusZ(positions.length / 3));
 
-    const canvas = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, strokeWidthPx);
+    const canvas = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, canvasPaint);
     const texture = new THREE.CanvasTexture(canvas);
     // `SRGBColorSpace`, not the 2D-canvas rule's `NoColorSpace`: measured, `NoColorSpace` dips
     // 5/255 below the backdrop at a glyph edge, where Godot draws a monotonic ramp. `textRun.md`
@@ -314,6 +329,8 @@ function TextRunMesh({
   depthTest,
   side,
   strokeWidthPx = 0,
+  quantisesPen = true,
+  penOriginXPx = 0,
   textureFilter = godotTextureFilterState(undefined),
   mipmapped = false,
   blends,
@@ -333,7 +350,7 @@ function TextRunMesh({
         layout,
         fontSizePx,
         { tint, clippingPlanes, depthTest, side, pixelMaterial },
-        strokeWidthPx,
+        { strokeWidthPx, quantisesPen, penOriginXPx },
         textureFilter,
         mipmapped
       ),
@@ -352,6 +369,8 @@ function TextRunMesh({
       side,
       pixelMaterial,
       strokeWidthPx,
+      quantisesPen,
+      penOriginXPx,
       textureFilter,
       mipmapped,
     ]

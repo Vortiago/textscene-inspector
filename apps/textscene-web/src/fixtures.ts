@@ -1193,8 +1193,23 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Astral Rtl",
+    "file": "unit-label-astral-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Autowrap In Container",
     "file": "unit-label-autowrap-in-container.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Bidi Alignment",
+    "file": "unit-label-bidi-alignment.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Bidi",
+    "file": "unit-label-bidi.tscn",
     "category": "Other"
   },
   {
@@ -1243,6 +1258,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Language",
+    "file": "unit-label-language.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Outline",
     "file": "unit-label-outline.tscn",
     "category": "Other"
@@ -1275,6 +1295,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Label Stacked Effects",
     "file": "unit-label-stacked-effects.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Structured Text",
+    "file": "unit-label-structured-text.tscn",
     "category": "Other"
   },
   {
