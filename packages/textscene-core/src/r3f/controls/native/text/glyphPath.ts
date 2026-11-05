@@ -7,7 +7,8 @@
  */
 
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
-import type { ContourPoint, GlyphContours } from './glyphContours';
+import { FIXED_26_6_ONE } from './fontMetrics';
+import { toOutlineUnits, type ContourPoint, type GlyphContours } from './glyphContours';
 import type { Vector2 } from '../../../../godot/math/vector';
 
 /** The calls of a canvas path that a glyph outline needs. */
@@ -16,18 +17,14 @@ export type PathSink = Pick<
   'moveTo' | 'lineTo' | 'quadraticCurveTo' | 'bezierCurveTo' | 'closePath'
 >;
 
-/** 26.6 fixed point: FreeType holds an outline point in 1/64 px. */
-const OUTLINE_UNITS_PER_PX = 64;
-
 /**
  * The point where two control points in a row meet, as `FT_Outline_Decompose` takes it: the
  * halfway point in 1/64 px, which C's integer division floors in the rasteriser's y-up frame.
  */
 function outlineMidpoint(a: Vector2, b: Vector2): Vector2 {
-  const units = (px: number) => Math.round(px * OUTLINE_UNITS_PER_PX);
   return {
-    x: Math.floor((units(a.x) + units(b.x)) / 2) / OUTLINE_UNITS_PER_PX,
-    y: Math.ceil((units(a.y) + units(b.y)) / 2) / OUTLINE_UNITS_PER_PX,
+    x: Math.floor((toOutlineUnits(a.x) + toOutlineUnits(b.x)) / 2) / FIXED_26_6_ONE,
+    y: Math.ceil((toOutlineUnits(a.y) + toOutlineUnits(b.y)) / 2) / FIXED_26_6_ONE,
   };
 }
 
@@ -36,7 +33,6 @@ function outlineMidpoint(a: Vector2, b: Vector2): Vector2 {
  * at its last point when that is on the curve, and between the two control points otherwise.
  */
 function traceContour(sink: PathSink, points: readonly ContourPoint[], first: number, last: number): void {
-  const at = (point: Vector2): [number, number] => [point.x, point.y];
   let limit = last;
   let index = first;
   const firstPoint = points[first]!;
@@ -52,40 +48,38 @@ function traceContour(sink: PathSink, points: readonly ContourPoint[], first: nu
     // The first point is read again, as the first control point.
     index--;
   }
-  sink.moveTo(...at(start));
+  sink.moveTo(start.x, start.y);
 
   while (index < limit) {
     index++;
     const current = points[index]!;
     if (current.tag === ContourPointTag.ON) {
-      sink.lineTo(...at(current));
+      sink.lineTo(current.x, current.y);
     } else if (current.tag === ContourPointTag.OFF_CONIC) {
       let control: Vector2 = current;
       // A run of control points ends on an on-curve point; each pair meets at its midpoint.
       while (true) {
         if (index >= limit) {
-          sink.quadraticCurveTo(...at(control), ...at(start));
+          sink.quadraticCurveTo(control.x, control.y, start.x, start.y);
           sink.closePath();
           return;
         }
         index++;
         const next = points[index]!;
         if (next.tag === ContourPointTag.ON) {
-          sink.quadraticCurveTo(...at(control), ...at(next));
+          sink.quadraticCurveTo(control.x, control.y, next.x, next.y);
           break;
         }
-        sink.quadraticCurveTo(...at(control), ...at(outlineMidpoint(control, next)));
+        const middle = outlineMidpoint(control, next);
+        sink.quadraticCurveTo(control.x, control.y, middle.x, middle.y);
         control = next;
       }
     } else {
       const firstControl = points[index]!;
       const secondControl = points[index + 1]!;
       index += 2;
-      sink.bezierCurveTo(
-        ...at(firstControl),
-        ...at(secondControl),
-        ...at(index <= limit ? points[index]! : start)
-      );
+      const end = index <= limit ? points[index]! : start;
+      sink.bezierCurveTo(firstControl.x, firstControl.y, secondControl.x, secondControl.y, end.x, end.y);
       if (index > limit) {
         sink.closePath();
         return;

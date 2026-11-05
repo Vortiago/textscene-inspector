@@ -5,7 +5,8 @@
  */
 import { glyphBitmapGrid, rasteriseGlyph, type BitmapGrid } from './ftGrays';
 import { strokeGlyphContours } from './ftStroker';
-import type { GlyphContours } from './glyphContours';
+import { FIXED_26_6_ONE } from './fontMetrics';
+import { toOutlineUnits, type GlyphContours } from './glyphContours';
 import { perObject } from '../../../../utils/perObject';
 
 /** A coverage bitmap and the grid it covers, in px from the glyph origin or, once placed, in raster px. */
@@ -14,8 +15,11 @@ export interface GlyphBitmap {
   coverage: Uint8Array;
 }
 
-/** 26.6 fixed point: FreeType moves an outline (`FT_Outline_Translate`) in 1/64 px. */
-const OUTLINE_UNITS_PER_PX = 64;
+/**
+ * The bitmaps one contour keeps. A canvas item's pen takes at most four subpixel steps, while a
+ * Label3D can sit at any 1/64 px, which would keep 4096 bitmaps of each glyph and radius.
+ */
+const MAX_BITMAPS_PER_CONTOUR = 64;
 
 /** The bitmaps drawn so far of each glyph outline, by subpixel shift and outline radius. */
 const drawnBitmaps = perObject((_contours: GlyphContours) => new Map<string, GlyphBitmap | null>());
@@ -60,12 +64,16 @@ export function placedGlyphBitmap(
 ): GlyphBitmap | null {
   const wholeX = Math.floor(originX);
   const wholeY = Math.floor(originY);
-  const dx = Math.round((originX - wholeX) * OUTLINE_UNITS_PER_PX) / OUTLINE_UNITS_PER_PX;
-  const dy = Math.round((originY - wholeY) * OUTLINE_UNITS_PER_PX) / OUTLINE_UNITS_PER_PX;
+  // FreeType moves an outline (`FT_Outline_Translate`) in 1/64 px.
+  const dx = toOutlineUnits(originX - wholeX) / FIXED_26_6_ONE;
+  const dy = toOutlineUnits(originY - wholeY) / FIXED_26_6_ONE;
   const bitmaps = drawnBitmaps(contours);
   const key = `${dx},${dy},${outlineRadiusPx}`;
   let bitmap = bitmaps.get(key);
-  if (bitmap === undefined) bitmaps.set(key, (bitmap = drawGlyphBitmap(contours, dx, dy, outlineRadiusPx)));
+  if (bitmap === undefined) {
+    if (bitmaps.size >= MAX_BITMAPS_PER_CONTOUR) bitmaps.delete(bitmaps.keys().next().value!);
+    bitmaps.set(key, (bitmap = drawGlyphBitmap(contours, dx, dy, outlineRadiusPx)));
+  }
   if (!bitmap) return null;
   const { grid, coverage } = bitmap;
   return { grid: { ...grid, left: grid.left + wholeX, top: grid.top + wholeY }, coverage };
@@ -92,7 +100,9 @@ export function blendGlyphBitmap(
       const level = coverage[row * grid.width + column]!;
       if (x < 0 || x >= width || level === 0) continue;
       const at = (y * width + x) * 4;
-      data.set(colour, at);
+      data[at] = colour[0];
+      data[at + 1] = colour[1];
+      data[at + 2] = colour[2];
       data[at + 3] = Math.round(level + (data[at + 3]! * (255 - level)) / 255);
     }
   }

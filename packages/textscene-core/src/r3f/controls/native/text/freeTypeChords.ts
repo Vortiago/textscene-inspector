@@ -6,32 +6,27 @@
  * Portions ported from FreeType (FreeType License).
  * Copyright (c) 1996-2024 David Turner, Robert Wilhelm and Werner Lemberg.
  */
+import { shiftRight } from './ftVector';
 import type { PathSink } from './glyphPath';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /** The sink calls a chord path needs: no curves. */
 export type ChordSink = Pick<CanvasPath, 'moveTo' | 'lineTo' | 'closePath'>;
 
-/** `ONE_PIXEL` of `ftgrays.c` (`PIXEL_BITS` 8): the rasteriser places a chord point in 1/256 px. */
-const SUBPIXELS_PER_PX = 256;
+/** `PIXEL_BITS` and `ONE_PIXEL` of `ftgrays.c`: the rasteriser places a point in 1/256 px. */
+export const PIXEL_BITS = 8;
+export const ONE_PIXEL = 1 << PIXEL_BITS;
 /** A conic whose `|P0 + P2 - 2 P1|` is within this draws as one chord: a deviation within 1/16 px. */
-const CONIC_FLATNESS = SUBPIXELS_PER_PX / 4;
+const CONIC_FLATNESS = ONE_PIXEL / 4;
 /** A cubic whose control points sit within this of their chord trisection points draws as one chord. */
-const CUBIC_FLATNESS = SUBPIXELS_PER_PX / 2;
+const CUBIC_FLATNESS = ONE_PIXEL / 2;
 
 /** A point in the rasteriser's frame: 1/256 px, y up, as FreeType's outline runs. */
-interface Subpixel {
-  x: number;
-  y: number;
-}
+type Subpixel = Vector2;
 
 /** The point of `(x, y)`, canvas px with y down, in the rasteriser's frame. */
 function toSubpixel(x: number, y: number): Subpixel {
-  return { x: x * SUBPIXELS_PER_PX, y: -y * SUBPIXELS_PER_PX };
-}
-
-/** `TPos >> bits`: an arithmetic shift, which floors. Division keeps it exact past 32 bits. */
-function shiftDown(value: number, bits: number): number {
-  return Math.floor(value / 2 ** bits);
+  return { x: x * ONE_PIXEL, y: -y * ONE_PIXEL };
 }
 
 /**
@@ -47,7 +42,7 @@ function conicChordEnds(p0: Subpixel, p1: Subpixel, p2: Subpixel): Subpixel[] {
   if (deviation <= CONIC_FLATNESS) return [p2];
   let count = 1;
   do {
-    deviation = shiftDown(deviation, 2);
+    deviation = shiftRight(deviation, 2);
     count *= 2;
   } while (deviation > CONIC_FLATNESS);
   // FreeType steps by forward differences on 2^32-scaled integers, which is exact: each end is the
@@ -82,13 +77,23 @@ function splitCubicAxis(arc: Subpixel[], at: number, axis: 'x' | 'y'): void {
   let a = base(0)[axis] + base(1)[axis];
   const b = base(1)[axis] + base(2)[axis];
   let c = base(2)[axis] + base(3)[axis];
-  base(5)[axis] = shiftDown(c, 1);
+  base(5)[axis] = shiftRight(c, 1);
   c += b;
-  base(4)[axis] = shiftDown(c, 2);
-  base(1)[axis] = shiftDown(a, 1);
+  base(4)[axis] = shiftRight(c, 2);
+  base(1)[axis] = shiftRight(a, 1);
   a += b;
-  base(2)[axis] = shiftDown(a, 2);
-  base(3)[axis] = shiftDown(a + c, 3);
+  base(2)[axis] = shiftRight(a, 2);
+  base(3)[axis] = shiftRight(a + c, 3);
+}
+
+/**
+ * `gray_split_cubic` and `ft_cubic_split`: halves the cubic at `at` of `arc` (end first) in place, the
+ * halves at `at` and `at + 3`, with FreeType's floors.
+ */
+export function splitCubic(arc: Vector2[], at: number): void {
+  while (arc.length < at + 7) arc.push({ x: 0, y: 0 });
+  splitCubicAxis(arc, at, 'x');
+  splitCubicAxis(arc, at, 'y');
 }
 
 /**
@@ -101,9 +106,7 @@ function cubicChordEnds(p0: Subpixel, p1: Subpixel, p2: Subpixel, p3: Subpixel):
   let at = 0;
   for (;;) {
     if (!isCubicFlat(arc, at)) {
-      while (arc.length < at + 7) arc.push({ x: 0, y: 0 });
-      splitCubicAxis(arc, at, 'x');
-      splitCubicAxis(arc, at, 'y');
+      splitCubic(arc, at);
       at += 3;
       continue;
     }
@@ -121,7 +124,7 @@ function cubicChordEnds(p0: Subpixel, p1: Subpixel, p2: Subpixel, p3: Subpixel):
 export function freeTypeChordSink(sink: ChordSink): PathSink {
   let current: Subpixel = { x: 0, y: 0 };
   const drawTo = (ends: readonly Subpixel[]) => {
-    for (const end of ends) sink.lineTo(end.x / SUBPIXELS_PER_PX, -end.y / SUBPIXELS_PER_PX);
+    for (const end of ends) sink.lineTo(end.x / ONE_PIXEL, -end.y / ONE_PIXEL);
     current = ends[ends.length - 1]!;
   };
   return {

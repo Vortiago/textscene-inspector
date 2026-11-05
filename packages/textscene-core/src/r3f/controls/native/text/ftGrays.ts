@@ -6,8 +6,9 @@
  * Portions ported from FreeType (FreeType License).
  * Copyright (c) 1996-2024 David Turner, Robert Wilhelm and Werner Lemberg.
  */
-import { freeTypeChordSink, type ChordSink } from './freeTypeChords';
-import type { GlyphContours } from './glyphContours';
+import { FIXED_26_6_ONE } from './fontMetrics';
+import { freeTypeChordSink, ONE_PIXEL, PIXEL_BITS, type ChordSink } from './freeTypeChords';
+import { extent, toOutlineUnits, type GlyphContours } from './glyphContours';
 import { traceGlyphContours } from './glyphPath';
 
 /** The pixel grid a bitmap covers: its top-left corner in px from the glyph origin, y down. */
@@ -18,14 +19,9 @@ export interface BitmapGrid {
   height: number;
 }
 
-/** `PIXEL_BITS` 8: a cell is 256 subpixels wide. */
-const PIXEL_BITS = 8;
-const ONE_PIXEL = 1 << PIXEL_BITS;
 /** `FT_UDIVPREP`: the 32-bit reciprocal that `FT_UDIV` multiplies by. */
 const UDIV_NUMERATOR = 0xffffffff;
 const TWO_TO_32 = 2 ** 32;
-/** 26.6 fixed point: an outline point sits on a grid of 1/64 px. */
-const OUTLINE_UNITS_PER_PX = 64;
 
 /** `TRUNC`: the cell of a subpixel coordinate. */
 const cellOf = (subpixel: number): number => Math.floor(subpixel / ONE_PIXEL);
@@ -237,12 +233,11 @@ export function rasteriseGlyph(contours: GlyphContours, grid: BitmapGrid): Uint8
  */
 export function glyphBitmapGrid({ points }: GlyphContours): BitmapGrid | null {
   if (points.length === 0) return null;
-  const units = (px: number) => Math.round(px * OUTLINE_UNITS_PER_PX);
-  const xs = points.map((point) => units(point.x));
-  const ys = points.map((point) => units(point.y));
-  const left = Math.floor(Math.min(...xs) / OUTLINE_UNITS_PER_PX);
-  const top = Math.floor(Math.min(...ys) / OUTLINE_UNITS_PER_PX);
-  const right = Math.ceil(Math.max(...xs) / OUTLINE_UNITS_PER_PX);
-  const bottom = Math.ceil(Math.max(...ys) / OUTLINE_UNITS_PER_PX);
+  const [xMin, xMax] = extent(points.map((point) => toOutlineUnits(point.x)));
+  const [yMin, yMax] = extent(points.map((point) => toOutlineUnits(point.y)));
+  const left = Math.floor(xMin / FIXED_26_6_ONE);
+  const top = Math.floor(yMin / FIXED_26_6_ONE);
+  const right = Math.ceil(xMax / FIXED_26_6_ONE);
+  const bottom = Math.ceil(yMax / FIXED_26_6_ONE);
   return { left, top, width: right - left, height: bottom - top };
 }

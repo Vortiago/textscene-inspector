@@ -45,7 +45,7 @@ export const ContourPointTag = {
  * `TextServer::Hinting` by value: HINTING_NONE=0, HINTING_LIGHT=1, HINTING_NORMAL=2
  * (servers/text/text_server.h:161-163): the target FreeType loads a glyph for.
  */
-export const FONT_HINTINGS = ['none', 'light', 'normal'] as const;
+const FONT_HINTINGS = ['none', 'light', 'normal'] as const;
 export type FontHinting = (typeof FONT_HINTINGS)[number];
 
 /** The hinting a `TextServer::Hinting` value names. Absent or unknown is light, the default of a font. */

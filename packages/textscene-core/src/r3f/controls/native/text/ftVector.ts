@@ -85,7 +85,7 @@ const TRIG_SAFE_MSB = 29;
 const TRIG_MAX_ITERS = 23;
 
 /** `x >> shift` on an `FT_Fixed` that may pass 32 bits, which `>>` would wrap. */
-const shiftRight = (value: number, shift: number): number => Math.floor(value / 2 ** shift);
+export const shiftRight = (value: number, shift: number): number => Math.floor(value / 2 ** shift);
 
 /** `ft_trig_downscale`: the magnitude times the shrink factor, rounded, with the sign kept. Exact in 64 bits. */
 function trigDownscale(value: number): number {
@@ -185,11 +185,9 @@ function pseudoPolarise(vectorX: number, vectorY: number): { length: number; ang
 export function ftVectorLength({ x, y }: Vector2): number {
   if (x === 0) return Math.abs(y);
   if (y === 0) return Math.abs(x);
-  // `ft_trig_prenorm`: scale so that the larger component's highest bit is the safe one.
-  const highest = highestBit(toUint32(Math.abs(x) | Math.abs(y)));
-  const shift = TRIG_SAFE_MSB - highest;
-  const scaled = (value: number) => (shift >= 0 ? value * 2 ** shift : shiftRight(value, -shift));
-  const length = trigDownscale(pseudoPolarise(scaled(x), scaled(y)).length);
+  const prenormed = { x, y };
+  const shift = trigPrenorm(prenormed);
+  const length = trigDownscale(pseudoPolarise(prenormed.x, prenormed.y).length);
   if (shift > 0) return shiftRight(length + 2 ** (shift - 1), shift);
   return toUint32(length * 2 ** -shift);
 }
@@ -212,9 +210,6 @@ export function ftVectorUnit(angle: number): Vector2 {
 /** `FT_Cos`: the 16.16 cosine of `angle`. */
 export const ftCos = (angle: number): number => ftVectorUnit(angle).x;
 
-/** `FT_Sin`: the 16.16 sine of `angle`. */
-export const ftSin = (angle: number): number => ftVectorUnit(angle).y;
-
 /** `FT_Tan`: the 16.16 tangent of `angle`. */
 export function ftTan(angle: number): number {
   const vector = { x: 1 << 24, y: 0 };
@@ -223,7 +218,7 @@ export function ftTan(angle: number): number {
 }
 
 /** `FT_Vector_Rotate`: `vector` turned by `angle`, rounded half away from zero on a scale down. */
-export function ftVectorRotate(vector: Readonly<Vector2>, angle: number): Vector2 {
+function ftVectorRotate(vector: Readonly<Vector2>, angle: number): Vector2 {
   if (angle === 0 || (vector.x === 0 && vector.y === 0)) return { x: vector.x, y: vector.y };
   const rotated = { x: vector.x, y: vector.y };
   const shift = trigPrenorm(rotated);

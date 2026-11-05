@@ -19,9 +19,14 @@ import {
   ftVectorFromPolar,
   ftVectorLength,
   ftVectorUnit,
+  shiftRight,
 } from './ftVector';
+import { divide } from './autofit/afHints';
+import { splitCubic } from './freeTypeChords';
 import {
+  contoursScaledOutline,
   scaledOutlineContours,
+  toOutlineUnits,
   type ContourTag,
   type GlyphContours,
   type ScaledOutline,
@@ -50,12 +55,6 @@ const isSmall = (value: number): boolean => value > -2 && value < 2;
 
 const isNear = (a: Vector2, b: Vector2): boolean => isSmall(a.x - b.x) && isSmall(a.y - b.y);
 
-/** C's `/`, which truncates toward zero. */
-const divide = (a: number, b: number): number => Math.trunc(a / b);
-
-/** `x >> bits` on a signed value: an arithmetic shift, which floors. */
-const shiftRight = (value: number, bits: number): number => Math.floor(value / 2 ** bits);
-
 const plus = (a: Vector2, b: Vector2): Vector2 => ({ x: a.x + b.x, y: a.y + b.y });
 
 /** `FT_SIDE_TO_ROTATE`: the turn from the path direction to border `side`, 0 left and 1 right. */
@@ -74,24 +73,6 @@ function splitConic(arc: Vector2[], at: number): void {
     base(3)[axis] = shiftRight(b, 1);
     base(2)[axis] = shiftRight(a + b, 2);
     base(1)[axis] = shiftRight(a, 1);
-  }
-}
-
-/** `ft_cubic_split`: halves the cubic at `at` of `arc` (end first) in place. */
-function splitCubic(arc: Vector2[], at: number): void {
-  const base = (i: number): Vector2 => (arc[at + i] ??= { x: 0, y: 0 });
-  for (const axis of ['x', 'y'] as const) {
-    base(6)[axis] = base(3)[axis];
-    let a = base(0)[axis] + base(1)[axis];
-    const b = base(1)[axis] + base(2)[axis];
-    let c = base(2)[axis] + base(3)[axis];
-    base(5)[axis] = shiftRight(c, 1);
-    c += b;
-    base(4)[axis] = shiftRight(c, 2);
-    base(1)[axis] = shiftRight(a, 1);
-    a += b;
-    base(2)[axis] = shiftRight(a, 2);
-    base(3)[axis] = shiftRight(a + c, 3);
   }
 }
 
@@ -529,9 +510,6 @@ function exportBorder(border: StrokeBorder, outline: ScaledOutline): void {
   });
 }
 
-/** 26.6 fixed point: FreeType holds an outline point in 1/64 px. */
-const OUTLINE_UNITS_PER_PX = 64;
-
 /**
  * `FT_Glyph_Stroke` with Godot's stroker (`FT_Stroker_Set(radius, BUTT, ROUND, 0)`): the outline of
  * the ring `radius` (26.6) each side of `outline`, left border first.
@@ -544,22 +522,10 @@ function strokeOutline(outline: ScaledOutline, radius: number): ScaledOutline {
   return stroked;
 }
 
-/** The glyph outline FreeType holds for `contours`: 26.6, y up. */
-function scaledOutlineOf({ points, contourEnds }: GlyphContours): ScaledOutline {
-  return {
-    x: points.map((point) => Math.round(point.x * OUTLINE_UNITS_PER_PX)),
-    y: points.map((point) => Math.round(-point.y * OUTLINE_UNITS_PER_PX)),
-    tags: points.map((point) => point.tag),
-    contourEnds: [...contourEnds],
-  };
-}
-
 /**
  * The outline of the ring Godot draws round `contours` for an outline of `radiusPx` each side
  * (`textOutline.ts`), in px with y down. Its fill under the non-zero rule is the stroked glyph.
  */
 export function strokeGlyphContours(contours: GlyphContours, radiusPx: number): GlyphContours {
-  return scaledOutlineContours(
-    strokeOutline(scaledOutlineOf(contours), Math.round(radiusPx * OUTLINE_UNITS_PER_PX))
-  );
+  return scaledOutlineContours(strokeOutline(contoursScaledOutline(contours), toOutlineUnits(radiusPx)));
 }

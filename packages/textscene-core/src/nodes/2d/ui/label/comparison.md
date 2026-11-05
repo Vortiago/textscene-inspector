@@ -22,8 +22,7 @@ A Label draws its layers in Godot's order (`label.cpp:828-883`). The shadow ring
 each stacked shadow and each stacked outline draw from the last index to the first. The outline comes next, and the fill
 comes last. A ring is a stroked contour with a one-sided radius of `outline_size / 4` px (`text_server_adv.cpp:1383`).
 It draws on the canvas painter for the bundled font and a scene font alike (ADR-0040), as do the fill and the plain
-shadows. Each glyph and ring draw from FreeType's bitmap at the font's `hinting`, so the `label-outline` golden matches
-Godot to 1/255.
+shadows. Each glyph and ring draw from FreeType's bitmap at the font's `hinting`, as Godot draws them.
 An embolden over the bundled font draws on the canvas painter, which emboldens the outline as
 FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0040).
 
@@ -151,8 +150,8 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 ## Known limitations
 
 - **Not drawn** Arabic letters draw in their isolated forms, since the shaper does not join them.
-- **Approximated** A glyph the previewer reads no outline for, in a font its reader cannot open,
-  draws with the browser's rasteriser and hinting, so a cap can sit 1 px lower here.
+- **Approximated** A font the previewer cannot read outlines from draws with the browser's
+  rasteriser and hinting, so a cap can sit 1 px lower here.
 - **Not drawn** The `fallbacks` of a BMFont: a missing character draws as a hex-code box (`text_server_adv.cpp:6810-6928`, #1298).
 - **Approximated** A wrapping Label inside a ScrollContainer can read one line short when
   the wrap is what makes the scrollbar appear.
