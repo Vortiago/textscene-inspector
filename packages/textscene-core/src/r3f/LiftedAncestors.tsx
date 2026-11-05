@@ -13,13 +13,18 @@ import {
   CanvasItemMaterialProvider,
   useCanvasAncestorMaterial,
 } from './components/canvasItemMaterialContext.js';
-import { node2dGroupProps, node2dGroupSpread, threeMatrixFromTransform2D } from './node2dTransform.js';
+import type * as THREE from 'three';
+import {
+  node2dGroupMatrix,
+  node2dGroupPropsOf,
+  node2dGroupSpread,
+  type Node2DGroupProps,
+} from './node2dTransform.js';
 import { CanvasSpaceProvider, useCanvasSpace } from './canvasRootScope.js';
 import { useSceneResources } from './SceneResourcesContext.js';
 import { joinPath } from '../utils/nodePath.js';
 import { pathsAlong, useLiveDrawnChain } from './liveNodePatches.js';
-import { useAnimatedValueAt } from './contexts/AnimatedValueContext.js';
-import { useOptionalSelection } from './contexts/SelectionContext.js';
+import { useCanvasItemVisible } from './canvasItemVisible.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
 
 /**
@@ -46,11 +51,21 @@ export function LiftedAncestors({
     () => foldCanvasAncestors(liftedPast, scope, INHERIT_PARENT_MATERIAL),
     [liftedPast, scope]
   );
-  const matrix = useMemo(() => threeMatrixFromTransform2D(lifted.transform), [lifted.transform]);
-  // The restored group is a real transform in the rendered tree, so a canvas root
-  // below it has to cancel it too (`canvasRootScope.tsx`).
+  const groups = useMemo(
+    () => liftedPast.map((ancestor) => node2dGroupPropsOf(ancestor.properties as Partial<Node2DProperties>)),
+    [liftedPast]
+  );
+  // The restored groups are real transforms in the rendered tree, so a canvas root
+  // below them has to cancel them too (`canvasRootScope.tsx`).
   const ambient = useCanvasSpace();
-  const liftedSpace = useMemo(() => (ambient ? ambient.clone().multiply(matrix) : matrix), [ambient, matrix]);
+  const liftedSpace = useMemo(
+    () =>
+      groups.reduce<THREE.Matrix4 | null>((space, group) => {
+        const own = node2dGroupMatrix(group);
+        return space ? space.clone().multiply(own) : own;
+      }, ambient),
+    [groups, ambient]
+  );
   const parentSampler = useContext(TextureSampler2DContext);
   const sampler = useMemo(
     () => inheritTextureSampler(lifted.sampler, parentSampler),
@@ -63,7 +78,7 @@ export function LiftedAncestors({
       <CanvasItemMaterialProvider value={material}>
         <TextureSampler2DContext.Provider value={sampler}>
           <CanvasSpaceProvider value={liftedSpace}>
-            <LiftedGroups chain={liftedPast} basePath={basePath}>
+            <LiftedGroups chain={liftedPast} groups={groups} basePath={basePath}>
               {children}
             </LiftedGroups>
           </CanvasSpaceProvider>
@@ -80,17 +95,19 @@ export function LiftedAncestors({
  */
 function LiftedGroups({
   chain,
+  groups,
   basePath,
   children,
 }: {
   chain: readonly TscnNode[];
+  groups: readonly Node2DGroupProps[];
   basePath: string;
   children: ReactNode;
 }) {
   const paths = useMemo(() => pathsAlong(chain, basePath), [chain, basePath]);
   return chain.reduceRight<ReactNode>(
     (inner, ancestor, index) => (
-      <LiftedGroup ancestor={ancestor} path={paths[index]!}>
+      <LiftedGroup group={groups[index]!} ancestor={ancestor} path={paths[index]!}>
         {inner}
       </LiftedGroup>
     ),
@@ -98,39 +115,23 @@ function LiftedGroups({
   );
 }
 
-/**
- * `ancestor`'s transform, and its visibility as its own group hides its descendants on the
- * ordinary walk: its `visible`, a pushed `visible`, or the eye toggle.
- */
+/** An ancestor's group: its transform, and its visibility as on the ordinary walk. */
 function LiftedGroup({
+  group,
   ancestor,
   path,
   children,
 }: {
+  group: Node2DGroupProps;
   ancestor: TscnNode;
   path: string;
   children: ReactNode;
 }) {
-  const props = ancestor.properties as Partial<Node2DProperties>;
-  const spread = useMemo(
-    () =>
-      node2dGroupSpread(
-        node2dGroupProps({
-          position: props.position ?? { x: 0, y: 0 },
-          rotation: props.rotation ?? 0,
-          scale: props.scale ?? { x: 1, y: 1 },
-          skew: props.skew,
-        })
-      ),
-    [props]
-  );
-  const animated = useAnimatedValueAt(path, 'visible', (value) => value[0] !== 0);
-  const isHidden = useOptionalSelection()?.hiddenNodePaths.has(path) ?? false;
-  const visible = (animated ?? props.visible !== false) && !isHidden;
+  const visible = useCanvasItemVisible(path, (ancestor.properties as Partial<Node2DProperties>).visible);
   return (
     // paint-order-safe: a lifted ancestor's restored transform, which wraps the
     // item's own group rather than sitting inside it.
-    <group {...spread} visible={visible}>
+    <group {...node2dGroupSpread(group)} visible={visible}>
       {children}
     </group>
   );

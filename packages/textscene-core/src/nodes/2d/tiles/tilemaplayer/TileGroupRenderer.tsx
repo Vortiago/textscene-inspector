@@ -15,13 +15,12 @@ import { ySortItemId, type YSortItem } from '../../../../r3f/ySortItems.js';
 import type { YSortGroupDescription } from '../../../../r3f/NodeComponentRegistry.js';
 import { useNodePath } from '../../../../r3f/contexts/NodePathContext.js';
 import { useLiveDrawnNode } from '../../../../r3f/liveNodePatches.js';
-import { useSelection } from '../../../../r3f/contexts/SelectionContext.js';
+import { useCanvasItemVisible } from '../../../../r3f/canvasItemVisible.js';
 
 export function TileGroupRenderer({ item, node: authored }: { item: YSortItem; node: TscnNode }): ReactNode {
   const path = useNodePath();
   const node = useLiveDrawnNode(authored, path);
   const props = node.properties as TileMapLayerProperties;
-  const isHidden = useSelection().hiddenNodePaths.has(path ?? '');
   const { model, status } = useTileSetModel(props.tile_set);
   // The y-sort pass gives the row's drawable cells. An item the pass left whole, because its
   // TileSet had not arrived there, draws every cell of the layer.
@@ -39,17 +38,20 @@ export function TileGroupRenderer({ item, node: authored }: { item: YSortItem; n
     () => ({ ...node, name: `TileGroup_${node.name}_${ySortItemId(item)}`, children: [] }),
     [node, item]
   );
-  const drawable = !isHidden && props.enabled && !!cells?.length && status === 'loaded' && !!model;
+  // The dispatcher's eye toggle never wraps a row, so the row reads it here.
+  const isVisible = useCanvasItemVisible(path ?? '', props.visible);
+  const drawable = isVisible && props.enabled && !!cells?.length && status === 'loaded';
 
   return (
     <CanvasItem2D
       node={row}
       props={props}
       ownItems={(state) =>
-        drawable && (
+        drawable &&
+        model && (
           <TileQuadrants
             quadrants={quadrants}
-            model={model!}
+            model={model}
             selfTint={state.tint.self}
             material={state.material}
             lightMask={state.lightMask}

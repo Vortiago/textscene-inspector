@@ -15,6 +15,8 @@ import { findByType } from '../nodes/2d/tiles/tilemaplayer/findByType.testkit';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import { SceneStack } from './testing/SceneStack';
+import { sceneRoot } from './testing/animationPlayback';
+import { compareKeys, paintKey } from './testing/paintOrder';
 
 import './nodes/index';
 import { settleLoads } from './testing/settleLoads';
@@ -66,6 +68,9 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
 
   const fake = createFakeResourceLoader();
   fake.resources.seed('res://tiles.tres', parseTresFile(TILE_SET));
+  const atlas = new THREE.Texture();
+  (atlas as unknown as { image: { width: number; height: number } }).image = { width: 32, height: 32 };
+  fake.textures.seed('res://tiles.png', atlas);
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack workspace="2d" loader={fake.loader} scene={scene}>
       <NodeDispatcher nodes={scene.nodes} />
@@ -73,20 +78,27 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
   );
   await settleLoads();
 
-  let root: THREE.Object3D | null | undefined = (
-    renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> }
-  ).children?.[0]?.instance;
-  while (root?.parent) root = root.parent;
-  root!.updateMatrixWorld(true);
-  const keyed: { name: string; key: number }[] = [];
+  const root = sceneRoot(renderer);
+  root.updateMatrixWorld(true);
+  const drawn: { name: string; key: [number, number, number] }[] = [];
   const rows = new Map<string, THREE.Matrix4>();
-  root!.traverse((o) => {
+  root.traverse((o) => {
     if (o.name.startsWith('TileGroup_')) rows.set(o.name, o.matrixWorld.clone());
-    if (o.name.startsWith('TileGroup_') || (o.name === 'Decor' && o.renderOrder !== 0)) {
-      keyed.push({ name: o.name, key: o.renderOrder });
+    if (o.name.startsWith('TileGroup_') || o.name === 'Decor') {
+      drawn.push({ name: o.name, key: paintKey(firstMesh(o)) });
     }
   });
-  return { order: keyed.sort((a, b) => a.key - b.key).map((k) => k.name), rows };
+  return { order: drawn.sort((a, b) => compareKeys(a.key, b.key)).map((d) => d.name), rows };
+}
+
+/** The first mesh drawn under `group`, which three orders by its nearest group's key. */
+function firstMesh(group: THREE.Object3D): THREE.Object3D {
+  let mesh: THREE.Object3D | undefined;
+  group.traverse((o) => {
+    if (!mesh && (o as THREE.Mesh).isMesh) mesh = o;
+  });
+  if (!mesh) throw new Error(`expected a mesh under ${group.name}, found none`);
+  return mesh;
 }
 
 /** Where the Godot layer-local point `(x, y)` lands in Godot canvas space, through `matrix`. */

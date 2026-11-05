@@ -91,11 +91,15 @@ function toSortRootOf(child: TscnNode, parent: YSortParent): Transform2DColumns 
   );
 }
 
-/** A child's sort y, the y of its origin in the sort root's space (`renderer_canvas_cull.h:115-123`), and its z bucket. */
-function itemSortKey(child: TscnNode, parent: YSortParent): { sortY: number; effectiveZ: number } {
+/**
+ * A child's sort y, the y of its origin in the sort root's space (`renderer_canvas_cull.h:115-123`),
+ * and what it threads to its own children: its transform there and its z bucket.
+ */
+function itemSortKey(child: TscnNode, parent: YSortParent): YSortParent & { sortY: number } {
   const props = child.properties as Record<string, unknown>;
   const ySortOrigin = (props.y_sort_origin as number | undefined) ?? 0;
-  const sortY = toSortRootOf(child, parent).ty + ySortOrigin;
+  const toSortRoot = toSortRootOf(child, parent);
+  const sortY = toSortRoot.ty + ySortOrigin;
 
   // The same accumulation the light cull uses: `_collect_ysort_children` (renderer_canvas_cull.cpp
   // 143-148) and `_cull_canvas_item` (430-434) both run
@@ -105,7 +109,7 @@ function itemSortKey(child: TscnNode, parent: YSortParent): { sortY: number; eff
     z_index: (props.z_index as number | undefined) ?? 0,
     z_as_relative: props.z_as_relative as boolean | undefined,
   });
-  return { sortY, effectiveZ };
+  return { toSortRoot, sortY, effectiveZ };
 }
 
 /**
@@ -141,7 +145,7 @@ export function collectYSortedItems(
         effectiveZ: key.effectiveZ,
         treeOrder: order++,
         kind: 'tileGroup',
-        tileData: { tileSetRef: layer.tileSetRef, toSortRoot: toSortRootOf(child, parent) },
+        tileData: { tileSetRef: layer.tileSetRef, toSortRoot: key.toSortRoot },
         node: child,
         liftedPast,
       });
@@ -162,12 +166,7 @@ export function collectYSortedItems(
       });
       // Its descendants sort against the child's accumulated transform and z-index
       // bucket, not the sort root's: Godot threads `ysort_xform` and `abs_z` through.
-      const subItems = collectYSortedItems(
-        child,
-        { toSortRoot: toSortRootOf(child, parent), effectiveZ: key.effectiveZ },
-        order,
-        [...liftedPast, child]
-      );
+      const subItems = collectYSortedItems(child, key, order, [...liftedPast, child]);
       items.push(...subItems);
       order += subItems.length;
     } else {

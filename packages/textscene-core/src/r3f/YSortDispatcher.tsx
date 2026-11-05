@@ -1,8 +1,8 @@
 /**
- * Sorts the children of a y_sort_enabled node by z bucket, then sort Y, then tree
- * order, and re-packs its draw-sequence run in that order (`canvasPaintOrder.ts`).
- * A y-sorted TileMapLayer splits into one item per tile row (`groupBySortY`), each
- * interleaving with sibling CanvasItems.
+ * Sorts the children of a y_sort_enabled node by z bucket, then sort Y, items with an equal Y
+ * keeping their collection order, and re-packs its draw-sequence run in that order
+ * (`canvasPaintOrder.ts`). A y-sorted TileMapLayer splits into one item per tile row
+ * (`ySortRows`), each interleaving with sibling CanvasItems.
  */
 
 import { useMemo, type ReactNode } from 'react';

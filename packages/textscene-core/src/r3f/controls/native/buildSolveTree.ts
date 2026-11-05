@@ -348,7 +348,8 @@ function isSortableChild(live: TscnNode): boolean {
 }
 
 /**
- * What a promoted Control's descendants inherit through the non-Control `collapsed`.
+ * What a promoted Control's descendants inherit through the non-Control `placed`, a collapsed
+ * node with what the live scene passes bind.
  * `get_parent_item()` casts only the direct parent (`scene/main/canvas_item.cpp:565-571`),
  * so Node2D chains compose, and a non-`CanvasItem` link reparents at the nearest
  * canvas (`canvas_item.cpp:246-267`): `null`, so nothing above it leaks through. A chain that
@@ -356,15 +357,15 @@ function isSortableChild(live: TscnNode): boolean {
  * link has no parent item, so it defers to nothing.
  */
 function nextSkippedAncestors(
-  collapsed: TscnNode,
+  placed: TscnNode,
   scope: SceneScope,
   previous: CanvasAncestors | null,
   canvasChainBroken: boolean
 ): CanvasAncestors | null {
-  if (!isCanvasItem(collapsed)) return null;
-  if (previous) return foldCanvasAncestor(previous, collapsed, scope);
-  const start = canvasChainBroken || isTopLevelItem(collapsed) ? NO_PARENT_MATERIAL : INHERIT_PARENT_MATERIAL;
-  return foldCanvasAncestors([collapsed], scope, start);
+  if (!isCanvasItem(placed)) return null;
+  if (previous) return foldCanvasAncestor(previous, placed, scope);
+  const start = canvasChainBroken || isTopLevelItem(placed) ? NO_PARENT_MATERIAL : INHERIT_PARENT_MATERIAL;
+  return foldCanvasAncestors([placed], scope, start);
 }
 
 /**
