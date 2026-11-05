@@ -101,19 +101,19 @@ export function computeCanvasTextCanvasLayout(
 }
 
 /**
- * The span of the ink of the glyphs, their pen boxes included, as Godot draws each glyph quad whole
- * wherever its side bearing reaches (#1376). The run of a fallback face keeps its glyphs at their
- * places on the line (`faceLayouts.ts`), so its raster spans them alone. A layout with no glyph spans
- * its width.
+ * The span of the ink of the glyphs, their pen boxes and the pen snap included, as Godot draws each
+ * glyph quad whole wherever its side bearing reaches (#1376). The run of a fallback face keeps its
+ * glyphs at their places on the line (`faceLayouts.ts`), so its raster spans them alone. A layout
+ * with no glyph spans its width.
  */
 function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: number } {
   let startPx = Infinity;
   let endPx = -Infinity;
   for (const { glyphs } of layout.lines) {
     for (const glyph of glyphs) {
-      const { leftPx, rightPx } = glyphInkPx(glyph, layout.baselineOffsetPx);
-      startPx = Math.min(startPx, glyph.x - leftPx);
-      endPx = Math.max(endPx, glyph.x + rightPx);
+      const { leftPx, rightPx } = glyphReachPx(glyph, layout.baselineOffsetPx);
+      startPx = Math.min(startPx, glyph.x - leftPx - INK_SLACK_LEFT_PX);
+      endPx = Math.max(endPx, glyph.x + rightPx + INK_SLACK_RIGHT_PX);
     }
   }
   return startPx === Infinity ? { startPx: 0, endPx: layout.widthPx } : { startPx, endPx };
@@ -128,16 +128,9 @@ const INK_SLACK_LEFT_PX = 2;
 const INK_SLACK_RIGHT_PX = 1;
 
 /**
- * How far `glyph`'s drawn ink reaches left of its pen and right of it, px, its pen box and the pen
- * snap included. A face that measures no ink takes `ascentPx` on each side: the ascent bounds the
- * reach of any glyph.
+ * How far `glyph`'s ink reaches left of its pen and right of it, px, its pen box included. A face that
+ * measures no ink takes `ascentPx` on each side: the ascent bounds the reach of any glyph.
  */
-function glyphInkPx(glyph: GlyphPlacement, ascentPx: number): { leftPx: number; rightPx: number } {
-  const { leftPx, rightPx } = glyphReachPx(glyph, ascentPx);
-  return { leftPx: leftPx + INK_SLACK_LEFT_PX, rightPx: rightPx + INK_SLACK_RIGHT_PX };
-}
-
-/** The reach of `glyph`'s ink from its pen, px, from its face's measured ink or else one ascent. */
 function glyphReachPx(glyph: GlyphPlacement, ascentPx: number): { leftPx: number; rightPx: number } {
   const face = glyph.fontMetrics;
   const ink = isCanvasFontMetrics(face) ? face.getGlyphInkUnits?.(glyph.char) : undefined;

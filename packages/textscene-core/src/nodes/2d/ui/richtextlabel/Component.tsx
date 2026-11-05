@@ -257,7 +257,6 @@ function RichTextBody({
         scrollOffsetPx,
         horizontalAlignment: props.horizontalAlignment,
         verticalAlignment: props.verticalAlignment,
-        isFillJustified: true,
       }),
     [runs, layout, wrapWidthPx, rect.h, scrollOffsetPx, props.horizontalAlignment, props.verticalAlignment]
   );

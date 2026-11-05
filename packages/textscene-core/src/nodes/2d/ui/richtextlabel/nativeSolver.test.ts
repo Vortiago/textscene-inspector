@@ -1766,7 +1766,6 @@ describe('RichTextLabel FILL justification', () => {
     const placements = layoutRichTextRuns(flagged, layout, {
       boxWidthPx,
       boxHeightPx: TALL_BOX_PX,
-      isFillJustified: true,
     });
     const widths: number[] = [];
     for (const p of placements) widths[p.lineIndex] = (widths[p.lineIndex] ?? 0) + p.layout.widthPx;
@@ -1836,7 +1835,6 @@ describe('RichTextLabel FILL justification', () => {
     for (const p of layoutRichTextRuns(runs, layout, {
       boxWidthPx: BOX_WIDTH_PX,
       boxHeightPx: TALL_BOX_PX,
-      isFillJustified: true,
     })) {
       widths[p.lineIndex] = (widths[p.lineIndex] ?? 0) + p.layout.widthPx;
     }
@@ -1898,9 +1896,14 @@ describe('RichTextLabel paragraph direction', () => {
         .lineOffsetXPx;
     }
 
-    it('starts an RTL LEFT or FILL line at the right edge', () => {
+    it('starts an RTL LEFT line at the right edge', () => {
       expect(offsetX(0, RTL)).toBe(108);
-      expect(offsetX(3, RTL)).toBe(108);
+    });
+
+    // A line with no space has nothing to fit, so FILL keeps the origin LEFT takes.
+    it('starts an RTL FILL line where an RTL LEFT line starts', () => {
+      expect(offsetX(3, RTL, 'Threat')).toBe(offsetX(0, RTL, 'Threat'));
+      expect(offsetX(3, RTL, 'Threat')).toBeGreaterThan(0);
     });
 
     it('leaves an RTL RIGHT line at the left edge', () => {

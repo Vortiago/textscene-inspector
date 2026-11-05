@@ -1038,8 +1038,6 @@ interface RichTextAlignment {
   verticalAlignment?: number;
   /** How far the scroll value has moved the text up (`vofs`, `rich_text_label.cpp:1613`). Absent is 0. */
   scrollOffsetPx?: number;
-  /** Whether FILL paragraphs fit the text rect. Absent leaves them unfitted. */
-  isFillJustified?: boolean;
 }
 
 /**
@@ -1088,10 +1086,9 @@ export function layoutRichTextRuns(
     if (startsParagraph(unfittedLayout.lines, i) && isFilled(i)) hasFilledParagraph = true;
   }
   const flagsOf = (firstLineIndex: number): number => paragraphRunOf(firstLineIndex)?.justificationFlags ?? 0;
-  const layout =
-    alignment?.isFillJustified && hasFilledParagraph
-      ? fitFilledParagraphs(unfittedLayout, isFilled, flagsOf, boxWidthPx)
-      : unfittedLayout;
+  const layout = hasFilledParagraph
+    ? fitFilledParagraphs(unfittedLayout, isFilled, flagsOf, boxWidthPx)
+    : unfittedLayout;
   // Fitting moves glyphs and keeps their text, so the second attribution reads the same runs.
   const perLine = layout === unfittedLayout ? unfittedPerLine : attributeRunsToLines(styledRuns, layout);
   const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);

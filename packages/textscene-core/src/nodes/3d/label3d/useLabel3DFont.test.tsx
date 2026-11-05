@@ -116,6 +116,12 @@ async function settle() {
   });
 }
 
+/** Settles one throwaway load, which wakes every reader of the font settle count. */
+async function notifySceneFontSettled() {
+  const { createSettledPeek } = await import('../../../r3f/controls/native/text/settledChannel');
+  createSettledPeek<object, null>()({}, async () => null);
+}
+
 beforeEach(async () => {
   modules = await importModules();
   bundled.metrics = modules.createOpenSansCanvasFontMetrics('label3d-font-test');
@@ -342,7 +348,6 @@ describe('useLabel3DFont mip chain while a chain face reloads', () => {
       peekSettledChainFaces: () => chain.faces,
     }));
     modules = await importModules();
-    const { createSettledPeek } = await import('../../../r3f/controls/native/text/settledChannel');
     const { result } = renderMetrics('SubResource("plain")');
     await settle();
 
@@ -350,7 +355,7 @@ describe('useLabel3DFont mip chain while a chain face reloads', () => {
       { font: null, metrics: bundled.metrics },
       { font: mipmappedFont, metrics: fallback },
     ];
-    createSettledPeek<object, null>()({}, async () => null);
+    await notifySceneFontSettled();
     await settle();
 
     expect(result.current?.fallbackMipmaps.get(fallback)).toBe(true);
