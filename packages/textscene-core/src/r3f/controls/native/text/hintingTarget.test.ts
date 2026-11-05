@@ -6,7 +6,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import reference from './hintingTarget.godot.json';
-import { freeTypeCoverage } from './freeTypeCoverage.testkit';
+import { glyphBitmapGrid, rasteriseGlyph, type BitmapGrid } from './ftGrays';
+import type { GlyphContours } from './glyphContours';
 import { charContours, fixtureFontBytes } from './sfntOutlines.testkit';
 import { openFontOutlines } from './sfntOutlines';
 import type { FontHinting } from '../../../../godot/text/textServerEnums';
@@ -23,36 +24,49 @@ interface ReferenceBitmap {
 }
 
 /**
- * FreeType floors where a chord crosses a pixel edge, and this rasteriser covers by exact area. That
- * moves a pixel at a thin joint by up to 9 levels, and the mean by under 0.3. A hint of 1/64 px
- * moves the mean of a glyph by more than 1.
+ * Godot's glyph texture holds a margin of one pixel round the FreeType bitmap (`rasterize_bitmap`,
+ * `text_server_adv.cpp:1223-1224`), which the reference bitmaps keep.
  */
-const LARGEST_LEVEL_DIFFERENCE = 10;
-const LARGEST_MEAN_LEVEL_DIFFERENCE = 0.3;
+const GODOT_GLYPH_MARGIN = 1;
 
 const bitmaps = reference as ReferenceBitmap[];
 const cases = bitmaps.map(
   (bitmap) => [`${bitmap.font} ${bitmap.char} at ${bitmap.sizePx} px, ${bitmap.hinting}`, bitmap] as const
 );
 
-async function ourCoverage(bitmap: ReferenceBitmap): Promise<number[][]> {
+async function glyphContoursOf(bitmap: ReferenceBitmap): Promise<GlyphContours> {
   const load = { hinting: bitmap.hinting, isAutohinterForced: false };
   const outlines = (await openFontOutlines(fixtureFontBytes(bitmap.font), load))!;
-  const [left, top] = bitmap.offset;
-  const grid = { left, top, width: bitmap.coverage[0]!.length, height: bitmap.coverage.length };
-  return freeTypeCoverage(charContours(outlines, bitmap.char, bitmap.sizePx), grid);
+  return charContours(outlines, bitmap.char, bitmap.sizePx);
 }
 
-/** The difference of each pixel between two bitmaps of one size. */
-const levelDifferences = (ours: number[][], godot: number[][]): number[] =>
-  godot.flatMap((row, y) => row.map((level, x) => Math.abs(level - ours[y]![x]!)));
+const gridOf = (bitmap: ReferenceBitmap): BitmapGrid => ({
+  left: bitmap.offset[0],
+  top: bitmap.offset[1],
+  width: bitmap.coverage[0]!.length,
+  height: bitmap.coverage.length,
+});
+
+async function ourCoverage(bitmap: ReferenceBitmap): Promise<number[][]> {
+  const grid = gridOf(bitmap);
+  const coverage = rasteriseGlyph(await glyphContoursOf(bitmap), grid);
+  return Array.from({ length: grid.height }, (_, row) =>
+    Array.from(coverage.subarray(row * grid.width, (row + 1) * grid.width))
+  );
+}
 
 describe('glyph bitmaps at the font hinting', () => {
   it.each(cases)('match Godot for %s', async (_, bitmap) => {
-    const differences = levelDifferences(await ourCoverage(bitmap), bitmap.coverage);
-    const mean = differences.reduce((sum, difference) => sum + difference, 0) / differences.length;
+    expect(await ourCoverage(bitmap)).toEqual(bitmap.coverage);
+  });
 
-    expect(Math.max(...differences)).toBeLessThanOrEqual(LARGEST_LEVEL_DIFFERENCE);
-    expect(mean).toBeLessThanOrEqual(LARGEST_MEAN_LEVEL_DIFFERENCE);
+  it.each(cases)('sit where Godot places them for %s', async (_, bitmap) => {
+    const { left, top, width, height } = gridOf(bitmap);
+    expect(glyphBitmapGrid(await glyphContoursOf(bitmap))).toEqual({
+      left: left + GODOT_GLYPH_MARGIN,
+      top: top + GODOT_GLYPH_MARGIN,
+      width: width - 2 * GODOT_GLYPH_MARGIN,
+      height: height - 2 * GODOT_GLYPH_MARGIN,
+    });
   });
 });
