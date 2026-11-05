@@ -25,6 +25,8 @@ import * as THREE from 'three';
 import { materialSourceKey, resolveNextPass, type MaterialSource } from './materialSource';
 import { NO_RAYCAST } from './materialOverlay';
 import { drawnTag } from '../meshes/meshContent';
+import type { SurfacePrimitive } from '../../resources/meshes/godotSurface';
+import { listedSlot } from '../meshes/sharedInstances';
 import { readyMaterial, useMaterial } from './useMaterial';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
 import { surfaceAttach, surfaceSources } from './SurfaceMaterialSlots';
@@ -60,11 +62,12 @@ export function nextPassRenderOrder(ordinal: number): number {
  *
  * @canonical The drawn element of a surface draw
  */
-export function drawnElementOf(drawsPoints: boolean, skeleton: THREE.Skeleton | null | undefined) {
-  if (skeleton && !drawsPoints) {
+export function drawnElementOf(primitive: SurfacePrimitive, skeleton: THREE.Skeleton | null | undefined) {
+  // Only a triangle surface skins: three has no skinned points or line segments.
+  if (skeleton && primitive === 'triangles') {
     return { Drawn: 'skinnedMesh' as const, skin: { skeleton, bindMode: THREE.DetachedBindMode } };
   }
-  return { Drawn: drawnTag(drawsPoints), skin: {} };
+  return { Drawn: drawnTag(primitive), skin: {} };
 }
 
 /**
@@ -89,8 +92,8 @@ export function useDrawnGeometry(ref: RefObject<THREE.Object3D | null>): THREE.B
 
 /** What every chain draw shares with the base it covers. */
 export interface ChainDrawBase {
-  /** The base draws points, so the chain draw does too. */
-  drawsPoints: boolean;
+  /** What the base draws, so the chain draw draws it too. */
+  primitive: SurfacePrimitive;
   /** The base is skinned, so a chain draw is skinned by the same skeleton. */
   skeleton?: THREE.Skeleton | null;
   /**
@@ -112,7 +115,7 @@ function ChainDraw({
   ordinal,
   attach,
   surfaceCount,
-  drawsPoints,
+  primitive,
   skeleton,
   godotLayers,
   shadow,
@@ -126,7 +129,7 @@ function ChainDraw({
   surfaceCount: number;
 } & ChainDrawBase) {
   const startingMaterial = useOneSurfaceStartingMaterial(surfaceCount);
-  const { Drawn, skin } = drawnElementOf(drawsPoints, skeleton);
+  const { Drawn, skin } = drawnElementOf(primitive, skeleton);
   return (
     <Drawn
       {...skin}
@@ -142,7 +145,7 @@ function ChainDraw({
       // The node's layers mask, which a decal's and a reflection probe's masks filter on.
       userData={visualLayersUserData(godotLayers)}
     >
-      <SurfaceMaterialSlot source={source} attach={attach} points={drawsPoints ? 'mesh' : undefined} />
+      <SurfaceMaterialSlot source={source} attach={attach} {...listedSlot(primitive, 'mesh')} />
     </Drawn>
   );
 }
@@ -239,7 +242,7 @@ export function NextPassLink(props: PassProps) {
         surfaceCount={surfaceCount}
         draw={draw}
         onOrdinal={onOrdinal}
-        drawsPoints={props.drawsPoints}
+        primitive={props.primitive}
         skeleton={props.skeleton}
         godotLayers={props.godotLayers}
         shadow={shadow}
@@ -255,7 +258,7 @@ export function NextPassLink(props: PassProps) {
     attach,
     surfaceCount,
     geometry,
-    drawsPoints: props.drawsPoints,
+    primitive: props.primitive,
     skeleton: props.skeleton,
     godotLayers: props.godotLayers,
     shadow,
@@ -297,7 +300,7 @@ export function NextPassChain({
   sources,
   overlay,
   draw,
-  drawsPoints,
+  primitive,
   skeleton,
   godotLayers,
   shadow,
@@ -313,7 +316,7 @@ export function NextPassChain({
   /** Renders each pass's own draw when the owner's object is instanced or placed. */
   draw?: ChainDrawFactory;
   /** The base draws points, so the chain draws do too. */
-  drawsPoints: boolean;
+  primitive: SurfacePrimitive;
   /** The skeleton that skins a skinned base's chain links, or null for an unskinned draw. */
   skeleton?: THREE.Skeleton | null;
   /** The node's `layers` mask, which its chain draws carry for the decals and probes. */
@@ -347,7 +350,7 @@ export function NextPassChain({
           surfaceCount={groups.length}
           draw={draw}
           onOrdinal={onOrdinal}
-          drawsPoints={drawsPoints}
+          primitive={primitive}
           skeleton={skeleton}
           godotLayers={godotLayers}
           shadow={shadow}

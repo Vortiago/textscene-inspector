@@ -10,30 +10,17 @@ import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { multiplyModulate, type CanvasItemTint } from '../../../../r3f/canvasItemModulate';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import { allocateNodePaintRange, canvasRenderOrder, packPaintRanges } from '../../../../r3f/canvasPaintOrder';
-import { useLayerRank, usePaintRange } from '../../../../r3f/contexts/PaintOrderContext';
-import {
-  accumulateCanvasItemZ,
-  useCanvasLayerIndex,
-  useEffectiveZ,
-} from '../../../../r3f/lighting2d/canvasItemPlacement';
+import { allocateNodePaintRange, packPaintRanges } from '../../../../r3f/canvasPaintOrder';
+import { usePaintRange } from '../../../../r3f/contexts/PaintOrderContext';
+import { childCanvasPlace } from '../../../../r3f/canvasItemState';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel';
-import { useNode2DTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import type { TileMapLayerData, TileMapProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 
 export function TileMap({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapProperties;
   const { model, status } = useTileSetModel(props.tile_set);
-  const sampler = useNode2DTextureSampler(props);
-
-  // Godot's TileMap `add_child`s a TileMapLayer CanvasItem per layer and forwards
-  // `set_z_index` to it (`scene/2d/tile_map.cpp:279,376`), so each layer takes
-  // its own canvas key. Read outside `ownItems`, where the ambient z is still the
-  // parent's, which this node's own `z_final` accumulates on.
-  const layerRank = useLayerRank(useCanvasLayerIndex());
-  const ownZFinal = accumulateCanvasItemZ(useEffectiveZ(), props);
   const paintRange = usePaintRange();
   // The layers are internal front children in Godot, in no `.tscn` child list,
   // so they draw from the `front` run, between this node and its authored
@@ -62,40 +49,37 @@ export function TileMap({ node, children }: NodeComponentProps) {
     });
   }, [model, props.layers, props.rendering_quadrant_size]);
 
-  const layerGroups = useMemo(
-    () =>
-      layerQuadrantSets?.map((set) => {
-        // A layer is a child CanvasItem with `z_as_relative` at its default, so
-        // its `z_index` accumulates onto the TileMap's own `z_final`.
-        const zFinal = accumulateCanvasItemZ(ownZFinal, { z_index: set.layer.zIndex });
-        const sequence = layerSequences[set.layerIndex]!;
-        return { ...set, zFinal, renderOrder: canvasRenderOrder({ layerRank, zFinal, sequence }) };
-      }) ?? null,
-    [layerQuadrantSets, layerRank, ownZFinal, layerSequences]
-  );
-
   return (
     <CanvasItem2D
       node={node}
       props={props}
-      ownItems={(tint, material) =>
-        status === 'loaded' && model && layerGroups
-          ? layerGroups.map((group) => (
-              // Each layer draws at its own place in the canvas, so its key rides
-              // its group: three reads the nearest enclosing group first.
-              <CanvasItemGroup key={group.layerIndex} renderOrder={group.renderOrder}>
-                <TileQuadrants
-                  quadrants={group.quadrants}
-                  model={model}
-                  selfTint={layerTint(tint, group.layer)}
-                  material={material}
-                  lightMask={props.light_mask}
-                  zFinal={group.zFinal}
-                  name={node.name}
-                  sampler={sampler}
-                />
-              </CanvasItemGroup>
-            ))
+      ownItems={(state) =>
+        status === 'loaded' && model && layerQuadrantSets
+          ? layerQuadrantSets.map((set) => {
+              // Godot's TileMap adds a TileMapLayer CanvasItem per layer and forwards
+              // `set_z_index` to it (`scene/2d/tile_map.cpp:279,376`), so each layer
+              // takes a key of its own at its own sequence.
+              const place = childCanvasPlace(
+                { key: state.keyAt(layerSequences[set.layerIndex]!), zFinal: state.zFinal },
+                set.layer.zIndex
+              );
+              return (
+                // Each layer draws at its own place in the canvas, so its key rides
+                // its group: three reads the nearest enclosing group first.
+                <CanvasItemGroup key={set.layerIndex} renderOrder={place.key}>
+                  <TileQuadrants
+                    quadrants={set.quadrants}
+                    model={model}
+                    selfTint={layerTint(state.tint, set.layer)}
+                    material={state.material}
+                    lightMask={state.lightMask}
+                    zFinal={place.zFinal}
+                    name={node.name}
+                    sampler={state.sampler}
+                  />
+                </CanvasItemGroup>
+              );
+            })
           : null
       }
     >

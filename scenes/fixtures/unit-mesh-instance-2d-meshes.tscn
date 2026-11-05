@@ -1,0 +1,105 @@
+[gd_scene format=3]
+
+; Draws each kind of mesh through MeshInstance2D, the one node that puts a mesh on the canvas: QuadMesh, BoxMesh
+; and PlaneMesh, an ArrayMesh with 3D vertices and with 2D vertices (ARRAY_FLAG_USE_2D_VERTICES), with and
+; without vertex colours, textured and not, and a QuadMesh turned and mirrored. No other scene
+; has a MeshInstance2D, so none shows a regression in how the canvas reads a mesh.
+
+[ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_quadrants"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_v8wl4"]
+size = Vector2(100, 100)
+
+[sub_resource type="QuadMesh" id="QuadMesh_liypn"]
+size = Vector2(100, 100)
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_5i082"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 100, 100, 1e-05),
+"attribute_data": PackedByteArray(255, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 0, 255, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 255, 255, 0, 0, 128, 63, 0, 0, 128, 63, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 128, 63),
+"format": 34359742489,
+"index_count": 6,
+"index_data": PackedByteArray(0, 0, 1, 0, 2, 0, 0, 0, 2, 0, 3, 0),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 200, 66, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 0, 0)
+}]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_djd6r"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 100, 100, 1e-05),
+"attribute_data": PackedByteArray(255, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 0, 255, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 255, 255, 0, 0, 128, 63, 0, 0, 128, 63, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 128, 63),
+"format": 34359742489,
+"index_count": 6,
+"index_data": PackedByteArray(0, 0, 1, 0, 2, 0, 0, 0, 2, 0, 3, 0),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 200, 66, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 0, 0)
+}]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_jxpxd"]
+_surfaces = [{
+"2d": true,
+"aabb": AABB(0, 0, 0, 100, 100, 0),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 128, 63),
+"format": 34393296913,
+"index_count": 6,
+"index_data": PackedByteArray(0, 0, 1, 0, 2, 0, 0, 0, 2, 0, 3, 0),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 200, 66, 0, 0, 0, 0, 0, 0, 200, 66)
+}]
+
+[sub_resource type="BoxMesh" id="BoxMesh_taobb"]
+size = Vector3(100, 60, 40)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_mlesv"]
+size = Vector2(100, 100)
+
+[sub_resource type="QuadMesh" id="QuadMesh_repgr"]
+size = Vector2(100, 100)
+
+[node name="Root" type="Node2D"]
+
+[node name="Quad" type="MeshInstance2D" parent="."]
+position = Vector2(100, 100)
+mesh = SubResource("QuadMesh_v8wl4")
+texture = ExtResource("1_quadrants")
+
+[node name="QuadModulated" type="MeshInstance2D" parent="."]
+modulate = Color(1, 0.5, 0.25, 1)
+position = Vector2(250, 100)
+mesh = SubResource("QuadMesh_liypn")
+
+[node name="ArrayColoured" type="MeshInstance2D" parent="."]
+position = Vector2(350, 50)
+mesh = SubResource("ArrayMesh_5i082")
+
+[node name="ArrayColouredTextured" type="MeshInstance2D" parent="."]
+position = Vector2(500, 50)
+mesh = SubResource("ArrayMesh_djd6r")
+texture = ExtResource("1_quadrants")
+
+[node name="Array2D" type="MeshInstance2D" parent="."]
+position = Vector2(650, 50)
+mesh = SubResource("ArrayMesh_jxpxd")
+texture = ExtResource("1_quadrants")
+
+[node name="Box" type="MeshInstance2D" parent="."]
+position = Vector2(250, 300)
+mesh = SubResource("BoxMesh_taobb")
+texture = ExtResource("1_quadrants")
+
+[node name="Plane" type="MeshInstance2D" parent="."]
+position = Vector2(100, 300)
+mesh = SubResource("PlaneMesh_mlesv")
+
+[node name="QuadTurned" type="MeshInstance2D" parent="."]
+position = Vector2(450, 300)
+rotation = 0.5
+scale = Vector2(-1, 1)
+mesh = SubResource("QuadMesh_repgr")
+texture = ExtResource("1_quadrants")

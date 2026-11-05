@@ -208,6 +208,26 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Array Mesh Lines Cpuparticles3d",
+    "file": "unit-array-mesh-lines-cpuparticles3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Array Mesh Lines Gridmap",
+    "file": "unit-array-mesh-lines-gridmap.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Array Mesh Lines Materials",
+    "file": "unit-array-mesh-lines-materials.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Array Mesh Lines",
+    "file": "unit-array-mesh-lines.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Aspect Ratio Container Rtl",
     "file": "unit-aspect-ratio-container-rtl.tscn",
     "category": "Other"
@@ -3320,6 +3340,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tile Map Layer Y Sort Transform",
+    "file": "unit-tile-map-layer-y-sort-transform.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Tile Map Layer",
     "file": "unit-tile-map-layer.tscn",
     "category": "Unit - 2D Canvas"
@@ -3447,6 +3472,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Cylinder Mesh",
     "file": "unit-cylinder-mesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Mesh Instance 2d Meshes",
+    "file": "unit-mesh-instance-2d-meshes.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Mesh Instance 2d Normal Map",
+    "file": "unit-mesh-instance-2d-normal-map.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Mesh Instance 2d Primitives",
+    "file": "unit-mesh-instance-2d-primitives.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

@@ -14,7 +14,7 @@ import { transform2DFromParts, type Transform2DColumns } from '../godot/math/tra
 // F is its own inverse, so `F·M1·F · F·M2·F = F·(M1·M2)·F` composes through any
 // nesting with no global flip group: Godot `(100, 50)` sits at three.js `(100, -50)`.
 // Draw order is `renderOrder`, not depth (`canvasPaintOrder.ts`).
-interface Node2DGroupProps {
+export interface Node2DGroupProps {
   position: Vec3Tuple;
   rotation: Vec3Tuple;
   scale: Vec3Tuple;
@@ -37,6 +37,19 @@ export function node2dGroupProps(t: Node2DLocalTransform, z = 0): Node2DGroupPro
 
   const matrix = threeMatrixFromTransform2D(transform2DFromParts(t.rotation, t.scale, skew, t.position), z);
   return { position, rotation, scale, matrix };
+}
+
+/**
+ * {@link node2dGroupProps} of a hand-built or partly parsed bag, each absent part at its
+ * `node_2d.h:39-42` default, as {@link node2DLocalTransform} fills it.
+ */
+export function node2dGroupPropsOf(parts: Partial<Node2DLocalTransform>): Node2DGroupProps {
+  return node2dGroupProps({
+    position: parts.position ?? { x: 0, y: 0 },
+    rotation: parts.rotation ?? 0,
+    scale: parts.scale ?? { x: 1, y: 1 },
+    skew: parts.skew,
+  });
 }
 
 /**

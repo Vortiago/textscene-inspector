@@ -173,9 +173,18 @@ function patchesBelow(patches: NodePatches, path: string): NodePatches {
  * re-renders the reader only where it changes one of them.
  */
 export function useLivePatchesBelow(path: string | null): NodePatches {
+  return usePatchesBelow(liveNodePatches, path);
+}
+
+/** {@link useLivePatchesBelow} as render draws the nodes: {@link liveDrawnPatches}. */
+export function useLiveDrawnPatchesBelow(path: string | null): NodePatches {
+  return usePatchesBelow(liveDrawnPatches, path);
+}
+
+function usePatchesBelow(pass: LiveScenePass<NodePatch>, path: string | null): NodePatches {
   const select = useMemo(
     () => (path === null ? null : (patches: NodePatches) => patchesBelow(patches, path)),
     [path]
   );
-  return useLiveScenePassSelection(liveNodePatches, select, sameEntries) ?? NO_PATCHES;
+  return useLiveScenePassSelection(pass, select, sameEntries) ?? NO_PATCHES;
 }

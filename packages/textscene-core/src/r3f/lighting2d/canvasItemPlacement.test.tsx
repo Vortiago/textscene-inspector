@@ -54,7 +54,7 @@ describe('the y-sort pass and the light cull agree on z', () => {
   it('buckets y-sorted items by the very function the lights are culled against', async () => {
     // Godot computes this once and reads it twice: to bucket y-sorted children, and as the
     // `z_final` a light's window tests. One function here too, so the two cannot drift.
-    const { collectYSortedItems } = await import('../ySortItems');
+    const { collectYSortedItems, Y_SORT_ROOT } = await import('../ySortItems');
     const node = {
       name: 'Root',
       type: 'Node2D',
@@ -70,7 +70,7 @@ describe('the y-sort pass and the light cull agree on z', () => {
       ],
     } as unknown as Parameters<typeof collectYSortedItems>[0];
 
-    const items = collectYSortedItems(node, { parentWorldY: 0, parentEffectiveZ: 2 }, 0);
+    const items = collectYSortedItems(node, { ...Y_SORT_ROOT, effectiveZ: 2 }, 0);
     expect(items.map((item) => item.effectiveZ)).toEqual([
       accumulateCanvasItemZ(2, { z_index: 3, z_as_relative: true }),
       accumulateCanvasItemZ(2, { z_index: 3, z_as_relative: false }),

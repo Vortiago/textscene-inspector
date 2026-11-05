@@ -959,4 +959,15 @@ export const CANVAS_2D_SCENES = [
   { name: 'menu-button-wrap-trim', file: 'unit-menu-button-wrap-trim.tscn', mode: '2d' },
   // A Polygon2D below a plain Node below a hidden Node2D: its visibility comes from the Window.
   { name: 'canvas-root-visibility', file: 'unit-canvas-root-visibility.tscn', mode: '2d' },
+
+  // MeshInstance2D draws a mesh through the canvas. Godot 4.6.3 `--mode 2d` probes: the textured QuadMesh
+  // shows its texture upside down, (75,75) blue and (75,125) red, and the PlaneMesh at (100,300) draws
+  // nothing. The ArrayMesh quad with colours reads (241,0,14) at (355,55) and (126,0,129) at its centre.
+  { name: 'mesh-instance-2d', file: 'unit-mesh-instance-2d-meshes.tscn', mode: '2d' },
+  // The normal map is read at the mesh's UV and never flipped: the mesh at (400,200) reads (245) at the
+  // top and (160) at the bottom, where the Sprite2D with the same texture reads the reverse.
+  { name: 'mesh-instance-2d-normal-map', file: 'unit-mesh-instance-2d-normal-map.tscn', mode: '2d' },
+  // Points, lines and a line strip are one pixel wide. A point at (60,60) lands on pixel (59,59), and
+  // the line of 100 px at (250,59)..(349,59) is white. A point or a line reads its texture at the UV.
+  { name: 'mesh-instance-2d-primitives', file: 'unit-mesh-instance-2d-primitives.tscn', mode: '2d' },
 ];

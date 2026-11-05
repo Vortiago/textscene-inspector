@@ -14,6 +14,8 @@ import { useResourceResolution } from '../../resources/useSubOrExtResource';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { UndrawnMeshesProvider, useUndrawnMeshTypes } from '../contexts/UndrawnMeshesContext';
 import { fixtureFontBytes } from '../controls/native/text/sfntOutlines.testkit';
+import { wallQuadSurfaces } from '../../resources/testing/arrayMeshSurfaces';
+import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import { arrayMeshPath, useMeshContent } from './meshContent';
 
 const BOX: TscnInternalResource = { id: 'box', type: 'BoxMesh', data: {} };
@@ -235,5 +237,39 @@ describe('useMeshContent for a property that holds no mesh', () => {
       useMeshContent(useResourceResolution('SubResource("gone")', SCENE))
     );
     expect(result.current).toEqual({ kind: 'unresolved' });
+  });
+});
+
+describe('an ArrayMesh with line surfaces', () => {
+  const LINES = { primitive: 1 };
+  const TRIANGLES_AND_LINES: TscnInternalResource = {
+    id: 'mixed',
+    type: 'ArrayMesh',
+    data: { _surfaces: wallQuadSurfaces({}, LINES) },
+  };
+  const LINES_ONLY: TscnInternalResource = {
+    id: 'lines',
+    type: 'ArrayMesh',
+    data: { _surfaces: wallQuadSurfaces(LINES) },
+  };
+  const SCENE: SceneResources = {
+    internalResources: [TRIANGLES_AND_LINES, LINES_ONLY],
+    externalResources: [],
+  };
+
+  function primitivesOf(ref: string) {
+    const { result } = renderHook(() => useMeshContent(useResourceResolution(ref, SCENE)));
+    const content = result.current;
+    return content.kind === 'surfaced'
+      ? content.mesh.parts.map((part) => geometryPrimitive(part.geometry))
+      : content.kind;
+  }
+
+  it('draws its lines after its triangles', () => {
+    expect(primitivesOf('SubResource("mixed")')).toEqual(['triangles', 'lines']);
+  });
+
+  it('draws a mesh of only lines', () => {
+    expect(primitivesOf('SubResource("lines")')).toEqual(['lines']);
   });
 });

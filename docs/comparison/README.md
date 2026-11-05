@@ -120,7 +120,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [GPUParticlesCollisionHeightField3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionheightfield3d/comparison.md): nothing yet, not implemented
 - [GPUParticlesCollisionSDF3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionsdf3d/comparison.md): nothing yet, not implemented
 - [GPUParticlesCollisionSphere3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionsphere3d/comparison.md): nothing yet, not implemented
-- [GridMap](../../packages/textscene-core/src/nodes/3d/gridmap/comparison.md): a THREE.InstancedMesh per MeshLibrary item surface, one THREE.Points per points surface
+- [GridMap](../../packages/textscene-core/src/nodes/3d/gridmap/comparison.md): a THREE.InstancedMesh per MeshLibrary item surface, one THREE.Points per points surface, one THREE.LineSegments per lines surface
 - [HingeJoint3D](../../packages/textscene-core/src/nodes/physics/3d/hingejoint3d/comparison.md): a transform group with the hinge axis and a circle for each body for every node
 - [ImporterMeshInstance3D](../../packages/textscene-core/src/nodes/3d/importermeshinstance3d/comparison.md): nothing (a transform-only group)
 - [JacobianIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/jacobianik3d/comparison.md): nothing yet, Godot converges its chain onto the target each frame, the previewer does not
@@ -249,7 +249,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [Marker2D](../../packages/textscene-core/src/nodes/2d/marker2d/comparison.md): a cross gizmo for every node
 - [MenuBar](../../packages/textscene-core/src/nodes/2d/ui/menubar/comparison.md): one StyleBox + text run per PopupMenu-child title
 - [MenuButton](../../packages/textscene-core/src/nodes/2d/ui/menubutton/comparison.md): a StyleBox quad with a centred text run and optional icon
-- [MeshInstance2D](../../packages/textscene-core/src/nodes/2d/meshinstance2d/comparison.md): nothing yet, Godot draws a textured mesh, the previewer does not
+- [MeshInstance2D](../../packages/textscene-core/src/nodes/2d/meshinstance2d/comparison.md): a THREE.Mesh, THREE.Points or THREE.LineSegments per surface kind
 - [MultiMeshInstance2D](../../packages/textscene-core/src/nodes/2d/multimeshinstance2d/comparison.md): nothing yet, Godot draws a batch of textured mesh instances, the previewer does not
 - [NavigationAgent2D](../../packages/textscene-core/src/nodes/2d/navigationagent2d/comparison.md): nothing (a transform-only group)
 - [NavigationLink2D](../../packages/textscene-core/src/nodes/2d/navigationlink2d/comparison.md): nothing (a transform-only group)

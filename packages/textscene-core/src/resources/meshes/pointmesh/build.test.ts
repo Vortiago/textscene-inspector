@@ -16,7 +16,7 @@ describe('PointMesh surface', () => {
 
   it('is a points surface that draws its one vertex', () => {
     const surface = pointMeshSurface()!;
-    expect(surface.isPoints).toBe(true);
+    expect(surface.primitive).toBe('points');
     expect(Array.from(surface.indices)).toEqual([0]);
   });
 

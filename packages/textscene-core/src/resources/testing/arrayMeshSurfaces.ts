@@ -80,3 +80,52 @@ export const truncatedSurface = surfaceWriter(
 "vertex_count": 4,
 "vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/")`
 );
+
+/**
+ * A PackedVector2Array quad (0,0)..(100,100) with UVs (0,0)..(1,1) and no colour, as Godot 4.6.3's
+ * `add_surface_from_arrays` saves it: format 34393296913 has ARRAY_FLAG_USE_2D_VERTICES.
+ */
+export const quad2DVerticesSurface = surfaceWriter(
+  `"2d": true,
+"aabb": AABB(0, 0, 0, 100, 100, 0),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 128, 63),
+"format": 34393296913,
+"index_count": 6,
+"index_data": PackedByteArray(0, 0, 1, 0, 2, 0, 0, 0, 2, 0, 3, 0),`,
+  `"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 200, 66, 0, 0, 0, 0, 0, 0, 200, 66)`
+);
+
+/**
+ * A PackedVector3Array quad (0,0,0)..(100,100,0) with UVs (0,0)..(1,1) and colours red, green at
+ * half alpha, blue and white at quarter alpha, as Godot 4.6.3 saves it: format 34359742489 =
+ * VERTEX|COLOR|TEX_UV|INDEX. Godot truncates `Color * 255`, so 0.5 stores 127 and 0.25 stores 63.
+ */
+export const colouredQuadSurface = surfaceWriter(
+  `"aabb": AABB(0, 0, 0, 100, 100, 1e-05),
+"attribute_data": PackedByteArray(255, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 0, 127, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 255, 255, 0, 0, 128, 63, 0, 0, 128, 63, 255, 255, 255, 63, 0, 0, 0, 0, 0, 0, 128, 63),
+"format": 34359742489,
+"index_count": 6,
+"index_data": PackedByteArray(0, 0, 1, 0, 2, 0, 0, 0, 2, 0, 3, 0),`,
+  `"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 200, 66, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 66, 0, 0, 0, 0)`
+);
+
+/**
+ * `colouredQuadSurface` saved with ARRAY_FLAG_COMPRESS_ATTRIBUTES (format 34896613401).
+ */
+export const colouredQuadCompressedSurface = surfaceWriter(
+  `"aabb": AABB(0, 0, 0, 100, 100, 1e-05),
+"attribute_data": PackedByteArray(255, 0, 0, 255, 0, 0, 0, 0, 0, 255, 0, 127, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 63, 0, 0, 255, 255),
+"format": 34896613401,
+"index_count": 6,
+"index_data": PackedByteArray(0, 0, 1, 0, 2, 0, 0, 0, 2, 0, 3, 0),`,
+  `"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 0, 0, 0, 0)`
+);

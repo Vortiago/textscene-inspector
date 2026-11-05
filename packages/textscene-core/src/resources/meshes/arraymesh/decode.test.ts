@@ -693,20 +693,28 @@ const POINTS_SECOND_SURFACE_TRES = TWO_SURFACE_TRES.replace(
   '"material": ExtResource("2_b"),\n"primitive": 0,'
 );
 
-/** WALL_TRES's only surface declared as a LINE_STRIP (primitive 2). */
+/** WALL_TRES's only surface declared as LINES (primitive 1) and as a LINE_STRIP (primitive 2). */
+const LINES_ONLY_TRES = WALL_TRES.replace('"primitive": 3,', '"primitive": 1,');
 const LINE_STRIP_ONLY_TRES = WALL_TRES.replace('"primitive": 3,', '"primitive": 2,');
+
+/** A primitive outside Godot's `Mesh.PrimitiveType`, which reads no way. */
+const UNKNOWN_ONLY_TRES = WALL_TRES.replace('"primitive": 3,', '"primitive": 9,');
+const UNKNOWN_SECOND_SURFACE_TRES = TWO_SURFACE_TRES.replace(
+  '"material": ExtResource("2_b"),\n"primitive": 3,',
+  '"material": ExtResource("2_b"),\n"primitive": 9,'
+);
 
 describe('POINTS primitive', () => {
   it('decodes a points surface, flagged, with the indices that pick its points', () => {
     const surface = decodeArrayMeshTres(POINTS_ONLY_TRES, 'res://mesh.tres').surfaces[0]!;
 
-    expect(surface.isPoints).toBe(true);
+    expect(surface.primitive).toBe('points');
     expect(surface.vertexCount).toBe(4);
     expect([...surface.indices]).toEqual([2, 0, 3, 2, 1, 0]);
   });
 
   it('flags no triangle surface as points', () => {
-    expect(decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres').surfaces[0]!.isPoints).toBeUndefined();
+    expect(decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres').surfaces[0]!.primitive).toBeUndefined();
   });
 
   it('draws a points surface saved with no indices as every vertex, in order (edge case)', () => {
@@ -721,7 +729,7 @@ describe('POINTS primitive', () => {
   it('keeps a points surface beside a triangle surface, in surface order', () => {
     const mesh = decodeArrayMeshTres(POINTS_SECOND_SURFACE_TRES, 'res://mesh.tres');
 
-    expect(mesh.surfaces.map((s) => [s.surfaceIndex, s.isPoints === true])).toEqual([
+    expect(mesh.surfaces.map((s) => [s.surfaceIndex, s.primitive === 'points'])).toEqual([
       [0, false],
       [1, true],
     ]);
@@ -740,7 +748,7 @@ describe('TRIANGLE_STRIP primitive', () => {
 
     expect([...surface.indices]).toEqual([2, 0, 3, 0, 2, 3, 3, 2, 1, 2, 0, 1]);
     expect(surface.indexCount).toBe(12);
-    expect(surface.isPoints).toBeUndefined();
+    expect(surface.primitive).toBeUndefined();
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
@@ -760,21 +768,59 @@ describe('TRIANGLE_STRIP primitive', () => {
   });
 });
 
-describe('non-triangle primitives', () => {
-  it('skips a non-triangle surface and keeps the triangle ones', () => {
-    // A LINES surface's indices are vertex pairs. Read as triangles they
-    // fabricate faces that were never authored, so the surface is dropped.
+describe('LINES and LINE_STRIP primitives', () => {
+  it('decodes a LINES surface, flagged, with the vertex pairs that pick its segments', () => {
+    const surface = decodeArrayMeshTres(LINES_ONLY_TRES, 'res://mesh.tres').surfaces[0]!;
+
+    expect(surface.primitive).toBe('lines');
+    expect([...surface.indices]).toEqual([2, 0, 3, 2, 1, 0]);
+  });
+
+  it('reads a LINE_STRIP as one segment between each pair of neighbouring indices', () => {
+    const surface = decodeArrayMeshTres(LINE_STRIP_ONLY_TRES, 'res://mesh.tres').surfaces[0]!;
+
+    expect(surface.primitive).toBe('lines');
+    expect([...surface.indices]).toEqual([2, 0, 0, 3, 3, 2, 2, 1, 1, 0]);
+  });
+
+  it('reads a LINE_STRIP of fewer than two indices as no segment', () => {
+    const oneIndex = LINE_STRIP_ONLY_TRES.replace('"index_count": 6,', '"index_count": 1,');
+    const surface = decodeArrayMeshTres(oneIndex, 'res://mesh.tres').surfaces[0]!;
+
+    expect(surface.indices).toHaveLength(0);
+  });
+
+  it('draws no segment of a LINES surface with an odd index count, as Godot draws none (`ref:godot`: 3, 5 and 7 indices)', () => {
+    const odd = LINES_ONLY_TRES.replace('"index_count": 6,', '"index_count": 5,');
+
+    expect(decodeArrayMeshTres(odd, 'res://mesh.tres').surfaces[0]!.indices).toHaveLength(0);
+  });
+
+  it('flags no triangle surface as lines', () => {
+    expect(decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres').surfaces[0]!.primitive).toBeUndefined();
+  });
+
+  it('keeps a lines surface beside a triangle surface, in surface order', () => {
     const mesh = decodeArrayMeshTres(LINES_SECOND_SURFACE_TRES, 'res://mesh.tres');
+
+    expect(mesh.surfaces.map((surface) => [surface.surfaceIndex, surface.primitive === 'lines'])).toEqual([
+      [0, false],
+      [1, true],
+    ]);
+  });
+});
+
+describe('a primitive Godot does not define', () => {
+  it('skips the surface and keeps the others', () => {
+    const mesh = decodeArrayMeshTres(UNKNOWN_SECOND_SURFACE_TRES, 'res://mesh.tres');
 
     expect(mesh.surfaces).toHaveLength(1);
     expect(mesh.surfaces[0]!.materialPath).toBe('res://a.tres');
     expect(warnSpy).toHaveBeenCalled();
   });
 
-  it('fails loudly when every surface is a non-triangle primitive', () => {
-    // Nothing renderable came out, so this must not cache an empty geometry as a
-    // success. The message names the primitive as the reason, not a byte defect.
-    expect(() => decodeArrayMeshTres(LINE_STRIP_ONLY_TRES, 'res://mesh.tres')).toThrow(/non-triangle/);
+  it('fails loudly when every surface has one', () => {
+    expect(() => decodeArrayMeshTres(UNKNOWN_ONLY_TRES, 'res://mesh.tres')).toThrow(/undefined primitive/);
   });
 
   it('keeps decoding a surface that omits `primitive` (Godot writes 3 for triangles)', () => {
