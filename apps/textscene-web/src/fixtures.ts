@@ -1498,6 +1498,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Menu Button Wrap Trim",
+    "file": "unit-menu-button-wrap-trim.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Menu Button",
     "file": "unit-menu-button.tscn",
     "category": "Other"
@@ -1515,6 +1520,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Multi Camera",
     "file": "unit-multi-camera.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Multi Mesh Instance 2d Flipbook",
+    "file": "unit-multi-mesh-instance-2d-flipbook.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Multi Mesh Instance 2d Instances",
+    "file": "unit-multi-mesh-instance-2d-instances.tscn",
     "category": "Other"
   },
   {
@@ -3653,6 +3668,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Button Clip Text",
     "file": "unit-button-clip-text.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Button Family Clip Text",
+    "file": "unit-button-family-clip-text.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

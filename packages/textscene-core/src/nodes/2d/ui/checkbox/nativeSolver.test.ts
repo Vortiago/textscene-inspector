@@ -236,7 +236,8 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
     checkVOffset: 0,
     hSeparation: 4,
     hasText: true,
-    textNaturalSize: { x: 90, y: 26 },
+    textHeightPx: 26,
+    textAlignment: 0,
     rtl: false,
   };
 
@@ -246,17 +247,18 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
     expect(iconPosition).toEqual({ x: 4, y: 6 });
   });
 
-  it('text starts past the icon + h_separation (the reserved "internal margin" width)', () => {
-    const { textOffset } = layoutCheckBoxContent(BASE);
-    // x = margin(4) + icon(16) + h_separation(4) = 24.
-    expect(textOffset!.x).toBe(24);
-    // customElementHeight = 28-8=20; y = (20-26)/2 + 4 = -3+4 = 1.
-    expect(textOffset!.y).toBeCloseTo(1, 10);
+  it('the label box starts past the icon + h_separation (the reserved "internal margin" width)', () => {
+    const { labelBox } = layoutCheckBoxContent(BASE);
+    // leftPx = margin(4) + icon(16) + h_separation(4) = 24; width = 150 - 8 - 20 = 122.
+    expect(labelBox!.leftPx).toBe(24);
+    expect(labelBox!.widthPx).toBe(122);
+    // customElementHeight = 28-8=20; topPx = (20-26)/2 + 4 = -3+4 = 1.
+    expect(labelBox!.topPx).toBeCloseTo(1, 10);
   });
 
-  it('returns textOffset: null when hasText is false (icon still positioned)', () => {
-    const { iconPosition, textOffset } = layoutCheckBoxContent({ ...BASE, hasText: false });
-    expect(textOffset).toBeNull();
+  it('returns labelBox: null when hasText is false (icon still positioned)', () => {
+    const { iconPosition, labelBox } = layoutCheckBoxContent({ ...BASE, hasText: false });
+    expect(labelBox).toBeNull();
     expect(iconPosition).toEqual({ x: 4, y: 6 });
   });
 
@@ -265,20 +267,26 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
     expect(iconPosition.y).toBe(9);
   });
 
-  it('a wider/taller icon (icon_max_width clamp NOT applied — already-fitted input) shifts the text start accordingly', () => {
-    const { textOffset } = layoutCheckBoxContent({ ...BASE, iconSize: { x: 8, y: 8 } });
-    // x = 4 + 8 + 4 = 16.
-    expect(textOffset!.x).toBe(16);
+  it('a smaller icon (icon_max_width clamp NOT applied — already-fitted input) moves the label box accordingly', () => {
+    const { labelBox } = layoutCheckBoxContent({ ...BASE, iconSize: { x: 8, y: 8 } });
+    // leftPx = 4 + 8 + 4 = 16; width = 150 - 8 - 12 = 130.
+    expect(labelBox!.leftPx).toBe(16);
+    expect(labelBox!.widthPx).toBe(130);
   });
 
   it("floors a half-pixel centring remainder DOWN, matching Button's own text_ofs.y (never floored in the source itself, only per-glyph — text_server_adv.cpp:4083)", () => {
     // customElementHeight = 32-2*4=24; (24-23)/2=0.5; +margin(4)=4.5 -> floor 4.
-    const { textOffset } = layoutCheckBoxContent({
-      ...BASE,
-      rectSize: { x: 150, y: 32 },
-      textNaturalSize: { x: 90, y: 23 },
-    });
-    expect(textOffset!.y).toBe(4);
+    const { labelBox } = layoutCheckBoxContent({ ...BASE, rectSize: { x: 150, y: 32 }, textHeightPx: 23 });
+    expect(labelBox!.topPx).toBe(4);
+  });
+
+  it('keeps the authored alignment (check_box.cpp:174 sets LEFT only as the default)', () => {
+    expect(layoutCheckBoxContent({ ...BASE, textAlignment: 1 }).labelBox!.alignment).toBe(1);
+    expect(layoutCheckBoxContent({ ...BASE, textAlignment: 2 }).labelBox!.alignment).toBe(2);
+  });
+
+  it('keeps the unceiled drawable width: the ceiling belongs to the drawn label (button.cpp:437)', () => {
+    expect(layoutCheckBoxContent({ ...BASE, rectSize: { x: 150.5, y: 28 } }).labelBox!.widthPx).toBe(122.5);
   });
 });
 
@@ -295,7 +303,8 @@ describe('layoutCheckBoxContent — RTL puts the check on the right and the labe
     checkVOffset: 0,
     hSeparation: 4,
     hasText: true,
-    textNaturalSize: { x: 90, y: 26 },
+    textHeightPx: 26,
+    textAlignment: 0,
     rtl: true,
   };
 
@@ -305,24 +314,21 @@ describe('layoutCheckBoxContent — RTL puts the check on the right and the labe
     expect(iconPosition).toEqual({ x: 130, y: 6 });
   });
 
-  it('lays the label out flush against the check', () => {
-    const { textOffset } = layoutCheckBoxContent(BASE);
-    // drawable = 150 - 4 - 4 - (16 + 4) = 122; text_ofs.x = style margin 4
-    // (the left internal margin is now 0) + RIGHT shift (122 - 90) = 36.
-    expect(textOffset!.x).toBe(36);
-    expect(textOffset!.y).toBeCloseTo(1, 10);
+  it('puts the label box at the left margin, 20 px short of the check, aligned RIGHT', () => {
+    const { labelBox } = layoutCheckBoxContent(BASE);
+    // drawable = 150 - 4 - 4 - (16 + 4) = 122; the left internal margin is now 0.
+    expect(labelBox).toEqual({ leftPx: 4, topPx: 1, widthPx: 122, alignment: 2 });
   });
 
-  it('hugs the CEILED paragraph width, not the raw drawable (button.cpp:437)', () => {
-    // rect 150.5 -> drawable 122.5 -> text_buf_width 123; 123 - 90 = 33; + margin 4.
-    const { textOffset } = layoutCheckBoxContent({ ...BASE, rectSize: { x: 150.5, y: 28 } });
-    expect(textOffset!.x).toBeCloseTo(37, 10);
+  it('swaps an authored RIGHT to LEFT and leaves CENTER (button.cpp:271-275)', () => {
+    expect(layoutCheckBoxContent({ ...BASE, textAlignment: 2 }).labelBox!.alignment).toBe(0);
+    expect(layoutCheckBoxContent({ ...BASE, textAlignment: 1 }).labelBox!.alignment).toBe(1);
   });
 
   it('keeps check_v_offset and the no-text case direction-independent', () => {
     expect(layoutCheckBoxContent({ ...BASE, checkVOffset: 3 }).iconPosition.y).toBe(9);
-    const { textOffset, iconPosition } = layoutCheckBoxContent({ ...BASE, hasText: false });
-    expect(textOffset).toBeNull();
+    const { labelBox, iconPosition } = layoutCheckBoxContent({ ...BASE, hasText: false });
+    expect(labelBox).toBeNull();
     expect(iconPosition.x).toBe(130);
   });
 });
@@ -385,5 +391,17 @@ describe('checkBoxDrawnIconSize', () => {
   it('is 0 for an icon that reports size 0, as an unset ViewportTexture does', () => {
     const n = { textureSlots: { unchecked: { x: 0, y: 0 } }, constants: {} };
     expect(checkBoxDrawnIconSize(n, 'unchecked')).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('checkBoxMinimumSize — clip_text zeroes the text width (button.cpp:493-495)', () => {
+  it('keeps the icon, the margins and the text height, and drops the text width and the h_separation', () => {
+    const result = checkBoxMinimumSize(node({ text: 'AB', clipText: true }), ctx());
+    expect(result).toEqual({ x: 8 + 16, y: 8 + FONT_HEIGHT });
+  });
+
+  it('keeps the whole text width without clip_text', () => {
+    const result = checkBoxMinimumSize(node({ text: 'AB', clipText: false }), ctx());
+    expect(result.x).toBe(8 + AB_SHAPED_WIDTH + 4 + 16);
   });
 });

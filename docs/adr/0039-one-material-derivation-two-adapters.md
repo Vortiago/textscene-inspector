@@ -217,11 +217,11 @@ reason. Its fourth union member, `invalid_key`, is the same constructor sentinel
 - **`particles_animation`** emits vertex code in Godot: `VERTEX.xy /=
   vec2(h_frames, v_frames)` plus the frame pick and the UV window
   (`canvas_item_material.cpp:118-137`). Here it is answered **on the CPU, in the
-  geometry**: `nodes/2d/cpuparticles2d/particleGeometry.ts` builds each particle's quad
-  at `cellWidth`/`cellHeight` and offsets its UVs by `uOffset`/`vOffset`, with
-  `flipbookFrame` transcribing the shader's `floor` / `clamp` / `mod` chain. So it is not
-  a material term here, and cannot be a key term of a material that never learns about
-  it.
+  geometry**: `r3f/particlesFlipbook.ts` transcribes the shader's `floor` / `clamp` /
+  `mod` chain as `flipbookCell`. `nodes/2d/cpuparticles2d/particleGeometry.ts` and
+  `r3f/meshes/canvasMeshInstances.ts` build each quad or mesh at the cell's size and
+  offset its UVs. So it is not a material term here, and cannot be a key term of a
+  material that never learns about it.
 
 ## Cast shadows are instance state, not material state
 

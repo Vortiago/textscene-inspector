@@ -10,3 +10,5 @@ import { menuButtonMinimumSize } from './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'MenuButton', Component: MenuButton });
 controlSolverRegistry.registerMinimumSize('MenuButton', menuButtonMinimumSize);
+// As Button's: `autowrap_mode` makes the label's height depend on this node's own width.
+controlSolverRegistry.registerSizeDependentMinimum('MenuButton');
