@@ -743,6 +743,8 @@ export const CANVAS_2D_SCENES = [
   // Other text scenes draw the fill alone. `label-stacked-effects` adds the stacked arrays.
   { name: 'label-outline', file: 'unit-label-outline.tscn', mode: '2d' },
   { name: 'label-stacked-effects', file: 'unit-label-stacked-effects.tscn', mode: '2d' },
+  // The one variable: a large glyph's curved edges, filled and ringed apart, as FreeType's chords draw them.
+  { name: 'label-glyph-edges', file: 'unit-label-glyph-edges.tscn', mode: '2d' },
   // The one variable: a `label_settings` loaded from its own `.tres` file, which beats the
   // node-local theme overrides as an inline one does.
   { name: 'label-label-settings-tres', file: 'unit-label-label-settings-tres.tscn', mode: '2d' },
