@@ -3,7 +3,7 @@
  * assertions read scene-graph structure only, never pixels: the paint is a
  * golden-image concern.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { godotTextureFilterState } from '../../../../resources/textures/godotTextureFilter';
 import { TextureFilter } from '../../../../godot/rendering/materials/textureFilter';
 import * as THREE from 'three';
@@ -12,12 +12,28 @@ import { fakeCanvasRenderer } from '../../../testing/fakeCanvasRenderer';
 import { TextRun, type TextRunProps } from './TextRun';
 import { shapeText } from './textLayout';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
-import { createRuntimeFontMetrics } from './runtimeFontMetrics';
+import { createRuntimeFontMetrics, type CanvasFontMetrics } from './runtimeFontMetrics';
 import { withVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
+import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
+
+const bundled = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | null | undefined }));
+
+vi.mock('./bundledFontLoader', () => ({ peekBundledCanvasFontMetrics: () => bundled.metrics }));
+vi.mock('./sceneFontOutlines', () => ({ peekGlyphOutlines: () => null }));
+
+function emboldenedLayout(embolden: number) {
+  return shapeText('AB', {
+    fontSizePx: 16,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 3,
+    fontMetrics: withVariation(OPEN_SANS_FONT_METRICS, { embolden }),
+  });
+}
 
 function layoutFor(text: string, uppercase = false) {
   return shapeText(text, {
@@ -56,23 +72,18 @@ describe('<TextRun>', () => {
     expect(mat.uniforms.uOpacity!.value).toBe(0.75);
   });
 
-  it('gives the material no distance bias for a layout with no embolden', async () => {
-    const renderer = await renderTextRun();
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(mat.uniforms.uDistanceBias!.value).toBe(0);
+  it('draws an emboldened atlas face on the bundled canvas face, as FreeType emboldens every value', async () => {
+    bundled.metrics = createOpenSansCanvasFontMetrics('bundled-textrun-test');
+    const renderer = await renderTextRun({ layout: emboldenedLayout(1.2) });
+    await vi.waitFor(() => expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1));
+    const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
+    expect(geometry.getAttribute('position').count).toBe(4);
   });
 
-  it("derives the material's distance bias from the embolden of the layout's face", async () => {
-    const layout = shapeText('AB', {
-      fontSizePx: 16,
-      boxWidthPx: 0,
-      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-      lineSpacingPx: 3,
-      fontMetrics: withVariation(OPEN_SANS_FONT_METRICS, { embolden: 1.2 }),
-    });
-    const renderer = await renderTextRun({ layout });
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(mat.uniforms.uDistanceBias!.value).toBeCloseTo(0.39375, 10);
+  it('draws nothing for an emboldened atlas face while the bundled canvas face loads', async () => {
+    bundled.metrics = undefined;
+    const renderer = await renderTextRun({ layout: emboldenedLayout(1.2) });
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
   it("shears the glyphs by the skew of the layout's face: the top moves right, the bottom stays", async () => {

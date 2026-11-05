@@ -188,10 +188,10 @@ describe('resolveNodeFontMetricsOr — a last rung of its own for a key no theme
     });
     const emboldenOf = (n: SolveNode) => resolveNodeFontMetricsOr(n, 'bold_font', rung.build).embolden;
     expect(emboldenOf(labelNode({ fontOverrides: { bold_font: embolden('1') } }))).toBe(1);
-    expect(emboldenOf(labelNode({ themeChain: [themeWith('0.75')] }))).toBe(0.75);
+    expect(emboldenOf(labelNode({ themeChain: [themeWith('2')] }))).toBe(2);
     expect(
-      emboldenOf(labelNode({ projectFonts: { ...NO_PROJECT_FONTS, projectTheme: themeWith('1.25') } }))
-    ).toBe(1.25);
+      emboldenOf(labelNode({ projectFonts: { ...NO_PROJECT_FONTS, projectTheme: themeWith('4') } }))
+    ).toBe(4);
     expect(rung.received).toEqual([]);
   });
 

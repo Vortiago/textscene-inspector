@@ -10,7 +10,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { lazy, useLayoutEffect, useMemo, useRef } from 'react';
 import { visualLayersUserData } from '../../../visualLayers';
 import * as THREE from 'three';
 import { getAtlasTexture, useIsAtlasDecoded } from './atlasTexture';
@@ -19,7 +19,6 @@ import {
   useCanvasItemPixelMaterial,
   type CanvasItemPixelMaterial,
 } from '../../../components/LitCanvasItemPixels';
-import { msdfDistanceBias } from './msdfEmbolden';
 import {
   computeCanvasTextCanvasLayout,
   buildCanvasTextQuadArrays,
@@ -46,6 +45,7 @@ import type { SurfaceBlend } from '../../../materials/surfaceBlend';
 import type { FadeVariants } from '../../../materials/fadeVariants';
 import { useSwappedMaterials } from '../../../materials/swappedMaterials';
 import { usePendingWhile } from '../../../../resources/usePendingWhile';
+import { PendingSuspense } from '../../../../resources/PendingSuspense';
 import type { ShadowCastingEffects } from '../../../shadowCasting';
 import type { Rgba } from '../../../../godot/math/math';
 import { useDisposeOnRelease } from '../../../useDisposeOnRelease';
@@ -219,9 +219,8 @@ function buildBitmapRun(
 
 /**
  * Dispatches on `layout.fontMetrics.kind`, so no slice's `Component.tsx` branches. The face sets the
- * shear (`FontMetrics.skew`). `strokeWidthPx` is canvas-only, and the embolden's distance bias
- * (`msdfDistanceBias`) atlas-only. Each branch ignores the other's, except that a BMFont run reads
- * a positive stroke width as its outline pass.
+ * shear (`FontMetrics.skew`). `strokeWidthPx` is canvas-only, and the atlas branch ignores it, except
+ * that a BMFont run reads a positive stroke width as its outline pass.
  */
 function buildTextRun(
   layout: TextLayoutResult,
@@ -281,7 +280,6 @@ function buildTextRun(
     color: { r, g, b },
     opacity: tint.a,
     pxRange: OPEN_SANS_ATLAS_INFO.distanceRange,
-    distanceBias: msdfDistanceBias(layout),
     clippingPlanes,
     depthTest,
     side,
@@ -291,7 +289,23 @@ function buildTextRun(
   return { geometry: geo, paint: () => createMsdfMaterial(options) };
 }
 
-export function TextRun({
+const BundledCanvasRun = lazy(() => import('./BundledCanvasRun'));
+
+/**
+ * An emboldened atlas face draws on the bundled canvas face: Godot's default font is not MSDF
+ * (`text_server.cpp:2386`), so FreeType grows its outline at every embolden.
+ */
+export function TextRun(props: TextRunProps) {
+  const { fontMetrics } = props.layout;
+  if (fontMetrics.kind !== 'atlas' || !fontMetrics.embolden) return <TextRunMesh {...props} />;
+  return (
+    <PendingSuspense>
+      <BundledCanvasRun {...props} />
+    </PendingSuspense>
+  );
+}
+
+function TextRunMesh({
   layout,
   fontSizePx,
   tint,

@@ -23,6 +23,14 @@ import { RICH_TEXT_LABEL_UNDERLINE_ALPHA, richTextLabelMinimumSize } from './nat
 import { RichTextLabel } from './Component';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
+// The bundled canvas face, which a [b] run draws on: the door to register it is shut under vitest.
+vi.mock('../../../../r3f/controls/native/text/bundledFontLoader', async () => {
+  const { createOpenSansCanvasFontMetrics } =
+    await import('../../../../r3f/controls/native/text/openSansCanvasFontMetrics');
+  const bundled = createOpenSansCanvasFontMetrics('bundled-rtl-test');
+  return { peekBundledCanvasFontMetrics: () => bundled };
+});
+
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
 
@@ -65,7 +73,7 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
 
   it('draws a separate mesh per bbcode style-run on the same line', async () => {
     const renderer = await render({ text: 'plain [b]bold[/b]', bbcodeEnabled: true });
-    expect(meshesOf(renderer).length).toBeGreaterThanOrEqual(2);
+    await vi.waitFor(() => expect(meshesOf(renderer).length).toBeGreaterThanOrEqual(2));
   });
 
   it('forwards renderOrder to every mesh, not just the first', async () => {
@@ -75,39 +83,31 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(5);
   });
 
-  it("a [b] run's material carries the distance bias of Godot's bold (0.39375); a plain run carries 0", async () => {
+  it("draws a [b] run, Godot's FreeType embolden, on the bundled canvas face; a plain run stays on the atlas", async () => {
     const renderer = await render({ text: 'plain [b]bold[/b]', bbcodeEnabled: true });
-    const materials = meshesOf(renderer).map((m) => m.material as THREE.ShaderMaterial);
-    const biases = materials.map((m) => m.uniforms.uDistanceBias!.value as number);
-    expect(biases.some((bias) => Math.abs(bias - 0.39375) < 1e-9)).toBe(true);
-    expect(biases).toContain(0);
+    await vi.waitFor(() => expect(meshesOf(renderer)).toHaveLength(2));
+    const kinds = meshesOf(renderer).map((m) => (m.material as THREE.Material).type);
+    expect(kinds.filter((type) => type === 'ShaderMaterial')).toHaveLength(1);
   });
 
   it(
-    "a [b] run with no bold_font_size override draws its glyphs at Godot's FALLBACK font size (16px), " +
-      'not normal_font_size — scene/theme/default_theme.cpp:1200 leaves bold_font_size at its own -1 ' +
-      'sentinel, which Theme::get_font_size (scene/resources/theme.cpp:658-661) never falls through to a ' +
-      'sibling key for, only to ThemeDB::get_fallback_font_size() (16)',
+    "a [b] run with no bold_font_size override draws at Godot's FALLBACK font size (16px), not " +
+      'normal_font_size: default_theme.cpp:1200 leaves bold_font_size at its -1 sentinel, which ' +
+      'Theme::get_font_size (theme.cpp:658-661) falls through only to ThemeDB::get_fallback_font_size()',
     async () => {
-      const renderer = await render({
-        text: 'A[b]A[/b]',
-        bbcodeEnabled: true,
-        themeOverrideFontSizes: { normal_font_size: 32 },
-      });
-      const meshes = meshesOf(renderer);
-      expect(meshes).toHaveLength(2);
-      const widthOf = (mesh: THREE.Mesh) => {
-        const pos = (mesh.geometry as THREE.BufferGeometry).getAttribute('position');
-        return pos.getX(1) - pos.getX(0); // TR.x - TL.x, the first (only) glyph's own ink width.
+      const boldHeight = async (fontSizes: Record<string, number>) => {
+        const renderer = await render({
+          text: '[b]A[/b]',
+          bbcodeEnabled: true,
+          themeOverrideFontSizes: fontSizes,
+        });
+        await vi.waitFor(() => expect(meshesOf(renderer)).toHaveLength(1));
+        const pos = (meshesOf(renderer)[0]!.geometry as THREE.BufferGeometry).getAttribute('position');
+        return pos.getY(0) - pos.getY(2);
       };
-      const plainWidth = widthOf(meshes[0]!);
-      const boldWidth = widthOf(meshes[1]!);
-      // Atlas 'A' bitmap width 32 at bake 42 (openSansAtlas.ts): 32*32/42 at 32px,
-      // and half that at the 16px fallback. 4 digits absorb the Float32Array
-      // precision loss.
-      expect(plainWidth).toBeCloseTo((32 * 32) / 42, 4);
-      expect(boldWidth).toBeCloseTo((32 * 16) / 42, 4);
-      expect(boldWidth).toBeCloseTo(plainWidth / 2, 4);
+      const fallback = await boldHeight({ normal_font_size: 32 });
+      expect(fallback).toBe(await boldHeight({ normal_font_size: 32, bold_font_size: 16 }));
+      expect(fallback).toBeLessThan(await boldHeight({ normal_font_size: 32, bold_font_size: 32 }));
     }
   );
 

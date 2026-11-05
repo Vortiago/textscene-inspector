@@ -14,7 +14,7 @@ import { TextRun, type TextRunProps } from './TextRun';
 import { PendingSuspense } from '../../../../resources/PendingSuspense';
 
 // The bundled font bytes load with the ring, not with every Control.
-const BundledOutlineRing = lazy(() => import('./BundledOutlineRing'));
+const BundledCanvasRun = lazy(() => import('./BundledCanvasRun'));
 
 /**
  * The render order of layer `index` of `count` stacked text layers: the layers spread over the
@@ -52,7 +52,7 @@ export function OutlineRingRun({ sizePx, ...run }: OutlineRingRunProps) {
   if (isCanvasFontMetrics(fontMetrics) || isBitmapFontMetrics(fontMetrics)) return <TextRun {...ring} />;
   return (
     <PendingSuspense>
-      <BundledOutlineRing {...ring} />
+      <BundledCanvasRun {...ring} />
     </PendingSuspense>
   );
 }

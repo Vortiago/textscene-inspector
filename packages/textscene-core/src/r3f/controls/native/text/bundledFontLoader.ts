@@ -1,56 +1,46 @@
 /**
  * Registers the bundled Open Sans font as a `FontFace` and hands out its canvas metrics, through the
- * door and the settled channel of `sceneFontLoader.ts`. Only lazy chunks reach it, the `Label3D`
- * glyphs, the outline ring and the dynamic import of `sceneFontLoader.ts`, so the base64 font bytes
- * stay out of the initial bundle.
+ * door of `fontFaceDoor.ts` and the settled channel. The base64 font bytes load as their own chunk on
+ * the first peek, so they stay out of the initial bundle.
  */
 import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
-import { bundledFontBytes } from './bundledFontBytes';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
-import { registerFontFace } from './sceneFontLoader';
-import { notifySceneFontSettled } from './settledChannel';
+import { IS_VITEST, registerFontFace } from './fontFaceDoor';
+import { createSettledPeek } from './settledChannel';
 import * as logger from '../../../../logger';
 
 /** Fixed, unlike a scene font's counter-suffixed name: there is exactly one bundled font and it is registered exactly once. */
 const BUNDLED_FAMILY = 'tscn-bundled-open-sans-semibold';
 
-/** Written only by `startRegistration`, once, and never cleared: a failed registration is not retried. */
-let bundledRegistration: Promise<void> | undefined;
-/** Undefined until `document.fonts.add` resolves: `fillText` with an unregistered family paints a system font without failing. */
-let bundledMetrics: CanvasFontMetrics | undefined;
+/** The one registration, keyed by `BUNDLED`. Null is a registration that failed, and it is not retried. */
+const peekRegistration = createSettledPeek<object, CanvasFontMetrics | null>();
 
-async function registerBundledFont(): Promise<void> {
+/** The cache key of the bundled font, which has no resource. */
+const BUNDLED = {};
+
+/** Settles on null when the font cannot register: under vitest at once, elsewhere after a warning. */
+async function registerBundledFont(): Promise<CanvasFontMetrics | null> {
+  if (IS_VITEST) return null;
   try {
+    const { bundledFontBytes } = await import('./bundledFontBytes');
     const doc = await registerFontFace(BUNDLED_FAMILY, bundledFontBytes);
-    if (!doc) {
-      logger.warn(
-        '[BundledFont] No FontFace/document.fonts in this environment; the bundled canvas-rasterised font is unavailable.'
-      );
-      return;
-    }
-    bundledMetrics = createOpenSansCanvasFontMetrics(BUNDLED_FAMILY);
+    if (doc) return createOpenSansCanvasFontMetrics(BUNDLED_FAMILY);
+    logger.warn(
+      '[BundledFont] No FontFace/document.fonts in this environment; the bundled canvas-rasterised font is unavailable.'
+    );
   } catch (err: unknown) {
     logger.warn(
       `[BundledFont] Failed to register the bundled font (${err instanceof Error ? err.message : String(err)}).`
     );
-  } finally {
-    // Notifies on any settle, as the scene arm does, so a consumer that peeked re-renders once.
-    notifySceneFontSettled();
   }
+  return null;
 }
 
-/** The canvas metrics once registration settles, or `undefined` when it failed. The first call starts the registration. */
-export async function loadBundledCanvasFontMetrics(): Promise<CanvasFontMetrics | undefined> {
-  await startRegistration();
-  return bundledMetrics;
-}
-
-/** Synchronous answer for a solve/paint pass: the canvas metrics once registration resolved, `undefined` before that. Kicks the registration off on first call. */
-export function peekBundledCanvasFontMetrics(): CanvasFontMetrics | undefined {
-  void startRegistration();
-  return bundledMetrics;
-}
-
-function startRegistration(): Promise<void> {
-  return (bundledRegistration ??= registerBundledFont());
+/**
+ * The canvas metrics once registration resolved: undefined while it runs, null once it failed. The
+ * first peek starts it. `fillText` with an unregistered family paints a system font without failing,
+ * so no caller paints before this answers.
+ */
+export function peekBundledCanvasFontMetrics(): CanvasFontMetrics | null | undefined {
+  return peekRegistration(BUNDLED, registerBundledFont);
 }

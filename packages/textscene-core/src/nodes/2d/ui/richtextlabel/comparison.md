@@ -22,9 +22,9 @@ While `clip_contents` is true, its default for this node (`rich_text_label.cpp:8
 clips every glyph, image and underline (`control.cpp:3948`). `fit_content` grows the control to its text, so
 nothing is cut.
 
-An embolden over the bundled font draws on the atlas up to a magnitude of about 1.4, the growth the atlas
-encodes. Past that it draws on the canvas painter, which emboldens the outline as FreeType does
-(`text_server_adv.cpp:1314-1315`, ADR-0040).
+A `[b]` run and any embolden over the bundled font draw on the canvas painter, which emboldens the
+outline as FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0040). The run draws nothing until the
+bundled face loads.
 
 ## Linting
 
@@ -81,8 +81,6 @@ string against `true`, so an absent property or any other value silently resolve
 
 - **Approximated** Only a subset of BBCode tags is styled, and a tag outside it renders as
   plain text.
-- **Approximated** A `[b]` run on the bundled font grows the MSDF edge by the embolden, since the atlas
-  has no formula for FreeType's outline growth.
 - **Not drawn** `[p dir=]` and the right-to-left arms of `_draw_line`
   (rich_text_label.cpp:987-1014), which Godot reaches only off the default `text_direction`.
 - **Not drawn** The right-to-left scrollbar offset (:988-996,2093-2100), the loading bar's

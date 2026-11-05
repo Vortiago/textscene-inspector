@@ -1,7 +1,6 @@
 /**
  * Turns a resolved `FontResource` into `FontMetrics`, or into the bundled default when that fails.
- * It owns the `FontFace` door, which `bundledFontLoader.ts` shares. It is the one DOM-touching
- * module of the font pipeline, and it never throws.
+ * It registers a scene font through the `FontFace` door of `fontFaceDoor.ts`, and it never throws.
  */
 import { withVariation, type FontMetrics, type GlyphVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
@@ -28,15 +27,7 @@ import * as logger from '../../../../logger';
 import { warnOnce } from '../../../../utils/warnOnce';
 import { createSettledPeek } from './settledChannel';
 import { peekGlyphOutlines } from './sceneFontOutlines';
-import { atlasHoldsEmbolden } from './msdfEmbolden';
-
-// happy-dom has neither `FontFace` nor a 2D canvas context, so under vitest the loader skips to the
-// bundled default before any DOM font API. The skip is deliberate, so it does not warn.
-// `r3f/internalTextLabel.tsx` uses the same detection.
-const IS_VITEST = (() => {
-  const proc = (globalThis as { process?: { env?: { VITEST?: string } } }).process;
-  return proc?.env?.VITEST === 'true';
-})();
+import { IS_VITEST, registerFontFace } from './fontFaceDoor';
 
 /**
  * Design units per em for a font `sfntTables.ts` cannot parse; every measurement uses this size.
@@ -50,18 +41,6 @@ let familyCounter = 0;
 
 /** Keyed by the resolved leaf `FontFileResource`, so nodes that share a font share one load. */
 const peekMetrics = createSettledPeek<FontFileResource, FontMetrics>();
-
-/** Keyed by `BUNDLED` alone. Null is a registration that failed. */
-const peekBundledCanvas = createSettledPeek<object, CanvasFontMetrics | null>();
-
-/** The cache key of the bundled canvas face, which has no resource. */
-const BUNDLED = {};
-
-/** A dynamic import, so the bundled font bytes stay out of the chunk that holds this loader. */
-async function loadBundledCanvas(): Promise<CanvasFontMetrics | null> {
-  const { loadBundledCanvasFontMetrics } = await import('./bundledFontLoader');
-  return (await loadBundledCanvasFontMetrics()) ?? null;
-}
 
 /** One `BitmapFontMetrics` for each decoded BMFont, so a layout memoised on its identity keeps its hits. */
 const bitmapMetricsOf = perObject(createBitmapFontMetrics);
@@ -77,29 +56,6 @@ function warnUnresolvable(font: FontResource, nodePath: string): void {
     'unresolvable',
     `[SceneFont] Node "${nodePath}": font resource is unresolvable (${reason}). Falling back to the bundled default font.`
   );
-}
-
-/**
- * The CSP-validated door (`default-src 'none'`, no `connect-src` or `font-src`):
- * bytes in hand go to `new FontFace` and `document.fonts.add`, with no fetch of any URL, no worker,
- * eval or WASM. Resolves to `undefined` with no `FontFace`, and rejects only on bytes that are not
- * a font, so `bytes` is a thunk that does not decode where there is no door.
- */
-export async function registerFontFace(
-  family: string,
-  bytes: () => ArrayBuffer,
-  descriptors?: FontFaceDescriptors
-): Promise<Document | undefined> {
-  // Read lazily: a non-DOM environment answers `undefined`, and a late `document.fonts` is still seen.
-  const { FontFace: FontFaceCtor, document: doc } = globalThis as {
-    FontFace?: typeof FontFace;
-    document?: Document;
-  };
-  if (!FontFaceCtor || !doc?.fonts) return undefined;
-  const face = new FontFaceCtor(family, bytes(), descriptors);
-  await face.load();
-  doc.fonts.add(face);
-  return doc;
 }
 
 /**
@@ -183,22 +139,6 @@ function fontVariation(font: FontResource): GlyphVariation {
 }
 
 /**
- * The bundled font under the variation of `font`, a `FontVariation` with no `base_font`. The atlas
- * draws the embolden it holds. Past that, FreeType's emboldened outline draws on the bundled canvas
- * face, as Label3D's does, and null answers while that face or its outlines load. A face that
- * cannot register stays on the atlas.
- */
-function peekBundledVariation(font: FontResource): FontMetrics | null {
-  const variation = fontVariation(font);
-  if (atlasHoldsEmbolden(variation.embolden ?? 0)) return withVariation(OPEN_SANS_FONT_METRICS, variation);
-  const canvas = peekBundledCanvas(BUNDLED, loadBundledCanvas);
-  if (canvas === undefined) return null;
-  if (!canvas) return withVariation(OPEN_SANS_FONT_METRICS, variation);
-  const outlines = peekGlyphOutlines(font, canvas, variation);
-  return outlines === undefined ? null : withVariation(canvas, { ...variation, outlines });
-}
-
-/**
  * The metrics of `font` once its load has settled, with the `FontVariation` embolden and skew on
  * top, and null while a load is in flight. A font that cannot load, or has no bytes to load,
  * settles at once on the bundled default. It starts one load per font, so calling both peeks
@@ -219,7 +159,7 @@ export function peekSettledSceneFontMetrics(
   const resolved = resolveFontFileBytes(font);
   if (!resolved) {
     // A variation with no `base_font` over the bundled default font: no failure, so no warning.
-    if (endsWithoutBase(font)) return peekBundledVariation(font);
+    if (endsWithoutBase(font)) return withVariation(OPEN_SANS_FONT_METRICS, fontVariation(font));
     warnUnresolvable(font, nodePath);
     return OPEN_SANS_FONT_METRICS;
   }
@@ -236,15 +176,5 @@ export function peekSettledSceneFontMetrics(
  * the real metrics once it lands. Never throws.
  */
 export function peekSceneFontMetrics(font: FontResource | null | undefined, nodePath: string): FontMetrics {
-  return peekSettledSceneFontMetrics(font, nodePath) ?? loadingFontMetrics(font);
-}
-
-/**
- * The metrics a solve pass measures while `font` loads. A bare `FontVariation` keeps its variation
- * on the atlas, since the bundled canvas face it waits for keeps the baked advances: the layout
- * does not move when the face settles.
- */
-function loadingFontMetrics(font: FontResource | null | undefined): FontMetrics {
-  if (!font || resolveFontFileBytes(font) || !endsWithoutBase(font)) return OPEN_SANS_FONT_METRICS;
-  return withVariation(OPEN_SANS_FONT_METRICS, fontVariation(font));
+  return peekSettledSceneFontMetrics(font, nodePath) ?? OPEN_SANS_FONT_METRICS;
 }

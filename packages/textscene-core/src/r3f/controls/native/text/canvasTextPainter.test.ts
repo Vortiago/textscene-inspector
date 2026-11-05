@@ -71,6 +71,21 @@ describe('computeCanvasTextCanvasLayout', () => {
     expect(skewed.canvasWidthPx - layout.widthPx).toBeCloseTo(2 * skewed.offsetXPx, 6);
   });
 
+  // A fractional pad puts each texel between two screen pixels, and the linear filter then thins
+  // every edge: an emboldened 32 px run drew 3% less ink than Godot.
+  it('pads by whole pixels, so each texel of the raster lands on a screen pixel', () => {
+    const emboldened = shapeText('AB', {
+      fontSizePx: 32,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      fontMetrics: withVariation(CANVAS_METRICS, { embolden: 1.8 }),
+      lineSpacingPx: 3,
+    });
+    const canvasLayout = computeCanvasTextCanvasLayout(emboldened, 0.3, 1.5);
+    expect(Number.isInteger(canvasLayout.offsetXPx)).toBe(true);
+    expect(Number.isInteger(canvasLayout.offsetYPx)).toBe(true);
+  });
+
   it('canvas height always exceeds the layout height by the same fixed vertical pad, independent of skew', () => {
     const layout = layoutFor('AB');
     const straight = computeCanvasTextCanvasLayout(layout, 0);
@@ -171,12 +186,12 @@ function boldLayoutFor(text: string, embolden: number) {
 // `FT_Outline_Embolden` grows the outline by `embolden * size / 16` px and anchors it at the left
 // and bottom (`text_server_adv.cpp:1314-1315`): half the growth on each side, then a shift of half.
 describe('embolden padding', () => {
+  // The growth is 1.2 * 16 / 16 = 1.2 px, which the pad rounds up to 2 whole pixels.
   it('pads the raster by the outline growth on every side, so the grown ink stays inside it', () => {
     const plain = computeCanvasTextCanvasLayout(layoutFor('AB', 0), 0);
     const bold = computeCanvasTextCanvasLayout(boldLayoutFor('AB', 1.2), 0);
-    const growthPx = (1.2 * 16) / 16;
-    expect(bold.offsetXPx).toBeCloseTo(plain.offsetXPx + growthPx, 10);
-    expect(bold.offsetYPx).toBeCloseTo(plain.offsetYPx + growthPx, 10);
+    expect(bold.offsetXPx).toBe(plain.offsetXPx + 2);
+    expect(bold.offsetYPx).toBe(plain.offsetYPx + 2);
   });
 
   it('pads by the largest growth when two glyphs differ', () => {
@@ -188,6 +203,11 @@ describe('embolden padding', () => {
 
 describe('paintSceneFontCanvas — embolden', () => {
   afterEach(() => vi.restoreAllMocks());
+
+  it('rasterises on the CPU, whose exact-area coverage FreeType shares, not the GPU path rasteriser', () => {
+    paintRecording(layoutFor('A', 0), 0);
+    expect(HTMLCanvasElement.prototype.getContext).toHaveBeenCalledWith('2d', { willReadFrequently: true });
+  });
 
   it('draws a plain glyph with one fill and no stroke', () => {
     const { calls } = paintRecording(layoutFor('A', 0), 0);

@@ -23,9 +23,8 @@ each stacked shadow and each stacked outline draw from the last index to the fir
 comes last. A ring is a stroked contour with a one-sided radius of `outline_size / 4` px (`text_server_adv.cpp:1383`).
 It draws on the canvas painter for the bundled font and a scene font alike (ADR-0040). The fill and the plain shadows
 draw on the painter their font takes.
-An embolden over the bundled font draws on the atlas up to a magnitude of about 1.4, the growth the atlas
-encodes. Past that it draws on the canvas painter, which emboldens the outline as FreeType does
-(`text_server_adv.cpp:1314-1315`, ADR-0040).
+An embolden over the bundled font draws on the canvas painter, which emboldens the outline as
+FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0040).
 
 A `label_settings.font` resolves in the file that wrote the settings. A font that is loading draws
 nothing (`label.cpp:112`, ADR-0059).

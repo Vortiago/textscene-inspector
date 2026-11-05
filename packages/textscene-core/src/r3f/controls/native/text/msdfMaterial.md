@@ -23,12 +23,3 @@ nothing.
   would be tone-mapped.
 - `WebGLProgram` injects `tonemapping_pars_fragment` and `colorspace_pars_fragment` into the
   prefix, so a copy in `FRAGMENT` would be a redefinition.
-
-## The fill fades out where the field is empty
-
-The field clamps to 0 beyond half its range. With a bias `b`, a texel there reads as coverage
-`0.5 - spr * (0.5 - b)`, which is positive while `spr` stays under `0.5 / (0.5 - b)`. For the bold
-bias of 0.39375 that is below `spr` 4.7, so below about 49 px, and the whole glyph quad fills grey.
-`smoothstep(0.0, MSDF_FILL_FADE_MEDIAN, m)` takes the fill to 0 on those texels.
-Without it, a bold `[b]` run at 18 px has a 32% box behind its letters. The fade also caps the growth
-the field encodes, so `msdfEmbolden.ts` sends a larger embolden to the canvas painter.

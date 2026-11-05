@@ -307,7 +307,7 @@ describe('richTextLabelMinimumSize — the faces of [b] and [i] spans', () => {
       baseFont: null,
       properties: { variation_embolden: '3' },
     };
-    // 3 * 16 / 64 = 0.75px more per advance: 84.5 + 6 = 90.5. It holds while the canvas face loads too.
+    // 3 * 16 / 64 = 0.75px more per advance: 84.5 + 6 = 90.5.
     expect(widthOf({ fontOverrides: { bold_font: emboldened } })).toBe(91);
   });
 });

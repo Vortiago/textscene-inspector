@@ -1,8 +1,7 @@
 [gd_scene load_steps=5 format=3]
 
-; The one variable: the embolden of a `FontVariation` with no `base_font`, past the growth the
-; bundled MSDF atlas holds (about 1.4). Each Label has its own variation over Godot's bundled font.
-; The 1.4 row sits at the limit, and the 18 px row checks a small size.
+; The one variable: the embolden of a `FontVariation` with no `base_font`, from 1.4 to 4.0. Each
+; Label has its own variation over Godot's bundled font, and the 18 px row checks a small size.
 
 [sub_resource type="FontVariation" id="FontVariation_1_4"]
 variation_embolden = 1.4

@@ -72,8 +72,10 @@ export function computeCanvasTextCanvasLayout(
   const strokePadPx = strokeWidthPx / 2;
   // An embolden reaches its full growth right and up. The pad is symmetric, so the quad stays centred.
   const emboldenPadPx = maxEmboldenGrowthPx(layout);
-  const offsetXPx = shearPadPx + strokePadPx + emboldenPadPx;
-  const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + strokePadPx + emboldenPadPx;
+  // Whole pixels, as Godot draws a glyph texture texel-aligned: a fractional pad puts each texel
+  // between two screen pixels, and the linear filter thins every edge.
+  const offsetXPx = Math.ceil(shearPadPx + strokePadPx + emboldenPadPx);
+  const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + Math.ceil(strokePadPx + emboldenPadPx);
   return {
     canvasWidthPx: wholeRasterPx(layout.widthPx + 2 * offsetXPx),
     canvasHeightPx: wholeRasterPx(layout.heightPx + 2 * offsetYPx),
@@ -148,7 +150,9 @@ export function paintSceneFontCanvas(
   canvas.width = canvasLayout.canvasWidthPx;
   canvas.height = canvasLayout.canvasHeightPx;
 
-  const ctx = canvas.getContext('2d');
+  // A CPU raster, as FreeType's exact-area coverage: Chromium's GPU path rasteriser thins small
+  // glyphs, 2.4% of the ink at 8 px against Godot's (`textRun.md`).
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return canvas; // happy-dom/vitest only.
 
   ctx.textAlign = 'left';
