@@ -47,6 +47,13 @@ export const TILE_AND_TARGET_SCENES = [
     file: 'unit-tile-map-layer-tile-y-sort-origin.tscn',
     mode: '2d',
   },
+  // A y-sorted layer, rotated and scaled: each row draws through the layer's transform and sorts
+  // by its origin's y in the parent's space. Verified against Godot 4.6.3.
+  {
+    name: 'tile-map-layer-y-sort-transform',
+    file: 'unit-tile-map-layer-y-sort-transform.tscn',
+    mode: '2d',
+  },
 
   // RemoteTransform3D and RemoteTransform2D copy their transform onto the node
   // remote_path names, resolved over the Live scene tree (remoteTransforms.ts).

@@ -17,6 +17,7 @@ import {
 import { useResource } from '../../resources/useResource';
 import { useSceneResources } from '../SceneResourcesContext';
 import type { SceneScope } from '../../parser/types';
+import type { CanvasAncestorMaterial } from '../canvasAncestors';
 
 const CanvasItemMaterialContext = createContext<CanvasItemMaterialProperties | null>(null);
 CanvasItemMaterialContext.displayName = 'CanvasItemMaterialContext';
@@ -72,6 +73,21 @@ export function useResolvedCanvasItemMaterial(
   const fromFile = useCanvasItemMaterialFile(filePath);
   if (useParentMaterial) return inherited;
   return sub ? fromSub : fromFile;
+}
+
+/**
+ * The material a `use_parent_material` item takes below an ancestor chain drawn away from it: the
+ * one the chain names, the item above the chain's, or none.
+ */
+export function useCanvasAncestorMaterial(
+  material: CanvasAncestorMaterial
+): CanvasItemMaterialProperties | null {
+  const scene = useSceneResources();
+  const own = material.kind === 'own' ? material : null;
+  return useResolvedCanvasItemMaterial(
+    { ref: own?.ref, useParentMaterial: material.kind === 'inherit' },
+    own?.resources ?? scene
+  );
 }
 
 /**

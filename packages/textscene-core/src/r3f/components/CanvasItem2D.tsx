@@ -17,7 +17,12 @@ import { useNodePaintSequence } from '../contexts/PaintOrderContext';
 import { useAnimatedValue } from '../contexts/AnimatedValueContext';
 import { CanvasItemKeyProvider } from './CanvasItemGroup';
 import { useCanvasItemMaterial } from './canvasItemMaterialContext';
-import { CanvasItemChildScope, node2dZStep, useCanvasItemState } from '../canvasItemState';
+import {
+  CanvasItemChildScope,
+  node2dZStep,
+  useCanvasItemState,
+  type CanvasItemState,
+} from '../canvasItemState';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 import type { CanvasItemSurface } from '../lighting2d/normalMappedLighting';
 
@@ -38,14 +43,10 @@ interface CanvasItem2DProps {
   surface?: CanvasItemSurface | null;
   /**
    * Draws this node's own child canvas items, each with its own light list, as a TileMapLayer's
-   * rendering quadrants are. A node that draws them passes no `body`. They take the own-pixel tint,
-   * the material in force and this node's `z_final`.
+   * rendering quadrants are. A node that draws them passes no `body`. They take this node's
+   * CanvasItem state: its own-pixel tint, the material in force, sampler, `z_final` and keys.
    */
-  ownItems?: (
-    tint: CanvasItemTint,
-    material: CanvasItemMaterialProperties | null,
-    zFinal: number
-  ) => ReactNode;
+  ownItems?: (state: CanvasItemState) => ReactNode;
   children?: ReactNode;
 }
 
@@ -96,7 +97,7 @@ export function CanvasItem2D({ node, props, body, surface = null, ownItems, chil
             {(pixelMaterial) => body(tint, material, pixelMaterial)}
           </LitCanvasItemPixels>
         )}
-        {ownItems?.(tint, material, zFinal)}
+        {ownItems?.(state)}
       </CanvasItemKeyProvider>
       <CanvasItemChildScope state={state}>
         <CanvasSpaceProvider value={canvasSpace}>{children}</CanvasSpaceProvider>

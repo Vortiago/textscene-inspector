@@ -9,7 +9,7 @@ import type { TscnNode } from '../parser/types.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
 import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
-import { node2dGroupProps } from './node2dTransform.js';
+import { node2dGroupPropsOf } from './node2dTransform.js';
 import { transformFromNode3DProperties, type NodeTransform } from './nodeTransform.js';
 
 export function fallbackTransform(node: TscnNode): NodeTransform {
@@ -17,13 +17,7 @@ export function fallbackTransform(node: TscnNode): NodeTransform {
     // Read defensively: a throw inside an ErrorBoundary's fallback blanks the
     // whole viewport, and not every canvas item has a Node2D transform
     // (ParallaxBackground parses `offset` and no `position`).
-    const props = node.properties as Partial<Node2DProperties>;
-    const { position, rotation, scale } = node2dGroupProps({
-      position: props.position ?? { x: 0, y: 0 },
-      rotation: props.rotation ?? 0,
-      scale: props.scale ?? { x: 1, y: 1 },
-      skew: props.skew,
-    });
+    const { position, rotation, scale } = node2dGroupPropsOf(node.properties as Partial<Node2DProperties>);
     return { position, rotation, scale };
   }
   return transformFromNode3DProperties(node.properties as Node3DProperties);

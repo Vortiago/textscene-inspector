@@ -8,7 +8,8 @@ import type { TscnNode } from '../../../parser/types';
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseControl } from '../../../nodes/2d/ui/control/parser';
 import type { Rect2 } from '../../../godot/math/rect2';
-import type { SkippedAncestors, SolveNode } from './solveTree';
+import type { SolveNode } from './solveTree';
+import type { CanvasAncestors } from '../../canvasAncestors';
 import { nativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type ContainerLayoutFn, type SolveContext } from './solverRegistry';
 import { combinedMinimumSize, createSolveContext, solveControlTree } from './controlRectSolver';
@@ -409,7 +410,7 @@ describe('solveControlTree — a promoted Control anchors against its DIRECT par
   // direct parent (canvas_item.cpp:565-571). Only `Control` overrides
   // `get_anchorable_rect` (control.cpp:1563-1566), and `CanvasItem`'s is a zero
   // rect (canvas_item.h:414), so a Control under a Node2D anchors against nothing.
-  const NODE2D_PARENT: SkippedAncestors = {
+  const NODE2D_PARENT: CanvasAncestors = {
     transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
     modulate: { r: 1, g: 1, b: 1, a: 1 },
     z: [],

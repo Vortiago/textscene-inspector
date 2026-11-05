@@ -7957,6 +7957,23 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p>A rendering quadrant is a <code>rendering_quadrant_size</code> square of cells, or one tile row of a y-sorted layer. Each quadrant takes its own lights, so a large layer is not held to 15 positional lights in total.</p></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>Y-sorted layer with a transform</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-tile-map-layer-y-sort-transform-godot.png" alt="Godot render of Y-sorted layer with a transform">
+          <img class="img-ours" src="images/unit-tile-map-layer-y-sort-transform-ours.png" alt="Our render of Y-sorted layer with a transform">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>This y-sorted layer turns 30 degrees and scales by 1.5 in its parent. It draws each tile row through its whole transform. A row sorts by the y of its origin in the parent's space (<code>renderer_canvas_cull.cpp:131</code>). The two white bars hide under the rows that sort below them. Rows that a rotation lays on one y keep their order within <code>is_equal_approx</code>. The previewer matches Godot 4.6.3 at rotations 0, 30 and -90 degrees, scales 0.5, 2, (-1, -1) and (1, -1), and skew 0.3.</p></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Padded atlas from a ViewportTexture</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
