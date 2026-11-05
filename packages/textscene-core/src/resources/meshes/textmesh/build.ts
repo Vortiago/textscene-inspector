@@ -147,14 +147,13 @@ function glyphMeshes(
 /** The glyph meshes of each face a glyph draws in: the fallback the shaper gave it, else the first face. */
 function glyphMeshesByFace(
   properties: TextMeshProperties,
-  [face, ...fallbacks]: TextMeshChain
+  face: TextMeshFace,
+  fallbacks: readonly TextMeshFace[]
 ): (glyph: GlyphPlacement) => GlyphMeshData | null {
-  const byFace = new Map<TextMeshFace, (codepoint: number) => GlyphMeshData | null>();
+  const meshesOf = perObject((glyphFace: TextMeshFace) => glyphMeshes(properties, glyphFace));
   return (glyph) => {
     const glyphFace = fallbacks.find((fallback) => fallback === glyph.fontMetrics) ?? face;
-    let meshOf = byFace.get(glyphFace);
-    if (!meshOf) byFace.set(glyphFace, (meshOf = glyphMeshes(properties, glyphFace)));
-    return meshOf(glyph.char.codePointAt(0)!);
+    return meshesOf(glyphFace)(glyph.char.codePointAt(0)!);
   };
 }
 
@@ -331,7 +330,7 @@ export function buildTextMeshSurface(
 ): GodotSurface {
   const [face, ...fallbacks] = chain;
   const lines = shapeTextMeshLines(properties, locale, withFallbacks(face, fallbacks));
-  const placed = placeGlyphs(properties, lines, glyphMeshesByFace(properties, chain));
+  const placed = placeGlyphs(properties, lines, glyphMeshesByFace(properties, face, fallbacks));
   const writer = new TextMeshWriter(properties.depth, inkBounds(placed));
   for (const glyph of placed) {
     if (isOutline(glyph)) writer.writeGlyph(glyph);

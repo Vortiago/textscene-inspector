@@ -65,11 +65,13 @@ export async function decodeFont(
     Promise.all(extractResourceRefs(properties['fallbacks'] ?? '').map(resolveRef)),
     resourceType === 'FontVariation' ? resolveRef(properties['base_font']) : null,
   ]);
-  return fontResourceOf(resourceType, properties, nonNull(fallbacks), baseFont);
+  return fontResourceOf(
+    resourceType,
+    properties,
+    fallbacks.filter((font) => font !== null),
+    baseFont
+  );
 }
-
-const nonNull = (fonts: readonly (FontResource | null)[]): FontResource[] =>
-  fonts.filter((font): font is FontResource => font !== null);
 
 /**
  * The `FontResource` of a Font body of type `type`, one of {@link FONT_SUB_RESOURCE_TYPES}, with its
@@ -155,7 +157,9 @@ export function resolveInlineFontResource(
   // Not a Font sub-resource type: the gate the file-backed path applies through
   // `subResourceTypeGate(FONT_SUB_RESOURCE_TYPES)`.
   if (!FONT_SUB_RESOURCE_TYPES.has(sub.type)) return null;
-  const fallbacks = nonNull(extractResourceRefs(sub.data['fallbacks'] ?? '').map(resolveNested));
+  const fallbacks = extractResourceRefs(sub.data['fallbacks'] ?? '')
+    .map(resolveNested)
+    .filter((font) => font !== null);
   const baseFont = sub.type === 'FontVariation' ? resolveNested(sub.data['base_font']) : null;
   return fontResourceOf(sub.type, sub.data, fallbacks, baseFont);
 }

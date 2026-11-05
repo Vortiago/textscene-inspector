@@ -176,8 +176,8 @@ export interface GlyphPlacement {
   emboldenGrowthPx?: number;
   /** This glyph's own size, px: the base of `fitLineToWidth`'s space-shrink floor, `gl.font_size` in Godot (`text_server_adv.cpp:5659`). Absent on an ellipsis glyph `textOverrun` appends. */
   fontSizePx?: number;
-  /** The face of the **Fallback chain** this glyph draws in. Absent on a glyph that takes the layout's. */
-  fontMetrics?: FontMetrics;
+  /** The face of the **Fallback chain** this glyph draws in. */
+  fontMetrics: FontMetrics;
 }
 
 export interface TextLineLayout {
@@ -572,9 +572,12 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
  */
 function roundAdvancesToWholePixels(glyphs: BreakGlyph[], chars: ArrayLike<string>, style: RunStyle): void {
   for (const [start, end] of spanRunRanges(style, chars.length)) {
+    const chain = fallbackChainOf(style.spanFaces[start]!);
+    // A subpixel run of one face rounds nothing, and it is most UI text: it skips the walk.
+    if (chain.length === 1 && fontUsesSubpixelPositioning(style.sizes[start]!, chain[0]!)) continue;
     const indices = Array.from({ length: end - start }, (_v, k) => start + k);
     if (isRtlRun(style, start)) indices.reverse();
-    roundFaceRun(glyphs, chars, style, indices, fallbackChainOf(style.spanFaces[start]!), 0);
+    roundFaceRun(glyphs, chars, style, indices, chain, 0);
   }
 }
 
@@ -868,7 +871,9 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       sizes: Array.from({ length: paraText.length }, (_v, i) =>
         fontSizePxAt ? fontSizePxAt(sourceIndex(i)) : fontSizePx
       ),
-      faces: spanFaces.map((face, i) => glyphFace(face, chars[i]!)),
+      faces: spanFaces.some((face) => face.fallbacks)
+        ? spanFaces.map((face, i) => glyphFace(face, chars[i]!))
+        : spanFaces,
       spanFaces,
       levels: bidi.levels,
       rangeIds: bidi.rangeIds,

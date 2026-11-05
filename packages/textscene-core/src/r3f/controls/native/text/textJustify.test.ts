@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GlyphPlacement, TextLineLayout } from './textLayout';
 import { justifyLinesToWidth, justifyParagraphs } from './textJustify';
+import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { JustificationFlag } from '../../../../godot/text/textServerEnums';
 
 const FONT_SIZE_PX = 16;
@@ -23,7 +24,7 @@ function fitLine(
 function mkLine(entries: Array<[char: string, advance: number]>): TextLineLayout {
   let x = 0;
   const glyphs: GlyphPlacement[] = entries.map(([char, advance]) => {
-    const g = { char, x, advance, glyph: null };
+    const g = { char, x, advance, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS };
     x += advance;
     return g;
   });

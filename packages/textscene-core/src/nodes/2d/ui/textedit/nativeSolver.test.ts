@@ -410,12 +410,12 @@ describe('textEditWrapIndentPx (text_edit.cpp:190-217,1363)', () => {
     text: '    ab',
     widthPx: 0,
     glyphs: [
-      { char: ' ', x: 0, advance: 5, glyph: null },
-      { char: ' ', x: 5, advance: 5, glyph: null },
-      { char: ' ', x: 10, advance: 5, glyph: null },
-      { char: ' ', x: 15, advance: 5, glyph: null },
-      { char: 'a', x: 20, advance: 9, glyph: null },
-      { char: 'b', x: 29, advance: 9, glyph: null },
+      { char: ' ', x: 0, advance: 5, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS },
+      { char: ' ', x: 5, advance: 5, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS },
+      { char: ' ', x: 10, advance: 5, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS },
+      { char: ' ', x: 15, advance: 5, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS },
+      { char: 'a', x: 20, advance: 9, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS },
+      { char: 'b', x: 29, advance: 9, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS },
     ],
   };
 
@@ -440,9 +440,9 @@ describe('textEditWrapIndentPx (text_edit.cpp:190-217,1363)', () => {
       text: '\tab',
       widthPx: 0,
       glyphs: [
-        { char: '\t', x: 0, advance: 32, glyph: null },
-        { char: 'a', x: 32, advance: 9, glyph: null },
-        { char: 'b', x: 41, advance: 9, glyph: null },
+        { char: '\t', x: 0, advance: 32, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS },
+        { char: 'a', x: 32, advance: 9, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS },
+        { char: 'b', x: 41, advance: 9, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS },
       ],
       paragraphIndex: 0,
     };

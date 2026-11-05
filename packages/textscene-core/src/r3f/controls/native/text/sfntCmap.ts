@@ -40,7 +40,7 @@ function findCmapSubtable(dv: DataView, cmapOffset: number): number | null {
 }
 
 /** Binary search for the first of `count` ascending entries whose end is at or above `target`. */
-function firstEndAtOrAbove(count: number, endAt: (index: number) => number, target: number): number {
+export function firstEndAtOrAbove(count: number, endAt: (index: number) => number, target: number): number {
   let low = 0;
   let high = count;
   while (low < high) {
@@ -141,9 +141,8 @@ export function cmapCodePoints(dv: DataView, cmapOffset: number, glyphCount: num
  * `cmap` subtable this module reads answers true, so its text keeps it.
  */
 export function sfntHasGlyph(sfnt: SfntFile): (ch: string) => boolean {
-  const cmap = sfnt.tables.get('cmap');
-  const lookup = cmap ? orOnRangeError(() => cmapLookup(sfnt.dv, cmap.offset), null) : null;
-  if (!lookup) return () => true;
+  const glyphIndexOf = sfntGlyphIndex(sfnt);
+  if (!glyphIndexOf) return () => true;
   const glyphCount = readGlyphCount(sfnt) ?? Infinity;
   // One answer per code point: the shaper asks for each character on every pass.
   const answers = new Map<number, boolean>();
@@ -151,11 +150,21 @@ export function sfntHasGlyph(sfnt: SfntFile): (ch: string) => boolean {
     const codePoint = ch.codePointAt(0)!;
     let answer = answers.get(codePoint);
     if (answer === undefined) {
-      const glyphIndex = orOnRangeError(() => lookup(codePoint), 1);
+      const glyphIndex = glyphIndexOf(codePoint);
       answers.set(codePoint, (answer = glyphIndex !== 0 && glyphIndex < glyphCount));
     }
     return answer;
   };
+}
+
+/**
+ * The glyph index of a code point through the `cmap` of `sfnt`, 0 for none or for a read a malformed
+ * table sends past the end. Null for a font with no subtable this module reads.
+ */
+export function sfntGlyphIndex(sfnt: SfntFile): ((codePoint: number) => number) | null {
+  const cmap = sfnt.tables.get('cmap');
+  const lookup = cmap ? orOnRangeError(() => cmapLookup(sfnt.dv, cmap.offset), null) : null;
+  return lookup && ((codePoint) => orOnRangeError(() => lookup(codePoint), 0));
 }
 
 /** `read()`, or `fallback` where a malformed table sends it past the end of the bytes. */

@@ -10,16 +10,14 @@ import { perObject } from '../../../../utils/perObject';
 export const faceLayouts = perObject(splitByFace);
 
 function splitByFace(layout: TextLayoutResult): readonly TextLayoutResult[] {
-  const faceOf = (glyph: GlyphPlacement): FontMetrics => glyph.fontMetrics ?? layout.fontMetrics;
   // One face is the common case, and it keeps the layout itself without a copy.
-  if (layout.lines.every((line) => line.glyphs.every((glyph) => faceOf(glyph) === layout.fontMetrics)))
+  if (layout.lines.every((line) => line.glyphs.every((glyph) => glyph.fontMetrics === layout.fontMetrics)))
     return [layout];
   const glyphsByFace = new Map<FontMetrics, GlyphPlacement[][]>();
   layout.lines.forEach((line, lineIndex) => {
     for (const glyph of line.glyphs) {
-      const face = faceOf(glyph);
-      let lines = glyphsByFace.get(face);
-      if (!lines) glyphsByFace.set(face, (lines = layout.lines.map(() => [])));
+      let lines = glyphsByFace.get(glyph.fontMetrics);
+      if (!lines) glyphsByFace.set(glyph.fontMetrics, (lines = layout.lines.map(() => [])));
       lines[lineIndex]!.push(glyph);
     }
   });

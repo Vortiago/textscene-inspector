@@ -245,18 +245,15 @@ function findOverrunTrim(
   }
 
   // :5985-6046
-  const lastFace = glyphs.at(-1)!.fontMetrics ?? fontMetrics;
-  const elFace =
-    flags.addEllipsis || flags.enforceEllipsis
-      ? faceWithGlyph(lastFace, fontMetrics, ellipsisChar)
-      : lastFace;
+  const lastFace = glyphs.at(-1)!.fontMetrics;
+  const wantsEllipsis = flags.addEllipsis || flags.enforceEllipsis;
+  const elFace = wantsEllipsis ? faceWithGlyph(lastFace, fontMetrics, ellipsisChar) : lastFace;
   const foundElChar = elFace !== null;
   const dotChar = foundElChar ? ellipsisChar : '.';
   const dotRepeat = foundElChar ? 1 : 3;
   const dotFace = elFace ?? faceWithGlyph(lastFace, fontMetrics, '.') ?? lastFace;
   const whitespaceFace = faceWithGlyph(lastFace, fontMetrics, ' ') ?? lastFace;
-  const dotAdvancePx =
-    flags.addEllipsis || flags.enforceEllipsis ? getFontEmboldenedAdvancePx(dotFace, dotChar, fontSizePx) : 0;
+  const dotAdvancePx = wantsEllipsis ? getFontEmboldenedAdvancePx(dotFace, dotChar, fontSizePx) : 0;
   const whitespaceAdvancePx = getFontEmboldenedAdvancePx(whitespaceFace, ' ', fontSizePx);
   const emboldenGrowthPx = getFontEmboldenGrowthPx(dotFace.embolden ?? 0, fontSizePx) || undefined;
   // :6044-6046 -- `int ellipsis_width` truncates.

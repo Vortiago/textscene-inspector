@@ -16,7 +16,7 @@ import { dictNumberEntries } from '../../../../godot/variant/variantParser';
 import type { OpentypeCoordinates } from './fontMetrics';
 import { perObject } from '../../../../utils/perObject';
 
-export type FileWithBytes = FontFileResource & { bytes: ArrayBuffer };
+type FileWithBytes = FontFileResource & { bytes: ArrayBuffer };
 type FileWithBitmap = FontFileResource & { bitmap: BitmapFont };
 
 /** Whether `file` is a decoded BMFont. */

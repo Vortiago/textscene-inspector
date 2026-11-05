@@ -226,6 +226,8 @@ function bakeAtlas(ttfBuffer) {
 
 function renderMetricsModule(metrics) {
   return `${GENERATED_HEADER}
+import { firstEndAtOrAbove } from './sfntCmap';
+
 /**
  * Font-wide scalar metrics for OpenSans_SemiBold, in font design units
  * (\`unitsPerEm\` = ${metrics.unitsPerEm}), read via \`fontkit\` from the vendored
@@ -339,16 +341,8 @@ export function getGlyphAdvanceUnits(ch: string): number | null {
 export function hasGlyph(ch: string): boolean {
   const codePoint = ch.codePointAt(0)!;
   const ranges = OPEN_SANS_METRICS.codePointRanges;
-  let low = 0;
-  let high = ranges.length - 1;
-  while (low <= high) {
-    const mid = (low + high) >> 1;
-    const [first, last] = ranges[mid]!;
-    if (codePoint < first) high = mid - 1;
-    else if (codePoint > last) low = mid + 1;
-    else return true;
-  }
-  return false;
+  const i = firstEndAtOrAbove(ranges.length, (k) => ranges[k]![1], codePoint);
+  return i < ranges.length && ranges[i]![0] <= codePoint;
 }
 
 /**

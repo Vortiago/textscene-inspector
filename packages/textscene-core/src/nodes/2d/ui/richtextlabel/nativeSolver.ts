@@ -720,7 +720,7 @@ function soloRunLayout(
   parentLayout: TextLayoutResult,
   lineAscentPx: number
 ): TextLayoutResult {
-  const { text, glyphs, fontMetrics } = segment;
+  const { text, glyphs } = segment;
   // The right edge from the line origin, not the run's own span: the glyphs keep their line-relative
   // `x`, and a canvas raster sized to the span alone would clip a run that starts mid-line.
   const lastGlyph = glyphs.at(-1);
@@ -729,7 +729,8 @@ function soloRunLayout(
     { text, glyphs, widthPx, paragraphIndex: 0 },
     parentLayout,
     lineAscentPx,
-    fontMetrics
+    // A segment holds a glyph at least. `faceLayouts` splits off a glyph of another face.
+    glyphs[0]!.fontMetrics
   );
 }
 
@@ -788,9 +789,7 @@ export function richTextContentHeightPx(
 
 /** The faces the glyphs of `segment` draw in, which may come from its **Fallback chain**. */
 function glyphFacesOf(segment: RunLineSegment): Set<FontMetrics> {
-  const faces = new Set([segment.fontMetrics]);
-  for (const glyph of segment.glyphs) if (glyph.fontMetrics) faces.add(glyph.fontMetrics);
-  return faces;
+  return new Set(segment.glyphs.map((glyph) => glyph.fontMetrics));
 }
 
 /** The paragraph indexes (counted by `\n`) of the lines of no height: each ends in a `zeroHeightBreak` run. */
@@ -896,11 +895,6 @@ interface RunLineSegment {
   text: string;
   /** This run's glyphs from that line, `x` already line-relative. */
   glyphs: GlyphPlacement[];
-  /**
-   * The face of the first glyph, which a glyph with no face of its own takes. The rest may draw in
-   * another face of the **Fallback chain**.
-   */
-  fontMetrics: FontMetrics;
 }
 
 /**
@@ -931,7 +925,6 @@ function attributeRunsToLines(
         runIndex,
         text: glyphs.map((g) => g.char).join(''),
         glyphs,
-        fontMetrics: glyphs[0]!.fontMetrics ?? layout.fontMetrics,
       });
       start = end;
     }

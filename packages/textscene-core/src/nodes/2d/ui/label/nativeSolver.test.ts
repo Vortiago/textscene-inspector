@@ -882,6 +882,7 @@ function fakeLine(charCount: number, firstSourceIndex = 0): TextLineLayout {
       x: i,
       advance: 1,
       glyph: null,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
       sourceIndex: firstSourceIndex + i,
     })),
     widthPx: charCount,
@@ -919,7 +920,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
 
   it('VC_CHARS_AFTER_SHAPING hides the ellipsis of a paragraph that starts past the budget, plus one', () => {
     // An ellipsis glyph's `end` is -1 (`text_server.h:628`), so `-1 + para_start > visible_chars` hides it.
-    const ellipsis = { char: '…', x: 0, advance: 1, glyph: null };
+    const ellipsis = { char: '…', x: 0, advance: 1, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS };
     const withEllipsis = (paragraphStart: number): TextLineLayout => ({
       ...fakeLine(0),
       glyphs: [ellipsis],

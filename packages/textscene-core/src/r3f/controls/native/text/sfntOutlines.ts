@@ -13,7 +13,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { cmapLookup, orOnRangeError } from './sfntCmap';
+import { orOnRangeError, sfntGlyphIndex } from './sfntCmap';
 import { glyphMetricsReader, metricsAtInstance } from './sfntGlyphMetrics';
 import type { GlyphContours, GlyphOutlineReader } from './glyphContours';
 import { glyphAdvance26_6, isInstanced, type GlyphVariation, type OpentypeCoordinates } from './fontMetrics';
@@ -137,13 +137,11 @@ function instanceAdvanceReaders(
 }
 
 function readSfntOutlines(sfnt: SfntFile, outlineOf: GlyphOutlineReader | null): SfntOutlines | null {
-  const cmap = sfnt.tables.get('cmap');
-  if (!cmap || !outlineOf) return null;
-  const lookup = orOnRangeError(() => cmapLookup(sfnt.dv, cmap.offset), null);
-  if (!lookup) return null;
+  const glyphIndex = outlineOf && sfntGlyphIndex(sfnt);
+  if (!glyphIndex) return null;
 
   return {
-    glyphIndex: (codePoint) => orOnRangeError(() => lookup(codePoint), 0),
+    glyphIndex,
     advanceAtInstance: instanceAdvanceReader(sfnt),
     glyphContours: (glyphIndex, fontSizePx, variation) =>
       orOnRangeError(() => {
