@@ -1,8 +1,7 @@
 /**
- * The MSDF quad shader for every glyph mesh (`TextRun.tsx`): msdfgen's median-of-3
- * decode against the vendored atlas (`openSansAtlas.ts`), antialiased with `fwidth`,
- * and a `distanceBias` that emboldens synthesised bold without a re-bake. It paints 2D Control
- * text at the bundled font. Its outline is a stroked ring on the canvas painter (ADR-0040).
+ * The MSDF quad shader for every glyph mesh (`TextRunMesh.tsx`): msdfgen's median-of-3
+ * decode against the vendored atlas (`openSansAtlas.ts`), antialiased with `fwidth`. It paints 2D
+ * Control text at the bundled font. An embolden and an outline ring draw on the canvas painter (ADR-0040).
  */
 // Godot's default project font is not MSDF (`servers/text/text_server.cpp:2386`,
 // `scene/theme/theme_db.cpp:59`). Its MSDF branch is `scene/resources/material.cpp:1639-1656`,
@@ -34,7 +33,6 @@ const FRAGMENT = /* glsl */ `
 uniform sampler2D uMap;
 uniform vec3 uColor;
 uniform float uOpacity;
-uniform float uDistanceBias;
 uniform float uPxRange;
 varying vec2 vUv;
 #include <clipping_planes_pars_fragment>
@@ -53,11 +51,8 @@ void main() {
   vec3 msd = texture2D(uMap, vUv).rgb;
   float m = median(msd.r, msd.g, msd.b);
   float spr = screenPxRange();
-  float signedDistancePx = spr * (m - 0.5 + uDistanceBias);
-  // The field clamps to 0 beyond half its range. A bias reads that flat 0 as a point inside the edge
-  // and fills the whole glyph quad, so the fill fades out where the field is empty.
-  float inRange = smoothstep(0.0, 0.04, m);
-  float fillCoverage = clamp(signedDistancePx + 0.5, 0.0, 1.0) * inRange;
+  float signedDistancePx = spr * (m - 0.5);
+  float fillCoverage = clamp(signedDistancePx + 0.5, 0.0, 1.0);
   // \`clipping_planes_fragment\` reads \`diffuseColor.a\` under ALPHA_TO_COVERAGE
   // and discards outright otherwise, so the value has to exist either way.
   vec4 diffuseColor = vec4(uColor, fillCoverage * uOpacity);
@@ -83,8 +78,6 @@ interface MsdfMaterialOptions {
   opacity: number;
   /** `OPEN_SANS_ATLAS_INFO.distanceRange`: the MSDF field's range, atlas-bake-size px. */
   pxRange: number;
-  /** Synthesised-bold embolden: shifts the zero-crossing outward. The default 0 keeps the baked weight. */
-  distanceBias?: number;
   /** Per-mesh clip planes (`controlClipping.tsx`), copied so a later change to the caller's array cannot reach a built material. */
   clippingPlanes?: readonly THREE.Plane[];
   /**
@@ -110,7 +103,6 @@ export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMa
     color,
     opacity,
     pxRange,
-    distanceBias = 0,
     clippingPlanes = [],
     depthTest = false,
     side,
@@ -124,7 +116,6 @@ export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMa
       uMap: { value: map },
       uColor: { value: new THREE.Vector3(color.r, color.g, color.b) },
       uOpacity: { value: opacity },
-      uDistanceBias: { value: distanceBias },
       uPxRange: { value: pxRange },
     },
     transparent: true,

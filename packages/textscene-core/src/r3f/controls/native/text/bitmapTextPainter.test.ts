@@ -55,9 +55,16 @@ describe('buildBitmapQuads', () => {
 
   it('floors the pen at its canvas position, so a run at x 0.5 draws half a pixel left of its origin', () => {
     // text_server_adv.cpp:4082-4085 floors `p_pos`, which is the canvas position, at scale 1.
-    const { positions } = quadsFor('H', 16, undefined, { penOriginXPx: 0.5 });
+    const { positions } = quadsFor('H', 16, undefined, { originPhasePx: { x: 0.5, y: 0 } });
 
     expect(rectOf(positions, 0)[0]).toBe(0.5);
+  });
+
+  it('floors the baseline at its canvas position, so a run at y 0.5 draws half a pixel above its origin', () => {
+    // text_server_adv.cpp:4083 floors `cpos.y` as it floors `cpos.x`.
+    const { positions } = quadsFor('H', 16, undefined, { originPhasePx: { x: 0, y: 0.5 } });
+
+    expect(rectOf(positions, 0)[1]).toBe(3.5);
   });
 
   it('draws no quad for a space, whose rectangle is empty', () => {
@@ -89,10 +96,10 @@ describe('buildBitmapQuads for a Label3D', () => {
     expect(rectOf(positions, 1)[0]).toBe(14);
   });
 
-  it('keeps the pen fractional, as its mesh does not floor it (`label_3d.cpp:347`)', () => {
-    const { positions } = quadsFor('H', 16, undefined, { ...label3D, penOriginXPx: 0.5 });
+  it('keeps the pen and the baseline, as its mesh floors neither (`label_3d.cpp:347`)', () => {
+    const { positions } = quadsFor('H', 16, undefined, { ...label3D, originPhasePx: { x: 0.5, y: 0.5 } });
 
-    expect(rectOf(positions, 0)[0]).toBe(1);
+    expect(rectOf(positions, 0).slice(0, 2)).toEqual([1, 4]);
   });
 });
 

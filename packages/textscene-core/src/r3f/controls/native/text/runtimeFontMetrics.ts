@@ -19,7 +19,7 @@ export interface RuntimeFontMetricsInput {
   readonly cssFontFamily: string;
 }
 
-/** `FontMetrics` painted with canvas-2D rather than the baked MSDF atlas. `TextRun.tsx` dispatches on `kind`. */
+/** `FontMetrics` painted with canvas-2D rather than the baked MSDF atlas. `TextRunMesh.tsx` dispatches on `kind`. */
 export interface CanvasFontMetrics extends FontMetrics {
   readonly kind: 'canvas';
   readonly cssFontFamily: string;

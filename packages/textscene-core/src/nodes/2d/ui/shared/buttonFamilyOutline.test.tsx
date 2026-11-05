@@ -1,6 +1,6 @@
 /**
  * The theme text outline of Button, CheckBox, CheckButton, OptionButton and MenuButton
- * (`button.cpp:458-462`). `<TextRun>` is stubbed to read the props each painter hands it.
+ * (`button.cpp:458-462`). `<TextRunMesh>` is stubbed to read the props each painter hands it.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -28,8 +28,8 @@ interface RunProps {
 
 const scene = vi.hoisted(() => ({ runs: [] as RunProps[] }));
 
-vi.mock('../../../../r3f/controls/native/text/TextRun', () => ({
-  TextRun: (props: RunProps) => {
+vi.mock('../../../../r3f/controls/native/text/TextRunMesh', () => ({
+  TextRunMesh: (props: RunProps) => {
     scene.runs.push(props);
     return null;
   },

@@ -11,7 +11,7 @@ import { kerningKey } from '../../../../resources/formats/bmfont/parseDescriptor
 import type { BitmapFont, BitmapGlyph } from '../../../../resources/fonts/font/types';
 import type { FontMetrics } from './fontMetrics';
 
-/** `FontMetrics` drawn from page images by `bitmapTextPainter.ts`. `TextRun.tsx` dispatches on `kind`. */
+/** `FontMetrics` drawn from page images by `bitmapTextPainter.ts`. `TextRunMesh.tsx` dispatches on `kind`. */
 export interface BitmapFontMetrics extends FontMetrics {
   readonly kind: 'bitmap';
   readonly bitmap: BitmapFont;

@@ -13,10 +13,10 @@
 import * as THREE from 'three';
 import type { FillSheet } from '../../../../resources/fonts/font/types';
 import type { BitmapFontMetrics } from './bitmapFontMetrics';
-import { fontIsScaled } from './fontMetrics';
-import type { CanvasTextPaintOptions } from './canvasTextPainter';
-import { drawsGlyphRect, GLYPH_DRAWER_RULES, type GlyphDrawer } from './glyphDrawer';
+import { snapsGlyphsToItemPixels, type CanvasTextPaintOptions } from './canvasTextPainter';
+import { drawsGlyphRect, type GlyphDrawer } from './glyphDrawer';
 import type { GlyphPlacement, TextLayoutResult } from './textLayout';
+import { VECTOR2_ZERO } from '../../../../godot/math/vector';
 
 /** A new texture of the sheet. `TextRun.tsx` shares one for each sampling among the runs of a sheet. */
 export function createSheetTexture(sheet: FillSheet): THREE.DataTexture {
@@ -38,7 +38,7 @@ export interface BitmapQuads {
   indices: Uint32Array;
 }
 
-export type BitmapPaintOptions = Pick<CanvasTextPaintOptions, 'glyphDrawer' | 'penOriginXPx'>;
+export type BitmapPaintOptions = Pick<CanvasTextPaintOptions, 'glyphDrawer' | 'originPhasePx'>;
 
 /**
  * The glyph a placement draws, or undefined for a hex-code box, a space, a glyph `drawer` skips and
@@ -61,17 +61,17 @@ function inkedGlyph(
 
 /**
  * The quads of `layout`, drawn at `fontSizePx` over `sheet`: the glyph sheet, or the outline sheet
- * for an outline pass. A canvas item floors a pen at its canvas position, `penOriginXPx` plus its x,
- * when the glyph is not scaled (`text_server_adv.cpp:4082-4085`). A BMFont adds no subpixel shift:
- * `FontFile::reset_state` sets `SUBPIXEL_POSITIONING_DISABLED` (`font.cpp:1433`) and
- * `_load_bitmap_font` starts with it.
+ * for an outline pass. A canvas item floors the pen and baseline of a glyph that is not scaled at their
+ * canvas position, `originPhasePx` past the run's whole item pixel (`text_server_adv.cpp:4082-4085`,
+ * `originPhase`). A Label3D mesh keeps them (`glyphDrawer.ts`). A BMFont adds no subpixel shift: `FontFile::reset_state` sets
+ * `SUBPIXEL_POSITIONING_DISABLED` (`font.cpp:1433`) and `_load_bitmap_font` starts with it.
  */
 export function buildBitmapQuads(
   layout: TextLayoutResult,
   metrics: BitmapFontMetrics,
   fontSizePx: number,
   sheet: FillSheet,
-  { glyphDrawer = 'canvasItem', penOriginXPx = 0 }: BitmapPaintOptions = {}
+  { glyphDrawer = 'canvasItem', originPhasePx = VECTOR2_ZERO }: BitmapPaintOptions = {}
 ): BitmapQuads {
   const inked = layout.lines.flatMap((line, lineIndex) =>
     line.glyphs.flatMap((placement) => {
@@ -83,7 +83,7 @@ export function buildBitmapQuads(
   const uvs = new Float32Array(inked.length * 4 * 2);
   const indices = new Uint32Array(inked.length * 6);
   const scale = metrics.pxPerUnit(fontSizePx);
-  const floorsPen = GLYPH_DRAWER_RULES[glyphDrawer].roundsPen && !fontIsScaled(fontSizePx, metrics);
+  const floorsPen = snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, metrics);
   const sheetWidthInverse = 1 / sheet.width;
   const sheetHeightInverse = 1 / sheet.height;
 
@@ -91,8 +91,8 @@ export function buildBitmapQuads(
   for (const { glyph, placement, lineIndex } of inked) {
     const rowOffset = sheet.rowOffsets[glyph.fillIndex]!;
     const baselinePx = lineIndex * layout.linePitchPx + layout.baselineOffsetPx;
-    const originX = floorsPen ? Math.floor(penOriginXPx + placement.x) - penOriginXPx : placement.x;
-    const originY = floorsPen ? Math.floor(baselinePx) : baselinePx;
+    const originX = floorsPen ? Math.floor(originPhasePx.x + placement.x) - originPhasePx.x : placement.x;
+    const originY = floorsPen ? Math.floor(originPhasePx.y + baselinePx) - originPhasePx.y : baselinePx;
     const left = originX + glyph.offsetX * scale;
     const top = originY + glyph.offsetY * scale;
     const right = left + glyph.width * scale;

@@ -7,6 +7,11 @@
   MenuButton and ProgressBar draws on painter B for the bundled font too, through
   `OutlinedTextRun`. Their fill stays on painter A. A Label draws a ring for each outline and
   stacked outline, and for each shadow outline.
+- Amended for embolden: an embolden over the bundled font draws on painter B at every value, with
+  the bundled font's baked advances and its emboldened outlines (`BundledCanvasRun.tsx`). Godot
+  has no MSDF cutoff: its default font is not MSDF (`text_server.cpp:2386`), so FreeType grows
+  every embolden (`text_server_adv.cpp:1313-1316`). This covers the synthesised `[b]` of a
+  RichTextLabel.
 - Related: ADR-0037 (Control nodes render natively in the canvas: the 2D text this
   decision leaves on the atlas is that decision's text), ADR-0026 (comparison sheets live
   in their slice: the per-node limitations below are recorded there too).
