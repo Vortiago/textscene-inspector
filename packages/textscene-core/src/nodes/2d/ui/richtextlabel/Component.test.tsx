@@ -257,6 +257,60 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     };
     expect(secondQuadX(withStop)).toBeGreaterThan(secondQuadX(withoutStop));
   });
+
+  it('a [p tab_stops] paragraph moves its own tab onto its own stop, and a bare [p] ignores the node stops', async () => {
+    const secondQuadX = (r: Awaited<ReturnType<typeof render>>) => {
+      const geo = meshesOf(r)[0]!.geometry as THREE.BufferGeometry;
+      return (geo.attributes.position!.array as Float32Array)[12]!;
+    };
+    const props = { autowrapMode: 0, bbcodeEnabled: true, tabStopsPx: [40] };
+    const own = await render({ ...props, text: '[p tab_stops=90]A\tB[/p]' });
+    const bare = await render({ ...props, text: '[p]A\tB[/p]' });
+    const node = await render({ ...props, text: 'A\tB' });
+    expect(secondQuadX(own)).toBeGreaterThan(secondQuadX(node));
+    expect(secondQuadX(bare)).toBeLessThan(secondQuadX(node));
+  });
+});
+
+describe('<RichTextLabel> — [hr]', () => {
+  const rulesOf = (r: Awaited<ReturnType<typeof render>>) =>
+    meshesOf(r).filter((m) => m.geometry.type === 'PlaneGeometry');
+
+  it('draws one solid white quad, 90 percent of the width by 2px, with no texture', async () => {
+    const renderer = await render({ text: '[hr]', bbcodeEnabled: true }, { x: 0, y: 0, w: 200, h: 100 });
+    const [rule] = rulesOf(renderer);
+    const { width, height } = (rule!.geometry as THREE.PlaneGeometry).parameters;
+    expect([rulesOf(renderer).length, width, height]).toEqual([1, 180, 2]);
+    expect((rule!.material as THREE.MeshBasicMaterial).map).toBeNull();
+  });
+
+  it('tints by color= times the walker tint', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <RichTextLabel
+        {...painterEnv()}
+        tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })}
+        solveNode={solveNode('RTL', { text: '[hr color=#e0a030]', bbcodeEnabled: true })}
+        rect={{ x: 0, y: 0, w: 200, h: 100 }}
+        renderOrder={5}
+      />
+    );
+    const expected = expectedLinear(0.5 * (0xe0 / 255), 0.5 * (0xa0 / 255), 0.5 * (0x30 / 255));
+    const { color } = rulesOf(renderer)[0]!.material as THREE.MeshBasicMaterial;
+    expect([color.r, color.g, color.b].map((c) => c.toFixed(5))).toEqual(
+      [expected.r, expected.g, expected.b].map((c) => c.toFixed(5))
+    );
+  });
+
+  it('puts the rule on a line below the text before it', async () => {
+    const renderer = await render({ text: 'a[hr]', bbcodeEnabled: true });
+    const worldTopOf = (mesh: THREE.Mesh) => {
+      mesh.updateWorldMatrix(true, false);
+      return new THREE.Vector3().setFromMatrixPosition(mesh.matrixWorld).y;
+    };
+    const rule = rulesOf(renderer)[0]!;
+    const text = meshesOf(renderer).find((m) => m.geometry.type !== 'PlaneGeometry')!;
+    expect(worldTopOf(rule)).toBeLessThan(worldTopOf(text));
+  });
 });
 
 describe('<RichTextLabel> registered through <ControlCanvasWalker> (end-to-end walker plumbing)', () => {

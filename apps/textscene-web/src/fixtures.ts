@@ -1318,6 +1318,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Tab Without Stop",
+    "file": "unit-label-tab-without-stop.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Visible Characters",
     "file": "unit-label-visible-characters.tscn",
     "category": "Other"
@@ -3663,6 +3668,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Text Mesh Variable Advance",
+    "file": "unit-text-mesh-variable-advance.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Text Mesh Variable Instance",
     "file": "unit-text-mesh-variable-instance.tscn",
     "category": "Unit - Primitive Meshes"
@@ -4064,6 +4074,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Rich Text Label Empty Line Vertical Fill",
+    "file": "unit-rich-text-label-empty-line-vertical-fill.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Empty Styling Before Paragraph",
+    "file": "unit-rich-text-label-empty-styling-before-paragraph.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Rich Text Label Fill",
     "file": "unit-rich-text-label-fill.tscn",
     "category": "Unit - 2D UI Controls"
@@ -4074,8 +4094,23 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Rich Text Label Hr",
+    "file": "unit-rich-text-label-hr.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Rich Text Label Lists",
     "file": "unit-rich-text-label-lists.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Paragraph Justification",
+    "file": "unit-rich-text-label-paragraph-justification.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Paragraph Tab Stops",
+    "file": "unit-rich-text-label-paragraph-tab-stops.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

@@ -203,7 +203,8 @@ export function justifyLinesToWidth(
 interface JustifyParagraphsOptions {
   /** The width each fitted line reaches, px. */
   widthPx: number;
-  flags: number;
+  /** The `JustificationFlag` bits, or those of the paragraph starting at a line index (`_find_jst_flags`). */
+  flags: number | ((firstLineIndex: number) => number);
   fontSizePx: number;
   /** Whether the paragraph starting at this line index has FILL alignment. Undefined fits every paragraph. */
   isFilled?: (firstLineIndex: number) => boolean;
@@ -225,9 +226,10 @@ export function justifyParagraphs(
     let end = first + 1;
     while (end < lines.length && !startsParagraph(lines, end)) end++;
     if (isFilled(first)) {
+      const paragraphFlags = typeof flags === 'function' ? flags(first) : flags;
       // The paragraph's inset narrows the width it fits to (`rich_text_label.cpp:474`).
       const fitWidthPx = widthPx - (lines[first]!.indentPx ?? 0);
-      justified.push(...justifyParagraph(lines.slice(first, end), fitWidthPx, flags, fontSizePx));
+      justified.push(...justifyParagraph(lines.slice(first, end), fitWidthPx, paragraphFlags, fontSizePx));
     } else {
       for (let i = first; i < end; i++) justified.push(lines[i]!);
     }

@@ -18,6 +18,16 @@ Each `\n` ends a paragraph (`rich_text_label.cpp:4016-4053`). Under FILL, from `
 single-line paragraph (`rich_text_label.h:582`). The fit width is the control's width truncated to a whole
 pixel (`rich_text_label.h:672`).
 
+A `[p]` tag reads `jst` or `justification_flags`, and `tab_stops`, for its own paragraph (`rich_text_label.cpp:5758-5789`). A bare
+`[p]` has the header flags and no tab stops, so its tabs use `tab_size` (`rich_text_label.h:849`). A `[p]` with other options,
+and each alignment tag, takes the node's flags and stops. A tab that no stop aligns has no width.
+
+`[hr]` draws the theme's 2 x 2 white `horizontal_rule` icon (`add_hr`, `:4159-4199`), at `width` (90 percent),
+`height` (2 px), `color` and `align`. A percent size truncates to whole pixels (`rich_text_label.h:741`). The text after the tag
+shares the rule's line. A line with no text, object or list item has no height, but it still counts as a line.
+`vertical_alignment` FILL spreads its gap over that line (`:1643-1648`). An empty colour, font, underline or strikethrough
+before a `[p]` adds no line (`_find_layout_subitem`, `:3712-3727`).
+
 `[indent]`, `[ul]` and `[ol]` inset each line they hold by `tab_size` spaces of the font around them
 (`_find_margin`, `rich_text_label.cpp:3407-3460`). A `[ul]` or `[ol]` line also draws a marker. The marker is
 the `bullet` option or `•` for `[ul]`, and for `[ol]` the number in the `type` option (`1`, `a`, `A`, `i`, `I`).
@@ -95,11 +105,6 @@ string against `true`, so an absent property or any other value silently resolve
 
 - **Approximated** Only a subset of BBCode tags is styled, and a tag outside it renders as
   plain text.
-- **Approximated** `[p jst=…]` and `[p tab_stops=…]` are not read, so a paragraph keeps the
-  node's justification and tab stops.
-- **Approximated** `[hr]` does not start a line of its own, though Godot pushes a paragraph for it.
-- **Approximated** A `[p]` after an empty styling tag starts a new line, where
-  `_find_layout_subitem` (:3712-3727) skips the empty tag.
 - **Not drawn** `localize_numeral_system`, which writes the numbers of an `[ol]` in the digits of the
   label's `language` (`:255-258`), since no control reads the property.
 - **Not drawn** The loading bar's right-to-left fill (:2580-2588) and the reveal end of

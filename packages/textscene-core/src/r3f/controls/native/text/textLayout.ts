@@ -136,6 +136,12 @@ export interface ShapeTextOptions {
    */
   tabStopsPx?: number[];
   /**
+   * The tab stops of each paragraph, keyed by the source index it starts at: a RichTextLabel line
+   * reads them from its first item (`_find_tab_stops`, `rich_text_label.cpp:3477`). Takes the place
+   * of `tabStopsPx`, so a paragraph with none has no tab alignment.
+   */
+  tabStopsPxAt?: (paragraphStart: number) => readonly number[];
+  /**
    * `Label.autowrap_trim_flags`. Only `BREAK_TRIM_START_EDGE_SPACES` (64) and
    * `BREAK_TRIM_END_EDGE_SPACES` (128) are read, not `BREAK_TRIM_INDENT` (32). Undefined turns both
    * trims on (`label.h:45`).
@@ -489,6 +495,10 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
         // (`text_server_adv.cpp:6844`): zero width.
         advance = 0;
       }
+    } else if (isTabChar(ch)) {
+      // A tab no stop aligns is as wide as the font's glyph for it, which is none (measured in
+      // Godot 4.6.3: `a<TAB>b` with `tab_size` 0 sets `b` against `a`).
+      advance = 0;
     } else if (lacksBitmapGlyph(faces[i]!, ch)) {
       // A BMFont lacks the character and has no system fallback (`resource_importer_bmfont.cpp:79`):
       // the shaper keeps the invalid character as a hex-code box (`text_server_adv.cpp:6835-6890`).
@@ -768,11 +778,11 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     paragraphSeparator,
     terminateLastParagraph = true,
     tabStopsPx,
+    tabStopsPxAt,
     autowrapTrimFlags,
     trimIndent = false,
     preserveControl = false,
   } = options;
-  const hasTabStops = !!tabStopsPx && tabStopsPx.length > 0;
   // Uppercase before indices are assigned, so a `fontSizePxAt` keyed on the transformed text lines up.
   const transformed = uppercase ? upperCaseFor(text, language) : text;
   const flags = breakFlagsForAutowrap(autowrapMode);
@@ -801,6 +811,8 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     const indentPx = paragraphIndentPx?.(para.offset) ?? 0;
     // A paragraph inset past the box wraps nowhere, as a box of no width does.
     const paragraphWidth = effectiveWidth > 0 ? Math.max(0, effectiveWidth - indentPx) : effectiveWidth;
+    const paragraphTabStopsPx = tabStopsPxAt ? tabStopsPxAt(para.offset) : tabStopsPx;
+    const hasTabStops = !!paragraphTabStopsPx && paragraphTabStopsPx.length > 0;
     const bidi = resolveParagraphBidi(paraText, {
       direction: paragraphBidi.direction,
       overrides: paragraphBidi.bidiOverride?.(paraText),
@@ -826,7 +838,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
         char: paraText[i]!,
         advance: breakGlyphs[i]!.advance,
       }));
-      const aligned = tabAlignAdvances(paragraphEntries, tabStopsPx!);
+      const aligned = tabAlignAdvances(paragraphEntries, paragraphTabStopsPx!);
       for (let i = 0; i < aligned.length; i++) breakGlyphs[i]!.advance = aligned[i]!;
     }
     for (const [start, end] of shapedTextGetLineBreaks(
@@ -844,7 +856,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
               char: paraText[start + i]!,
               advance: breakGlyphs[start + i]!.advance,
             })),
-            tabStopsPx!
+            paragraphTabStopsPx!
           )
         : null;
       let penX = 0;

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parseBBCodeRuns } from './bbcode';
-import { paragraphAlignment, paragraphBidiOptions } from './paragraph';
+import {
+  paragraphAlignment,
+  paragraphBidiOptions,
+  paragraphJustificationFlags,
+  paragraphTabStopsPx,
+} from './paragraph';
+import { DEFAULT_JUSTIFICATION_FLAGS, JustificationFlag } from '../../../../godot/text/textServerEnums';
 
 const AUTO = 0;
 const LTR = 1;
@@ -115,5 +121,118 @@ describe('paragraphBidiOptions override, `_find_stt` (`:3528-3541`)', () => {
     expect(
       paragraphBidiOptions(tagsOf('[p bidi_override=file]x[/p]'), PROPS, LTR_LAYOUT).bidiOverride!('a/b')
     ).toEqual(fileRanges);
+  });
+});
+
+describe('paragraphJustificationFlags, `_find_jst_flags` (`:3462-3475`)', () => {
+  const NODE_FLAGS = JustificationFlag.TRIM_EDGE_SPACES;
+  const flagsOf = (bbcode: string, nodeFlags = NODE_FLAGS): number =>
+    paragraphJustificationFlags(tagsOf(bbcode), nodeFlags);
+
+  it('takes the node flags outside a paragraph and in an alignment tag (`:5682-5694`)', () => {
+    expect(flagsOf('x')).toBe(NODE_FLAGS);
+    expect(flagsOf('[fill]x[/fill]')).toBe(NODE_FLAGS);
+  });
+
+  it('gives a bare [p] the header default, not the node flags (`rich_text_label.h:849`)', () => {
+    expect(flagsOf('[p]x[/p]')).toBe(DEFAULT_JUSTIFICATION_FLAGS);
+  });
+
+  it('gives a [p] with other options the node flags (`:5753`)', () => {
+    expect(flagsOf('[p align=f]x[/p]')).toBe(NODE_FLAGS);
+  });
+
+  it('starts from no flags and sets one per token in each spelling (`:5758-5782`)', () => {
+    expect(flagsOf('[p jst=w]x[/p]')).toBe(JustificationFlag.WORD_BOUND);
+    expect(flagsOf('[p justification_flags=kashida,trim]x[/p]')).toBe(
+      JustificationFlag.KASHIDA | JustificationFlag.TRIM_EDGE_SPACES
+    );
+    expect(flagsOf('[p jst=lt,sl,sv,ns]x[/p]')).toBe(
+      JustificationFlag.AFTER_LAST_TAB |
+        JustificationFlag.SKIP_LAST_LINE |
+        JustificationFlag.SKIP_LAST_LINE_WITH_VISIBLE_CHARS |
+        JustificationFlag.DO_NOT_SKIP_SINGLE_LINE
+    );
+    expect(
+      flagsOf('[p jst=after_last_tab,skip_last,skip_last_with_chars,do_not_skip_single,word,k]x[/p]')
+    ).toBe(
+      JustificationFlag.AFTER_LAST_TAB |
+        JustificationFlag.SKIP_LAST_LINE |
+        JustificationFlag.SKIP_LAST_LINE_WITH_VISIBLE_CHARS |
+        JustificationFlag.DO_NOT_SKIP_SINGLE_LINE |
+        JustificationFlag.WORD_BOUND |
+        JustificationFlag.KASHIDA
+    );
+  });
+
+  it('prefers the long option over the short one, and ignores an unknown token', () => {
+    expect(flagsOf('[p jst=w justification_flags=k]x[/p]')).toBe(JustificationFlag.KASHIDA);
+    expect(flagsOf('[p jst=w,bogus]x[/p]')).toBe(JustificationFlag.WORD_BOUND);
+    expect(flagsOf('[p jst=]x[/p]')).toBe(JustificationFlag.NONE);
+  });
+
+  it('reads the innermost paragraph', () => {
+    expect(flagsOf('[p jst=w][p jst=k]x[/p][/p]')).toBe(JustificationFlag.KASHIDA);
+    expect(flagsOf('[p jst=w][fill]x[/fill][/p]')).toBe(NODE_FLAGS);
+  });
+});
+
+describe('paragraphTabStopsPx, `_find_tab_stops` (`:3477-3490`)', () => {
+  const NODE_STOPS = [30];
+  const stopsOf = (bbcode: string): readonly number[] => paragraphTabStopsPx(tagsOf(bbcode), NODE_STOPS);
+
+  it('takes the node stops outside a paragraph and in an alignment tag', () => {
+    expect(stopsOf('x')).toEqual(NODE_STOPS);
+    expect(stopsOf('[center]x[/center]')).toEqual(NODE_STOPS);
+  });
+
+  it('gives a bare [p] no stops, so it falls to tab_size (`:5747`)', () => {
+    expect(stopsOf('[p]x[/p]')).toEqual([]);
+  });
+
+  it('gives a [p] with other options the node stops (`:5753`)', () => {
+    expect(stopsOf('[p align=c]x[/p]')).toEqual(NODE_STOPS);
+  });
+
+  it('splits tab_stops on commas and semicolons into floats (`:5783-5789`)', () => {
+    expect(stopsOf('[p tab_stops=40,120]x[/p]')).toEqual([40, 120]);
+    expect(stopsOf('[p tab_stops="12.5;7,3"]x[/p]')).toEqual([12.5, 7, 3]);
+  });
+
+  it('keeps an empty piece as 0, as `split_floats_mk` allows empty (`ustring.cpp:1243`)', () => {
+    expect(stopsOf('[p tab_stops="4,,9"]x[/p]')).toEqual([4, 0, 9]);
+    expect(stopsOf('[p tab_stops=""]x[/p]')).toEqual([]);
+  });
+});
+
+/** `add_hr` pushes an `ItemParagraph` with the struct defaults (`rich_text_label.h:369-377`), not the node's. */
+describe('the [hr] paragraph', () => {
+  const NODE_FLAGS = JustificationFlag.TRIM_EDGE_SPACES;
+  const hrTags = (bbcode: string) => parseBBCodeRuns(bbcode).find((run) => run.rule)!.tags;
+
+  it('aligns by its align option, CENTER by default (`:5957-5966`)', () => {
+    expect(paragraphAlignment(hrTags('[hr]'), LEFT)).toBe(CENTER);
+    expect(paragraphAlignment(hrTags('[hr align=right]'), LEFT)).toBe(RIGHT);
+    expect(paragraphAlignment(hrTags('[hr align=l]'), RIGHT)).toBe(LEFT);
+  });
+
+  it('keeps CENTER for fill and for an unknown align (`:5957-5966`)', () => {
+    expect(paragraphAlignment(hrTags('[hr align=fill]'), LEFT)).toBe(CENTER);
+    expect(paragraphAlignment(hrTags('[hr align=x]'), LEFT)).toBe(CENTER);
+  });
+
+  it('takes direction AUTO and the locale as language, whatever the node sets', () => {
+    const options = paragraphBidiOptions(
+      hrTags('[hr]'),
+      { ...PROPS, textDirection: RTL, language: 'de' },
+      LTR_LAYOUT
+    );
+    expect(options.direction).toBe(AUTO);
+    expect(options.language).toBe('en');
+  });
+
+  it('takes the header justification flags and no tab stops', () => {
+    expect(paragraphJustificationFlags(hrTags('[hr]'), NODE_FLAGS)).toBe(DEFAULT_JUSTIFICATION_FLAGS);
+    expect(paragraphTabStopsPx(hrTags('[hr]'), [30])).toEqual([]);
   });
 });
