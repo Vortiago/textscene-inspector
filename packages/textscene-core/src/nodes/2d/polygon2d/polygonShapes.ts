@@ -4,6 +4,11 @@
  * ring in stored order, less the trailing `internal_vertex_count` UV/skinning helpers.
  * With `invert`, that ring bridged to its grown bounds. Otherwise, one ring per
  * `polygons` entry.
+ *
+ * Portions ported from Godot Engine (MIT).
+ * Copyright (c) 2014-present Godot Engine contributors.
+ * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
+ * See THIRD-PARTY-NOTICES.md.
  */
 
 import { CMP_EPSILON } from '../../../godot/math/math';
