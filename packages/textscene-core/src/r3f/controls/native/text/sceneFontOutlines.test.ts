@@ -8,12 +8,16 @@ import { peekBundledGlyphOutlines, peekGlyphOutlines, peekSceneFontOutlines } fr
 import { openFontOutlines } from './sfntOutlines';
 import { bundledFontBytes } from './bundledFontBytes';
 import type { FontHinting } from '../../../../godot/text/textServerEnums';
-import { charContours, fixtureFontBytes, fontFile } from './sfntOutlines.testkit';
+import { FACELESS_FONT, type FileWithBytes } from './sceneFontResolution';
+import { charContours, fixtureFontBytes, fontFile, systemFont } from './sfntOutlines.testkit';
 import autoHintedReference from './autofit/autoHinting.godot.json';
 import { referencePoints, type ReferenceGlyph } from './glyphVariation.testkit';
 
+/** A font file that holds `bytes`, the face it draws. */
+const fileFace = (bytes: ArrayBuffer): FileWithBytes => ({ ...fontFile(bytes), bytes });
+
 const woffOfOpenSans = () =>
-  fontFile(woffFromSfnt(fixtureFontBytes('open-sans-semibold-subset.ttf'), { compress: true }));
+  fileFace(woffFromSfnt(fixtureFontBytes('open-sans-semibold-subset.ttf'), { compress: true }));
 
 async function settledOutlines(font: FontResource | null) {
   await vi.waitFor(() => expect(peekSceneFontOutlines(font)).not.toBeUndefined());
@@ -21,6 +25,10 @@ async function settledOutlines(font: FontResource | null) {
 }
 
 describe('peekSceneFontOutlines', () => {
+  it('lacks every glyph for a font with no face, so a TextMesh draws each as its fallback quad', () => {
+    expect(peekSceneFontOutlines(FACELESS_FONT)?.glyphIndex('H'.codePointAt(0)!)).toBe(0);
+  });
+
   it('answers undefined while a WOFF decompresses, then its outlines', async () => {
     const font = woffOfOpenSans();
 
@@ -32,7 +40,7 @@ describe('peekSceneFontOutlines', () => {
 
   it('loads a FontFile with `force_autohinter` on through the auto-hinter, as Godot does', async () => {
     const font = {
-      ...fontFile(fixtureFontBytes('open-sans-semibold-subset.ttf')),
+      ...fileFace(fixtureFontBytes('open-sans-semibold-subset.ttf')),
       properties: { force_autohinter: 'true' },
     };
     const godot = (autoHintedReference as ReferenceGlyph[]).find(
@@ -88,12 +96,6 @@ describe('peekSceneFontOutlines', () => {
     expect(await settledOutlines(fontFile(new ArrayBuffer(8)))).toBeNull();
   });
 
-  it('answers null for a SystemFont, which has no bytes to read', () => {
-    const font: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-
-    expect(peekSceneFontOutlines(font)).toBeNull();
-  });
-
   it('reads the face behind a FontVariation', async () => {
     const base = woffOfOpenSans();
     const variation: FontResource = { kind: 'variation', baseFont: base, properties: {} };
@@ -112,6 +114,16 @@ describe('peekSceneFontOutlines', () => {
 
     expect(await settledOutlines(variation)).toBe(await settledOutlines(null));
   });
+
+  it('reads the bundled Open Sans for a SystemFont, as Godot does when no OS font matches its names', async () => {
+    const font = systemFont();
+
+    expect(await settledOutlines(font)).toBe(await settledOutlines(null));
+  });
+
+  it('answers null for a font file with no bytes and no fallback', () => {
+    expect(peekSceneFontOutlines(fontFile(undefined, []))).toBeNull();
+  });
 });
 
 describe('peekGlyphOutlines', () => {
@@ -128,7 +140,7 @@ describe('peekGlyphOutlines', () => {
     expect(peekSceneFontOutlines(font)).toBeUndefined();
   });
 
-  async function settledGlyphOutlines(font: FontResource) {
+  async function settledGlyphOutlines(font: FileWithBytes) {
     await vi.waitFor(() => expect(peekGlyphOutlines(font, canvasFace)).not.toBeUndefined());
     return peekGlyphOutlines(font, canvasFace)!;
   }
@@ -148,7 +160,7 @@ describe('peekGlyphOutlines', () => {
   });
 
   it('loads the glyphs of a font file at light hinting, the default Godot draws them at', async () => {
-    const font = fontFile(fixtureFontBytes('open-sans-semibold-subset.ttf'));
+    const font = fileFace(fixtureFontBytes('open-sans-semibold-subset.ttf'));
 
     const outlines = await settledGlyphOutlines(font);
 
@@ -159,7 +171,7 @@ describe('peekGlyphOutlines', () => {
 
   it('loads the glyphs at the hinting the font file sets', async () => {
     const font = {
-      ...fontFile(fixtureFontBytes('open-sans-semibold-subset.ttf')),
+      ...fileFace(fixtureFontBytes('open-sans-semibold-subset.ttf')),
       properties: { hinting: '0' },
     };
 

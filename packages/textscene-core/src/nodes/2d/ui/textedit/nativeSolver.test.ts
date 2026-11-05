@@ -24,11 +24,16 @@ import {
   textEditCaretRect,
   textEditWrapIndentPx,
   textEditFirstIndentRow,
+  textEditDrawnLines,
+  textEditDrawnGlyphs,
+  textEditRowColorRuns,
 } from './nativeSolver';
 import { withVariation } from '../../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { TextEditProperties } from './types';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { StructuredTextParser } from '../../../../godot/text/textServerEnums';
+import type { GlyphPlacement } from '../../../../r3f/controls/native/text/textLayout';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const THEME = nativeTheme(1);
@@ -190,6 +195,69 @@ describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () =>
 
   it('floors the height at one row for an entirely empty buffer', () => {
     expect(fitHeight('')).toBe(ROW_HEIGHT_PX);
+  });
+
+  it('sizes an empty buffer by its placeholder rows and width (text_edit.cpp:8602,8608)', () => {
+    const placeholderProps = { text: '', placeholderText: 'a\nbb' };
+    expect(fitWidth(placeholderProps)).toBe(fitWidth({ text: 'bb' }));
+    expect(
+      textEditMinimumSize(node({ ...placeholderProps, fitContentHeight: true }), ctx()).y - STYLE_MIN_Y
+    ).toBe(2 * ROW_HEIGHT_PX);
+  });
+
+  it('ignores the placeholder once the buffer holds text', () => {
+    expect(fitWidth({ text: 'a', placeholderText: 'a much longer placeholder' })).toBe(
+      fitWidth({ text: 'a' })
+    );
+  });
+});
+
+describe('textEditDrawnLines', () => {
+  it('splits a buffer into its lines', () => {
+    expect(textEditDrawnLines('a\nb', undefined)).toEqual({ lines: ['a', 'b'], isPlaceholder: false });
+  });
+
+  it('shows the placeholder as one paragraph while the buffer is empty (text_edit.cpp:3377-3379)', () => {
+    expect(textEditDrawnLines('', 'a\nb')).toEqual({
+      lines: ['a\nb'],
+      isPlaceholder: true,
+    });
+  });
+
+  it('treats an unset text as empty', () => {
+    expect(textEditDrawnLines(undefined, 'x').isPlaceholder).toBe(true);
+  });
+
+  it('keeps a buffer of one newline as real text, since it holds two lines', () => {
+    expect(textEditDrawnLines('\n', 'x').isPlaceholder).toBe(false);
+  });
+});
+
+describe('shapeTextEditLines — placeholder', () => {
+  const OPTIONS = { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS };
+
+  it('breaks a placeholder paragraph at its newline into rows of the one entry', () => {
+    const [entry] = shapeTextEditLines(['a\nb'], { ...OPTIONS, placeholder: true });
+    expect(entry!.layout.lines).toHaveLength(2);
+  });
+
+  it('drops the structured-text override, which Godot never applies to a placeholder (text_edit.cpp:3348-3351)', () => {
+    const bidi = controlBidiOptions(
+      {
+        textDirection: 0,
+        language: '',
+        structuredTextBidiOverride: StructuredTextParser.STRUCTURED_TEXT_FILE,
+        structuredTextBidiOverrideOptions: [],
+      },
+      { rtl: false, locale: 'en' }
+    );
+    const text = 'שלום/world';
+    const shaped = (placeholder: boolean) =>
+      visualChars(shapeTextEditLines([text], { ...OPTIONS, bidi, placeholder })[0]!.layout.lines[0]!);
+    expect(shaped(true)).toBe(
+      visualChars(shapeTextEditLines([text], { ...OPTIONS, placeholder: true })[0]!.layout.lines[0]!)
+    );
+    expect(shaped(false)).not.toBe(shaped(true));
   });
 });
 
@@ -426,5 +494,42 @@ describe('shapeTextEditLines — direction, language and structured override (te
   it('runs the structured parser on each line on its own (text_edit.cpp:297-324)', () => {
     const file = { textDirection: 2, structuredTextBidiOverride: 2 };
     expect(visual(['שלום/abc', 'a/שלום'], file)).toEqual(['םולש/abc', 'a/םולש']);
+  });
+});
+
+describe('textEditDrawnGlyphs', () => {
+  // Three 10 px glyphs at pen x 0, 10 and 20.
+  const glyphs = [0, 10, 20].map((x) => ({ x, advance: 10 })) as GlyphPlacement[];
+
+  it('draws every glyph whose advance box lies between the margins (text_edit.cpp:1724)', () => {
+    expect(textEditDrawnGlyphs(glyphs, 4, 4, 34)).toEqual([true, true, true]);
+  });
+
+  it('drops a glyph that crosses the end margin whole, and stops the walk (:1736-1738)', () => {
+    expect(textEditDrawnGlyphs(glyphs, 4, 4, 33)).toEqual([true, true, false]);
+  });
+
+  it('keeps a glyph that ends on the end margin, then stops the walk', () => {
+    expect(textEditDrawnGlyphs(glyphs, 4, 4, 24)).toEqual([true, true]);
+  });
+
+  it('drops a glyph that starts before the begin margin and keeps walking', () => {
+    expect(textEditDrawnGlyphs(glyphs, -5, 0, 100)).toEqual([false, true, true]);
+  });
+});
+
+describe('textEditRowColorRuns — culled glyphs', () => {
+  const glyphs = [0, 10, 20].map((x) => ({ x, advance: 10, char: 'a' })) as GlyphPlacement[];
+  const colour = { r: 1, g: 1, b: 1, a: 1 };
+
+  it('omits a glyph the cull dropped and keeps the others at their own index', () => {
+    const [run] = textEditRowColorRuns(glyphs, 0, undefined, colour, [true, false, true]);
+    expect(run!.glyphs.map((glyph) => glyph.x)).toEqual([0, 20]);
+  });
+
+  it('still yields one empty run when every glyph is dropped, so the row keeps its TextRun', () => {
+    expect(textEditRowColorRuns(glyphs, 0, undefined, colour, [false, false, false])).toEqual([
+      { glyphs: [], color: colour },
+    ]);
   });
 });

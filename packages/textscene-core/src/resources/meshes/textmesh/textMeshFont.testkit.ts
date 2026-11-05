@@ -50,11 +50,6 @@ export function woff2FontFile(): FontFileResource {
   };
 }
 
-/** A SystemFont: OS family names, which the previewer has no bytes for. */
-export function systemFontResource(): FontResource {
-  return { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-}
-
 /** A TextMesh whose `font` names `FONT_PATH`, and the fonts loaded so far, `fonts`. */
 export function textMeshWith(
   data: Record<string, string> = {},

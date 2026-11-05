@@ -274,6 +274,16 @@ export const CANVAS_2D_SCENES = [
     file: 'project-default-font/unit-label-project-default-font.tscn',
     mode: '2d',
   },
+  // The one variable: a SystemFont as `gui/theme/custom_font`, which is every default it tries, so
+  // it has no face and draws hex-code boxes, under a FontVariation too.
+  {
+    name: 'label-custom-font-system-font',
+    file: 'custom-font-system-font/unit-custom-font-system-font-label.tscn',
+    mode: '2d',
+  },
+  // The one variable: a SystemFont as the project theme's `default_font`, which skips itself and
+  // draws `gui/theme/custom_font`.
+  { name: 'label-theme-system-font', file: 'theme-system-font/unit-theme-system-font.tscn', mode: '2d' },
   // The one variable: a BMFont `.fnt` font at its fixed size, double, one and a half times, tinted, and with a missing glyph.
   { name: 'label-bmfont', file: 'unit-label-bmfont.tscn', mode: '2d' },
   // The one variable: a BMFont's outline set, which Godot draws for any `outline_size` above 0.
@@ -333,6 +343,15 @@ export const CANVAS_2D_SCENES = [
   { name: 'button-states', file: 'unit-button-states.tscn', mode: '2d' },
   // The one variable: the theme text outline of Button, CheckBox, CheckButton, OptionButton and MenuButton.
   { name: 'button-family-outline', file: 'unit-button-family-outline.tscn', mode: '2d' },
+  // The one variable: the theme text outline of LinkButton, the FoldableContainer title and ItemList
+  // items, left to right and as a trimmed AUTO Hebrew line, whose ring trims by the inferred direction.
+  {
+    name: 'link-foldable-item-list-outline',
+    file: 'unit-text-outline-link-foldable-item-list.tscn',
+    mode: '2d',
+  },
+  // The same outline on rows set LTR and RTL, where the ring and the fill trim alike.
+  { name: 'text-outline-set-direction', file: 'unit-text-outline-set-direction.tscn', mode: '2d' },
   // The one variable: a Theme item keyed on BaseButton, which a Button finds only by walking its
   // ClassDB chain. Every other themed golden keys its items on the node's own class.
   { name: 'control-theme-base-class', file: 'unit-control-theme-base-class.tscn', mode: '2d' },
@@ -896,6 +915,9 @@ export const CANVAS_2D_SCENES = [
   { name: 'label-astral-rtl', file: 'unit-label-astral-rtl.tscn', mode: '2d' },
   { name: 'line-edit-rtl', file: 'unit-line-edit-rtl.tscn', mode: '2d' },
   { name: 'text-edit-rtl', file: 'unit-text-edit-rtl.tscn', mode: '2d' },
+  { name: 'text-edit-placeholder', file: 'unit-text-edit-placeholder.tscn', mode: '2d' },
+  { name: 'text-edit-overflow', file: 'unit-text-edit-overflow.tscn', mode: '2d' },
+  { name: 'code-edit-empty-gutter', file: 'unit-code-edit-empty-gutter.tscn', mode: '2d' },
   { name: 'code-edit-rtl', file: 'unit-code-edit-rtl.tscn', mode: '2d' },
   { name: 'rich-text-label-rtl', file: 'unit-rich-text-label-rtl.tscn', mode: '2d' },
   { name: 'spin-box-rtl', file: 'unit-spin-box-rtl.tscn', mode: '2d' },
@@ -925,7 +947,17 @@ export const CANVAS_2D_SCENES = [
   { name: 'rich-text-label-fractional-box', file: 'unit-rich-text-label-fractional-box.tscn', mode: '2d' },
   { name: 'rich-text-label-fill', file: 'unit-rich-text-label-fill.tscn', mode: '2d' },
   { name: 'rich-text-label-clip', file: 'unit-rich-text-label-clip.tscn', mode: '2d' },
+  { name: 'rich-text-label-scrollbar', file: 'unit-rich-text-label-scrollbar.tscn', mode: '2d' },
+  { name: 'rich-text-label-scrollbar-rtl', file: 'unit-rich-text-label-scrollbar-rtl.tscn', mode: '2d' },
+  { name: 'rich-text-label-scrollbar-following', file: 'unit-rich-text-label-scrollbar-following.tscn', mode: '2d' },
+  { name: 'rich-text-label-hr', file: 'unit-rich-text-label-hr.tscn', mode: '2d' },
+  { name: 'rich-text-label-paragraph-justification', file: 'unit-rich-text-label-paragraph-justification.tscn', mode: '2d' },
+  { name: 'rich-text-label-paragraph-tab-stops', file: 'unit-rich-text-label-paragraph-tab-stops.tscn', mode: '2d' },
+  { name: 'rich-text-label-empty-styling-before-paragraph', file: 'unit-rich-text-label-empty-styling-before-paragraph.tscn', mode: '2d' },
+  { name: 'rich-text-label-empty-line-vertical-fill', file: 'unit-rich-text-label-empty-line-vertical-fill.tscn', mode: '2d' },
   { name: 'label-fill-paragraphs', file: 'unit-label-fill-paragraphs.tscn', mode: '2d' },
+  { name: 'label-tab-without-stop', file: 'unit-label-tab-without-stop.tscn', mode: '2d' },
+  { name: 'label-fill-trim', file: 'unit-label-fill-trim.tscn', mode: '2d' },
   // Each scene below moves one property no other scene authors. Godot 4.6.3
   // `--mode 2d`: 0.005 to 0.342 of 255.
 

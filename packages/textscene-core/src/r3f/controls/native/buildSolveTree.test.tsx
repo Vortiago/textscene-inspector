@@ -1438,6 +1438,35 @@ describe('useBuildSolveTree — theme resolution', () => {
       });
     });
 
+    it("draws a LabelSettings SystemFont as the project's default font", async () => {
+      const loader = loaderServing({
+        'res://project.godot': projectGodot('res://body_font.tres'),
+        'res://body_font.tres':
+          '[gd_resource type="FontVariation" format=3]\n\n[resource]\nspacing_glyph = 3\n',
+      });
+      const settings: TscnInternalResource[] = [
+        { id: '1', type: 'LabelSettings', data: { font: 'SubResource("2")' } },
+        { id: '2', type: 'SystemFont', data: { font_names: 'PackedStringArray("Zz No Such Font")' } },
+      ];
+      const { result } = renderHook(
+        () => useBuildSolveTree([label('L', { labelSettings: 'SubResource("1")' })], [], settings),
+        {
+          wrapper: ({ children }: { children: ReactNode }) => (
+            <ResourceLoaderProvider loader={loader}>
+              <ProjectSettingsProvider sceneKey="res://scene.tscn">{children}</ProjectSettingsProvider>
+            </ResourceLoaderProvider>
+          ),
+        }
+      );
+
+      await settle();
+
+      expect(result.current.tree[0]?.labelSettingsFont).toMatchObject({
+        kind: 'variation',
+        properties: { spacing_glyph: '3' },
+      });
+    });
+
     it('is null for a project that sets no custom_font', async () => {
       const { result } = renderPlainLabel({
         'res://project.godot': 'config_version=5\n\n[gui]\n\ntheme/default_theme_scale=1.0\n',

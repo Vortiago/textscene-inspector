@@ -18,9 +18,25 @@ Each `\n` ends a paragraph (`rich_text_label.cpp:4016-4053`). Under FILL, from `
 single-line paragraph (`rich_text_label.h:582`). The fit width is the control's width truncated to a whole
 pixel (`rich_text_label.h:672`).
 
+A `[p]` tag reads `jst` or `justification_flags`, and `tab_stops`, for its own paragraph (`rich_text_label.cpp:5758-5789`). A bare
+`[p]` has the header flags and no tab stops, so its tabs use `tab_size` (`rich_text_label.h:849`). A `[p]` with other options,
+and each alignment tag, takes the node's flags and stops. A tab that no stop aligns has no width.
+
+`[hr]` draws the theme's 2 x 2 white `horizontal_rule` icon (`add_hr`, `:4159-4199`), at `width` (90 percent),
+`height` (2 px), `color` and `align`. A percent size truncates to whole pixels (`rich_text_label.h:741`). The text after the tag
+shares the rule's line. A line with no text, object or list item has no height, but it still counts as a line.
+`vertical_alignment` FILL spreads its gap over that line (`:1643-1648`). An empty colour, font, underline or strikethrough
+before a `[p]` adds no line (`_find_layout_subitem`, `:3712-3727`).
+
 While `clip_contents` is true, its default for this node (`rich_text_label.cpp:8225`), the control's own rect
 clips every glyph, image and underline (`control.cpp:3948`). `fit_content` grows the control to its text, so
 nothing is cut.
+
+With `scroll_active` true, text taller than the rect shows the vertical scrollbar over the right edge of
+the rect. The text wraps beside the bar (`rich_text_label.cpp:3801-3830`). A right-to-left layout mirrors
+the bar to the left edge and starts every line after it (`:990-996`). `scroll_following` scrolls the text
+to its foot (`:3827-3828`). A line that starts below the rect or ends above it is never drawn
+(`:973,978-981`), whether or not the control clips.
 
 A `[b]` run and any embolden over the bundled font draw on the canvas painter, which emboldens the
 outline as FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0040). The run draws nothing until the
@@ -81,11 +97,7 @@ string against `true`, so an absent property or any other value silently resolve
 
 - **Approximated** Only a subset of BBCode tags is styled, and a tag outside it renders as
   plain text.
-- **Approximated** `[p jst=…]` and `[p tab_stops=…]` are not read, so a paragraph keeps the
-  node's justification and tab stops.
-- **Approximated** `[hr]` does not start a line of its own, though Godot pushes a paragraph for it.
-- **Approximated** A `[p]` after an empty styling tag starts a new line, where
-  `_find_layout_subitem` (:3712-3727) skips the empty tag.
-- **Not drawn** The right-to-left scrollbar offset (:988-996,2093-2100), the loading bar's
-  right-to-left fill (:2580-2588) and the reveal end of `VC_GLYPHS_AUTO` (:944-945), since
-  none of their inputs is drawn.
+- **Not drawn** The loading bar's right-to-left fill (:2580-2588) and the reveal end of
+  `VC_GLYPHS_AUTO` (:944-945), since neither input is drawn.
+- **Not drawn** `scroll_following_visible_characters`, which scrolls to the last revealed line
+  (:2659-2667,5213-5221), since `visible_characters` is not drawn.

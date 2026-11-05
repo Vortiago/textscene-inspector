@@ -15,11 +15,7 @@ import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import {
-  hasOutlineRing,
-  OutlinedTextRun,
-  useTintedTextOutline,
-} from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import {
   clampAutowrapMode,
   infersRtl,
@@ -183,20 +179,16 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
     solveNode.constants,
     theme.separation,
   ]);
-  // The fill reads the set direction and the outline the inferred one (`shaped_text_draw` and
-  // `shaped_text_draw_outline`), so an AUTO Hebrew label trims to two different shapes.
-  const trimmed = useMemo(() => {
-    // `TextParagraph::_shape_lines` trims each row of an unwrapped buffer, and no row of a wrapped
-    // one, since Button hides no line (`text_paragraph.cpp:228-262,282-293`).
-    if (!layout || !overrunFlags.trim || wraps) return { fill: layout, outline: layout };
-    const trim = (drawsRtl: boolean) =>
-      trimLayoutToWidth(layout, trimWidthPx, overrunFlags, { fontMetrics, fontSizePx, isDrawnRtl: drawsRtl });
-    const fill = trim(isLineDrawnRtl);
-    const isOutlineDrawnRtl = infersRtl(layout);
-    const hasOwnOutlineShape = hasOutlineRing(textOutline) && isOutlineDrawnRtl !== isLineDrawnRtl;
-    return { fill, outline: hasOwnOutlineShape ? trim(isOutlineDrawnRtl) : fill };
-  }, [layout, overrunFlags, wraps, trimWidthPx, fontMetrics, fontSizePx, isLineDrawnRtl, textOutline]);
-  const trimmedLayout = trimmed.fill;
+  // `TextParagraph::_shape_lines` trims each row of an unwrapped buffer, and no row of a wrapped
+  // one, since Button hides no line (`text_paragraph.cpp:228-262,282-293`).
+  const trimmedLayout = useMemo(() => {
+    if (!layout || !overrunFlags.trim || wraps) return layout;
+    return trimLayoutToWidth(layout, trimWidthPx, overrunFlags, {
+      fontMetrics,
+      fontSizePx,
+      isDrawnRtl: isLineDrawnRtl,
+    });
+  }, [layout, overrunFlags, wraps, trimWidthPx, fontMetrics, fontSizePx, isLineDrawnRtl]);
 
   // One layout object per row, so a row's runs keep their meshes across renders.
   const lineLayouts = useMemo(
@@ -207,13 +199,6 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   const untrimmedShiftPx = content.text
     ? buttonTextAlignShiftPx(naturalSize(layout).x, content.drawableSize.x, textAlignment, infersRtl(layout))
     : 0;
-  // Only a trimmed layout has an outline shape of its own.
-  const outlineLineLayouts = useMemo(() => {
-    const { outline, fill } = trimmed;
-    return outline && outline !== fill
-      ? outline.lines.map((line) => soloLineLayout(line, outline))
-      : undefined;
-  }, [trimmed]);
 
   return (
     <>
@@ -255,7 +240,6 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
           >
             <OutlinedTextRun
               layout={lineLayouts[i]!}
-              outlineLayout={outlineLineLayouts?.[i]}
               fontSizePx={fontSizePx}
               tint={tintedFontColor}
               outline={textOutline}

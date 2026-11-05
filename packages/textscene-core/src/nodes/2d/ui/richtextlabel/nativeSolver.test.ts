@@ -4,6 +4,7 @@
  * `descent=600`, bake 42) worked by hand, never from the implementation.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -37,6 +38,9 @@ import { visualChars } from '../../../../r3f/controls/native/text/textLayout.tes
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
+/** A box height above every text here, so no line starts below it. */
+const TALL_BOX_PX = 1000;
+
 const ALL_STYLES = [
   { bold: false, italic: false },
   { bold: true, italic: false },
@@ -51,6 +55,8 @@ type StyledTextRun = ReturnType<typeof styledTextRuns>[number];
 const PARSED_DEFAULTS = {
   justificationFlags: 163,
   clipContents: true,
+  scrollActive: true,
+  scrollFollowing: false,
   textDirection: 0,
   language: '',
   structuredTextBidiOverride: 0,
@@ -60,6 +66,11 @@ const PARSED_DEFAULTS = {
 /** What a node with no direction properties resolves to under the test node's empty locale. */
 const NO_BIDI = { language: '' };
 
+/** The properties of a parsed node that `styledTextRuns` reads, from the few a test sets. */
+function parsedProps(fields: Partial<RichTextLabelProperties>): RichTextLabelProperties {
+  return { justificationFlags: PARSED_DEFAULTS.justificationFlags, ...fields } as RichTextLabelProperties;
+}
+
 function textRun(fields: Pick<StyledTextRun, 'text' | 'fontSizePx'> & Partial<StyledTextRun>): StyledTextRun {
   return {
     bold: false,
@@ -68,6 +79,8 @@ function textRun(fields: Pick<StyledTextRun, 'text' | 'fontSizePx'> & Partial<St
     color: WHITE,
     alignment: 0,
     bidi: NO_BIDI,
+    justificationFlags: PARSED_DEFAULTS.justificationFlags,
+    tabStopsPx: [],
     ...fields,
   };
 }
@@ -285,18 +298,21 @@ describe(`richTextLabelMinimumSize — resolves this RichTextLabel's own PARAGRA
   });
 
   it('a theme_override_fonts/normal_font local override is fed to the text engine (fit_content required for the shape branch to run at all)', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const unresolvableFont = fontFile(undefined);
     const n: SolveNode = {
       ...node({ fitContent: true, text: 'A' }),
-      fontOverrides: { normal_font: systemFont },
+      fontOverrides: { normal_font: unresolvableFont },
     };
     richTextLabelMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('a local override under a different key ("font", Label/Button/etc\'s own key) is not consulted', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n: SolveNode = { ...node({ fitContent: true, text: 'A' }), fontOverrides: { font: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n: SolveNode = {
+      ...node({ fitContent: true, text: 'A' }),
+      fontOverrides: { font: unresolvableFont },
+    };
     richTextLabelMinimumSize(n, ctx());
     expect(warnSpy).not.toHaveBeenCalled();
   });
@@ -395,7 +411,7 @@ describe('styledTextRuns', () => {
     expect(
       styledTextRuns(
         node({}),
-        { text: '[b]x[/b]', bbcodeEnabled: false } as RichTextLabelProperties,
+        parsedProps({ text: '[b]x[/b]', bbcodeEnabled: false }),
         WHITE,
         NORMAL,
         FALLBACK
@@ -405,23 +421,17 @@ describe('styledTextRuns', () => {
 
   it('bbcode disabled + empty text: no runs', () => {
     expect(
-      styledTextRuns(
-        node({}),
-        { text: '', bbcodeEnabled: false } as RichTextLabelProperties,
-        WHITE,
-        NORMAL,
-        FALLBACK
-      )
+      styledTextRuns(node({}), parsedProps({ text: '', bbcodeEnabled: false }), WHITE, NORMAL, FALLBACK)
     ).toEqual([]);
-    expect(
-      styledTextRuns(node({}), { bbcodeEnabled: false } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK)
-    ).toEqual([]);
+    expect(styledTextRuns(node({}), parsedProps({ bbcodeEnabled: false }), WHITE, NORMAL, FALLBACK)).toEqual(
+      []
+    );
   });
 
   it('bbcode enabled: [b] and [i] set independent flags, plain runs default to the passed color and normalFontSizePx', () => {
     const runs = styledTextRuns(
       node({}),
-      { text: 'plain [b]bold[/b] [i]italic[/i]', bbcodeEnabled: true } as RichTextLabelProperties,
+      parsedProps({ text: 'plain [b]bold[/b] [i]italic[/i]', bbcodeEnabled: true }),
       WHITE,
       NORMAL,
       FALLBACK
@@ -437,7 +447,7 @@ describe('styledTextRuns', () => {
   it('bbcode enabled: nested [b][i] combines both flags on one run (RTL_BOLD_ITALICS_FONT, rich_text_label.cpp:5452-5471)', () => {
     const runs = styledTextRuns(
       node({}),
-      { text: '[b][i]x[/i][/b]', bbcodeEnabled: true } as RichTextLabelProperties,
+      parsedProps({ text: '[b][i]x[/i][/b]', bbcodeEnabled: true }),
       WHITE,
       NORMAL,
       FALLBACK
@@ -448,10 +458,7 @@ describe('styledTextRuns', () => {
   it('bbcode enabled: [u] sets the underline flag, independent of bold/italic/color, and does NOT change font size (rich_text_label.cpp:4677 push_underline)', () => {
     const runs = styledTextRuns(
       node({}),
-      {
-        text: 'plain [u]underlined[/u] [b][u]bold and underlined[/u][/b]',
-        bbcodeEnabled: true,
-      } as RichTextLabelProperties,
+      parsedProps({ text: 'plain [u]underlined[/u] [b][u]bold and underlined[/u][/b]', bbcodeEnabled: true }),
       WHITE,
       NORMAL,
       FALLBACK
@@ -467,7 +474,7 @@ describe('styledTextRuns', () => {
   it('bbcode enabled: [color=#e0a030] resolves to that RGBA, overriding the passed default; colour alone does not change font size', () => {
     const runs = styledTextRuns(
       node({}),
-      { text: '[color=#e0a030]x[/color]', bbcodeEnabled: true } as RichTextLabelProperties,
+      parsedProps({ text: '[color=#e0a030]x[/color]', bbcodeEnabled: true }),
       WHITE,
       NORMAL,
       FALLBACK
@@ -485,7 +492,7 @@ describe('styledTextRuns', () => {
     const fallback = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
     const runs = styledTextRuns(
       node({}),
-      { text: '[color=not-a-color]x[/color]', bbcodeEnabled: true } as RichTextLabelProperties,
+      parsedProps({ text: '[color=not-a-color]x[/color]', bbcodeEnabled: true }),
       fallback,
       NORMAL,
       FALLBACK
@@ -496,7 +503,7 @@ describe('styledTextRuns', () => {
   it('bbcode enabled: drops zero-length runs (adjacent tags with nothing between)', () => {
     const runs = styledTextRuns(
       node({}),
-      { text: '[b][/b][i]x[/i]', bbcodeEnabled: true } as RichTextLabelProperties,
+      parsedProps({ text: '[b][/b][i]x[/i]', bbcodeEnabled: true }),
       WHITE,
       NORMAL,
       FALLBACK
@@ -508,7 +515,7 @@ describe('styledTextRuns', () => {
     it('a [b] run with no bold_font_size override renders at the FALLBACK size (16), never at normalFontSizePx (18) — Theme::get_font_size falls to ThemeDB::get_fallback_font_size, not to a sibling key', () => {
       const runs = styledTextRuns(
         node({}),
-        { text: '[b]x[/b]', bbcodeEnabled: true } as RichTextLabelProperties,
+        parsedProps({ text: '[b]x[/b]', bbcodeEnabled: true }),
         WHITE,
         NORMAL,
         FALLBACK
@@ -520,7 +527,7 @@ describe('styledTextRuns', () => {
     it('an [i] run with no italics_font_size override ALSO renders at the fallback size', () => {
       const runs = styledTextRuns(
         node({}),
-        { text: '[i]x[/i]', bbcodeEnabled: true } as RichTextLabelProperties,
+        parsedProps({ text: '[i]x[/i]', bbcodeEnabled: true }),
         WHITE,
         NORMAL,
         FALLBACK
@@ -608,7 +615,7 @@ describe('styledTextRuns', () => {
       };
       const runs = styledTextRuns(
         node({}, { themeChain: [theme] }),
-        { text: '[b]x[/b]', bbcodeEnabled: true } as RichTextLabelProperties,
+        parsedProps({ text: '[b]x[/b]', bbcodeEnabled: true }),
         WHITE,
         NORMAL,
         FALLBACK
@@ -627,7 +634,7 @@ describe('styledTextRuns', () => {
       };
       const runs = styledTextRuns(
         node({}, { themeChain: [theme] }),
-        { text: '[b]x[/b]', bbcodeEnabled: true } as RichTextLabelProperties,
+        parsedProps({ text: '[b]x[/b]', bbcodeEnabled: true }),
         WHITE,
         NORMAL,
         FALLBACK
@@ -674,7 +681,11 @@ describe('styledTextRuns', () => {
       const text = '[b]a[/b][b]b[/b][b]c[/b][b]d[/b][b]e[/b]';
       styledTextRuns(
         node({}),
-        { text, bbcodeEnabled: true } as RichTextLabelProperties,
+        {
+          text,
+          bbcodeEnabled: true,
+          justificationFlags: PARSED_DEFAULTS.justificationFlags,
+        } as RichTextLabelProperties,
         WHITE,
         NORMAL,
         FALLBACK
@@ -687,7 +698,11 @@ describe('styledTextRuns', () => {
       const text = '[b]a[/b][i]b[/i][b][i]c[/i][/b][b]d[/b][i]e[/i][b][i]f[/i][/b]';
       const runs = styledTextRuns(
         node({}),
-        { text, bbcodeEnabled: true } as RichTextLabelProperties,
+        {
+          text,
+          bbcodeEnabled: true,
+          justificationFlags: PARSED_DEFAULTS.justificationFlags,
+        } as RichTextLabelProperties,
         WHITE,
         NORMAL,
         FALLBACK
@@ -704,7 +719,7 @@ describe('styledTextRuns', () => {
     it('drops the run when imageSizePx cannot resolve it — no width/height/region authored, textureSlots not (yet) resolved, same outcome a failed ResourceLoader::load gives real Godot', () => {
       const runs = styledTextRuns(
         node({}),
-        { text: '[img]a.png[/img]', bbcodeEnabled: true } as RichTextLabelProperties,
+        parsedProps({ text: '[img]a.png[/img]', bbcodeEnabled: true }),
         WHITE,
         NORMAL,
         FALLBACK
@@ -716,7 +731,7 @@ describe('styledTextRuns', () => {
       const n = node({}, { textureSlots: { 'a.png': { x: 64, y: 32 } } });
       const runs = styledTextRuns(
         n,
-        { text: '[img]a.png[/img]', bbcodeEnabled: true } as RichTextLabelProperties,
+        parsedProps({ text: '[img]a.png[/img]', bbcodeEnabled: true }),
         WHITE,
         NORMAL,
         FALLBACK
@@ -731,7 +746,7 @@ describe('styledTextRuns', () => {
     it('resolves width×height authored on the value form, carrying it as the run — width repurposes fontSizePx (imageObjectFontMetrics doc)', () => {
       const runs = styledTextRuns(
         node({}),
-        { text: '[img=40x20]a.png[/img]', bbcodeEnabled: true } as RichTextLabelProperties,
+        parsedProps({ text: '[img=40x20]a.png[/img]', bbcodeEnabled: true }),
         WHITE,
         NORMAL,
         FALLBACK
@@ -748,7 +763,7 @@ describe('styledTextRuns', () => {
     it("resolves a %-form width/height against boxWidthPx — RichTextLabel's own p_width, never a height", () => {
       const runs = styledTextRuns(
         node({}),
-        { text: '[img=50%x25%]a.png[/img]', bbcodeEnabled: true } as RichTextLabelProperties,
+        parsedProps({ text: '[img=50%x25%]a.png[/img]', bbcodeEnabled: true }),
         WHITE,
         NORMAL,
         FALLBACK,
@@ -757,10 +772,22 @@ describe('styledTextRuns', () => {
       expect(runs[0]!.image!.sizePx).toEqual({ x: 100, y: 50 });
     });
 
+    it('truncates a %-form size to whole pixels, as `_get_image_size` takes `int` (`rich_text_label.h:741`)', () => {
+      const runs = styledTextRuns(
+        node({}),
+        parsedProps({ text: '[img=33%x7%]a.png[/img]', bbcodeEnabled: true }),
+        WHITE,
+        NORMAL,
+        FALLBACK,
+        260
+      );
+      expect(runs[0]!.image!.sizePx).toEqual({ x: 85, y: 18 });
+    });
+
     it("a %-form dimension resolves to 0 (unresolvable) when boxWidthPx is not yet known (a solve tree's first pass)", () => {
       const runs = styledTextRuns(
         node({}),
-        { text: '[img=50%]a.png[/img]', bbcodeEnabled: true } as RichTextLabelProperties,
+        parsedProps({ text: '[img=50%]a.png[/img]', bbcodeEnabled: true }),
         WHITE,
         NORMAL,
         FALLBACK
@@ -771,7 +798,7 @@ describe('styledTextRuns', () => {
     it('an image run never carries bold/italic/underline, and its top-level color mirrors the parsed [img] color=', () => {
       const runs = styledTextRuns(
         node({}),
-        { text: '[img=10x10 color=#ff0000]a.png[/img]', bbcodeEnabled: true } as RichTextLabelProperties,
+        parsedProps({ text: '[img=10x10 color=#ff0000]a.png[/img]', bbcodeEnabled: true }),
         WHITE,
         NORMAL,
         FALLBACK
@@ -787,7 +814,7 @@ describe('styledTextRuns', () => {
     it('an image run alongside plain text keeps both, in source order', () => {
       const runs = styledTextRuns(
         node({}),
-        { text: 'hi[img=10x10]a.png[/img]bye', bbcodeEnabled: true } as RichTextLabelProperties,
+        parsedProps({ text: 'hi[img=10x10]a.png[/img]bye', bbcodeEnabled: true }),
         WHITE,
         NORMAL,
         FALLBACK
@@ -904,7 +931,6 @@ function shapeRuns(
     boxWidthPx?: number;
     autowrapMode?: EnumValue<typeof AutowrapMode>;
     faces?: ReturnType<typeof resolveRichTextFaces>;
-    tabStopsPx?: number[];
     tabSize?: number;
   } = {}
 ): TextLayoutResult {
@@ -913,7 +939,6 @@ function shapeRuns(
     fontSizePx: FONT_SIZE,
     boxWidthPx,
     autowrapMode,
-    tabStopsPx: options.tabStopsPx,
     tabSize: options.tabSize,
   });
 }
@@ -925,6 +950,58 @@ function bareImageRun(widthPx: number) {
     image: { spec: {} as ParsedImgTag, sizePx: { x: widthPx, y: widthPx } },
   });
 }
+
+describe('styledTextRuns [hr]', () => {
+  const NORMAL = 18;
+  const FALLBACK = 16;
+  const ruleOf = (text: string, boxWidthPx?: number, defaultColor = WHITE) =>
+    styledTextRuns(
+      node({}),
+      parsedProps({ text, bbcodeEnabled: true }),
+      defaultColor,
+      NORMAL,
+      FALLBACK,
+      boxWidthPx
+    ).find((run) => run.image?.spec.solid)!;
+
+  it('is 90 percent of the box wide and 2px tall, centred, in the default colour (`:5955-5983`)', () => {
+    const rule = ruleOf('[hr]', 200, { r: 0.5, g: 0.25, b: 0.125, a: 1 });
+    expect(rule.image!.sizePx).toEqual({ x: 180, y: 2 });
+    expect(rule.color).toEqual({ r: 0.5, g: 0.25, b: 0.125, a: 1 });
+    expect(rule.alignment).toBe(1);
+  });
+
+  it('truncates a percent width to whole pixels, as `add_hr` sizes it through `int` (measured)', () => {
+    expect(ruleOf('[hr width=33%]', 260).image!.sizePx.x).toBe(85);
+  });
+
+  it('sizes a missing width or height from the 2 x 2 icon, `_get_image_size` (`:4120-4157`)', () => {
+    expect(ruleOf('[hr width=0 height=6]').image!.sizePx).toEqual({ x: 6, y: 6 });
+    expect(ruleOf('[hr width=10 height=0]').image!.sizePx).toEqual({ x: 10, y: 10 });
+    expect(ruleOf('[hr width=0 height=0]').image!.sizePx).toEqual({ x: 2, y: 2 });
+  });
+
+  it('reads color, falling back to the default colour for an invalid one (`:5967-5971`)', () => {
+    expect(ruleOf('[hr color=#ff0000]').color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(ruleOf('[hr color=nope]').color).toEqual(WHITE);
+  });
+
+  it('takes the alignment of its own paragraph, whatever surrounds it', () => {
+    expect(ruleOf('[right]a[hr align=left][/right]').alignment).toBe(0);
+  });
+
+  it('gives the shaper a placeholder one rule wide, which the text after it follows', () => {
+    const runs = styledTextRuns(
+      node({}),
+      parsedProps({ text: 'a[hr width=50]b', bbcodeEnabled: true }),
+      WHITE,
+      NORMAL,
+      FALLBACK
+    );
+    expect(runs.map((run) => run.text)).toEqual(['a\n', IMAGE_OBJECT_CHAR, 'b']);
+    expect(runs[1]!.fontSizePx).toBe(50);
+  });
+});
 
 describe('shapeRichText — an [img] placeholder', () => {
   it.each([24, 100, 33.5, 21, 1])(
@@ -1485,7 +1562,7 @@ describe('RichTextLabel paragraph alignment', () => {
     // "Threat level" at 16px shapes to a ceiled line width of 92 (`textLayout.test.ts`).
     function offsetX(alignment: number, boxWidthPx: number): number {
       const { runs, layout } = singleRun('Threat level', alignment);
-      return layoutRichTextRuns(runs, layout, { boxWidthPx, boxHeightPx: 0 })[0]!.lineOffsetXPx;
+      return layoutRichTextRuns(runs, layout, { boxWidthPx, boxHeightPx: TALL_BOX_PX })[0]!.lineOffsetXPx;
     }
 
     it('leaves LEFT at the box origin', () => {
@@ -1563,8 +1640,50 @@ describe('RichTextLabel paragraph alignment', () => {
       expect(lineTops('A\nB\nC', 3, 300)).toEqual([0, 138, 277]);
     });
 
+    // `[font_size][/font_size][p]` leaves an empty text buffer: no height, but a line for `lines` (`:1643-1648`).
+    describe('a line of no height', () => {
+      const runs = [
+        textRun({ text: '\n', fontSizePx: 16, zeroHeightBreak: true }),
+        textRun({ text: 'A\nB', fontSizePx: 16 }),
+      ];
+      const layout = shapeRuns(runs);
+      const tops = (verticalAlignment: number) =>
+        layoutRichTextRuns(runs, layout, { boxWidthPx: 0, boxHeightPx: 300, verticalAlignment }).map(
+          (p) => p.lineTopPx
+        );
+
+      it('adds no height to the text', () => {
+        expect(tops(0)).toEqual([0, 23]);
+      });
+
+      it('counts as a FILL line and takes its gap', () => {
+        // 300 - 2 * 23 = 254 of slack over three lines gives 127 a line: A is the second line, B the third.
+        expect(tops(3)).toEqual([127, 277]);
+      });
+    });
+
     it('needs two lines to have a FILL gap', () => {
       expect(lineTops('A', 3, 300)).toEqual([0]);
+    });
+
+    // A 160x40 label with `clip_contents` false and `scroll_active` false draws two of its lines,
+    // tops 0 and 23: the third starts at 46, below the box (`pnpm ref:godot`).
+    it('draws no line whose top is at or below the bottom of the box (rich_text_label.cpp:973)', () => {
+      expect(lineTops('A\nB\nC', 0, 40)).toEqual([0, 23]);
+      expect(lineTops('A\nB\nC', 0, 46)).toEqual([0, 23]);
+      expect(lineTops('A\nB\nC', 0, 46.5)).toEqual([0, 23, 46]);
+    });
+
+    // A 160x40 label with `scroll_following` shows 69 - 40 = 29 rows up: the first line, rows -29
+    // to -6, is gone, and the others start at -6 and 17.
+    it('shifts every line up by the scroll offset and skips a line that ends above the box (rich_text_label.cpp:978-981)', () => {
+      const { runs, layout } = singleRun('A\nB\nC', 0);
+      const placements = layoutRichTextRuns(runs, layout, {
+        boxWidthPx: 0,
+        boxHeightPx: 40,
+        scrollOffsetPx: 29,
+      });
+      expect(placements.map((p) => p.lineTopPx)).toEqual([-6, 17]);
     });
 
     it('stays TOP-aligned when the text is TALLER than its box, whatever the alignment', () => {
@@ -1580,7 +1699,9 @@ describe('RichTextLabel paragraph alignment', () => {
 describe('shapeRichText — tab stops (rich_text_label.cpp:479-482)', () => {
   /** The pen x of the glyph after a tab in `a<TAB>b`. */
   function xAfterTab(options: { tabStopsPx?: number[]; tabSize?: number }): number {
-    return shapeRuns([textRun({ text: 'a\tb', fontSizePx: 16 })], options).lines[0]!.glyphs[2]!.x;
+    const { tabStopsPx = [], tabSize } = options;
+    return shapeRuns([textRun({ text: 'a\tb', fontSizePx: 16, tabStopsPx })], { tabSize }).lines[0]!
+      .glyphs[2]!.x;
   }
 
   it('an explicit tab_stops array wins outright, ignoring tab_size', () => {
@@ -1598,6 +1719,15 @@ describe('shapeRichText — tab stops (rich_text_label.cpp:479-482)', () => {
 
   it('tab_size <= 0 disables inline tab alignment entirely (no stops)', () => {
     expect(xAfterTab({ tabSize: 0 })).not.toBe(16.625);
+  });
+
+  it('reads the stops of each paragraph from its own first run (`_find_tab_stops`)', () => {
+    const runs = [
+      textRun({ text: 'a\tb\n', fontSizePx: 16, tabStopsPx: [40] }),
+      textRun({ text: 'a\tb', fontSizePx: 16, tabStopsPx: [70] }),
+    ];
+    const [first, second] = shapeRuns(runs).lines;
+    expect([first!.glyphs[2]!.x, second!.glyphs[2]!.x]).toEqual([40, 70]);
   });
 });
 
@@ -1622,11 +1752,12 @@ describe('RichTextLabel FILL justification', () => {
       autowrapMode = AutowrapMode.AUTOWRAP_OFF,
       flags = DEFAULT_FLAGS,
     } = options;
-    const layout = shapeRuns(runs, { boxWidthPx, autowrapMode });
-    const placements = layoutRichTextRuns(runs, layout, {
+    const flagged = runs.map((run) => ({ ...run, justificationFlags: flags }));
+    const layout = shapeRuns(flagged, { boxWidthPx, autowrapMode });
+    const placements = layoutRichTextRuns(flagged, layout, {
       boxWidthPx,
-      boxHeightPx: 0,
-      justification: { flags, fontSizePx: FONT_SIZE },
+      boxHeightPx: TALL_BOX_PX,
+      justification: { fontSizePx: FONT_SIZE },
     });
     const widths: number[] = [];
     for (const p of placements) widths[p.lineIndex] = (widths[p.lineIndex] ?? 0) + p.layout.widthPx;
@@ -1674,6 +1805,35 @@ describe('RichTextLabel FILL justification', () => {
     const [width] = fittedWidths([fillRun('Wave rift over stone')], { flags: 34 });
     expect(width).toBeLessThan(300);
   });
+
+  it('fits the last line of a paragraph whose flags do not skip it (`_find_jst_flags`)', () => {
+    const WORD_BOUND = 2;
+    const widths = fittedWidths([fillRun('Wave rift over stone and the amber light')], {
+      boxWidthPx: 200,
+      autowrapMode: AutowrapMode.AUTOWRAP_WORD_SMART,
+      flags: WORD_BOUND,
+    });
+    expect(widths.at(-1)).toBe(200);
+  });
+
+  it('reads the flags of each paragraph from its own first run', () => {
+    const WORD_BOUND = 2;
+    const runs = [
+      { ...fillRun('Wave rift over stone\n'), justificationFlags: WORD_BOUND },
+      { ...fillRun('and amber light'), justificationFlags: 34 },
+    ];
+    const layout = shapeRuns(runs, { boxWidthPx: BOX_WIDTH_PX });
+    const widths: number[] = [];
+    for (const p of layoutRichTextRuns(runs, layout, {
+      boxWidthPx: BOX_WIDTH_PX,
+      boxHeightPx: TALL_BOX_PX,
+      justification: { fontSizePx: FONT_SIZE },
+    })) {
+      widths[p.lineIndex] = (widths[p.lineIndex] ?? 0) + p.layout.widthPx;
+    }
+    expect(widths[0]).toBe(300);
+    expect(widths[1]).toBeLessThan(300);
+  });
 });
 
 describe('layoutRichTextRuns run attribution', () => {
@@ -1682,7 +1842,7 @@ describe('layoutRichTextRuns run attribution', () => {
       textRun({ text: 'a\n', fontSizePx: FONT_SIZE }),
       textRun({ text: 'b', fontSizePx: FONT_SIZE, bold: true }),
     ];
-    const placements = layoutRichTextRuns(runs, shapeRuns(runs), { boxWidthPx: 0, boxHeightPx: 0 });
+    const placements = layoutRichTextRuns(runs, shapeRuns(runs), { boxWidthPx: 0, boxHeightPx: TALL_BOX_PX });
     expect(placements.map((p) => [p.lineIndex, p.layout.lines[0]!.text])).toEqual([
       [0, 'a​'],
       [1, 'b'],
@@ -1725,7 +1885,8 @@ describe('RichTextLabel paragraph direction', () => {
     // "Threat level" at 16px shapes to a ceiled line width of 92 (`textLayout.test.ts`).
     function offsetX(alignment: number, direction: number, text = 'Threat level'): number {
       const runs = [textRun({ text, fontSizePx: FONT_SIZE, alignment, bidi: { direction } })];
-      return layoutRichTextRuns(runs, shapeRuns(runs), { boxWidthPx: 200, boxHeightPx: 0 })[0]!.lineOffsetXPx;
+      return layoutRichTextRuns(runs, shapeRuns(runs), { boxWidthPx: 200, boxHeightPx: TALL_BOX_PX })[0]!
+        .lineOffsetXPx;
     }
 
     it('starts an RTL LEFT or FILL line at the right edge', () => {
@@ -1753,7 +1914,7 @@ describe('RichTextLabel paragraph direction', () => {
       textRun({ text: 'Threat level', fontSizePx: FONT_SIZE, alignment: 0 }),
     ];
     const layout = shapeRuns(runs, { boxWidthPx: 100, autowrapMode: AutowrapMode.AUTOWRAP_WORD_SMART });
-    const placements = layoutRichTextRuns(runs, layout, { boxWidthPx: 100, boxHeightPx: 0 });
+    const placements = layoutRichTextRuns(runs, layout, { boxWidthPx: 100, boxHeightPx: TALL_BOX_PX });
     expect(placements.map((p) => [p.lineIndex, p.lineOffsetXPx])).toEqual([
       [0, 4],
       [1, 4],

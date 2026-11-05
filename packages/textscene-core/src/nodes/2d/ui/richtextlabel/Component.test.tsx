@@ -22,6 +22,10 @@ import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderCont
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { RICH_TEXT_LABEL_UNDERLINE_ALPHA, richTextLabelMinimumSize } from './nativeSolver';
 import { RichTextLabel } from './Component';
+import {
+  SCROLL_BAR_GRABBER_RENDER_ORDER_OFFSET,
+  SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET,
+} from '../shared/ScrollBarChrome';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 // The bundled canvas face, which every run draws on: the door to register it is shut under vitest,
@@ -54,8 +58,13 @@ function solveNode(
   overrides: Partial<SolveNode> = {}
 ): SolveNode {
   const name = path.split('/').pop()!;
-  // `parseRichTextLabel` fills these two defaults, which the painter reads as given.
-  const parsedDefaults = { justificationFlags: 163, clipContents: true };
+  // `parseRichTextLabel` fills these defaults, which the painter reads as given.
+  const parsedDefaults = {
+    justificationFlags: 163,
+    clipContents: true,
+    scrollActive: true,
+    scrollFollowing: false,
+  };
   const tscnNode: TscnNode = controlNode(name, 'RichTextLabel', { name, ...parsedDefaults, ...properties });
   return { ...emptySolveNode(), path, node: tscnNode, ...overrides };
 }
@@ -250,6 +259,60 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
       return (geo.attributes.position!.array as Float32Array)[12]!;
     };
     expect(secondQuadX(withStop)).toBeGreaterThan(secondQuadX(withoutStop));
+  });
+
+  it('a [p tab_stops] paragraph moves its own tab onto its own stop, and a bare [p] ignores the node stops', async () => {
+    const secondQuadX = (r: Awaited<ReturnType<typeof render>>) => {
+      const geo = meshesOf(r)[0]!.geometry as THREE.BufferGeometry;
+      return (geo.attributes.position!.array as Float32Array)[12]!;
+    };
+    const props = { autowrapMode: 0, bbcodeEnabled: true, tabStopsPx: [40] };
+    const own = await render({ ...props, text: '[p tab_stops=90]A\tB[/p]' });
+    const bare = await render({ ...props, text: '[p]A\tB[/p]' });
+    const node = await render({ ...props, text: 'A\tB' });
+    expect(secondQuadX(own)).toBeGreaterThan(secondQuadX(node));
+    expect(secondQuadX(bare)).toBeLessThan(secondQuadX(node));
+  });
+});
+
+describe('<RichTextLabel> — [hr]', () => {
+  const rulesOf = (r: Awaited<ReturnType<typeof render>>) =>
+    meshesOf(r).filter((m) => m.geometry.type === 'PlaneGeometry');
+
+  it('draws one solid white quad, 90 percent of the width by 2px, with no texture', async () => {
+    const renderer = await render({ text: '[hr]', bbcodeEnabled: true }, { x: 0, y: 0, w: 200, h: 100 });
+    const [rule] = rulesOf(renderer);
+    const { width, height } = (rule!.geometry as THREE.PlaneGeometry).parameters;
+    expect([rulesOf(renderer).length, width, height]).toEqual([1, 180, 2]);
+    expect((rule!.material as THREE.MeshBasicMaterial).map).toBeNull();
+  });
+
+  it('tints by color= times the walker tint', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <RichTextLabel
+        {...painterEnv()}
+        tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })}
+        solveNode={solveNode('RTL', { text: '[hr color=#e0a030]', bbcodeEnabled: true })}
+        rect={{ x: 0, y: 0, w: 200, h: 100 }}
+        renderOrder={5}
+      />
+    );
+    const expected = expectedLinear(0.5 * (0xe0 / 255), 0.5 * (0xa0 / 255), 0.5 * (0x30 / 255));
+    const { color } = rulesOf(renderer)[0]!.material as THREE.MeshBasicMaterial;
+    expect([color.r, color.g, color.b].map((c) => c.toFixed(5))).toEqual(
+      [expected.r, expected.g, expected.b].map((c) => c.toFixed(5))
+    );
+  });
+
+  it('puts the rule on a line below the text before it', async () => {
+    const renderer = await render({ text: 'a[hr]', bbcodeEnabled: true });
+    const worldTopOf = (mesh: THREE.Mesh) => {
+      mesh.updateWorldMatrix(true, false);
+      return new THREE.Vector3().setFromMatrixPosition(mesh.matrixWorld).y;
+    };
+    const rule = rulesOf(renderer)[0]!;
+    const text = meshesOf(renderer).find((m) => m.geometry.type !== 'PlaneGeometry')!;
+    expect(worldTopOf(rule)).toBeLessThan(worldTopOf(text));
   });
 });
 
@@ -516,5 +579,51 @@ describe('<RichTextLabel> — [img]', () => {
     expect(meshes.length).toBeGreaterThan(1);
     expect(meshes.some((m) => materialOf(m).type === 'MeshBasicMaterial')).toBe(true);
     expect(meshes.some((m) => materialOf(m).type !== 'MeshBasicMaterial')).toBe(true);
+  });
+});
+
+describe('<RichTextLabel> scrollbar (rich_text_label.cpp:3801-3830)', () => {
+  const TALL_BOX: Rect2 = { x: 0, y: 0, w: 160, h: 40 };
+  const TEXT = 'Wave rift over quiet stone and amber light';
+
+  /** The bar's track and grabber: `renderOrder` 5 is the node's, and the bar draws above its text. */
+  async function barMeshes(properties: Record<string, unknown>, rect: Rect2) {
+    const renderer = await render({ text: TEXT, ...properties }, rect);
+    const meshes = meshesOf(renderer);
+    return {
+      tracks: meshes.filter((m) => m.renderOrder === 5 + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET),
+      grabbers: meshes.filter((m) => m.renderOrder === 5 + SCROLL_BAR_GRABBER_RENDER_ORDER_OFFSET),
+    };
+  }
+
+  it('draws the track and the grabber when the text is taller than the rect', async () => {
+    const { tracks, grabbers } = await barMeshes({}, TALL_BOX);
+    expect(tracks).toHaveLength(1);
+    expect(grabbers).toHaveLength(1);
+    // The bar's own origin is the rect's right edge less its 8px: x 152.
+    expect(tracks[0]!.getWorldPosition(new THREE.Vector3()).x).toBeCloseTo(152, 6);
+  });
+
+  it('mirrors the bar to the left edge under an RTL layout', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <RichTextLabel
+        {...painterEnv()}
+        solveNode={solveNode('RTL', { text: TEXT }, { rtl: true })}
+        rect={TALL_BOX}
+        renderOrder={5}
+      />
+    );
+    const track = meshesOf(renderer).find((m) => m.renderOrder === 5 + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET);
+    expect(track?.getWorldPosition(new THREE.Vector3()).x).toBeCloseTo(0, 6);
+  });
+
+  it('draws no bar when scroll_active is false', async () => {
+    const { tracks } = await barMeshes({ scrollActive: false }, TALL_BOX);
+    expect(tracks).toHaveLength(0);
+  });
+
+  it('draws no bar when the text fits the rect', async () => {
+    const { tracks } = await barMeshes({}, { x: 0, y: 0, w: 160, h: 80 });
+    expect(tracks).toHaveLength(0);
   });
 });

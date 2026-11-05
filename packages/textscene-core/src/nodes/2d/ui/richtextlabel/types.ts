@@ -38,4 +38,8 @@ export interface RichTextLabelProperties
   justificationFlags: number;
   /** While true, the control's own rect clips its drawing. RichTextLabel's constructor sets it (`rich_text_label.cpp:8225`), unlike Control. */
   clipContents: boolean;
+  /** While true, text taller than the rect shows the vertical scrollbar and wraps beside it (`rich_text_label.h:565`). */
+  scrollActive: boolean;
+  /** While true, text taller than the rect shows its foot: the scroll value follows the text height (`rich_text_label.h:561`). */
+  scrollFollowing: boolean;
 }

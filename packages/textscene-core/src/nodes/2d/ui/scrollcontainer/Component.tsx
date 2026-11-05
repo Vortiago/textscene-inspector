@@ -10,23 +10,20 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { createSolveContext } from '../../../../r3f/controls/native/controlRectSolver';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import {
-  snappedControlOrigin,
-  type ControlDrawTransform,
-} from '../../../../r3f/controls/native/controlPixelSnap';
-import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useOptionalIconTexture } from '../../../../r3f/controls/native/useIconTexture';
 import { SCROLL_HINT_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { applyUvWindow, flippedUvWindow, FULL_UV_WINDOW } from '../../../../r3f/uvWindow';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import {
+  ScrollBarChrome,
+  SCROLL_BAR_GRABBER_RENDER_ORDER_OFFSET,
+  SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET,
+} from '../shared/ScrollBarChrome';
 import {
   scrollContainerScrollBars,
   scrollContainerLayoutChannel,
-  type ScrollBarPlacement,
   type ScrollHintPlacement,
 } from './nativeSolver';
-import type { Rgba } from '../../../../godot/math/math';
 
 /**
  * `scroll_hint_vertical_color` and `scroll_hint_horizontal_color`: `Color(0, 0, 0)`
@@ -89,70 +86,6 @@ function ScrollHintChrome({
   );
 }
 
-/**
- * A ScrollBar's `ControlDrawTransform`. `_update_scrollbar_position` places the
- * bars through `set_anchor_and_offset` alone, so they carry no rotation, scale
- * or pivot.
- */
-const SCROLL_BAR_DRAW_TRANSFORM: ControlDrawTransform = {
-  rotation: 0,
-  scale: { x: 1, y: 1 },
-  pivot: { x: 0, y: 0 },
-};
-
-interface ScrollBarChromeProps {
-  bar: ScrollBarPlacement;
-  track: StyleBoxFlatData;
-  grabber: StyleBoxFlatData;
-  /** Raw sRGB, which `<StyleBoxQuad>` composes into `track` and `grabber`. */
-  color: Rgba;
-  /**
-   * `subtreeChromeRenderOrder`, the last descendant's key. The bars are
-   * `INTERNAL_MODE_BACK` children (`scene/gui/scroll_container.cpp:919,924`) that
-   * paint after every descendant, so they sit at fractions below the next sibling.
-   */
-  chromeRenderOrder: number;
-  /** The walker's `gui/common/snap_controls_to_pixels`, the only value correct inside a SubViewport. */
-  snapToPixels: boolean;
-}
-
-/**
- * One scrollbar's track and grabber. Each bar is its own CanvasItem
- * (`scene/gui/scroll_container.cpp:919,924`), so it snaps through
- * `snappedControlOrigin` apart from the container, while `bar.rect` stays at
- * full precision for the reservation arithmetic.
- */
-function ScrollBarChrome({
-  bar,
-  track,
-  grabber,
-  color,
-  chromeRenderOrder,
-  snapToPixels,
-}: ScrollBarChromeProps) {
-  if (!bar.visible) return null;
-  const origin = snappedControlOrigin(bar.rect, SCROLL_BAR_DRAW_TRANSFORM, snapToPixels);
-  // A group carries the position. `StyleBoxQuad` takes only the size and flips y.
-  // The grabber is no node (`scene/gui/scroll_bar.cpp:326-344`): it draws
-  // unrounded inside the bar's canvas item and inherits the bar's snap.
-  return (
-    <CanvasItemGroup position={[origin.x, -origin.y, 0]} renderOrder={chromeRenderOrder + 0.25}>
-      <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={chromeRenderOrder + 0.25} />
-      <CanvasItemGroup
-        position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}
-        renderOrder={chromeRenderOrder + 0.5}
-      >
-        <StyleBoxQuad
-          styleBox={grabber}
-          color={color}
-          rect={bar.grabberRect}
-          renderOrder={chromeRenderOrder + 0.5}
-        />
-      </CanvasItemGroup>
-    </CanvasItemGroup>
-  );
-}
-
 export function ScrollContainer({
   solveNode,
   tint,
@@ -200,12 +133,14 @@ export function ScrollContainer({
           opacity={tint.opacity}
           chromeRenderOrder={subtreeChromeRenderOrder}
         />
+        {/* `INTERNAL_MODE_BACK` children (`scroll_container.cpp:919,924`): the bars paint after every descendant. */}
         <ScrollBarChrome
           bar={layout.horizontal}
           track={theme.widgets.scrollBar.scrollHorizontal}
           grabber={theme.widgets.scrollBar.grabber}
           color={tint.own}
-          chromeRenderOrder={subtreeChromeRenderOrder}
+          renderOrder={subtreeChromeRenderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET}
+          grabberRenderOrder={subtreeChromeRenderOrder + SCROLL_BAR_GRABBER_RENDER_ORDER_OFFSET}
           snapToPixels={snapToPixels}
         />
         <ScrollBarChrome
@@ -213,7 +148,8 @@ export function ScrollContainer({
           track={theme.widgets.scrollBar.scrollVertical}
           grabber={theme.widgets.scrollBar.grabber}
           color={tint.own}
-          chromeRenderOrder={subtreeChromeRenderOrder}
+          renderOrder={subtreeChromeRenderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET}
+          grabberRenderOrder={subtreeChromeRenderOrder + SCROLL_BAR_GRABBER_RENDER_ORDER_OFFSET}
           snapToPixels={snapToPixels}
         />
         {children}

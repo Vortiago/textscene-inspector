@@ -1,0 +1,49 @@
+; One variable: layout_direction = 3 on a RichTextLabel whose text exceeds its rect. An RTL layout
+; mirrors the anchored scrollbar to the left edge (control.cpp:1785-1787) and starts every line after
+; it (rich_text_label.cpp:990-996). The second row sets text_direction = 3 as well, so the line takes
+; the right-to-left branch. Each label fills a parent of its own size, so the mirror of its rect is the
+; identity. No other scene shows a bar under an RTL layout.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="LayoutFrame" type="ColorRect" parent="."]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 200.0
+offset_bottom = 60.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="LayoutRtl" type="RichTextLabel" parent="LayoutFrame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+text = "Wave rift over quiet stone and amber light"
+layout_direction = 3
+
+[node name="TextFrame" type="ColorRect" parent="."]
+offset_left = 40.0
+offset_top = 100.0
+offset_right = 200.0
+offset_bottom = 140.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="TextRtl" type="RichTextLabel" parent="TextFrame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+text = "Wave rift over quiet stone and amber light"
+text_direction = 3
+layout_direction = 3

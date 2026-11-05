@@ -31,11 +31,17 @@ export const PRIMITIVE_SCENES = [
   { name: 'text-mesh-hinting', file: 'unit-text-mesh-hinting.tscn' },
   // A variable font at its default and at wght 700, drawn through gvar and cvar.
   { name: 'text-mesh-variable-instance', file: 'unit-text-mesh-variable-instance.tscn' },
+  // A proportional variable font at wght 800 and wdth 80, whose HVAR moves each advance.
+  { name: 'text-mesh-variable-advance', file: 'unit-text-mesh-variable-advance.tscn' },
   // The same sizes under a font with no hints, which FreeType's auto-hinter snaps to whole pixels.
   { name: 'text-mesh-autohint', file: 'unit-text-mesh-autohint.tscn' },
   // The same scene with no `font`, which draws Godot's default font, and again in a project whose
   // `gui/theme/custom_font` names a CFF font.
   { name: 'text-mesh-default-font', file: 'unit-text-mesh-default-font.tscn' },
+  { name: 'text-mesh-system-font', file: 'unit-text-mesh-system-font.tscn' },
+  // The same scene, plus a Label3D, on a SystemFont as `gui/theme/custom_font`, which has no face:
+  // each glyph draws a fallback quad, and the Label3D draws nothing.
+  { name: 'text-mesh-custom-font-system-font', file: 'custom-font-system-font/unit-custom-font-system-font-3d.tscn' },
   { name: 'text-mesh-project-default-font', file: 'project-default-font/unit-text-mesh-project-default-font.tscn' },
   // The one variable: a TextMesh's paragraph direction, language and structured override.
   { name: 'text-mesh-text-direction', file: 'unit-text-mesh-text-direction.tscn', camera: 'Root/Camera3D' },

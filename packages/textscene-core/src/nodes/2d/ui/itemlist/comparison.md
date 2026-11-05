@@ -71,10 +71,16 @@ Godot's saver never writes both forms in one file, because the array predates th
 `item_count`/`item_N/*` only. A wrong arity (`arr.size() % 3 != 0`) yields no rows, as
 Godot's `ERR_FAIL_COND_V` does before `clear()` runs.
 
+Each row draws the theme text outline, `font_outline_color` and `outline_size`, as Godot does
+(`item_list.cpp:1642-1644,1672-1674`). A ring of `outline_size / 4` px sits under the fill. No
+ring draws at an `outline_size` of 0 or a zero alpha. A LEFT-mode row that leaves its text no
+room past the icon draws the ring alone (`:1676-1688`). Each row trims at its own draw width
+(`:1632,1661`). A trimmed AUTO line whose paragraph resolves right-to-left trims its ring by that
+direction, with the ellipsis first. Its fill draws the glyphs that trim drops, from the visual
+left, as Godot's set-direction draw does (`text_server.cpp:1740-1935`).
+
 ## Known limitations
 
-- **Not drawn** The item text outline (`outline_size`, `font_outline_color`) that
-  `item_list.cpp:1642-1644` draws under each item's text.
 - **Not drawn** The scroll-hint icon (`scroll_hint_mode`), which needs a live scroll
   position that no static file has.
 - **Not drawn** The `focus` StyleBox and every selected, hovered or cursor row
@@ -94,6 +100,3 @@ Godot's `ERR_FAIL_COND_V` does before `clear()` runs.
 - **Needs runtime** The right-to-left arms of `get_item_at_position`
   (`item_list.cpp:1975,1986`) and `is_pos_at_end_of_items` (`:2021-2023`) answer mouse
   hits under a live cursor, which a static preview does not have.
-- **Approximated** `text_overrun_behavior` trims each row at its minimum-size width
-  (`fixed_column_width`, or unconstrained when unset), so a row narrower at draw time is
-  not re-trimmed.

@@ -1,24 +1,27 @@
 /**
  * The glyph outlines of a scene font as far as they have loaded, which a TextMesh extrudes and the
  * canvas painter draws: the counterpart of the metrics peek in `sceneFontLoader.ts`, and it answers
- * a settled load through the same channel. A WOFF2 decompresses with Brotli and rebuilds its `glyf`, so the answer is
- * never there on the first peek. It never throws.
+ * a settled load through the same channel. A WOFF2 decompresses with Brotli and rebuilds its `glyf`,
+ * so the answer is never there on the first peek. It never throws.
  */
-import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
 import type { FontResource } from '../../../../resources/fonts/font/types';
+import type { FontHinting } from '../../../../godot/text/textServerEnums';
 import * as logger from '../../../../logger';
 import type { FontMetrics } from './fontMetrics';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { bitmapFontOutlines } from './bitmapFontOutlines';
 import {
+  BUNDLED_FACE,
+  NO_FACE,
+  findDrawnFace,
   fontForcesAutohinter,
   fontHinting,
-  resolveBitmapFont,
-  resolveFontFileBytes,
+  hasBitmap,
+  type DrawnFace,
+  type FileWithBytes,
 } from './sceneFontResolution';
 import { createSettledPeek } from './settledChannel';
 import { CONTOUR_LOAD, openFontOutlines, type GlyphLoad, type SfntOutlines } from './sfntOutlines';
-import type { FontHinting } from '../../../../godot/text/textServerEnums';
 
 /** Undefined while the load runs. Null is a font that holds no outlines this reader opens. */
 type PeekedOutlines = SfntOutlines | null | undefined;
@@ -35,6 +38,9 @@ const peekCanvasOutlines = createSettledPeek<object, SfntOutlines | null>();
 const BUNDLED_CONTOURS = {};
 const BUNDLED_CANVAS: Record<FontHinting, object> = { none: {}, light: {}, normal: {} };
 
+/** The outlines of a font with no face: it lacks every glyph, so a TextMesh draws each as its fallback quad. */
+const NO_OUTLINES: SfntOutlines = { glyphIndex: () => 0, glyphContours: () => null };
+
 /** Settles as null for a font this reader cannot open, after a warning. */
 function settledOutlines(read: () => Promise<SfntOutlines | null>): Promise<SfntOutlines | null> {
   return read().catch((error: unknown) => {
@@ -44,9 +50,9 @@ function settledOutlines(read: () => Promise<SfntOutlines | null>): Promise<Sfnt
 }
 
 /**
- * The bundled Open Sans SemiBold, which `font: null` and a `FontVariation` with no `base_font`
- * draw, as `load` loads it. Its bytes load as their own chunk, so a scene with no text drawn from
- * outlines never fetches them.
+ * The bundled Open Sans SemiBold, which every font whose face is `BUNDLED_FACE` draws, as `load`
+ * loads it. Its bytes load as their own chunk, so a scene with no text drawn from outlines never
+ * fetches them.
  */
 function peekBundledOutlines(peek: typeof peekContourOutlines, key: object, load: GlyphLoad): PeekedOutlines {
   return peek(key, () =>
@@ -58,23 +64,21 @@ function peekBundledOutlines(peek: typeof peekContourOutlines, key: object, load
 }
 
 /**
- * The outlines of `font`, starting their load on the first peek. Null `font` and a
- * `FontVariation` with no `base_font` are the bundled font. A `SystemFont`, which has no bytes, and
- * a chain of fonts with none are null: Godot draws them, this previewer cannot. A BMFont has glyphs
- * with no contours (`bitmapFontOutlines.ts`). A TextMesh extrudes these.
+ * The outlines of `font` that a TextMesh extrudes, starting their load on the first peek. A chain of
+ * fonts with no glyphs, and bytes that hold no outlines this reader opens, are null. A BMFont has
+ * glyphs with no contours (`bitmapFontOutlines.ts`).
  *
  * @canonical Glyph outlines of a scene font in any container, from its font resource
  */
 export function peekSceneFontOutlines(font: FontResource | null | undefined): PeekedOutlines {
-  if (!font) return peekBundledOutlines(peekContourOutlines, BUNDLED_CONTOURS, CONTOUR_LOAD);
-  const bitmap = resolveBitmapFont(font);
-  if (bitmap) return bitmapFontOutlines(bitmap);
-  const resolved = resolveFontFileBytes(font);
-  if (!resolved) return endsWithoutBase(font) ? peekSceneFontOutlines(null) : null;
-  const load = { ...CONTOUR_LOAD, isAutohinterForced: fontForcesAutohinter(resolved.leaf) };
-  return peekContourOutlines(resolved.leaf, () =>
-    settledOutlines(() => openFontOutlines(resolved.bytes, load))
-  );
+  const face: DrawnFace = findDrawnFace(font);
+  if (face === BUNDLED_FACE) return peekBundledOutlines(peekContourOutlines, BUNDLED_CONTOURS, CONTOUR_LOAD);
+  if (face === NO_FACE) return NO_OUTLINES;
+  if (face && hasBitmap(face)) return bitmapFontOutlines(face.bitmap);
+  const bytes = face?.bytes;
+  if (!face || !bytes) return null;
+  const load = { ...CONTOUR_LOAD, isAutohinterForced: fontForcesAutohinter(face) };
+  return peekContourOutlines(face, () => settledOutlines(() => openFontOutlines(bytes, load)));
 }
 
 /**
@@ -84,17 +88,10 @@ export function peekSceneFontOutlines(font: FontResource | null | undefined): Pe
  *
  * @canonical Glyph outlines that the text of a canvas face draws from
  */
-export function peekGlyphOutlines(font: FontResource, metrics: FontMetrics): PeekedOutlines {
+export function peekGlyphOutlines(face: FileWithBytes, metrics: FontMetrics): PeekedOutlines {
   if (!isCanvasFontMetrics(metrics)) return null;
-  const resolved = resolveFontFileBytes(font);
-  if (!resolved) return null;
-  const load = {
-    hinting: fontHinting(resolved.leaf),
-    isAutohinterForced: fontForcesAutohinter(resolved.leaf),
-  };
-  return peekCanvasOutlines(resolved.leaf, () =>
-    settledOutlines(() => openFontOutlines(resolved.bytes, load))
-  );
+  const load = { hinting: fontHinting(face), isAutohinterForced: fontForcesAutohinter(face) };
+  return peekCanvasOutlines(face, () => settledOutlines(() => openFontOutlines(face.bytes, load)));
 }
 
 /**

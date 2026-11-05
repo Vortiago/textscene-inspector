@@ -5,6 +5,7 @@
  * ceil(600*16/2048) = 5, line_spacing 3 (default_theme.cpp:392): pitch 26, font height 23.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { LABEL_SETTINGS_FONT_LOADING, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry, type SolveContext } from '../../../../r3f/controls/native/solverRegistry';
@@ -46,7 +47,13 @@ import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFont
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
+  overrunFlagsForBehavior,
+  trimFilledLineToWidth,
+  trimLineToWidth,
+} from '../../../../r3f/controls/native/text/textOverrun';
+import {
   AutowrapMode,
+  OverrunBehavior,
   VisibleCharactersBehavior,
   JustificationFlag,
 } from '../../../../godot/text/textServerEnums';
@@ -667,15 +674,15 @@ describe(`labelMinimumSize — resolves this Label's own theme font key ("font",
   });
 
   it('a theme_override_fonts/font local override is fed to the text engine, even for empty text (fontHeightPx is resolved unconditionally)', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n = { ...node({}), fontOverrides: { font: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n = { ...node({}), fontOverrides: { font: unresolvableFont } };
     labelMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('a local override under a different key is not consulted', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n = { ...node({}), fontOverrides: { normal_font: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n = { ...node({}), fontOverrides: { normal_font: unresolvableFont } };
     labelMinimumSize(n, ctx());
     expect(warnSpy).not.toHaveBeenCalled();
   });
@@ -1226,7 +1233,7 @@ describe('layoutLabelLines — the overrun trim (label.cpp:302-332)', () => {
     });
     const trimTo60 = (line: TextLineLayout): TextLineLayout => ({ ...line, widthPx: 60 });
     const [placement] = layoutLabelLines(layout, 100, 40, 2, undefined, undefined, 16, {
-      trimLine: trimTo60,
+      trim: { line: trimTo60, filledLine: trimTo60 },
     });
     expect(placement!.line.widthPx).toBe(60);
     expect(placement!.x).toBe(40);
@@ -1244,7 +1251,7 @@ describe('layoutLabelLines — the justification-aware trim of FILL with autowra
   const markTrimmed = (line: TextLineLayout): TextLineLayout => ({ ...line, text: `${line.text}…` });
   const fillAt = (boxWidthPx: number) =>
     layoutLabelLines(layout, boxWidthPx, 40, 3, undefined, JustificationFlag.WORD_BOUND, 16, {
-      trimLine: markTrimmed,
+      trim: { line: markTrimmed, filledLine: markTrimmed },
     })[0]!.line;
 
   it('skips the trim of a line whose spaces shrink to fit, as `fit_width_minimum_reached` stays false (text_server_adv.cpp:5947)', () => {
@@ -1253,6 +1260,42 @@ describe('layoutLabelLines — the justification-aware trim of FILL with autowra
 
   it('trims a line that stays wider than the box at the smallest space', () => {
     expect(fillAt(Math.floor(naturalWidthPx / 2)).text).toBe('A long line of text…');
+  });
+});
+
+describe('layoutLabelLines — the trimmed FILL line fitted again with CONSTRAIN_ELLIPSIS (label.cpp:325)', () => {
+  // 'A' 10.578125 and the default ellipsis 13.0625 (truncated to 13 in `ellipsis_width`) at size 16.
+  const layout = shapeText('AAAAAAAA AAAAAAAA', {
+    fontSizePx: 16,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 3,
+  });
+  const BOX_WIDTH_PX = 100;
+  const ELLIPSIS_WIDTH_PX = 13;
+  const trimOptions = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 };
+  const ellipsisFlags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+  const filledLineAt = (justificationFlags: number) =>
+    layoutLabelLines(layout, BOX_WIDTH_PX, 40, 3, undefined, justificationFlags, 16, {
+      trim: {
+        line: (line) => trimLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, trimOptions),
+        filledLine: (line, filledFlags) =>
+          trimFilledLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, {
+            ...trimOptions,
+            justificationFlags: filledFlags,
+          }),
+      },
+    })[0]!.line;
+
+  it('stretches the kept spaces so the ellipsis ends at the box width', () => {
+    const ellipsis = filledLineAt(JustificationFlag.WORD_BOUND).glyphs.at(-1)!;
+    expect(ellipsis.char).toBe('…');
+    expect(ellipsis.x).toBe(BOX_WIDTH_PX - ELLIPSIS_WIDTH_PX);
+  });
+
+  it('leaves the spaces at the smallest width without WORD_BOUND', () => {
+    const ellipsis = filledLineAt(0).glyphs.at(-1)!;
+    expect(ellipsis.x).toBeLessThan(BOX_WIDTH_PX - ELLIPSIS_WIDTH_PX);
   });
 });
 

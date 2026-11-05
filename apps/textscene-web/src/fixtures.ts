@@ -338,6 +338,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Code Edit Empty Gutter",
+    "file": "unit-code-edit-empty-gutter.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Code Edit Guidelines",
     "file": "unit-code-edit-guidelines.tscn",
     "category": "Other"
@@ -1238,6 +1243,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Fill Trim",
+    "file": "unit-label-fill-trim.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Font Variation Bundled Embolden High",
     "file": "unit-label-font-variation-bundled-embolden-high.tscn",
     "category": "Other"
@@ -1310,6 +1320,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Label Structured Text",
     "file": "unit-label-structured-text.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Tab Without Stop",
+    "file": "unit-label-tab-without-stop.tscn",
     "category": "Other"
   },
   {
@@ -2453,6 +2468,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Text Edit Overflow",
+    "file": "unit-text-edit-overflow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Text Edit Placeholder",
+    "file": "unit-text-edit-placeholder.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Text Edit Rtl",
     "file": "unit-text-edit-rtl.tscn",
     "category": "Other"
@@ -2465,6 +2490,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Text Edit",
     "file": "unit-text-edit.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Text Outline Link Foldable Item List",
+    "file": "unit-text-outline-link-foldable-item-list.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Text Outline Set Direction",
+    "file": "unit-text-outline-set-direction.tscn",
     "category": "Other"
   },
   {
@@ -2764,6 +2799,18 @@ export const fixtures: Fixture[] = [
     "root": "alpha-antialiasing"
   },
   {
+    "name": "Custom Font System Font 3d",
+    "file": "custom-font-system-font/unit-custom-font-system-font-3d.tscn",
+    "category": "Other",
+    "root": "custom-font-system-font"
+  },
+  {
+    "name": "Custom Font System Font Label",
+    "file": "custom-font-system-font/unit-custom-font-system-font-label.tscn",
+    "category": "Other",
+    "root": "custom-font-system-font"
+  },
+  {
     "name": "Debanding",
     "file": "debanding/unit-debanding.tscn",
     "category": "Other",
@@ -2816,6 +2863,12 @@ export const fixtures: Fixture[] = [
     "file": "subviewport-snap-off/unit-subviewport-snap-off.tscn",
     "category": "Other",
     "root": "subviewport-snap-off"
+  },
+  {
+    "name": "Theme System Font",
+    "file": "theme-system-font/unit-theme-system-font.tscn",
+    "category": "Other",
+    "root": "theme-system-font"
   },
   {
     "name": "Touch Screen Button",
@@ -3605,6 +3658,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Text Mesh System Font",
+    "file": "unit-text-mesh-system-font.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Text Mesh Text Direction",
     "file": "unit-text-mesh-text-direction.tscn",
     "category": "Unit - Primitive Meshes"
@@ -3612,6 +3670,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Text Mesh Triangulation Failure",
     "file": "unit-text-mesh-triangulation-failure.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh Variable Advance",
+    "file": "unit-text-mesh-variable-advance.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {
@@ -4016,6 +4079,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Rich Text Label Empty Line Vertical Fill",
+    "file": "unit-rich-text-label-empty-line-vertical-fill.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Empty Styling Before Paragraph",
+    "file": "unit-rich-text-label-empty-styling-before-paragraph.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Rich Text Label Fill",
     "file": "unit-rich-text-label-fill.tscn",
     "category": "Unit - 2D UI Controls"
@@ -4026,8 +4099,38 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Rich Text Label Hr",
+    "file": "unit-rich-text-label-hr.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Paragraph Justification",
+    "file": "unit-rich-text-label-paragraph-justification.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Paragraph Tab Stops",
+    "file": "unit-rich-text-label-paragraph-tab-stops.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Rich Text Label Rtl",
     "file": "unit-rich-text-label-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Scrollbar Following",
+    "file": "unit-rich-text-label-scrollbar-following.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Scrollbar Rtl",
+    "file": "unit-rich-text-label-scrollbar-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Scrollbar",
+    "file": "unit-rich-text-label-scrollbar.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

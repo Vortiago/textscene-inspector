@@ -51,6 +51,16 @@ function scrollBarAreaSize(vertical: boolean, barLength: number, theme: NativeTh
   return barLength - trackAlong - grabberMinAlong(vertical, theme);
 }
 
+/** One bar as its owner draws it: where it sits and where its grabber sits inside it. */
+export interface ScrollBarPlacement {
+  /** `ScrollBar::is_visible()`: the owner's own gate, such as `_update_scrollbars` (`scroll_container.cpp:592-593`). */
+  visible: boolean;
+  /** This bar's own rect, relative to its owner's top-left. */
+  rect: Rect2;
+  /** The grabber StyleBox's rect, relative to THIS bar's own top-left (`scroll_bar.cpp`'s `NOTIFICATION_DRAW`). */
+  grabberRect: Rect2;
+}
+
 interface ScrollBarGrabberGeometry {
   /** Along-axis extent: `get_grabber_size()`. */
   size: number;
