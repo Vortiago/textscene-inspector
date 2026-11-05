@@ -118,7 +118,11 @@ function outlinesStub(glyphIndex = 7) {
 function paintRecording(
   layout: ReturnType<typeof layoutFor>,
   strokeWidthPx: number,
-  { skew = 0, outlines = null }: { skew?: number; outlines?: SfntOutlines | null } = {}
+  {
+    skew = 0,
+    outlines = null,
+    quantisesPen,
+  }: { skew?: number; outlines?: SfntOutlines | null; quantisesPen?: boolean } = {}
 ) {
   const calls: Call[] = [];
   let matrix = new DOMMatrix();
@@ -147,14 +151,10 @@ function paintRecording(
   };
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never);
   const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
-  paintSceneFontCanvas(
-    carrying(layout, skew, outlines),
-    16,
-    { r: 1, g: 1, b: 1, a: 1 },
-    skew,
-    canvasLayout,
-    strokeWidthPx
-  );
+  paintSceneFontCanvas(carrying(layout, skew, outlines), 16, { r: 1, g: 1, b: 1, a: 1 }, skew, canvasLayout, {
+    strokeWidthPx,
+    quantisesPen,
+  });
   return { calls, canvasLayout };
 }
 
@@ -183,6 +183,25 @@ describe('embolden padding', () => {
     const layout = layoutFor('AB', 0);
     layout.lines[0]!.glyphs[1]!.emboldenGrowthPx = 2;
     expect(computeCanvasTextCanvasLayout(layout, 0).offsetXPx).toBeCloseTo(2, 10);
+  });
+});
+
+describe('paintSceneFontCanvas — pen', () => {
+  /** A two-glyph line whose second pen sits between quarter pixels, as a justified line can put it. */
+  function fractionalPenLayout() {
+    const layout = layoutFor('AB', 0);
+    layout.lines[0]!.glyphs[1]!.x = 10.6;
+    return layout;
+  }
+
+  it('draws a glyph at the quarter pixel a 16 px canvas item rounds its pen to', () => {
+    const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0);
+    expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 10.5);
+  });
+
+  it('keeps the pen of a Label3D, whose mesh places each glyph where it is', () => {
+    const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, { quantisesPen: false });
+    expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 10.6);
   });
 });
 

@@ -47,6 +47,8 @@ interface ViewportSurfaceNativeProps {
    * `SubViewport` (`control.cpp:3584-3598`), so they inherit from this container.
    */
   rtl: boolean;
+  /** The container's `_get_locale()`, which the viewport's root carries as every Control does. */
+  locale: string;
 }
 
 /**
@@ -67,6 +69,7 @@ function ViewportSurfaceNative({
   internalResources,
   tint,
   rtl,
+  locale,
 }: ViewportSurfaceNativeProps) {
   const { size: authoredSize } = viewport.properties as SubViewportProperties;
 
@@ -121,6 +124,7 @@ function ViewportSurfaceNative({
       // A Viewport is neither a Control nor a Window, so it states no layout direction: the climb
       // passes through it to this container (`control.cpp:3584-3598`).
       rtl,
+      locale,
       styleBoxes: {},
       textureSize: null,
       textureSlots: {},
@@ -138,7 +142,7 @@ function ViewportSurfaceNative({
       // child of this node, so its refs name the same pools.
       resources: { externalResources, internalResources },
     }),
-    [path, viewport, rtl, externalResources, internalResources]
+    [path, viewport, rtl, locale, externalResources, internalResources]
   );
 
   // With `stretch` on, the viewport draws over the container's whole rect (`:142`). With it off, it
@@ -224,6 +228,7 @@ export function SubViewportContainer({
           externalResources={externalResources}
           internalResources={internalResources}
           rtl={solveNode.rtl}
+          locale={solveNode.locale}
         />
       ))}
     </>

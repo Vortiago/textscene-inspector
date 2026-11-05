@@ -73,12 +73,18 @@ Strict parsing format-checks these `Label` properties, plus 53 inherited from Co
 | `valid-label-autowrap-sizing` | `label-autowrap-needs-custom-minimum-size` | warning |
 <!-- lint:end -->
 
-The lenient parser reads `text`, `horizontal_alignment`, `vertical_alignment`,
-`autowrap_mode`, `uppercase`, `text_overrun_behavior`, `clip_text`, `ellipsis_char`,
-`justification_flags`, `tab_stops`, `autowrap_trim_flags`, `paragraph_separator`,
-`lines_skipped`, `max_lines_visible`, `label_settings`, `visible_characters`,
-`visible_ratio` and `visible_characters_behavior`. An out-of-range or unparseable
-alignment becomes `undefined` with no warning. `uppercase` turns on only for a value
+The lenient parser reads these properties:
+
+- `text`, `uppercase`, `label_settings`, `language` and `text_direction`.
+- `horizontal_alignment`, `vertical_alignment`, `justification_flags` and `tab_stops`.
+- `autowrap_mode`, `autowrap_trim_flags`, `paragraph_separator`, `lines_skipped` and
+  `max_lines_visible`.
+- `text_overrun_behavior`, `clip_text` and `ellipsis_char`.
+- `visible_characters`, `visible_ratio` and `visible_characters_behavior`.
+- `structured_text_bidi_override` and `structured_text_bidi_override_options`.
+
+An out-of-range `text_direction` becomes AUTO. An out-of-range or unparseable alignment becomes
+`undefined` with no warning. `uppercase` turns on only for a value
 that reads as `true`. `ellipsis_char` keeps only its first character, and a malformed
 `tab_stops` literal leaves tab stops unset.
 
@@ -91,8 +97,30 @@ Label's construction defaults. It assumes that `text`, whose length is the denom
 is already applied. Every real Godot save guarantees that, since `text` is the first
 `ADD_PROPERTY`, but a hand-edited file that writes `text` after either does not.
 
+## Text direction
+
+Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server runs ICU over it:
+
+- `text_direction` sets the paragraph direction (`label.cpp:178-181`). INHERITED takes the
+  Label's layout direction. AUTO takes the first strong character, else the direction of
+  `language`, else of the project's test locale (`text_server_adv.cpp:534-541,7231-7256`).
+- `language` also sets the rules of `uppercase` (`label.cpp:139,153`).
+- `structured_text_bidi_override` splits each paragraph into ranges (`label.cpp:195`,
+  `text_server.cpp:2140-2290`). Each range runs its own bidirectional pass, and the ranges stay in
+  logical order left to right (`text_server_adv.cpp:7258-7300`). A character outside every range
+  has no glyph, as the first part of a LIST. CUSTOM needs a script, so it gives no range.
+- Each line reorders on its own after the line break (`text_server_adv.cpp:5350-5420`), and a
+  character at an odd level draws its mirrored pair.
+- FILL with autowrap puts the lines of a right-to-left paragraph at the right edge
+  (`label.cpp:472-478`). LEFT, CENTER and RIGHT read the layout direction only.
+- The overrun trim of a right-to-left line keeps its logical start and draws the ellipsis at
+  the visual left (`text_server_adv.cpp:6053-6067`, `label.h:198-241`).
+
 ## Known limitations
 
+- **Not drawn** Arabic letters draw in their isolated forms, since the shaper does not join them.
+- **Approximated** A scene font's glyphs draw with the browser's hinting, not FreeType's light
+  hinting (`font.h:203`, `text_server_adv.cpp:1276-1277`), so a cap can sit 1 px lower here.
 - **Approximated** A wrapping Label inside a ScrollContainer can read one line short when
   the wrap is what makes the scrollbar appear.
 - **Not drawn** `BREAK_TRIM_INDENT` (an `autowrap_trim_flags` bit): a wrapped
@@ -109,8 +137,4 @@ is already applied. Every real Godot save guarantees that, since `text` is the f
   it a newline.
 - **Not drawn** The line-count clamp of `get_layout_data` (label.cpp:533-548), so text
   taller than the rect overflows it here, where Godot drops the lowest lines.
-- **Not drawn** The right-to-left arm of `HORIZONTAL_ALIGNMENT_FILL` (label.cpp:472-478)
-  and the leading-edge ellipsis (label.h:198-241), which only a non-default
-  `text_direction` reaches.
-- **Not drawn** Bidirectional reordering of a mixed-direction paragraph
-  (text_server_adv.cpp:5374): the bundled atlas covers no RTL script.
+- **Not drawn** A right-to-left script in the bundled font, whose atlas has no such glyph.

@@ -1,0 +1,96 @@
+; One variable: the paragraph direction of a Label, through `text_direction` (label.cpp:178-181)
+; and the inferred direction of AUTO (text_server_adv.cpp:7231-7256). Each row reorders by the
+; Unicode bidirectional algorithm and mirrors a paired character at an odd level. No other fixture
+; holds a right-to-left character, so none of them moves.
+
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://fonts/dejavu-sans-bidi-subset.ttf" id="1_font"]
+
+[sub_resource type="Theme" id="Theme_1"]
+default_font = ExtResource("1_font")
+default_font_size = 28
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.1, 0.12, 0.18, 1)
+
+; AUTO infers LTR from `a`: the Latin words stay, the Hebrew run reverses.
+[node name="MixedAuto" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 540.0
+offset_bottom = 64.0
+text = "abc שלום def"
+
+; LTR: `!` stays last and each Hebrew word reverses in place.
+[node name="HebrewLtr" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 84.0
+offset_right = 540.0
+offset_bottom = 128.0
+text = "שלום עולם!"
+text_direction = 1
+
+; RTL: `!` moves to the visual left of the Latin word.
+[node name="LatinRtl" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 148.0
+offset_right = 540.0
+offset_bottom = 192.0
+text = "Hello!"
+text_direction = 2
+
+; AUTO infers RTL from `ש`: the words swap and `!` goes to the visual left.
+[node name="HebrewAuto" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 212.0
+offset_right = 540.0
+offset_bottom = 256.0
+text = "שלום עולם!"
+
+; AUTO infers RTL: both parentheses mirror and the number keeps its LTR order.
+[node name="MirrorAuto" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 276.0
+offset_right = 540.0
+offset_bottom = 320.0
+text = "(שלום) 123"
+
+; RTL with autowrap: each line reorders on its own.
+[node name="WrappedRtl" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 340.0
+offset_right = 280.0
+offset_bottom = 420.0
+text = "שלום עולם abc def"
+text_direction = 2
+autowrap_mode = 3
+
+; INHERITED under an RTL layout direction shapes the paragraph RTL. The rect mirror of an RTL
+; Control (control.cpp:1785) puts the box at x 600-1100.
+[node name="LatinInherited" type="Label" parent="."]
+offset_left = 52.0
+offset_top = 20.0
+offset_right = 552.0
+offset_bottom = 64.0
+layout_direction = 3
+text = "Hello!"
+text_direction = 3
+
+; AUTO under an RTL layout direction still infers LTR from `H`.
+[node name="LatinAutoInRtlLayout" type="Label" parent="."]
+offset_left = 52.0
+offset_top = 84.0
+offset_right = 552.0
+offset_bottom = 128.0
+layout_direction = 3
+text = "Hello!"

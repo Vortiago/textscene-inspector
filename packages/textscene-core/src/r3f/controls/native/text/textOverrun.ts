@@ -1,7 +1,7 @@
 /**
  * Overrun trimming for one broken `TextLineLayout`: a port of
- * `TextServer::shaped_text_overrun_trim_to_width`, left to right only, with one span and one font
- * per line and no per-glyph font fallback search.
+ * `TextServer::shaped_text_overrun_trim_to_width`, with one span and one font per line and no
+ * per-glyph font fallback search. A right-to-left line cuts at its visual left.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -95,6 +95,25 @@ interface OverrunTrimOptions {
   fontSizePx: number;
   /** `Label.ellipsis_char` / `TextParagraph.ellipsis_char`; defaults to `DEFAULT_ELLIPSIS_CHAR`. */
   ellipsisChar?: string;
+  /**
+   * `sd->para_direction == DIRECTION_RTL` (`text_server_adv.cpp:6053`): cut at the visual left, keep
+   * the logical start, and draw the ellipsis first. Label passes its line's inferred direction.
+   * Every other caller keeps the left-to-right trim, which Godot draws for an AUTO `TextParagraph`
+   * (measured in Godot: a Button and an ItemList keep the visual left part).
+   */
+  isRtl?: boolean;
+}
+
+/** Where the trim loop stopped: the cut position and the ellipsis position, -1 for none. */
+interface TrimCut {
+  trimPos: number;
+  ellipsisPos: number;
+}
+
+interface TrimBudget {
+  widthPx: number;
+  flags: OverrunTrimFlags;
+  ellipsisWidthPx: number;
 }
 
 /** Whether the font has a bitmap for `ch`: the baked charset for `'atlas'` metrics, always true for a `'canvas'` font. */
@@ -151,93 +170,154 @@ export function trimLineToWidth(
     ? Math.trunc(dotRepeat * dotAdvancePx + (flags.trimWordOnly ? whitespaceAdvancePx : 0))
     : 0;
 
-  let width = line.widthPx;
-  let trimPos = 0;
-  let ellipsisPos = flags.enforceEllipsis ? 0 : -1;
-  // `last_valid_cut_witout_el`: the last position that fit without the ellipsis budget, for the
-  // min-characters fallback. Its width is not carried, since the final width comes from the kept glyphs.
-  let lastValidCutWithoutEl = -1;
-
-  // :6065-6114
-  if (flags.enforceEllipsis && width + ellipsisWidthPx <= widthPx) {
-    trimPos = -1;
-    ellipsisPos = glyphs.length;
-  } else {
-    for (let i = glyphs.length - 1; i >= 0; i--) {
-      const gp = glyphs[i]!;
-      width -= gp.advance;
-      const aboveMinCharThreshold = i >= ELL_MIN_CHARACTERS;
-      if (!aboveMinCharThreshold && lastValidCutWithoutEl !== -1) {
-        trimPos = lastValidCutWithoutEl;
-        ellipsisPos = -1;
-        break;
-      }
-      const cutAllowedHere = !(flags.trimWordOnly && aboveMinCharThreshold) || isSoftBreakGlyph(gp);
-
-      if (!flags.enforceEllipsis && width <= widthPx && lastValidCutWithoutEl === -1 && cutAllowedHere) {
-        lastValidCutWithoutEl = i;
-      }
-
-      const ellipsisBudget =
-        (aboveMinCharThreshold && flags.addEllipsis) || flags.enforceEllipsis ? ellipsisWidthPx : 0;
-      if (width + ellipsisBudget <= widthPx && cutAllowedHere) {
-        trimPos = i;
-        if (
-          flags.addEllipsis &&
-          (aboveMinCharThreshold || flags.enforceEllipsis) &&
-          width - ellipsisWidthPx <= widthPx
-        ) {
-          ellipsisPos = trimPos;
-        }
-        break;
-      }
-    }
-  }
-
-  // :6118-6120
-  if (trimPos === 0 && flags.enforceEllipsis && flags.addEllipsis) {
-    ellipsisPos = 0;
-  }
+  const budget: TrimBudget = { widthPx, flags, ellipsisWidthPx };
+  const { trimPos, ellipsisPos } = options.isRtl
+    ? findRtlCut(glyphs, line.widthPx, budget)
+    : findLtrCut(glyphs, line.widthPx, budget);
 
   // :6122
   if (!((trimPos >= 0 && line.widthPx > widthPx) || flags.enforceEllipsis)) {
     return line;
   }
 
-  // `trim_pos < 0` draws every glyph uncut (`text_server.cpp:1768-1777`): only `enforceEllipsis` on a
-  // line that fits reaches it, and appends the ellipsis.
-  const kept = trimPos < 0 ? glyphs : glyphs.slice(0, trimPos);
-  let penX = kept.length > 0 ? kept[kept.length - 1]!.x + kept[kept.length - 1]!.advance : 0;
-  const appended: GlyphPlacement[] = [];
-
-  // :6123-6149
+  // :6123-6149: the space a word cut adds, then the dots, in logical order.
+  const ellipsis: Array<Omit<GlyphPlacement, 'x'>> = [];
   if (flags.addEllipsis && (ellipsisPos > 0 || flags.enforceEllipsis)) {
     if (flags.trimWordOnly && ellipsisPos > 0) {
-      appended.push({
-        char: ' ',
-        x: penX,
-        advance: whitespaceAdvancePx,
-        glyph: atlasGlyphFor(fontMetrics, ' '),
-      });
-      penX += whitespaceAdvancePx;
+      ellipsis.push({ char: ' ', advance: whitespaceAdvancePx, glyph: atlasGlyphFor(fontMetrics, ' ') });
     }
     for (let r = 0; r < dotRepeat; r++) {
-      appended.push({
+      ellipsis.push({
         char: dotChar,
-        x: penX,
         advance: dotAdvancePx,
         glyph: atlasGlyphFor(fontMetrics, dotChar),
         emboldenGrowthPx,
       });
-      penX += dotAdvancePx;
     }
   }
 
-  const finalGlyphs = [...kept, ...appended];
+  // `trim_pos < 0` draws every glyph uncut (`text_server.cpp:1768-1777`): only `enforceEllipsis` on a
+  // line that fits reaches it. `draw_text` puts an RTL line's ellipsis first, its glyphs reversed (`label.h:200-210`).
+  const kept = trimPos < 0 ? glyphs : options.isRtl ? glyphs.slice(trimPos) : glyphs.slice(0, trimPos);
+  const finalGlyphs = placeLeftToRight(
+    options.isRtl ? [...ellipsis.reverse(), ...kept] : [...kept, ...ellipsis]
+  );
+  const last = finalGlyphs.at(-1);
   return {
     text: finalGlyphs.map((g) => g.char).join(''),
     glyphs: finalGlyphs,
-    widthPx: penX,
+    widthPx: last ? last.x + last.advance : 0,
     paragraphIndex: line.paragraphIndex,
+    isRtl: line.isRtl,
   };
+}
+
+/** `glyphs` laid out from x 0, each at the end of the one on its left. */
+function placeLeftToRight(glyphs: ReadonlyArray<Omit<GlyphPlacement, 'x'>>): GlyphPlacement[] {
+  let penX = 0;
+  return glyphs.map((glyph) => {
+    const placed = { ...glyph, x: penX };
+    penX += glyph.advance;
+    return placed;
+  });
+}
+
+/** Whether the trim may cut at `glyph`: anywhere, or only at a soft break for a word trim past the minimum. */
+function isCutAllowed(
+  glyph: GlyphPlacement,
+  flags: OverrunTrimFlags,
+  isAboveMinCharThreshold: boolean
+): boolean {
+  return !(flags.trimWordOnly && isAboveMinCharThreshold) || isSoftBreakGlyph(glyph);
+}
+
+/** The ellipsis width the cut must leave room for at a glyph on either side of the minimum. */
+function ellipsisBudgetPx(budget: TrimBudget, isAboveMinCharThreshold: boolean): number {
+  const { flags, ellipsisWidthPx } = budget;
+  return (isAboveMinCharThreshold && flags.addEllipsis) || flags.enforceEllipsis ? ellipsisWidthPx : 0;
+}
+
+/**
+ * `:6065-6120` for a left-to-right line: walks from the visual right, subtracting each glyph before
+ * it tests the cut, so `trimPos` keeps `[0, trimPos)`.
+ */
+function findLtrCut(glyphs: readonly GlyphPlacement[], lineWidthPx: number, budget: TrimBudget): TrimCut {
+  const { widthPx, flags, ellipsisWidthPx } = budget;
+  if (flags.enforceEllipsis && lineWidthPx + ellipsisWidthPx <= widthPx) {
+    return { trimPos: -1, ellipsisPos: glyphs.length };
+  }
+  let width = lineWidthPx;
+  let cut: TrimCut = { trimPos: 0, ellipsisPos: flags.enforceEllipsis ? 0 : -1 };
+  // `last_valid_cut_witout_el`: the last position that fit without the ellipsis budget, for the
+  // min-characters fallback. Its width is not carried, since the final width comes from the kept glyphs.
+  let lastValidCutWithoutEl = -1;
+  for (let i = glyphs.length - 1; i >= 0; i--) {
+    const glyph = glyphs[i]!;
+    width -= glyph.advance;
+    const isAboveMinCharThreshold = i >= ELL_MIN_CHARACTERS;
+    if (!isAboveMinCharThreshold && lastValidCutWithoutEl !== -1) {
+      cut = { trimPos: lastValidCutWithoutEl, ellipsisPos: -1 };
+      break;
+    }
+    const isAllowed = isCutAllowed(glyph, flags, isAboveMinCharThreshold);
+    if (!flags.enforceEllipsis && width <= widthPx && lastValidCutWithoutEl === -1 && isAllowed) {
+      lastValidCutWithoutEl = i;
+    }
+    if (width + ellipsisBudgetPx(budget, isAboveMinCharThreshold) <= widthPx && isAllowed) {
+      cut = { ...cut, trimPos: i };
+      if (
+        flags.addEllipsis &&
+        (isAboveMinCharThreshold || flags.enforceEllipsis) &&
+        width - ellipsisWidthPx <= widthPx
+      ) {
+        cut = { trimPos: i, ellipsisPos: i };
+      }
+      break;
+    }
+  }
+  return withEnforcedEllipsisAtStart(cut, flags);
+}
+
+/**
+ * `:6065-6120` for a right-to-left line: walks from the visual left and tests the cut before it
+ * subtracts the glyph, so `trimPos` keeps `[trimPos, length)`, the logical start.
+ */
+function findRtlCut(glyphs: readonly GlyphPlacement[], lineWidthPx: number, budget: TrimBudget): TrimCut {
+  const { widthPx, flags, ellipsisWidthPx } = budget;
+  if (flags.enforceEllipsis && lineWidthPx + ellipsisWidthPx <= widthPx) {
+    return { trimPos: -1, ellipsisPos: 0 };
+  }
+  let width = lineWidthPx;
+  let cut: TrimCut = { trimPos: glyphs.length, ellipsisPos: flags.enforceEllipsis ? 0 : -1 };
+  let lastValidCutWithoutEl = -1;
+  for (let i = 0; i < glyphs.length; i++) {
+    const glyph = glyphs[i]!;
+    const isAboveMinCharThreshold = glyphs.length - 1 - i >= ELL_MIN_CHARACTERS;
+    if (!isAboveMinCharThreshold && lastValidCutWithoutEl !== -1) {
+      cut = { trimPos: lastValidCutWithoutEl, ellipsisPos: -1 };
+      break;
+    }
+    const isAllowed = isCutAllowed(glyph, flags, isAboveMinCharThreshold);
+    if (!flags.enforceEllipsis && width <= widthPx && lastValidCutWithoutEl === -1 && isAllowed) {
+      lastValidCutWithoutEl = i;
+    }
+    if (width + ellipsisBudgetPx(budget, isAboveMinCharThreshold) <= widthPx && isAllowed) {
+      cut = { ...cut, trimPos: i };
+      if (
+        flags.addEllipsis &&
+        (isAboveMinCharThreshold || flags.enforceEllipsis) &&
+        width - ellipsisWidthPx <= widthPx
+      ) {
+        cut = { trimPos: i, ellipsisPos: i };
+      }
+      break;
+    }
+    width -= glyph.advance;
+  }
+  return withEnforcedEllipsisAtStart(cut, flags);
+}
+
+/** `:6118-6120`: an enforced ellipsis on a line cut to nothing still draws. */
+function withEnforcedEllipsisAtStart(cut: TrimCut, flags: OverrunTrimFlags): TrimCut {
+  return cut.trimPos === 0 && flags.enforceEllipsis && flags.addEllipsis ? { ...cut, ellipsisPos: 0 } : cut;
 }

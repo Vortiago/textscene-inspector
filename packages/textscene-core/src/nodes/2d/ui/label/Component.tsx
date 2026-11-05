@@ -20,6 +20,7 @@ import { TextRun, type TextRunProps } from '../../../../r3f/controls/native/text
 import {
   LABEL_PARAGRAPH_SEPARATOR,
   applyVisibleCharsReveal,
+  labelBidiOptions,
   labelEffectiveTextTheme,
   labelFontState,
   labelPreShapeText,
@@ -124,6 +125,19 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   // WeakMap cache that a later async load fills in place, so each render must look.
   // The `useMemo` dependency on `fontMetrics` limits re-shaping to an identity change.
   const { metrics: fontMetrics, isLoading: isFontLoading } = labelFontState(solveNode);
+  const bidiOptions = useMemo(
+    () => labelBidiOptions(props, solveNode),
+    // `props` is the parsed node's own object: these four fields are its identity for the bidi pass.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      props.textDirection,
+      props.language,
+      props.structuredTextBidiOverride,
+      props.structuredTextBidiOverrideOptions,
+      solveNode.rtl,
+      solveNode.locale,
+    ]
+  );
   const layout = useMemo(() => {
     if (sharedLayout) return sharedLayout;
     const shaped = shapeText(text, {
@@ -136,6 +150,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
       tabStopsPx: props.tabStopsPx,
       autowrapTrimFlags: props.autowrapTrimFlags,
+      ...bidiOptions,
     });
     const range = labelVisibleLineRange(shaped.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible);
     return windowLabelLines(shaped, range, textTheme.paragraphSpacingPx);
@@ -152,6 +167,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     props.paragraphSeparator,
     props.tabStopsPx,
     props.autowrapTrimFlags,
+    bidiOptions,
     props.linesSkipped,
     props.maxLinesVisible,
   ]);
@@ -177,6 +193,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
         textTheme.fontSizePx,
         {
           rtl: solveNode.rtl,
+          isAutowrapped: autowrapMode !== AutowrapMode.AUTOWRAP_OFF,
           lineSpacingPx: textTheme.lineSpacingPx,
           paragraphSpacingPx: textTheme.paragraphSpacingPx,
         }
@@ -192,6 +209,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       textTheme.lineSpacingPx,
       textTheme.paragraphSpacingPx,
       solveNode.rtl,
+      autowrapMode,
     ]
   );
 
@@ -212,6 +230,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
         fontMetrics,
         fontSizePx: textTheme.fontSizePx,
         ellipsisChar: props.ellipsisChar,
+        isRtl: placement.line.isRtl,
       }),
     }));
   }, [placements, autowrapMode, overrunFlags, rect.w, fontMetrics, textTheme.fontSizePx, props.ellipsisChar]);

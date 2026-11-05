@@ -435,7 +435,7 @@ export function projectLayoutDirectionEnv(settings: ProjectSettings | null): Lay
           ? systemLocaleRtl
           : applicationLocaleRtl;
 
-  return { forceRtl, rootRtl, applicationLocaleRtl, systemLocaleRtl };
+  return { forceRtl, rootRtl, applicationLocaleRtl, systemLocaleRtl, applicationLocale: testLocale };
 }
 
 /** The prefix of an `[autoload]` entry's full setting name. */

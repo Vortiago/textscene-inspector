@@ -182,6 +182,8 @@ export function getFontOutlineScale(unitsPerEm: number, fontSizePx: number): num
 
 /** `servers/text/text_server.h:172`: the largest font size `SUBPIXEL_POSITIONING_AUTO` still positions subpixel-precisely. */
 const SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE = 20;
+/** `servers/text/text_server.h:173`: the largest font size `SUBPIXEL_POSITIONING_AUTO` positions to a quarter pixel. */
+const SUBPIXEL_POSITIONING_ONE_QUARTER_MAX_SIZE = 16;
 
 /**
  * Godot's `subpos` (`text_server_adv.cpp:6936`) under the default
@@ -194,6 +196,24 @@ const SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE = 20;
 // `int64_t` API cannot express, takes the subpixel branch.
 export function fontUsesSubpixelPositioning(fontSizePx: number): boolean {
   return !Number.isInteger(fontSizePx) || fontSizePx <= SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE;
+}
+
+/**
+ * Where a canvas item draws a glyph whose pen is at `xPx`: `_font_draw_glyph` floors the pen
+ * after a quarter or half step and draws the glyph raster for that step
+ * (`text_server_adv.cpp:4024-4029,4074-4084`), so the ink starts on a 1/4, 1/2 or whole pixel.
+ * A fractional size has `scale != 1.0`, so its pen stays.
+ */
+export function canvasGlyphPenXPx(xPx: number, fontSizePx: number): number {
+  if (!Number.isInteger(fontSizePx)) return xPx;
+  const stepsPerPx =
+    fontSizePx <= SUBPIXEL_POSITIONING_ONE_QUARTER_MAX_SIZE
+      ? 4
+      : fontSizePx <= SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE
+        ? 2
+        : 1;
+  const halfStepPx = stepsPerPx === 1 ? 0 : 0.5 / stepsPerPx;
+  return Math.floor(stepsPerPx * (xPx + halfStepPx)) / stepsPerPx;
 }
 
 /**

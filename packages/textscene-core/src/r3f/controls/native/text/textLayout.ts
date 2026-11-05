@@ -26,7 +26,9 @@ import {
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { tabAlignAdvances } from './textTabStops';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { localeLanguage } from '../../../../godot/text/textServer';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
+import { resolveParagraphBidi, type BidiOverrideRange, type ParagraphBidi } from './bidi';
 
 /**
  * Narrows a parsed `autowrap_mode` to the enum, else returns `fallback`, as leniently as
@@ -60,8 +62,23 @@ export interface ShapeTextOptions {
    */
   trimIndent?: boolean;
   autowrapMode: EnumValue<typeof AutowrapMode>;
-  /** `Label.uppercase`: shapes `text.toUpperCase()`, not the source casing. */
+  /** `Label.uppercase`: shapes the text upper-cased by the rules of `language` (`label.cpp:153`). */
   uppercase?: boolean;
+  /**
+   * The paragraph direction, a `TextDirection`. AUTO by default, Godot's default for every Control,
+   * Label3D and TextMesh: each paragraph takes its first strong character, else `language`.
+   */
+  direction?: number;
+  /**
+   * The override ranges of one paragraph's text, its terminator included, as Label passes
+   * `structured_text_parser(...)` per paragraph (`label.cpp:195`). Each range runs the bidi algorithm on its own.
+   */
+  bidiOverride?: (paragraph: string) => readonly BidiOverrideRange[];
+  /**
+   * The language of the text, else the locale, as Label passes `language` or `_get_locale()`
+   * (`label.cpp:139`): it upper-cases and sets the direction of a text with no strong character.
+   */
+  language?: string;
   /**
    * The theme `line_spacing`, px. Required, because it is a per-control constant: Label 3
    * (`labelEffectiveTextTheme`), Button-family and LineEdit 0, RichTextLabel `line_separation` 0
@@ -146,7 +163,7 @@ export interface GlyphPlacement {
 }
 
 export interface TextLineLayout {
-  /** The rendered text of this line, edge-space-trimmed per Label's default. */
+  /** The source text of this line in logical order, edge-space-trimmed per Label's default. `glyphs` hold the visual order. */
   text: string;
   glyphs: GlyphPlacement[];
   /**
@@ -159,6 +176,11 @@ export interface TextLineLayout {
    * breaks inside a paragraph shares its index, so Label adds `paragraph_spacing` where it changes.
    */
   paragraphIndex: number;
+  /**
+   * Whether this line's paragraph resolved right-to-left: `shaped_text_get_inferred_direction() ==
+   * DIRECTION_RTL`. `shapeText` sets it. A painter's line rebuilt from part of one leaves it out.
+   */
+  isRtl?: boolean;
 }
 
 /** Whether `lines[index]` is the first shown line of its paragraph, where `paragraphIndex` changes. */
@@ -307,11 +329,39 @@ interface BreakGlyph {
 interface RunStyle {
   sizes: readonly number[];
   faces: readonly FontMetrics[];
+  /** The bidi embedding level of each character: each level run is its own HarfBuzz run (`text_server_adv.cpp:7293-7330`). */
+  levels: Uint8Array;
+  /** The bidi override range of each character, -1 for none: each range runs its own bidi pass and runs (`:7266`). */
+  rangeIds: Int32Array;
 }
 
-/** Whether character `i` starts a run: its size or face differs from the character before it. */
+/** Whether character `i` starts a run: its size, face, bidi level or override range differs from the character before it. */
 function startsNewRun(style: RunStyle, i: number): boolean {
-  return i > 0 && (style.sizes[i] !== style.sizes[i - 1] || style.faces[i] !== style.faces[i - 1]);
+  return (
+    i > 0 &&
+    (style.sizes[i] !== style.sizes[i - 1] ||
+      style.faces[i] !== style.faces[i - 1] ||
+      style.levels[i] !== style.levels[i - 1] ||
+      style.rangeIds[i] !== style.rangeIds[i - 1])
+  );
+}
+
+/** Whether character `i` is in a right-to-left run, whose glyphs HarfBuzz returns in reverse logical order. */
+function isRtlRun(style: RunStyle, i: number): boolean {
+  return style.levels[i]! % 2 === 1;
+}
+
+/** The `[start, end)` of each run of `length` characters, in logical order. */
+function runRanges(style: RunStyle, length: number): Array<[number, number]> {
+  const ranges: Array<[number, number]> = [];
+  let start = 0;
+  for (let i = 1; i <= length; i++) {
+    if (i === length || startsNewRun(style, i)) {
+      ranges.push([start, i]);
+      start = i;
+    }
+  }
+  return ranges;
 }
 
 /**
@@ -346,15 +396,33 @@ function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: 
   return getFontKerningAdjustmentPx(metrics, a, b, fontSizePx);
 }
 
+/** A character outside every bidi override range: Godot shapes no glyph for it, so it has no width and no break. */
+function unshapedGlyph(index: number): BreakGlyph {
+  return {
+    start: index,
+    end: index + 1,
+    advance: 0,
+    isSpace: false,
+    isHardBreak: false,
+    isTab: false,
+    emboldenGrowthPx: 0,
+  };
+}
+
 /**
  * One glyph per character, plus the zero-advance whitespace terminator Label appends
- * (`label.cpp:164`). `style` sets the size and face of each character.
+ * (`label.cpp:164`). `chars` are the characters the glyphs draw, mirrored where the level is odd,
+ * and `style` sets the size, face and level of each.
  */
-function toBreakGlyphs(text: string, style: RunStyle, preserveControl = false): BreakGlyph[] {
+function toBreakGlyphs(chars: readonly string[], style: RunStyle, preserveControl = false): BreakGlyph[] {
   const { sizes, faces } = style;
   const glyphs: BreakGlyph[] = [];
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i]!;
+  for (let i = 0; i < chars.length; i++) {
+    if (style.rangeIds[i]! < 0) {
+      glyphs.push(unshapedGlyph(i));
+      continue;
+    }
+    const ch = chars[i]!;
     const cp = ch.codePointAt(0)!;
     const hardBreak = isLinebreak(cp);
     // Tab and the linebreaks take their own branches, so this is only the "no font has a glyph"
@@ -394,17 +462,19 @@ function toBreakGlyphs(text: string, style: RunStyle, preserveControl = false): 
       emboldenGrowthPx,
     });
   }
-  // Kerning folds into the leading advance, skipped across a size boundary, before the whole-pixel
-  // round: a GPOS pair is already inside HarfBuzz's `x_advance` when `text_server_adv.cpp:7077`
-  // reads it. Where HarfBuzz quantises the pair is not pinned, as the vendored font has no kerning.
-  for (let i = 0; i + 1 < text.length; i++) {
-    if (startsNewRun(style, i + 1)) continue;
-    glyphs[i]!.advance += kerningAdjustmentPx(text[i]!, text[i + 1]!, sizes[i]!, faces[i]!);
+  // Kerning folds into the visually left advance, skipped across a run boundary, before the
+  // whole-pixel round: a GPOS pair is already inside HarfBuzz's `x_advance` when
+  // `text_server_adv.cpp:7077` reads it. The pair stays logical, as the font defines it. Where
+  // HarfBuzz quantises the pair is not pinned, as the vendored font has no kerning.
+  for (let i = 0; i + 1 < chars.length; i++) {
+    if (startsNewRun(style, i + 1) || style.rangeIds[i]! < 0) continue;
+    const visualLeft = isRtlRun(style, i) ? i + 1 : i;
+    glyphs[visualLeft]!.advance += kerningAdjustmentPx(chars[i]!, chars[i + 1]!, sizes[i]!, faces[i]!);
   }
-  roundAdvancesToWholePixels(glyphs, text, style);
+  roundAdvancesToWholePixels(glyphs, chars, style);
   glyphs.push({
-    start: text.length,
-    end: text.length + 1,
+    start: chars.length,
+    end: chars.length + 1,
     advance: 0,
     isSpace: true,
     isHardBreak: false,
@@ -417,22 +487,26 @@ function toBreakGlyphs(text: string, style: RunStyle, preserveControl = false): 
 /**
  * Above the subpixel threshold Godot rounds each advance to a whole pixel and carries the remainder
  * (`text_server_adv.cpp:7079-7084`; `keep_rounding_remainders` defaults to true,
- * `text_server_adv.h:344,618`), so each prefix sum stays within half a pixel. Mutates `glyphs`.
+ * `text_server_adv.h:344,618`), so each prefix sum stays within half a pixel. It walks a run in
+ * HarfBuzz's glyph order, which is reverse logical order for a right-to-left run. Mutates `glyphs`.
  */
-function roundAdvancesToWholePixels(glyphs: BreakGlyph[], text: string, style: RunStyle): void {
-  let advanceRemainder = 0;
-  for (let i = 0; i < text.length; i++) {
-    const sizePx = style.sizes[i]!;
-    // `adv_rem` is local to `_shape_run` (`:7011`), so a new run starts it at zero.
-    if (startsNewRun(style, i)) advanceRemainder = 0;
-    if (fontUsesSubpixelPositioning(sizePx)) continue;
-    const cp = text[i]!.codePointAt(0)!;
-    // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
-    if (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp)) advanceRemainder = 0;
-    const fullAdvance = advanceRemainder + glyphs[i]!.advance;
-    const rounded = godotRound(fullAdvance);
-    glyphs[i]!.advance = rounded;
-    advanceRemainder = fullAdvance - rounded;
+function roundAdvancesToWholePixels(glyphs: BreakGlyph[], chars: readonly string[], style: RunStyle): void {
+  for (const [start, end] of runRanges(style, chars.length)) {
+    // `adv_rem` is local to `_shape_run` (`:7011`), so each run starts it at zero.
+    let advanceRemainder = 0;
+    const order = Array.from({ length: end - start }, (_v, k) =>
+      isRtlRun(style, start) ? end - 1 - k : start + k
+    );
+    for (const i of order) {
+      if (fontUsesSubpixelPositioning(style.sizes[i]!)) continue;
+      const cp = chars[i]!.codePointAt(0)!;
+      // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
+      if (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp)) advanceRemainder = 0;
+      const fullAdvance = advanceRemainder + glyphs[i]!.advance;
+      const rounded = godotRound(fullAdvance);
+      glyphs[i]!.advance = rounded;
+      advanceRemainder = fullAdvance - rounded;
+    }
   }
 }
 
@@ -610,6 +684,39 @@ function splitParagraphs(
   return out;
 }
 
+/**
+ * `TS->string_to_upper(text, lang)` (`label.cpp:153`): ICU's casing for the language subtag of a
+ * Godot locale (`tr_TR` casts as `tr`). An empty or unknown language takes the root rules.
+ */
+function toUpperCase(text: string, language: string): string {
+  const subtag = localeLanguage(language);
+  if (subtag === '') return text.toUpperCase();
+  try {
+    return text.toLocaleUpperCase(subtag);
+  } catch {
+    // A subtag that is no BCP 47 language: ICU falls back to the root locale for it.
+    return text.toUpperCase();
+  }
+}
+
+/** The glyphs of `[start, end)` placed at their pen x in visual order, `advanceAt` giving each character's advance. */
+function placeLineGlyphs(
+  start: number,
+  end: number,
+  bidi: ParagraphBidi,
+  advanceAt: (index: number) => number,
+  glyphAt: (index: number, x: number, advance: number) => GlyphPlacement
+): { glyphs: GlyphPlacement[]; widthPx: number } {
+  let penX = 0;
+  const glyphs = bidi.visualOrder(start, end).map((index) => {
+    const advance = advanceAt(index);
+    const glyph = glyphAt(index, penX, advance);
+    penX += advance;
+    return glyph;
+  });
+  return { glyphs, widthPx: penX };
+}
+
 /** Shapes `text` into lines and per-glyph placements at `options.fontSizePx`, against `options.fontMetrics` (default `OPEN_SANS_FONT_METRICS`). */
 export function shapeText(text: string, options: ShapeTextOptions): TextLayoutResult {
   const {
@@ -617,6 +724,9 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     boxWidthPx,
     autowrapMode,
     uppercase = false,
+    direction,
+    bidiOverride,
+    language = '',
     lineSpacingPx,
     fontSizePxAt,
     fontMetricsAt,
@@ -630,7 +740,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
   } = options;
   const hasTabStops = !!tabStopsPx && tabStopsPx.length > 0;
   // Uppercase before indices are assigned, so a `fontSizePxAt` keyed on the transformed text lines up.
-  const transformed = uppercase ? text.toUpperCase() : text;
+  const transformed = uppercase ? toUpperCase(text, language) : text;
   const flags = breakFlagsForAutowrap(autowrapMode);
   const trim = {
     start: autowrapTrimFlags === undefined ? true : (autowrapTrimFlags & BREAK_TRIM_START_EDGE_SPACES) !== 0,
@@ -653,6 +763,8 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     // into the whole text, are offset back, and the index past the paragraph's end takes the last value.
     const sourceIndex = (i: number): number => para.offset + Math.max(0, Math.min(i, para.text.length - 1));
     const paraText = para.terminated ? para.text + PARAGRAPH_TERMINATOR : para.text;
+    const bidi = resolveParagraphBidi(paraText, { direction, overrides: bidiOverride?.(paraText), language });
+    const chars = Array.from({ length: paraText.length }, (_v, i) => bidi.glyphChar(i));
     const runStyle: RunStyle = {
       sizes: Array.from({ length: paraText.length }, (_v, i) =>
         fontSizePxAt ? fontSizePxAt(sourceIndex(i)) : fontSizePx
@@ -660,8 +772,10 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       faces: Array.from({ length: paraText.length }, (_v, i) =>
         fontMetricsAt ? fontMetricsAt(sourceIndex(i)) : fontMetrics
       ),
+      levels: bidi.levels,
+      rangeIds: bidi.rangeIds,
     };
-    const breakGlyphs = toBreakGlyphs(paraText, runStyle, preserveControl);
+    const breakGlyphs = toBreakGlyphs(chars, runStyle, preserveControl);
     // First tab pass: the aligned advance must be in place before line breaking measures it.
     if (hasTabStops) {
       const paragraphEntries = Array.from(paraText, (char, i) => ({
@@ -689,26 +803,31 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
             tabStopsPx!
           )
         : null;
-      let penX = 0;
-      const glyphs: GlyphPlacement[] = [];
-      for (let idx = start; idx < clampedEnd; idx++) {
-        const ch = paraText[idx]!;
-        const advance = lineAdvances ? lineAdvances[idx - start]! : breakGlyphs[idx]!.advance;
-        glyphs.push({
-          char: ch,
-          x: penX,
+      const { glyphs, widthPx } = placeLineGlyphs(
+        start,
+        clampedEnd,
+        bidi,
+        (idx) => (lineAdvances ? lineAdvances[idx - start]! : breakGlyphs[idx]!.advance),
+        (idx, x, advance) => ({
+          char: chars[idx]!,
+          x,
           advance,
           // Atlas bitmaps exist only for the font `openSansAtlas.ts` bakes.
-          glyph: runStyle.faces[idx]!.kind === 'atlas' ? (OPEN_SANS_ATLAS_GLYPHS[ch] ?? null) : null,
+          glyph: runStyle.faces[idx]!.kind === 'atlas' ? (OPEN_SANS_ATLAS_GLYPHS[chars[idx]!] ?? null) : null,
           controlCodepoint: breakGlyphs[idx]!.controlCodepoint,
           emboldenGrowthPx: breakGlyphs[idx]!.emboldenGrowthPx || undefined,
           sourceIndex: para.offset + idx,
           fontSizePx: runStyle.sizes[idx]!,
           fontMetrics: runStyle.faces[idx]!,
-        });
-        penX += advance;
-      }
-      lines.push({ text: paraText.slice(start, clampedEnd), glyphs, widthPx: penX, paragraphIndex });
+        })
+      );
+      lines.push({
+        text: paraText.slice(start, clampedEnd),
+        glyphs,
+        widthPx,
+        paragraphIndex,
+        isRtl: bidi.isRtl,
+      });
     }
   }
 

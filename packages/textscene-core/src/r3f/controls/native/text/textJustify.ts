@@ -1,7 +1,8 @@
 /**
  * Line justification, a port of `TextServer::shaped_text_fit_to_width`
- * (`modules/text_server_adv/text_server_adv.cpp:5531-5686`) scoped to what a Latin font with no
- * kashida elongation glyphs and no BiDi reaches. It ports `WORD_BOUND`, `TRIM_EDGE_SPACES` and
+ * (`modules/text_server_adv/text_server_adv.cpp:5531-5686`) scoped to what a font with no kashida
+ * elongation glyphs reaches. It walks a line's glyphs in visual order, as `sd->glyphs` holds them
+ * after `_shape_substr` (`:5350-5420`). It ports `WORD_BOUND`, `TRIM_EDGE_SPACES` and
  * `AFTER_LAST_TAB`. Without `TRIM_EDGE_SPACES` it skips the break spaces at the ends of a line, as
  * `shaped_text_fit_to_width` does. The other flags do nothing here:
  * - `KASHIDA` fires only on elongation glyphs (Arabic tatweel runs), which the Latin shaper never tags.

@@ -53,6 +53,7 @@ export function solveNode(): Pick<
   | 'paintSequence'
   | 'skippedAncestors'
   | 'rtl'
+  | 'locale'
 > {
   return {
     children: [],
@@ -80,6 +81,8 @@ export function solveNode(): Pick<
     skippedAncestors: null,
     // `LAYOUT_DIRECTION_INHERITED` all the way to a left-to-right root.
     rtl: false,
+    // No `internationalization/locale/test`.
+    locale: '',
   };
 }
 

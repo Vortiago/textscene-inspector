@@ -23,6 +23,7 @@ import {
   shapeText,
   shapedTextSizeWidthPx,
   startsParagraph,
+  type ShapeTextOptions,
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
@@ -33,6 +34,7 @@ import {
   type ResolvedTextTheme,
   type TextThemeDefaults,
   type TextThemeKeys,
+  type TextThemeProps,
 } from '../../../../r3f/controls/native/textTheme';
 import type { LabelProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -40,9 +42,11 @@ import type { Rgba } from '../../../../godot/math/math';
 import {
   AutowrapMode,
   OverrunBehavior,
+  TextDirection,
   VisibleCharactersBehavior,
   DEFAULT_JUSTIFICATION_FLAGS,
 } from '../../../../godot/text/textServerEnums';
+import { parseStructuredText } from '../../../../godot/text/structuredText';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
@@ -81,7 +85,7 @@ const LABEL_DEFAULT_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 /** This Label's theme font size and colour: its overrides, else the ancestor Theme chain, else the theme default, else Label's white (`resolveTextTheme`). */
 export function labelTextTheme(
   n: ShareNode,
-  props: LabelProperties,
+  props: TextThemeProps,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: LABEL_DEFAULT_FONT_COLOR };
@@ -199,6 +203,31 @@ export function labelShapingWidthPx(controlWidthPx: number): number {
   return Math.trunc(controlWidthPx);
 }
 
+/** The `shapeText` options that set each paragraph's bidi pass and casing. */
+type LabelBidiOptions = Pick<ShapeTextOptions, 'direction' | 'language' | 'bidiOverride'>;
+
+/**
+ * Each paragraph's direction, language and override ranges as `Label::_shape` hands them to the text
+ * server (`label.cpp:139,178-181,195`). INHERITED takes the layout direction. An empty `language` takes
+ * the locale. The solver's shapes and the painter's read this, so they shape the same lines.
+ */
+export function labelBidiOptions(
+  props: Pick<
+    LabelProperties,
+    'textDirection' | 'language' | 'structuredTextBidiOverride' | 'structuredTextBidiOverrideOptions'
+  >,
+  n: Pick<ShareNode, 'rtl' | 'locale'>
+): LabelBidiOptions {
+  const { textDirection, structuredTextBidiOverride, structuredTextBidiOverrideOptions } = props;
+  const inheritedDirection = n.rtl ? TextDirection.TEXT_DIRECTION_RTL : TextDirection.TEXT_DIRECTION_LTR;
+  return {
+    direction: textDirection === TextDirection.TEXT_DIRECTION_INHERITED ? inheritedDirection : textDirection,
+    language: props.language || n.locale,
+    bidiOverride: (paragraph) =>
+      parseStructuredText(structuredTextBidiOverride, structuredTextBidiOverrideOptions, paragraph),
+  };
+}
+
 // lines_skipped and max_lines_visible: label.cpp:344-361,520-561
 
 interface LabelLineRange {
@@ -281,31 +310,44 @@ interface VisibleCharsBudget {
 
 /**
  * `draw_text`'s per-glyph `skip` (`label.cpp:778-780,label.h:197-240`) over lines already shaped
- * and windowed to `label.cpp`'s `start`/`end` (`:548-559`). CHARS_AFTER_SHAPING counts characters and GLYPHS_LTR glyphs from the front,
- * GLYPHS_RTL from the back (`label.cpp:780`), and GLYPHS_AUTO picks by `rtl_layout` (`:779-780`). One
- * glyph is one character here (no ligatures), except across a trimmed edge space (`comparison.md`).
+ * and windowed to `label.cpp`'s `start`/`end` (`:548-559`). CHARS_AFTER_SHAPING hides each glyph whose
+ * source character is at or past the budget (`p_glyphs[j].end + p_para_start > p_visible_chars`). The
+ * GLYPHS behaviours count glyphs in visual order: GLYPHS_LTR from the front, GLYPHS_RTL from the back
+ * (`label.cpp:780`), and GLYPHS_AUTO picks by `rtl_layout` (`:779-780`).
  */
 export function applyVisibleCharsReveal(
   lines: readonly TextLineLayout[],
   budget: VisibleCharsBudget
 ): TextLineLayout[] {
   if (budget.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return [...lines];
-
-  let limit: number;
-  let fromEnd = false;
   if (budget.behavior === VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING) {
-    if (budget.visibleChars === undefined || budget.visibleChars < 0) return [...lines];
-    limit = budget.visibleChars;
-  } else {
-    if (budget.visibleRatio === undefined || budget.visibleRatio >= 1) return [...lines];
-    const totalGlyphs = lines.reduce((sum, l) => sum + l.glyphs.length, 0);
-    limit = Math.trunc(totalGlyphs * Math.max(0, budget.visibleRatio));
-    fromEnd =
-      budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_RTL ||
-      (budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_AUTO && budget.rtl === true);
+    return revealCharacters(lines, budget.visibleChars);
   }
+  return revealGlyphs(lines, budget);
+}
 
+/** CHARS_AFTER_SHAPING. An ellipsis glyph has no source character, so it stays. */
+function revealCharacters(
+  lines: readonly TextLineLayout[],
+  visibleChars: number | undefined
+): TextLineLayout[] {
+  if (visibleChars === undefined || visibleChars < 0) return [...lines];
+  return lines.map((line) => ({
+    ...line,
+    glyphs: line.glyphs.filter(
+      (glyph) => glyph.sourceIndex === undefined || glyph.sourceIndex < visibleChars
+    ),
+  }));
+}
+
+/** The GLYPHS behaviours: `visible_ratio * total_glyphs` glyphs, counted in visual order across lines. */
+function revealGlyphs(lines: readonly TextLineLayout[], budget: VisibleCharsBudget): TextLineLayout[] {
+  if (budget.visibleRatio === undefined || budget.visibleRatio >= 1) return [...lines];
   const totalGlyphs = lines.reduce((sum, l) => sum + l.glyphs.length, 0);
+  const limit = Math.trunc(totalGlyphs * Math.max(0, budget.visibleRatio));
+  const fromEnd =
+    budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_RTL ||
+    (budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_AUTO && budget.rtl === true);
   const hideBefore = fromEnd ? totalGlyphs - limit : 0;
   let seen = 0;
   return lines.map((line) => ({
@@ -343,6 +385,7 @@ export const labelUnwrappedShape = defineShare<TextLayoutResult | null>((n, them
     paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
     tabStopsPx: props.tabStopsPx,
     autowrapTrimFlags: props.autowrapTrimFlags,
+    ...labelBidiOptions(props, n),
   });
   return windowLabelLines(
     layout,
@@ -410,6 +453,7 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
       paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
       tabStopsPx: props.tabStopsPx,
       autowrapTrimFlags: props.autowrapTrimFlags,
+      ...labelBidiOptions(props, n),
     });
     // Not modelled: `min_size.height = 1` and the `max_lines_visible` clamp (`:985-987`), which
     // need `clip` or an `overrun_behavior` other than `OVERRUN_NO_TRIMMING`.
@@ -464,11 +508,13 @@ function horizontalOffsetPx(
   lineWidthPx: number,
   boxWidthPx: number,
   alignment: number | undefined,
-  rtl: boolean
+  direction: LineDirection
 ): number {
+  const { rtl, isRtlParagraph, isAutowrapped } = direction;
   // `rtl_layout` swaps the two arms outright (`:481-497`): LEFT takes the
   // trailing-edge expression and RIGHT takes `style->get_offset().x`, which is
-  // zero for the StyleBoxEmpty above. CENTER carries no arm.
+  // zero for the StyleBoxEmpty above. CENTER carries no arm. FILL's own arm reads
+  // the inferred paragraph direction instead (`:472-478`).
   const trailingEdge = Math.trunc(boxWidthPx - lineWidthPx);
   switch (alignment ?? H_LEFT) {
     case H_CENTER:
@@ -479,21 +525,27 @@ function horizontalOffsetPx(
     case H_LEFT:
       return rtl ? trailingEdge : 0;
     case H_FILL:
+      return isRtlParagraph && isAutowrapped ? trailingEdge : 0;
     default:
       return 0;
   }
 }
 
-/**
- * `_get_line_rect`'s x reads two directions (`label.cpp:470-471`), and only `rtl_layout` is here.
- * The paragraph direction follows `text_direction`, default `TEXT_DIRECTION_AUTO` (`label.h:70`),
- * which infers LTR for Latin text (`:179`, `text_server_adv.cpp:7241-7247`). FILL's own arm
- * (`:472`) is unreachable while `text_direction` is unmodelled (`comparison.md`).
- */
+/** The two directions `_get_line_rect`'s x reads (`label.cpp:470-471`), and the autowrap gate of FILL's arm. */
+interface LineDirection {
+  /** `is_layout_rtl()`. */
+  rtl: boolean;
+  /** `shaped_text_get_inferred_direction() == DIRECTION_RTL` of the line's paragraph. */
+  isRtlParagraph: boolean;
+  isAutowrapped: boolean;
+}
+
 interface LabelLayoutOptions extends Partial<LabelSpacing> {
   // The spacings default to Label's theme defaults, which the Graph titlebar's title Label uses.
   /** `is_layout_rtl()` (`SolveNode.rtl`). Defaults `false`. */
   rtl?: boolean;
+  /** `autowrap_mode != AUTOWRAP_OFF`, the gate of FILL's RTL arm (`label.cpp:473`). Defaults `false`. */
+  isAutowrapped?: boolean;
 }
 
 /**
@@ -514,6 +566,7 @@ export function layoutLabelLines(
 ): LabelLinePlacement[] {
   const {
     rtl = false,
+    isAutowrapped = false,
     lineSpacingPx = LABEL_LINE_SPACING_PX,
     paragraphSpacingPx = LABEL_PARAGRAPH_SPACING_PX,
   } = options;
@@ -563,11 +616,11 @@ export function layoutLabelLines(
       paragraphGapsAbovePx += paragraphSpacingPx;
     }
     const y = vbeginPx + lineIndex * effectivePitchPx + paragraphGapsAbovePx;
-    if (isFill) return { x: 0, y, line };
     // `_get_line_rect` aligns against the ceiled `TS->shaped_text_get_size(rid)` (`label.cpp:478`),
     // not the raw pen advance the fit needs.
+    const direction = { rtl, isRtlParagraph: line.isRtl === true, isAutowrapped };
     return {
-      x: horizontalOffsetPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, horizontalAlignment, rtl),
+      x: horizontalOffsetPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, horizontalAlignment, direction),
       y,
       line,
     };

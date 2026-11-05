@@ -9,20 +9,7 @@ import type { AsymmetryEntry } from './types.js';
 export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   // Text-bearing leaves: carets, selection, context menus and virtual keyboards
   // have no frozen-frame surface, while BiDi and locale change where glyphs
-  // land. This renderer shapes text left-to-right, so those are a render gap.
-
-  Label: {
-    linterOnly: [],
-    renderGap: [
-      // BiDi and locale: our shaper runs left-to-right only.
-      'language',
-      'structured_text_bidi_override',
-      'structured_text_bidi_override_options',
-      'text_direction',
-    ],
-    reason:
-      'Every key here changes the frozen frame and is not implemented yet: BiDi and locale are unread by a left-to-right shaper.',
-  },
+  // land. Only Label reads its own direction yet, so the others list a render gap.
 
   LineEdit: {
     linterOnly: [
@@ -48,7 +35,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'virtual_keyboard_type',
     ],
     renderGap: [
-      // BiDi and locale: our shaper runs left-to-right only.
+      // BiDi and locale: this Control does not pass its own direction to the shaper yet.
       'language',
       'structured_text_bidi_override',
       'structured_text_bidi_override_options',
@@ -72,7 +59,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'progress_bar_delay',
     ],
     renderGap: [
-      // BiDi and locale: our shaper runs left-to-right only.
+      // BiDi and locale: this Control does not pass its own direction to the shaper yet.
       'language',
       'structured_text_bidi_override',
       'structured_text_bidi_override_options',
@@ -194,7 +181,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'scroll_past_end_of_file',
     ],
     renderGap: [
-      // BiDi and locale: our shaper runs left-to-right only.
+      // BiDi and locale: this Control does not pass its own direction to the shaper yet.
       'language',
       'structured_text_bidi_override',
       'structured_text_bidi_override_options',
@@ -306,12 +293,12 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'start_index',
     ],
     renderGap: [
-      // BiDi and locale: our shaper runs left-to-right only.
+      // BiDi and locale: this Control does not pass its own direction to the shaper yet.
       'language',
       'text_direction',
     ],
     reason:
-      'Hover switching, the global menu and the start index are all about opening menus a still frame never shows; BiDi is unread by a left-to-right shaper.',
+      'Hover switching, the global menu and the start index are all about opening menus a still frame never shows; this Control does not pass its own BiDi direction to the shaper yet.',
   },
 
   MenuButton: {
@@ -333,12 +320,12 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'foldable_group',
     ],
     renderGap: [
-      // BiDi and locale for the title: our shaper runs left-to-right only.
+      // BiDi and locale for the title: this Control does not pass its own direction to the shaper yet.
       'language',
       'title_text_direction',
     ],
     reason:
-      'The group only decides which sibling ends up folded, which each container already records; BiDi is unread by a left-to-right shaper.',
+      'The group only decides which sibling ends up folded, which each container already records; this Control does not pass its own BiDi direction to the shaper yet.',
   },
 
   ColorPicker: {
@@ -366,25 +353,25 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   Button: {
     linterOnly: [],
     renderGap: [
-      // BiDi and locale: our shaper runs left-to-right only.
+      // BiDi and locale: this Control does not pass its own direction to the shaper yet.
       'text_direction',
       'language',
     ],
     reason:
-      "BiDi changes where the label's glyphs land, and this renderer's own shaper reads none of it yet.",
+      "BiDi changes where the label's glyphs land, and this Control does not pass its own direction to the shaper yet.",
   },
 
   LinkButton: {
     linterOnly: [],
     renderGap: [
-      // BiDi and locale: our shaper runs left-to-right only.
+      // BiDi and locale: this Control does not pass its own direction to the shaper yet.
       'language',
       'structured_text_bidi_override',
       'structured_text_bidi_override_options',
       'text_direction',
     ],
     reason:
-      "BiDi changes where the underlined label's glyphs land, and the left-to-right shaper reads none of it yet.",
+      "BiDi changes where the underlined label's glyphs land, and this Control does not pass its own direction to the shaper yet.",
   },
 
   TextureButton: {

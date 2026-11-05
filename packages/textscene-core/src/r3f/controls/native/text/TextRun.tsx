@@ -25,6 +25,7 @@ import {
   buildCanvasTextQuadArrays,
   paintSceneFontCanvas,
   createCanvasTextMaterial,
+  type CanvasTextPaintOptions,
 } from './canvasTextPainter';
 import type { SurfaceShading } from '../../../materialFor2d';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
@@ -102,6 +103,11 @@ export interface TextRunProps {
    */
   strokeWidthPx?: number;
   /**
+   * Rounds each glyph pen as a canvas item draws it (`canvasGlyphPenXPx`). Label3D passes false, as
+   * its mesh keeps the pen (`label_3d.cpp:347`). Canvas runs only: the MSDF atlas keeps the pen too.
+   */
+  quantisesPen?: boolean;
+  /**
    * The raster texture's sampler: Label3D's `texture_filter` (`label_3d.h:140`). The default is
    * Godot's default filter. A mipmapped row samples a mip chain only where `mipmapped` built one.
    * Canvas runs only: the MSDF atlas is always sampled linearly.
@@ -171,21 +177,21 @@ interface TextRunLook {
 
 /**
  * Dispatches on `layout.fontMetrics.kind`, so no slice's `Component.tsx` branches. The face sets the
- * shear (`FontMetrics.skew`). `strokeWidthPx` is canvas-only, and the embolden's distance bias
+ * shear (`FontMetrics.skew`). `canvasPaint` is canvas-only, and the embolden's distance bias
  * (`msdfDistanceBias`) atlas-only. Each branch ignores the other's.
  */
 function buildTextRun(
   layout: TextLayoutResult,
   fontSizePx: number,
   look: TextRunLook,
-  strokeWidthPx: number,
+  canvasPaint: CanvasTextPaintOptions,
   textureFilter: TextureFilterState,
   mipmapped: boolean
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
   const skew = layout.fontMetrics.skew ?? 0;
   if (isCanvasFontMetrics(layout.fontMetrics)) {
-    const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, canvasPaint.strokeWidthPx);
     const { positions, uvs, indices } = buildCanvasTextQuadArrays(canvasLayout);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -194,7 +200,7 @@ function buildTextRun(
     // On every run, so toggling the shading rebuilds the material alone, not the raster.
     geo.setAttribute('normal', quadFacingPlusZ(positions.length / 3));
 
-    const canvas = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, strokeWidthPx);
+    const canvas = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, canvasPaint);
     const texture = new THREE.CanvasTexture(canvas);
     // `SRGBColorSpace`, not the 2D-canvas rule's `NoColorSpace`: measured, `NoColorSpace` dips
     // 5/255 below the backdrop at a glyph edge, where Godot draws a monotonic ramp. `textRun.md`
@@ -254,6 +260,7 @@ export function TextRun({
   depthTest,
   side,
   strokeWidthPx = 0,
+  quantisesPen = true,
   textureFilter = godotTextureFilterState(undefined),
   mipmapped = false,
   blends,
@@ -273,7 +280,7 @@ export function TextRun({
         layout,
         fontSizePx,
         { tint, clippingPlanes, depthTest, side, pixelMaterial },
-        strokeWidthPx,
+        { strokeWidthPx, quantisesPen },
         textureFilter,
         mipmapped
       ),
@@ -292,6 +299,7 @@ export function TextRun({
       side,
       pixelMaterial,
       strokeWidthPx,
+      quantisesPen,
       textureFilter,
       mipmapped,
     ]

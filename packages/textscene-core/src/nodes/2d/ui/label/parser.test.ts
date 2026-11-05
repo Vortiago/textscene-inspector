@@ -159,4 +159,35 @@ describe('parseLabel', () => {
       expect(p.visibleRatio).toBeUndefined();
     });
   });
+
+  describe('direction, language and structured override', () => {
+    it('defaults to AUTO, no language, the DEFAULT parser and no options (label.h:68-72)', () => {
+      const p = parseLabel(heading('Label', { name: 'T' }), {});
+      expect(p.textDirection).toBe(0);
+      expect(p.language).toBe('');
+      expect(p.structuredTextBidiOverride).toBe(0);
+      expect(p.structuredTextBidiOverrideOptions).toEqual([]);
+    });
+
+    it('reads text_direction, language, the parser and its options', () => {
+      const p = parseLabel(heading('Label', { name: 'T' }), {
+        text_direction: '2',
+        language: '"he"',
+        structured_text_bidi_override: '4',
+        structured_text_bidi_override_options: '["/", &"x", 3]',
+      });
+      expect(p.textDirection).toBe(2);
+      expect(p.language).toBe('he');
+      expect(p.structuredTextBidiOverride).toBe(4);
+      // A StringName is a string to `is_string()`. Any other Variant keeps its place as null.
+      expect(p.structuredTextBidiOverrideOptions).toEqual(['/', 'x', null]);
+    });
+
+    it('keeps an escaped option as the string the tokenizer resolves', () => {
+      const p = parseLabel(heading('Label', { name: 'T' }), {
+        structured_text_bidi_override_options: '["\\\\", "a\\"b"]',
+      });
+      expect(p.structuredTextBidiOverrideOptions).toEqual(['\\', 'a"b']);
+    });
+  });
 });

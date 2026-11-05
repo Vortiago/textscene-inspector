@@ -388,7 +388,7 @@ describe("labelShapingWidthPx (label.cpp:581's `int width = get_size().width - s
 describe('labelTextTheme', () => {
   it('reads the font_size and font_color overrides', () => {
     const red = { r: 1, g: 0, b: 0, a: 1 };
-    const props = { name: 'L', themeOverrideFontSizes: { font_size: 20 } } as LabelProperties;
+    const props = { themeOverrideFontSizes: { font_size: 20 } };
     const resolved = labelTextTheme(node({}, { colors: { font_color: red } }), props, {
       theme: nativeTheme(1),
     });
@@ -397,12 +397,12 @@ describe('labelTextTheme', () => {
 
   it("resolves the theme's own default font size and Label's opaque white absent an override", () => {
     // default_theme.cpp sets Label's font_color to Color(1, 1, 1), not the gray control_font_color.
-    const resolved = labelTextTheme(node({}), { name: 'L' } as LabelProperties, { theme: nativeTheme(1) });
+    const resolved = labelTextTheme(node({}), {}, { theme: nativeTheme(1) });
     expect(resolved).toEqual({ fontSizePx: 16, color: { r: 1, g: 1, b: 1, a: 1 } });
   });
 
   it("ignores RichTextLabel's normal_font_size and default_color keys (edge case)", () => {
-    const props = { name: 'L', themeOverrideFontSizes: { normal_font_size: 20 } } as LabelProperties;
+    const props = { themeOverrideFontSizes: { normal_font_size: 20 } };
     const n = node({}, { colors: { default_color: { r: 1, g: 0, b: 0, a: 1 } } });
     expect(labelTextTheme(n, props, { theme: nativeTheme(1) })).toEqual({
       fontSizePx: 16,
@@ -866,10 +866,17 @@ describe('labelPreShapeText (label.cpp:155-156)', () => {
   });
 });
 
-function fakeLine(charCount: number): TextLineLayout {
+/** A line of `charCount` glyphs whose source characters start at `firstSourceIndex`. */
+function fakeLine(charCount: number, firstSourceIndex = 0): TextLineLayout {
   return {
     text: 'x'.repeat(charCount),
-    glyphs: Array.from({ length: charCount }, (_, i) => ({ char: 'x', x: i, advance: 1, glyph: null })),
+    glyphs: Array.from({ length: charCount }, (_, i) => ({
+      char: 'x',
+      x: i,
+      advance: 1,
+      glyph: null,
+      sourceIndex: firstSourceIndex + i,
+    })),
     widthPx: charCount,
     paragraphIndex: 0,
   };
@@ -877,13 +884,30 @@ function fakeLine(charCount: number): TextLineLayout {
 
 describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
   it('VC_CHARS_AFTER_SHAPING keeps a running CHARACTER budget across lines (happy path)', () => {
-    const [l1, l2] = applyVisibleCharsReveal([fakeLine(3), fakeLine(3)], {
+    const [l1, l2] = applyVisibleCharsReveal([fakeLine(3), fakeLine(3, 3)], {
       behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
       visibleChars: 4,
       visibleRatio: undefined,
     });
     expect(l1!.glyphs.length).toBe(3);
     expect(l2!.glyphs.length).toBe(1);
+  });
+
+  it('VC_CHARS_AFTER_SHAPING hides each glyph whose source character is past the budget, in visual order', () => {
+    // `glyph.end + para_start > visible_chars` (label.h:207) reads the logical end, so a reversed
+    // Hebrew run loses its logical tail from its visual left.
+    const line = shapeText('abc שלום', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+    }).lines[0]!;
+    const [revealed] = applyVisibleCharsReveal([line], {
+      behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+      visibleChars: 6,
+      visibleRatio: undefined,
+    });
+    expect(revealed!.glyphs.map((glyph) => glyph.sourceIndex)).toEqual([0, 1, 2, 3, 5, 4]);
   });
 
   it('VC_GLYPHS_AUTO/LTR reveal GLYPHS from the FRONT, budgeted by visible_ratio * total_glyphs', () => {
@@ -1175,6 +1199,53 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
   });
 });
 
+describe('layoutLabelLines — the inferred paragraph direction (label.cpp:470-478)', () => {
+  const FONT_SIZE = 16;
+  const UNJUSTIFIED_FLAGS = JustificationFlag.WORD_BOUND | JustificationFlag.SKIP_LAST_LINE;
+
+  function fillOrigin(isRtl: boolean, isAutowrapped: boolean, rtl = false): number {
+    const layout = shapeText('Wave rift', {
+      fontSizePx: FONT_SIZE,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+    });
+    const lines = layout.lines.map((line) => ({ ...line, widthPx: 70, isRtl }));
+    return layoutLabelLines({ ...layout, lines }, 200, 100, 3, undefined, UNJUSTIFIED_FLAGS, FONT_SIZE, {
+      rtl,
+      isAutowrapped,
+    })[0]!.x;
+  }
+
+  it('H_FILL puts a line of an RTL paragraph at the right edge when autowrap is on', () => {
+    expect(fillOrigin(true, true)).toBe(130);
+  });
+
+  it('H_FILL keeps a line of an RTL paragraph at x 0 with autowrap off', () => {
+    expect(fillOrigin(true, false)).toBe(0);
+  });
+
+  it('H_FILL keeps a line of an LTR paragraph at x 0 under an RTL layout', () => {
+    expect(fillOrigin(false, true, true)).toBe(0);
+  });
+
+  it('H_FILL puts the last line of a wrapped Hebrew paragraph at the right edge', () => {
+    const layout = shapeText('שלום עולם שלום עולם', {
+      fontSizePx: FONT_SIZE,
+      boxWidthPx: 100,
+      autowrapMode: AutowrapMode.AUTOWRAP_WORD_SMART,
+      lineSpacingPx: 3,
+    });
+    const placements = layoutLabelLines(layout, 100, 100, 3, undefined, undefined, FONT_SIZE, {
+      isAutowrapped: true,
+    });
+    const last = placements.at(-1)!;
+    expect(placements.length).toBeGreaterThan(1);
+    expect(last.x).toBe(Math.trunc(100 - Math.ceil(last.line.widthPx)));
+    expect(last.x).toBeGreaterThan(0);
+  });
+});
+
 describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
   it('VC_GLYPHS_AUTO reveals from the BACK under RTL layout', () => {
     // `trim_glyphs_rtl = ... || ((behavior == VC_GLYPHS_AUTO) && rtl_layout)`: AUTO follows the
@@ -1314,5 +1385,41 @@ describe('Label paragraph_spacing and the theme spacing constants (label.cpp:344
       lineSpacingPx: 3,
       paragraphSpacingPx: 0,
     });
+  });
+});
+
+describe('labelUnwrappedShape — direction, language and structured override (label.cpp:139-195)', () => {
+  /** The first shaped line's glyph characters, left to right, without the paragraph terminator. */
+  function visual(props: Partial<LabelProperties>, overrides: Partial<SolveNode> = {}): string {
+    const layout = labelUnwrappedShape(node({ autowrapMode: 0, ...props }, overrides), nativeTheme(1))!;
+    return layout.lines[0]!.glyphs.map((glyph) => glyph.char)
+      .join('')
+      .replace('\u200b', '');
+  }
+
+  it('shapes an INHERITED paragraph at the layout direction (label.cpp:178-179)', () => {
+    expect(visual({ text: 'Hello!', textDirection: 3 }, { rtl: true })).toBe('!Hello');
+    expect(visual({ text: 'Hello!', textDirection: 3 }, { rtl: false })).toBe('Hello!');
+  });
+
+  it('passes an explicit direction through, whatever the layout direction (label.cpp:180-181)', () => {
+    expect(visual({ text: 'Hello!', textDirection: 2 }, { rtl: false })).toBe('!Hello');
+    expect(visual({ text: 'Hello!', textDirection: 0 }, { rtl: true })).toBe('Hello!');
+  });
+
+  it('takes a neutral paragraph from the language, else the locale (label.cpp:139)', () => {
+    expect(visual({ text: '123!', language: 'he' })).toBe('!123');
+    expect(visual({ text: '123!' }, { locale: 'he_IL' })).toBe('!123');
+    expect(visual({ text: '123!', language: 'en' }, { locale: 'he_IL' })).toBe('123!');
+  });
+
+  it('upper-cases with the language, else the locale (label.cpp:153)', () => {
+    expect(visual({ text: 'istanbul', uppercase: true, language: 'tr' })).toBe('İSTANBUL');
+    expect(visual({ text: 'istanbul', uppercase: true }, { locale: 'tr' })).toBe('İSTANBUL');
+  });
+
+  it('runs each paragraph through the structured parser and its options (label.cpp:195)', () => {
+    expect(visual({ text: 'שלום/abc', textDirection: 2, structuredTextBidiOverride: 2 })).toBe('םולש/abc');
+    expect(visual({ text: 'שלום/abc', textDirection: 2 })).toBe('abc/םולש');
   });
 });
