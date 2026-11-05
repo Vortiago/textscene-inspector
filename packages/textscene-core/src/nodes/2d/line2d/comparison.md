@@ -1,7 +1,6 @@
 ---
 type: Line2D
 category: 2D
-status: done
 fixture: unit-line2d.tscn
 image: unit-line2d
 renders_as: a stroked mesh polyline
@@ -11,8 +10,17 @@ renders_as: a stroked mesh polyline
 
 Line2D strokes a chain of points. The previewer builds the stroke as Godot's `LineBuilder`
 does. That gives the joints, the cap modes, the `gradient`, the `width_curve` and the UVs of the
-`texture`. The texture samples with the `texture_filter` and `texture_repeat` of the item. `antialiased` has
-no effect in Godot 4.6.3, since `Line2D::_draw` never reads it.
+`texture`. The texture samples with the `texture_filter` and `texture_repeat` of the item, or with those
+of its CanvasTexture where it sets them. `antialiased` has no effect in Godot 4.6.3, since
+`Line2D::_draw` never reads it.
+
+## Normal map
+<!-- compare: image=unit-line2d-normal-map status=done fixture=unit-line2d-normal-map.tscn -->
+
+A CanvasTexture's `normal_texture` and `specular_texture` shade the line under PointLight2D and
+DirectionalLight2D. Only the node's rotation and scale turn the normal (`canvas.glsl:708-710`). The
+line's direction and its UVs do not. A vertical line lights as a horizontal one. A line rotated a
+quarter turn is lit from below, as in Godot.
 
 ## Linting
 
