@@ -55,6 +55,7 @@ export function parseSubViewport(
     ),
     msaa_2d: enumOr(properties.msaa_2d, MSAA_DISABLED, MSAA_MODES, context),
     msaa_3d: enumOr(properties.msaa_3d, MSAA_DISABLED, MSAA_MODES, context),
+    use_hdr_2d: boolOr(properties.use_hdr_2d, false, context),
     use_debanding: boolOr(properties.use_debanding, false, context),
     audio_listener_enable_2d: boolOr(properties.audio_listener_enable_2d, false, context),
     canvas_item_default_texture_filter: enumOr(

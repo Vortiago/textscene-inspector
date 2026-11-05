@@ -16,7 +16,6 @@ import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResou
 import { canvasMapProps, useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { CanvasItemSurfaceSource } from '../../../r3f/canvasItemSurface';
 import { useCanvasTextureSampler, useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
-import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import type { CanvasItemSurface } from '../../../r3f/lighting2d/normalMappedLighting';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { canvasMeshGeometry } from '../../../r3f/meshes/canvasMeshGeometry';
@@ -28,6 +27,7 @@ import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import type { MeshInstance2DProperties } from './types';
+import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
 
 export function MeshInstance2D({ node, children }: NodeComponentProps) {
   const props = node.properties as MeshInstance2DProperties;
@@ -110,10 +110,12 @@ function CanvasSurfaces({
   const primitive = geometryPrimitive(geometry);
   const drawsPoints = primitive === 'points';
   const pixelRatio = useThree((state) => state.viewport.dpr);
-  const map = canvasMapProps(texture);
+  const canvasSpace = useCanvasColorSpace();
+  const map = canvasMapProps(texture, canvasSpace);
   const point = drawsPoints ? canvasPointSize(pixelRatio) : undefined;
-  // The map and the vertex colours are sRGB numbers that Godot multiplies as stored
-  // (`canvas.glsl:172-181`), and the define is a program input, so it keys the material.
+  // The vertex colours are sRGB numbers, which an sRGB canvas multiplies as stored with the map and
+  // a linear canvas decodes (`canvas.glsl:172-181`). The define is a program input, so it keys the
+  // material.
   const program = materialProgramInputs({
     props: {
       ...map,
@@ -122,7 +124,7 @@ function CanvasSurfaces({
       vertexColors: hasVertexColors,
       transparent: true,
       depthWrite: false,
-      defines: hasVertexColors ? CANVAS_SRGB_DEFINES : map.defines,
+      defines: hasVertexColors ? canvasSpace.defines : map.defines,
       // three leaves `gl_PointSize` unwritten for a mesh material.
       injection: point?.injection,
       userData: point?.userData,

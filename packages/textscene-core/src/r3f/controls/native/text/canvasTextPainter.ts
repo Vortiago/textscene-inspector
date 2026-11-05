@@ -223,6 +223,8 @@ export function paintSceneFontCanvas(
 
 interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
   map: THREE.Texture;
+  /** The linear colour the raster multiplies by, white when omitted, as the raster carries the tint. */
+  color?: THREE.Color;
   /** Multiplies the raster's anti-aliasing alpha. The raster is opaque, so this is the only place `tint.a` applies. */
   opacity: number;
   /** `false` by default, like `createMsdfMaterial`. */
@@ -249,6 +251,7 @@ interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
 export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): THREE.MeshBasicMaterial {
   const {
     map,
+    color,
     opacity,
     depthTest = false,
     side,
@@ -268,6 +271,7 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
   const { injection: pixelInjection, ...pixelState } = pixelMaterial ?? {};
   const material = new THREE.MeshBasicMaterial({
     map,
+    ...(color && { color }),
     opacity,
     depthTest,
     ...passBlendMaterialProps({

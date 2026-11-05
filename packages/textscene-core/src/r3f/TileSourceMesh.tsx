@@ -14,7 +14,8 @@ import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
 import { useCanvas2DTexture } from './canvas2DTextureDecode';
 import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
-import { CANVAS_SRGB_DEFINES } from './canvasSrgbMultiply';
+import { WHITE_MODULATE, type VertexColorTint } from './canvasItemModulate';
+import type { Rgba } from '../godot/math/math';
 import { TILE_TEXTURE_PADDING, TILE_UV_BOUNDS_ATTRIBUTE } from './tileTexturePadding';
 import { materialProgramInputs } from './materialProgramInputs';
 import { usePaddedAtlasStandIn } from './paddedAtlasStandIn';
@@ -26,9 +27,8 @@ interface TileSourceMeshProps {
   grid: TileGrid;
   /** The run's place among the layer's runs. three compares the group's order first. */
   renderOrder: number;
-  /** Own-pixel tint from the node's CanvasItem ritual (linear space). */
-  color: THREE.Color;
-  opacity: number;
+  /** The tile canvas item's tint, split between the vertex colours and the material. */
+  tint: VertexColorTint;
   /** Group name for the per-source missing-texture placeholder. */
   name?: string;
   /** The tile canvas item's facing, blend state and light list. */
@@ -42,8 +42,7 @@ export function TileSourceMesh({
   cells,
   grid,
   renderOrder,
-  color,
-  opacity,
+  tint,
   name,
   pixelMaterial,
   sampler,
@@ -53,7 +52,7 @@ export function TileSourceMesh({
     slot?.ref,
     slot?.externalResources ?? NO_RESOURCES.externalResources,
     slot?.internalResources ?? NO_RESOURCES.internalResources,
-    'plain',
+    undefined,
     slot?.isHeldLocally
   );
   const standIn = usePaddedAtlasStandIn(texResult, source);
@@ -63,19 +62,23 @@ export function TileSourceMesh({
   const texW = image?.width;
   const texH = image?.height;
 
-  const geometry = useMemo(() => {
+  const arrays = useMemo(() => {
     if (!texW || !texH) return null;
     const build = isStandIn ? buildPaddedStandInGeometryArrays : buildTileGeometryArrays;
-    const arrays = build(cells, source, grid, texW, texH);
+    return build(cells, source, grid, texW, texH);
+  }, [cells, source, grid, texW, texH, isStandIn]);
+  const colors = useMemo(() => arrays && tintedColors(arrays.colors, tint.vertex), [arrays, tint.vertex]);
+  const geometry = useMemo(() => {
+    if (!arrays || !colors) return null;
     const geom = new THREE.BufferGeometry();
     geom.setAttribute('position', new THREE.BufferAttribute(arrays.positions, 3));
     geom.setAttribute('uv', new THREE.BufferAttribute(arrays.uvs, 2));
-    geom.setAttribute('color', new THREE.BufferAttribute(arrays.colors, 4));
+    geom.setAttribute('color', new THREE.BufferAttribute(colors, 4));
     if (arrays.uvBounds)
       geom.setAttribute(TILE_UV_BOUNDS_ATTRIBUTE, new THREE.BufferAttribute(arrays.uvBounds, 4));
     geom.setIndex(new THREE.BufferAttribute(arrays.indices, 1));
     return geom;
-  }, [cells, source, grid, texW, texH, isStandIn]);
+  }, [arrays, colors]);
   // R3F does not dispose a geometry passed as a prop, so this releases it.
   useDisposeOnRelease(geometry);
 
@@ -93,13 +96,13 @@ export function TileSourceMesh({
   const program = materialProgramInputs({
     props: {
       map: tex,
-      color,
-      opacity,
+      color: tint.color,
+      opacity: tint.opacity,
       // Each tile's `modulate`, multiplied onto its pixels (`tile_map_layer.cpp:2690`) in sRGB.
       vertexColors: true,
       transparent: true,
       depthWrite: false,
-      defines: CANVAS_SRGB_DEFINES,
+      defines: tint.defines,
     },
     merge: [pixelMaterial, padsInShader(source, isStandIn) ? { injection: TILE_TEXTURE_PADDING } : undefined],
   });
@@ -114,4 +117,12 @@ export function TileSourceMesh({
 /** A padded source holds each sample inside its tile in the shader, unless it samples a stand-in. */
 function padsInShader(source: AtlasSourceModel, isStandIn: boolean): boolean {
   return source.usesTexturePadding && !isStandIn;
+}
+
+/** Each tile's `modulate` with the rgb of `vertexTint` multiplied in, or the colours as built under white. */
+function tintedColors(colors: Float32Array, vertexTint: Rgba): Float32Array {
+  if (vertexTint === WHITE_MODULATE) return colors;
+  const { r, g, b } = vertexTint;
+  const factors = [r, g, b, 1];
+  return colors.map((value, index) => value * (factors[index % 4] ?? 1));
 }

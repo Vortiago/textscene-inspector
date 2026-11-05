@@ -404,6 +404,10 @@ A key between a canvas item's key and the next one, for a piece the item draws a
 Each piece owns a slot inside its parent's, so a piece can hand out sub-orders of its own.
 _Avoid_: "render-order offset", "fraction".
 
+**Canvas colour space** (`r3f/canvasColorSpace.ts`):
+Whether a canvas multiplies sRGB numbers into an 8-bit target, or linear values into a half-float one. Only a sub-viewport with `use_hdr_2d` draws a linear canvas. Its target, texture views, material defines and tint all follow this one value.
+_Avoid_: "HDR mode", "linear mode".
+
 **Canvas frame** (`Canvas2DStage/canvasFrame.ts`):
 The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057). Under `render_target_clear_mode` NEVER it takes the bytes of the target first and draws over them.
 _Avoid_: "MSAA frame".

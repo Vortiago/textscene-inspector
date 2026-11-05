@@ -38,7 +38,8 @@ import {
   godotTextureFilterState,
   type TextureFilterState,
 } from '../../../../resources/textures/godotTextureFilter';
-import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
+import { useItemLinearColor, WHITE_MODULATE } from '../../../canvasItemModulate';
+import { useCanvasColorSpace } from '../../../canvasColorSpace';
 import type { SurfaceBlend } from '../../../materials/surfaceBlend';
 import type { FadeVariants } from '../../../materials/fadeVariants';
 import { useSwappedMaterials } from '../../../materials/swappedMaterials';
@@ -161,6 +162,12 @@ interface TextRunLook {
   side: THREE.Side | undefined;
   /** The lit Control around the run, or undefined for a run drawn unlit such as Label3D's. */
   pixelMaterial: CanvasItemPixelMaterial | undefined;
+  /** `tint` as the item draws it, in linear (`useItemLinearColor`). */
+  linearTint: THREE.Color;
+  /** The outline colour as the item draws it, in linear. */
+  linearOutline: THREE.Color;
+  /** Whether the run draws in a linear canvas, where the raster is white and the material carries the tint. */
+  isLinearCanvas: boolean;
 }
 
 /**
@@ -178,7 +185,8 @@ function buildTextRun(
   outlineColor: Rgba | undefined,
   outlineWidthPx: number
 ): BuiltTextRun {
-  const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
+  const { tint, clippingPlanes, depthTest, side, pixelMaterial, linearTint, linearOutline, isLinearCanvas } =
+    look;
   const skew = layout.fontMetrics.skew ?? 0;
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
@@ -188,7 +196,10 @@ function buildTextRun(
     geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
 
-    const canvas = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, strokeWidthPx);
+    // Godot's glyph is a white coverage mask that the rect modulate tints (`text_server_adv.cpp`
+    // `rasterize_bitmap`). A linear canvas converts that modulate unclamped, so the material carries it.
+    const rasterTint = isLinearCanvas ? WHITE_MODULATE : tint;
+    const canvas = paintSceneFontCanvas(layout, fontSizePx, rasterTint, skew, canvasLayout, strokeWidthPx);
     const texture = new THREE.CanvasTexture(canvas);
     // `SRGBColorSpace`, not the 2D-canvas rule's `NoColorSpace`: measured, `NoColorSpace` dips
     // 5/255 below the backdrop at a glyph edge, where Godot draws a monotonic ramp. `textRun.md`
@@ -205,6 +216,7 @@ function buildTextRun(
     const paint = (blend: SurfaceBlend | undefined) =>
       createCanvasTextMaterial({
         map: texture,
+        color: isLinearCanvas ? linearTint : undefined,
         opacity,
         clippingPlanes,
         depthTest,
@@ -222,15 +234,13 @@ function buildTextRun(
   geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   geo.setIndex(new THREE.BufferAttribute(indices, 1));
 
-  const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
-  let outline: { color: { r: number; g: number; b: number }; opacity: number; widthPx: number } | undefined;
+  let outline: { color: THREE.Color; opacity: number; widthPx: number } | undefined;
   if (outlineColor && outlineWidthPx > 0) {
-    const [or, og, ob] = sRGBToLinearRGB(outlineColor.r, outlineColor.g, outlineColor.b);
-    outline = { color: { r: or, g: og, b: ob }, opacity: outlineColor.a, widthPx: outlineWidthPx };
+    outline = { color: linearOutline, opacity: outlineColor.a, widthPx: outlineWidthPx };
   }
   const options = {
     map: getAtlasTexture(),
-    color: { r, g, b },
+    color: linearTint,
     opacity: tint.a,
     pxRange: OPEN_SANS_ATLAS_INFO.distanceRange,
     distanceBias: msdfDistanceBias(layout),
@@ -264,6 +274,9 @@ export function TextRun({
 }: TextRunProps) {
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
+  const linearTint = useItemLinearColor(tint);
+  const linearOutline = useItemLinearColor(outlineColor ?? WHITE_MODULATE);
+  const isLinearCanvas = useCanvasColorSpace().isLinear;
   if (blends && !swapped)
     throw new Error('expected blends only inside a GeometryInstance3D drawer, got none');
 
@@ -272,7 +285,7 @@ export function TextRun({
       buildTextRun(
         layout,
         fontSizePx,
-        { tint, clippingPlanes, depthTest, side, pixelMaterial },
+        { tint, clippingPlanes, depthTest, side, pixelMaterial, linearTint, linearOutline, isLinearCanvas },
         strokeWidthPx,
         textureFilter,
         mipmapped,
@@ -293,6 +306,9 @@ export function TextRun({
       depthTest,
       side,
       pixelMaterial,
+      linearTint,
+      linearOutline,
+      isLinearCanvas,
       strokeWidthPx,
       textureFilter,
       mipmapped,
@@ -324,13 +340,8 @@ export function TextRun({
   useDisposeOnRelease(run.ownedTexture);
   useNearestAnisotropy(run.ownedTexture ?? null);
 
-  // `draw_hex_code_box` (`text_server.cpp:771-812`) draws in its caller's colour:
-  // this run's `tint`, converted to linear once as for every `ControlQuad`.
+  // `draw_hex_code_box` (`text_server.cpp:771-812`) draws in its caller's colour, this run's `tint`.
   const hexBoxRects = useMemo(() => collectHexCodeBoxRects(layout, fontSizePx), [layout, fontSizePx]);
-  const hexBoxColor = useMemo(() => {
-    const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
-    return new THREE.Color(r, g, b);
-  }, [tint.r, tint.g, tint.b]);
   // Memoised, as R3F assigns a new `userData` object on each render and drops what it held.
   const userData = useMemo(
     () => ({
@@ -362,7 +373,7 @@ export function TextRun({
           <ControlQuad
             width={r.w}
             height={r.h}
-            color={hexBoxColor}
+            color={linearTint}
             opacity={tint.a}
             renderOrder={renderOrder}
             drawHooks={shadow}

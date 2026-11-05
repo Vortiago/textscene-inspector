@@ -10,7 +10,6 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -52,6 +51,7 @@ import {
   type TabLayoutInput,
   type TabLayoutItem,
 } from './nativeSolver';
+import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 /** A stable identity for "no tabs", so a Control with none never invalidates a memo depending on it every render. */
 const EMPTY_TABS: readonly TabBarTabProperties[] = [];
@@ -281,8 +281,8 @@ function TabBarTabChrome({
   const tintedFontColor = tintColor(fontColor, tint.own);
   const baseIconColor = tabBarIconColor(solveNode.colors, state);
   const tintedIconColor = tintColor(baseIconColor, tint.own);
-  const iconLinearColor = useGodotLinearColor(tintedIconColor);
-  const closeLinearColor = useGodotLinearColor(tint.own);
+  const iconLinearColor = useItemLinearColor(tintedIconColor);
+  const closeLinearColor = useItemLinearColor(tint.own);
 
   const content = layoutTabContent({
     barHeightPx: barHeight,
@@ -378,7 +378,7 @@ function ScrollArrows({
     missingRight,
     rtl,
   });
-  const white = useGodotLinearColor({ r: 1, g: 1, b: 1 });
+  const white = useItemLinearColor({ r: 1, g: 1, b: 1 });
   const alpha = (dim: boolean) => (dim ? 0.5 : 1) * tint.own.a;
 
   return (

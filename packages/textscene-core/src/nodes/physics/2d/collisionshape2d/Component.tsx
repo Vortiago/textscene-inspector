@@ -11,8 +11,8 @@ import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useSubOrExtResource } from '../../../../resources/useSubOrExtResource';
 import { useViewportMode } from '../../../../r3f/contexts/ViewportModeContext';
 import { CollisionGizmo2D } from './CollisionGizmo2D';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../shared/debugColor';
+import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 export function CollisionShape2D({ node, children }: NodeComponentProps) {
   const properties = node.properties as CollisionShape2DProperties;
@@ -21,7 +21,7 @@ export function CollisionShape2D({ node, children }: NodeComponentProps) {
 
   const shapeResource = useSubOrExtResource(properties.shape, sceneResources)?.resource;
   // Godot draws the shape in the node's own `debug_color`. The literal is sRGB.
-  const debugColor = useGodotLinearColor(properties.debugColor ?? DEFAULT_COLLISION_DEBUG_COLOR);
+  const debugColor = useItemLinearColor(properties.debugColor ?? DEFAULT_COLLISION_DEBUG_COLOR);
 
   return (
     <CanvasItem2D

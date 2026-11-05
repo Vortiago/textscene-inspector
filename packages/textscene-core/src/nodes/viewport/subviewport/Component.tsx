@@ -30,6 +30,8 @@ import type { Vector2 } from '../../../godot/math/vector';
 import { viewportSize, viewportTargetSize } from './targetSize';
 import { useInCanvasOverWorld } from './canvasOverWorldScope';
 import { ViewportCanvasScope } from '../../../r3f/viewportCanvasScope';
+import { viewportCanvasColorSpace } from './offscreenViewport';
+import { CanvasColorSpaceProvider } from '../../../r3f/canvasColorSpace';
 
 // Lazy: the Control painters register on import, and a viewport with no Controls never needs them.
 const ViewportControls = lazy(() =>
@@ -95,6 +97,7 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
     [authoredSize.x, authoredSize.y]
   );
   const canvasModulate = useCanvasModulateColor(node.children);
+  const canvasSpace = viewportCanvasColorSpace(properties, kind === '3d' ? '3d' : '2d');
   // A canvas holds the 2D items and Controls of a viewport, in one tree-order draw. A 2D pass draws
   // it in its portal. A 3D pass draws it over its world, in a scene of its own (`OffscreenViewportPass`),
   // so the world's portal holds the children alone and each workspace drops the other's nodes.
@@ -102,7 +105,9 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
     <ViewportSizeProvider size={layoutSize}>
       <LayerRanksProvider value={canvasLayers}>
         <ViewportCanvasScope>
-          <SubViewportSamplerScope properties={properties}>{inner}</SubViewportSamplerScope>
+          <SubViewportSamplerScope properties={properties}>
+            <CanvasColorSpaceProvider value={canvasSpace}>{inner}</CanvasColorSpaceProvider>
+          </SubViewportSamplerScope>
         </ViewportCanvasScope>
       </LayerRanksProvider>
     </ViewportSizeProvider>

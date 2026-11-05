@@ -12,6 +12,7 @@ import { fakeTiledUploads } from './tiledUpload/fakeTiledUploads.testkit';
 import { useOwnedTextureView, useTextureView, useWindowedTextureView } from './useTextureView';
 import { publishLiveTargets } from './liveTargets';
 import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
+import { SRGB_CANVAS } from './canvasColorSpace';
 
 const RAW_REPEAT: ViewSampler = { colorSpace: THREE.NoColorSpace, wrap: THREE.RepeatWrapping };
 
@@ -184,7 +185,7 @@ describe('useOwnedTextureView', () => {
 
 describe('useWindowedTextureView', () => {
   it("shows a live target's cell through the window inside the cell's copy", () => {
-    const target = createCanvasTarget(32, 16, 'SubViewport');
+    const target = createCanvasTarget(32, 16, 'SubViewport', SRGB_CANVAS);
     const withdraw = publishLiveTargets([target.texture], null, false);
     const window = { repeat: { x: 0.25, y: 0.5 }, offset: { x: 0.25, y: 0.5 } };
     const { result } = renderHook(() =>

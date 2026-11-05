@@ -15,6 +15,7 @@ import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
+import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
@@ -136,6 +137,7 @@ function ParticleField({
   // this material compiles mapless unless a fresh one replaces it
   // (`materialProgramInputs.ts`). Called from the drawing arm: the group mounts
   // before a geometry can exist, as `useEmissionTransform` samples its world matrix.
+  const canvasSpace = useCanvasColorSpace();
   const particleMesh = (geom: THREE.BufferGeometry) => {
     const program = materialProgramInputs({
       props: {
@@ -145,9 +147,10 @@ function ParticleField({
         vertexColors: true,
         transparent: true,
         depthWrite: false,
-        // The vertex colours hold each particle's sRGB colour, which multiplies in sRGB
-        // (`canvas.glsl:189`), with the texture or without it.
-        defines: CANVAS_SRGB_DEFINES,
+        // The vertex colours hold each particle's colour, which multiplies in sRGB (`canvas.glsl:189`),
+        // with the texture or without it. A linear canvas multiplies the instance colour raw
+        // (`canvas.glsl:255`), so three's linear multiply holds there.
+        defines: canvasSpace.isLinear ? undefined : CANVAS_SRGB_DEFINES,
       },
       // Each particle has its own vertex colour and alpha, and each quad is wound
       // by its own transform's determinant (`particleGeometry.ts`). A split by

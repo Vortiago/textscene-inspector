@@ -1,7 +1,8 @@
 /**
  * The two views a sub-viewport pass publishes of its target, as Godot's `R8G8B8A8_UNORM` storage
  * with an `R8G8B8A8_SRGB` view. The target serves the view its storage is, and a copy serves the
- * other (a canvas target is the plain view, a 3D target the decoding view).
+ * other (a canvas target is the plain view, a 3D target the decoding view). An HDR target's sRGB
+ * view is its own half-float format (`texture_storage.cpp:4541-4547`), so it serves both.
  */
 import { useEffect, useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
@@ -45,13 +46,14 @@ export function useTargetViews(target: THREE.WebGLRenderTarget, isTransparent: b
   const gl = useThree((state) => state.gl);
   const views = useMemo(() => {
     const holdsBytes = holdsSrgbBytes(target.texture);
+    const storageIsDecodingView = !holdsBytes || target.texture.type === THREE.HalfFloatType;
     const samplers = { count: 0 };
     const plain = countingSamplers(
       holdsBytes ? ownStorageView(target.texture) : plainCopy(gl, target),
       samplers
     );
     const decoding = countingSamplers(
-      holdsBytes ? decodingCopy(gl, target) : ownStorageView(target.texture),
+      storageIsDecodingView ? ownStorageView(target.texture) : decodingCopy(gl, target),
       samplers
     );
     return {

@@ -106,6 +106,22 @@ describe('parseSubViewport', () => {
     });
   });
 
+  describe('use_hdr_2d', () => {
+    it('parses use_hdr_2d true, the linear half-float canvas', () => {
+      const result = parseSubViewport(heading('SubViewport', { name: 'V' }), { use_hdr_2d: 'true' });
+      expect(result.use_hdr_2d).toBe(true);
+    });
+
+    it('parses use_hdr_2d false', () => {
+      const result = parseSubViewport(heading('SubViewport', { name: 'V' }), { use_hdr_2d: 'false' });
+      expect(result.use_hdr_2d).toBe(false);
+    });
+
+    it('defaults use_hdr_2d to false when absent (viewport.h:265)', () => {
+      expect(parseSubViewport(heading('SubViewport', { name: 'V' }), {}).use_hdr_2d).toBe(false);
+    });
+  });
+
   describe('remaining Viewport properties the corpus authors', () => {
     it('parses them all', () => {
       const result = parseSubViewport(heading('SubViewport', { name: 'V' }), {

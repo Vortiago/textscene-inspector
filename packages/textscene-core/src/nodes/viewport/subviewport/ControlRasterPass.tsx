@@ -13,7 +13,13 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext.js';
 import { SubViewportSamplerScope } from './SubViewportSamplerScope';
 import { ViewportControls } from './ViewportControls.js';
 import { viewportTransfer } from '../../../r3f/texelCopy.js';
-import { createCanvasTarget, renderToOffscreenTarget, viewportMsaaMode } from './offscreenViewport.js';
+import {
+  createCanvasTarget,
+  renderToOffscreenTarget,
+  viewportCanvasColorSpace,
+  viewportMsaaMode,
+} from './offscreenViewport.js';
+import { CanvasColorSpaceProvider } from '../../../r3f/canvasColorSpace.js';
 import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
 import { useCanvasPass } from './useCanvasPass.js';
 import { useResolvedGate } from './useViewportGate.js';
@@ -64,13 +70,19 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   // Godot draws canvas items after the tonemap pass (`RendererViewport::_draw_viewport`), so the
   // target holds sRGB values with no curve, and a 3D consumer applies its curve once: a 0.5 grey
   // ColorRect reaches it as rgb(162), not a pre-tonemapped rgb(196).
+  const canvasSpace = viewportCanvasColorSpace(properties, '2d');
   const createTarget = useCallback(
-    () => createCanvasTarget(width, height, node.name),
-    [width, height, node.name]
+    () => createCanvasTarget(width, height, node.name, canvasSpace),
+    [width, height, node.name, canvasSpace]
   );
   // The frame takes the 2D buffer's multisampling, so the target it copies into never multisamples.
   const target = useMultisampledTarget(0, createTarget);
-  const { camera, frame } = useCanvasPass(layoutWidth, layoutHeight, viewportMsaaMode(properties, '2d'));
+  const { camera, frame } = useCanvasPass(
+    layoutWidth,
+    layoutHeight,
+    viewportMsaaMode(properties, '2d'),
+    canvasSpace
+  );
 
   const canvasModulate = useCanvasModulateColor(node.children);
   const controlsSize = useMemo(() => ({ x: layoutWidth, y: layoutHeight }), [layoutWidth, layoutHeight]);
@@ -102,7 +114,9 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
     <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
       <World2DLightingBoundary canvasModulate={canvasModulate}>
         <SubViewportSamplerScope properties={properties}>
-          <ViewportControls nodes={node.children} size={controlsSize} inheritedRtl={inheritedRtl} />
+          <CanvasColorSpaceProvider value={canvasSpace}>
+            <ViewportControls nodes={node.children} size={controlsSize} inheritedRtl={inheritedRtl} />
+          </CanvasColorSpaceProvider>
         </SubViewportSamplerScope>
       </World2DLightingBoundary>
     </SceneResourcesProvider>,

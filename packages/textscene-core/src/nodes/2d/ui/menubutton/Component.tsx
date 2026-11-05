@@ -9,7 +9,6 @@ import { sizeWithArea } from '../../../../resources/textures/textureSize';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -29,6 +28,7 @@ import {
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import { buttonIconColor, menuButtonLabelShape, menuButtonTextTheme } from './nativeSolver';
 import type { MenuButtonProperties } from './types';
+import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<MenuButtonProperties>(solveNode);
@@ -65,7 +65,7 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
 
   const baseIconColor = buttonIconColor(solveNode.colors, state);
   const tintedIconColorSrgb = useMemo(() => tintColor(baseIconColor, tint.own), [baseIconColor, tint.own]);
-  const iconLinearColor = useGodotLinearColor(tintedIconColorSrgb);
+  const iconLinearColor = useItemLinearColor(tintedIconColorSrgb);
 
   // Content layout: icon and text placement within the solved rect
   const content = useMemo(

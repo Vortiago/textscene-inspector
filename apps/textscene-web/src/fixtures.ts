@@ -4736,6 +4736,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Hdr 2d World",
+    "file": "unit-sub-viewport-hdr-2d-world.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Hdr 2d",
+    "file": "unit-sub-viewport-hdr-2d.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Inherited Rtl",
     "file": "unit-sub-viewport-inherited-rtl.tscn",
     "category": "Unit - Viewports"

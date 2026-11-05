@@ -9,7 +9,6 @@ import { sizeWithArea } from '../../../../resources/textures/textureSize';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -37,6 +36,7 @@ import { BUTTON_THEME_FONT_KEY, buttonLabelShape, buttonTextTheme, buttonIconCol
 import type { ButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<ButtonProperties>(solveNode);
@@ -83,7 +83,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
 
   const baseIconColor = buttonIconColor(solveNode.colors, state);
   const tintedIconColorSrgb = useMemo(() => tintColor(baseIconColor, tint.own), [baseIconColor, tint.own]);
-  const iconLinearColor = useGodotLinearColor(tintedIconColorSrgb);
+  const iconLinearColor = useItemLinearColor(tintedIconColorSrgb);
 
   const contentInput = useMemo(
     () => ({

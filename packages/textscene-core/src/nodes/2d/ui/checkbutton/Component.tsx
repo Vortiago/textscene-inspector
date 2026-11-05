@@ -8,7 +8,6 @@ import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -40,6 +39,7 @@ import {
   CHECKBUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { CheckButtonProperties } from './types';
+import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<CheckButtonProperties>(solveNode);
@@ -68,7 +68,7 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
   // takes the tint before its one sRGB-to-linear conversion, as Button's icon does.
   const baseIconColor = checkButtonIconColor(props, solveNode.colors);
   const tintedIconColorSrgb = useMemo(() => tintColor(baseIconColor, tint.own), [baseIconColor, tint.own]);
-  const iconLinearColor = useGodotLinearColor(tintedIconColorSrgb);
+  const iconLinearColor = useItemLinearColor(tintedIconColorSrgb);
 
   const text = props.text ?? '';
   const hasText = text.length > 0;
