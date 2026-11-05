@@ -119,7 +119,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   const mipmapped = font?.generatesMipmaps ?? false;
   // Both surfaces take one material (`label_3d.cpp:396`), so they share these props.
   const surfaceProps = {
-    quantisesPen: false,
+    glyphDrawer: 'label3D' as const,
     depthTest,
     side,
     textureFilter,

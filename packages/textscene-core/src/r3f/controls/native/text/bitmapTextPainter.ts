@@ -14,6 +14,7 @@ import * as THREE from 'three';
 import type { FillSheet } from '../../../../resources/fonts/font/types';
 import type { BitmapFontMetrics } from './bitmapFontMetrics';
 import { fontIsScaled } from './fontMetrics';
+import { drawsGlyphRect, type GlyphDrawer } from './glyphDrawer';
 import type { GlyphPlacement, TextLayoutResult } from './textLayout';
 
 /** A texture of the sheet, one for each run so that its filter state is the run's own. The bytes are shared. */
@@ -36,43 +37,62 @@ export interface BitmapQuads {
   indices: Uint32Array;
 }
 
-/** The glyph a placement draws, or undefined for a hex-code box, a space and a glyph no fill of `sheet` holds. */
-function inkedGlyph(placement: GlyphPlacement, metrics: BitmapFontMetrics, sheet: FillSheet) {
+export interface BitmapPaintOptions {
+  /** `'canvasItem'` by default. */
+  glyphDrawer?: GlyphDrawer;
+  /** Where the run's x 0 sits in its canvas item, which a floored pen includes. 0 by default. */
+  penOriginXPx?: number;
+}
+
+/**
+ * The glyph a placement draws, or undefined for a hex-code box, a space, a glyph `drawer` skips and
+ * a glyph no fill of `sheet` holds.
+ */
+function inkedGlyph(
+  placement: GlyphPlacement,
+  metrics: BitmapFontMetrics,
+  sheet: FillSheet,
+  drawer: GlyphDrawer
+) {
   if (placement.controlCodepoint !== undefined) return undefined;
   const glyph = metrics.glyphOf(placement.char);
   const hasInk =
-    glyph && glyph.width > 0 && glyph.height > 0 && sheet.rowOffsets[glyph.fillIndex] !== undefined;
+    glyph &&
+    drawsGlyphRect(drawer, glyph.width, glyph.height) &&
+    sheet.rowOffsets[glyph.fillIndex] !== undefined;
   return hasInk ? glyph : undefined;
 }
 
 /**
  * The quads of `layout`, drawn at `fontSizePx` over `sheet`: the glyph sheet, or the outline sheet
- * for an outline pass. A pen floors at its canvas position, `penOriginXPx` plus its x, when the
- * glyph is not scaled (`text_server_adv.cpp:4082-4085`). A BMFont adds no subpixel shift: `FontFile::reset_state` sets
- * `SUBPIXEL_POSITIONING_DISABLED` (`font.cpp:1433`) and `_load_bitmap_font` starts with it.
+ * for an outline pass. A canvas item floors a pen at its canvas position, `penOriginXPx` plus its x,
+ * when the glyph is not scaled (`text_server_adv.cpp:4082-4085`). A BMFont adds no subpixel shift:
+ * `FontFile::reset_state` sets `SUBPIXEL_POSITIONING_DISABLED` (`font.cpp:1433`) and
+ * `_load_bitmap_font` starts with it.
  */
 export function buildBitmapQuads(
   layout: TextLayoutResult,
   metrics: BitmapFontMetrics,
   fontSizePx: number,
   sheet: FillSheet,
-  penOriginXPx = 0
+  { glyphDrawer = 'canvasItem', penOriginXPx = 0 }: BitmapPaintOptions = {}
 ): BitmapQuads {
   const placements = layout.lines.flatMap((line, lineIndex) =>
     line.glyphs.map((placement) => ({ placement, lineIndex }))
   );
-  const inkedCount = placements.filter(({ placement }) => inkedGlyph(placement, metrics, sheet)).length;
+  const inkedOf = (placement: GlyphPlacement) => inkedGlyph(placement, metrics, sheet, glyphDrawer);
+  const inkedCount = placements.filter(({ placement }) => inkedOf(placement)).length;
   const positions = new Float32Array(inkedCount * 4 * 3);
   const uvs = new Float32Array(inkedCount * 4 * 2);
   const indices = new Uint32Array(inkedCount * 6);
   const scale = metrics.pxPerUnit(fontSizePx);
-  const floorsPen = !fontIsScaled(fontSizePx, metrics);
+  const floorsPen = glyphDrawer === 'canvasItem' && !fontIsScaled(fontSizePx, metrics);
   const sheetWidthInverse = 1 / sheet.width;
   const sheetHeightInverse = 1 / sheet.height;
 
   let quad = 0;
   for (const { placement, lineIndex } of placements) {
-    const glyph = inkedGlyph(placement, metrics, sheet);
+    const glyph = inkedOf(placement);
     if (!glyph) continue;
     const rowOffset = sheet.rowOffsets[glyph.fillIndex]!;
     const baselinePx = lineIndex * layout.linePitchPx + layout.baselineOffsetPx;

@@ -31,6 +31,7 @@ import type { SurfaceShading } from '../../../materialFor2d';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { isBitmapFontMetrics, type BitmapFontMetrics } from './bitmapFontMetrics';
 import { buildBitmapQuads, createSheetTexture } from './bitmapTextPainter';
+import type { GlyphDrawer } from './glyphDrawer';
 import type { TextLayoutResult } from './textLayout';
 import { hexCodeBoxRects } from './hexCodeBox';
 import { buildGlyphQuadArrays, type GlyphQuadArrays } from './glyphQuads';
@@ -105,10 +106,11 @@ export interface TextRunProps {
    */
   strokeWidthPx?: number;
   /**
-   * Rounds each glyph pen as a canvas item draws it (`canvasGlyphPenXPx`). Label3D passes false, as
-   * its mesh keeps the pen (`label_3d.cpp:347`). Canvas runs only: the MSDF atlas keeps the pen too.
+   * The Godot code that draws the glyphs, `'canvasItem'` by default: it decides the pen rounding,
+   * the glyphs skipped and the hex-code boxes (`glyphDrawer.ts`). Label3D passes `'label3D'`. The
+   * MSDF atlas keeps the pen whatever the drawer.
    */
-  quantisesPen?: boolean;
+  glyphDrawer?: GlyphDrawer;
   /** Where the run's x 0 sits in its canvas item, which a rounded pen includes (`text_server_adv.cpp:4074-4084`). Canvas runs only. */
   penOriginXPx?: number;
   /**
@@ -179,6 +181,22 @@ interface TextRunLook {
   pixelMaterial: CanvasItemPixelMaterial | undefined;
 }
 
+/** How a run samples the raster it owns: its filter row, and whether a mip chain is built for it. */
+interface RasterSampling {
+  textureFilter: TextureFilterState;
+  mipmapped: boolean;
+}
+
+/**
+ * Writes `sampling` onto an owned raster. No chain unless the caller asks: Godot builds one only
+ * for a font with `generate_mipmaps` (`text_server_adv.cpp:3121`), and a raster rebuilt on every
+ * text or size change is costly to mipmap.
+ */
+function sampleRaster(texture: THREE.Texture, { textureFilter, mipmapped }: RasterSampling): void {
+  texture.generateMipmaps = mipmapped;
+  applyTextureFilterState(texture, textureFilter);
+}
+
 /** The geometry of merged glyph quads. A lit run reads the normal, so a caller adds it. */
 function quadGeometry({ positions, uvs, indices }: GlyphQuadArrays): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
@@ -189,9 +207,9 @@ function quadGeometry({ positions, uvs, indices }: GlyphQuadArrays): THREE.Buffe
 }
 
 /**
- * A BMFont run: one quad for each glyph over a texture of the font's page fills, drawn as a Control
- * draws any texture. The tint multiplies the page colour, as Godot's modulate does for a font with
- * no FreeType face (`text_server_adv.cpp:4045`). An outline pass draws the font's outline set, at
+ * A BMFont run: one quad for each glyph over a texture of the font's page fills. The tint multiplies
+ * the page colour, as Godot's modulate does for a font with no FreeType face (`text_server_adv.cpp:4045`):
+ * in sRGB as a Control draws any texture, or in linear for a Label3D (`glyphDrawer.ts`). An outline pass draws the font's outline set, at
  * the glyph's own rectangle, for every outline size (`text_server_adv.h:406-414`, `font.cpp:1712-1717`).
  * A positive `strokeWidthPx` is that outline pass.
  */
@@ -200,17 +218,18 @@ function buildBitmapRun(
   metrics: BitmapFontMetrics,
   fontSizePx: number,
   look: TextRunLook,
-  textureFilter: TextureFilterState,
-  { strokeWidthPx = 0, penOriginXPx = 0 }: CanvasTextPaintOptions
+  sampling: RasterSampling,
+  { strokeWidthPx = 0, glyphDrawer, penOriginXPx }: CanvasTextPaintOptions
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
   const isOutlinePass = strokeWidthPx > 0;
   const sheet = isOutlinePass ? metrics.bitmap.outlineSheet : metrics.bitmap.sheet;
-  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet, penOriginXPx);
+  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet, { glyphDrawer, penOriginXPx });
   const geometry = quadGeometry(quads);
   geometry.setAttribute('normal', quadFacingPlusZ(quads.positions.length / 3));
   const texture = createSheetTexture(sheet);
-  applyTextureFilterState(texture, textureFilter);
+  if (glyphDrawer === 'label3D') texture.colorSpace = THREE.SRGBColorSpace;
+  sampleRaster(texture, sampling);
   const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
   const paint = (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) =>
     createCanvasTextMaterial({
@@ -221,6 +240,7 @@ function buildBitmapRun(
       depthTest,
       side,
       pixelMaterial,
+      mipmapped: sampling.mipmapped,
       shading,
       ...blend,
     });
@@ -238,13 +258,12 @@ function buildTextRun(
   fontSizePx: number,
   look: TextRunLook,
   canvasPaint: CanvasTextPaintOptions,
-  textureFilter: TextureFilterState,
-  mipmapped: boolean
+  sampling: RasterSampling
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
   const skew = layout.fontMetrics.skew ?? 0;
   if (isBitmapFontMetrics(layout.fontMetrics)) {
-    return buildBitmapRun(layout, layout.fontMetrics, fontSizePx, look, textureFilter, canvasPaint);
+    return buildBitmapRun(layout, layout.fontMetrics, fontSizePx, look, sampling, canvasPaint);
   }
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, canvasPaint.strokeWidthPx);
@@ -260,10 +279,7 @@ function buildTextRun(
     // 5/255 below the backdrop at a glyph edge, where Godot draws a monotonic ramp. `textRun.md`
     // gives the engine lines, and why a raster split into coverage plus colour would reopen this.
     texture.colorSpace = THREE.SRGBColorSpace;
-    // No chain unless the caller asks: Godot's default font generates none
-    // (`text_server.cpp:2387`), and a raster rebuilt on every text or size change is costly to mipmap.
-    texture.generateMipmaps = mipmapped;
-    applyTextureFilterState(texture, textureFilter);
+    sampleRaster(texture, sampling);
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
 
@@ -276,7 +292,7 @@ function buildTextRun(
         depthTest,
         side,
         pixelMaterial,
-        mipmapped,
+        mipmapped: sampling.mipmapped,
         shading,
         ...blend,
       });
@@ -310,7 +326,7 @@ export function TextRun({
   depthTest,
   side,
   strokeWidthPx = 0,
-  quantisesPen = true,
+  glyphDrawer = 'canvasItem',
   penOriginXPx = 0,
   textureFilter = godotTextureFilterState(undefined),
   mipmapped = false,
@@ -331,9 +347,8 @@ export function TextRun({
         layout,
         fontSizePx,
         { tint, clippingPlanes, depthTest, side, pixelMaterial },
-        { strokeWidthPx, quantisesPen, penOriginXPx },
-        textureFilter,
-        mipmapped
+        { strokeWidthPx, glyphDrawer, penOriginXPx },
+        { textureFilter, mipmapped }
       ),
     // `tint` is compared by its fields, not by identity: a caller that re-creates an equal
     // object every render must not rebuild the mesh.
@@ -350,7 +365,7 @@ export function TextRun({
       side,
       pixelMaterial,
       strokeWidthPx,
-      quantisesPen,
+      glyphDrawer,
       penOriginXPx,
       textureFilter,
       mipmapped,
@@ -379,7 +394,10 @@ export function TextRun({
 
   // `draw_hex_code_box` (`text_server.cpp:771-812`) draws in its caller's colour:
   // this run's `tint`, converted to linear once as for every `ControlQuad`.
-  const hexBoxRects = useMemo(() => collectHexCodeBoxRects(layout, fontSizePx), [layout, fontSizePx]);
+  const hexBoxRects = useMemo(
+    () => (glyphDrawer === 'canvasItem' ? collectHexCodeBoxRects(layout, fontSizePx) : []),
+    [glyphDrawer, layout, fontSizePx]
+  );
   const hexBoxColor = useMemo(() => {
     const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
     return new THREE.Color(r, g, b);

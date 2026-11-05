@@ -28,6 +28,7 @@ import { passBlendMaterialProps, type SurfaceBlend } from '../../../materials/su
 import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
 import type { SurfaceShading } from '../../../materialFor2d';
 import type { Rgba } from '../../../../godot/math/math';
+import type { GlyphDrawer } from './glyphDrawer';
 
 /** Fixed vertical pad, CSS px, on every raster edge: anti-aliased ink can overshoot a glyph's ascent/descent box. The quad is this much taller than `layout.heightPx` on both edges. */
 const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
@@ -124,8 +125,8 @@ function opaqueCssColor(tint: Pick<Rgba, 'r' | 'g' | 'b'>): string {
 export interface CanvasTextPaintOptions {
   /** A positive width paints the outline ring instead of the fill, as Godot's separate outline surface (`label_3d.cpp:610-615`). */
   strokeWidthPx?: number;
-  /** Rounds each pen as a canvas item draws a glyph (`canvasGlyphPenXPx`). False for Label3D, whose mesh keeps the pen (`label_3d.cpp:347`). */
-  quantisesPen?: boolean;
+  /** `'canvasItem'` by default, which rounds each pen (`canvasGlyphPenXPx`). A Label3D's mesh keeps the pen. */
+  glyphDrawer?: GlyphDrawer;
   /** Where the run's x 0 sits in its canvas item, which the rounded pen includes. 0 by default. */
   penOriginXPx?: number;
 }
@@ -145,7 +146,7 @@ export function paintSceneFontCanvas(
   tint: Rgba,
   skew: number,
   canvasLayout: CanvasTextCanvasLayout,
-  { strokeWidthPx = 0, quantisesPen = true, penOriginXPx = 0 }: CanvasTextPaintOptions = {}
+  { strokeWidthPx = 0, glyphDrawer = 'canvasItem', penOriginXPx = 0 }: CanvasTextPaintOptions = {}
 ): HTMLCanvasElement {
   const metrics = layout.fontMetrics;
   if (!isCanvasFontMetrics(metrics)) {
@@ -217,7 +218,9 @@ export function paintSceneFontCanvas(
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
       const penX =
         canvasLayout.offsetXPx +
-        (quantisesPen ? canvasGlyphPenXPx(penOriginXPx + gp.x, fontSizePx, metrics) - penOriginXPx : gp.x);
+        (glyphDrawer === 'canvasItem'
+          ? canvasGlyphPenXPx(penOriginXPx + gp.x, fontSizePx, metrics) - penOriginXPx
+          : gp.x);
       // A glyph shaped with no growth, in a layout that is not sheared, stays on its plain ring.
       const hasVariedGlyph = skew !== 0 || gp.emboldenGrowthPx;
       const contours = contoursOf && hasVariedGlyph ? contoursOf(gp.char) : null;

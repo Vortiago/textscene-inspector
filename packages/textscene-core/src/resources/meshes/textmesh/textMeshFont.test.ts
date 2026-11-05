@@ -13,6 +13,9 @@ import {
   woffFontFile,
 } from './textMeshFont.testkit';
 import { textMeshFont, textMeshFontFiles, textMeshFontKey } from './textMeshFont';
+import { bitmapFontFile } from '../../../r3f/controls/native/text/bitmapFontMetrics.testkit';
+import { buildTextMeshSurface } from './build';
+import { decodeTextMesh } from './decode';
 
 const loaded = (font: FontFileResource = trueTypeFontFile()) => ({ [FONT_PATH]: font });
 
@@ -219,5 +222,22 @@ describe('textMeshFontFiles', () => {
     const mesh = { ...textMeshWith(), resource: { id: 't', type: 'TextMesh', data: {} } };
 
     expect(textMeshFontFiles(mesh, () => undefined)).toEqual([]);
+  });
+});
+
+describe('textMeshFont on a BMFont', () => {
+  /** The surface a TextMesh of `text` builds over the test BMFont at its fixed size. */
+  function bitmapSurface(text: string) {
+    const font = textMeshFont(textMeshWith({}, loaded(bitmapFontFile())));
+    if (font.status !== 'ready') throw new Error(`expected a ready font, got ${font.status}`);
+    return buildTextMeshSurface(decodeTextMesh({ text: `"${text}"`, font_size: '16' }), font.face);
+  }
+
+  it('builds no glyph surface: a font with no FreeType face has no contours (`text_server_adv.cpp:3613`)', () => {
+    expect(Array.from(bitmapSurface('Hi AV').indices)).toEqual([0, 0, 0]);
+  });
+
+  it('builds the hex-code box quad of a character the font lacks, as for any font', () => {
+    expect(bitmapSurface('HzH').positions.length / 3).toBe(4);
   });
 });

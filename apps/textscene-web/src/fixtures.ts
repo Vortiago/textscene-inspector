@@ -1303,6 +1303,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label3d Bmfont",
+    "file": "unit-label3d-bmfont.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label3d Layout",
     "file": "unit-label3d-layout.tscn",
     "category": "Other"

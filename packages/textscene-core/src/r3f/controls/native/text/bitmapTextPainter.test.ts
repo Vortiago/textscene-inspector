@@ -5,10 +5,10 @@
 import { describe, expect, it } from 'vitest';
 import { AutowrapMode, FixedSizeScaleMode } from '../../../../godot/text/textServerEnums';
 import { testBitmapFont, testBitmapMetrics } from './bitmapFontMetrics.testkit';
-import { buildBitmapQuads } from './bitmapTextPainter';
+import { buildBitmapQuads, type BitmapPaintOptions } from './bitmapTextPainter';
 import { shapeText } from './textLayout';
 
-function quadsFor(text: string, fontSizePx: number, scaleMode?: number, penOriginXPx?: number) {
+function quadsFor(text: string, fontSizePx: number, scaleMode?: number, paint?: BitmapPaintOptions) {
   const fontMetrics = testBitmapMetrics(scaleMode);
   const layout = shapeText(text, {
     fontSizePx,
@@ -17,7 +17,7 @@ function quadsFor(text: string, fontSizePx: number, scaleMode?: number, penOrigi
     lineSpacingPx: 3,
     fontMetrics,
   });
-  return buildBitmapQuads(layout, fontMetrics, fontSizePx, fontMetrics.bitmap.sheet, penOriginXPx);
+  return buildBitmapQuads(layout, fontMetrics, fontSizePx, fontMetrics.bitmap.sheet, paint);
 }
 
 /** The left, top, right and bottom of quad `index`, in Godot px with Y down. */
@@ -55,7 +55,7 @@ describe('buildBitmapQuads', () => {
 
   it('floors the pen at its canvas position, so a run at x 0.5 draws half a pixel left of its origin', () => {
     // text_server_adv.cpp:4082-4085 floors `p_pos`, which is the canvas position, at scale 1.
-    const { positions } = quadsFor('H', 16, undefined, 0.5);
+    const { positions } = quadsFor('H', 16, undefined, { penOriginXPx: 0.5 });
 
     expect(rectOf(positions, 0)[0]).toBe(0.5);
   });
@@ -75,6 +75,24 @@ describe('buildBitmapQuads', () => {
 
     // Fill 0 is 64 x 32: i is x 8, y 0, 2 x 12.
     expect([uvs[0], uvs[1], uvs[2], uvs[5]]).toEqual([8 / 64, 0, 10 / 64, 12 / 32]);
+  });
+});
+
+describe('buildBitmapQuads for a Label3D', () => {
+  const label3D: BitmapPaintOptions = { glyphDrawer: 'label3D' };
+
+  it('skips a glyph whose rectangle is 2 px wide, and still advances the pen past it', () => {
+    // `label_3d.cpp:357-360`: i is 2 x 12, so H and A draw, and A sits after the advances 10 and 4.
+    const { positions } = quadsFor('HiA', 16, undefined, label3D);
+
+    expect(positions.length / 12).toBe(2);
+    expect(rectOf(positions, 1)[0]).toBe(14);
+  });
+
+  it('keeps the pen fractional, as its mesh does not floor it (`label_3d.cpp:347`)', () => {
+    const { positions } = quadsFor('H', 16, undefined, { ...label3D, penOriginXPx: 0.5 });
+
+    expect(rectOf(positions, 0)[0]).toBe(1);
   });
 });
 

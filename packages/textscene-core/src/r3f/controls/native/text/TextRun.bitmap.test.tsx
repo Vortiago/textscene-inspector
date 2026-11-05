@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { TextureFilter } from '../../../../godot/rendering/materials/textureFilter';
+import { godotTextureFilterState } from '../../../../resources/textures/godotTextureFilter';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
 import { testBitmapMetrics } from './bitmapFontMetrics.testkit';
 import { TextRun } from './TextRun';
@@ -38,6 +40,22 @@ describe('<TextRun> over a BMFont', () => {
     expect(material.map).toBeInstanceOf(THREE.DataTexture);
     expect(material.map?.colorSpace).toBe(THREE.NoColorSpace);
     expect(material.defines).toHaveProperty('CANVAS_SRGB_MULTIPLY');
+  });
+
+  it('decodes the page sheet for a Label3D, whose material multiplies in linear (`material.cpp:969,1218`)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextRun
+        layout={layoutFor('H')}
+        fontSizePx={16}
+        tint={{ r: 1, g: 1, b: 1, a: 1 }}
+        glyphDrawer="label3D"
+      />
+    );
+    const material = (renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
+
+    expect(material.map?.colorSpace).toBe(THREE.SRGBColorSpace);
+    expect(material.defines ?? {}).not.toHaveProperty('CANVAS_SRGB_MULTIPLY');
   });
 
   it('multiplies the page colour by the tint, with alpha as opacity', async () => {
@@ -79,5 +97,35 @@ describe('<TextRun> over a BMFont', () => {
 
     expect(run.geometry.getAttribute('position').count).toBe(4);
     expect(map.image.data?.[0]).toBe(7);
+  });
+
+  it('draws no hex-code box for a Label3D, as a box has no UV rect to draw (`label_3d.cpp:357`)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextRun
+        layout={layoutFor('HzH')}
+        fontSizePx={16}
+        tint={{ r: 1, g: 1, b: 1, a: 1 }}
+        glyphDrawer="label3D"
+      />
+    );
+
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
+  });
+
+  it('builds a mip chain on the page sheet of a mipmapped run', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextRun
+        layout={layoutFor('H')}
+        fontSizePx={16}
+        tint={{ r: 1, g: 1, b: 1, a: 1 }}
+        textureFilter={godotTextureFilterState(TextureFilter.LINEAR_WITH_MIPMAPS)}
+        mipmapped
+      />
+    );
+    const run = renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh;
+    const map = (run.material as THREE.MeshBasicMaterial).map!;
+
+    expect(map.generateMipmaps).toBe(true);
+    expect(map.minFilter).toBe(THREE.LinearMipmapLinearFilter);
   });
 });

@@ -182,6 +182,8 @@ export const GEOMETRY_SCENES = [
   { name: 'label3d-shaded', file: 'unit-label3d-shaded.tscn', camera: 'Root/Camera3D' },
   // The one variable: the `font` of a Label3D, with an outline ring under an embolden.
   { name: 'label3d-scene-font', file: 'unit-label3d-scene-font.tscn' },
+  // The one variable: a BMFont as the font of a TextMesh, which draws nothing, and of two Label3Ds.
+  { name: 'label3d-bmfont', file: 'unit-label3d-bmfont.tscn' },
   // The one variable: how a Label3D lays its text out. Wrap at `width`, FILL, TOP and BOTTOM
   // vertical alignment, `offset` and `uppercase`, seen through the scene's own camera.
   { name: 'label3d-layout', file: 'unit-label3d-layout.tscn', camera: 'Root/Camera3D' },
