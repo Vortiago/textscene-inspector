@@ -11,6 +11,14 @@ export function scaledIconSize(authoredPx: number, scale: number): number {
   return Math.max(1, Math.round(authoredPx * scale));
 }
 
+/** `tag` with the attribute `name` set to `value`, added after `<svg` when the tag has none. */
+function withAttribute(tag: string, name: string, value: string): string {
+  const attribute = ` ${name}="${value}"`;
+  const match = new RegExp(`\\s${name}="[^"]*"`).exec(tag);
+  if (!match) return `<svg${attribute}${tag.slice('<svg'.length)}`;
+  return tag.slice(0, match.index) + attribute + tag.slice(match.index + match[0].length);
+}
+
 /**
  * The same SVG with its root `width` and `height` scaled. A `viewBox` of the authored size goes on
  * when the root has none, so the drawing scales with the canvas instead of clipping to it.
@@ -18,14 +26,15 @@ export function scaledIconSize(authoredPx: number, scale: number): number {
 export function scaledSvgDataUrl(dataUrl: string, scale: number): string {
   if (scale === 1 || !dataUrl.startsWith(SVG_DATA_PREFIX)) return dataUrl;
   const svg = atob(dataUrl.slice(SVG_DATA_PREFIX.length));
-  const root = /<svg\b[^>]*>/.exec(svg)?.[0];
+  const root = /<svg\b[^>]*>/.exec(svg);
   if (!root) throw new Error(`expected an <svg> root in the icon, got ${svg.slice(0, 40)}`);
-  const width = Number(/\swidth="([\d.]+)"/.exec(root)?.[1]);
-  const height = Number(/\sheight="([\d.]+)"/.exec(root)?.[1]);
-  if (!(width > 0 && height > 0)) throw new Error(`expected a sized <svg> root, got ${root}`);
-  let scaled = root
-    .replace(/\swidth="[\d.]+"/, ` width="${scaledIconSize(width, scale)}"`)
-    .replace(/\sheight="[\d.]+"/, ` height="${scaledIconSize(height, scale)}"`);
-  if (!/\sviewBox=/.test(root)) scaled = scaled.replace(/^<svg\b/, `<svg viewBox="0 0 ${width} ${height}"`);
-  return SVG_DATA_PREFIX + btoa(svg.replace(root, scaled));
+  const tag = root[0];
+  const width = Number(/\swidth="([\d.]+)"/.exec(tag)?.[1]);
+  const height = Number(/\sheight="([\d.]+)"/.exec(tag)?.[1]);
+  if (!(width > 0 && height > 0)) throw new Error(`expected a sized <svg> root, got ${tag}`);
+  let scaled = withAttribute(tag, 'width', String(scaledIconSize(width, scale)));
+  scaled = withAttribute(scaled, 'height', String(scaledIconSize(height, scale)));
+  if (!/\sviewBox=/.test(tag)) scaled = withAttribute(scaled, 'viewBox', `0 0 ${width} ${height}`);
+  const end = root.index + tag.length;
+  return SVG_DATA_PREFIX + btoa(svg.slice(0, root.index) + scaled + svg.slice(end));
 }

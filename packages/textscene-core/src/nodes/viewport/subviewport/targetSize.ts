@@ -28,7 +28,7 @@ export function viewportSize(authored: Vector2, forced: ViewportRect | null): Ve
  * The render target `viewportSize` allocates. Godot leaves the ceiling to the GPU driver, but a
  * file Godot opens can hand `THREE.WebGLRenderTarget` a 2000000000-pixel axis.
  */
-export function viewportTargetSize(authored: Vector2, forced: ViewportRect | null): Vector2 {
+function viewportTargetSize(authored: Vector2, forced: ViewportRect | null): Vector2 {
   const size = viewportSize(authored, forced);
   return { x: Math.min(MAX_TEXTURE_EXTENT, size.x), y: Math.min(MAX_TEXTURE_EXTENT, size.y) };
 }
@@ -62,7 +62,7 @@ export function viewportPassSizes(node: TscnNode, forced: ViewportRect | null): 
   const scale = windowContentScale(size, (properties as WindowProperties).content_scale);
   const render = viewportSize(scale.renderSize, null);
   return {
-    target: { x: Math.min(MAX_TEXTURE_EXTENT, render.x), y: Math.min(MAX_TEXTURE_EXTENT, render.y) },
+    target: viewportTargetSize(scale.renderSize, null),
     layout: scale.layoutSize,
     view: { x: render.x / scale.canvasScale, y: render.y / scale.canvasScale },
   };

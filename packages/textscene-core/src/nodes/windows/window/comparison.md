@@ -45,6 +45,30 @@ loaded with, so it grows to the right and down.
 The `embedded_border` StyleBox, `title_color`, `title_font_size` and a `title_outline_size` ring
 override the default theme.
 
+## Right-to-left parent
+<!-- compare: image=unit-window-rtl status=done fixture=unit-window-rtl.tscn -->
+
+A window under a right-to-left Control lays its Controls out from the right. Its title trims from
+the start and the close icon stays at the right edge. Window has no `layout_direction` key of its own.
+
+## Theme scale
+<!-- compare: image=unit-window-theme-scale status=done fixture=window-theme-scale/unit-window-theme-scale.tscn -->
+
+With `gui/theme/default_theme_scale` at 1.5, the frame, the title font and the close icon grow
+with the theme.
+
+## Under a SubViewport that does not embed
+<!-- compare: image=unit-window-under-disabled-viewport status=done fixture=unit-window-under-disabled-viewport.tscn -->
+
+A window under a SubViewport without `gui_embed_subwindows` draws in the root viewport. It
+updates as the root does, though the SubViewport never updates.
+
+## Content scale
+<!-- compare: image=unit-window-content-scale status=done fixture=unit-window-content-scale.tscn -->
+
+`content_scale_factor` scales the window's Controls. `content_scale_size` with a mode and an
+aspect gives the design rect, and black bars fill the rest of the window.
+
 ## Linting
 
 <!-- lint:begin Window -->
@@ -113,8 +137,5 @@ as an unset key does, and no diagnostic comes from the lenient path.
 
 - **Approximated** The title glyph edges differ from Godot's by the same amount as a Label's in the
   default font.
-- **Not drawn** `content_scale_*` keys do not scale the window's Controls.
-- **Approximated** A window's own `layout_direction` is not read, so its Controls take the direction
-  of the Control above the window.
 - **Not drawn** A window with `force_native`, or one that no viewport embeds, draws nothing, as it
   opens as a system window in a running game.
