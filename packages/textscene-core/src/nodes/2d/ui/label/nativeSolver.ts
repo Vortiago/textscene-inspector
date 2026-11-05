@@ -525,10 +525,10 @@ interface LabelLayoutOptions extends Partial<LabelSpacing> {
   rtl?: boolean;
   /** `autowrap_mode != AUTOWRAP_OFF`, the gate of FILL's RTL arm (`label.cpp:473`). Defaults `false`. */
   isAutowrapped?: boolean;
-  /** The overrun trim `_shape` runs on each line after the fit, before `_get_line_rect` aligns it (`label.cpp:319-330`). */
   /**
-   * `refitFlags` is set for a line FILL fitted first, which `_shape` fits again with these
-   * `justification_flags` after the trim (`label.cpp:325`).
+   * The overrun trim `_shape` runs on each line after the fit, before `_get_line_rect` aligns it
+   * (`label.cpp:319-330`). `refitFlags` is set for a line FILL fitted first, which `_shape` fits again
+   * with these `justification_flags` after the trim (`label.cpp:325`).
    */
   trimLine?: (line: TextLineLayout, refitFlags?: number) => TextLineLayout;
 }
