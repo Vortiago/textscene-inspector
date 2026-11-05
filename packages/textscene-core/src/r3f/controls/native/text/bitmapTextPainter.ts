@@ -13,7 +13,6 @@
 import * as THREE from 'three';
 import type { FillSheet } from '../../../../resources/fonts/font/types';
 import type { BitmapFontMetrics } from './bitmapFontMetrics';
-import { fontIsScaled } from './fontMetrics';
 import type { GlyphPlacement, TextLayoutResult } from './textLayout';
 import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
 
@@ -47,9 +46,18 @@ function inkedGlyph(placement: GlyphPlacement, metrics: BitmapFontMetrics, sheet
 }
 
 /**
+ * Whether a BMFont glyph at `fontSizePx` floors its pen and baseline at their canvas position. Godot
+ * floors at scale 1.0 (`text_server_adv.cpp:4082-4084`), and truncates the size to an integer first,
+ * so a fractional size at the fixed size floors too.
+ */
+export function bitmapFloorsPen(fontSizePx: number, metrics: Pick<BitmapFontMetrics, 'pxPerUnit'>): boolean {
+  return metrics.pxPerUnit(fontSizePx) === 1;
+}
+
+/**
  * The quads of `layout`, drawn at `fontSizePx` over `sheet`: the glyph sheet, or the outline sheet
- * for an outline pass. When the glyph is not scaled, its pen and baseline floor at their canvas
- * position, `originPhasePx` past the run's whole item pixel (`text_server_adv.cpp:4082-4085`, `originPhase`).
+ * for an outline pass. When `bitmapFloorsPen`, its pen and baseline floor at their canvas
+ * position, `originPhasePx` past the run's whole item pixel (`originPhase`).
  * A BMFont adds no subpixel shift: `FontFile::reset_state` sets
  * `SUBPIXEL_POSITIONING_DISABLED` (`font.cpp:1433`) and `_load_bitmap_font` starts with it.
  */
@@ -68,7 +76,7 @@ export function buildBitmapQuads(
   const uvs = new Float32Array(inkedCount * 4 * 2);
   const indices = new Uint32Array(inkedCount * 6);
   const scale = metrics.pxPerUnit(fontSizePx);
-  const floorsPen = !fontIsScaled(fontSizePx, metrics);
+  const floorsPen = scale === 1;
   const sheetWidthInverse = 1 / sheet.width;
   const sheetHeightInverse = 1 / sheet.height;
 

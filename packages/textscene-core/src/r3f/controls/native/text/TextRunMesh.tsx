@@ -31,7 +31,7 @@ import {
 import type { SurfaceShading } from '../../../materialFor2d';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { isBitmapFontMetrics, type BitmapFontMetrics } from './bitmapFontMetrics';
-import { buildBitmapQuads, createSheetTexture } from './bitmapTextPainter';
+import { bitmapFloorsPen, buildBitmapQuads, createSheetTexture } from './bitmapTextPainter';
 import type { TextLayoutResult } from './textLayout';
 import { hexCodeBoxRects } from './hexCodeBox';
 import { buildGlyphQuadArrays, type GlyphQuadArrays } from './glyphQuads';
@@ -50,7 +50,8 @@ import { useSwappedMaterials } from '../../../materials/swappedMaterials';
 import { usePendingWhile } from '../../../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../../../shadowCasting';
 import type { Rgba } from '../../../../godot/math/math';
-import { VECTOR2_ZERO } from '../../../../godot/math/vector';
+import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
+import type { FillSheet } from '../../../../resources/fonts/font/types';
 import { useDisposeOnRelease } from '../../../useDisposeOnRelease';
 import { useNearestAnisotropy } from '../../../nearestAnisotropy';
 
@@ -202,21 +203,17 @@ function buildBitmapRun(
   metrics: BitmapFontMetrics,
   fontSizePx: number,
   look: TextRunLook,
-  textureFilter: TextureFilterState,
-  { strokeWidthPx = 0, originPhasePx }: CanvasTextPaintOptions
+  texture: BitmapSheetTexture,
+  originPhasePx: Readonly<Vector2> | undefined
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
-  const isOutlinePass = strokeWidthPx > 0;
-  const sheet = isOutlinePass ? metrics.bitmap.outlineSheet : metrics.bitmap.sheet;
-  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet, originPhasePx);
+  const quads = buildBitmapQuads(layout, metrics, fontSizePx, texture.sheet, originPhasePx);
   const geometry = quadGeometry(quads);
   geometry.setAttribute('normal', quadFacingPlusZ(quads.positions.length / 3));
-  const texture = createSheetTexture(sheet);
-  applyTextureFilterState(texture, textureFilter);
   const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
   const paint = (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) =>
     createCanvasTextMaterial({
-      map: texture,
+      map: texture.texture,
       color: new THREE.Color(r, g, b),
       opacity: tint.a,
       clippingPlanes,
@@ -226,13 +223,44 @@ function buildBitmapRun(
       shading,
       ...blend,
     });
-  return { geometry, paint, ownedTexture: texture };
+  return { geometry, paint };
+}
+
+/** A BMFont page sheet on the GPU. It outlives a run, so a pen move rebuilds the quads alone. */
+interface BitmapSheetTexture {
+  sheet: FillSheet;
+  texture: THREE.DataTexture;
+}
+
+/**
+ * The texture of the sheet a BMFont run samples: the outline sheet for an outline pass, which a
+ * positive `strokeWidthPx` marks. Undefined for every other face.
+ */
+function useBitmapSheetTexture(
+  metrics: TextLayoutResult['fontMetrics'],
+  strokeWidthPx: number,
+  textureFilter: TextureFilterState
+): BitmapSheetTexture | undefined {
+  const sheet = isBitmapFontMetrics(metrics)
+    ? strokeWidthPx > 0
+      ? metrics.bitmap.outlineSheet
+      : metrics.bitmap.sheet
+    : undefined;
+  const sheetTexture = useMemo(() => {
+    if (!sheet) return undefined;
+    const texture = createSheetTexture(sheet);
+    applyTextureFilterState(texture, textureFilter);
+    return { sheet, texture };
+  }, [sheet, textureFilter]);
+  useDisposeOnRelease(sheetTexture?.texture);
+  useNearestAnisotropy(sheetTexture?.texture ?? null);
+  return sheetTexture;
 }
 
 /**
  * Dispatches on `layout.fontMetrics.kind`, so no slice's `Component.tsx` branches. The face sets the
- * shear (`FontMetrics.skew`). The atlas branch ignores `canvasPaint`. A BMFont run reads its
- * stroke width as its outline pass, and its origin phase as a canvas run does.
+ * shear (`FontMetrics.skew`). The atlas branch ignores `canvasPaint`. A BMFont run draws over
+ * `bitmapSheet` and reads its origin phase as a canvas run does.
  */
 function buildTextRun(
   layout: TextLayoutResult,
@@ -240,12 +268,20 @@ function buildTextRun(
   look: TextRunLook,
   canvasPaint: CanvasTextPaintOptions,
   textureFilter: TextureFilterState,
-  mipmapped: boolean
+  mipmapped: boolean,
+  bitmapSheet: BitmapSheetTexture | undefined
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
   const skew = layout.fontMetrics.skew ?? 0;
-  if (isBitmapFontMetrics(layout.fontMetrics)) {
-    return buildBitmapRun(layout, layout.fontMetrics, fontSizePx, look, textureFilter, canvasPaint);
+  if (isBitmapFontMetrics(layout.fontMetrics) && bitmapSheet) {
+    return buildBitmapRun(
+      layout,
+      layout.fontMetrics,
+      fontSizePx,
+      look,
+      bitmapSheet,
+      canvasPaint.originPhasePx
+    );
   }
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(
@@ -329,12 +365,13 @@ export function TextRunMesh({
   const pixelMaterial = useCanvasItemPixelMaterial();
   // The run memo keys by the phase, so a run that moves by whole pixels keeps its raster. An atlas
   // run and a run that keeps its pen read no phase, so a move never rebuilds them. A BMFont pen
-  // floors in every caller (`buildBitmapQuads`).
+  // floors in every caller, Label3D too, wherever `bitmapFloorsPen` holds.
   const itemOrigin = useCanvasItemOrigin();
   const { fontMetrics } = layout;
-  const readsPhase =
-    (isCanvasFontMetrics(fontMetrics) || isBitmapFontMetrics(fontMetrics)) &&
-    snapsGlyphsToItemPixels(quantisesPen || isBitmapFontMetrics(fontMetrics), fontSizePx, fontMetrics);
+  const bitmapSheet = useBitmapSheetTexture(fontMetrics, strokeWidthPx, textureFilter);
+  const readsPhase = isBitmapFontMetrics(fontMetrics)
+    ? bitmapFloorsPen(fontSizePx, fontMetrics)
+    : isCanvasFontMetrics(fontMetrics) && snapsGlyphsToItemPixels(quantisesPen, fontSizePx, fontMetrics);
   const { x: phaseX, y: phaseY } = readsPhase ? originPhase(itemOrigin) : VECTOR2_ZERO;
   if (blends && !swapped)
     throw new Error('expected blends only inside a GeometryInstance3D drawer, got none');
@@ -347,7 +384,8 @@ export function TextRunMesh({
         { tint, clippingPlanes, depthTest, side, pixelMaterial },
         { strokeWidthPx, quantisesPen, originPhasePx: { x: phaseX, y: phaseY } },
         textureFilter,
-        mipmapped
+        mipmapped,
+        bitmapSheet
       ),
     // `tint` is compared by its fields, not by identity: a caller that re-creates an equal
     // object every render must not rebuild the mesh.
@@ -369,6 +407,7 @@ export function TextRunMesh({
       phaseY,
       textureFilter,
       mipmapped,
+      bitmapSheet,
     ]
   );
   const material = usePaintedMaterial(run, blends?.unfaded, shading);
@@ -410,8 +449,8 @@ export function TextRunMesh({
 
   return (
     <>
-      {/* A canvas run owns its texture. Only an atlas run waits for the atlas. */}
-      {!run.ownedTexture && <AtlasPending />}
+      {/* A canvas or BMFont run owns its texture. Only an atlas run waits for the atlas. */}
+      {!run.ownedTexture && !bitmapSheet && <AtlasPending />}
       <mesh
         ref={meshRef}
         geometry={run.geometry}
