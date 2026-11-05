@@ -25,6 +25,16 @@ export function outlineSizeOf(value: string): number {
 }
 
 /**
+ * A `[font_size=N]` payload as a list marker reads it: any `N` but -1 is the marker's size,
+ * including 0 and below, which shape nothing (`item_font_size != -1`, `rich_text_label.cpp:362`).
+ */
+export function markerFontSizeOf(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  const sizePx = stringToInt(value);
+  return sizePx === -1 ? undefined : sizePx;
+}
+
+/**
  * The outline of a run: the innermost `[outline_size]` and `[outline_color]`, each over the theme's.
  * An unreadable colour is `defaultColor` (`:6155`).
  */

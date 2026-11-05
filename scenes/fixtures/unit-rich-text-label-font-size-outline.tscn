@@ -4,7 +4,7 @@
 ; only in those tags, over a plain 24 px label. The first row sizes a span, which grows its line.
 ; The second outlines a span in red and in a size past the control's. The third sets the control's
 ; own outline through theme overrides, and a tag that turns it off. The fourth wraps sized text in
-; a narrow box. The fifth gives list items a size and an outline, which the marker follows. No other scene shows a regression in these tags, since none sets one.
+; a narrow box. The fifth gives list items a size and an outline, which the marker follows, and a size of 0 that draws none. No other scene shows a regression in these tags, since none sets one.
 
 [node name="Root" type="Control"]
 anchors_preset = 15
@@ -58,10 +58,11 @@ layout_mode = 0
 offset_left = 400.0
 offset_top = 320.0
 offset_right = 1100.0
-offset_bottom = 520.0
+offset_bottom = 600.0
 theme_override_font_sizes/normal_font_size = 20
 bbcode_enabled = true
 text = "[ul][font_size=36]big item[/font_size]
 [outline_size=3][outline_color=red]outlined[/outline_color][/outline_size]
+[font_size=0]no marker[/font_size]
 plain[/ul][ol][font_size=30]one[/font_size]
 two[/ol]"

@@ -2075,6 +2075,21 @@ describe('RichTextLabel lists and indents', () => {
       expect(marker.outline).toEqual({ sizePx: 3, color: { r: 1, g: 0, b: 0, a: 1 } });
     });
 
+    it.each(['0', '-7'])(
+      'draws no marker at a [font_size] of %s, and adds no width (`item_font_size != -1`)',
+      (value) => {
+        const placements = listPlacements(`[ul][font_size=${value}]a[/font_size][/ul]`);
+        expect(textAndOffset(placements).slice(0, 2)).toEqual([
+          ['', MARGIN_PX],
+          ['a', MARGIN_PX],
+        ]);
+      }
+    );
+
+    it('keeps the font size for a [font_size] of -1, which `item_font_size` uses for none', () => {
+      expect(markerOf('[ul][font_size=-1]a[/font_size][/ul]').fontSizePx).toBe(FONT_SIZE);
+    });
+
     it('has no outline where its item has none, and the colour falls to the base colour', () => {
       expect(markerOf('[ul]a[/ul]').outline).toEqual({ sizePx: 0, color: WHITE });
     });

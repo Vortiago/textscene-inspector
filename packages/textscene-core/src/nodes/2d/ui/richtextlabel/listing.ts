@@ -27,7 +27,7 @@ import {
   type OpenBBCodeTag,
 } from './bbcode';
 import { faceOfStyle, type RichTextFaces } from './styleFaces';
-import { fontSizeOf, outlineSizeOf, tagFontSizePx } from './runStyle';
+import { markerFontSizeOf, outlineSizeOf, tagFontSizePx } from './runStyle';
 import type { StyledTextRun } from './nativeSolver';
 
 /** `ItemList`'s default bullet (`rich_text_label.cpp:7593`). */
@@ -121,7 +121,7 @@ function markerFormatting(
   const outlineColorValue = pick(tags, 'outline_color');
   const fontSizeValue = pick(tags, 'font_size');
   return {
-    fontSizePx: fontSizeOf(fontSizeValue),
+    fontSizePx: markerFontSizeOf(fontSizeValue),
     color: colorOf(pick(tags, 'color'), defaultColor),
     outlineSizePx: sizeValue === undefined ? undefined : outlineSizeOf(sizeValue),
     outlineColor: colorOf(outlineColorValue, defaultColor),
@@ -405,8 +405,10 @@ function marginPx(frames: readonly IndentFrame[], context: ListingContext): numb
 
 function shapeMarker(text: string, row: Row, faces: RichTextFaces): ListMarker {
   const style = rowMarkerStyle(row);
+  // A size of 0 or less shapes no glyphs, so the marker has no width and draws nothing.
+  const shapedString = style.fontSizePx > 0 ? text : '';
   const direction = row.run.bidi.direction;
-  const layout = shapeText(text, {
+  const layout = shapeText(shapedString, {
     fontSizePx: style.fontSizePx,
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,
