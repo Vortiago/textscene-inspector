@@ -157,8 +157,8 @@ function FilledPolygon({
 
 /**
  * Builds the mesh from the resolved rings, or null with no fillable ring.
- * `polygons` yields independent rings, and `invert_enabled` the grown bounds with
- * the polygon as a hole. Winding is irrelevant: the material is double-sided.
+ * `polygons` yields independent rings, and `invert_enabled` one ring bridged to the
+ * grown bounds. Winding is irrelevant: the material is double-sided.
  */
 function buildPolygonGeometry(
   rings: PolygonRings,
@@ -175,10 +175,7 @@ function buildPolygonGeometry(
   }));
 
   const index: number[] = [];
-  const holes = rings.hole ? [rings.hole] : [];
-  for (const outline of rings.outlines) {
-    triangulateRing(points, outline, holes, index);
-  }
+  for (const outline of rings.outlines) triangulateRing(points, outline, index);
   if (index.length === 0) return null;
 
   const geometry = new THREE.BufferGeometry();
@@ -257,28 +254,12 @@ function buildVertexColors(vertexCount: number, vertexColors: Float32Array): Flo
 }
 
 /**
- * Triangulates one ring and appends the triangles to `index`, in the original point numbering. A
- * ring without holes takes Godot's own ear clipping (`polygon_2d.cpp:345-372`), whose triangles a
- * skeleton bends, and which draws nothing for a ring whose edges cross. The ring with the
- * `invert_enabled` hole takes three's, since Godot bridges that hole into one ring.
+ * Triangulates one ring with Godot's ear clipping (`polygon_2d.cpp:323-357`) and appends the
+ * triangles to `index`, in the pool's numbering. A skeleton bends these triangles, and a ring whose
+ * edges cross draws none.
  */
-function triangulateRing(points: Vector2[], outline: number[], holes: number[][], index: number[]): void {
-  if (holes.length === 0) {
-    for (const local of triangulatePolygon(outline.map((i) => points[i]!))) index.push(outline[local]!);
-    return;
-  }
-  const contour = outline.map((i) => new THREE.Vector2(points[i]!.x, -points[i]!.y));
-  const holeContours = holes.map((hole) => hole.map((i) => new THREE.Vector2(points[i]!.x, -points[i]!.y)));
-  // The flat local numbering triangulateShape works in: contour first, then
-  // each hole, in the order it concatenates them internally.
-  const localToGlobal = [...outline, ...holes.flat()];
-  for (const tri of THREE.ShapeUtils.triangulateShape(contour, holeContours)) {
-    for (const local of tri) {
-      const global = localToGlobal[local];
-      if (global === undefined) return;
-      index.push(global);
-    }
-  }
+function triangulateRing(points: Vector2[], outline: number[], index: number[]): void {
+  for (const local of triangulatePolygon(outline.map((i) => points[i]!))) index.push(outline[local]!);
 }
 
 /** The top-left texel's UV, u 0 and v 1, at every vertex. */

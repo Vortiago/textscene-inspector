@@ -27,6 +27,8 @@ const STRIP = `polygon = PackedVector2Array(0, 0, 100, 0, 100, 10)
 skeleton = NodePath("../Skeleton")
 `;
 
+const UPPER_STRIP = `${STRIP}bones = [NodePath("Upper"), PackedFloat32Array(1, 1, 1)]`;
+
 function scene(polygonProperties: string, skeleton = SKELETON): string {
   return `[gd_scene format=3]
 [node name="Root" type="Node2D"]
@@ -43,7 +45,7 @@ function bindingOf(content: string): PolygonSkeletonBinding | undefined {
 
 describe('bindPolygonsToSkeletons', () => {
   it('binds the bones of the named Skeleton2D in tree order', () => {
-    const binding = bindingOf(scene(`${STRIP}bones = [NodePath("Upper"), PackedFloat32Array(1, 1, 1)]`));
+    const binding = bindingOf(scene(UPPER_STRIP));
     expect(binding?.skeletonPath).toBe('Root/Skeleton');
     expect(binding?.bonePaths).toEqual([
       'Root/Skeleton/Upper',
@@ -53,14 +55,14 @@ describe('bindPolygonsToSkeletons', () => {
   });
 
   it('inverts the rest each bone composes down the chain', () => {
-    const binding = bindingOf(scene(`${STRIP}bones = [NodePath("Upper"), PackedFloat32Array(1, 1, 1)]`));
+    const binding = bindingOf(scene(UPPER_STRIP));
     const { a, b, c, d, tx, ty } = binding!.restInverses[1]!;
     expect([a, b, c, d, tx, ty].map((value) => value + 0)).toEqual([1, 0, 0, 1, -100, 0]);
   });
 
   it('leaves a singular rest uninverted, as affine_invert does', () => {
     // The unset rest of Free zeroes the basis, and its parent's rest still carries the origin.
-    const binding = bindingOf(scene(`${STRIP}bones = [NodePath("Upper"), PackedFloat32Array(1, 1, 1)]`));
+    const binding = bindingOf(scene(UPPER_STRIP));
     expect(binding?.restInverses[2]).toEqual({ a: 0, b: 0, c: 0, d: 0, tx: 100, ty: 0 });
   });
 
@@ -90,11 +92,7 @@ bones = [NodePath("Upper"), PackedFloat32Array(1, 1, 1)]`)
   });
 
   it('binds nothing with invert_enabled on', () => {
-    const binding = bindingOf(
-      scene(`${STRIP}invert_enabled = true
-bones = [NodePath("Upper"), PackedFloat32Array(1, 1, 1)]`)
-    );
-    expect(binding).toBeUndefined();
+    expect(bindingOf(scene(`${UPPER_STRIP}\ninvert_enabled = true`))).toBeUndefined();
   });
 
   it('binds nothing without bones', () => {
@@ -102,12 +100,7 @@ bones = [NodePath("Upper"), PackedFloat32Array(1, 1, 1)]`)
   });
 
   it('binds nothing where the path names a node that is not a Skeleton2D', () => {
-    const binding = bindingOf(
-      scene(
-        `${STRIP}bones = [NodePath("Upper"), PackedFloat32Array(1, 1, 1)]`,
-        '[node name="Skeleton" type="Node2D" parent="."]'
-      )
-    );
+    const binding = bindingOf(scene(UPPER_STRIP, '[node name="Skeleton" type="Node2D" parent="."]'));
     expect(binding).toBeUndefined();
   });
 });

@@ -4,8 +4,7 @@
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
-import { parseNode2D } from '../../base/node2d/parser';
-import { TRANSFORM2D_SLOT_RE, allFinite, matchedFloat } from '../../../godot/variant/number.js';
+import { parseNode2D, parseTransform2DColumns } from '../../base/node2d/parser';
 import type { Transform2DColumns } from '../../../godot/math/transform2d.js';
 import { warn } from '../../../logger';
 import type { Bone2DProperties } from './types';
@@ -19,12 +18,8 @@ export function parseBone2D(heading: ParsedHeading, properties: Record<string, s
 
 function restOf(value: string | undefined, name: string): Transform2DColumns {
   if (value === undefined) return UNSET_REST;
-  const match = TRANSFORM2D_SLOT_RE.exec(value.trim());
-  const columns = match?.slice(1, 7).map((capture) => matchedFloat(capture));
-  if (!columns || !allFinite(columns)) {
-    warn(`Bone2D "${name}": expected a finite Transform2D rest, got "${value}"`);
-    return UNSET_REST;
-  }
-  const [a, b, c, d, tx, ty] = columns as [number, number, number, number, number, number];
-  return { a, b, c, d, tx, ty };
+  const rest = parseTransform2DColumns(value);
+  if (rest) return rest;
+  warn(`Bone2D "${name}": expected a finite Transform2D rest, got "${value}"`);
+  return UNSET_REST;
 }

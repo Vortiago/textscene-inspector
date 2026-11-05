@@ -15,13 +15,13 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import '../../../r3f/nodes/index';
 
 /** A strip along +x whose one bone turns a quarter, so Godot's (100, 0) draws at (0, 100). */
-function scene(polygonLines = '', boneLines = 'rotation = 1.5707964'): string {
+function scene(polygonLines = ''): string {
   return `[gd_scene format=3]
 [node name="Root" type="Node2D"]
 [node name="Skeleton" type="Skeleton2D" parent="."]
 position = Vector2(50, 50)
 [node name="Arm" type="Bone2D" parent="Skeleton"]
-${boneLines}
+rotation = 1.5707964
 rest = Transform2D(1, 0, 0, 1, 0, 0)
 [node name="Strip" type="Polygon2D" parent="."]
 position = Vector2(50, 50)

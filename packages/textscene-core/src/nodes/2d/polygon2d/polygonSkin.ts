@@ -30,6 +30,7 @@ export interface BoneWeights {
 
 /** Four bones and four weights for each vertex, as the skin buffer stores them. */
 export interface VertexInfluences {
+  vertexCount: number;
   bones: Int32Array;
   weights: Float32Array;
 }
@@ -53,7 +54,7 @@ export function vertexInfluences(vertexCount: number, entries: readonly BoneWeig
   for (let vertex = 0; vertex < vertexCount; vertex++) {
     normaliseWeights(weights, vertex * BONES_PER_VERTEX);
   }
-  return { bones, weights };
+  return { vertexCount, bones, weights };
 }
 
 /** Puts `weight` before the first smaller one of the vertex at `base`, pushing the rest down. */

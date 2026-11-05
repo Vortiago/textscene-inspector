@@ -78,7 +78,7 @@ export function parsePolygon2D(
 function parseBones(value: string): Polygon2DBone[] {
   const body = arrayLiteralBody(value);
   if (body === null) throw new Error(`expected an Array literal, got ${value}`);
-  const elements = body.trim() === '' ? [] : dropTrailingComma(splitTopLevel(body)).map((e) => e.trim());
+  const elements = dropTrailingComma(splitTopLevel(body));
   if (elements.length % 2 !== 0)
     throw new Error(`expected path and weights pairs, got ${elements.length} elements`);
   const bones: Polygon2DBone[] = [];
@@ -93,6 +93,6 @@ function weightsOf(value: string): Float32Array {
     return new Float32Array(parsePackedFloat32Array(value));
   } catch {
     // Another Variant casts to an empty PackedFloat32Array, which no vertex count matches.
-    return new Float32Array(0);
+    return NO_FLOATS;
   }
 }

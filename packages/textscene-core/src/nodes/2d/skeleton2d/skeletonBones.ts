@@ -11,6 +11,7 @@
 import {
   affineInverseTransform2D,
   multiplyTransform2D,
+  transform2DDeterminant,
   type Transform2DColumns,
 } from '../../../godot/math/transform2d.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
@@ -66,6 +67,5 @@ export function skeletonOfBone(bonePath: string, tree: LiveTree): string | null 
  * `ERR_FAIL_COND(det == 0)` returns before it inverts (`transform_2d.cpp:51`).
  */
 function bindInverse(rest: Transform2DColumns): Transform2DColumns {
-  const determinant = Math.fround(Math.fround(rest.a * rest.d) - Math.fround(rest.b * rest.c));
-  return determinant === 0 ? rest : affineInverseTransform2D(rest);
+  return transform2DDeterminant(rest) === 0 ? rest : affineInverseTransform2D(rest);
 }

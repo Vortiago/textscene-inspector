@@ -10,7 +10,7 @@ import { parseColor } from '../../../utils/colorParser';
 import { enumOr, floatOr, intOr, vec2Or, parseHeadingIndex } from '../../../parser/valueParsers';
 import { TRANSFORM2D_SLOT_RE, matchedFloat, allFinite } from '../../../godot/variant/number.js';
 import { degToRad } from '../../../godot/math/math.js';
-import { transform2DDecompose } from '../../../godot/math/transform2d.js';
+import { transform2DDecompose, type Transform2DColumns } from '../../../godot/math/transform2d.js';
 import { warn } from '../../../logger';
 import type { Node2DProperties } from './types';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
@@ -92,25 +92,23 @@ export function decomposeTransform2D(
   value: string,
   nodeName = ''
 ): { position: Vector2; rotation: number; scale: Vector2; skew: number } | null {
-  const m = TRANSFORM2D_SLOT_RE.exec(value.trim());
-  if (!m) {
+  const columns = parseTransform2DColumns(value);
+  if (!columns) {
     warn(`Node2D${nodeName ? ` "${nodeName}"` : ''}: invalid Transform2D "${value}"`);
     return null;
   }
-  const [xx, xy, yx, yy, ox, oy] = m.slice(1, 7).map((v) => matchedFloat(v)) as [
-    number,
-    number,
-    number,
-    number,
-    number,
-    number,
-  ];
-  // An overflowing exponent is inside the finite grammar; the decomposition
-  // below turns it into a NaN skew and a canvas transform nothing draws under.
-  if (!allFinite([xx, xy, yx, yy, ox, oy])) {
-    warn(`Node2D${nodeName ? ` "${nodeName}"` : ''}: non-finite Transform2D "${value}"`);
-    return null;
-  }
+  return transform2DDecompose(columns);
+}
 
-  return transform2DDecompose({ a: xx, b: xy, c: yx, d: yy, tx: ox, ty: oy });
+/**
+ * The columns of a `Transform2D(...)` literal, or null for another value. An overflowing exponent is
+ * inside the finite grammar and reads as null too, as it would turn every product into NaN.
+ */
+export function parseTransform2DColumns(value: string): Transform2DColumns | null {
+  const columns = TRANSFORM2D_SLOT_RE.exec(value.trim())
+    ?.slice(1, 7)
+    .map((capture) => matchedFloat(capture));
+  if (!columns || !allFinite(columns)) return null;
+  const [a, b, c, d, tx, ty] = columns as [number, number, number, number, number, number];
+  return { a, b, c, d, tx, ty };
 }

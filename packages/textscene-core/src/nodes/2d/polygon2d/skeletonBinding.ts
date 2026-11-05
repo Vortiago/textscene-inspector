@@ -6,9 +6,8 @@
  */
 
 import type { Transform2DColumns } from '../../../godot/math/transform2d.js';
-import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
-import { uniquePathsOfLiteral } from '../../../r3f/nodePathUniqueNames.js';
+import { resolveLiteralOnLiveTree } from '../../../r3f/nodePathUniqueNames.js';
 import { perObject } from '../../../utils/perObject.js';
 import { sameData } from '../../../utils/sameData.js';
 import { skeleton2DBones, skeletonOfBone, type Skeleton2DBone } from '../skeleton2d/skeletonBones.js';
@@ -27,13 +26,20 @@ export interface PolygonSkeletonBinding {
   influences: VertexInfluences;
 }
 
+/** The bones of one Skeleton2D, and the index of each by its live path. */
+interface SkeletonBones {
+  list: Skeleton2DBone[];
+  indexOf: ReadonlyMap<string, number>;
+}
+
 /** The binding of every Polygon2D in `tree` that a Skeleton2D deforms, by the polygon's live path. */
 export function bindPolygonsToSkeletons(tree: LiveTree): ReadonlyMap<string, PolygonSkeletonBinding> {
-  const bonesBySkeleton = new Map<string, Skeleton2DBone[]>();
+  const bonesBySkeleton = new Map<string, SkeletonBones>();
   const bonesOf = (skeletonPath: string) => {
     let bones = bonesBySkeleton.get(skeletonPath);
     if (!bones) {
-      bones = skeleton2DBones(tree.at(skeletonPath)!, tree);
+      const list = skeleton2DBones(tree.at(skeletonPath)!, tree);
+      bones = { list, indexOf: new Map(list.map((bone, index) => [bone.path, index])) };
       bonesBySkeleton.set(skeletonPath, bones);
     }
     return bones;
@@ -50,30 +56,18 @@ export function bindPolygonsToSkeletons(tree: LiveTree): ReadonlyMap<string, Pol
 function bindingOf(
   { step, path }: LiveLink,
   tree: LiveTree,
-  bonesOf: (skeletonPath: string) => Skeleton2DBone[]
+  bonesOf: (skeletonPath: string) => SkeletonBones
 ): PolygonSkeletonBinding | null {
   if (step.node.type !== 'Polygon2D') return null;
   const properties = step.node.properties as Polygon2DProperties;
   const vertexCount = drawnVertexCount(properties);
   if (properties.invertEnabled || properties.bones.length === 0 || vertexCount <= 0) return null;
-  const skeletonPath = resolveNodePathLiteral(
-    path,
-    properties.skeleton,
-    uniquePathsOfLiteral(properties.skeleton, path, tree)
-  );
+  const skeletonPath = resolveLiteralOnLiveTree(path, properties.skeleton, tree);
   if (skeletonPath === null || tree.at(skeletonPath)?.step.node.type !== 'Skeleton2D') return null;
-  const bones = bonesOf(skeletonPath);
+  const { list: bones } = bonesOf(skeletonPath);
   const entries: BoneWeights[] = [];
   for (const { path: bonePathLiteral, weights } of properties.bones) {
-    const bone = boneIndexOf(
-      resolveNodePathLiteral(
-        skeletonPath,
-        bonePathLiteral,
-        uniquePathsOfLiteral(bonePathLiteral, skeletonPath, tree)
-      ),
-      tree,
-      bonesOf
-    );
+    const bone = boneIndexOf(resolveLiteralOnLiveTree(skeletonPath, bonePathLiteral, tree), tree, bonesOf);
     if (bone !== null) entries.push({ bone, weights });
   }
   return {
@@ -102,12 +96,12 @@ function drawnVertexCount({ polygon, polygons, internalVertexCount }: Polygon2DP
 function boneIndexOf(
   bonePath: string | null,
   tree: LiveTree,
-  bonesOf: (skeletonPath: string) => Skeleton2DBone[]
+  bonesOf: (skeletonPath: string) => SkeletonBones
 ): number | null {
   if (bonePath === null || tree.at(bonePath)?.step.node.type !== 'Bone2D') return null;
   const ownSkeleton = skeletonOfBone(bonePath, tree);
   if (ownSkeleton === null) return -1;
-  return bonesOf(ownSkeleton).findIndex((bone) => bone.path === bonePath);
+  return bonesOf(ownSkeleton).indexOf.get(bonePath) ?? -1;
 }
 
 /** Written only by {@link kept}: the last binding of each polygon node, by live path. */
