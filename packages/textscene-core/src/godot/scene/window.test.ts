@@ -124,35 +124,25 @@ describe('embeddedWindowSize', () => {
   const limits = { minSize: { x: 0, y: 0 }, maxSize: { x: 0, y: 0 } };
 
   it('grows a wrap_controls window to its contents (measured: 200x100 around a 420x310 child)', () => {
-    const size = embeddedWindowSize(
-      { x: 200, y: 100 },
-      { ...limits, wrapControls: true },
-      { x: 420, y: 310 }
-    );
+    const size = embeddedWindowSize({ x: 200, y: 100 }, limits, { x: 420, y: 310 });
     expect(size).toEqual({ x: 420, y: 310 });
   });
 
-  it('ignores the contents without wrap_controls', () => {
-    const size = embeddedWindowSize(
-      { x: 200, y: 100 },
-      { ...limits, wrapControls: false },
-      { x: 420, y: 310 }
-    );
-    expect(size).toEqual({ x: 200, y: 100 });
+  it('keeps the loaded size without wrap_controls', () => {
+    expect(embeddedWindowSize({ x: 200, y: 100 }, limits)).toEqual({ x: 200, y: 100 });
   });
 
   it('caps the wrapped size at a valid max_size', () => {
     const size = embeddedWindowSize(
       { x: 200, y: 100 },
-      { minSize: { x: 0, y: 0 }, maxSize: { x: 300, y: 300 }, wrapControls: true },
+      { minSize: { x: 0, y: 0 }, maxSize: { x: 300, y: 300 } },
       { x: 420, y: 310 }
     );
     expect(size).toEqual({ x: 300, y: 300 });
   });
 
   it('holds an embedded window at 1 pixel at least (window.cpp:1208)', () => {
-    const size = embeddedWindowSize({ x: 0, y: 0 }, { ...limits, wrapControls: false }, { x: 0, y: 0 });
-    expect(size).toEqual({ x: 1, y: 1 });
+    expect(embeddedWindowSize({ x: 0, y: 0 }, limits)).toEqual({ x: 1, y: 1 });
   });
 });
 

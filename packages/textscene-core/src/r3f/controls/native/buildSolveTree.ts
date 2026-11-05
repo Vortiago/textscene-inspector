@@ -73,6 +73,7 @@ import {
   type LiveChildGroup,
   type LiveTreeContext,
   type LiveLink,
+  type LiveStep,
   type SceneScope,
 } from '../../liveSceneTree';
 import { NOTHING_CACHED, recordingReads } from '../../cacheSources';
@@ -430,6 +431,14 @@ interface ForestStart {
   themeOwners: readonly ThemeOwner[];
 }
 
+/**
+ * Whether a window may sit below `step`: the children a fold descends into, which hold a sub-scene's
+ * nodes where the step instances one, and its raw node's children do not.
+ */
+function mayHoldWindowBelow(step: LiveStep): boolean {
+  return step.groups.some((group) => group.children.some(mayHoldWindow));
+}
+
 /** The SolveNode forest for one nodes and resource-scope pair. Not a hook: `useBuildSolveTree` is. */
 function buildForest(
   nodes: readonly TscnNode[],
@@ -710,7 +719,7 @@ function buildForest(
     if (isEmbeddableWindow(live)) {
       windows.push(windowSolveNode(live, path, step.scope, themeChain, hidden, ancestry.inheritedRtl));
     }
-    if (embedsSubwindows(live) || !link.raw.children.some(mayHoldWindow)) return NOTHING_WALKED;
+    if (embedsSubwindows(live) || !mayHoldWindowBelow(step)) return NOTHING_WALKED;
     descend({ ...ancestry, themeChain, ancestorHidden: hidden, windowsOnly: true });
     return NOTHING_WALKED;
   }
@@ -784,9 +793,10 @@ function buildForest(
       inheritedRtl,
       childVisibility,
     } = ancestry;
-    const isContentRoot = node === contentRoot;
-    // A viewport owns its own World2D (ADR-0033): its Control subtree draws in its own target.
-    if (isViewportBoundary(node.type) && !isContentRoot) return walkViewport(link, ancestry, descend);
+    const isContentRoot = node === contentRoot || step.node === contentRoot;
+    // A viewport owns its own World2D (ADR-0033): its Control subtree draws in its own target. The
+    // collapsed type, since an instance's own node has none when its sub-scene root is the viewport.
+    if (isViewportBoundary(step.node.type) && !isContentRoot) return walkViewport(link, ancestry, descend);
     const paintRange = canvasRoots.get(node) ?? ancestry.paintRanges.get(node) ?? WHOLE_CANVAS_RANGE;
 
     // A grafted node's instance ref names an id in the file that authored it.
@@ -825,7 +835,7 @@ function buildForest(
     const nodeThemeChain = isControl ? withOwnTheme(collapsed, ownScope, themeChain) : [];
     const hidden = ancestorHidden || hiddenNodePaths.has(path);
     if (ancestry.windowsOnly) {
-      if (!node.children.some(mayHoldWindow)) return NOTHING_WALKED;
+      if (!mayHoldWindowBelow(step)) return NOTHING_WALKED;
       descend({ ...ancestry, themeChain: nodeThemeChain, ancestorHidden: hidden, inheritedRtl: rtl });
       return NOTHING_WALKED;
     }

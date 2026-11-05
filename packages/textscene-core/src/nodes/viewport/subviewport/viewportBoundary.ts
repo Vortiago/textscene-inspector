@@ -56,10 +56,17 @@ export function embedsAWindow(viewport: ViewportNode): boolean {
   return embedsSubwindows(viewport) && reachesEmbedder(viewport.children);
 }
 
+/** Only a visible window registers with its embedder (`window.cpp:1546-1563`). A hidden one's children still climb. */
 function reachesEmbedder(nodes: readonly ViewportNode[]): boolean {
   return nodes.some(
-    (node) => isEmbeddableWindow(node) || (!embedsSubwindows(node) && reachesEmbedder(node.children))
+    (node) =>
+      (isEmbeddableWindow(node) && isVisibleWindow(node)) ||
+      (!embedsSubwindows(node) && reachesEmbedder(node.children))
   );
+}
+
+function isVisibleWindow(node: EmbeddingNode): boolean {
+  return (node.properties as { visible?: boolean }).visible !== false;
 }
 
 /** The fields of a parsed node the window search reads. */

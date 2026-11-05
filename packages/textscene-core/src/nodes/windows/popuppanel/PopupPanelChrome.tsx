@@ -15,9 +15,11 @@ export function PopupPanelChrome({ solveNode, rect, theme, tint, renderOrder }: 
     w: rect.w - insets.left + insets.right,
     h: rect.h - insets.top + insets.bottom,
   };
+  // A right-to-left layout mirrors the internal Panel's rect (`control.cpp:1785-1787`).
+  const panelX = solveNode.rtl ? -insets.right : insets.left;
   // `StyleBoxQuad` draws from its group's origin, so the group carries the inset.
   return (
-    <CanvasItemGroup position={[insets.left, -insets.top, 0]}>
+    <CanvasItemGroup position={[panelX, -insets.top, 0]}>
       <StyleBoxQuad styleBox={style} color={tint.own} rect={panelSize} renderOrder={renderOrder} />
     </CanvasItemGroup>
   );

@@ -115,12 +115,17 @@ export function clampLimitSize(size: Vector2): Vector2 {
   return { x: Math.max(size.x, 0), y: Math.max(size.y, 0) };
 }
 
+/** A `max_size` of zero on both axes sets no maximum (`window.cpp:471-475`). */
+export function isMaxSizeSet(maxSize: Vector2): boolean {
+  return maxSize.x > 0 || maxSize.y > 0;
+}
+
 /**
  * `max_size` while `_validate_limit_size` (`window.cpp:471-475`) accepts it, else `null`. A `null`
  * cap is the rendering server's maximum, which a target size meets on its own.
  */
 export function validMaxSize({ minSize, maxSize }: WindowSizeLimits): Vector2 | null {
-  if (maxSize.x <= 0 && maxSize.y <= 0) return null;
+  if (!isMaxSizeSet(maxSize)) return null;
   return maxSize.x >= minSize.x && maxSize.y >= minSize.y ? maxSize : null;
 }
 
@@ -148,27 +153,22 @@ export function replayWindowSize(writes: Iterable<WindowSizeWrite>): Vector2 {
   return size;
 }
 
-/** What an embedded window's final size reads beside its loaded size. */
-interface EmbeddedWindowSizing extends WindowSizeLimits {
-  wrapControls: boolean;
-}
-
 /**
- * `_update_window_size` once the window's Controls are ready (`window.cpp:1629-1632`): with
- * `wrap_controls` the floor is `min_size` or the contents minimum, whichever is larger
- * (`get_clamped_minimum_size`, `window.cpp:2244-2251`). An embedded window keeps 1 pixel at
- * least (`window.cpp:1208`).
+ * `_update_window_size` once the window's Controls are ready (`window.cpp:1629-1632`). The floor is
+ * `min_size`, or with `wrap_controls` the larger of it and the contents minimum
+ * (`get_clamped_minimum_size`, `window.cpp:2244-2251`). `contentsMinimum` is absent without
+ * `wrap_controls`. An embedded window keeps 1 pixel at least (`window.cpp:1208`).
  */
 export function embeddedWindowSize(
   loaded: Vector2,
-  sizing: EmbeddedWindowSizing,
-  contentsMinimum: Vector2
+  limits: WindowSizeLimits,
+  contentsMinimum?: Vector2
 ): Vector2 {
-  const { minSize, wrapControls } = sizing;
-  const floor = wrapControls
+  const { minSize } = limits;
+  const floor = contentsMinimum
     ? { x: Math.max(minSize.x, contentsMinimum.x), y: Math.max(minSize.y, contentsMinimum.y) }
     : minSize;
-  const size = clampWindowSize(loaded, floor, sizing);
+  const size = clampWindowSize(loaded, floor, limits);
   return { x: Math.max(size.x, 1), y: Math.max(size.y, 1) };
 }
 

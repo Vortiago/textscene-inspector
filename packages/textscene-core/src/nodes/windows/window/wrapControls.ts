@@ -39,12 +39,11 @@ export function wrappedWindowSize(
   measureText: TextMeasurer | null
 ): Vector2 {
   const props = window.node.properties as WindowProperties;
-  const loaded = props.size;
-  const sizing = { minSize: props.min_size, maxSize: props.max_size, wrapControls: props.wrap_controls };
-  if (!sizing.wrapControls) return embeddedWindowSize(loaded, sizing, loaded);
+  const limits = { minSize: props.min_size, maxSize: props.max_size };
+  if (!props.wrap_controls) return embeddedWindowSize(props.size, limits);
   return embeddedWindowSize(
-    loaded,
-    sizing,
+    props.size,
+    limits,
     contentsMinimumSize(window, createSolveContext(theme, measureText))
   );
 }

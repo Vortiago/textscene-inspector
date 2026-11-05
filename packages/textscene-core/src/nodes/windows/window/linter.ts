@@ -18,6 +18,7 @@ import {
   ContentScaleStretch,
   isWindowSizeKey,
   replayWindowSize,
+  isMaxSizeSet,
   validMaxSize,
   type WindowSizeWrite,
 } from '../../../godot/scene/window.js';
@@ -55,8 +56,7 @@ function checkMaxBelowMin(node: RuleContext['node'], rawProps: Record<string, st
   // the rendering server's maximum: `Vector2i(0, 1080)` under `Vector2i(400, 300)` has no
   // maximum at all, not a capped height.
   const limits = { minSize: clampLimitSize(minSize), maxSize: clampLimitSize(maxSize) };
-  const isMaxSizeSet = limits.maxSize.x > 0 || limits.maxSize.y > 0;
-  if (!isMaxSizeSet || validMaxSize(limits)) return [];
+  if (!isMaxSizeSet(limits.maxSize) || validMaxSize(limits)) return [];
   return [
     armDiagnostic(
       arms.maxSizeBelowMinSize,

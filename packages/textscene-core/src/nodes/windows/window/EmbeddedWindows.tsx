@@ -27,7 +27,7 @@ interface StackEntry extends StackedWindow {
   solveNode: SolveNode;
 }
 
-/** Whether the embedder registers the window: only a visible one enters the stack (`window.cpp:1552`). */
+/** Whether the embedder registers the window: only a visible one enters the stack (`window.cpp:1546-1563`). */
 function isShown(window: SolveNode): boolean {
   return !window.hidden && (window.node.properties as WindowProperties).visible;
 }

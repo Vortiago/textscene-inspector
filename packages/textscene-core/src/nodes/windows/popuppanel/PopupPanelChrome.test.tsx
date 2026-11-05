@@ -15,9 +15,10 @@ const WINDOW_RECT = { x: 0, y: 0, w: 300, h: 200 };
 // Without anti-aliasing the fill's bounds are the panel's own rect, with no feather around it.
 const PLAIN_PANEL: StyleBoxFlatData = { ...flatStyleBox({ r: 1, g: 1, b: 1, a: 1 }), antiAliased: false };
 
-function popupPanel(panel: StyleBoxFlatData): SolveNode {
+function popupPanel(panel: StyleBoxFlatData, rtl = false): SolveNode {
   return {
     ...solveNode(),
+    rtl,
     path: 'Pop',
     node: controlNode('Pop', 'PopupPanel', { name: 'Pop' }),
     styleBoxes: { panel },
@@ -25,9 +26,14 @@ function popupPanel(panel: StyleBoxFlatData): SolveNode {
 }
 
 /** Where the panel's one mesh starts drawing, and what it covers with its shadow, in Godot pixels. */
-async function panelMesh(panel: StyleBoxFlatData) {
+async function panelMesh(panel: StyleBoxFlatData, rtl = false) {
   const renderer = await ReactThreeTestRenderer.create(
-    <PopupPanelChrome {...painterEnv()} solveNode={popupPanel(panel)} rect={WINDOW_RECT} renderOrder={0} />
+    <PopupPanelChrome
+      {...painterEnv()}
+      solveNode={popupPanel(panel, rtl)}
+      rect={WINDOW_RECT}
+      renderOrder={0}
+    />
   );
   const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
   mesh.updateWorldMatrix(true, false);
@@ -55,5 +61,12 @@ describe('<PopupPanelChrome>', () => {
       origin: { x: 6, y: 5 },
       covers: { x: 0, y: 0, w: 300, h: 200 },
     });
+  });
+
+  it('mirrors the inset panel in a right-to-left layout', async () => {
+    const panel = { ...PLAIN_PANEL, shadowSize: 8, shadowOffset: { x: 2, y: 3 } };
+    // RTL offsets: left 8 + 2 and right -8 + 2 (`popup.cpp:335-337`). The mirror puts the 284-wide
+    // panel at 300 - 10 - 284 = 6 from the left, the negated right offset (`control.cpp:1785-1787`).
+    expect((await panelMesh(panel, true)).origin).toEqual({ x: 6, y: 5 });
   });
 });

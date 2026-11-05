@@ -10,7 +10,6 @@ import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { peekBundledCanvasFontMetrics } from '../../../r3f/controls/native/text/bundledFontLoader';
-import { withOutlines } from '../../../r3f/controls/native/text/fontMetrics';
 import { bundledCanvasFace } from '../../../r3f/controls/native/text/bundledCanvasFace';
 import {
   isCanvasFontMetrics,
@@ -54,13 +53,8 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
     const font = fontForNode('Label3D', fontRef, { resources, loadedFont, projectFonts });
     const settled = peekSettledSceneFontMetrics(font, nodePath);
     if (!settled) return undefined;
-    // A canvas face carries its outlines already, or none when unvaried. An atlas face draws as the
-    // bundled canvas face.
-    const metrics = isCanvasFontMetrics(settled)
-      ? settled.outlines
-        ? withOutlines(settled, settled.outlines)
-        : settled
-      : bundledCanvasFace(font, settled);
+    // A canvas face carries its outlines already. An atlas face draws as the bundled canvas face.
+    const metrics = isCanvasFontMetrics(settled) ? settled : bundledCanvasFace(font, settled);
     if (!metrics) return undefined;
     return {
       metrics,

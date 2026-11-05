@@ -60,6 +60,16 @@ describe('embedsAWindow — whether a viewport draws a window over its canvas', 
     expect(embedsAWindow(node('SubViewport', { gui_embed_subwindows: true }, [passing]))).toBe(true);
   });
 
+  it('leaves out a hidden window, which the embedder never registers (`window.cpp:1546-1563`)', () => {
+    const viewport = node('SubViewport', { gui_embed_subwindows: true }, [node('Popup', { visible: false })]);
+    expect(embedsAWindow(viewport)).toBe(false);
+  });
+
+  it('reaches a visible window below a hidden one', () => {
+    const hidden = node('Window', { visible: false }, [node('Popup', { visible: true })]);
+    expect(embedsAWindow(node('SubViewport', { gui_embed_subwindows: true }, [hidden]))).toBe(true);
+  });
+
   it('leaves out a native window', () => {
     const viewport = node('SubViewport', { gui_embed_subwindows: true }, [
       node('Window', { force_native: true }),
