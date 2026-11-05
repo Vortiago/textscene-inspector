@@ -10,9 +10,8 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { useArrayColorOf, useItemLinearColorOf, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
-import { useNode2DCanvasTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { useCanvasItemTexture } from '../../../r3f/canvasItemTexture';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
-import { useTexture2D } from '../../../resources/useTexture2D';
 import type { ImageSize } from '../../../resources/formats/image/imagePixels';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { Polygon2DProperties } from './types';
@@ -32,15 +31,14 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Polygon2DProperties;
   const { externalResources, internalResources } = useSceneResources();
 
-  // Either an image file or an inline procedural texture; `useTexture2D` hides
+  // Either an image file or an inline procedural texture; `useCanvasItemTexture` hides
   // which, and owns the lifetime of the procedural one it rasterises.
   const {
     texture: resolvedTexture,
     size,
+    sampler,
     canvasTexture,
-  } = useTexture2D(props.texture, externalResources, internalResources);
-  // A CanvasTexture's own filter and repeat win over the item's.
-  const sampler = useNode2DCanvasTextureSampler(props, canvasTexture?.texture);
+  } = useCanvasItemTexture(props, props.texture, externalResources, internalResources);
   const texture = useCanvas2DTexture(resolvedTexture, sampler);
 
   const rings = useMemo(

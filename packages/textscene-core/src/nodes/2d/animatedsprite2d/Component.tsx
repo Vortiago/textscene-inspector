@@ -10,10 +10,9 @@ import { useFrame } from '@react-three/fiber';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { frameSizePx, WHOLE_FRAME } from '../../../r3f/spriteFrame';
-import { useNode2DCanvasTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { useCanvasItemTexture } from '../../../r3f/canvasItemTexture';
 import { canvasMapProps, useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
-import { useTexture2D } from '../../../resources/useTexture2D';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useAnimationTransport } from '../../../r3f/contexts/AnimationTransportContext';
 import { stepPlayback } from '../../../r3f/animation/stepPlayback';
@@ -147,19 +146,18 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     texture: frameTexture,
     size: frameSize,
     missing: frameMissing,
+    sampler,
     canvasTexture,
-  } = useTexture2D(
+  } = useCanvasItemTexture(
+    props,
     frameRef ?? undefined,
     resolved?.externalResources ?? NO_EXTERNAL_RESOURCES,
     resolved?.subResources ?? NO_INTERNAL_RESOURCES,
-    undefined,
     resolved ? isLocalToScene(resolved.resource) : undefined
   );
 
   // `useCanvas2DTexture` clones each frame texture with the item's sampler and disposes the clone
-  // once it no longer draws, so playback leaks no GPU texture. A CanvasTexture frame's own filter
-  // and repeat win over the item's.
-  const sampler = useNode2DCanvasTextureSampler(props, canvasTexture?.texture);
+  // once it no longer draws, so playback leaks no GPU texture.
   const displayedTexture = useCanvas2DTexture(frameTexture, sampler);
   const { width, height } = useMemo(() => frameSizePx(frameSize, WHOLE_FRAME), [frameSize]);
 
