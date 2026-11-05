@@ -45,11 +45,11 @@ const SYNTHETIC_UNITS_PER_EM = 1000;
 /** A counter suffix per load, so two scene fonts never collide in `document.fonts`. */
 let familyCounter = 0;
 
-/** Keyed by the resolved leaf `FontFileResource`, so nodes that share a font share one load. */
-const peekMetrics = createSettledPeek<FontFileResource, FontMetrics>();
-
-/** Written only by `loadSceneFontMetrics` when a load fails. Never cleared: a face keeps its bytes for good. */
-const failedFaces = new WeakSet<FontFileResource>();
+/**
+ * Keyed by the resolved leaf `FontFileResource`, so nodes that share a font share one load. Null is a
+ * load that failed: the face draws the bundled default.
+ */
+const peekMetrics = createSettledPeek<FontFileResource, FontMetrics | null>();
 
 /** One `BitmapFontMetrics` for each decoded BMFont, so a layout memoised on its identity keeps its hits. */
 const bitmapMetricsOf = perObject(createBitmapFontMetrics);
@@ -122,17 +122,16 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
   return createRuntimeFontMetrics({ scalars, measureWidthUnits, cssFontFamily: family, hasGlyph });
 }
 
-/** Loads the bytes of `face`. It never throws, and always returns usable `FontMetrics`. */
-async function loadSceneFontMetrics(face: FileWithBytes, nodePath: string): Promise<FontMetrics> {
+/** Loads the bytes of `face`. It never throws, and returns null for bytes that do not load. */
+async function loadSceneFontMetrics(face: FileWithBytes, nodePath: string): Promise<FontMetrics | null> {
   if (IS_VITEST) return OPEN_SANS_FONT_METRICS;
   try {
     return await loadRuntimeFont(face.bytes, nodePath);
   } catch (err: unknown) {
-    failedFaces.add(face);
     logger.warn(
       `[SceneFont] Node "${nodePath}": failed to load scene font (${err instanceof Error ? err.message : String(err)}). Falling back to the bundled default font.`
     );
-    return OPEN_SANS_FONT_METRICS;
+    return null;
   }
 }
 
@@ -183,28 +182,36 @@ export function peekSettledChainFaces(
   if (!font) return [{ font: null, metrics: OPEN_SANS_FONT_METRICS }];
   const ownChain = fallbackChain(font);
   const chain = ownChain.length > 0 ? ownChain : [font];
-  const faces = chain.map((entry) => peekSettledFaceMetrics(entry, nodePath));
+  const faces = chain.map((entry) => peekFace(entry, nodePath));
   if (faces.includes(null)) return null;
-  return chain.flatMap((entry, i) =>
-    i > 0 && failedToLoad(entry) ? [] : [{ font: entry, metrics: faces[i]! }]
-  );
-}
-
-/** Whether `entry` draws the bundled default for want of its own face: it has none that resolves, or its load failed. */
-function failedToLoad(entry: FontResource): boolean {
-  const face = findDrawnFace(entry);
-  return !face || (typeof face === 'object' && failedFaces.has(face));
+  return chain.flatMap((entry, i) => {
+    const metrics = faces[i]!;
+    if (metrics !== MISSING_FACE) return [{ font: entry, metrics }];
+    return i === 0 ? [{ font: entry, metrics: OPEN_SANS_FONT_METRICS }] : [];
+  });
 }
 
 /** {@link peekSettledSceneFontMetrics} for the face `font` draws alone, with no fallback. */
 function peekSettledFaceMetrics(font: FontResource, nodePath: string): FontMetrics | null {
+  const metrics = peekFace(font, nodePath);
+  return metrics === MISSING_FACE ? OPEN_SANS_FONT_METRICS : metrics;
+}
+
+/** A face that draws the bundled default for want of its own: none resolves, or its load failed. */
+const MISSING_FACE = Symbol('missing face');
+
+/**
+ * The settled metrics of the face `font` draws alone: {@link MISSING_FACE} when it has none, which
+ * drops a fallback from its chain, and null while a load is in flight.
+ */
+function peekFace(font: FontResource, nodePath: string): FontMetrics | typeof MISSING_FACE | null {
   const face = findDrawnFace(font);
   // No failure, so no warning: Godot draws the bundled font here too.
   if (face === BUNDLED_FACE) return withVariation(OPEN_SANS_FONT_METRICS, fontVariation(font));
   if (face === NO_FACE) return NO_FACE_METRICS;
   if (!face) {
     warnUnresolvable(font, nodePath);
-    return OPEN_SANS_FONT_METRICS;
+    return MISSING_FACE;
   }
 
   // A BMFont is decoded by the time its resource settles, so it needs no load of its own. Only the
@@ -213,7 +220,8 @@ function peekSettledFaceMetrics(font: FontResource, nodePath: string): FontMetri
     return withVariation(bitmapMetricsOf(face.bitmap), { embolden: fontVariationEmbolden(font) });
 
   const metrics = peekMetrics(face, () => loadSceneFontMetrics(face, nodePath));
-  if (!metrics) return null;
+  if (metrics === undefined) return null;
+  if (metrics === null) return MISSING_FACE;
   const variation = fontVariation(font);
   const outlines = peekGlyphOutlines(face, metrics, variation);
   return outlines === undefined ? null : withVariation(metrics, { ...variation, outlines });

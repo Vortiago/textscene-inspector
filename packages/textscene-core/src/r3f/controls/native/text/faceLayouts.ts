@@ -11,14 +11,21 @@ export const faceLayouts = perObject(splitByFace);
 
 function splitByFace(layout: TextLayoutResult): readonly TextLayoutResult[] {
   const faceOf = (glyph: GlyphPlacement): FontMetrics => glyph.fontMetrics ?? layout.fontMetrics;
-  const faces = new Set(layout.lines.flatMap((line) => line.glyphs.map(faceOf)));
-  if (faces.size === 0 || (faces.size === 1 && faces.has(layout.fontMetrics))) return [layout];
-  return [...faces].map((face) => ({
+  // One face is the common case, and it keeps the layout itself without a copy.
+  if (layout.lines.every((line) => line.glyphs.every((glyph) => faceOf(glyph) === layout.fontMetrics)))
+    return [layout];
+  const glyphsByFace = new Map<FontMetrics, GlyphPlacement[][]>();
+  layout.lines.forEach((line, lineIndex) => {
+    for (const glyph of line.glyphs) {
+      const face = faceOf(glyph);
+      let lines = glyphsByFace.get(face);
+      if (!lines) glyphsByFace.set(face, (lines = layout.lines.map(() => [])));
+      lines[lineIndex]!.push(glyph);
+    }
+  });
+  return [...glyphsByFace].map(([face, glyphsByLine]) => ({
     ...layout,
     fontMetrics: face,
-    lines: layout.lines.map((line) => ({
-      ...line,
-      glyphs: line.glyphs.filter((glyph) => faceOf(glyph) === face),
-    })),
+    lines: layout.lines.map((line, lineIndex) => ({ ...line, glyphs: glyphsByLine[lineIndex]! })),
   }));
 }

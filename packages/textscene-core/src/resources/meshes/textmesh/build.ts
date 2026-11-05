@@ -16,6 +16,7 @@ import { isZeroApprox, remapf } from '../../../godot/math/math';
 import { normalizedVector2, type Vector2 } from '../../../godot/math/vector';
 import {
   variationKey,
+  withFallbacks,
   type FontMetrics,
   type GlyphVariation,
 } from '../../../r3f/controls/native/text/fontMetrics';
@@ -38,6 +39,9 @@ import type { TextMeshProperties } from './types';
  * extrude. Each face of its **Fallback chain** carries its own.
  */
 export type TextMeshFace = FontMetrics & { readonly outlines: SfntOutlines };
+
+/** The faces of a TextMesh's **Fallback chain**, in the order the shaper tries them. */
+export type TextMeshChain = readonly [TextMeshFace, ...TextMeshFace[]];
 
 /** U+200B has no glyph to draw: the shaper gives it an advance of 0 (`textLayout.ts`). */
 const ZERO_WIDTH_SPACE = 0x200b;
@@ -140,14 +144,14 @@ function glyphMeshes(
   };
 }
 
-/** The glyph meshes of each face a glyph draws in: `face`, or the face of its **Fallback chain** the shaper gave it. */
+/** The glyph meshes of each face a glyph draws in: the fallback the shaper gave it, else the first face. */
 function glyphMeshesByFace(
   properties: TextMeshProperties,
-  face: TextMeshFace
+  [face, ...fallbacks]: TextMeshChain
 ): (glyph: GlyphPlacement) => GlyphMeshData | null {
-  const byFace = new Map<FontMetrics, (codepoint: number) => GlyphMeshData | null>();
+  const byFace = new Map<TextMeshFace, (codepoint: number) => GlyphMeshData | null>();
   return (glyph) => {
-    const glyphFace = (glyph.fontMetrics as TextMeshFace | undefined) ?? face;
+    const glyphFace = fallbacks.find((fallback) => fallback === glyph.fontMetrics) ?? face;
     let meshOf = byFace.get(glyphFace);
     if (!meshOf) byFace.set(glyphFace, (meshOf = glyphMeshes(properties, glyphFace)));
     return meshOf(glyph.char.codePointAt(0)!);
@@ -323,10 +327,11 @@ class TextMeshWriter {
 export function buildTextMeshSurface(
   properties: TextMeshProperties,
   locale: string,
-  face: TextMeshFace
+  chain: TextMeshChain
 ): GodotSurface {
-  const lines = shapeTextMeshLines(properties, locale, face);
-  const placed = placeGlyphs(properties, lines, glyphMeshesByFace(properties, face));
+  const [face, ...fallbacks] = chain;
+  const lines = shapeTextMeshLines(properties, locale, withFallbacks(face, fallbacks));
+  const placed = placeGlyphs(properties, lines, glyphMeshesByFace(properties, chain));
   const writer = new TextMeshWriter(properties.depth, inkBounds(placed));
   for (const glyph of placed) {
     if (isOutline(glyph)) writer.writeGlyph(glyph);

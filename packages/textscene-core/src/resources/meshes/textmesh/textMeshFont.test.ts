@@ -14,7 +14,7 @@ import {
 } from './textMeshFont.testkit';
 import { textMeshFont, textMeshFontFiles, textMeshFontKey } from './textMeshFont';
 import { bitmapFontFile } from '../../../r3f/controls/native/text/bitmapFontMetrics.testkit';
-import { buildTextMeshSurface, type TextMeshFace } from './build';
+import { buildTextMeshSurface } from './build';
 import { decodeTextMesh } from './decode';
 import { settledPeek } from '../../../r3f/testing/settleFontWork';
 
@@ -37,11 +37,16 @@ const withoutFont = (projectFonts: ProjectFonts = NO_PROJECT_FONTS) => ({
   resource: { id: 't', type: 'TextMesh', data: {} },
 });
 
-/** The ready face of `mesh`, once its outlines and metrics have settled. */
-async function readyFace(mesh: ReturnType<typeof textMeshWith>) {
+/** The ready chain of `mesh`, once its outlines and metrics have settled. */
+async function readyChain(mesh: ReturnType<typeof textMeshWith>) {
   const font = await settledPeek(() => textMeshFont(mesh));
   if (font.status !== 'ready') throw new Error('expected a ready font');
-  return font.face;
+  return font.chain;
+}
+
+/** The first face of the ready chain of `mesh`. */
+async function readyFace(mesh: ReturnType<typeof textMeshWith>) {
+  return (await readyChain(mesh))[0];
 }
 
 /** The outlines a font settles to, which tells the font a chain chose. */
@@ -81,7 +86,7 @@ describe('textMeshFont', () => {
 
     const font = await settledPeek(() => textMeshFont(mesh));
     if (font.status !== 'ready') throw new Error('expected a ready font');
-    expect(font.face.outlines.glyphIndex(0x48)).toBeGreaterThan(0);
+    expect(font.chain[0].outlines.glyphIndex(0x48)).toBeGreaterThan(0);
   });
 
   it('is ready with the outlines of an OpenType-CFF font', async () => {
@@ -89,7 +94,7 @@ describe('textMeshFont', () => {
 
     const font = await settledPeek(() => textMeshFont(mesh));
     if (font.status !== 'ready') throw new Error('expected a ready font');
-    expect(font.face.outlines.glyphIndex(0x48)).toBeGreaterThan(0);
+    expect(font.chain[0].outlines.glyphIndex(0x48)).toBeGreaterThan(0);
   });
 
   it.each([
@@ -101,7 +106,7 @@ describe('textMeshFont', () => {
 
     const font = await settledPeek(() => textMeshFont(mesh));
     if (font.status !== 'ready') throw new Error('expected a ready font');
-    expect(font.face.outlines.glyphIndex(0x48)).toBeGreaterThan(0);
+    expect(font.chain[0].outlines.glyphIndex(0x48)).toBeGreaterThan(0);
   });
 
   it('keeps a ready font for the same mesh object', async () => {
@@ -119,21 +124,19 @@ describe('textMeshFont on a font with fallbacks', () => {
   });
 
   it('carries the outlines of each fallback face', async () => {
-    const face = await readyFace(textMeshWith({}, loaded(withFallback())));
+    const [, fallback] = await readyChain(textMeshWith({}, loaded(withFallback())));
 
     const hebrewAlef = 0x5d0;
-    expect(
-      (face.fallbacks?.[0] as TextMeshFace | undefined)?.outlines.glyphIndex(hebrewAlef)
-    ).toBeGreaterThan(0);
+    expect(fallback?.outlines.glyphIndex(hebrewAlef)).toBeGreaterThan(0);
   });
 
   it('drops a fallback whose outlines it cannot read', async () => {
     const font = withFallback();
     font.fallbacks = [{ ...trueTypeFontFile(), bytes: new ArrayBuffer(8) }];
 
-    const face = await readyFace(textMeshWith({}, loaded(font)));
+    const chain = await readyChain(textMeshWith({}, loaded(font)));
 
-    expect(face.fallbacks ?? []).toEqual([]);
+    expect(chain).toHaveLength(1);
   });
 });
 
@@ -263,7 +266,7 @@ describe('textMeshFont on a BMFont', () => {
   function bitmapSurface(text: string) {
     const font = textMeshFont(textMeshWith({}, loaded(bitmapFontFile())));
     if (font.status !== 'ready') throw new Error(`expected a ready font, got ${font.status}`);
-    return buildTextMeshSurface(decodeTextMesh({ text: `"${text}"`, font_size: '16' }), '', font.face);
+    return buildTextMeshSurface(decodeTextMesh({ text: `"${text}"`, font_size: '16' }), '', font.chain);
   }
 
   it('builds no glyph surface: a font with no FreeType face has no contours (`text_server_adv.cpp:3613`)', () => {

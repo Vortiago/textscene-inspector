@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { hexCodeBoxAdvanceSize } from '../../../r3f/controls/native/text/hexCodeBox';
 import {
-  withFallbacks,
   withOutlines,
   withVariation,
   type GlyphVariation,
@@ -36,7 +35,7 @@ const face: TextMeshFace = withOutlines(OPEN_SANS_FONT_METRICS, outlines);
 /** A TextMesh at `font_size` 64 with depth 0.05, the properties of `raw` over those defaults, built. */
 function surfaceOf(text: string, raw: Record<string, string> = {}): GodotSurface {
   const properties = decodeTextMesh({ text: `"${text}"`, font_size: String(FONT_SIZE), ...raw });
-  return buildTextMeshSurface(properties, '', face);
+  return buildTextMeshSurface(properties, '', [face]);
 }
 
 /** The mesh data of `char` as the TextMesh builds it at the defaults of `surfaceOf`. */
@@ -314,7 +313,7 @@ describe('buildTextMeshSurface missing glyph', () => {
   it('places a quad per glyph of a font with no face, at the vertices Godot builds', () => {
     const noFace = withOutlines(NO_FACE_METRICS, peekSceneFontOutlines(FACELESS_FONT)!);
     const properties = decodeTextMesh({ text: '"8aA"', font_size: String(FONT_SIZE), depth: '0.0' });
-    const surface = buildTextMeshSurface(properties, '', noFace);
+    const surface = buildTextMeshSurface(properties, '', [noFace]);
     const quad = (left: number, right: number) => [left, -0.21, left, 0.39, right, 0.39, right, -0.21];
     const godot = [...quad(-0.48, -0.16), ...quad(-0.16, 0.16), ...quad(0.16, 0.48)];
     const xy = Array.from(
@@ -328,7 +327,7 @@ describe('buildTextMeshSurface missing glyph', () => {
   it('gives the quads of a font with no face NaN UVs, as Godot does', () => {
     const noFace = withOutlines(NO_FACE_METRICS, peekSceneFontOutlines(FACELESS_FONT)!);
     const properties = decodeTextMesh({ text: '"8"', font_size: String(FONT_SIZE), depth: '0.0' });
-    expect(uvAxis(buildTextMeshSurface(properties, '', noFace), 0).every(Number.isNaN)).toBe(true);
+    expect(uvAxis(buildTextMeshSurface(properties, '', [noFace]), 0).every(Number.isNaN)).toBe(true);
   });
 
   it('leaves the quad out of the box the UV spans', () => {
@@ -350,7 +349,7 @@ describe('buildTextMeshSurface font variation', () => {
       font_size: String(FONT_SIZE),
       horizontal_alignment: LEFT,
     });
-    return extent(axis(buildTextMeshSurface(properties, '', faceOf(variation)), 0)).max;
+    return extent(axis(buildTextMeshSurface(properties, '', [faceOf(variation)]), 0)).max;
   };
 
   it.each([
@@ -382,11 +381,9 @@ describe('buildTextMeshSurface glyph reuse', () => {
   }
 
   const build = (text: string, face: TextMeshFace, raw: Record<string, string> = {}) =>
-    buildTextMeshSurface(
-      decodeTextMesh({ text: `"${text}"`, font_size: String(FONT_SIZE), ...raw }),
-      '',
-      face
-    );
+    buildTextMeshSurface(decodeTextMesh({ text: `"${text}"`, font_size: String(FONT_SIZE), ...raw }), '', [
+      face,
+    ]);
 
   it('reads the outline of a glyph once across builds of one font, so a keystroke adds only its own glyph', () => {
     const { face: counted, contoursRead } = countingFace();
@@ -422,7 +419,7 @@ describe('buildTextMeshSurface — a fallback chain', () => {
       outlines
     );
     const properties = decodeTextMesh({ text: '"A"', font_size: String(FONT_SIZE) });
-    const drawn = buildTextMeshSurface(properties, '', withFallbacks(lacksA, [fallback]));
-    expect(drawn.positions).toEqual(buildTextMeshSurface(properties, '', fallback).positions);
+    const drawn = buildTextMeshSurface(properties, '', [lacksA, fallback]);
+    expect(drawn.positions).toEqual(buildTextMeshSurface(properties, '', [fallback]).positions);
   });
 });

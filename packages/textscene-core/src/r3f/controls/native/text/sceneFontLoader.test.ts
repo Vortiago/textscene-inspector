@@ -381,6 +381,16 @@ describe('scene font in an environment with no font door', () => {
       expect.stringContaining('no FontFace/document.fonts in this environment')
     );
   });
+
+  it('draws the bundled default for a face that fails to load, and drops a fallback that fails', async () => {
+    const { peekSettledChainFaces: peekChain, bundled } = await loaderWithoutVitestGuard();
+
+    const fallback = fontFile(new ArrayBuffer(4));
+    const font = fontFile(new ArrayBuffer(4), [fallback]);
+    peekChain(font, 'Root/NoDom');
+    await settleLoads();
+    expect(peekChain(font, 'Root/NoDom')).toEqual([{ font, metrics: bundled }]);
+  });
 });
 
 describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canvas face follows', () => {

@@ -9,17 +9,17 @@ import {
   type SettledChainFace,
 } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
-import { withFallbacks, withOutlines } from '../../../r3f/controls/native/text/fontMetrics';
+import { withOutlines } from '../../../r3f/controls/native/text/fontMetrics';
 import { identityKey } from '../../../utils/identityKey';
 import { perObject } from '../../../utils/perObject';
 import { resolveFontReference } from '../../fonts/font/resolveFontReference';
 import { fontForNode } from '../../styles/theme/lookup';
 import type { LoadedFont, ResolvableResource, ScopedResource } from '../../scopedResource';
-import type { TextMeshFace } from './build';
+import type { TextMeshChain, TextMeshFace } from './build';
 
 export type TextMeshFont =
   /** A font whose outlines this reader cannot open: Godot draws it, this previewer cannot. */
-  { status: 'unreadable' } | { status: 'awaitingFont' } | { status: 'ready'; face: TextMeshFace };
+  { status: 'unreadable' } | { status: 'awaitingFont' } | { status: 'ready'; chain: TextMeshChain };
 
 const UNREADABLE: TextMeshFont = { status: 'unreadable' };
 const AWAITING_FONT: TextMeshFont = { status: 'awaitingFont' };
@@ -47,7 +47,7 @@ function readTextMeshFont({
   const [face, ...fallbacks] = faces?.map(faceWithOutlines) ?? [undefined];
   if (!face || fallbacks.includes(undefined)) return AWAITING_FONT;
   const readable = fallbacks.filter((fallback): fallback is TextMeshFace => fallback !== null);
-  return { status: 'ready', face: withFallbacks(face, readable) };
+  return { status: 'ready', chain: [face, ...readable] };
 }
 
 /**
@@ -70,5 +70,5 @@ export function textMeshFontFiles({ resource, resources }: ScopedResource, loade
  */
 export function textMeshFontKey(font: TextMeshFont): string {
   if (font.status !== 'ready') return font.status;
-  return `${identityKey(font.face)}`;
+  return font.chain.map(identityKey).join(',');
 }
