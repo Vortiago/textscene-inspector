@@ -68,7 +68,12 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
         />
         {/* A window the root does not embed is a native one, drawn outside the game frame. */}
         {rootEmbedsSubwindows(settings) ? (
-          <EmbeddedWindows windows={windows} embedderSize={{ x: viewport.w, y: viewport.h }} theme={theme} />
+          <EmbeddedWindows
+            windows={windows}
+            embedderSize={{ x: viewport.w, y: viewport.h }}
+            forestPath=""
+            theme={theme}
+          />
         ) : null}
       </LayerRanksProvider>
     </CanvasModulateContext.Provider>

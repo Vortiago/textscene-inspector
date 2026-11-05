@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types';
-import { useBuildSolveTree } from './buildSolveTree';
+import { useBuildSolveTree, useBuildViewportTree } from './buildSolveTree';
 import { themeResource } from './testing/themeResource';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
@@ -22,6 +22,8 @@ function node(
 ) {
   return { rawProperties: {}, name, type, children, properties: { name, ...properties } } as TscnNode;
 }
+
+const NO_OWNERS = [] as const;
 
 function windowPaths(nodes: TscnNode[]): string[] {
   const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
@@ -80,5 +82,54 @@ describe('useBuildSolveTree — embedded windows', () => {
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
 
     expect(result.current.windows[0]!.constants.title_height).toBe(50);
+  });
+});
+
+describe('useBuildViewportTree — the Controls a viewport draws', () => {
+  const serving = (themes: Record<string, ReturnType<typeof themeResource>>) => {
+    const loader = createFakeResourceLoader();
+    for (const [path, theme] of Object.entries(themes)) loader.themes.seed(path, theme);
+    return ({ children }: { children: ReactNode }) => (
+      <ResourceLoaderProvider loader={loader.loader}>{children}</ResourceLoaderProvider>
+    );
+  };
+
+  it('roots the forest at the window, with its Controls below it', () => {
+    const window = node('Dialog', 'Window', {}, [node('Inside', 'Label')]);
+    const { result } = renderHook(() => useBuildViewportTree(window, [], [], NO_OWNERS));
+
+    expect(result.current.tree.map((root) => root.path)).toEqual(['Dialog']);
+    expect(result.current.tree[0]!.children.map((child) => child.path)).toEqual(['Dialog/Inside']);
+  });
+
+  it('roots a SubViewport’s forest at its children, as the viewport is no Control', () => {
+    const viewport = node('View', 'SubViewport', {}, [node('Inside', 'Label')]);
+    const { result } = renderHook(() => useBuildViewportTree(viewport, [], [], NO_OWNERS));
+
+    expect(result.current.tree.map((root) => root.path)).toEqual(['Inside']);
+  });
+
+  it('draws the Controls of a hidden window, whose visibility is its embedder’s to apply', () => {
+    const popup = node('Menu', 'Popup', { visible: false }, [node('Inside', 'Label')]);
+    const { result } = renderHook(() => useBuildViewportTree(popup, [], [], NO_OWNERS));
+
+    expect((result.current.tree[0]!.node.properties as { visible: boolean }).visible).toBe(true);
+  });
+
+  it('hands the window’s theme to its Controls, then the theme of each owner above it', () => {
+    const own = themeResource({ defaultFontSize: 20 });
+    const above = themeResource({ defaultFontSize: 30 });
+    const window = node('Dialog', 'Window', { theme: 'ExtResource("own")' }, [node('Inside', 'Label')]);
+    const owner = node('Root', 'Control', { theme: 'ExtResource("above")' });
+    const externalResources = [
+      { id: 'own', path: 'res://own.tres', type: 'Theme' },
+      { id: 'above', path: 'res://above.tres', type: 'Theme' },
+    ];
+    const owners = [{ node: owner, scope: { externalResources, internalResources: [] } }];
+    const { result } = renderHook(() => useBuildViewportTree(window, externalResources, [], owners), {
+      wrapper: serving({ 'res://own.tres': own, 'res://above.tres': above }),
+    });
+
+    expect(result.current.tree[0]!.children[0]!.themeChain).toEqual([own, above]);
   });
 });

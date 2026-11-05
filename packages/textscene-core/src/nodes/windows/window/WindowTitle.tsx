@@ -1,9 +1,9 @@
 /**
  * An embedded window's title: one `TextLine` in `title_font` at `title_font_size`, trimmed to the
  * title space with an ellipsis and centred over the window in the `title_height` band
- * (`viewport.cpp:363-379`). The outline draws first, under the text.
+ * (`viewport.cpp:363-379`). The outline draws first, under the text, as a stroked ring (ADR-0040).
  */
-import { useMemo } from 'react';
+import { lazy, useMemo } from 'react';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
@@ -18,14 +18,18 @@ import { overrunFlagsForBehavior, trimLineToWidth } from '../../../r3f/controls/
 import { resolveNodeFont } from '../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { peekSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { isCanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
+import { PendingSuspense } from '../../../resources/PendingSuspense';
 import { resolveTextTheme } from '../../../r3f/controls/native/textTheme';
 import { contentMarginSize } from '../../../r3f/controls/native/styleBoxFlat';
 import { AutowrapMode, OverrunBehavior } from '../../../godot/text/textServerEnums';
-import { outlineRadiusPx, outlineStrokeWidthPx } from '../../3d/label3d/glyphLayout';
+import { outlineStrokeWidthPx } from '../../3d/label3d/glyphLayout';
 import { canvasSubOrder, type CanvasSlot } from '../../../r3f/canvasItemState';
 import { titleOrigin, titleSpace } from './decoration';
 import type { WindowThemeDefaults } from './theme';
 import type { WindowProperties } from './types';
+
+// Lazy: only an outlined title in the atlas face needs the bundled canvas face's bytes.
+const TitleOutlineRing = lazy(() => import('./TitleOutlineRing'));
 
 /** `TextLine::overrun_behavior`'s default (`text_line.h:50`), which the embedder never changes. */
 const TITLE_OVERRUN_FLAGS = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
@@ -60,7 +64,8 @@ export function WindowTitle({
     { sizeKey: 'title_font_size', colorKey: 'title_color' },
     { fontSizePx: theme.fontSize, color: defaults.titleColor }
   );
-  const fontMetrics = peekSceneFontMetrics(resolveNodeFont(solveNode, 'title_font'), solveNode.path);
+  const font = resolveNodeFont(solveNode, 'title_font');
+  const fontMetrics = peekSceneFontMetrics(font, solveNode.path);
   const titleHeight = constants.title_height ?? defaults.titleHeight;
   const outlineSize = constants.title_outline_size ?? defaults.titleOutlineSize;
   const outlineColor = colors.title_outline_modulate ?? defaults.titleOutlineModulate;
@@ -84,15 +89,13 @@ export function WindowTitle({
     x: shapedTextSizeWidthPx(layout.widthPx),
     y: layout.heightPx,
   });
-  // `outline_size > 0 && font_outline_color.a > 0` (`viewport.cpp:374`). The MSDF atlas, the default
-  // font, has no contour to stroke, so it draws the outline as a wider threshold in the same mesh.
+  // `outline_size > 0 && font_outline_color.a > 0` (`viewport.cpp:374`).
   const hasOutline = outlineSize > 0 && outlineColor.a > 0;
-  const drawsCanvasOutline = hasOutline && isCanvasFontMetrics(layout.fontMetrics);
-  const drawsMsdfOutline = hasOutline && !drawsCanvasOutline;
+  const textKey = hasOutline ? canvasSubOrder(slot).key : slot.key;
 
   return (
     <CanvasItemGroup position={[origin.x, -origin.y, 0]}>
-      {drawsCanvasOutline ? (
+      {hasOutline && isCanvasFontMetrics(layout.fontMetrics) ? (
         <TextRun
           layout={layout}
           fontSizePx={fontSizePx}
@@ -101,14 +104,19 @@ export function WindowTitle({
           renderOrder={slot.key}
         />
       ) : null}
-      <TextRun
-        layout={layout}
-        fontSizePx={fontSizePx}
-        tint={color}
-        outlineColor={drawsMsdfOutline ? outlineColor : undefined}
-        outlineWidthPx={drawsMsdfOutline ? outlineRadiusPx(outlineSize) : 0}
-        renderOrder={drawsCanvasOutline ? canvasSubOrder(slot).key : slot.key}
-      />
+      {hasOutline && !isCanvasFontMetrics(layout.fontMetrics) ? (
+        <PendingSuspense>
+          <TitleOutlineRing
+            layout={layout}
+            font={font}
+            fontSizePx={fontSizePx}
+            tint={outlineColor}
+            outlineSize={outlineSize}
+            renderOrder={slot.key}
+          />
+        </PendingSuspense>
+      ) : null}
+      <TextRun layout={layout} fontSizePx={fontSizePx} tint={color} renderOrder={textKey} />
     </CanvasItemGroup>
   );
 }

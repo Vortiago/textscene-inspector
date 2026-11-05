@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { Vector2 } from '../../../godot/math/vector';
-import { parentPathOf } from '../../../utils/nodePath';
+import { joinPath, parentPathOf } from '../../../utils/nodePath';
 import { subwindowStack, type StackedWindow } from './embedding';
 import { EmbeddedWindowFrame } from './EmbeddedWindowFrame';
 import { SubwindowCanvasScope } from './SubwindowCanvasScope';
@@ -18,6 +18,8 @@ interface EmbeddedWindowsProps {
   windows: readonly SolveNode[];
   /** The embedder's visible size, which a centred window centres in. */
   embedderSize: Vector2;
+  /** The live path the forest's roots hang below: `''` for a scene's roots, else the viewport's. */
+  forestPath: string;
   theme: NativeTheme;
 }
 
@@ -57,7 +59,7 @@ function nearestWindowAbove(path: string, byPath: ReadonlyMap<string, StackEntry
   return null;
 }
 
-export function EmbeddedWindows({ windows, embedderSize, theme }: EmbeddedWindowsProps) {
+export function EmbeddedWindows({ windows, embedderSize, forestPath, theme }: EmbeddedWindowsProps) {
   const stack = useMemo(() => subwindowStack(stackEntries(windows.filter(isShown))), [windows]);
   if (stack.order.length === 0) return null;
   return (
@@ -66,6 +68,7 @@ export function EmbeddedWindows({ windows, embedderSize, theme }: EmbeddedWindow
         <EmbeddedWindowFrame
           key={entry.solveNode.path}
           solveNode={entry.solveNode}
+          path={joinPath(forestPath, entry.solveNode.path)}
           isFocused={entry === stack.focused}
           drawIndex={drawIndex}
           embedderSize={embedderSize}

@@ -1833,6 +1833,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Popuppanel Embedded",
+    "file": "unit-popuppanel-embedded.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Popuppanel Shadow",
+    "file": "unit-popuppanel-shadow.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Preview Lighting",
     "file": "unit-preview-lighting.tscn",
     "category": "Other"
@@ -2628,6 +2638,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Window Theme",
+    "file": "unit-window-theme.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Window Title Trim",
     "file": "unit-window-title-trim.tscn",
     "category": "Other"
@@ -2635,6 +2650,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Window Transparent",
     "file": "unit-window-transparent.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Wrap",
+    "file": "unit-window-wrap.tscn",
     "category": "Other"
   },
   {

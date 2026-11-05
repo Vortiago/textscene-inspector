@@ -1,0 +1,35 @@
+; One variable: a Window's theme overrides recolour its frame and its title, and outline the title.
+
+[gd_scene format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_frame"]
+bg_color = Color(0.15, 0.45, 0.25, 1)
+content_margin_left = 6.0
+content_margin_top = 30.0
+content_margin_right = 6.0
+content_margin_bottom = 6.0
+expand_margin_left = 6.0
+expand_margin_top = 30.0
+expand_margin_right = 6.0
+expand_margin_bottom = 6.0
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Win" type="Window" parent="."]
+title = "Themed window"
+position = Vector2i(200, 150)
+size = Vector2i(360, 220)
+theme_override_colors/title_color = Color(1, 0.85, 0.2, 1)
+theme_override_colors/title_outline_modulate = Color(0.4, 0, 0, 1)
+theme_override_constants/title_outline_size = 4
+theme_override_font_sizes/title_font_size = 20
+theme_override_styles/embedded_border = SubResource("StyleBoxFlat_frame")

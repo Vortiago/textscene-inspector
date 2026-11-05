@@ -104,6 +104,14 @@ the plain view, and `decoding`, the sRGB view. Each consumer picks the view Godo
 consumer would, so it does not learn which kind of content produced the target, and the
 Control-rasterisation path and the FBO path are interchangeable behind it.
 
+**An embedded window is a viewport boundary too.** A Window, Popup or PopupPanel owns a
+viewport, so its Controls draw into its own target through the same passes, rooted at the
+window, which lays them out against its whole rect and owns a theme as a Control does. The
+**embedder** is no surface in the tree: it draws each visible window's frame, title, close
+icon and target on its subwindow canvas (`SUBWINDOW_CANVAS_LAYER`, `viewport.cpp:315-317`),
+in the stack order of `_sub_window_update_order`. With `wrap_controls`, the window publishes
+the size its Controls need through `ViewportRectContext`, as a stretching container does.
+
 ## Considered options
 
 **Render-to-texture for each sub-viewport.** Rejected by measurement. It hides 3D content

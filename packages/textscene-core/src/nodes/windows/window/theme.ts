@@ -47,6 +47,15 @@ function scaledConstant(value: number, scale: number): number {
   return Math.trunc(value * scale);
 }
 
+/** PopupPanel's `panel`: `make_flat_stylebox(style_normal_color)` (`default_theme.cpp:726`). */
+export function popupPanelDefaultStyle(theme: NativeTheme): StyleBoxFlatData {
+  const margin = theme.contentMargin;
+  return flatStyleBox(theme.styleFill.normal, {
+    contentMargin: { left: margin, top: margin, right: margin, bottom: margin },
+    cornerRadius: theme.cornerRadius,
+  });
+}
+
 export function windowThemeDefaults(theme: NativeTheme): WindowThemeDefaults {
   return {
     embeddedBorder: embeddedBorder(theme.styleFill.popup, theme),

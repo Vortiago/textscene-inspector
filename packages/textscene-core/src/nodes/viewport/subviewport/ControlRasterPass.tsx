@@ -43,7 +43,7 @@ export function ControlRasterPasses({ viewports }: ControlRasterPassesProps) {
 }
 
 function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
-  const { path, node, inheritedRtl, internalResources, externalResources } = viewport;
+  const { path, node, inheritedRtl, themeOwners, internalResources, externalResources } = viewport;
   const gate = useResolvedGate(viewport.gate);
 
   const properties = node.properties as SubViewportProperties;
@@ -103,9 +103,11 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
       <World2DLightingBoundary canvasModulate={canvasModulate}>
         <SubViewportSamplerScope properties={properties}>
           <ViewportControls
-            nodes={node.children}
+            path={path}
+            viewport={node}
             size={controlsSize}
             inheritedRtl={inheritedRtl}
+            themeOwners={themeOwners}
             embedsWindows={properties.gui_embed_subwindows}
           />
         </SubViewportSamplerScope>

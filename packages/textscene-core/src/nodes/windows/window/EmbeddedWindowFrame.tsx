@@ -33,6 +33,8 @@ import type { WindowProperties } from './types';
 
 interface EmbeddedWindowFrameProps {
   solveNode: SolveNode;
+  /** The window's live path, which keys its target and its size. */
+  path: string;
   /** Whether the window holds the embedder's focus, which picks `embedded_border`. */
   isFocused: boolean;
   /** The window's place in the stack, back to front (`canvas_item_set_draw_index`, `viewport.cpp:300`). */
@@ -47,9 +49,9 @@ const WHITE = new THREE.Color(1, 1, 1);
  * The rect the window takes in its embedder. A centred window centres its loaded size, before its
  * Controls wrap it (`window.cpp:1555-1560`). The size is the one its viewport holds now.
  */
-function useWindowRect(solveNode: SolveNode, embedderSize: Vector2): Rect2 {
+function useWindowRect(solveNode: SolveNode, path: string, embedderSize: Vector2): Rect2 {
   const props = solveNode.node.properties as WindowProperties;
-  const size = viewportSize(props.size, useViewportRect(solveNode.path));
+  const size = viewportSize(props.size, useViewportRect(path));
   const position =
     props.initial_position === InitialPosition.ABSOLUTE
       ? props.position
@@ -59,13 +61,14 @@ function useWindowRect(solveNode: SolveNode, embedderSize: Vector2): Rect2 {
 
 export function EmbeddedWindowFrame({
   solveNode,
+  path,
   isFocused,
   drawIndex,
   embedderSize,
   theme,
 }: EmbeddedWindowFrameProps) {
   const props = solveNode.node.properties as WindowProperties;
-  const rect = useWindowRect(solveNode, embedderSize);
+  const rect = useWindowRect(solveNode, path, embedderSize);
   const defaults = useMemo(() => windowThemeDefaults(theme), [theme]);
   // The subwindow canvas item: no modulate, z 0, and the draw index as its sequence.
   const { key } = useCanvasItemState({
@@ -80,7 +83,7 @@ export function EmbeddedWindowFrame({
     sequence: drawIndex,
   });
   const slots = canvasSubOrders(wholeKeySlot(key), ['title', 'close', 'content'] as const);
-  const { texture } = useViewportTargetSlot(solveNode.path, null, 'plain');
+  const { texture } = useViewportTargetSlot(path, null, 'plain');
 
   return (
     // Every group here carries the key: three takes `groupOrder` from the nearest enclosing group.

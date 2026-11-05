@@ -25,14 +25,14 @@ function windowNode(path: string, type: string, properties: Record<string, strin
   return { ...solveNode(), path, node: node as unknown as TscnNode };
 }
 
-async function draw(windows: SolveNode[], published: string[]) {
+async function draw(windows: SolveNode[], published: string[], forestPath = '') {
   const textures = new Map(published.map((path) => [path, new THREE.Texture()]));
   const renderer = await ReactThreeTestRenderer.create(
     <ViewportTextureProvider>
       {[...textures].map(([path, texture]) => (
         <ViewportTexturePublisher key={path} path={path} entry={viewportEntry(texture, { x: 1, y: 1 })} />
       ))}
-      <EmbeddedWindows windows={windows} embedderSize={EMBEDDER} theme={THEME} />
+      <EmbeddedWindows windows={windows} embedderSize={EMBEDDER} forestPath={forestPath} theme={THEME} />
     </ViewportTextureProvider>
   );
   return { renderer, textures };
@@ -60,6 +60,12 @@ describe('<EmbeddedWindows>', () => {
 
     expect(content).toBeDefined();
     expect(topLeft(content!)).toEqual({ x: 100, y: 120 });
+  });
+
+  it('samples the target at the window’s live path below the forest’s viewport', async () => {
+    const window = windowNode('Dialog', 'Window', { borderless: 'true' });
+    const { renderer, textures } = await draw([window], ['Root/View/Dialog'], 'Root/View');
+    expect(quadsSampling(renderer.scene, textures.get('Root/View/Dialog')!)).toHaveLength(1);
   });
 
   it('centres a window that is not placed absolutely in the embedder (`window.cpp:1555-1560`)', async () => {

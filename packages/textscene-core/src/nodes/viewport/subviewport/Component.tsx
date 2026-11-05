@@ -24,6 +24,7 @@ import { useCanvasModulateColor } from '../../../r3f/canvasModulate';
 import { SubViewportSamplerScope } from './SubViewportSamplerScope';
 import { useViewportContent } from './useViewportContent';
 import { useInheritedRtl } from './useInheritedRtl';
+import { useViewportThemeOwners } from '../../windows/window/useViewportThemeOwners';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
@@ -36,21 +37,29 @@ const ViewportControls = lazy(() =>
   import('./ViewportControls.js').then((m) => ({ default: m.ViewportControls }))
 );
 
-/** The Controls of a viewport beside its 2D items; the direction climb runs only for such a viewport. */
+/** The Controls of a viewport beside its 2D items; the climbs above it run only for such a viewport. */
 function MixedViewportControls({
   path,
-  nodes,
+  viewport,
   size,
   embedsWindows,
 }: {
   path: string;
-  nodes: readonly TscnNode[];
+  viewport: TscnNode;
   size: Vector2;
   embedsWindows: boolean;
 }) {
   const inheritedRtl = useInheritedRtl(path);
+  const themeOwners = useViewportThemeOwners(path);
   return (
-    <ViewportControls nodes={nodes} size={size} inheritedRtl={inheritedRtl} embedsWindows={embedsWindows} />
+    <ViewportControls
+      path={path}
+      viewport={viewport}
+      size={size}
+      inheritedRtl={inheritedRtl}
+      themeOwners={themeOwners}
+      embedsWindows={embedsWindows}
+    />
   );
 }
 
@@ -118,7 +127,7 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
         <PendingSuspense>
           <MixedViewportControls
             path={path}
-            nodes={node.children}
+            viewport={node}
             size={layoutSize}
             embedsWindows={properties.gui_embed_subwindows}
           />

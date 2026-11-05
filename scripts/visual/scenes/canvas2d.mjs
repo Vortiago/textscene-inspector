@@ -956,6 +956,27 @@ export const CANVAS_2D_SCENES = [
   // A Polygon2D below a plain Node below a hidden Node2D: its visibility comes from the Window.
   { name: 'canvas-root-visibility', file: 'unit-canvas-root-visibility.tscn', mode: '2d' },
 
+  // Embedded windows, as the root viewport draws them over its canvas. Godot 4.6.3 `--mode 2d` diffs
+  // differ only in the title glyphs (max 70 to 103 of 255), as a plain Label does (max 103).
+  // A decorated Window: frame, title, close icon and target. Mean 0.367.
+  { name: 'window-embedded', file: 'unit-window-embedded.tscn', mode: '2d' },
+  // The stack: the last focusable window is focused and draws the focused frame. Mean 0.514.
+  { name: 'window-focus-order', file: 'unit-window-focus-order.tscn', mode: '2d' },
+  // A title wider than its space ends in an ellipsis. Mean 0.352.
+  { name: 'window-title-trim', file: 'unit-window-title-trim.tscn', mode: '2d' },
+  // A transparent window shows the embedder through its target. Mean 0.331.
+  { name: 'window-transparent', file: 'unit-window-transparent.tscn', mode: '2d' },
+  // A Popup is borderless: its target alone. Mean 0.364.
+  { name: 'popup-embedded', file: 'unit-popup-embedded.tscn', mode: '2d' },
+  // wrap_controls grows a centred 200x100 window to 420x310 at (476,274). Mean 0.284.
+  { name: 'window-wrap', file: 'unit-window-wrap.tscn', mode: '2d' },
+  // A PopupPanel's panel, with its child inset by the default 4 px margins. Max 1, mean 0.308.
+  { name: 'popuppanel-embedded', file: 'unit-popuppanel-embedded.tscn', mode: '2d' },
+  // A shadowed panel insets by (6,5,10,11), and its shadow fills the window. Max 1, mean 0.309.
+  { name: 'popuppanel-shadow', file: 'unit-popuppanel-shadow.tscn', mode: '2d' },
+  // Theme overrides: the frame, the title colour, size and outline ring. Mean 0.426.
+  { name: 'window-theme', file: 'unit-window-theme.tscn', mode: '2d' },
+
   // MeshInstance2D draws a mesh through the canvas. Godot 4.6.3 `--mode 2d` probes: the textured QuadMesh
   // shows its texture upside down, (75,75) blue and (75,125) red, and the PlaneMesh at (100,300) draws
   // nothing. The ArrayMesh quad with colours reads (241,0,14) at (355,55) and (126,0,129) at its centre.
