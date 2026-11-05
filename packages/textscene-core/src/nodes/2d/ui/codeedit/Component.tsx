@@ -238,7 +238,8 @@ export function CodeEdit(props: NativeControlComponentProps) {
           const text = codeEditLineNumberText(
             lineIndex,
             band.lineNumberDigits,
-            codeEditProps.gutterZeroPadLineNumbers
+            codeEditProps.gutterZeroPadLineNumbers,
+            { locale: solveNode.locale, localizeNumeralSystem: codeEditProps.localizeNumeralSystem }
           );
           const layout = shapeText(text, {
             fontSizePx,
@@ -246,6 +247,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
             autowrapMode: AutowrapMode.AUTOWRAP_OFF,
             lineSpacingPx: 0,
             fontMetrics,
+            language: solveNode.locale,
           });
           // The gutter cell is the row's own band (`text_edit.cpp:1448`), so
           // it starts where the band does, not at the control's top edge.

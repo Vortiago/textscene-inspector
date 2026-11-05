@@ -2842,6 +2842,12 @@ export const fixtures: Fixture[] = [
     "root": "msaa-3d"
   },
   {
+    "name": "Numeral Locale",
+    "file": "numeral-locale/unit-numeral-locale.tscn",
+    "category": "Other",
+    "root": "numeral-locale"
+  },
+  {
     "name": "Label Project Default Font",
     "file": "project-default-font/unit-label-project-default-font.tscn",
     "category": "Other",

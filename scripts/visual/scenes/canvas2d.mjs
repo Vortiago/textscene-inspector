@@ -957,6 +957,7 @@ export const CANVAS_2D_SCENES = [
   { name: 'rich-text-label-empty-line-vertical-fill', file: 'unit-rich-text-label-empty-line-vertical-fill.tscn', mode: '2d' },
   { name: 'rich-text-label-lists', file: 'unit-rich-text-label-lists.tscn', mode: '2d' },
   { name: 'rich-text-label-numeral-system', file: 'unit-rich-text-label-numeral-system.tscn', mode: '2d' },
+  { name: 'numeral-locale', file: 'numeral-locale/unit-numeral-locale.tscn', mode: '2d' },
   { name: 'label-fill-paragraphs', file: 'unit-label-fill-paragraphs.tscn', mode: '2d' },
   { name: 'label-tab-without-stop', file: 'unit-label-tab-without-stop.tscn', mode: '2d' },
   { name: 'label-fill-trim', file: 'unit-label-fill-trim.tscn', mode: '2d' },

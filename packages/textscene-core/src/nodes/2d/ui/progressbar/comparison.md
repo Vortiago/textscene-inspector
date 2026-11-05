@@ -12,6 +12,8 @@ renders_as: a background and ratio-filled StyleBox pair, with a percentage label
 ProgressBar draws its `background` StyleBox across the whole control and its `fill`
 StyleBox windowed to the current value's ratio, in the direction `fill_mode` names.
 Unless `indeterminate` is set, it adds a centred percentage label with an optional outline.
+While `localize_numeral_system` is true, its default, the label uses the digits of the project locale. It
+ends with the percent sign of that locale (`progress_bar.cpp:168-174`).
 
 ## Linting
 
@@ -52,8 +54,6 @@ outline ring (ADR-0064).
 
 ## Known limitations
 
-- **Not drawn** `localize_numeral_system`, which writes the percentage in the digits of the
-  control's language, since the parser reads the property and the bar draws ASCII digits.
 - **Approximated** `indeterminate` never animates, so the previewer always draws Godot's
   static frame (the bar centred in the control), whatever `editor_preview_indeterminate`
   says.

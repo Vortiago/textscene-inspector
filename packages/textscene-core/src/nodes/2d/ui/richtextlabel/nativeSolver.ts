@@ -670,7 +670,7 @@ export function shapeRichText(
   const listings = paragraphListings(styledRuns, {
     faces,
     tabSize,
-    localizeNumeralSystem: options.localizeNumeralSystem ?? true,
+    localizeNumeralSystem: options.localizeNumeralSystem,
   });
   const layout = shapeText(plainTextOf(styledRuns), {
     fontSizePx,

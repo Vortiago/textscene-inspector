@@ -140,15 +140,17 @@ describe('formatGodotNumber', () => {
 
 describe('spinBoxDisplayText', () => {
   it('wraps the formatted value in prefix/suffix, space-separated (happy path)', () => {
-    expect(spinBoxDisplayText({ name: 'S', prefix: '$', suffix: 'kg', step: 0.25 }, 5.5)).toBe('$ 5.5 kg');
+    expect(spinBoxDisplayText({ name: 'S', prefix: '$', suffix: 'kg', step: 0.25 }, 5.5, '')).toBe(
+      '$ 5.5 kg'
+    );
   });
 
   it('omits an absent prefix/suffix entirely, not as an empty wrap (error path)', () => {
-    expect(spinBoxDisplayText({ name: 'S' }, 5)).toBe('5');
+    expect(spinBoxDisplayText({ name: 'S' }, 5, '')).toBe('5');
   });
 
   it('falls back to step=1 (Range default) when unset (edge case)', () => {
-    expect(spinBoxDisplayText({ name: 'S' }, 5.5)).toBe('6'); // step_decimals(1) = 0, so String::num rounds with %.0lf
+    expect(spinBoxDisplayText({ name: 'S' }, 5.5, '')).toBe('6'); // step_decimals(1) = 0, so String::num rounds with %.0lf
   });
 });
 
@@ -227,5 +229,17 @@ describe('spinBoxMinimumSize', () => {
     const result = spinBoxMinimumSize(n, ctx(false));
     // blockWidth = max(18, 40+2) = 42, against the untethered 18.
     expect(result.x).toBe(8 + 42);
+  });
+});
+
+describe('spinBoxDisplayText with a locale (spin_box.cpp:91-93)', () => {
+  it('writes the value in the digits of the locale, and keeps the prefix and suffix as they are', () => {
+    expect(spinBoxDisplayText({ name: 'S', prefix: '$', suffix: 'kg', step: 0.25 }, 5.5, 'ar')).toBe(
+      '$ ٥٫٥ kg'
+    );
+  });
+
+  it('writes ASCII digits while localize_numeral_system is off', () => {
+    expect(spinBoxDisplayText({ name: 'S', localizeNumeralSystem: false }, 5.5, 'ar')).toBe('6');
   });
 });

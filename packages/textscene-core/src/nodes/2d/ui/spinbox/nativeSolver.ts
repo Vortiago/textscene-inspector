@@ -8,6 +8,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { formatControlNumber } from '../../../../godot/text/numberFormat';
 import type {
   MinimumSizeFn,
   SolveContext,
@@ -182,13 +183,16 @@ export function formatGodotNumber(value: number, decimals: number): string {
 }
 
 /**
- * `SpinBox::_update_text` (`spin_box.cpp:88-114`) for a still frame: `line_edit->is_editing()` is
+ * `SpinBox::_update_text` (`spin_box.cpp:88-114`) for a still frame, the value in the digits of `locale` (`:91-93`): `line_edit->is_editing()` is
  * always false, so the prefix and suffix always apply. `accepted` stays `true` without a live
  * edit, so the `update_on_text_changed` re-format never runs.
  */
-export function spinBoxDisplayText(props: SpinBoxProperties, resolvedValue: number): string {
+export function spinBoxDisplayText(props: SpinBoxProperties, resolvedValue: number, locale: string): string {
   const step = props.step ?? SPIN_BOX_STEP_DEFAULT;
-  let text = formatGodotNumber(resolvedValue, rangeStepDecimals(step));
+  let text = formatControlNumber(formatGodotNumber(resolvedValue, rangeStepDecimals(step)), {
+    locale,
+    localizeNumeralSystem: props.localizeNumeralSystem,
+  });
   const prefix = props.prefix ?? '';
   const suffix = props.suffix ?? '';
   if (prefix !== '') text = `${prefix} ${text}`;

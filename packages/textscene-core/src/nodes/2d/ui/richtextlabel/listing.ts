@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
-import { formatNumber } from '../../../../godot/text/numberFormat';
+import { formatControlNumber } from '../../../../godot/text/numberFormat';
 import type { Rgba } from '../../../../godot/math/math';
 import { getFontTabWidthPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
@@ -330,8 +330,8 @@ function nearestListOf(row: Row): OpenBBCodeTag | undefined {
 export interface ListingContext {
   faces: RichTextFaces;
   tabSize: number;
-  /** `Control.localize_numeral_system`. */
-  localizeNumeralSystem: boolean;
+  /** `Control.localize_numeral_system`; absent means on. */
+  localizeNumeralSystem?: boolean;
 }
 
 /**
@@ -406,9 +406,9 @@ export function paragraphListings(
     let widestMarkerPx = 0;
     [firstRow, ...(rowsOfList.get(list) ?? [])].forEach((rowIndex, position) => {
       const row = rows[rowIndex]!;
-      const { language } = row.run.bidi;
+      const locale = row.run.bidi.language ?? '';
       const writeNumber = (number: number) =>
-        context.localizeNumeralSystem ? formatNumber(String(number), language ?? '') : String(number);
+        formatControlNumber(String(number), { locale, localizeNumeralSystem: context.localizeNumeralSystem });
       const text = markerText(kinds, [position + 1, ...outerIndexes], writeNumber);
       const marker = shapeMarker(text, row, context.faces);
       markers.set(rowIndex, marker);

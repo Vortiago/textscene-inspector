@@ -33,6 +33,7 @@ import type { Vector2 } from '../../../../godot/math/vector.js';
 import { isEqualApprox, type Rgba } from '../../../../godot/math/math.js';
 import { CONTROL_FONT_HOVER_COLOR } from '../../../../godot/scene/theme.js';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { formatControlPercent } from '../../../../godot/text/numberFormat';
 import { ProgressBarFillMode } from '../../../../godot/scene/gui';
 
 /**
@@ -158,6 +159,16 @@ const progressBarMinimumSize: MinimumSizeFn = (n, ctx) => {
 };
 
 controlSolverRegistry.registerMinimumSize('ProgressBar', progressBarMinimumSize);
+
+/** The label's text: the rounded percentage, in the digits and with the percent sign of `locale` (`progress_bar.cpp:168-174`). */
+export function progressBarPercentText(
+  props: ProgressBarProperties,
+  orderedKeys: RangeValueOrder,
+  locale: string
+): string {
+  const percent = String(Math.round(progressBarPercentRatio(props, orderedKeys) * 100));
+  return formatControlPercent(percent, { locale, localizeNumeralSystem: props.localizeNumeralSystem });
+}
 
 /**
  * The percentage label's ratio (`progress_bar.cpp:149-166`). The fill uses
