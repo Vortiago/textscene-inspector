@@ -15,7 +15,7 @@ import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { shapeText, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import {
   pickLineEditStyleBox,
   resolveLineEditStyleState,
@@ -28,6 +28,7 @@ import {
   spinBoxArrowPosition,
   spinBoxLayout,
   spinBoxDisplayText,
+  shapeSpinBoxFieldText,
   spinBoxFieldTextTheme,
   spinBoxUpButtonState,
   spinBoxDownButtonState,
@@ -37,7 +38,6 @@ import {
 } from './nativeSolver';
 import type { SpinBoxProperties } from './types';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<SpinBoxProperties>(solveNode);
@@ -66,15 +66,8 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
   const textLayout: TextLayoutResult = useMemo(
-    () =>
-      shapeText(text, {
-        fontSizePx,
-        boxWidthPx: 0,
-        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-        lineSpacingPx: 0,
-        fontMetrics,
-      }),
-    [text, fontSizePx, fontMetrics]
+    () => shapeSpinBoxFieldText(text, { fontSizePx, fontMetrics }, solveNode.locale),
+    [text, fontSizePx, fontMetrics, solveNode.locale]
   );
 
   const content = useMemo(

@@ -2873,6 +2873,12 @@ export const fixtures: Fixture[] = [
     "root": "numeral-locale"
   },
   {
+    "name": "Spin Box Direction",
+    "file": "numeral-locale/unit-spin-box-direction.tscn",
+    "category": "Other",
+    "root": "numeral-locale"
+  },
+  {
     "name": "Label Project Default Font",
     "file": "project-default-font/unit-label-project-default-font.tscn",
     "category": "Other",

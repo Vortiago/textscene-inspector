@@ -8,6 +8,8 @@ import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
+import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SpinBoxProperties } from './types';
@@ -23,6 +25,7 @@ import {
   spinBoxFieldTextTheme,
   spinBoxMinimumSize,
   spinBoxWidestButtonIconWidth,
+  shapeSpinBoxFieldText,
 } from './nativeSolver';
 
 // At font size 16 with no theme in the chain: 'W' advances 1936*(16/2048) = 15.125
@@ -241,5 +244,25 @@ describe('spinBoxDisplayText with a locale (spin_box.cpp:91-93)', () => {
 
   it('writes ASCII digits while localize_numeral_system is off', () => {
     expect(spinBoxDisplayText({ name: 'S', localizeNumeralSystem: false }, 5.5, 'ar')).toBe('6');
+  });
+});
+
+describe('shapeSpinBoxFieldText (the inner LineEdit is AUTO, line_edit.h:144, with no language)', () => {
+  function visual(text: string, locale: string): string {
+    return visualChars(
+      shapeSpinBoxFieldText(text, { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS }, locale).lines[0]!
+    );
+  }
+
+  it('takes a neutral paragraph from a right-to-left locale, so the minus sign follows the digits', () => {
+    expect(visual('$ -12.5', 'ar')).toBe('12.5- $');
+  });
+
+  it('keeps a left-to-right run in its order, after the sign it follows', () => {
+    expect(visual('-12.5 kg', 'ar')).toBe('-12.5 kg');
+  });
+
+  it('keeps the typed order under a left-to-right locale', () => {
+    expect(visual('$ -12.5', 'en')).toBe('$ -12.5');
   });
 });
