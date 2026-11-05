@@ -16,6 +16,7 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
+import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
@@ -23,12 +24,17 @@ import { RICH_TEXT_LABEL_UNDERLINE_ALPHA, richTextLabelMinimumSize } from './nat
 import { RichTextLabel } from './Component';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
-// The bundled canvas face, which a [b] run draws on: the door to register it is shut under vitest.
-vi.mock('../../../../r3f/controls/native/text/bundledFontLoader', async () => {
+// The bundled canvas face, which a [b] run draws on: the door to register it is shut under vitest,
+// and a real face would decode the bundled outlines, which a painter test does not read.
+vi.mock('../../../../r3f/controls/native/text/bundledCanvasFace', async () => {
   const { createOpenSansCanvasFontMetrics } =
     await import('../../../../r3f/controls/native/text/openSansCanvasFontMetrics');
+  const { withVariation } = await import('../../../../r3f/controls/native/text/fontMetrics');
   const bundled = createOpenSansCanvasFontMetrics('bundled-rtl-test');
-  return { peekBundledCanvasFontMetrics: () => bundled };
+  return {
+    peekBundledCanvasFace: (atlasFace: FontMetrics) =>
+      withVariation(bundled, { embolden: atlasFace.embolden, skew: atlasFace.skew }),
+  };
 });
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
