@@ -13,9 +13,7 @@ import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
-import { useCanvasTextureSampler, useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
-import { CanvasItemSurfaceSource } from '../../../r3f/canvasItemSurface';
-import type { CanvasItemSurface } from '../../../r3f/lighting2d/normalMappedLighting';
+import { useNode2DCanvasTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import { threeMatrixFromTransform2D } from '../../../r3f/node2dTransform';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
@@ -36,41 +34,40 @@ const UNTEXTURED_QUAD = { width: 1, height: 1 };
 export function CPUParticles2D({ node, children }: NodeComponentProps) {
   const props = node.properties as CPUParticles2DProperties;
   const { externalResources, internalResources } = useSceneResources();
-  const resolved = useTexture2D(props.texture, externalResources, internalResources);
-  const { canvasTexture } = resolved;
+  const {
+    texture: resolvedTexture,
+    size,
+    missing,
+    canvasTexture,
+  } = useTexture2D(props.texture, externalResources, internalResources);
   // A CanvasTexture's own filter and repeat win over the item's.
-  const sampler = useCanvasTextureSampler(useNode2DTextureSampler(props), canvasTexture?.texture);
-  const texture = useCanvas2DTexture(resolved.texture, sampler);
-  const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
+  const sampler = useNode2DCanvasTextureSampler(props, canvasTexture?.texture);
+  // An emitter that is not emitting draws nothing, so it uploads no view.
+  const texture = useCanvas2DTexture(props.emitting ? resolvedTexture : null, sampler);
 
-  // A fragment either way, so the item keeps its place when the source mounts.
   return (
-    <>
-      <CanvasItem2D
-        node={node}
-        props={props}
-        surface={surface}
-        body={({ color, opacity }, material, pixelMaterial) =>
-          props.emitting ? (
-            <ParticleField
-              props={props}
-              name={node.name}
-              resolved={resolved}
-              texture={texture}
-              color={color}
-              opacity={opacity}
-              material={material}
-              pixelMaterial={pixelMaterial}
-            />
-          ) : null
-        }
-      >
-        {children}
-      </CanvasItem2D>
-      {canvasTexture?.texture.normalTexture && (
-        <CanvasItemSurfaceSource slot={canvasTexture} sampler={sampler} onSurface={setSurface} />
-      )}
-    </>
+    <CanvasItem2D
+      node={node}
+      props={props}
+      canvasTexture={canvasTexture}
+      body={({ color, opacity }, material, pixelMaterial) =>
+        props.emitting ? (
+          <ParticleField
+            props={props}
+            name={node.name}
+            texture={texture}
+            size={size}
+            missing={missing}
+            color={color}
+            opacity={opacity}
+            material={material}
+            pixelMaterial={pixelMaterial}
+          />
+        ) : null
+      }
+    >
+      {children}
+    </CanvasItem2D>
   );
 }
 
@@ -91,8 +88,9 @@ function particleFlipbook(material: CanvasItemMaterialProperties | null): Partic
 function ParticleField({
   props,
   name,
-  resolved,
   texture,
+  size,
+  missing,
   color,
   opacity,
   material,
@@ -100,17 +98,17 @@ function ParticleField({
 }: {
   props: CPUParticles2DProperties;
   name: string;
-  /** The emitter's texture as it resolved, for its size and whether it failed. */
-  resolved: Texture2DResult;
-  /** The texture view the particles sample, with the item's sampler. */
+  /** The view the particles sample, with the CanvasTexture's sampler where it names one. */
   texture: THREE.Texture | null;
+  size: Texture2DResult['size'];
+  /** The texture is set but failed to load. */
+  missing: boolean;
   color: THREE.Color;
   opacity: number;
   material: CanvasItemMaterialProperties | null;
   pixelMaterial: CanvasItemPixelMaterial;
 }) {
   const flipbook = useMemo(() => particleFlipbook(material), [material]);
-  const { size, missing } = resolved;
 
   // A callback ref, not useRef: the emission-transform sample runs once the
   // container is in the tree, since its world matrix does not exist before.

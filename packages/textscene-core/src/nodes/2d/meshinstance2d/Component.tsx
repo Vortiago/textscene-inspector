@@ -6,7 +6,7 @@
  * for, draws nothing and its children still draw (`mesh_instance_2d.cpp:45-53`).
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -14,10 +14,8 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { canvasMapProps, useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
-import { CanvasItemSurfaceSource } from '../../../r3f/canvasItemSurface';
-import { useCanvasTextureSampler, useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { useNode2DCanvasTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
-import type { CanvasItemSurface } from '../../../r3f/lighting2d/normalMappedLighting';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { canvasMeshGeometry } from '../../../r3f/meshes/canvasMeshGeometry';
 import { drawnTag, useMeshContent, type SurfacedMesh } from '../../../r3f/meshes/meshContent';
@@ -42,40 +40,33 @@ export function MeshInstance2D({ node, children }: NodeComponentProps) {
     canvasTexture,
   } = useTexture2D(props.texture, pools.externalResources, pools.internalResources);
   // A CanvasTexture's own filter and repeat win over the item's.
-  const sampler = useCanvasTextureSampler(useNode2DTextureSampler(props), canvasTexture?.texture);
+  const sampler = useNode2DCanvasTextureSampler(props, canvasTexture?.texture);
   const texture = useCanvas2DTexture(sourceTexture, sampler);
-  const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
 
-  // A fragment either way, so the item keeps its place when the source mounts.
   return (
-    <>
-      <CanvasItem2D
-        node={node}
-        props={props}
-        surface={surface}
-        body={({ color, opacity }, _material, pixelMaterial) => {
-          // No texture draws white. A texture that is set but not here yet draws nothing, and one
-          // that never draws gets the placeholder.
-          if (textureMissing) return <MissingResourcePlaceholder shape="plane" name={node.name} />;
-          if (textureArriving) return null;
-          return geometries.map((geometry) => (
-            <CanvasSurfaces
-              key={geometry.uuid}
-              geometry={geometry}
-              texture={texture}
-              color={color}
-              opacity={opacity}
-              pixelMaterial={pixelMaterial}
-            />
-          ));
-        }}
-      >
-        {children}
-      </CanvasItem2D>
-      {canvasTexture?.texture.normalTexture && (
-        <CanvasItemSurfaceSource slot={canvasTexture} sampler={sampler} onSurface={setSurface} />
-      )}
-    </>
+    <CanvasItem2D
+      node={node}
+      props={props}
+      canvasTexture={canvasTexture}
+      body={({ color, opacity }, _material, pixelMaterial) => {
+        // No texture draws white. A texture that is set but not here yet draws nothing, and one
+        // that never draws gets the placeholder.
+        if (textureMissing) return <MissingResourcePlaceholder shape="plane" name={node.name} />;
+        if (textureArriving) return null;
+        return geometries.map((geometry) => (
+          <CanvasSurfaces
+            key={geometry.uuid}
+            geometry={geometry}
+            texture={texture}
+            color={color}
+            opacity={opacity}
+            pixelMaterial={pixelMaterial}
+          />
+        ));
+      }}
+    >
+      {children}
+    </CanvasItem2D>
   );
 }
 

@@ -5,42 +5,25 @@
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { parseAnimatedSprite2D } from './parser';
+import './index';
 import { AnimatedSprite2D } from './Component';
+import { parsedNode } from '../../../parser/testing/parserKit';
+import { subResource } from '../../../testing/subResource';
 import {
   CANVAS_TEXTURE_REF,
   FLAT_GREY_REF,
   canvasTexture,
   renderLitItem,
 } from '../../../r3f/testing/canvasTextureLighting';
-import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { TscnInternalResource } from '../../../parser/types';
 
-const SPRITE_FRAMES: TscnInternalResource = {
-  id: 'sf',
-  type: 'SpriteFrames',
-  data: {
-    animations: `[{"frames": [{"duration": 1.0, "texture": ${CANVAS_TEXTURE_REF}}], "loop": true, "name": &"default", "speed": 5.0}]`,
-  },
-};
+const SPRITE_FRAMES = subResource('SpriteFrames', 'sf', {
+  animations: `[{"frames": [{"duration": 1.0, "texture": ${CANVAS_TEXTURE_REF}}], "loop": true, "name": &"default", "speed": 5.0}]`,
+});
 
-function animatedSprite(): TscnNode {
-  const heading = { type: 'node', attributes: { type: 'AnimatedSprite2D', name: 'A' } };
-  return {
-    rawProperties: {},
-    name: 'A',
-    type: 'AnimatedSprite2D',
-    children: [],
-    properties: parseAnimatedSprite2D(heading, { sprite_frames: 'SubResource("sf")' }),
-  };
-}
-
-async function render(wrapper: TscnInternalResource) {
-  const { renderer, registerItem } = await renderLitItem(<AnimatedSprite2D node={animatedSprite()} />, [
-    SPRITE_FRAMES,
-    wrapper,
-  ]);
-  const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-  return { registerItem, map: (mesh.material as THREE.MeshBasicMaterial).map! };
+function render(wrapper: TscnInternalResource) {
+  const sprite = parsedNode({ type: 'AnimatedSprite2D', name: 'A' }, { sprite_frames: 'SubResource("sf")' });
+  return renderLitItem(<AnimatedSprite2D node={sprite} />, [SPRITE_FRAMES, wrapper]);
 }
 
 describe('AnimatedSprite2D with a CanvasTexture frame', () => {

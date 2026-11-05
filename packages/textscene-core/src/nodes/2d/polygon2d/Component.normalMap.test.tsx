@@ -5,34 +5,23 @@
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { parsePolygon2D } from './parser';
+import './index';
 import { Polygon2D } from './Component';
+import { parsedNode } from '../../../parser/testing/parserKit';
 import {
   CANVAS_TEXTURE_REF,
   FLAT_GREY_REF,
   canvasTexture,
   renderLitItem,
 } from '../../../r3f/testing/canvasTextureLighting';
-import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { TscnInternalResource } from '../../../parser/types';
 
-function polygon(): TscnNode {
-  const heading = { type: 'node', attributes: { type: 'Polygon2D', name: 'P' } };
-  return {
-    rawProperties: {},
-    name: 'P',
-    type: 'Polygon2D',
-    children: [],
-    properties: parsePolygon2D(heading, {
-      texture: CANVAS_TEXTURE_REF,
-      polygon: 'PackedVector2Array(-4, -4, 4, -4, 4, 4, -4, 4)',
-    }),
-  };
-}
-
-async function render(wrapper: TscnInternalResource) {
-  const { renderer, registerItem } = await renderLitItem(<Polygon2D node={polygon()} />, [wrapper]);
-  const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-  return { registerItem, map: (mesh.material as THREE.MeshBasicMaterial).map! };
+function render(wrapper: TscnInternalResource) {
+  const polygon = parsedNode(
+    { type: 'Polygon2D', name: 'P' },
+    { texture: CANVAS_TEXTURE_REF, polygon: 'PackedVector2Array(-4, -4, 4, -4, 4, 4, -4, 4)' }
+  );
+  return renderLitItem(<Polygon2D node={polygon} />, [wrapper]);
 }
 
 describe('Polygon2D with a CanvasTexture', () => {

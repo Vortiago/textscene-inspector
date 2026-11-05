@@ -6,9 +6,10 @@
  */
 import { beforeAll, describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { parseCPUParticles2D } from './parser';
+import './index';
 import { CPUParticles2D } from './Component';
 import { loadSimulate } from './simulateModule';
+import { parsedNode } from '../../../parser/testing/parserKit';
 import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import {
   CANVAS_TEXTURE_REF,
@@ -16,48 +17,25 @@ import {
   canvasTexture,
   renderLitItem,
 } from '../../../r3f/testing/canvasTextureLighting';
-import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { TscnInternalResource } from '../../../parser/types';
 
 const QUARTER_TURN = '1.5707964';
 
-function emitter(raw: Record<string, string> = {}): TscnNode {
-  const heading = { type: 'node', attributes: { type: 'CPUParticles2D', name: 'Fx' } };
-  return {
-    rawProperties: {},
-    name: 'Fx',
-    type: 'CPUParticles2D',
-    children: [],
-    properties: parseCPUParticles2D(heading, {
-      texture: CANVAS_TEXTURE_REF,
-      amount: '1',
-      explosiveness: '1',
-      gravity: 'Vector2(0, 0)',
-      ...raw,
-    }),
-  };
-}
-
-async function render(wrapper: TscnInternalResource, raw: Record<string, string> = {}) {
-  const { renderer, registerItem } = await renderLitItem(
+function render(wrapper: TscnInternalResource, raw: Record<string, string> = {}) {
+  const emitter = parsedNode(
+    { type: 'CPUParticles2D', name: 'Fx' },
+    { texture: CANVAS_TEXTURE_REF, amount: '1', explosiveness: '1', gravity: 'Vector2(0, 0)', ...raw }
+  );
+  return renderLitItem(
     <CanvasWorkspaceProvider workspace="2d">
-      <CPUParticles2D node={emitter(raw)} />
+      <CPUParticles2D node={emitter} />
     </CanvasWorkspaceProvider>,
     [wrapper]
   );
-  const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-  return { registerItem, mesh, map: (mesh.material as THREE.MeshBasicMaterial).map! };
-}
-
-/** Updates every world matrix from the root, as a render does: the mesh's own matrix is fixed. */
-function updateWorldMatrices(mesh: THREE.Mesh): void {
-  let root: THREE.Object3D = mesh;
-  while (root.parent) root = root.parent;
-  root.updateMatrixWorld();
 }
 
 /** The x axis the mesh draws at, in three's y-up frame: what turns the normal (`canvas.glsl:708`). */
 function drawnXAxis(mesh: THREE.Mesh): THREE.Vector3 {
-  updateWorldMatrices(mesh);
   return new THREE.Vector3().setFromMatrixColumn(mesh.matrixWorld, 0).normalize();
 }
 
@@ -83,14 +61,22 @@ describe('CPUParticles2D with a CanvasTexture', () => {
 
 describe('the basis a CPUParticles2D draws at', () => {
   it('is the canvas transform for a global-coords emitter, whatever its rotation', async () => {
-    const { mesh } = await render(canvasTexture({}), { rotation: QUARTER_TURN, local_coords: 'false' });
+    const { renderer, mesh } = await render(canvasTexture({}), {
+      rotation: QUARTER_TURN,
+      local_coords: 'false',
+    });
+    renderer.scene.instance.updateMatrixWorld();
     const axis = drawnXAxis(mesh);
     expect(axis.x).toBeCloseTo(1, 5);
     expect(axis.y).toBeCloseTo(0, 5);
   });
 
   it("is the emitter's own for a local-coords emitter", async () => {
-    const { mesh } = await render(canvasTexture({}), { rotation: QUARTER_TURN, local_coords: 'true' });
+    const { renderer, mesh } = await render(canvasTexture({}), {
+      rotation: QUARTER_TURN,
+      local_coords: 'true',
+    });
+    renderer.scene.instance.updateMatrixWorld();
     const axis = drawnXAxis(mesh);
     // Godot's clockwise quarter turn is three's -y in the y-up frame.
     expect(axis.x).toBeCloseTo(0, 5);
@@ -98,12 +84,12 @@ describe('the basis a CPUParticles2D draws at', () => {
   });
 
   it('places a global-coords particle where its emitter spawns it', async () => {
-    const { mesh } = await render(canvasTexture({}), {
+    const { renderer, mesh } = await render(canvasTexture({}), {
       rotation: QUARTER_TURN,
       position: 'Vector2(30, 40)',
       local_coords: 'false',
     });
-    updateWorldMatrices(mesh);
+    renderer.scene.instance.updateMatrixWorld();
     mesh.geometry.computeBoundingBox();
     const centre = mesh.geometry.boundingBox!.getCenter(new THREE.Vector3()).applyMatrix4(mesh.matrixWorld);
     expect(centre.x).toBeCloseTo(30, 3);

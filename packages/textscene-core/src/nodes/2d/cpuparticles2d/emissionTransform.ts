@@ -6,7 +6,7 @@
  */
 
 import { useLayoutEffect, useRef, useState } from 'react';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import { TRANSFORM2D_IDENTITY, type Transform2DColumns } from '../../../godot/math/transform2d.js';
 import { transform2DFromThreeMatrix } from '../../../r3f/node2dTransform';
 import { useCanvasFrame } from '../../../r3f/canvasFrame';

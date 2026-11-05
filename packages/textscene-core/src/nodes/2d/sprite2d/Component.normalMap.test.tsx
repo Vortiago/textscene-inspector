@@ -5,31 +5,20 @@
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { parseSprite2D } from './parser';
+import './index';
 import { Sprite2D } from './Component';
+import { parsedNode } from '../../../parser/testing/parserKit';
 import {
   CANVAS_TEXTURE_REF,
   FLAT_GREY_REF,
   canvasTexture,
   renderLitItem,
 } from '../../../r3f/testing/canvasTextureLighting';
-import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { TscnInternalResource } from '../../../parser/types';
 
-function sprite(): TscnNode {
-  const heading = { type: 'node', attributes: { type: 'Sprite2D', name: 'S' } };
-  return {
-    rawProperties: {},
-    name: 'S',
-    type: 'Sprite2D',
-    children: [],
-    properties: parseSprite2D(heading, { texture: CANVAS_TEXTURE_REF }),
-  };
-}
-
-async function render(wrapper: TscnInternalResource) {
-  const { renderer, registerItem } = await renderLitItem(<Sprite2D node={sprite()} />, [wrapper]);
-  const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-  return { registerItem, map: (mesh.material as THREE.MeshBasicMaterial).map! };
+function render(wrapper: TscnInternalResource) {
+  const sprite = parsedNode({ type: 'Sprite2D', name: 'S' }, { texture: CANVAS_TEXTURE_REF });
+  return renderLitItem(<Sprite2D node={sprite} />, [wrapper]);
 }
 
 describe('Sprite2D with a CanvasTexture', () => {

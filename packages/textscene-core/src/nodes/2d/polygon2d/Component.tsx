@@ -4,16 +4,14 @@
  * position, so a renumbering mesh such as `ShapeGeometry` would mismatch them.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
-import { useCanvasTextureSampler, useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
-import { CanvasItemSurfaceSource } from '../../../r3f/canvasItemSurface';
-import type { CanvasItemSurface } from '../../../r3f/lighting2d/normalMappedLighting';
+import { useNode2DCanvasTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
@@ -38,9 +36,8 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
     canvasTexture,
   } = useTexture2D(props.texture, externalResources, internalResources);
   // A CanvasTexture's own filter and repeat win over the item's.
-  const sampler = useCanvasTextureSampler(useNode2DTextureSampler(props), canvasTexture?.texture);
+  const sampler = useNode2DCanvasTextureSampler(props, canvasTexture?.texture);
   const texture = useCanvas2DTexture(resolvedTexture, sampler);
-  const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
 
   const rings = useMemo(
     () =>
@@ -62,32 +59,26 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
   // R3F does not dispose a geometry passed through `attach`, so release it on rebuild.
   useDisposeOnRelease(geometry);
 
-  // A fragment either way, so the item keeps its place when the source mounts.
   return (
-    <>
-      <CanvasItem2D
-        node={node}
-        props={props}
-        surface={surface}
-        body={(tint, _material, pixelMaterial) =>
-          geometry ? (
-            <FilledPolygon
-              geometry={geometry}
-              tint={tint}
-              color={props.color}
-              texture={texture}
-              vertexColors={geometry.hasAttribute('color')}
-              pixelMaterial={pixelMaterial}
-            />
-          ) : null
-        }
-      >
-        {children}
-      </CanvasItem2D>
-      {canvasTexture?.texture.normalTexture && (
-        <CanvasItemSurfaceSource slot={canvasTexture} sampler={sampler} onSurface={setSurface} />
-      )}
-    </>
+    <CanvasItem2D
+      node={node}
+      props={props}
+      canvasTexture={canvasTexture}
+      body={(tint, _material, pixelMaterial) =>
+        geometry ? (
+          <FilledPolygon
+            geometry={geometry}
+            tint={tint}
+            color={props.color}
+            texture={texture}
+            vertexColors={geometry.hasAttribute('color')}
+            pixelMaterial={pixelMaterial}
+          />
+        ) : null
+      }
+    >
+      {children}
+    </CanvasItem2D>
   );
 }
 
