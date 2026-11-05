@@ -1,0 +1,39 @@
+[gd_scene load_steps=3 format=3]
+
+; The one variable: a `FontVariation` whose `variation_opentype` sets the `MONO` axis of Recursive to
+; 0.5 (tag 1297043023). Its `GPOS` kerning moves with the axis: each pair kerns half as much as at the
+; default instance. The top Label draws the font itself and the lower Label the instance, both at 64 px,
+; with the same pairs.
+
+[ext_resource type="FontFile" path="res://fonts/recursive-vf-subset.woff2" id="1_font"]
+
+[sub_resource type="FontVariation" id="FontVariation_mono"]
+base_font = ExtResource("1_font")
+variation_opentype = {
+1297043023: 0.5
+}
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Default" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 30.0
+offset_right = 1100.0
+offset_bottom = 120.0
+theme_override_fonts/font = ExtResource("1_font")
+theme_override_font_sizes/font_size = 64
+text = "LT AT T. To Ta AV Lv"
+
+[node name="Mono" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 140.0
+offset_right = 1100.0
+offset_bottom = 230.0
+theme_override_fonts/font = SubResource("FontVariation_mono")
+theme_override_font_sizes/font_size = 64
+text = "LT AT T. To Ta AV Lv"

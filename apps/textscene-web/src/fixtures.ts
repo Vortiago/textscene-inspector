@@ -1268,6 +1268,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Font Variation Kerning",
+    "file": "unit-label-font-variation-kerning.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Label Settings Tres",
     "file": "unit-label-label-settings-tres.tscn",
     "category": "Other"

@@ -68,6 +68,12 @@ at the instance. They follow the `fvar`, `avar`, `gvar` and `cvar` tables. Each 
 phantom points that `gvar` moves in a font without `HVAR`. The pair kerning follows the `GPOS` `kern` feature
 with its deltas at the instance. A `FontVariation` over another takes its own axis values alone (`font.cpp:3120-3131`).
 
+## Kerning at a variable-font instance
+
+<!-- compare: image=unit-label-font-variation-kerning status=done fixture=unit-label-font-variation-kerning.tscn -->
+
+Recursive at `MONO` 0.5 kerns each pair by half its kerning at the default instance, as Godot does.
+
 ## Linting
 
 <!-- lint:begin Label -->
