@@ -170,6 +170,14 @@ _Avoid_: "autohint" as a verb for the native TrueType hinter.
 The text up to a separator, which Godot shapes as its own `TextParagraph`: a `\n` ends one in a Label (`paragraph_separator`) and in a RichTextLabel. Autowrap splits a paragraph into lines, and `justification_flags` count their lines inside the paragraph, so each fits or skips its own last line (`justifyParagraphs`).
 _Avoid_: "line" for it, and a count of lines over the whole text.
 
+**Text buffer** (`trimTextBufferLineToWidth` in `r3f/controls/native/text/textOverrun.ts`):
+A Control's own `TextLine` or `TextParagraph`, its `text_buf`, which Button, LinkButton, the FoldableContainer title and each ItemList item draw. Its fill draws in the set direction (`shaped_text_draw`) and its outline in the **inferred direction** (`shaped_text_draw_outline`), so a trimmed AUTO line that resolves right-to-left draws a different glyph set in each. Label draws its own lines in the inferred direction for both.
+_Avoid_: "text line" for it, which names one shaped line.
+
+**Inferred direction** (`TextLineLayout.isRtl`):
+The direction the text server resolves for a paragraph, `shaped_text_get_inferred_direction`: the set direction, or for AUTO the direction of the first strong character. The overrun trim always cuts by it (`text_server_adv.cpp:6053`).
+_Avoid_: "set direction" for it, which is the `text_direction` a Control passes.
+
 **Asset re-import**:
 What the previewer does in place of Godot's import pipeline: it loads the source asset (`.gltf`, `.glb`, `.obj`) and re-derives the scene from it.
 ADR-0028 holds the decision and the allowlist of **Import sidecar** parameters it honours.

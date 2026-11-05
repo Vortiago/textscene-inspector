@@ -12,13 +12,17 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { shapedTextSizeWidthPx, soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
-import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import {
+  overrunFlagsForBehavior,
+  trimTextBufferLineToWidth,
+} from '../../../../r3f/controls/native/text/textOverrun';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../godot/math/rect2';
+import type { Rgba } from '../../../../godot/math/math';
 import {
   foldableContainerHSeparation,
   foldableContainerTitleShape,
@@ -35,6 +39,9 @@ const ARROW_ICON_URL: Record<FoldableContainerArrow, string> = {
   folded: FOLDABLE_CONTAINER_ICONS.foldedArrow,
   foldedMirrored: FOLDABLE_CONTAINER_ICONS.foldedArrowMirrored,
 };
+
+/** FoldableContainer's `font_outline_color` default: white, not the black of most types (`default_theme.cpp:1327`). */
+const FOLDABLE_CONTAINER_OUTLINE_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** `FoldableContainer::_get_actual_alignment` (`foldable_container.cpp:503-511`): RTL swaps LEFT and RIGHT and leaves every other value alone. */
 function actualTitleAlignment(alignment: number, rtl: boolean): number {
@@ -65,6 +72,7 @@ export function FoldableContainer({
     ARROW_ICON_URL[title.arrow]
   );
   const tintedFontColor = useMemo(() => tintColor(title.color, tint.own), [title.color, tint.own]);
+  const textOutline = useTintedTextOutline(solveNode, tint.own, FOLDABLE_CONTAINER_OUTLINE_COLOR);
   const arrowSize = title.arrowSize;
   const hSeparation = foldableContainerHSeparation(theme);
 
@@ -102,10 +110,15 @@ export function FoldableContainer({
   );
   const trimmedLayout = useMemo(() => {
     if (!title.layout || !overrunFlags.trim) return title.layout;
-    const trimmedLine = trimLineToWidth(title.layout.lines[0]!, Math.max(1, titleTextWidth), overrunFlags, {
-      fontMetrics: title.layout.fontMetrics,
-      fontSizePx: title.fontSizePx,
-    });
+    const trimmedLine = trimTextBufferLineToWidth(
+      title.layout.lines[0]!,
+      Math.max(1, titleTextWidth),
+      overrunFlags,
+      {
+        fontMetrics: title.layout.fontMetrics,
+        fontSizePx: title.fontSizePx,
+      }
+    );
     return soloLineLayout(trimmedLine, title.layout);
   }, [title.layout, overrunFlags, titleTextWidth, title.fontSizePx]);
 
@@ -162,10 +175,11 @@ export function FoldableContainer({
       </CanvasItemGroup>
       {trimmedLayout && titleTextWidth > 0 && (
         <CanvasItemGroup position={[titleRect.x + textPos.x, -(titleRect.y + textPos.y), 0]}>
-          <TextRun
+          <OutlinedTextRun
             layout={trimmedLayout}
             fontSizePx={title.fontSizePx}
             tint={tintedFontColor}
+            outline={textOutline}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />

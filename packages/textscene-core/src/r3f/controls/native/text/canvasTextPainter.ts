@@ -43,7 +43,7 @@ function wholeRasterPx(cssPx: number): number {
 }
 
 interface CanvasTextCanvasLayout {
-  /** `HTMLCanvasElement#width`: `layout.widthPx` plus twice `offsetXPx`, rounded up to a whole pixel. */
+  /** `HTMLCanvasElement#width`: the drawn width (`drawnWidthPx`) plus twice `offsetXPx`, rounded up to a whole pixel. */
   canvasWidthPx: number;
   /** `HTMLCanvasElement#height`: `layout.heightPx` plus twice `offsetYPx`, rounded up to a whole pixel. */
   canvasHeightPx: number;
@@ -75,11 +75,22 @@ export function computeCanvasTextCanvasLayout(
   const offsetXPx = shearPadPx + strokePadPx + emboldenPadPx;
   const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + strokePadPx + emboldenPadPx;
   return {
-    canvasWidthPx: wholeRasterPx(layout.widthPx + 2 * offsetXPx),
+    canvasWidthPx: wholeRasterPx(drawnWidthPx(layout) + 2 * offsetXPx),
     canvasHeightPx: wholeRasterPx(layout.heightPx + 2 * offsetYPx),
     offsetXPx,
     offsetYPx,
   };
+}
+
+/**
+ * `layout.widthPx`, or the end of a glyph that reaches past it: a trimmed AUTO right-to-left fill
+ * draws past the trimmed width it reports (`trimTextBufferLineToWidth`).
+ */
+function drawnWidthPx(layout: TextLayoutResult): number {
+  return layout.lines.reduce((widthPx, line) => {
+    const last = line.glyphs.at(-1);
+    return last ? Math.max(widthPx, last.x + last.advance) : widthPx;
+  }, layout.widthPx);
 }
 
 /** The `GlyphQuadArrays` shape `buildGlyphQuadArrays` produces, always exactly one quad. */

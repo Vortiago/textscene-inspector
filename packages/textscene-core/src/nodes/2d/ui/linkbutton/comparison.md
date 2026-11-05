@@ -45,6 +45,12 @@ Strict parsing format-checks these `LinkButton` properties, plus 10 inherited fr
 `text_direction` and the structured-text-bidi pair go into the untyped property bag with
 no substitution.
 
+LinkButton draws the theme text outline, `font_outline_color` and `outline_size`, as Godot
+does (`link_button.cpp:294-301`). A ring of `outline_size / 4` px sits under the fill. No ring
+draws at an `outline_size` of 0 or a zero alpha. A trimmed AUTO line whose paragraph resolves right-to-left trims its ring by that
+direction, with the ellipsis first. Its fill draws the glyphs that trim drops, from the visual
+left, as Godot's set-direction draw does (`text_server.cpp:1740-1935`).
+
 A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
 outline ring (ADR-0064).
 

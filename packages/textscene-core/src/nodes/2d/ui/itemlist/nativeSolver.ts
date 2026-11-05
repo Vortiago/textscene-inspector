@@ -28,7 +28,10 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import {
+  overrunFlagsForBehavior,
+  trimTextBufferLineToWidth,
+} from '../../../../r3f/controls/native/text/textOverrun';
 import {
   shapeText,
   shapedTextSizeWidthPx,
@@ -209,8 +212,9 @@ function itemListAutowrapMode(iconMode: number, maxTextLines: number): EnumValue
 /**
  * The width `text_buf->set_width()` is called with during the MINSIZE pass
  * (`item_list.cpp:1763-1766`): `fixed_column_width` when set, else
- * unconstrained (Godot's `-1`, this engine's `0`). Text is not shaped again at the
- * final column width (`item_list.cpp:1628-1634,1657-1661`), so a wider fitted column is approximate.
+ * unconstrained (Godot's `-1`, this engine's `0`). The text wraps at this width only: the draw
+ * pass re-trims at its own width (`trimItemListText`), but does not wrap again
+ * (`item_list.cpp:1628-1634,1657-1661`), so a wider fitted column is approximate.
  */
 function itemListShapeWidth(fixedColumnWidth: number): number {
   return fixedColumnWidth > 0 ? fixedColumnWidth : 0;
@@ -223,38 +227,51 @@ interface ItemTextShapeInput {
   iconMode: number;
   maxTextLines: number;
   fixedColumnWidth: number;
+}
+
+/**
+ * Shapes one item's text, untrimmed, or `null` for an item with none. The minsize pass and the
+ * draw pass each trim it at their own `text_buf->set_width` (`trimItemListText`).
+ * `shapeText` spaces no lines: `force_update_list_size` adds a flat
+ * `line_separation * max_text_lines` (`item_list.cpp:1772`), which `itemContentMinSize` adds.
+ */
+export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult | null {
+  if (input.text.length === 0) return null;
+  return shapeText(input.text, {
+    fontSizePx: input.fontSizePx,
+    boxWidthPx: itemListShapeWidth(input.fixedColumnWidth),
+    autowrapMode: itemListAutowrapMode(input.iconMode, input.maxTextLines),
+    lineSpacingPx: 0,
+    fontMetrics: input.fontMetrics,
+  });
+}
+
+interface ItemTextTrimOptions {
+  fontSizePx: number;
   /** `TextServer::OverrunBehavior`. Godot default 3 (OVERRUN_TRIM_ELLIPSIS, `item_list.h:131`). */
   overrunBehavior?: number;
 }
 
 /**
- * Shapes one item's text, or `null` for an item with none. The minsize pass
- * (`item_list.cpp:1763-1766`) and the draw pass (`:1621-1661`) both read the
- * trimmed size after `text_buf->set_width`, so the overrun trim applies here, to
- * each line, as `TextParagraph::_shape_lines` does (`text_paragraph.cpp:257-270`).
+ * `text_buf->set_width(widthPx)`: the overrun trim of each line, as `TextParagraph::_shape_lines`
+ * does (`text_paragraph.cpp:257-270`). The minsize pass trims at `itemListShapeWidth`
+ * (`item_list.cpp:1763-1766`), the draw pass at the row's text width (`:1632,1661`). A width of 0
+ * or less trims nothing.
  */
-export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult | null {
-  if (input.text.length === 0) return null;
-  const widthPx = itemListShapeWidth(input.fixedColumnWidth);
-  const layout = shapeText(input.text, {
-    fontSizePx: input.fontSizePx,
-    boxWidthPx: widthPx,
-    autowrapMode: itemListAutowrapMode(input.iconMode, input.maxTextLines),
-    lineSpacingPx: itemListLineSeparationForShaping(input),
-    fontMetrics: input.fontMetrics,
-  });
+export function trimItemListText(
+  layout: TextLayoutResult,
+  widthPx: number,
+  options: ItemTextTrimOptions
+): TextLayoutResult {
   const overrunFlags = overrunFlagsForBehavior(
-    input.overrunBehavior ?? OverrunBehavior.OVERRUN_TRIM_ELLIPSIS
+    options.overrunBehavior ?? OverrunBehavior.OVERRUN_TRIM_ELLIPSIS
   );
   if (!overrunFlags.trim || widthPx <= 0) return layout;
 
   const trimmedLines = layout.lines.map((line) =>
-    // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to
-    // the vendored atlas font when the caller passes none, and the trim must
-    // agree with whichever metrics actually shaped these glyphs.
-    trimLineToWidth(line, widthPx, overrunFlags, {
+    trimTextBufferLineToWidth(line, widthPx, overrunFlags, {
       fontMetrics: layout.fontMetrics,
-      fontSizePx: input.fontSizePx,
+      fontSizePx: options.fontSizePx,
     })
   );
   return {
@@ -265,12 +282,17 @@ export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult |
 }
 
 /**
- * Zero: `shapeText` spaces between lines, but `force_update_list_size`
- * (`item_list.cpp:1772`) adds a flat `line_separation * max_text_lines`, which
- * `itemContentMinSize` adds.
+ * The text size the minsize pass reads (`item_list.cpp:1763-1766`): `shaped` trimmed at
+ * `itemListShapeWidth`, `{ widthPx: ceiled, heightPx }`, or zero for an item with no text.
  */
-function itemListLineSeparationForShaping(_input: ItemTextShapeInput): number {
-  return 0;
+export function itemTextMinimumSize(
+  shaped: TextLayoutResult | null,
+  fixedColumnWidth: number,
+  options: ItemTextTrimOptions
+): Vector2 {
+  if (!shaped) return { x: 0, y: 0 };
+  const trimmed = trimItemListText(shaped, itemListShapeWidth(fixedColumnWidth), options);
+  return { x: shapedTextSizeWidthPx(trimmed.widthPx), y: trimmed.heightPx };
 }
 
 // --- Per-item minimum size --------------------------------------------------
@@ -489,21 +511,14 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
     );
     const text = item.text ?? '';
     const hasText = text.length > 0;
-    const layout =
+    const shaped =
       hasText && ctx.measureText
-        ? shapeItemListText({
-            text,
-            fontSizePx,
-            fontMetrics,
-            iconMode,
-            maxTextLines,
-            fixedColumnWidth,
-            overrunBehavior: props.textOverrunBehavior,
-          })
+        ? shapeItemListText({ text, fontSizePx, fontMetrics, iconMode, maxTextLines, fixedColumnWidth })
         : null;
-    const textSize = layout
-      ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
-      : { x: 0, y: 0 };
+    const textSize = itemTextMinimumSize(shaped, fixedColumnWidth, {
+      fontSizePx,
+      overrunBehavior: props.textOverrunBehavior,
+    });
     return itemMinimumSize(
       { hasIcon, iconSize, hasText, textSize, iconMode, maxTextLines, fixedColumnWidth },
       ctx.theme
@@ -740,4 +755,25 @@ export function itemListWrappedTextWidthPx(
  */
 export function itemListRightAlignOffsetPx(textWidthPx: number, lineWidthPx: number): number {
   return textWidthPx > 0 ? textWidthPx - lineWidthPx : 0;
+}
+
+interface ItemTextFillInput {
+  fixedColumnWidth: number;
+  wraparoundItems: boolean;
+  rowWidthPx: number;
+  /** The list's `width`: the control less the panel's minimum size (`item_list.cpp:1387`). */
+  contentWidthPx: number;
+  iconWidthPx: number;
+  hSeparation: number;
+}
+
+/**
+ * Whether a LEFT-mode row draws its text fill (`item_list.cpp:1676-1688`): only while the text
+ * keeps room past the icon. A static preview has no scroll, so the wraparound test reads 0 for it.
+ */
+export function isItemTextFillDrawn(input: ItemTextFillInput): boolean {
+  const reservePx = input.iconWidthPx + Math.max(input.hSeparation, 0);
+  if (input.fixedColumnWidth > 0) return input.rowWidthPx - reservePx > 0;
+  if (input.wraparoundItems) return input.contentWidthPx - reservePx > 0;
+  return true;
 }

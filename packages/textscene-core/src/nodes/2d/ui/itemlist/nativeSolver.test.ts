@@ -21,6 +21,7 @@ import {
   itemIconPackedSize,
   itemListGuideColor,
   itemListGuideLines,
+  isItemTextFillDrawn,
   itemListMirrorX,
   itemListRightAlignOffsetPx,
   itemListRowTextX,
@@ -33,8 +34,10 @@ import {
   itemTextLineCenterOffset,
   packItemListRows,
   shapeItemListText,
+  trimItemListText,
 } from './nativeSolver';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 const itemListMinimumSize = controlSolverRegistry.minimumSize('ItemList')!;
 
@@ -86,7 +89,6 @@ describe('shapeItemListText — wrapping (item_list.cpp:37-55)', () => {
     fontSizePx: 16,
     fontMetrics: OPEN_SANS_FONT_METRICS,
     fixedColumnWidth: 30,
-    overrunBehavior: 0,
   };
 
   it('wraps only TOP icon mode with max_text_lines > 0 (happy path)', () => {
@@ -108,32 +110,34 @@ describe('shapeItemListText — wrapping (item_list.cpp:37-55)', () => {
   });
 });
 
-describe('shapeItemListText — overrun trim (item_list.h:131 default OVERRUN_TRIM_ELLIPSIS)', () => {
-  const baseInput = {
-    fontSizePx: 16,
-    fontMetrics: OPEN_SANS_FONT_METRICS,
-    iconMode: ICON_MODE_LEFT,
-    maxTextLines: 1,
-  };
+describe('trimItemListText — overrun trim (item_list.h:131 default OVERRUN_TRIM_ELLIPSIS)', () => {
+  const FONT_SIZE_PX = 16;
 
-  it('trims to fixedColumnWidth by default, appending an ellipsis (matches text_overrun.test.ts derivation)', () => {
-    const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', fixedColumnWidth: 100 });
-    expect(layout!.lines[0]!.glyphs.map((glyph) => glyph.char).join('')).toBe('AAAAAAAA…');
-  });
-
-  it('is a no-op with no fixedColumnWidth — nothing to trim against (unconstrained shape width)', () => {
-    const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', fixedColumnWidth: 0 });
-    expect(layout!.lines[0]!.glyphs.map((glyph) => glyph.char).join('')).toBe('AAAAAAAAAAAA');
-  });
-
-  it('OVERRUN_NO_TRIMMING (0) leaves the text untrimmed even with a fixedColumnWidth', () => {
-    const layout = shapeItemListText({
-      ...baseInput,
+  function trimmedChars(widthPx: number, overrunBehavior?: number): string {
+    const shaped = shapeItemListText({
       text: 'AAAAAAAAAAAA',
-      fixedColumnWidth: 100,
-      overrunBehavior: 0,
-    });
-    expect(layout!.lines[0]!.glyphs.map((glyph) => glyph.char).join('')).toBe('AAAAAAAAAAAA');
+      fontSizePx: FONT_SIZE_PX,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      iconMode: ICON_MODE_LEFT,
+      maxTextLines: 1,
+      fixedColumnWidth: 0,
+    })!;
+    const layout = trimItemListText(shaped, widthPx, { fontSizePx: FONT_SIZE_PX, overrunBehavior });
+    return layout.lines[0]!.glyphs.map((glyph) => glyph.char).join('');
+  }
+
+  it('trims to the width by default, appending an ellipsis (matches text_overrun.test.ts derivation)', () => {
+    expect(trimmedChars(100)).toBe('AAAAAAAA…');
+  });
+
+  // text_server_adv.cpp:5958 trims only at a positive width, as a draw width past the icon can be.
+  it('leaves the text whole at a width of 0 or less', () => {
+    expect(trimmedChars(0)).toBe('AAAAAAAAAAAA');
+    expect(trimmedChars(-30)).toBe('AAAAAAAAAAAA');
+  });
+
+  it('OVERRUN_NO_TRIMMING (0) leaves the text untrimmed', () => {
+    expect(trimmedChars(100, OverrunBehavior.OVERRUN_NO_TRIMMING)).toBe('AAAAAAAAAAAA');
   });
 });
 
@@ -508,5 +512,33 @@ describe('itemListRightAlignOffsetPx', () => {
   });
   it('goes negative for a line wider than its box, exactly as the engine does', () => {
     expect(itemListRightAlignOffsetPx(30, 78)).toBe(-48);
+  });
+});
+
+// item_list.cpp:1676-1688: a LEFT-mode row draws its fill only when the text keeps room past the
+// icon. The outline above it draws regardless (:1672-1674).
+describe('isItemTextFillDrawn', () => {
+  const ROW = { iconWidthPx: 16, hSeparation: 4, rowWidthPx: 120, contentWidthPx: 200 };
+
+  it('draws the fill of a fixed column wider than the icon and separation', () => {
+    expect(isItemTextFillDrawn({ ...ROW, fixedColumnWidth: 120, wraparoundItems: true })).toBe(true);
+  });
+
+  it('hides the fill of a fixed column no wider than the icon and separation', () => {
+    expect(isItemTextFillDrawn({ ...ROW, rowWidthPx: 20, fixedColumnWidth: 20, wraparoundItems: true })).toBe(
+      false
+    );
+  });
+
+  it('hides the fill of a wraparound list no wider than the icon and separation', () => {
+    expect(
+      isItemTextFillDrawn({ ...ROW, contentWidthPx: 20, fixedColumnWidth: 0, wraparoundItems: true })
+    ).toBe(false);
+  });
+
+  it('draws the fill of a list without wraparound at any width', () => {
+    expect(
+      isItemTextFillDrawn({ ...ROW, contentWidthPx: 0, fixedColumnWidth: 0, wraparoundItems: false })
+    ).toBe(true);
   });
 });

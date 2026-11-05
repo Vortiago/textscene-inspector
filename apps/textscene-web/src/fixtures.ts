@@ -2433,6 +2433,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Text Outline Link Foldable Item List",
+    "file": "unit-text-outline-link-foldable-item-list.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Texture Button",
     "file": "unit-texture-button.tscn",
     "category": "Other"

@@ -188,6 +188,12 @@ export interface TextLineLayout {
    * DIRECTION_RTL`. `shapeText` sets it. A painter's line rebuilt from part of one leaves it out.
    */
   isRtl?: boolean;
+  /**
+   * The glyphs `shaped_text_draw_outline` draws where they differ from `glyphs`: a trimmed AUTO
+   * line whose paragraph resolved right-to-left. The outline reads the inferred direction, the
+   * fill the set one (`text_server.cpp:1744,1840`). `trimTextBufferLineToWidth` sets it.
+   */
+  outlineGlyphs?: GlyphPlacement[];
 }
 
 /** Whether `lines[index]` is the first shown line of its paragraph, where `paragraphIndex` changes. */

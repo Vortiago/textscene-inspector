@@ -22,7 +22,10 @@ import {
   soloLineLayout,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import {
+  overrunFlagsForBehavior,
+  trimTextBufferLineToWidth,
+} from '../../../../r3f/controls/native/text/textOverrun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   resolveButtonDrawState,
@@ -164,7 +167,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
     // button.cpp:424 `text_buf_width = ceil(MAX(1, drawable_size_remained.width))`. The icon's
     // computed reservation, `content.icon.rect.w`, keeps this in step with `layoutButtonContent`.
     const trimWidthPx = Math.ceil(Math.max(1, customElementWidth - iconReserve));
-    const trimmedLine = trimLineToWidth(layout.lines[0]!, trimWidthPx, overrunFlags, {
+    const trimmedLine = trimTextBufferLineToWidth(layout.lines[0]!, trimWidthPx, overrunFlags, {
       fontMetrics,
       fontSizePx,
     });
