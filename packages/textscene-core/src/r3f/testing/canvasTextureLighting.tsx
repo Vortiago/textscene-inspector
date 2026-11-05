@@ -3,8 +3,8 @@
  * each item registers for: `apart` for a normal-mapped item, `plain` for one without a normal map.
  */
 import type { ReactElement } from 'react';
-import { vi } from 'vitest';
-import type * as THREE from 'three';
+import { describe, expect, it, vi } from 'vitest';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
@@ -59,4 +59,31 @@ export async function renderLitItem(item: ReactElement, resources: readonly Tscn
   const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
   const map = (mesh.material as THREE.MeshBasicMaterial).map!;
   return { renderer, update, registerItem, mesh, map };
+}
+
+/**
+ * The three things every item that draws a CanvasTexture does: declares itself normal-mapped while
+ * the CanvasTexture names a normal map, declares none while it names none, and samples with the
+ * CanvasTexture's own filter. `render` draws the node with the CanvasTexture `wrapper` in its scene.
+ */
+export function describeCanvasTextureItem(
+  title: string,
+  render: (wrapper: TscnInternalResource) => ReturnType<typeof renderLitItem>
+): void {
+  describe(`${title} with a CanvasTexture`, () => {
+    it('declares itself normal-mapped while the CanvasTexture names a normal map', async () => {
+      const { registerItem } = await render(canvasTexture({ normal_texture: FLAT_GREY_REF }));
+      expect(registerItem).toHaveBeenLastCalledWith(expect.anything(), 'apart');
+    });
+
+    it('declares no normal map while the CanvasTexture names none', async () => {
+      const { registerItem } = await render(canvasTexture({}));
+      expect(registerItem).toHaveBeenLastCalledWith(expect.anything(), 'plain');
+    });
+
+    it("samples the diffuse with the CanvasTexture's own filter", async () => {
+      const { map } = await render(canvasTexture({ texture_filter: '1' }));
+      expect([map.magFilter, map.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
+    });
+  });
 }

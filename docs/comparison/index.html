@@ -2370,7 +2370,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p><code>height</code> tilts the light from the canvas plane, 0, toward the viewer, 1. A plain Sprite2D takes it head-on whatever the height. Two normal-mapped ones take it by their normals: Flat tilts to +x, and Dome sweeps from -x to +x. Each lands on Godot. A Polygon2D, AnimatedSprite2D, CPUParticles2D or MeshInstance2D takes a normal map the same way.</p></div>
+        <div class="prose"><p><code>height</code> tilts the light from the canvas plane, 0, toward the viewer, 1. A plain Sprite2D takes it head-on whatever the height. Two normal-mapped ones take it by their normals: Flat tilts to +x, and Dome sweeps from -x to +x. Each lands on Godot. A Polygon2D, Line2D, AnimatedSprite2D, CPUParticles2D or MeshInstance2D takes a normal map the same way.</p></div>
       </section><div class="prose"><h3>Linting</h3>
 <p>Strict parsing format-checks these <code>DirectionalLight2D</code> properties, plus 15 inherited from Light2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>height</code></td><td>float 0-1</td><td>warning</td></tr><tr><td><code>max_distance</code></td><td>float &gt;= 0</td><td>warning below</td></tr></tbody></table></div>
@@ -4020,8 +4020,8 @@ tr:last-child td{border-bottom:0}
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-line2d.tscn" target="_blank" rel="noopener" title="Open unit-line2d.tscn in the previewer"><code>unit-line2d.tscn</code> ↗</a>
         <span class="status st-done">Done</span>
       </header>
-      <div class="status-note st-done"></div>
       
+      <div class="prose intro"><p>Line2D strokes a chain of points. The previewer builds the stroke as Godot's <code>LineBuilder</code> does. That gives the joints, the cap modes, the <code>gradient</code>, the <code>width_curve</code> and the UVs of the <code>texture</code>. The texture samples with the <code>texture_filter</code> and <code>texture_repeat</code> of the item, or with those of its CanvasTexture where it sets them. <code>antialiased</code> has no effect in Godot 4.6.3, since <code>Line2D::_draw</code> never reads it.</p></div>
       <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-line2d-godot.png" alt="Godot render of Line2D">
@@ -4035,8 +4035,23 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Line2D strokes a chain of points. The previewer builds the stroke as Godot's <code>LineBuilder</code> does. That gives the joints, the cap modes, the <code>gradient</code>, the <code>width_curve</code> and the UVs of the <code>texture</code>. The texture samples with the <code>texture_filter</code> and <code>texture_repeat</code> of the item. <code>antialiased</code> has no effect in Godot 4.6.3, since <code>Line2D::_draw</code> never reads it.</p>
-<h3>Linting</h3>
+      <section class="prop">
+        <div class="prop-head"><h3>Normal map</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-line2d-normal-map-godot.png" alt="Godot render of Normal map">
+          <img class="img-ours" src="images/unit-line2d-normal-map-ours.png" alt="Our render of Normal map">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A CanvasTexture's <code>normal_texture</code> and <code>specular_texture</code> shade the line under PointLight2D and DirectionalLight2D. Only the node's rotation and scale turn the normal (<code>canvas.glsl:708-710</code>). The line's direction and its UVs do not. A vertical line lights as a horizontal one. A line rotated a quarter turn is lit from below, as in Godot.</p></div>
+      </section><div class="prose"><h3>Linting</h3>
 <p>Strict parsing format-checks these <code>Line2D</code> properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>antialiased</code></td><td>true or false</td><td></td></tr><tr><td><code>begin_cap_mode</code></td><td>enum 0-2 (NONE/BOX/ROUND)</td><td>warning</td></tr><tr><td><code>closed</code></td><td>true or false</td><td></td></tr><tr><td><code>default_color</code></td><td>Color(r, g, b, a), or the colour string or int it converts</td><td></td></tr><tr><td><code>end_cap_mode</code></td><td>enum 0-2 (NONE/BOX/ROUND)</td><td>warning</td></tr><tr><td><code>gradient</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>joint_mode</code></td><td>enum 0-2 (SHARP/BEVEL/ROUND)</td><td>warning</td></tr><tr><td><code>points</code></td><td>PackedVector2Array(x, y, …)</td><td></td></tr><tr><td><code>round_precision</code></td><td>integer 1-32</td><td>error below, warning above</td></tr><tr><td><code>sharp_limit</code></td><td>float &gt;= 0</td><td>error below 0</td></tr><tr><td><code>texture</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>texture_mode</code></td><td>enum 0-2 (NONE/TILE/STRETCH)</td><td>warning</td></tr><tr><td><code>width</code></td><td>float &gt;= 0</td><td>error below 0</td></tr><tr><td><code>width_curve</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-canvasitem-clip-ancestry</code> (type-family match)</td><td><code>canvasitem-ancestor-clips-children</code></td><td>warning</td></tr><tr><td></td><td><code>canvasitem-ancestor-is-canvasgroup</code></td><td>warning</td></tr></tbody></table></div>
@@ -5658,7 +5673,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A Sprite2D, Polygon2D, AnimatedSprite2D, CPUParticles2D or MeshInstance2D whose CanvasTexture has a <code>normal_texture</code> takes each light at an angle, so <code>height</code> counts. Here two Sprite2Ds carry the same normal map, which tilts to +x. The light at height 0 lights only the side that faces it. The light at height 50 also reaches the side that faces away and the top. The previewer keeps each light that reaches a normal-mapped item in a buffer of its own. The item shades each one by its normal, then blends them in Godot's order.</p></div>
+        <div class="prose"><p>A Sprite2D, Polygon2D, Line2D, AnimatedSprite2D, CPUParticles2D or MeshInstance2D whose CanvasTexture has a <code>normal_texture</code> takes each light at an angle, so <code>height</code> counts. Here two Sprite2Ds carry the same normal map, which tilts to +x. The light at height 0 lights only the side that faces it. The light at height 50 also reaches the side that faces away and the top. The previewer keeps each light that reaches a normal-mapped item in a buffer of its own. The item shades each one by its normal, then blends them in Godot's order.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Specular on a normal-mapped item</h3><span class="status st-done">Done</span></div>

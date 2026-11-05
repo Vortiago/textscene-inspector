@@ -11,11 +11,10 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import { useArrayColorOf, WHITE_MODULATE, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
-import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { useCanvasItemTexture } from '../../../r3f/canvasItemTexture';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { bottomUpV } from '../../../godot/math/uv';
 import { storedReal } from '../../../godot/math/real';
-import { useTexture2D } from '../../../resources/useTexture2D';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { bakedCurveSampler } from '../../../resources/curves/curve/bakedSample';
@@ -32,12 +31,13 @@ export function Line2D({ node, children }: NodeComponentProps) {
   const gradient = gradients[0] ?? null;
 
   const { externalResources, internalResources } = useSceneResources();
-  const { texture: resolvedTexture, size } = useTexture2D(
-    props.texture,
-    externalResources,
-    internalResources
-  );
-  const texture = useCanvas2DTexture(resolvedTexture, useNode2DTextureSampler(props));
+  const {
+    texture: resolvedTexture,
+    size,
+    sampler,
+    canvasTexture,
+  } = useCanvasItemTexture(props, props.texture, externalResources, internalResources);
+  const texture = useCanvas2DTexture(resolvedTexture, sampler);
   // `Size2::aspect` of the texture, and 1 without one (`line_builder.h:51`).
   const hasTexture = texture !== null;
   const tileAspect = size ? storedReal(size.width / size.height) : 1;
@@ -93,6 +93,7 @@ export function Line2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
+      canvasTexture={canvasTexture}
       body={(tint, _material, pixelMaterial) =>
         geometry ? (
           <LineMesh

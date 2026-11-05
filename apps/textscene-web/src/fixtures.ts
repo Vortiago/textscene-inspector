@@ -3160,6 +3160,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Line2d Normal Map",
+    "file": "unit-line2d-normal-map.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Line2d Texture Clamp",
     "file": "unit-line2d-texture-clamp.tscn",
     "category": "Unit - 2D Canvas"
