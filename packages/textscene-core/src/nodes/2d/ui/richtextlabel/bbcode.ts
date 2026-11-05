@@ -30,6 +30,22 @@ interface BBCodeRun {
   tags: readonly OpenBBCodeTag[];
   /** Set only on the single-U+FFFC run for an `[img]` (`rich_text_label.cpp:6145`'s `add_image`), never alongside real text. */
   image?: ParsedImgTag;
+  /** Set only on the single-U+FFFC run for an `[hr]` (`add_hr`, `:4159`), whose tags end in the `hr` paragraph. */
+  rule?: ParsedRuleTag;
+}
+
+/**
+ * What the `hr` arm of `append_text` (`rich_text_label.cpp:5955-5983`) passes to `add_hr`, but the
+ * colour: its fallback is the theme `default_color`, which only the solver knows.
+ */
+export interface ParsedRuleTag {
+  /** `[hr width=…]`: 90 percent unless set. */
+  width: number;
+  widthInPercent: boolean;
+  /** `[hr height=…]`: 2 px unless set. */
+  height: number;
+  heightInPercent: boolean;
+  colorOption: string | undefined;
 }
 
 /** Which point of the image meets which point of the text: `core/math/math_defs.h`'s `InlineAlignment` bitfield as two named axes. */
@@ -67,6 +83,8 @@ export interface ParsedImgTag {
   /** `alt=` (`:6040-6043`): accessibility metadata, draws nothing, read unconditionally like `color`/`region`. */
   altText: string;
   alignment: ParsedImageAlignment;
+  /** Set only on an `[hr]`'s image: it draws the theme's solid white `horizontal_rule` icon, so `path` names no resource. */
+  solid?: true;
 }
 
 // A tag is `[name]`, `[name=value]`, `[name attr=...]`, or a `[/name]` close. Only a space starts
@@ -168,9 +186,6 @@ const SELF_CLOSING_TEXT: ReadonlyMap<string, string> = new Map([
   ['shy', '\u00ad'],
 ]);
 
-/** `[hr]`: consumed and drawn, contributing no text and no open tag. */
-const SELF_CLOSING_SILENT: ReadonlySet<string> = new Set(['hr']);
-
 /**
  * Tags whose push adds its item with `p_ensure_newline` (`rich_text_label.cpp:4096-4103`):
  * `push_paragraph`, `push_indent` and `push_list` (`:4718,4732,4749`).
@@ -187,20 +202,10 @@ const PARAGRAPH_TAGS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Tags whose item `_find_layout_subitem` skips (`:3712-3727`): a font, a colour, an underline or a
- * strikethrough. Any other open item makes the line hold layout.
+ * Tags whose line has height with no text in it: a list item draws its bullet. Any other item with
+ * nothing in it leaves a line of no height (measured in Godot 4.6.3), so it needs no break after it.
  */
-const STYLING_TAGS: ReadonlySet<string> = new Set([
-  'b',
-  'i',
-  'code',
-  'font',
-  'opentype_features',
-  'otf',
-  'color',
-  'u',
-  's',
-]);
+const LIST_TAGS: ReadonlySet<string> = new Set(['ol', 'ul']);
 
 /**
  * What a self-closing tag adds to the surrounding run, or `null` when `name`
@@ -210,7 +215,6 @@ const STYLING_TAGS: ReadonlySet<string> = new Set([
 function selfClosingText(name: string, value: string | undefined): string | null {
   const fixed = SELF_CLOSING_TEXT.get(name);
   if (fixed !== undefined) return fixed;
-  if (SELF_CLOSING_SILENT.has(name)) return '';
   if (name !== 'char') return null;
   const codePoint = parseInt(value ?? '', 16);
   // The surrogate range has no scalar value, so `String.fromCodePoint` would
@@ -240,7 +244,7 @@ export function unquoteMatchedPair(s: string): string {
  * (`rich_text_label.cpp:5243-5301`): splits `src` on `splitter` outside quotes,
  * and drops empty pieces as the source's `end > from` guard does.
  */
-function splitUnquoted(src: string, splitter: string): string[] {
+export function splitUnquoted(src: string, splitter: string): string[] {
   const out: string[] = [];
   let start = 0;
   let inSingle = false;
@@ -451,6 +455,40 @@ function parseImgTag(content: string, path: string): ParsedImgTag {
   };
 }
 
+/** The `hr` arm matches by prefix, `tag.begins_with("hr")` (`rich_text_label.cpp:5955`), so `[hrx]` draws a rule. */
+const RULE_TAG_PREFIX = 'hr';
+
+/** The `[hr align=…]` values `add_hr` takes (`:5957-5966`), by alignment tag name. CENTER stands for anything else. */
+const RULE_ALIGNMENT_NAMES: ReadonlyMap<string, string> = new Map([
+  ['l', 'left'],
+  ['left', 'left'],
+  ['c', 'center'],
+  ['center', 'center'],
+  ['r', 'right'],
+  ['right', 'right'],
+]);
+
+/**
+ * The `hr` arm's options (`:5955-5983`), or `undefined` for a negative size, which `add_hr`
+ * refuses (`:4167-4168`) before it adds an item. `alignment` names the `[left]`, `[center]` or
+ * `[right]` paragraph it opens.
+ */
+function parseRuleTag(
+  options: ReadonlyMap<string, string> | undefined
+): { rule: ParsedRuleTag; alignment: string } | undefined {
+  const widthOption = options?.get('width');
+  const heightOption = options?.get('height');
+  const rule: ParsedRuleTag = {
+    width: widthOption === undefined ? 90 : stringToInt(widthOption),
+    widthInPercent: widthOption === undefined || widthOption.endsWith('%'),
+    height: heightOption === undefined ? 2 : stringToInt(heightOption),
+    heightInPercent: heightOption !== undefined && heightOption.endsWith('%'),
+    colorOption: options?.get('color'),
+  };
+  if (rule.width < 0 || rule.height < 0) return undefined;
+  return { rule, alignment: RULE_ALIGNMENT_NAMES.get(options?.get('align') ?? '') ?? 'center' };
+}
+
 function sameTags(a: readonly OpenBBCodeTag[], b: readonly OpenBBCodeTag[]): boolean {
   return (
     a.length === b.length &&
@@ -474,31 +512,39 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
   const stack: OpenBBCodeTag[] = [];
   const runs: BBCodeRun[] = [];
   let pending = '';
-  // Whether the current line holds text or a non-styling item, so a paragraph tag ends it.
-  let lineHasLayout = false;
+  // Whether the current line has height, from text, an object or a list item, so a paragraph tag ends it.
+  let lineHasHeight = false;
 
   function append(added: string): void {
     pending += added;
     const lastBreak = added.lastIndexOf('\n');
-    if (lastBreak >= 0) lineHasLayout = lastBreak < added.length - 1;
-    else if (added.length > 0) lineHasLayout = true;
+    if (lastBreak >= 0) lineHasHeight = lastBreak < added.length - 1;
+    else if (added.length > 0) lineHasHeight = true;
   }
 
   function push(tag: OpenBBCodeTag): void {
-    if (PARAGRAPH_TAGS.has(tag.name) && lineHasLayout) append('\n');
+    if (PARAGRAPH_TAGS.has(tag.name) && lineHasHeight) append('\n');
     flush();
     stack.push(tag);
-    // `[img]` opens a tag but no item (`:6145`): its loaded image sets the flag where it is added.
-    if (!STYLING_TAGS.has(tag.name) && tag.name !== 'img') lineHasLayout = true;
+    if (LIST_TAGS.has(tag.name)) lineHasHeight = true;
+  }
+
+  /** `add_hr`: a paragraph item, so the line of the text before ends, then the rule on the new line. */
+  function addRule(rule: ParsedRuleTag, alignment: string): void {
+    if (lineHasHeight) append('\n');
+    flush();
+    runs.push({ text: IMAGE_OBJECT_CHAR, tags: [...stack, { name: 'hr', value: alignment }], rule });
+    lineHasHeight = true;
   }
 
   function flush(): void {
     if (!pending) return;
     // Text with an unchanged stack merges into the previous run, so a literal
-    // bracket or `[hr]` never splits it into separate meshes. An image run
-    // never merges: its `text` is the object placeholder a painter keys off.
+    // bracket never splits it into separate meshes. An image or rule run never
+    // merges: its `text` is the object placeholder a painter keys off.
     const previous = runs[runs.length - 1];
-    if (previous && !previous.image && sameTags(previous.tags, stack)) previous.text += pending;
+    if (previous && !previous.image && !previous.rule && sameTags(previous.tags, stack))
+      previous.text += pending;
     else runs.push({ text: pending, tags: [...stack] });
     pending = '';
   }
@@ -530,13 +576,19 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
 
     const open = close ? null : OPEN.exec(token);
     // Tag names compare exactly (`:5452`), so `[B]` is text.
-    if (open && RECOGNISED_TAGS.has(open[1]!)) {
+    if (open && (RECOGNISED_TAGS.has(open[1]!) || open[1]!.startsWith(RULE_TAG_PREFIX))) {
       const name = open[1]!;
       const emitted = selfClosingText(name, open[2]);
       if (emitted !== null) {
         // Part of the surrounding run, so no `flush()`: it carries the same
         // stack as the text either side of it.
         append(emitted);
+        pos = brkEnd + 1;
+        continue;
+      }
+      if (name.startsWith(RULE_TAG_PREFIX)) {
+        const parsed = parseRuleTag(openTag(name, open[2], token).options);
+        if (parsed) addRule(parsed.rule, parsed.alignment);
         pos = brkEnd + 1;
         continue;
       }
@@ -554,7 +606,7 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
             tags: [...stack],
             image: parseImgTag(token.slice(1, -1), path),
           });
-          lineHasLayout = true;
+          lineHasHeight = true;
         }
         push(openTag(name, open[2], token));
         pos = imgEnd;

@@ -18,6 +18,15 @@ Each `\n` ends a paragraph (`rich_text_label.cpp:4016-4053`). Under FILL, from `
 single-line paragraph (`rich_text_label.h:582`). The fit width is the control's width truncated to a whole
 pixel (`rich_text_label.h:672`).
 
+A `[p]` tag reads `jst` or `justification_flags`, and `tab_stops`, for its own paragraph (`rich_text_label.cpp:5758-5789`). A bare
+`[p]` has the header flags and no tab stops, so its tabs use `tab_size` (`rich_text_label.h:849`). A `[p]` with other options,
+and each alignment tag, takes the node's flags and stops. A tab that no stop aligns has no width.
+
+`[hr]` draws the theme's 2 x 2 white `horizontal_rule` icon (`add_hr`, `:4159-4199`), at `width` (90 percent),
+`height` (2 px), `color` and `align`. A percent size truncates to whole pixels (`rich_text_label.h:741`). The text after the tag
+shares the rule's line. A line with no text, object or list item has no height.
+So an item with nothing in it before a `[p]` adds no space (`_find_layout_subitem`, `:3712-3727`).
+
 While `clip_contents` is true, its default for this node (`rich_text_label.cpp:8225`), the control's own rect
 clips every glyph, image and underline (`control.cpp:3948`). `fit_content` grows the control to its text, so
 nothing is cut.
@@ -87,11 +96,6 @@ string against `true`, so an absent property or any other value silently resolve
 
 - **Approximated** Only a subset of BBCode tags is styled, and a tag outside it renders as
   plain text.
-- **Approximated** `[p jst=…]` and `[p tab_stops=…]` are not read, so a paragraph keeps the
-  node's justification and tab stops.
-- **Approximated** `[hr]` does not start a line of its own, though Godot pushes a paragraph for it.
-- **Approximated** A `[p]` after an empty styling tag starts a new line, where
-  `_find_layout_subitem` (:3712-3727) skips the empty tag.
 - **Not drawn** The loading bar's right-to-left fill (:2580-2588) and the reveal end of
   `VC_GLYPHS_AUTO` (:944-945), since neither input is drawn.
 - **Not drawn** `scroll_following_visible_characters`, which scrolls to the last revealed line

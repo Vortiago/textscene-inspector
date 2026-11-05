@@ -1,6 +1,7 @@
 /**
- * What a RichTextLabel line reads from the paragraph tags open on it: `_find_alignment`,
- * `_find_direction`, `_find_stt` and `_find_language` (`scene/gui/rich_text_label.cpp:3492-3558`).
+ * What a RichTextLabel line reads from the paragraph tags open on it: `_find_jst_flags`,
+ * `_find_tab_stops`, `_find_alignment`, `_find_direction`, `_find_stt` and `_find_language`
+ * (`scene/gui/rich_text_label.cpp:3462-3558`).
  * Each paragraph tag is a `push_paragraph` item (`:4703-4718`).
  *
  * Portions ported from Godot Engine (MIT).
@@ -8,9 +9,15 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { unquoteMatchedPair, type OpenBBCodeTag } from './bbcode';
+import { splitUnquoted, unquoteMatchedPair, type OpenBBCodeTag } from './bbcode';
+import { stringToFloat } from '../../../../godot/string/string';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
-import { StructuredTextParser, TextDirection } from '../../../../godot/text/textServerEnums';
+import {
+  DEFAULT_JUSTIFICATION_FLAGS,
+  JustificationFlag,
+  StructuredTextParser,
+  TextDirection,
+} from '../../../../godot/text/textServerEnums';
 import type {
   StructuredTextOverrideProperties,
   TextDirectionProperties,
@@ -75,6 +82,31 @@ const STRUCTURED_TEXT_OPTIONS: ReadonlyMap<string, number> = new Map([
   ['custom', StructuredTextParser.STRUCTURED_TEXT_CUSTOM],
 ]);
 
+/** `[p jst=…]` or `[p justification_flags=…]` tokens (`:5758-5782`), long name before short. */
+const JUSTIFICATION_TOKENS: ReadonlyMap<string, number> = new Map([
+  ['kashida', JustificationFlag.KASHIDA],
+  ['k', JustificationFlag.KASHIDA],
+  ['word', JustificationFlag.WORD_BOUND],
+  ['w', JustificationFlag.WORD_BOUND],
+  ['trim', JustificationFlag.TRIM_EDGE_SPACES],
+  ['tr', JustificationFlag.TRIM_EDGE_SPACES],
+  ['after_last_tab', JustificationFlag.AFTER_LAST_TAB],
+  ['lt', JustificationFlag.AFTER_LAST_TAB],
+  ['skip_last', JustificationFlag.SKIP_LAST_LINE],
+  ['sl', JustificationFlag.SKIP_LAST_LINE],
+  ['skip_last_with_chars', JustificationFlag.SKIP_LAST_LINE_WITH_VISIBLE_CHARS],
+  ['sv', JustificationFlag.SKIP_LAST_LINE_WITH_VISIBLE_CHARS],
+  ['do_not_skip_single', JustificationFlag.DO_NOT_SKIP_SINGLE_LINE],
+  ['ns', JustificationFlag.DO_NOT_SKIP_SINGLE_LINE],
+]);
+
+/** `add_hr`'s `ItemParagraph`, which keeps the struct defaults (`rich_text_label.h:369-377`): AUTO direction, no language. */
+const RULE_PARAGRAPH: ParagraphBidi = {
+  textDirection: TextDirection.TEXT_DIRECTION_AUTO,
+  language: '',
+  structuredTextBidiOverride: StructuredTextParser.STRUCTURED_TEXT_DEFAULT,
+};
+
 /** A bare `[p]`: `push_paragraph(HORIZONTAL_ALIGNMENT_LEFT)` with the header defaults (`rich_text_label.h:849`). */
 const BARE_PARAGRAPH: ParagraphBidi = {
   textDirection: TextDirection.TEXT_DIRECTION_INHERITED,
@@ -82,8 +114,18 @@ const BARE_PARAGRAPH: ParagraphBidi = {
   structuredTextBidiOverride: StructuredTextParser.STRUCTURED_TEXT_DEFAULT,
 };
 
+/** The paragraph an `[hr]` run opens is named `hr`, and its value is the alignment tag it stands for (`parseRuleTag`). */
 function isParagraphTag(tag: OpenBBCodeTag): boolean {
-  return tag.name === 'p' || ALIGNMENT_TAGS.has(tag.name);
+  return tag.name === 'p' || tag.name === 'hr' || ALIGNMENT_TAGS.has(tag.name);
+}
+
+/**
+ * `String::split_floats_mk` with `,` and `;` and empty pieces allowed (`ustring.cpp:1224-1257`):
+ * an empty string gives no stops, and an empty piece between two splitters reads as 0.
+ */
+function splitTabStops(value: string): number[] {
+  if (value === '') return [];
+  return value.split(/[,;]/).map(stringToFloat);
 }
 
 /** The last-opened tag that `matches`, as each `_find_*` walks outward from the item. */
@@ -102,6 +144,7 @@ function optionOf(options: ReadonlyMap<string, string>, long: string, short: str
 
 /** A `[p …]` with options: INHERITED, the node language and DEFAULT unless an option sets one (`:5750-5844`). */
 function paragraphBidiOf(tag: OpenBBCodeTag, props: ParagraphProperties): ParagraphBidi {
+  if (tag.name === 'hr') return RULE_PARAGRAPH;
   if (tag.name !== 'p') return props;
   if (!tag.options) return BARE_PARAGRAPH;
   return {
@@ -122,6 +165,7 @@ export function paragraphAlignment(
 ): number {
   const tag = innermost(tags, isParagraphTag);
   if (!tag) return defaultAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT;
+  if (tag.name === 'hr') return ALIGNMENT_TAGS.get(tag.value!)!;
   return (
     ALIGNMENT_TAGS.get(tag.name) ??
     ALIGNMENT_OPTIONS.get(tag.options?.get('align') ?? '') ??
@@ -162,4 +206,38 @@ export function paragraphBidiOptions(
     },
     env
   );
+}
+
+/**
+ * `_find_jst_flags`: the innermost paragraph's flags, else `justification_flags`. A bare `[p]`
+ * keeps the header default (`rich_text_label.h:849`). A `[p …]` takes the node's unless `jst` sets
+ * them, and `jst` starts from no flags (`:5758-5782`).
+ */
+export function paragraphJustificationFlags(tags: readonly OpenBBCodeTag[], nodeFlags: number): number {
+  const tag = innermost(tags, isParagraphTag);
+  if (tag?.name === 'hr') return DEFAULT_JUSTIFICATION_FLAGS;
+  if (!tag || tag.name !== 'p') return nodeFlags;
+  if (!tag.options) return DEFAULT_JUSTIFICATION_FLAGS;
+  const option = tag.options.get('justification_flags') ?? tag.options.get('jst');
+  if (option === undefined) return nodeFlags;
+  return splitUnquoted(option, ',').reduce(
+    (flags, token) => flags | (JUSTIFICATION_TOKENS.get(token) ?? 0),
+    0
+  );
+}
+
+/**
+ * `_find_tab_stops`: the innermost paragraph's stops, else `tab_stops`. A bare `[p]` has none, so
+ * its tabs fall to `tab_size`. A `[p …]` takes the node's unless `tab_stops` sets them (`:5783-5789`).
+ */
+export function paragraphTabStopsPx(
+  tags: readonly OpenBBCodeTag[],
+  nodeStopsPx: readonly number[]
+): number[] {
+  const tag = innermost(tags, isParagraphTag);
+  if (tag?.name === 'hr') return [];
+  if (!tag || tag.name !== 'p') return [...nodeStopsPx];
+  if (!tag.options) return [];
+  const option = tag.options.get('tab_stops');
+  return option === undefined ? [...nodeStopsPx] : splitTabStops(option);
 }
