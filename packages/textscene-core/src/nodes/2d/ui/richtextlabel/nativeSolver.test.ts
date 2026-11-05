@@ -1938,16 +1938,7 @@ describe('richTextContentHeightPx — a glyph from a fallback face', () => {
       hasGlyph: (ch) => ch !== '一',
       fallbacks: [tall],
     };
-    const run = {
-      text: 'A一',
-      bold: false,
-      italic: false,
-      underline: false,
-      color: WHITE,
-      fontSizePx: 16,
-      alignment: 0,
-      bidi: {},
-    };
+    const run = textRun({ text: 'A一', fontSizePx: 16 });
     const layout = shapeText(run.text, {
       fontSizePx: 16,
       boxWidthPx: 0,
