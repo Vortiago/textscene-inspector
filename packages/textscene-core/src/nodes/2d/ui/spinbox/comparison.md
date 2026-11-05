@@ -18,7 +18,7 @@ default, the value is written in the digits of the project locale. The prefix an
 (`spin_box.cpp:91-93`).
 The field shapes its text as an AUTO-direction LineEdit with the project locale, so under a right-to-left
 locale a prefix, a suffix or a minus sign lands on the side Godot gives it, even beneath an LTR root
-(`line_edit.cpp:3103-3112`). The `spin-box-direction` golden pairs a prefixed negative value with `pnpm ref:godot`.
+(`line_edit.cpp:3103-3112`). The `spin-box-direction` golden shows a prefix, a prefixed negative value and a suffix.
 
 ## Linting
 
