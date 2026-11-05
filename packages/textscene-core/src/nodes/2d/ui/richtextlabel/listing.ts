@@ -141,8 +141,6 @@ export function runListing(inputs: RunListingInputs): RunListing | undefined {
   };
 }
 
-// ── Markers ──
-
 /** `RichTextLabel::ListType`, with the options a tag carries. */
 type ListKind =
   | { type: 'dots'; bullet: string }
@@ -225,8 +223,6 @@ function markerText(kinds: readonly ListKind[], indexes: readonly number[]): str
   }
   return `${marker} `;
 }
-
-// ── Paragraphs ──
 
 /** What the layout takes from a paragraph in an indent or a list. */
 export interface ParagraphListing {
@@ -385,7 +381,7 @@ export function paragraphListings(
 
   /** `_find_list`'s index of `list` for a line at or below `row`: the lines of the list up to it, plus one. */
   const indexOf = (list: OpenBBCodeTag, row: number): number =>
-    1 + (rowsOfList.get(list) ?? []).filter((rowIndex) => rowIndex <= row).length;
+    1 + countAtOrBelow(rowsOfList.get(list) ?? [], row);
 
   // `_add_list_prefixes` shapes a list's markers on its first line, so a list whose first line sits
   // outside it (a styling tag opens that line) has none and a zero marker width.
@@ -415,4 +411,16 @@ export function paragraphListings(
     });
   });
   return listings;
+}
+
+/** The count of `ascending` at or below `value`, by binary search: a nested list asks once per row. */
+function countAtOrBelow(ascending: readonly number[], value: number): number {
+  let low = 0;
+  let high = ascending.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (ascending[middle]! <= value) low = middle + 1;
+    else high = middle;
+  }
+  return low;
 }
