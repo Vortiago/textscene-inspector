@@ -20,8 +20,7 @@ import {
   HAIRLINE_CENTRE_OFFSET_PX,
   ControlQuad,
 } from '../../../../r3f/controls/native/controlQuad';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
@@ -108,7 +107,7 @@ const DOT_SIZE_PX = 3;
 /** Grid and connection colours take the tint while both are sRGB, before the one linear conversion. */
 function useColorQuad(base: Rgba, tintOwn: NativeControlComponentProps['tint']['own']) {
   const combined = useMemo(() => multiplyModulate(tintOwn, base), [tintOwn, base]);
-  const color = useGodotLinearColor(combined);
+  const color = useItemLinearColor(combined);
   return { color, opacity: combined.a };
 }
 
@@ -121,8 +120,8 @@ function GridLineQuad({
 }: {
   line: GridLine;
   rect: { w: number; h: number };
-  majorColor: { color: ReturnType<typeof useGodotLinearColor>; opacity: number };
-  minorColor: { color: ReturnType<typeof useGodotLinearColor>; opacity: number };
+  majorColor: { color: ReturnType<typeof useItemLinearColor>; opacity: number };
+  minorColor: { color: ReturnType<typeof useItemLinearColor>; opacity: number };
   renderOrder: number;
 }) {
   const { color, opacity } = line.major ? majorColor : minorColor;
@@ -143,7 +142,7 @@ function GridDotQuad({
   renderOrder,
 }: {
   dot: GridDot;
-  colorQuad: { color: ReturnType<typeof useGodotLinearColor>; opacity: number };
+  colorQuad: { color: ReturnType<typeof useItemLinearColor>; opacity: number };
   renderOrder: number;
 }) {
   return (

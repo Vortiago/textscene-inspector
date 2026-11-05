@@ -48,6 +48,7 @@ import {
   cameraAtPath,
   selectViewportCamera2D,
   viewportAspect,
+  viewportCanvasColorSpace,
   viewportMsaaMode,
 } from './offscreenViewport';
 import { OffscreenToneMapStage, type OffscreenToneMap } from '../../../r3f/environment/offscreenToneMap';
@@ -127,10 +128,14 @@ export function OffscreenViewportPass({
     [rendersInline, mainScene, drawnCanvasWorld, node.name]
   );
 
+  const canvasSpace = viewportCanvasColorSpace(properties, kind);
   // One sample: a 3D pass multisamples its world buffer, and a 2D pass its canvas frame.
   const target = useMemo(
-    () => (kind === '3d' ? createSceneTarget : createCanvasTarget)(width, height, node.name),
-    [kind, width, height, node.name]
+    () =>
+      kind === '3d'
+        ? createSceneTarget(width, height, node.name)
+        : createCanvasTarget(width, height, node.name, canvasSpace),
+    [kind, width, height, node.name, canvasSpace]
   );
   useDisposeOnRelease(target);
   const { gate, clearMode, renderState } = useGatedViewport(path, properties);
@@ -173,7 +178,8 @@ export function OffscreenViewportPass({
   const { camera: orthoCamera, frame } = useCanvasPass(
     layoutSize.x,
     layoutSize.y,
-    kind === '2d' || drawsCanvasOverWorld ? canvasMsaaMode : 0
+    kind === '2d' || drawsCanvasOverWorld ? canvasMsaaMode : 0,
+    canvasSpace
   );
   const backdropTarget = useBackdropTarget(width, height, node.name);
   const canvasLayers = useMemo(() => canvasLayerRanks(node.children), [node]);

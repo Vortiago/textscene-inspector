@@ -7,6 +7,7 @@ import {
 } from '../../resources/meshes/godotSurface';
 import type { MultiMeshInstance } from '../../resources/meshes/multimesh';
 import { canvasInstancesGeometry } from './canvasMeshInstances';
+import { sRGBChannelToLinear } from '../../utils/colorSpace';
 
 /** A 10 by 10 quad at the origin, with UVs, as `godotSurfacesGeometry` builds it. */
 function quad(extra: Partial<GodotSurface> = {}): THREE.BufferGeometry {
@@ -83,6 +84,20 @@ describe('canvasInstancesGeometry', () => {
     );
 
     expect(attribute(geometry, 'color').slice(0, 8)).toEqual([0.5, 1, 1, 0.5, 0.5, 0, 0, 0.5]);
+  });
+
+  it('decodes the vertex colour alone before the instance colour multiplies, as a linear canvas does', () => {
+    const grey = new Uint8Array(16).fill(255).map((value, i) => (i % 4 === 3 ? value : 128));
+    const geometry = canvasInstancesGeometry(
+      quad({ colors: grey }),
+      [instance(AT_ORIGIN, [0.5, 0.5, 0.5, 1])],
+      null,
+      sRGBChannelToLinear
+    );
+
+    // 128/255 decodes to 0.2158, and the instance's 0.5 multiplies raw (`canvas.glsl:176-178,255`).
+    expect(attribute(geometry, 'color')[0]).toBeCloseTo(0.2158 * 0.5, 4);
+    expect(attribute(geometry, 'color')[3]).toBe(1);
   });
 
   it('gives a mesh with no vertex colours the instance colour alone', () => {

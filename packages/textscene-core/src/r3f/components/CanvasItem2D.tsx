@@ -10,7 +10,7 @@ import type { TscnNode } from '../../parser/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from '../node2dTransform';
 import { CanvasSpaceProvider, useCanvasSpace } from '../canvasRootScope';
-import type { CanvasItemTint } from '../canvasItemModulate';
+import { OwnCanvasModulateProvider, type CanvasItemTint } from '../canvasItemModulate';
 import { useNode2DTextureSampler } from '../canvasItemTextureSampler';
 import { CanvasItemSurfaceSource } from '../canvasItemSurface';
 import type { CanvasItemTexture } from '../canvasItemTexture';
@@ -93,17 +93,19 @@ export function CanvasItem2D({ node, props, body, canvasTexture, ownItems, child
       renderOrder={key}
     >
       <CanvasItemKeyProvider value={key}>
-        {body && (
-          <LitCanvasItemPixels
-            material={material}
-            lightMask={state.lightMask}
-            zFinal={zFinal}
-            surface={surface}
-          >
-            {(pixelMaterial) => body(tint, material, pixelMaterial)}
-          </LitCanvasItemPixels>
-        )}
-        {ownItems?.(state)}
+        <OwnCanvasModulateProvider value={tint.canvasModulate}>
+          {body && (
+            <LitCanvasItemPixels
+              material={material}
+              lightMask={state.lightMask}
+              zFinal={zFinal}
+              surface={surface}
+            >
+              {(pixelMaterial) => body(tint, material, pixelMaterial)}
+            </LitCanvasItemPixels>
+          )}
+          {ownItems?.(state)}
+        </OwnCanvasModulateProvider>
         {canvasTexture?.slot.texture.normalTexture && (
           <CanvasItemSurfaceSource
             slot={canvasTexture.slot}

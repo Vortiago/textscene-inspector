@@ -9,9 +9,7 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
-import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
-import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
-import { godotColorToLinear } from '../../../r3f/godotColor';
+import { useArrayColorOf, WHITE_MODULATE, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { useCanvasItemTexture } from '../../../r3f/canvasItemTexture';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -24,6 +22,7 @@ import { buildLineStroke, type LineStroke } from './lineBuilder';
 import { strokeGradient } from './strokeResources';
 import type { Line2DProperties } from './types';
 import { useReferencedResources } from '../../../resources/useReferencedResources';
+import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
 
 export function Line2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Line2DProperties;
@@ -126,12 +125,15 @@ function LineMesh({
   pixelMaterial: CanvasItemPixelMaterial;
 }) {
   const vertexColors = geometry.hasAttribute('color');
+  const canvasSpace = useCanvasColorSpace();
+  const toArrayLinear = useArrayColorOf();
   // With a gradient `default_color` is ignored: the vertices carry the colour and the node's tint
-  // multiplies on top (`line_builder.cpp:120-124`).
+  // multiplies on top (`line_builder.cpp:120-124`). Without one, `default_color` is the one array
+  // colour (`line_2d.cpp:306-310`).
   const { fill, opacity } = useMemo(() => {
-    const composed = vertexColors ? tint.own : multiplyModulate(tint.own, color);
-    return { fill: godotColorToLinear(composed), opacity: composed.a };
-  }, [tint.own, color, vertexColors]);
+    const arrayColor = vertexColors ? WHITE_MODULATE : color;
+    return { fill: toArrayLinear(tint.own, arrayColor), opacity: tint.own.a * arrayColor.a };
+  }, [tint.own, color, vertexColors, toArrayLinear]);
 
   const program = materialProgramInputs({
     props: {
@@ -141,8 +143,9 @@ function LineMesh({
       map: texture,
       transparent: true,
       depthWrite: false,
-      // Godot multiplies the vertex colours and the texels as the sRGB numbers they are (`canvas.glsl:631`).
-      defines: vertexColors || texture ? CANVAS_SRGB_DEFINES : undefined,
+      // An sRGB canvas multiplies the vertex colours and the texels as the sRGB numbers they are
+      // (`canvas.glsl:631`), and a linear one decodes the vertex colours.
+      defines: vertexColors || texture ? canvasSpace.defines : undefined,
     },
     // The strip is one uniform colour or a smooth gradient, and it draws no area twice, so one pass
     // of the canvas-item facing draws it whatever its winding.

@@ -16,12 +16,16 @@ import {
   cameraAtPath,
   selectViewportCamera2D,
   viewportAspect,
+  viewportCanvasColorSpace,
   viewportMsaaMode,
 } from './offscreenViewport';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
+import { canvasColorSpaceOf, SRGB_CANVAS } from '../../../r3f/canvasColorSpace';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 
 import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
+
+const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 /** A camera tagged the way `<Camera3D>` tags one: its dispatcher-absolute path. */
 function camera(tscnPath: string): THREE.PerspectiveCamera {
@@ -402,7 +406,7 @@ describe('createCanvasTarget', () => {
    * `isXRRenderTarget`, and then into the space `texture.colorSpace` names.
    */
   it('has three encode the pass into sRGB, as into the drawing buffer', () => {
-    const target = createCanvasTarget(64, 64, 'Probe');
+    const target = createCanvasTarget(64, 64, 'Probe', SRGB_CANVAS);
     expect((target as { isXRRenderTarget?: boolean }).isXRRenderTarget).toBe(true);
     expect(target.texture.colorSpace).toBe(THREE.SRGBColorSpace);
     target.dispose();
@@ -414,29 +418,60 @@ describe('createCanvasTarget', () => {
    * second time and blend in linear light.
    */
   it('stores the encoded bytes in plain RGBA8', () => {
-    const target = createCanvasTarget(64, 64, 'Probe');
+    const target = createCanvasTarget(64, 64, 'Probe', SRGB_CANVAS);
     expect(target.texture.internalFormat).toBe('RGBA8');
     target.dispose();
   });
 
   it('marks its texture as holding sRGB bytes, which a canvas consumer multiplies in sRGB', () => {
-    const target = createCanvasTarget(64, 64, 'Probe');
+    const target = createCanvasTarget(64, 64, 'Probe', SRGB_CANVAS);
     expect(holdsSrgbBytes(target.texture)).toBe(true);
     target.dispose();
   });
 
   it('allocates no depth buffer: every canvas material sets depthWrite false (controlQuad.tsx)', () => {
-    const target = createCanvasTarget(64, 64, 'Probe');
+    const target = createCanvasTarget(64, 64, 'Probe', SRGB_CANVAS);
     expect(target.depthBuffer).toBe(false);
     target.dispose();
   });
 
   it('samples linearly without mipmaps, as Godot keeps one mip level (edge case)', () => {
-    const target = createCanvasTarget(64, 64, 'Probe');
+    const target = createCanvasTarget(64, 64, 'Probe', SRGB_CANVAS);
     expect(target.texture.minFilter).toBe(THREE.LinearFilter);
     expect(target.texture.magFilter).toBe(THREE.LinearFilter);
     expect(target.texture.generateMipmaps).toBe(false);
     target.dispose();
+  });
+});
+
+describe('createCanvasTarget in a linear canvas', () => {
+  /** An HDR target is `R16G16B16A16_SFLOAT`, and its sRGB view is the same format (`texture_storage.cpp:4541-4547`). */
+  it('stores linear half floats, which keep a value above 1', () => {
+    const target = createCanvasTarget(64, 64, 'Probe', LINEAR_CANVAS);
+    expect(target.texture.type).toBe(THREE.HalfFloatType);
+    expect(target.texture.internalFormat).toBe('RGBA16F');
+    expect(target.texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
+    target.dispose();
+  });
+
+  it('marks its texture for a raw sRGB multiply, as a non-HDR canvas consumer reads the stored numbers', () => {
+    const target = createCanvasTarget(64, 64, 'Probe', LINEAR_CANVAS);
+    expect(holdsSrgbBytes(target.texture)).toBe(true);
+    target.dispose();
+  });
+});
+
+describe('viewportCanvasColorSpace', () => {
+  it('draws the canvas of a 2D viewport with use_hdr_2d in linear', () => {
+    expect(viewportCanvasColorSpace({ use_hdr_2d: true }, '2d')).toBe(LINEAR_CANVAS);
+  });
+
+  it('draws the canvas of a viewport without use_hdr_2d in sRGB', () => {
+    expect(viewportCanvasColorSpace({ use_hdr_2d: false }, '2d')).toBe(SRGB_CANVAS);
+  });
+
+  it('keeps the canvas over a 3D world in sRGB, whose tonemap target stays 8-bit (edge case)', () => {
+    expect(viewportCanvasColorSpace({ use_hdr_2d: true }, '3d')).toBe(SRGB_CANVAS);
   });
 });
 
@@ -479,13 +514,13 @@ describe('clearTarget', () => {
 
   it('clears an opaque target to opaque black, which a consumer samples as black', () => {
     const { gl, clears } = recordingRenderer();
-    clearTarget(gl, createCanvasTarget(4, 4, 't'), false);
+    clearTarget(gl, createCanvasTarget(4, 4, 't', SRGB_CANVAS), false);
     expect(clears).toEqual([{ rgb: [0, 0, 0], alpha: 1 }]);
   });
 
   it('clears a transparent target to (0, 0, 0, 0)', () => {
     const { gl, clears } = recordingRenderer();
-    clearTarget(gl, createCanvasTarget(4, 4, 't'), true);
+    clearTarget(gl, createCanvasTarget(4, 4, 't', SRGB_CANVAS), true);
     expect(clears).toEqual([{ rgb: [0, 0, 0], alpha: 0 }]);
   });
 });

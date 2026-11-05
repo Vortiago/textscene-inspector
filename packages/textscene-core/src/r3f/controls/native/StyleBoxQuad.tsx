@@ -21,15 +21,19 @@ import { styleBoxLineDrawRect } from './styleBoxLineGeometry';
 import { ninePatchGeometry } from './ninePatchGeometry';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { useControlClipPlanes } from './controlClipping';
-import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
+import {
+  multiplyModulate,
+  useItemLinearColor,
+  useVertexColorTint,
+  WHITE_MODULATE,
+} from '../../canvasItemModulate';
 import { useCanvasItemMerge } from '../../components/LitCanvasItemPixels';
 import { materialProgramInputs } from '../../materialProgramInputs';
-import { CANVAS_SRGB_DEFINES } from '../../canvasSrgbMultiply';
 import { canvasMapProps, useOwnerCanvas2DTexture } from '../../canvas2DTextureDecode';
-import { useGodotLinearColor } from '../../godotColor';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import type { Rgba } from '../../../godot/math/math';
 import { useDisposeOnRelease } from '../../useDisposeOnRelease';
+import { useCanvasColorSpace } from '../../canvasColorSpace';
 
 interface StyleBoxQuadProps {
   styleBox: ResolvedStyleBox;
@@ -92,7 +96,9 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
     }
     return { flatBox: styleBox, flatRect: size };
   }, [styleBox, size, kind]);
-  const tintedStyleBox = useMemo(() => tintStyleBox(flatBox, color ?? WHITE_MODULATE), [flatBox, color]);
+  const tint = useVertexColorTint(color ?? WHITE_MODULATE);
+  const vertexTint = tint.vertex;
+  const tintedStyleBox = useMemo(() => tintStyleBox(flatBox, vertexTint), [flatBox, vertexTint]);
   // Not built for a texture box, but the hook always runs, so the hook order
   // never depends on `kind`.
   const flatGeometry = useMemo(
@@ -119,13 +125,15 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
 
   const program = materialProgramInputs({
     props: {
+      color: tint.color,
+      opacity: tint.opacity,
       vertexColors: true,
       transparent: true,
       depthWrite: false,
       clippingPlanes: clippingPlanes as THREE.Plane[],
       // Godot ramps a `border_blend` between sRGB vertex colours (`style_box_flat.cpp:380,389`), and
-      // linear endpoints move the midpoint, so the vertex colours stay sRGB to the fragment.
-      defines: CANVAS_SRGB_DEFINES,
+      // linear endpoints move the midpoint, so the vertex colours stay sRGB until their decode.
+      defines: tint.defines,
     },
     // Single pass: `StyleBoxFlat::draw` emits rings in painter's order, and its
     // `(i, i+2, i+1)` pattern (`style_box_flat.cpp:403-408`) gives each ring quad's
@@ -194,11 +202,12 @@ interface ImageLike {
  */
 function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes }: StyleBoxTextureMeshProps) {
   const canvasItemMerge = useCanvasItemMerge();
+  const canvasSpace = useCanvasColorSpace();
   const { texture: rawTexture } = useTexture2D(
     texture.texture,
     texture.resources.externalResources,
     texture.resources.internalResources,
-    'plain',
+    undefined,
     texture.isHeldLocally
   );
 
@@ -261,13 +270,13 @@ function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes 
     () => multiplyModulate(tint, texture.modulateColor),
     [tint, texture.modulateColor]
   );
-  const linearColor = useGodotLinearColor(combinedTint);
+  const linearColor = useItemLinearColor(combinedTint);
 
   if (!geometry || !drawnTexture) return null;
 
   const program = materialProgramInputs({
     props: {
-      ...canvasMapProps(drawnTexture),
+      ...canvasMapProps(drawnTexture, canvasSpace),
       color: linearColor,
       opacity: combinedTint.a,
       transparent: true,

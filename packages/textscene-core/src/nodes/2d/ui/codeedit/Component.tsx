@@ -10,8 +10,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { godotColorToLinear } from '../../../../r3f/godotColor';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
+import { multiplyModulate, useItemLinearColorOf } from '../../../../r3f/canvasItemModulate';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -52,6 +51,7 @@ import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 export function CodeEdit(props: NativeControlComponentProps) {
   const { solveNode, tint, rect, renderOrder, theme, measureText } = props;
+  const toItemLinear = useItemLinearColorOf();
   const codeEditProps = painterView<CodeEditProperties>(solveNode);
   const state = resolveTextEditStyleState(codeEditProps.editable);
   const styleBox = pickTextEditStyleBox(solveNode.styleBoxes, theme.widgets.lineEdit, state);
@@ -197,7 +197,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
             <ControlQuad
               width={1}
               height={rect.h}
-              color={godotColorToLinear(guidelineColor)}
+              color={toItemLinear(guidelineColor)}
               opacity={guideline.dimmed ? guidelineColor.a * 0.5 : guidelineColor.a}
               renderOrder={renderOrder}
             />
@@ -223,7 +223,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
                 renderOrder={renderOrder}
                 width={icon.w}
                 height={icon.h}
-                color={godotColorToLinear(color)}
+                color={toItemLinear(color)}
                 opacity={color.a}
                 map={region ? canFoldRegionIcon : canFoldIcon}
               />

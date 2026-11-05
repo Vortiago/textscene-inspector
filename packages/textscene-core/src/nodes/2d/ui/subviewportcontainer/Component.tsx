@@ -21,6 +21,7 @@ import type { SubViewportContainerProperties } from './types.js';
 import { lastPaintSequence, WHOLE_CANVAS_RANGE } from '../../../../r3f/canvasPaintOrder.js';
 import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts.js';
 import { canvasPieceSlot, type CanvasSlot } from '../../../../r3f/canvasItemState';
+import { useCanvasColorSpace } from '../../../../r3f/canvasColorSpace';
 
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
@@ -89,7 +90,9 @@ function ViewportSurfaceNative({
   // By path, since a nested `<SubViewport>` names no ref. A dependency cycle
   // (`ViewportPassRegistryContext.tsx`) reports `cyclic: true` and draws `<ControlFallback>`'s outline,
   // the same "content unavailable" fact. `warnAs` is `null`: the pass driver logs the cycle once.
-  const { texture, cyclic } = useViewportTargetSlot(path, null, 'plain');
+  // The view of the canvas this container draws in: a linear canvas samples the decoding one.
+  const { viewportTextureView } = useCanvasColorSpace();
+  const { texture, cyclic } = useViewportTargetSlot(path, null, viewportTextureView);
 
   // The quad is Godot's viewport size, not the capped render target: it stretches whatever pixels the
   // target holds over the same rect.

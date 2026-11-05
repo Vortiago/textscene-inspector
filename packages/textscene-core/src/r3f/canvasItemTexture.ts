@@ -27,9 +27,6 @@ interface CanvasItemTextureResult extends Omit<Texture2DResult, 'canvasTexture'>
   canvasTexture: CanvasItemTexture | undefined;
 }
 
-/** A canvas item samples the plain view of a ViewportTexture. */
-const CANVAS_ITEM_VIEW = 'plain';
-
 export function useCanvasItemTexture(
   props: Pick<Node2DProperties, 'texture_filter' | 'texture_repeat'>,
   ref: string | undefined,
@@ -37,11 +34,12 @@ export function useCanvasItemTexture(
   internalResources: readonly TscnInternalResource[],
   isHeldLocally?: boolean
 ): CanvasItemTextureResult {
+  // No view: the slot samples the view of its canvas's colour space.
   const { canvasTexture: slot, ...drawn } = useTexture2D(
     ref,
     externalResources,
     internalResources,
-    CANVAS_ITEM_VIEW,
+    undefined,
     isHeldLocally
   );
   const sampler = useCanvasTextureSampler(useNode2DTextureSampler(props), slot?.texture);

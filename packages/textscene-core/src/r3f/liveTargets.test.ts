@@ -20,6 +20,7 @@ import { createCanvasTarget, createSceneTarget } from '../nodes/viewport/subview
 import { copiesFilledFrom, recordingRenderer } from './liveTargets.testkit';
 import { holdUntilReleased } from './useDisposeOnRelease';
 import { flippedUvWindow } from './uvWindow';
+import { SRGB_CANVAS } from './canvasColorSpace';
 
 const FLIPPED = { repeat: { x: -1, y: 1 }, offset: { x: 1, y: 0 } };
 const UPRIGHT = { repeat: { x: 1, y: 1 }, offset: { x: 0, y: 0 } };
@@ -39,7 +40,7 @@ function held(view: THREE.Texture): THREE.Texture {
 
 /** A canvas target its pass publishes, as a SubViewport does. */
 function liveCanvasTarget(): THREE.WebGLRenderTarget {
-  const target = createCanvasTarget(32, 16, 'SubViewport');
+  const target = createCanvasTarget(32, 16, 'SubViewport', SRGB_CANVAS);
   withdrawals.push(publishLiveTargets([target.texture], null, false));
   return target;
 }
@@ -246,7 +247,7 @@ describe('a copy no reader holds', () => {
   });
 
   it('is freed once its target is withdrawn', async () => {
-    const target = createCanvasTarget(32, 16, 'SubViewport');
+    const target = createCanvasTarget(32, 16, 'SubViewport', SRGB_CANVAS);
     const withdraw = publishLiveTargets([target.texture], null, false);
     const view = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
     let isDisposed = false;
@@ -302,7 +303,7 @@ describe('unrenderedTexel', () => {
   });
 
   it("is clear for a crop of a transparent target, which keeps its source's alpha", () => {
-    const target = createCanvasTarget(32, 16, 'SubViewport');
+    const target = createCanvasTarget(32, 16, 'SubViewport', SRGB_CANVAS);
     withdrawals.push(publishLiveTargets([target.texture], null, true));
     const crop = liveTargetCrop(target.texture, CORNER_CELL);
     expect(unrenderedTexel(crop)).toEqual([0, 0, 0, 0]);
@@ -310,7 +311,7 @@ describe('unrenderedTexel', () => {
   });
 
   it('follows its target when the target publishes again with another transparency', () => {
-    const target = createCanvasTarget(32, 16, 'SubViewport');
+    const target = createCanvasTarget(32, 16, 'SubViewport', SRGB_CANVAS);
     const withdrawOpaque = publishLiveTargets([target.texture], null, false);
     const crop = liveTargetCrop(target.texture, CORNER_CELL);
     withdrawals.push(publishLiveTargets([target.texture], null, true));

@@ -21,9 +21,17 @@ import { ViewportTextureProvider } from './contexts/ViewportTextureContext';
 import { NodePathProvider } from './contexts/NodePathContext';
 import { ViewportTexturePublisher, viewportEntry } from './testing/ViewportTexturePublisher';
 import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
+import { WHITE_MODULATE, type VertexColorTint } from './canvasItemModulate';
+import { SRGB_CANVAS } from './canvasColorSpace';
 import { isLocalToScene } from '../resources/textures/viewporttexture/localToScene';
 
 const TEXTURE = 'res://tiles.png';
+const WHITE_TINT: VertexColorTint = {
+  vertex: WHITE_MODULATE,
+  color: new THREE.Color(1, 1, 1),
+  opacity: 1,
+  defines: SRGB_CANVAS.defines,
+};
 const grid: TileGrid = {
   shape: TileShape.TILE_SHAPE_SQUARE,
   layout: 0,
@@ -56,7 +64,7 @@ async function render(source: AtlasSourceModel, texture: THREE.Texture | null, s
 
 /** `source` drawn at `Root/Tiles`, beside a SubViewport published at `Root/SubViewport`. */
 async function renderBesideViewport(source: AtlasSourceModel, isTransparent: boolean) {
-  const target = createCanvasTarget(32, 32, 'SubViewport');
+  const target = createCanvasTarget(32, 32, 'SubViewport', SRGB_CANVAS);
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
       <ViewportTextureProvider>
@@ -80,8 +88,7 @@ function tileMesh(source: AtlasSourceModel, sampler: typeof DEFAULT_SAMPLER) {
           cells={[drawableCellOf({ coords: { x: 0, y: 0 }, atlasCoords: { x: 1, y: 0 } })]}
           grid={grid}
           renderOrder={0}
-          color={new THREE.Color(1, 1, 1)}
-          opacity={1}
+          tint={WHITE_TINT}
           pixelMaterial={pixelMaterial}
           sampler={sampler}
         />
