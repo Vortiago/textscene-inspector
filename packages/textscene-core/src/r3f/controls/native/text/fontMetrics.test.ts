@@ -17,6 +17,8 @@ import {
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
   withOutlines,
+  drawnOpentype,
+  type OpentypeCoordinates,
   withVariation,
   type FontMetrics,
 } from './fontMetrics';
@@ -173,15 +175,19 @@ describe('withVariation at a variable-font instance', () => {
   const REGULAR = new Map([[WGHT, 400]]);
   /** At the font's units per em, a kerning in px equals the kerning in design units. */
   const UNIT_SIZE_PX = METRICS.unitsPerEm;
-  /** Outlines whose default instance is wght 400, with A at glyph 1, V at glyph 2 and no glyph for any other character. */
+  /**
+   * Outlines whose default instance is wght 400, with A at glyph 1, V at glyph 2 and no glyph for any
+   * other character. Like the real outlines, they kern nothing at the default instance.
+   */
   const glyphIndex = (codePoint: number) => ({ A: 1, V: 2 })[String.fromCodePoint(codePoint)] ?? 0;
+  const drawsInstance = (opentype: OpentypeCoordinates) => opentype.get(WGHT) !== 400;
   const variableOutlines = {
     glyphIndex,
     glyphContours: () => null,
-    drawsInstance: (opentype: ReadonlyMap<number | string, number>) => opentype.get(WGHT) !== 400,
-    kerningAtInstance: (leftCodePoint: number, rightCodePoint: number) => {
+    drawsInstance,
+    kerningAtInstance: (leftCodePoint: number, rightCodePoint: number, opentype: OpentypeCoordinates) => {
       const [left, right] = [glyphIndex(leftCodePoint), glyphIndex(rightCodePoint)];
-      return left === 0 || right === 0 ? null : left * 10 + right;
+      return !drawsInstance(opentype) || left === 0 || right === 0 ? null : left * 10 + right;
     },
   };
   const kerningPx = (face: FontMetrics, a: string, b: string) =>
@@ -197,9 +203,9 @@ describe('withVariation at a variable-font instance', () => {
     expect(kerningPx(face, 'A', 'x')).toBe(0);
   });
 
-  it('drops axis values that draw the default instance, so the face draws as the font itself', () => {
+  it('draws axis values at the default instance as the font itself, with its own kerning', () => {
     const face = withVariation(METRICS, { opentype: REGULAR, outlines: variableOutlines });
-    expect(face.opentype).toBeUndefined();
+    expect(drawnOpentype(face)).toBeUndefined();
     expect(kerningPx(face, 'A', 'V')).toBe(-256);
   });
 
@@ -214,7 +220,7 @@ describe('withVariation at a variable-font instance', () => {
   it('drops the instance under a variation of its own that sets no axis', () => {
     const atInstance = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
     const bold = withVariation(atInstance, { embolden: 1.2 });
-    expect(bold.opentype).toBeUndefined();
+    expect(drawnOpentype(bold)).toBeUndefined();
     expect(kerningPx(bold, 'A', 'V')).toBe(-256);
   });
 });

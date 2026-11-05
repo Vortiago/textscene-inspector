@@ -19,6 +19,7 @@ import {
 } from './canvasVariation';
 import {
   canvasGlyphPenXPx,
+  drawnOpentype,
   fontIsScaled,
   isGlyphVaried,
   type FontMetrics,
@@ -236,7 +237,7 @@ export function paintSceneFontCanvas(
 
   const baselineOffsetPx = layout.baselineOffsetPx;
   const embolden = metrics.embolden ?? 0;
-  const { opentype } = metrics;
+  const opentype = drawnOpentype(metrics);
   const variation: GlyphVariation = { embolden, skew, opentype };
   // The ring of a varied face strokes the contours, and the fill of a face varied by more than a shear
   // fills them. They carry their own shear.

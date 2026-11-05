@@ -337,8 +337,8 @@ const variationsOf = perObject(
  * `metrics` with a `FontVariation`'s `embolden`, `skew` and `opentype` set, and the `outlines` its text follows.
  * The wrapper reads every other field through the face, so a live getter stays live. With no variation
  * and no outlines, it is the face itself. Two fonts that share a face and a variation keep
- * their own outlines, each on its own wrapper. The axis values stay as `drawnInstance` keeps them,
- * and the advances and the kerning then follow the instance.
+ * their own outlines, each on its own wrapper. The advances and the kerning follow the instance
+ * that the axis values name, and the glyphs draw it where `drawnOpentype` gives them.
  * A variation of a wrapper replaces its variation and keeps its outlines, as a `FontVariation` over
  * another finds its face at its own values alone (`font.cpp:3120-3131`).
  */
@@ -361,7 +361,7 @@ export function withVariation<Metrics extends FontMetrics>(
     wrapped = Object.create(metrics, {
       embolden: { value: embolden },
       skew: { value: skew },
-      opentype: { value: drawnInstance(opentype, outlines) },
+      opentype: { value: opentype },
       ...(outlines !== undefined && { outlines: { value: outlines } }),
     }) as FontMetrics;
     byOutlines.set(outlines, wrapped);
@@ -370,15 +370,12 @@ export function withVariation<Metrics extends FontMetrics>(
 }
 
 /**
- * The axis values that `outlines` draws as an instance other than the default, else undefined. A face
- * without outlines keeps them all, so the outlines a TextMesh adds later with `withOutlines` find them.
+ * The axis values of `metrics` where its outlines draw them as an instance other than the default,
+ * else undefined: at the default, FreeType and HarfBuzz draw the font itself, so the face draws as
+ * the font does without a variation.
  */
-function drawnInstance(
-  opentype: OpentypeCoordinates | undefined,
-  outlines: FontMetrics['outlines']
-): OpentypeCoordinates | undefined {
-  if (!outlines) return opentype;
-  return isInstanced(opentype) && outlines.drawsInstance?.(opentype) ? opentype : undefined;
+export function drawnOpentype({ opentype, outlines }: FontMetrics): OpentypeCoordinates | undefined {
+  return isInstanced(opentype) && outlines?.drawsInstance?.(opentype) ? opentype : undefined;
 }
 
 /** `metrics` carrying `outlines`, keeping its own variation. */

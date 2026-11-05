@@ -9,7 +9,7 @@ import { peekSceneFontMetrics, peekSettledSceneFontMetrics } from './sceneFontLo
 import { fontWork, onSceneFontSettled, sceneFontSettleCount } from './settledChannel';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { FACELESS_FONT } from './sceneFontResolution';
-import { getFontAscentPx, getFontGlyphAdvancePx, getFontLinePitchPx } from './fontMetrics';
+import { drawnOpentype, getFontAscentPx, getFontGlyphAdvancePx, getFontLinePitchPx } from './fontMetrics';
 import * as logger from '../../../../logger';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 
@@ -442,7 +442,7 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
   it('settles a variable font at an instance on its outlines, which its text and advances follow', async () => {
     const face = await settledAtMono(1);
 
-    expect(face.opentype).toEqual(new Map([[1297043023, 1]]));
+    expect(drawnOpentype(face)).toEqual(new Map([[1297043023, 1]]));
     // Recursive's `MONO` instance advances every glyph 600 of 1000 units, where `m` measures 500 at the default.
     expect(getFontGlyphAdvancePx(face, 'm', 10)).toBe(6);
   });
@@ -450,7 +450,7 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
   it('keeps a variable font at its default instance on the measured advances', async () => {
     const face = await settledAtMono(0);
 
-    expect(face.opentype).toBeUndefined();
+    expect(drawnOpentype(face)).toBeUndefined();
     expect(getFontGlyphAdvancePx(face, 'm', 10)).toBe(5);
   });
 
