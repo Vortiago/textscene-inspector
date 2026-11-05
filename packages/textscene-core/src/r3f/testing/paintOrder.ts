@@ -5,6 +5,7 @@
  * Every 2D canvas material skips depth writes, so this comparator decides what covers what.
  */
 import * as THREE from 'three';
+import { isMesh } from './threeNarrow';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../canvasPaintOrder';
 import { WORLD_CANVAS_LAYER } from '../lighting2d/canvasItemPlacement';
 
@@ -59,7 +60,7 @@ export function isInZBucket(key: number, zFinal: number): boolean {
 function firstMeshUnder(group: THREE.Object3D): THREE.Object3D {
   let mesh: THREE.Object3D | undefined;
   group.traverse((o) => {
-    if (!mesh && (o as THREE.Mesh).isMesh) mesh = o;
+    if (!mesh && isMesh(o)) mesh = o;
   });
   if (!mesh) throw new Error(`expected a mesh under ${group.name}, found none`);
   return mesh;

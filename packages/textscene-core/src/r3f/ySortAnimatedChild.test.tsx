@@ -9,6 +9,7 @@ import type { FakeResourceLoader } from '../resources/testing/createFakeResource
 import { parseTresFile } from '../parser/parsedResource';
 import { mountWithPlayer, play, sceneRoot, stop } from './testing/animationPlayback';
 import { namesInPaintOrder } from './testing/paintOrder';
+import { seedAtlasTexture } from './testing/seedAtlasTexture';
 import { settleLoads } from './testing/settleLoads';
 
 const TILE_SET = `[gd_resource type="TileSet" format=3]
@@ -63,9 +64,7 @@ libraries/ = SubResource("Lib")
 /** The TileSet and the atlas texture it names, which a row needs to draw a mesh. */
 function seedTileSet(fake: FakeResourceLoader): void {
   fake.resources.seed('res://tiles.tres', parseTresFile(TILE_SET));
-  const atlas = new THREE.Texture();
-  (atlas as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
-  fake.textures.seed('res://tiles.png', atlas);
+  seedAtlasTexture(fake);
 }
 
 /** The row and child names in the order three paints them. */

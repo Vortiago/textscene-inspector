@@ -4,7 +4,6 @@
  * grid's `tile_size`, and `TileGroupRenderer` draws each row from its own model.
  */
 import { describe, it, expect } from 'vitest';
-import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../parser/TscnParser';
 import { parseTresFile } from '../parser/parsedResource';
@@ -17,6 +16,8 @@ import { SceneStack } from './testing/SceneStack';
 import { namesInPaintOrder } from './testing/paintOrder';
 
 import './nodes/index';
+import { sceneRoot } from './testing/animationPlayback';
+import { seedAtlasTexture } from './testing/seedAtlasTexture';
 import { settleLoads } from './testing/settleLoads';
 
 /** A square TileSet of the given pitch, with the one tile every cell draws. */
@@ -71,9 +72,7 @@ y_sort_enabled = true
   const fake = createFakeResourceLoader();
   fake.resources.seed('res://small.tres', parseTresFile(squareTileSet(32)));
   fake.resources.seed('res://big.tres', parseTresFile(squareTileSet(64)));
-  const atlas = new THREE.Texture();
-  (atlas as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
-  fake.textures.seed('res://tiles.png', atlas);
+  seedAtlasTexture(fake);
 
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack workspace="2d" loader={fake.loader} scene={scene}>
@@ -82,11 +81,7 @@ y_sort_enabled = true
   );
   await settleLoads();
 
-  const first = (renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> })
-    .children?.[0]?.instance;
-  let root: THREE.Object3D | null | undefined = first;
-  while (root?.parent) root = root.parent;
-  return namesInPaintOrder(root!, (o) => o.name?.startsWith('TileGroup_'));
+  return namesInPaintOrder(sceneRoot(renderer), (o) => o.name?.startsWith('TileGroup_'));
 }
 
 describe('y-sorted TileMapLayers with different TileSets', () => {

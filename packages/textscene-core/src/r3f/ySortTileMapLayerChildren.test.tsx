@@ -4,7 +4,6 @@
  * y-sorted TileMap sorts the rows of its y-sorted layers with its child nodes the same way.
  */
 import { describe, it, expect } from 'vitest';
-import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../parser/TscnParser';
 import { parseTresFile } from '../parser/parsedResource';
@@ -15,6 +14,8 @@ import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/type
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import { SceneStack } from './testing/SceneStack';
 import { namesInPaintOrder } from './testing/paintOrder';
+import { sceneRoot } from './testing/animationPlayback';
+import { seedAtlasTexture } from './testing/seedAtlasTexture';
 import { settleLoads } from './testing/settleLoads';
 
 import './nodes/index';
@@ -92,9 +93,7 @@ async function drawOrder(source: string): Promise<string[]> {
 
   const fake = createFakeResourceLoader();
   fake.resources.seed('res://tiles.tres', parseTresFile(TILE_SET));
-  const atlas = new THREE.Texture();
-  (atlas as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
-  fake.textures.seed('res://tiles.png', atlas);
+  seedAtlasTexture(fake);
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack workspace="2d" loader={fake.loader} scene={scene}>
       <NodeDispatcher nodes={scene.nodes} />
@@ -102,13 +101,10 @@ async function drawOrder(source: string): Promise<string[]> {
   );
   await settleLoads();
 
-  let root: THREE.Object3D | null | undefined = (
-    renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> }
-  ).children?.[0]?.instance;
-  while (root?.parent) root = root.parent;
-  return namesInPaintOrder(root!, (o) => o.name?.startsWith('TileGroup_') || o.name === 'Child').map((name) =>
-    name.replace(/^TileGroup_.*_\d+_(\d+)$/, 'row $1')
-  );
+  return namesInPaintOrder(
+    sceneRoot(renderer),
+    (o) => o.name?.startsWith('TileGroup_') || o.name === 'Child'
+  ).map((name) => name.replace(/^TileGroup_.*_\d+_(\d+)$/, 'row $1'));
 }
 
 describe('a y-sorted TileMapLayer with a child node', () => {

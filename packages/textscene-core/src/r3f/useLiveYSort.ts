@@ -45,6 +45,10 @@ export function useLiveYSort(items: readonly YSortItem[], basePath: string): rea
     ys: new Map(),
   });
 
+  /** Written only by the pose listener: the draw order last rendered, per `items`. */
+  const committed = useRef<{ items: readonly YSortItem[]; order: string | null }>({ items, order: null });
+  if (committed.current.items !== items) committed.current = { items, order: null };
+
   const onPose = useCallback(() => {
     if (!selection) return;
     if (lastReadRef.current.items !== items) lastReadRef.current = { items, ys: new Map() };
@@ -61,10 +65,13 @@ export function useLiveYSort(items: readonly YSortItem[], basePath: string): rea
     }
     // Sorted only when some y moved: the frames of a held pose cost a read of each group.
     if (!moved) return;
-    lastRead.clear();
-    for (const [id, y] of read) lastRead.set(id, y);
-    if (drawOrder(items, read) !== drawOrder(items, ys)) setLive({ items, ys: read });
-  }, [selection, items, basePath, ys]);
+    lastReadRef.current = { items, ys: read };
+    committed.current.order ??= drawOrder(items, NO_YS);
+    const order = drawOrder(items, read);
+    if (order === committed.current.order) return;
+    committed.current = { items, order };
+    setLive({ items, ys: read });
+  }, [selection, items, basePath]);
   useOnMixerPose(onPose);
 
   return useMemo(() => withLiveYs(items, ys), [items, ys]);
