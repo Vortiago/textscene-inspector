@@ -454,6 +454,14 @@ describe('peekSettledSceneFontMetrics — a bundled FontVariation past the embol
     properties: { variation_embolden: embolden },
   });
 
+  /** The metrics `peek` settles on for a bare variation at `embolden`. */
+  async function settledAt(peek: typeof peekSettledSceneFontMetrics, embolden: string) {
+    const font = bare(embolden);
+    peek(font, 'Root/Past');
+    await vi.waitFor(() => expect(peek(font, 'Root/Past')).not.toBeNull());
+    return peek(font, 'Root/Past');
+  }
+
   it('keeps an embolden the atlas holds on the atlas', async () => {
     const { peekSettledSceneFontMetrics: peek } = await loaderWithFontDoor();
     expect(peek(bare('1.4'), 'Root/Held')?.kind).toBe('atlas');
@@ -466,11 +474,7 @@ describe('peekSettledSceneFontMetrics — a bundled FontVariation past the embol
 
   it('draws an embolden past the limit on the bundled canvas face, with the outlines FreeType emboldens', async () => {
     const { peekSettledSceneFontMetrics: peek } = await loaderWithFontDoor();
-    const font = bare('3.0');
-    peek(font, 'Root/Past');
-    await vi.waitFor(() => expect(peek(font, 'Root/Past')).not.toBeNull());
-
-    const metrics = peek(font, 'Root/Past');
+    const metrics = await settledAt(peek, '3.0');
     expect(metrics?.kind).toBe('canvas');
     expect(metrics?.embolden).toBe(3);
     expect(metrics?.outlines?.glyphIndex(0x48)).toBeGreaterThan(0);
@@ -478,23 +482,14 @@ describe('peekSettledSceneFontMetrics — a bundled FontVariation past the embol
 
   it('keeps the baked advances of the bundled font, so the layout does not move', async () => {
     const { peekSettledSceneFontMetrics: peek } = await loaderWithFontDoor();
-    const font = bare('3.0');
-    peek(font, 'Root/Past');
-    await vi.waitFor(() => expect(peek(font, 'Root/Past')).not.toBeNull());
-
-    expect(peek(font, 'Root/Past')?.getGlyphAdvanceUnits('W')).toBe(
-      OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits('W')
-    );
+    const metrics = await settledAt(peek, '3.0');
+    expect(metrics?.getGlyphAdvanceUnits('W')).toBe(OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits('W'));
   });
 
   it('stays on the atlas when the bundled canvas face cannot register', async () => {
     const { peekSettledSceneFontMetrics: peek } = await loaderWithFontDoor();
     vi.stubGlobal('FontFace', undefined);
     vi.spyOn(await import('../../../../logger'), 'warn').mockImplementation(() => {});
-    const font = bare('3.0');
-    peek(font, 'Root/NoDoor');
-    await vi.waitFor(() => expect(peek(font, 'Root/NoDoor')).not.toBeNull());
-
-    expect(peek(font, 'Root/NoDoor')?.kind).toBe('atlas');
+    expect((await settledAt(peek, '3.0'))?.kind).toBe('atlas');
   });
 });

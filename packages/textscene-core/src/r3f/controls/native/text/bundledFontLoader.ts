@@ -48,6 +48,6 @@ export async function loadBundledCanvasFontMetrics(): Promise<CanvasFontMetrics 
 
 /** Synchronous answer for a solve/paint pass: the canvas metrics once registration resolved, `undefined` before that. Kicks the registration off on first call. */
 export function peekBundledCanvasFontMetrics(): CanvasFontMetrics | undefined {
-  void loadBundledCanvasFontMetrics();
+  bundledRegistration ??= registerBundledFont();
   return bundledMetrics;
 }

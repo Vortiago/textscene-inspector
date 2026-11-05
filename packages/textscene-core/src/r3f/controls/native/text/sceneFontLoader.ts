@@ -57,6 +57,12 @@ const peekBundledCanvas = createSettledPeek<object, CanvasFontMetrics | null>();
 /** The cache key of the bundled canvas face, which has no resource. */
 const BUNDLED = {};
 
+/** A dynamic import, so the bundled font bytes stay out of the chunk that holds this loader. */
+async function loadBundledCanvas(): Promise<CanvasFontMetrics | null> {
+  const { loadBundledCanvasFontMetrics } = await import('./bundledFontLoader');
+  return (await loadBundledCanvasFontMetrics()) ?? null;
+}
+
 /** One `BitmapFontMetrics` for each decoded BMFont, so a layout memoised on its identity keeps its hits. */
 const bitmapMetricsOf = perObject(createBitmapFontMetrics);
 
@@ -184,15 +190,10 @@ function fontVariation(font: FontResource): GlyphVariation {
  */
 function peekBundledVariation(font: FontResource): FontMetrics | null {
   const variation = fontVariation(font);
-  const atlas = withVariation(OPEN_SANS_FONT_METRICS, variation);
-  if (atlasHoldsEmbolden(variation.embolden ?? 0)) return atlas;
-  // A dynamic import, so the bundled font bytes stay out of the chunk that holds this loader.
-  const canvas = peekBundledCanvas(
-    BUNDLED,
-    async () => (await (await import('./bundledFontLoader')).loadBundledCanvasFontMetrics()) ?? null
-  );
+  if (atlasHoldsEmbolden(variation.embolden ?? 0)) return withVariation(OPEN_SANS_FONT_METRICS, variation);
+  const canvas = peekBundledCanvas(BUNDLED, loadBundledCanvas);
   if (canvas === undefined) return null;
-  if (!canvas) return atlas;
+  if (!canvas) return withVariation(OPEN_SANS_FONT_METRICS, variation);
   const outlines = peekGlyphOutlines(font, canvas, variation);
   return outlines === undefined ? null : withVariation(canvas, { ...variation, outlines });
 }
