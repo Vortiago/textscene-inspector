@@ -282,7 +282,7 @@ export function GraphEdit({
   const shape = (text: string): TextLayoutResult => {
     let layout = layoutCache.get(text);
     if (!layout) {
-      layout = shapeButtonLabel(text, theme.fontSize, fontMetrics);
+      layout = shapeButtonLabel(text, { fontSizePx: theme.fontSize, fontMetrics });
       layoutCache.set(text, layout);
     }
     return layout;

@@ -28,7 +28,7 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import { overrunFlagsForBehavior, trimLayoutToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import {
   shapeText,
   shapedTextSizeWidthPx,
@@ -39,7 +39,8 @@ import type { ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_LOWER_COLOR } from '../../../../godot/scene/theme';
-import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { AutowrapMode, OverrunBehavior, TextDirection } from '../../../../godot/text/textServerEnums';
+import { isDrawnRtl, textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 
 // --- Enum literals ------------------------------------------------------
@@ -225,7 +226,12 @@ interface ItemTextShapeInput {
   fixedColumnWidth: number;
   /** `TextServer::OverrunBehavior`. Godot default 3 (OVERRUN_TRIM_ELLIPSIS, `item_list.h:131`). */
   overrunBehavior?: number;
+  /** The control's `_get_locale()`, which an item's empty `language` takes (`item_list.cpp:45`). */
+  locale: string;
 }
+
+/** An item's own `text_direction` and `language` (`item_list.h:73-74`), which no scene changes. */
+const ITEM_BIDI = { textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: '' };
 
 /**
  * Shapes one item's text, or `null` for an item with none. The minsize pass
@@ -236,7 +242,9 @@ interface ItemTextShapeInput {
 export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult | null {
   if (input.text.length === 0) return null;
   const widthPx = itemListShapeWidth(input.fixedColumnWidth);
+  const bidi = textBidiOptions(ITEM_BIDI, input.locale);
   const layout = shapeText(input.text, {
+    ...bidi,
     fontSizePx: input.fontSizePx,
     boxWidthPx: widthPx,
     autowrapMode: itemListAutowrapMode(input.iconMode, input.maxTextLines),
@@ -248,20 +256,13 @@ export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult |
   );
   if (!overrunFlags.trim || widthPx <= 0) return layout;
 
-  const trimmedLines = layout.lines.map((line) =>
-    // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to
-    // the vendored atlas font when the caller passes none, and the trim must
-    // agree with whichever metrics actually shaped these glyphs.
-    trimLineToWidth(line, widthPx, overrunFlags, {
-      fontMetrics: layout.fontMetrics,
-      fontSizePx: input.fontSizePx,
-    })
-  );
-  return {
-    ...layout,
-    lines: trimmedLines,
-    widthPx: trimmedLines.reduce((max, l) => Math.max(max, l.widthPx), 0),
-  };
+  // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to the vendored atlas
+  // font when the caller passes none, and the trim must agree with the metrics that shaped the glyphs.
+  return trimLayoutToWidth(layout, widthPx, overrunFlags, {
+    fontMetrics: layout.fontMetrics,
+    fontSizePx: input.fontSizePx,
+    isDrawnRtl: isDrawnRtl(bidi),
+  });
 }
 
 /**
@@ -499,6 +500,7 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
             maxTextLines,
             fixedColumnWidth,
             overrunBehavior: props.textOverrunBehavior,
+            locale: n.locale,
           })
         : null;
     const textSize = layout
@@ -610,9 +612,18 @@ export function itemTextDrawOffset(
   };
 }
 
-/** One line's own horizontal offset under `HORIZONTAL_ALIGNMENT_CENTER` (TOP icon mode only: LEFT mode never centres, `_shape_text`'s own alignment call site). */
-export function itemTextLineCenterOffset(centerWidth: number, lineWidthCeiled: number): number {
-  return Math.max(0, centerWidth - lineWidthCeiled) / 2;
+/**
+ * One line's own horizontal offset under `HORIZONTAL_ALIGNMENT_CENTER` (TOP icon mode only: LEFT mode
+ * never centres, `_shape_text`'s own alignment call site). A line wider than its box stays at the
+ * origin, or ends at the trailing edge when it infers RTL (`text_paragraph.cpp:900-913`).
+ */
+export function itemTextLineCenterOffset(
+  centerWidth: number,
+  lineWidthCeiled: number,
+  isRtl: boolean
+): number {
+  if (lineWidthCeiled <= centerWidth) return (centerWidth - lineWidthCeiled) / 2;
+  return isRtl ? centerWidth - lineWidthCeiled : 0;
 }
 
 // --- Per-item colour: item_list.cpp:1568-1571,1607-1622, minus selected/hovered ---

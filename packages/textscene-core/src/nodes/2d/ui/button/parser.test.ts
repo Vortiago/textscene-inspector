@@ -41,4 +41,21 @@ describe('parseButton', () => {
     expect(p.overrunBehavior).toBe(3);
     expect(p.clipText).toBe(true);
   });
+
+  it('defaults text_direction to AUTO and language to empty (button.h)', () => {
+    const p = parseButton(h({ name: 'Ok', type: 'Button' }), {});
+    expect(p.textDirection).toBe(0);
+    expect(p.language).toBe('');
+  });
+
+  it('reads text_direction and language', () => {
+    const p = parseButton(h({ name: 'Ok', type: 'Button' }), { text_direction: '2', language: '"he"' });
+    expect(p.textDirection).toBe(2);
+    expect(p.language).toBe('he');
+  });
+
+  it('keeps AUTO for a text_direction the setter refuses (button.cpp:637)', () => {
+    const p = parseButton(h({ name: 'Ok', type: 'Button' }), { text_direction: '7' });
+    expect(p.textDirection).toBe(0);
+  });
 });

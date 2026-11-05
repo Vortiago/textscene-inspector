@@ -62,6 +62,7 @@ export function textMeshWith(
     loadedFile: NO_FILES,
     loadedFont: loadedFilesOf(fonts),
     projectFonts,
+    locale: '',
   };
 }
 

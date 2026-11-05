@@ -38,6 +38,8 @@ export const PRIMITIVE_SCENES = [
   { name: 'text-mesh-default-font', file: 'unit-text-mesh-default-font.tscn' },
   { name: 'text-mesh-system-font', file: 'unit-text-mesh-system-font.tscn' },
   { name: 'text-mesh-project-default-font', file: 'project-default-font/unit-text-mesh-project-default-font.tscn' },
+  // The one variable: a TextMesh's paragraph direction, language and structured override.
+  { name: 'text-mesh-text-direction', file: 'unit-text-mesh-text-direction.tscn', camera: 'Root/Camera3D' },
   { name: 'torus-mesh', file: 'unit-torus-mesh.tscn' },
   { name: 'torus-mesh-texture-uv', file: 'unit-torus-mesh-texture-uv.tscn' },
   { name: 'tube-trail-mesh-texture-uv', file: 'unit-tube-trail-mesh-texture-uv.tscn' },

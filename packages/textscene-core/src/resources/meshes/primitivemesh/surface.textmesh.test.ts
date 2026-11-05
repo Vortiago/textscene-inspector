@@ -68,6 +68,15 @@ describe('primitiveMeshSurface for a TextMesh', () => {
 
     expect(primitiveMeshSurface(reloaded, TEXEL_SIZE)).not.toBe(primitiveMeshSurface(first, TEXEL_SIZE));
   });
+
+  it('builds again in another locale, which a TextMesh with no language shapes in', async () => {
+    const mesh = await readyTextMesh({ text: '"i"', uppercase: 'true' });
+    const root = primitiveMeshSurface(mesh, TEXEL_SIZE)!;
+
+    const turkish = primitiveMeshSurface({ ...mesh, locale: 'tr' }, TEXEL_SIZE)!;
+
+    expect(turkish.positions).not.toEqual(root.positions);
+  });
 });
 
 describe('isDrawablePrimitiveMesh', () => {

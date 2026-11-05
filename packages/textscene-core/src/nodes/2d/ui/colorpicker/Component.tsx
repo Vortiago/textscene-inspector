@@ -264,7 +264,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const shape = (text: string): TextLayoutResult => {
     let layout = layoutCache.get(text);
     if (!layout) {
-      layout = shapeButtonLabel(text, fontSizePx, fontMetrics);
+      layout = shapeButtonLabel(text, { fontSizePx, fontMetrics });
       layoutCache.set(text, layout);
     }
     return layout;

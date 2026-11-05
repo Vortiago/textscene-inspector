@@ -23,6 +23,7 @@ import {
   buttonLabelShape,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const minSize = buttonMinimumSize;
 
@@ -255,6 +256,32 @@ describe('buttonLabelShape — the one shaping the solver and the painter share'
   });
 });
 
+describe('buttonLabelShape — direction and language (button.cpp:564-569)', () => {
+  /** The shaped line's glyph characters, left to right. */
+  function visual(props: Partial<ButtonProperties>, overrides: Partial<SolveNode> = {}): string {
+    const layout = buttonLabelShape({ ...node(props), ...overrides }, ctx().theme)!;
+    return visualChars(layout.lines[0]!);
+  }
+
+  it('shapes an RTL paragraph with `!` at the visual left', () => {
+    expect(visual({ text: 'Hello!', textDirection: 2 })).toBe('!Hello');
+  });
+
+  it('shapes an INHERITED paragraph at the layout direction', () => {
+    expect(visual({ text: 'Hello!', textDirection: 3 }, { rtl: true })).toBe('!Hello');
+    expect(visual({ text: 'Hello!', textDirection: 3 }, { rtl: false })).toBe('Hello!');
+  });
+
+  it('keeps an AUTO Latin paragraph left to right under an RTL layout', () => {
+    expect(visual({ text: 'Hello!', textDirection: 0 }, { rtl: true })).toBe('Hello!');
+  });
+
+  it('takes a neutral paragraph from the language, else the locale', () => {
+    expect(visual({ text: '123!', textDirection: 0, language: 'he' })).toBe('!123');
+    expect(visual({ text: '123!', textDirection: 0 }, { locale: 'he_IL' })).toBe('!123');
+  });
+});
+
 describe('buttonTextTheme — font_color / font_disabled_color key mapping', () => {
   it('resolves the theme default control_font_color for the normal state', () => {
     expect(buttonTextTheme(node({}), {} as ButtonProperties, 'normal', ctx())).toEqual({
@@ -274,13 +301,20 @@ describe('buttonTextTheme — font_color / font_disabled_color key mapping', () 
   it('a theme_override_colors/font_disabled_color override wins over the default disabled color', () => {
     const props: ButtonProperties = {
       name: 'B',
+      textDirection: 0,
+      language: '',
       themeOverrideColors: { font_disabled_color: { r: 1, g: 0, b: 0, a: 1 } },
     };
     expect(buttonTextTheme(node(props), props, 'disabled', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 
   it('theme_override_font_sizes/font_size overrides the theme default for BOTH states', () => {
-    const props: ButtonProperties = { name: 'B', themeOverrideFontSizes: { font_size: 24 } };
+    const props: ButtonProperties = {
+      name: 'B',
+      textDirection: 0,
+      language: '',
+      themeOverrideFontSizes: { font_size: 24 },
+    };
     expect(buttonTextTheme(node(props), props, 'normal', ctx()).fontSizePx).toBe(24);
     expect(buttonTextTheme(node(props), props, 'disabled', ctx()).fontSizePx).toBe(24);
   });

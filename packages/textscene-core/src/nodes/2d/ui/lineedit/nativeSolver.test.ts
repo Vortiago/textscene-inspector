@@ -13,7 +13,9 @@ import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import * as logger from '../../../../logger';
 import type { LineEditProperties } from './types';
+import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import {
+  shapeLineEditText,
   lineEditMinimumSize,
   lineEditTextTheme,
   resolveLineEditTextState,
@@ -29,6 +31,7 @@ import {
 } from './nativeSolver';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 // line_edit.h:85-89 numbers ExpandMode from EXPAND_MODE_ORIGINAL_SIZE = 0.
 const EXPAND_MODE_FIT_TO_TEXT = 1;
@@ -880,5 +883,36 @@ describe('lineEditDrawnLine: the glyphs the draw loop keeps (line_edit.cpp:1512-
 
   it('keeps the line width the alignment used', () => {
     expect(lineEditDrawnLayout(layoutOf([10, 10, 10]), 4, 20).lines[0]!.widthPx).toBe(30);
+  });
+});
+
+describe('shapeLineEditText — direction, language and structured override (line_edit.cpp:3104-3112)', () => {
+  /** The shaped line's glyph characters, left to right. */
+  function visual(props: Partial<LineEditProperties>, overrides: Partial<SolveNode> = {}): string {
+    const n = { ...node(props), ...overrides };
+    return visualChars(
+      shapeLineEditText(props.text ?? '', props, {
+        fontSizePx: 16,
+        fontMetrics: OPEN_SANS_FONT_METRICS,
+        ...controlBidiOptions(n.node.properties as LineEditProperties, n),
+      }).lines[0]!
+    );
+  }
+
+  it('shapes an RTL paragraph with `!` at the visual left', () => {
+    expect(visual({ text: 'Hello!', textDirection: 2 })).toBe('!Hello');
+  });
+
+  it('shapes an INHERITED paragraph at the layout direction', () => {
+    expect(visual({ text: 'Hello!', textDirection: 3 }, { rtl: true })).toBe('!Hello');
+    expect(visual({ text: 'Hello!', textDirection: 0 }, { rtl: true })).toBe('Hello!');
+  });
+
+  it('takes a neutral paragraph from the language', () => {
+    expect(visual({ text: '123!', textDirection: 0, language: 'he' })).toBe('!123');
+  });
+
+  it('keeps the FILE segments in logical order, left to right', () => {
+    expect(visual({ text: 'שלום/abc', textDirection: 2, structuredTextBidiOverride: 2 })).toBe('םולש/abc');
   });
 });

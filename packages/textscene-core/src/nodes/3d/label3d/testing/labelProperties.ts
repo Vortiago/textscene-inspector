@@ -10,6 +10,8 @@ import {
   AutowrapMode,
   DEFAULT_AUTOWRAP_TRIM_FLAGS,
   DEFAULT_JUSTIFICATION_FLAGS,
+  StructuredTextParser,
+  TextDirection,
 } from '../../../../godot/text/textServerEnums';
 import { AlphaAntiAliasing } from '../../../../godot/rendering/materials/alphaAntialiasing';
 
@@ -30,6 +32,10 @@ export function labelProperties(overrides: Partial<Label3DProperties> = {}): Lab
     horizontal_alignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
     vertical_alignment: VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
     uppercase: false,
+    textDirection: TextDirection.TEXT_DIRECTION_AUTO,
+    language: '',
+    structuredTextBidiOverride: StructuredTextParser.STRUCTURED_TEXT_DEFAULT,
+    structuredTextBidiOverrideOptions: [],
     width: 500,
     autowrap_mode: AutowrapMode.AUTOWRAP_OFF,
     autowrap_trim_flags: DEFAULT_AUTOWRAP_TRIM_FLAGS,

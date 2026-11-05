@@ -260,6 +260,8 @@ interface CheckButtonContentInput {
   textAlignment: number;
   /** The shaped text's natural (unwrapped) size, ignored when `hasText` is false. */
   textNaturalSize: Vector2;
+  /** Whether the shaped text infers RTL: an overflowing CENTER line then ends at the trailing edge. */
+  isTextRtl: boolean;
   /** `Control::is_layout_rtl()` (`SolveNode.rtl`): moves the toggle to the left edge and swaps the label's alignment side. */
   rtl: boolean;
 }
@@ -288,6 +290,7 @@ export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckB
     hasText,
     textAlignment,
     textNaturalSize,
+    isTextRtl,
     rtl,
   } = input;
 
@@ -303,7 +306,7 @@ export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckB
     const textBoxWidth = rectSize.x - 2 * marginX - reserved;
     const customElementHeight = rectSize.y - 2 * marginY;
     const align = rtl ? swapAlignmentSide(textAlignment) : textAlignment;
-    const shiftX = buttonTextAlignShiftPx(textNaturalSize.x, textBoxWidth, align);
+    const shiftX = buttonTextAlignShiftPx(textNaturalSize.x, textBoxWidth, align, isTextRtl);
     const x = marginX + (rtl ? reserved : 0) + shiftX;
     const y = centredTextTopPx(customElementHeight, textNaturalSize.y, marginY);
     textOffset = { x, y };

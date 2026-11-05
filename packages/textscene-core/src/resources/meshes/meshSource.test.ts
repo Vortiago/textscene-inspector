@@ -12,7 +12,13 @@ function scopedOf(type: string): ScopedResource {
 }
 
 function resolvedOf(type: string): ResolvableResource {
-  return { ...scopedOf(type), loadedFile: NO_FILES, loadedFont: NO_FONTS, projectFonts: NO_PROJECT_FONTS };
+  return {
+    ...scopedOf(type),
+    loadedFile: NO_FILES,
+    loadedFont: NO_FONTS,
+    projectFonts: NO_PROJECT_FONTS,
+    locale: '',
+  };
 }
 
 describe('undrawnMeshType', () => {

@@ -106,6 +106,8 @@ describe('checkBoxTextTheme', () => {
   it('a theme_override_colors/font_pressed_color override wins over the default', () => {
     const props: CheckBoxProperties = {
       name: 'C',
+      textDirection: 0,
+      language: '',
       themeOverrideColors: { font_pressed_color: { r: 1, g: 0, b: 0, a: 1 } },
     };
     expect(checkBoxTextTheme(node(props), props, 'pressed', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });

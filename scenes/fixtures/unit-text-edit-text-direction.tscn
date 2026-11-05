@@ -1,0 +1,72 @@
+; One variable: the paragraph direction of a TextEdit, through `text_direction`, `language` and the
+; structured override (text_edit.cpp:3394-3401). Each line shapes on its own.
+
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://fonts/dejavu-sans-bidi-subset.ttf" id="1_font"]
+
+[sub_resource type="Theme" id="Theme_1"]
+default_font = ExtResource("1_font")
+default_font_size = 28
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.1, 0.12, 0.18, 1)
+
+; RTL reorders each line. The text keeps its left offset.
+[node name="Rtl" type="TextEdit" parent="."]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 340.0
+offset_bottom = 120.0
+text = "Hello!
+שלום abc"
+text_direction = 2
+
+; AUTO gives each line its own direction.
+[node name="Auto" type="TextEdit" parent="."]
+offset_left = 40.0
+offset_top = 140.0
+offset_right = 340.0
+offset_bottom = 240.0
+text = "Hello!
+שלום abc!"
+
+; FILE runs on each line on its own.
+[node name="File" type="TextEdit" parent="."]
+offset_left = 40.0
+offset_top = 260.0
+offset_right = 440.0
+offset_bottom = 360.0
+text = "שלום/עולם/abc.txt
+שלום/abc"
+text_direction = 2
+structured_text_bidi_override = 2
+
+; Hebrew sets the direction of neutral text.
+[node name="NeutralHe" type="TextEdit" parent="."]
+offset_left = 40.0
+offset_top = 380.0
+offset_right = 340.0
+offset_bottom = 440.0
+text = "123!"
+language = "he"
+
+; INHERITED takes the right-to-left layout. A right-to-left control mirrors its own offsets in its parent (control.cpp:1785).
+[node name="Inherited" type="TextEdit" parent="."]
+layout_direction = 3
+offset_left = 252.0
+offset_top = 20.0
+offset_right = 552.0
+offset_bottom = 120.0
+text = "Hello!"
+text_direction = 3
+

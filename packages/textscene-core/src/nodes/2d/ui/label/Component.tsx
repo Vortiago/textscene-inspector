@@ -17,11 +17,11 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import { OutlineRingRun, textLayerRenderOrder } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { TextRun, type TextRunProps } from '../../../../r3f/controls/native/text/TextRun';
 import {
   LABEL_PARAGRAPH_SEPARATOR,
   applyVisibleCharsReveal,
-  labelBidiOptions,
   labelEffectiveTextTheme,
   labelFontState,
   labelPreShapeText,
@@ -126,19 +126,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   // WeakMap cache that a later async load fills in place, so each render must look.
   // The `useMemo` dependency on `fontMetrics` limits re-shaping to an identity change.
   const { metrics: fontMetrics, isLoading: isFontLoading } = labelFontState(solveNode);
-  const bidiOptions = useMemo(
-    () => labelBidiOptions(props, solveNode),
-    // `props` is the parsed node's own object: these four fields are its identity for the bidi pass.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      props.textDirection,
-      props.language,
-      props.structuredTextBidiOverride,
-      props.structuredTextBidiOverrideOptions,
-      solveNode.rtl,
-      solveNode.locale,
-    ]
-  );
+  const bidiOptions = useControlBidiOptions(props, solveNode);
   const layout = useMemo(() => {
     if (sharedLayout) return sharedLayout;
     const shaped = shapeText(text, {
@@ -196,7 +184,6 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
         fontMetrics,
         fontSizePx: textTheme.fontSizePx,
         ellipsisChar: props.ellipsisChar,
-        isRtl: line.isRtl,
       });
   }, [autowrapMode, overrunFlags, rect.w, fontMetrics, textTheme.fontSizePx, props.ellipsisChar]);
 

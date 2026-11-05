@@ -41,18 +41,17 @@ Strict parsing format-checks these `LinkButton` properties, plus 10 inherited fr
 <!-- lint:end -->
 
 `linterParser.ts` format-checks all of LinkButton's own members. `parser.ts` reads
-`text`, `uri`, `underline`, `text_overrun_behavior` and `ellipsis_char`. `language`,
-`text_direction` and the structured-text-bidi pair go into the untyped property bag with
-no substitution.
+`text`, `uri`, `underline`, `text_overrun_behavior`, `ellipsis_char`, `text_direction`,
+`language` and the structured-text-bidi pair. The label shapes in its own direction, language
+and override (`link_button.cpp:35-48`).
 
 A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
 outline ring (ADR-0064).
 
 ## Known limitations
 
+- **Not drawn** The text outline (`outline_size`, `font_outline_color`) that
+  `link_button.cpp:294-301` draws under the text.
 - **Approximated** A `theme_override_fonts/font` scene font takes its underline position
   and thickness from the vendored Open Sans metrics, because no scene font carries baked
   underline data.
-- **Approximated** Under `layout_direction = 3` or `text_direction = 2`, the label's glyphs
-  keep left-to-right order for a right-to-left script or trailing punctuation, though
-  `layout_direction = 3` swaps the label and its underline.
