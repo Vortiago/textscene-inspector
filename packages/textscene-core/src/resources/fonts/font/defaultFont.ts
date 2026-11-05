@@ -8,48 +8,87 @@
  */
 import type { FontFileResource, FontResource } from './types';
 import { perObject } from '../../../utils/perObject';
-import { findDrawnFace, hasGlyphs } from '../../../r3f/controls/native/text/sceneFontResolution';
+import {
+  FACELESS_FONT,
+  findDrawnFace,
+  hasGlyphs,
+} from '../../../r3f/controls/native/text/sceneFontResolution';
 
 /**
- * The font each Godot class without a face takes: the default theme context's `font` for that
- * class's type chain. Null is the bundled font, and a font left with no face draws it.
+ * The fonts each Godot class without a face tries, in Godot's order: the default theme context's
+ * `font` for that class's type chain, then the fallback theme's. Null is the bundled font. A font
+ * takes the first that is not itself (`isBaseCyclic`), and with none it draws no face.
  */
 export interface DefaultFonts {
-  readonly variation: FontResource | null;
-  readonly system: FontResource | null;
+  readonly variation: readonly (FontResource | null)[];
+  readonly system: readonly (FontResource | null)[];
 }
 
-export const NO_DEFAULT_FONTS: DefaultFonts = { variation: null, system: null };
+export const NO_DEFAULT_FONTS: DefaultFonts = { variation: [null], system: [null] };
+
+/** Godot's `MAX_FALLBACK_DEPTH` (`font.h:93`): a deeper chain of defaults is a cycle, and draws no face. */
+const MAX_DEFAULT_DEPTH = 64;
 
 /**
  * Keyed by the defaults, then by font, so a font answers one object per `DefaultFonts` and a
  * metrics cache keyed on it keeps its hits. The theme lookup builds one `DefaultFonts` per project.
  */
 const resolvedOver = perObject((defaults: DefaultFonts) =>
-  perObject((font: FontResource) => replaceDefaults(font, defaults))
+  perObject((font: FontResource) => replaceDefaults(font, defaults, 0))
 );
 
+/** `Font::_is_base_cyclic` (`font.cpp:152-169`): whether `candidate` is `font`, or its `base_font` chain reaches it. */
+function isBaseCyclic(candidate: FontResource | null, font: FontResource): boolean {
+  for (let link = candidate; link; link = link.kind === 'variation' ? link.baseFont : null) {
+    if (link === font) return true;
+  }
+  return false;
+}
+
+/**
+ * The default `font` takes (`_get_base_font_or_default`, `font.cpp:2987-3039` and `3368-3415`), with
+ * the defaults under it in turn. A font with no default draws no face: Godot gives it no RID, and
+ * its text draws hex-code boxes.
+ */
+function defaultOf(
+  font: FontResource,
+  candidates: readonly (FontResource | null)[],
+  defaults: DefaultFonts,
+  depth: number
+): FontResource | null {
+  const index = candidates.findIndex((candidate) => !isBaseCyclic(candidate, font));
+  if (index < 0 || depth >= MAX_DEFAULT_DEPTH) return FACELESS_FONT;
+  const chosen = candidates[index]!;
+  return chosen && replaceDefaults(chosen, defaults, depth + 1);
+}
+
 /** `font` itself where nothing under it changes, so an untouched branch keeps its identity. */
-function replaceDefaults(font: FontResource, defaults: DefaultFonts): FontResource {
+function replaceDefaults(font: FontResource, defaults: DefaultFonts, depth: number): FontResource {
   switch (font.kind) {
     case 'system':
-      return defaults.system ?? font;
+      return defaultOf(font, defaults.system, defaults, depth) ?? font;
     case 'variation': {
-      const baseFont = font.baseFont ? replaceDefaults(font.baseFont, defaults) : defaults.variation;
+      const baseFont = font.baseFont
+        ? replaceDefaults(font.baseFont, defaults, depth)
+        : defaultOf(font, defaults.variation, defaults, depth);
       return baseFont === font.baseFont ? font : { ...font, baseFont };
     }
     case 'file': {
       if (hasGlyphs(font)) return font;
-      return withFallbackDefaults(font, defaults);
+      return withFallbackDefaults(font, defaults, depth);
     }
   }
 }
 
 /** Up to the first fallback that draws: the walk never reaches the fallbacks after it. */
-function withFallbackDefaults(font: FontFileResource, defaults: DefaultFonts): FontFileResource {
+function withFallbackDefaults(
+  font: FontFileResource,
+  defaults: DefaultFonts,
+  depth: number
+): FontFileResource {
   const fallbacks = [...font.fallbacks];
   for (const [i, fallback] of fallbacks.entries()) {
-    fallbacks[i] = replaceDefaults(fallback, defaults);
+    fallbacks[i] = replaceDefaults(fallback, defaults, depth);
     if (findDrawnFace(fallbacks[i])) break;
   }
   return fallbacks.every((fallback, i) => fallback === font.fallbacks[i]) ? font : { ...font, fallbacks };
@@ -62,7 +101,6 @@ function withFallbackDefaults(font: FontFileResource, defaults: DefaultFonts): F
  */
 export function withDefaultFonts(font: FontResource | null, defaults: DefaultFonts): FontResource | null {
   // A file with its own glyphs draws them, and the walk never reaches its fallbacks.
-  if (!font || (font.kind === 'file' && hasGlyphs(font)) || (!defaults.variation && !defaults.system))
-    return font;
+  if (!font || (font.kind === 'file' && hasGlyphs(font))) return font;
   return resolvedOver(defaults)(font);
 }

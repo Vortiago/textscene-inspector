@@ -5,6 +5,8 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
+import { fontResourceFromBitmap } from '../../../../resources/fonts/font/loadFont';
+import { testBitmapFont } from '../../../../r3f/controls/native/text/bitmapFontMetrics.testkit';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
@@ -134,7 +136,7 @@ describe('resolveRichTextFaces', () => {
   it("lets a style's own embolden win over the project font's, as the outermost FontVariation does (font.cpp:3128-3131)", () => {
     const projectFont: FontResource = {
       kind: 'variation',
-      baseFont: null,
+      baseFont: fontResourceFromBitmap(testBitmapFont(), {}),
       properties: { variation_embolden: '0.5' },
     };
     const faces = facesOf(

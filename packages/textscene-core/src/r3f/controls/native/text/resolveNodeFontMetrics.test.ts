@@ -16,6 +16,8 @@ import {
 } from './resolveNodeFontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { fontFile } from './sfntOutlines.testkit';
+import { fontResourceFromBitmap } from '../../../../resources/fonts/font/loadFont';
+import { testBitmapFont } from './bitmapFontMetrics.testkit';
 import { withVariation, type FontMetrics } from './fontMetrics';
 import * as logger from '../../../../logger';
 import * as themeLookup from '../../../../resources/styles/theme/lookup';
@@ -110,8 +112,15 @@ describe('resolveNodeFontMetrics', () => {
   });
 });
 
+/** A BMFont, whose face is there with no load: a bare FontVariation as the project font has no face. */
+const BITMAP_FILE = fontResourceFromBitmap(testBitmapFont(), {});
+
 describe('resolveNodeFont — the project default font as the last rung', () => {
-  const projectFont: FontResource = { kind: 'variation', baseFont: null, properties: { project: '1' } };
+  const projectFont: FontResource = {
+    kind: 'variation',
+    baseFont: BITMAP_FILE,
+    properties: { project: '1' },
+  };
 
   it('is the project default font for a Control that no theme gives a font', () => {
     expect(
@@ -150,7 +159,7 @@ describe('resolveNodeFont — the project default font as the last rung', () => 
 describe('resolveNodeFontMetricsOr — a last rung of its own for a key no theme or override defines', () => {
   const embolden = (value: string): FontResource => ({
     kind: 'variation',
-    baseFont: null,
+    baseFont: BITMAP_FILE,
     properties: { variation_embolden: value },
   });
 

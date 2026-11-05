@@ -22,11 +22,23 @@ export const hasGlyphs = (file: FontFileResource): file is FileWithBytes | FileW
 /** What no font, a `SystemFont` and a `FontVariation` with no `base_font` draw: the bundled font. */
 export const BUNDLED_FACE = Symbol('bundled face');
 
+/** What a font whose every default is itself draws: no face, so Godot gives it no RID (`font.cpp:3675-3694`). */
+export const NO_FACE = Symbol('no face');
+
+/** The font `withDefaultFonts` puts where Godot finds no default: it draws `NO_FACE`. */
+export const FACELESS_FONT: FontFileResource = Object.freeze({
+  kind: 'file',
+  bytes: undefined,
+  mimeType: undefined,
+  fallbacks: [],
+  properties: {},
+});
+
 /**
- * The face a font draws: the first font file with glyphs of its own, `BUNDLED_FACE`, or null for a
- * chain that reaches no glyphs. `sceneFontLoader.ts` keys its load cache on the file's identity.
+ * The face a font draws: the first font file with glyphs of its own, `BUNDLED_FACE`, `NO_FACE`, or
+ * null for a chain that reaches no glyphs. `sceneFontLoader.ts` keys its load cache on the file's identity.
  */
-export type DrawnFace = FileWithBytes | FileWithBitmap | typeof BUNDLED_FACE | null;
+export type DrawnFace = FileWithBytes | FileWithBitmap | typeof BUNDLED_FACE | typeof NO_FACE | null;
 
 /**
  * Depth first: `FontVariation` to `baseFont`, `FontFile` to itself when it has glyphs, else the first
@@ -36,6 +48,7 @@ export type DrawnFace = FileWithBytes | FileWithBitmap | typeof BUNDLED_FACE | n
 export function findDrawnFace(font: FontResource | null | undefined): DrawnFace {
   if (!font || font.kind === 'system') return BUNDLED_FACE;
   if (font.kind === 'variation') return findDrawnFace(font.baseFont);
+  if (font === FACELESS_FONT) return NO_FACE;
   if (hasGlyphs(font)) return font;
   for (const fallback of font.fallbacks) {
     const face = findDrawnFace(fallback);
@@ -80,12 +93,12 @@ export function fontVariationOpentype(font: FontResource | null | undefined): Op
 /**
  * The `generate_mipmaps` of the face `font` draws with: a font keeps its own, and the project
  * setting reaches the bundled font only (`default_theme.cpp:1359-1386`). Undefined for a font that
- * draws the bundled font, where the caller reads the project setting.
+ * draws the bundled font, where the caller reads the project setting, and for one that draws no face.
  */
 export function fontGeneratesMipmaps(font: FontResource | null): boolean | undefined {
   if (font?.kind === 'variation') return fontGeneratesMipmaps(font.baseFont);
   const face = findDrawnFace(font);
-  if (!font || face === BUNDLED_FACE) return undefined;
+  if (!font || face === BUNDLED_FACE || face === NO_FACE) return undefined;
   return boolSlotValue((face ?? font).properties['generate_mipmaps']) ?? false;
 }
 

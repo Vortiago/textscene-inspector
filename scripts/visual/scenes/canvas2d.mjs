@@ -274,6 +274,16 @@ export const CANVAS_2D_SCENES = [
     file: 'project-default-font/unit-label-project-default-font.tscn',
     mode: '2d',
   },
+  // The one variable: a SystemFont as `gui/theme/custom_font`, which is every default it tries, so
+  // it has no face and draws hex-code boxes, under a FontVariation too.
+  {
+    name: 'label-custom-font-system-font',
+    file: 'custom-font-system-font/unit-custom-font-system-font-label.tscn',
+    mode: '2d',
+  },
+  // The one variable: a SystemFont as the project theme's `default_font`, which skips itself and
+  // draws `gui/theme/custom_font`.
+  { name: 'label-theme-system-font', file: 'theme-system-font/unit-theme-system-font.tscn', mode: '2d' },
   // The one variable: a BMFont `.fnt` font at its fixed size, double, one and a half times, tinted, and with a missing glyph.
   { name: 'label-bmfont', file: 'unit-label-bmfont.tscn', mode: '2d' },
   // The one variable: a BMFont's outline set, which Godot draws for any `outline_size` above 0.

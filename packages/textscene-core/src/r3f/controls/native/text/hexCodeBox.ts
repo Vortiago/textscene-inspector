@@ -28,8 +28,12 @@ function hexCodeBoxCells(
 ): { byteWidth: number; spacer: number; cellPx: number } {
   const byteWidth = codepoint <= 0xff ? 1 : codepoint <= 0xffff ? 2 : 3;
   const spacer = Math.max(0, byteWidth - 1);
-  const cellPx = Math.max(1, godotRound(fontSizePx / 15));
-  return { byteWidth, spacer, cellPx };
+  return { byteWidth, spacer, cellPx: hexCodeBoxCellPx(fontSizePx) };
+}
+
+/** `sz` (`text_server.cpp:738`): the pixels of one cell of a hex-code box, whose frame is 15 cells high. */
+export function hexCodeBoxCellPx(fontSizePx: number): number {
+  return Math.max(1, godotRound(fontSizePx / 15));
 }
 
 /**

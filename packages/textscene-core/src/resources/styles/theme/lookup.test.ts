@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
+import { FACELESS_FONT } from '../../../r3f/controls/native/text/sceneFontResolution';
 import {
   findThemeFontIn,
   fontForNode,
@@ -356,6 +357,22 @@ describe('resolveThemeFontIn — a SystemFont', () => {
   it('stays a SystemFont, which draws the bundled font, when the project sets no font', () => {
     const scope = themeResolutionScope('Label', undefined, [], NO_PROJECT_FONTS);
     expect(resolveThemeFontIn(scope, 'font', SYSTEM_FONT)).toBe(SYSTEM_FONT);
+  });
+
+  it("as the project theme's default_font, skips itself and takes the project's custom_font", () => {
+    const scope = themeResolutionScope('Label', undefined, [], {
+      projectTheme: theme({ defaultFont: SYSTEM_FONT }),
+      projectDefaultFont: FONT_A,
+    });
+    expect(resolveThemeFontIn(scope, 'font', undefined)).toBe(FONT_A);
+  });
+
+  it("as the project's custom_font, draws no face: every default Godot tries is itself", () => {
+    const scope = themeResolutionScope('Label', undefined, [], {
+      projectTheme: null,
+      projectDefaultFont: SYSTEM_FONT,
+    });
+    expect(resolveThemeFontIn(scope, 'font', undefined)).toBe(FACELESS_FONT);
   });
 });
 

@@ -112,22 +112,20 @@ export interface ThemeResolutionScope {
 }
 
 /**
- * The default font of a `FontVariation` with no `base_font` or a `SystemFont`
- * (`_get_base_font_or_default`, `scene/resources/font.cpp:2987-3039` and `3368-3415`): the default
- * theme context's `font` for `fontClass`, the project theme first, then the default theme, whose
- * `default_font` is `projectDefaultFont`. A scene ancestor's theme is not in that context.
+ * The fonts a `FontVariation` with no `base_font` or a `SystemFont` tries for its default
+ * (`_get_base_font_or_default`, `scene/resources/font.cpp:2987-3039` and `3368-3415`): the project
+ * theme's `font` for each type of `fontClass`, then the default theme's `default_font`, which is
+ * `projectDefaultFont`, as is the fallback theme's font (`theme_db.cpp:73-80`). A scene ancestor's
+ * theme is not in that context.
  */
-function defaultFontOf(
+function defaultFontCandidates(
   fontClass: 'FontVariation' | 'SystemFont',
   { projectTheme, projectDefaultFont }: ProjectFonts
-): FontResource | null {
-  if (projectTheme) {
-    for (const type of nativeTypeChain(fontClass)) {
-      const found = fontInTheme(projectTheme, type, 'font');
-      if (found !== undefined) return found;
-    }
-  }
-  return projectDefaultFont;
+): (FontResource | null)[] {
+  const themed = projectTheme
+    ? nativeTypeChain(fontClass).map((type) => fontInTheme(projectTheme, type, 'font'))
+    : [];
+  return [...themed.filter((found) => found !== undefined), projectDefaultFont];
 }
 
 /** Stands in for a null project theme or project font as a cache key. */
@@ -146,8 +144,8 @@ function defaultFontsOf(projectFonts: ProjectFonts): DefaultFonts {
   const cached = byFont.get(fontKey);
   if (cached) return cached;
   const defaults: DefaultFonts = {
-    variation: defaultFontOf('FontVariation', projectFonts),
-    system: defaultFontOf('SystemFont', projectFonts),
+    variation: defaultFontCandidates('FontVariation', projectFonts),
+    system: defaultFontCandidates('SystemFont', projectFonts),
   };
   byFont.set(fontKey, defaults);
   return defaults;
@@ -160,11 +158,12 @@ export function themeResolutionScope(
   projectFonts: ProjectFonts
 ): ThemeResolutionScope {
   const { projectTheme, projectDefaultFont } = projectFonts;
+  const defaultFonts = defaultFontsOf(projectFonts);
   return {
     typeChain: buildThemeTypeChain(nativeType, typeVariation, ancestorThemes, projectTheme),
     searchOrder: themeSearchOrder(ancestorThemes, projectTheme),
-    projectDefaultFont,
-    defaultFonts: defaultFontsOf(projectFonts),
+    projectDefaultFont: withDefaultFonts(projectDefaultFont, defaultFonts),
+    defaultFonts,
   };
 }
 

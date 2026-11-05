@@ -122,4 +122,6 @@ second font cannot reimplement it and drop it.
   failure: it draws the default font with no warning, as Godot does when no OS font matches
   its names (`SystemFont::_get_base_font_or_default`, `font.cpp:3368-3415`). The previewer
   reads no OS font, so a name the OS would match is a resource gap, not Godot's behaviour.
+  A default that is the font itself is skipped (`Font::_is_base_cyclic`, `font.cpp:152-169`).
+  A font with no other default has no face, and its text draws hex-code boxes, as in Godot.
 - **Two paths is a real cost.** Do not delete the path the CSP requires to "clean it up".

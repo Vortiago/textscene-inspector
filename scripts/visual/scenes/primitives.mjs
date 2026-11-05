@@ -37,6 +37,9 @@ export const PRIMITIVE_SCENES = [
   // `gui/theme/custom_font` names a CFF font.
   { name: 'text-mesh-default-font', file: 'unit-text-mesh-default-font.tscn' },
   { name: 'text-mesh-system-font', file: 'unit-text-mesh-system-font.tscn' },
+  // The same scene, plus a Label3D, on a SystemFont as `gui/theme/custom_font`, which has no face:
+  // each glyph draws a fallback quad, and the Label3D draws nothing.
+  { name: 'text-mesh-custom-font-system-font', file: 'custom-font-system-font/unit-custom-font-system-font-3d.tscn' },
   { name: 'text-mesh-project-default-font', file: 'project-default-font/unit-text-mesh-project-default-font.tscn' },
   // The one variable: a TextMesh's paragraph direction, language and structured override.
   { name: 'text-mesh-text-direction', file: 'unit-text-mesh-text-direction.tscn', camera: 'Root/Camera3D' },

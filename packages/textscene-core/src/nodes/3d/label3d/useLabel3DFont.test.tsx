@@ -37,9 +37,21 @@ vi.mock('../../../r3f/controls/native/text/bundledFontLoader', () => ({
   peekBundledCanvasFontMetrics: () => bundled.metrics,
 }));
 
+const BOLD_VARIATION =
+  '[gd_resource type="FontVariation" format=3]\n\n[resource]\nvariation_embolden = 2.0\n';
+
+/** The project theme's `default_font` is a bare FontVariation, which skips itself and takes the bundled font. */
 const PROJECT_FONT_FILES = {
+  'res://project.godot': 'config_version=5\n\n[gui]\n\ntheme/custom="res://theme.tres"\n',
+  'res://theme.tres':
+    '[gd_resource type="Theme" load_steps=2 format=3]\n\n[ext_resource type="FontVariation" path="res://bold.tres" id="1"]\n\n[resource]\ndefault_font = ExtResource("1")\n',
+  'res://bold.tres': BOLD_VARIATION,
+};
+
+/** A bare FontVariation as `custom_font` is every default it tries, so it draws no face. */
+const FACELESS_PROJECT_FILES = {
   'res://project.godot': 'config_version=5\n\n[gui]\n\ntheme/custom_font="res://bold.tres"\n',
-  'res://bold.tres': '[gd_resource type="FontVariation" format=3]\n\n[resource]\nvariation_embolden = 2.0\n',
+  'res://bold.tres': BOLD_VARIATION,
 };
 
 const OWN_FONT: TscnInternalResource = {
@@ -139,6 +151,21 @@ describe('useLabel3DFont metrics', () => {
     const { result } = renderMetrics('SubResource("own")', PROJECT_FONT_FILES);
 
     await settledMetrics(result, { kind: 'canvas', embolden: 1 });
+  });
+
+  it('draws glyphs for a font with a face', async () => {
+    const { result } = renderMetrics(undefined);
+
+    await settle();
+
+    expect(result.current?.drawsGlyphs).toBe(true);
+  });
+
+  // `label_3d.cpp:344-358`: a glyph with no font RID has no texture, so Label3D draws nothing.
+  it('draws no glyph for a font with no face', async () => {
+    const { result } = renderMetrics(undefined, FACELESS_PROJECT_FILES);
+
+    await vi.waitFor(() => expect(result.current?.drawsGlyphs).toBe(false));
   });
 
   it('is undefined while the project font loads', async () => {

@@ -8,6 +8,8 @@ import { fontFile, systemFont } from './sfntOutlines.testkit';
 import { peekSceneFontMetrics, peekSettledSceneFontMetrics } from './sceneFontLoader';
 import { fontWork, onSceneFontSettled, sceneFontSettleCount } from './settledChannel';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
+import { FACELESS_FONT } from './sceneFontResolution';
+import { getFontAscentPx, getFontLinePitchPx } from './fontMetrics';
 import * as logger from '../../../../logger';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 
@@ -67,6 +69,22 @@ describe('peekSceneFontMetrics', () => {
     const leaf = fontFile(new ArrayBuffer(4));
     const metrics = peekSceneFontMetrics(leaf, 'Root/D');
     expect(metrics).toBe(OPEN_SANS_FONT_METRICS);
+  });
+});
+
+describe('peekSettledSceneFontMetrics — a font with no face', () => {
+  // `text_server_adv.cpp:6886-6889`: the line holds a hex-code box, 15 cells of `round(size / 15)` px.
+  it('holds a hex-code box line: 0.85 of the box above the baseline, 0.15 below', () => {
+    const metrics = peekSettledSceneFontMetrics(FACELESS_FONT, 'Label')!;
+    expect([getFontAscentPx(metrics, 56), getFontLinePitchPx(metrics, 56, 0)]).toEqual([51, 60]);
+  });
+
+  it('has a glyph for no character, so each draws as a hex-code box', () => {
+    expect(peekSettledSceneFontMetrics(FACELESS_FONT, 'Label')!.getGlyphAdvanceUnits('H')).toBeNull();
+  });
+
+  it('keeps a cell of 1 px at a size whose cell rounds to 0', () => {
+    expect(getFontAscentPx(peekSettledSceneFontMetrics(FACELESS_FONT, 'Label')!, 6)).toBe(12.75);
   });
 });
 

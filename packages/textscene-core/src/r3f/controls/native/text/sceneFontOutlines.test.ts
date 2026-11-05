@@ -5,7 +5,7 @@ import { fontWork, sceneFontSettleCount } from './settledChannel';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { peekGlyphOutlines, peekSceneFontOutlines } from './sceneFontOutlines';
-import { findDrawnFace } from './sceneFontResolution';
+import { FACELESS_FONT, findDrawnFace } from './sceneFontResolution';
 import { charContours, fixtureFontBytes, fontFile, systemFont } from './sfntOutlines.testkit';
 import autoHintedReference from './autofit/autoHinting.godot.json';
 import { referencePoints, type ReferenceGlyph } from './glyphVariation.testkit';
@@ -19,6 +19,10 @@ async function settledOutlines(font: FontResource | null) {
 }
 
 describe('peekSceneFontOutlines', () => {
+  it('lacks every glyph for a font with no face, so a TextMesh draws each as its fallback quad', () => {
+    expect(peekSceneFontOutlines(FACELESS_FONT)?.glyphIndex('H'.codePointAt(0)!)).toBe(0);
+  });
+
   it('answers undefined while a WOFF decompresses, then its outlines', async () => {
     const font = woffOfOpenSans();
 

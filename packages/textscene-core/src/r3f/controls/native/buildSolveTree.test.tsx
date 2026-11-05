@@ -1461,10 +1461,10 @@ describe('useBuildSolveTree — theme resolution', () => {
 
       await settle();
 
-      expect(result.current.tree[0]?.labelSettingsFont).toBe(
-        result.current.tree[0]?.projectFonts.projectDefaultFont
-      );
-      expect(result.current.tree[0]?.labelSettingsFont).toMatchObject({ kind: 'variation' });
+      expect(result.current.tree[0]?.labelSettingsFont).toMatchObject({
+        kind: 'variation',
+        properties: { spacing_glyph: '3' },
+      });
     });
 
     it('is null for a project that sets no custom_font', async () => {

@@ -169,7 +169,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
 
   // Nothing renders before the family registers: `ctx.fillText` against an
   // unregistered one rasterises a system font, frame-stable, so no golden catches it.
-  if (!fontMetrics) return null;
+  if (!fontMetrics || !font.drawsGlyphs) return null;
 
   // `modulate` is authored sRGB. Godot decodes the vertex colour (`label_3d.cpp:428`)
   // through `FLAG_SRGB_VERTEX_COLOR` (`material.cpp:3048-3049`, `material.cpp:1218`).

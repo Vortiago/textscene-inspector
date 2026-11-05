@@ -14,6 +14,7 @@ import {
 } from './runtimeFontMetrics';
 import {
   BUNDLED_FACE,
+  NO_FACE,
   findDrawnFace,
   fontVariationEmbolden,
   fontVariationOpentype,
@@ -21,6 +22,7 @@ import {
   hasBitmap,
 } from './sceneFontResolution';
 import { createBitmapFontMetrics } from './bitmapFontMetrics';
+import { NO_FACE_METRICS } from './noFaceMetrics';
 import { perObject } from '../../../../utils/perObject';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
@@ -151,6 +153,7 @@ export function peekSettledSceneFontMetrics(
   const face = findDrawnFace(font);
   // No failure, so no warning: Godot draws the bundled font here too.
   if (face === BUNDLED_FACE) return withVariation(OPEN_SANS_FONT_METRICS, fontVariation(font));
+  if (face === NO_FACE) return NO_FACE_METRICS;
   if (!face) {
     warnUnresolvable(font, nodePath);
     return OPEN_SANS_FONT_METRICS;

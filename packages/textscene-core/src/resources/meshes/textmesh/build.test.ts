@@ -6,6 +6,9 @@ import {
   type GlyphVariation,
 } from '../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
+import { NO_FACE_METRICS } from '../../../r3f/controls/native/text/noFaceMetrics';
+import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
+import { FACELESS_FONT } from '../../../r3f/controls/native/text/sceneFontResolution';
 import { openFontOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { shapedTextSizeWidthPx, shapeText } from '../../../r3f/controls/native/text/textLayout';
@@ -304,6 +307,20 @@ describe('buildTextMeshSurface missing glyph', () => {
     );
     expect(axis(surface, 2)).toEqual([0, 0, 0, 0]);
     expect(Array.from(surface.indices)).toEqual([0, 1, 2, 0, 2, 3]);
+  });
+
+  // Godot 4.6.3 `TextMesh.get_mesh_arrays()` of "8aA" at 64 px, depth 0, on a SystemFont as the project font.
+  it('places a quad per glyph of a font with no face, at the vertices Godot builds', () => {
+    const noFace = withOutlines(NO_FACE_METRICS, peekSceneFontOutlines(FACELESS_FONT)!);
+    const properties = decodeTextMesh({ text: '"8aA"', font_size: String(FONT_SIZE), depth: '0.0' });
+    const surface = buildTextMeshSurface(properties, '', noFace);
+    const quad = (left: number, right: number) => [left, -0.21, left, 0.39, right, 0.39, right, -0.21];
+    const godot = [...quad(-0.48, -0.16), ...quad(-0.16, 0.16), ...quad(0.16, 0.48)];
+    const xy = Array.from(
+      { length: godot.length },
+      (_v, i) => surface.positions[Math.floor(i / 2) * 3 + (i % 2)]!
+    );
+    expect(xy).toEqual(godot.map((value) => expect.closeTo(value, 6)));
   });
 
   it('leaves the quad out of the box the UV spans', () => {

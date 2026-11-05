@@ -3,6 +3,8 @@ import { fontFile, systemFont } from './sfntOutlines.testkit';
 import { testBitmapFont } from './bitmapFontMetrics.testkit';
 import {
   BUNDLED_FACE,
+  FACELESS_FONT,
+  NO_FACE,
   findDrawnFace,
   fontGeneratesMipmaps,
   fontVariationOpentype,
@@ -24,6 +26,10 @@ describe('findDrawnFace', () => {
       BUNDLED_FACE,
       BUNDLED_FACE,
     ]);
+  });
+
+  it('is no face for the font with no default, through a variation', () => {
+    expect(findDrawnFace(variationOver(FACELESS_FONT))).toBe(NO_FACE);
   });
 
   it('is a FontFile that carries its own bytes, or a BMFont', () => {

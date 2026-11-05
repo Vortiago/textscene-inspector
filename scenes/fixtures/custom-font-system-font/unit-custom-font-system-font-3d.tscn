@@ -1,0 +1,44 @@
+[gd_scene load_steps=6 format=3]
+
+; The TextMesh scene of unit-text-mesh-default-font.tscn, plus a Label3D, on the project SystemFont,
+; which has no face: each TextMesh glyph draws its fallback quad, and the Label3D draws nothing.
+
+[sub_resource type="Gradient" id="Gradient_uv"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv"]
+gradient = SubResource("Gradient_uv")
+fill_to = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv"]
+shading_mode = 0
+albedo_texture = SubResource("GradientTexture2D_uv")
+
+[sub_resource type="TextMesh" id="TextMesh_deep"]
+material = SubResource("StandardMaterial3D_uv")
+text = "8aA"
+font_size = 64
+depth = 0.2
+
+[sub_resource type="TextMesh" id="TextMesh_flat"]
+material = SubResource("StandardMaterial3D_uv")
+text = "8aA"
+font_size = 64
+depth = 0.0
+
+[node name="Root" type="Node3D"]
+
+[node name="Deep" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, -1.1, 0, 0)
+mesh = SubResource("TextMesh_deep")
+
+[node name="Flat" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, 1.1, 0, 0)
+mesh = SubResource("TextMesh_flat")
+
+[node name="Caption" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.8, 0)
+font_size = 64
+text = "Hog"

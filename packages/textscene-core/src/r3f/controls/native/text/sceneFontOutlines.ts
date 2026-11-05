@@ -8,7 +8,13 @@ import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import { isGlyphVaried, type FontMetrics, type GlyphVariation } from './fontMetrics';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
-import { BUNDLED_FACE, findDrawnFace, fontForcesAutohinter, type DrawnFace } from './sceneFontResolution';
+import {
+  BUNDLED_FACE,
+  NO_FACE,
+  findDrawnFace,
+  fontForcesAutohinter,
+  type DrawnFace,
+} from './sceneFontResolution';
 import { createSettledPeek } from './settledChannel';
 import { openAutoHintedFontOutlines, openFontOutlines, type SfntOutlines } from './sfntOutlines';
 
@@ -20,6 +26,9 @@ const peekOutlines = createSettledPeek<object, SfntOutlines | null>();
 
 /** The cache key of the bundled font, which has no resource. */
 const BUNDLED = {};
+
+/** The outlines of a font with no face: it lacks every glyph, so a TextMesh draws each as its fallback quad. */
+const NO_OUTLINES: SfntOutlines = { glyphIndex: () => 0, glyphContours: () => null };
 
 /** Settles as null for a font this reader cannot open, after a warning. */
 function settledOutlines(read: () => Promise<SfntOutlines | null>): Promise<SfntOutlines | null> {
@@ -55,6 +64,7 @@ export function peekSceneFontOutlines(font: FontResource | null | undefined): Pe
 /** The outlines of the face a font draws, which a caller with the face in hand reads without a second walk. */
 function peekFaceOutlines(face: DrawnFace): PeekedOutlines {
   if (face === BUNDLED_FACE) return peekBundledOutlines();
+  if (face === NO_FACE) return NO_OUTLINES;
   const bytes = face?.bytes;
   if (!face || !bytes) return null;
   const open = fontForcesAutohinter(face) ? openAutoHintedFontOutlines : openFontOutlines;

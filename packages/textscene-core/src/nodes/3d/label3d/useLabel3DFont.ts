@@ -15,7 +15,11 @@ import {
   type CanvasFontMetrics,
 } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { peekSettledSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
-import { fontGeneratesMipmaps } from '../../../r3f/controls/native/text/sceneFontResolution';
+import {
+  NO_FACE,
+  findDrawnFace,
+  fontGeneratesMipmaps,
+} from '../../../r3f/controls/native/text/sceneFontResolution';
 import { useSceneFontSettleCount } from '../../../r3f/controls/native/text/useSceneFontSettleCount';
 import { resolveFontReference } from '../../../resources/fonts/font/resolveFontReference';
 import { fontForNode } from '../../../resources/styles/theme/lookup';
@@ -29,6 +33,11 @@ export interface Label3DFont {
   metrics: CanvasFontMetrics;
   /** Whether the glyph raster carries a mip chain: the font's own setting, or the project's for the bundled font. */
   generatesMipmaps: boolean;
+  /**
+   * False for a font with no face: its glyphs have no texture, so Godot draws nothing
+   * (`label_3d.cpp:344-358`). The metrics still shape the label.
+   */
+  drawsGlyphs: boolean;
 }
 
 /**
@@ -56,6 +65,7 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
     return {
       metrics,
       generatesMipmaps: fontGeneratesMipmaps(font) ?? projectDefaultFontGeneratesMipmaps(settings),
+      drawsGlyphs: findDrawnFace(font) !== NO_FACE,
     };
   };
   const label3DFont = isLoading ? undefined : settledFont();
