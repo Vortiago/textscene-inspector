@@ -315,7 +315,8 @@ function revealCharacters(
   if (visibleChars === undefined || visibleChars < 0) return [...lines];
   // Glyph source indices are UTF-16 offsets; the budget counts code points.
   const visibleEnd = utf16OffsetOf(text, visibleChars);
-  // `paragraphStart - 1 <= visibleChars` in code points is `paragraphStart <= visibleChars + 1` in offsets.
+  // `paragraphStart - 1 <= visibleChars` in code points is `paragraphStart <= ellipsisEnd`, the offset
+  // of code point `visibleChars + 1`.
   const ellipsisEnd = utf16OffsetOf(text, visibleChars + 1);
   return lines.map((line) => {
     const isEllipsisShown = (line.paragraphStart ?? 0) <= ellipsisEnd;
