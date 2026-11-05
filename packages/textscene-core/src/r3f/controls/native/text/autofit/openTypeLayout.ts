@@ -465,7 +465,7 @@ function inputAfterFirst(dv: DataView, at: number, inputCount: number): number[]
 }
 
 /** A `SequenceRule` of a context subtable of format 1 or 2. */
-export function readSequenceRule(dv: DataView, at: number): ContextRule {
+function readSequenceRule(dv: DataView, at: number): ContextRule {
   const inputCount = u16(dv, at);
   const input = inputAfterFirst(dv, at + 4, inputCount);
   return {
@@ -478,7 +478,7 @@ export function readSequenceRule(dv: DataView, at: number): ContextRule {
 }
 
 /** A `ChainedSequenceRule` of a chained context subtable of format 1 or 2. */
-export function readChainedSequenceRule(dv: DataView, at: number): ContextRule {
+function readChainedSequenceRule(dv: DataView, at: number): ContextRule {
   const backtrack = countedU16Values(dv, at);
   const inputAt = at + 2 + 2 * backtrack.length;
   const inputCount = u16(dv, inputAt);
@@ -491,7 +491,7 @@ export function readChainedSequenceRule(dv: DataView, at: number): ContextRule {
 }
 
 /** The single rule of a context subtable of format 3 at `subtable`. */
-export function readSequenceContextFormat3(dv: DataView, subtable: number): CoverageContextRule {
+function readSequenceContextFormat3(dv: DataView, subtable: number): CoverageContextRule {
   const inputCount = u16(dv, subtable + 2);
   const coverages = u16Values(dv, subtable + 6, inputCount);
   return {
@@ -505,7 +505,7 @@ export function readSequenceContextFormat3(dv: DataView, subtable: number): Cove
 }
 
 /** The single rule of a chained context subtable of format 3 at `subtable`. */
-export function readChainedSequenceContextFormat3(dv: DataView, subtable: number): CoverageContextRule {
+function readChainedSequenceContextFormat3(dv: DataView, subtable: number): CoverageContextRule {
   const backtrack = countedU16Values(dv, subtable + 2);
   const inputAt = subtable + 4 + 2 * backtrack.length;
   const coverages = countedU16Values(dv, inputAt);
