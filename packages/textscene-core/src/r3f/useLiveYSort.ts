@@ -3,7 +3,7 @@
  * sort y each draws at now, and re-renders only on a frame where that changes the sorted order.
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Object3D } from 'three';
 import { useOnMixerPose } from './contexts/AnimatedValueContext.js';
 import { useOptionalSelection } from './contexts/SelectionContext.js';
@@ -39,20 +39,14 @@ export function useLiveYSort(items: readonly YSortItem[], basePath: string): rea
   const ys = live.items === items ? live.ys : NO_YS;
   /** Written only by the pose listener: the group found for each path, until it detaches. */
   const groups = useRef(new Map<string, Object3D>());
-  /** Written only by the pose listener: each item's sort y at the last pose it read, per `items`. */
-  const lastReadRef = useRef<{ items: readonly YSortItem[]; ys: Map<string, number> }>({
-    items,
-    ys: new Map(),
-  });
-
-  /** Written only by the pose listener: the draw order last rendered, per `items`. */
-  const committed = useRef<{ items: readonly YSortItem[]; order: string | null }>({ items, order: null });
-  if (committed.current.items !== items) committed.current = { items, order: null };
+  /** Written only by the pose listener: what it last read and rendered, until `items` change. */
+  const pose = useMemo(
+    () => ({ items, ys: new Map<string, number>(), order: null as string | null }),
+    [items]
+  );
 
   const onPose = useCallback(() => {
     if (!selection) return;
-    if (lastReadRef.current.items !== items) lastReadRef.current = { items, ys: new Map() };
-    const lastRead = lastReadRef.current.ys;
     const groupAt = cachedGroupAt(selection.nodeObjectMap, groups.current);
     const read = new Map<string, number>();
     let moved = false;
@@ -61,18 +55,21 @@ export function useLiveYSort(items: readonly YSortItem[], basePath: string): rea
       if (y === null) continue;
       const id = ySortItemId(item);
       read.set(id, y);
-      moved ||= y !== (lastRead.get(id) ?? item.sortY);
+      moved ||= y !== (pose.ys.get(id) ?? item.sortY);
     }
     // Sorted only when some y moved: the frames of a held pose cost a read of each group.
     if (!moved) return;
-    lastReadRef.current = { items, ys: read };
-    committed.current.order ??= drawOrder(items, NO_YS);
+    pose.ys = read;
+    pose.order ??= drawOrder(items, NO_YS);
     const order = drawOrder(items, read);
-    if (order === committed.current.order) return;
-    committed.current = { items, order };
+    if (order === pose.order) return;
+    pose.order = order;
     setLive({ items, ys: read });
-  }, [selection, items, basePath]);
+  }, [selection, items, basePath, pose]);
   useOnMixerPose(onPose);
+  // New items drop the poses read for the old ones, and a paused mixer announces no pose to read
+  // them again, so the items read the groups once as they arrive.
+  useEffect(onPose, [onPose]);
 
   return useMemo(() => withLiveYs(items, ys), [items, ys]);
 }

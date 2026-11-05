@@ -33,6 +33,7 @@ export async function seekPlayer(page, time) {
   // since .fill() does not drive onChange.
   await page.evaluate((value) => {
     const el = document.querySelector('input[type=range]');
+    if (!el) throw new Error('expected an animation scrubber, found none');
     const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
     set.call(el, String(value));
     el.dispatchEvent(new Event('input', { bubbles: true }));

@@ -25,7 +25,7 @@ export function liveSortY(item: YSortItem, basePath: string, groupAt: GroupAt): 
   const node = item.node;
   if (!node || item.kind !== 'node' || descendsFromClass(node.type, 'Node3D')) return null;
   toSortRoot.identity();
-  // The group of each node on the way, outermost first; the common item has no lifted ancestor.
+  // The group of each node on the way, outermost first. The common item has no lifted ancestor.
   const paths =
     item.liftedPast.length === 0
       ? [joinPath(basePath, node.name)]
