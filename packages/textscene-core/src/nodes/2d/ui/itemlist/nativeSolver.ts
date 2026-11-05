@@ -225,6 +225,8 @@ interface ItemTextShapeInput {
   fixedColumnWidth: number;
   /** `TextServer::OverrunBehavior`. Godot default 3 (OVERRUN_TRIM_ELLIPSIS, `item_list.h:131`). */
   overrunBehavior?: number;
+  /** The control's locale: an item's `language` is empty, so it takes `_get_locale()` (`item_list.cpp:45`). */
+  locale: string;
 }
 
 /**
@@ -236,7 +238,9 @@ interface ItemTextShapeInput {
 export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult | null {
   if (input.text.length === 0) return null;
   const widthPx = itemListShapeWidth(input.fixedColumnWidth);
+  // An item's own `text_direction` is AUTO (`item_list.h:74`), which no scene changes.
   const layout = shapeText(input.text, {
+    language: input.locale,
     fontSizePx: input.fontSizePx,
     boxWidthPx: widthPx,
     autowrapMode: itemListAutowrapMode(input.iconMode, input.maxTextLines),
@@ -499,6 +503,7 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
             maxTextLines,
             fixedColumnWidth,
             overrunBehavior: props.textOverrunBehavior,
+            locale: n.locale,
           })
         : null;
     const textSize = layout
@@ -610,9 +615,18 @@ export function itemTextDrawOffset(
   };
 }
 
-/** One line's own horizontal offset under `HORIZONTAL_ALIGNMENT_CENTER` (TOP icon mode only: LEFT mode never centres, `_shape_text`'s own alignment call site). */
-export function itemTextLineCenterOffset(centerWidth: number, lineWidthCeiled: number): number {
-  return Math.max(0, centerWidth - lineWidthCeiled) / 2;
+/**
+ * One line's own horizontal offset under `HORIZONTAL_ALIGNMENT_CENTER` (TOP icon mode only: LEFT mode
+ * never centres, `_shape_text`'s own alignment call site). A line wider than its box stays at the
+ * origin, or ends at the trailing edge when it infers RTL (`text_paragraph.cpp:900-913`).
+ */
+export function itemTextLineCenterOffset(
+  centerWidth: number,
+  lineWidthCeiled: number,
+  isRtl: boolean
+): number {
+  if (lineWidthCeiled <= centerWidth) return (centerWidth - lineWidthCeiled) / 2;
+  return isRtl ? centerWidth - lineWidthCeiled : 0;
 }
 
 // --- Per-item colour: item_list.cpp:1568-1571,1607-1622, minus selected/hovered ---

@@ -91,6 +91,10 @@ describe('linkButtonTextTheme', () => {
   it('a theme_override_colors/font_color override wins over the default', () => {
     const props: LinkButtonProperties = {
       name: 'L',
+      textDirection: 0,
+      language: '',
+      structuredTextBidiOverride: 0,
+      structuredTextBidiOverrideOptions: [],
       themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
     };
     expect(linkButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({

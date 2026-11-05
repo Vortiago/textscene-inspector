@@ -97,6 +97,8 @@ describe('checkButtonTextTheme', () => {
   it('a theme_override_colors/font_color override wins over the default', () => {
     const props: CheckButtonProperties = {
       name: 'CB',
+      textDirection: 0,
+      language: '',
       themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
     };
     expect(checkButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({
@@ -147,7 +149,7 @@ describe('checkButtonIconColor (default_theme.cpp:352-353)', () => {
   });
 
   it('a theme_override_colors/button_checked_color override (already folded into n.colors) wins when checked', () => {
-    const props: CheckButtonProperties = { name: 'CB', buttonPressed: true };
+    const props: CheckButtonProperties = { name: 'CB', textDirection: 0, language: '', buttonPressed: true };
     expect(checkButtonIconColor(props, { button_checked_color: { r: 0, g: 1, b: 0, a: 1 } })).toEqual({
       r: 0,
       g: 1,

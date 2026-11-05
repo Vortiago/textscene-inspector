@@ -300,13 +300,20 @@ describe('buttonTextTheme — font_color / font_disabled_color key mapping', () 
   it('a theme_override_colors/font_disabled_color override wins over the default disabled color', () => {
     const props: ButtonProperties = {
       name: 'B',
+      textDirection: 0,
+      language: '',
       themeOverrideColors: { font_disabled_color: { r: 1, g: 0, b: 0, a: 1 } },
     };
     expect(buttonTextTheme(node(props), props, 'disabled', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 
   it('theme_override_font_sizes/font_size overrides the theme default for BOTH states', () => {
-    const props: ButtonProperties = { name: 'B', themeOverrideFontSizes: { font_size: 24 } };
+    const props: ButtonProperties = {
+      name: 'B',
+      textDirection: 0,
+      language: '',
+      themeOverrideFontSizes: { font_size: 24 },
+    };
     expect(buttonTextTheme(node(props), props, 'normal', ctx()).fontSizePx).toBe(24);
     expect(buttonTextTheme(node(props), props, 'disabled', ctx()).fontSizePx).toBe(24);
   });

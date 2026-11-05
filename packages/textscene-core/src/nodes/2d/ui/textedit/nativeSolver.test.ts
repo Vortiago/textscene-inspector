@@ -168,7 +168,15 @@ describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () =>
   });
 
   it('adds the gutter band width into the width', () => {
-    const props: TextEditProperties = { name: 'T', text: 'a', fitContentWidth: true };
+    const props: TextEditProperties = {
+      name: 'T',
+      textDirection: 0,
+      language: '',
+      structuredTextBidiOverride: 0,
+      structuredTextBidiOverrideOptions: [],
+      text: 'a',
+      fitContentWidth: true,
+    };
     const box = THEME.widgets.lineEdit.normal;
     const withoutGutter = textEditMinimumSizeWith(node(props), ctx(), props, box, 0).x;
     expect(textEditMinimumSizeWith(node(props), ctx(), props, box, 5).x).toBe(withoutGutter + 5);

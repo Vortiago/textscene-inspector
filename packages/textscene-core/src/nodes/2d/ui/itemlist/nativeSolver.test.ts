@@ -86,6 +86,7 @@ describe('shapeItemListText — wrapping (item_list.cpp:37-55)', () => {
     fontSizePx: 16,
     fontMetrics: OPEN_SANS_FONT_METRICS,
     fixedColumnWidth: 30,
+    locale: '',
     overrunBehavior: 0,
   };
 
@@ -114,6 +115,7 @@ describe('shapeItemListText — overrun trim (item_list.h:131 default OVERRUN_TR
     fontMetrics: OPEN_SANS_FONT_METRICS,
     iconMode: ICON_MODE_LEFT,
     maxTextLines: 1,
+    locale: '',
   };
 
   it('trims to fixedColumnWidth by default, appending an ellipsis (matches text_overrun.test.ts derivation)', () => {
@@ -124,6 +126,18 @@ describe('shapeItemListText — overrun trim (item_list.h:131 default OVERRUN_TR
   it('is a no-op with no fixedColumnWidth — nothing to trim against (unconstrained shape width)', () => {
     const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', fixedColumnWidth: 0 });
     expect(layout!.lines[0]!.glyphs.map((glyph) => glyph.char).join('')).toBe('AAAAAAAAAAAA');
+  });
+
+  // Measured in Godot 4.6.3 (`unit-item-list-text-direction`): the trim keeps the visual left part.
+  it('keeps the visual left part of an AUTO Hebrew item and ends in the ellipsis', () => {
+    const layout = shapeItemListText({ ...baseInput, text: 'שלום עולם רחב מאוד', fixedColumnWidth: 80 });
+    const chars = layout!.lines[0]!.glyphs.map((glyph) => glyph.char).join('');
+    expect([chars[0], chars.at(-1)]).toEqual(['ד', '…']);
+  });
+
+  it('takes the direction of neutral text from the locale (`item_list.cpp:45`)', () => {
+    const layout = shapeItemListText({ ...baseInput, text: '123!', fixedColumnWidth: 0, locale: 'he' });
+    expect(layout!.lines[0]!.glyphs.map((glyph) => glyph.char).join('')).toBe('!123');
   });
 
   it('OVERRUN_NO_TRIMMING (0) leaves the text untrimmed even with a fixedColumnWidth', () => {
@@ -360,9 +374,18 @@ describe('itemTextDrawOffset / itemTextLineCenterOffset', () => {
     expect(offset).toEqual({ x: 22, y: 15 });
   });
 
-  it('itemTextLineCenterOffset floors a wider box at zero, never negative (edge case)', () => {
-    expect(itemTextLineCenterOffset(50, 80)).toBe(0);
-    expect(itemTextLineCenterOffset(50, 20)).toBe(15);
+  it('itemTextLineCenterOffset centres a line no wider than its box', () => {
+    expect(itemTextLineCenterOffset(50, 20, false)).toBe(15);
+    expect(itemTextLineCenterOffset(50, 20, true)).toBe(15);
+  });
+
+  // `TextParagraph::draw` CENTER (`text_paragraph.cpp:900-913`).
+  it('itemTextLineCenterOffset keeps a wider LTR line at the origin', () => {
+    expect(itemTextLineCenterOffset(50, 80, false)).toBe(0);
+  });
+
+  it('itemTextLineCenterOffset moves a wider RTL line to the trailing edge', () => {
+    expect(itemTextLineCenterOffset(50, 80, true)).toBe(-30);
   });
 });
 

@@ -46,8 +46,15 @@ const ALL_STYLES = [
 type StyledTextRun = ReturnType<typeof styledTextRuns>[number];
 
 /** A plain, white, left-aligned run of `text` at `fontSizePx`, with the fields a test cares about overridden. */
-/** What `parseRichTextLabel` fills for the two properties whose defaults are not `undefined`. */
-const PARSED_DEFAULTS = { justificationFlags: 163, clipContents: true };
+/** What `parseRichTextLabel` fills for the properties whose defaults are not `undefined`. */
+const PARSED_DEFAULTS = {
+  justificationFlags: 163,
+  clipContents: true,
+  textDirection: 0,
+  language: '',
+  structuredTextBidiOverride: 0,
+  structuredTextBidiOverrideOptions: [],
+};
 
 /** What a node with no direction properties resolves to under the test node's empty locale. */
 const NO_BIDI = { language: '' };
@@ -1686,15 +1693,9 @@ describe('RichTextLabel paragraph direction', () => {
   const AUTO = 0;
   const RTL = 2;
   const INHERITED = 3;
-  const DIRECTION_DEFAULTS = {
-    textDirection: AUTO,
-    language: '',
-    structuredTextBidiOverride: 0,
-    structuredTextBidiOverrideOptions: [],
-  };
 
   function runsOf(props: Partial<RichTextLabelProperties>, overrides: Partial<SolveNode> = {}) {
-    const all = { ...PARSED_DEFAULTS, ...DIRECTION_DEFAULTS, bbcodeEnabled: true, ...props };
+    const all = { name: 'RTL', ...PARSED_DEFAULTS, bbcodeEnabled: true, ...props };
     return styledTextRuns(node(all, overrides), all, WHITE, FONT_SIZE, FONT_SIZE);
   }
 
