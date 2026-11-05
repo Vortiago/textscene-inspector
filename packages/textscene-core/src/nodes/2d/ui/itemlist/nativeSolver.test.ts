@@ -390,12 +390,12 @@ describe('itemIconColor / itemTextColor', () => {
 });
 
 describe('itemListGuideLines', () => {
-  // item_list.cpp:1447-1458 -- one hairline per row-packing separator, spanning
-  // the panel's own content width, only outside TOP icon mode.
+  // item_list.cpp:1447-1458: one hairline per row-packing separator, spanning the panel's own
+  // content width, only outside TOP icon mode. Each quad starts half a pixel above its separator.
   it('one line per separator, spanning contentWidth, in LEFT icon mode (happy path)', () => {
     expect(itemListGuideLines(ICON_MODE_LEFT, [24, 48], 100)).toEqual([
-      { y: 24, width: 100 },
-      { y: 48, width: 100 },
+      { y: 23.5, width: 100 },
+      { y: 47.5, width: 100 },
     ]);
   });
 

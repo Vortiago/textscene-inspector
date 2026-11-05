@@ -44,6 +44,7 @@ import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_LOWER_COLOR } from '../../../../godot/scene/theme';
 import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
+import { hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
 
 // --- Enum literals ------------------------------------------------------
 
@@ -670,7 +671,10 @@ export function itemListGuideColor(n: Pick<SolveNode, 'colors'>): Rgba {
 }
 
 interface ItemListGuideLine {
-  /** Content-relative Y: the caller adds the panel's own offset (`origin`, `item_list.cpp:1429`). */
+  /**
+   * Content-relative top of the hairline quad: the caller adds the panel's own offset (`origin`,
+   * `item_list.cpp:1429`).
+   */
   y: number;
   /** Spans the panel's own content width, from its content origin (`item_list.cpp:1455-1457`). */
   width: number;
@@ -687,7 +691,7 @@ export function itemListGuideLines(
   contentWidth: number
 ): ItemListGuideLine[] {
   if (iconMode === ICON_MODE_TOP) return [];
-  return separators.map((y) => ({ y, width: contentWidth }));
+  return separators.map((y) => ({ y: hairlineQuadStartPx(y), width: contentWidth }));
 }
 
 // --- RTL draw geometry: item_list.cpp:1582-1584,1629-1641,1657-1668 -------
