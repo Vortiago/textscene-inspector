@@ -1,0 +1,112 @@
+; One variable: vertical_alignment FILL with an item with nothing in it before a [p]. The item's line has
+; no height but counts as a line (rich_text_label.cpp:1643-1648), so the gap spreads over it. An empty
+; colour, font, underline or strikethrough adds no line (:3712-3727), so its cell keeps two lines.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="EmptyFontSizeThenParagraphBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 280.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="EmptyFontSizeThenParagraph" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 280.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "[font_size=30][/font_size][p]a[/p]b\nc"
+vertical_alignment = 3
+
+[node name="TextThenEmptyFontSizeBox" type="ColorRect" parent="."]
+offset_left = 300.0
+offset_top = 10.0
+offset_right = 560.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="TextThenEmptyFontSize" type="RichTextLabel" parent="."]
+offset_left = 300.0
+offset_top = 10.0
+offset_right = 560.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "x\n[font_size=30][/font_size][p]a[/p]b\nc"
+vertical_alignment = 3
+
+[node name="EmptyParagraphThenParagraphBox" type="ColorRect" parent="."]
+offset_left = 580.0
+offset_top = 10.0
+offset_right = 840.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="EmptyParagraphThenParagraph" type="RichTextLabel" parent="."]
+offset_left = 580.0
+offset_top = 10.0
+offset_right = 840.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "[p][/p][p]a[/p]\nb"
+vertical_alignment = 3
+
+[node name="EmptyIndentBetweenLinesBox" type="ColorRect" parent="."]
+offset_left = 860.0
+offset_top = 10.0
+offset_right = 1120.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="EmptyIndentBetweenLines" type="RichTextLabel" parent="."]
+offset_left = 860.0
+offset_top = 10.0
+offset_right = 1120.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "a\n[indent][/indent][p]b[/p]\nc"
+vertical_alignment = 3
+
+[node name="EmptyColourThenParagraphBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 170.0
+offset_right = 280.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="EmptyColourThenParagraph" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 170.0
+offset_right = 280.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "[color=red][/color][p]a[/p]\nb"
+vertical_alignment = 3
+
+[node name="NoEmptyItemBox" type="ColorRect" parent="."]
+offset_left = 300.0
+offset_top = 170.0
+offset_right = 560.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="NoEmptyItem" type="RichTextLabel" parent="."]
+offset_left = 300.0
+offset_top = 170.0
+offset_right = 560.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "a\nb\nc"
+vertical_alignment = 3

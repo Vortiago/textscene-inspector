@@ -46,7 +46,7 @@ export function plainReferenceGlyph(glyph: ReferenceGlyph): ReferenceGlyph {
   return plain;
 }
 
-const opentypeOf = (record: ReferenceGlyph['opentype']): OpentypeCoordinates | undefined =>
+export const opentypeOf = (record: ReferenceGlyph['opentype']): OpentypeCoordinates | undefined =>
   record &&
   new Map(
     Object.entries(record).flatMap(([key, value]) =>

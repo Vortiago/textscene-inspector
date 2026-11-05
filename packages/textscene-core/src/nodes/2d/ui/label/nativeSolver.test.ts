@@ -1253,7 +1253,7 @@ describe('layoutLabelLines — the overrun trim (label.cpp:302-332)', () => {
     });
     const trimTo60 = (line: TextLineLayout): TextLineLayout => ({ ...line, widthPx: 60 });
     const [placement] = layoutLabelLines(layout, 100, 40, 2, undefined, undefined, 16, {
-      trimLine: trimTo60,
+      trim: { line: trimTo60, filledLine: trimTo60 },
     });
     expect(placement!.line.widthPx).toBe(60);
     expect(placement!.x).toBe(40);
@@ -1271,7 +1271,7 @@ describe('layoutLabelLines — the justification-aware trim of FILL with autowra
   const markTrimmed = (line: TextLineLayout): TextLineLayout => ({ ...line, text: `${line.text}…` });
   const fillAt = (boxWidthPx: number) =>
     layoutLabelLines(layout, boxWidthPx, 40, 3, undefined, JustificationFlag.WORD_BOUND, 16, {
-      trimLine: markTrimmed,
+      trim: { line: markTrimmed, filledLine: markTrimmed },
     })[0]!.line;
 
   it('skips the trim of a line whose spaces shrink to fit, as `fit_width_minimum_reached` stays false (text_server_adv.cpp:5947)', () => {
@@ -1297,13 +1297,14 @@ describe('layoutLabelLines — the trimmed FILL line fitted again with CONSTRAIN
   const ellipsisFlags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
   const filledLineAt = (justificationFlags: number) =>
     layoutLabelLines(layout, BOX_WIDTH_PX, 40, 3, undefined, justificationFlags, 16, {
-      trimLine: (line, refitFlags) =>
-        refitFlags === undefined
-          ? trimLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, trimOptions)
-          : trimFilledLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, {
-              ...trimOptions,
-              justificationFlags: refitFlags,
-            }),
+      trim: {
+        line: (line) => trimLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, trimOptions),
+        filledLine: (line, filledFlags) =>
+          trimFilledLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, {
+            ...trimOptions,
+            justificationFlags: filledFlags,
+          }),
+      },
     })[0]!.line;
 
   it('stretches the kept spaces so the ellipsis ends at the box width', () => {

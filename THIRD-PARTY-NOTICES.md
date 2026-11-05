@@ -364,6 +364,8 @@ pre-baked atlas, not a runtime font parse, is what the VS Code webview CSP allow
 
 `scenes/fixtures/fonts/open-sans-typo-metrics-subset.ttf` is that subset with the `OS/2` typographic ascender and descender changed to 1700 and -450, so they differ from `hhea`. The typo-metrics golden uses it.
 
+`scenes/fixtures/fonts/open-sans-variable-subset.ttf` is a subset of the Open Sans variable font, with its `wght` and `wdth` axes and its `HVAR` table: the space, the printable ASCII characters and `é`. `open-sans-variable-subset-no-hvar.ttf` is the same subset with the `HVAR` table removed. The tests of variable-font advances and the `text-mesh-variable-advance` golden use them.
+
 Per Godot's own `COPYRIGHT.txt` (`Files: thirdparty/fonts/OpenSans*.woff2`) and
 `thirdparty/README.md`:
 

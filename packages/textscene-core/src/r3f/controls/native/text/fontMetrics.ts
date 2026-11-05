@@ -255,21 +255,39 @@ export function canvasGlyphPenXPx(
  * (`text_server_adv.cpp:7077`). A missing glyph takes `averageAdvanceUnits`,
  * so the line does not collapse around it.
  */
-// 1. `freetype/src/base/ftadvanc.c:52`: `FT_MulFix(1024 * advance, x_scale)` to 16.16, half up.
-// 2. `thirdparty/harfbuzz/src/hb-ft.cc:519,523`: `(v + (1<<9)) >> 10` to 26.6, half up.
-//    Unhinted (`hb-ft.cc:115`: `FT_LOAD_DEFAULT | FT_LOAD_NO_HINTING`), the raw-`hmtx` path (`ftadvanc.c:124-131`).
-// At 2048 units and 16px this is `ceil(units / 2) / 64`: 1/128 px wider for an odd advance.
+// A face at a variable-font instance takes its advance from `SfntOutlines.advanceAtInstance` instead.
 export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSizePx: number): number {
   const units = metrics.getGlyphAdvanceUnits(ch) ?? metrics.averageAdvanceUnits;
   // A bitmap font's advance reaches HarfBuzz in 26.6 as `advance * 64` and leaves as
   // `advance * scale` (`text_server_adv.cpp:130,7077`): no FreeType chain.
   if (metrics.pxPerUnit) return unitsToPx(units, metrics, fontSizePx);
-  const { xScale } = freeTypeSizeRequest(metrics.unitsPerEm, fontSizePx);
-  const advance16_16 = ftMulFix(1024 * units, xScale);
+  const advanceAtInstance = instanceGlyphAdvance26_6(metrics, ch, fontSizePx);
+  if (advanceAtInstance !== null) return advanceAtInstance / FIXED_26_6_ONE;
   // The error only adds width, so a run of odd advances can push
   // `shapedTextSizeWidthPx`'s ceil a whole pixel wider, as in Godot.
-  const advance26_6 = Math.floor((advance16_16 + 512) / 1024);
-  return advance26_6 / FIXED_26_6_ONE;
+  return glyphAdvance26_6(units, metrics.unitsPerEm, fontSizePx) / FIXED_26_6_ONE;
+}
+
+// 1. `freetype/src/base/ftadvanc.c:52`: `FT_MulFix(1024 * advance, x_scale)` to 16.16, half up.
+// 2. `thirdparty/harfbuzz/src/hb-ft.cc:519,523`: `(v + (1<<9)) >> 10` to 26.6, half up.
+//    Unhinted (`hb-ft.cc:115`: `FT_LOAD_DEFAULT | FT_LOAD_NO_HINTING`), the raw-`hmtx` path (`ftadvanc.c:124-131`).
+// At 2048 units and 16px this is `ceil(units / 2) / 64`: 1/128 px wider for an odd advance.
+/** An advance of `units` in 26.6, through the two steps above. */
+export function glyphAdvance26_6(units: number, unitsPerEm: number, fontSizePx: number): number {
+  const { xScale } = freeTypeSizeRequest(unitsPerEm, fontSizePx);
+  const advance16_16 = ftMulFix(1024 * units, xScale);
+  return Math.floor((advance16_16 + 512) / 1024);
+}
+
+/**
+ * The advance in 26.6 of `ch` at the axis values of the face's `variation_opentype`, or null for a
+ * face at its default instance and a character with no glyph: the default advance stands.
+ */
+function instanceGlyphAdvance26_6(metrics: FontMetrics, ch: string, fontSizePx: number): number | null {
+  const { outlines, opentype } = metrics;
+  if (!outlines || !isInstanced(opentype)) return null;
+  const glyphIndex = outlines.glyphIndex(ch.codePointAt(0)!);
+  return glyphIndex === 0 ? null : (outlines.advanceAtInstance?.(glyphIndex, fontSizePx, opentype) ?? null);
 }
 
 /**
@@ -280,6 +298,11 @@ export type OpentypeCoordinates = ReadonlyMap<number | string, number>;
 
 /** The embolden, the shear and the axis values of a `FontVariation`: absent is none. */
 export type GlyphVariation = Pick<FontMetrics, 'embolden' | 'skew' | 'opentype'>;
+
+/** Whether `opentype` names an axis value, so the face is drawn at a variable-font instance. */
+export function isInstanced(opentype: OpentypeCoordinates | undefined): opentype is OpentypeCoordinates {
+  return !!opentype?.size;
+}
 
 /** Whether the variation changes the glyph outline at all. */
 export function isGlyphVaried({ embolden = 0, skew = 0 }: GlyphVariation): boolean {
@@ -317,7 +340,7 @@ export function withVariation<Metrics extends FontMetrics>(
   metrics: Metrics,
   { embolden = 0, skew = 0, opentype, outlines }: GlyphVariation & Pick<FontMetrics, 'outlines'>
 ): Metrics {
-  if (!outlines && !isGlyphVaried({ embolden, skew }) && !opentype?.size) return metrics;
+  if (!outlines && !isGlyphVaried({ embolden, skew }) && !isInstanced(opentype)) return metrics;
   const byVariation = variationsOf(metrics);
   const key = variationKey({ embolden, skew, opentype });
   let byOutlines = byVariation.get(key);

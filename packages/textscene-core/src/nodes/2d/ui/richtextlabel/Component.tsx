@@ -126,6 +126,28 @@ function RichTextImage({
   );
 }
 
+/** An `[hr]`: the theme's solid white `horizontal_rule` icon, stretched over the solved box and tinted. */
+function RichTextRule({
+  placement,
+  tint,
+  renderOrder,
+}: {
+  placement: RichTextImagePlacement;
+  tint: Rgba;
+  renderOrder: number;
+}) {
+  const imageTint = multiplyModulate(tint, placement.spec.color);
+  return (
+    <ControlQuad
+      renderOrder={renderOrder}
+      width={placement.widthPx}
+      height={placement.heightPx}
+      color={godotColorToLinear(imageTint)}
+      opacity={imageTint.a}
+    />
+  );
+}
+
 interface RichTextBodyProps extends NativeControlComponentProps {
   /** What a `TextRun` clips to: the inherited planes, or this control's rect merged onto them. */
   clippingPlanes: readonly THREE.Plane[];
@@ -180,7 +202,6 @@ function useShapedRichText(
                 fontSizePx: textTheme.fontSizePx,
                 boxWidthPx: wrapWidthPx,
                 autowrapMode,
-                tabStopsPx: props.tabStopsPx,
                 tabSize: props.tabSize,
                 autowrapTrimFlags: props.autowrapTrimFlags,
               }
@@ -207,7 +228,6 @@ function useShapedRichText(
       textTheme.fontSizePx,
       box,
       autowrapMode,
-      props.tabStopsPx,
       props.tabSize,
       props.autowrapTrimFlags,
       theme,
@@ -232,7 +252,6 @@ function RichTextBody({
     [solveNode, props, theme]
   );
 
-  const { justificationFlags } = props;
   const { visibleCharacters, visibleRatio, visibleCharactersBehavior } = props;
   const reveal = useMemo(
     () => richTextReveal({ visibleCharacters, visibleRatio, visibleCharactersBehavior }, solveNode.rtl),
@@ -259,7 +278,6 @@ function RichTextBody({
         horizontalAlignment: props.horizontalAlignment,
         verticalAlignment: props.verticalAlignment,
         justification: {
-          flags: justificationFlags,
           fontSizePx: textTheme.fontSizePx,
         },
         reveal,
@@ -278,7 +296,6 @@ function RichTextBody({
       scrollOffsetPx,
       props.horizontalAlignment,
       props.verticalAlignment,
-      justificationFlags,
       textTheme.fontSizePx,
     ]
   );
@@ -295,12 +312,16 @@ function RichTextBody({
                 key={index}
                 position={[placement.lineOffsetXPx + placement.image.xPx, -(y + placement.image.yPx), 0]}
               >
-                <RichTextImage
-                  placement={placement.image}
-                  tint={tint.own}
-                  resources={solveNode.resources}
-                  renderOrder={renderOrder}
-                />
+                {placement.image.spec.solid ? (
+                  <RichTextRule placement={placement.image} tint={tint.own} renderOrder={renderOrder} />
+                ) : (
+                  <RichTextImage
+                    placement={placement.image}
+                    tint={tint.own}
+                    resources={solveNode.resources}
+                    renderOrder={renderOrder}
+                  />
+                )}
               </CanvasItemGroup>
             );
           }

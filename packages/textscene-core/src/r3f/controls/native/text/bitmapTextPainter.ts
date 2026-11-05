@@ -18,7 +18,7 @@ import { drawsGlyphRect, GLYPH_DRAWER_RULES, type GlyphDrawer } from './glyphDra
 import type { GlyphPlacement, TextLayoutResult } from './textLayout';
 import { VECTOR2_ZERO } from '../../../../godot/math/vector';
 
-/** A new texture of the sheet. `TextRun.tsx` shares one for each sampling among the runs of a sheet. */
+/** A new texture of the sheet. `TextRunMesh.tsx` shares one for each sampling among the runs of a sheet. */
 export function createSheetTexture(sheet: FillSheet): THREE.DataTexture {
   const texture = new THREE.DataTexture(sheet.data, sheet.width, sheet.height, THREE.RGBAFormat);
   // The rows are top first, so v counts down the image and no flip applies.
