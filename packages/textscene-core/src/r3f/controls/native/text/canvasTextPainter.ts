@@ -111,10 +111,10 @@ const INK_SLACK_LEFT_PX = 2;
 const INK_SLACK_RIGHT_PX = 1;
 
 /**
- * The span of the ink of the glyphs, their pen boxes, the pen snap and the hinting included, as
- * Godot draws each glyph quad whole wherever its side bearing reaches (#1376). The run of a
- * fallback face keeps its glyphs at their places on the line (`faceLayouts.ts`), so its raster
- * spans them alone. A layout with no glyph spans its width.
+ * The span of the ink of the glyphs, their pen boxes, the pen snap and the hinting included. Godot
+ * draws each glyph quad whole wherever its side bearing reaches, which a raster of the line box
+ * would clip. The run of a fallback face keeps its glyphs at their places on the line
+ * (`faceLayouts.ts`), so its raster spans them alone. A layout with no glyph spans its width.
  */
 function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: number } {
   let startPx = Infinity;
