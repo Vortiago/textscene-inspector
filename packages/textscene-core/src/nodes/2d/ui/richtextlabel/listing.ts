@@ -19,17 +19,18 @@ import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import {
-  IMAGE_OBJECT_CHAR,
-  INDENT_TAGS,
-  hasOpenTag,
-  lastTagValue,
-  resolveBBColor,
-  type OpenBBCodeTag,
-} from './bbcode';
+import { IMAGE_OBJECT_CHAR, INDENT_TAGS, hasOpenTag, lastTagValue, type OpenBBCodeTag } from './bbcode';
 import { faceOfStyle, type RichTextFaces } from './styleFaces';
-import { markerFontSizeOf, outlineSizeOf, tagFontSizePx } from './runStyle';
+import {
+  markerFontSizeOf,
+  tagColorOf,
+  tagFontSizePx,
+  tagOutlineOf,
+  type TagOutline,
+  type TagValuePick,
+} from './runStyle';
 import type { StyledTextRun } from './nativeSolver';
+import { countAtOrBelow } from '../../../../utils/countAtOrBelow';
 
 /** `ItemList`'s default bullet (`rich_text_label.cpp:7593`). */
 const DEFAULT_BULLET = '•';
@@ -94,8 +95,17 @@ function indentFramesOf(
   return frames;
 }
 
-function colorOf(value: string | undefined, fallback: Rgba): Rgba | undefined {
-  return value === undefined ? undefined : resolveBBColor(value, fallback);
+/** The bold and italic of a font, as `fontSizePxOf` and `faceOfStyle` take them. */
+interface FontStyle {
+  bold: boolean;
+  italic: boolean;
+}
+
+const REGULAR: FontStyle = { bold: false, italic: false };
+
+/** The style of the `[b]` and `[i]` open in `tags`. */
+function openFontStyle(tags: readonly OpenBBCodeTag[]): FontStyle {
+  return { bold: hasOpenTag(tags, 'b'), italic: hasOpenTag(tags, 'i') };
 }
 
 /** The tags of `formatting`, each reduced to the one value a marker takes from the items that set it. */
@@ -105,8 +115,7 @@ interface MarkerFormatting {
   /** The `[color]` the marker takes, if any (`prefix_color`). */
   color: Rgba | undefined;
   /** The `[outline_size]` and `[outline_color]` it takes, if any (`prefix_outline_size`, `prefix_outline_color`). */
-  outlineSizePx: number | undefined;
-  outlineColor: Rgba | undefined;
+  outline: TagOutline;
 }
 
 /**
@@ -115,15 +124,13 @@ interface MarkerFormatting {
  */
 function markerFormatting(
   tags: readonly OpenBBCodeTag[],
-  pick: (tags: readonly OpenBBCodeTag[], name: string) => string | undefined,
+  pick: TagValuePick,
   defaultColor: Rgba
 ): MarkerFormatting {
-  const sizeValue = pick(tags, 'outline_size');
   return {
     fontSizePx: markerFontSizeOf(pick(tags, 'font_size')),
-    color: colorOf(pick(tags, 'color'), defaultColor),
-    outlineSizePx: sizeValue === undefined ? undefined : outlineSizeOf(sizeValue),
-    outlineColor: colorOf(pick(tags, 'outline_color'), defaultColor),
+    color: tagColorOf(pick(tags, 'color'), defaultColor),
+    outline: tagOutlineOf(tags, pick, defaultColor),
   };
 }
 
@@ -139,11 +146,10 @@ function outermostValue(tags: readonly OpenBBCodeTag[], name: string): string | 
  * control's base colour there, not the theme's outline colour.
  */
 function styleOf(
-  bold: boolean,
-  italic: boolean,
+  { bold, italic }: FontStyle,
   formatting: MarkerFormatting,
-  lineTags: readonly OpenBBCodeTag[] | undefined,
-  inputs: RunListingInputs
+  inputs: RunListingInputs,
+  lineTags?: readonly OpenBBCodeTag[]
 ): MarkerStyle {
   const { defaultColor, themeOutline } = inputs;
   const line = lineTags && markerFormatting(lineTags, lastTagValue, defaultColor);
@@ -153,8 +159,8 @@ function styleOf(
     fontSizePx: formatting.fontSizePx ?? inputs.fontSizePxOf(bold, italic),
     color: formatting.color ?? line?.color ?? defaultColor,
     outline: {
-      sizePx: formatting.outlineSizePx ?? line?.outlineSizePx ?? themeOutline.sizePx,
-      color: formatting.outlineColor ?? line?.outlineColor ?? defaultColor,
+      sizePx: formatting.outline.sizePx ?? line?.outline.sizePx ?? themeOutline.sizePx,
+      color: formatting.outline.color ?? line?.outline.color ?? defaultColor,
     },
   };
 }
@@ -166,7 +172,7 @@ function styleOf(
 function textRowMarkerStyle(inputs: RunListingInputs): MarkerStyle {
   const { tags, defaultColor } = inputs;
   const formatting = markerFormatting(tags, outermostValue, defaultColor);
-  return styleOf(hasOpenTag(tags, 'b'), hasOpenTag(tags, 'i'), formatting, undefined, inputs);
+  return styleOf(openFontStyle(tags), formatting, inputs);
 }
 
 /**
@@ -183,9 +189,8 @@ function emptyRowMarkerStyle(
   const { tags, defaultColor } = inputs;
   const opensFont = openedHere.some((tag) => tag.name === 'b' || tag.name === 'i');
   const formatting = markerFormatting(openedHere, lastTagValue, defaultColor);
-  return opensFont
-    ? styleOf(hasOpenTag(tags, 'b'), hasOpenTag(tags, 'i'), formatting, lineTags, inputs)
-    : styleOf(false, false, formatting, lineTags, inputs);
+  const style = opensFont ? openFontStyle(tags) : REGULAR;
+  return styleOf(style, formatting, inputs, lineTags);
 }
 
 /** The listing of the run `inputs` describe, or `undefined` when no indent or list is open. */
@@ -484,16 +489,4 @@ export function paragraphListings(
     });
   });
   return listings;
-}
-
-/** The count of `ascending` at or below `value`, by binary search: a nested list asks once per row. */
-function countAtOrBelow(ascending: readonly number[], value: number): number {
-  let low = 0;
-  let high = ascending.length;
-  while (low < high) {
-    const middle = (low + high) >>> 1;
-    if (ascending[middle]! <= value) low = middle + 1;
-    else high = middle;
-  }
-  return low;
 }

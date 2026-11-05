@@ -200,15 +200,18 @@ function readSubstitutions(dv: DataView, at: number): Map<number, readonly numbe
   return substitutions;
 }
 
+/** The extension lookup type of each layout table, which wraps a lookup of any other type. */
+const EXTENSION_TYPE = { GSUB: GSUB_EXTENSION, GPOS: GPOS_EXTENSION } as const;
+
 /** Reads the `GSUB` or `GPOS` table of `length` bytes at `offset`. */
-function readLayoutTable(dv: DataView, offset: number, length: number, isGsub: boolean): LayoutTable {
+function readLayoutTable(dv: DataView, offset: number, length: number, extensionType: number): LayoutTable {
   const end = offset + length;
   return {
     dv,
     end,
     scripts: readScripts(dv, offset + u16(dv, offset + 4)),
     features: readFeatures(dv, offset + u16(dv, offset + 6)),
-    lookups: readLookups(dv, offset + u16(dv, offset + 8), end, isGsub ? GSUB_EXTENSION : GPOS_EXTENSION),
+    lookups: readLookups(dv, offset + u16(dv, offset + 8), end, extensionType),
     featureSubstitutions: readFeatureSubstitutions(dv, offset),
   };
 }
@@ -221,7 +224,7 @@ function readSfntLayoutTable(sfnt: SfntFile, tag: 'GSUB' | 'GPOS'): LayoutTable 
   const table = sfnt.tables.get(tag);
   if (!table) return null;
   try {
-    return readLayoutTable(sfnt.dv, table.offset, table.length, tag === 'GSUB');
+    return readLayoutTable(sfnt.dv, table.offset, table.length, EXTENSION_TYPE[tag]);
   } catch (error) {
     if (!(error instanceof RangeError)) throw error;
     return null;
@@ -462,7 +465,7 @@ function inputAfterFirst(dv: DataView, at: number, inputCount: number): number[]
 }
 
 /** A `SequenceRule` of a context subtable of format 1 or 2. */
-export function readSequenceRule(dv: DataView, at: number): ContextRule {
+function readSequenceRule(dv: DataView, at: number): ContextRule {
   const inputCount = u16(dv, at);
   const input = inputAfterFirst(dv, at + 4, inputCount);
   return {
@@ -475,7 +478,7 @@ export function readSequenceRule(dv: DataView, at: number): ContextRule {
 }
 
 /** A `ChainedSequenceRule` of a chained context subtable of format 1 or 2. */
-export function readChainedSequenceRule(dv: DataView, at: number): ContextRule {
+function readChainedSequenceRule(dv: DataView, at: number): ContextRule {
   const backtrack = countedU16Values(dv, at);
   const inputAt = at + 2 + 2 * backtrack.length;
   const inputCount = u16(dv, inputAt);
@@ -488,7 +491,7 @@ export function readChainedSequenceRule(dv: DataView, at: number): ContextRule {
 }
 
 /** The single rule of a context subtable of format 3 at `subtable`. */
-export function readSequenceContextFormat3(dv: DataView, subtable: number): CoverageContextRule {
+function readSequenceContextFormat3(dv: DataView, subtable: number): CoverageContextRule {
   const inputCount = u16(dv, subtable + 2);
   const coverages = u16Values(dv, subtable + 6, inputCount);
   return {
@@ -502,7 +505,7 @@ export function readSequenceContextFormat3(dv: DataView, subtable: number): Cove
 }
 
 /** The single rule of a chained context subtable of format 3 at `subtable`. */
-export function readChainedSequenceContextFormat3(dv: DataView, subtable: number): CoverageContextRule {
+function readChainedSequenceContextFormat3(dv: DataView, subtable: number): CoverageContextRule {
   const backtrack = countedU16Values(dv, subtable + 2);
   const inputAt = subtable + 4 + 2 * backtrack.length;
   const coverages = countedU16Values(dv, inputAt);
@@ -518,6 +521,32 @@ export function readChainedSequenceContextFormat3(dv: DataView, subtable: number
     records: readSequenceLookups(dv, recordsAt + 2, u16(dv, recordsAt)),
   };
 }
+
+/** Where a context subtable or a chained one keeps its parts, and how it reads them. */
+export interface ContextReader {
+  /** The offsets of the backtrack, input and lookahead `ClassDef`s of format 2. */
+  classDefFields: readonly [number, number, number];
+  /** The offset of the rule set count of format 2. */
+  classSetCountField: number;
+  readRule: (dv: DataView, at: number) => ContextRule;
+  readFormat3: (dv: DataView, subtable: number) => CoverageContextRule;
+}
+
+/** A `SequenceContext` subtable: one `ClassDef` serves all three sequences. */
+export const SEQUENCE_CONTEXT: ContextReader = {
+  classDefFields: [4, 4, 4],
+  classSetCountField: 6,
+  readRule: readSequenceRule,
+  readFormat3: readSequenceContextFormat3,
+};
+
+/** A `ChainedSequenceContext` subtable. */
+export const CHAINED_SEQUENCE_CONTEXT: ContextReader = {
+  classDefFields: [4, 6, 8],
+  classSetCountField: 10,
+  readRule: readChainedSequenceRule,
+  readFormat3: readChainedSequenceContextFormat3,
+};
 
 /**
  * The size in bytes of a `GPOS` value record of `valueFormat`: two bytes for each bit set, the

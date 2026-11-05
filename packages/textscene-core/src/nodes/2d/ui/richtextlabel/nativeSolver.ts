@@ -79,6 +79,7 @@ import {
 } from './paragraph';
 import { tagFontSizePx, tagOutline } from './runStyle';
 import { paragraphListings, runListing, type ParagraphListing, type RunListing } from './listing';
+import { countAtOrBelow } from '../../../../utils/countAtOrBelow';
 
 /** RichTextLabel reads `theme_override_font_sizes/normal_font_size` and `theme_override_colors/default_color`, not Label's `font_size` and `font_color`. */
 const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
@@ -628,16 +629,7 @@ function runAtFromRuns(styledRuns: readonly StyledTextRun[]): RunAt {
     starts.push(start);
     start += run.text.length;
   }
-  return (charIndex) => {
-    let low = 0;
-    let high = starts.length - 1;
-    while (low < high) {
-      const middle = (low + high + 1) >> 1;
-      if (starts[middle]! <= charIndex) low = middle;
-      else high = middle - 1;
-    }
-    return runs[low];
-  };
+  return (charIndex) => runs[Math.max(0, countAtOrBelow(starts, charIndex) - 1)];
 }
 
 /**
@@ -734,7 +726,8 @@ export interface RichTextRunPlacement {
   lineTopPx: number;
   /** The line's left offset, per line since each aligns by its own width (`richTextHorizontalOffsetPx`). */
   lineOffsetXPx: number;
-  underline: boolean;
+  /** The paragraph's underline position and thickness for an `[u]` run, else null. */
+  underline: RichTextUnderlineMetrics | null;
   color: Rgba;
   /** The run's outline ring, in the run's own colour space before the control tint: its size and colour. */
   outline: TextOutlineTheme;
@@ -915,21 +908,39 @@ interface RichTextUnderlineMetrics {
 }
 
 /**
- * The paragraph's underline position and thickness: a max over every run's size.
- * `_shape_substr` in `modules/text_server_adv/text_server_adv.cpp` (`:5310-5311`) copies the
- * paragraph's `upos`/`uthk` into each line that `rich_text_label.cpp:1053-1054` reads.
- * Both scale monotonically, as `text_server_adv.cpp:7174-7175` accumulates them.
+ * Each paragraph's underline position and thickness, by the source index of a character in it: a
+ * max over the sizes of the paragraph's font spans. `_shape_substr` (`text_server_adv.cpp:5310-5311`)
+ * copies the paragraph's `upos`/`uthk` into each line that `rich_text_label.cpp:1053-1054` reads,
+ * and `:7174-7175` accumulates them from the spans' fonts only, so an `[img]` adds nothing.
  */
-export function richTextUnderlineMetrics(styledRuns: readonly StyledTextRun[]): RichTextUnderlineMetrics {
+function richTextUnderlineMetrics(
+  styledRuns: readonly StyledTextRun[]
+): (sourceIndex: number) => RichTextUnderlineMetrics {
+  const paragraphs: RichTextUnderlineMetrics[] = [{ positionPx: 0, thicknessPx: 0 }];
+  const paragraphStarts: number[] = [0];
+  let runStart = 0;
+  for (const run of styledRuns) {
+    let segmentStart = runStart;
+    run.text.split('\n').forEach((segment, i) => {
+      if (i > 0) {
+        paragraphStarts.push(segmentStart);
+        paragraphs.push({ positionPx: 0, thicknessPx: 0 });
+      }
+      if (segment.length > 0 && !run.image)
+        widenUnderline(paragraphs[paragraphs.length - 1]!, run.fontSizePx);
+      segmentStart += segment.length + 1;
+    });
+    runStart += run.text.length;
+  }
+  return (index) => paragraphs[countAtOrBelow(paragraphStarts, index) - 1]!;
+}
+
+/** Widens `metrics` to a span at `fontSizePx`. Both scale monotonically with the size. */
+function widenUnderline(metrics: RichTextUnderlineMetrics, fontSizePx: number): void {
   // Open Sans's `post` table (`openSansMetrics.ts`): `fontMetrics.ts` has no
   // underline fields, so a scene font keeps Open Sans proportions.
-  let positionPx = 0;
-  let thicknessPx = 0;
-  for (const run of styledRuns) {
-    positionPx = Math.max(positionPx, getUnderlinePositionPx(run.fontSizePx));
-    thicknessPx = Math.max(thicknessPx, getUnderlineThicknessPx(run.fontSizePx));
-  }
-  return { positionPx, thicknessPx };
+  metrics.positionPx = Math.max(metrics.positionPx, getUnderlinePositionPx(fontSizePx));
+  metrics.thicknessPx = Math.max(metrics.thicknessPx, getUnderlineThicknessPx(fontSizePx));
 }
 
 /** One line's share of one style run. */
@@ -1095,6 +1106,7 @@ export function layoutRichTextRuns(
   const boxWidthPx = alignment?.boxWidthPx ?? 0;
   // Every line of a paragraph aligns as its first item does (`rich_text_label.cpp:598-599`).
   const runAt = runAtFromRuns(styledRuns);
+  const underlineAt = richTextUnderlineMetrics(styledRuns);
   const paragraphRunOf = (lineIndex: number): StyledTextRun | undefined =>
     runAt(unfittedLayout.lines[lineIndex]?.paragraphStart ?? 0);
   const alignmentOfLine = (lineIndex: number): number =>
@@ -1148,7 +1160,7 @@ export function layoutRichTextRuns(
         lineTopPx: Math.floor(exactTopPx),
         // Beside the text, on the side it starts from (`:1021-1038`).
         lineOffsetXPx: isRtl ? lineOffsetXPx + lineWidthPx : lineOffsetXPx - marker.widthPx,
-        underline: false,
+        underline: null,
         color: marker.color,
         outline: marker.outline,
         fontSizePx: marker.fontSizePx,
@@ -1162,7 +1174,7 @@ export function layoutRichTextRuns(
         lineIndex,
         lineTopPx,
         lineOffsetXPx,
-        underline: run.underline,
+        underline: run.underline ? underlineAt(layout.lines[lineIndex]?.paragraphStart ?? 0) : null,
         color: run.color,
         outline: run.outline,
         fontSizePx: run.fontSizePx,

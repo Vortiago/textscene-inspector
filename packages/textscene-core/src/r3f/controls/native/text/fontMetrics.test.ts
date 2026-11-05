@@ -168,6 +168,13 @@ describe('withVariation', () => {
     expect(withVariation(METRICS, { embolden: 1.2 })).toBe(withVariation(METRICS, { embolden: 1.2 }));
     expect(withVariation(METRICS, { embolden: 1.2 })).not.toBe(withVariation(METRICS, { skew: 1.2 }));
   });
+
+  // An animation of `variation_opentype` steps through axis values without end.
+  it('drops the wrapper read least recently once an animation steps through many variations', () => {
+    const first = withVariation(METRICS, { embolden: 0.5 });
+    for (let step = 1; step <= 1000; step++) withVariation(METRICS, { embolden: 0.5 + step / 1000 });
+    expect(withVariation(METRICS, { embolden: 0.5 })).not.toBe(first);
+  });
 });
 
 describe('withVariation at a variable-font instance', () => {
