@@ -1,14 +1,14 @@
 /**
- * Window parser registration: reuses the Node parse. Property knowledge lives in
- * linterParser.ts. index.r3f.ts registers it as pending, so the tree reports the gap.
+ * Window parser registration: the Window parse, which reads the Window class defaults. Property
+ * knowledge for the linter lives in linterParser.ts.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseNode } from '../../node/parser';
+import { parseWindow } from './parser';
 
 const windowRegistration: NodeTypeRegistration = {
   typeName: 'Window',
-  parser: parseNode,
+  parser: parseWindow,
 };
 
 nodeRegistry.register(windowRegistration);

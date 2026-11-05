@@ -2,7 +2,7 @@
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { unquoteStringName } from '../../../../parser/utils';
-import type { ControlCanvasItemFields, ControlProperties } from './types';
+import type { ControlCanvasItemFields, ControlProperties, ThemeOwnerFields } from './types';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
 import {
   intOr,
@@ -15,8 +15,8 @@ import { LayoutDirection } from '../../../../godot/scene/control.js';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import type { Rgba } from '../../../../godot/math/math.js';
 
-/** Collect `theme_override_<category>/<name> = value` into the five typed maps. */
-function parseThemeOverrides(properties: Record<string, string>): Partial<ControlProperties> {
+/** Collect `theme_override_<category>/<name> = value` into the six typed maps. */
+function parseThemeOverrides(properties: Record<string, string>): ThemeOwnerFields {
   const constants: Record<string, number> = {};
   const colors: Record<string, Rgba> = {};
   const fontSizes: Record<string, number> = {};
@@ -58,7 +58,7 @@ function parseThemeOverrides(properties: Record<string, string>): Partial<Contro
     }
   }
 
-  const out: Partial<ControlProperties> = {};
+  const out: ThemeOwnerFields = {};
   if (Object.keys(constants).length) out.themeOverrideConstants = constants;
   if (Object.keys(colors).length) out.themeOverrideColors = colors;
   if (Object.keys(fontSizes).length) out.themeOverrideFontSizes = fontSizes;
@@ -73,6 +73,15 @@ function parseThemeTypeVariation(value: string | undefined): string | undefined 
   if (value === undefined) return undefined;
   const name = unquoteStringName(value);
   return name === '' ? undefined : name;
+}
+
+/** The theme a Control or a Window owns: its overrides, its own Theme and its type variation. */
+export function parseThemeOwnerFields(properties: Record<string, string>): ThemeOwnerFields {
+  const fields = parseThemeOverrides(properties);
+  // Raw, and resolved later by `SubResourceResolver`, as `themeOverrideStyles` is.
+  if (properties.theme !== undefined) fields.theme = properties.theme;
+  fields.themeTypeVariation = parseThemeTypeVariation(properties.theme_type_variation);
+  return fields;
 }
 
 /**
@@ -147,11 +156,5 @@ export function parseControl(heading: ParsedHeading, properties: Record<string, 
 
   if (properties.material !== undefined) result.materialPath = properties.material;
 
-  Object.assign(result, parseThemeOverrides(properties));
-
-  // Raw, and resolved later by `SubResourceResolver`, as `themeOverrideStyles` is.
-  if (properties.theme !== undefined) result.theme = properties.theme;
-  result.themeTypeVariation = parseThemeTypeVariation(properties.theme_type_variation);
-
-  return result;
+  return Object.assign(result, parseThemeOwnerFields(properties));
 }

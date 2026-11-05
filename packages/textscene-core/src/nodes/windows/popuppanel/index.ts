@@ -1,14 +1,14 @@
 /**
- * PopupPanel parser registration: reuses the Node parse. Property knowledge lives in
- * linterParser.ts. index.r3f.ts registers it as pending, so the tree reports the gap.
+ * PopupPanel parser registration: the Window parse, which reads the PopupPanel class defaults. Property
+ * knowledge for the linter lives in linterParser.ts.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseNode } from '../../node/parser';
+import { parseWindow } from '../window/parser';
 
 const popupPanelRegistration: NodeTypeRegistration = {
   typeName: 'PopupPanel',
-  parser: parseNode,
+  parser: parseWindow,
 };
 
 nodeRegistry.register(popupPanelRegistration);

@@ -129,6 +129,19 @@ export interface ControlProperties {
   themeTypeVariation?: string;
 }
 
+/** The theme fields a theme owner holds: a Control or a Window (`scene/theme/theme_owner.cpp`). */
+export type ThemeOwnerFields = Pick<
+  ControlProperties,
+  | 'themeOverrideConstants'
+  | 'themeOverrideColors'
+  | 'themeOverrideFontSizes'
+  | 'themeOverrideStyles'
+  | 'themeOverrideIcons'
+  | 'themeOverrideFonts'
+  | 'theme'
+  | 'themeTypeVariation'
+>;
+
 /** The CanvasItem fields every Control holds, set or not. */
 export type ControlCanvasItemFields = Pick<
   ControlProperties,

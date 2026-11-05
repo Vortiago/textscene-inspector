@@ -185,6 +185,20 @@ describe('bootstrapScript — the random generator is seeded', () => {
   });
 });
 
+describe('bootstrapScript — the 2D capture embeds a Window', () => {
+  /**
+   * A Window embeds in the nearest viewport that embeds subwindows (`window.cpp:1400-1420`). A
+   * SubViewport does not by default, so without the flag a Window draws in the root window,
+   * outside the capture.
+   */
+  it('lets the capture viewport embed subwindows before the scene enters it', () => {
+    const gd = bootstrap({ previews: true });
+    const render2d = gd.slice(gd.indexOf('func _render_2d('));
+    expect(render2d).toMatch(/\n\tvp\.gui_embed_subwindows = true\n/);
+    expect(render2d.indexOf('gui_embed_subwindows')).toBeLessThan(render2d.indexOf('vp.add_child(target)'));
+  });
+});
+
 describe('bootstrapScript — a non-tool script never runs under previews', () => {
   /**
    * Like the editor, the default pauses the tree first, stops AnimationPlayers, never steps
