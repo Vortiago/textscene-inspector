@@ -4,16 +4,6 @@
  */
 
 /**
- * happy-dom has neither `FontFace` nor a 2D canvas context, so under vitest a loader settles on its
- * fallback before any DOM font API. The skip is deliberate, so it does not warn.
- * `r3f/internalTextLabel.tsx` skips drei's `<Text>` on it too.
- */
-export const IS_VITEST = (() => {
-  const proc = (globalThis as { process?: { env?: { VITEST?: string } } }).process;
-  return proc?.env?.VITEST === 'true';
-})();
-
-/**
  * The CSP-validated door (`default-src 'none'`, no `connect-src` or `font-src`):
  * bytes in hand go to `new FontFace` and `document.fonts.add`, with no fetch of any URL, no worker,
  * eval or WASM. Resolves to `undefined` with no `FontFace`, and rejects only on bytes that are not

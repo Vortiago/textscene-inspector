@@ -11,14 +11,17 @@ import { usePendingWhile } from '../../../../resources/usePendingWhile';
 
 /** Draws nothing until the bundled face settles, so no run paints against the wrong face. */
 export default function BundledCanvasRun({ layout, ...run }: TextRunProps) {
-  // `withVariation` memoises the face, so a render keeps its identity. A face that cannot register
-  // (null) draws nothing, and the loader has warned.
+  // `withVariation` memoises the face, so a render keeps its identity. Null is a face that cannot
+  // register, and the loader has warned.
   const face = peekBundledCanvasFace(layout.fontMetrics);
   // Listens only while the face loads. The count re-renders a run whose settle lands first.
   useSceneFontSettleCount(face === undefined);
   // The canvas face keeps the baked advances, so the atlas layout places its glyphs.
   const canvasLayout = useMemo(() => face && { ...layout, fontMetrics: face }, [layout, face]);
   usePendingWhile(face === undefined);
-  if (!canvasLayout) return null;
-  return <TextRunMesh {...run} layout={canvasLayout} />;
+  if (canvasLayout) return <TextRunMesh {...run} layout={canvasLayout} />;
+  // The atlas fill keeps the text visible without its embolden. The atlas cannot stroke a ring.
+  const isFill = !((run.strokeWidthPx ?? 0) > 0);
+  if (face === null && isFill) return <TextRunMesh {...run} layout={layout} />;
+  return null;
 }

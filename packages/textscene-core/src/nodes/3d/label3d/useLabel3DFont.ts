@@ -34,7 +34,7 @@ export interface Label3DFont {
 /**
  * Undefined while the bundled font registers, or while the font file, the project font, the metrics
  * or, for an emboldened or sheared label, the outlines of the font load: nothing draws against
- * the wrong face meanwhile.
+ * the wrong face meanwhile. A bundled font that cannot register leaves an atlas face undefined for good.
  */
 export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undefined {
   const resources = useSceneResources();

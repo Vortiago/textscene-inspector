@@ -3,7 +3,7 @@
  * assertions read scene-graph structure only, never pixels: the paint is a
  * golden-image concern.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { godotTextureFilterState } from '../../../../resources/textures/godotTextureFilter';
 import { TextureFilter } from '../../../../godot/rendering/materials/textureFilter';
 import * as THREE from 'three';
@@ -24,6 +24,10 @@ const bundled = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | nu
 
 vi.mock('./bundledFontLoader', () => ({ peekBundledCanvasFontMetrics: () => bundled.metrics }));
 vi.mock('./sceneFontOutlines', () => ({ peekGlyphOutlines: () => null }));
+
+beforeEach(() => {
+  bundled.metrics = undefined;
+});
 
 function emboldenedLayout(embolden: number) {
   return shapeText('AB', {
@@ -86,6 +90,19 @@ describe('<TextRun>', () => {
     await vi.waitFor(() => expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1));
     const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
     expect(geometry.getAttribute('position').count).toBe(4);
+  });
+
+  it('draws an emboldened atlas face on the atlas when the bundled canvas face cannot register', async () => {
+    bundled.metrics = null;
+    const renderer = await renderTextRun({ layout: emboldenedLayout(1.2) });
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect(mesh.material).toBeInstanceOf(THREE.ShaderMaterial);
+  });
+
+  it('draws no outline ring of an atlas face when the bundled canvas face cannot register', async () => {
+    bundled.metrics = null;
+    const renderer = await renderTextRun({ strokeWidthPx: 2 });
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
   it('draws nothing for an emboldened atlas face while the bundled canvas face loads', async () => {

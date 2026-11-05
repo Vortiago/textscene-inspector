@@ -24,7 +24,7 @@ nothing is cut.
 
 A `[b]` run and any embolden over the bundled font draw on the canvas painter, which emboldens the
 outline as FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0040). The run draws nothing until the
-bundled face loads.
+bundled face loads, and draws on the atlas without its embolden where the face cannot register.
 
 ## Linting
 

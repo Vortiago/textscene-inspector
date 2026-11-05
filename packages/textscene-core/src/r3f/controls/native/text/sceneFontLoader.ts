@@ -27,7 +27,8 @@ import * as logger from '../../../../logger';
 import { warnOnce } from '../../../../utils/warnOnce';
 import { createSettledPeek } from './settledChannel';
 import { peekGlyphOutlines } from './sceneFontOutlines';
-import { IS_VITEST, registerFontFace } from './fontFaceDoor';
+import { registerFontFace } from './fontFaceDoor';
+import { IS_VITEST } from '../../../../utils/isVitest';
 
 /**
  * Design units per em for a font `sfntTables.ts` cannot parse; every measurement uses this size.

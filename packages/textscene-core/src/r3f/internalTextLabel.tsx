@@ -5,7 +5,7 @@
  */
 
 import { lazy, Suspense, type ReactNode } from 'react';
-import { IS_VITEST } from './controls/native/text/fontFaceDoor';
+import { IS_VITEST } from '../utils/isVitest';
 
 const Text = lazy(() => import('@react-three/drei/core/Text').then((m) => ({ default: m.Text })));
 

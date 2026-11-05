@@ -21,7 +21,7 @@ const NOT_A_BOOL_SLOT: Record<string, string> = {
   'r3f/components/SceneTreeViewer/SceneTreeViewer.tsx': 'aria-expanded, a DOM attribute',
   'nodes/animation/animationplayer/keyframeValues.ts': 'an untyped Variant keyframe value',
   'godot/variant/variantBool.ts': 'the definition itself',
-  'r3f/controls/native/text/fontFaceDoor.ts': 'the VITEST environment variable',
+  'utils/isVitest.ts': 'the VITEST environment variable',
   'nodes/2d/ui/richtextlabel/bbcode.ts':
     'a BBCode tag option, which Godot itself compares against the literal text (rich_text_label.cpp:6138)',
 };

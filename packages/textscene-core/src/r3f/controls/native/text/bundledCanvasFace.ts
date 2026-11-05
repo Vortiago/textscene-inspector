@@ -6,6 +6,7 @@ import { peekBundledCanvasFontMetrics } from './bundledFontLoader';
 import { withVariation, type FontMetrics } from './fontMetrics';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
 import { peekGlyphOutlines } from './sceneFontOutlines';
+
 /**
  * The bundled canvas face carrying the variation of `atlasFace`, with the outlines FreeType
  * emboldens and shears. Undefined while the face or its outlines load, and null when the face cannot register.

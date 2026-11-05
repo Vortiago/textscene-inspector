@@ -5,7 +5,8 @@
  */
 import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
-import { IS_VITEST, registerFontFace } from './fontFaceDoor';
+import { registerFontFace } from './fontFaceDoor';
+import { IS_VITEST } from '../../../../utils/isVitest';
 import { createSettledPeek } from './settledChannel';
 import * as logger from '../../../../logger';
 
