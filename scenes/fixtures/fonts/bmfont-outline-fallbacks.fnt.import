@@ -1,0 +1,17 @@
+[remap]
+
+importer="font_data_bmfont"
+type="FontFile"
+uid="uid://bmfontfallbacks1"
+path="res://.godot/imported/bmfont-outline-fallbacks.fnt-9e8d7c6b5a4f30211203f4e5d6c7b8a9.fontdata"
+
+[deps]
+
+source_file="res://fonts/bmfont-outline-fallbacks.fnt"
+dest_files=["res://.godot/imported/bmfont-outline-fallbacks.fnt-9e8d7c6b5a4f30211203f4e5d6c7b8a9.fontdata"]
+
+[params]
+
+fallbacks=[Resource("res://fonts/bmfont-blocks.fnt")]
+compress=true
+scaling_mode=2

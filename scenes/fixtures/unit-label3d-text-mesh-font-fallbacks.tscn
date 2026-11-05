@@ -1,0 +1,36 @@
+[gd_scene load_steps=4 format=3]
+
+; The one variable: a character the font lacks, which a Label3D and a TextMesh draw from the first
+; font of the fallback chain that has it. Montserrat holds basic Latin only. Its FontVariation falls
+; back to Noto Sans (sharp s, H with stroke) and then DejaVu Sans for the Hebrew, which Noto Sans
+; lacks.
+
+[ext_resource type="FontFile" path="res://fonts/montserrat-semibold-subset.ttf" id="1_plain"]
+[ext_resource type="FontFile" path="res://fonts/noto-sans-regular-subset.ttf" id="2_noto"]
+[ext_resource type="FontFile" path="res://fonts/dejavu-sans-bidi-subset.ttf" id="3_dejavu"]
+
+[sub_resource type="FontVariation" id="FontVariation_chain"]
+base_font = ExtResource("1_plain")
+fallbacks = Array[Font]([ExtResource("2_noto"), ExtResource("3_dejavu")])
+
+[sub_resource type="TextMesh" id="TextMesh_chain"]
+text = "ßĦ שלום"
+font = SubResource("FontVariation_chain")
+font_size = 48
+depth = 0.05
+
+[node name="Root" type="Node3D"]
+
+[node name="Label" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+pixel_size = 0.01
+font = SubResource("FontVariation_chain")
+font_size = 48
+text = "Straße Ħal שלום"
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4, 0)
+mesh = SubResource("TextMesh_chain")
+
+[node name="Light" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0.6, 0, -0.6, 0.8, 0, 2, 2)

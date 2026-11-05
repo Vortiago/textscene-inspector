@@ -355,7 +355,10 @@ interface BreakGlyph {
  */
 interface RunStyle {
   sizes: readonly number[];
+  /** The face each character draws in: its span's face, or a face of that face's **Fallback chain**. */
   faces: readonly FontMetrics[];
+  /** The face each character's span asks for, whose run Godot shapes first (`text_server_adv.cpp:7011`). */
+  spanFaces: readonly FontMetrics[];
   /** The bidi embedding level of each character: each level run is its own HarfBuzz run (`text_server_adv.cpp:7293-7330`). */
   levels: Uint8Array;
   /** The bidi override range of each character, -1 for none: each range runs its own bidi pass and runs (`:7266`). */
@@ -364,10 +367,15 @@ interface RunStyle {
 
 /** Whether character `i` starts a run: its size, face, bidi level or override range differs from the character before it. */
 function startsNewRun(style: RunStyle, i: number): boolean {
+  return i > 0 && (style.faces[i] !== style.faces[i - 1] || startsNewSpanRun(style, i));
+}
+
+/** Whether character `i` starts a run of its span's face, which a glyph from the **Fallback chain** does not break. */
+function startsNewSpanRun(style: RunStyle, i: number): boolean {
   return (
     i > 0 &&
     (style.sizes[i] !== style.sizes[i - 1] ||
-      style.faces[i] !== style.faces[i - 1] ||
+      style.spanFaces[i] !== style.spanFaces[i - 1] ||
       style.levels[i] !== style.levels[i - 1] ||
       style.rangeIds[i] !== style.rangeIds[i - 1])
   );
@@ -378,12 +386,16 @@ function isRtlRun(style: RunStyle, i: number): boolean {
   return style.levels[i]! % 2 === 1;
 }
 
-/** The `[start, end)` of each run of `length` characters, in logical order. */
-function runRanges(style: RunStyle, length: number): Array<[number, number]> {
+/** The `[start, end)` of each run of `length` characters, in logical order, split where `startsRun` says. */
+function runRanges(
+  style: RunStyle,
+  length: number,
+  startsRun: (style: RunStyle, i: number) => boolean = startsNewRun
+): Array<[number, number]> {
   const ranges: Array<[number, number]> = [];
   let start = 0;
   for (let i = 1; i <= length; i++) {
-    if (i === length || startsNewRun(style, i)) {
+    if (i === length || startsRun(style, i)) {
       ranges.push([start, i]);
       start = i;
     }
@@ -551,22 +563,52 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
  * HarfBuzz's glyph order, which is reverse logical order for a right-to-left run. Mutates `glyphs`.
  */
 function roundAdvancesToWholePixels(glyphs: BreakGlyph[], chars: ArrayLike<string>, style: RunStyle): void {
-  for (const [start, end] of runRanges(style, chars.length)) {
-    // `adv_rem` is local to `_shape_run` (`:7011`), so each run starts it at zero.
-    let advanceRemainder = 0;
-    // A run has one size and one face, so its first character answers for all of them.
-    if (fontUsesSubpixelPositioning(style.sizes[start]!, style.faces[start]!)) continue;
-    const step = isRtlRun(style, start) ? -1 : 1;
-    for (let i = step > 0 ? start : end - 1; i >= start && i < end; i += step) {
-      const cp = chars[i]!.codePointAt(0) ?? 0;
-      // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
-      if (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp)) advanceRemainder = 0;
-      const fullAdvance = advanceRemainder + glyphs[i]!.advance;
-      const rounded = godotRound(fullAdvance);
-      glyphs[i]!.advance = rounded;
-      advanceRemainder = fullAdvance - rounded;
-    }
+  for (const [start, end] of runRanges(style, chars.length, startsNewSpanRun)) {
+    const indices = Array.from({ length: end - start }, (_v, k) => start + k);
+    if (isRtlRun(style, start)) indices.reverse();
+    const spanFace = style.spanFaces[start]!;
+    roundFaceRun(glyphs, chars, style, indices, [spanFace, ...(spanFace.fallbacks ?? [])]);
   }
+}
+
+/**
+ * Rounds the glyphs of `indices` that draw in `chain[0]`, with one remainder. Each stretch of glyphs
+ * that draw in a later face is a run of its own in the rest of the chain, as Godot shapes a failed
+ * stretch again in the next font, and leaves this remainder as it was (`text_server_adv.cpp:7058,7132`).
+ */
+function roundFaceRun(
+  glyphs: BreakGlyph[],
+  chars: ArrayLike<string>,
+  style: RunStyle,
+  indices: readonly number[],
+  chain: readonly FontMetrics[]
+): void {
+  const [face, ...rest] = chain;
+  const drawsHere = (i: number): boolean => rest.length === 0 || style.faces[i] === face;
+  const usesSubpixel = fontUsesSubpixelPositioning(style.sizes[indices[0]!]!, face!);
+  // `adv_rem` is local to `_shape_run` (`:7011`), so each run starts it at zero.
+  let advanceRemainder = 0;
+  let stretch: number[] = [];
+  const roundStretch = (): void => {
+    if (stretch.length > 0) roundFaceRun(glyphs, chars, style, stretch, rest);
+    stretch = [];
+  };
+  for (const i of indices) {
+    if (!drawsHere(i)) {
+      stretch.push(i);
+      continue;
+    }
+    roundStretch();
+    if (usesSubpixel) continue;
+    const cp = chars[i]!.codePointAt(0) ?? 0;
+    // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
+    if (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp)) advanceRemainder = 0;
+    const fullAdvance = advanceRemainder + glyphs[i]!.advance;
+    const rounded = godotRound(fullAdvance);
+    glyphs[i]!.advance = rounded;
+    advanceRemainder = fullAdvance - rounded;
+  }
+  roundStretch();
 }
 
 /**
@@ -812,13 +854,15 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       language: paragraphBidi.language,
     });
     const chars = bidi.glyphChars;
+    const spanFaces = Array.from({ length: paraText.length }, (_v, i) =>
+      fontMetricsAt ? fontMetricsAt(sourceIndex(i)) : fontMetrics
+    );
     const runStyle: RunStyle = {
       sizes: Array.from({ length: paraText.length }, (_v, i) =>
         fontSizePxAt ? fontSizePxAt(sourceIndex(i)) : fontSizePx
       ),
-      faces: Array.from({ length: paraText.length }, (_v, i) =>
-        glyphFace(fontMetricsAt ? fontMetricsAt(sourceIndex(i)) : fontMetrics, chars[i]!)
-      ),
+      faces: spanFaces.map((face, i) => glyphFace(face, chars[i]!)),
+      spanFaces,
       levels: bidi.levels,
       rangeIds: bidi.rangeIds,
     };

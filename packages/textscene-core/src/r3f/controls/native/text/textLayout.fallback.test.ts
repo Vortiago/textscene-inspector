@@ -23,9 +23,9 @@ function faceOf(advances: Record<string, number>, kerning: Record<string, number
   };
 }
 
-function glyphsOf(text: string, fontMetrics: FontMetrics): GlyphPlacement[] {
+function glyphsOf(text: string, fontMetrics: FontMetrics, fontSizePx = 16): GlyphPlacement[] {
   return shapeText(text, {
-    fontSizePx: 16,
+    fontSizePx,
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx: 0,
@@ -73,5 +73,18 @@ describe('shapeText — a fallback chain', () => {
     const cjk = faceOf({ 一: 2048 }, kerning);
     const [a] = glyphsOf('A一', { ...faceOf({ A: 1024 }, kerning), fallbacks: [cjk] });
     expect(a!.advance).toBe(8);
+  });
+
+  // Above 20 px Godot rounds each advance and carries the remainder. A glyph the font lacks shapes
+  // as index 0, which leaves the remainder untouched (`text_server_adv.cpp:7058`).
+  it("carries the face's rounding remainder across a glyph a fallback draws", () => {
+    const halfPixelOver = faceOf({ A: 1056 });
+    const [first, , last] = glyphsOf('A一A', { ...halfPixelOver, fallbacks: [CJK] }, 32);
+    expect([first!.advance, last!.advance]).toEqual([17, 16]);
+  });
+
+  it("starts the fallback's own rounding remainder at zero", () => {
+    const [, han] = glyphsOf('A一', { ...faceOf({ A: 1056 }), fallbacks: [faceOf({ 一: 1056 })] }, 32);
+    expect(han!.advance).toBe(17);
   });
 });
