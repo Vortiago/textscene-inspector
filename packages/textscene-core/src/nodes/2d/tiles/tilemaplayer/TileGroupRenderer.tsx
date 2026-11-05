@@ -9,6 +9,7 @@ import type { TscnNode } from '../../../../parser/types.js';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D.js';
 import { drawableCells } from '../../../../resources/tileset/drawableCell.js';
 import type { TileMapLayerProperties } from './types.js';
+import { childCanvasItemProperties } from '../shared/childCanvasItem.js';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel.js';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants.js';
 import { ySortItemId, type YSortItem } from '../../../../r3f/ySortItems.js';
@@ -19,7 +20,15 @@ import { useIsHiddenInEditor } from '../../../../r3f/canvasItemVisible.js';
 
 export function TileGroupRenderer({ item, node: authored }: { item: YSortItem; node: TscnNode }): ReactNode {
   const path = useNodePath();
-  const node = useLiveDrawnNode(authored, path);
+  const live = useLiveDrawnNode(authored, path);
+  // A row of a layer that roots its own sort draws below the group the layer's component placed.
+  const node = useMemo(
+    () =>
+      item.isSortRootRows
+        ? { ...live, properties: childCanvasItemProperties(live.properties as TileMapLayerProperties) }
+        : live,
+    [item.isSortRootRows, live]
+  );
   const props = node.properties as TileMapLayerProperties;
   const { model, status } = useTileSetModel(props.tile_set);
   // The y-sort pass gives the row's drawable cells. An item the pass left whole, because its

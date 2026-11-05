@@ -7,6 +7,7 @@ import { useRef, type MutableRefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { AnimationAction, AnimationMixer } from 'three';
 import type { PlayState } from '../contexts/AnimationTransportContext';
+import { useAnnounceMixerPose } from '../contexts/AnimatedValueContext';
 import { stepPlayback } from './stepPlayback';
 import { startAction, seekAction } from './actionHelpers';
 
@@ -40,6 +41,8 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
   const prevReconfigureKeyRef = useRef<unknown>(undefined);
   /** Written only by the frame below: the mixer it last drove. */
   const prevMixerRef = useRef<AnimationMixer | null>(null);
+
+  const announceMixerPose = useAnnounceMixerPose();
 
   useFrame((_, delta) => {
     const { playState, selectedClip, transportTime, mixerRef, actionsRef } = params;
@@ -88,6 +91,7 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
           if (mixerRebuilt) action.time = transportTime;
         }
         mixer.update(delta * speedScale);
+        announceMixerPose();
         if (action) params.reportTime(action.time);
         break;
       }
@@ -95,6 +99,7 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
         if (action) {
           seekAction(action, transportTime);
           mixer.update(0);
+          announceMixerPose();
         }
         break;
       }
@@ -107,6 +112,7 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
       case 'stop-and-restore': {
         mixer.stopAllAction();
         params.restore();
+        announceMixerPose();
         break;
       }
       case 'none': {

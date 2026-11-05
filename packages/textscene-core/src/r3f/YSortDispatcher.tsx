@@ -10,9 +10,17 @@ import type { TscnNode } from '../parser/types.js';
 import type { TileSetModel } from '../resources/tileset/types.js';
 import { ySortRows } from '../resources/tileset/tileYSort.js';
 import { drawableCells } from '../resources/tileset/drawableCell.js';
-import { collectYSortedItems, ySortItemId, Y_SORT_ROOT, type YSortItem } from './ySortItems.js';
+import {
+  collectSortRootRows,
+  collectYSortedItems,
+  ySortItemId,
+  Y_SORT_ROOT,
+  type YSortItem,
+} from './ySortItems.js';
 import { TileSetModels, tileSetRefsOf } from './ySortTileSetModels.js';
 import { LiftedAncestors, liftedPath } from './LiftedAncestors.js';
+import { compareYSortItems } from './ySortOrder.js';
+import { useLiveYSort } from './useLiveYSort.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import {
   allocateNodePaintRange,
@@ -22,7 +30,6 @@ import {
 } from './canvasPaintOrder.js';
 import { PaintRangeProvider, useCanvasRootRanges, usePaintRange } from './contexts/PaintOrderContext.js';
 import { joinPath } from '../utils/nodePath.js';
-import { isEqualApprox } from '../godot/math/math.js';
 import { transform2DXform } from '../godot/math/transform2d.js';
 // Sorted children go back through the one dispatcher, so instances, selection,
 // hiding and the workspace split work under y-sort without a copy. The reverse
@@ -31,15 +38,17 @@ import { DispatchedNode } from './NodeDispatcher.js';
 import { NodePathProvider, useNodePath } from './contexts/NodePathContext.js';
 import { useLiveDrawnPatchesBelow } from './liveNodePatches.js';
 
-/** Performs the y-sort pass on a y_sort_enabled Node2D's children. */
+/** Performs the y-sort pass on a y_sort_enabled Node2D's or TileMapLayer's children. */
 export function YSortDispatcher({ node, children: _children }: { node: TscnNode; children: ReactNode }) {
   const path = useNodePath() ?? node.name;
   const patches = useLiveDrawnPatchesBelow(path);
-  // Collect raw items (y_sort TileMapLayer → one tileGroup placeholder per layer).
-  const rawItems = useMemo(
-    () => collectYSortedItems(node, Y_SORT_ROOT, 0, [], { path, patches }),
-    [node, path, patches]
-  );
+  // Collect raw items (y_sort TileMapLayer → one tileGroup placeholder per layer). A layer that
+  // roots the sort lists its own rows first, so its children number from 1.
+  const rawItems = useMemo(() => {
+    const ownRows = collectSortRootRows(node);
+    const children = collectYSortedItems(node, Y_SORT_ROOT, ownRows ? 1 : 0, [], { path, patches });
+    return ownRows ? [ownRows, ...children] : children;
+  }, [node, path, patches]);
   // Each y-sorted layer expands against its own grid, so every distinct
   // `tile_set` in the list is resolved, not just the first one's.
   const refs = useMemo(() => tileSetRefsOf(rawItems), [rawItems]);
@@ -85,11 +94,15 @@ function SortedChildren({
     () => rawItems.flatMap((item) => rowItemsOf(item, models) ?? [item]),
     [rawItems, models]
   );
-  const sorted = useMemo(() => [...items].sort(compareYSortItems), [items]);
+  // Items sort on the poses drawn now, so a child a mixer moves re-sorts among the rows.
+  const liveItems = useLiveYSort(items, basePath);
+  const sorted = useMemo(() => [...liveItems].sort(compareYSortItems), [liveItems]);
 
   // Re-packs this subtree's run in sorted order. Nothing outside can land in the
   // run, and each item keeps a run as wide as its subtree, so its descendants draw
-  // between it and the next-ranked item.
+  // between it and the next-ranked item. The items render in collection order, not
+  // sorted: a moved child makes R3F apply its authored props again, which would undo the
+  // pose a mixer has just written.
   const packed = useMemo(() => {
     // A tile-group item is one group with no subtree, drawn from its layer's
     // reserve. Sized by the layer node, each row would claim a new reserve.
@@ -98,8 +111,9 @@ function SortedChildren({
       item.kind === 'tileGroup' || !item.node ? 1 : paintRangeSize(item.node)
     );
     const ranges = packPaintRanges(paintRange, sizes, ownSequence + 1);
-    return sorted.map((item, i) => ({ item, range: ranges[i]! }));
-  }, [sorted, ownSequence, paintRange]);
+    const rangeOf = new Map(sorted.map((item, i) => [ySortItemId(item), ranges[i]!]));
+    return liveItems.map((item) => ({ item, range: rangeOf.get(ySortItemId(item))! }));
+  }, [sorted, liveItems, ownSequence, paintRange]);
 
   return (
     <>
@@ -113,7 +127,11 @@ function SortedChildren({
           return (
             <PaintRangeProvider key={`tg-${item.node.name}-${ySortItemId(item)}`} value={range}>
               <LiftedAncestors liftedPast={item.liftedPast} basePath={basePath}>
-                <NodePathProvider path={liftedPath(basePath, item.liftedPast, item.node.name)}>
+                <NodePathProvider
+                  path={
+                    item.isSortRootRows ? basePath : liftedPath(basePath, item.liftedPast, item.node.name)
+                  }
+                >
                   <Renderer item={item} node={item.node} />
                 </NodePathProvider>
               </LiftedAncestors>
@@ -165,13 +183,4 @@ function rowItemsOf(item: YSortItem, models: ReadonlyMap<string, TileSetModel>):
     groupIndex,
     tileData: { ...item.tileData!, cells: row.cells },
   }));
-}
-
-/**
- * Godot's order for one flat sort: the z bucket, then the sort y, and items whose y is equal
- * within `is_equal_approx` keep their collection order (`renderer_canvas_cull.h:115-123`).
- */
-function compareYSortItems(a: YSortItem, b: YSortItem): number {
-  if (a.effectiveZ !== b.effectiveZ) return a.effectiveZ - b.effectiveZ;
-  return isEqualApprox(a.sortY, b.sortY) ? 0 : a.sortY - b.sortY;
 }

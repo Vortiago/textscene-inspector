@@ -55,6 +55,24 @@ export const TILE_AND_TARGET_SCENES = [
     mode: '2d',
   },
 
+  // A y-sorted layer's child nodes sort with its tile rows, at the root of a sort and lifted into
+  // a y-sorted parent. Verified against Godot 4.6.3.
+  {
+    name: 'tile-map-layer-y-sort-children',
+    file: 'unit-tile-map-layer-y-sort-children.tscn',
+    mode: '2d',
+  },
+
+  // The child slides across a row: at 0.5 s it has passed row 1 and sits above row 2, so it
+  // draws over row 1 and under row 2. Verified against Godot 4.6.3 at that pose.
+  {
+    name: 'tile-map-layer-y-sort-animated-child',
+    file: 'unit-tile-map-layer-y-sort-animated-child.tscn',
+    mode: '2d',
+    select: 'World/Player',
+    animationTime: 0.5,
+  },
+
   // RemoteTransform3D and RemoteTransform2D copy their transform onto the node
   // remote_path names, resolved over the Live scene tree (remoteTransforms.ts).
   // Each target is authored away from its relay. Verified against Godot 4.6.3.

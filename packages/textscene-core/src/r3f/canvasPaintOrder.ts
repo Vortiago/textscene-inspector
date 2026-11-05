@@ -160,7 +160,13 @@ function reservesRoom(node: TscnNode): boolean {
  */
 export function internalFrontRoom(node: TscnNode): number {
   if (node.type !== 'TileMap') return 0;
-  return (node.properties as { layers?: readonly unknown[] }).layers?.length ?? 0;
+  const { layers, y_sort_enabled: ySorted } = node.properties as {
+    layers?: readonly unknown[];
+    y_sort_enabled?: boolean;
+  };
+  // A y-sorted TileMap hands its layers to the y-sort pass, which splits each into a group per
+  // tile row once the tileset loads, so the layers draw from a reserve like a TileMapLayer's.
+  return ySorted ? DYNAMIC_CHILD_RESERVE : (layers?.length ?? 0);
 }
 
 /**

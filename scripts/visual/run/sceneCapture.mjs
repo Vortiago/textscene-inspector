@@ -12,6 +12,7 @@ import {
   setDisplayToggle,
   settleCanvas,
 } from '../previewServer.mjs';
+import { pausePlayer, seekPlayer } from './seekAnimation.mjs';
 
 // Greater than CameraFit's last load-time fit timer (1100 ms after mount), with margin for
 // render-loop latency under host contention.
@@ -73,6 +74,14 @@ export async function captureScene(pageState, baseUrl, scene) {
     await row.click();
     // `.click()` hovers the row first and leaves its hover highlight on, so the pointer moves off
     // the tree and only the selection renders.
+    await page.mouse.move(0, 0);
+  }
+
+  // The pose at `animationTime` on the selected AnimationPlayer's first clip, which Godot's
+  // `seek` reaches too. A stopped player shows the rest pose, so only a seek puts a clip on screen.
+  if (scene.animationTime !== undefined) {
+    await pausePlayer(page);
+    await seekPlayer(page, scene.animationTime);
     await page.mouse.move(0, 0);
   }
 

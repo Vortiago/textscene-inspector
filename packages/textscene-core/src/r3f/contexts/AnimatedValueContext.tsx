@@ -5,7 +5,7 @@
  * stable context re-renders only the target whose value changes.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNodePath } from './NodePathContext';
 import { createPushStoreContext, type PushStore } from './pushStore';
 
@@ -19,6 +19,13 @@ export type AnimatedValueRegistry = PushStore<readonly number[]>;
 export function animatedValueKey(nodePath: string, property: string): string {
   return `${nodePath}:${property}`;
 }
+
+/**
+ * The registry key a driver writes after its mixer moves the scene's objects. A pass that reads
+ * the transforms drawn, such as the y-sort, listens to it instead of racing the mixer's frame.
+ * Node paths are never empty, so no node's property takes this key.
+ */
+const MIXER_POSED_KEY = animatedValueKey('', 'posed');
 
 const { Provider: AnimatedValueProvider, useStore: useAnimatedValueRegistry } =
   createPushStoreContext<readonly number[]>('AnimatedValueContext');
@@ -99,4 +106,19 @@ export function withPushedVisible<K>(
   if (visible === undefined) next.delete(key);
   else next.set(key, visible);
   return next;
+}
+
+/** The function a driver calls after its mixer has moved the scene's objects. */
+export function useAnnounceMixerPose(): () => void {
+  const registry = useAnimatedValueRegistry();
+  const poses = useRef(0);
+  return useCallback(() => registry.set(MIXER_POSED_KEY, [++poses.current]), [registry]);
+}
+
+/** Calls `listener` after each pose a driver's mixer writes. `listener` is read through a ref. */
+export function useOnMixerPose(listener: () => void): void {
+  const registry = useAnimatedValueRegistry();
+  const listenerRef = useRef(listener);
+  listenerRef.current = listener;
+  useEffect(() => registry.subscribe(MIXER_POSED_KEY, () => listenerRef.current()), [registry]);
 }

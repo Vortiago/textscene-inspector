@@ -7,7 +7,8 @@
  * `camera: <Camera3D node path>`, which the previewer looks through as `?camera=` opens it, or
  * `canvas: { width, height }`, the 3D canvas size a small frame renders at, or `settleTimeout: <ms>`,
  * each screenshot's limit where one frame outlasts Playwright's default. `pnpm recapture` takes the
- * same limit for the sheet image of the scene's fixture.
+ * same limit for the sheet image of the scene's fixture. `animationTime: <seconds>` seeks the
+ * AnimationPlayer that `select` names to that time before the shot.
  */
 
 import { GEOMETRY_SCENES } from './scenes/geometry.mjs';
@@ -31,6 +32,7 @@ export const SCENE_OPTIONS = [
   'camera',
   'canvas',
   'settleTimeout',
+  'animationTime',
 ];
 
 /**

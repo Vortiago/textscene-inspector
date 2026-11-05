@@ -1,0 +1,128 @@
+/**
+ * A y-sorted TileMapLayer sorts its child nodes with its tile rows, whether the layer is the root
+ * of a sort or lifted into a y-sorted parent's flat sort (`renderer_canvas_cull.cpp:110-170`). A
+ * y-sorted TileMap sorts the rows of its y-sorted layers with its child nodes the same way.
+ */
+import { describe, it, expect } from 'vitest';
+import * as THREE from 'three';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { TscnParser } from '../parser/TscnParser';
+import { parseTresFile } from '../parser/parsedResource';
+import { NodeDispatcher } from './NodeDispatcher';
+import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
+import { findByType } from '../nodes/2d/tiles/tilemaplayer/findByType.testkit';
+import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types';
+import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
+import { SceneStack } from './testing/SceneStack';
+import { namesInPaintOrder } from './testing/paintOrder';
+import { settleLoads } from './testing/settleLoads';
+
+import './nodes/index';
+
+const TILE_SET = `[gd_resource type="TileSet" format=3]
+
+[ext_resource type="Texture2D" path="res://tiles.png" id="1"]
+
+[sub_resource type="TileSetAtlasSource" id="atlas"]
+texture = ExtResource("1")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+
+[resource]
+tile_size = Vector2i(64, 64)
+sources/0 = SubResource("atlas")
+`;
+
+/** Rows 0 to 2 sort at y 32, 96 and 160. The child at y 76 sorts between rows 0 and 1. */
+const CELLS: PlacedCell[] = [0, 1, 2].map((y) => ({
+  coords: { x: 0, y },
+  sourceId: 0,
+  atlasCoords: { x: 0, y: 0 },
+  alternativeId: 0,
+}));
+
+const LAYER_AND_CHILD = (parent: string) => `
+[node name="Layer" type="TileMapLayer" parent="${parent}"]
+tile_set = ExtResource("1")
+y_sort_enabled = true
+
+[node name="Child" type="Polygon2D" parent="${parent === '.' ? 'Layer' : `${parent}/Layer`}"]
+position = Vector2(96, 76)
+polygon = PackedVector2Array(-80, -70, -20, -70, -20, 30, -80, 30)
+`;
+
+const AT_ROOT = `[gd_scene format=3]
+[ext_resource type="TileSet" path="res://tiles.tres" id="1"]
+
+[node name="World" type="Node2D"]
+${LAYER_AND_CHILD('.')}`;
+
+const LIFTED = `[gd_scene format=3]
+[ext_resource type="TileSet" path="res://tiles.tres" id="1"]
+
+[node name="World" type="Node2D"]
+y_sort_enabled = true
+${LAYER_AND_CHILD('.')}`;
+
+const TILE_MAP = `[gd_scene format=3]
+[ext_resource type="TileSet" path="res://tiles.tres" id="1"]
+
+[node name="World" type="Node2D"]
+
+[node name="Map" type="TileMap" parent="."]
+y_sort_enabled = true
+tile_set = ExtResource("1")
+format = 2
+layer_0/y_sort_enabled = true
+layer_0/tile_data = PackedInt32Array(0, 0, 0, 65536, 0, 0, 131072, 0, 0)
+
+[node name="Child" type="Polygon2D" parent="Map"]
+position = Vector2(96, 76)
+polygon = PackedVector2Array(-80, -70, -20, -70, -20, 30, -80, 30)
+`;
+
+/** The row and child names in the order three paints them. */
+async function drawOrder(source: string): Promise<string[]> {
+  const scene = new TscnParser().parse(source);
+  for (const layer of findByType(scene.nodes, 'TileMapLayer')) {
+    const props = layer.properties as TileMapLayerProperties;
+    props.cells = CELLS;
+    props.enabled = true;
+  }
+
+  const fake = createFakeResourceLoader();
+  fake.resources.seed('res://tiles.tres', parseTresFile(TILE_SET));
+  const atlas = new THREE.Texture();
+  (atlas as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
+  fake.textures.seed('res://tiles.png', atlas);
+  const renderer = await ReactThreeTestRenderer.create(
+    <SceneStack workspace="2d" loader={fake.loader} scene={scene}>
+      <NodeDispatcher nodes={scene.nodes} />
+    </SceneStack>
+  );
+  await settleLoads();
+
+  let root: THREE.Object3D | null | undefined = (
+    renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> }
+  ).children?.[0]?.instance;
+  while (root?.parent) root = root.parent;
+  return namesInPaintOrder(root!, (o) => o.name?.startsWith('TileGroup_') || o.name === 'Child').map((name) =>
+    name.replace(/^TileGroup_.*_\d+_(\d+)$/, 'row $1')
+  );
+}
+
+describe('a y-sorted TileMapLayer with a child node', () => {
+  it('draws the child between the rows it sorts between, at the root of a sort', async () => {
+    expect(await drawOrder(AT_ROOT)).toEqual(['row 0', 'Child', 'row 1', 'row 2']);
+  });
+
+  it('draws the child between the rows it sorts between, lifted into a y-sorted parent', async () => {
+    expect(await drawOrder(LIFTED)).toEqual(['row 0', 'Child', 'row 1', 'row 2']);
+  });
+});
+
+describe('a y-sorted TileMap with a child node', () => {
+  it("draws the child between the rows of the TileMap's y-sorted layer", async () => {
+    expect(await drawOrder(TILE_MAP)).toEqual(['row 0', 'Child', 'row 1', 'row 2']);
+  });
+});

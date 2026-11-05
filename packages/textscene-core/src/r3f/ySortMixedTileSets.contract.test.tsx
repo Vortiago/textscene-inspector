@@ -14,6 +14,7 @@ import { findByType } from '../nodes/2d/tiles/tilemaplayer/findByType.testkit';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import { SceneStack } from './testing/SceneStack';
+import { namesInPaintOrder } from './testing/paintOrder';
 
 import './nodes/index';
 import { settleLoads } from './testing/settleLoads';
@@ -36,7 +37,7 @@ sources/0 = SubResource("atlas")
 const cellsAt = (rows: number[]): PlacedCell[] =>
   rows.map((y) => ({ coords: { x: 0, y }, sourceId: 0, atlasCoords: { x: 0, y: 0 }, alternativeId: 0 }));
 
-/** `TileGroup_*` names in draw order, read off each group's own z, not traversal order. */
+/** `TileGroup_*` names in the order three paints them. */
 async function drawOrder(): Promise<string[]> {
   const scene = new TscnParser().parse(`[gd_scene format=3]
 [ext_resource type="TileSet" path="res://small.tres" id="1"]
@@ -70,6 +71,9 @@ y_sort_enabled = true
   const fake = createFakeResourceLoader();
   fake.resources.seed('res://small.tres', parseTresFile(squareTileSet(32)));
   fake.resources.seed('res://big.tres', parseTresFile(squareTileSet(64)));
+  const atlas = new THREE.Texture();
+  (atlas as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
+  fake.textures.seed('res://tiles.png', atlas);
 
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack workspace="2d" loader={fake.loader} scene={scene}>
@@ -82,11 +86,7 @@ y_sort_enabled = true
     .children?.[0]?.instance;
   let root: THREE.Object3D | null | undefined = first;
   while (root?.parent) root = root.parent;
-  const groups: Array<{ name: string; z: number }> = [];
-  root?.traverse((o: THREE.Object3D) => {
-    if (o.name?.startsWith('TileGroup_')) groups.push({ name: o.name, z: o.position.z });
-  });
-  return groups.sort((a, b) => a.z - b.z).map((g) => g.name);
+  return namesInPaintOrder(root!, (o) => o.name?.startsWith('TileGroup_'));
 }
 
 describe('y-sorted TileMapLayers with different TileSets', () => {

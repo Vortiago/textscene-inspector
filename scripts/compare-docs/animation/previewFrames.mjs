@@ -3,8 +3,6 @@
  * pause it, then drive the scrubber to each sampled time and screenshot.
  */
 
-/* global document, window */ // used only inside the page.evaluate callback, which runs in the browser.
-
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { launchGodotComparisonBrowser } from '../../showcase/browser.mjs';
@@ -17,6 +15,7 @@ import {
   withPreviewBrowser,
 } from '../../visual/previewServer.mjs';
 import { FRAMES } from './clip.mjs';
+import { clipDuration, pausePlayer, seekPlayer } from '../../visual/run/seekAnimation.mjs';
 
 export function captureOurFrames(fixture, framesDir, mode, driverText) {
   return withPreviewBrowser(
@@ -43,33 +42,14 @@ export function captureOurFrames(fixture, framesDir, mode, driverText) {
       const { target, reason: targetReason } = await findCaptureTarget(page, { canvas2D: mode === '2d' });
       if (!target) throw new Error(targetReason ?? 'no capture target after selecting the driver');
 
-      const scrubber = page.locator('input[type="range"]').first();
-      if ((await scrubber.count()) === 0) throw new Error('no animation scrubber after selecting the player');
-      const duration = Number(await scrubber.getAttribute('max'));
-      if (!Number.isFinite(duration) || duration <= 0) throw new Error(`bad scrubber max: ${duration}`);
-
-      // Enter the paused state before scrubbing: a seek from the initial stopped state restores the
-      // rest pose and ignores the time. Play then Pause reaches it, and the exact-name match avoids
-      // the "Animation Player" clip dropdown, whose label also holds "Play".
-      await page.getByRole('button', { name: 'Play', exact: true }).click();
-      await page.waitForTimeout(150);
-      await page.getByRole('button', { name: 'Pause', exact: true }).click();
-      await page.waitForTimeout(150);
+      const duration = await clipDuration(page);
+      await pausePlayer(page);
 
       await mkdir(framesDir, { recursive: true });
       const { shoot } = targetShooter(target);
       for (let i = 0; i < FRAMES; i++) {
         const t = (duration * i) / FRAMES;
-        // A React-controlled input: set through the native value setter and fire input and change,
-        // since .fill() does not drive onChange.
-        await page.evaluate((value) => {
-          const el = document.querySelector('input[type=range]');
-          const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-          set.call(el, String(value));
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true }));
-        }, t);
-        await page.waitForTimeout(220);
+        await seekPlayer(page, t);
         await writeFile(join(framesDir, `frame_${String(i).padStart(2, '0')}.png`), await shoot());
       }
     }
