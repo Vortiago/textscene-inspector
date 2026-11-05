@@ -987,6 +987,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     // 30/44 in double precision times 44 is 29.999999999999996, which truncates to 29. Godot's float ratio gives 30.
     const [line] = applyVisibleCharsReveal([fakeLine(44)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+      text: '',
       visibleChars: 30,
       visibleRatio: 30 / 44,
     });
@@ -996,6 +997,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
   it('budgets by the total glyph count it is given when that differs from the lines', () => {
     const [line] = applyVisibleCharsReveal([fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
       totalCharacters: 6,
