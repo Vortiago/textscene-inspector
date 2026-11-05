@@ -282,7 +282,7 @@ export type OpentypeCoordinates = ReadonlyMap<number | string, number>;
 export type GlyphVariation = Pick<FontMetrics, 'embolden' | 'skew' | 'opentype'>;
 
 /** Whether the variation changes the glyph outline at all. */
-export function isGlyphVaried({ embolden = 0, skew = 0 }: GlyphVariation): boolean {
+function isGlyphVaried({ embolden = 0, skew = 0 }: GlyphVariation): boolean {
   return embolden !== 0 || skew !== 0;
 }
 
