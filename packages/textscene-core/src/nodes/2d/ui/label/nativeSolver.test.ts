@@ -33,12 +33,12 @@ import {
   labelVisibleLineRange,
   windowLabelLines,
   labelPreShapeText,
-  applyVisibleCharsReveal,
   labelEffectiveTextTheme,
   labelOutlineTheme,
   labelShadowTheme,
   labelFontState,
 } from './nativeSolver';
+import { applyVisibleCharsReveal } from '../shared/visibleChars';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { resolveLabelSettings } from '../../../../resources/styles/labelsettings/decode';

@@ -45,7 +45,6 @@ import {
   DEFAULT_JUSTIFICATION_FLAGS,
 } from '../../../../godot/text/textServerEnums';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
-import { truncatedShare } from '../shared/visibleChars';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
@@ -270,76 +269,6 @@ export function labelPreShapeText(
   )
     return text;
   return text.slice(0, visibleChars);
-}
-
-interface VisibleCharsBudget {
-  behavior: number;
-  /** Final resolved `visible_chars`, the budget of CHARS_AFTER_SHAPING. */
-  visibleChars: number | undefined;
-  /** Final resolved `visible_ratio`, the budget of the GLYPHS_* behaviours. */
-  visibleRatio: number | undefined;
-  /** Total glyphs when it is not the lines' count: RichTextLabel counts each paragraph's glyphs, trimmed edge spaces included (`rich_text_label.cpp:8017-8033`). */
-  totalGlyphs?: number;
-  /** `is_layout_rtl()` (`SolveNode.rtl`), which picks the end GLYPHS_AUTO trims from (`label.cpp:779-780`). Defaults `false`. */
-  rtl?: boolean;
-}
-
-/**
- * `draw_text`'s per-glyph `skip` (`label.cpp:778-780,label.h:197-240`) over lines already shaped
- * and windowed to `label.cpp`'s `start`/`end` (`:548-559`). CHARS_AFTER_SHAPING hides each glyph whose
- * source character is at or past the budget (`p_glyphs[j].end + p_para_start > p_visible_chars`). The
- * GLYPHS behaviours count glyphs in visual order: GLYPHS_LTR from the front, GLYPHS_RTL from the back
- * (`label.cpp:780`), and GLYPHS_AUTO picks by `rtl_layout` (`:779-780`).
- */
-export function applyVisibleCharsReveal(
-  lines: readonly TextLineLayout[],
-  budget: VisibleCharsBudget
-): TextLineLayout[] {
-  if (budget.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return [...lines];
-  if (budget.behavior === VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING) {
-    return revealCharacters(lines, budget.visibleChars);
-  }
-  return revealGlyphs(lines, budget);
-}
-
-/**
- * CHARS_AFTER_SHAPING. An ellipsis glyph has no source character: its `end` is -1 (`text_server.h:628`),
- * so it hides where `paragraphStart - 1 > visibleChars`.
- */
-function revealCharacters(
-  lines: readonly TextLineLayout[],
-  visibleChars: number | undefined
-): TextLineLayout[] {
-  if (visibleChars === undefined || visibleChars < 0) return [...lines];
-  return lines.map((line) => {
-    const isEllipsisShown = (line.paragraphStart ?? 0) - 1 <= visibleChars;
-    return {
-      ...line,
-      glyphs: line.glyphs.filter((glyph) =>
-        glyph.sourceIndex === undefined ? isEllipsisShown : glyph.sourceIndex < visibleChars
-      ),
-    };
-  });
-}
-
-/** The GLYPHS behaviours: `visible_ratio * total_glyphs` glyphs, counted in visual order across lines. */
-function revealGlyphs(lines: readonly TextLineLayout[], budget: VisibleCharsBudget): TextLineLayout[] {
-  if (budget.visibleRatio === undefined || budget.visibleRatio >= 1) return [...lines];
-  const totalGlyphs = budget.totalGlyphs ?? lines.reduce((sum, l) => sum + l.glyphs.length, 0);
-  const limit = truncatedShare(totalGlyphs, Math.max(0, budget.visibleRatio));
-  const fromEnd =
-    budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_RTL ||
-    (budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_AUTO && budget.rtl === true);
-  const hideBefore = fromEnd ? totalGlyphs - limit : 0;
-  let seen = 0;
-  return lines.map((line) => ({
-    ...line,
-    glyphs: line.glyphs.filter(() => {
-      const keep = fromEnd ? seen >= hideBefore : seen < limit;
-      seen++;
-      return keep;
-    }),
-  }));
 }
 
 /**

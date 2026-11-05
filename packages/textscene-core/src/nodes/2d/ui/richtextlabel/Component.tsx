@@ -189,7 +189,9 @@ function useShapedRichText(
           // Before Shaping draws a prefix shaped on its own, so a typewriter reveal wraps as it grows.
           if (reveal?.behavior !== VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return { runs, layout };
           const shownRuns = truncateRunsToCharacters(runs, reveal.characters);
-          return { runs, layout, shown: { runs: shownRuns, layout: shape(shownRuns) } };
+          // A cut that keeps every run whole leaves the text unchanged, so its layout is reused.
+          const isUncut = shownRuns.length === runs.length && shownRuns.every((run, i) => run === runs[i]);
+          return { runs, layout, shown: { runs: shownRuns, layout: isUncut ? layout : shape(shownRuns) } };
         },
         box,
         theme

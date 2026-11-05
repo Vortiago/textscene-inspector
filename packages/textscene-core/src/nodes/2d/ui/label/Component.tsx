@@ -25,7 +25,6 @@ import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useC
 import { TextRun, type TextRunProps } from '../../../../r3f/controls/native/text/TextRun';
 import {
   LABEL_PARAGRAPH_SEPARATOR,
-  applyVisibleCharsReveal,
   labelEffectiveTextTheme,
   labelFontState,
   labelPreShapeText,
@@ -37,6 +36,7 @@ import {
   windowLabelLines,
   type LabelLinePlacement,
 } from './nativeSolver';
+import { applyVisibleCharsReveal } from '../shared/visibleChars';
 import { labelEffectLayers, labelFillLayer, type LabelEffectLayer } from './effectLayers';
 import type { LabelProperties } from './types';
 import {

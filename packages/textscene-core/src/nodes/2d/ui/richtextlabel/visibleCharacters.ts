@@ -10,7 +10,7 @@
 
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type { GlyphPlacement, TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { applyVisibleCharsReveal } from '../label/nativeSolver';
+import { applyVisibleCharsReveal } from '../shared/visibleChars';
 import type { StyledTextRun } from './nativeSolver';
 import type { RichTextLabelProperties } from './types';
 
@@ -84,9 +84,14 @@ export function revealedGlyphs(
   const countedLines = layout.lines.map((line) => ({
     ...line,
     glyphs: line.glyphs
-      .filter((glyph) => !implicit.has(glyph.sourceIndex!))
+      .filter((glyph) => glyph.sourceIndex === undefined || !implicit.has(glyph.sourceIndex))
       .map((glyph) => {
-        const counted = { ...glyph, sourceIndex: glyph.sourceIndex! - skippedBefore[glyph.sourceIndex!]! };
+        // A glyph past the text, or with no index, follows every implicit break.
+        const index = glyph.sourceIndex;
+        const counted =
+          index === undefined
+            ? glyph
+            : { ...glyph, sourceIndex: index - (skippedBefore[index] ?? implicit.size) };
         originals.set(counted, glyph);
         return counted;
       }),

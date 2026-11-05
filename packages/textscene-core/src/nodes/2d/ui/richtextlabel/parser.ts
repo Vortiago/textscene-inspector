@@ -60,7 +60,7 @@ export function parseRichTextLabel(
   result.tabStopsPx = parseTabStops(properties.tab_stops);
   result.tabSize = parseOptionalInt(properties.tab_size);
   result.autowrapTrimFlags = parseOptionalInt(properties.autowrap_trim_flags, 'int64');
-  const visibleState = resolveVisibleChars(properties, () => characterCount(result));
+  const visibleState = resolveVisibleChars(properties, () => characterCount(result), true);
   if (visibleState) {
     result.visibleCharacters = visibleState.visibleChars;
     result.visibleRatio = visibleState.visibleRatio;
