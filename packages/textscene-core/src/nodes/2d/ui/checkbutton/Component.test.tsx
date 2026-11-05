@@ -195,3 +195,27 @@ describe('<CheckButton> (isolated painter contract)', () => {
     expect(await iconSrc(true)).toBe(CHECK_BUTTON_ICONS.uncheckedMirrored);
   });
 });
+
+describe('<CheckButton> — text_overrun_behavior trims the label to its paragraph box (button.cpp:428-432)', () => {
+  const glyphQuadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
+
+  async function render(properties: Partial<CheckButtonProperties>) {
+    return ReactThreeTestRenderer.create(
+      <CheckButton
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'AAAA BBBB CCCC', ...properties })}
+        rect={{ x: 0, y: 0, w: 108, h: 28 }}
+        renderOrder={0}
+      />
+    );
+  }
+
+  it('draws only the whole words that fit under OVERRUN_TRIM_WORD', async () => {
+    // 'AAAA BBBB' is 88.6 px, wider than the 80 px box: the word trim keeps 'AAAA' (4 quads), where the
+    // paragraph cut alone keeps the glyphs of 'BBB' too.
+    const trimmed = await render({ overrunBehavior: 2 });
+    const cut = await render({ overrunBehavior: 0 });
+    expect(glyphQuadCount(trimmed)).toBe(4);
+    expect(glyphQuadCount(cut)).toBeGreaterThan(4);
+  });
+});

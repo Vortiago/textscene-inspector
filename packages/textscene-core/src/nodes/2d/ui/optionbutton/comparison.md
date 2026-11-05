@@ -13,6 +13,8 @@ OptionButton is a dropdown that collapses to its selected item. The previewer dr
 that item's text and the theme's arrow inside the button's chrome. `clip_text` zeroes each
 item's text width in the minimum size, and `TextParagraph::draw` cuts the label to its paragraph
 box. The previewer does both, so a box narrower than the item shows only the glyphs that fit.
+A trimming `text_overrun_behavior` zeroes the width the same way. The previewer trims the item
+to the box, with an ellipsis where Godot adds one, as Button does.
 
 ## Linting
 

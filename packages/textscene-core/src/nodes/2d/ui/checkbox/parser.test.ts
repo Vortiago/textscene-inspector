@@ -46,3 +46,14 @@ describe('parseCheckBox — alignment', () => {
     expect(parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), {}).alignment).toBeUndefined();
   });
 });
+
+describe('parseCheckBox — text_overrun_behavior', () => {
+  it('reads text_overrun_behavior', () => {
+    const p = parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), { text_overrun_behavior: '3' });
+    expect(p.overrunBehavior).toBe(3);
+  });
+
+  it('leaves overrunBehavior undefined when absent', () => {
+    expect(parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), {}).overrunBehavior).toBeUndefined();
+  });
+});

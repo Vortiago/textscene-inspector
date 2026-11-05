@@ -18,11 +18,8 @@ import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
 import {
   clampAutowrapMode,
   shapedTextSizeWidthPx,
-  soloLineLayout,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   resolveButtonDrawState,
   pickButtonStyleBox,
@@ -30,10 +27,10 @@ import {
   layoutButtonContent,
 } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
-import { BUTTON_THEME_FONT_KEY, buttonLabelShape, buttonTextTheme, buttonIconColor } from './nativeSolver';
+import { buttonLabelShape, buttonTextTheme, buttonIconColor } from './nativeSolver';
 import type { ButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 interface ButtonPainterProps extends NativeControlComponentProps {
@@ -60,7 +57,6 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
   const { fontSizePx, color: baseFontColor } = textTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
-  const fontMetrics = resolveNodeFontMetrics(solveNode, BUTTON_THEME_FONT_KEY);
   // Pass 1, unwrapped: what the icon's own reservation is measured against. It is the
   // **solve handoff** the minimum-size solver calls too, so one shaping sizes both.
   const unwrapped: TextLayoutResult | null = buttonLabelShape(solveNode, theme);
@@ -145,42 +141,6 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
     [contentInput, layout]
   );
 
-  const overrunFlags = useMemo(
-    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
-    [props.overrunBehavior]
-  );
-  const trimmedLayout: TextLayoutResult | null = useMemo(() => {
-    // The TextServer trims a wrapped buffer per row. This single-line
-    // trim would collapse it to its first row, so it stands down there.
-    if (!layout || !overrunFlags.trim || layout.lines.length > 1) return layout;
-    const customElementWidth = rect.w - baseStyleBox.contentMargin.left - baseStyleBox.contentMargin.right;
-    const iconReserve =
-      content.icon &&
-      (props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT) !==
-        HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER
-        ? content.icon.rect.w + (solveNode.constants.h_separation ?? theme.separation)
-        : 0;
-    // button.cpp:424 `text_buf_width = ceil(MAX(1, drawable_size_remained.width))`. The icon's
-    // computed reservation, `content.icon.rect.w`, keeps this in step with `layoutButtonContent`.
-    const trimWidthPx = Math.ceil(Math.max(1, customElementWidth - iconReserve));
-    const trimmedLine = trimLineToWidth(layout.lines[0]!, trimWidthPx, overrunFlags, {
-      fontMetrics,
-      fontSizePx,
-    });
-    return soloLineLayout(trimmedLine, layout);
-  }, [
-    layout,
-    overrunFlags,
-    rect.w,
-    baseStyleBox.contentMargin,
-    content.icon,
-    props.iconAlignment,
-    solveNode.constants,
-    theme.separation,
-    fontMetrics,
-    fontSizePx,
-  ]);
-
   return (
     <>
       {!props.flat && (
@@ -198,9 +158,10 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
           />
         </CanvasItemGroup>
       )}
-      {content.labelBox && trimmedLayout && (
+      {content.labelBox && layout && (
         <ButtonLabel
-          layout={trimmedLayout}
+          layout={layout}
+          overrunBehavior={props.overrunBehavior}
           box={content.labelBox}
           fontSizePx={fontSizePx}
           tint={tintedFontColor}

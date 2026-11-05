@@ -15,6 +15,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   fitIconSize,
+  isTextWidthClipped,
   pickButtonStyleBox,
   resolveButtonDrawState,
   shapeButtonLabel,
@@ -33,14 +34,14 @@ import { clampAutowrapMode, shapedTextSizeWidthPx } from '../../../../r3f/contro
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ButtonProperties } from './types';
 import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
-import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /**
  * Button's theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:152`). Only
  * {@link buttonLabelShape} reads it, and this module and `Component.tsx` both call that, so the
  * two agree on the font.
  */
-export const BUTTON_THEME_FONT_KEY = 'font';
+const BUTTON_THEME_FONT_KEY = 'font';
 
 /**
  * One `font_size` key for every draw state (`default_theme.cpp:153`), but a colour key per
@@ -171,13 +172,8 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const textSize = layout ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx } : { x: 0, y: 0 };
   // button.cpp:493-495: `clip_text`, a trimming overrun behaviour or autowrap zeroes the
   // text's width contribution, since a narrower box trims or wraps it. The icon still counts.
-  const overrunBehavior = props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING;
   const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF);
-  if (
-    props.clipText ||
-    overrunBehavior !== OverrunBehavior.OVERRUN_NO_TRIMMING ||
-    autowrapMode !== AutowrapMode.AUTOWRAP_OFF
-  ) {
+  if (isTextWidthClipped(props) || autowrapMode !== AutowrapMode.AUTOWRAP_OFF) {
     textSize.x = 0;
   }
 

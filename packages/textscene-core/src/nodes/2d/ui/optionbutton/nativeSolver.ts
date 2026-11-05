@@ -151,8 +151,8 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
       // Each item goes through `Button::get_minimum_size_for_text_and_icon` (`button.cpp:492`), whose
       // `paragraph->get_size()` is ceiled (`text_paragraph.cpp:601-608` -> `text_server_adv.cpp:7524-7537`),
       // so the max is over whole-pixel widths.
-      // `clip_text` zeroes the width (`button.cpp:493-495`).
-      textW = Math.max(textW, textMinimumWidthPx(size.x, props.clipText));
+      // `clip_text` or a trimming overrun zeroes the width (`button.cpp:493-495`).
+      textW = Math.max(textW, textMinimumWidthPx(size.x, props));
       textH = Math.max(textH, size.y);
     }
   }

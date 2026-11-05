@@ -228,8 +228,8 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   // extent. The icon and separation are added outside the ceil (`check_button.cpp:66-77`).
   const measured =
     hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
-  // `clip_text` zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
-  const textSize = { x: textMinimumWidthPx(measured.x, props.clipText), y: measured.y };
+  // `clip_text` or a trimming overrun zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
+  const textSize = { x: textMinimumWidthPx(measured.x, props), y: measured.y };
 
   const iconSize = fitIconSize(
     checkButtonIconNaturalSize(n, state === 'disabled', n.rtl),

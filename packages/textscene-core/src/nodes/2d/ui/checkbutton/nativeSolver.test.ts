@@ -374,3 +374,15 @@ describe('checkButtonMinimumSize — clip_text zeroes the text width (button.cpp
     expect(result.x).toBe(12 + AB_SHAPED_WIDTH + 4 + 32);
   });
 });
+
+describe('checkButtonMinimumSize — a trimming text_overrun_behavior zeroes the text width (button.cpp:493-495)', () => {
+  it('drops the text width and the h_separation under OVERRUN_TRIM_ELLIPSIS', () => {
+    const result = checkButtonMinimumSize(node({ text: 'AB', overrunBehavior: 3 }), ctx());
+    expect(result).toEqual({ x: 12 + 32, y: 8 + FONT_HEIGHT });
+  });
+
+  it('keeps the whole text width under OVERRUN_NO_TRIMMING', () => {
+    const result = checkButtonMinimumSize(node({ text: 'AB', overrunBehavior: 0 }), ctx());
+    expect(result.x).toBe(12 + AB_SHAPED_WIDTH + 4 + 32);
+  });
+});

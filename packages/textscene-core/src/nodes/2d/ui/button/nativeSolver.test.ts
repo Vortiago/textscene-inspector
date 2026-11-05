@@ -19,7 +19,6 @@ import {
   buttonTextTheme,
   buttonIconColor,
   BUTTON_DEFAULT_FONT_COLOR,
-  BUTTON_THEME_FONT_KEY,
   buttonLabelShape,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -306,7 +305,7 @@ describe('buttonIconColor — icon_normal_color / icon_disabled_color (default_t
   });
 });
 
-describe(`buttonMinimumSize — resolves this Button's own theme font key ("${BUTTON_THEME_FONT_KEY}", default_theme.cpp:152)`, () => {
+describe(`buttonMinimumSize — resolves this Button's own theme font key ("font", default_theme.cpp:152)`, () => {
   // Without a DOM, `peekSceneFontMetrics` always answers the bundled default, so a
   // resolved value cannot be observed. It warns for an unresolvable font (a SystemFont),
   // which proves the lookup found something.
@@ -320,7 +319,7 @@ describe(`buttonMinimumSize — resolves this Button's own theme font key ("${BU
 
   it("a theme_override_fonts/font local override is fed to the text engine (proven by peekSceneFontMetrics's own warn)", () => {
     const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { [BUTTON_THEME_FONT_KEY]: systemFont } };
+    const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { font: systemFont } };
     buttonMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });

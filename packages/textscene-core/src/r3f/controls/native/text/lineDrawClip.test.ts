@@ -55,6 +55,31 @@ describe('drawnLinesInBox cuts each line to the box', () => {
   });
 });
 
+describe('drawnLinesInBox leaves a trim ellipsis uncut (text_server.cpp:1811-1822)', () => {
+  const ellipsis = { char: '…', x: 20, advance: 13, glyph: null, isEllipsis: true };
+  const trimmed: TextLineLayout = {
+    text: 'ab…',
+    widthPx: 33,
+    glyphs: [...LINE.glyphs.slice(0, 2), ellipsis],
+  };
+
+  it('draws the ellipsis past a box narrower than it', () => {
+    const [drawn] = drawnLinesInBox([trimmed], 25, HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT, false);
+    expect(drawn!.line.text).toBe('ab…');
+  });
+
+  it('draws the ellipsis of a line that kept no glyph', () => {
+    const lone: TextLineLayout = { text: '…', widthPx: 13, glyphs: [ellipsis] };
+    const [drawn] = drawnLinesInBox([lone], 2, HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT, false);
+    expect(drawn!.line.text).toBe('…');
+  });
+
+  it('drops the ellipsis with the glyphs after the first one that overflows the box', () => {
+    const [drawn] = drawnLinesInBox([trimmed], 15, HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT, false);
+    expect(drawn!.line.text).toBe('a');
+  });
+});
+
 describe('textParagraphLineShiftPx', () => {
   const { HORIZONTAL_ALIGNMENT_RIGHT, HORIZONTAL_ALIGNMENT_FILL } = HorizontalAlignment;
 

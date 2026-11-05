@@ -271,3 +271,27 @@ describe('<OptionButton> — scene-font (canvas-kind FontMetrics) text path', ()
     expect(await arrowX(true)).toBe(4);
   });
 });
+
+describe('<OptionButton> — text_overrun_behavior trims the label to its paragraph box (button.cpp:428-432)', () => {
+  const glyphQuadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
+
+  async function render(properties: Partial<OptionButtonProperties>) {
+    return ReactThreeTestRenderer.create(
+      <OptionButton
+        {...painterEnv()}
+        solveNode={solveNode({ items: [{ text: 'AAAA BBBB CCCC', id: 0 }], selected: 0, ...properties })}
+        rect={{ x: 0, y: 0, w: 112, h: 32 }}
+        renderOrder={0}
+      />
+    );
+  }
+
+  it('draws only the whole words that fit under OVERRUN_TRIM_WORD', async () => {
+    // 'AAAA BBBB' is 88.6 px, wider than the 80 px box: the word trim keeps 'AAAA' (4 quads), where the
+    // paragraph cut alone keeps the glyphs of 'BBB' too.
+    const trimmed = await render({ overrunBehavior: 2 });
+    const cut = await render({ overrunBehavior: 0 });
+    expect(glyphQuadCount(trimmed)).toBe(4);
+    expect(glyphQuadCount(cut)).toBeGreaterThan(4);
+  });
+});

@@ -405,3 +405,15 @@ describe('checkBoxMinimumSize — clip_text zeroes the text width (button.cpp:49
     expect(result.x).toBe(8 + AB_SHAPED_WIDTH + 4 + 16);
   });
 });
+
+describe('checkBoxMinimumSize — a trimming text_overrun_behavior zeroes the text width (button.cpp:493-495)', () => {
+  it('drops the text width and the h_separation under OVERRUN_TRIM_ELLIPSIS', () => {
+    const result = checkBoxMinimumSize(node({ text: 'AB', overrunBehavior: 3 }), ctx());
+    expect(result).toEqual({ x: 8 + 16, y: 8 + FONT_HEIGHT });
+  });
+
+  it('keeps the whole text width under OVERRUN_NO_TRIMMING', () => {
+    const result = checkBoxMinimumSize(node({ text: 'AB', overrunBehavior: 0 }), ctx());
+    expect(result.x).toBe(8 + AB_SHAPED_WIDTH + 4 + 16);
+  });
+});

@@ -139,6 +139,8 @@ export interface GlyphPlacement {
   emboldenGrowthPx?: number;
   /** The face `shapeText` shaped this glyph in. Absent on an ellipsis glyph `textOverrun` appends, which takes the layout's. */
   fontMetrics?: FontMetrics;
+  /** An ellipsis glyph `trimLineToWidth` appended: `shaped_text_draw` draws it after the kept glyphs, with no clip (`text_server.cpp:1811-1822`). */
+  isEllipsis?: boolean;
 }
 
 export interface TextLineLayout {

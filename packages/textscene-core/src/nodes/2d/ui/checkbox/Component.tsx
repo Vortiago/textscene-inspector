@@ -92,6 +92,7 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       {content.labelBox && layout && (
         <ButtonLabel
           layout={layout}
+          overrunBehavior={props.overrunBehavior}
           box={content.labelBox}
           fontSizePx={fontSizePx}
           tint={tintedFontColor}
