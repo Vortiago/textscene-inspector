@@ -16,7 +16,7 @@ import {
 } from '../../../godot/scene/window';
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../../godot/scene/viewport';
 import { parseViewport } from '../../viewport/shared/parser';
-import { parseThemeOwnerFields } from '../../2d/ui/control/parser';
+import { parseThemeOwnerFields } from '../../2d/ui/control/themeOwnerParser';
 import type { WindowProperties } from './types';
 
 const ORIGIN = { x: 0, y: 0 };

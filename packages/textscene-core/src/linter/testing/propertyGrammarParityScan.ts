@@ -63,6 +63,9 @@ export const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   // The H and V flow containers and the enabler register the parse of this base.
   FlowContainer: '2d/ui/flowcontainer/parser.ts',
   VisibleOnScreenNotifier3D: '3d/visibleonscreennotifier3d/parser.ts',
+  // SubViewport and Window read the shared Viewport keys, and Popup and PopupPanel the Window ones.
+  Viewport: 'viewport/shared/parser.ts',
+  Window: 'windows/window/parser.ts',
 };
 
 /**
