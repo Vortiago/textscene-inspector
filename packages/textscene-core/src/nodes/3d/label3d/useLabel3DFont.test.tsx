@@ -11,13 +11,14 @@ import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtim
  */
 async function importModules() {
   vi.resetModules();
-  const [settings, fontMetrics, resources, loading, serving, hook] = await Promise.all([
+  const [settings, fontMetrics, resources, loading, serving, hook, noFace] = await Promise.all([
     import('../../../r3f/contexts/ProjectSettingsContext'),
     import('../../../r3f/controls/native/text/openSansCanvasFontMetrics'),
     import('../../../r3f/SceneResourcesContext'),
     import('../../../resources/ResourceLoaderContext'),
     import('../../../resources/testing/servingResourceLoader'),
     import('./useLabel3DFont'),
+    import('../../../r3f/controls/native/text/noFaceMetrics'),
   ]);
   return {
     ProjectSettingsProvider: settings.ProjectSettingsProvider,
@@ -26,6 +27,7 @@ async function importModules() {
     ResourceLoaderProvider: loading.ResourceLoaderProvider,
     loaderServing: serving.loaderServing,
     useLabel3DFont: hook.useLabel3DFont,
+    NO_FACE_METRICS: noFace.NO_FACE_METRICS,
   };
 }
 
@@ -153,19 +155,12 @@ describe('useLabel3DFont metrics', () => {
     await settledMetrics(result, { kind: 'canvas', embolden: 1 });
   });
 
-  it('draws glyphs for a font with a face', async () => {
-    const { result } = renderMetrics(undefined);
-
-    await settle();
-
-    expect(result.current?.drawsGlyphs).toBe(true);
-  });
-
-  // `label_3d.cpp:344-358`: a glyph with no font RID has no texture, so Label3D draws nothing.
-  it('draws no glyph for a font with no face', async () => {
+  // `label_3d.cpp:344-358, 601-606`: a glyph with no font RID has no texture, and the box holds hex-code boxes.
+  it('is the hex-code box metrics for a font with no face, with no wait for the bundled font', async () => {
+    bundled.metrics = undefined;
     const { result } = renderMetrics(undefined, FACELESS_PROJECT_FILES);
 
-    await vi.waitFor(() => expect(result.current?.drawsGlyphs).toBe(false));
+    await vi.waitFor(() => expect(result.current?.metrics).toBe(modules.NO_FACE_METRICS));
   });
 
   it('is undefined while the project font loads', async () => {

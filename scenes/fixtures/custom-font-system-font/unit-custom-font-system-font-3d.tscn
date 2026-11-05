@@ -1,29 +1,22 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=4 format=3]
 
 ; The TextMesh scene of unit-text-mesh-default-font.tscn, plus a Label3D, on the project SystemFont,
-; which has no face: each TextMesh glyph draws its fallback quad, and the Label3D draws nothing.
+; which has no face: each TextMesh glyph draws its fallback quad, and the Label3D draws nothing. The
+; material reads no texture: a fallback quad's UVs are NaN in Godot (primitive_meshes.cpp:3559-3562),
+; and what a sampler returns there depends on the GPU.
 
-[sub_resource type="Gradient" id="Gradient_uv"]
-interpolation_mode = 1
-offsets = PackedFloat32Array(0, 0.33, 0.67)
-colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv"]
-gradient = SubResource("Gradient_uv")
-fill_to = Vector2(1, 1)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_flat"]
 shading_mode = 0
-albedo_texture = SubResource("GradientTexture2D_uv")
+albedo_color = Color(0.2, 0.6, 0.9, 1)
 
 [sub_resource type="TextMesh" id="TextMesh_deep"]
-material = SubResource("StandardMaterial3D_uv")
+material = SubResource("StandardMaterial3D_flat")
 text = "8aA"
 font_size = 64
 depth = 0.2
 
 [sub_resource type="TextMesh" id="TextMesh_flat"]
-material = SubResource("StandardMaterial3D_uv")
+material = SubResource("StandardMaterial3D_flat")
 text = "8aA"
 font_size = 64
 depth = 0.0

@@ -323,6 +323,13 @@ describe('buildTextMeshSurface missing glyph', () => {
     expect(xy).toEqual(godot.map((value) => expect.closeTo(value, 6)));
   });
 
+  // `primitive_meshes.cpp:3559-3562` remaps over the bounds of no outline, +INF to -INF, as the dump shows.
+  it('gives the quads of a font with no face NaN UVs, as Godot does', () => {
+    const noFace = withOutlines(NO_FACE_METRICS, peekSceneFontOutlines(FACELESS_FONT)!);
+    const properties = decodeTextMesh({ text: '"8"', font_size: String(FONT_SIZE), depth: '0.0' });
+    expect(uvAxis(buildTextMeshSurface(properties, '', noFace), 0).every(Number.isNaN)).toBe(true);
+  });
+
   it('leaves the quad out of the box the UV spans', () => {
     const raw = { horizontal_alignment: LEFT };
     const withBox = uvAxis(surfaceOf(`H${missing}`, raw), 0);

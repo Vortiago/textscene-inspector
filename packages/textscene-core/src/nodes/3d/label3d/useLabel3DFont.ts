@@ -27,14 +27,14 @@ import { useLoadedFilesAndFonts } from '../../../resources/useLoadedFilesAndFont
 const noFiles = () => [];
 
 export interface Label3DFont {
-  metrics: CanvasFontMetrics;
+  /**
+   * A canvas face, or `NO_FACE_METRICS` for a font with no face. That one shapes the label and its
+   * box from hex-code boxes (`label_3d.cpp:601-606`), and draws nothing: its glyphs have no
+   * texture (`label_3d.cpp:344-358`).
+   */
+  metrics: CanvasFontMetrics | typeof NO_FACE_METRICS;
   /** Whether the glyph raster carries a mip chain: the font's own setting, or the project's for the bundled font. */
   generatesMipmaps: boolean;
-  /**
-   * False for a font with no face: its glyphs have no texture, so Godot draws nothing
-   * (`label_3d.cpp:344-358`). The metrics still shape the label.
-   */
-  drawsGlyphs: boolean;
 }
 
 /**
@@ -57,12 +57,16 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
     const settled = peekSettledSceneFontMetrics(font, nodePath);
     if (!settled) return undefined;
     // A canvas face carries its outlines already. An atlas face draws as the bundled canvas face.
-    const metrics = isCanvasFontMetrics(settled) ? settled : peekBundledCanvasFace(settled);
+    const metrics =
+      settled === NO_FACE_METRICS
+        ? NO_FACE_METRICS
+        : isCanvasFontMetrics(settled)
+          ? settled
+          : peekBundledCanvasFace(settled);
     if (!metrics) return undefined;
     return {
       metrics,
       generatesMipmaps: fontGeneratesMipmaps(font) ?? projectDefaultFontGeneratesMipmaps(settings),
-      drawsGlyphs: settled !== NO_FACE_METRICS,
     };
   };
   const label3DFont = isLoading ? undefined : settledFont();

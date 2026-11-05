@@ -20,6 +20,7 @@ import { outlineStrokeWidthPx } from '../../../r3f/controls/native/text/textOutl
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import { type Label3DProperties } from './types';
 import { useLabel3DFont } from './useLabel3DFont';
+import { isCanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { useLayoutDirectionEnv } from '../../../r3f/contexts/useLayoutDirectionEnv';
 import { textBidiOptions } from '../../../r3f/controls/native/text/textBidiOptions';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
@@ -169,7 +170,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
 
   // Nothing renders before the family registers: `ctx.fillText` against an
   // unregistered one rasterises a system font, frame-stable, so no golden catches it.
-  if (!fontMetrics || !font.drawsGlyphs) return null;
+  if (!fontMetrics || !isCanvasFontMetrics(fontMetrics)) return null;
 
   // `modulate` is authored sRGB. Godot decodes the vertex colour (`label_3d.cpp:428`)
   // through `FLAG_SRGB_VERTEX_COLOR` (`material.cpp:3048-3049`, `material.cpp:1218`).
