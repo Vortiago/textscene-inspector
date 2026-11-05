@@ -11,7 +11,7 @@ import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from '../node2dTransform';
 import { CanvasSpaceProvider, useCanvasSpace } from '../canvasRootScope';
 import type { CanvasItemTint } from '../canvasItemModulate';
-import { useNode2DCanvasTextureSampler, useNode2DTextureSampler } from '../canvasItemTextureSampler';
+import { useCanvasTextureSampler, useNode2DTextureSampler } from '../canvasItemTextureSampler';
 import { CanvasItemSurfaceSource } from '../canvasItemSurface';
 import type { CanvasTextureSlot } from '../../resources/useTexture2D';
 import { LitCanvasItemPixels, type CanvasItemPixelMaterial } from './LitCanvasItemPixels';
@@ -69,7 +69,7 @@ export function CanvasItem2D({ node, props, body, canvasTexture, ownItems, child
   // node's component takes before this group exists, so it repeats the call on its own properties.
   const sampler = useNode2DTextureSampler(props);
   // The sampler the node's component draws its CanvasTexture with, which the maps share.
-  const canvasTextureSampler = useNode2DCanvasTextureSampler(props, canvasTexture?.texture);
+  const canvasTextureSampler = useCanvasTextureSampler(sampler, canvasTexture?.texture);
   const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
   const state = useCanvasItemState({
     modulate: props.modulate,

@@ -280,7 +280,7 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
     if (props.one_shot && state.cycle > 0) state.emitting = false;
   }
 
-  // A global-coords emitter spawns in world space. `velocity_xform` is the same
+  // A global-coords emitter spawns in canvas space. `velocity_xform` is the same
   // transform with its translation dropped, since a velocity is a direction.
   const emissionXform = state.emissionXform;
   const velocityXform: Transform2DColumns = { ...emissionXform, tx: 0, ty: 0 };

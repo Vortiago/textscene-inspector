@@ -40,19 +40,23 @@ export function canvasTexture(data: Record<string, string>): TscnInternalResourc
 
 /**
  * Renders `item` on a lit canvas with the flat grey texture and `resources` in the scene, and
- * returns the first mesh it draws and that mesh's map.
+ * returns the first mesh it draws, that mesh's map and an `update` that swaps the item.
  */
 export async function renderLitItem(item: ReactElement, resources: readonly TscnInternalResource[]) {
   const registerItem = vi.fn((_placement: ItemPlacement, _read: LitItemRead) => () => {});
   const lighting: CanvasLighting2D = { ...INERT_CANVAS_LIGHTING, registerItem };
-  const renderer = await ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
+  const loader = createFakeResourceLoader().loader;
+  const onLitCanvas = (drawn: ReactElement) => (
+    <ResourceLoaderProvider loader={loader}>
       <SceneResourcesProvider internalResources={[...FLAT_GREY, ...resources]} externalResources={[]}>
-        <CanvasLighting2DContext.Provider value={lighting}>{item}</CanvasLighting2DContext.Provider>
+        <CanvasLighting2DContext.Provider value={lighting}>{drawn}</CanvasLighting2DContext.Provider>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
+  const renderer = await ReactThreeTestRenderer.create(onLitCanvas(item));
+  /** Renders `next` in place of the item, on the same canvas. */
+  const update = (next: ReactElement) => renderer.update(onLitCanvas(next));
   const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
   const map = (mesh.material as THREE.MeshBasicMaterial).map!;
-  return { renderer, registerItem, mesh, map };
+  return { renderer, update, registerItem, mesh, map };
 }

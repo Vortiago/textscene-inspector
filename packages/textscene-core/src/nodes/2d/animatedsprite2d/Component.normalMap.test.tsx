@@ -42,3 +42,25 @@ describe('AnimatedSprite2D with a CanvasTexture frame', () => {
     expect([map.magFilter, map.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
   });
 });
+
+describe('AnimatedSprite2D stepping between normal-mapped frames', () => {
+  const TWO_FRAMES = subResource('SpriteFrames', 'sf', {
+    animations: `[{"frames": [{"duration": 1.0, "texture": SubResource("CanvasTexture_1")}, {"duration": 1.0, "texture": SubResource("CanvasTexture_2")}], "loop": true, "name": &"default", "speed": 5.0}]`,
+  });
+  const second = { ...canvasTexture({ normal_texture: FLAT_GREY_REF }), id: 'CanvasTexture_2' };
+
+  it('stays normal-mapped while the next frame takes its own CanvasTexture', async () => {
+    const sprite = (frame: string) =>
+      parsedNode({ type: 'AnimatedSprite2D', name: 'A' }, { sprite_frames: 'SubResource("sf")', frame });
+    const { update, registerItem } = await renderLitItem(<AnimatedSprite2D node={sprite('0')} />, [
+      TWO_FRAMES,
+      canvasTexture({ normal_texture: FLAT_GREY_REF }),
+      second,
+    ]);
+    const readsBefore = registerItem.mock.calls.length;
+    await update(<AnimatedSprite2D node={sprite('1')} />);
+    const readsAfter = registerItem.mock.calls.slice(readsBefore).map((call) => call[1]);
+    expect(readsAfter).not.toContain('plain');
+    expect(registerItem).toHaveBeenLastCalledWith(expect.anything(), 'apart');
+  });
+});

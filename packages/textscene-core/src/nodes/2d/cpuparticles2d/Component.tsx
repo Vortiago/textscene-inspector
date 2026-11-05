@@ -42,14 +42,14 @@ export function CPUParticles2D({ node, children }: NodeComponentProps) {
   } = useTexture2D(props.texture, externalResources, internalResources);
   // A CanvasTexture's own filter and repeat win over the item's.
   const sampler = useNode2DCanvasTextureSampler(props, canvasTexture?.texture);
-  // An emitter that is not emitting draws nothing, so it uploads no view.
+  // An emitter that is not emitting draws nothing, so it uploads no view and loads no maps.
   const texture = useCanvas2DTexture(props.emitting ? resolvedTexture : null, sampler);
 
   return (
     <CanvasItem2D
       node={node}
       props={props}
-      canvasTexture={canvasTexture}
+      canvasTexture={props.emitting ? canvasTexture : undefined}
       body={({ color, opacity }, material, pixelMaterial) =>
         props.emitting ? (
           <ParticleField
@@ -114,8 +114,8 @@ function ParticleField({
   // container is in the tree, since its world matrix does not exist before.
   const [container, setContainer] = useState<THREE.Group | null>(null);
   const emissionTransform = useEmissionTransform(container, props.local_coords);
-  // The pose is in canvas space, and Godot draws it at the canvas transform, so the normal map
-  // turns with that basis, not the emitter's (`canvas.glsl:708`).
+  // The pose is in canvas space, where Godot draws it, so the mesh cancels the emitter's canvas
+  // transform. The normal map then turns with the canvas basis, not the emitter's (`canvas.glsl:708`).
   const canvasPlacement = useMemo(
     () => threeMatrixFromTransform2D(emissionTransform).invert(),
     [emissionTransform]
