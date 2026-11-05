@@ -36,6 +36,7 @@ import {
   type TextThemeProps,
 } from '../../../../r3f/controls/native/textTheme';
 import type { LabelProperties } from './types';
+import { codePointIndexAt, sliceCodePoints, utf16OffsetOf } from '../../../../godot/string/codePoints.js';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import {
@@ -268,12 +269,14 @@ export function labelPreShapeText(
     VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING
   )
     return text;
-  return text.slice(0, visibleChars);
+  return sliceCodePoints(text, visibleChars);
 }
 
 interface VisibleCharsBudget {
   behavior: number;
-  /** Final resolved `visible_chars`, the budget of CHARS_AFTER_SHAPING. */
+  /** The shaped text, which maps a glyph's UTF-16 `sourceIndex` to the code point count Godot budgets. */
+  text: string;
+  /** Final resolved `visible_chars` in code points, the budget of CHARS_AFTER_SHAPING. */
   visibleChars: number | undefined;
   /** Final resolved `visible_ratio`, the budget of the GLYPHS_* behaviours. */
   visibleRatio: number | undefined;
@@ -294,7 +297,7 @@ export function applyVisibleCharsReveal(
 ): TextLineLayout[] {
   if (budget.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return [...lines];
   if (budget.behavior === VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING) {
-    return revealCharacters(lines, budget.visibleChars);
+    return revealCharacters(lines, budget.text, budget.visibleChars);
   }
   return revealGlyphs(lines, budget);
 }
@@ -305,15 +308,18 @@ export function applyVisibleCharsReveal(
  */
 function revealCharacters(
   lines: readonly TextLineLayout[],
+  text: string,
   visibleChars: number | undefined
 ): TextLineLayout[] {
   if (visibleChars === undefined || visibleChars < 0) return [...lines];
+  // Glyph source indices are UTF-16 offsets; the budget counts code points.
+  const visibleEnd = utf16OffsetOf(text, visibleChars);
   return lines.map((line) => {
-    const isEllipsisShown = (line.paragraphStart ?? 0) - 1 <= visibleChars;
+    const isEllipsisShown = codePointIndexAt(text, line.paragraphStart ?? 0) - 1 <= visibleChars;
     return {
       ...line,
       glyphs: line.glyphs.filter((glyph) =>
-        glyph.sourceIndex === undefined ? isEllipsisShown : glyph.sourceIndex < visibleChars
+        glyph.sourceIndex === undefined ? isEllipsisShown : glyph.sourceIndex < visibleEnd
       ),
     };
   });

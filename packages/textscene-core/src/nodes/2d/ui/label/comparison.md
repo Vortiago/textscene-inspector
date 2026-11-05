@@ -122,6 +122,11 @@ Label's construction defaults. It assumes that `text`, whose length is the denom
 is already applied. Every real Godot save guarantees that, since `text` is the first
 `ADD_PROPERTY`, but a hand-edited file that writes `text` after either does not.
 
+Every count counts code points, as Godot's `String` does (`label.cpp:1375-1377`): the
+denominator, the cut at VC_CHARS_BEFORE_SHAPING (`:155-156`) and the budget of
+VC_CHARS_AFTER_SHAPING (`label.h:207`). An astral character, such as an emoji, counts one. The
+previewer draws no colour emoji, so only the letters after it show the count.
+
 ## Text direction
 
 Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server runs ICU over it:

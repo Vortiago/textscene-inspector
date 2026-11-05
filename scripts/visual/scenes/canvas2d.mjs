@@ -906,6 +906,7 @@ export const CANVAS_2D_SCENES = [
   { name: 'label-rtl-alignment', file: 'unit-label-rtl-alignment.tscn', mode: '2d' },
   { name: 'label-rtl-fill-autowrap', file: 'unit-label-rtl-fill-autowrap.tscn', mode: '2d' },
   { name: 'label-rtl-visible-chars-auto', file: 'unit-label-rtl-visible-chars-auto.tscn', mode: '2d' },
+  { name: 'label-visible-characters-astral', file: 'unit-label-visible-characters-astral.tscn', mode: '2d' },
   // A Label's own paragraph direction: the bidirectional reorder, the arms that read the inferred
   // direction, the structured override and the language.
   { name: 'label-bidi', file: 'unit-label-bidi.tscn', mode: '2d' },

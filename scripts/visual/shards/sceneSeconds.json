@@ -190,6 +190,7 @@
   "label-rtl-alignment": 3.2,
   "label-rtl-fill-autowrap": 2.5,
   "label-rtl-visible-chars-auto": 2.6,
+  "label-visible-characters-astral": 2.6,
   "label-valign": 2.9,
   "label-wrap": 3.3,
   "label3d-shadow": 17.7,

@@ -10,6 +10,7 @@ import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
 import { floatElements } from '../../../../resources/shapes/packedArray';
 import { SizeFlags } from '../../../../godot/scene/control';
+import { codePointCount } from '../../../../godot/string/codePoints.js';
 
 const PACKED_FLOAT32_ARRAY_FORMS = packedArrayForms('PackedFloat32Array');
 
@@ -71,7 +72,7 @@ function applySetVisibleRatio(
  */
 function resolveVisibleChars(
   properties: Record<string, string>,
-  textLength: number
+  totalChars: number
 ): VisibleCharsState | undefined {
   const rawChars = properties.visible_characters;
   const rawRatio = properties.visible_ratio;
@@ -81,10 +82,10 @@ function resolveVisibleChars(
   for (const key of Object.keys(properties)) {
     if (key === 'visible_characters') {
       const amount = parseOptionalInt(rawChars);
-      if (amount !== undefined) state = applySetVisibleCharacters(state, amount, textLength);
+      if (amount !== undefined) state = applySetVisibleCharacters(state, amount, totalChars);
     } else if (key === 'visible_ratio') {
       const ratio = parseOptionalFloat(rawRatio);
-      if (ratio !== undefined) state = applySetVisibleRatio(state, ratio, textLength);
+      if (ratio !== undefined) state = applySetVisibleRatio(state, ratio, totalChars);
     }
   }
   return state;
@@ -123,7 +124,7 @@ export function parseLabel(heading: ParsedHeading, properties: Record<string, st
   result.linesSkipped = parseOptionalInt(properties.lines_skipped);
   result.maxLinesVisible = parseOptionalInt(properties.max_lines_visible);
   if (properties.label_settings !== undefined) result.labelSettings = properties.label_settings.trim();
-  const visibleState = resolveVisibleChars(properties, (result.text ?? '').length);
+  const visibleState = resolveVisibleChars(properties, codePointCount(result.text ?? ''));
   if (visibleState) {
     result.visibleCharacters = visibleState.visibleChars;
     result.visibleRatio = visibleState.visibleRatio;

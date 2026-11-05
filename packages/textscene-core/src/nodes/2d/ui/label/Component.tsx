@@ -235,6 +235,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       placements.map((placement) => placement.line),
       {
         behavior: props.visibleCharactersBehavior ?? VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING,
+        text: props.text ?? '',
         visibleChars: props.visibleCharacters,
         visibleRatio: props.visibleRatio,
         rtl: solveNode.rtl,
@@ -244,6 +245,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   }, [
     placements,
     props.visibleCharactersBehavior,
+    props.text,
     props.visibleCharacters,
     props.visibleRatio,
     solveNode.rtl,
