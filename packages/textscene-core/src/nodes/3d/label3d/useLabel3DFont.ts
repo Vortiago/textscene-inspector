@@ -64,15 +64,15 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
     const projectMipmaps = projectDefaultFontGeneratesMipmaps(settings);
     const generatesMipmaps = fontGeneratesMipmaps(font) ?? projectMipmaps;
     const fallbackMipmaps = settled.fallbacks
-      ? fallbackFaceMipmaps(peekSettledChainFaces(font, nodePath), projectMipmaps)
+      ? fallbackFaceMipmaps(settled.fallbacks, peekSettledChainFaces(font, nodePath) ?? [], projectMipmaps)
       : NO_FALLBACK_MIPMAPS;
     if (isBitmapFontMetrics(settled)) return { metrics: settled, generatesMipmaps, fallbackMipmaps };
     // A canvas face carries its outlines already. An atlas face draws as the bundled canvas face,
     // which stands in for that face alone and so keeps its fallbacks.
-    const canvasFace = isCanvasFontMetrics(settled) ? settled : peekBundledCanvasFace(settled);
+    if (isCanvasFontMetrics(settled)) return { metrics: settled, generatesMipmaps, fallbackMipmaps };
+    const canvasFace = peekBundledCanvasFace(settled);
     if (!canvasFace) return undefined;
-    const metrics = withFallbacks(canvasFace, settled.fallbacks ?? []);
-    return { metrics, generatesMipmaps, fallbackMipmaps };
+    return { metrics: withFallbacks(canvasFace, settled.fallbacks ?? []), generatesMipmaps, fallbackMipmaps };
   };
   const label3DFont = isLoading ? undefined : settledFont();
   // Listens only while a face is missing: a label that has its font draws the same through every later settle.
@@ -80,21 +80,21 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
   return label3DFont;
 }
 
-/**
- * The first fallback of the same metrics wins, and the drawn face's own metrics take none, as
- * `withFallbacks` keeps the chain: a glyph draws in the first face that has it.
- */
 const NO_FALLBACK_MIPMAPS: ReadonlyMap<FontMetrics, boolean> = new Map();
 
+/**
+ * The `generate_mipmaps` of each fallback face the shaper draws with (`FontMetrics.fallbacks`), from
+ * the font of the first chain face with those metrics, as the first face that has a glyph draws it.
+ */
 function fallbackFaceMipmaps(
-  faces: readonly SettledChainFace[] | null,
+  fallbacks: readonly FontMetrics[],
+  chainFaces: readonly SettledChainFace[],
   projectMipmaps: boolean
 ): ReadonlyMap<FontMetrics, boolean> {
-  const [drawn, ...fallbacks] = faces ?? [];
-  const mipmaps = new Map<FontMetrics, boolean>();
-  for (const { font, metrics } of fallbacks) {
-    if (metrics === drawn!.metrics || mipmaps.has(metrics)) continue;
-    mipmaps.set(metrics, fontGeneratesMipmaps(font) ?? projectMipmaps);
-  }
-  return mipmaps;
+  return new Map(
+    fallbacks.map((metrics) => {
+      const font = chainFaces.find((face) => face.metrics === metrics)?.font ?? null;
+      return [metrics, fontGeneratesMipmaps(font) ?? projectMipmaps];
+    })
+  );
 }

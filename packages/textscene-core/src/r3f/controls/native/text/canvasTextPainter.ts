@@ -24,7 +24,7 @@ import {
   type FontMetrics,
   type GlyphVariation,
 } from './fontMetrics';
-import type { TextLayoutResult } from './textLayout';
+import type { GlyphPlacement, TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
 import type { CanvasItemPixelMaterial } from '../../../components/LitCanvasItemPixels';
@@ -68,7 +68,7 @@ interface CanvasTextCanvasLayout {
 /**
  * Sizes the raster canvas for `layout`, at a synthesised-italic `skew` (0 is
  * upright) and outline `strokeWidthPx` (0 is filled). The horizontal pad is
- * split evenly, so the quad stays centred on the content box. Pure: no DOM.
+ * split evenly, so the quad stays centred on the ink of the glyphs (`drawnExtentPx`). Pure: no DOM.
  */
 export function computeCanvasTextCanvasLayout(
   layout: TextLayoutResult,
@@ -76,10 +76,10 @@ export function computeCanvasTextCanvasLayout(
   strokeWidthPx = 0,
   originPhasePx: Readonly<Vector2> = VECTOR2_ZERO
 ): CanvasTextCanvasLayout {
-  // The worst-case shear offset over the ink height (`buildGlyphQuadArrays`'s
+  // The worst-case shear offset over a line's ink, which the ascent bounds (`buildGlyphQuadArrays`'s
   // `dx(y) = -skew * (y - baselinePx)`). It over-pads a little, which costs
   // only idle canvas pixels.
-  const shearPadPx = Math.abs(skew) * inkHeightPx(layout);
+  const shearPadPx = Math.abs(skew) * layout.baselineOffsetPx;
   // A centred stroke reaches half its width outside the contour on every side,
   // horizontally too, where an upright fill needs no pad.
   const strokePadPx = strokeWidthPx / 2;
@@ -101,31 +101,37 @@ export function computeCanvasTextCanvasLayout(
 }
 
 /**
- * The span of the ink of the glyphs: their pen boxes, one ink height wider on each side, as Godot draws
- * each glyph quad whole wherever its side bearing reaches (#1376). The run of a fallback face keeps
- * its glyphs at their places on the line (`faceLayouts.ts`), so its raster spans them alone. A layout
- * with no glyph spans its width.
+ * The span of the ink of the glyphs, their pen boxes included, as Godot draws each glyph quad whole
+ * wherever its side bearing reaches (#1376). The run of a fallback face keeps its glyphs at their
+ * places on the line (`faceLayouts.ts`), so its raster spans them alone. A layout with no glyph spans
+ * its width.
  */
 function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: number } {
   let startPx = Infinity;
   let endPx = -Infinity;
   for (const { glyphs } of layout.lines) {
-    const last = glyphs.at(-1);
-    if (!last) continue;
-    startPx = Math.min(startPx, glyphs[0]!.x);
-    endPx = Math.max(endPx, last.x + last.advance);
+    for (const glyph of glyphs) {
+      const { leftPx, rightPx } = glyphInkPx(glyph, layout.baselineOffsetPx);
+      startPx = Math.min(startPx, glyph.x - leftPx);
+      endPx = Math.max(endPx, glyph.x + rightPx);
+    }
   }
-  if (startPx === Infinity) return { startPx: 0, endPx: layout.widthPx };
-  const bearingPx = inkHeightPx(layout);
-  return { startPx: startPx - bearingPx, endPx: endPx + bearingPx };
+  return startPx === Infinity ? { startPx: 0, endPx: layout.widthPx } : { startPx, endPx };
 }
 
 /**
- * The line pitch, and at least the ascent: a negative `line_spacing` shrinks the pitch, and can take
- * it below zero. It bounds how far a glyph's ink reaches past its pen box.
+ * How far `glyph`'s ink reaches left of its pen and right of it, px, its pen box included. A face that
+ * measures no ink takes `ascentPx` on each side: the ascent bounds the reach of any glyph.
  */
-function inkHeightPx(layout: TextLayoutResult): number {
-  return Math.max(layout.linePitchPx, layout.baselineOffsetPx);
+function glyphInkPx(glyph: GlyphPlacement, ascentPx: number): { leftPx: number; rightPx: number } {
+  const face = glyph.fontMetrics;
+  const ink = isCanvasFontMetrics(face) ? face.getGlyphInkUnits?.(glyph.char) : undefined;
+  if (!ink || glyph.fontSizePx === undefined) return { leftPx: ascentPx, rightPx: glyph.advance + ascentPx };
+  const pxPerUnit = glyph.fontSizePx / face.unitsPerEm;
+  return {
+    leftPx: Math.max(0, ink.left * pxPerUnit),
+    rightPx: Math.max(glyph.advance, ink.right * pxPerUnit),
+  };
 }
 
 /** The `GlyphQuadArrays` shape `buildGlyphQuadArrays` produces, always exactly one quad. */

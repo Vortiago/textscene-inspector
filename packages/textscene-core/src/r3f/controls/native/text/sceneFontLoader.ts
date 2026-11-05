@@ -126,7 +126,17 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
   }
 
   const hasGlyph = sfnt ? sfntHasGlyph(sfnt) : () => true;
-  return createRuntimeFontMetrics({ scalars, measureWidthUnits, cssFontFamily: family, hasGlyph });
+  const measureInkUnits = (ch: string) => {
+    const { actualBoundingBoxLeft, actualBoundingBoxRight } = ctx.measureText(ch);
+    return { left: actualBoundingBoxLeft, right: actualBoundingBoxRight };
+  };
+  return createRuntimeFontMetrics({
+    scalars,
+    measureWidthUnits,
+    measureInkUnits,
+    cssFontFamily: family,
+    hasGlyph,
+  });
 }
 
 /** Loads a face from `bytes`. It never throws, and returns null for bytes that do not load. */

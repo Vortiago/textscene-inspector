@@ -59,12 +59,12 @@ function contentOriginOnQuad(canvasLayout: ReturnType<typeof computeCanvasTextCa
 
 describe('computeCanvasTextCanvasLayout', () => {
   // A glyph's ink can pass its pen box by a side bearing, as a `j` does left of the line start.
-  it('reaches one line pitch past each end of the glyphs, and keeps the content box at the quad origin', () => {
+  it('reaches one ascent past each end of the glyphs of a face that measures no ink, and keeps the content box at the quad origin', () => {
     const layout = layoutFor('AB');
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
-    const inkLeftPx = Math.floor(-layout.linePitchPx);
+    const inkLeftPx = Math.floor(-layout.baselineOffsetPx);
     expect(canvasLayout.offsetXPx).toBe(-inkLeftPx);
-    expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx + layout.linePitchPx - inkLeftPx));
+    expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx + layout.baselineOffsetPx - inkLeftPx));
     expect(contentOriginOnQuad(canvasLayout).x).toBeCloseTo(0, 6);
   });
 
@@ -79,22 +79,45 @@ describe('computeCanvasTextCanvasLayout', () => {
   });
 
   // A fallback face's own run starts where its first glyph is on the line (`faceLayouts.ts`).
-  it('starts the raster one line pitch left of the first glyph of a run that starts mid-line', () => {
+  it('starts the raster one ascent left of the first glyph of a run that starts mid-line', () => {
     const layout = layoutFor('ABCDEFGH');
     const line = layout.lines[0]!;
-    const firstIndex = line.glyphs.findIndex((glyph) => glyph.x > 2 * layout.linePitchPx);
+    const firstIndex = line.glyphs.findIndex((glyph) => glyph.x > 2 * layout.baselineOffsetPx);
     expect(firstIndex).toBeGreaterThan(0);
     const shifted = { ...layout, lines: [{ ...line, glyphs: line.glyphs.slice(firstIndex) }] };
-    const inkLeftPx = Math.floor(line.glyphs[firstIndex]!.x - layout.linePitchPx);
+    const inkLeftPx = Math.floor(line.glyphs[firstIndex]!.x - layout.baselineOffsetPx);
     const canvasLayout = computeCanvasTextCanvasLayout(shifted, 0);
-    expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx + layout.linePitchPx - inkLeftPx));
+    expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx + layout.baselineOffsetPx - inkLeftPx));
     expect(contentOriginOnQuad(canvasLayout).x).toBeCloseTo(0, 6);
   });
 
-  it('reaches one ascent past the glyphs at a line spacing that takes the pitch below zero', () => {
-    const layout = layoutFor('AB', -100);
-    expect(layout.linePitchPx).toBeLessThan(0);
-    expect(computeCanvasTextCanvasLayout(layout, 0).offsetXPx).toBe(-Math.floor(-layout.baselineOffsetPx));
+  it('reaches no further at a large line spacing, which moves no ink', () => {
+    const tight = computeCanvasTextCanvasLayout(layoutFor('AB', 0), 0.3);
+    const loose = computeCanvasTextCanvasLayout(layoutFor('AB', 2000), 0.3);
+    expect(loose.offsetXPx).toBe(tight.offsetXPx);
+    expect(loose.canvasWidthPx).toBe(tight.canvasWidthPx);
+  });
+
+  it("bounds the raster by a face's measured ink, with the pen box inside it", () => {
+    // A `j`-like glyph whose ink reaches 100 units left of its pen and 300 right, at 16 px over 1000 units.
+    const measured = createRuntimeFontMetrics({
+      hasGlyph: () => true,
+      scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
+      measureWidthUnits: (text) => text.length * 500,
+      measureInkUnits: () => ({ left: 100, right: 300 }),
+      cssFontFamily: 'scene-font-ink-test',
+    });
+    const layout = shapeText('jj', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      fontMetrics: measured,
+      lineSpacingPx: 0,
+    });
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
+    // 100 units at 16 px is 1.6 px left of the first pen, and the second glyph's pen box ends the ink.
+    expect(canvasLayout.offsetXPx).toBe(2);
+    expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx + 2));
   });
 
   it('pads a sheared raster at a line spacing that takes the pitch below zero', () => {
@@ -106,9 +129,9 @@ describe('computeCanvasTextCanvasLayout', () => {
   it('widens by the origin phase, which carries the content that far right of the quad', () => {
     const layout = layoutFor('AB');
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0, 0, { x: 0.25, y: 0 });
-    const inkLeftPx = Math.floor(-layout.linePitchPx);
+    const inkLeftPx = Math.floor(-layout.baselineOffsetPx);
     expect(canvasLayout.canvasWidthPx).toBe(
-      Math.ceil(layout.widthPx + layout.linePitchPx - inkLeftPx + 0.25)
+      Math.ceil(layout.widthPx + layout.baselineOffsetPx - inkLeftPx + 0.25)
     );
   });
 
