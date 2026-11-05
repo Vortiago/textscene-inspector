@@ -786,7 +786,10 @@ interface RunLineSegment {
   text: string;
   /** This run's glyphs from that line, `x` already line-relative. */
   glyphs: GlyphPlacement[];
-  /** The face the glyphs were shaped in: the run's. */
+  /**
+   * The face of the first glyph, which a glyph with no face of its own takes. The rest may draw in
+   * another face of the **Fallback chain**.
+   */
   fontMetrics: FontMetrics;
 }
 

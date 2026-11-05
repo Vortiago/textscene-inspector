@@ -11,6 +11,7 @@ import {
   dictSubResourceEntries,
   extResourceIdsIn,
   isPathResourceLiteral,
+  pathResourcePathsIn,
   keyedResourceRefReader,
   openResourceRef,
   renameResourceRefs,
@@ -82,6 +83,18 @@ describe('resourceRef', () => {
 
 // The text loader sets no `rp.func`, so `Resource(…)` takes the generic branch
 // (`variant_parser.cpp:1123-1185`) and loads by path.
+describe('pathResourcePathsIn', () => {
+  it('reads the path of each Resource literal in an Array, in order', () => {
+    const value = '[Resource("res://a.ttf"), Resource ( "uid://b3x" , "res://b.fnt" )]';
+
+    expect(pathResourcePathsIn(value)).toEqual(['res://a.ttf', 'res://b.fnt']);
+  });
+
+  it('skips a literal that names only a uid, which nothing here resolves', () => {
+    expect(pathResourcePathsIn('[Resource("uid://b3x"), Resource("res://a.ttf")]')).toEqual(['res://a.ttf']);
+  });
+});
+
 describe('isPathResourceLiteral', () => {
   it.each([
     'Resource("res://a.tres")',
