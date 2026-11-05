@@ -65,15 +65,15 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Bone2D: {
     renderGap: [
-      // The editor bone gizmo reads all four (`skeleton_2d.cpp:189-354`), owned by #1267. The
-      // Skeleton2D modification stack reads length and bone_angle too, owned by #1266.
+      // The editor bone gizmo, which the previewer does not draw yet, reads all four
+      // (`skeleton_2d.cpp:189-354`). The Skeleton2D modification stack reads length and bone_angle too.
       'auto_calculate_length_and_angle',
       'bone_angle',
       'editor_settings/show_bone_gizmo',
       'length',
     ],
     reason:
-      'rest is parsed for the Polygon2D skin; the bone gizmo (#1267) and the modification stack (#1266) read the rest.',
+      'rest is parsed for the Polygon2D skin; the bone gizmo and the modification stack, neither drawn yet, read the rest.',
   },
 
   CPUParticles2D: {
