@@ -116,7 +116,7 @@ async function settle() {
   });
 }
 
-/** Settles one throwaway load inside `act`, which wakes every reader of the font settle count. */
+/** Settles one throwaway load inside `act`. The settle wakes every reader of the font settle count. */
 async function settleThrowawayFontLoad() {
   const { createSettledPeek } = await import('../../../r3f/controls/native/text/settledChannel');
   await act(async () => {
