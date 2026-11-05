@@ -248,3 +248,28 @@ describe('<SpinBox> — RTL layout', () => {
     expect(rtlX).toBeGreaterThan(ltrX + FIELD_LEFT_RTL);
   });
 });
+
+describe('<SpinBox> — field text direction (line_edit.cpp:3103-3112)', () => {
+  afterEach(() => {
+    controlSolverRegistry.clear();
+  });
+
+  async function glyphPositions(locale: string): Promise<number[]> {
+    const renderer = await ReactThreeTestRenderer.create(
+      <SpinBox
+        {...painterEnv()}
+        solveNode={{
+          ...solveNode({ prefix: '$', value: -12.5, step: 0.5, localizeNumeralSystem: false }),
+          locale,
+        }}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    return Array.from(findTextMesh(renderer.scene)!.geometry.attributes.position!.array);
+  }
+
+  it('lays the glyphs out in another order under a right-to-left locale than under a left-to-right one', async () => {
+    expect(await glyphPositions('ar')).not.toEqual(await glyphPositions('en'));
+  });
+});
