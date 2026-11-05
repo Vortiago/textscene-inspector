@@ -42,7 +42,7 @@ import {
 } from '../../../../r3f/controls/native/text/openSansMetrics';
 import {
   getFontAscentPx,
-  getFontTabWidthPx,
+  getFontTabStopsPx,
   getFontLinePitchPx,
   type FontMetrics,
 } from '../../../../r3f/controls/native/text/fontMetrics';
@@ -297,19 +297,6 @@ function wrapForImageObject(base: FontMetrics): FontMetrics {
 
 /** `tab_size`'s default (`rich_text_label.h:575`). */
 const DEFAULT_TAB_SIZE = 4;
-
-/**
- * The stops of a paragraph with no `tab_stops`: one stop of `tab_size` spaces
- * (`_find_tab_stops`, `rich_text_label.cpp:479-482`). `tab_size <= 0` disables tab alignment (`:479`).
- */
-function richTextDefaultTabStopsPx(
-  tabSize: number,
-  fontMetrics: FontMetrics,
-  fontSizePx: number
-): readonly number[] {
-  if (tabSize <= 0) return [];
-  return [getFontTabWidthPx(fontMetrics, tabSize, fontSizePx)];
-}
 
 /**
  * `get_content_width` (`rich_text_label.cpp:7513-7518`): the widest paragraph, its inset plus its
@@ -689,7 +676,7 @@ export function shapeRichText(
     fontSizePxAt: fontSizePxAtFromRuns(styledRuns),
     fontMetricsAt: fontMetricsAtFromRuns(styledRuns, faces),
     fontMetrics: faces.normal,
-    tabStopsPxAt: tabStopsPxAtFromRuns(runAt, richTextDefaultTabStopsPx(tabSize, faces.normal, fontSizePx)),
+    tabStopsPxAt: tabStopsPxAtFromRuns(runAt, getFontTabStopsPx(faces.normal, tabSize, fontSizePx)),
     autowrapTrimFlags,
     paragraphSeparator: '\n',
     terminateLastParagraph: false,

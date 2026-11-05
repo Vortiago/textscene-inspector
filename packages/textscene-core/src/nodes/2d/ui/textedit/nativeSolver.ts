@@ -12,7 +12,7 @@
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
-  getFontTabWidthPx,
+  getFontTabStopsPx,
   getFontLinePitchPx,
   type FontMetrics,
 } from '../../../../r3f/controls/native/text/fontMetrics';
@@ -266,19 +266,13 @@ function textEditContentSize(
  */
 export const TEXT_EDIT_DEFAULT_TAB_SIZE = 4;
 
-/**
- * `Text::invalidate_cache` (`text_edit.cpp:348-352`, and `invalidate_all_lines`, `:394-398`): one
- * repeating stop of `MAX(1, (space width + get_spacing(SPACING_SPACE)) * tab_size)`.
- */
+/** `Text::invalidate_cache` (`text_edit.cpp:348-352`, and `invalidate_all_lines`, `:394-398`). */
 export function textEditTabStopsPx(
   tabSize: number | undefined,
   fontMetrics: FontMetrics,
   fontSizePx: number
 ): number[] {
-  const size = tabSize ?? TEXT_EDIT_DEFAULT_TAB_SIZE;
-  // `tab_size <= 0` skips tab alignment, and `[]` is `shapeText`'s no-op input.
-  if (size <= 0) return [];
-  return [getFontTabWidthPx(fontMetrics, size, fontSizePx)];
+  return getFontTabStopsPx(fontMetrics, tabSize ?? TEXT_EDIT_DEFAULT_TAB_SIZE, fontSizePx);
 }
 
 /**
