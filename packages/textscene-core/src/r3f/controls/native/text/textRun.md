@@ -31,21 +31,21 @@ The scene-font canvas texture is `SRGBColorSpace`, not the 2D-canvas rule's `NoC
   pre-filter decode hides that fringe.
 - A raster split into coverage plus a modulated colour would reopen this choice.
 
-## The scene-font raster runs on the CPU
+## Each glyph draws from FreeType's bitmap
 
-`paintSceneFontCanvas` asks for `willReadFrequently`, which keeps the 2D canvas on Chromium's CPU
-rasteriser. That rasteriser computes exact-area coverage, as FreeType's smooth rasteriser does
-for Godot's `FT_RENDER_MODE_NORMAL` (`text_server_adv.cpp:1323`). Chromium's GPU raster samples
-coverage instead, and no canvas option changes how it anti-aliases. So only the CPU raster can
-draw Godot's outline.
+`paintSceneFontCanvas` draws each glyph that has an outline as FreeType draws it for Godot
+(`glyphCoverage.ts`). `ftStroker.ts` strokes the outline ring and `ftGrays.ts` covers each pixel,
+so a glyph matches Godot's bitmap to the level (`hintingTarget.test.ts`, `ftStroker.test.ts`). The
+painter blends the bitmaps into the canvas with `putImageData`.
 
-- Measured with 60 slanted stems 0.6 px wide on lavapipe, the GPU raster puts down 3 coverage
-  levels and the CPU raster 140. On SwiftShader, which has no GPU raster, both put down 140.
-- Measured against Godot with hinting off on both sides, every embolden row from 8 px to 128 px
-  is within 2% on the CPU raster. On the GPU raster, the 8 px rows lose 2.4% of the ink.
-- The cost is the paint and upload of each raster, once per text change. For a 640 x 80 px raster
-  of filled contours on lavapipe, the CPU canvas takes 3.2 ms and the GPU canvas 0.15 ms. On
-  SwiftShader both take 0.5 ms.
+- A canvas fill of the same outline is off by up to 25 levels, and a canvas stroke by up to 27 on
+  a curve, because Chromium's rasteriser does not cover by FreeType's integer cell sums.
+- Measured in Node, a 16 px glyph takes 0.1 ms to fill and 0.8 ms to stroke, a 48 px glyph 0.2 ms
+  and 0.8 ms. The painter keeps each bitmap for its contour, subpixel shift and radius, so a
+  repaint at a new tint draws none again.
+- The canvas asks for `willReadFrequently`, which keeps it in CPU memory for `getImageData`. A
+  glyph with no outline draws its text there, on Chromium's CPU rasteriser, which covers by exact
+  area where the GPU raster samples coverage.
 
 ## Each canvas run owns its raster
 

@@ -1,12 +1,10 @@
 /**
- * The font-variation half of `canvasTextPainter.ts`: the embolden padding, the emboldened fill and
- * the ring of an emboldened or sheared glyph. Godot emboldens the contour (`text_server_adv.cpp:1314`),
- * shears it (`:1318`), then strokes the result (`:1383`).
+ * The font-variation half of `canvasTextPainter.ts`: the embolden padding, the contours of an
+ * emboldened or sheared glyph, and the emboldened text of a glyph with no contour. Godot emboldens the
+ * contour (`text_server_adv.cpp:1314`), shears it (`:1318`), then strokes the result (`:1383`).
  */
 import { variationKey, type GlyphVariation } from './fontMetrics';
 import type { GlyphContours } from './glyphContours';
-import { freeTypeChordSink } from './freeTypeChords';
-import { traceGlyphContours } from './glyphPath';
 import type { SfntOutlines } from './sfntOutlines';
 import type { TextLayoutResult } from './textLayout';
 import { perObject } from '../../../../utils/perObject';
@@ -91,47 +89,4 @@ export function glyphContoursReader(
 /** Shears what the context draws next about `baselineY`: x' = x - skew * (y - baselineY), the MSDF path's per-vertex shear (TextRunMesh.tsx's `dx`). */
 export function shearAboutBaseline(ctx: CanvasRenderingContext2D, skew: number, baselineY: number): void {
   ctx.transform(1, 0, -skew, 1, skew * baselineY, 0);
-}
-
-/** Starts a path of `contours` from the pen. */
-function traceContoursFromPen(
-  ctx: CanvasRenderingContext2D,
-  contours: GlyphContours,
-  penX: number,
-  baselineY: number
-): void {
-  ctx.beginPath();
-  traceGlyphContours(freeTypeChordSink(ctx), contours, penX, baselineY);
-}
-
-/**
- * Strokes `contours` from the pen, with the stroke state of `ctx`. The contours carry their own
- * shear, so the caller draws them under no shear transform and the line keeps its width in every
- * direction.
- */
-export function strokeContours(
-  ctx: CanvasRenderingContext2D,
-  contours: GlyphContours,
-  penX: number,
-  baselineY: number
-): void {
-  traceContoursFromPen(ctx, contours, penX, baselineY);
-  ctx.stroke();
-}
-
-/**
- * Fills `contours` from the pen, with the fill state of `ctx`. FreeType fills the grown contour
- * where `fillText` snaps its baseline to a whole pixel, which leaves the fill off the stroke that
- * follows the same contour. The caller draws under no shear transform, as for the stroke.
- *
- * @canonical Fills a glyph outline on a 2D context, from the pen
- */
-export function fillContours(
-  ctx: CanvasRenderingContext2D,
-  contours: GlyphContours,
-  penX: number,
-  baselineY: number
-): void {
-  traceContoursFromPen(ctx, contours, penX, baselineY);
-  ctx.fill();
 }

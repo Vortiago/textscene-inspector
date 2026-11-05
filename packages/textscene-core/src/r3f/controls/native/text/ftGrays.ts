@@ -38,51 +38,43 @@ const fractionOf = (subpixel: number): number => subpixel - cellOf(subpixel) * O
  */
 const udiv = (a: number, b: number): number => Math.floor((a * Math.floor(UDIV_NUMERATOR / b)) / TWO_TO_32);
 
-/** The `cover` and `area` sums of one cell (`TCell`). */
-interface Cell {
-  cover: number;
-  area: number;
-}
-
 /**
  * The cells of one render (`gray_TWorker`), in the rasteriser's frame: subpixels, y up, the grid's
  * bottom-left corner at the origin. A cell left of the grid lands in column -1, as `gray_set_cell`
- * puts it at `min_ex - 1`, and a cell right of, above or below the grid is dropped.
+ * puts it at `min_ex - 1`, and a cell right of, above or below the grid is dropped. Each row holds
+ * every column, where FreeType lists only the cells a line touches: an untouched cell sums to zero,
+ * so the sweep reads the same coverage.
  */
 class CellRaster {
-  readonly rows: Map<number, Cell>[];
-  private cell: Cell | null = null;
+  /** The `cover` and `area` sums of each cell (`TCell`), row by row, column -1 first. */
+  readonly cover: Float64Array;
+  readonly area: Float64Array;
+  readonly stride: number;
+  /** The index of the current cell, or -1 for a dropped one. */
+  private cell = -1;
   private x = 0;
   private y = 0;
 
   constructor(
     private readonly width: number,
-    height: number
+    readonly height: number
   ) {
-    this.rows = Array.from({ length: height }, () => new Map<number, Cell>());
+    this.stride = width + 1;
+    this.cover = new Float64Array(this.stride * height);
+    this.area = new Float64Array(this.stride * height);
   }
 
   /** `gray_set_cell`. */
   private setCell(ex: number, ey: number): void {
-    if (ey < 0 || ey >= this.rows.length || ex >= this.width) {
-      this.cell = null;
-      return;
-    }
-    const row = this.rows[ey]!;
-    const column = Math.max(ex, -1);
-    let cell = row.get(column);
-    if (!cell) {
-      cell = { cover: 0, area: 0 };
-      row.set(column, cell);
-    }
-    this.cell = cell;
+    const isDropped = ey < 0 || ey >= this.height || ex >= this.width;
+    this.cell = isDropped ? -1 : ey * this.stride + Math.max(ex, -1) + 1;
   }
 
   /** `FT_INTEGRATE`. */
   private integrate(cover: number, doubledX: number): void {
-    if (!this.cell) return;
-    this.cell.cover += cover;
-    this.cell.area += cover * doubledX;
+    if (this.cell < 0) return;
+    this.cover[this.cell]! += cover;
+    this.area[this.cell]! += cover * doubledX;
   }
 
   /** `gray_move_to`. */
@@ -96,7 +88,7 @@ class CellRaster {
   lineTo(toX: number, toY: number): void {
     let ey1 = cellOf(this.y);
     const ey2 = cellOf(toY);
-    const height = this.rows.length;
+    const height = this.height;
     if ((ey1 >= height && ey2 >= height) || (ey1 < 0 && ey2 < 0)) {
       this.x = toX;
       this.y = toY;
@@ -185,22 +177,17 @@ function coverageOf(area: number): number {
 
 /** `gray_sweep`: the coverage of each pixel, row by row from the top, from the cells of each row. */
 function sweep(raster: CellRaster, width: number): Uint8Array {
-  const height = raster.rows.length;
+  const { height, stride, cover: covers, area: areas } = raster;
   const bitmap = new Uint8Array(width * height);
-  raster.rows.forEach((cells, ey) => {
+  for (let ey = 0; ey < height; ey++) {
     const line = (height - 1 - ey) * width;
-    let x = 0;
     let cover = 0;
-    for (const column of [...cells.keys()].sort((a, b) => a - b)) {
-      const cell = cells.get(column)!;
-      if (cover !== 0 && column > x) bitmap.fill(coverageOf(cover), line + x, line + column);
-      cover += cell.cover * ONE_PIXEL * 2;
-      const area = cover - cell.area;
-      if (area !== 0 && column >= 0) bitmap[line + column] = coverageOf(area);
-      x = column + 1;
+    for (let column = -1; column < width; column++) {
+      const cell = ey * stride + column + 1;
+      cover += covers[cell]! * ONE_PIXEL * 2;
+      if (column >= 0) bitmap[line + column] = coverageOf(cover - areas[cell]!);
     }
-    if (cover !== 0) bitmap.fill(coverageOf(cover), line + x, line + width);
-  });
+  }
   return bitmap;
 }
 

@@ -43,9 +43,9 @@ the out-of-range write, so the node keeps its class-default mode.
 
 The percentage's outline is a stroked contour ring with a one-sided radius of `outline_size / 4` px
 (`text_server_adv.cpp:1383`), drawn before the text (`progress_bar.cpp:180-181`). It draws on the
-canvas painter (painter B) for the bundled font and a scene font alike (ADR-0040). The bundled font
-keeps the percentage fill on the atlas. The golden `progress-bar-bundled-outline` matches Godot's ring
-ink to 5 px of 1477 at size 48 with `outline_size 16`.
+canvas painter (painter B) for the bundled font and a scene font alike, as does the fill (ADR-0040).
+Each glyph and its ring draw from FreeType's bitmap, so the golden `progress-bar-bundled-outline`
+matches Godot to 1/255 at size 48 with `outline_size 16`.
 
 A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
 outline ring (ADR-0064).
@@ -55,5 +55,4 @@ outline ring (ADR-0064).
 - **Approximated** `indeterminate` never animates, so the previewer always draws Godot's
   static frame (the bar centred in the control), whatever `editor_preview_indeterminate`
   says.
-- **Approximated** An emboldened glyph follows FreeType's normal hinting, not the font's light hinting that Godot rasterises with, so it is a fraction of a pixel off.
 - **Resource gap** A SystemFont always draws the default font, as Godot does when no OS font matches its names, where Godot draws a matching OS font.

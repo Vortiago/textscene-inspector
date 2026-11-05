@@ -76,7 +76,9 @@ export function ftVectorNormLen(vector: Vector2): number {
 }
 
 /** `FT_TRIG_SCALE`: the CORDIC shrink factor, 0.858785336480436 in 0.32. */
-const TRIG_SCALE = 0xdbd95b16n;
+const TRIG_SCALE = 0xdbd95b16;
+const TRIG_SCALE_HIGH = Math.floor(TRIG_SCALE / 0x10000);
+const TRIG_SCALE_LOW = TRIG_SCALE % 0x10000;
 /** `FT_TRIG_SAFE_MSB`: the highest bit of a component that no pseudo-rotation overflows. */
 const TRIG_SAFE_MSB = 29;
 /** `FT_TRIG_MAX_ITERS`: the pseudo-rotations, one fewer than the iterations it counts. */
@@ -87,8 +89,11 @@ const shiftRight = (value: number, shift: number): number => Math.floor(value / 
 
 /** `ft_trig_downscale`: the magnitude times the shrink factor, rounded, with the sign kept. Exact in 64 bits. */
 function trigDownscale(value: number): number {
-  const magnitude = Number((BigInt(Math.abs(value)) * TRIG_SCALE + 0x40000000n) >> 32n);
-  return value < 0 ? -magnitude : magnitude;
+  // The 64-bit product splits at bit 16, so each half stays exact in a double.
+  const magnitude = Math.abs(value);
+  const low = Math.floor((magnitude * TRIG_SCALE_LOW + 0x40000000) / 0x10000);
+  const product = Math.floor((magnitude * TRIG_SCALE_HIGH + low) / 0x10000);
+  return value < 0 ? -product : product;
 }
 
 /** `FT_ANGLE_PI` and its parts: an `FT_Angle` is 16.16 degrees. */
@@ -121,7 +126,10 @@ function trigPrenorm(vector: Vector2): number {
   return -shift;
 }
 
-/** `ft_trig_pseudo_rotate`: rotates `vector` by `theta` in place by CORDIC, scaled by its gain. */
+/**
+ * `ft_trig_pseudo_rotate`: rotates `vector` by `theta` in place by CORDIC, scaled by its gain. A
+ * prenormed component stays under 2^31 through every step, so the 32-bit `>>` is FreeType's shift.
+ */
 function pseudoRotate(vector: Vector2, angle: number): void {
   let { x, y } = vector;
   let theta = angle;
@@ -135,8 +143,8 @@ function pseudoRotate(vector: Vector2, angle: number): void {
   }
   for (let i = 1, bias = 1; i < TRIG_MAX_ITERS; bias *= 2, i++) {
     const towards = theta < 0 ? -1 : 1;
-    const nextX = x - towards * shiftRight(y + bias, i);
-    y += towards * shiftRight(x + bias, i);
+    const nextX = x - towards * ((y + bias) >> i);
+    y += towards * ((x + bias) >> i);
     x = nextX;
     theta -= towards * ARCTAN_TABLE[i - 1]!;
   }
@@ -146,7 +154,8 @@ function pseudoRotate(vector: Vector2, angle: number): void {
 
 /**
  * `ft_trig_pseudo_polarize`: the length of a prenormed vector, still scaled by the CORDIC gain, and
- * its angle rounded to 1/16 degree, from rotating it onto the positive x axis.
+ * its angle rounded to 1/16 degree, from rotating it onto the positive x axis. Its components
+ * stay under 2^31, as in `pseudoRotate`.
  */
 function pseudoPolarise(vectorX: number, vectorY: number): { length: number; angle: number } {
   let x = vectorX;
@@ -158,8 +167,8 @@ function pseudoPolarise(vectorX: number, vectorY: number): { length: number; ang
   } else if (y < -x) [theta, x, y] = [-ANGLE_PI2, -y, x];
   for (let i = 1, bias = 1; i < TRIG_MAX_ITERS; bias *= 2, i++) {
     const towards = y > 0 ? 1 : -1;
-    const nextX = x + towards * shiftRight(y + bias, i);
-    y -= towards * shiftRight(x + bias, i);
+    const nextX = x + towards * ((y + bias) >> i);
+    y -= towards * ((x + bias) >> i);
     x = nextX;
     theta += towards * ARCTAN_TABLE[i - 1]!;
   }
@@ -195,7 +204,7 @@ export function ftAtan2(dx: number, dy: number): number {
 
 /** `FT_Vector_Unit`: the 16.16 unit vector at `angle`. */
 export function ftVectorUnit(angle: number): Vector2 {
-  const vector = { x: Number(TRIG_SCALE >> 8n), y: 0 };
+  const vector = { x: Math.floor(TRIG_SCALE / 256), y: 0 };
   pseudoRotate(vector, angle);
   return { x: shiftRight(vector.x + 0x80, 8), y: shiftRight(vector.y + 0x80, 8) };
 }
