@@ -1338,6 +1338,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Visible Characters Astral",
+    "file": "unit-label-visible-characters-astral.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Visible Characters",
     "file": "unit-label-visible-characters.tscn",
     "category": "Other"

@@ -14,6 +14,12 @@ import { drawnOpentype, getFontAscentPx, getFontGlyphAdvancePx, getFontLinePitch
 import * as logger from '../../../../logger';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 
+/**
+ * The first outline load of a run imports the lazy kerning chunk, which Vite transforms cold. A warm run
+ * settles in 0.2 s, but the parallel pre-push run exhausted `vi.waitFor`'s 1 s default and left the peek null.
+ */
+const OUTLINE_LOAD_TIMEOUT_MS = 15_000;
+
 /** Lets every load a peek started settle: each one resolves within a macrotask here. */
 function settleLoads(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
@@ -471,7 +477,7 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
     await settleLoads();
     expect(peek(font, 'Root/Bold')).toBeNull();
 
-    await vi.waitFor(() => expect(peek(font, 'Root/Bold')).not.toBeNull());
+    await vi.waitFor(() => expect(peek(font, 'Root/Bold')).not.toBeNull(), OUTLINE_LOAD_TIMEOUT_MS);
     expect(peek(font, 'Root/Bold')?.outlines?.glyphIndex(0x48)).toBeGreaterThan(0);
   });
 
@@ -496,7 +502,7 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
       properties: { variation_opentype: `{\n1297043023: ${mono}\n}` },
     };
     peek(font, 'Root/Label');
-    await vi.waitFor(() => expect(peek(font, 'Root/Label')).not.toBeNull());
+    await vi.waitFor(() => expect(peek(font, 'Root/Label')).not.toBeNull(), OUTLINE_LOAD_TIMEOUT_MS);
     return peek(font, 'Root/Label')!;
   }
 

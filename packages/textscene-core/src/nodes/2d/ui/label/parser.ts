@@ -10,6 +10,7 @@ import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
 import { floatElements } from '../../../../resources/shapes/packedArray';
 import { SizeFlags } from '../../../../godot/scene/control';
+import { codePointCount, sliceCodePoints } from '../../../../godot/string/codePoints.js';
 
 const PACKED_FLOAT32_ARRAY_FORMS = packedArrayForms('PackedFloat32Array');
 
@@ -44,23 +45,23 @@ const DEFAULT_VISIBLE_CHARS_STATE: VisibleCharsState = { visibleChars: -1, visib
 function applySetVisibleCharacters(
   state: VisibleCharsState,
   amount: number,
-  totalChars: number
+  characterCount: number
 ): VisibleCharsState {
   if (state.visibleChars === amount) return state;
-  if (amount === -1 || totalChars === 0) return { visibleChars: amount, visibleRatio: 1 };
-  return { visibleChars: amount, visibleRatio: amount / totalChars };
+  if (amount === -1 || characterCount === 0) return { visibleChars: amount, visibleRatio: 1 };
+  return { visibleChars: amount, visibleRatio: amount / characterCount };
 }
 
 /** `Label::set_visible_ratio` (label.cpp:1305-1323): a no-op when `p_ratio` matches the current field. */
 function applySetVisibleRatio(
   state: VisibleCharsState,
   ratio: number,
-  totalChars: number
+  characterCount: number
 ): VisibleCharsState {
   if (state.visibleRatio === ratio) return state;
   if (ratio >= 1) return { visibleChars: -1, visibleRatio: 1 };
   if (ratio < 0) return { visibleChars: 0, visibleRatio: 0 };
-  return { visibleChars: Math.trunc(totalChars * ratio), visibleRatio: ratio };
+  return { visibleChars: Math.trunc(characterCount * ratio), visibleRatio: ratio };
 }
 
 /**
@@ -71,20 +72,21 @@ function applySetVisibleRatio(
  */
 function resolveVisibleChars(
   properties: Record<string, string>,
-  textLength: number
+  text: string
 ): VisibleCharsState | undefined {
   const rawChars = properties.visible_characters;
   const rawRatio = properties.visible_ratio;
   if (rawChars === undefined && rawRatio === undefined) return undefined;
+  const characterCount = codePointCount(text);
 
   let state = DEFAULT_VISIBLE_CHARS_STATE;
   for (const key of Object.keys(properties)) {
     if (key === 'visible_characters') {
       const amount = parseOptionalInt(rawChars);
-      if (amount !== undefined) state = applySetVisibleCharacters(state, amount, textLength);
+      if (amount !== undefined) state = applySetVisibleCharacters(state, amount, characterCount);
     } else if (key === 'visible_ratio') {
       const ratio = parseOptionalFloat(rawRatio);
-      if (ratio !== undefined) state = applySetVisibleRatio(state, ratio, textLength);
+      if (ratio !== undefined) state = applySetVisibleRatio(state, ratio, characterCount);
     }
   }
   return state;
@@ -108,7 +110,7 @@ export function parseLabel(heading: ParsedHeading, properties: Record<string, st
   if (boolSlotValue(properties.clip_text) === true) result.clipText = true;
   // label.cpp:1259-1261: `set_ellipsis_char` keeps only the first character.
   if (properties.ellipsis_char !== undefined) {
-    result.ellipsisChar = unquoteStringName(properties.ellipsis_char).slice(0, 1) || undefined;
+    result.ellipsisChar = sliceCodePoints(unquoteStringName(properties.ellipsis_char), 1) || undefined;
   }
   // int64: a `BitField` slot, as the validator declares it. Otherwise a value past 2^31 reads as a
   // different number than Godot stores.
@@ -123,7 +125,7 @@ export function parseLabel(heading: ParsedHeading, properties: Record<string, st
   result.linesSkipped = parseOptionalInt(properties.lines_skipped);
   result.maxLinesVisible = parseOptionalInt(properties.max_lines_visible);
   if (properties.label_settings !== undefined) result.labelSettings = properties.label_settings.trim();
-  const visibleState = resolveVisibleChars(properties, (result.text ?? '').length);
+  const visibleState = resolveVisibleChars(properties, result.text ?? '');
   if (visibleState) {
     result.visibleCharacters = visibleState.visibleChars;
     result.visibleRatio = visibleState.visibleRatio;

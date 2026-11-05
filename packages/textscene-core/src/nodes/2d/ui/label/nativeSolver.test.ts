@@ -825,6 +825,7 @@ describe('labelVisibleLineRange (label.cpp:344-361)', () => {
 
 describe('windowLabelLines', () => {
   const layout: TextLayoutResult = {
+    shapedText: 'abc',
     lines: [
       { text: 'a', glyphs: [], widthPx: 10, paragraphIndex: 0 },
       { text: 'b', glyphs: [], widthPx: 30, paragraphIndex: 1 },
@@ -865,6 +866,10 @@ describe('labelPreShapeText (label.cpp:155-156)', () => {
     expect(labelPreShapeText('Hello', 3, VisibleCharactersBehavior.VC_GLYPHS_LTR)).toBe('Hello');
   });
 
+  it('cuts by code points, so an astral character is never split (edge case)', () => {
+    expect(labelPreShapeText('😀😀😀😀abcdefgh', 6, undefined)).toBe('😀😀😀😀ab');
+  });
+
   it('a negative or absent visibleChars is "show all" (edge case)', () => {
     expect(labelPreShapeText('Hello', -1, VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING)).toBe('Hello');
     expect(labelPreShapeText('Hello', undefined, VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING)).toBe(
@@ -895,6 +900,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
   it('VC_CHARS_AFTER_SHAPING keeps a running CHARACTER budget across lines (happy path)', () => {
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(3), fakeLine(3, 3)], {
       behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+      text: 'x'.repeat(6),
       visibleChars: 4,
       visibleRatio: undefined,
     });
@@ -913,10 +919,24 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     }).lines[0]!;
     const [revealed] = applyVisibleCharsReveal([line], {
       behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+      text: 'abc שלום',
       visibleChars: 6,
       visibleRatio: undefined,
     });
     expect(revealed!.glyphs.map((glyph) => glyph.sourceIndex)).toEqual([0, 1, 2, 3, 5, 4]);
+  });
+
+  it('VC_CHARS_AFTER_SHAPING budgets code points, so an astral glyph costs one (label.h:207)', () => {
+    // "😀😀ab" has glyph source indices 0, 2, 4, 5 in UTF-16 units but code points 0, 1, 2, 3.
+    const line = fakeLine(4);
+    line.glyphs = line.glyphs.map((glyph, index) => ({ ...glyph, sourceIndex: [0, 2, 4, 5][index] }));
+    const [revealed] = applyVisibleCharsReveal([line], {
+      behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+      text: '😀😀ab',
+      visibleChars: 3,
+      visibleRatio: undefined,
+    });
+    expect(revealed!.glyphs.map((glyph) => glyph.sourceIndex)).toEqual([0, 2, 4]);
   });
 
   it('VC_CHARS_AFTER_SHAPING hides the ellipsis of a paragraph that starts past the budget, plus one', () => {
@@ -936,6 +956,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     });
     const [kept, hidden] = applyVisibleCharsReveal([withEllipsis(3), withEllipsis(4)], {
       behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+      text: 'x'.repeat(6),
       visibleChars: 2,
       visibleRatio: undefined,
     });
@@ -946,6 +967,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
   it('VC_GLYPHS_AUTO/LTR reveal GLYPHS from the FRONT, budgeted by visible_ratio * total_glyphs', () => {
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
     });
@@ -953,6 +975,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(l2!.glyphs.length).toBe(0);
     const auto = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_AUTO,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
     });
@@ -963,6 +986,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
   it('VC_GLYPHS_RTL reveals GLYPHS from the BACK — the opposite end from LTR/AUTO (error path)', () => {
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_RTL,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
     });
@@ -975,6 +999,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(
       applyVisibleCharsReveal(lines, {
         behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+        text: 'x'.repeat(6),
         visibleChars: undefined,
         visibleRatio: 1,
       })[0]!.glyphs.length
@@ -982,6 +1007,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(
       applyVisibleCharsReveal(lines, {
         behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+        text: 'x'.repeat(6),
         visibleChars: -1,
         visibleRatio: undefined,
       })[0]!.glyphs.length
@@ -993,6 +1019,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(
       applyVisibleCharsReveal(lines, {
         behavior: VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING,
+        text: '',
         visibleChars: 0,
         visibleRatio: 0,
       })[0]!.glyphs.length
@@ -1352,6 +1379,7 @@ describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
     // layout direction, so the same budget hides the opposite end from the LTR case.
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_AUTO,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
       rtl: true,
@@ -1363,6 +1391,7 @@ describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
   it('VC_GLYPHS_LTR and VC_GLYPHS_RTL are explicit and ignore the layout direction (:779-780)', () => {
     const ltr = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
       rtl: true,
@@ -1370,6 +1399,7 @@ describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
     expect(ltr[0]!.glyphs.length).toBe(4);
     const rtlBehavior = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_RTL,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
       rtl: false,
