@@ -12,7 +12,7 @@
 import { perObject } from '../../../../../utils/perObject';
 import { opentypeKey, type OpentypeCoordinates } from '../fontMetrics';
 import { tableFits, type SfntFile } from '../sfntTables';
-import { controlValuesOf } from '../truetype/trueTypeHinting';
+import { controlValuesOf } from '../truetype/controlValues';
 import { designCoordinates, normalizedCoordinates } from './axisCoordinates';
 import { readAvar, type AxisVariations } from './avar';
 import { variedControlValues } from './cvar';

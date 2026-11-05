@@ -29,6 +29,7 @@ import {
   type SfntFile,
 } from '../sfntTables';
 import { isTrickyFont } from '../trickyFont';
+import { controlValuesOf } from './controlValues';
 import { CodeRange, ExecContext, type FaceBytecode } from './ttExecContext';
 import { INSTRUCT_CONTROL_NO_HINTING, saveProgramState } from './ttGraphicsState';
 import { runContext } from './ttRunInstructions';
@@ -43,16 +44,6 @@ const MAXP_STACK_OFFSET = 24;
 const MIN_FUNCTION_DEFS = 64;
 /** The twilight points FreeType allows, four phantom points short of 16 bits. */
 const MAX_TWILIGHT_POINTS = 0xffff - PHANTOM_POINT_COUNT;
-
-/** `tt_face_load_cvt`: the control values in 26.6 font units. */
-export function controlValuesOf(sfnt: SfntFile): Int32Array {
-  const bytes = tableBytes(sfnt, 'cvt ');
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  return Int32Array.from(
-    { length: bytes.length >> 1 },
-    (_, index) => view.getInt16(index * 2, false) * FIXED_26_6_ONE
-  );
-}
 
 /** The `maxp` limits and the programs of a font, or null for a font with no `maxp` that fits. */
 function faceBytecodeOf(sfnt: SfntFile): FaceBytecode | null {
