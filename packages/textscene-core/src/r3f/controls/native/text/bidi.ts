@@ -197,14 +197,31 @@ function reverseInPlace(values: number[], first: number, last: number): void {
   }
 }
 
+/** The levels and paragraphs of `[from, to)` of one range, indexed from `from`, as `ubidi_setLine` makes a line of its own. */
+function lineEmbedding(embedding: EmbeddingLevels, from: number, to: number): EmbeddingLevels {
+  return {
+    levels: embedding.levels.slice(from, to),
+    paragraphs: embedding.paragraphs
+      .filter((paragraph) => paragraph.end >= from && paragraph.start < to)
+      .map(({ start, end, level }) => ({
+        start: Math.max(start, from) - from,
+        end: Math.min(end, to - 1) - from,
+        level,
+      })),
+  };
+}
+
 /**
  * `[from, to)` of one range in visual order, offset to paragraph indices. `ubidi_setLine` (`:5359`):
- * rule L1 resets the line's own trailing whitespace, then L2 reverses each segment in turn.
+ * rule L1 resets the line's own trailing whitespace, then L2 reverses each segment in turn. The line
+ * goes in as its own text: bidi-js 1.1.0's L1 indexes a line that starts past 0 from the range start,
+ * so it misses the trailing whitespace of every line after the first.
  */
 function rangeVisualOrder(range: ResolvedRange, from: number, to: number): number[] {
   const order = logicalOrder(range.start + from, range.start + to);
-  for (const [first, last] of bidi.getReorderSegments(range.text, range.embedding, from, to - 1)) {
-    reverseInPlace(order, first! - from, last! - from);
+  const lineText = range.text.slice(from, to);
+  for (const [first, last] of bidi.getReorderSegments(lineText, lineEmbedding(range.embedding, from, to))) {
+    reverseInPlace(order, first!, last!);
   }
   return order;
 }

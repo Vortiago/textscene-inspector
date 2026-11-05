@@ -34,7 +34,10 @@ export function useTintedTextOutline(
   return useMemo(() => ({ color: multiplyModulate(color, ownTint), sizePx }), [color, sizePx, ownTint]);
 }
 
-type RunLookProps = Pick<TextRunProps, 'layout' | 'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder'>;
+type RunLookProps = Pick<
+  TextRunProps,
+  'layout' | 'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder' | 'penOriginXPx'
+>;
 
 type OutlineRingRunProps = RunLookProps & {
   /** `outline_size` in px. */

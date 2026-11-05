@@ -15,7 +15,7 @@ import { usePendingWhile } from '../../../../resources/usePendingWhile';
 
 type BundledOutlineRingProps = Pick<
   TextRunProps,
-  'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder'
+  'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder' | 'penOriginXPx'
 > & {
   /** Shaped on the atlas face, whose baked advances the canvas face reads too. */
   layout: TextLayoutResult;
