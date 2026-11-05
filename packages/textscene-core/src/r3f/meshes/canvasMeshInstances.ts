@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { copyDrawnPrimitive } from '../../resources/meshes/godotSurface';
 import type { MultiMeshInstance } from '../../resources/meshes/multimesh';
 import { flipbookCell, type ParticlesFlipbook } from '../particlesFlipbook';
-import { canvasMeshGeometry } from './canvasMeshGeometry';
+import { canvasPositions } from './canvasMeshGeometry';
 
 /** The one instance of a mesh a MeshInstance2D draws: untransformed, uncoloured, with no custom data. */
 export const MESH_INSTANCE: MultiMeshInstance = {
@@ -21,7 +21,7 @@ export const MESH_INSTANCE: MultiMeshInstance = {
 const CUSTOM_DATA_Z = 2;
 
 /**
- * `geometry` copied once per instance, in canvas space (see {@link canvasMeshGeometry}): shrunk to a
+ * `geometry` copied once per instance, in canvas space (see {@link canvasPositions}): shrunk to a
  * flipbook cell, then under the instance transform (`canvas.glsl:253-266`). The colour is the vertex
  * colour times the instance colour, in sRGB as stored. The caller disposes the result.
  */
@@ -30,12 +30,11 @@ export function canvasInstancesGeometry(
   instances: readonly MultiMeshInstance[],
   flipbook: ParticlesFlipbook | null
 ): THREE.BufferGeometry {
-  const canvas = canvasMeshGeometry(geometry);
-  const position = canvas.getAttribute('position');
-  const uv = canvas.getAttribute('uv');
-  const vertexColor = canvas.getAttribute('color');
-  const index = canvas.getIndex();
-  const vertexCount = position.count;
+  const canvasPosition = canvasPositions(geometry.getAttribute('position'));
+  const uv = geometry.getAttribute('uv');
+  const vertexColor = geometry.getAttribute('color');
+  const index = geometry.getIndex();
+  const vertexCount = canvasPosition.length / 3;
   const hasColors = vertexColor !== undefined || instances.some((instance) => instance.color);
 
   const positions = new Float32Array(instances.length * vertexCount * 3);
@@ -48,8 +47,8 @@ export function canvasInstancesGeometry(
     for (let v = 0; v < vertexCount; v++) {
       const at = i * vertexCount + v;
       // Godot's y runs down, and the canvas geometry has already turned it up for the world.
-      const x = position.getX(v) / cell.hFrames;
-      const y = -position.getY(v) / cell.vFrames;
+      const x = canvasPosition[v * 3]! / cell.hFrames;
+      const y = -canvasPosition[v * 3 + 1]! / cell.vFrames;
       positions[at * 3] = transform[0]! * x + transform[1]! * y + transform[3]!;
       positions[at * 3 + 1] = -(transform[4]! * x + transform[5]! * y + transform[7]!);
       if (uv && uvs) {
@@ -82,7 +81,6 @@ export function canvasInstancesGeometry(
     );
   }
   copyDrawnPrimitive(geometry, merged);
-  canvas.dispose();
   return merged;
 }
 
