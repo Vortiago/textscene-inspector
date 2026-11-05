@@ -26,15 +26,10 @@ function applySetVisibleCharacters(
   emptyTextKeepsRatio: boolean
 ): VisibleCharsState {
   if (state.visibleChars === amount) return state;
-  if (amount === -1) return { visibleChars: amount, visibleRatio: 1, lastSetter: 'characters' };
   // Label resets the ratio on empty text (label.cpp:1288); RichTextLabel leaves it (:7898-7900).
-  if (totalChars === 0)
-    return {
-      visibleChars: amount,
-      visibleRatio: emptyTextKeepsRatio ? state.visibleRatio : 1,
-      lastSetter: 'characters',
-    };
-  return { visibleChars: amount, visibleRatio: amount / totalChars, lastSetter: 'characters' };
+  const emptyTextRatio = emptyTextKeepsRatio ? state.visibleRatio : 1;
+  const visibleRatio = amount === -1 ? 1 : totalChars === 0 ? emptyTextRatio : amount / totalChars;
+  return { visibleChars: amount, visibleRatio, lastSetter: 'characters' };
 }
 
 /**
@@ -87,7 +82,7 @@ export function resolveVisibleChars(
   return state;
 }
 
-export interface VisibleCharsBudget {
+interface VisibleCharsBudget {
   behavior: number;
   /** Final resolved `visible_chars`, the budget of CHARS_AFTER_SHAPING. */
   visibleChars: number | undefined;
@@ -160,6 +155,7 @@ interface LigatureClusters {
 function ligatureClusters(glyphs: readonly GlyphPlacement[]): LigatureClusters {
   const clusters: LigatureClusters = { tails: new Set(), lastIndexOf: new Map() };
   for (let start = 0; start < glyphs.length; start++) {
+    if (glyphs[start]!.char !== LIGATURE_START) continue;
     const length = ligatureLengthAt(glyphs, start);
     if (length === 0) continue;
     for (let offset = 1; offset < length; offset++) clusters.tails.add(glyphs[start + offset]!);
@@ -168,6 +164,9 @@ function ligatureClusters(glyphs: readonly GlyphPlacement[]): LigatureClusters {
   }
   return clusters;
 }
+
+/** `f` starts every ligature, so a line without one skips the search. */
+const LIGATURE_START = 'f';
 
 function ligatureLengthAt(glyphs: readonly GlyphPlacement[], start: number): number {
   return (
@@ -198,13 +197,13 @@ function revealGlyphs(lines: readonly TextLineLayout[], budget: VisibleCharsBudg
   const hideBefore = fromEnd ? totalGlyphs - limit : 0;
   let seen = 0;
   let isShown = false;
-  return lines.map((line, lineIndex) => ({
-    ...line,
-    glyphs: line.glyphs.filter((glyph) => {
+  return lines.map((line, lineIndex) => {
+    const glyphs = line.glyphs.filter((glyph) => {
       if (tailsByLine[lineIndex]!.has(glyph)) return isShown;
       isShown = fromEnd ? seen >= hideBefore : seen < limit;
       seen++;
       return isShown;
-    }),
-  }));
+    });
+    return glyphs.length === line.glyphs.length ? line : { ...line, glyphs };
+  });
 }

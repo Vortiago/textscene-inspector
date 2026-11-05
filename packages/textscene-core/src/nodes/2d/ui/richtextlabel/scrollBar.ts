@@ -72,20 +72,15 @@ function scrollBarPlacement(
 }
 
 /**
- * Where `scroll_following_visible_characters` leaves the scroll value. `_update_follow_vc`
- * (`:5209-5221`) runs as the scene loads, before any line is shaped, so `get_line_count()` is 0 and
+ * The scroll value: the foot for `scroll_following`, which wins (`:3827-3828`), else where
+ * `scroll_following_visible_characters` leaves it, else the top. `_update_follow_vc` (`:5209-5221`) runs as the scene loads, before any line is shaped, so `get_line_count()` is 0 and
  * it scrolls to the bar's default max (`:5218`). `Range` then clamps it to `max - page` when the
  * text is shaped (`range.cpp:192-194`).
  */
-function followedVisibleCharactersOffsetPx(contentHeightPx: number, boxHeightPx: number): number {
-  return Math.min(RANGE_DEFAULT_MAX, Math.max(0, contentHeightPx - boxHeightPx));
-}
-
-/** The scroll value: the foot for `scroll_following`, which wins (`:3827-3828`), else the followed position, else the top. */
 function scrollOffsetOf(box: RichTextBox, contentHeightPx: number): number {
-  if (box.scrollFollowing) return Math.max(0, contentHeightPx - box.h);
-  if (box.scrollFollowingVisibleCharacters) return followedVisibleCharactersOffsetPx(contentHeightPx, box.h);
-  return 0;
+  const footPx = Math.max(0, contentHeightPx - box.h);
+  if (box.scrollFollowing) return footPx;
+  return box.scrollFollowingVisibleCharacters ? Math.min(RANGE_DEFAULT_MAX, footPx) : 0;
 }
 
 /**

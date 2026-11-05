@@ -40,6 +40,7 @@ import {
   styledTextRuns,
   underlineRectPx,
   type RichTextImagePlacement,
+  type StyledTextRun,
 } from './nativeSolver';
 import { resolveRichTextFaces } from './styleFaces';
 import { shapeBesideScrollBar } from './scrollBar';
@@ -187,42 +188,42 @@ function useShapedRichText(
     [rect.w, rect.h, props.scrollActive, props.scrollFollowing, props.scrollFollowingVisibleCharacters, rtl]
   );
 
-  const shaped = useMemo(
-    () =>
-      shapeBesideScrollBar(
-        (wrapWidthPx) => {
-          const runs = wrapWidthPx === rect.w ? runsAtRectWidth : runsAt(wrapWidthPx);
-          const layout = shapeRichText(
-            runs,
-            { normal, bold, italic, boldItalic },
-            {
-              fontSizePx: textTheme.fontSizePx,
-              boxWidthPx: wrapWidthPx,
-              autowrapMode,
-              tabSize: props.tabSize,
-              autowrapTrimFlags: props.autowrapTrimFlags,
-            }
-          );
-          return { runs, layout };
-        },
-        box,
-        theme
+  const shapeAtWidth = useCallback(
+    (shapedRuns: StyledTextRun[], boxWidthPx: number) =>
+      shapeRichText(
+        shapedRuns,
+        { normal, bold, italic, boldItalic },
+        {
+          fontSizePx: textTheme.fontSizePx,
+          boxWidthPx,
+          autowrapMode,
+          tabSize: props.tabSize,
+          autowrapTrimFlags: props.autowrapTrimFlags,
+        }
       ),
     [
-      runsAt,
-      runsAtRectWidth,
-      rect.w,
       normal,
       bold,
       italic,
       boldItalic,
       textTheme.fontSizePx,
-      box,
       autowrapMode,
       props.tabSize,
       props.autowrapTrimFlags,
-      theme,
     ]
+  );
+
+  const shaped = useMemo(
+    () =>
+      shapeBesideScrollBar(
+        (wrapWidthPx) => {
+          const runs = wrapWidthPx === rect.w ? runsAtRectWidth : runsAt(wrapWidthPx);
+          return { runs, layout: shapeAtWidth(runs, wrapWidthPx) };
+        },
+        box,
+        theme
+      ),
+    [runsAt, runsAtRectWidth, rect.w, shapeAtWidth, box, theme]
   );
 
   const { visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior } = props;
@@ -243,37 +244,14 @@ function useShapedRichText(
     if (reveal?.behavior !== VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return undefined;
     const { runs, layout, wrapWidthPx } = shaped;
     const shownRuns = truncateRunsToCharacters(runs, reveal.characters);
-    // A cut that keeps every run whole leaves the text unchanged, so its layout is reused.
-    const isUncut = shownRuns.length === runs.length && shownRuns.every((run, i) => run === runs[i]);
+    // A cut that keeps the text whole returns the same runs, so its layout is reused.
+    const isUncut = shownRuns === runs;
     return {
       runs: shownRuns,
-      layout: isUncut
-        ? layout
-        : shapeRichText(
-            shownRuns,
-            { normal, bold, italic, boldItalic },
-            {
-              fontSizePx: textTheme.fontSizePx,
-              boxWidthPx: wrapWidthPx,
-              autowrapMode,
-              tabSize: props.tabSize,
-              autowrapTrimFlags: props.autowrapTrimFlags,
-            }
-          ),
+      layout: isUncut ? layout : shapeAtWidth(shownRuns, wrapWidthPx),
       fullText: { heightPx: richTextContentHeightPx(runs, layout), lineCount: layout.lines.length },
     };
-  }, [
-    shaped,
-    reveal,
-    normal,
-    bold,
-    italic,
-    boldItalic,
-    textTheme.fontSizePx,
-    autowrapMode,
-    props.tabSize,
-    props.autowrapTrimFlags,
-  ]);
+  }, [shaped, reveal, shapeAtWidth]);
 
   return { ...shaped, shown, reveal };
 }

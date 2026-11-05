@@ -136,6 +136,7 @@ export function truncateRunsToCharacters(
 ): StyledTextRun[] {
   const implicit = implicitBreakIndices(runs);
   const kept: StyledTextRun[] = [];
+  let isCut = false;
   let remaining = characters;
   let runStart = 0;
   for (const run of runs) {
@@ -145,10 +146,11 @@ export function truncateRunsToCharacters(
       if (!implicit.has(runStart + length)) remaining--;
       length++;
     }
+    if (length < run.text.length) isCut = true;
     kept.push(length === run.text.length ? run : cutRun(run, length));
     runStart += run.text.length;
   }
-  return kept;
+  return isCut || kept.length < runs.length ? kept : (runs as StyledTextRun[]);
 }
 
 function cutRun(run: StyledTextRun, length: number): StyledTextRun {

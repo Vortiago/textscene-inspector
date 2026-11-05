@@ -533,6 +533,8 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
   let lineHasHeight = false;
   // Whether the current line holds an item `_find_layout_subitem` counts, with or without height.
   let lineHasLayout = false;
+  // Indices in `pending` of the newlines a paragraph tag adds, which `flush` hands to the run.
+  let pendingBreaks: number[] = [];
 
   function append(added: string): void {
     if (added === '') return;
@@ -554,9 +556,6 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
     runs.push({ text: '\n', tags: [...stack], zeroHeightBreak: true, implicitBreaks: [0] });
     lineHasLayout = false;
   }
-
-  // Indices in `pending` of the newlines that `push` adds, which `flush` hands to the run.
-  let pendingBreaks: number[] = [];
 
   function push(tag: OpenBBCodeTag): void {
     if (PARAGRAPH_TAGS.has(tag.name)) endLineForParagraph();
