@@ -31,8 +31,10 @@ import {
 import { justifyParagraphs } from '../../../../r3f/controls/native/text/textJustify';
 import { faceOfStyle, resolveRichTextFaces, type RichTextFaces } from './styleFaces';
 import {
+  resolveTextOutline,
   resolveTextTheme,
   type ResolvedTextTheme,
+  type TextOutlineTheme,
   type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
@@ -46,6 +48,7 @@ import {
   getFontLinePitchPx,
   type FontMetrics,
 } from '../../../../r3f/controls/native/text/fontMetrics';
+import { stringToInt } from '../../../../godot/string/string';
 import { resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { RichTextLabelProperties } from './types';
 import {
@@ -377,6 +380,10 @@ export interface StyledTextRun {
   color: Rgba;
   /** This run's font size, px (`resolveRunFontSizePx`): `normal_font_size` for a plain run. */
   fontSizePx: number;
+  /** The run's `outline_size`, px: the innermost `[outline_size]`, else the theme's (`_find_outline_size`, `rich_text_label.cpp:3326`). */
+  outlineSizePx: number;
+  /** The run's outline colour: the innermost `[outline_color]`, else the theme's (`_find_outline_color`, `:3575`). */
+  outlineColor: Rgba;
   /** The paragraph's `HorizontalAlignment` (`paragraphAlignment`). */
   alignment: number;
   /** The paragraph's direction, language and override (`paragraphBidiOptions`), INHERITED resolved. */
@@ -407,12 +414,14 @@ const RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS = {
 } as const;
 
 /**
- * A styled run's font size: `normalFontSizePx` for a plain run, else its style
- * key through the ancestor-Theme walk (`resolveNodeFontSizePx`,
- * `scene/resources/theme.cpp:658-666`) down to `builtInDefaultPx`. `cache`
- * holds one answer per key for one `styledTextRuns` call.
+ * A styled run's font size. The innermost `[font_size]` of more than 0 wins, as `_shape_line` reads
+ * the size item after the font item (`rich_text_label.cpp:639-641`). Else `normalFontSizePx` for a
+ * plain run, or its style key through the ancestor-Theme walk (`resolveNodeFontSizePx`,
+ * `scene/resources/theme.cpp:658-666`) down to `builtInDefaultPx`. `cache` holds one answer per
+ * key for one `styledTextRuns` call.
  */
 function resolveRunFontSizePx(
+  tags: readonly OpenBBCodeTag[],
   bold: boolean,
   italic: boolean,
   props: RichTextLabelProperties,
@@ -421,6 +430,8 @@ function resolveRunFontSizePx(
   builtInDefaultPx: number,
   cache: Map<string, number>
 ): number {
+  const tagSizePx = tagFontSizePx(tags);
+  if (tagSizePx !== undefined) return tagSizePx;
   if (!bold && !italic) return normalFontSizePx;
   const key =
     bold && italic
@@ -433,6 +444,32 @@ function resolveRunFontSizePx(
   const resolved = resolveNodeFontSizePx(n, key, props.themeOverrideFontSizes?.[key], builtInDefaultPx);
   cache.set(key, resolved);
   return resolved;
+}
+
+/** The innermost `[font_size=N]`, or `undefined` for none or an `N` of 0 or less (`font_size_it->font_size > 0`). */
+function tagFontSizePx(tags: readonly OpenBBCodeTag[]): number | undefined {
+  const value = lastTagValue(tags, 'font_size');
+  if (value === undefined) return undefined;
+  const sizePx = stringToInt(value);
+  return sizePx > 0 ? sizePx : undefined;
+}
+
+/**
+ * The outline of a run: the innermost `[outline_size]` and `[outline_color]`, each over the theme's
+ * (`rich_text_label.cpp:3326-3338`, `:3575-3588`). A negative size is 0 (`push_outline_size(MAX(0, n))`,
+ * `:6370`), and an unreadable colour is `defaultColor` (`:6155`).
+ */
+function resolveRunOutline(
+  tags: readonly OpenBBCodeTag[],
+  themeOutline: TextOutlineTheme,
+  defaultColor: Rgba
+): Pick<StyledTextRun, 'outlineSizePx' | 'outlineColor'> {
+  const sizeValue = lastTagValue(tags, 'outline_size');
+  const colorValue = lastTagValue(tags, 'outline_color');
+  return {
+    outlineSizePx: sizeValue === undefined ? themeOutline.sizePx : Math.max(0, stringToInt(sizeValue)),
+    outlineColor: colorValue === undefined ? themeOutline.color : resolveBBColor(colorValue, defaultColor),
+  };
 }
 
 /** An `[img]` run's resolved size and spec, or `undefined` while its texture cannot size it. */
@@ -462,6 +499,7 @@ export function styledTextRuns(
   boxWidthPx?: number
 ): StyledTextRun[] {
   const raw = props.text ?? '';
+  const themeOutline = resolveTextOutline(n);
   if (!props.bbcodeEnabled) {
     return raw.length === 0
       ? []
@@ -473,6 +511,7 @@ export function styledTextRuns(
             underline: false,
             color: defaultColor,
             fontSizePx: normalFontSizePx,
+            ...resolveRunOutline([], themeOutline, defaultColor),
             alignment: paragraphAlignment([], props.horizontalAlignment),
             bidi: controlBidiOptions(props, n),
             ...paragraphShapeOptions([], props),
@@ -498,6 +537,7 @@ export function styledTextRuns(
         color: image.spec.color,
         // Carries the object width: `imageObjectFontMetrics`.
         fontSizePx: image.sizePx.x,
+        ...resolveRunOutline([], themeOutline, defaultColor),
         alignment: paragraphAlignment(run.tags, props.horizontalAlignment),
         bidi: paragraphBidiOptions(run.tags, props, n),
         ...paragraphShapeOptions(run.tags, props),
@@ -516,6 +556,7 @@ export function styledTextRuns(
       underline: hasOpenTag(run.tags, 'u'),
       color: colorValue !== undefined ? resolveBBColor(colorValue, defaultColor) : defaultColor,
       fontSizePx: resolveRunFontSizePx(
+        run.tags,
         bold,
         italic,
         props,
@@ -524,6 +565,7 @@ export function styledTextRuns(
         builtInDefaultPx,
         runFontSizeCache
       ),
+      ...resolveRunOutline(run.tags, themeOutline, defaultColor),
       alignment: paragraphAlignment(run.tags, props.horizontalAlignment),
       bidi: paragraphBidiOptions(run.tags, props, n),
       ...paragraphShapeOptions(run.tags, props),
@@ -689,7 +731,7 @@ export interface RichTextImagePlacement {
 }
 
 /** One line and style run for one `<TextRun>`, or an `[img]` when `image` is set, which leaves the text fields unused. */
-interface RichTextRunPlacement {
+export interface RichTextRunPlacement {
   lineIndex: number;
   /** The line's top from the control's top: `RichTextLineMetrics.topPx` plus the `vertical_alignment` shift (`richTextVerticalOffsets`). */
   lineTopPx: number;
@@ -697,6 +739,8 @@ interface RichTextRunPlacement {
   lineOffsetXPx: number;
   underline: boolean;
   color: Rgba;
+  /** The run's outline ring, in the run's own colour space before the control tint: `outlineSizePx` and `outlineColor`. */
+  outline: TextOutlineTheme;
   /** The run's font size, px, for its glyphs. The baseline is the line's: `layout.baselineOffsetPx`. */
   fontSizePx: number;
   /** A single-line layout of only this run's glyphs from the line, `glyph.x` already line-relative. */
@@ -708,24 +752,27 @@ interface RichTextRunPlacement {
  * Keeps the parent's `linePitchPx` (`soloLineLayout`) and takes the run's own face, since `TextRun`
  * picks atlas or canvas painting, and the shear, from `layout.fontMetrics`. `baselineOffsetPx` is
  * the line's ascent, applied once per line (`rich_text_label.cpp:1055`'s `off.y += l_ascent`),
- * so mixed sizes share it.
+ * so mixed sizes share it. `heightPx` is the line's own height: a canvas raster of the parent's
+ * pitch would cut off the top of a run beside a larger one.
  */
 function soloRunLayout(
   segment: RunLineSegment,
   parentLayout: TextLayoutResult,
-  lineAscentPx: number
+  lineAscentPx: number,
+  lineHeightPx: number
 ): TextLayoutResult {
   const { text, glyphs, fontMetrics } = segment;
   // The right edge from the line origin, not the run's own span: the glyphs keep their line-relative
   // `x`, and a canvas raster sized to the span alone would clip a run that starts mid-line.
   const lastGlyph = glyphs.at(-1);
   const widthPx = lastGlyph ? lastGlyph.x + lastGlyph.advance : 0;
-  return soloLineLayout(
+  const solo = soloLineLayout(
     { text, glyphs, widthPx, paragraphIndex: 0 },
     parentLayout,
     lineAscentPx,
     fontMetrics
   );
+  return { ...solo, heightPx: Math.max(solo.heightPx, lineHeightPx) };
 }
 
 /**
@@ -1102,8 +1149,9 @@ export function layoutRichTextRuns(
         lineOffsetXPx,
         underline: run.underline,
         color: run.color,
+        outline: { sizePx: run.outlineSizePx, color: run.outlineColor },
         fontSizePx: run.fontSizePx,
-        layout: soloRunLayout(segment, layout, ascentPx),
+        layout: soloRunLayout(segment, layout, ascentPx, ascentPx + descentPx),
         image: run.image
           ? {
               spec: run.image.spec,

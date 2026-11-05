@@ -77,6 +77,8 @@ function textRun(fields: Pick<StyledTextRun, 'text' | 'fontSizePx'> & Partial<St
     italic: false,
     underline: false,
     color: WHITE,
+    outlineSizePx: 0,
+    outlineColor: { r: 0, g: 0, b: 0, a: 1 },
     alignment: 0,
     bidi: NO_BIDI,
     justificationFlags: PARSED_DEFAULTS.justificationFlags,
@@ -1112,6 +1114,16 @@ describe('layoutRichTextRuns', () => {
     expect(placements[1]!.layout.lines[0]!.glyphs.map((g) => g.char)).toEqual(['B', 'O', 'L', 'D']);
   });
 
+  it("gives a run beside a larger one the line's height, so a canvas raster holds the line's ascent", () => {
+    const runs = [
+      textRun({ text: 'small', fontSizePx: FONT_SIZE }),
+      textRun({ text: 'BOLD', bold: true, fontSizePx: FONT_SIZE * 3 }),
+    ];
+    const [small, bold] = layoutRichTextRuns(runs, shapeRuns(runs));
+    // ceil(2189*48/2048) + ceil(600*48/2048) = 52 + 15 at 48 px, against 23 at 16 px.
+    expect([small!.layout.heightPx, bold!.layout.heightPx]).toEqual([67, 67]);
+  });
+
   it("draws each placement in the face its glyphs were shaped in: the run's bold or italics face, not the paragraph's", () => {
     const runs = [
       textRun({ text: 'plain', fontSizePx: FONT_SIZE }),
@@ -1919,5 +1931,102 @@ describe('RichTextLabel paragraph direction', () => {
       [0, 4],
       [1, 4],
     ]);
+  });
+});
+
+describe('styledTextRuns: [font_size], [outline_size] and [outline_color]', () => {
+  const NORMAL = 18;
+  const FALLBACK = 16;
+  const BLACK = { r: 0, g: 0, b: 0, a: 1 };
+  const RED = { r: 1, g: 0, b: 0, a: 1 };
+
+  function runsOf(
+    text: string,
+    props: Partial<RichTextLabelProperties> = {},
+    overrides?: Partial<SolveNode>
+  ) {
+    return styledTextRuns(
+      node({}, overrides),
+      parsedProps({ text, bbcodeEnabled: true, ...props }),
+      WHITE,
+      NORMAL,
+      FALLBACK
+    );
+  }
+
+  describe('[font_size] (rich_text_label.cpp:6161-6165, :639-641)', () => {
+    it('sizes its text, and the text around it keeps the control size', () => {
+      const runs = runsOf('a[font_size=30]b[/font_size]c');
+      expect(runs.map((run) => run.fontSizePx)).toEqual([NORMAL, 30, NORMAL]);
+    });
+
+    it('beats the size of a [b] it sits in, as `_shape_line` reads the size item after the font item', () => {
+      const [run] = runsOf('[b][font_size=30]x[/font_size][/b]');
+      expect(run!.bold).toBe(true);
+      expect(run!.fontSizePx).toBe(30);
+    });
+
+    it('takes the innermost size', () => {
+      const [run] = runsOf('[font_size=30][font_size=40]x[/font_size][/font_size]');
+      expect(run!.fontSizePx).toBe(40);
+    });
+
+    it.each(['0', '-5', 'wide'])(
+      'keeps the control size for the value %s, as `font_size > 0` gates it',
+      (value) => {
+        const [run] = runsOf(`[font_size=${value}]x[/font_size]`);
+        expect(run!.fontSizePx).toBe(NORMAL);
+      }
+    );
+
+    it('keeps the style size of a [b] for a value of 0', () => {
+      const [run] = runsOf('[b][font_size=0]x[/font_size][/b]');
+      expect(run!.fontSizePx).toBe(FALLBACK);
+    });
+  });
+
+  describe('[outline_size] and [outline_color] (rich_text_label.cpp:3326-3338, :3575-3588, :6154-6159, :6367-6371)', () => {
+    it('draws no outline by default: the theme outline_size is 0 and the colour is black', () => {
+      const [run] = runsOf('x');
+      expect(run!.outlineSizePx).toBe(0);
+      expect(run!.outlineColor).toEqual(BLACK);
+    });
+
+    it('sets the size inside the tag only', () => {
+      const runs = runsOf('a[outline_size=3]b[/outline_size]c');
+      expect(runs.map((run) => run.outlineSizePx)).toEqual([0, 3, 0]);
+    });
+
+    it('clamps a negative size to 0 (`push_outline_size(MAX(0, fnt_size))`)', () => {
+      const [run] = runsOf('[outline_size=-4]x[/outline_size]', {}, { constants: { outline_size: 2 } });
+      expect(run!.outlineSizePx).toBe(0);
+    });
+
+    it('starts from the theme outline_size and font_outline_color', () => {
+      const [run] = runsOf('x', {}, { constants: { outline_size: 2 }, colors: { font_outline_color: RED } });
+      expect(run!.outlineSizePx).toBe(2);
+      expect(run!.outlineColor).toEqual(RED);
+    });
+
+    it('sets the colour inside the tag, innermost first', () => {
+      const runs = runsOf('[outline_color=red]a[outline_color=#00ff00]b[/outline_color]c[/outline_color]d');
+      expect(runs.map((run) => run.outlineColor)).toEqual([RED, { r: 0, g: 1, b: 0, a: 1 }, RED, BLACK]);
+    });
+
+    it('falls back to the control default colour for a value that is not a colour (`Color::from_string(value, default_color)`)', () => {
+      const [run] = runsOf('[outline_color=nonsense]x[/outline_color]');
+      expect(run!.outlineColor).toEqual(WHITE);
+    });
+  });
+});
+
+describe('richTextLabelMinimumSize: [font_size]', () => {
+  it('grows the line to the pitch at the tag size', () => {
+    const height = (text: string) =>
+      richTextLabelMinimumSize(node({ fitContent: true, autowrapMode: 0, bbcodeEnabled: true, text }), ctx())
+        .y;
+    // ceil(2189*32/2048) + ceil(600*32/2048) = 35 + 10 against 23 at 16 px.
+    expect(height('A')).toBe(OWN_LINE_PITCH);
+    expect(height('[font_size=32]A[/font_size]')).toBe(45);
   });
 });
