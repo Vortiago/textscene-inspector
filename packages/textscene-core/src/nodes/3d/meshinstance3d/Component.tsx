@@ -24,6 +24,7 @@ import {
   type SurfacedPart,
 } from '../../../r3f/meshes/meshContent';
 import { geometryPrimitive, type SurfacePrimitive } from '../../../resources/meshes/godotSurface';
+import { listedSlot } from '../../../r3f/meshes/sharedInstances';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
@@ -226,7 +227,7 @@ function MaterialOverlayMesh({
         renderOrder={renderOrder}
         receiveShadow
       >
-        <SurfaceMaterialSlot source={source} points={primitive === 'points' ? 'mesh' : undefined} />
+        <SurfaceMaterialSlot source={source} {...listedSlot(primitive, 'mesh')} />
       </Drawn>
       <NextPassLink
         source={source}
@@ -348,7 +349,7 @@ function MeshSurfaces({
   return (
     <>
       <primitive object={part.geometry} attach="geometry" />
-      <SurfaceMaterialSlots sources={sources} points={primitive === 'points' ? 'mesh' : undefined} />
+      <SurfaceMaterialSlots sources={sources} {...listedSlot(primitive, 'mesh')} />
       <NextPassChain
         meshRef={meshRef}
         sources={sources}

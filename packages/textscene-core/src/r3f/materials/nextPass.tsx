@@ -26,6 +26,7 @@ import { materialSourceKey, resolveNextPass, type MaterialSource } from './mater
 import { NO_RAYCAST } from './materialOverlay';
 import { drawnTag } from '../meshes/meshContent';
 import type { SurfacePrimitive } from '../../resources/meshes/godotSurface';
+import { listedSlot } from '../meshes/sharedInstances';
 import { readyMaterial, useMaterial } from './useMaterial';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
 import { surfaceAttach, surfaceSources } from './SurfaceMaterialSlots';
@@ -144,11 +145,7 @@ function ChainDraw({
       // The node's layers mask, which a decal's and a reflection probe's masks filter on.
       userData={visualLayersUserData(godotLayers)}
     >
-      <SurfaceMaterialSlot
-        source={source}
-        attach={attach}
-        points={primitive === 'points' ? 'mesh' : undefined}
-      />
+      <SurfaceMaterialSlot source={source} attach={attach} {...listedSlot(primitive, 'mesh')} />
     </Drawn>
   );
 }

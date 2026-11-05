@@ -2,7 +2,7 @@
 
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { godotSurfacesGeometry, type GodotSurface } from '../../resources/meshes/godotSurface';
+import { godotSurfaceParts, type GodotSurface } from '../../resources/meshes/godotSurface';
 import type { SurfacedMesh } from './meshContent';
 import { meshDebugLines } from './meshDebugLines';
 
@@ -15,15 +15,11 @@ function surface(
 }
 
 function meshOf(...surfaces: GodotSurface[]): SurfacedMesh {
-  const part = (kind: GodotSurface[]) => ({
-    geometry: godotSurfacesGeometry(kind),
+  const [first, ...rest] = godotSurfaceParts(surfaces).map(({ geometry, surfaces: kind }) => ({
+    geometry,
     surfaceIndices: kind.map((_surface, index) => index),
     materials: kind.map(() => undefined),
-  });
-  const kinds = [undefined, 'points', 'lines'].map((primitive) =>
-    surfaces.filter((s) => s.primitive === primitive)
-  );
-  const [first, ...rest] = kinds.filter((kind) => kind.length > 0).map(part);
+  }));
   return { parts: [first!, ...rest] };
 }
 

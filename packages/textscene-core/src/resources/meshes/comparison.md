@@ -36,7 +36,7 @@ The same surfaces read a texture at their UVs, a vertex colour with alpha, and t
 
 <!-- compare: image=unit-array-mesh-lines-gridmap status=done fixture=unit-array-mesh-lines-gridmap.tscn -->
 
-A MeshLibrary item whose mesh has a LINES surface draws its segments at each cell. A cell's basis turns the +Z normal that lights them, so the sun lights the upright cells and not the one turned a half turn about Y.
+A MeshLibrary item whose mesh has a LINES surface draws its segments at each cell. A cell's basis turns the +Z normal that lights the segments, so the sun misses the cell turned a half turn about Y.
 
 ## Lines in a CPUParticles3D
 
