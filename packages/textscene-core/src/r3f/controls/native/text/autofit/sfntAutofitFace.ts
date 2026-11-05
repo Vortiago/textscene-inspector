@@ -11,7 +11,7 @@ import type { UnscaledOutlines } from '../glyphContours';
 import { cmapCodePoints, cmapLookup } from '../sfntCmap';
 import { OS2_FS_SELECTION_OFFSET, OS2_TABLE_MIN_LENGTH, tableFits, type SfntFile } from '../sfntTables';
 import type { AutofitFace } from './afFace';
-import { readLayoutTable, type LayoutTable } from './openTypeLayout';
+import { sfntGpos, sfntGsub } from './openTypeLayout';
 
 /** `OS/2.fsSelection` bit 0, italic, and bit 9, oblique. */
 const FS_SELECTION_ITALIC = 1 << 0;
@@ -38,21 +38,6 @@ function isItalicFace(sfnt: SfntFile): boolean {
   );
 }
 
-/**
- * The table `tag`, or null for none, or for one whose lists leave the file: HarfBuzz reads a table
- * it cannot sanitise as empty.
- */
-function layoutTableOf(sfnt: SfntFile, tag: 'GSUB' | 'GPOS'): LayoutTable | null {
-  const table = sfnt.tables.get(tag);
-  if (!table) return null;
-  try {
-    return readLayoutTable(sfnt.dv, table.offset, table.length, tag === 'GSUB');
-  } catch (error) {
-    if (!(error instanceof RangeError)) throw error;
-    return null;
-  }
-}
-
 /** The face of a font with `outlines` and a `cmap`, or null for a font without a readable `cmap`. */
 export function sfntAutofitFace(sfnt: SfntFile, outlines: UnscaledOutlines): AutofitFace | null {
   const cmap = sfnt.tables.get('cmap');
@@ -67,7 +52,7 @@ export function sfntAutofitFace(sfnt: SfntFile, outlines: UnscaledOutlines): Aut
       const glyph = lookup(codePoint);
       return glyph < glyphCount ? glyph : 0;
     },
-    gsub: layoutTableOf(sfnt, 'GSUB'),
-    gpos: layoutTableOf(sfnt, 'GPOS'),
+    gsub: sfntGsub(sfnt),
+    gpos: sfntGpos(sfnt),
   };
 }

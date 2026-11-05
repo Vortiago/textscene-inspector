@@ -4,7 +4,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { readLayoutTable } from './openTypeLayout';
+import { sfntFileOfTables } from '../sfntTables';
+import { sfntGsub } from './openTypeLayout';
 import { shapeCluster, type ShapingFace } from './openTypeShaping';
 
 const GLYPH_A = 3;
@@ -40,9 +41,14 @@ function tag(name: string): [number, number] {
 
 /** A face that maps every character to glyph A and has `words` as its GSUB. */
 function faceOf(words: readonly number[]): ShapingFace {
-  const dv = new DataView(new ArrayBuffer(words.length * 2));
+  const bytes = new Uint8Array(words.length * 2);
+  const dv = new DataView(bytes.buffer);
   words.forEach((word, i) => dv.setUint16(i * 2, word, false));
-  return { glyphIndex: () => GLYPH_A, gsub: readLayoutTable(dv, 0, dv.byteLength, true), gpos: null };
+  return {
+    glyphIndex: () => GLYPH_A,
+    gsub: sfntGsub(sfntFileOfTables(new Map([['GSUB', bytes]]))),
+    gpos: null,
+  };
 }
 
 const glyphsOf = (face: ShapingFace, cluster: string): number[] =>
