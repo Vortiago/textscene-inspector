@@ -218,8 +218,8 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   // separation are added outside the ceil (`check_box.cpp:63-73`).
   const measured =
     hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
-  // `clip_text` zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
-  const textSize = { x: textMinimumWidthPx(measured.x, props.clipText), y: measured.y };
+  // `clip_text` or a trimming overrun zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
+  const textSize = { x: textMinimumWidthPx(measured.x, props), y: measured.y };
 
   const iconSize = fitIconSize(checkBoxIconNaturalSize(n), checkBoxIconMaxWidth(n.constants));
   const hSeparation = checkBoxHSeparation(n.constants, ctx);

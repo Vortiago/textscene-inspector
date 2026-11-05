@@ -248,6 +248,7 @@ export function trimLineToWidth(
         x: penX,
         advance: whitespaceAdvancePx,
         glyph: atlasGlyphFor(fontMetrics, ' '),
+        isEllipsis: true,
       });
       penX += whitespaceAdvancePx;
     }
@@ -258,6 +259,7 @@ export function trimLineToWidth(
         advance: dotAdvancePx,
         glyph: atlasGlyphFor(fontMetrics, dotChar),
         emboldenGrowthPx,
+        isEllipsis: true,
       });
       penX += dotAdvancePx;
     }

@@ -112,6 +112,8 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
       {content.labelBox && layout && (
         <ButtonLabel
           layout={layout}
+          overrunBehavior={props.overrunBehavior}
+          fontMetrics={fontMetrics}
           box={content.labelBox}
           fontSizePx={fontSizePx}
           tint={tintedFontColor}

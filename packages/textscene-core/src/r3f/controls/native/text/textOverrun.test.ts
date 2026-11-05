@@ -96,6 +96,14 @@ describe('trimLineToWidth', () => {
     expect(result.widthPx).toBeCloseTo(8 * 10.578125 + 13, 10);
   });
 
+  it('marks only the appended ellipsis glyphs, which the draw clip leaves uncut', () => {
+    const result = trim('AAAAAAAAAAAA', 100, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS));
+    expect(result.glyphs.map((glyph) => glyph.isEllipsis === true)).toEqual([
+      ...Array<boolean>(8).fill(false),
+      true,
+    ]);
+  });
+
   it('draws the ellipsis of an emboldened face with the widened advance and the outline growth', () => {
     const fontMetrics = withVariation(OPEN_SANS_FONT_METRICS, { embolden: 1.2 });
     const shaped = shapeText('AAAAAAAAAAAA', {

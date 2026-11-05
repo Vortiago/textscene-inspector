@@ -13,6 +13,8 @@ CheckBox is a toggle button with a check indicator to the left of its label. The
 previewer draws the theme's indicator icon and the label beside it. `clip_text` zeroes the
 label's width in the minimum size, and `TextParagraph::draw` cuts the label to its paragraph
 box. The previewer does both, so a box narrower than the label shows only the glyphs that fit.
+A trimming `text_overrun_behavior` zeroes the width the same way and trims the label to the box with an
+ellipsis where Godot adds one, as Button does.
 
 ## Linting
 

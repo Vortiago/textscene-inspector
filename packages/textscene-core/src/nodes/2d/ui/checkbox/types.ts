@@ -5,6 +5,8 @@ import type { ControlProperties } from '../control/types';
 export interface CheckBoxProperties extends ControlProperties {
   /** CheckBox label text. */
   text?: string;
+  /** `TextServer::OverrunBehavior` (0-6). Godot default 0 (OVERRUN_NO_TRIMMING). */
+  overrunBehavior?: number;
   /** Whether the checkbox is in the checked/pressed state. */
   buttonPressed?: boolean;
   /** Disabled checkboxes render dimmed and non-interactive. */

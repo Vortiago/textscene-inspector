@@ -111,6 +111,8 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
       {hasText && layout && (
         <ButtonLabel
           layout={layout}
+          overrunBehavior={props.overrunBehavior}
+          fontMetrics={fontMetrics}
           box={content.labelBox}
           fontSizePx={fontSizePx}
           tint={tintedFontColor}

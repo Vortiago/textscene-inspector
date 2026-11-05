@@ -1,11 +1,12 @@
 /**
  * `<ButtonLabel>`: a Button-family label drawn as `Button::_notification` draws it. Each line sits in
- * the label's paragraph box, shifted by its own alignment and cut to the box, as `TextParagraph::draw`
- * does. Button, CheckBox, CheckButton, OptionButton and MenuButton share it.
+ * the label's paragraph box, trimmed by `text_overrun_behavior`, shifted by its own alignment and cut to
+ * the box, as `TextParagraph::draw` does. Button, CheckBox, CheckButton, OptionButton and MenuButton share it.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../components/CanvasItemGroup';
-import { buttonDrawnLabel, type ButtonLabelBox } from './buttonBase';
+import { buttonDrawnLabel, trimButtonLabel, type ButtonLabelBox } from './buttonBase';
+import type { FontMetrics } from './text/fontMetrics';
 import { TextRun, type TextRunProps } from './text/TextRun';
 import { soloLineLayout } from './text/textLayout';
 
@@ -14,18 +15,21 @@ interface ButtonLabelProps extends Pick<
   'layout' | 'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder'
 > {
   box: ButtonLabelBox;
+  /** `TextServer::OverrunBehavior`; absent means no trimming. */
+  overrunBehavior: number | undefined;
+  fontMetrics: FontMetrics;
 }
 
 /** @canonical A Button-family label drawn in its paragraph box, each line shifted and cut */
-export function ButtonLabel({ layout, box, ...runProps }: ButtonLabelProps) {
-  const drawnLines = useMemo(
-    () =>
-      buttonDrawnLabel(layout.lines, box.widthPx, box.alignment).map(({ line, offsetXPx }) => ({
-        lineLayout: soloLineLayout(line, layout),
-        offsetXPx,
-      })),
-    [layout, box.widthPx, box.alignment]
-  );
+export function ButtonLabel({ layout, box, overrunBehavior, fontMetrics, ...runProps }: ButtonLabelProps) {
+  const { fontSizePx } = runProps;
+  const drawnLines = useMemo(() => {
+    const trimmed = trimButtonLabel(layout, overrunBehavior, box.widthPx, { fontMetrics, fontSizePx });
+    return buttonDrawnLabel(trimmed.lines, box.widthPx, box.alignment).map(({ line, offsetXPx }) => ({
+      lineLayout: soloLineLayout(line, trimmed),
+      offsetXPx,
+    }));
+  }, [layout, overrunBehavior, fontMetrics, fontSizePx, box.widthPx, box.alignment]);
   return (
     <>
       {drawnLines.map(({ lineLayout, offsetXPx }, i) => (

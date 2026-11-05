@@ -40,7 +40,8 @@ export function textParagraphLineShiftPx(
 /**
  * `TextParagraph::draw` passes `clip_l = max(0, -shiftPx)` and `clip_r = clip_l + boxWidthPx`
  * (`text_paragraph.cpp:925-930`). `shaped_text_draw` skips a glyph that starts left of `clip_l` and
- * stops at the first glyph whose advance ends past `clip_r` (`text_server.cpp:1783-1808`). Both
+ * stops at the first glyph whose advance ends past `clip_r` (`text_server.cpp:1783-1808`), which also drops
+ * the ellipsis after it. The ellipsis itself is never cut (`:1811-1822`). Both
  * tests run only while the bound is positive, so an unconstrained box draws the whole line.
  * `widthPx` stays the pen extent: alignment and sizing read the shaped width, never the drawn one.
  * Returns `line` itself when nothing is cut.
@@ -50,6 +51,10 @@ function clipLineToDrawBox(line: TextLineLayout, boxWidthPx: number, shiftPx: nu
   const clipRightPx = clipLeftPx + boxWidthPx;
   const kept = [];
   for (const glyph of line.glyphs) {
+    if (glyph.isEllipsis) {
+      kept.push(glyph);
+      continue;
+    }
     if (clipRightPx > 0 && glyph.x + glyph.advance > clipRightPx) break;
     if (clipLeftPx > 0 && glyph.x < clipLeftPx) continue;
     kept.push(glyph);

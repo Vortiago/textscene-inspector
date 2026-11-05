@@ -329,3 +329,17 @@ describe('optionButtonMinimumSize — clip_text zeroes each item text width (but
     expect(result.x).toBe(16 + AB_SHAPED_WIDTH + 12 + 4);
   });
 });
+
+describe('optionButtonMinimumSize — a trimming text_overrun_behavior zeroes each item text width (button.cpp:493-495)', () => {
+  const items = [{ text: 'AB', id: 0 }];
+
+  it('drops the text width under OVERRUN_TRIM_ELLIPSIS', () => {
+    const result = optionButtonMinimumSize(node({ items, selected: 0, overrunBehavior: 3 }), ctx());
+    expect(result).toEqual({ x: 16 + 12 + 4, y: 8 + FONT_HEIGHT });
+  });
+
+  it('keeps the widest item text width under OVERRUN_NO_TRIMMING', () => {
+    const result = optionButtonMinimumSize(node({ items, selected: 0, overrunBehavior: 0 }), ctx());
+    expect(result.x).toBe(16 + AB_SHAPED_WIDTH + 12 + 4);
+  });
+});

@@ -12,11 +12,15 @@ import {
   layoutButtonContent,
   pickButtonStyleBox,
   resolveButtonDrawState,
+  textMinimumWidthPx,
   tintColor,
+  trimButtonLabel,
   type ButtonContentInput,
 } from './buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
-import type { TextLineLayout } from './text/textLayout';
+import { shapeText, type TextLineLayout } from './text/textLayout';
+import { OPEN_SANS_FONT_METRICS } from './text/openSansFontMetrics';
+import { AutowrapMode, OverrunBehavior } from '../../../godot/text/textServerEnums';
 
 const { HORIZONTAL_ALIGNMENT_CENTER, HORIZONTAL_ALIGNMENT_LEFT, HORIZONTAL_ALIGNMENT_RIGHT } =
   HorizontalAlignment;
@@ -458,5 +462,77 @@ describe('buttonDrawnLabel — each line cut to the paragraph box as TextParagra
   it('cuts each line of a wrapped label on its own', () => {
     const drawn = buttonDrawnLabel([lineOf('abcdef'), lineOf('gh')], 35, HORIZONTAL_ALIGNMENT_LEFT);
     expect(drawn.map((entry) => entry.line.text)).toEqual(['abc', 'gh']);
+  });
+});
+
+describe('textMinimumWidthPx — the label width a minimum size keeps (button.cpp:493-495)', () => {
+  it('keeps the measured width, ceiled, with no clipping property', () => {
+    expect(textMinimumWidthPx(40.2, {})).toBe(41);
+  });
+
+  it('drops the width under clip_text', () => {
+    expect(textMinimumWidthPx(40.2, { clipText: true })).toBe(0);
+  });
+
+  it.each([
+    OverrunBehavior.OVERRUN_TRIM_CHAR,
+    OverrunBehavior.OVERRUN_TRIM_WORD,
+    OverrunBehavior.OVERRUN_TRIM_ELLIPSIS,
+    OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS,
+    OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE,
+    OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS_FORCE,
+  ])('drops the width under text_overrun_behavior %i', (overrunBehavior) => {
+    expect(textMinimumWidthPx(40.2, { overrunBehavior })).toBe(0);
+  });
+
+  it('keeps the width under OVERRUN_NO_TRIMMING', () => {
+    expect(textMinimumWidthPx(40.2, { overrunBehavior: OverrunBehavior.OVERRUN_NO_TRIMMING })).toBe(41);
+  });
+});
+
+describe('trimButtonLabel — the label trimmed to its paragraph box (button.cpp:428-432, text_paragraph.cpp:286-293)', () => {
+  const FONT_SIZE_PX = 16;
+  const font = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX };
+
+  function shaped(text: string, boxWidthPx = 0, autowrapMode: number = AutowrapMode.AUTOWRAP_OFF) {
+    return shapeText(text, {
+      fontSizePx: FONT_SIZE_PX,
+      boxWidthPx,
+      autowrapMode,
+      lineSpacingPx: 0,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+    });
+  }
+
+  it('trims a line wider than the box', () => {
+    const layout = shaped('alpha bravo charlie');
+    const trimmed = trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 60, font);
+    expect(trimmed.lines[0]!.widthPx).toBeLessThanOrEqual(60);
+    expect(trimmed.lines[0]!.text.length).toBeLessThan(layout.lines[0]!.text.length);
+  });
+
+  it('keeps a line that fits', () => {
+    const layout = shaped('alpha');
+    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 200, font)).toBe(layout);
+  });
+
+  it('keeps every line of a wrapped label', () => {
+    const layout = shaped('alpha bravo charlie', 40, AutowrapMode.AUTOWRAP_WORD);
+    expect(layout.lines.length).toBeGreaterThan(1);
+    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 40, font)).toBe(layout);
+  });
+
+  it('keeps the label under OVERRUN_NO_TRIMMING', () => {
+    const layout = shaped('alpha bravo charlie');
+    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_NO_TRIMMING, 60, font)).toBe(layout);
+  });
+
+  it('trims at the ceiled box width, with a floor of 1 px', () => {
+    const layout = shaped('alpha bravo charlie');
+    const atCeil = trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 59.2, font);
+    expect(atCeil.lines[0]).toEqual(
+      trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 60, font).lines[0]
+    );
+    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, -5, font).lines[0]!.widthPx).toBe(0);
   });
 });
