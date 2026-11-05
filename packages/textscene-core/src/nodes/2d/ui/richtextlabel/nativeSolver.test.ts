@@ -1936,3 +1936,178 @@ describe('RichTextLabel paragraph direction', () => {
     ]);
   });
 });
+
+// `rich_text_label.cpp:196-373,1017-1039,3407-3460`. OpenSans_SemiBold at 16 px, worked by hand from
+// the hmtx advances: ' ' 532/2048 = 4.156, '•' 770 = 6.016, '1' 1171 = 9.148, '.' 561 = 4.383. A marker is
+// as wide as its ceiled pen advance, and a margin is `int(tab_size * 4.156)` = 16.
+describe('RichTextLabel lists and indents', () => {
+  const BOX_WIDTH_PX = 160;
+  const MARGIN_PX = 16;
+  const BULLET_MARKER_PX = 11;
+
+  function listPlacements(text: string, props: Partial<RichTextLabelProperties> = {}) {
+    const label = { text, bbcodeEnabled: true, ...props } as RichTextLabelProperties;
+    const runs = styledTextRuns(node(label), label, WHITE, FONT_SIZE, FONT_SIZE, BOX_WIDTH_PX);
+    const layout = shapeRichText(runs, resolveRichTextFaces(node(label), runs), {
+      fontSizePx: FONT_SIZE,
+      boxWidthPx: BOX_WIDTH_PX,
+      autowrapMode: AutowrapMode.AUTOWRAP_WORD_SMART,
+      tabSize: props.tabSize,
+    });
+    return layoutRichTextRuns(runs, layout, { boxWidthPx: BOX_WIDTH_PX, boxHeightPx: TALL_BOX_PX });
+  }
+
+  /** The text of each placement with its left offset, the marker as `<marker>`. */
+  function textAndOffset(placements: ReturnType<typeof listPlacements>) {
+    return placements.map((p) => [p.layout.lines[0]!.text.replace('​', ''), p.lineOffsetXPx]);
+  }
+
+  it('insets an [indent] line by tab_size spaces and draws no marker', () => {
+    expect(textAndOffset(listPlacements('[indent]a[/indent]'))).toEqual([['a', MARGIN_PX]]);
+  });
+
+  it('adds the margin of each nested [indent], summed before it truncates (`_find_margin` returns an int)', () => {
+    // The outer [indent] holds a line of no height, which draws nothing.
+    expect(textAndOffset(listPlacements('[indent][indent]a[/indent][/indent]'))).toEqual([['a', 33]]);
+  });
+
+  it('follows tab_size, and keeps one pixel for none', () => {
+    expect(textAndOffset(listPlacements('[indent]a[/indent]', { tabSize: 2 }))).toEqual([['a', 8]]);
+    expect(textAndOffset(listPlacements('[indent]a[/indent]', { tabSize: 0 }))).toEqual([['a', 1]]);
+  });
+
+  it('draws the bullet right-aligned in the inset, and the text after it', () => {
+    expect(textAndOffset(listPlacements('[ul]a[/ul]'))).toEqual([
+      ['• ', MARGIN_PX],
+      ['a', MARGIN_PX + BULLET_MARKER_PX],
+    ]);
+  });
+
+  it('draws the [ul bullet=...] option as the bullet', () => {
+    expect(textAndOffset(listPlacements('[ul bullet=*]a[/ul]'))[0]![0]).toBe('* ');
+  });
+
+  it('draws a marker for an empty item, which keeps its line', () => {
+    const placements = listPlacements('[ul]a\n\nb[/ul]');
+    expect(placements.filter((p) => p.layout.lines[0]!.text === '• ')).toHaveLength(3);
+  });
+
+  it('wraps an item at the box width less its inset', () => {
+    const placements = listPlacements('[ul]aaaaaaaa bbbbbbbb cccccccc dddddddd[/ul]');
+    const lines = placements.filter((p) => p.layout.lines[0]!.text !== '• ');
+    expect(lines.length).toBeGreaterThan(1);
+    for (const line of lines) {
+      expect(line.lineOffsetXPx + line.layout.widthPx).toBeLessThanOrEqual(BOX_WIDTH_PX);
+    }
+    expect(new Set(lines.map((p) => p.lineOffsetXPx))).toEqual(new Set([MARGIN_PX + BULLET_MARKER_PX]));
+  });
+
+  it('draws the marker on the first line of a wrapped item only', () => {
+    const placements = listPlacements('[ul]aaaaaaaa bbbbbbbb cccccccc dddddddd[/ul]');
+    expect(placements.filter((p) => p.layout.lines[0]!.text === '• ')).toHaveLength(1);
+  });
+
+  it.each([
+    ['[ol]a\nb\nc\nd[/ol]', ['1. ', '2. ', '3. ', '4. ']],
+    ['[ol type=1]a\nb[/ol]', ['1. ', '2. ']],
+    ['[ol type=a]a\nb\nc[/ol]', ['a. ', 'b. ', 'c. ']],
+    ['[ol type=A]a\nb[/ol]', ['A. ', 'B. ']],
+    ['[ol type=i]a\nb\nc\nd[/ol]', ['i. ', 'ii. ', 'iii. ', 'iv. ']],
+    ['[ol type=I]a\nb\nc\nd[/ol]', ['I. ', 'II. ', 'III. ', 'IV. ']],
+  ])('numbers %j as %j', (source, markers) => {
+    const drawn = listPlacements(source)
+      .map((p) => p.layout.lines[0]!.text)
+      .filter((text) => text.endsWith('. '));
+    expect(drawn).toEqual(markers);
+  });
+
+  it('writes the marker of a nested list as the outer number, a dot and the inner number', () => {
+    const drawn = listPlacements('[ol]a\n[ol type=a]b\nc[/ol]\nd[/ol]')
+      .map((p) => p.layout.lines[0]!.text)
+      .filter((text) => text.endsWith('. '));
+    expect(drawn).toEqual(['1. ', '1.a. ', '1.b. ', '2. ']);
+  });
+
+  it('draws a bullet in a list nested in a numbered one, and stops the number at a bullet', () => {
+    const drawn = listPlacements('[ol]a\n[ul]b[/ul][/ol]')
+      .map((p) => p.layout.lines[0]!.text)
+      .filter((text) => text.endsWith(' ') && !text.includes('​'));
+    expect(drawn).toEqual(['1. ', '• ']);
+  });
+
+  it('sizes every marker of a list to its widest', () => {
+    const [a, b] = listPlacements('[ol type=i]a\nb\nc\nd[/ol]').filter((p) =>
+      p.layout.lines[0]!.text.endsWith('. ')
+    );
+    // 'i. ' is narrower than 'ii. ', yet each ends at the text, whose ceiled width is its own.
+    const rightEdge = (marker: typeof a) =>
+      marker!.lineOffsetXPx + Math.ceil(marker!.layout.lines[0]!.widthPx);
+    expect(rightEdge(a)).toBe(rightEdge(b));
+  });
+
+  it('draws the marker in the bold face of a bold item', () => {
+    const plain = listPlacements('[ul]a[/ul]')[0]!;
+    const bold = listPlacements('[ul][b]a[/b][/ul]')[0]!;
+    expect(bold.layout.lines[0]!.text).toBe('• ');
+    expect(bold.layout.fontMetrics).not.toBe(plain.layout.fontMetrics);
+  });
+
+  it('colours the marker with the outermost colour of its item (`:342-349`)', () => {
+    const [marker] = listPlacements('[ul][color=red][color=blue]a[/color][/color][/ul]');
+    expect(marker!.color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+  });
+
+  it('colours the marker of an empty item with the colour opened and closed at its start (`:312-321`)', () => {
+    const drawn = listPlacements('[ul]a\n[color=blue][/color]\n[/ul]').filter(
+      (p) => p.layout.lines[0]!.text === '• '
+    );
+    expect(drawn.map((p) => p.color)).toEqual([WHITE, { r: 0, g: 0, b: 1, a: 1 }]);
+  });
+
+  it('draws no marker and no inset on the first line when a styling tag opens it (`:4096-4103`)', () => {
+    const drawn = textAndOffset(listPlacements('[color=red][ul]a\nb[/ul][/color]'));
+    expect(drawn).toEqual([
+      ['a', 0],
+      ['b', MARGIN_PX],
+    ]);
+  });
+
+  it('draws the marker at the line end under right-to-left, and the text after the inset', () => {
+    const placements = listPlacements('[ul]a[/ul]', { textDirection: 2 });
+    const [marker, text] = placements;
+    expect(text!.lineOffsetXPx).toBe(
+      BOX_WIDTH_PX - MARGIN_PX - BULLET_MARKER_PX - Math.ceil(text!.layout.widthPx)
+    );
+    expect(marker!.lineOffsetXPx).toBe(text!.lineOffsetXPx + Math.ceil(text!.layout.widthPx));
+  });
+});
+
+describe('richTextLabelMinimumSize height of a final line break', () => {
+  const heightOf = (text: string) =>
+    richTextLabelMinimumSize(node({ text, bbcodeEnabled: true, fitContent: true, autowrapMode: 0 }), ctx()).y;
+
+  // `get_content_height` measured in Godot 4.6.3: the line after a final `\n` holds no item, so it has no height.
+  it('gives `a\n` the height of one line', () => {
+    expect(heightOf('a\n')).toBe(heightOf('a'));
+  });
+
+  it('keeps the height of a blank line between two others', () => {
+    expect(heightOf('a\n\nb')).toBe(3 * heightOf('a'));
+  });
+
+  it('gives a list of two items the height of two lines, as each item ends in a `\n`', () => {
+    expect(heightOf('[ul]a\nb[/ul]')).toBe(2 * heightOf('a'));
+  });
+
+  it('gives the empty first line of a list that a paragraph tag follows no height', () => {
+    expect(heightOf('[ul][center]one\ntwo[/center][/ul]')).toBe(2 * heightOf('a'));
+  });
+});
+
+describe('richTextLabelMinimumSize with a list', () => {
+  it('counts the inset and the widest marker in the content width (`:7513-7518`)', () => {
+    const props = { text: '[ul]a[/ul]', bbcodeEnabled: true, fitContent: true, autowrapMode: 0 };
+    // 16 margin + 11 marker + 'a' ceiled to 10, as `get_content_width` truncates the sum into an int.
+    expect(richTextLabelMinimumSize(node(props), ctx()).x).toBe(37);
+  });
+});

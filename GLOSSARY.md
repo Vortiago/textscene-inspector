@@ -170,6 +170,14 @@ _Avoid_: "autohint" as a verb for the native TrueType hinter.
 The text up to a separator, which Godot shapes as its own `TextParagraph`: a `\n` ends one in a Label (`paragraph_separator`) and in a RichTextLabel. Autowrap splits a paragraph into lines, and `justification_flags` count their lines inside the paragraph, so each fits or skips its own last line (`justifyParagraphs`).
 _Avoid_: "line" for it, and a count of lines over the whole text.
 
+**Paragraph inset** (`TextLineLayout.indentPx` in `r3f/controls/native/text/textLayout.ts`, set by `nodes/2d/ui/richtextlabel/listing.ts`):
+How far a RichTextLabel paragraph sits from the edge its text starts at: the margin of every `[indent]`, `[ul]` and `[ol]` around it, plus the width of its list's widest **List marker**. The paragraph wraps and aligns in the width left of it (`l.indent`).
+_Avoid_: "indent" for the sum, which names the tag and its margin alone.
+
+**List marker** (`ListMarker` in `nodes/2d/ui/richtextlabel/listing.ts`):
+The bullet or number a `[ul]` or `[ol]` item draws before its first line (`text_prefix`). It is shaped in the item's font, drawn at the line's top and right-aligned against the text, and an empty item draws one too.
+_Avoid_: "prefix", which is the engine's name for the marker's text.
+
 **Text buffer** (`trimTextBufferLineToWidth` in `r3f/controls/native/text/textOverrun.ts`):
 A Control's own `TextLine` or `TextParagraph`, its `text_buf`, which Button, LinkButton, the FoldableContainer title and each ItemList item draw. Its fill draws in the set direction (`shaped_text_draw`) and its outline in the **inferred direction** (`shaped_text_draw_outline`), so a trimmed AUTO line that resolves right-to-left draws a different glyph set in each. Label draws its own lines in the inferred direction for both.
 _Avoid_: "text line" for it, which names one shaped line.
