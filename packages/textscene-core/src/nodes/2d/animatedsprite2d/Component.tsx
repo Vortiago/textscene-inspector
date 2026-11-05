@@ -151,7 +151,6 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     frameRef ?? undefined,
     resolved?.externalResources ?? NO_EXTERNAL_RESOURCES,
     resolved?.subResources ?? NO_INTERNAL_RESOURCES,
-    'plain',
     resolved ? isLocalToScene(resolved.resource) : undefined
   );
 

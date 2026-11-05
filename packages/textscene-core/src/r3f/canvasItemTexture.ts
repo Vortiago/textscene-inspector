@@ -5,8 +5,8 @@
  * that loads its texture any other way, so a new one cannot forget the maps.
  */
 
-import { useMemo } from 'react';
 import type { Node2DProperties } from '../nodes/base/node2d/types';
+import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { useTexture2D, type CanvasTextureSlot, type Texture2DResult } from '../resources/useTexture2D';
 import {
   useCanvasTextureSampler,
@@ -27,12 +27,23 @@ interface CanvasItemTextureResult extends Omit<Texture2DResult, 'canvasTexture'>
   canvasTexture: CanvasItemTexture | undefined;
 }
 
+/** A canvas item samples the plain view of a ViewportTexture. */
+const CANVAS_ITEM_VIEW = 'plain';
+
 export function useCanvasItemTexture(
   props: Pick<Node2DProperties, 'texture_filter' | 'texture_repeat'>,
-  ...load: Parameters<typeof useTexture2D>
+  ref: string | undefined,
+  externalResources: readonly TscnExternalResource[],
+  internalResources: readonly TscnInternalResource[],
+  isHeldLocally?: boolean
 ): CanvasItemTextureResult {
-  const { canvasTexture: slot, ...drawn } = useTexture2D(...load);
+  const { canvasTexture: slot, ...drawn } = useTexture2D(
+    ref,
+    externalResources,
+    internalResources,
+    CANVAS_ITEM_VIEW,
+    isHeldLocally
+  );
   const sampler = useCanvasTextureSampler(useNode2DTextureSampler(props), slot?.texture);
-  const canvasTexture = useMemo(() => slot && { slot, sampler }, [slot, sampler]);
-  return { ...drawn, sampler, canvasTexture };
+  return { ...drawn, sampler, canvasTexture: slot && { slot, sampler } };
 }

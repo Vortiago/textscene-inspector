@@ -27,6 +27,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // means none does. The registry carries a numeric tuple (ADR-0017), here a 1-tuple.
   const animatedFrame = useAnimatedValue('frame', (v) => v[0] ?? null);
 
+  // With `texture_repeat` Disabled, an overrunning `region_rect` stretches its edge texels,
+  // where Sprite3D tiles.
   const {
     texture: sourceTexture,
     size: reportedSize,
@@ -35,8 +37,6 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     canvasTexture,
   } = useCanvasItemTexture(props, props.texture, externalResources, internalResources);
 
-  // With `texture_repeat` Disabled, an overrunning `region_rect` stretches its edge texels,
-  // where Sprite3D tiles.
   // A driven `frame` overrides the authored `frame` and any authored
   // `frame_coords` (in Godot the two are the same value), so the animation wins.
   const frameWindow = useMemo(() => {

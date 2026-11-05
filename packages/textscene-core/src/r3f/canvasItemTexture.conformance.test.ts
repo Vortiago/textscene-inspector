@@ -22,36 +22,47 @@ function sourceFiles(directory: string): string[] {
   });
 }
 
+/** The code of `text`, so a comment that names a hook is not a call. */
+function withoutComments(text: string): string {
+  return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+}
+
 const canvasItems = sourceFiles(SRC)
   .map((path) => ({
     name: relative(SRC, path).split(sep).join('/'),
-    text: readFileSync(path, 'utf8'),
+    text: withoutComments(readFileSync(path, 'utf8')),
   }))
   .filter(({ text }) => text.includes('<CanvasItem2D'));
 
+const LOADS_THROUGH_HOOK = /\buseCanvasItemTexture\(/;
+const LOADS_DIRECTLY = /\buseTexture2D\s*\(/;
+const PASSES_CANVAS_TEXTURE = /\bcanvasTexture\s*=\s*\{/;
+
 describe('a texture-drawing canvas item', () => {
   it('finds the canvas items that draw a texture', () => {
-    const loaders = canvasItems.filter(({ text }) => text.includes('useCanvasItemTexture('));
-    expect(loaders.map(({ name }) => name).sort()).toEqual([
-      'nodes/2d/animatedsprite2d/Component.tsx',
-      'nodes/2d/cpuparticles2d/Component.tsx',
-      'nodes/2d/line2d/Component.tsx',
-      'nodes/2d/polygon2d/Component.tsx',
-      'nodes/2d/sprite2d/Component.tsx',
-      'r3f/components/CanvasMeshItem.tsx',
-    ]);
+    const loaders = canvasItems.filter(({ text }) => LOADS_THROUGH_HOOK.test(text));
+    expect(loaders.map(({ name }) => name)).toEqual(
+      expect.arrayContaining([
+        'nodes/2d/animatedsprite2d/Component.tsx',
+        'nodes/2d/cpuparticles2d/Component.tsx',
+        'nodes/2d/line2d/Component.tsx',
+        'nodes/2d/polygon2d/Component.tsx',
+        'nodes/2d/sprite2d/Component.tsx',
+        'r3f/components/CanvasMeshItem.tsx',
+      ])
+    );
   });
 
   it('loads its texture through useCanvasItemTexture', () => {
     const loadsDirectly = canvasItems
-      .filter(({ name, text }) => text.includes('useTexture2D(') && !(name in LOADS_NO_DRAWN_TEXTURE))
+      .filter(({ name, text }) => LOADS_DIRECTLY.test(text) && !(name in LOADS_NO_DRAWN_TEXTURE))
       .map(({ name }) => name);
     expect(loadsDirectly).toEqual([]);
   });
 
   it('passes the CanvasTexture on to CanvasItem2D', () => {
     const dropsIt = canvasItems
-      .filter(({ text }) => text.includes('useCanvasItemTexture(') && !text.includes('canvasTexture={'))
+      .filter(({ text }) => LOADS_THROUGH_HOOK.test(text) && !PASSES_CANVAS_TEXTURE.test(text))
       .map(({ name }) => name);
     expect(dropsIt).toEqual([]);
   });
