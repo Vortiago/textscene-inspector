@@ -206,12 +206,6 @@ const SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE = 20;
 const SUBPIXEL_POSITIONING_ONE_QUARTER_MAX_SIZE = 16;
 
 /**
- * Godot's `subpos` (`text_server_adv.cpp:6936`) under the default
- * `SUBPIXEL_POSITIONING_AUTO` (`text_server_adv.h:343`): true at or below 20 px
- * (`servers/text/text_server.h:172`). When false, `text_server_adv.cpp:7079-7084`
- * rounds every advance to a whole pixel, so a Label at 28 has integer pen positions.
- */
-/**
  * Godot's `scale != 1.0` (`text_server_adv.cpp:4082`): a fixed-size font drawn off its own size, or
  * a fractional size, which Godot's `int64_t` API cannot express. A whole-pixel size of an outline
  * font has `fd->scale` `sz / y_ppem` (`text_server_adv.cpp:1509`), so it is never scaled.
@@ -220,6 +214,12 @@ export function fontIsScaled(fontSizePx: number, metrics: Pick<FontMetrics, 'pxP
   return (metrics.pxPerUnit?.(fontSizePx) ?? 1) !== 1 || !Number.isInteger(fontSizePx);
 }
 
+/**
+ * Godot's `subpos` (`text_server_adv.cpp:6936`) under the default
+ * `SUBPIXEL_POSITIONING_AUTO` (`text_server_adv.h:343`): true at or below 20 px
+ * (`servers/text/text_server.h:172`). When false, `text_server_adv.cpp:7079-7084`
+ * rounds every advance to a whole pixel, so a Label at 28 has integer pen positions.
+ */
 export function fontUsesSubpixelPositioning(
   fontSizePx: number,
   metrics: Pick<FontMetrics, 'pxPerUnit'>
@@ -236,7 +236,7 @@ export function fontUsesSubpixelPositioning(
 export function canvasGlyphPenXPx(
   xPx: number,
   fontSizePx: number,
-  metrics: Pick<FontMetrics, 'pxPerUnit'> = {}
+  metrics: Pick<FontMetrics, 'pxPerUnit'>
 ): number {
   if (fontIsScaled(fontSizePx, metrics)) return xPx;
   const stepsPerPx =

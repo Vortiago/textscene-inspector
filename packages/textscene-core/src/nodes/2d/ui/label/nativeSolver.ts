@@ -562,19 +562,12 @@ interface LabelLayoutOptions extends Partial<LabelSpacing> {
 }
 
 /**
- * Whether `_shape` leaves a fitted line untrimmed: with autowrap off, FILL trims with
- * `OVERRUN_JUSTIFICATION_AWARE` (`label.cpp:322-325`), which returns early unless the fit hit the
- * smallest spaces, `floor(width) < floor(justified width)` (`text_server_adv.cpp:5660,5947`). A line
- * the fit skipped is the same object as its shaped line, and trims as usual.
+ * Whether the fit of a line stopped above the smallest spaces: `fit_width_minimum_reached` is false
+ * (`text_server_adv.cpp:5660`), so a justification-aware trim returns early (`:5947`). A line the fit
+ * skipped is the same object as its shaped line (`justifyParagraph`), and has no fit to stop.
  */
-function isJustificationAwareTrimSkipped(
-  fitted: TextLineLayout,
-  shaped: TextLineLayout,
-  widthPx: number,
-  isAutowrapped: boolean
-): boolean {
-  if (isAutowrapped || fitted === shaped) return false;
-  return Math.floor(widthPx) >= Math.floor(fitted.widthPx);
+function isFitAboveMinimum(fitted: TextLineLayout, shaped: TextLineLayout, widthPx: number): boolean {
+  return fitted !== shaped && Math.floor(widthPx) >= Math.floor(fitted.widthPx);
 }
 
 /**
@@ -641,9 +634,11 @@ export function layoutLabelLines(
         fontSizePx,
       })
     : layout.lines;
+  // With autowrap off, FILL trims `OVERRUN_JUSTIFICATION_AWARE` (`label.cpp:322-324`).
+  const isTrimJustificationAware = isFill && !isAutowrapped;
   const lines = trimLine
     ? fitted.map((line, index) =>
-        isJustificationAwareTrimSkipped(line, layout.lines[index]!, shapingWidthPx, isAutowrapped)
+        isTrimJustificationAware && isFitAboveMinimum(line, layout.lines[index]!, shapingWidthPx)
           ? line
           : trimLine(line)
       )
