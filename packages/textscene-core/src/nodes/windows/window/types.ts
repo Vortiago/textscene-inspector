@@ -16,8 +16,11 @@ import type { ContentScale } from './contentScale';
  */
 export interface WindowProperties extends SubViewportProperties, ThemeOwnerFields {
   title: string;
-  /** The top-left of the window's content in its embedder, without the decoration. */
-  position: Vector2;
+  /**
+   * The top-left of the window's content in its embedder, without the decoration. Read-only: a
+   * window without `position` shares the frozen origin.
+   */
+  position: Readonly<Vector2>;
   /** `Window::WindowInitialPosition`. Any value but Absolute centres the window. */
   initial_position: number;
   visible: boolean;

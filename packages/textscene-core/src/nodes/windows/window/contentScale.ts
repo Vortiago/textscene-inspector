@@ -20,7 +20,8 @@ export interface ContentScale {
   mode: number;
   aspect: number;
   stretch: number;
-  size: Vector2;
+  /** Read-only: a window without `content_scale_size` shares the frozen default. */
+  size: Readonly<Vector2>;
   factor: number;
 }
 

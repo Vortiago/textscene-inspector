@@ -94,6 +94,15 @@ function settledMetrics(
   return vi.waitFor(() => expect(result.current?.metrics).toMatchObject(expected));
 }
 
+/** happy-dom has no `FontFace`, so no font file settles to a canvas face unless the loader says so. */
+async function importSettlingTo(face: CanvasFontMetrics | undefined) {
+  vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    peekSettledSceneFontMetrics: () => face,
+  }));
+  return importModules();
+}
+
 async function settle() {
   await act(async () => {
     for (let pass = 0; pass < 6; pass++) await new Promise((resolve) => setTimeout(resolve, 0));
@@ -163,12 +172,7 @@ describe('useLabel3DFont outlines', () => {
   });
 
   it('is ready, with no outlines, for an unvaried canvas face', async () => {
-    // happy-dom has no `FontFace`, so no font file settles to a canvas face unless the loader says so.
-    vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
-      ...(await importOriginal<object>()),
-      peekSettledSceneFontMetrics: () => bundled.metrics,
-    }));
-    modules = await importModules();
+    modules = await importSettlingTo(bundled.metrics);
     const { result } = renderMetrics(undefined);
 
     await settle();
@@ -179,11 +183,7 @@ describe('useLabel3DFont outlines', () => {
   it('is ready for a canvas face before the bundled font registers', async () => {
     const face = bundled.metrics;
     bundled.metrics = undefined;
-    vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
-      ...(await importOriginal<object>()),
-      peekSettledSceneFontMetrics: () => face,
-    }));
-    modules = await importModules();
+    modules = await importSettlingTo(face);
     const { result } = renderMetrics(undefined);
 
     await settle();

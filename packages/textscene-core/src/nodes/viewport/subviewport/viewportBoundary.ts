@@ -13,7 +13,12 @@ import type { WindowProperties } from '../../windows/window/types';
  * The `Window` classes an embedder draws with their decoration (`viewport.cpp:342-401`). A
  * window is a `Viewport`, so it owns its World2D and its Controls draw only in its target.
  */
-const EMBEDDED_WINDOW_TYPES: ReadonlySet<string> = new Set(['Window', 'Popup', 'PopupPanel']);
+const EMBEDDED_WINDOW_TYPE_NAMES = ['Window', 'Popup', 'PopupPanel'] as const;
+
+/** A `Window` class an embedder draws: the one list the registration helpers take their names from. */
+export type EmbeddedWindowType = (typeof EMBEDDED_WINDOW_TYPE_NAMES)[number];
+
+const EMBEDDED_WINDOW_TYPES: ReadonlySet<string> = new Set(EMBEDDED_WINDOW_TYPE_NAMES);
 
 /** True when this type is a `Window` that an embedder can draw. */
 export function isEmbeddedWindow(type: string): boolean {

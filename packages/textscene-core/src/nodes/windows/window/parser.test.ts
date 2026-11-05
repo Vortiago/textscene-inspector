@@ -124,4 +124,11 @@ describe('parseWindow', () => {
     }).content_scale;
     expect({ factor: scale.factor, size: scale.size }).toEqual({ factor: 1, size: { x: 0, y: 0 } });
   });
+
+  it('shares only frozen vectors between windows that leave the keys unset', () => {
+    const result = parseWindow(heading('Window'), {});
+    expect(Object.isFrozen(result.position)).toBe(true);
+    expect(Object.isFrozen(result.size_2d_override)).toBe(true);
+    expect(Object.isFrozen(result.content_scale.size)).toBe(true);
+  });
 });
