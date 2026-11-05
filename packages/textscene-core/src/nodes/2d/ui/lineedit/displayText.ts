@@ -24,7 +24,9 @@ function truncateToMaxLength(text: string, maxLength: number | undefined): strin
   return codePoints.length > maxLength ? codePoints.slice(0, maxLength).join('') : text;
 }
 
-export function lineEditDisplayText(props: LineEditProperties): LineEditDisplayText {
+export function lineEditDisplayText(
+  props: Pick<LineEditProperties, 'text' | 'maxLength' | 'placeholderText' | 'secret' | 'secretCharacter'>
+): LineEditDisplayText {
   const text = truncateToMaxLength(props.text ?? '', props.maxLength);
   if (text === '') return { text: props.placeholderText ?? '', isPlaceholder: true };
 

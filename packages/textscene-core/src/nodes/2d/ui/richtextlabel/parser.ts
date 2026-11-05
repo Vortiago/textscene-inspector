@@ -4,6 +4,8 @@ import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { RichTextLabelProperties } from './types';
 import { parseControl } from '../control/parser';
+import { parseTextDirectionProperties } from '../../../../parser/textDirectionParser';
+import { parseStructuredTextOverride } from '../../../../parser/structuredTextOverrideParser';
 import { DEFAULT_JUSTIFICATION_FLAGS } from '../../../../godot/text/textServerEnums';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
@@ -29,6 +31,8 @@ export function parseRichTextLabel(
 ): RichTextLabelProperties {
   const result: RichTextLabelProperties = {
     ...parseControl(heading, properties),
+    ...parseTextDirectionProperties(properties, 'RichTextLabel'),
+    ...parseStructuredTextOverride(properties),
     justificationFlags:
       parseOptionalInt(properties.justification_flags, 'int64') ?? DEFAULT_JUSTIFICATION_FLAGS,
     clipContents: boolSlotValue(properties.clip_contents) ?? true,

@@ -1,18 +1,13 @@
 /** Parses a Label: the Control properties plus its text, alignment and reveal state. */
 
 import { type ParsedHeading, unquoteString, unquoteStringName } from '../../../../parser/utils';
-import { parseOptionalFloat, parseOptionalInt, settableIntOr } from '../../../../parser/valueParsers';
+import { parseOptionalFloat, parseOptionalInt } from '../../../../parser/valueParsers';
+import { parseTextDirectionProperties } from '../../../../parser/textDirectionParser';
+import { parseStructuredTextOverride } from '../../../../parser/structuredTextOverrideParser';
 import type { LabelProperties } from './types';
 import { parseControl } from '../control/parser';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
-import {
-  JACKETED_STRING_RE,
-  arrayLiteralBody,
-  packedArrayBody,
-  packedArrayForms,
-} from '../../../../godot/variant/variantParser.js';
-import { dropTrailingComma, splitTopLevel } from '../../../../godot/string/string.js';
-import { StructuredTextParser, TextDirection } from '../../../../godot/text/textServerEnums';
+import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
 import { floatElements } from '../../../../resources/shapes/packedArray';
 import { SizeFlags } from '../../../../godot/scene/control';
 
@@ -28,29 +23,6 @@ function parseTabStops(value: string | undefined): number[] | undefined {
   } catch {
     return undefined;
   }
-}
-
-/**
- * `structured_text_bidi_override_options`, which Godot writes as a bare `[…]`. A String or StringName
- * element is a string to `is_string()` (`text_server.cpp:2192`). Any other element keeps its place as null.
- */
-function parseStructuredTextOptions(value: string | undefined): (string | null)[] {
-  const body = value === undefined ? null : arrayLiteralBody(value);
-  if (body === null) return [];
-  return dropTrailingComma(splitTopLevel(body)).map((element) => {
-    const trimmed = element.trim();
-    return JACKETED_STRING_RE.test(trimmed) ? unquoteString(trimmed) : null;
-  });
-}
-
-/** `Label::set_text_direction` refuses a value outside -1..3 (`label.cpp:1140`), so the default stays. */
-function parseTextDirection(value: string | undefined): number {
-  return settableIntOr(
-    value,
-    TextDirection.TEXT_DIRECTION_AUTO,
-    { min: -1, max: TextDirection.TEXT_DIRECTION_INHERITED },
-    'Label.text_direction'
-  );
 }
 
 /**
@@ -121,14 +93,8 @@ function resolveVisibleChars(
 export function parseLabel(heading: ParsedHeading, properties: Record<string, string>): LabelProperties {
   const result: LabelProperties = {
     ...parseControl(heading, properties),
-    textDirection: parseTextDirection(properties.text_direction),
-    language: properties.language === undefined ? '' : unquoteString(properties.language),
-    structuredTextBidiOverride:
-      parseOptionalInt(properties.structured_text_bidi_override) ??
-      StructuredTextParser.STRUCTURED_TEXT_DEFAULT,
-    structuredTextBidiOverrideOptions: parseStructuredTextOptions(
-      properties.structured_text_bidi_override_options
-    ),
+    ...parseTextDirectionProperties(properties, 'Label'),
+    ...parseStructuredTextOverride(properties),
   };
   if (result.sizeFlagsVertical === undefined) {
     result.sizeFlagsVertical = LABEL_DEFAULT_V_SIZE_FLAGS;

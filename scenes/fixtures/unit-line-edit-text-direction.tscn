@@ -1,0 +1,87 @@
+; One variable: the paragraph direction of a LineEdit, through `text_direction`, `language` and the
+; structured override (line_edit.cpp:3104-3112). Only the glyph order changes.
+
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://fonts/dejavu-sans-bidi-subset.ttf" id="1_font"]
+
+[sub_resource type="Theme" id="Theme_1"]
+default_font = ExtResource("1_font")
+default_font_size = 28
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.1, 0.12, 0.18, 1)
+
+; RTL puts `!` at the visual left. The text keeps its left offset.
+[node name="Rtl" type="LineEdit" parent="."]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 340.0
+offset_bottom = 64.0
+text = "Hello!"
+text_direction = 2
+
+; FILE keeps each path segment in logical order, left to right.
+[node name="File" type="LineEdit" parent="."]
+offset_left = 40.0
+offset_top = 84.0
+offset_right = 440.0
+offset_bottom = 128.0
+text = "שלום/עולם/abc.txt"
+text_direction = 2
+structured_text_bidi_override = 2
+
+; Without an override, the RTL paragraph puts the Latin name at the visual left.
+[node name="NoOverride" type="LineEdit" parent="."]
+offset_left = 40.0
+offset_top = 148.0
+offset_right = 440.0
+offset_bottom = 192.0
+text = "שלום/עולם/abc.txt"
+text_direction = 2
+
+; Hebrew sets the direction of neutral text.
+[node name="NeutralHe" type="LineEdit" parent="."]
+offset_left = 40.0
+offset_top = 212.0
+offset_right = 340.0
+offset_bottom = 256.0
+text = "123!"
+language = "he"
+
+; The placeholder shapes by the same rule.
+[node name="Placeholder" type="LineEdit" parent="."]
+offset_left = 40.0
+offset_top = 276.0
+offset_right = 340.0
+offset_bottom = 320.0
+placeholder_text = "Hello!"
+text_direction = 2
+
+; INHERITED takes the right-to-left layout. A right-to-left control mirrors its own offsets in its parent (control.cpp:1785).
+[node name="Inherited" type="LineEdit" parent="."]
+layout_direction = 3
+offset_left = 252.0
+offset_top = 20.0
+offset_right = 552.0
+offset_bottom = 64.0
+text = "Hello!"
+text_direction = 3
+
+; AUTO infers LTR from `H`, whatever the layout.
+[node name="Auto" type="LineEdit" parent="."]
+layout_direction = 3
+offset_left = 252.0
+offset_top = 84.0
+offset_right = 552.0
+offset_bottom = 128.0
+text = "Hello!"

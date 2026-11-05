@@ -18,6 +18,7 @@ import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   checkBoxDrawnIconSize,
@@ -65,9 +66,10 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // Read inside the render body, not the `useMemo` below: Label's Component.tsx
   // gives the reason.
   const fontMetrics = resolveNodeFontMetrics(solveNode, CHECKBOX_THEME_FONT_KEY);
+  const bidi = useControlBidiOptions(props, solveNode);
   const layout: TextLayoutResult | null = useMemo(
-    () => (hasText ? shapeButtonLabel(text, fontSizePx, fontMetrics) : null),
-    [hasText, text, fontSizePx, fontMetrics]
+    () => (hasText ? shapeButtonLabel(text, { fontSizePx, fontMetrics, bidi }) : null),
+    [hasText, text, fontSizePx, fontMetrics, bidi]
   );
 
   const content = useMemo(

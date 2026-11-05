@@ -9,6 +9,7 @@ import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import type { FontMetrics } from './fontMetrics';
 import { AutowrapMode, StructuredTextParser, TextDirection } from '../../../../godot/text/textServerEnums';
 import { parseStructuredText } from '../../../../godot/text/structuredText';
+import { visualChars } from './textLayout.testkit';
 
 const ADLAM_ALIF = '\u{1E900}';
 const ADLAM_DAALI = '\u{1E901}';
@@ -22,10 +23,6 @@ const BASE: ShapeTextOptions = {
 };
 
 /** The line's glyph characters, left to right. */
-function visualChars(line: TextLineLayout): string {
-  return line.glyphs.map((glyph) => glyph.char).join('');
-}
-
 function firstLine(text: string, options: Partial<ShapeTextOptions> = {}): TextLineLayout {
   return shapeText(text, { ...BASE, ...options }).lines[0]!;
 }
@@ -147,6 +144,32 @@ describe('shapeText — bidirectional text', () => {
     const narrowedPx = plain.glyphs[1]!.x - line.glyphs[1]!.x;
     expect(narrowedPx).toBeGreaterThan(0);
     expect(plain.widthPx - line.widthPx).toBeCloseTo(narrowedPx, 9);
+  });
+});
+
+describe('shapeText — a direction, language and override per paragraph', () => {
+  const RTL_FIRST = (paragraphStart: number) =>
+    paragraphStart === 0
+      ? { direction: TextDirection.TEXT_DIRECTION_RTL }
+      : { direction: TextDirection.TEXT_DIRECTION_LTR, language: 'he' };
+
+  it('shapes each paragraph in the options its first character gives', () => {
+    const { lines } = shapeText('ab!\nab!', {
+      ...BASE,
+      paragraphSeparator: '\n',
+      paragraphBidiAt: RTL_FIRST,
+    });
+    expect(lines.map(visualChars)).toEqual(['\u200b!ab', 'ab!\u200b']);
+  });
+
+  it('takes the language of a text with no strong character from its paragraph', () => {
+    const { lines } = shapeText('ab\n12!', {
+      ...BASE,
+      paragraphSeparator: '\n',
+      terminateLastParagraph: false,
+      paragraphBidiAt: (start) => (start === 0 ? {} : { language: 'he' }),
+    });
+    expect(visualChars(lines[1]!)).toBe('!12');
   });
 });
 

@@ -33,6 +33,7 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
+import { controlBidiOptions, isDrawnRtl } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { FoldableContainerProperties } from './types';
 import { TITLE_POSITION_BOTTOM, TITLE_POSITION_TOP } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -175,6 +176,8 @@ export interface FoldableContainerTitleMetrics {
   color: Rgba;
   /** The shaped title text, or `null` for an empty title or before a measurer exists. */
   layout: TextLayoutResult | null;
+  /** Whether the title draws right to left, from its set direction (`isDrawnRtl`). */
+  isDrawnRtl: boolean;
   /**
    * `title_minimum_size` (`foldable_container.cpp:441-478`): the minimum size of the title bar. It has
    * no `title_controls` term: `add_title_bar_control` is a method with no `ADD_PROPERTY`
@@ -186,6 +189,7 @@ export interface FoldableContainerTitleMetrics {
 /**
  * `FoldableContainer::_update_title_min_size` (`foldable_container.cpp:441-478`), with the
  * style, icon and font of `_get_title_style`, `_get_title_icon` and `_shape` (`:421-435,481-501`).
+ * The title shapes in `title_text_direction`, INHERITED taking the layout direction (`:491-495`).
  * The shaped result is the share {@link foldableContainerTitleShape}. The unshaped one
  * stays a plain call: a memoised unshaped title would outlive the readiness gate.
  */
@@ -218,9 +222,11 @@ function foldableContainerTitleMetrics(
   const title = props.title ?? '';
   const hasTitle = title.length > 0;
   const fontMetrics = resolveNodeFontMetrics(n, FOLDABLE_CONTAINER_THEME_FONT_KEY);
+  const bidi = controlBidiOptions({ textDirection: props.titleTextDirection, language: props.language }, n);
   const layout: TextLayoutResult | null =
     hasTitle && shapeTitle
       ? shapeText(title, {
+          ...bidi,
           fontSizePx,
           boxWidthPx: 0,
           autowrapMode: AutowrapMode.AUTOWRAP_OFF,
@@ -257,6 +263,7 @@ function foldableContainerTitleMetrics(
     fontSizePx,
     color,
     layout,
+    isDrawnRtl: isDrawnRtl(bidi),
     size: { x: width, y: height },
   };
 }

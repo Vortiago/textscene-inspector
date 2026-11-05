@@ -114,8 +114,6 @@ always shapes at the class default of 4.
 - **Not drawn** The right-to-left mouse mirror (text_edit.cpp:2241,2516,4956), hit tests
   (:5024,8213-8215), empty-line caret (:1781) and end-of-line selection rect (:1517),
   which need pointer, caret or selection state.
+- **Not drawn** `placeholder_text`: the parser reads it, but an empty TextEdit draws no placeholder.
 - **Not drawn** The minimap's RTL side (:1161-1165,1226-1235,1284-1286) and the
   per-line background rect's (:1396-1400): neither feature is drawn at all.
-- **Not drawn** `shaped_text_set_direction` at :3340,3396,3732,3761: it takes
-  `is_layout_rtl()` only while `text_direction` is INHERITED, and the default is
-  `TEXT_DIRECTION_AUTO` (text_edit.h:327).

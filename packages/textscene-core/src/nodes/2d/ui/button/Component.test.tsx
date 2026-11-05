@@ -238,7 +238,42 @@ describe('<Button> (isolated painter contract)', () => {
     const quadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
     expect(quadCount(trimmed)).toBeLessThan(quadCount(untrimmed));
   });
+
+  it('trims every row of an unwrapped label (text_paragraph.cpp:282-293)', async () => {
+    const narrow: Rect2 = { x: 0, y: 0, w: 30, h: 64 };
+    const renderer = await ReactThreeTestRenderer.create(
+      <Button
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'AAAAAAAAAAAA\nAAAAAAAAAAAA', overrunBehavior: 1 })}
+        rect={narrow}
+        renderOrder={0}
+      />
+    );
+    expect(textQuadCounts(renderer.scene)).toEqual([2, 2]);
+  });
+
+  it('trims no row of a wrapped label, which hides no line (text_paragraph.cpp:228-262)', async () => {
+    const narrow: Rect2 = { x: 0, y: 0, w: 30, h: 64 };
+    const renderer = await ReactThreeTestRenderer.create(
+      <Button
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'AAAAAAAAAAAA', overrunBehavior: 1, autowrapMode: 2 })}
+        rect={narrow}
+        renderOrder={0}
+      />
+    );
+    expect(textQuadCounts(renderer.scene)).toEqual([12]);
+  });
 });
+
+/** The glyph quads of each text mesh, in draw order. */
+function textQuadCounts(scene: Rendered['scene']): number[] {
+  return scene
+    .findAllByType('Mesh')
+    .map((m) => m.instance as THREE.Mesh)
+    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined)
+    .map((m) => m.geometry.attributes.position!.count / 4);
+}
 
 describe('<Button> — icon (ControlQuad), via ResourceLoader/SceneResources', () => {
   function fakeTexture(w: number, h: number): THREE.Texture {

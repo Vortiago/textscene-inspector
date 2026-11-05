@@ -1,6 +1,12 @@
 import type { ControlProperties } from '../control/types';
+import type {
+  StructuredTextOverrideProperties,
+  TextDirectionProperties,
+} from '../../../../godot/text/paragraphDirection';
 
-export interface RichTextLabelProperties extends ControlProperties {
+/** The `text_direction`, `language` and override are the defaults a `[p]` tag overrides per paragraph. */
+export interface RichTextLabelProperties
+  extends ControlProperties, TextDirectionProperties, StructuredTextOverrideProperties {
   /** Raw text, which may contain BBCode tags when bbcodeEnabled is true. */
   text?: string;
   /** When true, BBCode tags in `text` are interpreted rather than shown literally. */

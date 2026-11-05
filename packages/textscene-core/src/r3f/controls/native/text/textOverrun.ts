@@ -10,7 +10,7 @@
  */
 import { OPEN_SANS_ATLAS_GLYPHS } from './openSansAtlas';
 import { getFontEmboldenedAdvancePx, getFontEmboldenGrowthPx, type FontMetrics } from './fontMetrics';
-import { isWhitespace, type GlyphPlacement, type TextLineLayout } from './textLayout';
+import { isWhitespace, type GlyphPlacement, type TextLayoutResult, type TextLineLayout } from './textLayout';
 import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 /**
@@ -96,18 +96,19 @@ interface OverrunTrimOptions {
   /** `Label.ellipsis_char` / `TextParagraph.ellipsis_char`; defaults to `DEFAULT_ELLIPSIS_CHAR`. */
   ellipsisChar?: string;
   /**
-   * `sd->para_direction == DIRECTION_RTL` (`text_server_adv.cpp:6053`): cut at the visual left, keep
-   * the logical start, and draw the ellipsis first. Label passes its line's inferred direction.
-   * Every other caller keeps the left-to-right trim, which Godot draws for an AUTO `TextParagraph`
-   * (measured in Godot: a Button and an ItemList keep the visual left part).
+   * `shaped_text_get_direction == DIRECTION_RTL` in `shaped_text_draw` (`text_server.cpp`), which reads
+   * the set direction. Defaults to the line's inferred direction, as Label's own `draw_text` reads it.
+   * An AUTO `TextParagraph` line that infers RTL passes false: it draws the glyphs left of the cut.
    */
-  isRtl?: boolean;
+  isDrawnRtl?: boolean;
 }
 
 /** Where the trim loop stopped: the cut position and the ellipsis position, -1 for none. */
 interface TrimCut {
   trimPos: number;
   ellipsisPos: number;
+  /** The loop's `width` where it stopped: the advance it keeps, without the ellipsis. */
+  keptWidthPx: number;
 }
 
 interface TrimBudget {
@@ -171,8 +172,9 @@ export function trimLineToWidth(
     : 0;
 
   const budget: TrimBudget = { widthPx, flags, ellipsisWidthPx };
-  const isRtl = options.isRtl ?? false;
-  const { trimPos, ellipsisPos } = findCut(glyphs, line.widthPx, budget, isRtl);
+  // `sd->para_direction == DIRECTION_RTL` (`:6053`): the cut walks from the visual left.
+  const isParagraphRtl = line.isRtl === true;
+  const { trimPos, ellipsisPos, keptWidthPx } = findCut(glyphs, line.widthPx, budget, isParagraphRtl);
 
   // :6122
   if (!((trimPos >= 0 && line.widthPx > widthPx) || flags.enforceEllipsis)) {
@@ -197,18 +199,40 @@ export function trimLineToWidth(
 
   // `trim_pos < 0` draws every glyph uncut (`text_server.cpp:1768-1777`): only `enforceEllipsis` on a
   // line that fits reaches it. `draw_text` puts an RTL line's ellipsis first, its glyphs reversed (`label.h:200-210`).
-  const finalGlyphs = isRtl
-    ? placeFrom(0, [...ellipsis.reverse(), ...(trimPos < 0 ? glyphs : glyphs.slice(trimPos))])
+  const isDrawnRtl = options.isDrawnRtl ?? isParagraphRtl;
+  const finalGlyphs = isDrawnRtl
+    ? placeFrom(0, [...[...ellipsis].reverse(), ...(trimPos < 0 ? glyphs : glyphs.slice(trimPos))])
     : keptWithEllipsis(trimPos < 0 ? glyphs : glyphs.slice(0, trimPos), ellipsis);
-  const last = finalGlyphs.at(-1);
   return {
     text: line.text,
     glyphs: finalGlyphs,
-    widthPx: last ? last.x + last.advance : 0,
+    // `width_trimmed` (`:6152`), which alignment reads. For an AUTO line that infers RTL it is the
+    // part the cut keeps, not the part it draws.
+    widthPx: keptWidthPx + (ellipsisPos !== -1 ? ellipsisWidthPx : 0),
     paragraphIndex: line.paragraphIndex,
     paragraphStart: line.paragraphStart,
     isRtl: line.isRtl,
   };
+}
+
+/**
+ * Each row of `layout` trimmed by {@link trimLineToWidth}, as `TextParagraph::_shape_lines` trims an
+ * unwrapped buffer (`text_paragraph.cpp:282-293`). Its width is the widest trimmed row.
+ */
+export function trimLayoutToWidth(
+  layout: TextLayoutResult,
+  widthPx: number,
+  flags: OverrunTrimFlags,
+  options: OverrunTrimOptions
+): TextLayoutResult {
+  const lines = layout.lines.map((line) => trimLineToWidth(line, widthPx, flags, options));
+  return { ...layout, lines, widthPx: lines.reduce((max, line) => Math.max(max, line.widthPx), 0) };
+}
+
+/** The right edge of the last placed glyph. */
+function drawnWidthPx(glyphs: readonly GlyphPlacement[]): number {
+  const last = glyphs.at(-1);
+  return last ? last.x + last.advance : 0;
 }
 
 /** `glyphs` laid out from `penX`, each at the end of the one on its left. */
@@ -225,8 +249,7 @@ function keptWithEllipsis(
   kept: readonly GlyphPlacement[],
   ellipsis: ReadonlyArray<Omit<GlyphPlacement, 'x'>>
 ): GlyphPlacement[] {
-  const last = kept.at(-1);
-  return [...kept, ...placeFrom(last ? last.x + last.advance : 0, ellipsis)];
+  return [...kept, ...placeFrom(drawnWidthPx(kept), ellipsis)];
 }
 
 /** Whether the trim may cut at `glyph`: anywhere, or only at a soft break for a word trim past the minimum. */
@@ -253,44 +276,50 @@ function findCut(
   glyphs: readonly GlyphPlacement[],
   lineWidthPx: number,
   budget: TrimBudget,
-  isRtl: boolean
+  isParagraphRtl: boolean
 ): TrimCut {
   const { widthPx, flags, ellipsisWidthPx } = budget;
   const length = glyphs.length;
   if (flags.enforceEllipsis && lineWidthPx + ellipsisWidthPx <= widthPx) {
-    return { trimPos: -1, ellipsisPos: isRtl ? 0 : length };
+    return { trimPos: -1, ellipsisPos: isParagraphRtl ? 0 : length, keptWidthPx: lineWidthPx };
   }
   let width = lineWidthPx;
-  let cut: TrimCut = { trimPos: isRtl ? length : 0, ellipsisPos: flags.enforceEllipsis ? 0 : -1 };
-  // `last_valid_cut_witout_el`: the last position that fit without the ellipsis budget, for the
-  // min-characters fallback. Its width is not carried, since the final width comes from the kept glyphs.
+  let trimPos = isParagraphRtl ? length : 0;
+  let ellipsisPos = flags.enforceEllipsis ? 0 : -1;
+  // `last_valid_cut_witout_el` and its width: the last position that fit without the ellipsis
+  // budget, for the min-characters fallback.
   let lastValidCutWithoutEl = -1;
-  const step = isRtl ? 1 : -1;
+  let widthWithoutElPx = width;
+  const step = isParagraphRtl ? 1 : -1;
   // `glyphs_to` is `sd_size - 1` for RTL (`:6062`), so the cut never keeps the last glyph alone.
-  const stopAt = isRtl ? length - 1 : -1;
-  for (let i = isRtl ? 0 : length - 1; i !== stopAt; i += step) {
+  const stopAt = isParagraphRtl ? length - 1 : -1;
+  for (let i = isParagraphRtl ? 0 : length - 1; i !== stopAt; i += step) {
     const glyph = glyphs[i]!;
-    if (!isRtl) width -= glyph.advance;
-    const isAboveMinCharThreshold = (isRtl ? length - 1 - i : i) >= ELL_MIN_CHARACTERS;
+    if (!isParagraphRtl) width -= glyph.advance;
+    const isAboveMinCharThreshold = (isParagraphRtl ? length - 1 - i : i) >= ELL_MIN_CHARACTERS;
     if (!isAboveMinCharThreshold && lastValidCutWithoutEl !== -1) {
-      cut = { trimPos: lastValidCutWithoutEl, ellipsisPos: -1 };
+      trimPos = lastValidCutWithoutEl;
+      ellipsisPos = -1;
+      width = widthWithoutElPx;
       break;
     }
     const isAllowed = isCutAllowed(glyph, flags, isAboveMinCharThreshold);
     if (!flags.enforceEllipsis && width <= widthPx && lastValidCutWithoutEl === -1 && isAllowed) {
       lastValidCutWithoutEl = i;
+      widthWithoutElPx = width;
     }
     if (width + ellipsisBudgetPx(budget, isAboveMinCharThreshold) <= widthPx && isAllowed) {
       const fitsEllipsis =
         flags.addEllipsis &&
         (isAboveMinCharThreshold || flags.enforceEllipsis) &&
         width - ellipsisWidthPx <= widthPx;
-      cut = { trimPos: i, ellipsisPos: fitsEllipsis ? i : cut.ellipsisPos };
+      trimPos = i;
+      if (fitsEllipsis) ellipsisPos = i;
       break;
     }
-    if (isRtl) width -= glyph.advance;
+    if (isParagraphRtl) width -= glyph.advance;
   }
-  return withEnforcedEllipsisAtStart(cut, flags);
+  return withEnforcedEllipsisAtStart({ trimPos, ellipsisPos, keptWidthPx: width }, flags);
 }
 
 /** `:6118-6120`: an enforced ellipsis on a line cut to nothing still draws. */

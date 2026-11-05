@@ -185,6 +185,8 @@ export const GEOMETRY_SCENES = [
   // The one variable: how a Label3D lays its text out. Wrap at `width`, FILL, TOP and BOTTOM
   // vertical alignment, `offset` and `uppercase`, seen through the scene's own camera.
   { name: 'label3d-layout', file: 'unit-label3d-layout.tscn', camera: 'Root/Camera3D' },
+  // The one variable: a Label3D's paragraph direction, language and structured override.
+  { name: 'label3d-text-direction', file: 'unit-label3d-text-direction.tscn', camera: 'Root/Camera3D' },
   // The default font's glyph pages with a mip chain (`gui/theme/default_font_generate_mipmaps`), seen
   // small at a project mipmap bias of -1. A raster without the chain draws the same text sparkling.
   { name: 'label3d-glyph-mipmaps', file: 'label3d-glyph-mipmaps/unit-label3d-glyph-mipmaps.tscn' },

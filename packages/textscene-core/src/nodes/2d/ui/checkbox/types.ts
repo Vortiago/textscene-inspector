@@ -1,8 +1,10 @@
 /** CheckBox property definitions. */
 
 import type { ControlProperties } from '../control/types';
+import type { TextDirectionProperties } from '../../../../godot/text/paragraphDirection';
 
-export interface CheckBoxProperties extends ControlProperties {
+/** The label shapes in `text_direction` and `language`, else the locale (`button.cpp:564-569`). */
+export interface CheckBoxProperties extends ControlProperties, TextDirectionProperties {
   /** CheckBox label text. */
   text?: string;
   /** Whether the checkbox is in the checked/pressed state. */

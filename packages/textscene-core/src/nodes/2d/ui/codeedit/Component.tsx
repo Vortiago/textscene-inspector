@@ -17,6 +17,7 @@ import { shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { CODE_EDIT_FOLD_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { ControlQuad as FoldQuad } from '../../../../r3f/controls/native/controlQuad';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { TextEditBody } from '../textedit/Component';
 import {
@@ -90,19 +91,20 @@ export function CodeEdit(props: NativeControlComponentProps) {
     () => textEditTabStopsPx(codeEditProps.indentSize, fontMetrics, fontSizePx),
     [codeEditProps.indentSize, fontMetrics, fontSizePx]
   );
+  const bidi = useControlBidiOptions(codeEditProps, solveNode);
   const lineLayouts = useMemo(
     () =>
-      shapeTextEditLines(
-        lines,
+      shapeTextEditLines(lines, {
         fontSizePx,
-        codeEditProps.wrapMode,
-        codeEditProps.autowrapMode,
-        wrapWidthPx,
         fontMetrics,
+        wrapMode: codeEditProps.wrapMode,
+        autowrapMode: codeEditProps.autowrapMode,
+        wrapWidthPx,
         tabStopsPx,
-        codeEditProps.drawControlChars,
-        codeEditProps.indentWrappedLines
-      ),
+        preserveControl: codeEditProps.drawControlChars,
+        indentWrappedLines: codeEditProps.indentWrappedLines,
+        bidi,
+      }),
     [
       lines,
       fontSizePx,
@@ -113,6 +115,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
       tabStopsPx,
       codeEditProps.drawControlChars,
       codeEditProps.indentWrappedLines,
+      bidi,
     ]
   );
 

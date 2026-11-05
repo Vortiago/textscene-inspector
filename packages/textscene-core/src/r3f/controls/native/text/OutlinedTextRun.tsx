@@ -9,6 +9,7 @@ import { outlineStrokeWidthPx } from './textOutline';
 import { resolveTextOutline, type TextOutlineTheme } from '../textTheme';
 import type { ShareNode } from '../solveTree';
 import { TextRun, type TextRunProps } from './TextRun';
+import type { TextLayoutResult } from './textLayout';
 
 /**
  * The render order of layer `index` of `count` stacked text layers: the layers spread over the
@@ -44,19 +45,32 @@ export function OutlineRingRun({ sizePx, ...run }: OutlineRingRunProps) {
 }
 
 type OutlinedTextRunProps = RunLookProps & {
-  /** Already tinted. No outline draws at a size of 0 or a zero alpha (`button.cpp:460`). */
+  /** Already tinted. */
   outline: TextOutlineTheme;
+  /** The ring's own shape when it differs from the fill's, as a trimmed AUTO line's does. Defaults to `layout`. */
+  outlineLayout?: TextLayoutResult;
 };
 
-export function OutlinedTextRun({ layout, outline, renderOrder = 0, ...run }: OutlinedTextRunProps) {
-  const hasRing = outline.sizePx > 0 && outline.color.a > 0;
+/** Whether an outline draws a ring: none draws at a size of 0 or a zero alpha (`button.cpp:460`). */
+export function hasOutlineRing(outline: TextOutlineTheme): boolean {
+  return outline.sizePx > 0 && outline.color.a > 0;
+}
+
+export function OutlinedTextRun({
+  layout,
+  outlineLayout = layout,
+  outline,
+  renderOrder = 0,
+  ...run
+}: OutlinedTextRunProps) {
+  const hasRing = hasOutlineRing(outline);
   const layerCount = hasRing ? 2 : 1;
   return (
     <>
       {hasRing && (
         <OutlineRingRun
           {...run}
-          layout={layout}
+          layout={outlineLayout}
           tint={outline.color}
           sizePx={outline.sizePx}
           renderOrder={textLayerRenderOrder(renderOrder, 0, layerCount)}

@@ -17,6 +17,7 @@ import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { useSubOrExtResource } from '../../../../resources/useSubOrExtResource';
 import { decodeCodeHighlighter } from '../../../../resources/styles/codehighlighter/decode';
@@ -134,19 +135,20 @@ export function TextEditBody({
     () => textEditTabStopsPx(tabSize, fontMetrics, fontSizePx),
     [tabSize, fontMetrics, fontSizePx]
   );
+  const bidi = useControlBidiOptions(props, solveNode);
   const lineLayouts = useMemo(
     () =>
-      shapeTextEditLines(
-        lines,
+      shapeTextEditLines(lines, {
         fontSizePx,
-        props.wrapMode,
-        props.autowrapMode,
-        wrapWidthPx,
         fontMetrics,
+        wrapMode: props.wrapMode,
+        autowrapMode: props.autowrapMode,
+        wrapWidthPx,
         tabStopsPx,
-        props.drawControlChars,
-        props.indentWrappedLines
-      ),
+        preserveControl: props.drawControlChars,
+        indentWrappedLines: props.indentWrappedLines,
+        bidi,
+      }),
     [
       lines,
       fontSizePx,
@@ -157,6 +159,7 @@ export function TextEditBody({
       tabStopsPx,
       props.drawControlChars,
       props.indentWrappedLines,
+      bidi,
     ]
   );
 

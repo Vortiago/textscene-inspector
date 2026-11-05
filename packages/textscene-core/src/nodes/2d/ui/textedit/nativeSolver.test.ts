@@ -28,6 +28,8 @@ import {
 import { withVariation } from '../../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { TextEditProperties } from './types';
+import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const THEME = nativeTheme(1);
 
@@ -98,27 +100,46 @@ describe('textEditWrapWidthPx', () => {
 
 describe('shapeTextEditLines', () => {
   it('shapes each buffer line independently, one row per line when unwrapped', () => {
-    const result = shapeTextEditLines(['a', 'bb'], 16, 0, undefined, 0, OPEN_SANS_FONT_METRICS);
+    const result = shapeTextEditLines(['a', 'bb'], { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS });
     expect(result).toHaveLength(2);
     expect(result[0]!.startRow).toBe(0);
     expect(result[0]!.layout.lines).toHaveLength(1);
     expect(result[1]!.startRow).toBe(1);
   });
   it("preserveControl threads through to each line's own shapeText call (Text::set_draw_control_chars, text_edit.cpp:292)", () => {
-    const dropped = shapeTextEditLines(['AB'], 16, 0, undefined, 0, OPEN_SANS_FONT_METRICS);
-    const boxed = shapeTextEditLines(['AB'], 16, 0, undefined, 0, OPEN_SANS_FONT_METRICS, [], true);
+    const dropped = shapeTextEditLines(['AB'], { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS });
+    const boxed = shapeTextEditLines(['AB'], {
+      fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      preserveControl: true,
+    });
     expect(dropped[0]!.layout.lines[0]!.glyphs[1]!.controlCodepoint).toBeUndefined();
     expect(boxed[0]!.layout.lines[0]!.glyphs[1]!.controlCodepoint).toBe(0x0001);
   });
   it('still occupies one row for an empty buffer line (a blank line is not zero rows)', () => {
-    const result = shapeTextEditLines(['a', '', 'b'], 16, 0, undefined, 0, OPEN_SANS_FONT_METRICS);
+    const result = shapeTextEditLines(['a', '', 'b'], {
+      fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+    });
     expect(result.map((l) => l.startRow)).toEqual([0, 1, 2]);
     expect(result[1]!.layout.lines[0]!.glyphs).toHaveLength(0);
   });
   it('wraps a long line into multiple rows only when wrap_mode is BOUNDARY(1)', () => {
     const longLine = 'a repeated word wrap word wrap word wrap word wrap';
-    const unwrapped = shapeTextEditLines([longLine], 16, 0, 3, 60, OPEN_SANS_FONT_METRICS);
-    const wrapped = shapeTextEditLines([longLine], 16, 1, 3, 60, OPEN_SANS_FONT_METRICS);
+    const unwrapped = shapeTextEditLines([longLine], {
+      fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      wrapMode: 0,
+      autowrapMode: 3,
+      wrapWidthPx: 60,
+    });
+    const wrapped = shapeTextEditLines([longLine], {
+      fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      wrapMode: 1,
+      autowrapMode: 3,
+      wrapWidthPx: 60,
+    });
     expect(unwrapped[0]!.layout.lines.length).toBe(1);
     expect(wrapped[0]!.layout.lines.length).toBeGreaterThan(1);
   });
@@ -148,7 +169,15 @@ describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () =>
   });
 
   it('adds the gutter band width into the width', () => {
-    const props: TextEditProperties = { name: 'T', text: 'a', fitContentWidth: true };
+    const props: TextEditProperties = {
+      name: 'T',
+      textDirection: 0,
+      language: '',
+      structuredTextBidiOverride: 0,
+      structuredTextBidiOverrideOptions: [],
+      text: 'a',
+      fitContentWidth: true,
+    };
     const box = THEME.widgets.lineEdit.normal;
     const withoutGutter = textEditMinimumSizeWith(node(props), ctx(), props, box, 0).x;
     expect(textEditMinimumSizeWith(node(props), ctx(), props, box, 5).x).toBe(withoutGutter + 5);
@@ -370,5 +399,32 @@ describe('textEditFirstIndentRow (text_edit.cpp:4107-4131)', () => {
     // Eight leading spaces broken after the fourth: the run is still going
     // when row 1 starts, so the first row that may take the indent is row 2.
     expect(textEditFirstIndentRow('        alpha', [0, 4])).toBe(1);
+  });
+});
+
+describe('shapeTextEditLines — direction, language and structured override (text_edit.cpp:3394-3401)', () => {
+  /** Each buffer line's glyph characters, left to right. */
+  function visual(lines: string[], props: Partial<TextEditProperties>, rtl = false): string[] {
+    const bidi = controlBidiOptions({ textDirection: 0, language: '', ...props }, { rtl, locale: '' });
+    return shapeTextEditLines(lines, { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS, bidi }).map(
+      ({ layout }) => visualChars(layout.lines[0]!)
+    );
+  }
+
+  it('reorders each line of an RTL paragraph on its own', () => {
+    expect(visual(['Hello!', 'abc?'], { textDirection: 2 })).toEqual(['!Hello', '?abc']);
+  });
+
+  it('shapes an INHERITED paragraph at the layout direction', () => {
+    expect(visual(['Hello!'], { textDirection: 3 }, true)).toEqual(['!Hello']);
+  });
+
+  it('lets each AUTO line infer its own direction', () => {
+    expect(visual(['Hello!', 'שלום!'], { textDirection: 0 })).toEqual(['Hello!', '!םולש']);
+  });
+
+  it('runs the structured parser on each line on its own (text_edit.cpp:297-324)', () => {
+    const file = { textDirection: 2, structuredTextBidiOverride: 2 };
+    expect(visual(['שלום/abc', 'a/שלום'], file)).toEqual(['םולש/abc', 'a/םולש']);
   });
 });
