@@ -62,6 +62,18 @@ describe('parseRichTextLabel', () => {
     expect(p.clipContents).toBe(false);
   });
 
+  it('defaults scroll_active to true (rich_text_label.h:565) and reads scroll_active = false', () => {
+    const heading = h({ name: 'T', type: 'RichTextLabel' });
+    expect(parseRichTextLabel(heading, {}).scrollActive).toBe(true);
+    expect(parseRichTextLabel(heading, { scroll_active: 'false' }).scrollActive).toBe(false);
+  });
+
+  it('defaults scroll_following to false (rich_text_label.h:561) and reads scroll_following = true', () => {
+    const heading = h({ name: 'T', type: 'RichTextLabel' });
+    expect(parseRichTextLabel(heading, {}).scrollFollowing).toBe(false);
+    expect(parseRichTextLabel(heading, { scroll_following: 'true' }).scrollFollowing).toBe(true);
+  });
+
   it('defaults text_direction to AUTO, language to empty and the override to DEFAULT', () => {
     const p = parseRichTextLabel(h({ name: 'T', type: 'RichTextLabel' }), {});
     expect(p.textDirection).toBe(0);

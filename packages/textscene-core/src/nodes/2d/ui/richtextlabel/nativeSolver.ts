@@ -308,15 +308,11 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
     tabSize: props.tabSize,
     autowrapTrimFlags: props.autowrapTrimFlags,
   });
-  // `get_content_height` sums each line's own ascent+descent, never a count
-  // times one pitch (`richTextLineMetrics`).
-  const lines = richTextLineMetrics(runs, layout);
-  const lastLine = lines[lines.length - 1];
   const measured = {
     // `get_content_width` maxes `TS->shaped_text_get_size(lines_rid[i])`
     // (`text_paragraph.cpp:601-608`): the ceiled extent.
     x: shapedTextSizeWidthPx(layout.widthPx),
-    y: lastLine ? lastLine.topPx + lastLine.ascentPx + lastLine.descentPx : 0,
+    y: richTextContentHeightPx(runs, layout),
   };
 
   if (wraps) {
@@ -328,7 +324,7 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
 // ── Draw time: BBCode to styled runs to per-line placements ──
 
 /** One styled run of the plain text, with what `[b]`/`[i]`/`[u]`/`[color]` resolve to. */
-interface StyledTextRun {
+export interface StyledTextRun {
   text: string;
   bold: boolean;
   italic: boolean;
@@ -679,6 +675,23 @@ function richTextLineMetrics(
   return lineMetricsOf(attributeRunsToLines(styledRuns, layout), styledRuns, layout);
 }
 
+/**
+ * `get_content_height`'s sum of each line's own ascent+descent, not `layout.heightPx`, a count
+ * times one pitch that mixed sizes make wrong.
+ */
+function contentHeightOf(lines: readonly RichTextLineMetrics[]): number {
+  const lastLine = lines[lines.length - 1];
+  return lastLine ? lastLine.topPx + lastLine.ascentPx + lastLine.descentPx : 0;
+}
+
+/** The height of the whole shaped text, px: what the scrollbar and `fit_content` compare against. */
+export function richTextContentHeightPx(
+  styledRuns: readonly StyledTextRun[],
+  layout: TextLayoutResult
+): number {
+  return contentHeightOf(richTextLineMetrics(styledRuns, layout));
+}
+
 function lineMetricsOf(
   perLine: readonly RunLineSegment[][],
   styledRuns: readonly StyledTextRun[],
@@ -888,6 +901,8 @@ interface RichTextAlignment {
   boxHeightPx: number;
   horizontalAlignment?: number;
   verticalAlignment?: number;
+  /** How far the scroll value has moved the text up (`vofs`, `rich_text_label.cpp:1613`). Absent is 0. */
+  scrollOffsetPx?: number;
   /** Absent leaves FILL paragraphs unfitted. */
   justification?: RichTextJustification;
 }
@@ -914,7 +929,8 @@ function fitFilledParagraphs(
 /**
  * One placement per line and style run, with each line's top and baseline from
  * `richTextLineMetrics` and its alignment offsets. Alignment and direction resolve per
- * paragraph, since tags differ between paragraphs. Without `alignment`, the box is zero-width.
+ * paragraph, since tags differ between paragraphs. Without `alignment`, the box is zero-width
+ * and no line falls below it.
  */
 export function layoutRichTextRuns(
   styledRuns: readonly StyledTextRun[],
@@ -945,12 +961,8 @@ export function layoutRichTextRuns(
   const perLine = layout === unfittedLayout ? unfittedPerLine : attributeRunsToLines(styledRuns, layout);
   const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);
 
-  // `get_content_height`'s sum of each line's ascent+descent, not `layout.heightPx`,
-  // a count times one pitch that mixed sizes make wrong.
-  const lastLine = lineMetrics[lineMetrics.length - 1];
-  const contentHeightPx = lastLine ? lastLine.topPx + lastLine.ascentPx + lastLine.descentPx : 0;
   const { vbeginPx, vsepPx } = richTextVerticalOffsets(
-    contentHeightPx,
+    contentHeightOf(lineMetrics),
     alignment?.boxHeightPx ?? 0,
     alignment?.verticalAlignment,
     layout.lines.length
@@ -958,7 +970,14 @@ export function layoutRichTextRuns(
 
   const placements: RichTextRunPlacement[] = [];
   perLine.forEach((segments, lineIndex) => {
-    const { topPx, ascentPx, textAscentPx, textDescentPx } = lineMetrics[lineIndex]!;
+    const { topPx, ascentPx, descentPx, textAscentPx, textDescentPx } = lineMetrics[lineIndex]!;
+    // `vbegin` and `vsep` are fractional. In Godot a 23px line centred in a 150px box has
+    // `vbegin` 63.5 and ink on row 69, since the glyph floors (`text_server_adv.cpp:4083`'s
+    // `cpos.y = Math::floor(cpos.y)`) and the line top does not.
+    const exactTopPx = topPx + vbeginPx + lineIndex * vsepPx - (alignment?.scrollOffsetPx ?? 0);
+    // A line that starts at or below the box bottom, or ends at or above its top, is never drawn
+    // (`:973,978-981`), clipped or not.
+    if (alignment && (exactTopPx >= alignment.boxHeightPx || exactTopPx + ascentPx + descentPx <= 0)) return;
     const lineOffsetXPx = richTextHorizontalOffsetPx(
       shapedTextSizeWidthPx(layout.lines[lineIndex]?.widthPx ?? 0),
       boxWidthPx,
@@ -967,10 +986,7 @@ export function layoutRichTextRuns(
     );
     for (const segment of segments) {
       const run = styledRuns[segment.runIndex]!;
-      // Floored as Godot floors the glyph (`text_server_adv.cpp:4083`'s `cpos.y =
-      // Math::floor(cpos.y)`), with `vbegin` and `vsep` fractional. In Godot a 23px
-      // line centred in a 150px box has `vbegin` 63.5 and ink on row 69.
-      const lineTopPx = Math.floor(topPx + vbeginPx + lineIndex * vsepPx);
+      const lineTopPx = Math.floor(exactTopPx);
       placements.push({
         lineIndex,
         lineTopPx,

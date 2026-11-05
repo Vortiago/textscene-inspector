@@ -4,7 +4,7 @@
  * style run, or one `<RichTextImage>` per `[img]`, through the MSDF text
  * engine `<Label>` uses. Other tags are a non-goal.
  */
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import type * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -25,6 +25,11 @@ import { useTexture2D } from '../../../../resources/useTexture2D';
 import { clampAutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import {
+  ScrollBarChrome,
+  SCROLL_BAR_GRABBER_RENDER_ORDER_OFFSET,
+  SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET,
+} from '../shared/ScrollBarChrome';
+import {
   RICH_TEXT_LABEL_UNDERLINE_ALPHA,
   RICH_TEXT_LABEL_DEFAULT_AUTOWRAP,
   layoutRichTextRuns,
@@ -36,8 +41,12 @@ import {
   type RichTextImagePlacement,
 } from './nativeSolver';
 import { resolveRichTextFaces } from './styleFaces';
+import { shapeBesideScrollBar } from './scrollBar';
 import type { RichTextLabelProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
+import type { Rect2 } from '../../../../godot/math/rect2';
+import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import type { ResolvedTextTheme } from '../../../../r3f/controls/native/textTheme';
 
 interface ImageLike {
   width?: number;
@@ -118,8 +127,91 @@ interface RichTextBodyProps extends NativeControlComponentProps {
   clippingPlanes: readonly THREE.Plane[];
 }
 
-/** The lines and images of a RichTextLabel. A `ControlQuad` reads its clip from context, a `TextRun` from `clippingPlanes`. */
-function RichTextBody({ solveNode, tint, rect, renderOrder, theme, clippingPlanes }: RichTextBodyProps) {
+/**
+ * The text of `solveNode` shaped to wrap in `rect`, beside the scrollbar where there is one. The
+ * faces are read in the render body, not in a `useMemo`: see Label's Component.tsx.
+ */
+function useShapedRichText(
+  solveNode: SolveNode,
+  props: RichTextLabelProperties,
+  rect: Rect2,
+  theme: NativeTheme,
+  textTheme: ResolvedTextTheme
+) {
+  const runsAt = useCallback(
+    (wrapWidthPx: number) =>
+      styledTextRuns(solveNode, props, textTheme.color, textTheme.fontSizePx, theme.fontSize, wrapWidthPx),
+    [solveNode, props, textTheme.color, textTheme.fontSizePx, theme.fontSize]
+  );
+  // RichTextLabel's own default is WORD_SMART (`rich_text_label.h:557`), not Label's OFF.
+  const autowrapMode = clampAutowrapMode(props.autowrapMode, RICH_TEXT_LABEL_DEFAULT_AUTOWRAP);
+  // The styles in use do not depend on the wrap width.
+  const runsAtRectWidth = useMemo(() => runsAt(rect.w), [runsAt, rect.w]);
+  const faces = resolveRichTextFaces(solveNode, runsAtRectWidth);
+  const { normal, bold, italic, boldItalic } = faces;
+  const { rtl } = solveNode;
+  const box = useMemo(
+    () => ({
+      w: rect.w,
+      h: rect.h,
+      scrollActive: props.scrollActive,
+      scrollFollowing: props.scrollFollowing,
+      rtl,
+    }),
+    [rect.w, rect.h, props.scrollActive, props.scrollFollowing, rtl]
+  );
+
+  return useMemo(
+    () =>
+      shapeBesideScrollBar(
+        (wrapWidthPx) => {
+          const runs = wrapWidthPx === rect.w ? runsAtRectWidth : runsAt(wrapWidthPx);
+          const layout = shapeRichText(
+            runs,
+            { normal, bold, italic, boldItalic },
+            {
+              fontSizePx: textTheme.fontSizePx,
+              boxWidthPx: wrapWidthPx,
+              autowrapMode,
+              tabStopsPx: props.tabStopsPx,
+              tabSize: props.tabSize,
+              autowrapTrimFlags: props.autowrapTrimFlags,
+            }
+          );
+          return { runs, layout };
+        },
+        box,
+        theme
+      ),
+    [
+      runsAt,
+      runsAtRectWidth,
+      rect.w,
+      normal,
+      bold,
+      italic,
+      boldItalic,
+      textTheme.fontSizePx,
+      box,
+      autowrapMode,
+      props.tabStopsPx,
+      props.tabSize,
+      props.autowrapTrimFlags,
+      theme,
+    ]
+  );
+}
+
+/** The lines and images of a RichTextLabel, and its scrollbar. A `ControlQuad` reads its clip from context, a `TextRun` from `clippingPlanes`. */
+function RichTextBody({
+  solveNode,
+  tint,
+  rect,
+  renderOrder,
+  theme,
+  snapToPixels,
+  clippingPlanes,
+}: RichTextBodyProps) {
   const props = painterView<RichTextLabelProperties>(solveNode);
   const textTheme = useMemo(
     () => richTextLabelTextTheme(solveNode, props, { theme }),
@@ -127,44 +219,12 @@ function RichTextBody({ solveNode, tint, rect, renderOrder, theme, clippingPlane
   );
 
   const { justificationFlags } = props;
-
-  // A styled run reads its own theme font-size key, never `normal_font_size`.
-  const runs = useMemo(
-    () => styledTextRuns(solveNode, props, textTheme.color, textTheme.fontSizePx, theme.fontSize, rect.w),
-    [solveNode, props, textTheme.color, textTheme.fontSizePx, theme.fontSize, rect.w]
-  );
-  // RichTextLabel's own default is WORD_SMART (`rich_text_label.h:557`), not Label's OFF.
-  const autowrapMode = clampAutowrapMode(props.autowrapMode, RICH_TEXT_LABEL_DEFAULT_AUTOWRAP);
-
-  // Read in the render body, not in the `useMemo` below: see Label's Component.tsx.
-  const { normal, bold, italic, boldItalic } = resolveRichTextFaces(solveNode, runs);
-  const layout = useMemo(
-    () =>
-      shapeRichText(
-        runs,
-        { normal, bold, italic, boldItalic },
-        {
-          fontSizePx: textTheme.fontSizePx,
-          boxWidthPx: rect.w,
-          autowrapMode,
-          tabStopsPx: props.tabStopsPx,
-          tabSize: props.tabSize,
-          autowrapTrimFlags: props.autowrapTrimFlags,
-        }
-      ),
-    [
-      runs,
-      normal,
-      bold,
-      italic,
-      boldItalic,
-      textTheme.fontSizePx,
-      rect.w,
-      autowrapMode,
-      props.tabStopsPx,
-      props.tabSize,
-      props.autowrapTrimFlags,
-    ]
+  const { runs, layout, wrapWidthPx, textOriginXPx, scrollOffsetPx, scrollBar } = useShapedRichText(
+    solveNode,
+    props,
+    rect,
+    theme,
+    textTheme
   );
 
   // The alignment property and the `[center]`/`[right]`/`[left]`/`[fill]` tags
@@ -173,8 +233,9 @@ function RichTextBody({ solveNode, tint, rect, renderOrder, theme, clippingPlane
   const placements = useMemo(
     () =>
       layoutRichTextRuns(runs, layout, {
-        boxWidthPx: rect.w,
+        boxWidthPx: wrapWidthPx,
         boxHeightPx: rect.h,
+        scrollOffsetPx,
         horizontalAlignment: props.horizontalAlignment,
         verticalAlignment: props.verticalAlignment,
         justification: {
@@ -185,8 +246,9 @@ function RichTextBody({ solveNode, tint, rect, renderOrder, theme, clippingPlane
     [
       runs,
       layout,
-      rect.w,
+      wrapWidthPx,
       rect.h,
+      scrollOffsetPx,
       props.horizontalAlignment,
       props.verticalAlignment,
       justificationFlags,
@@ -197,58 +259,73 @@ function RichTextBody({ solveNode, tint, rect, renderOrder, theme, clippingPlane
 
   return (
     <>
-      {placements.map((placement, index) => {
-        const y = placement.lineTopPx;
-        if (placement.image) {
-          return (
-            <CanvasItemGroup
-              key={index}
-              position={[placement.lineOffsetXPx + placement.image.xPx, -(y + placement.image.yPx), 0]}
-            >
-              <RichTextImage
-                placement={placement.image}
-                tint={tint.own}
-                resources={solveNode.resources}
-                renderOrder={renderOrder}
-              />
-            </CanvasItemGroup>
-          );
-        }
-        // `lineTopPx` sums the earlier lines' heights, since font sizes vary by line.
-        // The tint multiplies in sRGB and `<TextRun>` converts once.
-        const runTint = multiplyModulate(tint.own, placement.color);
-        // `[u]` is a stroke on the line's baseline with the paragraph's metrics,
-        // snapped to whole pixel rows, at `underline_alpha` times the opacity.
-        const underline = placement.underline
-          ? underlineRectPx(
-              placement.layout.lines[0]!.glyphs,
-              placement.layout.baselineOffsetPx,
-              underlineMetrics
-            )
-          : null;
-        return (
-          <CanvasItemGroup key={index} position={[placement.lineOffsetXPx, -y, 0]}>
-            <TextRun
-              layout={placement.layout}
-              fontSizePx={placement.fontSizePx}
-              tint={runTint}
-              clippingPlanes={clippingPlanes}
-              renderOrder={renderOrder}
-            />
-            {underline && (
-              <CanvasItemGroup position={[underline.x0, -underline.topPx, 0]}>
-                <ControlQuad
-                  width={underline.x1 - underline.x0}
-                  height={underline.heightPx}
-                  color={godotColorToLinear(runTint)}
-                  opacity={runTint.a * RICH_TEXT_LABEL_UNDERLINE_ALPHA}
+      <CanvasItemGroup position={[textOriginXPx, 0, 0]}>
+        {placements.map((placement, index) => {
+          const y = placement.lineTopPx;
+          if (placement.image) {
+            return (
+              <CanvasItemGroup
+                key={index}
+                position={[placement.lineOffsetXPx + placement.image.xPx, -(y + placement.image.yPx), 0]}
+              >
+                <RichTextImage
+                  placement={placement.image}
+                  tint={tint.own}
+                  resources={solveNode.resources}
                   renderOrder={renderOrder}
                 />
               </CanvasItemGroup>
-            )}
-          </CanvasItemGroup>
-        );
-      })}
+            );
+          }
+          // `lineTopPx` sums the earlier lines' heights, since font sizes vary by line.
+          // The tint multiplies in sRGB and `<TextRun>` converts once.
+          const runTint = multiplyModulate(tint.own, placement.color);
+          // `[u]` is a stroke on the line's baseline with the paragraph's metrics,
+          // snapped to whole pixel rows, at `underline_alpha` times the opacity.
+          const underline = placement.underline
+            ? underlineRectPx(
+                placement.layout.lines[0]!.glyphs,
+                placement.layout.baselineOffsetPx,
+                underlineMetrics
+              )
+            : null;
+          return (
+            <CanvasItemGroup key={index} position={[placement.lineOffsetXPx, -y, 0]}>
+              <TextRun
+                layout={placement.layout}
+                fontSizePx={placement.fontSizePx}
+                tint={runTint}
+                clippingPlanes={clippingPlanes}
+                renderOrder={renderOrder}
+              />
+              {underline && (
+                <CanvasItemGroup position={[underline.x0, -underline.topPx, 0]}>
+                  <ControlQuad
+                    width={underline.x1 - underline.x0}
+                    height={underline.heightPx}
+                    color={godotColorToLinear(runTint)}
+                    opacity={runTint.a * RICH_TEXT_LABEL_UNDERLINE_ALPHA}
+                    renderOrder={renderOrder}
+                  />
+                </CanvasItemGroup>
+              )}
+            </CanvasItemGroup>
+          );
+        })}
+      </CanvasItemGroup>
+      {scrollBar && (
+        // `vscroll` is an `INTERNAL_MODE_FRONT` child (`rich_text_label.cpp:8208`): it paints
+        // over the text, under any regular child.
+        <ScrollBarChrome
+          bar={scrollBar}
+          track={theme.widgets.scrollBar.scrollVertical}
+          grabber={theme.widgets.scrollBar.grabber}
+          color={tint.own}
+          renderOrder={renderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET}
+          grabberRenderOrder={renderOrder + SCROLL_BAR_GRABBER_RENDER_ORDER_OFFSET}
+          snapToPixels={snapToPixels}
+        />
+      )}
     </>
   );
 }
