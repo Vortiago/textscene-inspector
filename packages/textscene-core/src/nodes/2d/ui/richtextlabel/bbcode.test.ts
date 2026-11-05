@@ -406,4 +406,8 @@ describe('parseBBCodeRuns paragraph breaks', () => {
   it('ends a line that holds only an empty paragraph', () => {
     expect(parseBBCodeRuns('[p][/p][p]x[/p]').map((run) => run.text)).toEqual(['\n', 'x']);
   });
+
+  it('adds no break after an [img] with no path, which adds no item (`:6145`)', () => {
+    expect(parseBBCodeRuns('[img][/img][p]x[/p]').map((run) => run.text)).toEqual(['x']);
+  });
 });

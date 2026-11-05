@@ -230,15 +230,15 @@ interface ItemTextShapeInput {
   locale: string;
 }
 
+/** An item's own `text_direction` and `language` (`item_list.h:73-74`), which no scene changes. */
+const ITEM_BIDI = { textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: '' };
+
 /**
  * Shapes one item's text, or `null` for an item with none. The minsize pass
  * (`item_list.cpp:1763-1766`) and the draw pass (`:1621-1661`) both read the
  * trimmed size after `text_buf->set_width`, so the overrun trim applies here, to
  * each line, as `TextParagraph::_shape_lines` does (`text_paragraph.cpp:257-270`).
  */
-/** An item's own `text_direction` and `language` (`item_list.h:73-74`), which no scene changes. */
-const ITEM_BIDI = { textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: '' };
-
 export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult | null {
   if (input.text.length === 0) return null;
   const widthPx = itemListShapeWidth(input.fixedColumnWidth);

@@ -297,6 +297,7 @@ export function textEditMinimumSizeWith(
     wrapWidthPx,
     tabStopsPx: textEditTabStopsPx(tabSize, fontMetrics, fontSizePx),
     preserveControl: props.drawControlChars,
+    indentWrappedLines: props.indentWrappedLines,
     bidi: controlBidiOptions(props, n),
   });
   const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);

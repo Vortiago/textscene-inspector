@@ -10,7 +10,7 @@ import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 export function parseButton(heading: ParsedHeading, properties: Record<string, string>): ButtonProperties {
   const result: ButtonProperties = {
     ...parseControl(heading, properties),
-    ...parseTextDirectionProperties(properties, 'Button'),
+    ...parseTextDirectionProperties(properties, heading.attributes.type ?? 'Button'),
   };
   if (properties.text !== undefined) result.text = unquoteString(properties.text);
   result.disabled = boolSlotValue(properties.disabled) === true;

@@ -84,6 +84,10 @@ describe('paragraphBidiOptions language, `_find_language` (`:3543-3558`)', () =>
     expect(languageOf('[p language=he]x[/p]')).toBe('he');
   });
 
+  it('gives a [p] with a space but no option the node language (`:5753`)', () => {
+    expect(languageOf('[p x]x[/p]')).toBe('de');
+  });
+
   it('takes the innermost [lang] or paragraph', () => {
     expect(languageOf('[p lang=he][lang=ar]x[/lang][/p]')).toBe('ar');
     expect(languageOf('[lang=ar][p lang=he]x[/p][/lang]')).toBe('he');

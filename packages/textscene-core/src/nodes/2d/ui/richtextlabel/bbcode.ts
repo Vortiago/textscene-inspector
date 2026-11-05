@@ -14,7 +14,10 @@ export interface OpenBBCodeTag {
   name: string;
   /** The `=value` portion, verbatim; absent for a bare `[name]` or the space-attribute form. */
   value?: string;
-  /** `bbcode_options`, the `key=value` pieces after the name (`rich_text_label.cpp:5357-5382`). Absent on a tag with none. */
+  /**
+   * `bbcode_options`, the `key=value` pieces after the name (`rich_text_label.cpp:5357-5382`).
+   * Present, perhaps empty, when a space follows the name, which `[p ` reads apart from a bare `[p]` (`:5753`).
+   */
   options?: ReadonlyMap<string, string>;
 }
 
@@ -362,12 +365,11 @@ function bbcodeOptions(splitBlock: readonly string[]): Map<string, string> {
   return options;
 }
 
-/** The tag a `[name...]` token opens, its options kept when it has any. */
+/** The tag a `[name...]` token opens, with an options map when a space follows its name. */
 function openTag(name: string, value: string | undefined, token: string): OpenBBCodeTag {
-  // Options follow a space, so a token without one, as most are, skips the split.
-  if (!token.includes(' ')) return { name, value };
-  const options = bbcodeOptions(splitUnquoted(token.slice(1, -1), ' '));
-  return options.size > 0 ? { name, value, options } : { name, value };
+  // Options follow a space right after the name (`:5753`), so `[color=a b]` has none.
+  if (token[name.length + 1] !== ' ') return { name, value };
+  return { name, value, options: bbcodeOptions(splitUnquoted(token.slice(1, -1), ' ')) };
 }
 
 /**
@@ -486,7 +488,8 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
     if (PARAGRAPH_TAGS.has(tag.name) && lineHasLayout) append('\n');
     flush();
     stack.push(tag);
-    if (!STYLING_TAGS.has(tag.name)) lineHasLayout = true;
+    // `[img]` opens a tag but no item (`:6145`): its loaded image sets the flag where it is added.
+    if (!STYLING_TAGS.has(tag.name) && tag.name !== 'img') lineHasLayout = true;
   }
 
   function flush(): void {

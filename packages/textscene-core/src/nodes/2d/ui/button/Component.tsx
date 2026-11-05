@@ -221,14 +221,14 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
         trimmedLayout &&
         trimmedLayout.lines.map((line, i) => (
           // `TextParagraph::draw` aligns each line on its own (`text_paragraph.cpp:887-922`),
-          // so shorter rows re-centre. `content.text.offset.x` carries the widest row's
-          // shift, so it is backed out and each row's own put in its place.
+          // so shorter rows re-centre. `content.text.offset.x` carries the shift of the untrimmed
+          // `layout`, so that shift is backed out and each row's own put in its place.
           <CanvasItemGroup
             key={i}
             position={[
               content.text!.offset.x -
                 buttonTextAlignShiftPx(
-                  naturalSize(trimmedLayout).x,
+                  naturalSize(layout).x,
                   content.drawableSize.x,
                   textAlignment,
                   infersRtl(layout)
