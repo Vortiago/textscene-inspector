@@ -1,11 +1,12 @@
-/** The test BMFont (`descriptor.testkit.ts`) as `FontMetrics`, with a blank 64 x 32 page for fill 0. */
+/** The test BMFont (`descriptor.testkit.ts`) as `FontMetrics` and as a `FontFile`, with a blank 64 x 32 page for fill 0. */
 
 import { FixedSizeScaleMode } from '../../../../godot/text/textServerEnums';
 import { TEXT_DESCRIPTOR } from '../../../../resources/formats/bmfont/descriptor.testkit';
 import { parseDescriptor } from '../../../../resources/formats/bmfont/parseDescriptor';
 import { stackFills } from '../../../../resources/formats/bmfont/fillSheet';
-import type { BitmapFill, BitmapFont } from '../../../../resources/fonts/font/types';
+import type { BitmapFill, BitmapFont, FontFileResource } from '../../../../resources/fonts/font/types';
 import { createBitmapFontMetrics, type BitmapFontMetrics } from './bitmapFontMetrics';
+import { fontFile } from './sfntOutlines.testkit';
 
 export function testBitmapFont(
   scaleMode: number = FixedSizeScaleMode.FIXED_SIZE_SCALE_ENABLED,
@@ -29,4 +30,9 @@ export function testBitmapMetrics(
   outlineFills?: readonly BitmapFill[]
 ): BitmapFontMetrics {
   return createBitmapFontMetrics(testBitmapFont(scaleMode, outlineFills));
+}
+
+/** The test BMFont as the `FontFile` the font processor loads from a `.fnt`: no bytes, its bitmap only. */
+export function bitmapFontFile(): FontFileResource {
+  return { ...fontFile(undefined), bitmap: testBitmapFont() };
 }

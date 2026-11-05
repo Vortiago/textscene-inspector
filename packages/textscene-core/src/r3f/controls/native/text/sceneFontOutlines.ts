@@ -9,7 +9,8 @@ import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import type { FontMetrics } from './fontMetrics';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
-import { fontForcesAutohinter, resolveFontFileBytes } from './sceneFontResolution';
+import { bitmapFontOutlines } from './bitmapFontOutlines';
+import { fontForcesAutohinter, resolveBitmapFont, resolveFontFileBytes } from './sceneFontResolution';
 import { createSettledPeek } from './settledChannel';
 import { openAutoHintedFontOutlines, openFontOutlines, type SfntOutlines } from './sfntOutlines';
 
@@ -46,12 +47,15 @@ function peekBundledOutlines(): PeekedOutlines {
 /**
  * The outlines of `font`, starting their load on the first peek. Null `font` and a
  * `FontVariation` with no `base_font` are the bundled font. A `SystemFont`, which has no bytes, and
- * a chain of fonts with none are null: Godot draws them, this previewer cannot.
+ * a chain of fonts with none are null: Godot draws them, this previewer cannot. A BMFont has glyphs
+ * with no contours (`bitmapFontOutlines.ts`).
  *
  * @canonical Glyph outlines of a scene font in any container, from its font resource
  */
 export function peekSceneFontOutlines(font: FontResource | null | undefined): PeekedOutlines {
   if (!font) return peekBundledOutlines();
+  const bitmap = resolveBitmapFont(font);
+  if (bitmap) return bitmapFontOutlines(bitmap);
   const resolved = resolveFontFileBytes(font);
   if (!resolved) return endsWithoutBase(font) ? peekBundledOutlines() : null;
   const open = fontForcesAutohinter(resolved.leaf) ? openAutoHintedFontOutlines : openFontOutlines;
