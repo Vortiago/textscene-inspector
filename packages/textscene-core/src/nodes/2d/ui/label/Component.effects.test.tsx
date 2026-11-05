@@ -22,6 +22,7 @@ interface RunProps {
   outlineColor?: Rgba;
   outlineWidthPx?: number;
   renderOrder?: number;
+  penOriginXPx?: number;
 }
 
 const scene = vi.hoisted(() => ({ bundled: undefined as FontMetrics | undefined }));
@@ -102,6 +103,17 @@ describe('<Label> outline ring', () => {
     expect(filled.outlineColor).toBeUndefined();
     expect(filled.outlineWidthPx).toBeUndefined();
     expect(filled.renderOrder).toBeGreaterThan(rings(runs)[0]!.renderOrder!);
+  });
+
+  it('rounds the ring pen at the canvas origin of its fill, so the ring stays on its glyph', async () => {
+    // label.cpp:796-797: one `ofs.x` per line feeds every draw_text pass, the outline and the fill alike.
+    const centred = label({
+      ...outlined,
+      node: controlNode('L', 'Label', { name: 'L', text: 'A', horizontalAlignment: 1 }),
+    });
+    const runs = await draw(centred, 2);
+    expect(fill(runs).penOriginXPx).toBeGreaterThan(0);
+    expect(rings(runs)[0]?.penOriginXPx).toBe(fill(runs).penOriginXPx);
   });
 
   it('draws no ring at outline_size 0', async () => {

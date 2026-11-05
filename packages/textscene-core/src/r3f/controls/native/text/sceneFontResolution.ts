@@ -52,7 +52,8 @@ const hasGlyphs = (file: FontFileResource): file is FileWithBytes | FileWithBitm
 
 /**
  * The decoded BMFont of the first font file that draws, by the same walk. Null for a font that
- * draws from outlines, so a BMFont fallback stays behind a primary file with bytes.
+ * draws from outlines, so a BMFont fallback stays behind a primary file with bytes. Godot lists the
+ * primary RID before its fallbacks (`font.cpp:104-116`).
  */
 export function resolveBitmapFont(font: FontResource | null | undefined): BitmapFont | null {
   const leaf = findFontFile(font, hasGlyphs);
