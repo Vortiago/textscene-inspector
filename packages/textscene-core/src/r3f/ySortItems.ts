@@ -16,6 +16,9 @@ import {
 } from '../godot/math/transform2d.js';
 import { node2DLocalTransform } from './node2dTransform.js';
 import type { Node2DLocalTransform } from '../nodes/base/node2d/types.js';
+import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
+import { NO_PATCHES, patchedNode, type NodePatches } from './nodePatch.js';
+import { joinPath } from '../utils/nodePath.js';
 
 /** What `_collect_ysort_children` threads down to the children of one y-sorted item. */
 export interface YSortParent {
@@ -83,8 +86,12 @@ function ownBodyOf(node: TscnNode): TscnNode {
   return { ...node, children: [] };
 }
 
-/** A child's transform in the sort root's space, `ysort_xform` (`renderer_canvas_cull.cpp:131`). */
+/**
+ * A child's transform in the sort root's space, `ysort_xform` (`renderer_canvas_cull.cpp:131`).
+ * A Node3D child has no 2D transform: its Vector3 `rotation` would make every sort y NaN.
+ */
 function toSortRootOf(child: TscnNode, parent: YSortParent): Transform2DColumns {
+  if (descendsFromClass(child.type, 'Node3D')) return parent.toSortRoot;
   return multiplyTransform2D(
     parent.toSortRoot,
     node2DLocalTransform(child.properties as Partial<Node2DLocalTransform>)
@@ -93,13 +100,13 @@ function toSortRootOf(child: TscnNode, parent: YSortParent): Transform2DColumns 
 
 /**
  * A child's sort y, the y of its origin in the sort root's space (`renderer_canvas_cull.h:115-123`),
- * and what it threads to its own children: its transform there and its z bucket.
+ * and what it threads to its own children: its transform there and its z bucket. A TileMapLayer's
+ * `y_sort_origin` moves only its rows (`tile_map_layer.cpp:547`), never the layer's own origin.
  */
 function itemSortKey(child: TscnNode, parent: YSortParent): YSortParent & { sortY: number } {
   const props = child.properties as Record<string, unknown>;
-  const ySortOrigin = (props.y_sort_origin as number | undefined) ?? 0;
   const toSortRoot = toSortRootOf(child, parent);
-  const sortY = toSortRoot.ty + ySortOrigin;
+  const sortY = toSortRoot.ty;
 
   // The same accumulation the light cull uses: `_collect_ysort_children` (renderer_canvas_cull.cpp
   // 143-148) and `_cull_canvas_item` (430-434) both run
@@ -112,17 +119,27 @@ function itemSortKey(child: TscnNode, parent: YSortParent): YSortParent & { sort
   return { toSortRoot, sortY, effectiveZ };
 }
 
+/** The live poses the sort reads: the patches below the live path of the node it collects from. */
+export interface YSortLivePoses {
+  path: string;
+  patches: NodePatches;
+}
+
+const AUTHORED_POSES: YSortLivePoses = { path: '', patches: NO_PATCHES };
+
 /**
  * Collect y-sorted items from a node's children: a y_sort_enabled TileMapLayer is a
- * tileGroup, another y_sort_enabled child is its own body and then its merged subtree,
- * and any other child is one atomic unit. `liftedPast` is the chain of y_sort_enabled
- * ancestors, so the renderer can restore their transforms and path segments.
+ * tileGroup, another y_sort_enabled child is its own body, each then followed by its merged
+ * subtree, and any other child is one atomic unit. `liftedPast` is the chain of y_sort_enabled
+ * ancestors, so the renderer can restore their transforms and path segments. The items keep the
+ * authored nodes, which the renderer patches itself, and sort on the `live` poses.
  */
 export function collectYSortedItems(
   node: TscnNode,
   parent: YSortParent,
   startOrder: number,
-  liftedPast: readonly TscnNode[] = []
+  liftedPast: readonly TscnNode[] = [],
+  live: YSortLivePoses = AUTHORED_POSES
 ): YSortItem[] {
   const items: YSortItem[] = [];
   let order = startOrder;
@@ -133,7 +150,10 @@ export function collectYSortedItems(
     // canvas instead (`canvas_item.cpp:234-285`), so it is never among them.
     // `<YSortDispatcher>` draws it as a canvas root.
     if (isTopLevelItem(child)) continue;
-    const key = itemSortKey(child, parent);
+    const childPoses = { path: joinPath(live.path, child.name), patches: live.patches };
+    // Godot sorts on the transform it draws (`renderer_canvas_cull.cpp:131`), such as the pose a
+    // RemoteTransform2D pushes.
+    const key = itemSortKey(patchedNode(child, live.patches.get(childPoses.path)), parent);
     const props = child.properties as Record<string, unknown>;
     const isYSort = props.y_sort_enabled === true;
 
@@ -149,6 +169,10 @@ export function collectYSortedItems(
         node: child,
         liftedPast,
       });
+      // A y-sorted layer merges its children into this sort, as any y_sort_enabled child does.
+      const subItems = collectYSortedItems(child, key, order, [...liftedPast, child], childPoses);
+      items.push(...subItems);
+      order += subItems.length;
       continue;
     }
 
@@ -166,7 +190,7 @@ export function collectYSortedItems(
       });
       // Its descendants sort against the child's accumulated transform and z-index
       // bucket, not the sort root's: Godot threads `ysort_xform` and `abs_z` through.
-      const subItems = collectYSortedItems(child, key, order, [...liftedPast, child]);
+      const subItems = collectYSortedItems(child, key, order, [...liftedPast, child], childPoses);
       items.push(...subItems);
       order += subItems.length;
     } else {

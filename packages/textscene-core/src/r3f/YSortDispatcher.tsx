@@ -29,11 +29,17 @@ import { transform2DXform } from '../godot/math/transform2d.js';
 // edge resolves through `nodeComponentRegistry` at runtime, so there is no cycle.
 import { DispatchedNode } from './NodeDispatcher.js';
 import { NodePathProvider, useNodePath } from './contexts/NodePathContext.js';
+import { useLiveDrawnPatchesBelow } from './liveNodePatches.js';
 
 /** Performs the y-sort pass on a y_sort_enabled Node2D's children. */
 export function YSortDispatcher({ node, children: _children }: { node: TscnNode; children: ReactNode }) {
+  const path = useNodePath() ?? node.name;
+  const patches = useLiveDrawnPatchesBelow(path);
   // Collect raw items (y_sort TileMapLayer → one tileGroup placeholder per layer).
-  const rawItems = useMemo(() => collectYSortedItems(node, Y_SORT_ROOT, 0), [node]);
+  const rawItems = useMemo(
+    () => collectYSortedItems(node, Y_SORT_ROOT, 0, [], { path, patches }),
+    [node, path, patches]
+  );
   // Each y-sorted layer expands against its own grid, so every distinct
   // `tile_set` in the list is resolved, not just the first one's.
   const refs = useMemo(() => tileSetRefsOf(rawItems), [rawItems]);

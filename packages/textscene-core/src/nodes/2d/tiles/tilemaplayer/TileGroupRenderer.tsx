@@ -15,7 +15,7 @@ import { ySortItemId, type YSortItem } from '../../../../r3f/ySortItems.js';
 import type { YSortGroupDescription } from '../../../../r3f/NodeComponentRegistry.js';
 import { useNodePath } from '../../../../r3f/contexts/NodePathContext.js';
 import { useLiveDrawnNode } from '../../../../r3f/liveNodePatches.js';
-import { useCanvasItemVisible } from '../../../../r3f/canvasItemVisible.js';
+import { useIsHiddenInEditor } from '../../../../r3f/canvasItemVisible.js';
 
 export function TileGroupRenderer({ item, node: authored }: { item: YSortItem; node: TscnNode }): ReactNode {
   const path = useNodePath();
@@ -38,9 +38,10 @@ export function TileGroupRenderer({ item, node: authored }: { item: YSortItem; n
     () => ({ ...node, name: `TileGroup_${node.name}_${ySortItemId(item)}`, children: [] }),
     [node, item]
   );
-  // The dispatcher's eye toggle never wraps a row, so the row reads it here.
-  const isVisible = useCanvasItemVisible(path ?? '', props.visible);
-  const drawable = isVisible && props.enabled && !!cells?.length && status === 'loaded';
+  // `<CanvasItem2D>` applies `visible`. The dispatcher's eye toggle never wraps a row, so the
+  // row reads it here.
+  const isHidden = useIsHiddenInEditor(path ?? '');
+  const drawable = !isHidden && props.enabled && !!cells?.length && status === 'loaded';
 
   return (
     <CanvasItem2D

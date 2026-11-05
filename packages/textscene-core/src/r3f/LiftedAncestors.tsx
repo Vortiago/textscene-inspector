@@ -13,11 +13,10 @@ import {
   CanvasItemMaterialProvider,
   useCanvasAncestorMaterial,
 } from './components/canvasItemMaterialContext.js';
-import type * as THREE from 'three';
 import {
-  node2dGroupMatrix,
   node2dGroupPropsOf,
   node2dGroupSpread,
+  threeMatrixFromTransform2D,
   type Node2DGroupProps,
 } from './node2dTransform.js';
 import { CanvasSpaceProvider, useCanvasSpace } from './canvasRootScope.js';
@@ -58,14 +57,10 @@ export function LiftedAncestors({
   // The restored groups are real transforms in the rendered tree, so a canvas root
   // below them has to cancel them too (`canvasRootScope.tsx`).
   const ambient = useCanvasSpace();
-  const liftedSpace = useMemo(
-    () =>
-      groups.reduce<THREE.Matrix4 | null>((space, group) => {
-        const own = node2dGroupMatrix(group);
-        return space ? space.clone().multiply(own) : own;
-      }, ambient),
-    [groups, ambient]
-  );
+  const liftedSpace = useMemo(() => {
+    const own = threeMatrixFromTransform2D(lifted.transform);
+    return ambient ? ambient.clone().multiply(own) : own;
+  }, [lifted.transform, ambient]);
   const parentSampler = useContext(TextureSampler2DContext);
   const sampler = useMemo(
     () => inheritTextureSampler(lifted.sampler, parentSampler),
