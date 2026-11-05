@@ -18,9 +18,9 @@ import { isViewportBoundary } from '../../../viewport/subviewport/viewportBounda
 import type { SubViewportProperties } from '../../../viewport/subviewport/types.js';
 import { viewportSize } from '../../../viewport/subviewport/targetSize.js';
 import type { SubViewportContainerProperties } from './types.js';
-import { WHOLE_CANVAS_RANGE } from '../../../../r3f/canvasPaintOrder.js';
+import { lastPaintSequence, WHOLE_CANVAS_RANGE } from '../../../../r3f/canvasPaintOrder.js';
 import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts.js';
-import { canvasPieceSlot, wholeKeySlot, type CanvasSlot } from '../../../../r3f/canvasItemState';
+import { canvasPieceSlot, type CanvasSlot } from '../../../../r3f/canvasItemState';
 
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
@@ -111,7 +111,7 @@ function ViewportSurfaceNative({
       // against the enclosing canvas: it starts a fresh range.
       paintRange: WHOLE_CANVAS_RANGE,
       paintSequence: WHOLE_CANVAS_RANGE.base,
-      backSequence: WHOLE_CANVAS_RANGE.base + WHOLE_CANVAS_RANGE.size - 1,
+      backSequence: lastPaintSequence(WHOLE_CANVAS_RANGE),
       // The SubViewport itself, not a scene node the outliner can hide.
       hidden: false,
       // A Viewport is neither a CanvasItem nor a CanvasLayer, so the `parent_visible_in_tree` climb
@@ -152,6 +152,7 @@ function ViewportSurfaceNative({
           solveNode={fallbackSolveNode}
           rect={viewportRect}
           renderOrder={slot.key}
+          slot={slot}
           // The cycle branch renders no subtree, so the fallback's chrome takes its own slot.
           chromeSlot={slot}
           theme={theme}
@@ -186,7 +187,7 @@ export function SubViewportContainer({
   solveNode,
   tint,
   rect,
-  renderOrder,
+  slot,
   theme,
   measureText,
 }: NativeControlComponentProps) {
@@ -213,7 +214,7 @@ export function SubViewportContainer({
           shrink={shrink}
           tint={tint}
           // Each successive viewport draws on top of the last, in tree order (`subviewport_container.cpp:134-145`).
-          slot={canvasPieceSlot(wholeKeySlot(renderOrder), index, viewports.length)}
+          slot={canvasPieceSlot(slot, index, viewports.length)}
           theme={theme}
           measureText={measureText}
           externalResources={externalResources}

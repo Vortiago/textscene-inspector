@@ -52,6 +52,11 @@ interface CanvasPlacement {
 /** The range a whole canvas starts from, before any node has been allocated. */
 export const WHOLE_CANVAS_RANGE: PaintRange = { base: 0, size: PAINT_SEQUENCE_STRIDE };
 
+/** The last sequence value of `range`, which a lone node's back pieces draw from. */
+export function lastPaintSequence(range: PaintRange): number {
+  return range.base + range.size - 1;
+}
+
 /**
  * The `renderOrder` of a canvas item's wrapper group: `(layerRank, zFinal,
  * sequence)` packed into one integer. `zFinal` is clamped as Godot clamps it
@@ -164,7 +169,20 @@ export function internalFrontRoom(node: TscnNode): number {
  * (`scroll_container.cpp:919,924`). Their draw indices come after every authored child's.
  */
 export function internalBackRoom(node: TscnNode): number {
-  return descendsFromClass(node.type, 'Control') ? 1 : 0;
+  return isControlType(node.type) ? 1 : 0;
+}
+
+/** Filled by `isControlType` and never cleared: a class's chain is fixed. */
+const controlTypes = new Map<string, boolean>();
+
+/** Cached, since every allocation sizes each subtree again and the chain walk is per call. */
+function isControlType(type: string): boolean {
+  let isControl = controlTypes.get(type);
+  if (isControl === undefined) {
+    isControl = descendsFromClass(type, 'Control');
+    controlTypes.set(type, isControl);
+  }
+  return isControl;
 }
 
 /**
@@ -298,7 +316,10 @@ interface AllocatedPaintRange {
   front: PaintRange;
   /** One range per child, positionally matching the `children` passed in. */
   children: PaintRange[];
-  /** The run the parent's internal back children draw from (`internalBackRoom`), last of all. */
+  /**
+   * The run the parent's internal back children draw from (`internalBackRoom`), last of all. With
+   * no back room it is empty and starts at the run's last value, never at the next sibling's first.
+   */
   back: PaintRange;
   /**
    * The room `reservesRoom` held back after the children. Injected sub-scene
@@ -372,7 +393,7 @@ export function allocatePaintRange(
     self,
     front,
     children: allocated,
-    back: { base: end, size: backSize },
+    back: { base: backSize > 0 ? end : lastPaintSequence(range), size: backSize },
     tail: { base: Math.min(cursor, end), size: Math.max(0, end - cursor) },
   };
 }

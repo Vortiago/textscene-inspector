@@ -124,6 +124,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
         rect={RECT}
         theme={THEME}
         renderOrder={5}
+        slot={wholeKeySlot(5)}
         chromeSlot={wholeKeySlot(9)}
       />
     );
@@ -134,6 +135,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
         rect={RECT}
         theme={THEME}
         renderOrder={5}
+        slot={wholeKeySlot(5)}
         chromeSlot={wholeKeySlot(9)}
       />
     );

@@ -20,6 +20,7 @@ import { TextureSampler2DContext, type CanvasItemTextureSampler } from './canvas
 import { canvasRenderOrder } from './canvasPaintOrder';
 import { useLayerRank, useNodePaintSequence } from './contexts/PaintOrderContext';
 import type { TscnNode } from '../parser/types';
+import type { Node2DProperties } from '../nodes/base/node2d/types';
 import { CanvasItemMaterialProvider } from './components/canvasItemMaterialContext';
 import {
   EffectiveZProvider,
@@ -32,6 +33,11 @@ import {
 export interface CanvasItemZStep {
   zIndex: number;
   zAsRelative: boolean;
+}
+
+/** The z step of a Node2D-family item, whose parser fills both fields. */
+export function node2dZStep(props: Pick<Node2DProperties, 'z_index' | 'z_as_relative'>): CanvasItemZStep {
+  return { zIndex: props.z_index, zAsRelative: props.z_as_relative };
 }
 
 /**

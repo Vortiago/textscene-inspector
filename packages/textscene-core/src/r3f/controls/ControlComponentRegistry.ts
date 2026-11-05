@@ -63,6 +63,12 @@ export interface NativeControlComponentProps {
    */
   renderOrder: number;
   /**
+   * The slot `renderOrder` heads, which a painter's own pieces split (`canvasSubOrders`). A Control
+   * the walker places owns a whole key's slot. A painter that draws another painter hands it the
+   * piece it drew it from, so the inner painter's pieces stay inside that piece.
+   */
+  slot: CanvasSlot;
+  /**
    * The slot after this node's whole subtree, for chrome that draws there like Godot's
    * `INTERNAL_MODE_BACK` children: ScrollContainer's bars (`scene/gui/scroll_container.cpp:919,924`).
    * A slot, not a key, so a nested painter handed a piece splits only that piece (`canvasSubOrders`).

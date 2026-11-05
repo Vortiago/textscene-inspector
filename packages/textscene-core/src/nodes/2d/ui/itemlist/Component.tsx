@@ -8,7 +8,6 @@ import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { wholeKeySlot } from '../../../../r3f/canvasItemState';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
@@ -167,13 +166,13 @@ export function ItemList({
   tint,
   rect,
   renderOrder,
+  slot,
   theme,
   snapToPixels,
   children,
 }: NativeControlComponentProps) {
   const props = painterView<ItemListProperties>(solveNode);
   const items = props.items;
-  const ownSlot = useMemo(() => wholeKeySlot(renderOrder), [renderOrder]);
 
   const iconMode = props.iconMode ?? ICON_MODE_LEFT;
   const maxTextLines = props.maxTextLines ?? 1;
@@ -465,14 +464,14 @@ export function ItemList({
         hint={scrollBars.bottomHint}
         color={hintColor}
         opacity={tint.opacity}
-        chromeSlot={ownSlot}
+        chromeSlot={slot}
       />
       <ScrollBarChrome
         bar={scrollBars.horizontal}
         track={theme.widgets.scrollBar.scrollHorizontal}
         grabber={theme.widgets.scrollBar.grabber}
         color={tint.own}
-        chromeSlot={ownSlot}
+        chromeSlot={slot}
         snapToPixels={snapToPixels}
       />
       <ScrollBarChrome
@@ -480,7 +479,7 @@ export function ItemList({
         track={theme.widgets.scrollBar.scrollVertical}
         grabber={theme.widgets.scrollBar.grabber}
         color={tint.own}
-        chromeSlot={ownSlot}
+        chromeSlot={slot}
         snapToPixels={snapToPixels}
       />
       {children}

@@ -12,6 +12,7 @@ import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext.js';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext.js';
 import { SubViewportSamplerScope } from './SubViewportSamplerScope';
 import { ViewportControls } from './ViewportControls.js';
+import { viewportTransfer } from '../../../r3f/texelCopy.js';
 import { createCanvasTarget, renderToOffscreenTarget, viewportMsaaMode } from './offscreenViewport.js';
 import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
 import { useCanvasPass } from './useCanvasPass.js';
@@ -81,7 +82,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
       target,
       clearColor: clear.color,
       transparentBg,
-      draw: () => frame.draw(gl, portalScene, camera, clear.clears),
+      draw: () => frame.draw(gl, portalScene, camera, clear.clears, viewportTransfer('none', transparentBg)),
     });
   }, [gl, target, frame, clearColor, clearMode, renderState, transparentBg, portalScene, camera]);
 

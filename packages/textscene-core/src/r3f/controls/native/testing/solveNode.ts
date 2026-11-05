@@ -12,6 +12,7 @@ import type { SolveNode } from '../solveTree';
 import {
   allocatePaintRange,
   internalBackRoom,
+  lastPaintSequence,
   WHOLE_CANVAS_RANGE,
   type PaintRange,
 } from '../../../canvasPaintOrder';
@@ -80,7 +81,7 @@ export function solveNode(): Pick<
     // invent an order. A test asserting draw order uses `withPaintRanges`.
     paintRange: WHOLE_CANVAS_RANGE,
     paintSequence: WHOLE_CANVAS_RANGE.base,
-    backSequence: WHOLE_CANVAS_RANGE.base + WHOLE_CANVAS_RANGE.size - 1,
+    backSequence: lastPaintSequence(WHOLE_CANVAS_RANGE),
     // No skipped Node2D ancestor, the common case a hand-built tree states.
     skippedAncestors: null,
     // `LAYOUT_DIRECTION_INHERITED` all the way to a left-to-right root.

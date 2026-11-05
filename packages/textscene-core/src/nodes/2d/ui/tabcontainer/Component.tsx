@@ -25,7 +25,7 @@ import {
   tabHeaderHeight,
   tabbarStyleMargins,
 } from './nativeSolver';
-import { canvasSubOrder, wholeKeySlot } from '../../../../r3f/canvasItemState';
+import { canvasSubOrder } from '../../../../r3f/canvasItemState';
 
 /** `default_theme.cpp:1223`: `theme->set_constant("side_margin", "TabContainer", round(8 * scale))`, the literal `nativeSolver.ts` uses for the minimum size. */
 const SIDE_MARGIN_LITERAL = 8;
@@ -38,6 +38,7 @@ export function TabContainer({
   rect,
   theme,
   renderOrder,
+  slot,
   chromeSlot,
   measureText,
   snapToPixels,
@@ -76,7 +77,7 @@ export function TabContainer({
   // Godot's default (`all_tabs_in_front === false`, `INTERNAL_MODE_BACK`) draws the strip
   // after every page, on top, from the chrome slot. With `true` (`INTERNAL_MODE_FRONT`) it draws
   // after the container's own pixels and before the pages, from a piece of its own key.
-  const stripSlot = canvasSubOrder(allTabsInFront ? wholeKeySlot(renderOrder) : chromeSlot);
+  const stripSlot = canvasSubOrder(allTabsInFront ? slot : chromeSlot);
 
   return (
     <>
@@ -108,6 +109,7 @@ export function TabContainer({
             rect={{ x: 0, y: 0, w: barRect.w, h: barRect.h }}
             theme={theme}
             renderOrder={stripSlot.key}
+            slot={stripSlot}
             chromeSlot={stripSlot}
             measureText={measureText}
             snapToPixels={snapToPixels}

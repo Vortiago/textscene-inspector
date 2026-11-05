@@ -388,3 +388,11 @@ describe("a Control's back slot", () => {
     expect(inner.back.base).toBeLessThan(outer.back.base);
   });
 });
+
+describe('a node with no back room', () => {
+  it("keeps its back slot on its own run's last value, below the next sibling", () => {
+    const layer = node('Layer', 'CanvasLayer', [node('Body', 'ColorRect')]);
+    const range = { base: 10, size: paintRangeSize(layer) };
+    expect(allocateNodePaintRange(range, layer).back.base).toBe(range.base + range.size - 1);
+  });
+});

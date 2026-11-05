@@ -17,7 +17,7 @@ import { useNodePaintSequence } from '../contexts/PaintOrderContext';
 import { useAnimatedValue } from '../contexts/AnimatedValueContext';
 import { CanvasItemKeyProvider } from './CanvasItemGroup';
 import { useCanvasItemMaterial } from './canvasItemMaterialContext';
-import { CanvasItemChildScope, useCanvasItemState } from '../canvasItemState';
+import { CanvasItemChildScope, node2dZStep, useCanvasItemState } from '../canvasItemState';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 import type { CanvasItemSurface } from '../lighting2d/normalMappedLighting';
 
@@ -65,8 +65,7 @@ export function CanvasItem2D({ node, props, body, surface = null, ownItems, chil
   const state = useCanvasItemState({
     modulate: props.modulate,
     selfModulate: props.self_modulate,
-    zIndex: props.z_index,
-    zAsRelative: props.z_as_relative,
+    ...node2dZStep(props),
     material: useCanvasItemMaterial(props),
     sampler,
     lightMask: props.light_mask,

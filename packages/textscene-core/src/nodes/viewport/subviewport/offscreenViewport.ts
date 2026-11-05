@@ -7,7 +7,6 @@
 import * as THREE from 'three';
 import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
 import { takeOutputLikeDrawingBuffer } from '../../../r3f/outputTarget';
-import { fillAlphaWithOne } from '../../../r3f/opaqueAlpha';
 import { markSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { pinColorSpace } from '../../../resources/textures/textureView';
 import { BLACK } from '../renderGate';
@@ -82,7 +81,7 @@ export function viewportMsaaMode(
 
 /**
  * The previous clear colour, reused so no pass allocates a `THREE.Color` per frame.
- * Written only by `inOffscreenTarget`. Safe as a module scratch because the
+ * Written only by `renderToOffscreenTarget`. Safe as a module scratch because the
  * one orchestrator (`ViewportPassRegistryContext`) drives passes in sequence,
  * never nested, so no pass clobbers another's saved colour.
  */
@@ -90,31 +89,21 @@ const PREVIOUS_CLEAR_COLOR = new THREE.Color();
 
 /**
  * Bind `target`, set the clear colour, run `draw`, and restore the render target, clear colour,
- * alpha and colour auto-clear. `draw` clears whatever it needs cleared. An opaque target's alpha is
- * then 1 (`opaqueAlpha.ts`). three draws no tone curve into a target (r187 `WebGLPrograms.js:183`).
+ * alpha and colour auto-clear. `draw` clears whatever it needs cleared, and writes alpha 1 into an
+ * opaque target (`viewportTransfer`, the tonemap). three draws no tone curve into a target (r187
+ * `WebGLPrograms.js:183`).
  */
-export function renderToOffscreenTarget(gl: THREE.WebGLRenderer, options: OffscreenRender): void {
-  inOffscreenTarget(gl, options, () => {
-    options.draw();
-    if (!options.transparentBg) fillOpaqueTargetAlpha(gl, options.target);
-  });
-}
-
-interface OffscreenRender {
-  target: THREE.WebGLRenderTarget;
-  /** The project clear colour, linear, which an opaque target clears to (`renderer_viewport.cpp:371`). */
-  clearColor: THREE.Color;
-  transparentBg: boolean;
-  /** Clears no colour: a 3D render under BG_KEEP loads the colour its buffer holds. */
-  keepsColor?: boolean;
-  draw: () => void;
-}
-
-/** Runs `step` with `target` bound and cleared as `options` say, then restores the renderer. */
-function inOffscreenTarget(
+export function renderToOffscreenTarget(
   gl: THREE.WebGLRenderer,
-  options: Omit<OffscreenRender, 'draw'>,
-  step: () => void
+  options: {
+    target: THREE.WebGLRenderTarget;
+    /** The project clear colour, linear, which an opaque target clears to (`renderer_viewport.cpp:371`). */
+    clearColor: THREE.Color;
+    transparentBg: boolean;
+    /** Clears no colour: a 3D render under BG_KEEP loads the colour its buffer holds. */
+    keepsColor?: boolean;
+    draw: () => void;
+  }
 ): void {
   const previousTarget = gl.getRenderTarget();
   const previousAlpha = gl.getClearAlpha();
@@ -125,18 +114,12 @@ function inOffscreenTarget(
     gl.setRenderTarget(options.target);
     gl.setClearColor(options.clearColor, options.transparentBg ? 0 : 1);
     if (options.keepsColor) gl.autoClearColor = false;
-    step();
+    options.draw();
   } finally {
     gl.setRenderTarget(previousTarget);
     gl.setClearColor(PREVIOUS_CLEAR_COLOR, previousAlpha);
     gl.autoClearColor = previousAutoClearColor;
   }
-}
-
-/** `draw` may bind another target last, such as its frame, so the fill binds `target` again then. */
-function fillOpaqueTargetAlpha(gl: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget): void {
-  if (gl.getRenderTarget() !== target) gl.setRenderTarget(target);
-  fillAlphaWithOne(gl);
 }
 
 /**
@@ -291,6 +274,10 @@ export function clearTarget(
   target: THREE.WebGLRenderTarget,
   transparentBg: boolean
 ): void {
-  // The clear writes alpha 1 to an opaque target already, so it needs no fill.
-  inOffscreenTarget(gl, { target, clearColor: BLACK, transparentBg }, () => gl.clear(true, true, true));
+  renderToOffscreenTarget(gl, {
+    target,
+    clearColor: BLACK,
+    transparentBg,
+    draw: () => gl.clear(true, true, true),
+  });
 }

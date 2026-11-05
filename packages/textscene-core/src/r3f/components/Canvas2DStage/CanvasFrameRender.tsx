@@ -11,6 +11,7 @@ import { projectTransparentBackground } from '../../../parser/projectSettingsPar
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import { createCanvasFrame } from './canvasFrame.js';
 import { useMultisampledTarget } from '../../multisampledTarget.js';
+import { viewportTransfer } from '../../texelCopy.js';
 
 /** A positive priority stops R3F's own render, and runs after every pass at priority 0 or below. */
 const OWNS_THE_RENDER = 1;
@@ -22,6 +23,6 @@ export function CanvasFrameRender() {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   const camera = useThree((state) => state.camera);
-  useFrame(() => frame.render(gl, scene, camera, isTransparent ? 'none' : 'opaque'), OWNS_THE_RENDER);
+  useFrame(() => frame.render(gl, scene, camera, viewportTransfer('none', isTransparent)), OWNS_THE_RENDER);
   return null;
 }

@@ -28,8 +28,8 @@ export function multiplyModulate(a: Rgba, b: Rgba): Rgba {
 }
 
 /**
- * The tint of a canvas item's own pixels: what a Control painter is handed, without the value its
- * descendants inherit, so no painter can re-enter the modulate chain.
+ * The tint of a canvas item's own pixels: the type a Control painter is handed. It names no value
+ * the descendants inherit, so no painter can re-enter the modulate chain.
  */
 export interface OwnPixelTint {
   /**

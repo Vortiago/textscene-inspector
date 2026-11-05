@@ -31,14 +31,17 @@ export function painterTint(own: Rgba = WHITE_MODULATE): OwnPixelTint {
  */
 export function painterEnv(): Pick<
   NativeControlComponentProps,
-  'theme' | 'measureText' | 'childRects' | 'chromeSlot' | 'snapToPixels' | 'meta' | 'tint'
+  'theme' | 'measureText' | 'childRects' | 'slot' | 'chromeSlot' | 'snapToPixels' | 'meta' | 'tint'
 > {
   return {
     theme: nativeTheme(1),
     measureText: null,
     childRects: NO_CHILD_RECTS,
-    // A childless Control at paint index 0. Required on the contract, since an
-    // absent value would draw chrome under the subtree.
+    // Key 0's slot, for a test that keeps `renderOrder` at 0. A test of a painter's pieces passes
+    // the slot of its own `renderOrder`.
+    slot: wholeKeySlot(0),
+    // A back slot at key 0. Required on the contract, since an absent value
+    // would draw chrome under the subtree.
     chromeSlot: wholeKeySlot(0),
     // The `Viewport::snap_controls_to_pixels` initialiser (`scene/main/viewport.h`).
     snapToPixels: true,

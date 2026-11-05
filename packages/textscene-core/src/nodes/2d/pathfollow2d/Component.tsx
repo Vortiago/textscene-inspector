@@ -13,7 +13,7 @@ import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import { useParentPath2DCurve } from '../../../r3f/contexts/Path2DCurveContext';
 import { node2dGroupProps, node2dGroupSpread } from '../../../r3f/node2dTransform';
-import { useCanvasKeyOfNode } from '../../../r3f/canvasItemState';
+import { node2dZStep, useCanvasKeyOfNode } from '../../../r3f/canvasItemState';
 import { Modulate2DContext, multiplyModulate, useParentModulate } from '../../../r3f/canvasItemModulate';
 import { TextureSampler2DContext, useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import type { Curve2DSampler } from '../../../resources/curves/curve2d';
@@ -43,10 +43,7 @@ export function PathFollow2D({ node, children }: NodeComponentProps) {
   const followTransform = useMemo(() => computeFollowTransform(sampler, props), [sampler, props]);
 
   const dot = gizmoVisible ? <FollowDot /> : null;
-  const renderOrder = useCanvasKeyOfNode(node, {
-    zIndex: props.z_index,
-    zAsRelative: props.z_as_relative !== false,
-  });
+  const renderOrder = useCanvasKeyOfNode(node, node2dZStep(props));
 
   // No curve in scope → behave like a plain Node2D at the authored transform.
   if (!followTransform) {

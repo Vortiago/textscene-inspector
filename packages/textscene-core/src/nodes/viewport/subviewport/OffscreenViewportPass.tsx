@@ -35,6 +35,7 @@ import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLighting
 import { CanvasLightPass } from '../../../r3f/lighting2d/CanvasLightPass';
 import { createViewportLightPassHost } from './viewportLightPassHost';
 import type { LightPassHost } from '../../../r3f/lighting2d/lightPassHost';
+import { viewportTransfer } from '../../../r3f/texelCopy';
 import type { Rgba } from '../../../godot/math/math';
 import {
   applyOrthoFrame,
@@ -201,7 +202,8 @@ export function OffscreenViewportPass({
         clearColor,
         transparentBg,
         draw: () => {
-          const drawCanvas = () => frame.render(gl, canvasScene!, orthoCamera, 'decode');
+          const drawCanvas = () =>
+            frame.render(gl, canvasScene!, orthoCamera, viewportTransfer('decode', transparentBg));
           if (inWindow) drawCanvasKeys(canvasScene!, inWindow, drawCanvas);
           else drawCanvas();
         },
@@ -279,7 +281,7 @@ export function OffscreenViewportPass({
             renderWithMipmapBias(mipmapBias, () =>
               renderWithShadowAtlas(shadowAtlas, () =>
                 kind === '2d'
-                  ? frame.draw(gl, passScene, camera, clear.clears)
+                  ? frame.draw(gl, passScene, camera, clear.clears, viewportTransfer('none', transparentBg))
                   : drawWith(passScene, toneMap!.environment, exposure, () =>
                       backdrop
                         ? drawOverBackground(passScene, backdrop.texture, () => gl.render(passScene, camera))

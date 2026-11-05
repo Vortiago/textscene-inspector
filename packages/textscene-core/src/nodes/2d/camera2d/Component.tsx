@@ -8,7 +8,7 @@
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node2dGroupProps, node2dGroupSpread } from '../../../r3f/node2dTransform';
-import { useCanvasKeyOfNode } from '../../../r3f/canvasItemState';
+import { node2dZStep, useCanvasKeyOfNode } from '../../../r3f/canvasItemState';
 import type { Camera2DTag } from './cameraView';
 import type { Camera2DProperties } from './types';
 
@@ -17,10 +17,7 @@ export function Camera2D({ node, children }: NodeComponentProps) {
   const transform = useMemo(() => node2dGroupSpread(node2dGroupProps(props)), [props]);
   // Drawn outside `<CanvasItem2D>`, so it takes the shared draw-order key
   // directly rather than deriving a second one of its own.
-  const renderOrder = useCanvasKeyOfNode(node, {
-    zIndex: props.z_index,
-    zAsRelative: props.z_as_relative !== false,
-  });
+  const renderOrder = useCanvasKeyOfNode(node, node2dZStep(props));
   const visible = props.visible !== false;
   return (
     <group

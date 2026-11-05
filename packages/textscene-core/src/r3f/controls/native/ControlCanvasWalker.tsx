@@ -175,8 +175,9 @@ function ControlItemGroup({
   const props = controlProps(solveNode);
   const state = useControlState(solveNode, props);
   const { key: renderOrder, tint } = state;
-  // For chrome drawn after the whole subtree (Godot's `INTERNAL_MODE_BACK`). The
-  // subtree owns a contiguous run, so this is its last value.
+  const slot = useMemo(() => wholeKeySlot(renderOrder), [renderOrder]);
+  // For chrome drawn after the whole subtree (Godot's `INTERNAL_MODE_BACK`), from the
+  // sequence value the allocator holds after it (`internalBackRoom`).
   const backKey = state.keyAt(solveNode.backSequence);
   const chromeSlot = useMemo(() => wholeKeySlot(backKey), [backKey]);
   // `is_visible_in_tree()` is `visible && parent_visible_in_tree` (`canvas_item.cpp:62-64`).
@@ -246,6 +247,7 @@ function ControlItemGroup({
         solveNode={solveNode}
         rect={rect}
         renderOrder={renderOrder}
+        slot={slot}
         tint={tint}
         chromeSlot={chromeSlot}
         theme={theme}
@@ -276,7 +278,7 @@ function ControlItemGroup({
     </>
   );
 
-  const ownGroup = (
+  return (
     // Every group here carries the key: three takes `groupOrder` from the nearest
     // enclosing group, so a bare one would reset the pixels inside to zero.
     <group
@@ -304,6 +306,4 @@ function ControlItemGroup({
       </CanvasItemKeyProvider>
     </group>
   );
-
-  return ownGroup;
 }
