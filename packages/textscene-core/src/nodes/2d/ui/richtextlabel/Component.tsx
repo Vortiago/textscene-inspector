@@ -197,6 +197,7 @@ function useShapedRichText(
               autowrapMode,
               tabSize: props.tabSize,
               autowrapTrimFlags: props.autowrapTrimFlags,
+              localizeNumeralSystem: props.localizeNumeralSystem,
             }
           );
           return { runs, layout };
@@ -217,6 +218,7 @@ function useShapedRichText(
       autowrapMode,
       props.tabSize,
       props.autowrapTrimFlags,
+      props.localizeNumeralSystem,
       theme,
     ]
   );

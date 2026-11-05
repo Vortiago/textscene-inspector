@@ -10,6 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { formatNumber } from '../../../../godot/text/numberFormat';
 import type { Rgba } from '../../../../godot/math/math';
 import { getFontEmboldenedAdvancePx } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
@@ -201,11 +202,16 @@ function letterNumeral(number: number, capitalise: boolean): string {
   return digits.join('');
 }
 
+function numberSegment(index: number, language: string | undefined): string {
+  return language === undefined ? String(index) : formatNumber(String(index), language);
+}
+
 /**
  * `_get_prefix` (`:242-270`). `kinds` and `indexes` run innermost list first. A bullet ends the walk,
- * and stands alone when no number came before it.
+ * and stands alone when no number came before it. A plain number takes the digits of `language`
+ * when `language` is given (`:255-258`).
  */
-function markerText(kinds: readonly ListKind[], indexes: readonly number[]): string {
+function markerText(kinds: readonly ListKind[], indexes: readonly number[], language?: string): string {
   let marker = '';
   let segments = 0;
   for (const [position, kind] of kinds.entries()) {
@@ -216,7 +222,7 @@ function markerText(kinds: readonly ListKind[], indexes: readonly number[]): str
     const index = indexes[position]!;
     const segment =
       kind.type === 'numbers'
-        ? String(index)
+        ? numberSegment(index, language)
         : kind.type === 'letters'
           ? letterNumeral(index, kind.capitalise)
           : romanNumeral(index, kind.capitalise);
@@ -325,6 +331,8 @@ function nearestListOf(row: Row): OpenBBCodeTag | undefined {
 export interface ListingContext {
   faces: RichTextFaces;
   tabSize: number;
+  /** `Control.localize_numeral_system`. */
+  localizeNumeralSystem: boolean;
 }
 
 /**
@@ -398,8 +406,10 @@ export function paragraphListings(
     const outerIndexes = lists.slice(1).map((outer, i) => indexOf(outer, firstRowOf.get(lists[i]!)!));
     let widestMarkerPx = 0;
     [firstRow, ...(rowsOfList.get(list) ?? [])].forEach((rowIndex, position) => {
-      const text = markerText(kinds, [position + 1, ...outerIndexes]);
-      const marker = shapeMarker(text, rows[rowIndex]!, context.faces);
+      const row = rows[rowIndex]!;
+      const language = context.localizeNumeralSystem ? row.run.bidi.language : undefined;
+      const text = markerText(kinds, [position + 1, ...outerIndexes], language);
+      const marker = shapeMarker(text, row, context.faces);
       markers.set(rowIndex, marker);
       widestMarkerPx = Math.max(widestMarkerPx, marker.widthPx);
     });
