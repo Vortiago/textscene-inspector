@@ -64,19 +64,16 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   Bone2D: {
-    linterOnly: [
-      // Draws the bone shape in the editor only (`skeleton_2d.cpp:51-55`).
-      'editor_settings/show_bone_gizmo',
-    ],
     renderGap: [
-      // The Skeleton2D modification stack reads these (`skeleton_modification_2d*.cpp`), and it
-      // does not run yet. The auto flag sets them on ready (`skeleton_2d.cpp:176-177`).
+      // The editor bone gizmo reads all four (`skeleton_2d.cpp:189-354`), owned by #1267. The
+      // Skeleton2D modification stack reads length and bone_angle too, owned by #1266.
       'auto_calculate_length_and_angle',
       'bone_angle',
+      'editor_settings/show_bone_gizmo',
       'length',
     ],
     reason:
-      'rest is parsed for the Polygon2D skin; the editor gizmo has no runtime draw, and length/bone_angle wait for the modification stack.',
+      'rest is parsed for the Polygon2D skin; the bone gizmo (#1267) and the modification stack (#1266) read the rest.',
   },
 
   CPUParticles2D: {

@@ -14,6 +14,11 @@ clipping into an unlit mesh with one vertex per point and tints it with `color`.
 sampled through the per-vertex `uv` with Godot's own UV formula. With `skeleton` and `bones`,
 each vertex moves with its four heaviest bones of the Skeleton2D, as an AnimationPlayer poses them.
 
+The skin follows the Forward+ and Mobile renderers. They weight the corner of each bone matrix too
+(`servers/rendering/renderer_rd/shaders/skeleton.glsl:172-180`), so a vertex with no weight lands on
+the polygon's origin. The Compatibility renderer adds a corner of 1 after it weights
+(`drivers/gles3/shaders/skeleton.glsl:179`), so there that vertex lands on the skeleton's origin.
+
 ## Linting
 
 <!-- lint:begin Polygon2D -->
