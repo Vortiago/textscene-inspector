@@ -14,10 +14,9 @@
  */
 
 import { cmapLookup } from './sfntCmap';
-import { glyphAdvance26_6 } from './fontMetrics';
 import { glyphMetricsReader } from './sfntGlyphMetrics';
 import type { GlyphContours, GlyphOutlineReader } from './glyphContours';
-import type { GlyphVariation, OpentypeCoordinates } from './fontMetrics';
+import { glyphAdvance26_6, isInstanced, type GlyphVariation, type OpentypeCoordinates } from './fontMetrics';
 import { cffOutlineReader } from './sfntCff';
 import { isNativelyHinted, type GlyphHinting } from './glyphHinting';
 import { glyfAdvanceReader, glyphOutlineReader } from './sfntGlyf';
@@ -99,26 +98,40 @@ async function autoHintedReaderOf(sfnt: SfntFile): Promise<GlyphOutlineReader | 
 
 /** The font at the axis values of `variation`, or null for the default instance. */
 function instanceOf(sfnt: SfntFile, variation: GlyphVariation | undefined): FontInstance | null {
-  return variation?.opentype?.size ? fontInstanceOf(sfnt, variation.opentype) : null;
+  return isInstanced(variation?.opentype) ? fontInstanceOf(sfnt, variation.opentype) : null;
 }
 
 /**
- * A glyph's advance in 26.6 at `instance`. FreeType takes it from `hmtx` and `HVAR` where the font
- * has `HVAR` (`tt_get_advances`), and else from the phantom points of an unhinted load.
+ * The advance in 26.6 of each glyph of `sfnt` at an instance. FreeType takes it from `hmtx` and
+ * `HVAR` where the font has `HVAR` (`tt_get_advances`), and else from the phantom points of an
+ * unhinted load. The readers are built once per font and each answer is kept, as a layout asks
+ * for the same glyph at the same size again and again.
  */
-function instanceAdvance(
-  sfnt: SfntFile,
-  instance: FontInstance | null,
-  glyphIndex: number,
-  fontSizePx: number
-): number | null {
-  if (!instance) return null;
-  if (instance.adjustedAdvances.horizontal) {
-    const { advance } = glyphMetricsReader(sfnt)(glyphIndex, 0).horizontal;
-    const units = toUint16(advance + instance.advanceDelta.horizontal(glyphIndex));
-    return glyphAdvance26_6(units, readHeadUnitsPerEm(sfnt), fontSizePx);
-  }
-  return glyfAdvanceReader(sfnt)?.(glyphIndex, fontSizePx, instance) ?? null;
+function instanceAdvanceReader(sfnt: SfntFile): SfntOutlines['advanceAtInstance'] {
+  const metricsOf = glyphMetricsReader(sfnt);
+  const unitsPerEm = readHeadUnitsPerEm(sfnt);
+  const phantomAdvance = glyfAdvanceReader(sfnt);
+  const kept = new WeakMap<OpentypeCoordinates, Map<string, number | null>>();
+
+  const read = (instance: FontInstance, glyphIndex: number, fontSizePx: number): number | null => {
+    if (!instance.adjustedAdvances.horizontal)
+      return phantomAdvance?.(glyphIndex, fontSizePx, instance) ?? null;
+    const units = toUint16(
+      metricsOf(glyphIndex, 0).horizontal.advance + instance.advanceDelta.horizontal(glyphIndex)
+    );
+    return glyphAdvance26_6(units, unitsPerEm, fontSizePx);
+  };
+
+  return (glyphIndex, fontSizePx, opentype) => {
+    let byGlyph = kept.get(opentype);
+    if (!byGlyph) kept.set(opentype, (byGlyph = new Map()));
+    const key = `${fontSizePx}/${glyphIndex}`;
+    if (byGlyph.has(key)) return byGlyph.get(key)!;
+    const instance = fontInstanceOf(sfnt, opentype);
+    const advance = instance && orOnRangeError(() => read(instance, glyphIndex, fontSizePx), null);
+    byGlyph.set(key, advance);
+    return advance;
+  };
 }
 
 function readSfntOutlines(sfnt: SfntFile, outlineOf: GlyphOutlineReader | null): SfntOutlines | null {
@@ -129,11 +142,7 @@ function readSfntOutlines(sfnt: SfntFile, outlineOf: GlyphOutlineReader | null):
 
   return {
     glyphIndex: (codePoint) => orOnRangeError(() => lookup(codePoint), 0),
-    advanceAtInstance: (glyphIndex, fontSizePx, opentype) =>
-      orOnRangeError(
-        () => instanceAdvance(sfnt, fontInstanceOf(sfnt, opentype), glyphIndex, fontSizePx),
-        null
-      ),
+    advanceAtInstance: instanceAdvanceReader(sfnt),
     glyphContours: (glyphIndex, fontSizePx, variation) =>
       orOnRangeError(() => {
         const outline = outlineOf(glyphIndex, fontSizePx, instanceOf(sfnt, variation));

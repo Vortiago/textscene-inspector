@@ -261,12 +261,12 @@ export function canvasGlyphPenXPx(
 // A face at a variable-font instance takes its advance from `SfntOutlines.advanceAtInstance` instead.
 // At 2048 units and 16px this is `ceil(units / 2) / 64`: 1/128 px wider for an odd advance.
 export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSizePx: number): number {
-  const advanceAtInstance = instanceGlyphAdvance26_6(metrics, ch, fontSizePx);
-  if (advanceAtInstance !== null) return advanceAtInstance / FIXED_26_6_ONE;
   const units = metrics.getGlyphAdvanceUnits(ch) ?? metrics.averageAdvanceUnits;
   // A bitmap font's advance reaches HarfBuzz in 26.6 as `advance * 64` and leaves as
   // `advance * scale` (`text_server_adv.cpp:130,7077`): no FreeType chain.
   if (metrics.pxPerUnit) return unitsToPx(units, metrics, fontSizePx);
+  const advanceAtInstance = instanceGlyphAdvance26_6(metrics, ch, fontSizePx);
+  if (advanceAtInstance !== null) return advanceAtInstance / FIXED_26_6_ONE;
   // The error only adds width, so a run of odd advances can push
   // `shapedTextSizeWidthPx`'s ceil a whole pixel wider, as in Godot.
   return glyphAdvance26_6(units, metrics.unitsPerEm, fontSizePx) / FIXED_26_6_ONE;
@@ -285,7 +285,7 @@ export function glyphAdvance26_6(units: number, unitsPerEm: number, fontSizePx: 
  */
 function instanceGlyphAdvance26_6(metrics: FontMetrics, ch: string, fontSizePx: number): number | null {
   const { outlines, opentype } = metrics;
-  if (!outlines || !opentype?.size || metrics.pxPerUnit) return null;
+  if (!outlines || !isInstanced(opentype)) return null;
   const glyphIndex = outlines.glyphIndex(ch.codePointAt(0)!);
   return glyphIndex === 0 ? null : (outlines.advanceAtInstance?.(glyphIndex, fontSizePx, opentype) ?? null);
 }
@@ -298,6 +298,11 @@ export type OpentypeCoordinates = ReadonlyMap<number | string, number>;
 
 /** The embolden, the shear and the axis values of a `FontVariation`: absent is none. */
 export type GlyphVariation = Pick<FontMetrics, 'embolden' | 'skew' | 'opentype'>;
+
+/** Whether `opentype` names an axis value, so the face is drawn at a variable-font instance. */
+export function isInstanced(opentype: OpentypeCoordinates | undefined): opentype is OpentypeCoordinates {
+  return !!opentype?.size;
+}
 
 /** Whether the variation changes the glyph outline at all. */
 export function isGlyphVaried({ embolden = 0, skew = 0 }: GlyphVariation): boolean {
@@ -335,7 +340,7 @@ export function withVariation<Metrics extends FontMetrics>(
   metrics: Metrics,
   { embolden = 0, skew = 0, opentype, outlines }: GlyphVariation & Pick<FontMetrics, 'outlines'>
 ): Metrics {
-  if (!outlines && !isGlyphVaried({ embolden, skew }) && !opentype?.size) return metrics;
+  if (!outlines && !isGlyphVaried({ embolden, skew }) && !isInstanced(opentype)) return metrics;
   const byVariation = variationsOf(metrics);
   const key = variationKey({ embolden, skew, opentype });
   let byOutlines = byVariation.get(key);

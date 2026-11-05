@@ -6,7 +6,7 @@
  */
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
-import { isGlyphVaried, type FontMetrics, type GlyphVariation } from './fontMetrics';
+import { isGlyphVaried, isInstanced, type FontMetrics, type GlyphVariation } from './fontMetrics';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { bitmapFontOutlines } from './bitmapFontOutlines';
 import {
@@ -88,6 +88,6 @@ export function peekGlyphOutlines(
   metrics: FontMetrics,
   variation: GlyphVariation
 ): PeekedOutlines {
-  const needsOutlines = isGlyphVaried(variation) || !!variation.opentype?.size;
+  const needsOutlines = isGlyphVaried(variation) || isInstanced(variation.opentype);
   return isCanvasFontMetrics(metrics) && needsOutlines ? peekFaceOutlines(face) : null;
 }
