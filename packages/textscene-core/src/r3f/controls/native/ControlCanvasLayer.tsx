@@ -1,9 +1,8 @@
 /**
- * The WebGL Control mount point in the 2D viewport. `World2DContents` mounts it
- * beside `<NodeDispatcher>`, and it reads resources from the same ambient context
- * (ADR-0009). It feeds `buildSolveTree`, the project's viewport rect and theme
- * scale, and the layer-0 canvas modulate into `<ControlCanvasWalker>`, and draws the windows the
- * root window embeds over them.
+ * The WebGL Control mount point in the 2D viewport. `World2DContents` mounts it beside
+ * `<NodeDispatcher>`, and it reads resources from the same ambient context (ADR-0009).
+ * It feeds `buildSolveTree`, the project's viewport rect and theme scale, and the layer-0 canvas
+ * modulate into `<ControlCanvasWalker>`. The windows the root window embeds draw over the Controls.
  */
 import { useMemo } from 'react';
 import type { TscnNode } from '../../../parser/types';
@@ -19,6 +18,7 @@ import { canvasLayerRanks } from '../../canvasPaintOrder';
 import { LayerRanksProvider } from '../../contexts/PaintOrderContext';
 import { measureText } from './text/measurer';
 import { EmbeddedWindows } from '../../../nodes/windows/window/EmbeddedWindows';
+import { useStableVector2 } from '../../hooks/useStableVector2';
 
 interface ControlCanvasLayerProps {
   nodes: readonly TscnNode[];
@@ -55,7 +55,7 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
   // inherit them, and a different layer set would order Controls against the
   // world wrongly.
   const ranks = useMemo(() => canvasLayerRanks(rootNodes), [rootNodes]);
-  const embedderSize = useMemo(() => ({ x: viewport.w, y: viewport.h }), [viewport.w, viewport.h]);
+  const embedderSize = useStableVector2({ x: viewport.w, y: viewport.h });
 
   return (
     <CanvasModulateContext.Provider value={canvasModulate}>

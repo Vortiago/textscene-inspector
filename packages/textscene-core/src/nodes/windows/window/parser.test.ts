@@ -53,6 +53,10 @@ describe('parseWindow', () => {
     expect(parseWindow(heading('PopupPanel'), {}).transparent_bg).toBe(true);
   });
 
+  it('lets a PopupPanel line clear the background its constructor makes transparent', () => {
+    expect(parseWindow(heading('PopupPanel'), { transparent_bg: 'false' }).transparent_bg).toBe(false);
+  });
+
   it('clears a transparent Window to nothing, as set_flag(FLAG_TRANSPARENT) does', () => {
     expect(parseWindow(heading('Window'), { transparent: 'true' }).transparent_bg).toBe(true);
   });

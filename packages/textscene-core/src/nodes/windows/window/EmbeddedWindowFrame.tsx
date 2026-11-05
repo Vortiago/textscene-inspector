@@ -26,7 +26,6 @@ import { useInheritedTextureSampler } from '../../../r3f/canvasItemTextureSample
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { useViewportTargetSlot } from '../../../resources/textures/viewporttexture/useViewportTextureSlot';
 import { InitialPosition, centredWindowPosition } from '../../../godot/scene/window';
-import { viewportSize } from '../../viewport/subviewport/targetSize';
 import { imageSize } from '../../../resources/formats/image/imagePixels';
 import { closeIconOrigin } from './decoration';
 import { windowContentScale } from './contentScale';
@@ -51,11 +50,13 @@ const BLACK = new THREE.Color(0, 0, 0);
 
 /**
  * The rect the window takes in its embedder. A centred window centres its loaded size, before its
- * Controls wrap it (`window.cpp:1555-1560`). The size is the one its viewport holds now.
+ * Controls wrap it (`window.cpp:1555-1560`). The size is the window's, not its target's: an embedded
+ * window keeps 1 pixel at least (`window.cpp:1208`), where its target floors at 2.
  */
 function useWindowRect(solveNode: SolveNode, path: string, embedderSize: Vector2): Rect2 {
   const props = solveNode.node.properties as WindowProperties;
-  const size = viewportSize(props.size, useViewportRect(path));
+  const shown = useViewportRect(path) ?? props.size;
+  const size = { x: Math.max(shown.x, 1), y: Math.max(shown.y, 1) };
   const position =
     props.initial_position === InitialPosition.ABSOLUTE
       ? props.position

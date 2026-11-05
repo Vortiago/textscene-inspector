@@ -29,6 +29,7 @@ import { PendingSuspense } from '../../../resources/PendingSuspense';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
 import { viewportPassSizes } from './targetSize';
+import { useStableVector2 } from '../../../r3f/hooks/useStableVector2';
 import { useInCanvasOverWorld } from './canvasOverWorldScope';
 import { ViewportCanvasScope } from '../../../r3f/viewportCanvasScope';
 import { viewportCanvasColorSpace } from './offscreenViewport';
@@ -100,13 +101,10 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
   // So are its CanvasModulate and its lights: the parent canvas's tint stops at this viewport.
   const sizes = viewportPassSizes(node, useViewportRect(path));
   // Stable while the numbers are, so the pass and the light host do not follow a new object.
-  const size = useMemo(() => ({ x: sizes.target.x, y: sizes.target.y }), [sizes.target.x, sizes.target.y]);
-  // Godot lays Controls out by the visible rect (`viewport.cpp:1202-1216`); only the target is capped.
-  const layoutSize = useMemo(
-    () => ({ x: sizes.layout.x, y: sizes.layout.y }),
-    [sizes.layout.x, sizes.layout.y]
-  );
-  const viewSize = useMemo(() => ({ x: sizes.view.x, y: sizes.view.y }), [sizes.view.x, sizes.view.y]);
+  const size = useStableVector2(sizes.target);
+  // Godot lays Controls out by the visible rect (`viewport.cpp:1202-1216`). Only the target is capped.
+  const layoutSize = useStableVector2(sizes.layout);
+  const viewSize = useStableVector2(sizes.view);
   const canvasModulate = useCanvasModulateColor(node.children);
   const canvasSpace = viewportCanvasColorSpace(properties, kind === '3d' ? '3d' : '2d');
   // A canvas holds the 2D items and Controls of a viewport, in one tree-order draw. A 2D pass draws

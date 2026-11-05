@@ -21,10 +21,8 @@ import type { WindowProperties } from './types';
  * A subclass's registered minimum, such as PopupPanel's, reads no rect. The base rule reads each
  * child's position, so it lays the Controls out in the rect the loaded size gives them first.
  */
-function contentsMinimumSize(window: SolveNode, ctx: SolveContext): Vector2 {
+function contentsMinimumSize(window: SolveNode, ctx: SolveContext, layoutSize: Vector2): Vector2 {
   if (controlSolverRegistry.minimumSize(window.node.type)) return ctx.combinedMinimumSize(window);
-  const { size, content_scale } = window.node.properties as WindowProperties;
-  const { layoutSize } = windowContentScale(size, content_scale);
   return windowContentsMinimumSize(
     window,
     solveControlTree([window], { x: 0, y: 0, w: layoutSize.x, h: layoutSize.y }, ctx)
@@ -37,8 +35,8 @@ function contentsMinimumSize(window: SolveNode, ctx: SolveContext): Vector2 {
  */
 function scaledContentsMinimumSize(window: SolveNode, ctx: SolveContext): Vector2 {
   const { size, content_scale } = window.node.properties as WindowProperties;
-  const factor = windowContentScale(size, content_scale).canvasScale;
-  const minimum = contentsMinimumSize(window, ctx);
+  const { layoutSize, canvasScale: factor } = windowContentScale(size, content_scale);
+  const minimum = contentsMinimumSize(window, ctx, layoutSize);
   return { x: minimum.x * factor, y: minimum.y * factor };
 }
 

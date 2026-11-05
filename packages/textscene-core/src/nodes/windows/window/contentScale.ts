@@ -11,6 +11,7 @@
 
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { Vector2 } from '../../../godot/math/vector';
+import { isEqualApprox } from '../../../godot/math/math';
 import { storedReal } from '../../../godot/math/real';
 import { ContentScaleAspect, ContentScaleMode, ContentScaleStretch } from '../../../godot/scene/window';
 
@@ -22,6 +23,15 @@ export interface ContentScale {
   size: Vector2;
   factor: number;
 }
+
+/** A window with every `content_scale_*` key unset (`window.h:126-140`): its content drawn 1:1. */
+export const DEFAULT_CONTENT_SCALE: Readonly<ContentScale> = {
+  mode: ContentScaleMode.DISABLED,
+  aspect: ContentScaleAspect.IGNORE,
+  stretch: ContentScaleStretch.FRACTIONAL,
+  size: { x: 0, y: 0 },
+  factor: 1,
+};
 
 export interface WindowViewportScale {
   /** The target's pixels: `final_size`. */
@@ -47,8 +57,7 @@ function fitDesignSize(size: Vector2, scale: ContentScale): { viewport: Vector2;
   const videoAspect = storedReal(size.x / size.y);
   let viewport: Vector2;
   let screen: Vector2;
-  const sameAspect = Math.abs(viewportAspect - videoAspect) <= 1e-5 * Math.max(1, Math.abs(viewportAspect));
-  if (scale.aspect === ContentScaleAspect.IGNORE || sameAspect) {
+  if (scale.aspect === ContentScaleAspect.IGNORE || isEqualApprox(viewportAspect, videoAspect)) {
     viewport = desired;
     screen = size;
   } else if (viewportAspect < videoAspect) {

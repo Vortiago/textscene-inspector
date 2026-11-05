@@ -3,7 +3,8 @@
  * checked against the measured `Hello window` capture: a 300x200 window at (100, 120).
  */
 import { describe, expect, it } from 'vitest';
-import { closeIconOrigin, titleOrigin, titleSpace } from './decoration';
+import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
+import { closeIconOrigin, shapeTitle, titleOrigin, titleSpace } from './decoration';
 
 const WIDTH = 300;
 
@@ -34,5 +35,13 @@ describe('titleOrigin', () => {
 describe('closeIconOrigin', () => {
   it('hangs the close icon from the top-right corner by its offsets (`:382-384`)', () => {
     expect(closeIconOrigin(WIDTH, { closeHOffset: 18, closeVOffset: 24 })).toEqual({ x: 282, y: -24 });
+  });
+});
+
+describe('shapeTitle', () => {
+  it('keeps a title with a newline on one line, as its one TextLine does (`viewport.cpp:374`)', () => {
+    const shaped = shapeTitle('First\nSecond', 14, OPEN_SANS_FONT_METRICS);
+    expect(shaped.lines).toHaveLength(1);
+    expect(shaped.lines[0]!.glyphs.map((g) => g.char).join('')).toContain('Second');
   });
 });

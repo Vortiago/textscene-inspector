@@ -1010,6 +1010,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'window-focus-order', file: 'unit-window-focus-order.tscn', mode: '2d' },
   // A title wider than its space ends in an ellipsis. Mean 0.352.
   { name: 'window-title-trim', file: 'unit-window-title-trim.tscn', mode: '2d' },
+  // A newline stays inside the title's one line at zero width. Max 92, mean 0.414.
+  { name: 'window-title-newline', file: 'unit-window-title-newline.tscn', mode: '2d' },
   // A transparent window shows the embedder through its target. Mean 0.331.
   { name: 'window-transparent', file: 'unit-window-transparent.tscn', mode: '2d' },
   // A Popup is borderless: its target alone. Mean 0.364.

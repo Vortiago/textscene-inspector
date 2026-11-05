@@ -10,11 +10,7 @@ import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { TextRun } from '../../../r3f/controls/native/text/TextRun';
-import {
-  shapeText,
-  shapedTextSizeWidthPx,
-  soloLineLayout,
-} from '../../../r3f/controls/native/text/textLayout';
+import { shapedTextSizeWidthPx, soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { overrunFlagsForBehavior, trimLineToWidth } from '../../../r3f/controls/native/text/textOverrun';
 import { resolveNodeFont } from '../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { peekSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
@@ -22,10 +18,10 @@ import { isCanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFo
 import { PendingSuspense } from '../../../resources/PendingSuspense';
 import { resolveTextTheme } from '../../../r3f/controls/native/textTheme';
 import { contentMarginSize } from '../../../r3f/controls/native/styleBoxFlat';
-import { AutowrapMode, OverrunBehavior } from '../../../godot/text/textServerEnums';
+import { OverrunBehavior } from '../../../godot/text/textServerEnums';
 import { outlineStrokeWidthPx } from '../../3d/label3d/glyphLayout';
 import { canvasSubOrder, type CanvasSlot } from '../../../r3f/canvasItemState';
-import { titleOrigin, titleSpace } from './decoration';
+import { shapeTitle, titleOrigin, titleSpace } from './decoration';
 import type { WindowThemeDefaults } from './theme';
 import type { WindowProperties } from './types';
 
@@ -74,13 +70,7 @@ export function WindowTitle({
 
   const layout = useMemo(() => {
     if (space <= 0) return null;
-    const shaped = shapeText(props.title, {
-      fontSizePx,
-      boxWidthPx: 0,
-      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-      lineSpacingPx: 0,
-      fontMetrics,
-    });
+    const shaped = shapeTitle(props.title, fontSizePx, fontMetrics);
     // `set_direction` follows the window's `is_layout_rtl()` (`viewport.cpp:375`).
     const line = trimLineToWidth(shaped.lines[0]!, space, TITLE_OVERRUN_FLAGS, {
       fontMetrics,

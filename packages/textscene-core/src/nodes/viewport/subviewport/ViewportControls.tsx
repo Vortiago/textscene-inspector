@@ -1,9 +1,9 @@
 /**
  * The Controls of one sub-viewport or embedded window, drawn by the native Control walker into the
- * canvas the viewport's pass renders, and the windows it embeds over them. A Control-only viewport
- * mounts it in its own detached scene
- * (`ControlRasterPass.tsx`). A viewport that also holds 2D-world content mounts it in the portal
- * beside those items, so both share one paint range and the Camera2D frames them together.
+ * canvas the viewport's pass renders, with the windows it embeds over them. A Control-only viewport
+ * mounts it in its own detached scene (`ControlRasterPass.tsx`). A viewport that also holds 2D-world
+ * content mounts it in the portal beside those items, so both share one paint range and the
+ * Camera2D frames them together.
  */
 import { useMemo } from 'react';
 

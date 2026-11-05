@@ -86,7 +86,7 @@ import {
   mayHoldWindow,
 } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import type { WindowProperties } from '../../../nodes/windows/window/types';
-import type { ThemeOwner } from '../../../nodes/windows/window/themeOwners';
+import { NO_OWNERS, type ThemeOwner } from '../../../nodes/windows/window/themeOwners';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
 import type { SolveNode, ThemedIconRef } from './solveTree';
@@ -1009,8 +1009,6 @@ function buildForest(
   };
 }
 
-const NO_THEME_OWNERS: readonly ThemeOwner[] = [];
-
 /** The Control forest of `nodes`, a scene's roots or a SubViewport's children. */
 export function useBuildSolveTree(
   nodes: readonly TscnNode[],
@@ -1019,10 +1017,7 @@ export function useBuildSolveTree(
   /** `ForestStart.inheritedRtl`. */
   inheritedRtl: boolean | null = null
 ): UseBuildSolveTreeResult {
-  const start = useMemo(
-    () => ({ inheritedRtl, contentRoot: null, themeOwners: NO_THEME_OWNERS }),
-    [inheritedRtl]
-  );
+  const start = useMemo(() => ({ inheritedRtl, contentRoot: null, themeOwners: NO_OWNERS }), [inheritedRtl]);
   return useSolveForest(nodes, externalResources, internalResources, start);
 }
 

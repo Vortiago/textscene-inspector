@@ -17,7 +17,7 @@ import {
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../../godot/scene/viewport';
 import { parseViewport } from '../../viewport/shared/parser';
 import { parseThemeOwnerFields } from '../../2d/ui/control/themeOwnerParser';
-import type { ContentScale } from './contentScale';
+import { DEFAULT_CONTENT_SCALE, type ContentScale } from './contentScale';
 import type { WindowProperties } from './types';
 
 const ORIGIN = { x: 0, y: 0 };
@@ -35,15 +35,32 @@ function sizeWrites(properties: Record<string, string>): WindowSizeWrite[] {
 
 /** The `content_scale_*` keys. A setter refuses a negative size or a factor at or below 0 (`window.cpp:1716,1774`). */
 function parseContentScale(properties: Record<string, string>, context: string): ContentScale {
-  const size = vec2iOr(properties.content_scale_size, ORIGIN, `${context}.content_scale_size`);
-  const factor = floatOr(properties.content_scale_factor, 1, `${context}.content_scale_factor`);
+  const unset = DEFAULT_CONTENT_SCALE;
+  const size = vec2iOr(properties.content_scale_size, unset.size, `${context}.content_scale_size`);
+  const factor = floatOr(properties.content_scale_factor, unset.factor, `${context}.content_scale_factor`);
   return {
-    mode: intOr(properties.content_scale_mode, 0, `${context}.content_scale_mode`),
-    aspect: intOr(properties.content_scale_aspect, 0, `${context}.content_scale_aspect`),
-    stretch: intOr(properties.content_scale_stretch, 0, `${context}.content_scale_stretch`),
-    size: size.x < 0 || size.y < 0 ? ORIGIN : size,
-    factor: factor > 0 ? factor : 1,
+    mode: intOr(properties.content_scale_mode, unset.mode, `${context}.content_scale_mode`),
+    aspect: intOr(properties.content_scale_aspect, unset.aspect, `${context}.content_scale_aspect`),
+    stretch: intOr(properties.content_scale_stretch, unset.stretch, `${context}.content_scale_stretch`),
+    size: size.x < 0 || size.y < 0 ? unset.size : size,
+    factor: factor > 0 ? factor : unset.factor,
   };
+}
+
+/**
+ * `transparent_bg` and the `transparent` flag both set the background (`window.cpp:548-549`), so the
+ * line written last wins. Without either, the constructor's flag stands.
+ */
+function parseTransparentBackground(
+  properties: Record<string, string>,
+  classDefault: boolean,
+  context: string
+): boolean {
+  const flag = boolOr(properties.transparent, classDefault, context);
+  if (properties.transparent_bg === undefined) return flag;
+  const keys = Object.keys(properties);
+  const isFlagLast = keys.indexOf('transparent') > keys.indexOf('transparent_bg');
+  return isFlagLast ? flag : boolOr(properties.transparent_bg, classDefault, context);
 }
 
 export function parseWindow(heading: ParsedHeading, properties: Record<string, string>): WindowProperties {
@@ -51,13 +68,11 @@ export function parseWindow(heading: ParsedHeading, properties: Record<string, s
   const defaults = windowClassDefaults(heading.attributes.type ?? 'Window');
   const context = `${heading.attributes.type ?? 'Window'} ${viewport.name || '(unnamed)'}`;
   const visible = boolOr(properties.visible, defaults.visible, context);
-  // `set_flag(FLAG_TRANSPARENT)` sets the transparent background (`window.cpp:548-549`).
-  const transparent = boolOr(properties.transparent, defaults.transparent, context);
 
   return {
     ...viewport,
     ...parseThemeOwnerFields(properties),
-    transparent_bg: viewport.transparent_bg || transparent,
+    transparent_bg: parseTransparentBackground(properties, defaults.transparent, context),
     size: replayWindowSize(sizeWrites(properties)),
     size_2d_override: ORIGIN,
     size_2d_override_stretch: false,

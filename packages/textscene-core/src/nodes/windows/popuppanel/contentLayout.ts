@@ -59,6 +59,20 @@ function insetSize(insets: PanelInsets): Vector2 {
 }
 
 /**
+ * The internal Panel's rect in a window of `size`: the window less the shadow insets. A right-to-left
+ * layout mirrors it (`control.cpp:1785-1787`).
+ */
+export function popupPanelRect(insets: PanelInsets, isRtl: boolean, size: Vector2): Rect2 {
+  const shadow = insetSize(insets);
+  return {
+    x: isRtl ? -insets.right : insets.left,
+    y: insets.top,
+    w: size.x - shadow.x,
+    h: size.y - shadow.y,
+  };
+}
+
+/**
  * `PopupPanel::_get_contents_minimum_size` (`popup.cpp:270-292`): the largest combined minimum of
  * the children its layout places, plus the shadow insets and the panel's own minimum.
  */
@@ -83,13 +97,13 @@ export const popupPanelContentsMinimumSize: MinimumSizeFn = (n, ctx) => {
  */
 export const popupPanelLayout: ContainerLayoutFn = (n, children, rect, ctx) => {
   const { style, insets } = popupPanelBox(n, ctx.theme);
-  const shadow = insetSize(insets);
+  const box = popupPanelRect(insets, n.rtl, { x: rect.w, y: rect.h });
   const panel = contentMarginSize(style);
   const content: Rect2 = {
-    x: style.contentMargin.left + (n.rtl ? -insets.right : insets.left),
-    y: style.contentMargin.top + insets.top,
-    w: rect.w - panel.x - shadow.x,
-    h: rect.h - panel.y - shadow.y,
+    x: box.x + style.contentMargin.left,
+    y: box.y + style.contentMargin.top,
+    w: box.w - panel.x,
+    h: box.h - panel.y,
   };
   return new Map(children.map(({ node }) => [node.path, content]));
 };

@@ -30,6 +30,7 @@ import type { SubViewportProperties } from './types.js';
 import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
 import { useCanvasModulateColor } from '../../../r3f/canvasModulate.js';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary.js';
+import { useStableVector2 } from '../../../r3f/hooks/useStableVector2';
 
 export interface ControlRasterPassesProps {
   /** The Control-only sub-viewports found in the scene, each with its own resource scope (ADR-0009). */
@@ -84,7 +85,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   );
 
   const canvasModulate = useCanvasModulateColor(node.children);
-  const controlsSize = useMemo(() => ({ x: layoutWidth, y: layoutHeight }), [layoutWidth, layoutHeight]);
+  const controlsSize = useStableVector2({ x: layoutWidth, y: layoutHeight });
 
   const renderState = useViewportRenderState(gate.updateMode);
   const renderPass = useCallback(() => {

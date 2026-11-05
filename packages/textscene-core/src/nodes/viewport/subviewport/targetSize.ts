@@ -8,7 +8,11 @@ import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import { VIEWPORT_MIN_SIZE } from '../../../godot/rendering/viewport.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 import type { TscnNode } from '../../../parser/types.js';
-import { windowContentScale, type ContentScale } from '../../windows/window/contentScale.js';
+import {
+  DEFAULT_CONTENT_SCALE,
+  windowContentScale,
+  type ContentScale,
+} from '../../windows/window/contentScale.js';
 import type { WindowProperties } from '../../windows/window/types.js';
 import { isEmbeddedWindow } from './viewportBoundary.js';
 import type { SubViewportProperties } from './types.js';
@@ -47,11 +51,11 @@ export interface ViewportPassSizes {
   view: Vector2;
 }
 
-/** A SubViewport's content: drawn 1:1, as a window with every `content_scale_*` key unset. */
-const UNSCALED: ContentScale = { mode: 0, aspect: 0, stretch: 0, size: { x: 0, y: 0 }, factor: 1 };
-
+/** A SubViewport draws its content 1:1, as a window with every `content_scale_*` key unset. */
 function contentScaleOf(node: TscnNode): ContentScale {
-  return isEmbeddedWindow(node.type) ? (node.properties as WindowProperties).content_scale : UNSCALED;
+  return isEmbeddedWindow(node.type)
+    ? (node.properties as WindowProperties).content_scale
+    : DEFAULT_CONTENT_SCALE;
 }
 
 /**

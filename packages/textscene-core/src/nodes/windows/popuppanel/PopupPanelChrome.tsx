@@ -5,22 +5,20 @@
 import type { NativeControlComponentProps } from '../../../r3f/controls/ControlComponentRegistry';
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { StyleBoxQuad } from '../../../r3f/controls/native/StyleBoxQuad';
-import { popupPanelBox } from './contentLayout';
+import { popupPanelBox, popupPanelRect } from './contentLayout';
 
 export function PopupPanelChrome({ solveNode, rect, theme, tint, renderOrder }: NativeControlComponentProps) {
   const { style, insets } = popupPanelBox(solveNode, theme);
-  const panelSize = {
-    x: 0,
-    y: 0,
-    w: rect.w - insets.left + insets.right,
-    h: rect.h - insets.top + insets.bottom,
-  };
-  // A right-to-left layout mirrors the internal Panel's rect (`control.cpp:1785-1787`).
-  const panelX = solveNode.rtl ? -insets.right : insets.left;
+  const panel = popupPanelRect(insets, solveNode.rtl, { x: rect.w, y: rect.h });
   // `StyleBoxQuad` draws from its group's origin, so the group carries the inset.
   return (
-    <CanvasItemGroup position={[panelX, -insets.top, 0]}>
-      <StyleBoxQuad styleBox={style} color={tint.own} rect={panelSize} renderOrder={renderOrder} />
+    <CanvasItemGroup position={[panel.x, -panel.y, 0]}>
+      <StyleBoxQuad
+        styleBox={style}
+        color={tint.own}
+        rect={{ x: 0, y: 0, w: panel.w, h: panel.h }}
+        renderOrder={renderOrder}
+      />
     </CanvasItemGroup>
   );
 }

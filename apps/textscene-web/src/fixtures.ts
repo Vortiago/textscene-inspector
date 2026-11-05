@@ -2718,6 +2718,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Window Title Newline",
+    "file": "unit-window-title-newline.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Window Title Trim",
     "file": "unit-window-title-trim.tscn",
     "category": "Other"

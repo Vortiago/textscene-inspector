@@ -10,6 +10,9 @@
  */
 
 import { halfOfInt } from '../../../godot/scene/window';
+import { AutowrapMode } from '../../../godot/text/textServerEnums';
+import type { FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
+import { shapeText, type TextLayoutResult } from '../../../r3f/controls/native/text/textLayout';
 import type { Vector2 } from '../../../godot/math/vector';
 
 /** The width a title may take: what the border's margins and the close offset leave (`:363`). */
@@ -34,4 +37,19 @@ export function closeIconOrigin(
   { closeHOffset, closeVOffset }: { closeHOffset: number; closeVOffset: number }
 ): Vector2 {
   return { x: width - closeHOffset, y: -closeVOffset };
+}
+
+/**
+ * The title as one `TextLine` (`viewport.cpp:374`): no wrap and no mandatory break, so a newline
+ * stays inside the line at zero width.
+ */
+export function shapeTitle(title: string, fontSizePx: number, fontMetrics: FontMetrics): TextLayoutResult {
+  return shapeText(title, {
+    fontSizePx,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 0,
+    fontMetrics,
+    breakMandatory: false,
+  });
 }

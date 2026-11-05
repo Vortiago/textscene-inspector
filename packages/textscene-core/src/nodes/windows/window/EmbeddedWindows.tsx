@@ -11,6 +11,7 @@ import { joinPath, parentPathOf } from '../../../utils/nodePath';
 import { subwindowStack, type StackedWindow } from './embedding';
 import { EmbeddedWindowFrame } from './EmbeddedWindowFrame';
 import { SubwindowCanvasScope } from './SubwindowCanvasScope';
+import { isRegisteredWindow } from '../../viewport/subviewport/viewportBoundary';
 import type { WindowProperties } from './types';
 
 interface EmbeddedWindowsProps {
@@ -27,9 +28,9 @@ interface StackEntry extends StackedWindow {
   solveNode: SolveNode;
 }
 
-/** Whether the embedder registers the window: only a visible one enters the stack (`window.cpp:1546-1563`). */
+/** Whether the window enters the stack: it registers, and no animation hides it. */
 function isShown(window: SolveNode): boolean {
-  return !window.hidden && (window.node.properties as WindowProperties).visible;
+  return !window.hidden && isRegisteredWindow(window.node);
 }
 
 /**
