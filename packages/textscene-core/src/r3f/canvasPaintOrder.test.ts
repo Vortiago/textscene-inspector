@@ -260,6 +260,25 @@ describe('allocatePaintRange', () => {
     expect(allocated.self).toBeLessThan(allocated.children[1]!.base);
   });
 
+  it('draws a CanvasGroup after every child, in index order whatever show_behind_parent says', () => {
+    // A CanvasGroup culls all its children, then attaches itself (lines 471-484).
+    const group = node('Group', 'CanvasGroup', [
+      node('Front', 'Sprite2D'),
+      node('Behind', 'Sprite2D', [], { show_behind_parent: true }),
+    ]);
+    const allocated = allocateNodePaintRange({ base: 0, size: paintRangeSize(group) }, group);
+
+    expect(allocated.children[0]!.base).toBeLessThan(allocated.children[1]!.base);
+    expect(allocated.children[1]!.base).toBeLessThan(allocated.self);
+  });
+
+  it('draws a y-sorted CanvasGroup first, as any y-sorting parent, since it groups nothing', () => {
+    const group = node('Group', 'CanvasGroup', [node('Child', 'Sprite2D')], { y_sort_enabled: true });
+    const allocated = allocateNodePaintRange({ base: 0, size: paintRangeSize(group) }, group);
+
+    expect(allocated.self).toBe(0);
+  });
+
   it('puts a y-sorting parent at the FRONT of its range, ignoring show_behind_parent', () => {
     // `_cull_canvas_item` takes `_collect_ysort_children` for a y-sorted node and
     // runs no behind/ahead split. With one, the parent's sequence moves past

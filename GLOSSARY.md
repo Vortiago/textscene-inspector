@@ -421,6 +421,10 @@ _Avoid_: "visible instance" for the record, which names only the count.
 The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057). Under `render_target_clear_mode` NEVER it takes the bytes of the target first and draws over them.
 _Avoid_: "MSAA frame".
 
+**Group window** (`r3f/canvasGroup/canvasGroupPass.ts`):
+The draw-order keys a CanvasGroup collects into its buffer: its run at its own `z_final`, without its own key, where its composite rect draws. A child at another `z_final` falls outside the window and draws on the canvas.
+_Avoid_: "group range", "group layer".
+
 **Frame AABB** (`r3f/components/FrameAabb.tsx`):
 The `get_aabb()` of a GeometryInstance3D, in node space, that the camera frames the scene on (`r3f/frameSceneBounds.ts`). An empty one still frames, as the point at the node origin that `AABB()` is. The selection and hover boxes do not read it.
 _Avoid_: "bounds proxy".

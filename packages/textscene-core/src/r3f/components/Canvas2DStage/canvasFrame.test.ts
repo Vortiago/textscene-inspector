@@ -4,7 +4,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { offscreenRendererState } from '../../../nodes/viewport/subviewport/offscreenRenderer.testkit';
 import { createCanvasFrame } from './canvasFrame';
+import { registerCanvasGroup } from '../../canvasGroup/canvasGroupPass';
 import { canvasColorSpaceOf, SRGB_CANVAS } from '../../canvasColorSpace';
 import { innermostStep, startFrameProfile } from '../../frameProfile/frameProfile';
 import { profiledRendererMembers } from '../../frameProfile/frameProfile.testkit';
@@ -29,7 +31,7 @@ function recordingRenderer(width: number, height: number) {
   const clears: { target: Target; drawsBefore: number }[] = [];
   let bound: Target = null;
   const gl = {
-    autoClear: true,
+    ...offscreenRendererState(),
     getDrawingBufferSize: (out: THREE.Vector2) => out.set(width, height),
     getRenderTarget: () => bound,
     setRenderTarget: (target: Target) => {
@@ -101,6 +103,25 @@ describe('createCanvasFrame', () => {
     frame.render(gl, scene, camera);
 
     expect(clears).toEqual([]);
+    frame.dispose();
+  });
+
+  it("draws a CanvasGroup's buffer, at the frame's size, before the world draws into the frame", () => {
+    const { gl, draws } = recordingRenderer(640, 360);
+    const groupScene = new THREE.Scene();
+    const buffer = new THREE.WebGLRenderTarget(1, 1);
+    const release = registerCanvasGroup(groupScene, {
+      window: { own: 0, from: 0, to: 1 },
+      buffer,
+      fit: () => new THREE.Box3(),
+    });
+    const frame = multisampledFrame(0);
+
+    frame.render(gl, groupScene, camera);
+
+    expect(draws.slice(0, 2).map((draw) => draw.target)).toEqual([buffer, frame]);
+    expect(buffer).toMatchObject({ width: 640, height: 360 });
+    release();
     frame.dispose();
   });
 

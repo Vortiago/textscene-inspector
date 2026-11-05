@@ -303,6 +303,36 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Canvas Group Material",
+    "file": "unit-canvas-group-material.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Canvas Group Modulate",
+    "file": "unit-canvas-group-modulate.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Canvas Group Nested",
+    "file": "unit-canvas-group-nested.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Canvas Group Self Modulate",
+    "file": "unit-canvas-group-self-modulate.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Canvas Group Y Sort",
+    "file": "unit-canvas-group-y-sort.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Canvas Group Z Escape",
+    "file": "unit-canvas-group-z-escape.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Canvas Group",
     "file": "unit-canvas-group.tscn",
     "category": "Other"

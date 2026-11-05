@@ -375,6 +375,11 @@ function drawsBehindParent(node: TscnNode): boolean {
 interface PaintRangeLayout {
   /** `y_sort_enabled`: the children are re-packed in sort order after the parent. */
   sortsChildren?: boolean;
+  /**
+   * A CanvasGroup's: every child draws before the parent, in index order (lines 471-484). A parent
+   * that sorts its children takes the y-sort branch instead, which groups nothing (lines 437-469).
+   */
+  drawsChildrenFirst?: boolean;
   /** Values the parent's internal front children take (`internalFrontRoom`). */
   frontRoom?: number;
   /** Values the parent's internal back children take (`internalBackRoom`). */
@@ -393,14 +398,20 @@ interface PaintRangeLayout {
 export function allocatePaintRange(
   range: PaintRange,
   children: readonly TscnNode[],
-  { sortsChildren = false, frontRoom = 0, backRoom = 0, listedOrder }: PaintRangeLayout = {}
+  {
+    sortsChildren = false,
+    drawsChildrenFirst = false,
+    frontRoom = 0,
+    backRoom = 0,
+    listedOrder,
+  }: PaintRangeLayout = {}
 ): AllocatedPaintRange {
   const order = listedOrder ?? children.map((_, index) => index);
   const layerRoom = order.includes(LISTED_LAYER) ? 1 : 0;
   // A `y_sort_enabled` parent takes `_collect_ysort_children` instead, so it has
   // no behind split. With one, its sequence moves past `range.base` and the
   // y-sort pass overruns into the next sibling's range.
-  const behind = children.map((child) => !sortsChildren && drawsBehindParent(child));
+  const behind = children.map((child) => !sortsChildren && (drawsChildrenFirst || drawsBehindParent(child)));
   // Fitted with the children, since a squeezed range shrinks the front as well.
   const fitted = fitToRange([frontRoom, backRoom, layerRoom, ...children.map(paintRangeSize)], range.size);
   const frontSize = frontRoom > 0 ? fitted[0]! : 0;
@@ -444,6 +455,7 @@ export function allocatePaintRange(
 export function allocateNodePaintRange(range: PaintRange, node: TscnNode): AllocatedPaintRange {
   return allocatePaintRange(range, node.children, {
     sortsChildren: (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true,
+    drawsChildrenFirst: node.type === 'CanvasGroup',
     frontRoom: internalFrontRoom(node),
     backRoom: internalBackRoom(node),
     listedOrder: listedChildOrder(node, node.children),

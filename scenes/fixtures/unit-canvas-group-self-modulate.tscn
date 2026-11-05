@@ -1,0 +1,34 @@
+; One variable: a CanvasGroup's `self_modulate`, alpha 0.5, over two overlapping opaque squares. The
+; group draws them into one buffer and blends it once, so the overlap shows blue at half alpha. Beside
+; it the same squares under a plain Node2D with `modulate` alpha 0.5 blend one by one, so red shows
+; through the overlap. No other scene holds a CanvasGroup with children.
+
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Group" type="CanvasGroup" parent="."]
+position = Vector2(100, 100)
+self_modulate = Color(1, 1, 1, 0.5)
+
+[node name="Red" type="Polygon2D" parent="Group"]
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Blue" type="Polygon2D" parent="Group"]
+position = Vector2(50, 50)
+color = Color(0, 0, 1, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Plain" type="Node2D" parent="."]
+position = Vector2(400, 100)
+modulate = Color(1, 1, 1, 0.5)
+
+[node name="Red" type="Polygon2D" parent="Plain"]
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Blue" type="Polygon2D" parent="Plain"]
+position = Vector2(50, 50)
+color = Color(0, 0, 1, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
