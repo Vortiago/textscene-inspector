@@ -64,7 +64,6 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
       fontMetrics,
       fontSizePx,
       ellipsisChar: props.ellipsisChar,
-      isRtl: unshapedLayout.lines[0]!.isRtl === true,
       isDrawnRtl: isLineDrawnRtl,
     });
     return soloLineLayout(trimmedLine, unshapedLayout);

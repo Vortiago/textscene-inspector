@@ -205,15 +205,13 @@ export const lineEditTextureSlots: TextureSlotsFn = (
  */
 export function shapeLineEditText(
   text: string,
-  options: { fontSizePx: number; fontMetrics: FontMetrics; preserveControl?: boolean; bidi: TextBidiOptions }
+  options: TextBidiOptions & { fontSizePx: number; fontMetrics: FontMetrics; preserveControl?: boolean }
 ): TextLayoutResult {
-  const { bidi, ...font } = options;
   return shapeText(text, {
-    ...font,
+    ...options,
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx: 0,
-    ...bidi,
   });
 }
 
@@ -256,7 +254,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
             fontSizePx,
             fontMetrics,
             preserveControl: props.drawControlChars,
-            bidi: controlBidiOptions(props, n),
+            ...controlBidiOptions(props, n),
           }).widthPx
         )
       : 0;

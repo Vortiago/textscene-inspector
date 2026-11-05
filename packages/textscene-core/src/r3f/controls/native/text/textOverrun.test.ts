@@ -9,7 +9,7 @@ import { getFontEmboldenedAdvancePx, withVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
 import { overrunFlagsForBehavior, trimLineToWidth, type OverrunTrimFlags } from './textOverrun';
-import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { AutowrapMode, OverrunBehavior, TextDirection } from '../../../../godot/text/textServerEnums';
 
 const FONT_SIZE_PX = 16;
 
@@ -166,7 +166,6 @@ describe('trimLineToWidth — a right-to-left line (text_server_adv.cpp:6053-611
     return trimLineToWidth(line(HEBREW), widthPx, overrunFlagsForBehavior(behavior), {
       fontMetrics: OPEN_SANS_FONT_METRICS,
       fontSizePx: FONT_SIZE_PX,
-      isRtl: true,
     });
   }
 
@@ -211,7 +210,7 @@ describe('trimLineToWidth — a right-to-left line (text_server_adv.cpp:6053-611
   it('draws the glyphs the cut removed when an AUTO line infers RTL (`text_server.cpp` shaped_text_draw)', () => {
     const full = line(HEBREW);
     const flags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
-    const options = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX, isRtl: true };
+    const options = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX };
     const rtl = trimLineToWidth(full, full.widthPx * 0.75, flags, options);
     const auto = trimLineToWidth(full, full.widthPx * 0.75, flags, { ...options, isDrawnRtl: false });
     const keptCount = rtl.glyphs.length - 1;
@@ -224,16 +223,19 @@ describe('trimLineToWidth — a right-to-left line (text_server_adv.cpp:6053-611
     expect(auto.widthPx).toBeCloseTo(rtl.widthPx, 9);
   });
 
-  it('keeps the left-to-right trim over the visual order without the option', () => {
-    const full = line(HEBREW);
+  it('cuts a Hebrew line set LTR from the visual right, as its paragraph direction is LTR', () => {
+    const full = shapeText(HEBREW, {
+      fontSizePx: FONT_SIZE_PX,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      direction: TextDirection.TEXT_DIRECTION_LTR,
+    }).lines[0]!;
     const result = trimLineToWidth(
       full,
       full.widthPx * 0.75,
       overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS),
-      {
-        fontMetrics: OPEN_SANS_FONT_METRICS,
-        fontSizePx: FONT_SIZE_PX,
-      }
+      { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX }
     );
     expect(result.glyphs.at(-1)!.char).toBe('…');
     expect(result.glyphs[0]!.sourceIndex).toBe(HEBREW.length - 1);

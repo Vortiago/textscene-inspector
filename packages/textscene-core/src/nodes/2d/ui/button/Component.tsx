@@ -4,7 +4,7 @@
  * comes only from `disabled`: a static viewer has no hover, pressed or focus.
  * `ControlCanvasWalker` owns `visible`, the children and the transform.
  */
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { sizeWithArea } from '../../../../resources/textures/textureSize';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -181,35 +181,41 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   ]);
   // The fill reads the set direction and the outline the inferred one (`shaped_text_draw` and
   // `shaped_text_draw_outline`), so an AUTO Hebrew label trims to two different shapes.
-  const trimFirstLine = useCallback(
-    (isLineDrawnRtlNow: boolean): TextLayoutResult | null => {
-      // The TextServer trims a wrapped buffer per row. This single-line
-      // trim would collapse it to its first row, so it stands down there.
-      if (!layout || !overrunFlags.trim || layout.lines.length > 1) return layout;
-      const trimmedLine = trimLineToWidth(layout.lines[0]!, trimWidthPx, overrunFlags, {
-        fontMetrics,
-        fontSizePx,
-        isRtl: infersRtl(layout),
-        isDrawnRtl: isLineDrawnRtlNow,
-      });
-      return soloLineLayout(trimmedLine, layout);
-    },
-    [layout, overrunFlags, trimWidthPx, fontMetrics, fontSizePx]
-  );
-  const trimmedLayout = useMemo(() => trimFirstLine(isLineDrawnRtl), [trimFirstLine, isLineDrawnRtl]);
-  const trimmedOutlineLayout = useMemo(
-    () => (isLineDrawnRtl === infersRtl(layout) ? trimmedLayout : trimFirstLine(infersRtl(layout))),
-    [trimFirstLine, trimmedLayout, isLineDrawnRtl, layout]
-  );
+  const trimmed = useMemo(() => {
+    // The TextServer trims a wrapped buffer per row. This single-line
+    // trim would collapse it to its first row, so it stands down there.
+    if (!layout || !overrunFlags.trim || layout.lines.length > 1) return { fill: layout, outline: layout };
+    const trim = (drawsRtl: boolean) =>
+      soloLineLayout(
+        trimLineToWidth(layout.lines[0]!, trimWidthPx, overrunFlags, {
+          fontMetrics,
+          fontSizePx,
+          isDrawnRtl: drawsRtl,
+        }),
+        layout
+      );
+    const fill = trim(isLineDrawnRtl);
+    const isOutlineDrawnRtl = infersRtl(layout);
+    return { fill, outline: isOutlineDrawnRtl === isLineDrawnRtl ? fill : trim(isOutlineDrawnRtl) };
+  }, [layout, overrunFlags, trimWidthPx, fontMetrics, fontSizePx, isLineDrawnRtl]);
+  const trimmedLayout = trimmed.fill;
 
   // One layout object per row, so a row's runs keep their meshes across renders.
   const lineLayouts = useMemo(
     () => trimmedLayout?.lines.map((line) => soloLineLayout(line, trimmedLayout)) ?? [],
     [trimmedLayout]
   );
-  const outlineLineLayouts = useMemo(
-    () => trimmedOutlineLayout?.lines.map((line) => soloLineLayout(line, trimmedOutlineLayout)) ?? [],
-    [trimmedOutlineLayout]
+  // `content.text.offset.x` holds this shift of the untrimmed `layout`; each row backs it out.
+  const untrimmedShiftPx = content.text
+    ? buttonTextAlignShiftPx(naturalSize(layout).x, content.drawableSize.x, textAlignment, infersRtl(layout))
+    : 0;
+  // Only a trimmed single line has an outline shape of its own.
+  const outlineLineLayout = useMemo(
+    () =>
+      trimmed.outline && trimmed.outline !== trimmed.fill
+        ? soloLineLayout(trimmed.outline.lines[0]!, trimmed.outline)
+        : undefined,
+    [trimmed]
   );
 
   return (
@@ -239,12 +245,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
             key={i}
             position={[
               content.text!.offset.x -
-                buttonTextAlignShiftPx(
-                  naturalSize(layout).x,
-                  content.drawableSize.x,
-                  textAlignment,
-                  infersRtl(layout)
-                ) +
+                untrimmedShiftPx +
                 buttonTextAlignShiftPx(
                   shapedTextSizeWidthPx(line.widthPx),
                   content.drawableSize.x,
@@ -257,7 +258,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
           >
             <OutlinedTextRun
               layout={lineLayouts[i]!}
-              outlineLayout={outlineLineLayouts[i]}
+              outlineLayout={outlineLineLayout}
               fontSizePx={fontSizePx}
               tint={tintedFontColor}
               outline={textOutline}

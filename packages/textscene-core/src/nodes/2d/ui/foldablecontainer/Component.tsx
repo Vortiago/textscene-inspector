@@ -105,7 +105,6 @@ export function FoldableContainer({
     const trimmedLine = trimLineToWidth(title.layout.lines[0]!, Math.max(1, titleTextWidth), overrunFlags, {
       fontMetrics: title.layout.fontMetrics,
       fontSizePx: title.fontSizePx,
-      isRtl: title.layout.lines[0]!.isRtl === true,
       isDrawnRtl: title.isDrawnRtl,
     });
     return soloLineLayout(trimmedLine, title.layout);

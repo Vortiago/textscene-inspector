@@ -262,6 +262,8 @@ export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult |
     trimLineToWidth(line, widthPx, overrunFlags, {
       fontMetrics: layout.fontMetrics,
       fontSizePx: input.fontSizePx,
+      // An AUTO `TextParagraph` (`ITEM_BIDI`): `shaped_text_draw` reads the set direction.
+      isDrawnRtl: false,
     })
   );
   return {

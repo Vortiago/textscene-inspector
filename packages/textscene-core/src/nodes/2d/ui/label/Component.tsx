@@ -189,7 +189,6 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
         fontMetrics,
         fontSizePx: textTheme.fontSizePx,
         ellipsisChar: props.ellipsisChar,
-        isRtl: line.isRtl,
       });
   }, [autowrapMode, overrunFlags, rect.w, fontMetrics, textTheme.fontSizePx, props.ellipsisChar]);
 

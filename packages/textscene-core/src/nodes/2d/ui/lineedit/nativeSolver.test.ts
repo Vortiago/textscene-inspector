@@ -894,7 +894,7 @@ describe('shapeLineEditText — direction, language and structured override (lin
       shapeLineEditText(props.text ?? '', {
         fontSizePx: 16,
         fontMetrics: OPEN_SANS_FONT_METRICS,
-        bidi: controlBidiOptions(n.node.properties as LineEditProperties, n),
+        ...controlBidiOptions(n.node.properties as LineEditProperties, n),
       }).lines[0]!
     );
   }

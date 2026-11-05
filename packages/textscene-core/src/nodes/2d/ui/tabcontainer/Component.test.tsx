@@ -14,6 +14,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { ControlProperties } from '../control/types';
 import type { TabContainerProperties } from './types';
 import { TabContainer } from './Component';
+import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
@@ -156,9 +157,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
         subtreeChromeRenderOrder={9}
       />
     );
-    let parent = findTextMeshes(behind.scene)[0]!.parent;
-    while (parent && !(parent as THREE.Group).isGroup) parent = parent.parent;
-    expect(parent!.renderOrder).toBeCloseTo(9.5, 5);
+    expect(nearestGroupOrder(findTextMeshes(behind.scene)[0]!)).toBeCloseTo(9.5, 5);
   });
 });
 
