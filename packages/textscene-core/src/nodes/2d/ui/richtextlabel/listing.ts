@@ -30,6 +30,7 @@ import {
   type TagValuePick,
 } from './runStyle';
 import type { StyledTextRun } from './nativeSolver';
+import { countAtOrBelow } from '../../../../utils/countAtOrBelow';
 
 /** `ItemList`'s default bullet (`rich_text_label.cpp:7593`). */
 const DEFAULT_BULLET = '•';
@@ -488,16 +489,4 @@ export function paragraphListings(
     });
   });
   return listings;
-}
-
-/** The count of `ascending` at or below `value`, by binary search: a nested list asks once per row. */
-function countAtOrBelow(ascending: readonly number[], value: number): number {
-  let low = 0;
-  let high = ascending.length;
-  while (low < high) {
-    const middle = (low + high) >>> 1;
-    if (ascending[middle]! <= value) low = middle + 1;
-    else high = middle;
-  }
-  return low;
 }
