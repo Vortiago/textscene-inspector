@@ -41,7 +41,11 @@ import type { CodeHighlighterColorSpan } from '../../../../resources/styles/code
 import type { TextEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
+import {
+  CONTROL_FONT_COLOR,
+  CONTROL_FONT_DISABLED_COLOR,
+  CONTROL_FONT_PLACEHOLDER_COLOR,
+} from '../../../../godot/scene/theme';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** `SceneStringName(font)` = `"font"`: `default_theme.cpp:460` (TextEdit), `:501` (CodeEdit). */
@@ -90,21 +94,29 @@ const TEXT_EDIT_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
 /** TextEdit's `font_readonly_color` default (`default_theme.cpp:468`). CodeEdit computes the same value inline (`:516`). */
 const TEXT_EDIT_DEFAULT_READONLY_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
-const TEXT_EDIT_THEME_KEYS: Record<TextEditStyleState, TextThemeKeys> = {
+/** TextEdit's `font_placeholder_color` default (`default_theme.cpp:469`). CodeEdit's is the same (`:517`). */
+const TEXT_EDIT_DEFAULT_PLACEHOLDER_COLOR = CONTROL_FONT_PLACEHOLDER_COLOR;
+
+/** The text states `NOTIFICATION_DRAW` picks a colour for: the placeholder wins over `editable` (`text_edit.cpp:1346-1352`). */
+type TextEditTextState = TextEditStyleState | 'placeholder';
+
+const TEXT_EDIT_THEME_KEYS: Record<TextEditTextState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
   read_only: { sizeKey: 'font_size', colorKey: 'font_readonly_color' },
+  placeholder: { sizeKey: 'font_size', colorKey: 'font_placeholder_color' },
 };
 
-const TEXT_EDIT_DEFAULT_COLORS: Record<TextEditStyleState, Rgba> = {
+const TEXT_EDIT_DEFAULT_COLORS: Record<TextEditTextState, Rgba> = {
   normal: TEXT_EDIT_DEFAULT_FONT_COLOR,
   read_only: TEXT_EDIT_DEFAULT_READONLY_COLOR,
+  placeholder: TEXT_EDIT_DEFAULT_PLACEHOLDER_COLOR,
 };
 
 /** Resolves this node's theme font size and colour for `state` (overrides, else the ancestor Theme chain, theme default or TextEdit's literal). CodeEdit shares it, since its defaults are the same. */
 export function textEditTextTheme(
   n: SolveNode,
   props: TextEditProperties,
-  state: TextEditStyleState,
+  state: TextEditTextState,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = {
@@ -112,6 +124,19 @@ export function textEditTextTheme(
     color: TEXT_EDIT_DEFAULT_COLORS[state],
   };
   return resolveTextTheme(n, props, TEXT_EDIT_THEME_KEYS[state], defaults);
+}
+
+/**
+ * `_using_placeholder` (`text_edit.cpp:3377-3379`): a buffer of one empty line draws `placeholder_text` in its
+ * place, as one paragraph that breaks at its own newlines. A buffer of `\n` holds two lines and is real text.
+ */
+export function textEditDrawnLines(props: Pick<TextEditProperties, 'text' | 'placeholderText'>): {
+  lines: string[];
+  isPlaceholder: boolean;
+} {
+  const text = props.text ?? '';
+  if (text === '') return { lines: [props.placeholderText ?? ''], isPlaceholder: true };
+  return { lines: text.split('\n'), isPlaceholder: false };
 }
 
 /** A single buffer line's already-shaped rows plus its own start row index within the whole TextEdit. */
@@ -135,6 +160,11 @@ interface TextEditShapeOptions {
   indentWrappedLines?: boolean;
   /** Every line's direction, language and override ranges (`text_edit.cpp:3394-3401`). */
   bidi?: TextBidiOptions;
+  /**
+   * Shapes `lines` as the placeholder paragraph. Its override is dropped: `_update_placeholder` sets
+   * `placeholder_bidi_override` only when it is empty (`text_edit.cpp:3349-3351`), so none applies.
+   */
+  placeholder?: boolean;
 }
 
 /**
@@ -157,7 +187,9 @@ export function shapeTextEditLines(
     preserveControl = false,
     indentWrappedLines = false,
     bidi,
+    placeholder = false,
   } = options;
+  const lineBidi = placeholder ? { ...bidi, bidiOverride: undefined } : bidi;
   const mode =
     wrapMode === 1
       ? clampAutowrapMode(autowrapMode, AutowrapMode.AUTOWRAP_WORD_SMART)
@@ -173,7 +205,7 @@ export function shapeTextEditLines(
       tabStopsPx,
       preserveControl,
       trimIndent: indentWrappedLines,
-      ...bidi,
+      ...lineBidi,
     });
     const entry: TextEditLineLayout = { layout, startRow: row };
     row += layout.lines.length;
@@ -202,7 +234,7 @@ export function textEditWrapWidthPx(
 
 /**
  * `_update_scrollbars`'s `content_size_cache` (`text_edit.cpp:8601-8614`) for `fit_content_*`,
- * without the `scroll_past_end_of_file`/placeholder terms: `(max width + gutters + minimap when
+ * without the `scroll_past_end_of_file` term: `(max width + gutters + minimap when
  * drawn + 10, MAX(total_rows, 1) * line_height)`. `text.get_max_width()` is the widest row's ceiled
  * `data_buf` width, here the max `shapedTextSizeWidthPx` over every shaped row.
  */
@@ -288,7 +320,7 @@ export function textEditMinimumSizeWith(
         );
   const effectiveWrapMode = rectWidthPx === undefined ? 0 : props.wrapMode;
 
-  const lines = (props.text ?? '').split('\n');
+  const { lines, isPlaceholder } = textEditDrawnLines(props);
   const lineLayouts = shapeTextEditLines(lines, {
     fontSizePx,
     fontMetrics,
@@ -299,6 +331,7 @@ export function textEditMinimumSizeWith(
     preserveControl: props.drawControlChars,
     indentWrappedLines: props.indentWrappedLines,
     bidi: controlBidiOptions(props, n),
+    placeholder: isPlaceholder,
   });
   const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
   const content = textEditContentSize(

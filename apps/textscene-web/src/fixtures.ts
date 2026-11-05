@@ -2443,6 +2443,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Text Edit Placeholder",
+    "file": "unit-text-edit-placeholder.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Text Edit Rtl",
     "file": "unit-text-edit-rtl.tscn",
     "category": "Other"

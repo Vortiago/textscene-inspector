@@ -24,11 +24,13 @@ import {
   textEditCaretRect,
   textEditWrapIndentPx,
   textEditFirstIndentRow,
+  textEditDrawnLines,
 } from './nativeSolver';
 import { withVariation } from '../../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { TextEditProperties } from './types';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { StructuredTextParser } from '../../../../godot/text/textServerEnums';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const THEME = nativeTheme(1);
@@ -190,6 +192,69 @@ describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () =>
 
   it('floors the height at one row for an entirely empty buffer', () => {
     expect(fitHeight('')).toBe(ROW_HEIGHT_PX);
+  });
+
+  it('sizes an empty buffer by its placeholder rows and width (text_edit.cpp:8602,8608)', () => {
+    const placeholderProps = { text: '', placeholderText: 'a\nbb' };
+    expect(fitWidth(placeholderProps)).toBe(fitWidth({ text: 'bb' }));
+    expect(
+      textEditMinimumSize(node({ ...placeholderProps, fitContentHeight: true }), ctx()).y - STYLE_MIN_Y
+    ).toBe(2 * ROW_HEIGHT_PX);
+  });
+
+  it('ignores the placeholder once the buffer holds text', () => {
+    expect(fitWidth({ text: 'a', placeholderText: 'a much longer placeholder' })).toBe(
+      fitWidth({ text: 'a' })
+    );
+  });
+});
+
+describe('textEditDrawnLines', () => {
+  it('splits a buffer into its lines', () => {
+    expect(textEditDrawnLines({ text: 'a\nb' })).toEqual({ lines: ['a', 'b'], isPlaceholder: false });
+  });
+
+  it('shows the placeholder as one paragraph while the buffer is empty (text_edit.cpp:3377-3379)', () => {
+    expect(textEditDrawnLines({ text: '', placeholderText: 'a\nb' })).toEqual({
+      lines: ['a\nb'],
+      isPlaceholder: true,
+    });
+  });
+
+  it('treats an unset text as empty', () => {
+    expect(textEditDrawnLines({ placeholderText: 'x' }).isPlaceholder).toBe(true);
+  });
+
+  it('keeps a buffer of one newline as real text, since it holds two lines', () => {
+    expect(textEditDrawnLines({ text: '\n', placeholderText: 'x' }).isPlaceholder).toBe(false);
+  });
+});
+
+describe('shapeTextEditLines — placeholder', () => {
+  const OPTIONS = { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS };
+
+  it('breaks a placeholder paragraph at its newline into rows of the one entry', () => {
+    const [entry] = shapeTextEditLines(['a\nb'], { ...OPTIONS, placeholder: true });
+    expect(entry!.layout.lines).toHaveLength(2);
+  });
+
+  it('drops the structured-text override, which Godot never applies to a placeholder (text_edit.cpp:3348-3351)', () => {
+    const bidi = controlBidiOptions(
+      {
+        textDirection: 0,
+        language: '',
+        structuredTextBidiOverride: StructuredTextParser.STRUCTURED_TEXT_FILE,
+        structuredTextBidiOverrideOptions: [],
+      },
+      { rtl: false, locale: 'en' }
+    );
+    const text = 'שלום/world';
+    const shaped = (placeholder: boolean) =>
+      visualChars(shapeTextEditLines([text], { ...OPTIONS, bidi, placeholder })[0]!.layout.lines[0]!);
+    expect(shaped(true)).toBe(
+      visualChars(shapeTextEditLines([text], { ...OPTIONS, placeholder: true })[0]!.layout.lines[0]!)
+    );
+    expect(shaped(false)).not.toBe(shaped(true));
   });
 });
 

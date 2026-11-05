@@ -34,6 +34,7 @@ import {
   pickTextEditStyleBox,
   resolveTextEditStyleState,
   textEditTextTheme,
+  textEditDrawnLines,
   textEditRowHeightPx,
   textEditWrapWidthPx,
   shapeTextEditLines,
@@ -101,7 +102,19 @@ export function TextEditBody({
   const state = resolveTextEditStyleState(props.editable);
   const styleBox = pickTextEditStyleBox(solveNode.styleBoxes, theme.widgets.lineEdit, state);
 
-  const { fontSizePx, color: baseFontColor } = textEditTextTheme(solveNode, props, state, { theme });
+  // `_using_placeholder` swaps the buffer for `placeholder_text` and its colour whatever `editable` says (`:1350-1352`).
+  const { lines, isPlaceholder } = useMemo(
+    () => textEditDrawnLines(props),
+    // `props` is the painter's whole node object: these two fields are its identity for the drawn text.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [props.text, props.placeholderText]
+  );
+  const { fontSizePx, color: baseFontColor } = textEditTextTheme(
+    solveNode,
+    props,
+    isPlaceholder ? 'placeholder' : state,
+    { theme }
+  );
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, TEXT_EDIT_THEME_FONT_KEY);
   const lineSpacingPx = theme.separation; // nativeSolver.ts says why.
@@ -130,7 +143,8 @@ export function TextEditBody({
     [rect.w, styleBox, gutterBandWidthPx, props.minimapWidth, props.minimapDraw]
   );
 
-  const lines = useMemo(() => (props.text ?? '').split('\n'), [props.text]);
+  // The step-in reads line 0 of the buffer, which is empty while a placeholder draws (`:1480-1483`).
+  const indentsWrappedRows = props.indentWrappedLines && !isPlaceholder;
   const tabStopsPx = useMemo(
     () => textEditTabStopsPx(tabSize, fontMetrics, fontSizePx),
     [tabSize, fontMetrics, fontSizePx]
@@ -148,6 +162,7 @@ export function TextEditBody({
         preserveControl: props.drawControlChars,
         indentWrappedLines: props.indentWrappedLines,
         bidi,
+        placeholder: isPlaceholder,
       }),
     [
       lines,
@@ -160,11 +175,13 @@ export function TextEditBody({
       props.drawControlChars,
       props.indentWrappedLines,
       bidi,
+      isPlaceholder,
     ]
   );
 
   // `syntax_highlighter` resolves in this node's scope, never `useSceneResources()`. Only a
   // `CodeHighlighter` decodes: anything else leaves `highlighter` null, and lines paint at `font_color`.
+  // A placeholder paints at its own colour: the colour map of the empty buffer line is empty (`:1346-1352`).
   const highlighterResource = useSubOrExtResource(props.syntaxHighlighter, solveNode.resources)?.resource;
   const highlighter = useMemo(
     () =>
@@ -176,14 +193,14 @@ export function TextEditBody({
   // Threaded line by line: one open region (an unterminated string or comment)
   // carries into the next line (`highlight.ts`).
   const lineColorSpans = useMemo<(readonly CodeHighlighterColorSpan[])[] | null>(() => {
-    if (!highlighter) return null;
+    if (!highlighter || isPlaceholder) return null;
     let region = -1;
     return lines.map((lineText) => {
       const { spans, regionAtLineEnd } = resolveLineColors(lineText, highlighter, baseFontColor, region);
       region = regionAtLineEnd;
       return spans;
     });
-  }, [highlighter, lines, baseFontColor]);
+  }, [highlighter, isPlaceholder, lines, baseFontColor]);
 
   // `tint.own` (raw sRGB, `self_modulate` folded onto `modulate`) tints the StyleBoxQuad and every
   // font, highlight and icon colour before its one sRGB-to-linear conversion, as in LineEdit.
@@ -254,11 +271,11 @@ export function TextEditBody({
         const spans = lineColorSpans?.[lineIndex];
         // Computed whenever the wrap indent or the highlighter's spans need it.
         const rowStartIndices =
-          spans || props.indentWrappedLines ? textEditRowStartIndices(lineText, layout.lines) : undefined;
-        const wrapIndentPx = props.indentWrappedLines
+          spans || indentsWrappedRows ? textEditRowStartIndices(lineText, layout.lines) : undefined;
+        const wrapIndentPx = indentsWrappedRows
           ? textEditWrapIndentPx(layout.lines[0] ?? EMPTY_ROW, lineText, wrapWidthPx)
           : 0;
-        const firstIndentRow = props.indentWrappedLines
+        const firstIndentRow = indentsWrappedRows
           ? textEditFirstIndentRow(lineText, rowStartIndices ?? [0])
           : 0;
         return layout.lines.map((line, rowInLine) => {
