@@ -180,8 +180,9 @@ describe('solve handoff conformance', () => {
     );
     // Button's label shaping is not a share: its wrap width is a third input the
     // `(node, theme)` key cannot express. Its solver and painter still call one
-    // function, just not a memoised one.
-    expect(shares.length).toBeGreaterThanOrEqual(5);
+    // function, just not a memoised one. MenuButton sizes through `buttonMinimumSize`
+    // and shapes with Button's function, so it declares no share either.
+    expect(shares.length).toBeGreaterThanOrEqual(4);
   });
 
   it('opens `meta` only through a channel — no painter hand-rolls a shape guard', () => {

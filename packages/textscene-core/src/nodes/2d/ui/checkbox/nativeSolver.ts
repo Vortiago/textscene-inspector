@@ -18,12 +18,12 @@ import type {
 import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
-  buttonTextAlignShiftPx,
-  centredTextTopPx,
   fitIconSize,
+  reservedLabelBox,
+  textMinimumWidthPx,
   tintColor,
+  type ButtonLabelBox,
 } from '../../../../r3f/controls/native/buttonBase';
-import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -32,7 +32,6 @@ import {
 } from '../../../../r3f/controls/native/textTheme';
 import type { CheckBoxIcons } from '../../../../r3f/controls/native/themeIcons';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { CheckBoxProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import {
@@ -219,7 +218,8 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   // separation are added outside the ceil (`check_box.cpp:63-73`).
   const measured =
     hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
-  const textSize = { x: shapedTextSizeWidthPx(measured.x), y: measured.y };
+  // `clip_text` zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
+  const textSize = { x: textMinimumWidthPx(measured.x, props.clipText), y: measured.y };
 
   const iconSize = fitIconSize(checkBoxIconNaturalSize(n), checkBoxIconMaxWidth(n.constants));
   const hSeparation = checkBoxHSeparation(n.constants, ctx);
@@ -243,8 +243,10 @@ interface CheckBoxContentInput {
   checkVOffset: number;
   hSeparation: number;
   hasText: boolean;
-  /** The shaped text's natural (unwrapped) size, ignored when `hasText` is false. */
-  textNaturalSize: Vector2;
+  /** The shaped label's height, ignored when `hasText` is false. */
+  textHeightPx: number;
+  /** Text `alignment` (`HorizontalAlignment`). CheckBox's default is LEFT. */
+  textAlignment: number;
   /** `Control::is_layout_rtl()` (`SolveNode.rtl`): moves the check to the right edge and the label against it. */
   rtl: boolean;
 }
@@ -252,8 +254,8 @@ interface CheckBoxContentInput {
 interface CheckBoxContentLayout {
   /** The icon's top-left, local to the control's own top-left, Godot px. */
   iconPosition: Vector2;
-  /** The text paragraph's box top-left, local Godot px, for `<TextRun>`, which anchors each line at its baseline from there. `null` when there is no text. */
-  textOffset: Vector2 | null;
+  /** The label's paragraph box. `null` when there is no text. */
+  labelBox: ButtonLabelBox | null;
 }
 
 /**
@@ -262,32 +264,25 @@ interface CheckBoxContentLayout {
  * (`check_box.cpp:96-101`), never zero, so the gap is always `iconSize.x + h_separation`.
  */
 export function layoutCheckBoxContent(input: CheckBoxContentInput): CheckBoxContentLayout {
-  const { rectSize, margin, iconSize, checkVOffset, hSeparation, hasText, textNaturalSize, rtl } = input;
+  const { rectSize, margin, iconSize, checkVOffset, hSeparation, hasText, textHeightPx, textAlignment, rtl } =
+    input;
 
   // `int()` truncates the centring before the offset is added (`check_box.cpp:131-137`).
   const iconPosition: Vector2 = {
     x: rtl ? rectSize.x - margin - iconSize.x : margin,
     y: Math.trunc((rectSize.y - iconSize.y) / 2) + checkVOffset,
   };
+  if (!hasText) return { iconPosition, labelBox: null };
 
-  let textOffset: Vector2 | null = null;
-  if (hasText) {
-    const reserved = iconSize.x + hSeparation;
-    const customElementHeight = rectSize.y - 2 * margin;
-    const drawableWidth = rectSize.x - 2 * margin - reserved;
-    // `rtl` moves the reservation to SIDE_RIGHT (`:98-100`) and the icon to the right margin
-    // (`:129`), and the constructor's LEFT alignment (`:174`) swaps to RIGHT (`button.cpp:271-275`).
-    const x = rtl
-      ? margin +
-        buttonTextAlignShiftPx(
-          textNaturalSize.x,
-          drawableWidth,
-          HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT
-        )
-      : margin + reserved;
-    const y = centredTextTopPx(customElementHeight, textNaturalSize.y, margin);
-    textOffset = { x, y };
-  }
-
-  return { iconPosition, textOffset };
+  // `rtl` moves the reservation to SIDE_RIGHT (`:98-100`) and the icon to the right margin (`:129`).
+  const labelBox = reservedLabelBox({
+    rectSize,
+    margin: { left: margin, top: margin, right: margin, bottom: margin },
+    reservedPx: iconSize.x + hSeparation,
+    isReservedOnLeft: !rtl,
+    textHeightPx,
+    textAlignment,
+    rtl,
+  });
+  return { iconPosition, labelBox };
 }

@@ -169,7 +169,7 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   // over `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`):
   // the ceiled extent, not the raw pen advance.
   const textSize = layout ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx } : { x: 0, y: 0 };
-  // button.cpp:492-494: `clip_text`, a trimming overrun behaviour or autowrap zeroes the
+  // button.cpp:493-495: `clip_text`, a trimming overrun behaviour or autowrap zeroes the
   // text's width contribution, since a narrower box trims or wraps it. The icon still counts.
   const overrunBehavior = props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING;
   const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF);

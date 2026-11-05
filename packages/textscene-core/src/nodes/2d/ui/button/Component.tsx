@@ -15,7 +15,7 @@ import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
 import {
   clampAutowrapMode,
   shapedTextSizeWidthPx,
@@ -29,8 +29,6 @@ import {
   pickButtonStyleBox,
   tintColor,
   layoutButtonContent,
-  buttonDrawnLabel,
-  swapAlignmentSide,
 } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import { BUTTON_THEME_FONT_KEY, buttonLabelShape, buttonTextTheme, buttonIconColor } from './nativeSolver';
@@ -38,7 +36,13 @@ import type { ButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
-export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
+interface ButtonPainterProps extends NativeControlComponentProps {
+  /** The theme font size and colour for the Control's own class (`default_theme.cpp`). */
+  textTheme: typeof buttonTextTheme;
+}
+
+/** The painter every `Button` subclass that adds no draw code of its own shares. */
+export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textTheme }: ButtonPainterProps) {
   const props = painterView<ButtonProperties>(solveNode);
   const state = resolveButtonDrawState(props.disabled);
 
@@ -53,7 +57,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   // and icon colours before each one's single sRGB-to-linear conversion.
   const text = props.text ?? '';
   const hasText = text.length > 0;
-  const { fontSizePx, color: baseFontColor } = buttonTextTheme(solveNode, props, state, { theme });
+  const { fontSizePx, color: baseFontColor } = textTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, BUTTON_THEME_FONT_KEY);
@@ -124,10 +128,6 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   const naturalSize = (l: TextLayoutResult | null): Vector2 =>
     l ? { x: shapedTextSizeWidthPx(l.widthPx), y: l.heightPx } : { x: 0, y: 0 };
 
-  // `button.cpp:262-276`: the same RTL side swap `layoutButtonContent` makes internally.
-  const textAlignment = solveNode.rtl
-    ? swapAlignmentSide(props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER)
-    : (props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER);
   // `button.cpp:428-432` re-shapes a wrapping label at the width the unwrapped pass measured:
   // `is_clipped` is true under autowrap (`:332`), so the icon's reservation does not move
   // with the text. Godot reaches the same state over two frames.
@@ -181,11 +181,6 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
     fontSizePx,
   ]);
 
-  const drawnLabel = useMemo(
-    () => (trimmedLayout ? buttonDrawnLabel(trimmedLayout.lines, content.drawableSize.x, textAlignment) : []),
-    [trimmedLayout, content.drawableSize.x, textAlignment]
-  );
-
   return (
     <>
       {!props.flat && (
@@ -203,27 +198,20 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
           />
         </CanvasItemGroup>
       )}
-      {content.text !== null &&
-        trimmedLayout &&
-        drawnLabel.map(({ line, offsetXPx }, i) => (
-          // `TextParagraph::draw` shifts and cuts each line on its own (`text_paragraph.cpp:887-931`).
-          <CanvasItemGroup
-            key={i}
-            position={[
-              content.text!.boxLeftPx + offsetXPx,
-              -(content.text!.offset.y + i * trimmedLayout.linePitchPx),
-              0,
-            ]}
-          >
-            <TextRun
-              layout={soloLineLayout(line, trimmedLayout)}
-              fontSizePx={fontSizePx}
-              tint={tintedFontColor}
-              clippingPlanes={clippingPlanes}
-              renderOrder={renderOrder}
-            />
-          </CanvasItemGroup>
-        ))}
+      {content.labelBox && trimmedLayout && (
+        <ButtonLabel
+          layout={trimmedLayout}
+          box={content.labelBox}
+          fontSizePx={fontSizePx}
+          tint={tintedFontColor}
+          clippingPlanes={clippingPlanes}
+          renderOrder={renderOrder}
+        />
+      )}
     </>
   );
+}
+
+export function Button(props: NativeControlComponentProps) {
+  return <ButtonPainter {...props} textTheme={buttonTextTheme} />;
 }
