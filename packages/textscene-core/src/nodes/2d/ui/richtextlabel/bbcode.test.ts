@@ -10,6 +10,7 @@ import {
   parseBBCodeRuns,
   resolveBBColor,
   type ParsedImgTag,
+  type ParsedRuleTag,
 } from './bbcode';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
@@ -153,10 +154,6 @@ describe('parseBBCodeRuns', () => {
       expect(parseBBCodeRuns('[lrm][rlm][zwnj][shy]')).toEqual([
         { text: '\u200e\u200f\u200c\u00ad', tags: [] },
       ]);
-    });
-
-    it('consumes [hr] without opening it — `:5955` draws a rule and never pushes', () => {
-      expect(parseBBCodeRuns('a[hr]b')).toEqual([{ text: 'ab', tags: [] }]);
     });
 
     it('still opens [p] and [img], which DO push (`:5746`, `:5992`)', () => {
@@ -408,11 +405,106 @@ describe('parseBBCodeRuns paragraph breaks', () => {
     expect(parseBBCodeRuns('[b][p]x[/p][/b]').map((run) => run.text)).toEqual(['x']);
   });
 
-  it('ends a line that holds only an empty paragraph', () => {
-    expect(parseBBCodeRuns('[p][/p][p]x[/p]').map((run) => run.text)).toEqual(['\n', 'x']);
+  it.each(['[p][/p]', '[font_size=30][/font_size]', '[indent][/indent]', '[url=x][/url]', '[wave][/wave]'])(
+    'ends the line of %s with a break of no height, since the empty item counts (`:4097-4104`)',
+    (empty) => {
+      const runs = parseBBCodeRuns(`${empty}[p]x[/p]`);
+      expect(runs.map((run) => run.text)).toEqual(['\n', 'x']);
+      expect(runs[0]!.zeroHeightBreak).toBe(true);
+    }
+  );
+
+  it('gives a real break, not one of no height, to a line that holds text', () => {
+    expect(parseBBCodeRuns('a[p]x[/p]')[0]!.zeroHeightBreak).toBeUndefined();
+  });
+
+  it('still ends a line that holds text before an empty tag', () => {
+    expect(parseBBCodeRuns('a[font_size=30][/font_size][p]x[/p]').map((run) => run.text)).toEqual([
+      'a\n',
+      'x',
+    ]);
+  });
+
+  it('ends a line that holds only a list item, which draws its bullet (measured, Godot 4.6.3)', () => {
+    expect(parseBBCodeRuns('[ul][/ul][p]x[/p]').map((run) => run.text)).toEqual(['\n', 'x']);
   });
 
   it('adds no break after an [img] with no path, which adds no item (`:6145`)', () => {
     expect(parseBBCodeRuns('[img][/img][p]x[/p]').map((run) => run.text)).toEqual(['x']);
+  });
+});
+
+/** `[hr]` is `add_hr` (`rich_text_label.cpp:4159-4199`): its own paragraph item, then an image item. */
+describe('parseBBCodeRuns [hr]', () => {
+  const RULE: ParsedRuleTag = {
+    width: 90,
+    widthInPercent: true,
+    height: 2,
+    heightInPercent: false,
+    colorOption: undefined,
+  };
+  const ruleRun = (align: string | undefined = undefined, rule = RULE) => ({
+    text: IMAGE_OBJECT_CHAR,
+    tags: [{ name: 'hr', value: align }],
+    rule,
+  });
+
+  it('ends the line of the text before it and shares its own line with the text after it', () => {
+    expect(parseBBCodeRuns('abc[hr]def')).toEqual([
+      { text: 'abc\n', tags: [] },
+      ruleRun(),
+      { text: 'def', tags: [] },
+    ]);
+  });
+
+  it('adds no break before a rule that starts the text or follows only a styling tag (`:4097-4101`)', () => {
+    expect(parseBBCodeRuns('[hr]')).toEqual([ruleRun()]);
+    expect(parseBBCodeRuns('[b][/b][hr]')).toEqual([ruleRun()]);
+  });
+
+  it('gives a paragraph tag after a rule its own line, for the rule holds layout', () => {
+    expect(parseBBCodeRuns('[hr][p]x[/p]').map((run) => run.text)).toEqual([IMAGE_OBJECT_CHAR, '\n', 'x']);
+  });
+
+  it('keeps the tags open around it on the text either side, and opens none itself (`:5955`)', () => {
+    expect(parseBBCodeRuns('[b]a[hr]b[/b]')[2]).toEqual({
+      text: 'b',
+      tags: [{ name: 'b', value: undefined }],
+    });
+  });
+
+  it('reads align, color, width and height (`:5955-5983`)', () => {
+    expect(parseBBCodeRuns('[hr align=right color=red width=50 height=4%]')).toEqual([
+      ruleRun('right', {
+        width: 50,
+        widthInPercent: false,
+        height: 4,
+        heightInPercent: true,
+        colorOption: 'red',
+      }),
+    ]);
+  });
+
+  it('reads the percent of width from its suffix and the length with `to_int`', () => {
+    expect(parseBBCodeRuns('[hr width=30%]')[0]!.rule).toMatchObject({ width: 30, widthInPercent: true });
+    expect(parseBBCodeRuns('[hr width=12.9]')[0]!.rule).toMatchObject({ width: 12, widthInPercent: false });
+  });
+
+  it('keeps the align option as written, for `paragraphAlignment` to read', () => {
+    expect(parseBBCodeRuns('[hr align=fill]')[0]!.tags).toEqual([{ name: 'hr', value: 'fill' }]);
+    expect(parseBBCodeRuns('[hr align=l]')[0]!.tags).toEqual([{ name: 'hr', value: 'l' }]);
+  });
+
+  it('matches the tag by prefix, as `tag.begins_with("hr")` does (`:5955`)', () => {
+    expect(parseBBCodeRuns('a[hrx width=5]b').map((run) => run.text)).toEqual([
+      'a\n',
+      IMAGE_OBJECT_CHAR,
+      'b',
+    ]);
+  });
+
+  it('adds nothing for a negative width or height, which `add_hr` refuses (`:4167-4168`)', () => {
+    expect(parseBBCodeRuns('a[hr width=-1]b')).toEqual([{ text: 'ab', tags: [] }]);
+    expect(parseBBCodeRuns('a[hr height=-2]b')).toEqual([{ text: 'ab', tags: [] }]);
   });
 });
