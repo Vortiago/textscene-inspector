@@ -4,6 +4,7 @@ import {
   computeCanvasTextCanvasLayout,
   buildCanvasTextQuadArrays,
   createCanvasTextMaterial,
+  originPhase,
   paintSceneFontCanvas,
 } from './canvasTextPainter';
 import { withVariation } from './fontMetrics';
@@ -15,6 +16,7 @@ import { litPixelMaterial } from '../../../lighting2d/testing/litPixelMaterial';
 import { AutowrapMode, ContourPointTag } from '../../../../godot/text/textServerEnums';
 import type { GlyphContours } from './glyphContours';
 import type { SfntOutlines } from './sfntOutlines';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 const CANVAS_METRICS = createRuntimeFontMetrics({
   scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
@@ -54,10 +56,10 @@ function contentOriginOnQuad(canvasLayout: ReturnType<typeof computeCanvasTextCa
 }
 
 describe('computeCanvasTextCanvasLayout', () => {
-  it('with no skew, pads only for anti-aliasing overshoot: canvas content area equals the layout box', () => {
+  it('with no skew, adds no horizontal pad: the canvas is the layout box rounded up to a whole pixel', () => {
     const layout = layoutFor('AB');
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
-    expect(canvasLayout.canvasWidthPx).toBeCloseTo(layout.widthPx, 6);
+    expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx));
     expect(canvasLayout.offsetXPx).toBe(0);
   });
 
@@ -69,6 +71,12 @@ describe('computeCanvasTextCanvasLayout', () => {
     expect(computeCanvasTextCanvasLayout(narrowed, 0).canvasWidthPx).toBeCloseTo(16, 6);
   });
 
+  it('widens by the origin phase, which carries the content that far right of the quad', () => {
+    const layout = layoutFor('AB');
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0, 0, { x: 0.25, y: 0 });
+    expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx + 0.25));
+  });
+
   it('a nonzero skew widens the canvas symmetrically to fit the sheared ink, and offsets content by the same pad', () => {
     const layout = layoutFor('AB');
     const straight = computeCanvasTextCanvasLayout(layout, 0);
@@ -76,7 +84,22 @@ describe('computeCanvasTextCanvasLayout', () => {
     expect(skewed.canvasWidthPx).toBeGreaterThan(straight.canvasWidthPx);
     expect(skewed.offsetXPx).toBeGreaterThan(0);
     // Symmetric: padding added equally left/right.
-    expect(skewed.canvasWidthPx - layout.widthPx).toBeCloseTo(2 * skewed.offsetXPx, 6);
+    expect(skewed.canvasWidthPx).toBe(Math.ceil(layout.widthPx + 2 * skewed.offsetXPx));
+  });
+
+  // A fractional pad puts each texel between two screen pixels, and the linear filter then thins
+  // every edge: an emboldened 32 px run drew 3% less ink than Godot.
+  it('pads by whole pixels, so each texel of the raster lands on a screen pixel', () => {
+    const emboldened = shapeText('AB', {
+      fontSizePx: 32,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      fontMetrics: withVariation(CANVAS_METRICS, { embolden: 1.8 }),
+      lineSpacingPx: 3,
+    });
+    const canvasLayout = computeCanvasTextCanvasLayout(emboldened, 0.3, 1.5);
+    expect(Number.isInteger(canvasLayout.offsetXPx)).toBe(true);
+    expect(Number.isInteger(canvasLayout.offsetYPx)).toBe(true);
   });
 
   it('canvas height always exceeds the layout height by the same fixed vertical pad, independent of skew', () => {
@@ -130,8 +153,15 @@ function paintRecording(
     skew = 0,
     outlines = null,
     quantisesPen,
-    penOriginXPx,
-  }: { skew?: number; outlines?: SfntOutlines | null; quantisesPen?: boolean; penOriginXPx?: number } = {}
+    originPhasePx,
+    fontSizePx = 16,
+  }: {
+    fontSizePx?: number;
+    skew?: number;
+    outlines?: SfntOutlines | null;
+    quantisesPen?: boolean;
+    originPhasePx?: Vector2;
+  } = {}
 ) {
   const calls: Call[] = [];
   let matrix = new DOMMatrix();
@@ -160,11 +190,18 @@ function paintRecording(
   };
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never);
   const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
-  paintSceneFontCanvas(carrying(layout, skew, outlines), 16, { r: 1, g: 1, b: 1, a: 1 }, skew, canvasLayout, {
-    strokeWidthPx,
-    quantisesPen,
-    penOriginXPx,
-  });
+  paintSceneFontCanvas(
+    carrying(layout, skew, outlines),
+    fontSizePx,
+    { r: 1, g: 1, b: 1, a: 1 },
+    skew,
+    canvasLayout,
+    {
+      strokeWidthPx,
+      quantisesPen,
+      originPhasePx,
+    }
+  );
   return { calls, canvasLayout };
 }
 
@@ -181,12 +218,12 @@ function boldLayoutFor(text: string, embolden: number) {
 // `FT_Outline_Embolden` grows the outline by `embolden * size / 16` px and anchors it at the left
 // and bottom (`text_server_adv.cpp:1314-1315`): half the growth on each side, then a shift of half.
 describe('embolden padding', () => {
+  // The growth is 1.2 * 16 / 16 = 1.2 px, which the pad rounds up to 2 whole pixels.
   it('pads the raster by the outline growth on every side, so the grown ink stays inside it', () => {
     const plain = computeCanvasTextCanvasLayout(layoutFor('AB', 0), 0);
     const bold = computeCanvasTextCanvasLayout(boldLayoutFor('AB', 1.2), 0);
-    const growthPx = (1.2 * 16) / 16;
-    expect(bold.offsetXPx).toBeCloseTo(plain.offsetXPx + growthPx, 10);
-    expect(bold.offsetYPx).toBeCloseTo(plain.offsetYPx + growthPx, 10);
+    expect(bold.offsetXPx).toBe(plain.offsetXPx + 2);
+    expect(bold.offsetYPx).toBe(plain.offsetYPx + 2);
   });
 
   it('pads by the largest growth when two glyphs differ', () => {
@@ -209,23 +246,63 @@ describe('paintSceneFontCanvas — pen', () => {
     expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 10.5);
   });
 
-  it('rounds the pen where it sits in the canvas item, its run origin included', () => {
-    const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, { penOriginXPx: 0.3 });
-    // 0.3 + 10.6 = 10.9 rounds to the quarter step 11, which is 10.7 past the run origin.
-    expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBeCloseTo(
-      canvasLayout.offsetXPx + 10.7,
+  it('rounds the pen where it sits in the canvas item, past the whole pixel the quad starts on', () => {
+    const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, {
+      originPhasePx: { x: 0.3, y: 0 },
+    });
+    // 0.3 + 10.6 = 10.9 rounds to the quarter step 11, and the quad starts at the floored origin 0.
+    expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 11);
+  });
+
+  // `text_server_adv.cpp:4082-4084`: a glyph at scale 1 draws at the floored `cpos.y`.
+  it('puts the baseline on the whole pixel a canvas item floors it to, its run origin included', () => {
+    const layout = layoutFor('A\nB', 0.5);
+    const { calls, canvasLayout } = paintRecording(layout, 0, { originPhasePx: { x: 0, y: 0.6 } });
+    // The second baseline sits 17.5 + 13 px down, which the origin carries to 31.1 and the floor to 31.
+    expect(layout.linePitchPx + layout.baselineOffsetPx).toBeCloseTo(30.5, 9);
+    expect(calls.filter((c) => c.op === 'fillText')[1]!.args[2]).toBe(canvasLayout.offsetYPx + 31);
+  });
+
+  // Godot's `int64_t` size has no fraction, so a fractional one draws at `scale != 1.0` (`canvasGlyphPenXPx`).
+  it('keeps the baseline of a fractional font size, which draws off the scale-1 branch', () => {
+    const layout = layoutFor('A\nB', 0.5);
+    const { calls, canvasLayout } = paintRecording(layout, 0, {
+      fontSizePx: 15.5,
+      originPhasePx: { x: 0, y: 0.6 },
+    });
+    expect(calls.filter((c) => c.op === 'fillText')[1]!.args[2]).toBeCloseTo(
+      canvasLayout.offsetYPx + 30.5,
       9
     );
   });
 
   it('keeps the pen of a Label3D, whose mesh places each glyph where it is', () => {
-    const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, { quantisesPen: false });
+    const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, {
+      quantisesPen: false,
+      originPhasePx: { x: 0.3, y: 0.6 },
+    });
     expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 10.6);
+  });
+
+  it('keeps the baseline of a Label3D', () => {
+    const layout = fractionalPenLayout();
+    const { calls, canvasLayout } = paintRecording(layout, 0, {
+      quantisesPen: false,
+      originPhasePx: { x: 0.3, y: 0.6 },
+    });
+    expect(calls.filter((c) => c.op === 'fillText')[0]!.args[2]).toBe(
+      canvasLayout.offsetYPx + layout.baselineOffsetPx
+    );
   });
 });
 
 describe('paintSceneFontCanvas — embolden', () => {
   afterEach(() => vi.restoreAllMocks());
+
+  it('rasterises on the CPU, whose exact-area coverage FreeType shares, not the GPU path rasteriser', () => {
+    paintRecording(layoutFor('A', 0), 0);
+    expect(HTMLCanvasElement.prototype.getContext).toHaveBeenCalledWith('2d', { willReadFrequently: true });
+  });
 
   it('draws a plain glyph with one fill and no stroke', () => {
     const { calls } = paintRecording(layoutFor('A', 0), 0);
@@ -431,6 +508,12 @@ describe('the outline surface overlays the fill surface exactly', () => {
   });
 });
 
+describe('originPhase', () => {
+  it('measures a negative place from the whole pixel below it, where Godot floors it', () => {
+    expect(originPhase({ x: -0.25, y: 2.75 })).toEqual({ x: 0.75, y: 0.75 });
+  });
+});
+
 describe('buildCanvasTextQuadArrays', () => {
   it('emits exactly one quad (4 verts, 6 indices) regardless of glyph count', () => {
     const layout = layoutFor('Hello World');
@@ -451,10 +534,17 @@ describe('buildCanvasTextQuadArrays', () => {
     const trX = arrays.positions[3]!;
     const blY = arrays.positions[2 * 3 + 1]!;
     expect(tlX).toBeCloseTo(-canvasLayout.offsetXPx, 6);
-    expect(trX).toBeCloseTo(layout.widthPx + canvasLayout.offsetXPx, 6);
+    expect(trX).toBeCloseTo(canvasLayout.canvasWidthPx - canvasLayout.offsetXPx, 6);
     // Y is negated (three-local Y-up); top edge y = -(-offsetYPx) = offsetYPx (above the content box).
     expect(tlY).toBeCloseTo(canvasLayout.offsetYPx, 6);
     expect(blY).toBeCloseTo(-(canvasLayout.canvasHeightPx - canvasLayout.offsetYPx), 6);
+  });
+
+  it('moves back to the whole pixel at or before a fractional item origin, so each texel lands on a pixel', () => {
+    const canvasLayout = computeCanvasTextCanvasLayout(layoutFor('AB'), 0);
+    const arrays = buildCanvasTextQuadArrays(canvasLayout, { x: 0.25, y: 0.75 });
+    expect(arrays.positions[0]).toBeCloseTo(-canvasLayout.offsetXPx - 0.25, 6);
+    expect(arrays.positions[1]).toBeCloseTo(canvasLayout.offsetYPx + 0.75, 6);
   });
 
   it('UVs cover the full [0,1] texture with flipY convention (top edge v=1)', () => {

@@ -17,7 +17,7 @@ import { LitCanvasItemPixels, type CanvasItemPixelMaterial } from './LitCanvasIt
 import { EffectiveZProvider, accumulateCanvasItemZ, useEffectiveZ } from '../lighting2d/canvasItemPlacement';
 import { useCanvasItemRenderOrder } from '../contexts/PaintOrderContext';
 import { useAnimatedValue } from '../contexts/AnimatedValueContext';
-import { CanvasItemKeyProvider } from './CanvasItemGroup';
+import { CanvasItemProvider } from './CanvasItemGroup';
 import { CanvasItemMaterialProvider, useCanvasItemMaterial } from './canvasItemMaterialContext';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 import type { CanvasItemSurface } from '../lighting2d/normalMappedLighting';
@@ -91,7 +91,7 @@ export function CanvasItem2D({ node, props, body, surface = null, ownItems, chil
       visible={animatedVisible ?? props.visible !== false}
       renderOrder={renderOrder}
     >
-      <CanvasItemKeyProvider value={renderOrder}>
+      <CanvasItemProvider value={renderOrder}>
         {body && (
           <LitCanvasItemPixels
             material={material}
@@ -103,7 +103,7 @@ export function CanvasItem2D({ node, props, body, surface = null, ownItems, chil
           </LitCanvasItemPixels>
         )}
         {ownItems?.(tint, material, effectiveZ)}
-      </CanvasItemKeyProvider>
+      </CanvasItemProvider>
       <Modulate2DContext.Provider value={tint.inherited}>
         {/* Descendants inherit through `use_parent_material` what this node
             resolved, a null included, which stops an inherited material. */}

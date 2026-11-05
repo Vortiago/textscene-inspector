@@ -2,7 +2,7 @@
  * The theme text outline of the Controls that draw a text buffer's outline under its fill:
  * Button, CheckBox, CheckButton, OptionButton and MenuButton (`button.cpp:458-462`), LinkButton
  * (`link_button.cpp:294-301`), the FoldableContainer title (`foldable_container.cpp:310-312`) and
- * ItemList items (`item_list.cpp:1642-1644`). `<TextRun>` is stubbed to read the props each
+ * ItemList items (`item_list.cpp:1642-1644`). `<TextRunMesh>` is stubbed to read the props each
  * painter hands it.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -37,8 +37,8 @@ interface RunProps {
 
 const scene = vi.hoisted(() => ({ runs: [] as RunProps[] }));
 
-vi.mock('../../../../r3f/controls/native/text/TextRun', () => ({
-  TextRun: (props: RunProps) => {
+vi.mock('../../../../r3f/controls/native/text/TextRunMesh', () => ({
+  TextRunMesh: (props: RunProps) => {
     scene.runs.push(props);
     return null;
   },

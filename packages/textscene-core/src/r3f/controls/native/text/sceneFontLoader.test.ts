@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fontFile } from './sfntOutlines.testkit';
 import { peekSceneFontMetrics, peekSettledSceneFontMetrics } from './sceneFontLoader';
-import { fontWork, notifySceneFontSettled, onSceneFontSettled, sceneFontSettleCount } from './settledChannel';
+import { fontWork, onSceneFontSettled, sceneFontSettleCount } from './settledChannel';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import * as logger from '../../../../logger';
 import type { FontResource } from '../../../../resources/fonts/font/types';
@@ -232,24 +232,6 @@ describe('onSceneFontSettled', () => {
     } finally {
       offA();
       offB();
-    }
-  });
-});
-
-describe('notifySceneFontSettled', () => {
-  it('calls every listener after one throws, then rethrows the first error', () => {
-    const failure = new Error('listener failed');
-    const later = vi.fn();
-    const offFailing = onSceneFontSettled(() => {
-      throw failure;
-    });
-    const offLater = onSceneFontSettled(later);
-    try {
-      expect(() => notifySceneFontSettled()).toThrow(failure);
-      expect(later).toHaveBeenCalledTimes(1);
-    } finally {
-      offFailing();
-      offLater();
     }
   });
 });
