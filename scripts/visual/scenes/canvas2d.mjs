@@ -288,6 +288,7 @@ export const CANVAS_2D_SCENES = [
   { name: 'label-bmfont', file: 'unit-label-bmfont.tscn', mode: '2d' },
   // The one variable: a BMFont's outline set, which Godot draws for any `outline_size` above 0.
   { name: 'label-bmfont-outline', file: 'unit-label-bmfont-outline.tscn', mode: '2d' },
+  // The one variable: `variation_opentype` at `wght` 700 over Cascadia Code, whose `gvar` deltas move the outlines.
   { name: 'label-font-variation-instance', file: 'unit-label-font-variation-instance.tscn', mode: '2d' },
   // The one variable: `variation_opentype` at `MONO` 0.5 over Recursive, whose `GPOS` kerning halves at that instance.
   { name: 'label-font-variation-kerning', file: 'unit-label-font-variation-kerning.tscn', mode: '2d' },

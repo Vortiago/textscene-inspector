@@ -33,8 +33,12 @@ const MEASURED_KERNING_UNITS = 99;
 /** HarfBuzz scales a `GPOS` value to whole 1/64 px, where this shaper keeps the scaled float. */
 const HARFBUZZ_STEP_PX = 1 / 64;
 
+const UNITS_PER_EM = 1000;
+/** At the face's units per em, a kerning in px equals the kerning in design units. */
+const UNIT_SIZE_PX = UNITS_PER_EM;
+
 const canvasFace = createRuntimeFontMetrics({
-  scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
+  scalars: { unitsPerEm: UNITS_PER_EM, ascent: 800, descent: 200 },
   measureWidthUnits: (text) => (text.length === 2 ? 1000 + MEASURED_KERNING_UNITS : 500),
   cssFontFamily: 'variable-font-test',
 });
@@ -65,6 +69,6 @@ describe('the kerning of a variable font at an instance', () => {
       opentype: opentypeOf({ 1297043023: 0.5 }),
       outlines: await recursiveOutlines(),
     });
-    expect(face.getKerningAdjustmentUnits('A', '一')).toBe(MEASURED_KERNING_UNITS);
+    expect(getFontKerningAdjustmentPx(face, 'A', '一', UNIT_SIZE_PX)).toBe(MEASURED_KERNING_UNITS);
   });
 });

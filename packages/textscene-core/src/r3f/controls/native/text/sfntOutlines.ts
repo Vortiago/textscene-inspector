@@ -96,9 +96,12 @@ async function openOutlines(
 async function kerningReaderOf(sfnt: SfntFile): Promise<InstanceKerningReader | null> {
   if (!sfnt.tables.has('GPOS') || !sfnt.tables.has('fvar')) return null;
   const { instanceKerningReader } = await import('./variation/instanceKerning');
+  // Undefined until an instance first asks. Null is a font with no `kern` feature, read only once.
   let readerAt: ReturnType<typeof instanceKerningReader> | undefined;
-  return (normalized) =>
-    (readerAt ??= orOnRangeError(() => instanceKerningReader(sfnt), null))?.(normalized) ?? null;
+  return (normalized) => {
+    if (readerAt === undefined) readerAt = orOnRangeError(() => instanceKerningReader(sfnt), null);
+    return readerAt?.(normalized) ?? null;
+  };
 }
 
 /**
@@ -113,7 +116,7 @@ function instanceKerningOf(
   const kept = new WeakMap<OpentypeCoordinates, PairKerningReader | null>();
   return (left, right, opentype) => {
     if (!kept.has(opentype)) {
-      const instance = fontInstanceOf(sfnt, opentype);
+      const instance = orOnRangeError(() => fontInstanceOf(sfnt, opentype), null);
       const kerningOf = instance && kerningAt(instance.normalized);
       kept.set(opentype, kerningOf && keptPairs(kerningOf));
     }
@@ -220,6 +223,6 @@ function readSfntOutlines(
         return outline && variedContours(outline, fontSizePx, variation);
       }, null),
     kerningAtInstance: instanceKerningOf(sfnt, kerningAt),
-    drawsInstance: (opentype) => fontInstanceOf(sfnt, opentype) !== null,
+    drawsInstance: (opentype) => orOnRangeError(() => fontInstanceOf(sfnt, opentype) !== null, false),
   };
 }
