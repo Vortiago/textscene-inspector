@@ -126,6 +126,8 @@ export interface CanvasTextPaintOptions {
   strokeWidthPx?: number;
   /** Rounds each pen as a canvas item draws a glyph (`canvasGlyphPenXPx`). False for Label3D, whose mesh keeps the pen (`label_3d.cpp:347`). */
   quantisesPen?: boolean;
+  /** Where the run's x 0 sits in its canvas item, which the rounded pen includes. 0 by default. */
+  penOriginXPx?: number;
 }
 
 /**
@@ -143,7 +145,7 @@ export function paintSceneFontCanvas(
   tint: Rgba,
   skew: number,
   canvasLayout: CanvasTextCanvasLayout,
-  { strokeWidthPx = 0, quantisesPen = true }: CanvasTextPaintOptions = {}
+  { strokeWidthPx = 0, quantisesPen = true, penOriginXPx = 0 }: CanvasTextPaintOptions = {}
 ): HTMLCanvasElement {
   const metrics = layout.fontMetrics;
   if (!isCanvasFontMetrics(metrics)) {
@@ -213,7 +215,9 @@ export function paintSceneFontCanvas(
     if (skew !== 0 && !contourOutlines) shearAboutBaseline(ctx, skew, baselineY);
     for (const gp of line.glyphs) {
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
-      const penX = canvasLayout.offsetXPx + (quantisesPen ? canvasGlyphPenXPx(gp.x, fontSizePx) : gp.x);
+      const penX =
+        canvasLayout.offsetXPx +
+        (quantisesPen ? canvasGlyphPenXPx(penOriginXPx + gp.x, fontSizePx) - penOriginXPx : gp.x);
       // A glyph shaped with no growth, in a layout that is not sheared, stays on its plain ring.
       const hasVariedGlyph = skew !== 0 || gp.emboldenGrowthPx;
       const contours = contoursOf && hasVariedGlyph ? contoursOf(gp.char) : null;

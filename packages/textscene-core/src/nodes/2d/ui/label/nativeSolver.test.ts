@@ -910,6 +910,23 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(revealed!.glyphs.map((glyph) => glyph.sourceIndex)).toEqual([0, 1, 2, 3, 5, 4]);
   });
 
+  it('VC_CHARS_AFTER_SHAPING hides the ellipsis of a paragraph that starts past the budget, plus one', () => {
+    // An ellipsis glyph's `end` is -1 (`text_server.h:628`), so `-1 + para_start > visible_chars` hides it.
+    const ellipsis = { char: '…', x: 0, advance: 1, glyph: null };
+    const withEllipsis = (paragraphStart: number): TextLineLayout => ({
+      ...fakeLine(0),
+      glyphs: [ellipsis],
+      paragraphStart,
+    });
+    const [kept, hidden] = applyVisibleCharsReveal([withEllipsis(3), withEllipsis(4)], {
+      behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+      visibleChars: 2,
+      visibleRatio: undefined,
+    });
+    expect(kept!.glyphs).toEqual([ellipsis]);
+    expect(hidden!.glyphs).toEqual([]);
+  });
+
   it('VC_GLYPHS_AUTO/LTR reveal GLYPHS from the FRONT, budgeted by visible_ratio * total_glyphs', () => {
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
@@ -1196,6 +1213,23 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
       }
     );
     expect(placements[0]!.x).toBe(0);
+  });
+});
+
+describe('layoutLabelLines — the overrun trim (label.cpp:302-332)', () => {
+  it('aligns a RIGHT line by its trimmed width, as `_shape` trims before `_get_line_rect` reads it', () => {
+    const layout = shapeText('A long line of text that overruns', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+    });
+    const trimTo60 = (line: TextLineLayout): TextLineLayout => ({ ...line, widthPx: 60 });
+    const [placement] = layoutLabelLines(layout, 100, 40, 2, undefined, undefined, 16, {
+      trimLine: trimTo60,
+    });
+    expect(placement!.line.widthPx).toBe(60);
+    expect(placement!.x).toBe(40);
   });
 });
 

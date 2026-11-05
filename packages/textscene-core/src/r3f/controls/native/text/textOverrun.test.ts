@@ -4,7 +4,7 @@
  * 'A' 1354 -> 10.578125, 'B' 1350 -> 10.546875, space 532 -> 4.15625, '…' 1672 -> 13.0625.
  */
 import { describe, expect, it } from 'vitest';
-import { shapeText } from './textLayout';
+import { shapeText, type TextLineLayout } from './textLayout';
 import { getFontEmboldenedAdvancePx, withVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { overrunFlagsForBehavior, trimLineToWidth, type OverrunTrimFlags } from './textOverrun';
@@ -28,6 +28,11 @@ function trim(text: string, widthPx: number, flags: OverrunTrimFlags, ellipsisCh
     fontSizePx: FONT_SIZE_PX,
     ellipsisChar,
   });
+}
+
+/** The characters a trimmed line draws, left to right. */
+function drawnText(trimmed: TextLineLayout): string {
+  return trimmed.glyphs.map((glyph) => glyph.char).join('');
 }
 
 describe('overrunFlagsForBehavior', () => {
@@ -57,12 +62,12 @@ describe('overrunFlagsForBehavior', () => {
 describe('trimLineToWidth', () => {
   it('NO_TRIMMING leaves the line untouched however narrow the box (text_server_adv.cpp:5958)', () => {
     const result = trim('AAAAAAAAAA', 10, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_NO_TRIMMING));
-    expect(result.text).toBe('AAAAAAAAAA');
+    expect(drawnText(result)).toBe('AAAAAAAAAA');
   });
 
   it('a line that already fits and is not enforced is untouched (text_server_adv.cpp:5958, `sd->width > p_width`)', () => {
     const result = trim('AAAA', 200, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS));
-    expect(result.text).toBe('AAAA');
+    expect(drawnText(result)).toBe('AAAA');
     expect(result.widthPx).toBeCloseTo(4 * 10.578125, 10);
   });
 
@@ -70,7 +75,7 @@ describe('trimLineToWidth', () => {
     // 10 A's = 105.78125px; backward search finds i=4 the first index where
     // width-after-removal (42.3125) fits 50 (text_server_adv.cpp:6069-6108).
     const result = trim('AAAAAAAAAA', 50, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_CHAR));
-    expect(result.text).toBe('AAAA');
+    expect(drawnText(result)).toBe('AAAA');
     expect(result.widthPx).toBeCloseTo(4 * 10.578125, 10);
   });
 
@@ -78,7 +83,7 @@ describe('trimLineToWidth', () => {
     // Same cut as TRIM_CHAR above: the fitting prefix (4 chars) is below the
     // 6-character ellipsis threshold, so add_ellipsis never gets a chance.
     const result = trim('AAAAAAAAAA', 50, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS));
-    expect(result.text).toBe('AAAA');
+    expect(drawnText(result)).toBe('AAAA');
     expect(result.widthPx).toBeCloseTo(4 * 10.578125, 10);
   });
 
@@ -86,7 +91,7 @@ describe('trimLineToWidth', () => {
     // 12 A's = 126.9375px; i=8 is the first index (>= 6) whose remaining
     // width (84.625) plus the ellipsis budget (13, truncated) fits 100.
     const result = trim('AAAAAAAAAAAA', 100, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS));
-    expect(result.text).toBe('AAAAAAAA…');
+    expect(drawnText(result)).toBe('AAAAAAAA…');
     expect(result.widthPx).toBeCloseTo(8 * 10.578125 + 13.0625, 10);
   });
 
@@ -118,13 +123,13 @@ describe('trimLineToWidth', () => {
       90,
       overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS)
     );
-    expect(result.text).toBe('AAAAAA …');
+    expect(drawnText(result)).toBe('AAAAAA …');
     expect(result.widthPx).toBeCloseTo(6 * 10.578125 + 4.15625 + 13.0625, 10);
   });
 
   it('ENFORCE_ELLIPSIS appends the ellipsis even when the line already fits, drawing every original glyph (text_server_adv.cpp:5958,6065-6067; text_server.cpp:1768-1777 trim_pos<0)', () => {
     const result = trim('AAAA', 200, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE));
-    expect(result.text).toBe('AAAA…');
+    expect(drawnText(result)).toBe('AAAA…');
     expect(result.widthPx).toBeCloseTo(4 * 10.578125 + 13.0625, 10);
   });
 
@@ -135,7 +140,7 @@ describe('trimLineToWidth', () => {
       overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS),
       '●'
     );
-    expect(result.text).toBe('AAAAAAAA...');
+    expect(drawnText(result)).toBe('AAAAAAAA...');
   });
 });
 
@@ -179,6 +184,13 @@ describe('trimLineToWidth — a right-to-left line (text_server_adv.cpp:6053-611
     const result = trimRtl(full.widthPx + 100, OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE);
     expect(result.glyphs[0]!.char).toBe('…');
     expect(result.glyphs.length).toBe(full.glyphs.length + 1);
+  });
+
+  it('keeps no glyph when only the logically first one fits, as the cut loop stops before it', () => {
+    const full = line(HEBREW);
+    const firstGlyph = full.glyphs.at(-1)!;
+    const result = trimRtl(firstGlyph.advance + 0.5, OverrunBehavior.OVERRUN_TRIM_CHAR);
+    expect(result.glyphs).toEqual([]);
   });
 
   it('keeps the left-to-right trim over the visual order without the option', () => {

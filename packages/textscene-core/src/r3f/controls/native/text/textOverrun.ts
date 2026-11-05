@@ -202,10 +202,11 @@ export function trimLineToWidth(
     : keptWithEllipsis(trimPos < 0 ? glyphs : glyphs.slice(0, trimPos), ellipsis);
   const last = finalGlyphs.at(-1);
   return {
-    text: finalGlyphs.map((g) => g.char).join(''),
+    text: line.text,
     glyphs: finalGlyphs,
     widthPx: last ? last.x + last.advance : 0,
     paragraphIndex: line.paragraphIndex,
+    paragraphStart: line.paragraphStart,
     isRtl: line.isRtl,
   };
 }
@@ -265,7 +266,9 @@ function findCut(
   // min-characters fallback. Its width is not carried, since the final width comes from the kept glyphs.
   let lastValidCutWithoutEl = -1;
   const step = isRtl ? 1 : -1;
-  for (let i = isRtl ? 0 : length - 1; i >= 0 && i < length; i += step) {
+  // `glyphs_to` is `sd_size - 1` for RTL (`:6062`), so the cut never keeps the last glyph alone.
+  const stopAt = isRtl ? length - 1 : -1;
+  for (let i = isRtl ? 0 : length - 1; i !== stopAt; i += step) {
     const glyph = glyphs[i]!;
     if (!isRtl) width -= glyph.advance;
     const isAboveMinCharThreshold = (isRtl ? length - 1 - i : i) >= ELL_MIN_CHARACTERS;

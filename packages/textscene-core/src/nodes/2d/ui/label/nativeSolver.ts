@@ -331,18 +331,24 @@ export function applyVisibleCharsReveal(
   return revealGlyphs(lines, budget);
 }
 
-/** CHARS_AFTER_SHAPING. An ellipsis glyph has no source character, so it stays. */
+/**
+ * CHARS_AFTER_SHAPING. An ellipsis glyph has no source character: its `end` is -1 (`text_server.h:628`),
+ * so it hides where `paragraphStart - 1 > visibleChars`.
+ */
 function revealCharacters(
   lines: readonly TextLineLayout[],
   visibleChars: number | undefined
 ): TextLineLayout[] {
   if (visibleChars === undefined || visibleChars < 0) return [...lines];
-  return lines.map((line) => ({
-    ...line,
-    glyphs: line.glyphs.filter(
-      (glyph) => glyph.sourceIndex === undefined || glyph.sourceIndex < visibleChars
-    ),
-  }));
+  return lines.map((line) => {
+    const isEllipsisShown = (line.paragraphStart ?? 0) - 1 <= visibleChars;
+    return {
+      ...line,
+      glyphs: line.glyphs.filter((glyph) =>
+        glyph.sourceIndex === undefined ? isEllipsisShown : glyph.sourceIndex < visibleChars
+      ),
+    };
+  });
 }
 
 /** The GLYPHS behaviours: `visible_ratio * total_glyphs` glyphs, counted in visual order across lines. */
@@ -551,6 +557,8 @@ interface LabelLayoutOptions extends Partial<LabelSpacing> {
   rtl?: boolean;
   /** `autowrap_mode != AUTOWRAP_OFF`, the gate of FILL's RTL arm (`label.cpp:473`). Defaults `false`. */
   isAutowrapped?: boolean;
+  /** The overrun trim `_shape` runs on each line after the fit, before `_get_line_rect` aligns it (`label.cpp:319-330`). */
+  trimLine?: (line: TextLineLayout) => TextLineLayout;
 }
 
 /**
@@ -572,6 +580,7 @@ export function layoutLabelLines(
   const {
     rtl = false,
     isAutowrapped = false,
+    trimLine,
     lineSpacingPx = LABEL_LINE_SPACING_PX,
     paragraphSpacingPx = LABEL_PARAGRAPH_SPACING_PX,
   } = options;
@@ -608,13 +617,14 @@ export function layoutLabelLines(
   const isFill = (horizontalAlignment ?? H_LEFT) === H_FILL;
   // `_shape` justifies at the truncated `int width` it broke the lines at (`label.cpp:297,331`),
   // not the raw `get_size()` that `_get_line_rect` reads.
-  const lines = isFill
+  const fitted = isFill
     ? justifyParagraphs(layout.lines, {
         widthPx: labelShapingWidthPx(boxWidthPx),
         flags: justificationFlags,
         fontSizePx,
       })
     : layout.lines;
+  const lines = trimLine ? fitted.map(trimLine) : fitted;
 
   return lines.map((line, lineIndex) => {
     if (lineIndex > 0 && startsParagraph(lines, lineIndex)) {

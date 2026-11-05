@@ -107,6 +107,8 @@ export interface TextRunProps {
    * its mesh keeps the pen (`label_3d.cpp:347`). Canvas runs only: the MSDF atlas keeps the pen too.
    */
   quantisesPen?: boolean;
+  /** Where the run's x 0 sits in its canvas item, which a rounded pen includes (`text_server_adv.cpp:4074-4084`). Canvas runs only. */
+  penOriginXPx?: number;
   /**
    * The raster texture's sampler: Label3D's `texture_filter` (`label_3d.h:140`). The default is
    * Godot's default filter. A mipmapped row samples a mip chain only where `mipmapped` built one.
@@ -261,6 +263,7 @@ export function TextRun({
   side,
   strokeWidthPx = 0,
   quantisesPen = true,
+  penOriginXPx = 0,
   textureFilter = godotTextureFilterState(undefined),
   mipmapped = false,
   blends,
@@ -280,7 +283,7 @@ export function TextRun({
         layout,
         fontSizePx,
         { tint, clippingPlanes, depthTest, side, pixelMaterial },
-        { strokeWidthPx, quantisesPen },
+        { strokeWidthPx, quantisesPen, penOriginXPx },
         textureFilter,
         mipmapped
       ),
@@ -300,6 +303,7 @@ export function TextRun({
       pixelMaterial,
       strokeWidthPx,
       quantisesPen,
+      penOriginXPx,
       textureFilter,
       mipmapped,
     ]

@@ -118,12 +118,12 @@ describe('shapeItemListText — overrun trim (item_list.h:131 default OVERRUN_TR
 
   it('trims to fixedColumnWidth by default, appending an ellipsis (matches text_overrun.test.ts derivation)', () => {
     const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', fixedColumnWidth: 100 });
-    expect(layout!.lines[0]!.text).toBe('AAAAAAAA…');
+    expect(layout!.lines[0]!.glyphs.map((glyph) => glyph.char).join('')).toBe('AAAAAAAA…');
   });
 
   it('is a no-op with no fixedColumnWidth — nothing to trim against (unconstrained shape width)', () => {
     const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', fixedColumnWidth: 0 });
-    expect(layout!.lines[0]!.text).toBe('AAAAAAAAAAAA');
+    expect(layout!.lines[0]!.glyphs.map((glyph) => glyph.char).join('')).toBe('AAAAAAAAAAAA');
   });
 
   it('OVERRUN_NO_TRIMMING (0) leaves the text untrimmed even with a fixedColumnWidth', () => {
@@ -133,7 +133,7 @@ describe('shapeItemListText — overrun trim (item_list.h:131 default OVERRUN_TR
       fixedColumnWidth: 100,
       overrunBehavior: 0,
     });
-    expect(layout!.lines[0]!.text).toBe('AAAAAAAAAAAA');
+    expect(layout!.lines[0]!.glyphs.map((glyph) => glyph.char).join('')).toBe('AAAAAAAAAAAA');
   });
 });
 

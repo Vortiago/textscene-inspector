@@ -136,7 +136,7 @@ function splitGdscript(text: string): StructuredTextRange[] {
       break;
     }
   }
-  if (prev < text.length) pushAuto(ranges, prev, text.length);
+  pushAuto(ranges, prev, text.length);
   return ranges;
 }
 

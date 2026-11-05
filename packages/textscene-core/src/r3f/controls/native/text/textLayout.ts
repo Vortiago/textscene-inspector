@@ -164,7 +164,7 @@ export interface GlyphPlacement {
 }
 
 export interface TextLineLayout {
-  /** The source text of this line in logical order, edge-space-trimmed per Label's default. `glyphs` hold the visual order. */
+  /** The source text of this line in logical order, edge-space-trimmed per Label's default, and untrimmed by an overrun as Godot keeps the shaped text. `glyphs` hold the visual order. */
   text: string;
   glyphs: GlyphPlacement[];
   /**
@@ -177,6 +177,11 @@ export interface TextLineLayout {
    * breaks inside a paragraph shares its index, so Label adds `paragraph_spacing` where it changes.
    */
   paragraphIndex: number;
+  /**
+   * The source index where this line's paragraph starts: Label's `para.start`. `shapeText` sets it.
+   * Label hides an ellipsis by it, as the ellipsis glyph has no source character of its own.
+   */
+  paragraphStart?: number;
   /**
    * Whether this line's paragraph resolved right-to-left: `shaped_text_get_inferred_direction() ==
    * DIRECTION_RTL`. `shapeText` sets it. A painter's line rebuilt from part of one leaves it out.
@@ -762,8 +767,10 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     const breakGlyphs = toBreakGlyphs(chars, runStyle, preserveControl);
     // First tab pass: the aligned advance must be in place before line breaking measures it.
     if (hasTabStops) {
-      const paragraphEntries = Array.from(paraText, (char, i) => ({
-        char,
+      // One entry per UTF-16 unit, as `breakGlyphs` holds them: a code-point walk shifts every
+      // advance after an astral character.
+      const paragraphEntries = Array.from({ length: paraText.length }, (_v, i) => ({
+        char: paraText[i]!,
         advance: breakGlyphs[i]!.advance,
       }));
       const aligned = tabAlignAdvances(paragraphEntries, tabStopsPx!);
@@ -810,6 +817,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
         glyphs,
         widthPx: penX,
         paragraphIndex,
+        paragraphStart: para.offset,
         isRtl: bidi.isRtl,
       });
     }

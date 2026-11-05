@@ -119,6 +119,8 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 ## Known limitations
 
 - **Not drawn** Arabic letters draw in their isolated forms, since the shaper does not join them.
+- **Approximated** An astral right-to-left script, such as Adlam, keeps its logical order, since the
+  bidi library classifies each UTF-16 unit on its own.
 - **Approximated** A scene font's glyphs draw with the browser's hinting, not FreeType's light
   hinting (`font.h:203`, `text_server_adv.cpp:1276-1277`), so a cap can sit 1 px lower here.
 - **Approximated** A wrapping Label inside a ScrollContainer can read one line short when
@@ -129,9 +131,6 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
   `text_overrun_behavior` puts the ellipsis after the last kept glyph, where Godot
   re-justifies the line.
 - **Approximated** An embolden above about 1.4 over the bundled font differs from FreeType, since the atlas rounds corners and holds limited growth.
-- **Approximated** A non-default `visible_characters_behavior` counts glyphs as a proxy
-  for Godot's indices, so the reveal count drifts by one per trimmed line-edge space past
-  the first.
 - **Not drawn** The doubled-backslash escapes of `paragraph_separator`, so a literal
   `"\\n"` stays two characters where Godot's `String::c_unescape()` (label.cpp:158) makes
   it a newline.

@@ -122,7 +122,8 @@ function paintRecording(
     skew = 0,
     outlines = null,
     quantisesPen,
-  }: { skew?: number; outlines?: SfntOutlines | null; quantisesPen?: boolean } = {}
+    penOriginXPx,
+  }: { skew?: number; outlines?: SfntOutlines | null; quantisesPen?: boolean; penOriginXPx?: number } = {}
 ) {
   const calls: Call[] = [];
   let matrix = new DOMMatrix();
@@ -154,6 +155,7 @@ function paintRecording(
   paintSceneFontCanvas(carrying(layout, skew, outlines), 16, { r: 1, g: 1, b: 1, a: 1 }, skew, canvasLayout, {
     strokeWidthPx,
     quantisesPen,
+    penOriginXPx,
   });
   return { calls, canvasLayout };
 }
@@ -197,6 +199,15 @@ describe('paintSceneFontCanvas — pen', () => {
   it('draws a glyph at the quarter pixel a 16 px canvas item rounds its pen to', () => {
     const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0);
     expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 10.5);
+  });
+
+  it('rounds the pen where it sits in the canvas item, its run origin included', () => {
+    const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, { penOriginXPx: 0.3 });
+    // 0.3 + 10.6 = 10.9 rounds to the quarter step 11, which is 10.7 past the run origin.
+    expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBeCloseTo(
+      canvasLayout.offsetXPx + 10.7,
+      9
+    );
   });
 
   it('keeps the pen of a Label3D, whose mesh places each glyph where it is', () => {
