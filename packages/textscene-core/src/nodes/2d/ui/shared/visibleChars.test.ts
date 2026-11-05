@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type { GlyphPlacement, TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
   applyVisibleCharsReveal,
   resolveLabelVisibleChars,
   resolveRichTextVisibleChars,
 } from './visibleChars';
+
+const DEFAULT_FONT = {} as FontMetrics;
 
 /** A line of default-font glyphs, one per character; the font draws the sequences `ff`, `fi`, `fl`, `ffi` and `ffl` as one glyph. */
 function defaultFontLine(text: string): TextLineLayout {
@@ -15,6 +18,8 @@ function defaultFontLine(text: string): TextLineLayout {
     advance: 1,
     sourceIndex: i,
     glyph: {} as GlyphPlacement['glyph'],
+    fontSizePx: 16,
+    fontMetrics: DEFAULT_FONT,
   }));
   return { text, glyphs, widthPx: text.length, paragraphIndex: 0 };
 }
