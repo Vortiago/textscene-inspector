@@ -48,7 +48,7 @@ interface BBCodeRun {
   /** Set only on the single-U+FFFC run for an `[hr]` (`add_hr`, `:4159`), whose tags end in the `hr` paragraph. */
   rule?: ParsedRuleTag;
   /**
-   * Set only on the single `\n` run that ends a line with no text, object or list item, such as one
+   * Set only on the single `\n` run that ends a line with no text or object, such as one
    * left by `[font_size][/font_size][p]`. Godot keeps that line, as an empty text buffer of no height.
    */
   zeroHeightBreak?: true;
@@ -573,7 +573,7 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
   // The tags pushed since the last character, and the ones the pending run's first character follows.
   let openedSinceCharacter: OpenBBCodeTag[] = [];
   let pendingOpenedAtStart: OpenBBCodeTag[] | undefined;
-  // Whether the current line has height, from text, an object or a list item.
+  // Whether the current line has height, from text or an object.
   let lineHasHeight = false;
   // Whether the current line holds an item `_find_layout_subitem` counts, with or without height.
   let lineHasLayout = false;

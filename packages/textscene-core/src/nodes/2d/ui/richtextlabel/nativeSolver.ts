@@ -810,10 +810,13 @@ export function richTextContentHeightPx(
   return contentHeightOf(richTextLineMetrics(styledRuns, layout));
 }
 
-/** The paragraph indexes (counted by `\n`) of the lines of no height: each ends in a `zeroHeightBreak` run. */
+/**
+ * The paragraph indexes (counted by `\n`) of the lines of no height: each `zeroHeightBreak` run ends
+ * one, and so does a final `\n`, which leaves a line that holds no item (`a\n` is one line tall,
+ * measured in Godot 4.6.3).
+ */
 function zeroHeightParagraphsOf(styledRuns: readonly StyledTextRun[]): ReadonlySet<number> {
   const paragraphs = new Set<number>();
-  if (!styledRuns.some((run) => run.zeroHeightBreak)) return paragraphs;
   let paragraphIndex = 0;
   for (const run of styledRuns) {
     for (let at = run.text.indexOf('\n'); at >= 0; at = run.text.indexOf('\n', at + 1)) {
@@ -821,6 +824,7 @@ function zeroHeightParagraphsOf(styledRuns: readonly StyledTextRun[]): ReadonlyS
       paragraphIndex++;
     }
   }
+  if (styledRuns.at(-1)?.text.endsWith('\n')) paragraphs.add(paragraphIndex);
   return paragraphs;
 }
 
@@ -832,14 +836,11 @@ function lineMetricsOf(
   const paragraphAscentPx = layout.baselineOffsetPx;
   const paragraphDescentPx = layout.linePitchPx - layout.baselineOffsetPx;
   const zeroHeightParagraphs = zeroHeightParagraphsOf(styledRuns);
-  const endsInBreak = styledRuns.at(-1)?.text.endsWith('\n') ?? false;
 
   let topPx = 0;
   return perLine.map((segments, lineIndex) => {
-    // An empty text buffer has no ascent or descent (measured in Godot 4.6.3). So has the line after
-    // a final `\n`, which holds no item at all: `a\n` is one line tall.
-    const isEmptyTrailingLine = segments.length === 0 && lineIndex === perLine.length - 1 && endsInBreak;
-    if (isEmptyTrailingLine || zeroHeightParagraphs.has(layout.lines[lineIndex]!.paragraphIndex)) {
+    // An empty text buffer has no ascent or descent (measured in Godot 4.6.3).
+    if (zeroHeightParagraphs.has(layout.lines[lineIndex]!.paragraphIndex)) {
       return { topPx, ascentPx: 0, descentPx: 0, textAscentPx: 0, textDescentPx: 0 };
     }
     // Text first: `_realign` measures every image against these values, and an
