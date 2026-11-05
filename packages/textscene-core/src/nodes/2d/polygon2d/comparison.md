@@ -8,9 +8,15 @@ renders_as: a filled, optionally textured mesh
 
 # Polygon2D
 
-Polygon2D fills an outline on the canvas. The previewer triangulates it into an unlit
-mesh with one vertex per point and tints it with `color`. `texture` is sampled through
-the per-vertex `uv` with Godot's own UV formula.
+Polygon2D fills an outline on the canvas. The previewer triangulates it with Godot's ear
+clipping into an unlit mesh with one vertex per point and tints it with `color`. `texture` is
+sampled through the per-vertex `uv` with Godot's own UV formula. With `skeleton` and `bones`,
+each vertex moves with its four heaviest bones of the Skeleton2D, as an AnimationPlayer poses them.
+
+The skin follows the Forward+ and Mobile renderers. They weight the corner of each bone matrix too
+(`servers/rendering/renderer_rd/shaders/skeleton.glsl:172-180`), so a vertex with no weight lands on
+the polygon's origin. The Compatibility renderer adds a corner of 1 after it weights
+(`drivers/gles3/shaders/skeleton.glsl:179`), so there that vertex lands on the skeleton's origin.
 
 ## Normal map
 <!-- compare: image=unit-polygon2d-normal-map-rotation status=done fixture=unit-polygon2d-normal-map-rotation.tscn -->
@@ -56,7 +62,8 @@ A non-numeric `internal_vertex_count` falls back to `0` and `invert_border` to `
 each with a warning. So do `invert_enabled` to `false`, `offset` and `texture_offset` to
 `(0, 0)` and `texture_scale` to `(1, 1)`. A malformed `color` falls back to white
 silently. Malformed `polygon`, `polygons`, `uv` or `vertex_colors` warn and degrade to
-empty, which is Godot's own size-mismatch branch.
+empty, which is Godot's own size-mismatch branch. A `bones` array with an odd count warns
+and deforms nothing. Weights that are not a PackedFloat32Array skip their bone.
 
 ## Known limitations
 

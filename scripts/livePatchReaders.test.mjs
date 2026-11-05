@@ -23,6 +23,14 @@ const NEEDS_NO_OVERLAY = new Map([
     'A pass: it takes the placements of the pass before it as an argument.',
   ],
   [
+    'nodes/2d/polygon2d/skeletonBinding.ts',
+    'Reads the polygon, its bones and weights, and the types it binds, which no pass patches. The pose comes from the drawn objects.',
+  ],
+  [
+    'nodes/2d/skeleton2d/skeletonBones.ts',
+    'Reads the type and `rest` of each Bone2D, which no pass patches.',
+  ],
+  [
     'nodes/shared/remotetransform/remoteTransforms.ts',
     'A pass: it reads the tree it places nodes in, and builds the placements.',
   ],

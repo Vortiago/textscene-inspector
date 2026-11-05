@@ -45,4 +45,22 @@ describe('parsePolygon2D', () => {
     });
     expect(props.polygon.length).toBe(0);
   });
+
+  it('keeps the skeleton path and each bone path with its weights', () => {
+    const props = parsePolygon2D(heading('Polygon2D', { name: 'Skinned' }), {
+      skeleton: 'NodePath("../Skeleton")',
+      bones:
+        '[NodePath("Upper"), PackedFloat32Array(1, 0.5), NodePath("Upper/Lower"), PackedFloat32Array(0, 0.5)]',
+    });
+    expect(props.skeleton).toBe('NodePath("../Skeleton")');
+    expect(props.bones.map((entry) => entry.path)).toEqual(['NodePath("Upper")', 'NodePath("Upper/Lower")']);
+    expect(Array.from(props.bones[1]!.weights)).toEqual([0, 0.5]);
+  });
+
+  it('reads a malformed bones array as no bones', () => {
+    const props = parsePolygon2D(heading('Polygon2D', { name: 'Odd' }), {
+      bones: '[NodePath("Upper")]',
+    });
+    expect(props.bones).toEqual([]);
+  });
 });

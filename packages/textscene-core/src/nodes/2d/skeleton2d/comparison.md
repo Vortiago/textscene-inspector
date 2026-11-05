@@ -5,14 +5,14 @@ status: unimplemented
 fixture: unit-skeleton-2d.tscn
 # image: unit-skeleton-2d
 visual: false
-renders_as: nothing yet, Godot runs its modification stack on the bones each frame, the previewer does not
+renders_as: nothing yet, its modification stack does not run, and its bones deform the Polygon2Ds bound to it
 ---
 
 # Skeleton2D
 
-Skeleton2D is the root of a Bone2D chain. Godot runs its `modification_stack` on the
-bones each frame, and the previewer does not yet (ADR-0045). The bones hold their authored
-transforms, and everything visible belongs to its children.
+Skeleton2D is the root of a Bone2D chain. A Polygon2D that names it in `skeleton` draws
+each vertex where its weighted bones move it from their rest. Godot also runs the
+`modification_stack` on the bones each frame, and the previewer does not yet (ADR-0045).
 
 ## Linting
 

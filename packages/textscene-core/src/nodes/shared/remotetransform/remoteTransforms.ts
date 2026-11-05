@@ -10,10 +10,9 @@
 
 import { parentPathOf, relativeTo } from '../../../utils/nodePath.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
-import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { liveGlobalTransform3D, nodesOnTheWayTo } from '../../../r3f/liveGlobalTransform.js';
-import { uniquePathsOfLiteral } from '../../../r3f/nodePathUniqueNames.js';
+import { resolveLiteralOnLiveTree } from '../../../r3f/nodePathUniqueNames.js';
 import type { NodePatch, NodePatches } from '../../../r3f/nodePatch.js';
 import { sameData } from '../../../utils/sameData.js';
 import type { Transform3D } from '../../../godot/math/transform3d.js';
@@ -113,7 +112,7 @@ const liveRelayView = perObject((tree: LiveTree): RelayTreeView<LiveLink> => ({
   childrenOf: (link) => tree.fold<void, LiveLink>(undefined, (child) => child, link),
   isAtOrAbove: (upper, link) => relativeTo(upper.path, link.path) !== undefined,
   nodeAt: (from, literal) => {
-    const path = resolveNodePathLiteral(from.path, literal, uniquePathsOfLiteral(literal, from.path, tree));
+    const path = resolveLiteralOnLiveTree(from.path, literal, tree);
     return path === null ? null : tree.at(path);
   },
 }));
