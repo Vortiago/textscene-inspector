@@ -10,7 +10,6 @@ import type { LabelSettingsResource } from '../../../../resources/styles/labelse
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { createOpenSansCanvasFontMetrics } from '../../../../r3f/controls/native/text/openSansCanvasFontMetrics';
-import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { isCanvasFontMetrics } from '../../../../r3f/controls/native/text/runtimeFontMetrics';
 import { useCanvasItemOrigin } from '../../../../r3f/components/CanvasItemGroup';
@@ -101,10 +100,10 @@ describe('<Label> outline ring', () => {
     expect(ring?.tint).toEqual(RED);
   });
 
-  it('draws the fill on the atlas with no outline of its own, above the ring', async () => {
+  it('fills on the canvas face with no outline of its own, above the ring', async () => {
     const runs = await draw(outlined, 2);
     const filled = fill(runs);
-    expect(filled.layout.fontMetrics).toBe(OPEN_SANS_FONT_METRICS);
+    expect(filled.layout.fontMetrics.kind).toBe('canvas');
     expect(filled.outlineColor).toBeUndefined();
     expect(filled.outlineWidthPx).toBeUndefined();
     expect(filled.renderOrder).toBeGreaterThan(rings(runs)[0]!.renderOrder!);
