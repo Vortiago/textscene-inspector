@@ -17,7 +17,7 @@ import {
 } from './canvasItemModulate';
 import { useCanvasModulateFor } from './canvasModulate';
 import { TextureSampler2DContext, type CanvasItemTextureSampler } from './canvasItemTextureSampler';
-import { canvasRenderOrder } from './canvasPaintOrder';
+import { canvasKeyAtZ, canvasRenderOrder } from './canvasPaintOrder';
 import { useLayerRank, useNodePaintSequence } from './contexts/PaintOrderContext';
 import type { TscnNode } from '../parser/types';
 import type { Node2DProperties } from '../nodes/base/node2d/types';
@@ -110,6 +110,24 @@ export function useCanvasItemState(fields: CanvasItemFields): CanvasItemState {
  */
 export function useCanvasKeyOfNode(node: TscnNode, own: CanvasItemZStep): number {
   return useCanvasKeyAt(useZFinal(own))(useNodePaintSequence(node));
+}
+
+/** Where a canvas item draws: its draw-order key and its `z_final`. */
+export interface CanvasPlace {
+  key: number;
+  zFinal: number;
+}
+
+/**
+ * The place of a child canvas item that the walk reaches at `parent`'s key with a relative
+ * `z_index` of its own, such as a TileMap's layer (`tile_map.cpp:279,376`) or a tile layer's
+ * quadrant item (`tile_map_layer.cpp:356-357`).
+ *
+ * @canonical The draw-order key and z_final of a child canvas item at a z of its own
+ */
+export function childCanvasPlace(parent: CanvasPlace, zIndex: number): CanvasPlace {
+  const zFinal = stepZ(parent.zFinal, { zIndex, zAsRelative: true });
+  return { key: canvasKeyAtZ(parent.key, parent.zFinal, zFinal), zFinal };
 }
 
 /** The key of each draw sequence at this canvas layer and `zFinal`. */

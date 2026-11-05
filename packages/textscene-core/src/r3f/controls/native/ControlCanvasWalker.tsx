@@ -18,7 +18,11 @@ import { ControlFallback } from './ControlFallback';
 import { WHITE_MODULATE } from '../../canvasItemModulate';
 import { useInheritedTextureSampler } from '../../canvasItemTextureSampler';
 import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
-import { useResolvedCanvasItemMaterial } from '../../components/canvasItemMaterialContext';
+import {
+  useCanvasAncestorMaterial,
+  useResolvedCanvasItemMaterial,
+} from '../../components/canvasItemMaterialContext';
+import { INHERIT_PARENT_MATERIAL } from '../../canvasAncestors';
 import { isCanvasLayerType } from '../../canvasPaintOrder';
 import { CanvasItemGroup, CanvasItemKeyProvider } from '../../components/CanvasItemGroup';
 import { NodePathProvider } from '../../contexts/NodePathContext';
@@ -116,12 +120,8 @@ function useControlMaterial(
     { ref: props.materialPath, useParentMaterial },
     solveNode.resources
   );
-  const fromSkippedAncestor = useResolvedCanvasItemMaterial(
-    { ref: skipped?.kind === 'own' ? skipped.ref : undefined, useParentMaterial: false },
-    skipped?.kind === 'own' ? skipped.resources : solveNode.resources
-  );
-  if (!useParentMaterial || !skipped || skipped.kind === 'inherit') return ownOrAmbient;
-  return skipped.kind === 'own' ? fromSkippedAncestor : null;
+  const fromSkippedAncestors = useCanvasAncestorMaterial(skipped ?? INHERIT_PARENT_MATERIAL);
+  return useParentMaterial && skipped ? fromSkippedAncestors : ownOrAmbient;
 }
 
 /**

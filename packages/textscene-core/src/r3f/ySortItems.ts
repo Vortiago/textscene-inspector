@@ -5,11 +5,35 @@
  */
 
 import type { TscnNode } from '../parser/types.js';
-import type { YSortContextValue } from './contexts/YSortContext.js';
 import { isTopLevelItem } from './canvasPaintOrder.js';
 import { accumulateCanvasItemZ } from './lighting2d/canvasItemPlacement.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { DrawableCell } from '../resources/tileset/drawableCell.js';
+import {
+  multiplyTransform2D,
+  TRANSFORM2D_IDENTITY,
+  type Transform2DColumns,
+} from '../godot/math/transform2d.js';
+import { node2DLocalTransform } from './node2dTransform.js';
+import type { Node2DLocalTransform } from '../nodes/base/node2d/types.js';
+
+/** What `_collect_ysort_children` threads down to the children of one y-sorted item. */
+export interface YSortParent {
+  /** `ysort_xform`: the item's transform in the sort root's space (`renderer_canvas_cull.cpp:131`). */
+  toSortRoot: Transform2DColumns;
+  /**
+   * The z the pass buckets on: `_collect_ysort_children` carries `abs_z` down, and an item sorts
+   * only within its bucket. `EffectiveZContext` carries the same `accumulateCanvasItemZ` value on
+   * the ordinary walk.
+   */
+  effectiveZ: number;
+}
+
+/**
+ * The sort root's own children. The pass starts at 0, not at the ambient z, so a root under a
+ * `z_index`'d ancestor buckets from 0: only the relative order of the buckets reaches the draw.
+ */
+export const Y_SORT_ROOT: YSortParent = { toSortRoot: TRANSFORM2D_IDENTITY, effectiveZ: 0 };
 
 /** A renderable item collected by the y-sort pass. */
 export interface YSortItem {
@@ -18,11 +42,10 @@ export interface YSortItem {
   treeOrder: number;
   kind: 'node' | 'tileGroup';
   /**
-   * For 'tileGroup': TileMapLayer tile props. `worldY` is the layer's accumulated
-   * world Y, every lifted-past ancestor plus its own `position.y`. The per-row
-   * expansion sees only the sort root's context, so it cannot recompute it.
+   * For 'tileGroup': TileMapLayer tile props. `toSortRoot` is the layer's transform in the sort
+   * root's space, through every lifted-past ancestor, which places each row's sort y.
    */
-  tileData?: { tileSetRef: string; worldY: number; cells?: readonly DrawableCell[] };
+  tileData?: { tileSetRef: string; toSortRoot: Transform2DColumns; cells?: readonly DrawableCell[] };
   /**
    * The TscnNode to re-dispatch. For a y_sort_enabled node this is its body only
    * (`ownBodyOf`): its children are items of their own in this list, so the whole
@@ -60,18 +83,25 @@ function ownBodyOf(node: TscnNode): TscnNode {
   return { ...node, children: [] };
 }
 
-/** Compute the sortY and effectiveZ for a single CanvasItem node relative to parent context. */
-function itemSortKey(node: TscnNode, parent: YSortContextValue): { sortY: number; effectiveZ: number } {
-  const props = node.properties as Record<string, unknown>;
-  const localY = (props.position as { y: number } | undefined)?.y ?? 0;
+/** A child's transform in the sort root's space, `ysort_xform` (`renderer_canvas_cull.cpp:131`). */
+function toSortRootOf(child: TscnNode, parent: YSortParent): Transform2DColumns {
+  return multiplyTransform2D(
+    parent.toSortRoot,
+    node2DLocalTransform(child.properties as Partial<Node2DLocalTransform>)
+  );
+}
+
+/** A child's sort y, the y of its origin in the sort root's space (`renderer_canvas_cull.h:115-123`), and its z bucket. */
+function itemSortKey(child: TscnNode, parent: YSortParent): { sortY: number; effectiveZ: number } {
+  const props = child.properties as Record<string, unknown>;
   const ySortOrigin = (props.y_sort_origin as number | undefined) ?? 0;
-  const sortY = parent.parentWorldY + localY + ySortOrigin;
+  const sortY = toSortRootOf(child, parent).ty + ySortOrigin;
 
   // The same accumulation the light cull uses: `_collect_ysort_children` (renderer_canvas_cull.cpp
-  // 160-166) and `_cull_canvas_item` (816-820) both run
+  // 143-148) and `_cull_canvas_item` (430-434) both run
   // `CLAMP(p_z + z_index, CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX)` under `z_relative`
   // and assign `z_index` unclamped otherwise. A second copy could drift from the lights.
-  const effectiveZ = accumulateCanvasItemZ(parent.parentEffectiveZ, {
+  const effectiveZ = accumulateCanvasItemZ(parent.effectiveZ, {
     z_index: (props.z_index as number | undefined) ?? 0,
     z_as_relative: props.z_as_relative as boolean | undefined,
   });
@@ -86,7 +116,7 @@ function itemSortKey(node: TscnNode, parent: YSortContextValue): { sortY: number
  */
 export function collectYSortedItems(
   node: TscnNode,
-  parent: YSortContextValue,
+  parent: YSortParent,
   startOrder: number,
   liftedPast: readonly TscnNode[] = []
 ): YSortItem[] {
@@ -111,10 +141,7 @@ export function collectYSortedItems(
         effectiveZ: key.effectiveZ,
         treeOrder: order++,
         kind: 'tileGroup',
-        tileData: {
-          tileSetRef: layer.tileSetRef,
-          worldY: parent.parentWorldY + layer.positionY,
-        },
+        tileData: { tileSetRef: layer.tileSetRef, toSortRoot: toSortRootOf(child, parent) },
         node: child,
         liftedPast,
       });
@@ -133,12 +160,11 @@ export function collectYSortedItems(
         node: ownBodyOf(child),
         liftedPast,
       });
-      // Its descendants sort against the child's accumulated position and z-index
+      // Its descendants sort against the child's accumulated transform and z-index
       // bucket, not the sort root's: Godot threads `ysort_xform` and `abs_z` through.
-      const childLocalY = (props.position as { y: number } | undefined)?.y ?? 0;
       const subItems = collectYSortedItems(
         child,
-        { parentWorldY: parent.parentWorldY + childLocalY, parentEffectiveZ: key.effectiveZ },
+        { toSortRoot: toSortRootOf(child, parent), effectiveZ: key.effectiveZ },
         order,
         [...liftedPast, child]
       );

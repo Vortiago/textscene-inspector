@@ -11,13 +11,11 @@ import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel';
-import { useNode2DTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import type { TileMapLayerProperties } from './types';
 
 export function TileMapLayer({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapLayerProperties;
   const { model, status } = useTileSetModel(props.tile_set);
-  const sampler = useNode2DTextureSampler(props);
   const cells = props.cells ?? null;
   const {
     y_sort_enabled: ySortEnabled,
@@ -39,17 +37,17 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      ownItems={(tint, material, zFinal) =>
+      ownItems={(state) =>
         props.enabled && status === 'loaded' && model && quadrants ? (
           <TileQuadrants
             quadrants={quadrants}
             model={model}
-            selfTint={tint.self}
-            material={material}
-            lightMask={props.light_mask}
-            zFinal={zFinal}
+            selfTint={state.tint.self}
+            material={state.material}
+            lightMask={state.lightMask}
+            zFinal={state.zFinal}
             name={node.name}
-            sampler={sampler}
+            sampler={state.sampler}
           />
         ) : null
       }

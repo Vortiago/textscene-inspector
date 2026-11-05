@@ -1,31 +1,31 @@
 /**
- * Putting back what the y-sort flattening took away. An item lifted out of one
- * or more y_sort_enabled containers is re-rendered as a flat sibling of the sort
- * root, so the containers' transforms, CanvasItem state and path segments have
- * to be rebuilt around it.
+ * Puts back what the y-sort flattening took away. An item lifted out of one or more
+ * y_sort_enabled containers is drawn as a flat sibling of the sort root, so the
+ * containers' CanvasItem state and path segments are rebuilt around it.
  */
 
 import { useContext, useMemo, type ReactNode } from 'react';
-import type * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
-import type { Node2DProperties } from '../nodes/base/node2d/types.js';
-import { multiplyModulate, WHITE_MODULATE } from './canvasItemModulate.js';
+import { TextureSampler2DContext, inheritTextureSampler } from './canvasItemTextureSampler.js';
+import { SkippedCanvasItemsScope } from './canvasItemState.js';
+import { foldCanvasAncestors, INHERIT_PARENT_MATERIAL } from './canvasAncestors.js';
 import {
-  TextureSampler2DContext,
-  inheritTextureSampler,
-  type AmbientTextureSampler,
-} from './canvasItemTextureSampler.js';
-import { SkippedCanvasItemsScope, type SkippedCanvasItems } from './canvasItemState.js';
-import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from './node2dTransform.js';
+  CanvasItemMaterialProvider,
+  useCanvasAncestorMaterial,
+} from './components/canvasItemMaterialContext.js';
+import { node2dGroupProps, node2dGroupSpread, threeMatrixFromTransform2D } from './node2dTransform.js';
 import { CanvasSpaceProvider, useCanvasSpace } from './canvasRootScope.js';
+import { useSceneResources } from './SceneResourcesContext.js';
 import { joinPath } from '../utils/nodePath.js';
 import { pathsAlong, useLiveDrawnChain } from './liveNodePatches.js';
+import { useAnimatedValueAt } from './contexts/AnimatedValueContext.js';
+import { useOptionalSelection } from './contexts/SelectionContext.js';
+import type { Node2DProperties } from '../nodes/base/node2d/types.js';
 
 /**
- * Rebuild the `<group>` transforms of the y_sort_enabled ancestors an item was lifted
- * past, outermost first, around `element`. The same `node2dGroupProps` conjugation as
- * every CanvasItem: `F·M1·F · F·M2·F = F·(M1·M2)·F`, so nesting reproduces the tree's
- * composition, skew included, with no second transform path.
+ * Puts back around `children` the CanvasItem state of the y_sort_enabled ancestors they were
+ * lifted past, outermost first: their composed transform, modulate, z, sampler, the material a
+ * `use_parent_material` item takes, and each one's visibility.
  */
 export function LiftedAncestors({
   liftedPast: authoredLiftedPast,
@@ -39,85 +39,101 @@ export function LiftedAncestors({
 }) {
   // The properties the live scene passes bind, such as the pose a RemoteTransform2D pushes.
   const liftedPast = useLiveDrawnChain(authoredLiftedPast, basePath);
-  // Flattening drops the ancestors' CanvasItem state. `visible` and `modulate` inherit
-  // in Godot, so a hidden or tinted y-sorted container keeps hiding or tinting the
-  // descendants lifted out of it, as its own body does through CanvasItem2D.
-  // The same goes for the z the lights are culled against: `z_index` accumulates
-  // down the tree, so an item lifted out of two nested containers has to be told
-  // what those containers contributed before it adds its own.
-  const skipped = useMemo(() => liftedCanvasItems(liftedPast), [liftedPast]);
-  const parentSampler = useContext(TextureSampler2DContext);
-  // The restored groups are real transforms in the rendered tree, so a canvas
-  // root below them has to cancel them too (`canvasRootScope.tsx`).
+  const scope = useSceneResources();
+  // The sort root is the parent item of the outermost lifted ancestor, so a chain that
+  // defers all the way takes the root's material.
+  const lifted = useMemo(
+    () => foldCanvasAncestors(liftedPast, scope, INHERIT_PARENT_MATERIAL),
+    [liftedPast, scope]
+  );
+  const matrix = useMemo(() => threeMatrixFromTransform2D(lifted.transform), [lifted.transform]);
+  // The restored group is a real transform in the rendered tree, so a canvas root
+  // below it has to cancel it too (`canvasRootScope.tsx`).
   const ambient = useCanvasSpace();
-
-  const liftedSpace = useMemo(
-    () =>
-      liftedPast.reduce<THREE.Matrix4 | null>((space, ancestor) => {
-        const props = ancestor.properties as Partial<Node2DProperties>;
-        const own = node2dGroupMatrix(
-          node2dGroupProps({
-            position: props.position ?? { x: 0, y: 0 },
-            rotation: props.rotation ?? 0,
-            scale: props.scale ?? { x: 1, y: 1 },
-            skew: props.skew,
-          })
-        );
-        return space ? space.clone().multiply(own) : own;
-      }, ambient),
-    [liftedPast, ambient]
+  const liftedSpace = useMemo(() => (ambient ? ambient.clone().multiply(matrix) : matrix), [ambient, matrix]);
+  const parentSampler = useContext(TextureSampler2DContext);
+  const sampler = useMemo(
+    () => inheritTextureSampler(lifted.sampler, parentSampler),
+    [lifted.sampler, parentSampler]
   );
-
-  let wrapped = children;
-  for (let i = liftedPast.length - 1; i >= 0; i--) {
-    const ancestor = liftedPast[i]!;
-    const props = ancestor.properties as Partial<Node2DProperties>;
-    const spread = node2dGroupSpread(
-      node2dGroupProps({
-        position: props.position ?? { x: 0, y: 0 },
-        rotation: props.rotation ?? 0,
-        scale: props.scale ?? { x: 1, y: 1 },
-        skew: props.skew,
-      })
-    );
-    wrapped = (
-      // paint-order-safe: a lifted ancestor's restored transform, which
-      // wraps the item's own group rather than sitting inside it.
-      <group {...spread} visible={props.visible !== false}>
-        {wrapped}
-      </group>
-    );
-  }
-
-  // The filter and repeat inherit too, innermost ancestor last so that it wins, as in the tree.
-  const inheritedSampler = useMemo(
-    () =>
-      liftedPast.reduce<AmbientTextureSampler>((acc, a) => {
-        const props = a.properties as Partial<Node2DProperties>;
-        return inheritTextureSampler({ filter: props.texture_filter, repeat: props.texture_repeat }, acc);
-      }, parentSampler),
-    [liftedPast, parentSampler]
-  );
+  const material = useCanvasAncestorMaterial(lifted.material);
 
   return (
-    <SkippedCanvasItemsScope skipped={skipped}>
-      <TextureSampler2DContext.Provider value={inheritedSampler}>
-        <CanvasSpaceProvider value={liftedSpace}>{wrapped}</CanvasSpaceProvider>
-      </TextureSampler2DContext.Provider>
+    <SkippedCanvasItemsScope skipped={lifted}>
+      <CanvasItemMaterialProvider value={material}>
+        <TextureSampler2DContext.Provider value={sampler}>
+          <CanvasSpaceProvider value={liftedSpace}>
+            <LiftedGroups chain={liftedPast} basePath={basePath}>
+              {children}
+            </LiftedGroups>
+          </CanvasSpaceProvider>
+        </TextureSampler2DContext.Provider>
+      </CanvasItemMaterialProvider>
     </SkippedCanvasItemsScope>
   );
 }
 
 /**
- * The lifted ancestors' `modulate` and z steps, outermost first. Only `modulate` inherits, not
- * `self_modulate`, so it applies outside the restored groups.
+ * `children` under one group per ancestor of `chain`, outermost first. The same `node2dGroupProps`
+ * conjugation as every CanvasItem: `F·M1·F · F·M2·F = F·(M1·M2)·F`, so nesting reproduces the
+ * tree's composition, skew included. One group per ancestor, since each hides on its own.
  */
-function liftedCanvasItems(liftedPast: readonly TscnNode[]): SkippedCanvasItems {
-  const props = liftedPast.map((ancestor) => ancestor.properties as Partial<Node2DProperties>);
-  return {
-    modulate: props.reduce((acc, p) => multiplyModulate(acc, p.modulate ?? WHITE_MODULATE), WHITE_MODULATE),
-    z: props.map((p) => ({ zIndex: p.z_index ?? 0, zAsRelative: p.z_as_relative !== false })),
-  };
+function LiftedGroups({
+  chain,
+  basePath,
+  children,
+}: {
+  chain: readonly TscnNode[];
+  basePath: string;
+  children: ReactNode;
+}) {
+  const paths = useMemo(() => pathsAlong(chain, basePath), [chain, basePath]);
+  return chain.reduceRight<ReactNode>(
+    (inner, ancestor, index) => (
+      <LiftedGroup ancestor={ancestor} path={paths[index]!}>
+        {inner}
+      </LiftedGroup>
+    ),
+    children
+  );
+}
+
+/**
+ * `ancestor`'s transform, and its visibility as its own group hides its descendants on the
+ * ordinary walk: its `visible`, a pushed `visible`, or the eye toggle.
+ */
+function LiftedGroup({
+  ancestor,
+  path,
+  children,
+}: {
+  ancestor: TscnNode;
+  path: string;
+  children: ReactNode;
+}) {
+  const props = ancestor.properties as Partial<Node2DProperties>;
+  const spread = useMemo(
+    () =>
+      node2dGroupSpread(
+        node2dGroupProps({
+          position: props.position ?? { x: 0, y: 0 },
+          rotation: props.rotation ?? 0,
+          scale: props.scale ?? { x: 1, y: 1 },
+          skew: props.skew,
+        })
+      ),
+    [props]
+  );
+  const animated = useAnimatedValueAt(path, 'visible', (value) => value[0] !== 0);
+  const isHidden = useOptionalSelection()?.hiddenNodePaths.has(path) ?? false;
+  const visible = (animated ?? props.visible !== false) && !isHidden;
+  return (
+    // paint-order-safe: a lifted ancestor's restored transform, which wraps the
+    // item's own group rather than sitting inside it.
+    <group {...spread} visible={visible}>
+      {children}
+    </group>
+  );
 }
 
 /** The item's true path in the scene tree, including the levels it was lifted past. */
