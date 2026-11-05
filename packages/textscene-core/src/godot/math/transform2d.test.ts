@@ -9,7 +9,10 @@ import { readFileSync } from 'node:fs';
 import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2D,
+  affineInverseTransform2DInto,
   multiplyTransform2D,
+  multiplyTransform2DInto,
+  mutableTransform2D,
   transform2DDecompose,
   transform2DFromParts,
   transform2DGetScale,
@@ -419,5 +422,50 @@ describe('transform2DBasisXformInto', () => {
 
     transform2DBasisXformInto(v, { a: 0, b: 1, c: -1, d: 0, tx: 0, ty: 0 }, v);
     expect(v).toEqual({ x: 2.5, y: 1.5 });
+  });
+});
+
+describe('multiplyTransform2DInto', () => {
+  const parent = { a: 0.3, b: 1.7, c: -2.1, d: 0.9, tx: 12.5, ty: -3.25 };
+  const local = { a: 1.1, b: -0.4, c: 0.6, d: 2.3, tx: -7.75, ty: 4.5 };
+
+  it('writes the same bits as multiplyTransform2D into the transform it is given', () => {
+    const out = mutableTransform2D();
+
+    expect(multiplyTransform2DInto(out, parent, local)).toBe(out);
+    expect(out).toEqual(multiplyTransform2D(parent, local));
+  });
+
+  it('reads both factors before it writes, so out may be either factor (edge case)', () => {
+    const intoParent = { ...parent };
+    const intoLocal = { ...local };
+
+    multiplyTransform2DInto(intoParent, intoParent, local);
+    multiplyTransform2DInto(intoLocal, parent, intoLocal);
+    expect(intoParent).toEqual(multiplyTransform2D(parent, local));
+    expect(intoLocal).toEqual(multiplyTransform2D(parent, local));
+  });
+});
+
+describe('affineInverseTransform2DInto', () => {
+  const t = { a: 0.3, b: 1.7, c: -2.1, d: 0.9, tx: 12.5, ty: -3.25 };
+
+  it('writes the same bits as affineInverseTransform2D, even when out is the input', () => {
+    const inPlace = { ...t };
+
+    expect(affineInverseTransform2DInto(inPlace, inPlace)).toBe(inPlace);
+    expect(inPlace).toEqual(affineInverseTransform2D(t));
+  });
+
+  it('keeps the sign of a zero origin, as basis_xform adds no origin (edge case)', () => {
+    const out = affineInverseTransform2DInto(mutableTransform2D(), TRANSFORM2D_IDENTITY);
+
+    expect(Object.is(out.tx, -0)).toBe(Object.is(affineInverseTransform2D(TRANSFORM2D_IDENTITY).tx, -0));
+  });
+
+  it('writes the identity for a singular transform (edge case)', () => {
+    const out = affineInverseTransform2DInto({ ...t }, { a: 0, b: 0, c: 0, d: 0, tx: 5, ty: 5 });
+
+    expect(out).toEqual(TRANSFORM2D_IDENTITY);
   });
 });
