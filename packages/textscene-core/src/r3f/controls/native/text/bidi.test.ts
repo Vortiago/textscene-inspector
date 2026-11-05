@@ -29,6 +29,13 @@ describe('resolveParagraphBidi', () => {
     expect(resolveParagraphBidi('abc שלום def').isRtl).toBe(false);
   });
 
+  it('puts the trailing space of a line after the first at the paragraph level, by rule L1', () => {
+    // `גד ` is a later line: its space sits between two Hebrew words at level 1, and ends the line.
+    const text = 'ab אב גד הו x';
+    expect(visualText(text, TEXT_DIRECTION_LTR, 0, 6)).toBe('ab בא ');
+    expect(visualText(text, TEXT_DIRECTION_LTR, 6, 9)).toBe('דג ');
+  });
+
   it('resolves an LTR Latin paragraph to level 0 throughout, in logical order', () => {
     const bidi = resolveParagraphBidi('Hello (world) 123');
     expect(bidi.isLeftToRight).toBe(true);
