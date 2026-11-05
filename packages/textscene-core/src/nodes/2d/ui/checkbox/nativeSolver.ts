@@ -20,6 +20,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   fitIconSize,
   reservedLabelBox,
+  textMinimumWidthPx,
   tintColor,
   type ButtonLabelBox,
 } from '../../../../r3f/controls/native/buttonBase';
@@ -31,7 +32,6 @@ import {
 } from '../../../../r3f/controls/native/textTheme';
 import type { CheckBoxIcons } from '../../../../r3f/controls/native/themeIcons';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { CheckBoxProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import {
@@ -219,7 +219,7 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   const measured =
     hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
   // `clip_text` zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
-  const textSize = { x: props.clipText ? 0 : shapedTextSizeWidthPx(measured.x), y: measured.y };
+  const textSize = { x: textMinimumWidthPx(measured.x, props.clipText), y: measured.y };
 
   const iconSize = fitIconSize(checkBoxIconNaturalSize(n), checkBoxIconMaxWidth(n.constants));
   const hSeparation = checkBoxHSeparation(n.constants, ctx);

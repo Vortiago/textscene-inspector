@@ -20,6 +20,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   fitIconSize,
   reservedLabelBox,
+  textMinimumWidthPx,
   tintColor,
   type ButtonLabelBox,
 } from '../../../../r3f/controls/native/buttonBase';
@@ -32,7 +33,6 @@ import {
 import type { CheckButtonIcons } from '../../../../r3f/controls/native/themeIcons';
 import { CHECK_BUTTON_ICON_NATURAL_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { CheckButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
@@ -208,9 +208,6 @@ export function checkButtonCheckVOffset(constants: SolveNode['constants']): numb
   return constants.check_v_offset ?? 0;
 }
 
-/** CheckButton's default text alignment is LEFT (`check_button.cpp:169`), over Button's CENTER. A scene's `alignment` still wins. */
-export const CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT = 0;
-
 /**
  * `CheckButton::get_minimum_size` (`check_button.cpp:64-79`): Button's text-only floor plus the icon's
  * width, and `h_separation` only with text. Not `buttonMinimumSize`, whose flat stylebox is Button's:
@@ -232,7 +229,7 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const measured =
     hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
   // `clip_text` zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
-  const textSize = { x: props.clipText ? 0 : shapedTextSizeWidthPx(measured.x), y: measured.y };
+  const textSize = { x: textMinimumWidthPx(measured.x, props.clipText), y: measured.y };
 
   const iconSize = fitIconSize(
     checkButtonIconNaturalSize(n, state === 'disabled', n.rtl),

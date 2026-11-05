@@ -14,7 +14,12 @@ import { multiplyModulate } from '../../canvasItemModulate';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
 import { drawnLinesInBox, textParagraphLineShiftPx } from './text/lineDrawClip';
-import { shapeText, type TextLayoutResult, type TextLineLayout } from './text/textLayout';
+import {
+  shapeText,
+  shapedTextSizeWidthPx,
+  type TextLayoutResult,
+  type TextLineLayout,
+} from './text/textLayout';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { type Rgba } from '../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
@@ -341,6 +346,14 @@ function swapAlignmentSide(alignment: number): number {
   if (alignment === H_RIGHT) return H_LEFT;
   if (alignment === H_LEFT) return H_RIGHT;
   return alignment;
+}
+
+/**
+ * A Button-family label's width contribution to the minimum size: the ceiled shaped width, or 0 under
+ * `clip_text` (`button.cpp:493-495`), since a narrower box cuts the label.
+ */
+export function textMinimumWidthPx(measuredWidthPx: number, isClipText: boolean | undefined): number {
+  return isClipText ? 0 : shapedTextSizeWidthPx(measuredWidthPx);
 }
 
 /** `button.cpp:428,432`: the paragraph box width, the drawable width ceiled to a whole pixel. */

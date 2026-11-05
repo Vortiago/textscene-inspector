@@ -22,6 +22,7 @@ import {
   pickButtonStyleBox,
   resolveButtonDrawState,
   reservedLabelBox,
+  textMinimumWidthPx,
   tintColor,
   type ButtonDrawState,
   type ButtonLabelBox,
@@ -34,7 +35,6 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { OptionButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
@@ -152,7 +152,7 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
       // `paragraph->get_size()` is ceiled (`text_paragraph.cpp:601-608` -> `text_server_adv.cpp:7524-7537`),
       // so the max is over whole-pixel widths.
       // `clip_text` zeroes the width (`button.cpp:493-495`).
-      textW = Math.max(textW, props.clipText ? 0 : shapedTextSizeWidthPx(size.x));
+      textW = Math.max(textW, textMinimumWidthPx(size.x, props.clipText));
       textH = Math.max(textH, size.y);
     }
   }

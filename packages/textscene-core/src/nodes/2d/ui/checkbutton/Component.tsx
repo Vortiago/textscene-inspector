@@ -33,9 +33,9 @@ import {
   resolveCheckButtonIconKey,
   tintColor,
   CHECK_BUTTON_ICON_THEME_NAME,
-  CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT,
   CHECKBUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import type { CheckButtonProperties } from './types';
 
 export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
@@ -91,7 +91,7 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
         hSeparation: checkButtonHSeparation(solveNode.constants, { theme }),
         hasText,
         textHeightPx: layout?.heightPx ?? 0,
-        textAlignment: props.alignment ?? CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT,
+        textAlignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
         rtl: solveNode.rtl,
       }),
     [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout, props.alignment, solveNode.rtl]
