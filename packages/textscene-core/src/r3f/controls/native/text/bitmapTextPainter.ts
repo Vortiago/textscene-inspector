@@ -14,10 +14,11 @@ import * as THREE from 'three';
 import type { FillSheet } from '../../../../resources/fonts/font/types';
 import type { BitmapFontMetrics } from './bitmapFontMetrics';
 import { fontIsScaled } from './fontMetrics';
-import { drawsGlyphRect, type GlyphDrawer } from './glyphDrawer';
+import type { CanvasTextPaintOptions } from './canvasTextPainter';
+import { drawsGlyphRect, GLYPH_DRAWER_RULES, type GlyphDrawer } from './glyphDrawer';
 import type { GlyphPlacement, TextLayoutResult } from './textLayout';
 
-/** A texture of the sheet, one for each run so that its filter state is the run's own. The bytes are shared. */
+/** A new texture of the sheet. `TextRun.tsx` shares one for each sampling among the runs of a sheet. */
 export function createSheetTexture(sheet: FillSheet): THREE.DataTexture {
   const texture = new THREE.DataTexture(sheet.data, sheet.width, sheet.height, THREE.RGBAFormat);
   // The rows are top first, so v counts down the image and no flip applies.
@@ -37,12 +38,7 @@ export interface BitmapQuads {
   indices: Uint32Array;
 }
 
-export interface BitmapPaintOptions {
-  /** `'canvasItem'` by default. */
-  glyphDrawer?: GlyphDrawer;
-  /** Where the run's x 0 sits in its canvas item, which a floored pen includes. 0 by default. */
-  penOriginXPx?: number;
-}
+export type BitmapPaintOptions = Pick<CanvasTextPaintOptions, 'glyphDrawer' | 'penOriginXPx'>;
 
 /**
  * The glyph a placement draws, or undefined for a hex-code box, a space, a glyph `drawer` skips and
@@ -77,23 +73,22 @@ export function buildBitmapQuads(
   sheet: FillSheet,
   { glyphDrawer = 'canvasItem', penOriginXPx = 0 }: BitmapPaintOptions = {}
 ): BitmapQuads {
-  const placements = layout.lines.flatMap((line, lineIndex) =>
-    line.glyphs.map((placement) => ({ placement, lineIndex }))
+  const inked = layout.lines.flatMap((line, lineIndex) =>
+    line.glyphs.flatMap((placement) => {
+      const glyph = inkedGlyph(placement, metrics, sheet, glyphDrawer);
+      return glyph ? [{ glyph, placement, lineIndex }] : [];
+    })
   );
-  const inkedOf = (placement: GlyphPlacement) => inkedGlyph(placement, metrics, sheet, glyphDrawer);
-  const inkedCount = placements.filter(({ placement }) => inkedOf(placement)).length;
-  const positions = new Float32Array(inkedCount * 4 * 3);
-  const uvs = new Float32Array(inkedCount * 4 * 2);
-  const indices = new Uint32Array(inkedCount * 6);
+  const positions = new Float32Array(inked.length * 4 * 3);
+  const uvs = new Float32Array(inked.length * 4 * 2);
+  const indices = new Uint32Array(inked.length * 6);
   const scale = metrics.pxPerUnit(fontSizePx);
-  const floorsPen = glyphDrawer === 'canvasItem' && !fontIsScaled(fontSizePx, metrics);
+  const floorsPen = GLYPH_DRAWER_RULES[glyphDrawer].roundsPen && !fontIsScaled(fontSizePx, metrics);
   const sheetWidthInverse = 1 / sheet.width;
   const sheetHeightInverse = 1 / sheet.height;
 
   let quad = 0;
-  for (const { placement, lineIndex } of placements) {
-    const glyph = inkedOf(placement);
-    if (!glyph) continue;
+  for (const { glyph, placement, lineIndex } of inked) {
     const rowOffset = sheet.rowOffsets[glyph.fillIndex]!;
     const baselinePx = lineIndex * layout.linePitchPx + layout.baselineOffsetPx;
     const originX = floorsPen ? Math.floor(penOriginXPx + placement.x) - penOriginXPx : placement.x;

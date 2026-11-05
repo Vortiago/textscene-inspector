@@ -1,19 +1,17 @@
 /**
  * The font a TextMesh builds from, as far as it has loaded: the outlines it extrudes and
  * the metrics that shape its lines. The font file, its outlines and its metrics all arrive after the scene.
- * A BMFont shapes from its descriptor and has no outlines (`bitmapFontOutlines.ts`).
+ * A BMFont shapes from its descriptor and has no outlines (`bitmapFontOutlines.ts`), so only a hex-code box draws.
  */
 
 import { peekSettledSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
-import { resolveBitmapFont } from '../../../r3f/controls/native/text/sceneFontResolution';
 import { withOutlines } from '../../../r3f/controls/native/text/fontMetrics';
 import { identityKey } from '../../../utils/identityKey';
 import { perObject } from '../../../utils/perObject';
 import { resolveFontReference } from '../../fonts/font/resolveFontReference';
 import { fontForNode } from '../../styles/theme/lookup';
 import type { LoadedFont, ResolvableResource, ScopedResource } from '../../scopedResource';
-import { bitmapFontOutlines } from './bitmapFontOutlines';
 import type { TextMeshFace } from './build';
 
 export type TextMeshFont =
@@ -39,8 +37,7 @@ function readTextMeshFont({
   projectFonts,
 }: ResolvableResource): TextMeshFont {
   const font = fontForNode('TextMesh', resource.data['font'], { resources, loadedFont, projectFonts });
-  const bitmap = resolveBitmapFont(font);
-  const outlines = bitmap ? bitmapFontOutlines(bitmap) : peekSceneFontOutlines(font);
+  const outlines = peekSceneFontOutlines(font);
   if (outlines === null) return UNREADABLE;
   // The settled metrics are keyed by the resolved font file, and the name only labels a failure.
   const metrics = peekSettledSceneFontMetrics(font, `TextMesh ${resource.id}`);

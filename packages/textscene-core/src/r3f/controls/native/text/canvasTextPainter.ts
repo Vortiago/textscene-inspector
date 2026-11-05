@@ -28,7 +28,7 @@ import { passBlendMaterialProps, type SurfaceBlend } from '../../../materials/su
 import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
 import type { SurfaceShading } from '../../../materialFor2d';
 import type { Rgba } from '../../../../godot/math/math';
-import type { GlyphDrawer } from './glyphDrawer';
+import { GLYPH_DRAWER_RULES, type GlyphDrawer } from './glyphDrawer';
 
 /** Fixed vertical pad, CSS px, on every raster edge: anti-aliased ink can overshoot a glyph's ascent/descent box. The quad is this much taller than `layout.heightPx` on both edges. */
 const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
@@ -218,7 +218,7 @@ export function paintSceneFontCanvas(
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
       const penX =
         canvasLayout.offsetXPx +
-        (glyphDrawer === 'canvasItem'
+        (GLYPH_DRAWER_RULES[glyphDrawer].roundsPen
           ? canvasGlyphPenXPx(penOriginXPx + gp.x, fontSizePx, metrics) - penOriginXPx
           : gp.x);
       // A glyph shaped with no growth, in a layout that is not sheared, stays on its plain ring.
