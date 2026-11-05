@@ -141,20 +141,24 @@ function readFeatures(dv: DataView, list: number): Feature[] {
   });
 }
 
-function readLookups(dv: DataView, list: number, extensionType: number): Lookup[] {
+/** The lookups of the list at `list`, in a table that ends at `end`. */
+function readLookups(dv: DataView, list: number, end: number, extensionType: number): Lookup[] {
   return Array.from({ length: u16(dv, list) }, (_, i) => {
     const lookup = list + u16(dv, list + 2 + 2 * i);
     const type = u16(dv, lookup);
     const flag = u16(dv, lookup + 2);
     const offsets = countedU16Values(dv, lookup + 4);
+    const markFilteringSetAt = lookup + 6 + 2 * offsets.length;
+    // `Lookup::sanitize` (`hb-ot-layout-common.hh:1418-1431`) fails, and HarfBuzz empties the lookup.
+    if (flag & LookupFlag.USE_MARK_FILTERING_SET && markFilteringSetAt + 2 > end)
+      return { subtables: [], props: flag };
     const subtables = offsets.map((offset): Subtable => {
       const at = lookup + offset;
       if (type !== extensionType) return { type, offset: at };
       return { type: u16(dv, at + 2), offset: at + dv.getUint32(at + 4, false) };
     });
     // `Lookup::get_props` (`hb-ot-layout-common.hh:1325-1334`).
-    const markFilteringSet =
-      flag & LookupFlag.USE_MARK_FILTERING_SET ? u16(dv, lookup + 6 + 2 * offsets.length) : 0;
+    const markFilteringSet = flag & LookupFlag.USE_MARK_FILTERING_SET ? u16(dv, markFilteringSetAt) : 0;
     return { subtables, props: flag + markFilteringSet * 0x10000 };
   });
 }
@@ -197,12 +201,13 @@ function readSubstitutions(dv: DataView, at: number): Map<number, readonly numbe
 
 /** Reads the `GSUB` or `GPOS` table of `length` bytes at `offset`. */
 export function readLayoutTable(dv: DataView, offset: number, length: number, isGsub: boolean): LayoutTable {
+  const end = offset + length;
   return {
     dv,
-    end: offset + length,
+    end,
     scripts: readScripts(dv, offset + u16(dv, offset + 4)),
     features: readFeatures(dv, offset + u16(dv, offset + 6)),
-    lookups: readLookups(dv, offset + u16(dv, offset + 8), isGsub ? GSUB_EXTENSION : GPOS_EXTENSION),
+    lookups: readLookups(dv, offset + u16(dv, offset + 8), end, isGsub ? GSUB_EXTENSION : GPOS_EXTENSION),
     featureSubstitutions: readFeatureSubstitutions(dv, offset),
   };
 }
@@ -443,6 +448,18 @@ export function valueRecordSize(valueFormat: number): number {
   for (let bits = valueFormat; bits !== 0; bits &= bits - 1) size += 2;
   return size;
 }
+
+/** The fields of a `GPOS` value record (`ValueFormat`, `hb-ot-layout-gpos-table.hh`), in record order. */
+export const ValueFormat = {
+  X_PLACEMENT: 0x01,
+  Y_PLACEMENT: 0x02,
+  X_ADVANCE: 0x04,
+  X_ADVANCE_DEVICE: 0x40,
+} as const;
+
+/** Where the field `field` of a value record of `valueFormat` starts: after every field of a lower bit. */
+export const valueFieldOffset = (valueFormat: number, field: number): number =>
+  valueRecordSize(valueFormat & (field - 1));
 
 /**
  * One value record of a `GPOS` pair subtable: where it starts, its format, and the table its device

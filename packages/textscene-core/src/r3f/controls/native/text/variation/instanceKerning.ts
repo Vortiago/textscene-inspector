@@ -10,13 +10,13 @@
  */
 
 import {
-  collectLookups,
   GposType,
   i16,
   pairValueRecords,
   readLayoutTable,
   u16,
-  valueRecordSize,
+  valueFieldOffset,
+  ValueFormat,
   type LayoutTable,
   type PairValueRecord,
 } from '../autofit/openTypeLayout';
@@ -34,8 +34,6 @@ import { itemDeltaFixed, readItemVariationStore, type ItemVariationStore } from 
 /** The kerning of a pair of glyphs in design units, with the fraction of its deltas. */
 export type PairKerningReader = (left: LookupGlyph, right: LookupGlyph) => number;
 
-const VALUE_X_ADVANCE = 0x4;
-const VALUE_X_ADVANCE_DEVICE = 0x40;
 const VARIATION_INDEX_FORMAT = 0x8000;
 /** `GDEF` 1.3 keeps the offset of its item variation store at this byte. */
 const GDEF_VARIATION_STORE_OFFSET = 14;
@@ -49,16 +47,20 @@ function gdefVariationStore(sfnt: SfntFile, axisCount: number): ItemVariationSto
 }
 
 /**
- * The lookups of the `kern` feature in every script. A `FeatureVariations` record that swaps them at
- * an instance is left out: this reader keeps the lookups of the default instance.
+ * The lookups of the `kern` feature in the default language system of every script, ascending.
+ * HarfBuzz takes that system for text with no language of the font (`hb-ot-layout.cc:769-804`), and
+ * the previewer gives no text a language. A `FeatureVariations` record that swaps them is left out.
  */
-function kernLookups(table: LayoutTable): number[] {
-  const scripts = table.scripts.map((script) => script.tag);
-  return collectLookups({ ...table, featureSubstitutions: [] }, scripts, ['kern']);
+function kernLookups({ scripts, features }: LayoutTable): number[] {
+  const lookups = new Set<number>();
+  for (const { defaultLanguage } of scripts) {
+    if (!defaultLanguage) continue;
+    const { requiredFeature, features: indices } = defaultLanguage;
+    for (const index of requiredFeature === null ? indices : [requiredFeature, ...indices])
+      if (features[index]?.tag === 'kern') features[index]!.lookups.forEach((lookup) => lookups.add(lookup));
+  }
+  return [...lookups].sort((a, b) => a - b);
 }
-
-/** Where the field `flag` of a value record of `format` starts: after every field of a lower flag. */
-const fieldOffset = (format: number, flag: number): number => valueRecordSize(format & (flag - 1));
 
 /**
  * The x advance a value record adds, in design units: its own, and the delta of its device table at
@@ -72,9 +74,9 @@ function xAdvanceUnits(
   normalized: Int32Array
 ): number {
   let units = 0;
-  if (format & VALUE_X_ADVANCE) units += i16(dv, at + fieldOffset(format, VALUE_X_ADVANCE));
-  if (!(format & VALUE_X_ADVANCE_DEVICE) || !store) return units;
-  const deviceOffset = u16(dv, at + fieldOffset(format, VALUE_X_ADVANCE_DEVICE));
+  if (format & ValueFormat.X_ADVANCE) units += i16(dv, at + valueFieldOffset(format, ValueFormat.X_ADVANCE));
+  if (!(format & ValueFormat.X_ADVANCE_DEVICE) || !store) return units;
+  const deviceOffset = u16(dv, at + valueFieldOffset(format, ValueFormat.X_ADVANCE_DEVICE));
   if (deviceOffset === 0) return units;
   const device = base + deviceOffset;
   if (u16(dv, device + 4) !== VARIATION_INDEX_FORMAT) return units;

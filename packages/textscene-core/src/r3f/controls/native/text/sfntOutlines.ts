@@ -90,8 +90,11 @@ async function openOutlines(
 ): Promise<SfntOutlines | null> {
   const sfnt = await openFontContainer(bytes, OUTLINE_TABLE_TAGS);
   if (!sfnt) return null;
-  const outlineOf = isAutoHinted(sfnt) ? await autoHintedReaderOf(sfnt) : await nativeReaderOf(sfnt);
-  return readSfntOutlines(sfnt, outlineOf, await kerningReaderOf(sfnt));
+  const [outlineOf, kerningAt] = await Promise.all([
+    isAutoHinted(sfnt) ? autoHintedReaderOf(sfnt) : nativeReaderOf(sfnt),
+    kerningReaderOf(sfnt),
+  ]);
+  return readSfntOutlines(sfnt, outlineOf, kerningAt);
 }
 
 /**

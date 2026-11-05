@@ -115,3 +115,13 @@ describe('a hinting device table on the kerning', () => {
     expect(kerning(lookup, classes(BASE, BASE))).toBe(KERNED_UNITS);
   });
 });
+
+// `hb_ot_layout_script_select_language` (`hb-ot-layout.cc`) falls back to the default language system,
+// and the previewer gives no text a language.
+describe('a kern lookup of a language system', () => {
+  it('adds nothing beside the default language system', () => {
+    const font = syntheticKernFont([{ flag: 0 }, { flag: 0, isLanguageOnly: true }]);
+    const reader = instanceKerningReader(font)!(BOLD_NORMALIZED);
+    expect(reader({ glyph: 1, codePoint: LETTER_A }, { glyph: 2, codePoint: LETTER_V })).toBe(KERNED_UNITS);
+  });
+});

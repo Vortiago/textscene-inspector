@@ -203,6 +203,12 @@ describe('withVariation at a variable-font instance', () => {
     expect(kerningPx(face, 'A', 'V')).toBe(-256);
   });
 
+  // A TextMesh reads its outlines apart from its metrics, so a face may first settle without them.
+  it('keeps the axis values of a face without outlines, so outlines added later draw the instance', () => {
+    const settled = withVariation(METRICS, { opentype: BOLD, outlines: null });
+    expect(kerningPx(withOutlines(settled, variableOutlines), 'A', 'V')).toBe(12);
+  });
+
   // A `FontVariation` over another finds its face at its own axis values (`font.cpp:3120-3131`), as
   // the bold that the default theme makes of a project font does (`default_theme.cpp:1393-1394`).
   it('drops the instance under a variation of its own that sets no axis', () => {

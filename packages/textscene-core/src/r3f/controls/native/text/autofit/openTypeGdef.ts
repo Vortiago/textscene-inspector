@@ -31,6 +31,8 @@ const GDEF_LIGATURE_GLYPH = 2;
 const GDEF_MARK_GLYPH = 3;
 const GDEF_GLYPH_CLASS_DEF_OFFSET = 4;
 const GDEF_MARK_ATTACH_CLASS_DEF_OFFSET = 10;
+/** The size of a `GDEF` 1.0 header: the version and four offsets. */
+const GDEF_1_0_HEADER_SIZE = 12;
 /** `GDEF` 1.2 keeps the offset of its mark glyph sets at this byte. */
 const GDEF_MARK_GLYPH_SETS_OFFSET = 12;
 
@@ -71,7 +73,7 @@ function synthesizedProps({ codePoint }: LookupGlyph): number {
  */
 export function glyphPropsReader(sfnt: SfntFile): (glyph: LookupGlyph) => number {
   const { dv } = sfnt;
-  const gdef = gdefOf(sfnt, GDEF_MARK_GLYPH_SETS_OFFSET);
+  const gdef = gdefOf(sfnt, GDEF_1_0_HEADER_SIZE);
   const glyphClassDef = gdef && gdefSubtable(dv, gdef, GDEF_GLYPH_CLASS_DEF_OFFSET);
   if (!gdef || glyphClassDef === null) return synthesizedProps;
   const markAttachClassDef = gdefSubtable(dv, gdef, GDEF_MARK_ATTACH_CLASS_DEF_OFFSET);

@@ -32,6 +32,8 @@ import {
   substituteList,
   type Subtable,
   u16,
+  valueFieldOffset,
+  ValueFormat,
   valueRecordSize,
 } from './openTypeLayout';
 
@@ -373,13 +375,10 @@ function applyGsub(table: LayoutTable, stages: readonly Stage[], buffer: Buffer)
   }
 }
 
-const X_PLACEMENT = 0x01;
-const Y_PLACEMENT = 0x02;
-
 /** The y placement of a `GPOS` value record of `valueFormat` at `at`, 0 for a record without one. */
 function yPlacementOf(dv: DataView, at: number, valueFormat: number): number {
-  if (!(valueFormat & Y_PLACEMENT)) return 0;
-  return i16(dv, valueFormat & X_PLACEMENT ? at + 2 : at);
+  if (!(valueFormat & ValueFormat.Y_PLACEMENT)) return 0;
+  return i16(dv, at + valueFieldOffset(valueFormat, ValueFormat.Y_PLACEMENT));
 }
 
 function adjust(glyph: ShapedGlyph, dv: DataView, at: number, valueFormat: number): void {

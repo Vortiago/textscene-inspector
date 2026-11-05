@@ -337,8 +337,8 @@ const variationsOf = perObject(
  * `metrics` with a `FontVariation`'s `embolden`, `skew` and `opentype` set, and the `outlines` its text follows.
  * The wrapper reads every other field through the face, so a live getter stays live. With no variation
  * and no outlines, it is the face itself. Two fonts that share a face and a variation keep
- * their own outlines, each on its own wrapper. The axis values stay only where the outlines draw
- * them as an instance other than the default, and the advances and the kerning then follow it.
+ * their own outlines, each on its own wrapper. The axis values stay as `drawnInstance` keeps them,
+ * and the advances and the kerning then follow the instance.
  * A variation of a wrapper replaces its variation and keeps its outlines, as a `FontVariation` over
  * another finds its face at its own values alone (`font.cpp:3120-3131`).
  */
@@ -351,10 +351,9 @@ export function withVariation<Metrics extends FontMetrics>(
     outlines = metrics.outlines,
   }: GlyphVariation & Pick<FontMetrics, 'outlines'>
 ): Metrics {
-  const instance = isInstanced(opentype) && outlines?.drawsInstance?.(opentype) ? opentype : undefined;
-  if (!outlines && !isGlyphVaried({ embolden, skew, opentype: instance })) return metrics;
+  if (!outlines && !isGlyphVaried({ embolden, skew, opentype })) return metrics;
   const byVariation = variationsOf(metrics);
-  const key = variationKey({ embolden, skew, opentype: instance });
+  const key = variationKey({ embolden, skew, opentype });
   let byOutlines = byVariation.get(key);
   if (!byOutlines) byVariation.set(key, (byOutlines = new Map()));
   let wrapped = byOutlines.get(outlines);
@@ -362,12 +361,24 @@ export function withVariation<Metrics extends FontMetrics>(
     wrapped = Object.create(metrics, {
       embolden: { value: embolden },
       skew: { value: skew },
-      opentype: { value: instance },
+      opentype: { value: drawnInstance(opentype, outlines) },
       ...(outlines !== undefined && { outlines: { value: outlines } }),
     }) as FontMetrics;
     byOutlines.set(outlines, wrapped);
   }
   return wrapped as Metrics;
+}
+
+/**
+ * The axis values that `outlines` draws as an instance other than the default, else undefined. A face
+ * without outlines keeps them all, so the outlines a TextMesh adds later with `withOutlines` find them.
+ */
+function drawnInstance(
+  opentype: OpentypeCoordinates | undefined,
+  outlines: FontMetrics['outlines']
+): OpentypeCoordinates | undefined {
+  if (!outlines) return opentype;
+  return isInstanced(opentype) && outlines.drawsInstance?.(opentype) ? opentype : undefined;
 }
 
 /** `metrics` carrying `outlines`, keeping its own variation. */

@@ -274,10 +274,12 @@ const imageObjectFontMetrics = perObject(wrapForImageObject);
 function wrapForImageObject(base: FontMetrics): FontMetrics {
   // A fractional width skips the whole-pixel round, and the size change at each
   // edge resets the remainder and kerning, as a separate shaped run would.
-  // `Object.create` keeps the rest of the face live. An image has no outline, so no embolden or skew.
+  // `Object.create` keeps the rest of the face live. An image has no outline, so no embolden, skew
+  // or variable-font instance, whose advance would replace the image width.
   return Object.create(base, {
     embolden: { value: 0 },
     skew: { value: 0 },
+    opentype: { value: undefined },
     getGlyphAdvanceUnits: {
       value(ch: string): number | null {
         if (ch === IMAGE_OBJECT_CHAR) return base.unitsPerEm;

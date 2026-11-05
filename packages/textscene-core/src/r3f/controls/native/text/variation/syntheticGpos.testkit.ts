@@ -1,18 +1,16 @@
 /**
  * A variable font of `fvar`, `GPOS` and `GDEF` alone, built in bytes, so a test sets each field of a
- * `kern` lookup that the fixture fonts leave out: its lookup flag, its mark filtering set and the
- * device table of its value. Each lookup kerns glyph 1 before glyph 2 by `KERNED_UNITS`.
+ * `kern` lookup that the fixture fonts leave out: its lookup flag, its mark filtering set, the
+ * device table of its value and the language system that holds it. Each lookup kerns glyph 1 before glyph 2 by `KERNED_UNITS`.
  */
 
+import { ValueFormat } from '../autofit/openTypeLayout';
 import { ByteWriter } from '../sfntOutlines.testkit';
 import { sfntFileOfTables, type SfntFile } from '../sfntTables';
 
 export const KERNED_UNITS = -50;
 const LEFT_GLYPH = 1;
 const RIGHT_GLYPH = 2;
-
-const VALUE_X_ADVANCE = 0x4;
-const VALUE_X_ADVANCE_DEVICE = 0x40;
 
 const tag = (out: ByteWriter, name: string): ByteWriter => out.raw([...name].map((ch) => ch.charCodeAt(0)));
 
@@ -49,6 +47,8 @@ export interface KernLookup {
   readonly flag: number;
   readonly markFilteringSet?: number;
   readonly device?: HintingDevice;
+  /** Whether the lookup is in the `kern` feature of the `TRK ` language system alone, not of the default one. */
+  readonly isLanguageOnly?: boolean;
 }
 
 /** The format 1 device table of `device`: two bits for each ppem, eight to a word. */
@@ -73,7 +73,7 @@ function pairPosBytes({ device }: KernLookup): ByteWriter {
     .u16(KERNED_UNITS & 0xffff);
   // A format 1 device offset counts from the `PairSet`, and the device follows the coverage.
   if (device) pairSet.u16(pairSet.length + 2 + coverage.length);
-  const valueFormat = VALUE_X_ADVANCE | (device ? VALUE_X_ADVANCE_DEVICE : 0);
+  const valueFormat = ValueFormat.X_ADVANCE | (device ? ValueFormat.X_ADVANCE_DEVICE : 0);
   return new ByteWriter()
     .u16(1)
     .u16(header + pairSet.length)
@@ -98,18 +98,47 @@ function lookupBytes(lookup: KernLookup): ByteWriter {
   return out.raw(pairPosBytes(lookup));
 }
 
-/** A `GPOS` whose `DFLT` script has one `kern` feature with `lookups`, in order. */
+/** A `LangSys` with no required feature and the one feature at `featureIndex`. */
+const langSysBytes = (featureIndex: number): ByteWriter =>
+  new ByteWriter().u16(0).u16(0xffff).u16(1).u16(featureIndex);
+
+/** A `ScriptList` whose `DFLT` script has feature 0 in its default language system and feature 1 in `TRK `. */
+function scriptListBytes(): ByteWriter {
+  const scriptHeader = 10;
+  const defaultLangSys = langSysBytes(0);
+  const script = tag(new ByteWriter().u16(scriptHeader).u16(1), 'TRK ').u16(
+    scriptHeader + defaultLangSys.length
+  );
+  script.raw(defaultLangSys).raw(langSysBytes(1));
+  return tag(new ByteWriter().u16(1), 'DFLT').u16(8).raw(script);
+}
+
+/** A `FeatureList` of `kern` features, each holding the lookups of its indices. */
+function featureListBytes(features: readonly (readonly number[])[]): ByteWriter {
+  const tables = features.map((indices) => {
+    const table = new ByteWriter().u16(0).u16(indices.length);
+    indices.forEach((index) => table.u16(index));
+    return table;
+  });
+  const out = new ByteWriter().u16(tables.length);
+  offsetsOf(tables, 2 + 6 * tables.length).forEach((offset) => tag(out, 'kern').u16(offset));
+  tables.forEach((table) => out.raw(table));
+  return out;
+}
+
+const indicesWhere = (lookups: readonly KernLookup[], test: (lookup: KernLookup) => boolean): number[] =>
+  lookups.flatMap((lookup, index) => (test(lookup) ? [index] : []));
+
+/**
+ * A `GPOS` whose `DFLT` script has a `kern` feature in its default language system and another in
+ * `TRK `, each with its `lookups`, in order.
+ */
 function gposBytes(lookups: readonly KernLookup[]): ByteWriter {
-  const scriptList = tag(new ByteWriter().u16(1), 'DFLT')
-    .u16(8)
-    .u16(4)
-    .u16(0)
-    .u16(0)
-    .u16(0xffff)
-    .u16(1)
-    .u16(0);
-  const featureList = tag(new ByteWriter().u16(1), 'kern').u16(8).u16(0).u16(lookups.length);
-  lookups.forEach((_, i) => featureList.u16(i));
+  const scriptList = scriptListBytes();
+  const featureList = featureListBytes([
+    indicesWhere(lookups, (lookup) => !lookup.isLanguageOnly),
+    indicesWhere(lookups, (lookup) => lookup.isLanguageOnly === true),
+  ]);
   const lookupTables = lookups.map(lookupBytes);
   const lookupList = new ByteWriter().u16(lookups.length);
   offsetsOf(lookupTables, 2 + 2 * lookups.length).forEach((offset) => lookupList.u16(offset));

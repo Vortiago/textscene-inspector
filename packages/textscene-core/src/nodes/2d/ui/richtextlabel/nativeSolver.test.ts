@@ -1023,6 +1023,21 @@ describe('shapeRichText — an [img] placeholder', () => {
     ]);
   });
 
+  it('advances by the image width in a face at a variable-font instance', () => {
+    const WGHT_TAG = 0x77676874;
+    const outlines = {
+      glyphIndex: () => 5,
+      advanceAtInstance: () => 999 * 64,
+    } as unknown as FontMetrics['outlines'];
+    const instanced: FontMetrics = {
+      ...OPEN_SANS_FONT_METRICS,
+      opentype: new Map([[WGHT_TAG, 700]]),
+      outlines,
+    };
+    const faces = { ...ALL_FACES, normal: instanced };
+    expect(shapeRuns([bareImageRun(24)], { faces }).lines[0]!.glyphs[0]!.advance).toBe(24);
+  });
+
   it('suppresses kerning on either side of the placeholder', () => {
     const kerned = { ...OPEN_SANS_FONT_METRICS, getKerningAdjustmentUnits: () => 100 };
     const faces = { ...ALL_FACES, normal: kerned };
