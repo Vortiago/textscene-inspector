@@ -9,8 +9,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { godotColorToLinear } from '../../../../r3f/godotColor';
+import { multiplyModulate, useItemLinearColorOf } from '../../../../r3f/canvasItemModulate';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useWindowedCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
@@ -56,6 +55,7 @@ function RichTextImage({
   renderOrder: number;
 }) {
   const { spec, widthPx, heightPx } = placement;
+  const toItemLinear = useItemLinearColorOf();
   const { externalResources, internalResources } = resources;
   const { texture: rawTexture } = useTexture2D(spec.path, externalResources, internalResources);
 
@@ -100,7 +100,7 @@ function RichTextImage({
         renderOrder={renderOrder}
         width={drawWidthPx}
         height={drawHeightPx}
-        color={godotColorToLinear(imageTint)}
+        color={toItemLinear(imageTint)}
         opacity={imageTint.a}
         map={drawnTexture}
       />
@@ -110,6 +110,7 @@ function RichTextImage({
 
 export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<RichTextLabelProperties>(solveNode);
+  const toItemLinear = useItemLinearColorOf();
   const textTheme = useMemo(
     () => richTextLabelTextTheme(solveNode, props, { theme }),
     [solveNode, props, theme]
@@ -216,7 +217,7 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
                 <ControlQuad
                   width={underline.x1 - underline.x0}
                   height={underline.heightPx}
-                  color={godotColorToLinear(runTint)}
+                  color={toItemLinear(runTint)}
                   opacity={runTint.a * RICH_TEXT_LABEL_UNDERLINE_ALPHA}
                   renderOrder={renderOrder}
                 />

@@ -17,18 +17,23 @@ export const MESH_INSTANCE: MultiMeshInstance = {
   customData: null,
 };
 
+/** The vertex colour channel as stored, which an sRGB canvas multiplies. */
+const keepChannel = (channel: number) => channel;
+
 /** The z of `INSTANCE_CUSTOM`, which picks the flipbook cell (`canvas_item_material.cpp:127`). */
 const CUSTOM_DATA_Z = 2;
 
 /**
  * `geometry` copied once per instance, in canvas space (see {@link canvasPositions}): shrunk to a
  * flipbook cell, then under the instance transform (`canvas.glsl:253-266`). The colour is the vertex
- * colour times the instance colour, in sRGB as stored. The caller disposes the result.
+ * colour, through `decodeVertexColor`, times the instance colour as stored: a linear canvas decodes
+ * the attribute alone (`canvas.glsl:176-178,255`). The caller disposes the result.
  */
 export function canvasInstancesGeometry(
   geometry: THREE.BufferGeometry,
   instances: readonly MultiMeshInstance[],
-  flipbook: ParticlesFlipbook | null
+  flipbook: ParticlesFlipbook | null,
+  decodeVertexColor: (channel: number) => number = keepChannel
 ): THREE.BufferGeometry {
   const canvasPosition = canvasPositions(geometry.getAttribute('position'));
   const uv = geometry.getAttribute('uv');
@@ -57,9 +62,9 @@ export function canvasInstancesGeometry(
         uvs[at * 2 + 1] = 1 - ((1 - uv.getY(v)) / cell.vFrames + cell.vOffset);
       }
       if (colorValues) {
-        colorValues[at * 4] = (vertexColor?.getX(v) ?? 1) * (color?.[0] ?? 1);
-        colorValues[at * 4 + 1] = (vertexColor?.getY(v) ?? 1) * (color?.[1] ?? 1);
-        colorValues[at * 4 + 2] = (vertexColor?.getZ(v) ?? 1) * (color?.[2] ?? 1);
+        colorValues[at * 4] = decodeVertexColor(vertexColor?.getX(v) ?? 1) * (color?.[0] ?? 1);
+        colorValues[at * 4 + 1] = decodeVertexColor(vertexColor?.getY(v) ?? 1) * (color?.[1] ?? 1);
+        colorValues[at * 4 + 2] = decodeVertexColor(vertexColor?.getZ(v) ?? 1) * (color?.[2] ?? 1);
         colorValues[at * 4 + 3] =
           (vertexColor && vertexColor.itemSize === 4 ? vertexColor.getW(v) : 1) * (color?.[3] ?? 1);
       }

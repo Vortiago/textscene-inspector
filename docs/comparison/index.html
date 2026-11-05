@@ -7430,6 +7430,40 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p>A quad, a translucent Polygon2D and an opaque one share a SubViewport, and a CanvasLayer below the world's canvas holds a third. Godot draws the 3D render first and every canvas over it, so the CanvasLayer's polygon covers the quad and sits under the opaque Polygon2D.</p></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>HDR 2D canvas</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-sub-viewport-hdr-2d-godot.png" alt="Godot render of HDR 2D canvas">
+          <img class="img-ours" src="images/unit-sub-viewport-hdr-2d-ours.png" alt="Our render of HDR 2D canvas">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>With <code>use_hdr_2d</code>, a sub-viewport draws its canvas in linear colour into a half-float target that keeps values above 1 (<code>texture_storage.cpp:4541-4547</code>). Each colour of the canvas converts from sRGB to linear before it multiplies, and translucent items blend the linear values. A canvas item samples each texture through its decoding view. The SubViewportContainer shows the stored numbers as if they were sRGB bytes. So the left target draws darker than the sRGB target beside it. The bottom target keeps its value above 1 under the container's modulate of 0.5.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>HDR 2D canvas on a 3D surface</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-sub-viewport-hdr-2d-world-godot.png" alt="Godot render of HDR 2D canvas on a 3D surface">
+          <img class="img-ours" src="images/unit-sub-viewport-hdr-2d-world-ours.png" alt="Our render of HDR 2D canvas on a 3D surface">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A 3D material reads the same linear values with no decode, and a value above 1 reaches the tonemap. The top quad shows the HDR target and the bottom quad the sRGB one.</p></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Update mode</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
@@ -7485,7 +7519,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>
 <p>Strict and lenient parsing diverge only on out-of-range enums. The lenient parser warns and falls back to Godot's default (<code>render_target_update_mode</code> 2, <code>render_target_clear_mode</code> 0, <code>msaa_2d</code> 0, <code>msaa_3d</code> 0, <code>canvas_item_default_texture_filter</code> 1, <code>canvas_item_default_texture_repeat</code> 0), while the strict parser reports an error. A <code>size</code> Godot cannot read at all falls back to <code>Vector2i(512, 512)</code>. A component below 2 is a strict error, because <code>Viewport::_set_size</code> raises it (<code>viewport.cpp:1120</code>).</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.</li><li><strong>Approximated</strong> <code>use_hdr_2d</code> is not read, so an HDR canvas composites differently.</li><li><strong>Needs runtime</strong> A viewport whose camera or world is assigned by script shows only its clear colour in 3D, and frames from the origin in 2D.</li></ul></div>
+<ul><li><strong>Approximated</strong> A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.</li><li><strong>Approximated</strong> A Light2D in a <code>use_hdr_2d</code> canvas lights its items brighter than Godot does.</li><li><strong>Approximated</strong> The root viewport and a sub-viewport whose canvas draws over its 3D world ignore <code>use_hdr_2d</code>, and draw an sRGB canvas.</li><li><strong>Needs runtime</strong> A viewport whose camera or world is assigned by script shows only its clear colour in 3D, and frames from the origin in 2D.</li></ul></div>
     </article>
     <article class="sheet" data-type="SubViewportContainer" hidden>
       <header class="sheet-head">

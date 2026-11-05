@@ -17,8 +17,7 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { isStyleBoxTexture, type ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
@@ -127,7 +126,7 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
     showResizer ? RESIZER_SE_ICON : null
   );
   const resizerCombined = useMemo(() => multiplyModulate(tint.own, GRAPH_FRAME_RESIZER_COLOR), [tint.own]);
-  const resizerColor = useGodotLinearColor(resizerCombined);
+  const resizerColor = useItemLinearColor(resizerCombined);
 
   return (
     <>

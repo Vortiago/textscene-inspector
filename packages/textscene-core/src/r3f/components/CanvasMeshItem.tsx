@@ -16,6 +16,8 @@ import { useTexture2D } from '../../resources/useTexture2D';
 import { canvasMapProps, useCanvas2DTexture } from '../canvas2DTextureDecode';
 import { useNode2DCanvasTextureSampler } from '../canvasItemTextureSampler';
 import { CANVAS_SRGB_DEFINES } from '../canvasSrgbMultiply';
+import { useCanvasColorSpace, type CanvasColorSpace } from '../canvasColorSpace';
+import { sRGBChannelToLinear } from '../../utils/colorSpace';
 import { canvasMeshGeometry } from '../meshes/canvasMeshGeometry';
 import { canvasInstancesGeometry, MESH_INSTANCE } from '../meshes/canvasMeshInstances';
 import { drawnTag, type SurfacedMesh } from '../meshes/meshContent';
@@ -101,11 +103,13 @@ function CanvasMeshParts({
 }: CanvasMeshPartsProps) {
   // Stable per material: a new object each render would rebuild the merged geometry.
   const flipbook = useMemo(() => particlesFlipbook(material), [material]);
-  const geometries = useCanvasGeometries(mesh, instances, flipbook);
-  return geometries.map((geometry) => (
+  const canvasSpace = useCanvasColorSpace();
+  const geometries = useCanvasGeometries(mesh, instances, flipbook, canvasSpace);
+  return geometries.map(({ geometry, isInstanced }) => (
     <CanvasSurfaces
       key={geometry.uuid}
       geometry={geometry}
+      defines={vertexColorDefines(canvasSpace, isInstanced)}
       texture={texture}
       color={color}
       opacity={opacity}
@@ -114,35 +118,64 @@ function CanvasMeshParts({
   ));
 }
 
+/** One part's canvas geometry, and whether its colours are already per instance. */
+interface CanvasGeometry {
+  geometry: THREE.BufferGeometry;
+  isInstanced: boolean;
+}
+
 /**
  * The canvas geometry of each part of `mesh`, released when it changes or the node unmounts. A mesh
- * drawn once with no flipbook shares the source buffers. Any other draw builds its own copy.
+ * drawn once with no flipbook shares the source buffers. Any other draw builds its own copy, whose
+ * vertex colours a linear canvas decodes before the instance colours multiply.
  */
 function useCanvasGeometries(
   mesh: SurfacedMesh,
   instances: readonly MultiMeshInstance[] | undefined,
-  flipbook: ParticlesFlipbook | null
-): readonly THREE.BufferGeometry[] {
+  flipbook: ParticlesFlipbook | null,
+  canvasSpace: CanvasColorSpace
+): readonly CanvasGeometry[] {
   const geometries = useMemo(() => {
     const drawn = instances ?? (flipbook ? [MESH_INSTANCE] : null);
+    const decode = canvasSpace.isLinear ? sRGBChannelToLinear : undefined;
     return mesh.parts.map(({ geometry }) =>
-      drawn ? canvasInstancesGeometry(geometry, drawn, flipbook) : canvasMeshGeometry(geometry)
+      drawn
+        ? { geometry: canvasInstancesGeometry(geometry, drawn, flipbook, decode), isInstanced: true }
+        : { geometry: canvasMeshGeometry(geometry), isInstanced: false }
     );
-  }, [mesh, instances, flipbook]);
-  const disposable = useMemo(() => ({ dispose: () => geometries.forEach((g) => g.dispose()) }), [geometries]);
+  }, [mesh, instances, flipbook, canvasSpace]);
+  const disposable = useMemo(
+    () => ({ dispose: () => geometries.forEach(({ geometry }) => geometry.dispose()) }),
+    [geometries]
+  );
   useDisposeOnRelease(disposable);
   return geometries;
+}
+
+/**
+ * The defines of a part's vertex colours. An sRGB canvas multiplies them as sRGB numbers
+ * (`canvas.glsl:181`). A linear canvas decodes a mesh's own colours in the shader, and an instanced
+ * copy holds them decoded already, times the instance colour it multiplies raw (`canvas.glsl:255`).
+ */
+function vertexColorDefines(
+  canvasSpace: CanvasColorSpace,
+  isInstanced: boolean
+): Readonly<Record<string, string>> | undefined {
+  if (!canvasSpace.isLinear) return CANVAS_SRGB_DEFINES;
+  return isInstanced ? undefined : canvasSpace.defines;
 }
 
 /** One part of the mesh: triangles, points or line segments, by the primitive its geometry draws. */
 function CanvasSurfaces({
   geometry,
+  defines,
   texture,
   color,
   opacity,
   pixelMaterial,
 }: {
   geometry: THREE.BufferGeometry;
+  defines: Readonly<Record<string, string>> | undefined;
   texture: THREE.Texture | null;
   color: THREE.Color;
   opacity: number;
@@ -152,10 +185,9 @@ function CanvasSurfaces({
   const primitive = geometryPrimitive(geometry);
   const drawsPoints = primitive === 'points';
   const pixelRatio = useThree((state) => state.viewport.dpr);
-  const map = canvasMapProps(texture);
+  const map = canvasMapProps(texture, useCanvasColorSpace());
   const point = drawsPoints ? canvasPointSize(pixelRatio) : undefined;
-  // The map and the vertex colours are sRGB numbers that Godot multiplies as stored
-  // (`canvas.glsl:172-181`), and the define is a program input, so it keys the material.
+  // The define is a program input, so it keys the material.
   const program = materialProgramInputs({
     props: {
       ...map,
@@ -164,7 +196,7 @@ function CanvasSurfaces({
       vertexColors: hasVertexColors,
       transparent: true,
       depthWrite: false,
-      defines: hasVertexColors ? CANVAS_SRGB_DEFINES : map.defines,
+      defines: hasVertexColors ? defines : map.defines,
       // three leaves `gl_PointSize` unwritten for a mesh material.
       injection: point?.injection,
       userData: point?.userData,

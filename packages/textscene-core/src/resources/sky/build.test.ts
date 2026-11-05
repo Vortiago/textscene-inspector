@@ -8,6 +8,7 @@ import { debandingDrawnBy } from './skyLayers.testkit';
 import { publishLiveTargets } from '../../r3f/liveTargets';
 import { publishedCanvasTarget } from '../../r3f/liveTargets.testkit';
 import { createCanvasTarget } from '../../nodes/viewport/subviewport/offscreenViewport';
+import { SRGB_CANVAS } from '../../r3f/canvasColorSpace';
 
 /** A sky of `materialType` with `properties` and every other property at Godot's default. */
 function defaultSky(materialType: string, properties: Record<string, string> = {}): Sky {
@@ -209,7 +210,7 @@ describe('buildSkyEnvironment panorama wiring', () => {
 
   it('fills its copy of a live panorama before the cube samples it', async () => {
     const { renderer } = await testRenderer();
-    const target = createCanvasTarget(8, 4, 'SubViewport');
+    const target = createCanvasTarget(8, 4, 'SubViewport', SRGB_CANVAS);
     const withdraw = publishLiveTargets([target.texture], renderer, false);
     const bound: (THREE.Texture | undefined)[] = [];
     const setRenderTarget = renderer.setRenderTarget.bind(renderer);

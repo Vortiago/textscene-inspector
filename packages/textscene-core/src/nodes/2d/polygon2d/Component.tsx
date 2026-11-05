@@ -8,11 +8,9 @@ import { useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
-import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
-import { godotColorToLinear } from '../../../r3f/godotColor';
+import { useArrayColorOf, useItemLinearColorOf, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { useNode2DCanvasTextureSampler } from '../../../r3f/canvasItemTextureSampler';
-import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import type { ImageSize } from '../../../resources/formats/image/imagePixels';
@@ -28,6 +26,7 @@ import { useLiveScenePass } from '../../../r3f/liveScenePass';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { bindPolygonsToSkeletons, namesSkeletonToBind } from './skeletonBinding';
 import { useSkeletonSkin } from './useSkeletonSkin';
+import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
 
 export function Polygon2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Polygon2DProperties;
@@ -109,24 +108,28 @@ function FilledPolygon({
   pixelMaterial: CanvasItemPixelMaterial;
   meshRef: (mesh: THREE.Mesh | null) => void;
 }) {
-  // Godot multiplies fill × modulate × self_modulate in sRGB, then converts once.
   // `color` is quantized first, as Godot's 8-bit mesh upload stores it
   // (`vertexColorQuantize.ts`). The inherited tint (`tint.own`) is an
-  // unquantized per-draw multiply, so it composes after.
+  // unquantized per-draw multiply, so it composes after. An sRGB canvas multiplies
+  // fill × modulate × self_modulate in sRGB, then converts once. A linear canvas
+  // converts the stored colour apart from the tint (`canvas.glsl:176-178`).
+  const canvasSpace = useCanvasColorSpace();
+  const toItemLinear = useItemLinearColorOf();
+  const arrayColor = useArrayColorOf();
   const { fill, tintOnlyFill, opacity, tintOnlyOpacity } = useMemo(() => {
-    const composed = multiplyModulate(tint.own, quantizeVertexColor(color));
+    const stored = quantizeVertexColor(color);
     return {
-      fill: godotColorToLinear(composed),
+      fill: arrayColor(tint.own, stored),
       // The same tint without the node's own `color`, for the per-vertex path
       // where Godot replaces `color` rather than combining with it.
-      tintOnlyFill: godotColorToLinear(tint.own),
-      opacity: composed.a,
+      tintOnlyFill: toItemLinear(tint.own),
+      opacity: tint.own.a * stored.a,
       // `color` drops whole, alpha included, on the vertex-colour path:
       // `polygon_2d.cpp:310-314` assigns the vertex Color outright, and
       // `canvas_item_add_mesh` gets a bare `Color(1, 1, 1)` (`polygon_2d.cpp:401`).
       tintOnlyOpacity: tint.own.a,
     };
-  }, [tint.own, color]);
+  }, [tint.own, color, arrayColor, toItemLinear]);
 
   // `USE_MAP` is baked into the program source, so without
   // `materialProgramInputs` a texture resolving after the first compile would
@@ -142,8 +145,9 @@ function FilledPolygon({
       opacity: vertexColors ? tintOnlyOpacity : opacity,
       transparent: true,
       depthWrite: false,
-      // The `NoColorSpace` map and the sRGB vertex colours, which Godot multiplies as stored (`canvas.glsl:631`).
-      defines: CANVAS_SRGB_DEFINES,
+      // The map and the sRGB vertex colours, which an sRGB canvas multiplies as stored
+      // (`canvas.glsl:631`) and a linear canvas decodes.
+      defines: canvasSpace.defines,
     },
     // The one canvas mesh where a facing split would be visible, since every
     // vertex carries its own colour and alpha. The facing in `pixelMaterial`

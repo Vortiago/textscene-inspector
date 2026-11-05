@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { onTestFinished } from 'vitest';
 import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
 import { publishLiveTargets, refillLiveCopies } from './liveTargets';
+import { SRGB_CANVAS } from './canvasColorSpace';
 
 /** A renderer that records the target bound for each draw. */
 export function recordingRenderer() {
@@ -66,7 +67,7 @@ export function readableLiveTarget(size: number, bottom: readonly number[], top:
 
 /** A canvas target its pass publishes until the test ends, which no frame of the test draws. */
 export function publishedCanvasTarget(width: number, height: number): THREE.Texture {
-  const target = createCanvasTarget(width, height, 'SubViewport');
+  const target = createCanvasTarget(width, height, 'SubViewport', SRGB_CANVAS);
   onTestFinished(publishLiveTargets([target.texture], null, false));
   return target.texture;
 }

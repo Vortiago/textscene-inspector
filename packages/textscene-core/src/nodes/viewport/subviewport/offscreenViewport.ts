@@ -10,6 +10,7 @@ import { takeOutputLikeDrawingBuffer } from '../../../r3f/outputTarget';
 import { markSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { pinColorSpace } from '../../../resources/textures/textureView';
 import { BLACK } from '../renderGate';
+import { canvasColorSpaceOf, type CanvasColorSpace } from '../../../r3f/canvasColorSpace';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
 import type { Rect2 } from '../../../godot/math/rect2';
@@ -36,11 +37,31 @@ export function createSceneTarget(width: number, height: number, name: string): 
  * straight into an `R8G8B8A8_UNORM` target (`renderer_canvas_render_rd.cpp:671,729`,
  * `texture_storage.cpp:3568-3569`). So three encodes into RGBA8, as into the drawing buffer, and
  * blends and filters the encoded bytes. An sRGB tag alone would allocate SRGB8_ALPHA8. It holds no
- * depth: a 2D pass draws into a `CanvasFrame`, which does.
+ * depth: a 2D pass draws into a `CanvasFrame`, which does. A linear canvas writes its linear values
+ * into an `R16G16B16A16_SFLOAT` target instead (`texture_storage.cpp:4541-4547`).
  */
-export function createCanvasTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
+export function createCanvasTarget(
+  width: number,
+  height: number,
+  name: string,
+  space: CanvasColorSpace
+): THREE.WebGLRenderTarget {
+  if (space.isLinear) return createLinearCanvasTarget(width, height, name);
   const target = createTarget(width, height, name);
   storeSrgbBytes(target.texture);
+  return target;
+}
+
+/**
+ * Linear half floats, whose sRGB view is the same format (`texture_storage.cpp:3569,3645-3647`), so
+ * every consumer reads the stored values: a 3D one as linear, and a non-HDR canvas as if they were
+ * its sRGB bytes, which the mark tells it.
+ */
+function createLinearCanvasTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
+  const target = createTarget(width, height, name, THREE.HalfFloatType);
+  pinColorSpace(target.texture, THREE.LinearSRGBColorSpace);
+  target.texture.internalFormat = 'RGBA16F';
+  markSrgbBytes(target.texture);
   return target;
 }
 
@@ -58,14 +79,34 @@ export function storeSrgbBytes(texture: THREE.Texture): void {
  * rule. Not the SubViewport's `canvas_item_default_texture_filter`: Godot passes that to the items
  * drawn into the viewport (`renderer_viewport.cpp:688`), not to sampling its texture.
  */
-function createTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
-  const target = new THREE.WebGLRenderTarget(width, height, { depthBuffer: false, stencilBuffer: false });
+function createTarget(
+  width: number,
+  height: number,
+  name: string,
+  type: THREE.TextureDataType = THREE.UnsignedByteType
+): THREE.WebGLRenderTarget {
+  const target = new THREE.WebGLRenderTarget(width, height, {
+    depthBuffer: false,
+    stencilBuffer: false,
+    type,
+  });
   target.texture.name = `${name}::target`;
   target.texture.minFilter = THREE.LinearFilter;
   target.texture.magFilter = THREE.LinearFilter;
   target.texture.generateMipmaps = false;
   takeOutputLikeDrawingBuffer(target);
   return target;
+}
+
+/**
+ * The colour space of a sub-viewport's canvas: linear under `use_hdr_2d`. A canvas drawn over a 3D
+ * world stays sRGB, since that world's tonemap pass writes an 8-bit sRGB target here.
+ */
+export function viewportCanvasColorSpace(
+  properties: Pick<SubViewportProperties, 'use_hdr_2d'>,
+  kind: '2d' | '3d'
+): CanvasColorSpace {
+  return canvasColorSpaceOf(properties.use_hdr_2d && kind === '2d');
 }
 
 /**
