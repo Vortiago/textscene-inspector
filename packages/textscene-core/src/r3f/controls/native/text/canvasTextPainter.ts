@@ -57,8 +57,8 @@ interface CanvasTextCanvasLayout {
   /** `HTMLCanvasElement#height`: `layout.heightPx` plus twice `offsetYPx`, rounded up to a whole pixel. */
   canvasHeightPx: number;
   /**
-   * Where the unpadded content box (x=0 in `layout`) sits in the raster, CSS px: the shear and stroke
-   * reach, mirrored on the right, less the whole pixels before the ink (`drawnExtentPx`).
+   * Where the unpadded content box (x=0 in `layout`) sits in the raster, CSS px: the shear, stroke and
+   * embolden pad, plus the whole pixels of ink left of x=0, less those right of it (`drawnExtentPx`).
    */
   offsetXPx: number;
   /** Top padding, CSS px: `CANVAS_TEXT_VERTICAL_PAD_PX` plus any outline-stroke reach. */
@@ -76,10 +76,10 @@ export function computeCanvasTextCanvasLayout(
   strokeWidthPx = 0,
   originPhasePx: Readonly<Vector2> = VECTOR2_ZERO
 ): CanvasTextCanvasLayout {
-  // The worst-case shear offset over a line's ink, which the ascent bounds (`buildGlyphQuadArrays`'s
-  // `dx(y) = -skew * (y - baselinePx)`). It over-pads a little, which costs
-  // only idle canvas pixels.
-  const shearPadPx = Math.abs(skew) * layout.baselineOffsetPx;
+  // The worst-case shear offset over a line's rows of ink (`buildGlyphQuadArrays`'s
+  // `dx(y) = -skew * (y - baselinePx)`): the ascent and the vertical pad above the baseline. A font's
+  // descent is shorter than its ascent, so the rows below shear less.
+  const shearPadPx = Math.abs(skew) * (layout.baselineOffsetPx + CANVAS_TEXT_VERTICAL_PAD_PX);
   // A centred stroke reaches half its width outside the contour on every side,
   // horizontally too, where an upright fill needs no pad.
   const strokePadPx = strokeWidthPx / 2;
@@ -110,24 +110,39 @@ function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: numb
   let startPx = Infinity;
   let endPx = -Infinity;
   for (const { glyphs } of layout.lines) {
+    // An ellipsis `textOverrun` appends carries no size, and draws at the size of the glyph before it.
+    let sizePx: number | undefined;
     for (const glyph of glyphs) {
-      const { leftPx, rightPx } = glyphInkPx(glyph, layout.baselineOffsetPx);
+      sizePx = glyph.fontSizePx ?? sizePx;
+      const { leftPx, rightPx } = glyphInkPx(glyph, sizePx, layout.baselineOffsetPx);
       startPx = Math.min(startPx, glyph.x - leftPx);
       endPx = Math.max(endPx, glyph.x + rightPx);
     }
   }
-  return startPx === Infinity ? { startPx: 0, endPx: layout.widthPx } : { startPx, endPx };
+  if (startPx === Infinity) return { startPx: 0, endPx: layout.widthPx };
+  return { startPx: startPx - INK_SLACK_PX, endPx: endPx + INK_SLACK_PX };
 }
+
+/**
+ * The painter snaps each pen (`canvasGlyphPenXPx`) up to 1 px left or a quarter pixel right, and a
+ * hinted outline grid-fits under half a pixel past its measured box, so the raster reaches this far
+ * past the measured ink.
+ */
+const INK_SLACK_PX = 1;
 
 /**
  * How far `glyph`'s ink reaches left of its pen and right of it, px, its pen box included. A face that
  * measures no ink takes `ascentPx` on each side: the ascent bounds the reach of any glyph.
  */
-function glyphInkPx(glyph: GlyphPlacement, ascentPx: number): { leftPx: number; rightPx: number } {
+function glyphInkPx(
+  glyph: GlyphPlacement,
+  sizePx: number | undefined,
+  ascentPx: number
+): { leftPx: number; rightPx: number } {
   const face = glyph.fontMetrics;
   const ink = isCanvasFontMetrics(face) ? face.getGlyphInkUnits?.(glyph.char) : undefined;
-  if (!ink || glyph.fontSizePx === undefined) return { leftPx: ascentPx, rightPx: glyph.advance + ascentPx };
-  const pxPerUnit = glyph.fontSizePx / face.unitsPerEm;
+  if (!ink || sizePx === undefined) return { leftPx: ascentPx, rightPx: glyph.advance + ascentPx };
+  const pxPerUnit = sizePx / face.unitsPerEm;
   return {
     leftPx: Math.max(0, ink.left * pxPerUnit),
     rightPx: Math.max(glyph.advance, ink.right * pxPerUnit),

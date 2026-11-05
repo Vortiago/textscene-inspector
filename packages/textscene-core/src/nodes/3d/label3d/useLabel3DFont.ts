@@ -63,8 +63,10 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
     if (!settled) return undefined;
     const projectMipmaps = projectDefaultFontGeneratesMipmaps(settings);
     const generatesMipmaps = fontGeneratesMipmaps(font) ?? projectMipmaps;
-    const fallbackMipmaps = settled.fallbacks
-      ? fallbackFaceMipmaps(settled.fallbacks, peekSettledChainFaces(font, nodePath) ?? [], projectMipmaps)
+    // A chain face that reloads names no font for a while: its faces draw at the label's setting.
+    const chainFaces = settled.fallbacks ? peekSettledChainFaces(font, nodePath) : null;
+    const fallbackMipmaps = chainFaces
+      ? fallbackFaceMipmaps(settled.fallbacks!, chainFaces, projectMipmaps)
       : NO_FALLBACK_MIPMAPS;
     if (isBitmapFontMetrics(settled)) return { metrics: settled, generatesMipmaps, fallbackMipmaps };
     // A canvas face carries its outlines already. An atlas face draws as the bundled canvas face,

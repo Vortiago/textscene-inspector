@@ -312,6 +312,25 @@ describe('useLabel3DFont mip chain of a fallback face', () => {
   });
 });
 
+describe('useLabel3DFont mip chain while a chain face reloads', () => {
+  afterEach(() => vi.doUnmock('../../../r3f/controls/native/text/sceneFontLoader'));
+
+  it('draws each fallback face at the label setting', async () => {
+    const fallback = modules.createOpenSansCanvasFontMetrics('label3d-reload-test');
+    vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
+      ...(await importOriginal<object>()),
+      peekSettledSceneFontMetrics: () => withFallbacks(bundled.metrics!, [fallback]),
+      peekSettledChainFaces: () => null,
+    }));
+    modules = await importModules();
+    const { result } = renderMetrics('SubResource("plain")', { 'res://project.godot': PROJECT_MIPMAPS });
+
+    await settle();
+
+    expect(result.current?.fallbackMipmaps.has(fallback)).toBe(false);
+  });
+});
+
 describe('useLabel3DFont fallbacks of an atlas face', () => {
   afterEach(() => vi.doUnmock('../../../r3f/controls/native/text/sceneFontLoader'));
 

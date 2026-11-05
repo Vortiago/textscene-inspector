@@ -109,3 +109,30 @@ describe('createRuntimeFontMetrics', () => {
     expect(metrics.getGlyphAdvanceUnits('Z')).toBe(60);
   });
 });
+
+describe('createRuntimeFontMetrics — glyph ink', () => {
+  const input = {
+    hasGlyph: () => true,
+    scalars: { unitsPerEm: 1000, ascent: 950, descent: 250 },
+    measureWidthUnits: fakeMeasurer(),
+    cssFontFamily: 'ink-test',
+  };
+
+  it('measures the ink of each character once', () => {
+    let measures = 0;
+    const metrics = createRuntimeFontMetrics({
+      ...input,
+      measureInkUnits: () => {
+        measures++;
+        return { left: 10, right: 90 };
+      },
+    });
+    metrics.getGlyphInkUnits!('A');
+    expect(metrics.getGlyphInkUnits!('A')).toEqual({ left: 10, right: 90 });
+    expect(measures).toBe(1);
+  });
+
+  it('has no ink for a face that measures none', () => {
+    expect(createRuntimeFontMetrics(input).getGlyphInkUnits).toBeUndefined();
+  });
+});

@@ -9,6 +9,7 @@ import { peekSceneFontMetrics, peekSettledSceneFontMetrics } from './sceneFontLo
 import { fontWork, onSceneFontSettled, sceneFontSettleCount } from './settledChannel';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { FACELESS_FONT } from './sceneFontResolution';
+import type { CanvasFontMetrics } from './runtimeFontMetrics';
 import { getFontAscentPx, getFontLinePitchPx } from './fontMetrics';
 import * as logger from '../../../../logger';
 import type { FontResource } from '../../../../resources/fonts/font/types';
@@ -440,7 +441,11 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
     );
     vi.stubGlobal('document', {
       fonts: { add: () => {} },
-      createElement: () => ({ getContext: () => ({ measureText: () => ({ width: 500 }) }) }),
+      createElement: () => ({
+        getContext: () => ({
+          measureText: () => ({ width: 500, actualBoundingBoxLeft: 30, actualBoundingBoxRight: 470 }),
+        }),
+      }),
     });
     const { fontFile: freshFontFile, fixtureFontBytes } = await import('./sfntOutlines.testkit');
     const mod = await import('./sceneFontLoader');
@@ -464,6 +469,17 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
 
     await vi.waitFor(() => expect(peek(font, 'Root/Bold')).not.toBeNull());
     expect(peek(font, 'Root/Bold')?.outlines?.glyphIndex(0x48)).toBeGreaterThan(0);
+  });
+
+  it("measures each glyph's ink box with the canvas that measures its advance", async () => {
+    const { peekSettledSceneFontMetrics: peek, ttf } = await loaderWithFontDoor();
+    const font = ttf();
+
+    peek(font, 'Root/Ink');
+    await settleLoads();
+
+    const face = peek(font, 'Root/Ink') as CanvasFontMetrics;
+    expect(face.getGlyphInkUnits?.('A')).toEqual({ left: 30, right: 470 });
   });
 
   it('settles a plain canvas face at once, with no outlines to wait for', async () => {
