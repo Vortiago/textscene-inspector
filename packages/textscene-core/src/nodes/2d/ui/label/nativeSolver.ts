@@ -23,7 +23,6 @@ import {
   shapeText,
   shapedTextSizeWidthPx,
   startsParagraph,
-  type ShapeTextOptions,
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
@@ -42,12 +41,10 @@ import type { Rgba } from '../../../../godot/math/math';
 import {
   AutowrapMode,
   OverrunBehavior,
-  StructuredTextParser,
-  TextDirection,
   VisibleCharactersBehavior,
   DEFAULT_JUSTIFICATION_FLAGS,
 } from '../../../../godot/text/textServerEnums';
-import { parseStructuredText } from '../../../../godot/text/structuredText';
+import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
@@ -202,35 +199,6 @@ export function labelShadowTheme(n: SolveNode): LabelShadowTheme {
  */
 export function labelShapingWidthPx(controlWidthPx: number): number {
   return Math.trunc(controlWidthPx);
-}
-
-/** The `shapeText` options that set each paragraph's bidi pass and casing. */
-type LabelBidiOptions = Pick<ShapeTextOptions, 'direction' | 'language' | 'bidiOverride'>;
-
-/**
- * Each paragraph's direction, language and override ranges as `Label::_shape` hands them to the text
- * server (`label.cpp:139,178-181,195`). INHERITED takes the layout direction. An empty `language` takes
- * the locale. The solver's shapes and the painter's read this, so they shape the same lines.
- */
-export function labelBidiOptions(
-  props: Pick<
-    LabelProperties,
-    'textDirection' | 'language' | 'structuredTextBidiOverride' | 'structuredTextBidiOverrideOptions'
-  >,
-  n: Pick<ShareNode, 'rtl' | 'locale'>
-): LabelBidiOptions {
-  const { textDirection, language, structuredTextBidiOverride, structuredTextBidiOverrideOptions } = props;
-  const inheritedDirection = n.rtl ? TextDirection.TEXT_DIRECTION_RTL : TextDirection.TEXT_DIRECTION_LTR;
-  return {
-    direction: textDirection === TextDirection.TEXT_DIRECTION_INHERITED ? inheritedDirection : textDirection,
-    language: language || n.locale,
-    // DEFAULT's one INHERITED range over the whole paragraph is what no override shapes.
-    bidiOverride:
-      structuredTextBidiOverride === StructuredTextParser.STRUCTURED_TEXT_DEFAULT
-        ? undefined
-        : (paragraph) =>
-            parseStructuredText(structuredTextBidiOverride, structuredTextBidiOverrideOptions, paragraph),
-  };
 }
 
 // lines_skipped and max_lines_visible: label.cpp:344-361,520-561
@@ -396,7 +364,7 @@ export const labelUnwrappedShape = defineShare<TextLayoutResult | null>((n, them
     paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
     tabStopsPx: props.tabStopsPx,
     autowrapTrimFlags: props.autowrapTrimFlags,
-    ...labelBidiOptions(props, n),
+    ...controlBidiOptions(props, n),
   });
   return windowLabelLines(
     layout,
@@ -464,7 +432,7 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
       paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
       tabStopsPx: props.tabStopsPx,
       autowrapTrimFlags: props.autowrapTrimFlags,
-      ...labelBidiOptions(props, n),
+      ...controlBidiOptions(props, n),
     });
     // Not modelled: `min_size.height = 1` and the `max_lines_visible` clamp (`:985-987`), which
     // need `clip` or an `overrun_behavior` other than `OVERRUN_NO_TRIMMING`.

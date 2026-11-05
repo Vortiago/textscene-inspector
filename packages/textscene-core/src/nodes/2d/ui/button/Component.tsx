@@ -23,6 +23,8 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import { trimsAtVisualLeft } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   resolveButtonDrawState,
@@ -150,6 +152,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
     () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
     [props.overrunBehavior]
   );
+  const isTrimmedAtVisualLeft = trimsAtVisualLeft(useControlBidiOptions(props, solveNode));
   const trimmedLayout: TextLayoutResult | null = useMemo(() => {
     // The TextServer trims a wrapped buffer per row. This single-line
     // trim would collapse it to its first row, so it stands down there.
@@ -167,6 +170,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
     const trimmedLine = trimLineToWidth(layout.lines[0]!, trimWidthPx, overrunFlags, {
       fontMetrics,
       fontSizePx,
+      isRtl: isTrimmedAtVisualLeft,
     });
     return soloLineLayout(trimmedLine, layout);
   }, [
@@ -180,6 +184,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
     theme.separation,
     fontMetrics,
     fontSizePx,
+    isTrimmedAtVisualLeft,
   ]);
 
   // One layout object per row, so a row's runs keep their meshes across renders.

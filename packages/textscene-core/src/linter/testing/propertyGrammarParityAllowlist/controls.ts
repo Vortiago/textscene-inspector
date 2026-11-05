@@ -350,30 +350,6 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'Both configure the popup picker, which is a Window and never reaches the Control canvas.',
   },
 
-  Button: {
-    linterOnly: [],
-    renderGap: [
-      // BiDi and locale: this Control does not pass its own direction to the shaper yet.
-      'text_direction',
-      'language',
-    ],
-    reason:
-      "BiDi changes where the label's glyphs land, and this Control does not pass its own direction to the shaper yet.",
-  },
-
-  LinkButton: {
-    linterOnly: [],
-    renderGap: [
-      // BiDi and locale: this Control does not pass its own direction to the shaper yet.
-      'language',
-      'structured_text_bidi_override',
-      'structured_text_bidi_override_options',
-      'text_direction',
-    ],
-    reason:
-      "BiDi changes where the underlined label's glyphs land, and this Control does not pass its own direction to the shaper yet.",
-  },
-
   TextureButton: {
     linterOnly: [
       // A per-pixel hit mask: it decides which clicks land, never which pixels

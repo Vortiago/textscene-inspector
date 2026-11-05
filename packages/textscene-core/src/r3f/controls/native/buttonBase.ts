@@ -14,6 +14,7 @@ import { multiplyModulate } from '../../canvasItemModulate';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
 import { shapeText, type TextLayoutResult } from './text/textLayout';
+import type { TextBidiOptions } from './text/textBidiOptions';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { type Rgba } from '../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
@@ -70,22 +71,33 @@ export function fitIconSize(size: Vector2, maxWidth: number): Vector2 {
   return size;
 }
 
-/**
- * Shapes a Button-family label, the one measure its painters and solvers share.
- * @param boxWidthPx The width `Button::_notification` shapes at
- *   (`button.cpp:428-432`), `Math::ceil(MAX(1.0f, drawable_size_remained.width))`.
- *   A caller that does not wrap omits the last three.
- * @param autowrapTrimFlags `autowrap_flags_trim`, ORed onto the break flags at `:560`.
- *   Undefined keeps the class default, both edge-space trims.
- */
-export function shapeButtonLabel(
-  text: string,
-  fontSizePx: number,
-  fontMetrics: FontMetrics,
-  boxWidthPx = 0,
-  autowrapMode: EnumValue<typeof AutowrapMode> = AutowrapMode.AUTOWRAP_OFF,
-  autowrapTrimFlags?: number
-): TextLayoutResult {
+/** What a Button-family label shapes with, beyond its text. */
+interface ButtonLabelShapeOptions {
+  fontSizePx: number;
+  fontMetrics: FontMetrics;
+  /** The paragraph's direction, language and override ranges (`button.cpp:564-569`). Undefined shapes at AUTO in the root locale. */
+  bidi?: TextBidiOptions;
+  /**
+   * The width `Button::_notification` shapes at (`button.cpp:428-432`),
+   * `Math::ceil(MAX(1.0f, drawable_size_remained.width))`. A caller that does not wrap omits it and the
+   * two below.
+   */
+  boxWidthPx?: number;
+  autowrapMode?: EnumValue<typeof AutowrapMode>;
+  /** `autowrap_flags_trim`, ORed onto the break flags at `:560`. Undefined keeps the class default, both edge-space trims. */
+  autowrapTrimFlags?: number;
+}
+
+/** Shapes a Button-family label, the one measure its painters and solvers share. */
+export function shapeButtonLabel(text: string, options: ButtonLabelShapeOptions): TextLayoutResult {
+  const {
+    fontSizePx,
+    fontMetrics,
+    bidi,
+    boxWidthPx = 0,
+    autowrapMode = AutowrapMode.AUTOWRAP_OFF,
+    autowrapTrimFlags,
+  } = options;
   return shapeText(text, {
     fontSizePx,
     boxWidthPx,
@@ -95,6 +107,7 @@ export function shapeButtonLabel(
     lineSpacingPx: 0,
     fontMetrics,
     autowrapTrimFlags,
+    ...bidi,
   });
 }
 
