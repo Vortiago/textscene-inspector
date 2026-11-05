@@ -819,11 +819,6 @@ export function richTextContentHeightPx(
   return contentHeightOf(richTextLineMetrics(styledRuns, layout));
 }
 
-/** The faces the glyphs of `segment` draw in, which may come from its **Fallback chain**. */
-function glyphFacesOf(segment: RunLineSegment): Set<FontMetrics> {
-  return new Set(segment.glyphs.map((glyph) => glyph.fontMetrics));
-}
-
 /**
  * The paragraph indexes (counted by `\n`) of the lines of no height: each `zeroHeightBreak` run ends
  * one, and so does a final `\n`, which leaves a line that holds no item (`a\n` is one line tall,
@@ -866,7 +861,8 @@ function lineMetricsOf(
     for (const segment of segments) {
       const run = styledRuns[segment.runIndex]!;
       if (run.image) continue;
-      for (const face of glyphFacesOf(segment)) {
+      // A glyph may draw in a face of the **Fallback chain**, so each glyph's face counts.
+      for (const { fontMetrics: face } of segment.glyphs) {
         ascentPx = Math.max(ascentPx, getFontAscentPx(face, run.fontSizePx));
         descentPx = Math.max(descentPx, fontDescentPx(face, run.fontSizePx));
       }
@@ -1112,10 +1108,9 @@ export function layoutRichTextRuns(
   const alignmentOfLine = (lineIndex: number): number =>
     paragraphRunOf(lineIndex)?.alignment ?? alignment?.horizontalAlignment ?? HORIZONTAL_ALIGNMENT_LEFT;
 
-  const unfittedPerLine = attributeRunsToLines(styledRuns, unfittedLayout);
   const isFilled = (firstLineIndex: number): boolean =>
     alignmentOfLine(firstLineIndex) === HORIZONTAL_ALIGNMENT_FILL;
-  // A label with no FILL paragraph keeps its layout object, so it skips the second attribution.
+  // A label with no FILL paragraph keeps its layout object.
   const hasFilledParagraph = unfittedLayout.lines.some(
     (_, i) => startsParagraph(unfittedLayout.lines, i) && isFilled(i)
   );
@@ -1123,8 +1118,7 @@ export function layoutRichTextRuns(
   const layout = hasFilledParagraph
     ? fitFilledParagraphs(unfittedLayout, isFilled, flagsOf, boxWidthPx)
     : unfittedLayout;
-  // Fitting moves glyphs and keeps their text, so the second attribution reads the same runs.
-  const perLine = hasFilledParagraph ? attributeRunsToLines(styledRuns, layout) : unfittedPerLine;
+  const perLine = attributeRunsToLines(styledRuns, layout);
   const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);
 
   const { vbeginPx, vsepPx } = richTextVerticalOffsets(
