@@ -191,7 +191,8 @@ export interface TextLineLayout {
   /**
    * The glyphs `shaped_text_draw_outline` draws where they differ from `glyphs`: a trimmed AUTO
    * line whose paragraph resolved right-to-left. The outline reads the inferred direction, the
-   * fill the set one (`text_server.cpp:1744,1840`). `trimTextBufferLineToWidth` sets it.
+   * fill the set one (`text_server.cpp:1744,1840`). `trimTextBufferLineToWidth` sets it, and
+   * `widthPx` stays the width of the one trimmed buffer both draws place by (`width_trimmed`).
    */
   outlineGlyphs?: GlyphPlacement[];
 }

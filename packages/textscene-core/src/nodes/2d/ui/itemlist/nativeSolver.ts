@@ -281,18 +281,22 @@ export function trimItemListText(
   };
 }
 
-/**
- * The text size the minsize pass reads (`item_list.cpp:1763-1766`): `shaped` trimmed at
- * `itemListShapeWidth`, `{ widthPx: ceiled, heightPx }`, or zero for an item with no text.
- */
-export function itemTextMinimumSize(
-  shaped: TextLayoutResult | null,
-  fixedColumnWidth: number,
-  options: ItemTextTrimOptions
-): Vector2 {
-  if (!shaped) return { x: 0, y: 0 };
-  const trimmed = trimItemListText(shaped, itemListShapeWidth(fixedColumnWidth), options);
-  return { x: shapedTextSizeWidthPx(trimmed.widthPx), y: trimmed.heightPx };
+interface ItemTextShape {
+  /** Untrimmed, or null for an item with no text. */
+  shaped: TextLayoutResult | null;
+  /**
+   * The text size the minsize pass reads (`item_list.cpp:1763-1766`): `shaped` trimmed at
+   * `itemListShapeWidth`, `{ widthPx: ceiled, heightPx }`, or zero for an item with no text.
+   */
+  minimumSize: Vector2;
+}
+
+/** One item's shaped text and the size the minsize pass reads from it. */
+export function shapeItemText(input: ItemTextShapeInput & ItemTextTrimOptions): ItemTextShape {
+  const shaped = shapeItemListText(input);
+  if (!shaped) return { shaped, minimumSize: { x: 0, y: 0 } };
+  const trimmed = trimItemListText(shaped, itemListShapeWidth(input.fixedColumnWidth), input);
+  return { shaped, minimumSize: { x: shapedTextSizeWidthPx(trimmed.widthPx), y: trimmed.heightPx } };
 }
 
 // --- Per-item minimum size --------------------------------------------------
@@ -511,14 +515,18 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
     );
     const text = item.text ?? '';
     const hasText = text.length > 0;
-    const shaped =
+    const textSize =
       hasText && ctx.measureText
-        ? shapeItemListText({ text, fontSizePx, fontMetrics, iconMode, maxTextLines, fixedColumnWidth })
-        : null;
-    const textSize = itemTextMinimumSize(shaped, fixedColumnWidth, {
-      fontSizePx,
-      overrunBehavior: props.textOverrunBehavior,
-    });
+        ? shapeItemText({
+            text,
+            fontSizePx,
+            fontMetrics,
+            iconMode,
+            maxTextLines,
+            fixedColumnWidth,
+            overrunBehavior: props.textOverrunBehavior,
+          }).minimumSize
+        : { x: 0, y: 0 };
     return itemMinimumSize(
       { hasIcon, iconSize, hasText, textSize, iconMode, maxTextLines, fixedColumnWidth },
       ctx.theme

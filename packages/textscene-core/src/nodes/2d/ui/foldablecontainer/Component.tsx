@@ -22,11 +22,11 @@ import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import type { Rgba } from '../../../../godot/math/math';
 import {
   foldableContainerHSeparation,
   foldableContainerTitleShape,
   FOLDABLE_CONTAINER_ARROW_THEME_NAME,
+  FOLDABLE_CONTAINER_DEFAULT_OUTLINE_COLOR,
   type FoldableContainerArrow,
 } from './nativeSolver';
 import { FOLDABLE_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
@@ -39,9 +39,6 @@ const ARROW_ICON_URL: Record<FoldableContainerArrow, string> = {
   folded: FOLDABLE_CONTAINER_ICONS.foldedArrow,
   foldedMirrored: FOLDABLE_CONTAINER_ICONS.foldedArrowMirrored,
 };
-
-/** FoldableContainer's `font_outline_color` default: white, not the black of most types (`default_theme.cpp:1327`). */
-const FOLDABLE_CONTAINER_OUTLINE_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** `FoldableContainer::_get_actual_alignment` (`foldable_container.cpp:503-511`): RTL swaps LEFT and RIGHT and leaves every other value alone. */
 function actualTitleAlignment(alignment: number, rtl: boolean): number {
@@ -72,7 +69,7 @@ export function FoldableContainer({
     ARROW_ICON_URL[title.arrow]
   );
   const tintedFontColor = useMemo(() => tintColor(title.color, tint.own), [title.color, tint.own]);
-  const textOutline = useTintedTextOutline(solveNode, tint.own, FOLDABLE_CONTAINER_OUTLINE_COLOR);
+  const textOutline = useTintedTextOutline(solveNode, tint.own, FOLDABLE_CONTAINER_DEFAULT_OUTLINE_COLOR);
   const arrowSize = title.arrowSize;
   const hSeparation = foldableContainerHSeparation(theme);
 

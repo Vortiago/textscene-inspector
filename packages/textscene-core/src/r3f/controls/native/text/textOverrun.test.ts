@@ -17,6 +17,8 @@ import {
 import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 const FONT_SIZE_PX = 16;
+/** Twelve Hebrew letters: an AUTO paragraph that resolves right-to-left. */
+const HEBREW = 'אבגדהוזחטיכל';
 
 function line(text: string) {
   return shapeText(text, {
@@ -165,8 +167,6 @@ describe('trimLineToWidth', () => {
 });
 
 describe('trimLineToWidth — a right-to-left line (text_server_adv.cpp:6053-6114, label.h:198-241)', () => {
-  const HEBREW = 'אבגדהוזחטיכל';
-
   function trimRtl(widthPx: number, behavior: number) {
     return trimLineToWidth(line(HEBREW), widthPx, overrunFlagsForBehavior(behavior), {
       fontMetrics: OPEN_SANS_FONT_METRICS,
@@ -214,7 +214,6 @@ describe('trimLineToWidth — a right-to-left line (text_server_adv.cpp:6053-611
 });
 
 describe('trimTextBufferLineToWidth — an AUTO line whose paragraph resolved right-to-left (text_server.cpp:1740-1935)', () => {
-  const HEBREW = 'אבגדהוזחטיכל';
   const ELLIPSIS = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
   const OPTIONS = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX };
 

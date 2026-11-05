@@ -83,8 +83,8 @@ export function computeCanvasTextCanvasLayout(
 }
 
 /**
- * `layout.widthPx`, or the end of a glyph that reaches past it: a trimmed AUTO right-to-left fill
- * draws past the trimmed width it reports (`trimTextBufferLineToWidth`).
+ * `layout.widthPx`, or the end of a glyph that reaches past it: a layout's width is where Godot
+ * places it, and its glyphs may draw past that, as a trimmed AUTO right-to-left fill does.
  */
 function drawnWidthPx(layout: TextLayoutResult): number {
   return layout.lines.reduce((widthPx, line) => {

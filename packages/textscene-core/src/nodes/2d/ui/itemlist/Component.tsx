@@ -56,8 +56,7 @@ import {
   itemTextLineCenterOffset,
   packItemListRows,
   pickItemListPanelStyleBox,
-  itemTextMinimumSize,
-  shapeItemListText,
+  shapeItemText,
   trimItemListText,
 } from './nativeSolver';
 import type { ItemListItem, ItemListProperties } from './types';
@@ -92,7 +91,9 @@ interface RowGeometry {
   iconX: number;
   /** The width `text_buf->set_width()` gets, and the box CENTER/RIGHT alignment works inside. */
   textWidthPx: number;
-  /** False where a LEFT-mode row hides its fill and draws the outline alone (`item_list.cpp:1672-1688`). */
+  /** One layout per line of `textLayout`, so a TOP-mode line keeps its meshes across renders. */
+  lineLayouts: TextLayoutResult[];
+  /** Read in LEFT mode only: false where the row hides its fill and draws the outline alone (`item_list.cpp:1672-1688`). */
   isTextFillDrawn: boolean;
   iconMode: number;
   rect: Rect2;
@@ -136,6 +137,7 @@ function ItemListRow({
     textY,
     iconX,
     textWidthPx,
+    lineLayouts,
     isTextFillDrawn,
     iconMode,
     rect,
@@ -152,6 +154,7 @@ function ItemListRow({
   const iconColorSrgb = useMemo(() => tintColor(itemIconColor(disabled), tint), [disabled, tint]);
   const iconColorLinear = useGodotLinearColor(iconColorSrgb);
   const tintedTextColor = useMemo(() => tintColor(textColor, tint), [textColor, tint]);
+  const run = { fontSizePx, outline, clippingPlanes, renderOrder };
 
   return (
     <CanvasItemGroup position={[origin.x + rect.x, -(origin.y + rect.y), 0]}>
@@ -171,22 +174,9 @@ function ItemListRow({
         (iconMode === ICON_MODE_LEFT ? (
           <CanvasItemGroup position={[textX, -textY, 0]}>
             {isTextFillDrawn ? (
-              <OutlinedTextRun
-                layout={textLayout}
-                fontSizePx={fontSizePx}
-                tint={tintedTextColor}
-                outline={outline}
-                clippingPlanes={clippingPlanes}
-                renderOrder={renderOrder}
-              />
+              <OutlinedTextRun {...run} layout={textLayout} tint={tintedTextColor} />
             ) : (
-              <TextOutlineRing
-                layout={textLayout}
-                fontSizePx={fontSizePx}
-                outline={outline}
-                clippingPlanes={clippingPlanes}
-                renderOrder={renderOrder}
-              />
+              <TextOutlineRing {...run} layout={textLayout} />
             )}
           </CanvasItemGroup>
         ) : (
@@ -199,14 +189,7 @@ function ItemListRow({
                 0,
               ]}
             >
-              <OutlinedTextRun
-                layout={soloLineLayout(line, textLayout)}
-                fontSizePx={fontSizePx}
-                tint={tintedTextColor}
-                outline={outline}
-                clippingPlanes={clippingPlanes}
-                renderOrder={renderOrder}
-              />
+              <OutlinedTextRun {...run} layout={lineLayouts[index]!} tint={tintedTextColor} />
             </CanvasItemGroup>
           ))
         ))}
@@ -250,11 +233,13 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
 
       const text = item.text ?? '';
       const hasText = text.length > 0;
-      const shapedText = hasText
-        ? shapeItemListText({ text, fontSizePx, fontMetrics, iconMode, maxTextLines, fixedColumnWidth })
-        : null;
-      const textSize = itemTextMinimumSize(shapedText, fixedColumnWidth, {
+      const { shaped: shapedText, minimumSize: textSize } = shapeItemText({
+        text,
         fontSizePx,
+        fontMetrics,
+        iconMode,
+        maxTextLines,
+        fixedColumnWidth,
         overrunBehavior: props.textOverrunBehavior,
       });
 
@@ -409,16 +394,15 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
             ? itemListMirrorX(rowOriginX + iconDraw.rect.x, iconDraw.rect.w, rect.w, rtl) - rowOriginX
             : 0,
           textWidthPx,
-          isTextFillDrawn:
-            wrapped ||
-            isItemTextFillDrawn({
-              fixedColumnWidth,
-              wraparoundItems,
-              rowWidthPx: packedRect.w,
-              contentWidthPx: contentWidth,
-              iconWidthPx: r.iconSize.x,
-              hSeparation,
-            }),
+          lineLayouts: textLayout ? textLayout.lines.map((line) => soloLineLayout(line, textLayout)) : [],
+          isTextFillDrawn: isItemTextFillDrawn({
+            fixedColumnWidth,
+            wraparoundItems,
+            rowWidthPx: packedRect.w,
+            contentWidthPx: contentWidth,
+            iconWidthPx: r.iconSize.x,
+            hSeparation,
+          }),
           iconMode,
           rect: packedRect,
           textColor: itemTextColor(baseFontColor, r.disabled),
