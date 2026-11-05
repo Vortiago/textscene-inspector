@@ -11,7 +11,6 @@
  */
 
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import {
   scrollBarGrabberGeometry,
   scrollBarGrabberRect,
@@ -19,12 +18,12 @@ import {
   type ScrollBarPlacement,
 } from '../shared/scrollBarSolver';
 import { RANGE_DEFAULT_MAX } from '../shared/range';
-import { richTextContentHeightPx, type StyledTextRun } from './nativeSolver';
+import { richTextContentHeightPx, type RichTextLayout, type StyledTextRun } from './nativeSolver';
 
 /** The text shaped at one wrap width. */
 interface RichTextShape {
   runs: StyledTextRun[];
-  layout: TextLayoutResult;
+  layout: RichTextLayout;
 }
 
 interface RichTextShapeBesideScrollBar extends RichTextShape {

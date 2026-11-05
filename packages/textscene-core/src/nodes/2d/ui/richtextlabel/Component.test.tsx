@@ -92,6 +92,12 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     await vi.waitFor(() => expect(meshesOf(renderer).length).toBeGreaterThanOrEqual(2));
   });
 
+  it('draws a mesh for the marker of each [ul] item, beside the mesh of its text', async () => {
+    const list = await render({ text: '[ul]a\nb[/ul]', bbcodeEnabled: true });
+    const plain = await render({ text: 'a\nb', bbcodeEnabled: true });
+    expect(meshesOf(list)).toHaveLength(meshesOf(plain).length + 2);
+  });
+
   it('forwards renderOrder to every mesh, not just the first', async () => {
     const renderer = await render({ text: 'plain [b]bold[/b] [i]italic[/i]', bbcodeEnabled: true });
     const meshes = meshesOf(renderer);

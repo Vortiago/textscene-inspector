@@ -98,11 +98,34 @@ export function revealedGlyphs(
   );
 }
 
+/**
+ * Whether `_draw_line` draws the prefix (a list marker) of the paragraph starting at `paragraphStart`:
+ * not once its character offset is past the budget, nor while the glyph budget hides its first glyph
+ * (`rich_text_label.cpp:1016`). `revealed` is what `revealedGlyphs` returned for the same layout.
+ */
+export function isPrefixShown(
+  layout: TextLayoutResult,
+  runs: readonly CountedRun[],
+  reveal: RichTextReveal,
+  paragraphStart: number,
+  firstGlyph: GlyphPlacement | undefined,
+  revealed: ReadonlySet<GlyphPlacement> | undefined
+): boolean {
+  if (reveal.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return true;
+  if (reveal.behavior === VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING) {
+    const { skippedBefore } = countedLayoutOf(layout, runs);
+    return paragraphStart - (skippedBefore?.[paragraphStart] ?? 0) <= reveal.characters;
+  }
+  return firstGlyph === undefined || (revealed?.has(firstGlyph) ?? true);
+}
+
 /** A layout as the budget counts it: Godot's character indices, and the glyph each counted glyph copies. */
 interface CountedLayout {
   lines: readonly TextLineLayout[];
   /** Absent when no glyph needed a copy. */
   originals?: Map<GlyphPlacement, GlyphPlacement>;
+  /** For each text index, the implicit newlines before it. Absent when the text has none. */
+  skippedBefore?: readonly number[];
   totalCharacters: number;
 }
 
@@ -140,7 +163,7 @@ function countedLayoutOf(layout: TextLayoutResult, runs: readonly CountedRun[]):
         return counted;
       }),
   }));
-  const counted = { lines, originals, totalCharacters };
+  const counted = { lines, originals, skippedBefore, totalCharacters };
   countedLayouts.set(layout, counted);
   return counted;
 }

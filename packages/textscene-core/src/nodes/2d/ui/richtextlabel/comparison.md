@@ -28,6 +28,14 @@ shares the rule's line. A line with no text, object or list item has no height, 
 `vertical_alignment` FILL spreads its gap over that line (`:1643-1648`). An empty colour, font, underline or strikethrough
 before a `[p]` adds no line (`_find_layout_subitem`, `:3712-3727`).
 
+`[indent]`, `[ul]` and `[ol]` inset each line they hold by `tab_size` spaces of the font around them
+(`_find_margin`, `rich_text_label.cpp:3407-3460`). A `[ul]` or `[ol]` line also draws a marker. The marker is
+the `bullet` option or `•` for `[ul]`, and for `[ol]` the number in the `type` option (`1`, `a`, `A`, `i`, `I`).
+It takes the font of the item and the outermost colour of the item. It sits right-aligned in the inset, which
+is as wide as the widest marker of the list (`:242-372,1017-1039`). A nested `[ol]` writes the outer number
+first, as `1.a.`, and a bullet ends the number (`:242-270`). A list ends its last item with a newline, and an
+empty list holds one empty item (`:5326-5345,5415-5424`).
+
 While `clip_contents` is true, its default for this node (`rich_text_label.cpp:8225`), the control's own rect
 clips every glyph, image and underline (`control.cpp:3948`). `fit_content` grows the control to its text, so
 nothing is cut.
@@ -44,7 +52,7 @@ for drawing, so the paragraph the count ends in wraps again as it grows (`:668-6
 the Glyphs behaviours keep the full wrap and skip glyphs (`:943-947,1466`). The glyph budget counts every
 character of the text, including an edge space that a wrap trims (`:8017-8033`). An `[img]` counts only when
 Godot loads its texture (`:4210`), so a ratio takes the total of the images drawn. The line a paragraph tag
-ends counts no character (`:4097-4103`).
+ends counts no character (`:4097-4103`). A list marker draws only while its item starts at or before the budget (`:1016`).
 
 `scroll_following_visible_characters` runs as the scene loads, before any line exists. It scrolls to
 the scroll bar's default max, 100, and shows the bar over text that fits (`:2659-2667,5209-5221`).
@@ -110,6 +118,8 @@ string against `true`, so an absent property or any other value silently resolve
 
 - **Approximated** Only a subset of BBCode tags is styled, and a tag outside it renders as
   plain text.
+- **Not drawn** `localize_numeral_system`, which writes the numbers of an `[ol]` in the digits of the
+  label's `language` (`:255-258`), since no control reads the property.
 - **Approximated** The glyph budget joins only the default font's ligatures (`ff`, `fi`, `fl`, `ffi`, `ffl`),
   so a ligature of another font counts extra.
 - **Not drawn** The loading bar's right-to-left fill (:2580-2588), since the loading bar is not drawn.
