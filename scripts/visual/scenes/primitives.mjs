@@ -31,6 +31,8 @@ export const PRIMITIVE_SCENES = [
   { name: 'text-mesh-hinting', file: 'unit-text-mesh-hinting.tscn' },
   // A variable font at its default and at wght 700, drawn through gvar and cvar.
   { name: 'text-mesh-variable-instance', file: 'unit-text-mesh-variable-instance.tscn' },
+  // A proportional variable font at wght 800 and wdth 80, whose HVAR moves each advance.
+  { name: 'text-mesh-variable-advance', file: 'unit-text-mesh-variable-advance.tscn' },
   // The same sizes under a font with no hints, which FreeType's auto-hinter snaps to whole pixels.
   { name: 'text-mesh-autohint', file: 'unit-text-mesh-autohint.tscn' },
   // The same scene with no `font`, which draws Godot's default font, and again in a project whose

@@ -6,7 +6,7 @@
  */
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
-import { isGlyphVaried, type FontMetrics, type GlyphVariation } from './fontMetrics';
+import { isGlyphVaried, isInstanced, type FontMetrics, type GlyphVariation } from './fontMetrics';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { bitmapFontOutlines } from './bitmapFontOutlines';
 import {
@@ -76,9 +76,10 @@ function peekFaceOutlines(face: DrawnFace): PeekedOutlines {
 }
 
 /**
- * The outlines that the text of the `metrics` face under `variation` follows. Only an emboldened or
- * sheared canvas face needs them, as its fill and its stroke follow the changed glyph: the rest
- * answers null and loads nothing. An atlas face has no contour to follow.
+ * The outlines that the text of the `metrics` face under `variation` follows. An emboldened or
+ * sheared canvas face needs them, as its fill and its stroke follow the changed glyph, and so does
+ * one at axis values, as `HVAR` moves its advances: the rest answers null and loads nothing. An
+ * atlas face has no contour to follow.
  *
  * @canonical Glyph outlines that the text of an emboldened or sheared canvas face follows
  */
@@ -87,5 +88,6 @@ export function peekGlyphOutlines(
   metrics: FontMetrics,
   variation: GlyphVariation
 ): PeekedOutlines {
-  return isCanvasFontMetrics(metrics) && isGlyphVaried(variation) ? peekFaceOutlines(face) : null;
+  const needsOutlines = isGlyphVaried(variation) || isInstanced(variation.opentype);
+  return isCanvasFontMetrics(metrics) && needsOutlines ? peekFaceOutlines(face) : null;
 }

@@ -3668,6 +3668,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Text Mesh Variable Advance",
+    "file": "unit-text-mesh-variable-advance.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Text Mesh Variable Instance",
     "file": "unit-text-mesh-variable-instance.tscn",
     "category": "Unit - Primitive Meshes"
