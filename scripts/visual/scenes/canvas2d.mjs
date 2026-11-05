@@ -569,6 +569,25 @@ export const CANVAS_2D_SCENES = [
   // SUB and MUL blends that lower the canvas alpha. Godot 4.6.3 `--mode 2d`: (200,150) rgb(55,79,61)
   // Sub, (200,450) rgb(53,45,30) Mul, both opaque. Mean 0.027/255 against it.
   { name: 'canvas-item-sub-mul-alpha', file: 'unit-canvas-item-sub-mul-alpha.tscn', mode: '2d' },
+  // A CanvasGroup composites its squares through one buffer. Godot 4.6.3 `--mode 2d`, red-only, overlap
+  // and blue-only: the group at (125,125) rgb(166,38,38), (175,175) rgb(38,38,166), (225,225)
+  // rgb(38,38,166); the plain Node2D at (475,175) rgb(83,19,147).
+  { name: 'canvas-group-self-modulate', file: 'unit-canvas-group-self-modulate.tscn', mode: '2d' },
+  // The group's modulate applies twice. Godot 4.6.3 `--mode 2d`: (125,125) rgb(121,57,57), (175,175)
+  // rgb(79,47,111), (225,225) rgb(57,57,121); the plain Node2D at (475,175) rgb(83,19,147).
+  { name: 'canvas-group-modulate', file: 'unit-canvas-group-modulate.tscn', mode: '2d' },
+  // A child at another z escapes the group. Godot 4.6.3 `--mode 2d`: (125,125) rgb(166,38,38), (175,175)
+  // and (225,225) rgb(0,0,255).
+  { name: 'canvas-group-z-escape', file: 'unit-canvas-group-z-escape.tscn', mode: '2d' },
+  // A CanvasItemMaterial ADD on the group. Godot 4.6.3 `--mode 2d`: rgb(204,204,204) at (95,95) and
+  // (240,110), over x 90..259 and y 90..259.
+  { name: 'canvas-group-material', file: 'unit-canvas-group-material.tscn', mode: '2d' },
+  // A group in a group. Godot 4.6.3 `--mode 2d`: (125,125) rgb(166,102,102), (175,175) rgb(102,102,166),
+  // and (240,110) rgb(121,121,121) inside the inner rect.
+  { name: 'canvas-group-nested', file: 'unit-canvas-group-nested.tscn', mode: '2d' },
+  // A y-sorted group groups nothing. Godot 4.6.3 `--mode 2d`: (125,125) rgb(255,0,0), (175,175)
+  // rgb(0,0,255); the group under a y-sorted parent at (425,125) rgb(166,38,38), (475,175) rgb(38,38,166).
+  { name: 'canvas-group-y-sort', file: 'unit-canvas-group-y-sort.tscn', mode: '2d' },
   // A CanvasModulate tints native Controls. Godot 4.6.3 `--mode 2d`: (100,100) rgb(82,92,92).
   { name: 'control-canvas-modulate', file: 'unit-control-canvas-modulate.tscn', mode: '2d' },
   // A CanvasItemMaterial on a Control. Godot 4.6.3 `--mode 2d`: (100,100) rgb(204,102,51) unshaded,

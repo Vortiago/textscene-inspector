@@ -264,9 +264,9 @@ describe('property-grammar parity guard', () => {
   // itself. A transform-only type draws nothing, and a `pending` type is one
   // gap `renderIntent` already declares, so neither widens the population.
   // A type that reads its own properties through a parser of its own is a swept slice, not a reuser.
-  // BoneAttachment3D, MeshInstance2D, OccluderInstance3D, RayCast3D and ShapeCast3D read theirs.
-  const SWEPT_SLICES = 139;
-  const PARSER_REUSING_SLICES = 112;
+  // BoneAttachment3D, CanvasGroup, MeshInstance2D, OccluderInstance3D, RayCast3D and ShapeCast3D read theirs.
+  const SWEPT_SLICES = 140;
+  const PARSER_REUSING_SLICES = 111;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>
