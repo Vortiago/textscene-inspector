@@ -6,7 +6,7 @@
 
 import { useLayoutEffect } from 'react';
 import * as THREE from 'three';
-import type { ListedPlacement } from '../materials/godotPoint';
+import type { ListedPlacement, ListedSurface } from '../materials/godotPoint';
 import { geometryPrimitive, type SurfacePrimitive } from '../../resources/meshes/godotSurface';
 
 /** The attribute that holds each place's matrix, the name three's instanced programs read. */
@@ -95,17 +95,12 @@ export function useSharedInstances(geometry: THREE.BufferGeometry, source: THREE
 export function listedSlot(
   primitive: SurfacePrimitive,
   placement: ListedPlacement
-): { points?: ListedPlacement; lines?: ListedPlacement } {
-  if (primitive === 'points') return { points: placement };
-  if (primitive === 'lines') return { lines: placement };
-  return {};
+): { listed?: ListedSurface } {
+  return primitive === 'triangles' ? {} : { listed: { primitive, placement } };
 }
 
 /** The slot props for `geometry`'s points or lines, at instances when `sharedInstances` built it. */
-export function listedSlotOf(geometry: THREE.BufferGeometry): {
-  points?: ListedPlacement;
-  lines?: ListedPlacement;
-} {
+export function listedSlotOf(geometry: THREE.BufferGeometry): { listed?: ListedSurface } {
   const isInstanced = (geometry as THREE.InstancedBufferGeometry).isInstancedBufferGeometry;
   return listedSlot(geometryPrimitive(geometry), isInstanced ? 'instances' : 'mesh');
 }
@@ -126,11 +121,12 @@ export function instancesBounds(
 }
 
 /**
- * Scratch for `raycastInstanced`, overwritten by every call. Each holds `NO_GEOMETRY` between
- * calls, so a released draw's instance buffers are not kept alive.
+ * Scratch for `raycastInstanced`, the only writer, built on first use and overwritten by every call.
+ * Each holds `NO_GEOMETRY` between calls, so a released draw's instance buffers are not kept alive.
  */
 const NO_GEOMETRY = new THREE.BufferGeometry();
-const instanceScratch = { points: new THREE.Points(NO_GEOMETRY), lines: new THREE.LineSegments(NO_GEOMETRY) };
+let pointsScratch: THREE.Points | undefined;
+let linesScratch: THREE.LineSegments | undefined;
 const instanceLocal = new THREE.Matrix4();
 const instanceWorld = new THREE.Matrix4();
 const instanceHits: THREE.Intersection[] = [];
@@ -147,7 +143,9 @@ export function raycastInstanced(
   const geometry = this.geometry as THREE.InstancedBufferGeometry;
   const matrices = instanceMatrices(geometry);
   // Neither raycast reads a material, so the scratch takes only the geometry.
-  const scratch = (this as THREE.Points).isPoints ? instanceScratch.points : instanceScratch.lines;
+  const scratch = (this as THREE.Points).isPoints
+    ? (pointsScratch ??= new THREE.Points(NO_GEOMETRY))
+    : (linesScratch ??= new THREE.LineSegments(NO_GEOMETRY));
   scratch.geometry = geometry;
   for (let instanceId = 0; instanceId < geometry.instanceCount; instanceId++) {
     instanceLocal.fromArray(matrices.array, instanceId * MATRIX_FLOATS);

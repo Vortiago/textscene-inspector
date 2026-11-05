@@ -4,7 +4,7 @@
  * its overlay, whose own chain draws after the part's surface chains.
  */
 
-import { useLayoutEffect, useMemo } from 'react';
+import { useLayoutEffect, useMemo, type ReactNode } from 'react';
 import type * as THREE from 'three';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { resolveMaterialSource, type MaterialSource } from '../../../../r3f/materials/materialSource';
@@ -133,12 +133,12 @@ function ParticleChainDraw({ spec, primitive }: { spec: ChainDrawSpec; primitive
     [spec.geometry]
   );
   if (primitive !== 'triangles') {
-    const Drawn = drawnTag(primitive);
     // A points or lines emitter shares only geometry, and a point's size rides its material.
     return (
-      <Drawn
-        args={[spec.geometry, startingMaterial]}
-        frustumCulled={false}
+      <ParticleListedObject
+        primitive={primitive}
+        geometry={spec.geometry}
+        startingMaterial={startingMaterial}
         renderOrder={nextPassRenderOrder(spec.ordinal)}
         raycast={NO_RAYCAST}
         // The chain draw casts nothing of its own: the surface's own draw casts
@@ -154,7 +154,7 @@ function ParticleChainDraw({ spec, primitive }: { spec: ChainDrawSpec; primitive
           {...listedSlot(primitive, 'instances')}
           particles={withParticleDraw}
         />
-      </Drawn>
+      </ParticleListedObject>
     );
   }
   return (
@@ -194,16 +194,51 @@ function useParticleGeometry(
   return geometry;
 }
 
+type ListedDrawProps = Partial<
+  Pick<
+    THREE.Points,
+    | 'renderOrder'
+    | 'raycast'
+    | 'castShadow'
+    | 'receiveShadow'
+    | 'onBeforeRender'
+    | 'onAfterRender'
+    | 'userData'
+  > &
+    Pick<THREE.Light, 'onBeforeShadow' | 'onAfterShadow'>
+>;
+
+/** THREE.Points or THREE.LineSegments over a particle emitter's instanced geometry, never culled. */
+function ParticleListedObject({
+  primitive,
+  geometry,
+  startingMaterial,
+  children,
+  ...drawProps
+}: {
+  primitive: SurfacePrimitive;
+  geometry: THREE.BufferGeometry;
+  startingMaterial?: THREE.Material | THREE.Material[];
+  children: ReactNode;
+} & ListedDrawProps) {
+  const Drawn = drawnTag(primitive);
+  return (
+    <Drawn args={[geometry, startingMaterial]} frustumCulled={false} {...drawProps}>
+      {children}
+    </Drawn>
+  );
+}
+
 /** THREE.Points or THREE.LineSegments over the instanced geometry, picked at each instance. */
 function ParticleListed({ draws }: { draws: ParticlePartDraws }) {
   const { geometry, startingMaterial, draw } = draws;
   const primitive = geometryPrimitive(geometry);
-  const Drawn = drawnTag(primitive);
   return (
     <>
-      <Drawn
-        args={[geometry, startingMaterial]}
-        frustumCulled={false}
+      <ParticleListedObject
+        primitive={primitive}
+        geometry={geometry}
+        startingMaterial={startingMaterial}
         raycast={raycastInstanced}
         {...drawHookProps(draw.shadow)}
         userData={drawnUserData(draw.godotLayers)}
@@ -213,7 +248,7 @@ function ParticleListed({ draws }: { draws: ParticlePartDraws }) {
           {...listedSlot(primitive, 'instances')}
           particles={withParticleDraw}
         />
-      </Drawn>
+      </ParticleListedObject>
       <NextPassChain
         sources={draw.sources}
         geometry={geometry}
@@ -275,12 +310,11 @@ function OverlayDraw({
   godotLayers: number;
   order: number;
 }) {
-  const Drawn = drawnTag(primitive);
   const overlayDraw =
     primitive !== 'triangles' ? (
-      <Drawn
-        args={[geometry]}
-        frustumCulled={false}
+      <ParticleListedObject
+        primitive={primitive}
+        geometry={geometry}
         {...overlayDrawProps(shadow)}
         renderOrder={order}
         userData={boxlessUserData()}
@@ -290,7 +324,7 @@ function OverlayDraw({
           {...listedSlot(primitive, 'instances')}
           particles={withParticleDraw}
         />
-      </Drawn>
+      </ParticleListedObject>
     ) : (
       <InstancedOverlayDraw geometry={geometry} overlay={overlay} shadow={shadow} order={order} />
     );

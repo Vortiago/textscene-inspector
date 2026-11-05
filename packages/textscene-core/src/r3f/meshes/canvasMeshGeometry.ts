@@ -12,8 +12,8 @@ const CANVAS_ATTRIBUTES = ['uv', 'color'] as const;
 
 /**
  * `geometry` with the position at (x, -y, 0), since Godot's canvas runs +y down and the world runs
- * +y up. The UV, the colour, the index and a points or lines mark carry over. The caller disposes
- * the result, which owns its buffers.
+ * +y up. The points or lines mark carries over. The UV, colour and index buffers are
+ * the source's own, shared. The caller disposes the result, which owns only its positions.
  *
  * @canonical A mesh's geometry as the 2D canvas draws it
  */
@@ -29,10 +29,10 @@ export function canvasMeshGeometry(geometry: THREE.BufferGeometry): THREE.Buffer
   canvas.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   for (const name of CANVAS_ATTRIBUTES) {
     const attribute = geometry.getAttribute(name);
-    if (attribute) canvas.setAttribute(name, attribute.clone());
+    if (attribute) canvas.setAttribute(name, attribute);
   }
   const index = geometry.getIndex();
-  if (index) canvas.setIndex(index.clone());
+  if (index) canvas.setIndex(index);
   copyDrawnPrimitive(geometry, canvas);
   return canvas;
 }

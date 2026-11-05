@@ -7,7 +7,7 @@
  * InstancedMesh.
  */
 
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../../godot/scene/visualLayers';
 import * as THREE from 'three';
 import { nodeComponentRegistry, type NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -320,18 +320,10 @@ function ChainBatchedTiles({ spec, matrices }: { spec: ChainDrawSpec; matrices: 
 
 /** The chain link of a points or lines surface's material, as one more draw of the cells' primitives. */
 function ChainInstancedCells({ spec, cellInstances }: { spec: ChainDrawSpec; cellInstances: CellInstances }) {
-  const { geometry, boundingBox, boundingSphere } = cellInstances;
-  const startingMaterial = useOneSurfaceStartingMaterial(spec.surfaceCount);
-  const drawnRef = useRef<ListedObject>(null);
-  const Drawn = drawnTag(geometryPrimitive(geometry));
-  // Typed props hold no box on these objects, which three and the framing read off the object.
-  useLayoutEffect(() => {
-    if (drawnRef.current) Object.assign(drawnRef.current, { boundingBox, boundingSphere });
-  }, [boundingBox, boundingSphere]);
   return (
-    <Drawn
-      ref={drawnRef}
-      args={[geometry, startingMaterial]}
+    <CellsDrawn
+      cellInstances={cellInstances}
+      surfaceCount={spec.surfaceCount}
       renderOrder={nextPassRenderOrder(spec.ordinal)}
       raycast={NO_RAYCAST}
       // The chain draw casts nothing of its own: the surface's own draw casts the
@@ -343,9 +335,9 @@ function ChainInstancedCells({ spec, cellInstances }: { spec: ChainDrawSpec; cel
       <SurfaceMaterialSlot
         source={spec.source}
         attach={spec.attach}
-        {...listedSlot(geometryPrimitive(geometry), 'instances')}
+        {...listedSlot(geometryPrimitive(cellInstances.geometry), 'instances')}
       />
-    </Drawn>
+    </CellsDrawn>
   );
 }
 
@@ -402,8 +394,32 @@ function BatchedTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.M
 
 /** A surface's points or lines at every cell, one instanced object picked at each cell. */
 function InstancedCells({ draw, cellInstances }: { draw: SurfaceDraw; cellInstances: CellInstances }) {
-  const { geometry, boundingBox, boundingSphere } = cellInstances;
-  const startingMaterial = useOneSurfaceStartingMaterial(draw.surfaceCount);
+  return (
+    <CellsDrawn
+      cellInstances={cellInstances}
+      surfaceCount={draw.surfaceCount}
+      raycast={raycastInstanced}
+      {...drawHookProps(draw.shadow)}
+    >
+      <OwnedSurfaceSlot draw={{ ...draw, geometry: cellInstances.geometry }} />
+    </CellsDrawn>
+  );
+}
+
+type CellsDrawnProps = Pick<
+  THREE.Points,
+  'renderOrder' | 'raycast' | 'castShadow' | 'receiveShadow' | 'onBeforeRender' | 'onAfterRender'
+> &
+  Partial<Pick<THREE.Light, 'onBeforeShadow' | 'onAfterShadow'>>;
+
+/** The points or lines object over the cells' instances, carrying the box three culls it by. */
+function CellsDrawn({
+  cellInstances: { geometry, boundingBox, boundingSphere },
+  surfaceCount,
+  children,
+  ...drawProps
+}: { cellInstances: CellInstances; surfaceCount: number; children: ReactNode } & Partial<CellsDrawnProps>) {
+  const startingMaterial = useOneSurfaceStartingMaterial(surfaceCount);
   const drawnRef = useRef<ListedObject>(null);
   const Drawn = drawnTag(geometryPrimitive(geometry));
   // Typed props hold no box on these objects, which three and the framing read off the object.
@@ -411,13 +427,8 @@ function InstancedCells({ draw, cellInstances }: { draw: SurfaceDraw; cellInstan
     if (drawnRef.current) Object.assign(drawnRef.current, { boundingBox, boundingSphere });
   }, [boundingBox, boundingSphere]);
   return (
-    <Drawn
-      ref={drawnRef}
-      args={[geometry, startingMaterial]}
-      raycast={raycastInstanced}
-      {...drawHookProps(draw.shadow)}
-    >
-      <OwnedSurfaceSlot draw={{ ...draw, geometry }} />
+    <Drawn ref={drawnRef} args={[geometry, startingMaterial]} {...drawProps}>
+      {children}
     </Drawn>
   );
 }

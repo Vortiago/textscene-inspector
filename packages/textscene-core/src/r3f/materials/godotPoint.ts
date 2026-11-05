@@ -27,6 +27,12 @@ const PROJECT_CHUNK = '#include <project_vertex>';
  */
 export type ListedPlacement = 'mesh' | 'instances';
 
+/** A surface that draws `THREE.Points` or `THREE.LineSegments`, and where its primitives sit. */
+export interface ListedSurface {
+  primitive: 'points' | 'lines';
+  placement: ListedPlacement;
+}
+
 /** How a material draws the points of a points surface. */
 export interface PointDraw {
   /** The side of each point's square in Godot's pixels: `point_size` under `use_point_size`, else 1. */
