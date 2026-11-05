@@ -96,14 +96,24 @@ describe('useNearestAnisotropy', () => {
     expect(gl.texParameterf).toHaveBeenCalledWith(FAKE_GL.TEXTURE_2D, MAX_ANISOTROPY_PARAMETER, 2);
   });
 
-  it('writes nothing on a GPU without the anisotropic extension', () => {
-    const { gl, wrapper } = fakeCanvasRenderer({ isAllocated: true, hasAnisotropyExtension: false });
-    const texture = textureWith();
-    const original = texture.onUpdate;
+  it('writes the anisotropy a texture gains after it mounted with one tap', () => {
+    const { gl, wrapper } = fakeCanvasRenderer({ isAllocated: false });
+    const texture = textureWith({ anisotropy: 1 });
     renderHook(() => useNearestAnisotropy(texture), { wrapper });
 
+    texture.anisotropy = 2;
+    texture.onUpdate!(texture);
+
+    expect(gl.texParameterf).toHaveBeenCalledWith(FAKE_GL.TEXTURE_2D, MAX_ANISOTROPY_PARAMETER, 2);
+  });
+
+  it('writes nothing, even after an upload, on a GPU without the anisotropic extension', () => {
+    const { gl, wrapper } = fakeCanvasRenderer({ isAllocated: true, hasAnisotropyExtension: false });
+    const texture = textureWith();
+    renderHook(() => useNearestAnisotropy(texture), { wrapper });
+    texture.onUpdate!(texture);
+
     expect(gl.texParameterf).not.toHaveBeenCalled();
-    expect(texture.onUpdate).toBe(original);
   });
 
   it('writes no more than the GPU supports', () => {
@@ -117,14 +127,13 @@ describe('useNearestAnisotropy', () => {
     ['a linear magnification, which three handles', { magFilter: THREE.LinearFilter }],
     ['one tap', { anisotropy: 1 }],
     ['no mip chain to filter', { minFilter: THREE.NearestFilter }],
-  ])('leaves a texture with %s alone', (_name, filters) => {
+  ])('writes nothing, even after an upload, for a texture with %s', (_name, filters) => {
     const { gl, wrapper } = fakeCanvasRenderer({ isAllocated: true });
     const texture = textureWith(filters);
-    const original = texture.onUpdate;
     renderHook(() => useNearestAnisotropy(texture), { wrapper });
+    texture.onUpdate!(texture);
 
     expect(gl.texParameterf).not.toHaveBeenCalled();
-    expect(texture.onUpdate).toBe(original);
   });
 
   it('does nothing outside a Canvas, where no renderer exists', () => {
