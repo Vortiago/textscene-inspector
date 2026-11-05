@@ -195,6 +195,7 @@ function quadGeometry({ positions, uvs, indices }: GlyphQuadArrays): THREE.Buffe
  * draws any texture. The tint multiplies the page colour, as Godot's modulate does for a font with
  * no FreeType face (`text_server_adv.cpp:4045`). An outline pass draws the font's outline set, at
  * the glyph's own rectangle, for every outline size (`text_server_adv.h:406-414`, `font.cpp:1712-1717`).
+ * A positive `strokeWidthPx` is that outline pass.
  */
 function buildBitmapRun(
   layout: TextLayoutResult,
@@ -202,11 +203,12 @@ function buildBitmapRun(
   fontSizePx: number,
   look: TextRunLook,
   textureFilter: TextureFilterState,
-  isOutlinePass: boolean
+  { strokeWidthPx = 0, originPhasePx }: CanvasTextPaintOptions
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
+  const isOutlinePass = strokeWidthPx > 0;
   const sheet = isOutlinePass ? metrics.bitmap.outlineSheet : metrics.bitmap.sheet;
-  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet);
+  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet, originPhasePx);
   const geometry = quadGeometry(quads);
   geometry.setAttribute('normal', quadFacingPlusZ(quads.positions.length / 3));
   const texture = createSheetTexture(sheet);
@@ -229,8 +231,8 @@ function buildBitmapRun(
 
 /**
  * Dispatches on `layout.fontMetrics.kind`, so no slice's `Component.tsx` branches. The face sets the
- * shear (`FontMetrics.skew`). `canvasPaint` is canvas-only, and the atlas branch ignores it, except
- * that a BMFont run reads a positive stroke width as its outline pass.
+ * shear (`FontMetrics.skew`). The atlas branch ignores `canvasPaint`. A BMFont run reads its
+ * stroke width as its outline pass, and its origin phase as a canvas run does.
  */
 function buildTextRun(
   layout: TextLayoutResult,
@@ -243,14 +245,7 @@ function buildTextRun(
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
   const skew = layout.fontMetrics.skew ?? 0;
   if (isBitmapFontMetrics(layout.fontMetrics)) {
-    return buildBitmapRun(
-      layout,
-      layout.fontMetrics,
-      fontSizePx,
-      look,
-      textureFilter,
-      (canvasPaint.strokeWidthPx ?? 0) > 0
-    );
+    return buildBitmapRun(layout, layout.fontMetrics, fontSizePx, look, textureFilter, canvasPaint);
   }
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(
@@ -333,10 +328,13 @@ export function TextRunMesh({
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
   // The run memo keys by the phase, so a run that moves by whole pixels keeps its raster. An atlas
-  // run and a run that keeps its pen read no phase, so a move never rebuilds them.
+  // run and a run that keeps its pen read no phase, so a move never rebuilds them. A BMFont pen
+  // floors in every caller (`buildBitmapQuads`).
   const itemOrigin = useCanvasItemOrigin();
+  const { fontMetrics } = layout;
   const readsPhase =
-    isCanvasFontMetrics(layout.fontMetrics) && snapsGlyphsToItemPixels(quantisesPen, fontSizePx);
+    (isCanvasFontMetrics(fontMetrics) || isBitmapFontMetrics(fontMetrics)) &&
+    snapsGlyphsToItemPixels(quantisesPen || isBitmapFontMetrics(fontMetrics), fontSizePx, fontMetrics);
   const { x: phaseX, y: phaseY } = readsPhase ? originPhase(itemOrigin) : VECTOR2_ZERO;
   if (blends && !swapped)
     throw new Error('expected blends only inside a GeometryInstance3D drawer, got none');

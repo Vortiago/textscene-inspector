@@ -140,6 +140,8 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
   pair as one code point.
 - FILL with autowrap puts the lines of a right-to-left paragraph at the right edge
   (`label.cpp:472-478`). LEFT, CENTER and RIGHT read the layout direction only.
+- With autowrap off, FILL trims a line only when its spaces cannot shrink to fit
+  (`OVERRUN_JUSTIFICATION_AWARE`, `label.cpp:322-324`, `text_server_adv.cpp:5947`).
 - The overrun trim of a right-to-left line keeps its logical start and draws the ellipsis at
   the visual left (`text_server_adv.cpp:6053-6067`, `label.h:198-241`).
 
@@ -153,9 +155,8 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
   the wrap is what makes the scrollbar appear.
 - **Not drawn** `BREAK_TRIM_INDENT` (an `autowrap_trim_flags` bit): a wrapped
   continuation line does not reserve the leading tab/space indent Godot re-applies to it.
-- **Approximated** A FILL-aligned Label with autowrap OFF and a trimming
-  `text_overrun_behavior` puts the ellipsis after the last kept glyph, where Godot
-  re-justifies the line.
+- **Approximated** A trimmed FILL line with autowrap OFF is not re-justified with
+  `JUSTIFICATION_CONSTRAIN_ELLIPSIS` (`label.cpp:325`, #1318).
 - **Not drawn** The doubled-backslash escapes of `paragraph_separator`, so a literal
   `"\\n"` stays two characters where Godot's `String::c_unescape()` (label.cpp:158) makes
   it a newline.

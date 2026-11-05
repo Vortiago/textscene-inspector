@@ -17,7 +17,13 @@ import {
   shearAboutBaseline,
   strokeContours,
 } from './canvasVariation';
-import { canvasGlyphPenXPx, isGlyphVaried, type GlyphVariation } from './fontMetrics';
+import {
+  canvasGlyphPenXPx,
+  fontIsScaled,
+  isGlyphVaried,
+  type FontMetrics,
+  type GlyphVariation,
+} from './fontMetrics';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
@@ -123,11 +129,15 @@ export function buildCanvasTextQuadArrays(
 
 /**
  * Whether a run places its glyphs as a canvas item draws a glyph at scale 1: the pen on its subpixel
- * step and the baseline floored (`text_server_adv.cpp:4082-4084`). Godot's `int64_t` size has no
- * fraction, so a fractional size draws off that branch, as Label3D's mesh does.
+ * step and the baseline floored (`text_server_adv.cpp:4082-4084`). A scaled face (`fontIsScaled`)
+ * draws off that branch, as Label3D's mesh does.
  */
-export function snapsGlyphsToItemPixels(quantisesPen: boolean, fontSizePx: number): boolean {
-  return quantisesPen && Number.isInteger(fontSizePx);
+export function snapsGlyphsToItemPixels(
+  quantisesPen: boolean,
+  fontSizePx: number,
+  metrics: Pick<FontMetrics, 'pxPerUnit'>
+): boolean {
+  return quantisesPen && !fontIsScaled(fontSizePx, metrics);
 }
 
 /**
@@ -240,7 +250,7 @@ export function paintSceneFontCanvas(
   };
 
   // The raster starts at the whole item pixel at or before the run origin, where its quad sits.
-  const snapsGlyphs = snapsGlyphsToItemPixels(quantisesPen, fontSizePx);
+  const snapsGlyphs = snapsGlyphsToItemPixels(quantisesPen, fontSizePx, metrics);
   layout.lines.forEach((line, lineIndex) => {
     const lineBaselinePx = lineIndex * layout.linePitchPx + baselineOffsetPx;
     const baselineY =
@@ -252,7 +262,8 @@ export function paintSceneFontCanvas(
     for (const gp of line.glyphs) {
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
       const penX =
-        canvasLayout.offsetXPx + (snapsGlyphs ? canvasGlyphPenXPx(originPhasePx.x + gp.x, fontSizePx) : gp.x);
+        canvasLayout.offsetXPx +
+        (snapsGlyphs ? canvasGlyphPenXPx(originPhasePx.x + gp.x, fontSizePx, metrics) : gp.x);
       // A glyph shaped with no growth, in a layout that is not sheared, stays on its plain ring.
       const hasVariedGlyph = skew !== 0 || gp.emboldenGrowthPx;
       const contours = contoursOf && hasVariedGlyph ? contoursOf(gp.char) : null;

@@ -13,6 +13,8 @@ import { createOpenSansCanvasFontMetrics } from '../../../../r3f/controls/native
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { isCanvasFontMetrics } from '../../../../r3f/controls/native/text/runtimeFontMetrics';
+import { useCanvasItemOrigin } from '../../../../r3f/components/CanvasItemGroup';
+import type { Vector2 } from '../../../../godot/math/vector';
 import { Label } from './Component';
 
 interface RunProps {
@@ -22,6 +24,8 @@ interface RunProps {
   outlineColor?: Rgba;
   outlineWidthPx?: number;
   renderOrder?: number;
+  /** The run's place in its canvas item, which its pen and baseline floor at. */
+  itemOrigin: Vector2;
 }
 
 const scene = vi.hoisted(() => ({ bundled: undefined as FontMetrics | undefined }));
@@ -31,7 +35,9 @@ vi.mock('../../../../r3f/controls/native/text/bundledFontLoader', () => ({
 }));
 vi.mock('../../../../r3f/controls/native/text/TextRunMesh', () => ({
   // A mesh in the scene graph stands for the run, so the runs read back in draw order, once each.
-  TextRunMesh: (props: RunProps) => <mesh userData={{ run: props }} />,
+  TextRunMesh: (props: Omit<RunProps, 'itemOrigin'>) => (
+    <mesh userData={{ run: { ...props, itemOrigin: useCanvasItemOrigin() } }} />
+  ),
 }));
 
 const RECT = { x: 0, y: 0, w: 200, h: 60 };
@@ -102,6 +108,17 @@ describe('<Label> outline ring', () => {
     expect(filled.outlineColor).toBeUndefined();
     expect(filled.outlineWidthPx).toBeUndefined();
     expect(filled.renderOrder).toBeGreaterThan(rings(runs)[0]!.renderOrder!);
+  });
+
+  it('rounds the ring pen at the canvas origin of its fill, so the ring stays on its glyph', async () => {
+    // label.cpp:796-797: one `ofs.x` per line feeds every draw_text pass, the outline and the fill alike.
+    const centred = label({
+      ...outlined,
+      node: controlNode('L', 'Label', { name: 'L', text: 'A', horizontalAlignment: 1 }),
+    });
+    const runs = await draw(centred, 2);
+    expect(fill(runs).itemOrigin.x).toBeGreaterThan(0);
+    expect(rings(runs)[0]?.itemOrigin).toEqual(fill(runs).itemOrigin);
   });
 
   it('draws no ring at outline_size 0', async () => {

@@ -1,4 +1,4 @@
-/** `<TextRunMesh>` on the canvas painter: the quad of a run sits on its item's whole pixels. */
+/** `<TextRunMesh>` on the canvas and BMFont painters: the glyphs of a run sit on its item's whole pixels. */
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -8,6 +8,7 @@ import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { computeCanvasTextCanvasLayout } from './canvasTextPainter';
 import { shapeText } from './textLayout';
 import { TextRunMesh } from './TextRunMesh';
+import { testBitmapMetrics } from './bitmapFontMetrics.testkit';
 
 const layout = shapeText('AB', {
   fontSizePx: 16,
@@ -71,5 +72,28 @@ describe('<TextRunMesh> on the canvas painter', () => {
     const [x, y] = await quadTopLeft(false);
     expect(x).toBeCloseTo(-offsetXPx, 6);
     expect(y).toBeCloseTo(offsetYPx, 6);
+  });
+});
+
+describe('<TextRunMesh> over a BMFont', () => {
+  it('floors its glyph at the canvas position of its item', async () => {
+    const bitmapLayout = shapeText('H', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics: testBitmapMetrics(),
+    });
+    const renderer = await ReactThreeTestRenderer.create(
+      <CanvasItemProvider value={0}>
+        <CanvasItemGroup position={[2.25, -1.75, 0]}>
+          <TextRunMesh layout={bitmapLayout} fontSizePx={16} tint={{ r: 1, g: 1, b: 1, a: 1 }} />
+        </CanvasItemGroup>
+      </CanvasItemProvider>
+    );
+    const mesh = renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh;
+    const position = mesh.geometry.getAttribute('position');
+    // `H` sits 1 px right of its pen and 4 px below the line top (`bitmapTextPainter.test.ts`).
+    expect([position.getX(0), position.getY(0)]).toEqual([1 - 0.25, -(4 - 0.75)]);
   });
 });

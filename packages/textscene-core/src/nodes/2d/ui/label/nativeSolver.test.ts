@@ -1233,6 +1233,29 @@ describe('layoutLabelLines — the overrun trim (label.cpp:302-332)', () => {
   });
 });
 
+describe('layoutLabelLines — the justification-aware trim of FILL with autowrap off (label.cpp:322-325)', () => {
+  const layout = shapeText('A long line of text', {
+    fontSizePx: 16,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 3,
+  });
+  const naturalWidthPx = layout.lines[0]!.widthPx;
+  const markTrimmed = (line: TextLineLayout): TextLineLayout => ({ ...line, text: `${line.text}…` });
+  const fillAt = (boxWidthPx: number) =>
+    layoutLabelLines(layout, boxWidthPx, 40, 3, undefined, JustificationFlag.WORD_BOUND, 16, {
+      trimLine: markTrimmed,
+    })[0]!.line;
+
+  it('skips the trim of a line whose spaces shrink to fit, as `fit_width_minimum_reached` stays false (text_server_adv.cpp:5947)', () => {
+    expect(fillAt(Math.floor(naturalWidthPx) - 4).text).toBe('A long line of text');
+  });
+
+  it('trims a line that stays wider than the box at the smallest space', () => {
+    expect(fillAt(Math.floor(naturalWidthPx / 2)).text).toBe('A long line of text…');
+  });
+});
+
 describe('layoutLabelLines — the inferred paragraph direction (label.cpp:470-478)', () => {
   const FONT_SIZE = 16;
   const UNJUSTIFIED_FLAGS = JustificationFlag.WORD_BOUND | JustificationFlag.SKIP_LAST_LINE;
