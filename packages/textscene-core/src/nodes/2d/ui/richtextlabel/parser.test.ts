@@ -114,6 +114,15 @@ describe('parseRichTextLabel', () => {
       expect(p.visibleCharacters).toBe(2);
     });
 
+    it('marks a label whose ratio was written last, for the render to count again', () => {
+      expect(parseRichTextLabel(heading, { text: '"Hello"', visible_ratio: '0.5' }).visibleRatioDrives).toBe(
+        true
+      );
+      expect(
+        parseRichTextLabel(heading, { text: '"Hello"', visible_characters: '2' }).visibleRatioDrives
+      ).toBeUndefined();
+    });
+
     it('counts the characters BBCode draws, not its tags', () => {
       const p = parseRichTextLabel(heading, {
         text: '"[b]One[/b] two"',

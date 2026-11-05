@@ -10,6 +10,7 @@ import { DEFAULT_JUSTIFICATION_FLAGS } from '../../../../godot/text/textServerEn
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
 import { floatElements } from '../../../../resources/shapes/packedArray';
+import { countedCharacters } from './visibleCharacters';
 import { resolveVisibleChars } from '../shared/visibleChars';
 import { parseBBCodeRuns } from './bbcode';
 
@@ -30,10 +31,7 @@ function parseTabStops(value: string | undefined): number[] | undefined {
 /** `get_total_character_count` (`rich_text_label.cpp:7999-8014`): each text character, newline and `[img]` counts one, and a tag or a paragraph tag's line end none. */
 function characterCount({ text = '', bbcodeEnabled }: RichTextLabelProperties): number {
   if (!bbcodeEnabled) return text.length;
-  return parseBBCodeRuns(text).reduce(
-    (total, run) => total + run.text.length - (run.implicitBreaks?.length ?? 0),
-    0
-  );
+  return countedCharacters(parseBBCodeRuns(text));
 }
 
 export function parseRichTextLabel(
@@ -64,6 +62,7 @@ export function parseRichTextLabel(
   if (visibleState) {
     result.visibleCharacters = visibleState.visibleChars;
     result.visibleRatio = visibleState.visibleRatio;
+    if (visibleState.lastSetter === 'ratio') result.visibleRatioDrives = true;
   }
   result.visibleCharactersBehavior = parseOptionalInt(properties.visible_characters_behavior);
   return result;

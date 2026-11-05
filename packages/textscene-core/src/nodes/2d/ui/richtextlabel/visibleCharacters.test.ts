@@ -48,6 +48,17 @@ function shown(
 }
 
 describe('revealedGlyphs', () => {
+  // Measured with `pnpm ref:godot` on "abcdefgh" plus a ligature at visible_ratio 0.99: the default font
+  // draws `fi` as one glyph, so nine glyphs make a limit of eight and the ligature stays hidden.
+  it('counts the default font ligature fi as one glyph under GLYPHS_LTR (:8017-8033)', () => {
+    expect(shown('abcdefghfi', { behavior: VC_GLYPHS_LTR, characters: 9, ratio: 0.99, rtl: false })).toEqual([
+      'abcdefgh',
+    ]);
+    expect(shown('abcdefghft', { behavior: VC_GLYPHS_LTR, characters: 9, ratio: 0.99, rtl: false })).toEqual([
+      'abcdefghf',
+    ]);
+  });
+
   it('shows no glyph at or past the character budget under CHARS_AFTER_SHAPING (:1466)', () => {
     expect(
       shown('Hello world', { behavior: VC_CHARS_AFTER_SHAPING, characters: 5, ratio: 5 / 11, rtl: false })
@@ -118,17 +129,31 @@ describe('revealedGlyphs', () => {
 
 describe('richTextReveal', () => {
   it('is undefined while visible_characters is unset or -1', () => {
-    expect(richTextReveal({ visibleCharacters: undefined }, false)).toBeUndefined();
-    expect(richTextReveal({ visibleCharacters: -1, visibleRatio: 1 }, false)).toBeUndefined();
+    expect(richTextReveal({ visibleCharacters: undefined }, false, 0)).toBeUndefined();
+    expect(richTextReveal({ visibleCharacters: -1, visibleRatio: 1 }, false, 0)).toBeUndefined();
   });
 
   it('defaults the behaviour to CHARS_BEFORE_SHAPING', () => {
-    expect(richTextReveal({ visibleCharacters: 3, visibleRatio: 0.5 }, true)).toEqual({
+    expect(richTextReveal({ visibleCharacters: 3, visibleRatio: 0.5 }, true, 6)).toEqual({
       behavior: VC_CHARS_BEFORE_SHAPING,
       characters: 3,
       ratio: 0.5,
       rtl: true,
     });
+  });
+
+  // `get_total_character_count` counts an `[img]` only once Godot loaded its texture (:4210, :5992-6040),
+  // so a ratio re-derives its characters from the total of the runs that are drawn.
+  it('re-derives the characters of a ratio from the total it is given', () => {
+    const props = { visibleCharacters: 3, visibleRatio: 0.5, visibleRatioDrives: true as const };
+    expect(richTextReveal(props, false, 6)?.characters).toBe(3);
+    expect(richTextReveal(props, false, 5)?.characters).toBe(2);
+  });
+
+  it('re-derives the ratio of characters from the total it is given', () => {
+    const props = { visibleCharacters: 3, visibleRatio: 0.5 };
+    expect(richTextReveal(props, false, 5)?.ratio).toBeCloseTo(0.6);
+    expect(richTextReveal(props, false, 0)?.ratio).toBe(0.5);
   });
 });
 

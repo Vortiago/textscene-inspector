@@ -5,12 +5,14 @@
  */
 
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
-import type { TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import type { GlyphPlacement, TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import { parseOptionalFloat, parseOptionalInt } from '../../../../parser/valueParsers';
 
 interface VisibleCharsState {
   visibleChars: number;
   visibleRatio: number;
+  /** The setter that ran last: the other field is derived from it and the text length. Absent for the defaults. */
+  lastSetter?: 'characters' | 'ratio';
 }
 
 /** Godot's construction defaults for both classes (label.h:75-76, rich_text_label.h:553). */
@@ -24,11 +26,15 @@ function applySetVisibleCharacters(
   emptyTextKeepsRatio: boolean
 ): VisibleCharsState {
   if (state.visibleChars === amount) return state;
-  if (amount === -1) return { visibleChars: amount, visibleRatio: 1 };
+  if (amount === -1) return { visibleChars: amount, visibleRatio: 1, lastSetter: 'characters' };
   // Label resets the ratio on empty text (label.cpp:1288); RichTextLabel leaves it (:7898-7900).
   if (totalChars === 0)
-    return { visibleChars: amount, visibleRatio: emptyTextKeepsRatio ? state.visibleRatio : 1 };
-  return { visibleChars: amount, visibleRatio: amount / totalChars };
+    return {
+      visibleChars: amount,
+      visibleRatio: emptyTextKeepsRatio ? state.visibleRatio : 1,
+      lastSetter: 'characters',
+    };
+  return { visibleChars: amount, visibleRatio: amount / totalChars, lastSetter: 'characters' };
 }
 
 /**
@@ -46,9 +52,9 @@ function applySetVisibleRatio(
   totalChars: number
 ): VisibleCharsState {
   if (state.visibleRatio === ratio) return state;
-  if (ratio >= 1) return { visibleChars: -1, visibleRatio: 1 };
-  if (ratio < 0) return { visibleChars: 0, visibleRatio: 0 };
-  return { visibleChars: truncatedShare(totalChars, ratio), visibleRatio: ratio };
+  if (ratio >= 1) return { visibleChars: -1, visibleRatio: 1, lastSetter: 'ratio' };
+  if (ratio < 0) return { visibleChars: 0, visibleRatio: 0, lastSetter: 'ratio' };
+  return { visibleChars: truncatedShare(totalChars, ratio), visibleRatio: ratio, lastSetter: 'ratio' };
 }
 
 /**
@@ -87,8 +93,8 @@ export interface VisibleCharsBudget {
   visibleChars: number | undefined;
   /** Final resolved `visible_ratio`, the budget of the GLYPHS_* behaviours. */
   visibleRatio: number | undefined;
-  /** Total glyphs when it is not the lines' count: RichTextLabel counts each paragraph's glyphs, trimmed edge spaces included (`rich_text_label.cpp:8017-8033`). */
-  totalGlyphs?: number;
+  /** The characters of the text when the lines hold fewer: RichTextLabel counts each paragraph's characters, trimmed edge spaces included (`rich_text_label.cpp:8017-8033`). Each ligature still counts one glyph. */
+  totalCharacters?: number;
   /** `is_layout_rtl()` (`SolveNode.rtl`), which picks the end GLYPHS_AUTO trims from (`label.cpp:779-780`). Defaults `false`. */
   rtl?: boolean;
 }
@@ -122,31 +128,83 @@ function revealCharacters(
   if (visibleChars === undefined || visibleChars < 0) return [...lines];
   return lines.map((line) => {
     const isEllipsisShown = (line.paragraphStart ?? 0) - 1 <= visibleChars;
+    const { tails, lastIndexOf } = ligatureClusters(line.glyphs);
+    let isLigatureShown = false;
     return {
       ...line,
-      glyphs: line.glyphs.filter((glyph) =>
-        glyph.sourceIndex === undefined ? isEllipsisShown : glyph.sourceIndex < visibleChars
-      ),
+      glyphs: line.glyphs.filter((glyph) => {
+        if (tails.has(glyph)) return isLigatureShown;
+        if (glyph.sourceIndex === undefined) return isEllipsisShown;
+        // A ligature's `end` is its last character's, so it shows whole or not at all.
+        isLigatureShown = (lastIndexOf.get(glyph) ?? glyph.sourceIndex) < visibleChars;
+        return isLigatureShown;
+      }),
     };
   });
+}
+
+/**
+ * The default font draws these sequences as one glyph, which `shaped_text_get_glyph_count` counts once
+ * (measured with `pnpm ref:godot`; `ft`, `tt`, `fj`, `fb`, `fh`, `fk` and `Th` stay two). Longest first.
+ */
+const LIGATURES = ['ffi', 'ffl', 'ff', 'fi', 'fl'];
+
+interface LigatureClusters {
+  /** The glyphs that only continue the ligature before them: the layout has one glyph per character, Godot one for the sequence. */
+  tails: Set<GlyphPlacement>;
+  /** For each ligature's first glyph, the source index of its last character, where the cluster ends. */
+  lastIndexOf: Map<GlyphPlacement, number>;
+}
+
+/** The ligatures in a line of glyphs. Only the default font's glyphs form one here. */
+function ligatureClusters(glyphs: readonly GlyphPlacement[]): LigatureClusters {
+  const clusters: LigatureClusters = { tails: new Set(), lastIndexOf: new Map() };
+  for (let start = 0; start < glyphs.length; start++) {
+    const length = ligatureLengthAt(glyphs, start);
+    if (length === 0) continue;
+    for (let offset = 1; offset < length; offset++) clusters.tails.add(glyphs[start + offset]!);
+    clusters.lastIndexOf.set(glyphs[start]!, glyphs[start + length - 1]!.sourceIndex!);
+    start += length - 1;
+  }
+  return clusters;
+}
+
+function ligatureLengthAt(glyphs: readonly GlyphPlacement[], start: number): number {
+  return (
+    LIGATURES.find((ligature) =>
+      [...ligature].every((char, offset) => {
+        const glyph = glyphs[start + offset];
+        return (
+          glyph?.char === char &&
+          glyph.glyph !== null &&
+          glyph.sourceIndex === glyphs[start]!.sourceIndex! + offset
+        );
+      })
+    )?.length ?? 0
+  );
 }
 
 /** The GLYPHS behaviours: `visible_ratio * total_glyphs` glyphs, counted in visual order across lines. */
 function revealGlyphs(lines: readonly TextLineLayout[], budget: VisibleCharsBudget): TextLineLayout[] {
   if (budget.visibleRatio === undefined || budget.visibleRatio >= 1) return [...lines];
-  const totalGlyphs = budget.totalGlyphs ?? lines.reduce((sum, l) => sum + l.glyphs.length, 0);
+  const tailsByLine = lines.map((line) => ligatureClusters(line.glyphs).tails);
+  const tailCount = tailsByLine.reduce((sum, tails) => sum + tails.size, 0);
+  const totalGlyphs =
+    (budget.totalCharacters ?? lines.reduce((sum, l) => sum + l.glyphs.length, 0)) - tailCount;
   const limit = truncatedShare(totalGlyphs, Math.max(0, budget.visibleRatio));
   const fromEnd =
     budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_RTL ||
     (budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_AUTO && budget.rtl === true);
   const hideBefore = fromEnd ? totalGlyphs - limit : 0;
   let seen = 0;
-  return lines.map((line) => ({
+  let isShown = false;
+  return lines.map((line, lineIndex) => ({
     ...line,
-    glyphs: line.glyphs.filter(() => {
-      const keep = fromEnd ? seen >= hideBefore : seen < limit;
+    glyphs: line.glyphs.filter((glyph) => {
+      if (tailsByLine[lineIndex]!.has(glyph)) return isShown;
+      isShown = fromEnd ? seen >= hideBefore : seen < limit;
       seen++;
-      return keep;
+      return isShown;
     }),
   }));
 }

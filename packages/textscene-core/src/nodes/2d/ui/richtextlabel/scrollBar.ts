@@ -25,8 +25,6 @@ import { richTextContentHeightPx, type StyledTextRun } from './nativeSolver';
 interface RichTextShape {
   runs: StyledTextRun[];
   layout: TextLayoutResult;
-  /** What draws, when it is not `layout`: the shaped prefix of Before Shaping (`rich_text_label.cpp:668-671`). `layout` still sizes the text and its bar. */
-  shown?: { runs: StyledTextRun[]; layout: TextLayoutResult };
 }
 
 interface RichTextShapeBesideScrollBar extends RichTextShape {

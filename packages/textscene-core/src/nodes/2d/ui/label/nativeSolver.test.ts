@@ -966,7 +966,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
       visibleChars: undefined,
       visibleRatio: 0.5,
-      totalGlyphs: 6,
+      totalCharacters: 6,
     });
     expect(line!.glyphs.length).toBe(3);
   });

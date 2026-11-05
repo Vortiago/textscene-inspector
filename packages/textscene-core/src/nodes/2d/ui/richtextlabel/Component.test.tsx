@@ -645,6 +645,15 @@ describe('<RichTextLabel> visible_characters (rich_text_label.cpp:943-947,668-67
     expect(await textMeshCount({ visibleCharacters: 9, visibleCharactersBehavior: 1 }, rect)).toBe(2);
   });
 
+  // The parser counted 12 characters (an `[img]` Godot never loaded included), the text draws 11. A ratio written
+  // last takes the characters it draws: 11 * 0.82 is 9, so one line. Without the ratio, 12 shows everything.
+  it('derives the characters of a ratio from the text it draws', async () => {
+    const rect = { x: 0, y: 0, w: 75, h: 100 };
+    const staleCount = { visibleCharacters: 12, visibleRatio: 0.82 };
+    expect(await textMeshCount({ ...staleCount, visibleRatioDrives: true }, rect)).toBe(1);
+    expect(await textMeshCount(staleCount, rect)).toBe(2);
+  });
+
   // `unit-rich-text-label-visible-characters-follow.tscn`: the bar shows over text that fits.
   it('shows the bar over text that fits when scroll_following_visible_characters is set', async () => {
     const renderer = await render(

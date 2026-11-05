@@ -40,11 +40,10 @@ import {
   styledTextRuns,
   underlineRectPx,
   type RichTextImagePlacement,
-  type StyledTextRun,
 } from './nativeSolver';
 import { resolveRichTextFaces } from './styleFaces';
 import { shapeBesideScrollBar } from './scrollBar';
-import { richTextReveal, truncateRunsToCharacters, type RichTextReveal } from './visibleCharacters';
+import { countedCharacters, richTextReveal, truncateRunsToCharacters } from './visibleCharacters';
 import type { RichTextLabelProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
@@ -162,8 +161,7 @@ function useShapedRichText(
   props: RichTextLabelProperties,
   rect: Rect2,
   theme: NativeTheme,
-  textTheme: ResolvedTextTheme,
-  reveal: RichTextReveal | undefined
+  textTheme: ResolvedTextTheme
 ) {
   const runsAt = useCallback(
     (wrapWidthPx: number) =>
@@ -189,30 +187,23 @@ function useShapedRichText(
     [rect.w, rect.h, props.scrollActive, props.scrollFollowing, props.scrollFollowingVisibleCharacters, rtl]
   );
 
-  return useMemo(
+  const shaped = useMemo(
     () =>
       shapeBesideScrollBar(
         (wrapWidthPx) => {
           const runs = wrapWidthPx === rect.w ? runsAtRectWidth : runsAt(wrapWidthPx);
-          const shape = (shapedRuns: StyledTextRun[]) =>
-            shapeRichText(
-              shapedRuns,
-              { normal, bold, italic, boldItalic },
-              {
-                fontSizePx: textTheme.fontSizePx,
-                boxWidthPx: wrapWidthPx,
-                autowrapMode,
-                tabSize: props.tabSize,
-                autowrapTrimFlags: props.autowrapTrimFlags,
-              }
-            );
-          const layout = shape(runs);
-          // Before Shaping draws a prefix shaped on its own, so a typewriter reveal wraps as it grows.
-          if (reveal?.behavior !== VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return { runs, layout };
-          const shownRuns = truncateRunsToCharacters(runs, reveal.characters);
-          // A cut that keeps every run whole leaves the text unchanged, so its layout is reused.
-          const isUncut = shownRuns.length === runs.length && shownRuns.every((run, i) => run === runs[i]);
-          return { runs, layout, shown: { runs: shownRuns, layout: isUncut ? layout : shape(shownRuns) } };
+          const layout = shapeRichText(
+            runs,
+            { normal, bold, italic, boldItalic },
+            {
+              fontSizePx: textTheme.fontSizePx,
+              boxWidthPx: wrapWidthPx,
+              autowrapMode,
+              tabSize: props.tabSize,
+              autowrapTrimFlags: props.autowrapTrimFlags,
+            }
+          );
+          return { runs, layout };
         },
         box,
         theme
@@ -231,9 +222,60 @@ function useShapedRichText(
       props.tabSize,
       props.autowrapTrimFlags,
       theme,
-      reveal,
     ]
   );
+
+  const { visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior } = props;
+  const totalCharacters = useMemo(() => countedCharacters(shaped.runs), [shaped.runs]);
+  const reveal = useMemo(
+    () =>
+      richTextReveal(
+        { visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior },
+        rtl,
+        totalCharacters
+      ),
+    [visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior, rtl, totalCharacters]
+  );
+
+  // Before Shaping draws a prefix shaped on its own, so a typewriter reveal wraps as it grows. Only
+  // this prefix depends on the reveal: the full shape above, which the heights and the bar read, does not.
+  const shown = useMemo(() => {
+    if (reveal?.behavior !== VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return undefined;
+    const { runs, layout, wrapWidthPx } = shaped;
+    const shownRuns = truncateRunsToCharacters(runs, reveal.characters);
+    // A cut that keeps every run whole leaves the text unchanged, so its layout is reused.
+    const isUncut = shownRuns.length === runs.length && shownRuns.every((run, i) => run === runs[i]);
+    return {
+      runs: shownRuns,
+      layout: isUncut
+        ? layout
+        : shapeRichText(
+            shownRuns,
+            { normal, bold, italic, boldItalic },
+            {
+              fontSizePx: textTheme.fontSizePx,
+              boxWidthPx: wrapWidthPx,
+              autowrapMode,
+              tabSize: props.tabSize,
+              autowrapTrimFlags: props.autowrapTrimFlags,
+            }
+          ),
+      fullText: { heightPx: richTextContentHeightPx(runs, layout), lineCount: layout.lines.length },
+    };
+  }, [
+    shaped,
+    reveal,
+    normal,
+    bold,
+    italic,
+    boldItalic,
+    textTheme.fontSizePx,
+    autowrapMode,
+    props.tabSize,
+    props.autowrapTrimFlags,
+  ]);
+
+  return { ...shaped, shown, reveal };
 }
 
 /** The lines and images of a RichTextLabel, and its scrollbar. A `ControlQuad` reads its clip from context, a `TextRun` from `clippingPlanes`. */
@@ -252,19 +294,8 @@ function RichTextBody({
     [solveNode, props, theme]
   );
 
-  const { visibleCharacters, visibleRatio, visibleCharactersBehavior } = props;
-  const reveal = useMemo(
-    () => richTextReveal({ visibleCharacters, visibleRatio, visibleCharactersBehavior }, solveNode.rtl),
-    [visibleCharacters, visibleRatio, visibleCharactersBehavior, solveNode.rtl]
-  );
-  const { runs, layout, shown, wrapWidthPx, textOriginXPx, scrollOffsetPx, scrollBar } = useShapedRichText(
-    solveNode,
-    props,
-    rect,
-    theme,
-    textTheme,
-    reveal
-  );
+  const { runs, layout, shown, reveal, wrapWidthPx, textOriginXPx, scrollOffsetPx, scrollBar } =
+    useShapedRichText(solveNode, props, rect, theme, textTheme);
 
   // The alignment property and the `[center]`/`[right]`/`[left]`/`[fill]` tags
   // (`rich_text_label.cpp:5681-5696`) resolve through one `_find_alignment`
@@ -281,10 +312,7 @@ function RichTextBody({
           fontSizePx: textTheme.fontSizePx,
         },
         reveal,
-        fullText: shown && {
-          heightPx: richTextContentHeightPx(runs, layout),
-          lineCount: layout.lines.length,
-        },
+        fullText: shown?.fullText,
       }),
     [
       runs,

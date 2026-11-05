@@ -10,7 +10,7 @@
 
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type { GlyphPlacement, TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { applyVisibleCharsReveal } from '../shared/visibleChars';
+import { applyVisibleCharsReveal, truncatedShare } from '../shared/visibleChars';
 import type { StyledTextRun } from './nativeSolver';
 import type { RichTextLabelProperties } from './types';
 
@@ -23,23 +23,38 @@ export interface RichTextReveal {
   rtl: boolean;
 }
 
-/** The reveal a label asks for, or undefined while every character shows (`visible_characters < 0`). */
+/**
+ * The reveal a label asks for, or undefined while every character shows. `totalCharacters` is
+ * `get_total_character_count` of the runs drawn: the field written last is the fixed one, and the
+ * other follows from the total (`rich_text_label.cpp:7892-7948`).
+ */
 export function richTextReveal(
-  props: Pick<RichTextLabelProperties, 'visibleCharacters' | 'visibleRatio' | 'visibleCharactersBehavior'>,
-  rtl: boolean
+  props: Pick<
+    RichTextLabelProperties,
+    'visibleCharacters' | 'visibleRatio' | 'visibleRatioDrives' | 'visibleCharactersBehavior'
+  >,
+  rtl: boolean,
+  totalCharacters: number
 ): RichTextReveal | undefined {
   const { visibleCharacters, visibleRatio = 1, visibleCharactersBehavior } = props;
+  const behavior = visibleCharactersBehavior ?? VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING;
+  if (props.visibleRatioDrives) {
+    if (visibleRatio >= 1) return undefined;
+    const characters = visibleRatio < 0 ? 0 : truncatedShare(totalCharacters, visibleRatio);
+    return { behavior, characters, ratio: visibleRatio, rtl };
+  }
   if (visibleCharacters === undefined || visibleCharacters < 0) return undefined;
-  return {
-    behavior: visibleCharactersBehavior ?? VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING,
-    characters: visibleCharacters,
-    ratio: visibleRatio,
-    rtl,
-  };
+  const ratio = totalCharacters > 0 ? Math.fround(visibleCharacters / totalCharacters) : visibleRatio;
+  return { behavior, characters: visibleCharacters, ratio, rtl };
 }
 
 /** The runs as the text Godot counts: each run's text and the newlines a paragraph tag added to it. */
 type CountedRun = Pick<StyledTextRun, 'text' | 'implicitBreaks'>;
+
+/** `get_total_character_count` of the runs: each character and `[img]`, and none for the newline a paragraph tag adds. */
+export function countedCharacters(runs: readonly CountedRun[]): number {
+  return runs.reduce((total, run) => total + run.text.length - (run.implicitBreaks?.length ?? 0), 0);
+}
 
 /** The indices in the runs' joined text of the newlines Godot counts no character for (`BBCodeRun.implicitBreaks`). */
 function implicitBreakIndices(runs: readonly CountedRun[]): ReadonlySet<number> {
@@ -71,7 +86,7 @@ export function revealedGlyphs(
     behavior: reveal.behavior,
     visibleChars: reveal.characters,
     visibleRatio: reveal.ratio,
-    totalGlyphs: textLength - implicit.size,
+    totalCharacters: textLength - implicit.size,
     rtl: reveal.rtl,
   };
   if (implicit.size === 0) {

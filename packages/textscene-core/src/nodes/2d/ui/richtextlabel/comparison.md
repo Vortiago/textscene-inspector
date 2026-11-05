@@ -42,7 +42,8 @@ to its foot (`:3827-3828`). A line that starts below the rect or ends above it i
 (`rich_text_label.cpp:7401-7430,7892-7948`). Before Shaping, the default, shapes only the shown prefix
 for drawing, so the paragraph the count ends in wraps again as it grows (`:668-671`). After Shaping and
 the Glyphs behaviours keep the full wrap and skip glyphs (`:943-947,1466`). The glyph budget counts every
-character of the text, including an edge space that a wrap trims (`:8017-8033`). The line a paragraph tag
+character of the text, including an edge space that a wrap trims (`:8017-8033`). An `[img]` counts only when
+Godot loads its texture (`:4210`), so a ratio takes the total of the images drawn. The line a paragraph tag
 ends counts no character (`:4097-4103`).
 
 `scroll_following_visible_characters` runs as the scene loads, before any line exists. It scrolls to
@@ -109,4 +110,6 @@ string against `true`, so an absent property or any other value silently resolve
 
 - **Approximated** Only a subset of BBCode tags is styled, and a tag outside it renders as
   plain text.
+- **Approximated** The glyph budget joins only the default font's ligatures (`ff`, `fi`, `fl`, `ffi`, `ffl`),
+  so a ligature of another font counts extra.
 - **Not drawn** The loading bar's right-to-left fill (:2580-2588), since the loading bar is not drawn.
