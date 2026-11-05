@@ -11,6 +11,7 @@
 import { OPEN_SANS_ATLAS_GLYPHS } from './openSansAtlas';
 import { getFontEmboldenedAdvancePx, getFontEmboldenGrowthPx, type FontMetrics } from './fontMetrics';
 import { isWhitespace, type GlyphPlacement, type TextLayoutResult, type TextLineLayout } from './textLayout';
+import { fitTrimmedGlyphsToWidth } from './textJustify';
 import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 /**
@@ -156,7 +157,40 @@ export function trimLineToWidth(
 ): TextLineLayout {
   const trim = findOverrunTrim(line, widthPx, flags, options);
   if (!trim) return line;
-  return trimmedLine(line, trim, inferredDirectionGlyphs(line, trim));
+  return trimmedLine(line, trim, inferredDirectionGlyphs(line, line.glyphs, trim));
+}
+
+interface FilledTrimOptions extends OverrunTrimOptions {
+  /** The Label's `justification_flags`, which the fit after the trim reads (`label.cpp:325`). */
+  justificationFlags: number;
+}
+
+/**
+ * {@link trimLineToWidth} for a line of a FILL Label with autowrap off, which `_shape` fits, trims and
+ * fits again with `JUSTIFICATION_CONSTRAIN_ELLIPSIS` (`label.cpp:322-325`). The second fit grows the
+ * spaces the cut keeps until the kept glyphs and the ellipsis reach `widthPx`. A line the trim
+ * enforces an ellipsis on without cutting keeps its glyphs (`text_server_adv.cpp:5582`).
+ */
+export function trimFilledLineToWidth(
+  line: TextLineLayout,
+  widthPx: number,
+  flags: OverrunTrimFlags,
+  options: FilledTrimOptions
+): TextLineLayout {
+  const trim = findOverrunTrim(line, widthPx, flags, options);
+  if (!trim) return line;
+  const { trimPos } = trim.cut;
+  const glyphs =
+    trimPos < 0
+      ? line.glyphs
+      : fitTrimmedGlyphsToWidth(
+          line,
+          { trimPos, trimmedWidthPx: trimmedWidthPx(trim) },
+          widthPx,
+          options.justificationFlags,
+          options.fontSizePx
+        );
+  return trimmedLine(line, trim, inferredDirectionGlyphs(line, glyphs, trim));
 }
 
 /**
@@ -173,7 +207,7 @@ export function trimTextBufferLineToWidth(
 ): TextLineLayout {
   const trim = findOverrunTrim(line, widthPx, flags, options);
   if (!trim) return line;
-  const outline = trimmedLine(line, trim, inferredDirectionGlyphs(line, trim));
+  const outline = trimmedLine(line, trim, inferredDirectionGlyphs(line, line.glyphs, trim));
   if (!line.isRtl || options.isDrawnRtl) return outline;
   return {
     ...outline,
@@ -246,12 +280,15 @@ function findOverrunTrim(
 }
 
 /**
- * The glyphs the trim keeps, drawn in `line`'s inferred direction. `trim_pos < 0` draws every
+ * The `glyphs` of `line` the trim keeps, drawn in its inferred direction. `trim_pos < 0` draws every
  * glyph uncut (`text_server.cpp:1768-1777`): only `enforceEllipsis` on a line that fits reaches
  * it. An RTL line draws its ellipsis first, reversed (`:1752-1763`).
  */
-function inferredDirectionGlyphs(line: TextLineLayout, { cut, ellipsis }: OverrunTrim): GlyphPlacement[] {
-  const { glyphs } = line;
+function inferredDirectionGlyphs(
+  line: TextLineLayout,
+  glyphs: readonly GlyphPlacement[],
+  { cut, ellipsis }: OverrunTrim
+): GlyphPlacement[] {
   const { trimPos } = cut;
   if (line.isRtl) {
     return placeFrom(0, [...[...ellipsis].reverse(), ...(trimPos < 0 ? glyphs : glyphs.slice(trimPos))]);
@@ -275,18 +312,17 @@ function leftToRightClippedGlyphs(
   return keptWithEllipsis(drawn, ellipsis);
 }
 
+/** `width_trimmed` (`:6152`), which alignment reads: the kept advance and the truncated ellipsis width, which both draws place by. */
+function trimmedWidthPx({ cut, ellipsisWidthPx }: OverrunTrim): number {
+  return cut.keptWidthPx + (cut.ellipsisPos !== -1 ? ellipsisWidthPx : 0);
+}
+
 /** `line` with `glyphs` in place of its own. */
-function trimmedLine(
-  line: TextLineLayout,
-  { cut, ellipsisWidthPx }: OverrunTrim,
-  glyphs: GlyphPlacement[]
-): TextLineLayout {
+function trimmedLine(line: TextLineLayout, trim: OverrunTrim, glyphs: GlyphPlacement[]): TextLineLayout {
   return {
     text: line.text,
     glyphs,
-    // `width_trimmed` (`:6152`), which alignment reads: the kept advance and the truncated
-    // ellipsis width, which both draws place by.
-    widthPx: cut.keptWidthPx + (cut.ellipsisPos !== -1 ? ellipsisWidthPx : 0),
+    widthPx: trimmedWidthPx(trim),
     paragraphIndex: line.paragraphIndex,
     paragraphStart: line.paragraphStart,
     isRtl: line.isRtl,
