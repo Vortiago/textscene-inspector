@@ -28,6 +28,14 @@ shares the rule's line. A line with no text, object or list item has no height, 
 `vertical_alignment` FILL spreads its gap over that line (`:1643-1648`). An empty colour, font, underline or strikethrough
 before a `[p]` adds no line (`_find_layout_subitem`, `:3712-3727`).
 
+`[indent]`, `[ul]` and `[ol]` inset each line they hold by `tab_size` spaces of the font around them
+(`_find_margin`, `rich_text_label.cpp:3407-3460`). A `[ul]` or `[ol]` line also draws a marker. The marker is
+the `bullet` option or `•` for `[ul]`, and for `[ol]` the number in the `type` option (`1`, `a`, `A`, `i`, `I`).
+It takes the font of the item and the outermost colour of the item. It sits right-aligned in the inset, which
+is as wide as the widest marker of the list (`:242-372,1017-1039`). A nested `[ol]` writes the outer number
+first, as `1.a.`, and a bullet ends the number (`:242-270`). A list ends its last item with a newline, and an
+empty list holds one empty item (`:5326-5345,5415-5424`).
+
 While `clip_contents` is true, its default for this node (`rich_text_label.cpp:8225`), the control's own rect
 clips every glyph, image and underline (`control.cpp:3948`). `fit_content` grows the control to its text, so
 nothing is cut.
@@ -41,7 +49,7 @@ to its foot (`:3827-3828`). A line that starts below the rect or ends above it i
 `[font_size=N]` sizes its text when N is above 0, over the size of an enclosing `[b]` or `[i]` (`rich_text_label.cpp:639-641`).
 Line height and wrapping follow. `[outline_size=N]` and `[outline_color=C]` draw a ring under the glyphs, and a negative
 size draws none (`:6367-6371`, `:1198-1202`). The theme's `outline_size` and `font_outline_color` are the defaults the tags
-override. The ring takes the alpha of the run's colour (`:1457`). The golden `rich-text-label-font-size-outline` shows each tag.
+override. The ring takes the alpha of the run's colour (`:1457`). A list marker takes the size and outline of its item (`_add_list_prefixes`, `:342-358`, `:1020-1021`). The golden `rich-text-label-font-size-outline` shows each tag.
 
 A `[b]` run and any embolden over the bundled font draw on the canvas painter, which emboldens the
 outline as FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0040). The run draws nothing until the
@@ -102,6 +110,8 @@ string against `true`, so an absent property or any other value silently resolve
 
 - **Approximated** Only a subset of BBCode tags is styled, and a tag outside it renders as
   plain text.
+- **Not drawn** `localize_numeral_system`, which writes the numbers of an `[ol]` in the digits of the
+  label's `language` (`:255-258`), since no control reads the property.
 - **Not drawn** The loading bar's right-to-left fill (:2580-2588) and the reveal end of
   `VC_GLYPHS_AUTO` (:944-945), since neither input is drawn.
 - **Not drawn** `scroll_following_visible_characters`, which scrolls to the last revealed line
