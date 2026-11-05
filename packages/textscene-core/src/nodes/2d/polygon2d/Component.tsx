@@ -11,7 +11,7 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
-import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { useNode2DCanvasTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
@@ -30,12 +30,13 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
 
   // Either an image file or an inline procedural texture; `useTexture2D` hides
   // which, and owns the lifetime of the procedural one it rasterises.
-  const { texture: resolvedTexture, size } = useTexture2D(
-    props.texture,
-    externalResources,
-    internalResources
-  );
-  const sampler = useNode2DTextureSampler(props);
+  const {
+    texture: resolvedTexture,
+    size,
+    canvasTexture,
+  } = useTexture2D(props.texture, externalResources, internalResources);
+  // A CanvasTexture's own filter and repeat win over the item's.
+  const sampler = useNode2DCanvasTextureSampler(props, canvasTexture?.texture);
   const texture = useCanvas2DTexture(resolvedTexture, sampler);
 
   const rings = useMemo(
@@ -62,6 +63,7 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
+      canvasTexture={canvasTexture}
       body={(tint, _material, pixelMaterial) =>
         geometry ? (
           <FilledPolygon

@@ -233,9 +233,9 @@ describe('<CPUParticles2D>', () => {
   });
 
   it('cancels the node’s own scale under Godot’s default global coords', async () => {
-    // `local_coords = false` spawns in canvas space and draws the item with an
-    // identity transform, so the 8px quad stays 8px on screen however the node
-    // is scaled. Inside the scaled group that means a 8/3 local quad.
+    // `local_coords = false` spawns in canvas space and draws the item at the
+    // canvas transform, so the 8px quad stays 8px on screen however the node
+    // is scaled.
     const renderer = await render(
       node({
         scale: 'Vector2(3, 3)',
@@ -245,9 +245,10 @@ describe('<CPUParticles2D>', () => {
         gravity: 'Vector2(0, 0)',
       })
     );
-    const geometry = particleMesh(renderer)!.geometry;
-    geometry.computeBoundingBox();
-    expect(geometry.boundingBox!.max.x - geometry.boundingBox!.min.x).toBeCloseTo(8 / 3, 3);
+    const mesh = particleMesh(renderer)!;
+    renderer.scene.instance.updateMatrixWorld();
+    const onScreen = new THREE.Box3().setFromObject(mesh);
+    expect(onScreen.max.x - onScreen.min.x).toBeCloseTo(8, 3);
   });
 
   it('lets the node’s scale reach the quads under `local_coords`', async () => {
