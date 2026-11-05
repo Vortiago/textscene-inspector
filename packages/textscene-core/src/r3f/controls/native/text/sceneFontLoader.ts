@@ -236,5 +236,15 @@ export function peekSettledSceneFontMetrics(
  * the real metrics once it lands. Never throws.
  */
 export function peekSceneFontMetrics(font: FontResource | null | undefined, nodePath: string): FontMetrics {
-  return peekSettledSceneFontMetrics(font, nodePath) ?? OPEN_SANS_FONT_METRICS;
+  return peekSettledSceneFontMetrics(font, nodePath) ?? loadingFontMetrics(font);
+}
+
+/**
+ * The metrics a solve pass measures while `font` loads. A bare `FontVariation` keeps its variation
+ * on the atlas, since the bundled canvas face it waits for keeps the baked advances: the layout
+ * does not move when the face settles.
+ */
+function loadingFontMetrics(font: FontResource | null | undefined): FontMetrics {
+  if (!font || resolveFontFileBytes(font) || !endsWithoutBase(font)) return OPEN_SANS_FONT_METRICS;
+  return withVariation(OPEN_SANS_FONT_METRICS, fontVariation(font));
 }

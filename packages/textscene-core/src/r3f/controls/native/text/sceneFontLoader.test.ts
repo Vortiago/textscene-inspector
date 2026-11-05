@@ -472,6 +472,13 @@ describe('peekSettledSceneFontMetrics — a bundled FontVariation past the embol
     expect(peek(bare('3.0'), 'Root/Past')).toBeNull();
   });
 
+  it('gives a solve pass the atlas with the embolden while the bundled canvas face loads', async () => {
+    const { peekSceneFontMetrics } = await loaderWithFontDoor();
+    const metrics = peekSceneFontMetrics(bare('3.0'), 'Root/Past');
+    expect(metrics.kind).toBe('atlas');
+    expect(metrics.embolden).toBe(3);
+  });
+
   it('draws an embolden past the limit on the bundled canvas face, with the outlines FreeType emboldens', async () => {
     const { peekSettledSceneFontMetrics: peek } = await loaderWithFontDoor();
     const metrics = await settledAt(peek, '3.0');

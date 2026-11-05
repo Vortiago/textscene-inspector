@@ -22,8 +22,8 @@ const DISTANCE_BIAS_PER_EMBOLDEN = OPEN_SANS_ATLAS_INFO.fontSize / (32 * OPEN_SA
 
 /**
  * The largest embolden the field grows the edge for: a bias past `0.5 - MSDF_FILL_FADE_MEDIAN`
- * reaches the faded fill, so the glyph stops growing there, near 1.40. A negative embolden thins
- * the stems to nothing near -1.6, so the same magnitude bounds it.
+ * reaches the faded fill, so the glyph stops growing there, near 1.40. A negative embolden keeps
+ * the same bound, short of the -1.6 where the atlas thins the stems to nothing.
  */
 const MAX_ATLAS_EMBOLDEN = (0.5 - MSDF_FILL_FADE_MEDIAN) / DISTANCE_BIAS_PER_EMBOLDEN;
 

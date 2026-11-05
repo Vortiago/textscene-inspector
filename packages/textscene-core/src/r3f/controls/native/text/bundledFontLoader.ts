@@ -14,7 +14,7 @@ import * as logger from '../../../../logger';
 /** Fixed, unlike a scene font's counter-suffixed name: there is exactly one bundled font and it is registered exactly once. */
 const BUNDLED_FAMILY = 'tscn-bundled-open-sans-semibold';
 
-/** Written only by `peekBundledCanvasFontMetrics`, once, and never cleared: a failed registration is not retried. */
+/** Written only by `startRegistration`, once, and never cleared: a failed registration is not retried. */
 let bundledRegistration: Promise<void> | undefined;
 /** Undefined until `document.fonts.add` resolves: `fillText` with an unregistered family paints a system font without failing. */
 let bundledMetrics: CanvasFontMetrics | undefined;
@@ -41,13 +41,16 @@ async function registerBundledFont(): Promise<void> {
 
 /** The canvas metrics once registration settles, or `undefined` when it failed. The first call starts the registration. */
 export async function loadBundledCanvasFontMetrics(): Promise<CanvasFontMetrics | undefined> {
-  bundledRegistration ??= registerBundledFont();
-  await bundledRegistration;
+  await startRegistration();
   return bundledMetrics;
 }
 
 /** Synchronous answer for a solve/paint pass: the canvas metrics once registration resolved, `undefined` before that. Kicks the registration off on first call. */
 export function peekBundledCanvasFontMetrics(): CanvasFontMetrics | undefined {
-  bundledRegistration ??= registerBundledFont();
+  void startRegistration();
   return bundledMetrics;
+}
+
+function startRegistration(): Promise<void> {
+  return (bundledRegistration ??= registerBundledFont());
 }
