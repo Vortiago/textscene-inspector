@@ -6,6 +6,10 @@
 
 export const CANVAS_2D_SCENES = [
   { name: 'polygon-2d', file: 'unit-polygon2d.tscn', mode: '2d' },
+  // Two strips skinned to posed Skeleton2Ds. Godot probes: blue (51,153,255) at (200,190) on the bent
+  // lower half and orange (255,127,51) at (330,160). Undeformed, each strip would cover (240,100) and
+  // (390,120) instead, which read the background.
+  { name: 'polygon2d-skeleton', file: 'unit-polygon2d-skeleton.tscn', mode: '2d' },
   // An INT component past int32 wraps as Godot stores it. Godot probes: (260,160) red, the square at
   // (200,100), and (660,360) blue, the square at (600,300). Refused, both sit at the origin.
   { name: 'int-wrap-position', file: 'edge-int-wrap-position.tscn', mode: '2d' },

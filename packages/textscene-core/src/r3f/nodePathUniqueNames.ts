@@ -4,7 +4,7 @@
  */
 
 import type { TscnNode } from '../parser/types.js';
-import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath.js';
+import { resolveNodePathLiteral, UNIQUE_NODE_PREFIX } from '../godot/string/nodePath.js';
 import type { LiveTree, LiveTreeContext } from './liveSceneTree.js';
 import { claimOwnerOf, localSceneOf, localSceneUniquePaths, ownerUniquePaths } from './uniqueNameOwner.js';
 
@@ -38,4 +38,18 @@ export function uniquePathsOfLiteral(
   tree: Pick<LiveTree, 'roots' | 'ctx'>
 ): ReadonlyMap<string, string> | undefined {
   return literal?.includes(UNIQUE_NODE_PREFIX) ? nodePathUniquePaths(path, tree.roots, tree.ctx) : undefined;
+}
+
+/**
+ * The live path a raw NodePath `literal` on the node at `from` names, as `get_node_or_null` resolves
+ * it on the live tree, `%Name` segments included, or null where it names no other node.
+ *
+ * @canonical A NodePath literal resolved on the Live scene tree
+ */
+export function resolveLiteralOnLiveTree(
+  from: string,
+  literal: string | undefined,
+  tree: Pick<LiveTree, 'roots' | 'ctx'>
+): string | null {
+  return resolveNodePathLiteral(from, literal, uniquePathsOfLiteral(literal, from, tree));
 }

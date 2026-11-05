@@ -1,6 +1,6 @@
 /**
  * Registers the Skeleton2D parser. It reuses the Node2D parse, and its property
- * knowledge lives in linterParser.ts. Its Godot effect is not implemented here yet
+ * knowledge lives in linterParser.ts. Its modification stack is not run here yet
  * (ADR-0045), so index.r3f.ts registers Node2D as `pending`.
  */
 

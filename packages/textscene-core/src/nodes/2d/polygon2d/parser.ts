@@ -10,10 +10,13 @@ import { boolOr, floatOr, intOr, packedOr, vec2Or } from '../../../parser/valueP
 import {
   NO_FLOATS,
   parsePackedColorArray,
+  parsePackedFloat32Array,
   parsePackedInt32Arrays,
   parsePackedVector2Array,
 } from '../../../resources/shapes/packedArray';
-import type { Polygon2DProperties } from './types';
+import { arrayLiteralBody } from '../../../godot/variant/variantParser';
+import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string';
+import type { Polygon2DBone, Polygon2DProperties } from './types';
 
 export function parsePolygon2D(
   heading: ParsedHeading,
@@ -58,9 +61,38 @@ export function parsePolygon2D(
     invertBorder: floatOr(properties.invert_border, 100, 'Polygon2D'),
     color: properties.color ? parseColor(properties.color) : { r: 1, g: 1, b: 1, a: 1 },
     offset: vec2Or(properties.offset, { x: 0, y: 0 }, base.name || 'Polygon2D'),
+    bones: packedOr(properties.bones, parseBones, [], at('bones')),
   };
 
   if (properties.texture) result.texture = properties.texture;
+  if (properties.skeleton) result.skeleton = properties.skeleton;
 
   return result;
+}
+
+/**
+ * `_set_bones` (`polygon_2d.cpp:588-595`): pairs of a bone path and its weights. An odd count is
+ * refused whole. Weights that do not read as a PackedFloat32Array cast to an empty one, which the
+ * draw skips for its size.
+ */
+function parseBones(value: string): Polygon2DBone[] {
+  const body = arrayLiteralBody(value);
+  if (body === null) throw new Error(`expected an Array literal, got ${value}`);
+  const elements = dropTrailingComma(splitTopLevel(body));
+  if (elements.length % 2 !== 0)
+    throw new Error(`expected path and weights pairs, got ${elements.length} elements`);
+  const bones: Polygon2DBone[] = [];
+  for (let i = 0; i < elements.length; i += 2) {
+    bones.push({ path: elements[i]!, weights: weightsOf(elements[i + 1]!) });
+  }
+  return bones;
+}
+
+function weightsOf(value: string): Float32Array {
+  try {
+    return new Float32Array(parsePackedFloat32Array(value));
+  } catch {
+    // Another Variant casts to an empty PackedFloat32Array, which no vertex count matches.
+    return NO_FLOATS;
+  }
 }
