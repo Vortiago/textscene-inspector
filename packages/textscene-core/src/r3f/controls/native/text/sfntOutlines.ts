@@ -14,7 +14,7 @@
  */
 
 import { cmapLookup } from './sfntCmap';
-import { glyphMetricsReader } from './sfntGlyphMetrics';
+import { glyphMetricsReader, metricsAtInstance } from './sfntGlyphMetrics';
 import type { GlyphContours, GlyphOutlineReader } from './glyphContours';
 import { glyphAdvance26_6, isInstanced, type GlyphVariation, type OpentypeCoordinates } from './fontMetrics';
 import { cffOutlineReader } from './sfntCff';
@@ -24,7 +24,6 @@ import { variedContours } from './glyphVariation';
 import { isTrickyFont } from './trickyFont';
 import { openFontContainer } from './fontContainer';
 import { OUTLINE_TABLE_TAGS, readHeadUnitsPerEm, type SfntFile } from './sfntTables';
-import { toUint16 } from '../../../../godot/variant/intWidth';
 import { fontInstanceOf, type FontInstance } from './variation/fontInstance';
 
 export interface SfntOutlines {
@@ -142,10 +141,8 @@ function instanceAdvanceReaders(
   return (instance, glyphIndex, fontSizePx) => {
     if (!instance.adjustedAdvances.horizontal)
       return phantomAdvance?.(glyphIndex, fontSizePx, instance) ?? null;
-    const units = toUint16(
-      metricsOf(glyphIndex, 0).horizontal.advance + instance.advanceDelta.horizontal(glyphIndex)
-    );
-    return glyphAdvance26_6(units, unitsPerEm, fontSizePx);
+    const { advance } = metricsAtInstance(metricsOf(glyphIndex, 0), instance, glyphIndex).horizontal;
+    return glyphAdvance26_6(advance, unitsPerEm, fontSizePx);
   };
 }
 

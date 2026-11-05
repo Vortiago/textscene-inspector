@@ -14,7 +14,7 @@
  */
 
 import { ByteReader, ReadPastEndError } from '../../../../resources/formats/binaryresource/byteReader';
-import { toInt16, toUint16 } from '../../../../godot/variant/intWidth';
+import { toInt16 } from '../../../../godot/variant/intWidth';
 import { FIXED_16_16_ONE, freeTypeTrueTypeSize, ftMulFix, pixRound } from './fontMetrics';
 import { ftVectorLength } from './ftVector';
 import {
@@ -55,7 +55,7 @@ import {
   SIMPLE_Y_SHORT,
   locaEntry,
 } from './glyfFormat';
-import { glyphMetricsReader, type GlyphMetrics } from './sfntGlyphMetrics';
+import { glyphMetricsReader, metricsAtInstance, type GlyphMetrics } from './sfntGlyphMetrics';
 import { readGlyphCount, readIndexToLocFormat, readUnitsPerEm, tableFits, type SfntFile } from './sfntTables';
 import type { FontInstance } from './variation/fontInstance';
 import { variedGlyphPoints, type GlyphPoints, type VariedPoints } from './variation/gvar';
@@ -325,16 +325,8 @@ class GlyphLoad {
 
   /** `tt_get_metrics`: the glyph's metrics, its advances adjusted by `HVAR` and `VVAR` at the instance. */
   private metricsOf(glyphIndex: number, yMax: number): GlyphMetrics {
-    const { horizontal, vertical } = this.font.metricsOf(glyphIndex, yMax);
-    if (!this.instance) return { horizontal, vertical };
-    const { advanceDelta } = this.instance;
-    return {
-      horizontal: {
-        ...horizontal,
-        advance: toUint16(horizontal.advance + advanceDelta.horizontal(glyphIndex)),
-      },
-      vertical: { ...vertical, advance: toUint16(vertical.advance + advanceDelta.vertical(glyphIndex)) },
-    };
+    const metrics = this.font.metricsOf(glyphIndex, yMax);
+    return this.instance ? metricsAtInstance(metrics, this.instance, glyphIndex) : metrics;
   }
 
   /** `TT_Vary_Apply_Glyph_Deltas` on the glyph's points, which `points` gives in font units. */
