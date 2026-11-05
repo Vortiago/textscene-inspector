@@ -9,11 +9,13 @@ import { stringToFloat, stringToInt } from '../../../../godot/string/string';
 import type { Rgba } from '../../../../godot/math/math';
 
 /** One currently-open BBCode tag. `value` is the `[name=value]` payload, if the tag carries one. */
-interface OpenBBCodeTag {
+export interface OpenBBCodeTag {
   /** Lowercased tag name, such as `'b'` or `'color'`. */
   name: string;
   /** The `=value` portion, verbatim; absent for a bare `[name]` or the space-attribute form. */
   value?: string;
+  /** `bbcode_options`, the `key=value` pieces after the name (`rich_text_label.cpp:5357-5382`). Absent on a tag with none. */
+  options?: ReadonlyMap<string, string>;
 }
 
 /** `String::chr(0xfffc)`: the OBJECT REPLACEMENT CHARACTER Godot appends to `txt` for every inline object (`rich_text_label.cpp:686`), one glyph as wide as the object. */
@@ -167,6 +169,37 @@ const SELF_CLOSING_TEXT: ReadonlyMap<string, string> = new Map([
 const SELF_CLOSING_SILENT: ReadonlySet<string> = new Set(['hr']);
 
 /**
+ * Tags whose push adds its item with `p_ensure_newline` (`rich_text_label.cpp:4096-4103`):
+ * `push_paragraph`, `push_indent` and `push_list` (`:4718,4732,4749`).
+ */
+const PARAGRAPH_TAGS: ReadonlySet<string> = new Set([
+  'p',
+  'left',
+  'center',
+  'right',
+  'fill',
+  'indent',
+  'ol',
+  'ul',
+]);
+
+/**
+ * Tags whose item `_find_layout_subitem` skips (`:3712-3727`): a font, a colour, an underline or a
+ * strikethrough. Any other open item makes the line hold layout.
+ */
+const STYLING_TAGS: ReadonlySet<string> = new Set([
+  'b',
+  'i',
+  'code',
+  'font',
+  'opentype_features',
+  'otf',
+  'color',
+  'u',
+  's',
+]);
+
+/**
  * What a self-closing tag adds to the surrounding run, or `null` when `name`
  * is not one. `[char=hex]` is `String::chr(value.hex_to_int())` (`:5623-5626`),
  * and an unparseable or out-of-range value adds nothing.
@@ -191,7 +224,7 @@ function selfClosingText(name: string, value: string | undefined): string | null
 }
 
 /** `String::unquote()` (`ustring.cpp:5575-5581`): strips a matched leading and trailing `"` or `'` pair, and returns anything else as is. */
-function unquoteMatchedPair(s: string): string {
+export function unquoteMatchedPair(s: string): string {
   if (s.length < 2) return s;
   const first = s[0]!;
   const last = s[s.length - 1]!;
@@ -317,6 +350,25 @@ function parseSizeValue(value: string): { amount: number; inPercent: boolean } {
 }
 
 /**
+ * `bbcode_options` (`rich_text_label.cpp:5357-5382`): each piece after the first that holds a `=`,
+ * its value unquoted. A later piece with the same key wins.
+ */
+function bbcodeOptions(splitBlock: readonly string[]): Map<string, string> {
+  const options = new Map<string, string>();
+  for (const expr of splitBlock.slice(1)) {
+    const eq = expr.indexOf('=');
+    if (eq > -1) options.set(expr.slice(0, eq), unquoteMatchedPair(expr.slice(eq + 1)));
+  }
+  return options;
+}
+
+/** The tag a `[name...]` token opens, its options kept when it has any. */
+function openTag(name: string, value: string | undefined, token: string): OpenBBCodeTag {
+  const options = bbcodeOptions(splitUnquoted(token.slice(1, -1), ' '));
+  return options.size > 0 ? { name, value, options } : { name, value };
+}
+
+/**
  * The `img` arm of `RichTextLabel::append_text` (`rich_text_label.cpp:5990-6146`)
  * for the tag content without its brackets, such as `"img=100x50 color=red"`.
  * The first unquoted piece's `=value` is `bbcode_value`, and later pieces are
@@ -325,11 +377,7 @@ function parseSizeValue(value: string): { amount: number; inPercent: boolean } {
 function parseImgTag(content: string, path: string): ParsedImgTag {
   const splitBlock = splitUnquoted(content, ' ');
   const first = splitBlock[0] ?? content;
-  const options = new Map<string, string>();
-  for (const expr of splitBlock.slice(1)) {
-    const eq = expr.indexOf('=');
-    if (eq > -1) options.set(expr.slice(0, eq), unquoteMatchedPair(expr.slice(eq + 1)));
-  }
+  const options = bbcodeOptions(splitBlock);
   const mainEq = first.indexOf('=');
   const bbcodeValue = mainEq > -1 ? first.slice(mainEq + 1) : '';
 
@@ -400,7 +448,10 @@ function parseImgTag(content: string, path: string): ParsedImgTag {
 }
 
 function sameTags(a: readonly OpenBBCodeTag[], b: readonly OpenBBCodeTag[]): boolean {
-  return a.length === b.length && a.every((t, i) => t.name === b[i]!.name && t.value === b[i]!.value);
+  return (
+    a.length === b.length &&
+    a.every((t, i) => t.name === b[i]!.name && t.value === b[i]!.value && t.options === b[i]!.options)
+  );
 }
 
 /** The next `[` at or after `from`, or the end of the string (`:6026-6029`). */
@@ -419,6 +470,22 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
   const stack: OpenBBCodeTag[] = [];
   const runs: BBCodeRun[] = [];
   let pending = '';
+  // Whether the current line holds text or a non-styling item, so a paragraph tag ends it.
+  let lineHasLayout = false;
+
+  function append(added: string): void {
+    pending += added;
+    const lastBreak = added.lastIndexOf('\n');
+    if (lastBreak >= 0) lineHasLayout = lastBreak < added.length - 1;
+    else if (added.length > 0) lineHasLayout = true;
+  }
+
+  function push(tag: OpenBBCodeTag): void {
+    if (PARAGRAPH_TAGS.has(tag.name) && lineHasLayout) append('\n');
+    flush();
+    stack.push(tag);
+    if (!STYLING_TAGS.has(tag.name)) lineHasLayout = true;
+  }
 
   function flush(): void {
     if (!pending) return;
@@ -435,15 +502,15 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
   while (pos < text.length) {
     const brkStart = text.indexOf('[', pos);
     if (brkStart < 0) {
-      pending += text.slice(pos);
+      append(text.slice(pos));
       break;
     }
-    pending += text.slice(pos, brkStart);
+    append(text.slice(pos, brkStart));
 
     const brkEnd = text.indexOf(']', brkStart);
     if (brkEnd < 0) {
       // No closing bracket at all: the rest is text, brackets included.
-      pending += text.slice(brkStart);
+      append(text.slice(brkStart));
       break;
     }
     const token = text.slice(brkStart, brkEnd + 1);
@@ -463,7 +530,7 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
       if (emitted !== null) {
         // Part of the surrounding run, so no `flush()`: it carries the same
         // stack as the text either side of it.
-        pending += emitted;
+        append(emitted);
         pos = brkEnd + 1;
         continue;
       }
@@ -475,23 +542,24 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
         flush();
         // A failed `ResourceLoader::load(image, "Texture2D")` (`:6034`) adds no
         // image and no glyph, but the tag still opens (`:6145`).
-        if (path !== '')
+        if (path !== '') {
           runs.push({
             text: IMAGE_OBJECT_CHAR,
             tags: [...stack],
             image: parseImgTag(token.slice(1, -1), path),
           });
-        stack.push({ name, value: open[2] });
+          lineHasLayout = true;
+        }
+        push(openTag(name, open[2], token));
         pos = imgEnd;
         continue;
       }
-      flush();
-      stack.push({ name, value: open[2] });
+      push(openTag(name, open[2], token));
       pos = brkEnd + 1;
       continue;
     }
 
-    pending += '[';
+    append('[');
     pos = brkStart + 1;
   }
 

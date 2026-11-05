@@ -51,11 +51,6 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'progress_bar_delay',
     ],
     renderGap: [
-      // BiDi and locale: this Control does not pass its own direction to the shaper yet.
-      'language',
-      'structured_text_bidi_override',
-      'structured_text_bidi_override_options',
-      'text_direction',
       // Underlines actually drawn under [url] and [hint] spans.
       'hint_underlined',
       'meta_underlined',

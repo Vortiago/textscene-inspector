@@ -17,7 +17,7 @@ export type TextBidiOptions = Pick<ShapeTextOptions, 'direction' | 'language' | 
 type BidiProperties = TextDirectionProperties & Partial<StructuredTextOverrideProperties>;
 
 /** The layout direction and the locale a Control resolves (`SolveNode.rtl`, `SolveNode.locale`). */
-interface ControlTextEnv {
+export interface ControlTextEnv {
   rtl: boolean;
   locale: string;
 }

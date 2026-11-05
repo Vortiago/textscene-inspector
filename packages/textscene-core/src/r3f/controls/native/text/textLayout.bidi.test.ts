@@ -150,6 +150,32 @@ describe('shapeText — bidirectional text', () => {
   });
 });
 
+describe('shapeText — a direction, language and override per paragraph', () => {
+  const RTL_FIRST = (paragraphStart: number) =>
+    paragraphStart === 0
+      ? { direction: TextDirection.TEXT_DIRECTION_RTL }
+      : { direction: TextDirection.TEXT_DIRECTION_LTR, language: 'he' };
+
+  it('shapes each paragraph in the options its first character gives', () => {
+    const { lines } = shapeText('ab!\nab!', {
+      ...BASE,
+      paragraphSeparator: '\n',
+      paragraphBidiAt: RTL_FIRST,
+    });
+    expect(lines.map(visualChars)).toEqual(['\u200b!ab', 'ab!\u200b']);
+  });
+
+  it('takes the language of a text with no strong character from its paragraph', () => {
+    const { lines } = shapeText('ab\n12!', {
+      ...BASE,
+      paragraphSeparator: '\n',
+      terminateLastParagraph: false,
+      paragraphBidiAt: (start) => (start === 0 ? {} : { language: 'he' }),
+    });
+    expect(visualChars(lines[1]!)).toBe('!12');
+  });
+});
+
 describe('shapeText — language', () => {
   it('upper-cases with the language’s rules: `tr` gives a dotted capital I', () => {
     expect(firstLine('istanbul', { uppercase: true, language: 'tr' }).text).toBe('İSTANBUL');

@@ -49,8 +49,19 @@ type StyledTextRun = ReturnType<typeof styledTextRuns>[number];
 /** What `parseRichTextLabel` fills for the two properties whose defaults are not `undefined`. */
 const PARSED_DEFAULTS = { justificationFlags: 163, clipContents: true };
 
+/** What a node with no direction properties resolves to under the test node's empty locale. */
+const NO_BIDI = { language: '' };
+
 function textRun(fields: Pick<StyledTextRun, 'text' | 'fontSizePx'> & Partial<StyledTextRun>): StyledTextRun {
-  return { bold: false, italic: false, underline: false, color: WHITE, alignment: 0, ...fields };
+  return {
+    bold: false,
+    italic: false,
+    underline: false,
+    color: WHITE,
+    alignment: 0,
+    bidi: NO_BIDI,
+    ...fields,
+  };
 }
 
 function node(props: Partial<RichTextLabelProperties>, overrides: Partial<SolveNode> = {}): SolveNode {
@@ -1422,7 +1433,8 @@ describe('RichTextLabel paragraph alignment', () => {
   describe('styledTextRuns alignment, _find_alignment (rich_text_label.cpp:3492-3505)', () => {
     function alignmentOf(text: string, horizontalAlignment: number | undefined): number {
       const props = { text, bbcodeEnabled: true, horizontalAlignment } as RichTextLabelProperties;
-      return styledTextRuns(node({}), props, WHITE, 16, 16)[0]!.alignment;
+      // A nested paragraph tag ends the line its outer tag opened, so the text is the last run.
+      return styledTextRuns(node({}), props, WHITE, 16, 16).at(-1)!.alignment;
     }
 
     it('falls back to the node property when no paragraph tag is open', () => {
@@ -1666,6 +1678,83 @@ describe('layoutRichTextRuns run attribution', () => {
     expect(placements.map((p) => [p.lineIndex, p.layout.lines[0]!.text])).toEqual([
       [0, 'a​'],
       [1, 'b'],
+    ]);
+  });
+});
+
+describe('RichTextLabel paragraph direction', () => {
+  const AUTO = 0;
+  const RTL = 2;
+  const INHERITED = 3;
+  const DIRECTION_DEFAULTS = {
+    textDirection: AUTO,
+    language: '',
+    structuredTextBidiOverride: 0,
+    structuredTextBidiOverrideOptions: [],
+  };
+
+  function runsOf(props: Partial<RichTextLabelProperties>, overrides: Partial<SolveNode> = {}) {
+    const all = { ...PARSED_DEFAULTS, ...DIRECTION_DEFAULTS, bbcodeEnabled: true, ...props };
+    return styledTextRuns(node(all, overrides), all, WHITE, FONT_SIZE, FONT_SIZE);
+  }
+
+  function visualLines(runs: Parameters<typeof shapeRichText>[0]): string[] {
+    return shapeRuns(runs).lines.map((line) => line.glyphs.map((glyph) => glyph.char).join(''));
+  }
+
+  it('shapes a [p dir=rtl] paragraph with its "!" first, and the plain paragraph after it as written', () => {
+    expect(visualLines(runsOf({ text: '[p dir=rtl]ab![/p]\nab!' }))).toEqual(['\u200b!ab', 'ab!']);
+  });
+
+  it('shapes the whole text in text_direction without BBCode', () => {
+    expect(visualLines(runsOf({ text: 'ab!', bbcodeEnabled: false, textDirection: RTL }))).toEqual(['!ab']);
+  });
+
+  it('shapes INHERITED in the layout direction', () => {
+    expect(visualLines(runsOf({ text: 'ab!', textDirection: INHERITED }, { rtl: true }))).toEqual(['!ab']);
+  });
+
+  it('takes the language of neutral text from [p lang]', () => {
+    expect(visualLines(runsOf({ text: '[p lang=he]12![/p]' }))).toEqual(['!12']);
+  });
+
+  // `_draw_line` (`rich_text_label.cpp:987-1014`) reads the direction the paragraph sets, not the one it infers.
+  describe('layoutRichTextRuns line offset', () => {
+    // "Threat level" at 16px shapes to a ceiled line width of 92 (`textLayout.test.ts`).
+    function offsetX(alignment: number, direction: number, text = 'Threat level'): number {
+      const runs = [textRun({ text, fontSizePx: FONT_SIZE, alignment, bidi: { direction } })];
+      return layoutRichTextRuns(runs, shapeRuns(runs), { boxWidthPx: 200, boxHeightPx: 0 })[0]!.lineOffsetXPx;
+    }
+
+    it('starts an RTL LEFT or FILL line at the right edge', () => {
+      expect(offsetX(0, RTL)).toBe(108);
+      expect(offsetX(3, RTL)).toBe(108);
+    });
+
+    it('leaves an RTL RIGHT line at the left edge', () => {
+      expect(offsetX(2, RTL)).toBe(0);
+    });
+
+    it('centres an RTL CENTER line', () => {
+      expect(offsetX(1, RTL)).toBe(54);
+    });
+
+    it('keeps an AUTO paragraph at the left, though it infers RTL', () => {
+      expect(offsetX(0, AUTO, 'שלום')).toBe(0);
+    });
+  });
+
+  it('aligns a wrapped line by its paragraph, not by the run it starts with', () => {
+    // `_find_alignment(l.from)` (`rich_text_label.cpp:598`): one alignment for every line of a paragraph.
+    const runs = [
+      textRun({ text: 'Threat level ', fontSizePx: FONT_SIZE, alignment: 1 }),
+      textRun({ text: 'Threat level', fontSizePx: FONT_SIZE, alignment: 0 }),
+    ];
+    const layout = shapeRuns(runs, { boxWidthPx: 100, autowrapMode: AutowrapMode.AUTOWRAP_WORD_SMART });
+    const placements = layoutRichTextRuns(runs, layout, { boxWidthPx: 100, boxHeightPx: 0 });
+    expect(placements.map((p) => [p.lineIndex, p.lineOffsetXPx])).toEqual([
+      [0, 4],
+      [1, 4],
     ]);
   });
 });
