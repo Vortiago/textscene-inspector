@@ -9,17 +9,18 @@ import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
-  affineInverseTransform2D,
-  multiplyTransform2D,
-  type Transform2DColumns,
+  affineInverseTransform2DInto,
+  multiplyTransform2DInto,
+  mutableTransform2D,
+  type MutableTransform2D,
 } from '../../../godot/math/transform2d.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 import { canvasFrameOf } from '../../../r3f/canvasFrame.js';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext.js';
 import { lookupDrawnObjects, type DrawnObjects } from '../../../r3f/drawnObjects.js';
-import { transform2DFromThreeMatrix, writeGodotPointAsThree } from '../../../r3f/node2dTransform.js';
+import { transform2DFromThreeMatrixInto, writeGodotPointAsThree } from '../../../r3f/node2dTransform.js';
 import { observeSceneCamera } from '../../../r3f/sceneRenderCamera.js';
-import { skinnedPoints } from './polygonSkin.js';
+import { skinnedPointsInto } from './polygonSkin.js';
 import type { PolygonSkeletonBinding } from './skeletonBinding.js';
 
 /**
@@ -69,6 +70,13 @@ class MeshSkin {
    */
   private writtenAt: Float64Array;
   private readAt: Float64Array;
+  /** Written only by `skinned`, so a render where the skin moves builds no transform object. */
+  private readonly boneMatrices: MutableTransform2D[];
+  private readonly skeletonGlobal = mutableTransform2D();
+  private readonly skeletonInverse = mutableTransform2D();
+  private readonly skeletonToMesh = mutableTransform2D();
+  /** Written only by `skinned`, and read by `write` in the same render. */
+  private readonly skinnedBuffer: Vector2[];
 
   constructor(
     private readonly mesh: THREE.Mesh,
@@ -81,6 +89,8 @@ class MeshSkin {
     const terms = (this.paths.length + 3) * TRANSFORM_2D_ELEMENTS.length;
     this.writtenAt = new Float64Array(terms).fill(NaN);
     this.readAt = new Float64Array(terms);
+    this.boneMatrices = binding.bonePaths.map(() => mutableTransform2D());
+    this.skinnedBuffer = this.restPoints.map(() => ({ x: 0, y: 0 }));
   }
 
   update(): void {
@@ -105,7 +115,8 @@ class MeshSkin {
       for (const element of TRANSFORM_2D_ELEMENTS)
         this.readAt[at++] = object?.matrixWorld.elements[element] ?? 0;
     }
-    const isSame = this.readAt.every((term, i) => term === this.writtenAt[i]);
+    let isSame = true;
+    for (let i = 0; i < at && isSame; i++) isSame = this.readAt[i] === this.writtenAt[i];
     [this.writtenAt, this.readAt] = [this.readAt, this.writtenAt];
     return !isSame;
   }
@@ -116,25 +127,31 @@ class MeshSkin {
    * through Bone2D parents only, so it draws in the skeleton's canvas.
    */
   private skinned({ skeleton, bones }: SkinObjects): Vector2[] {
-    const skeletonGlobal = canvasTransform(skeleton);
-    const skeletonInverse = affineInverseTransform2D(skeletonGlobal);
-    const boneMatrices = bones.map((bone, i) =>
-      multiplyTransform2D(
-        multiplyTransform2D(skeletonInverse, canvasTransform(bone)),
-        this.binding.restInverses[i]!
-      )
+    canvasTransformInto(this.skeletonGlobal, skeleton);
+    affineInverseTransform2DInto(this.skeletonInverse, this.skeletonGlobal);
+    bones.forEach((bone, i) => {
+      const matrix = canvasTransformInto(this.boneMatrices[i]!, bone);
+      multiplyTransform2DInto(matrix, this.skeletonInverse, matrix);
+      multiplyTransform2DInto(matrix, matrix, this.binding.restInverses[i]!);
+    });
+    const meshInverse = affineInverseTransform2DInto(
+      this.skeletonToMesh,
+      canvasTransformInto(this.skeletonToMesh, this.mesh)
     );
-    const skeletonToMesh = multiplyTransform2D(
-      affineInverseTransform2D(canvasTransform(this.mesh)),
-      skeletonGlobal
+    multiplyTransform2DInto(this.skeletonToMesh, meshInverse, this.skeletonGlobal);
+    return skinnedPointsInto(
+      this.skinnedBuffer,
+      this.restPoints,
+      this.binding.influences,
+      this.boneMatrices,
+      this.skeletonToMesh
     );
-    return skinnedPoints(this.restPoints, this.binding.influences, boneMatrices, skeletonToMesh);
   }
 
   private write(points: readonly Vector2[]): void {
     const position = this.geometry.getAttribute('position') as THREE.BufferAttribute;
     const array = position.array as Float32Array;
-    points.forEach((point, i) => writeGodotPointAsThree(array, i * 3, point.x, point.y));
+    for (let i = 0; i < points.length; i++) writeGodotPointAsThree(array, i * 3, points[i]!.x, points[i]!.y);
     position.needsUpdate = true;
     this.geometry.computeBoundingSphere();
     if (this.geometry.boundingBox) this.geometry.computeBoundingBox();
@@ -149,11 +166,16 @@ function skinObjectsOf(mesh: THREE.Mesh, drawn: readonly (THREE.Object3D | null)
   return { skeleton, bones, watched: [mesh, ...frames, skeleton, ...bones] };
 }
 
-/** The node's global transform in Godot pixels: its world matrix within the frame of its canvas. */
-function canvasTransform(object: THREE.Object3D): Transform2DColumns {
+/** Written only by {@link canvasTransformInto}, and read back before it returns. */
+const scratchMatrix = new THREE.Matrix4();
+
+/** The node's global transform in Godot pixels, written into `out`: its world matrix within the frame of its canvas. */
+function canvasTransformInto(out: MutableTransform2D, object: THREE.Object3D): MutableTransform2D {
   const frame = canvasFrameOf(object);
-  const matrix = frame ? frame.matrixWorld.clone().invert().multiply(object.matrixWorld) : object.matrixWorld;
-  return transform2DFromThreeMatrix(matrix);
+  const matrix = frame
+    ? scratchMatrix.copy(frame.matrixWorld).invert().multiply(object.matrixWorld)
+    : object.matrixWorld;
+  return transform2DFromThreeMatrixInto(out, matrix);
 }
 
 /** The first `count` points of `geometry`, back in Godot's +Y-down pixels. */

@@ -13,7 +13,7 @@
 
 import { CMP_EPSILON } from '../../../godot/math/math';
 import type { Rect2 } from '../../../godot/math/rect2';
-import { storedReal } from '../../../godot/math/real';
+import { storedReal as f } from '../../../godot/math/real';
 import type { Vector2 } from '../../../godot/math/vector';
 
 export interface PolygonRings {
@@ -45,7 +45,7 @@ export function polygonRings(
     // Invert ignores `polygons` but still trims, and draws any ring left (`polygon_2d.cpp:153-160`).
     const ring = trimInternal(allIndices, all.length, internalVertexCount).map((i) => all[i]!);
     if (ring.length === 0) return { points: all, outlines: [] };
-    const points = invertedRing(ring, storedReal(invertBorder));
+    const points = invertedRing(ring, f(invertBorder));
     return { points, outlines: [points.map((_, i) => i)] };
   }
 
@@ -68,7 +68,6 @@ export function polygonRings(
  * returns `CMP_EPSILON` left of the lowest vertex.
  */
 function invertedRing(ring: Vector2[], border: number): Vector2[] {
-  const f = Math.fround;
   const lowest = lowestIndex(ring);
   const bounds = grownBounds(ring, border);
   const right = f(bounds.x + bounds.w);
@@ -104,7 +103,6 @@ function lowestIndex(ring: Vector2[]): number {
 
 /** `sum` in `polygon_2d.cpp:184-185`, in float32: positive for one winding, negative for the other. */
 function shoelaceSum(ring: Vector2[]): number {
-  const f = Math.fround;
   let sum = 0;
   for (let i = 0; i < ring.length; i++) {
     const next = ring[(i + 1) % ring.length]!;
@@ -138,7 +136,6 @@ function grownBounds(ring: Vector2[], border: number): Rect2 {
     maxX = Math.max(maxX, p.x);
     maxY = Math.max(maxY, p.y);
   }
-  const f = Math.fround;
   return {
     x: f(minX - border),
     y: f(minY - border),

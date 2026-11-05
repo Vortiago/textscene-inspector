@@ -48,6 +48,11 @@ class MultiMeshState {
     return this.colorOffset + (this.usesColors ? 4 : 0);
   }
 
+  /** The instances the server draws and bounds: the visible count, or all for -1. */
+  get drawnCount(): number {
+    return this.visibleInstances >= 0 ? this.visibleInstances : this.instances;
+  }
+
   get stride(): number {
     return this.customDataOffset + (this.usesCustomData ? 4 : 0);
   }
@@ -86,7 +91,7 @@ class MultiMeshState {
    * nothing wrote reads zero, as a buffer a setter never filled does.
    */
   drawnInstances(): MultiMeshInstance[] {
-    const count = this.visibleInstances >= 0 ? this.visibleInstances : this.instances;
+    const count = this.drawnCount;
     const data = this.dataCache ?? this.buffer ?? new Float32Array(this.instances * this.stride);
     const instances: MultiMeshInstance[] = [];
     for (let i = 0; i < count; i++) {
@@ -104,7 +109,7 @@ class MultiMeshState {
   settle(): void {
     if (!this.dataCache || !this.isBoxDirty) return;
     this.isBoxDirty = false;
-    this.bound(this.dataCache, this.visibleInstances >= 0 ? this.visibleInstances : this.instances);
+    this.bound(this.dataCache, this.drawnCount);
   }
 }
 
