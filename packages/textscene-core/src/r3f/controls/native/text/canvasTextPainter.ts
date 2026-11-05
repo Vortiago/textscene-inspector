@@ -123,8 +123,9 @@ function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: numb
   for (const { glyphs } of layout.lines) {
     for (const glyph of glyphs) {
       const face = glyph.fontMetrics;
-      if (!inkFaces.has(face)) inkFaces.set(face, drawsMeasuredInk(face) ? face : null);
-      const { leftPx, rightPx } = glyphReachPx(glyph, inkFaces.get(face)!, layout.baselineOffsetPx);
+      let inkFace = inkFaces.get(face);
+      if (inkFace === undefined) inkFaces.set(face, (inkFace = drawsMeasuredInk(face) ? face : null));
+      const { leftPx, rightPx } = glyphReachPx(glyph, inkFace, layout.baselineOffsetPx);
       startPx = Math.min(startPx, glyph.x - leftPx - INK_SLACK_LEFT_PX);
       endPx = Math.max(endPx, glyph.x + rightPx + INK_SLACK_RIGHT_PX);
     }

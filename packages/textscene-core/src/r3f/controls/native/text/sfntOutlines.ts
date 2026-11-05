@@ -107,6 +107,7 @@ type CharacterKerning = (leftCodePoint: number, rightCodePoint: number) => numbe
  */
 function instanceKerningOf(
   sfnt: SfntFile,
+  instanceAt: InstanceReader,
   glyphIndex: (codePoint: number) => number,
   kerningReader: InstanceKerningReader | null
 ): SfntOutlines['kerningAtInstance'] {
@@ -118,8 +119,6 @@ function instanceKerningOf(
     if (kerningAt === undefined) kerningAt = orOnRangeError(() => kerningReader(sfnt), null);
     return kerningAt && keptPairs(glyphIndex, kerningAt(instance.normalized));
   });
-  // Equal axis values share one instance, and so one kept pair for each pair.
-  const instanceAt = perObject((opentype: OpentypeCoordinates) => instanceAtOrDefault(sfnt, opentype));
   return (leftCodePoint, rightCodePoint, opentype) => {
     const instance = instanceAt(opentype);
     return (instance && pairsAt(instance)?.(leftCodePoint, rightCodePoint)) ?? null;
@@ -165,13 +164,22 @@ async function autoHintedReaderOf(sfnt: SfntFile): Promise<GlyphOutlineReader | 
 }
 
 /** The font at the axis values of `variation`, or null for the default instance. */
-function instanceOf(sfnt: SfntFile, variation: GlyphVariation | undefined): FontInstance | null {
-  return isInstanced(variation?.opentype) ? instanceAtOrDefault(sfnt, variation.opentype) : null;
+function instanceOf(instanceAt: InstanceReader, variation: GlyphVariation | undefined): FontInstance | null {
+  return isInstanced(variation?.opentype) ? instanceAt(variation.opentype) : null;
 }
 
-/** The font at `opentype`, or null for the default instance and for variation tables past the bytes. */
-function instanceAtOrDefault(sfnt: SfntFile, opentype: OpentypeCoordinates): FontInstance | null {
-  return orOnRangeError(() => fontInstanceOf(sfnt, opentype), null);
+/** The font at axis values, or null for the default instance and for variation tables past the bytes. */
+type InstanceReader = (opentype: OpentypeCoordinates) => FontInstance | null;
+
+/**
+ * `fontInstanceOf` that answers null where the variation tables run past the bytes. `fontInstanceOf`
+ * keeps no throw, so the null is kept here with its axis values, and a corrupt font parses once
+ * for each. Equal axis values share one instance, and so the pairs kept for it.
+ */
+function instanceReaderOf(sfnt: SfntFile): InstanceReader {
+  return perObject((opentype: OpentypeCoordinates) =>
+    orOnRangeError(() => fontInstanceOf(sfnt, opentype), null)
+  );
 }
 
 /**
@@ -180,7 +188,10 @@ function instanceAtOrDefault(sfnt: SfntFile, opentype: OpentypeCoordinates): Fon
  * unhinted load. The readers are built once per font and each answer is kept, as a layout asks
  * for the same glyph at the same size again and again.
  */
-function instanceAdvanceReader(sfnt: SfntFile): SfntOutlines['advanceAtInstance'] {
+function instanceAdvanceReader(
+  sfnt: SfntFile,
+  instanceAt: InstanceReader
+): SfntOutlines['advanceAtInstance'] {
   let readers: ReturnType<typeof instanceAdvanceReaders> | undefined;
   const kept = perObject((_opentype: OpentypeCoordinates) =>
     recentlyRead<number, Map<number, number | null>>(MAX_KEPT_SIZES)
@@ -189,7 +200,7 @@ function instanceAdvanceReader(sfnt: SfntFile): SfntOutlines['advanceAtInstance'
   return (glyphIndex, fontSizePx, opentype) => {
     const byGlyph = kept(opentype)(fontSizePx, () => new Map());
     if (byGlyph.has(glyphIndex)) return byGlyph.get(glyphIndex)!;
-    const instance = instanceAtOrDefault(sfnt, opentype);
+    const instance = instanceAt(opentype);
     const advance =
       instance &&
       orOnRangeError(
@@ -227,15 +238,16 @@ function readSfntOutlines(
   const glyphIndex = outlineOf && sfntGlyphIndex(sfnt);
   if (!glyphIndex) return null;
 
+  const instanceAt = instanceReaderOf(sfnt);
   return {
     glyphIndex,
-    advanceAtInstance: instanceAdvanceReader(sfnt),
+    advanceAtInstance: instanceAdvanceReader(sfnt, instanceAt),
     glyphContours: (glyph, fontSizePx, variation) =>
       orOnRangeError(() => {
-        const outline = outlineOf(glyph, fontSizePx, instanceOf(sfnt, variation));
+        const outline = outlineOf(glyph, fontSizePx, instanceOf(instanceAt, variation));
         return outline && variedContours(outline, fontSizePx, variation);
       }, null),
-    kerningAtInstance: instanceKerningOf(sfnt, glyphIndex, kerningReader),
-    drawsInstance: (opentype) => instanceAtOrDefault(sfnt, opentype) !== null,
+    kerningAtInstance: instanceKerningOf(sfnt, instanceAt, glyphIndex, kerningReader),
+    drawsInstance: (opentype) => instanceAt(opentype) !== null,
   };
 }

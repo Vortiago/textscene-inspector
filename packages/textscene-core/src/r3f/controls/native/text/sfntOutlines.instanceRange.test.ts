@@ -21,4 +21,9 @@ describe('openFontOutlines — variation tables past the bytes', () => {
     const glyphIndex = outlines!.glyphIndex('m'.codePointAt(0)!);
     expect(outlines!.advanceAtInstance!(glyphIndex, 16, MONO_INSTANCE)).toBeNull();
   });
+
+  it('draws the default instance, in place of a throw', async () => {
+    const outlines = await openFontOutlines(fixtureFontBytes('recursive-vf-subset.woff2'));
+    expect(outlines!.drawsInstance!(MONO_INSTANCE)).toBe(false);
+  });
 });
