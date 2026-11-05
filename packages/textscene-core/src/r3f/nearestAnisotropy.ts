@@ -60,7 +60,7 @@ export function useNearestAnisotropy(texture: THREE.Texture | null): void {
   const renderer = useContext(context)?.getState().gl;
   useEffect(() => {
     if (!texture || !renderer) return;
-    // A hold even for a texture that needs nothing now: its anisotropy or filters may change later.
+    // Hold even a texture that needs nothing now, as its anisotropy or filters may change later.
     const writeFresh = () => boundWriter(renderer, texture)?.();
     const release = holdUploadWriter(texture, writeFresh);
     writeNearestAnisotropy(renderer, texture);
@@ -78,7 +78,8 @@ interface UploadWriter {
 
 /**
  * Written only by `holdUploadWriter`: one writer for each texture, however many runs share it, so
- * an upload writes once, through the first live hold. Every hold sits on one renderer: no texture is shared across Canvases. The last hold to let go clears the entry.
+ * an upload writes once, through the first live hold. Every hold sits on one renderer: no texture
+ * is shared across Canvases. The last hold to let go clears the entry.
  */
 // eslint-disable-next-line no-restricted-syntax -- it keeps the live holds, and the last release deletes the entry
 const uploadWriters = new WeakMap<THREE.Texture, UploadWriter>();
@@ -96,7 +97,10 @@ function wrapUpload(texture: THREE.Texture): UploadWriter {
   return { holds, previous, wrapper };
 }
 
-/** Opens a hold on the upload writer of `texture` and returns the release. `write` reads the texture afresh. */
+/**
+ * Opens a hold on the upload writer of `texture` and returns the release. `write` reads the texture
+ * afresh.
+ */
 function holdUploadWriter(texture: THREE.Texture, write: () => void): () => void {
   const held = uploadWriters.get(texture) ?? wrapUpload(texture);
   uploadWriters.set(texture, held);
