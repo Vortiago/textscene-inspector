@@ -1021,6 +1021,11 @@ export function useBuildSolveTree(
   return useSolveForest(nodes, externalResources, internalResources, start);
 }
 
+/** A viewport's forest, and whether it is rooted at the window itself rather than at its children. */
+export interface UseBuildViewportTreeResult extends UseBuildSolveTreeResult {
+  isWindowForest: boolean;
+}
+
 /**
  * The Control forest a viewport draws on its canvas: a SubViewport's children, or a window rooted
  * at itself (`ForestStart.contentRoot`).
@@ -1031,14 +1036,17 @@ export function useBuildViewportTree(
   internalResources: readonly TscnInternalResource[],
   themeOwners: readonly ThemeOwner[],
   inheritedRtl: boolean | null = null
-): UseBuildSolveTreeResult {
+): UseBuildViewportTreeResult {
   const contentRoot = isEmbeddedWindow(viewport.type) ? viewport : null;
   const nodes = useMemo(() => (contentRoot ? [contentRoot] : viewport.children), [contentRoot, viewport]);
   const start = useMemo(
     () => ({ inheritedRtl, contentRoot, themeOwners }),
     [inheritedRtl, contentRoot, themeOwners]
   );
-  return useSolveForest(nodes, externalResources, internalResources, start);
+  return {
+    ...useSolveForest(nodes, externalResources, internalResources, start),
+    isWindowForest: !!contentRoot,
+  };
 }
 
 function useSolveForest(

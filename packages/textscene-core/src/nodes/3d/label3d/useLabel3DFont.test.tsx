@@ -176,6 +176,21 @@ describe('useLabel3DFont outlines', () => {
     expect(result.current?.metrics).toBe(bundled.metrics);
   });
 
+  it('is ready for a canvas face before the bundled font registers', async () => {
+    const face = bundled.metrics;
+    bundled.metrics = undefined;
+    vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
+      ...(await importOriginal<object>()),
+      peekSettledSceneFontMetrics: () => face,
+    }));
+    modules = await importModules();
+    const { result } = renderMetrics(undefined);
+
+    await settle();
+
+    expect(result.current?.metrics).toBe(face);
+  });
+
   it.each([
     ['emboldened', 'own'],
     ['sheared', 'sheared'],

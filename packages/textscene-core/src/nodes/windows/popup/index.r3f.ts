@@ -1,9 +1,4 @@
-/**
- * Popup draws as a viewport its embedder shows: the SubViewport component publishes its target, and
- * the embedder draws it with its decoration (`EmbeddedWindows.tsx`, ADR-0033).
- */
+/** Popup draws as a viewport its embedder shows (`registerWindowType.r3f.ts`). */
+import { registerWindowComponent } from '../window/registerWindowType.r3f';
 
-import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { SubViewport } from '../../viewport/subviewport/Component';
-
-nodeComponentRegistry.register({ typeName: 'Popup', Component: SubViewport });
+registerWindowComponent('Popup');

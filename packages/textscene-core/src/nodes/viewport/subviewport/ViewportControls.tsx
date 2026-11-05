@@ -25,7 +25,6 @@ import { EmbeddedWindows } from '../../windows/window/EmbeddedWindows.js';
 import type { ThemeOwner } from '../../windows/window/themeOwners.js';
 import { usePublishWrappedSize } from '../../windows/window/usePublishWrappedSize.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
-import { isEmbeddedWindow } from './viewportBoundary.js';
 
 interface ViewportControlsProps {
   /** The viewport's live path. */
@@ -57,18 +56,17 @@ export function ViewportControls({
   const { externalResources, internalResources } = useSceneResources();
   const { themeScale } = useProjectSettings();
   const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
-  const { tree, generation, windows } = useBuildViewportTree(
+  const { tree, generation, windows, isWindowForest } = useBuildViewportTree(
     viewport,
     externalResources,
     internalResources,
     themeOwners,
     inheritedRtl
   );
-  const isWindow = isEmbeddedWindow(viewport.type);
-  usePublishWrappedSize(path, isWindow ? (tree[0] ?? null) : null, theme, measureText, generation);
+  usePublishWrappedSize(path, isWindowForest ? (tree[0] ?? null) : null, theme, measureText, generation);
   const rect: Rect2 = useMemo(() => ({ x: 0, y: 0, w: size.x, h: size.y }), [size.x, size.y]);
   // A window's forest is rooted at the window itself, a SubViewport's at its children.
-  const forestPath = isWindow ? (parentPathOf(path) ?? '') : path;
+  const forestPath = isWindowForest ? (parentPathOf(path) ?? '') : path;
 
   return (
     <>

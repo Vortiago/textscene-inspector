@@ -9,7 +9,6 @@ import { projectDefaultFontGeneratesMipmaps } from '../../../parser/projectSetti
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { peekBundledCanvasFontMetrics } from '../../../r3f/controls/native/text/bundledFontLoader';
 import { bundledCanvasFace } from '../../../r3f/controls/native/text/bundledCanvasFace';
 import {
   isCanvasFontMetrics,
@@ -33,9 +32,9 @@ export interface Label3DFont {
 }
 
 /**
- * Undefined while the bundled font registers, or while the font file, the project font, the metrics
- * or, for an emboldened or sheared label, the outlines of the font load: nothing draws against
- * the wrong face meanwhile.
+ * Undefined while the font file, the project font, the metrics or, for an emboldened or sheared
+ * label, the outlines of the font load, and for an atlas face while the bundled font registers:
+ * nothing draws against the wrong face meanwhile.
  */
 export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undefined {
   const resources = useSceneResources();
@@ -47,9 +46,7 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
   const { loadedFont, projectFonts, isLoading } = useLoadedFilesAndFonts(noFiles, fontsPlan, true);
   const { settings } = useProjectSettings();
 
-  const bundled = peekBundledCanvasFontMetrics();
   const settledFont = (): Label3DFont | undefined => {
-    if (!bundled) return undefined;
     const font = fontForNode('Label3D', fontRef, { resources, loadedFont, projectFonts });
     const settled = peekSettledSceneFontMetrics(font, nodePath);
     if (!settled) return undefined;
