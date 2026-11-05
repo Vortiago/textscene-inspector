@@ -12,13 +12,16 @@ import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { isDrawnRtl } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import {
+  overrunFlagsForBehavior,
+  trimTextBufferLineToWidth,
+} from '../../../../r3f/controls/native/text/textOverrun';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import {
   linkButtonLabelShape,
@@ -39,12 +42,12 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
 
   const clippingPlanes = useControlClipPlanes();
 
-  // Text: theme resolution and shaping
   // `tint.own` (`self_modulate` on the inherited `modulate`) multiplies the font colour before its one
   // sRGB-to-linear conversion. The underline reuses that colour, as Godot's `draw_line` does
   // (`link_button.cpp:311,313`). `renderOrder` reaches the text and the underline alike.
   const { fontSizePx, color: baseFontColor } = linkButtonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, LINKBUTTON_THEME_FONT_KEY);
   // The solve-handoff share: the shaping `linkButtonMinimumSize` sized this control from. The trimming
@@ -60,12 +63,17 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
   const isLineDrawnRtl = isDrawnRtl(useControlBidiOptions(props, solveNode));
   const layout: TextLayoutResult | null = useMemo(() => {
     if (!unshapedLayout || !overrunFlags.trim) return unshapedLayout;
-    const trimmedLine = trimLineToWidth(unshapedLayout.lines[0]!, Math.max(1, rect.w), overrunFlags, {
-      fontMetrics,
-      fontSizePx,
-      ellipsisChar: props.ellipsisChar,
-      isDrawnRtl: isLineDrawnRtl,
-    });
+    const trimmedLine = trimTextBufferLineToWidth(
+      unshapedLayout.lines[0]!,
+      Math.max(1, rect.w),
+      overrunFlags,
+      {
+        fontMetrics,
+        fontSizePx,
+        ellipsisChar: props.ellipsisChar,
+        isDrawnRtl: isLineDrawnRtl,
+      }
+    );
     return soloLineLayout(trimmedLine, unshapedLayout);
   }, [unshapedLayout, overrunFlags, rect.w, fontMetrics, fontSizePx, props.ellipsisChar, isLineDrawnRtl]);
 
@@ -94,10 +102,11 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
     <>
       {layout && (
         <CanvasItemGroup position={[placement.originX, 0, 0]}>
-          <TextRun
+          <OutlinedTextRun
             layout={layout}
             fontSizePx={fontSizePx}
             tint={tintedFontColor}
+            outline={textOutline}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />

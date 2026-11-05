@@ -83,7 +83,7 @@ const ItemListSelectMode = {
 export const ITEM_LIST_SELECT_MODE_NAMES = enumNamesByValue(ItemListSelectMode);
 
 /** `ItemList::IconMode` (`item_list.h:43-44`), in declaration order. */
-const ItemListIconMode = {
+export const ItemListIconMode = {
   ICON_MODE_TOP: 0,
   ICON_MODE_LEFT: 1,
 } as const;

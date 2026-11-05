@@ -60,6 +60,8 @@ function foldableContainerArrowSize(theme: NativeTheme): Vector2 {
 const FOLDABLE_CONTAINER_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
 /** The default `collapsed_font_color` of FoldableContainer (`default_theme.cpp:1326`). */
 const FOLDABLE_CONTAINER_DEFAULT_COLLAPSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
+/** The default `font_outline_color` of FoldableContainer: white, not the black of most types (`default_theme.cpp:1327`). */
+export const FOLDABLE_CONTAINER_DEFAULT_OUTLINE_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 const FOLDABLE_CONTAINER_TITLE_THEME_KEYS: Record<'expanded' | 'folded', TextThemeKeys> = {
   expanded: { sizeKey: 'font_size', colorKey: 'font_color' },

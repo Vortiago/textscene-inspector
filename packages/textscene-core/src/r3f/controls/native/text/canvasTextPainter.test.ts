@@ -64,6 +64,14 @@ describe('computeCanvasTextCanvasLayout', () => {
     expect(canvasLayout.offsetXPx).toBe(0);
   });
 
+  // A trimmed AUTO right-to-left fill draws past the trimmed width it reports (text_server.cpp:1744).
+  it('widens the canvas to glyphs that reach past the layout width', () => {
+    const layout = layoutFor('AB');
+    const line = layout.lines[0]!;
+    const narrowed = { ...layout, widthPx: 8, lines: [{ ...line, widthPx: 8 }] };
+    expect(computeCanvasTextCanvasLayout(narrowed, 0).canvasWidthPx).toBeCloseTo(16, 6);
+  });
+
   it('widens by the origin phase, which carries the content that far right of the quad', () => {
     const layout = layoutFor('AB');
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0, 0, { x: 0.25, y: 0 });

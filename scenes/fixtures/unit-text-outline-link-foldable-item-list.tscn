@@ -1,0 +1,101 @@
+; One variable: the theme text outline of LinkButton (link_button.cpp:294-301), the
+; FoldableContainer title (foldable_container.cpp:310-312) and ItemList items
+; (item_list.cpp:1642-1644,1673-1675). Each draws a red outline_size 8 ring under its text.
+; The Hebrew rows are AUTO and trimmed: the ring trims by the inferred RTL direction and
+; draws its ellipsis first, while the fill draws by the set AUTO direction
+; (text_server.cpp:1740-1935), so ring and fill differ. No other fixture of these Controls
+; sets outline_size.
+
+[gd_scene load_steps=3 format=3 uid="uid://unittextoutlinelinkfoldableitemlist"]
+
+[ext_resource type="FontFile" path="res://fonts/dejavu-sans-bidi-subset.ttf" id="1_font"]
+
+[sub_resource type="Theme" id="Theme_1"]
+default_font = ExtResource("1_font")
+default_font_size = 28
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.1, 0.12, 0.18, 1)
+
+[node name="LinkLtr" type="LinkButton" parent="."]
+offset_left = 24.0
+offset_top = 16.0
+offset_right = 264.0
+offset_bottom = 56.0
+text = "Link"
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+
+[node name="LinkHebrewTrimmed" type="LinkButton" parent="."]
+offset_left = 300.0
+offset_top = 16.0
+offset_right = 420.0
+offset_bottom = 56.0
+text = "שלום עולם שלום"
+text_overrun_behavior = 3
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+
+[node name="FoldLtr" type="FoldableContainer" parent="."]
+offset_left = 24.0
+offset_top = 80.0
+offset_right = 264.0
+offset_bottom = 136.0
+title = "Title"
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+
+[node name="FoldHebrewTrimmed" type="FoldableContainer" parent="."]
+offset_left = 300.0
+offset_top = 80.0
+offset_right = 460.0
+offset_bottom = 136.0
+title = "שלום עולם שלום"
+title_text_overrun_behavior = 3
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+
+[node name="ItemsLtr" type="ItemList" parent="."]
+offset_left = 24.0
+offset_top = 160.0
+offset_right = 264.0
+offset_bottom = 260.0
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+item_count = 2
+item_0/text = "Sword"
+item_1/text = "Bow"
+
+[node name="ItemsHebrewTrimmed" type="ItemList" parent="."]
+offset_left = 300.0
+offset_top = 160.0
+offset_right = 540.0
+offset_bottom = 260.0
+fixed_column_width = 120
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+item_count = 2
+item_0/text = "שלום עולם שלום"
+item_1/text = "עולם"
+
+[node name="ItemsTop" type="ItemList" parent="."]
+offset_left = 24.0
+offset_top = 284.0
+offset_right = 264.0
+offset_bottom = 384.0
+icon_mode = 0
+max_columns = 2
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+item_count = 2
+item_0/text = "Top"
+item_1/text = "Row"

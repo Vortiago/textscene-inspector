@@ -52,7 +52,7 @@ function wholeRasterPx(cssPx: number): number {
 }
 
 interface CanvasTextCanvasLayout {
-  /** `HTMLCanvasElement#width`: `layout.widthPx` plus twice `offsetXPx` and the origin phase, rounded up to a whole pixel. */
+  /** `HTMLCanvasElement#width`: the drawn width (`drawnWidthPx`) plus twice `offsetXPx` and the origin phase, rounded up to a whole pixel. */
   canvasWidthPx: number;
   /** `HTMLCanvasElement#height`: `layout.heightPx` plus twice `offsetYPx`, rounded up to a whole pixel. */
   canvasHeightPx: number;
@@ -88,11 +88,22 @@ export function computeCanvasTextCanvasLayout(
   const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + Math.ceil(strokePadPx + emboldenPadPx);
   return {
     // The quad sits `originPhasePx.x` left of the run origin, so the content reaches that much further right.
-    canvasWidthPx: wholeRasterPx(layout.widthPx + 2 * offsetXPx + originPhasePx.x),
+    canvasWidthPx: wholeRasterPx(drawnWidthPx(layout) + 2 * offsetXPx + originPhasePx.x),
     canvasHeightPx: wholeRasterPx(layout.heightPx + 2 * offsetYPx),
     offsetXPx,
     offsetYPx,
   };
+}
+
+/**
+ * `layout.widthPx`, or the end of a glyph that reaches past it: a layout's width is where Godot
+ * places it, and its glyphs may draw past that, as a trimmed AUTO right-to-left fill does.
+ */
+function drawnWidthPx(layout: TextLayoutResult): number {
+  return layout.lines.reduce((widthPx, line) => {
+    const last = line.glyphs.at(-1);
+    return last ? Math.max(widthPx, last.x + last.advance) : widthPx;
+  }, layout.widthPx);
 }
 
 /** The `GlyphQuadArrays` shape `buildGlyphQuadArrays` produces, always exactly one quad. */

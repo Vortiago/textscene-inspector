@@ -51,7 +51,14 @@ unread. A malformed `folded` becomes `false`. A malformed `title_alignment`,
 `title_position` or `title_text_overrun_behavior` becomes `undefined`, and the render
 default (LEFT / TOP / no trimming) applies.
 
+The title draws the theme text outline, `font_outline_color` and `outline_size`, as Godot
+does (`foldable_container.cpp:310-312`). A ring of `outline_size / 4` px sits under the fill.
+No ring draws at an `outline_size` of 0 or a zero alpha. The default `font_outline_color` is
+white (`default_theme.cpp:1327`). A trimmed AUTO title whose paragraph resolves right-to-left
+trims its ring by that direction, with the ellipsis first. Its fill draws the glyphs that trim
+drops, from the visual left, as Godot's set-direction draw does (`text_server.cpp:1740-1935`).
+A title set RTL draws its ring and its fill alike.
+
 ## Known limitations
 
-- **Not drawn** The title outline (`outline_size`, `font_outline_color`) that
-  `foldable_container.cpp:310-312` draws under the title.
+None known.

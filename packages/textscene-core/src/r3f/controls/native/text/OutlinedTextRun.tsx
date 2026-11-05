@@ -1,6 +1,7 @@
 /**
- * `<OutlinedTextRun>`: a `<TextRun>` that draws the theme text outline of `Button`, `ProgressBar`
- * and the Controls that share their pass (`button.cpp:458-462`): a stroked ring, then the fill.
+ * `<OutlinedTextRun>`: a `<TextRun>` that draws the theme text outline of a Control that draws a
+ * text buffer (`button.cpp:458-462`, `link_button.cpp:294-301` and others): a stroked ring, then
+ * the fill.
  */
 import { useMemo } from 'react';
 import { multiplyModulate } from '../../../canvasItemModulate';
@@ -23,9 +24,10 @@ export function textLayerRenderOrder(renderOrder: number, index: number, count: 
 /** The outline theme of `n` multiplied by the Control's own tint, in sRGB, as `<TextRun>` converts it once. */
 export function useTintedTextOutline(
   n: Pick<ShareNode, 'colors' | 'constants'>,
-  ownTint: Rgba
+  ownTint: Rgba,
+  defaultColor?: Rgba
 ): TextOutlineTheme {
-  const { color, sizePx } = resolveTextOutline(n);
+  const { color, sizePx } = resolveTextOutline(n, defaultColor);
   return useMemo(() => ({ color: multiplyModulate(color, ownTint), sizePx }), [color, sizePx, ownTint]);
 }
 
@@ -47,35 +49,44 @@ export function OutlineRingRun({ sizePx, ...run }: OutlineRingRunProps) {
 type OutlinedTextRunProps = RunLookProps & {
   /** Already tinted. */
   outline: TextOutlineTheme;
-  /** The ring's own shape when it differs from the fill's, as a trimmed AUTO line's does. Defaults to `layout`. */
-  outlineLayout?: TextLayoutResult;
 };
 
-/** Whether an outline draws a ring: none draws at a size of 0 or a zero alpha (`button.cpp:460`). */
-export function hasOutlineRing(outline: TextOutlineTheme): boolean {
+/** `layout` as `shaped_text_draw_outline` draws it: each line's `outlineGlyphs` where it has them. */
+function outlineLayout(layout: TextLayoutResult): TextLayoutResult {
+  if (!layout.lines.some((line) => line.outlineGlyphs)) return layout;
+  return {
+    ...layout,
+    lines: layout.lines.map((line) => (line.outlineGlyphs ? { ...line, glyphs: line.outlineGlyphs } : line)),
+  };
+}
+
+/** No outline draws at a size of 0 or a zero alpha (`button.cpp:460`). */
+function hasOutlineRing(outline: TextOutlineTheme): boolean {
   return outline.sizePx > 0 && outline.color.a > 0;
 }
 
-export function OutlinedTextRun({
-  layout,
-  outlineLayout = layout,
-  outline,
-  renderOrder = 0,
-  ...run
-}: OutlinedTextRunProps) {
-  const hasRing = hasOutlineRing(outline);
-  const layerCount = hasRing ? 2 : 1;
+type TextOutlineRingProps = Omit<RunLookProps, 'tint'> & {
+  /** Already tinted. */
+  outline: TextOutlineTheme;
+};
+
+/** The theme outline ring of `layout` without its fill, as ItemList draws it under a fill it hides (`item_list.cpp:1672-1688`). */
+export function TextOutlineRing({ layout, outline, ...run }: TextOutlineRingProps) {
+  const ringLayout = useMemo(() => outlineLayout(layout), [layout]);
+  if (!hasOutlineRing(outline)) return null;
+  return <OutlineRingRun {...run} layout={ringLayout} tint={outline.color} sizePx={outline.sizePx} />;
+}
+
+export function OutlinedTextRun({ layout, outline, renderOrder = 0, ...run }: OutlinedTextRunProps) {
+  const layerCount = hasOutlineRing(outline) ? 2 : 1;
   return (
     <>
-      {hasRing && (
-        <OutlineRingRun
-          {...run}
-          layout={outlineLayout}
-          tint={outline.color}
-          sizePx={outline.sizePx}
-          renderOrder={textLayerRenderOrder(renderOrder, 0, layerCount)}
-        />
-      )}
+      <TextOutlineRing
+        {...run}
+        layout={layout}
+        outline={outline}
+        renderOrder={textLayerRenderOrder(renderOrder, 0, layerCount)}
+      />
       <TextRun
         {...run}
         layout={layout}
