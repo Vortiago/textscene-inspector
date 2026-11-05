@@ -153,10 +153,9 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
   the wrap is what makes the scrollbar appear.
 - **Not drawn** `BREAK_TRIM_INDENT` (an `autowrap_trim_flags` bit): a wrapped
   continuation line does not reserve the leading tab/space indent Godot re-applies to it.
-- **Approximated** A FILL-aligned Label with autowrap OFF and a trimming
-  `text_overrun_behavior` puts the ellipsis after the last kept glyph of a line that still
-  trims, where Godot re-justifies the line with `JUSTIFICATION_CONSTRAIN_ELLIPSIS`
-  (`label.cpp:325`, #1318).
+- **Approximated** A FILL-aligned Label with autowrap OFF can still trim a line. That line
+  ends with the ellipsis after the last kept glyph. Godot re-justifies it with
+  `JUSTIFICATION_CONSTRAIN_ELLIPSIS` (`label.cpp:325`, #1318).
 - **Approximated** An embolden above about 1.4 over the bundled font differs from FreeType, since the atlas rounds corners and holds limited growth.
 - **Not drawn** The doubled-backslash escapes of `paragraph_separator`, so a literal
   `"\\n"` stays two characters where Godot's `String::c_unescape()` (label.cpp:158) makes
