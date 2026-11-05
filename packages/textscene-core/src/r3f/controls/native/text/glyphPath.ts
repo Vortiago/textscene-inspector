@@ -11,7 +11,10 @@ import { midpoint, type ContourPoint, type GlyphContours } from './glyphContours
 import type { Vector2 } from '../../../../godot/math/vector';
 
 /** The calls of a canvas path that a glyph outline needs. */
-type PathSink = Pick<CanvasPath, 'moveTo' | 'lineTo' | 'quadraticCurveTo' | 'bezierCurveTo' | 'closePath'>;
+export type PathSink = Pick<
+  CanvasPath,
+  'moveTo' | 'lineTo' | 'quadraticCurveTo' | 'bezierCurveTo' | 'closePath'
+>;
 
 /**
  * Traces the contour `first` to `last` of `points`. A contour that starts on a control point starts

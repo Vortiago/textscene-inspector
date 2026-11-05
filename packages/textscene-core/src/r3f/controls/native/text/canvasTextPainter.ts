@@ -11,19 +11,13 @@
 import * as THREE from 'three';
 import {
   fillContours,
-  variedContoursReader,
+  glyphContoursReader,
   maxEmboldenGrowthPx,
   paintEmboldenedFill,
   shearAboutBaseline,
   strokeContours,
 } from './canvasVariation';
-import {
-  canvasGlyphPenXPx,
-  fontIsScaled,
-  isGlyphVaried,
-  type FontMetrics,
-  type GlyphVariation,
-} from './fontMetrics';
+import { canvasGlyphPenXPx, fontIsScaled, type FontMetrics, type GlyphVariation } from './fontMetrics';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
@@ -223,12 +217,11 @@ export function paintSceneFontCanvas(
   }
 
   const baselineOffsetPx = layout.baselineOffsetPx;
-  const embolden = metrics.embolden ?? 0;
-  const variation: GlyphVariation = { embolden, skew };
-  // The ring of a varied face strokes the contours, and the fill of an emboldened one fills them. They carry their own shear.
-  const followsContours = stroked ? isGlyphVaried(variation) : embolden !== 0;
-  const contourOutlines = followsContours ? (metrics.outlines ?? null) : null;
-  const contoursOf = contourOutlines && variedContoursReader(contourOutlines, fontSizePx, variation);
+  const variation: GlyphVariation = { embolden: metrics.embolden ?? 0, skew };
+  // Each glyph draws its contour as Godot's FreeType draws it, which carries its own shear. The text
+  // draws only for a face with no outlines, or a glyph with no contour.
+  const contourOutlines = metrics.outlines ?? null;
+  const contoursOf = contourOutlines && glyphContoursReader(contourOutlines, fontSizePx, variation);
 
   const paintGlyphText = (char: string, penX: number, baselineY: number, growthPx: number | undefined) => {
     if (stroked) ctx.strokeText(char, penX, baselineY);
@@ -264,9 +257,7 @@ export function paintSceneFontCanvas(
       const penX =
         canvasLayout.offsetXPx +
         (snapsGlyphs ? canvasGlyphPenXPx(originPhasePx.x + gp.x, fontSizePx, metrics) : gp.x);
-      // A glyph shaped with no growth, in a layout that is not sheared, stays on its plain ring.
-      const hasVariedGlyph = skew !== 0 || gp.emboldenGrowthPx;
-      const contours = contoursOf && hasVariedGlyph ? contoursOf(gp.char) : null;
+      const contours = contoursOf ? contoursOf(gp.char) : null;
       if (contours) (stroked ? strokeContours : fillContours)(ctx, contours, penX, baselineY);
       else if (contourOutlines && skew !== 0)
         paintShearedGlyphText(gp.char, penX, baselineY, gp.emboldenGrowthPx);

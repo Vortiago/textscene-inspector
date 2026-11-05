@@ -5,6 +5,7 @@
  */
 import { variationKey, type GlyphVariation } from './fontMetrics';
 import type { GlyphContours } from './glyphContours';
+import { freeTypeChordSink } from './freeTypeChords';
 import { traceGlyphContours } from './glyphPath';
 import type { SfntOutlines } from './sfntOutlines';
 import type { TextLayoutResult } from './textLayout';
@@ -54,7 +55,7 @@ const readContours = perObject(
  * Reads the outline of a character as the font variation leaves it at `fontSizePx`: null for a
  * glyph the font has no outline for. The face's cache is found once, so a glyph costs one lookup.
  */
-export function variedContoursReader(
+export function glyphContoursReader(
   outlines: SfntOutlines,
   fontSizePx: number,
   variation: GlyphVariation
@@ -100,7 +101,7 @@ function traceContoursFromPen(
   baselineY: number
 ): void {
   ctx.beginPath();
-  traceGlyphContours(ctx, contours, penX, baselineY);
+  traceGlyphContours(freeTypeChordSink(ctx), contours, penX, baselineY);
 }
 
 /**

@@ -7,7 +7,7 @@
 import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
-import { isGlyphVaried, type FontMetrics, type GlyphVariation } from './fontMetrics';
+import type { FontMetrics } from './fontMetrics';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { fontForcesAutohinter, resolveFontFileBytes } from './sceneFontResolution';
 import { createSettledPeek } from './settledChannel';
@@ -59,16 +59,14 @@ export function peekSceneFontOutlines(font: FontResource | null | undefined): Pe
 }
 
 /**
- * The outlines that the text of the `metrics` face under `variation` follows. Only an emboldened or
- * sheared canvas face needs them, as its fill and its stroke follow the changed glyph: the rest
- * answers null and loads nothing. An atlas face has no contour to follow.
+ * The outlines that the text of the `metrics` face draws from: a canvas face draws every glyph from
+ * its outline, as Godot's FreeType does. An atlas face has no contour to follow, and answers null.
  *
- * @canonical Glyph outlines that the text of an emboldened or sheared canvas face follows
+ * @canonical Glyph outlines that the text of a canvas face draws from
  */
 export function peekGlyphOutlines(
   font: FontResource | null | undefined,
-  metrics: FontMetrics,
-  variation: GlyphVariation
+  metrics: FontMetrics
 ): PeekedOutlines {
-  return isCanvasFontMetrics(metrics) && isGlyphVaried(variation) ? peekSceneFontOutlines(font) : null;
+  return isCanvasFontMetrics(metrics) ? peekSceneFontOutlines(font) : null;
 }

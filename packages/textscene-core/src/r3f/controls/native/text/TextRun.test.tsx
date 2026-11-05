@@ -25,8 +25,9 @@ const bundled = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | nu
 vi.mock('./bundledFontLoader', () => ({ peekBundledCanvasFontMetrics: () => bundled.metrics }));
 vi.mock('./sceneFontOutlines', () => ({ peekGlyphOutlines: () => null }));
 
+// Null is a bundled canvas face that cannot register, which leaves the atlas to draw the fill.
 beforeEach(() => {
-  bundled.metrics = undefined;
+  bundled.metrics = null;
 });
 
 function emboldenedLayout(embolden: number) {
@@ -56,6 +57,22 @@ async function renderTextRun(props: Partial<TextRunProps> = {}) {
 }
 
 describe('<TextRun>', () => {
+  // Godot's default font is not MSDF, so FreeType fills every glyph (`text_server_adv.cpp:1360-1373`).
+  it('draws a plain atlas face on the bundled canvas face, as FreeType fills every glyph', async () => {
+    bundled.metrics = createOpenSansCanvasFontMetrics('bundled-textrun-fill-test');
+    const renderer = await renderTextRun();
+    await vi.waitFor(() => expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1));
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect(mesh.material).not.toBeInstanceOf(THREE.ShaderMaterial);
+    expect(mesh.geometry.getAttribute('position').count).toBe(4);
+  });
+
+  it('draws nothing for a plain atlas face while the bundled canvas face loads', async () => {
+    bundled.metrics = undefined;
+    const renderer = await renderTextRun();
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
   it('mounts a single mesh carrying the merged glyph geometry', async () => {
     const renderer = await renderTextRun();
     const meshes = renderer.scene.findAllByType('Mesh');

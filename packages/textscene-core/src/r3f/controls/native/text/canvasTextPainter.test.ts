@@ -363,38 +363,82 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
     expect(calls.every((call) => Math.abs(call.shear + 0.3) < 1e-9)).toBe(true);
   });
 
-  it('fills the text of a plain glyph, which has no grown outline to follow', () => {
-    const { outlines } = outlinesStub();
-    const { calls } = paintRecording(layoutFor('A', 0), 0, { skew: 0, outlines });
+  // Godot fills the hinted outline of every glyph through FreeType (`text_server_adv.cpp:1360-1373`).
+  it('fills the outline of a plain glyph from its pen, in place of the text', () => {
+    const layout = layoutFor('A', 0);
+    const { outlines, glyphContours } = outlinesStub();
+    const { calls, canvasLayout } = paintRecording(layout, 0, { skew: 0, outlines });
+    const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
 
-    expect(calls.map((call) => call.op)).toEqual(['fillText']);
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0 });
+    expect(calls.map((call) => call.op)).toEqual([
+      'beginPath',
+      'moveTo',
+      'lineTo',
+      'lineTo',
+      'closePath',
+      'fill',
+    ]);
+    expect(calls[1]!.args).toEqual([canvasLayout.offsetXPx + 1, baselineY]);
   });
 
-  it('fills the text of a sheared glyph in the sheared space, as a shear alone leaves the fill be', () => {
-    const { outlines } = outlinesStub();
+  it('fills the sheared outline of a sheared glyph under the identity transform', () => {
+    const { outlines, glyphContours } = outlinesStub();
     const { calls } = paintRecording(layoutFor('A', 0), 0, { skew: 0.3, outlines });
 
-    expect(calls.map((call) => call.op)).toEqual(['fillText']);
-    expect(calls[0]!.shear).toBeCloseTo(-0.3, 10);
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0.3 });
+    expect(calls.at(-1)!.op).toBe('fill');
+    expect(calls.every((call) => call.shear === 0)).toBe(true);
+  });
+
+  // FreeType's smooth rasteriser draws a conic as chords (`ftgrays.c:1013-1141`), so an edge lands
+  // where Godot's bitmap has it, up to 1/16 px inside the curve.
+  it('draws each curve of the outline as the chords FreeType draws', () => {
+    const conicGlyph: GlyphContours = {
+      points: [
+        { x: 0, y: 0, tag: ContourPointTag.ON },
+        { x: 2, y: 0, tag: ContourPointTag.OFF_CONIC },
+        { x: 2, y: 2, tag: ContourPointTag.ON },
+      ],
+      contourEnds: [2],
+      isFillRight: true,
+    };
+    const outlines: SfntOutlines = { glyphIndex: () => 7, glyphContours: () => conicGlyph };
+    const layout = layoutFor('A', 0);
+    const { calls, canvasLayout } = paintRecording(layout, 0, { outlines });
+    const penX = canvasLayout.offsetXPx;
+    const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
+
+    const chordEnds = calls.filter((call) => call.op === 'lineTo').map((call) => call.args);
+    expect(chordEnds.slice(0, 4)).toEqual([
+      [penX + 0.875, baselineY + 0.125],
+      [penX + 1.5, baselineY + 0.5],
+      [penX + 1.875, baselineY + 1.125],
+      [penX + 2, baselineY + 2],
+    ]);
   });
 });
 
 describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('strokes a plain glyph once, centred on its contour at its pen', () => {
+  // Godot strokes the hinted outline of every glyph (`text_server_adv.cpp:1376-1393`).
+  it('strokes the outline of a plain glyph once, centred on its contour at its pen', () => {
     const layout = layoutFor('A', 0);
     const { outlines } = outlinesStub();
     const { calls, canvasLayout } = paintRecording(layout, 4, { outlines });
+    const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
 
-    expect(calls).toEqual([
-      {
-        op: 'strokeText',
-        args: ['A', canvasLayout.offsetXPx, canvasLayout.offsetYPx + layout.baselineOffsetPx],
-        lineWidth: 4,
-        shear: 0,
-      },
+    expect(calls.map((call) => call.op)).toEqual([
+      'beginPath',
+      'moveTo',
+      'lineTo',
+      'lineTo',
+      'closePath',
+      'stroke',
     ]);
+    expect(calls[1]!.args).toEqual([canvasLayout.offsetXPx + 1, baselineY]);
+    expect(calls.at(-1)!.lineWidth).toBe(4);
   });
 
   // FreeType strokes the emboldened contour (`text_server_adv.cpp:1314-1315`, then `:1383-1390`),
