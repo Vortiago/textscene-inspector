@@ -1213,6 +1213,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Bmfont Outline",
+    "file": "unit-label-bmfont-outline.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Bmfont Scaling",
+    "file": "unit-label-bmfont-scaling.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Bmfont",
+    "file": "unit-label-bmfont.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Fill Paragraphs",
     "file": "unit-label-fill-paragraphs.tscn",
     "category": "Other"

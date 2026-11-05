@@ -17,8 +17,11 @@ import {
   fontVariationEmbolden,
   fontVariationOpentype,
   fontVariationSkew,
+  resolveBitmapFont,
   resolveFontFileBytes,
 } from './sceneFontResolution';
+import { createBitmapFontMetrics } from './bitmapFontMetrics';
+import { perObject } from '../../../../utils/perObject';
 import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
@@ -46,6 +49,9 @@ let familyCounter = 0;
 
 /** Keyed by the resolved leaf `FontFileResource`, so nodes that share a font share one load. */
 const peekMetrics = createSettledPeek<FontFileResource, FontMetrics>();
+
+/** One `BitmapFontMetrics` for each decoded BMFont, so a layout memoised on its identity keeps its hits. */
+const bitmapMetricsOf = perObject(createBitmapFontMetrics);
 
 /** Warns once per unresolvable resource, not per call: the peek runs on every solve pass, and the failure belongs to the resource. */
 function warnUnresolvable(font: FontResource, nodePath: string): void {
@@ -175,6 +181,11 @@ export function peekSettledSceneFontMetrics(
   nodePath: string
 ): FontMetrics | null {
   if (!font) return OPEN_SANS_FONT_METRICS;
+
+  // A BMFont is decoded by the time its resource settles, so it needs no load of its own. Only the
+  // embolden of a variation reaches it: FreeType shears and emboldens an outline, and it has none.
+  const bitmap = resolveBitmapFont(font);
+  if (bitmap) return withVariation(bitmapMetricsOf(bitmap), { embolden: fontVariationEmbolden(font) });
 
   const resolved = resolveFontFileBytes(font);
   if (!resolved) {

@@ -79,6 +79,9 @@ an `outline_size` of 0 or a zero alpha. The ring strokes on the canvas painter f
 too (ADR-0040). Like the fill, the ring drops each glyph that ends past `ofs_max` and is not
 clipped to the margins (`:1512-1545`).
 
+A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
+outline ring (ADR-0064).
+
 ## Known limitations
 
 - **Not drawn** The right-to-left hit region of `_is_over_clear_button`
@@ -87,3 +90,4 @@ clipped to the margins (`:1512-1545`).
 - **Not drawn** `shaped_text_set_direction` at :3104: it takes `is_layout_rtl()`
   only while `text_direction` is INHERITED, and the default is
   `TEXT_DIRECTION_AUTO` (line_edit.h:144).
+- **Approximated** A control character draws as the hex-code box, but Godot draws a system font's own glyph when the host has one (`text_server_adv.cpp:6818`).

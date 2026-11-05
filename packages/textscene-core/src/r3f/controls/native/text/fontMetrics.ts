@@ -13,8 +13,9 @@ import type { SfntOutlines } from './sfntOutlines';
  * font-agnostic but rasterisation is not. `'atlas'` is a baked MSDF atlas
  * (`openSansFontMetrics.ts`), the only kind `GlyphPlacement.glyph` looks up.
  * `'canvas'` is a runtime-loaded scene font (`runtimeFontMetrics.ts`) drawn through canvas-2D.
+ * `'bitmap'` is a BMFont (`bitmapFontMetrics.ts`) drawn from its page images.
  */
-type FontMetricsKind = 'atlas' | 'canvas';
+type FontMetricsKind = 'atlas' | 'canvas' | 'bitmap';
 
 /**
  * Raw, design-unit font metrics a shaper needs. The functions below scale them
@@ -23,6 +24,12 @@ type FontMetricsKind = 'atlas' | 'canvas';
 export interface FontMetrics {
   /** Which glyph-painting path this metrics object pairs with. */
   readonly kind: FontMetricsKind;
+  /**
+   * The px one design unit is drawn at, `fontSizePx / unitsPerEm` when absent. Only a fixed-size
+   * font sets it, as Godot scales it by its scale mode, and then no FreeType rounding applies to
+   * its ascent, descent, advance or kerning.
+   */
+  readonly pxPerUnit?: (fontSizePx: number) => number;
   /** Design units per em (`hhea`/`head` table `unitsPerEm`): the scale denominator for every raw unit below. */
   readonly unitsPerEm: number;
   /** `hhea` ascender, design units (positive, upward), before `getFontAscentPx` rounds it. */
@@ -59,8 +66,12 @@ export interface FontMetrics {
  * float: ascent and descent ceil to whole pixels, and an advance goes through FreeType's and
  * HarfBuzz's fixed-point chain to whole 1/64 px.
  */
-function unitsToPx(units: number, metrics: Pick<FontMetrics, 'unitsPerEm'>, fontSizePx: number): number {
-  return units * (fontSizePx / metrics.unitsPerEm);
+function unitsToPx(
+  units: number,
+  metrics: Pick<FontMetrics, 'unitsPerEm' | 'pxPerUnit'>,
+  fontSizePx: number
+): number {
+  return units * (metrics.pxPerUnit?.(fontSizePx) ?? fontSizePx / metrics.unitsPerEm);
 }
 
 /**
@@ -70,10 +81,12 @@ function unitsToPx(units: number, metrics: Pick<FontMetrics, 'unitsPerEm'>, font
  * every baseline-relative quantity adds to this value rather than re-deriving it.
  */
 export function getFontAscentPx(
-  metrics: Pick<FontMetrics, 'ascent' | 'unitsPerEm'>,
+  metrics: Pick<FontMetrics, 'ascent' | 'unitsPerEm' | 'pxPerUnit'>,
   fontSizePx: number
 ): number {
-  return Math.ceil(unitsToPx(metrics.ascent, metrics, fontSizePx));
+  const ascentPx = unitsToPx(metrics.ascent, metrics, fontSizePx);
+  // A fixed-size font returns its cached ascent scaled, with no FreeType round (`:2907-2912`).
+  return metrics.pxPerUnit ? ascentPx : Math.ceil(ascentPx);
 }
 
 /**
@@ -85,10 +98,15 @@ export function getFontAscentPx(
 // `lineSpacingPx` has no default: `Math::round(3 * scale)` is Label's constant
 // (`scene/theme/default_theme.cpp:392`), and other controls read another key or none.
 export function getFontLinePitchPx(
-  metrics: Pick<FontMetrics, 'ascent' | 'descent' | 'unitsPerEm'>,
+  metrics: Pick<FontMetrics, 'ascent' | 'descent' | 'unitsPerEm' | 'pxPerUnit'>,
   fontSizePx: number,
   lineSpacingPx: number
 ): number {
+  // A fixed-size font sums its scaled ascent and descent, and the shaped size ceils the sum
+  // (`text_server_adv.cpp:7524-7537`).
+  if (metrics.pxPerUnit) {
+    return Math.ceil(unitsToPx(metrics.ascent + metrics.descent, metrics, fontSizePx)) + lineSpacingPx;
+  }
   const ascentPx = getFontAscentPx(metrics, fontSizePx);
   const descentPx = Math.ceil(unitsToPx(metrics.descent, metrics, fontSizePx));
   return ascentPx + descentPx + lineSpacingPx;
@@ -196,8 +214,13 @@ const SUBPIXEL_POSITIONING_ONE_QUARTER_MAX_SIZE = 16;
 // The other disjunct, `scale != 1.0`, never fires for a whole-pixel size: `fd->scale`
 // is `sz / y_ppem` (`text_server_adv.cpp:1509`). A fractional size, which Godot's
 // `int64_t` API cannot express, takes the subpixel branch.
-export function fontUsesSubpixelPositioning(fontSizePx: number): boolean {
-  return !Number.isInteger(fontSizePx) || fontSizePx <= SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE;
+export function fontUsesSubpixelPositioning(
+  fontSizePx: number,
+  metrics: Pick<FontMetrics, 'pxPerUnit'>
+): boolean {
+  // A fixed-size font scaled off its own size has `scale != 1.0`, the other disjunct.
+  const isScaled = (metrics.pxPerUnit?.(fontSizePx) ?? 1) !== 1;
+  return isScaled || !Number.isInteger(fontSizePx) || fontSizePx <= SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE;
 }
 
 /**
@@ -230,6 +253,9 @@ export function canvasGlyphPenXPx(xPx: number, fontSizePx: number): number {
 // At 2048 units and 16px this is `ceil(units / 2) / 64`: 1/128 px wider for an odd advance.
 export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSizePx: number): number {
   const units = metrics.getGlyphAdvanceUnits(ch) ?? metrics.averageAdvanceUnits;
+  // A bitmap font's advance reaches HarfBuzz in 26.6 as `advance * 64` and leaves as
+  // `advance * scale` (`text_server_adv.cpp:130,7077`): no FreeType chain.
+  if (metrics.pxPerUnit) return unitsToPx(units, metrics, fontSizePx);
   const { xScale } = freeTypeSizeRequest(metrics.unitsPerEm, fontSizePx);
   const advance16_16 = ftMulFix(1024 * units, xScale);
   // The error only adds width, so a run of odd advances can push

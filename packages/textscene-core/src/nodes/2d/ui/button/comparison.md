@@ -55,6 +55,9 @@ does (`button.cpp:458-462`). A ring of `outline_size / 4` px sits under the fill
 draws at an `outline_size` of 0 or a zero alpha. The ring strokes on the canvas painter for the
 bundled font too (ADR-0040).
 
+A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
+outline ring (ADR-0064).
+
 ## Known limitations
 
 - **Approximated** Under `layout_direction = 3` or `text_direction = 2`, the label's glyphs

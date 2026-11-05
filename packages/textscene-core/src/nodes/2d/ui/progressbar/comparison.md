@@ -47,6 +47,9 @@ canvas painter (painter B) for the bundled font and a scene font alike (ADR-0040
 keeps the percentage fill on the atlas. The golden `progress-bar-bundled-outline` matches Godot's ring
 ink to 5 px of 1477 at size 48 with `outline_size 16`.
 
+A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
+outline ring (ADR-0064).
+
 ## Known limitations
 
 - **Approximated** `indeterminate` never animates, so the previewer always draws Godot's

@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { shapeText, type TextLineLayout } from './textLayout';
 import { getFontEmboldenedAdvancePx, withVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
+import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
 import { overrunFlagsForBehavior, trimLineToWidth, type OverrunTrimFlags } from './textOverrun';
 import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
@@ -139,6 +140,20 @@ describe('trimLineToWidth', () => {
       100,
       overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS),
       '●'
+    );
+    expect(drawnText(result)).toBe('AAAAAAAA...');
+  });
+
+  it('the bundled canvas metrics keep that fallback: a custom ellipsis char Open Sans lacks gives three dots (text_server_adv.cpp:5985 _font_has_char)', () => {
+    const result = trimLineToWidth(
+      line('AAAAAAAAAAAA'),
+      100,
+      overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS),
+      {
+        fontMetrics: createOpenSansCanvasFontMetrics('sans-serif'),
+        fontSizePx: FONT_SIZE_PX,
+        ellipsisChar: '→',
+      }
     );
     expect(drawnText(result)).toBe('AAAAAAAA...');
   });

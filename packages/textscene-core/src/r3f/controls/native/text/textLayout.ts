@@ -13,6 +13,7 @@
 import { OPEN_SANS_ATLAS_GLYPHS, type OpenSansGlyph } from './openSansAtlas';
 import { round as godotRound } from '../../../../godot/math/math';
 import { hexCodeBoxAdvanceSize } from './hexCodeBox';
+import { isBitmapFontMetrics } from './bitmapFontMetrics';
 import {
   fontUsesSubpixelPositioning,
   getFontAscentPx,
@@ -402,6 +403,11 @@ function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: 
   return getFontKerningAdjustmentPx(metrics, a, b, fontSizePx);
 }
 
+/** Whether `face` is a BMFont with no glyph for `ch`, a tab aside: Godot then draws `ch` as a hex-code box. */
+function lacksBitmapGlyph(face: FontMetrics, ch: string): boolean {
+  return isBitmapFontMetrics(face) && !isTabChar(ch) && !face.glyphOf(ch);
+}
+
 /**
  * A unit with no glyph of its own: a character outside every bidi override range, which Godot does
  * not shape, or the second unit of a surrogate pair. It has no width and no break.
@@ -455,6 +461,11 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
         // (`text_server_adv.cpp:6844`): zero width.
         advance = 0;
       }
+    } else if (lacksBitmapGlyph(faces[i]!, ch)) {
+      // A BMFont lacks the character and has no system fallback (`resource_importer_bmfont.cpp:79`):
+      // the shaper keeps the invalid character as a hex-code box (`text_server_adv.cpp:6835-6890`).
+      advance = hexCodeBoxAdvanceSize(sizes[i]!, cp).x;
+      controlCodepoint = cp;
     } else {
       const embolden = faces[i]!.embolden ?? 0;
       advance = glyphAdvancePx(ch, sizes[i]!, faces[i]!) + getFontExtraAdvancePx(embolden, sizes[i]!);
@@ -506,8 +517,8 @@ function roundAdvancesToWholePixels(glyphs: BreakGlyph[], chars: ArrayLike<strin
   for (const [start, end] of runRanges(style, chars.length)) {
     // `adv_rem` is local to `_shape_run` (`:7011`), so each run starts it at zero.
     let advanceRemainder = 0;
-    // A run has one size, so its first character answers for all of them.
-    if (fontUsesSubpixelPositioning(style.sizes[start]!)) continue;
+    // A run has one size and one face, so its first character answers for all of them.
+    if (fontUsesSubpixelPositioning(style.sizes[start]!, style.faces[start]!)) continue;
     const step = isRtlRun(style, start) ? -1 : 1;
     for (let i = step > 0 ? start : end - 1; i >= start && i < end; i += step) {
       const cp = chars[i]!.codePointAt(0) ?? 0;

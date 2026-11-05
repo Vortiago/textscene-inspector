@@ -116,9 +116,9 @@ interface TrimBudget {
   ellipsisWidthPx: number;
 }
 
-/** Whether the font has a bitmap for `ch`: the baked charset for `'atlas'` metrics, always true for a `'canvas'` font. */
+/** Whether the font has a glyph for `ch`, as `_font_has_char` (`text_server_adv.cpp:5985`) asks: no advance of its own means none (`FontMetrics.getGlyphAdvanceUnits`), for every font kind. */
 function hasGlyphInk(fontMetrics: FontMetrics, ch: string): boolean {
-  return fontMetrics.kind !== 'atlas' || ch in OPEN_SANS_ATLAS_GLYPHS;
+  return fontMetrics.getGlyphAdvanceUnits(ch) !== null;
 }
 
 function atlasGlyphFor(fontMetrics: FontMetrics, ch: string) {

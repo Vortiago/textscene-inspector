@@ -2,8 +2,8 @@
  * Merged glyph quads for one `shapeText` layout: every visible glyph on every line
  * as one `THREE.BufferGeometry` and material. Every text-painting Control uses it,
  * and `layout.fontMetrics.kind` picks the painter: the MSDF atlas for `'atlas'`,
- * `canvasTextPainter.ts`'s single raster quad for `'canvas'`. Both painters place a line
- * by its box-top Y alone.
+ * `canvasTextPainter.ts`'s single raster quad for `'canvas'`, and `bitmapTextPainter.ts`'s quad for
+ * each glyph of a BMFont for `'bitmap'`. All three place a line by its box-top Y alone.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -29,9 +29,11 @@ import {
 } from './canvasTextPainter';
 import type { SurfaceShading } from '../../../materialFor2d';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
+import { isBitmapFontMetrics, type BitmapFontMetrics } from './bitmapFontMetrics';
+import { buildBitmapQuads, createSheetTexture } from './bitmapTextPainter';
 import type { TextLayoutResult } from './textLayout';
 import { hexCodeBoxRects } from './hexCodeBox';
-import { buildGlyphQuadArrays } from './glyphQuads';
+import { buildGlyphQuadArrays, type GlyphQuadArrays } from './glyphQuads';
 import { OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
 import { CanvasItemGroup } from '../../../components/CanvasItemGroup';
 import { ControlQuad } from '../controlQuad';
@@ -177,10 +179,57 @@ interface TextRunLook {
   pixelMaterial: CanvasItemPixelMaterial | undefined;
 }
 
+/** The geometry of merged glyph quads. A lit run reads the normal, so a caller adds it. */
+function quadGeometry({ positions, uvs, indices }: GlyphQuadArrays): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+  return geometry;
+}
+
+/**
+ * A BMFont run: one quad for each glyph over a texture of the font's page fills, drawn as a Control
+ * draws any texture. The tint multiplies the page colour, as Godot's modulate does for a font with
+ * no FreeType face (`text_server_adv.cpp:4045`). An outline pass draws the font's outline set, at
+ * the glyph's own rectangle, for every outline size (`text_server_adv.h:406-414`, `font.cpp:1712-1717`).
+ */
+function buildBitmapRun(
+  layout: TextLayoutResult,
+  metrics: BitmapFontMetrics,
+  fontSizePx: number,
+  look: TextRunLook,
+  textureFilter: TextureFilterState,
+  isOutlinePass: boolean
+): BuiltTextRun {
+  const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
+  const sheet = isOutlinePass ? metrics.bitmap.outlineSheet : metrics.bitmap.sheet;
+  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet);
+  const geometry = quadGeometry(quads);
+  geometry.setAttribute('normal', quadFacingPlusZ(quads.positions.length / 3));
+  const texture = createSheetTexture(sheet);
+  applyTextureFilterState(texture, textureFilter);
+  const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
+  const paint = (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) =>
+    createCanvasTextMaterial({
+      map: texture,
+      color: new THREE.Color(r, g, b),
+      opacity: tint.a,
+      clippingPlanes,
+      depthTest,
+      side,
+      pixelMaterial,
+      shading,
+      ...blend,
+    });
+  return { geometry, paint, ownedTexture: texture };
+}
+
 /**
  * Dispatches on `layout.fontMetrics.kind`, so no slice's `Component.tsx` branches. The face sets the
  * shear (`FontMetrics.skew`). `canvasPaint` is canvas-only, and the embolden's distance bias
- * (`msdfDistanceBias`) atlas-only. Each branch ignores the other's.
+ * (`msdfDistanceBias`) atlas-only. Each branch ignores the other's, except that a BMFont run reads
+ * a positive stroke width as its outline pass.
  */
 function buildTextRun(
   layout: TextLayoutResult,
@@ -192,13 +241,21 @@ function buildTextRun(
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
   const skew = layout.fontMetrics.skew ?? 0;
+  if (isBitmapFontMetrics(layout.fontMetrics)) {
+    return buildBitmapRun(
+      layout,
+      layout.fontMetrics,
+      fontSizePx,
+      look,
+      textureFilter,
+      (canvasPaint.strokeWidthPx ?? 0) > 0
+    );
+  }
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, canvasPaint.strokeWidthPx);
-    const { positions, uvs, indices } = buildCanvasTextQuadArrays(canvasLayout);
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-    geo.setIndex(new THREE.BufferAttribute(indices, 1));
+    const quads = buildCanvasTextQuadArrays(canvasLayout);
+    const geo = quadGeometry(quads);
+    const { positions } = quads;
     // On every run, so toggling the shading rebuilds the material alone, not the raster.
     geo.setAttribute('normal', quadFacingPlusZ(positions.length / 3));
 
@@ -231,11 +288,7 @@ function buildTextRun(
     return { geometry: geo, paint, ownedTexture: texture };
   }
 
-  const { positions, uvs, indices } = buildGlyphQuadArrays(layout, fontSizePx, skew);
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-  geo.setIndex(new THREE.BufferAttribute(indices, 1));
+  const geo = quadGeometry(buildGlyphQuadArrays(layout, fontSizePx, skew));
 
   const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
   const options = {
