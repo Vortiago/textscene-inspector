@@ -15,8 +15,7 @@ import type { MultiMeshInstance } from '../../resources/meshes/multimesh';
 import { useTexture2D } from '../../resources/useTexture2D';
 import { canvasMapProps, useCanvas2DTexture } from '../canvas2DTextureDecode';
 import { useNode2DCanvasTextureSampler } from '../canvasItemTextureSampler';
-import { CANVAS_SRGB_DEFINES } from '../canvasSrgbMultiply';
-import { useCanvasColorSpace, type CanvasColorSpace } from '../canvasColorSpace';
+import { instanceColorDefines, useCanvasColorSpace, type CanvasColorSpace } from '../canvasColorSpace';
 import { sRGBChannelToLinear } from '../../utils/colorSpace';
 import { canvasMeshGeometry } from '../meshes/canvasMeshGeometry';
 import { canvasInstancesGeometry, MESH_INSTANCE } from '../meshes/canvasMeshInstances';
@@ -161,8 +160,7 @@ function vertexColorDefines(
   canvasSpace: CanvasColorSpace,
   isInstanced: boolean
 ): Readonly<Record<string, string>> | undefined {
-  if (!canvasSpace.isLinear) return CANVAS_SRGB_DEFINES;
-  return isInstanced ? undefined : canvasSpace.defines;
+  return isInstanced ? instanceColorDefines(canvasSpace) : canvasSpace.defines;
 }
 
 /** One part of the mesh: triangles, points or line segments, by the primitive its geometry draws. */
