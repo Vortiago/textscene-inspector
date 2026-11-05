@@ -15,7 +15,7 @@
 
 import { ByteReader, ReadPastEndError } from '../../../../resources/formats/binaryresource/byteReader';
 import { toInt16, toUint16 } from '../../../../godot/variant/intWidth';
-import { FIXED_16_16_ONE, freeTypeTrueTypeSize, ftMulFix, pixRound } from './fontMetrics';
+import { FIXED_16_16_ONE, FIXED_26_6_ONE, freeTypeTrueTypeSize, ftMulFix, pixRound } from './fontMetrics';
 import { ftVectorLength } from './ftVector';
 import {
   transformOutline,
@@ -666,5 +666,25 @@ export function unscaledGlyfOutlines(sfnt: SfntFile, instance: FontInstance | nu
     glyphCount: font.glyphCount,
     unscaledGlyph: (glyphIndex) =>
       loadedGlyph(font, glyphIndex, FIXED_16_16_ONE, null, instance, true)?.outline() ?? null,
+  };
+}
+
+/** The loader's scale that takes a design unit to 1.0 in 26.6, so a point keeps the 1/64 units the deltas leave. */
+const DESIGN_UNITS_26_6_SCALE = FIXED_26_6_ONE * FIXED_16_16_ONE;
+
+/**
+ * The advance of each glyph at `instance` in design units, from the phantom points of an unhinted
+ * load (`compute_glyph_metrics`, `ttgload.c:1977`), or null for a font without `glyf` outlines. A
+ * glyph FreeType fails to load has no advance.
+ */
+export function variedGlyfAdvances(
+  sfnt: SfntFile,
+  instance: FontInstance
+): ((glyphIndex: number) => number | null) | null {
+  const font = glyfFont(sfnt);
+  if (!font) return null;
+  return (glyphIndex) => {
+    const load = loadedGlyph(font, glyphIndex, DESIGN_UNITS_26_6_SCALE, null, instance, false);
+    return load && (load.phantoms.x[1]! - load.phantoms.x[0]!) / FIXED_26_6_ONE;
   };
 }

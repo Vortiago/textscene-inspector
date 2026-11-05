@@ -50,11 +50,14 @@ export interface FontMetrics {
    * the baseline. Absent is 0, upright.
    */
   readonly skew?: number;
-  /** `FontVariation.variation_opentype` of this face. Absent is none: every axis at its default. */
+  /**
+   * `FontVariation.variation_opentype` of this face, where its `outlines` draw an instance other than
+   * the default. Absent is the default instance.
+   */
   readonly opentype?: OpentypeCoordinates;
   /**
-   * The glyph outlines that the text of an emboldened or sheared canvas face follows. Absent for
-   * a face that needs none. Null for a font whose outlines this previewer cannot read: its text
+   * The glyph outlines that the text of an emboldened, sheared or varied canvas face follows. Absent
+   * for a face that needs none. Null for a font whose outlines this previewer cannot read: its text
    * stays on `fillText` and `strokeText`.
    */
   readonly outlines?: SfntOutlines | null;
@@ -282,8 +285,8 @@ export type OpentypeCoordinates = ReadonlyMap<number | string, number>;
 export type GlyphVariation = Pick<FontMetrics, 'embolden' | 'skew' | 'opentype'>;
 
 /** Whether the variation changes the glyph outline at all. */
-export function isGlyphVaried({ embolden = 0, skew = 0 }: GlyphVariation): boolean {
-  return embolden !== 0 || skew !== 0;
+export function isGlyphVaried({ embolden = 0, skew = 0, opentype }: GlyphVariation): boolean {
+  return embolden !== 0 || skew !== 0 || (opentype?.size ?? 0) > 0;
 }
 
 /** The axis values as one string, in key order, so two dictionaries of one content share a key. */
@@ -307,32 +310,89 @@ const variationsOf = perObject(
   (_face: FontMetrics) => new Map<string, Map<FontMetrics['outlines'], FontMetrics>>()
 );
 
+/** The face each wrapper of `withVariation` wraps. Written only by `withVariation`, as it makes the wrapper. */
+// eslint-disable-next-line no-restricted-syntax -- the face is known when the wrapper is made, and perObject computes from its key alone.
+const faceOfWrapper = new WeakMap<FontMetrics, FontMetrics>();
+
+/**
+ * The advances and the kerning of `face` at the axis values of `opentype`, from the instance its
+ * `outlines` read, or null where they draw the default instance. Each character and pair reads the
+ * font once. A character the font has no glyph for keeps the face's own advance and kerning, and so
+ * does a font with no kerning to read.
+ */
+function instanceShaping(
+  face: FontMetrics,
+  outlines: SfntOutlines | null | undefined,
+  opentype: OpentypeCoordinates | undefined
+): Pick<FontMetrics, 'getGlyphAdvanceUnits' | 'getKerningAdjustmentUnits'> | null {
+  const instance = opentype?.size ? outlines?.instanceAt?.(opentype) : null;
+  if (!outlines || !instance) return null;
+  const glyphOf = (ch: string): number => outlines.glyphIndex(ch.codePointAt(0)!);
+  const advances = new Map<string, number | null>();
+  const kernings = new Map<string, number>();
+  const { kerningUnits } = instance;
+  return {
+    getGlyphAdvanceUnits: (ch) => {
+      if (!advances.has(ch)) {
+        const glyphIndex = glyphOf(ch);
+        const advance = glyphIndex === 0 ? null : instance.advanceUnits(glyphIndex);
+        advances.set(ch, advance ?? face.getGlyphAdvanceUnits(ch));
+      }
+      return advances.get(ch)!;
+    },
+    getKerningAdjustmentUnits: (a, b) => {
+      const key = `${a}\0${b}`;
+      if (!kernings.has(key)) {
+        const [left, right] = [glyphOf(a), glyphOf(b)];
+        const isRead = kerningUnits && left !== 0 && right !== 0;
+        kernings.set(key, isRead ? kerningUnits(left, right) : face.getKerningAdjustmentUnits(a, b));
+      }
+      return kernings.get(key)!;
+    },
+  };
+}
+
 /**
  * `metrics` with a `FontVariation`'s `embolden`, `skew` and `opentype` set, and the `outlines` its text follows.
  * The wrapper reads every other field through the face, so a live getter stays live. With no variation
  * and no outlines, it is the face itself. Two fonts that share a face and a variation keep
- * their own outlines, each on its own wrapper.
+ * their own outlines, each on its own wrapper. The axis values stay only where the outlines draw
+ * them as an instance other than the default, and the advances then follow the instance.
+ * A variation of a wrapper replaces its variation and keeps its outlines, as a `FontVariation` over
+ * another finds its face at its own values alone (`font.cpp:3120-3131`).
  */
 export function withVariation<Metrics extends FontMetrics>(
   metrics: Metrics,
-  { embolden = 0, skew = 0, opentype, outlines }: GlyphVariation & Pick<FontMetrics, 'outlines'>
+  {
+    embolden = 0,
+    skew = 0,
+    opentype,
+    outlines = metrics.outlines,
+  }: GlyphVariation & Pick<FontMetrics, 'outlines'>
 ): Metrics {
-  if (!outlines && !isGlyphVaried({ embolden, skew }) && !opentype?.size) return metrics;
-  const byVariation = variationsOf(metrics);
-  const key = variationKey({ embolden, skew, opentype });
+  const face = (faceOfWrapper.get(metrics) ?? metrics) as Metrics;
+  const shaping = instanceShaping(face, outlines, opentype);
+  const instance = shaping ? opentype : undefined;
+  if (!outlines && !isGlyphVaried({ embolden, skew, opentype: instance })) return face;
+  const byVariation = variationsOf(face);
+  const key = variationKey({ embolden, skew, opentype: instance });
   let byOutlines = byVariation.get(key);
   if (!byOutlines) byVariation.set(key, (byOutlines = new Map()));
   let wrapped = byOutlines.get(outlines);
-  if (!wrapped)
-    byOutlines.set(
-      outlines,
-      (wrapped = Object.create(metrics, {
-        embolden: { value: embolden },
-        skew: { value: skew },
-        opentype: { value: opentype },
-        ...(outlines !== undefined && { outlines: { value: outlines } }),
-      }))
-    );
+  if (!wrapped) {
+    wrapped = Object.create(face, {
+      embolden: { value: embolden },
+      skew: { value: skew },
+      opentype: { value: instance },
+      ...(outlines !== undefined && { outlines: { value: outlines } }),
+      ...(shaping && {
+        getGlyphAdvanceUnits: { value: shaping.getGlyphAdvanceUnits },
+        getKerningAdjustmentUnits: { value: shaping.getKerningAdjustmentUnits },
+      }),
+    }) as Metrics;
+    byOutlines.set(outlines, wrapped);
+    faceOfWrapper.set(wrapped, face);
+  }
   return wrapped as Metrics;
 }
 

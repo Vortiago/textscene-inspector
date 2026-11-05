@@ -473,6 +473,7 @@ The tests and goldens that read a font file's outlines use these fixture fonts:
 - `scenes/fixtures/fonts/montserrat-extra-bold.otf`: Montserrat Extra Bold, an OpenType-CFF font. Copyright (c) 2011-2015, Julieta Ulanovsky.
 - `scenes/fixtures/fonts/montserrat-semibold-subset.ttf`: a TrueType subset of Montserrat SemiBold. Copyright 2011 The Montserrat Project Authors (https://github.com/JulietaUla/Montserrat).
 - `scenes/fixtures/fonts/recursive-vf-subset.woff2`: a subset of the Recursive variable font, as the Godot demo `gui/bidi_and_font_features` ships it. Copyright 2019 The Recursive Project Authors (github.com/arrowtype/recursive).
+- `scenes/fixtures/fonts/recursive-no-hvar-subset.ttf`: a subset of the same Recursive font for `Hamburgefonsiv`, with its `MONO` and `wght` axes and without `HVAR`, so that its advances follow the `gvar` phantom points. Copyright 2019 The Recursive Project Authors (github.com/arrowtype/recursive).
 - `scenes/fixtures/fonts/cascadia-code-subset.ttf`: a subset of the Cascadia Code variable font, with its `wght` axis, its `gvar`, `cvar`, `avar` and `HVAR` tables and its hinting programs, and with a `post` table so that Chromium accepts it. Copyright (c) 2019 - Present, Microsoft Corporation, with Reserved Font Name 'Cascadia Code'.
 
 Each is licensed under the SIL Open Font License, Version 1.1 (OFL-1.1), whose full text the Open Sans section above holds.

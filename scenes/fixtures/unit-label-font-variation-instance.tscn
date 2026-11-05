@@ -1,0 +1,39 @@
+[gd_scene load_steps=3 format=3]
+
+; The one variable: a `FontVariation` whose `variation_opentype` sets the `wght` axis of a variable
+; TrueType font to 700 (tag 2003265652). The top Label draws the font itself, at its default instance,
+; and the lower Label draws the bold instance, whose `gvar` deltas move the outlines. Both are 56 px.
+; No other Label golden draws a variable font off its defaults.
+
+[ext_resource type="FontFile" path="res://fonts/cascadia-code-subset.ttf" id="1_font"]
+
+[sub_resource type="FontVariation" id="FontVariation_bold"]
+base_font = ExtResource("1_font")
+variation_opentype = {
+2003265652: 700.0
+}
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Default" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 30.0
+offset_right = 1100.0
+offset_bottom = 110.0
+theme_override_fonts/font = ExtResource("1_font")
+theme_override_font_sizes/font_size = 56
+text = "Hamburgefonsiv 0123"
+
+[node name="Bold" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 130.0
+offset_right = 1100.0
+offset_bottom = 210.0
+theme_override_fonts/font = SubResource("FontVariation_bold")
+theme_override_font_sizes/font_size = 56
+text = "Hamburgefonsiv 0123"

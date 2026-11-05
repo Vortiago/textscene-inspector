@@ -104,6 +104,7 @@ export const OUTLINE_TABLE_TAGS: readonly string[] = [
   'name',
   'GSUB',
   'GPOS',
+  'GDEF',
 ];
 
 export interface TableRecord {

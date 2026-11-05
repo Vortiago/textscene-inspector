@@ -15,7 +15,7 @@
 
 import { cmapLookup } from './sfntCmap';
 import type { GlyphContours, GlyphOutlineReader } from './glyphContours';
-import type { GlyphVariation } from './fontMetrics';
+import type { GlyphVariation, OpentypeCoordinates } from './fontMetrics';
 import { cffOutlineReader } from './sfntCff';
 import { isNativelyHinted, type GlyphHinting } from './glyphHinting';
 import { glyphOutlineReader } from './sfntGlyf';
@@ -24,12 +24,27 @@ import { isTrickyFont } from './trickyFont';
 import { openFontContainer } from './fontContainer';
 import { OUTLINE_TABLE_TAGS, type SfntFile } from './sfntTables';
 import { fontInstanceOf, type FontInstance } from './variation/fontInstance';
+import { instanceAdvanceReader } from './variation/instanceAdvances';
+import type { PairKerningReader } from './variation/instanceKerning';
+
+/** A variable font at one instance, as HarfBuzz shapes it, in design units. */
+export interface ShapedInstance {
+  /** A glyph's advance, or null for a glyph FreeType fails to load. */
+  advanceUnits(glyphIndex: number): number | null;
+  /** The `GPOS` kerning of a pair, or null for a font with no `kern` feature to read. */
+  readonly kerningUnits: PairKerningReader | null;
+}
 
 export interface SfntOutlines {
   /** The glyph index `cmap` gives `codePoint`, or 0 for a character the font lacks. */
   glyphIndex(codePoint: number): number;
   /** The contours of a glyph at `fontSizePx`, changed by `variation`, or null for a glyph with no outline. */
   glyphContours(glyphIndex: number, fontSizePx: number, variation?: GlyphVariation): GlyphContours | null;
+  /**
+   * The instance that HarfBuzz shapes at the axis values of `opentype`, or null where they draw the
+   * default instance. Absent for outlines with no variation axes to read.
+   */
+  instanceAt?(opentype: OpentypeCoordinates): ShapedInstance | null;
 }
 
 /** `read`, or `fallback` when a corrupt table puts an offset past the buffer: a `DataView` read throws a `RangeError` there. */
@@ -67,7 +82,16 @@ async function openOutlines(
   const sfnt = await openFontContainer(bytes, OUTLINE_TABLE_TAGS);
   if (!sfnt) return null;
   const outlineOf = isAutoHinted(sfnt) ? await autoHintedReaderOf(sfnt) : await nativeReaderOf(sfnt);
-  return readSfntOutlines(sfnt, outlineOf);
+  return readSfntOutlines(sfnt, outlineOf, await kerningReaderOf(sfnt));
+}
+
+/** The `GPOS` kerning of a variable font, at the coordinates of an instance. Its reader loads on demand. */
+async function kerningReaderOf(
+  sfnt: SfntFile
+): Promise<((normalized: Int32Array) => PairKerningReader) | null> {
+  if (!sfnt.tables.has('GPOS') || !sfnt.tables.has('fvar')) return null;
+  const { instanceKerningReader } = await import('./variation/instanceKerning');
+  return orOnRangeError(() => instanceKerningReader(sfnt), null);
 }
 
 /** The reader of a font's outlines as its own hints place them: TrueType bytecode or CFF hints. */
@@ -93,7 +117,11 @@ function instanceOf(sfnt: SfntFile, variation: GlyphVariation | undefined): Font
   return variation?.opentype?.size ? fontInstanceOf(sfnt, variation.opentype) : null;
 }
 
-function readSfntOutlines(sfnt: SfntFile, outlineOf: GlyphOutlineReader | null): SfntOutlines | null {
+function readSfntOutlines(
+  sfnt: SfntFile,
+  outlineOf: GlyphOutlineReader | null,
+  kerningAt: ((normalized: Int32Array) => PairKerningReader) | null
+): SfntOutlines | null {
   const cmap = sfnt.tables.get('cmap');
   if (!cmap || !outlineOf) return null;
   const lookup = orOnRangeError(() => cmapLookup(sfnt.dv, cmap.offset), null);
@@ -106,5 +134,15 @@ function readSfntOutlines(sfnt: SfntFile, outlineOf: GlyphOutlineReader | null):
         const outline = outlineOf(glyphIndex, fontSizePx, instanceOf(sfnt, variation));
         return outline && variedContours(outline, fontSizePx, variation);
       }, null),
+    instanceAt: (opentype) => {
+      const instance = fontInstanceOf(sfnt, opentype);
+      const advanceOf = instance && instanceAdvanceReader(sfnt, instance);
+      if (!instance || !advanceOf) return null;
+      const kerningOf = kerningAt?.(instance.normalized) ?? null;
+      return {
+        advanceUnits: (glyphIndex) => orOnRangeError(() => advanceOf(glyphIndex), null),
+        kerningUnits: kerningOf && ((left, right) => orOnRangeError(() => kerningOf(left, right), 0)),
+      };
+    },
   };
 }
