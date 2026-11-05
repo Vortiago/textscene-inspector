@@ -211,22 +211,22 @@ describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () =>
 
 describe('textEditDrawnLines', () => {
   it('splits a buffer into its lines', () => {
-    expect(textEditDrawnLines({ text: 'a\nb' })).toEqual({ lines: ['a', 'b'], isPlaceholder: false });
+    expect(textEditDrawnLines('a\nb', undefined)).toEqual({ lines: ['a', 'b'], isPlaceholder: false });
   });
 
   it('shows the placeholder as one paragraph while the buffer is empty (text_edit.cpp:3377-3379)', () => {
-    expect(textEditDrawnLines({ text: '', placeholderText: 'a\nb' })).toEqual({
+    expect(textEditDrawnLines('', 'a\nb')).toEqual({
       lines: ['a\nb'],
       isPlaceholder: true,
     });
   });
 
   it('treats an unset text as empty', () => {
-    expect(textEditDrawnLines({ placeholderText: 'x' }).isPlaceholder).toBe(true);
+    expect(textEditDrawnLines(undefined, 'x').isPlaceholder).toBe(true);
   });
 
   it('keeps a buffer of one newline as real text, since it holds two lines', () => {
-    expect(textEditDrawnLines({ text: '\n', placeholderText: 'x' }).isPlaceholder).toBe(false);
+    expect(textEditDrawnLines('\n', 'x').isPlaceholder).toBe(false);
   });
 });
 

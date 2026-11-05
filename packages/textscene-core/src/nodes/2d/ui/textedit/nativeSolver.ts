@@ -130,12 +130,11 @@ export function textEditTextTheme(
  * `_using_placeholder` (`text_edit.cpp:3377-3379`): a buffer of one empty line draws `placeholder_text` in its
  * place, as one paragraph that breaks at its own newlines. A buffer of `\n` holds two lines and is real text.
  */
-export function textEditDrawnLines(props: Pick<TextEditProperties, 'text' | 'placeholderText'>): {
-  lines: string[];
-  isPlaceholder: boolean;
-} {
-  const text = props.text ?? '';
-  if (text === '') return { lines: [props.placeholderText ?? ''], isPlaceholder: true };
+export function textEditDrawnLines(
+  text: string | undefined,
+  placeholderText: string | undefined
+): { lines: string[]; isPlaceholder: boolean } {
+  if (!text) return { lines: [placeholderText ?? ''], isPlaceholder: true };
   return { lines: text.split('\n'), isPlaceholder: false };
 }
 
@@ -320,7 +319,7 @@ export function textEditMinimumSizeWith(
         );
   const effectiveWrapMode = rectWidthPx === undefined ? 0 : props.wrapMode;
 
-  const { lines, isPlaceholder } = textEditDrawnLines(props);
+  const { lines, isPlaceholder } = textEditDrawnLines(props.text, props.placeholderText);
   const lineLayouts = shapeTextEditLines(lines, {
     fontSizePx,
     fontMetrics,

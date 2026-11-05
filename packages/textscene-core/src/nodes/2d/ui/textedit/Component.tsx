@@ -104,9 +104,7 @@ export function TextEditBody({
 
   // `_using_placeholder` swaps the buffer for `placeholder_text` and its colour whatever `editable` says (`:1350-1352`).
   const { lines, isPlaceholder } = useMemo(
-    () => textEditDrawnLines(props),
-    // `props` is the painter's whole node object: these two fields are its identity for the drawn text.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    () => textEditDrawnLines(props.text, props.placeholderText),
     [props.text, props.placeholderText]
   );
   const { fontSizePx, color: baseFontColor } = textEditTextTheme(
