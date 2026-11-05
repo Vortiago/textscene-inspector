@@ -97,7 +97,7 @@ interface OverrunTrimOptions {
   ellipsisChar?: string;
 }
 
-/** Whether the font has a glyph for `ch`: no advance of its own means none (`FontMetrics.getGlyphAdvanceUnits`), and a `'canvas'` font always has one. */
+/** Whether the font has a glyph for `ch`, as `_font_has_char` (`text_server_adv.cpp:5985`) asks: no advance of its own means none (`FontMetrics.getGlyphAdvanceUnits`), for every font kind. */
 function hasGlyphInk(fontMetrics: FontMetrics, ch: string): boolean {
   return fontMetrics.getGlyphAdvanceUnits(ch) !== null;
 }
