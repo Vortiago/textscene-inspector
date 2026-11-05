@@ -24,14 +24,17 @@ export interface ContentScale {
   factor: number;
 }
 
-/** A window with every `content_scale_*` key unset (`window.h:126-140`): its content drawn 1:1. */
-export const DEFAULT_CONTENT_SCALE: Readonly<ContentScale> = {
+/**
+ * A window with every `content_scale_*` key unset (`window.h:126-140`): its content drawn 1:1.
+ * Frozen, as every window without the keys shares it.
+ */
+export const DEFAULT_CONTENT_SCALE: Readonly<ContentScale> = Object.freeze({
   mode: ContentScaleMode.DISABLED,
   aspect: ContentScaleAspect.IGNORE,
   stretch: ContentScaleStretch.FRACTIONAL,
-  size: { x: 0, y: 0 },
+  size: Object.freeze({ x: 0, y: 0 }),
   factor: 1,
-};
+});
 
 export interface WindowViewportScale {
   /** The target's pixels: `final_size`. */

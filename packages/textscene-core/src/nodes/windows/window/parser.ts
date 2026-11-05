@@ -20,7 +20,8 @@ import { parseThemeOwnerFields } from '../../2d/ui/control/themeOwnerParser';
 import { DEFAULT_CONTENT_SCALE, type ContentScale } from './contentScale';
 import type { WindowProperties } from './types';
 
-const ORIGIN = { x: 0, y: 0 };
+/** Frozen: every parsed window shares it as a default, so no reader may write through it. */
+const ORIGIN = Object.freeze({ x: 0, y: 0 });
 
 /** The size lines in file order, a malformed one skipped as the lenient parse skips any bad value. */
 function sizeWrites(properties: Record<string, string>): WindowSizeWrite[] {
