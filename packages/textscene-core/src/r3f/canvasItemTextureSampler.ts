@@ -184,3 +184,11 @@ export function useCanvasTextureSampler(
     return unchanged ? item : { filter: named.filter ?? item.filter, repeat: named.repeat ?? item.repeat };
   }, [item, filter, repeat]);
 }
+
+/** `useCanvasTextureSampler` over a Node2D's own sampler: what it draws its texture with. */
+export function useNode2DCanvasTextureSampler(
+  props: Pick<Node2DProperties, 'texture_filter' | 'texture_repeat'>,
+  texture: Pick<CanvasTextureData, 'textureFilter' | 'textureRepeat'> | undefined
+): CanvasItemTextureSampler {
+  return useCanvasTextureSampler(useNode2DTextureSampler(props), texture);
+}

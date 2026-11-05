@@ -299,8 +299,7 @@ describe('transform2DHasZeroSkew', () => {
   });
 });
 
-// The expected numbers are Godot 4.6.3's own float `Transform2D`, from
-// /mnt/project-files/cpuparticles2d-995/transform-oracle.gd.
+// The expected numbers are what Godot 4.6.3's own float `Transform2D` prints for these inputs.
 describe('the Transform2D of Godot 4.6.3 in real_t float', () => {
   const parent = storedTransform2D({ a: 0.7, b: 0.3, c: -1.1, d: 0.9, tx: 13.3, ty: -7.1 });
   const local = storedTransform2D({ a: 1.7, b: -0.6, c: 0.45, d: 2.3, tx: -3.9, ty: 5.7 });

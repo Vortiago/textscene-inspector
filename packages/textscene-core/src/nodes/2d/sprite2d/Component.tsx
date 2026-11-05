@@ -5,15 +5,13 @@
  * flips the texture too, as in Godot, where 3D negates the UV.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import { frameSizePx, frameUvWindow } from '../../../r3f/spriteFrame';
-import { useCanvasTextureSampler, useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
-import { CanvasItemSurfaceSource } from '../../../r3f/canvasItemSurface';
-import type { CanvasItemSurface } from '../../../r3f/lighting2d/normalMappedLighting';
+import { useNode2DCanvasTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import { canvasMapProps, useWindowedCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -40,8 +38,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
 
   // With `texture_repeat` Disabled, an overrunning `region_rect` stretches its edge texels,
   // where Sprite3D tiles. A CanvasTexture's own filter and repeat win over the item's.
-  const sampler = useCanvasTextureSampler(useNode2DTextureSampler(props), canvasTexture?.texture);
-  const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
+  const sampler = useNode2DCanvasTextureSampler(props, canvasTexture?.texture);
   // A driven `frame` overrides the authored `frame` and any authored
   // `frame_coords` (in Godot the two are the same value), so the animation wins.
   const frameWindow = useMemo(() => {
@@ -54,37 +51,31 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // Quad size in pixels (1 px = 1 world unit in the 2D canvas).
   const { width, height } = useMemo(() => frameSizePx(reportedSize, props), [reportedSize, props]);
 
-  // A fragment either way, so the item keeps its place when the source mounts.
   return (
-    <>
-      <CanvasItem2D
-        node={node}
-        props={props}
-        surface={surface}
-        body={({ color, opacity }, _material, pixelMaterial) =>
-          // No texture draws nothing, as Godot's draw returns early (`sprite_2d.cpp:159`). The
-          // placeholder is for a texture that is set but never draws.
-          textureMissing ? (
-            <MissingResourcePlaceholder shape="plane" name={node.name} />
-          ) : drawnTexture ? (
-            <QuadMesh
-              texture={drawnTexture}
-              color={color}
-              opacity={opacity}
-              width={width}
-              height={height}
-              props={props}
-              pixelMaterial={pixelMaterial}
-            />
-          ) : null
-        }
-      >
-        {children}
-      </CanvasItem2D>
-      {canvasTexture?.texture.normalTexture && (
-        <CanvasItemSurfaceSource slot={canvasTexture} sampler={sampler} onSurface={setSurface} />
-      )}
-    </>
+    <CanvasItem2D
+      node={node}
+      props={props}
+      canvasTexture={canvasTexture}
+      body={({ color, opacity }, _material, pixelMaterial) =>
+        // No texture draws nothing, as Godot's draw returns early (`sprite_2d.cpp:159`). The
+        // placeholder is for a texture that is set but never draws.
+        textureMissing ? (
+          <MissingResourcePlaceholder shape="plane" name={node.name} />
+        ) : drawnTexture ? (
+          <QuadMesh
+            texture={drawnTexture}
+            color={color}
+            opacity={opacity}
+            width={width}
+            height={height}
+            props={props}
+            pixelMaterial={pixelMaterial}
+          />
+        ) : null
+      }
+    >
+      {children}
+    </CanvasItem2D>
   );
 }
 
