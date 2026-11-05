@@ -13,7 +13,9 @@ SpinBox is a numeric text input over a Range, with prefix, suffix and arrow-butt
 stepping. The previewer draws the internal field's chrome and its formatted value
 (`value` snapped to `step`, wrapped in `prefix`/`suffix`), and the up/down arrow icons.
 An arrow is dimmed once the value sits at its bound without `allow_greater`/
-`allow_lesser`, and both are dimmed once `editable` is false.
+`allow_lesser`, and both are dimmed once `editable` is false. While `localize_numeral_system` is true, its
+default, the value is written in the digits of the project locale. The prefix and suffix stay as written
+(`spin_box.cpp:91-93`).
 
 ## Linting
 

@@ -36,25 +36,18 @@ function isBreakSpace(glyphs: readonly GlyphPlacement[], i: number): boolean {
   return next === undefined || !isWhitespace(next.char.codePointAt(0)!);
 }
 
-interface FitLineOptions {
-  fontSizePx: number;
-  /**
-   * `JUSTIFICATION_CONSTRAIN_ELLIPSIS` (`:5573-5583`): the glyph index the overrun trim cut at.
-   * The fit then spans the glyphs from the start to it, or from it to the end on an RTL line.
-   */
-  trimPos?: number;
-}
-
 /**
  * Port of `TextServer::shaped_text_fit_to_width`, scoped per this module's own doc. The source's
  * `adv_remain` whole-pixel carry (`:5662-5671`) is not ported: `gl.advance = new_advance` runs
  * before `adv_remain += (new_advance - gl.advance)`, so the carry is always zero.
+ * `trimPos` is `JUSTIFICATION_CONSTRAIN_ELLIPSIS` (`:5573-5583`): the glyph index the overrun trim
+ * cut at. The fit then spans the glyphs from the start to it, or from it to the end on an RTL line.
  */
 function fitLineToWidth(
   line: TextLineLayout,
   widthPx: number,
   flags: EnumValue<typeof JustificationFlag>,
-  options: FitLineOptions
+  trimPos?: number
 ): TextLineLayout {
   const glyphs = line.glyphs;
   if (glyphs.length === 0) return line;
@@ -77,9 +70,9 @@ function fitLineToWidth(
     }
   }
 
-  if (options.trimPos !== undefined) {
-    if (line.isRtl) startPos = options.trimPos;
-    else endPos = options.trimPos;
+  if (trimPos !== undefined) {
+    if (line.isRtl) startPos = trimPos;
+    else endPos = trimPos;
   }
 
   let justificationWidthPx = line.widthPx;
@@ -122,8 +115,8 @@ function fitLineToWidth(
     if (zeroedAdvanceAt.has(i)) {
       advance = 0;
     } else if (wordBound && i >= startPos && i <= endPos && g.char === ' ') {
-      // `0.1 * gl.font_size` (`:5659`): the run's own size, else the caller's.
-      advance = Math.max(g.advance + deltaPerSpacePx, 0.1 * (g.fontSizePx ?? options.fontSizePx));
+      // `0.1 * gl.font_size` (`:5659`): the glyph's own size.
+      advance = Math.max(g.advance + deltaPerSpacePx, 0.1 * g.fontSizePx);
     }
     cumulativeShiftPx += advance - g.advance;
     return { ...g, x, advance };
@@ -141,11 +134,10 @@ export function fitTrimmedGlyphsToWidth(
   line: TextLineLayout,
   trim: { trimPos: number; trimmedWidthPx: number },
   widthPx: number,
-  flags: number,
-  fontSizePx: number
+  flags: number
 ): GlyphPlacement[] {
   const lineAtTrimmedWidth = { ...line, widthPx: trim.trimmedWidthPx };
-  return fitLineToWidth(lineAtTrimmedWidth, widthPx, flags, { fontSizePx, trimPos: trim.trimPos }).glyphs;
+  return fitLineToWidth(lineAtTrimmedWidth, widthPx, flags, trim.trimPos).glyphs;
 }
 
 /** `TS->shaped_text_has_visible_chars` reduced to this engine's charset: any glyph whose own character is not whitespace. */
@@ -177,11 +169,10 @@ function justifyToLineIndex(lines: readonly TextLineLayout[], flags: number): nu
 function justifyParagraph(
   lines: readonly TextLineLayout[],
   widthPx: number,
-  flags: number,
-  fontSizePx: number
+  flags: number
 ): TextLineLayout[] {
   const toLine = justifyToLineIndex(lines, flags);
-  return lines.map((line, i) => (i < toLine ? fitLineToWidth(line, widthPx, flags, { fontSizePx }) : line));
+  return lines.map((line, i) => (i < toLine ? fitLineToWidth(line, widthPx, flags) : line));
 }
 
 /**
@@ -192,12 +183,11 @@ function justifyParagraph(
 export function justifyLinesToWidth(
   lines: readonly TextLineLayout[],
   widthPx: number,
-  flags: number,
-  fontSizePx: number
+  flags: number
 ): TextLineLayout[] {
   const fitWidthPx =
     widthPx > 0 ? widthPx : Math.max(0, ...lines.map((line) => shapedTextSizeWidthPx(line.widthPx)));
-  return justifyParagraph(lines, fitWidthPx, flags, fontSizePx);
+  return justifyParagraph(lines, fitWidthPx, flags);
 }
 
 interface JustifyParagraphsOptions {
@@ -205,7 +195,6 @@ interface JustifyParagraphsOptions {
   widthPx: number;
   /** The `JustificationFlag` bits, or those of the paragraph starting at a line index (`_find_jst_flags`). */
   flags: number | ((firstLineIndex: number) => number);
-  fontSizePx: number;
   /** Whether the paragraph starting at this line index has FILL alignment. Undefined fits every paragraph. */
   isFilled?: (firstLineIndex: number) => boolean;
 }
@@ -219,7 +208,7 @@ export function justifyParagraphs(
   lines: readonly TextLineLayout[],
   options: JustifyParagraphsOptions
 ): TextLineLayout[] {
-  const { widthPx, flags, fontSizePx, isFilled = () => true } = options;
+  const { widthPx, flags, isFilled = () => true } = options;
   const justified: TextLineLayout[] = [];
   let first = 0;
   while (first < lines.length) {
@@ -227,7 +216,9 @@ export function justifyParagraphs(
     while (end < lines.length && !startsParagraph(lines, end)) end++;
     if (isFilled(first)) {
       const paragraphFlags = typeof flags === 'function' ? flags(first) : flags;
-      justified.push(...justifyParagraph(lines.slice(first, end), widthPx, paragraphFlags, fontSizePx));
+      // The paragraph's inset narrows the width it fits to (`rich_text_label.cpp:474`).
+      const fitWidthPx = widthPx - (lines[first]!.indentPx ?? 0);
+      justified.push(...justifyParagraph(lines.slice(first, end), fitWidthPx, paragraphFlags));
     } else {
       for (let i = first; i < end; i++) justified.push(lines[i]!);
     }

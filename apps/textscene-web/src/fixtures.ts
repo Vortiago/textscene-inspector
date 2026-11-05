@@ -1248,6 +1248,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Font Fallbacks",
+    "file": "unit-label-font-fallbacks.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Font Variation Bundled Embolden High",
     "file": "unit-label-font-variation-bundled-embolden-high.tscn",
     "category": "Other"
@@ -1260,6 +1265,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Label Font Variation Embolden",
     "file": "unit-label-font-variation-embolden.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Font Variation Instance",
+    "file": "unit-label-font-variation-instance.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Font Variation Kerning",
+    "file": "unit-label-font-variation-kerning.tscn",
     "category": "Other"
   },
   {
@@ -1328,6 +1343,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Visible Characters Astral",
+    "file": "unit-label-visible-characters-astral.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Visible Characters",
     "file": "unit-label-visible-characters.tscn",
     "category": "Other"
@@ -1365,6 +1385,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Label3d Text Direction",
     "file": "unit-label3d-text-direction.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label3d Text Mesh Font Fallbacks",
+    "file": "unit-label3d-text-mesh-font-fallbacks.tscn",
     "category": "Other"
   },
   {
@@ -2847,6 +2872,12 @@ export const fixtures: Fixture[] = [
     "root": "msaa-3d"
   },
   {
+    "name": "Numeral Locale",
+    "file": "numeral-locale/unit-numeral-locale.tscn",
+    "category": "Other",
+    "root": "numeral-locale"
+  },
+  {
     "name": "Label Project Default Font",
     "file": "project-default-font/unit-label-project-default-font.tscn",
     "category": "Other",
@@ -3864,6 +3895,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Font Arrows",
+    "file": "unit-control-font-arrows.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control In Parallax Background",
     "file": "unit-control-in-parallax-background.tscn",
     "category": "Unit - 2D UI Controls"
@@ -4094,6 +4130,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Rich Text Label Font Size Outline",
+    "file": "unit-rich-text-label-font-size-outline.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Rich Text Label Fractional Box",
     "file": "unit-rich-text-label-fractional-box.tscn",
     "category": "Unit - 2D UI Controls"
@@ -4101,6 +4142,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Rich Text Label Hr",
     "file": "unit-rich-text-label-hr.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Lists",
+    "file": "unit-rich-text-label-lists.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Numeral System",
+    "file": "unit-rich-text-label-numeral-system.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

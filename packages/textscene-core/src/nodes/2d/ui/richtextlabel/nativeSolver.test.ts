@@ -22,11 +22,11 @@ import {
   richTextLabelTextTheme,
   styledTextRuns,
   layoutRichTextRuns,
-  richTextUnderlineMetrics,
   underlineRectPx,
   richTextLabelTextureSlots,
   shapeRichText,
   RICH_TEXT_LABEL_UNDERLINE_ALPHA,
+  richTextContentHeightPx,
 } from './nativeSolver';
 import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment, type ParsedImgTag } from './bbcode';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -77,6 +77,7 @@ function textRun(fields: Pick<StyledTextRun, 'text' | 'fontSizePx'> & Partial<St
     italic: false,
     underline: false,
     color: WHITE,
+    outline: { sizePx: 0, color: { r: 0, g: 0, b: 0, a: 1 } },
     alignment: 0,
     bidi: NO_BIDI,
     justificationFlags: PARSED_DEFAULTS.justificationFlags,
@@ -320,7 +321,7 @@ describe(`richTextLabelMinimumSize — resolves this RichTextLabel's own PARAGRA
 
 describe('richTextLabelMinimumSize — the faces of [b] and [i] spans', () => {
   const text = '[b]ABABABAB[/b]';
-  const bareVariation: FontResource = { kind: 'variation', baseFont: null, properties: {} };
+  const bareVariation: FontResource = { kind: 'variation', baseFont: null, fallbacks: [], properties: {} };
 
   function widthOf(overrides: Partial<SolveNode> = {}) {
     const n = {
@@ -340,6 +341,7 @@ describe('richTextLabelMinimumSize — the faces of [b] and [i] spans', () => {
     const emboldened: FontResource = {
       kind: 'variation',
       baseFont: null,
+      fallbacks: [],
       properties: { variation_embolden: '3' },
     };
     // 3 * 16 / 64 = 0.75px more per advance: 84.5 + 6 = 90.5.
@@ -1023,6 +1025,21 @@ describe('shapeRichText — an [img] placeholder', () => {
     ]);
   });
 
+  it('advances by the image width in a face at a variable-font instance', () => {
+    const WGHT_TAG = 0x77676874;
+    const outlines = {
+      glyphIndex: () => 5,
+      advanceAtInstance: () => 999 * 64,
+    } as unknown as FontMetrics['outlines'];
+    const instanced: FontMetrics = {
+      ...OPEN_SANS_FONT_METRICS,
+      opentype: new Map([[WGHT_TAG, 700]]),
+      outlines,
+    };
+    const faces = { ...ALL_FACES, normal: instanced };
+    expect(shapeRuns([bareImageRun(24)], { faces }).lines[0]!.glyphs[0]!.advance).toBe(24);
+  });
+
   it('suppresses kerning on either side of the placeholder', () => {
     const kerned = { ...OPEN_SANS_FONT_METRICS, getKerningAdjustmentUnits: () => 100 };
     const faces = { ...ALL_FACES, normal: kerned };
@@ -1112,6 +1129,16 @@ describe('layoutRichTextRuns', () => {
     expect(placements[1]!.layout.lines[0]!.glyphs.map((g) => g.char)).toEqual(['B', 'O', 'L', 'D']);
   });
 
+  it("gives a run beside a larger one the line's height, so a canvas raster holds the line's ascent", () => {
+    const runs = [
+      textRun({ text: 'small', fontSizePx: FONT_SIZE }),
+      textRun({ text: 'BOLD', bold: true, fontSizePx: FONT_SIZE * 3 }),
+    ];
+    const [small, bold] = layoutRichTextRuns(runs, shapeRuns(runs));
+    // ceil(2189*48/2048) + ceil(600*48/2048) = 52 + 15 at 48 px, against 23 at 16 px.
+    expect([small!.layout.heightPx, bold!.layout.heightPx]).toEqual([67, 67]);
+  });
+
   it("draws each placement in the face its glyphs were shaped in: the run's bold or italics face, not the paragraph's", () => {
     const runs = [
       textRun({ text: 'plain', fontSizePx: FONT_SIZE }),
@@ -1157,7 +1184,7 @@ describe('layoutRichTextRuns', () => {
     }
   });
 
-  it('carries the underline flag through per placement, independent of bold/color', () => {
+  it("carries the paragraph's underline metrics on an underlined placement only", () => {
     const runs = [
       textRun({ text: 'plain', fontSizePx: FONT_SIZE }),
       textRun({ text: 'ULINE', underline: true, fontSizePx: FONT_SIZE }),
@@ -1165,8 +1192,8 @@ describe('layoutRichTextRuns', () => {
     const layout = shape('plainULINE');
     const placements = layoutRichTextRuns(runs, layout);
     expect(placements).toHaveLength(2);
-    expect(placements[0]!.underline).toBe(false);
-    expect(placements[1]!.underline).toBe(true);
+    expect(placements[0]!.underline).toBeNull();
+    expect(placements[1]!.underline).not.toBeNull();
   });
 
   it('a single run whose text WRAPS across two lines produces one placement per line, in its face on both', () => {
@@ -1404,23 +1431,52 @@ describe('layoutRichTextRuns', () => {
   });
 });
 
-describe('richTextUnderlineMetrics', () => {
-  it("is the MAX over EVERY run in the paragraph, not the underlined run's own size — a line's shaped substring inherits the paragraph's upos/uthk verbatim (text_server_adv.cpp:5310-5311), unlike ascent/descent, which ARE recomputed per line", () => {
+describe('the underline metrics of a placement', () => {
+  // -(-100 - 50/2)*size/2048 and 50*size/2048: a paragraph's upos/uthk at 16px and 18px. The
+  // -thickness/2 term is FreeType's top-edge-to-centre conversion (sfobjs.c:1424-1425).
+  const METRICS_16 = { positionPx: 0.9765625, thicknessPx: 0.390625 };
+  const METRICS_18 = { positionPx: 1.0986328125, thicknessPx: 0.439453125 };
+
+  const underlinesOf = (runs: StyledTextRun[]) =>
+    layoutRichTextRuns(runs, shapeRuns(runs)).flatMap((placement) =>
+      placement.underline ? [placement.underline] : []
+    );
+
+  // A line's shaped substring inherits the paragraph's upos/uthk (text_server_adv.cpp:5310-5311),
+  // unlike ascent and descent, which are recomputed per line.
+  it("is the max over every run in the paragraph, not the underlined run's own size", () => {
     const runs = [
       textRun({ text: 'big', bold: true, fontSizePx: 18 }),
       textRun({ text: 'small', underline: true, fontSizePx: 16 }),
     ];
-    // -(-100 - 50/2)*18/2048 and 50*18/2048: the 18px run's, though the 16px
-    // run carries [u]. The -thickness/2 term is FreeType's top-edge-to-centre
-    // conversion (sfobjs.c:1424-1425).
-    expect(richTextUnderlineMetrics(runs)).toEqual({
-      positionPx: 1.0986328125,
-      thicknessPx: 0.439453125,
-    });
+    expect(underlinesOf(runs)).toEqual([METRICS_18]);
   });
 
-  it('is zero for a run-less paragraph (nothing shaped, nothing to take a MAX over — text_server_adv.cpp:4461-4462 initialises both to 0)', () => {
-    expect(richTextUnderlineMetrics([])).toEqual({ positionPx: 0, thicknessPx: 0 });
+  // `upos` and `uthk` belong to each paragraph's own shaped text (`rich_text_label.cpp:1053-1054`).
+  it("takes each paragraph's metrics from that paragraph's runs only", () => {
+    const underlines = underlinesOf([
+      textRun({ text: 'small\n', underline: true, fontSizePx: 16 }),
+      textRun({ text: 'big', underline: true, fontSizePx: 18 }),
+    ]);
+    expect(underlines[0]).toEqual(METRICS_16);
+    expect(underlines.at(-1)).toEqual(METRICS_18);
+  });
+
+  // An `[img]` is an inline object, not a font span, so it adds nothing to the max
+  // (`text_server_adv.cpp:7174-7175` reads only the spans' fonts).
+  it('leaves an [img] run out of the max', () => {
+    const runs = [
+      textRun({ text: 'a', underline: true, fontSizePx: 16 }),
+      textRun({
+        text: IMAGE_OBJECT_CHAR,
+        fontSizePx: 200,
+        image: {
+          spec: { alignment: { imagePoint: 'center', textPoint: 'center' } } as ParsedImgTag,
+          sizePx: { x: 200, y: 200 },
+        },
+      }),
+    ];
+    expect(underlinesOf(runs)[0]).toEqual(METRICS_16);
   });
 });
 
@@ -1430,8 +1486,8 @@ describe('underlineRectPx', () => {
   // -(-100 - 50/2)*18/2048 and 50*18/2048: the same paragraph at 18px.
   const METRICS_18 = { positionPx: 1.0986328125, thicknessPx: 0.439453125 };
   const GLYPHS = [
-    { char: 'u', x: 10, advance: 5, glyph: null },
-    { char: 'l', x: 15, advance: 8, glyph: null },
+    { char: 'u', x: 10, advance: 5, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
+    { char: 'l', x: 15, advance: 8, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
   ];
 
   it(
@@ -1468,8 +1524,15 @@ describe('underlineRectPx', () => {
   it("snaps the x extent the same way — the run's first glyph pen x through its last glyph's pen x + advance, rounded out to the columns the quad's own centres fall in", () => {
     const rect = underlineRectPx(
       [
-        { char: 'u', x: 10.4, advance: 4.8, glyph: null },
-        { char: 'l', x: 15.2, advance: 8, glyph: null },
+        {
+          char: 'u',
+          x: 10.4,
+          advance: 4.8,
+          glyph: null,
+          fontMetrics: OPEN_SANS_FONT_METRICS,
+          fontSizePx: 16,
+        },
+        { char: 'l', x: 15.2, advance: 8, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
       ],
       18,
       METRICS_16
@@ -1757,7 +1820,6 @@ describe('RichTextLabel FILL justification', () => {
     const placements = layoutRichTextRuns(flagged, layout, {
       boxWidthPx,
       boxHeightPx: TALL_BOX_PX,
-      justification: { fontSizePx: FONT_SIZE },
     });
     const widths: number[] = [];
     for (const p of placements) widths[p.lineIndex] = (widths[p.lineIndex] ?? 0) + p.layout.widthPx;
@@ -1827,7 +1889,6 @@ describe('RichTextLabel FILL justification', () => {
     for (const p of layoutRichTextRuns(runs, layout, {
       boxWidthPx: BOX_WIDTH_PX,
       boxHeightPx: TALL_BOX_PX,
-      justification: { fontSizePx: FONT_SIZE },
     })) {
       widths[p.lineIndex] = (widths[p.lineIndex] ?? 0) + p.layout.widthPx;
     }
@@ -1889,9 +1950,19 @@ describe('RichTextLabel paragraph direction', () => {
         .lineOffsetXPx;
     }
 
-    it('starts an RTL LEFT or FILL line at the right edge', () => {
+    it('starts an RTL LEFT line at the right edge', () => {
       expect(offsetX(0, RTL)).toBe(108);
-      expect(offsetX(3, RTL)).toBe(108);
+    });
+
+    // `_shape_line` fits the line to the box (`text_paragraph.cpp:250-253`), so it fills the box from 0.
+    it('fits an RTL FILL line to the box, which starts it at the left edge', () => {
+      expect(offsetX(3, RTL)).toBe(0);
+    });
+
+    // A line with no space has nothing to fit, so FILL keeps the origin LEFT takes.
+    it('starts an RTL FILL line where an RTL LEFT line starts', () => {
+      expect(offsetX(3, RTL, 'Threat')).toBe(offsetX(0, RTL, 'Threat'));
+      expect(offsetX(3, RTL, 'Threat')).toBeGreaterThan(0);
     });
 
     it('leaves an RTL RIGHT line at the left edge', () => {
@@ -1919,5 +1990,403 @@ describe('RichTextLabel paragraph direction', () => {
       [0, 4],
       [1, 4],
     ]);
+  });
+});
+
+// `_shape_substr` takes each line's ascent and descent over the fonts of its glyphs (`text_server_adv.cpp:5486-5487`).
+describe('richTextContentHeightPx — a glyph from a fallback face', () => {
+  it("grows the line to the fallback face's ascent and descent", () => {
+    const tall: FontMetrics = {
+      ...OPEN_SANS_FONT_METRICS,
+      ascent: 4096,
+      descent: 1024,
+      hasGlyph: () => true,
+    };
+    const face: FontMetrics = {
+      ...OPEN_SANS_FONT_METRICS,
+      hasGlyph: (ch) => ch !== '一',
+      fallbacks: [tall],
+    };
+    const run = textRun({ text: 'A一', fontSizePx: 16 });
+    const layout = shapeText(run.text, {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      fontMetrics: face,
+    });
+    // ceil(4096 * 16 / 2048) + ceil(1024 * 16 / 2048) = 32 + 8.
+    expect(richTextContentHeightPx([run], layout)).toBe(40);
+  });
+});
+
+describe('styledTextRuns: [font_size], [outline_size] and [outline_color]', () => {
+  const NORMAL = 18;
+  const FALLBACK = 16;
+  const BLACK = { r: 0, g: 0, b: 0, a: 1 };
+  const RED = { r: 1, g: 0, b: 0, a: 1 };
+
+  function runsOf(
+    text: string,
+    props: Partial<RichTextLabelProperties> = {},
+    overrides?: Partial<SolveNode>
+  ) {
+    return styledTextRuns(
+      node({}, overrides),
+      parsedProps({ text, bbcodeEnabled: true, ...props }),
+      WHITE,
+      NORMAL,
+      FALLBACK
+    );
+  }
+
+  describe('[font_size] (rich_text_label.cpp:6161-6165, :639-641)', () => {
+    it('sizes its text, and the text around it keeps the control size', () => {
+      const runs = runsOf('a[font_size=30]b[/font_size]c');
+      expect(runs.map((run) => run.fontSizePx)).toEqual([NORMAL, 30, NORMAL]);
+    });
+
+    it('beats the size of a [b] it sits in, as `_shape_line` reads the size item after the font item', () => {
+      const [run] = runsOf('[b][font_size=30]x[/font_size][/b]');
+      expect(run!.bold).toBe(true);
+      expect(run!.fontSizePx).toBe(30);
+    });
+
+    it('takes the innermost size', () => {
+      const [run] = runsOf('[font_size=30][font_size=40]x[/font_size][/font_size]');
+      expect(run!.fontSizePx).toBe(40);
+    });
+
+    it.each(['0', '-5', 'wide'])(
+      'keeps the control size for the value %s, as `font_size > 0` gates it',
+      (value) => {
+        const [run] = runsOf(`[font_size=${value}]x[/font_size]`);
+        expect(run!.fontSizePx).toBe(NORMAL);
+      }
+    );
+
+    it('keeps the style size of a [b] for a value of 0', () => {
+      const [run] = runsOf('[b][font_size=0]x[/font_size][/b]');
+      expect(run!.fontSizePx).toBe(FALLBACK);
+    });
+  });
+
+  describe('[outline_size] and [outline_color] (rich_text_label.cpp:3326-3338, :3575-3588, :6154-6159, :6367-6371)', () => {
+    it('draws no outline by default: the theme outline_size is 0 and the colour is black', () => {
+      const [run] = runsOf('x');
+      expect(run!.outline.sizePx).toBe(0);
+      expect(run!.outline.color).toEqual(BLACK);
+    });
+
+    it('sets the size inside the tag only', () => {
+      const runs = runsOf('a[outline_size=3]b[/outline_size]c');
+      expect(runs.map((run) => run.outline.sizePx)).toEqual([0, 3, 0]);
+    });
+
+    it('clamps a negative size to 0 (`push_outline_size(MAX(0, fnt_size))`)', () => {
+      const [run] = runsOf('[outline_size=-4]x[/outline_size]', {}, { constants: { outline_size: 2 } });
+      expect(run!.outline.sizePx).toBe(0);
+    });
+
+    it('starts from the theme outline_size and font_outline_color', () => {
+      const [run] = runsOf('x', {}, { constants: { outline_size: 2 }, colors: { font_outline_color: RED } });
+      expect(run!.outline.sizePx).toBe(2);
+      expect(run!.outline.color).toEqual(RED);
+    });
+
+    it('sets the colour inside the tag, innermost first', () => {
+      const runs = runsOf('[outline_color=red]a[outline_color=#00ff00]b[/outline_color]c[/outline_color]d');
+      expect(runs.map((run) => run.outline.color)).toEqual([RED, { r: 0, g: 1, b: 0, a: 1 }, RED, BLACK]);
+    });
+
+    it('falls back to the control default colour for a value that is not a colour (`Color::from_string(value, default_color)`)', () => {
+      const [run] = runsOf('[outline_color=nonsense]x[/outline_color]');
+      expect(run!.outline.color).toEqual(WHITE);
+    });
+  });
+});
+
+describe('richTextLabelMinimumSize: [font_size]', () => {
+  it('grows the line to the pitch at the tag size', () => {
+    const height = (text: string) =>
+      richTextLabelMinimumSize(node({ fitContent: true, autowrapMode: 0, bbcodeEnabled: true, text }), ctx())
+        .y;
+    // ceil(2189*32/2048) + ceil(600*32/2048) = 35 + 10 against 23 at 16 px.
+    expect(height('A')).toBe(OWN_LINE_PITCH);
+    expect(height('[font_size=32]A[/font_size]')).toBe(45);
+  });
+});
+
+// `rich_text_label.cpp:196-373,1017-1039,3407-3460`. OpenSans_SemiBold at 16 px, worked by hand from
+// the hmtx advances: ' ' 532/2048 = 4.156, '•' 770 = 6.016, '1' 1171 = 9.148, '.' 561 = 4.383. A marker is
+// as wide as its ceiled pen advance, and a margin is `int(tab_size * 4.156)` = 16.
+describe('RichTextLabel lists and indents', () => {
+  const BOX_WIDTH_PX = 160;
+  const MARGIN_PX = 16;
+  const BULLET_MARKER_PX = 11;
+
+  function listPlacements(text: string, props: Partial<RichTextLabelProperties> = {}) {
+    const label = { text, bbcodeEnabled: true, ...props } as RichTextLabelProperties;
+    const runs = styledTextRuns(node(label), label, WHITE, FONT_SIZE, FONT_SIZE, BOX_WIDTH_PX);
+    const layout = shapeRichText(runs, resolveRichTextFaces(node(label), runs), {
+      fontSizePx: FONT_SIZE,
+      boxWidthPx: BOX_WIDTH_PX,
+      autowrapMode: AutowrapMode.AUTOWRAP_WORD_SMART,
+      tabSize: props.tabSize,
+      localizeNumeralSystem: props.localizeNumeralSystem,
+    });
+    return layoutRichTextRuns(runs, layout, { boxWidthPx: BOX_WIDTH_PX, boxHeightPx: TALL_BOX_PX });
+  }
+
+  /** The text of each placement with its left offset, the marker as `<marker>`. */
+  function textAndOffset(placements: ReturnType<typeof listPlacements>) {
+    return placements.map((p) => [p.layout.lines[0]!.text.replace('​', ''), p.lineOffsetXPx]);
+  }
+
+  describe('the marker takes the size and outline of its item (`:342-358`, `:1020-1021`)', () => {
+    const markerOf = (text: string) => listPlacements(text)[0]!;
+
+    it('takes the outermost [font_size] around the item', () => {
+      const marker = markerOf('[ul][font_size=30]a[/font_size][/ul]');
+      expect(marker.fontSizePx).toBe(30);
+      expect(markerOf('[font_size=24][ul][font_size=30]a[/font_size][/ul][/font_size]').fontSizePx).toBe(24);
+    });
+
+    it('widens the inset to the marker at that size', () => {
+      const plainOffset = listPlacements('[ul]a[/ul]')[1]!.lineOffsetXPx;
+      const sizedOffset = listPlacements('[ul][font_size=32]a[/font_size][/ul]')[1]!.lineOffsetXPx;
+      expect(sizedOffset).toBeGreaterThan(plainOffset);
+    });
+
+    it('takes the outline size and colour of its item, the outermost first', () => {
+      const marker = markerOf('[ul][outline_size=3][outline_color=red]a[/outline_color][/outline_size][/ul]');
+      expect(marker.outline).toEqual({ sizePx: 3, color: { r: 1, g: 0, b: 0, a: 1 } });
+    });
+
+    it.each(['0', '-7'])(
+      'draws no marker at a [font_size] of %s, and adds no width (`item_font_size != -1`)',
+      (value) => {
+        const placements = listPlacements(`[ul][font_size=${value}]a[/font_size][/ul]`);
+        expect(textAndOffset(placements).slice(0, 2)).toEqual([
+          ['', MARGIN_PX],
+          ['a', MARGIN_PX],
+        ]);
+      }
+    );
+
+    it('keeps the font size for a [font_size] of -1, which `item_font_size` uses for none', () => {
+      expect(markerOf('[ul][font_size=-1]a[/font_size][/ul]').fontSizePx).toBe(FONT_SIZE);
+    });
+
+    it('has no outline where its item has none, and the colour falls to the base colour', () => {
+      expect(markerOf('[ul]a[/ul]').outline).toEqual({ sizePx: 0, color: WHITE });
+    });
+
+    it('takes the formatting opened at the start of an empty item', () => {
+      const [marker] = listPlacements(
+        '[ul][font_size=30][outline_size=2]\nb[/outline_size][/font_size][/ul]'
+      );
+      expect([marker!.fontSizePx, marker!.outline.sizePx]).toEqual([30, 2]);
+    });
+  });
+
+  it('insets an [indent] line by tab_size spaces and draws no marker', () => {
+    expect(textAndOffset(listPlacements('[indent]a[/indent]'))).toEqual([['a', MARGIN_PX]]);
+  });
+
+  it('adds the margin of each nested [indent], summed before it truncates (`_find_margin` returns an int)', () => {
+    // The outer [indent] holds a line of no height, which draws nothing.
+    expect(textAndOffset(listPlacements('[indent][indent]a[/indent][/indent]'))).toEqual([['a', 33]]);
+  });
+
+  it('follows tab_size, and keeps one pixel for none', () => {
+    expect(textAndOffset(listPlacements('[indent]a[/indent]', { tabSize: 2 }))).toEqual([['a', 8]]);
+    expect(textAndOffset(listPlacements('[indent]a[/indent]', { tabSize: 0 }))).toEqual([['a', 1]]);
+  });
+
+  it('draws the bullet right-aligned in the inset, and the text after it', () => {
+    expect(textAndOffset(listPlacements('[ul]a[/ul]'))).toEqual([
+      ['• ', MARGIN_PX],
+      ['a', MARGIN_PX + BULLET_MARKER_PX],
+    ]);
+  });
+
+  it('draws the [ul bullet=...] option as the bullet', () => {
+    expect(textAndOffset(listPlacements('[ul bullet=*]a[/ul]'))[0]![0]).toBe('* ');
+  });
+
+  it('draws a marker for an empty item, which keeps its line', () => {
+    const placements = listPlacements('[ul]a\n\nb[/ul]');
+    expect(placements.filter((p) => p.layout.lines[0]!.text === '• ')).toHaveLength(3);
+  });
+
+  it('wraps an item at the box width less its inset', () => {
+    const placements = listPlacements('[ul]aaaaaaaa bbbbbbbb cccccccc dddddddd[/ul]');
+    const lines = placements.filter((p) => p.layout.lines[0]!.text !== '• ');
+    expect(lines.length).toBeGreaterThan(1);
+    for (const line of lines) {
+      expect(line.lineOffsetXPx + line.layout.widthPx).toBeLessThanOrEqual(BOX_WIDTH_PX);
+    }
+    expect(new Set(lines.map((p) => p.lineOffsetXPx))).toEqual(new Set([MARGIN_PX + BULLET_MARKER_PX]));
+  });
+
+  it('draws the marker on the first line of a wrapped item only', () => {
+    const placements = listPlacements('[ul]aaaaaaaa bbbbbbbb cccccccc dddddddd[/ul]');
+    expect(placements.filter((p) => p.layout.lines[0]!.text === '• ')).toHaveLength(1);
+  });
+
+  it.each([
+    ['[ol]a\nb\nc\nd[/ol]', ['1. ', '2. ', '3. ', '4. ']],
+    ['[ol type=1]a\nb[/ol]', ['1. ', '2. ']],
+    ['[ol type=a]a\nb\nc[/ol]', ['a. ', 'b. ', 'c. ']],
+    ['[ol type=A]a\nb[/ol]', ['A. ', 'B. ']],
+    ['[ol type=i]a\nb\nc\nd[/ol]', ['i. ', 'ii. ', 'iii. ', 'iv. ']],
+    ['[ol type=I]a\nb\nc\nd[/ol]', ['I. ', 'II. ', 'III. ', 'IV. ']],
+  ])('numbers %j as %j', (source, markers) => {
+    const drawn = listPlacements(source)
+      .map((p) => p.layout.lines[0]!.text)
+      .filter((text) => text.endsWith('. '));
+    expect(drawn).toEqual(markers);
+  });
+
+  describe('with localize_numeral_system', () => {
+    const markersOf = (source: string, props: Partial<RichTextLabelProperties>) =>
+      listPlacements(source, props)
+        .map((p) => p.layout.lines[0]!.text)
+        .filter((text) => text.endsWith('. ') || text.endsWith('.'));
+
+    it('writes the numbers of an [ol] in the digits of the label language (`_get_prefix`, `:255-258`)', () => {
+      const props = { localizeNumeralSystem: true, language: 'ar' };
+      expect(markersOf('[ol]a\nb\nc[/ol]', props)).toEqual(['١. ', '٢. ', '٣. ']);
+    });
+
+    it('writes the digits of a [lang] tag over the label language', () => {
+      const props = { localizeNumeralSystem: true, language: 'ar' };
+      expect(markersOf('[lang=fa][ol]a\nb[/ol][/lang]', props)).toEqual(['۱. ', '۲. ']);
+    });
+
+    it('writes every digit of a number past nine', () => {
+      const props = { localizeNumeralSystem: true, language: 'fa' };
+      expect(markersOf('[ol]a\nb\nc\nd\ne\nf\ng\nh\ni\nj[/ol]', props).at(-1)).toBe('۱۰. ');
+    });
+
+    it('writes each number of a nested [ol] in the digits', () => {
+      const props = { localizeNumeralSystem: true, language: 'ar' };
+      expect(markersOf('[ol]a\n[ol]b[/ol][/ol]', props)).toEqual(['١. ', '١.١. ']);
+    });
+
+    it('leaves a letter or roman numeral as it is', () => {
+      const props = { localizeNumeralSystem: true, language: 'ar' };
+      expect(markersOf('[ol type=a]a\nb[/ol]', props)).toEqual(['a. ', 'b. ']);
+      expect(markersOf('[ol type=I]a\nb[/ol]', props)).toEqual(['I. ', 'II. ']);
+    });
+
+    it('writes the digits of the language by default, as `localize_numeral_system` is on (`control.h:293`)', () => {
+      expect(markersOf('[ol]a\nb[/ol]', { language: 'ar' })).toEqual(['١. ', '٢. ']);
+    });
+
+    it('writes ASCII digits when the property is off', () => {
+      expect(markersOf('[ol]a\nb[/ol]', { localizeNumeralSystem: false, language: 'ar' })).toEqual([
+        '1. ',
+        '2. ',
+      ]);
+    });
+
+    it('writes ASCII digits for a language with no number system', () => {
+      expect(markersOf('[ol]a\nb[/ol]', { localizeNumeralSystem: true, language: 'en' })).toEqual([
+        '1. ',
+        '2. ',
+      ]);
+    });
+  });
+
+  it('writes the marker of a nested list as the outer number, a dot and the inner number', () => {
+    const drawn = listPlacements('[ol]a\n[ol type=a]b\nc[/ol]\nd[/ol]')
+      .map((p) => p.layout.lines[0]!.text)
+      .filter((text) => text.endsWith('. '));
+    expect(drawn).toEqual(['1. ', '1.a. ', '1.b. ', '2. ']);
+  });
+
+  it('draws a bullet in a list nested in a numbered one, and stops the number at a bullet', () => {
+    const drawn = listPlacements('[ol]a\n[ul]b[/ul][/ol]')
+      .map((p) => p.layout.lines[0]!.text)
+      .filter((text) => text.endsWith(' ') && !text.includes('​'));
+    expect(drawn).toEqual(['1. ', '• ']);
+  });
+
+  it('sizes every marker of a list to its widest', () => {
+    const [a, b] = listPlacements('[ol type=i]a\nb\nc\nd[/ol]').filter((p) =>
+      p.layout.lines[0]!.text.endsWith('. ')
+    );
+    // 'i. ' is narrower than 'ii. ', yet each ends at the text, whose ceiled width is its own.
+    const rightEdge = (marker: typeof a) =>
+      marker!.lineOffsetXPx + Math.ceil(marker!.layout.lines[0]!.widthPx);
+    expect(rightEdge(a)).toBe(rightEdge(b));
+  });
+
+  it('draws the marker in the bold face of a bold item', () => {
+    const plain = listPlacements('[ul]a[/ul]')[0]!;
+    const bold = listPlacements('[ul][b]a[/b][/ul]')[0]!;
+    expect(bold.layout.lines[0]!.text).toBe('• ');
+    expect(bold.layout.fontMetrics).not.toBe(plain.layout.fontMetrics);
+  });
+
+  it('colours the marker with the outermost colour of its item (`:342-349`)', () => {
+    const [marker] = listPlacements('[ul][color=red][color=blue]a[/color][/color][/ul]');
+    expect(marker!.color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+  });
+
+  it('colours the marker of an empty item with the colour opened and closed at its start (`:312-321`)', () => {
+    const drawn = listPlacements('[ul]a\n[color=blue][/color]\n[/ul]').filter(
+      (p) => p.layout.lines[0]!.text === '• '
+    );
+    expect(drawn.map((p) => p.color)).toEqual([WHITE, { r: 0, g: 0, b: 1, a: 1 }]);
+  });
+
+  it('draws no marker and no inset on the first line when a styling tag opens it (`:4096-4103`)', () => {
+    const drawn = textAndOffset(listPlacements('[color=red][ul]a\nb[/ul][/color]'));
+    expect(drawn).toEqual([
+      ['a', 0],
+      ['b', MARGIN_PX],
+    ]);
+  });
+
+  it('draws the marker at the line end under right-to-left, and the text after the inset', () => {
+    const placements = listPlacements('[ul]a[/ul]', { textDirection: 2 });
+    const [marker, text] = placements;
+    expect(text!.lineOffsetXPx).toBe(
+      BOX_WIDTH_PX - MARGIN_PX - BULLET_MARKER_PX - Math.ceil(text!.layout.widthPx)
+    );
+    expect(marker!.lineOffsetXPx).toBe(text!.lineOffsetXPx + Math.ceil(text!.layout.widthPx));
+  });
+});
+
+describe('richTextLabelMinimumSize height of a final line break', () => {
+  const heightOf = (text: string) =>
+    richTextLabelMinimumSize(node({ text, bbcodeEnabled: true, fitContent: true, autowrapMode: 0 }), ctx()).y;
+
+  // `get_content_height` measured in Godot 4.6.3: the line after a final `\n` holds no item, so it has no height.
+  it('gives `a\n` the height of one line', () => {
+    expect(heightOf('a\n')).toBe(heightOf('a'));
+  });
+
+  it('keeps the height of a blank line between two others', () => {
+    expect(heightOf('a\n\nb')).toBe(3 * heightOf('a'));
+  });
+
+  it('gives a list of two items the height of two lines, as each item ends in a `\n`', () => {
+    expect(heightOf('[ul]a\nb[/ul]')).toBe(2 * heightOf('a'));
+  });
+
+  it('gives the empty first line of a list that a paragraph tag follows no height', () => {
+    expect(heightOf('[ul][center]one\ntwo[/center][/ul]')).toBe(2 * heightOf('a'));
+  });
+});
+
+describe('richTextLabelMinimumSize with a list', () => {
+  it('counts the inset and the widest marker in the content width (`:7513-7518`)', () => {
+    const props = { text: '[ul]a[/ul]', bbcodeEnabled: true, fitContent: true, autowrapMode: 0 };
+    // 16 margin + 11 marker + 'a' ceiled to 10, as `get_content_width` truncates the sum into an int.
+    expect(richTextLabelMinimumSize(node(props), ctx()).x).toBe(37);
   });
 });

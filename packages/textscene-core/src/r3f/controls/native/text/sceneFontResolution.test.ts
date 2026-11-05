@@ -5,6 +5,7 @@ import {
   BUNDLED_FACE,
   FACELESS_FONT,
   NO_FACE,
+  fallbackChain,
   findDrawnFace,
   fontGeneratesMipmaps,
   fontVariationOpentype,
@@ -13,9 +14,10 @@ import {
 import { fontResourceFromBitmap } from '../../../../resources/fonts/font/loadFont';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 
-const variationOver = (baseFont: FontResource | null): FontResource => ({
+const variationOver = (baseFont: FontResource | null, fallbacks: FontResource[] = []): FontResource => ({
   kind: 'variation',
   baseFont,
+  fallbacks,
   properties: {},
 });
 
@@ -79,6 +81,7 @@ describe('fontVariationSkew', () => {
   const variation = (properties: Record<string, string>): FontResource => ({
     kind: 'variation',
     baseFont: null,
+    fallbacks: [],
     properties,
   });
 
@@ -103,6 +106,7 @@ describe('fontVariationOpentype', () => {
   const variation = (properties: Record<string, string>): FontResource => ({
     kind: 'variation',
     baseFont: null,
+    fallbacks: [],
     properties,
   });
 
@@ -145,13 +149,20 @@ describe('fontGeneratesMipmaps', () => {
   });
 
   it('is the generate_mipmaps of the FontFile a FontVariation wraps', () => {
-    const variation: FontResource = { kind: 'variation', baseFont: withMipmaps('true'), properties: {} };
+    const variation: FontResource = {
+      kind: 'variation',
+      baseFont: withMipmaps('true'),
+      fallbacks: [],
+      properties: {},
+    };
 
     expect(fontGeneratesMipmaps(variation)).toBe(true);
   });
 
   it('is undefined for a FontVariation over the bundled font', () => {
-    expect(fontGeneratesMipmaps({ kind: 'variation', baseFont: null, properties: {} })).toBeUndefined();
+    expect(
+      fontGeneratesMipmaps({ kind: 'variation', baseFont: null, fallbacks: [], properties: {} })
+    ).toBeUndefined();
   });
 
   it('is the generate_mipmaps of the FontFile behind a bytes-less wrapper', () => {
@@ -164,5 +175,46 @@ describe('fontGeneratesMipmaps', () => {
     const system: FontResource = { ...systemFont(), properties: { generate_mipmaps: 'true' } };
 
     expect(fontGeneratesMipmaps(system)).toBeUndefined();
+  });
+});
+
+// `Font::_update_rids` (`font.cpp:104-123`) and its FontVariation override (`:2926-2945`).
+describe('fallbackChain', () => {
+  const leaf = () => fontFile(new ArrayBuffer(4));
+
+  it('is the font, then each fallback and its own fallbacks, depth first', () => {
+    const [b, d, e] = [leaf(), leaf(), leaf()];
+    const c = fontFile(new ArrayBuffer(4), [d]);
+    const font = fontFile(new ArrayBuffer(4), [b, c, e]);
+    expect(fallbackChain(font)).toEqual([font, b, c, d, e]);
+  });
+
+  it('passes a font file with no glyphs, which has no face of its own', () => {
+    const real = leaf();
+    expect(fallbackChain(fontFile(undefined, [real]))).toEqual([real]);
+  });
+
+  it("takes the base's fallbacks for a FontVariation with none of its own", () => {
+    const cjk = leaf();
+    const variation = variationOver(fontFile(new ArrayBuffer(4), [cjk]));
+    expect(fallbackChain(variation)).toEqual([variation, cjk]);
+  });
+
+  it("keeps a FontVariation's own fallbacks in place of its base's", () => {
+    const [own, cjk] = [leaf(), leaf()];
+    const variation = variationOver(fontFile(new ArrayBuffer(4), [cjk]), [own]);
+    expect(fallbackChain(variation)).toEqual([variation, own]);
+  });
+
+  it("reads no base's fallbacks for a FontVariation that is itself a fallback", () => {
+    const nested = variationOver(fontFile(new ArrayBuffer(4), [leaf()]));
+    const font = fontFile(new ArrayBuffer(4), [nested]);
+    expect(fallbackChain(font)).toEqual([font, nested]);
+  });
+
+  it('keeps a FontVariation over the bundled font, which has a face', () => {
+    const hebrew = leaf();
+    const variation = variationOver(null, [hebrew]);
+    expect(fallbackChain(variation)).toEqual([variation, hebrew]);
   });
 });

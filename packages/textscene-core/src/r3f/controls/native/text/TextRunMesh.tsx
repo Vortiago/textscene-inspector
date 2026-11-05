@@ -58,7 +58,7 @@ import { useDisposeOnRelease } from '../../../useDisposeOnRelease';
 import { useNearestAnisotropy } from '../../../nearestAnisotropy';
 
 /** One rectangle of a hex-code box in local Godot px, +Y down, the space of `buildGlyphQuadArrays`' `topPx` before the Y negation. */
-export interface HexCodeBoxAbsoluteRect {
+interface HexCodeBoxAbsoluteRect {
   x: number;
   y: number;
   w: number;

@@ -77,6 +77,23 @@ describe('createFontProcessor on a BMFont', () => {
     expect(((await loaded) as FontFileResource).bitmap?.scaleMode).toBe(1);
   });
 
+  it("loads the font's `fallbacks` import param as its fallbacks (`resource_importer_bmfont.cpp:98`)", async () => {
+    const fallbackBytes = new ArrayBuffer(16);
+    const { processor, eventBus } = setup({
+      [FNT_PATH]: textBytes(),
+      [PAGE_PATH]: arrayBufferOf(png(6)),
+      [`${FNT_PATH}.import`]:
+        '[remap]\n\nimporter="font_data_bmfont"\n\n[params]\n\nfallbacks=[Resource("res://fonts/wide.ttf")]\n',
+      'res://fonts/wide.ttf': fallbackBytes,
+    });
+
+    const loaded = eventBus.once<FontResource>('font', 'loaded', FNT_PATH, 2000);
+    processor.request(FNT_PATH);
+
+    const fallback = ((await loaded) as FontFileResource).fallbacks[0] as FontFileResource | undefined;
+    expect(fallback?.bytes).toBe(fallbackBytes);
+  });
+
   it('fails the font when its page file is missing', async () => {
     const { processor, eventBus } = setup({ [FNT_PATH]: textBytes() });
 

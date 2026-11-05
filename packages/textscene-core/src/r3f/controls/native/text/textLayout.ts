@@ -22,6 +22,7 @@ import {
   getFontGlyphAdvancePx,
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
+  fallbackChainOf,
   type FontMetrics,
 } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
@@ -89,6 +90,12 @@ export interface ShapeTextOptions {
   paragraphBidiAt?: (
     paragraphStart: number
   ) => Partial<Pick<ShapeTextOptions, 'direction' | 'language' | 'bidiOverride'>>;
+  /**
+   * The left inset of each paragraph, px, keyed by the source index it starts at: RichTextLabel's
+   * margin and list marker (`l.indent`, `rich_text_label.cpp:472`). A paragraph wraps at `boxWidthPx` less its inset
+   * (`:474`), and its lines carry it as `indentPx`. Undefined or 0 insets nothing.
+   */
+  paragraphIndentPx?: (paragraphStart: number) => number;
   /**
    * The theme `line_spacing`, px. Required, because it is a per-control constant: Label 3
    * (`labelEffectiveTextTheme`), Button-family and LineEdit 0, RichTextLabel `line_separation` 0
@@ -172,10 +179,10 @@ export interface GlyphPlacement {
   controlCodepoint?: number;
   /** How far the embolden grows this glyph's outline at its own size, px. Absent for a glyph with none. */
   emboldenGrowthPx?: number;
-  /** This glyph's own size, px: the base of `fitLineToWidth`'s space-shrink floor, `gl.font_size` in Godot (`text_server_adv.cpp:5659`). Absent on an ellipsis glyph `textOverrun` appends. */
-  fontSizePx?: number;
-  /** The face `shapeText` shaped this glyph in. Absent on an ellipsis glyph `textOverrun` appends, which takes the layout's. */
-  fontMetrics?: FontMetrics;
+  /** This glyph's own size, px, `gl.font_size` in Godot: it scales the space-shrink floor of `fitLineToWidth` (`text_server_adv.cpp:5659`) and the measured ink. */
+  fontSizePx: number;
+  /** The face of the **Fallback chain** this glyph draws in. */
+  fontMetrics: FontMetrics;
 }
 
 export interface TextLineLayout {
@@ -197,6 +204,8 @@ export interface TextLineLayout {
    * Label hides an ellipsis by it, as the ellipsis glyph has no source character of its own.
    */
   paragraphStart?: number;
+  /** The paragraph's left inset, px, from `paragraphIndentPx`. Absent for none. */
+  indentPx?: number;
   /**
    * Whether this line's paragraph resolved right-to-left: `shaped_text_get_inferred_direction() ==
    * DIRECTION_RTL`. `shapeText` sets it. A painter's line rebuilt from part of one leaves it out.
@@ -228,6 +237,8 @@ export function shapedTextSizeWidthPx(widthPx: number): number {
 }
 
 export interface TextLayoutResult {
+  /** The text the lines were shaped from, after `uppercase`. A glyph's `sourceIndex` is a UTF-16 offset into it. */
+  shapedText: string;
   lines: TextLineLayout[];
   /** `getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx)`, one pitch for every line. */
   linePitchPx: number;
@@ -257,19 +268,22 @@ export function infersRtl(layout: TextLayoutResult | null): boolean {
  * Re-wraps one shaped line as a one-line result drawn from y = 0; the caller's `<group>` supplies
  * the cumulative Y. It bypasses `shapeText`, so it echoes the parent's `fontMetrics` and baseline.
  * Override `baselineOffsetPx` and `fontMetrics` for a RichTextLabel `[b]`/`[i]` run shaped at its own
- * size, in its own face.
+ * size, in its own face. Override `heightPx` where the line is taller than the parent's pitch, so a
+ * canvas raster holds the line's ascent. `linePitchPx` stays the parent's.
  */
 export function soloLineLayout(
   line: TextLineLayout,
   parent: TextLayoutResult,
   baselineOffsetPx: number = parent.baselineOffsetPx,
-  fontMetrics: FontMetrics = parent.fontMetrics
+  fontMetrics: FontMetrics = parent.fontMetrics,
+  heightPx: number = parent.linePitchPx
 ): TextLayoutResult {
   return {
+    shapedText: parent.shapedText,
     lines: [line],
     linePitchPx: parent.linePitchPx,
     widthPx: line.widthPx,
-    heightPx: parent.linePitchPx,
+    heightPx,
     baselineOffsetPx,
     fontMetrics,
   };
@@ -361,21 +375,28 @@ interface BreakGlyph {
  */
 interface RunStyle {
   sizes: readonly number[];
+  /** The face each character draws in: its span's face, or a face of that face's **Fallback chain**. */
   faces: readonly FontMetrics[];
+  /** The face each character's span asks for, whose run Godot shapes first (`text_server_adv.cpp:7011`). */
+  spanFaces: readonly FontMetrics[];
   /** The bidi embedding level of each character: each level run is its own HarfBuzz run (`text_server_adv.cpp:7293-7330`). */
   levels: Uint8Array;
   /** The bidi override range of each character, -1 for none: each range runs its own bidi pass and runs (`:7266`). */
   rangeIds: Int32Array;
 }
 
-/** Whether character `i` starts a run: its size, face, bidi level or override range differs from the character before it. */
+/** Whether character `i`, past the first, starts a run: its size, face, bidi level or override range differs from the character before it. */
 function startsNewRun(style: RunStyle, i: number): boolean {
+  return style.faces[i] !== style.faces[i - 1] || startsNewSpanRun(style, i);
+}
+
+/** Whether character `i`, past the first, starts a run of its span's face, which a glyph from the **Fallback chain** does not break. */
+function startsNewSpanRun(style: RunStyle, i: number): boolean {
   return (
-    i > 0 &&
-    (style.sizes[i] !== style.sizes[i - 1] ||
-      style.faces[i] !== style.faces[i - 1] ||
-      style.levels[i] !== style.levels[i - 1] ||
-      style.rangeIds[i] !== style.rangeIds[i - 1])
+    style.sizes[i] !== style.sizes[i - 1] ||
+    style.spanFaces[i] !== style.spanFaces[i - 1] ||
+    style.levels[i] !== style.levels[i - 1] ||
+    style.rangeIds[i] !== style.rangeIds[i - 1]
   );
 }
 
@@ -384,12 +405,12 @@ function isRtlRun(style: RunStyle, i: number): boolean {
   return style.levels[i]! % 2 === 1;
 }
 
-/** The `[start, end)` of each run of `length` characters, in logical order. */
-function runRanges(style: RunStyle, length: number): Array<[number, number]> {
+/** The `[start, end)` of each run of its span's face over `length` characters, in logical order. */
+function spanRunRanges(style: RunStyle, length: number): Array<[number, number]> {
   const ranges: Array<[number, number]> = [];
   let start = 0;
   for (let i = 1; i <= length; i++) {
-    if (i === length || startsNewRun(style, i)) {
+    if (i === length || startsNewSpanRun(style, i)) {
       ranges.push([start, i]);
       start = i;
     }
@@ -429,9 +450,63 @@ function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: 
   return getFontKerningAdjustmentPx(metrics, a, b, fontSizePx);
 }
 
-/** Whether `face` is a BMFont with no glyph for `ch`, a tab aside: Godot then draws `ch` as a hex-code box. */
+/**
+ * A character HarfBuzz never leaves invalid without a glyph: a space, a control, a break, a
+ * surrogate, an unassigned code point (`!u_isgraph`) or a default ignorable it hides
+ * (`text_server_adv.cpp:7116`).
+ */
+const KEEPS_ITS_FACE = /^[\p{Cc}\p{Cn}\p{Cs}\p{Zl}\p{Zp}\p{Zs}\p{Default_Ignorable_Code_Point}]/u;
+
+/**
+ * Written only by `glyphFaces`, on the first paragraph that needs a **Fallback chain**: most scenes
+ * have none. Never cleared.
+ */
+let graphemes: Intl.Segmenter | undefined;
+
+/**
+ * The face each character of a paragraph draws in. Godot marks a grapheme cluster valid only when
+ * every glyph of it is, and shapes each run of invalid clusters again in the next font
+ * (`text_server_adv.cpp:7119-7170`). So a cluster draws whole in the first face of its span's
+ * **Fallback chain** that has all of it, and stays in the span's face where none has.
+ */
+function glyphFaces(
+  text: string,
+  spanFaces: readonly FontMetrics[],
+  chars: ArrayLike<string>
+): readonly FontMetrics[] {
+  // Most paragraphs draw each character in its span face and need no segmenting, which costs 21 µs per 225 characters.
+  if (spanFaces.every((face, i) => drawsCluster(face, chars, i, i + 1))) return spanFaces;
+  const faces: FontMetrics[] = [];
+  graphemes ??= new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+  for (const { index, segment } of graphemes.segment(text)) {
+    const end = index + segment.length;
+    // A span boundary splits a cluster, as Godot shapes each span on its own.
+    for (let start = index, stop = index; start < end; start = stop) {
+      while (++stop < end && spanFaces[stop] === spanFaces[start]);
+      const face = clusterFace(spanFaces[start]!, chars, start, stop);
+      for (let i = start; i < stop; i++) faces.push(face);
+    }
+  }
+  return faces;
+}
+
+function clusterFace(face: FontMetrics, chars: ArrayLike<string>, start: number, end: number): FontMetrics {
+  return fallbackChainOf(face).find((entry) => drawsCluster(entry, chars, start, end)) ?? face;
+}
+
+/** Whether `face` has a glyph for every character of `chars[start, end)` that needs one (`KEEPS_ITS_FACE`). */
+function drawsCluster(face: FontMetrics, chars: ArrayLike<string>, start: number, end: number): boolean {
+  for (let i = start; i < end; i++) {
+    const ch = chars[i]!;
+    // `hasGlyph` first: most characters are in the face, and the property test costs more.
+    if (ch !== '' && !face.hasGlyph(ch) && !KEEPS_ITS_FACE.test(ch)) return false;
+  }
+  return true;
+}
+
+/** Whether `face` is a BMFont with no glyph for `ch`: Godot then draws `ch` as a hex-code box. The caller takes a tab first. */
 function lacksBitmapGlyph(face: FontMetrics, ch: string): boolean {
-  return isBitmapFontMetrics(face) && !isTabChar(ch) && !face.glyphOf(ch);
+  return isBitmapFontMetrics(face) && !face.glyphOf(ch);
 }
 
 /**
@@ -544,22 +619,82 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
  * HarfBuzz's glyph order, which is reverse logical order for a right-to-left run. Mutates `glyphs`.
  */
 function roundAdvancesToWholePixels(glyphs: BreakGlyph[], chars: ArrayLike<string>, style: RunStyle): void {
-  for (const [start, end] of runRanges(style, chars.length)) {
-    // `adv_rem` is local to `_shape_run` (`:7011`), so each run starts it at zero.
-    let advanceRemainder = 0;
-    // A run has one size and one face, so its first character answers for all of them.
-    if (fontUsesSubpixelPositioning(style.sizes[start]!, style.faces[start]!)) continue;
-    const step = isRtlRun(style, start) ? -1 : 1;
-    for (let i = step > 0 ? start : end - 1; i >= start && i < end; i += step) {
-      const cp = chars[i]!.codePointAt(0) ?? 0;
-      // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
-      if (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp)) advanceRemainder = 0;
-      const fullAdvance = advanceRemainder + glyphs[i]!.advance;
-      const rounded = godotRound(fullAdvance);
-      glyphs[i]!.advance = rounded;
-      advanceRemainder = fullAdvance - rounded;
+  for (const [start, end] of spanRunRanges(style, chars.length)) {
+    const chain = fallbackChainOf(style.spanFaces[start]!);
+    const isRtl = isRtlRun(style, start);
+    if (chain.length === 1) {
+      // One face needs no index list: most UI text takes this path.
+      if (fontUsesSubpixelPositioning(style.sizes[start]!, chain[0]!)) continue;
+      let advanceRemainder = 0;
+      for (let k = 0; k < end - start; k++) {
+        advanceRemainder = roundGlyphAdvance(
+          glyphs,
+          chars,
+          isRtl ? end - 1 - k : start + k,
+          advanceRemainder
+        );
+      }
+      continue;
     }
+    const indices = Array.from({ length: end - start }, (_v, k) => start + k);
+    if (isRtl) indices.reverse();
+    roundFaceRun(glyphs, chars, style, indices, chain, 0);
   }
+}
+
+/**
+ * Rounds the advance of glyph `i` with the remainder its run carries, and answers the new remainder.
+ * `adv_rem` is local to `_shape_run` (`:7011`), so each run starts it at zero.
+ */
+function roundGlyphAdvance(
+  glyphs: BreakGlyph[],
+  chars: ArrayLike<string>,
+  i: number,
+  remainder: number
+): number {
+  // The second unit of a surrogate pair has no glyph to round: rounding its 0 advance would move
+  // the remainder of a whole half pixel into it.
+  if (chars[i] === '') return remainder;
+  const cp = chars[i]!.codePointAt(0)!;
+  // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
+  const fullAdvance =
+    (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp) ? 0 : remainder) + glyphs[i]!.advance;
+  const rounded = godotRound(fullAdvance);
+  glyphs[i]!.advance = rounded;
+  return fullAdvance - rounded;
+}
+
+/**
+ * Rounds the glyphs of `indices` that draw in `chain[depth]`, with one remainder. Each stretch of
+ * glyphs that draw in a later face is a run of its own one level down, as Godot shapes a failed
+ * stretch again in the next font, and leaves this remainder as it was (`text_server_adv.cpp:7058,7132`).
+ */
+function roundFaceRun(
+  glyphs: BreakGlyph[],
+  chars: ArrayLike<string>,
+  style: RunStyle,
+  indices: readonly number[],
+  chain: readonly FontMetrics[],
+  depth: number
+): void {
+  const face = chain[depth]!;
+  const isLastFace = depth === chain.length - 1;
+  const usesSubpixel = fontUsesSubpixelPositioning(style.sizes[indices[0]!]!, face);
+  let advanceRemainder = 0;
+  let stretch: number[] = [];
+  const flushStretch = () => {
+    if (stretch.length > 0) roundFaceRun(glyphs, chars, style, stretch, chain, depth + 1);
+    stretch = [];
+  };
+  for (const i of indices) {
+    if (!isLastFace && style.faces[i] !== face) {
+      stretch.push(i);
+      continue;
+    }
+    flushStretch();
+    if (!usesSubpixel) advanceRemainder = roundGlyphAdvance(glyphs, chars, i, advanceRemainder);
+  }
+  flushStretch();
 }
 
 /**
@@ -762,6 +897,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     bidiOverride,
     language = '',
     paragraphBidiAt,
+    paragraphIndentPx,
     lineSpacingPx,
     fontSizePxAt,
     fontMetricsAt,
@@ -799,6 +935,9 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     const sourceIndex = (i: number): number => para.offset + Math.max(0, Math.min(i, para.text.length - 1));
     const paraText = para.terminated ? para.text + PARAGRAPH_TERMINATOR : para.text;
     const paragraphBidi = { direction, language, bidiOverride, ...paragraphBidiAt?.(para.offset) };
+    const indentPx = paragraphIndentPx?.(para.offset) ?? 0;
+    // A paragraph inset past the box wraps nowhere, as a box of no width does.
+    const paragraphWidth = effectiveWidth > 0 ? Math.max(0, effectiveWidth - indentPx) : effectiveWidth;
     const paragraphTabStopsPx = tabStopsPxAt ? tabStopsPxAt(para.offset) : tabStopsPx;
     const hasTabStops = !!paragraphTabStopsPx && paragraphTabStopsPx.length > 0;
     const bidi = resolveParagraphBidi(paraText, {
@@ -807,13 +946,15 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       language: paragraphBidi.language,
     });
     const chars = bidi.glyphChars;
+    const spanFaces = Array.from({ length: paraText.length }, (_v, i) =>
+      fontMetricsAt ? fontMetricsAt(sourceIndex(i)) : fontMetrics
+    );
     const runStyle: RunStyle = {
       sizes: Array.from({ length: paraText.length }, (_v, i) =>
         fontSizePxAt ? fontSizePxAt(sourceIndex(i)) : fontSizePx
       ),
-      faces: Array.from({ length: paraText.length }, (_v, i) =>
-        fontMetricsAt ? fontMetricsAt(sourceIndex(i)) : fontMetrics
-      ),
+      faces: spanFaces.some((face) => face.fallbacks) ? glyphFaces(paraText, spanFaces, chars) : spanFaces,
+      spanFaces,
       levels: bidi.levels,
       rangeIds: bidi.rangeIds,
     };
@@ -831,7 +972,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     }
     for (const [start, end] of shapedTextGetLineBreaks(
       breakGlyphs,
-      effectiveWidth,
+      paragraphWidth,
       flags,
       trim,
       trimIndent
@@ -875,14 +1016,20 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
         widthPx: penX,
         paragraphIndex,
         paragraphStart: para.offset,
+        ...(indentPx > 0 && { indentPx }),
         isRtl: bidi.isRtl,
       });
     }
   }
 
-  const widthPx = lines.reduce((max, l) => Math.max(max, l.widthPx), 0);
+  const widthPx = widestLineWidthPx(lines);
   const heightPx = lines.length * linePitchPx;
   const baselineOffsetPx = getFontAscentPx(fontMetrics, fontSizePx);
 
-  return { lines, linePitchPx, widthPx, heightPx, baselineOffsetPx, fontMetrics };
+  return { shapedText: transformed, lines, linePitchPx, widthPx, heightPx, baselineOffsetPx, fontMetrics };
+}
+
+/** The width of the widest of `lines`, or 0 for none. */
+export function widestLineWidthPx(lines: readonly TextLineLayout[]): number {
+  return lines.reduce((max, line) => Math.max(max, line.widthPx), 0);
 }

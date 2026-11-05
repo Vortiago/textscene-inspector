@@ -40,6 +40,8 @@ const LATIN1_SUPPLEMENT_END = 0xff;
 const LATIN1_SUPPLEMENT_EXCLUDE = new Set([0xad]);
 
 // Punctuation outside both ranges, each baked for its own reason.
+// The arrows U+2190 to U+2193 are not baked: Open Sans SemiBold has no glyph for them, and Godot
+// draws them from a host font. A scene that needs them names a font that holds them.
 const EXTRA_CODEPOINTS = [
   0x2022, // BULLET: LineEdit's default `secret_character` (`line_edit.cpp:3094`: `secret_character.is_empty() ? U"•" : ...`).
   0x2026, // HORIZONTAL ELLIPSIS: Label's default overrun character (`label.cpp:294`, also :299/:324/:328: `(el_char.length() > 0) ? el_char[0] : 0x2026`).
@@ -127,6 +129,18 @@ function bakeAdvanceWidths(font) {
   return advanceWidths;
 }
 
+/** The code points the `cmap` maps to a glyph, as ascending `[first, last]` ranges: what `_font_has_char` reads. */
+function bakeCodePointRanges(font) {
+  const ranges = [];
+  const codePoints = font.characterSet.filter((cp) => font.hasGlyphForCodePoint(cp)).sort((a, b) => a - b);
+  for (const cp of codePoints) {
+    const last = ranges.at(-1);
+    if (last && last[1] === cp - 1) last[1] = cp;
+    else ranges.push([cp, cp]);
+  }
+  return ranges;
+}
+
 /** Font-wide scalar metrics, design units (`font.unitsPerEm`-relative). */
 function bakeMetrics(font, kerning, advanceWidths) {
   return {
@@ -146,6 +160,7 @@ function bakeMetrics(font, kerning, advanceWidths) {
     // magic constant. The fallback advance outside the baked charset in
     // `textLayout.ts`'s `glyphAdvancePx`.
     averageAdvanceUnits: font['OS/2'].xAvgCharWidth,
+    codePointRanges: bakeCodePointRanges(font),
   };
 }
 
@@ -213,6 +228,8 @@ function bakeAtlas(ttfBuffer) {
 
 function renderMetricsModule(metrics) {
   return `${GENERATED_HEADER}
+import { firstEndAtOrAbove } from './sfntCmap';
+
 /**
  * Font-wide scalar metrics for OpenSans_SemiBold, in font design units
  * (\`unitsPerEm\` = ${metrics.unitsPerEm}), read via \`fontkit\` from the vendored
@@ -280,6 +297,8 @@ interface OpenSansMetrics {
    * table's own doc in the atlas module).
    */
   averageAdvanceUnits: number;
+  /** The code points the whole font maps to a glyph, as ascending \`[first, last]\` ranges, beyond the baked charset. */
+  codePointRanges: [number, number][];
 }
 
 export const OPEN_SANS_METRICS: OpenSansMetrics = ${JSON.stringify(metrics)};
@@ -318,6 +337,14 @@ export function getKerningAdjustmentUnits(a: string, b: string): number {
  */
 export function getGlyphAdvanceUnits(ch: string): number | null {
   return OPEN_SANS_METRICS.advanceWidths[ch] ?? null;
+}
+
+/** Whether the whole font, not only the baked charset, has a glyph for \`ch\`: Godot's default font draws it. */
+export function hasGlyph(ch: string): boolean {
+  const codePoint = ch.codePointAt(0)!;
+  const ranges = OPEN_SANS_METRICS.codePointRanges;
+  const i = firstEndAtOrAbove(ranges.length, (k) => ranges[k]![1], codePoint);
+  return i < ranges.length && ranges[i]![0] <= codePoint;
 }
 
 /**

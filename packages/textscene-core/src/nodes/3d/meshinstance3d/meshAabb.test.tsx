@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
@@ -182,6 +182,8 @@ describe('useMeshAabb over a TextMesh', () => {
 
     await act(async () => fake.fonts._resolve(FONT_PATH, FONT_FILE));
 
+    // The outlines load after the font, through the reader modules a cold run imports first.
+    await waitFor(() => expect(result.current).not.toBeNull());
     expect(result.current?.size.x).toBeGreaterThan(0);
     expect(result.current?.size.z).toBeCloseTo(0.05, 6);
   });
@@ -191,7 +193,7 @@ describe('useMeshAabb over a TextMesh', () => {
 
     await act(async () => fake.fonts._resolve(FONT_PATH, FONT_FILE));
 
-    expect(result.current?.size).toEqual({ x: 7, y: 8, z: 9 });
+    await waitFor(() => expect(result.current?.size).toEqual({ x: 7, y: 8, z: 9 }));
   });
 
   it('stays unknown for a font with no readable outlines', async () => {

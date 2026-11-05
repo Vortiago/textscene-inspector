@@ -89,6 +89,10 @@ export interface BitmapFont {
 interface SystemFontResource {
   kind: 'system';
   fontNames: string[];
+  /** The font it draws: null from the decode, as no OS font matches. `withDefaultFonts` puts the default here. */
+  baseFont: FontResource | null;
+  /** Other Fonts to try, in order. */
+  fallbacks: FontResource[];
   properties: Record<string, string>;
 }
 
@@ -99,6 +103,8 @@ interface SystemFontResource {
 export interface FontVariationResource {
   kind: 'variation';
   baseFont: FontResource | null;
+  /** Other Fonts to try, in order. None takes the `fallbacks` of `baseFont` (`font.cpp:2926-2945`). */
+  fallbacks: FontResource[];
   /** `spacing_*`, `embolden`, `opentype_features`, `variation_opentype`, …, raw. */
   properties: Record<string, string>;
 }

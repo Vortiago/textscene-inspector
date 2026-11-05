@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FontFileResource, FontResource, FontVariationResource } from './types';
 import { fontFile, systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
-import { FACELESS_FONT } from '../../../r3f/controls/native/text/sceneFontResolution';
+import { FACELESS_FONT, NO_FACE, findDrawnFace } from '../../../r3f/controls/native/text/sceneFontResolution';
 import { NO_DEFAULT_FONTS, withDefaultFonts, type DefaultFonts } from './defaultFont';
 
 const VARIATION_DEFAULT = fontFile(new ArrayBuffer(4));
@@ -9,7 +9,13 @@ const SYSTEM_DEFAULT = fontFile(new ArrayBuffer(4));
 const DEFAULTS: DefaultFonts = { variation: [VARIATION_DEFAULT], system: [SYSTEM_DEFAULT] };
 
 function variation(baseFont: FontResource | null, embolden = '1.2'): FontVariationResource {
-  return { kind: 'variation', baseFont, properties: { variation_embolden: embolden } };
+  return { kind: 'variation', baseFont, fallbacks: [], properties: { variation_embolden: embolden } };
+}
+
+/** The font a resolved SystemFont draws: the default `withDefaultFonts` put under it. */
+function baseOf(font: FontResource | null): FontResource | null {
+  if (font?.kind !== 'system') throw new Error(`expected a SystemFont, got ${font?.kind ?? 'null'}`);
+  return font.baseFont;
 }
 
 describe('withDefaultFonts — a FontVariation with no base_font', () => {
@@ -35,8 +41,8 @@ describe('withDefaultFonts — a FontVariation with no base_font', () => {
 });
 
 describe('withDefaultFonts — a SystemFont', () => {
-  it('is the SystemFont default', () => {
-    expect(withDefaultFonts(systemFont(), DEFAULTS)).toBe(SYSTEM_DEFAULT);
+  it('takes the SystemFont default as its base', () => {
+    expect(baseOf(withDefaultFonts(systemFont(), DEFAULTS))).toBe(SYSTEM_DEFAULT);
   });
 
   it('stays a SystemFont when the SystemFont default is the bundled font (null)', () => {
@@ -46,17 +52,17 @@ describe('withDefaultFonts — a SystemFont', () => {
 
   it('as the base_font of a FontVariation, puts the SystemFont default under it', () => {
     const resolved = withDefaultFonts(variation(systemFont()), DEFAULTS) as FontVariationResource;
-    expect(resolved.baseFont).toBe(SYSTEM_DEFAULT);
+    expect(baseOf(resolved.baseFont)).toBe(SYSTEM_DEFAULT);
   });
 
   it('as the base_font of a FontVariation over a FontVariation, puts the SystemFont default at the bottom', () => {
     const resolved = withDefaultFonts(variation(variation(systemFont())), DEFAULTS) as FontVariationResource;
-    expect((resolved.baseFont as FontVariationResource).baseFont).toBe(SYSTEM_DEFAULT);
+    expect(baseOf((resolved.baseFont as FontVariationResource).baseFont)).toBe(SYSTEM_DEFAULT);
   });
 
   it('in the fallbacks of a FontFile with no bytes, is the SystemFont default there', () => {
     const resolved = withDefaultFonts(fontFile(undefined, [systemFont()]), DEFAULTS) as FontFileResource;
-    expect(resolved.fallbacks).toEqual([SYSTEM_DEFAULT]);
+    expect(baseOf(resolved.fallbacks[0]!)).toBe(SYSTEM_DEFAULT);
   });
 });
 
@@ -66,13 +72,20 @@ describe('withDefaultFonts — fonts with a face of their own', () => {
     expect(withDefaultFonts(named, DEFAULTS)).toBe(named);
   });
 
-  it('leaves the fallbacks after the first one that draws as they are', () => {
+  it('puts the default under a fallback after one that draws, as the fallback chain reaches it', () => {
     const wrapper = fontFile(undefined, [fontFile(new ArrayBuffer(4)), systemFont()]);
-    expect(withDefaultFonts(wrapper, DEFAULTS)).toBe(wrapper);
+    const resolved = withDefaultFonts(wrapper, DEFAULTS) as FontFileResource;
+    expect(baseOf(resolved.fallbacks[1]!)).toBe(SYSTEM_DEFAULT);
   });
 
-  it('leaves a FontFile with bytes as it is, whatever its fallbacks: its own face draws', () => {
+  it('puts the default under a fallback of a FontFile with bytes', () => {
     const file = fontFile(new ArrayBuffer(4), [systemFont()]);
+    const resolved = withDefaultFonts(file, DEFAULTS) as FontFileResource;
+    expect(baseOf(resolved.fallbacks[0]!)).toBe(SYSTEM_DEFAULT);
+  });
+
+  it('leaves a FontFile with bytes and no fallbacks as it is', () => {
+    const file = fontFile(new ArrayBuffer(4));
     expect(withDefaultFonts(file, DEFAULTS)).toBe(file);
   });
 
@@ -92,6 +105,15 @@ describe('withDefaultFonts — identity', () => {
     expect(withDefaultFonts(bare, DEFAULTS)).toBe(withDefaultFonts(bare, DEFAULTS));
   });
 
+  it('resolves a default that two fonts reach to one object, so a cache keyed on it keeps its hits', () => {
+    const sharedDefault: FontVariationResource = { ...variation(null), fallbacks: [systemFont()] };
+    const defaults: DefaultFonts = { variation: [sharedDefault], system: [SYSTEM_DEFAULT] };
+    const first = withDefaultFonts(variation(null), defaults);
+    const second = withDefaultFonts(variation(null, '2'), defaults);
+    const defaultUnder = (font: FontResource | null) => (font?.kind === 'variation' ? font.baseFont : null);
+    expect(defaultUnder(first)).toBe(defaultUnder(second));
+  });
+
   it('answers a new object for another default font', () => {
     const bare = variation(null);
     const other: DefaultFonts = { ...DEFAULTS, variation: [fontFile(new ArrayBuffer(4))] };
@@ -102,18 +124,22 @@ describe('withDefaultFonts — identity', () => {
 describe('withDefaultFonts — a default that is the font itself (`_is_base_cyclic`, font.cpp:152-169)', () => {
   it('skips a SystemFont default that is the SystemFont, and takes the next', () => {
     const font = systemFont();
-    expect(withDefaultFonts(font, { ...DEFAULTS, system: [font, SYSTEM_DEFAULT] })).toBe(SYSTEM_DEFAULT);
+    expect(baseOf(withDefaultFonts(font, { ...DEFAULTS, system: [font, SYSTEM_DEFAULT] }))).toBe(
+      SYSTEM_DEFAULT
+    );
   });
 
   it('skips a default whose base_font chain reaches the font', () => {
     const font = systemFont();
     const over = variation(font);
-    expect(withDefaultFonts(font, { ...DEFAULTS, system: [over, SYSTEM_DEFAULT] })).toBe(SYSTEM_DEFAULT);
+    expect(baseOf(withDefaultFonts(font, { ...DEFAULTS, system: [over, SYSTEM_DEFAULT] }))).toBe(
+      SYSTEM_DEFAULT
+    );
   });
 
   it('draws no face when every SystemFont default is the SystemFont', () => {
     const font = systemFont();
-    expect(withDefaultFonts(font, { ...DEFAULTS, system: [font] })).toBe(FACELESS_FONT);
+    expect(baseOf(withDefaultFonts(font, { ...DEFAULTS, system: [font] }))).toBe(FACELESS_FONT);
   });
 
   it('draws no face when every FontVariation default is the bare FontVariation', () => {
@@ -125,7 +151,8 @@ describe('withDefaultFonts — a default that is the font itself (`_is_base_cycl
   it('gives a default with no face of its own its own default', () => {
     const font = systemFont();
     const other = systemFont();
-    expect(withDefaultFonts(font, { ...DEFAULTS, system: [other, SYSTEM_DEFAULT] })).toBe(SYSTEM_DEFAULT);
+    const resolved = withDefaultFonts(font, { ...DEFAULTS, system: [other, SYSTEM_DEFAULT] });
+    expect(baseOf(baseOf(resolved))).toBe(SYSTEM_DEFAULT);
   });
 
   it('gives the fallback after one with no face its default too', () => {
@@ -140,6 +167,15 @@ describe('withDefaultFonts — a default that is the font itself (`_is_base_cycl
     const first = systemFont();
     const second = systemFont();
     const defaults = { ...DEFAULTS, system: [second, first] };
-    expect(withDefaultFonts(first, defaults)).toBe(FACELESS_FONT);
+    expect(findDrawnFace(withDefaultFonts(first, defaults))).toBe(NO_FACE);
+  });
+
+  it('resolves a default whose SystemFont fallbacks each take it again once, not once per path', () => {
+    const variationDefault: FontVariationResource = {
+      ...variation(null),
+      fallbacks: [systemFont(), systemFont()],
+    };
+    const defaults = { variation: [variationDefault], system: [variationDefault] };
+    expect(findDrawnFace(withDefaultFonts(variationDefault, defaults))).toBe(NO_FACE);
   });
 });

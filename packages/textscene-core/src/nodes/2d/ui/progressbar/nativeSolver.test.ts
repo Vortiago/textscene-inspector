@@ -12,6 +12,7 @@ import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxF
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import {
   progressBarPercentRatio,
+  progressBarPercentText,
   progressBarIndeterminateFillRect,
   progressBarFillRect,
 } from './nativeSolver';
@@ -284,5 +285,21 @@ describe('is_layout_rtl() — the fill DIRECTION swap (progress_bar.cpp:82,121)'
       w: 10,
       h: 60,
     });
+  });
+});
+
+describe('progressBarPercentText (progress_bar.cpp:168-174)', () => {
+  it('writes the rounded percentage and a percent sign', () => {
+    expect(progressBarPercentText(0.5, { locale: '' })).toBe('50%');
+    expect(progressBarPercentText(0.425, { locale: '' })).toBe('43%');
+  });
+
+  it('writes the digits and the percent sign of the locale while localize_numeral_system is on', () => {
+    expect(progressBarPercentText(0.5, { locale: 'ar' })).toBe('٥٠٪');
+    expect(progressBarPercentText(0.5, { locale: 'fa' })).toBe('۵۰٪');
+  });
+
+  it('writes the ASCII text while the property is off', () => {
+    expect(progressBarPercentText(0.5, { locale: 'ar', localizeNumeralSystem: false })).toBe('50%');
   });
 });

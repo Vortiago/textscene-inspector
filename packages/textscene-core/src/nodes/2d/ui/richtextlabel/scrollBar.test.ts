@@ -92,6 +92,14 @@ describe('shapeBesideScrollBar (rich_text_label.cpp:3801-3830)', () => {
     expect(scrollBar!.grabberRect.y + scrollBar!.grabberRect.h).toBeCloseTo(40, 6);
   });
 
+  // A `%` image narrows with the wrap width, so the text beside the bar can be shorter than the
+  // rect. `Range` clamps the value to `min` after `max - page` (`range.cpp:192-196`).
+  it('keeps the text at its top when the text beside the bar is shorter than the rect', () => {
+    const shorterBeside = (wrapWidthPx: number) => shapeAt(wrapWidthPx < 160 ? 1000 : wrapWidthPx);
+    const box = { w: 160, h: 40, scrollActive: true, rtl: false, scrollFollowing: true };
+    expect(shapeBesideScrollBar(shorterBeside, box, THEME).scrollOffsetPx).toBe(0);
+  });
+
   it('keeps the text at its top without scroll_following', () => {
     expect(wrappedLines({ w: 160, h: 40 }, true).scrollOffsetPx).toBe(0);
   });

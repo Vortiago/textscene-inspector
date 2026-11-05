@@ -150,6 +150,10 @@ _Avoid_: "custom font", which a node's `theme_override_fonts` also is. "fallback
 A bitmap font a `FontFile` loads from an AngelCode `.fnt` or `.font` descriptor and the page images it names. Each glyph is a rectangle of a page, drawn at the font's fixed size and scaled to the requested size by its scale mode.
 _Avoid_: "sprite font", "pixel font".
 
+**Fallback chain** (`fallbackChain` in `r3f/controls/native/text/sceneFontResolution.ts`):
+The faces a font tries for each glyph, in order: its own face, then each of its `fallbacks` and theirs, depth first (`Font::_update_rids`). The shaper draws a character from the first face that has it. A character no face has stays in the first face.
+_Avoid_: "fallback font" for the bundled Open Sans, which is the **Project default font**'s last resort.
+
 **Project fonts** (`resources/fonts/font/projectFonts.ts`):
 The two files the **Project settings** name for every font lookup: the project theme (`gui/theme/custom`) and the **Project default font**. The Control solve tree, TextMesh and Label3D each resolve them from one source.
 _Avoid_: "theme context", which Godot's `ThemeContext` also names.
@@ -169,6 +173,14 @@ _Avoid_: "autohint" as a verb for the native TrueType hinter.
 **Text paragraph** (`TextLineLayout.paragraphIndex` in `r3f/controls/native/text/textLayout.ts`):
 The text up to a separator, which Godot shapes as its own `TextParagraph`: a `\n` ends one in a Label (`paragraph_separator`) and in a RichTextLabel. Autowrap splits a paragraph into lines, and `justification_flags` count their lines inside the paragraph, so each fits or skips its own last line (`justifyParagraphs`).
 _Avoid_: "line" for it, and a count of lines over the whole text.
+
+**Paragraph inset** (`TextLineLayout.indentPx` in `r3f/controls/native/text/textLayout.ts`, set by `nodes/2d/ui/richtextlabel/listing.ts`):
+How far a RichTextLabel paragraph sits from the edge its text starts at: the margin of every `[indent]`, `[ul]` and `[ol]` around it, plus the width of its list's widest **List marker**. The paragraph wraps and aligns in the width left of it (`l.indent`).
+_Avoid_: "indent" for the sum, which names the tag and its margin alone.
+
+**List marker** (`ListMarker` in `nodes/2d/ui/richtextlabel/listing.ts`):
+The bullet or number a `[ul]` or `[ol]` item draws before its first line (`text_prefix`). It is shaped in the item's font, drawn at the line's top and right-aligned against the text, and an empty item draws one too.
+_Avoid_: "prefix", which is the engine's name for the marker's text.
 
 **Text buffer** (`trimTextBufferLineToWidth` in `r3f/controls/native/text/textOverrun.ts`):
 A Control's own `TextLine` or `TextParagraph`, its `text_buf`, which Button, LinkButton, the FoldableContainer title and each ItemList item draw. Its fill draws in the set direction (`shaped_text_draw`) and its outline in the **inferred direction** (`shaped_text_draw_outline`), so a trimmed AUTO line that resolves right-to-left draws a different glyph set in each. Label draws its own lines in the inferred direction for both.

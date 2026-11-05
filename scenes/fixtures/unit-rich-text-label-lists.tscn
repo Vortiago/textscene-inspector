@@ -1,0 +1,181 @@
+; One variable: the marker and indent of a RichTextLabel [ul] and [ol] item (rich_text_label.cpp:242-372,
+; 1017-1039). Each cell is one list shape: a bullet, a bullet option, every number type, a nested list, a
+; styled item, a wrapped item and an empty item. No other scene draws a list marker or an [indent].
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="DotsBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 180.0
+offset_bottom = 140.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Dots" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 180.0
+offset_bottom = 140.0
+bbcode_enabled = true
+text = "[ul]one\nsecond\n\nfourth[/ul]"
+
+[node name="DotsBulletBox" type="ColorRect" parent="."]
+offset_left = 200.0
+offset_top = 10.0
+offset_right = 360.0
+offset_bottom = 140.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="DotsBullet" type="RichTextLabel" parent="."]
+offset_left = 200.0
+offset_top = 10.0
+offset_right = 360.0
+offset_bottom = 140.0
+bbcode_enabled = true
+text = "[ul bullet=*]one\nsecond[/ul]"
+
+[node name="NumbersBox" type="ColorRect" parent="."]
+offset_left = 380.0
+offset_top = 10.0
+offset_right = 540.0
+offset_bottom = 140.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Numbers" type="RichTextLabel" parent="."]
+offset_left = 380.0
+offset_top = 10.0
+offset_right = 540.0
+offset_bottom = 140.0
+bbcode_enabled = true
+text = "[ol]one\ntwo\n\nfour[/ol]"
+
+[node name="LettersBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 160.0
+offset_right = 180.0
+offset_bottom = 290.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Letters" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 160.0
+offset_right = 180.0
+offset_bottom = 290.0
+bbcode_enabled = true
+text = "[ol type=a]one\ntwo[/ol]"
+
+[node name="LettersCapsBox" type="ColorRect" parent="."]
+offset_left = 200.0
+offset_top = 160.0
+offset_right = 360.0
+offset_bottom = 290.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="LettersCaps" type="RichTextLabel" parent="."]
+offset_left = 200.0
+offset_top = 160.0
+offset_right = 360.0
+offset_bottom = 290.0
+bbcode_enabled = true
+text = "[ol type=A]one\ntwo[/ol]"
+
+[node name="RomansBox" type="ColorRect" parent="."]
+offset_left = 380.0
+offset_top = 160.0
+offset_right = 540.0
+offset_bottom = 290.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Romans" type="RichTextLabel" parent="."]
+offset_left = 380.0
+offset_top = 160.0
+offset_right = 540.0
+offset_bottom = 290.0
+bbcode_enabled = true
+text = "[ol type=i]one\ntwo\nthree\nfour[/ol]"
+
+[node name="RomansCapsBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 310.0
+offset_right = 180.0
+offset_bottom = 440.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="RomansCaps" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 310.0
+offset_right = 180.0
+offset_bottom = 440.0
+bbcode_enabled = true
+text = "[ol type=I]one\ntwo\nthree\nfour[/ol]"
+
+[node name="NestedBox" type="ColorRect" parent="."]
+offset_left = 200.0
+offset_top = 310.0
+offset_right = 360.0
+offset_bottom = 440.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Nested" type="RichTextLabel" parent="."]
+offset_left = 200.0
+offset_top = 310.0
+offset_right = 360.0
+offset_bottom = 440.0
+bbcode_enabled = true
+text = "[ol]one\n[ul]inner\nmore[/ul]\nlast[/ol]"
+
+[node name="BoldBox" type="ColorRect" parent="."]
+offset_left = 380.0
+offset_top = 310.0
+offset_right = 540.0
+offset_bottom = 440.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Bold" type="RichTextLabel" parent="."]
+offset_left = 380.0
+offset_top = 310.0
+offset_right = 540.0
+offset_bottom = 440.0
+bbcode_enabled = true
+text = "[ul][b]bold[/b] item\n[color=red]red item[/color][/ul]"
+
+[node name="WrappedBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 460.0
+offset_right = 180.0
+offset_bottom = 590.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Wrapped" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 460.0
+offset_right = 180.0
+offset_bottom = 590.0
+bbcode_enabled = true
+text = "[ul]a long item that wraps onto a second line inside the box[/ul]"
+
+[node name="PlainIndentBox" type="ColorRect" parent="."]
+offset_left = 200.0
+offset_top = 460.0
+offset_right = 360.0
+offset_bottom = 590.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="PlainIndent" type="RichTextLabel" parent="."]
+offset_left = 200.0
+offset_top = 460.0
+offset_right = 360.0
+offset_bottom = 590.0
+bbcode_enabled = true
+text = "before\n[indent]indented\n[indent]deeper[/indent][/indent]"

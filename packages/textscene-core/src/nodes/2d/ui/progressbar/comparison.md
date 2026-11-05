@@ -12,6 +12,8 @@ renders_as: a background and ratio-filled StyleBox pair, with a percentage label
 ProgressBar draws its `background` StyleBox across the whole control and its `fill`
 StyleBox windowed to the current value's ratio, in the direction `fill_mode` names.
 Unless `indeterminate` is set, it adds a centred percentage label with an optional outline.
+While `localize_numeral_system` is true, its default, the label uses the digits of the project locale. It
+ends with the percent sign of that locale (`progress_bar.cpp:168-174`).
 
 ## Linting
 

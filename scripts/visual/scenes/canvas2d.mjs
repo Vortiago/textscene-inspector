@@ -248,6 +248,8 @@ export const CANVAS_2D_SCENES = [
   // two hops down past a themeless Control, resolve it by the ancestor walk.
   // Every other Control golden draws the bundled MSDF atlas.
   { name: 'control-scene-font-theme', file: 'unit-control-scene-font-theme.tscn', mode: '2d' },
+  // The one variable: the arrows U+2190 to U+2193 from a scene font, as the bundled font has none.
+  { name: 'control-font-arrows', file: 'unit-control-font-arrows.tscn', mode: '2d' },
   // The one variable: a variable `.woff2` font drawn at its `fvar` defaults. Its metrics come
   // from its own tables, which `fontContainer.ts` decompresses. No same-face `.woff2`/`.otf`
   // pair exists, so compare with Godot, not the sibling.
@@ -288,8 +290,15 @@ export const CANVAS_2D_SCENES = [
   { name: 'label-bmfont', file: 'unit-label-bmfont.tscn', mode: '2d' },
   // The one variable: a BMFont's outline set, which Godot draws for any `outline_size` above 0.
   { name: 'label-bmfont-outline', file: 'unit-label-bmfont-outline.tscn', mode: '2d' },
+  // The one variable: `variation_opentype` at `wght` 700 over Cascadia Code, whose `gvar` deltas move the outlines.
+  { name: 'label-font-variation-instance', file: 'unit-label-font-variation-instance.tscn', mode: '2d' },
+  // The one variable: `variation_opentype` at `MONO` 0.5 over Recursive, whose `GPOS` kerning halves at that instance.
+  { name: 'label-font-variation-kerning', file: 'unit-label-font-variation-kerning.tscn', mode: '2d' },
   // The one variable: a BMFont's import `scaling_mode`, Integer and Disabled, at sizes off the fixed size.
   { name: 'label-bmfont-scaling', file: 'unit-label-bmfont-scaling.tscn', mode: '2d' },
+  // The one variable: a character the font lacks, drawn from the first font of its fallback chain
+  // that has it, on a raw font's import, a FontVariation, a BMFont's import and a RichTextLabel.
+  { name: 'label-font-fallbacks', file: 'unit-label-font-fallbacks.tscn', mode: '2d' },
   // The one variable: `FontVariation.variation_embolden` over a scene font at 0, 1.2 and 2.0, which
   // grows the outline and widens each advance, as the bold of a RichTextLabel does.
   { name: 'label-font-variation-embolden', file: 'unit-label-font-variation-embolden.tscn', mode: '2d' },
@@ -906,6 +915,7 @@ export const CANVAS_2D_SCENES = [
   { name: 'label-rtl-alignment', file: 'unit-label-rtl-alignment.tscn', mode: '2d' },
   { name: 'label-rtl-fill-autowrap', file: 'unit-label-rtl-fill-autowrap.tscn', mode: '2d' },
   { name: 'label-rtl-visible-chars-auto', file: 'unit-label-rtl-visible-chars-auto.tscn', mode: '2d' },
+  { name: 'label-visible-characters-astral', file: 'unit-label-visible-characters-astral.tscn', mode: '2d' },
   // A Label's own paragraph direction: the bidirectional reorder, the arms that read the inferred
   // direction, the structured override and the language.
   { name: 'label-bidi', file: 'unit-label-bidi.tscn', mode: '2d' },
@@ -951,10 +961,14 @@ export const CANVAS_2D_SCENES = [
   { name: 'rich-text-label-scrollbar-rtl', file: 'unit-rich-text-label-scrollbar-rtl.tscn', mode: '2d' },
   { name: 'rich-text-label-scrollbar-following', file: 'unit-rich-text-label-scrollbar-following.tscn', mode: '2d' },
   { name: 'rich-text-label-hr', file: 'unit-rich-text-label-hr.tscn', mode: '2d' },
+  { name: 'rich-text-label-font-size-outline', file: 'unit-rich-text-label-font-size-outline.tscn', mode: '2d' },
   { name: 'rich-text-label-paragraph-justification', file: 'unit-rich-text-label-paragraph-justification.tscn', mode: '2d' },
   { name: 'rich-text-label-paragraph-tab-stops', file: 'unit-rich-text-label-paragraph-tab-stops.tscn', mode: '2d' },
   { name: 'rich-text-label-empty-styling-before-paragraph', file: 'unit-rich-text-label-empty-styling-before-paragraph.tscn', mode: '2d' },
   { name: 'rich-text-label-empty-line-vertical-fill', file: 'unit-rich-text-label-empty-line-vertical-fill.tscn', mode: '2d' },
+  { name: 'rich-text-label-lists', file: 'unit-rich-text-label-lists.tscn', mode: '2d' },
+  { name: 'rich-text-label-numeral-system', file: 'unit-rich-text-label-numeral-system.tscn', mode: '2d' },
+  { name: 'numeral-locale', file: 'numeral-locale/unit-numeral-locale.tscn', mode: '2d' },
   { name: 'label-fill-paragraphs', file: 'unit-label-fill-paragraphs.tscn', mode: '2d' },
   { name: 'label-tab-without-stop', file: 'unit-label-tab-without-stop.tscn', mode: '2d' },
   { name: 'label-fill-trim', file: 'unit-label-fill-trim.tscn', mode: '2d' },

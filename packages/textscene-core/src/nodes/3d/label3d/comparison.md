@@ -11,7 +11,7 @@ renders_as: canvas-rasterised glyph quads, billboard-able
 
 Draws text on a flat plane in 3D space. The previewer shapes it in its `text_direction`, `language` and structured override, where an empty `language` takes the project locale and INHERITED acts as AUTO (`label_3d.cpp:479-494`). It breaks it at `width` as `autowrap_mode` says. It stretches each line to `width` under `HORIZONTAL_ALIGNMENT_FILL`, places the block by `vertical_alignment` and moves it by `offset` (`label_3d.cpp:483-606`). It rasterises a label in an outline font to a canvas texture, one texel per font pixel at `font_size` as Godot caches a glyph (`label_3d.cpp:345-350`). The font is the label's `font`, else the project theme's font for Label3D, else the project default font (`gui/theme/custom_font`), else the bundled font (`label_3d.cpp:812-850`). It maps the texture onto a transparent plane sized by `pixel_size`. It tints the plane by `modulate` and orients it by the node's `billboard` mode.
 
-A character the font lacks draws nothing in any font, as a glyph with no font has no rectangle to draw (`label_3d.cpp:357`). Godot draws no hex-code box for it, and the pen still advances.
+A character the font lacks draws from the first font of its **Fallback chain** that has it. The `label3d-text-mesh-font-fallbacks` golden pins this. A character no font of the chain has draws nothing, as a glyph with no font has no rectangle to draw (`label_3d.cpp:357`). Godot draws no hex-code box for it, and the pen still advances.
 
 A label is unlit by default. With `shaded` on, the scene's lights light its fill and outline, as Godot's `SHADING_MODE_PER_PIXEL` does (`material.cpp:3045`), and the label receives shadows. The plane faces +Z (`label_3d.cpp:422-423`). A double-sided label flips the normal of its back face (`scene_forward_clustered.glsl:1263-1266`), so its back is lit as its front. The `label3d-shaded` golden pins this.
 
@@ -20,6 +20,14 @@ A label casts no shadow by default, as its constructor turns `cast_shadow` off (
 ## BMFont
 
 A label in a BMFont draws each glyph as a quad over its page image at `pixel_size` (`label_3d.cpp:345-350`). The quad takes the glyph's offset and size. The label skips a glyph whose page rectangle is 2 px or less in either direction, and a character the font lacks (`:357-360`). The pen still advances past it. Its material decodes the page and the modulate and multiplies them in linear (`material.cpp:969,1218`). Any `outline_size` above 0 draws the font's outline set (`text_server_adv.h:406-414`). The `label3d-bmfont` golden pins this.
+
+## Variable fonts
+
+A `FontVariation` over a variable font draws the instance that its `variation_opentype` names, as Godot sets
+the axes on FreeType and HarfBuzz (`text_server_adv.cpp:1915-1950`). The glyphs and the outline draw from the outlines
+at the instance. They follow the `fvar`, `avar`, `gvar` and `cvar` tables. Each advance follows `HVAR`, or the
+phantom points that `gvar` moves in a font without `HVAR`. The pair kerning follows the `GPOS` `kern` feature
+with its deltas at the instance. A `FontVariation` over another takes its own axis values alone (`font.cpp:3120-3131`).
 
 ## Linting
 
@@ -80,6 +88,7 @@ The glyph raster has a mip chain only when its font generates mipmaps and `textu
 - **Approximated** The glyph mip chain is per label raster, where Godot's is per glyph page, so a minified label differs slightly.
 - **Resource gap** A SystemFont always draws the default font, as Godot does when no OS font matches its names, where Godot draws a matching OS font.
 - **Approximated** A glyph off whole pixels draws at its place, where Godot's mesh samples its glyph texture between texels.
+- **Approximated** At an instance, a variable font keeps its default glyphs where its `GSUB` feature variations swap them.
 - **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
 - **Approximated** A line with a hex-code box keeps the ascent of a BMFont, where Godot grows it to fit the box (#1324).

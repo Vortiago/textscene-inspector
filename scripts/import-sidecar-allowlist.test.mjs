@@ -2,7 +2,7 @@
  * Asserts the `.import` parameter allowlist against the corpus (ADR-0028). The previewer's asset
  * re-import honours `nodes/root_scale`, `nodes/apply_root_scale`, `meshes/light_baking`,
  * `meshes/lightmap_texel_size`, from `_subresources` the `use_external` material remaps, the
- * `mesh_instance/layers` mask, a BMFont's `scaling_mode`, the per-mesh `generate/lightmap_uv` and the per-clip
+ * `mesh_instance/layers` mask, a BMFont's `scaling_mode` and `fallbacks`, the per-mesh `generate/lightmap_uv` and the per-clip
  * `settings/loop_mode`, `nodes/use_name_suffixes` for the clip names, a `3d_texture` slice grid,
  * and a `texture` import's compression. A vendored sidecar that needs any other parameter would
  * render wrong with nothing to say so, so this test fails instead.
@@ -35,6 +35,8 @@ const HONOURED = new Set([
   'meshes/light_baking',
   'meshes/lightmap_texel_size',
   'scaling_mode',
+  // A BMFont's fallback fonts, which the shaper searches per glyph (`resource_importer_bmfont.cpp:98`).
+  'fallbacks',
   '_subresources',
 ]);
 
@@ -161,8 +163,6 @@ const MUST_BE_DEFAULT = new Map([
   ['scale_mesh', 'Vector3(1, 1, 1)'],
   ['offset_mesh', 'Vector3(0, 0, 0)'],
   ['generate_lightmap_uv2', 'false'],
-  // A BMFont's fallback fonts: no font kind here searches them per glyph.
-  ['fallbacks', '[]'],
 ]);
 
 /**

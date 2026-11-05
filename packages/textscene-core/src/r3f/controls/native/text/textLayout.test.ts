@@ -399,6 +399,7 @@ describe('shapeText — embolden (extra advance per glyph)', () => {
 
   it("takes a face's own embolden from its FontMetrics when fontMetricsAt names none", () => {
     const boldFace: FontMetrics = {
+      hasGlyph: () => true,
       kind: 'canvas',
       unitsPerEm: 1000,
       ascent: 800,
@@ -425,6 +426,7 @@ describe('shapeText — embolden (extra advance per glyph)', () => {
 // advances and draws each character by its own face.
 describe('shapeText — a face for each character', () => {
   const wideFace: CanvasFontMetrics = {
+    hasGlyph: () => true,
     kind: 'canvas',
     unitsPerEm: 1000,
     ascent: 800,
@@ -526,6 +528,7 @@ describe('shapeText — TextLayoutResult.fontMetrics / baselineOffsetPx (the sha
 
   it('a font of kind "canvas" shapes through the SAME line-breaking/placement code but every glyph placement carries no atlas bitmap', () => {
     const canvasMetrics: FontMetrics = {
+      hasGlyph: () => true,
       kind: 'canvas',
       unitsPerEm: 1000,
       ascent: 800,
@@ -555,6 +558,7 @@ describe('shapeText — TextLayoutResult.fontMetrics / baselineOffsetPx (the sha
 
 describe('soloLineLayout — re-wrapping one line of an already-shaped result', () => {
   const FAKE_SCENE_FONT_METRICS: CanvasFontMetrics = {
+    hasGlyph: () => true,
     kind: 'canvas',
     cssFontFamily: 'tscn-scene-font-test',
     unitsPerEm: 1000,
@@ -698,6 +702,19 @@ describe('shapeText — glyph advances vs real Godot (text_server_adv.cpp:6936,7
     ]);
     expect(layout.widthPx).toBe(257);
     expect(shapedTextSizeWidthPx(layout.widthPx)).toBe(257);
+  });
+
+  it('size 32: the second unit of a surrogate pair rounds nothing, so the remainder carries to the next glyph', () => {
+    // 1056 units at 32 px over a 2048-unit em is 16.5 px: 17, then 16 with the carried -0.5.
+    const face: FontMetrics = { ...OPEN_SANS_FONT_METRICS, getGlyphAdvanceUnits: () => 1056 };
+    const layout = shapeText('😀😀', {
+      fontSizePx: 32,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics: face,
+    });
+    expect(layout.lines[0]!.glyphs.map((g) => g.advance)).toEqual([17, 16]);
   });
 });
 

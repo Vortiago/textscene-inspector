@@ -321,7 +321,7 @@ export function buttonTextAlignShiftPx(
   alignment: number,
   isRtl: boolean
 ): number {
-  const textBufWidthPx = Math.ceil(Math.max(1, drawableWidthPx));
+  const textBufWidthPx = buttonTextBufWidthPx(drawableWidthPx);
   switch (alignment) {
     case H_CENTER: {
       // The ceiling's leftover (`:439`), then a floored half (`text_paragraph.cpp:904`). An
@@ -342,5 +342,10 @@ export function buttonTextAlignShiftPx(
 
 /** The RIGHT arm of {@link buttonTextAlignShiftPx}: the line ends at the ceiled paragraph width (`text_paragraph.cpp:916-922`). */
 export function buttonTextRightShiftPx(contentWidthPx: number, drawableWidthPx: number): number {
-  return Math.ceil(Math.max(1, drawableWidthPx)) - contentWidthPx;
+  return buttonTextBufWidthPx(drawableWidthPx) - contentWidthPx;
+}
+
+/** The width `button.cpp:424-432` gives the text buffer: the drawable width, at least 1, ceiled. */
+export function buttonTextBufWidthPx(drawableWidthPx: number): number {
+  return Math.ceil(Math.max(1, drawableWidthPx));
 }

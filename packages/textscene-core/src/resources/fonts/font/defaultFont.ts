@@ -6,12 +6,11 @@
  * so every SystemFont takes the default. The Control theme lookup owns the project's fonts, so the
  * defaults arrive as an argument.
  */
-import type { FontFileResource, FontResource } from './types';
+import type { FontResource } from './types';
 import { perObject } from '../../../utils/perObject';
 import {
   FACELESS_FONT,
-  NO_FACE,
-  findDrawnFace,
+  MAX_FALLBACK_DEPTH,
   hasGlyphs,
 } from '../../../r3f/controls/native/text/sceneFontResolution';
 
@@ -27,16 +26,25 @@ export interface DefaultFonts {
 
 export const NO_DEFAULT_FONTS: DefaultFonts = { variation: [null], system: [null] };
 
-/** Godot's `MAX_FALLBACK_DEPTH` (`font.h:93`): a deeper chain of defaults is a cycle, and draws no face. */
-const MAX_DEFAULT_DEPTH = 64;
+/**
+ * One `Resolution` per defaults, so a font answers one object per `DefaultFonts` wherever a walk
+ * reaches it, and a metrics cache keyed on it keeps its hits. The theme lookup builds one
+ * `DefaultFonts` per project.
+ */
+const resolutionOver = perObject((defaults: DefaultFonts): Resolution => ({
+  defaults,
+  resolved: new WeakMap(),
+}));
 
 /**
- * Keyed by the defaults, then by font, so a font answers one object per `DefaultFonts` and a
- * metrics cache keyed on it keeps its hits. The theme lookup builds one `DefaultFonts` per project.
+ * The walks of font graphs over one set of defaults. `resolved` holds each font a walk has
+ * finished, so a default that two fonts or two paths reach resolves once. Only a cycle walks past
+ * `MAX_FALLBACK_DEPTH`, and there the first walk to finish a font answers for the later ones.
  */
-const resolvedOver = perObject((defaults: DefaultFonts) =>
-  perObject((font: FontResource) => replaceDefaults(font, defaults, 0))
-);
+interface Resolution {
+  readonly defaults: DefaultFonts;
+  readonly resolved: WeakMap<FontResource, FontResource>;
+}
 
 /** `Font::_is_base_cyclic` (`font.cpp:152-169`): whether `candidate` is `font`, or its `base_font` chain reaches it. */
 function isBaseCyclic(candidate: FontResource | null, font: FontResource): boolean {
@@ -54,56 +62,47 @@ function isBaseCyclic(candidate: FontResource | null, font: FontResource): boole
 function defaultOf(
   font: FontResource,
   candidates: readonly (FontResource | null)[],
-  defaults: DefaultFonts,
+  resolution: Resolution,
   depth: number
 ): FontResource | null {
   const index = candidates.findIndex((candidate) => !isBaseCyclic(candidate, font));
-  if (index < 0 || depth >= MAX_DEFAULT_DEPTH) return FACELESS_FONT;
+  if (index < 0 || depth >= MAX_FALLBACK_DEPTH) return FACELESS_FONT;
   const chosen = candidates[index]!;
-  return chosen && replaceDefaults(chosen, defaults, depth + 1);
+  return chosen && replaceDefaults(chosen, resolution, depth + 1);
 }
 
 /** `font` itself where nothing under it changes, so an untouched branch keeps its identity. */
-function replaceDefaults(font: FontResource, defaults: DefaultFonts, depth: number): FontResource {
-  switch (font.kind) {
-    case 'system':
-      return defaultOf(font, defaults.system, defaults, depth) ?? font;
-    case 'variation': {
-      const baseFont = font.baseFont
-        ? replaceDefaults(font.baseFont, defaults, depth)
-        : defaultOf(font, defaults.variation, defaults, depth);
-      return baseFont === font.baseFont ? font : { ...font, baseFont };
-    }
-    case 'file': {
-      if (hasGlyphs(font)) return font;
-      return withFallbackDefaults(font, defaults, depth);
-    }
-  }
+function replaceDefaults(font: FontResource, resolution: Resolution, depth: number): FontResource {
+  let replaced = resolution.resolved.get(font);
+  if (!replaced) resolution.resolved.set(font, (replaced = replaceDefaultsOnce(font, resolution, depth)));
+  return replaced;
 }
 
-/** Up to the first fallback that draws a face: the walk passes one with no face, and never reaches the fallbacks after a face. */
-function withFallbackDefaults(
-  font: FontFileResource,
-  defaults: DefaultFonts,
-  depth: number
-): FontFileResource {
-  const fallbacks = [...font.fallbacks];
-  for (const [i, fallback] of fallbacks.entries()) {
-    fallbacks[i] = replaceDefaults(fallback, defaults, depth);
-    const face = findDrawnFace(fallbacks[i]);
-    if (face && face !== NO_FACE) break;
-  }
-  return fallbacks.every((fallback, i) => fallback === font.fallbacks[i]) ? font : { ...font, fallbacks };
+/** {@link replaceDefaults} for a font the walk has not finished. */
+function replaceDefaultsOnce(font: FontResource, resolution: Resolution, depth: number): FontResource {
+  const fallbacks = font.fallbacks.map((fallback) => replaceDefaults(fallback, resolution, depth));
+  const changed = fallbacks.some((fallback, i) => fallback !== font.fallbacks[i]);
+  if (font.kind === 'file') return changed ? { ...font, fallbacks } : font;
+  const { defaults } = resolution;
+  const candidates = font.kind === 'system' ? defaults.system : defaults.variation;
+  // A SystemFont's own `base_font` is the OS font, and none matches.
+  const baseFont =
+    font.kind === 'variation' && font.baseFont
+      ? replaceDefaults(font.baseFont, resolution, depth)
+      : defaultOf(font, candidates, resolution, depth);
+  return changed || baseFont !== font.baseFont ? { ...font, baseFont, fallbacks } : font;
 }
 
 /**
- * `font` with the default fonts under every font with no face of its own that its face can come
- * from: the bottom of its `base_font` chain, and the `fallbacks` of a `FontFile` with no glyphs.
- * A font with no face is left as it is where its default is the bundled font, and draws that.
+ * `font` with the default fonts under every font of its graph with no face of its own: the bottom
+ * of each `base_font` chain, in `font` and in every font of its **Fallback chain**. A font with no
+ * face is left as it is where its default is the bundled font, and draws that.
  */
 export function withDefaultFonts(font: FontResource | null, defaults: DefaultFonts): FontResource | null {
-  // A file with its own glyphs draws them, and the walk never reaches its fallbacks.
   // No default changes a font, so the cache would answer `font` itself.
-  if (!font || defaults === NO_DEFAULT_FONTS || (font.kind === 'file' && hasGlyphs(font))) return font;
-  return resolvedOver(defaults)(font);
+  if (!font || defaults === NO_DEFAULT_FONTS || (hasOwnGlyphs(font) && font.fallbacks.length === 0))
+    return font;
+  return replaceDefaults(font, resolutionOver(defaults), 0);
 }
+
+const hasOwnGlyphs = (font: FontResource): boolean => font.kind === 'file' && hasGlyphs(font);

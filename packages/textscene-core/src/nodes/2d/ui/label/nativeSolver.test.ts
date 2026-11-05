@@ -825,6 +825,7 @@ describe('labelVisibleLineRange (label.cpp:344-361)', () => {
 
 describe('windowLabelLines', () => {
   const layout: TextLayoutResult = {
+    shapedText: 'abc',
     lines: [
       { text: 'a', glyphs: [], widthPx: 10, paragraphIndex: 0 },
       { text: 'b', glyphs: [], widthPx: 30, paragraphIndex: 1 },
@@ -865,6 +866,10 @@ describe('labelPreShapeText (label.cpp:155-156)', () => {
     expect(labelPreShapeText('Hello', 3, VisibleCharactersBehavior.VC_GLYPHS_LTR)).toBe('Hello');
   });
 
+  it('cuts by code points, so an astral character is never split (edge case)', () => {
+    expect(labelPreShapeText('😀😀😀😀abcdefgh', 6, undefined)).toBe('😀😀😀😀ab');
+  });
+
   it('a negative or absent visibleChars is "show all" (edge case)', () => {
     expect(labelPreShapeText('Hello', -1, VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING)).toBe('Hello');
     expect(labelPreShapeText('Hello', undefined, VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING)).toBe(
@@ -882,6 +887,8 @@ function fakeLine(charCount: number, firstSourceIndex = 0): TextLineLayout {
       x: i,
       advance: 1,
       glyph: null,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      fontSizePx: 16,
       sourceIndex: firstSourceIndex + i,
     })),
     widthPx: charCount,
@@ -893,6 +900,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
   it('VC_CHARS_AFTER_SHAPING keeps a running CHARACTER budget across lines (happy path)', () => {
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(3), fakeLine(3, 3)], {
       behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+      text: 'x'.repeat(6),
       visibleChars: 4,
       visibleRatio: undefined,
     });
@@ -911,15 +919,36 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     }).lines[0]!;
     const [revealed] = applyVisibleCharsReveal([line], {
       behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+      text: 'abc שלום',
       visibleChars: 6,
       visibleRatio: undefined,
     });
     expect(revealed!.glyphs.map((glyph) => glyph.sourceIndex)).toEqual([0, 1, 2, 3, 5, 4]);
   });
 
+  it('VC_CHARS_AFTER_SHAPING budgets code points, so an astral glyph costs one (label.h:207)', () => {
+    // "😀😀ab" has glyph source indices 0, 2, 4, 5 in UTF-16 units but code points 0, 1, 2, 3.
+    const line = fakeLine(4);
+    line.glyphs = line.glyphs.map((glyph, index) => ({ ...glyph, sourceIndex: [0, 2, 4, 5][index] }));
+    const [revealed] = applyVisibleCharsReveal([line], {
+      behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+      text: '😀😀ab',
+      visibleChars: 3,
+      visibleRatio: undefined,
+    });
+    expect(revealed!.glyphs.map((glyph) => glyph.sourceIndex)).toEqual([0, 2, 4]);
+  });
+
   it('VC_CHARS_AFTER_SHAPING hides the ellipsis of a paragraph that starts past the budget, plus one', () => {
     // An ellipsis glyph's `end` is -1 (`text_server.h:628`), so `-1 + para_start > visible_chars` hides it.
-    const ellipsis = { char: '…', x: 0, advance: 1, glyph: null };
+    const ellipsis = {
+      char: '…',
+      x: 0,
+      advance: 1,
+      glyph: null,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      fontSizePx: 16,
+    };
     const withEllipsis = (paragraphStart: number): TextLineLayout => ({
       ...fakeLine(0),
       glyphs: [ellipsis],
@@ -927,6 +956,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     });
     const [kept, hidden] = applyVisibleCharsReveal([withEllipsis(3), withEllipsis(4)], {
       behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+      text: 'x'.repeat(6),
       visibleChars: 2,
       visibleRatio: undefined,
     });
@@ -937,6 +967,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
   it('VC_GLYPHS_AUTO/LTR reveal GLYPHS from the FRONT, budgeted by visible_ratio * total_glyphs', () => {
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
     });
@@ -944,6 +975,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(l2!.glyphs.length).toBe(0);
     const auto = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_AUTO,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
     });
@@ -954,6 +986,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
   it('VC_GLYPHS_RTL reveals GLYPHS from the BACK — the opposite end from LTR/AUTO (error path)', () => {
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_RTL,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
     });
@@ -966,6 +999,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(
       applyVisibleCharsReveal(lines, {
         behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+        text: 'x'.repeat(6),
         visibleChars: undefined,
         visibleRatio: 1,
       })[0]!.glyphs.length
@@ -973,6 +1007,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(
       applyVisibleCharsReveal(lines, {
         behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+        text: 'x'.repeat(6),
         visibleChars: -1,
         visibleRatio: undefined,
       })[0]!.glyphs.length
@@ -984,6 +1019,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(
       applyVisibleCharsReveal(lines, {
         behavior: VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING,
+        text: '',
         visibleChars: 0,
         visibleRatio: 0,
       })[0]!.glyphs.length
@@ -1177,7 +1213,7 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
   }
 
   function originAt(alignment: number, rtl: boolean): number {
-    return layoutLabelLines(lineOfWidth(70), 200, 100, alignment, undefined, undefined, FONT_SIZE, {
+    return layoutLabelLines(lineOfWidth(70), 200, 100, alignment, undefined, undefined, {
       rtl,
     })[0]!.x;
   }
@@ -1207,18 +1243,9 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
     // `if (rtl && autowrap_mode != AUTOWRAP_OFF)` reads `shaped_text_get_inferred_direction` (:470),
     // not `rtl_layout` (:471). `text_direction` defaults to TEXT_DIRECTION_AUTO (`label.h:70`), so `:179`
     // hands the TextServer DIRECTION_AUTO and a Latin paragraph infers LTR (`text_server_adv.cpp:7241-7247`).
-    const placements = layoutLabelLines(
-      lineOfWidth(70),
-      200,
-      100,
-      3,
-      undefined,
-      UNJUSTIFIED_FLAGS,
-      FONT_SIZE,
-      {
-        rtl: true,
-      }
-    );
+    const placements = layoutLabelLines(lineOfWidth(70), 200, 100, 3, undefined, UNJUSTIFIED_FLAGS, {
+      rtl: true,
+    });
     expect(placements[0]!.x).toBe(0);
   });
 });
@@ -1232,7 +1259,7 @@ describe('layoutLabelLines — the overrun trim (label.cpp:302-332)', () => {
       lineSpacingPx: 3,
     });
     const trimTo60 = (line: TextLineLayout): TextLineLayout => ({ ...line, widthPx: 60 });
-    const [placement] = layoutLabelLines(layout, 100, 40, 2, undefined, undefined, 16, {
+    const [placement] = layoutLabelLines(layout, 100, 40, 2, undefined, undefined, {
       trim: { line: trimTo60, filledLine: trimTo60 },
     });
     expect(placement!.line.widthPx).toBe(60);
@@ -1250,7 +1277,7 @@ describe('layoutLabelLines — the justification-aware trim of FILL with autowra
   const naturalWidthPx = layout.lines[0]!.widthPx;
   const markTrimmed = (line: TextLineLayout): TextLineLayout => ({ ...line, text: `${line.text}…` });
   const fillAt = (boxWidthPx: number) =>
-    layoutLabelLines(layout, boxWidthPx, 40, 3, undefined, JustificationFlag.WORD_BOUND, 16, {
+    layoutLabelLines(layout, boxWidthPx, 40, 3, undefined, JustificationFlag.WORD_BOUND, {
       trim: { line: markTrimmed, filledLine: markTrimmed },
     })[0]!.line;
 
@@ -1276,7 +1303,7 @@ describe('layoutLabelLines — the trimmed FILL line fitted again with CONSTRAIN
   const trimOptions = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 };
   const ellipsisFlags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
   const filledLineAt = (justificationFlags: number) =>
-    layoutLabelLines(layout, BOX_WIDTH_PX, 40, 3, undefined, justificationFlags, 16, {
+    layoutLabelLines(layout, BOX_WIDTH_PX, 40, 3, undefined, justificationFlags, {
       trim: {
         line: (line) => trimLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, trimOptions),
         filledLine: (line, filledFlags) =>
@@ -1311,7 +1338,7 @@ describe('layoutLabelLines — the inferred paragraph direction (label.cpp:470-4
       lineSpacingPx: 3,
     });
     const lines = layout.lines.map((line) => ({ ...line, widthPx: 70, isRtl }));
-    return layoutLabelLines({ ...layout, lines }, 200, 100, 3, undefined, UNJUSTIFIED_FLAGS, FONT_SIZE, {
+    return layoutLabelLines({ ...layout, lines }, 200, 100, 3, undefined, UNJUSTIFIED_FLAGS, {
       rtl,
       isAutowrapped,
     })[0]!.x;
@@ -1336,7 +1363,7 @@ describe('layoutLabelLines — the inferred paragraph direction (label.cpp:470-4
       autowrapMode: AutowrapMode.AUTOWRAP_WORD_SMART,
       lineSpacingPx: 3,
     });
-    const placements = layoutLabelLines(layout, 100, 100, 3, undefined, undefined, FONT_SIZE, {
+    const placements = layoutLabelLines(layout, 100, 100, 3, undefined, undefined, {
       isAutowrapped: true,
     });
     const last = placements.at(-1)!;
@@ -1352,6 +1379,7 @@ describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
     // layout direction, so the same budget hides the opposite end from the LTR case.
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_AUTO,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
       rtl: true,
@@ -1363,6 +1391,7 @@ describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
   it('VC_GLYPHS_LTR and VC_GLYPHS_RTL are explicit and ignore the layout direction (:779-780)', () => {
     const ltr = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
       rtl: true,
@@ -1370,6 +1399,7 @@ describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
     expect(ltr[0]!.glyphs.length).toBe(4);
     const rtlBehavior = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_RTL,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
       rtl: false,
@@ -1419,7 +1449,6 @@ describe('Label paragraph_spacing and the theme spacing constants (label.cpp:344
       undefined,
       props.verticalAlignment,
       undefined,
-      FONT_SIZE,
       {
         lineSpacingPx: theme.lineSpacingPx,
         paragraphSpacingPx: theme.paragraphSpacingPx,

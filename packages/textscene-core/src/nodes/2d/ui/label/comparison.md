@@ -58,6 +58,32 @@ glyph, not with `outline_size`.
 The import sidecar's `scaling_mode` sets how a size off the fixed size scales the glyphs
 (`text_server_adv.cpp:4093-4104`). Integer rounds the ratio, and Disabled keeps the fixed size.
 
+## Font fallbacks
+
+<!-- compare: image=unit-label-font-fallbacks status=done fixture=unit-label-font-fallbacks.tscn -->
+
+A character the font lacks draws from the first font of its **Fallback chain** that has it, with that
+font's advance and kerning (`text_server_adv.cpp:7111-7170`). The chain is the font's `fallbacks`, a font
+import's `fallbacks` (`resource_importer_dynamic_font.cpp:192`, `resource_importer_bmfont.cpp:98`), or
+the base's for a `FontVariation` with none (`font.cpp:2926-2945`). The `label-font-fallbacks` golden
+pins this.
+
+## Variable fonts
+
+<!-- compare: image=unit-label-font-variation-instance status=done fixture=unit-label-font-variation-instance.tscn -->
+
+A `FontVariation` over a variable font draws the instance that its `variation_opentype` names, as Godot sets
+the axes on FreeType and HarfBuzz (`text_server_adv.cpp:1915-1950`). The glyphs fill and stroke from the outlines
+at the instance. They follow the `fvar`, `avar`, `gvar` and `cvar` tables. Each advance follows `HVAR`, or the
+phantom points that `gvar` moves in a font without `HVAR`. The pair kerning follows the `GPOS` `kern` feature
+with its deltas at the instance. A `FontVariation` over another takes its own axis values alone (`font.cpp:3120-3131`).
+
+## Kerning at a variable-font instance
+
+<!-- compare: image=unit-label-font-variation-kerning status=done fixture=unit-label-font-variation-kerning.tscn -->
+
+Recursive at `MONO` 0.5 kerns each pair by half its kerning at the default instance, as Godot does.
+
 ## Linting
 
 <!-- lint:begin Label -->
@@ -122,6 +148,11 @@ Label's construction defaults. It assumes that `text`, whose length is the denom
 is already applied. Every real Godot save guarantees that, since `text` is the first
 `ADD_PROPERTY`, but a hand-edited file that writes `text` after either does not.
 
+Every count counts code points, as Godot's `String` does (`label.cpp:1375-1377`): the
+denominator, the cut at VC_CHARS_BEFORE_SHAPING (`:155-156`) and the budget of
+VC_CHARS_AFTER_SHAPING (`label.h:207`). An astral character, such as an emoji, counts one. The
+previewer draws no colour emoji, so only the letters after it show the count.
+
 ## Text direction
 
 Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server runs ICU over it:
@@ -150,6 +181,10 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 ## Known limitations
 
 - **Not drawn** Arabic letters draw in their isolated forms, since the shaper does not join them.
+- **Approximated** At an instance, a variable font keeps its default glyphs where its `GSUB` feature variations swap them.
+- **Approximated** At an instance, the `GPOS` kerning reads the pair lookups of every script, where Godot reads those of each script run.
+- **Approximated** At an instance, the `GPOS` kerning reads the default language system of each script, where Godot reads the system of the text's language.
+- **Approximated** At an instance, the `GPOS` kerning pairs adjacent characters only, where Godot also kerns across a glyph that a lookup flag skips.
 - **Approximated** A font the previewer cannot read outlines from draws with the browser's
   rasteriser and hinting, so a cap can sit 1 px lower here.
 - **Not drawn** The `fallbacks` of a BMFont: a missing character draws as a hex-code box (`text_server_adv.cpp:6810-6928`, #1298).

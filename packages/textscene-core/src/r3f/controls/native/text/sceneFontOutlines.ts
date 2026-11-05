@@ -21,22 +21,39 @@ import {
   type FileWithBytes,
 } from './sceneFontResolution';
 import { createSettledPeek } from './settledChannel';
+import { perObject } from '../../../../utils/perObject';
 import { CONTOUR_LOAD, openFontOutlines, type GlyphLoad, type SfntOutlines } from './sfntOutlines';
 
 /** Undefined while the load runs. Null is a font that holds no outlines this reader opens. */
 type PeekedOutlines = SfntOutlines | null | undefined;
 
 /**
- * The outlines of each load: a TextMesh extrudes the contours `font_get_glyph_contours` loads, and
- * the canvas draws the glyphs its font's `hinting` loads. Keyed by the leaf `FontFileResource`, as
- * the metrics are, so a reloaded file is read again and a shared one once.
+ * The outlines of each load of a font's bytes (`loadKey`): a TextMesh extrudes the contours
+ * `font_get_glyph_contours` loads, and the canvas draws the glyphs its font's `hinting` loads. Keyed
+ * by the bytes, as the metrics are, so a reloaded file is read again, and a shared one or a copy of
+ * it (`withDefaultFonts`) once.
  */
-const peekContourOutlines = createSettledPeek<object, SfntOutlines | null>();
-const peekCanvasOutlines = createSettledPeek<object, SfntOutlines | null>();
+const peekOutlines = createSettledPeek<object, SfntOutlines | null>();
 
-/** The cache keys of the bundled font, which has no resource: one for each load. */
-const BUNDLED_CONTOURS = {};
-const BUNDLED_CANVAS: Record<FontHinting, object> = { none: {}, light: {}, normal: {} };
+/** The cache key of the bundled font's bytes, which have no resource. */
+const BUNDLED = {};
+
+/** The key of each load of a font's bytes, built on the first ask: the bytes alone do not tell two loads apart. */
+const loadKeys = perObject((_bytes: object) => new Map<string, object>());
+
+/** The cache key of `bytes` as `load` loads them. */
+function loadKey(bytes: object, { hinting, isAutohinterForced }: GlyphLoad): object {
+  const keys = loadKeys(bytes);
+  const name = `${hinting},${isAutohinterForced}`;
+  let key = keys.get(name);
+  if (!key) keys.set(name, (key = {}));
+  return key;
+}
+
+/** The outlines of `bytes` as `load` loads them, starting the load on the first peek. */
+function peekLoadedOutlines(bytes: ArrayBuffer, load: GlyphLoad): PeekedOutlines {
+  return peekOutlines(loadKey(bytes, load), () => settledOutlines(() => openFontOutlines(bytes, load)));
+}
 
 /** The outlines of a font with no face: it lacks every glyph, so a TextMesh draws each as its fallback quad. */
 const NO_OUTLINES: SfntOutlines = { glyphIndex: () => 0, glyphContours: () => null };
@@ -54,8 +71,8 @@ function settledOutlines(read: () => Promise<SfntOutlines | null>): Promise<Sfnt
  * loads it. Its bytes load as their own chunk, so a scene with no text drawn from outlines never
  * fetches them.
  */
-function peekBundledOutlines(peek: typeof peekContourOutlines, key: object, load: GlyphLoad): PeekedOutlines {
-  return peek(key, () =>
+function peekBundledOutlines(load: GlyphLoad): PeekedOutlines {
+  return peekOutlines(loadKey(BUNDLED, load), () =>
     settledOutlines(async () => {
       const { bundledFontBytes } = await import('./bundledFontBytes');
       return openFontOutlines(bundledFontBytes(), load);
@@ -72,13 +89,12 @@ function peekBundledOutlines(peek: typeof peekContourOutlines, key: object, load
  */
 export function peekSceneFontOutlines(font: FontResource | null | undefined): PeekedOutlines {
   const face: DrawnFace = findDrawnFace(font);
-  if (face === BUNDLED_FACE) return peekBundledOutlines(peekContourOutlines, BUNDLED_CONTOURS, CONTOUR_LOAD);
+  if (face === BUNDLED_FACE) return peekBundledOutlines(CONTOUR_LOAD);
   if (face === NO_FACE) return NO_OUTLINES;
   if (face && hasBitmap(face)) return bitmapFontOutlines(face.bitmap);
   const bytes = face?.bytes;
   if (!face || !bytes) return null;
-  const load = { ...CONTOUR_LOAD, isAutohinterForced: fontForcesAutohinter(face) };
-  return peekContourOutlines(face, () => settledOutlines(() => openFontOutlines(bytes, load)));
+  return peekLoadedOutlines(bytes, { ...CONTOUR_LOAD, isAutohinterForced: fontForcesAutohinter(face) });
 }
 
 /**
@@ -90,8 +106,10 @@ export function peekSceneFontOutlines(font: FontResource | null | undefined): Pe
  */
 export function peekGlyphOutlines(face: FileWithBytes, metrics: FontMetrics): PeekedOutlines {
   if (!isCanvasFontMetrics(metrics)) return null;
-  const load = { hinting: fontHinting(face), isAutohinterForced: fontForcesAutohinter(face) };
-  return peekCanvasOutlines(face, () => settledOutlines(() => openFontOutlines(face.bytes, load)));
+  return peekLoadedOutlines(face.bytes, {
+    hinting: fontHinting(face),
+    isAutohinterForced: fontForcesAutohinter(face),
+  });
 }
 
 /**
@@ -99,6 +117,5 @@ export function peekGlyphOutlines(face: FileWithBytes, metrics: FontMetrics): Pe
  * `gui/theme/default_font_hinting`.
  */
 export function peekBundledGlyphOutlines(hinting: FontHinting): PeekedOutlines {
-  const load = { hinting, isAutohinterForced: false };
-  return peekBundledOutlines(peekCanvasOutlines, BUNDLED_CANVAS[hinting], load);
+  return peekBundledOutlines({ hinting, isAutohinterForced: false });
 }

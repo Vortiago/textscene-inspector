@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fixtureFontBytes, systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
 import { NO_PROJECT_FONTS, type ProjectFonts } from '../../fonts/font/projectFonts';
 import type { FontFileResource, FontResource } from '../../fonts/font/types';
@@ -37,11 +37,16 @@ const withoutFont = (projectFonts: ProjectFonts = NO_PROJECT_FONTS) => ({
   resource: { id: 't', type: 'TextMesh', data: {} },
 });
 
-/** The ready face of `mesh`, once its outlines and metrics have settled. */
-async function readyFace(mesh: ReturnType<typeof textMeshWith>) {
+/** The ready chain of `mesh`, once its outlines and metrics have settled. */
+async function readyChain(mesh: ReturnType<typeof textMeshWith>) {
   const font = await settledPeek(() => textMeshFont(mesh));
   if (font.status !== 'ready') throw new Error('expected a ready font');
-  return font.face;
+  return font.chain;
+}
+
+/** The first face of the ready chain of `mesh`. */
+async function readyFace(mesh: ReturnType<typeof textMeshWith>) {
+  return (await readyChain(mesh))[0];
 }
 
 /** The outlines a font settles to, which tells the font a chain chose. */
@@ -81,7 +86,7 @@ describe('textMeshFont', () => {
 
     const font = await settledPeek(() => textMeshFont(mesh));
     if (font.status !== 'ready') throw new Error('expected a ready font');
-    expect(font.face.outlines.glyphIndex(0x48)).toBeGreaterThan(0);
+    expect(font.chain[0].outlines.glyphIndex(0x48)).toBeGreaterThan(0);
   });
 
   it('is ready with the outlines of an OpenType-CFF font', async () => {
@@ -89,7 +94,7 @@ describe('textMeshFont', () => {
 
     const font = await settledPeek(() => textMeshFont(mesh));
     if (font.status !== 'ready') throw new Error('expected a ready font');
-    expect(font.face.outlines.glyphIndex(0x48)).toBeGreaterThan(0);
+    expect(font.chain[0].outlines.glyphIndex(0x48)).toBeGreaterThan(0);
   });
 
   it.each([
@@ -101,7 +106,7 @@ describe('textMeshFont', () => {
 
     const font = await settledPeek(() => textMeshFont(mesh));
     if (font.status !== 'ready') throw new Error('expected a ready font');
-    expect(font.face.outlines.glyphIndex(0x48)).toBeGreaterThan(0);
+    expect(font.chain[0].outlines.glyphIndex(0x48)).toBeGreaterThan(0);
   });
 
   it('keeps a ready font for the same mesh object', async () => {
@@ -109,6 +114,29 @@ describe('textMeshFont', () => {
     await settledPeek(() => textMeshFont(mesh));
 
     expect(textMeshFont(mesh)).toBe(textMeshFont(mesh));
+  });
+});
+
+describe('textMeshFont on a font with fallbacks', () => {
+  const withFallback = (): FontFileResource => ({
+    ...trueTypeFontFile(),
+    fallbacks: [{ ...trueTypeFontFile(), bytes: fixtureFontBytes('dejavu-sans-bidi-subset.ttf') }],
+  });
+
+  it('carries the outlines of each fallback face', async () => {
+    const [, fallback] = await readyChain(textMeshWith({}, loaded(withFallback())));
+
+    const hebrewAlef = 0x5d0;
+    expect(fallback?.outlines.glyphIndex(hebrewAlef)).toBeGreaterThan(0);
+  });
+
+  it('drops a fallback whose outlines it cannot read', async () => {
+    const font = withFallback();
+    font.fallbacks = [{ ...trueTypeFontFile(), bytes: new ArrayBuffer(8) }];
+
+    const chain = await readyChain(textMeshWith({}, loaded(font)));
+
+    expect(chain).toHaveLength(1);
   });
 });
 
@@ -168,7 +196,7 @@ describe('the font chain of a TextMesh (`TextMesh::_get_font_or_default`)', () =
   });
 
   it('draws a FontVariation with no base_font over the project default font', async () => {
-    const variation = { kind: 'variation', baseFont: null, properties: {} } as const;
+    const variation: FontResource = { kind: 'variation', baseFont: null, fallbacks: [], properties: {} };
     const projectFonts = { ...NO_PROJECT_FONTS, projectDefaultFont: projectFont };
     const mesh = textMeshWith({}, { [FONT_PATH]: variation }, projectFonts);
 
@@ -238,7 +266,7 @@ describe('textMeshFont on a BMFont', () => {
   function bitmapSurface(text: string) {
     const font = textMeshFont(textMeshWith({}, loaded(bitmapFontFile())));
     if (font.status !== 'ready') throw new Error(`expected a ready font, got ${font.status}`);
-    return buildTextMeshSurface(decodeTextMesh({ text: `"${text}"`, font_size: '16' }), '', font.face);
+    return buildTextMeshSurface(decodeTextMesh({ text: `"${text}"`, font_size: '16' }), '', font.chain);
   }
 
   it('builds no glyph surface: a font with no FreeType face has no contours (`text_server_adv.cpp:3613`)', () => {
@@ -247,5 +275,29 @@ describe('textMeshFont on a BMFont', () => {
 
   it('builds the hex-code box quad of a character the font lacks, as for any font', () => {
     expect(bitmapSurface('HzH').positions.length / 3).toBe(4);
+  });
+});
+
+describe('textMeshFont of a face that fails to load', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  // A face whose metrics fail draws the bundled metrics, and its own outlines would not match their advances.
+  it('is unreadable, though its outlines read', async () => {
+    vi.stubEnv('VITEST', 'false');
+    vi.resetModules();
+    const logger = await import('../../../logger');
+    vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const fresh = await import('./textMeshFont');
+    const freshOutlines = await import('../../../r3f/controls/native/text/sceneFontOutlines');
+    const { textMeshWith: freshMeshWith, trueTypeFontFile: freshFontFile } =
+      await import('./textMeshFont.testkit');
+    const font = freshFontFile();
+    const mesh = freshMeshWith({}, { [FONT_PATH]: font });
+
+    expect(await settledPeek(() => freshOutlines.peekSceneFontOutlines(font))).toBeTruthy();
+    expect(await settledPeek(() => fresh.textMeshFont(mesh))).toEqual({ status: 'unreadable' });
   });
 });

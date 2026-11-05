@@ -16,9 +16,16 @@ import {
   shearAboutBaseline,
 } from './canvasVariation';
 import { blendGlyphBitmap, placedGlyphBitmap, type ByteColour, type GlyphBitmap } from './glyphCoverage';
-import { canvasGlyphPenXPx, fontIsScaled, type FontMetrics, type GlyphVariation } from './fontMetrics';
-import type { TextLayoutResult } from './textLayout';
-import { isCanvasFontMetrics } from './runtimeFontMetrics';
+import {
+  canvasGlyphPenXPx,
+  drawnOpentype,
+  fontIsScaled,
+  getFontAscentPx,
+  type FontMetrics,
+  type GlyphVariation,
+} from './fontMetrics';
+import type { GlyphPlacement, TextLayoutResult } from './textLayout';
+import { isCanvasFontMetrics, type CanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
 import type { CanvasItemPixelMaterial } from '../../../components/LitCanvasItemPixels';
 import { injectProgram, injectViewportProgram } from '../../../materialProgramInputs';
@@ -45,11 +52,14 @@ function wholeRasterPx(cssPx: number): number {
 }
 
 interface CanvasTextCanvasLayout {
-  /** `HTMLCanvasElement#width`: the drawn width (`drawnWidthPx`) plus twice `offsetXPx` and the origin phase, rounded up to a whole pixel. */
+  /** `HTMLCanvasElement#width`: the drawn extent (`drawnExtentPx`), plus both pads and the origin phase, rounded up to a whole pixel. */
   canvasWidthPx: number;
   /** `HTMLCanvasElement#height`: `layout.heightPx` plus twice `offsetYPx`, rounded up to a whole pixel. */
   canvasHeightPx: number;
-  /** Left padding, CSS px: where the unpadded content box (x=0 in `layout`) sits in the raster. Shear reach plus stroke reach, mirrored on the right. */
+  /**
+   * Where the unpadded content box (x=0 in `layout`) sits in the raster, CSS px: the shear, stroke and
+   * embolden pad, plus the whole pixels of ink left of x=0, less those right of it (`drawnExtentPx`).
+   */
   offsetXPx: number;
   /** Top padding, CSS px: `CANVAS_TEXT_VERTICAL_PAD_PX` plus any outline-stroke reach. */
   offsetYPx: number;
@@ -58,7 +68,7 @@ interface CanvasTextCanvasLayout {
 /**
  * Sizes the raster canvas for `layout`, at a synthesised-italic `skew` (0 is
  * upright) and outline `strokeWidthPx` (0 is filled). The horizontal pad is
- * split evenly, so the quad stays centred on the content box. Pure: no DOM.
+ * split evenly, so the quad stays centred on the ink of the glyphs (`drawnExtentPx`). Pure: no DOM.
  */
 export function computeCanvasTextCanvasLayout(
   layout: TextLayoutResult,
@@ -66,37 +76,86 @@ export function computeCanvasTextCanvasLayout(
   strokeWidthPx = 0,
   originPhasePx: Readonly<Vector2> = VECTOR2_ZERO
 ): CanvasTextCanvasLayout {
-  // The worst-case shear offset over one line pitch (`buildGlyphQuadArrays`'s
-  // `dx(y) = -skew * (y - baselinePx)`). It over-pads a little, which costs
-  // only idle canvas pixels.
-  const shearPadPx = Math.abs(skew) * layout.linePitchPx;
   // A centred stroke reaches half its width outside the contour on every side,
   // horizontally too, where an upright fill needs no pad.
   const strokePadPx = strokeWidthPx / 2;
   // An embolden reaches its full growth right and up. The pad is symmetric, so the quad stays centred.
   const emboldenPadPx = maxEmboldenGrowthPx(layout);
+  const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + Math.ceil(strokePadPx + emboldenPadPx);
+  // The worst-case shear offset over a line's rows (`buildGlyphQuadArrays`'s
+  // `dx(y) = -skew * (y - baselinePx)`): every row of the raster above the baseline. A font's
+  // descent is shorter than its ascent, so the rows below shear less.
+  const shearPadPx = Math.abs(skew) * (layout.baselineOffsetPx + offsetYPx);
   // Whole pixels, as Godot draws a glyph texture texel-aligned: a fractional pad puts each texel
   // between two screen pixels, and the linear filter thins every edge.
-  const offsetXPx = Math.ceil(shearPadPx + strokePadPx + emboldenPadPx);
-  const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + Math.ceil(strokePadPx + emboldenPadPx);
+  const padXPx = Math.ceil(shearPadPx + strokePadPx + emboldenPadPx);
+  const { startPx, endPx } = drawnExtentPx(layout);
+  const inkLeftPx = Math.floor(startPx);
   return {
     // The quad sits `originPhasePx.x` left of the run origin, so the content reaches that much further right.
-    canvasWidthPx: wholeRasterPx(drawnWidthPx(layout) + 2 * offsetXPx + originPhasePx.x),
+    canvasWidthPx: wholeRasterPx(endPx - inkLeftPx + 2 * padXPx + originPhasePx.x),
     canvasHeightPx: wholeRasterPx(layout.heightPx + 2 * offsetYPx),
-    offsetXPx,
+    offsetXPx: padXPx - inkLeftPx,
     offsetYPx,
   };
 }
 
 /**
- * `layout.widthPx`, or the end of a glyph that reaches past it: a layout's width is where Godot
- * places it, and its glyphs may draw past that, as a trimmed AUTO right-to-left fill does.
+ * Whole pixels past a glyph's reach that its drawn ink can land. The painter floors a pen by up to
+ * 1 px (`canvasGlyphPenXPx`) or rounds it a quarter pixel right, and a hinted outline grid-fits under
+ * half a pixel past its measured box: 1.5 px on the left, 0.75 px on the right.
  */
-function drawnWidthPx(layout: TextLayoutResult): number {
-  return layout.lines.reduce((widthPx, line) => {
-    const last = line.glyphs.at(-1);
-    return last ? Math.max(widthPx, last.x + last.advance) : widthPx;
-  }, layout.widthPx);
+const INK_SLACK_LEFT_PX = 2;
+const INK_SLACK_RIGHT_PX = 1;
+
+/**
+ * The span of the ink of the glyphs, their pen boxes, the pen snap and the hinting included. Godot
+ * draws each glyph quad whole wherever its side bearing reaches, which a raster of the line box
+ * would clip. The run of a fallback face keeps its glyphs at their places on the line
+ * (`faceLayouts.ts`), so its raster spans them alone. A layout with no glyph spans its width.
+ */
+function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: number } {
+  let startPx = Infinity;
+  let endPx = -Infinity;
+  const inkFaces = new Map<FontMetrics, CanvasFontMetrics | null>();
+  for (const { glyphs } of layout.lines) {
+    for (const glyph of glyphs) {
+      const face = glyph.fontMetrics;
+      let inkFace = inkFaces.get(face);
+      if (inkFace === undefined) inkFaces.set(face, (inkFace = drawsMeasuredInk(face) ? face : null));
+      const { leftPx, rightPx } = glyphReachPx(glyph, inkFace, layout.baselineOffsetPx);
+      startPx = Math.min(startPx, glyph.x - leftPx - INK_SLACK_LEFT_PX);
+      endPx = Math.max(endPx, glyph.x + rightPx + INK_SLACK_RIGHT_PX);
+    }
+  }
+  return startPx === Infinity ? { startPx: 0, endPx: layout.widthPx } : { startPx, endPx };
+}
+
+/** Whether `face` draws the ink it measures: `measureText` measures the default instance alone. */
+function drawsMeasuredInk(face: FontMetrics): face is CanvasFontMetrics {
+  return isCanvasFontMetrics(face) && !drawnOpentype(face);
+}
+
+/**
+ * How far `glyph`'s ink reaches left of its pen and right of it, px, its pen box included. `inkFace`
+ * is its face where that face draws the ink it measures. A glyph with no such ink takes the larger
+ * of `lineAscentPx` and its face's own ascent on each side: an ascent bounds the reach of any glyph.
+ */
+function glyphReachPx(
+  glyph: GlyphPlacement,
+  inkFace: CanvasFontMetrics | null,
+  lineAscentPx: number
+): { leftPx: number; rightPx: number } {
+  const ink = inkFace?.getGlyphInkUnits?.(glyph.char);
+  if (!ink) {
+    const reachPx = Math.max(lineAscentPx, getFontAscentPx(glyph.fontMetrics, glyph.fontSizePx));
+    return { leftPx: reachPx, rightPx: glyph.advance + reachPx };
+  }
+  const pxPerUnit = glyph.fontSizePx / glyph.fontMetrics.unitsPerEm;
+  return {
+    leftPx: Math.max(0, ink.left * pxPerUnit),
+    rightPx: Math.max(glyph.advance, ink.right * pxPerUnit),
+  };
 }
 
 /** The `GlyphQuadArrays` shape `buildGlyphQuadArrays` produces, always exactly one quad. */
@@ -107,10 +166,9 @@ interface CanvasTextQuadArrays {
 }
 
 /**
- * One quad spanning the padded raster, placed so the unpadded content box is
- * `[0, layout.widthPx] x [0, layout.heightPx]` in `buildGlyphQuadArrays`'s
- * convention (Godot px, +Y down, negated to three's Y-up). A neighbouring run
- * lines up as if the padding did not exist. The quad moves back by `originPhasePx`, so its texels
+ * One quad spanning the padded raster, placed so the layout origin is at x = 0 in
+ * `buildGlyphQuadArrays`'s convention (Godot px, +Y down, negated to three's Y-up). The quad
+ * covers the ink of the glyphs (`drawnExtentPx`). It moves back by `originPhasePx`, so its texels
  * land on the item's whole pixels.
  */
 export function buildCanvasTextQuadArrays(
@@ -242,7 +300,11 @@ export function paintSceneFontCanvas(
   }
 
   const baselineOffsetPx = layout.baselineOffsetPx;
-  const variation: GlyphVariation = { embolden: metrics.embolden ?? 0, skew, opentype: metrics.opentype };
+  const variation: GlyphVariation = {
+    embolden: metrics.embolden ?? 0,
+    skew,
+    opentype: drawnOpentype(metrics),
+  };
   // Each glyph draws its contour as Godot's FreeType draws it, which carries its own shear. The text
   // draws only for a face with no outlines, or a glyph with no contour.
   const contourOutlines = metrics.outlines ?? null;

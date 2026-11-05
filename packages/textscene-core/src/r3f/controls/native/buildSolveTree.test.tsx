@@ -1434,6 +1434,7 @@ describe('useBuildSolveTree — theme resolution', () => {
       expect(result.current.tree[0]?.projectFonts.projectDefaultFont).toEqual({
         kind: 'variation',
         baseFont: null,
+        fallbacks: [],
         properties: { spacing_glyph: '3' },
       });
     });
@@ -1462,8 +1463,8 @@ describe('useBuildSolveTree — theme resolution', () => {
       await settle();
 
       expect(result.current.tree[0]?.labelSettingsFont).toMatchObject({
-        kind: 'variation',
-        properties: { spacing_glyph: '3' },
+        kind: 'system',
+        baseFont: { kind: 'variation', properties: { spacing_glyph: '3' } },
       });
     });
 

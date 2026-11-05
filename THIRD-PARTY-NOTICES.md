@@ -67,6 +67,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/controls/native/text/sfntCff.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) and FreeType's outline scaling |
 | `packages/textscene-core/src/r3f/controls/native/text/variation/axisCoordinates.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_ensure_cache_for_size`, which writes the variations, and `_tag_to_name`) |
 | `packages/textscene-core/src/godot/text/openTypeNames.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_insert_feature` calls and `_tag_to_name`) |
+| `packages/textscene-core/src/godot/text/numberFormat.ts` | `core/string/translation_server.cpp` (`TranslationServer::format_number`) and `core/string/locales.h` (`num_system_data`) |
 | `packages/textscene-core/src/r3f/controls/native/text/sfntCmap.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_index`) |
 | `packages/textscene-core/src/resources/meshes/boxmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`BoxMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/planemesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PlaneMesh::_create_mesh_array`) |
@@ -125,6 +126,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/scrollcontainer/nativeSolver.ts` | `scene/gui/scroll_container.cpp` (`ScrollContainer::get_minimum_size`, `_update_scrollbars`, `_update_scrollbar_position`, `_reposition_children`), `scene/gui/scroll_bar.cpp` (`ScrollBar::get_minimum_size`, `get_grabber_size`, `get_area_size`, `get_grabber_offset`, `NOTIFICATION_DRAW`'s grabber-rect math) and `scene/gui/range.cpp` (`Range::get_as_ratio`, `Range::set_page`'s own CLAMP) |
 | `packages/textscene-core/src/nodes/2d/ui/texturerect/nativeSolver.ts` | `scene/gui/texture_rect.cpp` (`TextureRect::get_minimum_size`'s `expand_mode` contribution, `TextureRect::_notification`'s `NOTIFICATION_DRAW` `stretch_mode` draw-rect math) and `scene/main/canvas_item.h` (`TextureFilter`/`TextureRepeat`) |
 | `packages/textscene-core/src/nodes/2d/ui/label/nativeSolver.ts` | `scene/gui/label.cpp` (`Label::get_minimum_size` and its `autowrap_mode` branch, backed by `_update_visible`'s per-line height sum and `get_line_height`'s empty-text fallback; `Label::_shape`'s `int width` line-break width and the wrapped `minsize` it leaves behind, plus its trailing `update_minimum_size()`; `Label::_notification`'s `NOTIFICATION_RESIZED` paragraph invalidation; `Label::get_layout_data`'s `vbegin`/`vsep` vertical-alignment math and `_get_line_rect`'s `int(...)` per-line horizontal offsets; `_update_visible`/`get_layout_data`'s own `lines_skipped`/`max_lines_visible` visible-line window; `draw_text`'s per-glyph `visible_characters`/`visible_characters_behavior` skip union and `Label::_shape`'s pre-shape `substr`; the `label_settings`-over-theme precedence in `get_minimum_size`/`_update_visible`/`NOTIFICATION_DRAW`) and `scene/theme/default_theme.cpp` (Label's `StyleBoxEmpty` `normal_style`, `line_spacing` 3 and opaque-white `font_color`) |
+| `packages/textscene-core/src/nodes/2d/ui/richtextlabel/listing.ts` | `scene/gui/rich_text_label.cpp` (`_find_margin`, `_get_prefix`, `_add_list_prefixes`, `_find_list`, `_find_list_item`, and the marker draw in `_draw_line`) |
 | `packages/textscene-core/src/nodes/2d/ui/richtextlabel/paragraph.ts` | `scene/gui/rich_text_label.cpp` (`_find_alignment`, `_find_direction`, `_find_stt`, `_find_language` and the `[p]` option arms of `append_text`) |
 | `packages/textscene-core/src/nodes/2d/ui/richtextlabel/nativeSolver.ts` | `scene/gui/rich_text_label.cpp` (`RichTextLabel::get_minimum_size`, backed by `get_content_height`/`get_content_width`) and `scene/theme/default_theme.cpp` (RichTextLabel's `default_color`/`line_separation`/`paragraph_separation` theme defaults; the bold/italic `FontVariation`'s `set_variation_embolden(1.2)`/`set_variation_transform`'s `0.2` shear) |
 | `packages/textscene-core/src/nodes/2d/ui/richtextlabel/scrollBar.ts` | `scene/gui/rich_text_label.cpp` (`_update_scroll_exceeds`, `_prepare_scroll_anchor` and the `vscroll` setup in the constructor) |
@@ -466,7 +468,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 ---
 
-## Montserrat, Recursive and Cascadia Code fonts
+## Montserrat, Recursive, Cascadia Code and Carlito fonts
 
 <https://github.com/JulietaUla/Montserrat>, <https://github.com/arrowtype/recursive> and <https://github.com/microsoft/cascadia-code>
 
@@ -476,6 +478,7 @@ The tests and goldens that read a font file's outlines use these fixture fonts:
 - `scenes/fixtures/fonts/montserrat-semibold-subset.ttf`: a TrueType subset of Montserrat SemiBold. Copyright 2011 The Montserrat Project Authors (https://github.com/JulietaUla/Montserrat).
 - `scenes/fixtures/fonts/recursive-vf-subset.woff2`: a subset of the Recursive variable font, as the Godot demo `gui/bidi_and_font_features` ships it. Copyright 2019 The Recursive Project Authors (github.com/arrowtype/recursive).
 - `scenes/fixtures/fonts/cascadia-code-subset.ttf`: a subset of the Cascadia Code variable font, with its `wght` axis, its `gvar`, `cvar`, `avar` and `HVAR` tables and its hinting programs, and with a `post` table so that Chromium accepts it. Copyright (c) 2019 - Present, Microsoft Corporation, with Reserved Font Name 'Cascadia Code'.
+- `scenes/fixtures/fonts/carlito-bold-arrows-subset.ttf`: a TrueType subset of Carlito Bold: the space, the letters of `go up down back` and the arrows `U+2190` to `U+2193`. The `control-font-arrows` golden uses it. Copyright 2013 The Carlito Project Authors (https://github.com/googlefonts/carlito).
 
 Each is licensed under the SIL Open Font License, Version 1.1 (OFL-1.1), whose full text the Open Sans section above holds.
 
@@ -514,6 +517,10 @@ check read it. Its `name` table holds the full licence.
 `scenes/fixtures/fonts/dejavu-sans-bidi-subset.ttf` is a subset of DejaVu Sans with its Latin, digits,
 punctuation, U+0130, U+2026, Hebrew and Arabic letters, and its `GSUB`, `GPOS` and hinting tables. The
 bidirectional Label fixtures draw with it. Its `name` table holds the full licence.
+
+`scenes/fixtures/fonts/dejavu-sans-numerals-subset.ttf` is a subset of DejaVu Sans with its Basic Latin, the
+Arabic-Indic and Extended Arabic-Indic digits, their separators and U+200B. The numeral-system fixtures draw with
+it. Its `name` table holds the full licence.
 
 DejaVu Sans is Copyright (c) 2003 by Bitstream, Inc. All Rights Reserved. Bitstream Vera is a trademark of
 Bitstream, Inc. Glyphs imported from Arev fonts are Copyright (c) 2006 by Tavmjong Bah. All Rights Reserved.
@@ -939,8 +946,9 @@ SOFTWARE.
 `openTypeLayout.ts`, `openTypeGlyphSets.ts` and `openTypeShaping.ts`, in
 `packages/textscene-core/src/r3f/controls/native/text/autofit/`, port HarfBuzz's reading of the `GSUB` and
 `GPOS` tables, its glyph closure and its default shaper, because FreeType's auto-hinter shapes its blue
-characters and finds the glyphs of each style with HarfBuzz in Godot. Godot vendors it as
-`thirdparty/harfbuzz`. HarfBuzz is licensed under the "Old MIT" licence, separately from Godot's own MIT
+characters and finds the glyphs of each style with HarfBuzz in Godot. `openTypeGdef.ts` in the same
+directory ports its `GDEF` glyph properties and lookup flags, and `variation/instanceKerning.ts` ports its
+pair kerning at a variable-font instance. Godot vendors it as `thirdparty/harfbuzz`. HarfBuzz is licensed under the "Old MIT" licence, separately from Godot's own MIT
 licence above.
 
 ```

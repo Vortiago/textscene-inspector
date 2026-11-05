@@ -133,7 +133,8 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   const bidiOptions = useControlBidiOptions(props, solveNode);
   const layout = useMemo(() => {
     if (sharedLayout) return sharedLayout;
-    const shaped = shapeText(text, {
+    // A loading font draws nothing, so its layout shapes no text.
+    const shaped = shapeText(isFontLoading ? '' : text, {
       fontSizePx: textTheme.fontSizePx,
       boxWidthPx: labelShapingWidthPx(rect.w),
       autowrapMode,
@@ -149,6 +150,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     return windowLabelLines(shaped, range, textTheme.paragraphSpacingPx);
   }, [
     sharedLayout,
+    isFontLoading,
     text,
     textTheme.fontSizePx,
     textTheme.lineSpacingPx,
@@ -202,7 +204,6 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
         props.horizontalAlignment,
         props.verticalAlignment,
         effectiveJustificationFlags,
-        textTheme.fontSizePx,
         {
           rtl: solveNode.rtl,
           isAutowrapped: autowrapMode !== AutowrapMode.AUTOWRAP_OFF,
@@ -218,7 +219,6 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       props.horizontalAlignment,
       props.verticalAlignment,
       effectiveJustificationFlags,
-      textTheme.fontSizePx,
       textTheme.lineSpacingPx,
       textTheme.paragraphSpacingPx,
       solveNode.rtl,
@@ -235,6 +235,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       placements.map((placement) => placement.line),
       {
         behavior: props.visibleCharactersBehavior ?? VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING,
+        text: layout.shapedText,
         visibleChars: props.visibleCharacters,
         visibleRatio: props.visibleRatio,
         rtl: solveNode.rtl,
@@ -244,6 +245,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   }, [
     placements,
     props.visibleCharactersBehavior,
+    layout.shapedText,
     props.visibleCharacters,
     props.visibleRatio,
     solveNode.rtl,

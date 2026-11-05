@@ -54,7 +54,7 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
 
   const orderedKeys = controlLayoutOrder(solveNode);
   const resolvedValue = resolveRangeValue(props, orderedKeys);
-  const text = spinBoxDisplayText(props, resolvedValue);
+  const text = spinBoxDisplayText(props, resolvedValue, solveNode.locale);
 
   const {
     fontSizePx,

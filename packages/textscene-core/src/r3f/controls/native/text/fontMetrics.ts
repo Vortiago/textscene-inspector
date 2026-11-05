@@ -2,10 +2,12 @@
  * The font-metrics contract the native Control text engine shapes against, and the px quantisation
  * every implementation shares, from design-unit data alone. The whole-pixel advance round above the
  * subpixel threshold carries a remainder, so it lives in `textLayout.ts`. This module imports only
- * `perObject`, so no consumer pulls in Open Sans's baked data.
+ * object caches from `utils`, so no consumer pulls in Open Sans's baked data.
  */
 
 import { perObject } from '../../../../utils/perObject';
+import { identityKey } from '../../../../utils/identityKey';
+import { recentlyRead } from '../../../../utils/recentlyRead';
 import type { SfntOutlines } from './sfntOutlines';
 
 /**
@@ -36,8 +38,15 @@ export interface FontMetrics {
   readonly ascent: number;
   /** `hhea` descender magnitude, design units (positive), before `getFontLinePitchPx` rounds it. */
   readonly descent: number;
+  /** Whether the face maps `ch` to a glyph, `_font_has_char`. A face that cannot tell answers true. */
+  hasGlyph(ch: string): boolean;
   /** A character's own advance width, design units, or `null` if this font has no glyph for it (a shaper falls back to `averageAdvanceUnits`). */
   getGlyphAdvanceUnits(ch: string): number | null;
+  /**
+   * The rest of the face's **Fallback chain**, in order. A character the face lacks draws from the
+   * first of them that has it. The list is flat: the `fallbacks` of an entry are not read. Absent is none.
+   */
+  readonly fallbacks?: readonly FontMetrics[];
   /** Pairwise advance adjustment for two adjacent characters, design units, or `0` when the font has no entry for the pair. */
   getKerningAdjustmentUnits(a: string, b: string): number;
   /** This font's typical glyph width (such as OS/2 `xAvgCharWidth`), design units: the fallback advance for a character outside its charset. */
@@ -50,11 +59,14 @@ export interface FontMetrics {
    * the baseline. Absent is 0, upright.
    */
   readonly skew?: number;
-  /** `FontVariation.variation_opentype` of this face. Absent is none: every axis at its default. */
+  /**
+   * `FontVariation.variation_opentype` of this face, where its `outlines` draw an instance other than
+   * the default. Absent is the default instance.
+   */
   readonly opentype?: OpentypeCoordinates;
   /**
-   * The glyph outlines that the text of an emboldened or sheared canvas face follows. Absent for
-   * a face that needs none. Null for a font whose outlines this previewer cannot read: its text
+   * The glyph outlines that the text of an emboldened, sheared or varied canvas face follows. Absent
+   * for a face that needs none. Null for a font whose outlines this previewer cannot read: its text
    * stays on `fillText` and `strokeText`.
    */
   readonly outlines?: SfntOutlines | null;
@@ -305,8 +317,8 @@ export function isInstanced(opentype: OpentypeCoordinates | undefined): opentype
 }
 
 /** Whether the variation changes the glyph outline at all. */
-function isGlyphVaried({ embolden = 0, skew = 0 }: GlyphVariation): boolean {
-  return embolden !== 0 || skew !== 0;
+export function isGlyphVaried({ embolden = 0, skew = 0, opentype }: GlyphVariation): boolean {
+  return embolden !== 0 || skew !== 0 || isInstanced(opentype);
 }
 
 /** The axis values as one string, in key order, so two dictionaries of one content share a key. */
@@ -323,40 +335,61 @@ export function variationKey({ embolden = 0, skew = 0, opentype }: GlyphVariatio
 }
 
 /**
+ * Each wrapper holds its `opentype`, which keys the kept instances and kerning, so a `variation_opentype`
+ * animation drops the wrapper read least recently past this count.
+ */
+const MAX_KEPT_VARIATIONS = 32;
+
+/**
  * The wrappers of one face, by embolden, skew and axis values, then by outlines: one each, so a layout memoised on
  * `FontMetrics` identity keeps its hits.
  */
-const variationsOf = perObject(
-  (_face: FontMetrics) => new Map<string, Map<FontMetrics['outlines'], FontMetrics>>()
+const variationsOf = perObject((_face: FontMetrics) =>
+  recentlyRead<string, Map<FontMetrics['outlines'], FontMetrics>>(MAX_KEPT_VARIATIONS)
 );
+
+const newWrappersByOutlines = (): Map<FontMetrics['outlines'], FontMetrics> => new Map();
 
 /**
  * `metrics` with a `FontVariation`'s `embolden`, `skew` and `opentype` set, and the `outlines` its text follows.
  * The wrapper reads every other field through the face, so a live getter stays live. With no variation
  * and no outlines, it is the face itself. Two fonts that share a face and a variation keep
- * their own outlines, each on its own wrapper.
+ * their own outlines, each on its own wrapper. The advances and the kerning follow the instance
+ * that the axis values name, and the glyphs draw it where `drawnOpentype` gives them.
+ * A variation of a wrapper replaces its variation and keeps its outlines, as a `FontVariation` over
+ * another finds its face at its own values alone (`font.cpp:3120-3131`).
  */
 export function withVariation<Metrics extends FontMetrics>(
   metrics: Metrics,
-  { embolden = 0, skew = 0, opentype, outlines }: GlyphVariation & Pick<FontMetrics, 'outlines'>
+  {
+    embolden = 0,
+    skew = 0,
+    opentype,
+    outlines = metrics.outlines,
+  }: GlyphVariation & Pick<FontMetrics, 'outlines'>
 ): Metrics {
-  if (!outlines && !isGlyphVaried({ embolden, skew }) && !isInstanced(opentype)) return metrics;
-  const byVariation = variationsOf(metrics);
-  const key = variationKey({ embolden, skew, opentype });
-  let byOutlines = byVariation.get(key);
-  if (!byOutlines) byVariation.set(key, (byOutlines = new Map()));
+  if (!outlines && !isGlyphVaried({ embolden, skew, opentype })) return metrics;
+  const byOutlines = variationsOf(metrics)(variationKey({ embolden, skew, opentype }), newWrappersByOutlines);
   let wrapped = byOutlines.get(outlines);
-  if (!wrapped)
-    byOutlines.set(
-      outlines,
-      (wrapped = Object.create(metrics, {
-        embolden: { value: embolden },
-        skew: { value: skew },
-        opentype: { value: opentype },
-        ...(outlines !== undefined && { outlines: { value: outlines } }),
-      }))
-    );
+  if (!wrapped) {
+    wrapped = Object.create(metrics, {
+      embolden: { value: embolden },
+      skew: { value: skew },
+      opentype: { value: opentype },
+      ...(outlines !== undefined && { outlines: { value: outlines } }),
+    }) as FontMetrics;
+    byOutlines.set(outlines, wrapped);
+  }
   return wrapped as Metrics;
+}
+
+/**
+ * The axis values of `metrics` where its outlines draw them as an instance other than the default,
+ * else undefined: at the default, FreeType and HarfBuzz draw the font itself, so the face draws as
+ * the font does without a variation.
+ */
+export function drawnOpentype({ opentype, outlines }: FontMetrics): OpentypeCoordinates | undefined {
+  return isInstanced(opentype) && outlines?.drawsInstance?.(opentype) ? opentype : undefined;
 }
 
 /** `metrics` carrying `outlines`, keeping its own variation. */
@@ -376,6 +409,38 @@ export function withOutlines<Metrics extends FontMetrics>(
   ) as Metrics & { readonly outlines: SfntOutlines };
 }
 
+/** `face` and then its `fallbacks`: the order the shaper tries them in. */
+export const fallbackChainOf = perObject((face: FontMetrics): readonly FontMetrics[] => [
+  face,
+  ...(face.fallbacks ?? []),
+]);
+
+/** The first face of the **Fallback chain** of `face` that has a glyph for `ch`, or null for none. */
+export function firstFaceWithGlyph(face: FontMetrics, ch: string): FontMetrics | null {
+  return fallbackChainOf(face).find((entry) => entry.hasGlyph(ch)) ?? null;
+}
+
+/** One wrapper per face and fallback list, so a layout memoised on the face keeps its hits. */
+const fallbackWrappersOf = perObject((_face: FontMetrics) => new Map<string, FontMetrics>());
+
+/**
+ * `face` with `fallbacks` as the rest of its **Fallback chain**. A face in the list twice, or the
+ * face itself, is tried once, where it first stands.
+ */
+export function withFallbacks<Metrics extends FontMetrics>(
+  face: Metrics,
+  fallbacks: readonly FontMetrics[]
+): Metrics {
+  if (fallbacks.length === 0) return face;
+  const distinct = [...new Set(fallbacks)].filter((fallback) => fallback !== face);
+  if (distinct.length === 0) return face;
+  const byList = fallbackWrappersOf(face);
+  const key = distinct.map(identityKey).join(',');
+  let wrapped = byList.get(key);
+  if (!wrapped) byList.set(key, (wrapped = Object.create(face, { fallbacks: { value: distinct } })));
+  return wrapped as Metrics;
+}
+
 /**
  * The px an embolden adds to every advance: `embolden * size.x / 4096` with `size.x` in 26.6
  * (`text_server_adv.cpp:3238-3239`), so `embolden * fontSizePx / 64`.
@@ -389,6 +454,19 @@ export function getFontEmboldenedAdvancePx(metrics: FontMetrics, ch: string, fon
   return (
     getFontGlyphAdvancePx(metrics, ch, fontSizePx) + getFontExtraAdvancePx(metrics.embolden ?? 0, fontSizePx)
   );
+}
+
+/**
+ * The width of `tab_size` spaces, at least 1: `MAX(1, tab_size * (space width + SPACING_SPACE))`, a
+ * TextEdit tab stop and a RichTextLabel tab stop or indent level. `SPACING_SPACE` is 0 for every loaded font.
+ */
+export function getFontTabWidthPx(metrics: FontMetrics, tabSize: number, fontSizePx: number): number {
+  return Math.max(1, tabSize * getFontEmboldenedAdvancePx(metrics, ' ', fontSizePx));
+}
+
+/** One repeating stop of `getFontTabWidthPx`, or none: `tab_size <= 0` skips tab alignment. */
+export function getFontTabStopsPx(metrics: FontMetrics, tabSize: number, fontSizePx: number): number[] {
+  return tabSize <= 0 ? [] : [getFontTabWidthPx(metrics, tabSize, fontSizePx)];
 }
 
 /**
@@ -409,14 +487,27 @@ export function getFontEmboldenStrength(embolden: number, fontSizePx: number): n
   return Math.trunc(Math.fround(Math.fround(embolden) * fontSizePx * FIXED_26_6_ONE) / 16);
 }
 
-/** `metrics.getKerningAdjustmentUnits(a, b)` scaled to `fontSizePx`. `0` short-circuits without a scale. */
+/**
+ * The kerning of `a` and `b` scaled to `fontSizePx`: the `GPOS` kerning of the instance at the face's
+ * `variation_opentype`, else `metrics.getKerningAdjustmentUnits(a, b)`. `0` short-circuits without a scale.
+ */
 export function getFontKerningAdjustmentPx(
   metrics: FontMetrics,
   a: string,
   b: string,
   fontSizePx: number
 ): number {
-  const units = metrics.getKerningAdjustmentUnits(a, b);
+  const units = instanceKerningUnits(metrics, a, b) ?? metrics.getKerningAdjustmentUnits(a, b);
   if (units === 0) return 0;
   return unitsToPx(units, metrics, fontSizePx);
+}
+
+/**
+ * The kerning in design units of `a` and `b` at the axis values of the face's `variation_opentype`,
+ * or null for a face at its default instance and a character with no glyph: the default kerning stands.
+ */
+function instanceKerningUnits(metrics: FontMetrics, a: string, b: string): number | null {
+  const { outlines, opentype } = metrics;
+  if (!outlines?.kerningAtInstance || !isInstanced(opentype)) return null;
+  return outlines.kerningAtInstance(a.codePointAt(0)!, b.codePointAt(0)!, opentype);
 }

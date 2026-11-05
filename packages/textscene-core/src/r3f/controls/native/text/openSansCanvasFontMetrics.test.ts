@@ -73,3 +73,24 @@ describe('createOpenSansCanvasFontMetrics', () => {
     expect(metrics.getGlyphAdvanceUnits('中')).toBeNull();
   });
 });
+
+describe('createOpenSansCanvasFontMetrics — glyph ink', () => {
+  const face = createOpenSansCanvasFontMetrics('ink-test');
+
+  // The atlas `j` sits 4 atlas px left of its pen (`xoffset: -4`).
+  it('reaches left of the pen for a glyph whose ink starts there', () => {
+    expect(face.getGlyphInkUnits!('j')!.left).toBeGreaterThan(0);
+  });
+
+  it('ends the ink past the pen for every glyph with a bitmap', () => {
+    expect(face.getGlyphInkUnits!('H')!.right).toBeGreaterThan(0);
+  });
+
+  it('has no ink for a character the atlas lacks', () => {
+    expect(face.getGlyphInkUnits!('一')).toBeUndefined();
+  });
+
+  it('answers one object per character', () => {
+    expect(face.getGlyphInkUnits!('j')).toBe(face.getGlyphInkUnits!('j'));
+  });
+});

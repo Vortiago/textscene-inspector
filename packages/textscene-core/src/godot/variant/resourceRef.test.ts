@@ -11,6 +11,7 @@ import {
   dictSubResourceEntries,
   extResourceIdsIn,
   isPathResourceLiteral,
+  pathResourcePathsIn,
   keyedResourceRefReader,
   openResourceRef,
   renameResourceRefs,
@@ -77,6 +78,24 @@ describe('resourceRef', () => {
   // No `g` flag, so `.exec()` carries no `lastIndex` between callers.
   it('is stateless across calls', () => {
     for (let i = 0; i < 3; i++) expect(resourceRef('SubResource("a")')).not.toBeNull();
+  });
+});
+
+describe('pathResourcePathsIn', () => {
+  it('reads the path of each Resource literal in an Array, in order', () => {
+    const value = '[Resource("res://a.ttf"), Resource ( "uid://b3x" , "res://b.fnt" )]';
+
+    expect(pathResourcePathsIn(value)).toEqual(['res://a.ttf', 'res://b.fnt']);
+  });
+
+  it('skips a literal that names only a uid, which nothing here resolves', () => {
+    expect(pathResourcePathsIn('[Resource("uid://b3x"), Resource("res://a.ttf")]')).toEqual(['res://a.ttf']);
+  });
+
+  it('reads no id from an ExtResource or a SubResource, whose argument is not a path', () => {
+    expect(
+      pathResourcePathsIn('[ExtResource("1_abc"), SubResource("Font_x"), Resource("res://a.ttf")]')
+    ).toEqual(['res://a.ttf']);
   });
 });
 
