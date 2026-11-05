@@ -2,20 +2,14 @@
  * `<OutlinedTextRun>`: a `<TextRun>` that draws the theme text outline of `Button`, `ProgressBar`
  * and the Controls that share their pass (`button.cpp:458-462`): a stroked ring, then the fill.
  */
-import { lazy, useMemo } from 'react';
+import { useMemo } from 'react';
 import { multiplyModulate } from '../../../canvasItemModulate';
 import type { Rgba } from '../../../../godot/math/math';
 import { outlineStrokeWidthPx } from './textOutline';
 import { resolveTextOutline, type TextOutlineTheme } from '../textTheme';
 import type { ShareNode } from '../solveTree';
-import { isBitmapFontMetrics } from './bitmapFontMetrics';
-import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { TextRun, type TextRunProps } from './TextRun';
 import type { TextLayoutResult } from './textLayout';
-import { PendingSuspense } from '../../../../resources/PendingSuspense';
-
-// The bundled font bytes load with the ring, not with every Control.
-const BundledOutlineRing = lazy(() => import('./BundledOutlineRing'));
 
 /**
  * The render order of layer `index` of `count` stacked text layers: the layers spread over the
@@ -35,10 +29,7 @@ export function useTintedTextOutline(
   return useMemo(() => ({ color: multiplyModulate(color, ownTint), sizePx }), [color, sizePx, ownTint]);
 }
 
-export type RunLookProps = Pick<
-  TextRunProps,
-  'layout' | 'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder' | 'penOriginXPx'
->;
+type RunLookProps = Pick<TextRunProps, 'layout' | 'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder'>;
 
 type OutlineRingRunProps = RunLookProps & {
   /** `outline_size` in px. */
@@ -46,19 +37,11 @@ type OutlineRingRunProps = RunLookProps & {
 };
 
 /**
- * One stroked outline ring, without the fill (ADR-0040). A canvas face strokes its own ring. A
- * BMFont draws its outline set. The bundled atlas face strokes it on the bundled canvas face, and
- * its pass waits for that face.
+ * One stroked outline ring, without the fill (ADR-0040). A canvas face strokes its own ring, a
+ * BMFont draws its outline set, and `TextRun` strokes the bundled atlas face on its canvas face.
  */
 export function OutlineRingRun({ sizePx, ...run }: OutlineRingRunProps) {
-  const ring = { ...run, strokeWidthPx: outlineStrokeWidthPx(sizePx) };
-  const { fontMetrics } = run.layout;
-  if (isCanvasFontMetrics(fontMetrics) || isBitmapFontMetrics(fontMetrics)) return <TextRun {...ring} />;
-  return (
-    <PendingSuspense>
-      <BundledOutlineRing {...ring} />
-    </PendingSuspense>
-  );
+  return <TextRun {...run} strokeWidthPx={outlineStrokeWidthPx(sizePx)} />;
 }
 
 type OutlinedTextRunProps = RunLookProps & {

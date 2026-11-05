@@ -1,5 +1,5 @@
 /**
- * The theme text outline of `<LineEdit>` (`line_edit.cpp:1512-1519`). `<TextRun>` is stubbed to read
+ * The theme text outline of `<LineEdit>` (`line_edit.cpp:1512-1519`). `<TextRunMesh>` is stubbed to read
  * the props the painter hands it.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -23,8 +23,8 @@ interface RunProps {
 
 const scene = vi.hoisted(() => ({ runs: [] as RunProps[] }));
 
-vi.mock('../../../../r3f/controls/native/text/TextRun', () => ({
-  TextRun: (props: RunProps) => {
+vi.mock('../../../../r3f/controls/native/text/TextRunMesh', () => ({
+  TextRunMesh: (props: RunProps) => {
     scene.runs.push(props);
     return null;
   },

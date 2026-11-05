@@ -1238,6 +1238,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Font Variation Bundled Embolden High",
+    "file": "unit-label-font-variation-bundled-embolden-high.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Font Variation Bundled Embolden",
     "file": "unit-label-font-variation-bundled-embolden.tscn",
     "category": "Other"
@@ -4117,6 +4122,12 @@ export const fixtures: Fixture[] = [
     "file": "layout-direction-root-rtl/unit-control-layout-direction-root.tscn",
     "category": "Unit - 2D UI Controls",
     "root": "layout-direction-root-rtl"
+  },
+  {
+    "name": "Button Fractional Text Origin",
+    "file": "project-default-font/unit-button-fractional-text-origin.tscn",
+    "category": "Unit - 2D UI Controls",
+    "root": "project-default-font"
   },
   {
     "name": "Camera Attributes Auto Exposure Physical",

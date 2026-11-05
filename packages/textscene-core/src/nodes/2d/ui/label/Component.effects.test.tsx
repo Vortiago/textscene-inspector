@@ -1,5 +1,5 @@
 /**
- * The outline rings and shadows of a `<Label>` (`label.cpp:828-883`). `<TextRun>` is stubbed to
+ * The outline rings and shadows of a `<Label>` (`label.cpp:828-883`). `<TextRunMesh>` is stubbed to
  * read the props the painter hands it, in draw order.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,6 +13,8 @@ import { createOpenSansCanvasFontMetrics } from '../../../../r3f/controls/native
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { isCanvasFontMetrics } from '../../../../r3f/controls/native/text/runtimeFontMetrics';
+import { useCanvasItemOrigin } from '../../../../r3f/components/CanvasItemGroup';
+import type { Vector2 } from '../../../../godot/math/vector';
 import { Label } from './Component';
 
 interface RunProps {
@@ -22,7 +24,8 @@ interface RunProps {
   outlineColor?: Rgba;
   outlineWidthPx?: number;
   renderOrder?: number;
-  penOriginXPx?: number;
+  /** The run's place in its canvas item, which its pen and baseline floor at. */
+  itemOrigin: Vector2;
 }
 
 const scene = vi.hoisted(() => ({ bundled: undefined as FontMetrics | undefined }));
@@ -30,9 +33,11 @@ const scene = vi.hoisted(() => ({ bundled: undefined as FontMetrics | undefined 
 vi.mock('../../../../r3f/controls/native/text/bundledFontLoader', () => ({
   peekBundledCanvasFontMetrics: () => scene.bundled,
 }));
-vi.mock('../../../../r3f/controls/native/text/TextRun', () => ({
+vi.mock('../../../../r3f/controls/native/text/TextRunMesh', () => ({
   // A mesh in the scene graph stands for the run, so the runs read back in draw order, once each.
-  TextRun: (props: RunProps) => <mesh userData={{ run: props }} />,
+  TextRunMesh: (props: Omit<RunProps, 'itemOrigin'>) => (
+    <mesh userData={{ run: { ...props, itemOrigin: useCanvasItemOrigin() } }} />
+  ),
 }));
 
 const RECT = { x: 0, y: 0, w: 200, h: 60 };
@@ -112,8 +117,8 @@ describe('<Label> outline ring', () => {
       node: controlNode('L', 'Label', { name: 'L', text: 'A', horizontalAlignment: 1 }),
     });
     const runs = await draw(centred, 2);
-    expect(fill(runs).penOriginXPx).toBeGreaterThan(0);
-    expect(rings(runs)[0]?.penOriginXPx).toBe(fill(runs).penOriginXPx);
+    expect(fill(runs).itemOrigin.x).toBeGreaterThan(0);
+    expect(rings(runs)[0]?.itemOrigin).toEqual(fill(runs).itemOrigin);
   });
 
   it('draws no ring at outline_size 0', async () => {

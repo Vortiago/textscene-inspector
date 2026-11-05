@@ -2,7 +2,7 @@
  * Framework-free line breaking and glyph placement for the native (WebGL) Control text engine: a
  * port of Godot's Label shaping against a `FontMetrics`, whose px quantisation is `fontMetrics.ts`.
  * Only an `'atlas'` font gets atlas bitmaps. A `'canvas'` scene font gets `glyph: null` for
- * `TextRun.tsx` to rasterise, since an atlas lookup would give its advances Open Sans ink.
+ * `TextRunMesh.tsx` to rasterise, since an atlas lookup would give its advances Open Sans ink.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -229,7 +229,7 @@ export interface TextLayoutResult {
    */
   baselineOffsetPx: number;
   /**
-   * The `FontMetrics` the layout was shaped against. `TextRun.tsx` dispatches on `.kind` between the
+   * The `FontMetrics` the layout was shaped against. `TextRunMesh.tsx` dispatches on `.kind` between the
    * MSDF atlas and canvas painters, so an omitted value would put a scene font on the atlas path.
    */
   fontMetrics: FontMetrics;

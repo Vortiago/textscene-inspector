@@ -63,25 +63,18 @@ type LayerRunsProps = Pick<TextRunProps, 'fontSizePx' | 'clippingPlanes' | 'rend
 
 /** One layer on every line. A ring strokes on the canvas painter, a plain layer draws on the painter of its font. */
 function LayerRuns({ layer, placements, lineLayouts, ...run }: LayerRunsProps) {
-  return placements.map((placement, index) => {
-    // One `ofs.x` per line feeds the ring and the fill alike (`label.cpp:796-797`).
-    const penOriginXPx = placement.x + layer.offset.x;
-    return (
-      <CanvasItemGroup key={index} position={[penOriginXPx, -(placement.y + layer.offset.y), 0]}>
-        {layer.kind === 'ring' ? (
-          <OutlineRingRun
-            {...run}
-            layout={lineLayouts[index]!}
-            tint={layer.color}
-            sizePx={layer.ringSizePx}
-            penOriginXPx={penOriginXPx}
-          />
-        ) : (
-          <TextRun {...run} layout={lineLayouts[index]!} tint={layer.color} penOriginXPx={penOriginXPx} />
-        )}
-      </CanvasItemGroup>
-    );
-  });
+  return placements.map((placement, index) => (
+    <CanvasItemGroup
+      key={index}
+      position={[placement.x + layer.offset.x, -(placement.y + layer.offset.y), 0]}
+    >
+      {layer.kind === 'ring' ? (
+        <OutlineRingRun {...run} layout={lineLayouts[index]!} tint={layer.color} sizePx={layer.ringSizePx} />
+      ) : (
+        <TextRun {...run} layout={lineLayouts[index]!} tint={layer.color} />
+      )}
+    </CanvasItemGroup>
+  ));
 }
 
 export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {

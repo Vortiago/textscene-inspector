@@ -65,6 +65,10 @@ A trimmed label cuts by its inferred direction and draws by its set direction, a
 `shaped_text_draw` does. An AUTO Hebrew label so keeps its visual left part, and its outline
 draws the other part (`shaped_text_draw_outline`).
 
+A fractional width centres the label at a fractional offset. A font on the canvas painter then
+draws on the Button's whole pixels: its pen rounds and its baseline floors in the Button's own
+coordinates. Godot floors a glyph's origin the same way (`text_server_adv.cpp:4082-4084`).
+
 ## Known limitations
 
 None known.
