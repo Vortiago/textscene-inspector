@@ -51,10 +51,21 @@ function autoHintedOutlineReader(face: AutofitFace): GlyphOutlineReader {
 
 /**
  * The auto-hinted outline reader of a font's `glyf` or CFF outlines, or null for a font without
- * them or without a `cmap`.
+ * them or without a `cmap`. A variable font's instance has its own globals, as FreeType's face holds
+ * one instance whose glyphs the blue zones and the styles are measured on.
  */
 export function autoHintedReader(sfnt: SfntFile): GlyphOutlineReader | null {
-  const outlines = unscaledGlyfOutlines(sfnt) ?? unscaledCffOutlines(sfnt);
+  const outlines = unscaledGlyfOutlines(sfnt, null) ?? unscaledCffOutlines(sfnt);
   const face = outlines && sfntAutofitFace(sfnt, outlines);
-  return face && autoHintedOutlineReader(face);
+  if (!face) return null;
+  const readers = new Map<string, GlyphOutlineReader>([['', autoHintedOutlineReader(face)]]);
+  return (glyphIndex, fontSizePx, instance = null) => {
+    const key = instance?.key ?? '';
+    if (!readers.has(key)) {
+      const instanceOutlines = unscaledGlyfOutlines(sfnt, instance);
+      const instanceFace = instanceOutlines && { ...face, unscaledGlyph: instanceOutlines.unscaledGlyph };
+      readers.set(key, autoHintedOutlineReader(instanceFace ?? face));
+    }
+    return readers.get(key)!(glyphIndex, fontSizePx, instance);
+  };
 }

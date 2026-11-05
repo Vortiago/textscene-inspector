@@ -13,7 +13,12 @@ import {
   type CanvasFontMetrics,
   type DesignUnitWidthFn,
 } from './runtimeFontMetrics';
-import { fontVariationEmbolden, fontVariationSkew, resolveFontFileBytes } from './sceneFontResolution';
+import {
+  fontVariationEmbolden,
+  fontVariationOpentype,
+  fontVariationSkew,
+  resolveFontFileBytes,
+} from './sceneFontResolution';
 import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
@@ -149,9 +154,13 @@ async function loadSceneFontMetrics(bytes: ArrayBuffer, nodePath: string): Promi
   }
 }
 
-/** The embolden and skew of `font`, when it is a `FontVariation`. */
+/** The embolden, skew and OpenType axes of `font`, when it is a `FontVariation`. */
 function fontVariation(font: FontResource): GlyphVariation {
-  return { embolden: fontVariationEmbolden(font), skew: fontVariationSkew(font) };
+  return {
+    embolden: fontVariationEmbolden(font),
+    skew: fontVariationSkew(font),
+    opentype: fontVariationOpentype(font),
+  };
 }
 
 /**

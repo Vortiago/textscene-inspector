@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { fontFile } from './sfntOutlines.testkit';
-import { fontGeneratesMipmaps, fontVariationSkew, resolveFontFileBytes } from './sceneFontResolution';
+import {
+  fontGeneratesMipmaps,
+  fontVariationOpentype,
+  fontVariationSkew,
+  resolveFontFileBytes,
+} from './sceneFontResolution';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 
 describe('resolveFontFileBytes', () => {
@@ -93,6 +98,31 @@ describe('fontVariationSkew', () => {
     expect(fontVariationSkew(variation({ variation_transform: 'Transform2D(1, 0.2)' }))).toBe(0);
     expect(fontVariationSkew(fontFile(undefined))).toBe(0);
     expect(fontVariationSkew(null)).toBe(0);
+  });
+});
+
+describe('fontVariationOpentype', () => {
+  const variation = (properties: Record<string, string>): FontResource => ({
+    kind: 'variation',
+    baseFont: null,
+    properties,
+  });
+
+  it('reads the axes of variation_opentype by tag and by name', () => {
+    const axes = fontVariationOpentype(
+      variation({ variation_opentype: '{\n2003265652: 700.0,\n"custom_MONO": 1\n}' })
+    );
+
+    expect([...axes]).toEqual([
+      [2003265652, 700],
+      ['custom_MONO', 1],
+    ]);
+  });
+
+  it('is empty for no dictionary and for a font that is not a variation', () => {
+    expect(fontVariationOpentype(variation({})).size).toBe(0);
+    expect(fontVariationOpentype(fontFile(undefined)).size).toBe(0);
+    expect(fontVariationOpentype(null).size).toBe(0);
   });
 });
 
