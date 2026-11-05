@@ -1,7 +1,8 @@
 /**
  * The two views a sub-viewport pass publishes of its target, as Godot's `R8G8B8A8_UNORM` storage
  * with an `R8G8B8A8_SRGB` view. The target serves the view its storage is, and a copy serves the
- * other (a canvas target is the plain view, a 3D target the decoding view).
+ * other (a canvas target is the plain view, a 3D target the decoding view). An HDR target's sRGB
+ * view is its own half-float format (`texture_storage.cpp:4541-4547`), so it serves both.
  */
 import { useEffect, useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
@@ -33,6 +34,8 @@ interface PassView extends TargetView {
 interface PassTargetViews {
   plain: PassView;
   decoding: PassView;
+  /** The distinct textures of the two views: one for a target that serves both. */
+  textures: readonly THREE.Texture[];
   /** Whether a consumer samples either view now. */
   isSampled(): boolean;
   /** Runs after each render of the pass: counts a draw of both views, then fills each reader's copy. */
@@ -45,29 +48,32 @@ export function useTargetViews(target: THREE.WebGLRenderTarget, isTransparent: b
   const gl = useThree((state) => state.gl);
   const views = useMemo(() => {
     const holdsBytes = holdsSrgbBytes(target.texture);
+    const storageIsDecodingView = !holdsBytes || target.texture.type === THREE.HalfFloatType;
     const samplers = { count: 0 };
     const plain = countingSamplers(
       holdsBytes ? ownStorageView(target.texture) : plainCopy(gl, target),
       samplers
     );
     const decoding = countingSamplers(
-      holdsBytes ? decodingCopy(gl, target) : ownStorageView(target.texture),
+      storageIsDecodingView ? ownStorageView(target.texture) : decodingCopy(gl, target),
       samplers
     );
+    // Once each: an HDR target serves both views from one texture, which a pass draws once.
+    const textures = [...new Set([plain.texture, decoding.texture])];
     return {
       plain,
       decoding,
-      isSampled: () => samplers.count > 0 || hasHeldCopies(plain.texture) || hasHeldCopies(decoding.texture),
+      textures,
+      isSampled: () => samplers.count > 0 || textures.some(hasHeldCopies),
       // One save and restore of the renderer for the views and every copy a reader holds, and none
       // for a pass with nothing to fill.
       fill: () => {
         const views = [plain, decoding];
-        noteLiveTargetDrawn(plain.texture);
-        noteLiveTargetDrawn(decoding.texture);
-        if (!views.some((view) => view.isFilled() || hasLiveCopies(view.texture))) return;
+        textures.forEach(noteLiveTargetDrawn);
+        if (!views.some((view) => view.isFilled()) && !textures.some(hasLiveCopies)) return;
         drawOffscreen(gl, () => {
           views.forEach((view) => view.fill());
-          views.forEach((view) => refillLiveCopies(view.texture, gl));
+          textures.forEach((texture) => refillLiveCopies(texture, gl));
         });
       },
       dispose: () => {
@@ -77,10 +83,7 @@ export function useTargetViews(target: THREE.WebGLRenderTarget, isTransparent: b
     };
   }, [gl, target]);
   useDisposeOnRelease(views);
-  useEffect(
-    () => publishLiveTargets([views.plain.texture, views.decoding.texture], gl, isTransparent),
-    [views, gl, isTransparent]
-  );
+  useEffect(() => publishLiveTargets(views.textures, gl, isTransparent), [views, gl, isTransparent]);
   return views;
 }
 

@@ -14,6 +14,7 @@ import { createCanvasTarget } from '../../../nodes/viewport/subviewport/offscree
 import { useBuildSolveTree } from './buildSolveTree';
 import '../../nodes/index';
 import '../index';
+import { SRGB_CANVAS } from '../../canvasColorSpace';
 
 const NO_EXTERNAL: readonly TscnExternalResource[] = [];
 
@@ -47,7 +48,7 @@ function node(name: string, type: string, extra: Partial<TscnNode> & Record<stri
 
 /** The textureSize the walk gives `Root/Shown`, with a 64 by 32 target published at `published`. */
 function shownTextureSize(nodes: TscnNode[], resources: TscnInternalResource[], published: string | null) {
-  const target = createCanvasTarget(64, 32, 'SubViewport');
+  const target = createCanvasTarget(64, 32, 'SubViewport', SRGB_CANVAS);
   const wrapper = ({ children }: { children: ReactNode }) => (
     <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
       <ViewportTextureProvider>
@@ -109,7 +110,7 @@ describe('useBuildSolveTree: a ViewportTexture slot', () => {
  * publish re-renders every reader of the viewport textures.
  */
 function solveBeforeAndAfterPublish(nodes: TscnNode[], resources: TscnInternalResource[]) {
-  const target = createCanvasTarget(64, 32, 'SubViewport');
+  const target = createCanvasTarget(64, 32, 'SubViewport', SRGB_CANVAS);
   const { loader } = createFakeResourceLoader();
   let isPublished = false;
   const wrapper = ({ children }: { children: ReactNode }) => (

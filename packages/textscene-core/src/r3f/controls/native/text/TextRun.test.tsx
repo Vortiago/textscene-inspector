@@ -4,6 +4,7 @@
  * golden-image concern.
  */
 import { describe, expect, it } from 'vitest';
+import type { ReactNode } from 'react';
 import { godotTextureFilterState } from '../../../../resources/textures/godotTextureFilter';
 import { TextureFilter } from '../../../../godot/rendering/materials/textureFilter';
 import * as THREE from 'three';
@@ -16,8 +17,24 @@ import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { withVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { canvasColorSpaceOf, CanvasColorSpaceProvider } from '../../../canvasColorSpace';
+import { OwnCanvasModulateProvider } from '../../../canvasItemModulate';
+
+const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
+const GREY = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
+/** 0.5 grey in linear, the canvas modulate of the linear-canvas tests. */
+const LINEAR_GREY = new THREE.Color(0.214041, 0.214041, 0.214041);
+
+/** `children` in a linear canvas whose canvas modulate is 0.5 grey. */
+function inLinearCanvas(children: ReactNode) {
+  return (
+    <CanvasColorSpaceProvider value={LINEAR_CANVAS}>
+      <OwnCanvasModulateProvider value={LINEAR_GREY}>{children}</OwnCanvasModulateProvider>
+    </CanvasColorSpaceProvider>
+  );
+}
 
 function layoutFor(text: string, uppercase = false) {
   return shapeText(text, {
@@ -54,6 +71,14 @@ describe('<TextRun>', () => {
     expect(uColor.y).toBeCloseTo(lg, 6);
     expect(uColor.z).toBeCloseTo(lb, 6);
     expect(mat.uniforms.uOpacity!.value).toBe(0.75);
+  });
+
+  it("multiplies a linear canvas's canvas modulate into the converted tint", async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inLinearCanvas(<TextRun layout={layoutFor('AB')} fontSizePx={16} tint={GREY} />)
+    );
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
+    expect((mat.uniforms.uColor!.value as THREE.Vector3).x).toBeCloseTo(0.214041 * 0.214041, 6);
   });
 
   it('gives the material no distance bias for a layout with no embolden', async () => {
@@ -304,6 +329,24 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
       expect(matAfter.map!.colorSpace).toBe(THREE.SRGBColorSpace);
     }
   );
+
+  it("carries the tint on the material in a linear canvas, as Godot's glyph modulate does", async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inLinearCanvas(<TextRun layout={canvasLayoutFor('Hi')} fontSizePx={16} tint={GREY} />)
+    );
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
+    expect(mat.color.r).toBeCloseTo(0.214041 * 0.214041, 6);
+  });
+
+  it('keeps the material white outside a linear canvas, where the raster carries the tint', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextRun layout={canvasLayoutFor('Hi')} fontSizePx={16} tint={GREY} />
+    );
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
+    expect(mat.color.r).toBe(1);
+  });
 
   it('applies tint.a directly as material opacity (the canvas raster is drawn opaque; alpha is not baked into it)', async () => {
     const tint = { r: 1, g: 1, b: 1, a: 0.4 };

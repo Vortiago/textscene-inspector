@@ -17,7 +17,7 @@ import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapeText, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { godotColorToLinear } from '../../../../r3f/godotColor';
+import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { lineEditDisplayText } from './displayText';
@@ -158,7 +158,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       ? (solveNode.colors['clear_button_color'] ?? LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR)
       : rightIconLocalColor(editable);
   const tintedIconColor = useMemo(() => tintColor(iconLocalColor, tint.own), [iconLocalColor, tint.own]);
-  const iconLinearColor = useMemo(() => godotColorToLinear(tintedIconColor), [tintedIconColor]);
+  const iconLinearColor = useItemLinearColor(tintedIconColor);
   // Point2(width - icon.width - margin_right, height/2 - icon.height/2) (line_edit.cpp:1457), where
   // `height/2` is an integer division. RTL puts the x at the left margin (line_edit.cpp:1458-1460).
   const iconPos = {
@@ -172,7 +172,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const caretWidthPx = solveNode.constants['caret_width'] ?? DEFAULT_CARET_WIDTH_PX;
   const caretColor = solveNode.colors['caret_color'] ?? LINE_EDIT_DEFAULT_CARET_COLOR;
   const tintedCaretColor = useMemo(() => tintColor(caretColor, tint.own), [caretColor, tint.own]);
-  const caretLinearColor = useMemo(() => godotColorToLinear(tintedCaretColor), [tintedCaretColor]);
+  const caretLinearColor = useItemLinearColor(tintedCaretColor);
   const caretRect = useMemo(
     () =>
       props.caretForceDisplayed === true

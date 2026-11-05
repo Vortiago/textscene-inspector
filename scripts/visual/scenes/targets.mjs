@@ -99,6 +99,10 @@ export const TILE_AND_TARGET_SCENES = [
   // The same target in the emission slot over a black albedo: every material slot binds a
   // ViewportTexture. A slot that drops it leaves a black quad.
   { name: 'sub-viewport-texture-emission', file: 'unit-sub-viewport-texture-emission.tscn' },
+  // A 3D material reads a `use_hdr_2d` target's linear values with no decode. Godot 4.6.3: the HDR
+  // quad's blend rgb(187,188,0) and value above 1 rgb(255,255,136), against rgb(127,128,0) and
+  // rgb(255,252,100) on the sRGB quad.
+  { name: 'sub-viewport-hdr-2d-world', file: 'unit-sub-viewport-hdr-2d-world.tscn', camera: 'Root/Camera3D' },
   // `tonemap_exposure` under LINEAR inside the target, with glow on the main view: the exposure
   // applies inside the target and again on the quad.
   { name: 'sub-viewport-shared-world-exposure', file: 'unit-sub-viewport-shared-world-exposure.tscn' },

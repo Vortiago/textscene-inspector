@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { unconfiguredViewportTexture } from '../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { StyleBoxQuad } from './StyleBoxQuad';
+import { canvasColorSpaceOf, CanvasColorSpaceProvider } from '../../canvasColorSpace';
 import { TextureSampler2DContext } from '../../canvasItemTextureSampler';
 import { CanvasItemTextureFilter } from '../../../godot/scene/canvasItem';
 import type { StyleBoxFlatData } from './styleBoxFlat';
@@ -16,6 +17,8 @@ import { sRGBChannelToLinear } from '../../../utils/colorSpace';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene';
+
+const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
@@ -108,6 +111,44 @@ describe('<StyleBoxQuad>', () => {
     const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
       .material as THREE.MeshBasicMaterial;
     expect(mat.defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
+  });
+
+  describe('in a linear canvas', () => {
+    /** A StyleBoxFlat draws a triangle array, whose colours convert apart from the modulate (`canvas.glsl:176-178`). */
+    const inLinearCanvas = (color: { r: number; g: number; b: number; a: number }) =>
+      ReactThreeTestRenderer.create(
+        <CanvasColorSpaceProvider value={LINEAR_CANVAS}>
+          <StyleBoxQuad
+            styleBox={box({ bgColor: { r: 1, g: 0.5, b: 0, a: 1 } })}
+            color={color}
+            rect={{ x: 0, y: 0, w: 100, h: 50 }}
+            renderOrder={0}
+          />
+        </CanvasColorSpaceProvider>
+      );
+    const halfGrey = { r: 0.5, g: 0.5, b: 0.5, a: 0.5 };
+
+    it('keeps the box colours in the vertex colours, untinted', async () => {
+      const renderer = await inLinearCanvas(halfGrey);
+      const color = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry.attributes
+        .color as THREE.BufferAttribute;
+      expect([color.getX(0), color.getY(0), color.getW(0)]).toEqual([1, 0.5, 1]);
+    });
+
+    it('draws the tint as the linear material colour and opacity', async () => {
+      const renderer = await inLinearCanvas(halfGrey);
+      const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+        .material as THREE.MeshBasicMaterial;
+      expect(mat.color.r).toBeCloseTo(sRGBChannelToLinear(0.5), 5);
+      expect(mat.opacity).toBe(0.5);
+    });
+
+    it('decodes each vertex colour on its own', async () => {
+      const renderer = await inLinearCanvas(halfGrey);
+      const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+        .material as THREE.MeshBasicMaterial;
+      expect(mat.defines).toEqual(LINEAR_CANVAS.defines);
+    });
   });
 
   it('renders nothing (no mesh) when the stylebox draws no geometry (draw_center false, no border)', async () => {

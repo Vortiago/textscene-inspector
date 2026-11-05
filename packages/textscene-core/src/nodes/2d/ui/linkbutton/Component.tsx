@@ -8,7 +8,6 @@ import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
@@ -30,6 +29,7 @@ import {
 } from './nativeSolver';
 import type { LinkButtonProperties } from './types';
 import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LinkButtonProperties>(solveNode);
@@ -73,7 +73,7 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
   );
 
   // Underline: a solid stroke, per underline_mode and draw state
-  const underlineLinearColor = useGodotLinearColor(tintedFontColor);
+  const underlineLinearColor = useItemLinearColor(tintedFontColor);
   const underline = useMemo(() => {
     if (!layout || !shouldUnderline(state, props.underline)) return null;
     // The ascent of the font the text draws in: a `theme_override_fonts/font` scene font shapes at its

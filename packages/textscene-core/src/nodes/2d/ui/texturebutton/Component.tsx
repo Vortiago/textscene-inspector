@@ -10,7 +10,10 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import {
+  useCanvasItemViewSampler,
+  useInheritedTextureSampler,
+} from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D, type Texture2DResult } from '../../../../resources/useTexture2D';
 import { rectTextureSampler, sampledDraw } from '../texturerect/rectTexture';
 import {
@@ -58,9 +61,14 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
     [rawTexture, size, rect.w, rect.h, props.stretchMode]
   );
 
+  const viewSampler = useCanvasItemViewSampler(sampler);
   const drawnTexture = useOwnedTextureView(
     rawTexture,
-    draw && rectTextureSampler(draw, sampler, { flipH: props.flipH === true, flipV: props.flipV === true })
+    draw &&
+      rectTextureSampler(draw, viewSampler, {
+        flipH: props.flipH === true,
+        flipV: props.flipV === true,
+      })
   );
 
   if (!draw || !drawnTexture) return null;

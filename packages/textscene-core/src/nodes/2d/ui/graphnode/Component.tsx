@@ -18,8 +18,7 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -52,7 +51,7 @@ import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 /** Composes `own` (raw sRGB) with a widget's base colour, then converts the result to linear. */
 function useTintedColor(own: Rgba, base: Rgba): { color: THREE.Color; opacity: number } {
   const combined = useMemo(() => multiplyModulate(own, base), [own, base]);
-  const color = useGodotLinearColor(combined);
+  const color = useItemLinearColor(combined);
   return { color, opacity: combined.a };
 }
 

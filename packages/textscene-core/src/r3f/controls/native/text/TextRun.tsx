@@ -38,7 +38,8 @@ import {
   godotTextureFilterState,
   type TextureFilterState,
 } from '../../../../resources/textures/godotTextureFilter';
-import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
+import { useItemLinearColor, WHITE_MODULATE } from '../../../canvasItemModulate';
+import { useCanvasColorSpace } from '../../../canvasColorSpace';
 import type { SurfaceBlend } from '../../../materials/surfaceBlend';
 import type { FadeVariants } from '../../../materials/fadeVariants';
 import { useSwappedMaterials } from '../../../materials/swappedMaterials';
@@ -161,6 +162,10 @@ interface TextRunLook {
   side: THREE.Side | undefined;
   /** The lit Control around the run, or undefined for a run drawn unlit such as Label3D's. */
   pixelMaterial: CanvasItemPixelMaterial | undefined;
+  /** `tint` as the item draws it, in linear (`useItemLinearColor`), for the atlas painter. */
+  linearTint: THREE.Color;
+  /** The outline colour as the item draws it, in linear. */
+  linearOutline: THREE.Color;
 }
 
 /**
@@ -178,7 +183,7 @@ function buildTextRun(
   outlineColor: Rgba | undefined,
   outlineWidthPx: number
 ): BuiltTextRun {
-  const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
+  const { tint, clippingPlanes, depthTest, side, pixelMaterial, linearTint, linearOutline } = look;
   const skew = layout.fontMetrics.skew ?? 0;
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
@@ -222,15 +227,13 @@ function buildTextRun(
   geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   geo.setIndex(new THREE.BufferAttribute(indices, 1));
 
-  const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
-  let outline: { color: { r: number; g: number; b: number }; opacity: number; widthPx: number } | undefined;
+  let outline: { color: THREE.Color; opacity: number; widthPx: number } | undefined;
   if (outlineColor && outlineWidthPx > 0) {
-    const [or, og, ob] = sRGBToLinearRGB(outlineColor.r, outlineColor.g, outlineColor.b);
-    outline = { color: { r: or, g: og, b: ob }, opacity: outlineColor.a, widthPx: outlineWidthPx };
+    outline = { color: linearOutline, opacity: outlineColor.a, widthPx: outlineWidthPx };
   }
   const options = {
     map: getAtlasTexture(),
-    color: { r, g, b },
+    color: linearTint,
     opacity: tint.a,
     pxRange: OPEN_SANS_ATLAS_INFO.distanceRange,
     distanceBias: msdfDistanceBias(layout),
@@ -264,6 +267,16 @@ export function TextRun({
 }: TextRunProps) {
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
+  const linearTint = useItemLinearColor(tint);
+  const linearOutline = useItemLinearColor(outlineColor ?? WHITE_MODULATE);
+  const isLinearCanvas = useCanvasColorSpace().isLinear;
+  const isCanvasRun = isCanvasFontMetrics(layout.fontMetrics);
+  // Godot's glyph is a white coverage mask that the rect modulate tints (`text_server_adv.cpp`
+  // `rasterize_bitmap`). A linear canvas converts that modulate unclamped, so a white raster takes
+  // the tint on its material, and a tint change repaints nothing.
+  const rasterColor = isCanvasRun && isLinearCanvas ? linearTint : null;
+  const builtTint = rasterColor ? { ...WHITE_MODULATE, a: tint.a } : tint;
+  const atlasTint = isCanvasRun ? null : linearTint;
   if (blends && !swapped)
     throw new Error('expected blends only inside a GeometryInstance3D drawer, got none');
 
@@ -272,7 +285,7 @@ export function TextRun({
       buildTextRun(
         layout,
         fontSizePx,
-        { tint, clippingPlanes, depthTest, side, pixelMaterial },
+        { tint: builtTint, clippingPlanes, depthTest, side, pixelMaterial, linearTint, linearOutline },
         strokeWidthPx,
         textureFilter,
         mipmapped,
@@ -285,14 +298,16 @@ export function TextRun({
     [
       layout,
       fontSizePx,
-      tint.r,
-      tint.g,
-      tint.b,
-      tint.a,
+      builtTint.r,
+      builtTint.g,
+      builtTint.b,
+      builtTint.a,
       clippingPlanes,
       depthTest,
       side,
       pixelMaterial,
+      atlasTint,
+      linearOutline,
       strokeWidthPx,
       textureFilter,
       mipmapped,
@@ -305,6 +320,7 @@ export function TextRun({
   );
   const material = usePaintedMaterial(run, blends?.unfaded);
   const alphaPassMaterial = useAlphaPassMaterial(run, blends?.alphaPass);
+  useRasterColor(rasterColor, material, alphaPassMaterial);
   const meshRef = useRef<THREE.Mesh | null>(null);
   useLayoutEffect(() => {
     const mesh = meshRef.current;
@@ -324,13 +340,8 @@ export function TextRun({
   useDisposeOnRelease(run.ownedTexture);
   useNearestAnisotropy(run.ownedTexture ?? null);
 
-  // `draw_hex_code_box` (`text_server.cpp:771-812`) draws in its caller's colour:
-  // this run's `tint`, converted to linear once as for every `ControlQuad`.
+  // `draw_hex_code_box` (`text_server.cpp:771-812`) draws in its caller's colour, this run's `tint`.
   const hexBoxRects = useMemo(() => collectHexCodeBoxRects(layout, fontSizePx), [layout, fontSizePx]);
-  const hexBoxColor = useMemo(() => {
-    const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
-    return new THREE.Color(r, g, b);
-  }, [tint.r, tint.g, tint.b]);
   // Memoised, as R3F assigns a new `userData` object on each render and drops what it held.
   const userData = useMemo(
     () => ({
@@ -362,7 +373,7 @@ export function TextRun({
           <ControlQuad
             width={r.w}
             height={r.h}
-            color={hexBoxColor}
+            color={linearTint}
             opacity={tint.a}
             renderOrder={renderOrder}
             drawHooks={shadow}
@@ -383,6 +394,19 @@ function AtlasPending(): null {
 }
 
 /** The run's material for `blend`. */
+/** Sets the colour a white canvas raster multiplies by on each of its materials, or leaves them white. */
+function useRasterColor(
+  color: THREE.Color | null,
+  material: THREE.Material,
+  alphaPassMaterial: THREE.Material | null
+): void {
+  useLayoutEffect(() => {
+    if (!color) return;
+    for (const painted of [material, alphaPassMaterial])
+      if (painted instanceof THREE.MeshBasicMaterial) painted.color.copy(color);
+  }, [color, material, alphaPassMaterial]);
+}
+
 function usePaintedMaterial(run: BuiltTextRun, blend: SurfaceBlend | undefined): THREE.Material {
   return useOwnedMaterial(run, blend, () => run.paint(blend));
 }

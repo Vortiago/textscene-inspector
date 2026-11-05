@@ -156,7 +156,6 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'canvas_cull_mask',
       'mesh_lod_threshold',
       'use_occlusion_culling',
-      'use_hdr_2d',
       'oversampling',
       'oversampling_override',
       'debug_draw',

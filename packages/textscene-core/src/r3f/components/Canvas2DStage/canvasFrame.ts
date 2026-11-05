@@ -10,6 +10,7 @@ import { copyTexels, reversedTexelRows, type TexelPlacement, type TexelTransfer 
 import { takeOutputLikeDrawingBuffer } from '../../outputTarget';
 import { beginStep, endStep } from '../../frameProfile/frameProfile';
 import { drawOffscreen } from '../../offscreen';
+import type { CanvasColorSpace } from '../../canvasColorSpace';
 
 /**
  * Copies `frame` to the target, each texel to the pixel under it from the frame's row
@@ -31,19 +32,24 @@ function copyToTarget(
 }
 
 /**
- * RGBA8 storage under an sRGB tag. Taking output like the drawing buffer, three encodes each
- * fragment to the tag's space (r187 `WebGLPrograms.js:217`), so the frame holds what the drawing buffer
- * would hold and items blend in the same space. The default sRGB format, SRGB8_ALPHA8, would blend
- * in linear.
+ * In an sRGB canvas, RGBA8 storage under an sRGB tag. Taking output like the drawing buffer, three
+ * encodes each fragment to the tag's space (r187 `WebGLPrograms.js:217`), so the frame holds what the
+ * drawing buffer would hold and items blend in the same space. The default sRGB format,
+ * SRGB8_ALPHA8, would blend in linear. In a linear canvas, RGBA16F under a linear tag, so three
+ * writes each fragment as it is and items blend linear values, those above 1 included.
  */
 class CanvasFrame extends THREE.WebGLRenderTarget {
   private readonly outputSize = new THREE.Vector2();
   private placement: TexelPlacement = reversedTexelRows(1, 1);
 
-  constructor() {
-    super(1, 1, { depthBuffer: true, stencilBuffer: false });
-    this.texture.colorSpace = THREE.SRGBColorSpace;
-    this.texture.internalFormat = 'RGBA8';
+  constructor(space: CanvasColorSpace) {
+    super(1, 1, {
+      depthBuffer: true,
+      stencilBuffer: false,
+      type: space.isLinear ? THREE.HalfFloatType : THREE.UnsignedByteType,
+    });
+    this.texture.colorSpace = space.isLinear ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace;
+    this.texture.internalFormat = space.isLinear ? 'RGBA16F' : 'RGBA8';
     this.texture.minFilter = THREE.NearestFilter;
     this.texture.magFilter = THREE.NearestFilter;
     this.texture.generateMipmaps = false;
@@ -90,8 +96,8 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
 
   /**
    * Draws `scene` over the bytes the bound target holds, as a canvas draws over a target that is
-   * never cleared (`renderer_canvas_render_rd.cpp:2276-2283`). The frame takes those bytes first,
-   * and its depth is the only thing the render clears. The target must hold sRGB bytes.
+   * never cleared (`renderer_canvas_render_rd.cpp:2276-2283`). The frame takes those texels first,
+   * and its depth is the only thing the render clears. The target holds the frame's space.
    */
   private renderOverTarget(
     gl: THREE.WebGLRenderer,
@@ -129,5 +135,5 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
   }
 }
 
-/** The factory `useMultisampledTarget` takes for a 2D canvas frame. */
-export const createCanvasFrame = () => new CanvasFrame();
+/** The frame of a canvas drawn in `space`, the factory `useMultisampledTarget` takes. */
+export const createCanvasFrame = (space: CanvasColorSpace) => new CanvasFrame(space);
