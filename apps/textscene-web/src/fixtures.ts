@@ -1518,6 +1518,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Multi Mesh Instance 2d Flipbook",
+    "file": "unit-multi-mesh-instance-2d-flipbook.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Multi Mesh Instance 2d Instances",
+    "file": "unit-multi-mesh-instance-2d-instances.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Multi Mesh Instance 2d",
     "file": "unit-multi-mesh-instance-2d.tscn",
     "category": "Other"
