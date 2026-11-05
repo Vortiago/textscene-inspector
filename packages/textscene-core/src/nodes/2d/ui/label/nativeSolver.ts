@@ -37,7 +37,7 @@ import {
   type TextThemeProps,
 } from '../../../../r3f/controls/native/textTheme';
 import type { LabelProperties } from './types';
-import { offsetAfterCodePoint, sliceCodePoints, utf16OffsetOf } from '../../../../godot/string/codePoints.js';
+import { sliceCodePoints, utf16OffsetOf } from '../../../../godot/string/codePoints.js';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import {
@@ -316,7 +316,7 @@ function revealCharacters(
   // Glyph source indices are UTF-16 offsets; the budget counts code points.
   const visibleEnd = utf16OffsetOf(text, visibleChars);
   // `paragraphStart - 1 <= visibleChars` in code points is `paragraphStart <= visibleChars + 1` in offsets.
-  const ellipsisEnd = offsetAfterCodePoint(text, visibleEnd);
+  const ellipsisEnd = utf16OffsetOf(text, visibleChars + 1);
   return lines.map((line) => {
     const isEllipsisShown = (line.paragraphStart ?? 0) <= ellipsisEnd;
     return {
