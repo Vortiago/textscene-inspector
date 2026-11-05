@@ -12,7 +12,7 @@ import { perObject } from '../../../../../utils/perObject';
 import { readTag, type SfntFile } from '../sfntTables';
 
 /** A `LangSys` table: its required feature, or null for none, and its other features. */
-interface LanguageSystem {
+export interface LanguageSystem {
   readonly requiredFeature: number | null;
   readonly features: readonly number[];
 }
@@ -232,6 +232,45 @@ function readSfntLayoutTable(sfnt: SfntFile, tag: 'GSUB' | 'GPOS'): LayoutTable 
 export const sfntGsub = perObject((sfnt: SfntFile) => readSfntLayoutTable(sfnt, 'GSUB'));
 /** The `GPOS` of a font, read once for the auto-hinter and the kerning at an instance. */
 export const sfntGpos = perObject((sfnt: SfntFile) => readSfntLayoutTable(sfnt, 'GPOS'));
+
+/**
+ * HarfBuzz's features of the default shaper after `rvrn`'s pause, past the two of the text's
+ * direction (`hb-ot-shape.cc:329-376`).
+ */
+export const DEFAULT_FEATURES = [
+  'rand',
+  'abvm',
+  'blwm',
+  'ccmp',
+  'locl',
+  'mark',
+  'mkmk',
+  'rlig',
+  'calt',
+  'clig',
+  'curs',
+  'dist',
+  'kern',
+  'liga',
+  'rclt',
+] as const;
+
+/**
+ * The features of `language` that HarfBuzz applies for `tags`: the required feature whatever its tag
+ * (`hb-ot-map.cc:205-210`), then the first feature of each tag (`hb_ot_layout_language_find_feature`).
+ */
+export function languageFeatures(
+  table: LayoutTable,
+  language: LanguageSystem,
+  tags: readonly string[]
+): number[] {
+  const indices = language.requiredFeature === null ? [] : [language.requiredFeature];
+  for (const tag of tags) {
+    const index = language.features.find((feature) => table.features[feature]?.tag === tag);
+    if (index !== undefined) indices.push(index);
+  }
+  return indices;
+}
 
 /** HarfBuzz skips a script or language system with nothing in it (`hb_collect_features_context_t::visited`). */
 const isEmptyScript = (script: Script): boolean => !script.defaultLanguage && script.languages.length === 0;

@@ -1,6 +1,6 @@
 /**
- * The pair kerning of a variable font's `GPOS` `kern` feature at one instance, as HarfBuzz applies it
- * (`PairPosFormat1`, `PairPosFormat2`): in each lookup whose flag matches both glyphs, the first
+ * The pair kerning of a variable font's default `GPOS` features at one instance, as HarfBuzz applies
+ * it (`PairPosFormat1`, `PairPosFormat2`): in each lookup whose flag matches both glyphs, the first
  * subtable that holds the pair moves the pen by the x advance of both value records, each with the
  * delta its `VariationIndex` device table takes from the `GDEF` item variation store at the instance.
  *
@@ -10,8 +10,10 @@
  */
 
 import {
+  DEFAULT_FEATURES,
   GposType,
   i16,
+  languageFeatures,
   pairValueRecords,
   sfntGpos,
   u16,
@@ -41,23 +43,18 @@ function gdefVariationStore(sfnt: SfntFile, axisCount: number): ItemVariationSto
   return storeOffset === 0 ? null : readItemVariationStore(sfnt.dv, gdef.offset + storeOffset, axisCount);
 }
 
-/** The pair positioning features HarfBuzz turns on for horizontal text (`hb-ot-shape.cc:309-318`). */
-const KERNING_FEATURE_TAGS = new Set(['kern', 'dist']);
-
 /**
- * The lookups of the `kern` and `dist` features and the required feature in the default language
- * system of every script, ascending. HarfBuzz takes that system for text with no language of the font
- * (`hb-ot-layout.cc:769-804`), and the previewer gives no text a language. It applies the required
- * feature whatever its tag. A `FeatureVariations` record that swaps them is left out.
+ * The lookups of the default language system of every script, of the features HarfBuzz turns on by
+ * default, ascending. HarfBuzz takes that system for text with no language of the font
+ * (`hb-ot-layout.cc:769-804`), and the previewer gives no text a language. The reader keeps their
+ * pair subtables. A `FeatureVariations` record that swaps them is left out.
  */
-function kernLookups({ scripts, features }: LayoutTable): number[] {
+function kernLookups(table: LayoutTable): number[] {
   const lookups = new Set<number>();
-  for (const { defaultLanguage } of scripts) {
+  for (const { defaultLanguage } of table.scripts) {
     if (!defaultLanguage) continue;
-    const { requiredFeature, features: indices } = defaultLanguage;
-    const kernFeatures = indices.filter((index) => KERNING_FEATURE_TAGS.has(features[index]?.tag ?? ''));
-    for (const index of requiredFeature === null ? kernFeatures : [requiredFeature, ...kernFeatures])
-      features[index]?.lookups.forEach((lookup) => lookups.add(lookup));
+    for (const index of languageFeatures(table, defaultLanguage, DEFAULT_FEATURES))
+      table.features[index]?.lookups.forEach((lookup) => lookups.add(lookup));
   }
   return [...lookups].sort((a, b) => a - b);
 }

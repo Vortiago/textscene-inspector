@@ -18,10 +18,12 @@ import {
   type ContextRule,
   type CoverageContextRule,
   coverageIndex,
+  DEFAULT_FEATURES,
   glyphClass,
   GposType,
   GsubType,
   i16,
+  languageFeatures,
   type LayoutTable,
   pairValueRecords,
   readChainedSequenceContextFormat3,
@@ -49,28 +51,8 @@ export interface ShapingFace {
   readonly gpos: LayoutTable | null;
 }
 
-/**
- * HarfBuzz's features of the default shaper before `rvrn`'s pause, and after it, past the two of
- * the text's direction (`hb-ot-shape.cc:329-376`).
- */
+/** HarfBuzz's feature of the default shaper before `rvrn`'s pause (`hb-ot-shape.cc:329-376`). */
 const FIRST_STAGE_FEATURES = ['rvrn'] as const;
-const DEFAULT_FEATURES = [
-  'rand',
-  'abvm',
-  'blwm',
-  'ccmp',
-  'locl',
-  'mark',
-  'mkmk',
-  'rlig',
-  'calt',
-  'clig',
-  'curs',
-  'dist',
-  'kern',
-  'liga',
-  'rclt',
-] as const;
 
 /** The scripts of the auto-hinter that HarfBuzz sets right to left (`hb_script_get_horizontal_direction`). */
 const RIGHT_TO_LEFT_SCRIPT_TAGS: ReadonlySet<string> = new Set([
@@ -104,11 +86,7 @@ function featureLookups(
     .find((found) => found !== undefined);
   const language = script?.defaultLanguage;
   if (!language) return [];
-  const indices = language.requiredFeature === null ? [] : [language.requiredFeature];
-  for (const tag of features) {
-    const index = language.features.find((feature) => table.features[feature]?.tag === tag);
-    if (index !== undefined) indices.push(index);
-  }
+  const indices = languageFeatures(table, language, features);
   const substitutions = table.featureSubstitutions.find(
     (variation) => variation.isDefaultInstance
   )?.substitutions;

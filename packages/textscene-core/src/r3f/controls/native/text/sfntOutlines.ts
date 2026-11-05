@@ -27,6 +27,7 @@ import { OUTLINE_TABLE_TAGS, readHeadUnitsPerEm, type SfntFile } from './sfntTab
 import { fontInstanceOf, type FontInstance } from './variation/fontInstance';
 import type { instanceKerningReader, PairKerningReader } from './variation/instanceKerning';
 import { perObject } from '../../../../utils/perObject';
+import { recentlyRead } from '../../../../utils/recentlyRead';
 
 type InstanceKerningReader = typeof instanceKerningReader;
 
@@ -110,12 +111,6 @@ async function kerningReaderOf(sfnt: SfntFile): Promise<InstanceKerningReader | 
 type CharacterKerning = (leftCodePoint: number, rightCodePoint: number) => number | null;
 
 /**
- * An axis animation passes through many instances, and `fontInstanceOf` keeps each one, so the pairs
- * of the oldest instance go at this count.
- */
-const MAX_KEPT_INSTANCES = 8;
-
-/**
  * The kerning of each pair at an instance, kept for each instance as a layout asks for the same pair
  * again and again. A font at its default instance reads no table. A pair that a corrupt table puts
  * past the buffer kerns 0.
@@ -128,16 +123,11 @@ function instanceKerningOf(
   if (!kerningReader) return undefined;
   // Undefined until an instance first asks. Null is a font with no pair kerning, read only once.
   let kerningAt: ReturnType<InstanceKerningReader> | undefined;
-  const pairsByInstance = new Map<FontInstance, CharacterKerning | null>();
-  const pairsAt = (instance: FontInstance): CharacterKerning | null => {
-    if (pairsByInstance.has(instance)) return pairsByInstance.get(instance)!;
+  // Kept with its instance, which `fontInstanceOf` bounds.
+  const pairsAt = perObject((instance: FontInstance): CharacterKerning | null => {
     if (kerningAt === undefined) kerningAt = orOnRangeError(() => kerningReader(sfnt), null);
-    if (pairsByInstance.size >= MAX_KEPT_INSTANCES)
-      pairsByInstance.delete(pairsByInstance.keys().next().value!);
-    const pairs = kerningAt && keptPairs(glyphIndex, kerningAt(instance.normalized));
-    pairsByInstance.set(instance, pairs);
-    return pairs;
-  };
+    return kerningAt && keptPairs(glyphIndex, kerningAt(instance.normalized));
+  });
   // Equal axis values share one instance, and so one kept pair for each pair.
   const instanceAt = perObject((opentype: OpentypeCoordinates) =>
     orOnRangeError(() => fontInstanceOf(sfnt, opentype), null)
@@ -199,17 +189,12 @@ function instanceOf(sfnt: SfntFile, variation: GlyphVariation | undefined): Font
  */
 function instanceAdvanceReader(sfnt: SfntFile): SfntOutlines['advanceAtInstance'] {
   let readers: ReturnType<typeof instanceAdvanceReaders> | undefined;
-  const kept = new WeakMap<OpentypeCoordinates, Map<number, Map<number, number | null>>>();
+  const kept = perObject((_opentype: OpentypeCoordinates) =>
+    recentlyRead<number, Map<number, number | null>>(MAX_KEPT_SIZES)
+  );
 
   return (glyphIndex, fontSizePx, opentype) => {
-    let bySize = kept.get(opentype);
-    if (!bySize) kept.set(opentype, (bySize = new Map()));
-    let byGlyph = bySize.get(fontSizePx);
-    if (!byGlyph) {
-      // A font size animation passes through many sizes, so the oldest size goes at this count.
-      if (bySize.size >= MAX_KEPT_SIZES) bySize.delete(bySize.keys().next().value!);
-      bySize.set(fontSizePx, (byGlyph = new Map()));
-    }
+    const byGlyph = kept(opentype)(fontSizePx, () => new Map());
     if (byGlyph.has(glyphIndex)) return byGlyph.get(glyphIndex)!;
     const instance = fontInstanceOf(sfnt, opentype);
     readers ??= instanceAdvanceReaders(sfnt);
@@ -219,7 +204,7 @@ function instanceAdvanceReader(sfnt: SfntFile): SfntOutlines['advanceAtInstance'
   };
 }
 
-/** The sizes of one instance whose advances are kept. */
+/** A font size animation passes through many sizes, so the advances of this many sizes of one instance are kept. */
 const MAX_KEPT_SIZES = 8;
 
 /** The reader of the 26.6 advance at an instance, with `hmtx`, `head` and the phantom-point loader set up once. */
