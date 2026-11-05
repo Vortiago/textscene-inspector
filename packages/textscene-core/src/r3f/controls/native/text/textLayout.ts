@@ -748,7 +748,7 @@ function splitParagraphs(
  * `TS->string_to_upper(text, lang)` (`label.cpp:153`): ICU's casing for the language subtag of a
  * Godot locale (`tr_TR` casts as `tr`). An empty or unknown language takes the root rules.
  */
-function upperCaseFor(text: string, language: string): string {
+export function upperCaseFor(text: string, language: string): string {
   const subtag = localeLanguage(language);
   if (subtag === '') return text.toUpperCase();
   try {

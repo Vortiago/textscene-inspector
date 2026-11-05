@@ -274,8 +274,8 @@ export function labelPreShapeText(
 
 interface VisibleCharsBudget {
   behavior: number;
-  /** The shaped text, which maps a glyph's UTF-16 `sourceIndex` to the code point count Godot budgets. Read only by CHARS_AFTER_SHAPING. */
-  text?: string;
+  /** The text as shaped, after `uppercase`. It maps a glyph's UTF-16 `sourceIndex` to the code point count Godot budgets, and only CHARS_AFTER_SHAPING reads it. */
+  text: string;
   /** Final resolved `visible_chars` in code points, the budget of CHARS_AFTER_SHAPING. */
   visibleChars: number | undefined;
   /** Final resolved `visible_ratio`, the budget of the GLYPHS_* behaviours. */
@@ -297,7 +297,7 @@ export function applyVisibleCharsReveal(
 ): TextLineLayout[] {
   if (budget.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return [...lines];
   if (budget.behavior === VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING) {
-    return revealCharacters(lines, budget.text ?? '', budget.visibleChars);
+    return revealCharacters(lines, budget.text, budget.visibleChars);
   }
   return revealGlyphs(lines, budget);
 }

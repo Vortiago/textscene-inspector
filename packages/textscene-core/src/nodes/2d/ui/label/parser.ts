@@ -45,23 +45,23 @@ const DEFAULT_VISIBLE_CHARS_STATE: VisibleCharsState = { visibleChars: -1, visib
 function applySetVisibleCharacters(
   state: VisibleCharsState,
   amount: number,
-  textLength: number
+  characterCount: number
 ): VisibleCharsState {
   if (state.visibleChars === amount) return state;
-  if (amount === -1 || textLength === 0) return { visibleChars: amount, visibleRatio: 1 };
-  return { visibleChars: amount, visibleRatio: amount / textLength };
+  if (amount === -1 || characterCount === 0) return { visibleChars: amount, visibleRatio: 1 };
+  return { visibleChars: amount, visibleRatio: amount / characterCount };
 }
 
 /** `Label::set_visible_ratio` (label.cpp:1305-1323): a no-op when `p_ratio` matches the current field. */
 function applySetVisibleRatio(
   state: VisibleCharsState,
   ratio: number,
-  textLength: number
+  characterCount: number
 ): VisibleCharsState {
   if (state.visibleRatio === ratio) return state;
   if (ratio >= 1) return { visibleChars: -1, visibleRatio: 1 };
   if (ratio < 0) return { visibleChars: 0, visibleRatio: 0 };
-  return { visibleChars: Math.trunc(textLength * ratio), visibleRatio: ratio };
+  return { visibleChars: Math.trunc(characterCount * ratio), visibleRatio: ratio };
 }
 
 /**
@@ -72,7 +72,7 @@ function applySetVisibleRatio(
  */
 function resolveVisibleChars(
   properties: Record<string, string>,
-  textLength: number
+  characterCount: number
 ): VisibleCharsState | undefined {
   const rawChars = properties.visible_characters;
   const rawRatio = properties.visible_ratio;
@@ -82,10 +82,10 @@ function resolveVisibleChars(
   for (const key of Object.keys(properties)) {
     if (key === 'visible_characters') {
       const amount = parseOptionalInt(rawChars);
-      if (amount !== undefined) state = applySetVisibleCharacters(state, amount, textLength);
+      if (amount !== undefined) state = applySetVisibleCharacters(state, amount, characterCount);
     } else if (key === 'visible_ratio') {
       const ratio = parseOptionalFloat(rawRatio);
-      if (ratio !== undefined) state = applySetVisibleRatio(state, ratio, textLength);
+      if (ratio !== undefined) state = applySetVisibleRatio(state, ratio, characterCount);
     }
   }
   return state;

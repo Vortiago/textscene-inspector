@@ -960,6 +960,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
   it('VC_GLYPHS_AUTO/LTR reveal GLYPHS from the FRONT, budgeted by visible_ratio * total_glyphs', () => {
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
     });
@@ -967,6 +968,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(l2!.glyphs.length).toBe(0);
     const auto = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_AUTO,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
     });
@@ -977,6 +979,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
   it('VC_GLYPHS_RTL reveals GLYPHS from the BACK — the opposite end from LTR/AUTO (error path)', () => {
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_RTL,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
     });
@@ -989,6 +992,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(
       applyVisibleCharsReveal(lines, {
         behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+        text: 'x'.repeat(6),
         visibleChars: undefined,
         visibleRatio: 1,
       })[0]!.glyphs.length
@@ -1008,6 +1012,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(
       applyVisibleCharsReveal(lines, {
         behavior: VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING,
+        text: '',
         visibleChars: 0,
         visibleRatio: 0,
       })[0]!.glyphs.length
@@ -1376,6 +1381,7 @@ describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
     // layout direction, so the same budget hides the opposite end from the LTR case.
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_AUTO,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
       rtl: true,
@@ -1387,6 +1393,7 @@ describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
   it('VC_GLYPHS_LTR and VC_GLYPHS_RTL are explicit and ignore the layout direction (:779-780)', () => {
     const ltr = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
       rtl: true,
@@ -1394,6 +1401,7 @@ describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
     expect(ltr[0]!.glyphs.length).toBe(4);
     const rtlBehavior = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_RTL,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
       rtl: false,
