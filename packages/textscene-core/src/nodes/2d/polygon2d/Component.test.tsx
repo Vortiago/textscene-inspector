@@ -101,4 +101,18 @@ describe('<Polygon2D>', () => {
     expect(geom.boundingBox!.min.x).toBeCloseTo(5, 5);
     expect(geom.boundingBox!.max.x).toBeCloseTo(15, 5);
   });
+
+  it("draws nothing for a polygon whose edges cross, as Godot's triangulation fails", async () => {
+    const renderer = await render(node({ polygon: 'PackedVector2Array(0, 0, 10, 10, 10, 0, 0, 10)' }));
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it("triangulates by Godot's ear clipping, which a skeleton bends", async () => {
+    const renderer = await render(
+      node({ polygon: 'PackedVector2Array(0, -20, 100, -20, 200, -20, 200, 20, 100, 20, 0, 20)' })
+    );
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    // `Triangulate::triangulate` clips these ears, so no diagonal spans the middle pair.
+    expect(Array.from(geom.getIndex()!.array)).toEqual([5, 0, 1, 1, 2, 3, 4, 5, 1, 1, 3, 4]);
+  });
 });

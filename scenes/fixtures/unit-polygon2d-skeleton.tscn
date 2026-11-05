@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+; Moves one variable: a Polygon2D skinned to a posed Skeleton2D. No other golden
+; draws a Polygon2D with `skeleton` and `bones`, so none shows a regression in the
+; deformation. The left strip shares its skeleton's transform. The right strip sits
+; away from its skeleton, so the mesh-to-skeleton transform is not the identity.
+
+[node name="Root" type="Node2D"]
+
+[node name="Skeleton" type="Skeleton2D" parent="."]
+position = Vector2(60, 100)
+
+[node name="Upper" type="Bone2D" parent="Skeleton"]
+rotation = 0.4
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+
+[node name="Lower" type="Bone2D" parent="Skeleton/Upper"]
+position = Vector2(100, 0)
+rotation = 0.6
+rest = Transform2D(1, 0, 0, 1, 100, 0)
+
+[node name="Strip" type="Polygon2D" parent="."]
+position = Vector2(60, 100)
+skeleton = NodePath("../Skeleton")
+color = Color(0.2, 0.6, 1, 1)
+polygon = PackedVector2Array(0, -20, 100, -20, 200, -20, 200, 20, 100, 20, 0, 20)
+bones = [NodePath("Upper"), PackedFloat32Array(1, 0.5, 0, 0, 0.5, 1), NodePath("Upper/Lower"), PackedFloat32Array(0, 0.5, 1, 1, 0.5, 0)]
+
+[node name="Skeleton2" type="Skeleton2D" parent="."]
+position = Vector2(320, 60)
+rotation = 0.3
+
+[node name="Arm" type="Bone2D" parent="Skeleton2"]
+position = Vector2(10, 5)
+rotation = 0.8
+scale = Vector2(1.2, 0.8)
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+
+[node name="OffsetStrip" type="Polygon2D" parent="."]
+position = Vector2(300, 140)
+rotation = -0.2
+skeleton = NodePath("../Skeleton2")
+color = Color(1, 0.5, 0.2, 1)
+offset = Vector2(5, 0)
+polygon = PackedVector2Array(0, -15, 120, -15, 120, 15, 0, 15)
+bones = [NodePath("Arm"), PackedFloat32Array(1, 0.25, 0.25, 1)]

@@ -769,6 +769,10 @@ _Avoid_: A write to the bone table. A modifier that draws.
 The position, rotation and scale of one bone, each part optional. An AnimationPlayer writes the poses its bone tracks sample, and the Skeleton3D pass lays them over the file pose before the **Pose modifier** edits run (`animation_mixer.cpp:1878-1891`). A part no track keys keeps the file pose.
 _Avoid_: A write to the bone table. A pose kept in three bones.
 
+**Polygon skin** (`skinnedPoints`, `nodes/2d/polygon2d/polygonSkin.ts`):
+A Polygon2D that a Skeleton2D deforms. Each vertex keeps its four heaviest `bones` weights, and moves by `T * (sum of weight * bone matrix) * T^-1`, with `T` the polygon's global inverse times the skeleton's (`skeleton.glsl:157-182`). A bone's matrix is its pose in skeleton space times the inverse of its rest there. The **Live scene pass** in `skeletonBinding.ts` hands the polygon its bones and weights. Each render then reads the drawn transforms and writes the vertices again where one moved, as Godot's skeleton pass writes a vertex buffer before the canvas draws.
+_Avoid_: A pose read from the file alone, which an AnimationPlayer never moves.
+
 **Override re-homing** (`rehomeOverride`, carried as `LiveNode.scope`):
 The copy of each resource an override names into the scope of the node it reaches, under a fresh id where that id is taken, so each property resolves in the file that wrote it (ADR-0051).
 Each copy keeps the id its own file wrote as `authoredId`, and the inspector shows that id.

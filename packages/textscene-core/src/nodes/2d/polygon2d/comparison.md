@@ -9,9 +9,10 @@ renders_as: a filled, optionally textured mesh
 
 # Polygon2D
 
-Polygon2D fills an outline on the canvas. The previewer triangulates it into an unlit
-mesh with one vertex per point and tints it with `color`. `texture` is sampled through
-the per-vertex `uv` with Godot's own UV formula.
+Polygon2D fills an outline on the canvas. The previewer triangulates it with Godot's ear
+clipping into an unlit mesh with one vertex per point and tints it with `color`. `texture` is
+sampled through the per-vertex `uv` with Godot's own UV formula. With `skeleton` and `bones`,
+each vertex moves with its four heaviest bones of the Skeleton2D, as an AnimationPlayer poses them.
 
 ## Linting
 
@@ -48,7 +49,8 @@ A non-numeric `internal_vertex_count` falls back to `0` and `invert_border` to `
 each with a warning. So do `invert_enabled` to `false`, `offset` and `texture_offset` to
 `(0, 0)` and `texture_scale` to `(1, 1)`. A malformed `color` falls back to white
 silently. Malformed `polygon`, `polygons`, `uv` or `vertex_colors` warn and degrade to
-empty, which is Godot's own size-mismatch branch.
+empty, which is Godot's own size-mismatch branch. A `bones` array with an odd count warns
+and deforms nothing. Weights that are not a PackedFloat32Array skip their bone.
 
 ## Known limitations
 

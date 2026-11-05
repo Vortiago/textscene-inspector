@@ -4,7 +4,7 @@
  * position, so a renumbering mesh such as `ShapeGeometry` would mismatch them.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
@@ -22,7 +22,12 @@ import { polygonRings, type PolygonRings } from './polygonShapes';
 import { quantizeVertexColor } from './vertexColorQuantize';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import type { Vector2 } from '../../../godot/math/vector';
+import { triangulatePolygon } from '../../../godot/math/triangulate';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
+import { useLiveScenePass } from '../../../r3f/liveScenePass';
+import { useNodePath } from '../../../r3f/contexts/NodePathContext';
+import { bindPolygonsToSkeletons } from './skeletonBinding';
+import { useSkeletonSkin } from './useSkeletonSkin';
 
 export function Polygon2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Polygon2DProperties;
@@ -57,6 +62,8 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
   const geometry = useMemo(() => buildPolygonGeometry(rings, props, uvSpace), [rings, props, uvSpace]);
   // R3F does not dispose a geometry passed through `attach`, so release it on rebuild.
   useDisposeOnRelease(geometry);
+  const [mesh, setMesh] = useState<THREE.Mesh | null>(null);
+  useSkeletonSkin(mesh, geometry, useLiveScenePass(bindPolygonsToSkeletons, useNodePath()));
 
   return (
     <CanvasItem2D
@@ -71,6 +78,7 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
             texture={texture}
             vertexColors={geometry.hasAttribute('color')}
             pixelMaterial={pixelMaterial}
+            meshRef={setMesh}
           />
         ) : null
       }
@@ -87,6 +95,7 @@ function FilledPolygon({
   texture,
   vertexColors,
   pixelMaterial,
+  meshRef,
 }: {
   geometry: THREE.BufferGeometry;
   tint: CanvasItemTint;
@@ -94,6 +103,7 @@ function FilledPolygon({
   texture: THREE.Texture | null;
   vertexColors: boolean;
   pixelMaterial: CanvasItemPixelMaterial;
+  meshRef: (mesh: THREE.Mesh | null) => void;
 }) {
   // Godot multiplies fill × modulate × self_modulate in sRGB, then converts once.
   // `color` is quantized first, as Godot's 8-bit mesh upload stores it
@@ -132,14 +142,13 @@ function FilledPolygon({
       defines: CANVAS_SRGB_DEFINES,
     },
     // The one canvas mesh where a facing split would be visible, since every
-    // vertex carries its own colour and alpha. It is safe only because earcut
-    // (`THREE.ShapeUtils.triangulateShape`) winds every ring one way, a property
-    // `triangulateRing` does not ask for.
+    // vertex carries its own colour and alpha. The facing in `pixelMaterial`
+    // draws one pass, so a bent skin's triangles keep their index order.
     merge: [pixelMaterial],
   });
 
   return (
-    <mesh>
+    <mesh ref={meshRef}>
       <primitive object={geometry} attach="geometry" />
       <meshBasicMaterial key={program.key} {...program.props} />
     </mesh>
@@ -248,12 +257,16 @@ function buildVertexColors(vertexCount: number, vertexColors: Float32Array): Flo
 }
 
 /**
- * Triangulate one ring (with optional holes) and append the triangles to
- * `index`, in the original point numbering. `ShapeUtils.triangulateShape`
- * returns triples indexing the contour arrays it was given, so they are mapped
- * back through the ring's own indices.
+ * Triangulates one ring and appends the triangles to `index`, in the original point numbering. A
+ * ring without holes takes Godot's own ear clipping (`polygon_2d.cpp:345-372`), whose triangles a
+ * skeleton bends, and which draws nothing for a ring whose edges cross. The ring with the
+ * `invert_enabled` hole takes three's, since Godot bridges that hole into one ring.
  */
 function triangulateRing(points: Vector2[], outline: number[], holes: number[][], index: number[]): void {
+  if (holes.length === 0) {
+    for (const local of triangulatePolygon(outline.map((i) => points[i]!))) index.push(outline[local]!);
+    return;
+  }
   const contour = outline.map((i) => new THREE.Vector2(points[i]!.x, -points[i]!.y));
   const holeContours = holes.map((hole) => hole.map((i) => new THREE.Vector2(points[i]!.x, -points[i]!.y)));
   // The flat local numbering triangulateShape works in: contour first, then

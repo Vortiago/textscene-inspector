@@ -3200,6 +3200,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Polygon2d Skeleton",
+    "file": "unit-polygon2d-skeleton.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Polygon2d Texture Repeat",
     "file": "unit-polygon2d-texture-repeat.tscn",
     "category": "Unit - 2D Canvas"
