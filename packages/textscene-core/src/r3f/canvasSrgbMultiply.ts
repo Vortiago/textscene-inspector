@@ -3,10 +3,12 @@
  * stored as (`drivers/gles3/shaders/canvas.glsl:181,631,716`), since `hdr_2d` is off by default
  * (`rendering_server.cpp:3771`). three multiplies linear values, which differs by up to 4/255 where
  * two factors are not white. Under `CANVAS_SRGB_MULTIPLY`, a material multiplies in sRGB and decodes
- * the product once.
+ * the product once. A linear canvas decodes each vertex colour on its own in the vertex stage instead
+ * (`canvas.glsl:176-178`), under `CANVAS_LINEAR_ATTRIBUTES`, so the GPU interpolates linear values.
  */
 
 import { installChunkEdits, type ChunkEdit } from './shaderPatch/chunkPatch.js';
+import { SRGB_DECODE } from './materials/godotVertexColor';
 
 /**
  * The define a 2D canvas material sets when its `map` samples sRGB bytes, a `NoColorSpace` retag
@@ -18,7 +20,17 @@ const CANVAS_SRGB_MULTIPLY = 'CANVAS_SRGB_MULTIPLY';
 /** `defines` for such a material. It needs no per-consumer state, so one object serves. */
 export const CANVAS_SRGB_DEFINES: Readonly<Record<string, string>> = { [CANVAS_SRGB_MULTIPLY]: '' };
 
+/**
+ * The define a linear canvas material sets when its vertex colours hold sRGB numbers: each decodes
+ * to linear in the vertex stage. Its map samples a decoding view, so three's linear multiply holds.
+ */
+const CANVAS_LINEAR_ATTRIBUTES = 'CANVAS_LINEAR_ATTRIBUTES';
+
+/** `defines` for a linear canvas material, one object for all. */
+export const CANVAS_LINEAR_DEFINES: Readonly<Record<string, string>> = { [CANVAS_LINEAR_ATTRIBUTES]: '' };
+
 type Chunk = 'map_fragment' | 'color_fragment';
+type PatchedChunk = Chunk | 'color_vertex';
 
 /** `diffuseColor` set to `rgb` and to its alpha times `factor`'s. */
 const assign = (rgb: string, factor: string) =>
@@ -50,7 +62,7 @@ const SRGB_MULTIPLY_CHUNKS: Readonly<
  * Three's linear `diffuseColor *= factor;` in `chunk`, with the sRGB multiply beside it under the
  * define. A textured, vertex-coloured fragment encodes and decodes once.
  */
-function srgbMultiplyEdit(chunk: Chunk): ChunkEdit<Chunk> {
+function srgbMultiplyEdit(chunk: Chunk): ChunkEdit<PatchedChunk> {
   const { factor, otherChunkGuard, sharedRgb } = SRGB_MULTIPLY_CHUNKS[chunk];
   const three = `\tdiffuseColor *= ${factor};`;
   const whole = assign(fromSrgb(`${toSrgb} * ${factor}.rgb`), factor);
@@ -64,10 +76,23 @@ function srgbMultiplyEdit(chunk: Chunk): ChunkEdit<Chunk> {
   };
 }
 
-/** Each linear multiply in three's chunks: the texel, then the vertex colour. */
-const CANVAS_SRGB_MULTIPLY_EDITS: readonly ChunkEdit<Chunk>[] = [
+/**
+ * Godot's decode of the vertex colour attribute (`canvas.glsl:176-178`), before the instance colour
+ * multiplies in. three's `sRGBTransferEOTF` is a fragment-stage function.
+ */
+const LINEAR_ATTRIBUTES_EDIT: ChunkEdit<PatchedChunk> = {
+  chunk: 'color_vertex',
+  three: '#ifdef USE_INSTANCING_COLOR',
+  godot:
+    `#if defined( ${CANVAS_LINEAR_ATTRIBUTES} ) && ( defined( USE_COLOR ) || defined( USE_COLOR_ALPHA ) )\n` +
+    `${SRGB_DECODE}\n#endif\n\n#ifdef USE_INSTANCING_COLOR`,
+};
+
+/** Each multiply in three's chunks: the texel, then the vertex colour, which a linear canvas decodes first. */
+const CANVAS_SRGB_MULTIPLY_EDITS: readonly ChunkEdit<PatchedChunk>[] = [
   srgbMultiplyEdit('map_fragment'),
   srgbMultiplyEdit('color_fragment'),
+  LINEAR_ATTRIBUTES_EDIT,
 ];
 
 /**

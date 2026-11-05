@@ -38,6 +38,7 @@ import { decodeCanvasTexture } from './textures/canvastexture/decode.js';
 import type { CanvasTextureData } from './textures/canvastexture/types.js';
 import { useByValue } from '../r3f/hooks/useByValue.js';
 import { sameData } from '../utils/sameData.js';
+import { useCanvasColorSpace } from '../r3f/canvasColorSpace';
 
 export interface Texture2DResult {
   /**
@@ -89,18 +90,20 @@ export interface CanvasTextureAtlas {
 export const NODE_PROPERTY = true;
 
 /**
- * The texture a slot draws. `view` is the ViewportTexture view the slot samples: a canvas item
- * samples the plain one. `isHeldLocally` is false when a resource between the node and `ref`, such
- * as the SpriteFrames that holds a frame, is not local to scene.
+ * The texture a slot draws. `view` is the ViewportTexture view the slot samples, and a canvas item's
+ * colour slot omits it to sample the view of its canvas's colour space. `isHeldLocally` is false when
+ * a resource between the node and `ref`, such as the SpriteFrames that holds a frame, is not local to
+ * scene.
  */
 export function useTexture2D(
   ref: string | undefined,
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
-  view: ViewportTextureView = 'plain',
+  view?: ViewportTextureView,
   isHeldLocally: boolean = NODE_PROPERTY
 ): Texture2DResult {
-  const slot = useTexture2DSlot(ref, externalResources, internalResources, view, isHeldLocally);
+  const canvasView = useCanvasColorSpace().viewportTextureView;
+  const slot = useTexture2DSlot(ref, externalResources, internalResources, view ?? canvasView, isHeldLocally);
   const { atlas, source, atlasResources } = slot;
   const cropped = useAtlasTextureCrop(atlas, source, atlasResources);
   // A sheet still loading, or a zero-area region that Godot's `get_rect_region` also declines,

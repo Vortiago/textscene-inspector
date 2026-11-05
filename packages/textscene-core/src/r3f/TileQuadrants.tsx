@@ -12,8 +12,10 @@ import type { CanvasItemMaterialProperties } from '../resources/materials/canvas
 import { LitCanvasItemPixels } from './components/LitCanvasItemPixels';
 import { CanvasItemGroup, useCanvasItemKey } from './components/CanvasItemGroup';
 import { useCanvasItemMaterialFile } from './components/canvasItemMaterialContext';
-import { multiplyModulate } from './canvasItemModulate';
+import type * as THREE from 'three';
+import { foldOwnPixelTint, WHITE_MODULATE, type VertexColorTint } from './canvasItemModulate';
 import { useCanvasModulateFor } from './canvasModulate';
+import { useCanvasColorSpace, type CanvasColorSpace } from './canvasColorSpace';
 import { useGodotLinearColor } from './godotColor';
 import { childCanvasPlace } from './canvasItemState';
 import { TileSourceMesh } from './TileSourceMesh';
@@ -63,14 +65,39 @@ function drawnItems(quadrants: readonly (readonly DrawableCell[])[]): DrawnItem[
   });
 }
 
+/**
+ * Where a tile item's tint goes. A tile draws a rect, which converts `modulate × tint` to linear as
+ * one product (`renderer_canvas_render_rd.cpp:2425-2428`). A linear canvas decodes the vertex
+ * colours apart, so the tint goes into them and the material carries the canvas modulate alone.
+ */
+function tileTint(
+  self: Rgba,
+  canvasModulate: Rgba,
+  linearModulate: THREE.Color,
+  space: CanvasColorSpace
+): VertexColorTint {
+  const { own, color, opacity } = foldOwnPixelTint(self, canvasModulate, space, linearModulate);
+  const { defines } = space;
+  return space.isLinear
+    ? { vertex: own, color: linearModulate, opacity, defines }
+    : { vertex: WHITE_MODULATE, color, opacity, defines };
+}
+
 function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
   const material = useTileItemMaterial(item.material, layer.material);
   const { key: canvasKey, zFinal } = childCanvasPlace(
     { key: useCanvasItemKey(), zFinal: layer.zFinal },
     item.zIndex
   );
-  const own = multiplyModulate(layer.selfTint, useCanvasModulateFor(material));
-  const color = useGodotLinearColor(own);
+  const canvasModulate = useCanvasModulateFor(material);
+  const linearModulate = useGodotLinearColor(canvasModulate);
+  const space = useCanvasColorSpace();
+  // Memoised on the values: a legacy TileMap layer hands a fresh `selfTint` on every render.
+  const { r, g, b, a } = layer.selfTint;
+  const tint = useMemo(
+    () => tileTint({ r, g, b, a }, canvasModulate, linearModulate, space),
+    [r, g, b, a, canvasModulate, linearModulate, space]
+  );
   return (
     <CanvasItemGroup renderOrder={canvasKey}>
       <LitCanvasItemPixels material={material} lightMask={layer.lightMask} zFinal={zFinal}>
@@ -82,8 +109,7 @@ function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
               cells={cells}
               grid={layer.model}
               renderOrder={item.firstOrder + runIndex}
-              color={color}
-              opacity={own.a}
+              tint={tint}
               name={layer.name}
               pixelMaterial={pixelMaterial}
               sampler={layer.sampler}

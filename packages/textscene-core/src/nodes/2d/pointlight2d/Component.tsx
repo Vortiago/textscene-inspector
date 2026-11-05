@@ -57,11 +57,13 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   const { externalResources, internalResources } = useSceneResources();
 
   // The cookie is often a GradientTexture2D, a radial falloff described inline,
-  // not an image. `useTexture2D` resolves either kind.
+  // not an image. `useTexture2D` resolves either kind. The plain view in either canvas colour
+  // space, as `COOKIE_SAMPLER` reads the texels raw.
   const { texture: cookieSource, missing } = useTexture2D(
     props.texture,
     externalResources,
-    internalResources
+    internalResources,
+    'plain'
   );
   // A light that draws no quad makes no view: it would clone and upload a cookie nothing draws.
   const cookie = useTextureView(props.enabled && !missing ? cookieSource : null, COOKIE_SAMPLER);

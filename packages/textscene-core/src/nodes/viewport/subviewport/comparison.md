@@ -28,6 +28,18 @@ Every Texture2D slot resolves a `ViewportTexture` the same way: a material slot,
 
 A quad, a translucent Polygon2D and an opaque one share a SubViewport, and a CanvasLayer below the world's canvas holds a third. Godot draws the 3D render first and every canvas over it, so the CanvasLayer's polygon covers the quad and sits under the opaque Polygon2D.
 
+## HDR 2D canvas
+
+<!-- compare: image=unit-sub-viewport-hdr-2d status=done fixture=unit-sub-viewport-hdr-2d.tscn -->
+
+With `use_hdr_2d`, a sub-viewport draws its canvas in linear colour into a half-float target that keeps values above 1 (`texture_storage.cpp:4541-4547`). Each colour of the canvas converts from sRGB to linear before it multiplies, and translucent items blend the linear values. A canvas item samples each texture through its decoding view. The SubViewportContainer shows the stored numbers as if they were sRGB bytes. So the left target draws darker than the sRGB target beside it. The bottom target keeps its value above 1 under the container's modulate of 0.5.
+
+## HDR 2D canvas on a 3D surface
+
+<!-- compare: image=unit-sub-viewport-hdr-2d-world status=done fixture=unit-sub-viewport-hdr-2d-world.tscn -->
+
+A 3D material reads the same linear values with no decode, and a value above 1 reaches the tonemap. The top quad shows the HDR target and the bottom quad the sRGB one.
+
 ## Update mode
 
 <!-- compare: image=unit-sub-viewport-update-mode status=done fixture=unit-sub-viewport-update-mode.tscn -->
@@ -69,5 +81,6 @@ Strict and lenient parsing diverge only on out-of-range enums. The lenient parse
 ## Known limitations
 
 - **Approximated** A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.
-- **Approximated** `use_hdr_2d` is not read, so an HDR canvas composites differently.
+- **Approximated** A Light2D in a `use_hdr_2d` canvas lights its items brighter than Godot does.
+- **Approximated** The root viewport and a sub-viewport whose canvas draws over its 3D world ignore `use_hdr_2d`, and draw an sRGB canvas.
 - **Needs runtime** A viewport whose camera or world is assigned by script shows only its clear colour in 3D, and frames from the origin in 2D.

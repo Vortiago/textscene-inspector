@@ -27,10 +27,18 @@ import { CanvasItemKeyProvider } from './components/CanvasItemGroup';
 import { canvasRenderOrder } from './canvasPaintOrder';
 import { CanvasModulateContext } from './canvasModulate';
 import { WHITE_MODULATE } from './canvasItemModulate';
+import {
+  canvasColorSpaceOf,
+  CanvasColorSpaceProvider,
+  SRGB_CANVAS,
+  type CanvasColorSpace,
+} from './canvasColorSpace';
 import { type CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
 import type { Rgba } from '../godot/math/math';
 import { CanvasItemMaterialBlendMode, CanvasItemMaterialLightMode } from '../godot/scene/canvasItemMaterial';
 import { tileTextureAt } from '../resources/tileset/testing/tileTexture';
+
+const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 function canvasItemMaterial(overrides: Partial<CanvasItemMaterialProperties>): CanvasItemMaterialProperties {
   return { ...canvasItemMaterialOf({ type: 'CanvasItemMaterial', data: {} })!, ...overrides };
@@ -97,11 +105,19 @@ interface Layer {
   zFinal?: number;
   material?: CanvasItemMaterialProperties | null;
   canvasModulate?: Rgba;
+  selfTint?: Rgba;
+  space?: CanvasColorSpace;
 }
 
 function render(
   quadrants: readonly (readonly PlacedCell[])[],
-  { zFinal = 0, material = null, canvasModulate = WHITE_MODULATE }: Layer = {}
+  {
+    zFinal = 0,
+    material = null,
+    canvasModulate = WHITE_MODULATE,
+    selfTint = WHITE_MODULATE,
+    space = SRGB_CANVAS,
+  }: Layer = {}
 ) {
   const fake = createFakeResourceLoader();
   for (const id of MODEL.sources.keys()) {
@@ -119,7 +135,9 @@ function render(
     <ResourceLoaderProvider loader={fake.loader}>
       <CanvasLighting2DContext.Provider value={lighting}>
         <CanvasModulateContext.Provider value={canvasModulate}>
-          <CanvasItemKeyProvider value={layerKey(zFinal)}>{children}</CanvasItemKeyProvider>
+          <CanvasColorSpaceProvider value={space}>
+            <CanvasItemKeyProvider value={layerKey(zFinal)}>{children}</CanvasItemKeyProvider>
+          </CanvasColorSpaceProvider>
         </CanvasModulateContext.Provider>
       </CanvasLighting2DContext.Provider>
     </ResourceLoaderProvider>
@@ -129,7 +147,7 @@ function render(
       <TileQuadrants
         quadrants={quadrants.map((cells) => drawableCells(MODEL, cells))}
         model={MODEL}
-        selfTint={WHITE_MODULATE}
+        selfTint={selfTint}
         material={material}
         lightMask={1}
         zFinal={zFinal}
@@ -243,5 +261,24 @@ describe('<TileQuadrants>', () => {
     const [mesh] = meshesOf(await render([[cell(0, 0, 0, 5)]]).tree);
     expect((mesh!.material as THREE.MeshBasicMaterial).vertexColors).toBe(true);
     expect(Array.from(mesh!.geometry.getAttribute('color').array.slice(0, 4))).toEqual([1, 0, 0, 1]);
+  });
+
+  describe('in a linear canvas', () => {
+    const grey = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
+
+    it("puts the layer's tint into the vertex colours, which convert as one product with the tile's modulate", async () => {
+      const [mesh] = meshesOf(
+        await render([[cell(0, 0, 0, 5)]], { selfTint: grey, space: LINEAR_CANVAS }).tree
+      );
+      expect(Array.from(mesh!.geometry.getAttribute('color').array.slice(0, 4))).toEqual([0.5, 0, 0, 1]);
+      expect((mesh!.material as THREE.MeshBasicMaterial).defines).toEqual(LINEAR_CANVAS.defines);
+    });
+
+    it('carries only the converted canvas modulate on the material', async () => {
+      const [shaded] = materialsOf(
+        await render([[cell(0, 0, 0)]], { selfTint: grey, canvasModulate: grey, space: LINEAR_CANVAS }).tree
+      );
+      expect(shaded!.color.r).toBeCloseTo(0.214041, 5);
+    });
   });
 });

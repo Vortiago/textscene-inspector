@@ -13,8 +13,7 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { godotColorToLinear } from '../../../../r3f/godotColor';
+import { multiplyModulate, useItemLinearColorOf } from '../../../../r3f/canvasItemModulate';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -97,6 +96,7 @@ export function TextEditBody({
   underlay,
 }: TextEditBodyProps) {
   const props = painterView<TextEditProperties>(solveNode);
+  const toItemLinear = useItemLinearColorOf();
   const state = resolveTextEditStyleState(props.editable);
   const styleBox = pickTextEditStyleBox(solveNode.styleBoxes, theme.widgets.lineEdit, state);
 
@@ -229,7 +229,7 @@ export function TextEditBody({
           <ControlQuad
             width={band.xMarginEndPx}
             height={rowHeightPx}
-            color={godotColorToLinear(tintedCurrentLineColor)}
+            color={toItemLinear(tintedCurrentLineColor)}
             opacity={tintedCurrentLineColor.a}
             renderOrder={renderOrder}
           />
@@ -240,7 +240,7 @@ export function TextEditBody({
           <ControlQuad
             width={caretRect.w}
             height={caretRect.h}
-            color={godotColorToLinear(tintedCaretColor)}
+            color={toItemLinear(tintedCaretColor)}
             opacity={tintedCaretColor.a}
             renderOrder={renderOrder}
           />
@@ -305,7 +305,7 @@ export function TextEditBody({
                         <ControlQuad
                           width={GLYPH_ICON_SIZE_PX}
                           height={GLYPH_ICON_SIZE_PX}
-                          color={godotColorToLinear(iconColor)}
+                          color={toItemLinear(iconColor)}
                           opacity={iconColor.a}
                           map={tabIcon}
                           renderOrder={renderOrder}
@@ -327,7 +327,7 @@ export function TextEditBody({
                         <ControlQuad
                           width={GLYPH_ICON_SIZE_PX}
                           height={GLYPH_ICON_SIZE_PX}
-                          color={godotColorToLinear(iconColor)}
+                          color={toItemLinear(iconColor)}
                           opacity={iconColor.a}
                           map={spaceIcon}
                           renderOrder={renderOrder}

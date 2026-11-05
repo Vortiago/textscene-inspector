@@ -12,6 +12,9 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { ColorPicker } from './Component';
+import { canvasColorSpaceOf, CanvasColorSpaceProvider } from '../../../../r3f/canvasColorSpace';
+
+const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 const THEME = nativeTheme(1);
 
@@ -119,6 +122,26 @@ describe('<ColorPicker> (isolated painter contract)', () => {
     expect(color.getX(0)).toBeCloseTo(0.5);
     expect(color.getY(0)).toBeCloseTo(0.5);
     expect(color.getZ(0)).toBeCloseTo(0.5);
+  });
+
+  it('carries the tint on the material in a linear canvas, which decodes the vertex colours apart', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CanvasColorSpaceProvider value={LINEAR_CANVAS}>
+        <ColorPicker
+          {...painterEnv()}
+          theme={THEME}
+          tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })}
+          solveNode={node({ color: 'Color(1, 0, 0, 1)', ...ONLY_SHAPE_AND_SAMPLE })}
+          rect={{ x: 0, y: 0, w: 400, h: 400 }}
+          renderOrder={0}
+        />
+      </CanvasColorSpaceProvider>
+    );
+    const baseMesh = renderer.scene.findAllByType('Mesh')[4]!.instance as THREE.Mesh;
+    const material = baseMesh.material as THREE.MeshBasicMaterial;
+    expect((baseMesh.geometry.getAttribute('color') as THREE.BufferAttribute).getX(0)).toBeCloseTo(1);
+    expect(material.color.r).toBeCloseTo(0.214041, 5);
+    expect(material.defines).toEqual(LINEAR_CANVAS.defines);
   });
 
   it('positions the cursor at the square bounds for s=0, v=1 (pure white)', async () => {

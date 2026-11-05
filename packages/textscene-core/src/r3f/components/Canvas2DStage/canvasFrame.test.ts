@@ -5,9 +5,12 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { createCanvasFrame } from './canvasFrame';
+import { canvasColorSpaceOf, SRGB_CANVAS } from '../../canvasColorSpace';
 import { innermostStep, startFrameProfile } from '../../frameProfile/frameProfile';
 import { profiledRendererMembers } from '../../frameProfile/frameProfile.testkit';
 import type { RenderStep } from '../../frameProfile/frameStats';
+
+const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 type Target = THREE.WebGLRenderTarget | null;
 
@@ -47,7 +50,7 @@ const camera = new THREE.OrthographicCamera();
 
 /** A frame at `samples`, as `useMultisampledTarget` sets them. */
 function multisampledFrame(samples: number): ReturnType<typeof createCanvasFrame> {
-  const frame = createCanvasFrame();
+  const frame = createCanvasFrame(SRGB_CANVAS);
   frame.samples = samples;
   return frame;
 }
@@ -208,6 +211,21 @@ describe('createCanvasFrame', () => {
     frame.render(resized.gl, scene, camera);
 
     expect(resized.draws[0]!.target).toMatchObject({ width: 128, height: 32 });
+    frame.dispose();
+  });
+
+  it('blends sRGB numbers in an sRGB canvas: RGBA8 under an sRGB tag, which three encodes into', () => {
+    const frame = createCanvasFrame(SRGB_CANVAS);
+    expect(frame.texture.internalFormat).toBe('RGBA8');
+    expect(frame.texture.colorSpace).toBe(THREE.SRGBColorSpace);
+    frame.dispose();
+  });
+
+  it('blends linear values and keeps those above 1 in a linear canvas: RGBA16F under a linear tag', () => {
+    const frame = createCanvasFrame(LINEAR_CANVAS);
+    expect(frame.texture.type).toBe(THREE.HalfFloatType);
+    expect(frame.texture.internalFormat).toBe('RGBA16F');
+    expect(frame.texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
     frame.dispose();
   });
 });

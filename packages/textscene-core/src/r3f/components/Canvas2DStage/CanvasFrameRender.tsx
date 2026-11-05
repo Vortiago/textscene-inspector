@@ -12,13 +12,17 @@ import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import { createCanvasFrame } from './canvasFrame.js';
 import { useMultisampledTarget } from '../../multisampledTarget.js';
 import { viewportTransfer } from '../../texelCopy.js';
+import { SRGB_CANVAS } from '../../canvasColorSpace.js';
+
+/** The root canvas draws sRGB: `rendering/viewport/hdr_2d` is not read. */
+const createRootCanvasFrame = () => createCanvasFrame(SRGB_CANVAS);
 
 /** A positive priority stops R3F's own render, and runs after every pass at priority 0 or below. */
 const OWNS_THE_RENDER = 1;
 
 export function CanvasFrameRender() {
   const { settings, msaaModes } = useProjectSettings();
-  const frame = useMultisampledTarget(msaaModes.msaa2D, createCanvasFrame);
+  const frame = useMultisampledTarget(msaaModes.msaa2D, createRootCanvasFrame);
   const isTransparent = projectTransparentBackground(settings);
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);

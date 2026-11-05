@@ -8,7 +8,6 @@ import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -66,6 +65,7 @@ import type { DrawnLine } from '../../../../r3f/controls/native/text/lineDrawCli
 import type { ItemListItem, ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
+import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 /**
  * Pass 1: this row's own icon/text size contribution: what `packItemListRows` needs, before rects
@@ -126,7 +126,7 @@ function ItemListRow({ geometry, origin, tint, renderOrder, fontSizePx, resource
   const clippingPlanes = useControlClipPlanes();
 
   const iconColorSrgb = useMemo(() => tintColor(itemIconColor(disabled), tint), [disabled, tint]);
-  const iconColorLinear = useGodotLinearColor(iconColorSrgb);
+  const iconColorLinear = useItemLinearColor(iconColorSrgb);
   const tintedTextColor = useMemo(() => tintColor(textColor, tint), [textColor, tint]);
 
   return (
@@ -329,7 +329,7 @@ export function ItemList({
     () => tintColor(itemListGuideColor(solveNode), tint.own),
     [solveNode, tint.own]
   );
-  const guideColorLinear = useGodotLinearColor(guideColorSrgb);
+  const guideColorLinear = useItemLinearColor(guideColorSrgb);
 
   const rowGeometries: RowGeometry[] = useMemo(() => {
     const minimumShapeWidthPx = itemListMinimumShapeWidthPx(fixedColumnWidth);

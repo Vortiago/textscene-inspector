@@ -8,7 +8,6 @@ import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -37,6 +36,7 @@ import {
 import type { SpinBoxProperties } from './types';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<SpinBoxProperties>(solveNode);
@@ -119,8 +119,8 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
     () => tintColor(spinBoxIconColor(solveNode.colors, 'down', downState), tint.own),
     [solveNode.colors, downState, tint.own]
   );
-  const upIconLinear = useGodotLinearColor(upIconColorSrgb);
-  const downIconLinear = useGodotLinearColor(downIconColorSrgb);
+  const upIconLinear = useItemLinearColor(upIconColorSrgb);
+  const downIconLinear = useItemLinearColor(downIconColorSrgb);
 
   const upIconPos = spinBoxArrowPosition(layout.upRect, upIconSize);
   const downIconPos = spinBoxArrowPosition(layout.downRect, downIconSize);

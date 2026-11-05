@@ -45,6 +45,7 @@ import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import '../../../../r3f/controls/index';
 import '../../../../r3f/nodes/index';
 import { ViewportTexturePublisher, viewportEntry } from '../../../../r3f/testing/ViewportTexturePublisher';
+import { SRGB_CANVAS } from '../../../../r3f/canvasColorSpace';
 
 function node(name: string, type: string, properties: object, children: TscnNode[] = []): TscnNode {
   return { name, type, children, properties: { name, ...properties } } as TscnNode;
@@ -330,7 +331,7 @@ describe('<SubViewportContainer> — the colour of the surface', () => {
   }
 
   it('multiplies a canvas target in sRGB', async () => {
-    const target = createCanvasTarget(200, 150, 'View');
+    const target = createCanvasTarget(200, 150, 'View', SRGB_CANVAS);
     expect((await surfaceMaterial(target.texture)).defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
     target.dispose();
   });

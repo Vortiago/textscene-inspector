@@ -12,8 +12,7 @@ import * as THREE from 'three';
 import { useCanvasItemMerge } from '../../../../r3f/components/LitCanvasItemPixels';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
-import { CANVAS_SRGB_DEFINES } from '../../../../r3f/canvasSrgbMultiply';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
+import { multiplyModulate, useVertexColorTint } from '../../../../r3f/canvasItemModulate';
 import { connectionControlPoints, tessellateConnectionLine } from './connectionCurve';
 import { connectionStrokeGeometry } from './connectionStroke';
 import type { ResolvedConnection } from './connectionEndpoints';
@@ -29,10 +28,6 @@ interface ConnectionLineProps {
   renderOrder: number;
 }
 
-function toStrokeColor(c: Rgba): Rgba {
-  return { r: c.r, g: c.g, b: c.b, a: c.a };
-}
-
 export function ConnectionLine({
   connection,
   curvature,
@@ -44,12 +39,13 @@ export function ConnectionLine({
   // A raw mesh, so it applies the clip planes itself (`nativeClipCoverage.test.tsx`).
   const clippingPlanes = useControlClipPlanes();
   const canvasItemMerge = useCanvasItemMerge();
+  const { vertex: vertexTint, color, opacity, defines } = useVertexColorTint(tintOwn);
   const geometry = useMemo(() => {
     const controlPoints = connectionControlPoints(connection.from.pos, connection.to.pos, curvature);
     const points = tessellateConnectionLine(controlPoints, curvature);
-    const from = toStrokeColor(multiplyModulate(tintOwn, connection.from.color));
-    const to = toStrokeColor(multiplyModulate(tintOwn, connection.to.color));
-    const rim = toStrokeColor(multiplyModulate(tintOwn, rimColor));
+    const from = multiplyModulate(vertexTint, connection.from.color);
+    const to = multiplyModulate(vertexTint, connection.to.color);
+    const rim = multiplyModulate(vertexTint, rimColor);
     const { positions, indices, colors } = connectionStrokeGeometry(points, lineWidth, from, to, rim);
     if (positions.length === 0) return null;
 
@@ -58,18 +54,20 @@ export function ConnectionLine({
     geo.setIndex(indices);
     geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 4));
     return geo;
-  }, [connection, curvature, lineWidth, rimColor, tintOwn]);
+  }, [connection, curvature, lineWidth, rimColor, vertexTint]);
   useDisposeOnRelease(geometry);
 
   if (!geometry) return null;
 
   const program = materialProgramInputs({
     props: {
+      color,
+      opacity,
       vertexColors: true,
       transparent: true,
       depthWrite: false,
       // sRGB vertex colours, ramped as Godot ramps them (`canvasSrgbMultiply.ts`).
-      defines: CANVAS_SRGB_DEFINES,
+      defines,
       clippingPlanes: clippingPlanes as THREE.Plane[],
     },
     merge: canvasItemMerge,

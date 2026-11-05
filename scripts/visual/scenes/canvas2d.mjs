@@ -622,6 +622,10 @@ export const CANVAS_2D_SCENES = [
   // `--mode 2d`: (160,155) rgb(159,123,130) under the Torch, (280,200) rgb(51,64,108) the tinted
   // far Floor, and (600,155) rgb(127,127,127) the untinted, unlit Outside.
   { name: 'sub-viewport-2d-light', file: 'unit-sub-viewport-2d-light.tscn', mode: '2d' },
+  // `use_hdr_2d` draws the canvas linear into a half-float target, which the container shows as
+  // stored. Godot 4.6.3 `--mode 2d`: (150,150) rgb(54,54,54) grey, (250,150) rgb(127,128,0) the linear
+  // blend, (350,150) rgb(255,255,63) a value above 1, and (350,350) rgb(255,160,31) the same at modulate 0.5.
+  { name: 'sub-viewport-hdr-2d', file: 'unit-sub-viewport-hdr-2d.tscn', mode: '2d' },
   // A DirectionalLight2D shadow inside a sub-viewport, beside a sun outside it. Godot 4.6.3
   // `--mode 2d`: (150,150) rgb(63,63,63) in the Wall's shadow, (250,150) rgb(158,110,87) lit by
   // the inside sun, and (600,155) rgb(84,114,84) lit by the outside sun alone. The outside sun
