@@ -1030,11 +1030,6 @@ function richTextVerticalOffsets(
   }
 }
 
-/** What `fitLineToWidth` reads of the control: the size behind its space-shrink floor. */
-interface RichTextJustification {
-  fontSizePx: number;
-}
-
 /** The box a paragraph aligns inside, plus the node's own two alignment properties. */
 interface RichTextAlignment {
   boxWidthPx: number;
@@ -1043,8 +1038,8 @@ interface RichTextAlignment {
   verticalAlignment?: number;
   /** How far the scroll value has moved the text up (`vofs`, `rich_text_label.cpp:1613`). Absent is 0. */
   scrollOffsetPx?: number;
-  /** Absent leaves FILL paragraphs unfitted. */
-  justification?: RichTextJustification;
+  /** Whether FILL paragraphs fit the text rect. Absent leaves them unfitted. */
+  isFillJustified?: boolean;
 }
 
 /**
@@ -1055,13 +1050,11 @@ function fitFilledParagraphs(
   layout: RichTextLayout,
   isFilled: (firstLineIndex: number) => boolean,
   flagsOf: (firstLineIndex: number) => number,
-  boxWidthPx: number,
-  justification: RichTextJustification
+  boxWidthPx: number
 ): RichTextLayout {
   const lines = justifyParagraphs(layout.lines, {
     widthPx: Math.trunc(boxWidthPx),
     flags: flagsOf,
-    fontSizePx: justification.fontSizePx,
     isFilled,
   });
   return { ...layout, lines };
@@ -1096,8 +1089,8 @@ export function layoutRichTextRuns(
   }
   const flagsOf = (firstLineIndex: number): number => paragraphRunOf(firstLineIndex)?.justificationFlags ?? 0;
   const layout =
-    alignment?.justification && hasFilledParagraph
-      ? fitFilledParagraphs(unfittedLayout, isFilled, flagsOf, boxWidthPx, alignment.justification)
+    alignment?.isFillJustified && hasFilledParagraph
+      ? fitFilledParagraphs(unfittedLayout, isFilled, flagsOf, boxWidthPx)
       : unfittedLayout;
   // Fitting moves glyphs and keeps their text, so the second attribution reads the same runs.
   const perLine = layout === unfittedLayout ? unfittedPerLine : attributeRunsToLines(styledRuns, layout);

@@ -179,8 +179,8 @@ export interface GlyphPlacement {
   controlCodepoint?: number;
   /** How far the embolden grows this glyph's outline at its own size, px. Absent for a glyph with none. */
   emboldenGrowthPx?: number;
-  /** This glyph's own size, px: the base of `fitLineToWidth`'s space-shrink floor, `gl.font_size` in Godot (`text_server_adv.cpp:5659`). */
-  fontSizePx?: number;
+  /** This glyph's own size, px, `gl.font_size` in Godot: it scales the space-shrink floor of `fitLineToWidth` (`text_server_adv.cpp:5659`) and the measured ink. */
+  fontSizePx: number;
   /** The face of the **Fallback chain** this glyph draws in. */
   fontMetrics: FontMetrics;
 }

@@ -138,9 +138,10 @@ describe('<LabelGlyphs>', () => {
     // Both sizes are above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE, so each advance
     // rounds to a whole pixel with the remainder carried (`text_server_adv.cpp:7079-7084`),
     // independently at each size. Doubling the size does not exactly double the
-    // pen extent: the residual is bounded by the rounding. The quad reaches two fixed pixels past the
-    // ink on each side (`canvasTextPainter.ts`'s INK_SLACK_PX), which do not scale.
-    const slackPx = 4;
+    // pen extent: the residual is bounded by the rounding. The quad reaches 2 fixed pixels past the ink
+    // on the left and 1 on the right (`canvasTextPainter.ts`'s INK_SLACK_LEFT_PX and INK_SLACK_RIGHT_PX),
+    // which do not scale.
+    const slackPx = 3;
     expect(Math.abs(largeSize.x - slackPx - (smallSize.x - slackPx) * 2)).toBeLessThan(2);
     // The quad's vertical anti-aliasing pad is fixed, so the content box is what
     // grows, and only near-proportionally: ascent and descent each ceil to a

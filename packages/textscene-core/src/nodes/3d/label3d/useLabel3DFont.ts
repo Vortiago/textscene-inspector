@@ -57,35 +57,44 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
   const { loadedFont, projectFonts, isLoading } = useLoadedFilesAndFonts(noFiles, fontsPlan, true);
   const { settings } = useProjectSettings();
 
-  // Set by `settledFont` while a chain face reloads, whose fallback faces draw at the label setting.
-  let isChainSettling = false;
-  const settledFont = (): Label3DFont | undefined => {
+  /** The font the label draws with, and whether a chain face reloads, whose fallback faces draw at the label setting meanwhile. */
+  const settledFont = (): SettledLabel3DFont => {
     const font = fontForNode('Label3D', fontRef, { resources, loadedFont, projectFonts });
     const settled = peekSettledSceneFontMetrics(font, nodePath);
-    if (!settled) return undefined;
+    if (!settled) return NO_FONT;
     const projectMipmaps = projectDefaultFontGeneratesMipmaps(settings);
     const generatesMipmaps = fontGeneratesMipmaps(font) ?? projectMipmaps;
     const { fallbacks } = settled;
     const chainFaces = fallbacks ? peekSettledChainFaces(font, nodePath) : null;
-    isChainSettling = !!fallbacks && !chainFaces;
+    const isChainSettling = !!fallbacks && !chainFaces;
     const fallbackMipmaps =
       fallbacks && chainFaces
         ? fallbackFaceMipmaps(fallbacks, chainFaces, projectMipmaps)
         : NO_FALLBACK_MIPMAPS;
-    if (isBitmapFontMetrics(settled)) return { metrics: settled, generatesMipmaps, fallbackMipmaps };
+    if (isBitmapFontMetrics(settled))
+      return { font: { metrics: settled, generatesMipmaps, fallbackMipmaps }, isChainSettling };
     // A canvas face carries its outlines already. An atlas face draws as the bundled canvas face,
     // which stands in for that face alone and so keeps its fallbacks.
-    if (isCanvasFontMetrics(settled)) return { metrics: settled, generatesMipmaps, fallbackMipmaps };
+    if (isCanvasFontMetrics(settled))
+      return { font: { metrics: settled, generatesMipmaps, fallbackMipmaps }, isChainSettling };
     const canvasFace = peekBundledCanvasFace(settled);
-    if (!canvasFace) return undefined;
-    return { metrics: withFallbacks(canvasFace, fallbacks ?? []), generatesMipmaps, fallbackMipmaps };
+    if (!canvasFace) return NO_FONT;
+    const metrics = withFallbacks(canvasFace, fallbacks ?? []);
+    return { font: { metrics, generatesMipmaps, fallbackMipmaps }, isChainSettling };
   };
-  const label3DFont = isLoading ? undefined : settledFont();
+  const { font: label3DFont, isChainSettling } = isLoading ? NO_FONT : settledFont();
   // Listens only while a face is missing or a chain face reloads: a label that has its font draws the
   // same through every later settle.
   useSceneFontSettleCount(label3DFont === undefined || isChainSettling);
   return label3DFont;
 }
+
+interface SettledLabel3DFont {
+  font: Label3DFont | undefined;
+  isChainSettling: boolean;
+}
+
+const NO_FONT: SettledLabel3DFont = { font: undefined, isChainSettling: false };
 
 const NO_FALLBACK_MIPMAPS: ReadonlyMap<FontMetrics, boolean> = new Map();
 

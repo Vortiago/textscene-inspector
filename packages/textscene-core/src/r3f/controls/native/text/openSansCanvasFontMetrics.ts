@@ -22,10 +22,11 @@ const atlasGlyphInk = new Map<string, GlyphInk>();
  * for a character the atlas lacks.
  */
 function atlasGlyphInkUnits(ch: string): GlyphInk | undefined {
-  let ink = atlasGlyphInk.get(ch);
+  const cached = atlasGlyphInk.get(ch);
+  if (cached) return cached;
   const glyph = OPEN_SANS_ATLAS_GLYPHS[ch];
-  if (ink || !glyph) return ink;
-  ink = {
+  if (!glyph) return undefined;
+  const ink = {
     left: -glyph.xoffset * UNITS_PER_ATLAS_PX,
     right: (glyph.xoffset + glyph.width) * UNITS_PER_ATLAS_PX,
   };

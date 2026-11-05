@@ -120,24 +120,32 @@ function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: numb
 }
 
 /**
- * The painter floors a pen by up to 1 px (`canvasGlyphPenXPx`) and rounds one up to a quarter pixel
- * right, and a hinted outline grid-fits under half a pixel past its measured box, so measured ink
- * takes this many whole pixels more on each side.
+ * Whole pixels past a glyph's reach that its drawn ink can land. The painter floors a pen by up to
+ * 1 px (`canvasGlyphPenXPx`) or rounds it a quarter pixel right, and a hinted outline grid-fits under
+ * half a pixel past its measured box: 1.5 px on the left, 0.75 px on the right.
  */
-const INK_SLACK_PX = 2;
+const INK_SLACK_LEFT_PX = 2;
+const INK_SLACK_RIGHT_PX = 1;
 
 /**
- * How far `glyph`'s ink reaches left of its pen and right of it, px, its pen box included. A face that
- * measures no ink takes `ascentPx` on each side: the ascent bounds the reach of any glyph.
+ * How far `glyph`'s drawn ink reaches left of its pen and right of it, px, its pen box and the pen
+ * snap included. A face that measures no ink takes `ascentPx` on each side: the ascent bounds the
+ * reach of any glyph.
  */
 function glyphInkPx(glyph: GlyphPlacement, ascentPx: number): { leftPx: number; rightPx: number } {
+  const { leftPx, rightPx } = glyphReachPx(glyph, ascentPx);
+  return { leftPx: leftPx + INK_SLACK_LEFT_PX, rightPx: rightPx + INK_SLACK_RIGHT_PX };
+}
+
+/** The reach of `glyph`'s ink from its pen, px, from its face's measured ink or else one ascent. */
+function glyphReachPx(glyph: GlyphPlacement, ascentPx: number): { leftPx: number; rightPx: number } {
   const face = glyph.fontMetrics;
   const ink = isCanvasFontMetrics(face) ? face.getGlyphInkUnits?.(glyph.char) : undefined;
-  if (!ink || glyph.fontSizePx === undefined) return { leftPx: ascentPx, rightPx: glyph.advance + ascentPx };
+  if (!ink) return { leftPx: ascentPx, rightPx: glyph.advance + ascentPx };
   const pxPerUnit = glyph.fontSizePx / face.unitsPerEm;
   return {
-    leftPx: Math.max(0, ink.left * pxPerUnit) + INK_SLACK_PX,
-    rightPx: Math.max(glyph.advance, ink.right * pxPerUnit) + INK_SLACK_PX,
+    leftPx: Math.max(0, ink.left * pxPerUnit),
+    rightPx: Math.max(glyph.advance, ink.right * pxPerUnit),
   };
 }
 

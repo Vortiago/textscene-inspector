@@ -81,8 +81,8 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     ]
   );
   const layout = useMemo(
-    () => justifyLabel3DLines(broken, { font_size, width, justification_flags, horizontal_alignment }),
-    [broken, font_size, width, justification_flags, horizontal_alignment]
+    () => justifyLabel3DLines(broken, { width, justification_flags, horizontal_alignment }),
+    [broken, width, justification_flags, horizontal_alignment]
   );
 
   // One `<TextRun>` per line: Godot aligns each line by its own width

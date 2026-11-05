@@ -128,6 +128,19 @@ describe('trimLineToWidth', () => {
     expect(ellipsis.emboldenGrowthPx).toBeCloseTo(1.2, 10);
   });
 
+  // A canvas raster scales the measured ink of a glyph by its own size (`canvasTextPainter.ts`).
+  it('sizes the space and the ellipsis it appends at the trim size', () => {
+    const result = trim(
+      'AAAAAA BBBBBB',
+      90,
+      overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS)
+    );
+    expect(result.glyphs.slice(-2).map(({ char, fontSizePx }) => [char, fontSizePx])).toEqual([
+      [' ', FONT_SIZE_PX],
+      ['…', FONT_SIZE_PX],
+    ]);
+  });
+
   it('TRIM_WORD_ELLIPSIS only cuts at a space, inserting one before the ellipsis (text_server_adv.cpp:6081-6091,6124-6135)', () => {
     // "AAAAAA BBBBBB": every mid-word B index is skipped (not a soft break);
     // the space at index 6 is the first index >= 6 that both is a soft break

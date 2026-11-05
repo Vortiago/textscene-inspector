@@ -52,12 +52,7 @@ export function shapeTextMeshLines(
   const isFill = properties.horizontalAlignment === HorizontalAlignment.HORIZONTAL_ALIGNMENT_FILL;
   return {
     lines: isFill
-      ? justifyLinesToWidth(
-          layout.lines,
-          properties.width,
-          properties.justificationFlags,
-          properties.fontSize
-        )
+      ? justifyLinesToWidth(layout.lines, properties.width, properties.justificationFlags)
       : layout.lines,
     baselineOffsetPx: layout.baselineOffsetPx,
     linePitchPx: layout.linePitchPx,

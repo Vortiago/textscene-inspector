@@ -257,20 +257,9 @@ function RichTextBody({
         scrollOffsetPx,
         horizontalAlignment: props.horizontalAlignment,
         verticalAlignment: props.verticalAlignment,
-        justification: {
-          fontSizePx: textTheme.fontSizePx,
-        },
+        isFillJustified: true,
       }),
-    [
-      runs,
-      layout,
-      wrapWidthPx,
-      rect.h,
-      scrollOffsetPx,
-      props.horizontalAlignment,
-      props.verticalAlignment,
-      textTheme.fontSizePx,
-    ]
+    [runs, layout, wrapWidthPx, rect.h, scrollOffsetPx, props.horizontalAlignment, props.verticalAlignment]
   );
   const underlineMetrics = useMemo(() => richTextUnderlineMetrics(runs), [runs]);
 

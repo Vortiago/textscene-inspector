@@ -1432,8 +1432,8 @@ describe('underlineRectPx', () => {
   // -(-100 - 50/2)*18/2048 and 50*18/2048: the same paragraph at 18px.
   const METRICS_18 = { positionPx: 1.0986328125, thicknessPx: 0.439453125 };
   const GLYPHS = [
-    { char: 'u', x: 10, advance: 5, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS },
-    { char: 'l', x: 15, advance: 8, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS },
+    { char: 'u', x: 10, advance: 5, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
+    { char: 'l', x: 15, advance: 8, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
   ];
 
   it(
@@ -1470,8 +1470,15 @@ describe('underlineRectPx', () => {
   it("snaps the x extent the same way — the run's first glyph pen x through its last glyph's pen x + advance, rounded out to the columns the quad's own centres fall in", () => {
     const rect = underlineRectPx(
       [
-        { char: 'u', x: 10.4, advance: 4.8, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS },
-        { char: 'l', x: 15.2, advance: 8, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS },
+        {
+          char: 'u',
+          x: 10.4,
+          advance: 4.8,
+          glyph: null,
+          fontMetrics: OPEN_SANS_FONT_METRICS,
+          fontSizePx: 16,
+        },
+        { char: 'l', x: 15.2, advance: 8, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
       ],
       18,
       METRICS_16
@@ -1759,7 +1766,7 @@ describe('RichTextLabel FILL justification', () => {
     const placements = layoutRichTextRuns(flagged, layout, {
       boxWidthPx,
       boxHeightPx: TALL_BOX_PX,
-      justification: { fontSizePx: FONT_SIZE },
+      isFillJustified: true,
     });
     const widths: number[] = [];
     for (const p of placements) widths[p.lineIndex] = (widths[p.lineIndex] ?? 0) + p.layout.widthPx;
@@ -1829,7 +1836,7 @@ describe('RichTextLabel FILL justification', () => {
     for (const p of layoutRichTextRuns(runs, layout, {
       boxWidthPx: BOX_WIDTH_PX,
       boxHeightPx: TALL_BOX_PX,
-      justification: { fontSizePx: FONT_SIZE },
+      isFillJustified: true,
     })) {
       widths[p.lineIndex] = (widths[p.lineIndex] ?? 0) + p.layout.widthPx;
     }

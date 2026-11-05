@@ -201,8 +201,7 @@ export function trimFilledLineToWidth(
           line,
           { trimPos, trimmedWidthPx: trimmedWidthPx(trim) },
           widthPx,
-          options.justificationFlags,
-          options.fontSizePx
+          options.justificationFlags
         );
   return trimmedLine(line, trim, inferredDirectionGlyphs(line, glyphs, trim));
 }
