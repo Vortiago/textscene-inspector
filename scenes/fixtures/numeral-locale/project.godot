@@ -1,0 +1,19 @@
+; A res:// root of its own, because `internationalization/locale/test` is a PROJECT setting and no .tscn
+; can carry one. ProgressBar, SpinBox and CodeEdit write their numbers in the digits of that locale
+; (`_get_locale()`). Kept in a subdirectory: a project.godot at scenes/fixtures would apply to every fixture.
+
+config_version=5
+
+[application]
+
+config/name="Numeral locale"
+run/main_scene="res://unit-numeral-locale.tscn"
+config/features=PackedStringArray("4.6")
+
+[gui]
+
+theme/custom_font="res://fonts/dejavu-sans-numerals-subset.ttf"
+
+[internationalization]
+
+locale/test="ar"

@@ -1,0 +1,121 @@
+; One variable: `localize_numeral_system` on a RichTextLabel [ol]. `_get_prefix` writes a LIST_NUMBERS segment through
+; `format_number(segment, _find_language(item))` while the property is on (rich_text_label.cpp:255-258), and a
+; letter or roman segment as it is. The property defaults to true (control.h:293). A [lang] tag overrides the label
+; language. The cell Off sets the property false. No other scene sets a language on a list.
+
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://fonts/dejavu-sans-numerals-subset.ttf" id="1_font"]
+
+[sub_resource type="Theme" id="Theme_1"]
+default_font = ExtResource("1_font")
+default_font_size = 20
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="ArabicBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 180.0
+offset_bottom = 290.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Arabic" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 180.0
+offset_bottom = 290.0
+bbcode_enabled = true
+language = "ar"
+text = "[ol]one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten[/ol]"
+
+[node name="PersianBox" type="ColorRect" parent="."]
+offset_left = 200.0
+offset_top = 10.0
+offset_right = 360.0
+offset_bottom = 290.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Persian" type="RichTextLabel" parent="."]
+offset_left = 200.0
+offset_top = 10.0
+offset_right = 360.0
+offset_bottom = 290.0
+bbcode_enabled = true
+language = "fa"
+text = "[ol]one\ntwo\nthree\nfour\nfive\nsix[/ol]"
+
+[node name="OffBox" type="ColorRect" parent="."]
+offset_left = 380.0
+offset_top = 10.0
+offset_right = 540.0
+offset_bottom = 290.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Off" type="RichTextLabel" parent="."]
+offset_left = 380.0
+offset_top = 10.0
+offset_right = 540.0
+offset_bottom = 290.0
+bbcode_enabled = true
+language = "ar"
+localize_numeral_system = false
+text = "[ol]one\ntwo\nthree[/ol]"
+
+[node name="LettersBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 300.0
+offset_right = 180.0
+offset_bottom = 580.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Letters" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 300.0
+offset_right = 180.0
+offset_bottom = 580.0
+bbcode_enabled = true
+language = "ar"
+text = "[ol type=a]one\ntwo[/ol]"
+
+[node name="LangBox" type="ColorRect" parent="."]
+offset_left = 200.0
+offset_top = 300.0
+offset_right = 360.0
+offset_bottom = 580.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Lang" type="RichTextLabel" parent="."]
+offset_left = 200.0
+offset_top = 300.0
+offset_right = 360.0
+offset_bottom = 580.0
+bbcode_enabled = true
+language = "ar"
+text = "[lang=fa][ol]one\ntwo\nthree\nfour\nfive\nsix[/ol][/lang]"
+
+[node name="NestedBox" type="ColorRect" parent="."]
+offset_left = 380.0
+offset_top = 300.0
+offset_right = 540.0
+offset_bottom = 580.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Nested" type="RichTextLabel" parent="."]
+offset_left = 380.0
+offset_top = 300.0
+offset_right = 540.0
+offset_bottom = 580.0
+bbcode_enabled = true
+language = "ar"
+text = "[ol]one\n[ol type=a]inner\nmore[/ol]\nlast[/ol]"
