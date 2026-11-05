@@ -64,6 +64,7 @@ export function parseWindow(heading: ParsedHeading, properties: Record<string, s
     borderless: boolOr(properties.borderless, defaults.borderless, context),
     unfocusable: boolOr(properties.unfocusable, false, context),
     always_on_top: boolOr(properties.always_on_top, false, context),
+    exclusive: boolOr(properties.exclusive, false, context),
     wrap_controls: boolOr(properties.wrap_controls, defaults.wrapControls, context),
     force_native: boolOr(properties.force_native, false, context),
     min_size: clampLimitSize(vec2iOr(properties.min_size, ORIGIN, context)),

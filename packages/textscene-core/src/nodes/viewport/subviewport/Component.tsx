@@ -41,13 +41,17 @@ function MixedViewportControls({
   path,
   nodes,
   size,
+  embedsWindows,
 }: {
   path: string;
   nodes: readonly TscnNode[];
   size: Vector2;
+  embedsWindows: boolean;
 }) {
   const inheritedRtl = useInheritedRtl(path);
-  return <ViewportControls nodes={nodes} size={size} inheritedRtl={inheritedRtl} />;
+  return (
+    <ViewportControls nodes={nodes} size={size} inheritedRtl={inheritedRtl} embedsWindows={embedsWindows} />
+  );
 }
 
 /**
@@ -112,7 +116,12 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
       {holdsCanvasItems ? children : null}
       {holdsControls ? (
         <PendingSuspense>
-          <MixedViewportControls path={path} nodes={node.children} size={layoutSize} />
+          <MixedViewportControls
+            path={path}
+            nodes={node.children}
+            size={layoutSize}
+            embedsWindows={properties.gui_embed_subwindows}
+          />
         </PendingSuspense>
       ) : null}
     </>

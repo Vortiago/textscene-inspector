@@ -26,6 +26,33 @@ export function isViewportBoundary(type: string): boolean {
   return isSubViewport(type) || isEmbeddedWindow(type);
 }
 
+/** The fields of a viewport node the embedding test reads. */
+interface ViewportNode {
+  type: string;
+  properties: unknown;
+  children: readonly ViewportNode[];
+}
+
+function embedsSubwindows(node: ViewportNode): boolean {
+  return (node.properties as { gui_embed_subwindows?: boolean }).gui_embed_subwindows === true;
+}
+
+/**
+ * Whether `viewport` draws a window over its canvas: it embeds windows, and one below it climbs to
+ * it, past each viewport that embeds none (`Window::get_embedder`). A native window draws outside.
+ */
+export function embedsAWindow(viewport: ViewportNode): boolean {
+  return embedsSubwindows(viewport) && reachesEmbedder(viewport.children);
+}
+
+function reachesEmbedder(nodes: readonly ViewportNode[]): boolean {
+  return nodes.some(
+    (node) =>
+      (isEmbeddedWindow(node.type) && !(node.properties as { force_native?: boolean }).force_native) ||
+      (!embedsSubwindows(node) && reachesEmbedder(node.children))
+  );
+}
+
 /**
  * A live-tree walk's descend predicate: true when a node's children share its viewport. A module
  * function, so a memo keyed on the predicate holds.

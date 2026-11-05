@@ -24,6 +24,8 @@ export interface WindowProperties extends SubViewportProperties, ThemeOwnerField
   /** Whether the window takes focus when it shows. The focused window draws `embedded_border`. */
   unfocusable: boolean;
   always_on_top: boolean;
+  /** An exclusive window under an always-on-top window rises with it (`viewport.cpp:279-281`). */
+  exclusive: boolean;
   wrap_controls: boolean;
   /** A native window draws outside the game frame, so the embedder draws nothing for it. */
   force_native: boolean;

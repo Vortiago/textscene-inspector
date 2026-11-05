@@ -31,6 +31,7 @@ describe('parseWindow', () => {
       wrap_controls: false,
       unfocusable: false,
       always_on_top: false,
+      exclusive: false,
       force_native: false,
       initial_position: 0,
     });

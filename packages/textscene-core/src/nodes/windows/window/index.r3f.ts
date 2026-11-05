@@ -1,15 +1,9 @@
 /**
- * Window is parsed but not drawn. `renderIntent: 'pending'` drives the "not
- * implemented" badge and the placeholder marker. `container: true` holds the type in
- * both canvases. The `Node` base applies no `visible`.
+ * Window draws as a viewport its embedder shows: the SubViewport component publishes its target, and
+ * the embedder draws it with its decoration (`EmbeddedWindows.tsx`, ADR-0033).
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { Node } from '../../node/Component';
+import { SubViewport } from '../../viewport/subviewport/Component';
 
-nodeComponentRegistry.register({
-  typeName: 'Window',
-  Component: Node,
-  container: true,
-  renderIntent: 'pending',
-});
+nodeComponentRegistry.register({ typeName: 'Window', Component: SubViewport });

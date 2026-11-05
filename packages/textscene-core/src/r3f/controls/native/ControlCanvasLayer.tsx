@@ -2,7 +2,8 @@
  * The WebGL Control mount point in the 2D viewport. `World2DContents` mounts it
  * beside `<NodeDispatcher>`, and it reads resources from the same ambient context
  * (ADR-0009). It feeds `buildSolveTree`, the project's viewport rect and theme
- * scale, and the layer-0 canvas modulate into `<ControlCanvasWalker>`.
+ * scale, and the layer-0 canvas modulate into `<ControlCanvasWalker>`, and draws the windows the
+ * root window embeds over them.
  */
 import { useMemo } from 'react';
 import type { TscnNode } from '../../../parser/types';
@@ -16,6 +17,8 @@ import { useCanvasModulateColor, CanvasModulateContext } from '../../canvasModul
 import { canvasLayerRanks } from '../../canvasPaintOrder';
 import { LayerRanksProvider } from '../../contexts/PaintOrderContext';
 import { measureText } from './text/measurer';
+import { EmbeddedWindows } from '../../../nodes/windows/window/EmbeddedWindows';
+import { rootEmbedsSubwindows } from '../../../nodes/windows/window/embedding';
 
 interface ControlCanvasLayerProps {
   nodes: readonly TscnNode[];
@@ -37,10 +40,10 @@ function showRoots(nodes: readonly TscnNode[]): readonly TscnNode[] {
 export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
   const { externalResources, internalResources } = useSceneResources();
   const rootNodes = useMemo(() => showRoots(nodes), [nodes]);
-  const { tree, generation } = useBuildSolveTree(rootNodes, externalResources, internalResources);
+  const { tree, generation, windows } = useBuildSolveTree(rootNodes, externalResources, internalResources);
 
   // The project's `gui/theme/default_theme_scale`, not a constant scale 1.
-  const { themeScale } = useProjectSettings();
+  const { themeScale, settings } = useProjectSettings();
   const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
   const viewport = useGameViewportRect();
   // A Control outside any `CanvasLayer` shares Godot's default canvas with the
@@ -63,6 +66,10 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
           theme={theme}
           measurer={measureText}
         />
+        {/* A window the root does not embed is a native one, drawn outside the game frame. */}
+        {rootEmbedsSubwindows(settings) ? (
+          <EmbeddedWindows windows={windows} embedderSize={{ x: viewport.w, y: viewport.h }} theme={theme} />
+        ) : null}
       </LayerRanksProvider>
     </CanvasModulateContext.Provider>
   );

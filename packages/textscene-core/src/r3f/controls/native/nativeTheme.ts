@@ -31,6 +31,8 @@ interface NativeThemeStyleFill {
   disabled: Rgba;
   /** `style_popup_color` = `Color(0.25, 0.25, 0.25, 1)`. */
   popup: Rgba;
+  /** `style_popup_hover_color` = `Color(0.4, 0.4, 0.4, 1)`. */
+  popupHover: Rgba;
   /** `style_progress_color` = `Color(1, 1, 1, 0.4)`, the sliders' filled `grabber_area`. */
   progress: Rgba;
 }

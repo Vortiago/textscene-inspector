@@ -46,6 +46,8 @@ export const STYLE_FILL = {
   disabled: { r: 0.1, g: 0.1, b: 0.1, a: 0.3 },
   /** `style_popup_color`. PopupMenu / dropdown-list panel. */
   popup: { r: 0.25, g: 0.25, b: 0.25, a: 1 },
+  /** `style_popup_hover_color`. An unfocused embedded window's border. */
+  popupHover: { r: 0.4, g: 0.4, b: 0.4, a: 1 },
   /** `style_progress_color`. */
   progress: { r: 1, g: 1, b: 1, a: 0.4 },
 } as const satisfies Record<string, Rgba>;

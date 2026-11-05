@@ -1813,6 +1813,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Popup Embedded",
+    "file": "unit-popup-embedded.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Popup Menu",
     "file": "unit-popup-menu.tscn",
     "category": "Other"
@@ -2610,6 +2615,26 @@ export const fixtures: Fixture[] = [
   {
     "name": "Vslider",
     "file": "unit-vslider.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Embedded",
+    "file": "unit-window-embedded.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Focus Order",
+    "file": "unit-window-focus-order.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Title Trim",
+    "file": "unit-window-title-trim.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Transparent",
+    "file": "unit-window-transparent.tscn",
     "category": "Other"
   },
   {

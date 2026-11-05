@@ -1,6 +1,5 @@
 /**
- * Window registration: parsed and validated, not yet rendered. The pending
- * registration makes the badge read a gap.
+ * Window registration: parsed, validated and drawn as an embedded window.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -18,8 +17,8 @@ describe('Window registration', () => {
     expect(registration!.parser).toBe(parseWindow);
   });
 
-  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.renderIntentOf('Window')).toBe('pending');
-    expect(rendersOwnVisual('Window')).toBe('not-implemented');
+  it('draws as a viewport its embedder shows', () => {
+    expect(nodeComponentRegistry.renderIntentOf('Window')).toBe('draws');
+    expect(rendersOwnVisual('Window')).toBe('draws');
   });
 });

@@ -47,6 +47,29 @@ describe('viewportContentKind', () => {
     expect(viewportContentKind(viewport(''))).toBe('empty');
   });
 
+  it('classifies a viewport that embeds a window as dom, since it draws the window over its canvas', () => {
+    const embedding = viewport(
+      'gui_embed_subwindows = true\n\n[node name="Dialog" type="Window" parent="Viewport"]'
+    );
+    expect(viewportContent(embedding)).toMatchObject({ kind: 'dom', holdsControls: true });
+  });
+
+  it('classifies an empty window as dom, since its embedder draws its cleared target', () => {
+    const scene = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="Root" type="Control"]
+
+[node name="Dialog" type="Window" parent="."]
+`);
+    expect(viewportContentKind(scene.nodes[0]!.children[0]!)).toBe('dom');
+  });
+
+  it('classifies a viewport that embeds no window and holds only one as empty', () => {
+    expect(viewportContentKind(viewport('\n[node name="Dialog" type="Window" parent="Viewport"]'))).toBe(
+      'empty'
+    );
+  });
+
   /**
    * `ProgressBar` is a `Range`, so Godot calls it 2D UI, though this previewer has
    * no component for it. Read as `'empty'`, both publishers would skip it, and a

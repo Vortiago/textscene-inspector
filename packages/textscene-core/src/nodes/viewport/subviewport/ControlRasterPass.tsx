@@ -102,7 +102,12 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
     <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
       <World2DLightingBoundary canvasModulate={canvasModulate}>
         <SubViewportSamplerScope properties={properties}>
-          <ViewportControls nodes={node.children} size={controlsSize} inheritedRtl={inheritedRtl} />
+          <ViewportControls
+            nodes={node.children}
+            size={controlsSize}
+            inheritedRtl={inheritedRtl}
+            embedsWindows={properties.gui_embed_subwindows}
+          />
         </SubViewportSamplerScope>
       </World2DLightingBoundary>
     </SceneResourcesProvider>,
