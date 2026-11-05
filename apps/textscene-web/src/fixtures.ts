@@ -1213,6 +1213,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Fill Paragraphs",
+    "file": "unit-label-fill-paragraphs.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Font Variation Bundled Embolden",
     "file": "unit-label-font-variation-bundled-embolden.tscn",
     "category": "Other"
@@ -3540,6 +3545,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Text Mesh Variable Instance",
+    "file": "unit-text-mesh-variable-instance.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Text Mesh Woff2",
     "file": "unit-text-mesh-woff2.tscn",
     "category": "Unit - Primitive Meshes"
@@ -3923,6 +3933,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Rich Text Label Center Overflow",
     "file": "unit-rich-text-label-center-overflow.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Clip",
+    "file": "unit-rich-text-label-clip.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Fill",
+    "file": "unit-rich-text-label-fill.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

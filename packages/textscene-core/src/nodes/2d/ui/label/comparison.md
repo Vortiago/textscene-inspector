@@ -15,6 +15,9 @@ outright. Without `label_settings`, it shapes in the theme's font and reads the 
 resolve. A paragraph adds its spacing once, after its last shown line: a line that autowrap breaks
 inside a paragraph does not.
 
+A FILL Label fits the lines of each paragraph on its own (`label.cpp:272-319`). The last line of each
+paragraph stays unfitted under the default flags, and a single-line paragraph is fitted.
+
 A Label draws its layers in Godot's order (`label.cpp:828-883`). The shadow ring and the shadow come first. Then
 each stacked shadow and each stacked outline draw from the last index to the first. The outline comes next, and the fill
 comes last. A ring is a stroked contour with a one-sided radius of `outline_size / 4` px (`text_server_adv.cpp:1383`).

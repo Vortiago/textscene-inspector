@@ -166,6 +166,10 @@ _Avoid_: "font smoothing" or "antialiasing", which act on the rasterised glyph.
 FreeType's hinter that finds a glyph's stems and blue zones from the outline alone, per script. It takes a TrueType font with no font program and a control value program of at most 7 bytes, and any font that is not tricky when its `FontFile` sets `force_autohinter`.
 _Avoid_: "autohint" as a verb for the native TrueType hinter.
 
+**Text paragraph** (`TextLineLayout.paragraphIndex` in `r3f/controls/native/text/textLayout.ts`):
+The text up to a separator, which Godot shapes as its own `TextParagraph`: a `\n` ends one in a Label (`paragraph_separator`) and in a RichTextLabel. Autowrap splits a paragraph into lines, and `justification_flags` count their lines inside the paragraph, so each fits or skips its own last line (`justifyParagraphs`).
+_Avoid_: "line" for it, and a count of lines over the whole text.
+
 **Asset re-import**:
 What the previewer does in place of Godot's import pipeline: it loads the source asset (`.gltf`, `.glb`, `.obj`) and re-derives the scene from it.
 ADR-0028 holds the decision and the allowlist of **Import sidecar** parameters it honours.

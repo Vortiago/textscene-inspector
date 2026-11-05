@@ -46,6 +46,9 @@ const ALL_STYLES = [
 type StyledTextRun = ReturnType<typeof styledTextRuns>[number];
 
 /** A plain, white, left-aligned run of `text` at `fontSizePx`, with the fields a test cares about overridden. */
+/** What `parseRichTextLabel` fills for the two properties whose defaults are not `undefined`. */
+const PARSED_DEFAULTS = { justificationFlags: 163, clipContents: true };
+
 function textRun(fields: Pick<StyledTextRun, 'text' | 'fontSizePx'> & Partial<StyledTextRun>): StyledTextRun {
   return { bold: false, italic: false, underline: false, color: WHITE, alignment: 0, ...fields };
 }
@@ -314,6 +317,7 @@ describe('richTextLabelTextTheme', () => {
     const red = { r: 1, g: 0, b: 0, a: 1 };
     const props = {
       name: 'RTL',
+      ...PARSED_DEFAULTS,
       themeOverrideFontSizes: { normal_font_size: 20 },
     } as RichTextLabelProperties;
     const n = node({}, { colors: { default_color: red } });
@@ -324,7 +328,11 @@ describe('richTextLabelTextTheme', () => {
   });
 
   it("ignores Label's font_size and font_color keys", () => {
-    const props = { name: 'RTL', themeOverrideFontSizes: { font_size: 20 } } as RichTextLabelProperties;
+    const props = {
+      name: 'RTL',
+      ...PARSED_DEFAULTS,
+      themeOverrideFontSizes: { font_size: 20 },
+    } as RichTextLabelProperties;
     const n = node({}, { colors: { font_color: { r: 1, g: 0, b: 0, a: 1 } } });
     expect(richTextLabelTextTheme(n, props, { theme: nativeTheme(1) })).toEqual({
       fontSizePx: 16,
@@ -506,6 +514,7 @@ describe('styledTextRuns', () => {
         node({}),
         {
           name: 'RTL',
+          ...PARSED_DEFAULTS,
           text: '[b]x[/b]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: { bold_font_size: 24 },
@@ -522,6 +531,7 @@ describe('styledTextRuns', () => {
         node({}),
         {
           name: 'RTL',
+          ...PARSED_DEFAULTS,
           text: '[b]x[/b]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: { bold_font_size: NORMAL },
@@ -538,6 +548,7 @@ describe('styledTextRuns', () => {
         node({}),
         {
           name: 'RTL',
+          ...PARSED_DEFAULTS,
           text: '[b]x[/b][i]y[/i]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: { italics_font_size: 20 },
@@ -555,6 +566,7 @@ describe('styledTextRuns', () => {
         node({}),
         {
           name: 'RTL',
+          ...PARSED_DEFAULTS,
           text: '[b][i]x[/i][/b]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: { bold_font_size: 20, italics_font_size: 22, bold_italics_font_size: 30 },
@@ -617,6 +629,7 @@ describe('styledTextRuns', () => {
         node({}, { themeChain: [theme] }),
         {
           name: 'RTL',
+          ...PARSED_DEFAULTS,
           text: '[b]x[/b]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: { bold_font_size: 24 },
@@ -1499,8 +1512,7 @@ describe('RichTextLabel paragraph alignment', () => {
 
     it('positions FILL like LEFT — justification is intra-line, not an origin shift', () => {
       // The LTR FILL arm of `:991`'s switch does nothing at all; only RTL
-      // shifts. The intra-line stretch this slice does not do is a
-      // `comparison.md` row.
+      // shifts. `fitFilledParagraphs` stretches the line itself.
       expect(offsetX(3, 200)).toBe(0);
     });
   });
@@ -1566,5 +1578,94 @@ describe('shapeRichText — tab stops (rich_text_label.cpp:479-482)', () => {
 
   it('tab_size <= 0 disables inline tab alignment entirely (no stops)', () => {
     expect(xAfterTab({ tabSize: 0 })).not.toBe(16.625);
+  });
+});
+
+/**
+ * FILL fits each paragraph's lines to the text rect (`text_paragraph.cpp:234-292`). Godot 4.6.3
+ * measured "Wave rift over stone" at 16px: with autowrap off, two single-line paragraphs end at
+ * x 738 and 739 in a 300px box at x 440, and a `[fill]` paragraph after a plain one fits alone.
+ */
+describe('RichTextLabel FILL justification', () => {
+  const FILL = 3;
+  const LEFT = 0;
+  const BOX_WIDTH_PX = 300;
+  const DEFAULT_FLAGS = 163;
+
+  /** The width of each line, as the first placement of each line carries it. */
+  function fittedWidths(
+    runs: Parameters<typeof shapeRichText>[0],
+    options: { boxWidthPx?: number; autowrapMode?: EnumValue<typeof AutowrapMode>; flags?: number }
+  ): number[] {
+    const {
+      boxWidthPx = BOX_WIDTH_PX,
+      autowrapMode = AutowrapMode.AUTOWRAP_OFF,
+      flags = DEFAULT_FLAGS,
+    } = options;
+    const layout = shapeRuns(runs, { boxWidthPx, autowrapMode });
+    const placements = layoutRichTextRuns(runs, layout, {
+      boxWidthPx,
+      boxHeightPx: 0,
+      justification: { flags, fontSizePx: FONT_SIZE },
+    });
+    const widths: number[] = [];
+    for (const p of placements) widths[p.lineIndex] = (widths[p.lineIndex] ?? 0) + p.layout.widthPx;
+    return widths;
+  }
+
+  const fillRun = (text: string, alignment = FILL) => textRun({ text, fontSizePx: FONT_SIZE, alignment });
+
+  it('fits both single-line paragraphs of "Wave rift over stone\\nand amber light" with autowrap off', () => {
+    expect(fittedWidths([fillRun('Wave rift over stone\nand amber light')], {})).toEqual([300, 300]);
+  });
+
+  it('fits the first line of each paragraph and leaves the last line of each', () => {
+    const widths = fittedWidths(
+      [
+        fillRun(
+          'Wave rift over stone and the amber light\nthe tide turns again and again until the sea sleeps'
+        ),
+      ],
+      {
+        boxWidthPx: 200,
+        autowrapMode: AutowrapMode.AUTOWRAP_WORD_SMART,
+      }
+    );
+    expect(widths).toHaveLength(4);
+    expect([widths[0], widths[2]]).toEqual([200, 200]);
+    expect(widths[1]).toBeLessThan(200);
+    expect(widths[3]).toBeLessThan(200);
+  });
+
+  it('fits a [fill] paragraph and leaves a plain paragraph before it in a LEFT label', () => {
+    const widths = fittedWidths(
+      [fillRun('Wave rift over stone\n', LEFT), fillRun('and amber light', FILL)],
+      {}
+    );
+    expect(widths[0]).toBeLessThan(300);
+    expect(widths[1]).toBe(300);
+  });
+
+  it('fits to the truncated width of a 300.7px box', () => {
+    expect(fittedWidths([fillRun('Wave rift over stone')], { boxWidthPx: 300.7 })).toEqual([300]);
+  });
+
+  it('fits no line when the flags skip a single line (34)', () => {
+    const [width] = fittedWidths([fillRun('Wave rift over stone')], { flags: 34 });
+    expect(width).toBeLessThan(300);
+  });
+});
+
+describe('layoutRichTextRuns run attribution', () => {
+  it('gives the paragraph terminator to the run that holds its "\\n", and the next line to the next run', () => {
+    const runs = [
+      textRun({ text: 'a\n', fontSizePx: FONT_SIZE }),
+      textRun({ text: 'b', fontSizePx: FONT_SIZE, bold: true }),
+    ];
+    const placements = layoutRichTextRuns(runs, shapeRuns(runs), { boxWidthPx: 0, boxHeightPx: 0 });
+    expect(placements.map((p) => [p.lineIndex, p.layout.lines[0]!.text])).toEqual([
+      [0, 'a​'],
+      [1, 'b'],
+    ]);
   });
 });

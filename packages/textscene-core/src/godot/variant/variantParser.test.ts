@@ -11,6 +11,7 @@ import {
   dictBoolField,
   dictCallField,
   dictKey,
+  dictNumberEntries,
   dictStringField,
   isNilLiteral,
   nodePathLiteral,
@@ -294,5 +295,39 @@ describe('dictBoolField', () => {
     expect(dictBoolField('loop').exec('{ "looped": true }')).toBeNull();
     expect(dictBoolField('loop').exec('{ "loop": trueish }')).toBeNull();
     expect(dictBoolField('loop').exec('{ "loop": "yes" }')).toBeNull();
+  });
+});
+
+describe('dictNumberEntries', () => {
+  it('reads int, string and sigil keys with the double each value converts to (variant.h:380-396)', () => {
+    const body = `{
+2003265652: 700.0,
+"custom_MONO": 1,
+&"opsz": null,
+@"slnt": true,
+"ital": "0.5x"
+}`;
+
+    expect(dictNumberEntries(body)).toEqual([
+      [2003265652, 700],
+      ['custom_MONO', 1],
+      ['opsz', 0],
+      ['slnt', 1],
+      ['ital', 0.5],
+    ]);
+  });
+
+  it('reads a value of another type as 0 and skips an entry with another kind of key (edge case)', () => {
+    expect(dictNumberEntries('{ "a": [1, 2], 1.5: 3, "b": { 4: 5 }, 7: 8 }')).toEqual([
+      ['a', 0],
+      ['b', 0],
+      [7, 8],
+    ]);
+  });
+
+  it('reads an empty Dictionary and one with a trailing comma, and refuses text that is no Dictionary (error case)', () => {
+    expect(dictNumberEntries('{}')).toEqual([]);
+    expect(dictNumberEntries('{ 1: 2, }')).toEqual([[1, 2]]);
+    expect(dictNumberEntries('[1, 2]')).toBeNull();
   });
 });

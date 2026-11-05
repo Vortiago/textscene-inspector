@@ -15,6 +15,7 @@ import {
 } from './runtimeFontMetrics';
 import {
   fontVariationEmbolden,
+  fontVariationOpentype,
   fontVariationSkew,
   resolveBitmapFont,
   resolveFontFileBytes,
@@ -159,9 +160,13 @@ async function loadSceneFontMetrics(bytes: ArrayBuffer, nodePath: string): Promi
   }
 }
 
-/** The embolden and skew of `font`, when it is a `FontVariation`. */
+/** The embolden, skew and OpenType axes of `font`, when it is a `FontVariation`. */
 function fontVariation(font: FontResource): GlyphVariation {
-  return { embolden: fontVariationEmbolden(font), skew: fontVariationSkew(font) };
+  return {
+    embolden: fontVariationEmbolden(font),
+    skew: fontVariationSkew(font),
+    opentype: fontVariationOpentype(font),
+  };
 }
 
 /**
