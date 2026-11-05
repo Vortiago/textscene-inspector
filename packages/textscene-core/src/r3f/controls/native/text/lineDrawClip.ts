@@ -44,10 +44,8 @@ export function textParagraphLineShiftPx(
  * tests run only while the bound is positive, so an unconstrained box draws the whole line.
  * `widthPx` stays the pen extent: alignment and sizing read the shaped width, never the drawn one.
  * Returns `line` itself when nothing is cut.
- *
- * @canonical A shaped line cut to its paragraph box, as TextParagraph draws it
  */
-export function clipLineToDrawBox(line: TextLineLayout, boxWidthPx: number, shiftPx: number): TextLineLayout {
+function clipLineToDrawBox(line: TextLineLayout, boxWidthPx: number, shiftPx: number): TextLineLayout {
   const clipLeftPx = Math.max(0, -shiftPx);
   const clipRightPx = clipLeftPx + boxWidthPx;
   const kept = [];

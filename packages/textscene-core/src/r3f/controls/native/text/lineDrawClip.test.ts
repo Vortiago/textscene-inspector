@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
-import { clipLineToDrawBox, textParagraphLineShiftPx } from './lineDrawClip';
+import { drawnLinesInBox, textParagraphLineShiftPx } from './lineDrawClip';
 import type { TextLineLayout } from './textLayout';
 
 /** Ten glyphs `a`..`j`, each a 10 px advance at pen x 0, 10, 20, and so on. */
@@ -15,31 +15,43 @@ const LINE: TextLineLayout = {
   glyphs: [...'abcdefghij'].map((char, index) => ({ char, x: index * 10, advance: 10, glyph: null })),
 };
 
-describe('clipLineToDrawBox', () => {
+describe('drawnLinesInBox cuts each line to the box', () => {
+  const { HORIZONTAL_ALIGNMENT_LEFT, HORIZONTAL_ALIGNMENT_RIGHT } = HorizontalAlignment;
+  const cut = (boxWidthPx: number, alignment: number) =>
+    drawnLinesInBox([LINE], boxWidthPx, alignment, false)[0]!.line;
+
   it('stops at the first glyph whose advance ends past the box', () => {
-    expect(clipLineToDrawBox(LINE, 35, 0).text).toBe('abc');
+    expect(cut(35, HORIZONTAL_ALIGNMENT_LEFT).text).toBe('abc');
   });
 
   it('keeps a glyph whose advance ends exactly on the box edge', () => {
-    expect(clipLineToDrawBox(LINE, 30, 0).text).toBe('abc');
+    expect(cut(30, HORIZONTAL_ALIGNMENT_LEFT).text).toBe('abc');
   });
 
   it('skips the glyphs left of clip_l when a negative shift moves the line left', () => {
-    // shift -25: ofs.x = -25, clip_l = 25, clip_r = 60. d starts at 30, g ends at 70 > 60.
-    expect(clipLineToDrawBox(LINE, 35, -25).text).toBe('def');
+    // RIGHT in a 75 box: shift -25, so clip_l = 25 and clip_r = 100. c starts at 20, d at 30.
+    expect(cut(75, HORIZONTAL_ALIGNMENT_RIGHT).text).toBe('defghij');
+  });
+
+  it('keeps the trailing glyphs of a RIGHT line in a narrow box', () => {
+    expect(cut(35, HORIZONTAL_ALIGNMENT_RIGHT).text).toBe('hij');
   });
 
   it('keeps the pen extent, since alignment and sizing read it', () => {
-    expect(clipLineToDrawBox(LINE, 35, 0).widthPx).toBe(100);
+    expect(cut(35, HORIZONTAL_ALIGNMENT_LEFT).widthPx).toBe(100);
   });
 
   it('draws the whole line at zero or negative width, as `clip_r > 0` is false', () => {
-    expect(clipLineToDrawBox(LINE, 0, 0)).toBe(LINE);
-    expect(clipLineToDrawBox(LINE, -1, 0)).toBe(LINE);
+    expect(cut(0, HORIZONTAL_ALIGNMENT_LEFT)).toBe(LINE);
+    expect(cut(-1, HORIZONTAL_ALIGNMENT_LEFT)).toBe(LINE);
   });
 
   it('returns the line itself when every glyph fits', () => {
-    expect(clipLineToDrawBox(LINE, 100, 0)).toBe(LINE);
+    expect(cut(100, HORIZONTAL_ALIGNMENT_LEFT)).toBe(LINE);
+  });
+
+  it('reports the shift each line was given', () => {
+    expect(drawnLinesInBox([LINE], 35, HORIZONTAL_ALIGNMENT_RIGHT, false)[0]!.shiftPx).toBe(-65);
   });
 });
 
