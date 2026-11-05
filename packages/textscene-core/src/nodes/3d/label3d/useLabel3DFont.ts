@@ -1,7 +1,7 @@
 /**
  * The font a Label3D shapes and paints with, as the font chain resolves it (`label_3d.cpp:812-850`).
- * Label3D rasterises with canvas-2D, so a font whose metrics are not canvas metrics, the bundled
- * default or a FontVariation over it, draws as the bundled canvas face.
+ * Label3D rasterises with canvas-2D or draws a BMFont's page images, so a font whose metrics are
+ * neither, the bundled default or a FontVariation over it, draws as the bundled canvas face.
  */
 
 import { useCallback } from 'react';
@@ -10,6 +10,10 @@ import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { peekBundledCanvasFace } from '../../../r3f/controls/native/text/bundledCanvasFace';
+import {
+  isBitmapFontMetrics,
+  type BitmapFontMetrics,
+} from '../../../r3f/controls/native/text/bitmapFontMetrics';
 import {
   isCanvasFontMetrics,
   type CanvasFontMetrics,
@@ -26,7 +30,7 @@ import { useLoadedFilesAndFonts } from '../../../resources/useLoadedFilesAndFont
 const noFiles = () => [];
 
 export interface Label3DFont {
-  metrics: CanvasFontMetrics;
+  metrics: CanvasFontMetrics | BitmapFontMetrics;
   /** Whether the glyph raster carries a mip chain: the font's own setting, or the project's for the bundled font. */
   generatesMipmaps: boolean;
 }
@@ -50,13 +54,11 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
     const font = fontForNode('Label3D', fontRef, { resources, loadedFont, projectFonts });
     const settled = peekSettledSceneFontMetrics(font, nodePath);
     if (!settled) return undefined;
+    const generatesMipmaps = fontGeneratesMipmaps(font) ?? projectDefaultFontGeneratesMipmaps(settings);
+    if (isBitmapFontMetrics(settled)) return { metrics: settled, generatesMipmaps };
     // A canvas face carries its outlines already. An atlas face draws as the bundled canvas face.
     const metrics = isCanvasFontMetrics(settled) ? settled : peekBundledCanvasFace(settled);
-    if (!metrics) return undefined;
-    return {
-      metrics,
-      generatesMipmaps: fontGeneratesMipmaps(font) ?? projectDefaultFontGeneratesMipmaps(settings),
-    };
+    return metrics ? { metrics, generatesMipmaps } : undefined;
   };
   const label3DFont = isLoading ? undefined : settledFont();
   // Listens only while a face is missing: a label that has its font draws the same through every later settle.

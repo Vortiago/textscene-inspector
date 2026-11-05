@@ -62,19 +62,46 @@ export function useNearestAnisotropy(texture: THREE.Texture | null): void {
     if (!texture || !renderer) return;
     const writeToBound = boundWriter(renderer, texture);
     if (!writeToBound) return;
-
-    const previous = texture.onUpdate;
-    const onUpdate: THREE.Texture['onUpdate'] = (uploaded) => {
-      previous?.(uploaded);
-      writeToBound();
-    };
-    texture.onUpdate = onUpdate;
-
+    const release = holdUploadWriter(texture, writeToBound);
     const storage = handleOf(renderer, texture).__webglTexture;
     if (storage) writeToStorage(renderer, storage, writeToBound);
-    return () => {
-      // Another hook may have wrapped this one since: its chain still reaches ours, so leave it.
-      if (texture.onUpdate === onUpdate) texture.onUpdate = previous;
-    };
+    return release;
   }, [texture, renderer]);
+}
+
+interface UploadWriter {
+  holders: number;
+  /** The callback the texture had before the writer wrapped it. */
+  previous: THREE.Texture['onUpdate'];
+  wrapper: THREE.Texture['onUpdate'];
+}
+
+/**
+ * Written only by `holdUploadWriter`: one writer for each texture, however many runs share it, so
+ * an upload writes once. The last hold to let go clears the entry.
+ */
+// eslint-disable-next-line no-restricted-syntax -- it counts holders, and the last release deletes the entry
+const uploadWriters = new WeakMap<THREE.Texture, UploadWriter>();
+
+/** Wraps `onUpdate` of `texture` with `write` while a hold is open, and returns the release. */
+function holdUploadWriter(texture: THREE.Texture, write: () => void): () => void {
+  let writer = uploadWriters.get(texture);
+  if (!writer) {
+    const previous = texture.onUpdate;
+    const wrapper: THREE.Texture['onUpdate'] = (uploaded) => {
+      previous?.(uploaded);
+      write();
+    };
+    texture.onUpdate = wrapper;
+    writer = { holders: 0, previous, wrapper };
+    uploadWriters.set(texture, writer);
+  }
+  writer.holders++;
+  const held = writer;
+  return () => {
+    if (--held.holders > 0) return;
+    uploadWriters.delete(texture);
+    // Another hook may have wrapped this one since: its chain still reaches ours, so leave it.
+    if (texture.onUpdate === held.wrapper) texture.onUpdate = held.previous;
+  };
 }

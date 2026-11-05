@@ -8,6 +8,7 @@ import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { computeCanvasTextCanvasLayout } from './canvasTextPainter';
 import { shapeText } from './textLayout';
 import { TextRunMesh } from './TextRunMesh';
+import type { GlyphDrawer } from './glyphDrawer';
 import { testBitmapMetrics } from './bitmapFontMetrics.testkit';
 
 const layout = shapeText('AB', {
@@ -23,7 +24,7 @@ const layout = shapeText('AB', {
 });
 
 /** The top-left corner of the run's quad, in the group's coordinates with three's +Y up. */
-async function quadTopLeft(quantisesPen: boolean): Promise<[number, number]> {
+async function quadTopLeft(glyphDrawer: GlyphDrawer): Promise<[number, number]> {
   const renderer = await ReactThreeTestRenderer.create(
     <CanvasItemProvider value={0}>
       <CanvasItemGroup position={[2.25, -1.75, 0]}>
@@ -31,7 +32,7 @@ async function quadTopLeft(quantisesPen: boolean): Promise<[number, number]> {
           layout={layout}
           fontSizePx={16}
           tint={{ r: 1, g: 1, b: 1, a: 1 }}
-          quantisesPen={quantisesPen}
+          glyphDrawer={glyphDrawer}
         />
       </CanvasItemGroup>
     </CanvasItemProvider>
@@ -45,7 +46,7 @@ describe('<TextRunMesh> on the canvas painter', () => {
   const { offsetXPx, offsetYPx } = computeCanvasTextCanvasLayout(layout, 0);
 
   it('moves its quad back to the whole item pixel at or before the run origin', async () => {
-    const [x, y] = await quadTopLeft(true);
+    const [x, y] = await quadTopLeft('canvasItem');
     expect(x).toBeCloseTo(-offsetXPx - 0.25, 6);
     expect(y).toBeCloseTo(offsetYPx + 0.75, 6);
   });
@@ -69,31 +70,41 @@ describe('<TextRunMesh> on the canvas painter', () => {
   });
 
   it('keeps the quad of a Label3D run at its origin', async () => {
-    const [x, y] = await quadTopLeft(false);
+    const [x, y] = await quadTopLeft('label3D');
     expect(x).toBeCloseTo(-offsetXPx, 6);
     expect(y).toBeCloseTo(offsetYPx, 6);
   });
 });
 
 describe('<TextRunMesh> over a BMFont', () => {
+  const bitmapLayout = shapeText('H', {
+    fontSizePx: 16,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 3,
+    fontMetrics: testBitmapMetrics(),
+  });
+  const at = (x: number) => (
+    <CanvasItemProvider value={0}>
+      <CanvasItemGroup position={[x, -1.75, 0]}>
+        <TextRunMesh layout={bitmapLayout} fontSizePx={16} tint={{ r: 1, g: 1, b: 1, a: 1 }} />
+      </CanvasItemGroup>
+    </CanvasItemProvider>
+  );
+  const meshOf = (renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>) =>
+    renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh;
+
   it('floors its glyph at the canvas position of its item', async () => {
-    const bitmapLayout = shapeText('H', {
-      fontSizePx: 16,
-      boxWidthPx: 0,
-      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-      lineSpacingPx: 3,
-      fontMetrics: testBitmapMetrics(),
-    });
-    const renderer = await ReactThreeTestRenderer.create(
-      <CanvasItemProvider value={0}>
-        <CanvasItemGroup position={[2.25, -1.75, 0]}>
-          <TextRunMesh layout={bitmapLayout} fontSizePx={16} tint={{ r: 1, g: 1, b: 1, a: 1 }} />
-        </CanvasItemGroup>
-      </CanvasItemProvider>
-    );
-    const mesh = renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh;
-    const position = mesh.geometry.getAttribute('position');
+    const position = meshOf(await ReactThreeTestRenderer.create(at(2.25))).geometry.getAttribute('position');
     // `H` sits 1 px right of its pen and 4 px below the line top (`bitmapTextPainter.test.ts`).
     expect([position.getX(0), position.getY(0)]).toEqual([1 - 0.25, -(4 - 0.75)]);
+  });
+
+  it('keeps its page texture when the run moves by a fraction of a pixel', async () => {
+    const renderer = await ReactThreeTestRenderer.create(at(2.25));
+    const page = () => (meshOf(renderer).material as THREE.MeshBasicMaterial).map;
+    const before = page();
+    await renderer.update(at(2.5));
+    expect(page()).toBe(before);
   });
 });
