@@ -20,6 +20,7 @@ import { outlineStrokeWidthPx } from '../../../r3f/controls/native/text/textOutl
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import { type Label3DProperties } from './types';
 import { useLabel3DFont } from './useLabel3DFont';
+import { useLayoutDirectionEnv } from '../../../r3f/contexts/useLayoutDirectionEnv';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 
 export interface LabelGlyphsProps {
@@ -44,16 +45,46 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   // Each memo lists the fields it reads, so an unrelated property edit keeps the layout.
   const { text, font_size, line_spacing, width, autowrap_mode, autowrap_trim_flags } = properties;
   const { justification_flags, horizontal_alignment, vertical_alignment, uppercase } = properties;
+  const { textDirection, language, structuredTextBidiOverride, structuredTextBidiOverrideOptions } =
+    properties;
+  const locale = useLayoutDirectionEnv().applicationLocale;
   const { x: offsetX, y: offsetY } = properties.offset;
   // Width reaches the break only in a wrapping mode, so it is 0 otherwise: `shapeText` ignores it for OFF.
   const breakWidth = autowrap_mode === AutowrapMode.AUTOWRAP_OFF ? 0 : width;
   const broken = useMemo(
     () =>
       breakLabel3DLines(
-        { text, font_size, line_spacing, width: breakWidth, autowrap_mode, autowrap_trim_flags, uppercase },
+        {
+          text,
+          font_size,
+          line_spacing,
+          width: breakWidth,
+          autowrap_mode,
+          autowrap_trim_flags,
+          uppercase,
+          textDirection,
+          language,
+          structuredTextBidiOverride,
+          structuredTextBidiOverrideOptions,
+        },
+        locale,
         fontMetrics
       ),
-    [text, font_size, line_spacing, breakWidth, autowrap_mode, autowrap_trim_flags, uppercase, fontMetrics]
+    [
+      text,
+      font_size,
+      line_spacing,
+      breakWidth,
+      autowrap_mode,
+      autowrap_trim_flags,
+      uppercase,
+      textDirection,
+      language,
+      structuredTextBidiOverride,
+      structuredTextBidiOverrideOptions,
+      locale,
+      fontMetrics,
+    ]
   );
   const layout = useMemo(
     () => justifyLabel3DLines(broken, { font_size, width, justification_flags, horizontal_alignment }),

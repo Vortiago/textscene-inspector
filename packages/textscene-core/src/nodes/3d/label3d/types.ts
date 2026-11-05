@@ -8,8 +8,17 @@ import type { HorizontalAlignment, VerticalAlignment } from '../../../godot/math
 import type { Vector2 } from '../../../godot/math/vector';
 import type { AutowrapMode } from '../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
+import type {
+  StructuredTextOverrideProperties,
+  TextDirectionProperties,
+} from '../../../godot/text/paragraphDirection';
 
-export interface Label3DProperties extends GeometryInstance3DProperties, MaterialFor2dFields {
+export interface Label3DProperties
+  extends
+    GeometryInstance3DProperties,
+    MaterialFor2dFields,
+    TextDirectionProperties,
+    StructuredTextOverrideProperties {
   text: string;
 
   /** The raw `font` property, a reference into the scene's font resources. Absent draws the project font. */

@@ -15,6 +15,8 @@ import {
   DEFAULT_JUSTIFICATION_FLAGS,
 } from '../../../godot/text/textServerEnums';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
+import { parseTextDirectionProperties } from '../../../parser/textDirectionParser';
+import { parseStructuredTextOverride } from '../../../parser/structuredTextOverrideParser';
 
 const HORIZONTAL_ALIGNMENTS = Object.values(HorizontalAlignment);
 const AUTOWRAP_MODES = Object.values(AutowrapMode);
@@ -61,6 +63,8 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
       'vertical_alignment'
     ),
     uppercase: boolOr(properties.uppercase, false, 'uppercase'),
+    ...parseTextDirectionProperties(properties, 'Label3D'),
+    ...parseStructuredTextOverride(properties),
     width: floatOr(properties.width, 500, 'width'),
     autowrap_mode: enumOr(
       properties.autowrap_mode,

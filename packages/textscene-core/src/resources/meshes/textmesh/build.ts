@@ -298,8 +298,13 @@ class TextMeshWriter {
   }
 }
 
-export function buildTextMeshSurface(properties: TextMeshProperties, face: TextMeshFace): GodotSurface {
-  const lines = shapeTextMeshLines(properties, face);
+/** An empty `language` shapes in `locale`, the project's `_get_locale()`. */
+export function buildTextMeshSurface(
+  properties: TextMeshProperties,
+  locale: string,
+  face: TextMeshFace
+): GodotSurface {
+  const lines = shapeTextMeshLines(properties, locale, face);
   const placed = placeGlyphs(properties, lines, glyphMeshes(properties, face));
   const writer = new TextMeshWriter(properties.depth, inkBounds(placed));
   for (const glyph of placed) {
