@@ -76,7 +76,7 @@ export function buildBitmapQuads(
   const uvs = new Float32Array(inkedCount * 4 * 2);
   const indices = new Uint32Array(inkedCount * 6);
   const scale = metrics.pxPerUnit(fontSizePx);
-  const floorsPen = scale === 1;
+  const floorsPen = bitmapFloorsPen(fontSizePx, metrics);
   const sheetWidthInverse = 1 / sheet.width;
   const sheetHeightInverse = 1 / sheet.height;
 
