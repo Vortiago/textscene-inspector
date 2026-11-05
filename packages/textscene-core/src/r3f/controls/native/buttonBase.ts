@@ -142,7 +142,7 @@ interface ButtonIconLayout {
 }
 
 interface ButtonTextLayout {
-  /** The widest line's top-left, local Godot px, for `<TextRun>` to anchor each line's baseline from. */
+  /** The widest line's top-left, local Godot px. MenuButton, TabBar and the GraphEdit toolbar place their single line from it. */
   offset: Vector2;
   /** The paragraph box's left edge before alignment: margin and a LEFT icon's push. `buttonDrawnLabel` offsets lines from it. */
   boxLeftPx: number;
