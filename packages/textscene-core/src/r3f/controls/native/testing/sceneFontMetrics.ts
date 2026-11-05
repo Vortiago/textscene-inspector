@@ -19,6 +19,7 @@ export const TEST_SCENE_FONT_DESCENT_UNITS = 200;
 export const TEST_SCENE_FONT_ADVANCE_UNITS = 500;
 
 export const TEST_SCENE_FONT_METRICS: CanvasFontMetrics = createRuntimeFontMetrics({
+  hasGlyph: () => true,
   scalars: {
     unitsPerEm: TEST_SCENE_FONT_UNITS_PER_EM,
     ascent: TEST_SCENE_FONT_ASCENT_UNITS,

@@ -1248,6 +1248,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Font Fallbacks",
+    "file": "unit-label-font-fallbacks.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Font Variation Bundled Embolden High",
     "file": "unit-label-font-variation-bundled-embolden-high.tscn",
     "category": "Other"
@@ -1370,6 +1375,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Label3d Text Direction",
     "file": "unit-label3d-text-direction.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label3d Text Mesh Font Fallbacks",
+    "file": "unit-label3d-text-mesh-font-fallbacks.tscn",
     "category": "Other"
   },
   {

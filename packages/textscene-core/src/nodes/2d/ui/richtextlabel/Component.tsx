@@ -313,9 +313,6 @@ function RichTextBody({
         scrollOffsetPx,
         horizontalAlignment: props.horizontalAlignment,
         verticalAlignment: props.verticalAlignment,
-        justification: {
-          fontSizePx: textTheme.fontSizePx,
-        },
         reveal,
         fullText,
       }),
@@ -330,7 +327,6 @@ function RichTextBody({
       scrollOffsetPx,
       props.horizontalAlignment,
       props.verticalAlignment,
-      textTheme.fontSizePx,
     ]
   );
 

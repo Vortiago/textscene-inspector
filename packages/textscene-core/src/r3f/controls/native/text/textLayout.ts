@@ -22,6 +22,7 @@ import {
   getFontGlyphAdvancePx,
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
+  fallbackChainOf,
   type FontMetrics,
 } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
@@ -178,10 +179,10 @@ export interface GlyphPlacement {
   controlCodepoint?: number;
   /** How far the embolden grows this glyph's outline at its own size, px. Absent for a glyph with none. */
   emboldenGrowthPx?: number;
-  /** This glyph's own size, px: the base of `fitLineToWidth`'s space-shrink floor, `gl.font_size` in Godot (`text_server_adv.cpp:5659`). Absent on an ellipsis glyph `textOverrun` appends. */
-  fontSizePx?: number;
-  /** The face `shapeText` shaped this glyph in. Absent on an ellipsis glyph `textOverrun` appends, which takes the layout's. */
-  fontMetrics?: FontMetrics;
+  /** This glyph's own size, px, `gl.font_size` in Godot: it scales the space-shrink floor of `fitLineToWidth` (`text_server_adv.cpp:5659`) and the measured ink. */
+  fontSizePx: number;
+  /** The face of the **Fallback chain** this glyph draws in. */
+  fontMetrics: FontMetrics;
 }
 
 export interface TextLineLayout {
@@ -371,21 +372,28 @@ interface BreakGlyph {
  */
 interface RunStyle {
   sizes: readonly number[];
+  /** The face each character draws in: its span's face, or a face of that face's **Fallback chain**. */
   faces: readonly FontMetrics[];
+  /** The face each character's span asks for, whose run Godot shapes first (`text_server_adv.cpp:7011`). */
+  spanFaces: readonly FontMetrics[];
   /** The bidi embedding level of each character: each level run is its own HarfBuzz run (`text_server_adv.cpp:7293-7330`). */
   levels: Uint8Array;
   /** The bidi override range of each character, -1 for none: each range runs its own bidi pass and runs (`:7266`). */
   rangeIds: Int32Array;
 }
 
-/** Whether character `i` starts a run: its size, face, bidi level or override range differs from the character before it. */
+/** Whether character `i`, past the first, starts a run: its size, face, bidi level or override range differs from the character before it. */
 function startsNewRun(style: RunStyle, i: number): boolean {
+  return style.faces[i] !== style.faces[i - 1] || startsNewSpanRun(style, i);
+}
+
+/** Whether character `i`, past the first, starts a run of its span's face, which a glyph from the **Fallback chain** does not break. */
+function startsNewSpanRun(style: RunStyle, i: number): boolean {
   return (
-    i > 0 &&
-    (style.sizes[i] !== style.sizes[i - 1] ||
-      style.faces[i] !== style.faces[i - 1] ||
-      style.levels[i] !== style.levels[i - 1] ||
-      style.rangeIds[i] !== style.rangeIds[i - 1])
+    style.sizes[i] !== style.sizes[i - 1] ||
+    style.spanFaces[i] !== style.spanFaces[i - 1] ||
+    style.levels[i] !== style.levels[i - 1] ||
+    style.rangeIds[i] !== style.rangeIds[i - 1]
   );
 }
 
@@ -394,12 +402,12 @@ function isRtlRun(style: RunStyle, i: number): boolean {
   return style.levels[i]! % 2 === 1;
 }
 
-/** The `[start, end)` of each run of `length` characters, in logical order. */
-function runRanges(style: RunStyle, length: number): Array<[number, number]> {
+/** The `[start, end)` of each run of its span's face over `length` characters, in logical order. */
+function spanRunRanges(style: RunStyle, length: number): Array<[number, number]> {
   const ranges: Array<[number, number]> = [];
   let start = 0;
   for (let i = 1; i <= length; i++) {
-    if (i === length || startsNewRun(style, i)) {
+    if (i === length || startsNewSpanRun(style, i)) {
       ranges.push([start, i]);
       start = i;
     }
@@ -437,6 +445,56 @@ function isSpaceSeparator(cp: number): boolean {
 /** `metrics.getKerningAdjustmentUnits` scaled to `fontSizePx` with `getFontKerningAdjustmentPx`. */
 function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: FontMetrics): number {
   return getFontKerningAdjustmentPx(metrics, a, b, fontSizePx);
+}
+
+/**
+ * A character HarfBuzz never leaves invalid without a glyph: a space, a control, a break, a
+ * surrogate, an unassigned code point (`!u_isgraph`) or a default ignorable it hides
+ * (`text_server_adv.cpp:7116`).
+ */
+const KEEPS_ITS_FACE = /^[\p{Cc}\p{Cn}\p{Cs}\p{Zl}\p{Zp}\p{Zs}\p{Default_Ignorable_Code_Point}]/u;
+
+const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
+/**
+ * The face each character of a paragraph draws in. Godot marks a grapheme cluster valid only when
+ * every glyph of it is, and shapes each run of invalid clusters again in the next font
+ * (`text_server_adv.cpp:7119-7170`). So a cluster draws whole in the first face of its span's
+ * **Fallback chain** that has all of it, and stays in the span's face where none has.
+ */
+function glyphFaces(
+  text: string,
+  spanFaces: readonly FontMetrics[],
+  chars: ArrayLike<string>
+): readonly FontMetrics[] {
+  // Most paragraphs draw each character in its span face and need no segmenting, which costs 21 µs per 225 characters.
+  if (spanFaces.every((face, i) => drawsCluster(face, chars, i, i + 1))) return spanFaces;
+  const faces: FontMetrics[] = [];
+  for (const { index, segment } of GRAPHEMES.segment(text)) {
+    const end = index + segment.length;
+    // A span boundary splits a cluster, as Godot shapes each span on its own.
+    for (let start = index, stop = index; start < end; start = stop) {
+      while (++stop < end && spanFaces[stop] === spanFaces[start]);
+      faces.push(
+        ...Array<FontMetrics>(stop - start).fill(clusterFace(spanFaces[start]!, chars, start, stop))
+      );
+    }
+  }
+  return faces;
+}
+
+function clusterFace(face: FontMetrics, chars: ArrayLike<string>, start: number, end: number): FontMetrics {
+  return fallbackChainOf(face).find((entry) => drawsCluster(entry, chars, start, end)) ?? face;
+}
+
+/** Whether `face` has a glyph for every character of `chars[start, end)` that needs one (`KEEPS_ITS_FACE`). */
+function drawsCluster(face: FontMetrics, chars: ArrayLike<string>, start: number, end: number): boolean {
+  for (let i = start; i < end; i++) {
+    const ch = chars[i]!;
+    // `hasGlyph` first: most characters are in the face, and the property test costs more.
+    if (ch !== '' && !face.hasGlyph(ch) && !KEEPS_ITS_FACE.test(ch)) return false;
+  }
+  return true;
 }
 
 /** Whether `face` is a BMFont with no glyph for `ch`: Godot then draws `ch` as a hex-code box. The caller takes a tab first. */
@@ -554,22 +612,57 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
  * HarfBuzz's glyph order, which is reverse logical order for a right-to-left run. Mutates `glyphs`.
  */
 function roundAdvancesToWholePixels(glyphs: BreakGlyph[], chars: ArrayLike<string>, style: RunStyle): void {
-  for (const [start, end] of runRanges(style, chars.length)) {
-    // `adv_rem` is local to `_shape_run` (`:7011`), so each run starts it at zero.
-    let advanceRemainder = 0;
-    // A run has one size and one face, so its first character answers for all of them.
-    if (fontUsesSubpixelPositioning(style.sizes[start]!, style.faces[start]!)) continue;
-    const step = isRtlRun(style, start) ? -1 : 1;
-    for (let i = step > 0 ? start : end - 1; i >= start && i < end; i += step) {
-      const cp = chars[i]!.codePointAt(0) ?? 0;
-      // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
-      if (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp)) advanceRemainder = 0;
-      const fullAdvance = advanceRemainder + glyphs[i]!.advance;
-      const rounded = godotRound(fullAdvance);
-      glyphs[i]!.advance = rounded;
-      advanceRemainder = fullAdvance - rounded;
-    }
+  for (const [start, end] of spanRunRanges(style, chars.length)) {
+    const chain = fallbackChainOf(style.spanFaces[start]!);
+    // A subpixel run of one face rounds nothing, and it is most UI text: it skips the walk.
+    if (chain.length === 1 && fontUsesSubpixelPositioning(style.sizes[start]!, chain[0]!)) continue;
+    const indices = Array.from({ length: end - start }, (_v, k) => start + k);
+    if (isRtlRun(style, start)) indices.reverse();
+    roundFaceRun(glyphs, chars, style, indices, chain, 0);
   }
+}
+
+/**
+ * Rounds the glyphs of `indices` that draw in `chain[depth]`, with one remainder. Each stretch of
+ * glyphs that draw in a later face is a run of its own one level down, as Godot shapes a failed
+ * stretch again in the next font, and leaves this remainder as it was (`text_server_adv.cpp:7058,7132`).
+ */
+function roundFaceRun(
+  glyphs: BreakGlyph[],
+  chars: ArrayLike<string>,
+  style: RunStyle,
+  indices: readonly number[],
+  chain: readonly FontMetrics[],
+  depth: number
+): void {
+  const face = chain[depth]!;
+  const isLastFace = depth === chain.length - 1;
+  const usesSubpixel = fontUsesSubpixelPositioning(style.sizes[indices[0]!]!, face);
+  // `adv_rem` is local to `_shape_run` (`:7011`), so each run starts it at zero.
+  let advanceRemainder = 0;
+  let stretch: number[] = [];
+  const flushStretch = () => {
+    if (stretch.length > 0) roundFaceRun(glyphs, chars, style, stretch, chain, depth + 1);
+    stretch = [];
+  };
+  for (const i of indices) {
+    if (!isLastFace && style.faces[i] !== face) {
+      stretch.push(i);
+      continue;
+    }
+    flushStretch();
+    // The second unit of a surrogate pair has no glyph to round: rounding its 0 advance would move
+    // the remainder of a whole half pixel into it.
+    if (usesSubpixel || chars[i] === '') continue;
+    const cp = chars[i]!.codePointAt(0)!;
+    // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
+    if (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp)) advanceRemainder = 0;
+    const fullAdvance = advanceRemainder + glyphs[i]!.advance;
+    const rounded = godotRound(fullAdvance);
+    glyphs[i]!.advance = rounded;
+    advanceRemainder = fullAdvance - rounded;
+  }
+  flushStretch();
 }
 
 /**
@@ -821,13 +914,15 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       language: paragraphBidi.language,
     });
     const chars = bidi.glyphChars;
+    const spanFaces = Array.from({ length: paraText.length }, (_v, i) =>
+      fontMetricsAt ? fontMetricsAt(sourceIndex(i)) : fontMetrics
+    );
     const runStyle: RunStyle = {
       sizes: Array.from({ length: paraText.length }, (_v, i) =>
         fontSizePxAt ? fontSizePxAt(sourceIndex(i)) : fontSizePx
       ),
-      faces: Array.from({ length: paraText.length }, (_v, i) =>
-        fontMetricsAt ? fontMetricsAt(sourceIndex(i)) : fontMetrics
-      ),
+      faces: spanFaces.some((face) => face.fallbacks) ? glyphFaces(paraText, spanFaces, chars) : spanFaces,
+      spanFaces,
       levels: bidi.levels,
       rangeIds: bidi.rangeIds,
     };

@@ -4,7 +4,7 @@
  */
 
 import type { FontMetrics } from './fontMetrics';
-import { OPEN_SANS_METRICS, getGlyphAdvanceUnits, getKerningAdjustmentUnits } from './openSansMetrics';
+import { OPEN_SANS_METRICS, getGlyphAdvanceUnits, getKerningAdjustmentUnits, hasGlyph } from './openSansMetrics';
 
 // Every field reads through to the GENERATED `openSansMetrics.ts` (`OPEN_SANS_METRICS` and its
 // accessors) with getters, not a snapshot, so a live mutation (as `textLayout.test.ts` makes to
@@ -20,6 +20,7 @@ export const OPEN_SANS_FONT_METRICS: FontMetrics = {
   get descent() {
     return OPEN_SANS_METRICS.descent;
   },
+  hasGlyph,
   getGlyphAdvanceUnits,
   getKerningAdjustmentUnits,
   get averageAdvanceUnits() {

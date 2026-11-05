@@ -18,7 +18,12 @@ describe('peekSceneFontMetrics on a BMFont', () => {
   });
 
   it('reads the base font of a variation', () => {
-    const variation: FontResource = { kind: 'variation', baseFont: bitmapFontFile(), properties: {} };
+    const variation: FontResource = {
+      kind: 'variation',
+      baseFont: bitmapFontFile(),
+      fallbacks: [],
+      properties: {},
+    };
 
     expect(isBitmapFontMetrics(peekSettledSceneFontMetrics(variation, '/Root/Label') ?? undefined)).toBe(
       true
@@ -29,6 +34,7 @@ describe('peekSceneFontMetrics on a BMFont', () => {
     const variation: FontResource = {
       kind: 'variation',
       baseFont: bitmapFontFile(),
+      fallbacks: [],
       properties: { variation_embolden: '1' },
     };
 
@@ -43,5 +49,23 @@ describe('peekSceneFontMetrics on a BMFont', () => {
     };
 
     expect(isBitmapFontMetrics(peekSceneFontMetrics(wrapper, '/Root/Label'))).toBe(true);
+  });
+});
+
+// `Font::_update_rids` (`font.cpp:104-123`): the faces after the font's own are its fallback chain.
+describe('peekSettledSceneFontMetrics on a font with fallbacks', () => {
+  it('carries the face of each fallback, in order', () => {
+    const [second, third] = [bitmapFontFile(), bitmapFontFile()];
+    const font: FontFileResource = { ...bitmapFontFile(), fallbacks: [second, third] };
+    const metrics = peekSettledSceneFontMetrics(font, '/Root/Label')!;
+    expect(metrics.fallbacks?.map((face) => isBitmapFontMetrics(face) && face.bitmap)).toEqual([
+      second.bitmap,
+      third.bitmap,
+    ]);
+  });
+
+  it('keeps one metrics object for a font, so a layout memoised on it keeps its hits', () => {
+    const font: FontFileResource = { ...bitmapFontFile(), fallbacks: [bitmapFontFile()] };
+    expect(peekSettledSceneFontMetrics(font, '/Root/A')).toBe(peekSettledSceneFontMetrics(font, '/Root/B'));
   });
 });

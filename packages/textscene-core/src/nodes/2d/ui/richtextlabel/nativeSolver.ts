@@ -286,6 +286,11 @@ function wrapForImageObject(base: FontMetrics): FontMetrics {
   return Object.create(base, {
     embolden: { value: 0 },
     skew: { value: 0 },
+    hasGlyph: {
+      value(ch: string): boolean {
+        return ch === IMAGE_OBJECT_CHAR || base.hasGlyph(ch);
+      },
+    },
     opentype: { value: undefined },
     getGlyphAdvanceUnits: {
       value(ch: string): number | null {
@@ -738,8 +743,8 @@ export interface RichTextRunPlacement {
 }
 
 /**
- * Keeps the parent's `linePitchPx` (`soloLineLayout`) and takes the run's own face, since `TextRun`
- * picks atlas or canvas painting, and the shear, from `layout.fontMetrics`. `baselineOffsetPx` is
+ * Keeps the parent's `linePitchPx` (`soloLineLayout`) and takes the face of the run's first glyph,
+ * since `TextRun` picks atlas or canvas painting, and the shear, from `layout.fontMetrics`. `baselineOffsetPx` is
  * the line's ascent, applied once per line (`rich_text_label.cpp:1055`'s `off.y += l_ascent`),
  * so mixed sizes share it. `heightPx` is the line's own height: a canvas raster of the parent's
  * pitch would cut off the top of a run beside a larger one.
@@ -750,7 +755,7 @@ function soloRunLayout(
   lineAscentPx: number,
   lineHeightPx: number
 ): TextLayoutResult {
-  const { text, glyphs, fontMetrics } = segment;
+  const { text, glyphs } = segment;
   // The right edge from the line origin, not the run's own span: the glyphs keep their line-relative
   // `x`, and a canvas raster sized to the span alone would clip a run that starts mid-line.
   const lastGlyph = glyphs.at(-1);
@@ -759,7 +764,8 @@ function soloRunLayout(
     { text, glyphs, widthPx, paragraphIndex: 0 },
     parentLayout,
     lineAscentPx,
-    fontMetrics,
+    // A segment holds a glyph at least. `faceLayouts` splits off a glyph of another face.
+    glyphs[0]!.fontMetrics,
     Math.max(parentLayout.linePitchPx, lineHeightPx)
   );
 }
@@ -817,6 +823,11 @@ export function richTextContentHeightPx(
   return contentHeightOf(richTextLineMetrics(styledRuns, layout));
 }
 
+/** The faces the glyphs of `segment` draw in, which may come from its **Fallback chain**. */
+function glyphFacesOf(segment: RunLineSegment): Set<FontMetrics> {
+  return new Set(segment.glyphs.map((glyph) => glyph.fontMetrics));
+}
+
 /**
  * The paragraph indexes (counted by `\n`) of the lines of no height: each `zeroHeightBreak` run ends
  * one, and so does a final `\n`, which leaves a line that holds no item (`a\n` is one line tall,
@@ -859,8 +870,10 @@ function lineMetricsOf(
     for (const segment of segments) {
       const run = styledRuns[segment.runIndex]!;
       if (run.image) continue;
-      ascentPx = Math.max(ascentPx, getFontAscentPx(segment.fontMetrics, run.fontSizePx));
-      descentPx = Math.max(descentPx, fontDescentPx(segment.fontMetrics, run.fontSizePx));
+      for (const face of glyphFacesOf(segment)) {
+        ascentPx = Math.max(ascentPx, getFontAscentPx(face, run.fontSizePx));
+        descentPx = Math.max(descentPx, fontDescentPx(face, run.fontSizePx));
+      }
     }
     // A blank line shapes its break in the paragraph font, so it keeps that height.
     if (segments.length === 0) {
@@ -942,8 +955,6 @@ interface RunLineSegment {
   text: string;
   /** This run's glyphs from that line, `x` already line-relative. */
   glyphs: GlyphPlacement[];
-  /** The face the glyphs were shaped in: the run's. */
-  fontMetrics: FontMetrics;
 }
 
 /** The segment's glyphs that `revealed` keeps, or null when it keeps none. */
@@ -982,7 +993,6 @@ function attributeRunsToLines(
         runIndex,
         text: glyphs.map((g) => g.char).join(''),
         glyphs,
-        fontMetrics: glyphs[0]!.fontMetrics ?? layout.fontMetrics,
       });
       start = end;
     }
@@ -1066,11 +1076,6 @@ function richTextVerticalOffsets(
   }
 }
 
-/** What `fitLineToWidth` reads of the control: the size behind its space-shrink floor. */
-interface RichTextJustification {
-  fontSizePx: number;
-}
-
 /** The box a paragraph aligns inside, plus the node's own two alignment properties. */
 interface RichTextAlignment {
   boxWidthPx: number;
@@ -1079,8 +1084,6 @@ interface RichTextAlignment {
   verticalAlignment?: number;
   /** How far the scroll value has moved the text up (`vofs`, `rich_text_label.cpp:1613`). Absent is 0. */
   scrollOffsetPx?: number;
-  /** Absent leaves FILL paragraphs unfitted. */
-  justification?: RichTextJustification;
   /** Absent shows every glyph. */
   reveal?: RichTextReveal;
   /**
@@ -1098,13 +1101,11 @@ function fitFilledParagraphs(
   layout: RichTextLayout,
   isFilled: (firstLineIndex: number) => boolean,
   flagsOf: (firstLineIndex: number) => number,
-  boxWidthPx: number,
-  justification: RichTextJustification
+  boxWidthPx: number
 ): RichTextLayout {
   const lines = justifyParagraphs(layout.lines, {
     widthPx: Math.trunc(boxWidthPx),
     flags: flagsOf,
-    fontSizePx: justification.fontSizePx,
     isFilled,
   });
   return { ...layout, lines };
@@ -1134,17 +1135,15 @@ export function layoutRichTextRuns(
   const isFilled = (firstLineIndex: number): boolean =>
     alignmentOfLine(firstLineIndex) === HORIZONTAL_ALIGNMENT_FILL;
   // A label with no FILL paragraph keeps its layout object, so it skips the second attribution.
-  let hasFilledParagraph = false;
-  for (let i = 0; i < unfittedLayout.lines.length; i++) {
-    if (startsParagraph(unfittedLayout.lines, i) && isFilled(i)) hasFilledParagraph = true;
-  }
+  const hasFilledParagraph = unfittedLayout.lines.some(
+    (_, i) => startsParagraph(unfittedLayout.lines, i) && isFilled(i)
+  );
   const flagsOf = (firstLineIndex: number): number => paragraphRunOf(firstLineIndex)?.justificationFlags ?? 0;
-  const layout =
-    alignment?.justification && hasFilledParagraph
-      ? fitFilledParagraphs(unfittedLayout, isFilled, flagsOf, boxWidthPx, alignment.justification)
-      : unfittedLayout;
+  const layout = hasFilledParagraph
+    ? fitFilledParagraphs(unfittedLayout, isFilled, flagsOf, boxWidthPx)
+    : unfittedLayout;
   // Fitting moves glyphs and keeps their text, so the second attribution reads the same runs.
-  const perLine = layout === unfittedLayout ? unfittedPerLine : attributeRunsToLines(styledRuns, layout);
+  const perLine = hasFilledParagraph ? attributeRunsToLines(styledRuns, layout) : unfittedPerLine;
   const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);
 
   const { vbeginPx, vsepPx } = richTextVerticalOffsets(

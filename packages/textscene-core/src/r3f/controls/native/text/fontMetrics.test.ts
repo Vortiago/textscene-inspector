@@ -25,6 +25,7 @@ import {
 
 /** Open Sans SemiBold's scalars with an odd and an even advance, since only an odd one moves under 26.6 quantisation at size 16. */
 const METRICS: FontMetrics = {
+  hasGlyph: () => true,
   kind: 'atlas',
   unitsPerEm: 2048,
   ascent: 2189,

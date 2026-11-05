@@ -26,6 +26,7 @@ import {
   richTextLabelTextureSlots,
   shapeRichText,
   RICH_TEXT_LABEL_UNDERLINE_ALPHA,
+  richTextContentHeightPx,
 } from './nativeSolver';
 import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment, type ParsedImgTag } from './bbcode';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -322,7 +323,7 @@ describe(`richTextLabelMinimumSize — resolves this RichTextLabel's own PARAGRA
 
 describe('richTextLabelMinimumSize — the faces of [b] and [i] spans', () => {
   const text = '[b]ABABABAB[/b]';
-  const bareVariation: FontResource = { kind: 'variation', baseFont: null, properties: {} };
+  const bareVariation: FontResource = { kind: 'variation', baseFont: null, fallbacks: [], properties: {} };
 
   function widthOf(overrides: Partial<SolveNode> = {}) {
     const n = {
@@ -342,6 +343,7 @@ describe('richTextLabelMinimumSize — the faces of [b] and [i] spans', () => {
     const emboldened: FontResource = {
       kind: 'variation',
       baseFont: null,
+      fallbacks: [],
       properties: { variation_embolden: '3' },
     };
     // 3 * 16 / 64 = 0.75px more per advance: 84.5 + 6 = 90.5.
@@ -1486,8 +1488,8 @@ describe('underlineRectPx', () => {
   // -(-100 - 50/2)*18/2048 and 50*18/2048: the same paragraph at 18px.
   const METRICS_18 = { positionPx: 1.0986328125, thicknessPx: 0.439453125 };
   const GLYPHS = [
-    { char: 'u', x: 10, advance: 5, glyph: null },
-    { char: 'l', x: 15, advance: 8, glyph: null },
+    { char: 'u', x: 10, advance: 5, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
+    { char: 'l', x: 15, advance: 8, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
   ];
 
   it(
@@ -1524,8 +1526,15 @@ describe('underlineRectPx', () => {
   it("snaps the x extent the same way — the run's first glyph pen x through its last glyph's pen x + advance, rounded out to the columns the quad's own centres fall in", () => {
     const rect = underlineRectPx(
       [
-        { char: 'u', x: 10.4, advance: 4.8, glyph: null },
-        { char: 'l', x: 15.2, advance: 8, glyph: null },
+        {
+          char: 'u',
+          x: 10.4,
+          advance: 4.8,
+          glyph: null,
+          fontMetrics: OPEN_SANS_FONT_METRICS,
+          fontSizePx: 16,
+        },
+        { char: 'l', x: 15.2, advance: 8, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
       ],
       18,
       METRICS_16
@@ -1864,7 +1873,6 @@ describe('RichTextLabel FILL justification', () => {
     const placements = layoutRichTextRuns(flagged, layout, {
       boxWidthPx,
       boxHeightPx: TALL_BOX_PX,
-      justification: { fontSizePx: FONT_SIZE },
     });
     const widths: number[] = [];
     for (const p of placements) widths[p.lineIndex] = (widths[p.lineIndex] ?? 0) + p.layout.widthPx;
@@ -1934,7 +1942,6 @@ describe('RichTextLabel FILL justification', () => {
     for (const p of layoutRichTextRuns(runs, layout, {
       boxWidthPx: BOX_WIDTH_PX,
       boxHeightPx: TALL_BOX_PX,
-      justification: { fontSizePx: FONT_SIZE },
     })) {
       widths[p.lineIndex] = (widths[p.lineIndex] ?? 0) + p.layout.widthPx;
     }
@@ -1996,9 +2003,19 @@ describe('RichTextLabel paragraph direction', () => {
         .lineOffsetXPx;
     }
 
-    it('starts an RTL LEFT or FILL line at the right edge', () => {
+    it('starts an RTL LEFT line at the right edge', () => {
       expect(offsetX(0, RTL)).toBe(108);
-      expect(offsetX(3, RTL)).toBe(108);
+    });
+
+    // `_shape_line` fits the line to the box (`text_paragraph.cpp:250-253`), so it fills the box from 0.
+    it('fits an RTL FILL line to the box, which starts it at the left edge', () => {
+      expect(offsetX(3, RTL)).toBe(0);
+    });
+
+    // A line with no space has nothing to fit, so FILL keeps the origin LEFT takes.
+    it('starts an RTL FILL line where an RTL LEFT line starts', () => {
+      expect(offsetX(3, RTL, 'Threat')).toBe(offsetX(0, RTL, 'Threat'));
+      expect(offsetX(3, RTL, 'Threat')).toBeGreaterThan(0);
     });
 
     it('leaves an RTL RIGHT line at the left edge', () => {
@@ -2026,6 +2043,33 @@ describe('RichTextLabel paragraph direction', () => {
       [0, 4],
       [1, 4],
     ]);
+  });
+});
+
+// `_shape_substr` takes each line's ascent and descent over the fonts of its glyphs (`text_server_adv.cpp:5486-5487`).
+describe('richTextContentHeightPx — a glyph from a fallback face', () => {
+  it("grows the line to the fallback face's ascent and descent", () => {
+    const tall: FontMetrics = {
+      ...OPEN_SANS_FONT_METRICS,
+      ascent: 4096,
+      descent: 1024,
+      hasGlyph: () => true,
+    };
+    const face: FontMetrics = {
+      ...OPEN_SANS_FONT_METRICS,
+      hasGlyph: (ch) => ch !== '一',
+      fallbacks: [tall],
+    };
+    const run = textRun({ text: 'A一', fontSizePx: 16 });
+    const layout = shapeText(run.text, {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      fontMetrics: face,
+    });
+    // ceil(4096 * 16 / 2048) + ceil(1024 * 16 / 2048) = 32 + 8.
+    expect(richTextContentHeightPx([run], layout)).toBe(40);
   });
 });
 

@@ -46,6 +46,7 @@ export function createBitmapFontMetrics(bitmap: BitmapFont): BitmapFontMetrics {
     ascent: bitmap.ascent,
     descent: bitmap.descent,
     pxPerUnit: (fontSizePx) => bitmapScale(bitmap.scaleMode, bitmap.fixedSize, fontSizePx),
+    hasGlyph: (ch) => glyphOf(ch) !== undefined,
     getGlyphAdvanceUnits: (ch) => glyphOf(ch)?.advance ?? null,
     getKerningAdjustmentUnits: (a, b) =>
       bitmap.kerning.get(kerningKey(a.codePointAt(0)!, b.codePointAt(0)!)) ?? 0,
