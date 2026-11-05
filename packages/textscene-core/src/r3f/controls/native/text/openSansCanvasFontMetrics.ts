@@ -14,16 +14,24 @@ import type { CanvasFontMetrics, GlyphInk } from './runtimeFontMetrics';
 
 const UNITS_PER_ATLAS_PX = OPEN_SANS_FONT_METRICS.unitsPerEm / OPEN_SANS_ATLAS_INFO.fontSize;
 
+/** Written only by `atlasGlyphInkUnits`, one entry per character a raster asks for. */
+const atlasGlyphInk = new Map<string, GlyphInk>();
+
 /**
- * The ink box of each atlas character, from its bitmap, which the distance-field range pads a little.
- * A character the atlas lacks has none.
+ * The ink box of `ch` from its atlas bitmap, which the distance-field range pads a little. Undefined
+ * for a character the atlas lacks.
  */
-const ATLAS_GLYPH_INK: ReadonlyMap<string, GlyphInk> = new Map(
-  Object.entries(OPEN_SANS_ATLAS_GLYPHS).map(([ch, { xoffset, width }]) => [
-    ch,
-    { left: -xoffset * UNITS_PER_ATLAS_PX, right: (xoffset + width) * UNITS_PER_ATLAS_PX },
-  ])
-);
+function atlasGlyphInkUnits(ch: string): GlyphInk | undefined {
+  let ink = atlasGlyphInk.get(ch);
+  const glyph = OPEN_SANS_ATLAS_GLYPHS[ch];
+  if (ink || !glyph) return ink;
+  ink = {
+    left: -glyph.xoffset * UNITS_PER_ATLAS_PX,
+    right: (glyph.xoffset + glyph.width) * UNITS_PER_ATLAS_PX,
+  };
+  atlasGlyphInk.set(ch, ink);
+  return ink;
+}
 
 /**
  * Wraps the bundled font's baked metrics as `'canvas'`-kind, tagged with the CSS family it was
@@ -45,7 +53,7 @@ export function createOpenSansCanvasFontMetrics(cssFontFamily: string): CanvasFo
     },
     hasGlyph: (ch) => OPEN_SANS_FONT_METRICS.hasGlyph(ch),
     getGlyphAdvanceUnits: (ch) => OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits(ch),
-    getGlyphInkUnits: (ch) => ATLAS_GLYPH_INK.get(ch),
+    getGlyphInkUnits: atlasGlyphInkUnits,
     getKerningAdjustmentUnits: (a, b) => OPEN_SANS_FONT_METRICS.getKerningAdjustmentUnits(a, b),
     get averageAdvanceUnits() {
       return OPEN_SANS_FONT_METRICS.averageAdvanceUnits;

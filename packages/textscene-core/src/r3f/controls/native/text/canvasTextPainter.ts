@@ -76,19 +76,19 @@ export function computeCanvasTextCanvasLayout(
   strokeWidthPx = 0,
   originPhasePx: Readonly<Vector2> = VECTOR2_ZERO
 ): CanvasTextCanvasLayout {
-  // The worst-case shear offset over a line's rows of ink (`buildGlyphQuadArrays`'s
-  // `dx(y) = -skew * (y - baselinePx)`): the ascent and the vertical pad above the baseline. A font's
-  // descent is shorter than its ascent, so the rows below shear less.
-  const shearPadPx = Math.abs(skew) * (layout.baselineOffsetPx + CANVAS_TEXT_VERTICAL_PAD_PX);
   // A centred stroke reaches half its width outside the contour on every side,
   // horizontally too, where an upright fill needs no pad.
   const strokePadPx = strokeWidthPx / 2;
   // An embolden reaches its full growth right and up. The pad is symmetric, so the quad stays centred.
   const emboldenPadPx = maxEmboldenGrowthPx(layout);
+  const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + Math.ceil(strokePadPx + emboldenPadPx);
+  // The worst-case shear offset over a line's rows (`buildGlyphQuadArrays`'s
+  // `dx(y) = -skew * (y - baselinePx)`): every row of the raster above the baseline. A font's
+  // descent is shorter than its ascent, so the rows below shear less.
+  const shearPadPx = Math.abs(skew) * (layout.baselineOffsetPx + offsetYPx);
   // Whole pixels, as Godot draws a glyph texture texel-aligned: a fractional pad puts each texel
   // between two screen pixels, and the linear filter thins every edge.
   const padXPx = Math.ceil(shearPadPx + strokePadPx + emboldenPadPx);
-  const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + Math.ceil(strokePadPx + emboldenPadPx);
   const { startPx, endPx } = drawnExtentPx(layout);
   const inkLeftPx = Math.floor(startPx);
   return {
@@ -110,42 +110,34 @@ function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: numb
   let startPx = Infinity;
   let endPx = -Infinity;
   for (const { glyphs } of layout.lines) {
-    // An ellipsis `textOverrun` appends carries no size, and draws at the size of the glyph before it.
-    let sizePx: number | undefined;
     for (const glyph of glyphs) {
-      sizePx = glyph.fontSizePx ?? sizePx;
-      const { leftPx, rightPx } = glyphInkPx(glyph, sizePx, layout.baselineOffsetPx);
+      const { leftPx, rightPx } = glyphInkPx(glyph, layout.baselineOffsetPx);
       startPx = Math.min(startPx, glyph.x - leftPx);
       endPx = Math.max(endPx, glyph.x + rightPx);
     }
   }
-  if (startPx === Infinity) return { startPx: 0, endPx: layout.widthPx };
-  return { startPx: startPx - INK_SLACK_PX, endPx: endPx + INK_SLACK_PX };
+  return startPx === Infinity ? { startPx: 0, endPx: layout.widthPx } : { startPx, endPx };
 }
 
 /**
- * The painter snaps each pen (`canvasGlyphPenXPx`) up to 1 px left or a quarter pixel right, and a
- * hinted outline grid-fits under half a pixel past its measured box, so the raster reaches this far
- * past the measured ink.
+ * The painter floors a pen by up to 1 px (`canvasGlyphPenXPx`) and rounds one up to a quarter pixel
+ * right, and a hinted outline grid-fits under half a pixel past its measured box, so measured ink
+ * takes this many whole pixels more on each side.
  */
-const INK_SLACK_PX = 1;
+const INK_SLACK_PX = 2;
 
 /**
  * How far `glyph`'s ink reaches left of its pen and right of it, px, its pen box included. A face that
  * measures no ink takes `ascentPx` on each side: the ascent bounds the reach of any glyph.
  */
-function glyphInkPx(
-  glyph: GlyphPlacement,
-  sizePx: number | undefined,
-  ascentPx: number
-): { leftPx: number; rightPx: number } {
+function glyphInkPx(glyph: GlyphPlacement, ascentPx: number): { leftPx: number; rightPx: number } {
   const face = glyph.fontMetrics;
   const ink = isCanvasFontMetrics(face) ? face.getGlyphInkUnits?.(glyph.char) : undefined;
-  if (!ink || sizePx === undefined) return { leftPx: ascentPx, rightPx: glyph.advance + ascentPx };
-  const pxPerUnit = sizePx / face.unitsPerEm;
+  if (!ink || glyph.fontSizePx === undefined) return { leftPx: ascentPx, rightPx: glyph.advance + ascentPx };
+  const pxPerUnit = glyph.fontSizePx / face.unitsPerEm;
   return {
-    leftPx: Math.max(0, ink.left * pxPerUnit),
-    rightPx: Math.max(glyph.advance, ink.right * pxPerUnit),
+    leftPx: Math.max(0, ink.left * pxPerUnit) + INK_SLACK_PX,
+    rightPx: Math.max(glyph.advance, ink.right * pxPerUnit) + INK_SLACK_PX,
   };
 }
 

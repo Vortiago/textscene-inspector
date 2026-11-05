@@ -59,10 +59,10 @@ function contentOriginOnQuad(canvasLayout: ReturnType<typeof computeCanvasTextCa
 
 describe('computeCanvasTextCanvasLayout', () => {
   // A glyph's ink can pass its pen box by a side bearing, as a `j` does left of the line start.
-  it('reaches one ascent and a pixel past each end of the glyphs of a face that measures no ink, and keeps the content box at the quad origin', () => {
+  it('reaches one ascent past each end of the glyphs of a face that measures no ink, and keeps the content box at the quad origin', () => {
     const layout = layoutFor('AB');
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
-    const reachPx = layout.baselineOffsetPx + 1;
+    const reachPx = layout.baselineOffsetPx;
     const inkLeftPx = Math.floor(-reachPx);
     expect(canvasLayout.offsetXPx).toBe(-inkLeftPx);
     expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx + reachPx - inkLeftPx));
@@ -80,13 +80,13 @@ describe('computeCanvasTextCanvasLayout', () => {
   });
 
   // A fallback face's own run starts where its first glyph is on the line (`faceLayouts.ts`).
-  it('starts the raster one ascent and a pixel left of the first glyph of a run that starts mid-line', () => {
+  it('starts the raster one ascent left of the first glyph of a run that starts mid-line', () => {
     const layout = layoutFor('ABCDEFGH');
     const line = layout.lines[0]!;
     const firstIndex = line.glyphs.findIndex((glyph) => glyph.x > 2 * layout.baselineOffsetPx);
     expect(firstIndex).toBeGreaterThan(0);
     const shifted = { ...layout, lines: [{ ...line, glyphs: line.glyphs.slice(firstIndex) }] };
-    const reachPx = layout.baselineOffsetPx + 1;
+    const reachPx = layout.baselineOffsetPx;
     const inkLeftPx = Math.floor(line.glyphs[firstIndex]!.x - reachPx);
     const canvasLayout = computeCanvasTextCanvasLayout(shifted, 0);
     expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx + reachPx - inkLeftPx));
@@ -118,12 +118,12 @@ describe('computeCanvasTextCanvasLayout', () => {
     });
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
     // 100 units at 16 px is 1.6 px left of the first pen, and the second glyph's pen box ends the ink.
-    // A pixel more on each side holds the pen snap and the hinting: floor(-2.6) is -3, and 16 + 1 + 3 is 20.
-    expect(canvasLayout.offsetXPx).toBe(3);
-    expect(canvasLayout.canvasWidthPx).toBe(20);
+    // Two pixels more on each side hold the pen snap and the hinting: floor(-3.6) is -4, and 16 + 2 + 4 is 22.
+    expect(canvasLayout.offsetXPx).toBe(4);
+    expect(canvasLayout.canvasWidthPx).toBe(22);
   });
 
-  it("bounds an ellipsis glyph, which carries no size, by its face's ink at the line's size", () => {
+  it("bounds a glyph with no size by one ascent, as its face's ink cannot scale", () => {
     const measured = createRuntimeFontMetrics({
       hasGlyph: () => true,
       scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
@@ -139,9 +139,24 @@ describe('computeCanvasTextCanvasLayout', () => {
       lineSpacingPx: 0,
     });
     const line = layout.lines[0]!;
-    const { fontSizePx: _size, ...ellipsis } = { ...line.glyphs[1]!, char: '…' };
-    const trimmed = { ...layout, lines: [{ ...line, glyphs: [line.glyphs[0]!, ellipsis] }] };
-    expect(computeCanvasTextCanvasLayout(trimmed, 0).canvasWidthPx).toBe(18);
+    const { fontSizePx: _size, ...unsized } = line.glyphs[1]!;
+    const trimmed = { ...layout, lines: [{ ...line, glyphs: [line.glyphs[0]!, unsized] }] };
+    // The sized glyph reaches 2 px left, and the unsized one reaches one ascent past its pen box.
+    const ascentPx = layout.baselineOffsetPx;
+    const inkLeftPx = Math.floor(Math.min(-2, unsized.x - ascentPx));
+    expect(computeCanvasTextCanvasLayout(trimmed, 0).canvasWidthPx).toBe(
+      Math.ceil(unsized.x + unsized.advance + ascentPx - inkLeftPx)
+    );
+  });
+
+  // The rows above the baseline run up to the vertical pad, and shear furthest there.
+  it('pads a sheared raster by the shear of its top row', () => {
+    const layout = layoutFor('AB');
+    const straight = computeCanvasTextCanvasLayout(layout, 0);
+    const skewed = computeCanvasTextCanvasLayout(layout, 0.3);
+    expect(skewed.offsetXPx - straight.offsetXPx).toBe(
+      Math.ceil(0.3 * (layout.baselineOffsetPx + straight.offsetYPx))
+    );
   });
 
   it('pads a sheared raster at a line spacing that takes the pitch below zero', () => {
@@ -153,7 +168,7 @@ describe('computeCanvasTextCanvasLayout', () => {
   it('widens by the origin phase, which carries the content that far right of the quad', () => {
     const layout = layoutFor('AB');
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0, 0, { x: 0.25, y: 0 });
-    const reachPx = layout.baselineOffsetPx + 1;
+    const reachPx = layout.baselineOffsetPx;
     const inkLeftPx = Math.floor(-reachPx);
     expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx + reachPx - inkLeftPx + 0.25));
   });

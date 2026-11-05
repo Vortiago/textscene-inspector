@@ -323,10 +323,12 @@ describe('useLabel3DFont mip chain while a chain face reloads', () => {
       peekSettledChainFaces: () => null,
     }));
     modules = await importModules();
-    const { result } = renderMetrics('SubResource("plain")', { 'res://project.godot': PROJECT_MIPMAPS });
+    const { result } = renderMetrics('SubResource("mipmapped")');
 
     await settle();
 
+    // The project sets none, so a fallback drawn at the project setting would lose the label's mip chain.
+    expect(result.current?.generatesMipmaps).toBe(true);
     expect(result.current?.fallbackMipmaps.has(fallback)).toBe(false);
   });
 });

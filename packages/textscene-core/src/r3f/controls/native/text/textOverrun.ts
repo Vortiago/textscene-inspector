@@ -284,6 +284,7 @@ function findOverrunTrim(
         char: ' ',
         advance: whitespaceAdvancePx,
         glyph: atlasGlyphFor(whitespaceFace, ' '),
+        fontSizePx,
         fontMetrics: whitespaceFace,
       });
     }
@@ -293,6 +294,7 @@ function findOverrunTrim(
         advance: dotAdvancePx,
         glyph: atlasGlyphFor(dotFace, dotChar),
         emboldenGrowthPx,
+        fontSizePx,
         fontMetrics: dotFace,
       });
     }
