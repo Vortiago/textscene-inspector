@@ -311,6 +311,13 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-label-font-variation-bundled-embolden-high.tscn',
     mode: '2d',
   },
+  // The one variable: the fractional width of a centred Button, whose text then sits off a whole item
+  // pixel, which Godot floors.
+  {
+    name: 'button-fractional-text-origin',
+    file: 'project-default-font/unit-button-fractional-text-origin.tscn',
+    mode: '2d',
+  },
   // The one variable: the same bare variations in a project whose `gui/theme/custom_font` is the
   // default font they wrap.
   {

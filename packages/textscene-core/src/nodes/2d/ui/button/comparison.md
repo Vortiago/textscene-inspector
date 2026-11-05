@@ -58,6 +58,10 @@ bundled font too (ADR-0040).
 A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
 outline ring (ADR-0064).
 
+A label centred at a fractional offset, as a fractional width puts it, draws on the item's whole
+pixels where its font draws on the canvas painter: its pen rounds and its baseline floors in the
+Button's own coordinates, as Godot floors a glyph's origin (`text_server_adv.cpp:4082-4084`).
+
 ## Known limitations
 
 - **Approximated** Under `layout_direction = 3` or `text_direction = 2`, the label's glyphs

@@ -4084,6 +4084,12 @@ export const fixtures: Fixture[] = [
     "root": "layout-direction-root-rtl"
   },
   {
+    "name": "Button Fractional Text Origin",
+    "file": "project-default-font/unit-button-fractional-text-origin.tscn",
+    "category": "Unit - 2D UI Controls",
+    "root": "project-default-font"
+  },
+  {
     "name": "Camera Attributes Auto Exposure Physical",
     "file": "unit-camera-attributes-auto-exposure-physical.tscn",
     "category": "Unit - Basic Nodes"
