@@ -900,7 +900,7 @@ interface RichTextUnderlineMetrics {
  * copies the paragraph's `upos`/`uthk` into each line that `rich_text_label.cpp:1053-1054` reads,
  * and `:7174-7175` accumulates them from the spans' fonts only, so an `[img]` adds nothing.
  */
-export function richTextUnderlineMetrics(
+function richTextUnderlineMetrics(
   styledRuns: readonly StyledTextRun[]
 ): (sourceIndex: number) => RichTextUnderlineMetrics {
   const paragraphs: RichTextUnderlineMetrics[] = [{ positionPx: 0, thicknessPx: 0 }];

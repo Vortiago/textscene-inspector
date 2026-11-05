@@ -22,7 +22,6 @@ import {
   richTextLabelTextTheme,
   styledTextRuns,
   layoutRichTextRuns,
-  richTextUnderlineMetrics,
   underlineRectPx,
   richTextLabelTextureSlots,
   shapeRichText,
@@ -1192,7 +1191,7 @@ describe('layoutRichTextRuns', () => {
     const placements = layoutRichTextRuns(runs, layout);
     expect(placements).toHaveLength(2);
     expect(placements[0]!.underline).toBeNull();
-    expect(placements[1]!.underline).toEqual(richTextUnderlineMetrics(runs)(0));
+    expect(placements[1]!.underline).not.toBeNull();
   });
 
   it('a single run whose text WRAPS across two lines produces one placement per line, in its face on both', () => {
@@ -1430,43 +1429,52 @@ describe('layoutRichTextRuns', () => {
   });
 });
 
-describe('richTextUnderlineMetrics', () => {
-  it("is the MAX over EVERY run in the paragraph, not the underlined run's own size — a line's shaped substring inherits the paragraph's upos/uthk verbatim (text_server_adv.cpp:5310-5311), unlike ascent/descent, which ARE recomputed per line", () => {
+describe('the underline metrics of a placement', () => {
+  // -(-100 - 50/2)*size/2048 and 50*size/2048: a paragraph's upos/uthk at 16px and 18px. The
+  // -thickness/2 term is FreeType's top-edge-to-centre conversion (sfobjs.c:1424-1425).
+  const METRICS_16 = { positionPx: 0.9765625, thicknessPx: 0.390625 };
+  const METRICS_18 = { positionPx: 1.0986328125, thicknessPx: 0.439453125 };
+
+  const underlinesOf = (runs: StyledTextRun[]) =>
+    layoutRichTextRuns(runs, shapeRuns(runs)).flatMap((placement) =>
+      placement.underline ? [placement.underline] : []
+    );
+
+  // A line's shaped substring inherits the paragraph's upos/uthk (text_server_adv.cpp:5310-5311),
+  // unlike ascent and descent, which are recomputed per line.
+  it("is the max over every run in the paragraph, not the underlined run's own size", () => {
     const runs = [
       textRun({ text: 'big', bold: true, fontSizePx: 18 }),
       textRun({ text: 'small', underline: true, fontSizePx: 16 }),
     ];
-    // -(-100 - 50/2)*18/2048 and 50*18/2048: the 18px run's, though the 16px
-    // run carries [u]. The -thickness/2 term is FreeType's top-edge-to-centre
-    // conversion (sfobjs.c:1424-1425).
-    expect(richTextUnderlineMetrics(runs)(0)).toEqual({
-      positionPx: 1.0986328125,
-      thicknessPx: 0.439453125,
-    });
-  });
-
-  it('is zero for a run-less paragraph (nothing shaped, nothing to take a MAX over — text_server_adv.cpp:4461-4462 initialises both to 0)', () => {
-    expect(richTextUnderlineMetrics([])(0)).toEqual({ positionPx: 0, thicknessPx: 0 });
+    expect(underlinesOf(runs)).toEqual([METRICS_18]);
   });
 
   // `upos` and `uthk` belong to each paragraph's own shaped text (`rich_text_label.cpp:1053-1054`).
   it("takes each paragraph's metrics from that paragraph's runs only", () => {
-    const at = richTextUnderlineMetrics([
+    const underlines = underlinesOf([
       textRun({ text: 'small\n', underline: true, fontSizePx: 16 }),
-      textRun({ text: 'big', fontSizePx: 18 }),
+      textRun({ text: 'big', underline: true, fontSizePx: 18 }),
     ]);
-    expect(at(0)).toEqual({ positionPx: 0.9765625, thicknessPx: 0.390625 });
-    expect(at(6)).toEqual({ positionPx: 1.0986328125, thicknessPx: 0.439453125 });
+    expect(underlines[0]).toEqual(METRICS_16);
+    expect(underlines.at(-1)).toEqual(METRICS_18);
   });
 
   // An `[img]` is an inline object, not a font span, so it adds nothing to the max
   // (`text_server_adv.cpp:7174-7175` reads only the spans' fonts).
   it('leaves an [img] run out of the max', () => {
-    const at = richTextUnderlineMetrics([
+    const runs = [
       textRun({ text: 'a', underline: true, fontSizePx: 16 }),
-      textRun({ text: IMAGE_OBJECT_CHAR, fontSizePx: 200, image: {} as StyledTextRun['image'] }),
-    ]);
-    expect(at(0)).toEqual({ positionPx: 0.9765625, thicknessPx: 0.390625 });
+      textRun({
+        text: IMAGE_OBJECT_CHAR,
+        fontSizePx: 200,
+        image: {
+          spec: { alignment: { imagePoint: 'center', textPoint: 'center' } } as ParsedImgTag,
+          sizePx: { x: 200, y: 200 },
+        },
+      }),
+    ];
+    expect(underlinesOf(runs)[0]).toEqual(METRICS_16);
   });
 });
 
