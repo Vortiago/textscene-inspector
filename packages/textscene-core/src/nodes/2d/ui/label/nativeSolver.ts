@@ -562,6 +562,15 @@ interface LabelLayoutOptions extends Partial<LabelSpacing> {
 }
 
 /**
+ * Whether the fit of a line stopped above the smallest spaces: `fit_width_minimum_reached` is false
+ * (`text_server_adv.cpp:5660`), so a justification-aware trim returns early (`:5947`). A line the fit
+ * skipped is the same object as its shaped line (`justifyParagraph`), and has no fit to stop.
+ */
+function isFitAboveMinimum(fitted: TextLineLayout, shaped: TextLineLayout, widthPx: number): boolean {
+  return fitted !== shaped && Math.floor(widthPx) >= Math.floor(fitted.widthPx);
+}
+
+/**
  * Per-line placement for `horizontal_alignment` and `vertical_alignment` (`_get_line_rect`'s x,
  * `get_layout_data`'s vbegin and vsep, `label.cpp:592-617`). Godot aligns each line by its own
  * width, which one merged `<TextRun>` cannot express, so each placement is for its own `<TextRun>`.
@@ -615,16 +624,25 @@ export function layoutLabelLines(
   // `ofs.y += paragraph_spacing` after each paragraph's last shown line (`label.cpp:889`).
   let paragraphGapsAbovePx = 0;
   const isFill = (horizontalAlignment ?? H_LEFT) === H_FILL;
+  const shapingWidthPx = labelShapingWidthPx(boxWidthPx);
   // `_shape` justifies at the truncated `int width` it broke the lines at (`label.cpp:297,331`),
   // not the raw `get_size()` that `_get_line_rect` reads.
   const fitted = isFill
     ? justifyParagraphs(layout.lines, {
-        widthPx: labelShapingWidthPx(boxWidthPx),
+        widthPx: shapingWidthPx,
         flags: justificationFlags,
         fontSizePx,
       })
     : layout.lines;
-  const lines = trimLine ? fitted.map(trimLine) : fitted;
+  // With autowrap off, FILL trims `OVERRUN_JUSTIFICATION_AWARE` (`label.cpp:322-324`).
+  const isTrimJustificationAware = isFill && !isAutowrapped;
+  const lines = trimLine
+    ? fitted.map((line, index) =>
+        isTrimJustificationAware && isFitAboveMinimum(line, layout.lines[index]!, shapingWidthPx)
+          ? line
+          : trimLine(line)
+      )
+    : fitted;
 
   return lines.map((line, lineIndex) => {
     if (lineIndex > 0 && startsParagraph(lines, lineIndex)) {

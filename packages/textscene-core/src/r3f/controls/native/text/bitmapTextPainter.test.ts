@@ -8,7 +8,7 @@ import { testBitmapFont, testBitmapMetrics } from './bitmapFontMetrics.testkit';
 import { buildBitmapQuads } from './bitmapTextPainter';
 import { shapeText } from './textLayout';
 
-function quadsFor(text: string, fontSizePx: number, scaleMode?: number) {
+function quadsFor(text: string, fontSizePx: number, scaleMode?: number, penOriginXPx?: number) {
   const fontMetrics = testBitmapMetrics(scaleMode);
   const layout = shapeText(text, {
     fontSizePx,
@@ -17,7 +17,7 @@ function quadsFor(text: string, fontSizePx: number, scaleMode?: number) {
     lineSpacingPx: 3,
     fontMetrics,
   });
-  return buildBitmapQuads(layout, fontMetrics, fontSizePx, fontMetrics.bitmap.sheet);
+  return buildBitmapQuads(layout, fontMetrics, fontSizePx, fontMetrics.bitmap.sheet, penOriginXPx);
 }
 
 /** The left, top, right and bottom of quad `index`, in Godot px with Y down. */
@@ -51,6 +51,13 @@ describe('buildBitmapQuads', () => {
     // The baseline is 16 * 1.5 = 24 down, the offset -12 * 1.5 = -18 from it.
     expect(rectOf(positions, 0)).toEqual([1.5, 6, 1.5 + 12, 24]);
     expect(rectOf(positions, 1)).toEqual([15 + 1.5, 6, 15 + 1.5 + 3, 24]);
+  });
+
+  it('floors the pen at its canvas position, so a run at x 0.5 draws half a pixel left of its origin', () => {
+    // text_server_adv.cpp:4082-4085 floors `p_pos`, which is the canvas position, at scale 1.
+    const { positions } = quadsFor('H', 16, undefined, 0.5);
+
+    expect(rectOf(positions, 0)[0]).toBe(0.5);
   });
 
   it('draws no quad for a space, whose rectangle is empty', () => {
