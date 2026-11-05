@@ -62,7 +62,7 @@ export function useNearestAnisotropy(texture: THREE.Texture | null): void {
     if (!texture || !renderer) return;
     const writeToBound = boundWriter(renderer, texture);
     if (!writeToBound) return;
-    const release = holdUploadWriter(texture, writeToBound);
+    const release = holdUploadWriter(texture, () => boundWriter(renderer, texture)?.());
     const storage = handleOf(renderer, texture).__webglTexture;
     if (storage) writeToStorage(renderer, storage, writeToBound);
     return release;
@@ -70,7 +70,8 @@ export function useNearestAnisotropy(texture: THREE.Texture | null): void {
 }
 
 interface UploadWriter {
-  holders: number;
+  /** The live holds. Each recomputes the write from the texture, so none goes stale. */
+  holds: Set<() => void>;
   /** The callback the texture had before the writer wrapped it. */
   previous: THREE.Texture['onUpdate'];
   wrapper: THREE.Texture['onUpdate'];
@@ -78,28 +79,32 @@ interface UploadWriter {
 
 /**
  * Written only by `holdUploadWriter`: one writer for each texture, however many runs share it, so
- * an upload writes once. The last hold to let go clears the entry.
+ * an upload writes once, through the first live hold. The last hold to let go clears the entry.
  */
 // eslint-disable-next-line no-restricted-syntax -- it counts holders, and the last release deletes the entry
 const uploadWriters = new WeakMap<THREE.Texture, UploadWriter>();
 
-/** Wraps `onUpdate` of `texture` with `write` while a hold is open, and returns the release. */
+/** Wraps `onUpdate` of `texture` so an upload writes through the first live hold. */
+function wrapUpload(texture: THREE.Texture): UploadWriter {
+  const previous = texture.onUpdate;
+  const holds = new Set<() => void>();
+  const wrapper: THREE.Texture['onUpdate'] = (uploaded) => {
+    previous?.(uploaded);
+    holds.values().next().value?.();
+  };
+  texture.onUpdate = wrapper;
+  const writer = { holds, previous, wrapper };
+  uploadWriters.set(texture, writer);
+  return writer;
+}
+
+/** Opens a hold on the upload writer of `texture` and returns the release. `write` reads the texture afresh. */
 function holdUploadWriter(texture: THREE.Texture, write: () => void): () => void {
-  let writer = uploadWriters.get(texture);
-  if (!writer) {
-    const previous = texture.onUpdate;
-    const wrapper: THREE.Texture['onUpdate'] = (uploaded) => {
-      previous?.(uploaded);
-      write();
-    };
-    texture.onUpdate = wrapper;
-    writer = { holders: 0, previous, wrapper };
-    uploadWriters.set(texture, writer);
-  }
-  writer.holders++;
-  const held = writer;
+  const held = uploadWriters.get(texture) ?? wrapUpload(texture);
+  held.holds.add(write);
   return () => {
-    if (--held.holders > 0) return;
+    held.holds.delete(write);
+    if (held.holds.size > 0) return;
     uploadWriters.delete(texture);
     // Another hook may have wrapped this one since: its chain still reaches ours, so leave it.
     if (texture.onUpdate === held.wrapper) texture.onUpdate = held.previous;
