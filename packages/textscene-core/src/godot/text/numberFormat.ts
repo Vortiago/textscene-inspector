@@ -126,6 +126,7 @@ export function formatControlNumber(number: string, numerals: Numerals): string 
 
 /** The percentage as `ProgressBar` writes it (`progress_bar.cpp:168-174`): the digits and the percent sign of `locale`, or `%` after ASCII digits. */
 export function formatControlPercent(number: string, numerals: Numerals): string {
-  const sign = isLocalizing(numerals) ? percentSign(numerals.locale) : '%';
-  return `${formatControlNumber(number, numerals)}${sign}`;
+  return isLocalizing(numerals)
+    ? `${formatNumber(number, numerals.locale)}${percentSign(numerals.locale)}`
+    : `${number}%`;
 }

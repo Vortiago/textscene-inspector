@@ -183,9 +183,9 @@ export function formatGodotNumber(value: number, decimals: number): string {
 }
 
 /**
- * `SpinBox::_update_text` (`spin_box.cpp:88-114`) for a still frame, the value in the digits of `locale` (`:91-93`): `line_edit->is_editing()` is
- * always false, so the prefix and suffix always apply. `accepted` stays `true` without a live
- * edit, so the `update_on_text_changed` re-format never runs.
+ * `SpinBox::_update_text` (`spin_box.cpp:88-114`) for a still frame. The value takes the digits of
+ * `locale` (`:91-93`). `line_edit->is_editing()` is always false, so the prefix and suffix always apply.
+ * `accepted` stays `true` without a live edit, so the `update_on_text_changed` re-format never runs.
  */
 export function spinBoxDisplayText(props: SpinBoxProperties, resolvedValue: number, locale: string): string {
   const step = props.step ?? SPIN_BOX_STEP_DEFAULT;
