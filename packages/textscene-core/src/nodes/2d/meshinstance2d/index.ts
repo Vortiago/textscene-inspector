@@ -1,14 +1,19 @@
 /**
- * MeshInstance2D registration: the parser, which reuses the Node2D parse.
- * linterParser.ts holds the property validators.
+ * MeshInstance2D registration: the parser. linterParser.ts holds the property validators.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseNode2D } from '../../base/node2d/parser';
+import { parseMeshInstance2D } from './parser';
+import { formatMeshInstance2DProperties } from './propertyFormatter';
 
 const meshInstance2DRegistration: NodeTypeRegistration = {
   typeName: 'MeshInstance2D',
-  parser: parseNode2D,
+  parser: parseMeshInstance2D,
+  propertyFormatter: formatMeshInstance2DProperties,
 };
 
 nodeRegistry.register(meshInstance2DRegistration);
+
+export * from './parser';
+export * from './propertyFormatter';
+export * from './types';

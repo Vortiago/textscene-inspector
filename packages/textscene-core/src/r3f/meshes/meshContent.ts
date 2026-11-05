@@ -11,7 +11,7 @@ import type { TscnInternalResource } from '../../parser/types';
 import { warn } from '../../logger';
 import { projectPrimitiveMeshTexelSize } from '../../parser/projectSettingsParser';
 import { decodeSceneArrayMesh } from '../../resources/meshes/arraymesh/decode';
-import { godotSurfaceParts } from '../../resources/meshes/godotSurface';
+import { godotSurfaceParts, type SurfacePrimitive } from '../../resources/meshes/godotSurface';
 import {
   meshKind,
   primitiveMaterialAddress,
@@ -54,9 +54,11 @@ export interface SurfacedMesh {
   parts: readonly [SurfacedPart, ...SurfacedPart[]];
 }
 
-/** The R3F tag that draws a surface: `THREE.Points` for geometry of Godot's `PRIMITIVE_POINTS`, else a `THREE.Mesh`. */
-export function drawnTag(drawsPoints: boolean): 'points' | 'mesh' {
-  return drawsPoints ? 'points' : 'mesh';
+const DRAWN_TAGS = { triangles: 'mesh', points: 'points', lines: 'lineSegments' } as const;
+
+/** The R3F tag that draws a surface: `THREE.Points` for points, `THREE.LineSegments` for lines, else a `THREE.Mesh`. */
+export function drawnTag(primitive: SurfacePrimitive): (typeof DRAWN_TAGS)[SurfacePrimitive] {
+  return DRAWN_TAGS[primitive];
 }
 
 type MeshContent =
@@ -83,8 +85,9 @@ export function arrayMeshPath({ scoped, resourcePath }: ResourceResolution): str
 }
 
 /**
- * `isHeldLocally` is false when a resource between the node and the mesh, such as a GridMap's
- * MeshLibrary, is not local to scene. A mesh that is a node's property has none between.
+ * `resolution`'s mesh, with the parts it draws as triangles, points and lines. `isHeldLocally` is
+ * false when a resource between the node and the mesh, such as a GridMap's MeshLibrary, is not
+ * local to scene. A mesh that is a node's property has none between.
  *
  * @canonical Mesh content and its disposal
  */

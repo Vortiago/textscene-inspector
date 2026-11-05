@@ -25,7 +25,7 @@ import { GODOT_AMBIENT_OCCLUSION } from '../materials/godotAmbientOcclusion';
 import { GODOT_METALLIC_ROUGHNESS_CHANNELS } from '../materials/godotMetallicRoughnessChannels';
 import { mipmapBiasInjection, viewportSamplersUserData } from '../materials/godotMipmapBias';
 import { parallaxInjection, unshadedParallaxInjection } from '../materials/godotParallax';
-import { withPointDraw, type PointPlacement } from '../materials/godotPoint';
+import { withPointDraw, type ListedPlacement } from '../materials/godotPoint';
 import { withParticleDraw } from '../materials/godotParticlesProgram';
 import { SRGB_VERTEX_COLOR } from '../materials/godotVertexColor';
 import { growInjectionOf } from '../materials/godotGrow';
@@ -113,7 +113,7 @@ type DepthBase = THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial;
 const SOME_SURFACE_ALPHA = { readsAlbedoAlpha: false, opaqueAfterCut: false };
 const TRANSPARENT = { transparent: true };
 
-const pointBag = (samplesAlbedoAtPointCoord: boolean, placement: PointPlacement = 'mesh') =>
+const pointBag = (samplesAlbedoAtPointCoord: boolean, placement: ListedPlacement = 'mesh') =>
   withPointDraw(
     { materialClass: 'standard', props: { map: new THREE.Texture() } },
     { pixels: 4, pixelRatio: 1, samplesAlbedoAtPointCoord, placement }

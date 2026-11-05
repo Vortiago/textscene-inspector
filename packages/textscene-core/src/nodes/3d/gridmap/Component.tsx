@@ -1,13 +1,13 @@
 /**
  * <GridMap> instances each MeshLibrary item's mesh, an ArrayMesh or a PrimitiveMesh, at its
- * populated cells. Each surface draws as one THREE.InstancedMesh, or as one THREE.Points instanced
- * at every cell for a PointMesh. A billboarding material turns each cell about its own origin in its
+ * populated cells. Each surface draws as one THREE.InstancedMesh, or as one THREE.Points or
+ * THREE.LineSegments instanced at every cell for a points or lines surface. A billboarding material turns each cell about its own origin in its
  * program. A loading item draws nothing.
  * An item whose mesh or library this previewer cannot read draws cell-sized wireframe boxes in one
  * InstancedMesh.
  */
 
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../../godot/scene/visualLayers';
 import * as THREE from 'three';
 import { nodeComponentRegistry, type NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -17,8 +17,8 @@ import { LightmapSubInstanceProvider } from '../../../r3f/lightmap/useLightmapAs
 import { Node3D } from '../../base/node3d/Component';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
 import type { MaterialSource } from '../../../r3f/materials/materialSource';
-import { useMeshContent, type SurfacedPart } from '../../../r3f/meshes/meshContent';
-import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
+import { drawnTag, useMeshContent, type SurfacedPart } from '../../../r3f/meshes/meshContent';
+import { geometryPrimitive } from '../../../resources/meshes/godotSurface';
 import { usePathResolution } from '../../../resources/useSubOrExtResource';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { surfaceAttach, surfaceSources } from '../../../r3f/materials/SurfaceMaterialSlots';
@@ -37,8 +37,9 @@ import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import {
   instancesBounds,
-  pointPlacementOf,
-  raycastInstancedPoints,
+  listedSlot,
+  listedSlotOf,
+  raycastInstanced,
   sharedInstancesAt,
   useSharedInstances,
 } from '../../../r3f/meshes/sharedInstances';
@@ -224,45 +225,51 @@ interface GridMapPartProps {
 
 /** One part of an item's mesh at every cell: the surfaces that share one primitive type. */
 function GridMapPart(props: GridMapPartProps) {
-  return geometryDrawsPoints(props.part.geometry) ? <PointsPart {...props} /> : <PartSurfaces {...props} />;
+  return geometryPrimitive(props.part.geometry) === 'triangles' ? (
+    <PartSurfaces {...props} />
+  ) : (
+    <ListedPart {...props} />
+  );
 }
 
 /**
- * A points part at every cell as one instanced geometry over the item's own, shared by the part's
+ * A points or lines part at every cell as one instanced geometry over the item's own, shared by the part's
  * surfaces, new for each set of cells, with the box and sphere of every cell.
  */
-function PointsPart(props: GridMapPartProps) {
+function ListedPart(props: GridMapPartProps) {
   const { part, matrices } = props;
-  const cellPoints = useMemo<CellPoints>(
+  const cellInstances = useMemo<CellInstances>(
     () => ({
       geometry: sharedInstancesAt(part.geometry, matrices),
       ...instancesBounds(part.geometry, matrices),
     }),
     [part.geometry, matrices]
   );
-  useSharedInstances(cellPoints.geometry, part.geometry);
-  return <PartSurfaces {...props} cellPoints={cellPoints} />;
+  useSharedInstances(cellInstances.geometry, part.geometry);
+  return <PartSurfaces {...props} cellInstances={cellInstances} />;
 }
 
-/** A points part at every cell, and the box and sphere three frames and culls it by. */
-interface CellPoints extends ReturnType<typeof instancesBounds> {
+/** What a points or lines draw mounts as. */
+type ListedObject = THREE.Points | THREE.LineSegments;
+
+/** The points or lines of a part at every cell, and the box and sphere three frames and culls it by. */
+interface CellInstances extends ReturnType<typeof instancesBounds> {
   geometry: THREE.InstancedBufferGeometry;
 }
 
 function PartSurfaces({
   part,
-  cellPoints,
+  cellInstances,
   shadow,
   matrices,
-}: GridMapPartProps & { cellPoints?: CellPoints }) {
+}: GridMapPartProps & { cellInstances?: CellInstances }) {
   const surfaces = surfaceSources(part.materials);
   const { geometry } = part;
-  const points = geometryDrawsPoints(geometry);
   // A cell's chain draw is its own instanced batch of the cells, at its surface's
   // ordinal, over the geometry the part draws, and at its surface's own draw group.
   const chainDraw: ChainDrawFactory = (spec) =>
-    cellPoints ? (
-      <ChainCellPoints spec={spec} cellPoints={cellPoints} />
+    cellInstances ? (
+      <ChainInstancedCells spec={spec} cellInstances={cellInstances} />
     ) : (
       <ChainBatchedTiles spec={spec} matrices={matrices} />
     );
@@ -271,14 +278,14 @@ function PartSurfaces({
       {surfaces.map((source, surface) => (
         <GridMapSurface
           key={surface}
-          draw={{ geometry, cellPoints, source, surface, surfaceCount: surfaces.length, shadow }}
+          draw={{ geometry, cellInstances, source, surface, surfaceCount: surfaces.length, shadow }}
           matrices={matrices}
         />
       ))}
       <NextPassChain
         sources={surfaces}
-        geometry={cellPoints?.geometry ?? geometry}
-        drawsPoints={points}
+        geometry={cellInstances?.geometry ?? geometry}
+        primitive={geometryPrimitive(geometry)}
         godotLayers={GODOT_DEFAULT_VISUAL_LAYERS}
         shadow={shadow}
         draw={chainDraw}
@@ -306,28 +313,17 @@ function ChainBatchedTiles({ spec, matrices }: { spec: ChainDrawSpec; matrices: 
       onBeforeRender={spec.shadow.onBeforeRender}
       onAfterRender={spec.shadow.onAfterRender}
     >
-      <SurfaceMaterialSlot
-        source={spec.source}
-        attach={spec.attach}
-        points={pointPlacementOf(spec.geometry)}
-      />
+      <SurfaceMaterialSlot source={spec.source} attach={spec.attach} {...listedSlotOf(spec.geometry)} />
     </instancedMesh>
   );
 }
 
-/** The chain link of a points surface's material, as one more draw of the cells' points. */
-function ChainCellPoints({ spec, cellPoints }: { spec: ChainDrawSpec; cellPoints: CellPoints }) {
-  const { geometry, boundingBox, boundingSphere } = cellPoints;
-  const startingMaterial = useOneSurfaceStartingMaterial(spec.surfaceCount);
-  const pointsRef = useRef<THREE.Points>(null);
-  // Typed props hold no box on THREE.Points, which three and the framing read off the object.
-  useLayoutEffect(() => {
-    if (pointsRef.current) Object.assign(pointsRef.current, { boundingBox, boundingSphere });
-  }, [boundingBox, boundingSphere]);
+/** The chain link of a points or lines surface's material, as one more draw of the cells' primitives. */
+function ChainInstancedCells({ spec, cellInstances }: { spec: ChainDrawSpec; cellInstances: CellInstances }) {
   return (
-    <points
-      ref={pointsRef}
-      args={[geometry, startingMaterial]}
+    <CellsDrawn
+      cellInstances={cellInstances}
+      surfaceCount={spec.surfaceCount}
       renderOrder={nextPassRenderOrder(spec.ordinal)}
       raycast={NO_RAYCAST}
       // The chain draw casts nothing of its own: the surface's own draw casts the
@@ -336,17 +332,21 @@ function ChainCellPoints({ spec, cellPoints }: { spec: ChainDrawSpec; cellPoints
       onBeforeRender={spec.shadow.onBeforeRender}
       onAfterRender={spec.shadow.onAfterRender}
     >
-      <SurfaceMaterialSlot source={spec.source} attach={spec.attach} points="instances" />
-    </points>
+      <SurfaceMaterialSlot
+        source={spec.source}
+        attach={spec.attach}
+        {...listedSlot(geometryPrimitive(cellInstances.geometry), 'instances')}
+      />
+    </CellsDrawn>
   );
 }
 
 /** One surface of an item's mesh, drawn on its own. */
 interface SurfaceDraw {
-  /** The geometry drawn: the item's own, or a points surface's instances at every cell. */
+  /** The geometry drawn: the item's own, or a points or lines surface's instances at every cell. */
   geometry: THREE.BufferGeometry;
-  /** A points surface's points at every cell. Undefined for triangles. */
-  cellPoints?: CellPoints;
+  /** A points or lines surface's primitives at every cell. Undefined for triangles. */
+  cellInstances?: CellInstances;
   /** Undefined for a surface that names no material: Godot's default surface. */
   source: MaterialSource | undefined;
   /** The draw group this draw owns. */
@@ -360,8 +360,8 @@ interface SurfaceDraw {
  * each cell about its own origin, as Godot's multimesh does (`surfaceBillboard.ts`).
  */
 function GridMapSurface({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.Matrix4[] }) {
-  if (!draw.cellPoints) return <BatchedTiles draw={draw} matrices={matrices} />;
-  return <InstancedCellPoints draw={draw} cellPoints={draw.cellPoints} />;
+  if (!draw.cellInstances) return <BatchedTiles draw={draw} matrices={matrices} />;
+  return <InstancedCells draw={draw} cellInstances={draw.cellInstances} />;
 }
 
 /**
@@ -392,24 +392,44 @@ function BatchedTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.M
   );
 }
 
-/** A surface's points at every cell, one instanced THREE.Points picked at each cell. */
-function InstancedCellPoints({ draw, cellPoints }: { draw: SurfaceDraw; cellPoints: CellPoints }) {
-  const { geometry, boundingBox, boundingSphere } = cellPoints;
-  const startingMaterial = useOneSurfaceStartingMaterial(draw.surfaceCount);
-  const pointsRef = useRef<THREE.Points>(null);
-  // Typed props hold no box on THREE.Points, which three and the framing read off the object.
-  useLayoutEffect(() => {
-    if (pointsRef.current) Object.assign(pointsRef.current, { boundingBox, boundingSphere });
-  }, [boundingBox, boundingSphere]);
+/** A surface's points or lines at every cell, one instanced object picked at each cell. */
+function InstancedCells({ draw, cellInstances }: { draw: SurfaceDraw; cellInstances: CellInstances }) {
   return (
-    <points
-      ref={pointsRef}
-      args={[geometry, startingMaterial]}
-      raycast={raycastInstancedPoints}
+    <CellsDrawn
+      cellInstances={cellInstances}
+      surfaceCount={draw.surfaceCount}
+      raycast={raycastInstanced}
       {...drawHookProps(draw.shadow)}
     >
-      <OwnedSurfaceSlot draw={{ ...draw, geometry }} />
-    </points>
+      <OwnedSurfaceSlot draw={{ ...draw, geometry: cellInstances.geometry }} />
+    </CellsDrawn>
+  );
+}
+
+type CellsDrawnProps = Pick<
+  THREE.Points,
+  'renderOrder' | 'raycast' | 'castShadow' | 'receiveShadow' | 'onBeforeRender' | 'onAfterRender'
+> &
+  Partial<Pick<THREE.Light, 'onBeforeShadow' | 'onAfterShadow'>>;
+
+/** The points or lines object over the cells' instances, carrying the box three culls it by. */
+function CellsDrawn({
+  cellInstances: { geometry, boundingBox, boundingSphere },
+  surfaceCount,
+  children,
+  ...drawProps
+}: { cellInstances: CellInstances; surfaceCount: number; children: ReactNode } & Partial<CellsDrawnProps>) {
+  const startingMaterial = useOneSurfaceStartingMaterial(surfaceCount);
+  const drawnRef = useRef<ListedObject>(null);
+  const Drawn = drawnTag(geometryPrimitive(geometry));
+  // Typed props hold no box on these objects, which three and the framing read off the object.
+  useLayoutEffect(() => {
+    if (drawnRef.current) Object.assign(drawnRef.current, { boundingBox, boundingSphere });
+  }, [boundingBox, boundingSphere]);
+  return (
+    <Drawn ref={drawnRef} args={[geometry, startingMaterial]} {...drawProps}>
+      {children}
+    </Drawn>
   );
 }
 
@@ -419,7 +439,7 @@ function OwnedSurfaceSlot({ draw }: { draw: SurfaceDraw }) {
     <SurfaceMaterialSlot
       source={draw.source}
       attach={surfaceAttach(draw.surface, draw.surfaceCount)}
-      points={pointPlacementOf(draw.geometry)}
+      {...listedSlotOf(draw.geometry)}
     />
   );
 }

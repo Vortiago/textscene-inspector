@@ -1,17 +1,17 @@
 ---
 type: MeshInstance2D
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-mesh-instance-2d.tscn
-# image: unit-mesh-instance-2d
-renders_as: nothing yet, Godot draws a textured mesh, the previewer does not
+image: unit-mesh-instance-2d
+renders_as: a THREE.Mesh, THREE.Points or THREE.LineSegments per surface kind
 ---
 
 # MeshInstance2D
 
-MeshInstance2D draws a Mesh on the canvas, textured through `texture`. The previewer
-parses and validates it but does not draw it, so it draws nothing
-and its children still show.
+MeshInstance2D draws a Mesh on the canvas, textured through `texture`. The previewer draws each
+surface at its vertices' x and y, with y down, and multiplies the texel, the vertex colour and the
+modulate. The surfaces' own materials never apply.
 
 ## Linting
 
@@ -31,9 +31,9 @@ Strict parsing format-checks these `MeshInstance2D` properties, plus 12 inherite
 <!-- lint:end -->
 
 A bare string in `mesh` or `texture`, such as `"res://quad.tres"`, is stored as-is with
-no warning. Nothing reads it back, since no render component exists.
+no warning. The mesh then draws nothing, and the texture draws white.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the textured mesh, but the previewer draws nothing for this
-  node.
+- **Approximated** A line is one device pixel wide, thinner than Godot's one viewport pixel on a
+  display with a pixel ratio above 1.
