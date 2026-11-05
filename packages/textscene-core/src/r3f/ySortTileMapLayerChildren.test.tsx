@@ -13,6 +13,9 @@ import { findByType } from '../nodes/2d/tiles/tilemaplayer/findByType.testkit';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import { SceneStack } from './testing/SceneStack';
+import { HiddenSeeder } from './testing/HiddenSeeder';
+import { visibleInTree } from './visibleInTree';
+import type * as THREE from 'three';
 import { namesInPaintOrder } from './testing/paintOrder';
 import { sceneRoot } from './testing/animationPlayback';
 import { seedAtlasTexture } from './testing/seedAtlasTexture';
@@ -82,8 +85,8 @@ position = Vector2(96, 76)
 polygon = PackedVector2Array(-80, -70, -20, -70, -20, 30, -80, 30)
 `;
 
-/** The row and child names in the order three paints them. */
-async function drawOrder(source: string): Promise<string[]> {
+/** Mounts `source` with the layers' cells and the editor eye toggle hiding `hiddenPaths`. */
+async function mount(source: string, hiddenPaths: string[] = []) {
   const scene = new TscnParser().parse(source);
   for (const layer of findByType(scene.nodes, 'TileMapLayer')) {
     const props = layer.properties as TileMapLayerProperties;
@@ -96,20 +99,40 @@ async function drawOrder(source: string): Promise<string[]> {
   seedAtlasTexture(fake);
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack workspace="2d" loader={fake.loader} scene={scene}>
+      <HiddenSeeder paths={hiddenPaths} />
       <NodeDispatcher nodes={scene.nodes} />
     </SceneStack>
   );
   await settleLoads();
+  return sceneRoot(renderer);
+}
 
+/** The row and child names in the order three paints them. */
+async function drawOrder(source: string): Promise<string[]> {
   return namesInPaintOrder(
-    sceneRoot(renderer),
+    await mount(source),
     (o) => o.name?.startsWith('TileGroup_') || o.name === 'Child'
   ).map((name) => name.replace(/^TileGroup_.*_\d+_(\d+)$/, 'row $1'));
+}
+
+/** Whether each row of the layer shows in the scene tree. */
+async function rowsVisible(source: string, hiddenPaths: string[]): Promise<boolean[]> {
+  const root = await mount(source, hiddenPaths);
+  const rows: THREE.Object3D[] = [];
+  root.traverse((o) => {
+    if (o.name?.startsWith('TileGroup_')) rows.push(o);
+  });
+  return rows.map(visibleInTree);
 }
 
 describe('a y-sorted TileMapLayer with a child node', () => {
   it('draws the child between the rows it sorts between, at the root of a sort', async () => {
     expect(await drawOrder(AT_ROOT)).toEqual(['row 0', 'Child', 'row 1', 'row 2']);
+  });
+
+  it('hides the rows with the layer when the editor eye toggle hides it', async () => {
+    expect(await rowsVisible(AT_ROOT, [])).toEqual([true, true, true]);
+    expect(await rowsVisible(AT_ROOT, ['World/Layer'])).toEqual([false, false, false]);
   });
 
   it('draws the child between the rows it sorts between, lifted into a y-sorted parent', async () => {
