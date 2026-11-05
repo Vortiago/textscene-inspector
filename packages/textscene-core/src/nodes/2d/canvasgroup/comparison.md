@@ -16,23 +16,21 @@ twice.
 ## Linting
 
 <!-- lint:begin CanvasGroup -->
-
 Strict parsing format-checks these `CanvasGroup` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property       | Accepts       | Out of range |
-| -------------- | ------------- | ------------ |
-| `clear_margin` | float >= 0    | error below  |
-| `fit_margin`   | float >= 0    | error below  |
-| `use_mipmaps`  | true or false |              |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `clear_margin` | float >= 0 | error below |
+| `fit_margin` | float >= 0 | error below |
+| `use_mipmaps` | true or false |  |
 
-| Rule                                                 | Reports                               | Severity |
-| ---------------------------------------------------- | ------------------------------------- | -------- |
-| `binary-resource-reference` (all nodes)              | `binary-resource-reference`           | info     |
-| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children`  | warning  |
-|                                                      | `canvasitem-ancestor-is-canvasgroup`  | warning  |
-| `valid-canvasgroup-ancestry`                         | `canvasgroup-ancestor-clips-children` | warning  |
-|                                                      | `canvasgroup-nested-in-canvasgroup`   | warning  |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-canvasgroup-ancestry` | `canvasgroup-ancestor-clips-children` | warning |
+|  | `canvasgroup-nested-in-canvasgroup` | warning |
 <!-- lint:end -->
 
 The lenient parser keeps the default 10 for a negative `fit_margin` or `clear_margin`, which each
