@@ -16,5 +16,5 @@ export interface StructuredTextOverrideProperties {
   /** `TextServer::StructuredTextParser`. Godot default STRUCTURED_TEXT_DEFAULT on every type that has it. */
   structuredTextBidiOverride: number;
   /** `structured_text_bidi_override_options`, an untyped `Array`: each String or StringName element, null for any other Variant. */
-  structuredTextBidiOverrideOptions: (string | null)[];
+  structuredTextBidiOverrideOptions: readonly (string | null)[];
 }

@@ -58,8 +58,8 @@ bundled font too (ADR-0040).
 A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
 outline ring (ADR-0064).
 
+The label shapes in its own `text_direction` and `language` (`button.cpp:564-569`). INHERITED
+takes the layout direction, and an empty `language` takes the project locale.
+
 ## Known limitations
 
-- **Approximated** Under `layout_direction = 3` or `text_direction = 2`, the label's glyphs
-  keep left-to-right order for a right-to-left script or trailing punctuation, though
-  `layout_direction = 3` swaps the label, icon and chrome.

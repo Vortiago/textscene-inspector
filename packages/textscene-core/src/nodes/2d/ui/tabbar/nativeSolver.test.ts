@@ -22,6 +22,7 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { TabBarProperties } from './types';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 describe('resolveTabDrawState', () => {
   it('picks selected for the current tab', () => {
@@ -578,9 +579,7 @@ describe('layoutScrollArrows', () => {
 // (`tab_bar.cpp:358-362`).
 describe('shapeTabLabel direction', () => {
   const visual = (rtl: boolean) =>
-    shapeTabLabel('Hello!', { rtl, locale: '' }, { fontSizePx: 16 })
-      .lines[0]!.glyphs.map((glyph) => glyph.char)
-      .join('');
+    visualChars(shapeTabLabel('Hello!', { rtl, locale: '' }, { fontSizePx: 16 }).lines[0]!);
 
   it('draws "!" first under an RTL layout', () => {
     expect(visual(true)).toBe('!Hello');

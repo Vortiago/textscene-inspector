@@ -22,6 +22,7 @@ import {
 } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const MARGIN = 8; // content_margin 4, both sides.
 const FONT_HEIGHT = 23;
@@ -253,7 +254,7 @@ describe('foldableContainerTitleShape direction', () => {
       ...node({ title: 'Hello!', titleTextDirection: 0, language: '', ...props }),
       rtl,
     });
-    return title.layout!.lines[0]!.glyphs.map((glyph) => glyph.char).join('');
+    return visualChars(title.layout!.lines[0]!);
   }
 
   it('draws "!" first at RTL', () => {

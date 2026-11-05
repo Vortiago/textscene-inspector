@@ -15,7 +15,7 @@ import {
 } from '../../../r3f/controls/native/text/textLayout';
 import type { FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
 import { justifyLinesToWidth } from '../../../r3f/controls/native/text/textJustify';
-import { textBidiOptions } from '../../../r3f/controls/native/text/textBidiOptions';
+import type { TextBidiOptions } from '../../../r3f/controls/native/text/textBidiOptions';
 
 import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
 import { blockStartY, HorizontalAlignment, lineStartOffset } from '../../../godot/math/alignment';
@@ -23,17 +23,7 @@ import type { Label3DProperties } from './types';
 
 type Label3DBreakProperties = Pick<
   Label3DProperties,
-  | 'text'
-  | 'font_size'
-  | 'line_spacing'
-  | 'width'
-  | 'autowrap_mode'
-  | 'autowrap_trim_flags'
-  | 'uppercase'
-  | 'textDirection'
-  | 'language'
-  | 'structuredTextBidiOverride'
-  | 'structuredTextBidiOverrideOptions'
+  'text' | 'font_size' | 'line_spacing' | 'width' | 'autowrap_mode' | 'autowrap_trim_flags' | 'uppercase'
 >;
 
 type Label3DJustifyProperties = Pick<
@@ -55,17 +45,17 @@ interface Label3DLinePlacement {
 }
 
 /**
- * The text shaped in its direction, language and override (`label_3d.cpp:479-494`), and broken at
- * `width` as `autowrap_mode` says (`:495-530`). The trim flags apply in every mode, OFF included
- * (`:528`). An empty `language` takes `locale`, the project's `_get_locale()`.
+ * The text shaped in `bidi`, the label's direction, language and override (`label_3d.cpp:479-494`),
+ * and broken at `width` as `autowrap_mode` says (`:495-530`). The trim flags apply in every mode, OFF
+ * included (`:528`).
  */
 export function breakLabel3DLines(
   properties: Label3DBreakProperties,
-  locale: string,
+  bidi: TextBidiOptions,
   fontMetrics?: FontMetrics
 ): TextLayoutResult {
   return shapeText(properties.text, {
-    ...textBidiOptions(properties, locale),
+    ...bidi,
     fontSizePx: properties.font_size,
     boxWidthPx: properties.width,
     autowrapMode: properties.autowrap_mode,

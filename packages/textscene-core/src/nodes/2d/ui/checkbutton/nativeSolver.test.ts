@@ -233,8 +233,20 @@ describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-26
     hasText: true,
     textAlignment: 0,
     textNaturalSize: { x: 90, y: 26 },
+    isTextRtl: false,
     rtl: false,
   };
+
+  it('ends an overflowing right-to-left CENTER label at the trailing edge (text_paragraph.cpp:908-910)', () => {
+    // The text box is 150 - 2*6 - (32+4) = 102 wide: 6 + (102 - 200) = -92.
+    const { textOffset } = layoutCheckButtonContent({
+      ...BASE,
+      textAlignment: 1,
+      textNaturalSize: { x: 200, y: 26 },
+      isTextRtl: true,
+    });
+    expect(textOffset!.x).toBe(-92);
+  });
 
   it('icon sits flush against the RIGHT edge, vertically centred + check_v_offset', () => {
     const { iconPosition } = layoutCheckButtonContent(BASE);
@@ -323,6 +335,7 @@ describe('layoutCheckButtonContent — RTL puts the toggle on the left', () => {
     hasText: true,
     textAlignment: 0,
     textNaturalSize: { x: 90, y: 26 },
+    isTextRtl: false,
     rtl: true,
   };
 

@@ -21,6 +21,7 @@ import {
   linkButtonLabelShape,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 function node(props: Partial<LinkButtonProperties>): SolveNode {
   return {
@@ -209,7 +210,7 @@ describe('linkButtonLabelShape — direction, language and structured override (
   /** The shaped line's glyph characters, left to right. */
   function visual(props: Partial<LinkButtonProperties>, overrides: Partial<SolveNode> = {}): string {
     const layout = linkButtonLabelShape({ ...node(props), ...overrides }, nativeTheme(1))!;
-    return layout.lines[0]!.glyphs.map((glyph) => glyph.char).join('');
+    return visualChars(layout.lines[0]!);
   }
 
   it('shapes an RTL paragraph with `!` at the visual left', () => {

@@ -9,16 +9,18 @@ import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSa
 import { buildGlyphQuadArrays } from '../../../r3f/controls/native/text/glyphQuads';
 import { label3DAabb, layoutLabel3DLines, breakLabel3DLines, justifyLabel3DLines } from './glyphLayout';
 import { labelProperties } from './testing/labelProperties';
+import { textBidiOptions } from '../../../r3f/controls/native/text/textBidiOptions';
 import { soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
 import type { EnumValue } from '../../../godot/classdb/enumNames';
 import { AutowrapMode, JustificationFlag } from '../../../godot/text/textServerEnums';
 import type { Label3DProperties } from './types';
+import { visualChars } from '../../../r3f/controls/native/text/textLayout.testkit';
 
 const FONT_SIZE = 32;
 
 function shapeLabel3DLinesForTest(properties: Label3DProperties) {
-  return justifyLabel3DLines(breakLabel3DLines(properties, ''), properties);
+  return justifyLabel3DLines(breakLabel3DLines(properties, {}), properties);
 }
 
 function props(overrides: Partial<Label3DProperties> = {}): Label3DProperties {
@@ -367,9 +369,10 @@ describe('a fractional line width', () => {
 describe('breakLabel3DLines — direction, language and structured override (label_3d.cpp:479-494)', () => {
   /** The first line's glyph characters, left to right. */
   function visual(overrides: Partial<Label3DProperties>, locale = ''): string {
-    return breakLabel3DLines(props(overrides), locale, OPEN_SANS_FONT_METRICS)
-      .lines[0]!.glyphs.map((glyph) => glyph.char)
-      .join('');
+    const properties = props(overrides);
+    return visualChars(
+      breakLabel3DLines(properties, textBidiOptions(properties, locale), OPEN_SANS_FONT_METRICS).lines[0]!
+    );
   }
 
   it('shapes an RTL paragraph with `!` at the visual left', () => {

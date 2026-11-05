@@ -33,6 +33,7 @@ import { resolveRichTextFaces } from './styleFaces';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
@@ -1111,7 +1112,7 @@ describe('layoutRichTextRuns', () => {
     const placements = layoutRichTextRuns(runs, layout);
     // Every placement's glyphs come from exactly one of the two runs.
     for (const p of placements) {
-      const chars = p.layout.lines[0]!.glyphs.map((g) => g.char).join('');
+      const chars = visualChars(p.layout.lines[0]!);
       expect(chars === 'AAAA' || chars === 'BBBB').toBe(true);
     }
   });
@@ -1700,7 +1701,7 @@ describe('RichTextLabel paragraph direction', () => {
   }
 
   function visualLines(runs: Parameters<typeof shapeRichText>[0]): string[] {
-    return shapeRuns(runs).lines.map((line) => line.glyphs.map((glyph) => glyph.char).join(''));
+    return shapeRuns(runs).lines.map((line) => visualChars(line));
   }
 
   it('shapes a [p dir=rtl] paragraph with its "!" first, and the plain paragraph after it as written', () => {

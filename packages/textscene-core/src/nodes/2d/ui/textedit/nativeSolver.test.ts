@@ -29,6 +29,7 @@ import { withVariation } from '../../../../r3f/controls/native/text/fontMetrics'
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { TextEditProperties } from './types';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const THEME = nativeTheme(1);
 
@@ -406,7 +407,7 @@ describe('shapeTextEditLines — direction, language and structured override (te
   function visual(lines: string[], props: Partial<TextEditProperties>, rtl = false): string[] {
     const bidi = controlBidiOptions({ textDirection: 0, language: '', ...props }, { rtl, locale: '' });
     return shapeTextEditLines(lines, { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS, bidi }).map(
-      ({ layout }) => layout.lines[0]!.glyphs.map((glyph) => glyph.char).join('')
+      ({ layout }) => visualChars(layout.lines[0]!)
     );
   }
 

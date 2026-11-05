@@ -514,14 +514,42 @@ function fontMetricsAtFromRuns(
 }
 
 /**
+ * The run a character of the concatenated text is in, found by its start among the runs' starts: a
+ * lookup once per paragraph or line needs no table as long as the text. Past the end it is the last
+ * run, and undefined for no runs.
+ */
+function runAtFromRuns(
+  styledRuns: readonly StyledTextRun[]
+): (charIndex: number) => StyledTextRun | undefined {
+  // An empty run holds no character, so only the others take part.
+  const runs = styledRuns.filter((run) => run.text.length > 0);
+  const starts: number[] = [];
+  let start = 0;
+  for (const run of runs) {
+    starts.push(start);
+    start += run.text.length;
+  }
+  return (charIndex) => {
+    let low = 0;
+    let high = starts.length - 1;
+    while (low < high) {
+      const middle = (low + high + 1) >> 1;
+      if (starts[middle]! <= charIndex) low = middle;
+      else high = middle - 1;
+    }
+    return runs[low];
+  };
+}
+
+/**
  * The per-paragraph `paragraphBidiAt` for `shapeText`: each paragraph takes the options of the run
  * its first character is in, as a line reads them from its first item (`rich_text_label.cpp:598-599`).
  */
 function paragraphBidiAtFromRuns(
   styledRuns: readonly StyledTextRun[]
 ): (paragraphStart: number) => TextBidiOptions {
-  const bidiAt = perCharacter(styledRuns, (run) => run.bidi);
-  return (paragraphStart) => bidiAt(paragraphStart) ?? {};
+  const runAt = runAtFromRuns(styledRuns);
+  return (paragraphStart) => runAt(paragraphStart)?.bidi ?? {};
 }
 
 /** What `shapeRichText` takes from the control: the paragraph's box, and the three properties that shape it. */
@@ -895,7 +923,7 @@ export function layoutRichTextRuns(
 ): RichTextRunPlacement[] {
   const boxWidthPx = alignment?.boxWidthPx ?? 0;
   // Every line of a paragraph aligns as its first item does (`rich_text_label.cpp:598-599`).
-  const runAt = perCharacter(styledRuns, (run) => run);
+  const runAt = runAtFromRuns(styledRuns);
   const paragraphRunOf = (lineIndex: number): StyledTextRun | undefined =>
     runAt(unfittedLayout.lines[lineIndex]?.paragraphStart ?? 0);
   const alignmentOfLine = (lineIndex: number): number =>

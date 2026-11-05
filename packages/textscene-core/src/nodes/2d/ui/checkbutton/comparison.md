@@ -44,6 +44,3 @@ outline ring (ADR-0064).
 
 - **Not drawn** Button's inherited `icon` property (distinct from the toggle glyph) is
   parsed but never drawn.
-- **Approximated** Under `layout_direction = 3` or `text_direction = 2`, the label's glyphs
-  keep left-to-right order for a right-to-left script or trailing punctuation, while the
-  label, icon and chrome swap sides.

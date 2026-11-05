@@ -15,6 +15,7 @@ import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import {
+  infersRtl,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
@@ -101,6 +102,7 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
         textNaturalSize: layout
           ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
           : { x: 0, y: 0 },
+        isTextRtl: infersRtl(layout),
       }),
     [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout, props.alignment, solveNode.rtl]
   );

@@ -21,6 +21,7 @@ import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import { type Label3DProperties } from './types';
 import { useLabel3DFont } from './useLabel3DFont';
 import { useLayoutDirectionEnv } from '../../../r3f/contexts/useLayoutDirectionEnv';
+import { textBidiOptions } from '../../../r3f/controls/native/text/textBidiOptions';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 
 export interface LabelGlyphsProps {
@@ -48,26 +49,23 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   const { textDirection, language, structuredTextBidiOverride, structuredTextBidiOverrideOptions } =
     properties;
   const locale = useLayoutDirectionEnv().applicationLocale;
+  // An empty `language` takes the project's `_get_locale()` (`label_3d.cpp:483`).
+  const bidi = useMemo(
+    () =>
+      textBidiOptions(
+        { textDirection, language, structuredTextBidiOverride, structuredTextBidiOverrideOptions },
+        locale
+      ),
+    [textDirection, language, structuredTextBidiOverride, structuredTextBidiOverrideOptions, locale]
+  );
   const { x: offsetX, y: offsetY } = properties.offset;
   // Width reaches the break only in a wrapping mode, so it is 0 otherwise: `shapeText` ignores it for OFF.
   const breakWidth = autowrap_mode === AutowrapMode.AUTOWRAP_OFF ? 0 : width;
   const broken = useMemo(
     () =>
       breakLabel3DLines(
-        {
-          text,
-          font_size,
-          line_spacing,
-          width: breakWidth,
-          autowrap_mode,
-          autowrap_trim_flags,
-          uppercase,
-          textDirection,
-          language,
-          structuredTextBidiOverride,
-          structuredTextBidiOverrideOptions,
-        },
-        locale,
+        { text, font_size, line_spacing, width: breakWidth, autowrap_mode, autowrap_trim_flags, uppercase },
+        bidi,
         fontMetrics
       ),
     [
@@ -78,11 +76,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
       autowrap_mode,
       autowrap_trim_flags,
       uppercase,
-      textDirection,
-      language,
-      structuredTextBidiOverride,
-      structuredTextBidiOverrideOptions,
-      locale,
+      bidi,
       fontMetrics,
     ]
   );

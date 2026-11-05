@@ -18,6 +18,7 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import {
   clampAutowrapMode,
+  infersRtl,
   shapedTextSizeWidthPx,
   soloLineLayout,
   type TextLayoutResult,
@@ -139,12 +140,18 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   const drawableWidthPx = layoutButtonContent({
     ...contentInput,
     textNaturalSize: naturalSize(unwrapped),
+    isTextRtl: infersRtl(unwrapped),
   }).drawableSize.x;
   const layout: TextLayoutResult | null = wraps
     ? buttonLabelShape(solveNode, theme, Math.ceil(Math.max(1, drawableWidthPx)))
     : unwrapped;
   const content = useMemo(
-    () => layoutButtonContent({ ...contentInput, textNaturalSize: naturalSize(layout) }),
+    () =>
+      layoutButtonContent({
+        ...contentInput,
+        textNaturalSize: naturalSize(layout),
+        isTextRtl: infersRtl(layout),
+      }),
     [contentInput, layout]
   );
 
@@ -220,11 +227,17 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
             key={i}
             position={[
               content.text!.offset.x -
-                buttonTextAlignShiftPx(naturalSize(trimmedLayout).x, content.drawableSize.x, textAlignment) +
+                buttonTextAlignShiftPx(
+                  naturalSize(trimmedLayout).x,
+                  content.drawableSize.x,
+                  textAlignment,
+                  infersRtl(layout)
+                ) +
                 buttonTextAlignShiftPx(
                   shapedTextSizeWidthPx(line.widthPx),
                   content.drawableSize.x,
-                  textAlignment
+                  textAlignment,
+                  line.isRtl === true
                 ),
               -(content.text!.offset.y + i * trimmedLayout.linePitchPx),
               0,

@@ -35,6 +35,7 @@ import {
   shapeItemListText,
 } from './nativeSolver';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const itemListMinimumSize = controlSolverRegistry.minimumSize('ItemList')!;
 
@@ -120,24 +121,24 @@ describe('shapeItemListText — overrun trim (item_list.h:131 default OVERRUN_TR
 
   it('trims to fixedColumnWidth by default, appending an ellipsis (matches text_overrun.test.ts derivation)', () => {
     const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', fixedColumnWidth: 100 });
-    expect(layout!.lines[0]!.glyphs.map((glyph) => glyph.char).join('')).toBe('AAAAAAAA…');
+    expect(visualChars(layout!.lines[0]!)).toBe('AAAAAAAA…');
   });
 
   it('is a no-op with no fixedColumnWidth — nothing to trim against (unconstrained shape width)', () => {
     const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', fixedColumnWidth: 0 });
-    expect(layout!.lines[0]!.glyphs.map((glyph) => glyph.char).join('')).toBe('AAAAAAAAAAAA');
+    expect(visualChars(layout!.lines[0]!)).toBe('AAAAAAAAAAAA');
   });
 
   // Measured in Godot 4.6.3 (`unit-item-list-text-direction`): the trim keeps the visual left part.
   it('keeps the visual left part of an AUTO Hebrew item and ends in the ellipsis', () => {
     const layout = shapeItemListText({ ...baseInput, text: 'שלום עולם רחב מאוד', fixedColumnWidth: 80 });
-    const chars = layout!.lines[0]!.glyphs.map((glyph) => glyph.char).join('');
+    const chars = visualChars(layout!.lines[0]!);
     expect([chars[0], chars.at(-1)]).toEqual(['ד', '…']);
   });
 
   it('takes the direction of neutral text from the locale (`item_list.cpp:45`)', () => {
     const layout = shapeItemListText({ ...baseInput, text: '123!', fixedColumnWidth: 0, locale: 'he' });
-    expect(layout!.lines[0]!.glyphs.map((glyph) => glyph.char).join('')).toBe('!123');
+    expect(visualChars(layout!.lines[0]!)).toBe('!123');
   });
 
   it('OVERRUN_NO_TRIMMING (0) leaves the text untrimmed even with a fixedColumnWidth', () => {
@@ -147,7 +148,7 @@ describe('shapeItemListText — overrun trim (item_list.h:131 default OVERRUN_TR
       fixedColumnWidth: 100,
       overrunBehavior: 0,
     });
-    expect(layout!.lines[0]!.glyphs.map((glyph) => glyph.char).join('')).toBe('AAAAAAAAAAAA');
+    expect(visualChars(layout!.lines[0]!)).toBe('AAAAAAAAAAAA');
   });
 });
 

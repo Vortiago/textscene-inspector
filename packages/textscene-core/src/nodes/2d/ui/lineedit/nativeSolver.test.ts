@@ -30,6 +30,7 @@ import {
 } from './nativeSolver';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 // line_edit.h:85-89 numbers ExpandMode from EXPAND_MODE_ORIGINAL_SIZE = 0.
 const EXPAND_MODE_FIT_TO_TEXT = 1;
@@ -888,9 +889,10 @@ describe('shapeLineEditText — direction, language and structured override (lin
   /** The shaped line's glyph characters, left to right. */
   function visual(props: Partial<LineEditProperties>, overrides: Partial<SolveNode> = {}): string {
     const n = { ...node(props), ...overrides };
-    return shapeLineEditText(n, props.text ?? '', { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS })
-      .lines[0]!.glyphs.map((glyph) => glyph.char)
-      .join('');
+    return visualChars(
+      shapeLineEditText(n, props.text ?? '', { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS })
+        .lines[0]!
+    );
   }
 
   it('shapes an RTL paragraph with `!` at the visual left', () => {

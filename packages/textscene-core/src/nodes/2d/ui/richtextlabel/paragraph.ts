@@ -23,14 +23,9 @@ import {
 
 type ParagraphProperties = TextDirectionProperties & StructuredTextOverrideProperties;
 
-/** The bidi half of what `push_paragraph` stores. */
-interface ParagraphBidi {
-  /** A `Control::TextDirection`. INHERITED takes the next paragraph out. */
-  direction: number;
-  /** Empty takes the locale. */
-  language: string;
-  structuredTextParser: number;
-}
+/** The bidi half of what `push_paragraph` stores. An INHERITED direction takes the next paragraph out. */
+type ParagraphBidi = TextDirectionProperties &
+  Pick<StructuredTextOverrideProperties, 'structuredTextBidiOverride'>;
 
 /** The alignment tags, each a paragraph in the node's direction, language and override (`:5681-5696`). */
 const ALIGNMENT_TAGS: ReadonlyMap<string, number> = new Map([
@@ -82,9 +77,9 @@ const STRUCTURED_TEXT_OPTIONS: ReadonlyMap<string, number> = new Map([
 
 /** A bare `[p]`: `push_paragraph(HORIZONTAL_ALIGNMENT_LEFT)` with the header defaults (`rich_text_label.h:849`). */
 const BARE_PARAGRAPH: ParagraphBidi = {
-  direction: TextDirection.TEXT_DIRECTION_INHERITED,
+  textDirection: TextDirection.TEXT_DIRECTION_INHERITED,
   language: '',
-  structuredTextParser: StructuredTextParser.STRUCTURED_TEXT_DEFAULT,
+  structuredTextBidiOverride: StructuredTextParser.STRUCTURED_TEXT_DEFAULT,
 };
 
 function isParagraphTag(tag: OpenBBCodeTag): boolean {
@@ -107,20 +102,14 @@ function optionOf(options: ReadonlyMap<string, string>, long: string, short: str
 
 /** A `[p …]` with options: INHERITED, the node language and DEFAULT unless an option sets one (`:5750-5844`). */
 function paragraphBidiOf(tag: OpenBBCodeTag, props: ParagraphProperties): ParagraphBidi {
-  if (tag.name !== 'p') {
-    return {
-      direction: props.textDirection,
-      language: props.language,
-      structuredTextParser: props.structuredTextBidiOverride,
-    };
-  }
+  if (tag.name !== 'p') return props;
   if (!tag.options) return BARE_PARAGRAPH;
   return {
-    direction:
+    textDirection:
       DIRECTION_OPTIONS.get(optionOf(tag.options, 'direction', 'dir')) ??
       TextDirection.TEXT_DIRECTION_INHERITED,
     language: tag.options.get('language') ?? tag.options.get('lang') ?? props.language,
-    structuredTextParser:
+    structuredTextBidiOverride:
       STRUCTURED_TEXT_OPTIONS.get(optionOf(tag.options, 'bidi_override', 'st')) ??
       StructuredTextParser.STRUCTURED_TEXT_DEFAULT,
   };
@@ -164,10 +153,11 @@ export function paragraphBidiOptions(
   return controlBidiOptions(
     {
       textDirection:
-        paragraphs.find((p) => p.direction !== TextDirection.TEXT_DIRECTION_INHERITED)?.direction ??
+        paragraphs.find((p) => p.textDirection !== TextDirection.TEXT_DIRECTION_INHERITED)?.textDirection ??
         props.textDirection,
       language: paragraphLanguage(tags, props),
-      structuredTextBidiOverride: paragraphs[0]?.structuredTextParser ?? props.structuredTextBidiOverride,
+      structuredTextBidiOverride:
+        paragraphs[0]?.structuredTextBidiOverride ?? props.structuredTextBidiOverride,
       structuredTextBidiOverrideOptions: props.structuredTextBidiOverrideOptions,
     },
     env

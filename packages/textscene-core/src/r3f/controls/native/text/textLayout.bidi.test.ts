@@ -9,6 +9,7 @@ import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import type { FontMetrics } from './fontMetrics';
 import { AutowrapMode, StructuredTextParser, TextDirection } from '../../../../godot/text/textServerEnums';
 import { parseStructuredText } from '../../../../godot/text/structuredText';
+import { visualChars } from './textLayout.testkit';
 
 const ADLAM_ALIF = '\u{1E900}';
 const ADLAM_DAALI = '\u{1E901}';
@@ -22,10 +23,6 @@ const BASE: ShapeTextOptions = {
 };
 
 /** The line's glyph characters, left to right. */
-function visualChars(line: TextLineLayout): string {
-  return line.glyphs.map((glyph) => glyph.char).join('');
-}
-
 function firstLine(text: string, options: Partial<ShapeTextOptions> = {}): TextLineLayout {
   return shapeText(text, { ...BASE, ...options }).lines[0]!;
 }

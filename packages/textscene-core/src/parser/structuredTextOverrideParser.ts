@@ -10,13 +10,16 @@ import { dropTrailingComma, splitTopLevel } from '../godot/string/string.js';
 import { StructuredTextParser } from '../godot/text/textServerEnums';
 import type { StructuredTextOverrideProperties } from '../godot/text/paragraphDirection';
 
+/** One shared empty list, so a node with no options keeps the same array across parses and a memo keyed on it holds. */
+const NO_OPTIONS: readonly (string | null)[] = [];
+
 /**
  * `structured_text_bidi_override_options`, which Godot writes as a bare `[…]`. A String or StringName
  * element is a string to `is_string()` (`text_server.cpp:2192`). Any other element keeps its place as null.
  */
-function parseStructuredTextOptions(value: string | undefined): (string | null)[] {
+function parseStructuredTextOptions(value: string | undefined): readonly (string | null)[] {
   const body = value === undefined ? null : arrayLiteralBody(value);
-  if (body === null) return [];
+  if (body === null) return NO_OPTIONS;
   return dropTrailingComma(splitTopLevel(body)).map((element) => {
     const trimmed = element.trim();
     return JACKETED_STRING_RE.test(trimmed) ? unquoteString(trimmed) : null;

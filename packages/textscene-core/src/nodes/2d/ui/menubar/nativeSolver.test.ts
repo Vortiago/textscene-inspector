@@ -18,6 +18,7 @@ import {
   type MenuBarTitle,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const MARGIN = 8; // content_margin 4, both sides.
 const FONT_HEIGHT = 23;
@@ -123,7 +124,7 @@ describe('layoutMenuBarItems', () => {
 describe('menuBarTitleShapes direction', () => {
   function visualTitle(props: Partial<MenuBarProperties>, overrides: Partial<SolveNode> = {}): string {
     const [title] = menuBarTitleShapes(node([popup('Menu', 'Hello!')], props, overrides), nativeTheme(1));
-    return title!.layout.lines[0]!.glyphs.map((glyph) => glyph.char).join('');
+    return visualChars(title!.layout.lines[0]!);
   }
 
   it('draws "!" first at RTL', () => {

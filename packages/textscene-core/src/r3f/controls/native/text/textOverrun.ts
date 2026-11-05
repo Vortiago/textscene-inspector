@@ -97,9 +97,8 @@ interface OverrunTrimOptions {
   ellipsisChar?: string;
   /**
    * `sd->para_direction == DIRECTION_RTL` (`text_server_adv.cpp:6053`): cut at the visual left, keep
-   * the logical start, and draw the ellipsis first. Label passes its line's inferred direction.
-   * Every other caller keeps the left-to-right trim, which Godot draws for an AUTO `TextParagraph`
-   * (measured in Godot: a Button and an ItemList keep the visual left part).
+   * the logical start, and draw the ellipsis first. Label passes its line's inferred direction. A
+   * `TextParagraph` control passes `trimsAtVisualLeft`: an AUTO paragraph keeps the visual left part.
    */
   isRtl?: boolean;
 }

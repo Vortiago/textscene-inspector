@@ -235,6 +235,11 @@ export interface TextLayoutResult {
   fontMetrics: FontMetrics;
 }
 
+/** Whether the first line of `layout` infers RTL, as a one-paragraph control's text reads it. False for no layout. */
+export function infersRtl(layout: TextLayoutResult | null): boolean {
+  return layout?.lines[0]?.isRtl === true;
+}
+
 /**
  * Re-wraps one shaped line as a one-line result drawn from y = 0; the caller's `<group>` supplies
  * the cumulative Y. It bypasses `shapeText`, so it echoes the parent's `fontMetrics` and baseline.

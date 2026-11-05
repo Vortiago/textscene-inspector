@@ -9,6 +9,7 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { vec2iOr } from '../../../parser/valueParsers';
 import { storedReal } from '../../../godot/math/real';
 import { perObject } from '../../../utils/perObject';
+import { parseLanguage } from '../../../parser/textDirectionParser';
 import type { Vector2 } from '../../../godot/math/vector';
 import { resourceContentKey } from '../../resourceContentKey';
 import { referencedFilePath, resolveReference, resolveReferencedResource } from '../../resolveReference';
@@ -205,8 +206,8 @@ export function isDrawablePrimitiveMesh(mesh: ResolvableResource): boolean {
 }
 
 /**
- * A key over the content of each resource the mesh's build reads, and over its font and the locale
- * the font shapes in, empty for a type that reads none. A resource that is not there, or not loaded, is part of the key as missing.
+ * A key over the content of each resource the mesh's build reads, and over its font and the language
+ * it shapes in, empty for a type that reads none. A resource that is not there, or not loaded, is part of the key as missing.
  * A mesh object holds its resources and its lookups for good, so a key is read once per object. A
  * mesh whose font awaits its outlines or metrics is read each time: its key moves when they settle.
  */
@@ -222,7 +223,7 @@ function readReferencesKey(mesh: ResolvableResource): string {
       const named = resolveReference(resource.data[property], resources, loadedFile);
       return named ? resourceContentKey(named.resource) : 'missing';
     }),
-    ...(font ? [textMeshFontKey(font), mesh.locale] : []),
+    ...(font ? [textMeshFontKey(font), parseLanguage(resource.data['language']) || mesh.locale] : []),
   ].join('|');
 }
 

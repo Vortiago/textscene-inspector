@@ -23,6 +23,7 @@ import {
   buttonLabelShape,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const minSize = buttonMinimumSize;
 
@@ -259,7 +260,7 @@ describe('buttonLabelShape — direction and language (button.cpp:564-569)', () 
   /** The shaped line's glyph characters, left to right. */
   function visual(props: Partial<ButtonProperties>, overrides: Partial<SolveNode> = {}): string {
     const layout = buttonLabelShape({ ...node(props), ...overrides }, ctx().theme)!;
-    return layout.lines[0]!.glyphs.map((glyph) => glyph.char).join('');
+    return visualChars(layout.lines[0]!);
   }
 
   it('shapes an RTL paragraph with `!` at the visual left', () => {

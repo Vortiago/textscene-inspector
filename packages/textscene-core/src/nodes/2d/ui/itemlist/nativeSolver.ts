@@ -39,7 +39,8 @@ import type { ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_LOWER_COLOR } from '../../../../godot/scene/theme';
-import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { AutowrapMode, OverrunBehavior, TextDirection } from '../../../../godot/text/textServerEnums';
+import { textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 
 // --- Enum literals ------------------------------------------------------
@@ -225,7 +226,7 @@ interface ItemTextShapeInput {
   fixedColumnWidth: number;
   /** `TextServer::OverrunBehavior`. Godot default 3 (OVERRUN_TRIM_ELLIPSIS, `item_list.h:131`). */
   overrunBehavior?: number;
-  /** The control's locale: an item's `language` is empty, so it takes `_get_locale()` (`item_list.cpp:45`). */
+  /** The control's `_get_locale()`, which an item's empty `language` takes (`item_list.cpp:45`). */
   locale: string;
 }
 
@@ -235,12 +236,14 @@ interface ItemTextShapeInput {
  * trimmed size after `text_buf->set_width`, so the overrun trim applies here, to
  * each line, as `TextParagraph::_shape_lines` does (`text_paragraph.cpp:257-270`).
  */
+/** An item's own `text_direction` and `language` (`item_list.h:73-74`), which no scene changes. */
+const ITEM_BIDI = { textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: '' };
+
 export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult | null {
   if (input.text.length === 0) return null;
   const widthPx = itemListShapeWidth(input.fixedColumnWidth);
-  // An item's own `text_direction` is AUTO (`item_list.h:74`), which no scene changes.
   const layout = shapeText(input.text, {
-    language: input.locale,
+    ...textBidiOptions(ITEM_BIDI, input.locale),
     fontSizePx: input.fontSizePx,
     boxWidthPx: widthPx,
     autowrapMode: itemListAutowrapMode(input.iconMode, input.maxTextLines),

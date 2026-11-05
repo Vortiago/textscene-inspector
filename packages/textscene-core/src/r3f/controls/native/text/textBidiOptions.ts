@@ -14,7 +14,7 @@ import type {
 export type TextBidiOptions = Pick<ShapeTextOptions, 'direction' | 'language' | 'bidiOverride'>;
 
 /** A type without the structured override shapes with none, as Button and MenuBar do. */
-type BidiProperties = TextDirectionProperties & Partial<StructuredTextOverrideProperties>;
+export type BidiProperties = TextDirectionProperties & Partial<StructuredTextOverrideProperties>;
 
 /** The layout direction and the locale a Control resolves (`SolveNode.rtl`, `SolveNode.locale`). */
 export interface ControlTextEnv {

@@ -364,6 +364,8 @@ function bbcodeOptions(splitBlock: readonly string[]): Map<string, string> {
 
 /** The tag a `[name...]` token opens, its options kept when it has any. */
 function openTag(name: string, value: string | undefined, token: string): OpenBBCodeTag {
+  // Options follow a space, so a token without one, as most are, skips the split.
+  if (!token.includes(' ')) return { name, value };
   const options = bbcodeOptions(splitUnquoted(token.slice(1, -1), ' '));
   return options.size > 0 ? { name, value, options } : { name, value };
 }

@@ -4,12 +4,11 @@ import { describe, expect, it } from 'vitest';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
 import { decodeTextMesh } from './decode';
 import { shapeTextMeshLines } from './textMeshLines';
+import { visualChars } from '../../../r3f/controls/native/text/textLayout.testkit';
 
 /** The first line's glyph characters, left to right, of a TextMesh with `raw` properties. */
 function visual(raw: Record<string, string>, locale = ''): string {
-  return shapeTextMeshLines(decodeTextMesh(raw), locale, OPEN_SANS_FONT_METRICS)
-    .lines[0]!.glyphs.map((glyph) => glyph.char)
-    .join('');
+  return visualChars(shapeTextMeshLines(decodeTextMesh(raw), locale, OPEN_SANS_FONT_METRICS).lines[0]!);
 }
 
 describe('shapeTextMeshLines', () => {

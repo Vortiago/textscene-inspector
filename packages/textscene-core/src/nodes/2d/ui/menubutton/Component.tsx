@@ -17,6 +17,7 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import {
+  infersRtl,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
@@ -86,6 +87,7 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
         textNaturalSize: layout
           ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
           : { x: 0, y: 0 },
+        isTextRtl: infersRtl(layout),
       }),
     [
       rect.w,

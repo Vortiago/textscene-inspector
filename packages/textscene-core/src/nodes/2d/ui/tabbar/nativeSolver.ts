@@ -358,11 +358,10 @@ export function shapeTabLabel(
 ): TextLayoutResult {
   return shapeText(text, {
     ...controlBidiOptions(TAB_TITLE_BIDI, env),
-    fontSizePx: font.fontSizePx,
+    ...font,
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx: 0,
-    fontMetrics: font.fontMetrics,
   });
 }
 
