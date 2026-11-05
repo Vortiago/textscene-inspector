@@ -35,7 +35,7 @@ the Glyphs behaviours keep the full wrap and skip glyphs (`:943-947,1466`). The 
 character of the text, including an edge space that a wrap trims (`:8017-8033`). The line a paragraph tag
 ends counts no character (`:4097-4103`).
 
-`scroll_following_visible_characters` runs as the scene loads, before any line exists, so it scrolls to
+`scroll_following_visible_characters` runs as the scene loads, before any line exists. It scrolls to
 the scroll bar's default max, 100, and shows the bar over text that fits (`:2659-2667,5209-5221`).
 `scroll_active` false hides the bar and keeps the scroll. `scroll_following` scrolls the same way
 without the bar (`:3827-3830`).
