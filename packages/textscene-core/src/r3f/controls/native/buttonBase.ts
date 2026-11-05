@@ -13,7 +13,8 @@
 import { multiplyModulate } from '../../canvasItemModulate';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
-import { shapeText, type TextLayoutResult } from './text/textLayout';
+import { drawnLinesInBox, textParagraphLineShiftPx } from './text/lineDrawClip';
+import { shapeText, type TextLayoutResult, type TextLineLayout } from './text/textLayout';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { type Rgba } from '../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
@@ -141,8 +142,10 @@ interface ButtonIconLayout {
 }
 
 interface ButtonTextLayout {
-  /** The paragraph box's top-left, local Godot px, for `<TextRun>` to anchor each line's baseline from. */
+  /** The widest line's top-left, local Godot px, for `<TextRun>` to anchor each line's baseline from. */
   offset: Vector2;
+  /** The paragraph box's left edge before alignment: margin and a LEFT icon's push. `buttonDrawnLabel` offsets lines from it. */
+  boxLeftPx: number;
 }
 
 interface ButtonContentLayout {
@@ -267,19 +270,19 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
 
   let textLayout: ButtonTextLayout | null = null;
   if (hasText) {
-    let textOffsetX = styleMargin.left;
+    let boxLeftPx = styleMargin.left;
     if (iconLayout && iconAlign === H_LEFT) {
       // Only a LEFT icon pushes the text right. A RIGHT or CENTER icon has
       // already narrowed `drawableWidth`.
-      textOffsetX += customElementSize.x - drawableWidth;
+      boxLeftPx += customElementSize.x - drawableWidth;
     }
-    textOffsetX += buttonTextAlignShiftPx(textNaturalSize.x, drawableWidth, textAlign);
+    const textOffsetX = boxLeftPx + buttonTextAlignShiftPx(textNaturalSize.x, drawableWidth, textAlign);
 
     let textOffsetY = centredTextTopPx(drawableHeight, textNaturalSize.y, styleMargin.top);
     if (iconLayout && verticalIconAlignment === V_TOP) {
       textOffsetY += customElementSize.y - drawableHeight;
     }
-    textLayout = { offset: { x: textOffsetX, y: textOffsetY } };
+    textLayout = { offset: { x: textOffsetX, y: textOffsetY }, boxLeftPx };
   }
 
   return { icon: iconLayout, text: textLayout, drawableSize: { x: drawableWidth, y: drawableHeight } };
@@ -292,10 +295,26 @@ export function swapAlignmentSide(alignment: number): number {
   return alignment;
 }
 
+/** `button.cpp:428,432`: the paragraph box width, the drawable width ceiled to a whole pixel. */
+function textBufWidthPx(drawableWidthPx: number): number {
+  return Math.ceil(Math.max(1, drawableWidthPx));
+}
+
 /**
- * A Button-family label's shift in its drawable box: `button.cpp:437-441`, then
+ * The ceiling's leftover (`button.cpp:437-439`): only CENTER centres the whole paragraph box in the
+ * drawable width, and every other alignment starts the box at its left edge.
+ */
+function textBoxOffsetPx(drawableWidthPx: number, alignment: number): number {
+  if (alignment !== H_CENTER) return 0;
+  return (drawableWidthPx - textBufWidthPx(drawableWidthPx)) / 2;
+}
+
+/**
+ * A Button-family line's shift in its drawable box: `button.cpp:437-441`, then
  * `TextParagraph::draw`'s alignment (`text_paragraph.cpp:887-922`). Every arm
  * measures against the ceiled paragraph width (`:437`), not the drawable width.
+ * An overflowing CENTER line right-hugs only an inferred RTL direction (`:902`),
+ * which this shaper never produces.
  * @param contentWidthPx `shaped_text_get_width`, ceiled (`text_server_adv.cpp:7561-7570`).
  */
 export function buttonTextAlignShiftPx(
@@ -303,20 +322,29 @@ export function buttonTextAlignShiftPx(
   drawableWidthPx: number,
   alignment: number
 ): number {
-  const textBufWidthPx = Math.ceil(Math.max(1, drawableWidthPx));
-  switch (alignment) {
-    case H_CENTER: {
-      // The ceiling's leftover (`:439`), then a floored half
-      // (`text_paragraph.cpp:904`). An overflowing line (`:902`) right-hugs only
-      // an inferred RTL direction, which this shaper never produces.
-      const boxOffsetPx = (drawableWidthPx - textBufWidthPx) / 2;
-      if (contentWidthPx > textBufWidthPx) return boxOffsetPx;
-      return boxOffsetPx + Math.floor((textBufWidthPx - contentWidthPx) / 2);
-    }
-    case H_RIGHT:
-      return textBufWidthPx - contentWidthPx;
-    case H_LEFT:
-    default:
-      return 0;
-  }
+  return (
+    textBoxOffsetPx(drawableWidthPx, alignment) +
+    textParagraphLineShiftPx(contentWidthPx, textBufWidthPx(drawableWidthPx), alignment, false)
+  );
+}
+
+/** A label line cut to its paragraph box, with its x offset from `ButtonTextLayout.boxLeftPx`. */
+export interface ButtonDrawnLine {
+  line: TextLineLayout;
+  offsetXPx: number;
+}
+
+/**
+ * The label lines as `TextParagraph::draw` paints them in the Button's paragraph box, so
+ * an overlong line or wrapped word stays inside it. Only `<Button>` calls it so far.
+ */
+export function buttonDrawnLabel(
+  lines: readonly TextLineLayout[],
+  drawableWidthPx: number,
+  alignment: number
+): ButtonDrawnLine[] {
+  const boxOffsetPx = textBoxOffsetPx(drawableWidthPx, alignment);
+  return drawnLinesInBox(lines, textBufWidthPx(drawableWidthPx), alignment, false).map(
+    ({ line, shiftPx }) => ({ line, offsetXPx: boxOffsetPx + shiftPx })
+  );
 }

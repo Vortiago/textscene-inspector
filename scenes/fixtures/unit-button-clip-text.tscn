@@ -1,0 +1,50 @@
+; The one variable: a label line wider than its paragraph box. Button draws through
+; TextParagraph::draw, which skips glyphs left of clip_l and stops at the first glyph past clip_r
+; (text_paragraph.cpp:925-931). The three clip_text Buttons share one 60 px box and differ only in
+; alignment; the last wraps "supercalifragilistic go" at autowrap_mode = 2 around a word wider than
+; its box. A label that fits never cuts, so unit-button and unit-button-autowrap show no change.
+
+[gd_scene format=3 uid="uid://unit_button_clip_text"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Left" type="Button" parent="."]
+layout_mode = 1
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 76.0
+offset_bottom = 48.0
+text = "alpha bravo"
+clip_text = true
+alignment = 0
+
+[node name="Center" type="Button" parent="."]
+layout_mode = 1
+offset_left = 16.0
+offset_top = 64.0
+offset_right = 76.0
+offset_bottom = 96.0
+text = "alpha bravo"
+clip_text = true
+
+[node name="Right" type="Button" parent="."]
+layout_mode = 1
+offset_left = 400.0
+offset_top = 16.0
+offset_right = 460.0
+offset_bottom = 48.0
+text = "alpha bravo"
+clip_text = true
+alignment = 2
+
+[node name="Wrapped" type="Button" parent="."]
+layout_mode = 1
+offset_left = 200.0
+offset_top = 16.0
+offset_right = 260.0
+offset_bottom = 96.0
+text = "supercalifragilistic go"
+autowrap_mode = 2

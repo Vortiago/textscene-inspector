@@ -219,11 +219,11 @@ describe('<Button> (isolated painter contract)', () => {
 
   it('text_overrun_behavior trims the label to the content box, minus the style margins (button.cpp:424)', async () => {
     const narrow: Rect2 = { x: 0, y: 0, w: 30, h: 32 };
-    const untrimmed = await ReactThreeTestRenderer.create(
+    const whole = await ReactThreeTestRenderer.create(
       <Button
         {...painterEnv()}
         solveNode={solveNode({ text: 'AAAAAAAAAAAA' })}
-        rect={narrow}
+        rect={{ x: 0, y: 0, w: 300, h: 32 }}
         renderOrder={0}
       />
     );
@@ -236,7 +236,38 @@ describe('<Button> (isolated painter contract)', () => {
       />
     );
     const quadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
-    expect(quadCount(trimmed)).toBeLessThan(quadCount(untrimmed));
+    expect(quadCount(trimmed)).toBeLessThan(quadCount(whole));
+  });
+});
+
+describe('<Button> — the label is cut to its paragraph box whatever clip_text says (TextParagraph::draw, text_paragraph.cpp:925-931)', () => {
+  afterEach(() => {
+    controlSolverRegistry.clear();
+  });
+
+  const glyphQuadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
+
+  async function render(properties: Partial<ButtonProperties>, rect: Rect2) {
+    return ReactThreeTestRenderer.create(
+      <Button
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'alpha bravo', ...properties })}
+        rect={rect}
+        renderOrder={0}
+      />
+    );
+  }
+
+  it('draws fewer glyphs than the whole label when the box is narrower than the text', async () => {
+    const whole = await render({}, { x: 0, y: 0, w: 140, h: 32 });
+    const clipped = await render({}, { x: 0, y: 0, w: 60, h: 32 });
+    expect(glyphQuadCount(clipped)).toBeLessThan(glyphQuadCount(whole));
+  });
+
+  it('draws the whole label when the box fits it', async () => {
+    const fitting = await render({ clipText: true }, { x: 0, y: 0, w: 140, h: 32 });
+    const unclipped = await render({}, { x: 0, y: 0, w: 140, h: 32 });
+    expect(glyphQuadCount(fitting)).toBe(glyphQuadCount(unclipped));
   });
 });
 

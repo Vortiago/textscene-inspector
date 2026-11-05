@@ -8,7 +8,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
-import type { TextLineLayout } from './textLayout';
+import { shapedTextSizeWidthPx, type TextLineLayout } from './textLayout';
 
 /**
  * One line's x shift inside its box, as `TextParagraph::draw` applies it while the box has a width
@@ -58,4 +58,28 @@ export function clipLineToDrawBox(line: TextLineLayout, boxWidthPx: number, shif
   }
   if (kept.length === line.glyphs.length) return line;
   return { ...line, glyphs: kept, text: kept.map((glyph) => glyph.char).join('') };
+}
+
+/** A line cut to its paragraph box, with the alignment shift `TextParagraph::draw` gave it. */
+export interface DrawnLine {
+  line: TextLineLayout;
+  shiftPx: number;
+}
+
+/**
+ * Each line as `TextParagraph::draw` paints it in a box of `boxWidthPx`: shifted by its own
+ * alignment (`shaped_text_get_width` is ceiled) and cut with `clipLineToDrawBox`.
+ *
+ * @canonical A paragraph's lines, each shifted and cut to the paragraph box as TextParagraph draws them
+ */
+export function drawnLinesInBox(
+  lines: readonly TextLineLayout[],
+  boxWidthPx: number,
+  alignment: number,
+  rtl: boolean
+): DrawnLine[] {
+  return lines.map((line) => {
+    const shiftPx = textParagraphLineShiftPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, alignment, rtl);
+    return { line: clipLineToDrawBox(line, boxWidthPx, shiftPx), shiftPx };
+  });
 }

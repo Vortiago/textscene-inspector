@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import {
+  buttonDrawnLabel,
   fitIconSize,
   layoutButtonContent,
   pickButtonStyleBox,
@@ -15,6 +16,7 @@ import {
   type ButtonContentInput,
 } from './buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
+import type { TextLineLayout } from './text/textLayout';
 
 const { HORIZONTAL_ALIGNMENT_CENTER, HORIZONTAL_ALIGNMENT_LEFT, HORIZONTAL_ALIGNMENT_RIGHT } =
   HorizontalAlignment;
@@ -411,5 +413,50 @@ describe('layoutButtonContent — RTL swaps the icon side', () => {
     const { icon, text } = layoutButtonContent({ ...WITH_ICON, iconAlignment: HORIZONTAL_ALIGNMENT_CENTER });
     expect(icon).toEqual({ rect: { x: 52, y: 8, w: 16, h: 16 } });
     expect(text!.offset.x).toBe(35);
+  });
+});
+
+/** `a`..`j` and `klmno`, each glyph a 10 px advance at pen x 0, 10, 20, and so on. */
+function lineOf(text: string): TextLineLayout {
+  const glyphs = [...text].map((char, index) => ({ char, x: index * 10, advance: 10, glyph: null }));
+  return { text, glyphs, widthPx: glyphs.length * 10 };
+}
+
+describe('buttonDrawnLabel — each line cut to the paragraph box as TextParagraph::draw cuts it', () => {
+  const WIDE = lineOf('abcdefghij');
+
+  it('LEFT keeps the leading glyphs that fit the box', () => {
+    const [drawn] = buttonDrawnLabel([WIDE], 35, HORIZONTAL_ALIGNMENT_LEFT);
+    expect(drawn!.line.text).toBe('abc');
+    expect(drawn!.offsetXPx).toBe(0);
+  });
+
+  it('CENTER starts an overflowing line at the box edge, so it cuts as LEFT does', () => {
+    const [drawn] = buttonDrawnLabel([WIDE], 35, HORIZONTAL_ALIGNMENT_CENTER);
+    expect(drawn!.line.text).toBe('abc');
+    expect(drawn!.offsetXPx).toBe(0);
+  });
+
+  it('CENTER keeps the ceiling leftover of a fractional box as the line offset', () => {
+    const [drawn] = buttonDrawnLabel([WIDE], 34.5, HORIZONTAL_ALIGNMENT_CENTER);
+    expect(drawn!.offsetXPx).toBe(-0.25);
+  });
+
+  it('RIGHT keeps the trailing glyphs, placed at the trailing edge', () => {
+    const [drawn] = buttonDrawnLabel([WIDE], 35, HORIZONTAL_ALIGNMENT_RIGHT);
+    expect(drawn!.line.text).toBe('hij');
+    expect(drawn!.offsetXPx).toBe(-65);
+  });
+
+  it('returns a line that fits whole, centred by a floored half of the slack', () => {
+    const line = lineOf('abc');
+    const [drawn] = buttonDrawnLabel([line], 45, HORIZONTAL_ALIGNMENT_CENTER);
+    expect(drawn!.line).toBe(line);
+    expect(drawn!.offsetXPx).toBe(7);
+  });
+
+  it('cuts each line of a wrapped label on its own', () => {
+    const drawn = buttonDrawnLabel([lineOf('abcdef'), lineOf('gh')], 35, HORIZONTAL_ALIGNMENT_LEFT);
+    expect(drawn.map((entry) => entry.line.text)).toEqual(['abc', 'gh']);
   });
 });
