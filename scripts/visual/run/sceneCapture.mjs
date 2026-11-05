@@ -6,6 +6,7 @@
 
 import {
   clearDiagnostics,
+  errorReport,
   loggedErrors,
   openScene,
   setDisplayToggle,
@@ -77,13 +78,12 @@ export async function captureScene(pageState, baseUrl, scene) {
 
   const result = await settleCanvas(page, canvas, { screenshotTimeout: scene.settleTimeout });
   if (!result.buffer) return result;
-  const errors = loggedErrors(diagnostics);
-  if (errors.length > 0) {
+  if (loggedErrors(diagnostics).length > 0) {
     // A console error in a settled, plausible capture is still a broken render: pixels cannot see a
     // swallowed resource failure that leaves the previous frame on screen.
     return {
       buffer: null,
-      reason: `console error(s) logged during capture: ${errors.join(' | ')}`,
+      reason: `console error(s) logged during capture: ${errorReport(diagnostics)}`,
       status: 'console-error',
     };
   }

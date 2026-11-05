@@ -20,7 +20,12 @@ export {
   windowForCanvas,
 } from './preview/appContract.mjs';
 export { createCaptureContext, installStyle, paintedOutChromeCss } from './preview/captureContext.mjs';
-export { attachDiagnostics, clearDiagnostics, loggedErrors } from './preview/pageDiagnostics.mjs';
+export {
+  attachDiagnostics,
+  clearDiagnostics,
+  errorReport,
+  loggedErrors,
+} from './preview/pageDiagnostics.mjs';
 export { readViewportMode, setDisplayToggle } from './preview/viewportProbes.mjs';
 export { withPreviewBrowser } from './preview/session.mjs';
 export { targetShooter } from './preview/targetShot.mjs';
