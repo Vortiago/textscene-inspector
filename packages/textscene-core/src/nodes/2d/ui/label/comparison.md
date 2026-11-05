@@ -167,6 +167,8 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 
 - **Not drawn** Arabic letters draw in their isolated forms, since the shaper does not join them.
 - **Approximated** At an instance, a variable font keeps its default glyphs where its `GSUB` feature variations swap them.
+- **Approximated** At an instance, the `GPOS` kerning reads the `kern` lookups of every script, where Godot reads those of each script run.
+- **Approximated** At an instance, the `GPOS` kerning pairs adjacent characters only, where Godot also kerns across a glyph that a lookup flag skips.
 - **Approximated** A scene font's glyphs draw with the browser's hinting, not FreeType's light
   hinting (`font.h:203`, `text_server_adv.cpp:1276-1277`), so a cap can sit 1 px lower here.
 - **Not drawn** The `fallbacks` of a BMFont: a missing character draws as a hex-code box (`text_server_adv.cpp:6810-6928`, #1298).

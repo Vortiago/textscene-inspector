@@ -442,7 +442,5 @@ export function getFontKerningAdjustmentPx(
 function instanceKerningUnits(metrics: FontMetrics, a: string, b: string): number | null {
   const { outlines, opentype } = metrics;
   if (!outlines?.kerningAtInstance || !isInstanced(opentype)) return null;
-  const left = outlines.glyphIndex(a.codePointAt(0)!);
-  const right = outlines.glyphIndex(b.codePointAt(0)!);
-  return left === 0 || right === 0 ? null : outlines.kerningAtInstance(left, right, opentype);
+  return outlines.kerningAtInstance(a.codePointAt(0)!, b.codePointAt(0)!, opentype);
 }

@@ -174,11 +174,15 @@ describe('withVariation at a variable-font instance', () => {
   /** At the font's units per em, a kerning in px equals the kerning in design units. */
   const UNIT_SIZE_PX = METRICS.unitsPerEm;
   /** Outlines whose default instance is wght 400, with A at glyph 1, V at glyph 2 and no glyph for any other character. */
+  const glyphIndex = (codePoint: number) => ({ A: 1, V: 2 })[String.fromCodePoint(codePoint)] ?? 0;
   const variableOutlines = {
-    glyphIndex: (codePoint: number) => ({ A: 1, V: 2 })[String.fromCodePoint(codePoint)] ?? 0,
+    glyphIndex,
     glyphContours: () => null,
     drawsInstance: (opentype: ReadonlyMap<number | string, number>) => opentype.get(WGHT) !== 400,
-    kerningAtInstance: (left: number, right: number) => left * 10 + right,
+    kerningAtInstance: (leftCodePoint: number, rightCodePoint: number) => {
+      const [left, right] = [glyphIndex(leftCodePoint), glyphIndex(rightCodePoint)];
+      return left === 0 || right === 0 ? null : left * 10 + right;
+    },
   };
   const kerningPx = (face: FontMetrics, a: string, b: string) =>
     getFontKerningAdjustmentPx(face, a, b, UNIT_SIZE_PX);

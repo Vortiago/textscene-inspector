@@ -35,7 +35,12 @@ export interface Subtable {
 
 export interface Lookup {
   readonly subtables: readonly Subtable[];
+  /** The lookup flag, as HarfBuzz keeps it in `lookup_props`: the mark filtering set in its high 16 bits. */
+  readonly props: number;
 }
+
+/** The bit of a lookup flag that names a mark filtering set after the subtable offsets. */
+export const USE_MARK_FILTERING_SET = 0x10;
 
 /**
  * A record of `FeatureVariations`: whether its conditions hold at the default instance, which
@@ -133,12 +138,16 @@ function readLookups(dv: DataView, list: number, extensionType: number): Lookup[
   return Array.from({ length: u16(dv, list) }, (_, i) => {
     const lookup = list + u16(dv, list + 2 + 2 * i);
     const type = u16(dv, lookup);
-    const subtables = countedU16Values(dv, lookup + 4).map((offset): Subtable => {
+    const flag = u16(dv, lookup + 2);
+    const offsets = countedU16Values(dv, lookup + 4);
+    const subtables = offsets.map((offset): Subtable => {
       const at = lookup + offset;
       if (type !== extensionType) return { type, offset: at };
       return { type: u16(dv, at + 2), offset: at + dv.getUint32(at + 4, false) };
     });
-    return { subtables };
+    // `Lookup::get_props` (`hb-ot-layout-common.hh:1325-1334`).
+    const markFilteringSet = flag & USE_MARK_FILTERING_SET ? u16(dv, lookup + 6 + 2 * offsets.length) : 0;
+    return { subtables, props: flag + markFilteringSet * 0x10000 };
   });
 }
 

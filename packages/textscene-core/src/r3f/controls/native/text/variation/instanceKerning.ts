@@ -1,8 +1,8 @@
 /**
  * The pair kerning of a variable font's `GPOS` `kern` feature at one instance, as HarfBuzz applies it
- * (`PairPosFormat1`, `PairPosFormat2`): in each lookup, the first subtable that holds the pair moves
- * the pen by the x advance of both value records, each with the delta its `VariationIndex` device
- * table takes from the `GDEF` item variation store at the instance.
+ * (`PairPosFormat1`, `PairPosFormat2`): in each lookup whose flag matches both glyphs, the first
+ * subtable that holds the pair moves the pen by the x advance of both value records, each with the
+ * delta its `VariationIndex` device table takes from the `GDEF` item variation store at the instance.
  *
  * Portions ported from HarfBuzz ("Old MIT" licence).
  * Copyright (C) 2007-2026 by Behdad Esfahbod and the HarfBuzz contributors.
@@ -20,28 +20,17 @@ import {
   type LayoutTable,
   type PairValueRecord,
 } from '../autofit/openTypeLayout';
-import { tableFits, type SfntFile } from '../sfntTables';
+import { gdefVariationStore, lookupGlyphMatcher, type LookupGlyph } from '../autofit/openTypeGdef';
+import type { SfntFile } from '../sfntTables';
 import { readFvarAxes } from './fvar';
-import { itemDeltaFixed, readItemVariationStore, type ItemVariationStore } from './itemVariationStore';
+import { itemDeltaFixed, type ItemVariationStore } from './itemVariationStore';
 
 /** The kerning of a pair of glyphs in design units, with the fraction of its deltas. */
-export type PairKerningReader = (left: number, right: number) => number;
+export type PairKerningReader = (left: LookupGlyph, right: LookupGlyph) => number;
 
 const VALUE_X_ADVANCE = 0x4;
 const VALUE_X_ADVANCE_DEVICE = 0x40;
 const VARIATION_INDEX_FORMAT = 0x8000;
-/** `GDEF` 1.3 keeps the offset of its item variation store at this byte. */
-const GDEF_VARIATION_STORE_OFFSET = 14;
-const GDEF_VERSION_1_3_MINOR = 3;
-
-/** The `GDEF` item variation store, or null for a font whose `GDEF` holds none. */
-function gdefVariationStore(sfnt: SfntFile, axisCount: number): ItemVariationStore | null {
-  const gdef = sfnt.tables.get('GDEF');
-  if (!gdef || !tableFits(sfnt.dv, gdef, GDEF_VARIATION_STORE_OFFSET + 4)) return null;
-  if (u16(sfnt.dv, gdef.offset) !== 1 || u16(sfnt.dv, gdef.offset + 2) < GDEF_VERSION_1_3_MINOR) return null;
-  const storeOffset = sfnt.dv.getUint32(gdef.offset + GDEF_VARIATION_STORE_OFFSET, false);
-  return storeOffset === 0 ? null : readItemVariationStore(sfnt.dv, gdef.offset + storeOffset, axisCount);
-}
 
 /**
  * The lookups of the `kern` feature in every script. A `FeatureVariations` record that swaps them at
@@ -57,7 +46,8 @@ const fieldOffset = (format: number, flag: number): number => valueRecordSize(fo
 
 /**
  * The x advance a value record adds, in design units: its own, and the delta of its device table at
- * `normalized` when that table is a `VariationIndex`.
+ * `normalized` when that table is a `VariationIndex`. A hinting device adds nothing: `hb-ft` sets no
+ * ppem (`hb-ft.cc:1365-1368`), and `HintingDevice::get_delta` gives 0 at a ppem of 0 (`hb-ot-layout-common.hh:4840-4849`).
  */
 function xAdvanceUnits(
   dv: DataView,
@@ -86,17 +76,22 @@ export function instanceKerningReader(
   const axes = readFvarAxes(sfnt);
   if (!gpos || !axes) return null;
   const table = readLayoutTable(sfnt.dv, gpos.offset, gpos.length, false);
-  const pairSubtables = kernLookups(table).map((lookup) =>
-    (table.lookups[lookup]?.subtables ?? []).filter((subtable) => subtable.type === GposType.PAIR)
-  );
-  if (pairSubtables.every((subtables) => subtables.length === 0)) return null;
+  const pairLookups = kernLookups(table).map((index) => {
+    const lookup = table.lookups[index];
+    const subtables = (lookup?.subtables ?? []).filter((subtable) => subtable.type === GposType.PAIR);
+    return { props: lookup?.props ?? 0, subtables };
+  });
+  if (pairLookups.every(({ subtables }) => subtables.length === 0)) return null;
   const store = gdefVariationStore(sfnt, axes.length);
+  const matches = lookupGlyphMatcher(sfnt);
   const { dv } = sfnt;
   return (normalized) => (left, right) => {
     let units = 0;
-    for (const subtables of pairSubtables) {
+    for (const { props, subtables } of pairLookups) {
+      // A lookup kerns neither glyph that its flag skips: it skips the left one, and pairs the left one past the right one.
+      if (!matches(left, props) || !matches(right, props)) continue;
       for (const { offset } of subtables) {
-        const records = pairValueRecords(dv, offset, left, right);
+        const records = pairValueRecords(dv, offset, left.glyph, right.glyph);
         if (!records) continue;
         units += records.reduce((sum, record) => sum + xAdvanceUnits(dv, record, store, normalized), 0);
         break;

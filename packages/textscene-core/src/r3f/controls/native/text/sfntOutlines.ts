@@ -42,11 +42,16 @@ export interface SfntOutlines {
    */
   advanceAtInstance?(glyphIndex: number, fontSizePx: number, opentype: OpentypeCoordinates): number | null;
   /**
-   * The `GPOS` kerning in design units of a pair of glyphs, as HarfBuzz shapes it at the axis values
-   * of `opentype`: null where they draw the default instance, or the font has no `kern` feature to
-   * read. Absent for outlines with no `GPOS` variation to read.
+   * The `GPOS` kerning in design units of a pair of characters, as HarfBuzz shapes it at the axis
+   * values of `opentype`: null where they draw the default instance, where the font has no `kern`
+   * feature to read, and for a character it has no glyph for. Absent for outlines with no `GPOS`
+   * variation to read.
    */
-  kerningAtInstance?(left: number, right: number, opentype: OpentypeCoordinates): number | null;
+  kerningAtInstance?(
+    leftCodePoint: number,
+    rightCodePoint: number,
+    opentype: OpentypeCoordinates
+  ): number | null;
   /** Whether the axis values of `opentype` draw an instance other than the default. */
   drawsInstance?(opentype: OpentypeCoordinates): boolean;
 }
@@ -104,33 +109,47 @@ async function kerningReaderOf(sfnt: SfntFile): Promise<InstanceKerningReader | 
   };
 }
 
+/** The kerning of a pair of characters at one instance, or null for a character the font has no glyph for. */
+type CharacterKerning = (leftCodePoint: number, rightCodePoint: number) => number | null;
+
 /**
  * The kerning of each pair at an instance, kept for each axis values as a layout asks for the same
  * pair again and again. A pair that a corrupt table puts past the buffer kerns 0.
  */
 function instanceKerningOf(
   sfnt: SfntFile,
+  glyphIndex: (codePoint: number) => number,
   kerningAt: InstanceKerningReader | null
 ): SfntOutlines['kerningAtInstance'] {
   if (!kerningAt) return undefined;
-  const kept = new WeakMap<OpentypeCoordinates, PairKerningReader | null>();
-  return (left, right, opentype) => {
+  const kept = new WeakMap<OpentypeCoordinates, CharacterKerning | null>();
+  return (leftCodePoint, rightCodePoint, opentype) => {
     if (!kept.has(opentype)) {
       const instance = orOnRangeError(() => fontInstanceOf(sfnt, opentype), null);
       const kerningOf = instance && kerningAt(instance.normalized);
-      kept.set(opentype, kerningOf && keptPairs(kerningOf));
+      kept.set(opentype, kerningOf && keptPairs(glyphIndex, kerningOf));
     }
-    return kept.get(opentype)?.(left, right) ?? null;
+    return kept.get(opentype)?.(leftCodePoint, rightCodePoint) ?? null;
   };
 }
 
-/** `kerningOf` with the answer for each pair kept, and 0 for a pair a corrupt table puts past the buffer. */
-function keptPairs(kerningOf: PairKerningReader): PairKerningReader {
-  const kept = new Map<number, number>();
-  return (left, right) => {
-    const pair = left * 0x10000 + right;
-    let units = kept.get(pair);
-    if (units === undefined) kept.set(pair, (units = orOnRangeError(() => kerningOf(left, right), 0)));
+/** One more than the largest code point, so two code points make one pair number. */
+const CODE_POINT_COUNT = 0x110000;
+
+/** `kerningOf` for characters, with the answer for each pair kept. */
+function keptPairs(
+  glyphIndex: (codePoint: number) => number,
+  kerningOf: PairKerningReader
+): CharacterKerning {
+  const kept = new Map<number, number | null>();
+  return (leftCodePoint, rightCodePoint) => {
+    const pair = leftCodePoint * CODE_POINT_COUNT + rightCodePoint;
+    if (kept.has(pair)) return kept.get(pair)!;
+    const left = { glyph: glyphIndex(leftCodePoint), codePoint: leftCodePoint };
+    const right = { glyph: glyphIndex(rightCodePoint), codePoint: rightCodePoint };
+    const units =
+      left.glyph === 0 || right.glyph === 0 ? null : orOnRangeError(() => kerningOf(left, right), 0);
+    kept.set(pair, units);
     return units;
   };
 }
@@ -214,15 +233,16 @@ function readSfntOutlines(
   const lookup = orOnRangeError(() => cmapLookup(sfnt.dv, cmap.offset), null);
   if (!lookup) return null;
 
+  const glyphIndex = (codePoint: number): number => orOnRangeError(() => lookup(codePoint), 0);
   return {
-    glyphIndex: (codePoint) => orOnRangeError(() => lookup(codePoint), 0),
+    glyphIndex,
     advanceAtInstance: instanceAdvanceReader(sfnt),
     glyphContours: (glyphIndex, fontSizePx, variation) =>
       orOnRangeError(() => {
         const outline = outlineOf(glyphIndex, fontSizePx, instanceOf(sfnt, variation));
         return outline && variedContours(outline, fontSizePx, variation);
       }, null),
-    kerningAtInstance: instanceKerningOf(sfnt, kerningAt),
+    kerningAtInstance: instanceKerningOf(sfnt, glyphIndex, kerningAt),
     drawsInstance: (opentype) => orOnRangeError(() => fontInstanceOf(sfnt, opentype) !== null, false),
   };
 }
