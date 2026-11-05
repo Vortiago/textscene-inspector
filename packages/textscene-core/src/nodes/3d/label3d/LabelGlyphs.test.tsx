@@ -138,8 +138,9 @@ describe('<LabelGlyphs>', () => {
     // Both sizes are above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE, so each advance
     // rounds to a whole pixel with the remainder carried (`text_server_adv.cpp:7079-7084`),
     // independently at each size. Doubling the size does not exactly double the
-    // pen extent: the residual is bounded by the rounding.
-    expect(Math.abs(largeSize.x - smallSize.x * 2)).toBeLessThan(2);
+    // pen extent: the residual is bounded by the rounding. The quad also reaches one line pitch
+    // past each end for the side bearings, each rounded to a whole pixel, which adds up to 2 px more.
+    expect(Math.abs(largeSize.x - smallSize.x * 2)).toBeLessThan(5);
     // The quad's vertical anti-aliasing pad is fixed, so the content box is what
     // grows, and only near-proportionally: ascent and descent each ceil to a
     // whole pixel independently at each size (`text_server_adv.cpp:1515-1516`).

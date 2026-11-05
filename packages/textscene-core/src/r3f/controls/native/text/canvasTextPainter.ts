@@ -101,10 +101,10 @@ export function computeCanvasTextCanvasLayout(
 }
 
 /**
- * The span of the ink of the glyphs: their pen boxes, one line pitch wider on each side for the side
- * bearings, and within `[0, max(layout.widthPx, end of the last glyph)]` as a raster of the whole
- * line. The run of a fallback face keeps its glyphs at their places on the line (`faceLayouts.ts`),
- * so its raster spans them alone. A layout with no glyph spans its width.
+ * The span of the ink of the glyphs: their pen boxes, one ink height wider on each side, as Godot draws
+ * each glyph quad whole wherever its side bearing reaches (#1376). The run of a fallback face keeps
+ * its glyphs at their places on the line (`faceLayouts.ts`), so its raster spans them alone. A layout
+ * with no glyph spans its width.
  */
 function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: number } {
   let startPx = Infinity;
@@ -117,10 +117,7 @@ function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: numb
   }
   if (startPx === Infinity) return { startPx: 0, endPx: layout.widthPx };
   const bearingPx = inkHeightPx(layout);
-  return {
-    startPx: Math.max(0, startPx - bearingPx),
-    endPx: Math.min(Math.max(layout.widthPx, endPx), endPx + bearingPx),
-  };
+  return { startPx: startPx - bearingPx, endPx: endPx + bearingPx };
 }
 
 /**
