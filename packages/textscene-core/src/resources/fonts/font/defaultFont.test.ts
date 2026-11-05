@@ -108,9 +108,8 @@ describe('withDefaultFonts — identity', () => {
   it('resolves a default that two fonts reach to one object, so a cache keyed on it keeps its hits', () => {
     const sharedDefault: FontVariationResource = { ...variation(null), fallbacks: [systemFont()] };
     const defaults: DefaultFonts = { variation: [sharedDefault], system: [SYSTEM_DEFAULT] };
-    const [first, second] = [variation(null), variation(null, '2')].map((font) =>
-      withDefaultFonts(font, defaults)
-    );
+    const first = withDefaultFonts(variation(null), defaults);
+    const second = withDefaultFonts(variation(null, '2'), defaults);
     const defaultUnder = (font: FontResource | null) => (font?.kind === 'variation' ? font.baseFont : null);
     expect(defaultUnder(first)).toBe(defaultUnder(second));
   });
