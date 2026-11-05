@@ -2061,6 +2061,7 @@ describe('RichTextLabel lists and indents', () => {
       boxWidthPx: BOX_WIDTH_PX,
       autowrapMode: AutowrapMode.AUTOWRAP_WORD_SMART,
       tabSize: props.tabSize,
+      localizeNumeralSystem: props.localizeNumeralSystem,
     });
     return layoutRichTextRuns(runs, layout, { boxWidthPx: BOX_WIDTH_PX, boxHeightPx: TALL_BOX_PX });
   }
@@ -2174,6 +2175,57 @@ describe('RichTextLabel lists and indents', () => {
       .map((p) => p.layout.lines[0]!.text)
       .filter((text) => text.endsWith('. '));
     expect(drawn).toEqual(markers);
+  });
+
+  describe('with localize_numeral_system', () => {
+    const markersOf = (source: string, props: Partial<RichTextLabelProperties>) =>
+      listPlacements(source, props)
+        .map((p) => p.layout.lines[0]!.text)
+        .filter((text) => text.endsWith('. ') || text.endsWith('.'));
+
+    it('writes the numbers of an [ol] in the digits of the label language (`_get_prefix`, `:255-258`)', () => {
+      const props = { localizeNumeralSystem: true, language: 'ar' };
+      expect(markersOf('[ol]a\nb\nc[/ol]', props)).toEqual(['١. ', '٢. ', '٣. ']);
+    });
+
+    it('writes the digits of a [lang] tag over the label language', () => {
+      const props = { localizeNumeralSystem: true, language: 'ar' };
+      expect(markersOf('[lang=fa][ol]a\nb[/ol][/lang]', props)).toEqual(['۱. ', '۲. ']);
+    });
+
+    it('writes every digit of a number past nine', () => {
+      const props = { localizeNumeralSystem: true, language: 'fa' };
+      expect(markersOf('[ol]a\nb\nc\nd\ne\nf\ng\nh\ni\nj[/ol]', props).at(-1)).toBe('۱۰. ');
+    });
+
+    it('writes each number of a nested [ol] in the digits', () => {
+      const props = { localizeNumeralSystem: true, language: 'ar' };
+      expect(markersOf('[ol]a\n[ol]b[/ol][/ol]', props)).toEqual(['١. ', '١.١. ']);
+    });
+
+    it('leaves a letter or roman numeral as it is', () => {
+      const props = { localizeNumeralSystem: true, language: 'ar' };
+      expect(markersOf('[ol type=a]a\nb[/ol]', props)).toEqual(['a. ', 'b. ']);
+      expect(markersOf('[ol type=I]a\nb[/ol]', props)).toEqual(['I. ', 'II. ']);
+    });
+
+    it('writes the digits of the language by default, as `localize_numeral_system` is on (`control.h:293`)', () => {
+      expect(markersOf('[ol]a\nb[/ol]', { language: 'ar' })).toEqual(['١. ', '٢. ']);
+    });
+
+    it('writes ASCII digits when the property is off', () => {
+      expect(markersOf('[ol]a\nb[/ol]', { localizeNumeralSystem: false, language: 'ar' })).toEqual([
+        '1. ',
+        '2. ',
+      ]);
+    });
+
+    it('writes ASCII digits for a language with no number system', () => {
+      expect(markersOf('[ol]a\nb[/ol]', { localizeNumeralSystem: true, language: 'en' })).toEqual([
+        '1. ',
+        '2. ',
+      ]);
+    });
   });
 
   it('writes the marker of a nested list as the outer number, a dot and the inner number', () => {

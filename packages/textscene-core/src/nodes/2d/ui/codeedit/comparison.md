@@ -12,7 +12,8 @@ renders_as: a TextEdit with a line-number gutter
 CodeEdit is the source-code editor Control, a TextEdit with gutters, completion,
 indentation and folding. The previewer draws everything TextEdit's painter draws,
 shifted right by this node's gutter band. It adds the line-numbers gutter, the fold
-gutter's arrows and the `line_length_guidelines` rules.
+gutter's arrows and the `line_length_guidelines` rules. While `localize_numeral_system` is true, its default,
+each line number is padded first, then written in the digits of the project locale (`code_edit.cpp:1569-1572`).
 
 ## Linting
 

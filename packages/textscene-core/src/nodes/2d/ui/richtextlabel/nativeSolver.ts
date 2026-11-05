@@ -356,6 +356,7 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
     autowrapMode: wrapWidthPx === undefined ? AutowrapMode.AUTOWRAP_OFF : autowrapMode,
     tabSize: props.tabSize,
     autowrapTrimFlags: props.autowrapTrimFlags,
+    localizeNumeralSystem: props.localizeNumeralSystem,
   });
   const measured = {
     // `get_content_width` maxes `TS->shaped_text_get_size(lines_rid[i])`
@@ -665,7 +666,7 @@ export interface RichTextLayout extends TextLayoutResult {
 interface RichTextShapeOptions
   extends
     Pick<ShapeTextOptions, 'fontSizePx' | 'boxWidthPx' | 'autowrapMode'>,
-    Pick<RichTextLabelProperties, 'tabSize' | 'autowrapTrimFlags'> {}
+    Pick<RichTextLabelProperties, 'tabSize' | 'autowrapTrimFlags' | 'localizeNumeralSystem'> {}
 
 /**
  * Shapes the whole paragraph once, each character at the size and in the face of its run, so line
@@ -679,7 +680,11 @@ export function shapeRichText(
   const { fontSizePx, boxWidthPx, autowrapMode, autowrapTrimFlags } = options;
   const tabSize = options.tabSize ?? DEFAULT_TAB_SIZE;
   const runAt = runAtFromRuns(styledRuns);
-  const listings = paragraphListings(styledRuns, { faces, tabSize });
+  const listings = paragraphListings(styledRuns, {
+    faces,
+    tabSize,
+    localizeNumeralSystem: options.localizeNumeralSystem,
+  });
   const layout = shapeText(plainTextOf(styledRuns), {
     fontSizePx,
     boxWidthPx,
