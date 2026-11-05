@@ -495,9 +495,9 @@ function drawsCluster(face: FontMetrics, chars: ArrayLike<string>, start: number
   return true;
 }
 
-/** Whether `face` is a BMFont with no glyph for `ch`, a tab aside: Godot then draws `ch` as a hex-code box. */
+/** Whether `face` is a BMFont with no glyph for `ch`: Godot then draws `ch` as a hex-code box. The caller takes a tab first. */
 function lacksBitmapGlyph(face: FontMetrics, ch: string): boolean {
-  return isBitmapFontMetrics(face) && !isTabChar(ch) && !face.glyphOf(ch);
+  return isBitmapFontMetrics(face) && !face.glyphOf(ch);
 }
 
 /**
@@ -988,9 +988,14 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     }
   }
 
-  const widthPx = lines.reduce((max, l) => Math.max(max, l.widthPx), 0);
+  const widthPx = widestLineWidthPx(lines);
   const heightPx = lines.length * linePitchPx;
   const baselineOffsetPx = getFontAscentPx(fontMetrics, fontSizePx);
 
   return { lines, linePitchPx, widthPx, heightPx, baselineOffsetPx, fontMetrics };
+}
+
+/** The width of the widest of `lines`, or 0 for none. */
+export function widestLineWidthPx(lines: readonly TextLineLayout[]): number {
+  return lines.reduce((max, line) => Math.max(max, line.widthPx), 0);
 }

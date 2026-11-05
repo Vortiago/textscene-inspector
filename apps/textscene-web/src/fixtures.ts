@@ -3869,6 +3869,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Font Arrows",
+    "file": "unit-control-font-arrows.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control In Parallax Background",
     "file": "unit-control-in-parallax-background.tscn",
     "category": "Unit - 2D UI Controls"

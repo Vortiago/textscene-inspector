@@ -432,6 +432,19 @@ export function getFontEmboldenedAdvancePx(metrics: FontMetrics, ch: string, fon
 }
 
 /**
+ * The width of `tab_size` spaces, at least 1: `MAX(1, tab_size * (space width + SPACING_SPACE))`, a
+ * TextEdit tab stop and a RichTextLabel tab stop or indent level. `SPACING_SPACE` is 0 for every loaded font.
+ */
+export function getFontTabWidthPx(metrics: FontMetrics, tabSize: number, fontSizePx: number): number {
+  return Math.max(1, tabSize * getFontEmboldenedAdvancePx(metrics, ' ', fontSizePx));
+}
+
+/** One repeating stop of `getFontTabWidthPx`, or none: `tab_size <= 0` skips tab alignment. */
+export function getFontTabStopsPx(metrics: FontMetrics, tabSize: number, fontSizePx: number): number[] {
+  return tabSize <= 0 ? [] : [getFontTabWidthPx(metrics, tabSize, fontSizePx)];
+}
+
+/**
  * The px `FT_Outline_Embolden` grows an outline by: `strength = embolden * size.x / 16` in 26.6
  * (`text_server_adv.cpp:1314-1315`). The ink keeps its left and bottom edges and gains this much
  * at the right and top.
