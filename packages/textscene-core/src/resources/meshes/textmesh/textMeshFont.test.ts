@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fixtureFontBytes, systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
 import { NO_PROJECT_FONTS, type ProjectFonts } from '../../fonts/font/projectFonts';
@@ -279,6 +279,11 @@ describe('textMeshFont on a BMFont', () => {
 });
 
 describe('textMeshFont of a face that fails to load', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
   // A face whose metrics fail draws the bundled metrics, and its own outlines would not match their advances.
   it('is unreadable, though its outlines read', async () => {
     vi.stubEnv('VITEST', 'false');
@@ -286,12 +291,13 @@ describe('textMeshFont of a face that fails to load', () => {
     const logger = await import('../../../logger');
     vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const fresh = await import('./textMeshFont');
+    const freshOutlines = await import('../../../r3f/controls/native/text/sceneFontOutlines');
     const { textMeshWith: freshMeshWith, trueTypeFontFile: freshFontFile } =
       await import('./textMeshFont.testkit');
-    const mesh = freshMeshWith({}, { [FONT_PATH]: freshFontFile() });
+    const font = freshFontFile();
+    const mesh = freshMeshWith({}, { [FONT_PATH]: font });
 
+    expect(await settledPeek(() => freshOutlines.peekSceneFontOutlines(font))).toBeTruthy();
     expect(await settledPeek(() => fresh.textMeshFont(mesh))).toEqual({ status: 'unreadable' });
-    vi.unstubAllEnvs();
-    vi.restoreAllMocks();
   });
 });

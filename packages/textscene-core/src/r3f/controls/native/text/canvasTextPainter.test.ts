@@ -79,6 +79,7 @@ describe('computeCanvasTextCanvasLayout', () => {
     const layout = layoutFor('ABCDEFGH');
     const line = layout.lines[0]!;
     const firstIndex = line.glyphs.findIndex((glyph) => glyph.x > 2 * layout.linePitchPx);
+    expect(firstIndex).toBeGreaterThan(0);
     const shifted = { ...layout, lines: [{ ...line, glyphs: line.glyphs.slice(firstIndex) }] };
     const inkLeftPx = Math.floor(line.glyphs[firstIndex]!.x - layout.linePitchPx);
     const canvasLayout = computeCanvasTextCanvasLayout(shifted, 0);
@@ -94,6 +95,22 @@ describe('computeCanvasTextCanvasLayout', () => {
     expect(computeCanvasTextCanvasLayout(shortened, 0).canvasWidthPx).toBe(
       Math.ceil(first.x + first.advance + layout.linePitchPx)
     );
+  });
+
+  it('ends the raster one ascent past the last glyph at a line spacing that takes the pitch below zero', () => {
+    const layout = layoutFor('ABCDEFGH', -100);
+    const line = layout.lines[0]!;
+    const first = line.glyphs[0]!;
+    const shortened = { ...layout, lines: [{ ...line, glyphs: [first] }] };
+    expect(layout.linePitchPx).toBeLessThan(0);
+    expect(computeCanvasTextCanvasLayout(shortened, 0).canvasWidthPx).toBe(
+      Math.ceil(first.x + first.advance + layout.baselineOffsetPx)
+    );
+  });
+
+  it('pads a sheared raster at a line spacing that takes the pitch below zero', () => {
+    const layout = layoutFor('AB', -100);
+    expect(computeCanvasTextCanvasLayout(layout, 0.3).offsetXPx).toBeGreaterThan(0);
   });
 
   it('widens by the origin phase, which carries the content that far right of the quad', () => {

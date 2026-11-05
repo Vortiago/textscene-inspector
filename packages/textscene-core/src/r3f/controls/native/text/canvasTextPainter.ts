@@ -76,10 +76,10 @@ export function computeCanvasTextCanvasLayout(
   strokeWidthPx = 0,
   originPhasePx: Readonly<Vector2> = VECTOR2_ZERO
 ): CanvasTextCanvasLayout {
-  // The worst-case shear offset over one line pitch (`buildGlyphQuadArrays`'s
+  // The worst-case shear offset over the ink height (`buildGlyphQuadArrays`'s
   // `dx(y) = -skew * (y - baselinePx)`). It over-pads a little, which costs
   // only idle canvas pixels.
-  const shearPadPx = Math.abs(skew) * layout.linePitchPx;
+  const shearPadPx = Math.abs(skew) * inkHeightPx(layout);
   // A centred stroke reaches half its width outside the contour on every side,
   // horizontally too, where an upright fill needs no pad.
   const strokePadPx = strokeWidthPx / 2;
@@ -116,11 +116,19 @@ function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: numb
     endPx = Math.max(endPx, last.x + last.advance);
   }
   if (startPx === Infinity) return { startPx: 0, endPx: layout.widthPx };
-  const bearingPx = layout.linePitchPx;
+  const bearingPx = inkHeightPx(layout);
   return {
     startPx: Math.max(0, startPx - bearingPx),
     endPx: Math.min(Math.max(layout.widthPx, endPx), endPx + bearingPx),
   };
+}
+
+/**
+ * The line pitch, and at least the ascent: a negative `line_spacing` shrinks the pitch, and can take
+ * it below zero. It bounds how far a glyph's ink reaches past its pen box.
+ */
+function inkHeightPx(layout: TextLayoutResult): number {
+  return Math.max(layout.linePitchPx, layout.baselineOffsetPx);
 }
 
 /** The `GlyphQuadArrays` shape `buildGlyphQuadArrays` produces, always exactly one quad. */
