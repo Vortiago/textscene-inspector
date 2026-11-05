@@ -83,8 +83,8 @@ string against `true`, so an absent property or any other value silently resolve
 - **Approximated** `[p jst=…]` and `[p tab_stops=…]` are not read, so a paragraph keeps the
   node's justification and tab stops.
 - **Approximated** `[hr]` does not start a line of its own, though Godot pushes a paragraph for it.
-- **Approximated** A styling tag that closes empty before a paragraph's text counts as layout, so a
-  `[p]` after it starts a new line where `_find_layout_subitem` (:3712-3727) skips it.
+- **Approximated** A `[p]` after an empty styling tag starts a new line, where
+  `_find_layout_subitem` (:3712-3727) skips the empty tag.
 - **Not drawn** The right-to-left scrollbar offset (:988-996,2093-2100), the loading bar's
   right-to-left fill (:2580-2588) and the reveal end of `VC_GLYPHS_AUTO` (:944-945), since
   none of their inputs is drawn.
