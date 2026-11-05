@@ -1478,6 +1478,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Menu Button Wrap Trim",
+    "file": "unit-menu-button-wrap-trim.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Menu Button",
     "file": "unit-menu-button.tscn",
     "category": "Other"

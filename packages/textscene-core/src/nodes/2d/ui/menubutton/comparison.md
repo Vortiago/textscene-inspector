@@ -14,7 +14,8 @@ draws no chrome of its own, so the previewer paints what its `Button` base does.
 internal PopupMenu never opens, since it is a Window and this previewer draws no
 Windows. `clip_text` zeroes the label's width in the minimum size, and `TextParagraph::draw`
 cuts the label to its paragraph box. The previewer does both, so a box narrower than the label
-shows only the glyphs that fit.
+shows only the glyphs that fit. `autowrap_mode` and `text_overrun_behavior` fit the label to the
+box as they do for Button.
 
 ## Linting
 

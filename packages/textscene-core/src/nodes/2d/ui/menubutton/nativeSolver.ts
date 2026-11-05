@@ -17,17 +17,8 @@ import {
   type ResolvedTextTheme,
   type TextThemeDefaults,
 } from '../../../../r3f/controls/native/textTheme';
-import {
-  BUTTON_DEFAULT_FONT_COLOR,
-  BUTTON_THEME_KEYS,
-  buttonIconColor,
-  buttonMinimumSize,
-} from '../button/nativeSolver';
+import { BUTTON_DEFAULT_FONT_COLOR, BUTTON_THEME_KEYS, buttonMinimumSize } from '../button/nativeSolver';
 import type { MenuButtonProperties } from './types';
-
-// Re-exported for Component.tsx. MenuButton registers no `icon_*_color`, so `Theme::get_color`'s
-// ancestor fallback gives it Button's icon colours.
-export { buttonIconColor };
 
 /** `Color(1, 1, 1, 0.3)`: MenuButton's own disabled font colour (`default_theme.cpp:268`), not Button's `control_font_disabled_color` (`:161`). */
 const MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 0.3 };

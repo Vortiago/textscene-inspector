@@ -36,7 +36,13 @@ import type { ButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
-export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
+interface ButtonPainterProps extends NativeControlComponentProps {
+  /** The theme font size and colour for the Control's own class (`default_theme.cpp`). */
+  textTheme: typeof buttonTextTheme;
+}
+
+/** The painter every `Button` subclass that adds no draw code of its own shares. */
+export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textTheme }: ButtonPainterProps) {
   const props = painterView<ButtonProperties>(solveNode);
   const state = resolveButtonDrawState(props.disabled);
 
@@ -51,7 +57,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   // and icon colours before each one's single sRGB-to-linear conversion.
   const text = props.text ?? '';
   const hasText = text.length > 0;
-  const { fontSizePx, color: baseFontColor } = buttonTextTheme(solveNode, props, state, { theme });
+  const { fontSizePx, color: baseFontColor } = textTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, BUTTON_THEME_FONT_KEY);
@@ -204,4 +210,8 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
       )}
     </>
   );
+}
+
+export function Button(props: NativeControlComponentProps) {
+  return <ButtonPainter {...props} textTheme={buttonTextTheme} />;
 }
