@@ -457,7 +457,11 @@ function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: 
  */
 const KEEPS_ITS_FACE = /^[\p{Cc}\p{Cn}\p{Cs}\p{Zl}\p{Zp}\p{Zs}\p{Default_Ignorable_Code_Point}]/u;
 
-const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+/**
+ * Written only by `glyphFaces`, on the first paragraph that needs a **Fallback chain**: most scenes
+ * have none. Never cleared.
+ */
+let graphemes: Intl.Segmenter | undefined;
 
 /**
  * The face each character of a paragraph draws in. Godot marks a grapheme cluster valid only when
@@ -473,14 +477,14 @@ function glyphFaces(
   // Most paragraphs draw each character in its span face and need no segmenting, which costs 21 µs per 225 characters.
   if (spanFaces.every((face, i) => drawsCluster(face, chars, i, i + 1))) return spanFaces;
   const faces: FontMetrics[] = [];
-  for (const { index, segment } of GRAPHEMES.segment(text)) {
+  graphemes ??= new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+  for (const { index, segment } of graphemes.segment(text)) {
     const end = index + segment.length;
     // A span boundary splits a cluster, as Godot shapes each span on its own.
     for (let start = index, stop = index; start < end; start = stop) {
       while (++stop < end && spanFaces[stop] === spanFaces[start]);
-      faces.push(
-        ...Array<FontMetrics>(stop - start).fill(clusterFace(spanFaces[start]!, chars, start, stop))
-      );
+      const face = clusterFace(spanFaces[start]!, chars, start, stop);
+      for (let i = start; i < stop; i++) faces.push(face);
     }
   }
   return faces;
@@ -617,12 +621,47 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
 function roundAdvancesToWholePixels(glyphs: BreakGlyph[], chars: ArrayLike<string>, style: RunStyle): void {
   for (const [start, end] of spanRunRanges(style, chars.length)) {
     const chain = fallbackChainOf(style.spanFaces[start]!);
-    // A subpixel run of one face rounds nothing, and it is most UI text: it skips the walk.
-    if (chain.length === 1 && fontUsesSubpixelPositioning(style.sizes[start]!, chain[0]!)) continue;
+    const isRtl = isRtlRun(style, start);
+    if (chain.length === 1) {
+      // One face needs no index list: most UI text takes this path.
+      if (fontUsesSubpixelPositioning(style.sizes[start]!, chain[0]!)) continue;
+      let advanceRemainder = 0;
+      for (let k = 0; k < end - start; k++) {
+        advanceRemainder = roundGlyphAdvance(
+          glyphs,
+          chars,
+          isRtl ? end - 1 - k : start + k,
+          advanceRemainder
+        );
+      }
+      continue;
+    }
     const indices = Array.from({ length: end - start }, (_v, k) => start + k);
-    if (isRtlRun(style, start)) indices.reverse();
+    if (isRtl) indices.reverse();
     roundFaceRun(glyphs, chars, style, indices, chain, 0);
   }
+}
+
+/**
+ * Rounds the advance of glyph `i` with the remainder its run carries, and answers the new remainder.
+ * `adv_rem` is local to `_shape_run` (`:7011`), so each run starts it at zero.
+ */
+function roundGlyphAdvance(
+  glyphs: BreakGlyph[],
+  chars: ArrayLike<string>,
+  i: number,
+  remainder: number
+): number {
+  // The second unit of a surrogate pair has no glyph to round: rounding its 0 advance would move
+  // the remainder of a whole half pixel into it.
+  if (chars[i] === '') return remainder;
+  const cp = chars[i]!.codePointAt(0)!;
+  // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
+  const fullAdvance =
+    (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp) ? 0 : remainder) + glyphs[i]!.advance;
+  const rounded = godotRound(fullAdvance);
+  glyphs[i]!.advance = rounded;
+  return fullAdvance - rounded;
 }
 
 /**
@@ -641,7 +680,6 @@ function roundFaceRun(
   const face = chain[depth]!;
   const isLastFace = depth === chain.length - 1;
   const usesSubpixel = fontUsesSubpixelPositioning(style.sizes[indices[0]!]!, face);
-  // `adv_rem` is local to `_shape_run` (`:7011`), so each run starts it at zero.
   let advanceRemainder = 0;
   let stretch: number[] = [];
   const flushStretch = () => {
@@ -654,16 +692,7 @@ function roundFaceRun(
       continue;
     }
     flushStretch();
-    // The second unit of a surrogate pair has no glyph to round: rounding its 0 advance would move
-    // the remainder of a whole half pixel into it.
-    if (usesSubpixel || chars[i] === '') continue;
-    const cp = chars[i]!.codePointAt(0)!;
-    // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
-    if (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp)) advanceRemainder = 0;
-    const fullAdvance = advanceRemainder + glyphs[i]!.advance;
-    const rounded = godotRound(fullAdvance);
-    glyphs[i]!.advance = rounded;
-    advanceRemainder = fullAdvance - rounded;
+    if (!usesSubpixel) advanceRemainder = roundGlyphAdvance(glyphs, chars, i, advanceRemainder);
   }
   flushStretch();
 }
