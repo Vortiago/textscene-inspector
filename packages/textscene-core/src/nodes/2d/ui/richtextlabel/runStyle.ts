@@ -13,7 +13,7 @@ export function tagFontSizePx(tags: readonly OpenBBCodeTag[]): number | undefine
 }
 
 /** A `[font_size=N]` payload, or `undefined` for none or an `N` of 0 or less. */
-export function fontSizeOf(value: string | undefined): number | undefined {
+function fontSizeOf(value: string | undefined): number | undefined {
   if (value === undefined) return undefined;
   const sizePx = stringToInt(value);
   return sizePx > 0 ? sizePx : undefined;
