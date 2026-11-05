@@ -1,4 +1,5 @@
-; One RichTextLabel per scroll_following_visible_characters case. The setter runs as the scene loads,
+; The variable is scroll_following_visible_characters. No existing RichTextLabel scene sets it, so each scrolled as
+; it does now: none can regress. One RichTextLabel per case. The setter runs as the scene loads,
 ; before any line is shaped, so it scrolls to the bar's default max, 100, whatever visible_characters
 ; says (rich_text_label.cpp:5209-5221), and the bar shows for it even over text that fits
 ; (:2659-2667). scroll_active = false hides the bar but not the scroll. NoFollow keeps the top.
