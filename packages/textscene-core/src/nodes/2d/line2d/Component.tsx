@@ -13,11 +13,10 @@ import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
-import { useNode2DCanvasTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { useCanvasItemTexture } from '../../../r3f/canvasItemTexture';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { bottomUpV } from '../../../godot/math/uv';
 import { storedReal } from '../../../godot/math/real';
-import { useTexture2D } from '../../../resources/useTexture2D';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { bakedCurveSampler } from '../../../resources/curves/curve/bakedSample';
@@ -36,10 +35,9 @@ export function Line2D({ node, children }: NodeComponentProps) {
   const {
     texture: resolvedTexture,
     size,
+    sampler,
     canvasTexture,
-  } = useTexture2D(props.texture, externalResources, internalResources);
-  // A CanvasTexture's own filter and repeat win over the item's.
-  const sampler = useNode2DCanvasTextureSampler(props, canvasTexture?.texture);
+  } = useCanvasItemTexture(props, props.texture, externalResources, internalResources);
   const texture = useCanvas2DTexture(resolvedTexture, sampler);
   // `Size2::aspect` of the texture, and 1 without one (`line_builder.h:51`).
   const hasTexture = texture !== null;

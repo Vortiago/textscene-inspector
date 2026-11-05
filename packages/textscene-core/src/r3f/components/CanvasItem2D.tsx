@@ -11,9 +11,9 @@ import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from '../node2dTransform';
 import { CanvasSpaceProvider, useCanvasSpace } from '../canvasRootScope';
 import type { CanvasItemTint } from '../canvasItemModulate';
-import { useCanvasTextureSampler, useNode2DTextureSampler } from '../canvasItemTextureSampler';
+import { useNode2DTextureSampler } from '../canvasItemTextureSampler';
 import { CanvasItemSurfaceSource } from '../canvasItemSurface';
-import type { CanvasTextureSlot } from '../../resources/useTexture2D';
+import type { CanvasItemTexture } from '../canvasItemTexture';
 import { LitCanvasItemPixels, type CanvasItemPixelMaterial } from './LitCanvasItemPixels';
 import { useNodePaintSequence } from '../contexts/PaintOrderContext';
 import { useAnimatedValue } from '../contexts/AnimatedValueContext';
@@ -42,10 +42,10 @@ interface CanvasItem2DProps {
     pixelMaterial: CanvasItemPixelMaterial
   ) => ReactNode;
   /**
-   * The CanvasTexture `body` draws, if any. Its normal and specular maps light the pixels, and
-   * without a normal map they light flat (`canvas.glsl:652-665`).
+   * The CanvasTexture `body` draws, if any, with the sampler it draws with. Its normal and
+   * specular maps light the pixels, and without a normal map they light flat (`canvas.glsl:652-665`).
    */
-  canvasTexture?: CanvasTextureSlot;
+  canvasTexture?: CanvasItemTexture;
   /**
    * Draws this node's own child canvas items, each with its own light list, as a TileMapLayer's
    * rendering quadrants are. A node that draws them passes no `body`. They take this node's
@@ -68,8 +68,6 @@ export function CanvasItem2D({ node, props, body, canvasTexture, ownItems, child
   // What this node's descendants inherit. Its own pixels sample through the same fold, which the
   // node's component takes before this group exists, so it repeats the call on its own properties.
   const sampler = useNode2DTextureSampler(props);
-  // The sampler the node's component draws its CanvasTexture with, which the maps share.
-  const canvasTextureSampler = useCanvasTextureSampler(sampler, canvasTexture?.texture);
   const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
   const state = useCanvasItemState({
     modulate: props.modulate,
@@ -106,10 +104,10 @@ export function CanvasItem2D({ node, props, body, canvasTexture, ownItems, child
           </LitCanvasItemPixels>
         )}
         {ownItems?.(state)}
-        {canvasTexture?.texture.normalTexture && (
+        {canvasTexture?.slot.texture.normalTexture && (
           <CanvasItemSurfaceSource
-            slot={canvasTexture}
-            sampler={canvasTextureSampler}
+            slot={canvasTexture.slot}
+            sampler={canvasTexture.sampler}
             onSurface={setSurface}
           />
         )}

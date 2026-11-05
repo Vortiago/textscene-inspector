@@ -13,11 +13,11 @@ import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
-import { useNode2DCanvasTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { useCanvasItemTexture } from '../../../r3f/canvasItemTexture';
 import { threeMatrixFromTransform2D } from '../../../r3f/node2dTransform';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
-import { useTexture2D, type Texture2DResult } from '../../../resources/useTexture2D';
+import type { Texture2DResult } from '../../../resources/useTexture2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { useEmissionTransform } from './emissionTransform';
@@ -39,10 +39,9 @@ export function CPUParticles2D({ node, children }: NodeComponentProps) {
     texture: resolvedTexture,
     size,
     missing,
+    sampler,
     canvasTexture,
-  } = useTexture2D(props.texture, externalResources, internalResources);
-  // A CanvasTexture's own filter and repeat win over the item's.
-  const sampler = useNode2DCanvasTextureSampler(props, canvasTexture?.texture);
+  } = useCanvasItemTexture(props, props.texture, externalResources, internalResources);
   // An emitter that is not emitting draws nothing, so it uploads no view and loads no maps.
   const texture = useCanvas2DTexture(props.emitting ? resolvedTexture : null, sampler);
 
