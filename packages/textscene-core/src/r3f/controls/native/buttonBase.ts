@@ -436,7 +436,7 @@ export function trimButtonLabel(
   drawableWidthPx: number,
   font: { fontMetrics: FontMetrics; fontSizePx: number }
 ): TextLayoutResult {
-  const flags = overrunFlagsForBehavior(overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING);
+  const flags = overrunFlagsForBehavior(overrunBehavior);
   if (!flags.trim || layout.lines.length !== 1) return layout;
   const line = layout.lines[0]!;
   const trimmedLine = trimLineToWidth(line, textBufWidthPx(drawableWidthPx), flags, font);
