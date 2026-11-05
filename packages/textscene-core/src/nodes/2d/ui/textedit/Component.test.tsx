@@ -13,6 +13,7 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import { TextEdit } from './Component';
 import type { TextEditProperties } from './types';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
+import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 100 };
@@ -381,5 +382,120 @@ describe('<TextEdit> — text clip band', () => {
     expect(await planesOf({ x: 0, y: 200, w: 300, h: 100 })).toEqual(
       await planesOf({ x: 0, y: 0, w: 300, h: 100 })
     );
+  });
+});
+
+describe('<TextEdit> — placeholder_text', () => {
+  afterEach(() => controlSolverRegistry.clear());
+
+  const opacityOf = (mesh: THREE.Mesh) => (mesh.material as THREE.ShaderMaterial).uniforms.uOpacity!.value;
+
+  async function render(properties: Partial<TextEditProperties>, node: Partial<SolveNode> = {}) {
+    return ReactThreeTestRenderer.create(
+      <TextEdit
+        {...painterEnv()}
+        solveNode={{ ...solveNode(properties), ...node }}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+  }
+
+  it('draws an empty buffer as its placeholder at font_placeholder_color (text_edit.cpp:1350-1352)', async () => {
+    const meshes = findTextMeshes((await render({ text: '', placeholderText: 'Type here' })).scene);
+    expect(meshes).toHaveLength(1);
+    const material = meshes[0]!.material as THREE.ShaderMaterial;
+    expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.875), 5);
+    expect(opacityOf(meshes[0]!)).toBeCloseTo(0.6, 5);
+  });
+
+  it('draws real text at font_color and no placeholder once the buffer holds text', async () => {
+    const meshes = findTextMeshes((await render({ text: 'Ada', placeholderText: 'Type here' })).scene);
+    expect(meshes).toHaveLength(1);
+    expect(opacityOf(meshes[0]!)).toBeCloseTo(1, 5);
+  });
+
+  it('keeps font_placeholder_color while read-only: the placeholder test wins over editable (:1350-1352)', async () => {
+    const meshes = findTextMeshes((await render({ placeholderText: 'x', editable: false })).scene);
+    expect(opacityOf(meshes[0]!)).toBeCloseTo(0.6, 5);
+  });
+
+  it('breaks a placeholder at its newline into one row each', async () => {
+    expect(findTextMeshes((await render({ placeholderText: 'a\nb' })).scene)).toHaveLength(2);
+  });
+
+  it('wraps a placeholder at wrap_mode BOUNDARY (text_edit.cpp:3333)', async () => {
+    const placeholderText = 'a repeated word wrap word wrap word wrap word wrap word wrap';
+    expect(findTextMeshes((await render({ placeholderText })).scene)).toHaveLength(1);
+    expect(findTextMeshes((await render({ placeholderText, wrapMode: 1 })).scene).length).toBeGreaterThan(1);
+  });
+
+  it('paints the placeholder past a syntax_highlighter, whose colour map is empty for an empty line', async () => {
+    const highlighter: TscnInternalResource = {
+      id: 'CH',
+      type: 'CodeHighlighter',
+      data: { keyword_colors: '{\n"if": Color(1, 0, 0, 1)\n}' },
+    };
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit
+        {...painterEnv()}
+        solveNode={solveNode({ placeholderText: 'if x', syntaxHighlighter: 'SubResource("CH")' }, [
+          highlighter,
+        ])}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const meshes = findTextMeshes(renderer.scene);
+    expect(meshes).toHaveLength(1);
+    expect(opacityOf(meshes[0]!)).toBeCloseTo(0.6, 5);
+  });
+
+  it('draws a tab icon over a placeholder tab in the placeholder colour', async () => {
+    const icons = findPlainQuads((await render({ placeholderText: 'a\tb', drawTabs: true })).scene);
+    const iconOpacities = icons.map((quad) => (quad.material as THREE.MeshBasicMaterial).opacity);
+    expect(iconOpacities).toContain(0.6);
+  });
+
+  it('places a placeholder row from the trailing edge under RTL, as buffer text is', async () => {
+    const x = (mesh: THREE.Mesh) => mesh.getWorldPosition(new THREE.Vector3()).x;
+    const ltr = findTextMeshes((await render({ placeholderText: 'Amber' })).scene);
+    const rtl = findTextMeshes((await render({ placeholderText: 'Amber' }, { rtl: true })).scene);
+    expect(x(rtl[0]!)).toBeGreaterThan(x(ltr[0]!));
+  });
+});
+
+describe('<TextEdit> — glyphs past the end margin', () => {
+  afterEach(() => controlSolverRegistry.clear());
+
+  const glyphCount = (scene: Rendered['scene']) =>
+    findTextMeshes(scene).reduce(
+      (sum, mesh) => sum + (mesh.geometry as THREE.BufferGeometry).attributes.position!.count / 4,
+      0
+    );
+
+  async function render(text: string) {
+    return ReactThreeTestRenderer.create(
+      <TextEdit {...painterEnv()} solveNode={solveNode({ text })} rect={RECT} renderOrder={0} />
+    );
+  }
+
+  it('drops the glyphs of an overflowing row that Godot skips (text_edit.cpp:1724)', async () => {
+    const fits = 'abcdefghij';
+    expect(glyphCount((await render(fits)).scene)).toBe(fits.length);
+    expect(glyphCount((await render(fits.repeat(10))).scene)).toBeLessThan(fits.length * 10);
+  });
+
+  it('draws no tab icon past the glyph where the walk stops', async () => {
+    const text = `${'a'.repeat(60)}\t`;
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text, drawTabs: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(findPlainQuads(renderer.scene)).toHaveLength(0);
   });
 });

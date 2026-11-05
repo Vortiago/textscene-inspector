@@ -12,7 +12,8 @@ renders_as: a multi-line text box
 TextEdit is the multi-line text editor Control that CodeEdit builds on. The previewer
 draws its `normal`/`read_only` StyleBox, every buffer line shaped and wrapped per
 `wrap_mode`/`autowrap_mode`/`indent_wrapped_lines`, `highlight_current_line`'s row band,
-and the `draw_tabs`/`draw_spaces` control-character glyphs. It is a still frame with no
+and the `draw_tabs`/`draw_spaces` control-character glyphs. While the buffer is empty it
+draws `placeholder_text`. It is a still frame with no
 selection or IME (input method editor) state. The one caret a still frame can carry is
 the `caret_draw_when_editable_disabled` one, which draws without focus.
 
@@ -99,6 +100,16 @@ line scanner (`highlight.ts`) colours every buffer line, one `<TextRun>` per
 colour run. Anything else the property can name (absent, unresolved, or a custom
 `SyntaxHighlighter` script) paints at the plain `font_color`.
 
+`placeholder_text` replaces an empty buffer (`text_edit.cpp:3377-3379`) as one paragraph
+that breaks at its own newlines and at the wrap width. It paints at
+`font_placeholder_color` whatever `editable` says, past any `syntax_highlighter`, and takes
+the node's direction and language but never `structured_text_bidi_override`
+(`text_edit.cpp:3348-3351`). `fit_content_*` measures its rows and widest row.
+
+A row wider than the text band drops each glyph whose advance box crosses `xmargin_beg` or
+`xmargin_end`. The glyph goes whole, not clipped. The walk stops at the end margin
+(`text_edit.cpp:1724-1738`), so a `draw_tabs` icon past that glyph is not drawn.
+
 `indent_size` (`CodeEdit` only, `set_tab_size`) re-aligns every tab glyph to a
 repeating stop `indent_size` space-widths wide (`nativeSolver.ts`'s
 `textEditTabStopsPx`). A bare `TextEdit` has no `.tscn` property for it and
@@ -114,6 +125,5 @@ always shapes at the class default of 4.
 - **Not drawn** The right-to-left mouse mirror (text_edit.cpp:2241,2516,4956), hit tests
   (:5024,8213-8215), empty-line caret (:1781) and end-of-line selection rect (:1517),
   which need pointer, caret or selection state.
-- **Not drawn** `placeholder_text`: the parser reads it, but an empty TextEdit draws no placeholder.
 - **Not drawn** The minimap's RTL side (:1161-1165,1226-1235,1284-1286) and the
   per-line background rect's (:1396-1400): neither feature is drawn at all.

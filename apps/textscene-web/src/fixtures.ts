@@ -338,6 +338,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Code Edit Empty Gutter",
+    "file": "unit-code-edit-empty-gutter.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Code Edit Guidelines",
     "file": "unit-code-edit-guidelines.tscn",
     "category": "Other"
@@ -2445,6 +2450,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Text Edit Indent Wrapped",
     "file": "unit-text-edit-indent-wrapped.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Text Edit Overflow",
+    "file": "unit-text-edit-overflow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Text Edit Placeholder",
+    "file": "unit-text-edit-placeholder.tscn",
     "category": "Other"
   },
   {
