@@ -6,10 +6,8 @@
 import { useMemo } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
-import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
-import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { multiMeshAabb } from '../../../resources/meshes/multimesh';
-import { useMultiMeshData } from '../../../resources/meshes/multimesh/useMultiMeshData';
+import { useReferencedMultiMesh } from '../../../resources/meshes/multimesh/useMultiMeshData';
 import { useMeshAabb } from '../meshinstance3d/meshAabb';
 
 /**
@@ -17,9 +15,8 @@ import { useMeshAabb } from '../meshinstance3d/meshAabb';
  * or null while the MultiMesh or the mesh box it needs is unknown.
  */
 export function useMultiMeshInstance3DAabb(node: TscnNode): Aabb | null {
-  const scoped = useSubOrExtResource(node.rawProperties['multimesh'], useSceneResources());
-  const multiMesh = useMultiMeshData(scoped);
-  const meshAabb = useMeshAabb(multiMesh?.mesh, scoped?.resources ?? NO_RESOURCES);
+  const { multiMesh, resources } = useReferencedMultiMesh(node.rawProperties['multimesh']);
+  const meshAabb = useMeshAabb(multiMesh?.mesh, resources);
   const hasMultiMesh = node.rawProperties['multimesh'] !== undefined;
   return useMemo(() => {
     if (multiMesh) return multiMeshAabb(multiMesh, meshAabb);

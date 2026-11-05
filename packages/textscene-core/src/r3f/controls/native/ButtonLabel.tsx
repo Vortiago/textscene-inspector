@@ -5,9 +5,11 @@
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../components/CanvasItemGroup';
-import { buttonDrawnLabel, type ButtonLabelBox } from './buttonBase';
+import { buttonDrawnLabel, shapeButtonLabel, type ButtonLabelBox } from './buttonBase';
+import type { ShareNode } from './solveTree';
+import { resolveNodeFontMetrics } from './text/resolveNodeFontMetrics';
 import { TextRun, type TextRunProps } from './text/TextRun';
-import { soloLineLayout } from './text/textLayout';
+import { soloLineLayout, type TextLayoutResult } from './text/textLayout';
 
 interface ButtonLabelProps extends Pick<
   TextRunProps,
@@ -37,5 +39,22 @@ export function ButtonLabel({ layout, box, ...runProps }: ButtonLabelProps) {
         </CanvasItemGroup>
       ))}
     </>
+  );
+}
+
+/**
+ * The shaped one-line label of a Button-family control, or null for empty text. The font metrics
+ * are read in the render body, not in the `useMemo`, for the reason Label's Component.tsx gives.
+ */
+export function useButtonLabelLayout(
+  solveNode: ShareNode,
+  themeFontKey: string,
+  text: string,
+  fontSizePx: number
+): TextLayoutResult | null {
+  const fontMetrics = resolveNodeFontMetrics(solveNode, themeFontKey);
+  return useMemo(
+    () => (text.length > 0 ? shapeButtonLabel(text, fontSizePx, fontMetrics) : null),
+    [text, fontSizePx, fontMetrics]
   );
 }

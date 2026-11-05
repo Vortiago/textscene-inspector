@@ -13,8 +13,8 @@ import { parsedNode } from '../../../parser/testing/parserKit';
 import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import {
   CANVAS_TEXTURE_REF,
-  FLAT_GREY_REF,
   canvasTexture,
+  describeCanvasTextureItem,
   renderLitItem,
 } from '../../../r3f/testing/canvasTextureLighting';
 import type { TscnInternalResource } from '../../../parser/types';
@@ -42,22 +42,7 @@ function drawnXAxis(mesh: THREE.Mesh): THREE.Vector3 {
 // The component loads this chunk lazily, so it lands before the first render.
 beforeAll(loadSimulate);
 
-describe('CPUParticles2D with a CanvasTexture', () => {
-  it('declares itself normal-mapped while the CanvasTexture names a normal map', async () => {
-    const { registerItem } = await render(canvasTexture({ normal_texture: FLAT_GREY_REF }));
-    expect(registerItem).toHaveBeenLastCalledWith(expect.anything(), 'apart');
-  });
-
-  it('declares no normal map while the CanvasTexture names none', async () => {
-    const { registerItem } = await render(canvasTexture({}));
-    expect(registerItem).toHaveBeenLastCalledWith(expect.anything(), 'plain');
-  });
-
-  it("samples the diffuse with the CanvasTexture's own filter", async () => {
-    const { map } = await render(canvasTexture({ texture_filter: '1' }));
-    expect([map.magFilter, map.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
-  });
-});
+describeCanvasTextureItem('CPUParticles2D', render);
 
 describe('the basis a CPUParticles2D draws at', () => {
   it('is the canvas transform for a global-coords emitter, whatever its rotation', async () => {

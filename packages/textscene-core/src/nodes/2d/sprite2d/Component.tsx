@@ -11,12 +11,11 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import { frameSizePx, frameUvWindow } from '../../../r3f/spriteFrame';
-import { useNode2DCanvasTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { useCanvasItemTexture } from '../../../r3f/canvasItemTexture';
 import { canvasMapProps, useWindowedCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
-import { useTexture2D } from '../../../resources/useTexture2D';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { Sprite2DProperties } from './types';
 import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
@@ -29,16 +28,16 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // means none does. The registry carries a numeric tuple (ADR-0017), here a 1-tuple.
   const animatedFrame = useAnimatedValue('frame', (v) => v[0] ?? null);
 
+  // With `texture_repeat` Disabled, an overrunning `region_rect` stretches its edge texels,
+  // where Sprite3D tiles.
   const {
     texture: sourceTexture,
     size: reportedSize,
     missing: textureMissing,
+    sampler,
     canvasTexture,
-  } = useTexture2D(props.texture, externalResources, internalResources);
+  } = useCanvasItemTexture(props, props.texture, externalResources, internalResources);
 
-  // With `texture_repeat` Disabled, an overrunning `region_rect` stretches its edge texels,
-  // where Sprite3D tiles. A CanvasTexture's own filter and repeat win over the item's.
-  const sampler = useNode2DCanvasTextureSampler(props, canvasTexture?.texture);
   // A driven `frame` overrides the authored `frame` and any authored
   // `frame_coords` (in Godot the two are the same value), so the animation wins.
   const frameWindow = useMemo(() => {
