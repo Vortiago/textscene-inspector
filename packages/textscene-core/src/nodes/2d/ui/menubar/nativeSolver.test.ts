@@ -34,7 +34,11 @@ function popup(name: string, title?: string): TscnNode {
   };
 }
 
-function node(children: TscnNode[]): SolveNode {
+function node(
+  children: TscnNode[],
+  props: Partial<MenuBarProperties> = {},
+  overrides: Partial<SolveNode> = {}
+): SolveNode {
   return {
     ...solveNode(),
     path: 'Bar',
@@ -43,8 +47,9 @@ function node(children: TscnNode[]): SolveNode {
       name: 'Bar',
       type: 'MenuBar',
       children,
-      properties: { name: 'Bar' } as MenuBarProperties,
+      properties: { name: 'Bar', textDirection: 0, language: '', ...props } as MenuBarProperties,
     },
+    ...overrides,
   };
 }
 
@@ -111,5 +116,25 @@ describe('layoutMenuBarItems', () => {
 
   it('keeps the first item against the trailing edge whatever the bar width', () => {
     expect(layoutMenuBarItems(titles, H_SEPARATION, 700, true)[0]!.x).toBe(640);
+  });
+});
+
+// `MenuBar::shape` (`menu_bar.cpp:520-528`): INHERITED takes the layout direction, an empty language the locale.
+describe('menuBarTitleShapes direction', () => {
+  function visualTitle(props: Partial<MenuBarProperties>, overrides: Partial<SolveNode> = {}): string {
+    const [title] = menuBarTitleShapes(node([popup('Menu', 'Hello!')], props, overrides), nativeTheme(1));
+    return title!.layout.lines[0]!.glyphs.map((glyph) => glyph.char).join('');
+  }
+
+  it('draws "!" first at RTL', () => {
+    expect(visualTitle({ textDirection: 2 })).toBe('!Hello');
+  });
+
+  it('keeps an AUTO Latin title as written', () => {
+    expect(visualTitle({})).toBe('Hello!');
+  });
+
+  it('takes the layout direction for INHERITED', () => {
+    expect(visualTitle({ textDirection: 3 }, { rtl: true })).toBe('!Hello');
   });
 });

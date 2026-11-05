@@ -447,7 +447,7 @@ describe('tabBarMinimumSize — the tab buffer is shaped at theme_cache.font_siz
     for (const fontSize of [8, 16, 28, 32]) {
       const n = node({ themeOverrideFontSizes: { font_size: fontSize } });
       const props = n.node.properties as TabBarProperties;
-      const layout = shapeTabLabel('Map', tabBarFontSizePx(n, props, nativeTheme(1)), undefined);
+      const layout = shapeTabLabel('Map', n, { fontSizePx: tabBarFontSizePx(n, props, nativeTheme(1)) });
       const content = layoutTabContent({
         barHeightPx: sizeOf(n).y,
         style,
@@ -571,5 +571,22 @@ describe('layoutScrollArrows', () => {
     // int vofs = (33 - 16) / 2 = 8, not 8.5 and not (33 - 10) / 2.
     expect(out.decrement.y).toBe(8);
     expect(out.increment.y).toBe(8);
+  });
+});
+
+// A tab's own `text_direction` is INHERITED (`tab_bar.h:77`), so `_shape` takes the layout direction
+// (`tab_bar.cpp:358-362`).
+describe('shapeTabLabel direction', () => {
+  const visual = (rtl: boolean) =>
+    shapeTabLabel('Hello!', { rtl, locale: '' }, { fontSizePx: 16 })
+      .lines[0]!.glyphs.map((glyph) => glyph.char)
+      .join('');
+
+  it('draws "!" first under an RTL layout', () => {
+    expect(visual(true)).toBe('!Hello');
+  });
+
+  it('draws the title as written under an LTR layout', () => {
+    expect(visual(false)).toBe('Hello!');
   });
 });

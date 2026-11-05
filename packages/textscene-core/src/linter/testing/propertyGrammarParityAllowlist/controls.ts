@@ -8,8 +8,7 @@ import type { AsymmetryEntry } from './types.js';
 
 export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   // Text-bearing leaves: carets, selection, context menus and virtual keyboards
-  // have no frozen-frame surface, while BiDi and locale change where glyphs
-  // land. Only Label reads its own direction yet, so the others list a render gap.
+  // have no frozen-frame surface.
 
   LineEdit: {
     linterOnly: [
@@ -272,13 +271,8 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'prefer_global_menu',
       'start_index',
     ],
-    renderGap: [
-      // BiDi and locale: this Control does not pass its own direction to the shaper yet.
-      'language',
-      'text_direction',
-    ],
     reason:
-      'Hover switching, the global menu and the start index are all about opening menus a still frame never shows; this Control does not pass its own BiDi direction to the shaper yet.',
+      'Hover switching, the global menu and the start index are all about opening menus a still frame never shows.',
   },
 
   MenuButton: {
@@ -299,13 +293,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // holds each container\'s resulting `folded`.
       'foldable_group',
     ],
-    renderGap: [
-      // BiDi and locale for the title: this Control does not pass its own direction to the shaper yet.
-      'language',
-      'title_text_direction',
-    ],
-    reason:
-      'The group only decides which sibling ends up folded, which each container already records; this Control does not pass its own BiDi direction to the shaper yet.',
+    reason: 'The group only decides which sibling ends up folded, which each container already records.',
   },
 
   ColorPicker: {

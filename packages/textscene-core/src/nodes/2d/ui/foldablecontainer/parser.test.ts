@@ -35,4 +35,24 @@ describe('parseFoldableContainer', () => {
     const p = parseFoldableContainer(h({ name: 'F', type: 'FoldableContainer' }), { folded: 'nope' });
     expect(p.folded).toBe(false);
   });
+
+  it('defaults title_text_direction to AUTO and language to empty', () => {
+    const p = parseFoldableContainer(h({ name: 'F', type: 'FoldableContainer' }), {});
+    expect([p.titleTextDirection, p.language]).toEqual([0, '']);
+  });
+
+  it('reads title_text_direction and language', () => {
+    const p = parseFoldableContainer(h({ name: 'F', type: 'FoldableContainer' }), {
+      title_text_direction: '2',
+      language: '"he"',
+    });
+    expect([p.titleTextDirection, p.language]).toEqual([2, 'he']);
+  });
+
+  it('refuses a title_text_direction of -1, which `ERR_FAIL_INDEX` rejects (`foldable_container.cpp:156`)', () => {
+    const p = parseFoldableContainer(h({ name: 'F', type: 'FoldableContainer' }), {
+      title_text_direction: '-1',
+    });
+    expect(p.titleTextDirection).toBe(0);
+  });
 });
