@@ -164,13 +164,13 @@ function quadFacingPlusZ(vertexCount: number): THREE.BufferAttribute {
 
 /**
  * One built run: its geometry, and on the canvas and BMFont paths the texture this component holds
- * and the last holder disposes. The atlas is shared and never disposed. `paint` builds a material for the run,
- * one for each pass a GeometryInstance3D's fade can draw it in.
+ * and the last holder disposes. The atlas is shared and never disposed. `paint` builds a material
+ * for the run, one for each pass a GeometryInstance3D's fade can draw it in.
  */
 interface BuiltTextRun {
   geometry: THREE.BufferGeometry;
   paint: (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) => THREE.Material;
-  ownedTexture?: THREE.Texture;
+  heldTexture?: THREE.Texture;
 }
 
 /** What both painters' materials read, apart from the blend. */
@@ -211,7 +211,7 @@ function quadGeometry({ positions, uvs, indices }: GlyphQuadArrays): THREE.Buffe
 /**
  * Written only by `sheetTexture`: one texture for each sheet, sampling and colour space, which every
  * run of the sheet shares, as Godot shares a font's page texture. Each run holds it through
- * `useDisposeOnRelease`, so the last run to let go disposes it, and three uploads it again for a later run.
+ * `useDisposeOnRelease`: the last run to let go disposes it, and three uploads it again for a later run.
  */
 const sheetTextures = perObject((_sheet: FillSheet) => new Map<string, THREE.DataTexture>());
 
@@ -243,10 +243,9 @@ function sheetTexture(
 
 /**
  * A BMFont run: one quad for each glyph over a texture of the font's page fills. The tint multiplies
- * the page colour, as Godot's modulate does for a font with no FreeType face (`text_server_adv.cpp:4045`):
- * in sRGB as a Control draws any texture, or in linear for a Label3D (`glyphDrawer.ts`). An outline pass draws the font's outline set, at
- * the glyph's own rectangle, for every outline size (`text_server_adv.h:406-414`, `font.cpp:1712-1717`).
- * A positive `strokeWidthPx` is that outline pass.
+ * the page colour as Godot's modulate does for a font with no FreeType face (`text_server_adv.cpp:4045`),
+ * in sRGB for a Control and in linear for a Label3D (`glyphDrawer.ts`). A positive `strokeWidthPx`
+ * draws the outline set at the glyph's own rectangle (`text_server_adv.h:406-414`, `font.cpp:1712-1717`).
  */
 function buildBitmapRun(
   layout: TextLayoutResult,
@@ -254,15 +253,15 @@ function buildBitmapRun(
   fontSizePx: number,
   look: TextRunLook,
   sampling: RasterSampling,
-  paint: CanvasTextPaintOptions
+  { strokeWidthPx = 0, glyphDrawer = 'canvasItem', penOriginXPx = 0 }: CanvasTextPaintOptions
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
-  const isOutlinePass = (paint.strokeWidthPx ?? 0) > 0;
+  const isOutlinePass = strokeWidthPx > 0;
   const sheet = isOutlinePass ? metrics.bitmap.outlineSheet : metrics.bitmap.sheet;
-  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet, paint);
+  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet, { glyphDrawer, penOriginXPx });
   const geometry = quadGeometry(quads);
   geometry.setAttribute('normal', quadFacingPlusZ(quads.positions.length / 3));
-  const { multipliesInLinear } = GLYPH_DRAWER_RULES[paint.glyphDrawer ?? 'canvasItem'];
+  const { multipliesInLinear } = GLYPH_DRAWER_RULES[glyphDrawer];
   const texture = sheetTexture(sheet, sampling, multipliesInLinear);
   const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
   const paintMaterial = (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) =>
@@ -278,7 +277,7 @@ function buildBitmapRun(
       shading,
       ...blend,
     });
-  return { geometry, paint: paintMaterial, ownedTexture: texture };
+  return { geometry, paint: paintMaterial, heldTexture: texture };
 }
 
 /**
@@ -330,7 +329,7 @@ function buildTextRun(
         shading,
         ...blend,
       });
-    return { geometry: geo, paint, ownedTexture: texture };
+    return { geometry: geo, paint, heldTexture: texture };
   }
 
   const geo = quadGeometry(buildGlyphQuadArrays(layout, fontSizePx, skew));
@@ -423,8 +422,8 @@ export function TextRun({
   // on every rebuild without this, and a Label re-shapes on every rect or font change.
   useDisposeOnRelease(run.geometry);
   // A canvas raster is fresh per rebuild, and a BMFont sheet texture is shared by its runs.
-  useDisposeOnRelease(run.ownedTexture);
-  useNearestAnisotropy(run.ownedTexture ?? null);
+  useDisposeOnRelease(run.heldTexture);
+  useNearestAnisotropy(run.heldTexture ?? null);
 
   // `draw_hex_code_box` (`text_server.cpp:771-812`) draws in its caller's colour:
   // this run's `tint`, converted to linear once as for every `ControlQuad`.
@@ -449,7 +448,7 @@ export function TextRun({
   return (
     <>
       {/* A canvas run owns its texture. Only an atlas run waits for the atlas. */}
-      {!run.ownedTexture && <AtlasPending />}
+      {!run.heldTexture && <AtlasPending />}
       <mesh
         ref={meshRef}
         geometry={run.geometry}
