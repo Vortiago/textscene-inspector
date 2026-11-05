@@ -5,7 +5,8 @@
  * single and pair adjustments of `GPOS`. The auto-hinter reads no advance of a contour's glyph.
  *
  * HarfBuzz's script shapers (Arabic joining, Indic reordering, mark positioning) are not ported:
- * a cluster of such a script shapes as the default shaper shapes it.
+ * a cluster of such a script shapes as the default shaper shapes it. A lookup matches every glyph
+ * of the cluster: it skips none by its flag (`openTypeGdef.ts` reads the flags for the kerning at an instance).
  *
  * Portions ported from HarfBuzz ("Old MIT" licence).
  * Copyright (C) 2007-2026 by Behdad Esfahbod and the HarfBuzz contributors.
@@ -14,19 +15,25 @@
 
 import { perObject } from '../../../../../utils/perObject';
 import {
+  CHAINED_SEQUENCE_CONTEXT,
+  type ContextReader,
   type ContextRule,
-  type CoverageContextRule,
   coverageIndex,
+  DEFAULT_FEATURES,
   glyphClass,
+  GposType,
+  GsubType,
+  i16,
+  languageFeatures,
   type LayoutTable,
-  readChainedSequenceContextFormat3,
-  readChainedSequenceRule,
-  readSequenceContextFormat3,
-  readSequenceRule,
+  pairValueRecords,
+  SEQUENCE_CONTEXT,
   singleSubstitute,
   substituteList,
   type Subtable,
   u16,
+  valueFieldOffset,
+  ValueFormat,
   valueRecordSize,
 } from './openTypeLayout';
 
@@ -42,28 +49,8 @@ export interface ShapingFace {
   readonly gpos: LayoutTable | null;
 }
 
-/**
- * HarfBuzz's features of the default shaper before `rvrn`'s pause, and after it, past the two of
- * the text's direction (`hb-ot-shape.cc:329-376`).
- */
+/** HarfBuzz's feature of the default shaper before `rvrn`'s pause (`hb-ot-shape.cc:329-376`). */
 const FIRST_STAGE_FEATURES = ['rvrn'] as const;
-const DEFAULT_FEATURES = [
-  'rand',
-  'abvm',
-  'blwm',
-  'ccmp',
-  'locl',
-  'mark',
-  'mkmk',
-  'rlig',
-  'calt',
-  'clig',
-  'curs',
-  'dist',
-  'kern',
-  'liga',
-  'rclt',
-] as const;
 
 /** The scripts of the auto-hinter that HarfBuzz sets right to left (`hb_script_get_horizontal_direction`). */
 const RIGHT_TO_LEFT_SCRIPT_TAGS: ReadonlySet<string> = new Set([
@@ -86,8 +73,6 @@ function shapingFeatures(scriptTags: readonly string[], feature: string | null):
 /** The default script HarfBuzz falls back on, then the two it tries after it (`hb_ot_layout_table_select_script`). */
 const FALLBACK_SCRIPT_TAGS = ['DFLT', 'dflt', 'latn'] as const;
 
-const i16 = (dv: DataView, at: number): number => dv.getInt16(at, false);
-
 /** The lookups of `features` under the first script of `scriptTags` the table has, its default language. */
 function featureLookups(
   table: LayoutTable,
@@ -99,11 +84,7 @@ function featureLookups(
     .find((found) => found !== undefined);
   const language = script?.defaultLanguage;
   if (!language) return [];
-  const indices = language.requiredFeature === null ? [] : [language.requiredFeature];
-  for (const tag of features) {
-    const index = language.features.find((feature) => table.features[feature]?.tag === tag);
-    if (index !== undefined) indices.push(index);
-  }
+  const indices = languageFeatures(table, language, features);
   const substitutions = table.featureSubstitutions.find(
     (variation) => variation.isDefaultInstance
   )?.substitutions;
@@ -250,22 +231,20 @@ function matchingRule(
   offset: number,
   glyphs: readonly number[],
   at: number,
-  isChain: boolean
+  reader: ContextReader
 ): ContextRule | null {
   const format = u16(dv, offset);
   const byGlyph: Matcher = (glyph, value) => glyph === value;
   const byCoverage: Matcher = (glyph, value) => coverageIndex(dv, offset + value, glyph) >= 0;
   if (format === 3) {
-    const rule: CoverageContextRule = isChain
-      ? readChainedSequenceContextFormat3(dv, offset)
-      : readSequenceContextFormat3(dv, offset);
+    const rule = reader.readFormat3(dv, offset);
     if (coverageIndex(dv, offset + rule.first, glyphs[at]!) < 0) return null;
     return ruleMatches(glyphs, at, rule, [byCoverage, byCoverage, byCoverage]) ? rule : null;
   }
   const coverage = coverageIndex(dv, offset + u16(dv, offset + 2), glyphs[at]!);
   if (coverage < 0) return null;
   const classDefs =
-    format === 2 ? (isChain ? [4, 6, 8] : [4, 4, 4]).map((field) => offset + u16(dv, offset + field)) : null;
+    format === 2 ? reader.classDefFields.map((field) => offset + u16(dv, offset + field)) : null;
   const byClass =
     (classDef: number): Matcher =>
     (glyph, value) =>
@@ -274,14 +253,13 @@ function matchingRule(
     ? [byClass(classDefs[0]!), byClass(classDefs[1]!), byClass(classDefs[2]!)]
     : [byGlyph, byGlyph, byGlyph];
   const setIndex = classDefs ? glyphClass(dv, classDefs[1]!, glyphs[at]!) : coverage;
-  const countAt = offset + (format === 1 ? 4 : isChain ? 10 : 6);
+  const countAt = offset + (format === 1 ? 4 : reader.classSetCountField);
   if (setIndex >= u16(dv, countAt)) return null;
   const setOffset = u16(dv, countAt + 2 + 2 * setIndex);
   if (setOffset === 0) return null;
   const set = offset + setOffset;
-  const readRule = isChain ? readChainedSequenceRule : readSequenceRule;
   for (let i = 0; i < u16(dv, set); i++) {
-    const rule = readRule(dv, set + u16(dv, set + 2 + 2 * i));
+    const rule = reader.readRule(dv, set + u16(dv, set + 2 + 2 * i));
     if (ruleMatches(glyphs, at, rule, matchers)) return rule;
   }
   return null;
@@ -297,7 +275,13 @@ function applyContext(
   at: number,
   depth: number
 ): Applied | null {
-  const rule = matchingRule(table.dv, subtable.offset, buffer.glyphs, at, subtable.type === 6);
+  const rule = matchingRule(
+    table.dv,
+    subtable.offset,
+    buffer.glyphs,
+    at,
+    subtable.type === GsubType.CHAIN_CONTEXT ? CHAINED_SEQUENCE_CONTEXT : SEQUENCE_CONTEXT
+  );
   if (!rule) return null;
   let end = at + 1 + rule.input.length;
   for (const { sequenceIndex, lookupIndex } of rule.records) {
@@ -319,16 +303,16 @@ function applySubtable(
 ): Applied | null {
   const { dv } = table;
   switch (subtable.type) {
-    case 1:
+    case GsubType.SINGLE:
       return applySingle(dv, subtable.offset, buffer, at);
-    case 2:
+    case GsubType.MULTIPLE:
       return applyMultiple(dv, subtable.offset, buffer, at);
-    case 3:
+    case GsubType.ALTERNATE:
       return applyAlternate(dv, subtable.offset, buffer, at, isRandom);
-    case 4:
+    case GsubType.LIGATURE:
       return applyLigature(dv, subtable.offset, buffer, at);
-    case 5:
-    case 6:
+    case GsubType.CONTEXT:
+    case GsubType.CHAIN_CONTEXT:
       return applyContext(table, subtable, buffer, at, depth);
     default:
       return null;
@@ -364,13 +348,10 @@ function applyGsub(table: LayoutTable, stages: readonly Stage[], buffer: Buffer)
   }
 }
 
-const X_PLACEMENT = 0x01;
-const Y_PLACEMENT = 0x02;
-
 /** The y placement of a `GPOS` value record of `valueFormat` at `at`, 0 for a record without one. */
 function yPlacementOf(dv: DataView, at: number, valueFormat: number): number {
-  if (!(valueFormat & Y_PLACEMENT)) return 0;
-  return i16(dv, valueFormat & X_PLACEMENT ? at + 2 : at);
+  if (!(valueFormat & ValueFormat.Y_PLACEMENT)) return 0;
+  return i16(dv, at + valueFieldOffset(valueFormat, ValueFormat.Y_PLACEMENT));
 }
 
 function adjust(glyph: ShapedGlyph, dv: DataView, at: number, valueFormat: number): void {
@@ -387,30 +368,10 @@ function applySinglePosition(dv: DataView, offset: number, glyph: ShapedGlyph): 
 }
 
 function applyPairPosition(dv: DataView, offset: number, first: ShapedGlyph, second: ShapedGlyph): boolean {
-  const index = coverageIndex(dv, offset + u16(dv, offset + 2), first.glyph);
-  if (index < 0) return false;
-  const format1 = u16(dv, offset + 4);
-  const format2 = u16(dv, offset + 6);
-  const size1 = valueRecordSize(format1);
-  const size2 = valueRecordSize(format2);
-  let record: number | null = null;
-  if (u16(dv, offset) === 1) {
-    const set = offset + u16(dv, offset + 10 + 2 * index);
-    for (let i = 0; i < u16(dv, set) && record === null; i++) {
-      const at = set + 2 + i * (2 + size1 + size2);
-      if (u16(dv, at) === second.glyph) record = at + 2;
-    }
-  } else {
-    const class1 = glyphClass(dv, offset + u16(dv, offset + 8), first.glyph);
-    const class2 = glyphClass(dv, offset + u16(dv, offset + 10), second.glyph);
-    const class1Count = u16(dv, offset + 12);
-    const class2Count = u16(dv, offset + 14);
-    if (class1 < class1Count && class2 < class2Count)
-      record = offset + 16 + (class1 * class2Count + class2) * (size1 + size2);
-  }
-  if (record === null) return false;
-  adjust(first, dv, record, format1);
-  adjust(second, dv, record + size1, format2);
+  const records = pairValueRecords(dv, offset, first.glyph, second.glyph);
+  if (!records) return false;
+  adjust(first, dv, records[0].at, records[0].format);
+  adjust(second, dv, records[1].at, records[1].format);
   return true;
 }
 
@@ -421,9 +382,9 @@ function applyGpos(table: LayoutTable, lookups: readonly number[], shaped: Shape
       for (const { type, offset } of table.lookups[lookupIndex]?.subtables ?? []) {
         const next = shaped[at + 1];
         const isApplied =
-          type === 1
+          type === GposType.SINGLE
             ? applySinglePosition(dv, offset, shaped[at]!)
-            : type === 2 && next
+            : type === GposType.PAIR && next
               ? applyPairPosition(dv, offset, shaped[at]!, next)
               : false;
         if (isApplied) break;

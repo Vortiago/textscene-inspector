@@ -25,6 +25,11 @@ import { isTrickyFont } from './trickyFont';
 import { openFontContainer } from './fontContainer';
 import { OUTLINE_TABLE_TAGS, readHeadUnitsPerEm, type SfntFile } from './sfntTables';
 import { fontInstanceOf, type FontInstance } from './variation/fontInstance';
+import type { instanceKerningReader, PairKerningReader } from './variation/instanceKerning';
+import { perObject } from '../../../../utils/perObject';
+import { recentlyRead } from '../../../../utils/recentlyRead';
+
+type InstanceKerningReader = typeof instanceKerningReader;
 
 export interface SfntOutlines {
   /** The glyph index `cmap` gives `codePoint`, or 0 for a character the font lacks. */
@@ -37,6 +42,19 @@ export interface SfntOutlines {
    * a font with no variation axes to set, such as a BMFont's.
    */
   advanceAtInstance?(glyphIndex: number, fontSizePx: number, opentype: OpentypeCoordinates): number | null;
+  /**
+   * The `GPOS` kerning in design units of a pair of characters, as HarfBuzz shapes it at the axis
+   * values of `opentype`: null where they draw the default instance, where the font has no `kern`
+   * feature to read, and for a character it has no glyph for. Absent for outlines with no `GPOS`
+   * variation to read.
+   */
+  kerningAtInstance?(
+    leftCodePoint: number,
+    rightCodePoint: number,
+    opentype: OpentypeCoordinates
+  ): number | null;
+  /** Whether the axis values of `opentype` draw an instance other than the default. */
+  drawsInstance?(opentype: OpentypeCoordinates): boolean;
 }
 
 /** `read`, or `fallback` when a corrupt table puts an offset past the buffer: a `DataView` read throws a `RangeError` there. */
@@ -73,8 +91,73 @@ async function openOutlines(
 ): Promise<SfntOutlines | null> {
   const sfnt = await openFontContainer(bytes, OUTLINE_TABLE_TAGS);
   if (!sfnt) return null;
-  const outlineOf = isAutoHinted(sfnt) ? await autoHintedReaderOf(sfnt) : await nativeReaderOf(sfnt);
-  return readSfntOutlines(sfnt, outlineOf);
+  const [outlineOf, kerningReader] = await Promise.all([
+    isAutoHinted(sfnt) ? autoHintedReaderOf(sfnt) : nativeReaderOf(sfnt),
+    kerningReaderOf(sfnt),
+  ]);
+  return readSfntOutlines(sfnt, outlineOf, kerningReader);
+}
+
+/**
+ * The `GPOS` kerning reader of a variable font, or null for a font without `GPOS` and `fvar`. Its
+ * module loads with the font, and `instanceKerningOf` reads the tables when an instance first asks.
+ */
+async function kerningReaderOf(sfnt: SfntFile): Promise<InstanceKerningReader | null> {
+  if (!sfnt.tables.has('GPOS') || !sfnt.tables.has('fvar')) return null;
+  return (await import('./variation/instanceKerning')).instanceKerningReader;
+}
+
+/** The kerning of a pair of characters at one instance, or null for a character the font has no glyph for. */
+type CharacterKerning = (leftCodePoint: number, rightCodePoint: number) => number | null;
+
+/**
+ * The kerning of each pair at an instance, kept for each instance as a layout asks for the same pair
+ * again and again. A font at its default instance reads no table. A pair that a corrupt table puts
+ * past the buffer kerns 0.
+ */
+function instanceKerningOf(
+  sfnt: SfntFile,
+  glyphIndex: (codePoint: number) => number,
+  kerningReader: InstanceKerningReader | null
+): SfntOutlines['kerningAtInstance'] {
+  if (!kerningReader) return undefined;
+  // Read when an instance first asks. Null is a font with no pair kerning, read only once.
+  const kerningAtOf = perObject((font: SfntFile) => orOnRangeError(() => kerningReader(font), null));
+  // Kept with its instance, which `fontInstanceOf` bounds.
+  const pairsAt = perObject((instance: FontInstance): CharacterKerning | null => {
+    const kerningAt = kerningAtOf(sfnt);
+    return kerningAt && keptPairs(glyphIndex, kerningAt(instance.normalized));
+  });
+  // Equal axis values share one instance, and so one kept pair for each pair.
+  const instanceAt = perObject((opentype: OpentypeCoordinates) =>
+    orOnRangeError(() => fontInstanceOf(sfnt, opentype), null)
+  );
+  return (leftCodePoint, rightCodePoint, opentype) => {
+    const instance = instanceAt(opentype);
+    return (instance && pairsAt(instance)?.(leftCodePoint, rightCodePoint)) ?? null;
+  };
+}
+
+/** Past the last code point, so `left * CODE_POINT_LIMIT + right` names one pair, well inside 2^53. */
+const CODE_POINT_LIMIT = 0x110000;
+
+/** `kerningOf` for characters, with the answer for each pair kept by its pair of code points. */
+function keptPairs(
+  glyphIndex: (codePoint: number) => number,
+  kerningOf: PairKerningReader
+): CharacterKerning {
+  const kept = new Map<number, number | null>();
+  return (leftCodePoint, rightCodePoint) => {
+    const pair = leftCodePoint * CODE_POINT_LIMIT + rightCodePoint;
+    const known = kept.get(pair);
+    if (known !== undefined) return known;
+    const left = { glyph: glyphIndex(leftCodePoint), codePoint: leftCodePoint };
+    const right = { glyph: glyphIndex(rightCodePoint), codePoint: rightCodePoint };
+    const units =
+      left.glyph === 0 || right.glyph === 0 ? null : orOnRangeError(() => kerningOf(left, right), 0);
+    kept.set(pair, units);
+    return units;
+  };
 }
 
 /** The reader of a font's outlines as its own hints place them: TrueType bytecode or CFF hints. */
@@ -108,17 +191,12 @@ function instanceOf(sfnt: SfntFile, variation: GlyphVariation | undefined): Font
  */
 function instanceAdvanceReader(sfnt: SfntFile): SfntOutlines['advanceAtInstance'] {
   let readers: ReturnType<typeof instanceAdvanceReaders> | undefined;
-  const kept = new WeakMap<OpentypeCoordinates, Map<number, Map<number, number | null>>>();
+  const kept = perObject((_opentype: OpentypeCoordinates) =>
+    recentlyRead<number, Map<number, number | null>>(MAX_KEPT_SIZES)
+  );
 
   return (glyphIndex, fontSizePx, opentype) => {
-    let bySize = kept.get(opentype);
-    if (!bySize) kept.set(opentype, (bySize = new Map()));
-    let byGlyph = bySize.get(fontSizePx);
-    if (!byGlyph) {
-      // A font size animation passes through many sizes, so the oldest size goes at this count.
-      if (bySize.size >= MAX_KEPT_SIZES) bySize.delete(bySize.keys().next().value!);
-      bySize.set(fontSizePx, (byGlyph = new Map()));
-    }
+    const byGlyph = kept(opentype)(fontSizePx, newAdvancesByGlyph);
     if (byGlyph.has(glyphIndex)) return byGlyph.get(glyphIndex)!;
     const instance = fontInstanceOf(sfnt, opentype);
     readers ??= instanceAdvanceReaders(sfnt);
@@ -128,7 +206,10 @@ function instanceAdvanceReader(sfnt: SfntFile): SfntOutlines['advanceAtInstance'
   };
 }
 
-/** The sizes of one instance whose advances are kept. */
+/** Declared once, not inline: an arrow inside the reader would allocate a closure on every read. */
+const newAdvancesByGlyph = (): Map<number, number | null> => new Map();
+
+/** A font size animation passes through many sizes, so the advances of this many sizes of one instance are kept. */
 const MAX_KEPT_SIZES = 8;
 
 /** The reader of the 26.6 advance at an instance, with `hmtx`, `head` and the phantom-point loader set up once. */
@@ -146,19 +227,26 @@ function instanceAdvanceReaders(
   };
 }
 
-function readSfntOutlines(sfnt: SfntFile, outlineOf: GlyphOutlineReader | null): SfntOutlines | null {
+function readSfntOutlines(
+  sfnt: SfntFile,
+  outlineOf: GlyphOutlineReader | null,
+  kerningReader: InstanceKerningReader | null
+): SfntOutlines | null {
   const cmap = sfnt.tables.get('cmap');
   if (!cmap || !outlineOf) return null;
   const lookup = orOnRangeError(() => cmapLookup(sfnt.dv, cmap.offset), null);
   if (!lookup) return null;
 
+  const glyphIndex = (codePoint: number): number => orOnRangeError(() => lookup(codePoint), 0);
   return {
-    glyphIndex: (codePoint) => orOnRangeError(() => lookup(codePoint), 0),
+    glyphIndex,
     advanceAtInstance: instanceAdvanceReader(sfnt),
-    glyphContours: (glyphIndex, fontSizePx, variation) =>
+    glyphContours: (glyph, fontSizePx, variation) =>
       orOnRangeError(() => {
-        const outline = outlineOf(glyphIndex, fontSizePx, instanceOf(sfnt, variation));
+        const outline = outlineOf(glyph, fontSizePx, instanceOf(sfnt, variation));
         return outline && variedContours(outline, fontSizePx, variation);
       }, null),
+    kerningAtInstance: instanceKerningOf(sfnt, glyphIndex, kerningReader),
+    drawsInstance: (opentype) => orOnRangeError(() => fontInstanceOf(sfnt, opentype) !== null, false),
   };
 }

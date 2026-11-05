@@ -8,10 +8,11 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { readTag } from '../sfntTables';
+import { perObject } from '../../../../../utils/perObject';
+import { readTag, type SfntFile } from '../sfntTables';
 
 /** A `LangSys` table: its required feature, or null for none, and its other features. */
-interface LanguageSystem {
+export interface LanguageSystem {
   readonly requiredFeature: number | null;
   readonly features: readonly number[];
 }
@@ -35,7 +36,19 @@ export interface Subtable {
 
 export interface Lookup {
   readonly subtables: readonly Subtable[];
+  /** The lookup flag, as HarfBuzz keeps it in `lookup_props`: the mark filtering set in its high 16 bits. */
+  readonly props: number;
 }
+
+/** The bits of a lookup flag (`LookupFlag`, `hb-ot-layout-common.hh`). */
+export const LookupFlag = {
+  IGNORE_BASE_GLYPHS: 0x2,
+  IGNORE_LIGATURES: 0x4,
+  IGNORE_MARKS: 0x8,
+  /** A mark filtering set follows the subtable offsets. */
+  USE_MARK_FILTERING_SET: 0x10,
+  MARK_ATTACHMENT_TYPE: 0xff00,
+} as const;
 
 /**
  * A record of `FeatureVariations`: whether its conditions hold at the default instance, which
@@ -63,7 +76,30 @@ const NO_REQUIRED_FEATURE = 0xffff;
 const GSUB_EXTENSION = 7;
 const GPOS_EXTENSION = 9;
 
+/** The lookup types of `GSUB`. */
+export const GsubType = {
+  SINGLE: 1,
+  MULTIPLE: 2,
+  ALTERNATE: 3,
+  LIGATURE: 4,
+  CONTEXT: 5,
+  CHAIN_CONTEXT: 6,
+  REVERSE_CHAIN: 8,
+} as const;
+/** The lookup types of `GPOS`. */
+export const GposType = {
+  SINGLE: 1,
+  PAIR: 2,
+  CURSIVE: 3,
+  MARK_TO_BASE: 4,
+  MARK_TO_LIGATURE: 5,
+  MARK_TO_MARK: 6,
+  CONTEXT: 7,
+  CHAIN_CONTEXT: 8,
+} as const;
+
 export const u16 = (dv: DataView, at: number): number => dv.getUint16(at, false);
+export const i16 = (dv: DataView, at: number): number => dv.getInt16(at, false);
 
 /** The `count` 16-bit values from `at`. */
 function u16Values(dv: DataView, at: number, count: number): number[] {
@@ -106,16 +142,25 @@ function readFeatures(dv: DataView, list: number): Feature[] {
   });
 }
 
-function readLookups(dv: DataView, list: number, extensionType: number): Lookup[] {
+/** The lookups of the list at `list`, in a table that ends at `end`. */
+function readLookups(dv: DataView, list: number, end: number, extensionType: number): Lookup[] {
   return Array.from({ length: u16(dv, list) }, (_, i) => {
     const lookup = list + u16(dv, list + 2 + 2 * i);
     const type = u16(dv, lookup);
-    const subtables = countedU16Values(dv, lookup + 4).map((offset): Subtable => {
+    const flag = u16(dv, lookup + 2);
+    const offsets = countedU16Values(dv, lookup + 4);
+    const markFilteringSetAt = lookup + 6 + 2 * offsets.length;
+    // `Lookup::sanitize` (`hb-ot-layout-common.hh:1418-1431`) fails, and HarfBuzz empties the lookup.
+    if (flag & LookupFlag.USE_MARK_FILTERING_SET && markFilteringSetAt + 2 > end)
+      return { subtables: [], props: flag };
+    const subtables = offsets.map((offset): Subtable => {
       const at = lookup + offset;
       if (type !== extensionType) return { type, offset: at };
       return { type: u16(dv, at + 2), offset: at + dv.getUint32(at + 4, false) };
     });
-    return { subtables };
+    // `Lookup::get_props` (`hb-ot-layout-common.hh:1325-1334`).
+    const markFilteringSet = flag & LookupFlag.USE_MARK_FILTERING_SET ? u16(dv, markFilteringSetAt) : 0;
+    return { subtables, props: flag + markFilteringSet * 0x10000 };
   });
 }
 
@@ -155,16 +200,79 @@ function readSubstitutions(dv: DataView, at: number): Map<number, readonly numbe
   return substitutions;
 }
 
+/** The extension lookup type of each layout table, which wraps a lookup of any other type. */
+const EXTENSION_TYPE = { GSUB: GSUB_EXTENSION, GPOS: GPOS_EXTENSION } as const;
+
 /** Reads the `GSUB` or `GPOS` table of `length` bytes at `offset`. */
-export function readLayoutTable(dv: DataView, offset: number, length: number, isGsub: boolean): LayoutTable {
+function readLayoutTable(dv: DataView, offset: number, length: number, extensionType: number): LayoutTable {
+  const end = offset + length;
   return {
     dv,
-    end: offset + length,
+    end,
     scripts: readScripts(dv, offset + u16(dv, offset + 4)),
     features: readFeatures(dv, offset + u16(dv, offset + 6)),
-    lookups: readLookups(dv, offset + u16(dv, offset + 8), isGsub ? GSUB_EXTENSION : GPOS_EXTENSION),
+    lookups: readLookups(dv, offset + u16(dv, offset + 8), end, extensionType),
     featureSubstitutions: readFeatureSubstitutions(dv, offset),
   };
+}
+
+/**
+ * The table `tag`, or null for none, or for one whose lists leave the file: HarfBuzz reads a table
+ * it cannot sanitise as empty.
+ */
+function readSfntLayoutTable(sfnt: SfntFile, tag: 'GSUB' | 'GPOS'): LayoutTable | null {
+  const table = sfnt.tables.get(tag);
+  if (!table) return null;
+  try {
+    return readLayoutTable(sfnt.dv, table.offset, table.length, EXTENSION_TYPE[tag]);
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    return null;
+  }
+}
+
+/** The `GSUB` of a font, read once for the auto-hinter and the shaper. */
+export const sfntGsub = perObject((sfnt: SfntFile) => readSfntLayoutTable(sfnt, 'GSUB'));
+/** The `GPOS` of a font, read once for the auto-hinter and the kerning at an instance. */
+export const sfntGpos = perObject((sfnt: SfntFile) => readSfntLayoutTable(sfnt, 'GPOS'));
+
+/**
+ * HarfBuzz's features of the default shaper after `rvrn`'s pause, past the two of the text's
+ * direction (`hb-ot-shape.cc:329-376`).
+ */
+export const DEFAULT_FEATURES = [
+  'rand',
+  'abvm',
+  'blwm',
+  'ccmp',
+  'locl',
+  'mark',
+  'mkmk',
+  'rlig',
+  'calt',
+  'clig',
+  'curs',
+  'dist',
+  'kern',
+  'liga',
+  'rclt',
+] as const;
+
+/**
+ * The features of `language` that HarfBuzz applies for `tags`: the required feature whatever its tag
+ * (`hb-ot-map.cc:205-210`), then the first feature of each tag (`hb_ot_layout_language_find_feature`).
+ */
+export function languageFeatures(
+  table: LayoutTable,
+  language: LanguageSystem,
+  tags: readonly string[]
+): number[] {
+  const indices = language.requiredFeature === null ? [] : [language.requiredFeature];
+  for (const tag of tags) {
+    const index = language.features.find((feature) => table.features[feature]?.tag === tag);
+    if (index !== undefined) indices.push(index);
+  }
+  return indices;
 }
 
 /** HarfBuzz skips a script or language system with nothing in it (`hb_collect_features_context_t::visited`). */
@@ -236,15 +344,35 @@ export function coverageGlyphs(dv: DataView, at: number): number[] {
 
 /** The coverage index of `glyph` in the coverage table at `at`, or -1 for a glyph it does not cover. */
 export function coverageIndex(dv: DataView, at: number, glyph: number): number {
-  if (u16(dv, at) === 1) {
-    const count = u16(dv, at + 2);
-    for (let i = 0; i < count; i++) if (u16(dv, at + 4 + 2 * i) === glyph) return i;
-    return -1;
-  }
-  for (let i = 0; i < u16(dv, at + 2); i++) {
-    const range = at + 4 + 6 * i;
-    const start = u16(dv, range);
-    if (glyph >= start && glyph <= u16(dv, range + 2)) return u16(dv, range + 4) + glyph - start;
+  const count = u16(dv, at + 2);
+  if (u16(dv, at) === 1) return sortedGlyphRecord(dv, at + 4, count, 2, 0, glyph);
+  const index = sortedGlyphRecord(dv, at + 4, count, 6, 2, glyph);
+  if (index < 0) return -1;
+  const range = at + 4 + 6 * index;
+  return u16(dv, range + 4) + glyph - u16(dv, range);
+}
+
+/**
+ * The index of the record that holds `glyph`, of `count` records `stride` bytes apart from `first`,
+ * or -1. Each record starts with its first glyph and keeps its last at `lastGlyphOffset`. OpenType
+ * sorts these arrays, and HarfBuzz searches them in halves (`hb_sorted_array_t::bsearch`).
+ */
+function sortedGlyphRecord(
+  dv: DataView,
+  first: number,
+  count: number,
+  stride: number,
+  lastGlyphOffset: number,
+  glyph: number
+): number {
+  let low = 0;
+  let high = count - 1;
+  while (low <= high) {
+    const middle = (low + high) >>> 1;
+    const record = first + middle * stride;
+    if (glyph < u16(dv, record)) high = middle - 1;
+    else if (glyph > u16(dv, record + lastGlyphOffset)) low = middle + 1;
+    else return middle;
   }
   return -1;
 }
@@ -337,7 +465,7 @@ function inputAfterFirst(dv: DataView, at: number, inputCount: number): number[]
 }
 
 /** A `SequenceRule` of a context subtable of format 1 or 2. */
-export function readSequenceRule(dv: DataView, at: number): ContextRule {
+function readSequenceRule(dv: DataView, at: number): ContextRule {
   const inputCount = u16(dv, at);
   const input = inputAfterFirst(dv, at + 4, inputCount);
   return {
@@ -350,7 +478,7 @@ export function readSequenceRule(dv: DataView, at: number): ContextRule {
 }
 
 /** A `ChainedSequenceRule` of a chained context subtable of format 1 or 2. */
-export function readChainedSequenceRule(dv: DataView, at: number): ContextRule {
+function readChainedSequenceRule(dv: DataView, at: number): ContextRule {
   const backtrack = countedU16Values(dv, at);
   const inputAt = at + 2 + 2 * backtrack.length;
   const inputCount = u16(dv, inputAt);
@@ -363,7 +491,7 @@ export function readChainedSequenceRule(dv: DataView, at: number): ContextRule {
 }
 
 /** The single rule of a context subtable of format 3 at `subtable`. */
-export function readSequenceContextFormat3(dv: DataView, subtable: number): CoverageContextRule {
+function readSequenceContextFormat3(dv: DataView, subtable: number): CoverageContextRule {
   const inputCount = u16(dv, subtable + 2);
   const coverages = u16Values(dv, subtable + 6, inputCount);
   return {
@@ -377,7 +505,7 @@ export function readSequenceContextFormat3(dv: DataView, subtable: number): Cove
 }
 
 /** The single rule of a chained context subtable of format 3 at `subtable`. */
-export function readChainedSequenceContextFormat3(dv: DataView, subtable: number): CoverageContextRule {
+function readChainedSequenceContextFormat3(dv: DataView, subtable: number): CoverageContextRule {
   const backtrack = countedU16Values(dv, subtable + 2);
   const inputAt = subtable + 4 + 2 * backtrack.length;
   const coverages = countedU16Values(dv, inputAt);
@@ -394,6 +522,32 @@ export function readChainedSequenceContextFormat3(dv: DataView, subtable: number
   };
 }
 
+/** Where a context subtable or a chained one keeps its parts, and how it reads them. */
+export interface ContextReader {
+  /** The offsets of the backtrack, input and lookahead `ClassDef`s of format 2. */
+  classDefFields: readonly [number, number, number];
+  /** The offset of the rule set count of format 2. */
+  classSetCountField: number;
+  readRule: (dv: DataView, at: number) => ContextRule;
+  readFormat3: (dv: DataView, subtable: number) => CoverageContextRule;
+}
+
+/** A `SequenceContext` subtable: one `ClassDef` serves all three sequences. */
+export const SEQUENCE_CONTEXT: ContextReader = {
+  classDefFields: [4, 4, 4],
+  classSetCountField: 6,
+  readRule: readSequenceRule,
+  readFormat3: readSequenceContextFormat3,
+};
+
+/** A `ChainedSequenceContext` subtable. */
+export const CHAINED_SEQUENCE_CONTEXT: ContextReader = {
+  classDefFields: [4, 6, 8],
+  classSetCountField: 10,
+  readRule: readChainedSequenceRule,
+  readFormat3: readChainedSequenceContextFormat3,
+};
+
 /**
  * The size in bytes of a `GPOS` value record of `valueFormat`: two bytes for each bit set, the
  * reserved bits too, as HarfBuzz counts them (`ValueFormat::get_len`).
@@ -402,6 +556,71 @@ export function valueRecordSize(valueFormat: number): number {
   let size = 0;
   for (let bits = valueFormat; bits !== 0; bits &= bits - 1) size += 2;
   return size;
+}
+
+/** The fields of a `GPOS` value record (`ValueFormat`, `hb-ot-layout-gpos-table.hh`), in record order. */
+export const ValueFormat = {
+  X_PLACEMENT: 0x01,
+  Y_PLACEMENT: 0x02,
+  X_ADVANCE: 0x04,
+  X_ADVANCE_DEVICE: 0x40,
+} as const;
+
+/** Where the field `field` of a value record of `valueFormat` starts: after every field of a lower bit. */
+export const valueFieldOffset = (valueFormat: number, field: number): number =>
+  valueRecordSize(valueFormat & (field - 1));
+
+/**
+ * One value record of a `GPOS` pair subtable: where it starts, its format, and the table its device
+ * offsets count from, a `PairSet` in format 1 and the subtable in format 2.
+ */
+export interface PairValueRecord {
+  readonly at: number;
+  readonly base: number;
+  readonly format: number;
+}
+
+/** The first value record of the pair set at `pairSet` for `right`, or null for a glyph it does not list. */
+function pairSetRecord(dv: DataView, pairSet: number, right: number, recordSize: number): number | null {
+  const index = sortedGlyphRecord(dv, pairSet + 2, u16(dv, pairSet), 2 + recordSize, 0, right);
+  return index < 0 ? null : pairSet + 2 + index * (2 + recordSize) + 2;
+}
+
+/**
+ * The two value records the pair subtable at `subtable` gives `left` and `right` (`PairPosFormat1`,
+ * `PairPosFormat2`), or null for a pair it does not hold.
+ */
+export function pairValueRecords(
+  dv: DataView,
+  subtable: number,
+  left: number,
+  right: number
+): [PairValueRecord, PairValueRecord] | null {
+  const leftIndex = coverageIndex(dv, subtable + u16(dv, subtable + 2), left);
+  if (leftIndex < 0) return null;
+  const format1 = u16(dv, subtable + 4);
+  const format2 = u16(dv, subtable + 6);
+  const size1 = valueRecordSize(format1);
+  const recordSize = size1 + valueRecordSize(format2);
+  let at: number | null;
+  let base = subtable;
+  if (u16(dv, subtable) === 1) {
+    base = subtable + u16(dv, subtable + 10 + 2 * leftIndex);
+    at = pairSetRecord(dv, base, right, recordSize);
+  } else {
+    const leftClass = glyphClass(dv, subtable + u16(dv, subtable + 8), left);
+    const rightClass = glyphClass(dv, subtable + u16(dv, subtable + 10), right);
+    const rightClassCount = u16(dv, subtable + 14);
+    at =
+      leftClass < u16(dv, subtable + 12) && rightClass < rightClassCount
+        ? subtable + 16 + (leftClass * rightClassCount + rightClass) * recordSize
+        : null;
+  }
+  if (at === null) return null;
+  return [
+    { at, base, format: format1 },
+    { at: at + size1, base, format: format2 },
+  ];
 }
 
 /**

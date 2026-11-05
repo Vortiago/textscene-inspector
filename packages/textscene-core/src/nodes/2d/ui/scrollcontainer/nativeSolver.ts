@@ -29,6 +29,7 @@ import type { ScrollContainerProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
 import { ScrollContainerScrollHintMode, ScrollMode } from '../../../../godot/scene/gui';
+import { clampRangeValue } from '../shared/range';
 
 /** `scrollbar_h_separation`/`scrollbar_v_separation` default to 0 (`scroll_container.h:104-105`), and `default_theme.cpp` overrides them only for `Tree`. */
 const SCROLLBAR_SEPARATION = 0;
@@ -255,7 +256,7 @@ function settledScrollValue(raw: number, range: number, rawPage: number): number
   // `_update_scrollbars` (`:595-599`) sets `max` to the largest child minimum and `page` to the
   // viewport extent. `set_max` and `set_page` both re-run `set_value(shared->val)`, so the
   // authored offset is re-clamped, and a container that does not overflow scrolls by 0.
-  return Math.max(0, Math.min(raw, range - clampPage(rawPage, range)));
+  return clampRangeValue(raw, 0, range, clampPage(rawPage, range));
 }
 
 /**

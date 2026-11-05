@@ -265,19 +265,21 @@ export function infersRtl(layout: TextLayoutResult | null): boolean {
  * Re-wraps one shaped line as a one-line result drawn from y = 0; the caller's `<group>` supplies
  * the cumulative Y. It bypasses `shapeText`, so it echoes the parent's `fontMetrics` and baseline.
  * Override `baselineOffsetPx` and `fontMetrics` for a RichTextLabel `[b]`/`[i]` run shaped at its own
- * size, in its own face.
+ * size, in its own face. Override `heightPx` where the line is taller than the parent's pitch, so a
+ * canvas raster holds the line's ascent. `linePitchPx` stays the parent's.
  */
 export function soloLineLayout(
   line: TextLineLayout,
   parent: TextLayoutResult,
   baselineOffsetPx: number = parent.baselineOffsetPx,
-  fontMetrics: FontMetrics = parent.fontMetrics
+  fontMetrics: FontMetrics = parent.fontMetrics,
+  heightPx: number = parent.linePitchPx
 ): TextLayoutResult {
   return {
     lines: [line],
     linePitchPx: parent.linePitchPx,
     widthPx: line.widthPx,
-    heightPx: parent.linePitchPx,
+    heightPx,
     baselineOffsetPx,
     fontMetrics,
   };
@@ -437,9 +439,9 @@ function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: 
   return getFontKerningAdjustmentPx(metrics, a, b, fontSizePx);
 }
 
-/** Whether `face` is a BMFont with no glyph for `ch`, a tab aside: Godot then draws `ch` as a hex-code box. */
+/** Whether `face` is a BMFont with no glyph for `ch`: Godot then draws `ch` as a hex-code box. The caller takes a tab first. */
 function lacksBitmapGlyph(face: FontMetrics, ch: string): boolean {
-  return isBitmapFontMetrics(face) && !isTabChar(ch) && !face.glyphOf(ch);
+  return isBitmapFontMetrics(face) && !face.glyphOf(ch);
 }
 
 /**
@@ -893,9 +895,14 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     }
   }
 
-  const widthPx = lines.reduce((max, l) => Math.max(max, l.widthPx), 0);
+  const widthPx = widestLineWidthPx(lines);
   const heightPx = lines.length * linePitchPx;
   const baselineOffsetPx = getFontAscentPx(fontMetrics, fontSizePx);
 
   return { lines, linePitchPx, widthPx, heightPx, baselineOffsetPx, fontMetrics };
+}
+
+/** The width of the widest of `lines`, or 0 for none. */
+export function widestLineWidthPx(lines: readonly TextLineLayout[]): number {
+  return lines.reduce((max, line) => Math.max(max, line.widthPx), 0);
 }

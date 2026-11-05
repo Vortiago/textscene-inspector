@@ -290,6 +290,10 @@ export const CANVAS_2D_SCENES = [
   { name: 'label-bmfont', file: 'unit-label-bmfont.tscn', mode: '2d' },
   // The one variable: a BMFont's outline set, which Godot draws for any `outline_size` above 0.
   { name: 'label-bmfont-outline', file: 'unit-label-bmfont-outline.tscn', mode: '2d' },
+  // The one variable: `variation_opentype` at `wght` 700 over Cascadia Code, whose `gvar` deltas move the outlines.
+  { name: 'label-font-variation-instance', file: 'unit-label-font-variation-instance.tscn', mode: '2d' },
+  // The one variable: `variation_opentype` at `MONO` 0.5 over Recursive, whose `GPOS` kerning halves at that instance.
+  { name: 'label-font-variation-kerning', file: 'unit-label-font-variation-kerning.tscn', mode: '2d' },
   // The one variable: a BMFont's import `scaling_mode`, Integer and Disabled, at sizes off the fixed size.
   { name: 'label-bmfont-scaling', file: 'unit-label-bmfont-scaling.tscn', mode: '2d' },
   // The one variable: `FontVariation.variation_embolden` over a scene font at 0, 1.2 and 2.0, which
@@ -952,11 +956,14 @@ export const CANVAS_2D_SCENES = [
   { name: 'rich-text-label-scrollbar-rtl', file: 'unit-rich-text-label-scrollbar-rtl.tscn', mode: '2d' },
   { name: 'rich-text-label-scrollbar-following', file: 'unit-rich-text-label-scrollbar-following.tscn', mode: '2d' },
   { name: 'rich-text-label-hr', file: 'unit-rich-text-label-hr.tscn', mode: '2d' },
+  { name: 'rich-text-label-font-size-outline', file: 'unit-rich-text-label-font-size-outline.tscn', mode: '2d' },
   { name: 'rich-text-label-paragraph-justification', file: 'unit-rich-text-label-paragraph-justification.tscn', mode: '2d' },
   { name: 'rich-text-label-paragraph-tab-stops', file: 'unit-rich-text-label-paragraph-tab-stops.tscn', mode: '2d' },
   { name: 'rich-text-label-empty-styling-before-paragraph', file: 'unit-rich-text-label-empty-styling-before-paragraph.tscn', mode: '2d' },
   { name: 'rich-text-label-empty-line-vertical-fill', file: 'unit-rich-text-label-empty-line-vertical-fill.tscn', mode: '2d' },
   { name: 'rich-text-label-lists', file: 'unit-rich-text-label-lists.tscn', mode: '2d' },
+  { name: 'rich-text-label-numeral-system', file: 'unit-rich-text-label-numeral-system.tscn', mode: '2d' },
+  { name: 'numeral-locale', file: 'numeral-locale/unit-numeral-locale.tscn', mode: '2d' },
   { name: 'label-fill-paragraphs', file: 'unit-label-fill-paragraphs.tscn', mode: '2d' },
   { name: 'label-tab-without-stop', file: 'unit-label-tab-without-stop.tscn', mode: '2d' },
   { name: 'label-fill-trim', file: 'unit-label-fill-trim.tscn', mode: '2d' },

@@ -1,8 +1,8 @@
 /**
  * RichTextLabel's vertical scrollbar: it shows when `scroll_active` holds and the text is taller
  * than the rect, and the text then wraps beside it (`_update_scroll_exceeds`,
- * `scene/gui/rich_text_label.cpp:3801-3830`). Only the top of the text is in frame, so the bar
- * never scrolls.
+ * `scene/gui/rich_text_label.cpp:3801-3830`). The bar sits at the top, or at the foot of the text
+ * under `scroll_following`.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -17,6 +17,7 @@ import {
   scrollBarMinimumSize,
   type ScrollBarPlacement,
 } from '../shared/scrollBarSolver';
+import { clampRangeValue } from '../shared/range';
 import { richTextContentHeightPx, type RichTextLayout, type StyledTextRun } from './nativeSolver';
 
 /** The text shaped at one wrap width. */
@@ -86,8 +87,11 @@ export function shapeBesideScrollBar(
   const wrapWidthPx = box.w - barWidthPx;
   const beside = shapeAt(wrapWidthPx);
   const contentHeightPx = richTextContentHeightPx(beside.runs, beside.layout);
-  // `set_value(total_height)` (`:3827-3828`), which `Range` clamps to `max - page` (`range.cpp:192-194`).
-  const scrollOffsetPx = box.scrollFollowing ? contentHeightPx - box.h : 0;
+  // `set_value(total_height)` (`:3827-3828`). A `%` image narrows beside the bar, so the text
+  // there can be shorter than the rect, and the clamp to `min` holds it at 0.
+  const scrollOffsetPx = box.scrollFollowing
+    ? clampRangeValue(contentHeightPx, 0, contentHeightPx, box.h)
+    : 0;
   return {
     ...beside,
     wrapWidthPx,

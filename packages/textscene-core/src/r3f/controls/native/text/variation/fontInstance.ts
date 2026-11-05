@@ -10,6 +10,7 @@
  */
 
 import { perObject } from '../../../../../utils/perObject';
+import { recentlyRead } from '../../../../../utils/recentlyRead';
 import { opentypeKey, type OpentypeCoordinates } from '../fontMetrics';
 import { tableFits, type SfntFile } from '../sfntTables';
 import { controlValuesOf } from '../truetype/controlValues';
@@ -102,8 +103,13 @@ function advanceDeltaOf(
   };
 }
 
+/** An axis animation passes through many axis values, so the instances of this many are kept for each font. */
+const MAX_KEPT_INSTANCES = 8;
+
 /** The instance of cached values by font, then by axis values. */
-const instancesOf = perObject(() => new Map<string, FontInstance | null>());
+const instancesOf = perObject((_sfnt: SfntFile) =>
+  recentlyRead<string, FontInstance | null>(MAX_KEPT_INSTANCES)
+);
 
 /**
  * The font drawn at the axis values of `opentype` as Godot sets them, or null when FreeType draws
@@ -111,10 +117,7 @@ const instancesOf = perObject(() => new Map<string, FontInstance | null>());
  * are all at the default.
  */
 export function fontInstanceOf(sfnt: SfntFile, opentype: OpentypeCoordinates): FontInstance | null {
-  const key = opentypeKey(opentype);
-  const instances = instancesOf(sfnt);
-  if (!instances.has(key)) instances.set(key, buildInstance(sfnt, opentype));
-  return instances.get(key)!;
+  return instancesOf(sfnt)(opentypeKey(opentype), () => buildInstance(sfnt, opentype));
 }
 
 function buildInstance(sfnt: SfntFile, opentype: OpentypeCoordinates): FontInstance | null {

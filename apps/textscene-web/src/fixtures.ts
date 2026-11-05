@@ -1263,6 +1263,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Font Variation Instance",
+    "file": "unit-label-font-variation-instance.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Font Variation Kerning",
+    "file": "unit-label-font-variation-kerning.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Label Settings Tres",
     "file": "unit-label-label-settings-tres.tscn",
     "category": "Other"
@@ -2847,6 +2857,12 @@ export const fixtures: Fixture[] = [
     "root": "msaa-3d"
   },
   {
+    "name": "Numeral Locale",
+    "file": "numeral-locale/unit-numeral-locale.tscn",
+    "category": "Other",
+    "root": "numeral-locale"
+  },
+  {
     "name": "Label Project Default Font",
     "file": "project-default-font/unit-label-project-default-font.tscn",
     "category": "Other",
@@ -4099,6 +4115,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Rich Text Label Font Size Outline",
+    "file": "unit-rich-text-label-font-size-outline.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Rich Text Label Fractional Box",
     "file": "unit-rich-text-label-fractional-box.tscn",
     "category": "Unit - 2D UI Controls"
@@ -4111,6 +4132,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Rich Text Label Lists",
     "file": "unit-rich-text-label-lists.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Numeral System",
+    "file": "unit-rich-text-label-numeral-system.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

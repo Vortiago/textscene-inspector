@@ -11,7 +11,7 @@
 
 import { ByteReader, ReadPastEndError } from '../../../../../resources/formats/binaryresource/byteReader';
 import { ftMulDiv } from '../fontMetrics';
-import { fdot14ToFixed } from './fixedPoint';
+import { fdot14ToFixed, fixedToWhole } from './fixedPoint';
 
 /** The three coordinates of a region on one axis, in 16.16. */
 interface AxisRegion {
@@ -148,6 +148,16 @@ export function itemDelta(
   innerIndex: number,
   normalized: Int32Array
 ): number {
+  return fixedToWhole(itemDeltaFixed(store, outerIndex, innerIndex, normalized));
+}
+
+/** `itemDelta` in 16.16, before FreeType rounds it: HarfBuzz keeps the fraction of a `GPOS` delta. */
+export function itemDeltaFixed(
+  store: ItemVariationStore,
+  outerIndex: number,
+  innerIndex: number,
+  normalized: Int32Array
+): number {
   if (outerIndex === NO_VARIATION_INDEX && innerIndex === NO_VARIATION_INDEX) return 0;
   const data = store.data[outerIndex];
   if (!data || innerIndex >= data.itemCount || data.regionIndices.length === 0) return 0;
@@ -162,7 +172,7 @@ export function itemDelta(
     if (scalar !== 0) sum += readDelta(data.deltaSets, at, width) * scalar;
     at += width;
   }
-  return Math.floor((sum + 0x8000) / 0x10000);
+  return sum;
 }
 
 /** A signed big-endian delta of 1, 2 or 4 bytes. */

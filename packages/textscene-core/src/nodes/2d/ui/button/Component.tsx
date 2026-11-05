@@ -33,6 +33,7 @@ import {
   tintColor,
   layoutButtonContent,
   buttonTextAlignShiftPx,
+  buttonTextBufWidthPx,
   swapAlignmentSide,
 } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
@@ -143,7 +144,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
     isTextRtl: infersRtl(unwrapped),
   }).drawableSize.x;
   const layout: TextLayoutResult | null = wraps
-    ? buttonLabelShape(solveNode, theme, Math.ceil(Math.max(1, drawableWidthPx)))
+    ? buttonLabelShape(solveNode, theme, buttonTextBufWidthPx(drawableWidthPx))
     : unwrapped;
   const content = useMemo(
     () =>
@@ -170,7 +171,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
         : 0;
     // button.cpp:424 `text_buf_width = ceil(MAX(1, drawable_size_remained.width))`. The icon's
     // computed reservation, `content.icon.rect.w`, keeps this in step with `layoutButtonContent`.
-    return Math.ceil(Math.max(1, customElementWidth - iconReserve));
+    return buttonTextBufWidthPx(customElementWidth - iconReserve);
   }, [
     rect.w,
     baseStyleBox.contentMargin,

@@ -23,6 +23,7 @@ import {
   shapeText,
   shapedTextSizeWidthPx,
   startsParagraph,
+  widestLineWidthPx,
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
@@ -115,10 +116,10 @@ interface LabelFontState {
  */
 export function labelFontState(n: ShareNode): LabelFontState {
   const font = n.labelSettingsFont;
-  if (font === null) return { metrics: resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY), isLoading: false };
-  const settled = font === LABEL_SETTINGS_FONT_LOADING ? null : peekSettledSceneFontMetrics(font, n.path);
+  const settled =
+    font === null || font === LABEL_SETTINGS_FONT_LOADING ? null : peekSettledSceneFontMetrics(font, n.path);
   if (settled) return { metrics: settled, isLoading: false };
-  return { metrics: resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY), isLoading: true };
+  return { metrics: resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY), isLoading: font !== null };
 }
 
 /**
@@ -246,7 +247,7 @@ export function windowLabelLines(
   paragraphSpacingPx: number
 ): TextLayoutResult {
   const lines = layout.lines.slice(range.start, range.end);
-  const widthPx = lines.reduce((max, l) => Math.max(max, l.widthPx), 0);
+  const widthPx = widestLineWidthPx(lines);
   const heightPx = lines.length * layout.linePitchPx + countParagraphs(lines) * paragraphSpacingPx;
   return { ...layout, lines, heightPx, widthPx };
 }
