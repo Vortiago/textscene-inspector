@@ -6,9 +6,9 @@
  * so every SystemFont takes the default. The Control theme lookup owns the project's fonts, so the
  * defaults arrive as an argument.
  */
-import type { FontResource } from './types';
+import type { FontFileResource, FontResource } from './types';
 import { perObject } from '../../../utils/perObject';
-import { hasGlyphs } from '../../../r3f/controls/native/text/sceneFontResolution';
+import { findDrawnFace, hasGlyphs } from '../../../r3f/controls/native/text/sceneFontResolution';
 
 /**
  * The font each Godot class without a face takes: the default theme context's `font` for that
@@ -40,10 +40,19 @@ function replaceDefaults(font: FontResource, defaults: DefaultFonts): FontResour
     }
     case 'file': {
       if (hasGlyphs(font)) return font;
-      const fallbacks = font.fallbacks.map((fallback) => replaceDefaults(fallback, defaults));
-      return fallbacks.every((fallback, i) => fallback === font.fallbacks[i]) ? font : { ...font, fallbacks };
+      return withFallbackDefaults(font, defaults);
     }
   }
+}
+
+/** Up to the first fallback that draws: the walk never reaches the fallbacks after it. */
+function withFallbackDefaults(font: FontFileResource, defaults: DefaultFonts): FontFileResource {
+  const fallbacks = [...font.fallbacks];
+  for (const [i, fallback] of fallbacks.entries()) {
+    fallbacks[i] = replaceDefaults(fallback, defaults);
+    if (findDrawnFace(fallbacks[i])) break;
+  }
+  return fallbacks.every((fallback, i) => fallback === font.fallbacks[i]) ? font : { ...font, fallbacks };
 }
 
 /**

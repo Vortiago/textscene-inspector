@@ -5,6 +5,7 @@ import { fontWork, sceneFontSettleCount } from './settledChannel';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { peekGlyphOutlines, peekSceneFontOutlines } from './sceneFontOutlines';
+import { findDrawnFace } from './sceneFontResolution';
 import { charContours, fixtureFontBytes, fontFile, systemFont } from './sfntOutlines.testkit';
 import autoHintedReference from './autofit/autoHinting.godot.json';
 import { referencePoints, type ReferenceGlyph } from './glyphVariation.testkit';
@@ -125,15 +126,15 @@ describe('peekGlyphOutlines', () => {
   it('answers null for a face with no embolden and no skew, whose text follows the glyph as it is', () => {
     const font = woffOfOpenSans();
 
-    expect(peekGlyphOutlines(font, canvasFace, {})).toBeNull();
-    expect(peekGlyphOutlines(font, canvasFace, { embolden: 0, skew: 0 })).toBeNull();
+    expect(peekGlyphOutlines(findDrawnFace(font), canvasFace, {})).toBeNull();
+    expect(peekGlyphOutlines(findDrawnFace(font), canvasFace, { embolden: 0, skew: 0 })).toBeNull();
     expect(peekSceneFontOutlines(font)).toBeUndefined();
   });
 
   it('answers null for an atlas face, which has no contour to follow', () => {
     const font = woffOfOpenSans();
 
-    expect(peekGlyphOutlines(font, OPEN_SANS_FONT_METRICS, { embolden: 1 })).toBeNull();
+    expect(peekGlyphOutlines(findDrawnFace(font), OPEN_SANS_FONT_METRICS, { embolden: 1 })).toBeNull();
     expect(peekSceneFontOutlines(font)).toBeUndefined();
   });
 
@@ -143,9 +144,9 @@ describe('peekGlyphOutlines', () => {
   ])('answers the outlines of the font once %s canvas face has loaded them', async (_, variation) => {
     const font = woffOfOpenSans();
 
-    expect(peekGlyphOutlines(font, canvasFace, variation)).toBeUndefined();
+    expect(peekGlyphOutlines(findDrawnFace(font), canvasFace, variation)).toBeUndefined();
 
     const outlines = await settledOutlines(font);
-    expect(peekGlyphOutlines(font, canvasFace, variation)).toBe(outlines);
+    expect(peekGlyphOutlines(findDrawnFace(font), canvasFace, variation)).toBe(outlines);
   });
 });

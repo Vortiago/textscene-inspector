@@ -65,6 +65,11 @@ describe('withDefaultFonts — fonts with a face of their own', () => {
     expect(withDefaultFonts(named, DEFAULTS)).toBe(named);
   });
 
+  it('leaves the fallbacks after the first one that draws as they are', () => {
+    const wrapper = fontFile(undefined, [fontFile(new ArrayBuffer(4)), systemFont()]);
+    expect(withDefaultFonts(wrapper, DEFAULTS)).toBe(wrapper);
+  });
+
   it('leaves a FontFile with bytes as it is, whatever its fallbacks: its own face draws', () => {
     const file = fontFile(new ArrayBuffer(4), [systemFont()]);
     expect(withDefaultFonts(file, DEFAULTS)).toBe(file);

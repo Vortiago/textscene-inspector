@@ -164,7 +164,7 @@ export function peekSettledSceneFontMetrics(
   const metrics = peekMetrics(face, () => loadSceneFontMetrics(face.bytes, nodePath));
   if (!metrics) return null;
   const variation = fontVariation(font);
-  const outlines = peekGlyphOutlines(font, metrics, variation);
+  const outlines = peekGlyphOutlines(face, metrics, variation);
   return outlines === undefined ? null : withVariation(metrics, { ...variation, outlines });
 }
 

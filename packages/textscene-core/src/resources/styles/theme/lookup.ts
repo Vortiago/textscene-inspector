@@ -130,11 +130,28 @@ function defaultFontOf(
   return projectDefaultFont;
 }
 
-/** Built once per project, so every node's scope shares one `DefaultFonts` object. */
-const defaultFontsOf = perObject((projectFonts: ProjectFonts): DefaultFonts => ({
-  variation: defaultFontOf('FontVariation', projectFonts),
-  system: defaultFontOf('SystemFont', projectFonts),
-}));
+/** Stands in for a null project theme or project font as a cache key. */
+const NO_KEY = {};
+
+/**
+ * Keyed by the project theme, then by the project font, not by the `ProjectFonts` object: a solve
+ * tree resolves a new one on every build, and `withDefaultFonts` keys its cache on `DefaultFonts`.
+ */
+const defaultFontsByTheme = perObject((_projectTheme: object) => new WeakMap<object, DefaultFonts>());
+
+/** One `DefaultFonts` per project theme and project font, which every node's scope shares. */
+function defaultFontsOf(projectFonts: ProjectFonts): DefaultFonts {
+  const byFont = defaultFontsByTheme(projectFonts.projectTheme ?? NO_KEY);
+  const fontKey = projectFonts.projectDefaultFont ?? NO_KEY;
+  const cached = byFont.get(fontKey);
+  if (cached) return cached;
+  const defaults: DefaultFonts = {
+    variation: defaultFontOf('FontVariation', projectFonts),
+    system: defaultFontOf('SystemFont', projectFonts),
+  };
+  byFont.set(fontKey, defaults);
+  return defaults;
+}
 
 export function themeResolutionScope(
   nativeType: string,

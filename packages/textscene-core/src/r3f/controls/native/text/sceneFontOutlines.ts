@@ -8,7 +8,7 @@ import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import { isGlyphVaried, type FontMetrics, type GlyphVariation } from './fontMetrics';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
-import { BUNDLED_FACE, findDrawnFace, fontForcesAutohinter } from './sceneFontResolution';
+import { BUNDLED_FACE, findDrawnFace, fontForcesAutohinter, type DrawnFace } from './sceneFontResolution';
 import { createSettledPeek } from './settledChannel';
 import { openAutoHintedFontOutlines, openFontOutlines, type SfntOutlines } from './sfntOutlines';
 
@@ -49,7 +49,11 @@ function peekBundledOutlines(): PeekedOutlines {
  * @canonical Glyph outlines of a scene font in any container, from its font resource
  */
 export function peekSceneFontOutlines(font: FontResource | null | undefined): PeekedOutlines {
-  const face = findDrawnFace(font);
+  return peekFaceOutlines(findDrawnFace(font));
+}
+
+/** The outlines of the face a font draws, which a caller with the face in hand reads without a second walk. */
+function peekFaceOutlines(face: DrawnFace): PeekedOutlines {
   if (face === BUNDLED_FACE) return peekBundledOutlines();
   const bytes = face?.bytes;
   if (!face || !bytes) return null;
@@ -65,9 +69,9 @@ export function peekSceneFontOutlines(font: FontResource | null | undefined): Pe
  * @canonical Glyph outlines that the text of an emboldened or sheared canvas face follows
  */
 export function peekGlyphOutlines(
-  font: FontResource | null | undefined,
+  face: DrawnFace,
   metrics: FontMetrics,
   variation: GlyphVariation
 ): PeekedOutlines {
-  return isCanvasFontMetrics(metrics) && isGlyphVaried(variation) ? peekSceneFontOutlines(font) : null;
+  return isCanvasFontMetrics(metrics) && isGlyphVaried(variation) ? peekFaceOutlines(face) : null;
 }

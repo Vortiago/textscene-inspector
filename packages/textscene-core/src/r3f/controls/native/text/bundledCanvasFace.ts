@@ -6,6 +6,7 @@ import { peekBundledCanvasFontMetrics } from './bundledFontLoader';
 import { withVariation, type FontMetrics } from './fontMetrics';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
 import { peekGlyphOutlines } from './sceneFontOutlines';
+import { BUNDLED_FACE } from './sceneFontResolution';
 
 /**
  * The bundled canvas face carrying the variation of `atlasFace`, with the outlines FreeType
@@ -14,7 +15,7 @@ import { peekGlyphOutlines } from './sceneFontOutlines';
 export function peekBundledCanvasFace(atlasFace: FontMetrics): CanvasFontMetrics | null | undefined {
   const bundled = peekBundledCanvasFontMetrics();
   if (!bundled) return bundled;
-  const outlines = peekGlyphOutlines(null, bundled, atlasFace);
+  const outlines = peekGlyphOutlines(BUNDLED_FACE, bundled, atlasFace);
   if (outlines === undefined) return undefined;
   // Null is no outlines to follow: an unvaried face, or one this reader cannot open.
   return withVariation(bundled, {

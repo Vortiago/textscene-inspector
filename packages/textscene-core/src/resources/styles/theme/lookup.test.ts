@@ -359,6 +359,21 @@ describe('resolveThemeFontIn — a SystemFont', () => {
   });
 });
 
+describe('themeResolutionScope — the default fonts', () => {
+  it('resolves a font with no face to one object for two ProjectFonts objects of the same fonts, as each solve tree build makes', () => {
+    const first = themeResolutionScope('Label', undefined, [], {
+      projectTheme: null,
+      projectDefaultFont: FONT_A,
+    });
+    const second = themeResolutionScope('Label', undefined, [], {
+      projectTheme: null,
+      projectDefaultFont: FONT_A,
+    });
+    const bare: FontVariationResource = { kind: 'variation', baseFont: null, properties: {} };
+    expect(resolveThemeFontIn(first, 'font', bare)).toBe(resolveThemeFontIn(second, 'font', bare));
+  });
+});
+
 describe('resolveThemeFontSizeIn', () => {
   it('a positive node-local override wins over any ancestor theme', () => {
     const ancestor = theme({ fontSizes: { Label: { font_size: 30 } } });
