@@ -373,15 +373,21 @@ describe('comparison sheets', () => {
       expect(sliceSheets.length).toBeGreaterThan(50);
     });
 
+    // One below the slice-backed sheets today: a filter that drops any of them fails here. It
+    // ratchets up with each new sheet and never goes down.
+    const SLICE_BACKED_FLOOR = 246;
+
     it('gives every slice-backed sheet a status, so none sits outside the checks', () => {
       // Every assertion in this block filters on a status literal, so a sheet
       // without one would escape them all. Resource sheets are in this check
       // only: a Resource slice registers through `registerResourceSlice`
       // (ADR-0031), not `nodeComponentRegistry`.
       const slice = (s) => s.file.includes(`${sep}nodes${sep}`) || s.file.includes(`${sep}resources${sep}`);
+      // The floor counts every slice-backed sheet, so a sheet that gains sections keeps it.
+      const sliceBacked = sheets.filter(slice);
+      expect(sliceBacked.length).toBeGreaterThan(SLICE_BACKED_FLOOR);
       // A sectioned sheet is exempt: the guard above forbids its key.
-      const backed = sheets.filter(slice).filter((s) => !s.body.includes('<!-- compare:'));
-      expect(backed.length).toBeGreaterThan(227);
+      const backed = sliceBacked.filter((s) => !s.body.includes('<!-- compare:'));
       expect(backed.filter((s) => !s.meta.status).map((s) => s.label)).toEqual([]);
     });
 
