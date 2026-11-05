@@ -10,11 +10,17 @@ import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
 import {
   overrunFlagsForBehavior,
+  trimFilledLineToWidth,
   trimLineToWidth,
   trimTextBufferLineToWidth,
   type OverrunTrimFlags,
 } from './textOverrun';
-import { AutowrapMode, OverrunBehavior, TextDirection } from '../../../../godot/text/textServerEnums';
+import {
+  AutowrapMode,
+  JustificationFlag,
+  OverrunBehavior,
+  TextDirection,
+} from '../../../../godot/text/textServerEnums';
 
 const FONT_SIZE_PX = 16;
 /** Twelve Hebrew letters: an AUTO paragraph that resolves right-to-left. */
@@ -310,5 +316,62 @@ describe('trimTextBufferLineToWidth — an AUTO line whose paragraph resolved ri
   it('leaves a line that fits unchanged', () => {
     const full = line(HEBREW);
     expect(trimTextBufferLineToWidth(full, full.widthPx + 1, ELLIPSIS, OPTIONS)).toBe(full);
+  });
+});
+
+describe('trimFilledLineToWidth — the fit after the trim, JUSTIFICATION_CONSTRAIN_ELLIPSIS (label.cpp:325, text_server_adv.cpp:5573-5583)', () => {
+  // The ellipsis advances 13.0625 and `ellipsis_width` truncates it to 13 (`:6044-6046`).
+  const ELLIPSIS_ADVANCE_PX = 13.0625;
+  const ELLIPSIS_WIDTH_PX = 13;
+  const WIDTH_PX = 100;
+  /** The cut falls in the second word, so the kept glyphs hold the one space. */
+  const SPACE_THEN_LETTERS = 'AAA AAAAAAAAAAAAA';
+  const ellipsisFlags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+
+  function trimFilled(text: string, justificationFlags: number, flags = ellipsisFlags) {
+    return trimFilledLineToWidth(line(text), WIDTH_PX, flags, {
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      fontSizePx: FONT_SIZE_PX,
+      justificationFlags,
+    });
+  }
+
+  it('grows a space the cut keeps until the ellipsis ends at the width', () => {
+    const ellipsis = trimFilled(SPACE_THEN_LETTERS, JustificationFlag.WORD_BOUND).glyphs.at(-1)!;
+    expect(ellipsis.x).toBe(WIDTH_PX - ELLIPSIS_WIDTH_PX);
+  });
+
+  it('keeps the width Godot aligns by, the kept advance plus the truncated ellipsis', () => {
+    const plain = trim(SPACE_THEN_LETTERS, WIDTH_PX, ellipsisFlags);
+    expect(trimFilled(SPACE_THEN_LETTERS, JustificationFlag.WORD_BOUND).widthPx).toBe(plain.widthPx);
+  });
+
+  it('leaves the glyphs as the trim placed them without WORD_BOUND', () => {
+    expect(trimFilled(SPACE_THEN_LETTERS, 0)).toEqual(trim(SPACE_THEN_LETTERS, WIDTH_PX, ellipsisFlags));
+  });
+
+  it('leaves a cut that keeps no space as the trim placed it', () => {
+    expect(trimFilled('AAAAAAAAAAAAAAAA', JustificationFlag.WORD_BOUND)).toEqual(
+      trim('AAAAAAAAAAAAAAAA', WIDTH_PX, ellipsisFlags)
+    );
+  });
+
+  it('keeps every glyph when only an enforced ellipsis draws (trim_pos < 0, `:5582`)', () => {
+    const enforced = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE);
+    expect(trimFilled('A B', JustificationFlag.WORD_BOUND, enforced)).toEqual(
+      trim('A B', WIDTH_PX, enforced)
+    );
+  });
+
+  it('grows the spaces of a right-to-left line from its visual left, after the ellipsis', () => {
+    const hebrew = 'אבג דהו זחט יכל מנס עפצ קרש';
+    const filled = trimFilledLineToWidth(line(hebrew), WIDTH_PX, ellipsisFlags, {
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      fontSizePx: FONT_SIZE_PX,
+      justificationFlags: JustificationFlag.WORD_BOUND,
+    });
+    const last = filled.glyphs.at(-1)!;
+    expect(filled.glyphs[0]!.char).toBe('…');
+    expect(last.x + last.advance).toBeCloseTo(WIDTH_PX + (ELLIPSIS_ADVANCE_PX - ELLIPSIS_WIDTH_PX), 9);
   });
 });
