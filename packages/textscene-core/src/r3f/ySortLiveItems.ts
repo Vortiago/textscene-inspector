@@ -7,7 +7,6 @@
 import { Matrix4, type Object3D } from 'three';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { pathsAlong } from './liveNodePatches.js';
-import { joinPath } from '../utils/nodePath.js';
 import type { YSortItem } from './ySortItems.js';
 
 /** The group that draws the node at a scene path, or null while it is not mounted. */
@@ -24,11 +23,7 @@ const toSortRoot = new Matrix4();
 export function liveGroupChain(item: YSortItem, basePath: string, groupAt: GroupAt): Object3D[] | null {
   const node = item.node;
   if (!node || item.kind !== 'node' || descendsFromClass(node.type, 'Node3D')) return null;
-  // The common item has no lifted ancestor.
-  const paths =
-    item.liftedPast.length === 0
-      ? [joinPath(basePath, node.name)]
-      : pathsAlong([...item.liftedPast, node], basePath);
+  const paths = pathsAlong([...item.liftedPast, node], basePath);
   const chain: Object3D[] = [];
   for (const path of paths) {
     const group = groupAt(path);

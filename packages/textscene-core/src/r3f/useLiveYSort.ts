@@ -15,6 +15,17 @@ import { ySortItemId, type YSortItem } from './ySortItems.js';
 type LiveYs = ReadonlyMap<string, number>;
 const NO_YS: LiveYs = new Map();
 
+interface Pose {
+  items: readonly YSortItem[];
+  chains: Map<string, Object3D[]>;
+  ys: Map<string, number>;
+  order: string | null;
+}
+
+function newPose(items: readonly YSortItem[]): Pose {
+  return { items, chains: new Map(), ys: new Map(), order: null };
+}
+
 /** The ids of `items` in draw order, with `ys` laid over their authored sort y. */
 function drawOrder(items: readonly YSortItem[], ys: LiveYs): string {
   return withLiveYs(items, ys).sort(compareYSortItems).map(ySortItemId).join(' ');
@@ -43,24 +54,15 @@ export function useLiveYSort(items: readonly YSortItem[], basePath: string): rea
    * Written only by the pose listener, until `items` change: each item's group chain, the sort y
    * read at the last pose that moved it, and the draw order last rendered.
    */
-  const pose = useMemo(
-    () => ({
-      items,
-      chains: new Map<string, Object3D[]>(),
-      ys: new Map<string, number>(),
-      order: null as string | null,
-    }),
-    [items]
-  );
+  const pose = useMemo(() => newPose(items), [items]);
 
   /** `posed` holds the uuids a pose moved. Null reads every item, as the first read does. */
   const onPose = useCallback(
     (posed: ReadonlySet<string> | null) => {
       if (!selection) return;
       const groupAt = cachedGroupAt(selection.nodeObjectMap, groups.current);
-      const read = new Map(pose.ys);
-      let moved = false;
-      for (const item of items) {
+      const moves: Array<[string, number]> = [];
+      for (const item of pose.items) {
         const id = ySortItemId(item);
         let chain: Object3D[] | null | undefined = pose.chains.get(id);
         if (!chain || chain.some((group) => !group.parent)) {
@@ -70,19 +72,19 @@ export function useLiveYSort(items: readonly YSortItem[], basePath: string): rea
         // A pose that moved none of the item's groups leaves its y as it was read.
         if (!chain || (posed && !chain.some((group) => posed.has(group.uuid)))) continue;
         const y = sortYOfChain(chain);
-        read.set(id, y);
-        moved ||= y !== (pose.ys.get(id) ?? item.sortY);
+        if (y !== (pose.ys.get(id) ?? item.sortY)) moves.push([id, y]);
       }
       // Sorted only when some y moved: the frames of a held pose cost a read of each moved group.
-      if (!moved) return;
+      if (moves.length === 0) return;
+      const read = new Map([...pose.ys, ...moves]);
       pose.ys = read;
-      pose.order ??= drawOrder(items, NO_YS);
-      const order = drawOrder(items, read);
+      pose.order ??= drawOrder(pose.items, NO_YS);
+      const order = drawOrder(pose.items, read);
       if (order === pose.order) return;
       pose.order = order;
-      setLive({ items, ys: read });
+      setLive({ items: pose.items, ys: read });
     },
-    [selection, items, basePath, pose]
+    [selection, basePath, pose]
   );
   useOnMixerPose(onPose);
   // New items drop the poses read for the old ones, and a paused mixer announces no pose to read

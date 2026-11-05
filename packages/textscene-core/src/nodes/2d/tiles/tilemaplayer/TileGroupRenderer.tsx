@@ -67,12 +67,12 @@ export function TileGroupRenderer({ item, node: authored }: { item: YSortItem; n
   );
 }
 
-/** What the y-sort pass needs to know about this layer to decompose it per row. */
 /** The layer as its own rows draw it: below the group the layer's component placed. */
 export function asRootRowsNode(node: TscnNode): TscnNode {
   return { ...node, properties: childCanvasItemProperties(node.properties as TileMapLayerProperties) };
 }
 
+/** What the y-sort pass needs to know about this layer to decompose it per row. */
 export function describeYSortLayer(node: TscnNode): YSortGroupDescription {
   const props = node.properties as TileMapLayerProperties;
   return {

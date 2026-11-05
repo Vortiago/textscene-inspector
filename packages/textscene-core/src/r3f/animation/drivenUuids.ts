@@ -11,9 +11,8 @@ const uuidsDrivenBy = perObject((clip: AnimationClip): readonly string[] => [
   ...new Set(clip.tracks.map((track) => splitTrackName(track.name).path)),
 ]);
 
-/** The uuids that `actions` move. Built again when the map changes size, as a rebuilt mixer's does. */
+/** The uuids that `actions` move. A rebuilt mixer holds a new map, so the set builds again. */
 export const drivenUuids = perObject(
   (actions: ReadonlyMap<string, AnimationAction>): ReadonlySet<string> =>
-    new Set([...actions.values()].flatMap((action) => uuidsDrivenBy(action.getClip()))),
-  { stamp: (actions) => actions.size }
+    new Set([...actions.values()].flatMap((action) => uuidsDrivenBy(action.getClip())))
 );
