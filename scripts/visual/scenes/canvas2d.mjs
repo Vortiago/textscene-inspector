@@ -6,6 +6,10 @@
 
 export const CANVAS_2D_SCENES = [
   { name: 'polygon-2d', file: 'unit-polygon2d.tscn', mode: '2d' },
+  // Two strips skinned to posed Skeleton2Ds. Godot probes: blue (51,153,255) at (200,190) on the bent
+  // lower half and orange (255,127,51) at (330,160). Undeformed, each strip would cover (240,100) and
+  // (390,120) instead, which read the background.
+  { name: 'polygon2d-skeleton', file: 'unit-polygon2d-skeleton.tscn', mode: '2d' },
   // An INT component past int32 wraps as Godot stores it. Godot probes: (260,160) red, the square at
   // (200,100), and (660,360) blue, the square at (600,300). Refused, both sit at the origin.
   { name: 'int-wrap-position', file: 'edge-int-wrap-position.tscn', mode: '2d' },
@@ -147,6 +151,10 @@ export const CANVAS_2D_SCENES = [
   // flip_h flips the frame's normal. Godot 4.6.3 `--mode 2d`: Plain rgb(226) at (100,324), Flipped
   // rgb(128) at (852,324) and rgb(244) at (976,324).
   { name: 'animatedsprite2d-normal-map-flip', file: 'unit-animatedsprite2d-normal-map-flip.tscn', mode: '2d' },
+  // A Line2D whose CanvasTexture carries a normal map; only the item's rotation turns the normal. Godot
+  // 4.6.3 `--mode 2d`: Vertical rgb(226) at (100,324), rgb(160) at (200,224) and rgb(161) at (200,424).
+  // Turned rgb(161) at (852,324), rgb(226) at (952,224) and rgb(128) at (952,424).
+  { name: 'line2d-normal-map', file: 'unit-line2d-normal-map.tscn', mode: '2d' },
   // A global-coords emitter's rotation leaves the normal, a local one's turns it. Godot 4.6.3
   // `--mode 2d`: Global rgb(226) at (100,324), Local rgb(161) at (852,324) and rgb(226) at (952,224).
   { name: 'cpuparticles2d-normal-map', file: 'unit-cpuparticles2d-normal-map.tscn', mode: '2d' },

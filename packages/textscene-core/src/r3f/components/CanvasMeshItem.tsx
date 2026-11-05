@@ -12,9 +12,8 @@ import type { TscnNode } from '../../parser/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import type { MultiMeshInstance } from '../../resources/meshes/multimesh';
-import { useTexture2D } from '../../resources/useTexture2D';
 import { canvasMapProps, useCanvas2DTexture } from '../canvas2DTextureDecode';
-import { useNode2DCanvasTextureSampler } from '../canvasItemTextureSampler';
+import { useCanvasItemTexture } from '../canvasItemTexture';
 import { CANVAS_SRGB_DEFINES } from '../canvasSrgbMultiply';
 import { useCanvasColorSpace, type CanvasColorSpace } from '../canvasColorSpace';
 import { sRGBChannelToLinear } from '../../utils/colorSpace';
@@ -48,10 +47,9 @@ export function CanvasMeshItem({ node, props, mesh, instances, children }: Canva
     texture: sourceTexture,
     missing: textureMissing,
     isArriving: textureArriving,
+    sampler,
     canvasTexture,
-  } = useTexture2D(props.texture, pools.externalResources, pools.internalResources);
-  // A CanvasTexture's own filter and repeat win over the item's.
-  const sampler = useNode2DCanvasTextureSampler(props, canvasTexture?.texture);
+  } = useCanvasItemTexture(props, props.texture, pools.externalResources, pools.internalResources);
   const texture = useCanvas2DTexture(sourceTexture, sampler);
 
   return (

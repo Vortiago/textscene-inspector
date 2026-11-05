@@ -59,14 +59,21 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // Display tweak with no rendering parity requirement.
       'antialiased',
     ],
+    reason:
+      'polygon/polygons/vertex_colors/bones/skeleton are parsed AND validated now; antialiased is a display tweak with no equivalent.',
+  },
+
+  Bone2D: {
     renderGap: [
-      // Skeleton2D skinning: `bones` is the weight table and `skeleton` names
-      // the rig. Godot deforms the polygon by them; this draws the rest pose.
-      'bones',
-      'skeleton',
+      // The editor bone gizmo, which the previewer does not draw yet, reads all four
+      // (`skeleton_2d.cpp:189-354`). The Skeleton2D modification stack reads length and bone_angle too.
+      'auto_calculate_length_and_angle',
+      'bone_angle',
+      'editor_settings/show_bone_gizmo',
+      'length',
     ],
     reason:
-      'polygon/polygons/vertex_colors are parsed AND validated now; antialiased is a display tweak with no equivalent; bones/skeleton are the unimplemented Skeleton2D deformation.',
+      'rest is parsed for the Polygon2D skin; the bone gizmo and the modification stack, neither drawn yet, read the rest.',
   },
 
   CPUParticles2D: {

@@ -127,7 +127,7 @@ export function transform2DXform(t: Transform2DColumns, v: Vector2): Vector2 {
  * @canonical A Transform2D inverse in float32
  */
 export function affineInverseTransform2D(t: Transform2DColumns): Transform2DColumns {
-  const det = f(f(t.a * t.d) - f(t.b * t.c));
+  const det = transform2DDeterminant(t);
   if (det === 0 || !Number.isFinite(det)) return TRANSFORM2D_IDENTITY;
   const idet = f(1 / det);
   const a = f(t.d * idet);
@@ -136,6 +136,11 @@ export function affineInverseTransform2D(t: Transform2DColumns): Transform2DColu
   const d = f(t.a * idet);
   const origin = transform2DBasisXform({ a, b, c, d, tx: 0, ty: 0 }, { x: -t.tx, y: -t.ty });
   return { a, b, c, d, tx: origin.x, ty: origin.y };
+}
+
+/** `Transform2D::determinant()` (`transform_2d.cpp:258-260`) in float32: the signed area of the basis. */
+export function transform2DDeterminant(t: Transform2DColumns): number {
+  return f(f(t.a * t.d) - f(t.b * t.c));
 }
 
 /**

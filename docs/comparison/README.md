@@ -282,7 +282,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [RigidBody2D](../../packages/textscene-core/src/nodes/physics/2d/rigidbody2d/comparison.md): a transform-only group
 - [ScrollContainer](../../packages/textscene-core/src/nodes/2d/ui/scrollcontainer/comparison.md): a clipped content rect with themed scrollbars
 - [ShapeCast2D](../../packages/textscene-core/src/nodes/physics/2d/shapecast2d/comparison.md): nothing (a transform-only group)
-- [Skeleton2D](../../packages/textscene-core/src/nodes/2d/skeleton2d/comparison.md): nothing yet, Godot runs its modification stack on the bones each frame, the previewer does not
+- [Skeleton2D](../../packages/textscene-core/src/nodes/2d/skeleton2d/comparison.md): nothing yet, its modification stack does not run, and its bones deform the Polygon2Ds bound to it
 - [SpinBox](../../packages/textscene-core/src/nodes/2d/ui/spinbox/comparison.md): a LineEdit-style field plus two arrow stepper icons
 - [SplitContainer](../../packages/textscene-core/src/nodes/2d/ui/splitcontainer/comparison.md): two children split at a computed offset, along the `vertical`-chosen axis
 - [Sprite2D](../../packages/textscene-core/src/nodes/2d/sprite2d/comparison.md): an unlit textured quad

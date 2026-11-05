@@ -3237,6 +3237,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Line2d Normal Map",
+    "file": "unit-line2d-normal-map.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Line2d Texture Clamp",
     "file": "unit-line2d-texture-clamp.tscn",
     "category": "Unit - 2D Canvas"
@@ -3304,6 +3309,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Polygon2d Normal Map Rotation",
     "file": "unit-polygon2d-normal-map-rotation.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Polygon2d Skeleton",
+    "file": "unit-polygon2d-skeleton.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
