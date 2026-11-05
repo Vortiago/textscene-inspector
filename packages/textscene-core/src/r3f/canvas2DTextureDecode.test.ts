@@ -9,6 +9,9 @@ import { fakeTiledUploads } from './tiledUpload/fakeTiledUploads.testkit';
 import * as THREE from 'three';
 import { canvasMapProps, useCanvas2DTexture } from './canvas2DTextureDecode';
 import { markSrgbBytes } from './srgbByteTextures';
+import { canvasColorSpaceOf, SRGB_CANVAS } from './canvasColorSpace';
+
+const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 /** Linear and Disabled, the viewport defaults (`viewport.h:419-420`). */
 const DEFAULT_SAMPLER = { filter: 2, repeat: 1 };
@@ -96,15 +99,26 @@ describe('useCanvas2DTexture in a canvas', () => {
   });
 });
 
+describe('canvasMapProps in a linear canvas', () => {
+  it('returns no define for a texture marked as holding sRGB bytes, an HDR target whose values are linear', () => {
+    const texture = markSrgbBytes(makeTexture(THREE.LinearSRGBColorSpace));
+    expect(canvasMapProps(texture, LINEAR_CANVAS).defines).toBeUndefined();
+  });
+
+  it('returns no define for a decoding view, whose sample is linear already', () => {
+    expect(canvasMapProps(makeTexture(THREE.SRGBColorSpace), LINEAR_CANVAS).defines).toBeUndefined();
+  });
+});
+
 describe('canvasMapProps', () => {
   it('returns the sRGB-multiply define for a NoColorSpace texture', () => {
     const texture = makeTexture(THREE.NoColorSpace);
-    expect(canvasMapProps(texture).defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
+    expect(canvasMapProps(texture, SRGB_CANVAS).defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
   });
 
   it('returns no define for an untouched (SRGBColorSpace) texture', () => {
     const texture = makeTexture(THREE.SRGBColorSpace);
-    expect(canvasMapProps(texture).defines).toBeUndefined();
+    expect(canvasMapProps(texture, SRGB_CANVAS).defines).toBeUndefined();
   });
 
   /**
@@ -113,22 +127,22 @@ describe('canvasMapProps', () => {
    */
   it('returns the sRGB-multiply define for a texture marked as holding sRGB bytes', () => {
     const texture = markSrgbBytes(makeTexture(THREE.SRGBColorSpace));
-    expect(canvasMapProps(texture).defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
+    expect(canvasMapProps(texture, SRGB_CANVAS).defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
   });
 
   it('returns the texture as the map', () => {
     const texture = makeTexture(THREE.NoColorSpace);
-    expect(canvasMapProps(texture).map).toBe(texture);
+    expect(canvasMapProps(texture, SRGB_CANVAS).map).toBe(texture);
   });
 
   it('returns an empty map and no define for null and undefined (no map bound yet)', () => {
-    expect(canvasMapProps(null)).toEqual({ map: null, defines: undefined });
-    expect(canvasMapProps(undefined)).toEqual({ map: null, defines: undefined });
+    expect(canvasMapProps(null, SRGB_CANVAS)).toEqual({ map: null, defines: undefined });
+    expect(canvasMapProps(undefined, SRGB_CANVAS)).toEqual({ map: null, defines: undefined });
   });
 
   it('returns one define object for every texture, so a rerender keeps the material', () => {
-    const a = canvasMapProps(makeTexture(THREE.NoColorSpace)).defines;
-    const b = canvasMapProps(makeTexture(THREE.NoColorSpace)).defines;
+    const a = canvasMapProps(makeTexture(THREE.NoColorSpace), SRGB_CANVAS).defines;
+    const b = canvasMapProps(makeTexture(THREE.NoColorSpace), SRGB_CANVAS).defines;
     expect(a).toBe(b);
   });
 });

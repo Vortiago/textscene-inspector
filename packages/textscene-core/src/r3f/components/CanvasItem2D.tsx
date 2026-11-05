@@ -5,13 +5,15 @@
  * self_modulate, and scene children render inside the modulate provider.
  */
 
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { TscnNode } from '../../parser/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from '../node2dTransform';
 import { CanvasSpaceProvider, useCanvasSpace } from '../canvasRootScope';
-import type { CanvasItemTint } from '../canvasItemModulate';
-import { useNode2DTextureSampler } from '../canvasItemTextureSampler';
+import { OwnCanvasModulateProvider, type CanvasItemTint } from '../canvasItemModulate';
+import { useCanvasTextureSampler, useNode2DTextureSampler } from '../canvasItemTextureSampler';
+import { CanvasItemSurfaceSource } from '../canvasItemSurface';
+import type { CanvasTextureSlot } from '../../resources/useTexture2D';
 import { LitCanvasItemPixels, type CanvasItemPixelMaterial } from './LitCanvasItemPixels';
 import { useNodePaintSequence } from '../contexts/PaintOrderContext';
 import { useAnimatedValue } from '../contexts/AnimatedValueContext';
@@ -39,8 +41,11 @@ interface CanvasItem2DProps {
     material: CanvasItemMaterialProperties | null,
     pixelMaterial: CanvasItemPixelMaterial
   ) => ReactNode;
-  /** The normal and specular maps `body` lights its pixels with, or null to light them flat. */
-  surface?: CanvasItemSurface | null;
+  /**
+   * The CanvasTexture `body` draws, if any. Its normal and specular maps light the pixels, and
+   * without a normal map they light flat (`canvas.glsl:652-665`).
+   */
+  canvasTexture?: CanvasTextureSlot;
   /**
    * Draws this node's own child canvas items, each with its own light list, as a TileMapLayer's
    * rendering quadrants are. A node that draws them passes no `body`. They take this node's
@@ -50,7 +55,7 @@ interface CanvasItem2DProps {
   children?: ReactNode;
 }
 
-export function CanvasItem2D({ node, props, body, surface = null, ownItems, children }: CanvasItem2DProps) {
+export function CanvasItem2D({ node, props, body, canvasTexture, ownItems, children }: CanvasItem2DProps) {
   const local = useMemo(() => node2dGroupProps(props), [props]);
   const transform = useMemo(() => node2dGroupSpread(local), [local]);
   // What a canvas root nested below this item cancels: the transform every
@@ -63,6 +68,9 @@ export function CanvasItem2D({ node, props, body, surface = null, ownItems, chil
   // What this node's descendants inherit. Its own pixels sample through the same fold, which the
   // node's component takes before this group exists, so it repeats the call on its own properties.
   const sampler = useNode2DTextureSampler(props);
+  // The sampler the node's component draws its CanvasTexture with, which the maps share.
+  const canvasTextureSampler = useCanvasTextureSampler(sampler, canvasTexture?.texture);
+  const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
   const state = useCanvasItemState({
     modulate: props.modulate,
     selfModulate: props.self_modulate,
@@ -87,17 +95,26 @@ export function CanvasItem2D({ node, props, body, surface = null, ownItems, chil
       renderOrder={key}
     >
       <CanvasItemKeyProvider value={key}>
-        {body && (
-          <LitCanvasItemPixels
-            material={material}
-            lightMask={state.lightMask}
-            zFinal={zFinal}
-            surface={surface}
-          >
-            {(pixelMaterial) => body(tint, material, pixelMaterial)}
-          </LitCanvasItemPixels>
+        <OwnCanvasModulateProvider value={tint.canvasModulate}>
+          {body && (
+            <LitCanvasItemPixels
+              material={material}
+              lightMask={state.lightMask}
+              zFinal={zFinal}
+              surface={surface}
+            >
+              {(pixelMaterial) => body(tint, material, pixelMaterial)}
+            </LitCanvasItemPixels>
+          )}
+          {ownItems?.(state)}
+        </OwnCanvasModulateProvider>
+        {canvasTexture?.texture.normalTexture && (
+          <CanvasItemSurfaceSource
+            slot={canvasTexture}
+            sampler={canvasTextureSampler}
+            onSurface={setSurface}
+          />
         )}
-        {ownItems?.(state)}
       </CanvasItemKeyProvider>
       <CanvasItemChildScope state={state}>
         <CanvasSpaceProvider value={canvasSpace}>{children}</CanvasSpaceProvider>

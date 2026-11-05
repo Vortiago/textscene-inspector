@@ -13,6 +13,12 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { subResource } from '../../../testing/subResource';
 import { MultiMeshInstance2D } from './Component';
 import { parseMultiMeshInstance2D } from './parser';
+import {
+  canvasColorSpaceOf,
+  CanvasColorSpaceProvider,
+  SRGB_CANVAS,
+  type CanvasColorSpace,
+} from '../../../r3f/canvasColorSpace';
 
 const QUAD = subResource('QuadMesh', 'Quad', { size: 'Vector2(10, 10)' });
 const FLIPBOOK = subResource('CanvasItemMaterial', 'Flip', {
@@ -43,14 +49,20 @@ function multiMeshNode(raw: Record<string, string>): TscnNode {
   };
 }
 
-async function render(raw: Record<string, string>, resources: TscnInternalResource[]) {
+async function render(
+  raw: Record<string, string>,
+  resources: TscnInternalResource[],
+  space: CanvasColorSpace = SRGB_CANVAS
+) {
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={[QUAD, FLIPBOOK, ...resources]}>
-        <MultiMeshInstance2D node={multiMeshNode(raw)}>
-          <group name="Child" />
-        </MultiMeshInstance2D>
+        <CanvasColorSpaceProvider value={space}>
+          <MultiMeshInstance2D node={multiMeshNode(raw)}>
+            <group name="Child" />
+          </MultiMeshInstance2D>
+        </CanvasColorSpaceProvider>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
@@ -145,6 +157,20 @@ describe('MultiMeshInstance2D draws', () => {
       1, 0, 0, 0.5,
     ]);
     expect(material.vertexColors).toBe(true);
+  });
+
+  it('with the instance colour multiplied raw in a linear canvas (canvas.glsl:255)', async () => {
+    const coloured = multiMesh({
+      use_colors: 'true',
+      instance_count: '1',
+      buffer: buffer([...at(0, 0), 0.5, 0, 0, 1]),
+    });
+    const renderer = await render(MULTIMESH, [coloured], canvasColorSpaceOf(true));
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
+
+    expect(drawnGeometry(renderer).getAttribute('color').getX(0)).toBe(0.5);
+    expect(material.defines ?? {}).toEqual({});
   });
 
   it('the cell of the custom z when the material animates particles', async () => {

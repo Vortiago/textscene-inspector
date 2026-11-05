@@ -27,6 +27,8 @@ export interface ViewportProperties extends Omit<NodeProperties, 'transform'> {
   msaa_2d: number;
   /** `Viewport.MSAA` of the buffer the 3D world draws into. */
   msaa_3d: number;
+  /** The canvas draws in linear colour into a half-float target that keeps values above 1. */
+  use_hdr_2d: boolean;
   use_debanding: boolean;
   audio_listener_enable_2d: boolean;
   canvas_item_default_texture_filter: ViewportTextureFilter;

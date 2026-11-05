@@ -404,6 +404,10 @@ A key between a canvas item's key and the next one, for a piece the item draws a
 Each piece owns a slot inside its parent's, so a piece can hand out sub-orders of its own.
 _Avoid_: "render-order offset", "fraction".
 
+**Canvas colour space** (`r3f/canvasColorSpace.ts`):
+Whether a canvas multiplies sRGB numbers into an 8-bit target, or linear values into a half-float one. Only a sub-viewport with `use_hdr_2d` draws a linear canvas. Its target, texture views, material defines and tint all follow this one value.
+_Avoid_: "HDR mode", "linear mode".
+
 **Flipbook cell** (`r3f/particlesFlipbook.ts`):
 The one cell of a `particles_animation` sheet that a canvas item draws. The item shrinks to the cell and windows its UV to it, and `INSTANCE_CUSTOM.z` picks it.
 A CPUParticles2D particle, a MultiMeshInstance2D instance and a MeshInstance2D (which has no custom data, so cell 0) share it.

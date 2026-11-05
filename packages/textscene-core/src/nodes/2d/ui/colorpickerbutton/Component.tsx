@@ -11,8 +11,7 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
 import { pickButtonStyleBox } from '../../../../r3f/controls/native/buttonBase';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { parseColor } from '../../../../utils/colorParser';
 import { Button } from '../button/Component';
 import { AlphaCheckerboardQuad } from '../shared/AlphaCheckerboardQuad';
@@ -26,7 +25,7 @@ export function ColorPickerButton(props: NativeControlComponentProps) {
 
   const fill = useMemo(() => parseColor(buttonProps.color), [buttonProps.color]);
   const filled = useMemo(() => multiplyModulate(tint.own, fill), [tint.own, fill]);
-  const swatchColor = useGodotLinearColor(filled);
+  const swatchColor = useItemLinearColor(filled);
 
   // `Rect2(normal_style->get_offset(), get_size() - normal_style->get_minimum_size())`: the
   // margins of "normal" in every draw state. `normal_style` binds Button's "normal" (`default_theme.cpp:1134`).

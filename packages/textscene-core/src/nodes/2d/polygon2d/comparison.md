@@ -1,7 +1,6 @@
 ---
 type: Polygon2D
 category: 2D
-status: limitation
 fixture: unit-polygon2d.tscn
 image: unit-polygon2d
 renders_as: a filled, optionally textured mesh
@@ -12,6 +11,15 @@ renders_as: a filled, optionally textured mesh
 Polygon2D fills an outline on the canvas. The previewer triangulates it into an unlit
 mesh with one vertex per point and tints it with `color`. `texture` is sampled through
 the per-vertex `uv` with Godot's own UV formula.
+
+## Normal map
+<!-- compare: image=unit-polygon2d-normal-map-rotation status=done fixture=unit-polygon2d-normal-map-rotation.tscn -->
+
+A CanvasTexture's `normal_texture` and `specular_texture` shade the polygon under PointLight2D and
+DirectionalLight2D, and its own `texture_filter` and `texture_repeat` win over the polygon's. The
+polygon's rotation and scale turn the normal (`canvas.glsl:708`). `texture_rotation`, `texture_offset`
+and `texture_scale` move only the UV, so they do not. Turned, rotated a quarter turn, is lit from
+below, as in Godot.
 
 ## Linting
 

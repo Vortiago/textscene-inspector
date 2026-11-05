@@ -18,6 +18,7 @@ import { ViewportTexturePublisher, viewportEntry } from '../../../r3f/testing/Vi
 import { createCanvasTarget, createSceneTarget } from '../../viewport/subviewport/offscreenViewport';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import { copiesFilledFrom } from '../../../r3f/liveTargets.testkit';
+import { SRGB_CANVAS } from '../../../r3f/canvasColorSpace';
 
 const VIEWPORT_TEXTURE_RESOURCE: TscnInternalResource = {
   id: 'ViewportTexture_1',
@@ -67,7 +68,7 @@ async function spriteMaterial(
 
 describe('<Sprite2D> with a ViewportTexture', () => {
   it('multiplies a canvas target in sRGB', async () => {
-    const target = createCanvasTarget(16, 16, 'SubViewport');
+    const target = createCanvasTarget(16, 16, 'SubViewport', SRGB_CANVAS);
     expect((await spriteMaterial(target.texture)).defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
     target.dispose();
   });
@@ -80,13 +81,13 @@ describe('<Sprite2D> with a ViewportTexture', () => {
 
   /** Godot samples the target's RID with the item's sampler, so a matching reader needs no copy. */
   it("samples the target itself when it draws the whole target with the target's own sampler", async () => {
-    const target = createCanvasTarget(16, 16, 'SubViewport');
+    const target = createCanvasTarget(16, 16, 'SubViewport', SRGB_CANVAS);
     expect((await spriteMaterial(target.texture)).map).toBe(target.texture);
     target.dispose();
   });
 
   it("reads its own copy of the region's cell, with a texel of apron, when it draws a region of the target", async () => {
-    const target = createCanvasTarget(16, 16, 'SubViewport');
+    const target = createCanvasTarget(16, 16, 'SubViewport', SRGB_CANVAS);
     const material = await spriteMaterial(target.texture, {
       region_enabled: 'true',
       region_rect: 'Rect2(0, 0, 8, 16)',

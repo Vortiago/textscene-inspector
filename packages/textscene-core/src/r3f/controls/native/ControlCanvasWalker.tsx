@@ -15,7 +15,7 @@ import { controlSolverRegistry, type TextMeasurer } from './solverRegistry';
 import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
 import { controlComponentRegistry } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
-import { WHITE_MODULATE } from '../../canvasItemModulate';
+import { OwnCanvasModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
 import { useInheritedTextureSampler } from '../../canvasItemTextureSampler';
 import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
 import {
@@ -294,17 +294,19 @@ function ControlItemGroup({
         {/* The painter sits in the scope too: Godot tests an item's light window against its
             own `z_final`, and its descendants start from that value. */}
         <CanvasItemChildScope state={state}>
-          {hasOwnTransform ? (
-            <CanvasItemGroup
-              position={[pivotX, -pivotY, 0]}
-              rotation={[0, 0, 0 - rotation]}
-              scale={[scaleX, scaleY, 1]}
-            >
-              <CanvasItemGroup position={[-pivotX, pivotY, 0]}>{content}</CanvasItemGroup>
-            </CanvasItemGroup>
-          ) : (
-            content
-          )}
+          <OwnCanvasModulateProvider value={state.tint.canvasModulate}>
+            {hasOwnTransform ? (
+              <CanvasItemGroup
+                position={[pivotX, -pivotY, 0]}
+                rotation={[0, 0, 0 - rotation]}
+                scale={[scaleX, scaleY, 1]}
+              >
+                <CanvasItemGroup position={[-pivotX, pivotY, 0]}>{content}</CanvasItemGroup>
+              </CanvasItemGroup>
+            ) : (
+              content
+            )}
+          </OwnCanvasModulateProvider>
         </CanvasItemChildScope>
       </CanvasItemKeyProvider>
     </group>

@@ -11,8 +11,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlLayoutOrder, painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { multiplyModulate, WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { multiplyModulate, WHITE_MODULATE, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { useCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import {
   useInheritedTextureSampler,
@@ -39,6 +38,7 @@ import type { Vector2 } from '../../../../godot/math/vector';
 import { imageSize, type ImageSize } from '../../../../resources/formats/image/imagePixels';
 import { sizeWithArea } from '../../../../resources/textures/textureSize';
 import { AxisStretchMode, TextureProgressBarFillMode } from '../../../../godot/scene/gui';
+import { useCanvasColorSpace } from '../../../../r3f/canvasColorSpace';
 
 const ZERO: Vector2 = { x: 0, y: 0 };
 
@@ -75,11 +75,12 @@ function useCroppedTexture(
   region: { x: number; y: number; w: number; h: number } | undefined,
   textureSize: Vector2 | null
 ): THREE.Texture | null {
+  const { textureColorSpace } = useCanvasColorSpace();
   return useOwnedTextureView(
     texture,
     region &&
       textureSize && {
-        colorSpace: THREE.NoColorSpace,
+        colorSpace: textureColorSpace,
         wrap: THREE.ClampToEdgeWrapping,
         window: regionUvWindow(region, textureSize),
       }
@@ -134,9 +135,9 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
     () => multiplyModulate(props.tintOver ?? WHITE_MODULATE, tint.own),
     [props.tintOver, tint.own]
   );
-  const underColor = useGodotLinearColor(underColorSrgb);
-  const progressColor = useGodotLinearColor(progressColorSrgb);
-  const overColor = useGodotLinearColor(overColorSrgb);
+  const underColor = useItemLinearColor(underColorSrgb);
+  const progressColor = useItemLinearColor(progressColorSrgb);
+  const overColor = useItemLinearColor(overColorSrgb);
 
   const fillMode = normalizeTextureProgressBarFillMode(props.fillMode);
   const isRadialMode =

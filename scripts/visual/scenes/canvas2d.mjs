@@ -141,6 +141,15 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-pointlight2d-normal-map-specular.tscn',
     mode: '2d',
   },
+  // The polygon's rotation turns its normal. Godot 4.6.3 `--mode 2d`: Upright rgb(226) at (100,324) and
+  // rgb(128) at (300,324). Turned rgb(161) at (852,324) and rgb(226) at (952,224).
+  { name: 'polygon2d-normal-map-rotation', file: 'unit-polygon2d-normal-map-rotation.tscn', mode: '2d' },
+  // flip_h flips the frame's normal. Godot 4.6.3 `--mode 2d`: Plain rgb(226) at (100,324), Flipped
+  // rgb(128) at (852,324) and rgb(244) at (976,324).
+  { name: 'animatedsprite2d-normal-map-flip', file: 'unit-animatedsprite2d-normal-map-flip.tscn', mode: '2d' },
+  // A global-coords emitter's rotation leaves the normal, a local one's turns it. Godot 4.6.3
+  // `--mode 2d`: Global rgb(226) at (100,324), Local rgb(161) at (852,324) and rgb(226) at (952,224).
+  { name: 'cpuparticles2d-normal-map', file: 'unit-cpuparticles2d-normal-map.tscn', mode: '2d' },
   // A DirectionalLight2D at height 0.5. Godot 4.6.3 `--mode 2d`: Plain rgb(255) at (200,324), Flat
   // rgb(193) at (576,324), Dome rgb(200), rgb(219) and rgb(200) at x=840, 952 and 1064.
   { name: 'directionallight2d-normal-map', file: 'unit-directionallight2d-normal-map.tscn', mode: '2d' },
@@ -613,6 +622,10 @@ export const CANVAS_2D_SCENES = [
   // `--mode 2d`: (160,155) rgb(159,123,130) under the Torch, (280,200) rgb(51,64,108) the tinted
   // far Floor, and (600,155) rgb(127,127,127) the untinted, unlit Outside.
   { name: 'sub-viewport-2d-light', file: 'unit-sub-viewport-2d-light.tscn', mode: '2d' },
+  // `use_hdr_2d` draws the canvas linear into a half-float target, which the container shows as
+  // stored. Godot 4.6.3 `--mode 2d`: (150,150) rgb(54,54,54) grey, (250,150) rgb(127,128,0) the linear
+  // blend, (350,150) rgb(255,255,63) a value above 1, and (350,350) rgb(255,160,31) the same at modulate 0.5.
+  { name: 'sub-viewport-hdr-2d', file: 'unit-sub-viewport-hdr-2d.tscn', mode: '2d' },
   // A DirectionalLight2D shadow inside a sub-viewport, beside a sun outside it. Godot 4.6.3
   // `--mode 2d`: (150,150) rgb(63,63,63) in the Wall's shadow, (250,150) rgb(158,110,87) lit by
   // the inside sun, and (600,155) rgb(84,114,84) lit by the outside sun alone. The outside sun

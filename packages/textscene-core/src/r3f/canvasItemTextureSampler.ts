@@ -16,6 +16,7 @@ import type { Node2DProperties } from '../nodes/base/node2d/types';
 import { projectCanvasTextureDefaults } from '../parser/projectSettingsParser';
 import { godotTextureFilterState, type TextureFilterState } from '../resources/textures/godotTextureFilter';
 import { useProjectSettings } from './contexts/ProjectSettingsContext';
+import { useCanvasColorSpace } from './canvasColorSpace';
 import type { ViewSampler } from '../resources/textures/textureView';
 import type { CanvasTextureData } from '../resources/textures/canvastexture/types';
 
@@ -42,15 +43,29 @@ function canvasItemWrap(repeat: number): THREE.Wrapping {
 }
 
 /**
- * What a 2D view samples with `sampler`. NoColorSpace: with `hdr_2d` off (`rendering_server.cpp:3771`),
- * the canvas filters raw sRGB bytes (`texture_storage.cpp:754`), and `ControlQuad` decodes the sample.
+ * What a 2D view samples with `sampler` in `colorSpace`: a colour map in its canvas's
+ * `textureColorSpace`, a normal or specular map raw.
  */
-export function canvasItemViewSampler(sampler: CanvasItemTextureSampler): ViewSampler {
+export function canvasItemViewSampler(
+  sampler: CanvasItemTextureSampler,
+  colorSpace: THREE.ColorSpace
+): ViewSampler {
   return {
-    colorSpace: THREE.NoColorSpace,
+    colorSpace,
     filter: canvasItemFilterState(sampler.filter),
     wrap: canvasItemWrap(sampler.repeat),
   };
+}
+
+/**
+ * `canvasItemViewSampler` for a colour map, in the texture colour space of the canvas the item
+ * draws in. Memoised on the sampler and the canvas.
+ *
+ * @canonical The view sampler of a colour map a canvas item draws
+ */
+export function useCanvasItemViewSampler(sampler: CanvasItemTextureSampler): ViewSampler {
+  const { textureColorSpace } = useCanvasColorSpace();
+  return useMemo(() => canvasItemViewSampler(sampler, textureColorSpace), [sampler, textureColorSpace]);
 }
 
 /** What the ancestors name, `undefined` where none does. */
@@ -168,4 +183,12 @@ export function useCanvasTextureSampler(
     const unchanged = named.filter === item.filter && named.repeat === item.repeat;
     return unchanged ? item : { filter: named.filter ?? item.filter, repeat: named.repeat ?? item.repeat };
   }, [item, filter, repeat]);
+}
+
+/** `useCanvasTextureSampler` over a Node2D's own sampler: what it draws its texture with. */
+export function useNode2DCanvasTextureSampler(
+  props: Pick<Node2DProperties, 'texture_filter' | 'texture_repeat'>,
+  texture: Pick<CanvasTextureData, 'textureFilter' | 'textureRepeat'> | undefined
+): CanvasItemTextureSampler {
+  return useCanvasTextureSampler(useNode2DTextureSampler(props), texture);
 }

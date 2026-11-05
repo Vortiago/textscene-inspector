@@ -16,8 +16,7 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import {
   shapedTextSizeWidthPx,
@@ -178,7 +177,7 @@ export function GraphEditToolbarChrome({
   const pressedStyle = useMemo(() => flatButtonPressedStyleBox(theme.widgets.button.pressed), [theme]);
   const labelColor = useMemo(() => multiplyModulate(tint.own, LABEL_FONT_COLOR), [tint.own]);
   const fieldColor = useMemo(() => multiplyModulate(tint.own, CONTROL_FONT_COLOR), [tint.own]);
-  const arrowColor = useGodotLinearColor(fieldColor);
+  const arrowColor = useItemLinearColor(fieldColor);
   const clippingPlanes = useControlClipPlanes() as THREE.Plane[];
 
   const iconTextures: Record<string, THREE.Texture | null> = {
