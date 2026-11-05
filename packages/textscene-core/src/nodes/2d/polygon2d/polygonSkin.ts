@@ -66,7 +66,8 @@ function insertWeight(
   weight: number
 ): void {
   for (let slot = 0; slot < BONES_PER_VERTEX; slot++) {
-    if (weights[base + slot]! >= weight) continue;
+    // `<`, as Godot compares: no weight is less than a NaN, so a NaN weight takes no slot.
+    if (!(weights[base + slot]! < weight)) continue;
     for (let later = BONES_PER_VERTEX - 1; later > slot; later--) {
       weights[base + later] = weights[base + later - 1]!;
       bones[base + later] = bones[base + later - 1]!;
@@ -77,9 +78,10 @@ function insertWeight(
   }
 }
 
+/** Divides by the weight sum, which Godot adds up in a float32 `real_t`. */
 function normaliseWeights(weights: Float32Array, base: number): void {
   let total = 0;
-  for (let slot = 0; slot < BONES_PER_VERTEX; slot++) total += weights[base + slot]!;
+  for (let slot = 0; slot < BONES_PER_VERTEX; slot++) total = Math.fround(total + weights[base + slot]!);
   if (total === 0) return;
   for (let slot = 0; slot < BONES_PER_VERTEX; slot++) {
     const normalised = Math.fround(weights[base + slot]! / total);

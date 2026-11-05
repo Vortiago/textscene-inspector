@@ -94,7 +94,7 @@ export function decomposeTransform2D(
 ): { position: Vector2; rotation: number; scale: Vector2; skew: number } | null {
   const columns = parseTransform2DColumns(value);
   if (!columns) {
-    warn(`Node2D${nodeName ? ` "${nodeName}"` : ''}: invalid Transform2D "${value}"`);
+    warn(`Node2D${nodeName ? ` "${nodeName}"` : ''}: invalid or non-finite Transform2D "${value}"`);
     return null;
   }
   return transform2DDecompose(columns);

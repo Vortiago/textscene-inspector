@@ -26,7 +26,7 @@ import { triangulatePolygon } from '../../../godot/math/triangulate';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { useLiveScenePass } from '../../../r3f/liveScenePass';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { bindPolygonsToSkeletons } from './skeletonBinding';
+import { bindPolygonsToSkeletons, namesSkeletonToBind } from './skeletonBinding';
 import { useSkeletonSkin } from './useSkeletonSkin';
 
 export function Polygon2D({ node, children }: NodeComponentProps) {
@@ -63,7 +63,9 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
   // R3F does not dispose a geometry passed through `attach`, so release it on rebuild.
   useDisposeOnRelease(geometry);
   const [mesh, setMesh] = useState<THREE.Mesh | null>(null);
-  useSkeletonSkin(mesh, geometry, useLiveScenePass(bindPolygonsToSkeletons, useNodePath()));
+  const nodePath = useNodePath();
+  const binding = useLiveScenePass(bindPolygonsToSkeletons, namesSkeletonToBind(props) ? nodePath : null);
+  useSkeletonSkin(mesh, geometry, binding);
 
   return (
     <CanvasItem2D

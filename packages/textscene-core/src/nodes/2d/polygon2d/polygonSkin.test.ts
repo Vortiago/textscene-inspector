@@ -45,6 +45,15 @@ describe('vertexInfluences', () => {
     expect(Array.from(influences.weights)).toEqual([0, 0, 0, 0]);
   });
 
+  it('gives a NaN weight no slot, as no weight compares less than it', () => {
+    const influences = vertexInfluences(1, [
+      { bone: 0, weights: [NaN] },
+      { bone: 1, weights: [1] },
+    ]);
+    expect(Array.from(influences.bones)).toEqual([1, 0, 0, 0]);
+    expect(Array.from(influences.weights)).toEqual([1, 0, 0, 0]);
+  });
+
   it('stores each weight as a 16-bit unorm, truncated', () => {
     const influences = vertexInfluences(1, [
       { bone: 0, weights: [1] },

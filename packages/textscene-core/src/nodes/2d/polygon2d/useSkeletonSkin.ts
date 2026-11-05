@@ -48,13 +48,24 @@ export function useSkeletonSkin(
 /** The world matrix terms a 2D transform reads: the x and y columns and the origin. */
 const TRANSFORM_2D_ELEMENTS = [0, 1, 4, 5, 12, 13] as const;
 
+/** The drawn skeleton and bones a skin reads, and every object whose world matrix moves the skin. */
+interface SkinObjects {
+  skeleton: THREE.Object3D;
+  bones: THREE.Object3D[];
+  /** The mesh, the frame of its canvas and of the skeleton's, the skeleton, and each bone. */
+  watched: (THREE.Object3D | null)[];
+}
+
 class MeshSkin {
   private readonly restPoints: Vector2[];
   private readonly paths: string[];
+  /** Written only by `update`, each time the lookup finds other objects. */
   private drawn: DrawnObjects | null = null;
+  /** Written only by `update` with `drawn`: null while the skeleton or a bone is not drawn. */
+  private objects: SkinObjects | null = null;
   /**
-   * The world matrix terms of the polygon, its frame and every skeleton path at the last write, so
-   * a render where nothing moved builds no transform. Two buffers swap, so a render allocates none.
+   * The world matrix terms of every watched object at the last write, so a render where nothing
+   * moved builds no transform. Two buffers swap, so a render where nothing moved allocates none.
    */
   private writtenAt: Float64Array;
   private readAt: Float64Array;
@@ -73,12 +84,13 @@ class MeshSkin {
   }
 
   update(): void {
-    this.drawn = lookupDrawnObjects(this.nodeObjects, this.paths, this.drawn);
-    const [skeleton, ...bones] = this.drawn.objects;
-    if (!skeleton || bones.some((bone) => bone === null)) return;
-    const frames = [canvasFrameOf(this.mesh), canvasFrameOf(skeleton)];
-    if (!this.moved([this.mesh, ...frames, skeleton, ...bones])) return;
-    this.write(this.skinned(this.mesh, skeleton, bones as THREE.Object3D[]));
+    const drawn = lookupDrawnObjects(this.nodeObjects, this.paths, this.drawn);
+    if (drawn !== this.drawn) {
+      this.drawn = drawn;
+      this.objects = skinObjectsOf(this.mesh, drawn.objects);
+    }
+    if (!this.objects || !this.moved(this.objects.watched)) return;
+    this.write(this.skinned(this.objects));
   }
 
   /** Writes the undeformed points back, so the next skin of this geometry starts from them. */
@@ -103,7 +115,7 @@ class MeshSkin {
    * global inverse times the skeleton's (`mesh_storage.cpp:1224-1225`). A bone joins its skeleton
    * through Bone2D parents only, so it draws in the skeleton's canvas.
    */
-  private skinned(mesh: THREE.Object3D, skeleton: THREE.Object3D, bones: THREE.Object3D[]): Vector2[] {
+  private skinned({ skeleton, bones }: SkinObjects): Vector2[] {
     const skeletonGlobal = canvasTransform(skeleton);
     const skeletonInverse = affineInverseTransform2D(skeletonGlobal);
     const boneMatrices = bones.map((bone, i) =>
@@ -113,7 +125,7 @@ class MeshSkin {
       )
     );
     const skeletonToMesh = multiplyTransform2D(
-      affineInverseTransform2D(canvasTransform(mesh)),
+      affineInverseTransform2D(canvasTransform(this.mesh)),
       skeletonGlobal
     );
     return skinnedPoints(this.restPoints, this.binding.influences, boneMatrices, skeletonToMesh);
@@ -127,6 +139,14 @@ class MeshSkin {
     this.geometry.computeBoundingSphere();
     if (this.geometry.boundingBox) this.geometry.computeBoundingBox();
   }
+}
+
+/** The objects of {@link SkinObjects} from the drawn skeleton and bones, or null where one is missing. */
+function skinObjectsOf(mesh: THREE.Mesh, drawn: readonly (THREE.Object3D | null)[]): SkinObjects | null {
+  const [skeleton, ...bones] = drawn;
+  if (!skeleton || !bones.every((bone): bone is THREE.Object3D => bone !== null)) return null;
+  const frames = [canvasFrameOf(mesh), canvasFrameOf(skeleton)];
+  return { skeleton, bones, watched: [mesh, ...frames, skeleton, ...bones] };
 }
 
 /** The node's global transform in Godot pixels: its world matrix within the frame of its canvas. */

@@ -6,6 +6,9 @@
  * `polygons` entry.
  */
 
+import { CMP_EPSILON } from '../../../godot/math/math';
+import type { Rect2 } from '../../../godot/math/rect2';
+import { storedReal } from '../../../godot/math/real';
 import type { Vector2 } from '../../../godot/math/vector';
 
 export interface PolygonRings {
@@ -22,9 +25,6 @@ export interface PolygonRings {
 /** Minimum vertices for a fillable ring. */
 const MIN_RING = 3;
 
-/** `CMP_EPSILON` (`math_defs.h`): how far left of the polygon the bridge returns. */
-const CMP_EPSILON = 0.00001;
-
 export function polygonRings(
   polygon: Float32Array,
   polygons: number[][],
@@ -40,7 +40,7 @@ export function polygonRings(
     // Invert ignores `polygons` but still trims, and draws any ring left (`polygon_2d.cpp:153-160`).
     const ring = trimInternal(allIndices, all.length, internalVertexCount).map((i) => all[i]!);
     if (ring.length === 0) return { points: all, outlines: [] };
-    const points = invertedRing(ring, invertBorder);
+    const points = invertedRing(ring, storedReal(invertBorder));
     return { points, outlines: [points.map((_, i) => i)] };
   }
 
@@ -59,19 +59,23 @@ export function polygonRings(
 /**
  * The one ring `invert_enabled` fills (`polygon_2d.cpp:170-218`): seven points after the lowest
  * vertex bridge the polygon to the bounds grown by `border`, so the polygon reads as a hole. A ring
- * wound the other way takes the bridge mirrored, so the outline keeps one winding.
+ * wound the other way takes the bridge mirrored, so the outline keeps one winding. The bridge
+ * returns `CMP_EPSILON` left of the lowest vertex.
  */
 function invertedRing(ring: Vector2[], border: number): Vector2[] {
+  const f = Math.fround;
   const lowest = lowestIndex(ring);
   const bounds = grownBounds(ring, border);
-  const bridgeX = Math.fround(ring[lowest]!.x - CMP_EPSILON);
-  const bridgeY = Math.fround(ring[lowest]!.y + border);
+  const right = f(bounds.x + bounds.w);
+  const bottom = f(bounds.y + bounds.h);
+  const bridgeX = f(ring[lowest]!.x - CMP_EPSILON);
+  const bridgeY = f(ring[lowest]!.y + border);
   const bridge: Vector2[] = [
     { x: ring[lowest]!.x, y: bridgeY },
-    { x: bounds.maxX, y: bounds.maxY },
-    { x: bounds.maxX, y: bounds.minY },
-    { x: bounds.minX, y: bounds.minY },
-    { x: bounds.minX, y: bounds.maxY },
+    { x: right, y: bottom },
+    { x: right, y: bounds.y },
+    { x: bounds.x, y: bounds.y },
+    { x: bounds.x, y: bottom },
     { x: bridgeX, y: bridgeY },
     { x: bridgeX, y: ring[lowest]!.y },
   ];
@@ -118,10 +122,7 @@ function toPoints(flat: Float32Array): Vector2[] {
 }
 
 /** The ring's bounds after `Rect2::grow(border)`, in float32 as `real_t` holds them. */
-function grownBounds(
-  ring: Vector2[],
-  border: number
-): { minX: number; minY: number; maxX: number; maxY: number } {
+function grownBounds(ring: Vector2[], border: number): Rect2 {
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -133,9 +134,10 @@ function grownBounds(
     maxY = Math.max(maxY, p.y);
   }
   const f = Math.fround;
-  const x = f(minX - border);
-  const y = f(minY - border);
-  const width = f(f(maxX - minX) + f(border * 2));
-  const height = f(f(maxY - minY) + f(border * 2));
-  return { minX: x, minY: y, maxX: f(x + width), maxY: f(y + height) };
+  return {
+    x: f(minX - border),
+    y: f(minY - border),
+    w: f(f(maxX - minX) + f(border * 2)),
+    h: f(f(maxY - minY) + f(border * 2)),
+  };
 }

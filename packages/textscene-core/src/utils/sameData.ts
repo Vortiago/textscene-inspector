@@ -1,6 +1,7 @@
 /**
- * Whether two plain data values hold the same content: numbers, strings, booleans, null, and arrays
- * typed arrays, and arrays and objects of them. A NaN equals a NaN, so a value with one in it can still be found unchanged.
+ * Whether two plain data values hold the same content: numbers, strings, booleans, null, typed
+ * arrays, and arrays and objects of them. A NaN equals a NaN, so a value with one in it can still
+ * be found unchanged.
  *
  * @canonical Whether two plain data values hold the same content
  */

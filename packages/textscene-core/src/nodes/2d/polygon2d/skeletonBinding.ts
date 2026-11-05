@@ -61,7 +61,7 @@ function bindingOf(
   if (step.node.type !== 'Polygon2D') return null;
   const properties = step.node.properties as Polygon2DProperties;
   const vertexCount = drawnVertexCount(properties);
-  if (properties.invertEnabled || properties.bones.length === 0 || vertexCount <= 0) return null;
+  if (!namesSkeletonToBind(properties) || vertexCount <= 0) return null;
   const skeletonPath = resolveLiteralOnLiveTree(path, properties.skeleton, tree);
   if (skeletonPath === null || tree.at(skeletonPath)?.step.node.type !== 'Skeleton2D') return null;
   const { list: bones } = bonesOf(skeletonPath);
@@ -76,6 +76,14 @@ function bindingOf(
     restInverses: bones.map((bone) => bone.restInverse),
     influences: vertexInfluences(vertexCount, entries),
   };
+}
+
+/**
+ * Whether the polygon asks for a Skeleton2D: a `skeleton` path, `bones`, and `invert_enabled` off
+ * (`polygon_2d.cpp:127-132`). A polygon that does not watches no load of the pass.
+ */
+export function namesSkeletonToBind({ skeleton, bones, invertEnabled }: Polygon2DProperties): boolean {
+  return skeleton !== undefined && bones.length > 0 && !invertEnabled;
 }
 
 /**
