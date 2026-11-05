@@ -194,34 +194,33 @@ export function peekSettledChainFaces(
   const faces = chain.map((entry) => peekFace(entry, nodePath));
   if (faces.includes(null)) return null;
   return chain.flatMap((entry, i) => {
-    const face = faces[i]!;
-    if (!isMissing(face)) return [{ font: entry, metrics: face }];
-    return i === 0 ? [{ font: entry, metrics: face.bundled }] : [];
+    const metrics = faces[i]!;
+    if (metrics !== MISSING_FACE) return [{ font: entry, metrics }];
+    // The font still names its variation: only its face is missing.
+    return i === 0
+      ? [{ font: entry, metrics: withVariation(OPEN_SANS_FONT_METRICS, fontVariation(entry)) }]
+      : [];
   });
 }
 
 /**
- * A face with none of its own: none resolves, or its load failed. The first face of a chain draws
- * `bundled` in its place, and a fallback drops out of its chain.
+ * A face with none of its own: none resolves, or its load failed. The first face of a chain draws the
+ * bundled default in its place, and a fallback drops out of its chain.
  */
-interface MissingFace {
-  readonly bundled: FontMetrics;
-}
-
-const isMissing = (face: FontMetrics | MissingFace): face is MissingFace => 'bundled' in face;
+const MISSING_FACE = Symbol('missing face');
 
 /**
- * The settled metrics of the face `font` draws alone: a {@link MissingFace} when it has none, and
- * null while a load is in flight.
+ * The settled metrics of the face `font` draws alone: {@link MISSING_FACE} when it has none, and null
+ * while a load is in flight.
  */
-function peekFace(font: FontResource, nodePath: string): FontMetrics | MissingFace | null {
+function peekFace(font: FontResource, nodePath: string): FontMetrics | typeof MISSING_FACE | null {
   const face = findDrawnFace(font);
   // No failure, so no warning: Godot draws the bundled font here too.
   if (face === BUNDLED_FACE) return withVariation(OPEN_SANS_FONT_METRICS, fontVariation(font));
   if (face === NO_FACE) return NO_FACE_METRICS;
   if (!face) {
     warnUnresolvable(font, nodePath);
-    return { bundled: OPEN_SANS_FONT_METRICS };
+    return MISSING_FACE;
   }
 
   // A BMFont is decoded by the time its resource settles, so it needs no load of its own. Only the
@@ -231,9 +230,8 @@ function peekFace(font: FontResource, nodePath: string): FontMetrics | MissingFa
 
   const metrics = peekMetrics(face.bytes, () => loadSceneFontMetrics(face.bytes, nodePath));
   if (metrics === undefined) return null;
+  if (metrics === null) return MISSING_FACE;
   const variation = fontVariation(font);
-  // The font still names its variation: only its face failed to load.
-  if (metrics === null) return { bundled: withVariation(OPEN_SANS_FONT_METRICS, variation) };
   const outlines = peekGlyphOutlines(face, metrics, variation);
   return outlines === undefined ? null : withVariation(metrics, { ...variation, outlines });
 }

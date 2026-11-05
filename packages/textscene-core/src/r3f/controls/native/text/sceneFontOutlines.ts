@@ -77,9 +77,10 @@ function peekFaceOutlines(face: DrawnFace): PeekedOutlines {
   if (face && hasBitmap(face)) return bitmapFontOutlines(face.bitmap);
   const bytes = face?.bytes;
   if (!face || !bytes) return null;
-  if (fontForcesAutohinter(face))
-    return peekAutoHintedOutlines(bytes, () => settledOutlines(() => openAutoHintedFontOutlines(bytes)));
-  return peekOutlines(bytes, () => settledOutlines(() => openFontOutlines(bytes)));
+  const [peek, open] = fontForcesAutohinter(face)
+    ? [peekAutoHintedOutlines, openAutoHintedFontOutlines]
+    : [peekOutlines, openFontOutlines];
+  return peek(bytes, () => settledOutlines(() => open(bytes)));
 }
 
 /**

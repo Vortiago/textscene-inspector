@@ -17,7 +17,7 @@ export const sceneFontSettleCount = settleCount.get;
 
 /**
  * Subscribes to a font load settling, metrics or outlines, and returns an unsubscribe function. It fires once per
- * font's bytes on their first settle and once for the bundled font, never for a font that short-circuits
+ * load on its first settle and once for the bundled font, never for a font that short-circuits
  * synchronously.
  */
 export const onSceneFontSettled = settleCount.subscribe;

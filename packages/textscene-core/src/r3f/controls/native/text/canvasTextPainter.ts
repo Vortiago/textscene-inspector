@@ -110,14 +110,13 @@ function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: numb
   let startPx = Infinity;
   let endPx = -Infinity;
   for (const { glyphs } of layout.lines) {
-    const [first, last] = [glyphs[0], glyphs.at(-1)];
-    if (!first || !last) continue;
-    startPx = Math.min(startPx, first.x);
+    const last = glyphs.at(-1);
+    if (!last) continue;
+    startPx = Math.min(startPx, glyphs[0]!.x);
     endPx = Math.max(endPx, last.x + last.advance);
   }
-  return endPx === -Infinity
-    ? { startPx: 0, endPx: layout.widthPx }
-    : { startPx: Math.max(0, startPx), endPx };
+  const hasGlyph = startPx !== Infinity;
+  return hasGlyph ? { startPx: Math.max(0, startPx), endPx } : { startPx: 0, endPx: layout.widthPx };
 }
 
 /** The `GlyphQuadArrays` shape `buildGlyphQuadArrays` produces, always exactly one quad. */
