@@ -25,7 +25,7 @@ import {
   useResolvedCanvasItemMaterial,
 } from '../../components/canvasItemMaterialContext';
 import { canvasRenderOrder, isCanvasLayerType } from '../../canvasPaintOrder';
-import { CanvasItemGroup, CanvasItemKeyProvider } from '../../components/CanvasItemGroup';
+import { CanvasItemGroup, CanvasItemProvider } from '../../components/CanvasItemGroup';
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import { useLayerRank } from '../../contexts/PaintOrderContext';
 import { snapControlsToPixelsEnabled, snappedControlOrigin } from './controlPixelSnap';
@@ -295,7 +295,7 @@ function ControlNodeGroup({
       visible={isVisible}
       renderOrder={renderOrder}
     >
-      <CanvasItemKeyProvider value={renderOrder}>
+      <CanvasItemProvider value={renderOrder}>
         <Modulate2DContext.Provider value={inheritedModulate}>
           <CanvasItemMaterialProvider value={material}>
             <TextureSampler2DContext.Provider value={sampler}>
@@ -313,7 +313,7 @@ function ControlNodeGroup({
             </TextureSampler2DContext.Provider>
           </CanvasItemMaterialProvider>
         </Modulate2DContext.Provider>
-      </CanvasItemKeyProvider>
+      </CanvasItemProvider>
     </group>
   );
 

@@ -1,7 +1,6 @@
 /**
  * Turns a resolved `FontResource` into `FontMetrics`, or into the bundled default when that fails.
- * It owns the `FontFace` door, which `bundledFontLoader.ts` shares. It is the one DOM-touching
- * module of the font pipeline, and it never throws.
+ * It registers a scene font through the `FontFace` door of `fontFaceDoor.ts`, and it never throws.
  */
 import { withVariation, type FontMetrics, type GlyphVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
@@ -28,14 +27,8 @@ import * as logger from '../../../../logger';
 import { warnOnce } from '../../../../utils/warnOnce';
 import { createSettledPeek } from './settledChannel';
 import { peekGlyphOutlines } from './sceneFontOutlines';
-
-// happy-dom has neither `FontFace` nor a 2D canvas context, so under vitest the loader skips to the
-// bundled default before any DOM font API. The skip is deliberate, so it does not warn.
-// `r3f/internalTextLabel.tsx` uses the same detection.
-const IS_VITEST = (() => {
-  const proc = (globalThis as { process?: { env?: { VITEST?: string } } }).process;
-  return proc?.env?.VITEST === 'true';
-})();
+import { registerFontFace } from './fontFaceDoor';
+import { IS_VITEST } from '../../../../utils/isVitest';
 
 /**
  * Design units per em for a font `sfntTables.ts` cannot parse; every measurement uses this size.
@@ -60,29 +53,6 @@ function warnUnresolvable(font: FontResource, nodePath: string): void {
     'unresolvable',
     `[SceneFont] Node "${nodePath}": font resource is unresolvable (no FontFile in its fallback chain carries loadable bytes). Falling back to the bundled default font.`
   );
-}
-
-/**
- * The CSP-validated door (`default-src 'none'`, no `connect-src` or `font-src`):
- * bytes in hand go to `new FontFace` and `document.fonts.add`, with no fetch of any URL, no worker,
- * eval or WASM. Resolves to `undefined` with no `FontFace`, and rejects only on bytes that are not
- * a font, so `bytes` is a thunk that does not decode where there is no door.
- */
-export async function registerFontFace(
-  family: string,
-  bytes: () => ArrayBuffer,
-  descriptors?: FontFaceDescriptors
-): Promise<Document | undefined> {
-  // Read lazily: a non-DOM environment answers `undefined`, and a late `document.fonts` is still seen.
-  const { FontFace: FontFaceCtor, document: doc } = globalThis as {
-    FontFace?: typeof FontFace;
-    document?: Document;
-  };
-  if (!FontFaceCtor || !doc?.fonts) return undefined;
-  const face = new FontFaceCtor(family, bytes(), descriptors);
-  await face.load();
-  doc.fonts.add(face);
-  return doc;
 }
 
 /**
