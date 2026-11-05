@@ -149,6 +149,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     side,
     textureFilter,
     mipmapped,
+    fallbackMipmaps: font?.fallbackMipmaps,
     blends,
     shadow: { ...shadow, castShadow: shadow.castShadow && joinsShadowPass },
     layers: properties.layers,

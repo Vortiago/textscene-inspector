@@ -173,10 +173,12 @@ export function peekSettledSceneFontMetrics(
   return metrics;
 }
 
-/** A font of a **Fallback chain**, and the settled metrics of the face it draws. */
+/** A font of a **Fallback chain**, and the settled metrics of the face it draws. Null is the bundled font. */
 export interface SettledChainFace {
   readonly font: FontResource | null;
   readonly metrics: FontMetrics;
+  /** Whether `metrics` are the bundled font's, standing in for a first face that is missing. */
+  readonly isStandIn?: true;
 }
 
 /**
@@ -193,12 +195,18 @@ export function peekSettledChainFaces(
   const chain = ownChain.length > 0 ? ownChain : [font];
   const faces = chain.map((entry) => peekFace(entry, nodePath));
   if (faces.includes(null)) return null;
-  return chain.flatMap((entry, i) => {
+  return chain.flatMap((entry, i): SettledChainFace[] => {
     const metrics = faces[i]!;
     if (metrics !== MISSING_FACE) return [{ font: entry, metrics }];
-    // The font still names its variation: only its face is missing.
+    // The bundled font draws in its place, with the variation the font still names.
     return i === 0
-      ? [{ font: entry, metrics: withVariation(OPEN_SANS_FONT_METRICS, fontVariation(entry)) }]
+      ? [
+          {
+            font: entry,
+            metrics: withVariation(OPEN_SANS_FONT_METRICS, fontVariation(entry)),
+            isStandIn: true,
+          },
+        ]
       : [];
   });
 }

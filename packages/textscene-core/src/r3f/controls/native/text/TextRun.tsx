@@ -7,15 +7,26 @@
  */
 import BundledCanvasRun from './BundledCanvasRun';
 import { faceLayouts } from './faceLayouts';
-import { TextRunMesh, type TextRunProps } from './TextRunMesh';
+import type { FontMetrics } from './fontMetrics';
+import { TextRunMesh, type TextRunProps as TextRunMeshProps } from './TextRunMesh';
 
-export type { TextRunProps } from './TextRunMesh';
-
-export function TextRun(props: TextRunProps) {
-  return faceLayouts(props.layout).map((layout, i) => <FaceRun key={i} {...props} layout={layout} />);
+export interface TextRunProps extends TextRunMeshProps {
+  /** The `mipmapped` of each fallback face, by its metrics. A face it lacks takes `mipmapped`. */
+  fallbackMipmaps?: ReadonlyMap<FontMetrics, boolean>;
 }
 
-function FaceRun(props: TextRunProps) {
+export function TextRun({ fallbackMipmaps, ...props }: TextRunProps) {
+  return faceLayouts(props.layout).map((layout, i) => (
+    <FaceRun
+      key={i}
+      {...props}
+      layout={layout}
+      mipmapped={fallbackMipmaps?.get(layout.fontMetrics) ?? props.mipmapped}
+    />
+  ));
+}
+
+function FaceRun(props: TextRunMeshProps) {
   const { fontMetrics } = props.layout;
   const needsContour = !!fontMetrics.embolden || (props.strokeWidthPx ?? 0) > 0;
   if (fontMetrics.kind === 'atlas' && needsContour) return <BundledCanvasRun {...props} />;

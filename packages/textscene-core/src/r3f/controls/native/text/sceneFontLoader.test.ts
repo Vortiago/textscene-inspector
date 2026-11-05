@@ -401,7 +401,7 @@ describe('scene font in an environment with no font door', () => {
     const font = fontFile(new ArrayBuffer(4), [fallback]);
     peekChain(font, 'Root/NoDom');
     await settleLoads();
-    expect(peekChain(font, 'Root/NoDom')).toEqual([{ font, metrics: bundled }]);
+    expect(peekChain(font, 'Root/NoDom')).toEqual([{ font, metrics: bundled, isStandIn: true }]);
   });
 
   it('keeps the embolden of a FontVariation over a face that fails to load', async () => {

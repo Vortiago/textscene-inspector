@@ -263,3 +263,28 @@ describe('useLabel3DFont mip chain', () => {
     expect(result.current?.generatesMipmaps).toBe(true);
   });
 });
+
+describe('useLabel3DFont mip chain of a fallback face', () => {
+  afterEach(() => vi.doUnmock('../../../r3f/controls/native/text/sceneFontLoader'));
+
+  // Each FontFile builds its own glyph textures, so a fallback keeps its own `generate_mipmaps`.
+  it('follows the fallback font, not the label font', async () => {
+    const fallback = modules.createOpenSansCanvasFontMetrics('label3d-fallback-test');
+    const mipmappedFont = { kind: 'file', fallbacks: [], properties: { generate_mipmaps: 'true' } };
+    vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
+      ...(await importOriginal<object>()),
+      peekSettledSceneFontMetrics: () => bundled.metrics,
+      peekSettledChainFaces: () => [
+        { font: null, metrics: bundled.metrics },
+        { font: mipmappedFont, metrics: fallback },
+      ],
+    }));
+    modules = await importModules();
+    const { result } = renderMetrics('SubResource("plain")');
+
+    await settle();
+
+    expect(result.current?.generatesMipmaps).toBe(false);
+    expect(result.current?.fallbackMipmaps.get(fallback)).toBe(true);
+  });
+});

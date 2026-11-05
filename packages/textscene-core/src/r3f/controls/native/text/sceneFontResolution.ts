@@ -46,7 +46,7 @@ export const FACELESS_FONT: FontFileResource = Object.freeze({
 
 /**
  * The face a font draws: the first font file with glyphs of its own, `BUNDLED_FACE`, `NO_FACE`, or
- * null for a chain that reaches no glyphs. `sceneFontLoader.ts` keys its load cache on the file's identity.
+ * null for a chain that reaches no glyphs. `sceneFontLoader.ts` keys its load cache on the file's bytes.
  */
 export type DrawnFace = FileWithBytes | FileWithBitmap | typeof BUNDLED_FACE | typeof NO_FACE | null;
 

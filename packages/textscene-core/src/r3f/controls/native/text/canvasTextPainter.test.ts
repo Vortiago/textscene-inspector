@@ -74,23 +74,25 @@ describe('computeCanvasTextCanvasLayout', () => {
   });
 
   // A fallback face's own run starts where its first glyph is on the line (`faceLayouts.ts`).
-  it('starts the raster at the whole pixel of the first glyph, and keeps the content box at the quad origin', () => {
-    const layout = layoutFor('AB');
+  // A glyph's ink can pass its pen box by a side bearing, as a `j` does to the left.
+  it('starts the raster one line pitch left of the first glyph, and keeps the content box at the quad origin', () => {
+    const layout = layoutFor('ABCDEFGH');
     const line = layout.lines[0]!;
-    const shifted = { ...layout, lines: [{ ...line, glyphs: line.glyphs.slice(1) }] };
-    const inkLeftPx = Math.floor(line.glyphs[1]!.x);
+    const firstIndex = line.glyphs.findIndex((glyph) => glyph.x > 2 * layout.linePitchPx);
+    const shifted = { ...layout, lines: [{ ...line, glyphs: line.glyphs.slice(firstIndex) }] };
+    const inkLeftPx = Math.floor(line.glyphs[firstIndex]!.x - layout.linePitchPx);
     const canvasLayout = computeCanvasTextCanvasLayout(shifted, 0);
     expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx - inkLeftPx));
     expect(contentOriginOnQuad(canvasLayout).x).toBeCloseTo(0, 6);
   });
 
-  it('ends the raster at the end of the last glyph, short of the layout width', () => {
-    const layout = layoutFor('AB');
+  it('ends the raster one line pitch past the last glyph, short of the layout width', () => {
+    const layout = layoutFor('ABCDEFGH');
     const line = layout.lines[0]!;
     const first = line.glyphs[0]!;
     const shortened = { ...layout, lines: [{ ...line, glyphs: [first] }] };
     expect(computeCanvasTextCanvasLayout(shortened, 0).canvasWidthPx).toBe(
-      Math.ceil(first.x + first.advance)
+      Math.ceil(first.x + first.advance + layout.linePitchPx)
     );
   });
 
