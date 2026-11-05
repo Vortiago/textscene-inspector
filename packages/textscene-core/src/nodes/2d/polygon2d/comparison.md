@@ -1,7 +1,6 @@
 ---
 type: Polygon2D
 category: 2D
-status: limitation
 fixture: unit-polygon2d.tscn
 image: unit-polygon2d
 renders_as: a filled, optionally textured mesh
@@ -18,6 +17,15 @@ The skin follows the Forward+ and Mobile renderers. They weight the corner of ea
 (`servers/rendering/renderer_rd/shaders/skeleton.glsl:172-180`), so a vertex with no weight lands on
 the polygon's origin. The Compatibility renderer adds a corner of 1 after it weights
 (`drivers/gles3/shaders/skeleton.glsl:179`), so there that vertex lands on the skeleton's origin.
+
+## Normal map
+<!-- compare: image=unit-polygon2d-normal-map-rotation status=done fixture=unit-polygon2d-normal-map-rotation.tscn -->
+
+A CanvasTexture's `normal_texture` and `specular_texture` shade the polygon under PointLight2D and
+DirectionalLight2D, and its own `texture_filter` and `texture_repeat` win over the polygon's. The
+polygon's rotation and scale turn the normal (`canvas.glsl:708`). `texture_rotation`, `texture_offset`
+and `texture_scale` move only the UV, so they do not. Turned, rotated a quarter turn, is lit from
+below, as in Godot.
 
 ## Linting
 

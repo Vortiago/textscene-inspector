@@ -118,6 +118,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animatedsprite2d Normal Map Flip",
+    "file": "unit-animatedsprite2d-normal-map-flip.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animatedsprite2d Texture Filter Inherited",
     "file": "unit-animatedsprite2d-texture-filter-inherited.tscn",
     "category": "Other"
@@ -465,6 +470,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Cpuparticles2d Local Coords",
     "file": "unit-cpuparticles2d-local-coords.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles2d Normal Map",
+    "file": "unit-cpuparticles2d-normal-map.tscn",
     "category": "Other"
   },
   {
@@ -3212,6 +3222,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Pathfollow2d",
     "file": "unit-pathfollow2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Polygon2d Normal Map Rotation",
+    "file": "unit-polygon2d-normal-map-rotation.tscn",
     "category": "Unit - 2D Canvas"
   },
   {

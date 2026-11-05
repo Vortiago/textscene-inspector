@@ -13,10 +13,11 @@ import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
-import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { useNode2DCanvasTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { threeMatrixFromTransform2D } from '../../../r3f/node2dTransform';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
-import { useTexture2D } from '../../../resources/useTexture2D';
+import { useTexture2D, type Texture2DResult } from '../../../resources/useTexture2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { useEmissionTransform } from './emissionTransform';
@@ -33,16 +34,31 @@ const UNTEXTURED_QUAD = { width: 1, height: 1 };
 
 export function CPUParticles2D({ node, children }: NodeComponentProps) {
   const props = node.properties as CPUParticles2DProperties;
+  const { externalResources, internalResources } = useSceneResources();
+  const {
+    texture: resolvedTexture,
+    size,
+    missing,
+    canvasTexture,
+  } = useTexture2D(props.texture, externalResources, internalResources);
+  // A CanvasTexture's own filter and repeat win over the item's.
+  const sampler = useNode2DCanvasTextureSampler(props, canvasTexture?.texture);
+  // An emitter that is not emitting draws nothing, so it uploads no view and loads no maps.
+  const texture = useCanvas2DTexture(props.emitting ? resolvedTexture : null, sampler);
 
   return (
     <CanvasItem2D
       node={node}
       props={props}
+      canvasTexture={props.emitting ? canvasTexture : undefined}
       body={({ color, opacity }, material, pixelMaterial) =>
         props.emitting ? (
           <ParticleField
             props={props}
             name={node.name}
+            texture={texture}
+            size={size}
+            missing={missing}
             color={color}
             opacity={opacity}
             material={material}
@@ -59,6 +75,9 @@ export function CPUParticles2D({ node, children }: NodeComponentProps) {
 function ParticleField({
   props,
   name,
+  texture,
+  size,
+  missing,
   color,
   opacity,
   material,
@@ -66,25 +85,28 @@ function ParticleField({
 }: {
   props: CPUParticles2DProperties;
   name: string;
+  /** The view the particles sample, with the CanvasTexture's sampler where it names one. */
+  texture: THREE.Texture | null;
+  size: Texture2DResult['size'];
+  /** The texture is set but failed to load. */
+  missing: boolean;
   color: THREE.Color;
   opacity: number;
   material: CanvasItemMaterialProperties | null;
   pixelMaterial: CanvasItemPixelMaterial;
 }) {
-  const { externalResources, internalResources } = useSceneResources();
   const flipbook = useMemo(() => particlesFlipbook(material), [material]);
-  const {
-    texture: resolvedTexture,
-    size,
-    missing,
-  } = useTexture2D(props.texture, externalResources, internalResources);
-  const sampler = useNode2DTextureSampler(props);
-  const texture = useCanvas2DTexture(resolvedTexture, sampler);
 
   // A callback ref, not useRef: the emission-transform sample runs once the
   // container is in the tree, since its world matrix does not exist before.
   const [container, setContainer] = useState<THREE.Group | null>(null);
   const emissionTransform = useEmissionTransform(container, props.local_coords);
+  // The pose is in canvas space, where Godot draws it, so the mesh cancels the emitter's canvas
+  // transform. The normal map then turns with the canvas basis, not the emitter's (`canvas.glsl:708`).
+  const canvasPlacement = useMemo(
+    () => threeMatrixFromTransform2D(emissionTransform).invert(),
+    [emissionTransform]
+  );
 
   const { curves, scaleCurves, colorRamp, colorInitialRamp } = useParticleResources({
     params: props.params,
@@ -143,7 +165,7 @@ function ParticleField({
       merge: [pixelMaterial],
     });
     return (
-      <mesh geometry={geom}>
+      <mesh geometry={geom} matrix={canvasPlacement} matrixAutoUpdate={false}>
         <meshBasicMaterial key={program.key} {...program.props} />
       </mesh>
     );

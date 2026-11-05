@@ -145,6 +145,15 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-pointlight2d-normal-map-specular.tscn',
     mode: '2d',
   },
+  // The polygon's rotation turns its normal. Godot 4.6.3 `--mode 2d`: Upright rgb(226) at (100,324) and
+  // rgb(128) at (300,324). Turned rgb(161) at (852,324) and rgb(226) at (952,224).
+  { name: 'polygon2d-normal-map-rotation', file: 'unit-polygon2d-normal-map-rotation.tscn', mode: '2d' },
+  // flip_h flips the frame's normal. Godot 4.6.3 `--mode 2d`: Plain rgb(226) at (100,324), Flipped
+  // rgb(128) at (852,324) and rgb(244) at (976,324).
+  { name: 'animatedsprite2d-normal-map-flip', file: 'unit-animatedsprite2d-normal-map-flip.tscn', mode: '2d' },
+  // A global-coords emitter's rotation leaves the normal, a local one's turns it. Godot 4.6.3
+  // `--mode 2d`: Global rgb(226) at (100,324), Local rgb(161) at (852,324) and rgb(226) at (952,224).
+  { name: 'cpuparticles2d-normal-map', file: 'unit-cpuparticles2d-normal-map.tscn', mode: '2d' },
   // A DirectionalLight2D at height 0.5. Godot 4.6.3 `--mode 2d`: Plain rgb(255) at (200,324), Flat
   // rgb(193) at (576,324), Dome rgb(200), rgb(219) and rgb(200) at x=840, 952 and 1064.
   { name: 'directionallight2d-normal-map', file: 'unit-directionallight2d-normal-map.tscn', mode: '2d' },
