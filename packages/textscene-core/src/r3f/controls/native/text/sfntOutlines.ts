@@ -108,29 +108,44 @@ function instanceOf(sfnt: SfntFile, variation: GlyphVariation | undefined): Font
  * for the same glyph at the same size again and again.
  */
 function instanceAdvanceReader(sfnt: SfntFile): SfntOutlines['advanceAtInstance'] {
+  let readers: ReturnType<typeof instanceAdvanceReaders> | undefined;
+  const kept = new WeakMap<OpentypeCoordinates, Map<number, Map<number, number | null>>>();
+
+  return (glyphIndex, fontSizePx, opentype) => {
+    let bySize = kept.get(opentype);
+    if (!bySize) kept.set(opentype, (bySize = new Map()));
+    let byGlyph = bySize.get(fontSizePx);
+    if (!byGlyph) {
+      // A font size animation passes through many sizes, so the oldest size goes at this count.
+      if (bySize.size >= MAX_KEPT_SIZES) bySize.delete(bySize.keys().next().value!);
+      bySize.set(fontSizePx, (byGlyph = new Map()));
+    }
+    if (byGlyph.has(glyphIndex)) return byGlyph.get(glyphIndex)!;
+    const instance = fontInstanceOf(sfnt, opentype);
+    readers ??= instanceAdvanceReaders(sfnt);
+    const advance = instance && orOnRangeError(() => readers!(instance, glyphIndex, fontSizePx), null);
+    byGlyph.set(glyphIndex, advance);
+    return advance;
+  };
+}
+
+/** The sizes of one instance whose advances are kept. */
+const MAX_KEPT_SIZES = 8;
+
+/** The reader of the 26.6 advance at an instance, with `hmtx`, `head` and the phantom-point loader set up once. */
+function instanceAdvanceReaders(
+  sfnt: SfntFile
+): (instance: FontInstance, glyphIndex: number, fontSizePx: number) => number | null {
   const metricsOf = glyphMetricsReader(sfnt);
   const unitsPerEm = readHeadUnitsPerEm(sfnt);
   const phantomAdvance = glyfAdvanceReader(sfnt);
-  const kept = new WeakMap<OpentypeCoordinates, Map<string, number | null>>();
-
-  const read = (instance: FontInstance, glyphIndex: number, fontSizePx: number): number | null => {
+  return (instance, glyphIndex, fontSizePx) => {
     if (!instance.adjustedAdvances.horizontal)
       return phantomAdvance?.(glyphIndex, fontSizePx, instance) ?? null;
     const units = toUint16(
       metricsOf(glyphIndex, 0).horizontal.advance + instance.advanceDelta.horizontal(glyphIndex)
     );
     return glyphAdvance26_6(units, unitsPerEm, fontSizePx);
-  };
-
-  return (glyphIndex, fontSizePx, opentype) => {
-    let byGlyph = kept.get(opentype);
-    if (!byGlyph) kept.set(opentype, (byGlyph = new Map()));
-    const key = `${fontSizePx}/${glyphIndex}`;
-    if (byGlyph.has(key)) return byGlyph.get(key)!;
-    const instance = fontInstanceOf(sfnt, opentype);
-    const advance = instance && orOnRangeError(() => read(instance, glyphIndex, fontSizePx), null);
-    byGlyph.set(key, advance);
-    return advance;
   };
 }
 

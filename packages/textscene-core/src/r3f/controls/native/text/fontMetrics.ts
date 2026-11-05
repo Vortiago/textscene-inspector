@@ -255,11 +255,7 @@ export function canvasGlyphPenXPx(
  * (`text_server_adv.cpp:7077`). A missing glyph takes `averageAdvanceUnits`,
  * so the line does not collapse around it.
  */
-// 1. `freetype/src/base/ftadvanc.c:52`: `FT_MulFix(1024 * advance, x_scale)` to 16.16, half up.
-// 2. `thirdparty/harfbuzz/src/hb-ft.cc:519,523`: `(v + (1<<9)) >> 10` to 26.6, half up.
-//    Unhinted (`hb-ft.cc:115`: `FT_LOAD_DEFAULT | FT_LOAD_NO_HINTING`), the raw-`hmtx` path (`ftadvanc.c:124-131`).
 // A face at a variable-font instance takes its advance from `SfntOutlines.advanceAtInstance` instead.
-// At 2048 units and 16px this is `ceil(units / 2) / 64`: 1/128 px wider for an odd advance.
 export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSizePx: number): number {
   const units = metrics.getGlyphAdvanceUnits(ch) ?? metrics.averageAdvanceUnits;
   // A bitmap font's advance reaches HarfBuzz in 26.6 as `advance * 64` and leaves as
@@ -272,7 +268,11 @@ export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSize
   return glyphAdvance26_6(units, metrics.unitsPerEm, fontSizePx) / FIXED_26_6_ONE;
 }
 
-/** An advance of `units` in 26.6, through steps 1 and 2 of `getFontGlyphAdvancePx`. */
+// 1. `freetype/src/base/ftadvanc.c:52`: `FT_MulFix(1024 * advance, x_scale)` to 16.16, half up.
+// 2. `thirdparty/harfbuzz/src/hb-ft.cc:519,523`: `(v + (1<<9)) >> 10` to 26.6, half up.
+//    Unhinted (`hb-ft.cc:115`: `FT_LOAD_DEFAULT | FT_LOAD_NO_HINTING`), the raw-`hmtx` path (`ftadvanc.c:124-131`).
+// At 2048 units and 16px this is `ceil(units / 2) / 64`: 1/128 px wider for an odd advance.
+/** An advance of `units` in 26.6, through the two steps above. */
 export function glyphAdvance26_6(units: number, unitsPerEm: number, fontSizePx: number): number {
   const { xScale } = freeTypeSizeRequest(unitsPerEm, fontSizePx);
   const advance16_16 = ftMulFix(1024 * units, xScale);
