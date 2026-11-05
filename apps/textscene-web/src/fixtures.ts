@@ -3335,6 +3335,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tile Map Layer Y Sort Transform",
+    "file": "unit-tile-map-layer-y-sort-transform.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Tile Map Layer",
     "file": "unit-tile-map-layer.tscn",
     "category": "Unit - 2D Canvas"

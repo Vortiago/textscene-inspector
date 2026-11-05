@@ -13,7 +13,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
-import type { Node2DProperties } from '../../../nodes/base/node2d/types';
 import { perObject } from '../../../utils/perObject';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
@@ -81,14 +80,17 @@ import { scopeOf } from '../../../resources/liveNode';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
-import type { SkippedAncestors, SkippedMaterial, SolveNode, ThemedIconRef } from './solveTree';
-import { ROOT_TEXTURE_SAMPLER, inheritTextureSampler } from '../../canvasItemTextureSampler';
-import { multiplyTransform2D } from '../../../godot/math/transform2d.js';
+import type { SolveNode, ThemedIconRef } from './solveTree';
+import {
+  INHERIT_PARENT_MATERIAL,
+  NO_PARENT_MATERIAL,
+  foldCanvasAncestor,
+  foldCanvasAncestors,
+  type CanvasAncestors,
+} from '../../canvasAncestors';
 import { liveNodePatches } from '../../liveNodePatches';
 import { liveScenePassResults } from '../../liveScenePass';
 import { patchedNode } from '../../nodePatch';
-import { node2DLocalTransform } from '../../node2dTransform';
-import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
 import {
   allocatePaintRange,
   canvasRootRanges,
@@ -262,7 +264,7 @@ interface Ancestry {
   /** Where each child draws, by the child as authored. */
   paintRanges: ReadonlyMap<TscnNode, PaintRange>;
   /** What every skipped Node2D ancestor since the last real Control or root contributes. */
-  skippedAncestors: SkippedAncestors | null;
+  skippedAncestors: CanvasAncestors | null;
   /**
    * Whether a non-`CanvasItem` link sits between here and the nearest Control,
    * so the climb ends with `has_parent_control == false` (`control.cpp:3874-3890`).
@@ -346,59 +348,24 @@ function isSortableChild(live: TscnNode): boolean {
 }
 
 /**
- * What a promoted Control's descendants inherit through the non-Control `collapsed`.
+ * What a promoted Control's descendants inherit through the non-Control `placed`, a collapsed
+ * node with what the live scene passes bind.
  * `get_parent_item()` casts only the direct parent (`scene/main/canvas_item.cpp:565-571`),
  * so Node2D chains compose, and a non-`CanvasItem` link reparents at the nearest
- * canvas (`canvas_item.cpp:246-267`): `null`, so nothing above it leaks through.
+ * canvas (`canvas_item.cpp:246-267`): `null`, so nothing above it leaks through. A chain that
+ * starts on the Control above defers its material to that Control. A `top_level` or canvas-root
+ * link has no parent item, so it defers to nothing.
  */
 function nextSkippedAncestors(
-  collapsed: TscnNode,
-  previous: SkippedAncestors | null,
-  material: SkippedMaterial
-): SkippedAncestors | null {
-  if (!isCanvasItem(collapsed)) return null;
-  const props = collapsed.properties as Node2DProperties;
-  const local = node2DLocalTransform(props);
-  return {
-    // `local` first, then the ancestors above it, as `get_global_transform()` composes.
-    transform: previous ? multiplyTransform2D(previous.transform, local) : local,
-    // `_cull_canvas_item` folds each item's `modulate` into what its children
-    // inherit (`renderer_canvas_cull.cpp`); `self_modulate` stays own-pixel.
-    modulate: multiplyModulate(previous?.modulate ?? WHITE_MODULATE, props.modulate ?? WHITE_MODULATE),
-    // Appended, not summed: `p_z` clamps at every step and a
-    // `z_relative == false` item restarts (`renderer_canvas_cull.cpp:430-434`), so
-    // only the walker, which knows the ambient z, can fold it.
-    z: [...(previous?.z ?? []), { zIndex: props.z_index ?? 0, zAsRelative: props.z_as_relative !== false }],
-    // Own over previous, each property on its own: a PARENT_NODE link takes its parent's cache.
-    sampler: inheritTextureSampler(
-      { filter: props.texture_filter, repeat: props.texture_repeat },
-      previous?.sampler ?? ROOT_TEXTURE_SAMPLER
-    ),
-    material,
-  };
-}
-
-const INHERIT_MATERIAL: SkippedMaterial = { kind: 'inherit' };
-const NO_MATERIAL: SkippedMaterial = { kind: 'none' };
-
-/**
- * The material a promoted Control's parent item has through the skipped `collapsed`: its own
- * `material`, or with `use_parent_material` the one above it. A chain that starts on the Control
- * above defers to that Control. A `top_level` or canvas-root link has no parent item, so it defers
- * to nothing (`CanvasItem::get_parent_item`, `canvas_item.cpp:565-571`).
- */
-function skippedMaterialOf(
-  collapsed: TscnNode,
+  placed: TscnNode,
   scope: SceneScope,
-  previous: SkippedAncestors | null,
+  previous: CanvasAncestors | null,
   canvasChainBroken: boolean
-): SkippedMaterial {
-  const props = collapsed.properties as Node2DProperties;
-  if (props.use_parent_material) {
-    if (previous) return previous.material;
-    return canvasChainBroken || isTopLevelItem(collapsed) ? NO_MATERIAL : INHERIT_MATERIAL;
-  }
-  return props.materialPath ? { kind: 'own', ref: props.materialPath, resources: scope } : NO_MATERIAL;
+): CanvasAncestors | null {
+  if (!isCanvasItem(placed)) return null;
+  if (previous) return foldCanvasAncestor(previous, placed, scope);
+  const start = canvasChainBroken || isTopLevelItem(placed) ? NO_PARENT_MATERIAL : INHERIT_PARENT_MATERIAL;
+  return foldCanvasAncestors([placed], scope, start);
 }
 
 /**
@@ -761,11 +728,7 @@ function buildForest(
     // folds its own CanvasItem transform into what they inherit.
     const childSkippedAncestors = isControl
       ? null
-      : nextSkippedAncestors(
-          placed,
-          skippedAncestors,
-          skippedMaterialOf(collapsed, ownScope, skippedAncestors, canvasChainBroken)
-        );
+      : nextSkippedAncestors(placed, ownScope, skippedAncestors, canvasChainBroken);
     // The climb is `while (!node->is_set_as_top_level())` (`control.cpp:3876`),
     // so the flag ends it on the Control itself or on any CanvasItem above.
     const topLevel = isTopLevelItem(collapsed);

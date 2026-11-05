@@ -15,8 +15,7 @@ import { useCanvasItemMaterialFile } from './components/canvasItemMaterialContex
 import { multiplyModulate } from './canvasItemModulate';
 import { useCanvasModulateFor } from './canvasModulate';
 import { useGodotLinearColor } from './godotColor';
-import { canvasKeyAtZ } from './canvasPaintOrder';
-import { accumulateCanvasItemZ } from './lighting2d/canvasItemPlacement';
+import { childCanvasPlace } from './canvasItemState';
 import { TileSourceMesh } from './TileSourceMesh';
 import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import type { Rgba } from '../godot/math/math';
@@ -66,9 +65,10 @@ function drawnItems(quadrants: readonly (readonly DrawableCell[])[]): DrawnItem[
 
 function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
   const material = useTileItemMaterial(item.material, layer.material);
-  // `z_as_relative` (`:356`), so the item's z accumulates onto the layer's.
-  const zFinal = accumulateCanvasItemZ(layer.zFinal, { z_index: item.zIndex });
-  const canvasKey = canvasKeyAtZ(useCanvasItemKey(), layer.zFinal, zFinal);
+  const { key: canvasKey, zFinal } = childCanvasPlace(
+    { key: useCanvasItemKey(), zFinal: layer.zFinal },
+    item.zIndex
+  );
   const own = multiplyModulate(layer.selfTint, useCanvasModulateFor(material));
   const color = useGodotLinearColor(own);
   return (

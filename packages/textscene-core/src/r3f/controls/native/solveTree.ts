@@ -12,10 +12,8 @@ import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
 import type { PaintRange } from '../../canvasPaintOrder';
-import type { AmbientTextureSampler } from '../../canvasItemTextureSampler';
-import type { SkippedCanvasItems } from '../../canvasItemState';
+import type { CanvasAncestors } from '../../canvasAncestors';
 import type { StyleBoxFlatData } from './styleBoxFlat';
-import type { Transform2DColumns } from '../../../godot/math/transform2d.js';
 import type { Rgba } from '../../../godot/math/math.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 
@@ -30,37 +28,6 @@ export interface ThemedIconRef {
   /** Whether every resource between the node and `ref` is local to scene: true for an override, the Theme's for a theme item. */
   isHeldLocally: boolean;
 }
-
-/**
- * The accumulated `CanvasItem` state of the non-Control ancestors a promoted
- * Control was walked past: the facets `_render_canvas_item_tree` re-seeds for a
- * canvas root (`renderer_canvas_cull.cpp:70-83`), as one value because one break resets all.
- * Visibility follows the scene tree instead: {@link SolveNode.parentVisibleInTree}. Its `modulate`
- * and `z` are what `useCanvasItemState` folds.
- */
-export interface SkippedAncestors extends SkippedCanvasItems {
-  /**
-   * Composed `Transform2D`, outermost first (`transform_2d.cpp:198-218`). Never decomposed:
-   * composed ancestors can shear, which rotation and scale cannot represent.
-   */
-  transform: Transform2DColumns;
-  /**
-   * The `texture_filter` and `texture_repeat` the skipped ancestors name, the innermost winning
-   * (`canvas_item.cpp:1625-1699`). Unnamed where none does: the walker lays the ancestors above them
-   * and the viewport default under them.
-   */
-  sampler: AmbientTextureSampler;
-  /** What a `use_parent_material` Control under the skipped ancestors takes (`canvas_item.cpp`). */
-  material: SkippedMaterial;
-}
-
-/**
- * The material of a promoted Control's parent item: the innermost skipped ancestor that names one,
- * a chain that names none, or the Control above the chain where every skipped ancestor defers.
- * `own` carries the scope of that ancestor, since an instanced sub-scene names its materials in its file.
- */
-export type SkippedMaterial =
-  { kind: 'own'; ref: string; resources: SceneScope } | { kind: 'inherit' } | { kind: 'none' };
 
 /**
  * One Control or 2D-UI node in the live, collapsed scene tree (instance roots
@@ -106,8 +73,9 @@ export interface SolveNode {
   // Transform, tint and z accumulate down `CanvasItem::get_parent_item()`, which
   // casts only the direct parent and returns nullptr for `top_level`
   // (`scene/main/canvas_item.cpp:565-571`). A plain `Node`, `Node3D` or `CanvasLayer`
-  // breaks the chain: `null`, and the node is hoisted to a canvas root.
-  skippedAncestors: SkippedAncestors | null;
+  // breaks the chain: `null`, and the node is hoisted to a canvas root. Visibility follows
+  // `parentVisibleInTree` instead, which a hoisted Control keeps too.
+  skippedAncestors: CanvasAncestors | null;
   /**
    * `CanvasItem::parent_visible_in_tree`, the other half of `is_visible_in_tree()`
    * (`canvas_item.cpp:62-64`). It follows the scene tree with no `top_level` test

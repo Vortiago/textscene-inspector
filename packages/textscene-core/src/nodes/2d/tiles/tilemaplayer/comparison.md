@@ -23,6 +23,12 @@ A rendering quadrant is a `rendering_quadrant_size` square of cells, or one tile
 y-sorted layer. Each quadrant takes its own lights, so a large layer is not held to 15
 positional lights in total.
 
+## Y-sorted layer with a transform
+
+<!-- compare: image=unit-tile-map-layer-y-sort-transform status=done fixture=unit-tile-map-layer-y-sort-transform.tscn -->
+
+This y-sorted layer turns 30 degrees and scales by 1.5 in its parent. It draws each tile row through its whole transform. A row sorts by the y of its origin in the parent's space (`renderer_canvas_cull.cpp:131`). The two white bars hide under the rows that sort below them. Rows that a rotation lays on one y keep their order within `is_equal_approx`. The previewer matches Godot 4.6.3 at rotations 0, 30 and -90 degrees, scales 0.5, 2, (-1, -1) and (1, -1), and skew 0.3.
+
 ## Padded atlas from a ViewportTexture
 
 <!-- compare: image=unit-tile-atlas-viewport-padding status=done fixture=unit-tile-atlas-viewport-padding.tscn -->
