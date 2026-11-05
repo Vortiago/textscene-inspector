@@ -34,6 +34,11 @@ export function markerFontSizeOf(value: string | undefined): number | undefined 
   return sizePx === -1 ? undefined : sizePx;
 }
 
+/** The `[color]` or `[outline_color]` payload `value`, or `undefined` for none. An unreadable colour is `defaultColor` (`:6155`). */
+export function tagColorOf(value: string | undefined, defaultColor: Rgba): Rgba | undefined {
+  return value === undefined ? undefined : resolveBBColor(value, defaultColor);
+}
+
 /** Chooses one value among the open tags of a kind, or `undefined` for none. */
 export type TagValuePick = (tags: readonly OpenBBCodeTag[], name: string) => string | undefined;
 
@@ -43,17 +48,16 @@ export interface TagOutline {
   color: Rgba | undefined;
 }
 
-/** The outline tags of `tags` as `pick` chooses them. An unreadable colour is `defaultColor` (`:6155`). */
+/** The outline tags of `tags` as `pick` chooses them. */
 export function tagOutlineOf(
   tags: readonly OpenBBCodeTag[],
   pick: TagValuePick,
   defaultColor: Rgba
 ): TagOutline {
   const sizeValue = pick(tags, 'outline_size');
-  const colorValue = pick(tags, 'outline_color');
   return {
     sizePx: sizeValue === undefined ? undefined : outlineSizeOf(sizeValue),
-    color: colorValue === undefined ? undefined : resolveBBColor(colorValue, defaultColor),
+    color: tagColorOf(pick(tags, 'outline_color'), defaultColor),
   };
 }
 

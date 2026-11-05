@@ -18,17 +18,11 @@ import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import {
-  IMAGE_OBJECT_CHAR,
-  INDENT_TAGS,
-  hasOpenTag,
-  lastTagValue,
-  resolveBBColor,
-  type OpenBBCodeTag,
-} from './bbcode';
+import { IMAGE_OBJECT_CHAR, INDENT_TAGS, hasOpenTag, lastTagValue, type OpenBBCodeTag } from './bbcode';
 import { faceOfStyle, type RichTextFaces } from './styleFaces';
 import {
   markerFontSizeOf,
+  tagColorOf,
   tagFontSizePx,
   tagOutlineOf,
   type TagOutline,
@@ -112,10 +106,6 @@ function openFontStyle(tags: readonly OpenBBCodeTag[]): FontStyle {
   return { bold: hasOpenTag(tags, 'b'), italic: hasOpenTag(tags, 'i') };
 }
 
-function colorOf(value: string | undefined, fallback: Rgba): Rgba | undefined {
-  return value === undefined ? undefined : resolveBBColor(value, fallback);
-}
-
 /** The tags of `formatting`, each reduced to the one value a marker takes from the items that set it. */
 interface MarkerFormatting {
   /** The `[font_size]` the marker takes, if any (`item_font_size`). */
@@ -137,7 +127,7 @@ function markerFormatting(
 ): MarkerFormatting {
   return {
     fontSizePx: markerFontSizeOf(pick(tags, 'font_size')),
-    color: colorOf(pick(tags, 'color'), defaultColor),
+    color: tagColorOf(pick(tags, 'color'), defaultColor),
     outline: tagOutlineOf(tags, pick, defaultColor),
   };
 }

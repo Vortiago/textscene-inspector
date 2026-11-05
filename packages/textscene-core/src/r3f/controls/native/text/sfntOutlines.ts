@@ -122,10 +122,10 @@ function instanceKerningOf(
 ): SfntOutlines['kerningAtInstance'] {
   if (!kerningReader) return undefined;
   // Read when an instance first asks. Null is a font with no pair kerning, read only once.
-  const kerningOf = perObject((font: SfntFile) => orOnRangeError(() => kerningReader(font), null));
+  const kerningAtOf = perObject((font: SfntFile) => orOnRangeError(() => kerningReader(font), null));
   // Kept with its instance, which `fontInstanceOf` bounds.
   const pairsAt = perObject((instance: FontInstance): CharacterKerning | null => {
-    const kerningAt = kerningOf(sfnt);
+    const kerningAt = kerningAtOf(sfnt);
     return kerningAt && keptPairs(glyphIndex, kerningAt(instance.normalized));
   });
   // Equal axis values share one instance, and so one kept pair for each pair.
@@ -206,7 +206,7 @@ function instanceAdvanceReader(sfnt: SfntFile): SfntOutlines['advanceAtInstance'
   };
 }
 
-/** Built once, not per read: `recentlyRead` calls it only for a size it does not keep. */
+/** Declared once, not inline: an arrow inside the reader would allocate a closure on every read. */
 const newAdvancesByGlyph = (): Map<number, number | null> => new Map();
 
 /** A font size animation passes through many sizes, so the advances of this many sizes of one instance are kept. */

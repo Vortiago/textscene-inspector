@@ -15,6 +15,8 @@
 
 import { perObject } from '../../../../../utils/perObject';
 import {
+  CHAINED_SEQUENCE_CONTEXT,
+  type ContextReader,
   type ContextRule,
   coverageIndex,
   DEFAULT_FEATURES,
@@ -25,6 +27,7 @@ import {
   languageFeatures,
   type LayoutTable,
   pairValueRecords,
+  SEQUENCE_CONTEXT,
   singleSubstitute,
   substituteList,
   type Subtable,
@@ -32,9 +35,6 @@ import {
   valueFieldOffset,
   ValueFormat,
   valueRecordSize,
-  CHAINED_SEQUENCE_CONTEXT,
-  SEQUENCE_CONTEXT,
-  type ContextReader,
 } from './openTypeLayout';
 
 /** A shaped glyph: its index and vertical offset in font units. */

@@ -19,8 +19,8 @@ export const intToFixed = (value: number): number => value * 0x10000;
 export const fixedToFdot6 = (value: number): number => Math.floor((value + 0x200) / 0x400);
 
 /** 16.16 to a whole number, rounded half up, with no clamp to a width. */
-export const roundFixed = (value: number): number =>
+export const fixedToWhole = (value: number): number =>
   Math.floor((value + FIXED_16_16_ONE / 2) / FIXED_16_16_ONE);
 
 /** `FT_fixedToInt`: 16.16 to a `FT_Short`, rounded half up. */
-export const fixedToInt = (value: number): number => toInt16(roundFixed(value));
+export const fixedToInt = (value: number): number => toInt16(fixedToWhole(value));

@@ -66,10 +66,7 @@ interface PairLookup {
   subtables: readonly Subtable[];
 }
 
-/**
- * The kerning lookups that hold a pair subtable, each with its pair subtables only. A function of
- * its own, so the reader's closure keeps these and not the whole `GPOS` table.
- */
+/** The kerning lookups that hold a pair subtable, each with its pair subtables only. */
 function pairLookupsOf(table: LayoutTable): PairLookup[] {
   const pairLookups: PairLookup[] = [];
   for (const index of kernLookups(table)) {
