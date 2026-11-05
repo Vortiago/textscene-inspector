@@ -90,6 +90,12 @@ export interface ShapeTextOptions {
     paragraphStart: number
   ) => Partial<Pick<ShapeTextOptions, 'direction' | 'language' | 'bidiOverride'>>;
   /**
+   * The left inset of each paragraph, px, keyed by the source index it starts at: RichTextLabel's
+   * margin and list marker (`l.indent`, `rich_text_label.cpp:472`). A paragraph wraps at `boxWidthPx` less its inset
+   * (`:474`), and its lines carry it as `indentPx`. Undefined or 0 insets nothing.
+   */
+  paragraphIndentPx?: (paragraphStart: number) => number;
+  /**
    * The theme `line_spacing`, px. Required, because it is a per-control constant: Label 3
    * (`labelEffectiveTextTheme`), Button-family and LineEdit 0, RichTextLabel `line_separation` 0
    * (`default_theme.cpp:1217`), Label3D its authored `line_spacing`. A miss is a 1-3 px shift.
@@ -191,6 +197,8 @@ export interface TextLineLayout {
    * Label hides an ellipsis by it, as the ellipsis glyph has no source character of its own.
    */
   paragraphStart?: number;
+  /** The paragraph's left inset, px, from `paragraphIndentPx`. Absent for none. */
+  indentPx?: number;
   /**
    * Whether this line's paragraph resolved right-to-left: `shaped_text_get_inferred_direction() ==
    * DIRECTION_RTL`. `shapeText` sets it. A painter's line rebuilt from part of one leaves it out.
@@ -752,6 +760,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     bidiOverride,
     language = '',
     paragraphBidiAt,
+    paragraphIndentPx,
     lineSpacingPx,
     fontSizePxAt,
     fontMetricsAt,
@@ -789,6 +798,9 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     const sourceIndex = (i: number): number => para.offset + Math.max(0, Math.min(i, para.text.length - 1));
     const paraText = para.terminated ? para.text + PARAGRAPH_TERMINATOR : para.text;
     const paragraphBidi = { direction, language, bidiOverride, ...paragraphBidiAt?.(para.offset) };
+    const indentPx = paragraphIndentPx?.(para.offset) ?? 0;
+    // A paragraph inset past the box wraps nowhere, as a box of no width does.
+    const paragraphWidth = effectiveWidth > 0 ? Math.max(0, effectiveWidth - indentPx) : effectiveWidth;
     const bidi = resolveParagraphBidi(paraText, {
       direction: paragraphBidi.direction,
       overrides: paragraphBidi.bidiOverride?.(paraText),
@@ -819,7 +831,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     }
     for (const [start, end] of shapedTextGetLineBreaks(
       breakGlyphs,
-      effectiveWidth,
+      paragraphWidth,
       flags,
       trim,
       trimIndent
@@ -863,6 +875,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
         widthPx: penX,
         paragraphIndex,
         paragraphStart: para.offset,
+        ...(indentPx > 0 && { indentPx }),
         isRtl: bidi.isRtl,
       });
     }

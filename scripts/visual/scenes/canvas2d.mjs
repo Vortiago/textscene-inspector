@@ -948,6 +948,7 @@ export const CANVAS_2D_SCENES = [
   { name: 'rich-text-label-scrollbar', file: 'unit-rich-text-label-scrollbar.tscn', mode: '2d' },
   { name: 'rich-text-label-scrollbar-rtl', file: 'unit-rich-text-label-scrollbar-rtl.tscn', mode: '2d' },
   { name: 'rich-text-label-scrollbar-following', file: 'unit-rich-text-label-scrollbar-following.tscn', mode: '2d' },
+  { name: 'rich-text-label-lists', file: 'unit-rich-text-label-lists.tscn', mode: '2d' },
   { name: 'label-fill-paragraphs', file: 'unit-label-fill-paragraphs.tscn', mode: '2d' },
   { name: 'label-fill-trim', file: 'unit-label-fill-trim.tscn', mode: '2d' },
   // Each scene below moves one property no other scene authors. Godot 4.6.3

@@ -225,7 +225,9 @@ export function justifyParagraphs(
     let end = first + 1;
     while (end < lines.length && !startsParagraph(lines, end)) end++;
     if (isFilled(first)) {
-      justified.push(...justifyParagraph(lines.slice(first, end), widthPx, flags, fontSizePx));
+      // The paragraph's inset narrows the width it fits to (`rich_text_label.cpp:474`).
+      const fitWidthPx = widthPx - (lines[first]!.indentPx ?? 0);
+      justified.push(...justifyParagraph(lines.slice(first, end), fitWidthPx, flags, fontSizePx));
     } else {
       for (let i = first; i < end; i++) justified.push(lines[i]!);
     }

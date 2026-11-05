@@ -18,6 +18,14 @@ Each `\n` ends a paragraph (`rich_text_label.cpp:4016-4053`). Under FILL, from `
 single-line paragraph (`rich_text_label.h:582`). The fit width is the control's width truncated to a whole
 pixel (`rich_text_label.h:672`).
 
+`[indent]`, `[ul]` and `[ol]` inset each line they hold by `tab_size` spaces of the font around them
+(`_find_margin`, `rich_text_label.cpp:3407-3460`). A `[ul]` or `[ol]` line also draws its marker: the
+`bullet` option or `•` for `[ul]`, and for `[ol]` its number in the `type` option (`1`, `a`, `A`, `i`, `I`).
+The marker takes the item's font and the outermost colour of the item, and sits right-aligned in the
+inset, which is as wide as the widest marker of the list (`:242-372,1017-1039`). A nested `[ol]` writes the
+outer number first, as `1.a.`, and a bullet ends the number (`:242-270`). A list ends its last item with a
+newline, and an empty list holds one empty item (`:5326-5345,5415-5424`).
+
 While `clip_contents` is true, its default for this node (`rich_text_label.cpp:8225`), the control's own rect
 clips every glyph, image and underline (`control.cpp:3948`). `fit_content` grows the control to its text, so
 nothing is cut.
@@ -92,6 +100,8 @@ string against `true`, so an absent property or any other value silently resolve
 - **Approximated** `[hr]` does not start a line of its own, though Godot pushes a paragraph for it.
 - **Approximated** A `[p]` after an empty styling tag starts a new line, where
   `_find_layout_subitem` (:3712-3727) skips the empty tag.
+- **Not drawn** `localize_numeral_system`, which writes the numbers of an `[ol]` in the digits of the
+  label's `language` (`:255-258`), since no control reads the property.
 - **Not drawn** The loading bar's right-to-left fill (:2580-2588) and the reveal end of
   `VC_GLYPHS_AUTO` (:944-945), since neither input is drawn.
 - **Not drawn** `scroll_following_visible_characters`, which scrolls to the last revealed line

@@ -67,6 +67,7 @@ import {
   type TextBidiOptions,
 } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { paragraphAlignment, paragraphBidiOptions } from './paragraph';
+import { paragraphListings, runListing, type ParagraphListing, type RunListing } from './listing';
 
 /** RichTextLabel reads `theme_override_font_sizes/normal_font_size` and `theme_override_colors/default_color`, not Label's `font_size` and `font_color`. */
 const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
@@ -248,6 +249,9 @@ function wrapForImageObject(base: FontMetrics): FontMetrics {
   });
 }
 
+/** `tab_size`'s default (`rich_text_label.h:575`). */
+const DEFAULT_TAB_SIZE = 4;
+
 /**
  * `tab_stops`, else one stop of `max(1, tab_size * space_advance)`
  * (`_find_tab_stops`, `rich_text_label.cpp:479-482`). `SPACING_SPACE` is 0 for
@@ -260,9 +264,20 @@ function richTextTabStopsPx(
   fontSizePx: number
 ): number[] {
   if (tabStopsPx && tabStopsPx.length > 0) return tabStopsPx;
-  const size = tabSize ?? 4;
+  const size = tabSize ?? DEFAULT_TAB_SIZE;
   if (size <= 0) return [];
   return [Math.max(1, size * getFontEmboldenedAdvancePx(fontMetrics, ' ', fontSizePx))];
+}
+
+/**
+ * `get_content_width` (`rich_text_label.cpp:7513-7518`): the widest paragraph, its inset plus its
+ * ceiled width, truncated into the `int` the function keeps.
+ */
+function contentWidthPx(layout: TextLayoutResult): number {
+  return Math.max(
+    0,
+    ...layout.lines.map((line) => Math.trunc((line.indentPx ?? 0) + shapedTextSizeWidthPx(line.widthPx)))
+  );
 }
 
 /**
@@ -311,7 +326,7 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const measured = {
     // `get_content_width` maxes `TS->shaped_text_get_size(lines_rid[i])`
     // (`text_paragraph.cpp:601-608`): the ceiled extent.
-    x: shapedTextSizeWidthPx(layout.widthPx),
+    x: contentWidthPx(layout),
     y: richTextContentHeightPx(runs, layout),
   };
 
@@ -337,6 +352,8 @@ export interface StyledTextRun {
   alignment: number;
   /** The paragraph's direction, language and override (`paragraphBidiOptions`), INHERITED resolved. */
   bidi: TextBidiOptions;
+  /** Set only on a run inside an `[indent]`, `[ul]` or `[ol]` (`listing.ts`). */
+  listing?: RunListing;
   /**
    * Set only on the `[img]` placeholder run. There `fontSizePx` carries
    * `sizePx.x` (`imageObjectFontMetrics`), so check this field first.
@@ -419,8 +436,17 @@ export function styledTextRuns(
 
   // One Theme walk per style key, however many spans the paragraph has.
   const runFontSizeCache = new Map<string, number>();
+  const fontSizePxOf = (bold: boolean, italic: boolean): number =>
+    resolveRunFontSizePx(bold, italic, props, normalFontSizePx, n, builtInDefaultPx, runFontSizeCache);
   const styled: StyledTextRun[] = [];
   for (const run of parseBBCodeRuns(raw)) {
+    const listing = runListing({
+      tags: run.tags,
+      startTags: run.startTags,
+      openedAtStart: run.openedAtStart,
+      defaultColor,
+      fontSizePxOf,
+    });
     if (run.image) {
       const widthPx = resolveImageDimension(run.image.width, run.image.widthInPercent, boxWidthPx);
       const heightPx = resolveImageDimension(run.image.height, run.image.heightInPercent, boxWidthPx);
@@ -436,6 +462,7 @@ export function styledTextRuns(
         fontSizePx: sizePx.x,
         alignment: paragraphAlignment(run.tags, props.horizontalAlignment),
         bidi: paragraphBidiOptions(run.tags, props, n),
+        listing,
         image: { spec: run.image, sizePx },
       });
       continue;
@@ -450,17 +477,10 @@ export function styledTextRuns(
       italic,
       underline: hasOpenTag(run.tags, 'u'),
       color: colorValue !== undefined ? resolveBBColor(colorValue, defaultColor) : defaultColor,
-      fontSizePx: resolveRunFontSizePx(
-        bold,
-        italic,
-        props,
-        normalFontSizePx,
-        n,
-        builtInDefaultPx,
-        runFontSizeCache
-      ),
+      fontSizePx: fontSizePxOf(bold, italic),
       alignment: paragraphAlignment(run.tags, props.horizontalAlignment),
       bidi: paragraphBidiOptions(run.tags, props, n),
+      listing,
     });
   }
   return styled;
@@ -548,6 +568,11 @@ function paragraphBidiAtFromRuns(
   return (paragraphStart) => runAt(paragraphStart)?.bidi ?? {};
 }
 
+/** The shaped text, and the inset and marker of each paragraph that sits in an indent or a list. */
+export interface RichTextLayout extends TextLayoutResult {
+  listings?: ReadonlyMap<number, ParagraphListing>;
+}
+
 /** What `shapeRichText` takes from the control: the paragraph's box, and the three properties that shape it. */
 interface RichTextShapeOptions
   extends
@@ -562,9 +587,10 @@ export function shapeRichText(
   styledRuns: readonly StyledTextRun[],
   faces: RichTextFaces,
   options: RichTextShapeOptions
-): TextLayoutResult {
+): RichTextLayout {
   const { fontSizePx, boxWidthPx, autowrapMode, tabStopsPx, tabSize, autowrapTrimFlags } = options;
-  return shapeText(plainTextOf(styledRuns), {
+  const listings = paragraphListings(styledRuns, { faces, tabSize: tabSize ?? DEFAULT_TAB_SIZE });
+  const layout = shapeText(plainTextOf(styledRuns), {
     fontSizePx,
     boxWidthPx,
     autowrapMode,
@@ -578,7 +604,9 @@ export function shapeRichText(
     paragraphSeparator: '\n',
     terminateLastParagraph: false,
     paragraphBidiAt: paragraphBidiAtFromRuns(styledRuns),
+    paragraphIndentPx: (paragraphStart) => listings.get(paragraphStart)?.indentPx ?? 0,
   });
+  return listings.size > 0 ? { ...layout, listings } : layout;
 }
 
 /**
@@ -912,11 +940,11 @@ interface RichTextAlignment {
  * `_shape_line` takes an `int p_width` (`rich_text_label.h:672`), so the fit width truncates.
  */
 function fitFilledParagraphs(
-  layout: TextLayoutResult,
+  layout: RichTextLayout,
   isFilled: (firstLineIndex: number) => boolean,
   boxWidthPx: number,
   justification: RichTextJustification
-): TextLayoutResult {
+): RichTextLayout {
   const lines = justifyParagraphs(layout.lines, {
     widthPx: Math.trunc(boxWidthPx),
     flags: justification.flags,
@@ -934,7 +962,7 @@ function fitFilledParagraphs(
  */
 export function layoutRichTextRuns(
   styledRuns: readonly StyledTextRun[],
-  unfittedLayout: TextLayoutResult,
+  unfittedLayout: RichTextLayout,
   alignment?: RichTextAlignment
 ): RichTextRunPlacement[] {
   const boxWidthPx = alignment?.boxWidthPx ?? 0;
@@ -978,12 +1006,28 @@ export function layoutRichTextRuns(
     // A line that starts at or below the box bottom, or ends at or above its top, is never drawn
     // (`:973,978-981`), clipped or not.
     if (alignment && (exactTopPx >= alignment.boxHeightPx || exactTopPx + ascentPx + descentPx <= 0)) return;
-    const lineOffsetXPx = richTextHorizontalOffsetPx(
-      shapedTextSizeWidthPx(layout.lines[lineIndex]?.widthPx ?? 0),
-      boxWidthPx,
-      alignmentOfLine(lineIndex),
-      paragraphRunOf(lineIndex)?.bidi.direction === TextDirection.TEXT_DIRECTION_RTL
-    );
+    const lineWidthPx = shapedTextSizeWidthPx(layout.lines[lineIndex]?.widthPx ?? 0);
+    const isRtl = paragraphRunOf(lineIndex)?.bidi.direction === TextDirection.TEXT_DIRECTION_RTL;
+    // The text rect starts after the inset, or ends before it under RTL (`:988-996`).
+    const indentPx = layout.lines[lineIndex]?.indentPx ?? 0;
+    const lineOffsetXPx =
+      (isRtl ? 0 : indentPx) +
+      richTextHorizontalOffsetPx(lineWidthPx, boxWidthPx - indentPx, alignmentOfLine(lineIndex), isRtl);
+    const marker = startsParagraph(layout.lines, lineIndex)
+      ? layout.listings?.get(layout.lines[lineIndex]!.paragraphStart!)?.marker
+      : undefined;
+    if (marker) {
+      placements.push({
+        lineIndex,
+        lineTopPx: Math.floor(exactTopPx),
+        // Beside the text, on the side it starts from (`:1021-1038`).
+        lineOffsetXPx: isRtl ? lineOffsetXPx + lineWidthPx : lineOffsetXPx - marker.widthPx,
+        underline: false,
+        color: marker.color,
+        fontSizePx: marker.fontSizePx,
+        layout: marker.layout,
+      });
+    }
     for (const segment of segments) {
       const run = styledRuns[segment.runIndex]!;
       const lineTopPx = Math.floor(exactTopPx);

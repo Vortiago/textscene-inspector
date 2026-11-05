@@ -4074,6 +4074,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Rich Text Label Lists",
+    "file": "unit-rich-text-label-lists.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Rich Text Label Rtl",
     "file": "unit-rich-text-label-rtl.tscn",
     "category": "Unit - 2D UI Controls"
