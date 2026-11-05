@@ -5,12 +5,12 @@
  * all sides (`make_flat_stylebox`). LineEdit sets no line_spacing: the font height is 18 + 5 = 23.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import type { LineEditProperties } from './types';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
@@ -670,15 +670,15 @@ describe(`lineEditMinimumSize — resolves this LineEdit's own theme font key ("
   });
 
   it('a theme_override_fonts/font local override is fed to BOTH the em-space TextMeasurer call and the font-height floor', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n: SolveNode = { ...node({}), fontOverrides: { [LINE_EDIT_THEME_FONT_KEY]: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n: SolveNode = { ...node({}), fontOverrides: { [LINE_EDIT_THEME_FONT_KEY]: unresolvableFont } };
     lineEditMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('a local override under a different key is not consulted', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n: SolveNode = { ...node({}), fontOverrides: { normal_font: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n: SolveNode = { ...node({}), fontOverrides: { normal_font: unresolvableFont } };
     lineEditMinimumSize(n, ctx());
     expect(warnSpy).not.toHaveBeenCalled();
   });

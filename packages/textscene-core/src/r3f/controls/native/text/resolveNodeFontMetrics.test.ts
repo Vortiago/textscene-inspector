@@ -1,7 +1,7 @@
 /**
  * Under vitest, `peekSceneFontMetrics` always returns the bundled default, so a resolved value is
- * not observable. A `SystemFont` always warns, so a warn proves the lookup found the font at that
- * type and key.
+ * not observable. A FontFile with no bytes always warns, so a warn proves the lookup found the
+ * font at that type and key.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { SolveNode } from '../solveTree';
@@ -15,6 +15,9 @@ import {
   resolveNodeFontSizePx,
 } from './resolveNodeFontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
+import { fontFile } from './sfntOutlines.testkit';
+import { fontResourceFromBitmap } from '../../../../resources/fonts/font/loadFont';
+import { testBitmapFont } from './bitmapFontMetrics.testkit';
 import { withVariation, type FontMetrics } from './fontMetrics';
 import * as logger from '../../../../logger';
 import * as themeLookup from '../../../../resources/styles/theme/lookup';
@@ -23,8 +26,8 @@ import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts'
 
 // A fresh object per test: the warn dedupe in `sceneFontLoader.ts` is a module-level `WeakSet`
 // keyed by resource identity, so a shared constant lets an earlier warn suppress a later one.
-function systemFont(): FontResource {
-  return { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+function unresolvableFont(): FontResource {
+  return fontFile(undefined);
 }
 
 function emptyTheme(): ThemeResource {
@@ -65,52 +68,59 @@ describe('resolveNodeFontMetrics', () => {
   });
 
   it("(happy) a local theme_override_fonts entry under THIS key is found and passed through — proven by peekSceneFontMetrics's own warn", () => {
-    const n = labelNode({ fontOverrides: { font: systemFont() } });
+    const n = labelNode({ fontOverrides: { font: unresolvableFont() } });
     resolveNodeFontMetrics(n, 'font');
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy.mock.calls[0]![0]).toContain('Root/MyLabel');
   });
 
   it('a local override under a DIFFERENT key is not consulted for this lookup', () => {
-    const n = labelNode({ fontOverrides: { normal_font: systemFont() } });
+    const n = labelNode({ fontOverrides: { normal_font: unresolvableFont() } });
     resolveNodeFontMetrics(n, 'font');
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it("(happy) an ancestor theme's <nativeType>/fonts/<key> entry is found via THIS node's own node.type", () => {
-    const theme: ThemeResource = { ...emptyTheme(), fonts: { Label: { font: systemFont() } } };
+    const theme: ThemeResource = { ...emptyTheme(), fonts: { Label: { font: unresolvableFont() } } };
     const n = labelNode({ themeChain: [theme] });
     resolveNodeFontMetrics(n, 'font');
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
   it("an ancestor theme entry registered under a DIFFERENT native type is not found for this node's own type", () => {
-    const theme: ThemeResource = { ...emptyTheme(), fonts: { Button: { font: systemFont() } } };
+    const theme: ThemeResource = { ...emptyTheme(), fonts: { Button: { font: unresolvableFont() } } };
     const n = labelNode({ themeChain: [theme] });
     resolveNodeFontMetrics(n, 'font');
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it('(edge) falls back to the project theme when no ancestor theme resolves the key', () => {
-    const theme: ThemeResource = { ...emptyTheme(), fonts: { Label: { font: systemFont() } } };
+    const theme: ThemeResource = { ...emptyTheme(), fonts: { Label: { font: unresolvableFont() } } };
     const n = labelNode({ themeChain: [], projectFonts: { ...NO_PROJECT_FONTS, projectTheme: theme } });
     resolveNodeFontMetrics(n, 'font');
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('(edge) a local override wins over an ancestor theme entry even when the override itself is unresolved (null)', () => {
-    const theme: ThemeResource = { ...emptyTheme(), fonts: { Label: { font: systemFont() } } };
+    const theme: ThemeResource = { ...emptyTheme(), fonts: { Label: { font: unresolvableFont() } } };
     const n = labelNode({ fontOverrides: { font: null }, themeChain: [theme] });
     const metrics = resolveNodeFontMetrics(n, 'font');
-    // The null override ("authored but invalid") wins over the ancestor SystemFont, so no font
+    // The null override ("authored but invalid") wins over the ancestor's unresolvable font, so no font
     // resolves and no warn fires.
     expect(metrics).toBe(OPEN_SANS_FONT_METRICS);
     expect(warnSpy).not.toHaveBeenCalled();
   });
 });
 
+/** A BMFont, whose face is there with no load: a bare FontVariation as the project font has no face. */
+const BITMAP_FILE = fontResourceFromBitmap(testBitmapFont(), {});
+
 describe('resolveNodeFont — the project default font as the last rung', () => {
-  const projectFont: FontResource = { kind: 'variation', baseFont: null, properties: { project: '1' } };
+  const projectFont: FontResource = {
+    kind: 'variation',
+    baseFont: BITMAP_FILE,
+    properties: { project: '1' },
+  };
 
   it('is the project default font for a Control that no theme gives a font', () => {
     expect(
@@ -126,7 +136,7 @@ describe('resolveNodeFont — the project default font as the last rung', () => 
   });
 
   it("a gui/theme/custom theme's default_font wins over it", () => {
-    const themeFont = systemFont();
+    const themeFont = unresolvableFont();
     const project: ThemeResource = { ...emptyTheme(), defaultFont: themeFont };
     const n = labelNode({ projectFonts: { projectTheme: project, projectDefaultFont: projectFont } });
     expect(resolveNodeFont(n, 'font')).toBe(themeFont);
@@ -149,7 +159,7 @@ describe('resolveNodeFont — the project default font as the last rung', () => 
 describe('resolveNodeFontMetricsOr — a last rung of its own for a key no theme or override defines', () => {
   const embolden = (value: string): FontResource => ({
     kind: 'variation',
-    baseFont: null,
+    baseFont: BITMAP_FILE,
     properties: { variation_embolden: value },
   });
 

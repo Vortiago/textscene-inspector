@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
 import { NO_PROJECT_FONTS, type ProjectFonts } from '../../fonts/font/projectFonts';
 import type { FontFileResource, FontResource } from '../../fonts/font/types';
@@ -6,7 +7,6 @@ import type { ThemeResource } from '../../styles/theme/types';
 import {
   FONT_PATH,
   openTypeFontFile,
-  systemFontResource,
   textMeshWith,
   trueTypeFontFile,
   woff2FontFile,
@@ -69,10 +69,10 @@ describe('textMeshFont', () => {
     expect(await settledPeek(() => textMeshFont(mesh))).toEqual({ status: 'unreadable' });
   });
 
-  it('is unreadable for a SystemFont, which has no bytes to read', () => {
-    const mesh = textMeshWith({}, { [FONT_PATH]: systemFontResource() });
+  it('draws the bundled Open Sans for a SystemFont, as Godot does when no OS font matches its names', async () => {
+    const face = await readyFace(textMeshWith({}, { [FONT_PATH]: systemFont() }));
 
-    expect(textMeshFont(mesh)).toEqual({ status: 'unreadable' });
+    expect(face.outlines.glyphIndex(0x48)).toBe(43);
   });
 
   it('awaits the font file of a TrueType font, then is ready with its outlines and metrics', async () => {
@@ -173,6 +173,23 @@ describe('the font chain of a TextMesh (`TextMesh::_get_font_or_default`)', () =
     const mesh = textMeshWith({}, { [FONT_PATH]: variation }, projectFonts);
 
     expect((await readyFace(mesh)).outlines).toBe(await outlinesOf(projectFont));
+  });
+
+  it('draws a SystemFont as the project default font', async () => {
+    const projectFonts = { ...NO_PROJECT_FONTS, projectDefaultFont: projectFont };
+    const mesh = textMeshWith({}, { [FONT_PATH]: systemFont() }, projectFonts);
+
+    expect((await readyFace(mesh)).outlines).toBe(await outlinesOf(projectFont));
+  });
+
+  it("draws a SystemFont as the project theme's SystemFont font, not its TextMesh font", async () => {
+    const projectFonts = {
+      projectTheme: themeWith({ fonts: { SystemFont: { font: themeFont }, TextMesh: { font: ownFont } } }),
+      projectDefaultFont: projectFont,
+    };
+    const mesh = textMeshWith({}, { [FONT_PATH]: systemFont() }, projectFonts);
+
+    expect((await readyFace(mesh)).outlines).toBe(await outlinesOf(themeFont));
   });
 });
 

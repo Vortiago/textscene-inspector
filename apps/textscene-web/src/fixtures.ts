@@ -2784,6 +2784,18 @@ export const fixtures: Fixture[] = [
     "root": "alpha-antialiasing"
   },
   {
+    "name": "Custom Font System Font 3d",
+    "file": "custom-font-system-font/unit-custom-font-system-font-3d.tscn",
+    "category": "Other",
+    "root": "custom-font-system-font"
+  },
+  {
+    "name": "Custom Font System Font Label",
+    "file": "custom-font-system-font/unit-custom-font-system-font-label.tscn",
+    "category": "Other",
+    "root": "custom-font-system-font"
+  },
+  {
     "name": "Debanding",
     "file": "debanding/unit-debanding.tscn",
     "category": "Other",
@@ -2836,6 +2848,12 @@ export const fixtures: Fixture[] = [
     "file": "subviewport-snap-off/unit-subviewport-snap-off.tscn",
     "category": "Other",
     "root": "subviewport-snap-off"
+  },
+  {
+    "name": "Theme System Font",
+    "file": "theme-system-font/unit-theme-system-font.tscn",
+    "category": "Other",
+    "root": "theme-system-font"
   },
   {
     "name": "Touch Screen Button",
@@ -3622,6 +3640,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Text Mesh Hinting",
     "file": "unit-text-mesh-hinting.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh System Font",
+    "file": "unit-text-mesh-system-font.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

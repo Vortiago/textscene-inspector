@@ -46,6 +46,15 @@ export function fontFile(bytes: ArrayBuffer | undefined, fallbacks: FontResource
   return { kind: 'file', bytes, mimeType: bytes ? 'font/ttf' : undefined, fallbacks, properties: {} };
 }
 
+/**
+ * A `SystemFont` whose name no OS font matches, new on each call: it draws the default font.
+ *
+ * @canonical A SystemFont resource fixture for a font test
+ */
+export function systemFont(): FontResource {
+  return { kind: 'system', fontNames: ['Zz No Such Font'], properties: {} };
+}
+
 export interface TestPoint {
   x: number;
   y: number;

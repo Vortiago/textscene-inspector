@@ -56,4 +56,4 @@ outline ring (ADR-0064).
   static frame (the bar centred in the control), whatever `editor_preview_indeterminate`
   says.
 - **Approximated** An emboldened glyph follows FreeType's normal hinting, not the font's light hinting that Godot rasterises with, so it is a fraction of a pixel off.
-- **Resource gap** A SystemFont has no bytes to read, so it draws the glyph as it stands, where Godot emboldens or shears it.
+- **Resource gap** A SystemFont always draws the default font, as Godot does when no OS font matches its names, where Godot draws a matching OS font.

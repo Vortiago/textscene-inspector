@@ -28,8 +28,18 @@ function hexCodeBoxCells(
 ): { byteWidth: number; spacer: number; cellPx: number } {
   const byteWidth = codepoint <= 0xff ? 1 : codepoint <= 0xffff ? 2 : 3;
   const spacer = Math.max(0, byteWidth - 1);
-  const cellPx = Math.max(1, godotRound(fontSizePx / 15));
-  return { byteWidth, spacer, cellPx };
+  return { byteWidth, spacer, cellPx: hexCodeBoxCellPx(fontSizePx) };
+}
+
+/** The cells of a hex-code box frame, top to bottom (`text_server.cpp:742`). */
+export const HEX_CODE_BOX_CELLS_HIGH = 15;
+
+/** The part of a hex-code box above the baseline (`text_server_adv.cpp:6894`, `text_server.cpp:781`). */
+export const HEX_CODE_BOX_ASCENT = 0.85;
+
+/** `sz` (`text_server.cpp:740`): the pixels of one cell of a hex-code box. */
+export function hexCodeBoxCellPx(fontSizePx: number): number {
+  return Math.max(1, godotRound(fontSizePx / HEX_CODE_BOX_CELLS_HIGH));
 }
 
 /**
@@ -39,7 +49,7 @@ function hexCodeBoxCells(
  */
 export function hexCodeBoxAdvanceSize(fontSizePx: number, codepoint: number): Vector2 {
   const { byteWidth, spacer, cellPx } = hexCodeBoxCells(fontSizePx, codepoint);
-  return { x: (4 + 3 * byteWidth + spacer + 1) * cellPx, y: 15 * cellPx };
+  return { x: (4 + 3 * byteWidth + spacer + 1) * cellPx, y: HEX_CODE_BOX_CELLS_HIGH * cellPx };
 }
 
 /** `text_server.cpp:745-767`: the bitmask of a 7-segment digit's rectangles (top/upper-right/lower-right/bottom/lower-left/upper-left/middle), one entry per hex nibble 0x0-0xF. */
@@ -70,8 +80,8 @@ export function hexCodeBoxRects(fontSizePx: number, codepoint: number): HexCodeB
   if (codepoint <= 0) return [];
   const { byteWidth, spacer, cellPx } = hexCodeBoxCells(fontSizePx, codepoint);
   const sizeX = (4 + 3 * byteWidth + spacer) * cellPx;
-  const sizeY = 15 * cellPx;
-  const originY = -Math.trunc(sizeY * 0.85);
+  const sizeY = HEX_CODE_BOX_CELLS_HIGH * cellPx;
+  const originY = -Math.trunc(sizeY * HEX_CODE_BOX_ASCENT);
 
   const rects: HexCodeBoxRect[] = [
     { x: 0, y: originY, w: cellPx, h: sizeY },
