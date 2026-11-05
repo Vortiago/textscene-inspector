@@ -16,6 +16,7 @@ import {
   type LiveTreeSources,
 } from '../../../r3f/liveSceneTree.js';
 import { compositeCallPrefix } from '../../../godot/variant/variantParser.js';
+import { isViewportBoundary } from './viewportBoundary.js';
 
 /**
  * The `i`-suffixed spellings are listed: `Vector2i` is as 2D as `Vector2`, and it
@@ -110,7 +111,7 @@ export function viewportContent(node: TscnNode): ViewportContent {
   };
 
   const isNode3DContent = (child: TscnNode): boolean => {
-    if (child.type === 'SubViewport') return false;
+    if (isViewportBoundary(child.type)) return false;
     // Godot's question (`is2DUIType`), not the component registry's: a Control
     // with no component of its own, such as `ProgressBar`, still gets a pass.
     if (is2DUIType(child.type)) {
@@ -166,7 +167,7 @@ function resolvedChildren(tree: LiveTree, from?: LiveLink): TscnNode[] {
   return tree.fold<void, TscnNode>(
     undefined,
     ({ raw, step }, _, descend) => {
-      if (raw.type === 'SubViewport') return raw;
+      if (isViewportBoundary(raw.type)) return raw;
       return { ...step.node, children: descend() };
     },
     from

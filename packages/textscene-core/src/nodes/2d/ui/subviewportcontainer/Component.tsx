@@ -14,7 +14,7 @@ import { useViewportTargetSlot } from '../../../../resources/textures/viewportte
 import { useRegisterViewportRect } from '../../../../r3f/contexts/ViewportRectContext.js';
 import { joinPath } from '../../../../utils/nodePath.js';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../../parser/types.js';
-import { isViewportBoundary } from '../../../viewport/subviewport/viewportBoundary.js';
+import { isSubViewport } from '../../../viewport/subviewport/viewportBoundary.js';
 import type { SubViewportProperties } from '../../../viewport/subviewport/types.js';
 import { viewportSize } from '../../../viewport/subviewport/targetSize.js';
 import type { SubViewportContainerProperties } from './types.js';
@@ -202,7 +202,7 @@ export function SubViewportContainer({
 
   // Raw live children: `solveNode.children` is the Control-only solve forest, and `buildSolveTree`
   // skips a viewport boundary.
-  const viewports = solveNode.node.children.filter((child) => isViewportBoundary(child.type));
+  const viewports = solveNode.node.children.filter((child) => isSubViewport(child.type));
 
   return (
     <>

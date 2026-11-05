@@ -5,12 +5,25 @@
  * a sub-viewport through, since Godot shares the parent's World3D.
  */
 
-/** Godot `Viewport` subclasses authorable in a `.tscn`. `Window` is not supported. */
-const VIEWPORT_TYPES: ReadonlySet<string> = new Set(['SubViewport']);
+/**
+ * The `Window` classes an embedder draws with their decoration (`viewport.cpp:342-401`). A
+ * window is a `Viewport`, so it owns its World2D and its Controls draw only in its target.
+ */
+const EMBEDDED_WINDOW_TYPES: ReadonlySet<string> = new Set(['Window', 'Popup', 'PopupPanel']);
+
+/** True when this type is a `Window` that an embedder can draw. */
+export function isEmbeddedWindow(type: string): boolean {
+  return EMBEDDED_WINDOW_TYPES.has(type);
+}
+
+/** True for a `SubViewport`, the only viewport a `SubViewportContainer` shows (`subviewport_container.cpp:134-145`). */
+export function isSubViewport(type: string): boolean {
+  return type === 'SubViewport';
+}
 
 /** True when this type scopes its canvas subtree to its own viewport surface. */
 export function isViewportBoundary(type: string): boolean {
-  return VIEWPORT_TYPES.has(type);
+  return isSubViewport(type) || isEmbeddedWindow(type);
 }
 
 /**
