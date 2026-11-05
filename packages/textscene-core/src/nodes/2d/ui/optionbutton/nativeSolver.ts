@@ -19,14 +19,14 @@ import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistr
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
-  buttonTextAlignShiftPx,
   centredTextTopPx,
   pickButtonStyleBox,
   resolveButtonDrawState,
+  swapAlignmentSide,
   tintColor,
   type ButtonDrawState,
+  type ButtonLabelBox,
 } from '../../../../r3f/controls/native/buttonBase';
-import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   resolveTextTheme,
@@ -152,7 +152,8 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
       // Each item goes through `Button::get_minimum_size_for_text_and_icon` (`button.cpp:492`), whose
       // `paragraph->get_size()` is ceiled (`text_paragraph.cpp:601-608` -> `text_server_adv.cpp:7524-7537`),
       // so the max is over whole-pixel widths.
-      textW = Math.max(textW, shapedTextSizeWidthPx(size.x));
+      // `clip_text` zeroes the width (`button.cpp:493-495`).
+      textW = Math.max(textW, props.clipText ? 0 : shapedTextSizeWidthPx(size.x));
       textH = Math.max(textH, size.y);
     }
   }
@@ -178,8 +179,10 @@ interface OptionButtonContentInput {
   arrowMargin: number;
   /** `h_separation` theme constant, clamped to >= 0, part of the arrow's internal-margin reservation. */
   hSeparation: number;
-  /** The selected item's shaped natural size, `(0, 0)` with no selection. */
-  textNaturalSize: Vector2;
+  /** The selected item's shaped height, `0` with no selection. */
+  textHeightPx: number;
+  /** Text `alignment` (`HorizontalAlignment`). OptionButton's default is LEFT (`option_button.cpp:654`). */
+  textAlignment: number;
   /** `Control::is_layout_rtl()` (`SolveNode.rtl`): moves the arrow to the left edge and the label against the right margin. */
   rtl: boolean;
 }
@@ -187,8 +190,8 @@ interface OptionButtonContentInput {
 interface OptionButtonContentLayout {
   /** Local to the control's top-left, Godot px. */
   arrowRect: Rect2;
-  /** The text box's top-left, local Godot px, for `<TextRun>`, which anchors each line at its baseline from there (`buildGlyphQuadArrays`). Always returned: the caller decides whether text draws. */
-  textOffset: Vector2;
+  /** The label's paragraph box. Always returned: the caller decides whether text draws. */
+  labelBox: ButtonLabelBox;
 }
 
 /**
@@ -198,7 +201,8 @@ interface OptionButtonContentLayout {
  * (option_button.cpp:139-147), so the label keeps `arrowSize.x + h_separation` clear. The arrow reads only `arrow_margin` against the full control size.
  */
 export function layoutOptionButtonContent(input: OptionButtonContentInput): OptionButtonContentLayout {
-  const { rectSize, styleMargin, arrowSize, arrowMargin, hSeparation, textNaturalSize, rtl } = input;
+  const { rectSize, styleMargin, arrowSize, arrowMargin, hSeparation, textHeightPx, textAlignment, rtl } =
+    input;
 
   const arrowRect: Rect2 = {
     x: Math.floor(rtl ? arrowMargin : rectSize.x - arrowSize.x - arrowMargin),
@@ -207,23 +211,15 @@ export function layoutOptionButtonContent(input: OptionButtonContentInput): Opti
     h: arrowSize.y,
   };
 
-  const customElementHeight = rectSize.y - styleMargin.top - styleMargin.bottom;
   const reserved = arrowSize.x + hSeparation;
-  const drawableWidth = rectSize.x - styleMargin.left - styleMargin.right - reserved;
-  // Under `rtl` the reservation moves to SIDE_LEFT and the constructor's `HORIZONTAL_ALIGNMENT_LEFT`
-  // (`:654`) swaps to RIGHT (`button.cpp:271-275`), so only that arm reads `h_separation`.
-  const textOffset: Vector2 = {
-    x: rtl
-      ? styleMargin.left +
-        reserved +
-        buttonTextAlignShiftPx(
-          textNaturalSize.x,
-          drawableWidth,
-          HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT
-        )
-      : styleMargin.left,
-    y: centredTextTopPx(customElementHeight, textNaturalSize.y, styleMargin.top),
+  // Under `rtl` the reservation moves to SIDE_LEFT and the alignment swaps sides (`button.cpp:271-275`),
+  // so only that arm reads `h_separation`.
+  const labelBox: ButtonLabelBox = {
+    leftPx: styleMargin.left + (rtl ? reserved : 0),
+    topPx: centredTextTopPx(rectSize.y - styleMargin.top - styleMargin.bottom, textHeightPx, styleMargin.top),
+    widthPx: rectSize.x - styleMargin.left - styleMargin.right - reserved,
+    alignment: rtl ? swapAlignmentSide(textAlignment) : textAlignment,
   };
 
-  return { arrowRect, textOffset };
+  return { arrowRect, labelBox };
 }

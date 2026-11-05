@@ -25,3 +25,24 @@ describe('parseCheckBox', () => {
     expect(p.text).toBeUndefined();
   });
 });
+
+describe('parseCheckBox — clip_text', () => {
+  it('reads clip_text', () => {
+    const p = parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), { text: '"Sound"', clip_text: 'true' });
+    expect(p.clipText).toBe(true);
+  });
+
+  it('leaves clipText undefined when absent', () => {
+    expect(parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), {}).clipText).toBeUndefined();
+  });
+});
+
+describe('parseCheckBox — alignment', () => {
+  it('reads alignment, which Button declares and CheckBox inherits', () => {
+    expect(parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), { alignment: '2' }).alignment).toBe(2);
+  });
+
+  it('leaves alignment undefined when absent', () => {
+    expect(parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), {}).alignment).toBeUndefined();
+  });
+});

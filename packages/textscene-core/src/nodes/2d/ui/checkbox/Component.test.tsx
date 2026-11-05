@@ -283,3 +283,28 @@ describe('<CheckBox> — scene-font (canvas-kind FontMetrics) text path', () => 
     expect(await iconX(true)).toBe(130);
   });
 });
+
+describe('<CheckBox> — the label is cut to its paragraph box (TextParagraph::draw, text_paragraph.cpp:925-931)', () => {
+  const glyphQuadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
+
+  const render = (rect: Rect2) =>
+    ReactThreeTestRenderer.create(
+      <CheckBox
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'alpha bravo', clipText: true })}
+        rect={rect}
+        renderOrder={0}
+      />
+    );
+
+  // The glyph counts are the "a" and "alpha" `pnpm ref:godot` draws in these boxes.
+  it('draws only the glyphs inside a box narrower than the text', async () => {
+    const narrow = await render({ x: 0, y: 0, w: 40, h: 32 });
+    expect(glyphQuadCount(narrow)).toBe(1);
+  });
+
+  it('draws the whole label when the box fits it', async () => {
+    const wide = await render({ x: 0, y: 0, w: 300, h: 32 });
+    expect(glyphQuadCount(wide)).toBe(10);
+  });
+});

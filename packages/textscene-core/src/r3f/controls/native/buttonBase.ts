@@ -148,9 +148,23 @@ interface ButtonTextLayout {
   boxLeftPx: number;
 }
 
+/** The paragraph box a Button-family label draws in, local to the control, Godot px. */
+export interface ButtonLabelBox {
+  /** The box's left edge before alignment: the margins and whatever the icon or the check reserves. */
+  leftPx: number;
+  /** The first line's top. */
+  topPx: number;
+  /** `drawable_size_remained.width` (`button.cpp:428`), before the ceiling. */
+  widthPx: number;
+  /** `align_rtl_checked`, the alignment after the RTL side swap (`button.cpp:271-275`). */
+  alignment: number;
+}
+
 interface ButtonContentLayout {
   icon: ButtonIconLayout | null;
   text: ButtonTextLayout | null;
+  /** The label's paragraph box, `null` without text. `<ButtonLabel>` draws the label in it. */
+  labelBox: ButtonLabelBox | null;
   /** `drawable_size_remained` (`button.cpp:332-352,428`): the label's box after margins and the icon. A wrapping label re-shapes at `Math::ceil(MAX(1, drawableSize.x))`. */
   drawableSize: Vector2;
 }
@@ -285,7 +299,18 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     textLayout = { offset: { x: textOffsetX, y: textOffsetY }, boxLeftPx };
   }
 
-  return { icon: iconLayout, text: textLayout, drawableSize: { x: drawableWidth, y: drawableHeight } };
+  const labelBox = textLayout && {
+    leftPx: textLayout.boxLeftPx,
+    topPx: textLayout.offset.y,
+    widthPx: drawableWidth,
+    alignment: textAlign,
+  };
+  return {
+    icon: iconLayout,
+    text: textLayout,
+    labelBox,
+    drawableSize: { x: drawableWidth, y: drawableHeight },
+  };
 }
 
 /** `button.cpp:266-275`: LEFT and RIGHT trade places under RTL, and any other value stays. */
@@ -317,11 +342,7 @@ function textBoxOffsetPx(drawableWidthPx: number, alignment: number): number {
  * which this shaper never produces.
  * @param contentWidthPx `shaped_text_get_width`, ceiled (`text_server_adv.cpp:7561-7570`).
  */
-export function buttonTextAlignShiftPx(
-  contentWidthPx: number,
-  drawableWidthPx: number,
-  alignment: number
-): number {
+function buttonTextAlignShiftPx(contentWidthPx: number, drawableWidthPx: number, alignment: number): number {
   return (
     textBoxOffsetPx(drawableWidthPx, alignment) +
     textParagraphLineShiftPx(contentWidthPx, textBufWidthPx(drawableWidthPx), alignment, false)
@@ -336,7 +357,7 @@ export interface ButtonDrawnLine {
 
 /**
  * The label lines as `TextParagraph::draw` paints them in the Button's paragraph box, so
- * an overlong line or wrapped word stays inside it. Only `<Button>` calls it so far.
+ * an overlong line or wrapped word stays inside it. `<ButtonLabel>` calls it.
  */
 export function buttonDrawnLabel(
   lines: readonly TextLineLayout[],

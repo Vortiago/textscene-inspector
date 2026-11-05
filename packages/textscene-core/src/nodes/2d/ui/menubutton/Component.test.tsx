@@ -110,3 +110,28 @@ describe('<MenuButton> (isolated painter contract)', () => {
     expect(rtlLeft).toBe(ltrRight);
   });
 });
+
+describe('<MenuButton> — the label is cut to its paragraph box (TextParagraph::draw, text_paragraph.cpp:925-931)', () => {
+  const glyphQuadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
+
+  const render = (rect: Rect2) =>
+    ReactThreeTestRenderer.create(
+      <MenuButton
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'alpha bravo', clipText: true })}
+        rect={rect}
+        renderOrder={0}
+      />
+    );
+
+  // The glyph counts are the "a" and "alpha" `pnpm ref:godot` draws in these boxes.
+  it('draws only the glyphs inside a box narrower than the text', async () => {
+    const narrow = await render({ x: 0, y: 0, w: 60, h: 32 });
+    expect(glyphQuadCount(narrow)).toBe(5);
+  });
+
+  it('draws the whole label when the box fits it', async () => {
+    const wide = await render({ x: 0, y: 0, w: 300, h: 32 });
+    expect(glyphQuadCount(wide)).toBe(10);
+  });
+});

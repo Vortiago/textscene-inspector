@@ -15,7 +15,7 @@ import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
 import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
@@ -27,7 +27,8 @@ import {
   layoutButtonContent,
 } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
-import { buttonIconColor, menuButtonLabelShape, menuButtonTextTheme } from './nativeSolver';
+import { buttonLabelShape } from '../button/nativeSolver';
+import { buttonIconColor, menuButtonTextTheme } from './nativeSolver';
 import type { MenuButtonProperties } from './types';
 
 export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
@@ -46,8 +47,8 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
   // its one sRGB-to-linear conversion, as Button's painter does.
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
-  // The solve-handoff share the minimum-size solver also reads, as in Button's painter.
-  const layout: TextLayoutResult | null = menuButtonLabelShape(solveNode, theme);
+  // The label `buttonMinimumSize` sizes from, as in Button's painter.
+  const layout: TextLayoutResult | null = buttonLabelShape(solveNode, theme);
 
   // Icon: resolve and load the referenced texture
   const { externalResources, internalResources } = solveNode.resources;
@@ -120,16 +121,15 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
           />
         </CanvasItemGroup>
       )}
-      {content.text && layout && (
-        <CanvasItemGroup position={[content.text.offset.x, -content.text.offset.y, 0]}>
-          <TextRun
-            layout={layout}
-            fontSizePx={fontSizePx}
-            tint={tintedFontColor}
-            clippingPlanes={clippingPlanes}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
+      {content.labelBox && layout && (
+        <ButtonLabel
+          layout={layout}
+          box={content.labelBox}
+          fontSizePx={fontSizePx}
+          tint={tintedFontColor}
+          clippingPlanes={clippingPlanes}
+          renderOrder={renderOrder}
+        />
       )}
     </>
   );

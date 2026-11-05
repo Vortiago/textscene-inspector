@@ -12,7 +12,9 @@ renders_as: a StyleBox quad with a centred text run and optional icon
 MenuButton is a Button that opens an internal PopupMenu when pressed. `menu_button.cpp`
 draws no chrome of its own, so the previewer paints what its `Button` base does. The
 internal PopupMenu never opens, since it is a Window and this previewer draws no
-Windows.
+Windows. `clip_text` zeroes the label's width in the minimum size, and `TextParagraph::draw`
+cuts the label to its paragraph box. The previewer does both, so a box narrower than the label
+shows only the glyphs that fit.
 
 ## Linting
 
