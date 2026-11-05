@@ -7,7 +7,7 @@
 import { useLayoutEffect } from 'react';
 import * as THREE from 'three';
 import type { PointPlacement } from '../materials/godotPoint';
-import { geometryDrawsPoints } from '../../resources/meshes/godotSurface';
+import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 
 /** The attribute that holds each place's matrix, the name three's instanced programs read. */
 export const INSTANCE_MATRIX_ATTRIBUTE = 'instanceMatrix';
@@ -91,9 +91,9 @@ export function useSharedInstances(geometry: THREE.BufferGeometry, source: THREE
   }, [geometry, source]);
 }
 
-/** Where `geometry`'s points sit: at instances, or in the mesh. Undefined for triangles. */
+/** Where `geometry`'s points sit: at instances, or in the mesh. Undefined for triangles and lines. */
 export function pointPlacementOf(geometry: THREE.BufferGeometry): PointPlacement | undefined {
-  if (!geometryDrawsPoints(geometry)) return undefined;
+  if (geometryPrimitive(geometry) !== 'points') return undefined;
   return (geometry as THREE.InstancedBufferGeometry).isInstancedBufferGeometry ? 'instances' : 'mesh';
 }
 

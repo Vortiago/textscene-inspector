@@ -483,7 +483,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A LINES surface and a LINE_STRIP surface of an ArrayMesh draw as one pixel wide segments under the surface material, lit as a normal along +Z in node space. The strip reads its vertex colours. A mesh of a triangle surface and a lines surface draws both. The engines differ by one pixel where a segment ends or crosses a pixel edge, as their rasterisers break ties differently.</p></div>
+        <div class="prose"><p>A LINES surface and a LINE_STRIP surface of an ArrayMesh draw as segments one pixel wide under the surface material. The material lights them as a normal along +Z in node space. The strip reads its vertex colours. A mesh of a triangle surface and a lines surface draws both. The engines differ by one pixel where a segment ends or crosses a pixel edge, as their rasterisers break ties differently.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Lines under other materials</h3><span class="status st-done">Done</span></div>

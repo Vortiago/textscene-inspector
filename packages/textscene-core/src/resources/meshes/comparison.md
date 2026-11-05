@@ -1,7 +1,6 @@
 ---
 type: ArrayMesh
 category: Resources
-status: unreviewed
 renders_as: one merged THREE.BufferGeometry with a draw group per surface
 ---
 
@@ -25,7 +24,7 @@ The lenient parser never rejects a mesh property. An unreadable `subdivide_width
 
 <!-- compare: image=unit-array-mesh-lines status=done fixture=unit-array-mesh-lines.tscn -->
 
-A LINES surface and a LINE_STRIP surface of an ArrayMesh draw as one pixel wide segments under the surface material, lit as a normal along +Z in node space. The strip reads its vertex colours. A mesh of a triangle surface and a lines surface draws both. The engines differ by one pixel where a segment ends or crosses a pixel edge, as their rasterisers break ties differently.
+A LINES surface and a LINE_STRIP surface of an ArrayMesh draw as segments one pixel wide under the surface material. The material lights them as a normal along +Z in node space. The strip reads its vertex colours. A mesh of a triangle surface and a lines surface draws both. The engines differ by one pixel where a segment ends or crosses a pixel edge, as their rasterisers break ties differently.
 
 ## Lines under other materials
 

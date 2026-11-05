@@ -30,7 +30,7 @@ import {
 import { drawHookProps, type ShadowCastingEffects } from '../../../../r3f/shadowCasting';
 import { visualLayersUserData } from '../../../../r3f/visualLayers';
 import { boxlessUserData } from '../../../../r3f/bounds';
-import { geometryDrawsPoints } from '../../../../resources/meshes/godotSurface';
+import { geometryPrimitive } from '../../../../resources/meshes/godotSurface';
 import { useResourceResolution } from '../../../../resources/useSubOrExtResource';
 import { particleCount, particleGeometry, writeParticles } from './particleInstances';
 import type { CPUParticles3DProperties } from './types';
@@ -98,7 +98,7 @@ interface ParticlePartDraws {
 function ParticlePart({ source, draw }: { source: THREE.BufferGeometry; draw: ParticleDraw }) {
   const geometry = useParticleGeometry(source, draw.buffer);
   const startingMaterial = useOneSurfaceStartingMaterial(draw.sources.length);
-  const points = geometryDrawsPoints(source);
+  const points = geometryPrimitive(source) === 'points';
   const Draws = points ? ParticlePoints : ParticleMeshInstances;
   return <Draws key={particleCount(draw.buffer)} draws={{ geometry, startingMaterial, draw }} />;
 }

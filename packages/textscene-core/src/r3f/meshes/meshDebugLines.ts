@@ -5,7 +5,7 @@
 
 import type { SurfacedMesh } from './meshContent';
 import { FLOATS_PER_VERTEX } from '../../godot/math/vector';
-import { geometryDrawsPoints, godotTriangleVertices } from '../../resources/meshes/godotSurface';
+import { geometryPrimitive, godotTriangleVertices } from '../../resources/meshes/godotSurface';
 
 /** Three segments, two vertices each. */
 const FLOATS_PER_TRIANGLE_EDGES = 6 * FLOATS_PER_VERTEX;
@@ -19,7 +19,7 @@ const FLOATS_PER_TRIANGLE_EDGES = 6 * FLOATS_PER_VERTEX;
  */
 export function meshDebugLines(mesh: SurfacedMesh): Float32Array {
   const triangles = mesh.parts
-    .filter((part) => !geometryDrawsPoints(part.geometry))
+    .filter((part) => geometryPrimitive(part.geometry) === 'triangles')
     .map(({ geometry }) => ({
       positions: geometry.getAttribute('position').array,
       vertices: godotTriangleVertices(geometry),

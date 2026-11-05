@@ -7,7 +7,6 @@ import * as THREE from 'three';
 import { decodeArrayMeshTres } from '../testing/decodeArrayMeshTres';
 import type { ArrayMeshData } from './arraymesh/types';
 import {
-  geometryDrawsPoints,
   geometryPrimitive,
   godotSurfaceParts,
   godotSurfacesGeometry,
@@ -281,9 +280,9 @@ describe('godotSurfacesGeometry of points surfaces', () => {
     ]);
   });
 
-  it('tags the geometry as drawn by points, and a triangle geometry not', () => {
-    expect(geometryDrawsPoints(godotSurfacesGeometry([points([0, 0, 0])]))).toBe(true);
-    expect(geometryDrawsPoints(godotSurfacesGeometry([triangle()]))).toBe(false);
+  it('tags the geometry as drawn by points, and a triangle geometry as triangles', () => {
+    expect(geometryPrimitive(godotSurfacesGeometry([points([0, 0, 0])]))).toBe('points');
+    expect(geometryPrimitive(godotSurfacesGeometry([triangle()]))).toBe('triangles');
   });
 });
 
@@ -301,20 +300,20 @@ describe('godotSurfaceParts', () => {
 
     expect(parts).toHaveLength(1);
     expect(parts[0]!.surfaces.map((s) => s.tag)).toEqual(['a', 'b']);
-    expect(geometryDrawsPoints(parts[0]!.geometry)).toBe(false);
+    expect(geometryPrimitive(parts[0]!.geometry)).toBe('triangles');
   });
 
   it('draws a mesh of only points as one points part', () => {
     const parts = godotSurfaceParts([point('a')]);
 
     expect(parts).toHaveLength(1);
-    expect(geometryDrawsPoints(parts[0]!.geometry)).toBe(true);
+    expect(geometryPrimitive(parts[0]!.geometry)).toBe('points');
   });
 
   it('splits triangle and points surfaces into a part each, triangles first, keeping each surface', () => {
     const parts = godotSurfaceParts([point('dots'), tri('wall'), point('more dots')]);
 
-    expect(parts.map((part) => geometryDrawsPoints(part.geometry))).toEqual([false, true]);
+    expect(parts.map((part) => geometryPrimitive(part.geometry))).toEqual(['triangles', 'points']);
     expect(parts.map((part) => part.surfaces.map((s) => s.tag))).toEqual([['wall'], ['dots', 'more dots']]);
     expect(parts[1]!.geometry.groups.map((g) => g.materialIndex)).toEqual([0, 1]);
   });

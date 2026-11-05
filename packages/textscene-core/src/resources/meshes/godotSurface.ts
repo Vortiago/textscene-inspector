@@ -63,11 +63,6 @@ export function geometryPrimitive(geometry: THREE.BufferGeometry): SurfacePrimit
   return (geometry.userData[DRAWN_PRIMITIVE] as SurfacePrimitive | undefined) ?? 'triangles';
 }
 
-/** Whether `godotSurfacesGeometry` built `geometry` from points surfaces. */
-export function geometryDrawsPoints(geometry: THREE.BufferGeometry): boolean {
-  return geometryPrimitive(geometry) === 'points';
-}
-
 /** Marks `target` as drawing the primitive `source` draws, for a geometry rebuilt from another. */
 export function copyDrawnPrimitive(source: THREE.BufferGeometry, target: THREE.BufferGeometry): void {
   const primitive = geometryPrimitive(source);

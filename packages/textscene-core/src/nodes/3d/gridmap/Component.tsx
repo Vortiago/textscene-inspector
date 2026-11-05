@@ -18,7 +18,7 @@ import { Node3D } from '../../base/node3d/Component';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
 import type { MaterialSource } from '../../../r3f/materials/materialSource';
 import { useInstancedMeshContent, type SurfacedPart } from '../../../r3f/meshes/meshContent';
-import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
+import { geometryPrimitive } from '../../../resources/meshes/godotSurface';
 import { usePathResolution } from '../../../resources/useSubOrExtResource';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { surfaceAttach, surfaceSources } from '../../../r3f/materials/SurfaceMaterialSlots';
@@ -224,7 +224,11 @@ interface GridMapPartProps {
 
 /** One part of an item's mesh at every cell: the surfaces that share one primitive type. */
 function GridMapPart(props: GridMapPartProps) {
-  return geometryDrawsPoints(props.part.geometry) ? <PointsPart {...props} /> : <PartSurfaces {...props} />;
+  return geometryPrimitive(props.part.geometry) === 'points' ? (
+    <PointsPart {...props} />
+  ) : (
+    <PartSurfaces {...props} />
+  );
 }
 
 /**
@@ -257,7 +261,7 @@ function PartSurfaces({
 }: GridMapPartProps & { cellPoints?: CellPoints }) {
   const surfaces = surfaceSources(part.materials);
   const { geometry } = part;
-  const points = geometryDrawsPoints(geometry);
+  const points = geometryPrimitive(geometry) === 'points';
   // A cell's chain draw is its own instanced batch of the cells, at its surface's
   // ordinal, over the geometry the part draws, and at its surface's own draw group.
   const chainDraw: ChainDrawFactory = (spec) =>

@@ -6,12 +6,12 @@ import { godotSurfacesGeometry, type GodotSurface } from '../../resources/meshes
 import type { SurfacedMesh } from './meshContent';
 import { meshDebugLines } from './meshDebugLines';
 
-function surface(positions: number[], indices: number[], isPoints = false): GodotSurface {
-  return {
-    positions: new Float32Array(positions),
-    indices,
-    ...(isPoints && { primitive: 'points' as const }),
-  };
+function surface(
+  positions: number[],
+  indices: number[],
+  primitive?: GodotSurface['primitive']
+): GodotSurface {
+  return { positions: new Float32Array(positions), indices, primitive };
 }
 
 function meshOf(...surfaces: GodotSurface[]): SurfacedMesh {
@@ -20,9 +20,10 @@ function meshOf(...surfaces: GodotSurface[]): SurfacedMesh {
     surfaceIndices: kind.map((_surface, index) => index),
     materials: kind.map(() => undefined),
   });
-  const triangles = surfaces.filter((s) => !s.primitive);
-  const points = surfaces.filter((s) => s.primitive === 'points');
-  const [first, ...rest] = [triangles, points].filter((kind) => kind.length > 0).map(part);
+  const kinds = [undefined, 'points', 'lines'].map((primitive) =>
+    surfaces.filter((s) => s.primitive === primitive)
+  );
+  const [first, ...rest] = kinds.filter((kind) => kind.length > 0).map(part);
   return { parts: [first!, ...rest] };
 }
 
@@ -62,8 +63,12 @@ describe('meshDebugLines', () => {
   });
 
   it('adds nothing for a points surface', () => {
-    const lines = meshDebugLines(meshOf(surface(TRIANGLE, [0, 1, 2], true)));
+    const lines = meshDebugLines(meshOf(surface(TRIANGLE, [0, 1, 2], 'points')));
     expect(lines).toHaveLength(0);
+  });
+
+  it('adds nothing for a lines surface, whose indices are segments and not triangles', () => {
+    expect(meshDebugLines(meshOf(surface(TRIANGLE, [0, 1, 1, 2], 'lines')))).toHaveLength(0);
   });
 
   it('adds nothing for a triangle surface with no triangle', () => {

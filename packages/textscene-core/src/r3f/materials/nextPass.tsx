@@ -62,6 +62,7 @@ export function nextPassRenderOrder(ordinal: number): number {
  * @canonical The drawn element of a surface draw
  */
 export function drawnElementOf(primitive: SurfacePrimitive, skeleton: THREE.Skeleton | null | undefined) {
+  // Only a triangle surface skins: three has no skinned points or line segments.
   if (skeleton && primitive === 'triangles') {
     return { Drawn: 'skinnedMesh' as const, skin: { skeleton, bindMode: THREE.DetachedBindMode } };
   }
