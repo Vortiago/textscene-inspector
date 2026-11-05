@@ -254,7 +254,8 @@ describe('<SpinBox> — field text direction (line_edit.cpp:3103-3112)', () => {
     controlSolverRegistry.clear();
   });
 
-  async function glyphPositions(locale: string): Promise<number[]> {
+  /** The atlas rectangle of each drawn glyph quad (four corners of u, v), left to right. */
+  async function glyphAtlasRects(locale: string): Promise<number[][]> {
     const renderer = await ReactThreeTestRenderer.create(
       <SpinBox
         {...painterEnv()}
@@ -266,10 +267,14 @@ describe('<SpinBox> — field text direction (line_edit.cpp:3103-3112)', () => {
         renderOrder={0}
       />
     );
-    return Array.from(findTextMesh(renderer.scene)!.geometry.attributes.position!.array);
+    const uv = Array.from(findTextMesh(renderer.scene)!.geometry.attributes.uv!.array);
+    return Array.from({ length: uv.length / 8 }, (_, i) => uv.slice(i * 8, i * 8 + 8));
   }
 
-  it('lays the glyphs out in another order under a right-to-left locale than under a left-to-right one', async () => {
-    expect(await glyphPositions('ar')).not.toEqual(await glyphPositions('en'));
+  it('draws the prefix as the first glyph under a left-to-right locale and the last under a right-to-left one', async () => {
+    const ltr = await glyphAtlasRects('en');
+    const rtl = await glyphAtlasRects('ar');
+    expect(rtl.at(-1)).toEqual(ltr[0]);
+    expect(rtl[0]).not.toEqual(ltr[0]);
   });
 });
