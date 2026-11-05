@@ -20,7 +20,6 @@ import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   resolveButtonDrawState,
   pickButtonStyleBox,
@@ -28,7 +27,7 @@ import {
   layoutButtonContent,
 } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
-import { BUTTON_THEME_FONT_KEY, buttonLabelShape, buttonTextTheme, buttonIconColor } from './nativeSolver';
+import { buttonLabelShape, buttonTextTheme, buttonIconColor } from './nativeSolver';
 import type { ButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
@@ -58,7 +57,6 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
   const { fontSizePx, color: baseFontColor } = textTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
-  const fontMetrics = resolveNodeFontMetrics(solveNode, BUTTON_THEME_FONT_KEY);
   // Pass 1, unwrapped: what the icon's own reservation is measured against. It is the
   // **solve handoff** the minimum-size solver calls too, so one shaping sizes both.
   const unwrapped: TextLayoutResult | null = buttonLabelShape(solveNode, theme);
@@ -164,7 +162,6 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
         <ButtonLabel
           layout={layout}
           overrunBehavior={props.overrunBehavior}
-          fontMetrics={fontMetrics}
           box={content.labelBox}
           fontSizePx={fontSizePx}
           tint={tintedFontColor}

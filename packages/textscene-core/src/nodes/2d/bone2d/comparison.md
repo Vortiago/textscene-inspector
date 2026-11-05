@@ -12,7 +12,7 @@ renders_as: nothing (a transform-only group, the bone gizmo is editor-only)
 
 Bone2D is one bone of a Skeleton2D chain. Its gizmo draws only in the editor, so at
 runtime the node is a transform, and the previewer renders it as a transform-only group
-(ADR-0008).
+(ADR-0008). Its pose against its `rest` moves the Polygon2Ds its skeleton deforms.
 
 ## Linting
 
@@ -37,7 +37,8 @@ Strict parsing format-checks these `Bone2D` properties, plus 12 inherited from N
 |  | `bone2d-missing-rest-pose` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode2D`, which reads none of the five bone keys. A
-`length` of `2048` or a `bone_angle` of `900` is carried through untouched and changes
-nothing on screen, where strict warns on both. `default_length` is a legacy alias Godot
+The lenient parser reads `rest` on top of `parseNode2D`, and reads none of the other four
+bone keys. A `rest` that is not a finite Transform2D warns and reads as the all-zero unset
+rest. A `length` of `2048` or a `bone_angle` of `900` is carried through untouched and
+changes nothing on screen, where strict warns on both. `default_length` is a legacy alias Godot
 never writes, so an old scene carrying it lints clean.

@@ -11,6 +11,7 @@ import { takeOutputLikeDrawingBuffer } from '../../outputTarget';
 import { beginStep, endStep } from '../../frameProfile/frameProfile';
 import { drawOffscreen } from '../../offscreen';
 import type { CanvasColorSpace } from '../../canvasColorSpace';
+import { drawCanvasGroups } from '../../canvasGroup/canvasGroupPass';
 
 /**
  * Copies `frame` to the target, each texel to the pixel under it from the frame's row
@@ -59,9 +60,10 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
 
   /**
    * Draws `scene` into the frame and copies the result, rows reversed, to the target bound before.
-   * The frame clears itself where the render will not: a render clears only while the renderer's
-   * `autoClear` is on, which a caller may turn off. A target of SRGB8_ALPHA8 storage takes the
-   * `decode` transfer, so its hardware encode writes the frame's bytes back unchanged.
+   * Each CanvasGroup's buffer draws first, at the frame's size. The frame clears itself where the
+   * render will not: a render clears only while the renderer's `autoClear` is on, which a caller
+   * may turn off. A target of SRGB8_ALPHA8 storage takes the `decode` transfer, so its hardware
+   * encode writes the frame's bytes back unchanged.
    */
   render(
     gl: THREE.WebGLRenderer,
@@ -74,7 +76,7 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
     try {
       gl.setRenderTarget(this);
       if (!gl.autoClear) gl.clear(true, true, true);
-      gl.render(scene, camera);
+      drawCanvasGroups(gl, scene, camera, this, () => gl.render(scene, camera));
     } catch (error) {
       gl.setRenderTarget(previous);
       throw error;

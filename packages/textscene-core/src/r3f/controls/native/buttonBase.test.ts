@@ -493,7 +493,6 @@ describe('textMinimumWidthPx — the label width a minimum size keeps (button.cp
 
 describe('trimButtonLabel — the label trimmed to its paragraph box (button.cpp:428-432, text_paragraph.cpp:286-293)', () => {
   const FONT_SIZE_PX = 16;
-  const font = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX };
 
   function shaped(
     text: string,
@@ -511,33 +510,35 @@ describe('trimButtonLabel — the label trimmed to its paragraph box (button.cpp
 
   it('trims a line wider than the box', () => {
     const layout = shaped('alpha bravo charlie');
-    const trimmed = trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 60, font);
+    const trimmed = trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 60, FONT_SIZE_PX);
     expect(trimmed.lines[0]!.widthPx).toBeLessThanOrEqual(60);
     expect(trimmed.lines[0]!.text.length).toBeLessThan(layout.lines[0]!.text.length);
   });
 
   it('keeps a line that fits', () => {
     const layout = shaped('alpha');
-    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 200, font)).toBe(layout);
+    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 200, FONT_SIZE_PX)).toBe(layout);
   });
 
   it('keeps every line of a wrapped label', () => {
     const layout = shaped('alpha bravo charlie', 40, AutowrapMode.AUTOWRAP_WORD);
     expect(layout.lines.length).toBeGreaterThan(1);
-    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 40, font)).toBe(layout);
+    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 40, FONT_SIZE_PX)).toBe(layout);
   });
 
   it('keeps the label under OVERRUN_NO_TRIMMING', () => {
     const layout = shaped('alpha bravo charlie');
-    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_NO_TRIMMING, 60, font)).toBe(layout);
+    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_NO_TRIMMING, 60, FONT_SIZE_PX)).toBe(layout);
   });
 
   it('trims at the ceiled box width, with a floor of 1 px', () => {
     const layout = shaped('alpha bravo charlie');
-    const atCeil = trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 59.2, font);
+    const atCeil = trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 59.2, FONT_SIZE_PX);
     expect(atCeil.lines[0]).toEqual(
-      trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 60, font).lines[0]
+      trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 60, FONT_SIZE_PX).lines[0]
     );
-    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, -5, font).lines[0]!.widthPx).toBe(0);
+    expect(
+      trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, -5, FONT_SIZE_PX).lines[0]!.widthPx
+    ).toBe(0);
   });
 });

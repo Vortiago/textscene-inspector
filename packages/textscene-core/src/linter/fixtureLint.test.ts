@@ -41,6 +41,10 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     rules: ['collisionobject3d-needs-collision-shape'],
     reason: 'exists to show unsupported types; the Area3D has no shape on purpose',
   },
+  'unit-canvas-group-nested.tscn': {
+    rules: ['canvasgroup-nested-in-canvasgroup'],
+    reason: 'the nested group is the fixture, held so the plain rect Godot draws for it can be measured',
+  },
   'unit-cpuparticles2d-crossed-range.tscn': {
     rules: ['cpuparticles2d-param-min-above-max'],
     reason: 'the crossed velocity pair is the fixture, held so the range Godot loads can be measured',
@@ -131,6 +135,11 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     rules: ['format:frame', 'format:z_index', 'format:rotation'],
     reason:
       'the fixture writes `true` into INT and FLOAT slots on purpose: the converted-spelling warning is the point, and the golden pins what Godot draws for it',
+  },
+  'unit-window-content-scale-unknown.tscn': {
+    rules: ['format:content_scale_mode'],
+    reason:
+      'mode 3 is outside the enum on purpose: the warning is the point, and the golden pins the empty target Godot draws for it',
   },
   'unit-lightmap-gi-shadowmask-only.tscn': {
     rules: ['format:shadowmask_mode'],

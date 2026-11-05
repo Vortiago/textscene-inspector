@@ -27,6 +27,14 @@ export interface Transform2DColumns {
   readonly ty: number;
 }
 
+/** A {@link Transform2DColumns} an `Into` function writes, owned by its caller. */
+export type MutableTransform2D = { -readonly [K in keyof Transform2DColumns]: number };
+
+/** A new identity the caller owns, for the `out` of an `Into` function. */
+export function mutableTransform2D(): MutableTransform2D {
+  return { ...TRANSFORM2D_IDENTITY };
+}
+
 export const TRANSFORM2D_IDENTITY: Transform2DColumns = Object.freeze({
   a: 1,
   b: 0,
@@ -72,15 +80,45 @@ export function multiplyTransform2D(
   parent: Transform2DColumns,
   local: Transform2DColumns
 ): Transform2DColumns {
-  const origin = transform2DXform(parent, { x: local.tx, y: local.ty });
-  return {
-    a: f(f(parent.a * local.a) + f(parent.c * local.b)),
-    b: f(f(parent.b * local.a) + f(parent.d * local.b)),
-    c: f(f(parent.a * local.c) + f(parent.c * local.d)),
-    d: f(f(parent.b * local.c) + f(parent.d * local.d)),
-    tx: origin.x,
-    ty: origin.y,
-  };
+  return multiplyTransform2DInto(mutableTransform2D(), parent, local);
+}
+
+/**
+ * {@link multiplyTransform2D} written into `out`, for a loop that allocates nothing. `out` may be
+ * `parent` or `local`.
+ *
+ * @canonical A Transform2D product in float32, written in place
+ */
+export function multiplyTransform2DInto(
+  out: MutableTransform2D,
+  parent: Transform2DColumns,
+  local: Transform2DColumns
+): MutableTransform2D {
+  const a = f(f(parent.a * local.a) + f(parent.c * local.b));
+  const b = f(f(parent.b * local.a) + f(parent.d * local.b));
+  const c = f(f(parent.a * local.c) + f(parent.c * local.d));
+  const d = f(f(parent.b * local.c) + f(parent.d * local.d));
+  const tx = f(f(f(parent.a * local.tx) + f(parent.c * local.ty)) + parent.tx);
+  const ty = f(f(f(parent.b * local.tx) + f(parent.d * local.ty)) + parent.ty);
+  return assignTransform2D(out, a, b, c, d, tx, ty);
+}
+
+function assignTransform2D(
+  out: MutableTransform2D,
+  a: number,
+  b: number,
+  c: number,
+  d: number,
+  tx: number,
+  ty: number
+): MutableTransform2D {
+  out.a = a;
+  out.b = b;
+  out.c = c;
+  out.d = d;
+  out.tx = tx;
+  out.ty = ty;
+  return out;
 }
 
 /**
@@ -127,15 +165,37 @@ export function transform2DXform(t: Transform2DColumns, v: Vector2): Vector2 {
  * @canonical A Transform2D inverse in float32
  */
 export function affineInverseTransform2D(t: Transform2DColumns): Transform2DColumns {
-  const det = f(f(t.a * t.d) - f(t.b * t.c));
+  const det = transform2DDeterminant(t);
   if (det === 0 || !Number.isFinite(det)) return TRANSFORM2D_IDENTITY;
+  return affineInverseTransform2DInto(mutableTransform2D(), t);
+}
+
+/**
+ * {@link affineInverseTransform2D} written into `out`, for a loop that allocates nothing. `out` may
+ * be `t`. A singular `t` writes the identity.
+ *
+ * @canonical A Transform2D inverse in float32, written in place
+ */
+export function affineInverseTransform2DInto(
+  out: MutableTransform2D,
+  t: Transform2DColumns
+): MutableTransform2D {
+  const det = transform2DDeterminant(t);
+  if (det === 0 || !Number.isFinite(det)) return assignTransform2D(out, 1, 0, 0, 1, 0, 0);
   const idet = f(1 / det);
   const a = f(t.d * idet);
   const b = f(t.b * -idet);
   const c = f(t.c * -idet);
   const d = f(t.a * idet);
-  const origin = transform2DBasisXform({ a, b, c, d, tx: 0, ty: 0 }, { x: -t.tx, y: -t.ty });
-  return { a, b, c, d, tx: origin.x, ty: origin.y };
+  // `basis_xform` of `-origin`: no origin is added, so a -0 stays -0.
+  const ox = -t.tx;
+  const oy = -t.ty;
+  return assignTransform2D(out, a, b, c, d, f(f(a * ox) + f(c * oy)), f(f(b * ox) + f(d * oy)));
+}
+
+/** `Transform2D::determinant()` (`transform_2d.cpp:258-260`) in float32: the signed area of the basis. */
+export function transform2DDeterminant(t: Transform2DColumns): number {
+  return f(f(t.a * t.d) - f(t.b * t.c));
 }
 
 /**

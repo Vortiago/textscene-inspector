@@ -13,6 +13,7 @@ export const RENDER_STEPS = [
   'Shadows',
   'Fog',
   'Compositor',
+  'Canvas groups',
   'Canvas copy',
 ] as const;
 

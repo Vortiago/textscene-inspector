@@ -13,11 +13,8 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { OPTION_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
-import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
-import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   layoutOptionButtonContent,
   optionButtonHSeparation,
@@ -53,12 +50,7 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
   const { fontSizePx, color: baseFontColor } = optionButtonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
-  // Read in the render body, not the `useMemo` below, for the reason Label's Component.tsx gives.
-  const fontMetrics = resolveNodeFontMetrics(solveNode, OPTION_BUTTON_THEME_FONT_KEY);
-  const layout: TextLayoutResult | null = useMemo(
-    () => (hasText ? shapeButtonLabel(text, fontSizePx, fontMetrics) : null),
-    [hasText, text, fontSizePx, fontMetrics]
-  );
+  const layout = useButtonLabelLayout(solveNode, OPTION_BUTTON_THEME_FONT_KEY, text, fontSizePx);
 
   // Content layout: text and arrow placement within the solved rect
   const arrowMargin = solveNode.constants.arrow_margin ?? theme.separation;
@@ -112,7 +104,6 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
         <ButtonLabel
           layout={layout}
           overrunBehavior={props.overrunBehavior}
-          fontMetrics={fontMetrics}
           box={content.labelBox}
           fontSizePx={fontSizePx}
           tint={tintedFontColor}

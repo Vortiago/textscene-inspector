@@ -11,10 +11,7 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
-import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
-import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import {
   checkButtonCheckVOffset,
@@ -72,13 +69,7 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const { fontSizePx, color: baseFontColor } = checkButtonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
-  // Read inside the render body, not the `useMemo` below: Label's Component.tsx
-  // gives the reason.
-  const fontMetrics = resolveNodeFontMetrics(solveNode, CHECKBUTTON_THEME_FONT_KEY);
-  const layout: TextLayoutResult | null = useMemo(
-    () => (hasText ? shapeButtonLabel(text, fontSizePx, fontMetrics) : null),
-    [hasText, text, fontSizePx, fontMetrics]
-  );
+  const layout = useButtonLabelLayout(solveNode, CHECKBUTTON_THEME_FONT_KEY, text, fontSizePx);
 
   const content = useMemo(
     () =>
@@ -113,7 +104,6 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
         <ButtonLabel
           layout={layout}
           overrunBehavior={props.overrunBehavior}
-          fontMetrics={fontMetrics}
           box={content.labelBox}
           fontSizePx={fontSizePx}
           tint={tintedFontColor}

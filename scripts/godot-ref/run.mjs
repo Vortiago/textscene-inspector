@@ -853,6 +853,9 @@ func _render_2d(target: Node) -> void:
 	var vp := SubViewport.new()
 	vp.size = CANVAS_2D_SIZE
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	# The root embeds subwindows and a SubViewport does not, so without this a Window
+	# in the scene embeds in the root, outside the capture (window.cpp:1400-1420).
+	vp.gui_embed_subwindows = true
 	add_child(vp)
 	_report_root_only_drift(vp)
 	if not SCENE_CAMERA:

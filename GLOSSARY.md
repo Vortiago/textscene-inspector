@@ -421,6 +421,10 @@ _Avoid_: "visible instance" for the record, which names only the count.
 The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057). Under `render_target_clear_mode` NEVER it takes the bytes of the target first and draws over them.
 _Avoid_: "MSAA frame".
 
+**Group window** (`r3f/canvasGroup/canvasGroupPass.ts`):
+The draw-order keys a CanvasGroup collects into its buffer: its run at its own `z_final`, without its own key, where its composite rect draws. A child at another `z_final` falls outside the window and draws on the canvas.
+_Avoid_: "group range", "group layer".
+
 **Frame AABB** (`r3f/components/FrameAabb.tsx`):
 The `get_aabb()` of a GeometryInstance3D, in node space, that the camera frames the scene on (`r3f/frameSceneBounds.ts`). An empty one still frames, as the point at the node origin that `AABB()` is. The selection and hover boxes do not read it.
 _Avoid_: "bounds proxy".
@@ -469,6 +473,14 @@ _Avoid_: "background canvas".
 **Viewport surface**:
 What displays a **sub-viewport**'s render target (a `SubViewportContainer` or a `ViewportTexture` consumer), and the one place its canvas subtree is dispatched.
 _Avoid_: "viewport container" for the concept. "render target" for the surface.
+
+**Embedded window** (`nodes/windows/window/`):
+A visible Window, Popup or PopupPanel that a viewport draws on its own canvas instead of the system's. The window's Controls draw into its target as a **sub-viewport**'s do, rooted at the window itself (ADR-0033).
+_Avoid_: "dialog" for the base case. "native window", which Godot draws through the system.
+
+**Embedder**:
+The viewport that draws an **Embedded window**: the nearest viewport above it with `gui_embed_subwindows`, the root through `display/window/subwindows/embed_subwindows`. It draws each window's frame, title, close icon and target on its subwindow canvas, layer 1024, in stack order (`viewport.cpp:342-401`).
+_Avoid_: "parent viewport", which may not embed.
 
 **Pass gate** (`PassGate` in `r3f/contexts/ViewportPassRegistryContext.tsx`, `nodes/viewport/renderGate.ts`):
 What decides whether a **sub-viewport**'s pass renders in a frame: its effective `render_target_update_mode` (a `SubViewportContainer` parent replaces the authored mode), the viewport it sits in, and whether a mounted consumer sampled its target. The same gate decides what a render clears, from `render_target_clear_mode` and the renders the viewport has had.
@@ -781,6 +793,10 @@ _Avoid_: A write to the bone table. A modifier that draws.
 **Bone pose** (`BonePose`, `AnimatedPose`, `nodes/3d/skeleton3d/skeletonPose.ts`):
 The position, rotation and scale of one bone, each part optional. An AnimationPlayer writes the poses its bone tracks sample, and the Skeleton3D pass lays them over the file pose before the **Pose modifier** edits run (`animation_mixer.cpp:1878-1891`). A part no track keys keeps the file pose.
 _Avoid_: A write to the bone table. A pose kept in three bones.
+
+**Polygon skin** (`skinnedPoints`, `nodes/2d/polygon2d/polygonSkin.ts`):
+A Polygon2D that a Skeleton2D deforms. Each vertex keeps its four heaviest `bones` weights, and moves by `T * (sum of weight * bone matrix) * T^-1`, with `T` the polygon's global inverse times the skeleton's (`skeleton.glsl:157-182`). A bone's matrix is its pose in skeleton space times the inverse of its rest there. The **Live scene pass** in `skeletonBinding.ts` hands the polygon its bones and weights. Each render then reads the drawn transforms and writes the vertices again where one moved, as Godot's skeleton pass writes a vertex buffer before the canvas draws.
+_Avoid_: A pose read from the file alone, which an AnimationPlayer never moves.
 
 **Override re-homing** (`rehomeOverride`, carried as `LiveNode.scope`):
 The copy of each resource an override names into the scope of the node it reaches, under a fresh id where that id is taken, so each property resolves in the file that wrote it (ADR-0051).

@@ -119,6 +119,32 @@ function itemSortKey(child: TscnNode, parent: YSortParent): YSortParent & { sort
   return { toSortRoot, sortY, effectiveZ };
 }
 
+/** The y-sort group of a y_sort_enabled canvas item that draws per tile row, or undefined. */
+function ySortTileGroup(node: TscnNode) {
+  if ((node.properties as Record<string, unknown>).y_sort_enabled !== true) return undefined;
+  const group = nodeComponentRegistry.getYSortGroup(node.type);
+  return group && nodeComponentRegistry.isCanvasItem(node.type) ? group : undefined;
+}
+
+/**
+ * The rows of a y_sort_enabled TileMapLayer that roots its own sort, or null for any other node.
+ * Godot lists the rows beside the layer's child nodes (`renderer_canvas_cull.cpp:110-170`), and on
+ * a tie in sort y a row draws before a child node, so the item comes first in collection order.
+ */
+export function collectSortRootRows(node: TscnNode): YSortItem | null {
+  const group = ySortTileGroup(node);
+  if (!group) return null;
+  return {
+    sortY: 0,
+    effectiveZ: Y_SORT_ROOT.effectiveZ,
+    treeOrder: 0,
+    kind: 'tileGroup',
+    tileData: { tileSetRef: group.describe(node).tileSetRef, toSortRoot: Y_SORT_ROOT.toSortRoot },
+    node: ownBodyOf(group.asRootRows(node)),
+    liftedPast: [],
+  };
+}
+
 /** The live poses the sort reads: the patches below the live path of the node it collects from. */
 export interface YSortLivePoses {
   path: string;
@@ -157,8 +183,8 @@ export function collectYSortedItems(
     const props = child.properties as Record<string, unknown>;
     const isYSort = props.y_sort_enabled === true;
 
-    const group = isYSort ? nodeComponentRegistry.getYSortGroup(child.type) : undefined;
-    const isTileGroup = group !== undefined && nodeComponentRegistry.isCanvasItem(child.type);
+    const group = ySortTileGroup(child);
+    const isTileGroup = group !== undefined;
     items.push({
       sortY: key.sortY,
       effectiveZ: key.effectiveZ,

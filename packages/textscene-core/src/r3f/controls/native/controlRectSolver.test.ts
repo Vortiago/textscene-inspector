@@ -686,6 +686,35 @@ describe('solveControlTree — a registered canvas boundary (CanvasLayer)', () =
     const solved = solveControlTree([box], VIEWPORT, ctx());
     expect(solved.get('Box/HUD')?.rect).toEqual({ x: 0, y: 0, w: 1152, h: 648 });
   });
+
+  describe('with a ContainerLayoutFn of its own, as PopupPanel has', () => {
+    const fillBox: ContainerLayoutFn = (_n, children) =>
+      new Map(children.map((c) => [c.node.path, { x: 5, y: 5, w: 10, h: 10 }]));
+    const FREE_RECT = { offsetLeft: 20, offsetTop: 30, offsetRight: 60, offsetBottom: 50 };
+
+    function solveUnderLayoutBoundary(child: SolveNode) {
+      controlSolverRegistry.registerCanvasBoundary(BOUNDARY);
+      controlSolverRegistry.registerContainerLayout(BOUNDARY, fillBox);
+      return solveControlTree([node('Popup', BOUNDARY, {}, [child])], VIEWPORT, ctx());
+    }
+
+    it('places a direct child', () => {
+      const solved = solveUnderLayoutBoundary(node('Popup/Child', 'Control', FREE_RECT));
+      expect(solved.get('Popup/Child')?.rect).toEqual({ x: 5, y: 5, w: 10, h: 10 });
+    });
+
+    it('leaves a `top_level` direct child free, as `_update_child_rects` skips it (`popup.cpp:361-363`)', () => {
+      const solved = solveUnderLayoutBoundary(
+        node('Popup/Child', 'Control', { ...FREE_RECT, topLevel: true })
+      );
+      expect(solved.get('Popup/Child')?.rect).toEqual({ x: 20, y: 30, w: 40, h: 20 });
+    });
+
+    it('leaves a Control it adopted from deeper in the scene free, as it is no `get_child(i)`', () => {
+      const solved = solveUnderLayoutBoundary(node('Popup/Holder/Child', 'Control', FREE_RECT));
+      expect(solved.get('Popup/Holder/Child')?.rect).toEqual({ x: 20, y: 30, w: 40, h: 20 });
+    });
+  });
 });
 
 describe('solveControlTree — the ContainerLayoutFn solve handoff', () => {

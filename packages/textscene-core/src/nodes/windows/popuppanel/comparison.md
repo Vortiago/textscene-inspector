@@ -1,15 +1,25 @@
 ---
 type: PopupPanel
-category: Other
-status: unimplemented
-fixture: unit-popup-panel.tscn
-# image: unit-popup-panel
-renders_as: nothing yet, not implemented
+category: 2D
+fixture: unit-popuppanel-embedded.tscn
+renders_as: a panel StyleBox under its Controls, drawn by its embedder with no frame
 ---
 
 # PopupPanel
 
-A popup with a themed panel background that stretches its children to fit. The previewer parses and validates it but does not draw it. The base `Node` mounts under `renderIntent: 'pending'` as an empty group, and its children still show (ADR-0045).
+A popup with a themed panel background that stretches its children to fit. The previewer draws the
+`panel` StyleBox across the window and fits every child Control into the panel's content rect.
+
+## Panel
+<!-- compare: image=unit-popuppanel-embedded status=done fixture=unit-popuppanel-embedded.tscn -->
+
+The default panel fills the window, and the child fills the panel inside its content margins.
+
+## Shadow
+<!-- compare: image=unit-popuppanel-shadow status=done fixture=unit-popuppanel-shadow.tscn -->
+
+A `panel` StyleBoxFlat with a shadow insets the panel so that the shadow fits inside the window. The
+child moves in with the panel.
 
 ## Linting
 
@@ -24,8 +34,10 @@ Strict parsing format-checks the inherited set (45 inherited from Window, 47 inh
 |  | `window-content-scale-factor-floored` | warning |
 <!-- lint:end -->
 
-PopupPanel declares no property of its own. The lenient parser registers the plain `Node` reader. A negative inherited `size` component or an unquoted `title` is never read, substituted or reported on the lenient path.
+The lenient parser reads the Window keys with the PopupPanel class defaults: hidden, borderless,
+transparent and `wrap_controls` on. A malformed value takes that default.
 
 ## Known limitations
 
-- **Not drawn** Godot displays the panel once shown, but the previewer draws nothing for it.
+- **Needs runtime** A PopupPanel closes when its parent window takes the focus, which only a running
+  game shows.

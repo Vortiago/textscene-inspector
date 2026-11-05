@@ -22,6 +22,9 @@ import { findByType } from './findByType.testkit';
 import { quadrantCanvasItems } from '../../../../resources/tileset/tileCanvasItems';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
 import { CanvasLighting2DContext, INERT_CANVAS_LIGHTING } from '../../../../r3f/lighting2d/lightPassContext';
+// A y-sorted layer draws its rows through the registry's y-sort group.
+import './index.r3f';
+import { settleLoads } from '../../../../r3f/testing/settleLoads';
 import type { CappedItem } from '../../../../r3f/lighting2d/itemLightCap';
 import type { TileMapLayerProperties } from './types';
 import { resolveExtResourcePath } from '../../../../resources/SubResourceResolver';
@@ -102,6 +105,7 @@ describe('isometric dungeon integration', () => {
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
+    await settleLoads();
     return { renderer, registerCappedItem };
   }
 

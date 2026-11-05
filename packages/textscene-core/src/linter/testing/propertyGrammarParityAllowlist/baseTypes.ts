@@ -119,8 +119,7 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'Parser uses the transform matrix; linter validates discrete component forms and global equivalents that the renderer ignores.',
   },
 
-  // Viewport has no parser.ts of its own; SubViewport and Window inherit these
-  // through the base-walk, so one entry here covers both.
+  // SubViewport and Window inherit these through the base-walk, so one entry here covers both.
   Viewport: {
     linterOnly: [
       // Input routing and 3D audio listening. None of it touches a frozen
@@ -163,7 +162,47 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'world_3d',
     ],
     reason:
-      'Viewport is a base with no parser of its own. The picking/gui/audio keys are input and sound routing with no frozen-frame effect; the rest form the image (antialiasing, scaling, shadow atlas, VRS, SDF, snapping, culling) and are unimplemented.',
+      'The picking/gui/audio keys are input and sound routing with no frozen-frame effect; the rest form the image (antialiasing, scaling, shadow atlas, VRS, SDF, snapping, culling) and are unimplemented.',
+  },
+
+  // Popup and PopupPanel inherit these through the base-walk. An embedder reads only the
+  // borderless, transparent, unfocusable and always-on-top flags (`viewport.cpp:269-401`).
+  Window: {
+    linterOnly: [
+      // Read through the loop over the size keys, so no fixed key is scraped.
+      'size',
+      // The parser loops over `theme_override_*/*`, as the Control parser does.
+      'theme_override_colors/*',
+      'theme_override_constants/*',
+      'theme_override_font_sizes/*',
+      'theme_override_fonts/*',
+      'theme_override_icons/*',
+      'theme_override_styles/*',
+      // A native window's state, or input routing: an embedder stores `mode` and draws the same
+      // (`window.cpp:523-533`), and `keep_title_visible` applies only without one (`window.cpp:1185`).
+      'mode',
+      'keep_title_visible',
+      'current_screen',
+      'unresizable',
+      'extend_to_title',
+      'mouse_passthrough',
+      'mouse_passthrough_polygon',
+      'nonclient_area',
+      'popup_window',
+      'popup_wm_hint',
+      'sharp_corners',
+      'exclude_from_capture',
+      'minimize_disabled',
+      'maximize_disabled',
+      'accessibility_name',
+      'accessibility_description',
+      // A transient child sits after its parent in tree order, where the exclusive-child pass
+      // (`viewport.cpp:290-300`) would move it.
+      'transient',
+      'transient_to_focused',
+    ],
+    reason:
+      'The size and theme-override keys are read through loops. The rest drive a native window or input, which an embedded frame never shows.',
   },
 
   Light3D: {

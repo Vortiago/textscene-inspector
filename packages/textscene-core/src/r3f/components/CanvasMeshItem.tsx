@@ -12,11 +12,9 @@ import type { TscnNode } from '../../parser/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import type { MultiMeshInstance } from '../../resources/meshes/multimesh';
-import { useTexture2D } from '../../resources/useTexture2D';
 import { canvasMapProps, useCanvas2DTexture } from '../canvas2DTextureDecode';
-import { useNode2DCanvasTextureSampler } from '../canvasItemTextureSampler';
-import { CANVAS_SRGB_DEFINES } from '../canvasSrgbMultiply';
-import { useCanvasColorSpace, type CanvasColorSpace } from '../canvasColorSpace';
+import { useCanvasItemTexture } from '../canvasItemTexture';
+import { instanceColorDefines, useCanvasColorSpace, type CanvasColorSpace } from '../canvasColorSpace';
 import { sRGBChannelToLinear } from '../../utils/colorSpace';
 import { canvasMeshGeometry } from '../meshes/canvasMeshGeometry';
 import { canvasInstancesGeometry, MESH_INSTANCE } from '../meshes/canvasMeshInstances';
@@ -48,10 +46,9 @@ export function CanvasMeshItem({ node, props, mesh, instances, children }: Canva
     texture: sourceTexture,
     missing: textureMissing,
     isArriving: textureArriving,
+    sampler,
     canvasTexture,
-  } = useTexture2D(props.texture, pools.externalResources, pools.internalResources);
-  // A CanvasTexture's own filter and repeat win over the item's.
-  const sampler = useNode2DCanvasTextureSampler(props, canvasTexture?.texture);
+  } = useCanvasItemTexture(props, props.texture, pools.externalResources, pools.internalResources);
   const texture = useCanvas2DTexture(sourceTexture, sampler);
 
   return (
@@ -161,8 +158,7 @@ function vertexColorDefines(
   canvasSpace: CanvasColorSpace,
   isInstanced: boolean
 ): Readonly<Record<string, string>> | undefined {
-  if (!canvasSpace.isLinear) return CANVAS_SRGB_DEFINES;
-  return isInstanced ? undefined : canvasSpace.defines;
+  return isInstanced ? instanceColorDefines(canvasSpace) : canvasSpace.defines;
 }
 
 /** One part of the mesh: triangles, points or line segments, by the primitive its geometry draws. */

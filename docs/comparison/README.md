@@ -206,7 +206,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [BoxContainer](../../packages/textscene-core/src/nodes/2d/ui/boxcontainer/comparison.md): children laid out along its own `vertical`-chosen axis
 - [Button](../../packages/textscene-core/src/nodes/2d/ui/button/comparison.md): a StyleBox quad with a centred text run
 - [Camera2D](../../packages/textscene-core/src/nodes/2d/camera2d/comparison.md): a 2D view frame with no drawn geometry
-- [CanvasGroup](../../packages/textscene-core/src/nodes/2d/canvasgroup/comparison.md): nothing yet, Godot composites its children into one offscreen buffer, the previewer does not
+- [CanvasGroup](../../packages/textscene-core/src/nodes/2d/canvasgroup/comparison.md): its children drawn into one buffer, composited by one rect
 - [CanvasLayer](../../packages/textscene-core/src/nodes/2d/ui/canvaslayer/comparison.md): a full-rect passthrough layer hosting Control children
 - [CanvasModulate](../../packages/textscene-core/src/nodes/2d/canvasmodulate/comparison.md): a colour multiply applied to the whole canvas
 - [CenterContainer](../../packages/textscene-core/src/nodes/2d/ui/centercontainer/comparison.md): a rect centred inside its own
@@ -271,6 +271,8 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [PinJoint2D](../../packages/textscene-core/src/nodes/physics/2d/pinjoint2d/comparison.md): nothing (a transform-only group)
 - [PointLight2D](../../packages/textscene-core/src/nodes/2d/pointlight2d/comparison.md): the light's cookie multiplied into every CanvasItem beneath it
 - [Polygon2D](../../packages/textscene-core/src/nodes/2d/polygon2d/comparison.md): a filled, optionally textured mesh
+- [Popup](../../packages/textscene-core/src/nodes/windows/popup/comparison.md): its viewport's target, drawn by its embedder with no frame
+- [PopupPanel](../../packages/textscene-core/src/nodes/windows/popuppanel/comparison.md): a panel StyleBox under its Controls, drawn by its embedder with no frame
 - [ProgressBar](../../packages/textscene-core/src/nodes/2d/ui/progressbar/comparison.md): a background and ratio-filled StyleBox pair, with a percentage label
 - [Range](../../packages/textscene-core/src/nodes/2d/ui/range/comparison.md): nothing of its own
 - [RayCast2D](../../packages/textscene-core/src/nodes/physics/2d/raycast2d/comparison.md): nothing (a transform-only group)
@@ -280,7 +282,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [RigidBody2D](../../packages/textscene-core/src/nodes/physics/2d/rigidbody2d/comparison.md): a transform-only group
 - [ScrollContainer](../../packages/textscene-core/src/nodes/2d/ui/scrollcontainer/comparison.md): a clipped content rect with themed scrollbars
 - [ShapeCast2D](../../packages/textscene-core/src/nodes/physics/2d/shapecast2d/comparison.md): nothing (a transform-only group)
-- [Skeleton2D](../../packages/textscene-core/src/nodes/2d/skeleton2d/comparison.md): nothing yet, Godot runs its modification stack on the bones each frame, the previewer does not
+- [Skeleton2D](../../packages/textscene-core/src/nodes/2d/skeleton2d/comparison.md): nothing yet, its modification stack does not run, and its bones deform the Polygon2Ds bound to it
 - [SpinBox](../../packages/textscene-core/src/nodes/2d/ui/spinbox/comparison.md): a LineEdit-style field plus two arrow stepper icons
 - [SplitContainer](../../packages/textscene-core/src/nodes/2d/ui/splitcontainer/comparison.md): two children split at a computed offset, along the `vertical`-chosen axis
 - [Sprite2D](../../packages/textscene-core/src/nodes/2d/sprite2d/comparison.md): an unlit textured quad
@@ -305,6 +307,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [VSeparator](../../packages/textscene-core/src/nodes/2d/ui/vseparator/comparison.md): a thin vertical quad
 - [VSlider](../../packages/textscene-core/src/nodes/2d/ui/vslider/comparison.md): a vertical track with a round grabber
 - [VSplitContainer](../../packages/textscene-core/src/nodes/2d/ui/vsplitcontainer/comparison.md): two children stacked, split at a computed offset
+- [Window](../../packages/textscene-core/src/nodes/windows/window/comparison.md): its viewport's target in a themed frame, drawn by its embedder
 
 ## Other
 
@@ -316,12 +319,9 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [MultiplayerSpawner](../../packages/textscene-core/src/nodes/networking/multiplayerspawner/comparison.md): nothing (a transform-only group)
 - [MultiplayerSynchronizer](../../packages/textscene-core/src/nodes/networking/multiplayersynchronizer/comparison.md): nothing (a transform-only group)
 - [Node](../../packages/textscene-core/src/nodes/node/comparison.md): nothing, a non-spatial base node
-- [Popup](../../packages/textscene-core/src/nodes/windows/popup/comparison.md): nothing yet, not implemented
 - [PopupMenu](../../packages/textscene-core/src/nodes/windows/popupmenu/comparison.md): nothing yet, not implemented
-- [PopupPanel](../../packages/textscene-core/src/nodes/windows/popuppanel/comparison.md): nothing yet, not implemented
 - [ResourcePreloader](../../packages/textscene-core/src/nodes/resources/resourcepreloader/comparison.md): nothing (a transform-only group)
 - [ScriptCreateDialog](../../packages/textscene-core/src/nodes/windows/scriptcreatedialog/comparison.md): nothing yet, not implemented
 - [ShaderGlobalsOverride](../../packages/textscene-core/src/nodes/rendering/shaderglobalsoverride/comparison.md): nothing yet, Godot re-shades every material that reads the overridden globals, the previewer does not
 - [StatusIndicator](../../packages/textscene-core/src/nodes/os/statusindicator/comparison.md): nothing (a transform-only group)
 - [Timer](../../packages/textscene-core/src/nodes/timers/timer/comparison.md): nothing (a countdown timer node)
-- [Window](../../packages/textscene-core/src/nodes/windows/window/comparison.md): nothing yet, not implemented

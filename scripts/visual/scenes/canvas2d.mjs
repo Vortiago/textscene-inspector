@@ -6,6 +6,10 @@
 
 export const CANVAS_2D_SCENES = [
   { name: 'polygon-2d', file: 'unit-polygon2d.tscn', mode: '2d' },
+  // Two strips skinned to posed Skeleton2Ds. Godot probes: blue (51,153,255) at (200,190) on the bent
+  // lower half and orange (255,127,51) at (330,160). Undeformed, each strip would cover (240,100) and
+  // (390,120) instead, which read the background.
+  { name: 'polygon2d-skeleton', file: 'unit-polygon2d-skeleton.tscn', mode: '2d' },
   // An INT component past int32 wraps as Godot stores it. Godot probes: (260,160) red, the square at
   // (200,100), and (660,360) blue, the square at (600,300). Refused, both sit at the origin.
   { name: 'int-wrap-position', file: 'edge-int-wrap-position.tscn', mode: '2d' },
@@ -147,6 +151,10 @@ export const CANVAS_2D_SCENES = [
   // flip_h flips the frame's normal. Godot 4.6.3 `--mode 2d`: Plain rgb(226) at (100,324), Flipped
   // rgb(128) at (852,324) and rgb(244) at (976,324).
   { name: 'animatedsprite2d-normal-map-flip', file: 'unit-animatedsprite2d-normal-map-flip.tscn', mode: '2d' },
+  // A Line2D whose CanvasTexture carries a normal map; only the item's rotation turns the normal. Godot
+  // 4.6.3 `--mode 2d`: Vertical rgb(226) at (100,324), rgb(160) at (200,224) and rgb(161) at (200,424).
+  // Turned rgb(161) at (852,324), rgb(226) at (952,224) and rgb(128) at (952,424).
+  { name: 'line2d-normal-map', file: 'unit-line2d-normal-map.tscn', mode: '2d' },
   // A global-coords emitter's rotation leaves the normal, a local one's turns it. Godot 4.6.3
   // `--mode 2d`: Global rgb(226) at (100,324), Local rgb(161) at (852,324) and rgb(226) at (952,224).
   { name: 'cpuparticles2d-normal-map', file: 'unit-cpuparticles2d-normal-map.tscn', mode: '2d' },
@@ -569,6 +577,25 @@ export const CANVAS_2D_SCENES = [
   // SUB and MUL blends that lower the canvas alpha. Godot 4.6.3 `--mode 2d`: (200,150) rgb(55,79,61)
   // Sub, (200,450) rgb(53,45,30) Mul, both opaque. Mean 0.027/255 against it.
   { name: 'canvas-item-sub-mul-alpha', file: 'unit-canvas-item-sub-mul-alpha.tscn', mode: '2d' },
+  // A CanvasGroup composites its squares through one buffer. Godot 4.6.3 `--mode 2d`, red-only, overlap
+  // and blue-only: the group at (125,125) rgb(166,38,38), (175,175) rgb(38,38,166), (225,225)
+  // rgb(38,38,166); the plain Node2D at (475,175) rgb(83,19,147).
+  { name: 'canvas-group-self-modulate', file: 'unit-canvas-group-self-modulate.tscn', mode: '2d' },
+  // The group's modulate applies twice. Godot 4.6.3 `--mode 2d`: (125,125) rgb(121,57,57), (175,175)
+  // rgb(79,47,111), (225,225) rgb(57,57,121); the plain Node2D at (475,175) rgb(83,19,147).
+  { name: 'canvas-group-modulate', file: 'unit-canvas-group-modulate.tscn', mode: '2d' },
+  // A child at another z escapes the group. Godot 4.6.3 `--mode 2d`: (125,125) rgb(166,38,38), (175,175)
+  // and (225,225) rgb(0,0,255).
+  { name: 'canvas-group-z-escape', file: 'unit-canvas-group-z-escape.tscn', mode: '2d' },
+  // A CanvasItemMaterial ADD on the group. Godot 4.6.3 `--mode 2d`: rgb(204,204,204) at (95,95) and
+  // (240,110), over x 90..259 and y 90..259.
+  { name: 'canvas-group-material', file: 'unit-canvas-group-material.tscn', mode: '2d' },
+  // A group in a group. Godot 4.6.3 `--mode 2d`: (125,125) rgb(166,102,102), (175,175) rgb(102,102,166),
+  // and (240,110) rgb(121,121,121) inside the inner rect.
+  { name: 'canvas-group-nested', file: 'unit-canvas-group-nested.tscn', mode: '2d' },
+  // A y-sorted group groups nothing. Godot 4.6.3 `--mode 2d`: (125,125) rgb(255,0,0), (175,175)
+  // rgb(0,0,255); the group under a y-sorted parent at (425,125) rgb(166,38,38), (475,175) rgb(38,38,166).
+  { name: 'canvas-group-y-sort', file: 'unit-canvas-group-y-sort.tscn', mode: '2d' },
   // A CanvasModulate tints native Controls. Godot 4.6.3 `--mode 2d`: (100,100) rgb(82,92,92).
   { name: 'control-canvas-modulate', file: 'unit-control-canvas-modulate.tscn', mode: '2d' },
   // A CanvasItemMaterial on a Control. Godot 4.6.3 `--mode 2d`: (100,100) rgb(204,102,51) unshaded,
@@ -974,6 +1001,44 @@ export const CANVAS_2D_SCENES = [
   { name: 'menu-button-wrap-trim', file: 'unit-menu-button-wrap-trim.tscn', mode: '2d' },
   // A Polygon2D below a plain Node below a hidden Node2D: its visibility comes from the Window.
   { name: 'canvas-root-visibility', file: 'unit-canvas-root-visibility.tscn', mode: '2d' },
+
+  // Embedded windows, as the root viewport draws them over its canvas. Godot 4.6.3 `--mode 2d` diffs
+  // differ only in the title glyphs (max 70 to 155 of 255), as a plain Label at the title's place does.
+  // A Label with the title's font, size and centre: max 92, mean 0.338, as the window title's max 92.
+  { name: 'window-title-label', file: 'unit-window-title-label.tscn', mode: '2d' },
+  // A decorated Window: frame, title, close icon and target. Mean 0.367.
+  { name: 'window-embedded', file: 'unit-window-embedded.tscn', mode: '2d' },
+  // The stack: the last focusable window is focused and draws the focused frame. Mean 0.514.
+  { name: 'window-focus-order', file: 'unit-window-focus-order.tscn', mode: '2d' },
+  // A title wider than its space ends in an ellipsis. Mean 0.352.
+  { name: 'window-title-trim', file: 'unit-window-title-trim.tscn', mode: '2d' },
+  // A newline stays inside the title's one line at zero width. Max 92, mean 0.414.
+  { name: 'window-title-newline', file: 'unit-window-title-newline.tscn', mode: '2d' },
+  // A transparent window shows the embedder through its target. Mean 0.331.
+  { name: 'window-transparent', file: 'unit-window-transparent.tscn', mode: '2d' },
+  // A Popup is borderless: its target alone. Mean 0.364.
+  { name: 'popup-embedded', file: 'unit-popup-embedded.tscn', mode: '2d' },
+  // wrap_controls grows a centred 200x100 window to 420x310 at (476,274). Mean 0.284.
+  { name: 'window-wrap', file: 'unit-window-wrap.tscn', mode: '2d' },
+  // A PopupPanel's panel, with its child inset by the default 4 px margins. Max 1, mean 0.308.
+  { name: 'popuppanel-embedded', file: 'unit-popuppanel-embedded.tscn', mode: '2d' },
+  // A shadowed panel insets by (6,5,10,11), and its shadow fills the window. Max 1, mean 0.309.
+  { name: 'popuppanel-shadow', file: 'unit-popuppanel-shadow.tscn', mode: '2d' },
+  // Theme overrides: the frame, the title colour, size and outline ring. Mean 0.426.
+  { name: 'window-theme', file: 'unit-window-theme.tscn', mode: '2d' },
+  // Under a right-to-left parent the title trims from its start and the close icon stays right. Max 70, mean 0.407.
+  { name: 'window-rtl', file: 'unit-window-rtl.tscn', mode: '2d' },
+  // Theme scale 1.5: a 24 px close icon and a 21 px title. Max 155, mean 0.390.
+  { name: 'window-theme-scale', file: 'window-theme-scale/unit-window-theme-scale.tscn', mode: '2d' },
+  // The same title as a Label at theme scale 1.5: max 155, mean 0.346.
+  { name: 'window-theme-scale-label', file: 'window-theme-scale/unit-window-theme-scale-label.tscn', mode: '2d' },
+  // A window under a SubViewport that never updates draws in the root, which does. Max 92, mean 0.383.
+  { name: 'window-under-disabled-viewport', file: 'unit-window-under-disabled-viewport.tscn', mode: '2d' },
+  // content_scale_*: factor, canvas items, viewport, expand, integer and keep-height, with black bars.
+  // Max 92, mean 0.385.
+  { name: 'window-content-scale', file: 'unit-window-content-scale.tscn', mode: '2d' },
+  // A content_scale_mode outside the enum leaves the target empty: black content. Max 92, mean 0.318.
+  { name: 'window-content-scale-unknown', file: 'unit-window-content-scale-unknown.tscn', mode: '2d' },
 
   // MeshInstance2D draws a mesh through the canvas. Godot 4.6.3 `--mode 2d` probes: the textured QuadMesh
   // shows its texture upside down, (75,75) blue and (75,125) red, and the PlaneMesh at (100,300) draws

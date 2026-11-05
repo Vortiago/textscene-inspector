@@ -434,11 +434,14 @@ export function trimButtonLabel(
   layout: TextLayoutResult,
   overrunBehavior: number | undefined,
   drawableWidthPx: number,
-  font: { fontMetrics: FontMetrics; fontSizePx: number }
+  fontSizePx: number
 ): TextLayoutResult {
   const flags = overrunFlagsForBehavior(overrunBehavior);
   if (!flags.trim || layout.lines.length !== 1) return layout;
   const line = layout.lines[0]!;
-  const trimmedLine = trimLineToWidth(line, textBufWidthPx(drawableWidthPx), flags, font);
+  const trimmedLine = trimLineToWidth(line, textBufWidthPx(drawableWidthPx), flags, {
+    fontMetrics: layout.fontMetrics,
+    fontSizePx,
+  });
   return trimmedLine === line ? layout : soloLineLayout(trimmedLine, layout);
 }

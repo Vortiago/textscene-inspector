@@ -9,7 +9,12 @@
 import * as THREE from 'three';
 import type { Node2DLocalTransform } from '../nodes/base/node2d/types';
 import type { Vec3Tuple } from './nodeTransform';
-import { transform2DFromParts, type Transform2DColumns } from '../godot/math/transform2d.js';
+import {
+  mutableTransform2D,
+  transform2DFromParts,
+  type MutableTransform2D,
+  type Transform2DColumns,
+} from '../godot/math/transform2d.js';
 
 // F is its own inverse, so `F·M1·F · F·M2·F = F·(M1·M2)·F` composes through any
 // nesting with no global flip group: Godot `(100, 50)` sits at three.js `(100, -50)`.
@@ -109,15 +114,22 @@ export function threeMatrixFromTransform2D(t: Transform2DColumns, z = 0): THREE.
  * sign and the Y translation negates.
  */
 export function transform2DFromThreeMatrix(matrix: THREE.Matrix4): Transform2DColumns {
+  return transform2DFromThreeMatrixInto(mutableTransform2D(), matrix);
+}
+
+/** {@link transform2DFromThreeMatrix} written into `out`, for a render that allocates nothing. */
+export function transform2DFromThreeMatrixInto(
+  out: MutableTransform2D,
+  matrix: THREE.Matrix4
+): MutableTransform2D {
   const e = matrix.elements;
-  return {
-    a: e[0]!,
-    b: 0 - e[1]!,
-    c: 0 - e[4]!,
-    d: e[5]!,
-    tx: e[12]!,
-    ty: 0 - e[13]!,
-  };
+  out.a = e[0]!;
+  out.b = 0 - e[1]!;
+  out.c = 0 - e[4]!;
+  out.d = e[5]!;
+  out.tx = e[12]!;
+  out.ty = 0 - e[13]!;
+  return out;
 }
 
 /**

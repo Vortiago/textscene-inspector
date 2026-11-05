@@ -14,6 +14,8 @@ import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/AnimationTransportContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useIsSelected } from '../../../r3f/hooks/useIsSelected';
+import { useAnnounceMixerPose } from '../../../r3f/contexts/AnimatedValueContext';
+import { drivenUuids } from '../../../r3f/animation/drivenUuids';
 import { useAnimationDriver, type BoundClips } from '../../../r3f/contexts/AnimationDriverContext';
 import { useRebindKey } from '../../../r3f/animation/useRebindKey';
 import { useUniqueNamePaths } from '../../../r3f/useUniqueNames';
@@ -121,6 +123,8 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
   const prevTimeRef = useRef(0);
   /** Written only by the frame below: the mixer it last drove. */
   const prevMixerRef = useRef<AnimationMixer | null>(null);
+  const announceMixerPose = useAnnounceMixerPose();
+
   useFrame((_, delta) => {
     const mixer = mixerRef.current;
     const state: PlayState = isActive ? transport.playState : 'stopped';
@@ -164,6 +168,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
         // blend program drives N weighted actions with their own timeScale and weight, and Godot
         // has no single loop mode for a blend tree or state machine preview.
         mixer.update(delta * transport.playbackSpeed);
+        announceMixerPose(drivenUuids(actions));
         if (dominant) transport.reportTime(actions.get(dominant.clip)?.time ?? 0);
         break;
       }
@@ -176,6 +181,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
           seekAction(action, transport.time, { weight, timeScale });
         }
         mixer.update(0);
+        announceMixerPose(drivenUuids(actions));
         break;
       }
       case 'hold-paused': {
@@ -185,6 +191,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
       case 'stop-and-restore': {
         mixer.stopAllAction();
         restoreSnapshot(snapshotRef.current);
+        announceMixerPose(drivenUuids(actions));
         break;
       }
       case 'none': {

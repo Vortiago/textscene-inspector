@@ -57,6 +57,7 @@ import { ScrollBarChrome } from '../shared/ScrollChrome';
 import { canvasSubOrders } from '../../../../r3f/canvasItemState';
 import type { GraphEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
+import { useStableVector2 } from '../../../../r3f/hooks/useStableVector2';
 
 /** `default_theme.cpp:1287`: `make_flat_stylebox(style_normal_color, 4, 4, 4, 5)`, with a larger bottom margin. */
 function defaultPanel(theme: NativeControlComponentProps['theme']): StyleBoxFlatData {
@@ -217,7 +218,7 @@ export function GraphEdit({
     [minorColor.color, minorColor.opacity, minorDotAlphaFactor]
   );
 
-  const rectSize = useMemo(() => ({ x: rect.w, y: rect.h }), [rect.w, rect.h]);
+  const rectSize = useStableVector2({ x: rect.w, y: rect.h });
   const lines = useMemo(
     () =>
       showGrid && gridPattern !== GRID_PATTERN_DOTS

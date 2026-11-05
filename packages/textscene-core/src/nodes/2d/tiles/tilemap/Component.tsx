@@ -1,7 +1,8 @@
 /**
  * Draws a TileMap, the deprecated multi-layer node: each layer's rendering quadrants, each a lit
  * canvas item of one batched mesh per source run. An unresolvable TileSet or undecodable layer
- * data leaves the transform-only group with its children (ADR-0008).
+ * data leaves the transform-only group with its children (ADR-0008). A y-sorted TileMap hands its
+ * layers to <YSortDispatcher> as child TileMapLayers, which sort with its child nodes.
  */
 
 import { useMemo } from 'react';
@@ -15,10 +16,58 @@ import { usePaintRange } from '../../../../r3f/contexts/PaintOrderContext';
 import { childCanvasPlace } from '../../../../r3f/canvasItemState';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel';
+import { YSortDispatcher } from '../../../../r3f/YSortDispatcher';
+import type { TscnNode } from '../../../../parser/types';
+import type { TileMapLayerProperties } from '../tilemaplayer/types';
+import { childCanvasItemProperties } from '../shared/childCanvasItem';
 import type { TileMapLayerData, TileMapProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 
 export function TileMap({ node, children }: NodeComponentProps) {
+  const props = node.properties as TileMapProperties;
+  if (!props.y_sort_enabled) return <LayeredTileMap node={node}>{children}</LayeredTileMap>;
+  return <YSortedTileMap node={node}>{children}</YSortedTileMap>;
+}
+
+function YSortedTileMap({ node, children }: NodeComponentProps) {
+  const props = node.properties as TileMapProperties;
+  const withLayers = useMemo(() => withLayerNodes(node), [node]);
+  return (
+    <CanvasItem2D node={node} props={props}>
+      <YSortDispatcher node={withLayers}>{children}</YSortDispatcher>
+    </CanvasItem2D>
+  );
+}
+
+/**
+ * The TileMap with its layers in front of its child nodes, as Godot's internal front children are.
+ * A layer node is named `@TileMapLayer@<index>`, as Godot names a generated node, so no authored
+ * child shares its path.
+ */
+function withLayerNodes(map: TscnNode): TscnNode {
+  const { layers, ...props } = map.properties as TileMapProperties;
+  const layerNodes = layers.map((layer, index): TscnNode => ({
+    name: `@TileMapLayer@${index}`,
+    type: 'TileMapLayer',
+    parent: '.',
+    properties: {
+      ...childCanvasItemProperties(props),
+      tile_set: props.tile_set,
+      enabled: layer.enabled,
+      rendering_quadrant_size: props.rendering_quadrant_size,
+      cells: layer.cells,
+      y_sort_enabled: layer.ySortEnabled,
+      y_sort_origin: layer.ySortOrigin,
+      z_index: layer.zIndex,
+      ...(layer.modulate && { modulate: layer.modulate }),
+    } satisfies TileMapLayerProperties,
+    rawProperties: {},
+    children: [],
+  }));
+  return { ...map, children: [...layerNodes, ...map.children] };
+}
+
+function LayeredTileMap({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapProperties;
   const { model, status } = useTileSetModel(props.tile_set);
   const paintRange = usePaintRange();

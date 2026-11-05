@@ -9,6 +9,7 @@ import type { TscnNode } from '../../../../parser/types.js';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D.js';
 import { drawableCells } from '../../../../resources/tileset/drawableCell.js';
 import type { TileMapLayerProperties } from './types.js';
+import { childCanvasItemProperties } from '../shared/childCanvasItem.js';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel.js';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants.js';
 import { ySortItemId, type YSortItem } from '../../../../r3f/ySortItems.js';
@@ -64,6 +65,11 @@ export function TileGroupRenderer({ item, node: authored }: { item: YSortItem; n
       }
     />
   );
+}
+
+/** The layer as its own rows draw it: below the group the layer's component placed. */
+export function asRootRowsNode(node: TscnNode): TscnNode {
+  return { ...node, properties: childCanvasItemProperties(node.properties as TileMapLayerProperties) };
 }
 
 /** What the y-sort pass needs to know about this layer to decompose it per row. */

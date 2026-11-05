@@ -1,15 +1,73 @@
 ---
 type: Window
-category: Other
-status: unimplemented
-fixture: unit-window.tscn
-# image: unit-window
-renders_as: nothing yet, not implemented
+category: 2D
+fixture: unit-window-embedded.tscn
+renders_as: its viewport's target in a themed frame, drawn by its embedder
 ---
 
 # Window
 
-The node that creates a window, and the base of AcceptDialog, ConfirmationDialog, Popup, PopupMenu, PopupPanel and FileDialog. The previewer parses and validates it but does not draw it. The base `Node` mounts under `renderIntent: 'pending'` as an empty group, and its children still show (ADR-0045).
+The node that creates a window, and the base of AcceptDialog, Popup and PopupPanel. The previewer
+draws a visible Window as its embedder does (ADR-0033). The window's Controls draw into its target.
+The embedder then draws the frame, the title, the close icon and the target over its canvas.
+
+## Decoration
+<!-- compare: image=unit-window-embedded status=done fixture=unit-window-embedded.tscn -->
+
+A decorated window draws the `embedded_border` frame, its title centred in the `title_height` band
+and the close icon, then its Controls.
+
+## Focus and stack order
+<!-- compare: image=unit-window-focus-order status=done fixture=unit-window-focus-order.tscn -->
+
+The last focusable window takes the focus and the `embedded_border` frame. Every other window
+takes `embedded_unfocused_border`, and a window registered later draws over an earlier one.
+
+## Title trim
+<!-- compare: image=unit-window-title-trim status=done fixture=unit-window-title-trim.tscn -->
+
+A title wider than the space between the frame and the close icon ends in an ellipsis.
+
+## Transparent
+<!-- compare: image=unit-window-transparent status=done fixture=unit-window-transparent.tscn -->
+
+A `transparent` window clears its target to no colour, so the embedder shows through it.
+
+## Wrap controls
+<!-- compare: image=unit-window-wrap status=done fixture=unit-window-wrap.tscn -->
+
+With `wrap_controls`, the window grows to hold its Controls. A centred window centres the size it
+loaded with, so it grows to the right and down.
+
+## Theme overrides
+<!-- compare: image=unit-window-theme status=done fixture=unit-window-theme.tscn -->
+
+The `embedded_border` StyleBox, `title_color`, `title_font_size` and a `title_outline_size` ring
+override the default theme.
+
+## Right-to-left parent
+<!-- compare: image=unit-window-rtl status=done fixture=unit-window-rtl.tscn -->
+
+A window under a right-to-left Control lays its Controls out from the right. Its title trims from
+the start and the close icon stays at the right edge. Window has no `layout_direction` key of its own.
+
+## Theme scale
+<!-- compare: image=unit-window-theme-scale status=done fixture=window-theme-scale/unit-window-theme-scale.tscn -->
+
+With `gui/theme/default_theme_scale` at 1.5, the frame, the title font and the close icon grow
+with the theme.
+
+## Under a SubViewport that does not embed
+<!-- compare: image=unit-window-under-disabled-viewport status=done fixture=unit-window-under-disabled-viewport.tscn -->
+
+A window under a SubViewport without `gui_embed_subwindows` draws in the root viewport. It
+updates as the root does, though the SubViewport never updates.
+
+## Content scale
+<!-- compare: image=unit-window-content-scale status=done fixture=unit-window-content-scale.tscn -->
+
+`content_scale_factor` scales the window's Controls. `content_scale_size` with a mode and an
+aspect gives the design rect, and black bars fill the rest of the window.
 
 ## Linting
 
@@ -72,8 +130,12 @@ Strict parsing format-checks these `Window` properties, plus 47 inherited from V
 |  | `window-content-scale-factor-floored` | warning |
 <!-- lint:end -->
 
-The lenient parser registers the plain `Node` reader, which reads only the heading attributes and an optional `transform`. A malformed `mode` or any other Window key is never read, substituted or reported, and the node mounts as the same empty group either way.
+The lenient parser reads every Window key it draws with. A malformed value takes the class default,
+as an unset key does, and no diagnostic comes from the lenient path.
 
 ## Known limitations
 
-- **Not drawn** Godot displays the window and its Control children at runtime, but the previewer draws nothing for it.
+- **Approximated** The title glyph edges differ from Godot's by the same amount as a Label's in the
+  default font.
+- **Not drawn** A window with `force_native`, or one that no viewport embeds, draws nothing, as it
+  opens as a system window in a running game.

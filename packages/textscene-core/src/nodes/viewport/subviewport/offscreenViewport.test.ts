@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 
 import {
+  frameOverView,
   applyOrthoFrame,
   clearTarget,
   createCanvasTarget,
@@ -522,5 +523,21 @@ describe('clearTarget', () => {
     const { gl, clears } = recordingRenderer();
     clearTarget(gl, createCanvasTarget(4, 4, 't', SRGB_CANVAS), true);
     expect(clears).toEqual([{ rgb: [0, 0, 0], alpha: 0 }]);
+  });
+});
+
+describe('frameOverView', () => {
+  it('keeps a frame whose view is its layout', () => {
+    const frame = orthoFrameForSize({ x: 120, y: 80 });
+    expect(frameOverView(frame, { x: 120, y: 80 }, { x: 120, y: 80 })).toBe(frame);
+  });
+
+  it('grows a frame about its top-left corner to the canvas units the target shows', () => {
+    const framed = frameOverView(orthoFrameForSize({ x: 120, y: 60 }), { x: 120, y: 60 }, { x: 240, y: 120 });
+    const [cx, cy] = framed.position;
+    // World edges: x from 0 to 240, y from 0 down to -120.
+    expect([cx + framed.left, cx + framed.right, cy + framed.top, cy + framed.bottom]).toEqual([
+      0, 240, 0, -120,
+    ]);
   });
 });

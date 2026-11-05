@@ -1,26 +1,20 @@
-/**
- * CanvasGroup registration: parsed and validated, not yet rendered. The slice
- * registers a base component under `renderIntent: 'pending'`, so the badge reads a
- * gap while `visible` and the workspace split still work.
- */
+/** CanvasGroup registration: its own parse, and a component that draws. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { rendersOwnVisual } from '../../../r3f/nodeSupport';
-import { parseNode2D } from '../../base/node2d/parser';
+import { parseCanvasGroup } from './parser';
 import './index';
 import './index.r3f';
 
 describe('CanvasGroup registration', () => {
-  it('registers the parseNode2D parse it reuses', () => {
-    const registration = nodeRegistry.getRegistration('CanvasGroup');
-    expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode2D);
+  it('registers its own parse', () => {
+    expect(nodeRegistry.getRegistration('CanvasGroup')!.parser).toBe(parseCanvasGroup);
   });
 
-  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.renderIntentOf('CanvasGroup')).toBe('pending');
-    expect(rendersOwnVisual('CanvasGroup')).toBe('not-implemented');
+  it('registers a component that draws', () => {
+    expect(nodeComponentRegistry.renderIntentOf('CanvasGroup')).toBe('draws');
+    expect(rendersOwnVisual('CanvasGroup')).toBe('draws');
   });
 });

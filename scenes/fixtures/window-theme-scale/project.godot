@@ -1,0 +1,14 @@
+; A res:// root of its own, because `gui/theme/default_theme_scale` is a PROJECT setting and no
+; .tscn can carry one.
+
+config_version=5
+
+[application]
+
+config/name="Window at theme scale 1.5"
+run/main_scene="res://unit-window-theme-scale.tscn"
+config/features=PackedStringArray("4.6")
+
+[gui]
+
+theme/default_theme_scale=1.5
