@@ -34,7 +34,6 @@ import {
   RICH_TEXT_LABEL_DEFAULT_AUTOWRAP,
   layoutRichTextRuns,
   richTextLabelTextTheme,
-  richTextContentHeightPx,
   richTextUnderlineMetrics,
   shapeRichText,
   styledTextRuns,
@@ -245,7 +244,7 @@ function useShapedRichText(
     () =>
       isBeforeShaping
         ? {
-            heightPx: richTextContentHeightPx(shaped.runs, shaped.layout),
+            heightPx: shaped.contentHeightPx,
             lineCount: shaped.layout.lines.length,
           }
         : undefined,

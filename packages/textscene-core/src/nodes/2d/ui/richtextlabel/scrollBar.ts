@@ -29,6 +29,8 @@ interface RichTextShape {
 interface RichTextShapeBesideScrollBar extends RichTextShape {
   /** The width the text wrapped at: the rect's, less the bar's when it shows. */
   wrapWidthPx: number;
+  /** The height of the text at that width. */
+  contentHeightPx: number;
   /** Where the lines begin: after the bar when an RTL layout mirrors it to the left. */
   textOriginXPx: number;
   /** How far the scroll value has moved the text up. */
@@ -100,6 +102,7 @@ export function shapeBesideScrollBar(
     return {
       ...full,
       wrapWidthPx: box.w,
+      contentHeightPx: fullHeightPx,
       textOriginXPx: 0,
       scrollOffsetPx: scrollOffsetOf(box, fullHeightPx),
       scrollBar: null,
@@ -114,6 +117,7 @@ export function shapeBesideScrollBar(
   return {
     ...beside,
     wrapWidthPx,
+    contentHeightPx,
     textOriginXPx: box.rtl ? barWidthPx : 0,
     scrollOffsetPx,
     scrollBar: scrollBarPlacement(box, contentHeightPx, scrollOffsetPx, barWidthPx, theme),

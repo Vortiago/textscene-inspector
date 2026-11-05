@@ -12,7 +12,7 @@ import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { resolveRichTextFaces } from './styleFaces';
-import { shapeRichText, styledTextRuns } from './nativeSolver';
+import { richTextContentHeightPx, shapeRichText, styledTextRuns } from './nativeSolver';
 import { shapeBesideScrollBar } from './scrollBar';
 import type { RichTextLabelProperties } from './types';
 
@@ -62,6 +62,12 @@ describe('shapeBesideScrollBar (rich_text_label.cpp:3801-3830)', () => {
     expect(wrapWidthPx).toBe(152);
     expect(lines).toEqual(['Wave rift over', 'quiet stone and', 'amber light']);
     expect(scrollBar).toMatchObject({ visible: true, rect: { x: 152, y: 0, w: 8, h: 40 } });
+  });
+
+  it('reports the height of the text at the width it wrapped at', () => {
+    const { contentHeightPx, layout, runs } = wrappedLines({ w: 160, h: 40 }, true);
+    expect(contentHeightPx).toBe(richTextContentHeightPx(runs, layout));
+    expect(contentHeightPx).toBeGreaterThan(40);
   });
 
   it('puts the grabber at the top, its height the page over the text height', () => {
