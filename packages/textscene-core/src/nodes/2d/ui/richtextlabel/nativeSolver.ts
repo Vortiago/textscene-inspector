@@ -861,8 +861,12 @@ function lineMetricsOf(
     for (const segment of segments) {
       const run = styledRuns[segment.runIndex]!;
       if (run.image) continue;
-      // A glyph may draw in a face of the **Fallback chain**, so each glyph's face counts.
+      // A glyph may draw in a face of the **Fallback chain**, so each glyph's face counts. A run of
+      // glyphs in one face measures it once.
+      let lastFace: FontMetrics | undefined;
       for (const { fontMetrics: face } of segment.glyphs) {
+        if (face === lastFace) continue;
+        lastFace = face;
         ascentPx = Math.max(ascentPx, getFontAscentPx(face, run.fontSizePx));
         descentPx = Math.max(descentPx, fontDescentPx(face, run.fontSizePx));
       }

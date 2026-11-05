@@ -457,7 +457,10 @@ function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: 
  */
 const KEEPS_ITS_FACE = /^[\p{Cc}\p{Cn}\p{Cs}\p{Zl}\p{Zp}\p{Zs}\p{Default_Ignorable_Code_Point}]/u;
 
-/** Built on the first paragraph with a **Fallback chain**: most scenes have none. */
+/**
+ * Written only by `glyphFaces`, on the first paragraph that needs a **Fallback chain**: most scenes
+ * have none. Never cleared.
+ */
 let graphemes: Intl.Segmenter | undefined;
 
 /**

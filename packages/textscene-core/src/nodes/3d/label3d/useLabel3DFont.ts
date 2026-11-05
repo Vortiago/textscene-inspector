@@ -71,8 +71,9 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
       fallbacks && chainFaces
         ? fallbackFaceMipmaps(fallbacks, chainFaces, projectMipmaps)
         : NO_FALLBACK_MIPMAPS;
-    // A canvas face carries its outlines already. An atlas face draws as the bundled canvas face,
-    // which stands in for that face alone and so keeps its fallbacks.
+    // A bitmap face draws its page images and a canvas face carries its outlines, so each draws as it
+    // is. An atlas face draws as the bundled canvas face, which stands in for that face alone and so
+    // keeps its fallbacks.
     if (isBitmapFontMetrics(settled) || isCanvasFontMetrics(settled))
       return { font: { metrics: settled, generatesMipmaps, fallbackMipmaps }, isChainSettling };
     const canvasFace = peekBundledCanvasFace(settled);
