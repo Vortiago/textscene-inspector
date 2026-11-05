@@ -15,8 +15,8 @@ import { NodePathProvider } from '../contexts/NodePathContext';
 import { UndrawnMeshesProvider, useUndrawnMeshTypes } from '../contexts/UndrawnMeshesContext';
 import { fixtureFontBytes } from '../controls/native/text/sfntOutlines.testkit';
 import { wallQuadSurfaces } from '../../resources/testing/arrayMeshSurfaces';
-import { geometryDrawsLines } from '../../resources/meshes/godotSurface';
-import { arrayMeshPath, useCanvasMeshContent, useMeshContent } from './meshContent';
+import { geometryPrimitive } from '../../resources/meshes/godotSurface';
+import { arrayMeshPath, useInstancedMeshContent, useMeshContent } from './meshContent';
 
 const BOX: TscnInternalResource = { id: 'box', type: 'BoxMesh', data: {} };
 const RESOURCES: SceneResources = {
@@ -257,27 +257,27 @@ describe('an ArrayMesh with line surfaces', () => {
     externalResources: [],
   };
 
-  function partsDrawnAsLines(ref: string, useContent: typeof useMeshContent | typeof useCanvasMeshContent) {
+  function primitivesOf(useContent: typeof useMeshContent, ref: string) {
     const { result } = renderHook(() => useContent(useResourceResolution(ref, SCENE)));
     const content = result.current;
     return content.kind === 'surfaced'
-      ? content.mesh.parts.map((part) => geometryDrawsLines(part.geometry))
+      ? content.mesh.parts.map((part) => geometryPrimitive(part.geometry))
       : content.kind;
   }
 
-  it('leaves its lines out of a world draw, which draws none', () => {
-    expect(partsDrawnAsLines('SubResource("mixed")', useMeshContent)).toEqual([false]);
+  it('draws its lines after its triangles', () => {
+    expect(primitivesOf(useMeshContent, 'SubResource("mixed")')).toEqual(['triangles', 'lines']);
   });
 
-  it('draws a mesh of only lines as unresolved in the world, as it did before lines decoded', () => {
-    expect(partsDrawnAsLines('SubResource("lines")', useMeshContent)).toBe('unresolved');
+  it('draws a mesh of only lines', () => {
+    expect(primitivesOf(useMeshContent, 'SubResource("lines")')).toEqual(['lines']);
   });
 
-  it('keeps its lines, after its triangles, for the canvas', () => {
-    expect(partsDrawnAsLines('SubResource("mixed")', useCanvasMeshContent)).toEqual([false, true]);
+  it('leaves its lines out of an instanced draw', () => {
+    expect(primitivesOf(useInstancedMeshContent, 'SubResource("mixed")')).toEqual(['triangles']);
   });
 
-  it('draws a mesh of only lines on the canvas', () => {
-    expect(partsDrawnAsLines('SubResource("lines")', useCanvasMeshContent)).toEqual([true]);
+  it('draws a mesh of only lines as unresolved in an instanced draw', () => {
+    expect(primitivesOf(useInstancedMeshContent, 'SubResource("lines")')).toBe('unresolved');
   });
 });

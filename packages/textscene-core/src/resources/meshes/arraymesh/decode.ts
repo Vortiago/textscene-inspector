@@ -122,6 +122,26 @@ function stripToSegments(strip: Uint32Array): Uint32Array {
 }
 
 /**
+ * A LINES surface's indices, or none when their count is odd: `ref:godot` draws no segment for a
+ * list of 3, 5 or 7 indices, and every segment of one of 4 or 6.
+ */
+function wholeSegments(stored: Uint32Array): Uint32Array {
+  return stored.length % 2 === 0 ? stored : new Uint32Array(0);
+}
+
+/** What a surface of each primitive Godot defines draws, and how its stored indices become a list. */
+const DRAWN_PRIMITIVES = new Map<
+  number,
+  { primitive?: 'points' | 'lines'; listIndices: (stored: Uint32Array) => Uint32Array }
+>([
+  [PRIMITIVE_POINTS, { primitive: 'points', listIndices: (stored) => stored }],
+  [PRIMITIVE_LINES, { primitive: 'lines', listIndices: wholeSegments }],
+  [PRIMITIVE_LINE_STRIP, { primitive: 'lines', listIndices: stripToSegments }],
+  [PRIMITIVE_TRIANGLES, { listIndices: (stored) => stored }],
+  [PRIMITIVE_TRIANGLE_STRIP, { listIndices: stripToTriangles }],
+]);
+
+/**
  * The shared surface loop. `label` names the mesh in diagnostics and errors.
  * `readMaterial` is the one thing that differs between a mesh read out of a
  * `.tres` and one inlined in a scene.
@@ -142,10 +162,8 @@ function decodeSurfaces(
 
     // Godot always writes `primitive` for a saved surface, so an absent key is a triangle surface.
     const primitive = block.includes('"primitive"') ? readInt(block, 'primitive') : PRIMITIVE_TRIANGLES;
-    const isPoints = primitive === PRIMITIVE_POINTS;
-    const isLines = primitive === PRIMITIVE_LINES || primitive === PRIMITIVE_LINE_STRIP;
-    const isStrip = primitive === PRIMITIVE_TRIANGLE_STRIP;
-    if (primitive !== PRIMITIVE_TRIANGLES && !isPoints && !isLines && !isStrip) {
+    const drawn = DRAWN_PRIMITIVES.get(primitive);
+    if (!drawn) {
       undefinedPrimitive++;
       const name = readName(block);
       warn(
@@ -186,11 +204,7 @@ function decodeSurfaces(
       );
       continue;
     }
-    const indices = isStrip
-      ? stripToTriangles(stored)
-      : primitive === PRIMITIVE_LINE_STRIP
-        ? stripToSegments(stored)
-        : stored;
+    const indices = drawn.listIndices(stored);
 
     surfaces.push({
       surfaceIndex,
@@ -204,9 +218,8 @@ function decodeSurfaces(
       normals,
       tangents,
       indices,
-      ...(isPoints && { isPoints }),
-      ...(isLines && { isLines }),
-      ...(isStrip && { isTriangleStrip: true }),
+      ...(drawn.primitive && { primitive: drawn.primitive }),
+      ...(primitive === PRIMITIVE_TRIANGLE_STRIP && { isTriangleStrip: true }),
       ...readMaterial(block),
     });
   }

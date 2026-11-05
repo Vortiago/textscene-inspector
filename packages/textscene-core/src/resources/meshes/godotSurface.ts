@@ -32,17 +32,19 @@ export interface GodotSurface {
   bones?: SurfaceBones;
   /** Three per triangle, or one per drawn point. */
   indices: ArrayLike<number>;
-  /** Godot's `PRIMITIVE_POINTS`: one point per index, drawn at the material's point size. */
-  isPoints?: boolean;
-  /** Godot's `PRIMITIVE_LINES` and `PRIMITIVE_LINE_STRIP`: two indices per segment. */
-  isLines?: boolean;
+  /**
+   * `'points'` for Godot's `PRIMITIVE_POINTS`: one point per index, drawn at the material's point
+   * size. `'lines'` for `PRIMITIVE_LINES` and `PRIMITIVE_LINE_STRIP`: two indices per segment.
+   * Undefined for a triangle surface.
+   */
+  primitive?: 'points' | 'lines';
 }
 
-/** Set on the geometry of points surfaces, which a drawer mounts as `THREE.Points`. */
-const DRAWS_POINTS = 'godotDrawsPoints';
+/** What one three object draws of a Godot mesh: triangles, points or line segments. */
+export type SurfacePrimitive = 'triangles' | 'points' | 'lines';
 
-/** Set on the geometry of line surfaces, which a drawer mounts as `THREE.LineSegments`. */
-const DRAWS_LINES = 'godotDrawsLines';
+/** Set on the geometry of a points or lines surface, which a drawer mounts as `Points` or `LineSegments`. */
+const DRAWN_PRIMITIVE = 'godotPrimitive';
 
 /** Set on the geometry of skinned surfaces: the bones each surface addresses, in surface order. */
 const SURFACE_BONE_COUNTS = 'godotSurfaceBoneCounts';
@@ -56,20 +58,20 @@ export function surfaceBoneCounts(geometry: THREE.BufferGeometry): readonly numb
   return geometry.userData[SURFACE_BONE_COUNTS] as readonly number[] | undefined;
 }
 
-/** Whether `godotSurfacesGeometry` built `geometry` from points surfaces. */
-export function geometryDrawsPoints(geometry: THREE.BufferGeometry): boolean {
-  return geometry.userData[DRAWS_POINTS] === true;
+/** The primitive `godotSurfacesGeometry` built `geometry` for. */
+export function geometryPrimitive(geometry: THREE.BufferGeometry): SurfacePrimitive {
+  return (geometry.userData[DRAWN_PRIMITIVE] as SurfacePrimitive | undefined) ?? 'triangles';
 }
 
-/** Whether `godotSurfacesGeometry` built `geometry` from line surfaces. */
-export function geometryDrawsLines(geometry: THREE.BufferGeometry): boolean {
-  return geometry.userData[DRAWS_LINES] === true;
+/** Whether `godotSurfacesGeometry` built `geometry` from points surfaces. */
+export function geometryDrawsPoints(geometry: THREE.BufferGeometry): boolean {
+  return geometryPrimitive(geometry) === 'points';
 }
 
 /** Marks `target` as drawing the primitive `source` draws, for a geometry rebuilt from another. */
 export function copyDrawnPrimitive(source: THREE.BufferGeometry, target: THREE.BufferGeometry): void {
-  if (geometryDrawsPoints(source)) target.userData[DRAWS_POINTS] = true;
-  if (geometryDrawsLines(source)) target.userData[DRAWS_LINES] = true;
+  const primitive = geometryPrimitive(source);
+  if (primitive !== 'triangles') target.userData[DRAWN_PRIMITIVE] = primitive;
 }
 
 /** The surfaces one three object draws, as one geometry with a draw group per surface, in order. */
@@ -83,22 +85,22 @@ export interface SurfacePart<S extends GodotSurface> {
  * points and line surfaces each become a part, in that order, and a mesh of one kind has one.
  */
 export function godotSurfaceParts<S extends GodotSurface>(surfaces: readonly S[]): SurfacePart<S>[] {
-  const triangles = surfaces.filter((surface) => !surface.isPoints && !surface.isLines);
-  const points = surfaces.filter((surface) => surface.isPoints);
-  const lines = surfaces.filter((surface) => surface.isLines);
-  return [triangles, points, lines]
+  const parts = [undefined, 'points', 'lines'].map((primitive) =>
+    surfaces.filter((surface) => surface.primitive === primitive)
+  );
+  return parts
     .filter((part) => part.length > 0)
     .map((part) => ({ geometry: godotSurfacesGeometry(part), surfaces: part }));
 }
 
 /**
  * The surfaces of one primitive type as one geometry: all triangles, all points or all lines. Points
- * draw as `THREE.Points`, with their indices kept in order and a normal for every vertex. Lines
- * draw as `THREE.LineSegments`, with no normal.
+ * and lines keep their indices in order and get a normal for every vertex, as Godot's default
+ * buffer gives one.
  */
 export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.BufferGeometry {
-  const isPoints = surfaces.length > 0 && surfaces.every((s) => s.isPoints);
-  const isLines = surfaces.length > 0 && surfaces.every((s) => s.isLines);
+  const primitive = surfaces.length > 0 ? surfaces[0]!.primitive : undefined;
+  const isListed = primitive !== undefined && surfaces.every((s) => s.primitive === primitive);
   const geometry = new THREE.BufferGeometry();
 
   const vertexCountOf = (surface: GodotSurface) => surface.positions.length / 3;
@@ -120,7 +122,7 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
   // UV2 keeps Godot's top-down V, which the UV2 binding samples, and a surface without one keeps
   // (0, 0), where Godot samples it.
   const uv2s = surfaces.some((s) => s.uv2s) ? new Float32Array(totalVertices * 2) : undefined;
-  const normals = useDecodedNormals || isPoints ? new Float32Array(totalVertices * 3) : undefined;
+  const normals = useDecodedNormals || isListed ? new Float32Array(totalVertices * 3) : undefined;
   // three builds `vBitangent = cross(normal, tangent) * w`, Godot's binormal
   // (`scene_forward_clustered.glsl:756`), so the tangents pass through as Godot wrote them.
   const tangents = useDecodedTangents ? new Float32Array(totalVertices * 4) : undefined;
@@ -159,7 +161,7 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
     // Re-base each surface's indices into the merged vertex array. A triangle's winding reverses:
     // Godot fronts triangles clockwise and three.js counter-clockwise, so without the swap every
     // face is back-culled. A point or a segment has no winding.
-    if (isPoints || isLines) {
+    if (isListed) {
       for (let i = 0; i < indexCount; i++) indices[indexBase + i] = surface.indices[i]! + vertexBase;
     } else {
       for (let i = 0; i + 2 < indexCount; i += 3) {
@@ -180,7 +182,7 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   if (normals) {
     geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-  } else if (!isLines) {
+  } else {
     geometry.computeVertexNormals();
   }
   if (tangents) geometry.setAttribute('tangent', new THREE.BufferAttribute(tangents, 4));
@@ -188,8 +190,7 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
     geometry.setAttribute('skinIndex', new THREE.BufferAttribute(skin.indices, 4));
     geometry.setAttribute('skinWeight', new THREE.BufferAttribute(skin.weights, 4));
   }
-  if (isPoints) geometry.userData[DRAWS_POINTS] = true;
-  if (isLines) geometry.userData[DRAWS_LINES] = true;
+  if (isListed) geometry.userData[DRAWN_PRIMITIVE] = primitive;
   if (isSkinned) geometry.userData[SURFACE_BONE_COUNTS] = surfaces.map((s) => boneCountOf(s.bones));
 
   return geometry;

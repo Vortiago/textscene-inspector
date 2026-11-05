@@ -17,7 +17,7 @@ import { LightmapSubInstanceProvider } from '../../../r3f/lightmap/useLightmapAs
 import { Node3D } from '../../base/node3d/Component';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
 import type { MaterialSource } from '../../../r3f/materials/materialSource';
-import { useMeshContent, type SurfacedPart } from '../../../r3f/meshes/meshContent';
+import { useInstancedMeshContent, type SurfacedPart } from '../../../r3f/meshes/meshContent';
 import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { usePathResolution } from '../../../resources/useSubOrExtResource';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
@@ -187,7 +187,7 @@ interface GridMapItemProps extends CellGrid {
  * billboards per instance in its shader (`scene_forward_clustered.glsl:338-342`).
  */
 function GridMapItem({ item, isMeshHeldLocally, cells, cellSize, cellCenter, cellScale }: GridMapItemProps) {
-  const content = useMeshContent(usePathResolution(item.meshPath), isMeshHeldLocally);
+  const content = useInstancedMeshContent(usePathResolution(item.meshPath), isMeshHeldLocally);
 
   // `cellCenter` is compared by identity: the parser hands back one shared
   // frozen instance for the all-centered default, so re-parsing an unchanged
@@ -278,7 +278,7 @@ function PartSurfaces({
       <NextPassChain
         sources={surfaces}
         geometry={cellPoints?.geometry ?? geometry}
-        drawsPoints={points}
+        primitive={points ? 'points' : 'triangles'}
         godotLayers={GODOT_DEFAULT_VISUAL_LAYERS}
         shadow={shadow}
         draw={chainDraw}

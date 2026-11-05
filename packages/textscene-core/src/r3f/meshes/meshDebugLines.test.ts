@@ -7,7 +7,11 @@ import type { SurfacedMesh } from './meshContent';
 import { meshDebugLines } from './meshDebugLines';
 
 function surface(positions: number[], indices: number[], isPoints = false): GodotSurface {
-  return { positions: new Float32Array(positions), indices, isPoints };
+  return {
+    positions: new Float32Array(positions),
+    indices,
+    ...(isPoints && { primitive: 'points' as const }),
+  };
 }
 
 function meshOf(...surfaces: GodotSurface[]): SurfacedMesh {
@@ -16,8 +20,8 @@ function meshOf(...surfaces: GodotSurface[]): SurfacedMesh {
     surfaceIndices: kind.map((_surface, index) => index),
     materials: kind.map(() => undefined),
   });
-  const triangles = surfaces.filter((s) => !s.isPoints);
-  const points = surfaces.filter((s) => s.isPoints);
+  const triangles = surfaces.filter((s) => !s.primitive);
+  const points = surfaces.filter((s) => s.primitive === 'points');
   const [first, ...rest] = [triangles, points].filter((kind) => kind.length > 0).map(part);
   return { parts: [first!, ...rest] };
 }

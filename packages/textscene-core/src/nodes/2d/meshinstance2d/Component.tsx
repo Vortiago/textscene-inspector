@@ -20,9 +20,9 @@ import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import type { CanvasItemSurface } from '../../../r3f/lighting2d/normalMappedLighting';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { canvasMeshGeometry } from '../../../r3f/meshes/canvasMeshGeometry';
-import { useCanvasMeshContent, type SurfacedMesh } from '../../../r3f/meshes/meshContent';
+import { drawnTag, useMeshContent, type SurfacedMesh } from '../../../r3f/meshes/meshContent';
 import { canvasPointSize } from '../../../r3f/materials/godotPoint';
-import { geometryDrawsLines, geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
+import { geometryPrimitive } from '../../../resources/meshes/godotSurface';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
@@ -32,7 +32,7 @@ import type { MeshInstance2DProperties } from './types';
 export function MeshInstance2D({ node, children }: NodeComponentProps) {
   const props = node.properties as MeshInstance2DProperties;
   const pools = useSceneResources();
-  const content = useCanvasMeshContent(useResourceResolution(props.mesh, pools));
+  const content = useMeshContent(useResourceResolution(props.mesh, pools));
   const geometries = useCanvasGeometries(content.kind === 'surfaced' ? content.mesh : null);
 
   const {
@@ -107,7 +107,8 @@ function CanvasSurfaces({
   pixelMaterial: CanvasItemPixelMaterial;
 }) {
   const hasVertexColors = geometry.hasAttribute('color');
-  const drawsPoints = geometryDrawsPoints(geometry);
+  const primitive = geometryPrimitive(geometry);
+  const drawsPoints = primitive === 'points';
   const pixelRatio = useThree((state) => state.viewport.dpr);
   const map = canvasMapProps(texture);
   const point = drawsPoints ? canvasPointSize(pixelRatio) : undefined;
@@ -130,7 +131,7 @@ function CanvasSurfaces({
   });
 
   const material = <meshBasicMaterial key={program.key} {...program.props} />;
-  const Draw = drawsPoints ? 'points' : geometryDrawsLines(geometry) ? 'lineSegments' : 'mesh';
+  const Draw = drawnTag(primitive);
   return (
     <Draw>
       <primitive object={geometry} attach="geometry" />

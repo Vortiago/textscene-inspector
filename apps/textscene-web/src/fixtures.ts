@@ -208,6 +208,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Array Mesh Lines Materials",
+    "file": "unit-array-mesh-lines-materials.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Array Mesh Lines",
+    "file": "unit-array-mesh-lines.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Aspect Ratio Container Rtl",
     "file": "unit-aspect-ratio-container-rtl.tscn",
     "category": "Other"

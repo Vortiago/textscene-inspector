@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
-  geometryDrawsLines,
-  geometryDrawsPoints,
+  geometryPrimitive,
   godotSurfacesGeometry,
   type GodotSurface,
 } from '../../resources/meshes/godotSurface';
@@ -58,11 +57,10 @@ describe('canvasMeshGeometry', () => {
 
   it('stays a points geometry or a lines geometry, for the object that draws it', () => {
     const bare = { positions: new Float32Array([0, 0, 0, 1, 0, 0]), indices: [0, 1] };
-    const points = canvasMeshGeometry(godotSurfacesGeometry([{ ...bare, isPoints: true }]));
-    const lines = canvasMeshGeometry(godotSurfacesGeometry([{ ...bare, isLines: true }]));
+    const points = canvasMeshGeometry(godotSurfacesGeometry([{ ...bare, primitive: 'points' }]));
+    const lines = canvasMeshGeometry(godotSurfacesGeometry([{ ...bare, primitive: 'lines' }]));
 
-    expect([geometryDrawsPoints(points), geometryDrawsLines(points)]).toEqual([true, false]);
-    expect([geometryDrawsPoints(lines), geometryDrawsLines(lines)]).toEqual([false, true]);
+    expect([geometryPrimitive(points), geometryPrimitive(lines)]).toEqual(['points', 'lines']);
   });
 
   it('leaves the source geometry as it was', () => {

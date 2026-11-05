@@ -2,8 +2,8 @@
 
 /**
  * One decoded mesh surface: a TRIANGLES primitive, a TRIANGLE_STRIP that `indices` already lists as
- * triangles, POINTS when `isPoints` is set, or LINES or LINE_STRIP when `isLines` is set, which
- * `indices` already lists as segments.
+ * triangles, or POINTS or LINES or LINE_STRIP when `primitive` is set, which `indices` already
+ * lists as segments.
  */
 export interface ArrayMeshSurface {
   /**
@@ -36,10 +36,11 @@ export interface ArrayMeshSurface {
    * `godotSurfacesGeometry` copies them into the width the merged mesh needs.
    */
   indices: Uint32Array;
-  /** Godot's `PRIMITIVE_POINTS`: one point per index. Absent for a triangle surface. */
-  isPoints?: boolean;
-  /** Godot's `PRIMITIVE_LINES` or `PRIMITIVE_LINE_STRIP`: two indices per segment. Absent for any other surface. */
-  isLines?: boolean;
+  /**
+   * `'points'` for Godot's `PRIMITIVE_POINTS`, one point per index. `'lines'` for `PRIMITIVE_LINES` or
+   * `PRIMITIVE_LINE_STRIP`, two indices per segment. Absent for a triangle surface.
+   */
+  primitive?: 'points' | 'lines';
   /** Godot's `PRIMITIVE_TRIANGLE_STRIP`, which `indices` lists as triangles. Absent for any other surface. */
   isTriangleStrip?: boolean;
   /** Resolved `res://` path of the surface's material, if it has one. */

@@ -23,7 +23,7 @@ import {
   type SurfacedMesh,
   type SurfacedPart,
 } from '../../../r3f/meshes/meshContent';
-import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
+import { geometryPrimitive, type SurfacePrimitive } from '../../../resources/meshes/godotSurface';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
@@ -99,7 +99,8 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
   const shadow = useGeometryInstance(content.kind === 'unresolved' ? UNPLACED : placement);
 
   // The shell is the mesh's first part, which draws triangles when the mesh has any.
-  const drawsPoints = content.kind === 'surfaced' && geometryDrawsPoints(content.mesh.parts[0].geometry);
+  const primitive: SurfacePrimitive =
+    content.kind === 'surfaced' ? geometryPrimitive(content.mesh.parts[0].geometry) : 'triangles';
   const skin = useMeshSkin(properties, useNodePath());
   const bindCount = skin?.matrices.length ?? 0;
   // The instance has no bounds only where every surface of every part outgrows the skin.
@@ -113,7 +114,7 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
   const shellProps = {
     name: node.name,
     meshRef,
-    drawsPoints,
+    primitive,
     skeleton,
     transform,
     shadow,
@@ -188,7 +189,7 @@ const NO_PARTS: readonly SurfacedPart[] = [];
  */
 function MaterialOverlayMesh({
   meshRef,
-  drawsPoints,
+  primitive,
   skeleton,
   godotLayers,
   source,
@@ -196,8 +197,8 @@ function MaterialOverlayMesh({
   renderOrder,
 }: {
   meshRef: RefObject<DrawnMesh | null>;
-  /** The base draws points, so the overlay does too. */
-  drawsPoints: boolean;
+  /** What the base draws, so the overlay draws it too. */
+  primitive: SurfacePrimitive;
   /** The base is skinned, so the overlay is skinned by the same skeleton. */
   skeleton?: THREE.Skeleton | null;
   /** The node's `layers`, which an overlay chain draw carries for the decals and probes. */
@@ -215,7 +216,7 @@ function MaterialOverlayMesh({
   // share one component and the two meshes share one geometry.
   const geometry = useDrawnGeometry(meshRef);
   if (!geometry) return null;
-  const { Drawn, skin } = drawnElementOf(drawsPoints, skeleton);
+  const { Drawn, skin } = drawnElementOf(primitive, skeleton);
   return (
     <>
       <Drawn
@@ -225,7 +226,7 @@ function MaterialOverlayMesh({
         renderOrder={renderOrder}
         receiveShadow
       >
-        <SurfaceMaterialSlot source={source} points={drawsPoints ? 'mesh' : undefined} />
+        <SurfaceMaterialSlot source={source} points={primitive === 'points' ? 'mesh' : undefined} />
       </Drawn>
       <NextPassLink
         source={source}
@@ -236,7 +237,7 @@ function MaterialOverlayMesh({
         geometry={geometry}
         attach="material"
         surfaceCount={1}
-        drawsPoints={drawsPoints}
+        primitive={primitive}
         skeleton={skeleton}
         godotLayers={godotLayers}
         shadow={shadow}
@@ -249,8 +250,8 @@ interface MeshShellProps {
   name: string;
   /** Ref to the underlying THREE.Mesh or THREE.Points, whose geometry the overlay draws again. */
   meshRef: RefObject<DrawnMesh | null>;
-  /** The mesh draws `PRIMITIVE_POINTS`, so the shell mounts `<points>`. */
-  drawsPoints: boolean;
+  /** What the mesh's first part draws, which the shell mounts as `<mesh>`, `<points>` or `<lineSegments>`. */
+  primitive: SurfacePrimitive;
   /** The skeleton that skins the shell's surfaces, or null for an unskinned draw. */
   skeleton: THREE.Skeleton | null;
   transform: NodeTransform;
@@ -272,7 +273,7 @@ interface MeshShellProps {
 function MeshShell({
   name,
   meshRef,
-  drawsPoints,
+  primitive,
   skeleton,
   transform,
   shadow,
@@ -280,7 +281,7 @@ function MeshShell({
   subtree,
   children,
 }: MeshShellProps) {
-  const { Drawn, skin } = drawnElementOf(drawsPoints, skeleton);
+  const { Drawn, skin } = drawnElementOf(primitive, skeleton);
   return (
     <Drawn
       {...skin}
@@ -343,15 +344,15 @@ function MeshSurfaces({
   const sources = Array.from({ length: groupCount }, (_unused, i) =>
     effectiveMaterialSource(overrides, part.surfaceIndices[i] ?? i, part.materials[i])
   );
-  const drawsPoints = geometryDrawsPoints(part.geometry);
+  const primitive = geometryPrimitive(part.geometry);
   return (
     <>
       <primitive object={part.geometry} attach="geometry" />
-      <SurfaceMaterialSlots sources={sources} points={drawsPoints ? 'mesh' : undefined} />
+      <SurfaceMaterialSlots sources={sources} points={primitive === 'points' ? 'mesh' : undefined} />
       <NextPassChain
         meshRef={meshRef}
         sources={sources}
-        drawsPoints={drawsPoints}
+        primitive={primitive}
         skeleton={skeleton}
         godotLayers={godotLayers}
         shadow={shadow}
@@ -360,7 +361,7 @@ function MeshSurfaces({
             ? (renderOrder) => (
                 <MaterialOverlayMesh
                   meshRef={meshRef}
-                  drawsPoints={drawsPoints}
+                  primitive={primitive}
                   skeleton={skeleton}
                   godotLayers={godotLayers}
                   source={overlaySource}
@@ -394,8 +395,7 @@ function FollowingPart({
   godotLayers: number;
 }) {
   const ref = useRef<DrawnMesh | null>(null);
-  const drawsPoints = geometryDrawsPoints(part.geometry);
-  const Drawn = drawnTag(drawsPoints);
+  const Drawn = drawnTag(geometryPrimitive(part.geometry));
   return (
     <Drawn ref={ref} {...drawHookProps(shadow)} userData={visualLayersUserData(godotLayers)}>
       <MeshSurfaces

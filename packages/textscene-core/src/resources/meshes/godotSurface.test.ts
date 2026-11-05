@@ -7,8 +7,8 @@ import * as THREE from 'three';
 import { decodeArrayMeshTres } from '../testing/decodeArrayMeshTres';
 import type { ArrayMeshData } from './arraymesh/types';
 import {
-  geometryDrawsLines,
   geometryDrawsPoints,
+  geometryPrimitive,
   godotSurfaceParts,
   godotSurfacesGeometry,
   godotTriangleVertices,
@@ -43,7 +43,6 @@ function triangle(overrides: Partial<ArrayMeshData['surfaces'][number] & GodotSu
   return {
     surfaceIndex: 0,
     format: 0,
-    primitive: 3,
     vertexCount: 3,
     indexCount: 3,
     positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
@@ -243,7 +242,7 @@ describe('godotSurfacesGeometry', () => {
 });
 
 describe('godotSurfacesGeometry for a points surface', () => {
-  const POINT: GodotSurface = { positions: new Float32Array([1, 2, 3]), indices: [0], isPoints: true };
+  const POINT: GodotSurface = { positions: new Float32Array([1, 2, 3]), indices: [0], primitive: 'points' };
 
   it('draws each vertex through its index, in one draw group', () => {
     const geometry = godotSurfacesGeometry([POINT]);
@@ -264,7 +263,7 @@ describe('godotSurfacesGeometry of points surfaces', () => {
   const points = (positions: number[], extra: Partial<GodotSurface> = {}): GodotSurface => ({
     positions: new Float32Array(positions),
     indices: new Uint32Array([0]),
-    isPoints: true,
+    primitive: 'points',
     ...extra,
   });
 
@@ -292,7 +291,7 @@ describe('godotSurfaceParts', () => {
   const point = (tag: string): GodotSurface & { tag: string } => ({
     positions: new Float32Array([0, 0, 0]),
     indices: [0],
-    isPoints: true,
+    primitive: 'points',
     tag,
   });
   const tri = (tag: string): GodotSurface & { tag: string } => ({ ...triangle(), tag });
@@ -377,7 +376,7 @@ describe('godotSurfacesGeometry vertex colours', () => {
 });
 
 describe('godotSurfacesGeometry of lines surfaces', () => {
-  const SEGMENTS = triangle({ isLines: true, indices: new Uint32Array([0, 1, 1, 2]) });
+  const SEGMENTS = triangle({ primitive: 'lines', indices: new Uint32Array([0, 1, 1, 2]) });
 
   it('keeps the segments in order, with no winding to swap', () => {
     const geo = godotSurfacesGeometry([SEGMENTS]);
@@ -385,19 +384,21 @@ describe('godotSurfacesGeometry of lines surfaces', () => {
     expect(Array.from(geo.getIndex()!.array)).toEqual([0, 1, 1, 2]);
   });
 
-  it('flags the geometry as lines, and no other', () => {
-    expect(geometryDrawsLines(godotSurfacesGeometry([SEGMENTS]))).toBe(true);
-    expect(geometryDrawsLines(godotSurfacesGeometry([triangle()]))).toBe(false);
+  it('names the primitive the geometry draws, and triangles for none', () => {
+    expect(geometryPrimitive(godotSurfacesGeometry([SEGMENTS]))).toBe('lines');
+    expect(geometryPrimitive(godotSurfacesGeometry([triangle()]))).toBe('triangles');
   });
 
-  it('computes no normals, which a segment has none of', () => {
-    expect(godotSurfacesGeometry([SEGMENTS]).hasAttribute('normal')).toBe(false);
+  it("gives every vertex Godot's default normal, as a points surface gets", () => {
+    const normals = godotSurfacesGeometry([{ ...SEGMENTS, normals: undefined }]).getAttribute('normal');
+
+    expect(Array.from(normals.array)).toEqual([0, 0, 1, 0, 0, 1, 0, 0, 1]);
   });
 
   it('draws the lines of a mesh after its triangles and points, as a part of their own', () => {
     const parts = godotSurfaceParts([
       SEGMENTS,
-      triangle({ surfaceIndex: 1, isPoints: true }),
+      triangle({ surfaceIndex: 1, primitive: 'points' }),
       triangle({ surfaceIndex: 2 }),
     ]);
 
@@ -406,6 +407,6 @@ describe('godotSurfacesGeometry of lines surfaces', () => {
       [1],
       [0],
     ]);
-    expect(parts.map((part) => geometryDrawsLines(part.geometry))).toEqual([false, false, true]);
+    expect(parts.map((part) => geometryPrimitive(part.geometry))).toEqual(['triangles', 'points', 'lines']);
   });
 });

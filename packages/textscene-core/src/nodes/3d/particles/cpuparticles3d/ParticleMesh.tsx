@@ -21,7 +21,7 @@ import {
 import { useOneSurfaceStartingMaterial } from '../../../../r3f/materials/useOneSurfaceStartingMaterial';
 import { NO_RAYCAST, overlayDrawProps } from '../../../../r3f/materials/materialOverlay';
 import { withParticleDraw } from '../../../../r3f/materials/godotParticlesProgram';
-import { useMeshContent } from '../../../../r3f/meshes/meshContent';
+import { useInstancedMeshContent } from '../../../../r3f/meshes/meshContent';
 import {
   instanceMatrices,
   raycastInstancedPoints,
@@ -44,7 +44,7 @@ interface ParticleMeshProps {
 /** The mesh at every particle. A node with no mesh, or one that is not loaded yet, draws none. */
 export function ParticleMesh({ properties, buffer, shadow }: ParticleMeshProps) {
   const pools = useSceneResources();
-  const content = useMeshContent(useResourceResolution(properties.mesh, pools));
+  const content = useInstancedMeshContent(useResourceResolution(properties.mesh, pools));
   const override = useMemo(
     () => resolveMaterialSource(properties.materialOverride, pools),
     [properties.materialOverride, pools]
@@ -210,7 +210,7 @@ function ParticlePoints({ draws }: { draws: ParticlePartDraws }) {
       <NextPassChain
         sources={draw.sources}
         geometry={geometry}
-        drawsPoints
+        primitive="points"
         godotLayers={draw.godotLayers}
         shadow={draw.shadow}
         draw={chainDrawOf(true)}
@@ -238,7 +238,7 @@ function ParticleMeshInstances({ draws }: { draws: ParticlePartDraws }) {
       <NextPassChain
         sources={draw.sources}
         geometry={geometry}
-        drawsPoints={false}
+        primitive="triangles"
         godotLayers={draw.godotLayers}
         shadow={draw.shadow}
         draw={chainDrawOf(false)}
@@ -294,7 +294,7 @@ function OverlayDraw({
         geometry={geometry}
         attach="material"
         surfaceCount={1}
-        drawsPoints={points}
+        primitive={points ? 'points' : 'triangles'}
         godotLayers={godotLayers}
         shadow={shadow}
         draw={chainDrawOf(points)}

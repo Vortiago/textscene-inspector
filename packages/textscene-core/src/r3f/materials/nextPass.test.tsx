@@ -42,20 +42,24 @@ describe('drawnElementOf', () => {
   const skeleton = new THREE.Skeleton([new THREE.Bone()]);
 
   it('skins a triangles draw by the given skeleton, detached, in mesh space', () => {
-    const { Drawn, skin } = drawnElementOf(false, skeleton);
+    const { Drawn, skin } = drawnElementOf('triangles', skeleton);
     expect(Drawn).toBe('skinnedMesh');
     expect(skin).toEqual({ skeleton, bindMode: THREE.DetachedBindMode });
   });
 
   it('skins a points draw by nothing: a point skinned is not a point draw', () => {
-    const { Drawn, skin } = drawnElementOf(true, skeleton);
+    const { Drawn, skin } = drawnElementOf('points', skeleton);
     expect(Drawn).toBe('points');
     expect(skin).toEqual({});
   });
 
+  it('draws a lines surface as line segments', () => {
+    expect(drawnElementOf('lines', null).Drawn).toBe('lineSegments');
+  });
+
   it('draws an unskinned triangles surface as a mesh', () => {
-    expect(drawnElementOf(false, null).Drawn).toBe('mesh');
-    expect(drawnElementOf(false, undefined).Drawn).toBe('mesh');
+    expect(drawnElementOf('triangles', null).Drawn).toBe('mesh');
+    expect(drawnElementOf('triangles', undefined).Drawn).toBe('mesh');
   });
 });
 

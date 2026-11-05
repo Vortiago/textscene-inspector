@@ -2,8 +2,7 @@
  * What a resolved mesh draws: its geometry and each draw group's own material, whatever kind of
  * mesh it is and wherever it lives. MeshInstance3D and GridMap read a mesh through this one hook.
  * An ArrayMesh with a path decodes once through the ArrayMesh processor. Every other mesh builds in
- * place. A TextMesh builds once its font has loaded. The 2D canvas draws a mesh's line surfaces and
- * the world draws none, so each reads the mesh through its own hook.
+ * place. A TextMesh builds once its font has loaded.
  */
 
 import { useMemo } from 'react';
@@ -12,7 +11,11 @@ import type { TscnInternalResource } from '../../parser/types';
 import { warn } from '../../logger';
 import { projectPrimitiveMeshTexelSize } from '../../parser/projectSettingsParser';
 import { decodeSceneArrayMesh } from '../../resources/meshes/arraymesh/decode';
-import { geometryDrawsLines, godotSurfaceParts } from '../../resources/meshes/godotSurface';
+import {
+  geometryPrimitive,
+  godotSurfaceParts,
+  type SurfacePrimitive,
+} from '../../resources/meshes/godotSurface';
 import {
   meshKind,
   primitiveMaterialAddress,
@@ -55,9 +58,11 @@ export interface SurfacedMesh {
   parts: readonly [SurfacedPart, ...SurfacedPart[]];
 }
 
-/** The R3F tag that draws a surface: `THREE.Points` for geometry of Godot's `PRIMITIVE_POINTS`, else a `THREE.Mesh`. */
-export function drawnTag(drawsPoints: boolean): 'points' | 'mesh' {
-  return drawsPoints ? 'points' : 'mesh';
+const DRAWN_TAGS = { triangles: 'mesh', points: 'points', lines: 'lineSegments' } as const;
+
+/** The R3F tag that draws a surface: `THREE.Points` for points, `THREE.LineSegments` for lines, else a `THREE.Mesh`. */
+export function drawnTag(primitive: SurfacePrimitive): (typeof DRAWN_TAGS)[SurfacePrimitive] {
+  return DRAWN_TAGS[primitive];
 }
 
 type MeshContent =
@@ -78,16 +83,41 @@ const NONE: MeshContent = { kind: 'none' };
 const LOADING: MeshContent = { kind: 'loading' };
 const EMPTY: MeshContent = { kind: 'empty' };
 
+/**
+ * `useMeshContent` for a draw that places a mesh at many instances, a GridMap's cells or a
+ * CPUParticles3D's particles. Their materials and batches draw triangles and points, so a mesh of
+ * only lines is unresolved there.
+ *
+ * @canonical Mesh content for an instanced draw
+ */
+export function useInstancedMeshContent(
+  resolution: ResourceResolution,
+  isHeldLocally: boolean = NODE_PROPERTY
+): MeshContent {
+  const content = useMeshContent(resolution, isHeldLocally);
+  const mesh = content.kind === 'surfaced' ? content.mesh : null;
+  const withoutLines = useMemo(() => mesh && meshWithoutLines(mesh), [mesh]);
+  if (content.kind !== 'surfaced' || withoutLines === mesh) return content;
+  return withoutLines ? { kind: 'surfaced', mesh: withoutLines } : UNRESOLVED;
+}
+
+/** `mesh` without its line parts, `mesh` itself when it has none, or null when only lines are left. */
+function meshWithoutLines(mesh: SurfacedMesh): SurfacedMesh | null {
+  const parts = mesh.parts.filter((part) => geometryPrimitive(part.geometry) !== 'lines');
+  if (parts.length === mesh.parts.length) return mesh;
+  const kept = nonEmpty(parts);
+  return kept && { parts: kept };
+}
+
 /** The path the ArrayMesh processor decodes, for an ArrayMesh with a path. Null for any other mesh. */
 export function arrayMeshPath({ scoped, resourcePath }: ResourceResolution): string | null {
   return resourcePath && scoped && meshKind(scoped.resource.type) === 'arrayMesh' ? resourcePath : null;
 }
 
 /**
- * `resolution`'s mesh for a world draw, whose surfaces are triangles and points. A mesh of only
- * lines is unresolved, as it was when the decoder dropped lines. `isHeldLocally` is false when a
- * resource between the node and the mesh, such as a GridMap's MeshLibrary, is not local to scene.
- * A mesh that is a node's property has none between.
+ * `resolution`'s mesh, with the parts it draws as triangles, points and lines. `isHeldLocally` is
+ * false when a resource between the node and the mesh, such as a GridMap's MeshLibrary, is not
+ * local to scene. A mesh that is a node's property has none between.
  *
  * @canonical Mesh content and its disposal
  */
@@ -95,33 +125,6 @@ export function useMeshContent(
   resolution: ResourceResolution,
   isHeldLocally: boolean = NODE_PROPERTY
 ): MeshContent {
-  const content = useMeshParts(resolution, isHeldLocally);
-  const mesh = content.kind === 'surfaced' ? content.mesh : null;
-  const withoutLines = useMemo(() => mesh && meshWithoutLines(mesh), [mesh]);
-  if (content.kind !== 'surfaced' || withoutLines === mesh) return content;
-  return withoutLines ? { kind: 'surfaced', mesh: withoutLines } : UNRESOLVED;
-}
-
-/**
- * A canvas item's mesh, whose surfaces are triangles, points and lines: the 2D canvas draws all
- * three (`renderer_canvas_render_rd.cpp:3187-3212`). The mesh is the node's own property.
- *
- * @canonical Mesh content of a canvas item
- */
-export function useCanvasMeshContent(resolution: ResourceResolution): MeshContent {
-  return useMeshParts(resolution, NODE_PROPERTY);
-}
-
-/** `mesh` without its line parts, `mesh` itself when it has none, or null when only lines are left. */
-function meshWithoutLines(mesh: SurfacedMesh): SurfacedMesh | null {
-  const parts = mesh.parts.filter((part) => !geometryDrawsLines(part.geometry));
-  if (parts.length === mesh.parts.length) return mesh;
-  const kept = nonEmpty(parts);
-  return kept && { parts: kept };
-}
-
-/** Every part of the mesh `resolution` names, lines included. */
-function useMeshParts(resolution: ResourceResolution, isHeldLocally: boolean): MeshContent {
   const { scoped, status, resourcePath } = resolution;
   const kind = scoped ? meshKind(scoped.resource.type) : null;
   const isMaterialHeldLocally = scoped ? isHeldLocally && isLocalToScene(scoped.resource) : isHeldLocally;
