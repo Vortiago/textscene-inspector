@@ -23,6 +23,8 @@ each stacked shadow and each stacked outline draw from the last index to the fir
 comes last. A ring is a stroked contour with a one-sided radius of `outline_size / 4` px (`text_server_adv.cpp:1383`).
 It draws on the canvas painter for the bundled font and a scene font alike (ADR-0040). The fill and the plain shadows
 draw on the painter their font takes.
+An embolden over the bundled font draws on the canvas painter, which emboldens the outline as
+FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0040).
 
 A `label_settings.font` resolves in the file that wrote the settings. A font that is loading draws
 nothing (`label.cpp:112`, ADR-0059).
@@ -155,7 +157,6 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
   continuation line does not reserve the leading tab/space indent Godot re-applies to it.
 - **Approximated** A trimmed FILL line with autowrap OFF is not re-justified with
   `JUSTIFICATION_CONSTRAIN_ELLIPSIS` (`label.cpp:325`, #1318).
-- **Approximated** An embolden above about 1.4 over the bundled font differs from FreeType, since the atlas rounds corners and holds limited growth.
 - **Not drawn** The doubled-backslash escapes of `paragraph_separator`, so a literal
   `"\\n"` stays two characters where Godot's `String::c_unescape()` (label.cpp:158) makes
   it a newline.

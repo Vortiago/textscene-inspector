@@ -9,14 +9,12 @@ import { projectDefaultFontGeneratesMipmaps } from '../../../parser/projectSetti
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { peekBundledCanvasFontMetrics } from '../../../r3f/controls/native/text/bundledFontLoader';
-import { withOutlines, withVariation } from '../../../r3f/controls/native/text/fontMetrics';
+import { peekBundledCanvasFace } from '../../../r3f/controls/native/text/bundledCanvasFace';
 import {
   isCanvasFontMetrics,
   type CanvasFontMetrics,
 } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { peekSettledSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
-import { peekGlyphOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
 import { fontGeneratesMipmaps } from '../../../r3f/controls/native/text/sceneFontResolution';
 import { useSceneFontSettleCount } from '../../../r3f/controls/native/text/useSceneFontSettleCount';
 import { resolveFontReference } from '../../../resources/fonts/font/resolveFontReference';
@@ -36,7 +34,7 @@ export interface Label3DFont {
 /**
  * Undefined while the bundled font registers, or while the font file, the project font, the metrics
  * or, for an emboldened or sheared label, the outlines of the font load: nothing draws against
- * the wrong face meanwhile.
+ * the wrong face meanwhile. A bundled font that cannot register leaves an atlas face undefined for good.
  */
 export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undefined {
   const resources = useSceneResources();
@@ -48,20 +46,13 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
   const { loadedFont, projectFonts, isLoading } = useLoadedFilesAndFonts(noFiles, fontsPlan, true);
   const { settings } = useProjectSettings();
 
-  const bundled = peekBundledCanvasFontMetrics();
   const settledFont = (): Label3DFont | undefined => {
-    if (!bundled) return undefined;
     const font = fontForNode('Label3D', fontRef, { resources, loadedFont, projectFonts });
     const settled = peekSettledSceneFontMetrics(font, nodePath);
     if (!settled) return undefined;
-    // A canvas face carries its outlines already, or none when unvaried (null, not the undefined of a load in flight).
-    // An atlas face draws as the bundled canvas face.
-    const outlines = isCanvasFontMetrics(settled)
-      ? (settled.outlines ?? null)
-      : peekGlyphOutlines(font, bundled, settled);
-    if (outlines === undefined) return undefined;
-    const varied = isCanvasFontMetrics(settled) ? settled : withVariation(bundled, settled);
-    const metrics = outlines ? withOutlines(varied, outlines) : varied;
+    // A canvas face carries its outlines already. An atlas face draws as the bundled canvas face.
+    const metrics = isCanvasFontMetrics(settled) ? settled : peekBundledCanvasFace(settled);
+    if (!metrics) return undefined;
     return {
       metrics,
       generatesMipmaps: fontGeneratesMipmaps(font) ?? projectDefaultFontGeneratesMipmaps(settings),

@@ -87,7 +87,7 @@ export function variedContoursReader(
   };
 }
 
-/** Shears what the context draws next about `baselineY`: x' = x - skew * (y - baselineY), the MSDF path's per-vertex shear (TextRun.tsx's `dx`). */
+/** Shears what the context draws next about `baselineY`: x' = x - skew * (y - baselineY), the MSDF path's per-vertex shear (TextRunMesh.tsx's `dx`). */
 export function shearAboutBaseline(ctx: CanvasRenderingContext2D, skew: number, baselineY: number): void {
   ctx.transform(1, 0, -skew, 1, skew * baselineY, 0);
 }

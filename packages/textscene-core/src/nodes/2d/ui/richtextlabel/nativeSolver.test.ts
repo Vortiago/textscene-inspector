@@ -1109,7 +1109,7 @@ describe('layoutRichTextRuns', () => {
     expect(placements[1]!.fontSizePx).toBe(16);
   });
 
-  it("(regression) each placement echoes the PARENT layout's fontMetrics/linePitchPx — TextRun.tsx dispatches paint by layout.fontMetrics.kind, so an omitted value here would silently force every run onto the atlas path", () => {
+  it("(regression) each placement echoes the PARENT layout's fontMetrics/linePitchPx — TextRunMesh.tsx dispatches paint by layout.fontMetrics.kind, so an omitted value here would silently force every run onto the atlas path", () => {
     const runs = [textRun({ text: 'AB', fontSizePx: FONT_SIZE })];
     const layout = shape('AB');
     const placements = layoutRichTextRuns(runs, layout);

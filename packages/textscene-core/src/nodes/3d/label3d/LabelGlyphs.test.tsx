@@ -30,10 +30,8 @@ import { TextureFilter } from '../../../godot/rendering/materials/textureFilter'
 /** The painter's fixed anti-aliasing pad on each vertical raster edge, CSS px. */
 const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
 
-// happy-dom has neither `FontFace` nor `document.fonts`, so the real bundled
-// registration can only ever answer `undefined` here (`bundledFontLoader.ts`'s
-// own doc). Mocking the function `LabelGlyphs` reads through is what lets both sides of the gate
-// be exercised.
+// The real bundled registration settles on null under vitest (`bundledFontLoader.ts`). Mocking
+// the function `LabelGlyphs` reads through lets both sides of the gate be exercised.
 const loader = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | undefined }));
 vi.mock('../../../r3f/controls/native/text/bundledFontLoader', () => ({
   peekBundledCanvasFontMetrics: () => loader.metrics,
