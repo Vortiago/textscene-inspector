@@ -92,13 +92,15 @@ function GroupRect({ window, tint, material, pixelMaterial, fitMargin, clearMarg
   const compositeMaterial = useMemo(() => createCompositeMaterial(buffer.texture), [buffer]);
   useEffect(() => () => compositeMaterial.dispose(), [compositeMaterial]);
   useLayoutEffect(() => {
-    compositeMaterial.uniforms.colour!.value = compositeColour(tint.self, space);
+    writeCompositeColour(compositeMaterial.uniforms.colour!.value as THREE.Vector4, tint.self, space);
   }, [compositeMaterial, tint.self, space]);
 
   const clip = useClip();
   const composite = useRef<THREE.Mesh>(null);
   const plain = useRef<THREE.Mesh>(null);
   const readsBuffer = material === null;
+  // The rect an enclosing group merges in the same frame: one box per group, so no two groups share it.
+  const clearedRect = useMemo(() => new THREE.Box3(), []);
   useLayoutEffect(
     () =>
       registerCanvasGroup(scene, {
@@ -112,11 +114,11 @@ function GroupRect({ window, tint, material, pixelMaterial, fitMargin, clearMarg
           const pixels = framed && fittedRect(drawn, framed, frameClip, fitMargin);
           if (!pixels) return null;
           const shown = nested || !readsBuffer ? plain.current : composite.current;
-          if (shown) placeRect(shown, worldBoxOfCanvasPixels(pixels, framed));
-          return worldBoxOfCanvasPixels(rect2Grow(pixels, clearMargin), framed);
+          if (shown) placeRect(shown, worldBoxOfCanvasPixels(pixels, framed, shownRectBox));
+          return worldBoxOfCanvasPixels(rect2Grow(pixels, clearMargin), framed, clearedRect);
         },
       }),
-    [scene, window, buffer, readsBuffer, clip, fitMargin, clearMargin]
+    [scene, window, buffer, readsBuffer, clip, fitMargin, clearMargin, clearedRect]
   );
 
   const program = materialProgramInputs({
@@ -176,6 +178,9 @@ function fittedRect(
 
 const shownBox = new THREE.Box3();
 
+/** The world box `placeRect` reads at once, shared by every group. */
+const shownRectBox = new THREE.Box3();
+
 /**
  * The part of the canvas the frame shows, in `clip`'s pixels, which lists the items the group
  * fits. It is the clip in a SubViewport. The root stage shows a panned view past Godot's viewport,
@@ -211,7 +216,7 @@ function placeRect(mesh: THREE.Mesh, world: THREE.Box3): void {
  * The group colour in the numbers the composite writes: sRGB in an sRGB canvas, linear in a
  * linear one, where Godot converts each modulate before it multiplies.
  */
-function compositeColour(colour: Rgba, space: CanvasColorSpace): THREE.Vector4 {
+function writeCompositeColour(out: THREE.Vector4, colour: Rgba, space: CanvasColorSpace): void {
   const { r, g, b } = space.isLinear ? godotColorToLinear(colour) : colour;
-  return new THREE.Vector4(r, g, b, colour.a);
+  out.set(r, g, b, colour.a);
 }

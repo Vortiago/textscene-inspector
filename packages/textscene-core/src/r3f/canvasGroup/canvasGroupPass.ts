@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { canvasKeyOf, drawCanvasKeys } from '../canvasKeyWindow';
+import { canvasKeyOf, drawKeyedObjects } from '../canvasKeyWindow';
 import type { CanvasRunKeys } from '../canvasItemState';
 import { isNodeIcon } from '../editorHelpers';
 import { drawableLocalBox, isDrawable, type Drawable } from '../drawable';
@@ -38,14 +38,25 @@ export interface CanvasGroupEntry {
   fit(drawn: readonly THREE.Box3[], nested: boolean, frameClip: CanvasClip | null): THREE.Box3 | null;
 }
 
-/** The mounted groups of each scene, written only by `registerCanvasGroup`. */
-const groupsOf = perObject((_scene: THREE.Object3D) => new Set<CanvasGroupEntry>());
+/** The mounted groups of one scene, and how they nest. */
+interface SceneGroups {
+  /** Written only by `registerCanvasGroup`. */
+  readonly entries: Set<CanvasGroupEntry>;
+  /** Written by `nestingOf` on the first frame after a change. `registerCanvasGroup` clears it. */
+  nesting: GroupNesting | null;
+}
+
+const groupsOf = perObject((_scene: THREE.Object3D): SceneGroups => ({ entries: new Set(), nesting: null }));
 
 /** Adds `entry` to the pass of the canvas `scene` draws, and answers the call that withdraws it. */
 export function registerCanvasGroup(scene: THREE.Object3D, entry: CanvasGroupEntry): () => void {
   const groups = groupsOf(scene);
-  groups.add(entry);
-  return () => groups.delete(entry);
+  groups.entries.add(entry);
+  groups.nesting = null;
+  return () => {
+    groups.entries.delete(entry);
+    groups.nesting = null;
+  };
 }
 
 const RECT_KEY = 'tscnCanvasGroupRect';
@@ -82,28 +93,35 @@ export function drawCanvasGroups(
   draw: () => void
 ): void {
   const groups = groupsOf(scene);
-  if (groups.size === 0) {
+  if (groups.entries.size === 0) {
     draw();
     return;
   }
   scene.updateMatrixWorld();
-  const entries = [...groups];
-  const { outermost, drawing } = fitGroups(
-    entries,
-    drawnBoxes(scene, camera, entries),
+  const nesting = nestingOf(groups);
+  const keyed = keyedScene(scene);
+  const drawing = fitGroups(
+    nesting,
+    drawnBoxes(keyed, camera, nesting.innermostFirst),
     frameClipOf(camera, frame)
   );
+  const { outermost } = nesting;
   const previousAutoUpdate = scene.matrixWorldAutoUpdate;
   beginStep(gl, 'Canvas groups');
   try {
     // Only layers change between the buffer draws, and `fit` updates each rect it moves.
     scene.matrixWorldAutoUpdate = false;
-    for (const group of outermost) if (drawing.has(group)) fillBuffer(gl, scene, camera, group, frame);
+    for (const group of outermost) if (drawing.has(group)) fillBuffer(gl, keyed, scene, camera, group, frame);
   } finally {
     scene.matrixWorldAutoUpdate = previousAutoUpdate;
     endStep(gl, 'Canvas groups');
   }
-  drawCanvasKeys(scene, (key) => !outermost.some((group) => collects(group.window, key)), draw);
+  drawKeyedObjects(
+    keyed.objects,
+    keyed.keys,
+    (key) => !outermost.some((group) => collects(group.window, key)),
+    draw
+  );
 }
 
 /** The clip an ortho camera shows over a frame of `width` x `height` pixels. */
@@ -115,39 +133,75 @@ function frameClipOf(
   return ortho.isOrthographicCamera ? clipOfCamera(ortho, { x: width, y: height }) : null;
 }
 
-/** The groups `fitGroups` answers. */
-interface FittedGroups {
+/** How the mounted groups of one scene nest. Stable while no group mounts or unmounts. */
+interface GroupNesting {
+  /** Every group, the innermost first, so an enclosing group merges the rect of each group inside it. */
+  innermostFirst: CanvasGroupEntry[];
+  /** The groups whose window collects each group's own key. */
+  enclosing: ReadonlyMap<CanvasGroupEntry, readonly CanvasGroupEntry[]>;
   /** The groups inside no other group's window, whose items the frame leaves out. */
   outermost: CanvasGroupEntry[];
-  /** The groups whose `fit` answered a rect. A group that draws nothing needs no buffer. */
-  drawing: ReadonlySet<CanvasGroupEntry>;
 }
 
-/**
- * Fits every group, the innermost first, so an enclosing group merges the rect of each group inside
- * it.
- */
-function fitGroups(
-  groups: readonly CanvasGroupEntry[],
-  drawn: ReadonlyMap<CanvasGroupEntry, THREE.Box3[]>,
-  frameClip: CanvasClip | null
-): FittedGroups {
+function nestingOf(groups: SceneGroups): GroupNesting {
+  if (groups.nesting) return groups.nesting;
+  const entries = [...groups.entries];
   const enclosing = new Map(
-    groups.map((inner) => [
+    entries.map((inner) => [
       inner,
-      groups.filter((group) => group !== inner && collects(group.window, inner.window.own)),
+      entries.filter((group) => group !== inner && collects(group.window, inner.window.own)),
     ])
   );
   const around = (group: CanvasGroupEntry) => enclosing.get(group)!;
-  const innermostFirst = [...groups].sort((a, b) => around(b).length - around(a).length);
+  const nesting = {
+    innermostFirst: entries.sort((a, b) => around(b).length - around(a).length),
+    enclosing,
+    outermost: entries.filter((group) => around(group).length === 0),
+  };
+  groups.nesting = nesting;
+  return nesting;
+}
+
+/** Fits every group, the innermost first, and answers the groups whose `fit` answered a rect. */
+function fitGroups(
+  { innermostFirst, enclosing }: GroupNesting,
+  drawn: ReadonlyMap<CanvasGroupEntry, THREE.Box3[]>,
+  frameClip: CanvasClip | null
+): ReadonlySet<CanvasGroupEntry> {
   const drawing = new Set<CanvasGroupEntry>();
   for (const group of innermostFirst) {
-    const rect = group.fit(drawn.get(group)!, around(group).length > 0, frameClip);
+    const around = enclosing.get(group)!;
+    const rect = group.fit(drawn.get(group)!, around.length > 0, frameClip);
     if (!rect) continue;
     drawing.add(group);
-    for (const outer of around(group)) drawn.get(outer)!.push(rect);
+    for (const outer of around) drawn.get(outer)!.push(rect);
   }
-  return { outermost: groups.filter((group) => around(group).length === 0), drawing };
+  return drawing;
+}
+
+/**
+ * Every object of a scene with its paint-order key, from one walk a frame. `measured` marks the
+ * objects whose box a group lists: visible, and under no node icon or group rect.
+ */
+interface KeyedScene {
+  objects: THREE.Object3D[];
+  keys: number[];
+  measured: boolean[];
+}
+
+function keyedScene(scene: THREE.Object3D): KeyedScene {
+  const keyed: KeyedScene = { objects: [], keys: [], measured: [] };
+  const visit = (object: THREE.Object3D, inherited: number, isMeasuredBranch: boolean): void => {
+    const key = canvasKeyOf(object, inherited);
+    const isMeasured =
+      isMeasuredBranch && object.visible && !isNodeIcon(object) && !isCanvasGroupRect(object);
+    keyed.objects.push(object);
+    keyed.keys.push(key);
+    keyed.measured.push(isMeasured);
+    for (const child of object.children) visit(child, key, isMeasured);
+  };
+  visit(scene, 0, true);
+  return keyed;
 }
 
 /**
@@ -155,35 +209,33 @@ function fitGroups(
  * key. A node icon sizes itself to the editor camera, so no bounds include it.
  */
 function drawnBoxes(
-  scene: THREE.Object3D,
+  { objects, keys, measured }: KeyedScene,
   camera: THREE.Camera,
   groups: readonly CanvasGroupEntry[]
 ): Map<CanvasGroupEntry, THREE.Box3[]> {
   const drawn = new Map(groups.map((group) => [group, [] as THREE.Box3[]]));
-  const visit = (object: THREE.Object3D, inherited: number): void => {
-    if (!object.visible || isNodeIcon(object) || isCanvasGroupRect(object)) return;
-    const key = canvasKeyOf(object, inherited);
-    if (isDrawable(object) && camera.layers.test(object.layers)) listBox(object, key);
-    for (const child of object.children) visit(child, key);
-  };
-  // A loop, not `.filter`: no array per object per frame. The first collecting group measures the box.
-  const listBox = (object: Drawable, key: number): void => {
+  for (let i = 0; i < objects.length; i++) {
+    const object = objects[i]!;
+    if (!measured[i] || !isDrawable(object) || !camera.layers.test(object.layers)) continue;
+    // A loop, not `.filter`: no array per object per frame. The first collecting group measures the box.
     let box: THREE.Box3 | null | undefined;
     for (const group of groups) {
-      if (!collects(group.window, key)) continue;
+      if (!collects(group.window, keys[i]!)) continue;
       box ??= worldBox(object);
-      if (!box) return;
+      if (!box) break;
       drawn.get(group)!.push(box);
     }
-  };
-  visit(scene, 0);
+  }
   return drawn;
 }
+
+/** Each drawable's world box, reused every frame. Written only by `worldBox`. */
+const worldBoxOf = perObject((_object: Drawable) => new THREE.Box3());
 
 /** The bounds of a drawable object's geometry, its instances included, in world space. */
 function worldBox(object: Drawable): THREE.Box3 | null {
   const local = drawableLocalBox(object);
-  return local.isEmpty() ? null : local.clone().applyMatrix4(object.matrixWorld);
+  return local.isEmpty() ? null : worldBoxOf(object).copy(local).applyMatrix4(object.matrixWorld);
 }
 
 /**
@@ -192,6 +244,7 @@ function worldBox(object: Drawable): THREE.Box3 | null {
  */
 function fillBuffer(
   gl: THREE.WebGLRenderer,
+  keyed: KeyedScene,
   scene: THREE.Object3D,
   camera: THREE.Camera,
   { window, buffer }: CanvasGroupEntry,
@@ -207,8 +260,9 @@ function fillBuffer(
     draw: () =>
       drawOffscreen(gl, () => {
         gl.clear(true, true, true);
-        drawCanvasKeys(
-          scene,
+        drawKeyedObjects(
+          keyed.objects,
+          keyed.keys,
           (key) => collects(window, key),
           () => gl.render(scene, camera)
         );
