@@ -15,7 +15,11 @@ import {
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import {
+  overrunFlagsForBehavior,
+  trimFilledLineToWidth,
+  trimLineToWidth,
+} from '../../../../r3f/controls/native/text/textOverrun';
 import { OutlineRingRun, textLayerRenderOrder } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { TextRun, type TextRunProps } from '../../../../r3f/controls/native/text/TextRun';
@@ -176,16 +180,27 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
     [props.overrunBehavior]
   );
-  const trimLine = useMemo(() => {
+  const trims = useMemo(() => {
     if (autowrapMode !== AutowrapMode.AUTOWRAP_OFF || !overrunFlags.trim) return undefined;
     const widthPx = labelShapingWidthPx(rect.w);
-    return (line: TextLineLayout) =>
-      trimLineToWidth(line, widthPx, overrunFlags, {
-        fontMetrics,
-        fontSizePx: textTheme.fontSizePx,
-        ellipsisChar: props.ellipsisChar,
-      });
-  }, [autowrapMode, overrunFlags, rect.w, fontMetrics, textTheme.fontSizePx, props.ellipsisChar]);
+    const options = { fontMetrics, fontSizePx: textTheme.fontSizePx, ellipsisChar: props.ellipsisChar };
+    return {
+      trimLine: (line: TextLineLayout) => trimLineToWidth(line, widthPx, overrunFlags, options),
+      trimFilledLine: (line: TextLineLayout) =>
+        trimFilledLineToWidth(line, widthPx, overrunFlags, {
+          ...options,
+          justificationFlags: effectiveJustificationFlags,
+        }),
+    };
+  }, [
+    autowrapMode,
+    overrunFlags,
+    rect.w,
+    fontMetrics,
+    textTheme.fontSizePx,
+    props.ellipsisChar,
+    effectiveJustificationFlags,
+  ]);
 
   // Godot aligns each line by its own width (`Label::_get_line_rect`), so each line
   // gets its own box top here, and `<TextRun>` anchors it at the baseline.
@@ -202,7 +217,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
         {
           rtl: solveNode.rtl,
           isAutowrapped: autowrapMode !== AutowrapMode.AUTOWRAP_OFF,
-          trimLine,
+          ...trims,
           lineSpacingPx: textTheme.lineSpacingPx,
           paragraphSpacingPx: textTheme.paragraphSpacingPx,
         }
@@ -219,7 +234,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       textTheme.paragraphSpacingPx,
       solveNode.rtl,
       autowrapMode,
-      trimLine,
+      trims,
     ]
   );
 
