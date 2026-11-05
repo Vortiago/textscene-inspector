@@ -7,13 +7,11 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../../parser/types';
 import {
   allocateNodePaintRange,
-  canvasRenderOrder,
   layerRankOf,
   layerRanks,
   WHOLE_CANVAS_RANGE,
   type PaintRange,
 } from '../canvasPaintOrder';
-import { useCanvasLayerIndex } from '../lighting2d/canvasItemPlacement';
 
 const PaintRangeContext = createContext<PaintRange>(WHOLE_CANVAS_RANGE);
 PaintRangeContext.displayName = 'PaintRangeContext';
@@ -70,15 +68,4 @@ export function LayerRanksProvider({ value, children }: { value: readonly number
 export function useNodePaintSequence(node: TscnNode): number {
   const range = usePaintRange();
   return useMemo(() => allocateNodePaintRange(range, node).self, [range, node]);
-}
-
-/**
- * The `renderOrder` of a canvas item's group, Godot's whole draw-order key, for a slice that draws
- * outside `<CanvasItem2D>` (`canvasItemState.tsx` gives it to every item that does). The caller
- * passes `effectiveZ`, already accumulated for the light cull.
- */
-export function useCanvasItemRenderOrder(node: TscnNode, effectiveZ: number): number {
-  const layerRank = useLayerRank(useCanvasLayerIndex());
-  const sequence = useNodePaintSequence(node);
-  return canvasRenderOrder({ layerRank, zFinal: effectiveZ, sequence });
 }

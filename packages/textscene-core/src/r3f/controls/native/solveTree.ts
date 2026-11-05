@@ -89,6 +89,11 @@ export interface SolveNode {
    */
   paintSequence: number;
   /**
+   * The draw-sequence value of this node's back pieces, such as a ScrollContainer's bars: after
+   * its whole subtree, which Godot's `INTERNAL_MODE_BACK` children follow (`internalBackRoom`).
+   */
+  backSequence: number;
+  /**
    * What the non-Control `CanvasItem` ancestors this node promoted past contribute,
    * or `null` for none. Non-null tells the solver that `data.parent_canvas_item`
    * is not a Control (`isPromotedControl`).

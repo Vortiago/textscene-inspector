@@ -1,7 +1,8 @@
 /**
  * The alpha of an opaque Godot viewport. Godot samples a target without `transparent_bg` with
  * `swizzle_a = ONE` (`texture_storage.cpp:3641-3642`), so a SUB or MUL item that lowers the alpha
- * it writes never lets what lies behind the viewport show through.
+ * it writes never lets what lies behind the viewport show through. A SubViewport pass fills its
+ * target's alpha here. The root canvas writes it in its frame copy, the `opaque` texel transfer.
  */
 import type * as THREE from 'three';
 

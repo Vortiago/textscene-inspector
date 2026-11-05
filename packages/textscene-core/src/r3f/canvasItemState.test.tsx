@@ -9,10 +9,14 @@ import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import {
   CanvasItemChildScope,
+  SkippedCanvasItemsScope,
   canvasPieceSlot,
+  canvasSubOrder,
   canvasSubOrders,
+  wholeKeySlot,
   useCanvasItemState,
   type CanvasItemFields,
+  type SkippedCanvasItems,
 } from './canvasItemState';
 import { Modulate2DContext, useParentModulate } from './canvasItemModulate';
 import { CanvasModulateContext } from './canvasModulate';
@@ -20,8 +24,8 @@ import { canvasRenderOrder, layerRankOf, layerRanks } from './canvasPaintOrder';
 import { EffectiveZProvider, useEffectiveZ } from './lighting2d/canvasItemPlacement';
 import { useResolvedTextureSampler } from './canvasItemTextureSampler';
 import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
-import { CanvasItemMaterialBlendMode, CanvasItemMaterialLightMode } from '../godot/scene/canvasItemMaterial';
-import type { CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
+import { CanvasItemMaterialLightMode } from '../godot/scene/canvasItemMaterial';
+import { canvasItemMaterial } from './testing/canvasItemMaterial';
 import type { Rgba } from '../godot/math/math';
 import { useResolvedCanvasItemMaterial } from './components/canvasItemMaterialContext';
 
@@ -41,17 +45,6 @@ function fields(overrides: Partial<CanvasItemFields> = {}): CanvasItemFields {
     sequence: 1,
     ...overrides,
   };
-}
-
-function material(lightMode: number): CanvasItemMaterialProperties {
-  return {
-    blendMode: CanvasItemMaterialBlendMode.MIX,
-    lightMode,
-    particlesAnimation: false,
-    particlesAnimHFrames: 1,
-    particlesAnimVFrames: 1,
-    particlesAnimLoop: false,
-  } as CanvasItemMaterialProperties;
 }
 
 interface Ambient {
@@ -103,7 +96,7 @@ describe('the tint', () => {
   });
 
   it('keeps the canvas tint off an Unshaded item, as the light-mode guard in canvas.glsl does', () => {
-    const { tint } = stateOf(fields({ material: material(CanvasItemMaterialLightMode.UNSHADED) }), {
+    const { tint } = stateOf(fields({ material: canvasItemMaterial(CanvasItemMaterialLightMode.UNSHADED) }), {
       canvasModulate: { r: 0.5, g: 0.2, b: 1, a: 1 },
     });
     expect(tint.own).toEqual(WHITE);
@@ -113,14 +106,6 @@ describe('the tint', () => {
     const { tint } = stateOf(fields({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }));
     const expected = new THREE.Color().setRGB(0.5, 0.5, 0.5, THREE.SRGBColorSpace);
     expect(tint.color.r).toBeCloseTo(expected.r, 6);
-  });
-
-  it("folds skipped ancestors' modulate between the ambient and the item's own", () => {
-    // Three distinct halves on one channel, so a fold that drops one or squares another
-    // cannot land on 0.125.
-    const red = { r: 0.5, g: 1, b: 1, a: 1 };
-    const { tint } = stateOf(fields({ modulate: red, skipped: { modulate: red, z: [] } }), { modulate: red });
-    expect(tint.inherited.r).toBeCloseTo(0.125, 6);
   });
 });
 
@@ -137,17 +122,6 @@ describe('z_final', () => {
     expect(stateOf(fields({ zIndex: 9000 })).zFinal).toBe(CANVAS_ITEM_Z_MAX);
     expect(stateOf(fields({ zIndex: -9000 })).zFinal).toBe(CANVAS_ITEM_Z_MIN);
   });
-
-  it('folds skipped ancestors one step at a time, so an absolute step restarts the chain', () => {
-    const skipped = {
-      modulate: WHITE,
-      z: [
-        { zIndex: 50, zAsRelative: true },
-        { zIndex: 3, zAsRelative: false },
-      ],
-    };
-    expect(stateOf(fields({ zIndex: 2, skipped }), { z: 5 }).zFinal).toBe(5);
-  });
 });
 
 describe('the draw-order key', () => {
@@ -163,26 +137,61 @@ describe('the draw-order key', () => {
 });
 
 describe('canvasSubOrders', () => {
+  const KEY_40 = wholeKeySlot(40);
+
   it('orders the pieces as listed, strictly above the key and below the next one', () => {
-    const { panel, label, icon } = canvasSubOrders(40, ['panel', 'label', 'icon']);
+    const { panel, label, icon } = canvasSubOrders(KEY_40, ['panel', 'label', 'icon']);
     expect(40 < panel.key && panel.key < label.key && label.key < icon.key && icon.key < 41).toBe(true);
   });
 
   it("keeps a piece's own pieces below the next piece", () => {
-    const { bars, minimap } = canvasSubOrders(40, ['bars', 'minimap']);
-    const { grabber } = canvasSubOrders(bars, ['grabber']);
+    const { bars, minimap } = canvasSubOrders(KEY_40, ['bars', 'minimap']);
+    const grabber = canvasSubOrder(bars);
     expect(bars.key < grabber.key && grabber.key < minimap.key).toBe(true);
   });
 
   it('hands an unnamed run of pieces the slots a named list of that length gets', () => {
-    const { b } = canvasSubOrders(40, ['a', 'b', 'c']);
-    expect(canvasPieceSlot(40, 1, 3)).toEqual(b);
+    const { b } = canvasSubOrders(KEY_40, ['a', 'b', 'c']);
+    expect(canvasPieceSlot(KEY_40, 1, 3)).toEqual(b);
+  });
+
+  it('hands one piece the slot a one-name list gets', () => {
+    expect(canvasSubOrder(KEY_40)).toEqual(canvasSubOrders(KEY_40, ['only']).only);
   });
 
   it('gives each key its own pieces, so two keys never interleave', () => {
-    const below = canvasSubOrders(40, ['a', 'b']);
-    const above = canvasSubOrders(41, ['a', 'b']);
+    const below = canvasSubOrders(KEY_40, ['a', 'b']);
+    const above = canvasSubOrders(wholeKeySlot(41), ['a', 'b']);
     expect(below.b.key < above.a.key).toBe(true);
+  });
+});
+
+describe('SkippedCanvasItemsScope', () => {
+  function stateUnder(skipped: SkippedCanvasItems, item: CanvasItemFields, around: Ambient) {
+    const Around = ambient(around);
+    return renderHook(() => useCanvasItemState(item), {
+      wrapper: ({ children }) => (
+        <Around>
+          <SkippedCanvasItemsScope skipped={skipped}>{children}</SkippedCanvasItemsScope>
+        </Around>
+      ),
+    }).result.current;
+  }
+
+  it("folds skipped items' modulate between the ambient and the item's own", () => {
+    // Three distinct halves on one channel, so a fold that drops one or squares another
+    // cannot land on 0.125.
+    const red = { r: 0.5, g: 1, b: 1, a: 1 };
+    const { tint } = stateUnder({ modulate: red, z: [] }, fields({ modulate: red }), { modulate: red });
+    expect(tint.inherited.r).toBeCloseTo(0.125, 6);
+  });
+
+  it('folds skipped items one step at a time, so an absolute step restarts the chain', () => {
+    const z = [
+      { zIndex: 50, zAsRelative: true },
+      { zIndex: 3, zAsRelative: false },
+    ];
+    expect(stateUnder({ modulate: WHITE, z }, fields({ zIndex: 2 }), { z: 5 }).zFinal).toBe(5);
   });
 });
 
@@ -221,7 +230,7 @@ describe('CanvasItemChildScope', () => {
   });
 
   it("hands a use_parent_material descendant the item's material", () => {
-    const own = material(CanvasItemMaterialLightMode.LIGHT_ONLY);
+    const own = canvasItemMaterial(CanvasItemMaterialLightMode.LIGHT_ONLY);
     const inherited = readInside(fields({ material: own }), () =>
       useResolvedCanvasItemMaterial(
         { ref: undefined, useParentMaterial: true },

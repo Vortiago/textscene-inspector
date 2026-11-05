@@ -17,7 +17,7 @@ import {
 } from './canvasItemLighting.js';
 import { placementId, type LitItemRead } from './itemLightList.js';
 import { releasedOnUnmount } from '../sharedTexture.js';
-import { useCanvasLayerIndex, useEffectiveZ } from './canvasItemPlacement.js';
+import { useCanvasLayerIndex } from './canvasItemPlacement.js';
 import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial.js';
 import {
   normalMappedLightingProps,
@@ -121,12 +121,8 @@ interface CanvasItemLightingOptions {
   material: CanvasItemMaterialProperties | null;
   /** The item's CanvasItem `light_mask`, or Godot's default 1 for a node without one. */
   lightMask?: number;
-  /**
-   * The item's own `z_final`. Defaults to the enclosing item's accumulated z, which is what every
-   * ordinary slice wants. The y-sort pass renders items outside their tree position and so passes
-   * the z it computed for them.
-   */
-  effectiveZ?: number;
+  /** The item's own `z_final`, which a light's z window tests (`canvasItemState.tsx`). */
+  zFinal: number;
   /** The item's normal and specular maps, or null for an item that has none. */
   surface?: CanvasItemSurface | null;
 }
@@ -145,12 +141,10 @@ interface CanvasItemLighting {
 export function useCanvasItemLighting({
   material,
   lightMask = 1,
-  effectiveZ,
+  zFinal,
   surface = null,
 }: CanvasItemLightingOptions): CanvasItemLighting {
   const { lists, resolution } = useCanvasLighting2D();
-  const inheritedZ = useEffectiveZ();
-  const itemZ = effectiveZ ?? inheritedZ;
   const canvasLayer = useCanvasLayerIndex();
   // The raw canvas tint, not the light-mode-gated one: the shader divides out
   // exactly what the CPU folded in, and the floor is applied on both sides.
@@ -165,7 +159,7 @@ export function useCanvasItemLighting({
   // past the render's budget, the item drops the later ones from its list.
   const geometryRef = useRef<THREE.Object3D | null>(null);
   const [takenLights, setTakenLights] = useState<readonly number[] | null>(null);
-  const placement = { lightMask, z: itemZ, layer: canvasLayer, takenLights };
+  const placement = { lightMask, z: zFinal, layer: canvasLayer, takenLights };
   useCapItemLights(placement, geometryRef, setTakenLights);
   const readsNormals = surface !== null && lightMode !== CanvasItemMaterialLightMode.UNSHADED;
   const read: LitItemRead = readsNormals ? 'apart' : lightOnly ? 'lightOnly' : 'plain';

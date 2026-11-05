@@ -28,10 +28,10 @@ The 2D canvas always draws through a `CanvasFrame`, whatever `msaa_2d` says.
 - The frame copies to the drawing buffer through one full-screen pass that reads the rows in
   reverse. The drawing buffer then shows the canvas upright. The frame profile times the pass as
   Canvas copy.
-- Without `transparent_background`, the frame fills the drawing buffer's alpha with 1 after the
-  copy (`fillAlphaWithOne`). Godot samples an opaque viewport with `swizzle_a = ONE`
-  (`texture_storage.cpp:3641-3642`), so a SUB or MUL item that lowers the alpha never shows the
-  page through the canvas. An opaque SubViewport target takes the same fill after each pass.
+- Without `transparent_background`, the copy writes alpha 1 (the `opaque` texel transfer). Godot
+  samples an opaque viewport with `swizzle_a = ONE` (`texture_storage.cpp:3641-3642`), so a SUB or
+  MUL item that lowers the alpha never shows the page through the canvas. An opaque SubViewport
+  target fills its alpha with 1 after each pass (`fillAlphaWithOne`), which covers 3D passes too.
 - Passes that read `gl_FragCoord` or project through the camera, such as the window scissor and the
   canvas item lighting, run on the same flipped target. They need no change.
 
@@ -45,7 +45,7 @@ reversed, into the published target. The frame is as large as the target and tak
 
 Each 2D frame, and each 2D SubViewport pass, costs one extra full-screen draw call when `msaa_2d`
 is off. `scripts/perf/budgets.json` holds it as one Canvas copy run and one draw call per 2D budget
-scene. An opaque frame or target adds one masked clear for its alpha, which is no draw call.
+scene. An opaque SubViewport target adds one masked clear for its alpha, which is no draw call.
 
 The 2D goldens whose edges sit on pixel centres moved. The visual suite and `pnpm ref:diff` show
 each move, and none is further from Godot than before except where the reference driver differs.

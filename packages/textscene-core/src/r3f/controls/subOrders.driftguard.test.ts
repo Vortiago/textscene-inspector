@@ -24,7 +24,7 @@ describe('Control draw-order sub-keys', () => {
 
   it('would catch an offset key, and passes a handed-out one', () => {
     expect(keyOffsetLines('  renderOrder={renderOrder + 0.05}')).toEqual([1]);
-    expect(keyOffsetLines('  const key = subtreeChromeRenderOrder + PIECE;')).toEqual([1]);
+    expect(keyOffsetLines('  const key = chromeRenderOrder + PIECE;')).toEqual([1]);
     expect(keyOffsetLines('  renderOrder={renderOrder + (index + 1) / 100}')).toEqual([1]);
     expect(keyOffsetLines('  renderOrder={pieces.resizer.key}')).toEqual([]);
   });

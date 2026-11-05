@@ -131,9 +131,15 @@ describe('paintRangeSize', () => {
   it('counts the node and every descendant, so a subtree owns a contiguous run', () => {
     const tree = node('Root', 'Node2D', [
       node('A', 'Sprite2D', [node('A1', 'Sprite2D')]),
-      node('B', 'ColorRect'),
+      node('B', 'Marker2D'),
     ]);
     expect(paintRangeSize(tree)).toBe(4);
+  });
+
+  it("counts one more value for a Control's back pieces", () => {
+    expect(paintRangeSize(node('Scroll', 'ScrollContainer', [node('Body', 'ColorRect')]))).toBe(
+      1 + 1 + 1 + 1
+    );
   });
 
   it('reserves room in a tile layer for the rows a y-sort pass expands it into', () => {
@@ -219,7 +225,7 @@ describe('canvasRootRanges', () => {
     // The reserve is what a nested root draws from; a canvas whose items all
     // nest under a CanvasItem parent has none, and must keep the numbers the
     // plain pre-order allocation gives it.
-    const root = node('Root', 'Control', [node('A', 'ColorRect'), node('B', 'ColorRect')]);
+    const root = node('Root', 'Node2D', [node('A', 'Sprite2D'), node('B', 'Sprite2D')]);
     const ranges = allocatePaintRange(WHOLE_CANVAS_RANGE, [root]).children;
 
     expect(paintRangeSize(root)).toBe(3);
@@ -360,5 +366,25 @@ describe('allocatePaintRange', () => {
       expect(child.base).toBeGreaterThanOrEqual(range.base);
       expect(child.base + child.size).toBeLessThanOrEqual(range.base + range.size);
     }
+  });
+});
+
+describe("a Control's back slot", () => {
+  // Godot adds a Control's chrome, such as a ScrollContainer's bars, as INTERNAL_MODE_BACK
+  // children (`scroll_container.cpp:919,924`), which draw after every authored child.
+  const scroll = node('Outer', 'ScrollContainer', [
+    node('Inner', 'ScrollContainer', [node('Body', 'ColorRect')]),
+  ]);
+
+  it("lies after the whole run of the Control's last child", () => {
+    const outer = allocateNodePaintRange({ base: 0, size: paintRangeSize(scroll) }, scroll);
+    const inner = outer.children[0]!;
+    expect(outer.back.base).toBe(inner.base + inner.size);
+  });
+
+  it("is its own value, so a nested Control's back slot never ties with it", () => {
+    const outer = allocateNodePaintRange({ base: 0, size: paintRangeSize(scroll) }, scroll);
+    const inner = allocateNodePaintRange(outer.children[0]!, scroll.children[0]!);
+    expect(inner.back.base).toBeLessThan(outer.back.base);
   });
 });

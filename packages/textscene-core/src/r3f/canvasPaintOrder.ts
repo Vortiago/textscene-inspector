@@ -159,12 +159,22 @@ export function internalFrontRoom(node: TscnNode): number {
 }
 
 /**
+ * How many values the internal children Godot adds at the back of `node` take: one for a
+ * Control's chrome, such as a ScrollContainer's bars, each added with `INTERNAL_MODE_BACK`
+ * (`scroll_container.cpp:919,924`). Their draw indices come after every authored child's.
+ */
+export function internalBackRoom(node: TscnNode): number {
+  return descendsFromClass(node.type, 'Control') ? 1 : 0;
+}
+
+/**
  * How many sequence values `node`'s subtree needs. Every node counts, not only
  * the canvas items: over-allocating is free, and a canvas-item test here would
  * be a second definition the two walks could disagree on.
  */
 export function paintRangeSize(node: TscnNode): number {
-  let size = (reservesRoom(node) ? DYNAMIC_CHILD_RESERVE : 1) + internalFrontRoom(node);
+  let size =
+    (reservesRoom(node) ? DYNAMIC_CHILD_RESERVE : 1) + internalFrontRoom(node) + internalBackRoom(node);
   for (const child of node.children) size += paintRangeSize(child);
   // A canvas root nested under this item draws after its whole subtree, from
   // room held at the end of its run.
@@ -288,6 +298,8 @@ interface AllocatedPaintRange {
   front: PaintRange;
   /** One range per child, positionally matching the `children` passed in. */
   children: PaintRange[];
+  /** The run the parent's internal back children draw from (`internalBackRoom`), last of all. */
+  back: PaintRange;
   /**
    * The room `reservesRoom` held back after the children. Injected sub-scene
    * roots draw from here, after the authored children, as in Godot's tree.
@@ -308,28 +320,32 @@ interface PaintRangeLayout {
   sortsChildren?: boolean;
   /** Values the parent's internal front children take (`internalFrontRoom`). */
   frontRoom?: number;
+  /** Values the parent's internal back children take (`internalBackRoom`). */
+  backRoom?: number;
 }
 
 /**
  * Splits `range` between its node and the children, in draw order.
  * `_cull_canvas_item` (lines 477-490) visits the `show_behind_parent` children,
  * then the node, then the other children, each group in index order. Internal
- * front children have the lowest indices, so they draw first of the others.
+ * front children have the lowest indices, so they draw first of the others, and internal back
+ * children the highest, so they draw last.
  */
 export function allocatePaintRange(
   range: PaintRange,
   children: readonly TscnNode[],
-  { sortsChildren = false, frontRoom = 0 }: PaintRangeLayout = {}
+  { sortsChildren = false, frontRoom = 0, backRoom = 0 }: PaintRangeLayout = {}
 ): AllocatedPaintRange {
   // A `y_sort_enabled` parent takes `_collect_ysort_children` instead, so it has
   // no behind split. With one, its sequence moves past `range.base` and the
   // y-sort pass overruns into the next sibling's range.
   const behind = children.map((child) => !sortsChildren && drawsBehindParent(child));
   // Fitted with the children, since a squeezed range shrinks the front as well.
-  const fitted = fitToRange([frontRoom, ...children.map(paintRangeSize)], range.size);
+  const fitted = fitToRange([frontRoom, backRoom, ...children.map(paintRangeSize)], range.size);
   const frontSize = frontRoom > 0 ? fitted[0]! : 0;
-  const sizes = fitted.slice(1);
-  const end = range.base + range.size;
+  const backSize = backRoom > 0 ? fitted[1]! : 0;
+  const sizes = fitted.slice(2);
+  const end = range.base + range.size - backSize;
 
   let cursor = range.base;
   const allocated: PaintRange[] = new Array<PaintRange>(children.length);
@@ -356,6 +372,7 @@ export function allocatePaintRange(
     self,
     front,
     children: allocated,
+    back: { base: end, size: backSize },
     tail: { base: Math.min(cursor, end), size: Math.max(0, end - cursor) },
   };
 }
@@ -365,6 +382,7 @@ export function allocateNodePaintRange(range: PaintRange, node: TscnNode): Alloc
   return allocatePaintRange(range, node.children, {
     sortsChildren: (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true,
     frontRoom: internalFrontRoom(node),
+    backRoom: internalBackRoom(node),
   });
 }
 

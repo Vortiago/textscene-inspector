@@ -12,6 +12,7 @@ import type { TextMeasurer } from './native/solverRegistry';
 import type { Rect2 } from '../../godot/math/rect2';
 import type { SolveNode } from './native/solveTree';
 import type { OwnPixelTint } from '../canvasItemModulate';
+import type { CanvasSlot } from '../canvasItemState';
 import type { SealedHandoff } from './native/solveHandoff';
 
 /**
@@ -62,12 +63,12 @@ export interface NativeControlComponentProps {
    */
   renderOrder: number;
   /**
-   * The key at the end of this node's contiguous run, for chrome that draws after the whole subtree
-   * like Godot's `INTERNAL_MODE_BACK` children: ScrollContainer's bars (`scene/gui/scroll_container.cpp:919,924`),
-   * and those of LineEdit, OptionButton, RichTextLabel and SplitContainer. The next sibling starts one
-   * past it, so chrome takes its keys from `canvasSubOrders`. Required, since a `renderOrder` fallback hides a bar.
+   * The slot after this node's whole subtree, for chrome that draws there like Godot's
+   * `INTERNAL_MODE_BACK` children: ScrollContainer's bars (`scene/gui/scroll_container.cpp:919,924`).
+   * A slot, not a key, so a nested painter handed a piece splits only that piece (`canvasSubOrders`).
+   * Required, since a `renderOrder` fallback hides a bar.
    */
-  subtreeChromeRenderOrder: number;
+  chromeSlot: CanvasSlot;
   /**
    * The **solve handoff** the Control's `ContainerLayoutFn` sealed (`SolvedControl.meta`), or
    * `undefined`. Only the producing slice's channel opens it (`native/solveHandoff.ts`). A painter

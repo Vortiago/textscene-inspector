@@ -20,7 +20,7 @@ import { viewportSize } from '../../../viewport/subviewport/targetSize.js';
 import type { SubViewportContainerProperties } from './types.js';
 import { WHOLE_CANVAS_RANGE } from '../../../../r3f/canvasPaintOrder.js';
 import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts.js';
-import { canvasPieceSlot } from '../../../../r3f/canvasItemState';
+import { canvasPieceSlot, wholeKeySlot, type CanvasSlot } from '../../../../r3f/canvasItemState';
 
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
@@ -30,7 +30,8 @@ interface ViewportSurfaceNativeProps {
   containerRect: Rect2;
   stretch: boolean;
   shrink: number;
-  renderOrder: number;
+  /** This viewport's piece of the container's slot, in tree order. */
+  slot: CanvasSlot;
   theme: NativeControlComponentProps['theme'];
   measureText: NativeControlComponentProps['measureText'];
   externalResources: readonly TscnExternalResource[];
@@ -58,7 +59,7 @@ function ViewportSurfaceNative({
   containerRect,
   stretch,
   shrink,
-  renderOrder,
+  slot,
   theme,
   measureText,
   externalResources,
@@ -110,6 +111,7 @@ function ViewportSurfaceNative({
       // against the enclosing canvas: it starts a fresh range.
       paintRange: WHOLE_CANVAS_RANGE,
       paintSequence: WHOLE_CANVAS_RANGE.base,
+      backSequence: WHOLE_CANVAS_RANGE.base + WHOLE_CANVAS_RANGE.size - 1,
       // The SubViewport itself, not a scene node the outliner can hide.
       hidden: false,
       // A Viewport is neither a CanvasItem nor a CanvasLayer, so the `parent_visible_in_tree` climb
@@ -149,9 +151,9 @@ function ViewportSurfaceNative({
         <ControlFallback
           solveNode={fallbackSolveNode}
           rect={viewportRect}
-          renderOrder={renderOrder}
-          // The cycle branch renders no subtree, so the fallback's slot is its subtree's last.
-          subtreeChromeRenderOrder={renderOrder}
+          renderOrder={slot.key}
+          // The cycle branch renders no subtree, so the fallback's chrome takes its own slot.
+          chromeSlot={slot}
           theme={theme}
           // Threaded for the contract; the outline is a diagnostic and
           // deliberately draws in its own colour, untinted.
@@ -173,7 +175,7 @@ function ViewportSurfaceNative({
           color={tint.color}
           opacity={tint.opacity}
           map={texture}
-          renderOrder={renderOrder}
+          renderOrder={slot.key}
         />
       ) : null}
     </CanvasItemGroup>
@@ -211,7 +213,7 @@ export function SubViewportContainer({
           shrink={shrink}
           tint={tint}
           // Each successive viewport draws on top of the last, in tree order (`subviewport_container.cpp:134-145`).
-          renderOrder={canvasPieceSlot(renderOrder, index, viewports.length).key}
+          slot={canvasPieceSlot(wholeKeySlot(renderOrder), index, viewports.length)}
           theme={theme}
           measureText={measureText}
           externalResources={externalResources}

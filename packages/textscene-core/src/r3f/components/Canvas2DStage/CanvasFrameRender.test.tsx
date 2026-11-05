@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { waitFor } from '@testing-library/react';
 import { CanvasFrameRender } from './CanvasFrameRender';
@@ -14,7 +15,7 @@ import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 
 interface Probe {
   /** The store's reader: R3F mutates the render priority in place, so no selector sees it. */
-  get: (() => { internal: { priority: number } }) | null;
+  get: (() => { internal: { priority: number }; gl: THREE.WebGLRenderer }) | null;
   hasProject: boolean;
 }
 
@@ -76,38 +77,41 @@ describe('<CanvasFrameRender>', () => {
   });
 });
 
-/** The colour masks the frame sets on the drawing buffer while it renders one frame under `project`. */
-async function colorMasksOneFrameIn(project: string) {
+/** The fragment of each copy pass the frame draws to the drawing buffer in one frame under `project`. */
+async function copyFragmentsOneFrameIn(project: string) {
   const ProjectFixture = withProject(project);
-  const masks: boolean[][] = [];
   const probe: Probe = { get: null, hasProject: false };
   const renderer = await ReactThreeTestRenderer.create(
     <ProjectFixture>
       <CanvasFrameRender />
       <StoreProbe probe={probe} />
     </ProjectFixture>,
-    {
-      beforeReturn: patchesContext((context) => {
-        context.colorMask = (r, g, b, a) => void masks.push([r, g, b, a]);
-      }),
-    }
+    { beforeReturn: listSampleCounts(FOUR_SAMPLES_ONLY) }
   );
   await waitFor(() => expect(probe.hasProject).toBe(true));
-  masks.length = 0;
+  const gl = probe.get!().gl as THREE.WebGLRenderer;
+  const fragments: string[] = [];
+  const render = gl.render.bind(gl);
+  gl.render = (scene, camera) => {
+    if (gl.getRenderTarget() === null && scene instanceof THREE.Mesh)
+      fragments.push((scene.material as THREE.ShaderMaterial).fragmentShader);
+    render(scene, camera);
+  };
   await renderer.advanceFrames(1, 16);
-  return masks;
+  return fragments;
 }
 
-const ALPHA_ONLY = [false, false, false, true];
+const WRITES_ALPHA_ONE = 'vec4( texel.rgb, 1.0 )';
 
 describe('the drawing buffer alpha', () => {
-  it('is cleared to 1 with the colour masked off when the root is opaque', async () => {
-    const masks = await colorMasksOneFrameIn('[rendering]\nviewport/transparent_background=false\n');
-    expect(masks).toContainEqual(ALPHA_ONLY);
+  it('is 1 when the root is opaque, as Godot samples an opaque viewport', async () => {
+    const fragments = await copyFragmentsOneFrameIn('[rendering]\nviewport/transparent_background=false\n');
+    expect(fragments.some((fragment) => fragment.includes(WRITES_ALPHA_ONE))).toBe(true);
   });
 
   it('keeps what the canvas wrote when the root is transparent', async () => {
-    const masks = await colorMasksOneFrameIn('[rendering]\nviewport/transparent_background=true\n');
-    expect(masks).not.toContainEqual(ALPHA_ONLY);
+    const fragments = await copyFragmentsOneFrameIn('[rendering]\nviewport/transparent_background=true\n');
+    expect(fragments).not.toHaveLength(0);
+    expect(fragments.some((fragment) => fragment.includes(WRITES_ALPHA_ONE))).toBe(false);
   });
 });

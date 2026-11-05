@@ -10,15 +10,16 @@ import type { Rgba } from '../godot/math/math';
 import type { CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
 import {
   Modulate2DContext,
-  WHITE_MODULATE,
   multiplyModulate,
+  useParentModulate,
   useCanvasItemTint,
   type CanvasItemTint,
 } from './canvasItemModulate';
 import { useCanvasModulateFor } from './canvasModulate';
 import { TextureSampler2DContext, type CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import { canvasRenderOrder } from './canvasPaintOrder';
-import { useLayerRank } from './contexts/PaintOrderContext';
+import { useLayerRank, useNodePaintSequence } from './contexts/PaintOrderContext';
+import type { TscnNode } from '../parser/types';
 import { CanvasItemMaterialProvider } from './components/canvasItemMaterialContext';
 import {
   EffectiveZProvider,
@@ -36,7 +37,7 @@ export interface CanvasItemZStep {
 /**
  * Canvas items the walk descends through that draw no group of their own here, outermost first,
  * such as the Node2D chain a promoted Control was walked past. They sit between the ambient and
- * the item, so their modulate and z fold in that order.
+ * the item, so `SkippedCanvasItemsScope` folds them into the ambient the item reads.
  */
 export interface SkippedCanvasItems {
   /** The product of their `modulate`. Their `self_modulate` never propagates. */
@@ -59,7 +60,6 @@ export interface CanvasItemFields {
   lightMask: number | undefined;
   /** The item's draw sequence, its place in the canvas's pre-order walk. */
   sequence: number;
-  skipped?: SkippedCanvasItems;
 }
 
 export interface CanvasItemState {
@@ -75,25 +75,18 @@ export interface CanvasItemState {
   lightMask: number | undefined;
 }
 
-const NO_SKIPPED_ITEMS: SkippedCanvasItems = { modulate: WHITE_MODULATE, z: [] };
-
 /**
  * The CanvasItem state of one item, under the ambient its parent published.
  *
  * @canonical The tint, z_final and draw-order key of a canvas item
  */
 export function useCanvasItemState(fields: CanvasItemFields): CanvasItemState {
-  const skipped = fields.skipped ?? NO_SKIPPED_ITEMS;
-  const zFinal = useZFinal(fields, skipped.z);
+  const zFinal = useZFinal(fields);
   // The canvas tint reaches the item's own pixels when its light mode admits it, never what its
   // children inherit. The light injection divides this value back out, so both read this one hook.
   const canvasModulate = useCanvasModulateFor(fields.material);
-  const tint = useCanvasItemTint(useTintInputs(fields, skipped.modulate), canvasModulate);
-  const layerRank = useLayerRank(useCanvasLayerIndex());
-  const keyAt = useMemo(
-    () => (sequence: number) => canvasRenderOrder({ layerRank, zFinal, sequence }),
-    [layerRank, zFinal]
-  );
+  const tint = useCanvasItemTint(useTintInputs(fields), canvasModulate);
+  const keyAt = useCanvasKeyAt(zFinal);
   return {
     key: keyAt(fields.sequence),
     keyAt,
@@ -105,28 +98,58 @@ export function useCanvasItemState(fields: CanvasItemFields): CanvasItemState {
   };
 }
 
-/** `p_z` accumulated through the skipped items, one step each, and then the item's own. */
-function useZFinal(fields: CanvasItemFields, skippedZ: readonly CanvasItemZStep[]): number {
-  const parentZ = useEffectiveZ();
-  const steps = [...skippedZ, { zIndex: fields.zIndex, zAsRelative: fields.zAsRelative }];
-  return steps.reduce(
-    (z, step) => accumulateCanvasItemZ(z, { z_index: step.zIndex, z_as_relative: step.zAsRelative }),
-    parentZ
+/**
+ * The draw-order key of a canvas item that draws outside `useCanvasItemState`, such as a Camera2D's
+ * gizmo, from its node and its own z step.
+ */
+export function useCanvasKeyOfNode(node: TscnNode, own: CanvasItemZStep): number {
+  return useCanvasKeyAt(useZFinal(own))(useNodePaintSequence(node));
+}
+
+/** The key of each draw sequence at this canvas layer and `zFinal`. */
+function useCanvasKeyAt(zFinal: number): (sequence: number) => number {
+  const layerRank = useLayerRank(useCanvasLayerIndex());
+  return useMemo(
+    () => (sequence: number) => canvasRenderOrder({ layerRank, zFinal, sequence }),
+    [layerRank, zFinal]
   );
 }
 
-/** The item's tint properties, its `modulate` with the skipped items' product folded in front, as the walk meets them. */
-function useTintInputs(
-  fields: CanvasItemFields,
-  skippedModulate: Rgba
-): { modulate: Rgba; self_modulate: Rgba } {
-  const { modulate, selfModulate } = fields;
-  return useMemo(
-    () => ({
-      modulate: multiplyModulate(skippedModulate, modulate),
-      self_modulate: selfModulate,
-    }),
-    [skippedModulate, modulate, selfModulate]
+function useZFinal(own: CanvasItemZStep): number {
+  return stepZ(useEffectiveZ(), own);
+}
+
+/** `p_z` after one step (`renderer_canvas_cull.cpp:430-434`). */
+function stepZ(parentZ: number, step: CanvasItemZStep): number {
+  return accumulateCanvasItemZ(parentZ, { z_index: step.zIndex, z_as_relative: step.zAsRelative });
+}
+
+/** The item's tint properties in the names `useCanvasItemTint` reads. */
+function useTintInputs({ modulate, selfModulate }: CanvasItemFields): {
+  modulate: Rgba;
+  self_modulate: Rgba;
+} {
+  return useMemo(() => ({ modulate, self_modulate: selfModulate }), [modulate, selfModulate]);
+}
+
+/** The ambient below `skipped`: their modulate and z folded in, as if each drew its own group. */
+export function SkippedCanvasItemsScope({
+  skipped,
+  children,
+}: {
+  skipped: SkippedCanvasItems;
+  children: ReactNode;
+}) {
+  const parentModulate = useParentModulate();
+  const modulate = useMemo(
+    () => multiplyModulate(parentModulate, skipped.modulate),
+    [parentModulate, skipped.modulate]
+  );
+  const z = skipped.z.reduce(stepZ, useEffectiveZ());
+  return (
+    <Modulate2DContext.Provider value={modulate}>
+      <EffectiveZProvider value={z}>{children}</EffectiveZProvider>
+    </Modulate2DContext.Provider>
   );
 }
 
@@ -164,7 +187,7 @@ export interface CanvasSlot {
  * @canonical A draw-order key between a canvas item's key and the next
  */
 export function canvasSubOrders<const Piece extends string>(
-  slot: number | CanvasSlot,
+  slot: CanvasSlot,
   pieces: readonly Piece[]
 ): Readonly<Record<Piece, CanvasSlot>> {
   return Object.fromEntries(
@@ -173,8 +196,17 @@ export function canvasSubOrders<const Piece extends string>(
 }
 
 /** The slot of piece `index` of `count` that `canvasSubOrders` hands out, for a run of pieces with no names. */
-export function canvasPieceSlot(slot: number | CanvasSlot, index: number, count: number): CanvasSlot {
-  const { key, span } = typeof slot === 'number' ? { key: slot, span: 1 } : slot;
+export function canvasPieceSlot({ key, span }: CanvasSlot, index: number, count: number): CanvasSlot {
   const step = span / (count + 1);
   return { key: key + (index + 1) * step, span: step };
+}
+
+/** The slot of the one piece an item draws after the pixels at `slot`. */
+export function canvasSubOrder(slot: CanvasSlot): CanvasSlot {
+  return canvasPieceSlot(slot, 0, 1);
+}
+
+/** The slot of a whole draw-order key, such as a canvas item's own: the next key starts 1 above it. */
+export function wholeKeySlot(key: number): CanvasSlot {
+  return { key, span: 1 };
 }

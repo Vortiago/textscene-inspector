@@ -407,16 +407,16 @@ describe('<ControlCanvasWalker>', () => {
     expect(lines.some((l) => l.renderOrder >= worldFloor)).toBe(true);
   });
 
-  it("hands the painter subtreeChromeRenderOrder from the END of its own draw-sequence run — the deepest descendant's own renderOrder, one less than the next sibling's", async () => {
+  it('hands the painter a chromeSlot at its own back slot, after its deepest descendant and before the next sibling', async () => {
+    // A real Control type, since only a Control holds a back slot (`internalBackRoom`). The
+    // registry clears after each test.
     controlComponentRegistry.register({
-      typeName: 'TestOrderType',
-      Component: ({ subtreeChromeRenderOrder }) => (
-        <group name="order-probe" renderOrder={subtreeChromeRenderOrder ?? -1} />
-      ),
+      typeName: 'Panel',
+      Component: ({ chromeSlot }) => <group name="order-probe" renderOrder={chromeSlot.key} />,
     });
     const grandchild = solveNode('Root/Child/Grandchild', 'TestType', { anchorsPreset: 15 });
     const child = solveNode('Root/Child', 'TestType', { anchorsPreset: 15 }, [grandchild]);
-    const root = solveNode('Root', 'TestOrderType', { anchorsPreset: 15 }, [child]);
+    const root = solveNode('Root', 'Panel', { anchorsPreset: 15 }, [child]);
     const sibling = solveNode('Sibling', 'TestType', { anchorsPreset: 15 });
 
     const renderer = await ReactThreeTestRenderer.create(
@@ -436,16 +436,11 @@ describe('<ControlCanvasWalker>', () => {
     const lines = renderer.scene
       .findAllByType('LineSegments')
       .map((l) => l.instance as { renderOrder: number });
-    // Root's run covers Root, Child and Grandchild; the next sibling starts one
-    // past its end. So the chrome slot is the run's LAST value, which is both
-    // the deepest descendant's own and exactly one below the sibling's.
+    // Root, Child and Grandchild take 1 to 3, the back slot 4, and the sibling 5.
     const at = (sequence: number) => canvasRenderOrder({ layerRank: WORLD_RANK, zFinal: 0, sequence });
-    const grandchildOrder = at(3);
-    const siblingOrder = at(4);
-    expect(lines.some((l) => l.renderOrder === grandchildOrder)).toBe(true);
-    expect(lines.some((l) => l.renderOrder === siblingOrder)).toBe(true);
-    expect(probe.renderOrder).toBe(grandchildOrder);
-    expect(probe.renderOrder).toBe(siblingOrder - 1);
+    expect(lines.some((l) => l.renderOrder === at(3))).toBe(true);
+    expect(lines.some((l) => l.renderOrder === at(5))).toBe(true);
+    expect(probe.renderOrder).toBe(at(4));
   });
 
   it('leaves every Control group at z=0 regardless of CanvasLayer nesting — paint order comes from renderOrder alone', async () => {

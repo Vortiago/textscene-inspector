@@ -160,6 +160,9 @@ function ToolbarText({
   );
 }
 
+/** Each item is a child item of `menu_hbox` (`graph_edit.cpp:3235-3321`): its box draws before its content. */
+const TOOLBAR_ITEM_PIECES = ['boxes', 'content'] as const;
+
 export function GraphEditToolbarChrome({
   toolbar,
   icons,
@@ -170,9 +173,7 @@ export function GraphEditToolbarChrome({
   rtl,
   slot,
 }: GraphEditToolbarProps) {
-  const renderOrder = slot.key;
-  // Each item is a child item of `menu_hbox` (`:3235-3321`): its box draws before its content.
-  const items = canvasSubOrders(slot, ['boxes', 'content']);
+  const items = canvasSubOrders(slot, TOOLBAR_ITEM_PIECES);
   const panelStyle = useMemo(() => graphEditMenuPanelStyleBox(theme), [theme]);
   const pressedStyle = useMemo(() => flatButtonPressedStyleBox(theme.widgets.button.pressed), [theme]);
   const labelColor = useMemo(() => multiplyModulate(tint.own, LABEL_FONT_COLOR), [tint.own]);
@@ -196,12 +197,12 @@ export function GraphEditToolbarChrome({
   const lineEditInsetX = theme.widgets.lineEdit.normal.contentMargin.left;
 
   return (
-    <CanvasItemGroup position={[panelRect.x, -panelRect.y, 0]} renderOrder={renderOrder}>
+    <CanvasItemGroup position={[panelRect.x, -panelRect.y, 0]} renderOrder={slot.key}>
       <StyleBoxQuad
         styleBox={panelStyle}
         color={tint.own}
         rect={{ x: 0, y: 0, w: panelRect.w, h: panelRect.h }}
-        renderOrder={renderOrder}
+        renderOrder={slot.key}
       />
 
       {toolbar.items.map((item) => {

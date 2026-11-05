@@ -53,6 +53,10 @@ describe('copyTexels', () => {
     expect(copyWith('encode').drawn.fragment).toContain('sRGBTransferOETF');
   });
 
+  it('writes alpha 1 and keeps the colour for an opaque copy', () => {
+    expect(copyWith('opaque').drawn.fragment).toContain('vec4( texel.rgb, 1.0 )');
+  });
+
   it("reads the source's edge texel for a placed texel past the source, as a clamped sampler does", () => {
     expect(copyWith().drawn.fragment).toContain('clamp( at, ivec2( 0 ), textureSize( source, 0 ) - 1 )');
   });

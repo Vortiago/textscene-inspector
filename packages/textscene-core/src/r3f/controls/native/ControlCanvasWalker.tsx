@@ -24,7 +24,13 @@ import { CanvasItemGroup, CanvasItemKeyProvider } from '../../components/CanvasI
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import { snapControlsToPixelsEnabled, snappedControlOrigin } from './controlPixelSnap';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
-import { CanvasItemChildScope, useCanvasItemState, type CanvasItemState } from '../../canvasItemState';
+import {
+  CanvasItemChildScope,
+  SkippedCanvasItemsScope,
+  useCanvasItemState,
+  wholeKeySlot,
+  type CanvasItemState,
+} from '../../canvasItemState';
 
 interface ControlCanvasWalkerProps {
   tree: readonly SolveNode[];
@@ -138,11 +144,27 @@ function useControlState(solveNode: SolveNode, props: ControlProperties): Canvas
     ),
     lightMask: props.lightMask,
     sequence: solveNode.paintSequence,
-    skipped: solveNode.skippedAncestors ?? undefined,
   });
 }
 
-function ControlNodeGroup({
+/**
+ * One Control, under the skipped Node2D chain it promoted past (`SolveNode.skippedAncestors`), when
+ * there is one. A product of ancestors can shear, so the chain's transform goes in as a whole matrix.
+ */
+function ControlNodeGroup(props: ControlNodeGroupProps) {
+  const skipped = props.solveNode.skippedAncestors;
+  if (!skipped) return <ControlItemGroup {...props} />;
+  // paint-order-safe: outside the keyed item group, never between it and a mesh.
+  return (
+    <group matrix={threeMatrixFromTransform2D(skipped.transform)} matrixAutoUpdate={false}>
+      <SkippedCanvasItemsScope skipped={skipped}>
+        <ControlItemGroup {...props} />
+      </SkippedCanvasItemsScope>
+    </group>
+  );
+}
+
+function ControlItemGroup({
   solveNode,
   solved,
   isFreeParent,
@@ -155,7 +177,8 @@ function ControlNodeGroup({
   const { key: renderOrder, tint } = state;
   // For chrome drawn after the whole subtree (Godot's `INTERNAL_MODE_BACK`). The
   // subtree owns a contiguous run, so this is its last value.
-  const subtreeChromeRenderOrder = state.keyAt(solveNode.paintRange.base + solveNode.paintRange.size - 1);
+  const backKey = state.keyAt(solveNode.backSequence);
+  const chromeSlot = useMemo(() => wholeKeySlot(backKey), [backKey]);
   // `is_visible_in_tree()` is `visible && parent_visible_in_tree` (`canvas_item.cpp:62-64`).
   // Both halves come from the solve, which read `hiddenNodePaths`: a skipped
   // Node2D mounts no group, and a hoisted `top_level` or chain-broken Control is a
@@ -224,7 +247,7 @@ function ControlNodeGroup({
         rect={rect}
         renderOrder={renderOrder}
         tint={tint}
-        subtreeChromeRenderOrder={subtreeChromeRenderOrder}
+        chromeSlot={chromeSlot}
         theme={theme}
         measureText={measureText}
         snapToPixels={snapToPixels}
@@ -282,14 +305,5 @@ function ControlNodeGroup({
     </group>
   );
 
-  if (!solveNode.skippedAncestors) return ownGroup;
-
-  // paint-order-safe: outside the keyed `ownGroup`, never between it and a mesh.
-  // The skipped Node2D chain this node promoted past (`SolveNode.skippedAncestors`). A product
-  // of ancestors can shear, so it goes in as a whole matrix, never decomposed.
-  return (
-    <group matrix={threeMatrixFromTransform2D(solveNode.skippedAncestors.transform)} matrixAutoUpdate={false}>
-      {ownGroup}
-    </group>
-  );
+  return ownGroup;
 }

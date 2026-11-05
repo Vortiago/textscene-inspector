@@ -16,7 +16,7 @@ export function ScrollContainer({
   solveNode,
   tint,
   rect,
-  subtreeChromeRenderOrder,
+  chromeSlot,
   theme,
   snapToPixels,
   children,
@@ -51,20 +51,20 @@ export function ScrollContainer({
           hint={layout.hints.topLeft}
           color={hintColor}
           opacity={tint.opacity}
-          chromeSlot={subtreeChromeRenderOrder}
+          chromeSlot={chromeSlot}
         />
         <ScrollHintChrome
           hint={layout.hints.bottomRight}
           color={hintColor}
           opacity={tint.opacity}
-          chromeSlot={subtreeChromeRenderOrder}
+          chromeSlot={chromeSlot}
         />
         <ScrollBarChrome
           bar={layout.horizontal}
           track={theme.widgets.scrollBar.scrollHorizontal}
           grabber={theme.widgets.scrollBar.grabber}
           color={tint.own}
-          chromeSlot={subtreeChromeRenderOrder}
+          chromeSlot={chromeSlot}
           snapToPixels={snapToPixels}
         />
         <ScrollBarChrome
@@ -72,7 +72,7 @@ export function ScrollContainer({
           track={theme.widgets.scrollBar.scrollVertical}
           grabber={theme.widgets.scrollBar.grabber}
           color={tint.own}
-          chromeSlot={subtreeChromeRenderOrder}
+          chromeSlot={chromeSlot}
           snapToPixels={snapToPixels}
         />
         {children}

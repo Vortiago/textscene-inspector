@@ -11,6 +11,7 @@ import { nativeTheme } from '../nativeTheme';
 import { WHITE_MODULATE, type OwnPixelTint } from '../../../canvasItemModulate';
 import { godotColorToLinear } from '../../../godotColor';
 import type { NativeControlComponentProps } from '../../ControlComponentRegistry';
+import { wholeKeySlot } from '../../../canvasItemState';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Rgba } from '../../../../godot/math/math';
 
@@ -30,7 +31,7 @@ export function painterTint(own: Rgba = WHITE_MODULATE): OwnPixelTint {
  */
 export function painterEnv(): Pick<
   NativeControlComponentProps,
-  'theme' | 'measureText' | 'childRects' | 'subtreeChromeRenderOrder' | 'snapToPixels' | 'meta' | 'tint'
+  'theme' | 'measureText' | 'childRects' | 'chromeSlot' | 'snapToPixels' | 'meta' | 'tint'
 > {
   return {
     theme: nativeTheme(1),
@@ -38,9 +39,7 @@ export function painterEnv(): Pick<
     childRects: NO_CHILD_RECTS,
     // A childless Control at paint index 0. Required on the contract, since an
     // absent value would draw chrome under the subtree.
-    subtreeChromeRenderOrder: 0,
-    // A Control with no `z_index`. A lit painter passes it to
-    // `useCanvasItemLighting`, whose fallback reads the parent's z.
+    chromeSlot: wholeKeySlot(0),
     // The `Viewport::snap_controls_to_pixels` initialiser (`scene/main/viewport.h`).
     snapToPixels: true,
     meta: undefined,

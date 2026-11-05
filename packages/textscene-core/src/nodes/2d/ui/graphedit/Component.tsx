@@ -159,13 +159,19 @@ function GridDotQuad({
   );
 }
 
+/**
+ * The pieces of `top_layer`, an `INTERNAL_MODE_BACK` child drawn after every GraphElement
+ * (`graph_edit.cpp:3183`), in its child order (`:3211-3329`).
+ */
+export const GRAPH_EDIT_TOP_LAYER = ['scrollBars', 'toolbar', 'minimap'] as const;
+
 export function GraphEdit({
   solveNode,
   tint,
   rect,
   theme,
   renderOrder,
-  subtreeChromeRenderOrder,
+  chromeSlot,
   childRects,
   measureText,
   snapToPixels,
@@ -260,13 +266,8 @@ export function GraphEdit({
     graphEditSize,
     theme
   );
-  // The chrome is `INTERNAL_MODE_*` children of `top_layer`, which is `INTERNAL_MODE_BACK`
-  // (`graph_edit.cpp:3183`), so it paints after every GraphElement, in `top_layer`
-  // child order (`:3210,3229,3329`): scrollbars, toolbar, minimap.
   const scrollBars = graphEditScrollBars(graphEditSize, bounds, scrollOffset, theme);
-  // `top_layer` is an `INTERNAL_MODE_BACK` child, drawn after every GraphElement (`graph_edit.cpp:3183`),
-  // and holds the bars, the menu panel and the minimap in that order (`:3211-3329`).
-  const topLayer = canvasSubOrders(subtreeChromeRenderOrder, ['scrollBars', 'toolbar', 'minimap']);
+  const topLayer = canvasSubOrders(chromeSlot, GRAPH_EDIT_TOP_LAYER);
   const minimapPanelRect = minimapRect(graphEditSize, props);
   const minimapXform = minimapTransform({ x: minimapPanelRect.w, y: minimapPanelRect.h }, bounds);
 

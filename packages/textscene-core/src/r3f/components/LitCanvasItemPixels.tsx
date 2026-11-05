@@ -67,7 +67,7 @@ export function LitCanvasItemPixels({
   const { props: lighting, geometryRef } = useCanvasItemLighting({
     material,
     lightMask,
-    effectiveZ: zFinal,
+    zFinal,
     surface,
   });
   const blendMode = material?.blendMode ?? CanvasItemMaterialBlendMode.MIX;

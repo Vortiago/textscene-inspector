@@ -5,7 +5,7 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import { canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemState';
+import { canvasSubOrder, canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemState';
 import {
   snappedControlOrigin,
   type ControlDrawTransform,
@@ -31,8 +31,10 @@ export const SCROLL_HINT_MODULATE = new THREE.Color(0, 0, 0);
  * scrollbars (`scroll_container.cpp:905-924`). A bare slot key would tie with that item, and three
  * would put the fade under an opaque one.
  */
-function scrollChromeOrders(chromeSlot: number | CanvasSlot) {
-  return canvasSubOrders(chromeSlot, ['hints', 'bars']);
+const SCROLL_CHROME_PIECES = ['hints', 'bars'] as const;
+
+function scrollChromeOrders(chromeSlot: CanvasSlot) {
+  return canvasSubOrders(chromeSlot, SCROLL_CHROME_PIECES);
 }
 
 /**
@@ -50,7 +52,7 @@ export function ScrollHintChrome({
   color: THREE.Color;
   opacity: number;
   /** See `ScrollBarChromeProps.chromeSlot`. */
-  chromeSlot: number | CanvasSlot;
+  chromeSlot: CanvasSlot;
 }) {
   const loaded = useOptionalIconTexture(
     hint === null ? null : hint.vertical ? SCROLL_HINT_ICONS.vertical : SCROLL_HINT_ICONS.horizontal
@@ -101,13 +103,13 @@ interface ScrollBarChromeProps {
   /** Raw sRGB, which `<StyleBoxQuad>` composes into `track` and `grabber`. */
   color: Rgba;
   /**
-   * The key of the last item the chrome paints over, or a piece's slot, so the chrome draws inside
-   * it and below the next sibling. ScrollContainer passes `subtreeChromeRenderOrder`: its bars are
-   * `INTERNAL_MODE_BACK` children (`scroll_container.cpp:919,924`) that paint after every descendant.
-   * ItemList passes its own `renderOrder`: its bars are `INTERNAL_MODE_FRONT` children
-   * (`item_list.cpp:2472,2476`) that paint over its rows and under its regular children.
+   * The slot the chrome draws inside, below the next sibling. ScrollContainer passes its
+   * `chromeSlot`: its bars are `INTERNAL_MODE_BACK` children (`scroll_container.cpp:919,924`) that
+   * paint after every descendant. ItemList passes its own key's slot: its bars are
+   * `INTERNAL_MODE_FRONT` children (`item_list.cpp:2472,2476`) that paint over its rows and under
+   * its regular children.
    */
-  chromeSlot: number | CanvasSlot;
+  chromeSlot: CanvasSlot;
   /** The walker's `gui/common/snap_controls_to_pixels`, the only value correct inside a SubViewport. */
   snapToPixels: boolean;
 }
@@ -128,7 +130,7 @@ export function ScrollBarChrome({
 }: ScrollBarChromeProps) {
   if (!bar.visible) return null;
   const bars = scrollChromeOrders(chromeSlot).bars;
-  const grabberKey = canvasSubOrders(bars, ['grabber']).grabber.key;
+  const grabberKey = canvasSubOrder(bars).key;
   const origin = snappedControlOrigin(bar.rect, SCROLL_BAR_DRAW_TRANSFORM, snapToPixels);
   // A group carries the position. `StyleBoxQuad` takes only the size and flips y.
   // The grabber is no node (`scene/gui/scroll_bar.cpp:326-344`): it draws

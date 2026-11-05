@@ -15,6 +15,7 @@ import { ControlClipProvider, useControlClipPlanes } from '../../../../r3f/contr
 import type { ScrollContainerProperties } from './types';
 import { ScrollContainer } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
+import { wholeKeySlot } from '../../../../r3f/canvasItemState';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 // Only `gui/common/snap_controls_to_pixels` comes from the project settings,
@@ -133,19 +134,20 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
     expect(box.min.y).toBeCloseTo(-476.66, 1);
   });
 
-  it('draws both bars after subtreeChromeRenderOrder, grabber over track, strictly above every descendant and strictly below the next sibling', async () => {
-    // `scene/gui/scroll_container.cpp:919,924` adds the bars as `INTERNAL_MODE_BACK`,
-    // after the whole subtree. The next sibling starts one past
-    // `subtreeChromeRenderOrder` (`canvasPaintOrder.ts`), so the bars sit in that gap.
+  it('draws both bars inside chromeSlot, grabber over track, strictly above every descendant and strictly below the next sibling', async () => {
+    // `scene/gui/scroll_container.cpp:919,924` adds the bars as `INTERNAL_MODE_BACK`, after the
+    // whole subtree. The back slot holds the key after the subtree's last (`internalBackRoom`), and
+    // the next sibling starts one past it, so the bars sit in that slot.
     const content = leaf('Scroll/Content', { customMinimumSize: { x: 399, y: 800 } });
-    const deepestDescendantOrder = 12; // stands in for the end of this node's draw-sequence run.
+    const deepestDescendantOrder = 11;
+    const backKey = 12;
     const renderer = await ReactThreeTestRenderer.create(
       <ScrollContainer
         {...painterEnv()}
         solveNode={scrollNode({}, [content])}
         rect={FIXTURE_RECT}
         renderOrder={10}
-        subtreeChromeRenderOrder={deepestDescendantOrder}
+        chromeSlot={wholeKeySlot(backKey)}
       >
         <mesh name="deepest-descendant" renderOrder={deepestDescendantOrder}>
           <boxGeometry args={[1, 1, 1]} />
@@ -162,7 +164,7 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
     // Strictly above every descendant this node ever draws...
     expect(orders[0]!).toBeGreaterThan(nearestGroupOrder(descendant));
     // ...and strictly below the next sibling's own paint slot.
-    expect(orders[1]!).toBeLessThan(deepestDescendantOrder + 1);
+    expect(orders[1]!).toBeLessThan(backKey + 1);
   });
 
   it('offsets the grabber toward the bottom when scrolled (scroll_vertical authored)', async () => {

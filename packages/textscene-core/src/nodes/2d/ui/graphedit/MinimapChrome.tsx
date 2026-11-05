@@ -156,6 +156,9 @@ interface GraphEditMinimapProps {
   slot: CanvasSlot;
 }
 
+/** What `GraphEdit::_minimap_draw` draws after its panel, in order (`graph_edit.cpp:1807-1892`). */
+export const MINIMAP_PIECES = ['nodes', 'connections', 'camera', 'resizer'] as const;
+
 export function GraphEditMinimapChrome({
   rect,
   transform,
@@ -173,9 +176,7 @@ export function GraphEditMinimapChrome({
   tint,
   slot,
 }: GraphEditMinimapProps) {
-  const renderOrder = slot.key;
-  // `GraphEdit::_minimap_draw` draws the panel, the nodes, the connections, the camera and the resizer in this order (`graph_edit.cpp:1807-1892`).
-  const pieces = canvasSubOrders(slot, ['nodes', 'connections', 'camera', 'resizer']);
+  const pieces = canvasSubOrders(slot, MINIMAP_PIECES);
   const scale = theme.contentMargin / DEFAULT_CONTENT_MARGIN;
   // `minimap->set_modulate(Color(1, 1, 1, minimap_opacity))` (`:3330`) multiplies every draw
   // inside the minimap, so it folds into each sRGB colour before the linear conversion.
@@ -205,16 +206,15 @@ export function GraphEditMinimapChrome({
   );
   const resizerOpacity = modulated.a * RESIZER_COLOR.a;
 
-  const resizerRenderOrder = pieces.resizer.key;
   const cameraRect = minimapCameraRect(transform, bounds, scrollOffset, graphEditSize);
 
   return (
-    <CanvasItemGroup position={[rect.x, -rect.y, 0]} renderOrder={renderOrder}>
+    <CanvasItemGroup position={[rect.x, -rect.y, 0]} renderOrder={slot.key}>
       <StyleBoxQuad
         styleBox={panelStyle}
         color={modulated}
         rect={{ x: 0, y: 0, w: rect.w, h: rect.h }}
-        renderOrder={renderOrder}
+        renderOrder={slot.key}
       />
 
       {elements.map((element) => {
@@ -252,14 +252,14 @@ export function GraphEditMinimapChrome({
       </CanvasItemGroup>
 
       {resizerTexture && (
-        <CanvasItemGroup renderOrder={resizerRenderOrder}>
+        <CanvasItemGroup renderOrder={pieces.resizer.key}>
           <ControlQuad
             width={GRAPH_EDIT_ICON_SIZE}
             height={GRAPH_EDIT_ICON_SIZE}
             color={resizerColor}
             opacity={resizerOpacity}
             map={resizerTexture}
-            renderOrder={resizerRenderOrder}
+            renderOrder={pieces.resizer.key}
           />
         </CanvasItemGroup>
       )}
