@@ -17,7 +17,14 @@ import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { IMAGE_OBJECT_CHAR, INDENT_TAGS, hasOpenTag, resolveBBColor, type OpenBBCodeTag } from './bbcode';
+import {
+  IMAGE_OBJECT_CHAR,
+  INDENT_TAGS,
+  hasOpenTag,
+  lastTagValue,
+  resolveBBColor,
+  type OpenBBCodeTag,
+} from './bbcode';
 import { faceOfStyle, type RichTextFaces } from './styleFaces';
 import type { StyledTextRun } from './nativeSolver';
 
@@ -79,13 +86,8 @@ function indentFramesOf(
   return frames;
 }
 
-function colorOf(tag: OpenBBCodeTag | undefined, fallback: Rgba): Rgba | undefined {
-  return tag && tag.value !== undefined ? resolveBBColor(tag.value, fallback) : undefined;
-}
-
-/** The last tag named `color`: the innermost, which `_find_color` takes. */
-function innermostColorTag(tags: readonly OpenBBCodeTag[]): OpenBBCodeTag | undefined {
-  return [...tags].reverse().find((tag) => tag.name === 'color');
+function colorOf(value: string | undefined, fallback: Rgba): Rgba | undefined {
+  return value === undefined ? undefined : resolveBBColor(value, fallback);
 }
 
 function styleOf(bold: boolean, italic: boolean, color: Rgba, inputs: RunListingInputs): MarkerStyle {
@@ -98,11 +100,7 @@ function styleOf(bold: boolean, italic: boolean, color: Rgba, inputs: RunListing
  */
 function textRowMarkerStyle(inputs: RunListingInputs): MarkerStyle {
   const { tags, defaultColor } = inputs;
-  const color =
-    colorOf(
-      tags.find((tag) => tag.name === 'color'),
-      defaultColor
-    ) ?? defaultColor;
+  const color = colorOf(tags.find((tag) => tag.name === 'color')?.value, defaultColor) ?? defaultColor;
   return styleOf(hasOpenTag(tags, 'b'), hasOpenTag(tags, 'i'), color, inputs);
 }
 
@@ -120,8 +118,8 @@ function emptyRowMarkerStyle(
   const { tags, defaultColor } = inputs;
   const opensFont = openedHere.some((tag) => tag.name === 'b' || tag.name === 'i');
   const color =
-    colorOf(innermostColorTag(openedHere), defaultColor) ??
-    colorOf(innermostColorTag(lineTags), defaultColor) ??
+    colorOf(lastTagValue(openedHere, 'color'), defaultColor) ??
+    colorOf(lastTagValue(lineTags, 'color'), defaultColor) ??
     defaultColor;
   return opensFont
     ? styleOf(hasOpenTag(tags, 'b'), hasOpenTag(tags, 'i'), color, inputs)
@@ -280,8 +278,13 @@ function rowTableOf(runs: readonly ListingRun[]): RowTable {
   let startsRow = true;
   for (const run of runs) {
     const runFirstRow = startsRow ? rows.length : rows.length - 1;
-    for (const frame of [...(run.listing?.frames ?? []), ...(run.listing?.startFrames ?? [])]) {
-      if (!firstRowOf.has(frame.tag)) firstRowOf.set(frame.tag, runFirstRow);
+    if (run.listing) {
+      for (const frame of run.listing.frames) {
+        if (!firstRowOf.has(frame.tag)) firstRowOf.set(frame.tag, runFirstRow);
+      }
+      for (const frame of run.listing.startFrames ?? []) {
+        if (!firstRowOf.has(frame.tag)) firstRowOf.set(frame.tag, runFirstRow);
+      }
     }
     for (let i = 0; i < run.text.length; i++) {
       if (startsRow) {
@@ -313,7 +316,10 @@ function listsOf(row: Row): OpenBBCodeTag[] {
 
 /** The innermost list of a line, the one `_find_list_item` returns. */
 function nearestListOf(row: Row): OpenBBCodeTag | undefined {
-  return listsOf(row)[0];
+  for (let i = row.frames.length - 1; i >= 0; i--) {
+    if (row.frames[i]!.tag.name !== 'indent') return row.frames[i]!.tag;
+  }
+  return undefined;
 }
 
 export interface ListingContext {
@@ -336,13 +342,14 @@ function marginPx(frames: readonly IndentFrame[], context: ListingContext): numb
 
 function shapeMarker(text: string, row: Row, faces: RichTextFaces): ListMarker {
   const style = rowMarkerStyle(row);
+  const direction = row.run.bidi.direction;
   const layout = shapeText(text, {
     fontSizePx: style.fontSizePx,
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx: 0,
     fontMetrics: faceOfStyle(faces, style),
-    direction: row.run.bidi.direction,
+    direction,
     paragraphSeparator: '\n',
     terminateLastParagraph: false,
   });
@@ -371,7 +378,9 @@ export function paragraphListings(
   rows.forEach((row, rowIndex) => {
     const list = nearestListOf(row);
     if (list === undefined || rowIndex <= firstRowOf.get(list)!) return;
-    rowsOfList.set(list, [...(rowsOfList.get(list) ?? []), rowIndex]);
+    const listRows = rowsOfList.get(list) ?? [];
+    listRows.push(rowIndex);
+    rowsOfList.set(list, listRows);
   });
 
   /** `_find_list`'s index of `list` for a line at or below `row`: the lines of the list up to it, plus one. */
@@ -385,10 +394,11 @@ export function paragraphListings(
   for (const [list, firstRow] of firstRowOf) {
     if (list.name === 'indent' || nearestListOf(rows[firstRow]!) !== list) continue;
     const lists = listsOf(rows[firstRow]!);
+    const kinds = lists.map(listKindOf);
     const outerIndexes = lists.slice(1).map((outer, i) => indexOf(outer, firstRowOf.get(lists[i]!)!));
     let widestMarkerPx = 0;
     [firstRow, ...(rowsOfList.get(list) ?? [])].forEach((rowIndex, position) => {
-      const text = markerText(lists.map(listKindOf), [position + 1, ...outerIndexes]);
+      const text = markerText(kinds, [position + 1, ...outerIndexes]);
       const marker = shapeMarker(text, rows[rowIndex]!, context.faces);
       markers.set(rowIndex, marker);
       widestMarkerPx = Math.max(widestMarkerPx, marker.widthPx);
@@ -400,7 +410,7 @@ export function paragraphListings(
     if (row.frames.length === 0) return;
     const list = nearestListOf(row);
     listings.set(row.paragraphStart, {
-      indentPx: marginPx(row.frames, context) + ((list && markerWidthOfList.get(list)) || 0),
+      indentPx: marginPx(row.frames, context) + (list ? (markerWidthOfList.get(list) ?? 0) : 0),
       marker: markers.get(rowIndex),
     });
   });

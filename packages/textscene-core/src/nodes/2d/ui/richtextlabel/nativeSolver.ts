@@ -319,10 +319,11 @@ function richTextTabStopsPx(
  * ceiled width, truncated into the `int` the function keeps.
  */
 function contentWidthPx(layout: TextLayoutResult): number {
-  return Math.max(
-    0,
-    ...layout.lines.map((line) => Math.trunc((line.indentPx ?? 0) + shapedTextSizeWidthPx(line.widthPx)))
-  );
+  let widestPx = 0;
+  for (const line of layout.lines) {
+    widestPx = Math.max(widestPx, Math.trunc((line.indentPx ?? 0) + shapedTextSizeWidthPx(line.widthPx)));
+  }
+  return widestPx;
 }
 
 /**

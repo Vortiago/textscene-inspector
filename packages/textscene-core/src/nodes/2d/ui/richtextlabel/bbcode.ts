@@ -587,30 +587,28 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
   let afterListOpen = false;
   let afterListClose = false;
 
+  function startLine(): void {
+    lineFirstItemTags = null;
+    lineHasCharacter = false;
+  }
+
+  /** Records the non-empty `added` text against the line state the list markers read. */
   function noteCharacters(added: string): void {
-    if (added !== '') {
-      if (
-        pending === '' &&
-        openedSinceCharacter.length > 0 &&
-        stack.some((tag) => INDENT_TAGS.has(tag.name))
-      ) {
-        pendingOpenedAtStart = openedSinceCharacter;
-      }
-      openedSinceCharacter = [];
+    if (pending === '' && openedSinceCharacter.length > 0 && stack.some((tag) => INDENT_TAGS.has(tag.name))) {
+      pendingOpenedAtStart = openedSinceCharacter;
     }
-    for (let start = 0; start <= added.length;) {
+    openedSinceCharacter = [];
+    for (let start = 0; start < added.length;) {
       const newline = added.indexOf('\n', start);
-      const hasItem = (newline < 0 ? added.length : newline) > start || newline >= 0;
-      if (hasItem && lineFirstItemTags === null) lineFirstItemTags = [...stack];
-      if (hasItem && !lineHasCharacter) {
-        const firstItemTags = lineFirstItemTags!;
+      lineFirstItemTags ??= [...stack];
+      if (!lineHasCharacter) {
+        const firstItemTags = lineFirstItemTags;
         const leavesOutFrame = stack.some((tag) => INDENT_TAGS.has(tag.name) && !firstItemTags.includes(tag));
         if (pending === '' && leavesOutFrame) pendingStartTags = firstItemTags;
         lineHasCharacter = true;
       }
       if (newline < 0) return;
-      lineFirstItemTags = null;
-      lineHasCharacter = false;
+      startLine();
       start = newline + 1;
     }
   }
@@ -634,8 +632,7 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
     flush();
     runs.push({ text: '\n', tags: [...stack], zeroHeightBreak: true });
     lineHasLayout = false;
-    lineFirstItemTags = null;
-    lineHasCharacter = false;
+    startLine();
   }
 
   function push(tag: OpenBBCodeTag): void {
