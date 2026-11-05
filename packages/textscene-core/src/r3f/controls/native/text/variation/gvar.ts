@@ -24,7 +24,6 @@ import {
 const GVAR_HEADER_SIZE = 20;
 const GVAR_VERSION = 0x00010000;
 const LONG_OFFSETS = 1;
-/** `Fixed 26.6` of a font unit: a point at 64 times its value. */
 
 /** The `gvar` of a font, read for its header. */
 export interface GlyphVariations {

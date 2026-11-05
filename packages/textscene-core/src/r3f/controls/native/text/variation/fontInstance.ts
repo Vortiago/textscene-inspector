@@ -35,7 +35,7 @@ interface AdvanceVariations {
 }
 
 export interface FontInstance {
-  /** Names the instance for a cache: the same for two dictionaries that name the same axis values. */
+  /** Names the instance for a cache: its normalised coordinates, the same for two dictionaries that draw alike. */
   readonly key: string;
   /** The coordinate of each axis in 16.16, between -1 and 1. */
   readonly normalized: Int32Array;
@@ -113,11 +113,11 @@ const instancesOf = perObject(() => new Map<string, FontInstance | null>());
 export function fontInstanceOf(sfnt: SfntFile, opentype: OpentypeCoordinates): FontInstance | null {
   const key = opentypeKey(opentype);
   const instances = instancesOf(sfnt);
-  if (!instances.has(key)) instances.set(key, buildInstance(sfnt, opentype, key));
+  if (!instances.has(key)) instances.set(key, buildInstance(sfnt, opentype));
   return instances.get(key)!;
 }
 
-function buildInstance(sfnt: SfntFile, opentype: OpentypeCoordinates, key: string): FontInstance | null {
+function buildInstance(sfnt: SfntFile, opentype: OpentypeCoordinates): FontInstance | null {
   const face = variationFaceOf(sfnt);
   if (!face || face.glyphVariations === 'invalid') return null;
   const normalized = normalizedCoordinates(face.axes, designCoordinates(face.axes, opentype), face.avar);
@@ -137,7 +137,7 @@ function buildInstance(sfnt: SfntFile, opentype: OpentypeCoordinates, key: strin
     throw error;
   }
   return {
-    key,
+    key: normalized.join(','),
     normalized,
     glyphVariations: face.glyphVariations,
     controlValues,

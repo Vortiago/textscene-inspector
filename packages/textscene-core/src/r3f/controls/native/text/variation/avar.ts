@@ -55,7 +55,7 @@ function readSegments(reader: ByteReader, axisCount: number, tableLength: number
 /**
  * The adjustments of `avar`, or null when the font has none or FreeType ignores the table: a
  * version it does not know, or a count of axes that differs from `fvar`'s. A table that fails
- * half way keeps what FreeType had loaded then.
+ * half way keeps the segments and the store it had read, and a read past its end keeps none.
  */
 export function readAvar(sfnt: SfntFile, axisCount: number): AxisVariations | null {
   const { dv } = sfnt;

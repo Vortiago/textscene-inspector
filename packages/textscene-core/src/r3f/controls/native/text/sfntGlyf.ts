@@ -296,7 +296,9 @@ class GlyphLoad {
     private readonly scale: number,
     private readonly hinter: GlyphLoadHinter | null,
     /** The variable font's instance, or null for the default instance, which `IS_DEFAULT_INSTANCE` takes. */
-    private readonly instance: FontInstance | null
+    private readonly instance: FontInstance | null,
+    /** `FT_LOAD_NO_SCALE`: the auto-hinter's load. A scale of 1.0 alone does not say so, as 2048 units at 32 px scale by 1.0. */
+    private readonly isUnscaled: boolean
   ) {}
 
   /** `load_truetype_glyph`: appends the glyph's points, or throws the error that fails the load. */
@@ -339,11 +341,6 @@ class GlyphLoad {
   private variedPoints(glyphIndex: number, points: GlyphPoints): VariedPoints {
     const { glyphVariations, normalized, adjustedAdvances } = this.instance!;
     return variedGlyphPoints(glyphVariations, normalized, glyphIndex, points, adjustedAdvances);
-  }
-
-  /** Whether the glyph loads in font units, which the auto-hinter does, as `scale` 1.0 says. */
-  private get isUnscaled(): boolean {
-    return this.scale === FIXED_16_16_ONE;
   }
 
   /** The phantom points of a glyph with no contour, moved by the instance's deltas, in whole font units. */
@@ -632,7 +629,7 @@ export function glyphOutlineReader(sfnt: SfntFile, hinting: GlyphHinting | null)
     const { scale, ppem } = freeTypeTrueTypeSize(font.unitsPerEm, fontSizePx, font.isPpemRounded);
     const hinter = hinting ? hinting.beginLoad(ppem, scale, instance) : null;
     if (hinter === 'failed') return null;
-    const load = loadedGlyph(font, glyphIndex, scale, hinter, instance);
+    const load = loadedGlyph(font, glyphIndex, scale, hinter, instance, false);
     return load && load.x.length > 0 ? load.outline() : null;
   };
 }
@@ -643,9 +640,10 @@ function loadedGlyph(
   glyphIndex: number,
   scale: number,
   hinter: GlyphLoadHinter | null,
-  instance: FontInstance | null
+  instance: FontInstance | null,
+  isUnscaled: boolean
 ): GlyphLoad | null {
-  const load = new GlyphLoad(font, scale, hinter, instance);
+  const load = new GlyphLoad(font, scale, hinter, instance, isUnscaled);
   try {
     load.load(glyphIndex, 0);
   } catch (error) {
@@ -667,6 +665,6 @@ export function unscaledGlyfOutlines(sfnt: SfntFile, instance: FontInstance | nu
     isPpemRounded: font.isPpemRounded,
     glyphCount: font.glyphCount,
     unscaledGlyph: (glyphIndex) =>
-      loadedGlyph(font, glyphIndex, FIXED_16_16_ONE, null, instance)?.outline() ?? null,
+      loadedGlyph(font, glyphIndex, FIXED_16_16_ONE, null, instance, true)?.outline() ?? null,
   };
 }

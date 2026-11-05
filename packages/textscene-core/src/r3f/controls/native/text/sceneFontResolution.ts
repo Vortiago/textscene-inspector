@@ -68,9 +68,8 @@ export function fontVariationSkew(font: FontResource | null | undefined): number
 }
 
 /**
- * `FontVariation.variation_opentype` of `font`: the axes keyed by tag (an int) or by name, in the order Godot applies
- * them. Empty for any other font and for no dictionary. As for the
- * embolden, a variation over a variation takes its own value (`font.cpp:3128-3131`).
+ * `FontVariation.variation_opentype` of `font`: the axes keyed by tag (an int) or by name. Empty for any other font and
+ * for no dictionary. As for the embolden, a variation over a variation takes its own value (`font.cpp:3128-3131`).
  */
 export function fontVariationOpentype(font: FontResource | null | undefined): OpentypeCoordinates {
   const entries =
