@@ -17,6 +17,8 @@ export interface RuntimeFontMetricsInput {
   readonly measureWidthUnits: DesignUnitWidthFn;
   /** The unique CSS font family the font was registered under, which a canvas-2D painter sets `ctx.font` to. */
   readonly cssFontFamily: string;
+  /** From the font's `cmap`: canvas has no "no glyph" signal. */
+  readonly hasGlyph: (ch: string) => boolean;
 }
 
 /** `FontMetrics` painted with canvas-2D rather than the baked MSDF atlas. `TextRunMesh.tsx` dispatches on `kind`. */
@@ -36,7 +38,7 @@ export function isCanvasFontMetrics(metrics: FontMetrics | undefined): metrics i
  * pair on every shape.
  */
 export function createRuntimeFontMetrics(input: RuntimeFontMetricsInput): CanvasFontMetrics {
-  const { scalars, measureWidthUnits, cssFontFamily } = input;
+  const { scalars, measureWidthUnits, cssFontFamily, hasGlyph } = input;
 
   const advanceCache = new Map<string, number>();
   const kerningCache = new Map<string, number>();
@@ -57,6 +59,7 @@ export function createRuntimeFontMetrics(input: RuntimeFontMetricsInput): Canvas
     unitsPerEm: scalars.unitsPerEm,
     ascent: scalars.ascent,
     descent: scalars.descent,
+    hasGlyph,
 
     // Never `null`: canvas has no "no glyph" signal, and the measured width is what `fillText`
     // paints. It carries the real `hmtx` advance, not a hand-parsed one, though a measured float

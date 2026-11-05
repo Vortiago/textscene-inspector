@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
+import { fixtureFontBytes, systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
 import { NO_PROJECT_FONTS, type ProjectFonts } from '../../fonts/font/projectFonts';
 import type { FontFileResource, FontResource } from '../../fonts/font/types';
@@ -14,7 +14,7 @@ import {
 } from './textMeshFont.testkit';
 import { textMeshFont, textMeshFontFiles, textMeshFontKey } from './textMeshFont';
 import { bitmapFontFile } from '../../../r3f/controls/native/text/bitmapFontMetrics.testkit';
-import { buildTextMeshSurface } from './build';
+import { buildTextMeshSurface, type TextMeshFace } from './build';
 import { decodeTextMesh } from './decode';
 import { settledPeek } from '../../../r3f/testing/settleFontWork';
 
@@ -112,6 +112,31 @@ describe('textMeshFont', () => {
   });
 });
 
+describe('textMeshFont on a font with fallbacks', () => {
+  const withFallback = (): FontFileResource => ({
+    ...trueTypeFontFile(),
+    fallbacks: [{ ...trueTypeFontFile(), bytes: fixtureFontBytes('dejavu-sans-bidi-subset.ttf') }],
+  });
+
+  it('carries the outlines of each fallback face', async () => {
+    const face = await readyFace(textMeshWith({}, loaded(withFallback())));
+
+    const hebrewAlef = 0x5d0;
+    expect(
+      (face.fallbacks?.[0] as TextMeshFace | undefined)?.outlines.glyphIndex(hebrewAlef)
+    ).toBeGreaterThan(0);
+  });
+
+  it('drops a fallback whose outlines it cannot read', async () => {
+    const font = withFallback();
+    font.fallbacks = [{ ...trueTypeFontFile(), bytes: new ArrayBuffer(8) }];
+
+    const face = await readyFace(textMeshWith({}, loaded(font)));
+
+    expect(face.fallbacks ?? []).toEqual([]);
+  });
+});
+
 describe('the font chain of a TextMesh (`TextMesh::_get_font_or_default`)', () => {
   const projectFont = openTypeFontFile();
   const themeFont = woffFontFile();
@@ -168,7 +193,7 @@ describe('the font chain of a TextMesh (`TextMesh::_get_font_or_default`)', () =
   });
 
   it('draws a FontVariation with no base_font over the project default font', async () => {
-    const variation = { kind: 'variation', baseFont: null, properties: {} } as const;
+    const variation: FontResource = { kind: 'variation', baseFont: null, fallbacks: [], properties: {} };
     const projectFonts = { ...NO_PROJECT_FONTS, projectDefaultFont: projectFont };
     const mesh = textMeshWith({}, { [FONT_PATH]: variation }, projectFonts);
 

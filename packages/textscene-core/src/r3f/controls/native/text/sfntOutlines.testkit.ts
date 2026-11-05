@@ -52,7 +52,7 @@ export function fontFile(bytes: ArrayBuffer | undefined, fallbacks: FontResource
  * @canonical A SystemFont resource fixture for a font test
  */
 export function systemFont(): FontResource {
-  return { kind: 'system', fontNames: ['Zz No Such Font'], properties: {} };
+  return { kind: 'system', fontNames: ['Zz No Such Font'], baseFont: null, fallbacks: [], properties: {} };
 }
 
 export interface TestPoint {

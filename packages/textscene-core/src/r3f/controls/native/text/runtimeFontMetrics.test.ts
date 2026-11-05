@@ -16,6 +16,7 @@ function fakeMeasurer(): DesignUnitWidthFn {
 describe('createRuntimeFontMetrics', () => {
   it('exposes the injected scalars and a canvas kind/family for the painter to dispatch on', () => {
     const metrics = createRuntimeFontMetrics({
+      hasGlyph: () => true,
       scalars: { unitsPerEm: 1000, ascent: 950, descent: 250 },
       measureWidthUnits: fakeMeasurer(),
       cssFontFamily: 'scene-font-1',
@@ -29,6 +30,7 @@ describe('createRuntimeFontMetrics', () => {
 
   it('getGlyphAdvanceUnits returns the measurer’s own per-character width', () => {
     const metrics = createRuntimeFontMetrics({
+      hasGlyph: () => true,
       scalars: { unitsPerEm: 1000, ascent: 950, descent: 250 },
       measureWidthUnits: fakeMeasurer(),
       cssFontFamily: 'scene-font-1',
@@ -44,6 +46,7 @@ describe('createRuntimeFontMetrics', () => {
       return text.length * 42;
     };
     const metrics = createRuntimeFontMetrics({
+      hasGlyph: () => true,
       scalars: { unitsPerEm: 1000, ascent: 950, descent: 250 },
       measureWidthUnits: measure,
       cssFontFamily: 'scene-font-1',
@@ -56,6 +59,7 @@ describe('createRuntimeFontMetrics', () => {
 
   it('getKerningAdjustmentUnits is width(ab) - width(a) - width(b)', () => {
     const metrics = createRuntimeFontMetrics({
+      hasGlyph: () => true,
       scalars: { unitsPerEm: 1000, ascent: 950, descent: 250 },
       measureWidthUnits: fakeMeasurer(),
       cssFontFamily: 'scene-font-1',
@@ -66,6 +70,7 @@ describe('createRuntimeFontMetrics', () => {
 
   it('getKerningAdjustmentUnits is 0 for a pair the measurer treats as purely additive', () => {
     const metrics = createRuntimeFontMetrics({
+      hasGlyph: () => true,
       scalars: { unitsPerEm: 1000, ascent: 950, descent: 250 },
       measureWidthUnits: fakeMeasurer(),
       cssFontFamily: 'scene-font-1',
@@ -77,6 +82,7 @@ describe('createRuntimeFontMetrics', () => {
   it('averageAdvanceUnits is the mean per-character width of the sample string, measured once and cached', () => {
     let calls = 0;
     const metrics = createRuntimeFontMetrics({
+      hasGlyph: () => true,
       scalars: { unitsPerEm: 1000, ascent: 950, descent: 250 },
       measureWidthUnits: (text) => {
         calls++;
@@ -93,6 +99,7 @@ describe('createRuntimeFontMetrics', () => {
 
   it('getGlyphAdvanceUnits never returns null: canvas measureText has no reliable "no glyph" signal, so every character gets the browser’s own measured width', () => {
     const metrics = createRuntimeFontMetrics({
+      hasGlyph: () => true,
       scalars: { unitsPerEm: 1000, ascent: 950, descent: 250 },
       measureWidthUnits: fakeMeasurer(),
       cssFontFamily: 'scene-font-1',

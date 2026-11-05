@@ -119,6 +119,7 @@ describe('resolveNodeFont — the project default font as the last rung', () => 
   const projectFont: FontResource = {
     kind: 'variation',
     baseFont: BITMAP_FILE,
+    fallbacks: [],
     properties: { project: '1' },
   };
 
@@ -160,6 +161,7 @@ describe('resolveNodeFontMetricsOr — a last rung of its own for a key no theme
   const embolden = (value: string): FontResource => ({
     kind: 'variation',
     baseFont: BITMAP_FILE,
+    fallbacks: [],
     properties: { variation_embolden: value },
   });
 

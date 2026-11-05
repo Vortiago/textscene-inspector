@@ -233,6 +233,11 @@ function wrapForImageObject(base: FontMetrics): FontMetrics {
   return Object.create(base, {
     embolden: { value: 0 },
     skew: { value: 0 },
+    hasGlyph: {
+      value(ch: string): boolean {
+        return ch === IMAGE_OBJECT_CHAR || base.hasGlyph(ch);
+      },
+    },
     getGlyphAdvanceUnits: {
       value(ch: string): number | null {
         if (ch === IMAGE_OBJECT_CHAR) return base.unitsPerEm;
@@ -692,6 +697,11 @@ export function richTextContentHeightPx(
   return contentHeightOf(richTextLineMetrics(styledRuns, layout));
 }
 
+/** The faces the glyphs of `segment` draw in, which may come from its **Fallback chain**. */
+function glyphFacesOf(segment: RunLineSegment): Set<FontMetrics> {
+  return new Set(segment.glyphs.map((glyph) => glyph.fontMetrics ?? segment.fontMetrics));
+}
+
 function lineMetricsOf(
   perLine: readonly RunLineSegment[][],
   styledRuns: readonly StyledTextRun[],
@@ -709,8 +719,10 @@ function lineMetricsOf(
     for (const segment of segments) {
       const run = styledRuns[segment.runIndex]!;
       if (run.image) continue;
-      ascentPx = Math.max(ascentPx, getFontAscentPx(segment.fontMetrics, run.fontSizePx));
-      descentPx = Math.max(descentPx, fontDescentPx(segment.fontMetrics, run.fontSizePx));
+      for (const face of glyphFacesOf(segment)) {
+        ascentPx = Math.max(ascentPx, getFontAscentPx(face, run.fontSizePx));
+        descentPx = Math.max(descentPx, fontDescentPx(face, run.fontSizePx));
+      }
     }
     // A blank line shapes its break in the paragraph font, so it keeps that height.
     if (segments.length === 0) {

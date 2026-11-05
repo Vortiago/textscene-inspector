@@ -399,6 +399,7 @@ describe('shapeText — embolden (extra advance per glyph)', () => {
 
   it("takes a face's own embolden from its FontMetrics when fontMetricsAt names none", () => {
     const boldFace: FontMetrics = {
+      hasGlyph: () => true,
       kind: 'canvas',
       unitsPerEm: 1000,
       ascent: 800,
@@ -425,6 +426,7 @@ describe('shapeText — embolden (extra advance per glyph)', () => {
 // advances and draws each character by its own face.
 describe('shapeText — a face for each character', () => {
   const wideFace: CanvasFontMetrics = {
+    hasGlyph: () => true,
     kind: 'canvas',
     unitsPerEm: 1000,
     ascent: 800,
@@ -526,6 +528,7 @@ describe('shapeText — TextLayoutResult.fontMetrics / baselineOffsetPx (the sha
 
   it('a font of kind "canvas" shapes through the SAME line-breaking/placement code but every glyph placement carries no atlas bitmap', () => {
     const canvasMetrics: FontMetrics = {
+      hasGlyph: () => true,
       kind: 'canvas',
       unitsPerEm: 1000,
       ascent: 800,
@@ -555,6 +558,7 @@ describe('shapeText — TextLayoutResult.fontMetrics / baselineOffsetPx (the sha
 
 describe('soloLineLayout — re-wrapping one line of an already-shaped result', () => {
   const FAKE_SCENE_FONT_METRICS: CanvasFontMetrics = {
+    hasGlyph: () => true,
     kind: 'canvas',
     cssFontFamily: 'tscn-scene-font-test',
     unitsPerEm: 1000,

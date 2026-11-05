@@ -122,6 +122,7 @@ describe('peekSettledSceneFontMetrics', () => {
     const variation: FontResource = {
       kind: 'variation',
       baseFont: leaf,
+      fallbacks: [],
       properties: { variation_embolden: '0.5' },
     };
     expect(peekSettledSceneFontMetrics(variation, 'Root/Mesh')).toBeNull();
@@ -134,7 +135,7 @@ describe('peekSceneFontMetrics — FontVariation embolden', () => {
   const bytes = new ArrayBuffer(8);
 
   function variation(baseFont: FontResource | null, properties: Record<string, string>): FontResource {
-    return { kind: 'variation', baseFont, properties };
+    return { kind: 'variation', baseFont, fallbacks: [], properties };
   }
 
   async function settledPeek(font: FontResource) {
@@ -226,7 +227,10 @@ describe('onSceneFontSettled', () => {
     const off = onSceneFontSettled(listener);
     try {
       peekSceneFontMetrics(undefined, 'Root/F');
-      peekSceneFontMetrics({ kind: 'system', fontNames: [], properties: {} }, 'Root/G');
+      peekSceneFontMetrics(
+        { kind: 'system', fontNames: [], baseFont: null, fallbacks: [], properties: {} },
+        'Root/G'
+      );
       await settleLoads();
       expect(listener).not.toHaveBeenCalled();
     } finally {
@@ -301,7 +305,10 @@ describe('fontWork', () => {
 
   it('counts no work for a font that settles by itself on the bundled default', () => {
     peekSceneFontMetrics(undefined, 'Root/N');
-    peekSceneFontMetrics({ kind: 'system', fontNames: [], properties: {} }, 'Root/O');
+    peekSceneFontMetrics(
+      { kind: 'system', fontNames: [], baseFont: null, fallbacks: [], properties: {} },
+      'Root/O'
+    );
 
     expect(fontWork.pending()).toBe(0);
   });
@@ -407,6 +414,7 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
   const emboldened = (base: FontResource): FontResource => ({
     kind: 'variation',
     baseFont: base,
+    fallbacks: [],
     properties: { variation_embolden: '1.2' },
   });
 

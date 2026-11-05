@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { hexCodeBoxAdvanceSize } from '../../../r3f/controls/native/text/hexCodeBox';
 import {
+  withFallbacks,
   withOutlines,
   withVariation,
   type GlyphVariation,
@@ -408,5 +409,20 @@ describe('buildTextMeshSurface glyph reuse', () => {
     build('H', counted);
     build('H', counted, { pixel_size: '0.02' });
     expect(contoursRead()).toBe(2);
+  });
+});
+
+// A glyph the face lacks draws from the first fallback that has it (`text_server_adv.cpp:7132-7170`).
+describe('buildTextMeshSurface — a fallback chain', () => {
+  it("extrudes a glyph the face lacks from the fallback's outlines", async () => {
+    const dejaVu = (await openFontOutlines(fixtureFontBytes('dejavu-sans-bidi-subset.ttf')))!;
+    const fallback = withOutlines({ ...OPEN_SANS_FONT_METRICS, hasGlyph: () => true }, dejaVu);
+    const lacksA = withOutlines(
+      { ...OPEN_SANS_FONT_METRICS, hasGlyph: (ch: string) => ch !== 'A' },
+      outlines
+    );
+    const properties = decodeTextMesh({ text: '"A"', font_size: String(FONT_SIZE) });
+    const drawn = buildTextMeshSurface(properties, '', withFallbacks(lacksA, [fallback]));
+    expect(drawn.positions).toEqual(buildTextMeshSurface(properties, '', fallback).positions);
   });
 });

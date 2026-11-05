@@ -27,6 +27,7 @@ import {
   richTextLabelTextureSlots,
   shapeRichText,
   RICH_TEXT_LABEL_UNDERLINE_ALPHA,
+  richTextContentHeightPx,
 } from './nativeSolver';
 import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment, type ParsedImgTag } from './bbcode';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -313,7 +314,7 @@ describe(`richTextLabelMinimumSize — resolves this RichTextLabel's own PARAGRA
 
 describe('richTextLabelMinimumSize — the faces of [b] and [i] spans', () => {
   const text = '[b]ABABABAB[/b]';
-  const bareVariation: FontResource = { kind: 'variation', baseFont: null, properties: {} };
+  const bareVariation: FontResource = { kind: 'variation', baseFont: null, fallbacks: [], properties: {} };
 
   function widthOf(overrides: Partial<SolveNode> = {}) {
     const n = {
@@ -333,6 +334,7 @@ describe('richTextLabelMinimumSize — the faces of [b] and [i] spans', () => {
     const emboldened: FontResource = {
       kind: 'variation',
       baseFont: null,
+      fallbacks: [],
       properties: { variation_embolden: '3' },
     };
     // 3 * 16 / 64 = 0.75px more per advance: 84.5 + 6 = 90.5.
@@ -1788,5 +1790,41 @@ describe('RichTextLabel paragraph direction', () => {
       [0, 4],
       [1, 4],
     ]);
+  });
+});
+
+// `_shape_substr` takes each line's ascent and descent over the fonts of its glyphs (`text_server_adv.cpp:5486-5487`).
+describe('richTextContentHeightPx — a glyph from a fallback face', () => {
+  it("grows the line to the fallback face's ascent and descent", () => {
+    const tall: FontMetrics = {
+      ...OPEN_SANS_FONT_METRICS,
+      ascent: 4096,
+      descent: 1024,
+      hasGlyph: () => true,
+    };
+    const face: FontMetrics = {
+      ...OPEN_SANS_FONT_METRICS,
+      hasGlyph: (ch) => ch !== '一',
+      fallbacks: [tall],
+    };
+    const run = {
+      text: 'A一',
+      bold: false,
+      italic: false,
+      underline: false,
+      color: WHITE,
+      fontSizePx: 16,
+      alignment: 0,
+      bidi: {},
+    };
+    const layout = shapeText(run.text, {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      fontMetrics: face,
+    });
+    // ceil(4096 * 16 / 2048) + ceil(1024 * 16 / 2048) = 32 + 8.
+    expect(richTextContentHeightPx([run], layout)).toBe(40);
   });
 });

@@ -127,6 +127,18 @@ function bakeAdvanceWidths(font) {
   return advanceWidths;
 }
 
+/** The code points the `cmap` maps to a glyph, as ascending `[first, last]` ranges: what `_font_has_char` reads. */
+function bakeCodePointRanges(font) {
+  const ranges = [];
+  const codePoints = font.characterSet.filter((cp) => font.hasGlyphForCodePoint(cp)).sort((a, b) => a - b);
+  for (const cp of codePoints) {
+    const last = ranges.at(-1);
+    if (last && last[1] === cp - 1) last[1] = cp;
+    else ranges.push([cp, cp]);
+  }
+  return ranges;
+}
+
 /** Font-wide scalar metrics, design units (`font.unitsPerEm`-relative). */
 function bakeMetrics(font, kerning, advanceWidths) {
   return {
@@ -146,6 +158,7 @@ function bakeMetrics(font, kerning, advanceWidths) {
     // magic constant. The fallback advance outside the baked charset in
     // `textLayout.ts`'s `glyphAdvancePx`.
     averageAdvanceUnits: font['OS/2'].xAvgCharWidth,
+    codePointRanges: bakeCodePointRanges(font),
   };
 }
 
@@ -280,6 +293,8 @@ interface OpenSansMetrics {
    * table's own doc in the atlas module).
    */
   averageAdvanceUnits: number;
+  /** The code points the whole font maps to a glyph, as ascending \`[first, last]\` ranges, beyond the baked charset. */
+  codePointRanges: [number, number][];
 }
 
 export const OPEN_SANS_METRICS: OpenSansMetrics = ${JSON.stringify(metrics)};
@@ -318,6 +333,22 @@ export function getKerningAdjustmentUnits(a: string, b: string): number {
  */
 export function getGlyphAdvanceUnits(ch: string): number | null {
   return OPEN_SANS_METRICS.advanceWidths[ch] ?? null;
+}
+
+/** Whether the whole font, not only the baked charset, has a glyph for \`ch\`: Godot's default font draws it. */
+export function hasGlyph(ch: string): boolean {
+  const codePoint = ch.codePointAt(0)!;
+  const ranges = OPEN_SANS_METRICS.codePointRanges;
+  let low = 0;
+  let high = ranges.length - 1;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    const [first, last] = ranges[mid]!;
+    if (codePoint < first) high = mid - 1;
+    else if (codePoint > last) low = mid + 1;
+    else return true;
+  }
+  return false;
 }
 
 /**

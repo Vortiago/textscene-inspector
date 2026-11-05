@@ -2,10 +2,11 @@
  * Turns a resolved `FontResource` into `FontMetrics`, or into the bundled default when that fails.
  * It registers a scene font through the `FontFace` door of `fontFaceDoor.ts`, and it never throws.
  */
-import { withVariation, type FontMetrics, type GlyphVariation } from './fontMetrics';
+import { withFallbacks, withVariation, type FontMetrics, type GlyphVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { faceDescriptors } from './sceneFontFace';
 import { openFontContainer } from './fontContainer';
+import { sfntHasGlyph } from './sfntCmap';
 import { parseSfntScalars, readAxisDefaults, type SfntScalars } from './sfntTables';
 import {
   createRuntimeFontMetrics,
@@ -15,6 +16,7 @@ import {
 import {
   BUNDLED_FACE,
   NO_FACE,
+  fallbackChain,
   findDrawnFace,
   fontVariationEmbolden,
   fontVariationOpentype,
@@ -44,6 +46,9 @@ let familyCounter = 0;
 
 /** Keyed by the resolved leaf `FontFileResource`, so nodes that share a font share one load. */
 const peekMetrics = createSettledPeek<FontFileResource, FontMetrics>();
+
+/** Written only by `loadSceneFontMetrics` when a load fails. Never cleared: a face keeps its bytes for good. */
+const failedFaces = new WeakSet<FontFileResource>();
 
 /** One `BitmapFontMetrics` for each decoded BMFont, so a layout memoised on its identity keeps its hits. */
 const bitmapMetricsOf = perObject(createBitmapFontMetrics);
@@ -112,15 +117,21 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
     );
   }
 
-  return createRuntimeFontMetrics({ scalars, measureWidthUnits, cssFontFamily: family });
+  const hasGlyph = sfnt ? sfntHasGlyph(sfnt) : () => true;
+  return createRuntimeFontMetrics({ scalars, measureWidthUnits, cssFontFamily: family, hasGlyph });
 }
 
 /** Loads the font at `bytes`. It never throws, and always returns usable `FontMetrics`. */
-async function loadSceneFontMetrics(bytes: ArrayBuffer, nodePath: string): Promise<FontMetrics> {
+async function loadSceneFontMetrics(
+  face: FontFileResource,
+  bytes: ArrayBuffer,
+  nodePath: string
+): Promise<FontMetrics> {
   if (IS_VITEST) return OPEN_SANS_FONT_METRICS;
   try {
     return await loadRuntimeFont(bytes, nodePath);
   } catch (err: unknown) {
+    failedFaces.add(face);
     logger.warn(
       `[SceneFont] Node "${nodePath}": failed to load scene font (${err instanceof Error ? err.message : String(err)}). Falling back to the bundled default font.`
     );
@@ -138,18 +149,55 @@ function fontVariation(font: FontResource): GlyphVariation {
 }
 
 /**
- * The metrics of `font` once its load has settled, with the `FontVariation` embolden and skew on
- * top, and null while a load is in flight. A font that cannot load, or has no bytes to load,
- * settles at once on the bundled default. It starts one load per font, so calling both peeks
- * never double-loads. A consumer that must not draw against the default while
- * the real font loads reads this one.
+ * The metrics of `font` once the loads of its whole **Fallback chain** have settled, each face with
+ * its `FontVariation` embolden and skew on top, and null while a load is in flight. A font that
+ * cannot load, or has no bytes to load, settles at once on the bundled default, and a fallback that
+ * cannot load drops out. It starts one load per face, so calling both peeks never double-loads. A
+ * consumer that must not draw against the default while the real font loads reads this one.
  */
 export function peekSettledSceneFontMetrics(
   font: FontResource | null | undefined,
   nodePath: string
 ): FontMetrics | null {
-  if (!font) return OPEN_SANS_FONT_METRICS;
+  const faces = peekSettledChainFaces(font, nodePath);
+  if (!faces) return null;
+  const [face, ...fallbacks] = faces.map(({ metrics }) => metrics);
+  return withFallbacks(face!, fallbacks);
+}
 
+/** A font of a **Fallback chain**, and the settled metrics of the face it draws. */
+export interface SettledChainFace {
+  readonly font: FontResource | null;
+  readonly metrics: FontMetrics;
+}
+
+/**
+ * The settled faces of the **Fallback chain** of `font`, the drawn face first, as
+ * {@link peekSettledSceneFontMetrics} composes them. Null while a load is in flight. A consumer that
+ * reads more of each face than its metrics, such as its outlines, starts from this list.
+ */
+export function peekSettledChainFaces(
+  font: FontResource | null | undefined,
+  nodePath: string
+): readonly SettledChainFace[] | null {
+  if (!font) return [{ font: null, metrics: OPEN_SANS_FONT_METRICS }];
+  const chain = fallbackChain(font);
+  if (chain.length === 0) chain.push(font);
+  const faces = chain.map((entry) => peekSettledFaceMetrics(entry, nodePath));
+  if (faces.includes(null)) return null;
+  return chain.flatMap((entry, i) => {
+    return i > 0 && failedToLoad(entry) ? [] : [{ font: entry, metrics: faces[i]! }];
+  });
+}
+
+/** Whether `entry` draws the bundled default for want of its own face: it has none that resolves, or its load failed. */
+function failedToLoad(entry: FontResource): boolean {
+  const face = findDrawnFace(entry);
+  return !face || (typeof face === 'object' && failedFaces.has(face));
+}
+
+/** {@link peekSettledSceneFontMetrics} for the face `font` draws alone, with no fallback. */
+function peekSettledFaceMetrics(font: FontResource, nodePath: string): FontMetrics | null {
   const face = findDrawnFace(font);
   // No failure, so no warning: Godot draws the bundled font here too.
   if (face === BUNDLED_FACE) return withVariation(OPEN_SANS_FONT_METRICS, fontVariation(font));
@@ -164,7 +212,7 @@ export function peekSettledSceneFontMetrics(
   if (hasBitmap(face))
     return withVariation(bitmapMetricsOf(face.bitmap), { embolden: fontVariationEmbolden(font) });
 
-  const metrics = peekMetrics(face, () => loadSceneFontMetrics(face.bytes, nodePath));
+  const metrics = peekMetrics(face, () => loadSceneFontMetrics(face, face.bytes, nodePath));
   if (!metrics) return null;
   const variation = fontVariation(font);
   const outlines = peekGlyphOutlines(face, metrics, variation);

@@ -20,6 +20,7 @@ import type { GlyphDrawer } from './glyphDrawer';
 import type { Vector2 } from '../../../../godot/math/vector';
 
 const CANVAS_METRICS = createRuntimeFontMetrics({
+  hasGlyph: () => true,
   scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
   measureWidthUnits: (text) => text.length * 500,
   cssFontFamily: 'scene-font-test',

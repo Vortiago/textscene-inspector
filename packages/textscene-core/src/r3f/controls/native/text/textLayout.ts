@@ -168,7 +168,7 @@ export interface GlyphPlacement {
   emboldenGrowthPx?: number;
   /** This glyph's own size, px: the base of `fitLineToWidth`'s space-shrink floor, `gl.font_size` in Godot (`text_server_adv.cpp:5659`). Absent on an ellipsis glyph `textOverrun` appends. */
   fontSizePx?: number;
-  /** The face `shapeText` shaped this glyph in. Absent on an ellipsis glyph `textOverrun` appends, which takes the layout's. */
+  /** The face of the **Fallback chain** this glyph draws in. Absent on a glyph that takes the layout's. */
   fontMetrics?: FontMetrics;
 }
 
@@ -421,6 +421,23 @@ function isSpaceSeparator(cp: number): boolean {
 /** `metrics.getKerningAdjustmentUnits` scaled to `fontSizePx` with `getFontKerningAdjustmentPx`. */
 function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: FontMetrics): number {
   return getFontKerningAdjustmentPx(metrics, a, b, fontSizePx);
+}
+
+/**
+ * A character HarfBuzz never leaves invalid without a glyph: a space, a control, a break, a
+ * surrogate, an unassigned code point (`!u_isgraph`) or a default ignorable it hides
+ * (`text_server_adv.cpp:7116`).
+ */
+const KEEPS_ITS_FACE = /^[\p{Cc}\p{Cn}\p{Cs}\p{Zl}\p{Zp}\p{Zs}\p{Default_Ignorable_Code_Point}]/u;
+
+/**
+ * The face of the **Fallback chain** that draws `ch`: `face` where it has the glyph, else the first of
+ * its `fallbacks` that has it, as Godot shapes each run of invalid glyphs again in the next font
+ * (`text_server_adv.cpp:7132-7170`). A character that no font of the chain has stays in `face`.
+ */
+function glyphFace(face: FontMetrics, ch: string): FontMetrics {
+  if (!face.fallbacks || ch === '' || KEEPS_ITS_FACE.test(ch) || face.hasGlyph(ch)) return face;
+  return face.fallbacks.find((fallback) => fallback.hasGlyph(ch)) ?? face;
 }
 
 /** Whether `face` is a BMFont with no glyph for `ch`, a tab aside: Godot then draws `ch` as a hex-code box. */
@@ -800,7 +817,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
         fontSizePxAt ? fontSizePxAt(sourceIndex(i)) : fontSizePx
       ),
       faces: Array.from({ length: paraText.length }, (_v, i) =>
-        fontMetricsAt ? fontMetricsAt(sourceIndex(i)) : fontMetrics
+        glyphFace(fontMetricsAt ? fontMetricsAt(sourceIndex(i)) : fontMetrics, chars[i]!)
       ),
       levels: bidi.levels,
       rangeIds: bidi.rangeIds,

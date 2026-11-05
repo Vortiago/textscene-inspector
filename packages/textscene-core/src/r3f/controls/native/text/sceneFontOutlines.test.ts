@@ -92,7 +92,7 @@ describe('peekSceneFontOutlines', () => {
 
   it('reads the face behind a FontVariation', async () => {
     const base = woffOfOpenSans();
-    const variation: FontResource = { kind: 'variation', baseFont: base, properties: {} };
+    const variation: FontResource = { kind: 'variation', baseFont: base, fallbacks: [], properties: {} };
 
     expect(await settledOutlines(variation)).toBe(await settledOutlines(base));
   });
@@ -104,7 +104,7 @@ describe('peekSceneFontOutlines', () => {
   });
 
   it('reads the bundled Open Sans for a FontVariation with no base_font', async () => {
-    const variation: FontResource = { kind: 'variation', baseFont: null, properties: {} };
+    const variation: FontResource = { kind: 'variation', baseFont: null, fallbacks: [], properties: {} };
 
     expect(await settledOutlines(variation)).toBe(await settledOutlines(null));
   });
@@ -122,6 +122,7 @@ describe('peekSceneFontOutlines', () => {
 
 describe('peekGlyphOutlines', () => {
   const canvasFace = createRuntimeFontMetrics({
+    hasGlyph: () => true,
     scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
     measureWidthUnits: (text) => text.length * 500,
     cssFontFamily: 'scene-font-test',

@@ -2,10 +2,11 @@
  * The font-metrics contract the native Control text engine shapes against, and the px quantisation
  * every implementation shares, from design-unit data alone. The whole-pixel advance round above the
  * subpixel threshold carries a remainder, so it lives in `textLayout.ts`. This module imports only
- * `perObject`, so no consumer pulls in Open Sans's baked data.
+ * object caches from `utils`, so no consumer pulls in Open Sans's baked data.
  */
 
 import { perObject } from '../../../../utils/perObject';
+import { identityKey } from '../../../../utils/identityKey';
 import type { SfntOutlines } from './sfntOutlines';
 
 /**
@@ -36,8 +37,15 @@ export interface FontMetrics {
   readonly ascent: number;
   /** `hhea` descender magnitude, design units (positive), before `getFontLinePitchPx` rounds it. */
   readonly descent: number;
+  /** Whether the face maps `ch` to a glyph, `_font_has_char`. A face that cannot tell answers true. */
+  hasGlyph(ch: string): boolean;
   /** A character's own advance width, design units, or `null` if this font has no glyph for it (a shaper falls back to `averageAdvanceUnits`). */
   getGlyphAdvanceUnits(ch: string): number | null;
+  /**
+   * The rest of the face's **Fallback chain**, in order. A character the face lacks draws from the
+   * first of them that has it. The list is flat: the `fallbacks` of an entry are not read. Absent is none.
+   */
+  readonly fallbacks?: readonly FontMetrics[];
   /** Pairwise advance adjustment for two adjacent characters, design units, or `0` when the font has no entry for the pair. */
   getKerningAdjustmentUnits(a: string, b: string): number;
   /** This font's typical glyph width (such as OS/2 `xAvgCharWidth`), design units: the fallback advance for a character outside its charset. */
@@ -351,6 +359,26 @@ export function withOutlines<Metrics extends FontMetrics>(
           outlines,
         })
   ) as Metrics & { readonly outlines: SfntOutlines };
+}
+
+/** One wrapper per face and fallback list, so a layout memoised on the face keeps its hits. */
+const fallbacksOf = perObject((_face: FontMetrics) => new Map<string, FontMetrics>());
+
+/**
+ * `face` with `fallbacks` as the rest of its **Fallback chain**. A face in the list twice, or the
+ * face itself, is tried once, where it first stands.
+ */
+export function withFallbacks<Metrics extends FontMetrics>(
+  face: Metrics,
+  fallbacks: readonly FontMetrics[]
+): Metrics {
+  const distinct = [...new Set(fallbacks)].filter((fallback) => fallback !== face);
+  if (distinct.length === 0) return face;
+  const byList = fallbacksOf(face);
+  const key = distinct.map(identityKey).join(',');
+  let wrapped = byList.get(key);
+  if (!wrapped) byList.set(key, (wrapped = Object.create(face, { fallbacks: { value: distinct } })));
+  return wrapped as Metrics;
 }
 
 /**

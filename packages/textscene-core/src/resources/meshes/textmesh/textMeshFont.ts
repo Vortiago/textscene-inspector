@@ -4,9 +4,12 @@
  * A BMFont shapes from its descriptor and has no outlines (`bitmapFontOutlines.ts`), so only a hex-code box draws.
  */
 
-import { peekSettledSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
+import {
+  peekSettledChainFaces,
+  type SettledChainFace,
+} from '../../../r3f/controls/native/text/sceneFontLoader';
 import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
-import { withOutlines } from '../../../r3f/controls/native/text/fontMetrics';
+import { withFallbacks, withOutlines } from '../../../r3f/controls/native/text/fontMetrics';
 import { identityKey } from '../../../utils/identityKey';
 import { perObject } from '../../../utils/perObject';
 import { resolveFontReference } from '../../fonts/font/resolveFontReference';
@@ -37,11 +40,25 @@ function readTextMeshFont({
   projectFonts,
 }: ResolvableResource): TextMeshFont {
   const font = fontForNode('TextMesh', resource.data['font'], { resources, loadedFont, projectFonts });
-  const outlines = peekSceneFontOutlines(font);
-  if (outlines === null) return UNREADABLE;
   // The settled metrics are keyed by the resolved font file, and the name only labels a failure.
-  const metrics = peekSettledSceneFontMetrics(font, `TextMesh ${resource.id}`);
-  return outlines && metrics ? { status: 'ready', face: withOutlines(metrics, outlines) } : AWAITING_FONT;
+  const faces = peekSettledChainFaces(font, `TextMesh ${resource.id}`);
+  const primaryOutlines = peekSceneFontOutlines(faces?.[0]?.font ?? font);
+  if (primaryOutlines === null) return UNREADABLE;
+  if (!faces || !primaryOutlines) return AWAITING_FONT;
+  const fallbacks = faces.slice(1).map(faceWithOutlines);
+  if (fallbacks.includes(undefined)) return AWAITING_FONT;
+  const face = withOutlines(faces[0]!.metrics, primaryOutlines);
+  const readable = fallbacks.filter((fallback): fallback is TextMeshFace => !!fallback);
+  return { status: 'ready', face: withFallbacks(face, readable) };
+}
+
+/**
+ * A fallback face with the outlines it extrudes: undefined while they load, and null for outlines this
+ * reader cannot open, which drops the face from the chain.
+ */
+function faceWithOutlines({ font, metrics }: SettledChainFace): TextMeshFace | null | undefined {
+  const outlines = peekSceneFontOutlines(font);
+  return outlines ? withOutlines(metrics, outlines) : outlines;
 }
 
 /** The font files the `font` of `scoped` names, which the build reads once they load. */

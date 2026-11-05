@@ -29,7 +29,7 @@ function richTextNode(overrides: Partial<SolveNode> = {}): SolveNode {
 }
 
 function variation(embolden: string): FontResource {
-  return { kind: 'variation', baseFont: null, properties: { variation_embolden: embolden } };
+  return { kind: 'variation', baseFont: null, fallbacks: [], properties: { variation_embolden: embolden } };
 }
 
 function themeWith(
@@ -137,6 +137,7 @@ describe('resolveRichTextFaces', () => {
     const projectFont: FontResource = {
       kind: 'variation',
       baseFont: fontResourceFromBitmap(testBitmapFont(), {}),
+      fallbacks: [],
       properties: { variation_embolden: '0.5' },
     };
     const faces = facesOf(

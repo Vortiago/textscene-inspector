@@ -29,6 +29,7 @@ export function createOpenSansCanvasFontMetrics(cssFontFamily: string): CanvasFo
     get descent() {
       return OPEN_SANS_FONT_METRICS.descent;
     },
+    hasGlyph: (ch) => OPEN_SANS_FONT_METRICS.hasGlyph(ch),
     getGlyphAdvanceUnits: (ch) => OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits(ch),
     getKerningAdjustmentUnits: (a, b) => OPEN_SANS_FONT_METRICS.getKerningAdjustmentUnits(a, b),
     get averageAdvanceUnits() {

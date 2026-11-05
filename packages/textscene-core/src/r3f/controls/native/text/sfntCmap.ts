@@ -8,6 +8,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import type { SfntFile } from './sfntTables';
+
 /** `cmap` platform and encoding of each Unicode subtable, best first, as HarfBuzz ranks them (`hb-ot-cmap-table.hh`). */
 const CMAP_SUBTABLE_RANK: readonly (readonly [platform: number, encoding: number])[] = [
   [3, 10],
@@ -131,4 +133,25 @@ export function cmapCodePoints(dv: DataView, cmapOffset: number, glyphCount: num
   if (dv.getUint16(subtable, false) === CMAP_FORMAT_GROUPED)
     return groupedCodePoints(dv, subtable, glyphCount);
   return segmentedCodePoints(dv, subtable, glyphCount);
+}
+
+/**
+ * Whether `sfnt` maps a character to a glyph other than `.notdef`, which `_font_has_char` asks
+ * FreeType. A font with no `cmap` subtable this module reads answers true, so its text keeps it.
+ */
+export function sfntHasGlyph({ dv, tables }: SfntFile): (ch: string) => boolean {
+  const cmap = tables.get('cmap');
+  const lookup = cmap ? orNullOnRangeError(() => cmapLookup(dv, cmap.offset)) : null;
+  if (!lookup) return () => true;
+  return (ch) => (orNullOnRangeError(() => lookup(ch.codePointAt(0)!)) ?? 1) !== 0;
+}
+
+/** `read()`, or null where a malformed table sends it past the end of the bytes. */
+function orNullOnRangeError<T>(read: () => T): T | null {
+  try {
+    return read();
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    return null;
+  }
 }
