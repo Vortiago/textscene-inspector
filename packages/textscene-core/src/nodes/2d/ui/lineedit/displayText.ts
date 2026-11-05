@@ -20,7 +20,8 @@ interface LineEditDisplayText {
 
 /** `set_max_length` re-runs `set_text`, which truncates in `insert_text_at_caret` (`line_edit.cpp:2409-2412`) by code points, not UTF-16 units. `maxLength <= 0` is unlimited. */
 function truncateToMaxLength(text: string, maxLength: number | undefined): string {
-  if (!maxLength || maxLength <= 0) return text;
+  // A string with no more UTF-16 units than the limit has no more code points.
+  if (!maxLength || maxLength <= 0 || text.length <= maxLength) return text;
   return sliceCodePoints(text, maxLength);
 }
 

@@ -855,6 +855,7 @@ describe('lineEditDrawnLine: the glyphs the draw loop keeps (line_edit.cpp:1512-
     })),
   });
   const layoutOf = (advances: number[]) => ({
+    shapedText: 'x'.repeat(advances.length),
     lines: [line(advances)],
     linePitchPx: 20,
     widthPx: advances.reduce((a, b) => a + b, 0),

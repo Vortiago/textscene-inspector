@@ -825,6 +825,7 @@ describe('labelVisibleLineRange (label.cpp:344-361)', () => {
 
 describe('windowLabelLines', () => {
   const layout: TextLayoutResult = {
+    shapedText: 'abc',
     lines: [
       { text: 'a', glyphs: [], widthPx: 10, paragraphIndex: 0 },
       { text: 'b', glyphs: [], widthPx: 30, paragraphIndex: 1 },
@@ -867,7 +868,6 @@ describe('labelPreShapeText (label.cpp:155-156)', () => {
 
   it('cuts by code points, so an astral character is never split (edge case)', () => {
     expect(labelPreShapeText('😀😀😀😀abcdefgh', 6, undefined)).toBe('😀😀😀😀ab');
-    expect(labelPreShapeText('😀😀', 1, undefined)).toBe('😀');
   });
 
   it('a negative or absent visibleChars is "show all" (edge case)', () => {

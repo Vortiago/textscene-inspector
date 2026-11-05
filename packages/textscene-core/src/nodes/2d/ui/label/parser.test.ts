@@ -70,6 +70,9 @@ describe('parseLabel', () => {
     expect(jacketed.ellipsisChar).toBe('a');
     const bare = parseLabel(heading('Label', { name: 'T' }), { ellipsis_char: '"*"' });
     expect(bare.ellipsisChar).toBe('*');
+    // Godot's `left(1)` keeps a whole astral character, never half a surrogate pair.
+    const astral = parseLabel(heading('Label', { name: 'T' }), { ellipsis_char: '"😀b"' });
+    expect(astral.ellipsisChar).toBe('😀');
   });
 
   it('an empty ellipsis_char literal leaves ellipsisChar undefined (falls back to the engine default)', () => {
@@ -123,21 +126,12 @@ describe('parseLabel', () => {
       expect(p.visibleRatio).toBe(1);
     });
 
-    it('visible_ratio counts code points, so an astral character is one (label.cpp:1375-1377)', () => {
+    it('counts code points, so an astral character is one (label.cpp:1375-1377)', () => {
       // Measured on 4.6.3: "😀😀😀😀abcdefgh" has 12 characters, so ratio 0.5 gives visible_characters 6.
-      const p = parseLabel(heading('Label', { name: 'T' }), {
-        text: '"😀😀😀😀abcdefgh"',
-        visible_ratio: '0.5',
-      });
-      expect(p.visibleCharacters).toBe(6);
-    });
-
-    it('visible_characters derives visible_ratio from the code point count', () => {
-      const p = parseLabel(heading('Label', { name: 'T' }), {
-        text: '"😀😀😀😀abcdefgh"',
-        visible_characters: '6',
-      });
-      expect(p.visibleRatio).toBe(0.5);
+      const text = '"😀😀😀😀abcdefgh"';
+      const fromRatio = parseLabel(heading('Label', { name: 'T' }), { text, visible_ratio: '0.5' });
+      const fromCharacters = parseLabel(heading('Label', { name: 'T' }), { text, visible_characters: '6' });
+      expect([fromRatio.visibleCharacters, fromCharacters.visibleRatio]).toEqual([6, 0.5]);
     });
 
     it('visible_ratio alone clamps at 1.0 and resets visible_characters to -1', () => {

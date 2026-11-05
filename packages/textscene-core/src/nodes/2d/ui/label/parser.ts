@@ -10,7 +10,7 @@ import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
 import { floatElements } from '../../../../resources/shapes/packedArray';
 import { SizeFlags } from '../../../../godot/scene/control';
-import { codePointCount } from '../../../../godot/string/codePoints.js';
+import { codePointCount, sliceCodePoints } from '../../../../godot/string/codePoints.js';
 
 const PACKED_FLOAT32_ARRAY_FORMS = packedArrayForms('PackedFloat32Array');
 
@@ -72,11 +72,12 @@ function applySetVisibleRatio(
  */
 function resolveVisibleChars(
   properties: Record<string, string>,
-  characterCount: number
+  text: string
 ): VisibleCharsState | undefined {
   const rawChars = properties.visible_characters;
   const rawRatio = properties.visible_ratio;
   if (rawChars === undefined && rawRatio === undefined) return undefined;
+  const characterCount = codePointCount(text);
 
   let state = DEFAULT_VISIBLE_CHARS_STATE;
   for (const key of Object.keys(properties)) {
@@ -109,7 +110,7 @@ export function parseLabel(heading: ParsedHeading, properties: Record<string, st
   if (boolSlotValue(properties.clip_text) === true) result.clipText = true;
   // label.cpp:1259-1261: `set_ellipsis_char` keeps only the first character.
   if (properties.ellipsis_char !== undefined) {
-    result.ellipsisChar = unquoteStringName(properties.ellipsis_char).slice(0, 1) || undefined;
+    result.ellipsisChar = sliceCodePoints(unquoteStringName(properties.ellipsis_char), 1) || undefined;
   }
   // int64: a `BitField` slot, as the validator declares it. Otherwise a value past 2^31 reads as a
   // different number than Godot stores.
@@ -124,7 +125,7 @@ export function parseLabel(heading: ParsedHeading, properties: Record<string, st
   result.linesSkipped = parseOptionalInt(properties.lines_skipped);
   result.maxLinesVisible = parseOptionalInt(properties.max_lines_visible);
   if (properties.label_settings !== undefined) result.labelSettings = properties.label_settings.trim();
-  const visibleState = resolveVisibleChars(properties, codePointCount(result.text ?? ''));
+  const visibleState = resolveVisibleChars(properties, result.text ?? '');
   if (visibleState) {
     result.visibleCharacters = visibleState.visibleChars;
     result.visibleRatio = visibleState.visibleRatio;

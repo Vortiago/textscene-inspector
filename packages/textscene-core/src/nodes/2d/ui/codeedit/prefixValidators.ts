@@ -5,6 +5,7 @@
 
 import { accepts, propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
+import { codePointCount } from '../../../../godot/string/codePoints.js';
 import { parsePackedStringArray } from './arrayForms.js';
 
 /**
@@ -41,7 +42,7 @@ export function prefixArrayValidator(
         }
         continue;
       }
-      if ([...element].length !== 1) {
+      if (codePointCount(element) !== 1) {
         return propertyError(
           key,
           line,

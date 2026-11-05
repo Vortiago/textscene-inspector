@@ -25,6 +25,11 @@ export function utf16OffsetOf(text: string, index: number): number {
   return offset;
 }
 
+/** UTF-16 offset just past the code point that starts at `offset`, or `text.length` past the end. */
+export function offsetAfterCodePoint(text: string, offset: number): number {
+  return offset >= text.length ? text.length : offset + widthAt(text, offset);
+}
+
 /** `text.substr(0, count)` in code points (`ustring.cpp`). */
 export function sliceCodePoints(text: string, count: number): string {
   return text.slice(0, utf16OffsetOf(text, count));
