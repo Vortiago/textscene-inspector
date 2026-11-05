@@ -14,6 +14,7 @@ const box = (size: string): ResolvableResource => ({
   loadedFile: NO_FILES,
   loadedFont: NO_FONTS,
   projectFonts: NO_PROJECT_FONTS,
+  locale: '',
 });
 
 function renderMemo(initial: ResolvableResource | null) {
@@ -46,6 +47,7 @@ describe('useContentMemo', () => {
       loadedFile: NO_FILES,
       loadedFont: NO_FONTS,
       projectFonts: NO_PROJECT_FONTS,
+      locale: '',
     });
     const curve = (bakeResolution: string): TscnInternalResource => ({
       id: 'c',

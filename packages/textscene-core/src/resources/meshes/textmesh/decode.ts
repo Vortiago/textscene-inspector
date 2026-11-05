@@ -1,8 +1,7 @@
 /**
  * TextMesh decode. Defaults: `primitive_meshes.h:581-600`. The setters raise `depth` to 0 and clamp
  * `font_size` to 1-127, `pixel_size` to 0.0001-128 and `curve_step` to 0.1-10 (`primitive_meshes.cpp:3811-3912`),
- * and refuse an alignment past 3 (`:3712-3733`). `text_direction`, `language` and the structured text
- * override stay unread: no right-to-left shaping exists here.
+ * and refuse an alignment past 3 (`:3712-3733`).
  */
 
 import { unquoteString } from '../../../parser/utils';
@@ -11,6 +10,8 @@ import { clamp } from '../../../godot/math/math';
 import { storedReal, storedVector2 } from '../../../godot/math/real';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
 import { AutowrapMode, DEFAULT_JUSTIFICATION_FLAGS } from '../../../godot/text/textServerEnums';
+import { parseTextDirectionProperties } from '../../../parser/textDirectionParser';
+import { parseStructuredTextOverride } from '../../../parser/structuredTextOverrideParser';
 import type { TextMeshProperties } from './types';
 
 const HORIZONTAL_ALIGNMENTS = Object.values(HorizontalAlignment);
@@ -47,5 +48,7 @@ export function decodeTextMesh(properties: Record<string, string>): TextMeshProp
     pixelSize: storedReal(clamp(floatOr(properties.pixel_size, 0.01, 'TextMesh pixel_size'), 0.0001, 128)),
     curveStep: storedReal(clamp(floatOr(properties.curve_step, 0.5, 'TextMesh curve_step'), 0.1, 10)),
     offset: storedVector2(vec2Or(properties.offset, { x: 0, y: 0 }, 'TextMesh offset')),
+    ...parseTextDirectionProperties(properties, 'TextMesh'),
+    ...parseStructuredTextOverride(properties),
   };
 }

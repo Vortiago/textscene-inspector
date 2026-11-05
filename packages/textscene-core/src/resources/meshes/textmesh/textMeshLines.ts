@@ -1,6 +1,7 @@
 /**
- * The lines of a TextMesh: the shaped text broken at `width` as `autowrap_mode` says, and justified
- * under `HORIZONTAL_ALIGNMENT_FILL` (`primitive_meshes.cpp:3257-3304`). A TextMesh passes no trim
+ * The lines of a TextMesh: the text shaped in its direction, language and override
+ * (`primitive_meshes.cpp:3224-3240`), broken at `width` as `autowrap_mode` says, and justified under
+ * `HORIZONTAL_ALIGNMENT_FILL` (`:3257-3304`). A TextMesh passes no trim
  * flag to the line breaker, so it keeps the spaces at the edge of a line, unlike a Label.
  *
  * Portions ported from Godot Engine (MIT).
@@ -12,6 +13,7 @@
 import { HorizontalAlignment } from '../../../godot/math/alignment';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import type { FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
+import { textBidiOptions } from '../../../r3f/controls/native/text/textBidiOptions';
 import { justifyLinesToWidth } from '../../../r3f/controls/native/text/textJustify';
 import {
   clampAutowrapMode,
@@ -31,8 +33,14 @@ export interface TextMeshLines {
   linePitchPx: number;
 }
 
-export function shapeTextMeshLines(properties: TextMeshProperties, metrics: FontMetrics): TextMeshLines {
+/** An empty `language` takes `locale`, the project's `_get_locale()` (`primitive_meshes.cpp:3230`). */
+export function shapeTextMeshLines(
+  properties: TextMeshProperties,
+  locale: string,
+  metrics: FontMetrics
+): TextMeshLines {
   const layout = shapeText(properties.text, {
+    ...textBidiOptions(properties, locale),
     fontSizePx: properties.fontSize,
     boxWidthPx: properties.width,
     autowrapMode: clampAutowrapMode(properties.autowrapMode, AutowrapMode.AUTOWRAP_OFF),

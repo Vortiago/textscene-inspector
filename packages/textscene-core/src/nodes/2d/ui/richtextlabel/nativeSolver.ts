@@ -60,7 +60,13 @@ import {
 } from './bbcode';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { AutowrapMode, TextDirection } from '../../../../godot/text/textServerEnums';
+import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
+import {
+  controlBidiOptions,
+  type TextBidiOptions,
+} from '../../../../r3f/controls/native/text/textBidiOptions';
+import { paragraphAlignment, paragraphBidiOptions } from './paragraph';
 
 /** RichTextLabel reads `theme_override_font_sizes/normal_font_size` and `theme_override_colors/default_color`, not Label's `font_size` and `font_color`. */
 const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
@@ -331,11 +337,10 @@ interface StyledTextRun {
   color: Rgba;
   /** This run's font size, px (`resolveRunFontSizePx`): `normal_font_size` for a plain run. */
   fontSizePx: number;
-  /**
-   * The paragraph's `HorizontalAlignment`: `_find_alignment` over the tag
-   * stack, else `horizontal_alignment` (`resolveParagraphAlignment`).
-   */
+  /** The paragraph's `HorizontalAlignment` (`paragraphAlignment`). */
   alignment: number;
+  /** The paragraph's direction, language and override (`paragraphBidiOptions`), INHERITED resolved. */
+  bidi: TextBidiOptions;
   /**
    * Set only on the `[img]` placeholder run. There `fontSizePx` carries
    * `sizePx.x` (`imageObjectFontMetrics`), so check this field first.
@@ -410,7 +415,8 @@ export function styledTextRuns(
             underline: false,
             color: defaultColor,
             fontSizePx: normalFontSizePx,
-            alignment: resolveParagraphAlignment([], props.horizontalAlignment),
+            alignment: paragraphAlignment([], props.horizontalAlignment),
+            bidi: controlBidiOptions(props, n),
           },
         ];
   }
@@ -432,7 +438,8 @@ export function styledTextRuns(
         color: run.image.color,
         // Carries the image width: `imageObjectFontMetrics`.
         fontSizePx: sizePx.x,
-        alignment: resolveParagraphAlignment(run.tags, props.horizontalAlignment),
+        alignment: paragraphAlignment(run.tags, props.horizontalAlignment),
+        bidi: paragraphBidiOptions(run.tags, props, n),
         image: { spec: run.image, sizePx },
       });
       continue;
@@ -456,7 +463,8 @@ export function styledTextRuns(
         builtInDefaultPx,
         runFontSizeCache
       ),
-      alignment: resolveParagraphAlignment(run.tags, props.horizontalAlignment),
+      alignment: paragraphAlignment(run.tags, props.horizontalAlignment),
+      bidi: paragraphBidiOptions(run.tags, props, n),
     });
   }
   return styled;
@@ -505,6 +513,45 @@ function fontMetricsAtFromRuns(
   return (charIndex) => faceAt(charIndex) ?? faces.normal;
 }
 
+/**
+ * The run a character of the concatenated text is in, found by its start among the runs' starts: a
+ * lookup once per paragraph or line needs no table as long as the text. Past the end it is the last
+ * run, and undefined for no runs.
+ */
+function runAtFromRuns(
+  styledRuns: readonly StyledTextRun[]
+): (charIndex: number) => StyledTextRun | undefined {
+  // An empty run holds no character, so only the others take part.
+  const runs = styledRuns.filter((run) => run.text.length > 0);
+  const starts: number[] = [];
+  let start = 0;
+  for (const run of runs) {
+    starts.push(start);
+    start += run.text.length;
+  }
+  return (charIndex) => {
+    let low = 0;
+    let high = starts.length - 1;
+    while (low < high) {
+      const middle = (low + high + 1) >> 1;
+      if (starts[middle]! <= charIndex) low = middle;
+      else high = middle - 1;
+    }
+    return runs[low];
+  };
+}
+
+/**
+ * The per-paragraph `paragraphBidiAt` for `shapeText`: each paragraph takes the options of the run
+ * its first character is in, as a line reads them from its first item (`rich_text_label.cpp:598-599`).
+ */
+function paragraphBidiAtFromRuns(
+  styledRuns: readonly StyledTextRun[]
+): (paragraphStart: number) => TextBidiOptions {
+  const runAt = runAtFromRuns(styledRuns);
+  return (paragraphStart) => runAt(paragraphStart)?.bidi ?? {};
+}
+
 /** What `shapeRichText` takes from the control: the paragraph's box, and the three properties that shape it. */
 interface RichTextShapeOptions
   extends
@@ -534,6 +581,7 @@ export function shapeRichText(
     autowrapTrimFlags,
     paragraphSeparator: '\n',
     terminateLastParagraph: false,
+    paragraphBidiAt: paragraphBidiAtFromRuns(styledRuns),
   });
 }
 
@@ -755,65 +803,40 @@ function attributeRunsToLines(
 
 // ── Paragraph alignment (rich_text_label.cpp, text_paragraph.cpp) ──
 
-/** `HorizontalAlignment` (`core/variant/variant.h` enum order), as authored on `horizontal_alignment`. */
-const H_LEFT = 0;
-const H_CENTER = 1;
-const H_RIGHT = 2;
-const H_FILL = 3;
-
-/** `VerticalAlignment`, as authored on `vertical_alignment`. */
-const V_TOP = 0;
-const V_CENTER = 1;
-const V_BOTTOM = 2;
-const V_FILL = 3;
-
-/** The tags that push a paragraph alignment (`rich_text_label.cpp:5681-5696`), mapped to it. */
-const ALIGNMENT_TAGS: ReadonlyMap<string, number> = new Map([
-  ['left', H_LEFT],
-  ['center', H_CENTER],
-  ['right', H_RIGHT],
-  ['fill', H_FILL],
-]);
+const {
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_RIGHT,
+  HORIZONTAL_ALIGNMENT_FILL,
+} = HorizontalAlignment;
 
 /**
- * `RichTextLabel::_find_alignment` (`rich_text_label.cpp:3492-3505`): the
- * innermost alignment tag wins, else `horizontal_alignment` (`:7245-7258`).
- * `tags` is outermost-first, hence the reverse scan.
- */
-function resolveParagraphAlignment(
-  tags: readonly { name: string }[],
-  defaultAlignment: number | undefined
-): number {
-  for (let i = tags.length - 1; i >= 0; i--) {
-    const pushed = ALIGNMENT_TAGS.get(tags[i]!.name);
-    if (pushed !== undefined) return pushed;
-  }
-  return defaultAlignment ?? H_LEFT;
-}
-
-/**
- * A line's left offset: the LTR arms of `_draw_line` (`rich_text_label.cpp:1000-1014`), not
+ * A line's left offset: the arms of `_draw_line` (`rich_text_label.cpp:987-1014`), not
  * `TextParagraph::draw` (`scene/resources/text_paragraph.cpp:989-1023`), whose guards at `:1004`
- * and `:990` it lacks. An overflowing line hangs off the leading edge, clipped at `:8225`.
- * `lineWidthPx` is ceiled, as `:984` reads it.
+ * and `:990` it lacks. `isRtl` is the direction the paragraph sets, `text_buf->get_direction()`
+ * (`:940`), so an AUTO paragraph stays at the left. An overflowing line hangs off the leading edge,
+ * clipped at `:8225`. `lineWidthPx` is ceiled, as `:984` reads it.
  */
-function richTextHorizontalOffsetPx(lineWidthPx: number, boxWidthPx: number, alignment: number): number {
-  // The RTL arms (`rich_text_label.cpp:987-1014`) follow `_find_direction` (`:599`,
-  // `:3507-3525`), which the default `TEXT_DIRECTION_AUTO` (`rich_text_label.h:615`)
-  // keeps from `layout_direction`. `comparison.md` records the gap.
+function richTextHorizontalOffsetPx(
+  lineWidthPx: number,
+  boxWidthPx: number,
+  alignment: number,
+  isRtl: boolean
+): number {
+  // `_draw_line` skips the scrollbar width here, and this control draws no scrollbar.
   switch (alignment) {
-    case H_CENTER:
+    case HORIZONTAL_ALIGNMENT_CENTER:
       // Floored as Godot floors the glyph (`text_server_adv.cpp:4084`), which absorbs
       // the `int p_width` (`rich_text_label.h:672,678`) but not the line's ceil
       // (`text_paragraph.cpp:773-779`, `text_server_adv.cpp:7524-7537`). Label
       // truncates instead, a pixel apart on an overflowing line.
       return Math.floor((boxWidthPx - lineWidthPx) / 2);
-    case H_RIGHT:
-      return Math.floor(boxWidthPx - lineWidthPx);
-    case H_LEFT:
-    case H_FILL:
+    case HORIZONTAL_ALIGNMENT_RIGHT:
+      return isRtl ? 0 : Math.floor(boxWidthPx - lineWidthPx);
+    case HORIZONTAL_ALIGNMENT_LEFT:
+    case HORIZONTAL_ALIGNMENT_FILL:
     default:
-      return 0;
+      return isRtl ? Math.floor(boxWidthPx - lineWidthPx) : 0;
   }
 }
 
@@ -840,14 +863,14 @@ function richTextVerticalOffsets(
   const none = { vbeginPx: 0, vsepPx: 0 };
   if (boxHeightPx <= contentHeightPx) return none;
 
-  switch (alignment ?? V_TOP) {
-    case V_CENTER:
+  switch (alignment ?? VerticalAlignment.VERTICAL_ALIGNMENT_TOP) {
+    case VerticalAlignment.VERTICAL_ALIGNMENT_CENTER:
       return { vbeginPx: (boxHeightPx - contentHeightPx) / 2, vsepPx: 0 };
-    case V_BOTTOM:
+    case VerticalAlignment.VERTICAL_ALIGNMENT_BOTTOM:
       return { vbeginPx: boxHeightPx - contentHeightPx, vsepPx: 0 };
-    case V_FILL:
+    case VerticalAlignment.VERTICAL_ALIGNMENT_FILL:
       return { vbeginPx: 0, vsepPx: lineCount > 1 ? (boxHeightPx - contentHeightPx) / (lineCount - 1) : 0 };
-    case V_TOP:
+    case VerticalAlignment.VERTICAL_ALIGNMENT_TOP:
     default:
       return none;
   }
@@ -890,8 +913,8 @@ function fitFilledParagraphs(
 
 /**
  * One placement per line and style run, with each line's top and baseline from
- * `richTextLineMetrics` and its alignment offsets. Alignment resolves per line,
- * since tags differ between lines. Without `alignment`, the box is zero-width.
+ * `richTextLineMetrics` and its alignment offsets. Alignment and direction resolve per
+ * paragraph, since tags differ between paragraphs. Without `alignment`, the box is zero-width.
  */
 export function layoutRichTextRuns(
   styledRuns: readonly StyledTextRun[],
@@ -899,13 +922,16 @@ export function layoutRichTextRuns(
   alignment?: RichTextAlignment
 ): RichTextRunPlacement[] {
   const boxWidthPx = alignment?.boxWidthPx ?? 0;
-  // A paragraph tag cannot open mid-line, so the first segment's stack is the line's.
-  const alignmentOfLine = (segments: readonly RunLineSegment[]): number =>
-    segments[0] ? styledRuns[segments[0].runIndex]!.alignment : (alignment?.horizontalAlignment ?? H_LEFT);
+  // Every line of a paragraph aligns as its first item does (`rich_text_label.cpp:598-599`).
+  const runAt = runAtFromRuns(styledRuns);
+  const paragraphRunOf = (lineIndex: number): StyledTextRun | undefined =>
+    runAt(unfittedLayout.lines[lineIndex]?.paragraphStart ?? 0);
+  const alignmentOfLine = (lineIndex: number): number =>
+    paragraphRunOf(lineIndex)?.alignment ?? alignment?.horizontalAlignment ?? HORIZONTAL_ALIGNMENT_LEFT;
 
   const unfittedPerLine = attributeRunsToLines(styledRuns, unfittedLayout);
   const isFilled = (firstLineIndex: number): boolean =>
-    alignmentOfLine(unfittedPerLine[firstLineIndex]!) === H_FILL;
+    alignmentOfLine(firstLineIndex) === HORIZONTAL_ALIGNMENT_FILL;
   // A label with no FILL paragraph keeps its layout object, so it skips the second attribution.
   let hasFilledParagraph = false;
   for (let i = 0; i < unfittedLayout.lines.length; i++) {
@@ -936,7 +962,8 @@ export function layoutRichTextRuns(
     const lineOffsetXPx = richTextHorizontalOffsetPx(
       shapedTextSizeWidthPx(layout.lines[lineIndex]?.widthPx ?? 0),
       boxWidthPx,
-      alignmentOfLine(segments)
+      alignmentOfLine(lineIndex),
+      paragraphRunOf(lineIndex)?.bidi.direction === TextDirection.TEXT_DIRECTION_RTL
     );
     for (const segment of segments) {
       const run = styledRuns[segment.runIndex]!;

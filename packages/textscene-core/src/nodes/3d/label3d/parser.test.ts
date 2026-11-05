@@ -260,6 +260,36 @@ describe('Label3D Parser', () => {
       expect(props.castShadow).toBe(ShadowCastingSetting.OFF);
     });
 
+    it('defaults to AUTO, no language and the DEFAULT parser with no options (label_3d.h:131-134)', () => {
+      expect(parseLabel3D(heading('Label3D', { name: 'Label' }), {})).toMatchObject({
+        textDirection: 0,
+        language: '',
+        structuredTextBidiOverride: 0,
+        structuredTextBidiOverrideOptions: [],
+      });
+    });
+
+    it('reads text_direction, language, the parser and its options', () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
+        text_direction: '3',
+        language: '"he"',
+        structured_text_bidi_override: '2',
+        structured_text_bidi_override_options: '["/"]',
+      });
+      expect(props).toMatchObject({
+        textDirection: 3,
+        language: 'he',
+        structuredTextBidiOverride: 2,
+        structuredTextBidiOverrideOptions: ['/'],
+      });
+    });
+
+    it('keeps AUTO for a text_direction the setter refuses (label_3d.cpp:705)', () => {
+      expect(parseLabel3D(heading('Label3D', { name: 'Label' }), { text_direction: '4' }).textDirection).toBe(
+        0
+      );
+    });
+
     it('reads transparency through the GeometryInstance3D parse', () => {
       const props = parseLabel3D(heading('Label3D', { name: 'Label' }), { transparency: '0.4' });
       expect(props.transparency).toBe(0.4);

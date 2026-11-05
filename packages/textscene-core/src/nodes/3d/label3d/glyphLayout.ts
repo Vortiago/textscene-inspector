@@ -1,7 +1,6 @@
 /**
  * Label3D's line breaking, justification and placement, ported from `scene/3d/label_3d.cpp
- * Label3D::_shape()` (~483-606) over the shared shaping engine.
- * `text_direction`, `language` and the structured-text override are not read.
+ * Label3D::_shape()` (~479-606) over the shared shaping engine.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -16,6 +15,7 @@ import {
 } from '../../../r3f/controls/native/text/textLayout';
 import type { FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
 import { justifyLinesToWidth } from '../../../r3f/controls/native/text/textJustify';
+import type { TextBidiOptions } from '../../../r3f/controls/native/text/textBidiOptions';
 
 import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
 import { blockStartY, HorizontalAlignment, lineStartOffset } from '../../../godot/math/alignment';
@@ -45,14 +45,17 @@ interface Label3DLinePlacement {
 }
 
 /**
- * The text broken at `width` as `autowrap_mode` says (`label_3d.cpp:483-530`). The trim flags apply
- * in every mode, OFF included (`:528`).
+ * The text shaped in `bidi`, the label's direction, language and override (`label_3d.cpp:479-494`),
+ * and broken at `width` as `autowrap_mode` says (`:495-530`). The trim flags apply in every mode, OFF
+ * included (`:528`).
  */
 export function breakLabel3DLines(
   properties: Label3DBreakProperties,
+  bidi: TextBidiOptions,
   fontMetrics?: FontMetrics
 ): TextLayoutResult {
   return shapeText(properties.text, {
+    ...bidi,
     fontSizePx: properties.font_size,
     boxWidthPx: properties.width,
     autowrapMode: properties.autowrap_mode,

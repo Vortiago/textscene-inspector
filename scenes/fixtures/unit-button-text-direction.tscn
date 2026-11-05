@@ -1,0 +1,144 @@
+; One variable: the paragraph direction of each Button-family control, through `text_direction`,
+; `language` and LinkButton's structured override (button.cpp:564-569, link_button.cpp:41-47).
+; Only the glyph order and the trim side change.
+
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://fonts/dejavu-sans-bidi-subset.ttf" id="1_font"]
+
+[sub_resource type="Theme" id="Theme_1"]
+default_font = ExtResource("1_font")
+default_font_size = 28
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.1, 0.12, 0.18, 1)
+
+; RTL puts `!` at the visual left. The CENTER alignment does not move.
+[node name="ButtonRtl" type="Button" parent="."]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 340.0
+offset_bottom = 64.0
+text = "Hello!"
+text_direction = 2
+
+[node name="CheckBoxRtl" type="CheckBox" parent="."]
+offset_left = 40.0
+offset_top = 84.0
+offset_right = 340.0
+offset_bottom = 128.0
+text = "Hello!"
+text_direction = 2
+
+[node name="CheckButtonRtl" type="CheckButton" parent="."]
+offset_left = 40.0
+offset_top = 148.0
+offset_right = 340.0
+offset_bottom = 192.0
+text = "Hello!"
+text_direction = 2
+
+[node name="OptionButtonRtl" type="OptionButton" parent="."]
+offset_left = 40.0
+offset_top = 212.0
+offset_right = 340.0
+offset_bottom = 256.0
+text_direction = 2
+fit_to_longest_item = false
+item_count = 1
+popup/item_0/text = "Hello!"
+popup/item_0/id = 0
+selected = 0
+
+[node name="MenuButtonRtl" type="MenuButton" parent="."]
+offset_left = 40.0
+offset_top = 276.0
+offset_right = 340.0
+offset_bottom = 320.0
+text = "Hello!"
+text_direction = 2
+
+[node name="LinkButtonRtl" type="LinkButton" parent="."]
+offset_left = 40.0
+offset_top = 340.0
+offset_right = 340.0
+offset_bottom = 384.0
+text = "Hello!"
+text_direction = 2
+
+; Hebrew sets the direction of neutral text, so `!` goes to the visual left.
+[node name="ButtonNeutralHe" type="Button" parent="."]
+offset_left = 40.0
+offset_top = 404.0
+offset_right = 340.0
+offset_bottom = 448.0
+text = "123!"
+language = "he"
+
+; INHERITED takes the right-to-left layout. A right-to-left control mirrors its own offsets in its parent (control.cpp:1785).
+[node name="ButtonInherited" type="Button" parent="."]
+layout_direction = 3
+offset_left = 452.0
+offset_top = 20.0
+offset_right = 752.0
+offset_bottom = 64.0
+text = "Hello!"
+text_direction = 3
+
+; AUTO infers LTR from `H`, whatever the layout.
+[node name="ButtonAuto" type="Button" parent="."]
+layout_direction = 3
+offset_left = 452.0
+offset_top = 84.0
+offset_right = 752.0
+offset_bottom = 128.0
+text = "Hello!"
+
+; An explicit RTL paragraph trims at the visual left and draws the ellipsis there.
+[node name="ButtonTrimRtl" type="Button" parent="."]
+offset_left = 400.0
+offset_top = 148.0
+offset_right = 600.0
+offset_bottom = 192.0
+clip_text = true
+text_overrun_behavior = 3
+text = "Hello World Again!"
+text_direction = 2
+
+; An AUTO Hebrew paragraph keeps its visual left part and draws the ellipsis at the right.
+[node name="ButtonTrimAutoHe" type="Button" parent="."]
+offset_left = 400.0
+offset_top = 212.0
+offset_right = 600.0
+offset_bottom = 256.0
+clip_text = true
+text_overrun_behavior = 3
+text = "שלום עולם שלום עולם"
+
+; FILE keeps each path segment in logical order, left to right.
+[node name="LinkButtonFile" type="LinkButton" parent="."]
+offset_left = 400.0
+offset_top = 276.0
+offset_right = 800.0
+offset_bottom = 320.0
+text = "שלום/עולם/abc.txt"
+text_direction = 2
+structured_text_bidi_override = 2
+
+; Without an override, the RTL paragraph puts the Latin name at the visual left.
+[node name="LinkButtonNoOverride" type="LinkButton" parent="."]
+offset_left = 400.0
+offset_top = 340.0
+offset_right = 800.0
+offset_bottom = 384.0
+text = "שלום/עולם/abc.txt"
+text_direction = 2

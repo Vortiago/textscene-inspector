@@ -61,4 +61,23 @@ describe('parseRichTextLabel', () => {
     expect(p.justificationFlags).toBe(66);
     expect(p.clipContents).toBe(false);
   });
+
+  it('defaults text_direction to AUTO, language to empty and the override to DEFAULT', () => {
+    const p = parseRichTextLabel(h({ name: 'T', type: 'RichTextLabel' }), {});
+    expect(p.textDirection).toBe(0);
+    expect(p.language).toBe('');
+    expect(p.structuredTextBidiOverride).toBe(0);
+    expect(p.structuredTextBidiOverrideOptions).toEqual([]);
+  });
+
+  it('reads text_direction, language and the structured override', () => {
+    const p = parseRichTextLabel(h({ name: 'T', type: 'RichTextLabel' }), {
+      text_direction: '2',
+      language: '"he"',
+      structured_text_bidi_override: '2',
+    });
+    expect(p.textDirection).toBe(2);
+    expect(p.language).toBe('he');
+    expect(p.structuredTextBidiOverride).toBe(2);
+  });
 });

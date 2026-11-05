@@ -65,6 +65,7 @@ const POSITION_TOLERANCE = 2e-6;
 describe.each(measured.surfaces as unknown as MeasuredMesh[])('TextMesh $text $raw against Godot', (mesh) => {
   const surface = buildTextMeshSurface(
     decodeTextMesh({ ...mesh.raw, text: JSON.stringify(mesh.text) }),
+    '',
     measuredFace(mesh)
   );
 

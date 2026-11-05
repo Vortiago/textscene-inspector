@@ -56,9 +56,6 @@ family (`title`/`tooltip`/`icon`/`disabled`), aligned to `tab_count` like Option
 
 ## Known limitations
 
-- **Approximated** Under `layout_direction = 3`, a tab title keeps left-to-right glyph
-  order for a right-to-left script or trailing punctuation, while the tabs and their
-  contents still mirror.
 - **Not drawn** The drag drop-mark, and the hover and pressed chrome of a tab, its close
   button and the scroll arrows, since each needs a pointer.
 - **Approximated** `max_tab_width` caps a tab's width as Godot does, but the title draws

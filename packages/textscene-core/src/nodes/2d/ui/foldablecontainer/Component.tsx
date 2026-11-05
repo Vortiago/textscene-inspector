@@ -105,9 +105,10 @@ export function FoldableContainer({
     const trimmedLine = trimLineToWidth(title.layout.lines[0]!, Math.max(1, titleTextWidth), overrunFlags, {
       fontMetrics: title.layout.fontMetrics,
       fontSizePx: title.fontSizePx,
+      isDrawnRtl: title.isDrawnRtl,
     });
     return soloLineLayout(trimmedLine, title.layout);
-  }, [title.layout, overrunFlags, titleTextWidth, title.fontSizePx]);
+  }, [title.layout, overrunFlags, titleTextWidth, title.fontSizePx, title.isDrawnRtl]);
 
   // `TextLine::set_horizontal_alignment(_get_actual_alignment())` shifts the
   // drawn glyphs within `title_text_width` (`foldable_container.cpp:497,313`).

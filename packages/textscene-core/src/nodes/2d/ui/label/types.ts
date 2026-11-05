@@ -1,6 +1,12 @@
 import type { ControlProperties } from '../control/types';
+import type {
+  StructuredTextOverrideProperties,
+  TextDirectionProperties,
+} from '../../../../godot/text/paragraphDirection';
 
-export interface LabelProperties extends ControlProperties {
+/** Each paragraph shapes in `text_direction` and `language`, else the locale (`label.cpp:139,178-181,195`). */
+export interface LabelProperties
+  extends ControlProperties, TextDirectionProperties, StructuredTextOverrideProperties {
   text?: string;
   /** Godot HorizontalAlignment: 0 left, 1 center, 2 right, 3 fill. */
   horizontalAlignment?: number;
@@ -36,12 +42,4 @@ export interface LabelProperties extends ControlProperties {
   visibleRatio?: number;
   /** `TextServer::VisibleCharactersBehavior`. Godot default 0, VC_CHARS_BEFORE_SHAPING (`label.h:74`). */
   visibleCharactersBehavior?: number;
-  /** `Control::TextDirection` of each paragraph. Godot default TEXT_DIRECTION_AUTO (`label.h:70`). */
-  textDirection: number;
-  /** `Label.language`: the casing and the direction of a text with no strong character. Empty takes the locale (`label.cpp:139`). */
-  language: string;
-  /** `TextServer::StructuredTextParser`. Godot default STRUCTURED_TEXT_DEFAULT (`label.h:71`). */
-  structuredTextBidiOverride: number;
-  /** `structured_text_bidi_override_options`, an untyped `Array`: each String or StringName element, null for any other Variant. */
-  structuredTextBidiOverrideOptions: (string | null)[];
 }

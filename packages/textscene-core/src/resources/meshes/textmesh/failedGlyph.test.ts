@@ -31,7 +31,7 @@ function vertexCount({ text, embolden, skew, depth = 0, fontSize = 64, curveStep
     depth: String(depth),
     curve_step: String(curveStep),
   });
-  return buildTextMeshSurface(properties, face).positions.length / 3;
+  return buildTextMeshSurface(properties, '', face).positions.length / 3;
 }
 
 describe('a flat TextMesh of a glyph Godot fails to triangulate', () => {
