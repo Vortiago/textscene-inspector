@@ -9,7 +9,12 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { OPEN_SANS_ATLAS_GLYPHS } from './openSansAtlas';
-import { getFontEmboldenedAdvancePx, getFontEmboldenGrowthPx, type FontMetrics } from './fontMetrics';
+import {
+  firstFaceWithGlyph,
+  getFontEmboldenedAdvancePx,
+  getFontEmboldenGrowthPx,
+  type FontMetrics,
+} from './fontMetrics';
 import { isWhitespace, type GlyphPlacement, type TextLayoutResult, type TextLineLayout } from './textLayout';
 import { fitTrimmedGlyphsToWidth } from './textJustify';
 import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
@@ -125,8 +130,7 @@ interface TrimBudget {
  * first font of the span's **Fallback chain** that has it. Null for none.
  */
 function faceWithGlyph(lastFace: FontMetrics, spanFace: FontMetrics, ch: string): FontMetrics | null {
-  if (lastFace.hasGlyph(ch)) return lastFace;
-  return [spanFace, ...(spanFace.fallbacks ?? [])].find((face) => face.hasGlyph(ch)) ?? null;
+  return lastFace.hasGlyph(ch) ? lastFace : firstFaceWithGlyph(spanFace, ch);
 }
 
 function atlasGlyphFor(fontMetrics: FontMetrics, ch: string) {

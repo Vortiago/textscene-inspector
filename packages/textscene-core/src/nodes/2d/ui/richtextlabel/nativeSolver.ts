@@ -788,7 +788,9 @@ export function richTextContentHeightPx(
 
 /** The faces the glyphs of `segment` draw in, which may come from its **Fallback chain**. */
 function glyphFacesOf(segment: RunLineSegment): Set<FontMetrics> {
-  return new Set(segment.glyphs.map((glyph) => glyph.fontMetrics ?? segment.fontMetrics));
+  const faces = new Set([segment.fontMetrics]);
+  for (const glyph of segment.glyphs) if (glyph.fontMetrics) faces.add(glyph.fontMetrics);
+  return faces;
 }
 
 /** The paragraph indexes (counted by `\n`) of the lines of no height: each ends in a `zeroHeightBreak` run. */

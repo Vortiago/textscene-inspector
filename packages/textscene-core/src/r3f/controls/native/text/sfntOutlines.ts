@@ -13,7 +13,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { cmapLookup } from './sfntCmap';
+import { cmapLookup, orOnRangeError } from './sfntCmap';
 import { glyphMetricsReader, metricsAtInstance } from './sfntGlyphMetrics';
 import type { GlyphContours, GlyphOutlineReader } from './glyphContours';
 import { glyphAdvance26_6, isInstanced, type GlyphVariation, type OpentypeCoordinates } from './fontMetrics';
@@ -37,16 +37,6 @@ export interface SfntOutlines {
    * a font with no variation axes to set, such as a BMFont's.
    */
   advanceAtInstance?(glyphIndex: number, fontSizePx: number, opentype: OpentypeCoordinates): number | null;
-}
-
-/** `read`, or `fallback` when a corrupt table puts an offset past the buffer: a `DataView` read throws a `RangeError` there. */
-function orOnRangeError<T>(read: () => T, fallback: T): T {
-  try {
-    return read();
-  } catch (error) {
-    if (!(error instanceof RangeError)) throw error;
-    return fallback;
-  }
 }
 
 /**

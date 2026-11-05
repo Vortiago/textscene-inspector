@@ -42,19 +42,17 @@ function readTextMeshFont({
   const font = fontForNode('TextMesh', resource.data['font'], { resources, loadedFont, projectFonts });
   // The settled metrics are keyed by the resolved font file, and the name only labels a failure.
   const faces = peekSettledChainFaces(font, `TextMesh ${resource.id}`);
-  const primaryOutlines = peekSceneFontOutlines(faces?.[0]?.font ?? font);
-  if (primaryOutlines === null) return UNREADABLE;
-  if (!faces || !primaryOutlines) return AWAITING_FONT;
-  const fallbacks = faces.slice(1).map(faceWithOutlines);
-  if (fallbacks.includes(undefined)) return AWAITING_FONT;
-  const face = withOutlines(faces[0]!.metrics, primaryOutlines);
-  const readable = fallbacks.filter((fallback): fallback is TextMeshFace => !!fallback);
+  // Peeked before the metrics settle, so a font with no outlines is unreadable at once.
+  if (peekSceneFontOutlines(faces?.[0]?.font ?? font) === null) return UNREADABLE;
+  const [face, ...fallbacks] = faces?.map(faceWithOutlines) ?? [undefined];
+  if (!face || fallbacks.includes(undefined)) return AWAITING_FONT;
+  const readable = fallbacks.filter((fallback): fallback is TextMeshFace => fallback !== null);
   return { status: 'ready', face: withFallbacks(face, readable) };
 }
 
 /**
- * A fallback face with the outlines it extrudes: undefined while they load, and null for outlines this
- * reader cannot open, which drops the face from the chain.
+ * A face with the outlines it extrudes: undefined while they load, and null for outlines this reader
+ * cannot open, which drops a fallback from the chain.
  */
 function faceWithOutlines({ font, metrics }: SettledChainFace): TextMeshFace | null | undefined {
   const outlines = peekSceneFontOutlines(font);

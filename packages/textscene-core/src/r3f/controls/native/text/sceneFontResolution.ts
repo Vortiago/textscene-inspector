@@ -14,8 +14,9 @@ import { TRANSFORM2D_SLOT_RE, matchedFloat, parseGodotFloat } from '../../../../
 import { boolSlotValue } from '../../../../godot/variant/variantBool';
 import { dictNumberEntries } from '../../../../godot/variant/variantParser';
 import type { OpentypeCoordinates } from './fontMetrics';
+import { perObject } from '../../../../utils/perObject';
 
-type FileWithBytes = FontFileResource & { bytes: ArrayBuffer };
+export type FileWithBytes = FontFileResource & { bytes: ArrayBuffer };
 type FileWithBitmap = FontFileResource & { bitmap: BitmapFont };
 
 /** Whether `file` is a decoded BMFont. */
@@ -91,16 +92,14 @@ function pushFallbacks(font: FontResource, depth: number, chain: FontResource[])
  * shaper tries them (`Font::_update_rids`, `font.cpp:119-123`). A `FontVariation` or `SystemFont`
  * with no `fallbacks` of its own takes those of its base (`font.cpp:2926-2945`, `3216-3235`).
  */
-export function fallbackChain(font: FontResource): FontResource[] {
-  const chain: FontResource[] = [];
-  if (font.kind === 'file' || font.fallbacks.length > 0 || !font.baseFont) {
-    pushFallbacks(font, 0, chain);
-    return chain;
-  }
-  if (hasOwnFace(font)) chain.push(font);
-  for (const fallback of font.baseFont.fallbacks) pushFallbacks(fallback, 0, chain);
+export const fallbackChain = perObject((font: FontResource): readonly FontResource[] => {
+  const base = font.kind !== 'file' && font.fallbacks.length === 0 ? font.baseFont : null;
+  const chain: FontResource[] = hasOwnFace(font) ? [font] : [];
+  // The base's fallbacks start the walk at depth 0, as `FontVariation::_update_rids` does.
+  const depth = base ? 0 : 1;
+  for (const fallback of base ? base.fallbacks : font.fallbacks) pushFallbacks(fallback, depth, chain);
   return chain;
-}
+});
 
 /**
  * The `FontVariation` whose settings `font` draws with: itself, or the one a `SystemFont` draws as

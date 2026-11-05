@@ -141,17 +141,25 @@ export function cmapCodePoints(dv: DataView, cmapOffset: number, glyphCount: num
  */
 export function sfntHasGlyph({ dv, tables }: SfntFile): (ch: string) => boolean {
   const cmap = tables.get('cmap');
-  const lookup = cmap ? orNullOnRangeError(() => cmapLookup(dv, cmap.offset)) : null;
+  const lookup = cmap ? orOnRangeError(() => cmapLookup(dv, cmap.offset), null) : null;
   if (!lookup) return () => true;
-  return (ch) => (orNullOnRangeError(() => lookup(ch.codePointAt(0)!)) ?? 1) !== 0;
+  // One answer per code point: the shaper asks for each character on every pass.
+  const answers = new Map<number, boolean>();
+  return (ch) => {
+    const codePoint = ch.codePointAt(0)!;
+    let answer = answers.get(codePoint);
+    if (answer === undefined)
+      answers.set(codePoint, (answer = orOnRangeError(() => lookup(codePoint), 1) !== 0));
+    return answer;
+  };
 }
 
-/** `read()`, or null where a malformed table sends it past the end of the bytes. */
-function orNullOnRangeError<T>(read: () => T): T | null {
+/** `read()`, or `fallback` where a malformed table sends it past the end of the bytes. */
+export function orOnRangeError<T>(read: () => T, fallback: T): T {
   try {
     return read();
   } catch (error) {
     if (!(error instanceof RangeError)) throw error;
-    return null;
+    return fallback;
   }
 }

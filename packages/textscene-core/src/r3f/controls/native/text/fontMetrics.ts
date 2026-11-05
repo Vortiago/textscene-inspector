@@ -384,6 +384,18 @@ export function withOutlines<Metrics extends FontMetrics>(
   ) as Metrics & { readonly outlines: SfntOutlines };
 }
 
+/** `face` and then its `fallbacks`: the order the shaper tries them in. */
+export const fallbackChainOf = perObject((face: FontMetrics): readonly FontMetrics[] => [
+  face,
+  ...(face.fallbacks ?? []),
+]);
+
+/** The first face of the **Fallback chain** of `face` that has a glyph for `ch`, or null for none. */
+export function firstFaceWithGlyph(face: FontMetrics, ch: string): FontMetrics | null {
+  if (face.hasGlyph(ch)) return face;
+  return face.fallbacks?.find((fallback) => fallback.hasGlyph(ch)) ?? null;
+}
+
 /** One wrapper per face and fallback list, so a layout memoised on the face keeps its hits. */
 const fallbacksOf = perObject((_face: FontMetrics) => new Map<string, FontMetrics>());
 
@@ -391,10 +403,12 @@ const fallbacksOf = perObject((_face: FontMetrics) => new Map<string, FontMetric
  * `face` with `fallbacks` as the rest of its **Fallback chain**. A face in the list twice, or the
  * face itself, is tried once, where it first stands.
  */
+
 export function withFallbacks<Metrics extends FontMetrics>(
   face: Metrics,
   fallbacks: readonly FontMetrics[]
 ): Metrics {
+  if (fallbacks.length === 0) return face;
   const distinct = [...new Set(fallbacks)].filter((fallback) => fallback !== face);
   if (distinct.length === 0) return face;
   const byList = fallbacksOf(face);

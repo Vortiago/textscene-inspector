@@ -22,6 +22,7 @@ import {
   fontVariationOpentype,
   fontVariationSkew,
   hasBitmap,
+  type FileWithBytes,
 } from './sceneFontResolution';
 import { createBitmapFontMetrics } from './bitmapFontMetrics';
 import { NO_FACE_METRICS } from './noFaceMetrics';
@@ -121,15 +122,11 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
   return createRuntimeFontMetrics({ scalars, measureWidthUnits, cssFontFamily: family, hasGlyph });
 }
 
-/** Loads the font at `bytes`. It never throws, and always returns usable `FontMetrics`. */
-async function loadSceneFontMetrics(
-  face: FontFileResource,
-  bytes: ArrayBuffer,
-  nodePath: string
-): Promise<FontMetrics> {
+/** Loads the bytes of `face`. It never throws, and always returns usable `FontMetrics`. */
+async function loadSceneFontMetrics(face: FileWithBytes, nodePath: string): Promise<FontMetrics> {
   if (IS_VITEST) return OPEN_SANS_FONT_METRICS;
   try {
-    return await loadRuntimeFont(bytes, nodePath);
+    return await loadRuntimeFont(face.bytes, nodePath);
   } catch (err: unknown) {
     failedFaces.add(face);
     logger.warn(
@@ -159,6 +156,9 @@ export function peekSettledSceneFontMetrics(
   font: FontResource | null | undefined,
   nodePath: string
 ): FontMetrics | null {
+  if (!font) return OPEN_SANS_FONT_METRICS;
+  const chain = fallbackChain(font);
+  if (chain.length <= 1) return peekSettledFaceMetrics(chain[0] ?? font, nodePath);
   const faces = peekSettledChainFaces(font, nodePath);
   if (!faces) return null;
   const [face, ...fallbacks] = faces.map(({ metrics }) => metrics);
@@ -181,13 +181,13 @@ export function peekSettledChainFaces(
   nodePath: string
 ): readonly SettledChainFace[] | null {
   if (!font) return [{ font: null, metrics: OPEN_SANS_FONT_METRICS }];
-  const chain = fallbackChain(font);
-  if (chain.length === 0) chain.push(font);
+  const ownChain = fallbackChain(font);
+  const chain = ownChain.length > 0 ? ownChain : [font];
   const faces = chain.map((entry) => peekSettledFaceMetrics(entry, nodePath));
   if (faces.includes(null)) return null;
-  return chain.flatMap((entry, i) => {
-    return i > 0 && failedToLoad(entry) ? [] : [{ font: entry, metrics: faces[i]! }];
-  });
+  return chain.flatMap((entry, i) =>
+    i > 0 && failedToLoad(entry) ? [] : [{ font: entry, metrics: faces[i]! }]
+  );
 }
 
 /** Whether `entry` draws the bundled default for want of its own face: it has none that resolves, or its load failed. */
@@ -212,7 +212,7 @@ function peekSettledFaceMetrics(font: FontResource, nodePath: string): FontMetri
   if (hasBitmap(face))
     return withVariation(bitmapMetricsOf(face.bitmap), { embolden: fontVariationEmbolden(font) });
 
-  const metrics = peekMetrics(face, () => loadSceneFontMetrics(face, face.bytes, nodePath));
+  const metrics = peekMetrics(face, () => loadSceneFontMetrics(face, nodePath));
   if (!metrics) return null;
   const variation = fontVariation(font);
   const outlines = peekGlyphOutlines(face, metrics, variation);

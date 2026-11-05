@@ -22,6 +22,8 @@ import {
   getFontGlyphAdvancePx,
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
+  fallbackChainOf,
+  firstFaceWithGlyph,
   type FontMetrics,
 } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
@@ -371,19 +373,18 @@ interface RunStyle {
   rangeIds: Int32Array;
 }
 
-/** Whether character `i` starts a run: its size, face, bidi level or override range differs from the character before it. */
+/** Whether character `i`, past the first, starts a run: its size, face, bidi level or override range differs from the character before it. */
 function startsNewRun(style: RunStyle, i: number): boolean {
-  return i > 0 && (style.faces[i] !== style.faces[i - 1] || startsNewSpanRun(style, i));
+  return style.faces[i] !== style.faces[i - 1] || startsNewSpanRun(style, i);
 }
 
-/** Whether character `i` starts a run of its span's face, which a glyph from the **Fallback chain** does not break. */
+/** Whether character `i`, past the first, starts a run of its span's face, which a glyph from the **Fallback chain** does not break. */
 function startsNewSpanRun(style: RunStyle, i: number): boolean {
   return (
-    i > 0 &&
-    (style.sizes[i] !== style.sizes[i - 1] ||
-      style.spanFaces[i] !== style.spanFaces[i - 1] ||
-      style.levels[i] !== style.levels[i - 1] ||
-      style.rangeIds[i] !== style.rangeIds[i - 1])
+    style.sizes[i] !== style.sizes[i - 1] ||
+    style.spanFaces[i] !== style.spanFaces[i - 1] ||
+    style.levels[i] !== style.levels[i - 1] ||
+    style.rangeIds[i] !== style.rangeIds[i - 1]
   );
 }
 
@@ -392,16 +393,12 @@ function isRtlRun(style: RunStyle, i: number): boolean {
   return style.levels[i]! % 2 === 1;
 }
 
-/** The `[start, end)` of each run of `length` characters, in logical order, split where `startsRun` says. */
-function runRanges(
-  style: RunStyle,
-  length: number,
-  startsRun: (style: RunStyle, i: number) => boolean = startsNewRun
-): Array<[number, number]> {
+/** The `[start, end)` of each run of its span's face over `length` characters, in logical order. */
+function spanRunRanges(style: RunStyle, length: number): Array<[number, number]> {
   const ranges: Array<[number, number]> = [];
   let start = 0;
   for (let i = 1; i <= length; i++) {
-    if (i === length || startsRun(style, i)) {
+    if (i === length || startsNewSpanRun(style, i)) {
       ranges.push([start, i]);
       start = i;
     }
@@ -454,8 +451,9 @@ const KEEPS_ITS_FACE = /^[\p{Cc}\p{Cn}\p{Cs}\p{Zl}\p{Zp}\p{Zs}\p{Default_Ignorab
  * (`text_server_adv.cpp:7132-7170`). A character that no font of the chain has stays in `face`.
  */
 function glyphFace(face: FontMetrics, ch: string): FontMetrics {
-  if (!face.fallbacks || ch === '' || KEEPS_ITS_FACE.test(ch) || face.hasGlyph(ch)) return face;
-  return face.fallbacks.find((fallback) => fallback.hasGlyph(ch)) ?? face;
+  // `hasGlyph` first: most characters are in `face`, and the property test costs more.
+  if (!face.fallbacks || ch === '' || face.hasGlyph(ch) || KEEPS_ITS_FACE.test(ch)) return face;
+  return firstFaceWithGlyph(face, ch) ?? face;
 }
 
 /** Whether `face` is a BMFont with no glyph for `ch`, a tab aside: Godot then draws `ch` as a hex-code box. */
@@ -573,17 +571,16 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
  * HarfBuzz's glyph order, which is reverse logical order for a right-to-left run. Mutates `glyphs`.
  */
 function roundAdvancesToWholePixels(glyphs: BreakGlyph[], chars: ArrayLike<string>, style: RunStyle): void {
-  for (const [start, end] of runRanges(style, chars.length, startsNewSpanRun)) {
+  for (const [start, end] of spanRunRanges(style, chars.length)) {
     const indices = Array.from({ length: end - start }, (_v, k) => start + k);
     if (isRtlRun(style, start)) indices.reverse();
-    const spanFace = style.spanFaces[start]!;
-    roundFaceRun(glyphs, chars, style, indices, [spanFace, ...(spanFace.fallbacks ?? [])]);
+    roundFaceRun(glyphs, chars, style, indices, fallbackChainOf(style.spanFaces[start]!), 0);
   }
 }
 
 /**
- * Rounds the glyphs of `indices` that draw in `chain[0]`, with one remainder. Each stretch of glyphs
- * that draw in a later face is a run of its own in the rest of the chain, as Godot shapes a failed
+ * Rounds the glyphs of `indices` that draw in `chain[depth]`, with one remainder. Each stretch of
+ * glyphs that draw in a later face is a run of its own one level down, as Godot shapes a failed
  * stretch again in the next font, and leaves this remainder as it was (`text_server_adv.cpp:7058,7132`).
  */
 function roundFaceRun(
@@ -591,24 +588,22 @@ function roundFaceRun(
   chars: ArrayLike<string>,
   style: RunStyle,
   indices: readonly number[],
-  chain: readonly FontMetrics[]
+  chain: readonly FontMetrics[],
+  depth: number
 ): void {
-  const [face, ...rest] = chain;
-  const drawsHere = (i: number): boolean => rest.length === 0 || style.faces[i] === face;
-  const usesSubpixel = fontUsesSubpixelPositioning(style.sizes[indices[0]!]!, face!);
+  const face = chain[depth]!;
+  const isLastFace = depth === chain.length - 1;
+  const usesSubpixel = fontUsesSubpixelPositioning(style.sizes[indices[0]!]!, face);
   // `adv_rem` is local to `_shape_run` (`:7011`), so each run starts it at zero.
   let advanceRemainder = 0;
   let stretch: number[] = [];
-  const roundStretch = (): void => {
-    if (stretch.length > 0) roundFaceRun(glyphs, chars, style, stretch, rest);
-    stretch = [];
-  };
   for (const i of indices) {
-    if (!drawsHere(i)) {
+    if (!isLastFace && style.faces[i] !== face) {
       stretch.push(i);
       continue;
     }
-    roundStretch();
+    if (stretch.length > 0) roundFaceRun(glyphs, chars, style, stretch, chain, depth + 1);
+    stretch = [];
     if (usesSubpixel) continue;
     const cp = chars[i]!.codePointAt(0) ?? 0;
     // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
@@ -618,7 +613,7 @@ function roundFaceRun(
     glyphs[i]!.advance = rounded;
     advanceRemainder = fullAdvance - rounded;
   }
-  roundStretch();
+  if (stretch.length > 0) roundFaceRun(glyphs, chars, style, stretch, chain, depth + 1);
 }
 
 /**
