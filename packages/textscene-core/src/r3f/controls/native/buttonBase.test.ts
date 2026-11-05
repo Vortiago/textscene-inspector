@@ -21,6 +21,7 @@ import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alig
 import { shapeText, type TextLineLayout } from './text/textLayout';
 import { OPEN_SANS_FONT_METRICS } from './text/openSansFontMetrics';
 import { AutowrapMode, OverrunBehavior } from '../../../godot/text/textServerEnums';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 const { HORIZONTAL_ALIGNMENT_CENTER, HORIZONTAL_ALIGNMENT_LEFT, HORIZONTAL_ALIGNMENT_RIGHT } =
   HorizontalAlignment;
@@ -494,7 +495,11 @@ describe('trimButtonLabel — the label trimmed to its paragraph box (button.cpp
   const FONT_SIZE_PX = 16;
   const font = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX };
 
-  function shaped(text: string, boxWidthPx = 0, autowrapMode: number = AutowrapMode.AUTOWRAP_OFF) {
+  function shaped(
+    text: string,
+    boxWidthPx = 0,
+    autowrapMode: EnumValue<typeof AutowrapMode> = AutowrapMode.AUTOWRAP_OFF
+  ) {
     return shapeText(text, {
       fontSizePx: FONT_SIZE_PX,
       boxWidthPx,
