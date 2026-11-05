@@ -601,10 +601,9 @@ describe('simulateFrozenPose', () => {
   });
 });
 
-// The expected values come from Godot 4.6.3 running the single-particle path of
-// `_particles_process` through its own float `Vector2` maths
-// (/mnt/project-files/canvas-normals-718/particle-oracle.gd), as the issue measured: a double
-// simulation gives 0.44721360 for the first case, Godot 0.44721353.
+// The expected values come from Godot 4.6.3: a GDScript port of the single-particle path of
+// `CPUParticles2D::_particles_process` (cpu_particles_2d.cpp:765-1112), run through Godot's own
+// float `Vector2` maths. A double simulation gives 0.44721360 for the first case, Godot 0.44721353.
 describe('the simulation in real_t float (cpu_particles_2d.cpp:765-1112)', () => {
   const FRAME_STEPS = { thirty: '0.52', sixty: '0.66' };
 

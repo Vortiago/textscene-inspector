@@ -115,8 +115,7 @@ describe('component-wise Vector3 arithmetic', () => {
   });
 });
 
-// The expected numbers are Godot 4.6.3's float `Vector2`
-// (/mnt/project-files/cpuparticles2d-995/transform-oracle.gd).
+// The expected numbers are what Godot 4.6.3's float `Vector2` prints for these inputs.
 describe('component-wise Vector2 arithmetic', () => {
   const a = { x: storedReal(0.1), y: storedReal(0.7) };
   const b = { x: storedReal(0.2), y: storedReal(0.3) };
