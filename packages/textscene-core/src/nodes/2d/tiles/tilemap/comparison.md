@@ -52,7 +52,5 @@ passes through as the raw reference string, so a dangling reference draws no til
 
 ## Known limitations
 
-- **Approximated** Y-sort is computed once for the static scene, so a Y change driven by
-  an AnimationPlayer is not re-sorted.
 - **Resource gap** Scene-collection sources are skipped with a warning, animated tiles
   show their first frame, and legacy formats 0 and 1 draw nothing.

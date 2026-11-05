@@ -8022,7 +8022,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-canvasitem-clip-ancestry</code> (type-family match)</td><td><code>canvasitem-ancestor-clips-children</code></td><td>warning</td></tr><tr><td></td><td><code>canvasitem-ancestor-is-canvasgroup</code></td><td>warning</td></tr><tr><td><code>valid-tilemap</code></td><td><code>tilemap-deprecated</code></td><td>warning</td></tr><tr><td></td><td><code>tilemap-y-sort-z-index-conflict</code></td><td>warning</td></tr><tr><td></td><td><code>tilemap-layer-y-sort-without-node</code></td><td>warning</td></tr><tr><td></td><td><code>tilemap-node-y-sort-without-layer</code></td><td>warning</td></tr><tr><td></td><td><code>tilemap-requires-tileset</code></td><td>info</td></tr><tr><td></td><td><code>tilemap-unsupported-format</code></td><td>error</td></tr><tr><td></td><td><code>tilemap-invalid-tile-data</code></td><td>error</td></tr></tbody></table></div>
 <p><code>format</code> falls back to <code>2</code>, the current encoding, when absent or unreadable. Only format <code>2</code> decodes, so another value warns and drops that layer's <code>tile_data</code>. <code>tile_set</code> passes through as the raw reference string, so a dangling reference draws no tiles.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> Y-sort is computed once for the static scene, so a Y change driven by an AnimationPlayer is not re-sorted.</li><li><strong>Resource gap</strong> Scene-collection sources are skipped with a warning, animated tiles show their first frame, and legacy formats 0 and 1 draw nothing.</li></ul></div>
+<ul><li><strong>Resource gap</strong> Scene-collection sources are skipped with a warning, animated tiles show their first frame, and legacy formats 0 and 1 draw nothing.</li></ul></div>
     </article>
     <article class="sheet" data-type="TileMapLayer" hidden>
       <header class="sheet-head">
@@ -8071,6 +8071,23 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p>This y-sorted layer turns 30 degrees and scales by 1.5 in its parent. It draws each tile row through its whole transform. A row sorts by the y of its origin in the parent's space (<code>renderer_canvas_cull.cpp:131</code>). The two white bars hide under the rows that sort below them. Rows that a rotation lays on one y keep their order within <code>is_equal_approx</code>. The previewer matches Godot 4.6.3 at rotations 0, 30 and -90 degrees, scales 0.5, 2, (-1, -1) and (1, -1), and skew 0.3.</p></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>Child nodes of a y-sorted layer</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-tile-map-layer-y-sort-children-godot.png" alt="Godot render of Child nodes of a y-sorted layer">
+          <img class="img-ours" src="images/unit-tile-map-layer-y-sort-children-ours.png" alt="Our render of Child nodes of a y-sorted layer">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A y-sorted layer sorts its tile rows with its child nodes by y (<code>renderer_canvas_cull.cpp:110-170</code>). A child draws over the rows above its y and under the rows below it. The left layer roots a sort and the right layer sits in a y-sorted Node2D. The cyan and yellow children each cover row 0 and sit under row 1. A child that ties a row in y draws over it, and a y-sorted child merges its own children into the sort. A y-sorted TileMap with a y-sorted layer sorts the same way. A child that an AnimationPlayer moves across a row re-sorts on the frame the mixer moves it. The previewer matches Godot 4.6.3 in each case, and at 0.5 s of the <code>unit-tile-map-layer-y-sort-animated-child</code> clip.</p></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Padded atlas from a ViewportTexture</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
@@ -8109,7 +8126,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-canvasitem-clip-ancestry</code> (type-family match)</td><td><code>canvasitem-ancestor-clips-children</code></td><td>warning</td></tr><tr><td></td><td><code>canvasitem-ancestor-is-canvasgroup</code></td><td>warning</td></tr><tr><td><code>valid-tilemaplayer</code></td><td><code>tilemaplayer-requires-tileset</code></td><td>info</td></tr><tr><td></td><td><code>tilemaplayer-invalid-tile-data</code></td><td>error</td></tr></tbody></table></div>
 <p><code>enabled</code> falls back to <code>true</code> when absent or unparseable. <code>tile_set</code> passes through as the raw reference string, so a dangling reference draws no tiles. Malformed <code>tile_map_data</code> warns and drops every cell, leaving an empty layer.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> Y-sort is computed once for the static scene, so a Y change driven by an AnimationPlayer is not re-sorted.</li><li><strong>Resource gap</strong> Scene-collection sources are skipped with a warning, and animated tiles show their first frame.</li></ul></div>
+<ul><li><strong>Resource gap</strong> Scene-collection sources are skipped with a warning, and animated tiles show their first frame.</li></ul></div>
     </article>
     <article class="sheet" data-type="Timer" hidden>
       <header class="sheet-head">

@@ -2,7 +2,8 @@
  * <TileMapLayer> renders the layer's placed cells (decoded at parse time) as its rendering
  * quadrants, each a lit canvas item of batched textured quads. The TileSet resolves from the
  * scene's SubResources. An unresolvable TileSet or undecodable tile data degrades to the
- * transform-only group with children intact (ADR-0008).
+ * transform-only group with children intact (ADR-0008). A y-sorted layer draws no quadrants of
+ * its own: <YSortDispatcher> sorts its rows with its child nodes.
  */
 
 import { useMemo } from 'react';
@@ -11,26 +12,33 @@ import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel';
+import { YSortDispatcher } from '../../../../r3f/YSortDispatcher';
 import type { TileMapLayerProperties } from './types';
 
 export function TileMapLayer({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapLayerProperties;
+  if (!props.y_sort_enabled) return <QuadrantLayer node={node}>{children}</QuadrantLayer>;
+  return (
+    <CanvasItem2D node={node} props={props}>
+      <YSortDispatcher node={node}>{children}</YSortDispatcher>
+    </CanvasItem2D>
+  );
+}
+
+function QuadrantLayer({ node, children }: NodeComponentProps) {
+  const props = node.properties as TileMapLayerProperties;
   const { model, status } = useTileSetModel(props.tile_set);
   const cells = props.cells ?? null;
-  const {
-    y_sort_enabled: ySortEnabled,
-    y_sort_origin: ySortOrigin,
-    rendering_quadrant_size: quadrantSize,
-  } = props;
+  const { y_sort_origin: ySortOrigin, rendering_quadrant_size: quadrantSize } = props;
 
   // Parsed cells never change identity, so the batched geometries survive
   // unrelated re-renders and rebuild only on new data.
   const quadrants = useMemo(
     () =>
       model && cells?.length
-        ? layerQuadrants(cells, model, { ySortEnabled, ySortOrigin, quadrantSize })
+        ? layerQuadrants(cells, model, { ySortEnabled: false, ySortOrigin, quadrantSize })
         : null,
-    [model, cells, ySortEnabled, ySortOrigin, quadrantSize]
+    [model, cells, ySortOrigin, quadrantSize]
   );
 
   return (
