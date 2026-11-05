@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type { GlyphPlacement, TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
-import { applyVisibleCharsReveal, resolveVisibleChars } from './visibleChars';
+import {
+  applyVisibleCharsReveal,
+  resolveLabelVisibleChars,
+  resolveRichTextVisibleChars,
+} from './visibleChars';
 
 /** A line of default-font glyphs, one per character; the font draws the sequences `ff`, `fi`, `fl`, `ffi` and `ffl` as one glyph. */
 function defaultFontLine(text: string): TextLineLayout {
@@ -21,16 +25,16 @@ const glyphBudget = (visibleRatio: number) => ({
   visibleRatio,
 });
 
-describe('resolveVisibleChars', () => {
+describe('resolving visible_characters and visible_ratio', () => {
   it('multiplies the total and the ratio in single precision, as `get_total_character_count() * p_ratio` does', () => {
     // 44 * 0.6818181818181818 in double precision is 29.999999999999996, which truncates to 29. Godot's float gives 30.
-    expect(resolveVisibleChars({ visible_ratio: String(30 / 44) }, () => 44)?.visibleChars).toBe(30);
+    expect(resolveLabelVisibleChars({ visible_ratio: String(30 / 44) }, () => 44)?.visibleChars).toBe(30);
   });
 
   it('resets the ratio on empty text for Label and keeps it for RichTextLabel', () => {
     const properties = { visible_ratio: '0.5', visible_characters: '3' };
-    expect(resolveVisibleChars(properties, () => 0)?.visibleRatio).toBe(1);
-    expect(resolveVisibleChars(properties, () => 0, true)?.visibleRatio).toBe(0.5);
+    expect(resolveLabelVisibleChars(properties, () => 0)?.visibleRatio).toBe(1);
+    expect(resolveRichTextVisibleChars(properties, () => 0)?.visibleRatio).toBe(0.5);
   });
 });
 
@@ -51,6 +55,13 @@ describe('applyVisibleCharsReveal ligatures', () => {
   it('shows a ligature whole once the budget reaches it', () => {
     const [all] = applyVisibleCharsReveal([defaultFontLine('abffix')], glyphBudget(0.8));
     expect(all!.glyphs.map((glyph) => glyph.char).join('')).toBe('abffi');
+  });
+
+  it('forms no ligature across a change of font size, as the spans shape apart', () => {
+    const line = defaultFontLine('abcdefghfi');
+    line.glyphs[9]!.fontSizePx = 40;
+    const [revealed] = applyVisibleCharsReveal([line], glyphBudget(0.99));
+    expect(revealed!.glyphs.map((glyph) => glyph.char).join('')).toBe('abcdefghf');
   });
 
   it('draws no ligature for a glyph outside the default font atlas', () => {

@@ -240,8 +240,19 @@ function useShapedRichText(
 
   // Before Shaping draws a prefix shaped on its own, so a typewriter reveal wraps as it grows. Only
   // this prefix depends on the reveal: the full shape above, which the heights and the bar read, does not.
+  const isBeforeShaping = reveal?.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING;
+  const fullText = useMemo(
+    () =>
+      isBeforeShaping
+        ? {
+            heightPx: richTextContentHeightPx(shaped.runs, shaped.layout),
+            lineCount: shaped.layout.lines.length,
+          }
+        : undefined,
+    [isBeforeShaping, shaped]
+  );
   const shown = useMemo(() => {
-    if (reveal?.behavior !== VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return undefined;
+    if (!reveal || !isBeforeShaping) return undefined;
     const { runs, layout, wrapWidthPx } = shaped;
     const shownRuns = truncateRunsToCharacters(runs, reveal.characters);
     // A cut that keeps the text whole returns the same runs, so its layout is reused.
@@ -249,11 +260,10 @@ function useShapedRichText(
     return {
       runs: shownRuns,
       layout: isUncut ? layout : shapeAtWidth(shownRuns, wrapWidthPx),
-      fullText: { heightPx: richTextContentHeightPx(runs, layout), lineCount: layout.lines.length },
     };
-  }, [shaped, reveal, shapeAtWidth]);
+  }, [shaped, reveal, isBeforeShaping, shapeAtWidth]);
 
-  return { ...shaped, shown, reveal };
+  return { ...shaped, shown, fullText, reveal };
 }
 
 /** The lines and images of a RichTextLabel, and its scrollbar. A `ControlQuad` reads its clip from context, a `TextRun` from `clippingPlanes`. */
@@ -272,7 +282,7 @@ function RichTextBody({
     [solveNode, props, theme]
   );
 
-  const { runs, layout, shown, reveal, wrapWidthPx, textOriginXPx, scrollOffsetPx, scrollBar } =
+  const { runs, layout, shown, fullText, reveal, wrapWidthPx, textOriginXPx, scrollOffsetPx, scrollBar } =
     useShapedRichText(solveNode, props, rect, theme, textTheme);
 
   // The alignment property and the `[center]`/`[right]`/`[left]`/`[fill]` tags
@@ -290,12 +300,13 @@ function RichTextBody({
           fontSizePx: textTheme.fontSizePx,
         },
         reveal,
-        fullText: shown?.fullText,
+        fullText,
       }),
     [
       runs,
       layout,
       shown,
+      fullText,
       reveal,
       wrapWidthPx,
       rect.h,

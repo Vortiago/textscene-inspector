@@ -58,10 +58,10 @@ function applySetVisibleRatio(
  * (packed_scene.cpp:492), which the raw property bag keeps. `text` counts as applied first, as every
  * Godot save writes it first (`ADD_PROPERTY`, label.cpp:1431), even in a hand-edited file.
  */
-export function resolveVisibleChars(
+function resolveVisibleChars(
   properties: Record<string, string>,
   textLength: () => number,
-  emptyTextKeepsRatio = false
+  emptyTextKeepsRatio: boolean
 ): VisibleCharsState | undefined {
   const rawChars = properties.visible_characters;
   const rawRatio = properties.visible_ratio;
@@ -80,6 +80,22 @@ export function resolveVisibleChars(
     }
   }
   return state;
+}
+
+/** Label's pair: empty text resets the ratio (`label.cpp:1288`). */
+export function resolveLabelVisibleChars(
+  properties: Record<string, string>,
+  textLength: () => number
+): VisibleCharsState | undefined {
+  return resolveVisibleChars(properties, textLength, false);
+}
+
+/** RichTextLabel's pair: empty text keeps the ratio (`rich_text_label.cpp:7898-7900`). */
+export function resolveRichTextVisibleChars(
+  properties: Record<string, string>,
+  textLength: () => number
+): VisibleCharsState | undefined {
+  return resolveVisibleChars(properties, textLength, true);
 }
 
 interface VisibleCharsBudget {
@@ -168,7 +184,9 @@ function ligatureClusters(glyphs: readonly GlyphPlacement[]): LigatureClusters {
 /** `f` starts every ligature, so a line without one skips the search. */
 const LIGATURE_START = 'f';
 
+/** A ligature joins glyphs of one face at one size: a style or size change inside the sequence splits it. */
 function ligatureLengthAt(glyphs: readonly GlyphPlacement[], start: number): number {
+  const first = glyphs[start]!;
   return (
     LIGATURES.find((ligature) =>
       [...ligature].every((char, offset) => {
@@ -176,7 +194,9 @@ function ligatureLengthAt(glyphs: readonly GlyphPlacement[], start: number): num
         return (
           glyph?.char === char &&
           glyph.glyph !== null &&
-          glyph.sourceIndex === glyphs[start]!.sourceIndex! + offset
+          glyph.sourceIndex === first.sourceIndex! + offset &&
+          glyph.fontMetrics === first.fontMetrics &&
+          glyph.fontSizePx === first.fontSizePx
         );
       })
     )?.length ?? 0

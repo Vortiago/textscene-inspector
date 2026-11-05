@@ -5,7 +5,7 @@ import { parseOptionalInt } from '../../../../parser/valueParsers';
 import { parseTextDirectionProperties } from '../../../../parser/textDirectionParser';
 import { parseStructuredTextOverride } from '../../../../parser/structuredTextOverrideParser';
 import type { LabelProperties } from './types';
-import { resolveVisibleChars } from '../shared/visibleChars';
+import { resolveLabelVisibleChars } from '../shared/visibleChars';
 import { parseControl } from '../control/parser';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
@@ -66,7 +66,7 @@ export function parseLabel(heading: ParsedHeading, properties: Record<string, st
   result.linesSkipped = parseOptionalInt(properties.lines_skipped);
   result.maxLinesVisible = parseOptionalInt(properties.max_lines_visible);
   if (properties.label_settings !== undefined) result.labelSettings = properties.label_settings.trim();
-  const visibleState = resolveVisibleChars(properties, () => (result.text ?? '').length);
+  const visibleState = resolveLabelVisibleChars(properties, () => (result.text ?? '').length);
   if (visibleState) {
     result.visibleCharacters = visibleState.visibleChars;
     result.visibleRatio = visibleState.visibleRatio;

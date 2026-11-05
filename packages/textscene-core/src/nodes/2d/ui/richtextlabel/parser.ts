@@ -11,7 +11,7 @@ import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
 import { floatElements } from '../../../../resources/shapes/packedArray';
 import { countedCharacters } from './visibleCharacters';
-import { resolveVisibleChars } from '../shared/visibleChars';
+import { resolveRichTextVisibleChars } from '../shared/visibleChars';
 import { parseBBCodeRuns } from './bbcode';
 
 const PACKED_FLOAT32_ARRAY_FORMS = packedArrayForms('PackedFloat32Array');
@@ -58,7 +58,7 @@ export function parseRichTextLabel(
   result.tabStopsPx = parseTabStops(properties.tab_stops);
   result.tabSize = parseOptionalInt(properties.tab_size);
   result.autowrapTrimFlags = parseOptionalInt(properties.autowrap_trim_flags, 'int64');
-  const visibleState = resolveVisibleChars(properties, () => characterCount(result), true);
+  const visibleState = resolveRichTextVisibleChars(properties, () => characterCount(result));
   if (visibleState) {
     result.visibleCharacters = visibleState.visibleChars;
     result.visibleRatio = visibleState.visibleRatio;

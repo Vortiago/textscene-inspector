@@ -9,7 +9,11 @@
  */
 
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
-import type { GlyphPlacement, TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import type {
+  GlyphPlacement,
+  TextLayoutResult,
+  TextLineLayout,
+} from '../../../../r3f/controls/native/text/textLayout';
 import { applyVisibleCharsReveal, truncatedShare } from '../shared/visibleChars';
 import type { StyledTextRun } from './nativeSolver';
 import type { RichTextLabelProperties } from './types';
@@ -68,11 +72,9 @@ function implicitBreakIndices(runs: readonly CountedRun[]): ReadonlySet<number> 
 }
 
 /**
- * The glyphs `_draw_line` still draws, or undefined when it skips none. Before Shaping skips none
- * here: it cuts the text before shaping (`truncateRunsToCharacters`). The budget is the glyphs of
- * the whole text, one per character, so an edge space a wrap trims still counts (`:8017-8033`)
- * though no line draws it. A paragraph terminator counts too, as `_draw_line` counts it, but the
- * one of an implicit break does not exist in Godot.
+ * The glyphs `_draw_line` still draws, or undefined when it skips none (Before Shaping cuts the text
+ * instead). The budget counts every character, trimmed edge spaces and paragraph terminators included
+ * (`:8017-8033`), but not the newline of an implicit break, which Godot has no character for.
  */
 export function revealedGlyphs(
   layout: TextLayoutResult,
@@ -80,23 +82,50 @@ export function revealedGlyphs(
   reveal: RichTextReveal
 ): ReadonlySet<GlyphPlacement> | undefined {
   if (reveal.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return undefined;
-  const implicit = implicitBreakIndices(runs);
-  const textLength = runs.reduce((total, run) => total + run.text.length, 0);
-  const budget = {
+  const counted = countedLayoutOf(layout, runs);
+  const shownLines = applyVisibleCharsReveal(counted.lines, {
     behavior: reveal.behavior,
     visibleChars: reveal.characters,
     visibleRatio: reveal.ratio,
-    totalCharacters: textLength - implicit.size,
+    totalCharacters: counted.totalCharacters,
     rtl: reveal.rtl,
-  };
+  });
+  const { originals } = counted;
+  return new Set(
+    shownLines.flatMap((line) =>
+      originals ? line.glyphs.map((glyph) => originals.get(glyph)!) : line.glyphs
+    )
+  );
+}
+
+/** A layout as the budget counts it: Godot's character indices, and the glyph each counted glyph copies. */
+interface CountedLayout {
+  lines: readonly TextLineLayout[];
+  /** Absent when no glyph needed a copy. */
+  originals?: Map<GlyphPlacement, GlyphPlacement>;
+  totalCharacters: number;
+}
+
+/** Written only by `countedLayoutOf`. A layout never changes, so a reveal step reuses its entry. */
+// eslint-disable-next-line no-restricted-syntax -- the build needs the runs beside its layout key, which `perObject` cannot take.
+const countedLayouts = new WeakMap<TextLayoutResult, CountedLayout>();
+
+function countedLayoutOf(layout: TextLayoutResult, runs: readonly CountedRun[]): CountedLayout {
+  const cached = countedLayouts.get(layout);
+  if (cached) return cached;
+  const implicit = implicitBreakIndices(runs);
+  const textLength = runs.reduce((total, run) => total + run.text.length, 0);
+  const totalCharacters = textLength - implicit.size;
   if (implicit.size === 0) {
-    return new Set(applyVisibleCharsReveal(layout.lines, budget).flatMap((line) => line.glyphs));
+    const counted = { lines: layout.lines, totalCharacters };
+    countedLayouts.set(layout, counted);
+    return counted;
   }
   // The glyph a budget sees carries Godot's character index: the index in the text less the
   // implicit newlines before it.
   const skippedBefore = implicitBreaksBefore(textLength, implicit);
   const originals = new Map<GlyphPlacement, GlyphPlacement>();
-  const countedLines = layout.lines.map((line) => ({
+  const lines = layout.lines.map((line) => ({
     ...line,
     glyphs: line.glyphs
       .filter((glyph) => glyph.sourceIndex === undefined || !implicit.has(glyph.sourceIndex))
@@ -111,8 +140,9 @@ export function revealedGlyphs(
         return counted;
       }),
   }));
-  const shownLines = applyVisibleCharsReveal(countedLines, budget);
-  return new Set(shownLines.flatMap((line) => line.glyphs.map((glyph) => originals.get(glyph)!)));
+  const counted = { lines, originals, totalCharacters };
+  countedLayouts.set(layout, counted);
+  return counted;
 }
 
 /** For each index of a text of `length` characters, how many implicit newlines lie before it. */

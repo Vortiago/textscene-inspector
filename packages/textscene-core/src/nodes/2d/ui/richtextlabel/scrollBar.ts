@@ -73,9 +73,8 @@ function scrollBarPlacement(
 
 /**
  * The scroll value: the foot for `scroll_following`, which wins (`:3827-3828`), else where
- * `scroll_following_visible_characters` leaves it, else the top. `_update_follow_vc` (`:5209-5221`) runs as the scene loads, before any line is shaped, so `get_line_count()` is 0 and
- * it scrolls to the bar's default max (`:5218`). `Range` then clamps it to `max - page` when the
- * text is shaped (`range.cpp:192-194`).
+ * `scroll_following_visible_characters` leaves it, else the top. `_update_follow_vc` (`:5209-5221`)
+ * runs before any line is shaped, so it scrolls to the bar's default max, which `Range` clamps to the foot.
  */
 function scrollOffsetOf(box: RichTextBox, contentHeightPx: number): number {
   const footPx = Math.max(0, contentHeightPx - box.h);
