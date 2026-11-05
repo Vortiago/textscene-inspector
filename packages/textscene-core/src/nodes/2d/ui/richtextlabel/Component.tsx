@@ -1,8 +1,8 @@
 /**
  * The native (WebGL canvas) painter for RichTextLabel: the BBCode subset
- * `[b]`/`[i]`/`[u]`/`[color]`/`[font_size]`/`[outline_size]`/`[outline_color]`/`[img]`, drawn as one `<TextRun>` per line and
- * style run, or one `<RichTextImage>` per `[img]`, through the MSDF text
- * engine `<Label>` uses. Other tags are a non-goal.
+ * `[b]`/`[i]`/`[u]`/`[color]`/`[font_size]`/`[outline_size]`/`[outline_color]`/`[img]`,
+ * drawn as one `<OutlinedTextRun>` per line and style run, or one `<RichTextImage>` per
+ * `[img]`, through the MSDF text engine `<Label>` uses. Other tags are a non-goal.
  */
 import { useCallback, useMemo } from 'react';
 import type * as THREE from 'three';

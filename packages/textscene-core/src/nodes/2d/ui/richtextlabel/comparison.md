@@ -49,7 +49,9 @@ to its foot (`:3827-3828`). A line that starts below the rect or ends above it i
 `[font_size=N]` sizes its text when N is above 0, over the size of an enclosing `[b]` or `[i]` (`rich_text_label.cpp:639-641`).
 Line height and wrapping follow. `[outline_size=N]` and `[outline_color=C]` draw a ring under the glyphs, and a negative
 size draws none (`:6367-6371`, `:1198-1202`). The theme's `outline_size` and `font_outline_color` are the defaults the tags
-override. The ring takes the alpha of the run's colour (`:1457`). A list marker takes the size and outline of its item (`_add_list_prefixes`, `:342-358`, `:1020-1021`). The golden `rich-text-label-font-size-outline` shows each tag.
+override. The ring takes the alpha of the run's colour (`:1457`).
+A list marker takes the size and outline of its item (`_add_list_prefixes`, `:342-358`, `:1020-1021`).
+The golden `rich-text-label-font-size-outline` shows each tag.
 
 A `[b]` run and any embolden over the bundled font draw on the canvas painter, which emboldens the
 outline as FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0040). The run draws nothing until the
