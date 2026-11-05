@@ -19,6 +19,7 @@ import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { Sprite2DProperties } from './types';
+import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
 
 export function Sprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Sprite2DProperties;
@@ -101,12 +102,13 @@ function QuadMesh({
   const cgy = props.offset.y + (props.centered ? 0 : height / 2);
   const meshScale: [number, number, number] = [props.flip_h ? -1 : 1, props.flip_v ? -1 : 1, 1];
 
-  // The map is here at the first compile, but the define can change: a 3D-content
+  // The map is here at the first compile, but the define can change: in an sRGB canvas a 3D-content
   // ViewportTexture multiplies linearly where a canvas-content one and a `res://` file
   // multiply in sRGB, and a swap changes the program (`materialProgramInputs.ts`).
+  const canvasSpace = useCanvasColorSpace();
   const program = materialProgramInputs({
     props: {
-      ...canvasMapProps(texture),
+      ...canvasMapProps(texture, canvasSpace),
       color,
       opacity,
       transparent: true,

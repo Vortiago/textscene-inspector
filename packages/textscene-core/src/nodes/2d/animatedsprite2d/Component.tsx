@@ -25,6 +25,7 @@ import type { SpriteFramesAnimation } from '../../../resources/textures/spritefr
 import type { AnimatedSprite2DProperties } from './types';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene.js';
+import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
 
 const NO_EXTERNAL_RESOURCES: readonly TscnExternalResource[] = [];
 const NO_INTERNAL_RESOURCES: readonly TscnInternalResource[] = [];
@@ -139,6 +140,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const frame = frameCount > 0 ? Math.min(Math.max(rawFrame, 0), frameCount - 1) : 0;
   const frameRef = currentAnim?.frames[frame] ?? null;
 
+  const canvasSpace = useCanvasColorSpace();
   // A frame's ids are scoped to its SpriteFrames' home, so the frame resolves
   // against those pools: the scene's, or the .tres's.
   const {
@@ -150,7 +152,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     frameRef ?? undefined,
     resolved?.externalResources ?? NO_EXTERNAL_RESOURCES,
     resolved?.subResources ?? NO_INTERNAL_RESOURCES,
-    'plain',
+    undefined,
     resolved ? isLocalToScene(resolved.resource) : undefined
   );
 
@@ -183,7 +185,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
         // this remounts when the map appears, not per frame.
         const program = materialProgramInputs({
           props: {
-            ...canvasMapProps(displayedTexture),
+            ...canvasMapProps(displayedTexture, canvasSpace),
             color,
             opacity,
             transparent: true,

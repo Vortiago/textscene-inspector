@@ -20,9 +20,7 @@ import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useCanvasItemMerge } from '../../../../r3f/components/LitCanvasItemPixels';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { CANVAS_SRGB_DEFINES } from '../../../../r3f/canvasSrgbMultiply';
+import { multiplyModulate, useItemLinearColor, useVertexColorTint } from '../../../../r3f/canvasItemModulate';
 import { minimapConnectionLines } from './minimapConnections';
 import { polylineStrokeGeometry } from './polylineStroke';
 import {
@@ -82,6 +80,7 @@ function MinimapConnections({
 }: MinimapConnectionsProps) {
   const clippingPlanes = useControlClipPlanes();
   const canvasItemMerge = useCanvasItemMerge();
+  const { vertex: vertexTint, color, opacity, defines } = useVertexColorTint(lineTint);
   const geometry = useMemo(() => {
     const positions: number[] = [];
     const indices: number[] = [];
@@ -89,7 +88,7 @@ function MinimapConnections({
     for (const line of minimapConnectionLines(connections, transform, bounds, curvature)) {
       const stroke = polylineStrokeGeometry(
         line.points,
-        line.colors.map((c) => multiplyModulate(lineTint, c)),
+        line.colors.map((c) => multiplyModulate(vertexTint, c)),
         MINIMAP_LINE_WIDTH,
         antialiased
       );
@@ -105,17 +104,19 @@ function MinimapConnections({
     geo.setIndex(indices);
     geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 4));
     return geo;
-  }, [connections, transform, bounds, curvature, antialiased, lineTint]);
+  }, [connections, transform, bounds, curvature, antialiased, vertexTint]);
   useDisposeOnRelease(geometry);
 
   if (!geometry) return null;
 
   const program = materialProgramInputs({
     props: {
+      color,
+      opacity,
       vertexColors: true,
       transparent: true,
       depthWrite: false,
-      defines: CANVAS_SRGB_DEFINES,
+      defines,
       clippingPlanes: clippingPlanes as THREE.Plane[],
     },
     merge: canvasItemMerge,
@@ -201,7 +202,7 @@ export function GraphEditMinimapChrome({
   const nodeCornerRadius = Math.round(2 * scale);
 
   const resizerTexture = useNodeIcon(icons.resizer, GRAPH_EDIT_MINIMAP_RESIZER_ICON);
-  const resizerColor = useGodotLinearColor(
+  const resizerColor = useItemLinearColor(
     useMemo(() => multiplyModulate(modulated, RESIZER_COLOR), [modulated])
   );
   const resizerOpacity = modulated.a * RESIZER_COLOR.a;

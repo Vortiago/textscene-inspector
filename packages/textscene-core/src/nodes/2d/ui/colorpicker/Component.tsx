@@ -20,9 +20,13 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useCanvasItemMerge } from '../../../../r3f/components/LitCanvasItemPixels';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
-import { CANVAS_SRGB_DEFINES } from '../../../../r3f/canvasSrgbMultiply';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { godotColorToLinear, useGodotLinearColor } from '../../../../r3f/godotColor';
+import {
+  multiplyModulate,
+  useItemLinearColor,
+  useItemLinearColorOf,
+  useVertexColorTint,
+  type VertexColorTint,
+} from '../../../../r3f/canvasItemModulate';
 import { parseColor } from '../../../../utils/colorParser';
 import { AlphaCheckerboardQuad } from '../shared/AlphaCheckerboardQuad';
 import {
@@ -134,19 +138,23 @@ interface GradientMeshProps {
    * interpolating two sRGB colours in linear space moves the ramp's midpoint.
    */
   linear?: boolean;
+  /** The item's tint, whose vertex factor the geometry's colours already carry. */
+  tint: VertexColorTint;
 }
 
 /** One vertex-coloured, single-pass mesh: the SV square's two layers, the hue strip and every channel-slider band. */
-function GradientMesh({ geometry, renderOrder, clippingPlanes, linear }: GradientMeshProps) {
+function GradientMesh({ geometry, renderOrder, clippingPlanes, linear, tint }: GradientMeshProps) {
   const canvasItemMerge = useCanvasItemMerge();
   useDisposeOnRelease(geometry);
   const program = materialProgramInputs({
     props: {
+      color: tint.color,
+      opacity: tint.opacity,
       vertexColors: true,
       transparent: true,
       depthWrite: false,
       clippingPlanes,
-      defines: linear ? undefined : CANVAS_SRGB_DEFINES,
+      defines: linear ? undefined : tint.defines,
     },
     merge: canvasItemMerge,
   });
@@ -159,9 +167,8 @@ function GradientMesh({ geometry, renderOrder, clippingPlanes, linear }: Gradien
 }
 
 /**
- * The rendering server applies a CanvasItem's accumulated modulate to every draw call,
- * so `tint.own` multiplies each colour in sRGB space before this painter's one decode,
- * the same order as `StyleBoxQuad.tsx`.
+ * The rendering server applies a CanvasItem's accumulated modulate to every draw call, so the
+ * vertex factor of `useVertexColorTint` multiplies into each colour.
  */
 function tintVertexColors(colors: number[], tint: { r: number; g: number; b: number; a: number }): number[] {
   const out = new Array<number>(colors.length);
@@ -250,6 +257,7 @@ function CenteredIcon({ rect, size, texture, tint, renderOrder }: CenteredIconPr
 }
 
 export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
+  const toItemLinear = useItemLinearColorOf();
   const props = painterView<ColorPickerProperties>(solveNode);
   const fill = useMemo(() => parseColor(props.color), [props.color]);
   const hsv = useMemo(() => extractHsv(fill), [fill]);
@@ -303,7 +311,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const lineEditInsetX = theme.widgets.lineEdit.normal.contentMargin.left;
 
   const sampleFill = useMemo(() => multiplyModulate(tint.own, fill), [tint.own, fill]);
-  const sampleColor = useGodotLinearColor(sampleFill);
+  const sampleColor = useItemLinearColor(sampleFill);
   const overbrightTexture = useNodeIcon(solveNode.icons.overbright_indicator, COLOR_PICKER_OVERBRIGHT_ICON);
   const overbright = isColorOverbright(fill);
   const sampleCols = rows.sample
@@ -328,14 +336,12 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const spinUpTexture = useNodeIcon(solveNode.icons.up, SPIN_BOX_ICONS.up);
   const spinDownTexture = useNodeIcon(solveNode.icons.down, SPIN_BOX_ICONS.down);
   // `up_icon_modulate` and `down_icon_modulate` default to `control_font_color` (`default_theme.cpp:634,638`).
-  const spinArrowColor = useMemo(
-    () => godotColorToLinear(multiplyModulate(tint.own, CONTROL_FONT_COLOR)),
-    [tint.own]
-  );
+  const spinArrowColor = useItemLinearColor(fontColor);
 
   const shapeRects = rows.shape ? svAndHueRects(rows.shape, theme, solveNode.rtl) : null;
 
-  const baseTint = tint.own;
+  const vertexTint = useVertexColorTint(tint.own);
+  const baseTint = vertexTint.vertex;
   const svBaseGeometry = useMemo(() => {
     if (!shapeRects) return null;
     const g = svSquareBaseLayer(shapeRects.svSquare.w, shapeRects.svSquare.h);
@@ -361,13 +367,13 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     ? svSquareCursorPosition({ x: 0, y: 0, w: shapeRects.svSquare.w, h: shapeRects.svSquare.h }, hsv.s, hsv.v)
     : null;
   const cursorBgFill = useMemo(() => multiplyModulate(tint.own, { ...fill, a: 1 }), [tint.own, fill]);
-  const cursorBgColor = useGodotLinearColor(cursorBgFill);
+  const cursorBgColor = useItemLinearColor(cursorBgFill);
 
   const hueLineColor = useMemo(() => {
     const inverted = invertRgb(hsvToRgb(hsv.h, 1, 1));
     return multiplyModulate(tint.own, inverted);
   }, [hsv.h, tint.own]);
-  const hueLineLinear = useGodotLinearColor(hueLineColor);
+  const hueLineLinear = useItemLinearColor(hueLineColor);
   const hueY = shapeRects ? hueIndicatorY(shapeRects.hueSlider.h, hsv.h) : 0;
 
   const modeCols = rows.mode ? modeRowButtonRects(rows.mode, theme, solveNode.rtl) : null;
@@ -577,11 +583,13 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
               geometry={svBaseGeometry}
               renderOrder={renderOrder}
               clippingPlanes={clippingPlanes}
+              tint={vertexTint}
             />
             <GradientMesh
               geometry={svHueGeometry}
               renderOrder={renderOrder}
               clippingPlanes={clippingPlanes}
+              tint={vertexTint}
             />
             <CanvasItemGroup
               position={[cursorLocal.x - cursorSize / 2, -(cursorLocal.y - cursorSize / 2), 0]}
@@ -605,7 +613,12 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
             </CanvasItemGroup>
           </CanvasItemGroup>
           <CanvasItemGroup position={[shapeRects.hueSlider.x, -shapeRects.hueSlider.y, 0]}>
-            <GradientMesh geometry={hueStrip} renderOrder={renderOrder} clippingPlanes={clippingPlanes} />
+            <GradientMesh
+              geometry={hueStrip}
+              renderOrder={renderOrder}
+              clippingPlanes={clippingPlanes}
+              tint={vertexTint}
+            />
             <CanvasItemGroup position={[0, -hueY, 0]}>
               <ControlQuad
                 width={shapeRects.hueSlider.w}
@@ -736,7 +749,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                   <ControlQuad
                     width={sliderBox.w}
                     height={sliderBox.h}
-                    color={godotColorToLinear(multiplyModulate(tint.own, row.overlay.base))}
+                    color={toItemLinear(multiplyModulate(tint.own, row.overlay.base))}
                     opacity={tint.opacity}
                     renderOrder={renderOrder}
                   />
@@ -747,6 +760,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                     renderOrder={renderOrder}
                     clippingPlanes={clippingPlanes}
                     linear={row.linearSpace}
+                    tint={vertexTint}
                   />
                 )}
                 {isColorized &&
