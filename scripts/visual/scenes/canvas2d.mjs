@@ -955,6 +955,7 @@ export const CANVAS_2D_SCENES = [
     mode: '2d',
   },
   { name: 'label-fill-paragraphs', file: 'unit-label-fill-paragraphs.tscn', mode: '2d' },
+  { name: 'label-fill-trim', file: 'unit-label-fill-trim.tscn', mode: '2d' },
   // Each scene below moves one property no other scene authors. Godot 4.6.3
   // `--mode 2d`: 0.005 to 0.342 of 255.
 

@@ -1243,6 +1243,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Fill Trim",
+    "file": "unit-label-fill-trim.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Font Variation Bundled Embolden High",
     "file": "unit-label-font-variation-bundled-embolden-high.tscn",
     "category": "Other"

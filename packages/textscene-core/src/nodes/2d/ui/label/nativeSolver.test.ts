@@ -47,7 +47,13 @@ import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFont
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
+  overrunFlagsForBehavior,
+  trimFilledLineToWidth,
+  trimLineToWidth,
+} from '../../../../r3f/controls/native/text/textOverrun';
+import {
   AutowrapMode,
+  OverrunBehavior,
   VisibleCharactersBehavior,
   JustificationFlag,
 } from '../../../../godot/text/textServerEnums';
@@ -1274,6 +1280,41 @@ describe('layoutLabelLines — the justification-aware trim of FILL with autowra
 
   it('trims a line that stays wider than the box at the smallest space', () => {
     expect(fillAt(Math.floor(naturalWidthPx / 2)).text).toBe('A long line of text…');
+  });
+});
+
+describe('layoutLabelLines — the trimmed FILL line fitted again with CONSTRAIN_ELLIPSIS (label.cpp:325)', () => {
+  // 'A' 10.578125 and the default ellipsis 13.0625 (truncated to 13 in `ellipsis_width`) at size 16.
+  const layout = shapeText('AAAAAAAA AAAAAAAA', {
+    fontSizePx: 16,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 3,
+  });
+  const BOX_WIDTH_PX = 100;
+  const ELLIPSIS_WIDTH_PX = 13;
+  const trimOptions = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 };
+  const ellipsisFlags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+  const filledLineAt = (justificationFlags: number) =>
+    layoutLabelLines(layout, BOX_WIDTH_PX, 40, 3, undefined, justificationFlags, 16, {
+      trimLine: (line, refitFlags) =>
+        refitFlags === undefined
+          ? trimLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, trimOptions)
+          : trimFilledLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, {
+              ...trimOptions,
+              justificationFlags: refitFlags,
+            }),
+    })[0]!.line;
+
+  it('stretches the kept spaces so the ellipsis ends at the box width', () => {
+    const ellipsis = filledLineAt(JustificationFlag.WORD_BOUND).glyphs.at(-1)!;
+    expect(ellipsis.char).toBe('…');
+    expect(ellipsis.x).toBe(BOX_WIDTH_PX - ELLIPSIS_WIDTH_PX);
+  });
+
+  it('leaves the spaces at the smallest width without WORD_BOUND', () => {
+    const ellipsis = filledLineAt(0).glyphs.at(-1)!;
+    expect(ellipsis.x).toBeLessThan(BOX_WIDTH_PX - ELLIPSIS_WIDTH_PX);
   });
 });
 
