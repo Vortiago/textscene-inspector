@@ -53,15 +53,24 @@ describe('codeEditGutterBand line-number digits before any text change', () => {
   });
 });
 
+const NO_LOCALE = { locale: '' };
+
 describe('codeEditLineNumberText', () => {
+  it('writes the digits of the locale, the padding first (`code_edit.cpp:1569-1572`)', () => {
+    expect(codeEditLineNumberText(9, 3, true, { locale: 'ar' })).toBe('٠١٠');
+    expect(codeEditLineNumberText(0, 3, false, { locale: 'fa' })).toBe('  ۱');
+  });
+  it('writes ASCII digits while localize_numeral_system is off', () => {
+    expect(codeEditLineNumberText(0, 2, false, { locale: 'ar', localizeNumeralSystem: false })).toBe(' 1');
+  });
   it('left-pads with a space by default', () => {
-    expect(codeEditLineNumberText(0, 3, false)).toBe('  1');
+    expect(codeEditLineNumberText(0, 3, false, NO_LOCALE)).toBe('  1');
   });
   it('left-pads with a zero when gutters_zero_pad_line_numbers is set', () => {
-    expect(codeEditLineNumberText(0, 3, true)).toBe('001');
+    expect(codeEditLineNumberText(0, 3, true, NO_LOCALE)).toBe('001');
   });
   it('is 1-indexed: line index 0 reads as "1"', () => {
-    expect(codeEditLineNumberText(9, 2, false)).toBe('10');
+    expect(codeEditLineNumberText(9, 2, false, NO_LOCALE)).toBe('10');
   });
 });
 

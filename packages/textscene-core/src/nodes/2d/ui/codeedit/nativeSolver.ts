@@ -8,6 +8,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { formatControlNumber, type Numerals } from '../../../../godot/text/numberFormat';
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
@@ -51,13 +52,15 @@ function codeEditLineNumberDigits(props: CodeEditProperties, lineCount: number):
   return Math.max(minDigits, Math.floor(Math.log10(lineCount)) + 1);
 }
 
-/** `String::num_int64(line + 1).lpad(digits, padding)` (`code_edit.cpp:1569`). */
+/** `String::num_int64(line + 1).lpad(digits, padding)`, then `format_number` (`code_edit.cpp:1569-1572`). */
 export function codeEditLineNumberText(
   lineIndex: number,
   digits: number,
-  zeroPad: boolean | undefined
+  zeroPad: boolean | undefined,
+  numerals: Numerals
 ): string {
-  return String(lineIndex + 1).padStart(digits, zeroPad ? ZERO_PAD : SPACE_PAD);
+  const padded = String(lineIndex + 1).padStart(digits, zeroPad ? ZERO_PAD : SPACE_PAD);
+  return formatControlNumber(padded, numerals);
 }
 
 interface CodeEditGutterBand {
