@@ -91,28 +91,13 @@ function normaliseWeights(weights: Float32Array, base: number): void {
   }
 }
 
-/**
- * Where the skeleton pass moves each of `points`: `T * (sum of weight * bone matrix) * T^-1`, with
- * `skeletonToMesh` as `T`. The sum is a 3x3 matrix whose homogeneous corner is the weight sum, so a
- * vertex with no weight collapses to the mesh origin. A bone `boneMatrices` lacks reads as a zero
- * matrix, so its weight pulls the vertex to the skeleton origin.
- */
-export function skinnedPoints(
-  points: readonly Vector2[],
-  influences: VertexInfluences,
-  boneMatrices: readonly (Transform2DColumns | undefined)[],
-  skeletonToMesh: Transform2DColumns
-): Vector2[] {
-  const out = points.map(() => ({ x: 0, y: 0 }));
-  return skinnedPointsInto(out, points, influences, boneMatrices, skeletonToMesh);
-}
-
 /** Written only by {@link skinnedPointsInto}, and read back before it returns. */
 const meshToSkeleton = mutableTransform2D();
 
 /**
- * {@link skinnedPoints} written into `out`, one point per point of `points`, for a render that
- * allocates nothing. The caller owns `out` and reads it before the next call.
+ * Writes into `out` where the skeleton pass moves each of `points`: `T * (sum of weight * bone) * T^-1`,
+ * with `skeletonToMesh` as `T`. A vertex with no weight collapses to the mesh origin, and a missing
+ * bone reads as a zero matrix. The caller owns `out` and reads it before the next call.
  */
 export function skinnedPointsInto(
   out: Vector2[],

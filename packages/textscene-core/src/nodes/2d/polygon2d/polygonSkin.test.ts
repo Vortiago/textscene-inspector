@@ -5,9 +5,19 @@
  */
 import { describe, expect, it } from 'vitest';
 import { TRANSFORM2D_IDENTITY, type Transform2DColumns } from '../../../godot/math/transform2d';
-import { skinnedPoints, skinnedPointsInto, vertexInfluences } from './polygonSkin';
+import { skinnedPointsInto, vertexInfluences, type VertexInfluences } from './polygonSkin';
 
 const QUARTER_TURN: Transform2DColumns = { a: 0, b: 1, c: -1, d: 0, tx: 0, ty: 0 };
+
+function skinnedPoints(
+  points: readonly { x: number; y: number }[],
+  influences: VertexInfluences,
+  boneMatrices: readonly Transform2DColumns[],
+  skeletonToMesh: Transform2DColumns
+): { x: number; y: number }[] {
+  const out = points.map(() => ({ x: 0, y: 0 }));
+  return skinnedPointsInto(out, points, influences, boneMatrices, skeletonToMesh);
+}
 
 function translation(tx: number, ty: number): Transform2DColumns {
   return { ...TRANSFORM2D_IDENTITY, tx, ty };
@@ -64,7 +74,7 @@ describe('vertexInfluences', () => {
   });
 });
 
-describe('skinnedPoints', () => {
+describe('skinnedPointsInto on a fresh buffer', () => {
   it('turns a vertex by its one bone', () => {
     const influences = vertexInfluences(1, [{ bone: 0, weights: [1] }]);
     const [point] = skinnedPoints([{ x: 100, y: 0 }], influences, [QUARTER_TURN], TRANSFORM2D_IDENTITY);
@@ -112,13 +122,12 @@ describe('skinnedPoints', () => {
 });
 
 describe('skinnedPointsInto', () => {
-  it('writes the points skinnedPoints returns into the buffer it is given', () => {
+  it('writes into the buffer it is given and returns that buffer', () => {
     const influences = vertexInfluences(1, [{ bone: 0, weights: [1] }]);
     const out = [{ x: 0, y: 0 }];
 
     expect(skinnedPointsInto(out, [{ x: 40, y: 30 }], influences, [QUARTER_TURN], translation(5, 5))).toBe(
       out
     );
-    expect(out).toEqual(skinnedPoints([{ x: 40, y: 30 }], influences, [QUARTER_TURN], translation(5, 5)));
   });
 });
