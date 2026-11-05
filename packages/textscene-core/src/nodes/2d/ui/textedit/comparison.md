@@ -12,8 +12,8 @@ renders_as: a multi-line text box
 TextEdit is the multi-line text editor Control that CodeEdit builds on. The previewer
 draws its `normal`/`read_only` StyleBox, every buffer line shaped and wrapped per
 `wrap_mode`/`autowrap_mode`/`indent_wrapped_lines`, `highlight_current_line`'s row band,
-the `draw_tabs`/`draw_spaces` control-character glyphs, and `placeholder_text` while the
-buffer is empty. It is a still frame with no
+and the `draw_tabs`/`draw_spaces` control-character glyphs. While the buffer is empty it
+draws `placeholder_text`. It is a still frame with no
 selection or IME (input method editor) state. The one caret a still frame can carry is
 the `caret_draw_when_editable_disabled` one, which draws without focus.
 
