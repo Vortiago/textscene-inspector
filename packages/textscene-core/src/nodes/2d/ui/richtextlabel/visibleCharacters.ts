@@ -99,7 +99,7 @@ export function revealedGlyphs(
 }
 
 /**
- * Whether `_draw_line` draws the prefix (a list marker) of the paragraph starting at `paragraphStart`:
+ * Whether `_draw_line` draws the prefix (a list marker) of the paragraph that `line` starts:
  * not once its character offset is past the budget, nor while the glyph budget hides its first glyph
  * (`rich_text_label.cpp:1016`). `revealed` is what `revealedGlyphs` returned for the same layout.
  */
@@ -107,15 +107,16 @@ export function isPrefixShown(
   layout: TextLayoutResult,
   runs: readonly CountedRun[],
   reveal: RichTextReveal,
-  paragraphStart: number,
-  firstGlyph: GlyphPlacement | undefined,
+  line: TextLineLayout,
   revealed: ReadonlySet<GlyphPlacement> | undefined
 ): boolean {
   if (reveal.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return true;
   if (reveal.behavior === VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING) {
     const { skippedBefore } = countedLayoutOf(layout, runs);
+    const paragraphStart = line.paragraphStart!;
     return paragraphStart - (skippedBefore?.[paragraphStart] ?? 0) <= reveal.characters;
   }
+  const firstGlyph = line.glyphs[0];
   return firstGlyph === undefined || (revealed?.has(firstGlyph) ?? true);
 }
 
@@ -137,8 +138,7 @@ function countedLayoutOf(layout: TextLayoutResult, runs: readonly CountedRun[]):
   const cached = countedLayouts.get(layout);
   if (cached) return cached;
   const implicit = implicitBreakIndices(runs);
-  const textLength = runs.reduce((total, run) => total + run.text.length, 0);
-  const totalCharacters = textLength - implicit.size;
+  const totalCharacters = countedCharacters(runs);
   if (implicit.size === 0) {
     const counted = { lines: layout.lines, totalCharacters };
     countedLayouts.set(layout, counted);
@@ -146,6 +146,7 @@ function countedLayoutOf(layout: TextLayoutResult, runs: readonly CountedRun[]):
   }
   // The glyph a budget sees carries Godot's character index: the index in the text less the
   // implicit newlines before it.
+  const textLength = runs.reduce((total, run) => total + run.text.length, 0);
   const skippedBefore = implicitBreaksBefore(textLength, implicit);
   const originals = new Map<GlyphPlacement, GlyphPlacement>();
   const lines = layout.lines.map((line) => ({

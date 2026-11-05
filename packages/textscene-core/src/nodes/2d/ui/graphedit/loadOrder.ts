@@ -106,7 +106,7 @@ const OFFSET_KEYS: Record<string, 0 | 1 | 2 | 3> = {
 };
 
 /**
- * Replays the keys in file order, as `resolveLabelVisibleChars` does (`../label/parser.ts`):
+ * Replays the keys in file order, as `resolveLabelVisibleChars` does (`../shared/visibleChars.ts`):
  * the raw property bag's insertion order is file order (`TscnParserCore.ts`). `anchors_preset` and
  * `layout_mode` are not modelled (`graphEdit.md`).
  */

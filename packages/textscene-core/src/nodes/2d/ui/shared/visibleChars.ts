@@ -6,6 +6,7 @@
 
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type { GlyphPlacement, TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { perObject } from '../../../../utils/perObject';
 import { parseOptionalFloat, parseOptionalInt } from '../../../../parser/valueParsers';
 
 interface VisibleCharsState {
@@ -167,8 +168,8 @@ interface LigatureClusters {
   lastIndexOf: Map<GlyphPlacement, number>;
 }
 
-/** The ligatures in a line of glyphs. Only the default font's glyphs form one here. */
-function ligatureClusters(glyphs: readonly GlyphPlacement[]): LigatureClusters {
+/** The ligatures in a line of glyphs, built once for each line's glyph array. Only the default font's glyphs form one here. */
+const ligatureClusters = perObject((glyphs: readonly GlyphPlacement[]): LigatureClusters => {
   const clusters: LigatureClusters = { tails: new Set(), lastIndexOf: new Map() };
   for (let start = 0; start < glyphs.length; start++) {
     if (glyphs[start]!.char !== LIGATURE_START) continue;
@@ -179,7 +180,7 @@ function ligatureClusters(glyphs: readonly GlyphPlacement[]): LigatureClusters {
     start += length - 1;
   }
   return clusters;
-}
+});
 
 /** `f` starts every ligature, so a line without one skips the search. */
 const LIGATURE_START = 'f';

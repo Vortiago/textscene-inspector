@@ -1150,20 +1150,12 @@ export function layoutRichTextRuns(
     const lineOffsetXPx =
       (isRtl ? 0 : indentPx) +
       richTextHorizontalOffsetPx(lineWidthPx, boxWidthPx - indentPx, alignmentOfLine(lineIndex), isRtl);
+    const line = layout.lines[lineIndex]!;
     const marker = startsParagraph(layout.lines, lineIndex)
-      ? layout.listings?.get(layout.lines[lineIndex]!.paragraphStart!)?.marker
+      ? layout.listings?.get(line.paragraphStart!)?.marker
       : undefined;
-    const firstGlyph = layout.lines[lineIndex]?.glyphs[0];
     const isMarkerShown =
-      !alignment?.reveal ||
-      isPrefixShown(
-        layout,
-        styledRuns,
-        alignment.reveal,
-        layout.lines[lineIndex]!.paragraphStart!,
-        firstGlyph,
-        revealed
-      );
+      !marker || !alignment?.reveal || isPrefixShown(layout, styledRuns, alignment.reveal, line, revealed);
     if (marker && isMarkerShown) {
       placements.push({
         lineIndex,
