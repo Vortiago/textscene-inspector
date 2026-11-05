@@ -385,6 +385,8 @@ export interface StyledTextRun {
   justificationFlags: number;
   /** The paragraph's tab stops, px (`paragraphTabStopsPx`). Empty falls to `tab_size`. */
   tabStopsPx: readonly number[];
+  /** Set only on the `\n` run that ends a line of no height (`BBCodeRun.zeroHeightBreak`). */
+  zeroHeightBreak?: true;
   /**
    * Set only on the `[img]` placeholder run. There `fontSizePx` carries
    * `sizePx.x` (`imageObjectFontMetrics`), so check this field first.
@@ -528,6 +530,7 @@ export function styledTextRuns(
       alignment: paragraphAlignment(run.tags, props.horizontalAlignment),
       bidi: paragraphBidiOptions(run.tags, props, n),
       ...paragraphShapeOptions(run.tags, props),
+      ...(run.zeroHeightBreak && { zeroHeightBreak: true as const }),
     });
   }
   return styled;
@@ -781,6 +784,20 @@ export function richTextContentHeightPx(
   return contentHeightOf(richTextLineMetrics(styledRuns, layout));
 }
 
+/** The paragraph indexes (counted by `\n`) of the lines of no height: each ends in a `zeroHeightBreak` run. */
+function zeroHeightParagraphsOf(styledRuns: readonly StyledTextRun[]): ReadonlySet<number> {
+  const paragraphs = new Set<number>();
+  let paragraphIndex = 0;
+  for (const run of styledRuns) {
+    for (const char of run.text) {
+      if (char !== '\n') continue;
+      if (run.zeroHeightBreak) paragraphs.add(paragraphIndex);
+      paragraphIndex++;
+    }
+  }
+  return paragraphs;
+}
+
 function lineMetricsOf(
   perLine: readonly RunLineSegment[][],
   styledRuns: readonly StyledTextRun[],
@@ -788,9 +805,14 @@ function lineMetricsOf(
 ): RichTextLineMetrics[] {
   const paragraphAscentPx = layout.baselineOffsetPx;
   const paragraphDescentPx = layout.linePitchPx - layout.baselineOffsetPx;
+  const zeroHeightParagraphs = zeroHeightParagraphsOf(styledRuns);
 
   let topPx = 0;
-  return perLine.map((segments) => {
+  return perLine.map((segments, lineIndex) => {
+    // An empty text buffer has no ascent or descent (measured in Godot 4.6.3).
+    if (zeroHeightParagraphs.has(layout.lines[lineIndex]!.paragraphIndex)) {
+      return { topPx, ascentPx: 0, descentPx: 0, textAscentPx: 0, textDescentPx: 0 };
+    }
     // Text first: `_realign` measures every image against these values, and an
     // image adds nothing to them.
     let ascentPx = 0;

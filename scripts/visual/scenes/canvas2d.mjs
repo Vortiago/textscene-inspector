@@ -930,7 +930,9 @@ export const CANVAS_2D_SCENES = [
   { name: 'rich-text-label-paragraph-justification', file: 'unit-rich-text-label-paragraph-justification.tscn', mode: '2d' },
   { name: 'rich-text-label-paragraph-tab-stops', file: 'unit-rich-text-label-paragraph-tab-stops.tscn', mode: '2d' },
   { name: 'rich-text-label-empty-styling-before-paragraph', file: 'unit-rich-text-label-empty-styling-before-paragraph.tscn', mode: '2d' },
+  { name: 'rich-text-label-empty-line-vertical-fill', file: 'unit-rich-text-label-empty-line-vertical-fill.tscn', mode: '2d' },
   { name: 'label-fill-paragraphs', file: 'unit-label-fill-paragraphs.tscn', mode: '2d' },
+  { name: 'label-tab-without-stop', file: 'unit-label-tab-without-stop.tscn', mode: '2d' },
   // Each scene below moves one property no other scene authors. Godot 4.6.3
   // `--mode 2d`: 0.005 to 0.342 of 255.
 

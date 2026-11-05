@@ -32,6 +32,11 @@ interface BBCodeRun {
   image?: ParsedImgTag;
   /** Set only on the single-U+FFFC run for an `[hr]` (`add_hr`, `:4159`), whose tags end in the `hr` paragraph. */
   rule?: ParsedRuleTag;
+  /**
+   * Set only on the single `\n` run that ends a line with no text, object or list item, such as one
+   * left by `[font_size][/font_size][p]`. Godot keeps that line, as an empty text buffer of no height.
+   */
+  zeroHeightBreak?: true;
 }
 
 /**
@@ -199,6 +204,22 @@ const PARAGRAPH_TAGS: ReadonlySet<string> = new Set([
   'indent',
   'ol',
   'ul',
+]);
+
+/**
+ * Tags whose item `_find_layout_subitem` skips (`:3712-3727`): a font, a colour, an underline or a
+ * strikethrough. Any other open item makes the line count, though it has no height without text.
+ */
+const STYLING_TAGS: ReadonlySet<string> = new Set([
+  'b',
+  'i',
+  'code',
+  'font',
+  'opentype_features',
+  'otf',
+  'color',
+  'u',
+  's',
 ]);
 
 /**
@@ -512,29 +533,47 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
   const stack: OpenBBCodeTag[] = [];
   const runs: BBCodeRun[] = [];
   let pending = '';
-  // Whether the current line has height, from text, an object or a list item, so a paragraph tag ends it.
+  // Whether the current line has height, from text, an object or a list item.
   let lineHasHeight = false;
+  // Whether the current line holds an item `_find_layout_subitem` counts, with or without height.
+  let lineHasLayout = false;
 
   function append(added: string): void {
+    if (added === '') return;
     pending += added;
     const lastBreak = added.lastIndexOf('\n');
-    if (lastBreak >= 0) lineHasHeight = lastBreak < added.length - 1;
-    else if (added.length > 0) lineHasHeight = true;
+    lineHasHeight = lastBreak < 0 || lastBreak < added.length - 1;
+    lineHasLayout = lineHasHeight;
+  }
+
+  /** `_add_item`'s `p_ensure_newline` (`:4097-4104`): a line that counts ends, with or without height. */
+  function endLineForParagraph(): void {
+    if (lineHasHeight) {
+      append('\n');
+      return;
+    }
+    if (!lineHasLayout) return;
+    flush();
+    runs.push({ text: '\n', tags: [...stack], zeroHeightBreak: true });
+    lineHasLayout = false;
   }
 
   function push(tag: OpenBBCodeTag): void {
-    if (PARAGRAPH_TAGS.has(tag.name) && lineHasHeight) append('\n');
+    if (PARAGRAPH_TAGS.has(tag.name)) endLineForParagraph();
     flush();
     stack.push(tag);
+    // `[img]` opens a tag but no item (`:6145`): its loaded image sets the flags where it is added.
+    if (!STYLING_TAGS.has(tag.name) && tag.name !== 'img') lineHasLayout = true;
     if (LIST_TAGS.has(tag.name)) lineHasHeight = true;
   }
 
   /** `add_hr`: a paragraph item, so the line of the text before ends, then the rule on the new line. */
   function addRule(rule: ParsedRuleTag, alignment: string): void {
-    if (lineHasHeight) append('\n');
+    endLineForParagraph();
     flush();
     runs.push({ text: IMAGE_OBJECT_CHAR, tags: [...stack, { name: 'hr', value: alignment }], rule });
     lineHasHeight = true;
+    lineHasLayout = true;
   }
 
   function flush(): void {
@@ -543,7 +582,13 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
     // bracket never splits it into separate meshes. An image or rule run never
     // merges: its `text` is the object placeholder a painter keys off.
     const previous = runs[runs.length - 1];
-    if (previous && !previous.image && !previous.rule && sameTags(previous.tags, stack))
+    if (
+      previous &&
+      !previous.image &&
+      !previous.rule &&
+      !previous.zeroHeightBreak &&
+      sameTags(previous.tags, stack)
+    )
       previous.text += pending;
     else runs.push({ text: pending, tags: [...stack] });
     pending = '';
@@ -607,6 +652,7 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
             image: parseImgTag(token.slice(1, -1), path),
           });
           lineHasHeight = true;
+          lineHasLayout = true;
         }
         push(openTag(name, open[2], token));
         pos = imgEnd;

@@ -406,11 +406,17 @@ describe('parseBBCodeRuns paragraph breaks', () => {
   });
 
   it.each(['[p][/p]', '[font_size=30][/font_size]', '[indent][/indent]', '[url=x][/url]', '[wave][/wave]'])(
-    'adds no break after %s, whose line holds no text and has no height (measured, Godot 4.6.3)',
+    'ends the line of %s with a break of no height, since the empty item counts (`:4097-4104`)',
     (empty) => {
-      expect(parseBBCodeRuns(`${empty}[p]x[/p]`).map((run) => run.text)).toEqual(['x']);
+      const runs = parseBBCodeRuns(`${empty}[p]x[/p]`);
+      expect(runs.map((run) => run.text)).toEqual(['\n', 'x']);
+      expect(runs[0]!.zeroHeightBreak).toBe(true);
     }
   );
+
+  it('gives a real break, not one of no height, to a line that holds text', () => {
+    expect(parseBBCodeRuns('a[p]x[/p]')[0]!.zeroHeightBreak).toBeUndefined();
+  });
 
   it('still ends a line that holds text before an empty tag', () => {
     expect(parseBBCodeRuns('a[font_size=30][/font_size][p]x[/p]').map((run) => run.text)).toEqual([

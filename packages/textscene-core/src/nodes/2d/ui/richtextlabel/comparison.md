@@ -24,8 +24,9 @@ and each alignment tag, takes the node's flags and stops. A tab that no stop ali
 
 `[hr]` draws the theme's 2 x 2 white `horizontal_rule` icon (`add_hr`, `:4159-4199`), at `width` (90 percent),
 `height` (2 px), `color` and `align`. A percent size truncates to whole pixels (`rich_text_label.h:741`). The text after the tag
-shares the rule's line. A line with no text, object or list item has no height.
-So an item with nothing in it before a `[p]` adds no space (`_find_layout_subitem`, `:3712-3727`).
+shares the rule's line. A line with no text, object or list item has no height, but it still counts as a line.
+`vertical_alignment` FILL spreads its gap over that line (`:1643-1648`). An empty colour, font, underline or strikethrough
+before a `[p]` adds no line (`_find_layout_subitem`, `:3712-3727`).
 
 While `clip_contents` is true, its default for this node (`rich_text_label.cpp:8225`), the control's own rect
 clips every glyph, image and underline (`control.cpp:3948`). `fit_content` grows the control to its text, so

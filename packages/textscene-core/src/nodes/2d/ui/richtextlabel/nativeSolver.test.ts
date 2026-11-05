@@ -1636,6 +1636,28 @@ describe('RichTextLabel paragraph alignment', () => {
       expect(lineTops('A\nB\nC', 3, 300)).toEqual([0, 138, 277]);
     });
 
+    // `[font_size][/font_size][p]` leaves an empty text buffer: no height, but a line for `lines` (`:1643-1648`).
+    describe('a line of no height', () => {
+      const runs = [
+        textRun({ text: '\n', fontSizePx: 16, zeroHeightBreak: true }),
+        textRun({ text: 'A\nB', fontSizePx: 16 }),
+      ];
+      const layout = shapeRuns(runs);
+      const tops = (verticalAlignment: number) =>
+        layoutRichTextRuns(runs, layout, { boxWidthPx: 0, boxHeightPx: 300, verticalAlignment }).map(
+          (p) => p.lineTopPx
+        );
+
+      it('adds no height to the text', () => {
+        expect(tops(0)).toEqual([0, 23]);
+      });
+
+      it('counts as a FILL line and takes its gap', () => {
+        // 300 - 2 * 23 = 254 of slack over three lines gives 127 a line: A is the second line, B the third.
+        expect(tops(3)).toEqual([127, 277]);
+      });
+    });
+
     it('needs two lines to have a FILL gap', () => {
       expect(lineTops('A', 3, 300)).toEqual([0]);
     });

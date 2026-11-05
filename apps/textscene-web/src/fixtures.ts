@@ -1308,6 +1308,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Tab Without Stop",
+    "file": "unit-label-tab-without-stop.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Visible Characters",
     "file": "unit-label-visible-characters.tscn",
     "category": "Other"
@@ -4008,6 +4013,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Rich Text Label Clip",
     "file": "unit-rich-text-label-clip.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Empty Line Vertical Fill",
+    "file": "unit-rich-text-label-empty-line-vertical-fill.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
