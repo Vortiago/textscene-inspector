@@ -1,0 +1,192 @@
+/**
+ * A canvas item whose body is a mesh drawn on the 2D canvas, each surface at its vertices' x and y,
+ * in surface order, with no depth test and no face culling. The surfaces' own materials never
+ * apply: the canvas item's pipeline draws them (`renderer_canvas_render_rd.cpp:3187-3212`).
+ * MeshInstance2D draws the mesh once. MultiMeshInstance2D draws it for each instance of its MultiMesh.
+ */
+
+import { useMemo, useState, type ReactNode } from 'react';
+import * as THREE from 'three';
+import { useThree } from '@react-three/fiber';
+import type { TscnNode } from '../../parser/types';
+import type { Node2DProperties } from '../../nodes/base/node2d/types';
+import { geometryPrimitive } from '../../resources/meshes/godotSurface';
+import type { MultiMeshInstance } from '../../resources/meshes/multimesh';
+import { useTexture2D } from '../../resources/useTexture2D';
+import { canvasMapProps, useCanvas2DTexture } from '../canvas2DTextureDecode';
+import { CanvasItemSurfaceSource } from '../canvasItemSurface';
+import { useCanvasTextureSampler, useNode2DTextureSampler } from '../canvasItemTextureSampler';
+import { CANVAS_SRGB_DEFINES } from '../canvasSrgbMultiply';
+import type { CanvasItemSurface } from '../lighting2d/normalMappedLighting';
+import { canvasMeshGeometry } from '../meshes/canvasMeshGeometry';
+import { canvasInstancesGeometry, MESH_INSTANCE } from '../meshes/canvasMeshInstances';
+import { drawnTag, type SurfacedMesh } from '../meshes/meshContent';
+import { canvasPointSize } from '../materials/godotPoint';
+import { materialProgramInputs } from '../materialProgramInputs';
+import { particlesFlipbook, type ParticlesFlipbook } from '../particlesFlipbook';
+import { useSceneResources } from '../SceneResourcesContext';
+import { useDisposeOnRelease } from '../useDisposeOnRelease';
+import { CanvasItem2D } from './CanvasItem2D';
+import type { CanvasItemPixelMaterial } from './LitCanvasItemPixels';
+import { MissingResourcePlaceholder } from './MissingResourcePlaceholder';
+
+interface CanvasMeshItemProps {
+  node: TscnNode;
+  /** The item's Node2D surface and its `texture` reference. */
+  props: Node2DProperties & { texture?: string };
+  /** The mesh to draw, or null for a node that draws nothing. Its children still draw. */
+  mesh: SurfacedMesh | null;
+  /** The instances to draw the mesh for, in order. Absent draws it once, as a MeshInstance2D does. */
+  instances?: readonly MultiMeshInstance[];
+  children?: ReactNode;
+}
+
+export function CanvasMeshItem({ node, props, mesh, instances, children }: CanvasMeshItemProps) {
+  const pools = useSceneResources();
+  const {
+    texture: sourceTexture,
+    missing: textureMissing,
+    isArriving: textureArriving,
+    canvasTexture,
+  } = useTexture2D(props.texture, pools.externalResources, pools.internalResources);
+  // A CanvasTexture's own filter and repeat win over the item's.
+  const sampler = useCanvasTextureSampler(useNode2DTextureSampler(props), canvasTexture?.texture);
+  const texture = useCanvas2DTexture(sourceTexture, sampler);
+  const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
+
+  // A fragment either way, so the item keeps its place when the source mounts.
+  return (
+    <>
+      <CanvasItem2D
+        node={node}
+        props={props}
+        surface={surface}
+        body={({ color, opacity }, material, pixelMaterial) => {
+          // No texture draws white. A texture that is set but not here yet draws nothing, and one
+          // that never draws gets the placeholder.
+          if (textureMissing) return <MissingResourcePlaceholder shape="plane" name={node.name} />;
+          if (textureArriving || !mesh) return null;
+          return (
+            <CanvasMeshParts
+              mesh={mesh}
+              instances={instances}
+              flipbook={particlesFlipbook(material)}
+              texture={texture}
+              color={color}
+              opacity={opacity}
+              pixelMaterial={pixelMaterial}
+            />
+          );
+        }}
+      >
+        {children}
+      </CanvasItem2D>
+      {canvasTexture?.texture.normalTexture && (
+        <CanvasItemSurfaceSource slot={canvasTexture} sampler={sampler} onSurface={setSurface} />
+      )}
+    </>
+  );
+}
+
+interface CanvasMeshPartsProps {
+  mesh: SurfacedMesh;
+  instances: readonly MultiMeshInstance[] | undefined;
+  flipbook: ParticlesFlipbook | null;
+  texture: THREE.Texture | null;
+  color: THREE.Color;
+  opacity: number;
+  pixelMaterial: CanvasItemPixelMaterial;
+}
+
+function CanvasMeshParts({
+  mesh,
+  instances,
+  flipbook,
+  texture,
+  color,
+  opacity,
+  pixelMaterial,
+}: CanvasMeshPartsProps) {
+  const geometries = useCanvasGeometries(mesh, instances, flipbook);
+  return geometries.map((geometry) => (
+    <CanvasSurfaces
+      key={geometry.uuid}
+      geometry={geometry}
+      texture={texture}
+      color={color}
+      opacity={opacity}
+      pixelMaterial={pixelMaterial}
+    />
+  ));
+}
+
+/**
+ * The canvas geometry of each part of `mesh`, released when it changes or the node unmounts. A mesh
+ * drawn once with no flipbook shares the source buffers. Any other draw builds its own copy.
+ */
+function useCanvasGeometries(
+  mesh: SurfacedMesh,
+  instances: readonly MultiMeshInstance[] | undefined,
+  flipbook: ParticlesFlipbook | null
+): readonly THREE.BufferGeometry[] {
+  const geometries = useMemo(
+    () =>
+      mesh.parts.map(({ geometry }) =>
+        instances || flipbook
+          ? canvasInstancesGeometry(geometry, instances ?? [MESH_INSTANCE], flipbook)
+          : canvasMeshGeometry(geometry)
+      ),
+    [mesh, instances, flipbook]
+  );
+  const disposable = useMemo(() => ({ dispose: () => geometries.forEach((g) => g.dispose()) }), [geometries]);
+  useDisposeOnRelease(disposable);
+  return geometries;
+}
+
+/** One part of the mesh: triangles, points or line segments, by the primitive its geometry draws. */
+function CanvasSurfaces({
+  geometry,
+  texture,
+  color,
+  opacity,
+  pixelMaterial,
+}: {
+  geometry: THREE.BufferGeometry;
+  texture: THREE.Texture | null;
+  color: THREE.Color;
+  opacity: number;
+  pixelMaterial: CanvasItemPixelMaterial;
+}) {
+  const hasVertexColors = geometry.hasAttribute('color');
+  const primitive = geometryPrimitive(geometry);
+  const drawsPoints = primitive === 'points';
+  const pixelRatio = useThree((state) => state.viewport.dpr);
+  const map = canvasMapProps(texture);
+  const point = drawsPoints ? canvasPointSize(pixelRatio) : undefined;
+  // The map and the vertex colours are sRGB numbers that Godot multiplies as stored
+  // (`canvas.glsl:172-181`), and the define is a program input, so it keys the material.
+  const program = materialProgramInputs({
+    props: {
+      ...map,
+      color,
+      opacity,
+      vertexColors: hasVertexColors,
+      transparent: true,
+      depthWrite: false,
+      defines: hasVertexColors ? CANVAS_SRGB_DEFINES : map.defines,
+      // three leaves `gl_PointSize` unwritten for a mesh material.
+      injection: point?.injection,
+      userData: point?.userData,
+    },
+    merge: [pixelMaterial],
+  });
+
+  const material = <meshBasicMaterial key={program.key} {...program.props} />;
+  const Draw = drawnTag(primitive);
+  return (
+    <Draw>
+      <primitive object={geometry} attach="geometry" />
+      {material}
+    </Draw>
+  );
+}

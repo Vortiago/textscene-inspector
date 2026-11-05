@@ -250,7 +250,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [MenuBar](../../packages/textscene-core/src/nodes/2d/ui/menubar/comparison.md): one StyleBox + text run per PopupMenu-child title
 - [MenuButton](../../packages/textscene-core/src/nodes/2d/ui/menubutton/comparison.md): a StyleBox quad with a centred text run and optional icon
 - [MeshInstance2D](../../packages/textscene-core/src/nodes/2d/meshinstance2d/comparison.md): a THREE.Mesh, THREE.Points or THREE.LineSegments per surface kind
-- [MultiMeshInstance2D](../../packages/textscene-core/src/nodes/2d/multimeshinstance2d/comparison.md): nothing yet, Godot draws a batch of textured mesh instances, the previewer does not
+- [MultiMeshInstance2D](../../packages/textscene-core/src/nodes/2d/multimeshinstance2d/comparison.md): a THREE.Mesh, THREE.Points or THREE.LineSegments per surface kind, with every instance merged
 - [NavigationAgent2D](../../packages/textscene-core/src/nodes/2d/navigationagent2d/comparison.md): nothing (a transform-only group)
 - [NavigationLink2D](../../packages/textscene-core/src/nodes/2d/navigationlink2d/comparison.md): nothing (a transform-only group)
 - [NavigationObstacle2D](../../packages/textscene-core/src/nodes/2d/navigationobstacle2d/comparison.md): nothing (a transform-only group)
