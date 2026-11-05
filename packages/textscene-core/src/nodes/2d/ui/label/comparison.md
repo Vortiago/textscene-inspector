@@ -58,6 +58,16 @@ glyph, not with `outline_size`.
 The import sidecar's `scaling_mode` sets how a size off the fixed size scales the glyphs
 (`text_server_adv.cpp:4093-4104`). Integer rounds the ratio, and Disabled keeps the fixed size.
 
+## Font fallbacks
+
+<!-- compare: image=unit-label-font-fallbacks status=done fixture=unit-label-font-fallbacks.tscn -->
+
+A character the font lacks draws from the first font of its **Fallback chain** that has it, with that
+font's advance and kerning (`text_server_adv.cpp:7111-7170`). The chain is the font's `fallbacks`, its
+import's `fallbacks` (`resource_importer_dynamic_font.cpp:192`, `resource_importer_bmfont.cpp:98`), or
+the base's for a `FontVariation` with none (`font.cpp:2926-2945`). The `label-font-fallbacks` golden
+pins this.
+
 ## Linting
 
 <!-- lint:begin Label -->

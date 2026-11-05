@@ -290,6 +290,9 @@ export const CANVAS_2D_SCENES = [
   { name: 'label-bmfont-outline', file: 'unit-label-bmfont-outline.tscn', mode: '2d' },
   // The one variable: a BMFont's import `scaling_mode`, Integer and Disabled, at sizes off the fixed size.
   { name: 'label-bmfont-scaling', file: 'unit-label-bmfont-scaling.tscn', mode: '2d' },
+  // The one variable: a character the font lacks, drawn from the first font of its fallback chain
+  // that has it, on a raw font's import, a FontVariation, a BMFont's import and a RichTextLabel.
+  { name: 'label-font-fallbacks', file: 'unit-label-font-fallbacks.tscn', mode: '2d' },
   // The one variable: `FontVariation.variation_embolden` over a scene font at 0, 1.2 and 2.0, which
   // grows the outline and widens each advance, as the bold of a RichTextLabel does.
   { name: 'label-font-variation-embolden', file: 'unit-label-font-variation-embolden.tscn', mode: '2d' },

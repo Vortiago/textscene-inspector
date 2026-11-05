@@ -16,16 +16,16 @@ fallbacks = Array[Font]([ExtResource("2_noto"), ExtResource("3_dejavu")])
 [sub_resource type="TextMesh" id="TextMesh_chain"]
 text = "ßĦ שלום"
 font = SubResource("FontVariation_chain")
-font_size = 48
+font_size = 32
 depth = 0.05
 
 [node name="Root" type="Node3D"]
 
 [node name="Label" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
-pixel_size = 0.01
+pixel_size = 0.006
 font = SubResource("FontVariation_chain")
-font_size = 48
+font_size = 32
 text = "Straße Ħal שלום"
 
 [node name="Mesh" type="MeshInstance3D" parent="."]

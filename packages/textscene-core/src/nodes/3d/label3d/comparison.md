@@ -11,7 +11,7 @@ renders_as: canvas-rasterised glyph quads, billboard-able
 
 Draws text on a flat plane in 3D space. The previewer shapes it in its `text_direction`, `language` and structured override, where an empty `language` takes the project locale and INHERITED acts as AUTO (`label_3d.cpp:479-494`). It breaks it at `width` as `autowrap_mode` says. It stretches each line to `width` under `HORIZONTAL_ALIGNMENT_FILL`, places the block by `vertical_alignment` and moves it by `offset` (`label_3d.cpp:483-606`). It rasterises a label in an outline font to a canvas texture, one texel per font pixel at `font_size` as Godot caches a glyph (`label_3d.cpp:345-350`). The font is the label's `font`, else the project theme's font for Label3D, else the project default font (`gui/theme/custom_font`), else the bundled font (`label_3d.cpp:812-850`). It maps the texture onto a transparent plane sized by `pixel_size`. It tints the plane by `modulate` and orients it by the node's `billboard` mode.
 
-A character the font lacks draws nothing in any font, as a glyph with no font has no rectangle to draw (`label_3d.cpp:357`). Godot draws no hex-code box for it, and the pen still advances.
+A character the font lacks draws from the first font of its **Fallback chain** that has it. A character no font of the chain has draws nothing, as a glyph with no font has no rectangle to draw (`label_3d.cpp:357`). Godot draws no hex-code box for it, and the pen still advances.
 
 A label is unlit by default. With `shaded` on, the scene's lights light its fill and outline, as Godot's `SHADING_MODE_PER_PIXEL` does (`material.cpp:3045`), and the label receives shadows. The plane faces +Z (`label_3d.cpp:422-423`). A double-sided label flips the normal of its back face (`scene_forward_clustered.glsl:1263-1266`), so its back is lit as its front. The `label3d-shaded` golden pins this.
 
@@ -20,6 +20,14 @@ A label casts no shadow by default, as its constructor turns `cast_shadow` off (
 ## BMFont
 
 A label in a BMFont draws each glyph as a quad over its page image at `pixel_size` (`label_3d.cpp:345-350`). The quad takes the glyph's offset and size. The label skips a glyph whose page rectangle is 2 px or less in either direction, and a character the font lacks (`:357-360`). The pen still advances past it. Its material decodes the page and the modulate and multiplies them in linear (`material.cpp:969,1218`). Any `outline_size` above 0 draws the font's outline set (`text_server_adv.h:406-414`). The `label3d-bmfont` golden pins this.
+
+## Font fallbacks
+
+<!-- compare: image=unit-label3d-text-mesh-font-fallbacks status=done fixture=unit-label3d-text-mesh-font-fallbacks.tscn -->
+
+A Label3D and a TextMesh draw a character their font lacks from the first font of its **Fallback
+chain** that has it. The TextMesh extrudes that font's outlines. The `label3d-text-mesh-font-fallbacks`
+golden pins this.
 
 ## Linting
 
