@@ -14,19 +14,28 @@ import {
   type TextMeasurer,
 } from '../../../r3f/controls/native/solverRegistry';
 import { windowContentsMinimumSize } from './contentsMinimumSize';
+import { windowContentScale } from './contentScale';
 import type { WindowProperties } from './types';
 
 /**
  * A subclass's registered minimum, such as PopupPanel's, reads no rect. The base rule reads each
- * child's position, so it lays the Controls out at the loaded size first.
+ * child's position, so it lays the Controls out in the rect the loaded size gives them first.
  */
 function contentsMinimumSize(window: SolveNode, ctx: SolveContext): Vector2 {
   if (controlSolverRegistry.minimumSize(window.node.type)) return ctx.combinedMinimumSize(window);
-  const { size } = window.node.properties as WindowProperties;
+  const { size, content_scale } = window.node.properties as WindowProperties;
+  const { layoutSize } = windowContentScale(size, content_scale);
   return windowContentsMinimumSize(
     window,
-    solveControlTree([window], { x: 0, y: 0, w: size.x, h: size.y }, ctx)
+    solveControlTree([window], { x: 0, y: 0, w: layoutSize.x, h: layoutSize.y }, ctx)
   );
+}
+
+/** `get_contents_minimum_size() * get_content_scale_factor()` (`window.cpp:2250`): the raw factor, never floored. */
+function scaledContentsMinimumSize(window: SolveNode, ctx: SolveContext): Vector2 {
+  const { factor } = (window.node.properties as WindowProperties).content_scale;
+  const minimum = contentsMinimumSize(window, ctx);
+  return { x: minimum.x * factor, y: minimum.y * factor };
 }
 
 /**
@@ -44,6 +53,6 @@ export function wrappedWindowSize(
   return embeddedWindowSize(
     props.size,
     limits,
-    contentsMinimumSize(window, createSolveContext(theme, measureText))
+    scaledContentsMinimumSize(window, createSolveContext(theme, measureText))
   );
 }

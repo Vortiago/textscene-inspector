@@ -5,7 +5,7 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { unquoteString } from '../../../parser/utils';
-import { boolOr, intOr, parseOptionalVector2i, vec2iOr } from '../../../parser/valueParsers';
+import { boolOr, floatOr, intOr, parseOptionalVector2i, vec2iOr } from '../../../parser/valueParsers';
 import {
   clampLimitSize,
   InitialPosition,
@@ -17,6 +17,7 @@ import {
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../../godot/scene/viewport';
 import { parseViewport } from '../../viewport/shared/parser';
 import { parseThemeOwnerFields } from '../../2d/ui/control/themeOwnerParser';
+import type { ContentScale } from './contentScale';
 import type { WindowProperties } from './types';
 
 const ORIGIN = { x: 0, y: 0 };
@@ -30,6 +31,19 @@ function sizeWrites(properties: Record<string, string>): WindowSizeWrite[] {
     if (value) writes.push({ key, value });
   }
   return writes;
+}
+
+/** The `content_scale_*` keys. A setter refuses a negative size or a factor at or below 0 (`window.cpp:1716,1774`). */
+function parseContentScale(properties: Record<string, string>, context: string): ContentScale {
+  const size = vec2iOr(properties.content_scale_size, ORIGIN, `${context}.content_scale_size`);
+  const factor = floatOr(properties.content_scale_factor, 1, `${context}.content_scale_factor`);
+  return {
+    mode: intOr(properties.content_scale_mode, 0, `${context}.content_scale_mode`),
+    aspect: intOr(properties.content_scale_aspect, 0, `${context}.content_scale_aspect`),
+    stretch: intOr(properties.content_scale_stretch, 0, `${context}.content_scale_stretch`),
+    size: size.x < 0 || size.y < 0 ? ORIGIN : size,
+    factor: factor > 0 ? factor : 1,
+  };
 }
 
 export function parseWindow(heading: ParsedHeading, properties: Record<string, string>): WindowProperties {
@@ -69,5 +83,6 @@ export function parseWindow(heading: ParsedHeading, properties: Record<string, s
     force_native: boolOr(properties.force_native, false, context),
     min_size: clampLimitSize(vec2iOr(properties.min_size, ORIGIN, context)),
     max_size: clampLimitSize(vec2iOr(properties.max_size, ORIGIN, context)),
+    content_scale: parseContentScale(properties, context),
   };
 }

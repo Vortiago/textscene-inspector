@@ -25,7 +25,7 @@ import { useResolvedGate } from './useViewportGate.js';
 import { usePublishViewportPass } from './usePublishViewportPass.js';
 import { useViewportRenderState } from './useGatedViewport.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
-import { viewportSize, viewportTargetSize } from './targetSize.js';
+import { viewportPassSizes } from './targetSize.js';
 import type { SubViewportProperties } from './types.js';
 import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
 import { useCanvasModulateColor } from '../../../r3f/canvasModulate.js';
@@ -52,10 +52,10 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const gate = useResolvedGate(viewport.gate);
 
   const properties = node.properties as SubViewportProperties;
-  const { size, transparent_bg: transparentBg, render_target_clear_mode: clearMode } = properties;
-  const forcedRect = useViewportRect(path);
-  const { x: width, y: height } = viewportTargetSize(size, forcedRect);
-  const { x: layoutWidth, y: layoutHeight } = viewportSize(size, forcedRect);
+  const { transparent_bg: transparentBg, render_target_clear_mode: clearMode } = properties;
+  const sizes = viewportPassSizes(node, useViewportRect(path));
+  const { x: width, y: height } = sizes.target;
+  const { x: layoutWidth, y: layoutHeight } = sizes.layout;
 
   const gl = useThree((state) => state.gl);
   const clearColor = useProjectClearColor();
@@ -77,8 +77,8 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   // The frame takes the 2D buffer's multisampling, so the target it copies into never multisamples.
   const target = useMultisampledTarget(0, createTarget);
   const { camera, frame } = useCanvasPass(
-    layoutWidth,
-    layoutHeight,
+    sizes.view.x,
+    sizes.view.y,
     viewportMsaaMode(properties, '2d'),
     canvasSpace
   );

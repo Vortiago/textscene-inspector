@@ -123,6 +123,44 @@ describe('viewportGateAt: enclosing viewport', () => {
   });
 });
 
+/** A window's viewport follows its embedder's passes (`viewport.cpp:339`), found by `Window::get_embedder`. */
+describe('viewportGateAt: a window follows its embedder', () => {
+  const tree = treeOf(`[node name="Root" type="Control"]
+
+[node name="Frozen" type="SubViewport" parent="."]
+render_target_update_mode = 0
+
+[node name="Win" type="Window" parent="Frozen"]
+
+[node name="Embedding" type="SubViewport" parent="."]
+gui_embed_subwindows = true
+
+[node name="Group" type="Node" parent="Embedding"]
+
+[node name="Plain" type="SubViewport" parent="Embedding/Group"]
+
+[node name="Inner" type="Window" parent="Embedding/Group/Plain"]
+
+[node name="Panel" type="Control" parent="Embedding/Group/Plain/Inner"]
+
+[node name="View" type="SubViewport" parent="Embedding/Group/Plain/Inner/Panel"]
+`);
+
+  it('steps past a viewport that embeds no windows to the root (`window.cpp:1406-1418`)', () => {
+    expect(resolved(tree, 'Root/Frozen/Win', ALWAYS).enclosingPath).toBeNull();
+  });
+
+  it('names the nearest viewport that embeds windows', () => {
+    expect(resolved(tree, 'Root/Embedding/Group/Plain/Inner', ALWAYS).enclosingPath).toBe('Root/Embedding');
+  });
+
+  it('leaves a SubViewport inside a window under the window (`viewport.cpp:579`)', () => {
+    expect(resolved(tree, 'Root/Embedding/Group/Plain/Inner/Panel/View', ALWAYS).enclosingPath).toBe(
+      'Root/Embedding/Group/Plain/Inner'
+    );
+  });
+});
+
 describe('resolveGate: an animated visible', () => {
   const tree = treeOf(`[node name="Root" type="Control"]
 

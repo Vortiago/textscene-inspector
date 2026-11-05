@@ -184,3 +184,37 @@ describe('trimLineToWidth', () => {
     expect(trimmed.text).toBe('AAAA');
   });
 });
+
+/** A right-to-left paragraph keeps the visual end and draws the ellipsis first (`text_server_adv.cpp:6053-6114`). */
+describe('trimLineToWidth in a right-to-left paragraph', () => {
+  const ELLIPSIS = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+  const rtlTrim = (text: string, widthPx: number, flags: OverrunTrimFlags) =>
+    trimLineToWidth(line(text), widthPx, flags, {
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      fontSizePx: FONT_SIZE_PX,
+      isRtl: true,
+    });
+
+  it('cuts from the visual start and puts the ellipsis before the kept glyphs (measured: "…r window title")', () => {
+    // The mirror of the left-to-right case: the same 8 of 12 A's fit 100 px with the ellipsis.
+    expect(rtlTrim('AAAAAAAABBBB', 100, ELLIPSIS).text).toBe('…AAAABBBB');
+  });
+
+  it('places the kept glyphs after the ellipsis, from its advance', () => {
+    const result = rtlTrim('AAAAAAAAAAAA', 100, ELLIPSIS);
+    const dotAdvance = getFontEmboldenedAdvancePx(OPEN_SANS_FONT_METRICS, '…', FONT_SIZE_PX);
+    expect(result.glyphs[0]!.x).toBe(0);
+    expect(result.glyphs[1]!.x).toBeCloseTo(dotAdvance, 10);
+  });
+
+  it('counts the minimum characters from the visual end (`:6074`)', () => {
+    // Only the last 3 A's fit 40 px, fewer than 6, so a plain cut keeps them with no ellipsis.
+    expect(rtlTrim('AAAAAAAAAAAA', 40, ELLIPSIS).text).toBe('AAA');
+  });
+
+  it('measures the kept glyphs plus the ellipsis (`:6152`)', () => {
+    const result = rtlTrim('AAAAAAAAAAAA', 100, ELLIPSIS);
+    expect(result.text).toBe('…AAAAAAAA');
+    expect(result.widthPx).toBeCloseTo(8 * 10.578125 + 13, 10);
+  });
+});

@@ -1,7 +1,7 @@
 /**
  * One embedded window as its embedder draws it (`Viewport::_sub_window_update`,
  * `scene/main/viewport.cpp:342-401`): the border StyleBox, the title and the close icon unless the
- * window is borderless, then the window's own target over its rect.
+ * window is borderless, then the window's own target over the rect its content scale gives.
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
@@ -14,6 +14,7 @@ import { ControlQuad } from '../../../r3f/controls/native/controlQuad';
 import { StyleBoxQuad } from '../../../r3f/controls/native/StyleBoxQuad';
 import { useNodeIcon } from '../../../r3f/controls/native/useIconTexture';
 import { TAB_BAR_ICONS, TAB_BAR_ICON_SIZE } from '../../../r3f/controls/native/themeIcons';
+import { scaledIconSize, scaledSvgDataUrl } from '../../../r3f/controls/native/scaledSvgIcon';
 import {
   canvasSubOrders,
   useCanvasItemState,
@@ -28,6 +29,7 @@ import { InitialPosition, centredWindowPosition } from '../../../godot/scene/win
 import { viewportSize } from '../../viewport/subviewport/targetSize';
 import { imageSize } from '../../../resources/formats/image/imagePixels';
 import { closeIconOrigin } from './decoration';
+import { windowContentScale } from './contentScale';
 import { WindowTitle } from './WindowTitle';
 import { windowThemeDefaults, type WindowThemeDefaults } from './theme';
 import type { WindowProperties } from './types';
@@ -45,6 +47,7 @@ interface EmbeddedWindowFrameProps {
 }
 
 const WHITE = new THREE.Color(1, 1, 1);
+const BLACK = new THREE.Color(0, 0, 0);
 
 /**
  * The rect the window takes in its embedder. A centred window centres its loaded size, before its
@@ -83,8 +86,11 @@ export function EmbeddedWindowFrame({
     lightMask: undefined,
     sequence: drawIndex,
   });
-  const slots = canvasSubOrders(wholeKeySlot(key), ['title', 'close', 'content'] as const);
+  const slots = canvasSubOrders(wholeKeySlot(key), ['title', 'close', 'bars', 'content'] as const);
   const { texture } = useViewportTargetSlot(path, null, 'plain');
+  const { drawRect } = windowContentScale({ x: rect.w, y: rect.h }, props.content_scale);
+  // `vr != r`: the target leaves part of the window, which `Color()` fills opaque black (`viewport.cpp:397-399`).
+  const hasBars = drawRect.x !== 0 || drawRect.y !== 0 || drawRect.w !== rect.w || drawRect.h !== rect.h;
 
   return (
     // Every group here carries the key: three takes `groupOrder` from the nearest enclosing group.
@@ -106,15 +112,26 @@ export function EmbeddedWindowFrame({
             closeKey={slots.close.key}
           />
         )}
-        {texture ? (
+        {hasBars ? (
           <ControlQuad
             width={rect.w}
             height={rect.h}
-            color={WHITE}
+            color={BLACK}
             opacity={1}
-            map={texture}
-            renderOrder={slots.content.key}
+            renderOrder={slots.bars.key}
           />
+        ) : null}
+        {texture ? (
+          <CanvasItemGroup position={[drawRect.x, -drawRect.y, 0]}>
+            <ControlQuad
+              width={drawRect.w}
+              height={drawRect.h}
+              color={WHITE}
+              opacity={1}
+              map={texture}
+              renderOrder={slots.content.key}
+            />
+          </CanvasItemGroup>
         ) : null}
       </CanvasItemKeyProvider>
     </group>
@@ -132,10 +149,11 @@ interface WindowDecorationProps {
   closeKey: number;
 }
 
-/** The pixel size of a loaded icon, or the vendored icon's own until it loads. */
-function iconSize(texture: THREE.Texture | null): Vector2 {
+/** The pixel size of a loaded icon, or the vendored icon's at the theme scale until it loads. */
+function iconSize(texture: THREE.Texture | null, scale: number): Vector2 {
   const size = imageSize(texture?.image);
-  return size ? { x: size.width, y: size.height } : { x: TAB_BAR_ICON_SIZE, y: TAB_BAR_ICON_SIZE };
+  const vendored = scaledIconSize(TAB_BAR_ICON_SIZE, scale);
+  return size ? { x: size.width, y: size.height } : { x: vendored, y: vendored };
 }
 
 function WindowDecoration({
@@ -156,9 +174,11 @@ function WindowDecoration({
     closeHOffset: constants.close_h_offset ?? defaults.closeHOffset,
     closeVOffset: constants.close_v_offset ?? defaults.closeVOffset,
   };
-  // `close` and the TabBar's `close` are one default icon, `icons["close"]` (`default_theme.cpp:685,1039`).
-  const closeTexture = useNodeIcon(solveNode.icons.close, TAB_BAR_ICONS.close);
-  const closeSize = iconSize(closeTexture);
+  // `close` and the TabBar's `close` are one default icon, `icons["close"]` (`default_theme.cpp:685,1039`),
+  // rasterised at the theme scale.
+  const vendoredClose = useMemo(() => scaledSvgDataUrl(TAB_BAR_ICONS.close, theme.scale), [theme.scale]);
+  const closeTexture = useNodeIcon(solveNode.icons.close, vendoredClose);
+  const closeSize = iconSize(closeTexture, theme.scale);
   const rect: Rect2 = { x: 0, y: 0, w: size.x, h: size.y };
   const closeOrigin = closeIconOrigin(size.x, offsets);
 

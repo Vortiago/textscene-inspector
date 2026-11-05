@@ -974,7 +974,9 @@ export const CANVAS_2D_SCENES = [
   { name: 'canvas-root-visibility', file: 'unit-canvas-root-visibility.tscn', mode: '2d' },
 
   // Embedded windows, as the root viewport draws them over its canvas. Godot 4.6.3 `--mode 2d` diffs
-  // differ only in the title glyphs (max 70 to 103 of 255), as a plain Label does (max 103).
+  // differ only in the title glyphs (max 70 to 155 of 255), as a plain Label at the title's place does.
+  // A Label with the title's font, size and centre: max 92, mean 0.338, as the window title's max 92.
+  { name: 'window-title-label', file: 'unit-window-title-label.tscn', mode: '2d' },
   // A decorated Window: frame, title, close icon and target. Mean 0.367.
   { name: 'window-embedded', file: 'unit-window-embedded.tscn', mode: '2d' },
   // The stack: the last focusable window is focused and draws the focused frame. Mean 0.514.
@@ -993,6 +995,17 @@ export const CANVAS_2D_SCENES = [
   { name: 'popuppanel-shadow', file: 'unit-popuppanel-shadow.tscn', mode: '2d' },
   // Theme overrides: the frame, the title colour, size and outline ring. Mean 0.426.
   { name: 'window-theme', file: 'unit-window-theme.tscn', mode: '2d' },
+  // Under a right-to-left parent the title trims from its start and the close icon stays right. Max 70, mean 0.407.
+  { name: 'window-rtl', file: 'unit-window-rtl.tscn', mode: '2d' },
+  // Theme scale 1.5: a 24 px close icon and a 21 px title. Max 155, mean 0.390.
+  { name: 'window-theme-scale', file: 'window-theme-scale/unit-window-theme-scale.tscn', mode: '2d' },
+  // The same title as a Label at theme scale 1.5: max 155, mean 0.346.
+  { name: 'window-theme-scale-label', file: 'window-theme-scale/unit-window-theme-scale-label.tscn', mode: '2d' },
+  // A window under a SubViewport that never updates draws in the root, which does. Max 92, mean 0.383.
+  { name: 'window-under-disabled-viewport', file: 'unit-window-under-disabled-viewport.tscn', mode: '2d' },
+  // content_scale_*: factor, canvas items, viewport, expand, integer and keep-height, with black bars.
+  // Max 92, mean 0.385.
+  { name: 'window-content-scale', file: 'unit-window-content-scale.tscn', mode: '2d' },
 
   // MeshInstance2D draws a mesh through the canvas. Godot 4.6.3 `--mode 2d` probes: the textured QuadMesh
   // shows its texture upside down, (75,75) blue and (75,125) red, and the PlaneMesh at (100,300) draws

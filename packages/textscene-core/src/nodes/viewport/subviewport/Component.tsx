@@ -28,7 +28,7 @@ import { useViewportThemeOwners } from '../../windows/window/useViewportThemeOwn
 import { PendingSuspense } from '../../../resources/PendingSuspense';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
-import { viewportSize, viewportTargetSize } from './targetSize';
+import { viewportPassSizes } from './targetSize';
 import { useInCanvasOverWorld } from './canvasOverWorldScope';
 import { ViewportCanvasScope } from '../../../r3f/viewportCanvasScope';
 import { viewportCanvasColorSpace } from './offscreenViewport';
@@ -98,16 +98,15 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
   const rendersInline = rasterizes ? kind === '3d' && !ownWorld3D && workspace === '3d' : !ownWorld3D;
   // On either path the subtree's canvas items are in this viewport's World2D, never the parent's.
   // So are its CanvasModulate and its lights: the parent canvas's tint stops at this viewport.
-  const forcedRect = useViewportRect(path);
-  const targetSize = viewportTargetSize(properties.size, forcedRect);
-  const authoredSize = viewportSize(properties.size, forcedRect);
+  const sizes = viewportPassSizes(node, useViewportRect(path));
   // Stable while the numbers are, so the pass and the light host do not follow a new object.
-  const size = useMemo(() => ({ x: targetSize.x, y: targetSize.y }), [targetSize.x, targetSize.y]);
-  // Godot lays Controls out by `size` (`viewport.cpp:1202-1210`); only the target is capped.
+  const size = useMemo(() => ({ x: sizes.target.x, y: sizes.target.y }), [sizes.target.x, sizes.target.y]);
+  // Godot lays Controls out by the visible rect (`viewport.cpp:1202-1216`); only the target is capped.
   const layoutSize = useMemo(
-    () => ({ x: authoredSize.x, y: authoredSize.y }),
-    [authoredSize.x, authoredSize.y]
+    () => ({ x: sizes.layout.x, y: sizes.layout.y }),
+    [sizes.layout.x, sizes.layout.y]
   );
+  const viewSize = useMemo(() => ({ x: sizes.view.x, y: sizes.view.y }), [sizes.view.x, sizes.view.y]);
   const canvasModulate = useCanvasModulateColor(node.children);
   const canvasSpace = viewportCanvasColorSpace(properties, kind === '3d' ? '3d' : '2d');
   // A canvas holds the 2D items and Controls of a viewport, in one tree-order draw. A 2D pass draws
@@ -153,6 +152,7 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
             path={path}
             size={size}
             layoutSize={layoutSize}
+            viewSize={viewSize}
             kind={kind}
             rendersInline={rendersInline}
             canvasModulate={canvasModulate}

@@ -28,14 +28,14 @@ export const InitialPosition = {
 } as const;
 
 /** `Window::ContentScaleMode` without `CONTENT_SCALE_MODE_` (`window.h:73-77`, 4.7.2 `:72-76`). */
-const ContentScaleMode = {
+export const ContentScaleMode = {
   DISABLED: 0,
   CANVAS_ITEMS: 1,
   VIEWPORT: 2,
 } as const;
 
 /** `Window::ContentScaleAspect` without `CONTENT_SCALE_ASPECT_` (`window.h:79-85`, 4.7.2 `:78-84`). */
-const ContentScaleAspect = {
+export const ContentScaleAspect = {
   IGNORE: 0,
   KEEP: 1,
   KEEP_WIDTH: 2,

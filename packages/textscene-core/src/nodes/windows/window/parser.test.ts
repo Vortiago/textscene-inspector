@@ -94,4 +94,30 @@ describe('parseWindow', () => {
   it('reads the Viewport keys a Window inherits', () => {
     expect(parseWindow(heading('Window'), { own_world_3d: 'true' }).own_world_3d).toBe(true);
   });
+
+  it('reads the content scale, unscaled by default', () => {
+    expect(parseWindow(heading('Window'), {}).content_scale).toEqual({
+      mode: 0,
+      aspect: 0,
+      stretch: 0,
+      size: { x: 0, y: 0 },
+      factor: 1,
+    });
+    const scaled = parseWindow(heading('Window'), {
+      content_scale_mode: '1',
+      content_scale_aspect: '4',
+      content_scale_stretch: '1',
+      content_scale_size: 'Vector2i(120, 60)',
+      content_scale_factor: '1.5',
+    }).content_scale;
+    expect(scaled).toEqual({ mode: 1, aspect: 4, stretch: 1, size: { x: 120, y: 60 }, factor: 1.5 });
+  });
+
+  it('keeps the defaults for a factor or a size the setters refuse (`window.cpp:1716,1774`)', () => {
+    const scale = parseWindow(heading('Window'), {
+      content_scale_factor: '0',
+      content_scale_size: 'Vector2i(-1, 60)',
+    }).content_scale;
+    expect({ factor: scale.factor, size: scale.size }).toEqual({ factor: 1, size: { x: 0, y: 0 } });
+  });
 });

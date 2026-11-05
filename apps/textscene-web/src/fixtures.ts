@@ -2653,6 +2653,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Window Content Scale",
+    "file": "unit-window-content-scale.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Window Embedded",
     "file": "unit-window-embedded.tscn",
     "category": "Other"
@@ -2663,8 +2668,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Window Rtl",
+    "file": "unit-window-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Window Theme",
     "file": "unit-window-theme.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Title Label",
+    "file": "unit-window-title-label.tscn",
     "category": "Other"
   },
   {
@@ -2675,6 +2690,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Window Transparent",
     "file": "unit-window-transparent.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Under Disabled Viewport",
+    "file": "unit-window-under-disabled-viewport.tscn",
     "category": "Other"
   },
   {
@@ -2827,6 +2847,18 @@ export const fixtures: Fixture[] = [
     "file": "touch-screen-button/unit-touch-screen-button.tscn",
     "category": "Other",
     "root": "touch-screen-button"
+  },
+  {
+    "name": "Window Theme Scale Label",
+    "file": "window-theme-scale/unit-window-theme-scale-label.tscn",
+    "category": "Other",
+    "root": "window-theme-scale"
+  },
+  {
+    "name": "Window Theme Scale",
+    "file": "window-theme-scale/unit-window-theme-scale.tscn",
+    "category": "Other",
+    "root": "window-theme-scale"
   },
   {
     "name": "Animation Empty Library",

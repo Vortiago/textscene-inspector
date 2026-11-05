@@ -1,6 +1,6 @@
 /**
  * An embedded window's title: one `TextLine` in `title_font` at `title_font_size`, trimmed to the
- * title space with an ellipsis and centred over the window in the `title_height` band
+ * title space with an ellipsis at its end in the window's direction, and centred over the window in the `title_height` band
  * (`viewport.cpp:363-379`). The outline draws first, under the text, as a stroked ring (ADR-0040).
  */
 import { lazy, useMemo, type ComponentProps } from 'react';
@@ -80,9 +80,14 @@ export function WindowTitle({
       lineSpacingPx: 0,
       fontMetrics,
     });
-    const line = trimLineToWidth(shaped.lines[0]!, space, TITLE_OVERRUN_FLAGS, { fontMetrics, fontSizePx });
+    // `set_direction` follows the window's `is_layout_rtl()` (`viewport.cpp:375`).
+    const line = trimLineToWidth(shaped.lines[0]!, space, TITLE_OVERRUN_FLAGS, {
+      fontMetrics,
+      fontSizePx,
+      isRtl: solveNode.rtl,
+    });
     return soloLineLayout(line, shaped);
-  }, [props.title, fontSizePx, fontMetrics, space]);
+  }, [props.title, fontSizePx, fontMetrics, space, solveNode.rtl]);
 
   if (!layout) return null;
   const origin = titleOrigin(width, titleHeight, {

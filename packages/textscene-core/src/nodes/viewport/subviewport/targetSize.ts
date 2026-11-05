@@ -7,6 +7,11 @@ import type { ViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import { VIEWPORT_MIN_SIZE } from '../../../godot/rendering/viewport.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
+import type { TscnNode } from '../../../parser/types.js';
+import { windowContentScale } from '../../windows/window/contentScale.js';
+import type { WindowProperties } from '../../windows/window/types.js';
+import { isEmbeddedWindow } from './viewportBoundary.js';
+import type { SubViewportProperties } from './types.js';
 
 /**
  * Godot's `Viewport::get_size()`. A stretching `SubViewportContainer`'s forced rect wins over the
@@ -31,4 +36,34 @@ export function viewportTargetSize(authored: Vector2, forced: ViewportRect | nul
 /** Both sources are whole pixels already: the parser truncates `size`, and the container its rect. */
 function flooredExtent(raw: number): number {
   return Number.isFinite(raw) ? Math.max(VIEWPORT_MIN_SIZE, raw) : VIEWPORT_MIN_SIZE;
+}
+
+/** The three sizes a viewport pass reads. */
+export interface ViewportPassSizes {
+  /** The render target's pixels, capped. */
+  target: Vector2;
+  /** The rect Controls lay out in: `get_visible_rect()`. */
+  layout: Vector2;
+  /** The canvas units the target shows: its pixels over the canvas scale. */
+  view: Vector2;
+}
+
+/**
+ * A SubViewport renders, lays out and shows its `size`. An embedded window renders and lays out by
+ * its content scale (`contentScale.ts`), and its canvas draws scaled by the factor, so the target
+ * shows its pixels over the factor in canvas units (`window.cpp:1362-1367`).
+ */
+export function viewportPassSizes(node: TscnNode, forced: ViewportRect | null): ViewportPassSizes {
+  const properties = node.properties as SubViewportProperties;
+  const size = viewportSize(properties.size, forced);
+  if (!isEmbeddedWindow(node.type)) {
+    return { target: viewportTargetSize(properties.size, forced), layout: size, view: size };
+  }
+  const scale = windowContentScale(size, (properties as WindowProperties).content_scale);
+  const render = viewportSize(scale.renderSize, null);
+  return {
+    target: { x: Math.min(MAX_TEXTURE_EXTENT, render.x), y: Math.min(MAX_TEXTURE_EXTENT, render.y) },
+    layout: scale.layoutSize,
+    view: { x: render.x / scale.canvasScale, y: render.y / scale.canvasScale },
+  };
 }

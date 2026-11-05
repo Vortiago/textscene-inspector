@@ -6,6 +6,7 @@
 import type { Vector2 } from '../../../godot/math/vector';
 import type { ThemeOwnerFields } from '../../2d/ui/control/types';
 import type { SubViewportProperties } from '../../viewport/subviewport/types';
+import type { ContentScale } from './contentScale';
 
 /**
  * `size`, `render_target_update_mode` and `render_target_clear_mode` are the window's viewport as the
@@ -31,4 +32,6 @@ export interface WindowProperties extends SubViewportProperties, ThemeOwnerField
   force_native: boolean;
   min_size: Vector2;
   max_size: Vector2;
+  /** The `content_scale_*` keys (`contentScale.ts`). */
+  content_scale: ContentScale;
 }

@@ -201,15 +201,8 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'transient',
       'transient_to_focused',
     ],
-    renderGap: [
-      'content_scale_aspect',
-      'content_scale_factor',
-      'content_scale_mode',
-      'content_scale_size',
-      'content_scale_stretch',
-    ],
     reason:
-      'The size and theme-override keys are read through loops. The rest drive a native window or input, which an embedded frame never shows, except the content scale, which is unimplemented.',
+      'The size and theme-override keys are read through loops. The rest drive a native window or input, which an embedded frame never shows.',
   },
 
   Light3D: {
