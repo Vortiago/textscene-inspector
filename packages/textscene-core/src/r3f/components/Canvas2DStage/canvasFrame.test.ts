@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { offscreenRendererState } from '../../../nodes/viewport/subviewport/offscreenRenderer.testkit';
 import { createCanvasFrame } from './canvasFrame';
 import { registerCanvasGroup } from '../../canvasGroup/canvasGroupPass';
 import { canvasColorSpaceOf, SRGB_CANVAS } from '../../canvasColorSpace';
@@ -30,13 +31,7 @@ function recordingRenderer(width: number, height: number) {
   const clears: { target: Target; drawsBefore: number }[] = [];
   let bound: Target = null;
   const gl = {
-    autoClear: true,
-    autoClearColor: true,
-    getClearColor: (out: THREE.Color) => out,
-    getClearAlpha: () => 1,
-    getActiveCubeFace: () => 0,
-    getActiveMipmapLevel: () => 0,
-    setClearColor: () => {},
+    ...offscreenRendererState(),
     getDrawingBufferSize: (out: THREE.Vector2) => out.set(width, height),
     getRenderTarget: () => bound,
     setRenderTarget: (target: Target) => {

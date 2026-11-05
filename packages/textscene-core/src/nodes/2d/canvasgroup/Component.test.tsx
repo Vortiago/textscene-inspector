@@ -5,6 +5,7 @@
 import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { offscreenRendererState } from '../../viewport/subviewport/offscreenRenderer.testkit';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import { CanvasGroup } from './Component';
@@ -19,7 +20,7 @@ import {
   type CanvasLighting2D,
 } from '../../../r3f/lighting2d/lightPassContext';
 import type { CanvasClip } from '../../../r3f/lighting2d/lightPassHost';
-import { drawCanvasGroups } from '../../../r3f/canvasGroup/canvasGroupPass';
+import { canvasGroupRectTag, drawCanvasGroups } from '../../../r3f/canvasGroup/canvasGroupPass';
 import type { Rgba } from '../../../godot/math/math';
 
 const WORLD_RANK = layerRankOf(layerRanks([]), 0);
@@ -65,10 +66,14 @@ function ModulateReader() {
 
 const MATERIAL: TscnInternalResource = { id: 'Add', type: 'CanvasItemMaterial', data: { blend_mode: '1' } };
 
-async function renderGroup(props: Record<string, string> = {}, child: ReactNode = <ChildSquare />) {
+async function renderGroup(
+  props: Record<string, string> = {},
+  child: ReactNode = <ChildSquare />,
+  lighting: CanvasLighting2D = LIGHTING
+) {
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={[MATERIAL]} externalResources={[]}>
-      <CanvasLighting2DContext.Provider value={LIGHTING}>
+      <CanvasLighting2DContext.Provider value={lighting}>
         <PaintRangeProvider value={RUN}>
           <CanvasGroup node={groupNode(props)}>
             {child}
@@ -80,15 +85,9 @@ async function renderGroup(props: Record<string, string> = {}, child: ReactNode 
   );
   const scene = renderer.scene.instance as THREE.Object3D;
   const gl = {
-    autoClear: true,
-    autoClearColor: true,
+    ...offscreenRendererState(),
     getRenderTarget: () => null,
     setRenderTarget: () => {},
-    getActiveCubeFace: () => 0,
-    getActiveMipmapLevel: () => 0,
-    getClearColor: (out: THREE.Color) => out,
-    getClearAlpha: () => 1,
-    setClearColor: () => {},
     clear: () => {},
     render: () => {},
   } as unknown as THREE.WebGLRenderer;
@@ -97,6 +96,11 @@ async function renderGroup(props: Record<string, string> = {}, child: ReactNode 
 }
 
 /** The group's rect meshes: the composite, whose material is a ShaderMaterial, and the plain one. */
+/** Whether `object` carries the tag of a group's rect mesh. */
+function isCanvasGroupRect(object: THREE.Object3D): boolean {
+  return Object.entries(canvasGroupRectTag()).every(([key, value]) => object.userData[key] === value);
+}
+
 function rects(scene: THREE.Object3D) {
   const meshes: THREE.Mesh[] = [];
   scene.traverse((object) => {
@@ -126,6 +130,15 @@ describe('<CanvasGroup>', () => {
     expect(plain.visible).toBe(false);
     expect(composite.position.toArray()).toEqual([50, -50, 0]);
     expect(composite.scale.toArray()).toEqual([120, 120, 1]);
+  });
+
+  it('fits the rect in the clip of the frame camera where no light pass frames the canvas', async () => {
+    // The default camera frames 2 units over the 64-pixel frame, so the 10-pixel margin is 10/32.
+    const { scene } = await renderGroup({}, <ChildSquare />, INERT_CANVAS_LIGHTING);
+    const { composite } = rects(scene);
+
+    expect(composite.visible).toBe(true);
+    expect(composite.scale.toArray()).toEqual([100.625, 100.625, 1]);
   });
 
   it('fits the rect to the children alone at fit_margin 0', async () => {
@@ -172,7 +185,7 @@ describe('<CanvasGroup>', () => {
   it('draws as a plain Node2D when y-sorted, as Godot groups nothing then', async () => {
     const { scene } = await renderGroup({ y_sort_enabled: 'true' });
     const meshes: THREE.Object3D[] = [];
-    scene.traverse((object) => object.userData.tscnCanvasGroupRect && meshes.push(object));
+    scene.traverse((object) => isCanvasGroupRect(object) && meshes.push(object));
 
     expect(meshes).toEqual([]);
   });

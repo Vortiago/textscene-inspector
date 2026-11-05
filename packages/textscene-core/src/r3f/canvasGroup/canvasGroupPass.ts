@@ -9,10 +9,14 @@ import * as THREE from 'three';
 import { canvasKeyOf, drawCanvasKeys } from '../canvasKeyWindow';
 import type { CanvasRunKeys } from '../canvasItemState';
 import { isNodeIcon } from '../editorHelpers';
+import { drawableLocalBox, isDrawable } from '../drawable';
+import { BLACK } from '../../nodes/viewport/renderGate';
 import { drawOffscreen } from '../offscreen';
 import { perObject } from '../../utils/perObject';
 import { beginStep, endStep } from '../frameProfile/frameProfile';
 import { renderToOffscreenTarget } from '../../nodes/viewport/subviewport/offscreenViewport';
+import { clipOfCamera } from '../../nodes/viewport/subviewport/viewportLightPassHost';
+import type { CanvasClip } from '../lighting2d/lightPassHost';
 
 /**
  * The draw-order keys a group collects: its run's `[from, to)` without `own`, its own key, which its
@@ -27,10 +31,11 @@ export interface CanvasGroupEntry {
   readonly buffer: THREE.WebGLRenderTarget | null;
   /**
    * Fits the group's rect over `drawn`, the world boxes of its drawn items, and draws it plain when
-   * `nested` in another group's window. Answers the rect an enclosing group merges, or null when
-   * the group draws nothing.
+   * `nested` in another group's window. `frameClip` is the clip the frame's camera shows, null for
+   * a camera with no ortho view. Answers the rect an enclosing group merges, or null when the group
+   * draws nothing.
    */
-  fit(drawn: readonly THREE.Box3[], nested: boolean): THREE.Box3 | null;
+  fit(drawn: readonly THREE.Box3[], nested: boolean, frameClip: CanvasClip | null): THREE.Box3 | null;
 }
 
 /** The mounted groups of each scene, written only by `registerCanvasGroup`. */
@@ -53,12 +58,15 @@ export function canvasGroupRectTag(): { tscnCanvasGroupRect: true } {
   return { [RECT_KEY]: true };
 }
 
+/** Whether `object` is a group's rect mesh, tagged by `canvasGroupRectTag`. */
+function isCanvasGroupRect(object: THREE.Object3D): boolean {
+  return object.userData[RECT_KEY] === true;
+}
+
 /** Whether `key` is one of the keys the window collects. */
 function collects({ own, from, to }: CanvasGroupWindow, key: number): boolean {
   return key >= from && key < to && key !== own;
 }
-
-const TRANSPARENT_BLACK = new THREE.Color(0, 0, 0);
 
 /**
  * Draws the buffers of the groups in `scene`, then `draw`, the frame's own draw of the scene, with
@@ -79,16 +87,28 @@ export function drawCanvasGroups(
     return;
   }
   scene.updateMatrixWorld();
-  const outermost = fitGroups([...groups], drawnBoxes(scene, camera, [...groups]));
+  const entries = [...groups];
+  const outermost = fitGroups(entries, drawnBoxes(scene, camera, entries), frameClipOf(camera, frame));
+  const previousAutoUpdate = scene.matrixWorldAutoUpdate;
   beginStep(gl, 'Canvas groups');
   try {
-    for (const group of outermost) {
-      if (group.buffer) fillBuffer(gl, scene, camera, group.window, group.buffer, frame);
-    }
+    // Only layers change between the buffer draws, and `fit` updates each rect it moves.
+    scene.matrixWorldAutoUpdate = false;
+    for (const group of outermost) fillBuffer(gl, scene, camera, group, frame);
   } finally {
+    scene.matrixWorldAutoUpdate = previousAutoUpdate;
     endStep(gl, 'Canvas groups');
   }
   drawCanvasKeys(scene, (key) => !outermost.some((group) => collects(group.window, key)), draw);
+}
+
+/** The clip an ortho camera shows over a frame of `width` x `height` pixels. */
+function frameClipOf(
+  camera: THREE.Camera,
+  { width, height }: { width: number; height: number }
+): CanvasClip | null {
+  const ortho = camera as THREE.OrthographicCamera;
+  return ortho.isOrthographicCamera ? clipOfCamera(ortho, { x: width, y: height }) : null;
 }
 
 /**
@@ -97,17 +117,22 @@ export function drawCanvasGroups(
  */
 function fitGroups(
   groups: readonly CanvasGroupEntry[],
-  drawn: ReadonlyMap<CanvasGroupEntry, THREE.Box3[]>
+  drawn: ReadonlyMap<CanvasGroupEntry, THREE.Box3[]>,
+  frameClip: CanvasClip | null
 ): CanvasGroupEntry[] {
-  const enclosing = (inner: CanvasGroupEntry) =>
-    groups.filter((group) => group !== inner && collects(group.window, inner.window.own));
-  const innermostFirst = [...groups].sort((a, b) => enclosing(b).length - enclosing(a).length);
+  const enclosing = new Map(
+    groups.map((inner) => [
+      inner,
+      groups.filter((group) => group !== inner && collects(group.window, inner.window.own)),
+    ])
+  );
+  const around = (group: CanvasGroupEntry) => enclosing.get(group)!;
+  const innermostFirst = [...groups].sort((a, b) => around(b).length - around(a).length);
   for (const group of innermostFirst) {
-    const around = enclosing(group);
-    const rect = group.fit(drawn.get(group)!, around.length > 0);
-    if (rect) for (const outer of around) drawn.get(outer)!.push(rect);
+    const rect = group.fit(drawn.get(group)!, around(group).length > 0, frameClip);
+    if (rect) for (const outer of around(group)) drawn.get(outer)!.push(rect);
   }
-  return groups.filter((group) => enclosing(group).length === 0);
+  return groups.filter((group) => around(group).length === 0);
 }
 
 /**
@@ -121,12 +146,11 @@ function drawnBoxes(
 ): Map<CanvasGroupEntry, THREE.Box3[]> {
   const drawn = new Map(groups.map((group) => [group, [] as THREE.Box3[]]));
   const visit = (object: THREE.Object3D, inherited: number): void => {
-    if (!object.visible || isNodeIcon(object) || object.userData[RECT_KEY]) return;
+    if (!object.visible || isNodeIcon(object) || isCanvasGroupRect(object)) return;
     const key = canvasKeyOf(object, inherited);
-    const box = camera.layers.test(object.layers) ? worldBox(object) : null;
-    if (box) {
-      for (const group of groups) if (collects(group.window, key)) drawn.get(group)!.push(box);
-    }
+    const collecting = groups.filter((group) => collects(group.window, key));
+    const box = collecting.length > 0 && camera.layers.test(object.layers) ? worldBox(object) : null;
+    if (box) for (const group of collecting) drawn.get(group)!.push(box);
     for (const child of object.children) visit(child, key);
   };
   visit(scene, 0);
@@ -135,39 +159,28 @@ function drawnBoxes(
 
 /** The bounds of a drawable object's geometry, its instances included, in world space. */
 function worldBox(object: THREE.Object3D): THREE.Box3 | null {
-  const drawable = object as THREE.Mesh & {
-    boundingBox?: THREE.Box3 | null;
-    computeBoundingBox?: () => void;
-  };
-  if (!drawable.isMesh && !(object as THREE.Line).isLine && !(object as THREE.Points).isPoints) return null;
-  // An instanced or skinned mesh bounds its instances or its pose, not its geometry alone.
-  if (drawable.boundingBox !== undefined) {
-    if (drawable.boundingBox === null) drawable.computeBoundingBox?.();
-  } else if (drawable.geometry.boundingBox === null) {
-    drawable.geometry.computeBoundingBox();
-  }
-  const local = drawable.boundingBox ?? drawable.geometry.boundingBox;
-  if (!local || local.isEmpty()) return null;
-  return local.clone().applyMatrix4(object.matrixWorld);
+  if (!isDrawable(object)) return null;
+  const local = drawableLocalBox(object);
+  return local.isEmpty() ? null : local.clone().applyMatrix4(object.matrixWorld);
 }
 
 /**
- * Draws the keys `window` collects into `buffer`, which it clears to transparent black first
- * itself: a frame drawn over a kept target turns the render's colour clear off.
+ * Draws the keys the group's window collects into its buffer, if it reads one. It clears the buffer
+ * to transparent black itself: a frame drawn over a kept target turns the render's colour clear off.
  */
 function fillBuffer(
   gl: THREE.WebGLRenderer,
   scene: THREE.Object3D,
   camera: THREE.Camera,
-  window: CanvasGroupWindow,
-  buffer: THREE.WebGLRenderTarget,
+  { window, buffer }: CanvasGroupEntry,
   frame: { width: number; height: number }
 ): void {
+  if (!buffer) return;
   if (buffer.width !== frame.width || buffer.height !== frame.height)
     buffer.setSize(frame.width, frame.height);
   renderToOffscreenTarget(gl, {
     target: buffer,
-    clearColor: TRANSPARENT_BLACK,
+    clearColor: BLACK,
     transparentBg: true,
     draw: () =>
       drawOffscreen(gl, () => {

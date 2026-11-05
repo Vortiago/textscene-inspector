@@ -5,6 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import { offscreenRendererState } from '../../nodes/viewport/subviewport/offscreenRenderer.testkit';
 import {
   canvasGroupRectTag,
   drawCanvasGroups,
@@ -25,17 +26,11 @@ function recordingRenderer(meshes: Record<string, THREE.Mesh>) {
   const clears: Target[] = [];
   let bound: Target = null;
   const gl = {
-    autoClear: true,
-    autoClearColor: true,
+    ...offscreenRendererState(),
     getRenderTarget: () => bound,
     setRenderTarget: (target: Target) => {
       bound = target;
     },
-    getClearColor: (out: THREE.Color) => out,
-    getClearAlpha: () => 1,
-    getActiveCubeFace: () => 0,
-    getActiveMipmapLevel: () => 0,
-    setClearColor: () => {},
     clear: () => {
       clears.push(bound);
     },
@@ -63,6 +58,8 @@ function entry(window: CanvasGroupEntry['window'], buffer: Target): CanvasGroupE
 }
 
 const camera = new THREE.OrthographicCamera();
+/** The window of a group keyed 10 over a run of keys 10 to 19. */
+const WINDOW = { own: 10, from: 10, to: 20 };
 const FRAME = { width: 64, height: 32 };
 const releases: (() => void)[] = [];
 afterEach(() => releases.splice(0).forEach((release) => release()));
@@ -86,7 +83,7 @@ describe('drawCanvasGroups', () => {
     const scene = new THREE.Scene();
     const meshes = { before: item(scene, 5, 0), grouped: item(scene, 11, 0), after: item(scene, 25, 0) };
     const buffer = new THREE.WebGLRenderTarget(1, 1);
-    register(scene, entry({ own: 10, from: 10, to: 20 }, buffer));
+    register(scene, entry(WINDOW, buffer));
     const { gl, draws } = recordingRenderer(meshes);
 
     drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
@@ -102,7 +99,7 @@ describe('drawCanvasGroups', () => {
     const scene = new THREE.Scene();
     item(scene, 11, 0);
     const buffer = new THREE.WebGLRenderTarget(1, 1);
-    register(scene, entry({ own: 10, from: 10, to: 20 }, buffer));
+    register(scene, entry(WINDOW, buffer));
     const { gl, clears } = recordingRenderer({});
     gl.autoClearColor = false;
 
@@ -115,7 +112,7 @@ describe('drawCanvasGroups', () => {
     const scene = new THREE.Scene();
     item(scene, 11, 0);
     const buffer = new THREE.WebGLRenderTarget(1, 1);
-    register(scene, entry({ own: 10, from: 10, to: 20 }, buffer));
+    register(scene, entry(WINDOW, buffer));
     const { gl } = recordingRenderer({});
 
     drawCanvasGroups(gl, scene, camera, FRAME, () => {});
@@ -142,7 +139,7 @@ describe('drawCanvasGroups', () => {
   it('hands the group the world box of each grouped mesh, and draws no buffer it does not read', () => {
     const scene = new THREE.Scene();
     item(scene, 11, 3);
-    const group = entry({ own: 10, from: 10, to: 20 }, null);
+    const group = entry(WINDOW, null);
     register(scene, group);
     const { gl, draws } = recordingRenderer({});
 
@@ -154,11 +151,24 @@ describe('drawCanvasGroups', () => {
     expect(nested).toBe(false);
   });
 
+  it("hands the group the clip the frame's camera shows", () => {
+    const scene = new THREE.Scene();
+    const group = entry(WINDOW, null);
+    register(scene, group);
+
+    drawCanvasGroups(recordingRenderer({}).gl, scene, camera, FRAME, () => {});
+
+    expect(vi.mocked(group.fit).mock.calls[0]![2]).toEqual({
+      rect: { x: -1, y: -1, w: 2, h: 2 },
+      scale: { x: 32, y: 16 },
+    });
+  });
+
   it('leaves out a hidden mesh and a mesh the camera does not see', () => {
     const scene = new THREE.Scene();
     item(scene, 11, 0).visible = false;
     item(scene, 12, 0).layers.set(5);
-    const group = entry({ own: 10, from: 10, to: 20 }, null);
+    const group = entry(WINDOW, null);
     register(scene, group);
 
     drawCanvasGroups(recordingRenderer({}).gl, scene, camera, FRAME, () => {});
@@ -172,10 +182,10 @@ describe('drawCanvasGroups', () => {
     const outerBuffer = new THREE.WebGLRenderTarget(1, 1);
     const innerBuffer = new THREE.WebGLRenderTarget(1, 1);
     const innerRect = new THREE.Box3(new THREE.Vector3(-9, -9, 0), new THREE.Vector3(9, 9, 0));
-    const outer = entry({ own: 10, from: 10, to: 20 }, outerBuffer);
+    const outer = entry(WINDOW, outerBuffer);
     const inner = {
       ...entry({ own: 12, from: 12, to: 15 }, innerBuffer),
-      fit: vi.fn((_drawn: readonly THREE.Box3[], _nested: boolean) => innerRect),
+      fit: vi.fn((..._args: Parameters<CanvasGroupEntry['fit']>) => innerRect),
     };
     register(scene, outer);
     register(scene, inner);
@@ -195,7 +205,7 @@ describe('drawCanvasGroups', () => {
     const scene = new THREE.Scene();
     const rect = item(scene, 12, 0);
     rect.userData = { ...canvasGroupRectTag() };
-    const outer = entry({ own: 10, from: 10, to: 20 }, null);
+    const outer = entry(WINDOW, null);
     register(scene, outer);
 
     drawCanvasGroups(recordingRenderer({}).gl, scene, camera, FRAME, () => {});

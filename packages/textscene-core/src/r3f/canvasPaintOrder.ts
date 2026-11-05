@@ -369,7 +369,10 @@ function drawsBehindParent(node: TscnNode): boolean {
 interface PaintRangeLayout {
   /** `y_sort_enabled`: the children are re-packed in sort order after the parent. */
   sortsChildren?: boolean;
-  /** A CanvasGroup's: every child draws before the parent, in index order (lines 471-484). */
+  /**
+   * A CanvasGroup's: every child draws before the parent, in index order (lines 471-484). A parent
+   * that sorts its children takes the y-sort branch instead, which groups nothing (lines 437-469).
+   */
   drawsChildrenFirst?: boolean;
   /** Values the parent's internal front children take (`internalFrontRoom`). */
   frontRoom?: number;
@@ -444,11 +447,9 @@ export function allocatePaintRange(
 
 /** `allocatePaintRange` for `node`'s own children, with the layout the node declares. */
 export function allocateNodePaintRange(range: PaintRange, node: TscnNode): AllocatedPaintRange {
-  const sortsChildren = (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true;
   return allocatePaintRange(range, node.children, {
-    sortsChildren,
-    // A y-sorted CanvasGroup takes the y-sort branch, which groups nothing (lines 437-469).
-    drawsChildrenFirst: node.type === 'CanvasGroup' && !sortsChildren,
+    sortsChildren: (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true,
+    drawsChildrenFirst: node.type === 'CanvasGroup',
     frontRoom: internalFrontRoom(node),
     backRoom: internalBackRoom(node),
     listedOrder: listedChildOrder(node, node.children),

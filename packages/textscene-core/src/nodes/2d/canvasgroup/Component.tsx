@@ -55,7 +55,8 @@ function CompositingGroup({ node, children }: { node: TscnNode; children?: React
           tint={tint}
           material={material}
           pixelMaterial={pixelMaterial}
-          margins={props}
+          fitMargin={props.fit_margin}
+          clearMargin={props.clear_margin}
         />
       )}
     >
@@ -73,7 +74,8 @@ interface GroupRectProps {
   /** The CanvasItemMaterial in force, which replaces the group shader with a plain rect. */
   material: CanvasItemMaterialProperties | null;
   pixelMaterial: CanvasItemPixelMaterial;
-  margins: Pick<CanvasGroupProperties, 'fit_margin' | 'clear_margin'>;
+  fitMargin: number;
+  clearMargin: number;
 }
 
 /**
@@ -82,7 +84,7 @@ interface GroupRectProps {
  * (`renderer_canvas_render_rd.cpp:2207-2219`), and so does a group inside another group's window,
  * which Godot's renderer draws as an ordinary item (`:812-813`).
  */
-function GroupRect({ window, tint, material, pixelMaterial, margins }: GroupRectProps) {
+function GroupRect({ window, tint, material, pixelMaterial, fitMargin, clearMargin }: GroupRectProps) {
   const scene = useThree((state) => state.scene);
   const space = useCanvasColorSpace();
   const buffer = useMemo(() => createCanvasFrame(space), [space]);
@@ -97,15 +99,16 @@ function GroupRect({ window, tint, material, pixelMaterial, margins }: GroupRect
   const composite = useRef<THREE.Mesh>(null);
   const plain = useRef<THREE.Mesh>(null);
   const readsBuffer = material === null;
-  const { fit_margin: fitMargin, clear_margin: clearMargin } = margins;
   useLayoutEffect(
     () =>
       registerCanvasGroup(scene, {
         window,
         buffer: readsBuffer ? buffer : null,
-        fit: (drawn, nested) => {
-          for (const mesh of [composite.current, plain.current]) if (mesh) mesh.visible = false;
-          const framed = clip.current;
+        fit: (drawn, nested, frameClip) => {
+          if (composite.current) composite.current.visible = false;
+          if (plain.current) plain.current.visible = false;
+          // A canvas with no light pass, such as an inline SubViewport's, takes the frame's own clip.
+          const framed = clip.current ?? frameClip;
           const pixels = framed && fittedRect(drawn, framed, fitMargin);
           if (!pixels) return null;
           const shown = nested || !readsBuffer ? plain.current : composite.current;
@@ -178,6 +181,8 @@ function placeRect(mesh: THREE.Mesh, world: THREE.Box3): void {
   mesh.position.z = 0;
   mesh.scale.set(localBox.max.x - localBox.min.x, localBox.max.y - localBox.min.y, 1);
   mesh.visible = true;
+  // The pass draws the buffers after the scene's last matrix update.
+  mesh.updateMatrixWorld();
 }
 
 /**
