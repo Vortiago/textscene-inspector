@@ -242,7 +242,7 @@ export function paintSceneFontCanvas(
   }
 
   const baselineOffsetPx = layout.baselineOffsetPx;
-  const variation: GlyphVariation = { embolden: metrics.embolden ?? 0, skew };
+  const variation: GlyphVariation = { embolden: metrics.embolden ?? 0, skew, opentype: metrics.opentype };
   // Each glyph draws its contour as Godot's FreeType draws it, which carries its own shear. The text
   // draws only for a face with no outlines, or a glyph with no contour.
   const contourOutlines = metrics.outlines ?? null;
@@ -277,7 +277,7 @@ export function paintSceneFontCanvas(
       canvasLayout.offsetYPx + (snapsGlyphs ? Math.floor(originPhasePx.y + lineBaselinePx) : lineBaselinePx);
 
     ctx.save();
-    // A contour line draws under the identity transform, so its stroke keeps its width in every direction.
+    // A contour line draws under the identity transform: each contour carries its own shear.
     if (skew !== 0 && !contourOutlines) shearAboutBaseline(ctx, skew, baselineY);
     for (const gp of line.glyphs) {
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;

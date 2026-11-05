@@ -1,6 +1,6 @@
 /**
- * The canvas path of a glyph outline: `FT_Outline_Decompose` (`ftoutln.c`) over the points and tags
- * of `GlyphContours`, so that a canvas strokes the very contour FreeType's stroker takes.
+ * The path of a glyph outline: `FT_Outline_Decompose` (`ftoutln.c`) over the points and tags of
+ * `GlyphContours`, so that the smooth rasteriser (`ftGrays.ts`) covers the contour FreeType decomposes.
  *
  * Portions ported from FreeType (FreeType License).
  * Copyright (c) 1996-2024 David Turner, Robert Wilhelm and Werner Lemberg.

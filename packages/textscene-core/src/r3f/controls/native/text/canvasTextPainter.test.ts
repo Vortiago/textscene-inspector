@@ -396,6 +396,17 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
     expect(alphaAt(calls, penX + 3, baselineY + 1)).toBe(0);
   });
 
+  // Godot loads the glyph at the axis values of the face's `variation_opentype` (`text_server_adv.cpp:1260-1268`).
+  it('reads the outline at the axis values of the face', () => {
+    const { outlines, glyphContours } = outlinesStub();
+    const layout = layoutFor('A', 0);
+    const opentype = new Map([['wght', 700]]);
+    const varied = { ...layout, fontMetrics: withVariation(layout.fontMetrics, { opentype, outlines }) };
+    paintRecording(varied, 0, {});
+
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0, opentype });
+  });
+
   it('fills the sheared outline of a sheared glyph under the identity transform', () => {
     const { outlines, glyphContours } = outlinesStub();
     const { calls } = paintRecording(layoutFor('A', 0), 0, { skew: 0.3, outlines });

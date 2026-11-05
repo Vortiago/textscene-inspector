@@ -133,7 +133,10 @@ class StrokeBorder {
   lineTo(to: Vector2, isMovable: boolean): void {
     if (this.movable) {
       this.points[this.points.length - 1] = to;
-    } else if (!(this.start >= 0 && this.points.length > this.start && isNear(this.last, to))) {
+    } else {
+      // A zero-length line adds no point and leaves the border fixed, as FreeType returns before it
+      // sets `movable`: the next line must not move the corner point before it.
+      if (this.start >= 0 && this.points.length > this.start && isNear(this.last, to)) return;
       this.points.push(to);
       this.tags.push(TAG_ON);
     }

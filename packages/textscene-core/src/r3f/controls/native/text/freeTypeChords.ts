@@ -1,7 +1,7 @@
 /**
  * A path sink that draws each curve as the straight chords FreeType's smooth rasteriser draws
- * (`ftgrays.c`), so that a canvas fill or stroke of a glyph outline covers the pixels Godot's glyph
- * bitmap covers. A chord sits up to 1/16 px inside its conic, which moves an edge by that much.
+ * (`ftgrays.c`), so that the rasteriser port (`ftGrays.ts`) covers the pixels Godot's glyph bitmap
+ * covers. A chord sits up to 1/16 px inside its conic, which moves an edge by that much.
  *
  * Portions ported from FreeType (FreeType License).
  * Copyright (c) 1996-2024 David Turner, Robert Wilhelm and Werner Lemberg.
