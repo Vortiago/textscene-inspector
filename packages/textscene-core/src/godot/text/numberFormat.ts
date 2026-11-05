@@ -93,7 +93,7 @@ const SYSTEM_OF_LOCALE: ReadonlyMap<string, LoadedSystem> = new Map(
  * `format_number` (`translation_server.cpp:255-278`): `e`, `E`, each ASCII digit, `.` and `,` take the
  * locale's. An empty locale, or one with no system, returns the string as it is.
  */
-export function formatNumber(number: string, locale: string): string {
+function formatNumber(number: string, locale: string): string {
   const system = SYSTEM_OF_LOCALE.get(locale);
   if (system === undefined) return number;
   return number.replace(/[0-9.,eE]/g, (character) => {
@@ -104,7 +104,7 @@ export function formatNumber(number: string, locale: string): string {
 }
 
 /** `get_percent_sign` (`translation_server.cpp:301-312`): `%` for a locale with no system. */
-export function percentSign(locale: string): string {
+function percentSign(locale: string): string {
   return SYSTEM_OF_LOCALE.get(locale)?.percentSign ?? '%';
 }
 
@@ -115,13 +115,17 @@ export interface Numerals {
   localizeNumeralSystem?: boolean;
 }
 
+function isLocalizing({ localizeNumeralSystem }: Numerals): boolean {
+  return localizeNumeralSystem !== false;
+}
+
 /** The number as a control writes it: in the digits of `locale` unless the property is off (`is_localizing_numeral_system`). */
 export function formatControlNumber(number: string, numerals: Numerals): string {
-  return numerals.localizeNumeralSystem === false ? number : formatNumber(number, numerals.locale);
+  return isLocalizing(numerals) ? formatNumber(number, numerals.locale) : number;
 }
 
 /** The percentage as `ProgressBar` writes it (`progress_bar.cpp:168-174`): the digits and the percent sign of `locale`, or `%` after ASCII digits. */
 export function formatControlPercent(number: string, numerals: Numerals): string {
-  const sign = numerals.localizeNumeralSystem === false ? '%' : percentSign(numerals.locale);
+  const sign = isLocalizing(numerals) ? percentSign(numerals.locale) : '%';
   return `${formatControlNumber(number, numerals)}${sign}`;
 }

@@ -119,6 +119,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
     ]
   );
 
+  const numerals = { locale: solveNode.locale, localizeNumeralSystem: codeEditProps.localizeNumeralSystem };
   const lineNumberGutterXPx = codeEditLineNumberGutterXPx(styleBox.contentMargin.left, band.mainWidthPx);
 
   const drawBand = layoutTextEditDrawBand(
@@ -239,7 +240,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
             lineIndex,
             band.lineNumberDigits,
             codeEditProps.gutterZeroPadLineNumbers,
-            { locale: solveNode.locale, localizeNumeralSystem: codeEditProps.localizeNumeralSystem }
+            numerals
           );
           const layout = shapeText(text, {
             fontSizePx,

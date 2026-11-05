@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
-import { formatControlNumber } from '../../../../godot/text/numberFormat';
+import { formatControlNumber, type Numerals } from '../../../../godot/text/numberFormat';
 import type { Rgba } from '../../../../godot/math/math';
 import { getFontTabWidthPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
@@ -204,13 +204,9 @@ function letterNumeral(number: number, capitalise: boolean): string {
 
 /**
  * `_get_prefix` (`:242-270`). `kinds` and `indexes` run innermost list first. A bullet ends the walk,
- * and stands alone when no number came before it. `writeNumber` writes a plain number (`:255-258`).
+ * and stands alone when no number came before it. A plain number takes the digits of `numerals` (`:255-258`).
  */
-function markerText(
-  kinds: readonly ListKind[],
-  indexes: readonly number[],
-  writeNumber: (number: number) => string
-): string {
+function markerText(kinds: readonly ListKind[], indexes: readonly number[], numerals: Numerals): string {
   let marker = '';
   let segments = 0;
   for (const [position, kind] of kinds.entries()) {
@@ -221,7 +217,7 @@ function markerText(
     const index = indexes[position]!;
     const segment =
       kind.type === 'numbers'
-        ? writeNumber(index)
+        ? formatControlNumber(String(index), numerals)
         : kind.type === 'letters'
           ? letterNumeral(index, kind.capitalise)
           : romanNumeral(index, kind.capitalise);
@@ -406,10 +402,11 @@ export function paragraphListings(
     let widestMarkerPx = 0;
     [firstRow, ...(rowsOfList.get(list) ?? [])].forEach((rowIndex, position) => {
       const row = rows[rowIndex]!;
-      const locale = row.run.bidi.language ?? '';
-      const writeNumber = (number: number) =>
-        formatControlNumber(String(number), { locale, localizeNumeralSystem: context.localizeNumeralSystem });
-      const text = markerText(kinds, [position + 1, ...outerIndexes], writeNumber);
+      const numerals = {
+        locale: row.run.bidi.language ?? '',
+        localizeNumeralSystem: context.localizeNumeralSystem,
+      };
+      const text = markerText(kinds, [position + 1, ...outerIndexes], numerals);
       const marker = shapeMarker(text, row, context.faces);
       markers.set(rowIndex, marker);
       widestMarkerPx = Math.max(widestMarkerPx, marker.widthPx);

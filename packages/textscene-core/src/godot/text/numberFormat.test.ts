@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { formatControlNumber, formatNumber, percentSign } from './numberFormat';
+import { formatControlNumber, formatControlPercent } from './numberFormat';
+
+const formatNumber = (number: string, locale: string) => formatControlNumber(number, { locale });
+const percentSign = (locale: string) => formatControlPercent('', { locale });
 
 describe('formatNumber', () => {
   // Expected strings are the `num_system_data` digit rows of `core/string/locales.h:1863-1883`.
