@@ -27,7 +27,7 @@ import {
   type GlyphVariation,
 } from './fontMetrics';
 import type { GlyphPlacement, TextLayoutResult } from './textLayout';
-import { isCanvasFontMetrics } from './runtimeFontMetrics';
+import { isCanvasFontMetrics, type CanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
 import type { CanvasItemPixelMaterial } from '../../../components/LitCanvasItemPixels';
 import { injectProgram, injectViewportProgram } from '../../../materialProgramInputs';
@@ -119,12 +119,12 @@ const INK_SLACK_RIGHT_PX = 1;
 function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: number } {
   let startPx = Infinity;
   let endPx = -Infinity;
-  const measuresInk = new Map<FontMetrics, boolean>();
+  const inkFaces = new Map<FontMetrics, CanvasFontMetrics | null>();
   for (const { glyphs } of layout.lines) {
     for (const glyph of glyphs) {
       const face = glyph.fontMetrics;
-      if (!measuresInk.has(face)) measuresInk.set(face, facesMeasuredInkIsDrawn(face));
-      const { leftPx, rightPx } = glyphReachPx(glyph, measuresInk.get(face)!);
+      if (!inkFaces.has(face)) inkFaces.set(face, drawsMeasuredInk(face) ? face : null);
+      const { leftPx, rightPx } = glyphReachPx(glyph, inkFaces.get(face)!, layout.baselineOffsetPx);
       startPx = Math.min(startPx, glyph.x - leftPx - INK_SLACK_LEFT_PX);
       endPx = Math.max(endPx, glyph.x + rightPx + INK_SLACK_RIGHT_PX);
     }
@@ -133,23 +133,26 @@ function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: numb
 }
 
 /** Whether `face` draws the ink it measures: `measureText` measures the default instance alone. */
-function facesMeasuredInkIsDrawn(face: FontMetrics): boolean {
+function drawsMeasuredInk(face: FontMetrics): face is CanvasFontMetrics {
   return isCanvasFontMetrics(face) && !drawnOpentype(face);
 }
 
 /**
- * How far `glyph`'s ink reaches left of its pen and right of it, px, its pen box included. A glyph
- * with no drawn measured ink takes its face's ascent on each side: the ascent bounds the reach of
- * any glyph of the face.
+ * How far `glyph`'s ink reaches left of its pen and right of it, px, its pen box included. `inkFace`
+ * is its face where that face draws the ink it measures. A glyph with no such ink takes the larger
+ * of `lineAscentPx` and its face's own ascent on each side: an ascent bounds the reach of any glyph.
  */
-function glyphReachPx(glyph: GlyphPlacement, measuresInk: boolean): { leftPx: number; rightPx: number } {
-  const face = glyph.fontMetrics;
-  const ink = measuresInk && isCanvasFontMetrics(face) ? face.getGlyphInkUnits?.(glyph.char) : undefined;
+function glyphReachPx(
+  glyph: GlyphPlacement,
+  inkFace: CanvasFontMetrics | null,
+  lineAscentPx: number
+): { leftPx: number; rightPx: number } {
+  const ink = inkFace?.getGlyphInkUnits?.(glyph.char);
   if (!ink) {
-    const ascentPx = getFontAscentPx(face, glyph.fontSizePx);
-    return { leftPx: ascentPx, rightPx: glyph.advance + ascentPx };
+    const reachPx = Math.max(lineAscentPx, getFontAscentPx(glyph.fontMetrics, glyph.fontSizePx));
+    return { leftPx: reachPx, rightPx: glyph.advance + reachPx };
   }
-  const pxPerUnit = glyph.fontSizePx / face.unitsPerEm;
+  const pxPerUnit = glyph.fontSizePx / glyph.fontMetrics.unitsPerEm;
   return {
     leftPx: Math.max(0, ink.left * pxPerUnit),
     rightPx: Math.max(glyph.advance, ink.right * pxPerUnit),

@@ -69,13 +69,43 @@ describe('computeCanvasTextCanvasLayout', () => {
     expect(contentOriginOnQuad(canvasLayout).x).toBeCloseTo(0, 6);
   });
 
-  // A fallback face's run draws at the line's baseline, which another face's ascent can set.
-  it("reaches the ascent of the glyph's own face, not the line's baseline offset", () => {
+  it("reaches a face's own ascent where it passes the line's baseline offset", () => {
     const layout = layoutFor('AB');
     const lowBaseline = { ...layout, baselineOffsetPx: 1 };
     const glyph = layout.lines[0]!.glyphs[0]!;
     const inkLeftPx = Math.floor(-getFontAscentPx(glyph.fontMetrics, glyph.fontSizePx) - 2);
     expect(computeCanvasTextCanvasLayout(lowBaseline, 0).offsetXPx).toBe(-inkLeftPx);
+  });
+
+  // A fallback face's run draws at the line's baseline, which the taller first face sets.
+  it("reaches the line's ascent past a glyph of a shorter fallback face", () => {
+    const shortFace = createRuntimeFontMetrics({
+      hasGlyph: (ch) => ch === '一',
+      scalars: { unitsPerEm: 1000, ascent: 100, descent: 100 },
+      measureWidthUnits: (text) => text.length * 1000,
+      cssFontFamily: 'short-fallback-test',
+    });
+    const firstFace = createRuntimeFontMetrics({
+      hasGlyph: (ch) => ch !== '一',
+      scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
+      measureWidthUnits: (text) => text.length * 500,
+      cssFontFamily: 'tall-first-face-test',
+    });
+    const layout = shapeText('A一', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      fontMetrics: { ...firstFace, fallbacks: [shortFace] },
+      lineSpacingPx: 0,
+    });
+    const line = layout.lines[0]!;
+    const fallbackGlyph = line.glyphs.find((glyph) => glyph.fontMetrics === shortFace)!;
+    const fallbackRun = { ...layout, lines: [{ ...line, glyphs: [fallbackGlyph] }] };
+    const inkLeftPx = Math.floor(fallbackGlyph.x - layout.baselineOffsetPx - 2);
+    const canvasLayout = computeCanvasTextCanvasLayout(fallbackRun, 0);
+    expect(canvasLayout.canvasWidthPx).toBe(
+      Math.ceil(fallbackGlyph.x + fallbackGlyph.advance + layout.baselineOffsetPx + 1 - inkLeftPx)
+    );
   });
 
   // A trimmed AUTO right-to-left fill draws past the trimmed width it reports (text_server.cpp:1744).
