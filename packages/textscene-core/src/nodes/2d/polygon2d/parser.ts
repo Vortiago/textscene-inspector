@@ -24,6 +24,7 @@ export function parsePolygon2D(
 ): Polygon2DProperties {
   const base = parseNode2D(heading, properties);
   const at = (key: string) => `Polygon2D "${base.name}".${key}`;
+  const label = base.name || 'Polygon2D';
 
   const polygon = packedOr(properties.polygon, parsePackedVector2Array, NO_FLOATS, at('polygon'));
 
@@ -51,8 +52,8 @@ export function parsePolygon2D(
     vertexColors,
     // class_polygon2d.html: texture_offset (0,0), texture_scale (1,1),
     // texture_rotation 0.
-    textureOffset: vec2Or(properties.texture_offset, { x: 0, y: 0 }, base.name || 'Polygon2D'),
-    textureScale: vec2Or(properties.texture_scale, { x: 1, y: 1 }, base.name || 'Polygon2D'),
+    textureOffset: vec2Or(properties.texture_offset, { x: 0, y: 0 }, label),
+    textureScale: vec2Or(properties.texture_scale, { x: 1, y: 1 }, label),
     textureRotation: floatOr(properties.texture_rotation, 0, 'Polygon2D'),
     // class_polygon2d.html: internal_vertex_count 0, invert_enabled false,
     // invert_border 100.
@@ -60,7 +61,7 @@ export function parsePolygon2D(
     invertEnabled: boolOr(properties.invert_enabled, false),
     invertBorder: floatOr(properties.invert_border, 100, 'Polygon2D'),
     color: properties.color ? parseColor(properties.color) : { r: 1, g: 1, b: 1, a: 1 },
-    offset: vec2Or(properties.offset, { x: 0, y: 0 }, base.name || 'Polygon2D'),
+    offset: vec2Or(properties.offset, { x: 0, y: 0 }, label),
     bones: packedOr(properties.bones, parseBones, [], at('bones')),
   };
 
