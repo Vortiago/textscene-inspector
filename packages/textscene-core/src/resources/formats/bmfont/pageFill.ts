@@ -45,10 +45,18 @@ function channelOf({ pixels }: PageImage, channel: number): number[] {
   return values;
 }
 
-/** A page of one 8-bit channel, white with the channel as alpha (`_convert_mono_8bit`). */
-function mono8(image: PageImage, channel: number): BitmapFill {
+/**
+ * A page of one channel, white with the channel as alpha (`_convert_mono_8bit`, `_convert_mono_4bit`).
+ * A greyscale page holds its grey in the red channel.
+ */
+function mono(
+  image: PageImage,
+  channel: number,
+  toAlpha: (value: number) => number = (value) => value
+): BitmapFill {
   const { width, height } = image.pixels;
-  return whiteWithAlpha(channelOf(image, image.source === 'Lum8' ? RED : channel), width, height);
+  const values = channelOf(image, image.source === 'Lum8' ? RED : channel);
+  return whiteWithAlpha(values.map(toAlpha), width, height);
 }
 
 /** `value` kept only above `threshold` (`_convert_mono_4bit`, `_convert_rgba_4bit`). */
@@ -56,12 +64,6 @@ const upperHalf = (value: number): number => (value > 0x7f ? value : 0);
 
 /** The packed 4-bit glyph half (`_convert_packed_4bit`), a `uint8_t` store of `(value - 0x0F) * 2`. */
 const packedGlyphHalf = (value: number): number => (value > 0x0f ? ((value - 0x0f) * 2) & 0xff : 0);
-
-function mono4(image: PageImage, channel: number): BitmapFill {
-  const { width, height } = image.pixels;
-  const values = channelOf(image, image.source === 'Lum8' ? RED : channel);
-  return whiteWithAlpha(values.map(upperHalf), width, height);
-}
 
 function rgba4(image: PageImage): BitmapFill {
   const { width, height, data } = image.pixels;
@@ -73,7 +75,7 @@ function colour(image: PageImage): BitmapFill {
   return { width, height, data: Uint8Array.from(data) };
 }
 
-/** Four fills, one for each channel of a packed page, numbered from `firstIndex`. */
+/** Four fills, one for each channel of a packed page, numbered from `4 * pageId`. */
 function packed(
   image: PageImage,
   pageId: number,
@@ -98,19 +100,15 @@ const isRgba = (image: PageImage): boolean => image.source === 'RGBA8';
 /** `FORMAT_RGBA8` or `FORMAT_L8`: the layouts that read one channel. */
 const isRgbaOrGrey = (image: PageImage): boolean => image.source === 'RGBA8' || image.source === 'Lum8';
 
-/** Godot picks a layout by the channel settings, then refuses an image that is not in the format the layout reads. */
-function requireFormat(isReadable: boolean, page: BmfontPage): void {
-  if (!isReadable) throw unsupported(page.file);
-}
-
+// Godot picks a layout by the channel settings, then refuses an image that is not in the format it reads.
 function packedFills(layout: PageLayout, image: PageImage, page: BmfontPage): Map<number, BitmapFill> {
   const alphaChannel = layout.channels[ALPHA];
   if (alphaChannel === 0) {
-    requireFormat(isRgba(image), page);
+    if (!isRgba(image)) throw unsupported(page.file);
     return packed(image, page.id, (value) => value);
   }
   if (alphaChannel === 2 && layout.outline > 0) {
-    requireFormat(isRgba(image), page);
+    if (!isRgba(image)) throw unsupported(page.file);
     return packed(image, page.id, packedGlyphHalf);
   }
   throw unsupported(page.file);
@@ -131,24 +129,24 @@ function unpackedFill(layout: PageLayout, image: PageImage, page: BmfontPage): B
   const { channels, outline } = layout;
   if (layout.format === 'text' && isLegacyColourLayout(layout, image)) return colour(image);
   if (channels.every((channel) => channel === 0)) {
-    requireFormat(isRgba(image), page);
+    if (!isRgba(image)) throw unsupported(page.file);
     return colour(image);
   }
   if (channels.every((channel) => channel === 2) && outline > 0) {
-    requireFormat(isRgba(image), page);
+    if (!isRgba(image)) throw unsupported(page.file);
     return rgba4(image);
   }
   if (layout.firstGlyphChannel >= 0 && layout.firstOutlineChannel >= 0 && outline > 0) {
-    requireFormat(isRgbaOrGrey(image), page);
-    return mono8(image, layout.firstGlyphChannel);
+    if (!isRgbaOrGrey(image)) throw unsupported(page.file);
+    return mono(image, layout.firstGlyphChannel);
   }
   if (layout.firstCombinedChannel >= 0 && outline > 0) {
-    requireFormat(isRgbaOrGrey(image), page);
-    return mono4(image, layout.firstCombinedChannel);
+    if (!isRgbaOrGrey(image)) throw unsupported(page.file);
+    return mono(image, layout.firstCombinedChannel, upperHalf);
   }
   if (layout.firstGlyphChannel >= 0) {
-    requireFormat(isRgbaOrGrey(image), page);
-    return mono8(image, layout.firstGlyphChannel);
+    if (!isRgbaOrGrey(image)) throw unsupported(page.file);
+    return mono(image, layout.firstGlyphChannel);
   }
   throw unsupported(page.file);
 }

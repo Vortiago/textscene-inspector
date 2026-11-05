@@ -9,6 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { stringToInt } from '../../../godot/string/string';
 import type { BitmapGlyph } from '../../fonts/font/types';
 import { OEM_TO_UNICODE } from './oemTables';
 
@@ -83,17 +84,6 @@ export interface BmfontDescriptor {
 /** The key of a kerning pair: `first` and `second` are Unicode codepoints, at most 21 bits each. */
 export function kerningKey(first: number, second: number): number {
   return first * 0x200000 + second;
-}
-
-/**
- * `String::to_int` (`core/string/ustring.cpp:2303-2311,2616`): the characters before a sign or a
- * digit are skipped, the integer ends at the first other character, and a `.` ends the text.
- */
-function stringToInt(text: string): number {
-  const end = text.includes('.') ? text.indexOf('.') : text.length;
-  const match = /^[^0-9+-]*([+-]?)([0-9]*)/.exec(text.slice(0, end));
-  if (!match || match[2] === '') return 0;
-  return (match[1] === '-' ? -1 : 1) * Number(match[2]);
 }
 
 /** `info` as both formats give it. */
@@ -377,6 +367,12 @@ function intOf(keys: Map<string, string>, key: string): number | undefined {
   return value === undefined ? undefined : stringToInt(value);
 }
 
+/** Undefined when the line does not name `packed`, so the font keeps the layout it has. */
+function packedFlag(keys: Map<string, string>): boolean | undefined {
+  const packed = intOf(keys, 'packed');
+  return packed === undefined ? undefined : packed === 1;
+}
+
 /** The OEM encoding a text `info` line names, `NO_OEM_ENCODING` for a Unicode font or a name Godot does not know. */
 function textEncoding(keys: Map<string, string>): number {
   if (intOf(keys, 'unicode')) return NO_OEM_ENCODING;
@@ -403,7 +399,7 @@ function parseText(text: string, builder: DescriptorBuilder): void {
         builder.setCommon({
           height: intOf(keys, 'lineHeight'),
           ascent: intOf(keys, 'base'),
-          packed: intOf(keys, 'packed') === undefined ? undefined : intOf(keys, 'packed') === 1,
+          packed: packedFlag(keys),
           channels: ['redChnl', 'greenChnl', 'blueChnl', 'alphaChnl'].map((key) => intOf(keys, key)),
         });
         break;

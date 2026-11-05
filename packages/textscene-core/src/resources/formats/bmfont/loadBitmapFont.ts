@@ -25,11 +25,6 @@ function bitmapScaleMode(importParams: Record<string, string>): number {
   );
 }
 
-/** The path of a page: its file name joined to the folder of the descriptor (`font.cpp:1913`). */
-function bitmapPagePath(descriptorPath: string, file: string): string {
-  return pathJoin(getBaseDir(descriptorPath), file);
-}
-
 export async function loadBitmapFont(
   descriptorPath: string,
   descriptorBytes: ArrayBuffer,
@@ -40,7 +35,7 @@ export async function loadBitmapFont(
   const fills: (BitmapFill | undefined)[] = [];
   const pageFills = await Promise.all(
     descriptor.pages.map(async (page) =>
-      decodePageFills(page, await readPage(bitmapPagePath(descriptorPath, page.file)))
+      decodePageFills(page, await readPage(pathJoin(getBaseDir(descriptorPath), page.file)))
     )
   );
   for (const pageFill of pageFills) {
