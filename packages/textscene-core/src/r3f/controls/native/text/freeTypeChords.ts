@@ -10,8 +10,12 @@ import { shiftRight } from './ftVector';
 import type { PathSink } from './glyphPath';
 import type { Vector2 } from '../../../../godot/math/vector';
 
-/** The sink calls a chord path needs: no curves. */
-export type ChordSink = Pick<CanvasPath, 'moveTo' | 'lineTo' | 'closePath'>;
+/** The sink of a chord path: each point in the rasteriser's frame, 1/256 px with y up. */
+export interface ChordSink {
+  moveTo(x: number, y: number): void;
+  lineTo(x: number, y: number): void;
+  closePath(): void;
+}
 
 /** `PIXEL_BITS` and `ONE_PIXEL` of `ftgrays.c`: the rasteriser places a point in 1/256 px. */
 export const PIXEL_BITS = 8;
@@ -118,23 +122,23 @@ function cubicChordEnds(p0: Subpixel, p1: Subpixel, p2: Subpixel, p3: Subpixel):
 
 /**
  * Wraps `sink` so that a glyph outline traced into it (`traceGlyphContours`) reaches `sink` as
- * FreeType's chords. Points are canvas px, y down. FreeType floors a chord end in its own frame, so
+ * FreeType's chords in its own frame. Points in are canvas px, y down. FreeType floors a chord end in its own frame, so
  * an origin on a whole pixel lands each chord where Godot's bitmap has it.
  */
 export function freeTypeChordSink(sink: ChordSink): PathSink {
   let current: Subpixel = { x: 0, y: 0 };
   const drawTo = (ends: readonly Subpixel[]) => {
-    for (const end of ends) sink.lineTo(end.x / ONE_PIXEL, -end.y / ONE_PIXEL);
+    for (const end of ends) sink.lineTo(end.x, end.y);
     current = ends[ends.length - 1]!;
   };
   return {
     moveTo(x, y) {
       current = toSubpixel(x, y);
-      sink.moveTo(x, y);
+      sink.moveTo(current.x, current.y);
     },
     lineTo(x, y) {
       current = toSubpixel(x, y);
-      sink.lineTo(x, y);
+      sink.lineTo(current.x, current.y);
     },
     quadraticCurveTo(cpx, cpy, x, y) {
       drawTo(conicChordEnds(current, toSubpixel(cpx, cpy), toSubpixel(x, y)));

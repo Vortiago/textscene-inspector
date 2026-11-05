@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { freeTypeChordSink } from './freeTypeChords';
+import { freeTypeChordSink, ONE_PIXEL } from './freeTypeChords';
 
 /** A 1/256 px step, the precision of FreeType's smooth rasteriser. */
-const SUBPIXEL = 1 / 256;
+const SUBPIXEL = 1 / ONE_PIXEL;
 
+/** The chord ends after the first point, back in canvas px with y down. */
 function recordedChords(draw: (sink: ReturnType<typeof freeTypeChordSink>) => void): number[][] {
   const calls: number[][] = [];
   const sink = freeTypeChordSink({
-    moveTo: (x, y) => calls.push([x, y]),
-    lineTo: (x, y) => calls.push([x, y]),
+    moveTo: (x, y) => calls.push([x / ONE_PIXEL, -y / ONE_PIXEL]),
+    lineTo: (x, y) => calls.push([x / ONE_PIXEL, -y / ONE_PIXEL]),
     closePath: () => {},
   });
   draw(sink);
@@ -65,7 +66,7 @@ describe('freeTypeChordSink', () => {
     ]);
   });
 
-  it('passes lines through unchanged and closes on the sink', () => {
+  it('passes lines through in 1/256 px with y up, and closes on the sink', () => {
     const calls: string[] = [];
     const sink = freeTypeChordSink({
       moveTo: (x, y) => calls.push(`M${x},${y}`),
@@ -74,9 +75,9 @@ describe('freeTypeChordSink', () => {
     });
 
     sink.moveTo(1, 2);
-    sink.lineTo(3.3, 4);
+    sink.lineTo(3.25, 4);
     sink.closePath();
 
-    expect(calls).toEqual(['M1,2', 'L3.3,4', 'Z']);
+    expect(calls).toEqual(['M256,-512', 'L832,-1024', 'Z']);
   });
 });

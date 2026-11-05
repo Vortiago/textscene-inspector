@@ -188,23 +188,22 @@ function sweep(raster: CellRaster, width: number): Uint8Array {
 }
 
 /**
- * A chord sink that feeds `raster`. Points are px from the grid's top-left corner, y down, and land
- * on the subpixel grid. A closed path draws its last line back to the start, as
+ * A chord sink that feeds `raster`. Points are subpixels up from the grid's top-left corner, so the
+ * raster's rows count from its bottom. A closed path draws its last line back to the start, as
  * `FT_Outline_Decompose` closes every contour.
  */
 function rasterChordSink(raster: CellRaster, height: number): ChordSink {
-  const toSubpixelX = (x: number) => Math.round(x * ONE_PIXEL);
-  const toSubpixelY = (y: number) => Math.round((height - y) * ONE_PIXEL);
+  const bottom = height * ONE_PIXEL;
   let startX = 0;
   let startY = 0;
   return {
     moveTo(x, y) {
-      startX = toSubpixelX(x);
-      startY = toSubpixelY(y);
+      startX = x;
+      startY = bottom + y;
       raster.moveTo(startX, startY);
     },
     lineTo(x, y) {
-      raster.lineTo(toSubpixelX(x), toSubpixelY(y));
+      raster.lineTo(x, bottom + y);
     },
     closePath() {
       raster.lineTo(startX, startY);
