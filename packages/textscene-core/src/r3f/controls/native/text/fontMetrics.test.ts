@@ -167,6 +167,46 @@ describe('withVariation', () => {
   });
 });
 
+describe('withVariation at a variable-font instance', () => {
+  const WGHT = 0x77676874;
+  const BOLD = new Map([[WGHT, 700]]);
+  const REGULAR = new Map([[WGHT, 400]]);
+  /** Outlines whose default instance is wght 400, with A at glyph 1, V at glyph 2 and no glyph for any other character. */
+  const variableOutlines = {
+    glyphIndex: (codePoint: number) => ({ A: 1, V: 2 })[String.fromCodePoint(codePoint)] ?? 0,
+    glyphContours: () => null,
+    instanceAt: (opentype: ReadonlyMap<number | string, number>) =>
+      opentype.get(WGHT) === 400
+        ? null
+        : { kerningUnits: (left: number, right: number) => left * 10 + right },
+  };
+
+  it('kerns a pair by the GPOS kerning of the instance', () => {
+    const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    expect(face.getKerningAdjustmentUnits('A', 'V')).toBe(12);
+  });
+
+  it('keeps the kerning of the face for a character the font has no glyph for', () => {
+    const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    expect(face.getKerningAdjustmentUnits('A', 'x')).toBe(METRICS.getKerningAdjustmentUnits('A', 'x'));
+  });
+
+  it('drops axis values that draw the default instance, so the face draws as the font itself', () => {
+    const face = withVariation(METRICS, { opentype: REGULAR, outlines: variableOutlines });
+    expect(face.opentype).toBeUndefined();
+    expect(face.getKerningAdjustmentUnits('A', 'V')).toBe(-256);
+  });
+
+  // A `FontVariation` over another finds its face at its own axis values (`font.cpp:3120-3131`), as
+  // the bold that the default theme makes of a project font does (`default_theme.cpp:1393-1394`).
+  it('drops the instance under a variation of its own that sets no axis', () => {
+    const atInstance = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    const bold = withVariation(atInstance, { embolden: 1.2 });
+    expect(bold.opentype).toBeUndefined();
+    expect(bold.getKerningAdjustmentUnits('A', 'V')).toBe(-256);
+  });
+});
+
 describe('ftMulDiv', () => {
   it('rounds half up on the magnitude and signs the quotient', () => {
     expect(ftMulDiv(3, 5, 2)).toBe(8);

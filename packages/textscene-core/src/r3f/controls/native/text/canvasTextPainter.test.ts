@@ -491,7 +491,7 @@ const MONO_INSTANCE: OpentypeCoordinates = new Map([[1297043023, 1]]);
 /** Outlines whose axis values draw a non-default instance, or the default where `isDefault`. */
 function variableOutlinesStub(isDefault: boolean) {
   const { outlines, glyphContours } = outlinesStub();
-  const instanceAt = () => (isDefault ? null : { advanceUnits: () => 600, kerningUnits: null });
+  const instanceAt = () => (isDefault ? null : { kerningUnits: null });
   return { outlines: { ...outlines, instanceAt } satisfies SfntOutlines, glyphContours };
 }
 

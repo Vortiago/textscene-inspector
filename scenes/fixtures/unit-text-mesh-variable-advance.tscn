@@ -1,0 +1,54 @@
+[gd_scene load_steps=7 format=3 uid="uid://unittextmeshvariableadvance"]
+
+; The one variable: a `FontVariation` whose `variation_opentype` sets the `wght` axis (tag 2003265652) of
+; a proportional variable TrueType font to 800 and its `wdth` axis (tag 2003072104) to 80. The upper text
+; is the default instance, and the lower text is the heavy, narrow one: its `HVAR` deltas move every
+; advance. Both texts are flat, at 20 px. The variable-instance golden is monospace and shows none of it.
+
+[ext_resource type="FontFile" path="res://fonts/open-sans-variable-subset.ttf" id="1_font"]
+
+[sub_resource type="FontVariation" id="FontVariation_bold"]
+base_font = ExtResource("1_font")
+variation_opentype = {
+2003265652: 800.0,
+2003072104: 80.0
+}
+
+[sub_resource type="Gradient" id="Gradient_uv"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv"]
+gradient = SubResource("Gradient_uv")
+fill_to = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv"]
+shading_mode = 0
+albedo_texture = SubResource("GradientTexture2D_uv")
+
+[sub_resource type="TextMesh" id="TextMesh_default"]
+material = SubResource("StandardMaterial3D_uv")
+text = "Hamming Wig"
+font = ExtResource("1_font")
+font_size = 20
+pixel_size = 0.04
+depth = 0.0
+
+[sub_resource type="TextMesh" id="TextMesh_bold"]
+material = SubResource("StandardMaterial3D_uv")
+text = "Hamming Wig"
+font = SubResource("FontVariation_bold")
+font_size = 20
+pixel_size = 0.04
+depth = 0.0
+
+[node name="Root" type="Node3D"]
+
+[node name="Default" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, -1.4, 0.4, 0)
+mesh = SubResource("TextMesh_default")
+
+[node name="Bold" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, -1.4, -0.4, 0)
+mesh = SubResource("TextMesh_bold")
