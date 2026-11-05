@@ -301,14 +301,14 @@ describe('richTextLabelMinimumSize — the faces of [b] and [i] spans', () => {
     expect(widthOf()).toBe(87);
   });
 
-  it("measures a [b] span in the node's bold_font, not the default bold, when it sets one", () => {
+  it("measures a [b] span in the node's bold_font, not the default bold, when it sets one", async () => {
     const emboldened: FontResource = {
       kind: 'variation',
       baseFont: null,
       properties: { variation_embolden: '3' },
     };
-    // 3 * 16 / 64 = 0.75px more per advance: 84.5 + 6 = 90.5.
-    expect(widthOf({ fontOverrides: { bold_font: emboldened } })).toBe(91);
+    // 3 * 16 / 64 = 0.75px more per advance: 84.5 + 6 = 90.5. The face past the atlas's embolden settles first.
+    await vi.waitFor(() => expect(widthOf({ fontOverrides: { bold_font: emboldened } })).toBe(91));
   });
 });
 

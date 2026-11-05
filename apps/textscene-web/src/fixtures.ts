@@ -1218,6 +1218,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Font Variation Bundled Embolden High",
+    "file": "unit-label-font-variation-bundled-embolden-high.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Font Variation Bundled Embolden",
     "file": "unit-label-font-variation-bundled-embolden.tscn",
     "category": "Other"

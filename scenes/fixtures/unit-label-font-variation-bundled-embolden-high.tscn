@@ -1,0 +1,72 @@
+[gd_scene load_steps=5 format=3]
+
+; The one variable: the embolden of a `FontVariation` with no `base_font`, past the growth the
+; bundled MSDF atlas holds (about 1.4). Each Label has its own variation over Godot's bundled font.
+; The 1.4 row sits at the limit, and the 18 px row checks a small size.
+
+[sub_resource type="FontVariation" id="FontVariation_1_4"]
+variation_embolden = 1.4
+
+[sub_resource type="FontVariation" id="FontVariation_2_0"]
+variation_embolden = 2.0
+
+[sub_resource type="FontVariation" id="FontVariation_3_0"]
+variation_embolden = 3.0
+
+[sub_resource type="FontVariation" id="FontVariation_4_0"]
+variation_embolden = 4.0
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Embolden14" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 30.0
+offset_right = 1100.0
+offset_bottom = 110.0
+theme_override_fonts/font = SubResource("FontVariation_1_4")
+theme_override_font_sizes/font_size = 56
+text = "Hog Wave 123 1.4"
+
+[node name="Embolden20" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 130.0
+offset_right = 1100.0
+offset_bottom = 210.0
+theme_override_fonts/font = SubResource("FontVariation_2_0")
+theme_override_font_sizes/font_size = 56
+text = "Hog Wave 123 2.0"
+
+[node name="Embolden30" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 230.0
+offset_right = 1100.0
+offset_bottom = 310.0
+theme_override_fonts/font = SubResource("FontVariation_3_0")
+theme_override_font_sizes/font_size = 56
+text = "Hog Wave 123 3.0"
+
+[node name="Embolden40" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 330.0
+offset_right = 1100.0
+offset_bottom = 410.0
+theme_override_fonts/font = SubResource("FontVariation_4_0")
+theme_override_font_sizes/font_size = 56
+text = "Hog Wave 123 4.0"
+
+[node name="SmallEmbolden30" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 440.0
+offset_right = 1100.0
+offset_bottom = 480.0
+theme_override_fonts/font = SubResource("FontVariation_3_0")
+theme_override_font_sizes/font_size = 18
+text = "Hog Wave 123 3.0"

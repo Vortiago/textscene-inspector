@@ -35,6 +35,7 @@ let modules: Awaited<ReturnType<typeof importModules>>;
 const bundled = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | undefined }));
 vi.mock('../../../r3f/controls/native/text/bundledFontLoader', () => ({
   peekBundledCanvasFontMetrics: () => bundled.metrics,
+  loadBundledCanvasFontMetrics: () => Promise.resolve(bundled.metrics),
 }));
 
 const PROJECT_FONT_FILES = {

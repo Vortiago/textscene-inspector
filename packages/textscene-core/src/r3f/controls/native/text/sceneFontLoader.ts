@@ -28,6 +28,7 @@ import * as logger from '../../../../logger';
 import { warnOnce } from '../../../../utils/warnOnce';
 import { createSettledPeek } from './settledChannel';
 import { peekGlyphOutlines } from './sceneFontOutlines';
+import { atlasHoldsEmbolden } from './msdfEmbolden';
 
 // happy-dom has neither `FontFace` nor a 2D canvas context, so under vitest the loader skips to the
 // bundled default before any DOM font API. The skip is deliberate, so it does not warn.
@@ -49,6 +50,12 @@ let familyCounter = 0;
 
 /** Keyed by the resolved leaf `FontFileResource`, so nodes that share a font share one load. */
 const peekMetrics = createSettledPeek<FontFileResource, FontMetrics>();
+
+/** Keyed by `BUNDLED` alone. Null is a registration that failed. */
+const peekBundledCanvas = createSettledPeek<object, CanvasFontMetrics | null>();
+
+/** The cache key of the bundled canvas face, which has no resource. */
+const BUNDLED = {};
 
 /** One `BitmapFontMetrics` for each decoded BMFont, so a layout memoised on its identity keeps its hits. */
 const bitmapMetricsOf = perObject(createBitmapFontMetrics);
@@ -170,6 +177,27 @@ function fontVariation(font: FontResource): GlyphVariation {
 }
 
 /**
+ * The bundled font under the variation of `font`, a `FontVariation` with no `base_font`. The atlas
+ * draws the embolden it holds. Past that, FreeType's emboldened outline draws on the bundled canvas
+ * face, as Label3D's does, and null answers while that face or its outlines load. A face that
+ * cannot register stays on the atlas.
+ */
+function peekBundledVariation(font: FontResource): FontMetrics | null {
+  const variation = fontVariation(font);
+  const atlas = withVariation(OPEN_SANS_FONT_METRICS, variation);
+  if (atlasHoldsEmbolden(variation.embolden ?? 0)) return atlas;
+  // A dynamic import, so the bundled font bytes stay out of the chunk that holds this loader.
+  const canvas = peekBundledCanvas(
+    BUNDLED,
+    async () => (await (await import('./bundledFontLoader')).loadBundledCanvasFontMetrics()) ?? null
+  );
+  if (canvas === undefined) return null;
+  if (!canvas) return atlas;
+  const outlines = peekGlyphOutlines(font, canvas, variation);
+  return outlines === undefined ? null : withVariation(canvas, { ...variation, outlines });
+}
+
+/**
  * The metrics of `font` once its load has settled, with the `FontVariation` embolden and skew on
  * top, and null while a load is in flight. A font that cannot load, or has no bytes to load,
  * settles at once on the bundled default. It starts one load per font, so calling both peeks
@@ -190,7 +218,7 @@ export function peekSettledSceneFontMetrics(
   const resolved = resolveFontFileBytes(font);
   if (!resolved) {
     // A variation with no `base_font` over the bundled default font: no failure, so no warning.
-    if (endsWithoutBase(font)) return withVariation(OPEN_SANS_FONT_METRICS, fontVariation(font));
+    if (endsWithoutBase(font)) return peekBundledVariation(font);
     warnUnresolvable(font, nodePath);
     return OPEN_SANS_FONT_METRICS;
   }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { withVariation } from './fontMetrics';
-import { msdfDistanceBias } from './msdfEmbolden';
+import { atlasHoldsEmbolden, msdfDistanceBias } from './msdfEmbolden';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { shapeText } from './textLayout';
 
@@ -32,5 +32,24 @@ describe('msdfDistanceBias', () => {
 
   it('does not change with the font size, as the shader scales the bias by the screen px range', () => {
     expect(msdfDistanceBias(layoutAt(56, 1.2))).toBeCloseTo(0.39375, 10);
+  });
+});
+
+describe('atlasHoldsEmbolden', () => {
+  // The fill fades below a median of 0.04, so the edge moves at most (0.5 - 0.04) * 4 bake px, which
+  // an embolden of 0.46 * 4 * 32 / 42 = 1.4019 reaches at the 42 px bake.
+  it('holds an embolden up to 1.4019, the growth the bundled atlas encodes', () => {
+    expect(atlasHoldsEmbolden(1.4)).toBe(true);
+    expect(atlasHoldsEmbolden(1.401)).toBe(true);
+    expect(atlasHoldsEmbolden(1.403)).toBe(false);
+  });
+
+  it('does not hold an embolden past the limit', () => {
+    expect(atlasHoldsEmbolden(3)).toBe(false);
+  });
+
+  it('bounds a negative embolden by the same magnitude', () => {
+    expect(atlasHoldsEmbolden(-1.4)).toBe(true);
+    expect(atlasHoldsEmbolden(-1.6)).toBe(false);
   });
 });

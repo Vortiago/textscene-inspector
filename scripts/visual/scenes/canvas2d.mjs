@@ -304,6 +304,13 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-label-font-variation-bundled-embolden.tscn',
     mode: '2d',
   },
+  // The one variable: the embolden of a bare variation past the growth the atlas holds, which draws
+  // on the canvas painter with FreeType's emboldened outline.
+  {
+    name: 'label-font-variation-bundled-embolden-high',
+    file: 'unit-label-font-variation-bundled-embolden-high.tscn',
+    mode: '2d',
+  },
   // The one variable: the same bare variations in a project whose `gui/theme/custom_font` is the
   // default font they wrap.
   {

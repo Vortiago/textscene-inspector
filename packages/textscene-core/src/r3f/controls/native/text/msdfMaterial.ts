@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { canvasItemFacing } from '../../../canvasItemFacing';
 import { injectProgram } from '../../../materialProgramInputs';
 import type { CanvasItemPixelMaterial } from '../../../components/LitCanvasItemPixels';
+import { MSDF_FILL_FADE_MEDIAN } from './msdfEmbolden';
 
 // The `clipping_planes_*` chunks hold the `discard`. A `ShaderMaterial` needs them and
 // `clipping: true`, or it accepts the planes and ignores them without an error.
@@ -54,9 +55,9 @@ void main() {
   float m = median(msd.r, msd.g, msd.b);
   float spr = screenPxRange();
   float signedDistancePx = spr * (m - 0.5 + uDistanceBias);
-  // The field clamps to 0 beyond half its range. A bias reads that flat 0 as a point inside the edge
-  // and fills the whole glyph quad, so the fill fades out where the field is empty.
-  float inRange = smoothstep(0.0, 0.04, m);
+  // A bias reads the flat 0 beyond half the range as a point inside the edge and fills the whole
+  // glyph quad, so the fill fades out where the field is empty.
+  float inRange = smoothstep(0.0, ${MSDF_FILL_FADE_MEDIAN}, m);
   float fillCoverage = clamp(signedDistancePx + 0.5, 0.0, 1.0) * inRange;
   // \`clipping_planes_fragment\` reads \`diffuseColor.a\` under ALPHA_TO_COVERAGE
   // and discards outright otherwise, so the value has to exist either way.

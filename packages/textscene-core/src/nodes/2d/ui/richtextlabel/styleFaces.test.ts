@@ -90,25 +90,27 @@ describe('resolveRichTextFaces', () => {
     const faces = facesOf(
       richTextNode({
         fontOverrides: {
-          bold_font: variation('2'),
-          italics_font: variation('3'),
-          bold_italics_font: variation('4'),
+          bold_font: variation('0.75'),
+          italics_font: variation('1'),
+          bold_italics_font: variation('1.25'),
         },
       })
     );
-    expect([faces.bold, faces.italic, faces.boldItalic].map((face) => face.embolden)).toEqual([2, 3, 4]);
+    expect([faces.bold, faces.italic, faces.boldItalic].map((face) => face.embolden)).toEqual([
+      0.75, 1, 1.25,
+    ]);
   });
 
   it('lets a style key set in an ancestor theme or the project theme replace only that style', () => {
-    const ancestor = facesOf(richTextNode({ themeChain: [themeWith({ bold_font: variation('2') })] }));
-    expect(variationOf(ancestor.bold).embolden).toBe(2);
+    const ancestor = facesOf(richTextNode({ themeChain: [themeWith({ bold_font: variation('0.75') })] }));
+    expect(variationOf(ancestor.bold).embolden).toBe(0.75);
     expect(variationOf(ancestor.italic)).toEqual({ embolden: 0, skew: ITALIC_SKEW });
     const project = facesOf(
       richTextNode({
-        projectFonts: { ...NO_PROJECT_FONTS, projectTheme: themeWith({ bold_font: variation('4') }) },
+        projectFonts: { ...NO_PROJECT_FONTS, projectTheme: themeWith({ bold_font: variation('1.25') }) },
       })
     );
-    expect(variationOf(project.bold).embolden).toBe(4);
+    expect(variationOf(project.bold).embolden).toBe(1.25);
   });
 
   it("gives every style a theme's default_font when that theme sets no style font (theme.cpp:550)", () => {

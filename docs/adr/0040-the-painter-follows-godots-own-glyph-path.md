@@ -7,6 +7,9 @@
   MenuButton and ProgressBar draws on painter B for the bundled font too, through
   `OutlinedTextRun`. Their fill stays on painter A. A Label draws a ring for each outline and
   stacked outline, and for each shadow outline.
+- Amended for embolden: a `FontVariation` over the bundled font whose embolden has a magnitude
+  past what the field encodes (about 1.4, `msdfEmbolden.ts`) draws on painter B, with the
+  bundled font's baked advances and its emboldened outlines.
 - Related: ADR-0037 (Control nodes render natively in the canvas: the 2D text this
   decision leaves on the atlas is that decision's text), ADR-0026 (comparison sheets live
   in their slice: the per-node limitations below are recorded there too).

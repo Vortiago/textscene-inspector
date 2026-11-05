@@ -1,7 +1,8 @@
 /**
  * Registers the bundled Open Sans font as a `FontFace` and hands out its canvas metrics, through the
- * door and the settled channel of `sceneFontLoader.ts`. Only the lazy `Label3D` glyph chunk imports
- * it, so the base64 font bytes stay out of the initial bundle.
+ * door and the settled channel of `sceneFontLoader.ts`. Only lazy chunks reach it, the `Label3D`
+ * glyphs, the outline ring and the dynamic import of `sceneFontLoader.ts`, so the base64 font bytes
+ * stay out of the initial bundle.
  */
 import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
 import { bundledFontBytes } from './bundledFontBytes';
@@ -38,8 +39,15 @@ async function registerBundledFont(): Promise<void> {
   }
 }
 
+/** The canvas metrics once registration settles, or `undefined` when it failed. The first call starts the registration. */
+export async function loadBundledCanvasFontMetrics(): Promise<CanvasFontMetrics | undefined> {
+  bundledRegistration ??= registerBundledFont();
+  await bundledRegistration;
+  return bundledMetrics;
+}
+
 /** Synchronous answer for a solve/paint pass: the canvas metrics once registration resolved, `undefined` before that. Kicks the registration off on first call. */
 export function peekBundledCanvasFontMetrics(): CanvasFontMetrics | undefined {
-  bundledRegistration ??= registerBundledFont();
+  void loadBundledCanvasFontMetrics();
   return bundledMetrics;
 }
