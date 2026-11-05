@@ -9,6 +9,7 @@ import { peekSceneFontMetrics, peekSettledSceneFontMetrics } from './sceneFontLo
 import { fontWork, onSceneFontSettled, sceneFontSettleCount } from './settledChannel';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { FACELESS_FONT } from './sceneFontResolution';
+import type { CanvasFontMetrics } from './runtimeFontMetrics';
 import { drawnOpentype, getFontAscentPx, getFontGlyphAdvancePx, getFontLinePitchPx } from './fontMetrics';
 import * as logger from '../../../../logger';
 import type { FontResource } from '../../../../resources/fonts/font/types';
@@ -128,6 +129,7 @@ describe('peekSettledSceneFontMetrics', () => {
     const variation: FontResource = {
       kind: 'variation',
       baseFont: leaf,
+      fallbacks: [],
       properties: { variation_embolden: '0.5' },
     };
     expect(peekSettledSceneFontMetrics(variation, 'Root/Mesh')).toBeNull();
@@ -140,7 +142,7 @@ describe('peekSceneFontMetrics — FontVariation embolden', () => {
   const bytes = new ArrayBuffer(8);
 
   function variation(baseFont: FontResource | null, properties: Record<string, string>): FontResource {
-    return { kind: 'variation', baseFont, properties };
+    return { kind: 'variation', baseFont, fallbacks: [], properties };
   }
 
   async function settledPeek(font: FontResource) {
@@ -232,7 +234,10 @@ describe('onSceneFontSettled', () => {
     const off = onSceneFontSettled(listener);
     try {
       peekSceneFontMetrics(undefined, 'Root/F');
-      peekSceneFontMetrics({ kind: 'system', fontNames: [], properties: {} }, 'Root/G');
+      peekSceneFontMetrics(
+        { kind: 'system', fontNames: [], baseFont: null, fallbacks: [], properties: {} },
+        'Root/G'
+      );
       await settleLoads();
       expect(listener).not.toHaveBeenCalled();
     } finally {
@@ -288,6 +293,18 @@ describe('fontWork', () => {
     expect(fontWork.pending()).toBe(0);
   });
 
+  it('counts one load for a font and a copy of it with other fallbacks, which share its bytes', async () => {
+    const leaf = fontFile(new ArrayBuffer(4));
+    const copy = { ...leaf, fallbacks: [systemFont()] };
+
+    peekSettledSceneFontMetrics(leaf, 'Root/N');
+    peekSettledSceneFontMetrics(copy, 'Root/O');
+    expect(fontWork.pending()).toBe(1);
+    await settleLoads();
+
+    expect(fontWork.pending()).toBe(0);
+  });
+
   it('ends the work of a load whose settled listener throws, so a capture is not held for good', async () => {
     const off = onSceneFontSettled(() => {
       throw new Error('listener failed');
@@ -307,7 +324,10 @@ describe('fontWork', () => {
 
   it('counts no work for a font that settles by itself on the bundled default', () => {
     peekSceneFontMetrics(undefined, 'Root/N');
-    peekSceneFontMetrics({ kind: 'system', fontNames: [], properties: {} }, 'Root/O');
+    peekSceneFontMetrics(
+      { kind: 'system', fontNames: [], baseFont: null, fallbacks: [], properties: {} },
+      'Root/O'
+    );
 
     expect(fontWork.pending()).toBe(0);
   });
@@ -380,6 +400,30 @@ describe('scene font in an environment with no font door', () => {
       expect.stringContaining('no FontFace/document.fonts in this environment')
     );
   });
+
+  it('draws the bundled default for a face that fails to load, and drops a fallback that fails', async () => {
+    const { peekSettledChainFaces: peekChain, bundled } = await loaderWithoutVitestGuard();
+
+    const fallback = fontFile(new ArrayBuffer(4));
+    const font = fontFile(new ArrayBuffer(4), [fallback]);
+    peekChain(font, 'Root/NoDom');
+    await settleLoads();
+    expect(peekChain(font, 'Root/NoDom')).toEqual([{ font, metrics: bundled, isStandIn: true }]);
+  });
+
+  it('keeps the embolden of a FontVariation over a face that fails to load', async () => {
+    const { peekSceneFontMetrics: peek } = await loaderWithoutVitestGuard();
+
+    const font: FontResource = {
+      kind: 'variation',
+      baseFont: fontFile(new ArrayBuffer(4)),
+      fallbacks: [],
+      properties: { variation_embolden: '1.2' },
+    };
+    peek(font, 'Root/NoDom');
+    await settleLoads();
+    expect(peek(font, 'Root/NoDom').embolden).toBe(1.2);
+  });
 });
 
 describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canvas face follows', () => {
@@ -403,7 +447,11 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
     );
     vi.stubGlobal('document', {
       fonts: { add: () => {} },
-      createElement: () => ({ getContext: () => ({ measureText: () => ({ width: 500 }) }) }),
+      createElement: () => ({
+        getContext: () => ({
+          measureText: () => ({ width: 500, actualBoundingBoxLeft: 30, actualBoundingBoxRight: 470 }),
+        }),
+      }),
     });
     const { fontFile: freshFontFile, fixtureFontBytes } = await import('./sfntOutlines.testkit');
     const mod = await import('./sceneFontLoader');
@@ -417,6 +465,7 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
   const emboldened = (base: FontResource): FontResource => ({
     kind: 'variation',
     baseFont: base,
+    fallbacks: [],
     properties: { variation_embolden: '1.2' },
   });
 
@@ -432,12 +481,24 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
     expect(peek(font, 'Root/Bold')?.outlines?.glyphIndex(0x48)).toBeGreaterThan(0);
   });
 
+  it("measures each glyph's ink box with the canvas that measures its advance", async () => {
+    const { peekSettledSceneFontMetrics: peek, ttf } = await loaderWithFontDoor();
+    const font = ttf();
+
+    peek(font, 'Root/Ink');
+    await settleLoads();
+
+    const face = peek(font, 'Root/Ink') as CanvasFontMetrics;
+    expect(face.getGlyphInkUnits?.('A')).toEqual({ left: 30, right: 470 });
+  });
+
   /** Recursive's face under a `FontVariation` at `MONO` = `mono`, once its outlines settle. */
   async function settledAtMono(mono: number) {
     const { peekSettledSceneFontMetrics: peek, recursive } = await loaderWithFontDoor();
     const font: FontResource = {
       kind: 'variation',
       baseFont: recursive(),
+      fallbacks: [],
       properties: { variation_opentype: `{\n1297043023: ${mono}\n}` },
     };
     peek(font, 'Root/Label');

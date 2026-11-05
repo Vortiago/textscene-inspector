@@ -28,6 +28,7 @@ const defaultInstanceMetrics = createRuntimeFontMetrics({
   scalars: { unitsPerEm: 2048, ascent: 2189, descent: 600 },
   measureWidthUnits: () => 0,
   cssFontFamily: 'open-sans-variable',
+  hasGlyph: () => true,
 });
 
 async function metricsAt(glyph: ReferenceAdvance): Promise<FontMetrics> {

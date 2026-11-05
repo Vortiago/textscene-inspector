@@ -178,7 +178,13 @@ describe('resolveInlineThemeResource', () => {
     );
     expect(resource.defaultFont).toBe(FONT_A);
     expect(resource.defaultFontSize).toBe(20);
-    expect(resource.fonts.Label?.font).toEqual({ kind: 'system', fontNames: ['monospace'], properties: {} });
+    expect(resource.fonts.Label?.font).toEqual({
+      kind: 'system',
+      fontNames: ['monospace'],
+      baseFont: null,
+      fallbacks: [],
+      properties: {},
+    });
   });
 
   it('leaves an unrecognised key raw, and decodes styles/icons/colors/constants inline', () => {

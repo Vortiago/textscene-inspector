@@ -13,7 +13,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { cmapLookup } from './sfntCmap';
+import { orOnRangeError, sfntGlyphIndex } from './sfntCmap';
 import { glyphMetricsReader, metricsAtInstance } from './sfntGlyphMetrics';
 import type { GlyphContours, GlyphOutlineReader } from './glyphContours';
 import { glyphAdvance26_6, isInstanced, type GlyphVariation, type OpentypeCoordinates } from './fontMetrics';
@@ -55,16 +55,6 @@ export interface SfntOutlines {
   ): number | null;
   /** Whether the axis values of `opentype` draw an instance other than the default. */
   drawsInstance?(opentype: OpentypeCoordinates): boolean;
-}
-
-/** `read`, or `fallback` when a corrupt table puts an offset past the buffer: a `DataView` read throws a `RangeError` there. */
-function orOnRangeError<T>(read: () => T, fallback: T): T {
-  try {
-    return read();
-  } catch (error) {
-    if (!(error instanceof RangeError)) throw error;
-    return fallback;
-  }
 }
 
 /**
@@ -122,6 +112,7 @@ type CharacterKerning = (leftCodePoint: number, rightCodePoint: number) => numbe
  */
 function instanceKerningOf(
   sfnt: SfntFile,
+  instanceAt: InstanceReader,
   glyphIndex: (codePoint: number) => number,
   kerningReader: InstanceKerningReader | null
 ): SfntOutlines['kerningAtInstance'] {
@@ -136,10 +127,6 @@ function instanceKerningOf(
     const kerningAtInstance = kerningAt();
     return kerningAtInstance && keptPairs(glyphIndex, kerningAtInstance(instance.normalized));
   });
-  // Equal axis values share one instance, and so one kept pair for each pair.
-  const instanceAt = perObject((opentype: OpentypeCoordinates) =>
-    orOnRangeError(() => fontInstanceOf(sfnt, opentype), null)
-  );
   return (leftCodePoint, rightCodePoint, opentype) => {
     const instance = instanceAt(opentype);
     return (instance && pairsAt(instance)?.(leftCodePoint, rightCodePoint)) ?? null;
@@ -187,8 +174,22 @@ async function autoHintedReaderOf(sfnt: SfntFile): Promise<GlyphOutlineReader | 
 }
 
 /** The font at the axis values of `variation`, or null for the default instance. */
-function instanceOf(sfnt: SfntFile, variation: GlyphVariation | undefined): FontInstance | null {
-  return isInstanced(variation?.opentype) ? fontInstanceOf(sfnt, variation.opentype) : null;
+function instanceOf(instanceAt: InstanceReader, variation: GlyphVariation | undefined): FontInstance | null {
+  return isInstanced(variation?.opentype) ? instanceAt(variation.opentype) : null;
+}
+
+/** The font at axis values, or null for the default instance and for variation tables past the bytes. */
+type InstanceReader = (opentype: OpentypeCoordinates) => FontInstance | null;
+
+/**
+ * `fontInstanceOf` that answers null where the variation tables run past the bytes. `fontInstanceOf`
+ * keeps no throw, so the null is kept here with its axis values, and a corrupt font parses once
+ * for each. Equal axis values share one instance, and so the pairs kept for it.
+ */
+function instanceReaderOf(sfnt: SfntFile): InstanceReader {
+  return perObject((opentype: OpentypeCoordinates) =>
+    orOnRangeError(() => fontInstanceOf(sfnt, opentype), null)
+  );
 }
 
 /**
@@ -197,7 +198,10 @@ function instanceOf(sfnt: SfntFile, variation: GlyphVariation | undefined): Font
  * unhinted load. The readers are built once per font and each answer is kept, as a layout asks
  * for the same glyph at the same size again and again.
  */
-function instanceAdvanceReader(sfnt: SfntFile): SfntOutlines['advanceAtInstance'] {
+function instanceAdvanceReader(
+  sfnt: SfntFile,
+  instanceAt: InstanceReader
+): SfntOutlines['advanceAtInstance'] {
   let readers: ReturnType<typeof instanceAdvanceReaders> | undefined;
   const kept = perObject((_opentype: OpentypeCoordinates) =>
     recentlyRead<number, Map<number, number | null>>(MAX_KEPT_SIZES)
@@ -206,9 +210,13 @@ function instanceAdvanceReader(sfnt: SfntFile): SfntOutlines['advanceAtInstance'
   return (glyphIndex, fontSizePx, opentype) => {
     const byGlyph = kept(opentype)(fontSizePx, newAdvancesByGlyph);
     if (byGlyph.has(glyphIndex)) return byGlyph.get(glyphIndex)!;
-    const instance = fontInstanceOf(sfnt, opentype);
-    readers ??= instanceAdvanceReaders(sfnt);
-    const advance = instance && orOnRangeError(() => readers!(instance, glyphIndex, fontSizePx), null);
+    const instance = instanceAt(opentype);
+    const advance =
+      instance &&
+      orOnRangeError(
+        () => (readers ??= instanceAdvanceReaders(sfnt))(instance, glyphIndex, fontSizePx),
+        null
+      );
     byGlyph.set(glyphIndex, advance);
     return advance;
   };
@@ -240,21 +248,19 @@ function readSfntOutlines(
   outlineOf: GlyphOutlineReader | null,
   kerningReader: InstanceKerningReader | null
 ): SfntOutlines | null {
-  const cmap = sfnt.tables.get('cmap');
-  if (!cmap || !outlineOf) return null;
-  const lookup = orOnRangeError(() => cmapLookup(sfnt.dv, cmap.offset), null);
-  if (!lookup) return null;
+  const glyphIndex = outlineOf && sfntGlyphIndex(sfnt);
+  if (!glyphIndex) return null;
 
-  const glyphIndex = (codePoint: number): number => orOnRangeError(() => lookup(codePoint), 0);
+  const instanceAt = instanceReaderOf(sfnt);
   return {
     glyphIndex,
-    advanceAtInstance: instanceAdvanceReader(sfnt),
+    advanceAtInstance: instanceAdvanceReader(sfnt, instanceAt),
     glyphContours: (glyph, fontSizePx, variation) =>
       orOnRangeError(() => {
-        const outline = outlineOf(glyph, fontSizePx, instanceOf(sfnt, variation));
+        const outline = outlineOf(glyph, fontSizePx, instanceOf(instanceAt, variation));
         return outline && variedContours(outline, fontSizePx, variation);
       }, null),
-    kerningAtInstance: instanceKerningOf(sfnt, glyphIndex, kerningReader),
-    drawsInstance: (opentype) => orOnRangeError(() => fontInstanceOf(sfnt, opentype) !== null, false),
+    kerningAtInstance: instanceKerningOf(sfnt, instanceAt, glyphIndex, kerningReader),
+    drawsInstance: (opentype) => instanceAt(opentype) !== null,
   };
 }

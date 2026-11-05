@@ -852,6 +852,8 @@ describe('lineEditDrawnLine: the glyphs the draw loop keeps (line_edit.cpp:1512-
       x: advances.slice(0, i).reduce((a, b) => a + b, 0),
       advance,
       glyph: null,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      fontSizePx: 16,
     })),
   });
   const layoutOf = (advances: number[]) => ({

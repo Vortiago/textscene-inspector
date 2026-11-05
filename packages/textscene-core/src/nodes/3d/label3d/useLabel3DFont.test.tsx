@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
 import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { testBitmapMetrics } from '../../../r3f/controls/native/text/bitmapFontMetrics.testkit';
+import { withFallbacks } from '../../../r3f/controls/native/text/fontMetrics';
 
 /**
  * The modules under test, imported again after each `vi.resetModules()`: the outlines of the bundled
@@ -112,6 +113,15 @@ function settledMetrics(
 async function settle() {
   await act(async () => {
     for (let pass = 0; pass < 6; pass++) await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
+/** Settles one throwaway load inside `act`. The settle wakes every reader of the font settle count. */
+async function settleThrowawayFontLoad() {
+  const { createSettledPeek } = await import('../../../r3f/controls/native/text/settledChannel');
+  await act(async () => {
+    createSettledPeek<object, null>()({}, async () => null);
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
 }
 
@@ -261,5 +271,114 @@ describe('useLabel3DFont mip chain', () => {
     await settle();
 
     expect(result.current?.generatesMipmaps).toBe(true);
+  });
+});
+
+describe('useLabel3DFont mip chain of a fallback face', () => {
+  afterEach(() => vi.doUnmock('../../../r3f/controls/native/text/sceneFontLoader'));
+
+  // Each FontFile builds its own glyph textures, so a fallback keeps its own `generate_mipmaps`.
+  it('follows the fallback font, not the label font', async () => {
+    const fallback = modules.createOpenSansCanvasFontMetrics('label3d-fallback-test');
+    const mipmappedFont = { kind: 'file', fallbacks: [], properties: { generate_mipmaps: 'true' } };
+    vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
+      ...(await importOriginal<object>()),
+      peekSettledSceneFontMetrics: () => withFallbacks(bundled.metrics!, [fallback]),
+      peekSettledChainFaces: () => [
+        { font: null, metrics: bundled.metrics },
+        { font: mipmappedFont, metrics: fallback },
+      ],
+    }));
+    modules = await importModules();
+    const { result } = renderMetrics('SubResource("plain")');
+
+    await settle();
+
+    expect(result.current?.generatesMipmaps).toBe(false);
+    expect(result.current?.fallbackMipmaps.get(fallback)).toBe(true);
+  });
+
+  // `withFallbacks` keeps the first face of the same metrics, so its glyphs draw in that one.
+  it('follows the first fallback of the same metrics', async () => {
+    const fallback = modules.createOpenSansCanvasFontMetrics('label3d-fallback-test');
+    const plainFont = { kind: 'file', fallbacks: [], properties: {} };
+    const mipmappedFont = { kind: 'file', fallbacks: [], properties: { generate_mipmaps: 'true' } };
+    vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
+      ...(await importOriginal<object>()),
+      peekSettledSceneFontMetrics: () => withFallbacks(bundled.metrics!, [fallback]),
+      peekSettledChainFaces: () => [
+        { font: null, metrics: bundled.metrics },
+        { font: plainFont, metrics: fallback },
+        { font: mipmappedFont, metrics: fallback },
+      ],
+    }));
+    modules = await importModules();
+    const { result } = renderMetrics('SubResource("plain")');
+
+    await settle();
+
+    expect(result.current?.fallbackMipmaps.get(fallback)).toBe(false);
+  });
+});
+
+describe('useLabel3DFont mip chain while a chain face reloads', () => {
+  afterEach(() => vi.doUnmock('../../../r3f/controls/native/text/sceneFontLoader'));
+
+  it('draws each fallback face at the label setting', async () => {
+    const fallback = modules.createOpenSansCanvasFontMetrics('label3d-reload-test');
+    vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
+      ...(await importOriginal<object>()),
+      peekSettledSceneFontMetrics: () => withFallbacks(bundled.metrics!, [fallback]),
+      peekSettledChainFaces: () => null,
+    }));
+    modules = await importModules();
+    const { result } = renderMetrics('SubResource("mipmapped")');
+
+    await settle();
+
+    // The project sets none, so a fallback drawn at the project setting would lose the label's mip chain.
+    expect(result.current?.generatesMipmaps).toBe(true);
+    expect(result.current?.fallbackMipmaps.has(fallback)).toBe(false);
+  });
+
+  it('reads the mip chain of each fallback face once the chain face settles', async () => {
+    const fallback = modules.createOpenSansCanvasFontMetrics('label3d-reload-settle-test');
+    const mipmappedFont = { kind: 'file', fallbacks: [], properties: { generate_mipmaps: 'true' } };
+    const chain = { faces: null as readonly object[] | null };
+    vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
+      ...(await importOriginal<object>()),
+      peekSettledSceneFontMetrics: () => withFallbacks(bundled.metrics!, [fallback]),
+      peekSettledChainFaces: () => chain.faces,
+    }));
+    modules = await importModules();
+    const { result } = renderMetrics('SubResource("plain")');
+    await settle();
+
+    chain.faces = [
+      { font: null, metrics: bundled.metrics },
+      { font: mipmappedFont, metrics: fallback },
+    ];
+    await settleThrowawayFontLoad();
+
+    expect(result.current?.fallbackMipmaps.get(fallback)).toBe(true);
+  });
+});
+
+describe('useLabel3DFont fallbacks of an atlas face', () => {
+  afterEach(() => vi.doUnmock('../../../r3f/controls/native/text/sceneFontLoader'));
+
+  it('keeps the fallbacks on the bundled canvas face that draws it', async () => {
+    const fallback = modules.createOpenSansCanvasFontMetrics('label3d-atlas-fallback-test');
+    const { OPEN_SANS_FONT_METRICS } = await import('../../../r3f/controls/native/text/openSansFontMetrics');
+    vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
+      ...(await importOriginal<object>()),
+      peekSettledSceneFontMetrics: () => withFallbacks(OPEN_SANS_FONT_METRICS, [fallback]),
+    }));
+    modules = await importModules();
+    const { result } = renderMetrics(undefined);
+
+    await settle();
+
+    expect(result.current?.metrics.fallbacks).toEqual([fallback]);
   });
 });

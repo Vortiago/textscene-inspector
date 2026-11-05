@@ -148,7 +148,7 @@ const TYPES: Record<string, PrimitiveMeshType> = {
   // from a mesh that is empty. TextMesh writes no UV2 and keeps the authored lightmap size hint.
   TextMesh: {
     build: ({ data, font, locale }) =>
-      font?.status === 'ready' ? buildTextMeshSurface(decodeTextMesh(data), locale, font.face) : null,
+      font?.status === 'ready' ? buildTextMeshSurface(decodeTextMesh(data), locale, font.chain) : null,
     font: { files: textMeshFontFiles, read: textMeshFont },
     lightmapSizeHint: authoredLightmapSizeHint('TextMesh'),
   },

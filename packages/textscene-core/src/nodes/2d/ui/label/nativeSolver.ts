@@ -566,8 +566,6 @@ export function layoutLabelLines(
   horizontalAlignment: number | undefined,
   verticalAlignment: number | undefined,
   justificationFlags: number = DEFAULT_JUSTIFICATION_FLAGS,
-  // The floor of a glyph with no own size, such as an ellipsis. The default is the theme's 16.
-  fontSizePx: number = 16,
   options: LabelLayoutOptions = {}
 ): LabelLinePlacement[] {
   const {
@@ -615,7 +613,6 @@ export function layoutLabelLines(
     ? justifyParagraphs(layout.lines, {
         widthPx: shapingWidthPx,
         flags: justificationFlags,
-        fontSizePx,
       })
     : layout.lines;
   // With autowrap off, FILL trims `OVERRUN_JUSTIFICATION_AWARE` (`label.cpp:322-325`).

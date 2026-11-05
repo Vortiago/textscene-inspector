@@ -9,7 +9,12 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { OPEN_SANS_ATLAS_GLYPHS } from './openSansAtlas';
-import { getFontEmboldenedAdvancePx, getFontEmboldenGrowthPx, type FontMetrics } from './fontMetrics';
+import {
+  firstFaceWithGlyph,
+  getFontEmboldenedAdvancePx,
+  getFontEmboldenGrowthPx,
+  type FontMetrics,
+} from './fontMetrics';
 import {
   isWhitespace,
   widestLineWidthPx,
@@ -126,9 +131,12 @@ interface TrimBudget {
   ellipsisWidthPx: number;
 }
 
-/** Whether the font has a glyph for `ch`, as `_font_has_char` (`text_server_adv.cpp:5985`) asks: no advance of its own means none (`FontMetrics.getGlyphAdvanceUnits`), for every font kind. */
-function hasGlyphInk(fontMetrics: FontMetrics, ch: string): boolean {
-  return fontMetrics.getGlyphAdvanceUnits(ch) !== null;
+/**
+ * The face that draws `ch` past the cut (`text_server_adv.cpp:5984-6036`): the last glyph's, else the
+ * first font of the span's **Fallback chain** that has it. Null for none.
+ */
+function faceWithGlyph(lastFace: FontMetrics, spanFace: FontMetrics, ch: string): FontMetrics | null {
+  return lastFace.hasGlyph(ch) ? lastFace : firstFaceWithGlyph(spanFace, ch);
 }
 
 function atlasGlyphFor(fontMetrics: FontMetrics, ch: string) {
@@ -193,8 +201,7 @@ export function trimFilledLineToWidth(
           line,
           { trimPos, trimmedWidthPx: trimmedWidthPx(trim) },
           widthPx,
-          options.justificationFlags,
-          options.fontSizePx
+          options.justificationFlags
         );
   return trimmedLine(line, trim, inferredDirectionGlyphs(line, glyphs, trim));
 }
@@ -242,17 +249,18 @@ function findOverrunTrim(
     return null;
   }
 
-  // :5985-6046, without the span and fallback-font search: one font per line here.
-  const foundElChar =
-    flags.addEllipsis || flags.enforceEllipsis ? hasGlyphInk(fontMetrics, ellipsisChar) : true;
+  // :5985-6046
+  const lastFace = glyphs.at(-1)!.fontMetrics;
+  const wantsEllipsis = flags.addEllipsis || flags.enforceEllipsis;
+  const elFace = wantsEllipsis ? faceWithGlyph(lastFace, fontMetrics, ellipsisChar) : lastFace;
+  const foundElChar = elFace !== null;
   const dotChar = foundElChar ? ellipsisChar : '.';
   const dotRepeat = foundElChar ? 1 : 3;
-  const dotAdvancePx =
-    flags.addEllipsis || flags.enforceEllipsis
-      ? getFontEmboldenedAdvancePx(fontMetrics, dotChar, fontSizePx)
-      : 0;
-  const whitespaceAdvancePx = getFontEmboldenedAdvancePx(fontMetrics, ' ', fontSizePx);
-  const emboldenGrowthPx = getFontEmboldenGrowthPx(fontMetrics.embolden ?? 0, fontSizePx) || undefined;
+  const dotFace = elFace ?? faceWithGlyph(lastFace, fontMetrics, '.') ?? lastFace;
+  const whitespaceFace = faceWithGlyph(lastFace, fontMetrics, ' ') ?? lastFace;
+  const dotAdvancePx = wantsEllipsis ? getFontEmboldenedAdvancePx(dotFace, dotChar, fontSizePx) : 0;
+  const whitespaceAdvancePx = getFontEmboldenedAdvancePx(whitespaceFace, ' ', fontSizePx);
+  const emboldenGrowthPx = getFontEmboldenGrowthPx(dotFace.embolden ?? 0, fontSizePx) || undefined;
   // :6044-6046 -- `int ellipsis_width` truncates.
   const ellipsisWidthPx = flags.addEllipsis
     ? Math.trunc(dotRepeat * dotAdvancePx + (flags.trimWordOnly ? whitespaceAdvancePx : 0))
@@ -271,14 +279,22 @@ function findOverrunTrim(
   const ellipsis: Array<Omit<GlyphPlacement, 'x'>> = [];
   if (flags.addEllipsis && (cut.ellipsisPos > 0 || flags.enforceEllipsis)) {
     if (flags.trimWordOnly && cut.ellipsisPos > 0) {
-      ellipsis.push({ char: ' ', advance: whitespaceAdvancePx, glyph: atlasGlyphFor(fontMetrics, ' ') });
+      ellipsis.push({
+        char: ' ',
+        advance: whitespaceAdvancePx,
+        glyph: atlasGlyphFor(whitespaceFace, ' '),
+        fontSizePx,
+        fontMetrics: whitespaceFace,
+      });
     }
     for (let r = 0; r < dotRepeat; r++) {
       ellipsis.push({
         char: dotChar,
         advance: dotAdvancePx,
-        glyph: atlasGlyphFor(fontMetrics, dotChar),
+        glyph: atlasGlyphFor(dotFace, dotChar),
         emboldenGrowthPx,
+        fontSizePx,
+        fontMetrics: dotFace,
       });
     }
   }

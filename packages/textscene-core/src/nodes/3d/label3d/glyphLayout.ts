@@ -28,7 +28,7 @@ type Label3DBreakProperties = Pick<
 
 type Label3DJustifyProperties = Pick<
   Label3DProperties,
-  'font_size' | 'width' | 'justification_flags' | 'horizontal_alignment'
+  'width' | 'justification_flags' | 'horizontal_alignment'
 >;
 
 type Label3DPlaceProperties = Pick<
@@ -74,12 +74,7 @@ export function justifyLabel3DLines(
   if (properties.horizontal_alignment !== HorizontalAlignment.HORIZONTAL_ALIGNMENT_FILL) return layout;
   return {
     ...layout,
-    lines: justifyLinesToWidth(
-      layout.lines,
-      properties.width,
-      properties.justification_flags,
-      properties.font_size
-    ),
+    lines: justifyLinesToWidth(layout.lines, properties.width, properties.justification_flags),
   };
 }
 

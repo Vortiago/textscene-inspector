@@ -63,11 +63,9 @@ function farthestFromNearest(
 const POSITION_TOLERANCE = 2e-6;
 
 describe.each(measured.surfaces as unknown as MeasuredMesh[])('TextMesh $text $raw against Godot', (mesh) => {
-  const surface = buildTextMeshSurface(
-    decodeTextMesh({ ...mesh.raw, text: JSON.stringify(mesh.text) }),
-    '',
-    measuredFace(mesh)
-  );
+  const surface = buildTextMeshSurface(decodeTextMesh({ ...mesh.raw, text: JSON.stringify(mesh.text) }), '', [
+    measuredFace(mesh),
+  ]);
 
   it('writes the same number of vertices and indices', () => {
     expect([surface.positions.length / 3, surface.indices.length]).toEqual([mesh.vertices, mesh.indices]);

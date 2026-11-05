@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
-import { FACELESS_FONT } from '../../../r3f/controls/native/text/sceneFontResolution';
+import { NO_FACE, findDrawnFace } from '../../../r3f/controls/native/text/sceneFontResolution';
 import {
   findThemeFontIn,
   fontForNode,
@@ -13,6 +13,11 @@ import { NO_PROJECT_FONTS } from '../../fonts/font/projectFonts';
 import { NO_RESOURCES } from '../../../r3f/SceneResourcesContext';
 import type { ThemeResource } from './types';
 import type { FontResource, FontVariationResource } from '../../fonts/font/types';
+
+/** The base a FontVariation or SystemFont draws over. */
+function baseOf(font: FontResource | null): FontResource | null {
+  return font && font.kind !== 'file' ? font.baseFont : null;
+}
 
 const FONT_A: FontResource = {
   kind: 'file',
@@ -256,6 +261,7 @@ describe('resolveThemeFontIn', () => {
 const BARE_VARIATION: FontVariationResource = {
   kind: 'variation',
   baseFont: null,
+  fallbacks: [],
   properties: { variation_embolden: '1.2' },
 };
 
@@ -284,10 +290,6 @@ describe('findThemeFontIn', () => {
 // `FontVariation::_get_base_font_or_default` (`font.cpp:2987-3039`) asks the default theme context,
 // which holds the project theme and the default theme, never a scene ancestor.
 describe('resolveThemeFontIn — a FontVariation with no base_font', () => {
-  function baseOf(font: FontResource | null): FontResource | null {
-    return (font as FontVariationResource).baseFont;
-  }
-
   it("takes the project's custom_font as its base", () => {
     const scope = themeResolutionScope('Label', undefined, [], {
       projectTheme: null,
@@ -339,7 +341,7 @@ describe('resolveThemeFontIn — a SystemFont', () => {
       projectTheme: null,
       projectDefaultFont: FONT_A,
     });
-    expect(resolveThemeFontIn(scope, 'font', SYSTEM_FONT)).toBe(FONT_A);
+    expect(baseOf(resolveThemeFontIn(scope, 'font', SYSTEM_FONT))).toBe(FONT_A);
   });
 
   it("is the project theme's SystemFont font, where a bare FontVariation takes its FontVariation font", () => {
@@ -348,10 +350,8 @@ describe('resolveThemeFontIn — a SystemFont', () => {
       projectTheme: project,
       projectDefaultFont: null,
     });
-    expect(resolveThemeFontIn(scope, 'font', SYSTEM_FONT)).toBe(FONT_B);
-    expect((resolveThemeFontIn(scope, 'font', BARE_VARIATION) as FontVariationResource).baseFont).toBe(
-      FONT_A
-    );
+    expect(baseOf(resolveThemeFontIn(scope, 'font', SYSTEM_FONT))).toBe(FONT_B);
+    expect(baseOf(resolveThemeFontIn(scope, 'font', BARE_VARIATION))).toBe(FONT_A);
   });
 
   it('stays a SystemFont, which draws the bundled font, when the project sets no font', () => {
@@ -364,7 +364,7 @@ describe('resolveThemeFontIn — a SystemFont', () => {
       projectTheme: theme({ defaultFont: SYSTEM_FONT }),
       projectDefaultFont: FONT_A,
     });
-    expect(resolveThemeFontIn(scope, 'font', undefined)).toBe(FONT_A);
+    expect(baseOf(resolveThemeFontIn(scope, 'font', undefined))).toBe(FONT_A);
   });
 
   it("as the project's custom_font, draws no face: every default Godot tries is itself", () => {
@@ -372,7 +372,7 @@ describe('resolveThemeFontIn — a SystemFont', () => {
       projectTheme: null,
       projectDefaultFont: SYSTEM_FONT,
     });
-    expect(resolveThemeFontIn(scope, 'font', undefined)).toBe(FACELESS_FONT);
+    expect(findDrawnFace(resolveThemeFontIn(scope, 'font', undefined))).toBe(NO_FACE);
   });
 });
 
@@ -386,7 +386,7 @@ describe('themeResolutionScope — the default fonts', () => {
       projectTheme: null,
       projectDefaultFont: FONT_A,
     });
-    const bare: FontVariationResource = { kind: 'variation', baseFont: null, properties: {} };
+    const bare: FontVariationResource = { kind: 'variation', baseFont: null, fallbacks: [], properties: {} };
     expect(resolveThemeFontIn(first, 'font', bare)).toBe(resolveThemeFontIn(second, 'font', bare));
   });
 });
