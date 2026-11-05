@@ -149,11 +149,15 @@ function RichTextRule({
  * The run's outline as `_draw_line` tints it: the outline colour with the alpha of the run's colour
  * (`font_outline_color * Color(1, 1, 1, font_color.a)`, `rich_text_label.cpp:1457`), then the control tint.
  */
+/** The outline of a run with none: `OutlinedTextRun` draws no ring at a size of 0, whatever the colour. */
+const NO_OUTLINE: TextOutlineTheme = { sizePx: 0, color: { r: 0, g: 0, b: 0, a: 0 } };
+
 function runOutline(
   placement: Pick<RichTextRunPlacement, 'outline' | 'color'>,
   ownTint: Rgba
 ): TextOutlineTheme {
   const { sizePx, color } = placement.outline;
+  if (sizePx <= 0) return NO_OUTLINE;
   return { sizePx, color: multiplyModulate(ownTint, { ...color, a: color.a * placement.color.a }) };
 }
 
