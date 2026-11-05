@@ -90,3 +90,4 @@ outline ring (ADR-0064).
 - **Not drawn** `shaped_text_set_direction` at :3104: it takes `is_layout_rtl()`
   only while `text_direction` is INHERITED, and the default is
   `TEXT_DIRECTION_AUTO` (line_edit.h:144).
+- **Approximated** A control character draws as the hex-code box, but Godot draws a system font's own glyph when the host has one (`text_server_adv.cpp:6818`).
