@@ -1439,14 +1439,34 @@ describe('richTextUnderlineMetrics', () => {
     // -(-100 - 50/2)*18/2048 and 50*18/2048: the 18px run's, though the 16px
     // run carries [u]. The -thickness/2 term is FreeType's top-edge-to-centre
     // conversion (sfobjs.c:1424-1425).
-    expect(richTextUnderlineMetrics(runs)).toEqual({
+    expect(richTextUnderlineMetrics(runs)(0)).toEqual({
       positionPx: 1.0986328125,
       thicknessPx: 0.439453125,
     });
   });
 
   it('is zero for a run-less paragraph (nothing shaped, nothing to take a MAX over — text_server_adv.cpp:4461-4462 initialises both to 0)', () => {
-    expect(richTextUnderlineMetrics([])).toEqual({ positionPx: 0, thicknessPx: 0 });
+    expect(richTextUnderlineMetrics([])(0)).toEqual({ positionPx: 0, thicknessPx: 0 });
+  });
+
+  // `upos` and `uthk` belong to each paragraph's own shaped text (`rich_text_label.cpp:1053-1054`).
+  it("takes each paragraph's metrics from that paragraph's runs only", () => {
+    const at = richTextUnderlineMetrics([
+      textRun({ text: 'small\n', underline: true, fontSizePx: 16 }),
+      textRun({ text: 'big', fontSizePx: 18 }),
+    ]);
+    expect(at(0)).toEqual({ positionPx: 0.9765625, thicknessPx: 0.390625 });
+    expect(at(6)).toEqual({ positionPx: 1.0986328125, thicknessPx: 0.439453125 });
+  });
+
+  // An `[img]` is an inline object, not a font span, so it adds nothing to the max
+  // (`text_server_adv.cpp:7174-7175` reads only the spans' fonts).
+  it('leaves an [img] run out of the max', () => {
+    const at = richTextUnderlineMetrics([
+      textRun({ text: 'a', underline: true, fontSizePx: 16 }),
+      textRun({ text: IMAGE_OBJECT_CHAR, fontSizePx: 200, image: {} as StyledTextRun['image'] }),
+    ]);
+    expect(at(0)).toEqual({ positionPx: 0.9765625, thicknessPx: 0.390625 });
   });
 });
 

@@ -291,7 +291,7 @@ function RichTextBody({
       textTheme.fontSizePx,
     ]
   );
-  const underlineMetrics = useMemo(() => richTextUnderlineMetrics(runs), [runs]);
+  const underlineMetricsAt = useMemo(() => richTextUnderlineMetrics(runs), [runs]);
 
   return (
     <>
@@ -327,7 +327,7 @@ function RichTextBody({
             ? underlineRectPx(
                 placement.layout.lines[0]!.glyphs,
                 placement.layout.baselineOffsetPx,
-                underlineMetrics
+                underlineMetricsAt(layout.lines[placement.lineIndex]?.paragraphStart ?? 0)
               )
             : null;
           return (

@@ -6,6 +6,7 @@
  */
 
 import { perObject } from '../../../../utils/perObject';
+import { recentlyRead } from '../../../../utils/recentlyRead';
 import type { SfntOutlines } from './sfntOutlines';
 
 /**
@@ -327,11 +328,16 @@ export function variationKey({ embolden = 0, skew = 0, opentype }: GlyphVariatio
 
 /**
  * The wrappers of one face, by embolden, skew and axis values, then by outlines: one each, so a layout memoised on
- * `FontMetrics` identity keeps its hits.
+ * `FontMetrics` identity keeps its hits. Each wrapper holds its `opentype`, which keys the kept instances and
+ * kerning, so a `variation_opentype` animation drops the wrapper read least recently past this count.
  */
-const variationsOf = perObject(
-  (_face: FontMetrics) => new Map<string, Map<FontMetrics['outlines'], FontMetrics>>()
+const MAX_KEPT_VARIATIONS = 32;
+
+const variationsOf = perObject((_face: FontMetrics) =>
+  recentlyRead<string, Map<FontMetrics['outlines'], FontMetrics>>(MAX_KEPT_VARIATIONS)
 );
+
+const newWrappersByOutlines = (): Map<FontMetrics['outlines'], FontMetrics> => new Map();
 
 /**
  * `metrics` with a `FontVariation`'s `embolden`, `skew` and `opentype` set, and the `outlines` its text follows.
@@ -352,10 +358,7 @@ export function withVariation<Metrics extends FontMetrics>(
   }: GlyphVariation & Pick<FontMetrics, 'outlines'>
 ): Metrics {
   if (!outlines && !isGlyphVaried({ embolden, skew, opentype })) return metrics;
-  const byVariation = variationsOf(metrics);
-  const key = variationKey({ embolden, skew, opentype });
-  let byOutlines = byVariation.get(key);
-  if (!byOutlines) byVariation.set(key, (byOutlines = new Map()));
+  const byOutlines = variationsOf(metrics)(variationKey({ embolden, skew, opentype }), newWrappersByOutlines);
   let wrapped = byOutlines.get(outlines);
   if (!wrapped) {
     wrapped = Object.create(metrics, {

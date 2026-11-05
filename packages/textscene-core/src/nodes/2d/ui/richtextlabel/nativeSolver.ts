@@ -79,6 +79,7 @@ import {
 } from './paragraph';
 import { tagFontSizePx, tagOutline } from './runStyle';
 import { paragraphListings, runListing, type ParagraphListing, type RunListing } from './listing';
+import { countAtOrBelow } from '../../../../utils/countAtOrBelow';
 
 /** RichTextLabel reads `theme_override_font_sizes/normal_font_size` and `theme_override_colors/default_color`, not Label's `font_size` and `font_color`. */
 const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
@@ -902,21 +903,38 @@ interface RichTextUnderlineMetrics {
 }
 
 /**
- * The paragraph's underline position and thickness: a max over every run's size.
- * `_shape_substr` in `modules/text_server_adv/text_server_adv.cpp` (`:5310-5311`) copies the
- * paragraph's `upos`/`uthk` into each line that `rich_text_label.cpp:1053-1054` reads.
- * Both scale monotonically, as `text_server_adv.cpp:7174-7175` accumulates them.
+ * Each paragraph's underline position and thickness, by the source index of a character in it: a
+ * max over the sizes of the paragraph's font spans. `_shape_substr` (`text_server_adv.cpp:5310-5311`)
+ * copies the paragraph's `upos`/`uthk` into each line that `rich_text_label.cpp:1053-1054` reads,
+ * and `:7174-7175` accumulates them from the spans' fonts only, so an `[img]` adds nothing.
  */
-export function richTextUnderlineMetrics(styledRuns: readonly StyledTextRun[]): RichTextUnderlineMetrics {
+export function richTextUnderlineMetrics(
+  styledRuns: readonly StyledTextRun[]
+): (sourceIndex: number) => RichTextUnderlineMetrics {
+  const paragraphs: RichTextUnderlineMetrics[] = [{ positionPx: 0, thicknessPx: 0 }];
+  const paragraphStarts: number[] = [0];
+  let sourceIndex = 0;
+  for (const run of styledRuns) {
+    run.text.split('\n').forEach((segment, i) => {
+      if (i > 0) {
+        paragraphStarts.push(sourceIndex);
+        paragraphs.push({ positionPx: 0, thicknessPx: 0 });
+      }
+      if (segment.length > 0 && !run.image)
+        widenUnderline(paragraphs[paragraphs.length - 1]!, run.fontSizePx);
+      sourceIndex += segment.length + 1;
+    });
+    sourceIndex -= 1;
+  }
+  return (index) => paragraphs[countAtOrBelow(paragraphStarts, index) - 1]!;
+}
+
+/** Widens `metrics` to a span at `fontSizePx`. Both scale monotonically with the size. */
+function widenUnderline(metrics: RichTextUnderlineMetrics, fontSizePx: number): void {
   // Open Sans's `post` table (`openSansMetrics.ts`): `fontMetrics.ts` has no
   // underline fields, so a scene font keeps Open Sans proportions.
-  let positionPx = 0;
-  let thicknessPx = 0;
-  for (const run of styledRuns) {
-    positionPx = Math.max(positionPx, getUnderlinePositionPx(run.fontSizePx));
-    thicknessPx = Math.max(thicknessPx, getUnderlineThicknessPx(run.fontSizePx));
-  }
-  return { positionPx, thicknessPx };
+  metrics.positionPx = Math.max(metrics.positionPx, getUnderlinePositionPx(fontSizePx));
+  metrics.thicknessPx = Math.max(metrics.thicknessPx, getUnderlineThicknessPx(fontSizePx));
 }
 
 /** One line's share of one style run. */
