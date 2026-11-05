@@ -14,11 +14,9 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { OPTION_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import {
-  shapedTextSizeWidthPx,
-  type TextLayoutResult,
-} from '../../../../r3f/controls/native/text/textLayout';
+import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
+import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   layoutOptionButtonContent,
@@ -74,12 +72,9 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
         arrowMargin,
         hSeparation: optionButtonHSeparation(solveNode.constants, { theme }),
         rtl: solveNode.rtl,
-        // The draw path reads the ceiled `text_buf->get_size()` its minimum size does
-        // (`scene/gui/button.cpp:343,349`), so alignment uses the ceiled width. The height is already
-        // integral: ceiled ascent plus ceiled descent plus an integral spacing.
-        textNaturalSize: layout
-          ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
-          : { x: 0, y: 0 },
+        // Integral: ceiled ascent plus ceiled descent plus an integral spacing.
+        textHeightPx: layout?.heightPx ?? 0,
+        textAlignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
       }),
     [
       rect.w,
@@ -88,6 +83,7 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
       arrowSize,
       arrowMargin,
       layout,
+      props.alignment,
       solveNode.constants,
       theme,
       solveNode.rtl,
@@ -113,15 +109,14 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
         />
       </CanvasItemGroup>
       {hasText && layout && (
-        <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
-          <TextRun
-            layout={layout}
-            fontSizePx={fontSizePx}
-            tint={tintedFontColor}
-            clippingPlanes={clippingPlanes}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
+        <ButtonLabel
+          layout={layout}
+          box={content.labelBox}
+          fontSizePx={fontSizePx}
+          tint={tintedFontColor}
+          clippingPlanes={clippingPlanes}
+          renderOrder={renderOrder}
+        />
       )}
     </>
   );

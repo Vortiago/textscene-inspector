@@ -1,17 +1,18 @@
 ---
 type: MultiMeshInstance2D
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-multi-mesh-instance-2d.tscn
-# image: unit-multi-mesh-instance-2d
-renders_as: nothing yet, Godot draws a batch of textured mesh instances, the previewer does not
+image: unit-multi-mesh-instance-2d
+renders_as: a THREE.Mesh, THREE.Points or THREE.LineSegments per surface kind, with every instance merged
 ---
 
 # MultiMeshInstance2D
 
-MultiMeshInstance2D batch-draws many copies of one mesh from a MultiMesh resource. The
-previewer parses and validates it but does not draw it, so it draws nothing
-and its children still show.
+MultiMeshInstance2D draws the mesh of a MultiMesh once for each instance, on the canvas. The
+previewer draws each instance under its 2D transform, and multiplies the texel, the vertex colour,
+the instance colour and the modulate. With a CanvasItemMaterial that sets `particles_animation`,
+each instance shows the cell its custom data picks. It draws nothing for a 3D transform format.
 
 ## Linting
 
@@ -30,10 +31,5 @@ Strict parsing format-checks these `MultiMeshInstance2D` properties, plus 12 inh
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
-A bare string in `multimesh` or `texture`, such as `"res://grass.tres"`, is stored as-is
-with no warning. Nothing reads it back, since no render component exists.
-
-## Known limitations
-
-- **Not drawn** Godot draws the batch of textured instances, but the previewer draws
-  nothing for this node.
+A bare string in `multimesh` or `texture`, such as `"res://grass.tres"`, is stored as-is with
+no warning. The MultiMesh then draws nothing, and the texture draws white.

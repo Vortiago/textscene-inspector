@@ -231,7 +231,7 @@ describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-26
     hSeparation: 4,
     hasText: true,
     textAlignment: 0,
-    textNaturalSize: { x: 90, y: 26 },
+    textHeightPx: 26,
     rtl: false,
   };
 
@@ -246,57 +246,26 @@ describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-26
     expect(iconPosition.y).toBe(7.5);
   });
 
-  it('LEFT-aligned text (the default) starts at marginX with no shift', () => {
-    const { textOffset } = layoutCheckButtonContent(BASE);
-    expect(textOffset!.x).toBe(6);
-    // customElementHeight = 28-8=20; y = floor((20-26)/2 + 4) = floor(1) = 1.
-    expect(textOffset!.y).toBe(1);
+  it('the label box starts at marginX and ends before the toggle and its h_separation', () => {
+    const { labelBox } = layoutCheckButtonContent(BASE);
+    // width = 150 - 12 - (32 + 4) = 102. customElementHeight = 28-8=20; topPx = floor((20-26)/2 + 4) = 1.
+    expect(labelBox).toEqual({ leftPx: 6, topPx: 1, widthPx: 102, alignment: 0 });
   });
 
-  it('CENTER-aligned text centres within the box left of the icon', () => {
-    const { textOffset } = layoutCheckButtonContent({ ...BASE, textAlignment: 1 });
-    // textBoxWidth = 150-6-36-6=102; shift=(102-90)/2=6; x=6+6=12.
-    expect(textOffset!.x).toBe(12);
+  it('hands the authored alignment to the drawn label', () => {
+    expect(layoutCheckButtonContent({ ...BASE, textAlignment: 1 }).labelBox!.alignment).toBe(1);
+    expect(layoutCheckButtonContent({ ...BASE, textAlignment: 2 }).labelBox!.alignment).toBe(2);
   });
 
-  it('CENTER floors its own half (text_paragraph.cpp:904)', () => {
-    // textBoxWidth = 102, length 91: floor(11/2) = 5, not 5.5. x = 6 + 5.
-    const { textOffset } = layoutCheckButtonContent({
-      ...BASE,
-      textAlignment: 1,
-      textNaturalSize: { x: 91, y: 26 },
-    });
-    expect(textOffset!.x).toBe(11);
+  it('keeps the unceiled drawable width: the ceiling belongs to the drawn label (button.cpp:437)', () => {
+    expect(layoutCheckButtonContent({ ...BASE, rectSize: { x: 150.5, y: 28 } }).labelBox!.widthPx).toBe(
+      102.5
+    );
   });
 
-  it('CENTER does not shift an OVERFLOWING label at all (text_paragraph.cpp:902)', () => {
-    const { textOffset } = layoutCheckButtonContent({
-      ...BASE,
-      textAlignment: 1,
-      textNaturalSize: { x: 200, y: 26 },
-    });
-    expect(textOffset!.x).toBe(6);
-  });
-
-  it('RIGHT hugs the CEILED paragraph width, not the raw drawable (button.cpp:437)', () => {
-    // rect 150.5 -> textBoxWidth 102.5 -> text_buf_width 103; 103 - 90 = 13.
-    const { textOffset } = layoutCheckButtonContent({
-      ...BASE,
-      rectSize: { x: 150.5, y: 28 },
-      textAlignment: 2,
-    });
-    expect(textOffset!.x).toBeCloseTo(19, 10);
-  });
-
-  it('RIGHT-aligned text sits flush against the reserved icon gap', () => {
-    const { textOffset } = layoutCheckButtonContent({ ...BASE, textAlignment: 2 });
-    // shift = 102-90=12; x=6+12=18.
-    expect(textOffset!.x).toBe(18);
-  });
-
-  it('returns textOffset: null when hasText is false (icon still positioned)', () => {
-    const { iconPosition, textOffset } = layoutCheckButtonContent({ ...BASE, hasText: false });
-    expect(textOffset).toBeNull();
+  it('returns labelBox: null when hasText is false (icon still positioned)', () => {
+    const { iconPosition, labelBox } = layoutCheckButtonContent({ ...BASE, hasText: false });
+    expect(labelBox).toBeNull();
     expect(iconPosition).toEqual({ x: 112, y: 6 });
   });
 
@@ -321,7 +290,7 @@ describe('layoutCheckButtonContent — RTL puts the toggle on the left', () => {
     hSeparation: 4,
     hasText: true,
     textAlignment: 0,
-    textNaturalSize: { x: 90, y: 26 },
+    textHeightPx: 26,
     rtl: true,
   };
 
@@ -330,16 +299,15 @@ describe('layoutCheckButtonContent — RTL puts the toggle on the left', () => {
     expect(iconPosition).toEqual({ x: 6, y: 6 });
   });
 
-  it('lays LEFT-aligned text out at the far end of the box right of the toggle', () => {
-    const { textOffset } = layoutCheckButtonContent(BASE);
-    // reserved = 32+4 = 36; drawable = 150-12-36 = 102; RIGHT shift = 102-90 = 12.
-    expect(textOffset!.x).toBe(6 + 36 + 12);
-    expect(textOffset!.y).toBe(1);
+  it('puts the label box right of the toggle and aligns a LEFT label RIGHT', () => {
+    const { labelBox } = layoutCheckButtonContent(BASE);
+    // reserved = 32+4 = 36; drawable = 150-12-36 = 102.
+    expect(labelBox).toEqual({ leftPx: 6 + 36, topPx: 1, widthPx: 102, alignment: 2 });
   });
 
-  it('leaves CENTER alone and swaps RIGHT to flush against the toggle', () => {
-    expect(layoutCheckButtonContent({ ...BASE, textAlignment: 1 }).textOffset!.x).toBe(6 + 36 + 6);
-    expect(layoutCheckButtonContent({ ...BASE, textAlignment: 2 }).textOffset!.x).toBe(6 + 36);
+  it('leaves CENTER alone and swaps RIGHT to LEFT', () => {
+    expect(layoutCheckButtonContent({ ...BASE, textAlignment: 1 }).labelBox!.alignment).toBe(1);
+    expect(layoutCheckButtonContent({ ...BASE, textAlignment: 2 }).labelBox!.alignment).toBe(0);
   });
 });
 
@@ -392,5 +360,17 @@ describe('checkButtonDrawnIconSize', () => {
   it('is 0 for an icon that reports size 0, as an unset ViewportTexture does', () => {
     const n = { textureSlots: { unchecked: { x: 0, y: 0 } }, constants: {} };
     expect(checkButtonDrawnIconSize(n, 'unchecked')).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('checkButtonMinimumSize — clip_text zeroes the text width (button.cpp:493-495)', () => {
+  it('keeps the icon, the margins and the text height, and drops the text width and the h_separation', () => {
+    const result = checkButtonMinimumSize(node({ text: 'AB', clipText: true }), ctx());
+    expect(result).toEqual({ x: 12 + 32, y: 8 + FONT_HEIGHT });
+  });
+
+  it('keeps the whole text width without clip_text', () => {
+    const result = checkButtonMinimumSize(node({ text: 'AB', clipText: false }), ctx());
+    expect(result.x).toBe(12 + AB_SHAPED_WIDTH + 4 + 32);
   });
 });

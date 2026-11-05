@@ -12,11 +12,8 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import {
-  shapedTextSizeWidthPx,
-  type TextLayoutResult,
-} from '../../../../r3f/controls/native/text/textLayout';
+import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
+import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import {
@@ -35,9 +32,9 @@ import {
   resolveCheckButtonIconKey,
   tintColor,
   CHECK_BUTTON_ICON_THEME_NAME,
-  CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT,
   CHECKBUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import type { CheckButtonProperties } from './types';
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
@@ -93,11 +90,9 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
         checkVOffset: checkButtonCheckVOffset(solveNode.constants),
         hSeparation: checkButtonHSeparation(solveNode.constants, { theme }),
         hasText,
-        textAlignment: props.alignment ?? CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT,
+        textHeightPx: layout?.heightPx ?? 0,
+        textAlignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
         rtl: solveNode.rtl,
-        textNaturalSize: layout
-          ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
-          : { x: 0, y: 0 },
       }),
     [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout, props.alignment, solveNode.rtl]
   );
@@ -114,16 +109,15 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
           map={iconTexture}
         />
       </CanvasItemGroup>
-      {content.textOffset && layout && (
-        <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
-          <TextRun
-            layout={layout}
-            fontSizePx={fontSizePx}
-            tint={tintedFontColor}
-            clippingPlanes={clippingPlanes}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
+      {content.labelBox && layout && (
+        <ButtonLabel
+          layout={layout}
+          box={content.labelBox}
+          fontSizePx={fontSizePx}
+          tint={tintedFontColor}
+          clippingPlanes={clippingPlanes}
+          renderOrder={renderOrder}
+        />
       )}
     </>
   );

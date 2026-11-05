@@ -190,19 +190,20 @@ describe('resolveButtonDrawState reused for OptionButton (no CheckBox-style pres
   });
 });
 
-describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-260,444-456)', () => {
-  const BASE = {
-    rectSize: { x: 150, y: 32 },
-    styleMargin: { left: 8, top: 4, right: 8, bottom: 4 },
-    arrowSize: { x: 12, y: 12 },
-    arrowMargin: 4,
-    hSeparation: 4,
-    textNaturalSize: { x: 60, y: 26 },
-    rtl: false,
-  };
+const LAYOUT_BASE = {
+  rectSize: { x: 150, y: 32 },
+  styleMargin: { left: 8, top: 4, right: 8, bottom: 4 },
+  arrowSize: { x: 12, y: 12 },
+  arrowMargin: 4,
+  hSeparation: 4,
+  textHeightPx: 26,
+  textAlignment: 0,
+  rtl: false,
+};
 
+describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-260,444-456)', () => {
   it('the arrow sits at (rect.w - arrowSize.w - arrowMargin), NOT the content-margin edge', () => {
-    const { arrowRect } = layoutOptionButtonContent(BASE);
+    const { arrowRect } = layoutOptionButtonContent(LAYOUT_BASE);
     // Content margins are 8 by 4 (default_theme.cpp:212-215), but
     // `arrow_margin` (`:249`, round(4*scale)) counts from the full rect edge: `pnpm ref:godot
     // scenes/fixtures/unit-optionbutton.tscn --mode 2d` puts the chevron at 150 - 12 - 4 = 134, not 150 - 12 - 8.
@@ -211,26 +212,32 @@ describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-2
   });
 
   it('the arrow is vertically centred within the FULL rect height (not the content box)', () => {
-    const { arrowRect } = layoutOptionButtonContent(BASE);
+    const { arrowRect } = layoutOptionButtonContent(LAYOUT_BASE);
     // floor(abs((32-12)/2)) = 10.
     expect(arrowRect.y).toBe(10);
   });
 
-  it('text starts flush at the LEFT content margin (OptionButton sets text_alignment LEFT)', () => {
-    const { textOffset } = layoutOptionButtonContent(BASE);
-    expect(textOffset.x).toBe(8);
-  });
-
-  it('text is vertically centred within the content box (margins symmetric here)', () => {
-    const { textOffset } = layoutOptionButtonContent(BASE);
-    // customElementHeight = 32-8=24; y = (24-26)/2 + 4 = -1+4 = 3.
-    expect(textOffset.y).toBeCloseTo(3, 10);
+  it('the label box starts flush at the LEFT content margin and stops short of the arrow and its h_separation', () => {
+    const { labelBox } = layoutOptionButtonContent(LAYOUT_BASE);
+    // width = 150 - 8 - 8 - (12 + 4) = 118. customElementHeight = 32-8=24; topPx = (24-26)/2 + 4 = 3.
+    expect(labelBox).toEqual({ leftPx: 8, topPx: 3, widthPx: 118, alignment: 0 });
   });
 
   it("floors a half-pixel centring remainder DOWN, matching Button's own text_ofs.y (never floored in the source itself, only per-glyph — text_server_adv.cpp:4083) — the ACTUAL 'Normal' item at font size 16 (ascent 18 + descent 5 = 23)", () => {
     // customElementHeight = 32-8=24; (24-23)/2=0.5; +styleMargin.top(4)=4.5 -> floor 4.
-    const { textOffset } = layoutOptionButtonContent({ ...BASE, textNaturalSize: { x: 60, y: 23 } });
-    expect(textOffset.y).toBe(4);
+    const { labelBox } = layoutOptionButtonContent({ ...LAYOUT_BASE, textHeightPx: 23 });
+    expect(labelBox.topPx).toBe(4);
+  });
+
+  it('hands the authored alignment to the drawn label', () => {
+    expect(layoutOptionButtonContent({ ...LAYOUT_BASE, textAlignment: 1 }).labelBox.alignment).toBe(1);
+    expect(layoutOptionButtonContent({ ...LAYOUT_BASE, textAlignment: 2 }).labelBox.alignment).toBe(2);
+  });
+
+  it('keeps the unceiled drawable width: the ceiling belongs to the drawn label (button.cpp:437)', () => {
+    expect(
+      layoutOptionButtonContent({ ...LAYOUT_BASE, rectSize: { x: 150.5, y: 32 } }).labelBox.widthPx
+    ).toBe(118.5);
   });
 });
 
@@ -241,39 +248,27 @@ describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-2
  * the constructor's `HORIZONTAL_ALIGNMENT_LEFT` (`:654`) becomes RIGHT through Button's swap (`button.cpp:271-275`).
  */
 describe('layoutOptionButtonContent — RTL puts the arrow on the left', () => {
-  const BASE = {
-    rectSize: { x: 150, y: 32 },
-    styleMargin: { left: 8, top: 4, right: 8, bottom: 4 },
-    arrowSize: { x: 12, y: 12 },
-    arrowMargin: 4,
-    hSeparation: 4,
-    textNaturalSize: { x: 60, y: 26 },
-    rtl: false,
-  };
-  const RTL = { ...BASE, rtl: true };
+  const RTL = { ...LAYOUT_BASE, rtl: true };
 
   it('draws the arrow at arrow_margin from the LEFT edge, vertically unchanged', () => {
     const { arrowRect } = layoutOptionButtonContent(RTL);
     expect(arrowRect).toEqual({ x: 4, y: 10, w: 12, h: 12 });
   });
 
-  it('lays the selected item out against the right content margin', () => {
-    const { textOffset } = layoutOptionButtonContent(RTL);
-    // reserved = 12+4 = 16 on the LEFT; drawable = 150-8-8-16 = 118;
-    // text_ofs.x = 8 + 16, RIGHT shift = 118-60 = 58 -> 82.
-    expect(textOffset.x).toBe(82);
-    expect(textOffset.y).toBeCloseTo(3, 10);
+  it('puts the label box right of the arrow and aligns a LEFT label RIGHT', () => {
+    const { labelBox } = layoutOptionButtonContent(RTL);
+    // reserved = 12+4 = 16 on the LEFT; drawable = 150-8-8-16 = 118; leftPx = 8 + 16.
+    expect(labelBox).toEqual({ leftPx: 24, topPx: 3, widthPx: 118, alignment: 2 });
   });
 
-  it('hugs the CEILED paragraph width, not the raw drawable (button.cpp:437)', () => {
-    // rect 150.5 -> drawable 118.5 -> text_buf_width 119; 119 - 60 = 59; + 8 + 16.
-    const { textOffset } = layoutOptionButtonContent({ ...RTL, rectSize: { x: 150.5, y: 32 } });
-    expect(textOffset.x).toBeCloseTo(83, 10);
+  it('leaves CENTER alone and swaps RIGHT to LEFT', () => {
+    expect(layoutOptionButtonContent({ ...RTL, textAlignment: 1 }).labelBox.alignment).toBe(1);
+    expect(layoutOptionButtonContent({ ...RTL, textAlignment: 2 }).labelBox.alignment).toBe(0);
   });
 
   it('moves the label with h_separation, which the LTR arm never feels', () => {
-    expect(layoutOptionButtonContent({ ...RTL, hSeparation: 10 }).textOffset.x).toBe(82);
-    expect(layoutOptionButtonContent({ ...BASE, hSeparation: 10 }).textOffset.x).toBe(8);
+    expect(layoutOptionButtonContent({ ...RTL, hSeparation: 10 }).labelBox.leftPx).toBe(30);
+    expect(layoutOptionButtonContent({ ...LAYOUT_BASE, hSeparation: 10 }).labelBox.leftPx).toBe(8);
   });
 });
 
@@ -318,5 +313,19 @@ describe('optionButtonMinimumSize — the shaped item extent is ceiled (text_ser
       ],
     });
     expect(optionButtonMinimumSize(n, ctx()).x).toBe(103);
+  });
+});
+
+describe('optionButtonMinimumSize — clip_text zeroes each item text width (button.cpp:493-495)', () => {
+  const items = [{ text: 'AB', id: 0 }];
+
+  it('keeps the margins, the arrow and the text height, and drops the text width', () => {
+    const result = optionButtonMinimumSize(node({ items, selected: 0, clipText: true }), ctx());
+    expect(result).toEqual({ x: 16 + 12 + 4, y: 8 + FONT_HEIGHT });
+  });
+
+  it('keeps the widest item text width without clip_text', () => {
+    const result = optionButtonMinimumSize(node({ items, selected: 0, clipText: false }), ctx());
+    expect(result.x).toBe(16 + AB_SHAPED_WIDTH + 12 + 4);
   });
 });

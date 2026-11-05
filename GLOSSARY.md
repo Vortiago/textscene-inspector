@@ -408,6 +408,15 @@ _Avoid_: "render-order offset", "fraction".
 Whether a canvas multiplies sRGB numbers into an 8-bit target, or linear values into a half-float one. Only a sub-viewport with `use_hdr_2d` draws a linear canvas. Its target, texture views, material defines and tint all follow this one value.
 _Avoid_: "HDR mode", "linear mode".
 
+**Flipbook cell** (`r3f/particlesFlipbook.ts`):
+The one cell of a `particles_animation` sheet that a canvas item draws. The item shrinks to the cell and windows its UV to it, and `INSTANCE_CUSTOM.z` picks it.
+A CPUParticles2D particle, a MultiMeshInstance2D instance and a MeshInstance2D (which has no custom data, so cell 0) share it.
+_Avoid_: "frame", which is a Sprite2D's `frame` of `hframes`.
+
+**Drawn instance** (`resources/meshes/multimesh/types.ts`):
+One of the instances a MultiMesh draws: the first `visible_instance_count`, or all of them for -1, each with its transform, its colour when `use_colors` and its custom data when `use_custom_data`.
+_Avoid_: "visible instance" for the record, which names only the count.
+
 **Canvas frame** (`Canvas2DStage/canvasFrame.ts`):
 The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057). Under `render_target_clear_mode` NEVER it takes the bytes of the target first and draws over them.
 _Avoid_: "MSAA frame".

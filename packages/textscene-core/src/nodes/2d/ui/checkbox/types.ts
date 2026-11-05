@@ -9,6 +9,10 @@ export interface CheckBoxProperties extends ControlProperties {
   buttonPressed?: boolean;
   /** Disabled checkboxes render dimmed and non-interactive. */
   disabled?: boolean;
+  /** `alignment` (`HorizontalAlignment`). CheckBox's default is LEFT (`check_box.cpp:174`). */
+  alignment?: number;
+  /** `Button.clip_text`: zeroes the text's minimum-width contribution (`button.cpp:493-495`). */
+  clipText?: boolean;
   /**
    * A `ButtonGroup` reference. Godot swaps the check glyph for the `radio_*`
    * icons when a CheckBox belongs to one (`check_box.cpp::is_radio`), so this

@@ -21,7 +21,8 @@ import { useTexture2D } from '../../../resources/useTexture2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { useEmissionTransform } from './emissionTransform';
-import { buildParticleGeometry, type ParticleFlipbook } from './particleGeometry';
+import { buildParticleGeometry } from './particleGeometry';
+import { particlesFlipbook } from '../../../r3f/particlesFlipbook';
 import { useParticleResources } from '../../shared/cpuparticles/useParticleResources';
 import { loadSimulate } from './simulateModule';
 import type { CPUParticles2DProperties } from './types';
@@ -56,20 +57,6 @@ export function CPUParticles2D({ node, children }: NodeComponentProps) {
   );
 }
 
-/**
- * The emitter's flipbook, or null when its material has none. `particles_anim`,
- * a CanvasItemMaterial setting only a particles node drives, makes the texture a
- * sheet of cells, and a particle picks its cell from its simulated anim value.
- */
-function particleFlipbook(material: CanvasItemMaterialProperties | null): ParticleFlipbook | null {
-  if (!material?.particlesAnimation) return null;
-  return {
-    hFrames: material.particlesAnimHFrames,
-    vFrames: material.particlesAnimVFrames,
-    loop: material.particlesAnimLoop,
-  };
-}
-
 function ParticleField({
   props,
   name,
@@ -86,7 +73,7 @@ function ParticleField({
   pixelMaterial: CanvasItemPixelMaterial;
 }) {
   const { externalResources, internalResources } = useSceneResources();
-  const flipbook = useMemo(() => particleFlipbook(material), [material]);
+  const flipbook = useMemo(() => particlesFlipbook(material), [material]);
   const {
     texture: resolvedTexture,
     size,
