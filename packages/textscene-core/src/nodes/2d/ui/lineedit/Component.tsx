@@ -74,17 +74,11 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const fontMetrics = resolveNodeFontMetrics(solveNode, LINE_EDIT_THEME_FONT_KEY);
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
   const bidi = useControlBidiOptions(props, solveNode);
+  const { drawControlChars } = props;
   const layout: TextLayoutResult | null = useMemo(
     () =>
-      hasText
-        ? shapeLineEditText(text, {
-            ...bidi,
-            fontSizePx,
-            fontMetrics,
-            preserveControl: props.drawControlChars,
-          })
-        : null,
-    [hasText, text, fontSizePx, fontMetrics, props.drawControlChars, bidi]
+      hasText ? shapeLineEditText(text, { drawControlChars }, { ...bidi, fontSizePx, fontMetrics }) : null,
+    [hasText, text, fontSizePx, fontMetrics, drawControlChars, bidi]
   );
 
   // Icon: which one draws, its resolved size

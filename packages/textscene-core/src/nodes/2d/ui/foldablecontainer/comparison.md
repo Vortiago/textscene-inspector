@@ -53,4 +53,5 @@ default (LEFT / TOP / no trimming) applies.
 
 ## Known limitations
 
-None known.
+- **Not drawn** The title outline (`outline_size`, `font_outline_color`) that
+  `foldable_container.cpp:310-312` draws under the title.

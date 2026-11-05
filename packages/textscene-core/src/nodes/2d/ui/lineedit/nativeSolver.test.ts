@@ -891,7 +891,7 @@ describe('shapeLineEditText — direction, language and structured override (lin
   function visual(props: Partial<LineEditProperties>, overrides: Partial<SolveNode> = {}): string {
     const n = { ...node(props), ...overrides };
     return visualChars(
-      shapeLineEditText(props.text ?? '', {
+      shapeLineEditText(props.text ?? '', props, {
         fontSizePx: 16,
         fontMetrics: OPEN_SANS_FONT_METRICS,
         ...controlBidiOptions(n.node.properties as LineEditProperties, n),

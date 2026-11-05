@@ -73,6 +73,8 @@ Godot's `ERR_FAIL_COND_V` does before `clear()` runs.
 
 ## Known limitations
 
+- **Not drawn** The item text outline (`outline_size`, `font_outline_color`) that
+  `item_list.cpp:1642-1644` draws under each item's text.
 - **Not drawn** The scroll-hint icon (`scroll_hint_mode`), which needs a live scroll
   position that no static file has.
 - **Not drawn** The `focus` StyleBox and every selected, hovered or cursor row

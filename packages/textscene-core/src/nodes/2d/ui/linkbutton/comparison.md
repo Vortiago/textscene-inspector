@@ -50,6 +50,8 @@ outline ring (ADR-0064).
 
 ## Known limitations
 
+- **Not drawn** The text outline (`outline_size`, `font_outline_color`) that
+  `link_button.cpp:294-301` draws under the text.
 - **Approximated** A `theme_override_fonts/font` scene font takes its underline position
   and thickness from the vendored Open Sans metrics, because no scene font carries baked
   underline data.

@@ -69,9 +69,9 @@ export interface ParsedImgTag {
   alignment: ParsedImageAlignment;
 }
 
-// A tag is `[name]`, `[name=value]`, `[name attr=...]`, or a `[/name]` close.
-// Godot does not trim `value` either. Space attributes are matched and ignored.
-const OPEN = /^\[([a-zA-Z_][a-zA-Z0-9_]*)(?:=([^\]]*)|\s[^\]]*)?\]$/;
+// A tag is `[name]`, `[name=value]`, `[name attr=...]`, or a `[/name]` close. Only a space starts
+// the options (`rich_text_label.cpp:5358`), and Godot does not trim `value` either.
+const OPEN = /^\[([a-zA-Z_][a-zA-Z0-9_]*)(?:=([^\]]*)| [^\]]*)?\]$/;
 const CLOSE = /^\[\/([a-zA-Z_][a-zA-Z0-9_]*)\]$/;
 
 /**
@@ -521,7 +521,7 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
     const token = text.slice(brkStart, brkEnd + 1);
 
     const close = CLOSE.exec(token);
-    if (close && stack.length > 0 && stack[stack.length - 1]!.name === close[1]!.toLowerCase()) {
+    if (close && stack.length > 0 && stack[stack.length - 1]!.name === close[1]) {
       flush();
       stack.pop();
       pos = brkEnd + 1;
@@ -529,8 +529,9 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
     }
 
     const open = close ? null : OPEN.exec(token);
-    if (open && RECOGNISED_TAGS.has(open[1]!.toLowerCase())) {
-      const name = open[1]!.toLowerCase();
+    // Tag names compare exactly (`:5452`), so `[B]` is text.
+    if (open && RECOGNISED_TAGS.has(open[1]!)) {
+      const name = open[1]!;
       const emitted = selfClosingText(name, open[2]);
       if (emitted !== null) {
         // Part of the surrounding run, so no `flush()`: it carries the same

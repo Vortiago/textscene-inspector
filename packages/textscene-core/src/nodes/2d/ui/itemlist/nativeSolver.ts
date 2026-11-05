@@ -28,7 +28,7 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import { overrunFlagsForBehavior, trimLayoutToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import {
   shapeText,
   shapedTextSizeWidthPx,
@@ -40,7 +40,7 @@ import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_LOWER_COLOR } from '../../../../godot/scene/theme';
 import { AutowrapMode, OverrunBehavior, TextDirection } from '../../../../godot/text/textServerEnums';
-import { textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { isDrawnRtl, textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 
 // --- Enum literals ------------------------------------------------------
@@ -242,8 +242,9 @@ const ITEM_BIDI = { textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: 
 export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult | null {
   if (input.text.length === 0) return null;
   const widthPx = itemListShapeWidth(input.fixedColumnWidth);
+  const bidi = textBidiOptions(ITEM_BIDI, input.locale);
   const layout = shapeText(input.text, {
-    ...textBidiOptions(ITEM_BIDI, input.locale),
+    ...bidi,
     fontSizePx: input.fontSizePx,
     boxWidthPx: widthPx,
     autowrapMode: itemListAutowrapMode(input.iconMode, input.maxTextLines),
@@ -255,22 +256,13 @@ export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult |
   );
   if (!overrunFlags.trim || widthPx <= 0) return layout;
 
-  const trimmedLines = layout.lines.map((line) =>
-    // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to
-    // the vendored atlas font when the caller passes none, and the trim must
-    // agree with whichever metrics actually shaped these glyphs.
-    trimLineToWidth(line, widthPx, overrunFlags, {
-      fontMetrics: layout.fontMetrics,
-      fontSizePx: input.fontSizePx,
-      // An AUTO `TextParagraph` (`ITEM_BIDI`): `shaped_text_draw` reads the set direction.
-      isDrawnRtl: false,
-    })
-  );
-  return {
-    ...layout,
-    lines: trimmedLines,
-    widthPx: trimmedLines.reduce((max, l) => Math.max(max, l.widthPx), 0),
-  };
+  // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to the vendored atlas
+  // font when the caller passes none, and the trim must agree with the metrics that shaped the glyphs.
+  return trimLayoutToWidth(layout, widthPx, overrunFlags, {
+    fontMetrics: layout.fontMetrics,
+    fontSizePx: input.fontSizePx,
+    isDrawnRtl: isDrawnRtl(bidi),
+  });
 }
 
 /**

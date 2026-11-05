@@ -84,9 +84,14 @@ describe('parseBBCodeRuns', () => {
     ]);
   });
 
-  it('lowercases tag names', () => {
-    const runs = parseBBCodeRuns('[B]x[/B]');
-    expect(runs[0]!.tags).toEqual([{ name: 'b' }]);
+  it('draws an upper-case tag as text, as Godot compares tag names exactly', () => {
+    // `rich_text_label.cpp:5452`: `tag == "b"`, so `[B]` is no tag.
+    expect(parseBBCodeRuns('[B]x[/B]')).toEqual([{ text: '[B]x[/B]', tags: [] }]);
+  });
+
+  it('draws a tag whose name a tab follows as text, as only a space starts its options', () => {
+    // `rich_text_label.cpp:5358`: `_split_unquoted(tag, ' ')`, so `b\tx` is the whole name.
+    expect(parseBBCodeRuns('[b\tx]y')).toEqual([{ text: '[b\tx]y', tags: [] }]);
   });
 
   it('emits no run for text between two adjacent tags', () => {

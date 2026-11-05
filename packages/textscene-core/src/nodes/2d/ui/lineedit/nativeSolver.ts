@@ -205,10 +205,12 @@ export const lineEditTextureSlots: TextureSlotsFn = (
  */
 export function shapeLineEditText(
   text: string,
-  options: TextBidiOptions & { fontSizePx: number; fontMetrics: FontMetrics; preserveControl?: boolean }
+  props: Pick<LineEditProperties, 'drawControlChars'>,
+  options: TextBidiOptions & { fontSizePx: number; fontMetrics: FontMetrics }
 ): TextLayoutResult {
   return shapeText(text, {
     ...options,
+    preserveControl: props.drawControlChars,
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx: 0,
@@ -250,12 +252,8 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
     const { text: displayed } = lineEditDisplayText(props);
     const fullWidthPx = displayed.length
       ? shapedTextSizeWidthPx(
-          shapeLineEditText(displayed, {
-            fontSizePx,
-            fontMetrics,
-            preserveControl: props.drawControlChars,
-            ...controlBidiOptions(props, n),
-          }).widthPx
+          shapeLineEditText(displayed, props, { ...controlBidiOptions(props, n), fontSizePx, fontMetrics })
+            .widthPx
         )
       : 0;
     const caretWidthPx = n.constants['caret_width'] ?? DEFAULT_CARET_WIDTH;

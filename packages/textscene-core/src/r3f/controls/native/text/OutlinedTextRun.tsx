@@ -59,11 +59,16 @@ export function OutlineRingRun({ sizePx, ...run }: OutlineRingRunProps) {
 }
 
 type OutlinedTextRunProps = RunLookProps & {
-  /** Already tinted. No outline draws at a size of 0 or a zero alpha (`button.cpp:460`). */
+  /** Already tinted. */
   outline: TextOutlineTheme;
   /** The ring's own shape when it differs from the fill's, as a trimmed AUTO line's does. Defaults to `layout`. */
   outlineLayout?: TextLayoutResult;
 };
+
+/** Whether an outline draws a ring: none draws at a size of 0 or a zero alpha (`button.cpp:460`). */
+export function hasOutlineRing(outline: TextOutlineTheme): boolean {
+  return outline.sizePx > 0 && outline.color.a > 0;
+}
 
 export function OutlinedTextRun({
   layout,
@@ -72,7 +77,7 @@ export function OutlinedTextRun({
   renderOrder = 0,
   ...run
 }: OutlinedTextRunProps) {
-  const hasRing = outline.sizePx > 0 && outline.color.a > 0;
+  const hasRing = hasOutlineRing(outline);
   const layerCount = hasRing ? 2 : 1;
   return (
     <>
