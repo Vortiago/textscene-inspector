@@ -36,6 +36,7 @@ export const PRIMITIVE_SCENES = [
   // The same scene with no `font`, which draws Godot's default font, and again in a project whose
   // `gui/theme/custom_font` names a CFF font.
   { name: 'text-mesh-default-font', file: 'unit-text-mesh-default-font.tscn' },
+  { name: 'text-mesh-system-font', file: 'unit-text-mesh-system-font.tscn' },
   { name: 'text-mesh-project-default-font', file: 'project-default-font/unit-text-mesh-project-default-font.tscn' },
   { name: 'torus-mesh', file: 'unit-torus-mesh.tscn' },
   { name: 'torus-mesh-texture-uv', file: 'unit-torus-mesh-texture-uv.tscn' },

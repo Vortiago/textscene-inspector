@@ -327,6 +327,37 @@ describe('resolveThemeFontIn — a FontVariation with no base_font', () => {
   });
 });
 
+// `SystemFont::_get_base_font_or_default` (`font.cpp:3368-3415`) asks the same context for the
+// SystemFont type chain, when no OS font matches its names. The previewer reads no OS font.
+describe('resolveThemeFontIn — a SystemFont', () => {
+  const SYSTEM_FONT: FontResource = { kind: 'system', fontNames: ['Zz No Such Font'], properties: {} };
+
+  it("is the project's custom_font", () => {
+    const scope = themeResolutionScope('Label', undefined, [], {
+      projectTheme: null,
+      projectDefaultFont: FONT_A,
+    });
+    expect(resolveThemeFontIn(scope, 'font', SYSTEM_FONT)).toBe(FONT_A);
+  });
+
+  it("is the project theme's SystemFont font, where a bare FontVariation takes its FontVariation font", () => {
+    const project = theme({ fonts: { SystemFont: { font: FONT_B }, FontVariation: { font: FONT_A } } });
+    const scope = themeResolutionScope('Label', undefined, [], {
+      projectTheme: project,
+      projectDefaultFont: null,
+    });
+    expect(resolveThemeFontIn(scope, 'font', SYSTEM_FONT)).toBe(FONT_B);
+    expect((resolveThemeFontIn(scope, 'font', BARE_VARIATION) as FontVariationResource).baseFont).toBe(
+      FONT_A
+    );
+  });
+
+  it('stays a SystemFont, which draws the bundled font, when the project sets no font', () => {
+    const scope = themeResolutionScope('Label', undefined, [], NO_PROJECT_FONTS);
+    expect(resolveThemeFontIn(scope, 'font', SYSTEM_FONT)).toBe(SYSTEM_FONT);
+  });
+});
+
 describe('resolveThemeFontSizeIn', () => {
   it('a positive node-local override wins over any ancestor theme', () => {
     const ancestor = theme({ fontSizes: { Label: { font_size: 30 } } });

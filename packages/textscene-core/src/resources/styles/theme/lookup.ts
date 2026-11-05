@@ -5,7 +5,7 @@
 
 import { classInheritanceChain } from '../../../godot/classdb/classBaseTypes';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
-import { withDefaultBaseFont } from '../../fonts/font/defaultBaseFont';
+import { withDefaultFonts, type DefaultFonts } from '../../fonts/font/defaultFont';
 import type { ProjectFonts } from '../../fonts/font/projectFonts';
 import { resolveFontReference } from '../../fonts/font/resolveFontReference';
 import type { FontResource } from '../../fonts/font/types';
@@ -106,21 +106,23 @@ export interface ThemeResolutionScope {
   readonly searchOrder: readonly ThemeResource[];
   /** The font a lookup reaches after every theme: the default theme's `default_font`. Null draws the bundled font. */
   readonly projectDefaultFont: FontResource | null;
-  /** The base of a `FontVariation` with no `base_font` (`variationBaseFont`). Null is the bundled font. */
-  readonly variationBaseFont: FontResource | null;
+  /** The fonts under a font with no face of its own (`defaultFontOf`). */
+  readonly defaultFonts: DefaultFonts;
 }
 
 /**
- * `FontVariation::_get_base_font_or_default` (`scene/resources/font.cpp:2987-3039`) asks the default
- * theme context for `font` on `FontVariation`: the project theme, then the default theme, whose
+ * The default font of a `FontVariation` with no `base_font` or a `SystemFont`
+ * (`_get_base_font_or_default`, `scene/resources/font.cpp:2987-3039` and `3368-3415`): the default
+ * theme context's `font` for `fontClass`, the project theme first, then the default theme, whose
  * `default_font` is `projectDefaultFont`. A scene ancestor's theme is not in that context.
  */
-function variationBaseFont(
+function defaultFontOf(
+  fontClass: 'FontVariation' | 'SystemFont',
   projectTheme: ThemeResource | null,
   projectDefaultFont: FontResource | null
 ): FontResource | null {
   if (projectTheme) {
-    for (const type of nativeTypeChain('FontVariation')) {
+    for (const type of nativeTypeChain(fontClass)) {
       const found = fontInTheme(projectTheme, type, 'font');
       if (found !== undefined) return found;
     }
@@ -138,7 +140,10 @@ export function themeResolutionScope(
     typeChain: buildThemeTypeChain(nativeType, typeVariation, ancestorThemes, projectTheme),
     searchOrder: themeSearchOrder(ancestorThemes, projectTheme),
     projectDefaultFont,
-    variationBaseFont: variationBaseFont(projectTheme, projectDefaultFont),
+    defaultFonts: {
+      variation: defaultFontOf('FontVariation', projectTheme, projectDefaultFont),
+      system: defaultFontOf('SystemFont', projectTheme, projectDefaultFont),
+    },
   };
 }
 
@@ -160,15 +165,12 @@ export function findThemeFontIn(
   name: string,
   override: FontResource | null | undefined
 ): FontResource | null | undefined {
-  if (override !== undefined) return withDefaultBaseFont(override, scope.variationBaseFont);
+  if (override !== undefined) return withDefaultFonts(override, scope.defaultFonts);
 
-  // Resolved, not usable: a `SystemFont` has no bytes in a browser. The painter
-  // checks bytes with `resolveFontFileBytes` (`r3f/controls/native/text/sceneFontResolution.ts`),
-  // so the walk never skips to a farther ancestor that Godot would not reach.
   for (const theme of scope.searchOrder) {
     for (const type of scope.typeChain) {
       const found = fontInTheme(theme, type, name);
-      if (found !== undefined) return withDefaultBaseFont(found, scope.variationBaseFont);
+      if (found !== undefined) return withDefaultFonts(found, scope.defaultFonts);
     }
   }
   return undefined;

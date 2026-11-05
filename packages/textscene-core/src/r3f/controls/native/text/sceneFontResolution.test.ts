@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { fontFile } from './sfntOutlines.testkit';
 import { testBitmapFont } from './bitmapFontMetrics.testkit';
 import {
+  drawsBundledFont,
   fontGeneratesMipmaps,
   fontVariationOpentype,
   fontVariationSkew,
@@ -10,6 +11,9 @@ import {
 } from './sceneFontResolution';
 import { fontResourceFromBitmap } from '../../../../resources/fonts/font/loadFont';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
+
+/** A SystemFont the theme lookup left in place: its default is the bundled font. */
+const SYSTEM_FONT: FontResource = { kind: 'system', fontNames: ['Zz No Such Font'], properties: {} };
 
 describe('resolveFontFileBytes', () => {
   it('returns null for undefined/null (no font authored -- theme default)', () => {
@@ -54,14 +58,18 @@ describe('resolveFontFileBytes', () => {
     expect(result!.leaf).toBe(realFace);
   });
 
-  it('skips a fallback with no bytes (e.g. a SystemFont) and uses the next one that has them', () => {
+  it('skips a fallback with no bytes and uses the next one that has them', () => {
     const bytes = new ArrayBuffer(4);
     const realFace = fontFile(bytes);
-    const systemFallback: FontResource = { kind: 'system', fontNames: ['monospace'], properties: {} };
-    const wrapper = fontFile(undefined, [systemFallback, realFace]);
+    const wrapper = fontFile(undefined, [fontFile(undefined), realFace]);
     const result = resolveFontFileBytes(wrapper);
     expect(result!.bytes).toBe(bytes);
     expect(result!.leaf).toBe(realFace);
+  });
+
+  it('stops at a SystemFont fallback, which draws the bundled font before the next fallback', () => {
+    const wrapper = fontFile(undefined, [SYSTEM_FONT, fontFile(new ArrayBuffer(4))]);
+    expect(resolveFontFileBytes(wrapper)).toBeNull();
   });
 
   it('returns null when a bytes-less FontFile has no fallback that resolves to bytes', () => {
@@ -77,6 +85,37 @@ describe('resolveFontFileBytes', () => {
     const result = resolveFontFileBytes(variation);
     expect(result!.bytes).toBe(bytes);
     expect(result!.leaf).toBe(realFace);
+  });
+});
+
+describe('drawsBundledFont', () => {
+  it('is true for no font, a FontVariation with no base_font and a SystemFont', () => {
+    const bare: FontResource = { kind: 'variation', baseFont: null, properties: {} };
+    expect([drawsBundledFont(null), drawsBundledFont(bare), drawsBundledFont(SYSTEM_FONT)]).toEqual([
+      true,
+      true,
+      true,
+    ]);
+  });
+
+  it('is true for a FontVariation over a SystemFont', () => {
+    expect(drawsBundledFont({ kind: 'variation', baseFont: SYSTEM_FONT, properties: {} })).toBe(true);
+  });
+
+  it('is true for a bytes-less FontFile whose first fallback that draws is a SystemFont', () => {
+    const wrapper = fontFile(undefined, [fontFile(undefined), SYSTEM_FONT, fontFile(new ArrayBuffer(4))]);
+    expect(drawsBundledFont(wrapper)).toBe(true);
+  });
+
+  it('is false for a FontFile with bytes, or a BMFont, whatever its fallbacks', () => {
+    const bitmap = fontResourceFromBitmap(testBitmapFont(), {});
+    expect([drawsBundledFont(fontFile(new ArrayBuffer(4), [SYSTEM_FONT])), drawsBundledFont(bitmap)]).toEqual(
+      [false, false]
+    );
+  });
+
+  it('is false for a bytes-less FontFile with no fallback, which has no face at all', () => {
+    expect(drawsBundledFont(fontFile(undefined))).toBe(false);
   });
 });
 
@@ -178,13 +217,9 @@ describe('fontGeneratesMipmaps', () => {
     expect(fontGeneratesMipmaps(wrapper)).toBe(true);
   });
 
-  it('is the generate_mipmaps of a SystemFont', () => {
-    const system: FontResource = {
-      kind: 'system',
-      fontNames: ['sans-serif'],
-      properties: { generate_mipmaps: 'true' },
-    };
+  it('is undefined for a SystemFont, whose own generate_mipmaps Godot sets only on a matched OS file', () => {
+    const system: FontResource = { ...SYSTEM_FONT, properties: { generate_mipmaps: 'true' } };
 
-    expect(fontGeneratesMipmaps(system)).toBe(true);
+    expect(fontGeneratesMipmaps(system)).toBeUndefined();
   });
 });

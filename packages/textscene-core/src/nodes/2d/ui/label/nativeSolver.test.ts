@@ -5,6 +5,7 @@
  * ceil(600*16/2048) = 5, line_spacing 3 (default_theme.cpp:392): pitch 26, font height 23.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { LABEL_SETTINGS_FONT_LOADING, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry, type SolveContext } from '../../../../r3f/controls/native/solverRegistry';
@@ -667,15 +668,15 @@ describe(`labelMinimumSize — resolves this Label's own theme font key ("font",
   });
 
   it('a theme_override_fonts/font local override is fed to the text engine, even for empty text (fontHeightPx is resolved unconditionally)', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n = { ...node({}), fontOverrides: { font: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n = { ...node({}), fontOverrides: { font: unresolvableFont } };
     labelMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('a local override under a different key is not consulted', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n = { ...node({}), fontOverrides: { normal_font: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n = { ...node({}), fontOverrides: { normal_font: unresolvableFont } };
     labelMinimumSize(n, ctx());
     expect(warnSpy).not.toHaveBeenCalled();
   });

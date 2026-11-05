@@ -17,12 +17,12 @@ import {
   fontVariationEmbolden,
   fontVariationOpentype,
   fontVariationSkew,
+  drawsBundledFont,
   resolveBitmapFont,
   resolveFontFileBytes,
 } from './sceneFontResolution';
 import { createBitmapFontMetrics } from './bitmapFontMetrics';
 import { perObject } from '../../../../utils/perObject';
-import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import { warnOnce } from '../../../../utils/warnOnce';
@@ -55,14 +55,10 @@ const bitmapMetricsOf = perObject(createBitmapFontMetrics);
 
 /** Warns once per unresolvable resource, not per call: the peek runs on every solve pass, and the failure belongs to the resource. */
 function warnUnresolvable(font: FontResource, nodePath: string): void {
-  const reason =
-    font.kind === 'system'
-      ? `a SystemFont (OS family names: ${font.fontNames.join(', ') || '(none)'}) -- this previewer has no access to the user's system fonts`
-      : 'no FontFile in its fallback chain carries loadable bytes';
   warnOnce(
     font,
     'unresolvable',
-    `[SceneFont] Node "${nodePath}": font resource is unresolvable (${reason}). Falling back to the bundled default font.`
+    `[SceneFont] Node "${nodePath}": font resource is unresolvable (no FontFile in its fallback chain carries loadable bytes). Falling back to the bundled default font.`
   );
 }
 
@@ -187,10 +183,11 @@ export function peekSettledSceneFontMetrics(
   const bitmap = resolveBitmapFont(font);
   if (bitmap) return withVariation(bitmapMetricsOf(bitmap), { embolden: fontVariationEmbolden(font) });
 
+  // No failure, so no warning: Godot draws the bundled font here too.
+  if (drawsBundledFont(font)) return withVariation(OPEN_SANS_FONT_METRICS, fontVariation(font));
+
   const resolved = resolveFontFileBytes(font);
   if (!resolved) {
-    // A variation with no `base_font` over the bundled default font: no failure, so no warning.
-    if (endsWithoutBase(font)) return withVariation(OPEN_SANS_FONT_METRICS, fontVariation(font));
     warnUnresolvable(font, nodePath);
     return OPEN_SANS_FONT_METRICS;
   }

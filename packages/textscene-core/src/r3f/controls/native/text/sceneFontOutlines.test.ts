@@ -85,12 +85,6 @@ describe('peekSceneFontOutlines', () => {
     expect(await settledOutlines(fontFile(new ArrayBuffer(8)))).toBeNull();
   });
 
-  it('answers null for a SystemFont, which has no bytes to read', () => {
-    const font: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-
-    expect(peekSceneFontOutlines(font)).toBeNull();
-  });
-
   it('reads the face behind a FontVariation', async () => {
     const base = woffOfOpenSans();
     const variation: FontResource = { kind: 'variation', baseFont: base, properties: {} };
@@ -108,6 +102,16 @@ describe('peekSceneFontOutlines', () => {
     const variation: FontResource = { kind: 'variation', baseFont: null, properties: {} };
 
     expect(await settledOutlines(variation)).toBe(await settledOutlines(null));
+  });
+
+  it('reads the bundled Open Sans for a SystemFont, as Godot does when no OS font matches its names', async () => {
+    const font: FontResource = { kind: 'system', fontNames: ['Zz No Such Font'], properties: {} };
+
+    expect(await settledOutlines(font)).toBe(await settledOutlines(null));
+  });
+
+  it('answers null for a font file with no bytes and no fallback', () => {
+    expect(peekSceneFontOutlines(fontFile(undefined, []))).toBeNull();
   });
 });
 

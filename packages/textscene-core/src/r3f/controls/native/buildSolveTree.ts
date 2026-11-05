@@ -49,6 +49,7 @@ import { useSharedLiveTree } from '../../useLiveSceneTree';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { resolveInlineFontResource } from '../../../resources/fonts/font/decode';
 import { resolveProjectFonts } from '../../../resources/fonts/font/projectFonts';
+import { NO_DEFAULT_FONTS } from '../../../resources/fonts/font/defaultFont';
 import type { FontCacheReader, FontResource } from '../../../resources/fonts/font/types';
 import { resolveInlineThemeResource } from '../../../resources/styles/theme/decode';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
@@ -121,7 +122,7 @@ const NO_THEME_SCOPE: ThemeResolutionScope = {
   typeChain: [],
   searchOrder: [],
   projectDefaultFont: null,
-  variationBaseFont: null,
+  defaultFonts: NO_DEFAULT_FONTS,
 };
 
 /**

@@ -4,12 +4,11 @@
  * the same channel. A WOFF2 decompresses with Brotli and rebuilds its `glyf`, so the answer is
  * never there on the first peek. It never throws.
  */
-import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import { isGlyphVaried, type FontMetrics, type GlyphVariation } from './fontMetrics';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
-import { fontForcesAutohinter, resolveFontFileBytes } from './sceneFontResolution';
+import { drawsBundledFont, fontForcesAutohinter, resolveFontFileBytes } from './sceneFontResolution';
 import { createSettledPeek } from './settledChannel';
 import { openAutoHintedFontOutlines, openFontOutlines, type SfntOutlines } from './sfntOutlines';
 
@@ -31,8 +30,8 @@ function settledOutlines(read: () => Promise<SfntOutlines | null>): Promise<Sfnt
 }
 
 /**
- * The bundled Open Sans SemiBold, which `font: null` and a `FontVariation` with no `base_font`
- * draw. Its bytes load as their own chunk, so a scene with no TextMesh never fetches them.
+ * The bundled Open Sans SemiBold, which every font that `drawsBundledFont` draws. Its bytes load
+ * as their own chunk, so a scene with no TextMesh never fetches them.
  */
 function peekBundledOutlines(): PeekedOutlines {
   return peekOutlines(BUNDLED, () =>
@@ -44,16 +43,15 @@ function peekBundledOutlines(): PeekedOutlines {
 }
 
 /**
- * The outlines of `font`, starting their load on the first peek. Null `font` and a
- * `FontVariation` with no `base_font` are the bundled font. A `SystemFont`, which has no bytes, and
- * a chain of fonts with none are null: Godot draws them, this previewer cannot.
+ * The outlines of `font`, starting their load on the first peek. A chain of fonts with no bytes,
+ * and bytes that hold no outlines this reader opens, are null.
  *
  * @canonical Glyph outlines of a scene font in any container, from its font resource
  */
 export function peekSceneFontOutlines(font: FontResource | null | undefined): PeekedOutlines {
-  if (!font) return peekBundledOutlines();
+  if (drawsBundledFont(font)) return peekBundledOutlines();
   const resolved = resolveFontFileBytes(font);
-  if (!resolved) return endsWithoutBase(font) ? peekBundledOutlines() : null;
+  if (!resolved) return null;
   const open = fontForcesAutohinter(resolved.leaf) ? openAutoHintedFontOutlines : openFontOutlines;
   return peekOutlines(resolved.leaf, () => settledOutlines(() => open(resolved.bytes)));
 }

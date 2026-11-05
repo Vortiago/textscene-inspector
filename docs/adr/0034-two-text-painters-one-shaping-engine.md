@@ -118,8 +118,8 @@ second font cannot reimplement it and drop it.
   pads its box carries that padding in undetected.
 - **A font that fails to load renders in the bundled default, never nothing.** This
   matches Godot's own fallback to the theme default, with a per-resource deduplicated
-  `logger.warn` that names the node path. A `SystemFont` (OS family names) takes the same
-  path. Godot considers it a valid resolution because the OS resolves it, so "resolved"
-  and "usable" are separate predicates, and the previewer's limitation does not pass as
-  Godot's behaviour.
+  `logger.warn` that names the node path. A `SystemFont` (OS family names) is not a
+  failure: it draws the default font with no warning, as Godot does when no OS font matches
+  its names (`SystemFont::_get_base_font_or_default`, `font.cpp:3368-3415`). The previewer
+  reads no OS font, so a name the OS would match is a resource gap, not Godot's behaviour.
 - **Two paths is a real cost.** Do not delete the path the CSP requires to "clean it up".

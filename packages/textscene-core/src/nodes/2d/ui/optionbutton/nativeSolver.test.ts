@@ -5,12 +5,12 @@
  * `<TextRun>` reconciles the MSDF line anchor (`TextRun.test.tsx`).
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { resolveButtonDrawState } from '../../../../r3f/controls/native/buttonBase';
-import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import type { OptionButtonProperties } from './types';
 import {
@@ -287,15 +287,15 @@ describe(`optionButtonMinimumSize — resolves this OptionButton's own theme fon
   });
 
   it('a theme_override_fonts/font local override is fed to the text engine (resolved unconditionally, before the per-item measurement loop)', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n: SolveNode = { ...node({}), fontOverrides: { [OPTION_BUTTON_THEME_FONT_KEY]: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n: SolveNode = { ...node({}), fontOverrides: { [OPTION_BUTTON_THEME_FONT_KEY]: unresolvableFont } };
     optionButtonMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('a local override under a different key is not consulted', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n: SolveNode = { ...node({}), fontOverrides: { normal_font: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n: SolveNode = { ...node({}), fontOverrides: { normal_font: unresolvableFont } };
     optionButtonMinimumSize(n, ctx());
     expect(warnSpy).not.toHaveBeenCalled();
   });

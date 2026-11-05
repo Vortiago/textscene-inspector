@@ -83,9 +83,10 @@ export interface BitmapFont {
 
 /**
  * `SystemFont`: no file. `font_names` are OS family names (`"sans-serif"`, …) resolved at
- * runtime, which this previewer cannot load bytes for.
+ * runtime, which this previewer cannot load bytes for. It draws the theme's default font, as
+ * Godot does when no OS font matches (`defaultFont.ts`).
  */
-interface SystemFontResource {
+export interface SystemFontResource {
   kind: 'system';
   fontNames: string[];
   properties: Record<string, string>;

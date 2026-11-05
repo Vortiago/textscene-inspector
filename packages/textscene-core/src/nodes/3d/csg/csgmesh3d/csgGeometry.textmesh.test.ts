@@ -11,6 +11,7 @@ import { distinctAttributePositions } from '../../../../resources/meshes/textmes
 import {
   FONT_PATH,
   systemFontResource,
+  unreadableFontFile,
   trueTypeFontFile,
 } from '../../../../resources/meshes/textmesh/textMeshFont.testkit';
 import {
@@ -116,10 +117,20 @@ describe('csgMesh3DUndrawnMeshType for a TextMesh', () => {
     const ctx = csgGeometryContext({
       internalResources: [TEXT],
       externalResources: [FONT_REFERENCE],
-      fonts: { [FONT_PATH]: systemFontResource() },
+      fonts: { [FONT_PATH]: unreadableFontFile() },
     });
 
     expect(csgMesh3DUndrawnMeshType(PROPERTIES, ctx)).toBe('TextMesh');
+  });
+
+  it('names no type for a mesh with a SystemFont, which draws the default font', () => {
+    const ctx = csgGeometryContext({
+      internalResources: [TEXT],
+      externalResources: [FONT_REFERENCE],
+      fonts: { [FONT_PATH]: systemFontResource() },
+    });
+
+    expect(csgMesh3DUndrawnMeshType(PROPERTIES, ctx)).toBeNull();
   });
 
   it('names no type for a mesh whose font is ready', async () => {

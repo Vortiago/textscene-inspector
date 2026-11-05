@@ -4,7 +4,7 @@ import { UV2_ATTRIBUTE } from '../../resources/meshes/uv2';
 import {
   FONT_PATH,
   readyTextMesh,
-  systemFontResource,
+  unreadableFontFile,
   textMeshWith,
 } from '../../resources/meshes/textmesh/textMeshFont.testkit';
 import { primitiveMeshGeometry, primitiveMeshAabb } from './primitiveMeshGeometry';
@@ -175,7 +175,7 @@ describe('primitiveMeshAabb', () => {
   });
 
   it('is unknown for a TextMesh whose font has no outlines to read', () => {
-    expect(primitiveMeshAabb(textMeshWith({}, { [FONT_PATH]: systemFontResource() }))).toBeNull();
+    expect(primitiveMeshAabb(textMeshWith({}, { [FONT_PATH]: unreadableFontFile() }))).toBeNull();
   });
 
   it('bounds the glyphs of a TextMesh once its font is ready', async () => {

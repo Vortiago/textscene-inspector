@@ -4,7 +4,13 @@ import type { ResolvableResource, ScopedResource } from '../scopedResource';
 import { NO_FILES, NO_FONTS } from '../testing/loadedFiles';
 import { NO_PROJECT_FONTS } from '../fonts/font/projectFonts';
 import { undrawnMeshType } from './meshSource';
-import { FONT_PATH, readyTextMesh, systemFontResource, textMeshWith } from './textmesh/textMeshFont.testkit';
+import {
+  FONT_PATH,
+  readyTextMesh,
+  systemFontResource,
+  textMeshWith,
+  unreadableFontFile,
+} from './textmesh/textMeshFont.testkit';
 
 function scopedOf(type: string): ScopedResource {
   return { resource: { id: 'mesh', type, data: {} }, resources: NO_RESOURCES };
@@ -29,9 +35,15 @@ describe('undrawnMeshType', () => {
   });
 
   it('names a TextMesh whose font is one the previewer cannot read', () => {
-    const mesh = textMeshWith({}, { [FONT_PATH]: systemFontResource() });
+    const mesh = textMeshWith({}, { [FONT_PATH]: unreadableFontFile() });
 
     expect(undrawnMeshType(mesh, mesh)).toBe('TextMesh');
+  });
+
+  it('is null for a TextMesh with a SystemFont, which draws the default font', () => {
+    const mesh = textMeshWith({}, { [FONT_PATH]: systemFontResource() });
+
+    expect(undrawnMeshType(mesh, mesh)).toBeNull();
   });
 
   it('is null for a TextMesh whose font is ready', async () => {

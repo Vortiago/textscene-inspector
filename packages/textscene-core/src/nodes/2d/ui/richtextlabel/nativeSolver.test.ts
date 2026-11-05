@@ -4,6 +4,7 @@
  * `descent=600`, bake 42) worked by hand, never from the implementation.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -266,18 +267,21 @@ describe(`richTextLabelMinimumSize — resolves this RichTextLabel's own PARAGRA
   });
 
   it('a theme_override_fonts/normal_font local override is fed to the text engine (fit_content required for the shape branch to run at all)', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const unresolvableFont = fontFile(undefined);
     const n: SolveNode = {
       ...node({ fitContent: true, text: 'A' }),
-      fontOverrides: { normal_font: systemFont },
+      fontOverrides: { normal_font: unresolvableFont },
     };
     richTextLabelMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('a local override under a different key ("font", Label/Button/etc\'s own key) is not consulted', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n: SolveNode = { ...node({ fitContent: true, text: 'A' }), fontOverrides: { font: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n: SolveNode = {
+      ...node({ fitContent: true, text: 'A' }),
+      fontOverrides: { font: unresolvableFont },
+    };
     richTextLabelMinimumSize(n, ctx());
     expect(warnSpy).not.toHaveBeenCalled();
   });

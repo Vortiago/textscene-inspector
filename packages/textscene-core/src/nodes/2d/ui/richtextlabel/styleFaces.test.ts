@@ -4,6 +4,7 @@
  * scene font reads as the bundled one, so the tests read the embolden and skew a face carries.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
@@ -78,7 +79,7 @@ describe('resolveRichTextFaces', () => {
   });
 
   it("bases the styles on the project's default font, not the bundled one", () => {
-    const projectFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const projectFont = fontFile(undefined);
     facesOf(richTextNode({ projectFonts: { ...NO_PROJECT_FONTS, projectDefaultFont: projectFont } }));
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockClear();
@@ -147,7 +148,7 @@ describe('resolveRichTextFaces', () => {
 
 describe('resolveRichTextFaces — only the styles a run uses', () => {
   it('leaves a style no run uses at the normal face, and never resolves its font', () => {
-    const unusedFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+    const unusedFont = fontFile(undefined);
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     try {
       const faces = resolveRichTextFaces(richTextNode({ fontOverrides: { italics_font: unusedFont } }), [

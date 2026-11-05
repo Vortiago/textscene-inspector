@@ -1,7 +1,7 @@
 /**
  * Walks a `FontResource` graph down to the font bytes the runtime font loader needs. Godot's Font
- * kinds recurse through `fallbacks` and `base_font`, and a `SystemFont` never resolves, since the
- * previewer cannot load bytes for OS family names.
+ * kinds recurse through `fallbacks` and `base_font`. The theme lookup has put the default font under
+ * every font with no face of its own (`defaultFont.ts`), so one that is left draws the bundled font.
  */
 import type { BitmapFont, FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import { TRANSFORM2D_SLOT_RE, matchedFloat, parseGodotFloat } from '../../../../godot/variant/number';
@@ -16,23 +16,37 @@ interface ResolvedFontBytes {
   readonly leaf: FontFileResource;
 }
 
+/** The answer of the walk at a `SystemFont` or a `FontVariation` with no `base_font`. */
+const BUNDLED_FACE = Symbol('bundled face');
+
 /**
  * Depth first: `FontVariation` to `baseFont`, `FontFile` to itself when `accepts` it, else the first
- * `fallbacks` entry that resolves. Null for no authored font (the theme default), a `SystemFont`,
- * which never resolves, and a branch no file of which `accepts`.
+ * `fallbacks` entry that resolves. A font with no face of its own stops the walk at the bundled
+ * face, as its RID draws before the next fallback (`font.cpp:104-116`). Null for no authored font
+ * and for a branch no file of which `accepts`.
  */
+function findFace<Found extends FontFileResource>(
+  font: FontResource | null | undefined,
+  accepts: (file: FontFileResource) => file is Found
+): Found | typeof BUNDLED_FACE | null {
+  if (!font) return null;
+  if (font.kind === 'system') return BUNDLED_FACE;
+  if (font.kind === 'variation') return font.baseFont ? findFace(font.baseFont, accepts) : BUNDLED_FACE;
+  if (accepts(font)) return font;
+  for (const fallback of font.fallbacks) {
+    const found = findFace(fallback, accepts);
+    if (found) return found;
+  }
+  return null;
+}
+
+/** The file `findFace` reaches, null for the bundled face too. */
 function findFontFile<Found extends FontFileResource>(
   font: FontResource | null | undefined,
   accepts: (file: FontFileResource) => file is Found
 ): Found | null {
-  if (!font || font.kind === 'system') return null;
-  if (font.kind === 'variation') return findFontFile(font.baseFont, accepts);
-  if (accepts(font)) return font;
-  for (const fallback of font.fallbacks) {
-    const found = findFontFile(fallback, accepts);
-    if (found) return found;
-  }
-  return null;
+  const face = findFace(font, accepts);
+  return face === BUNDLED_FACE ? null : face;
 }
 
 type FileWithBytes = FontFileResource & { bytes: ArrayBuffer };
@@ -49,6 +63,11 @@ export function resolveFontFileBytes(font: FontResource | null | undefined): Res
 
 const hasGlyphs = (file: FontFileResource): file is FileWithBytes | FileWithBitmap =>
   hasBytes(file) || hasBitmap(file);
+
+/** Whether `font` draws the bundled font: no font, or a chain whose first face is a font with no face of its own. */
+export function drawsBundledFont(font: FontResource | null | undefined): boolean {
+  return !font || findFace(font, hasGlyphs) === BUNDLED_FACE;
+}
 
 /**
  * The decoded BMFont of the first font file that draws, by the same walk. Null for a font that
@@ -95,14 +114,15 @@ export function fontVariationOpentype(font: FontResource | null | undefined): Op
 
 /**
  * The `generate_mipmaps` of the face `font` draws with: a font keeps its own, and the project
- * setting reaches the bundled font only (`default_theme.cpp:1359-1386`). Undefined for the bundled
- * font, a null font or a variation with no base, where the caller reads the project setting.
+ * setting reaches the bundled font only (`default_theme.cpp:1359-1386`). Undefined for a font that
+ * draws the bundled font, where the caller reads the project setting.
  */
 export function fontGeneratesMipmaps(font: FontResource | null): boolean | undefined {
   if (!font) return undefined;
   if (font.kind === 'variation') return fontGeneratesMipmaps(font.baseFont);
-  const face = font.kind === 'system' ? font : (resolveFontFileBytes(font)?.leaf ?? font);
-  return boolSlotValue(face.properties['generate_mipmaps']) ?? false;
+  const face = findFace(font, hasBytes);
+  if (face === BUNDLED_FACE) return undefined;
+  return boolSlotValue((face ?? font).properties['generate_mipmaps']) ?? false;
 }
 
 /** `FontFile.force_autohinter` of `font`, which loads its glyphs through FreeType's auto-hinter. */

@@ -33,26 +33,25 @@ describe('peekSceneFontMetrics', () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('a SystemFont falls back to the bundled default and warns with the node path -- this previewer cannot load OS-family bytes', () => {
-    const font: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const metrics = peekSceneFontMetrics(font, 'Root/MyLabel');
-    expect(metrics).toBe(OPEN_SANS_FONT_METRICS);
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0]![0]).toContain('Root/MyLabel');
+  it('a SystemFont draws the bundled default with no warning, as Godot does when no OS font matches its names', () => {
+    const font: FontResource = { kind: 'system', fontNames: ['Zz No Such Font'], properties: {} };
+    expect(peekSceneFontMetrics(font, 'Root/MyLabel')).toBe(OPEN_SANS_FONT_METRICS);
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('warns at most once for the SAME SystemFont resource object across repeated peeks -- no per-frame warning spam', () => {
-    const font: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    peekSceneFontMetrics(font, 'Root/A');
-    peekSceneFontMetrics(font, 'Root/A');
-    peekSceneFontMetrics(font, 'Root/A');
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('a bytes-less FontFile with no resolvable fallback warns and falls back, same as SystemFont', () => {
+  it('a bytes-less FontFile with no resolvable fallback warns with the node path and falls back', () => {
     const wrapper = fontFile(undefined, []);
     const metrics = peekSceneFontMetrics(wrapper, 'Root/B');
     expect(metrics).toBe(OPEN_SANS_FONT_METRICS);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0]![0]).toContain('Root/B');
+  });
+
+  it('warns at most once for the SAME unresolvable resource object across repeated peeks -- no per-frame warning spam', () => {
+    const wrapper = fontFile(undefined, []);
+    peekSceneFontMetrics(wrapper, 'Root/A');
+    peekSceneFontMetrics(wrapper, 'Root/A');
+    peekSceneFontMetrics(wrapper, 'Root/A');
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -81,9 +80,8 @@ describe('peekSettledSceneFontMetrics', () => {
   });
 
   it('answers the bundled default at once for no font and for a font that cannot load, which settle by themselves', () => {
-    const system: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
     expect(peekSettledSceneFontMetrics(undefined, 'Root/Mesh')).toBe(OPEN_SANS_FONT_METRICS);
-    expect(peekSettledSceneFontMetrics(system, 'Root/Mesh')).toBe(OPEN_SANS_FONT_METRICS);
+    expect(peekSettledSceneFontMetrics(fontFile(undefined, []), 'Root/Mesh')).toBe(OPEN_SANS_FONT_METRICS);
   });
 
   it('answers null while the load a peek starts is in flight, then the metrics it settles on', async () => {
@@ -159,6 +157,14 @@ describe('peekSceneFontMetrics — FontVariation embolden', () => {
     } finally {
       warnSpy.mockRestore();
     }
+  });
+
+  it('wraps the bundled face for a variation over a SystemFont, as for a variation with no base_font', () => {
+    const system: FontResource = { kind: 'system', fontNames: ['Zz No Such Font'], properties: {} };
+    const embolden = { variation_embolden: '1.2' };
+    expect(peekSceneFontMetrics(variation(system, embolden), 'Root/OverSystem')).toBe(
+      peekSceneFontMetrics(variation(null, embolden), 'Root/Bare')
+    );
   });
 
   it("takes the outer variation's embolden over a bare variation, and the bundled face with none", () => {

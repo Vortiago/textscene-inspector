@@ -14,7 +14,7 @@ import type { LoadedFont, ResolvableResource, ScopedResource } from '../../scope
 import type { TextMeshFace } from './build';
 
 export type TextMeshFont =
-  /** A SystemFont, or a font without outlines this reader parses: Godot draws it, this previewer cannot. */
+  /** A font whose outlines this reader cannot open: Godot draws it, this previewer cannot. */
   { status: 'unreadable' } | { status: 'awaitingFont' } | { status: 'ready'; face: TextMeshFace };
 
 const UNREADABLE: TextMeshFont = { status: 'unreadable' };

@@ -5,11 +5,11 @@
  * `line_spacing`. `textOffset` is the paragraph's box top-left, and `<TextRun>` owns the line anchor.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
-import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import type { CheckBoxProperties } from './types';
 import {
@@ -338,22 +338,25 @@ describe(`checkBoxMinimumSize — resolves this CheckBox's own theme font key ("
   });
 
   it('a theme_override_fonts/font local override is fed to the text engine (also threaded through TextMeasurer, not just shapeText)', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { [CHECKBOX_THEME_FONT_KEY]: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n: SolveNode = {
+      ...node({ text: 'A' }),
+      fontOverrides: { [CHECKBOX_THEME_FONT_KEY]: unresolvableFont },
+    };
     checkBoxMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('a local override under a different key is not consulted', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { normal_font: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { normal_font: unresolvableFont } };
     checkBoxMinimumSize(n, ctx());
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it('resolves the font key even for empty text (unconditional, not gated behind hasText)', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n: SolveNode = { ...node({}), fontOverrides: { [CHECKBOX_THEME_FONT_KEY]: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n: SolveNode = { ...node({}), fontOverrides: { [CHECKBOX_THEME_FONT_KEY]: unresolvableFont } };
     checkBoxMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
