@@ -179,7 +179,7 @@ describe('paragraphJustificationFlags, `_find_jst_flags` (`:3462-3475`)', () => 
 
 describe('paragraphTabStopsPx, `_find_tab_stops` (`:3477-3490`)', () => {
   const NODE_STOPS = [30];
-  const stopsOf = (bbcode: string): number[] => paragraphTabStopsPx(tagsOf(bbcode), NODE_STOPS);
+  const stopsOf = (bbcode: string): readonly number[] => paragraphTabStopsPx(tagsOf(bbcode), NODE_STOPS);
 
   it('takes the node stops outside a paragraph and in an alignment tag', () => {
     expect(stopsOf('x')).toEqual(NODE_STOPS);
@@ -214,6 +214,11 @@ describe('the [hr] paragraph', () => {
     expect(paragraphAlignment(hrTags('[hr]'), LEFT)).toBe(CENTER);
     expect(paragraphAlignment(hrTags('[hr align=right]'), LEFT)).toBe(RIGHT);
     expect(paragraphAlignment(hrTags('[hr align=l]'), RIGHT)).toBe(LEFT);
+  });
+
+  it('keeps CENTER for fill and for an unknown align (`:5957-5966`)', () => {
+    expect(paragraphAlignment(hrTags('[hr align=fill]'), LEFT)).toBe(CENTER);
+    expect(paragraphAlignment(hrTags('[hr align=x]'), LEFT)).toBe(CENTER);
   });
 
   it('takes direction AUTO and the locale as language, whatever the node sets', () => {

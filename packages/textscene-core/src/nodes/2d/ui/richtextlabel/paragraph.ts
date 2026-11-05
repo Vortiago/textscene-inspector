@@ -114,7 +114,7 @@ const BARE_PARAGRAPH: ParagraphBidi = {
   structuredTextBidiOverride: StructuredTextParser.STRUCTURED_TEXT_DEFAULT,
 };
 
-/** The paragraph an `[hr]` run opens is named `hr`, and its value is the alignment tag it stands for (`parseRuleTag`). */
+/** The paragraph an `[hr]` run opens is named `hr`, and its value is the raw `align` option (`parseRuleTag`). */
 function isParagraphTag(tag: OpenBBCodeTag): boolean {
   return tag.name === 'p' || tag.name === 'hr' || ALIGNMENT_TAGS.has(tag.name);
 }
@@ -158,6 +158,14 @@ function paragraphBidiOf(tag: OpenBBCodeTag, props: ParagraphProperties): Paragr
   };
 }
 
+/** `add_hr`'s `align=` (`:5957-5966`): left, centre or right, and CENTER for anything else, `fill` included. */
+function ruleAlignment(align: string | undefined): number {
+  const alignment = ALIGNMENT_OPTIONS.get(align ?? '');
+  return alignment === undefined || alignment === HorizontalAlignment.HORIZONTAL_ALIGNMENT_FILL
+    ? HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER
+    : alignment;
+}
+
 /** `_find_alignment`: the innermost paragraph's alignment, else `horizontal_alignment`. */
 export function paragraphAlignment(
   tags: readonly OpenBBCodeTag[],
@@ -165,7 +173,7 @@ export function paragraphAlignment(
 ): number {
   const tag = innermost(tags, isParagraphTag);
   if (!tag) return defaultAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT;
-  if (tag.name === 'hr') return ALIGNMENT_TAGS.get(tag.value!)!;
+  if (tag.name === 'hr') return ruleAlignment(tag.value);
   return (
     ALIGNMENT_TAGS.get(tag.name) ??
     ALIGNMENT_OPTIONS.get(tag.options?.get('align') ?? '') ??
@@ -233,11 +241,11 @@ export function paragraphJustificationFlags(tags: readonly OpenBBCodeTag[], node
 export function paragraphTabStopsPx(
   tags: readonly OpenBBCodeTag[],
   nodeStopsPx: readonly number[]
-): number[] {
+): readonly number[] {
   const tag = innermost(tags, isParagraphTag);
   if (tag?.name === 'hr') return [];
-  if (!tag || tag.name !== 'p') return [...nodeStopsPx];
+  if (!tag || tag.name !== 'p') return nodeStopsPx;
   if (!tag.options) return [];
   const option = tag.options.get('tab_stops');
-  return option === undefined ? [...nodeStopsPx] : splitTabStops(option);
+  return option === undefined ? nodeStopsPx : splitTabStops(option);
 }

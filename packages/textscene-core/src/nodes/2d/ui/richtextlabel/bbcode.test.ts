@@ -443,9 +443,9 @@ describe('parseBBCodeRuns [hr]', () => {
     heightInPercent: false,
     colorOption: undefined,
   };
-  const ruleRun = (alignment = 'center', rule = RULE) => ({
+  const ruleRun = (align: string | undefined = undefined, rule = RULE) => ({
     text: IMAGE_OBJECT_CHAR,
-    tags: [{ name: 'hr', value: alignment }],
+    tags: [{ name: 'hr', value: align }],
     rule,
   });
 
@@ -490,10 +490,9 @@ describe('parseBBCodeRuns [hr]', () => {
     expect(parseBBCodeRuns('[hr width=12.9]')[0]!.rule).toMatchObject({ width: 12, widthInPercent: false });
   });
 
-  it('keeps CENTER for an unknown align, and takes l, c and r (`:5957-5966`)', () => {
-    expect(parseBBCodeRuns('[hr align=fill]')[0]!.tags).toEqual([{ name: 'hr', value: 'center' }]);
-    expect(parseBBCodeRuns('[hr align=l]')[0]!.tags).toEqual([{ name: 'hr', value: 'left' }]);
-    expect(parseBBCodeRuns('[hr align=c]')[0]!.tags).toEqual([{ name: 'hr', value: 'center' }]);
+  it('keeps the align option as written, for `paragraphAlignment` to read', () => {
+    expect(parseBBCodeRuns('[hr align=fill]')[0]!.tags).toEqual([{ name: 'hr', value: 'fill' }]);
+    expect(parseBBCodeRuns('[hr align=l]')[0]!.tags).toEqual([{ name: 'hr', value: 'l' }]);
   });
 
   it('matches the tag by prefix, as `tag.begins_with("hr")` does (`:5955`)', () => {

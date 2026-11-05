@@ -479,24 +479,14 @@ function parseImgTag(content: string, path: string): ParsedImgTag {
 /** The `hr` arm matches by prefix, `tag.begins_with("hr")` (`rich_text_label.cpp:5955`), so `[hrx]` draws a rule. */
 const RULE_TAG_PREFIX = 'hr';
 
-/** The `[hr align=…]` values `add_hr` takes (`:5957-5966`), by alignment tag name. CENTER stands for anything else. */
-const RULE_ALIGNMENT_NAMES: ReadonlyMap<string, string> = new Map([
-  ['l', 'left'],
-  ['left', 'left'],
-  ['c', 'center'],
-  ['center', 'center'],
-  ['r', 'right'],
-  ['right', 'right'],
-]);
-
 /**
  * The `hr` arm's options (`:5955-5983`), or `undefined` for a negative size, which `add_hr`
- * refuses (`:4167-4168`) before it adds an item. `alignment` names the `[left]`, `[center]` or
- * `[right]` paragraph it opens.
+ * refuses (`:4167-4168`) before it adds an item. `align` is the raw option, which
+ * `paragraphAlignment` reads.
  */
 function parseRuleTag(
   options: ReadonlyMap<string, string> | undefined
-): { rule: ParsedRuleTag; alignment: string } | undefined {
+): { rule: ParsedRuleTag; align: string | undefined } | undefined {
   const widthOption = options?.get('width');
   const heightOption = options?.get('height');
   const rule: ParsedRuleTag = {
@@ -507,7 +497,7 @@ function parseRuleTag(
     colorOption: options?.get('color'),
   };
   if (rule.width < 0 || rule.height < 0) return undefined;
-  return { rule, alignment: RULE_ALIGNMENT_NAMES.get(options?.get('align') ?? '') ?? 'center' };
+  return { rule, align: options?.get('align') };
 }
 
 function sameTags(a: readonly OpenBBCodeTag[], b: readonly OpenBBCodeTag[]): boolean {
@@ -568,10 +558,10 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
   }
 
   /** `add_hr`: a paragraph item, so the line of the text before ends, then the rule on the new line. */
-  function addRule(rule: ParsedRuleTag, alignment: string): void {
+  function addRule(rule: ParsedRuleTag, align: string | undefined): void {
     endLineForParagraph();
     flush();
-    runs.push({ text: IMAGE_OBJECT_CHAR, tags: [...stack, { name: 'hr', value: alignment }], rule });
+    runs.push({ text: IMAGE_OBJECT_CHAR, tags: [...stack, { name: 'hr', value: align }], rule });
     lineHasHeight = true;
     lineHasLayout = true;
   }
@@ -633,7 +623,7 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
       }
       if (name.startsWith(RULE_TAG_PREFIX)) {
         const parsed = parseRuleTag(openTag(name, open[2], token).options);
-        if (parsed) addRule(parsed.rule, parsed.alignment);
+        if (parsed) addRule(parsed.rule, parsed.align);
         pos = brkEnd + 1;
         continue;
       }

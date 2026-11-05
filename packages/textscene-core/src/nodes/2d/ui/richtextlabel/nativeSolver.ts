@@ -435,6 +435,18 @@ function resolveRunFontSizePx(
   return resolved;
 }
 
+/** An `[img]` run's resolved size and spec, or `undefined` while its texture cannot size it. */
+function resolveImage(
+  spec: ParsedImgTag,
+  n: SolveNode,
+  boxWidthPx: number | undefined
+): ResolvedImageRun | undefined {
+  const widthPx = resolveImageDimension(spec.width, spec.widthInPercent, boxWidthPx);
+  const heightPx = resolveImageDimension(spec.height, spec.heightInPercent, boxWidthPx);
+  const sizePx = imageSizePx(widthPx, heightPx, spec.region, n.textureSlots[spec.path]);
+  return sizePx ? { spec, sizePx } : undefined;
+}
+
 /**
  * Splits `props.text` into styled runs. Without `bbcode_enabled` it is one
  * literal run. `[b]` and `[i]` combine when nested (`rich_text_label.cpp:5452-5471`),
@@ -472,39 +484,24 @@ export function styledTextRuns(
   const runFontSizeCache = new Map<string, number>();
   const styled: StyledTextRun[] = [];
   for (const run of parseBBCodeRuns(raw)) {
-    if (run.rule) {
-      const image = resolveRule(run.rule, boxWidthPx, defaultColor);
+    const image = run.rule
+      ? resolveRule(run.rule, boxWidthPx, defaultColor)
+      : run.image && resolveImage(run.image, n, boxWidthPx);
+    if (run.rule || run.image) {
+      // An image that cannot be sized yet is dropped, as a failed load is in Godot.
+      if (!image) continue;
       styled.push({
         text: run.text,
         bold: false,
         italic: false,
         underline: false,
         color: image.spec.color,
+        // Carries the object width: `imageObjectFontMetrics`.
         fontSizePx: image.sizePx.x,
         alignment: paragraphAlignment(run.tags, props.horizontalAlignment),
         bidi: paragraphBidiOptions(run.tags, props, n),
         ...paragraphShapeOptions(run.tags, props),
         image,
-      });
-      continue;
-    }
-    if (run.image) {
-      const widthPx = resolveImageDimension(run.image.width, run.image.widthInPercent, boxWidthPx);
-      const heightPx = resolveImageDimension(run.image.height, run.image.heightInPercent, boxWidthPx);
-      const sizePx = imageSizePx(widthPx, heightPx, run.image.region, n.textureSlots[run.image.path]);
-      if (!sizePx) continue; // Unsizable yet: dropped, as a failed load is in Godot.
-      styled.push({
-        text: run.text,
-        bold: false,
-        italic: false,
-        underline: false,
-        color: run.image.color,
-        // Carries the image width: `imageObjectFontMetrics`.
-        fontSizePx: sizePx.x,
-        alignment: paragraphAlignment(run.tags, props.horizontalAlignment),
-        bidi: paragraphBidiOptions(run.tags, props, n),
-        ...paragraphShapeOptions(run.tags, props),
-        image: { spec: run.image, sizePx },
       });
       continue;
     }
@@ -530,7 +527,7 @@ export function styledTextRuns(
       alignment: paragraphAlignment(run.tags, props.horizontalAlignment),
       bidi: paragraphBidiOptions(run.tags, props, n),
       ...paragraphShapeOptions(run.tags, props),
-      ...(run.zeroHeightBreak && { zeroHeightBreak: true as const }),
+      zeroHeightBreak: run.zeroHeightBreak,
     });
   }
   return styled;
@@ -787,10 +784,10 @@ export function richTextContentHeightPx(
 /** The paragraph indexes (counted by `\n`) of the lines of no height: each ends in a `zeroHeightBreak` run. */
 function zeroHeightParagraphsOf(styledRuns: readonly StyledTextRun[]): ReadonlySet<number> {
   const paragraphs = new Set<number>();
+  if (!styledRuns.some((run) => run.zeroHeightBreak)) return paragraphs;
   let paragraphIndex = 0;
   for (const run of styledRuns) {
-    for (const char of run.text) {
-      if (char !== '\n') continue;
+    for (let at = run.text.indexOf('\n'); at >= 0; at = run.text.indexOf('\n', at + 1)) {
       if (run.zeroHeightBreak) paragraphs.add(paragraphIndex);
       paragraphIndex++;
     }
