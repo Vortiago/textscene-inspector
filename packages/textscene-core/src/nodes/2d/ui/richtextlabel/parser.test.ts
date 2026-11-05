@@ -44,4 +44,21 @@ describe('parseRichTextLabel', () => {
     expect(p.tabSize).toBe(8);
     expect(p.autowrapTrimFlags).toBe(64);
   });
+
+  // Defaults: `DEFAULT_JUSTIFICATION_FLAGS` (`rich_text_label.h:582`) and the constructor's
+  // `set_clip_contents(true)` (`rich_text_label.cpp:8225`).
+  it('defaults justification_flags to 163 and clip_contents to true', () => {
+    const p = parseRichTextLabel(h({ name: 'T', type: 'RichTextLabel' }), {});
+    expect(p.justificationFlags).toBe(163);
+    expect(p.clipContents).toBe(true);
+  });
+
+  it('reads justification_flags as authored, and clip_contents = false', () => {
+    const p = parseRichTextLabel(h({ name: 'T', type: 'RichTextLabel' }), {
+      justification_flags: '66',
+      clip_contents: 'false',
+    });
+    expect(p.justificationFlags).toBe(66);
+    expect(p.clipContents).toBe(false);
+  });
 });

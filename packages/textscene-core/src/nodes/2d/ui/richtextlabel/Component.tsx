@@ -5,13 +5,18 @@
  * engine `<Label>` uses. Other tags are a non-goal.
  */
 import { useMemo } from 'react';
+import type * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
-import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import {
+  ControlClipProvider,
+  useControlClipPlanes,
+  useWorldClipPlanes,
+} from '../../../../r3f/controls/native/controlClipping';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useWindowedCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { useResolvedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
@@ -108,14 +113,20 @@ function RichTextImage({
   );
 }
 
-export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
+interface RichTextBodyProps extends NativeControlComponentProps {
+  /** What a `TextRun` clips to: the inherited planes, or this control's rect merged onto them. */
+  clippingPlanes: readonly THREE.Plane[];
+}
+
+/** The lines and images of a RichTextLabel. A `ControlQuad` reads its clip from context, a `TextRun` from `clippingPlanes`. */
+function RichTextBody({ solveNode, tint, rect, renderOrder, theme, clippingPlanes }: RichTextBodyProps) {
   const props = painterView<RichTextLabelProperties>(solveNode);
   const textTheme = useMemo(
     () => richTextLabelTextTheme(solveNode, props, { theme }),
     [solveNode, props, theme]
   );
 
-  const clippingPlanes = useControlClipPlanes();
+  const { justificationFlags } = props;
 
   // A styled run reads its own theme font-size key, never `normal_font_size`.
   const runs = useMemo(
@@ -158,7 +169,7 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
 
   // The alignment property and the `[center]`/`[right]`/`[left]`/`[fill]` tags
   // (`rich_text_label.cpp:5681-5696`) resolve through one `_find_alignment`
-  // port. FILL positions like LEFT: `comparison.md` records the justification gap.
+  // port. A FILL paragraph fits the text rect by `justification_flags`.
   const placements = useMemo(
     () =>
       layoutRichTextRuns(runs, layout, {
@@ -166,8 +177,21 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
         boxHeightPx: rect.h,
         horizontalAlignment: props.horizontalAlignment,
         verticalAlignment: props.verticalAlignment,
+        justification: {
+          flags: justificationFlags,
+          fontSizePx: textTheme.fontSizePx,
+        },
       }),
-    [runs, layout, rect.w, rect.h, props.horizontalAlignment, props.verticalAlignment]
+    [
+      runs,
+      layout,
+      rect.w,
+      rect.h,
+      props.horizontalAlignment,
+      props.verticalAlignment,
+      justificationFlags,
+      textTheme.fontSizePx,
+    ]
   );
   const underlineMetrics = useMemo(() => richTextUnderlineMetrics(runs), [runs]);
 
@@ -227,4 +251,28 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
       })}
     </>
   );
+}
+
+/** `clip_contents` clips to the control's own rect, merged onto the inherited clip (`control.cpp:3948`). */
+function ClippedRichTextLabel(props: NativeControlComponentProps) {
+  const { rect } = props;
+  const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
+  const { anchorRef, clippingPlanes, clip } = useWorldClipPlanes(ownRect);
+  return (
+    <CanvasItemGroup ref={anchorRef}>
+      <ControlClipProvider value={clip}>
+        <RichTextBody {...props} clippingPlanes={clippingPlanes} />
+      </ControlClipProvider>
+    </CanvasItemGroup>
+  );
+}
+
+function UnclippedRichTextLabel(props: NativeControlComponentProps) {
+  return <RichTextBody {...props} clippingPlanes={useControlClipPlanes()} />;
+}
+
+/** The painter. `clip_contents` is true by default for this node (`rich_text_label.cpp:8225`). */
+export function RichTextLabel(props: NativeControlComponentProps) {
+  const { clipContents } = painterView<RichTextLabelProperties>(props.solveNode);
+  return clipContents ? <ClippedRichTextLabel {...props} /> : <UnclippedRichTextLabel {...props} />;
 }

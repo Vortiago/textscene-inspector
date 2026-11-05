@@ -8,7 +8,7 @@
  * - `CONSTRAIN_ELLIPSIS` is not wired. It needs a Label with autowrap off, `HORIZONTAL_ALIGNMENT_FILL`
  *   and a trimming `text_overrun_behavior` (the label slice's `comparison.md`).
  * - The `SKIP_LAST_LINE` flags and `DO_NOT_SKIP_SINGLE_LINE` decide which lines a caller fits at all,
- *   so they are the caller's business, and `justifyToLineIndex` answers it for Label and TextMesh.
+ *   so they are the caller's business, and `justifyToLineIndex` answers it for one paragraph.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -19,6 +19,7 @@ import {
   isTabChar,
   isWhitespace,
   shapedTextSizeWidthPx,
+  startsParagraph,
   type GlyphPlacement,
   type TextLineLayout,
 } from './textLayout';
@@ -39,25 +40,19 @@ interface FitLineOptions {
   fontSizePx: number;
 }
 
-interface FitLineResult {
-  line: TextLineLayout;
-  /** `sd->fit_width_minimum_reached` (`:5677-5679`): a shrinking line could not reach `widthPx`. */
-  fitWidthMinimumReached: boolean;
-}
-
 /**
  * Port of `TextServer::shaped_text_fit_to_width`, scoped per this module's own doc. The source's
  * `adv_remain` whole-pixel carry (`:5662-5671`) is not ported: `gl.advance = new_advance` runs
  * before `adv_remain += (new_advance - gl.advance)`, so the carry is always zero.
  */
-export function fitLineToWidth(
+function fitLineToWidth(
   line: TextLineLayout,
   widthPx: number,
   flags: EnumValue<typeof JustificationFlag>,
   options: FitLineOptions
-): FitLineResult {
+): TextLineLayout {
   const glyphs = line.glyphs;
-  if (glyphs.length === 0) return { line, fitWidthMinimumReached: false };
+  if (glyphs.length === 0) return line;
 
   let startPos = 0;
   let endPos = glyphs.length - 1;
@@ -104,7 +99,6 @@ export function fitLineToWidth(
   // :5648-5675
   const wordBound = (flags & JustificationFlag.WORD_BOUND) !== 0 && spaceCount > 0;
   const deltaPerSpacePx = wordBound ? (widthPx - justificationWidthPx) / spaceCount : 0;
-  const minSpaceAdvancePx = 0.1 * options.fontSizePx;
 
   let cumulativeShiftPx = 0;
   const outGlyphs = glyphs.map((g, i) => {
@@ -113,20 +107,14 @@ export function fitLineToWidth(
     if (zeroedAdvanceAt.has(i)) {
       advance = 0;
     } else if (wordBound && i >= startPos && i <= endPos && g.char === ' ') {
-      advance = Math.max(g.advance + deltaPerSpacePx, minSpaceAdvancePx);
+      // `0.1 * gl.font_size` (`:5659`): the run's own size, else the caller's.
+      advance = Math.max(g.advance + deltaPerSpacePx, 0.1 * (g.fontSizePx ?? options.fontSizePx));
     }
     cumulativeShiftPx += advance - g.advance;
     return { ...g, x, advance };
   });
 
-  const finalWidthPx = line.widthPx + cumulativeShiftPx;
-  // :5677-5679 -- checked against the FINAL (post-adjustment) width.
-  const fitWidthMinimumReached = Math.floor(widthPx) < Math.floor(finalWidthPx);
-
-  return {
-    line: { ...line, glyphs: outGlyphs, widthPx: finalWidthPx },
-    fitWidthMinimumReached,
-  };
+  return { ...line, glyphs: outGlyphs, widthPx: line.widthPx + cumulativeShiftPx };
 }
 
 /** `TS->shaped_text_has_visible_chars` reduced to this engine's charset: any glyph whose own character is not whitespace. */
@@ -139,7 +127,7 @@ function lineHasVisibleChars(line: TextLineLayout): boolean {
  * and of TextMesh (`primitive_meshes.cpp:3284-3304`). Label's autowrap-on copy (`:273-289`) serves
  * `lines_hidden`, which this slice does not model.
  */
-export function justifyToLineIndex(lines: readonly TextLineLayout[], flags: number): number {
+function justifyToLineIndex(lines: readonly TextLineLayout[], flags: number): number {
   if (lines.length === 1 && flags & JustificationFlag.DO_NOT_SKIP_SINGLE_LINE) return lines.length;
   let jstToLine = lines.length;
   if (flags & JustificationFlag.SKIP_LAST_LINE) jstToLine = lines.length - 1;
@@ -152,6 +140,17 @@ export function justifyToLineIndex(lines: readonly TextLineLayout[], flags: numb
     }
   }
   return jstToLine;
+}
+
+/** One paragraph's lines fitted to `widthPx`, by `justifyToLineIndex`'s count of lines to fit. */
+function justifyParagraph(
+  lines: readonly TextLineLayout[],
+  widthPx: number,
+  flags: number,
+  fontSizePx: number
+): TextLineLayout[] {
+  const toLine = justifyToLineIndex(lines, flags);
+  return lines.map((line, i) => (i < toLine ? fitLineToWidth(line, widthPx, flags, { fontSizePx }) : line));
 }
 
 /**
@@ -167,8 +166,39 @@ export function justifyLinesToWidth(
 ): TextLineLayout[] {
   const fitWidthPx =
     widthPx > 0 ? widthPx : Math.max(0, ...lines.map((line) => shapedTextSizeWidthPx(line.widthPx)));
-  const toLine = justifyToLineIndex(lines, flags);
-  return lines.map((line, i) =>
-    i < toLine ? fitLineToWidth(line, fitWidthPx, flags, { fontSizePx }).line : line
-  );
+  return justifyParagraph(lines, fitWidthPx, flags, fontSizePx);
+}
+
+interface JustifyParagraphsOptions {
+  /** The width each fitted line reaches, px. */
+  widthPx: number;
+  flags: number;
+  fontSizePx: number;
+  /** Whether the paragraph starting at this line index has FILL alignment. Undefined fits every paragraph. */
+  isFilled?: (firstLineIndex: number) => boolean;
+}
+
+/**
+ * The lines of Label (`label.cpp:272-319`) and RichTextLabel (`TextParagraph::_shape_lines`,
+ * `text_paragraph.cpp:234-292`), which fit each paragraph on its own: `jst_to_line` counts inside
+ * the paragraph, so each one skips its own last line. Lines of a paragraph are adjacent.
+ */
+export function justifyParagraphs(
+  lines: readonly TextLineLayout[],
+  options: JustifyParagraphsOptions
+): TextLineLayout[] {
+  const { widthPx, flags, fontSizePx, isFilled = () => true } = options;
+  const justified: TextLineLayout[] = [];
+  let first = 0;
+  while (first < lines.length) {
+    let end = first + 1;
+    while (end < lines.length && !startsParagraph(lines, end)) end++;
+    if (isFilled(first)) {
+      justified.push(...justifyParagraph(lines.slice(first, end), widthPx, flags, fontSizePx));
+    } else {
+      for (let i = first; i < end; i++) justified.push(lines[i]!);
+    }
+    first = end;
+  }
+  return justified;
 }

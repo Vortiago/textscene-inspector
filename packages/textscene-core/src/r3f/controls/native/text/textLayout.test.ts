@@ -742,6 +742,20 @@ describe('shapeText — paragraphSeparator (Label::_shape)', () => {
     expect(split.lines[0]!.glyphs.at(-1)!.glyph).toBeNull();
   });
 
+  // RichTextLabel adds its ZWSP for an ITEM_NEWLINE (`rich_text_label.cpp:626-644`), so only a
+  // paragraph that a "\n" ends carries one.
+  it('leaves the last paragraph unterminated with terminateLastParagraph false', () => {
+    const layout = shapeText('ab\ncd', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      paragraphSeparator: '\n',
+      terminateLastParagraph: false,
+    });
+    expect(layout.lines.map((l) => l.text)).toEqual([`ab${'\u200b'}`, 'cd']);
+  });
+
   it('is off by default — the callers whose engine counterpart never splits', () => {
     expect(
       shapeText('a\n\nb', {

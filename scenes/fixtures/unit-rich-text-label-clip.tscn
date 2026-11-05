@@ -1,0 +1,116 @@
+; One variable: the clip. A RichTextLabel clips its own drawing to its rect while clip_contents is
+; true, its constructor default (rich_text_label.cpp:8225, control.cpp:3948). No other RichTextLabel
+; fixture overflows its rect, so only this scene shows the clip. scroll_active is false so that no
+; scrollbar narrows the wrap width.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="OverflowNoWrapBox" type="ColorRect" parent="."]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 200.0
+offset_bottom = 80.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="OverflowNoWrap" type="RichTextLabel" parent="."]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 200.0
+offset_bottom = 80.0
+bbcode_enabled = true
+text = "Wave rift over quiet stone and amber light"
+autowrap_mode = 0
+
+[node name="ClipOffBox" type="ColorRect" parent="."]
+offset_left = 40.0
+offset_top = 100.0
+offset_right = 200.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="ClipOff" type="RichTextLabel" parent="."]
+offset_left = 40.0
+offset_top = 100.0
+offset_right = 200.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "Wave rift over quiet stone and amber light"
+autowrap_mode = 0
+clip_contents = false
+
+[node name="FitContentBox" type="ColorRect" parent="."]
+offset_left = 40.0
+offset_top = 180.0
+offset_right = 200.0
+offset_bottom = 240.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="FitContent" type="RichTextLabel" parent="."]
+offset_left = 40.0
+offset_top = 180.0
+offset_right = 200.0
+offset_bottom = 240.0
+bbcode_enabled = true
+text = "Wave rift over quiet stone and amber light"
+autowrap_mode = 0
+fit_content = true
+
+[node name="ShortBoxBox" type="ColorRect" parent="."]
+offset_left = 440.0
+offset_top = 20.0
+offset_right = 640.0
+offset_bottom = 60.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="ShortBox" type="RichTextLabel" parent="."]
+offset_left = 440.0
+offset_top = 20.0
+offset_right = 640.0
+offset_bottom = 60.0
+bbcode_enabled = true
+text = "Wave rift over stone and amber light across the sleeping harbour at the end of day"
+scroll_active = false
+
+[node name="ThinBoxBox" type="ColorRect" parent="."]
+offset_left = 440.0
+offset_top = 100.0
+offset_right = 640.0
+offset_bottom = 112.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="ThinBox" type="RichTextLabel" parent="."]
+offset_left = 440.0
+offset_top = 100.0
+offset_right = 640.0
+offset_bottom = 112.0
+bbcode_enabled = true
+text = "Wave rift over stone and amber light across the harbour"
+scroll_active = false
+
+[node name="FillOverflowBox" type="ColorRect" parent="."]
+offset_left = 440.0
+offset_top = 180.0
+offset_right = 600.0
+offset_bottom = 240.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="FillOverflow" type="RichTextLabel" parent="."]
+offset_left = 440.0
+offset_top = 180.0
+offset_right = 600.0
+offset_bottom = 240.0
+bbcode_enabled = true
+text = "Wave rift over quiet stone and amber light"
+autowrap_mode = 0
+horizontal_alignment = 3

@@ -15,15 +15,14 @@ import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 /**
  * The `TextServer::TextOverrunFlag` bits an `OverrunBehavior` reaches (`text_server.cpp:2399-2432`),
- * without `OVERRUN_SHORT_STRING_ELLIPSIS`, which that mapping never sets. A caller sets
- * `justificationAware` directly, as Label's autowrap-off FILL re-trim does (`label.cpp:323`).
+ * without `OVERRUN_SHORT_STRING_ELLIPSIS`, which that mapping never sets, and without
+ * `OVERRUN_JUSTIFICATION_AWARE`, which only Label's autowrap-off FILL re-trim sets (`label.cpp:323`).
  */
 export interface OverrunTrimFlags {
   trim: boolean;
   trimWordOnly: boolean;
   addEllipsis: boolean;
   enforceEllipsis: boolean;
-  justificationAware: boolean;
 }
 
 const NO_TRIM_FLAGS: OverrunTrimFlags = {
@@ -31,7 +30,6 @@ const NO_TRIM_FLAGS: OverrunTrimFlags = {
   trimWordOnly: false,
   addEllipsis: false,
   enforceEllipsis: false,
-  justificationAware: false,
 };
 
 /** `TextServer::get_overrun_flags_from_behavior` (`text_server.cpp:2399-2432`). */
@@ -43,7 +41,6 @@ export function overrunFlagsForBehavior(behavior: number): OverrunTrimFlags {
         trimWordOnly: true,
         addEllipsis: true,
         enforceEllipsis: true,
-        justificationAware: false,
       };
     case OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE:
       return {
@@ -51,7 +48,6 @@ export function overrunFlagsForBehavior(behavior: number): OverrunTrimFlags {
         trimWordOnly: false,
         addEllipsis: true,
         enforceEllipsis: true,
-        justificationAware: false,
       };
     case OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS:
       return {
@@ -59,7 +55,6 @@ export function overrunFlagsForBehavior(behavior: number): OverrunTrimFlags {
         trimWordOnly: true,
         addEllipsis: true,
         enforceEllipsis: false,
-        justificationAware: false,
       };
     case OverrunBehavior.OVERRUN_TRIM_ELLIPSIS:
       return {
@@ -67,7 +62,6 @@ export function overrunFlagsForBehavior(behavior: number): OverrunTrimFlags {
         trimWordOnly: false,
         addEllipsis: true,
         enforceEllipsis: false,
-        justificationAware: false,
       };
     case OverrunBehavior.OVERRUN_TRIM_WORD:
       return {
@@ -75,7 +69,6 @@ export function overrunFlagsForBehavior(behavior: number): OverrunTrimFlags {
         trimWordOnly: true,
         addEllipsis: false,
         enforceEllipsis: false,
-        justificationAware: false,
       };
     case OverrunBehavior.OVERRUN_TRIM_CHAR:
       return {
@@ -83,7 +76,6 @@ export function overrunFlagsForBehavior(behavior: number): OverrunTrimFlags {
         trimWordOnly: false,
         addEllipsis: false,
         enforceEllipsis: false,
-        justificationAware: false,
       };
     case OverrunBehavior.OVERRUN_NO_TRIMMING:
     default:
@@ -103,8 +95,6 @@ interface OverrunTrimOptions {
   fontSizePx: number;
   /** `Label.ellipsis_char` / `TextParagraph.ellipsis_char`; defaults to `DEFAULT_ELLIPSIS_CHAR`. */
   ellipsisChar?: string;
-  /** `sd->fit_width_minimum_reached` from a prior `fitLineToWidth`, read only when `flags.justificationAware`. */
-  fitWidthMinimumReached?: boolean;
 }
 
 /** Whether the font has a bitmap for `ch`: the baked charset for `'atlas'` metrics, always true for a `'canvas'` font. */
@@ -132,12 +122,7 @@ export function trimLineToWidth(
   flags: OverrunTrimFlags,
   options: OverrunTrimOptions
 ): TextLineLayout {
-  const {
-    fontMetrics,
-    fontSizePx,
-    ellipsisChar = DEFAULT_ELLIPSIS_CHAR,
-    fitWidthMinimumReached = false,
-  } = options;
+  const { fontMetrics, fontSizePx, ellipsisChar = DEFAULT_ELLIPSIS_CHAR } = options;
   const glyphs = line.glyphs;
 
   // :5958
@@ -147,10 +132,6 @@ export function trimLineToWidth(
     widthPx <= 0 ||
     !(line.widthPx > widthPx || flags.enforceEllipsis)
   ) {
-    return line;
-  }
-  // :5964-5966
-  if (flags.justificationAware && !fitWidthMinimumReached) {
     return line;
   }
 
