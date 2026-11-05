@@ -1,26 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import type { FontFileResource, FontResource, FontVariationResource, SystemFontResource } from './types';
+import type { FontFileResource, FontResource, FontVariationResource } from './types';
+import { fontFile, systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { NO_DEFAULT_FONTS, withDefaultFonts, type DefaultFonts } from './defaultFont';
 
-function fontFile(fallbacks: FontResource[] = []): FontFileResource {
-  return { kind: 'file', bytes: new ArrayBuffer(4), mimeType: 'font/otf', fallbacks, properties: {} };
-}
-
-/** A `.tres` FontFile with no bytes, which draws from its fallbacks. */
-function wrapper(fallbacks: FontResource[]): FontFileResource {
-  return { ...fontFile(fallbacks), bytes: undefined, mimeType: undefined };
-}
-
-const VARIATION_DEFAULT = fontFile();
-const SYSTEM_DEFAULT = fontFile();
+const VARIATION_DEFAULT = fontFile(new ArrayBuffer(4));
+const SYSTEM_DEFAULT = fontFile(new ArrayBuffer(4));
 const DEFAULTS: DefaultFonts = { variation: VARIATION_DEFAULT, system: SYSTEM_DEFAULT };
 
 function variation(baseFont: FontResource | null, embolden = '1.2'): FontVariationResource {
   return { kind: 'variation', baseFont, properties: { variation_embolden: embolden } };
-}
-
-function systemFont(): SystemFontResource {
-  return { kind: 'system', fontNames: ['Zz No Such Font'], properties: {} };
 }
 
 describe('withDefaultFonts — a FontVariation with no base_font', () => {
@@ -66,19 +54,19 @@ describe('withDefaultFonts — a SystemFont', () => {
   });
 
   it('in the fallbacks of a FontFile with no bytes, is the SystemFont default there', () => {
-    const resolved = withDefaultFonts(wrapper([systemFont()]), DEFAULTS) as FontFileResource;
+    const resolved = withDefaultFonts(fontFile(undefined, [systemFont()]), DEFAULTS) as FontFileResource;
     expect(resolved.fallbacks).toEqual([SYSTEM_DEFAULT]);
   });
 });
 
 describe('withDefaultFonts — fonts with a face of their own', () => {
   it('leaves a variation that names a FontFile base as it is', () => {
-    const named = variation(fontFile());
+    const named = variation(fontFile(new ArrayBuffer(4)));
     expect(withDefaultFonts(named, DEFAULTS)).toBe(named);
   });
 
   it('leaves a FontFile with bytes as it is, whatever its fallbacks: its own face draws', () => {
-    const file = fontFile([systemFont()]);
+    const file = fontFile(new ArrayBuffer(4), [systemFont()]);
     expect(withDefaultFonts(file, DEFAULTS)).toBe(file);
   });
 
@@ -93,14 +81,14 @@ describe('withDefaultFonts — fonts with a face of their own', () => {
 });
 
 describe('withDefaultFonts — identity', () => {
-  it('answers the same object for the same font and equal defaults, so a metrics cache keeps its hits', () => {
+  it('answers the same object for the same font and defaults, so a metrics cache keeps its hits', () => {
     const bare = variation(null);
-    expect(withDefaultFonts(bare, DEFAULTS)).toBe(withDefaultFonts(bare, { ...DEFAULTS }));
+    expect(withDefaultFonts(bare, DEFAULTS)).toBe(withDefaultFonts(bare, DEFAULTS));
   });
 
   it('answers a new object for another default font', () => {
     const bare = variation(null);
-    const other: DefaultFonts = { ...DEFAULTS, variation: fontFile() };
+    const other: DefaultFonts = { ...DEFAULTS, variation: fontFile(new ArrayBuffer(4)) };
     expect(withDefaultFonts(bare, DEFAULTS)).not.toBe(withDefaultFonts(bare, other));
   });
 });

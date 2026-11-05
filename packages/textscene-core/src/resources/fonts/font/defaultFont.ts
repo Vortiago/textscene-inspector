@@ -8,6 +8,7 @@
  */
 import type { FontResource } from './types';
 import { perObject } from '../../../utils/perObject';
+import { hasGlyphs } from '../../../r3f/controls/native/text/sceneFontResolution';
 
 /**
  * The font each Godot class without a face takes: the default theme context's `font` for that
@@ -20,22 +21,12 @@ export interface DefaultFonts {
 
 export const NO_DEFAULT_FONTS: DefaultFonts = { variation: null, system: null };
 
-/** Stands in for a null default font as a cache key. */
-const BUNDLED = {};
-
 /**
- * Keyed by each default font, then by font, so a font answers one object per pair of defaults and
- * a metrics cache keyed on it keeps its hits.
+ * Keyed by the defaults, then by font, so a font answers one object per `DefaultFonts` and a
+ * metrics cache keyed on it keeps its hits. The theme lookup builds one `DefaultFonts` per project.
  */
-const resolvedOver = perObject((variation: object) =>
-  perObject((system: object) =>
-    perObject((font: FontResource) =>
-      replaceDefaults(font, {
-        variation: variation === BUNDLED ? null : (variation as FontResource),
-        system: system === BUNDLED ? null : (system as FontResource),
-      })
-    )
-  )
+const resolvedOver = perObject((defaults: DefaultFonts) =>
+  perObject((font: FontResource) => replaceDefaults(font, defaults))
 );
 
 /** `font` itself where nothing under it changes, so an untouched branch keeps its identity. */
@@ -48,8 +39,7 @@ function replaceDefaults(font: FontResource, defaults: DefaultFonts): FontResour
       return baseFont === font.baseFont ? font : { ...font, baseFont };
     }
     case 'file': {
-      // A file with its own glyphs draws them, and the walk never reaches its fallbacks.
-      if (font.bytes || font.bitmap) return font;
+      if (hasGlyphs(font)) return font;
       const fallbacks = font.fallbacks.map((fallback) => replaceDefaults(fallback, defaults));
       return fallbacks.every((fallback, i) => fallback === font.fallbacks[i]) ? font : { ...font, fallbacks };
     }
@@ -62,6 +52,8 @@ function replaceDefaults(font: FontResource, defaults: DefaultFonts): FontResour
  * A font with no face is left as it is where its default is the bundled font, and draws that.
  */
 export function withDefaultFonts(font: FontResource | null, defaults: DefaultFonts): FontResource | null {
-  if (!font || (!defaults.variation && !defaults.system)) return font;
-  return resolvedOver(defaults.variation ?? BUNDLED)(defaults.system ?? BUNDLED)(font);
+  // A file with its own glyphs draws them, and the walk never reaches its fallbacks.
+  if (!font || (font.kind === 'file' && hasGlyphs(font)) || (!defaults.variation && !defaults.system))
+    return font;
+  return resolvedOver(defaults)(font);
 }

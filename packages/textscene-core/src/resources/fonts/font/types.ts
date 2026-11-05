@@ -86,7 +86,7 @@ export interface BitmapFont {
  * runtime, which this previewer cannot load bytes for. It draws the theme's default font, as
  * Godot does when no OS font matches (`defaultFont.ts`).
  */
-export interface SystemFontResource {
+interface SystemFontResource {
   kind: 'system';
   fontNames: string[];
   properties: Record<string, string>;

@@ -5,7 +5,7 @@ import { fontWork, sceneFontSettleCount } from './settledChannel';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { peekGlyphOutlines, peekSceneFontOutlines } from './sceneFontOutlines';
-import { charContours, fixtureFontBytes, fontFile } from './sfntOutlines.testkit';
+import { charContours, fixtureFontBytes, fontFile, systemFont } from './sfntOutlines.testkit';
 import autoHintedReference from './autofit/autoHinting.godot.json';
 import { referencePoints, type ReferenceGlyph } from './glyphVariation.testkit';
 
@@ -105,7 +105,7 @@ describe('peekSceneFontOutlines', () => {
   });
 
   it('reads the bundled Open Sans for a SystemFont, as Godot does when no OS font matches its names', async () => {
-    const font: FontResource = { kind: 'system', fontNames: ['Zz No Such Font'], properties: {} };
+    const font = systemFont();
 
     expect(await settledOutlines(font)).toBe(await settledOutlines(null));
   });

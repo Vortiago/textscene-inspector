@@ -10,6 +10,7 @@ import type { ProjectFonts } from '../../fonts/font/projectFonts';
 import { resolveFontReference } from '../../fonts/font/resolveFontReference';
 import type { FontResource } from '../../fonts/font/types';
 import type { LoadedFont } from '../../scopedResource';
+import { perObject } from '../../../utils/perObject';
 import type { ThemeResource } from './types';
 
 /**
@@ -106,7 +107,7 @@ export interface ThemeResolutionScope {
   readonly searchOrder: readonly ThemeResource[];
   /** The font a lookup reaches after every theme: the default theme's `default_font`. Null draws the bundled font. */
   readonly projectDefaultFont: FontResource | null;
-  /** The fonts under a font with no face of its own (`defaultFontOf`). */
+  /** The fonts under a font with no face of its own (`defaultFontsOf`). */
   readonly defaultFonts: DefaultFonts;
 }
 
@@ -118,8 +119,7 @@ export interface ThemeResolutionScope {
  */
 function defaultFontOf(
   fontClass: 'FontVariation' | 'SystemFont',
-  projectTheme: ThemeResource | null,
-  projectDefaultFont: FontResource | null
+  { projectTheme, projectDefaultFont }: ProjectFonts
 ): FontResource | null {
   if (projectTheme) {
     for (const type of nativeTypeChain(fontClass)) {
@@ -130,20 +130,24 @@ function defaultFontOf(
   return projectDefaultFont;
 }
 
+/** Built once per project, so every node's scope shares one `DefaultFonts` object. */
+const defaultFontsOf = perObject((projectFonts: ProjectFonts): DefaultFonts => ({
+  variation: defaultFontOf('FontVariation', projectFonts),
+  system: defaultFontOf('SystemFont', projectFonts),
+}));
+
 export function themeResolutionScope(
   nativeType: string,
   typeVariation: string | undefined,
   ancestorThemes: readonly ThemeResource[],
-  { projectTheme, projectDefaultFont }: ProjectFonts
+  projectFonts: ProjectFonts
 ): ThemeResolutionScope {
+  const { projectTheme, projectDefaultFont } = projectFonts;
   return {
     typeChain: buildThemeTypeChain(nativeType, typeVariation, ancestorThemes, projectTheme),
     searchOrder: themeSearchOrder(ancestorThemes, projectTheme),
     projectDefaultFont,
-    defaultFonts: {
-      variation: defaultFontOf('FontVariation', projectTheme, projectDefaultFont),
-      system: defaultFontOf('SystemFont', projectTheme, projectDefaultFont),
-    },
+    defaultFonts: defaultFontsOf(projectFonts),
   };
 }
 

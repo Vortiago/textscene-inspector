@@ -1,16 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { fontFile, systemFont } from '../../r3f/controls/native/text/sfntOutlines.testkit';
 import { NO_RESOURCES } from '../../r3f/SceneResourcesContext';
 import type { ResolvableResource, ScopedResource } from '../scopedResource';
 import { NO_FILES, NO_FONTS } from '../testing/loadedFiles';
 import { NO_PROJECT_FONTS } from '../fonts/font/projectFonts';
 import { undrawnMeshType } from './meshSource';
-import {
-  FONT_PATH,
-  readyTextMesh,
-  systemFontResource,
-  textMeshWith,
-  unreadableFontFile,
-} from './textmesh/textMeshFont.testkit';
+import { FONT_PATH, readyTextMesh, textMeshWith } from './textmesh/textMeshFont.testkit';
 
 function scopedOf(type: string): ScopedResource {
   return { resource: { id: 'mesh', type, data: {} }, resources: NO_RESOURCES };
@@ -35,13 +30,13 @@ describe('undrawnMeshType', () => {
   });
 
   it('names a TextMesh whose font is one the previewer cannot read', () => {
-    const mesh = textMeshWith({}, { [FONT_PATH]: unreadableFontFile() });
+    const mesh = textMeshWith({}, { [FONT_PATH]: fontFile(undefined) });
 
     expect(undrawnMeshType(mesh, mesh)).toBe('TextMesh');
   });
 
   it('is null for a TextMesh with a SystemFont, which draws the default font', () => {
-    const mesh = textMeshWith({}, { [FONT_PATH]: systemFontResource() });
+    const mesh = textMeshWith({}, { [FONT_PATH]: systemFont() });
 
     expect(undrawnMeshType(mesh, mesh)).toBeNull();
   });

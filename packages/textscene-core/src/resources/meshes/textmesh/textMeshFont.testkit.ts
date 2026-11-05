@@ -50,16 +50,6 @@ export function woff2FontFile(): FontFileResource {
   };
 }
 
-/** A FontFile with no bytes and no fallbacks: a font with no outlines to read. */
-export function unreadableFontFile(): FontFileResource {
-  return { ...trueTypeFontFile(), bytes: undefined, mimeType: undefined };
-}
-
-/** A SystemFont whose name no OS font matches, which draws the default font. */
-export function systemFontResource(): FontResource {
-  return { kind: 'system', fontNames: ['Zz No Such Font'], properties: {} };
-}
-
 /** A TextMesh whose `font` names `FONT_PATH`, and the fonts loaded so far, `fonts`. */
 export function textMeshWith(
   data: Record<string, string> = {},

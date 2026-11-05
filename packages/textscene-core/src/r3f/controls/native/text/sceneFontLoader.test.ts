@@ -4,7 +4,7 @@
  * peek contract. `bundledFontLoader.test.ts` reaches the shared door for real.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fontFile } from './sfntOutlines.testkit';
+import { fontFile, systemFont } from './sfntOutlines.testkit';
 import { peekSceneFontMetrics, peekSettledSceneFontMetrics } from './sceneFontLoader';
 import { fontWork, notifySceneFontSettled, onSceneFontSettled, sceneFontSettleCount } from './settledChannel';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
@@ -34,7 +34,7 @@ describe('peekSceneFontMetrics', () => {
   });
 
   it('a SystemFont draws the bundled default with no warning, as Godot does when no OS font matches its names', () => {
-    const font: FontResource = { kind: 'system', fontNames: ['Zz No Such Font'], properties: {} };
+    const font = systemFont();
     expect(peekSceneFontMetrics(font, 'Root/MyLabel')).toBe(OPEN_SANS_FONT_METRICS);
     expect(warnSpy).not.toHaveBeenCalled();
   });
@@ -160,7 +160,7 @@ describe('peekSceneFontMetrics — FontVariation embolden', () => {
   });
 
   it('wraps the bundled face for a variation over a SystemFont, as for a variation with no base_font', () => {
-    const system: FontResource = { kind: 'system', fontNames: ['Zz No Such Font'], properties: {} };
+    const system = systemFont();
     const embolden = { variation_embolden: '1.2' };
     expect(peekSceneFontMetrics(variation(system, embolden), 'Root/OverSystem')).toBe(
       peekSceneFontMetrics(variation(null, embolden), 'Root/Bare')

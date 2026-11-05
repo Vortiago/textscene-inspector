@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { fontFile, systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { meshContentKey } from '../meshSource';
-import {
-  FONT_PATH,
-  readyTextMesh,
-  systemFontResource,
-  unreadableFontFile,
-  textMeshWith,
-  trueTypeFontFile,
-} from '../textmesh/textMeshFont.testkit';
+import { FONT_PATH, readyTextMesh, textMeshWith, trueTypeFontFile } from '../textmesh/textMeshFont.testkit';
 import { isDrawablePrimitiveMesh, primitiveMeshSurface, referencesKey } from './surface';
 import { scopedMesh } from './surface.testkit';
 
@@ -78,11 +72,11 @@ describe('primitiveMeshSurface for a TextMesh', () => {
 
 describe('isDrawablePrimitiveMesh', () => {
   it('is false for a TextMesh whose font has no readable outlines', () => {
-    expect(isDrawablePrimitiveMesh(textMeshWith({}, { [FONT_PATH]: unreadableFontFile() }))).toBe(false);
+    expect(isDrawablePrimitiveMesh(textMeshWith({}, { [FONT_PATH]: fontFile(undefined) }))).toBe(false);
   });
 
   it('is true for a TextMesh with a SystemFont, which draws the default font', () => {
-    expect(isDrawablePrimitiveMesh(textMeshWith({}, { [FONT_PATH]: systemFontResource() }))).toBe(true);
+    expect(isDrawablePrimitiveMesh(textMeshWith({}, { [FONT_PATH]: systemFont() }))).toBe(true);
   });
 
   it('is true for a TextMesh with no loaded font, which draws the bundled font', () => {

@@ -1,12 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { fontFile } from '../controls/native/text/sfntOutlines.testkit';
 import { EMPTY_AABB } from '../../godot/math/aabb';
 import { UV2_ATTRIBUTE } from '../../resources/meshes/uv2';
-import {
-  FONT_PATH,
-  readyTextMesh,
-  unreadableFontFile,
-  textMeshWith,
-} from '../../resources/meshes/textmesh/textMeshFont.testkit';
+import { FONT_PATH, readyTextMesh, textMeshWith } from '../../resources/meshes/textmesh/textMeshFont.testkit';
 import { primitiveMeshGeometry, primitiveMeshAabb } from './primitiveMeshGeometry';
 import { COARSE_TUBE, curveEndingAt, scopedMesh } from '../../resources/meshes/primitivemesh/surface.testkit';
 import { subResource } from '../../testing/subResource';
@@ -175,7 +171,7 @@ describe('primitiveMeshAabb', () => {
   });
 
   it('is unknown for a TextMesh whose font has no outlines to read', () => {
-    expect(primitiveMeshAabb(textMeshWith({}, { [FONT_PATH]: unreadableFontFile() }))).toBeNull();
+    expect(primitiveMeshAabb(textMeshWith({}, { [FONT_PATH]: fontFile(undefined) }))).toBeNull();
   });
 
   it('bounds the glyphs of a TextMesh once its font is ready', async () => {

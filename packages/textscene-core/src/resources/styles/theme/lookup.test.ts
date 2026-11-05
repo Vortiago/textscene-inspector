@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import {
   findThemeFontIn,
   fontForNode,
@@ -330,7 +331,7 @@ describe('resolveThemeFontIn — a FontVariation with no base_font', () => {
 // `SystemFont::_get_base_font_or_default` (`font.cpp:3368-3415`) asks the same context for the
 // SystemFont type chain, when no OS font matches its names. The previewer reads no OS font.
 describe('resolveThemeFontIn — a SystemFont', () => {
-  const SYSTEM_FONT: FontResource = { kind: 'system', fontNames: ['Zz No Such Font'], properties: {} };
+  const SYSTEM_FONT = systemFont();
 
   it("is the project's custom_font", () => {
     const scope = themeResolutionScope('Label', undefined, [], {

@@ -8,7 +8,7 @@ import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import { isGlyphVaried, type FontMetrics, type GlyphVariation } from './fontMetrics';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
-import { drawsBundledFont, fontForcesAutohinter, resolveFontFileBytes } from './sceneFontResolution';
+import { BUNDLED_FACE, findDrawnFace, fontForcesAutohinter } from './sceneFontResolution';
 import { createSettledPeek } from './settledChannel';
 import { openAutoHintedFontOutlines, openFontOutlines, type SfntOutlines } from './sfntOutlines';
 
@@ -30,7 +30,7 @@ function settledOutlines(read: () => Promise<SfntOutlines | null>): Promise<Sfnt
 }
 
 /**
- * The bundled Open Sans SemiBold, which every font that `drawsBundledFont` draws. Its bytes load
+ * The bundled Open Sans SemiBold, which every font whose face is `BUNDLED_FACE` draws. Its bytes load
  * as their own chunk, so a scene with no TextMesh never fetches them.
  */
 function peekBundledOutlines(): PeekedOutlines {
@@ -43,17 +43,18 @@ function peekBundledOutlines(): PeekedOutlines {
 }
 
 /**
- * The outlines of `font`, starting their load on the first peek. A chain of fonts with no bytes,
- * and bytes that hold no outlines this reader opens, are null.
+ * The outlines of `font`, starting their load on the first peek. A chain of fonts with no glyphs, a
+ * BMFont, and bytes that hold no outlines this reader opens, are null.
  *
  * @canonical Glyph outlines of a scene font in any container, from its font resource
  */
 export function peekSceneFontOutlines(font: FontResource | null | undefined): PeekedOutlines {
-  if (drawsBundledFont(font)) return peekBundledOutlines();
-  const resolved = resolveFontFileBytes(font);
-  if (!resolved) return null;
-  const open = fontForcesAutohinter(resolved.leaf) ? openAutoHintedFontOutlines : openFontOutlines;
-  return peekOutlines(resolved.leaf, () => settledOutlines(() => open(resolved.bytes)));
+  const face = findDrawnFace(font);
+  if (face === BUNDLED_FACE) return peekBundledOutlines();
+  const bytes = face?.bytes;
+  if (!face || !bytes) return null;
+  const open = fontForcesAutohinter(face) ? openAutoHintedFontOutlines : openFontOutlines;
+  return peekOutlines(face, () => settledOutlines(() => open(bytes)));
 }
 
 /**

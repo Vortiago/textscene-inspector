@@ -14,12 +14,12 @@ import {
   type DesignUnitWidthFn,
 } from './runtimeFontMetrics';
 import {
+  BUNDLED_FACE,
+  findDrawnFace,
   fontVariationEmbolden,
   fontVariationOpentype,
   fontVariationSkew,
-  drawsBundledFont,
-  resolveBitmapFont,
-  resolveFontFileBytes,
+  hasBitmap,
 } from './sceneFontResolution';
 import { createBitmapFontMetrics } from './bitmapFontMetrics';
 import { perObject } from '../../../../utils/perObject';
@@ -178,21 +178,20 @@ export function peekSettledSceneFontMetrics(
 ): FontMetrics | null {
   if (!font) return OPEN_SANS_FONT_METRICS;
 
-  // A BMFont is decoded by the time its resource settles, so it needs no load of its own. Only the
-  // embolden of a variation reaches it: FreeType shears and emboldens an outline, and it has none.
-  const bitmap = resolveBitmapFont(font);
-  if (bitmap) return withVariation(bitmapMetricsOf(bitmap), { embolden: fontVariationEmbolden(font) });
-
+  const face = findDrawnFace(font);
   // No failure, so no warning: Godot draws the bundled font here too.
-  if (drawsBundledFont(font)) return withVariation(OPEN_SANS_FONT_METRICS, fontVariation(font));
-
-  const resolved = resolveFontFileBytes(font);
-  if (!resolved) {
+  if (face === BUNDLED_FACE) return withVariation(OPEN_SANS_FONT_METRICS, fontVariation(font));
+  if (!face) {
     warnUnresolvable(font, nodePath);
     return OPEN_SANS_FONT_METRICS;
   }
 
-  const metrics = peekMetrics(resolved.leaf, () => loadSceneFontMetrics(resolved.bytes, nodePath));
+  // A BMFont is decoded by the time its resource settles, so it needs no load of its own. Only the
+  // embolden of a variation reaches it: FreeType shears and emboldens an outline, and it has none.
+  if (hasBitmap(face))
+    return withVariation(bitmapMetricsOf(face.bitmap), { embolden: fontVariationEmbolden(font) });
+
+  const metrics = peekMetrics(face, () => loadSceneFontMetrics(face.bytes, nodePath));
   if (!metrics) return null;
   const variation = fontVariation(font);
   const outlines = peekGlyphOutlines(font, metrics, variation);
