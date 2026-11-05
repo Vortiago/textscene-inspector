@@ -2,9 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { ByteWriter } from '../sfntOutlines.testkit';
-import { LookupFlag, readLayoutTable } from './openTypeLayout';
-
-const PAIR_POSITIONING = 2;
+import { GposType, LookupFlag, readLayoutTable } from './openTypeLayout';
 
 /** A `GPOS` with no script and no feature, and one lookup of `flag` that ends before its mark filtering set. */
 function gposCutShortBeforeMarkFilteringSet(flag: number): DataView {
@@ -17,7 +15,7 @@ function gposCutShortBeforeMarkFilteringSet(flag: number): DataView {
     .u16(0)
     .u16(1)
     .u16(4)
-    .u16(PAIR_POSITIONING)
+    .u16(GposType.PAIR)
     .u16(flag)
     .u16(0);
   return new DataView(new Uint8Array(bytes.toBytes()).buffer);

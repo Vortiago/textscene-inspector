@@ -23,8 +23,6 @@ const LIGATURE_PROPS = LookupFlag.IGNORE_LIGATURES;
 const MARK_PROPS = LookupFlag.IGNORE_MARKS;
 /** `LookupFlag::IgnoreFlags`: the bits that skip a base glyph, a ligature or a mark. */
 const IGNORE_FLAGS = BASE_GLYPH_PROPS | LIGATURE_PROPS | MARK_PROPS;
-/** The bits of a lookup flag that can skip a glyph: with none of them, a lookup matches every glyph. */
-const MATCHING_FLAGS = IGNORE_FLAGS | LookupFlag.USE_MARK_FILTERING_SET | LookupFlag.MARK_ATTACHMENT_TYPE;
 
 const GDEF_BASE_GLYPH = 1;
 const GDEF_LIGATURE_GLYPH = 2;
@@ -106,9 +104,6 @@ function markSetCovers(dv: DataView, markGlyphSets: number | null, set: number, 
   const coverage = dv.getUint32(markGlyphSets + 4 + 4 * set, false);
   return coverage !== 0 && coverageIndex(dv, markGlyphSets + coverage, glyph) >= 0;
 }
-
-/** Whether a lookup of `lookupProps` (`Lookup.props`) can skip a glyph: one with no such flag matches them all. */
-export const canSkipGlyphs = (lookupProps: number): boolean => (lookupProps & MATCHING_FLAGS) !== 0;
 
 /**
  * `check_glyph_property` and `match_properties_mark` (`hb-ot-layout-gsubgpos.hh:800-838`) for the

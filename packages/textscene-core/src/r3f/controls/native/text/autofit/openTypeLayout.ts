@@ -8,7 +8,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { readTag } from '../sfntTables';
+import { perObject } from '../../../../../utils/perObject';
+import { readTag, type SfntFile } from '../sfntTables';
 
 /** A `LangSys` table: its required feature, or null for none, and its other features. */
 interface LanguageSystem {
@@ -212,6 +213,26 @@ export function readLayoutTable(dv: DataView, offset: number, length: number, is
   };
 }
 
+/**
+ * The table `tag`, or null for none, or for one whose lists leave the file: HarfBuzz reads a table
+ * it cannot sanitise as empty.
+ */
+function readSfntLayoutTable(sfnt: SfntFile, tag: 'GSUB' | 'GPOS'): LayoutTable | null {
+  const table = sfnt.tables.get(tag);
+  if (!table) return null;
+  try {
+    return readLayoutTable(sfnt.dv, table.offset, table.length, tag === 'GSUB');
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    return null;
+  }
+}
+
+/** The `GSUB` of a font, read once for the auto-hinter and the shaper. */
+export const sfntGsub = perObject((sfnt: SfntFile) => readSfntLayoutTable(sfnt, 'GSUB'));
+/** The `GPOS` of a font, read once for the auto-hinter and the kerning at an instance. */
+export const sfntGpos = perObject((sfnt: SfntFile) => readSfntLayoutTable(sfnt, 'GPOS'));
+
 /** HarfBuzz skips a script or language system with nothing in it (`hb_collect_features_context_t::visited`). */
 const isEmptyScript = (script: Script): boolean => !script.defaultLanguage && script.languages.length === 0;
 const isEmptyLanguage = (language: LanguageSystem): boolean =>
@@ -281,15 +302,35 @@ export function coverageGlyphs(dv: DataView, at: number): number[] {
 
 /** The coverage index of `glyph` in the coverage table at `at`, or -1 for a glyph it does not cover. */
 export function coverageIndex(dv: DataView, at: number, glyph: number): number {
-  if (u16(dv, at) === 1) {
-    const count = u16(dv, at + 2);
-    for (let i = 0; i < count; i++) if (u16(dv, at + 4 + 2 * i) === glyph) return i;
-    return -1;
-  }
-  for (let i = 0; i < u16(dv, at + 2); i++) {
-    const range = at + 4 + 6 * i;
-    const start = u16(dv, range);
-    if (glyph >= start && glyph <= u16(dv, range + 2)) return u16(dv, range + 4) + glyph - start;
+  const count = u16(dv, at + 2);
+  if (u16(dv, at) === 1) return sortedGlyphRecord(dv, at + 4, count, 2, 0, glyph);
+  const index = sortedGlyphRecord(dv, at + 4, count, 6, 2, glyph);
+  if (index < 0) return -1;
+  const range = at + 4 + 6 * index;
+  return u16(dv, range + 4) + glyph - u16(dv, range);
+}
+
+/**
+ * The index of the record that holds `glyph`, of `count` records `stride` bytes apart from `first`,
+ * or -1. Each record starts with its first glyph and keeps its last at `lastGlyphOffset`. OpenType
+ * sorts these arrays, and HarfBuzz searches them in halves (`hb_sorted_array_t::bsearch`).
+ */
+function sortedGlyphRecord(
+  dv: DataView,
+  first: number,
+  count: number,
+  stride: number,
+  lastGlyphOffset: number,
+  glyph: number
+): number {
+  let low = 0;
+  let high = count - 1;
+  while (low <= high) {
+    const middle = (low + high) >>> 1;
+    const record = first + middle * stride;
+    if (glyph < u16(dv, record)) high = middle - 1;
+    else if (glyph > u16(dv, record + lastGlyphOffset)) low = middle + 1;
+    else return middle;
   }
   return -1;
 }
@@ -473,12 +514,8 @@ export interface PairValueRecord {
 
 /** The first value record of the pair set at `pairSet` for `right`, or null for a glyph it does not list. */
 function pairSetRecord(dv: DataView, pairSet: number, right: number, recordSize: number): number | null {
-  const count = u16(dv, pairSet);
-  for (let i = 0; i < count; i++) {
-    const record = pairSet + 2 + i * (2 + recordSize);
-    if (u16(dv, record) === right) return record + 2;
-  }
-  return null;
+  const index = sortedGlyphRecord(dv, pairSet + 2, u16(dv, pairSet), 2 + recordSize, 0, right);
+  return index < 0 ? null : pairSet + 2 + index * (2 + recordSize) + 2;
 }
 
 /**

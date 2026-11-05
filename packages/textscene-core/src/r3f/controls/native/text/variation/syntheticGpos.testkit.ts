@@ -4,15 +4,14 @@
  * device table of its value and the language system that holds it. Each lookup kerns glyph 1 before glyph 2 by `KERNED_UNITS`.
  */
 
-import { ValueFormat } from '../autofit/openTypeLayout';
+import { GposType, ValueFormat } from '../autofit/openTypeLayout';
+import { FIXED_16_16_ONE } from '../fontMetrics';
 import { ByteWriter } from '../sfntOutlines.testkit';
 import { sfntFileOfTables, type SfntFile } from '../sfntTables';
 
 export const KERNED_UNITS = -50;
 const LEFT_GLYPH = 1;
 const RIGHT_GLYPH = 2;
-
-const tag = (out: ByteWriter, name: string): ByteWriter => out.raw([...name].map((ch) => ch.charCodeAt(0)));
 
 /** The offset of each of `parts` laid end to end from `start`. */
 function offsetsOf(parts: readonly ByteWriter[], start: number): number[] {
@@ -27,7 +26,8 @@ function offsetsOf(parts: readonly ByteWriter[], start: number): number[] {
 /** An `fvar` with one `wght` axis from 100 to 900, its default 400. */
 function fvarBytes(): ByteWriter {
   const out = new ByteWriter().u32(0x00010000).u16(16).u16(2).u16(1).u16(20).u16(0).u16(8);
-  return tag(out, 'wght')
+  return out
+    .tag('wght')
     .u32(100 << 16)
     .u32(400 << 16)
     .u32(900 << 16)
@@ -90,7 +90,7 @@ function pairPosBytes({ device }: KernLookup): ByteWriter {
 function lookupBytes(lookup: KernLookup): ByteWriter {
   const hasMarkFilteringSet = lookup.markFilteringSet !== undefined;
   const out = new ByteWriter()
-    .u16(2)
+    .u16(GposType.PAIR)
     .u16(lookup.flag)
     .u16(1)
     .u16(hasMarkFilteringSet ? 10 : 8);
@@ -106,11 +106,13 @@ const langSysBytes = (featureIndex: number): ByteWriter =>
 function scriptListBytes(): ByteWriter {
   const scriptHeader = 10;
   const defaultLangSys = langSysBytes(0);
-  const script = tag(new ByteWriter().u16(scriptHeader).u16(1), 'TRK ').u16(
-    scriptHeader + defaultLangSys.length
-  );
+  const script = new ByteWriter()
+    .u16(scriptHeader)
+    .u16(1)
+    .tag('TRK ')
+    .u16(scriptHeader + defaultLangSys.length);
   script.raw(defaultLangSys).raw(langSysBytes(1));
-  return tag(new ByteWriter().u16(1), 'DFLT').u16(8).raw(script);
+  return new ByteWriter().u16(1).tag('DFLT').u16(8).raw(script);
 }
 
 /** A `FeatureList` of `kern` features, each holding the lookups of its indices. */
@@ -121,7 +123,7 @@ function featureListBytes(features: readonly (readonly number[])[]): ByteWriter 
     return table;
   });
   const out = new ByteWriter().u16(tables.length);
-  offsetsOf(tables, 2 + 6 * tables.length).forEach((offset) => tag(out, 'kern').u16(offset));
+  offsetsOf(tables, 2 + 6 * tables.length).forEach((offset) => out.tag('kern').u16(offset));
   tables.forEach((table) => out.raw(table));
   return out;
 }
@@ -217,4 +219,4 @@ export function syntheticKernFont(lookups: readonly KernLookup[], definitions?: 
 }
 
 /** `wght` at 700, in the 16.16 normalised coordinates of the font: (700 - 400) / (900 - 400). */
-export const BOLD_NORMALIZED = Int32Array.of(Math.round(0.6 * 0x10000));
+export const BOLD_NORMALIZED = Int32Array.of(Math.round(0.6 * FIXED_16_16_ONE));
