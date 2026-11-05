@@ -76,4 +76,17 @@ describe('useCanvasItemOrigin', () => {
     ));
     expect(origin).toEqual({ x: 0.5, y: 0.5 });
   });
+
+  it('stores the sum as Godot stores a position, so tenths that make a whole pixel make it exactly', async () => {
+    const origin = await originAtProbe((probe) => (
+      <CanvasItemProvider value={0}>
+        <CanvasItemGroup position={[0, -0.2, 0]}>
+          <CanvasItemGroup position={[0, -0.7, 0]}>
+            <CanvasItemGroup position={[0, -0.1, 0]}>{probe}</CanvasItemGroup>
+          </CanvasItemGroup>
+        </CanvasItemGroup>
+      </CanvasItemProvider>
+    ));
+    expect(origin.y).toBe(1);
+  });
 });

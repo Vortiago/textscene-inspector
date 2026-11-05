@@ -56,7 +56,7 @@ function contentOriginOnQuad(canvasLayout: ReturnType<typeof computeCanvasTextCa
 }
 
 describe('computeCanvasTextCanvasLayout', () => {
-  it('with no skew, pads only for anti-aliasing overshoot: canvas content area equals the layout box', () => {
+  it('with no skew, adds no horizontal pad: the canvas is the layout box rounded up to a whole pixel', () => {
     const layout = layoutFor('AB');
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
     expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx));
@@ -146,7 +146,9 @@ function paintRecording(
     outlines = null,
     quantisesPen,
     originPhasePx,
+    fontSizePx = 16,
   }: {
+    fontSizePx?: number;
     skew?: number;
     outlines?: SfntOutlines | null;
     quantisesPen?: boolean;
@@ -180,11 +182,18 @@ function paintRecording(
   };
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never);
   const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
-  paintSceneFontCanvas(carrying(layout, skew, outlines), 16, { r: 1, g: 1, b: 1, a: 1 }, skew, canvasLayout, {
-    strokeWidthPx,
-    quantisesPen,
-    originPhasePx,
-  });
+  paintSceneFontCanvas(
+    carrying(layout, skew, outlines),
+    fontSizePx,
+    { r: 1, g: 1, b: 1, a: 1 },
+    skew,
+    canvasLayout,
+    {
+      strokeWidthPx,
+      quantisesPen,
+      originPhasePx,
+    }
+  );
   return { calls, canvasLayout };
 }
 
@@ -244,6 +253,19 @@ describe('paintSceneFontCanvas — pen', () => {
     // The second baseline sits 17.5 + 13 px down, which the origin carries to 31.1 and the floor to 31.
     expect(layout.linePitchPx + layout.baselineOffsetPx).toBeCloseTo(30.5, 9);
     expect(calls.filter((c) => c.op === 'fillText')[1]!.args[2]).toBe(canvasLayout.offsetYPx + 31);
+  });
+
+  // Godot's `int64_t` size has no fraction, so a fractional one draws at `scale != 1.0` (`canvasGlyphPenXPx`).
+  it('keeps the baseline of a fractional font size, which draws off the scale-1 branch', () => {
+    const layout = layoutFor('A\nB', 0.5);
+    const { calls, canvasLayout } = paintRecording(layout, 0, {
+      fontSizePx: 15.5,
+      originPhasePx: { x: 0, y: 0.6 },
+    });
+    expect(calls.filter((c) => c.op === 'fillText')[1]!.args[2]).toBeCloseTo(
+      canvasLayout.offsetYPx + 30.5,
+      9
+    );
   });
 
   it('keeps the pen of a Label3D, whose mesh places each glyph where it is', () => {

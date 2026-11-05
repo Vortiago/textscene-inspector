@@ -7,6 +7,7 @@
 import { createContext, forwardRef, useContext, useMemo, type ComponentProps, type ReactNode } from 'react';
 import type * as THREE from 'three';
 import { VECTOR2_ZERO, type Vector2 } from '../../godot/math/vector';
+import { storedReal } from '../../godot/math/real';
 
 /** Exactly what R3F's intrinsic `<group>` accepts. */
 type GroupProps = ComponentProps<'group'>;
@@ -45,15 +46,17 @@ export function CanvasItemProvider({ value, children }: { value: number; childre
 }
 
 /**
- * The item point a group at `position` moves its children to. Only the translation counts: the one
- * rotated and scaled group inside an item is `ControlCanvasWalker`'s pivot pair, whose two
- * positions cancel. A number sets every component, as three's `setScalar` does.
+ * The item point a group at `position` moves its children to. Only the translation counts:
+ * `ControlCanvasWalker`'s pivot pair rotates and scales, and its two positions cancel. A scaled
+ * group around a run would misplace its origin. A number sets every component, as three's
+ * `setScalar` does.
  */
 function useOriginPast(position: GroupProps['position']): Readonly<Vector2> {
   const origin = useCanvasItemOrigin();
   const [dx, dy] = translationOf(position);
-  const x = origin.x + dx;
-  const y = origin.y - dy;
+  // Stored as Godot stores a position, in `real_t`: a double sum of tenths can miss a whole pixel.
+  const x = storedReal(origin.x + dx);
+  const y = storedReal(origin.y - dy);
   // Keyed by the numbers, as a tuple `position` is a new array on every render.
   return useMemo(() => ({ x, y }), [x, y]);
 }

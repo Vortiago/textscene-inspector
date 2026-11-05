@@ -25,6 +25,7 @@ import {
   paintSceneFontCanvas,
   createCanvasTextMaterial,
   originPhase,
+  snapsGlyphsToItemPixels,
   type CanvasTextPaintOptions,
 } from './canvasTextPainter';
 import type { SurfaceShading } from '../../../materialFor2d';
@@ -49,7 +50,7 @@ import { useSwappedMaterials } from '../../../materials/swappedMaterials';
 import { usePendingWhile } from '../../../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../../../shadowCasting';
 import type { Rgba } from '../../../../godot/math/math';
-import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
+import { VECTOR2_ZERO } from '../../../../godot/math/vector';
 import { useDisposeOnRelease } from '../../../useDisposeOnRelease';
 import { useNearestAnisotropy } from '../../../nearestAnisotropy';
 
@@ -310,16 +311,6 @@ function buildTextRun(
   return { geometry: geo, paint: () => createMsdfMaterial(options) };
 }
 
-/**
- * The `originPhase` of the run's place in its canvas item, or zero for a run that keeps its pen.
- * Keyed by the phase, so a run that moves by whole pixels keeps its raster.
- */
-function useOriginPhase(quantisesPen: boolean): Readonly<Vector2> {
-  const itemOrigin = useCanvasItemOrigin();
-  const { x, y } = quantisesPen ? originPhase(itemOrigin) : VECTOR2_ZERO;
-  return useMemo(() => ({ x, y }), [x, y]);
-}
-
 /** Draws `props.layout` on the painter its face's `kind` names. `TextRun.tsx` routes a run here. */
 export function TextRunMesh({
   layout,
@@ -341,7 +332,12 @@ export function TextRunMesh({
 }: TextRunProps) {
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
-  const originPhasePx = useOriginPhase(quantisesPen);
+  // The run memo keys by the phase, so a run that moves by whole pixels keeps its raster. An atlas
+  // run and a run that keeps its pen read no phase, so a move never rebuilds them.
+  const itemOrigin = useCanvasItemOrigin();
+  const readsPhase =
+    isCanvasFontMetrics(layout.fontMetrics) && snapsGlyphsToItemPixels(quantisesPen, fontSizePx);
+  const { x: phaseX, y: phaseY } = readsPhase ? originPhase(itemOrigin) : VECTOR2_ZERO;
   if (blends && !swapped)
     throw new Error('expected blends only inside a GeometryInstance3D drawer, got none');
 
@@ -351,7 +347,7 @@ export function TextRunMesh({
         layout,
         fontSizePx,
         { tint, clippingPlanes, depthTest, side, pixelMaterial },
-        { strokeWidthPx, quantisesPen, originPhasePx },
+        { strokeWidthPx, quantisesPen, originPhasePx: { x: phaseX, y: phaseY } },
         textureFilter,
         mipmapped
       ),
@@ -371,7 +367,8 @@ export function TextRunMesh({
       pixelMaterial,
       strokeWidthPx,
       quantisesPen,
-      originPhasePx,
+      phaseX,
+      phaseY,
       textureFilter,
       mipmapped,
     ]
