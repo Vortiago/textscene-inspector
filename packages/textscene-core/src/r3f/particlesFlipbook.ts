@@ -4,6 +4,7 @@
  * to the cell `INSTANCE_CUSTOM.z` picks. CPUParticles2D and the 2D mesh nodes share it.
  */
 
+import { clamp, posmod } from '../godot/math/math';
 import type { CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
 
 export interface ParticlesFlipbook {
@@ -34,14 +35,7 @@ export function particlesFlipbook(material: CanvasItemMaterialProperties | null)
   };
 }
 
-/**
- * The cell the vertex shader picks for `z`, `INSTANCE_CUSTOM.z`:
- *
- *   frame = floor(z * total_frames)
- *   !loop ? clamp(frame, 0, total - 1) : mod(frame, total)
- *
- * A null flipbook is {@link WHOLE_TEXTURE}.
- */
+/** The cell the vertex shader picks for `INSTANCE_CUSTOM.z`. A null flipbook is {@link WHOLE_TEXTURE}. */
 export function flipbookCell(flipbook: ParticlesFlipbook | null, z: number): FlipbookCell {
   if (!flipbook) return WHOLE_TEXTURE;
   const hFrames = Math.max(1, Math.floor(flipbook.hFrames));
@@ -55,11 +49,12 @@ export function flipbookCell(flipbook: ParticlesFlipbook | null, z: number): Fli
   };
 }
 
+/** `frame = floor(z * total)`, then `clamp(frame, 0, total - 1)` without a loop and `mod(frame, total)` with one. */
 function cellIndex(z: number, totalFrames: number, loop: boolean): number {
   const frame = Math.floor(z * totalFrames);
   // A non-finite z would poison every UV. The first cell is the one a broken value falls back to.
   if (!Number.isFinite(frame)) return 0;
-  if (!loop) return Math.min(totalFrames - 1, Math.max(0, frame));
+  if (!loop) return clamp(frame, 0, totalFrames - 1);
   // GLSL `mod` follows the sign of the divisor, so a negative z wraps up.
-  return ((frame % totalFrames) + totalFrames) % totalFrames;
+  return posmod(frame, totalFrames);
 }

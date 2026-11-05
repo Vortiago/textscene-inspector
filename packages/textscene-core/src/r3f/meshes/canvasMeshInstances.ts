@@ -21,11 +21,9 @@ export const MESH_INSTANCE: MultiMeshInstance = {
 const CUSTOM_DATA_Z = 2;
 
 /**
- * `geometry` copied once per instance, in canvas space (see {@link canvasMeshGeometry}). The vertex
- * shader shrinks a vertex to a flipbook cell, then applies the instance transform
- * `x' = t0 x + t1 y + t3`, `y' = t4 x + t5 y + t7` (`canvas.glsl:253-266`). The colour is the vertex
- * colour times the instance colour, in sRGB as stored (`canvas.glsl:254-257`). The caller disposes
- * the result, which owns every buffer.
+ * `geometry` copied once per instance, in canvas space (see {@link canvasMeshGeometry}): shrunk to a
+ * flipbook cell, then under the instance transform (`canvas.glsl:253-266`). The colour is the vertex
+ * colour times the instance colour, in sRGB as stored. The caller disposes the result.
  */
 export function canvasInstancesGeometry(
   geometry: THREE.BufferGeometry,
@@ -38,11 +36,11 @@ export function canvasInstancesGeometry(
   const vertexColor = canvas.getAttribute('color');
   const index = canvas.getIndex();
   const vertexCount = position.count;
-  const colors = vertexColor || instances.some((instance) => instance.color) ? 4 : 0;
+  const hasColors = vertexColor || instances.some((instance) => instance.color);
 
   const positions = new Float32Array(instances.length * vertexCount * 3);
   const uvs = uv ? new Float32Array(instances.length * vertexCount * 2) : null;
-  const colorValues = new Float32Array(instances.length * vertexCount * colors);
+  const colorValues = hasColors ? new Float32Array(instances.length * vertexCount * 4) : null;
 
   instances.forEach((instance, i) => {
     const { transform, color, customData } = instance;
@@ -59,7 +57,7 @@ export function canvasInstancesGeometry(
         // three's V runs up and Godot's down: the cell is windowed in Godot's.
         uvs[at * 2 + 1] = 1 - ((1 - uv.getY(v)) / cell.vFrames + cell.vOffset);
       }
-      if (colors) {
+      if (colorValues) {
         colorValues[at * 4] = (vertexColor?.getX(v) ?? 1) * (color?.[0] ?? 1);
         colorValues[at * 4 + 1] = (vertexColor?.getY(v) ?? 1) * (color?.[1] ?? 1);
         colorValues[at * 4 + 2] = (vertexColor?.getZ(v) ?? 1) * (color?.[2] ?? 1);
@@ -73,7 +71,7 @@ export function canvasInstancesGeometry(
   merged.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   if (uvs) merged.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   // itemSize 4 makes three define USE_COLOR_ALPHA, which carries the per-instance alpha.
-  if (colors) merged.setAttribute('color', new THREE.BufferAttribute(colorValues, 4));
+  if (colorValues) merged.setAttribute('color', new THREE.BufferAttribute(colorValues, 4));
   const ranges = surfaceRanges(geometry, index ? index.count : vertexCount);
   // A single unindexed surface needs no index: its vertices already run in instance order.
   if (index || ranges.length > 1) {
@@ -86,14 +84,14 @@ export function canvasInstancesGeometry(
   return merged;
 }
 
-/** The index or vertex ranges of each surface of `geometry`, or the whole of it when it has no groups. */
-function surfaceRanges(geometry: THREE.BufferGeometry, length: number): readonly Range[] {
-  return geometry.groups.length > 0 ? geometry.groups : [{ start: 0, count: length }];
-}
-
 interface Range {
   start: number;
   count: number;
+}
+
+/** The index or vertex ranges of each surface of `geometry`, or the whole of it when it has no groups. */
+function surfaceRanges(geometry: THREE.BufferGeometry, length: number): readonly Range[] {
+  return geometry.groups.length > 0 ? geometry.groups : [{ start: 0, count: length }];
 }
 
 /**
@@ -110,9 +108,12 @@ function surfaceMajorIndex(
   const merged = new Uint32Array(copies * perCopy);
   let at = 0;
   for (const { start, count } of ranges) {
+    // Read the source range once, not once per copy.
+    const source = new Uint32Array(count);
+    for (let i = 0; i < count; i++) source[i] = index ? index.getX(start + i) : start + i;
     for (let copy = 0; copy < copies; copy++) {
-      for (let i = start; i < start + count; i++)
-        merged[at++] = (index ? index.getX(i) : i) + copy * vertexCount;
+      const offset = copy * vertexCount;
+      for (let i = 0; i < count; i++) merged[at++] = source[i]! + offset;
     }
   }
   return merged;

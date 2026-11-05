@@ -26,6 +26,7 @@ import { materialProgramInputs } from '../materialProgramInputs';
 import { particlesFlipbook, type ParticlesFlipbook } from '../particlesFlipbook';
 import { useSceneResources } from '../SceneResourcesContext';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
+import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 import { CanvasItem2D } from './CanvasItem2D';
 import type { CanvasItemPixelMaterial } from './LitCanvasItemPixels';
 import { MissingResourcePlaceholder } from './MissingResourcePlaceholder';
@@ -70,7 +71,7 @@ export function CanvasMeshItem({ node, props, mesh, instances, children }: Canva
             <CanvasMeshParts
               mesh={mesh}
               instances={instances}
-              flipbook={particlesFlipbook(material)}
+              material={material}
               texture={texture}
               color={color}
               opacity={opacity}
@@ -91,7 +92,7 @@ export function CanvasMeshItem({ node, props, mesh, instances, children }: Canva
 interface CanvasMeshPartsProps {
   mesh: SurfacedMesh;
   instances: readonly MultiMeshInstance[] | undefined;
-  flipbook: ParticlesFlipbook | null;
+  material: CanvasItemMaterialProperties | null;
   texture: THREE.Texture | null;
   color: THREE.Color;
   opacity: number;
@@ -101,12 +102,14 @@ interface CanvasMeshPartsProps {
 function CanvasMeshParts({
   mesh,
   instances,
-  flipbook,
+  material,
   texture,
   color,
   opacity,
   pixelMaterial,
 }: CanvasMeshPartsProps) {
+  // Stable per material: a new object each render would rebuild the merged geometry.
+  const flipbook = useMemo(() => particlesFlipbook(material), [material]);
   const geometries = useCanvasGeometries(mesh, instances, flipbook);
   return geometries.map((geometry) => (
     <CanvasSurfaces
@@ -129,15 +132,12 @@ function useCanvasGeometries(
   instances: readonly MultiMeshInstance[] | undefined,
   flipbook: ParticlesFlipbook | null
 ): readonly THREE.BufferGeometry[] {
-  const geometries = useMemo(
-    () =>
-      mesh.parts.map(({ geometry }) =>
-        instances || flipbook
-          ? canvasInstancesGeometry(geometry, instances ?? [MESH_INSTANCE], flipbook)
-          : canvasMeshGeometry(geometry)
-      ),
-    [mesh, instances, flipbook]
-  );
+  const geometries = useMemo(() => {
+    const drawn = instances ?? (flipbook ? [MESH_INSTANCE] : null);
+    return mesh.parts.map(({ geometry }) =>
+      drawn ? canvasInstancesGeometry(geometry, drawn, flipbook) : canvasMeshGeometry(geometry)
+    );
+  }, [mesh, instances, flipbook]);
   const disposable = useMemo(() => ({ dispose: () => geometries.forEach((g) => g.dispose()) }), [geometries]);
   useDisposeOnRelease(disposable);
   return geometries;

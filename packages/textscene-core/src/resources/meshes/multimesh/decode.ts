@@ -256,11 +256,15 @@ export function decodeMultiMesh(properties: Readonly<Record<string, string>>): D
     if (Object.hasOwn(SETTERS, key)) SETTERS[key]!(state, value);
   }
   state.settle();
+  let instances: readonly MultiMeshInstance[] | undefined;
   return {
     customAabb: state.customAabb,
     mesh: state.hasMesh ? properties['mesh'] : undefined,
     boundedTransforms: state.boundedTransforms,
     transformFormat: state.format,
-    instances: state.drawnInstances(),
+    // Built on first read: a box-only reader (MultiMeshInstance3D) never pays for the records.
+    get instances() {
+      return (instances ??= state.drawnInstances());
+    },
   };
 }

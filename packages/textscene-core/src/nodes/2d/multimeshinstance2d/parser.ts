@@ -1,7 +1,7 @@
 /** Parses a MultiMeshInstance2D: the Node2D surface plus the `multimesh` and `texture` references. */
 
 import type { ParsedHeading } from '../../../parser/utils';
-import { heldResource } from '../../../godot/scene/resourceLiteral.js';
+import { heldResource } from '../../../godot/scene/resourceLiteral';
 import { parseNode2D } from '../../base/node2d/parser';
 import type { MultiMeshInstance2DProperties } from './types';
 
