@@ -10,7 +10,7 @@ import * as THREE from 'three';
 
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext.js';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext.js';
-import { SubViewportSamplerScope } from './SubViewportSamplerScope';
+import { SubViewportCanvasScope } from './SubViewportCanvasScope';
 import { ViewportControls } from './ViewportControls.js';
 import { viewportTransfer } from '../../../r3f/texelCopy.js';
 import {
@@ -19,7 +19,6 @@ import {
   viewportCanvasColorSpace,
   viewportMsaaMode,
 } from './offscreenViewport.js';
-import { CanvasColorSpaceProvider } from '../../../r3f/canvasColorSpace.js';
 import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
 import { useCanvasPass } from './useCanvasPass.js';
 import { useResolvedGate } from './useViewportGate.js';
@@ -113,11 +112,9 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   return createPortal(
     <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
       <World2DLightingBoundary canvasModulate={canvasModulate}>
-        <SubViewportSamplerScope properties={properties}>
-          <CanvasColorSpaceProvider value={canvasSpace}>
-            <ViewportControls nodes={node.children} size={controlsSize} inheritedRtl={inheritedRtl} />
-          </CanvasColorSpaceProvider>
-        </SubViewportSamplerScope>
+        <SubViewportCanvasScope properties={properties} canvasSpace={canvasSpace}>
+          <ViewportControls nodes={node.children} size={controlsSize} inheritedRtl={inheritedRtl} />
+        </SubViewportCanvasScope>
       </World2DLightingBoundary>
     </SceneResourcesProvider>,
     portalScene

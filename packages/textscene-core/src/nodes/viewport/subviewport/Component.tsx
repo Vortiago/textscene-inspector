@@ -21,7 +21,7 @@ import { canvasLayerRanks } from '../../../r3f/canvasPaintOrder';
 import { Node } from '../../node/Component';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
 import { useCanvasModulateColor } from '../../../r3f/canvasModulate';
-import { SubViewportSamplerScope } from './SubViewportSamplerScope';
+import { SubViewportCanvasScope } from './SubViewportCanvasScope';
 import { useViewportContent } from './useViewportContent';
 import { useInheritedRtl } from './useInheritedRtl';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
@@ -31,7 +31,6 @@ import { viewportSize, viewportTargetSize } from './targetSize';
 import { useInCanvasOverWorld } from './canvasOverWorldScope';
 import { ViewportCanvasScope } from '../../../r3f/viewportCanvasScope';
 import { viewportCanvasColorSpace } from './offscreenViewport';
-import { CanvasColorSpaceProvider } from '../../../r3f/canvasColorSpace';
 
 // Lazy: the Control painters register on import, and a viewport with no Controls never needs them.
 const ViewportControls = lazy(() =>
@@ -105,9 +104,9 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
     <ViewportSizeProvider size={layoutSize}>
       <LayerRanksProvider value={canvasLayers}>
         <ViewportCanvasScope>
-          <SubViewportSamplerScope properties={properties}>
-            <CanvasColorSpaceProvider value={canvasSpace}>{inner}</CanvasColorSpaceProvider>
-          </SubViewportSamplerScope>
+          <SubViewportCanvasScope properties={properties} canvasSpace={canvasSpace}>
+            {inner}
+          </SubViewportCanvasScope>
         </ViewportCanvasScope>
       </LayerRanksProvider>
     </ViewportSizeProvider>
