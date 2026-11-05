@@ -115,7 +115,8 @@ class MeshSkin {
       for (const element of TRANSFORM_2D_ELEMENTS)
         this.readAt[at++] = object?.matrixWorld.elements[element] ?? 0;
     }
-    const isSame = this.readAt.every((term, i) => term === this.writtenAt[i]);
+    let isSame = true;
+    for (let i = 0; i < at && isSame; i++) isSame = this.readAt[i] === this.writtenAt[i];
     [this.writtenAt, this.readAt] = [this.readAt, this.writtenAt];
     return !isSame;
   }
