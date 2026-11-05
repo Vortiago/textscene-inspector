@@ -121,8 +121,6 @@ function CanvasSurfaces({
       vertexColors: hasVertexColors,
       transparent: true,
       depthWrite: false,
-      // Godot's canvas culls no face, and the y flip reverses every triangle's winding.
-      side: THREE.DoubleSide,
       defines: hasVertexColors ? CANVAS_SRGB_DEFINES : map.defines,
       // three leaves `gl_PointSize` unwritten for a mesh material.
       injection: point?.injection,
