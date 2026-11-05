@@ -8,6 +8,7 @@ import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { computeCanvasTextCanvasLayout } from './canvasTextPainter';
 import { shapeText } from './textLayout';
 import { TextRunMesh } from './TextRunMesh';
+import type { GlyphDrawer } from './glyphDrawer';
 import { testBitmapMetrics } from './bitmapFontMetrics.testkit';
 
 const layout = shapeText('AB', {
@@ -23,7 +24,7 @@ const layout = shapeText('AB', {
 });
 
 /** The top-left corner of the run's quad, in the group's coordinates with three's +Y up. */
-async function quadTopLeft(quantisesPen: boolean): Promise<[number, number]> {
+async function quadTopLeft(glyphDrawer: GlyphDrawer): Promise<[number, number]> {
   const renderer = await ReactThreeTestRenderer.create(
     <CanvasItemProvider value={0}>
       <CanvasItemGroup position={[2.25, -1.75, 0]}>
@@ -31,7 +32,7 @@ async function quadTopLeft(quantisesPen: boolean): Promise<[number, number]> {
           layout={layout}
           fontSizePx={16}
           tint={{ r: 1, g: 1, b: 1, a: 1 }}
-          quantisesPen={quantisesPen}
+          glyphDrawer={glyphDrawer}
         />
       </CanvasItemGroup>
     </CanvasItemProvider>
@@ -45,7 +46,7 @@ describe('<TextRunMesh> on the canvas painter', () => {
   const { offsetXPx, offsetYPx } = computeCanvasTextCanvasLayout(layout, 0);
 
   it('moves its quad back to the whole item pixel at or before the run origin', async () => {
-    const [x, y] = await quadTopLeft(true);
+    const [x, y] = await quadTopLeft('canvasItem');
     expect(x).toBeCloseTo(-offsetXPx - 0.25, 6);
     expect(y).toBeCloseTo(offsetYPx + 0.75, 6);
   });
@@ -69,7 +70,7 @@ describe('<TextRunMesh> on the canvas painter', () => {
   });
 
   it('keeps the quad of a Label3D run at its origin', async () => {
-    const [x, y] = await quadTopLeft(false);
+    const [x, y] = await quadTopLeft('label3D');
     expect(x).toBeCloseTo(-offsetXPx, 6);
     expect(y).toBeCloseTo(offsetYPx, 6);
   });
