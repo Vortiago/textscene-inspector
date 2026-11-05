@@ -67,6 +67,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/controls/native/text/sfntCff.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) and FreeType's outline scaling |
 | `packages/textscene-core/src/r3f/controls/native/text/variation/axisCoordinates.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_ensure_cache_for_size`, which writes the variations, and `_tag_to_name`) |
 | `packages/textscene-core/src/godot/text/openTypeNames.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_insert_feature` calls and `_tag_to_name`) |
+| `packages/textscene-core/src/godot/text/numberFormat.ts` | `core/string/translation_server.cpp` (`TranslationServer::format_number`) and `core/string/locales.h` (`num_system_data`) |
 | `packages/textscene-core/src/r3f/controls/native/text/sfntCmap.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_index`) |
 | `packages/textscene-core/src/resources/meshes/boxmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`BoxMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/planemesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PlaneMesh::_create_mesh_array`) |
@@ -517,6 +518,10 @@ check read it. Its `name` table holds the full licence.
 `scenes/fixtures/fonts/dejavu-sans-bidi-subset.ttf` is a subset of DejaVu Sans with its Latin, digits,
 punctuation, U+0130, U+2026, Hebrew and Arabic letters, and its `GSUB`, `GPOS` and hinting tables. The
 bidirectional Label fixtures draw with it. Its `name` table holds the full licence.
+
+`scenes/fixtures/fonts/dejavu-sans-numerals-subset.ttf` is a subset of DejaVu Sans with its Basic Latin, the
+Arabic-Indic and Extended Arabic-Indic digits, their separators and U+200B. The numeral-system fixtures draw with
+it. Its `name` table holds the full licence.
 
 DejaVu Sans is Copyright (c) 2003 by Bitstream, Inc. All Rights Reserved. Bitstream Vera is a trademark of
 Bitstream, Inc. Glyphs imported from Arev fonts are Copyright (c) 2006 by Tavmjong Bah. All Rights Reserved.

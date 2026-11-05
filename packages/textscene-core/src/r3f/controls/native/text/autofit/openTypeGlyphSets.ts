@@ -12,24 +12,22 @@
 import { perObject } from '../../../../../utils/perObject';
 import {
   classCoverage,
+  CHAINED_SEQUENCE_CONTEXT,
+  type ContextReader,
   type ContextRule,
   countedU16Values,
-  type CoverageContextRule,
   coverageGlyphs,
   coverageIndex,
   glyphClass,
   glyphsByClass,
   type LayoutTable,
-  readChainedSequenceContextFormat3,
-  readChainedSequenceRule,
-  readSequenceContextFormat3,
-  readSequenceRule,
   singleSubstitute,
   type Subtable,
   u16,
   valueRecordSize,
   GposType,
   GsubType,
+  SEQUENCE_CONTEXT,
 } from './openTypeLayout';
 
 /** The subtables at the offsets after the count at `at`, relative to `base`; a zero offset is none. */
@@ -38,27 +36,31 @@ function offsetsAfterCount(dv: DataView, at: number, base: number): (number | nu
 }
 
 /** The rule sets of a context or chained context subtable of format 1 or 2, by coverage index or class. */
-function ruleSets(dv: DataView, subtable: number, isChain: boolean): (ContextRule[] | null)[] {
+function ruleSets(dv: DataView, subtable: number, reader: ContextReader): (ContextRule[] | null)[] {
   const format = u16(dv, subtable);
-  const countAt = subtable + (format === 1 ? 4 : isChain ? 10 : 6);
-  const readRule = isChain ? readChainedSequenceRule : readSequenceRule;
+  const countAt = subtable + (format === 1 ? 4 : reader.classSetCountField);
   return offsetsAfterCount(dv, countAt, subtable).map((set) =>
     set === null
       ? null
-      : offsetsAfterCount(dv, set, set).flatMap((rule) => (rule === null ? [] : [readRule(dv, rule)]))
+      : offsetsAfterCount(dv, set, set).flatMap((rule) => (rule === null ? [] : [reader.readRule(dv, rule)]))
   );
 }
 
-/** The single rule of a context or chained context subtable of format 3, its values coverage offsets. */
-function coverageRule(dv: DataView, subtable: number, isChain: boolean): CoverageContextRule {
-  return isChain ? readChainedSequenceContextFormat3(dv, subtable) : readSequenceContextFormat3(dv, subtable);
+/** The reader of a context subtable, chained when `isChain`. */
+function contextReaderOf(isChain: boolean): ContextReader {
+  return isChain ? CHAINED_SEQUENCE_CONTEXT : SEQUENCE_CONTEXT;
+}
+
+/** The offset of the input `ClassDef` of a context subtable of format 2. */
+function inputClassDefAt(dv: DataView, subtable: number, reader: ContextReader): number {
+  return subtable + u16(dv, subtable + reader.classDefFields[1]);
 }
 
 /** The coverage table that gates a `GSUB` subtable (`get_coverage`). */
 function gsubCoverage(dv: DataView, { type, offset }: Subtable): number {
   const isContext = type === GsubType.CONTEXT || type === GsubType.CHAIN_CONTEXT;
   if (isContext && u16(dv, offset) === 3)
-    return offset + coverageRule(dv, offset, type === GsubType.CHAIN_CONTEXT).first;
+    return offset + contextReaderOf(type === GsubType.CHAIN_CONTEXT).readFormat3(dv, offset).first;
   return offset + u16(dv, offset + 2);
 }
 
@@ -93,7 +95,7 @@ function gsubOutput(dv: DataView, { type, offset }: Subtable): { glyphs: number[
     case GsubType.CHAIN_CONTEXT:
       return {
         glyphs: [],
-        lookups: contextRules(dv, offset, type === GsubType.CHAIN_CONTEXT).flatMap((rule) =>
+        lookups: contextRules(dv, offset, contextReaderOf(type === GsubType.CHAIN_CONTEXT)).flatMap((rule) =>
           rule.records.map((record) => record.lookupIndex)
         ),
       };
@@ -108,9 +110,9 @@ function gsubOutput(dv: DataView, { type, offset }: Subtable): { glyphs: number[
   }
 }
 
-function contextRules(dv: DataView, subtable: number, isChain: boolean): ContextRule[] {
-  if (u16(dv, subtable) === 3) return [coverageRule(dv, subtable, isChain)];
-  return ruleSets(dv, subtable, isChain).flatMap((set) => set ?? []);
+function contextRules(dv: DataView, subtable: number, reader: ContextReader): ContextRule[] {
+  if (u16(dv, subtable) === 3) return [reader.readFormat3(dv, subtable)];
+  return ruleSets(dv, subtable, reader).flatMap((set) => set ?? []);
 }
 
 /**
@@ -135,15 +137,15 @@ export function collectGsubOutput(table: LayoutTable, lookupIndex: number, outpu
 }
 
 /** The input glyphs of a context or chained context `GPOS` subtable: its coverage and each rule's input. */
-function contextInput(dv: DataView, subtable: number, isChain: boolean): number[] {
+function contextInput(dv: DataView, subtable: number, reader: ContextReader): number[] {
   const format = u16(dv, subtable);
   if (format === 3) {
-    const { first, input } = coverageRule(dv, subtable, isChain);
+    const { first, input } = reader.readFormat3(dv, subtable);
     return [first, ...input].flatMap((coverage) => coverageGlyphs(dv, subtable + coverage));
   }
   const glyphs = coverageGlyphs(dv, subtable + u16(dv, subtable + 2));
-  const sets = ruleSets(dv, subtable, isChain);
-  const classes = format === 2 ? glyphsByClass(dv, subtable + u16(dv, subtable + (isChain ? 6 : 4))) : null;
+  const sets = ruleSets(dv, subtable, reader);
+  const classes = format === 2 ? glyphsByClass(dv, inputClassDefAt(dv, subtable, reader)) : null;
   const coveredSets = format === 1 ? sets.slice(0, glyphs.length) : sets;
   for (const rule of coveredSets.flatMap((set) => set ?? []))
     for (const value of rule.input) glyphs.push(...(classes ? (classes.get(value) ?? []) : [value]));
@@ -172,7 +174,7 @@ function gposInput(dv: DataView, { type, offset }: Subtable): number[] {
       return [...coverageAt(2), ...coverageAt(4)];
     case GposType.CONTEXT:
     case GposType.CHAIN_CONTEXT:
-      return contextInput(dv, offset, type === GposType.CHAIN_CONTEXT);
+      return contextInput(dv, offset, contextReaderOf(type === GposType.CHAIN_CONTEXT));
     default:
       return [];
   }
@@ -231,14 +233,14 @@ function subtableWouldSubstitute(dv: DataView, subtable: Subtable, glyph: number
     }
     case GsubType.CONTEXT:
     case GsubType.CHAIN_CONTEXT: {
-      const isChain = type === GsubType.CHAIN_CONTEXT;
+      const reader = contextReaderOf(type === GsubType.CHAIN_CONTEXT);
       const format = u16(dv, offset);
-      if (format === 3) return isLoneRule(coverageRule(dv, offset, isChain));
+      if (format === 3) return isLoneRule(reader.readFormat3(dv, offset));
       const index =
         format === 1
           ? coverageIndex(dv, coverage, glyph)
-          : glyphClass(dv, offset + u16(dv, offset + (isChain ? 6 : 4)), glyph);
-      return ruleSets(dv, offset, isChain)[index]?.some(isLoneRule) ?? false;
+          : glyphClass(dv, inputClassDefAt(dv, offset, reader), glyph);
+      return ruleSets(dv, offset, reader)[index]?.some(isLoneRule) ?? false;
     }
     default:
       return false;

@@ -10,12 +10,19 @@
  */
 export function recentlyRead<K, V>(max: number): (key: K, build: (key: K) => V) => V {
   const kept = new Map<K, V>();
+  /** Written only by the reader, on each read that moves a key to the newest place. */
+  let newestKey: K | undefined;
   return (key, build) => {
-    const isKept = kept.has(key);
-    const value = isKept ? kept.get(key)! : build(key);
+    const found = kept.get(key);
+    // `get` first: `has` runs only for a value of `undefined`, so a hit costs one lookup.
+    const isKept = found !== undefined || kept.has(key);
+    // A read of the newest key leaves the order as it is, so it skips the delete and the insert.
+    if (isKept && key === newestKey) return found as V;
+    const value = isKept ? (found as V) : build(key);
     if (isKept) kept.delete(key);
     else if (kept.size >= max) kept.delete(kept.keys().next().value!);
     kept.set(key, value);
+    newestKey = key;
     return value;
   };
 }

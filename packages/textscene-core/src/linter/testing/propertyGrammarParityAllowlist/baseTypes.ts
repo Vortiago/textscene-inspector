@@ -271,14 +271,10 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'mouse_filter',
     ],
     renderGap: [
-      // Both change what Godot draws, for every Control below here.
-      // `clip_contents` sets the canvas clip rect, and
-      // `localize_numeral_system` swaps the numeral glyphs ProgressBar,
-      // SpinBox, CodeEdit and RichTextLabel draw.
+      // `clip_contents` sets the canvas clip rect of every Control below here.
       'clip_contents',
-      'localize_numeral_system',
     ],
     reason:
-      'Control parser reads transform for compatibility but linter does not validate it; the theme-override keys are wildcard-matched in the linter and loop-scraped in the parser, so they have no per-key surface to compare. The accessibility, focus, mouse and tooltip keys are input and assistive-tech surfaces with no frozen-frame effect, while the clip and numeral-system keys genuinely change the drawing and are unimplemented.',
+      'Control parser reads transform for compatibility but linter does not validate it; the theme-override keys are wildcard-matched in the linter and loop-scraped in the parser, so they have no per-key surface to compare. The accessibility, focus, mouse and tooltip keys are input and assistive-tech surfaces with no frozen-frame effect, while the clip key genuinely changes the drawing and is unimplemented.',
   },
 };

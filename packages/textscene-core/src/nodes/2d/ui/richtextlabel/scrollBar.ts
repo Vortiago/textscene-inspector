@@ -17,7 +17,7 @@ import {
   scrollBarMinimumSize,
   type ScrollBarPlacement,
 } from '../shared/scrollBarSolver';
-import { RANGE_DEFAULT_MAX } from '../shared/range';
+import { RANGE_DEFAULT_MAX, clampRangeValue } from '../shared/range';
 import { richTextContentHeightPx, type RichTextLayout, type StyledTextRun } from './nativeSolver';
 
 /** The text shaped at one wrap width. */
@@ -78,7 +78,7 @@ function scrollBarPlacement(
  * runs before any line is shaped, so it scrolls to the bar's default max, which `Range` clamps to the foot.
  */
 function scrollOffsetOf(box: RichTextBox, contentHeightPx: number): number {
-  const footPx = Math.max(0, contentHeightPx - box.h);
+  const footPx = clampRangeValue(contentHeightPx, 0, contentHeightPx, box.h);
   if (box.scrollFollowing) return footPx;
   return box.scrollFollowingVisibleCharacters ? Math.min(RANGE_DEFAULT_MAX, footPx) : 0;
 }
@@ -112,7 +112,8 @@ export function shapeBesideScrollBar(
   const wrapWidthPx = box.w - barWidthPx;
   const beside = shapeAt(wrapWidthPx);
   const contentHeightPx = richTextContentHeightPx(beside.runs, beside.layout);
-  // `set_value(total_height)` (`:3827-3828`), which `Range` clamps to `max - page` (`range.cpp:192-194`).
+  // `set_value(total_height)` (`:3827-3828`). A `%` image narrows beside the bar, so the text there
+  // can be shorter than the rect, and `Range` holds the value at 0 (`range.cpp:192-196`).
   const scrollOffsetPx = scrollOffsetOf(box, contentHeightPx);
   return {
     ...beside,

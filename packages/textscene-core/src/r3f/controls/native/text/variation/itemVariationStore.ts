@@ -11,7 +11,7 @@
 
 import { ByteReader, ReadPastEndError } from '../../../../../resources/formats/binaryresource/byteReader';
 import { ftMulDiv } from '../fontMetrics';
-import { fdot14ToFixed } from './fixedPoint';
+import { fdot14ToFixed, fixedToWhole } from './fixedPoint';
 
 /** The three coordinates of a region on one axis, in 16.16. */
 interface AxisRegion {
@@ -148,7 +148,7 @@ export function itemDelta(
   innerIndex: number,
   normalized: Int32Array
 ): number {
-  return Math.floor((itemDeltaFixed(store, outerIndex, innerIndex, normalized) + 0x8000) / 0x10000);
+  return fixedToWhole(itemDeltaFixed(store, outerIndex, innerIndex, normalized));
 }
 
 /** `itemDelta` in 16.16, before FreeType rounds it: HarfBuzz keeps the fraction of a `GPOS` delta. */

@@ -1,8 +1,8 @@
 /**
  * The native (WebGL canvas) painter for RichTextLabel: the BBCode subset
- * `[b]`/`[i]`/`[u]`/`[color]`/`[img]`, drawn as one `<TextRun>` per line and
- * style run, or one `<RichTextImage>` per `[img]`, through the MSDF text
- * engine `<Label>` uses. Other tags are a non-goal.
+ * `[b]`/`[i]`/`[u]`/`[color]`/`[font_size]`/`[outline_size]`/`[outline_color]`/`[img]`,
+ * drawn as one `<OutlinedTextRun>` per line and style run, or one `<RichTextImage>` per
+ * `[img]`, through the MSDF text engine `<Label>` uses. Other tags are a non-goal.
  */
 import { useCallback, useMemo } from 'react';
 import type * as THREE from 'three';
@@ -23,7 +23,7 @@ import { useResolvedTextureSampler } from '../../../../r3f/canvasItemTextureSamp
 import { WHOLE_FRAME, frameUvWindow } from '../../../../r3f/spriteFrame';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { clampAutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { OutlinedTextRun } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import {
   ScrollBarChrome,
   SCROLL_BAR_GRABBER_RENDER_ORDER_OFFSET,
@@ -34,11 +34,11 @@ import {
   RICH_TEXT_LABEL_DEFAULT_AUTOWRAP,
   layoutRichTextRuns,
   richTextLabelTextTheme,
-  richTextUnderlineMetrics,
   shapeRichText,
   styledTextRuns,
   underlineRectPx,
   type RichTextImagePlacement,
+  type RichTextRunPlacement,
   type StyledTextRun,
 } from './nativeSolver';
 import { resolveRichTextFaces } from './styleFaces';
@@ -49,7 +49,7 @@ import type { Rgba } from '../../../../godot/math/math';
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import type { ResolvedTextTheme } from '../../../../r3f/controls/native/textTheme';
+import type { ResolvedTextTheme, TextOutlineTheme } from '../../../../r3f/controls/native/textTheme';
 
 interface ImageLike {
   width?: number;
@@ -147,6 +147,22 @@ function RichTextRule({
   );
 }
 
+/** The outline of a run with none: `OutlinedTextRun` draws no ring at a size of 0, whatever the colour. */
+const NO_OUTLINE: TextOutlineTheme = { sizePx: 0, color: { r: 0, g: 0, b: 0, a: 0 } };
+
+/**
+ * The run's outline as `_draw_line` tints it: the outline colour with the alpha of the run's colour
+ * (`font_outline_color * Color(1, 1, 1, font_color.a)`, `rich_text_label.cpp:1457`), then the control tint.
+ */
+function runOutline(
+  placement: Pick<RichTextRunPlacement, 'outline' | 'color'>,
+  ownTint: Rgba
+): TextOutlineTheme {
+  const { sizePx, color } = placement.outline;
+  if (sizePx <= 0) return NO_OUTLINE;
+  return { sizePx, color: multiplyModulate(ownTint, { ...color, a: color.a * placement.color.a }) };
+}
+
 interface RichTextBodyProps extends NativeControlComponentProps {
   /** What a `TextRun` clips to: the inherited planes, or this control's rect merged onto them. */
   clippingPlanes: readonly THREE.Plane[];
@@ -198,6 +214,7 @@ function useShapedRichText(
           autowrapMode,
           tabSize: props.tabSize,
           autowrapTrimFlags: props.autowrapTrimFlags,
+          localizeNumeralSystem: props.localizeNumeralSystem,
         }
       ),
     [
@@ -209,6 +226,7 @@ function useShapedRichText(
       autowrapMode,
       props.tabSize,
       props.autowrapTrimFlags,
+      props.localizeNumeralSystem,
     ]
   );
 
@@ -315,7 +333,6 @@ function RichTextBody({
       textTheme.fontSizePx,
     ]
   );
-  const underlineMetrics = useMemo(() => richTextUnderlineMetrics(runs), [runs]);
 
   return (
     <>
@@ -344,19 +361,21 @@ function RichTextBody({
           // `lineTopPx` sums the earlier lines' heights, since font sizes vary by line.
           // The tint multiplies in sRGB and `<TextRun>` converts once.
           const runTint = multiplyModulate(tint.own, placement.color);
+          const outline = runOutline(placement, tint.own);
           // `[u]` is a stroke on the line's baseline with the paragraph's metrics,
           // snapped to whole pixel rows, at `underline_alpha` times the opacity.
           const underline = placement.underline
             ? underlineRectPx(
                 placement.layout.lines[0]!.glyphs,
                 placement.layout.baselineOffsetPx,
-                underlineMetrics
+                placement.underline
               )
             : null;
           return (
             <CanvasItemGroup key={index} position={[placement.lineOffsetXPx, -y, 0]}>
-              <TextRun
+              <OutlinedTextRun
                 layout={placement.layout}
+                outline={outline}
                 fontSizePx={placement.fontSizePx}
                 tint={runTint}
                 clippingPlanes={clippingPlanes}

@@ -23,6 +23,7 @@ import {
   progressBarFillRect,
   progressBarIndeterminateFillRect,
   progressBarPercentRatio,
+  progressBarPercentText,
   progressBarTextTheme,
   PROGRESS_BAR_THEME_FONT_KEY,
 } from './nativeSolver';
@@ -59,7 +60,10 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
   const fontMetrics = peekSceneFontMetrics(font, solveNode.path);
 
   const percentText = showPercentage
-    ? `${Math.round(progressBarPercentRatio(props, orderedKeys) * 100)}%`
+    ? progressBarPercentText(progressBarPercentRatio(props, orderedKeys), {
+        locale: solveNode.locale,
+        localizeNumeralSystem: props.localizeNumeralSystem,
+      })
     : null;
 
   const layout = useMemo(() => {
