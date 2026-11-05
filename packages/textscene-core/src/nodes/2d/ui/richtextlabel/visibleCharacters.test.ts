@@ -70,6 +70,21 @@ describe('revealedGlyphs', () => {
     ).toEqual(['Hello']);
   });
 
+  // Measured with a `TextParagraph` on the default font: `add_string("f")` then `add_string("i")` is two
+  // glyphs where `add_string("fi")` is one, so a ligature never joins glyphs of two runs.
+  it('counts f and i of two runs as two glyphs', () => {
+    const layout = shape('abcdefghfi');
+    const kept = revealedGlyphs(layout, [{ text: 'abcdefghf' }, { text: 'i' }], {
+      behavior: VC_GLYPHS_LTR,
+      characters: 9,
+      ratio: 0.99,
+      rtl: false,
+    });
+    expect(
+      layout.lines.map((line) => visualChars({ ...line, glyphs: line.glyphs.filter((g) => kept!.has(g)) }))
+    ).toEqual(['abcdefghf']);
+  });
+
   // A Godot `String` holds code points, so `😀` is one character where the JS string holds two units.
   it('counts an astral character as one under CHARS_AFTER_SHAPING', () => {
     expect(

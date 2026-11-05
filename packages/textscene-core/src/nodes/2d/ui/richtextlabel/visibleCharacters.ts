@@ -90,6 +90,7 @@ export function revealedGlyphs(
   const shownLines = applyVisibleCharsReveal(counted.lines, {
     behavior: reveal.behavior,
     text: counted.text,
+    spanStarts: counted.spanStarts,
     visibleChars: reveal.characters,
     visibleRatio: reveal.ratio,
     totalCharacters: counted.totalCharacters,
@@ -119,7 +120,7 @@ export function isPrefixShown(
   if (reveal.behavior === VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING) {
     const { skippedBefore, text } = countedLayoutOf(layout, runs);
     const paragraphStart = line.paragraphStart!;
-    // The character offset is in code points, the glyph indices in UTF-16 units of `text`.
+    // Both sides are UTF-16 offsets into the counted `text`: Godot's code point comparison holds for them.
     return paragraphStart - (skippedBefore?.[paragraphStart] ?? 0) <= utf16OffsetOf(text, reveal.characters);
   }
   const firstGlyph = line.glyphs[0];
@@ -131,9 +132,11 @@ interface CountedLayout {
   lines: readonly TextLineLayout[];
   /** The text the glyph indices count over: the runs' text less the implicit newlines. */
   text: string;
+  /** Where each run after the first starts in `text`: Godot shapes each run apart. */
+  spanStarts: ReadonlySet<number>;
   /** Absent when no glyph needed a copy. */
   originals?: Map<GlyphPlacement, GlyphPlacement>;
-  /** For each text index, the implicit newlines before it. Absent when the text has none. */
+  /** For each text index and the end, the implicit newlines before it. Absent when the text has none. */
   skippedBefore?: readonly number[];
   totalCharacters: number;
 }
@@ -149,7 +152,7 @@ function countedLayoutOf(layout: TextLayoutResult, runs: readonly CountedRun[]):
   const totalCharacters = countedCharacters(runs);
   const joined = joinedText(runs);
   if (implicit.size === 0) {
-    const counted = { lines: layout.lines, text: joined, totalCharacters };
+    const counted = { lines: layout.lines, text: joined, spanStarts: runStarts(runs), totalCharacters };
     countedLayouts.set(layout, counted);
     return counted;
   }
@@ -176,12 +179,24 @@ function countedLayoutOf(layout: TextLayoutResult, runs: readonly CountedRun[]):
         return counted;
       }),
   }));
-  const counted = { lines, text, originals, skippedBefore, totalCharacters };
+  const spanStarts = new Set([...runStarts(runs)].map((start) => start - skippedBefore[start]!));
+  const counted = { lines, text, spanStarts, originals, skippedBefore, totalCharacters };
   countedLayouts.set(layout, counted);
   return counted;
 }
 
-/** For each index of a text of `length` characters, how many implicit newlines lie before it. */
+/** The offsets in the runs' joined text where each run after the first starts. */
+function runStarts(runs: readonly CountedRun[]): ReadonlySet<number> {
+  const starts = new Set<number>();
+  let offset = 0;
+  for (const run of runs.slice(0, -1)) starts.add((offset += run.text.length));
+  return starts;
+}
+
+/**
+ * For each index of a text of `length` characters, and for its end, how many implicit newlines lie
+ * before it. The end entry serves a paragraph that starts after a trailing newline.
+ */
 function implicitBreaksBefore(length: number, implicit: ReadonlySet<number>): number[] {
   const before: number[] = [];
   let skipped = 0;
@@ -189,6 +204,7 @@ function implicitBreaksBefore(length: number, implicit: ReadonlySet<number>): nu
     before.push(skipped);
     if (implicit.has(index)) skipped++;
   }
+  before.push(skipped);
   return before;
 }
 
