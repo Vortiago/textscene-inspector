@@ -4,7 +4,10 @@ import { woffFromSfnt } from './fontContainer.testkit';
 import { fontWork, sceneFontSettleCount } from './settledChannel';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
-import { peekGlyphOutlines, peekSceneFontOutlines } from './sceneFontOutlines';
+import { peekBundledGlyphOutlines, peekGlyphOutlines, peekSceneFontOutlines } from './sceneFontOutlines';
+import { openFontOutlines } from './sfntOutlines';
+import { bundledFontBytes } from './bundledFontBytes';
+import type { FontHinting } from '../../../../godot/text/textServerEnums';
 import { charContours, fixtureFontBytes, fontFile } from './sfntOutlines.testkit';
 import autoHintedReference from './autofit/autoHinting.godot.json';
 import { referencePoints, type ReferenceGlyph } from './glyphVariation.testkit';
@@ -125,13 +128,59 @@ describe('peekGlyphOutlines', () => {
     expect(peekSceneFontOutlines(font)).toBeUndefined();
   });
 
+  async function settledGlyphOutlines(font: FontResource) {
+    await vi.waitFor(() => expect(peekGlyphOutlines(font, canvasFace)).not.toBeUndefined());
+    return peekGlyphOutlines(font, canvasFace)!;
+  }
+
+  async function referenceContours(name: string, hinting: FontHinting) {
+    const outlines = await openFontOutlines(fixtureFontBytes(name), { hinting, isAutohinterForced: false });
+    return charContours(outlines!, 'a', 16);
+  }
+
   // Godot draws every glyph from its outline (`text_server_adv.cpp:1360-1393`), varied or not.
-  it('answers the outlines of the font once a canvas face has loaded them', async () => {
+  it('answers undefined while the outlines of a canvas face load, then the outlines', async () => {
     const font = woffOfOpenSans();
 
     expect(peekGlyphOutlines(font, canvasFace)).toBeUndefined();
 
-    const outlines = await settledOutlines(font);
-    expect(peekGlyphOutlines(font, canvasFace)).toBe(outlines);
+    expect((await settledGlyphOutlines(font)).glyphIndex(0x48)).toBe(20);
+  });
+
+  it('loads the glyphs of a font file at light hinting, the default Godot draws them at', async () => {
+    const font = fontFile(fixtureFontBytes('open-sans-semibold-subset.ttf'));
+
+    const outlines = await settledGlyphOutlines(font);
+
+    expect(charContours(outlines, 'a', 16)).toEqual(
+      await referenceContours('open-sans-semibold-subset.ttf', 'light')
+    );
+  });
+
+  it('loads the glyphs at the hinting the font file sets', async () => {
+    const font = {
+      ...fontFile(fixtureFontBytes('open-sans-semibold-subset.ttf')),
+      properties: { hinting: '0' },
+    };
+
+    const outlines = await settledGlyphOutlines(font);
+
+    expect(charContours(outlines, 'a', 16)).toEqual(
+      await referenceContours('open-sans-semibold-subset.ttf', 'none')
+    );
+  });
+});
+
+describe('peekBundledGlyphOutlines', () => {
+  it('reads the bundled Open Sans at the hinting the project sets', async () => {
+    await vi.waitFor(() => expect(peekBundledGlyphOutlines('normal')).not.toBeUndefined());
+    const bundled = await openFontOutlines(bundledFontBytes(), {
+      hinting: 'normal',
+      isAutohinterForced: false,
+    });
+
+    expect(charContours(peekBundledGlyphOutlines('normal')!, 'a', 16)).toEqual(
+      charContours(bundled!, 'a', 16)
+    );
   });
 });

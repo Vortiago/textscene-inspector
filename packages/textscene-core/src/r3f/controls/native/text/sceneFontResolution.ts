@@ -6,6 +6,8 @@
 import type { BitmapFont, FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import { TRANSFORM2D_SLOT_RE, matchedFloat, parseGodotFloat } from '../../../../godot/variant/number';
 import { boolSlotValue } from '../../../../godot/variant/variantBool';
+import { fontHintingOf, type FontHinting } from '../../../../godot/text/textServerEnums';
+import { parseOptionalInt } from '../../../../parser/valueParsers';
 import { dictNumberEntries } from '../../../../godot/variant/variantParser';
 import type { OpentypeCoordinates } from './fontMetrics';
 
@@ -103,6 +105,11 @@ export function fontGeneratesMipmaps(font: FontResource | null): boolean | undef
   if (font.kind === 'variation') return fontGeneratesMipmaps(font.baseFont);
   const face = font.kind === 'system' ? font : (resolveFontFileBytes(font)?.leaf ?? font);
   return boolSlotValue(face.properties['generate_mipmaps']) ?? false;
+}
+
+/** `FontFile.hinting` of `font`, the target its glyph bitmaps load for. */
+export function fontHinting(font: FontFileResource): FontHinting {
+  return fontHintingOf(parseOptionalInt(font.properties['hinting']));
 }
 
 /** `FontFile.force_autohinter` of `font`, which loads its glyphs through FreeType's auto-hinter. */

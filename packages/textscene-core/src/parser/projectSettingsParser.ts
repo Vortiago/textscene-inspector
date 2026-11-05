@@ -13,6 +13,7 @@ import {
 import { boolSlotValue } from '../godot/variant/variantBool.js';
 import { dataDirectoryPath, extensionListPath } from '../godot/project/project.js';
 import { isLocaleRightToLeft } from '../godot/text/textServer.js';
+import { fontHintingOf, type FontHinting } from '../godot/text/textServerEnums.js';
 import type { LayoutDirectionEnv } from '../godot/scene/control.js';
 import { DEFAULT_CLEAR_COLOR } from '../godot/rendering/rendering.js';
 import { DEFAULT_PHYSICS_CLOCK, type PhysicsClock } from '../godot/scene/physicsTicks.js';
@@ -312,6 +313,11 @@ export function projectFontPath(settings: ProjectSettings | null): string | null
  */
 export function projectDefaultFontGeneratesMipmaps(settings: ProjectSettings | null): boolean {
   return boolSlotValue(settings?.['gui/theme/default_font_generate_mipmaps']) ?? false;
+}
+
+/** `gui/theme/default_font_hinting`, which the default font takes (`theme_db.cpp:56`). Light by default (`text_server.cpp:2383`). */
+export function projectDefaultFontHinting(settings: ProjectSettings | null): FontHinting {
+  return fontHintingOf(parseOptionalInt(settings?.['gui/theme/default_font_hinting']));
 }
 
 /** `RS::VIEWPORT_ANISOTROPY_16X`, the last level `Viewport.AnisotropicFiltering` names. */

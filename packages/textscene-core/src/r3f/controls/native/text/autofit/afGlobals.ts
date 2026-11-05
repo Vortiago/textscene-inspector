@@ -30,8 +30,8 @@ import { collectLookups } from './openTypeLayout';
 /** A style's metrics with its writing system's steps (`AF_WritingSystemClassRec`). */
 export interface StyleHinter {
   readonly metrics: StyleMetrics;
-  /** The `AF_SCALER_FLAG_*` bits the style's hints take. */
-  readonly scalerFlags: number;
+  /** The `AF_SCALER_FLAG_*` bits the style's hints take at the target the style last scaled to. */
+  scalerFlags(): number;
   scale(scaler: Scaler): void;
   /** Hints `outline`, which holds `glyph` in font units, in place, scaling it. */
   apply(glyph: number, hints: GlyphHints, outline: ScaledOutline): void;
@@ -47,7 +47,7 @@ export function initStyleHints(hints: GlyphHints, hinter: StyleHinter): void {
   hints.xDelta = xDelta;
   hints.yScale = yScale;
   hints.yDelta = yDelta;
-  hints.scalerFlags = hinter.scalerFlags;
+  hints.scalerFlags = hinter.scalerFlags();
 }
 
 /** The default script (`AF_CONFIG_OPTION_DEFAULT_SCRIPT`), and Godot's fallback style, CJK's. */
@@ -61,8 +61,9 @@ function latinHinter(globals: FaceGlobals, styleIndex: number): StyleHinter | nu
   return {
     metrics,
     scale: (scaler) => scaleLatinMetrics(metrics, scaler),
-    // An italic face has no horizontal hinting.
-    scalerFlags: metrics.globals.face.isItalic ? ScalerFlag.NO_HORIZONTAL : 0,
+    // The light target and an italic face have no horizontal hinting.
+    scalerFlags: () =>
+      metrics.scaler.renderMode === 'light' || metrics.globals.face.isItalic ? ScalerFlag.NO_HORIZONTAL : 0,
     apply: (glyph, hints, outline) => applyLatinHints(glyph, hints, outline, metrics),
   };
 }
@@ -73,7 +74,7 @@ function cjkSystemHinter(metrics: CjkMetrics): StyleHinter {
     metrics,
     scale: (scaler) => scaleCjkMetrics(metrics, scaler),
     // The CJK systems leave the advance unhinted.
-    scalerFlags: ScalerFlag.NO_ADVANCE,
+    scalerFlags: () => ScalerFlag.NO_ADVANCE,
     apply: (_, hints, outline) => applyCjkHints(hints, outline, metrics),
   };
 }
@@ -89,7 +90,7 @@ function dummyHinter(globals: FaceGlobals, styleIndex: number): StyleHinter {
   return {
     metrics,
     scale: (scaler) => Object.assign(metrics.scaler, scaler),
-    scalerFlags: 0,
+    scalerFlags: () => 0,
     apply: (_, hints, outline) => {
       reloadHints(hints, outline);
       saveHints(hints, outline);

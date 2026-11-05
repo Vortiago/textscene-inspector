@@ -5,7 +5,10 @@
  */
 
 import { useCallback } from 'react';
-import { projectDefaultFontGeneratesMipmaps } from '../../../parser/projectSettingsParser';
+import {
+  projectDefaultFontGeneratesMipmaps,
+  projectDefaultFontHinting,
+} from '../../../parser/projectSettingsParser';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -57,7 +60,9 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
     const generatesMipmaps = fontGeneratesMipmaps(font) ?? projectDefaultFontGeneratesMipmaps(settings);
     if (isBitmapFontMetrics(settled)) return { metrics: settled, generatesMipmaps };
     // A canvas face carries its outlines already. An atlas face draws as the bundled canvas face.
-    const metrics = isCanvasFontMetrics(settled) ? settled : peekBundledCanvasFace(settled);
+    const metrics = isCanvasFontMetrics(settled)
+      ? settled
+      : peekBundledCanvasFace(settled, projectDefaultFontHinting(settings));
     return metrics ? { metrics, generatesMipmaps } : undefined;
   };
   const label3DFont = isLoading ? undefined : settledFont();

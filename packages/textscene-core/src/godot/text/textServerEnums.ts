@@ -42,6 +42,16 @@ export const ContourPointTag = {
 } as const;
 
 /**
+ * `TextServer::Hinting` by value: HINTING_NONE=0, HINTING_LIGHT=1, HINTING_NORMAL=2
+ * (servers/text/text_server.h:161-163): the target FreeType loads a glyph for.
+ */
+export const FONT_HINTINGS = ['none', 'light', 'normal'] as const;
+export type FontHinting = (typeof FONT_HINTINGS)[number];
+
+/** The hinting a `TextServer::Hinting` value names. Absent or unknown is light, the default of a font. */
+export const fontHintingOf = (value: number | undefined): FontHinting => FONT_HINTINGS[value ?? 1] ?? 'light';
+
+/**
  * `TextServer::OverrunBehavior`: OVERRUN_NO_TRIMMING=0 …
  * OVERRUN_TRIM_WORD_ELLIPSIS_FORCE=6 (servers/text/text_server.h:123-130).
  * `FoldableContainer`'s hint stops at OVERRUN_TRIM_WORD_ELLIPSIS (4).

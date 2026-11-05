@@ -27,6 +27,7 @@ import {
   projectAnisotropicFilteringLevel,
   projectDecalFilter,
   projectDefaultFontGeneratesMipmaps,
+  projectDefaultFontHinting,
   projectTextureMipmapBias,
   projectViewportSize,
   projectVolumetricFogSettings,
@@ -750,6 +751,19 @@ describe('projectDecalFilter', () => {
 
   it.each(['6', '-1', '99'])('keeps the default for filter %s, which the enum does not name', (filter) => {
     expect(projectDecalFilter({ [KEY]: filter })).toBe(3);
+  });
+});
+
+describe('projectDefaultFontHinting', () => {
+  it('reads the hinting a project.godot line names', () => {
+    const settings = parseProjectSettings('[gui]\n\ntheme/default_font_hinting=2\n');
+
+    expect(projectDefaultFontHinting(settings)).toBe('normal');
+  });
+
+  it("is light with no project or no key, Godot's default (text_server.cpp:2383)", () => {
+    expect(projectDefaultFontHinting(null)).toBe('light');
+    expect(projectDefaultFontHinting({ 'gui/other': '0' })).toBe('light');
   });
 });
 

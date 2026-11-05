@@ -8,12 +8,15 @@ import { peekBundledCanvasFace } from './bundledCanvasFace';
 import { TextRunMesh, type TextRunProps } from './TextRunMesh';
 import { useSceneFontSettleCount } from './useSceneFontSettleCount';
 import { usePendingWhile } from '../../../../resources/usePendingWhile';
+import { useProjectSettings } from '../../../contexts/ProjectSettingsContext';
+import { projectDefaultFontHinting } from '../../../../parser/projectSettingsParser';
 
 /** Draws nothing until the bundled face settles, so no run paints against the wrong face. */
 export default function BundledCanvasRun({ layout, ...run }: TextRunProps) {
   // `withVariation` memoises the face, so a render keeps its identity. Null is a face that cannot
   // register, and the loader has warned.
-  const face = peekBundledCanvasFace(layout.fontMetrics);
+  const { settings } = useProjectSettings();
+  const face = peekBundledCanvasFace(layout.fontMetrics, projectDefaultFontHinting(settings));
   // Listens only while the face loads. The count re-renders a run whose settle lands first.
   useSceneFontSettleCount(face === undefined);
   // The canvas face keeps the baked advances, so the atlas layout places its glyphs.

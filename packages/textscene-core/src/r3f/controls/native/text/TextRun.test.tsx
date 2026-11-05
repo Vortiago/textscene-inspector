@@ -23,7 +23,10 @@ const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 const bundled = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | null | undefined }));
 
 vi.mock('./bundledFontLoader', () => ({ peekBundledCanvasFontMetrics: () => bundled.metrics }));
-vi.mock('./sceneFontOutlines', () => ({ peekGlyphOutlines: () => null }));
+vi.mock('./sceneFontOutlines', () => ({
+  peekGlyphOutlines: () => null,
+  peekBundledGlyphOutlines: () => null,
+}));
 
 // Null is a bundled canvas face that cannot register, which leaves the atlas to draw the fill.
 beforeEach(() => {
