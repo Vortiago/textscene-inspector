@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { keepsChildrenInViewport } from './viewportBoundary';
+import type { TscnNode } from '../../../parser/types';
+import {
+  embedsAWindow,
+  isEmbeddedWindow,
+  isSubViewport,
+  isViewportBoundary,
+  keepsChildrenInViewport,
+} from './viewportBoundary';
 
 describe('keepsChildrenInViewport', () => {
   it('keeps an ordinary node’s children in its viewport', () => {
@@ -12,5 +19,61 @@ describe('keepsChildrenInViewport', () => {
 
   it('keeps the children of the Control that displays a SubViewport in its own viewport', () => {
     expect(keepsChildrenInViewport({ type: 'SubViewportContainer' })).toBe(true);
+  });
+});
+
+describe('a window is a viewport boundary', () => {
+  it.each(['Window', 'Popup', 'PopupPanel'])('hands a %s’s children to its own viewport', (type) => {
+    expect(isViewportBoundary(type)).toBe(true);
+    expect(isEmbeddedWindow(type)).toBe(true);
+  });
+
+  it('shows only a SubViewport through a SubViewportContainer (`subviewport_container.cpp:134-145`)', () => {
+    expect(isSubViewport('SubViewport')).toBe(true);
+    expect(isSubViewport('Window')).toBe(false);
+  });
+
+  it('leaves a SubViewport out of the embedded windows', () => {
+    expect(isEmbeddedWindow('SubViewport')).toBe(false);
+  });
+});
+
+describe('embedsAWindow — whether a viewport draws a window over its canvas', () => {
+  const node = (type: string, properties: Record<string, unknown> = {}, children: TscnNode[] = []) =>
+    ({ name: type, type, properties, children, rawProperties: {} }) as unknown as TscnNode;
+
+  it('finds a window below a viewport that embeds windows', () => {
+    const viewport = node('SubViewport', { gui_embed_subwindows: true }, [
+      node('Node', {}, [node('Window')]),
+    ]);
+    expect(embedsAWindow(viewport)).toBe(true);
+  });
+
+  it('finds none in a viewport that embeds no windows', () => {
+    expect(embedsAWindow(node('SubViewport', { gui_embed_subwindows: false }, [node('Window')]))).toBe(false);
+  });
+
+  it('leaves out a window a nested viewport embeds, and reaches one past a viewport that embeds none', () => {
+    const embedding = node('SubViewport', { gui_embed_subwindows: true }, [node('Window')]);
+    const passing = node('SubViewport', { gui_embed_subwindows: false }, [node('Popup')]);
+    expect(embedsAWindow(node('SubViewport', { gui_embed_subwindows: true }, [embedding]))).toBe(false);
+    expect(embedsAWindow(node('SubViewport', { gui_embed_subwindows: true }, [passing]))).toBe(true);
+  });
+
+  it('leaves out a hidden window, which the embedder never registers (`window.cpp:1546-1563`)', () => {
+    const viewport = node('SubViewport', { gui_embed_subwindows: true }, [node('Popup', { visible: false })]);
+    expect(embedsAWindow(viewport)).toBe(false);
+  });
+
+  it('reaches a visible window below a hidden one', () => {
+    const hidden = node('Window', { visible: false }, [node('Popup', { visible: true })]);
+    expect(embedsAWindow(node('SubViewport', { gui_embed_subwindows: true }, [hidden]))).toBe(true);
+  });
+
+  it('leaves out a native window', () => {
+    const viewport = node('SubViewport', { gui_embed_subwindows: true }, [
+      node('Window', { force_native: true }),
+    ]);
+    expect(embedsAWindow(viewport)).toBe(false);
   });
 });

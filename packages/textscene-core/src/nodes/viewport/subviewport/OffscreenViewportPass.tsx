@@ -43,6 +43,7 @@ import {
   createSceneTarget,
   godotCanvasPosition,
   renderToOffscreenTarget,
+  frameOverView,
   orthoFrameForCamera2D,
   orthoFrameForSize,
   cameraAtPath,
@@ -80,8 +81,10 @@ const CanvasOverWorld = lazy(() =>
 export interface OffscreenViewportPassProps extends NodeComponentProps {
   path: string;
   size: Vector2;
-  /** The viewport's `size`, which lays Controls out and frames the camera. `size` is the capped target. */
+  /** The viewport's visible rect, which a Camera2D centres in. `size` is the capped target. */
   layoutSize: Vector2;
+  /** The canvas units the target shows, which frame the canvas: `layoutSize` unless a window scales its content. */
+  viewSize: Vector2;
   kind: '2d' | '3d';
   rendersInline: boolean;
   /** The tint of this viewport's own canvas, where its light accumulation starts. */
@@ -102,6 +105,7 @@ export function OffscreenViewportPass({
   path,
   size,
   layoutSize,
+  viewSize,
   kind,
   rendersInline,
   canvasModulate,
@@ -176,8 +180,8 @@ export function OffscreenViewportPass({
   // Both canvas draws take the viewport's `msaa_2d`: the 2D world's and the Controls'.
   const canvasMsaaMode = viewportMsaaMode(properties, '2d');
   const { camera: orthoCamera, frame } = useCanvasPass(
-    layoutSize.x,
-    layoutSize.y,
+    viewSize.x,
+    viewSize.y,
     kind === '2d' || drawsCanvasOverWorld ? canvasMsaaMode : 0,
     canvasSpace
   );
@@ -223,9 +227,9 @@ export function OffscreenViewportPass({
   const anchorBackdrop = useCallback(() => {
     const anchor = backdropAnchor.current;
     if (!anchor) return;
-    viewAnchorMatrix(orthoCamera, layoutSize, anchor.matrix);
+    viewAnchorMatrix(orthoCamera, viewSize, anchor.matrix);
     anchor.matrixWorldNeedsUpdate = true;
-  }, [orthoCamera, layoutSize]);
+  }, [orthoCamera, viewSize]);
   const frameCanvas = useCallback(
     (canvas: THREE.Scene) => {
       // The camera's world matrix is what carries an instanced sub-scene's
@@ -234,16 +238,15 @@ export function OffscreenViewportPass({
       canvas.updateMatrixWorld(true);
       const camera2d = selectViewportCamera2D(canvas);
       const tag = camera2d?.userData.camera2d as Camera2DTag | undefined;
-      applyOrthoFrame(
-        orthoCamera,
+      const framed =
         camera2d && tag
           ? orthoFrameForCamera2D(tag, godotCanvasPosition(camera2d), layoutSize)
-          : orthoFrameForSize(layoutSize)
-      );
+          : orthoFrameForSize(layoutSize);
+      applyOrthoFrame(orthoCamera, frameOverView(framed, layoutSize, viewSize));
       anchorBackdrop();
       lightHost?.run.current?.();
     },
-    [orthoCamera, layoutSize, lightHost, anchorBackdrop]
+    [orthoCamera, layoutSize, viewSize, lightHost, anchorBackdrop]
   );
 
   const renderPass = useCallback(() => {
@@ -264,7 +267,7 @@ export function OffscreenViewportPass({
 
     // A `<Camera3D>` camera mounts at the canvas aspect, and inside the viewport it frames the
     // target rect. Only a camera the canvas also renders through gets its fit back after the pass.
-    const aspect = viewportAspect(layoutSize);
+    const aspect = viewportAspect(viewSize);
     const restoreAspect = camera === canvasCamera ? fittedAspect(camera) : null;
     if (camera && fittedAspect(camera) !== aspect) fitToAspect(camera, aspect);
 
@@ -317,7 +320,7 @@ export function OffscreenViewportPass({
     mipmapBias,
     clearColor,
     transparentBg,
-    layoutSize,
+    viewSize,
     canvasScene,
     frameCanvas,
     renderCanvas,
@@ -345,7 +348,7 @@ export function OffscreenViewportPass({
   const canvasBackdropAndItems = canvasOverWorld ? (
     <>
       <PendingSuspense>
-        <CanvasOverWorld world={target.texture} size={layoutSize} anchor={backdropAnchor} />
+        <CanvasOverWorld world={target.texture} size={viewSize} anchor={backdropAnchor} />
       </PendingSuspense>
       <CanvasOverWorldScopeProvider>{canvasOverWorld}</CanvasOverWorldScopeProvider>
     </>

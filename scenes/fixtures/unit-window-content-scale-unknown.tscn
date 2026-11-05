@@ -1,0 +1,29 @@
+; One variable: `content_scale_mode = 3`, a value outside the enum. `_update_viewport_size`'s switch
+; has no case for it, so the target has no size and the window's content shows black
+; (`window.cpp:1263-1347`).
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Unknown" type="Window" parent="."]
+title = "Unknown"
+position = Vector2i(600, 340)
+size = Vector2i(240, 160)
+content_scale_mode = 3
+content_scale_size = Vector2i(120, 60)
+
+[node name="Full" type="ColorRect" parent="Unknown"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.2, 0.6, 0.3, 1)

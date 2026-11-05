@@ -321,7 +321,7 @@ export const TAB_BAR_ICONS: TabBarIcons = {
   decrementScroll: svgDataUrl(TAB_BAR_SCROLL_LEFT_B64),
 };
 
-/** Every vendored TabBar icon shares this authored size (16x16): never rescaled by the project theme scale, same limitation as `SPIN_BOX_ARROW_ICON_SIZE`. */
+/** Every vendored TabBar icon's authored size (16x16). Only an embedded window's `close` scales by the theme scale (`EmbeddedWindowFrame`), as `SPIN_BOX_ARROW_ICON_SIZE` does not. */
 export const TAB_BAR_ICON_SIZE = 16;
 
 /** `scene/theme/icons/mini_checkerboard.svg` (16x16): the alpha-preview tile, `ColorPicker`'s `sample_bg` and `ColorPickerButton`'s `bg`. */

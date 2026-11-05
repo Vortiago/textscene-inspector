@@ -1,6 +1,7 @@
 /**
- * What the live tree says about the update mode of a SubViewport: a SubViewportContainer parent
- * replaces the authored mode, and the viewport the node sits in decides a WHEN_PARENT_VISIBLE pass.
+ * What the live tree says about the update mode of a SubViewport or an embedded window: a
+ * SubViewportContainer parent replaces the authored mode, and the parent viewport decides a
+ * WHEN_PARENT_VISIBLE pass.
  */
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { SubViewportUpdateMode } from '../../../godot/scene/viewport.js';
@@ -8,7 +9,7 @@ import { isShownCanvasNode } from '../../../r3f/canvasScopes.js';
 import { isCanvasLayerType } from '../../../r3f/canvasPaintOrder.js';
 import type { LiveTree } from '../../../r3f/liveSceneTree.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
-import { isViewportBoundary } from './viewportBoundary.js';
+import { embedsSubwindows, isEmbeddableWindow, isViewportBoundary } from './viewportBoundary.js';
 
 /** A node the visibility climb of a SubViewportContainer reads, with the `visible` the scene authors. */
 interface VisibilityLink {
@@ -20,7 +21,7 @@ interface VisibilityLink {
 export interface ViewportGate {
   /** The mode the scene authors. */
   authoredMode: number;
-  /** The viewport the node sits in, null at the root viewport. */
+  /** The parent viewport whose passes gate this one, null at the root viewport. */
   enclosingPath: string | null;
   /**
    * The nodes whose `visible` decides a SubViewportContainer parent, the container first, null
@@ -67,11 +68,18 @@ export function resolveGate(gate: ViewportGate, animatedVisible: ReadonlyMap<str
   };
 }
 
-/** The path of the nearest SubViewport above `path`, null at the root viewport. */
+/**
+ * The viewport whose passes gate the one at `path`, null at the root viewport. A viewport's parent
+ * is the viewport it sits in (`viewport.cpp:579`). An embedded window's is its embedder
+ * (`viewport.cpp:339`): the nearest viewport above that embeds windows (`window.cpp:1400-1420`).
+ */
 function enclosingViewportPathAt(tree: LiveTree, path: string): string | null {
+  const node = tree.at(path)?.step.node;
+  const isGatedByEmbedder = node !== undefined && isEmbeddableWindow(node);
   for (let above = parentPathOf(path); above !== null; above = parentPathOf(above)) {
-    const node = tree.at(above)?.step.node;
-    if (node && isViewportBoundary(node.type)) return above;
+    const aboveNode = tree.at(above)?.step.node;
+    if (!aboveNode || !isViewportBoundary(aboveNode.type)) continue;
+    if (!isGatedByEmbedder || embedsSubwindows(aboveNode)) return above;
   }
   return null;
 }

@@ -73,11 +73,20 @@ import {
   type LiveChildGroup,
   type LiveTreeContext,
   type LiveLink,
+  type LiveStep,
   type SceneScope,
 } from '../../liveSceneTree';
 import { NOTHING_CACHED, recordingReads } from '../../cacheSources';
 import { scopeOf } from '../../../resources/liveNode';
-import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
+import {
+  embedsSubwindows,
+  isEmbeddableWindow,
+  isEmbeddedWindow,
+  isViewportBoundary,
+  mayHoldWindow,
+} from '../../../nodes/viewport/subviewport/viewportBoundary';
+import type { WindowProperties } from '../../../nodes/windows/window/types';
+import { NO_OWNERS, type ThemeOwner } from '../../../nodes/windows/window/themeOwners';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
 import type { SolveNode, ThemedIconRef } from './solveTree';
@@ -111,6 +120,11 @@ interface UseBuildSolveTreeResult {
   tree: readonly SolveNode[];
   /** Bumps on every load or failure and on settled font metrics: a stable dependency for a consumer's memo. */
   generation: number;
+  /**
+   * The windows this viewport would embed, in pre-order, which is the order each registers in
+   * (`viewport.cpp:308-341`). A caller whose viewport embeds no windows draws none of them.
+   */
+  windows: readonly SolveNode[];
 }
 
 /** No ancestor or project theme: `mergeThemedRecord` returns the seed unchanged. */
@@ -300,6 +314,11 @@ interface Ancestry {
    * `visible` honours it.
    */
   childVisibility: ReadonlyMap<TscnNode, boolean> | undefined;
+  /**
+   * Below a window or a viewport: its Controls draw in that viewport, so the walk only looks for the
+   * windows that still reach this forest's embedder.
+   */
+  windowsOnly: boolean;
 }
 
 /**
@@ -317,6 +336,7 @@ function paintRangesOf(...numbered: readonly (readonly [readonly TscnNode[], rea
 
 interface ForestResult {
   tree: SolveNode[];
+  windows: SolveNode[];
   pendingScenes: PendingScene[];
   pendingTextures: string[];
   pendingResourceFiles: string[];
@@ -394,6 +414,31 @@ const NO_KEYS: ReadonlySet<string> = new Set();
  */
 const SOLVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'texture', 'resource', 'theme', 'font'];
 
+/** What the forest starts from, which its roots cannot see above them. */
+interface ForestStart {
+  /**
+   * `Control::is_layout_rtl()` for the nearest ancestor Control or Window above
+   * this forest, `null` for a scene's roots. A `SubViewport`'s caller passes its
+   * enclosing Control's: the climb steps over a `Viewport` (`control.cpp:3584-3598`).
+   */
+  inheritedRtl: boolean | null;
+  /**
+   * A window whose own Controls the forest holds, the forest's one root, or `null`. It lays its
+   * Controls out against its whole rect, as a canvas of its own, and owns a theme like a Control.
+   */
+  contentRoot: TscnNode | null;
+  /** The theme owners above the forest, nearest first (`viewportThemeOwners`). */
+  themeOwners: readonly ThemeOwner[];
+}
+
+/**
+ * Whether a window may sit below `step`: the children a fold descends into, which hold a sub-scene's
+ * nodes where the step instances one, and its raw node's children do not.
+ */
+function mayHoldWindowBelow(step: LiveStep): boolean {
+  return step.groups.some((group) => group.children.some(mayHoldWindow));
+}
+
 /** The SolveNode forest for one nodes and resource-scope pair. Not a hook: `useBuildSolveTree` is. */
 function buildForest(
   nodes: readonly TscnNode[],
@@ -403,7 +448,7 @@ function buildForest(
   projectSettings: ProjectSettings | null,
   hiddenNodePaths: ReadonlySet<string>,
   layoutDirectionEnv: LayoutDirectionEnv,
-  inheritedRtl: boolean | null,
+  { inheritedRtl, contentRoot, themeOwners }: ForestStart,
   viewportTargetSize: ViewportTargetSize
 ): ForestResult {
   const pendingScenes = new Map<string, PendingScene>();
@@ -411,6 +456,7 @@ function buildForest(
   const pendingResourceFiles = new Set<string>();
   const pendingThemes = new Set<string>();
   const pendingFonts = new Set<string>();
+  const windows: SolveNode[] = [];
   const readKeys = new Set<string>();
   const recordRead = (path: string) => readKeys.add(path);
   const viewportSizeReads: ViewportSizeRead[] = [];
@@ -637,12 +683,106 @@ function buildForest(
     return out;
   }
 
-  /** The Control forest of one tree node: what it adds to the forest and what it hoists to the canvas. */
-  function walk(
-    { raw: node, step, path, group }: LiveLink,
+  /**
+   * `themeChain` with `owner`'s own `theme` in front. A Control and a Window own a theme
+   * (`ThemeOwner::propagate_theme_changed`, `scene/theme/theme_owner.cpp`).
+   */
+  function withOwnTheme(
+    owner: TscnNode,
+    scope: SceneScope,
+    themeChain: readonly ThemeResource[]
+  ): readonly ThemeResource[] {
+    const ownTheme = resolveOwnTheme(
+      (owner.properties as ControlProperties).theme,
+      scope.externalResources,
+      scope.internalResources
+    );
+    return ownTheme ? [ownTheme, ...themeChain] : themeChain;
+  }
+
+  /**
+   * A viewport adds no Control to this forest. A window in it still reaches this forest's embedder
+   * unless the viewport embeds it, since `Window::get_embedder` climbs past each viewport that embeds
+   * none (`window.cpp`). A native window draws outside the game frame, so it is left out.
+   */
+  function walkViewport(
+    link: LiveLink,
     ancestry: Ancestry,
     descend: (ancestry: Ancestry) => WalkResult[]
   ): WalkResult {
+    const { step, path } = link;
+    const live = step.node;
+    const hidden = ancestry.ancestorHidden || hiddenNodePaths.has(path);
+    const isWindow = isEmbeddedWindow(live.type);
+    // Theme inheritance stops at a viewport that is no Window, as at any non-Control.
+    const themeChain = isWindow ? withOwnTheme(live, step.scope, ancestry.themeChain) : [];
+    if (isEmbeddableWindow(live)) {
+      windows.push(windowSolveNode(live, path, step.scope, themeChain, hidden, ancestry.inheritedRtl));
+    }
+    if (embedsSubwindows(live) || !mayHoldWindowBelow(step)) return NOTHING_WALKED;
+    descend({ ...ancestry, themeChain, ancestorHidden: hidden, windowsOnly: true });
+    return NOTHING_WALKED;
+  }
+
+  /** A node's theme items by name, each resolved through `themeScope`, overrides first. */
+  function themeItems(
+    node: TscnNode,
+    scope: SceneScope,
+    themeScope: ReturnType<typeof themeResolutionScope>
+  ): Pick<SolveNode, 'styleBoxes' | 'fontOverrides' | 'colors' | 'constants' | 'icons'> {
+    return {
+      styleBoxes: resolveStyleBoxes(node, scope, themeScope),
+      fontOverrides: resolveFontOverrides(node, scope.externalResources, scope.internalResources),
+      colors: resolveThemedColors(node, themeScope),
+      constants: resolveThemedConstants(node, themeScope),
+      icons: resolveThemedIcons(node, scope, themeScope),
+    };
+  }
+
+  /**
+   * A window as its embedder reads it: its theme items, by the class chain from its own type
+   * (`Window::_update_theme_item_cache`). It draws in no canvas of this forest, so it carries no
+   * paint range and no Control children.
+   */
+  function windowSolveNode(
+    window: TscnNode,
+    path: string,
+    scope: SceneScope,
+    themeChain: readonly ThemeResource[],
+    hidden: boolean,
+    inheritedRtl: boolean | null
+  ): SolveNode {
+    const props = window.properties as WindowProperties;
+    const themeScope = themeResolutionScope(window.type, props.themeTypeVariation, themeChain, projectFonts);
+    return {
+      path,
+      node: window,
+      children: [],
+      paintRange: WHOLE_CANVAS_RANGE,
+      paintSequence: WHOLE_CANVAS_RANGE.base,
+      backSequence: WHOLE_CANVAS_RANGE.base,
+      layerSequence: WHOLE_CANVAS_RANGE.base,
+      skippedAncestors: null,
+      parentVisibleInTree: true,
+      rtl: inheritedRtl ?? layoutDirectionEnv.rootRtl,
+      hidden,
+      ...themeItems(window, scope, themeScope),
+      textureSize: null,
+      textureSlots: EMPTY_TEXTURE_SLOTS,
+      labelSettings: null,
+      resources: scope,
+      themeChain,
+      projectFonts,
+    };
+  }
+
+  /** The Control forest of one tree node: what it adds to the forest and what it hoists to the canvas. */
+  function walk(
+    link: LiveLink,
+    ancestry: Ancestry,
+    descend: (ancestry: Ancestry) => WalkResult[]
+  ): WalkResult {
+    const { raw: node, step, path, group } = link;
     const {
       themeChain,
       skippedAncestors,
@@ -653,10 +793,11 @@ function buildForest(
       inheritedRtl,
       childVisibility,
     } = ancestry;
+    const isContentRoot = node === contentRoot || step.node === contentRoot;
+    // A viewport owns its own World2D (ADR-0033): its Control subtree draws in its own target. The
+    // collapsed type, since an instance's own node has none when its sub-scene root is the viewport.
+    if (isViewportBoundary(step.node.type) && !isContentRoot) return walkViewport(link, ancestry, descend);
     const paintRange = canvasRoots.get(node) ?? ancestry.paintRanges.get(node) ?? WHOLE_CANVAS_RANGE;
-    // A SubViewport owns its own World2D (ADR-0033); its Control subtree is
-    // drawn by its own viewport surface, never by the enclosing canvas.
-    if (isViewportBoundary(node.type)) return NOTHING_WALKED;
 
     // A grafted node's instance ref names an id in the file that authored it.
     const authored = scopeOf(node, group.scope);
@@ -676,7 +817,7 @@ function buildForest(
 
     const { node: collapsed, scope: ownScope, groups } = step;
 
-    const isControl = TWO_D_UI_TYPES.has(collapsed.type);
+    const isControl = isContentRoot || TWO_D_UI_TYPES.has(collapsed.type);
 
     // A CanvasLayer counts as `isControl` here without being a Control at
     // all, so it never states a direction and simply passes one through.
@@ -691,18 +832,13 @@ function buildForest(
     // Theme inheritance breaks at a non-Control, non-Window ancestor
     // (`ThemeOwner::propagate_theme_changed`, `scene/theme/theme_owner.cpp`),
     // though layout passes through it.
-    const ownTheme = isControl
-      ? resolveOwnTheme(
-          (collapsed.properties as ControlProperties).theme,
-          ownScope.externalResources,
-          ownScope.internalResources
-        )
-      : null;
-    const nodeThemeChain: readonly ThemeResource[] = !isControl
-      ? []
-      : ownTheme
-        ? [ownTheme, ...themeChain]
-        : themeChain;
+    const nodeThemeChain = isControl ? withOwnTheme(collapsed, ownScope, themeChain) : [];
+    const hidden = ancestorHidden || hiddenNodePaths.has(path);
+    if (ancestry.windowsOnly) {
+      if (!mayHoldWindowBelow(step)) return NOTHING_WALKED;
+      descend({ ...ancestry, themeChain: nodeThemeChain, ancestorHidden: hidden, inheritedRtl: rtl });
+      return NOTHING_WALKED;
+    }
 
     // The world walk's allocation, from the same function, so the two walks'
     // sequences compare. `NodeDispatcher` numbers authored children from the
@@ -737,9 +873,9 @@ function buildForest(
     const childCanvasChainBroken = isControl
       ? false
       : !isCanvasItem(collapsed) || topLevel || canvasChainBroken;
-    const hidden = ancestorHidden || hiddenNodePaths.has(path);
     // Already filtered by `isSortableChild` when the parent built the map.
-    const writtenVisible = childVisibility?.get(node);
+    // The embedder applies a window's `visible`, so its own Controls always draw.
+    const writtenVisible = isContentRoot ? true : childVisibility?.get(node);
     const live =
       writtenVisible === undefined
         ? collapsed
@@ -776,6 +912,7 @@ function buildForest(
             canvasRoots: childCanvasRoots,
             inheritedRtl: rtl,
             childVisibility: writtenChildVisibility,
+            windowsOnly: false,
           })
         )
       : { nodes: [], hoisted: [] };
@@ -789,13 +926,13 @@ function buildForest(
       nodeThemeChain,
       projectFonts
     );
-    const themedIcons = resolveThemedIcons(collapsed, ownScope, themeScope);
+    const items = themeItems(collapsed, ownScope, themeScope);
     const texture = resolveTextureSize(
       collapsed,
       path,
       ownScope.externalResources,
       ownScope.internalResources,
-      themedIcons
+      items.icons
     );
     // A canvas boundary IS the canvas every chain broken below it parents
     // to, so it adopts those; every other Control passes them further up.
@@ -819,18 +956,14 @@ function buildForest(
       parentVisibleInTree,
       rtl: rtl ?? layoutDirectionEnv.rootRtl,
       hidden,
-      styleBoxes: resolveStyleBoxes(collapsed, ownScope, themeScope),
+      ...items,
       textureSize: texture.size,
       textureSlots: texture.slots,
-      fontOverrides: resolveFontOverrides(collapsed, ownScope.externalResources, ownScope.internalResources),
       labelSettings: resolveOwnLabelSettings(
         collapsed,
         ownScope.externalResources,
         ownScope.internalResources
       ),
-      colors: resolveThemedColors(collapsed, themeScope),
-      constants: resolveThemedConstants(collapsed, themeScope),
-      icons: themedIcons,
       resources: ownScope,
       themeChain: nodeThemeChain,
       projectFonts,
@@ -842,10 +975,11 @@ function buildForest(
   }
 
   const rootRanges = allocatePaintRange(WHOLE_CANVAS_RANGE, nodes).children;
+  const ownerThemeChain = themeOwners.flatMap(({ node, scope }) => withOwnTheme(node, scope, []));
   const walked = joinWalked(
     tree.fold(
       {
-        themeChain: [],
+        themeChain: ownerThemeChain,
         paintRanges: paintRangesOf([nodes, rootRanges]),
         skippedAncestors: null,
         canvasChainBroken: false,
@@ -854,6 +988,7 @@ function buildForest(
         canvasRoots: canvasRootRanges(nodes, rootRanges),
         inheritedRtl,
         childVisibility: undefined,
+        windowsOnly: false,
       },
       walk
     )
@@ -863,6 +998,7 @@ function buildForest(
   // (`canvas_item.cpp:265-267`).
   return {
     tree: [...walked.nodes, ...walked.hoisted],
+    windows,
     pendingScenes: [...pendingScenes.values()],
     pendingTextures: [...pendingTextures],
     pendingResourceFiles: [...pendingResourceFiles],
@@ -873,16 +1009,51 @@ function buildForest(
   };
 }
 
+/** The Control forest of `nodes`, a scene's roots or a SubViewport's children. */
 export function useBuildSolveTree(
   nodes: readonly TscnNode[],
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
-  /**
-   * `Control::is_layout_rtl()` for the nearest ancestor Control or Window above
-   * this forest, `null` for a scene's roots. A `SubViewport`'s caller passes its
-   * enclosing Control's: the climb steps over a `Viewport` (`control.cpp:3584-3598`).
-   */
+  /** `ForestStart.inheritedRtl`. */
   inheritedRtl: boolean | null = null
+): UseBuildSolveTreeResult {
+  const start = useMemo(() => ({ inheritedRtl, contentRoot: null, themeOwners: NO_OWNERS }), [inheritedRtl]);
+  return useSolveForest(nodes, externalResources, internalResources, start);
+}
+
+/** A viewport's forest, and whether it is rooted at the window itself rather than at its children. */
+export interface UseBuildViewportTreeResult extends UseBuildSolveTreeResult {
+  isWindowForest: boolean;
+}
+
+/**
+ * The Control forest a viewport draws on its canvas: a SubViewport's children, or a window rooted
+ * at itself (`ForestStart.contentRoot`).
+ */
+export function useBuildViewportTree(
+  viewport: TscnNode,
+  externalResources: readonly TscnExternalResource[],
+  internalResources: readonly TscnInternalResource[],
+  themeOwners: readonly ThemeOwner[],
+  inheritedRtl: boolean | null = null
+): UseBuildViewportTreeResult {
+  const contentRoot = isEmbeddedWindow(viewport.type) ? viewport : null;
+  const nodes = useMemo(() => (contentRoot ? [contentRoot] : viewport.children), [contentRoot, viewport]);
+  const start = useMemo(
+    () => ({ inheritedRtl, contentRoot, themeOwners }),
+    [inheritedRtl, contentRoot, themeOwners]
+  );
+  return {
+    ...useSolveForest(nodes, externalResources, internalResources, start),
+    isWindowForest: !!contentRoot,
+  };
+}
+
+function useSolveForest(
+  nodes: readonly TscnNode[],
+  externalResources: readonly TscnExternalResource[],
+  internalResources: readonly TscnInternalResource[],
+  start: ForestStart
 ): UseBuildSolveTreeResult {
   const loader = useResourceLoader();
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
@@ -924,7 +1095,7 @@ export function useBuildSolveTree(
         projectSettings,
         hiddenNodePaths,
         layoutDirectionEnv,
-        inheritedRtl,
+        start,
         viewportTargetSize
       ),
     // `generation` is a cache-buster, not read inside: the loader's caches are
@@ -938,7 +1109,7 @@ export function useBuildSolveTree(
       projectSettings,
       hiddenNodePaths,
       layoutDirectionEnv,
-      inheritedRtl,
+      start,
       sizesKey,
       generation,
     ]
@@ -963,5 +1134,5 @@ export function useBuildSolveTree(
     for (const path of pendingFonts) loader.fonts.request(path);
   }, [loader, pendingScenes, pendingTextures, pendingResourceFiles, pendingThemes, pendingFonts]);
 
-  return { tree, generation };
+  return { tree, generation, windows: forest.windows };
 }

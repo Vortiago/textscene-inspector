@@ -271,6 +271,8 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [PinJoint2D](../../packages/textscene-core/src/nodes/physics/2d/pinjoint2d/comparison.md): nothing (a transform-only group)
 - [PointLight2D](../../packages/textscene-core/src/nodes/2d/pointlight2d/comparison.md): the light's cookie multiplied into every CanvasItem beneath it
 - [Polygon2D](../../packages/textscene-core/src/nodes/2d/polygon2d/comparison.md): a filled, optionally textured mesh
+- [Popup](../../packages/textscene-core/src/nodes/windows/popup/comparison.md): its viewport's target, drawn by its embedder with no frame
+- [PopupPanel](../../packages/textscene-core/src/nodes/windows/popuppanel/comparison.md): a panel StyleBox under its Controls, drawn by its embedder with no frame
 - [ProgressBar](../../packages/textscene-core/src/nodes/2d/ui/progressbar/comparison.md): a background and ratio-filled StyleBox pair, with a percentage label
 - [Range](../../packages/textscene-core/src/nodes/2d/ui/range/comparison.md): nothing of its own
 - [RayCast2D](../../packages/textscene-core/src/nodes/physics/2d/raycast2d/comparison.md): nothing (a transform-only group)
@@ -305,6 +307,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [VSeparator](../../packages/textscene-core/src/nodes/2d/ui/vseparator/comparison.md): a thin vertical quad
 - [VSlider](../../packages/textscene-core/src/nodes/2d/ui/vslider/comparison.md): a vertical track with a round grabber
 - [VSplitContainer](../../packages/textscene-core/src/nodes/2d/ui/vsplitcontainer/comparison.md): two children stacked, split at a computed offset
+- [Window](../../packages/textscene-core/src/nodes/windows/window/comparison.md): its viewport's target in a themed frame, drawn by its embedder
 
 ## Other
 
@@ -316,12 +319,9 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [MultiplayerSpawner](../../packages/textscene-core/src/nodes/networking/multiplayerspawner/comparison.md): nothing (a transform-only group)
 - [MultiplayerSynchronizer](../../packages/textscene-core/src/nodes/networking/multiplayersynchronizer/comparison.md): nothing (a transform-only group)
 - [Node](../../packages/textscene-core/src/nodes/node/comparison.md): nothing, a non-spatial base node
-- [Popup](../../packages/textscene-core/src/nodes/windows/popup/comparison.md): nothing yet, not implemented
 - [PopupMenu](../../packages/textscene-core/src/nodes/windows/popupmenu/comparison.md): nothing yet, not implemented
-- [PopupPanel](../../packages/textscene-core/src/nodes/windows/popuppanel/comparison.md): nothing yet, not implemented
 - [ResourcePreloader](../../packages/textscene-core/src/nodes/resources/resourcepreloader/comparison.md): nothing (a transform-only group)
 - [ScriptCreateDialog](../../packages/textscene-core/src/nodes/windows/scriptcreatedialog/comparison.md): nothing yet, not implemented
 - [ShaderGlobalsOverride](../../packages/textscene-core/src/nodes/rendering/shaderglobalsoverride/comparison.md): nothing yet, Godot re-shades every material that reads the overridden globals, the previewer does not
 - [StatusIndicator](../../packages/textscene-core/src/nodes/os/statusindicator/comparison.md): nothing (a transform-only group)
 - [Timer](../../packages/textscene-core/src/nodes/timers/timer/comparison.md): nothing (a countdown timer node)
-- [Window](../../packages/textscene-core/src/nodes/windows/window/comparison.md): nothing yet, not implemented

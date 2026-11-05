@@ -6,6 +6,7 @@
 
 import type { SceneScope, TscnNode } from '../../../parser/types';
 import { perObject } from '../../../utils/perObject';
+import { parentPathOf } from '../../../utils/nodePath';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { ProjectFonts } from '../../../resources/fonts/font/projectFonts';
 import type { FontResource } from '../../../resources/fonts/font/types';
@@ -173,6 +174,21 @@ export interface SolveNode {
  */
 export function isPromotedControl(n: SolveNode): boolean {
   return n.skippedAncestors !== null;
+}
+
+/**
+ * Whether a container's layout places `child`: a `get_child(i)` of `parent` that is not `top_level`
+ * (`container.cpp:143-146`, `popup.cpp:361-363`). A canvas boundary also holds the Controls it
+ * adopted from deeper in its scene, which no layout of its own places.
+ */
+export function isLaidOutChild(parent: SolveNode, child: SolveNode): boolean {
+  if (isPromotedControl(child) || controlProps(child).topLevel === true) return false;
+  return isSceneChild(parent, child);
+}
+
+/** Whether `child` is a `get_child(i)` of `parent` in the scene, wherever its canvas item parents. */
+export function isSceneChild(parent: SolveNode, child: SolveNode): boolean {
+  return parentPathOf(child.path) === parent.path;
 }
 
 /** A `SolveNode` minus the sortable child list: what a share's callback sees (`solveHandoff.ts`). */

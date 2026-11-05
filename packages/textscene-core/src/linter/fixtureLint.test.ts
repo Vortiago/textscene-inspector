@@ -136,6 +136,11 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason:
       'the fixture writes `true` into INT and FLOAT slots on purpose: the converted-spelling warning is the point, and the golden pins what Godot draws for it',
   },
+  'unit-window-content-scale-unknown.tscn': {
+    rules: ['format:content_scale_mode'],
+    reason:
+      'mode 3 is outside the enum on purpose: the warning is the point, and the golden pins the empty target Godot draws for it',
+  },
   'unit-lightmap-gi-shadowmask-only.tscn': {
     rules: ['format:shadowmask_mode'],
     reason:

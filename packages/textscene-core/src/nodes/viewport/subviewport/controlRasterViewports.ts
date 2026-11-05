@@ -21,6 +21,7 @@ import { isViewportBoundary } from './viewportBoundary.js';
 import { resolveViewportSubtree, viewportContentKind } from './viewportContent.js';
 import type { SubViewportProperties } from './types.js';
 import { viewportGateAt, type ViewportGate } from './viewportGate.js';
+import { viewportThemeOwners, type ThemeOwner } from '../../windows/window/themeOwners.js';
 
 /** A sub-viewport whose target is produced by rasterising a Control subtree. */
 export interface ControlRasterViewport extends SceneScope {
@@ -35,6 +36,8 @@ export interface ControlRasterViewport extends SceneScope {
    * pass cannot see from the viewport's children.
    */
   inheritedRtl: boolean | null;
+  /** The theme owners above a window, whose Controls take their themes (`viewportThemeOwners`). */
+  themeOwners: readonly ThemeOwner[];
   /** What the tree says of the viewport's update mode: its container, and the viewport around it. */
   gate: ViewportGate;
 }
@@ -98,6 +101,7 @@ export function collectControlRasterViewports(
         path,
         node: step.node,
         inheritedRtl,
+        themeOwners: viewportThemeOwners(tree, path),
         gate: viewportGateAt(tree, path, authoredMode),
         ...step.scope,
       });

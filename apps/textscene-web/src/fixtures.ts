@@ -1868,6 +1868,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Popup Embedded",
+    "file": "unit-popup-embedded.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Popup Menu",
     "file": "unit-popup-menu.tscn",
     "category": "Other"
@@ -1880,6 +1885,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Popup",
     "file": "unit-popup.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Popuppanel Embedded",
+    "file": "unit-popuppanel-embedded.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Popuppanel Shadow",
+    "file": "unit-popuppanel-shadow.tscn",
     "category": "Other"
   },
   {
@@ -2668,6 +2683,66 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Window Content Scale Unknown",
+    "file": "unit-window-content-scale-unknown.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Content Scale",
+    "file": "unit-window-content-scale.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Embedded",
+    "file": "unit-window-embedded.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Focus Order",
+    "file": "unit-window-focus-order.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Rtl",
+    "file": "unit-window-rtl.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Theme",
+    "file": "unit-window-theme.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Title Label",
+    "file": "unit-window-title-label.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Title Newline",
+    "file": "unit-window-title-newline.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Title Trim",
+    "file": "unit-window-title-trim.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Transparent",
+    "file": "unit-window-transparent.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Under Disabled Viewport",
+    "file": "unit-window-under-disabled-viewport.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window Wrap",
+    "file": "unit-window-wrap.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Window",
     "file": "unit-window.tscn",
     "category": "Other"
@@ -2812,6 +2887,18 @@ export const fixtures: Fixture[] = [
     "file": "touch-screen-button/unit-touch-screen-button.tscn",
     "category": "Other",
     "root": "touch-screen-button"
+  },
+  {
+    "name": "Window Theme Scale Label",
+    "file": "window-theme-scale/unit-window-theme-scale-label.tscn",
+    "category": "Other",
+    "root": "window-theme-scale"
+  },
+  {
+    "name": "Window Theme Scale",
+    "file": "window-theme-scale/unit-window-theme-scale.tscn",
+    "category": "Other",
+    "root": "window-theme-scale"
   },
   {
     "name": "Animation Empty Library",

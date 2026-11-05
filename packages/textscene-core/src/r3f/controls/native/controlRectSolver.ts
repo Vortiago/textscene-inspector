@@ -11,13 +11,7 @@
  */
 
 import type { Rect2 } from '../../../godot/math/rect2';
-import {
-  controlLayoutOrder,
-  controlProps,
-  isPromotedControl,
-  sortableView,
-  type SolveNode,
-} from './solveTree';
+import { controlLayoutOrder, controlProps, isLaidOutChild, sortableView, type SolveNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import {
   controlSolverRegistry,
@@ -288,18 +282,18 @@ function dispatchChildren(
     return;
   }
 
-  // A promoted child is no `get_child(i)` of this Container, so it stays free
-  // against the zero rect `parentAnchorableRect` gives it.
-  for (const child of n.children.filter(isPromotedControl)) {
-    solveFree(child, rect, origin, viewport, ctx, out);
+  // A child the layout does not place stays free against the rect `parentAnchorableRect` gives
+  // it: zero for a promoted one, the boundary's own for one a canvas boundary adopted.
+  const laidOut: SolveNode[] = [];
+  for (const child of n.children) {
+    if (isLaidOutChild(n, child)) laidOut.push(child);
+    else solveFree(child, rect, origin, viewport, ctx, out);
   }
 
-  const childEntries = n.children
-    .filter((child) => !isPromotedControl(child))
-    .map((child) => ({
-      node: child,
-      minSize: ctx.combinedMinimumSize(child),
-    }));
+  const childEntries = laidOut.map((child) => ({
+    node: child,
+    minSize: ctx.combinedMinimumSize(child),
+  }));
   // No container registers chrome yet; one that does insets its own content
   // rect before calling its ContainerLayoutFn.
   const { rects: childRects, meta: containerMeta } = normalizeContainerLayoutResult(

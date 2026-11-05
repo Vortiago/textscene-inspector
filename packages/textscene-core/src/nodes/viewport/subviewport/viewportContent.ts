@@ -16,6 +16,7 @@ import {
   type LiveTreeSources,
 } from '../../../r3f/liveSceneTree.js';
 import { compositeCallPrefix } from '../../../godot/variant/variantParser.js';
+import { embedsAWindow, isEmbeddedWindow, isViewportBoundary } from './viewportBoundary.js';
 
 /**
  * The `i`-suffixed spellings are listed: `Vector2i` is as 2D as `Vector2`, and it
@@ -97,7 +98,8 @@ export interface ViewportContent {
  */
 export function viewportContent(node: TscnNode): ViewportContent {
   let sawCanvasItem = false;
-  let sawDom = false;
+  // The embedder draws its windows over its canvas, with the Controls (`EmbeddedWindows.tsx`).
+  let sawDom = embedsAWindow(node);
   let sawUntypedInstance = false;
 
   // Every child is visited, so `sawDom` is complete when a 3D node comes first.
@@ -110,7 +112,7 @@ export function viewportContent(node: TscnNode): ViewportContent {
   };
 
   const isNode3DContent = (child: TscnNode): boolean => {
-    if (child.type === 'SubViewport') return false;
+    if (isViewportBoundary(child.type)) return false;
     // Godot's question (`is2DUIType`), not the component registry's: a Control
     // with no component of its own, such as `ProgressBar`, still gets a pass.
     if (is2DUIType(child.type)) {
@@ -154,7 +156,8 @@ export function viewportContent(node: TscnNode): ViewportContent {
   // 3D, but only when nothing decisive was found: anything typed, or an instance
   // whose overrides name a world, outranks it.
   if (sawUntypedInstance) return found('3d');
-  return found(sawDom ? 'dom' : 'empty');
+  // An embedder draws a window's target even when it holds nothing, so the Control pass clears it.
+  return found(sawDom || isEmbeddedWindow(node.type) ? 'dom' : 'empty');
 }
 
 export function viewportContentKind(node: TscnNode): ViewportContentKind {
@@ -166,7 +169,7 @@ function resolvedChildren(tree: LiveTree, from?: LiveLink): TscnNode[] {
   return tree.fold<void, TscnNode>(
     undefined,
     ({ raw, step }, _, descend) => {
-      if (raw.type === 'SubViewport') return raw;
+      if (isViewportBoundary(raw.type)) return raw;
       return { ...step.node, children: descend() };
     },
     from

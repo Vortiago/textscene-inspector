@@ -1,7 +1,8 @@
 /**
  * Overrun trimming for one broken `TextLineLayout`: a port of
- * `TextServer::shaped_text_overrun_trim_to_width`, left to right only, with one span and one font
- * per line and no per-glyph font fallback search.
+ * `TextServer::shaped_text_overrun_trim_to_width`, with one span and one font per line and no
+ * per-glyph font fallback search. A right-to-left paragraph trims its visual start; its glyphs stay
+ * in visual order, as no bidi reordering runs here.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -115,6 +116,8 @@ interface OverrunTrimOptions {
   ellipsisChar?: string;
   /** `sd->fit_width_minimum_reached` from a prior `fitLineToWidth`, read only when `flags.justificationAware`. */
   fitWidthMinimumReached?: boolean;
+  /** `sd->para_direction == DIRECTION_RTL` (`text_server_adv.cpp:6053`): trim the visual start, not the end. */
+  isRtl?: boolean;
 }
 
 /** Whether the font has a bitmap for `ch`: the baked charset for `'atlas'` metrics, always true for a `'canvas'` font. */
@@ -129,6 +132,13 @@ function atlasGlyphFor(fontMetrics: FontMetrics, ch: string) {
 /** `GRAPHEME_IS_BREAK_SOFT` reduces to "is a space glyph" for this engine's ASCII/Latin word-bound rule (`textLayout.ts`'s own doc). */
 function isSoftBreakGlyph(gp: GlyphPlacement): boolean {
   return isWhitespace(gp.char.codePointAt(0)!);
+}
+
+/** One glyph of the ellipsis: a space before it under word trim, then each dot. */
+interface EllipsisGlyph {
+  char: string;
+  advance: number;
+  emboldenGrowthPx?: number;
 }
 
 /**
@@ -147,6 +157,7 @@ export function trimLineToWidth(
     fontSizePx,
     ellipsisChar = DEFAULT_ELLIPSIS_CHAR,
     fitWidthMinimumReached = false,
+    isRtl = false,
   } = options;
   const glyphs = line.glyphs;
 
@@ -180,53 +191,11 @@ export function trimLineToWidth(
     ? Math.trunc(dotRepeat * dotAdvancePx + (flags.trimWordOnly ? whitespaceAdvancePx : 0))
     : 0;
 
-  let width = line.widthPx;
-  let trimPos = 0;
-  let ellipsisPos = alwaysEllipsis ? 0 : -1;
-  // `last_valid_cut_witout_el`: the last position that fit without the ellipsis budget, for the
-  // min-characters fallback. Its width is not carried, since the final width comes from the kept glyphs.
-  let lastValidCutWithoutEl = -1;
-
-  // :6065-6114
-  if (alwaysEllipsis && width + ellipsisWidthPx <= widthPx) {
-    trimPos = -1;
-    ellipsisPos = glyphs.length;
-  } else {
-    for (let i = glyphs.length - 1; i >= 0; i--) {
-      const gp = glyphs[i]!;
-      width -= gp.advance;
-      const aboveMinCharThreshold = i >= ELL_MIN_CHARACTERS;
-      if (!aboveMinCharThreshold && lastValidCutWithoutEl !== -1) {
-        trimPos = lastValidCutWithoutEl;
-        ellipsisPos = -1;
-        break;
-      }
-      const cutAllowedHere = !(flags.trimWordOnly && aboveMinCharThreshold) || isSoftBreakGlyph(gp);
-
-      if (!alwaysEllipsis && width <= widthPx && lastValidCutWithoutEl === -1 && cutAllowedHere) {
-        lastValidCutWithoutEl = i;
-      }
-
-      const ellipsisBudget =
-        (aboveMinCharThreshold && flags.addEllipsis) || alwaysEllipsis ? ellipsisWidthPx : 0;
-      if (width + ellipsisBudget <= widthPx && cutAllowedHere) {
-        trimPos = i;
-        if (
-          flags.addEllipsis &&
-          (aboveMinCharThreshold || alwaysEllipsis) &&
-          width - ellipsisWidthPx <= widthPx
-        ) {
-          ellipsisPos = trimPos;
-        }
-        break;
-      }
-    }
-  }
-
-  // :6118-6120
-  if (trimPos === 0 && alwaysEllipsis && flags.addEllipsis) {
-    ellipsisPos = 0;
-  }
+  const { trimPos, ellipsisPos } = findTrimPosition(line, widthPx, flags, {
+    ellipsisWidthPx,
+    alwaysEllipsis,
+    isRtl,
+  });
 
   // :6122
   if (!((trimPos >= 0 && line.widthPx > widthPx) || alwaysEllipsis)) {
@@ -234,36 +203,26 @@ export function trimLineToWidth(
   }
 
   // `trim_pos < 0` draws every glyph uncut (`text_server.cpp:1768-1777`): only `enforceEllipsis` on a
-  // line that fits reaches it, and appends the ellipsis.
-  const kept = trimPos < 0 ? glyphs : glyphs.slice(0, trimPos);
-  const keptWidthPx = kept.length > 0 ? kept[kept.length - 1]!.x + kept[kept.length - 1]!.advance : 0;
-  let penX = keptWidthPx;
-  const appended: GlyphPlacement[] = [];
+  // line that fits reaches it, and draws the ellipsis too.
+  const kept = trimPos < 0 ? glyphs : isRtl ? glyphs.slice(trimPos) : glyphs.slice(0, trimPos);
+  const keptStartPx = kept.length > 0 ? kept[0]!.x : 0;
+  const keptWidthPx =
+    kept.length > 0 ? kept[kept.length - 1]!.x + kept[kept.length - 1]!.advance - keptStartPx : 0;
 
-  // :6123-6149
+  // :6123-6149. `text_server.cpp:1757-1766` draws a right-to-left ellipsis first, its buffer reversed.
+  const ellipsis: EllipsisGlyph[] = [];
   if (flags.addEllipsis && (ellipsisPos > 0 || alwaysEllipsis)) {
-    if (flags.trimWordOnly && ellipsisPos > 0) {
-      appended.push({
-        char: ' ',
-        x: penX,
-        advance: whitespaceAdvancePx,
-        glyph: atlasGlyphFor(fontMetrics, ' '),
-      });
-      penX += whitespaceAdvancePx;
-    }
+    if (flags.trimWordOnly && ellipsisPos > 0) ellipsis.push({ char: ' ', advance: whitespaceAdvancePx });
     for (let r = 0; r < dotRepeat; r++) {
-      appended.push({
-        char: dotChar,
-        x: penX,
-        advance: dotAdvancePx,
-        glyph: atlasGlyphFor(fontMetrics, dotChar),
-        emboldenGrowthPx,
-      });
-      penX += dotAdvancePx;
+      ellipsis.push({ char: dotChar, advance: dotAdvancePx, emboldenGrowthPx });
     }
   }
-
-  const finalGlyphs = [...kept, ...appended];
+  const finalGlyphs = isRtl
+    ? [
+        ...placeEllipsis(ellipsis.reverse(), 0, fontMetrics),
+        ...shiftGlyphs(kept, advanceOf(ellipsis) - keptStartPx),
+      ]
+    : [...shiftGlyphs(kept, -keptStartPx), ...placeEllipsis(ellipsis, keptWidthPx, fontMetrics)];
   return {
     text: finalGlyphs.map((g) => g.char).join(''),
     glyphs: finalGlyphs,
@@ -271,4 +230,95 @@ export function trimLineToWidth(
     // word-cut space even where `:6126` appends none.
     widthPx: keptWidthPx + (ellipsisPos !== -1 ? ellipsisWidthPx : 0),
   };
+}
+
+interface TrimSearch {
+  ellipsisWidthPx: number;
+  alwaysEllipsis: boolean;
+  isRtl: boolean;
+}
+
+/**
+ * `trim_pos` and `ellipsis_pos` (`text_server_adv.cpp:6055-6120`): the first glyph cut away from the
+ * end, or the first glyph kept from the start in a right-to-left paragraph.
+ */
+function findTrimPosition(
+  line: TextLineLayout,
+  widthPx: number,
+  flags: OverrunTrimFlags,
+  { ellipsisWidthPx, alwaysEllipsis, isRtl }: TrimSearch
+): { trimPos: number; ellipsisPos: number } {
+  const glyphs = line.glyphs;
+  const count = glyphs.length;
+  let width = line.widthPx;
+  let trimPos = isRtl ? count : 0;
+  let ellipsisPos = alwaysEllipsis ? 0 : -1;
+  // `last_valid_cut_witout_el`: the last position that fit without the ellipsis budget, for the
+  // min-characters fallback. Its width is not carried, since the final width comes from the kept glyphs.
+  let lastValidCutWithoutEl = -1;
+
+  // :6065-6114
+  if (alwaysEllipsis && width + ellipsisWidthPx <= widthPx) {
+    return { trimPos: -1, ellipsisPos: isRtl ? 0 : count };
+  }
+  // `glyphs_to` (`:6062`): a right-to-left search stops before the last glyph, so it never keeps that glyph alone.
+  const steps = isRtl ? count - 1 : count;
+  for (let step = 0; step < steps; step++) {
+    const i = isRtl ? step : count - 1 - step;
+    const gp = glyphs[i]!;
+    if (!isRtl) width -= gp.advance;
+    const aboveMinCharThreshold = (isRtl ? count - 1 - i : i) >= ELL_MIN_CHARACTERS;
+    if (!aboveMinCharThreshold && lastValidCutWithoutEl !== -1) {
+      trimPos = lastValidCutWithoutEl;
+      ellipsisPos = -1;
+      break;
+    }
+    const cutAllowedHere = !(flags.trimWordOnly && aboveMinCharThreshold) || isSoftBreakGlyph(gp);
+
+    if (!alwaysEllipsis && width <= widthPx && lastValidCutWithoutEl === -1 && cutAllowedHere) {
+      lastValidCutWithoutEl = i;
+    }
+
+    const ellipsisBudget =
+      (aboveMinCharThreshold && flags.addEllipsis) || alwaysEllipsis ? ellipsisWidthPx : 0;
+    if (width + ellipsisBudget <= widthPx && cutAllowedHere) {
+      trimPos = i;
+      if (
+        flags.addEllipsis &&
+        (aboveMinCharThreshold || alwaysEllipsis) &&
+        width - ellipsisWidthPx <= widthPx
+      ) {
+        ellipsisPos = trimPos;
+      }
+      break;
+    }
+    if (isRtl) width -= gp.advance;
+  }
+
+  // :6118-6120
+  if (trimPos === 0 && alwaysEllipsis && flags.addEllipsis) ellipsisPos = 0;
+  return { trimPos, ellipsisPos };
+}
+
+function advanceOf(glyphs: readonly { advance: number }[]): number {
+  return glyphs.reduce((sum, g) => sum + g.advance, 0);
+}
+
+function shiftGlyphs(glyphs: readonly GlyphPlacement[], dx: number): GlyphPlacement[] {
+  return dx === 0 ? [...glyphs] : glyphs.map((g) => ({ ...g, x: g.x + dx }));
+}
+
+/** The ellipsis glyphs in draw order, from `startPx`. */
+function placeEllipsis(
+  ellipsis: readonly EllipsisGlyph[],
+  startPx: number,
+  fontMetrics: FontMetrics
+): GlyphPlacement[] {
+  let penX = startPx;
+  return ellipsis.map(({ char, advance, emboldenGrowthPx }) => {
+    const placed: GlyphPlacement = { char, x: penX, advance, glyph: atlasGlyphFor(fontMetrics, char) };
+    if (emboldenGrowthPx !== undefined) placed.emboldenGrowthPx = emboldenGrowthPx;
+    penX += advance;
+    return placed;
+  });
 }

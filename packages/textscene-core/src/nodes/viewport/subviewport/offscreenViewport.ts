@@ -306,6 +306,20 @@ export function orthoFrameForSize(size: Vector2): OrthoFrame {
 }
 
 /**
+ * `frame`, framed for `layoutSize`, grown about its top-left corner to show `viewSize`. A window's
+ * canvas draws scaled by its content scale factor from the same origin (`window.cpp:1366`), so its
+ * target shows its pixels over the factor in canvas units, whatever rect a Camera2D centres in.
+ */
+export function frameOverView(frame: OrthoFrame, layoutSize: Vector2, viewSize: Vector2): OrthoFrame {
+  if (layoutSize.x === viewSize.x && layoutSize.y === viewSize.y) return frame;
+  return {
+    ...frame,
+    right: frame.left + ((frame.right - frame.left) * viewSize.x) / layoutSize.x,
+    bottom: frame.top - ((frame.top - frame.bottom) * viewSize.y) / layoutSize.y,
+  };
+}
+
+/**
  * Sets every texel of `target` to what a Godot target holds before its first render: (0, 0, 0, 0),
  * which a consumer of an opaque target samples as black (`transparentBg` false). The target takes
  * opaque black there, which draws the same.

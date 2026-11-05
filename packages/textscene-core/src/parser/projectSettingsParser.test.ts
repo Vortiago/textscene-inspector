@@ -20,6 +20,7 @@ import {
   projectClearColor,
   projectTransparentBackground,
   projectDrawsDepthPrepass,
+  projectEmbedsSubwindows,
   projectTracesHalfSizeReflections,
   projectGlowUsesBicubicUpscale,
   projectUsesLightmapBicubicFilter,
@@ -297,6 +298,17 @@ describe('projectTracesHalfSizeReflections', () => {
 
   it('keeps the default for a malformed value (error path)', () => {
     expect(projectTracesHalfSizeReflections({ [KEY]: 'nope' })).toBe(true);
+  });
+});
+
+describe('projectEmbedsSubwindows', () => {
+  it('embeds by default (`project_settings.cpp:1756`)', () => {
+    expect(projectEmbedsSubwindows(null)).toBe(true);
+    expect(projectEmbedsSubwindows({})).toBe(true);
+  });
+
+  it('leaves the windows native when the project turns it off', () => {
+    expect(projectEmbedsSubwindows({ 'display/window/subwindows/embed_subwindows': 'false' })).toBe(false);
   });
 });
 

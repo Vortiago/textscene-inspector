@@ -39,6 +39,7 @@ import { imageSize, type ImageSize } from '../../../../resources/formats/image/i
 import { sizeWithArea } from '../../../../resources/textures/textureSize';
 import { AxisStretchMode, TextureProgressBarFillMode } from '../../../../godot/scene/gui';
 import { useCanvasColorSpace } from '../../../../r3f/canvasColorSpace';
+import { useStableVector2 } from '../../../../r3f/hooks/useStableVector2';
 
 const ZERO: Vector2 = { x: 0, y: 0 };
 
@@ -119,7 +120,7 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
     }),
     [stretchMarginLeft, stretchMarginTop, stretchMarginRight, stretchMarginBottom]
   );
-  const controlSize: Vector2 = useMemo(() => ({ x: rect.w, y: rect.h }), [rect.w, rect.h]);
+  const controlSize = useStableVector2({ x: rect.w, y: rect.h });
 
   // `tint_under`/`tint_progress`/`tint_over` (raw sRGB) multiply into `tint.own` before the one
   // sRGB-to-linear conversion, as Button's icon does (`buttonBase.ts`).
