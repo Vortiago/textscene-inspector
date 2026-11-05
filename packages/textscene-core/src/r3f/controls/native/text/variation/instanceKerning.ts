@@ -41,18 +41,23 @@ function gdefVariationStore(sfnt: SfntFile, axisCount: number): ItemVariationSto
   return storeOffset === 0 ? null : readItemVariationStore(sfnt.dv, gdef.offset + storeOffset, axisCount);
 }
 
+/** The pair positioning features HarfBuzz turns on for horizontal text (`hb-ot-shape.cc:309-318`). */
+const KERNING_FEATURE_TAGS = new Set(['kern', 'dist']);
+
 /**
- * The lookups of the `kern` feature in the default language system of every script, ascending.
- * HarfBuzz takes that system for text with no language of the font (`hb-ot-layout.cc:769-804`), and
- * the previewer gives no text a language. A `FeatureVariations` record that swaps them is left out.
+ * The lookups of the `kern` and `dist` features and the required feature in the default language
+ * system of every script, ascending. HarfBuzz takes that system for text with no language of the font
+ * (`hb-ot-layout.cc:769-804`), and the previewer gives no text a language. It applies the required
+ * feature whatever its tag. A `FeatureVariations` record that swaps them is left out.
  */
 function kernLookups({ scripts, features }: LayoutTable): number[] {
   const lookups = new Set<number>();
   for (const { defaultLanguage } of scripts) {
     if (!defaultLanguage) continue;
     const { requiredFeature, features: indices } = defaultLanguage;
-    for (const index of requiredFeature === null ? indices : [requiredFeature, ...indices])
-      if (features[index]?.tag === 'kern') features[index]!.lookups.forEach((lookup) => lookups.add(lookup));
+    const kernFeatures = indices.filter((index) => KERNING_FEATURE_TAGS.has(features[index]?.tag ?? ''));
+    for (const index of requiredFeature === null ? kernFeatures : [requiredFeature, ...kernFeatures])
+      features[index]?.lookups.forEach((lookup) => lookups.add(lookup));
   }
   return [...lookups].sort((a, b) => a - b);
 }
@@ -80,7 +85,7 @@ function xAdvanceUnits(
 
 /**
  * The kerning reader of `sfnt` at the normalised coordinates of an instance, or null for a font
- * with no `GPOS` `kern` feature.
+ * with no pair lookup in its `GPOS` kerning features.
  */
 export function instanceKerningReader(
   sfnt: SfntFile

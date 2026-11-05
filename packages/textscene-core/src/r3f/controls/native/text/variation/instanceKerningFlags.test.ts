@@ -120,8 +120,25 @@ describe('a hinting device table on the kerning', () => {
 // and the previewer gives no text a language.
 describe('a kern lookup of a language system', () => {
   it('adds nothing beside the default language system', () => {
-    const font = syntheticKernFont([{ flag: 0 }, { flag: 0, isLanguageOnly: true }]);
+    const font = syntheticKernFont([{ flag: 0 }, { flag: 0, feature: 'languageKern' }]);
     const reader = instanceKerningReader(font)!(BOLD_NORMALIZED);
     expect(reader({ glyph: 1, codePoint: LETTER_A }, { glyph: 2, codePoint: LETTER_V })).toBe(KERNED_UNITS);
+  });
+});
+
+describe('a lookup of another feature HarfBuzz positions by default', () => {
+  const kerningIn = (lookup: KernLookup): number => {
+    const reader = instanceKerningReader(syntheticKernFont([lookup]))!(BOLD_NORMALIZED);
+    return reader({ glyph: 1, codePoint: LETTER_A }, { glyph: 2, codePoint: LETTER_V });
+  };
+
+  // `hb_ot_map_builder_t::compile` adds the required feature whatever its tag (`hb-ot-map.cc:205-210, 341-342`).
+  it('kerns a pair in the required feature', () => {
+    expect(kerningIn({ flag: 0, feature: 'required' })).toBe(KERNED_UNITS);
+  });
+
+  // `horizontal_features` (`hb-ot-shape.cc:309-318`) turns `dist` on beside `kern`.
+  it('kerns a pair in the dist feature', () => {
+    expect(kerningIn({ flag: 0, feature: 'dist' })).toBe(KERNED_UNITS);
   });
 });

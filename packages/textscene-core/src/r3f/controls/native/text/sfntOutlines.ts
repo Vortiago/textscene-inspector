@@ -110,6 +110,12 @@ async function kerningReaderOf(sfnt: SfntFile): Promise<InstanceKerningReader | 
 type CharacterKerning = (leftCodePoint: number, rightCodePoint: number) => number | null;
 
 /**
+ * An axis animation passes through many instances, and `fontInstanceOf` keeps each one, so the pairs
+ * of the oldest instance go at this count.
+ */
+const MAX_KEPT_INSTANCES = 8;
+
+/**
  * The kerning of each pair at an instance, kept for each instance as a layout asks for the same pair
  * again and again. A font at its default instance reads no table. A pair that a corrupt table puts
  * past the buffer kerns 0.
@@ -120,18 +126,24 @@ function instanceKerningOf(
   kerningReader: InstanceKerningReader | null
 ): SfntOutlines['kerningAtInstance'] {
   if (!kerningReader) return undefined;
-  // Undefined until an instance first asks. Null is a font with no `kern` feature, read only once.
+  // Undefined until an instance first asks. Null is a font with no pair kerning, read only once.
   let kerningAt: ReturnType<InstanceKerningReader> | undefined;
-  const pairsAt = perObject((instance: FontInstance): CharacterKerning | null => {
+  const pairsByInstance = new Map<FontInstance, CharacterKerning | null>();
+  const pairsAt = (instance: FontInstance): CharacterKerning | null => {
+    if (pairsByInstance.has(instance)) return pairsByInstance.get(instance)!;
     if (kerningAt === undefined) kerningAt = orOnRangeError(() => kerningReader(sfnt), null);
-    return kerningAt && keptPairs(glyphIndex, kerningAt(instance.normalized));
-  });
+    if (pairsByInstance.size >= MAX_KEPT_INSTANCES)
+      pairsByInstance.delete(pairsByInstance.keys().next().value!);
+    const pairs = kerningAt && keptPairs(glyphIndex, kerningAt(instance.normalized));
+    pairsByInstance.set(instance, pairs);
+    return pairs;
+  };
   // Equal axis values share one instance, and so one kept pair for each pair.
-  const instanceOf = perObject((opentype: OpentypeCoordinates) =>
+  const instanceAt = perObject((opentype: OpentypeCoordinates) =>
     orOnRangeError(() => fontInstanceOf(sfnt, opentype), null)
   );
   return (leftCodePoint, rightCodePoint, opentype) => {
-    const instance = instanceOf(opentype);
+    const instance = instanceAt(opentype);
     return (instance && pairsAt(instance)?.(leftCodePoint, rightCodePoint)) ?? null;
   };
 }
@@ -239,9 +251,9 @@ function readSfntOutlines(
   return {
     glyphIndex,
     advanceAtInstance: instanceAdvanceReader(sfnt),
-    glyphContours: (glyphIndex, fontSizePx, variation) =>
+    glyphContours: (glyph, fontSizePx, variation) =>
       orOnRangeError(() => {
-        const outline = outlineOf(glyphIndex, fontSizePx, instanceOf(sfnt, variation));
+        const outline = outlineOf(glyph, fontSizePx, instanceOf(sfnt, variation));
         return outline && variedContours(outline, fontSizePx, variation);
       }, null),
     kerningAtInstance: instanceKerningOf(sfnt, glyphIndex, kerningReader),

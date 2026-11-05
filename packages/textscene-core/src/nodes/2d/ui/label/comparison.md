@@ -167,7 +167,7 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 
 - **Not drawn** Arabic letters draw in their isolated forms, since the shaper does not join them.
 - **Approximated** At an instance, a variable font keeps its default glyphs where its `GSUB` feature variations swap them.
-- **Approximated** At an instance, the `GPOS` kerning reads the `kern` lookups of every script, where Godot reads those of each script run.
+- **Approximated** At an instance, the `GPOS` kerning reads the `kern` and `dist` lookups of every script, where Godot reads those of each script run.
 - **Approximated** At an instance, the `GPOS` kerning reads the default language system of each script, where Godot reads the system of the text's language.
 - **Approximated** At an instance, the `GPOS` kerning pairs adjacent characters only, where Godot also kerns across a glyph that a lookup flag skips.
 - **Approximated** A scene font's glyphs draw with the browser's hinting, not FreeType's light
