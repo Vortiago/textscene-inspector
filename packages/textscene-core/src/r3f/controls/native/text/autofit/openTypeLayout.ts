@@ -39,8 +39,15 @@ export interface Lookup {
   readonly props: number;
 }
 
-/** The bit of a lookup flag that names a mark filtering set after the subtable offsets. */
-export const USE_MARK_FILTERING_SET = 0x10;
+/** The bits of a lookup flag (`LookupFlag`, `hb-ot-layout-common.hh`). */
+export const LookupFlag = {
+  IGNORE_BASE_GLYPHS: 0x2,
+  IGNORE_LIGATURES: 0x4,
+  IGNORE_MARKS: 0x8,
+  /** A mark filtering set follows the subtable offsets. */
+  USE_MARK_FILTERING_SET: 0x10,
+  MARK_ATTACHMENT_TYPE: 0xff00,
+} as const;
 
 /**
  * A record of `FeatureVariations`: whether its conditions hold at the default instance, which
@@ -146,7 +153,8 @@ function readLookups(dv: DataView, list: number, extensionType: number): Lookup[
       return { type: u16(dv, at + 2), offset: at + dv.getUint32(at + 4, false) };
     });
     // `Lookup::get_props` (`hb-ot-layout-common.hh:1325-1334`).
-    const markFilteringSet = flag & USE_MARK_FILTERING_SET ? u16(dv, lookup + 6 + 2 * offsets.length) : 0;
+    const markFilteringSet =
+      flag & LookupFlag.USE_MARK_FILTERING_SET ? u16(dv, lookup + 6 + 2 * offsets.length) : 0;
     return { subtables, props: flag + markFilteringSet * 0x10000 };
   });
 }

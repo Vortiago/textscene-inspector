@@ -124,32 +124,32 @@ function instanceKerningOf(
   if (!kerningAt) return undefined;
   const kept = new WeakMap<OpentypeCoordinates, CharacterKerning | null>();
   return (leftCodePoint, rightCodePoint, opentype) => {
-    if (!kept.has(opentype)) {
+    let kerningOf = kept.get(opentype);
+    if (kerningOf === undefined) {
       const instance = orOnRangeError(() => fontInstanceOf(sfnt, opentype), null);
-      const kerningOf = instance && kerningAt(instance.normalized);
-      kept.set(opentype, kerningOf && keptPairs(glyphIndex, kerningOf));
+      const readerAt = instance && kerningAt(instance.normalized);
+      kept.set(opentype, (kerningOf = readerAt && keptPairs(glyphIndex, readerAt)));
     }
-    return kept.get(opentype)?.(leftCodePoint, rightCodePoint) ?? null;
+    return kerningOf?.(leftCodePoint, rightCodePoint) ?? null;
   };
 }
 
-/** One more than the largest code point, so two code points make one pair number. */
-const CODE_POINT_COUNT = 0x110000;
-
-/** `kerningOf` for characters, with the answer for each pair kept. */
+/** `kerningOf` for characters, with the answer for each pair kept by left, then right character. */
 function keptPairs(
   glyphIndex: (codePoint: number) => number,
   kerningOf: PairKerningReader
 ): CharacterKerning {
-  const kept = new Map<number, number | null>();
+  const kept = new Map<number, Map<number, number | null>>();
   return (leftCodePoint, rightCodePoint) => {
-    const pair = leftCodePoint * CODE_POINT_COUNT + rightCodePoint;
-    if (kept.has(pair)) return kept.get(pair)!;
+    let byRight = kept.get(leftCodePoint);
+    if (!byRight) kept.set(leftCodePoint, (byRight = new Map()));
+    const known = byRight.get(rightCodePoint);
+    if (known !== undefined) return known;
     const left = { glyph: glyphIndex(leftCodePoint), codePoint: leftCodePoint };
     const right = { glyph: glyphIndex(rightCodePoint), codePoint: rightCodePoint };
     const units =
       left.glyph === 0 || right.glyph === 0 ? null : orOnRangeError(() => kerningOf(left, right), 0);
-    kept.set(pair, units);
+    byRight.set(rightCodePoint, units);
     return units;
   };
 }

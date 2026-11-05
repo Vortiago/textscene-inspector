@@ -20,10 +20,16 @@ import {
   type LayoutTable,
   type PairValueRecord,
 } from '../autofit/openTypeLayout';
-import { gdefVariationStore, lookupGlyphMatcher, type LookupGlyph } from '../autofit/openTypeGdef';
+import {
+  canSkipGlyphs,
+  gdefOf,
+  glyphPropsReader,
+  lookupMatcher,
+  type LookupGlyph,
+} from '../autofit/openTypeGdef';
 import type { SfntFile } from '../sfntTables';
 import { readFvarAxes } from './fvar';
-import { itemDeltaFixed, type ItemVariationStore } from './itemVariationStore';
+import { itemDeltaFixed, readItemVariationStore, type ItemVariationStore } from './itemVariationStore';
 
 /** The kerning of a pair of glyphs in design units, with the fraction of its deltas. */
 export type PairKerningReader = (left: LookupGlyph, right: LookupGlyph) => number;
@@ -31,6 +37,16 @@ export type PairKerningReader = (left: LookupGlyph, right: LookupGlyph) => numbe
 const VALUE_X_ADVANCE = 0x4;
 const VALUE_X_ADVANCE_DEVICE = 0x40;
 const VARIATION_INDEX_FORMAT = 0x8000;
+/** `GDEF` 1.3 keeps the offset of its item variation store at this byte. */
+const GDEF_VARIATION_STORE_OFFSET = 14;
+
+/** The `GDEF` item variation store, or null for a font whose `GDEF` holds none. */
+function gdefVariationStore(sfnt: SfntFile, axisCount: number): ItemVariationStore | null {
+  const gdef = gdefOf(sfnt, GDEF_VARIATION_STORE_OFFSET + 4);
+  if (!gdef || gdef.minor < 3) return null;
+  const storeOffset = sfnt.dv.getUint32(gdef.offset + GDEF_VARIATION_STORE_OFFSET, false);
+  return storeOffset === 0 ? null : readItemVariationStore(sfnt.dv, gdef.offset + storeOffset, axisCount);
+}
 
 /**
  * The lookups of the `kern` feature in every script. A `FeatureVariations` record that swaps them at
@@ -83,13 +99,19 @@ export function instanceKerningReader(
   });
   if (pairLookups.every(({ subtables }) => subtables.length === 0)) return null;
   const store = gdefVariationStore(sfnt, axes.length);
-  const matches = lookupGlyphMatcher(sfnt);
+  const propsOf = glyphPropsReader(sfnt);
+  const matches = lookupMatcher(sfnt);
   const { dv } = sfnt;
   return (normalized) => (left, right) => {
+    let glyphProps: [number, number] | undefined;
     let units = 0;
     for (const { props, subtables } of pairLookups) {
-      // A lookup kerns neither glyph that its flag skips: it skips the left one, and pairs the left one past the right one.
-      if (!matches(left, props) || !matches(right, props)) continue;
+      if (canSkipGlyphs(props)) {
+        glyphProps ??= [propsOf(left), propsOf(right)];
+        // A lookup kerns neither glyph that its flag skips: it skips the left one, and pairs the left one past the right one.
+        if (!matches(left.glyph, glyphProps[0], props) || !matches(right.glyph, glyphProps[1], props))
+          continue;
+      }
       for (const { offset } of subtables) {
         const records = pairValueRecords(dv, offset, left.glyph, right.glyph);
         if (!records) continue;

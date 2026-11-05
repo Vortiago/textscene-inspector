@@ -5,7 +5,8 @@
  * single and pair adjustments of `GPOS`. The auto-hinter reads no advance of a contour's glyph.
  *
  * HarfBuzz's script shapers (Arabic joining, Indic reordering, mark positioning) are not ported:
- * a cluster of such a script shapes as the default shaper shapes it.
+ * a cluster of such a script shapes as the default shaper shapes it. A lookup matches every glyph
+ * of the cluster: it skips none by its flag (`openTypeGdef.ts` reads the flags for the kerning at an instance).
  *
  * Portions ported from HarfBuzz ("Old MIT" licence).
  * Copyright (C) 2007-2026 by Behdad Esfahbod and the HarfBuzz contributors.
