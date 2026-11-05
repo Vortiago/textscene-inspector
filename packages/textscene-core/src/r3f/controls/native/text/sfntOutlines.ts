@@ -14,15 +14,18 @@
  */
 
 import { cmapLookup } from './sfntCmap';
+import { glyphAdvance26_6 } from './fontMetrics';
+import { glyphMetricsReader } from './sfntGlyphMetrics';
 import type { GlyphContours, GlyphOutlineReader } from './glyphContours';
-import type { GlyphVariation } from './fontMetrics';
+import type { GlyphVariation, OpentypeCoordinates } from './fontMetrics';
 import { cffOutlineReader } from './sfntCff';
 import { isNativelyHinted, type GlyphHinting } from './glyphHinting';
-import { glyphOutlineReader } from './sfntGlyf';
+import { glyfAdvanceReader, glyphOutlineReader } from './sfntGlyf';
 import { variedContours } from './glyphVariation';
 import { isTrickyFont } from './trickyFont';
 import { openFontContainer } from './fontContainer';
-import { OUTLINE_TABLE_TAGS, type SfntFile } from './sfntTables';
+import { OUTLINE_TABLE_TAGS, readHeadUnitsPerEm, type SfntFile } from './sfntTables';
+import { toUint16 } from '../../../../godot/variant/intWidth';
 import { fontInstanceOf, type FontInstance } from './variation/fontInstance';
 
 export interface SfntOutlines {
@@ -30,6 +33,12 @@ export interface SfntOutlines {
   glyphIndex(codePoint: number): number;
   /** The contours of a glyph at `fontSizePx`, changed by `variation`, or null for a glyph with no outline. */
   glyphContours(glyphIndex: number, fontSizePx: number, variation?: GlyphVariation): GlyphContours | null;
+  /**
+   * The advance in 26.6 of a glyph at `fontSizePx`, as HarfBuzz shapes it at the axis values of
+   * `opentype`: null when the glyph stays at the default instance's advance. Absent for outlines of
+   * a font with no variation axes to set, such as a BMFont's.
+   */
+  advanceAtInstance?(glyphIndex: number, fontSizePx: number, opentype: OpentypeCoordinates): number | null;
 }
 
 /** `read`, or `fallback` when a corrupt table puts an offset past the buffer: a `DataView` read throws a `RangeError` there. */
@@ -93,6 +102,25 @@ function instanceOf(sfnt: SfntFile, variation: GlyphVariation | undefined): Font
   return variation?.opentype?.size ? fontInstanceOf(sfnt, variation.opentype) : null;
 }
 
+/**
+ * A glyph's advance in 26.6 at `instance`. FreeType takes it from `hmtx` and `HVAR` where the font
+ * has `HVAR` (`tt_get_advances`), and else from the phantom points of an unhinted load.
+ */
+function instanceAdvance(
+  sfnt: SfntFile,
+  instance: FontInstance | null,
+  glyphIndex: number,
+  fontSizePx: number
+): number | null {
+  if (!instance) return null;
+  if (instance.adjustedAdvances.horizontal) {
+    const { advance } = glyphMetricsReader(sfnt)(glyphIndex, 0).horizontal;
+    const units = toUint16(advance + instance.advanceDelta.horizontal(glyphIndex));
+    return glyphAdvance26_6(units, readHeadUnitsPerEm(sfnt), fontSizePx);
+  }
+  return glyfAdvanceReader(sfnt)?.(glyphIndex, fontSizePx, instance) ?? null;
+}
+
 function readSfntOutlines(sfnt: SfntFile, outlineOf: GlyphOutlineReader | null): SfntOutlines | null {
   const cmap = sfnt.tables.get('cmap');
   if (!cmap || !outlineOf) return null;
@@ -101,6 +129,11 @@ function readSfntOutlines(sfnt: SfntFile, outlineOf: GlyphOutlineReader | null):
 
   return {
     glyphIndex: (codePoint) => orOnRangeError(() => lookup(codePoint), 0),
+    advanceAtInstance: (glyphIndex, fontSizePx, opentype) =>
+      orOnRangeError(
+        () => instanceAdvance(sfnt, fontInstanceOf(sfnt, opentype), glyphIndex, fontSizePx),
+        null
+      ),
     glyphContours: (glyphIndex, fontSizePx, variation) =>
       orOnRangeError(() => {
         const outline = outlineOf(glyphIndex, fontSizePx, instanceOf(sfnt, variation));

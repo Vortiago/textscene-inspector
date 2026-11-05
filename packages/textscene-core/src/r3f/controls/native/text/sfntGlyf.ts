@@ -668,3 +668,20 @@ export function unscaledGlyfOutlines(sfnt: SfntFile, instance: FontInstance | nu
       loadedGlyph(font, glyphIndex, FIXED_16_16_ONE, null, instance, true)?.outline() ?? null,
   };
 }
+
+/**
+ * `FT_Load_Glyph` with `FT_LOAD_NO_HINTING | FT_LOAD_ADVANCE_ONLY`, as `ft_load_advances` runs it for a
+ * variable font with no `HVAR`: the advance in 26.6 at `fontSizePx`, from the phantom points that
+ * `gvar` moves. It is null for a glyph that fails to load, and for a font without `glyf`.
+ */
+export function glyfAdvanceReader(
+  sfnt: SfntFile
+): ((glyphIndex: number, fontSizePx: number, instance: FontInstance) => number | null) | null {
+  const font = glyfFont(sfnt);
+  if (!font) return null;
+  return (glyphIndex, fontSizePx, instance) => {
+    const { scale } = freeTypeTrueTypeSize(font.unitsPerEm, fontSizePx, font.isPpemRounded);
+    const load = loadedGlyph(font, glyphIndex, scale, null, instance, false);
+    return load && load.phantoms.x[1]! - load.phantoms.x[0]!;
+  };
+}
