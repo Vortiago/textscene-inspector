@@ -43,6 +43,8 @@ export interface FontMetrics {
    * the baseline. Absent is 0, upright.
    */
   readonly skew?: number;
+  /** `FontVariation.variation_opentype` of this face. Absent is none: every axis at its default. */
+  readonly opentype?: OpentypeCoordinates;
   /**
    * The glyph outlines that the text of an emboldened or sheared canvas face follows. Absent for
    * a face that needs none. Null for a font whose outlines this previewer cannot read: its text
@@ -236,21 +238,35 @@ export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSize
   return advance26_6 / FIXED_26_6_ONE;
 }
 
-/** The embolden and the shear of a `FontVariation`: absent is none. */
-export type GlyphVariation = Pick<FontMetrics, 'embolden' | 'skew'>;
+/**
+ * A `variation_opentype` dictionary: the value of each axis it names, under the axis tag as an
+ * integer or under the axis name as a string. A number that the key's axis does not take is ignored.
+ */
+export type OpentypeCoordinates = ReadonlyMap<number | string, number>;
+
+/** The embolden, the shear and the axis values of a `FontVariation`: absent is none. */
+export type GlyphVariation = Pick<FontMetrics, 'embolden' | 'skew' | 'opentype'>;
 
 /** Whether the variation changes the glyph outline at all. */
 export function isGlyphVaried({ embolden = 0, skew = 0 }: GlyphVariation): boolean {
   return embolden !== 0 || skew !== 0;
 }
 
+/** The axis values as one string, in key order, so two dictionaries of one content share a key. */
+export function opentypeKey(opentype: OpentypeCoordinates | undefined): string {
+  return [...(opentype ?? [])]
+    .map(([key, value]) => `${typeof key === 'number' ? key : JSON.stringify(key)}=${value}`)
+    .sort()
+    .join(',');
+}
+
 /** One string for a variation, with an absent embolden and skew equal to 0: the key of every cache that varies by it. */
-export function variationKey({ embolden = 0, skew = 0 }: GlyphVariation): string {
-  return `${embolden}/${skew}`;
+export function variationKey({ embolden = 0, skew = 0, opentype }: GlyphVariation): string {
+  return `${embolden}/${skew}/${opentypeKey(opentype)}`;
 }
 
 /**
- * The wrappers of one face, by embolden and skew, then by outlines: one each, so a layout memoised on
+ * The wrappers of one face, by embolden, skew and axis values, then by outlines: one each, so a layout memoised on
  * `FontMetrics` identity keeps its hits.
  */
 const variationsOf = perObject(
@@ -258,18 +274,18 @@ const variationsOf = perObject(
 );
 
 /**
- * `metrics` with a `FontVariation`'s `embolden` and `skew` set, and the `outlines` its text follows.
- * The wrapper reads every other field through the face, so a live getter stays live. With neither
- * embolden nor skew and no outlines, it is the face itself. Two fonts that share a face and a variation keep
+ * `metrics` with a `FontVariation`'s `embolden`, `skew` and `opentype` set, and the `outlines` its text follows.
+ * The wrapper reads every other field through the face, so a live getter stays live. With no variation
+ * and no outlines, it is the face itself. Two fonts that share a face and a variation keep
  * their own outlines, each on its own wrapper.
  */
 export function withVariation<Metrics extends FontMetrics>(
   metrics: Metrics,
-  { embolden = 0, skew = 0, outlines }: GlyphVariation & Pick<FontMetrics, 'outlines'>
+  { embolden = 0, skew = 0, opentype, outlines }: GlyphVariation & Pick<FontMetrics, 'outlines'>
 ): Metrics {
-  if (!outlines && !isGlyphVaried({ embolden, skew })) return metrics;
+  if (!outlines && !isGlyphVaried({ embolden, skew }) && !opentype?.size) return metrics;
   const byVariation = variationsOf(metrics);
-  const key = variationKey({ embolden, skew });
+  const key = variationKey({ embolden, skew, opentype });
   let byOutlines = byVariation.get(key);
   if (!byOutlines) byVariation.set(key, (byOutlines = new Map()));
   let wrapped = byOutlines.get(outlines);
@@ -279,13 +295,14 @@ export function withVariation<Metrics extends FontMetrics>(
       (wrapped = Object.create(metrics, {
         embolden: { value: embolden },
         skew: { value: skew },
+        opentype: { value: opentype },
         ...(outlines !== undefined && { outlines: { value: outlines } }),
       }))
     );
   return wrapped as Metrics;
 }
 
-/** `metrics` carrying `outlines`, keeping its own embolden and skew. */
+/** `metrics` carrying `outlines`, keeping its own variation. */
 export function withOutlines<Metrics extends FontMetrics>(
   metrics: Metrics,
   outlines: SfntOutlines
@@ -293,7 +310,12 @@ export function withOutlines<Metrics extends FontMetrics>(
   return (
     metrics.outlines === outlines
       ? metrics
-      : withVariation(metrics, { embolden: metrics.embolden, skew: metrics.skew, outlines })
+      : withVariation(metrics, {
+          embolden: metrics.embolden,
+          skew: metrics.skew,
+          opentype: metrics.opentype,
+          outlines,
+        })
   ) as Metrics & { readonly outlines: SfntOutlines };
 }
 

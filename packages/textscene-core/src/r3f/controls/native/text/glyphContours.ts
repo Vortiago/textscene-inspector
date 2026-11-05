@@ -12,6 +12,7 @@
 import type { Vector2 } from '../../../../godot/math/vector';
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
 import { FIXED_26_6_ONE, ftMulFix } from './fontMetrics';
+import type { FontInstance } from './variation/fontInstance';
 
 /** `ContourPointTag`: ON, or a conic or cubic control point. */
 export type ContourTag = (typeof ContourPointTag)[keyof typeof ContourPointTag];
@@ -42,8 +43,15 @@ export interface UnscaledOutlines {
   unscaledGlyph(glyphIndex: number): ScaledOutline | null;
 }
 
-/** The scaled outline of a glyph at `fontSizePx` as the font loads it, or null for a glyph with no outline. */
-export type GlyphOutlineReader = (glyphIndex: number, fontSizePx: number) => ScaledOutline | null;
+/**
+ * The scaled outline of a glyph at `fontSizePx` as the font loads it, at `instance` when the font is
+ * variable and the instance is not its default, or null for a glyph with no outline.
+ */
+export type GlyphOutlineReader = (
+  glyphIndex: number,
+  fontSizePx: number,
+  instance?: FontInstance | null
+) => ScaledOutline | null;
 
 /** A glyph's points as FreeType holds them: 26.6 fixed point, y up. */
 export interface ScaledOutline {

@@ -3550,6 +3550,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Text Mesh Variable Instance",
+    "file": "unit-text-mesh-variable-instance.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Text Mesh Woff2",
     "file": "unit-text-mesh-woff2.tscn",
     "category": "Unit - Primitive Meshes"

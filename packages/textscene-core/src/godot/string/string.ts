@@ -40,7 +40,7 @@ export function stringLiteral(text: string): string {
 
 /**
  * Depth- and quote-aware split of a bracket body's top-level comma-separated elements. Empty input yields no elements.
- * `(`/`[` both open a level and `)`/`]` both close one, because Godot's writer nests the two interchangeably
+ * `(`, `[` and `{` open a level and `)`, `]` and `}` close one, because Godot's writer nests the kinds interchangeably
  * (`Array[NodePath]([NodePath("a"), NodePath("b")])`). Inside a quoted run a backslash escapes the next character.
  */
 export function splitTopLevel(body: string): string[] {
@@ -62,9 +62,9 @@ export function splitTopLevel(body: string): string[] {
     }
     if (c === '"') {
       inQuote = true;
-    } else if (c === '(' || c === '[') {
+    } else if (c === '(' || c === '[' || c === '{') {
       depth++;
-    } else if (c === ')' || c === ']') {
+    } else if (c === ')' || c === ']' || c === '}') {
       depth--;
     } else if (c === ',' && depth === 0) {
       parts.push(trimmed.slice(start, i));

@@ -110,7 +110,7 @@ function glyphMeshes(
   face: TextMeshFace
 ): (codepoint: number) => GlyphMeshData | null {
   const { outlines } = face;
-  const variation: GlyphVariation = { embolden: face.embolden, skew: face.skew };
+  const variation: GlyphVariation = { embolden: face.embolden, skew: face.skew, opentype: face.opentype };
   const meshes = cachedGlyphMeshes(
     outlines,
     `${properties.fontSize}|${properties.pixelSize}|${properties.curveStep}|${variationKey(variation)}`
