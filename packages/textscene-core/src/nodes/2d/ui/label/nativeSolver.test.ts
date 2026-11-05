@@ -928,10 +928,8 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
 
   it('VC_CHARS_AFTER_SHAPING budgets code points, so an astral glyph costs one (label.h:207)', () => {
     // "😀😀ab" has glyph source indices 0, 2, 4, 5 in UTF-16 units but code points 0, 1, 2, 3.
-    const line: TextLineLayout = {
-      ...fakeLine(4),
-      glyphs: [0, 2, 4, 5].map((sourceIndex) => ({ char: 'x', x: 0, advance: 1, glyph: null, sourceIndex })),
-    };
+    const line = fakeLine(4);
+    line.glyphs = line.glyphs.map((glyph, index) => ({ ...glyph, sourceIndex: [0, 2, 4, 5][index] }));
     const [revealed] = applyVisibleCharsReveal([line], {
       behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
       text: '😀😀ab',
