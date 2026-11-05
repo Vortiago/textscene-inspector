@@ -201,7 +201,7 @@ function readSubstitutions(dv: DataView, at: number): Map<number, readonly numbe
 }
 
 /** Reads the `GSUB` or `GPOS` table of `length` bytes at `offset`. */
-export function readLayoutTable(dv: DataView, offset: number, length: number, isGsub: boolean): LayoutTable {
+function readLayoutTable(dv: DataView, offset: number, length: number, isGsub: boolean): LayoutTable {
   const end = offset + length;
   return {
     dv,
