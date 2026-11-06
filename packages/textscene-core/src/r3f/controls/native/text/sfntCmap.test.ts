@@ -1,7 +1,7 @@
 /** Whether a font maps a character to a glyph, as FreeType's `FT_Get_Char_Index` answers the shaper. */
 import { describe, expect, it } from 'vitest';
 import { sfntHasGlyph } from './sfntCmap';
-import { fixtureFontBytes } from './sfntOutlines.testkit';
+import { fixtureFontBytes, fixtureSfnt } from './sfntOutlines.testkit';
 import { openSfnt } from './sfntTables';
 
 /** Open Sans SemiBold with `maxp.numGlyphs` set to `glyphCount`. */
@@ -14,11 +14,11 @@ function openSansWithGlyphCount(glyphCount: number) {
 
 describe('sfntHasGlyph', () => {
   it('has a glyph for a character the cmap maps', () => {
-    expect(sfntHasGlyph(openSfnt(fixtureFontBytes('open-sans-semibold-subset.ttf'))!)('A')).toBe(true);
+    expect(sfntHasGlyph(fixtureSfnt('open-sans-semibold-subset.ttf'))('A')).toBe(true);
   });
 
   it('has no glyph for a character the cmap does not map', () => {
-    expect(sfntHasGlyph(openSfnt(fixtureFontBytes('open-sans-semibold-subset.ttf'))!)('א')).toBe(false);
+    expect(sfntHasGlyph(fixtureSfnt('open-sans-semibold-subset.ttf'))('א')).toBe(false);
   });
 
   // `FT_Get_Char_Index` answers 0 for an index at or past `num_glyphs`.
@@ -29,7 +29,7 @@ describe('sfntHasGlyph', () => {
   // HarfBuzz decomposes a character the font lacks into the base and marks it has, and draws them
   // (`hb-ot-shape-normalize.cc`, `decompose_current_character`). The font keeps no `Ä`, only `A` and U+0308.
   describe('for a character the cmap lacks but its canonical decomposition has', () => {
-    const marksFont = () => openSfnt(fixtureFontBytes('montserrat-semibold-marks-subset.ttf'))!;
+    const marksFont = () => fixtureSfnt('montserrat-semibold-marks-subset.ttf');
 
     it('has a glyph for a base and a mark', () => {
       expect(sfntHasGlyph(marksFont())('Ä')).toBe(true);

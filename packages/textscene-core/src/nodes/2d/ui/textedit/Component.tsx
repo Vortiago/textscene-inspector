@@ -46,6 +46,7 @@ import {
   textEditDrawnGlyphs,
   textEditColorRunLine,
   textEditGlyphColorAt,
+  textEditGlyphLineIndex,
   textEditTabStopsPx,
   TEXT_EDIT_THEME_FONT_KEY,
 } from './nativeSolver';
@@ -312,52 +313,34 @@ export function TextEditBody({
                 line.glyphs.map((glyph, glyphIndex) => {
                   // The icons draw before the margin test, but only for a glyph the walk reaches.
                   if (glyphIndex >= drawn.length) return null;
-                  if (props.drawTabs && glyph.char === '\t') {
-                    // The per-glyph highlighted colour tints its icon, not a
-                    // fixed font_color (text_edit.cpp:1674,1714).
-                    const iconColor = multiplyModulate(
-                      tint.own,
-                      textEditGlyphColorAt(spans, rowStartIndex + glyphIndex, baseFontColor)
-                    );
-                    return (
-                      <CanvasItemGroup
-                        key={glyphIndex}
-                        position={[glyph.x, -((rowHeightPx - GLYPH_ICON_SIZE_PX) / 2), 0]}
-                      >
-                        <ControlQuad
-                          width={GLYPH_ICON_SIZE_PX}
-                          height={GLYPH_ICON_SIZE_PX}
-                          color={godotColorToLinear(iconColor)}
-                          opacity={iconColor.a}
-                          map={tabIcon}
-                          renderOrder={renderOrder}
-                        />
-                      </CanvasItemGroup>
-                    );
-                  }
-                  if (props.drawSpaces && glyph.char === ' ') {
-                    const xOfs = glyph.x + (glyph.advance - GLYPH_ICON_SIZE_PX) / 2;
-                    const iconColor = multiplyModulate(
-                      tint.own,
-                      textEditGlyphColorAt(spans, rowStartIndex + glyphIndex, baseFontColor)
-                    );
-                    return (
-                      <CanvasItemGroup
-                        key={glyphIndex}
-                        position={[xOfs, -((rowHeightPx - GLYPH_ICON_SIZE_PX) / 2), 0]}
-                      >
-                        <ControlQuad
-                          width={GLYPH_ICON_SIZE_PX}
-                          height={GLYPH_ICON_SIZE_PX}
-                          color={godotColorToLinear(iconColor)}
-                          opacity={iconColor.a}
-                          map={spaceIcon}
-                          renderOrder={renderOrder}
-                        />
-                      </CanvasItemGroup>
-                    );
-                  }
-                  return null;
+                  const isTabIcon = props.drawTabs && glyph.char === '\t';
+                  if (!isTabIcon && !(props.drawSpaces && glyph.char === ' ')) return null;
+                  // The per-glyph highlighted colour tints its icon, not a
+                  // fixed font_color (text_edit.cpp:1674,1714).
+                  const iconColor = multiplyModulate(
+                    tint.own,
+                    textEditGlyphColorAt(
+                      spans,
+                      textEditGlyphLineIndex(glyph, rowStartIndex, glyphIndex),
+                      baseFontColor
+                    )
+                  );
+                  const iconXPx = isTabIcon ? glyph.x : glyph.x + (glyph.advance - GLYPH_ICON_SIZE_PX) / 2;
+                  return (
+                    <CanvasItemGroup
+                      key={glyphIndex}
+                      position={[iconXPx, -((rowHeightPx - GLYPH_ICON_SIZE_PX) / 2), 0]}
+                    >
+                      <ControlQuad
+                        width={GLYPH_ICON_SIZE_PX}
+                        height={GLYPH_ICON_SIZE_PX}
+                        color={godotColorToLinear(iconColor)}
+                        opacity={iconColor.a}
+                        map={isTabIcon ? tabIcon : spaceIcon}
+                        renderOrder={renderOrder}
+                      />
+                    </CanvasItemGroup>
+                  );
                 })}
             </CanvasItemGroup>
           );

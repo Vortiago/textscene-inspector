@@ -21,6 +21,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   clampAutowrapMode,
   shapeText,
+  glyphOffsetReachPx,
   shapedTextSizeWidthPx,
   soloLineLayout,
   startsParagraph,
@@ -44,8 +45,8 @@ import {
 } from '../../../../r3f/controls/native/text/openSansMetrics';
 import {
   getFontAscentPx,
+  getFontDescentPx,
   getFontTabStopsPx,
-  getFontLinePitchPx,
   type FontMetrics,
 } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -783,15 +784,6 @@ function soloRunLayout(
   );
 }
 
-/**
- * Descent at `fontSizePx`: pitch minus ascent at zero spacing, so
- * `fontMetrics.ts` keeps the one reading of the ceiling rule
- * (`text_server_adv.cpp:1515-1516`).
- */
-function fontDescentPx(metrics: FontMetrics, fontSizePx: number): number {
-  return getFontLinePitchPx(metrics, fontSizePx, 0) - getFontAscentPx(metrics, fontSizePx);
-}
-
 /** One wrapped line's vertical metrics, recomputed per line (`text_server_adv.cpp:5486-5487`), unlike the underline's. */
 interface RichTextLineMetrics {
   /** The line's top from the paragraph's top: the sum of the earlier lines' `ascentPx + descentPx`. */
@@ -885,11 +877,12 @@ function lineMetricsOf(
         if (face === lastFace) continue;
         lastFace = face;
         ascentPx = Math.max(ascentPx, getFontAscentPx(face, run.fontSizePx));
-        descentPx = Math.max(descentPx, fontDescentPx(face, run.fontSizePx));
+        descentPx = Math.max(descentPx, getFontDescentPx(face, run.fontSizePx));
       }
-      // A mark raised past the font's ascent lifts the line (`text_server_adv.cpp:5161`: `-gl.y_off`).
-      for (const { decomposition } of segment.glyphs)
-        if (decomposition) for (const { y } of decomposition.marks) ascentPx = Math.max(ascentPx, -y);
+      // A glyph offset past the font's line moves it (`text_server_adv.cpp:5161-5162`).
+      const { abovePx, belowPx } = glyphOffsetReachPx(segment.glyphs);
+      ascentPx = Math.max(ascentPx, abovePx);
+      descentPx = Math.max(descentPx, belowPx);
     }
     // A blank line shapes its break in the paragraph font, so it keeps that height.
     if (segments.length === 0) {
@@ -1169,7 +1162,8 @@ export function layoutRichTextRuns(
   // Line metrics above count every glyph, shown or not: a hidden glyph still takes its line's height.
   const reveal = alignment?.reveal;
   const counted = reveal && countedLayoutForReveal(layout, styledRuns, reveal);
-  const revealed = reveal && counted && revealedGlyphs(counted, reveal);
+  const revealing =
+    reveal && counted ? { reveal, counted, glyphs: revealedGlyphs(counted, reveal) } : undefined;
 
   const placements: RichTextRunPlacement[] = [];
   perLine.forEach((segments, lineIndex) => {
@@ -1192,7 +1186,8 @@ export function layoutRichTextRuns(
     const marker = startsParagraph(layout.lines, lineIndex)
       ? layout.listings?.get(line.paragraphStart!)?.marker
       : undefined;
-    const isMarkerShown = !marker || !reveal || !counted || isPrefixShown(counted, reveal, line, revealed);
+    const isMarkerShown =
+      !marker || !revealing || isPrefixShown(revealing.counted, revealing.reveal, line, revealing.glyphs);
     if (marker && isMarkerShown) {
       placements.push({
         lineIndex,
@@ -1207,7 +1202,7 @@ export function layoutRichTextRuns(
       });
     }
     for (const shownSegment of segments) {
-      const segment = revealed ? withGlyphs(shownSegment, revealed) : shownSegment;
+      const segment = revealing ? withGlyphs(shownSegment, revealing.glyphs) : shownSegment;
       if (!segment) continue;
       const run = styledRuns[segment.runIndex]!;
       const lineTopPx = Math.floor(exactTopPx);

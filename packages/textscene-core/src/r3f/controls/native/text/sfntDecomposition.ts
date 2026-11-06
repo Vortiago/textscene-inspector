@@ -9,15 +9,13 @@ import { recentlyRead } from '../../../../utils/recentlyRead';
 import { normalisedCharacters } from './canonicalGlyphs';
 import { fallbackMarkReader, type SizedClusterOffsets } from './fallbackMarkPositioning';
 import { glyphOffsetPx } from './fontMetrics';
-import { hasMarkScript, markPositioningReader, ORIGIN } from './markPositioning';
+import { markPositioningReader, ORIGIN, type MarkOffset } from './markPositioning';
 import { sfntMapsGlyph } from './sfntCmap';
 import { parseSfntScalars, type SfntFile } from './sfntTables';
 
 /** A mark drawn over a base, and where its origin sits against the base's origin in px with y up, at one font size. */
-export interface DrawnMark {
+export interface DrawnMark extends MarkOffset {
   readonly char: string;
-  readonly xPx: number;
-  readonly yPx: number;
 }
 
 /** A cluster drawn as a base and the marks over it. A cluster that composes into one character has no marks. */
@@ -32,9 +30,6 @@ export interface DecomposedGlyph {
  * one the font cannot draw.
  */
 export type Decomposition = (cluster: string, fontSizePx: number) => DecomposedGlyph | null;
-
-/** Whether `sfntDecomposition` needs outlines for `sfnt`: the font has no `GPOS` script for marks. */
-export const usesFallbackMarks = (sfnt: SfntFile): boolean => !hasMarkScript(sfnt);
 
 function fallbackMarkReaderOf(openOutlines: () => SfntFile | null): SizedClusterOffsets | null {
   const outlines = openOutlines();
@@ -63,7 +58,7 @@ function gposOffsetReader(sfnt: SfntFile): SizedClusterOffsets | null {
 
 /**
  * `openOutlines` opens the font with the tables the fallback placement reads (`glyf` or `CFF `, and
- * `hmtx`). A font with a `GPOS` script never calls it: see `usesFallbackMarks`.
+ * `hmtx`). A font with a `GPOS` script for its marks never calls it.
  */
 export function sfntDecomposition(
   sfnt: SfntFile,
@@ -93,6 +88,7 @@ const newDecompositionsByCluster = (): Map<string, DecomposedGlyph | null> => ne
 /** A font size animation passes through many sizes, so the decompositions of this many sizes are kept. */
 const MAX_KEPT_SIZES = 8;
 
+/** How `cluster` draws at `fontSizePx` in a font that maps the characters `mapsGlyph` accepts. */
 function decompose(
   cluster: string,
   fontSizePx: number,
@@ -105,7 +101,7 @@ function decompose(
   const offsets = readOffsets()?.(drawn, fontSizePx);
   const marks = drawn.slice(1).map((char, i) => {
     const { x, y } = offsets?.[i + 1] ?? ORIGIN;
-    return { char, xPx: x, yPx: y };
+    return { char, x, y };
   });
   return { base: drawn[0]!, marks };
 }

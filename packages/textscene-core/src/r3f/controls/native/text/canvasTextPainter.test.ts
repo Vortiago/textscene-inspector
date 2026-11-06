@@ -389,6 +389,17 @@ describe('paintSceneFontCanvas — pen', () => {
     expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 11);
   });
 
+  it('shears a raised glyph about its own origin, so the line shear does not move its pen', () => {
+    const penOfSecondGlyph = (yOffset: number) => {
+      const layout = layoutFor('AB', 0);
+      layout.lines[0]!.glyphs[1]!.yOffset = yOffset;
+      const { calls, canvasLayout } = paintRecording(layout, 0, { skew: 0.3 });
+      return (calls.filter((c) => c.op === 'fillText')[1]!.args[1] as number) - canvasLayout.offsetXPx;
+    };
+    // The line shears x by `-skew * (y - baseline)`, so the pen moves `skew * yOffset` to cancel it.
+    expect(penOfSecondGlyph(-8) - penOfSecondGlyph(0)).toBeCloseTo(0.3 * -8, 9);
+  });
+
   // `text_server_adv.cpp:4082-4084`: a glyph at scale 1 draws at the floored `cpos.y`.
   it('puts the baseline on the whole pixel a canvas item floors it to, its run origin included', () => {
     const layout = layoutFor('A\nB', 0.5);

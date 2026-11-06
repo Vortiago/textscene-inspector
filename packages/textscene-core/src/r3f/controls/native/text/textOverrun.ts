@@ -339,7 +339,7 @@ function trimmedWidthPx({ cut, ellipsisWidthPx }: OverrunTrim): number {
   return cut.keptWidthPx + (cut.ellipsisPos !== -1 ? ellipsisWidthPx : 0);
 }
 
-/** `line` with `glyphs` in place of its own. */
+/** `line` with `glyphs` in place of its own, and without the `outlineGlyphs` of an earlier trim. */
 function trimmedLine(line: TextLineLayout, trim: OverrunTrim, glyphs: GlyphPlacement[]): TextLineLayout {
   return {
     text: line.text,
@@ -347,6 +347,7 @@ function trimmedLine(line: TextLineLayout, trim: OverrunTrim, glyphs: GlyphPlace
     widthPx: trimmedWidthPx(trim),
     paragraphIndex: line.paragraphIndex,
     paragraphStart: line.paragraphStart,
+    ...(line.indentPx !== undefined && { indentPx: line.indentPx }),
     isRtl: line.isRtl,
   };
 }
@@ -432,30 +433,40 @@ function findCut(
   for (let i = isParagraphRtl ? 0 : length - 1; i !== stopAt; i += step) {
     const glyph = glyphs[i]!;
     if (!isParagraphRtl) width -= glyph.advance;
-    const isAboveMinCharThreshold = (isParagraphRtl ? length - 1 - i : i) >= ELL_MIN_CHARACTERS;
-    if (!isAboveMinCharThreshold && lastValidCutWithoutEl !== -1) {
-      trimPos = lastValidCutWithoutEl;
-      ellipsisPos = -1;
-      width = widthWithoutElPx;
-      break;
-    }
-    const isAllowed = isCutAllowed(glyph, flags, isAboveMinCharThreshold);
-    if (!flags.enforceEllipsis && width <= widthPx && lastValidCutWithoutEl === -1 && isAllowed) {
-      lastValidCutWithoutEl = i;
-      widthWithoutElPx = width;
-    }
-    if (width + ellipsisBudgetPx(budget, isAboveMinCharThreshold) <= widthPx && isAllowed) {
-      const fitsEllipsis =
-        flags.addEllipsis &&
-        (isAboveMinCharThreshold || flags.enforceEllipsis) &&
-        width - ellipsisWidthPx <= widthPx;
-      trimPos = i;
-      if (fitsEllipsis) ellipsisPos = i;
-      break;
+    // Godot tests a cut only at a glyph with `count > 0`, the first of its cluster, so a mark stays
+    // with its base. Every glyph still leaves the right-to-left width (`:6106-6108`).
+    if (startsCluster(glyphs, i)) {
+      const isAboveMinCharThreshold = (isParagraphRtl ? length - 1 - i : i) >= ELL_MIN_CHARACTERS;
+      if (!isAboveMinCharThreshold && lastValidCutWithoutEl !== -1) {
+        trimPos = lastValidCutWithoutEl;
+        ellipsisPos = -1;
+        width = widthWithoutElPx;
+        break;
+      }
+      const isAllowed = isCutAllowed(glyph, flags, isAboveMinCharThreshold);
+      if (!flags.enforceEllipsis && width <= widthPx && lastValidCutWithoutEl === -1 && isAllowed) {
+        lastValidCutWithoutEl = i;
+        widthWithoutElPx = width;
+      }
+      if (width + ellipsisBudgetPx(budget, isAboveMinCharThreshold) <= widthPx && isAllowed) {
+        const fitsEllipsis =
+          flags.addEllipsis &&
+          (isAboveMinCharThreshold || flags.enforceEllipsis) &&
+          width - ellipsisWidthPx <= widthPx;
+        trimPos = i;
+        if (fitsEllipsis) ellipsisPos = i;
+        break;
+      }
     }
     if (isParagraphRtl) width -= glyph.advance;
   }
   return withEnforcedEllipsisAtStart({ trimPos, ellipsisPos, keptWidthPx: width }, flags);
+}
+
+/** Whether `glyphs[i]` is the first glyph of its cluster: the glyph before it shapes another character. */
+function startsCluster(glyphs: readonly GlyphPlacement[], i: number): boolean {
+  const { sourceIndex } = glyphs[i]!;
+  return i === 0 || sourceIndex === undefined || glyphs[i - 1]!.sourceIndex !== sourceIndex;
 }
 
 /** `:6118-6120`: an enforced ellipsis on a line cut to nothing still draws. */

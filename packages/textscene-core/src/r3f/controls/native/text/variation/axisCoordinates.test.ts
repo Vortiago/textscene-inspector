@@ -4,14 +4,13 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { openSfnt } from '../sfntTables';
-import { fixtureFontBytes } from '../sfntOutlines.testkit';
+import { fixtureSfnt } from '../sfntOutlines.testkit';
 import { designCoordinates, normalizedCoordinates } from './axisCoordinates';
 import { readAvar } from './avar';
 import { readFvarAxes } from './fvar';
 
 const WGHT = 2003265652;
-const sfnt = openSfnt(fixtureFontBytes('cascadia-code-subset.ttf'))!;
+const sfnt = fixtureSfnt('cascadia-code-subset.ttf');
 const axes = readFvarAxes(sfnt)!;
 const avar = readAvar(sfnt, axes.length);
 

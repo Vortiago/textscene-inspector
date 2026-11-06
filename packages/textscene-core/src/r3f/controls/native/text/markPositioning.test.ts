@@ -5,13 +5,10 @@
  */
 import { describe, expect, it } from 'vitest';
 import { markPositioningReader } from './markPositioning';
-import { fixtureFontBytes } from './sfntOutlines.testkit';
-import { openSfnt } from './sfntTables';
+import { fixtureSfnt } from './sfntOutlines.testkit';
 
 const offsetsOf = (cluster: string) =>
-  markPositioningReader(openSfnt(fixtureFontBytes('montserrat-semibold-marks-subset.ttf'))!)!(
-    Array.from(cluster)
-  );
+  markPositioningReader(fixtureSfnt('montserrat-semibold-marks-subset.ttf'))!(Array.from(cluster));
 
 describe('markPositioningReader', () => {
   it('attaches a mark to its base with the difference of their anchors', () => {
@@ -45,9 +42,7 @@ describe('markPositioningReader', () => {
   });
 
   it('leaves a mark at its pen position, after the base, where the GPOS has no mark lookup', () => {
-    const reader = markPositioningReader(
-      openSfnt(fixtureFontBytes('montserrat-semibold-marks-nomark-subset.ttf'))!
-    )!;
+    const reader = markPositioningReader(fixtureSfnt('montserrat-semibold-marks-nomark-subset.ttf'))!;
     expect(reader(Array.from('Ȫ'.normalize('NFD')))).toEqual([
       { x: 0, y: 0 },
       { x: 842, y: 0 },
@@ -56,9 +51,7 @@ describe('markPositioningReader', () => {
   });
 
   it('leaves a mark at its pen position where the GPOS has a script and no lookup at all', () => {
-    const reader = markPositioningReader(
-      openSfnt(fixtureFontBytes('montserrat-semibold-marks-nolookups-subset.ttf'))!
-    )!;
+    const reader = markPositioningReader(fixtureSfnt('montserrat-semibold-marks-nolookups-subset.ttf'))!;
     expect(reader(Array.from('À'.normalize('NFD')))).toEqual([
       { x: 0, y: 0 },
       { x: 749, y: 0 },
@@ -66,8 +59,6 @@ describe('markPositioningReader', () => {
   });
 
   it('answers null for a font with no GPOS script, which HarfBuzz places by its fallback', () => {
-    expect(
-      markPositioningReader(openSfnt(fixtureFontBytes('montserrat-semibold-marks-nogpos-subset.ttf'))!)
-    ).toBeNull();
+    expect(markPositioningReader(fixtureSfnt('montserrat-semibold-marks-nogpos-subset.ttf'))).toBeNull();
   });
 });

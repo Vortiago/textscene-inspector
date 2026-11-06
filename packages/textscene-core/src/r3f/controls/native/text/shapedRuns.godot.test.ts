@@ -158,18 +158,31 @@ function layoutClusters(
   placements: readonly GlyphPlacement[],
   glyphOf: (ch: string) => number
 ): DrawnCluster[] {
-  return placements
-    .filter(({ char }) => char !== '\u200b')
-    .map((placed) => ({
-      start: placed.sourceIndex!,
-      end: placed.sourceIndex! + placed.char.length,
-      glyph: placed.glyphIndex ?? glyphOf(placed.decomposition?.base ?? placed.char),
-      x: placed.x,
-      xOffset: placed.xOffset ?? 0,
-      advance: placed.advance,
-      // Adding zero turns the layout's -0 into the 0 of the reference.
-      marks: (placed.decomposition?.marks ?? []).map(({ x, y }) => [x + 0, y + 0] as const),
-    }));
+  const drawn = placements.filter(({ char }) => char !== '\u200b');
+  return clusterGroups(drawn).map(([base, ...marks]) => ({
+    start: base!.sourceIndex!,
+    end: base!.sourceIndex! + (base!.cluster ?? base!.char).length,
+    glyph: base!.glyphIndex ?? glyphOf(base!.char),
+    x: base!.x,
+    xOffset: base!.xOffset ?? 0,
+    advance: base!.advance,
+    // Adding zero turns the layout's -0 into the 0 of the reference.
+    marks: marks.map(
+      (mark) => [mark.x - base!.x + (mark.xOffset ?? 0) + 0, (mark.yOffset ?? 0) + 0] as const
+    ),
+  }));
+}
+
+/** The placements of each cluster: a base, then the marks that share its cluster and source index. */
+function clusterGroups(placements: readonly GlyphPlacement[]): GlyphPlacement[][] {
+  const groups: GlyphPlacement[][] = [];
+  placements.forEach((placed, i) => {
+    const before = placements[i - 1];
+    const continuesCluster = placed.cluster !== undefined && before?.sourceIndex === placed.sourceIndex;
+    if (continuesCluster) groups.at(-1)!.push(placed);
+    else groups.push([placed]);
+  });
+  return groups;
 }
 
 const rows = reference as unknown as ReferenceRun[];

@@ -17,6 +17,7 @@ import { isBitmapFontMetrics } from './bitmapFontMetrics';
 import {
   fontUsesSubpixelPositioning,
   getFontAscentPx,
+  getFontDescentPx,
   getFontEmboldenGrowthPx,
   getFontExtraAdvancePx,
   getFontGlyphAdvancePx,
@@ -171,19 +172,6 @@ export interface ShapeTextOptions {
 const BREAK_TRIM_START_EDGE_SPACES = 1 << 6;
 const BREAK_TRIM_END_EDGE_SPACES = 1 << 7;
 
-/** A mark drawn over its base, with its origin against the base's, px with y down (`x_off` and `y_off` of the mark's glyph). */
-export interface MarkPlacement {
-  char: string;
-  x: number;
-  y: number;
-}
-
-/** The glyphs a cluster draws as: another character, or a base and its marks, which sit over the base's origin. */
-export interface PlacedDecomposition {
-  base: string;
-  marks: MarkPlacement[];
-}
-
 /** One glyph's placement within its line, in target-font-size px. */
 export interface GlyphPlacement {
   /**
@@ -205,18 +193,23 @@ export interface GlyphPlacement {
   /** The control character this glyph draws as a hex-code box (`draw_hex_code_box`), set only when `preserveControl` kept it. */
   controlCodepoint?: number;
   /**
-   * How `char` draws as another character or as a base and marks, after HarfBuzz's normalisation:
-   * where the face lacks a character and has its canonical decomposition, or composes a typed base
-   * and marks. Absent for a cluster that draws as its own glyph.
-   */
-  decomposition?: PlacedDecomposition;
-  /**
    * The font glyph a `GSUB` lookup of the run draws `char` as: a ligature, or a glyph its neighbours
    * swap. Absent for the glyph `cmap` gives a character.
    */
   glyphIndex?: number;
-  /** How far the glyph draws right of `x`, px, Godot's `x_off`: a whole pixel after an exact half-pixel remainder. Absent is 0. */
+  /**
+   * The source text of the cluster this glyph draws a part of, where the face draws it as another
+   * character or as a base and marks. Absent where `char` is the source text.
+   */
+  cluster?: string;
+  /**
+   * `x_off`: how far the glyph's origin sits right of the pen `x`, px. Absent for 0. A glyph after an
+   * exact half-pixel remainder has one. A mark of a base and marks has one, as HarfBuzz places it:
+   * zero advance, and the `sourceIndex` of its base.
+   */
   xOffset?: number;
+  /** `y_off`: how far the glyph's origin sits below the baseline, px. Absent for 0. */
+  yOffset?: number;
   /** How far the embolden grows this glyph's outline at its own size, px. Absent for a glyph with none. */
   emboldenGrowthPx?: number;
   /** This glyph's own size, px, `gl.font_size` in Godot: it scales the space-shrink floor of `fitLineToWidth` (`text_server_adv.cpp:5659`) and the measured ink. */
@@ -407,8 +400,11 @@ interface BreakGlyph {
   controlCodepoint?: number;
   /** The outline growth of the embolden that widened `advance`, px. 0 for none. */
   emboldenGrowthPx: number;
-  /** `GlyphPlacement.decomposition`. The mark x is the offset before the whole-pixel round of `roundGlyphAdvance`. */
-  decomposition?: PlacedDecomposition;
+  /**
+   * The base and marks the face draws the cluster as, absent for one glyph. A mark's `x` is from
+   * the base's origin, and `y` is down and whole: `roundGlyphAdvance` rounds the x.
+   */
+  decomposition?: DecomposedGlyph;
   /** `GlyphPlacement.glyphIndex`. */
   glyphIndex?: number;
   /** `GlyphPlacement.xOffset`. */
@@ -613,12 +609,12 @@ function placedDecomposition(
   face: FontMetrics,
   cluster: string,
   fontSizePx: number
-): PlacedDecomposition | undefined {
+): DecomposedGlyph | undefined {
   const decomposed = face.decomposition
     ? face.decomposition(cluster, fontSizePx)
     : composedCluster(face, cluster);
   if (!decomposed) return undefined;
-  const marks = decomposed.marks.map(({ char, xPx, yPx }) => ({ char, x: xPx, y: -godotRound(yPx) }));
+  const marks = decomposed.marks.map(({ char, x, y }) => ({ char, x, y: -godotRound(y) }));
   return { base: decomposed.base, marks };
 }
 
@@ -631,6 +627,32 @@ function composedCluster(face: FontMetrics, cluster: string): DecomposedGlyph | 
   if (codePointCount(cluster) < 2) return null;
   const drawn = normalisedCharacters(cluster, (ch) => face.hasGlyph(ch));
   return drawn?.length === 1 ? { base: drawn[0]!, marks: [] } : null;
+}
+
+/**
+ * The glyphs of `placed` where its face draws its cluster as `decomposition`: the base, then each
+ * mark at the pen after the base with no advance, as HarfBuzz emits a cluster. Each keeps the
+ * cluster's source text.
+ */
+function clusterPlacements(placed: GlyphPlacement, { base, marks }: DecomposedGlyph): GlyphPlacement[] {
+  const penAfterBase = placed.x + placed.advance;
+  const cluster = placed.char;
+  return [
+    { ...placed, char: base, cluster },
+    ...marks.map(({ char, x, y }) => {
+      const xOffset = x - placed.advance;
+      return {
+        ...placed,
+        char,
+        cluster,
+        x: penAfterBase,
+        advance: 0,
+        glyph: null,
+        xOffset: xOffset !== 0 ? xOffset : undefined,
+        ...(y !== 0 && { yOffset: y }),
+      };
+    }),
+  ];
 }
 
 /** The text of the cluster that runs from `start` to `end`. */
@@ -860,10 +882,31 @@ function roundAdvancesToWholePixels(glyphs: BreakGlyph[], chars: ArrayLike<strin
     // A one-face run under subpixel positioning rounds nothing, so it builds no index list.
     if (chain.length === 1 && fontUsesSubpixelPositioning(style.sizes[start]!, chain[0]!)) continue;
     const isRtl = isRtlRun(style, start);
+    if (chain.length === 1) {
+      roundOneFaceRun(glyphs, chars, start, end, isRtl);
+      continue;
+    }
     const indices = Array.from({ length: end - start }, (_v, k) => start + k);
     if (isRtl) indices.reverse();
     roundFaceRun(glyphs, chars, style, indices, chain, 0);
   }
+}
+
+/** `roundFaceRun` for a run whose face has no fallback: every glyph of `[start, end)` draws in it. */
+function roundOneFaceRun(
+  glyphs: BreakGlyph[],
+  chars: ArrayLike<string>,
+  start: number,
+  end: number,
+  isRtl: boolean
+): void {
+  let advanceRemainder = 0;
+  if (isRtl)
+    for (let i = end - 1; i >= start; i--)
+      advanceRemainder = roundGlyphAdvance(glyphs, chars, i, advanceRemainder);
+  else
+    for (let i = start; i < end; i++)
+      advanceRemainder = roundGlyphAdvance(glyphs, chars, i, advanceRemainder);
 }
 
 /**
@@ -888,22 +931,29 @@ function roundGlyphAdvance(
   // `x_off` rounds with the remainder too (`:7064`): a glyph after an exact half pixel draws a pixel off its pen.
   const xOffset = godotRound(carried);
   if (xOffset !== 0) glyphs[i]!.xOffset = xOffset;
-  roundMarkOffsets(glyphs[i]!.decomposition, carried, rounded);
+  const { decomposition } = glyphs[i]!;
+  if (decomposition) glyphs[i]!.decomposition = withRoundedMarks(decomposition, carried, rounded);
   return fullAdvance - rounded;
 }
 
 /**
  * A mark's `x_off` rounds from the pen after the base, with the remainder the base left
  * (`text_server_adv.cpp:7062`): the half-way ties round away from zero in that frame, not from the
- * base's origin. Mutates the marks.
+ * base's origin.
  */
-function roundMarkOffsets(
-  decomposition: PlacedDecomposition | undefined,
+function withRoundedMarks(
+  { base, marks }: DecomposedGlyph,
   carriedPx: number,
   roundedAdvancePx: number
-): void {
-  for (const mark of decomposition?.marks ?? [])
-    mark.x = roundedAdvancePx + godotRound(carriedPx - roundedAdvancePx + mark.x);
+): DecomposedGlyph {
+  return {
+    base,
+    marks: marks.map(({ char, x, y }) => ({
+      char,
+      x: roundedAdvancePx + godotRound(carriedPx - roundedAdvancePx + x),
+      y,
+    })),
+  };
 }
 
 /**
@@ -927,7 +977,8 @@ function roundFaceRun(
   let advanceRemainder = 0;
   let stretch: number[] = [];
   const flushStretch = () => {
-    if (stretch.length > 0) roundFaceRun(glyphs, chars, style, stretch, chain, depth + 1);
+    if (stretch.length === 0) return;
+    roundFaceRun(glyphs, chars, style, stretch, chain, depth + 1);
     stretch = [];
   };
   for (const i of indices) {
@@ -1167,8 +1218,6 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
   // start a new line (mirrors Label::_shape() never OR-ing a wrap flag in).
   const effectiveWidth = autowrapMode === AutowrapMode.AUTOWRAP_OFF ? 0 : boxWidthPx;
 
-  const linePitchPx = getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx);
-
   const lines: TextLineLayout[] = [];
   for (const [paragraphIndex, para] of splitParagraphs(
     transformed,
@@ -1245,12 +1294,12 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       const glyphs = bidi
         .visualOrder(start, clampedEnd)
         .filter((idx) => chars[idx] !== '' && !breakGlyphs[idx]!.isClusterTail)
-        .map((idx): GlyphPlacement => {
+        .flatMap((idx): GlyphPlacement[] => {
           const glyph = breakGlyphs[idx]!;
           const advance = lineAdvances ? lineAdvances[idx - start]! : glyph.advance;
           const x = penX;
           penX += advance;
-          return {
+          const placed: GlyphPlacement = {
             char: clusterText(chars, idx, glyph.end),
             x,
             advance,
@@ -1261,13 +1310,13 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
                 : null,
             controlCodepoint: glyph.controlCodepoint,
             emboldenGrowthPx: glyph.emboldenGrowthPx || undefined,
-            decomposition: glyph.decomposition,
             glyphIndex: glyph.glyphIndex,
             xOffset: glyph.xOffset,
             sourceIndex: para.offset + idx,
             fontSizePx: runStyle.sizes[idx]!,
             fontMetrics: runStyle.faces[idx]!,
           };
+          return glyph.decomposition ? clusterPlacements(placed, glyph.decomposition) : [placed];
         });
       lines.push({
         text: paraText.slice(start, clampedEnd),
@@ -1282,10 +1331,47 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
   }
 
   const widthPx = widestLineWidthPx(lines);
+  const { baselineOffsetPx, linePitchPx } = lineMetrics(lines, fontMetrics, fontSizePx, lineSpacingPx);
   const heightPx = lines.length * linePitchPx;
-  const baselineOffsetPx = getFontAscentPx(fontMetrics, fontSizePx);
 
   return { shapedText: transformed, lines, linePitchPx, widthPx, heightPx, baselineOffsetPx, fontMetrics };
+}
+
+/** How far the glyph offsets of `glyphs` reach above and below the baseline, px: `-y_off` and `y_off`. */
+export function glyphOffsetReachPx(glyphs: Iterable<GlyphPlacement>): { abovePx: number; belowPx: number } {
+  let abovePx = 0;
+  let belowPx = 0;
+  for (const { yOffset = 0 } of glyphs) {
+    abovePx = Math.max(abovePx, -yOffset);
+    belowPx = Math.max(belowPx, yOffset);
+  }
+  return { abovePx, belowPx };
+}
+
+/**
+ * The font's ascent and pitch, each grown by a glyph offset past the font's line: Godot's line
+ * ascent is `MAX(ascent, -y_off)` and its descent `MAX(descent, y_off)` (`text_server_adv.cpp:5161-5162`).
+ * One pitch serves every line, so the furthest offset of any line sets it.
+ */
+function lineMetrics(
+  lines: readonly TextLineLayout[],
+  fontMetrics: FontMetrics,
+  fontSizePx: number,
+  lineSpacingPx: number
+): { baselineOffsetPx: number; linePitchPx: number } {
+  const ascentPx = getFontAscentPx(fontMetrics, fontSizePx);
+  const descentPx = getFontDescentPx(fontMetrics, fontSizePx);
+  let liftPx = 0;
+  let dropPx = 0;
+  for (const { glyphs } of lines) {
+    const { abovePx, belowPx } = glyphOffsetReachPx(glyphs);
+    liftPx = Math.max(liftPx, abovePx - ascentPx);
+    dropPx = Math.max(dropPx, belowPx - descentPx);
+  }
+  return {
+    baselineOffsetPx: ascentPx + liftPx,
+    linePitchPx: getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx) + liftPx + dropPx,
+  };
 }
 
 /** The width of the widest of `lines`, or 0 for none. */

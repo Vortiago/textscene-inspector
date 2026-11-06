@@ -27,7 +27,6 @@ import {
   isControlChar,
   shapedTextSizeWidthPx,
   type GlyphPlacement,
-  type PlacedDecomposition,
 } from '../../../r3f/controls/native/text/textLayout';
 import { perObject } from '../../../utils/perObject';
 import { recentlyRead } from '../../../utils/recentlyRead';
@@ -154,39 +153,19 @@ function glyphMeshesByFace(
   properties: TextMeshProperties,
   face: TextMeshFace,
   fallbacks: readonly TextMeshFace[]
-): (glyph: GlyphPlacement, char: string) => GlyphMeshData | null {
+): (glyph: GlyphPlacement) => GlyphMeshData | null {
   const meshesOf = perObject((glyphFace: TextMeshFace) => glyphMeshes(properties, glyphFace));
   const fallbackFaces = new Map<FontMetrics, TextMeshFace>(fallbacks.map((fallback) => [fallback, fallback]));
-  return (glyph, char) => {
+  return (glyph) => {
     const { glyphIndexOf, meshOf } = meshesOf(fallbackFaces.get(glyph.fontMetrics) ?? face);
-    return meshOf(glyph.glyphIndex ?? glyphIndexOf(char));
+    return meshOf(glyph.glyphIndex ?? glyphIndexOf(glyph.char));
   };
-}
-
-/**
- * A decomposed glyph's base at `baseOrigin`, and its marks, each at its offset from the glyph's
- * origin, px with y down.
- */
-function placeDecomposedGlyph(
-  placed: PlacedGlyph[],
-  { base, marks }: PlacedDecomposition,
-  origin: { x: number; y: number },
-  baseOrigin: { x: number; y: number },
-  pixelSize: number,
-  meshOf: (char: string) => GlyphMeshData | null
-): void {
-  const baseMesh = meshOf(base);
-  if (baseMesh) placed.push({ ...baseOrigin, mesh: baseMesh });
-  for (const { char, x, y } of marks) {
-    const mesh = meshOf(char);
-    if (mesh) placed.push({ x: origin.x + x * pixelSize, y: origin.y - y * pixelSize, mesh });
-  }
 }
 
 function placeGlyphs(
   properties: TextMeshProperties,
   { lines, baselineOffsetPx, linePitchPx }: TextMeshLines,
-  meshOf: (glyph: GlyphPlacement, char: string) => GlyphMeshData | null
+  meshOf: (glyph: GlyphPlacement) => GlyphMeshData | null
 ): PlacedGlyph[] {
   const { pixelSize } = properties;
   const blockHeight = lines.length * linePitchPx * pixelSize;
@@ -202,17 +181,12 @@ function placeGlyphs(
     for (const glyph of line.glyphs) {
       const codepoint = glyph.char.codePointAt(0)!;
       if (isControlChar(codepoint) || codepoint === ZERO_WIDTH_SPACE) continue;
-      const origin = { x: startX + glyph.x * pixelSize, y: baseline };
-      const baseOrigin = { x: origin.x + (glyph.xOffset ?? 0) * pixelSize, y: baseline };
-      const { decomposition } = glyph;
-      if (decomposition) {
-        placeDecomposedGlyph(placed, decomposition, origin, baseOrigin, pixelSize, (char) =>
-          meshOf(glyph, char)
-        );
-        continue;
-      }
-      const mesh = meshOf(glyph, glyph.char);
-      if (mesh) placed.push({ ...baseOrigin, mesh });
+      const origin = {
+        x: startX + (glyph.x + (glyph.xOffset ?? 0)) * pixelSize,
+        y: baseline - (glyph.yOffset ?? 0) * pixelSize,
+      };
+      const mesh = meshOf(glyph);
+      if (mesh) placed.push({ ...origin, mesh });
       else {
         const box = hexCodeBoxAdvanceSize(properties.fontSize, codepoint);
         placed.push({ ...origin, box: { x: box.x * pixelSize, y: box.y * pixelSize } });

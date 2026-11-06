@@ -80,15 +80,11 @@ function implicitBreakIndices(runs: readonly CountedRun[]): ReadonlySet<number> 
 }
 
 /**
- * The glyphs `_draw_line` still draws, or undefined when it skips none (Before Shaping cuts the text
- * instead). The budget counts every character, trimmed edge spaces and paragraph terminators included
+ * The glyphs `_draw_line` still draws. A caller has a counted layout only past Before Shaping, which
+ * cuts the text instead (`countedLayoutForReveal`). The budget counts every character, trimmed edge spaces and paragraph terminators included
  * (`:8017-8033`), but not the newline of an implicit break, which Godot has no character for.
  */
-export function revealedGlyphs(
-  counted: CountedLayout,
-  reveal: RichTextReveal
-): ReadonlySet<GlyphPlacement> | undefined {
-  if (reveal.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return undefined;
+export function revealedGlyphs(counted: CountedLayout, reveal: RichTextReveal): ReadonlySet<GlyphPlacement> {
   const shownLines = applyVisibleCharsReveal(counted.lines, {
     behavior: reveal.behavior,
     text: counted.text,
@@ -110,9 +106,8 @@ export function isPrefixShown(
   counted: CountedLayout,
   reveal: RichTextReveal,
   line: TextLineLayout,
-  revealed: ReadonlySet<GlyphPlacement> | undefined
+  revealed: ReadonlySet<GlyphPlacement>
 ): boolean {
-  if (reveal.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return true;
   if (reveal.behavior === VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING) {
     const { skippedBefore, text } = counted;
     const paragraphStart = line.paragraphStart!;
@@ -120,7 +115,7 @@ export function isPrefixShown(
     return paragraphStart - (skippedBefore?.[paragraphStart] ?? 0) <= utf16OffsetOf(text, reveal.characters);
   }
   const firstGlyph = line.glyphs[0];
-  return firstGlyph === undefined || (revealed?.has(firstGlyph) ?? true);
+  return firstGlyph === undefined || revealed.has(firstGlyph);
 }
 
 /** A layout as the budget counts it: its lines without the implicit newlines, and Godot's character index of each glyph. */

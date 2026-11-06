@@ -46,7 +46,5 @@ const drawsOutsideAtlas = perObject((layout: TextLayoutResult): boolean =>
 );
 
 function isOutsideAtlas(glyph: GlyphPlacement): boolean {
-  const { decomposition } = glyph;
-  if (glyph.glyphIndex !== undefined) return true;
-  return !!decomposition && (decomposition.marks.length > 0 || glyph.glyph === null);
+  return glyph.glyphIndex !== undefined || (glyph.cluster !== undefined && glyph.glyph === null);
 }

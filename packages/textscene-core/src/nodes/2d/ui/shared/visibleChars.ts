@@ -26,6 +26,11 @@ interface VisibleCharsState {
 /** Godot's construction defaults for both classes (label.h:75-76, rich_text_label.h:553). */
 const DEFAULT_VISIBLE_CHARS_STATE: VisibleCharsState = { visibleChars: -1, visibleRatio: 1 };
 
+/** The ratio `set_visible_characters` leaves on empty text, where `amount / total` has no value. */
+type RatioOnEmptyText = (state: VisibleCharsState) => number;
+const resetRatio: RatioOnEmptyText = () => 1;
+const keepRatio: RatioOnEmptyText = (state) => state.visibleRatio;
+
 /**
  * `Label::set_visible_characters` (label.cpp:1285-1299): a no-op when `p_amount` matches the current
  * field, else re-derives both fields from the current text length. On empty text Label resets the
@@ -35,11 +40,10 @@ function applySetVisibleCharacters(
   state: VisibleCharsState,
   amount: number,
   totalChars: number,
-  resetsRatioOnEmptyText: boolean
+  ratioOnEmptyText: RatioOnEmptyText
 ): VisibleCharsState {
   if (state.visibleChars === amount) return state;
-  const emptyTextRatio = resetsRatioOnEmptyText ? 1 : state.visibleRatio;
-  const visibleRatio = amount === -1 ? 1 : totalChars === 0 ? emptyTextRatio : amount / totalChars;
+  const visibleRatio = amount === -1 ? 1 : totalChars === 0 ? ratioOnEmptyText(state) : amount / totalChars;
   return { visibleChars: amount, visibleRatio, lastSetter: 'characters' };
 }
 
@@ -72,7 +76,7 @@ function applySetVisibleRatio(
 function resolveVisibleChars(
   properties: Record<string, string>,
   textLength: () => number,
-  resetsRatioOnEmptyText: boolean
+  ratioOnEmptyText: RatioOnEmptyText
 ): VisibleCharsState | undefined {
   const rawChars = properties.visible_characters;
   const rawRatio = properties.visible_ratio;
@@ -84,7 +88,7 @@ function resolveVisibleChars(
     if (key === 'visible_characters') {
       const amount = parseOptionalInt(rawChars);
       if (amount !== undefined)
-        state = applySetVisibleCharacters(state, amount, totalChars, resetsRatioOnEmptyText);
+        state = applySetVisibleCharacters(state, amount, totalChars, ratioOnEmptyText);
     } else if (key === 'visible_ratio') {
       const ratio = parseOptionalFloat(rawRatio);
       if (ratio !== undefined) state = applySetVisibleRatio(state, ratio, totalChars);
@@ -98,7 +102,7 @@ export function resolveLabelVisibleChars(
   properties: Record<string, string>,
   textLength: () => number
 ): VisibleCharsState | undefined {
-  return resolveVisibleChars(properties, textLength, true);
+  return resolveVisibleChars(properties, textLength, resetRatio);
 }
 
 /** RichTextLabel's pair: empty text keeps the ratio (`rich_text_label.cpp:7898-7900`). */
@@ -106,7 +110,7 @@ export function resolveRichTextVisibleChars(
   properties: Record<string, string>,
   textLength: () => number
 ): VisibleCharsState | undefined {
-  return resolveVisibleChars(properties, textLength, false);
+  return resolveVisibleChars(properties, textLength, keepRatio);
 }
 
 interface VisibleCharsBudget {
@@ -163,37 +167,33 @@ function revealCharacters(lines: readonly TextLineLayout[], budget: VisibleChars
       glyphs: line.glyphs.filter((glyph) => {
         const index = indexOf(glyph);
         if (index === undefined) return isEllipsisShown;
-        // A cluster's `end` is past its last character, so a ligature shows whole or not at all.
-        return index + glyph.char.length <= visibleEnd;
+        // A cluster's `end` is past its last character, so a ligature, or a base and its marks, shows whole.
+        return index + (glyph.cluster ?? glyph.char).length <= visibleEnd;
       }),
     };
   });
 }
 
 /**
- * The glyphs Godot counts for `glyph` (`shaped_text_get_glyph_count`): a cluster draws one, and a
- * base drawn with marks one more for each mark.
- */
-const glyphCountOf = (glyph: GlyphPlacement): number => 1 + (glyph.decomposition?.marks.length ?? 0);
-
-/**
- * The glyphs and the characters, in code points, that `lines` draw. Kept per lines array, which
- * RichTextLabel passes again on each reveal tick. Label builds a new array, so it counts again.
+ * The glyphs and the characters, in code points, that `lines` draw. Each placement is one glyph
+ * (`shaped_text_get_glyph_count`). The placements of one cluster count its characters once. Kept per
+ * lines array, which RichTextLabel passes again on each reveal tick. Label builds a new array.
  */
 const drawnCountsOf = perObject((lines: readonly TextLineLayout[]) => {
   let glyphs = 0;
   let characters = 0;
   for (const line of lines)
-    for (const glyph of line.glyphs) {
-      glyphs += glyphCountOf(glyph);
-      characters += codePointCount(glyph.char);
-    }
+    line.glyphs.forEach((glyph, i) => {
+      glyphs++;
+      const before = line.glyphs[i - 1];
+      const continuesCluster = glyph.cluster !== undefined && before?.sourceIndex === glyph.sourceIndex;
+      if (!continuesCluster) characters += codePointCount(glyph.cluster ?? glyph.char);
+    });
   return { glyphs, characters };
 });
 
 /**
  * The GLYPHS behaviours: `visible_ratio * total_glyphs` glyphs, counted in visual order across lines.
- * A placement shows while its first glyph is within the budget.
  */
 function revealGlyphs(lines: readonly TextLineLayout[], budget: VisibleCharsBudget): TextLineLayout[] {
   if (budget.visibleRatio === undefined || budget.visibleRatio >= 1) return [...lines];
@@ -209,9 +209,9 @@ function revealGlyphs(lines: readonly TextLineLayout[], budget: VisibleCharsBudg
   const hideBefore = fromEnd ? totalGlyphs - limit : 0;
   let seen = 0;
   return lines.map((line) => {
-    const glyphs = line.glyphs.filter((glyph) => {
+    const glyphs = line.glyphs.filter(() => {
       const isShown = fromEnd ? seen >= hideBefore : seen < limit;
-      seen += glyphCountOf(glyph);
+      seen++;
       return isShown;
     });
     return glyphs.length === line.glyphs.length ? line : { ...line, glyphs };
