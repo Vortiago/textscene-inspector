@@ -39,6 +39,14 @@ describe('isPruned', () => {
     expect(isPruned(sidecarOf('albedo.png', 'PNG', 'texture'))).toBe(false);
   });
 
+  it('keeps a dynamic font sidecar, whose params become the FontFile properties', () => {
+    expect(isPruned(sidecarOf('open_sans.ttf', 'TTF', 'font_data_dynamic'))).toBe(false);
+  });
+
+  it('keeps a BMFont sidecar, which names the scale mode and fallbacks', () => {
+    expect(isPruned(sidecarOf('pixel.fnt', 'info', 'font_data_bmfont'))).toBe(false);
+  });
+
   it('prunes an audio sidecar', () => {
     expect(isPruned(sidecarOf('beep.wav', 'RIFF', 'wav'))).toBe(true);
   });
