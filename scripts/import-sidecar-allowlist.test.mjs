@@ -208,7 +208,7 @@ const DYNAMIC_FONT_MUST_BE_DEFAULT = new Map([
 
 /**
  * The font sidecars that leave a `DYNAMIC_FONT_MUST_BE_DEFAULT` option, with the values they set.
- * The previewer does not apply these options yet (#1396).
+ * The previewer does not apply these options yet.
  */
 const KNOWN_FONT_DEVIATIONS = {
   'scenes/demos/3d/voxel/menu/theme/TinyUnicode.ttf.import': { antialiasing: '0' },
