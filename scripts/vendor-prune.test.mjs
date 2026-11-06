@@ -7,7 +7,11 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DYNAMIC_FONT_IMPORTER, isPruned, sidecarImporter } from './vendor-prune.mjs';
+import { isPruned, sidecarImporter } from './vendor-prune.mjs';
+import {
+  BMFONT_IMPORTER,
+  DYNAMIC_FONT_IMPORTER,
+} from '../packages/textscene-core/src/godot/import/fontImport.ts';
 
 const root = mkdtempSync(join(tmpdir(), 'vendor-prune-'));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
@@ -44,7 +48,7 @@ describe('isPruned', () => {
   });
 
   it('keeps a BMFont sidecar, which names the scale mode and fallbacks', () => {
-    expect(isPruned(sidecarOf('pixel.fnt', 'info', 'font_data_bmfont'))).toBe(false);
+    expect(isPruned(sidecarOf('pixel.fnt', 'info', BMFONT_IMPORTER))).toBe(false);
   });
 
   it('prunes an audio sidecar', () => {

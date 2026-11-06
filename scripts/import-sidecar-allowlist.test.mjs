@@ -11,7 +11,11 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
-import { DYNAMIC_FONT_IMPORTER, READ_IMPORTERS, sidecarImporter } from './vendor-prune.mjs';
+import { READ_IMPORTERS, sidecarImporter } from './vendor-prune.mjs';
+import {
+  BMFONT_IMPORTER,
+  DYNAMIC_FONT_IMPORTER,
+} from '../packages/textscene-core/src/godot/import/fontImport.ts';
 import { TEXTURE_IMPORTER } from '../packages/textscene-core/src/godot/import/textureImport.ts';
 import {
   TEXTURE_2D_ARRAY_IMPORTER,
@@ -203,7 +207,7 @@ const DYNAMIC_FONT_MUST_BE_DEFAULT = new Map([
 
 /**
  * The font sidecars that leave a `DYNAMIC_FONT_MUST_BE_DEFAULT` option, with the values they set.
- * The previewer draws every one of these fonts from its outlines, so the option is not applied.
+ * The previewer does not apply these options yet (#1396).
  */
 const KNOWN_FONT_DEVIATIONS = {
   'scenes/demos/3d/voxel/menu/theme/TinyUnicode.ttf.import': { antialiasing: '0' },
@@ -355,16 +359,26 @@ function topLevelBlocks(text) {
 function defaultFindings(name, { importer, params }, deviations = {}) {
   const findings = [];
   for (const [key, value] of Object.entries(params)) {
-    const expected =
-      MUST_BE_DEFAULT.get(key) ??
-      (importer === TEXTURE_IMPORTER ? TEXTURE_MUST_BE_DEFAULT.get(key) : undefined) ??
-      (importer === DYNAMIC_FONT_IMPORTER ? DYNAMIC_FONT_MUST_BE_DEFAULT.get(key) : undefined);
+    const expected = MUST_BE_DEFAULT.get(key) ?? IMPORTER_MUST_BE_DEFAULT.get(importer)?.get(key);
     if (expected !== undefined && expected !== value && deviations[key] !== value) {
       findings.push(`${name}: ${key}=${value} would change the render (want ${expected || '""'})`);
     }
   }
   return findings;
 }
+
+/** Per importer, the parameters whose default is asserted. */
+const IMPORTER_MUST_BE_DEFAULT = new Map([
+  [TEXTURE_IMPORTER, TEXTURE_MUST_BE_DEFAULT],
+  [DYNAMIC_FONT_IMPORTER, DYNAMIC_FONT_MUST_BE_DEFAULT],
+]);
+
+/** Per importer, the parameters reviewed as read or inert at any value. */
+const IMPORTER_REVIEWED = new Map([
+  [TEXTURE_IMPORTER, TEXTURE_PARAMS],
+  [DYNAMIC_FONT_IMPORTER, DYNAMIC_FONT_INERT],
+  ...[...LAYERED_TEXTURE_IMPORTERS].map((importer) => [importer, LAYERED_TEXTURE_PARAMS]),
+]);
 
 const rel = (file) => relative(REPO_ROOT, file).split(sep).join('/');
 
@@ -392,7 +406,9 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
 
   it('keeps the sidecars of every importer core reads', () => {
     expect(
-      [TEXTURE_IMPORTER, ...LAYERED_TEXTURE_IMPORTERS].filter((importer) => !READ_IMPORTERS.has(importer))
+      [TEXTURE_IMPORTER, ...LAYERED_TEXTURE_IMPORTERS, DYNAMIC_FONT_IMPORTER, BMFONT_IMPORTER].filter(
+        (importer) => !READ_IMPORTERS.has(importer)
+      )
     ).toEqual([]);
   });
 
@@ -409,13 +425,7 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
       const { importer } = READ.get(file);
       for (const key of Object.keys(readParams(file))) {
         if (HONOURED.has(key) || INERT.has(key) || MUST_BE_DEFAULT.has(key)) continue;
-        if (
-          importer === DYNAMIC_FONT_IMPORTER &&
-          (DYNAMIC_FONT_INERT.has(key) || DYNAMIC_FONT_MUST_BE_DEFAULT.has(key))
-        )
-          continue;
-        if (LAYERED_TEXTURE_IMPORTERS.has(importer) && LAYERED_TEXTURE_PARAMS.has(key)) continue;
-        if (importer === TEXTURE_IMPORTER && (TEXTURE_PARAMS.has(key) || TEXTURE_MUST_BE_DEFAULT.has(key)))
+        if (IMPORTER_REVIEWED.get(importer)?.has(key) || IMPORTER_MUST_BE_DEFAULT.get(importer)?.has(key))
           continue;
         unknown.push(`${rel(file)}: ${key}`);
       }

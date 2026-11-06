@@ -7,9 +7,6 @@
 import { cpSync, existsSync, readFileSync, statSync } from 'node:fs';
 import { basename } from 'node:path';
 
-/** The importer of a raw TrueType, OpenType or WOFF font. */
-export const DYNAMIC_FONT_IMPORTER = 'font_data_dynamic';
-
 /**
  * The importers whose sidecars the previewer reads (ADR-0028): a scene's re-import options, a
  * texture's format and mip chain, and the slices of a 3D texture or a texture array, such as a
@@ -23,7 +20,7 @@ export const READ_IMPORTERS = new Set([
   '3d_texture',
   '2d_array_texture',
   'font_data_bmfont',
-  DYNAMIC_FONT_IMPORTER,
+  'font_data_dynamic',
 ]);
 
 /** Copies the tree at `src` to `dest` without what the prune drops, and returns the file count. */

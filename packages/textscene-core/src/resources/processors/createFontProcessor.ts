@@ -16,6 +16,7 @@ import {
 import type { DependencyGraph } from '../dependencyGraph';
 import { buildFontResource, fontResourceFromBitmap, fontResourceFromContainer } from '../fonts/font/loadFont';
 import { isFontContainerPath } from '../formats/dynamicfont/fontBytes';
+import { BMFONT_IMPORTER, DYNAMIC_FONT_IMPORTER } from '../../godot/import/fontImport';
 import { isBmfontPath } from '../formats/bmfont/extensions';
 import { loadBitmapFont } from '../formats/bmfont/loadBitmapFont';
 import type { PageImage } from '../formats/bmfont/pageFill';
@@ -62,15 +63,18 @@ export function createFontProcessor(
     return false;
   };
 
-  /** The `[params]` of a raw font's `.import` sidecar, which Godot's importer sets on the FontFile. */
-  const importParamsOf = async (path: string): Promise<Record<string, string>> => {
+  /**
+   * The `[params]` of a font's `.import` sidecar, which Godot's `importer` sets on the FontFile.
+   * A sidecar of another importer sets nothing on it, so it reads as none.
+   */
+  const importParamsOf = async (path: string, importer: string): Promise<Record<string, string>> => {
     const sidecar = await readImportSidecar({
       assetPath: path,
       dependent: { busType: 'font', key: path },
       fileEventBus,
       dependencies,
     });
-    return sidecar?.params ?? {};
+    return sidecar?.importer === importer ? sidecar.params : {};
   };
 
   /** A BMFont page: its bytes, decoded to pixels, with the format Godot's image loader gives the file. Records the page as a read of `font`, so a change to it reloads the font. */
@@ -89,7 +93,7 @@ export function createFontProcessor(
 
   /** A `.fnt` or `.font` file as a BMFont `FontFile`. The descriptor is text or binary, so a provider's string is encoded back to bytes. */
   const loadBitmap = async (path: string): Promise<FontFileResource> => {
-    const [data, importParams] = await Promise.all([readFile(path), importParamsOf(path)]);
+    const [data, importParams] = await Promise.all([readFile(path), importParamsOf(path, BMFONT_IMPORTER)]);
     const bytes = typeof data === 'string' ? (new TextEncoder().encode(data).buffer as ArrayBuffer) : data;
     return fontResourceFromBitmap(
       await loadBitmapFont(path, bytes, readPageImage(path), importParams),
@@ -99,7 +103,10 @@ export function createFontProcessor(
 
   /** A raw font container as a `FontFile`, with the `[params]` of its sidecar. */
   const loadContainer = async (path: string): Promise<FontFileResource> =>
-    fontResourceFromContainer(path, ...(await Promise.all([readFile(path), importParamsOf(path)])));
+    fontResourceFromContainer(
+      path,
+      ...(await Promise.all([readFile(path), importParamsOf(path, DYNAMIC_FONT_IMPORTER)]))
+    );
 
   /**
    * `font` with the fonts its `fallbacks` import param names loaded as its fallbacks, as both importers
