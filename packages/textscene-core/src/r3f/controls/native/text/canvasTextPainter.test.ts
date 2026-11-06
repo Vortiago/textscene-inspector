@@ -466,6 +466,13 @@ describe('paintSceneFontCanvas — embolden', () => {
     expect(calls.map((c) => c.op)).toEqual(['fillText']);
   });
 
+  it('leaves a character the font lacks to its hex-code box, so no host font draws it', () => {
+    const layout = layoutFor('AB', 0);
+    layout.lines[0]!.glyphs[1]!.controlCodepoint = 0x1f600;
+    const { calls } = paintRecording(layout, 0);
+    expect(calls.filter((c) => c.op === 'fillText').map((c) => c.args[0])).toEqual(['A']);
+  });
+
   it('draws a bold glyph filled and stroked by the growth, shifted right and up by half of it', () => {
     const layout = boldLayoutFor('A', 1.2);
     const { calls, canvasLayout } = paintRecording(layout, 0);

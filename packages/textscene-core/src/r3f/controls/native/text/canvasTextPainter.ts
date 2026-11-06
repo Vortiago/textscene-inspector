@@ -360,6 +360,8 @@ export function paintSceneFontCanvas(
     if (isLineSheared) shearAboutBaseline(ctx, skew, baselineY);
     for (const gp of line.glyphs) {
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
+      // A hex-code box draws as quads (`TextRunMesh`), so the text the font lacks never reaches a host font.
+      if (gp.controlCodepoint !== undefined) continue;
       // Godot snaps the glyph's origin, the pen plus its offset (`shaped_text_draw`).
       const originX = gp.x + (gp.xOffset ?? 0);
       const penX =
