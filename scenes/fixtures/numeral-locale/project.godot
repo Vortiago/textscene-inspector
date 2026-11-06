@@ -16,4 +16,4 @@ theme/custom_font="res://fonts/dejavu-sans-numerals-subset.ttf"
 
 [internationalization]
 
-locale/test="ar"
+locale/test="ar-EG"
