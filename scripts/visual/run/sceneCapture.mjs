@@ -47,7 +47,7 @@ export async function captureScene(pageState, baseUrl, scene) {
   if (scene.navigation) {
     // The navmesh overlay defaults on, but is set explicitly, so the baseline rests on no default.
     const reason = await setDisplayToggle(page, 'Navigation', true);
-    if (reason) return { buffer: null, reason };
+    if (reason) return { buffer: null, reason: withFailedRequests(reason, diagnostics) };
     await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
     await page.mouse.move(0, 0);
   }
@@ -56,7 +56,7 @@ export async function captureScene(pageState, baseUrl, scene) {
     // "Visible Collision Shapes" is off by default (ADR-0005/0006), so every other golden hides a
     // CollisionShape gizmo.
     const reason = await setDisplayToggle(page, 'Collisions', true);
-    if (reason) return { buffer: null, reason };
+    if (reason) return { buffer: null, reason: withFailedRequests(reason, diagnostics) };
     // Let CameraFit's load-time timers finish before changing what is on
     // screen, and take the pointer off the toolbar so no hover is captured.
     await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
@@ -72,7 +72,8 @@ export async function captureScene(pageState, baseUrl, scene) {
     try {
       await row.waitFor({ timeout: 10000 });
     } catch {
-      return { buffer: null, reason: `select target not found in tree: ${scene.select}` };
+      const reason = `select target not found in tree: ${scene.select}`;
+      return { buffer: null, reason: withFailedRequests(reason, diagnostics) };
     }
     // After CameraFit's fit timers (150/500/1100 ms after mount) have all fired: a click before the
     // last one lets it see the new gizmo and widen the frame, and host load picks the winner. The

@@ -205,6 +205,11 @@ function brief(value, limit = 200) {
   return text.length > limit ? `${text.slice(0, limit)}… (+${text.length - limit} chars)` : text;
 }
 
+/** A failed request with its url cut by `brief`, so a long url leaves room for the rest of the line. */
+function briefUrl(request) {
+  return { ...request, url: brief(request.url) };
+}
+
 /** Assertions every run must satisfy, whatever the scene paints. */
 function checkRun(gate, label, report) {
   const where = `[${label}]`;
@@ -241,7 +246,7 @@ function checkRun(gate, label, report) {
   );
   gate.check(
     webview.failedRequests.length === 0,
-    `${where} failed request(s) from the preview: ${brief(describeFailedRequests(webview.failedRequests))}`
+    `${where} failed request(s) from the preview: ${describeFailedRequests(webview.failedRequests.map(briefUrl))}`
   );
   gate.check(
     webview.consoleErrors.length === 0,
