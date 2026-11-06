@@ -29,6 +29,16 @@ An outline pass draws the font's outline set at the glyph's own rectangle. A fix
 the outline size at 1 for its cache (`text_server_adv.h:406-414`), so every `outline_size` above 0
 draws the same set.
 
+## Fallbacks
+
+The previewer models the re-imported state of a BMFont, in which its `fallbacks` import param names
+fonts that have imported. A fresh import in the editor loses a raw-font fallback: the editor sorts
+imports by import order, then by importer name (`editor_file_system.h:294-296`), so `font_data_bmfont`
+runs before `font_data_dynamic`, and `ResourceImporterBMFont::import` loads the raw font before it has
+an imported resource (`resource_importer_bmfont.cpp:98`). A second import keeps the fallback, and a
+project that has been opened twice holds that state. A Label that falls back from a BMFont to a raw
+font draws hex-code boxes in a fresh project and the fallback in a settled one.
+
 ## Consequences
 
 A character the descriptor lacks draws a hex-code box, where Godot draws it from the font's
