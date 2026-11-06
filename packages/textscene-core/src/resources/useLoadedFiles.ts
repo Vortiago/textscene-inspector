@@ -4,7 +4,7 @@
  * A kind of resource has its own cache and bus, so `useCachedFiles` serves them all.
  */
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { ParsedResource } from '../parser/parsedResource';
 import type { FontResource } from './fonts/font/types';
 import type { ThemeResource } from './styles/theme/types';
@@ -83,11 +83,7 @@ export function useCachedFiles<T extends object>(
   const loader = kind && ambientLoader;
   const cache = kind && loader ? kind.cacheOf(loader) : null;
   const readPaths = useRef<ReadonlySet<string>>(NO_PATHS);
-  const busVersion = useCacheVersion(loader, kind?.busTypes ?? NO_BUS_TYPES, readPaths, {
-    onlyReadKeys: true,
-  });
-  const [missedSettles, setMissedSettles] = useState(0);
-  const version = busVersion + missedSettles;
+  const version = useCacheVersion(loader, kind?.busTypes ?? NO_BUS_TYPES, readPaths, { onlyReadKeys: true });
   const planned = useMemo(
     () => (kind ? [...new Set(plan((path) => cache?.getCached(path) ?? undefined))] : []),
     // `version` is a cache-buster: the cache changes outside React.
@@ -108,34 +104,12 @@ export function useCachedFiles<T extends object>(
     [cache, paths, version]
   );
   const files = useStableEntries(read);
-  useMissedSettle(cache, files, () => setMissedSettles((count) => count + 1));
   useMissingFiles(files);
 
   const loadedFile = useMemo((): CachedFileReader<T> => (path) => files.get(path) ?? undefined, [files]);
   const isLoading = useMemo(() => loader !== null && hasUnsettledFile(files), [loader, files]);
   usePendingWhile(isLoading);
   return { loadedFile, isLoading };
-}
-
-/**
- * Calls `onMissed` when a file settled between the render that read `files` and the bus
- * subscription, which commits after the render: that settle woke no one, and its reader would load
- * for good. It runs after the subscription, since `useCacheVersion` is called first.
- */
-function useMissedSettle<T extends object>(
-  cache: ResourceProcessor<T> | null,
-  files: ReadonlyMap<string, CachedFile<T>>,
-  onMissed: () => void
-): void {
-  useEffect(() => {
-    if (!cache) return;
-    const hasMissed = [...files].some(
-      ([path, file]) => file === undefined && cache.getCached(path) !== undefined
-    );
-    if (hasMissed) onMissed();
-    // `onMissed` only bumps a counter, so a new identity each render must not re-run the check.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cache, files]);
 }
 
 function hasUnsettledFile(files: ReadonlyMap<string, CachedFile<object>>): boolean {

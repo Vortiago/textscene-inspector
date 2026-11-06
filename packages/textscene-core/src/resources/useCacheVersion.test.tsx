@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
+import { act, render, renderHook } from '@testing-library/react';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
 import { useCacheVersion } from './useCacheVersion';
 import type { ResourceLoader } from './ResourceLoader';
@@ -12,6 +12,29 @@ function mount(busTypes: Parameters<typeof useCacheVersion>[1], read?: string[])
 }
 
 describe('useCacheVersion', () => {
+  it('moves on for a load that settles between the render and the subscription (error path)', () => {
+    const fake = createFakeResourceLoader();
+    let version = 0;
+    function Reader() {
+      version = useCacheVersion(fake.loader as ResourceLoader, ['font']);
+      return null;
+    }
+    // Renders after `Reader`, before the effects commit: the sibling's load lands in that gap.
+    function Sibling() {
+      fake.fonts._resolve('res://a.ttf', {} as never);
+      return null;
+    }
+
+    render(
+      <>
+        <Reader />
+        <Sibling />
+      </>
+    );
+
+    expect(version).toBeGreaterThan(0);
+  });
+
   it('moves on when a listed bus loads or fails a key', () => {
     const { fake, hook } = mount(['theme', 'font']);
     const start = hook.result.current;

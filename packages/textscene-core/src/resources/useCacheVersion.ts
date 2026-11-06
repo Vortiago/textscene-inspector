@@ -4,7 +4,7 @@
  * caches change outside React, so the reader re-derives whenever this number moves.
  */
 
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { ResourceLoader } from './ResourceLoader';
 import type { ResourceType } from './ResourceEventBus';
 
@@ -14,6 +14,8 @@ import type { ResourceType } from './ResourceEventBus';
  * read, is requested again. It does not wait for every such key: one that never settles
  * would freeze the reader. With `onlyReadKeys`, a `loaded` or `failed` on a key outside
  * `readKeys` moves nothing, so a reader of few files does not render for every file in the project.
+ * A load that settles between the render and the subscription, which commits later, moves it once
+ * after subscribing: that settle woke no one, and its reader would wait for good.
  */
 export function useCacheVersion(
   loader: ResourceLoader | null | undefined,
@@ -22,9 +24,12 @@ export function useCacheVersion(
   { onlyReadKeys = false } = {}
 ): number {
   const [version, setVersion] = useState(0);
+  const settledAtRender = useRef(0);
+  settledAtRender.current = loader?.eventBus.settleCount ?? 0;
 
   useEffect(() => {
     if (!loader) return undefined;
+    if (loader.eventBus.settleCount !== settledAtRender.current) setVersion((v) => v + 1);
     return loader.eventBus.onChange(busTypes, ({ busType, event, key }) => {
       const isRead = readKeys?.current.has(key) ?? false;
       if (event !== 'invalidated') {
