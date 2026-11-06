@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
+import { useLayoutEffect } from 'react';
+import { act, render, renderHook } from '@testing-library/react';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
 import { useCacheVersion } from './useCacheVersion';
 import type { ResourceLoader } from './ResourceLoader';
@@ -58,6 +59,39 @@ describe('useCacheVersion', () => {
     const reads = renderWithSettleInGap(
       () => useCacheVersion(fake.loader as ResourceLoader, busTypes, readKeys, { onlyReadKeys: true }),
       () => fake.fonts._resolve('res://read.ttf', {} as never)
+    );
+
+    expect(reads.at(-1)).toBeGreaterThan(reads[0]!);
+  });
+
+  it('moves on with onlyReadKeys for a key a re-render reads first that settles before the commit', () => {
+    const fake = createFakeResourceLoader();
+    const busTypes = ['font'] as const;
+    const readKeys = { current: new Set<string>() };
+    const reads: number[] = [];
+    function Reader({ path }: { path?: string }) {
+      reads.push(useCacheVersion(fake.loader as ResourceLoader, busTypes, readKeys, { onlyReadKeys: true }));
+      useLayoutEffect(() => {
+        readKeys.current = new Set(path ? [path] : []);
+      }, [path]);
+      return null;
+    }
+    function Sibling({ path }: { path?: string }) {
+      if (path) fake.fonts._resolve(path, {} as never);
+      return null;
+    }
+    const { rerender } = render(
+      <>
+        <Reader />
+        <Sibling />
+      </>
+    );
+
+    rerender(
+      <>
+        <Reader path="res://late.ttf" />
+        <Sibling path="res://late.ttf" />
+      </>
     );
 
     expect(reads.at(-1)).toBeGreaterThan(reads[0]!);

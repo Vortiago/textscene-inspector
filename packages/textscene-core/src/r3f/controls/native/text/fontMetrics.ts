@@ -130,6 +130,17 @@ export function getFontLinePitchPx(
   return ascentPx + descentPx + lineSpacingPx;
 }
 
+/**
+ * Descent at `fontSizePx`: pitch less ascent at zero spacing, so `getFontLinePitchPx` keeps the one
+ * reading of the ceiling rule (`text_server_adv.cpp:1515-1516`).
+ */
+export function getFontDescentPx(
+  metrics: Pick<FontMetrics, 'ascent' | 'descent' | 'unitsPerEm' | 'pxPerUnit'>,
+  fontSizePx: number
+): number {
+  return getFontLinePitchPx(metrics, fontSizePx, 0) - getFontAscentPx(metrics, fontSizePx);
+}
+
 /** 1.0 in FreeType's 16.16 fixed point (`FT_Fixed`). */
 export const FIXED_16_16_ONE = 65536;
 

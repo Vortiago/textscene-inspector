@@ -52,6 +52,8 @@ export class ResourceEventBus {
   private sequence = 0;
   /** The last change to each key of each bus, at its sequence. Written only by `emit`. */
   private lastChanges = new Map<ResourceType, Map<string, SequencedChange>>();
+  /** The sequence of the last change on each bus. Written only by `emit`. */
+  private lastChangeAt = new Map<ResourceType, number>();
 
   constructor() {
     this.threeManager = new THREE.LoadingManager();
@@ -71,7 +73,7 @@ export class ResourceEventBus {
 
   /** True when a key on `busTypes` has changed after the token `since`. */
   hasChangedSince(busTypes: readonly ResourceType[], since: number): boolean {
-    return this.changesSince(busTypes, since).length > 0;
+    return busTypes.some((busType) => (this.lastChangeAt.get(busType) ?? 0) > since);
   }
 
   /**
@@ -79,7 +81,7 @@ export class ResourceEventBus {
    * A key that changed twice shows only its last change, which is what its cache holds now.
    */
   changesSince(busTypes: readonly ResourceType[], since: number): ResourceChange[] {
-    if (this.sequence <= since) return [];
+    if (!this.hasChangedSince(busTypes, since)) return [];
     const changes: SequencedChange[] = [];
     for (const busType of busTypes) {
       for (const change of this.lastChanges.get(busType)?.values() ?? []) {
@@ -142,6 +144,7 @@ export class ResourceEventBus {
     let changes = this.lastChanges.get(change.busType);
     if (!changes) this.lastChanges.set(change.busType, (changes = new Map()));
     changes.set(change.key, { ...change, at: ++this.sequence });
+    this.lastChangeAt.set(change.busType, this.sequence);
   }
 
   /**

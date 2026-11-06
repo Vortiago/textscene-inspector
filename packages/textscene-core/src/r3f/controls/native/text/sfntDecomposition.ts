@@ -69,7 +69,7 @@ export function sfntDecomposition(
     offsetsOf === undefined
       ? (offsetsOf = gposOffsetReader(sfnt) ?? fallbackMarkReaderOf(openOutlines))
       : offsetsOf;
-  const keptAtSize = recentlyRead<number, Map<string, DecomposedGlyph | null>>(MAX_KEPT_SIZES);
+  const keptAtSize = recentlyRead<number, Map<string, DecomposedGlyph>>(MAX_KEPT_SIZES);
   return (ch, fontSizePx) => {
     // A character drawn as one glyph or not at all skips the cache per size: `drawnOf` already caches it.
     const drawn = drawnOf(ch);
@@ -82,18 +82,17 @@ export function sfntDecomposition(
 }
 
 /** Declared once, not inline: an arrow inside the reader would allocate a closure on every read. */
-const newDecompositionsByCharacter = (): Map<string, DecomposedGlyph | null> => new Map();
+const newDecompositionsByCharacter = (): Map<string, DecomposedGlyph> => new Map();
 
 /** A font size animation passes through many sizes, so the decompositions of this many sizes are kept. */
 const MAX_KEPT_SIZES = 8;
 
-/** The glyph `drawn` makes at `fontSizePx`: null for a character drawn as one glyph or not at all. */
+/** The glyph that `drawn`, a base and at least one mark, makes at `fontSizePx`. */
 function decompose(
-  drawn: readonly string[] | null,
+  drawn: readonly string[],
   fontSizePx: number,
   readOffsets: () => SizedClusterOffsets | null
-): DecomposedGlyph | null {
-  if (!drawn || drawn.length < 2) return null;
+): DecomposedGlyph {
   const offsets = readOffsets()?.(drawn, fontSizePx);
   const marks = drawn.slice(1).map((char, i) => {
     const { x, y } = offsets?.[i + 1] ?? ORIGIN;

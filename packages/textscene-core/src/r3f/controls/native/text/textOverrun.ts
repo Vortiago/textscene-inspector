@@ -433,8 +433,12 @@ function findCut(
   for (let i = isParagraphRtl ? 0 : length - 1; i !== stopAt; i += step) {
     const glyph = glyphs[i]!;
     if (!isParagraphRtl) width -= glyph.advance;
-    // Godot tests a cut only at a glyph with `count > 0`, the first of its cluster, so a mark stays with its base.
-    if (!startsCluster(glyphs, i)) continue;
+    // Godot tests a cut only at a glyph with `count > 0`, the first of its cluster, so a mark stays
+    // with its base. Every glyph still leaves the right-to-left width (`:6106-6108`).
+    if (!startsCluster(glyphs, i)) {
+      if (isParagraphRtl) width -= glyph.advance;
+      continue;
+    }
     const isAboveMinCharThreshold = (isParagraphRtl ? length - 1 - i : i) >= ELL_MIN_CHARACTERS;
     if (!isAboveMinCharThreshold && lastValidCutWithoutEl !== -1) {
       trimPos = lastValidCutWithoutEl;

@@ -142,7 +142,7 @@ export function cmapCodePoints(dv: DataView, cmapOffset: number, glyphCount: num
  * FreeType. `FT_Get_Char_Index` answers 0 for an index at or past `maxp.numGlyphs`. Null for a font
  * with no `cmap` subtable this module reads.
  */
-export const sfntMapsGlyph = perObject((sfnt: SfntFile): ((ch: string) => boolean) | null => {
+const sfntMapsGlyph = perObject((sfnt: SfntFile): ((ch: string) => boolean) | null => {
   const glyphIndexOf = sfntGlyphIndex(sfnt);
   if (!glyphIndexOf) return null;
   const glyphCount = readGlyphCount(sfnt) ?? Infinity;

@@ -46,6 +46,7 @@ import {
   textEditDrawnGlyphs,
   textEditColorRunLine,
   textEditGlyphColorAt,
+  textEditGlyphLineIndex,
   textEditTabStopsPx,
   TEXT_EDIT_THEME_FONT_KEY,
 } from './nativeSolver';
@@ -317,7 +318,11 @@ export function TextEditBody({
                     // fixed font_color (text_edit.cpp:1674,1714).
                     const iconColor = multiplyModulate(
                       tint.own,
-                      textEditGlyphColorAt(spans, rowStartIndex + glyphIndex, baseFontColor)
+                      textEditGlyphColorAt(
+                        spans,
+                        textEditGlyphLineIndex(glyph, rowStartIndex, glyphIndex),
+                        baseFontColor
+                      )
                     );
                     return (
                       <CanvasItemGroup
@@ -339,7 +344,11 @@ export function TextEditBody({
                     const xOfs = glyph.x + (glyph.advance - GLYPH_ICON_SIZE_PX) / 2;
                     const iconColor = multiplyModulate(
                       tint.own,
-                      textEditGlyphColorAt(spans, rowStartIndex + glyphIndex, baseFontColor)
+                      textEditGlyphColorAt(
+                        spans,
+                        textEditGlyphLineIndex(glyph, rowStartIndex, glyphIndex),
+                        baseFontColor
+                      )
                     );
                     return (
                       <CanvasItemGroup

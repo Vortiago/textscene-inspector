@@ -17,6 +17,7 @@ import { isBitmapFontMetrics } from './bitmapFontMetrics';
 import {
   fontUsesSubpixelPositioning,
   getFontAscentPx,
+  getFontDescentPx,
   getFontEmboldenGrowthPx,
   getFontExtraAdvancePx,
   getFontGlyphAdvancePx,
@@ -1158,7 +1159,7 @@ function lineMetrics(
   lineSpacingPx: number
 ): { baselineOffsetPx: number; linePitchPx: number } {
   const ascentPx = getFontAscentPx(fontMetrics, fontSizePx);
-  const descentPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0) - ascentPx;
+  const descentPx = getFontDescentPx(fontMetrics, fontSizePx);
   let liftPx = 0;
   let dropPx = 0;
   for (const { glyphs } of lines) {

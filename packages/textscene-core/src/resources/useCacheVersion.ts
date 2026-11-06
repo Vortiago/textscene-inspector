@@ -100,6 +100,7 @@ export function useCacheVersion(
   const version = useSyncExternalStore(store.subscribe, store.get, store.get);
   const renderedAt = loader?.eventBus.changeToken() ?? 0;
   // A passive effect, after every layout effect of the commit: a caller fills `readKeys` in one.
-  useEffect(() => store.catchUp(renderedAt, version), [store, renderedAt, version]);
+  // It runs on every commit, as a render with the same token and version can still read a new key.
+  useEffect(() => store.catchUp(renderedAt, version));
   return version;
 }

@@ -327,7 +327,8 @@ export function paintSceneFontCanvas(
 
     ctx.save();
     // A contour line draws under the identity transform, so its stroke keeps its width in every direction.
-    if (skew !== 0 && !contourOutlines) shearAboutBaseline(ctx, skew, baselineY);
+    const isLineSheared = skew !== 0 && !contourOutlines;
+    if (isLineSheared) shearAboutBaseline(ctx, skew, baselineY);
     for (const gp of line.glyphs) {
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
       // Godot snaps the glyph's origin, the pen plus its offset (`shaped_text_draw`).
@@ -335,14 +336,17 @@ export function paintSceneFontCanvas(
       const penX =
         canvasLayout.offsetXPx +
         (snapsGlyphs ? canvasGlyphPenXPx(originPhasePx.x + originX, fontSizePx, metrics) : originX);
-      const glyphBaselineY = baselineY + (gp.yOffset ?? 0);
+      const yOffsetPx = gp.yOffset ?? 0;
+      const glyphBaselineY = baselineY + yOffsetPx;
+      // Godot shears a glyph about its own origin, so the line's shear must not move an offset origin.
+      const lineShearedPenX = isLineSheared ? penX + skew * yOffsetPx : penX;
       // A glyph shaped with no growth, in a layout that is not sheared or at an instance, stays on its plain ring.
       const hasVariedGlyph = gp.emboldenGrowthPx || isShapeVaried;
       const contours = contoursOf && hasVariedGlyph ? contoursOf(gp.char) : null;
       if (contours) (stroked ? strokeContours : fillContours)(ctx, contours, penX, glyphBaselineY);
       else if (contourOutlines && skew !== 0)
         paintShearedGlyphText(gp.char, penX, glyphBaselineY, gp.emboldenGrowthPx);
-      else paintGlyphText(gp.char, penX, glyphBaselineY, gp.emboldenGrowthPx);
+      else paintGlyphText(gp.char, lineShearedPenX, glyphBaselineY, gp.emboldenGrowthPx);
     }
     ctx.restore();
   });
