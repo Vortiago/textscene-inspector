@@ -71,13 +71,11 @@ export function standardizeLocale(locale: string): string {
     if (SCRIPT_PATTERN.test(second)) script = second;
     if (COUNTRY_PATTERN.test(second)) country = second;
   }
-  const third = elements[2];
-  if (third !== undefined) {
-    if (COUNTRY_PATTERN.test(third)) country = third;
-    else variant = variantOf(third, language) ?? variant;
+  // Godot reads the third segment as a country or a variant, and the fourth as a variant only.
+  for (const [offset, segment] of elements.slice(2, 4).entries()) {
+    if (offset === 0 && COUNTRY_PATTERN.test(segment)) country = segment;
+    else variant = variantOf(segment, language) ?? variant;
   }
-  const fourth = elements[3];
-  if (fourth !== undefined) variant = variantOf(fourth, language) ?? variant;
 
   const atParts = readAtParts(afterAt.split(';'), language);
   script = atParts.script ?? script;
@@ -88,5 +86,5 @@ export function standardizeLocale(locale: string): string {
   if (!SCRIPT_CODES.has(script)) script = '';
 
   // The language leads even when empty, so `_EG` keeps its underscore.
-  return [script, country, variant].reduce((out, part) => (part === '' ? out : `${out}_${part}`), language);
+  return [language, script, country, variant].filter((part, index) => index === 0 || part !== '').join('_');
 }
