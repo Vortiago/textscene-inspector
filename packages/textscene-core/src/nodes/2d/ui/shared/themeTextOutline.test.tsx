@@ -89,7 +89,7 @@ async function render(
 
 const strokeRuns = () => scene.runs.filter((run) => run.strokeWidthPx);
 /** The latest fill: the atlas fill comes first while the bundled canvas face registers. */
-const fillRun = () => scene.runs.findLast((run) => !run.strokeWidthPx)!;
+const fillRun = () => scene.runs.filter((run) => !run.strokeWidthPx).at(-1)!;
 
 afterEach(() => {
   vi.restoreAllMocks();

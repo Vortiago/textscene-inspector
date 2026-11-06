@@ -12,7 +12,6 @@ import type { LookupGlyph } from './autofit/openTypeGdef';
 import type { SizedClusterOffsets } from './fallbackMarkPositioning';
 import type { RunGlyph, RunShaping } from './glyphRun';
 import type { SfntOutlines } from './sfntOutlines';
-import type { PairKerningReader } from './variation/instanceKerning';
 
 /**
  * Which glyph-painting path a `FontMetrics` pairs with, since shaping is
@@ -56,10 +55,10 @@ export interface FontMetrics {
    */
   readonly markOffsets?: SizedClusterOffsets;
   /**
-   * The `GPOS` kerning of a pair of glyphs at the default instance, design units, which a pair with
-   * a glyph that a `GSUB` lookup gave takes. Absent for a face with no pair kerning to read.
+   * The `GPOS` kerning of a pair of shaped glyphs at the default instance, design units. Absent for a
+   * face with no `GPOS` to read.
    */
-  readonly getGlyphKerningUnits?: PairKerningReader;
+  readonly getGlyphKerningUnits?: GlyphKerningReader;
   /** A character's own advance width, design units, or `null` if this font has no glyph for it (a shaper falls back to `averageAdvanceUnits`). */
   getGlyphAdvanceUnits(ch: string): number | null;
   /**
@@ -91,6 +90,9 @@ export interface FontMetrics {
    */
   readonly outlines?: SfntOutlines | null;
 }
+
+/** The kerning of a pair of glyphs, design units. Null, not zero, where the kerning of their characters stands. */
+export type GlyphKerningReader = (left: LookupGlyph, right: LookupGlyph) => number | null;
 
 /** The fields of a face whose glyphs this previewer reads from its font file (`sfntFaceGlyphs.ts`). */
 export type FaceGlyphs = Pick<FontMetrics, 'shaping' | 'markOffsets' | 'getGlyphKerningUnits'>;

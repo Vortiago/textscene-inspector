@@ -609,34 +609,37 @@ function specialGlyph(
 ): BreakGlyph | undefined {
   const ch = chars[i]!;
   const cp = ch.codePointAt(0)!;
-  const hardBreak = isLinebreak(cp);
-  const isTab = isTabChar(ch);
-  const glyph: BreakGlyph = {
+  // A break grapheme, U+200B and a tab take no advance whatever the face holds: the baked charset has
+  // no entry for the first two, and a tab no stop aligns is as wide as the font's glyph for it, which
+  // is none (measured in Godot 4.6.3: `a<TAB>b` with `tab_size` 0 sets `b` against `a`).
+  if (isLinebreak(cp) || cp === 0x200b || isTabChar(ch)) return zeroWidthGlyph(ch, i);
+  // Only the "no font has a glyph" case is left (`text_server_adv.cpp:6842-6907`).
+  if (isControlChar(cp)) {
+    // Without `preserve_invalid` or `preserve_control`, a control pushes no `Glyph` (`:6844`).
+    return preserveControl ? hexCodeBox(ch, i, style.sizes[i]!) : zeroWidthGlyph(ch, i);
+  }
+  if (!lacksGlyph(style.faces[i]!, ch, style.hasUndrawnGlyph)) return undefined;
+  return hexCodeBox(ch, i, style.sizes[i]!);
+}
+
+/** The glyph of character `ch` at `i` with no advance. */
+function zeroWidthGlyph(ch: string, i: number): BreakGlyph {
+  const cp = ch.codePointAt(0)!;
+  return {
     start: i,
     end: i + 1,
     advance: 0,
     isSpace: isWhitespace(cp),
-    isHardBreak: hardBreak,
-    isTab,
+    isHardBreak: isLinebreak(cp),
+    isTab: isTabChar(ch),
     emboldenGrowthPx: 0,
   };
-  // A break grapheme, U+200B and a tab take no advance whatever the face holds: the baked charset has
-  // no entry for the first two, and a tab no stop aligns is as wide as the font's glyph for it, which
-  // is none (measured in Godot 4.6.3: `a<TAB>b` with `tab_size` 0 sets `b` against `a`).
-  if (hardBreak || cp === 0x200b || isTab) return glyph;
-  // Only the "no font has a glyph" case is left (`text_server_adv.cpp:6842-6907`).
-  if (isControlChar(cp)) {
-    // Without `preserve_invalid` or `preserve_control`, a control pushes no `Glyph` (`:6844`).
-    return preserveControl ? hexCodeBox(glyph, style.sizes[i]!, cp) : glyph;
-  }
-  if (!lacksGlyph(style.faces[i]!, ch, style.hasUndrawnGlyph)) return undefined;
-  return hexCodeBox(glyph, style.sizes[i]!, cp);
 }
 
-function hexCodeBox(glyph: BreakGlyph, size: number, cp: number): BreakGlyph {
-  glyph.advance = hexCodeBoxAdvanceSize(size, cp).x;
-  glyph.controlCodepoint = cp;
-  return glyph;
+/** The hex-code box of character `ch` at `i`, at font size `size`. */
+function hexCodeBox(ch: string, i: number, size: number): BreakGlyph {
+  const cp = ch.codePointAt(0)!;
+  return { ...zeroWidthGlyph(ch, i), advance: hexCodeBoxAdvanceSize(size, cp).x, controlCodepoint: cp };
 }
 
 /** The glyph of character `i` that breaks a shaped stretch, or undefined where its face shapes it. */

@@ -139,9 +139,8 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
     );
   }
 
-  // The outlines place marks by HarfBuzz's fallback for a font with no `GPOS` script, and draw a
-  // substituted glyph. The container decodes once for `bytes`, so preparing them costs nothing until
-  // the first mark or substituted glyph.
+  // The outlines place marks by HarfBuzz's fallback for a font with no `GPOS` script. The container
+  // decodes once for `bytes`, so preparing them costs nothing until the first mark.
   const glyphs = sfnt ? await faceGlyphsOf(sfnt, bytes) : undefined;
   const hasGlyph = sfnt ? sfntHasGlyph(sfnt) : () => true;
   const measureInkUnits = (ch: string) => {
@@ -162,8 +161,8 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
 async function faceGlyphsOf(sfnt: SfntFile, bytes: ArrayBuffer): Promise<FaceGlyphs> {
   const [openOutlines, kerning] = await Promise.all([
     lazyFontContainer(bytes, FALLBACK_MARK_TABLE_TAGS),
-    // The kerning of a substituted glyph only refines the advances: a chunk that fails to load
-    // (offline, after a deploy) must not take the face with it.
+    // The kerning of shaped glyphs only refines the advances: a chunk that fails to load (offline,
+    // after a deploy) must not take the face with it.
     sfnt.tables.has('GPOS') ? import('./variation/instanceKerning').catch(() => null) : null,
   ]);
   return sfntFaceGlyphs(sfnt, openOutlines, kerning?.defaultKerningReader);

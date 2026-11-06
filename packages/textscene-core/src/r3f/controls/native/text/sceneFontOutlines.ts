@@ -90,10 +90,10 @@ async function readBundledBytes(): Promise<ArrayBuffer> {
   return (await import('./bundledFontBytes')).bundledFontBytes();
 }
 
-/** The load of the contours a TextMesh extrudes (`font_get_glyph_contours`). */
-export function contourLoad(face: DrawnFace): GlyphLoad {
-  const isFile = !!face && typeof face === 'object' && !hasBitmap(face);
-  return { ...CONTOUR_LOAD, isAutohinterForced: isFile && fontForcesAutohinter(face) };
+/** The load of the contours a TextMesh extrudes (`font_get_glyph_contours`), at a font file's `force_autohinter`. */
+function contourLoad(face: DrawnFace): GlyphLoad {
+  if (typeof face !== 'object' || !face) return CONTOUR_LOAD;
+  return { ...CONTOUR_LOAD, isAutohinterForced: fontForcesAutohinter(face) };
 }
 
 /**

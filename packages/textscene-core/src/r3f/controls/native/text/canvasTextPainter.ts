@@ -351,13 +351,13 @@ export function paintSceneFontCanvas(
   const colour = opaqueByteColour(tint);
   const { canvasWidthPx, canvasHeightPx } = canvasLayout;
   // Only a paint with a glyph drawn as text needs a canvas: a bitmap lays on the raster alone.
-  let image = new ImageData(canvasWidthPx, canvasHeightPx);
+  let image: ImageData;
   if (textGlyphs.length > 0) {
     const ctx = textContext(canvasLayout, metrics, fontSizePx);
     if (!ctx) return null;
     paintGlyphTexts(ctx, textGlyphs, `rgb(${colour.join(', ')})`, skew, strokeWidthPx);
     image = ctx.getImageData(0, 0, canvasWidthPx, canvasHeightPx);
-  }
+  } else image = new ImageData(canvasWidthPx, canvasHeightPx);
   const outlineRadiusPx = strokeWidthPx / 2;
   const bitmaps = glyphs.flatMap(({ contours, penX, baselineY }) => {
     const bitmap = contours && placedGlyphBitmap(contours, penX, baselineY, outlineRadiusPx);
@@ -432,14 +432,27 @@ function paintGlyphTexts(
   const isStroked = strokeWidthPx > 0;
   if (isStroked) setStrokeStyle(ctx, cssColour, strokeWidthPx);
   else setFillStyle(ctx, cssColour);
-  for (const { char, penX, baselineY, emboldenGrowthPx } of glyphs) {
+  for (const glyph of glyphs) {
+    if (skew === 0) {
+      paintGlyphText(ctx, glyph, isStroked);
+      continue;
+    }
     ctx.save();
-    if (skew !== 0) shearAboutBaseline(ctx, skew, baselineY);
-    if (isStroked) ctx.strokeText(char, penX, baselineY);
-    else if (emboldenGrowthPx) paintEmboldenedFill(ctx, char, penX, baselineY, emboldenGrowthPx);
-    else ctx.fillText(char, penX, baselineY);
+    shearAboutBaseline(ctx, skew, glyph.baselineY);
+    paintGlyphText(ctx, glyph, isStroked);
     ctx.restore();
   }
+}
+
+/** Paints `glyph` as text in the style `ctx` holds. */
+function paintGlyphText(
+  ctx: CanvasRenderingContext2D,
+  { char, penX, baselineY, emboldenGrowthPx }: PlacedGlyph,
+  isStroked: boolean
+): void {
+  if (isStroked) ctx.strokeText(char, penX, baselineY);
+  else if (emboldenGrowthPx) paintEmboldenedFill(ctx, char, penX, baselineY, emboldenGrowthPx);
+  else ctx.fillText(char, penX, baselineY);
 }
 
 interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
