@@ -11,14 +11,12 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
-import { READ_IMPORTERS, sidecarImporter } from './vendor-prune.mjs';
+import { DYNAMIC_FONT_IMPORTER, READ_IMPORTERS, sidecarImporter } from './vendor-prune.mjs';
 import { TEXTURE_IMPORTER } from '../packages/textscene-core/src/godot/import/textureImport.ts';
 import {
   TEXTURE_2D_ARRAY_IMPORTER,
   TEXTURE_3D_IMPORTER,
 } from '../packages/textscene-core/src/godot/import/layeredTextureImport.ts';
-
-const DYNAMIC_FONT_IMPORTER = 'font_data_dynamic';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 const SCENES = join(REPO_ROOT, 'scenes');
@@ -151,14 +149,6 @@ const INERT = new Set([
   'force_disable_mesh_compression',
   // The font_data_bmfont importer's stored-data compression; the previewer reads the source page images.
   'compress',
-  // The font_data_dynamic importer's group headings and advanced-dialog storage: the editor's glyph
-  // preload and language and script pickers, which add no glyph the shaper does not draw on demand.
-  'Rendering',
-  'Fallbacks',
-  'Compress',
-  'preload',
-  'language_support',
-  'script_support',
 ]);
 
 /**
@@ -176,6 +166,19 @@ const MUST_BE_DEFAULT = new Map([
   ['scale_mesh', 'Vector3(1, 1, 1)'],
   ['offset_mesh', 'Vector3(0, 0, 0)'],
   ['generate_lightmap_uv2', 'false'],
+]);
+
+/**
+ * The font_data_dynamic importer's group headings and advanced-dialog storage: the editor's glyph
+ * preload and language and script pickers, which add no glyph the shaper does not draw on demand.
+ */
+const DYNAMIC_FONT_INERT = new Set([
+  'Rendering',
+  'Fallbacks',
+  'Compress',
+  'preload',
+  'language_support',
+  'script_support',
 ]);
 
 /**
@@ -406,7 +409,11 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
       const { importer } = READ.get(file);
       for (const key of Object.keys(readParams(file))) {
         if (HONOURED.has(key) || INERT.has(key) || MUST_BE_DEFAULT.has(key)) continue;
-        if (importer === DYNAMIC_FONT_IMPORTER && DYNAMIC_FONT_MUST_BE_DEFAULT.has(key)) continue;
+        if (
+          importer === DYNAMIC_FONT_IMPORTER &&
+          (DYNAMIC_FONT_INERT.has(key) || DYNAMIC_FONT_MUST_BE_DEFAULT.has(key))
+        )
+          continue;
         if (LAYERED_TEXTURE_IMPORTERS.has(importer) && LAYERED_TEXTURE_PARAMS.has(key)) continue;
         if (importer === TEXTURE_IMPORTER && (TEXTURE_PARAMS.has(key) || TEXTURE_MUST_BE_DEFAULT.has(key)))
           continue;

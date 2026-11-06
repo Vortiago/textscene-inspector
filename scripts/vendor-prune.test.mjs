@@ -7,7 +7,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { isPruned, sidecarImporter } from './vendor-prune.mjs';
+import { DYNAMIC_FONT_IMPORTER, isPruned, sidecarImporter } from './vendor-prune.mjs';
 
 const root = mkdtempSync(join(tmpdir(), 'vendor-prune-'));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
@@ -40,7 +40,7 @@ describe('isPruned', () => {
   });
 
   it('keeps a dynamic font sidecar, whose params become the FontFile properties', () => {
-    expect(isPruned(sidecarOf('open_sans.ttf', 'TTF', 'font_data_dynamic'))).toBe(false);
+    expect(isPruned(sidecarOf('open_sans.ttf', 'TTF', DYNAMIC_FONT_IMPORTER))).toBe(false);
   });
 
   it('keeps a BMFont sidecar, which names the scale mode and fallbacks', () => {
