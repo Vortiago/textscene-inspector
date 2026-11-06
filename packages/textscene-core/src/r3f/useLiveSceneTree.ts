@@ -69,7 +69,7 @@ const LIVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'glb'];
 
 /** What {@link useLiveTreeVersion} reads of one loader. */
 interface LoadTicks {
-  /** Written only by the bus handler, the first subscribe and the last unsubscribe. */
+  /** Written only by the bus handler and by a first subscribe that finds an unseen change. */
   version: number;
   readonly subscribe: (onChange: () => void) => () => void;
   readonly getVersion: () => number;
@@ -80,19 +80,19 @@ const NO_LOAD_TICKS: LoadTicks = { version: 0, subscribe: subscribeToNothing, ge
 /**
  * The one load counter of a loader, which every reader of its live tree shares. A handler sits on
  * the loader's bus only while a reader is mounted, so loads go unseen before the first subscribe
- * and after the last unsubscribe. The version moves at the first subscribe when a load settled
- * meanwhile, so no reader trusts a tree built then.
+ * and after the last unsubscribe. The version moves at the first subscribe when a load settled or a cache
+ * cleared meanwhile, so no reader trusts a tree built then.
  */
 const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
   const listeners = new Set<() => void>();
   let stopListening: (() => void) | undefined;
-  // The settles seen so far: a count that moved while no reader listened is a load that went unseen.
-  let seenSettles = loader.eventBus.settleCount(LIVE_TREE_BUSES);
+  // The settles seen so far: a count that moved while no reader listened is a load or a cache clear that went unseen.
+  let seenChanges = loader.eventBus.changeCount(LIVE_TREE_BUSES);
   const ticks: LoadTicks = {
     version: 0,
     getVersion: () => ticks.version,
     subscribe: (onChange) => {
-      if (listeners.size === 0 && loader.eventBus.settleCount(LIVE_TREE_BUSES) !== seenSettles)
+      if (listeners.size === 0 && loader.eventBus.changeCount(LIVE_TREE_BUSES) !== seenChanges)
         ticks.version++;
       listeners.add(onChange);
       stopListening ??= loader.eventBus.onChange(LIVE_TREE_BUSES, ({ event }) => {
@@ -105,7 +105,7 @@ const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
         if (listeners.size > 0) return;
         stopListening?.();
         stopListening = undefined;
-        seenSettles = loader.eventBus.settleCount(LIVE_TREE_BUSES);
+        seenChanges = loader.eventBus.changeCount(LIVE_TREE_BUSES);
       };
     },
   };

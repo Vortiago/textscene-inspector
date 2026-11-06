@@ -10,7 +10,7 @@ import { TscnParser } from '../parser/TscnParser.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader.js';
 import { HierarchyProvider } from './contexts/HierarchyContext.js';
-import { useLiveNode } from './useLiveSceneTree.js';
+import { useLiveNode, useLiveTreeVersion } from './useLiveSceneTree.js';
 import { useLocalScene, useUniqueNamePaths } from './useUniqueNames.js';
 
 const MAIN = `[gd_scene format=3]
@@ -92,5 +92,28 @@ describe('the live tree shared by its consumers', () => {
     const { result } = renderHook(() => useLiveNode(HEAD), { wrapper: wrapperWithLateLoad });
 
     expect(result.current?.node.name).toBe('Head');
+  });
+
+  it('gives a reader that mounts after a cache clear a fresh version (error path)', () => {
+    const { fake, wrapper } = mount();
+    const first = renderHook(() => useLiveTreeVersion(fake.loader), { wrapper });
+    const before = first.result.current;
+    first.unmount();
+
+    fake.eventBus.emit('scene', 'invalidated', 'res://kid.tscn');
+    const second = renderHook(() => useLiveTreeVersion(fake.loader), { wrapper });
+
+    expect(second.result.current).toBeGreaterThan(before);
+  });
+
+  it('keeps the version for a reader that mounts after nothing changed (edge case)', () => {
+    const { fake, wrapper } = mount();
+    const first = renderHook(() => useLiveTreeVersion(fake.loader), { wrapper });
+    const before = first.result.current;
+    first.unmount();
+
+    const second = renderHook(() => useLiveTreeVersion(fake.loader), { wrapper });
+
+    expect(second.result.current).toBe(before);
   });
 });

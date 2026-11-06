@@ -40,8 +40,9 @@ export interface ResourceChange {
 export class ResourceEventBus {
   private handlers = new Map<string, Set<EventHandler<unknown>>>();
   private threeManager: THREE.LoadingManager;
-  /** Written only by `emit`, never reset: a reader compares two reads of it. */
+  /** Written only by `emit`, never reset: a reader compares two reads of them. */
   private settles: Partial<Record<ResourceType, number>> = {};
+  private invalidations: Partial<Record<ResourceType, number>> = {};
 
   constructor() {
     this.threeManager = new THREE.LoadingManager();
@@ -58,6 +59,16 @@ export class ResourceEventBus {
   settleCount(busTypes: readonly ResourceType[]): number {
     let count = 0;
     for (const busType of busTypes) count += this.settles[busType] ?? 0;
+    return count;
+  }
+
+  /**
+   * {@link settleCount} and the invalidations on `busTypes`: every change to what a cache holds.
+   * A reader that listens only while mounted compares it across the time it did not listen.
+   */
+  changeCount(busTypes: readonly ResourceType[]): number {
+    let count = this.settleCount(busTypes);
+    for (const busType of busTypes) count += this.invalidations[busType] ?? 0;
     return count;
   }
 
@@ -98,6 +109,8 @@ export class ResourceEventBus {
     const key = `${resourceType}:${eventType}`;
     if (eventType === 'loaded' || eventType === 'failed') {
       this.settles[resourceType] = (this.settles[resourceType] ?? 0) + 1;
+    } else if (eventType === 'invalidated') {
+      this.invalidations[resourceType] = (this.invalidations[resourceType] ?? 0) + 1;
     }
     const handlers = this.handlers.get(key);
     if (handlers) {

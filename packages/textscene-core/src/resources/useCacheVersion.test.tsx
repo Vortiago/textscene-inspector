@@ -13,7 +13,7 @@ function mount(busTypes: Parameters<typeof useCacheVersion>[1], read?: string[])
 }
 
 describe('useCacheVersion', () => {
-  it('moves on for a load that settles between the render and the subscription (error path)', () => {
+  it('moves on for a load that settles between the render and the subscription (edge case)', () => {
     const fake = createFakeResourceLoader();
     const busTypes = ['font'] as const;
 

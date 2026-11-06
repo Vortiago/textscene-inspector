@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
+import { act, render, renderHook } from '@testing-library/react';
 import type { ParsedResource } from '../parser/parsedResource';
 import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 import type { FontFileResource } from './fonts/font/types';
@@ -120,6 +120,24 @@ describe('useLoadedFiles', () => {
     );
 
     expect(reads.at(-1)).toBe(false);
+  });
+
+  it('stops loading for a newly planned file that lands between the re-render and its listening (error path)', () => {
+    const { fake } = fakeRequesting();
+    let isLoading: boolean | undefined;
+    function Reader() {
+      isLoading = useLoadedFiles(NESTED_PLAN).isLoading;
+      // The re-render that plans INNER ends here, before the layout effect that starts listening for it.
+      if (fake.resources.getCached(OUTER) && !fake.resources.getCached(INNER)) {
+        fake.resources._resolve(INNER, FILE);
+      }
+      return null;
+    }
+    render(<Reader />, { wrapper: missingResourcesWrapper(fake.loader) });
+
+    act(() => fake.resources._resolve(OUTER, FILE));
+
+    expect(isLoading).toBe(false);
   });
 
   it('is not loading, and requests nothing, for a plan that names no file (edge case)', () => {

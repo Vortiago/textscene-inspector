@@ -4,7 +4,7 @@
  * A kind of resource has its own cache and bus, so `useCachedFiles` serves them all.
  */
 
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ParsedResource } from '../parser/parsedResource';
 import type { FontResource } from './fonts/font/types';
 import type { ThemeResource } from './styles/theme/types';
@@ -83,7 +83,12 @@ export function useCachedFiles<T extends object>(
   const loader = kind && ambientLoader;
   const cache = kind && loader ? kind.cacheOf(loader) : null;
   const readPaths = useRef<ReadonlySet<string>>(NO_PATHS);
-  const version = useCacheVersion(loader, kind?.busTypes ?? NO_BUS_TYPES, readPaths, { onlyReadKeys: true });
+  const busVersion = useCacheVersion(loader, kind?.busTypes ?? NO_BUS_TYPES, readPaths, {
+    onlyReadKeys: true,
+  });
+  const [lateSettles, setLateSettles] = useState(0);
+  // Both only grow, so their sum moves whenever either does.
+  const version = busVersion + lateSettles;
   const planned = useMemo(
     () => (kind ? [...new Set(plan((path) => cache?.getCached(path) ?? undefined))] : []),
     // `version` is a cache-buster: the cache changes outside React.
@@ -104,12 +109,35 @@ export function useCachedFiles<T extends object>(
     [cache, paths, version]
   );
   const files = useStableEntries(read);
+  useLateSettle(cache, files, () => setLateSettles((count) => count + 1));
   useMissingFiles(files);
 
   const loadedFile = useMemo((): CachedFileReader<T> => (path) => files.get(path) ?? undefined, [files]);
   const isLoading = useMemo(() => loader !== null && hasUnsettledFile(files), [loader, files]);
   usePendingWhile(isLoading);
   return { loadedFile, isLoading };
+}
+
+/**
+ * Calls `onLate` when a file `files` holds as loading has settled since the render that read it.
+ * A file the plan named for the first time settles unheard if it lands before `readPaths` takes it
+ * in its layout effect: the listener drops a key it has not read, and the store does not subscribe
+ * again. This layout effect runs after that one, so the file is listened for from here on.
+ */
+function useLateSettle<T extends object>(
+  cache: ResourceProcessor<T> | null,
+  files: ReadonlyMap<string, CachedFile<T>>,
+  onLate: () => void
+): void {
+  useLayoutEffect(() => {
+    if (!cache) return;
+    const hasLate = [...files].some(
+      ([path, file]) => file === undefined && cache.getCached(path) !== undefined
+    );
+    if (hasLate) onLate();
+    // `onLate` only moves a counter, so its identity must not re-run the check.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cache, files]);
 }
 
 function hasUnsettledFile(files: ReadonlyMap<string, CachedFile<object>>): boolean {

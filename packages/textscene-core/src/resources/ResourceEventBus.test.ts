@@ -126,6 +126,14 @@ describe('ResourceEventBus', () => {
       expect(eventBus.settleCount(['texture'])).toBe(0);
     });
 
+    it('counts an invalidated in the change count and not in the settle count', () => {
+      eventBus.emit('scene', 'loaded', 'a');
+      eventBus.emit('scene', 'invalidated', 'a');
+
+      expect(eventBus.settleCount(['scene'])).toBe(1);
+      expect(eventBus.changeCount(['scene'])).toBe(2);
+    });
+
     it('is already bumped when a handler of the settle reads it', () => {
       let seen = -1;
       eventBus.on('scene', 'loaded', () => {
