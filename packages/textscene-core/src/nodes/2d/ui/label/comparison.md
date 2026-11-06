@@ -65,8 +65,8 @@ The import sidecar's `scaling_mode` sets how a size off the fixed size scales th
 A character the font lacks draws from the first font of its **Fallback chain** that has it, with that
 font's advance and kerning (`text_server_adv.cpp:7111-7170`). The chain is the font's `fallbacks`, a font
 import's `fallbacks` (`resource_importer_dynamic_font.cpp:192`, `resource_importer_bmfont.cpp:98`), or
-the base's for a `FontVariation` with none (`font.cpp:2926-2945`). The `label-font-fallbacks` golden
-pins this.
+the base's for a `FontVariation` with none (`font.cpp:2926-2945`). A BMFont keeps its import's `fallbacks`
+as the re-imported state holds them (ADR-0064). The `label-font-fallbacks` golden pins this.
 
 ## Variable fonts
 
@@ -194,7 +194,6 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 - **Approximated** At an instance, the `GPOS` kerning pairs adjacent characters only, where Godot also kerns across a glyph that a lookup flag skips.
 - **Approximated** A scene font's glyphs draw with the browser's hinting, not FreeType's light
   hinting (`font.h:203`, `text_server_adv.cpp:1276-1277`), so a cap can sit 1 px lower here.
-- **Not drawn** The `fallbacks` of a BMFont: a missing character draws as a hex-code box (`text_server_adv.cpp:6810-6928`, #1298).
 - **Approximated** A wrapping Label inside a ScrollContainer can read one line short when
   the wrap is what makes the scrollbar appear.
 - **Not drawn** `BREAK_TRIM_INDENT` (an `autowrap_trim_flags` bit): a wrapped
