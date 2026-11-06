@@ -548,3 +548,25 @@ export const AUTOFIT_SCRIPTS: readonly AutofitScript[] = [
     nonbaseRanges: [0x302a, 0x302f, 0x3190, 0x319f],
   },
 ];
+
+/** Pairs of first and last code point, as `AutofitScript` holds its ranges. */
+export function* rangePairs(ranges: readonly number[]): Generator<[number, number]> {
+  for (let i = 0; i < ranges.length; i += 2) yield [ranges[i]!, ranges[i + 1]!];
+}
+
+const COMMON_CHARACTER = /[\p{Script=Common}\p{Script=Inherited}]/u;
+
+const isCommonCharacter = (character: string): boolean => COMMON_CHARACTER.test(character);
+
+/**
+ * The OpenType script tags of the first script whose ranges hold `codePoint`. A common character
+ * has none: HarfBuzz gives a run of one such character the default script.
+ */
+export function scriptTagsOf(codePoint: number): readonly string[] {
+  if (isCommonCharacter(String.fromCodePoint(codePoint))) return [];
+  const script = AUTOFIT_SCRIPTS.find(({ ranges }) => {
+    for (const [first, last] of rangePairs(ranges)) if (codePoint >= first && codePoint <= last) return true;
+    return false;
+  });
+  return script?.openTypeTags ?? [];
+}

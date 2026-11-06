@@ -132,7 +132,7 @@ function glyphMeshes(
   );
   return (codepoint) => {
     if (!meshes.has(codepoint)) {
-      const index = outlines.glyphIndex(codepoint);
+      const index = outlines.glyphIndex(codepoint, variation.opentype);
       meshes.set(
         codepoint,
         index === 0

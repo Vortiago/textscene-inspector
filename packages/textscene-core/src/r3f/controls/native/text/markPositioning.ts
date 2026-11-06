@@ -12,7 +12,6 @@
 
 import {
   coverageIndex,
-  defaultLanguageLookups,
   GposType,
   i16,
   sfntGpos,
@@ -21,6 +20,7 @@ import {
   type LayoutTable,
 } from './autofit/openTypeLayout';
 import { glyphPropsReader, lookupMatcher } from './autofit/openTypeGdef';
+import { defaultSubstitution, featureLookups } from './autofit/openTypeFeatures';
 import { sfntGlyphIndex } from './sfntCmap';
 import type { SfntFile } from './sfntTables';
 
@@ -35,9 +35,13 @@ const MARK_PROPS = 0x8;
 
 const ORIGIN: MarkOffset = { x: 0, y: 0 };
 
+/** The scripts whose marks the reader places: the first one the font has, else its default script. */
+const MARK_SCRIPT_TAGS = ['latn', 'grek', 'cyrl'] as const;
+
 /** The `GPOS` lookups of the `mark` and `mkmk` features that attach a mark. */
 function attachmentLookups(table: LayoutTable): Lookup[] {
-  return defaultLanguageLookups(table).flatMap((index) => {
+  const lookups = featureLookups(table, MARK_SCRIPT_TAGS, ['mark', 'mkmk'], defaultSubstitution(table));
+  return lookups.flatMap((index) => {
     const lookup = table.lookups[index];
     const subtables = lookup?.subtables.filter(
       ({ type }) => type === GposType.MARK_TO_BASE || type === GposType.MARK_TO_MARK

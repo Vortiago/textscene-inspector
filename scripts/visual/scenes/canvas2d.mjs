@@ -294,6 +294,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'label-font-variation-instance', file: 'unit-label-font-variation-instance.tscn', mode: '2d' },
   // The one variable: `variation_opentype` at `MONO` 0.5 over Recursive, whose `GPOS` kerning halves at that instance.
   { name: 'label-font-variation-kerning', file: 'unit-label-font-variation-kerning.tscn', mode: '2d' },
+  // The one variable: `variation_opentype` at `MONO` 1 or `slnt` -15 over Recursive, whose `GSUB` feature variations swap glyphs.
+  { name: 'label-font-variation-glyph-swap', file: 'unit-label-font-variation-glyph-swap.tscn', mode: '2d' },
   // The one variable: a BMFont's import `scaling_mode`, Integer and Disabled, at sizes off the fixed size.
   { name: 'label-bmfont-scaling', file: 'unit-label-bmfont-scaling.tscn', mode: '2d' },
   // The one variable: a character the font lacks, drawn from the first font of its fallback chain
