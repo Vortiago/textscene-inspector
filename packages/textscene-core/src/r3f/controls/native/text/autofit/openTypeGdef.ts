@@ -20,7 +20,7 @@ export interface LookupGlyph {
 /** `HB_OT_LAYOUT_GLYPH_PROPS_*`: the same bits as the lookup flags that skip each class. */
 const BASE_GLYPH_PROPS = LookupFlag.IGNORE_BASE_GLYPHS;
 const LIGATURE_PROPS = LookupFlag.IGNORE_LIGATURES;
-const MARK_PROPS = LookupFlag.IGNORE_MARKS;
+export const MARK_PROPS = LookupFlag.IGNORE_MARKS;
 /** `LookupFlag::IgnoreFlags`: the bits that skip a base glyph, a ligature or a mark. */
 const IGNORE_FLAGS = BASE_GLYPH_PROPS | LIGATURE_PROPS | MARK_PROPS;
 

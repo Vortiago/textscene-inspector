@@ -186,6 +186,9 @@ export const GEOMETRY_SCENES = [
   { name: 'label3d-bmfont', file: 'unit-label3d-bmfont.tscn' },
   // The one variable: a Label3D and a TextMesh draw a character the font lacks from its fallback chain.
   { name: 'label3d-text-mesh-font-fallbacks', file: 'unit-label3d-text-mesh-font-fallbacks.tscn' },
+  // The one variable: a precomposed character the font lacks, drawn by a Label3D and a TextMesh as its base
+  // and marks, the marks at the offsets of the font's GPOS, of a font with no GPOS script and of one with no mark lookup.
+  { name: 'label3d-text-mesh-decomposed-marks', file: 'unit-label3d-text-mesh-decomposed-marks.tscn' },
   // The one variable: how a Label3D lays its text out. Wrap at `width`, FILL, TOP and BOTTOM
   // vertical alignment, `offset` and `uppercase`, seen through the scene's own camera.
   { name: 'label3d-layout', file: 'unit-label3d-layout.tscn', camera: 'Root/Camera3D' },

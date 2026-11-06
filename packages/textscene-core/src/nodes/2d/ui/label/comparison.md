@@ -68,6 +68,16 @@ import's `fallbacks` (`resource_importer_dynamic_font.cpp:192`, `resource_import
 the base's for a `FontVariation` with none (`font.cpp:2926-2945`). A BMFont keeps its import's `fallbacks`
 as the re-imported state holds them (ADR-0064). The `label-font-fallbacks` golden pins this.
 
+## Decomposed marks
+
+<!-- compare: image=unit-label-decomposed-marks status=done fixture=unit-label-decomposed-marks.tscn -->
+
+A precomposed character the font lacks draws as its base and marks in that font, not in a fallback. The font
+needs the pieces of its canonical decomposition (`hb-ot-shape-normalize.cc`). The marks sit at the
+offsets of the font's `GPOS` mark lookups, and a RichTextLabel line rises to the highest mark
+(`text_server_adv.cpp:5161`). The browser draws the glyph of a scene font itself, so it places the marks
+there. A font with no `GPOS` script has its marks placed against the ink of the base (`hb-ot-shape-fallback.cc`). A `GPOS` with no mark lookup leaves each mark at its pen position. The `label-decomposed-marks` golden pins all three.
+
 ## Variable fonts
 
 <!-- compare: image=unit-label-font-variation-instance status=done fixture=unit-label-font-variation-instance.tscn -->
@@ -194,6 +204,7 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 - **Approximated** At an instance, the `GPOS` kerning pairs adjacent characters only, where Godot also kerns across a glyph that a lookup flag skips.
 - **Approximated** A scene font's glyphs draw with the browser's hinting, not FreeType's light
   hinting (`font.h:203`, `text_server_adv.cpp:1276-1277`), so a cap can sit 1 px lower here.
+- **Approximated** A base and a combining mark typed as two characters keep their own pens, with no `GPOS` mark offset (#1393).
 - **Approximated** A wrapping Label inside a ScrollContainer can read one line short when
   the wrap is what makes the scrollbar appear.
 - **Not drawn** `BREAK_TRIM_INDENT` (an `autowrap_trim_flags` bit): a wrapped

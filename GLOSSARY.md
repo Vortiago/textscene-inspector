@@ -154,6 +154,10 @@ _Avoid_: "sprite font", "pixel font".
 The faces a font tries for each glyph, in order: its own face, then each of its `fallbacks` and theirs, depth first (`Font::_update_rids`). The shaper draws a character from the first face that has it. A character no face has stays in the first face.
 _Avoid_: "fallback font" for the bundled Open Sans, which is the **Project default font**'s last resort.
 
+**Decomposed glyph** (`DecomposedGlyph` in `r3f/controls/native/text/sfntDecomposition.ts`):
+A character the face lacks that HarfBuzz draws as a base and marks the face has, found by the canonical decomposition (`canonicalGlyphs.ts`). Each mark sits at the offset of the face's `GPOS` mark lookups (`markPositioning.ts`), or against the ink of the base where the face has no `GPOS` script (`fallbackMarkPositioning.ts`). The face then counts as having the character, so its cluster stays in the face and out of the **Fallback chain**.
+_Avoid_: "composed glyph", which names the opposite step.
+
 **Project fonts** (`resources/fonts/font/projectFonts.ts`):
 The two files the **Project settings** name for every font lookup: the project theme (`gui/theme/custom`) and the **Project default font**. The Control solve tree, TextMesh and Label3D each resolve them from one source.
 _Avoid_: "theme context", which Godot's `ThemeContext` also names.
