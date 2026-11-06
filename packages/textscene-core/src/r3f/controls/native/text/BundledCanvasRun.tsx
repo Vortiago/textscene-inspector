@@ -4,27 +4,26 @@
  * (ADR-0040). It draws on the canvas painter through the bundled canvas face.
  */
 import { useMemo } from 'react';
-import { peekBundledCanvasFace } from './bundledCanvasFace';
+import { useBundledCanvasFace } from './bundledCanvasFace';
 import { TextRunMesh, type TextRunProps } from './TextRunMesh';
 import { useSceneFontSettleCount } from './useSceneFontSettleCount';
 import { usePendingWhile } from '../../../../resources/usePendingWhile';
-import { useProjectSettings } from '../../../contexts/ProjectSettingsContext';
-import { projectDefaultFontHinting } from '../../../../parser/projectSettingsParser';
 
-/** Draws nothing until the bundled face settles, so no run paints against the wrong face. */
+/** Fills on the atlas until the bundled face settles, as Godot always has its default font to draw. */
 export default function BundledCanvasRun({ layout, ...run }: TextRunProps) {
   // `withVariation` memoises the face, so a render keeps its identity. Null is a face that cannot
   // register, and the loader has warned.
-  const { settings } = useProjectSettings();
-  const face = peekBundledCanvasFace(layout.fontMetrics, projectDefaultFontHinting(settings));
+  const face = useBundledCanvasFace()(layout.fontMetrics);
   // Listens only while the face loads. The count re-renders a run whose settle lands first.
   useSceneFontSettleCount(face === undefined);
   // The canvas face keeps the baked advances, so the atlas layout places its glyphs.
   const canvasLayout = useMemo(() => face && { ...layout, fontMetrics: face }, [layout, face]);
   usePendingWhile(face === undefined);
-  if (canvasLayout) return <TextRunMesh {...run} layout={canvasLayout} />;
-  // Where the face cannot register, the atlas fill keeps the text visible. The atlas cannot stroke a ring.
+  // A key, so the canvas run mounts fresh rather than reusing the atlas fill's mesh, which moves a
+  // pixel of `complex-2d-gui` 1/255 away from Godot.
+  if (canvasLayout) return <TextRunMesh key="canvas" {...run} layout={canvasLayout} />;
+  // While the face registers, or where it cannot, the atlas fill keeps the text visible. The atlas
+  // cannot stroke a ring.
   const isFill = !((run.strokeWidthPx ?? 0) > 0);
-  if (face === null && isFill) return <TextRunMesh {...run} layout={layout} />;
-  return null;
+  return isFill ? <TextRunMesh {...run} layout={layout} /> : null;
 }

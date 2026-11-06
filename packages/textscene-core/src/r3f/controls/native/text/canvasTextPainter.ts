@@ -251,16 +251,14 @@ function hasOwnGlyph(gp: GlyphPlacement): boolean {
 }
 
 /**
- * A CPU canvas the size of the raster, set to paint the text of `metrics` in `colour`: the CPU
- * rasteriser covers by exact area where the GPU raster thins small glyphs (`textRun.md`). Null where
- * the document has no 2D context.
+ * A CPU canvas the size of the raster, set to the font of `metrics`: the CPU rasteriser covers by
+ * exact area where the GPU raster thins small glyphs (`textRun.md`). Null where the document has no
+ * 2D context.
  */
 function textContext(
   { canvasWidthPx, canvasHeightPx }: CanvasTextCanvasLayout,
   metrics: CanvasFontMetrics,
-  fontSizePx: number,
-  colour: ByteColour,
-  strokeWidthPx: number
+  fontSizePx: number
 ): CanvasRenderingContext2D | null {
   const canvas = document.createElement('canvas');
   canvas.width = canvasWidthPx;
@@ -270,23 +268,39 @@ function textContext(
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   ctx.font = `${fontSizePx}px "${metrics.cssFontFamily}"`;
-  const cssColour = `rgb(${colour.join(', ')})`;
-  if (strokeWidthPx > 0) {
-    // A glyph with no contour strokes its text: FreeType's `FT_Glyph_Stroke` exports both borders,
-    // an annulus a centred canvas stroke of the same width paints (`text_server_adv.cpp:1383-1390`).
-    // `LINEJOIN_ROUND`/`LINECAP_BUTT` are that stroker's settings (`:1383`).
-    ctx.strokeStyle = cssColour;
-    ctx.lineWidth = strokeWidthPx;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'butt';
-  } else {
-    ctx.fillStyle = cssColour;
-    // The stroke of an emboldened fill (`paintEmboldenedFill`) is the fill's colour, mitred as
-    // `FT_Outline_Embolden` mitres its corners.
-    ctx.strokeStyle = ctx.fillStyle;
-    ctx.lineJoin = 'miter';
-  }
   return ctx;
+}
+
+/**
+ * Sets `ctx` to stroke the outline ring of each glyph. A glyph with no contour strokes its text:
+ * FreeType's `FT_Glyph_Stroke` exports both borders, an annulus a centred canvas stroke of the same
+ * width paints (`text_server_adv.cpp:1383-1390`). `LINEJOIN_ROUND`/`LINECAP_BUTT` are that
+ * stroker's settings (`:1383`).
+ */
+function setStrokeStyle(ctx: CanvasRenderingContext2D, cssColour: string, strokeWidthPx: number): void {
+  ctx.strokeStyle = cssColour;
+  ctx.lineWidth = strokeWidthPx;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'butt';
+}
+
+/**
+ * Sets `ctx` to fill each glyph. The stroke of an emboldened fill (`paintEmboldenedFill`) is the
+ * fill's colour, mitred as `FT_Outline_Embolden` mitres its corners.
+ */
+function setFillStyle(ctx: CanvasRenderingContext2D, cssColour: string): void {
+  ctx.fillStyle = cssColour;
+  ctx.strokeStyle = cssColour;
+  ctx.lineJoin = 'miter';
+}
+
+/** A glyph at its place in the raster, with the contours it draws, or null where it draws as text. */
+interface PlacedGlyph {
+  char: string;
+  penX: number;
+  baselineY: number;
+  emboldenGrowthPx: number | undefined;
+  contours: GlyphContours | null;
 }
 
 export interface CanvasTextPaintOptions {
@@ -304,7 +318,7 @@ export interface CanvasTextPaintOptions {
 /**
  * Draws `layout`, shaped against a `'canvas'`-kind `FontMetrics`, glyph by glyph
  * at each `GlyphPlacement.x`.
- * `skew` shears each line's ink about its own baseline. With the `outlines` its metrics carry, each
+ * `skew` shears each glyph's ink about its own baseline. With the `outlines` its metrics carry, each
  * glyph draws as FreeType's bitmap of its contour, or of the ring round it (`glyphCoverage.ts`). The
  * contour carries the embolden and the shear, so a shear does not shear the ring's width. Null where
  * a glyph draws as text and the document has no 2D context.
@@ -323,106 +337,125 @@ export function paintSceneFontCanvas(
   if (!isCanvasFontMetrics(metrics)) {
     throw new Error('paintSceneFontCanvas requires a layout shaped against a canvas-kind FontMetrics');
   }
+  const frame: RasterFrame = {
+    metrics,
+    fontSizePx,
+    canvasLayout,
+    originPhasePx,
+    snapsGlyphs: snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, metrics),
+    contoursOf: placementContoursReader(metrics, fontSizePx, skew),
+  };
+  const glyphs = placeGlyphs(layout, frame);
+  const textGlyphs = glyphs.filter((glyph) => !glyph.contours);
+  const colour = opaqueByteColour(tint);
+  const { canvasWidthPx, canvasHeightPx } = canvasLayout;
+  // Only a paint with a glyph drawn as text needs a canvas: a bitmap lays on the raster alone.
+  let image: ImageData;
+  if (textGlyphs.length > 0) {
+    const ctx = textContext(canvasLayout, metrics, fontSizePx);
+    if (!ctx) return null;
+    paintGlyphTexts(ctx, textGlyphs, `rgb(${colour.join(', ')})`, skew, strokeWidthPx);
+    image = ctx.getImageData(0, 0, canvasWidthPx, canvasHeightPx);
+  } else image = new ImageData(canvasWidthPx, canvasHeightPx);
+  const outlineRadiusPx = strokeWidthPx / 2;
+  const bitmaps = glyphs.flatMap(({ contours, penX, baselineY }) => {
+    const bitmap = contours && placedGlyphBitmap(contours, penX, baselineY, outlineRadiusPx);
+    return bitmap ? [bitmap] : [];
+  });
+  return glyphRaster(image, bitmaps, colour);
+}
 
-  const baselineOffsetPx = layout.baselineOffsetPx;
+/**
+ * The contours each placement of `layout` draws, or null for a glyph that draws as text: every
+ * glyph of a face with no outlines, and a glyph with no contour. Each contour carries the shear and
+ * the embolden, as Godot's FreeType draws it.
+ */
+function placementContoursReader(
+  metrics: CanvasFontMetrics,
+  fontSizePx: number,
+  skew: number
+): (gp: GlyphPlacement) => GlyphContours | null {
+  const outlines = metrics.outlines;
+  if (!outlines) return () => null;
   const variation: GlyphVariation = {
     embolden: metrics.embolden ?? 0,
     skew,
     opentype: drawnOpentype(metrics),
   };
-  // Each glyph draws its contour as Godot's FreeType draws it, which carries its own shear. The text
-  // draws only for a face with no outlines, or a glyph with no contour.
-  const contourOutlines = metrics.outlines ?? null;
-  const contoursOf = contourOutlines && glyphContoursReader(contourOutlines, fontSizePx, variation);
-  // A glyph a `GSUB` lookup gives has no character to draw as text, so it draws its contours. So does
-  // each glyph of its cluster: the text of one character would shape through the lookup again.
-  const contoursOfGlyph =
-    contourOutlines && variedGlyphContoursReader(contourOutlines, fontSizePx, variation);
-  const substitutedSources = contoursOfGlyph && substitutedSourceIndices(layout);
-  const placementContours = (gp: GlyphPlacement): GlyphContours | null => {
-    if (gp.glyphIndex !== undefined && substitutedSources?.has(gp.sourceIndex))
-      return contoursOfGlyph!(gp.glyphIndex);
-    return contoursOf ? contoursOf(gp.char) : null;
-  };
-  const drawsAsText = (gp: GlyphPlacement) => hasOwnGlyph(gp) && !placementContours(gp);
-  const colour = opaqueByteColour(tint);
-  const stroked = strokeWidthPx > 0;
-  // Only a paint with a glyph drawn as text needs a canvas: a bitmap lays on the raster alone.
-  const isTextPainted = layout.lines.some((line) => line.glyphs.some(drawsAsText));
-  const ctx = isTextPainted ? textContext(canvasLayout, metrics, fontSizePx, colour, strokeWidthPx) : null;
-  if (isTextPainted && !ctx) return null;
-  const glyphBitmaps: GlyphBitmap[] = [];
-  const outlineRadiusPx = strokeWidthPx / 2;
-  const collectGlyphBitmap = (contours: GlyphContours, penX: number, baselineY: number) => {
-    const bitmap = placedGlyphBitmap(contours, penX, baselineY, outlineRadiusPx);
-    if (bitmap) glyphBitmaps.push(bitmap);
-  };
+  const contoursOfGlyph = variedGlyphContoursReader(outlines, fontSizePx, variation);
+  const contoursOfChar = glyphContoursReader(outlines, contoursOfGlyph, variation.opentype);
+  return (gp) => (gp.glyphIndex === undefined ? contoursOfChar(gp.char) : contoursOfGlyph(gp.glyphIndex));
+}
 
-  // `ctx` is null only where no glyph draws as text, so neither text painter runs then.
-  const paintGlyphText = (char: string, penX: number, baselineY: number, growthPx: number | undefined) => {
-    if (!ctx) return;
-    if (stroked) ctx.strokeText(char, penX, baselineY);
-    else if (growthPx) paintEmboldenedFill(ctx, char, penX, baselineY, growthPx);
-    else ctx.fillText(char, penX, baselineY);
-  };
+/** Where a raster sits against the run origin, and whether its glyphs snap to whole item pixels. */
+interface RasterFrame {
+  readonly metrics: CanvasFontMetrics;
+  readonly fontSizePx: number;
+  readonly canvasLayout: CanvasTextCanvasLayout;
+  readonly originPhasePx: Readonly<Vector2>;
+  readonly snapsGlyphs: boolean;
+  readonly contoursOf: (gp: GlyphPlacement) => GlyphContours | null;
+}
 
-  // The line of a contour face is unsheared, so a glyph with no contour shears itself.
-  const paintShearedGlyphText = (
-    char: string,
-    penX: number,
-    baselineY: number,
-    growthPx: number | undefined
-  ) => {
-    if (!ctx) return;
-    ctx.save();
-    shearAboutBaseline(ctx, skew, baselineY);
-    paintGlyphText(char, penX, baselineY, growthPx);
-    ctx.restore();
-  };
-
+/** Each glyph of `layout` that draws, at its pen and baseline in the raster. */
+function placeGlyphs(
+  layout: TextLayoutResult,
+  { metrics, fontSizePx, canvasLayout, originPhasePx, snapsGlyphs, contoursOf }: RasterFrame
+): PlacedGlyph[] {
   // The raster starts at the whole item pixel at or before the run origin, where its quad sits.
-  const snapsGlyphs = snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, metrics);
-  layout.lines.forEach((line, lineIndex) => {
-    const lineBaselinePx = lineIndex * layout.linePitchPx + baselineOffsetPx;
+  return layout.lines.flatMap((line, lineIndex) => {
+    const lineBaselinePx = lineIndex * layout.linePitchPx + layout.baselineOffsetPx;
     const baselineY =
       canvasLayout.offsetYPx + (snapsGlyphs ? Math.floor(originPhasePx.y + lineBaselinePx) : lineBaselinePx);
-
-    ctx?.save();
-    // A contour line draws under the identity transform, so its stroke keeps its width in every direction.
-    const isLineSheared = skew !== 0 && !contourOutlines;
-    if (ctx && isLineSheared) shearAboutBaseline(ctx, skew, baselineY);
-    for (const gp of line.glyphs) {
-      if (!hasOwnGlyph(gp)) continue;
+    return line.glyphs.filter(hasOwnGlyph).map((gp) => {
       // Godot snaps the glyph's origin, the pen plus its offset (`shaped_text_draw`).
       const originX = gp.x + (gp.xOffset ?? 0);
       const penX =
         canvasLayout.offsetXPx +
         (snapsGlyphs ? canvasGlyphPenXPx(originPhasePx.x + originX, fontSizePx, metrics) : originX);
-      const yOffsetPx = gp.yOffset ?? 0;
-      const glyphBaselineY = baselineY + yOffsetPx;
-      // Godot shears a glyph about its own origin, so the line's shear must not move an offset origin.
-      const lineShearedPenX = isLineSheared ? penX + skew * yOffsetPx : penX;
-      const contours = placementContours(gp);
-      if (contours) collectGlyphBitmap(contours, penX, glyphBaselineY);
-      else if (contourOutlines && skew !== 0)
-        paintShearedGlyphText(gp.char, penX, glyphBaselineY, gp.emboldenGrowthPx);
-      else paintGlyphText(gp.char, lineShearedPenX, glyphBaselineY, gp.emboldenGrowthPx);
-    }
-    ctx?.restore();
+      return {
+        char: gp.char,
+        penX,
+        baselineY: baselineY + (gp.yOffset ?? 0),
+        emboldenGrowthPx: gp.emboldenGrowthPx,
+        contours: contoursOf(gp),
+      };
+    });
   });
-  const { canvasWidthPx, canvasHeightPx } = canvasLayout;
-  const image = ctx
-    ? ctx.getImageData(0, 0, canvasWidthPx, canvasHeightPx)
-    : new ImageData(canvasWidthPx, canvasHeightPx);
-  return glyphRaster(image, glyphBitmaps, colour);
 }
 
-/** The source index of each cluster of `layout` that draws a glyph a `GSUB` lookup gave. */
-function substitutedSourceIndices(layout: TextLayoutResult): ReadonlySet<number | undefined> {
-  const indices = new Set<number | undefined>();
-  for (const line of layout.lines)
-    for (const glyph of line.glyphs) if (glyph.isSubstituted) indices.add(glyph.sourceIndex);
-  return indices;
+/** Paints each glyph of `glyphs` as text, sheared about its own origin as Godot shears a glyph. */
+function paintGlyphTexts(
+  ctx: CanvasRenderingContext2D,
+  glyphs: readonly PlacedGlyph[],
+  cssColour: string,
+  skew: number,
+  strokeWidthPx: number
+): void {
+  const isStroked = strokeWidthPx > 0;
+  if (isStroked) setStrokeStyle(ctx, cssColour, strokeWidthPx);
+  else setFillStyle(ctx, cssColour);
+  for (const glyph of glyphs) {
+    if (skew === 0) {
+      paintGlyphText(ctx, glyph, isStroked);
+      continue;
+    }
+    ctx.save();
+    shearAboutBaseline(ctx, skew, glyph.baselineY);
+    paintGlyphText(ctx, glyph, isStroked);
+    ctx.restore();
+  }
+}
+
+/** Paints `glyph` as text in the style `ctx` holds. */
+function paintGlyphText(
+  ctx: CanvasRenderingContext2D,
+  { char, penX, baselineY, emboldenGrowthPx }: PlacedGlyph,
+  isStroked: boolean
+): void {
+  if (isStroked) ctx.strokeText(char, penX, baselineY);
+  else if (emboldenGrowthPx) paintEmboldenedFill(ctx, char, penX, baselineY, emboldenGrowthPx);
+  else ctx.fillText(char, penX, baselineY);
 }
 
 interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {

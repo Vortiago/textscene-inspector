@@ -23,6 +23,7 @@ import {
 } from './sfntTables';
 import {
   createRuntimeFontMetrics,
+  isCanvasFontMetrics,
   type CanvasFontMetrics,
   type DesignUnitWidthFn,
 } from './runtimeFontMetrics';
@@ -43,7 +44,7 @@ import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import { warnOnce } from '../../../../utils/warnOnce';
 import { createSettledPeek } from './settledChannel';
-import { peekGlyphOutlines } from './sceneFontOutlines';
+import { drawLoad, peekOutlines } from './sceneFontOutlines';
 import { registerFontFace } from './fontFaceDoor';
 import { IS_VITEST } from '../../../../utils/isVitest';
 
@@ -138,9 +139,8 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
     );
   }
 
-  // The outlines place marks by HarfBuzz's fallback for a font with no `GPOS` script, and draw a
-  // substituted glyph. The container decodes once for `bytes`, so preparing them costs nothing until
-  // the first mark or substituted glyph.
+  // The outlines place marks by HarfBuzz's fallback for a font with no `GPOS` script. The container
+  // decodes once for `bytes`, so preparing them costs nothing until the first mark.
   const glyphs = sfnt ? await faceGlyphsOf(sfnt, bytes) : undefined;
   const hasGlyph = sfnt ? sfntHasGlyph(sfnt) : () => true;
   const measureInkUnits = (ch: string) => {
@@ -161,16 +161,20 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
 async function faceGlyphsOf(sfnt: SfntFile, bytes: ArrayBuffer): Promise<FaceGlyphs> {
   const [openOutlines, kerning] = await Promise.all([
     lazyFontContainer(bytes, FALLBACK_MARK_TABLE_TAGS),
-    // The kerning of a substituted glyph only refines the advances: a chunk that fails to load
-    // (offline, after a deploy) must not take the face with it.
+    // The kerning of shaped glyphs only refines the advances: a chunk that fails to load (offline,
+    // after a deploy) must not take the face with it.
     sfnt.tables.has('GPOS') ? import('./variation/instanceKerning').catch(() => null) : null,
   ]);
   return sfntFaceGlyphs(sfnt, openOutlines, kerning?.defaultKerningReader);
 }
 
+const VITEST_STAND_IN_METRICS: FontMetrics = { ...OPEN_SANS_FONT_METRICS, shaping: undefined };
+
 /** Loads a face from `bytes`. It never throws, and returns null for bytes that do not load. */
 async function loadSceneFontMetrics(bytes: ArrayBuffer, nodePath: string): Promise<FontMetrics | null> {
-  if (IS_VITEST) return OPEN_SANS_FONT_METRICS;
+  // Vitest has no FontFace, so the bundled advances stand in. The bundled shaping would hand out
+  // glyph indices of the bundled font, which the outlines of `bytes` do not share.
+  if (IS_VITEST) return VITEST_STAND_IN_METRICS;
   try {
     return await loadRuntimeFont(bytes, nodePath);
   } catch (err: unknown) {
@@ -279,7 +283,8 @@ function peekFace(font: FontResource, nodePath: string): FontMetrics | typeof MI
   if (metrics === undefined) return null;
   if (metrics === null) return MISSING_FACE;
   const variation = fontVariation(font);
-  const outlines = peekGlyphOutlines(face, metrics);
+  // A canvas face draws every glyph from its outline. An atlas face has no contour to follow.
+  const outlines = isCanvasFontMetrics(metrics) ? peekOutlines(face, drawLoad(face)) : null;
   return outlines === undefined ? null : withVariation(metrics, { ...variation, outlines });
 }
 

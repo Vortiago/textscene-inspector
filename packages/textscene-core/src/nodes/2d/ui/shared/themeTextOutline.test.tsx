@@ -88,7 +88,8 @@ async function render(
 }
 
 const strokeRuns = () => scene.runs.filter((run) => run.strokeWidthPx);
-const fillRun = () => scene.runs.find((run) => !run.strokeWidthPx)!;
+/** The latest fill: the atlas fill comes first while the bundled canvas face registers. */
+const fillRun = () => scene.runs.filter((run) => !run.strokeWidthPx).at(-1)!;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -134,11 +135,12 @@ describe.each(CONTROLS)('<%s> theme text outline', (type, Control) => {
     it('strokes the ring and fills the text on the canvas face, as FreeType draws both', async () => {
       await render(Control, outlined(type, { font_outline_color: RED }, { outline_size: OUTLINE_SIZE }));
 
-      await vi.waitFor(() => expect(strokeRuns()).toHaveLength(1));
+      // The fill draws on the atlas until the bundled canvas face registers, then moves to it.
+      await vi.waitFor(() => expect(fillRun().layout.fontMetrics.kind).toBe('canvas'));
+      expect(strokeRuns()).toHaveLength(1);
       expect(strokeRuns()[0]!.strokeWidthPx).toBe(outlineStrokeWidthPx(OUTLINE_SIZE));
       expect(strokeRuns()[0]!.layout.fontMetrics.kind).toBe('canvas');
       expect(strokeRuns()[0]!.renderOrder).toBeLessThan(fillRun().renderOrder!);
-      expect(fillRun().layout.fontMetrics.kind).toBe('canvas');
     });
 
     it('draws no ring at outline_size 0', async () => {

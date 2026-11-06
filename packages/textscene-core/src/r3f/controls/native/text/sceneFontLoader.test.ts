@@ -4,10 +4,13 @@
  * peek contract. `bundledFontLoader.test.ts` reaches the shared door for real.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fontFile, systemFont } from './sfntOutlines.testkit';
+import { fixtureFontBytes, fontFile, systemFont } from './sfntOutlines.testkit';
 import { peekSceneFontMetrics, peekSettledSceneFontMetrics } from './sceneFontLoader';
 import { fontWork, onSceneFontSettled, sceneFontSettleCount } from './settledChannel';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
+
+/** What a FontFile with bytes settles on here: the bundled advances, without the bundled shaping. */
+const VITEST_STAND_IN = { ...OPEN_SANS_FONT_METRICS, shaping: undefined };
 import { FACELESS_FONT } from './sceneFontResolution';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
 import { drawnOpentype, getFontAscentPx, getFontRunGlyphAdvancePx, getFontLinePitchPx } from './fontMetrics';
@@ -68,7 +71,7 @@ describe('peekSceneFontMetrics', () => {
     const leaf = fontFile(new ArrayBuffer(4));
     peekSceneFontMetrics(leaf, 'Root/C');
     await settleLoads();
-    expect(peekSceneFontMetrics(leaf, 'Root/C')).toBe(OPEN_SANS_FONT_METRICS);
+    expect(peekSceneFontMetrics(leaf, 'Root/C')).toEqual(VITEST_STAND_IN);
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
@@ -113,7 +116,7 @@ describe('peekSettledSceneFontMetrics', () => {
     const leaf = fontFile(new ArrayBuffer(4));
     expect(peekSettledSceneFontMetrics(leaf, 'Root/Mesh')).toBeNull();
     await settleLoads();
-    expect(peekSettledSceneFontMetrics(leaf, 'Root/Mesh')).toBe(OPEN_SANS_FONT_METRICS);
+    expect(peekSettledSceneFontMetrics(leaf, 'Root/Mesh')).toEqual(VITEST_STAND_IN);
   });
 
   it('shares the load with peekSceneFontMetrics, which answers the default meanwhile', async () => {
@@ -122,6 +125,14 @@ describe('peekSettledSceneFontMetrics', () => {
     expect(peekSettledSceneFontMetrics(leaf, 'Root/Mesh')).toBeNull();
     await settleLoads();
     expect(peekSettledSceneFontMetrics(leaf, 'Root/Mesh')).toBe(peekSceneFontMetrics(leaf, 'Root/Label'));
+  });
+
+  it('settles an atlas face with no outlines, since it has no contour to follow', async () => {
+    const font = fontFile(fixtureFontBytes('open-sans-semibold-subset.ttf'));
+    peekSettledSceneFontMetrics(font, 'Root/Atlas');
+    await vi.waitFor(() => expect(peekSettledSceneFontMetrics(font, 'Root/Atlas')).not.toBeNull());
+    await settleLoads();
+    expect(peekSettledSceneFontMetrics(font, 'Root/Atlas')?.outlines).toBeUndefined();
   });
 
   it('carries the embolden of a variation over a settled face', async () => {
@@ -167,9 +178,9 @@ describe('peekSceneFontMetrics — FontVariation embolden', () => {
   });
 
   it('leaves the base face untouched when the variation has no embolden, or an embolden of 0', async () => {
-    expect(await settledPeek(variation(fontFile(bytes), {}))).toBe(OPEN_SANS_FONT_METRICS);
-    expect(await settledPeek(variation(fontFile(bytes), { variation_embolden: '0.0' }))).toBe(
-      OPEN_SANS_FONT_METRICS
+    expect(await settledPeek(variation(fontFile(bytes), {}))).toEqual(VITEST_STAND_IN);
+    expect(await settledPeek(variation(fontFile(bytes), { variation_embolden: '0.0' }))).toEqual(
+      VITEST_STAND_IN
     );
   });
 

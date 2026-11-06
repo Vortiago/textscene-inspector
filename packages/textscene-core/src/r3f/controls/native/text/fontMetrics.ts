@@ -12,7 +12,6 @@ import type { LookupGlyph } from './autofit/openTypeGdef';
 import type { SizedClusterOffsets } from './fallbackMarkPositioning';
 import type { RunGlyph, RunShaping } from './glyphRun';
 import type { SfntOutlines } from './sfntOutlines';
-import type { PairKerningReader } from './variation/instanceKerning';
 
 /**
  * Which glyph-painting path a `FontMetrics` pairs with, since shaping is
@@ -56,10 +55,10 @@ export interface FontMetrics {
    */
   readonly markOffsets?: SizedClusterOffsets;
   /**
-   * The `GPOS` kerning of a pair of glyphs at the default instance, design units, which a pair with
-   * a glyph that a `GSUB` lookup gave takes. Absent for a face with no pair kerning to read.
+   * The `GPOS` kerning of a pair of shaped glyphs at the default instance, design units. Absent for a
+   * face with no `GPOS` to read.
    */
-  readonly getGlyphKerningUnits?: PairKerningReader;
+  readonly getGlyphKerningUnits?: GlyphKerningReader;
   /** A character's own advance width, design units, or `null` if this font has no glyph for it (a shaper falls back to `averageAdvanceUnits`). */
   getGlyphAdvanceUnits(ch: string): number | null;
   /**
@@ -91,6 +90,9 @@ export interface FontMetrics {
    */
   readonly outlines?: SfntOutlines | null;
 }
+
+/** The kerning of a pair of glyphs, design units. Null, not zero, where the kerning of their characters stands. */
+export type GlyphKerningReader = (left: LookupGlyph, right: LookupGlyph) => number | null;
 
 /** The fields of a face whose glyphs this previewer reads from its font file (`sfntFaceGlyphs.ts`). */
 export type FaceGlyphs = Pick<FontMetrics, 'shaping' | 'markOffsets' | 'getGlyphKerningUnits'>;
@@ -563,8 +565,6 @@ export function getFontEmboldenStrength(embolden: number, fontSizePx: number): n
 export interface KernGlyph {
   readonly char: string;
   readonly glyph?: number;
-  /** Whether a `GSUB` lookup gave `glyph`, so no character names it. */
-  readonly isSubstituted?: boolean;
 }
 
 /** The glyph a kerning lookup reads for `glyph`, or `cmapGlyph` of its character where the shaping read none. */
@@ -575,7 +575,7 @@ function lookupGlyphOf({ char, glyph }: KernGlyph, cmapGlyph: (codePoint: number
 
 /**
  * The kerning of `a` and `b` scaled to `fontSizePx`: the `GPOS` kerning of the instance at the face's
- * `variation_opentype`, else the `GPOS` kerning of a pair with a substituted glyph, else
+ * `variation_opentype`, else the default `GPOS` kerning of a pair of shaped glyphs, else
  * `metrics.getKerningAdjustmentUnits`. HarfBuzz positions a glyph in the 26.6 units of the FreeType
  * size Godot's `hb_font` takes (`text_server_adv.cpp:1513`), so the kerning lands on a 1/64 pixel.
  */
@@ -587,7 +587,7 @@ export function getFontKerningAdjustmentPx(
 ): number {
   const units =
     instanceKerningUnits(metrics, a, b) ??
-    substitutedKerningUnits(metrics, a, b) ??
+    glyphKerningUnits(metrics, a, b) ??
     metrics.getKerningAdjustmentUnits(a.char, b.char);
   if (units === 0) return 0;
   return Math.round(unitsToPx(units, metrics, fontSizePx) * FIXED_26_6_ONE) / FIXED_26_6_ONE;
@@ -605,15 +605,14 @@ function instanceKerningUnits(metrics: FontMetrics, a: KernGlyph, b: KernGlyph):
 }
 
 /**
- * The default `GPOS` kerning of a pair with a glyph a `GSUB` lookup gave, or null for a pair of
- * characters. No pair of characters names a substituted glyph, so a face with no glyph kerning gives 0.
+ * The default `GPOS` kerning of a pair of glyphs the run shaping read, or null where it read none or
+ * the face has no glyph kerning: the kerning of the characters stands.
  */
-function substitutedKerningUnits(metrics: FontMetrics, a: KernGlyph, b: KernGlyph): number | null {
-  if (!a.isSubstituted && !b.isSubstituted) return null;
+function glyphKerningUnits(metrics: FontMetrics, a: KernGlyph, b: KernGlyph): number | null {
   const kerningOf = metrics.getGlyphKerningUnits;
-  if (!kerningOf || a.glyph === undefined || b.glyph === undefined) return 0;
-  return kerningOf(lookupGlyphOf(a, NO_GLYPH), lookupGlyphOf(b, NO_GLYPH));
+  if (!kerningOf || a.glyph === undefined || b.glyph === undefined) return null;
+  return kerningOf(
+    { glyph: a.glyph, codePoint: a.char.codePointAt(0)! },
+    { glyph: b.glyph, codePoint: b.char.codePointAt(0)! }
+  );
 }
-
-/** No `cmap` to read: both glyphs of the pair are known. */
-const NO_GLYPH = (): number => 0;

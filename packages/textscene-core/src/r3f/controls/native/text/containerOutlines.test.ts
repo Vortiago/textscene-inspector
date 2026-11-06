@@ -1,13 +1,10 @@
 // @vitest-environment node
-import { join } from 'node:path';
 import wawoff2 from 'wawoff2';
 import { describe, expect, it } from 'vitest';
-import { fileBytes } from '../../../../resources/testing/fileBytes';
 import { woffFromSfnt } from './fontContainer.testkit';
 import { openFontOutlines, type SfntOutlines } from './sfntOutlines';
+import { bundledFontBytes } from './bundledFontBytes';
 import { fixtureFontBytes } from './sfntOutlines.testkit';
-
-const BUNDLED_WOFF2 = join(import.meta.dirname, '../../../../../assets/fonts/OpenSans_SemiBold.woff2');
 
 /** The plain TrueType font that Google's reference WOFF2 decoder makes of `woff2`: an independent decoder of the glyf transform. */
 async function plainFontOf(woff2: ArrayBuffer): Promise<ArrayBuffer> {
@@ -30,7 +27,7 @@ function allContours(outlines: SfntOutlines, glyphCount: number, fontSizePx: num
 
 describe('openFontOutlines of a .woff2 with a transformed glyf', () => {
   it('gives the outline of H that fontkit gives for the same font', async () => {
-    const outlines = await outlinesOf(fileBytes(BUNDLED_WOFF2));
+    const outlines = await outlinesOf(bundledFontBytes());
 
     // fontkit 2.0.4 on the font the reference decoder makes: H is glyph 43 and its path, in design
     // units over 2048 per em, is (1345,0) (1106,0) (1106,660) (432,660) (432,0) (192,0) (192,1462)
@@ -49,7 +46,7 @@ describe('openFontOutlines of a .woff2 with a transformed glyf', () => {
   it.each([16, 64])(
     'gives every glyph the contours of the reference decoder at %i px',
     async (fontSizePx) => {
-      const woff2 = fileBytes(BUNDLED_WOFF2);
+      const woff2 = bundledFontBytes();
       const reference = (await openFontOutlines(await plainFontOf(woff2)))!;
       const rebuilt = await outlinesOf(woff2);
       const glyphCount = 1150;
@@ -61,7 +58,7 @@ describe('openFontOutlines of a .woff2 with a transformed glyf', () => {
   );
 
   it('maps characters as the plain font does', async () => {
-    const woff2 = fileBytes(BUNDLED_WOFF2);
+    const woff2 = bundledFontBytes();
     const reference = (await openFontOutlines(await plainFontOf(woff2)))!;
     const rebuilt = await outlinesOf(woff2);
 
@@ -73,7 +70,7 @@ describe('openFontOutlines of a .woff2 with a transformed glyf', () => {
   });
 
   it('answers null for a .woff2 whose compressed data is cut short', async () => {
-    const whole = fileBytes(BUNDLED_WOFF2);
+    const whole = bundledFontBytes();
 
     expect(await openFontOutlines(whole.slice(0, whole.byteLength >> 1))).toBeNull();
   });

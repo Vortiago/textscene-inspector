@@ -140,6 +140,17 @@ describe('getFontKerningAdjustmentPx', () => {
   it('short-circuits to 0 for a pair the font has no entry for', () => {
     expect(getFontKerningAdjustmentPx(METRICS, { char: 'A' }, { char: 'A' }, 16)).toBe(0);
   });
+
+  it('takes the glyph kerning of a pair of shaped glyphs', () => {
+    const face: FontMetrics = { ...METRICS, getGlyphKerningUnits: () => -128 };
+    expect(getFontKerningAdjustmentPx(face, { char: 'A', glyph: 36 }, { char: 'V', glyph: 57 }, 16)).toBe(-1);
+  });
+
+  // HarfBuzz applies the legacy `kern` table to a font whose `GPOS` has no pair kerning.
+  it('keeps the kerning of the characters where the face reads no glyph kerning', () => {
+    const face: FontMetrics = { ...METRICS, getGlyphKerningUnits: () => null };
+    expect(getFontKerningAdjustmentPx(face, { char: 'A', glyph: 36 }, { char: 'V', glyph: 57 }, 16)).toBe(-2);
+  });
 });
 
 describe('withVariation', () => {

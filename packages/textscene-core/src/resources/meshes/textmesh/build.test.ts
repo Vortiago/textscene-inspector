@@ -11,6 +11,7 @@ import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFo
 import { FACELESS_FONT } from '../../../r3f/controls/native/text/sceneFontResolution';
 import { openFontOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
+import { unshapedFace } from '../../../r3f/controls/native/text/textLayout.testkit';
 import { shapedTextSizeWidthPx, shapeText } from '../../../r3f/controls/native/text/textLayout';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import type { GodotSurface } from '../godotSurface';
@@ -30,7 +31,7 @@ const BOTTOM = '2';
 const HALF_DEPTH = Math.fround(0.025);
 
 const outlines = (await openFontOutlines(fixtureFontBytes('open-sans-semibold-subset.ttf')))!;
-const face: TextMeshFace = withOutlines(OPEN_SANS_FONT_METRICS, outlines);
+const face: TextMeshFace = withOutlines(unshapedFace(OPEN_SANS_FONT_METRICS), outlines);
 
 /** A TextMesh at `font_size` 64 with depth 0.05, the properties of `raw` over those defaults, built. */
 function surfaceOf(text: string, raw: Record<string, string> = {}): GodotSurface {
@@ -342,7 +343,7 @@ describe('buildTextMeshSurface font variation', () => {
   const EMBOLDENED = { embolden: 0.6 };
   const SHEARED = { skew: 0.3 };
   const faceOf = (variation: GlyphVariation): TextMeshFace =>
-    withOutlines(withVariation(OPEN_SANS_FONT_METRICS, variation), outlines);
+    withOutlines(withVariation(unshapedFace(OPEN_SANS_FONT_METRICS), variation), outlines);
   const maxX = (variation: GlyphVariation): number => {
     const properties = decodeTextMesh({
       text: '"H"',
@@ -377,7 +378,7 @@ describe('buildTextMeshSurface glyph reuse', () => {
         return outlines.glyphContours(...args);
       },
     };
-    return { face: withOutlines(OPEN_SANS_FONT_METRICS, counting), contoursRead: () => reads };
+    return { face: withOutlines(unshapedFace(OPEN_SANS_FONT_METRICS), counting), contoursRead: () => reads };
   }
 
   const build = (text: string, face: TextMeshFace, raw: Record<string, string> = {}) =>
@@ -413,9 +414,9 @@ describe('buildTextMeshSurface glyph reuse', () => {
 describe('buildTextMeshSurface — a fallback chain', () => {
   it("extrudes a glyph the face lacks from the fallback's outlines", async () => {
     const dejaVu = (await openFontOutlines(fixtureFontBytes('dejavu-sans-bidi-subset.ttf')))!;
-    const fallback = withOutlines({ ...OPEN_SANS_FONT_METRICS, hasGlyph: () => true }, dejaVu);
+    const fallback = withOutlines({ ...unshapedFace(OPEN_SANS_FONT_METRICS), hasGlyph: () => true }, dejaVu);
     const lacksA = withOutlines(
-      { ...OPEN_SANS_FONT_METRICS, hasGlyph: (ch: string) => ch !== 'A' },
+      { ...unshapedFace(OPEN_SANS_FONT_METRICS), hasGlyph: (ch: string) => ch !== 'A' },
       outlines
     );
     const properties = decodeTextMesh({ text: '"A"', font_size: String(FONT_SIZE) });

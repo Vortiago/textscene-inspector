@@ -24,12 +24,13 @@ import { isInstanced, type FontMetrics } from './fontMetrics';
 export interface RunGlyph {
   /** The font glyph, absent for a face whose glyphs this previewer cannot read: the browser draws `char`. */
   readonly glyph?: number;
-  /** The character the glyph shapes, after normalisation. A glyph a lookup puts out keeps the character it replaces. */
+  /**
+   * The text the glyph draws as where a face draws text: the character it shapes, after normalisation.
+   * A glyph a `GSUB` lookup gives that starts its cluster takes the cluster's source text, which no glyph names alone.
+   */
   readonly char: string;
   /** Whether the glyph is a mark, which takes no advance and sits over the glyph before it. */
   readonly isMark: boolean;
-  /** Whether a `GSUB` lookup gave the glyph, so `char` alone does not draw it. */
-  readonly isSubstituted: boolean;
   /** The glyph's advance at the default instance, design units, where the face reads it. */
   readonly advanceUnits?: number;
 }
@@ -141,24 +142,27 @@ function shapeRun(
     let next = first + 1;
     while (next < buffer.glyphs.length && bufferClusters[next] === k) next++;
     const nextCluster = next < buffer.glyphs.length ? bufferClusters[next]! : clusters.length;
-    shaped.push({
-      start: clusters[k]!.start,
-      end: clusters[nextCluster - 1]!.end,
-      glyphs: buffer.glyphs
-        .slice(first, next)
-        .map((glyph, j) => runGlyph(face, glyph, buffer.codePoints![first + j]!)),
-    });
+    const start = clusters[k]!.start;
+    const end = clusters[nextCluster - 1]!.end;
+    const glyphs: RunGlyph[] = [];
+    for (let j = first; j < next; j++) {
+      const glyph = buffer.glyphs[j]!;
+      const codePoint = buffer.codePoints![j]!;
+      const isSubstitutedStart = j === first && glyph !== face.glyphIndex(codePoint);
+      const char = isSubstitutedStart ? chars.slice(start, end).join('') : String.fromCodePoint(codePoint);
+      glyphs.push(runGlyph(face, glyph, codePoint, char));
+    }
+    shaped.push({ start, end, glyphs });
     first = next;
   }
   return shaped;
 }
 
-function runGlyph(face: RunShapingFace, glyph: number, codePoint: number): RunGlyph {
+function runGlyph(face: RunShapingFace, glyph: number, codePoint: number, char: string): RunGlyph {
   return {
     glyph,
-    char: String.fromCodePoint(codePoint),
+    char,
     isMark: (face.filter.propsOf({ glyph, codePoint }) & MARK_PROPS) !== 0,
-    isSubstituted: glyph !== face.glyphIndex(codePoint),
     advanceUnits: face.advanceUnits(glyph),
   };
 }
@@ -175,7 +179,6 @@ function characterRunShaping(hasCharacter: (ch: string) => boolean): RunShaping 
       glyphs: drawnCharacters(cluster, hasCharacter).map((char) => ({
         char,
         isMark: isCombiningMark(char),
-        isSubstituted: false,
       })),
     }));
 }

@@ -24,8 +24,8 @@ const bundled = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | nu
 
 vi.mock('./bundledFontLoader', () => ({ peekBundledCanvasFontMetrics: () => bundled.metrics }));
 vi.mock('./sceneFontOutlines', () => ({
-  peekGlyphOutlines: () => null,
-  peekBundledGlyphOutlines: () => null,
+  peekOutlines: () => null,
+  drawLoad: () => ({}),
 }));
 
 // Null is a bundled canvas face that cannot register, which leaves the atlas to draw the fill.
@@ -70,10 +70,11 @@ describe('<TextRun>', () => {
     expect(mesh.geometry.getAttribute('position').count).toBe(4);
   });
 
-  it('draws nothing for a plain atlas face while the bundled canvas face loads', async () => {
+  it('fills a plain atlas face on the atlas while the bundled canvas face loads', async () => {
     bundled.metrics = undefined;
     const renderer = await renderTextRun();
-    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect(mesh.material).toBeInstanceOf(THREE.ShaderMaterial);
   });
 
   it('mounts a single mesh carrying the merged glyph geometry', async () => {
@@ -141,9 +142,9 @@ describe('<TextRun>', () => {
     expect(mesh.material).not.toBeInstanceOf(THREE.ShaderMaterial);
   });
 
-  it('draws nothing for an emboldened atlas face while the bundled canvas face loads', async () => {
+  it('draws no outline ring of an atlas face while the bundled canvas face loads', async () => {
     bundled.metrics = undefined;
-    const renderer = await renderTextRun({ layout: emboldenedLayout(1.2) });
+    const renderer = await renderTextRun({ strokeWidthPx: 2 });
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 

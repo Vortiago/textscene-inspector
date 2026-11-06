@@ -2,13 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { woffFromSfnt } from './fontContainer.testkit';
 import { fontWork, sceneFontSettleCount } from './settledChannel';
-import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
-import { createRuntimeFontMetrics } from './runtimeFontMetrics';
-import { peekBundledGlyphOutlines, peekGlyphOutlines, peekSceneFontOutlines } from './sceneFontOutlines';
+import { drawLoad, peekOutlines, peekSceneFontOutlines } from './sceneFontOutlines';
 import { openFontOutlines } from './sfntOutlines';
 import { bundledFontBytes } from './bundledFontBytes';
 import { Hinting, type FontHinting } from '../../../../godot/text/textServerEnums';
-import { FACELESS_FONT, type FileWithBytes } from './sceneFontResolution';
+import { BUNDLED_FACE, FACELESS_FONT, type FileWithBytes } from './sceneFontResolution';
 import { charContours, fixtureFontBytes, fontFile, systemFont } from './sfntOutlines.testkit';
 import autoHintedReference from './autofit/autoHinting.godot.json';
 import { referencePoints, type ReferenceGlyph } from './glyphVariation.testkit';
@@ -126,24 +124,10 @@ describe('peekSceneFontOutlines', () => {
   });
 });
 
-describe('peekGlyphOutlines', () => {
-  const canvasFace = createRuntimeFontMetrics({
-    hasGlyph: () => true,
-    scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
-    measureWidthUnits: (text) => text.length * 500,
-    cssFontFamily: 'scene-font-test',
-  });
-
-  it('answers null for an atlas face, which has no contour to follow', () => {
-    const font = woffOfOpenSans();
-
-    expect(peekGlyphOutlines(font, OPEN_SANS_FONT_METRICS)).toBeNull();
-    expect(peekSceneFontOutlines(font)).toBeUndefined();
-  });
-
+describe('peekOutlines at the draw load', () => {
   async function settledGlyphOutlines(font: FileWithBytes) {
-    await vi.waitFor(() => expect(peekGlyphOutlines(font, canvasFace)).not.toBeUndefined());
-    return peekGlyphOutlines(font, canvasFace)!;
+    await vi.waitFor(() => expect(peekOutlines(font, drawLoad(font))).not.toBeUndefined());
+    return peekOutlines(font, drawLoad(font))!;
   }
 
   async function referenceContours(name: string, hinting: FontHinting) {
@@ -155,7 +139,7 @@ describe('peekGlyphOutlines', () => {
   it('answers undefined while the outlines of a canvas face load, then the outlines', async () => {
     const font = woffOfOpenSans();
 
-    expect(peekGlyphOutlines(font, canvasFace)).toBeUndefined();
+    expect(peekOutlines(font, drawLoad(font))).toBeUndefined();
 
     expect((await settledGlyphOutlines(font)).glyphIndex(0x48)).toBe(20);
   });
@@ -184,16 +168,12 @@ describe('peekGlyphOutlines', () => {
   });
 });
 
-describe('peekBundledGlyphOutlines', () => {
+describe('peekOutlines of the bundled face', () => {
   it('reads the bundled Open Sans at the hinting the project sets', async () => {
-    await vi.waitFor(() => expect(peekBundledGlyphOutlines(Hinting.NORMAL)).not.toBeUndefined());
-    const bundled = await openFontOutlines(bundledFontBytes(), {
-      hinting: Hinting.NORMAL,
-      isAutohinterForced: false,
-    });
+    const load = { hinting: Hinting.NORMAL, isAutohinterForced: false };
+    await vi.waitFor(() => expect(peekOutlines(BUNDLED_FACE, load)).not.toBeUndefined());
+    const bundled = await openFontOutlines(bundledFontBytes(), load);
 
-    expect(charContours(peekBundledGlyphOutlines(Hinting.NORMAL)!, 'a', 16)).toEqual(
-      charContours(bundled!, 'a', 16)
-    );
+    expect(charContours(peekOutlines(BUNDLED_FACE, load)!, 'a', 16)).toEqual(charContours(bundled!, 'a', 16));
   });
 });

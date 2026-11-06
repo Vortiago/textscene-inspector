@@ -408,8 +408,8 @@ describe('paintSceneFontCanvas — pen', () => {
       const { calls, canvasLayout } = paintRecording(layout, 0, { skew: 0.3 });
       return (calls.filter((c) => c.op === 'fillText')[1]!.args[1] as number) - canvasLayout.offsetXPx;
     };
-    // The line shears x by `-skew * (y - baseline)`, so the pen moves `skew * yOffset` to cancel it.
-    expect(penOfSecondGlyph(-8) - penOfSecondGlyph(0)).toBeCloseTo(0.3 * -8, 9);
+    // Each glyph shears about its own baseline, so a raised glyph keeps its pen.
+    expect(penOfSecondGlyph(-8)).toBeCloseTo(penOfSecondGlyph(0), 9);
   });
 
   // `text_server_adv.cpp:4082-4084`: a glyph at scale 1 draws at the floored `cpos.y`.
@@ -890,9 +890,7 @@ describe('paintSceneFontCanvas — the glyphs a run shapes into', () => {
           {
             start: 0,
             end: 2,
-            glyphs: [
-              { glyph: FI_LIGATURE, char: 'f', isMark: false, isSubstituted: true, advanceUnits: 600 },
-            ],
+            glyphs: [{ glyph: FI_LIGATURE, char: 'fi', isMark: false, advanceUnits: 600 }],
           },
         ]
       : chars.map((char, i) => ({
@@ -903,7 +901,6 @@ describe('paintSceneFontCanvas — the glyphs a run shapes into', () => {
               glyph: char === 'l' ? SWAPPED_L : 1,
               char,
               isMark: false,
-              isSubstituted: char === 'l',
               advanceUnits: 500,
             },
           ],

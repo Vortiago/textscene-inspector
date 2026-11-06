@@ -35,8 +35,8 @@ const startsCluster = (glyphs: readonly GlyphPlacement[], i: number): boolean =>
 
 /**
  * Visits each atlas bitmap placement `i` of `glyphs` draws, `penPx` past its pen, its `xOffset`
- * included. A substituted glyph the atlas does not bake draws the characters of its source text at
- * their own advances, once for its cluster: each later glyph of a multiple substitution draws none.
+ * included. A glyph the atlas does not bake, such as a ligature, draws the characters of its `char`
+ * at their own advances, once for its cluster: each later glyph of its cluster draws none.
  */
 function forEachInkedGlyph(
   glyphs: readonly GlyphPlacement[],
@@ -46,7 +46,7 @@ function forEachInkedGlyph(
 ): void {
   const gp = glyphs[i]!;
   let penPx = gp.xOffset ?? 0;
-  if (gp.glyph || !gp.isSubstituted) {
+  if (gp.glyph) {
     if (hasInk(gp.glyph)) visit(gp.glyph, penPx);
     return;
   }

@@ -69,21 +69,17 @@ export function variedGlyphContoursReader(
   };
 }
 
-/** {@link variedGlyphContoursReader} for the `cmap` glyph of a character at the variation's instance. */
+/** `contoursOfGlyph`, a {@link variedGlyphContoursReader}, for the `cmap` glyph of a character at the variation's instance. */
 export function glyphContoursReader(
   outlines: SfntOutlines,
-  fontSizePx: number,
-  variation: GlyphVariation
+  contoursOfGlyph: (glyphIndex: number) => GlyphContours | null,
+  opentype: GlyphVariation['opentype']
 ): (char: string) => GlyphContours | null {
-  const contoursOfGlyph = variedGlyphContoursReader(outlines, fontSizePx, variation);
   const byChar = new Map<string, GlyphContours | null>();
   return (char) => {
     let contours = byChar.get(char);
     if (contours === undefined)
-      byChar.set(
-        char,
-        (contours = contoursOfGlyph(outlines.glyphIndex(char.codePointAt(0)!, variation.opentype)))
-      );
+      byChar.set(char, (contours = contoursOfGlyph(outlines.glyphIndex(char.codePointAt(0)!, opentype))));
     return contours;
   };
 }

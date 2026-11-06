@@ -21,6 +21,7 @@ import {
   ftVectorUnit,
   shiftRight,
 } from './ftVector';
+import { reverseFrom } from '../../../../utils/reverseFrom';
 import { divide } from './autofit/afHints';
 import { splitCubic } from './freeTypeChords';
 import {
@@ -119,8 +120,8 @@ class StrokeBorder {
       this.points[start] = this.points.pop()!;
       this.tags[start] = this.tags.pop()!;
       if (isReversed) {
-        this.points.splice(start + 1, Infinity, ...this.points.slice(start + 1).reverse());
-        this.tags.splice(start + 1, Infinity, ...this.tags.slice(start + 1).reverse());
+        reverseFrom(this.points, start + 1);
+        reverseFrom(this.tags, start + 1);
       }
       this.tags[start]! |= TAG_BEGIN;
       this.tags[this.tags.length - 1]! |= TAG_END;
