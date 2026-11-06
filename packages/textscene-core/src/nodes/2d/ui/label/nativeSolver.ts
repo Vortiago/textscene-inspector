@@ -37,7 +37,7 @@ import {
   type TextThemeProps,
 } from '../../../../r3f/controls/native/textTheme';
 import type { LabelProperties } from './types';
-import { sliceCodePoints, utf16OffsetOf } from '../../../../godot/string/codePoints.js';
+import { sliceCodePoints } from '../../../../godot/string/codePoints.js';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import {
@@ -271,82 +271,6 @@ export function labelPreShapeText(
   )
     return text;
   return sliceCodePoints(text, visibleChars);
-}
-
-interface VisibleCharsBudget {
-  behavior: number;
-  /** The layout's `shapedText`. It maps a glyph's UTF-16 `sourceIndex` to the code point count Godot budgets, and only CHARS_AFTER_SHAPING reads it. */
-  text: string;
-  /** Final resolved `visible_chars` in code points, the budget of CHARS_AFTER_SHAPING. */
-  visibleChars: number | undefined;
-  /** Final resolved `visible_ratio`, the budget of the GLYPHS_* behaviours. */
-  visibleRatio: number | undefined;
-  /** `is_layout_rtl()` (`SolveNode.rtl`), which picks the end GLYPHS_AUTO trims from (`label.cpp:779-780`). Defaults `false`. */
-  rtl?: boolean;
-}
-
-/**
- * `draw_text`'s per-glyph `skip` (`label.cpp:778-780,label.h:197-240`) over lines already shaped
- * and windowed to `label.cpp`'s `start`/`end` (`:548-559`). CHARS_AFTER_SHAPING hides each glyph whose
- * source character is at or past the budget (`p_glyphs[j].end + p_para_start > p_visible_chars`). The
- * GLYPHS behaviours count glyphs in visual order: GLYPHS_LTR from the front, GLYPHS_RTL from the back
- * (`label.cpp:780`), and GLYPHS_AUTO picks by `rtl_layout` (`:779-780`).
- */
-export function applyVisibleCharsReveal(
-  lines: readonly TextLineLayout[],
-  budget: VisibleCharsBudget
-): TextLineLayout[] {
-  if (budget.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return [...lines];
-  if (budget.behavior === VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING) {
-    return revealCharacters(lines, budget.text, budget.visibleChars);
-  }
-  return revealGlyphs(lines, budget);
-}
-
-/**
- * CHARS_AFTER_SHAPING. An ellipsis glyph has no source character: its `end` is -1 (`text_server.h:628`),
- * so it hides where `paragraphStart - 1 > visibleChars`.
- */
-function revealCharacters(
-  lines: readonly TextLineLayout[],
-  text: string,
-  visibleChars: number | undefined
-): TextLineLayout[] {
-  if (visibleChars === undefined || visibleChars < 0) return [...lines];
-  // Glyph source indices are UTF-16 offsets; the budget counts code points.
-  const visibleEnd = utf16OffsetOf(text, visibleChars);
-  // `paragraphStart - 1 <= visibleChars` in code points is `paragraphStart <= ellipsisEnd`, the offset
-  // of code point `visibleChars + 1`.
-  const ellipsisEnd = utf16OffsetOf(text, visibleChars + 1);
-  return lines.map((line) => {
-    const isEllipsisShown = (line.paragraphStart ?? 0) <= ellipsisEnd;
-    return {
-      ...line,
-      glyphs: line.glyphs.filter((glyph) =>
-        glyph.sourceIndex === undefined ? isEllipsisShown : glyph.sourceIndex < visibleEnd
-      ),
-    };
-  });
-}
-
-/** The GLYPHS behaviours: `visible_ratio * total_glyphs` glyphs, counted in visual order across lines. */
-function revealGlyphs(lines: readonly TextLineLayout[], budget: VisibleCharsBudget): TextLineLayout[] {
-  if (budget.visibleRatio === undefined || budget.visibleRatio >= 1) return [...lines];
-  const totalGlyphs = lines.reduce((sum, l) => sum + l.glyphs.length, 0);
-  const limit = Math.trunc(totalGlyphs * Math.max(0, budget.visibleRatio));
-  const fromEnd =
-    budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_RTL ||
-    (budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_AUTO && budget.rtl === true);
-  const hideBefore = fromEnd ? totalGlyphs - limit : 0;
-  let seen = 0;
-  return lines.map((line) => ({
-    ...line,
-    glyphs: line.glyphs.filter(() => {
-      const keep = fromEnd ? seen >= hideBefore : seen < limit;
-      seen++;
-      return keep;
-    }),
-  }));
 }
 
 /**

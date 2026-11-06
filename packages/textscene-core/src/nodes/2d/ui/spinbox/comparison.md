@@ -16,6 +16,10 @@ An arrow is dimmed once the value sits at its bound without `allow_greater`/
 `allow_lesser`, and both are dimmed once `editable` is false. While `localize_numeral_system` is true, its
 default, the value is written in the digits of the project locale. The prefix and suffix stay as written
 (`spin_box.cpp:91-93`).
+The field shapes its text as an AUTO-direction LineEdit with the project locale. Under a right-to-left
+locale, a prefix, a suffix or a minus sign lands on the side Godot gives it, even beneath an LTR root
+(`line_edit.cpp:3103-3112`). The `spin-box-direction` golden shows a prefix, a prefixed negative value
+and a suffix.
 
 ## Linting
 

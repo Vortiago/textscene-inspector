@@ -42,4 +42,14 @@ export interface RichTextLabelProperties
   scrollActive: boolean;
   /** While true, text taller than the rect shows its foot: the scroll value follows the text height (`rich_text_label.h:561`). */
   scrollFollowing: boolean;
+  /** `visible_characters`, derived with `visible_ratio` in file order (`rich_text_label.cpp:7401-7430,7892-7948`). Godot's default is -1, every character (`rich_text_label.h:553`). Unset means the default. */
+  visibleCharacters?: number;
+  /** `visible_ratio`, derived with `visible_characters`. It budgets the glyph behaviours (`rich_text_label.cpp:947`). Default 1. */
+  visibleRatio?: number;
+  /** Set when `visible_ratio` was written last, so the render derives `visible_characters` from the characters it draws: an `[img]` counts only once its texture loads (`rich_text_label.cpp:4210`). */
+  visibleRatioDrives?: true;
+  /** `TextServer::VisibleCharactersBehavior`. Unset means VC_CHARS_BEFORE_SHAPING, Godot's default (`rich_text_label.h:554`). */
+  visibleCharactersBehavior?: number;
+  /** While true, `scroll_active` keeps the bar showing and the text scrolled to `_update_follow_vc`'s position (`rich_text_label.cpp:2659-2667,5209-5221`). */
+  scrollFollowingVisibleCharacters: boolean;
 }

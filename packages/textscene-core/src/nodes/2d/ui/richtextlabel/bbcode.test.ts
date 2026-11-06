@@ -411,6 +411,7 @@ describe('parseBBCodeRuns paragraph breaks', () => {
       const runs = parseBBCodeRuns(`${empty}[p]x[/p]`);
       expect(runs.map((run) => run.text)).toEqual(['\n', 'x']);
       expect(runs[0]!.zeroHeightBreak).toBe(true);
+      expect(runs[0]!.implicitBreaks).toEqual([0]);
     }
   );
 
@@ -431,6 +432,25 @@ describe('parseBBCodeRuns paragraph breaks', () => {
 
   it('adds no break after an [img] with no path, which adds no item (`:6145`)', () => {
     expect(parseBBCodeRuns('[img][/img][p]x[/p]').map((run) => run.text)).toEqual(['x']);
+  });
+});
+
+// `push_paragraph`'s new line is a `Line`, not an `ITEM_NEWLINE`, so Godot counts no character for it
+// (`rich_text_label.cpp:4097-4103,4089-4091`), unlike a newline in the text.
+describe('parseBBCodeRuns implicit breaks', () => {
+  it('marks the newline a paragraph tag adds after text, and not one the text holds', () => {
+    expect(parseBBCodeRuns('a[p]b[/p]')[0]!.implicitBreaks).toEqual([1]);
+    expect(parseBBCodeRuns('a\n[p]b[/p]').every((run) => run.implicitBreaks === undefined)).toBe(true);
+  });
+
+  it('keeps the index when later text of the same tags joins the run', () => {
+    const [run] = parseBBCodeRuns('ab[p][/p]cd');
+    expect(run).toMatchObject({ text: 'ab\ncd', implicitBreaks: [2] });
+  });
+
+  it('marks the newline between two paragraphs on its own run', () => {
+    const runs = parseBBCodeRuns('[center]a[/center][right]b[/right]');
+    expect(runs.map((run) => run.implicitBreaks)).toEqual([undefined, [0], undefined]);
   });
 });
 
@@ -530,7 +550,7 @@ describe('parseBBCodeRuns [hr]', () => {
 
   it('ends the line of the text before it and shares its own line with the text after it', () => {
     expect(parseBBCodeRuns('abc[hr]def')).toEqual([
-      { text: 'abc\n', tags: [] },
+      { text: 'abc\n', tags: [], implicitBreaks: [3] },
       ruleRun(),
       { text: 'def', tags: [] },
     ]);

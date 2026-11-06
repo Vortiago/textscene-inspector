@@ -2878,6 +2878,12 @@ export const fixtures: Fixture[] = [
     "root": "numeral-locale"
   },
   {
+    "name": "Spin Box Direction",
+    "file": "numeral-locale/unit-spin-box-direction.tscn",
+    "category": "Other",
+    "root": "numeral-locale"
+  },
+  {
     "name": "Label Project Default Font",
     "file": "project-default-font/unit-label-project-default-font.tscn",
     "category": "Other",
@@ -4192,6 +4198,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Rich Text Label Text Direction",
     "file": "unit-rich-text-label-text-direction.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Visible Characters Follow",
+    "file": "unit-rich-text-label-visible-characters-follow.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Visible Characters",
+    "file": "unit-rich-text-label-visible-characters.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

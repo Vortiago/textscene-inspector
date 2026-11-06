@@ -32,7 +32,8 @@ import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment, type ParsedImgTag } from 
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { resolveRichTextFaces } from './styleFaces';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import type { RichTextReveal } from './visibleCharacters';
+import { AutowrapMode, VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
@@ -57,6 +58,7 @@ const PARSED_DEFAULTS = {
   clipContents: true,
   scrollActive: true,
   scrollFollowing: false,
+  scrollFollowingVisibleCharacters: false,
   textDirection: 0,
   language: '',
   structuredTextBidiOverride: 0,
@@ -1757,6 +1759,57 @@ describe('RichTextLabel paragraph alignment', () => {
       }
     });
   });
+  describe('layoutRichTextRuns visible characters (rich_text_label.cpp:943-947,1466)', () => {
+    const AFTER_SHAPING = 1;
+
+    /** The characters drawn per placement, so a hidden glyph is missing from its line. */
+    function drawnText(text: string, characters: number, fullText?: { heightPx: number; lineCount: number }) {
+      const { runs, layout } = singleRun(text, 0);
+      return layoutRichTextRuns(runs, layout, {
+        boxWidthPx: 0,
+        boxHeightPx: TALL_BOX_PX,
+        reveal: { behavior: AFTER_SHAPING, characters, ratio: 0.5, rtl: false },
+        fullText,
+      }).map((p) => p.layout.lines[0]!.glyphs.map((g) => g.char).join(''));
+    }
+
+    it('draws only the glyphs the budget shows', () => {
+      expect(drawnText('Hello world', 5)).toEqual(['Hello']);
+    });
+
+    it('draws no run of a line whose glyphs are all hidden', () => {
+      expect(drawnText('A\nB', 1)).toEqual(['A']);
+    });
+
+    it('keeps the line tops of the full text, so a shown last line stays below the hidden ones', () => {
+      const runs = [textRun({ text: 'A\nB\nC', fontSizePx: 16 })];
+      const layout = shapeRichText(runs, ALL_FACES, {
+        fontSizePx: 16,
+        boxWidthPx: 0,
+        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      });
+      const GLYPHS_RTL = 4;
+      // 5 glyphs at 0.34 allow 1, taken from the back: only "C" shows.
+      const placements = layoutRichTextRuns(runs, layout, {
+        boxWidthPx: 0,
+        boxHeightPx: TALL_BOX_PX,
+        reveal: { behavior: GLYPHS_RTL, characters: 1, ratio: 0.34, rtl: false },
+      });
+      expect(placements.map((p) => p.lineTopPx)).toEqual([46]);
+    });
+
+    it('aligns a shown prefix inside the box by the height of the whole text', () => {
+      // CENTER puts the 69px text of three lines at 115 in a 300px box; the one-line prefix alone would sit at 138.
+      const { runs, layout } = singleRun('A', 0);
+      const [placement] = layoutRichTextRuns(runs, layout, {
+        boxWidthPx: 0,
+        boxHeightPx: 300,
+        verticalAlignment: 1,
+        fullText: { heightPx: 69, lineCount: 3 },
+      });
+      expect(placement!.lineTopPx).toBe(115);
+    });
+  });
 });
 
 describe('shapeRichText — tab stops (rich_text_label.cpp:479-482)', () => {
@@ -2125,7 +2178,11 @@ describe('RichTextLabel lists and indents', () => {
   const MARGIN_PX = 16;
   const BULLET_MARKER_PX = 11;
 
-  function listPlacements(text: string, props: Partial<RichTextLabelProperties> = {}) {
+  function listPlacements(
+    text: string,
+    props: Partial<RichTextLabelProperties> = {},
+    reveal?: RichTextReveal
+  ) {
     const label = { text, bbcodeEnabled: true, ...props } as RichTextLabelProperties;
     const runs = styledTextRuns(node(label), label, WHITE, FONT_SIZE, FONT_SIZE, BOX_WIDTH_PX);
     const layout = shapeRichText(runs, resolveRichTextFaces(node(label), runs), {
@@ -2135,7 +2192,7 @@ describe('RichTextLabel lists and indents', () => {
       tabSize: props.tabSize,
       localizeNumeralSystem: props.localizeNumeralSystem,
     });
-    return layoutRichTextRuns(runs, layout, { boxWidthPx: BOX_WIDTH_PX, boxHeightPx: TALL_BOX_PX });
+    return layoutRichTextRuns(runs, layout, { boxWidthPx: BOX_WIDTH_PX, boxHeightPx: TALL_BOX_PX, reveal });
   }
 
   /** The text of each placement with its left offset, the marker as `<marker>`. */
@@ -2218,6 +2275,34 @@ describe('RichTextLabel lists and indents', () => {
   it('draws a marker for an empty item, which keeps its line', () => {
     const placements = listPlacements('[ul]a\n\nb[/ul]');
     expect(placements.filter((p) => p.layout.lines[0]!.text === '• ')).toHaveLength(3);
+  });
+
+  // `_draw_line` skips the prefix of a line whose `char_offset` is past the budget, or whose first glyph
+  // the glyph budget hides (`rich_text_label.cpp:1016`). The second item starts at character 2.
+  describe('with visible_characters', () => {
+    const markersShown = (reveal: RichTextReveal) =>
+      listPlacements('[ul]a\nb[/ul]', {}, reveal).filter((p) => p.layout.lines[0]!.text === '• ').length;
+
+    it('draws the marker of an item that starts at or before the budget, and not one past it', () => {
+      const afterShaping = (characters: number) => ({
+        behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+        characters,
+        ratio: 0.5,
+        rtl: false,
+      });
+      expect([markersShown(afterShaping(1)), markersShown(afterShaping(2))]).toEqual([1, 2]);
+    });
+
+    it('draws no marker when the glyph budget hides the first glyph of its item', () => {
+      expect(
+        markersShown({
+          behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+          characters: 0,
+          ratio: 0,
+          rtl: false,
+        })
+      ).toBe(0);
+    });
   });
 
   it('wraps an item at the box width less its inset', () => {
