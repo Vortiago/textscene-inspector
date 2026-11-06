@@ -1,6 +1,6 @@
 /** How Montserrat SemiBold's mark subset draws characters it lacks, against the offsets HarfBuzz shapes (`markPositioning.test.ts`). */
-import { describe, expect, it } from 'vitest';
-import { openFontContainer } from './fontContainer';
+import { describe, expect, it, vi } from 'vitest';
+import { lazyFontContainer, openFontContainer } from './fontContainer';
 import { sfntDecomposition, usesFallbackMarks } from './sfntDecomposition';
 import { fixtureFontBytes } from './sfntOutlines.testkit';
 import { FALLBACK_MARK_TABLE_TAGS, openSfnt } from './sfntTables';
@@ -47,14 +47,28 @@ describe('sfntDecomposition', () => {
     });
   });
 
-  it('places the marks of a WOFF2 by the fallback from the tables the loader reopens it with', async () => {
+  it('places the marks of a WOFF2 by the fallback, opening its outlines at the first decomposed character', async () => {
     const bytes = fixtureFontBytes('montserrat-semibold-marks-nogpos-subset.woff2');
     const sfnt = (await openFontContainer(bytes))!;
-    const outlines = (await openFontContainer(bytes, FALLBACK_MARK_TABLE_TAGS))!;
+    const openOutlines = await lazyFontContainer(bytes, FALLBACK_MARK_TABLE_TAGS);
 
     expect(usesFallbackMarks(sfnt)).toBe(true);
-    expect(sfntDecomposition(sfnt, outlines)!('Ä', EM_PX)?.marks).toEqual([
+    expect(sfntDecomposition(sfnt, openOutlines)!('Ä', EM_PX)?.marks).toEqual([
       { char: '\u0308', xPx: 674.5, yPx: 144.5 },
     ]);
+  });
+
+  it('opens the outlines of a font with no GPOS script at its first decomposed character', async () => {
+    const bytes = fixtureFontBytes('montserrat-semibold-marks-nogpos-subset.woff2');
+    const sfnt = (await openFontContainer(bytes))!;
+    const open = await lazyFontContainer(bytes, FALLBACK_MARK_TABLE_TAGS);
+    const openOutlines = vi.fn(open);
+    const decomposition = sfntDecomposition(sfnt, openOutlines)!;
+
+    decomposition('A', EM_PX);
+    expect(openOutlines).not.toHaveBeenCalled();
+    decomposition('Ä', EM_PX);
+    decomposition('Ö', EM_PX);
+    expect(openOutlines).toHaveBeenCalledTimes(1);
   });
 });

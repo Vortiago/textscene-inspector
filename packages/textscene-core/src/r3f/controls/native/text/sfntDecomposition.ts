@@ -33,6 +33,11 @@ export type Decomposition = (ch: string, fontSizePx: number) => DecomposedGlyph 
 /** Whether `sfntDecomposition` needs outlines for `sfnt`: the font has no `GPOS` script for marks. */
 export const usesFallbackMarks = (sfnt: SfntFile): boolean => !hasMarkScript(sfnt);
 
+function fallbackMarkReaderOf(openOutlines: () => SfntFile | null): SizedClusterOffsets | null {
+  const outlines = openOutlines();
+  return outlines && fallbackMarkReader(outlines);
+}
+
 /** The `GPOS` offsets, which are design units, in px at the size asked. */
 function gposOffsetReader(sfnt: SfntFile): SizedClusterOffsets | null {
   const offsetsOf = markPositioningReader(sfnt);
@@ -54,17 +59,20 @@ function gposOffsetReader(sfnt: SfntFile): SizedClusterOffsets | null {
 }
 
 /**
- * `outlines` is the font opened with the tables the fallback placement reads (`glyf` or `CFF `, and
- * `hmtx`), which a font with a `GPOS` script does not need: see `usesFallbackMarks`.
+ * `openOutlines` opens the font with the tables the fallback placement reads (`glyf` or `CFF `, and
+ * `hmtx`). A font with a `GPOS` script never calls it: see `usesFallbackMarks`.
  */
-export function sfntDecomposition(sfnt: SfntFile, outlines: SfntFile = sfnt): Decomposition | null {
+export function sfntDecomposition(
+  sfnt: SfntFile,
+  openOutlines: () => SfntFile | null = () => sfnt
+): Decomposition | null {
   const mapsGlyph = sfntMapsGlyph(sfnt);
   if (!mapsGlyph) return null;
   // Read at the first decomposed character: most fonts never need their `GPOS` or outlines.
   let offsetsOf: SizedClusterOffsets | null | undefined;
   const readOffsets = () =>
     offsetsOf === undefined
-      ? (offsetsOf = gposOffsetReader(sfnt) ?? fallbackMarkReader(outlines))
+      ? (offsetsOf = gposOffsetReader(sfnt) ?? fallbackMarkReaderOf(openOutlines))
       : offsetsOf;
   const kept = new Map<string, DecomposedGlyph | null>();
   return (ch, fontSizePx) => {

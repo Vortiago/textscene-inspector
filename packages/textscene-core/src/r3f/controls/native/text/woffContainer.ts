@@ -24,11 +24,20 @@ export async function readWoffTables(
   bytes: ArrayBuffer,
   tags: readonly string[] = SCENE_FONT_TABLE_TAGS
 ): Promise<SfntFile> {
+  return (await lazyWoffTables(bytes, tags))();
+}
+
+/** `readWoffTables` split at its slow step: the inflater loads here, and the thunk inflates the tables of `tags` when first called. */
+export async function lazyWoffTables(bytes: ArrayBuffer, tags: readonly string[]): Promise<() => SfntFile> {
+  const inflate = await zlibBlockInflater();
+  return () => woffTablesOf(bytes, tags, inflate);
+}
+
+function woffTablesOf(bytes: ArrayBuffer, tags: readonly string[], inflate: BlockInflater): SfntFile {
   const dv = new DataView(bytes);
   const numTables = dv.getUint16(WOFF_NUM_TABLES_OFFSET, false);
   const tables = new Map<string, Uint8Array>();
   const inflated = inflatedTablesOf(bytes);
-  let inflate: BlockInflater | undefined;
 
   for (let index = 0; index < numTables; index++) {
     const at = WOFF_HEADER_SIZE + index * WOFF_RECORD_SIZE;
@@ -43,7 +52,6 @@ export async function readWoffTables(
       continue;
     }
     if (!inflated.has(tag)) {
-      inflate ??= await zlibBlockInflater();
       inflated.set(tag, inflate(stored, length));
     }
     tables.set(tag, inflated.get(tag)!);
