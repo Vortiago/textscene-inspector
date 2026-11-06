@@ -3704,7 +3704,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A character the font lacks draws from the first font of its <strong>Fallback chain</strong> that has it, with that font's advance and kerning (<code>text_server_adv.cpp:7111-7170</code>). The chain is the font's <code>fallbacks</code>, a font import's <code>fallbacks</code> (<code>resource_importer_dynamic_font.cpp:192</code>, <code>resource_importer_bmfont.cpp:98</code>), or the base's for a <code>FontVariation</code> with none (<code>font.cpp:2926-2945</code>). The <code>label-font-fallbacks</code> golden pins this.</p></div>
+        <div class="prose"><p>A character the font lacks draws from the first font of its <strong>Fallback chain</strong> that has it, with that font's advance and kerning (<code>text_server_adv.cpp:7111-7170</code>). The chain is the font's <code>fallbacks</code>, a font import's <code>fallbacks</code> (<code>resource_importer_dynamic_font.cpp:192</code>, <code>resource_importer_bmfont.cpp:98</code>), or the base's for a <code>FontVariation</code> with none (<code>font.cpp:2926-2945</code>). A BMFont keeps its import's <code>fallbacks</code> as the re-imported state holds them (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0064-a-bmfont-draws-its-page-images-as-glyph-quads.md" target="_blank" rel="noopener">ADR-0064</a>). The <code>label-font-fallbacks</code> golden pins this.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Variable fonts</h3><span class="status st-done">Done</span></div>
