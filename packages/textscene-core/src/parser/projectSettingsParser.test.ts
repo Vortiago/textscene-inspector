@@ -505,6 +505,13 @@ describe('projectLayoutDirectionEnv', () => {
     ).toBe('tr_TR');
   });
 
+  it('standardises the test locale as `set_locale` does, so a hyphenated locale matches a numeral system', () => {
+    // `String new_locale = standardize_locale(p_locale);` (`translation_server.cpp:482`).
+    expect(projectLayoutDirectionEnv({ 'internationalization/locale/test': 'ar-EG' }).applicationLocale).toBe(
+      'ar_EG'
+    );
+  });
+
   it('leaves the system-locale answer false — the host locale is not in the scene', () => {
     expect(projectLayoutDirectionEnv({ 'internationalization/locale/test': 'ar' }).systemLocaleRtl).toBe(
       false

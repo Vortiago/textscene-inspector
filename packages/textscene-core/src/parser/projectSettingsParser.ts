@@ -12,6 +12,7 @@ import {
 } from '../godot/string/string.js';
 import { boolSlotValue } from '../godot/variant/variantBool.js';
 import { dataDirectoryPath, extensionListPath } from '../godot/project/project.js';
+import { standardizeLocale } from '../godot/text/standardizeLocale.js';
 import { isLocaleRightToLeft } from '../godot/text/textServer.js';
 import { fontHintingOf, type FontHinting } from '../godot/text/textServerEnums.js';
 import type { LayoutDirectionEnv } from '../godot/scene/control.js';
@@ -422,9 +423,9 @@ export function projectLayoutDirectionEnv(settings: ProjectSettings | null): Lay
   const forceRtl =
     boolSlotValue(settings?.['internationalization/rendering/force_right_to_left_layout_direction']) === true;
   // The locale comes from `internationalization/locale/test` when set, else the OS
-  // (`core/string/translation_server.cpp:592-599`). The OS locale is in no file, so
+  // (`core/string/translation_server.cpp:592-599`), standardised by `set_locale` (`:482`). The OS locale is in no file, so
   // those arms stay left-to-right.
-  const testLocale = settings?.['internationalization/locale/test']?.trim() ?? '';
+  const testLocale = standardizeLocale(settings?.['internationalization/locale/test']?.trim() ?? '');
   const applicationLocaleRtl = testLocale !== '' && isLocaleRightToLeft(testLocale);
   // The host's locale, which no scene file states.
   const systemLocaleRtl = false;

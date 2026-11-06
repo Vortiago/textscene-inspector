@@ -1,4 +1,5 @@
-; One variable: `internationalization/locale/test` is "ar", the locale `_get_locale()` returns. ProgressBar
+; One variable: `internationalization/locale/test` is "ar-EG", which `set_locale` standardises to "ar_EG" (translation_server.cpp:482)
+; before `_get_locale()` returns it. ProgressBar
 ; writes its percentage as `format_number(...)` plus the locale's percent sign (progress_bar.cpp:168-174),
 ; SpinBox its value (spin_box.cpp:91-93) and CodeEdit its line numbers, padded first (code_edit.cpp:1569-1572),
 ; while `localize_numeral_system` is on. Each control appears twice, the second with the property off.

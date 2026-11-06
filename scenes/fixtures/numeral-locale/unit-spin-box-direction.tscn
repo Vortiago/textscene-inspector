@@ -1,4 +1,4 @@
-; One variable: the project locale is "ar" under an LTR root (`layout_direction = 2`). The SpinBox's
+; One variable: the project locale is "ar-EG" under an LTR root (`layout_direction = 2`). The SpinBox's
 ; inner LineEdit is AUTO with no language, so its neutral text takes the locale's direction
 ; (`line_edit.h:144`, `line_edit.cpp:3103-3112`) and a prefix or minus sign lands on the far side.
 ; ASCII digits (`localize_numeral_system = false`), so only the direction differs.
