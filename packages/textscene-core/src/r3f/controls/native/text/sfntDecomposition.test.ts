@@ -29,6 +29,15 @@ describe('sfntDecomposition', () => {
     ]);
   });
 
+  it('keeps the decompositions of the sizes read most recently, so a size animation cannot grow the cache', () => {
+    const decompose = sfntDecomposition(openSfnt(fixtureFontBytes('montserrat-semibold-marks-subset.ttf'))!)!;
+    const first = decompose('Ä', 10);
+    for (let size = 11; size <= 18; size++) decompose('Ä', size);
+    expect(decompose('Ä', 18)).toBe(decompose('Ä', 18));
+    expect(decompose('Ä', 10)).not.toBe(first);
+    expect(decompose('Ä', 10)).toEqual(first);
+  });
+
   it('answers null for a character the font has', () => {
     expect(decomposition()('A')).toBeNull();
   });

@@ -2,7 +2,7 @@
  * Where a character that Montserrat's mark subsets lack draws its marks, against Godot 4.6.3:
  * `decomposedMarks.godot.json` holds the glyphs that Godot's shaper gives each character, with the
  * offset each mark takes from the pen after the base (`scripts/fonts/decomposed-marks-oracle`). The
- * three fonts differ only in their `GPOS`: whole, none, and one with no mark lookup.
+ * four fonts differ only in their `GPOS`: whole, none, one with no mark lookup, and one with a script but no lookup at all.
  */
 import { describe, expect, it } from 'vitest';
 import reference from './decomposedMarks.godot.json';

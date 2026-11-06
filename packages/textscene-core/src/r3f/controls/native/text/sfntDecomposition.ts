@@ -4,6 +4,7 @@
  * or HarfBuzz's fallback placement where the font has no `GPOS` script (`fallbackMarkPositioning.ts`).
  */
 
+import { recentlyRead } from '../../../../utils/recentlyRead';
 import { drawnCharacters } from './canonicalGlyphs';
 import { fallbackMarkReader, type SizedClusterOffsets } from './fallbackMarkPositioning';
 import { glyphOffsetPx } from './fontMetrics';
@@ -74,14 +75,20 @@ export function sfntDecomposition(
     offsetsOf === undefined
       ? (offsetsOf = gposOffsetReader(sfnt) ?? fallbackMarkReaderOf(openOutlines))
       : offsetsOf;
-  const kept = new Map<string, DecomposedGlyph | null>();
+  const keptAtSize = recentlyRead<number, Map<string, DecomposedGlyph | null>>(MAX_KEPT_SIZES);
   return (ch, fontSizePx) => {
-    const key = `${fontSizePx} ${ch}`;
-    let glyph = kept.get(key);
-    if (glyph === undefined) kept.set(key, (glyph = decompose(ch, fontSizePx, mapsGlyph, readOffsets)));
+    const kept = keptAtSize(fontSizePx, newDecompositionsByCharacter);
+    let glyph = kept.get(ch);
+    if (glyph === undefined) kept.set(ch, (glyph = decompose(ch, fontSizePx, mapsGlyph, readOffsets)));
     return glyph;
   };
 }
+
+/** Declared once, not inline: an arrow inside the reader would allocate a closure on every read. */
+const newDecompositionsByCharacter = (): Map<string, DecomposedGlyph | null> => new Map();
+
+/** A font size animation passes through many sizes, so the decompositions of this many sizes are kept. */
+const MAX_KEPT_SIZES = 8;
 
 function decompose(
   ch: string,

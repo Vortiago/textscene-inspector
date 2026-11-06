@@ -55,6 +55,16 @@ describe('markPositioningReader', () => {
     ]);
   });
 
+  it('leaves a mark at its pen position where the GPOS has a script and no lookup at all', () => {
+    const reader = markPositioningReader(
+      openSfnt(fixtureFontBytes('montserrat-semibold-marks-nolookups-subset.ttf'))!
+    )!;
+    expect(reader(Array.from('À'.normalize('NFD')))).toEqual([
+      { x: 0, y: 0 },
+      { x: 749, y: 0 },
+    ]);
+  });
+
   it('answers null for a font with no GPOS script, which HarfBuzz places by its fallback', () => {
     expect(
       markPositioningReader(openSfnt(fixtureFontBytes('montserrat-semibold-marks-nogpos-subset.ttf'))!)

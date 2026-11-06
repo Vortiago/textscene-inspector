@@ -10,6 +10,7 @@ const FONTS = [
   'montserrat-semibold-marks-subset.ttf',
   'montserrat-semibold-marks-nogpos-subset.ttf',
   'montserrat-semibold-marks-nomark-subset.ttf',
+  'montserrat-semibold-marks-nolookups-subset.ttf',
 ];
 const CHARACTERS = 'ÀÁÂÃÄÅäöüéÉǞẠ';
 const SIZES = '16,32';
