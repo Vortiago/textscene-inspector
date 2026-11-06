@@ -98,7 +98,7 @@ export function midpoint(a: Vector2, b: Vector2): Vector2 {
 const areaShift = (extent: number): number => Math.max(highestBit(extent) - AREA_COORDINATE_BITS, 0);
 
 /** The least and the greatest of `values`, which spreading into `Math.min` cannot take for a long outline. */
-function extent(values: readonly number[]): [number, number] {
+export function extent(values: readonly number[]): [number, number] {
   let least = Infinity;
   let greatest = -Infinity;
   for (const value of values) {

@@ -89,17 +89,7 @@ export const SCENE_FONT_TABLE_TAGS: readonly string[] = [
 ];
 
 /** The tables the fallback mark placement reads of a font with no `GPOS` script (`fallbackMarkPositioning.ts`). */
-export const FALLBACK_MARK_TABLE_TAGS: readonly string[] = [
-  'head',
-  'hhea',
-  'OS/2',
-  'cmap',
-  'maxp',
-  'hmtx',
-  'glyf',
-  'loca',
-  'CFF ',
-];
+export const FALLBACK_MARK_TABLE_TAGS: readonly string[] = [...SCENE_FONT_TABLE_TAGS, 'glyf', 'loca', 'CFF '];
 
 /**
  * The tables an outline reader uses (`sfntOutlines.ts`), for the container readers to decompress:

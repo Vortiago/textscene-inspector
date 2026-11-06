@@ -32,6 +32,9 @@ export interface MarkOffset {
   readonly y: number;
 }
 
+/** The base's own origin. */
+export const ORIGIN: MarkOffset = { x: 0, y: 0 };
+
 /** The scripts whose marks the reader places: the first one the font has, else its default script. */
 const MARK_SCRIPT_TAGS = ['latn', 'grek', 'cyrl'] as const;
 
@@ -143,7 +146,7 @@ export type ClusterOffsets = (cluster: readonly string[]) => readonly MarkOffset
 export function markPositioningReader(sfnt: SfntFile): ClusterOffsets | null {
   const table = sfntGpos(sfnt);
   const glyphIndexOf = sfntGlyphIndex(sfnt);
-  if (!table || !glyphIndexOf || !hasMarkScript(sfnt)) return null;
+  if (!table || !glyphIndexOf || !findScript(table, MARK_SCRIPT_TAGS)) return null;
   const lookups = attachmentLookups(table);
   const propsOf = glyphPropsReader(sfnt);
   const matches = lookupMatcher(sfnt);
@@ -170,14 +173,17 @@ export function markPositioningReader(sfnt: SfntFile): ClusterOffsets | null {
       }
     }
     // A zero-width mark that nothing attaches sits at the pen, which only the base has advanced.
-    const pen: MarkOffset = { x: metricsOf(clusterGlyphs.glyphs[0]!, 0).horizontal.advance, y: 0 };
-    const offsets: MarkOffset[] = [{ x: 0, y: 0 }];
+    let pen: MarkOffset | undefined;
+    const offsets: MarkOffset[] = [ORIGIN];
     for (let i = 1; i < clusterGlyphs.glyphs.length; i++) {
       const attachment = attachments[i];
-      const target = attachment && offsets[attachment.target]!;
-      offsets.push(
-        attachment ? { x: target!.x + attachment.delta.x, y: target!.y + attachment.delta.y } : pen
-      );
+      if (!attachment) {
+        pen ??= { x: metricsOf(clusterGlyphs.glyphs[0]!, 0).horizontal.advance, y: 0 };
+        offsets.push(pen);
+        continue;
+      }
+      const target = offsets[attachment.target]!;
+      offsets.push({ x: target.x + attachment.delta.x, y: target.y + attachment.delta.y });
     }
     return offsets;
   };

@@ -7,11 +7,9 @@
 import { drawnCharacters } from './canonicalGlyphs';
 import { fallbackMarkReader, type SizedClusterOffsets } from './fallbackMarkPositioning';
 import { glyphOffsetPx } from './fontMetrics';
-import { hasMarkScript, markPositioningReader } from './markPositioning';
+import { hasMarkScript, markPositioningReader, ORIGIN } from './markPositioning';
 import { sfntMapsGlyph } from './sfntCmap';
 import { parseSfntScalars, type SfntFile } from './sfntTables';
-
-const ORIGIN = { x: 0, y: 0 };
 
 /** A mark drawn over a base, and where its origin sits against the base's origin in px with y up, at one font size. */
 export interface DrawnMark {
@@ -40,8 +38,16 @@ function gposOffsetReader(sfnt: SfntFile): SizedClusterOffsets | null {
   const offsetsOf = markPositioningReader(sfnt);
   const unitsPerEm = parseSfntScalars(sfnt)?.unitsPerEm;
   if (!offsetsOf || !unitsPerEm) return null;
+  // The GPOS walk does not depend on the size, so each cluster is read once.
+  const unitOffsets = new Map<string, ReturnType<typeof offsetsOf>>();
+  const readUnits = (cluster: readonly string[]) => {
+    const key = cluster.join('');
+    let offsets = unitOffsets.get(key);
+    if (!offsets) unitOffsets.set(key, (offsets = offsetsOf(cluster)));
+    return offsets;
+  };
   return (cluster, fontSizePx) =>
-    offsetsOf(cluster).map(({ x, y }) => ({
+    readUnits(cluster).map(({ x, y }) => ({
       x: glyphOffsetPx(x, unitsPerEm, fontSizePx),
       y: glyphOffsetPx(y, unitsPerEm, fontSizePx),
     }));

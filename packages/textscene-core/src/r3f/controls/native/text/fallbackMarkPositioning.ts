@@ -14,7 +14,8 @@
 
 import { COMBINING_CLASS_RUNS } from './combiningClasses';
 import { ftMulFix, getFontOutlineScale, glyphAdvance26_6, FIXED_26_6_ONE } from './fontMetrics';
-import type { MarkOffset } from './markPositioning';
+import { ORIGIN, type MarkOffset } from './markPositioning';
+import { extent } from './glyphContours';
 import { unscaledCffOutlines } from './sfntCff';
 import { sfntGlyphIndex } from './sfntCmap';
 import { unscaledGlyfOutlines } from './sfntGlyf';
@@ -52,8 +53,6 @@ const RECATEGORIZED_CLASS = new Map(
     classes.map((klass) => [klass, Number(target)] as const)
   )
 );
-
-const ORIGIN: MarkOffset = { x: 0, y: 0 };
 
 /** The ink box of a glyph as `hb_glyph_extents_t` holds it in 26.6: y up, so `height` is negative. */
 interface Extents {
@@ -165,18 +164,22 @@ function inkBoxReader(
 ): { unitsPerEm: number; inkBoxOf: (glyph: number) => InkBox | null } | null {
   const outlines = unscaledGlyfOutlines(sfnt, null) ?? unscaledCffOutlines(sfnt);
   if (!outlines) return null;
+  const kept = new Map<number, InkBox | null>();
+  const read = (glyph: number): InkBox | null => {
+    const outline = outlines.unscaledGlyph(glyph);
+    if (!outline) return null;
+    if (outline.x.length === 0) return { xMin: 0, xMax: 0, yMin: 0, yMax: 0 };
+    const [xMin, xMax] = extent(outline.x);
+    const [yMin, yMax] = extent(outline.y);
+    return { xMin, xMax, yMin, yMax };
+  };
   return {
     unitsPerEm: outlines.unitsPerEm,
+    // The box is in design units, so every size shares it.
     inkBoxOf: (glyph) => {
-      const outline = outlines.unscaledGlyph(glyph);
-      if (!outline) return null;
-      if (outline.x.length === 0) return { xMin: 0, xMax: 0, yMin: 0, yMax: 0 };
-      return {
-        xMin: Math.min(...outline.x),
-        xMax: Math.max(...outline.x),
-        yMin: Math.min(...outline.y),
-        yMax: Math.max(...outline.y),
-      };
+      let box = kept.get(glyph);
+      if (box === undefined) kept.set(glyph, (box = read(glyph)));
+      return box;
     },
   };
 }
@@ -205,7 +208,7 @@ export function fallbackMarkReader(sfnt: SfntFile): SizedClusterOffsets | null {
       height: scaled(box.yMin) - scaled(box.yMax),
     });
     // The font scale `hb_ft_font_changed` sets: the em in 26.6.
-    const yGap = (Math.floor((xScale * unitsPerEm + 0x8000) / 0x10000) / 16) | 0;
+    const yGap = (ftMulFix(unitsPerEm, xScale) / 16) | 0;
     const toPx = ({ x, y }: MarkOffset): MarkOffset => ({ x: x / FIXED_26_6_ONE, y: y / FIXED_26_6_ONE });
 
     const glyphs = cluster.map((ch) => glyphIndexOf(ch.codePointAt(0)!));
