@@ -160,6 +160,19 @@ export interface ShapeTextOptions {
 const BREAK_TRIM_START_EDGE_SPACES = 1 << 6;
 const BREAK_TRIM_END_EDGE_SPACES = 1 << 7;
 
+/** A mark drawn over its base, with its origin against the base's, px with y down (`x_off` and `y_off` of the mark's glyph). */
+export interface MarkPlacement {
+  char: string;
+  x: number;
+  y: number;
+}
+
+/** The glyphs of a character the face lacks and draws as a base and its marks, which sit over the base's origin. */
+export interface PlacedDecomposition {
+  base: string;
+  marks: MarkPlacement[];
+}
+
 /** One glyph's placement within its line, in target-font-size px. */
 export interface GlyphPlacement {
   /** The character rendered (post-uppercase-transform, if requested). */
@@ -177,6 +190,8 @@ export interface GlyphPlacement {
   glyph: OpenSansGlyph | null;
   /** The control character this glyph draws as a hex-code box (`draw_hex_code_box`), set only when `preserveControl` kept it. */
   controlCodepoint?: number;
+  /** How `char` draws where the face lacks it and has its canonical decomposition. Absent for a character of one glyph. */
+  decomposition?: PlacedDecomposition;
   /** How far the embolden grows this glyph's outline at its own size, px. Absent for a glyph with none. */
   emboldenGrowthPx?: number;
   /** This glyph's own size, px, `gl.font_size` in Godot: it scales the space-shrink floor of `fitLineToWidth` (`text_server_adv.cpp:5659`) and the measured ink. */
@@ -367,6 +382,8 @@ interface BreakGlyph {
   controlCodepoint?: number;
   /** The outline growth of the embolden that widened `advance`, px. 0 for none. */
   emboldenGrowthPx: number;
+  /** `GlyphPlacement.decomposition`. The mark x is the offset before the whole-pixel round of `roundGlyphAdvance`. */
+  decomposition?: PlacedDecomposition;
 }
 
 /**
@@ -383,6 +400,11 @@ interface RunStyle {
   levels: Uint8Array;
   /** The bidi override range of each character, -1 for none: each range runs its own bidi pass and runs (`:7266`). */
   rangeIds: Int32Array;
+  /**
+   * Whether a character has no glyph in its face, once the chain is searched. False lets
+   * `toBreakGlyphs` skip the per-character glyph test: the paragraph pass already ran it.
+   */
+  hasUndrawnGlyph: boolean;
 }
 
 /** Whether character `i`, past the first, starts a run: its size, face, bidi level or override range differs from the character before it. */
@@ -474,8 +496,6 @@ function glyphFaces(
   spanFaces: readonly FontMetrics[],
   chars: ArrayLike<string>
 ): readonly FontMetrics[] {
-  // Most paragraphs draw each character in its span face and need no segmenting, which costs 21 µs per 225 characters.
-  if (spanFaces.every((face, i) => drawsCluster(face, chars, i, i + 1))) return spanFaces;
   const faces: FontMetrics[] = [];
   graphemes ??= new Intl.Segmenter(undefined, { granularity: 'grapheme' });
   for (const { index, segment } of graphemes.segment(text)) {
@@ -498,15 +518,27 @@ function clusterFace(face: FontMetrics, chars: ArrayLike<string>, start: number,
 function drawsCluster(face: FontMetrics, chars: ArrayLike<string>, start: number, end: number): boolean {
   for (let i = start; i < end; i++) {
     const ch = chars[i]!;
-    // `hasGlyph` first: most characters are in the face, and the property test costs more.
-    if (ch !== '' && !face.hasGlyph(ch) && !KEEPS_ITS_FACE.test(ch)) return false;
+    if (ch !== '' && lacksNeededGlyph(face, ch)) return false;
   }
   return true;
 }
 
-/** Whether `face` is a BMFont with no glyph for `ch`: Godot then draws `ch` as a hex-code box. The caller takes a tab first. */
-function lacksBitmapGlyph(face: FontMetrics, ch: string): boolean {
-  return isBitmapFontMetrics(face) && !face.glyphOf(ch);
+/**
+ * Whether no font of the chain has a glyph for `ch`: Godot then draws `ch` as a hex-code box
+ * (`text_server_adv.cpp:6835-6890`). The previewer has no host fonts, so `allow_system_fallback`
+ * finds nothing past the last fallback (`_find_sys_font_for_text`, `:6820-6833`). The caller takes a tab first.
+ */
+function lacksGlyph(face: FontMetrics, ch: string, hasUndrawnGlyph: boolean): boolean {
+  if (isBitmapFontMetrics(face)) return !face.glyphOf(ch);
+  return hasUndrawnGlyph && lacksNeededGlyph(face, ch);
+}
+
+/**
+ * Whether `face` lacks a glyph `ch` needs: a character in `KEEPS_ITS_FACE` needs none.
+ * `hasGlyph` first: most characters are in the face, and the property test costs more.
+ */
+function lacksNeededGlyph(face: FontMetrics, ch: string): boolean {
+  return !face.hasGlyph(ch) && !KEEPS_ITS_FACE.test(ch);
 }
 
 /**
@@ -523,6 +555,23 @@ function unshapedGlyph(index: number): BreakGlyph {
     isTab: false,
     emboldenGrowthPx: 0,
   };
+}
+
+/**
+ * How `ch` draws where `face` draws it as a base and marks, with their offsets at
+ * `fontSizePx`. Godot rounds a mark's y offset to a whole pixel at any size, and its x offset where
+ * the face has no subpixel positioning (`text_server_adv.cpp:7062-7068`): `roundGlyphAdvance` does
+ * the x.
+ */
+function placedDecomposition(
+  face: FontMetrics,
+  ch: string,
+  fontSizePx: number
+): PlacedDecomposition | undefined {
+  const decomposed = face.decomposition?.(ch, fontSizePx);
+  if (!decomposed) return undefined;
+  const marks = decomposed.marks.map(({ char, xPx, yPx }) => ({ char, x: xPx, y: -godotRound(yPx) }));
+  return { base: decomposed.base, marks };
 }
 
 /**
@@ -547,6 +596,7 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
     let advance: number;
     let emboldenGrowthPx = 0;
     let controlCodepoint: number | undefined;
+    let decomposition: PlacedDecomposition | undefined;
     if (hardBreak || cp === 0x200b) {
       // A break grapheme and U+200B carry no advance in Godot; the baked
       // charset has no entry for either, so the metrics fallback would give
@@ -566,15 +616,14 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
       // A tab no stop aligns is as wide as the font's glyph for it, which is none (measured in
       // Godot 4.6.3: `a<TAB>b` with `tab_size` 0 sets `b` against `a`).
       advance = 0;
-    } else if (lacksBitmapGlyph(faces[i]!, ch)) {
-      // A BMFont lacks the character and has no system fallback (`resource_importer_bmfont.cpp:79`):
-      // the shaper keeps the invalid character as a hex-code box (`text_server_adv.cpp:6835-6890`).
+    } else if (lacksGlyph(faces[i]!, ch, style.hasUndrawnGlyph)) {
       advance = hexCodeBoxAdvanceSize(sizes[i]!, cp).x;
       controlCodepoint = cp;
     } else {
       const embolden = faces[i]!.embolden ?? 0;
       advance = glyphAdvancePx(ch, sizes[i]!, faces[i]!) + getFontExtraAdvancePx(embolden, sizes[i]!);
       emboldenGrowthPx = getFontEmboldenGrowthPx(embolden, sizes[i]!);
+      decomposition = placedDecomposition(faces[i]!, ch, sizes[i]!);
     }
     glyphs.push({
       start: i,
@@ -585,6 +634,7 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
       isTab: isTabChar(ch),
       controlCodepoint,
       emboldenGrowthPx,
+      decomposition,
     });
   }
   // Kerning folds into the visually left advance, skipped across a run boundary, before the
@@ -621,21 +671,9 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
 function roundAdvancesToWholePixels(glyphs: BreakGlyph[], chars: ArrayLike<string>, style: RunStyle): void {
   for (const [start, end] of spanRunRanges(style, chars.length)) {
     const chain = fallbackChainOf(style.spanFaces[start]!);
+    // A one-face run under subpixel positioning rounds nothing, so it builds no index list.
+    if (chain.length === 1 && fontUsesSubpixelPositioning(style.sizes[start]!, chain[0]!)) continue;
     const isRtl = isRtlRun(style, start);
-    if (chain.length === 1) {
-      // One face needs no index list: most UI text takes this path.
-      if (fontUsesSubpixelPositioning(style.sizes[start]!, chain[0]!)) continue;
-      let advanceRemainder = 0;
-      for (let k = 0; k < end - start; k++) {
-        advanceRemainder = roundGlyphAdvance(
-          glyphs,
-          chars,
-          isRtl ? end - 1 - k : start + k,
-          advanceRemainder
-        );
-      }
-      continue;
-    }
     const indices = Array.from({ length: end - start }, (_v, k) => start + k);
     if (isRtl) indices.reverse();
     roundFaceRun(glyphs, chars, style, indices, chain, 0);
@@ -657,11 +695,26 @@ function roundGlyphAdvance(
   if (chars[i] === '') return remainder;
   const cp = chars[i]!.codePointAt(0)!;
   // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
-  const fullAdvance =
-    (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp) ? 0 : remainder) + glyphs[i]!.advance;
+  const carried = cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp) ? 0 : remainder;
+  const fullAdvance = carried + glyphs[i]!.advance;
   const rounded = godotRound(fullAdvance);
   glyphs[i]!.advance = rounded;
+  roundMarkOffsets(glyphs[i]!.decomposition, carried, rounded);
   return fullAdvance - rounded;
+}
+
+/**
+ * A mark's `x_off` rounds from the pen after the base, with the remainder the base left
+ * (`text_server_adv.cpp:7062`): the half-way ties round away from zero in that frame, not from the
+ * base's origin. Mutates the marks.
+ */
+function roundMarkOffsets(
+  decomposition: PlacedDecomposition | undefined,
+  carriedPx: number,
+  roundedAdvancePx: number
+): void {
+  for (const mark of decomposition?.marks ?? [])
+    mark.x = roundedAdvancePx + godotRound(carriedPx - roundedAdvancePx + mark.x);
 }
 
 /**
@@ -680,6 +733,8 @@ function roundFaceRun(
   const face = chain[depth]!;
   const isLastFace = depth === chain.length - 1;
   const usesSubpixel = fontUsesSubpixelPositioning(style.sizes[indices[0]!]!, face);
+  // The last face has no later stretch to hand on, so subpixel positioning leaves nothing to do.
+  if (isLastFace && usesSubpixel) return;
   let advanceRemainder = 0;
   let stretch: number[] = [];
   const flushStretch = () => {
@@ -949,14 +1004,20 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     const spanFaces = Array.from({ length: paraText.length }, (_v, i) =>
       fontMetricsAt ? fontMetricsAt(sourceIndex(i)) : fontMetrics
     );
+    // Most paragraphs draw each character in its span face: no segmenting, which costs 21 µs per 225 characters.
+    const spansDraw = spanFaces.every((face, i) => drawsCluster(face, chars, i, i + 1));
     const runStyle: RunStyle = {
       sizes: Array.from({ length: paraText.length }, (_v, i) =>
         fontSizePxAt ? fontSizePxAt(sourceIndex(i)) : fontSizePx
       ),
-      faces: spanFaces.some((face) => face.fallbacks) ? glyphFaces(paraText, spanFaces, chars) : spanFaces,
+      faces:
+        !spansDraw && spanFaces.some((face) => face.fallbacks)
+          ? glyphFaces(paraText, spanFaces, chars)
+          : spanFaces,
       spanFaces,
       levels: bidi.levels,
       rangeIds: bidi.rangeIds,
+      hasUndrawnGlyph: !spansDraw,
     };
     const breakGlyphs = toBreakGlyphs(chars, runStyle, preserveControl);
     // First tab pass: the aligned advance must be in place before line breaking measures it.
@@ -1005,6 +1066,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
               runStyle.faces[idx]!.kind === 'atlas' ? (OPEN_SANS_ATLAS_GLYPHS[chars[idx]!] ?? null) : null,
             controlCodepoint: breakGlyphs[idx]!.controlCodepoint,
             emboldenGrowthPx: breakGlyphs[idx]!.emboldenGrowthPx || undefined,
+            decomposition: breakGlyphs[idx]!.decomposition,
             sourceIndex: para.offset + idx,
             fontSizePx: runStyle.sizes[idx]!,
             fontMetrics: runStyle.faces[idx]!,

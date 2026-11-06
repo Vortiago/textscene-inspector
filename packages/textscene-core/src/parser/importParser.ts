@@ -179,6 +179,14 @@ export function importTextureOptions(parsed: ParsedImportFile | null): TextureIm
   };
 }
 
+/**
+ * The `[params]` of a font's sidecar, which the font importer `importer` sets on the FontFile. A
+ * sidecar of another importer, or none, sets nothing, so it reads as no params.
+ */
+export function importFontParams(parsed: ParsedImportFile | null, importer: string): Record<string, string> {
+  return parsed?.importer === importer ? parsed.params : {};
+}
+
 /** `compress/mode` by the number the sidecar stores, the default for one outside the enum. */
 function compressMode(value: string | undefined): TextureImportOptions['mode'] {
   const index = parseOptionalInt(value);

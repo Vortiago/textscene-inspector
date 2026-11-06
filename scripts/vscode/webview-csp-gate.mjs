@@ -17,6 +17,7 @@ import { withSurfaceAlbedo } from './meshEdit.mjs';
 import { diffMask, meanColourUnderMask, missingPlaceholderPixels } from './pixels.mjs';
 import { installTextureWorkProbe } from '../e2e/textureWorkProbe.mjs';
 import { TEXTURE_WORK_STATUS_TESTID } from '../visual/preview/appContract.mjs';
+import { describeFailedRequests } from '../visual/preview/pageDiagnostics.mjs';
 
 /**
  * The Control fixture whose only ink is text. The preview CSP (`webviewHtml.ts`)
@@ -204,6 +205,11 @@ function brief(value, limit = 200) {
   return text.length > limit ? `${text.slice(0, limit)}… (+${text.length - limit} chars)` : text;
 }
 
+/** A failed request with its url cut by `brief`, so a long url leaves room for the rest of the line. */
+function briefUrl(request) {
+  return { ...request, url: brief(request.url) };
+}
+
 /** Assertions every run must satisfy, whatever the scene paints. */
 function checkRun(gate, label, report) {
   const where = `[${label}]`;
@@ -240,11 +246,7 @@ function checkRun(gate, label, report) {
   );
   gate.check(
     webview.failedRequests.length === 0,
-    `${where} ${webview.failedRequests.length} failed request(s) from the preview: ` +
-      webview.failedRequests
-        .slice(0, 3)
-        .map((entry) => brief(`${entry.failure} ${entry.url}`))
-        .join(' | ')
+    `${where} failed request(s) from the preview: ${describeFailedRequests(webview.failedRequests.map(briefUrl))}`
   );
   gate.check(
     webview.consoleErrors.length === 0,

@@ -66,7 +66,7 @@ export function glyphContoursReader(
   return (char) => {
     const known = byChar.get(char);
     if (known !== undefined) return known;
-    const glyphIndex = outlines.glyphIndex(char.codePointAt(0)!);
+    const glyphIndex = outlines.glyphIndex(char.codePointAt(0)!, variation.opentype);
     let contours: GlyphContours | null = null;
     if (glyphIndex !== 0) {
       let cached = read.get(glyphIndex);

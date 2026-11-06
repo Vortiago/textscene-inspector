@@ -8,6 +8,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { perObject } from '../../../../utils/perObject';
+import { storedReal } from '../../../../godot/math/real';
 import { codePointCount, utf16OffsetOf, utf16WidthAt } from '../../../../godot/string/codePoints';
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type {
@@ -49,7 +51,9 @@ export function richTextReveal(
     return { behavior, characters, ratio: visibleRatio, rtl };
   }
   if (visibleCharacters === undefined || visibleCharacters < 0) return undefined;
-  const ratio = totalCharacters > 0 ? Math.fround(visibleCharacters / totalCharacters) : visibleRatio;
+  // A budget that covers a non-empty text hides nothing. An empty text keeps its ratio, which hides a list marker.
+  if (totalCharacters > 0 && visibleCharacters >= totalCharacters) return undefined;
+  const ratio = totalCharacters > 0 ? storedReal(visibleCharacters / totalCharacters) : visibleRatio;
   return { behavior, characters: visibleCharacters, ratio, rtl };
 }
 
@@ -81,27 +85,21 @@ function implicitBreakIndices(runs: readonly CountedRun[]): ReadonlySet<number> 
  * (`:8017-8033`), but not the newline of an implicit break, which Godot has no character for.
  */
 export function revealedGlyphs(
-  layout: TextLayoutResult,
-  runs: readonly CountedRun[],
+  counted: CountedLayout,
   reveal: RichTextReveal
 ): ReadonlySet<GlyphPlacement> | undefined {
   if (reveal.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return undefined;
-  const counted = countedLayoutOf(layout, runs);
   const shownLines = applyVisibleCharsReveal(counted.lines, {
     behavior: reveal.behavior,
     text: counted.text,
     spanStarts: counted.spanStarts,
+    indexOf: counted.indexOf,
     visibleChars: reveal.characters,
     visibleRatio: reveal.ratio,
     totalCharacters: counted.totalCharacters,
     rtl: reveal.rtl,
   });
-  const { originals } = counted;
-  return new Set(
-    shownLines.flatMap((line) =>
-      originals ? line.glyphs.map((glyph) => originals.get(glyph)!) : line.glyphs
-    )
-  );
+  return new Set(shownLines.flatMap((line) => line.glyphs));
 }
 
 /**
@@ -110,15 +108,14 @@ export function revealedGlyphs(
  * (`rich_text_label.cpp:1016`). `revealed` is what `revealedGlyphs` returned for the same layout.
  */
 export function isPrefixShown(
-  layout: TextLayoutResult,
-  runs: readonly CountedRun[],
+  counted: CountedLayout,
   reveal: RichTextReveal,
   line: TextLineLayout,
   revealed: ReadonlySet<GlyphPlacement> | undefined
 ): boolean {
   if (reveal.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return true;
   if (reveal.behavior === VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING) {
-    const { skippedBefore, text } = countedLayoutOf(layout, runs);
+    const { skippedBefore, text } = counted;
     const paragraphStart = line.paragraphStart!;
     // Both sides are UTF-16 offsets into the counted `text`: Godot's code point comparison holds for them.
     return paragraphStart - (skippedBefore?.[paragraphStart] ?? 0) <= utf16OffsetOf(text, reveal.characters);
@@ -127,34 +124,46 @@ export function isPrefixShown(
   return firstGlyph === undefined || (revealed?.has(firstGlyph) ?? true);
 }
 
-/** A layout as the budget counts it: Godot's character indices, and the glyph each counted glyph copies. */
-interface CountedLayout {
+/** A layout as the budget counts it: its lines without the implicit newlines, and Godot's character index of each glyph. */
+export interface CountedLayout {
   lines: readonly TextLineLayout[];
   /** The text the glyph indices count over: the runs' text less the implicit newlines. */
   text: string;
   /** Where each run after the first starts in `text`: Godot shapes each run apart. */
   spanStarts: ReadonlySet<number>;
-  /** Absent when no glyph needed a copy. */
-  originals?: Map<GlyphPlacement, GlyphPlacement>;
+  /** Absent when a glyph's `sourceIndex` is already Godot's index. */
+  indexOf?: (glyph: GlyphPlacement) => number | undefined;
   /** For each text index and the end, the implicit newlines before it. Absent when the text has none. */
   skippedBefore?: readonly number[];
   totalCharacters: number;
 }
 
-/** Written only by `countedLayoutOf`. A layout never changes, so a reveal step reuses its entry. */
-// eslint-disable-next-line no-restricted-syntax -- the build needs the runs beside its layout key, which `perObject` cannot take.
-const countedLayouts = new WeakMap<TextLayoutResult, CountedLayout>();
+/** The counted layout a reveal needs, or undefined for Before Shaping, which skips no glyph. A caller builds it once for every reveal function. */
+export function countedLayoutForReveal(
+  layout: TextLayoutResult,
+  runs: readonly CountedRun[],
+  reveal: RichTextReveal
+): CountedLayout | undefined {
+  return reveal.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING
+    ? undefined
+    : countedLayoutsOf(layout)(runs);
+}
 
+/**
+ * The counted layout of each layout and runs pair, so a reveal tick on an unchanged layout keeps the same filtered
+ * line arrays and the ligature cache hits.
+ */
+const countedLayoutsOf = perObject((layout: TextLayoutResult) =>
+  perObject((runs: readonly CountedRun[]) => countedLayoutOf(layout, runs))
+);
+
+/** `layout` as the budget counts it. */
 function countedLayoutOf(layout: TextLayoutResult, runs: readonly CountedRun[]): CountedLayout {
-  const cached = countedLayouts.get(layout);
-  if (cached) return cached;
   const implicit = implicitBreakIndices(runs);
-  const totalCharacters = countedCharacters(runs);
   const joined = joinedText(runs);
+  const totalCharacters = codePointCount(joined) - implicit.size;
   if (implicit.size === 0) {
-    const counted = { lines: layout.lines, text: joined, spanStarts: runStarts(runs), totalCharacters };
-    countedLayouts.set(layout, counted);
-    return counted;
+    return { lines: layout.lines, text: joined, spanStarts: runStarts(runs), totalCharacters };
   }
   // The glyph a budget sees carries Godot's character index: the index in the text less the
   // implicit newlines before it.
@@ -163,26 +172,19 @@ function countedLayoutOf(layout: TextLayoutResult, runs: readonly CountedRun[]):
     .split('')
     .filter((_, index) => !implicit.has(index))
     .join('');
-  const originals = new Map<GlyphPlacement, GlyphPlacement>();
   const lines = layout.lines.map((line) => ({
     ...line,
-    glyphs: line.glyphs
-      .filter((glyph) => glyph.sourceIndex === undefined || !implicit.has(glyph.sourceIndex))
-      .map((glyph) => {
-        // A glyph past the text, or with no index, follows every implicit break.
-        const index = glyph.sourceIndex;
-        const counted =
-          index === undefined
-            ? glyph
-            : { ...glyph, sourceIndex: index - (skippedBefore[index] ?? implicit.size) };
-        originals.set(counted, glyph);
-        return counted;
-      }),
+    glyphs: line.glyphs.filter(
+      (glyph) => glyph.sourceIndex === undefined || !implicit.has(glyph.sourceIndex)
+    ),
   }));
+  // A glyph past the text follows every implicit break.
+  const indexOf = (glyph: GlyphPlacement): number | undefined =>
+    glyph.sourceIndex === undefined
+      ? undefined
+      : glyph.sourceIndex - (skippedBefore[glyph.sourceIndex] ?? implicit.size);
   const spanStarts = new Set([...runStarts(runs)].map((start) => start - skippedBefore[start]!));
-  const counted = { lines, text, spanStarts, originals, skippedBefore, totalCharacters };
-  countedLayouts.set(layout, counted);
-  return counted;
+  return { lines, text, spanStarts, indexOf, skippedBefore, totalCharacters };
 }
 
 /** The offsets in the runs' joined text where each run after the first starts. */

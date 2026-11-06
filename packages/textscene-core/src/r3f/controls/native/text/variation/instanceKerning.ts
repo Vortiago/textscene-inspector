@@ -11,6 +11,7 @@
 
 import {
   DEFAULT_FEATURES,
+  type FeatureSubstitution,
   GposType,
   i16,
   languageFeatures,
@@ -26,6 +27,8 @@ import {
 import { gdefOf, glyphPropsReader, lookupMatcher, type LookupGlyph } from '../autofit/openTypeGdef';
 import { FIXED_16_16_ONE } from '../fontMetrics';
 import type { SfntFile } from '../sfntTables';
+import { featureLookupsAt } from '../autofit/openTypeFeatures';
+import { featureSubstitutionOfInstance } from './instanceRecord';
 import { readFvarAxes } from './fvar';
 import { itemDeltaFixed, readItemVariationStore, type ItemVariationStore } from './itemVariationStore';
 
@@ -48,14 +51,15 @@ function gdefVariationStore(sfnt: SfntFile, axisCount: number): ItemVariationSto
  * The lookups of the default language system of every script, of the features HarfBuzz turns on by
  * default, ascending. HarfBuzz takes that system for text with no language of the font
  * (`hb-ot-layout.cc:769-804`), and the previewer gives no text a language. The reader keeps their
- * pair subtables. A `FeatureVariations` record that swaps them is left out.
+ * pair subtables. A feature takes the lookups that `substitution`, the `FeatureVariations` record
+ * that holds at the instance, gives it.
  */
-function kernLookups(table: LayoutTable): number[] {
+function kernLookups(table: LayoutTable, substitution: FeatureSubstitution | undefined): number[] {
   const lookups = new Set<number>();
   for (const { defaultLanguage } of table.scripts) {
     if (!defaultLanguage) continue;
     for (const index of languageFeatures(table, defaultLanguage, DEFAULT_FEATURES))
-      table.features[index]?.lookups.forEach((lookup) => lookups.add(lookup));
+      featureLookupsAt(table, index, substitution).forEach((lookup) => lookups.add(lookup));
   }
   return [...lookups].sort((a, b) => a - b);
 }
@@ -67,9 +71,9 @@ interface PairLookup {
 }
 
 /** The kerning lookups that hold a pair subtable, each with its pair subtables only. */
-function pairLookupsOf(table: LayoutTable): PairLookup[] {
+function pairLookupsOf(table: LayoutTable, substitution: FeatureSubstitution | undefined): PairLookup[] {
   const pairLookups: PairLookup[] = [];
-  for (const index of kernLookups(table)) {
+  for (const index of kernLookups(table, substitution)) {
     const lookup = table.lookups[index];
     if (!lookup) continue;
     const subtables = lookup.subtables.filter((subtable) => subtable.type === GposType.PAIR);
@@ -101,7 +105,8 @@ function xAdvanceUnits(
 
 /**
  * The kerning reader of `sfnt` at the normalised coordinates of an instance, or null for a font
- * with no pair lookup in its `GPOS` kerning features.
+ * with no pair lookup in its default `GPOS` kerning features. An instance may hold a
+ * `FeatureVariations` record that gives those features other lookups.
  */
 export function instanceKerningReader(
   sfnt: SfntFile
@@ -109,28 +114,39 @@ export function instanceKerningReader(
   const table = sfntGpos(sfnt);
   const axes = readFvarAxes(sfnt);
   if (!table || !axes) return null;
-  const pairLookups = pairLookupsOf(table);
-  if (pairLookups.length === 0) return null;
+  const pairLookupsByRecord = new Map<FeatureSubstitution | undefined, PairLookup[]>();
+  const pairLookupsOfRecord = (record: FeatureSubstitution | undefined): PairLookup[] => {
+    let found = pairLookupsByRecord.get(record);
+    if (!found) pairLookupsByRecord.set(record, (found = pairLookupsOf(table, record)));
+    return found;
+  };
+  const hasPairLookups = [undefined, ...table.featureSubstitutions].some(
+    (record) => pairLookupsOfRecord(record).length > 0
+  );
+  if (!hasPairLookups) return null;
   const store = gdefVariationStore(sfnt, axes.length);
   const propsOf = glyphPropsReader(sfnt);
   const matches = lookupMatcher(sfnt);
   const { dv } = sfnt;
-  return (normalized) => (left, right) => {
-    const leftProps = propsOf(left);
-    const rightProps = propsOf(right);
-    let units = 0;
-    for (const { props, subtables } of pairLookups) {
-      // A lookup kerns neither glyph that its flag skips: it skips the left one, and pairs the left one past the right one.
-      if (!matches(left.glyph, leftProps, props) || !matches(right.glyph, rightProps, props)) continue;
-      for (const { offset } of subtables) {
-        const records = pairValueRecords(dv, offset, left.glyph, right.glyph);
-        if (!records) continue;
-        let pairUnits = 0;
-        for (const record of records) pairUnits += xAdvanceUnits(dv, record, store, normalized);
-        units += pairUnits;
-        break;
+  return (normalized) => {
+    const pairLookups = pairLookupsOfRecord(featureSubstitutionOfInstance(table, normalized));
+    return (left, right) => {
+      const leftProps = propsOf(left);
+      const rightProps = propsOf(right);
+      let units = 0;
+      for (const { props, subtables } of pairLookups) {
+        // A lookup kerns neither glyph that its flag skips: it skips the left one, and pairs the left one past the right one.
+        if (!matches(left.glyph, leftProps, props) || !matches(right.glyph, rightProps, props)) continue;
+        for (const { offset } of subtables) {
+          const records = pairValueRecords(dv, offset, left.glyph, right.glyph);
+          if (!records) continue;
+          let pairUnits = 0;
+          for (const record of records) pairUnits += xAdvanceUnits(dv, record, store, normalized);
+          units += pairUnits;
+          break;
+        }
       }
-    }
-    return units;
+      return units;
+    };
   };
 }

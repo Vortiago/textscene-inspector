@@ -8,6 +8,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { drawnCharacters } from './canonicalGlyphs';
 import { readGlyphCount, type SfntFile } from './sfntTables';
 
 /** `cmap` platform and encoding of each Unicode subtable, best first, as HarfBuzz ranks them (`hb-ot-cmap-table.hh`). */
@@ -137,22 +138,33 @@ export function cmapCodePoints(dv: DataView, cmapOffset: number, glyphCount: num
 
 /**
  * Whether `sfnt` maps a character to a glyph other than `.notdef`, which `_font_has_char` asks
- * FreeType. `FT_Get_Char_Index` answers 0 for an index at or past `maxp.numGlyphs`. A font with no
- * `cmap` subtable this module reads answers true, so its text keeps it.
+ * FreeType. `FT_Get_Char_Index` answers 0 for an index at or past `maxp.numGlyphs`. Null for a font
+ * with no `cmap` subtable this module reads.
+ */
+export function sfntMapsGlyph(sfnt: SfntFile): ((ch: string) => boolean) | null {
+  const glyphIndexOf = sfntGlyphIndex(sfnt);
+  if (!glyphIndexOf) return null;
+  const glyphCount = readGlyphCount(sfnt) ?? Infinity;
+  return (ch) => {
+    const glyphIndex = glyphIndexOf(ch.codePointAt(0)!);
+    return glyphIndex !== 0 && glyphIndex < glyphCount;
+  };
+}
+
+/**
+ * Whether `sfnt` draws a character without `.notdef`: `sfntMapsGlyph`, or every piece of its
+ * canonical decomposition has a glyph, as HarfBuzz shapes it. A font with no `cmap` subtable this
+ * module reads answers true, so its text keeps it.
  */
 export function sfntHasGlyph(sfnt: SfntFile): (ch: string) => boolean {
-  const glyphIndexOf = sfntGlyphIndex(sfnt);
-  if (!glyphIndexOf) return () => true;
-  const glyphCount = readGlyphCount(sfnt) ?? Infinity;
+  const mapsGlyph = sfntMapsGlyph(sfnt);
+  if (!mapsGlyph) return () => true;
   // One answer per code point: the shaper asks for each character on every pass.
   const answers = new Map<number, boolean>();
   return (ch) => {
     const codePoint = ch.codePointAt(0)!;
     let answer = answers.get(codePoint);
-    if (answer === undefined) {
-      const glyphIndex = glyphIndexOf(codePoint);
-      answers.set(codePoint, (answer = glyphIndex !== 0 && glyphIndex < glyphCount));
-    }
+    if (answer === undefined) answers.set(codePoint, (answer = drawnCharacters(ch, mapsGlyph) !== null));
     return answer;
   };
 }

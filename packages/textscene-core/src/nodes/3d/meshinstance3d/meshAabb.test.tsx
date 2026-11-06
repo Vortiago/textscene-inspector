@@ -168,6 +168,11 @@ describe('useMeshAabb over a TextMesh', () => {
     ],
     externalResources: [{ id: 'font', type: 'FontFile', path: FONT_PATH }],
   });
+  /**
+   * The outlines of a font load as their own chunks after the font file lands: 140 ms alone, and past
+   * the default 1 s on a loaded runner. One `act` does not wait for them.
+   */
+  const OUTLINES_TIMEOUT_MS = 5000;
   const renderTextAabb = (resources: SceneResources) => {
     const fake = createFakeResourceLoader();
     const { result } = renderHook(() => useMeshAabb('SubResource("text")', resources), {
@@ -182,9 +187,9 @@ describe('useMeshAabb over a TextMesh', () => {
 
     await act(async () => fake.fonts._resolve(FONT_PATH, FONT_FILE));
 
-    // The outlines load after the font, through the reader modules a cold run imports first.
-    await waitFor(() => expect(result.current).not.toBeNull());
-    expect(result.current?.size.x).toBeGreaterThan(0);
+    await waitFor(() => expect(result.current?.size.x).toBeGreaterThan(0), {
+      timeout: OUTLINES_TIMEOUT_MS,
+    });
     expect(result.current?.size.z).toBeCloseTo(0.05, 6);
   });
 
@@ -193,7 +198,9 @@ describe('useMeshAabb over a TextMesh', () => {
 
     await act(async () => fake.fonts._resolve(FONT_PATH, FONT_FILE));
 
-    await waitFor(() => expect(result.current?.size).toEqual({ x: 7, y: 8, z: 9 }));
+    await waitFor(() => expect(result.current?.size).toEqual({ x: 7, y: 8, z: 9 }), {
+      timeout: OUTLINES_TIMEOUT_MS,
+    });
   });
 
   it('stays unknown for a font with no readable outlines', async () => {

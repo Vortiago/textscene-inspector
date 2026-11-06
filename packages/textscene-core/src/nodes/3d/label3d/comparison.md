@@ -13,6 +13,8 @@ Draws text on a flat plane in 3D space. The previewer shapes it in its `text_dir
 
 A character the font lacks draws from the first font of its **Fallback chain** that has it. The `label3d-text-mesh-font-fallbacks` golden pins this. A character no font of the chain has draws nothing, as a glyph with no font has no rectangle to draw (`label_3d.cpp:357`). Godot draws no hex-code box for it, and the pen still advances.
 
+A precomposed character the font lacks draws as its base and marks in that font (`hb-ot-shape-normalize.cc`). The marks sit at the offsets of its `GPOS` mark lookups. In a font with no `GPOS` script they sit against the ink of the base (`hb-ot-shape-fallback.cc`). The `label3d-text-mesh-decomposed-marks` golden pins this.
+
 A label is unlit by default. With `shaded` on, the scene's lights light its fill and outline, as Godot's `SHADING_MODE_PER_PIXEL` does (`material.cpp:3045`), and the label receives shadows. The plane faces +Z (`label_3d.cpp:422-423`). A double-sided label flips the normal of its back face (`scene_forward_clustered.glsl:1263-1266`), so its back is lit as its front. The `label3d-shaded` golden pins this.
 
 A label casts no shadow by default, as its constructor turns `cast_shadow` off (`label_3d.cpp:1090`). With it on, the glyphs cast when Godot files their surface in the shadow pass (`render_forward_clustered.cpp:4079-4089`). That pass takes a cut surface, or an `OPAQUE_PREPASS` one, with the depth test on. An `OPAQUE_PREPASS` surface blends uncut, writes its depth in a depth prepass cut at 0.99, and cuts its shadow at 0.1 (`render_forward_clustered.cpp:1791,2770`). A blended label, the default `alpha_cut`, casts nothing. The `label3d-shadow` golden pins this.
@@ -27,7 +29,7 @@ A `FontVariation` over a variable font draws the instance that its `variation_op
 the axes on FreeType and HarfBuzz (`text_server_adv.cpp:1915-1950`). The glyphs and the outline draw from the outlines
 at the instance. They follow the `fvar`, `avar`, `gvar` and `cvar` tables. Each advance follows `HVAR`, or the
 phantom points that `gvar` moves in a font without `HVAR`. The pair kerning follows the `GPOS` `kern` feature
-with its deltas at the instance. A `FontVariation` over another takes its own axis values alone (`font.cpp:3120-3131`).
+with its deltas at the instance. The `rvrn` feature of the `GSUB` `FeatureVariations` swaps glyphs at some axis values. A `FontVariation` over another takes its own axis values alone (`font.cpp:3120-3131`).
 
 ## Linting
 
@@ -85,10 +87,11 @@ The glyph raster has a mip chain only when its font generates mipmaps and `textu
 
 ## Known limitations
 
+- **Approximated** A base and a combining mark typed as two characters keep their own pens, with no `GPOS` mark offset (#1393).
 - **Approximated** The glyph mip chain is per label raster, where Godot's is per glyph page, so a minified label differs slightly.
 - **Resource gap** A SystemFont always draws the default font, as Godot does when no OS font matches its names, where Godot draws a matching OS font.
 - **Approximated** A glyph off whole pixels draws at its place, where Godot's mesh samples its glyph texture between texels.
-- **Approximated** At an instance, a variable font keeps its default glyphs where its `GSUB` feature variations swap them.
+- **Approximated** At an instance, a variable font swaps glyphs by `rvrn` for each character alone, so its ligatures and contextual alternates keep the `cmap` glyphs (#1393).
 - **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
 - **Approximated** A line with a hex-code box keeps the ascent of a BMFont, where Godot grows it to fit the box (#1324).

@@ -192,7 +192,19 @@ export async function readWoff2Tables(
   bytes: ArrayBuffer,
   tags: readonly string[] = SCENE_FONT_TABLE_TAGS
 ): Promise<SfntFile> {
+  return tablesOfStream(await decodedStreamOf(bytes), tags);
+}
+
+/**
+ * `readWoff2Tables` split at its slow step: the Brotli stream decodes once here, and the thunk
+ * rebuilds the tables of `tags` when first called, which a `glyf` rebuild makes costly.
+ */
+export async function lazyWoff2Tables(bytes: ArrayBuffer, tags: readonly string[]): Promise<() => SfntFile> {
   const stream = await decodedStreamOf(bytes);
+  return () => tablesOfStream(stream, tags);
+}
+
+function tablesOfStream(stream: DecodedStream, tags: readonly string[]): SfntFile {
   const stored = storedTablesOf(stream);
   const tables = plainTablesOf(stored, tags);
 

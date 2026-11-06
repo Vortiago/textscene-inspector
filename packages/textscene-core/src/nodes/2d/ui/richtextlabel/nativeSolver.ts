@@ -77,7 +77,12 @@ import {
   paragraphJustificationFlags,
   paragraphTabStopsPx,
 } from './paragraph';
-import { isPrefixShown, revealedGlyphs, type RichTextReveal } from './visibleCharacters';
+import {
+  countedLayoutForReveal,
+  isPrefixShown,
+  revealedGlyphs,
+  type RichTextReveal,
+} from './visibleCharacters';
 import { tagFontSizePx, tagOutline } from './runStyle';
 import { paragraphListings, runListing, type ParagraphListing, type RunListing } from './listing';
 import { countAtOrBelow } from '../../../../utils/countAtOrBelow';
@@ -874,6 +879,9 @@ function lineMetricsOf(
         ascentPx = Math.max(ascentPx, getFontAscentPx(face, run.fontSizePx));
         descentPx = Math.max(descentPx, fontDescentPx(face, run.fontSizePx));
       }
+      // A mark raised past the font's ascent lifts the line (`text_server_adv.cpp:5161`: `-gl.y_off`).
+      for (const { decomposition } of segment.glyphs)
+        if (decomposition) for (const { y } of decomposition.marks) ascentPx = Math.max(ascentPx, -y);
     }
     // A blank line shapes its break in the paragraph font, so it keeps that height.
     if (segments.length === 0) {
@@ -1151,7 +1159,9 @@ export function layoutRichTextRuns(
     alignment?.fullText?.lineCount ?? layout.lines.length
   );
   // Line metrics above count every glyph, shown or not: a hidden glyph still takes its line's height.
-  const revealed = alignment?.reveal && revealedGlyphs(layout, styledRuns, alignment.reveal);
+  const reveal = alignment?.reveal;
+  const counted = reveal && countedLayoutForReveal(layout, styledRuns, reveal);
+  const revealed = reveal && counted && revealedGlyphs(counted, reveal);
 
   const placements: RichTextRunPlacement[] = [];
   perLine.forEach((segments, lineIndex) => {
@@ -1174,8 +1184,7 @@ export function layoutRichTextRuns(
     const marker = startsParagraph(layout.lines, lineIndex)
       ? layout.listings?.get(line.paragraphStart!)?.marker
       : undefined;
-    const isMarkerShown =
-      !marker || !alignment?.reveal || isPrefixShown(layout, styledRuns, alignment.reveal, line, revealed);
+    const isMarkerShown = !marker || !reveal || !counted || isPrefixShown(counted, reveal, line, revealed);
     if (marker && isMarkerShown) {
       placements.push({
         lineIndex,

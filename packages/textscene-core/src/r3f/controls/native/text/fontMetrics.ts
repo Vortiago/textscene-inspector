@@ -8,6 +8,7 @@
 import { perObject } from '../../../../utils/perObject';
 import { identityKey } from '../../../../utils/identityKey';
 import { recentlyRead } from '../../../../utils/recentlyRead';
+import type { Decomposition } from './sfntDecomposition';
 import type { SfntOutlines } from './sfntOutlines';
 
 /**
@@ -40,6 +41,11 @@ export interface FontMetrics {
   readonly descent: number;
   /** Whether the face maps `ch` to a glyph, `_font_has_char`. A face that cannot tell answers true. */
   hasGlyph(ch: string): boolean;
+  /**
+   * The base and marks a character the face lacks draws as, where the face has the pieces of its
+   * canonical decomposition, at a font size. Absent, or null for a character, is one glyph.
+   */
+  readonly decomposition?: Decomposition;
   /** A character's own advance width, design units, or `null` if this font has no glyph for it (a shaper falls back to `averageAdvanceUnits`). */
   getGlyphAdvanceUnits(ch: string): number | null;
   /**
@@ -292,13 +298,21 @@ export function glyphAdvance26_6(units: number, unitsPerEm: number, fontSizePx: 
 }
 
 /**
+ * A signed offset of `units` at `fontSizePx`, in px. FreeType scales a negative value as its
+ * magnitude and negates it (`FT_MulFix`), which `glyphAdvance26_6` alone does not for a sign.
+ */
+export function glyphOffsetPx(units: number, unitsPerEm: number, fontSizePx: number): number {
+  return (Math.sign(units) * glyphAdvance26_6(Math.abs(units), unitsPerEm, fontSizePx)) / FIXED_26_6_ONE;
+}
+
+/**
  * The advance in 26.6 of `ch` at the axis values of the face's `variation_opentype`, or null for a
  * face at its default instance and a character with no glyph: the default advance stands.
  */
 function instanceGlyphAdvance26_6(metrics: FontMetrics, ch: string, fontSizePx: number): number | null {
   const { outlines, opentype } = metrics;
   if (!outlines || !isInstanced(opentype)) return null;
-  const glyphIndex = outlines.glyphIndex(ch.codePointAt(0)!);
+  const glyphIndex = outlines.glyphIndex(ch.codePointAt(0)!, opentype);
   return glyphIndex === 0 ? null : (outlines.advanceAtInstance?.(glyphIndex, fontSizePx, opentype) ?? null);
 }
 

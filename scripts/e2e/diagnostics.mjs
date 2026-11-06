@@ -3,6 +3,8 @@
  * failed requests that `attachDiagnostics` collects per page, checked per scenario.
  */
 
+import { describeFailedRequests } from '../visual/preview/pageDiagnostics.mjs';
+
 /**
  * Patterns for the warnings a healthy load logs. Every other warning fails the scenario, so a
  * library that warns about a removed feature or a lost WebGL context stops the gate. A pattern,
@@ -41,10 +43,6 @@ export function checkDiagnostics(gate, label, diagnostics, { expectedWarnings = 
   );
   gate.check(
     diagnostics.failedRequests.length === 0,
-    `${label} ${diagnostics.failedRequests.length} failed request(s): ` +
-      diagnostics.failedRequests
-        .slice(0, 3)
-        .map((r) => `${r.failure} ${r.url}`)
-        .join(' | ')
+    `${label} failed request(s): ${describeFailedRequests(diagnostics.failedRequests)}`
   );
 }

@@ -5,9 +5,10 @@
 import { withFallbacks, withVariation, type FontMetrics, type GlyphVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { faceDescriptors } from './sceneFontFace';
-import { openFontContainer } from './fontContainer';
+import { lazyFontContainer, openFontContainer } from './fontContainer';
 import { sfntHasGlyph } from './sfntCmap';
-import { parseSfntScalars, readAxisDefaults, type SfntScalars } from './sfntTables';
+import { sfntDecomposition, usesFallbackMarks } from './sfntDecomposition';
+import { FALLBACK_MARK_TABLE_TAGS, parseSfntScalars, readAxisDefaults, type SfntScalars } from './sfntTables';
 import {
   createRuntimeFontMetrics,
   type CanvasFontMetrics,
@@ -125,6 +126,10 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
     );
   }
 
+  // Outlines only for a font with no `GPOS` script, opened at its first decomposed character: they
+  // place its marks by HarfBuzz's fallback.
+  const openMarkOutlines =
+    sfnt && usesFallbackMarks(sfnt) ? await lazyFontContainer(bytes, FALLBACK_MARK_TABLE_TAGS) : undefined;
   const hasGlyph = sfnt ? sfntHasGlyph(sfnt) : () => true;
   const measureInkUnits = (ch: string) => {
     const { actualBoundingBoxLeft, actualBoundingBoxRight } = ctx.measureText(ch);
@@ -136,6 +141,7 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
     measureInkUnits,
     cssFontFamily: family,
     hasGlyph,
+    decomposition: (sfnt && sfntDecomposition(sfnt, openMarkOutlines)) ?? undefined,
   });
 }
 

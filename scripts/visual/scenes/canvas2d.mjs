@@ -294,11 +294,17 @@ export const CANVAS_2D_SCENES = [
   { name: 'label-font-variation-instance', file: 'unit-label-font-variation-instance.tscn', mode: '2d' },
   // The one variable: `variation_opentype` at `MONO` 0.5 over Recursive, whose `GPOS` kerning halves at that instance.
   { name: 'label-font-variation-kerning', file: 'unit-label-font-variation-kerning.tscn', mode: '2d' },
+  // The one variable: `variation_opentype` at `MONO` 1 or `slnt` -15 over Recursive, whose `GSUB` feature variations swap glyphs.
+  { name: 'label-font-variation-glyph-swap', file: 'unit-label-font-variation-glyph-swap.tscn', mode: '2d' },
   // The one variable: a BMFont's import `scaling_mode`, Integer and Disabled, at sizes off the fixed size.
   { name: 'label-bmfont-scaling', file: 'unit-label-bmfont-scaling.tscn', mode: '2d' },
   // The one variable: a character the font lacks, drawn from the first font of its fallback chain
   // that has it, on a raw font's import, a FontVariation, a BMFont's import and a RichTextLabel.
   { name: 'label-font-fallbacks', file: 'unit-label-font-fallbacks.tscn', mode: '2d' },
+  // The one variable: a precomposed character the font lacks, drawn as its base and the marks the font has,
+  // in a Label at 16 px and 32 px and in a RichTextLabel whose fallback holds a character the marks cannot make,
+  // and in Labels over fonts with no GPOS script and with a GPOS that has no mark lookup.
+  { name: 'label-decomposed-marks', file: 'unit-label-decomposed-marks.tscn', mode: '2d' },
   // The one variable: `FontVariation.variation_embolden` over a scene font at 0, 1.2 and 2.0, which
   // grows the outline and widens each advance, as the bold of a RichTextLabel does.
   { name: 'label-font-variation-embolden', file: 'unit-label-font-variation-embolden.tscn', mode: '2d' },

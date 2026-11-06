@@ -24,15 +24,21 @@ import { isTrickyFont } from './trickyFont';
 import { openFontContainer } from './fontContainer';
 import { OUTLINE_TABLE_TAGS, readHeadUnitsPerEm, type SfntFile } from './sfntTables';
 import { fontInstanceOf, type FontInstance } from './variation/fontInstance';
+import type { instanceGlyphIndex, InstanceGlyphIndex } from './variation/instanceGlyph';
 import type { instanceKerningReader, PairKerningReader } from './variation/instanceKerning';
 import { perObject } from '../../../../utils/perObject';
 import { recentlyRead } from '../../../../utils/recentlyRead';
 
 type InstanceKerningReader = typeof instanceKerningReader;
+type InstanceGlyphIndexReader = typeof instanceGlyphIndex;
 
 export interface SfntOutlines {
-  /** The glyph index `cmap` gives `codePoint`, or 0 for a character the font lacks. */
-  glyphIndex(codePoint: number): number;
+  /**
+   * The glyph index of `codePoint` as HarfBuzz's `rvrn` feature leaves it at the axis values of
+   * `opentype`, or at the default instance without them: the glyph `cmap` gives it, or 0 for a
+   * character the font lacks.
+   */
+  glyphIndex(codePoint: number, opentype?: OpentypeCoordinates): number;
   /** The contours of a glyph at `fontSizePx`, changed by `variation`, or null for a glyph with no outline. */
   glyphContours(glyphIndex: number, fontSizePx: number, variation?: GlyphVariation): GlyphContours | null;
   /**
@@ -77,8 +83,20 @@ export async function openFontOutlines(
 ): Promise<SfntOutlines | null> {
   const sfnt = await openFontContainer(bytes, OUTLINE_TABLE_TAGS);
   if (!sfnt) return null;
-  const [outlineOf, kerningReader] = await Promise.all([outlineReaderOf(sfnt, load), kerningReaderOf(sfnt)]);
-  return readSfntOutlines(sfnt, outlineOf, kerningReader);
+  const [outlineOf, kerningReader, glyphIndexReader] = await Promise.all([
+    outlineReaderOf(sfnt, load),
+    variationReaderOf(
+      sfnt,
+      ['GPOS', 'fvar'],
+      async () => (await import('./variation/instanceKerning')).instanceKerningReader
+    ),
+    variationReaderOf(
+      sfnt,
+      ['GSUB', 'fvar'],
+      async () => (await import('./variation/instanceGlyph')).instanceGlyphIndex
+    ),
+  ]);
+  return readSfntOutlines(sfnt, outlineOf, kerningReader, glyphIndexReader);
 }
 
 /**
@@ -101,15 +119,19 @@ function unhintedReaderOf(sfnt: SfntFile): GlyphOutlineReader | null {
 }
 
 /**
- * The `GPOS` kerning reader of a variable font, or null for a font without `GPOS` and `fvar`. Its
- * module loads with the font, and `instanceKerningOf` reads the tables when an instance first asks.
+ * The reader of a variable font that `load` imports, or null for a font without all of `tables`. The
+ * module loads with the font, and the reader reads the tables when an instance first asks.
  */
-async function kerningReaderOf(sfnt: SfntFile): Promise<InstanceKerningReader | null> {
-  if (!sfnt.tables.has('GPOS') || !sfnt.tables.has('fvar')) return null;
+async function variationReaderOf<Reader>(
+  sfnt: SfntFile,
+  tables: readonly string[],
+  load: () => Promise<Reader>
+): Promise<Reader | null> {
+  if (!tables.every((tag) => sfnt.tables.has(tag))) return null;
   try {
-    return (await import('./variation/instanceKerning')).instanceKerningReader;
+    return await load();
   } catch {
-    // Kerning only refines the advances: a chunk that fails to load (offline, after a deploy) must not take the outlines with it.
+    // A reader only refines the glyphs and advances: a chunk that fails to load (offline, after a deploy) must not take the outlines with it.
     return null;
   }
 }
@@ -125,7 +147,7 @@ type CharacterKerning = (leftCodePoint: number, rightCodePoint: number) => numbe
 function instanceKerningOf(
   sfnt: SfntFile,
   instanceAt: InstanceReader,
-  glyphIndex: (codePoint: number) => number,
+  glyphIndex: InstanceGlyphIndex,
   kerningReader: InstanceKerningReader | null
 ): SfntOutlines['kerningAtInstance'] {
   if (!kerningReader) return undefined;
@@ -137,7 +159,10 @@ function instanceKerningOf(
   // Kept with its instance, and so for as long as the layout's opentype wrapper that asks for it lives.
   const pairsAt = perObject((instance: FontInstance): CharacterKerning | null => {
     const kerningAtInstance = kerningAt();
-    return kerningAtInstance && keptPairs(glyphIndex, kerningAtInstance(instance.normalized));
+    return (
+      kerningAtInstance &&
+      keptPairs((codePoint) => glyphIndex(codePoint, instance), kerningAtInstance(instance.normalized))
+    );
   });
   return (leftCodePoint, rightCodePoint, opentype) => {
     const instance = instanceAt(opentype);
@@ -261,14 +286,18 @@ function instanceAdvanceReaders(
 function readSfntOutlines(
   sfnt: SfntFile,
   outlineOf: GlyphOutlineReader | null,
-  kerningReader: InstanceKerningReader | null
+  kerningReader: InstanceKerningReader | null,
+  glyphIndexReader: InstanceGlyphIndexReader | null
 ): SfntOutlines | null {
-  const glyphIndex = outlineOf && sfntGlyphIndex(sfnt);
-  if (!glyphIndex) return null;
+  const cmapGlyphIndex = outlineOf && sfntGlyphIndex(sfnt);
+  if (!cmapGlyphIndex) return null;
 
   const instanceAt = instanceReaderOf(sfnt);
+  const glyphIndex: InstanceGlyphIndex = glyphIndexReader
+    ? glyphIndexReader(sfnt, cmapGlyphIndex)
+    : cmapGlyphIndex;
   return {
-    glyphIndex,
+    glyphIndex: (codePoint, opentype) => glyphIndex(codePoint, opentype ? instanceAt(opentype) : null),
     advanceAtInstance: instanceAdvanceReader(sfnt, instanceAt),
     glyphContours: (glyph, fontSizePx, variation) =>
       orOnRangeError(() => {

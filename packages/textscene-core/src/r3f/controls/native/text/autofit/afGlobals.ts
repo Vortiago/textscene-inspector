@@ -22,7 +22,7 @@ import { applyLatinHints } from './afLatinHinting';
 import { initLatinMetrics, scaleLatinMetrics } from './afLatinMetrics';
 import { applyCjkHints } from './afCjkHinting';
 import { initCjkMetrics, initIndicMetrics, scaleCjkMetrics, type CjkMetrics } from './afCjkMetrics';
-import { AUTOFIT_SCRIPTS } from './afScripts';
+import { AUTOFIT_SCRIPTS, rangePairs } from './afScripts';
 import { AUTOFIT_STYLES, type AutofitStyle } from './afStyles';
 import { collectGposInput, collectGsubOutput, wouldSubstitute } from './openTypeGlyphSets';
 import { collectLookups } from './openTypeLayout';
@@ -120,11 +120,6 @@ function* mappedGlyphs(face: AutofitFace, first: number, last: number): Generato
   }
   for (let i = low; i < codePoints.length && codePoints[i]! <= last; i++)
     yield face.glyphIndex(codePoints[i]!);
-}
-
-/** Pairs of first and last code point, as `AutofitScript` holds its ranges. */
-function* rangePairs(ranges: readonly number[]): Generator<[number, number]> {
-  for (let i = 0; i < ranges.length; i += 2) yield [ranges[i]!, ranges[i + 1]!];
 }
 
 /** The script tags `af_shaper_get_coverage_hb` collects under, the default script's own tag added for it. */

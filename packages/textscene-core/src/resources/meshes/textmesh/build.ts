@@ -27,6 +27,7 @@ import {
   isControlChar,
   shapedTextSizeWidthPx,
   type GlyphPlacement,
+  type PlacedDecomposition,
 } from '../../../r3f/controls/native/text/textLayout';
 import { perObject } from '../../../utils/perObject';
 import { recentlyRead } from '../../../utils/recentlyRead';
@@ -131,7 +132,7 @@ function glyphMeshes(
   );
   return (codepoint) => {
     if (!meshes.has(codepoint)) {
-      const index = outlines.glyphIndex(codepoint);
+      const index = outlines.glyphIndex(codepoint, variation.opentype);
       meshes.set(
         codepoint,
         index === 0
@@ -152,19 +153,35 @@ function glyphMeshesByFace(
   properties: TextMeshProperties,
   face: TextMeshFace,
   fallbacks: readonly TextMeshFace[]
-): (glyph: GlyphPlacement) => GlyphMeshData | null {
+): (glyph: GlyphPlacement, char: string) => GlyphMeshData | null {
   const meshesOf = perObject((glyphFace: TextMeshFace) => glyphMeshes(properties, glyphFace));
   const fallbackFaces = new Map<FontMetrics, TextMeshFace>(fallbacks.map((fallback) => [fallback, fallback]));
-  return (glyph) => {
+  return (glyph, char) => {
     const glyphFace = fallbackFaces.get(glyph.fontMetrics) ?? face;
-    return meshesOf(glyphFace)(glyph.char.codePointAt(0)!);
+    return meshesOf(glyphFace)(char.codePointAt(0)!);
   };
+}
+
+/** A decomposed glyph's base and marks, each at its offset from the glyph's origin, px with y down. */
+function placeDecomposedGlyph(
+  placed: PlacedGlyph[],
+  { base, marks }: PlacedDecomposition,
+  origin: { x: number; y: number },
+  pixelSize: number,
+  meshOf: (char: string) => GlyphMeshData | null
+): void {
+  const baseMesh = meshOf(base);
+  if (baseMesh) placed.push({ ...origin, mesh: baseMesh });
+  for (const { char, x, y } of marks) {
+    const mesh = meshOf(char);
+    if (mesh) placed.push({ x: origin.x + x * pixelSize, y: origin.y - y * pixelSize, mesh });
+  }
 }
 
 function placeGlyphs(
   properties: TextMeshProperties,
   { lines, baselineOffsetPx, linePitchPx }: TextMeshLines,
-  meshOf: (glyph: GlyphPlacement) => GlyphMeshData | null
+  meshOf: (glyph: GlyphPlacement, char: string) => GlyphMeshData | null
 ): PlacedGlyph[] {
   const { pixelSize } = properties;
   const blockHeight = lines.length * linePitchPx * pixelSize;
@@ -181,7 +198,12 @@ function placeGlyphs(
       const codepoint = glyph.char.codePointAt(0)!;
       if (isControlChar(codepoint) || codepoint === ZERO_WIDTH_SPACE) continue;
       const origin = { x: startX + glyph.x * pixelSize, y: baseline };
-      const mesh = meshOf(glyph);
+      const { decomposition } = glyph;
+      if (decomposition) {
+        placeDecomposedGlyph(placed, decomposition, origin, pixelSize, (char) => meshOf(glyph, char));
+        continue;
+      }
+      const mesh = meshOf(glyph, glyph.char);
       if (mesh) placed.push({ ...origin, mesh });
       else {
         const box = hexCodeBoxAdvanceSize(properties.fontSize, codepoint);

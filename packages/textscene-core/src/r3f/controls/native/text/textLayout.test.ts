@@ -158,6 +158,32 @@ describe('shapeText — a character outside the baked charset', () => {
   );
 });
 
+describe('shapeText — a character no font of the chain has (text_server_adv.cpp:6835-6890)', () => {
+  // Godot asks the host for a system font only while `allow_system_fallback` is on
+  // (`:6820`, default true). The previewer has no host fonts, so `_find_sys_font_for_text`
+  // finds nothing and `preserve_invalid` (default true, `text_server_adv.h:539`) draws a box.
+  const FACE_WITHOUT_CJK: FontMetrics = { ...OPEN_SANS_FONT_METRICS, hasGlyph: (ch) => ch !== '一' };
+  const shapeCjk = (fontMetrics: FontMetrics) =>
+    shapeText('A一', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics,
+    }).lines[0]!.glyphs[1]!;
+
+  it('draws a hex-code box for a character past the last fallback', () => {
+    const missing = shapeCjk({ ...FACE_WITHOUT_CJK, fallbacks: [FACE_WITHOUT_CJK] });
+    // hexCodeBoxAdvanceSize(16, 0x4e00).x: cell 1 px, two bytes, (4 + 3 * 2 + 1 + 1) * 1.
+    expect(missing.advance).toBe(12);
+    expect(missing.controlCodepoint).toBe(0x4e00);
+  });
+
+  it('draws a hex-code box for a character a face with no fallbacks lacks', () => {
+    expect(shapeCjk(FACE_WITHOUT_CJK).controlCodepoint).toBe(0x4e00);
+  });
+});
+
 describe('shapeText — preserveControl / control characters (text_server_adv.cpp:6844-6907, char_utils.h:117-118 is_control)', () => {
   // U+0001 START OF HEADING is `is_control` (<=0x001F) and neither tab nor linebreak.
   const CONTROL = '';
@@ -706,7 +732,11 @@ describe('shapeText — glyph advances vs real Godot (text_server_adv.cpp:6936,7
 
   it('size 32: the second unit of a surrogate pair rounds nothing, so the remainder carries to the next glyph', () => {
     // 1056 units at 32 px over a 2048-unit em is 16.5 px: 17, then 16 with the carried -0.5.
-    const face: FontMetrics = { ...OPEN_SANS_FONT_METRICS, getGlyphAdvanceUnits: () => 1056 };
+    const face: FontMetrics = {
+      ...OPEN_SANS_FONT_METRICS,
+      hasGlyph: () => true,
+      getGlyphAdvanceUnits: () => 1056,
+    };
     const layout = shapeText('😀😀', {
       fontSizePx: 32,
       boxWidthPx: 0,
