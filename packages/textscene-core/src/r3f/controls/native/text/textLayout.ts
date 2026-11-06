@@ -671,21 +671,9 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
 function roundAdvancesToWholePixels(glyphs: BreakGlyph[], chars: ArrayLike<string>, style: RunStyle): void {
   for (const [start, end] of spanRunRanges(style, chars.length)) {
     const chain = fallbackChainOf(style.spanFaces[start]!);
+    // A one-face run under subpixel positioning rounds nothing, so it builds no index list.
+    if (chain.length === 1 && fontUsesSubpixelPositioning(style.sizes[start]!, chain[0]!)) continue;
     const isRtl = isRtlRun(style, start);
-    if (chain.length === 1) {
-      // One face needs no index list: most UI text takes this path.
-      if (fontUsesSubpixelPositioning(style.sizes[start]!, chain[0]!)) continue;
-      let advanceRemainder = 0;
-      for (let k = 0; k < end - start; k++) {
-        advanceRemainder = roundGlyphAdvance(
-          glyphs,
-          chars,
-          isRtl ? end - 1 - k : start + k,
-          advanceRemainder
-        );
-      }
-      continue;
-    }
     const indices = Array.from({ length: end - start }, (_v, k) => start + k);
     if (isRtl) indices.reverse();
     roundFaceRun(glyphs, chars, style, indices, chain, 0);
@@ -745,6 +733,8 @@ function roundFaceRun(
   const face = chain[depth]!;
   const isLastFace = depth === chain.length - 1;
   const usesSubpixel = fontUsesSubpixelPositioning(style.sizes[indices[0]!]!, face);
+  // The last face has no later stretch to hand on, so subpixel positioning leaves nothing to do.
+  if (isLastFace && usesSubpixel) return;
   let advanceRemainder = 0;
   let stretch: number[] = [];
   const flushStretch = () => {

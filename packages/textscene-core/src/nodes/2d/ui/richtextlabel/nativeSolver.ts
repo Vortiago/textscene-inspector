@@ -77,7 +77,12 @@ import {
   paragraphJustificationFlags,
   paragraphTabStopsPx,
 } from './paragraph';
-import { isPrefixShown, revealedGlyphs, type RichTextReveal } from './visibleCharacters';
+import {
+  countedLayoutForReveal,
+  isPrefixShown,
+  revealedGlyphs,
+  type RichTextReveal,
+} from './visibleCharacters';
 import { tagFontSizePx, tagOutline } from './runStyle';
 import { paragraphListings, runListing, type ParagraphListing, type RunListing } from './listing';
 import { countAtOrBelow } from '../../../../utils/countAtOrBelow';
@@ -1154,7 +1159,9 @@ export function layoutRichTextRuns(
     alignment?.fullText?.lineCount ?? layout.lines.length
   );
   // Line metrics above count every glyph, shown or not: a hidden glyph still takes its line's height.
-  const revealed = alignment?.reveal && revealedGlyphs(layout, styledRuns, alignment.reveal);
+  const reveal = alignment?.reveal;
+  const counted = reveal && countedLayoutForReveal(layout, styledRuns, reveal);
+  const revealed = reveal && counted && revealedGlyphs(counted, reveal);
 
   const placements: RichTextRunPlacement[] = [];
   perLine.forEach((segments, lineIndex) => {
@@ -1177,8 +1184,7 @@ export function layoutRichTextRuns(
     const marker = startsParagraph(layout.lines, lineIndex)
       ? layout.listings?.get(line.paragraphStart!)?.marker
       : undefined;
-    const isMarkerShown =
-      !marker || !alignment?.reveal || isPrefixShown(layout, styledRuns, alignment.reveal, line, revealed);
+    const isMarkerShown = !marker || !reveal || !counted || isPrefixShown(counted, reveal, line, revealed);
     if (marker && isMarkerShown) {
       placements.push({
         lineIndex,

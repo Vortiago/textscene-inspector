@@ -8,6 +8,10 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { isPruned, sidecarImporter } from './vendor-prune.mjs';
+import {
+  BMFONT_IMPORTER,
+  DYNAMIC_FONT_IMPORTER,
+} from '../packages/textscene-core/src/godot/import/fontImport.ts';
 
 const root = mkdtempSync(join(tmpdir(), 'vendor-prune-'));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
@@ -37,6 +41,14 @@ describe('isPruned', () => {
 
   it('keeps a texture sidecar, which decides the import format and the mip chain', () => {
     expect(isPruned(sidecarOf('albedo.png', 'PNG', 'texture'))).toBe(false);
+  });
+
+  it('keeps a dynamic font sidecar, whose params become the FontFile properties', () => {
+    expect(isPruned(sidecarOf('open_sans.ttf', 'TTF', DYNAMIC_FONT_IMPORTER))).toBe(false);
+  });
+
+  it('keeps a BMFont sidecar, which names the scale mode and fallbacks', () => {
+    expect(isPruned(sidecarOf('pixel.fnt', 'info', BMFONT_IMPORTER))).toBe(false);
   });
 
   it('prunes an audio sidecar', () => {
