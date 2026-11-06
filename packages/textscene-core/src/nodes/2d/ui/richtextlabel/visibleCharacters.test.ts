@@ -25,13 +25,17 @@ const { VC_CHARS_BEFORE_SHAPING, VC_CHARS_AFTER_SHAPING, VC_GLYPHS_AUTO, VC_GLYP
 /** The zero-width glyph that ends each paragraph but the last. */
 const PARAGRAPH_TERMINATOR = '\u200b';
 
-/** The text shaped as RichTextLabel does: `\n` ends a paragraph with no terminator after the last. */
-function shape(text: string, boxWidthPx = 0) {
+/**
+ * The text shaped as RichTextLabel does: `\n` ends a paragraph with no terminator after the last.
+ * `spanAt` sets the run of each character.
+ */
+function shape(text: string, boxWidthPx = 0, spanAt?: (charIndex: number) => number) {
   return shapeText(text, {
     fontSizePx: 16,
     boxWidthPx,
     autowrapMode: boxWidthPx > 0 ? AutowrapMode.AUTOWRAP_WORD_SMART : AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx: 0,
+    spanAt,
     paragraphSeparator: '\n',
     terminateLastParagraph: false,
   });
@@ -70,7 +74,7 @@ describe('revealedGlyphs', () => {
   // Measured with a `TextParagraph` on the default font: `add_string("f")` then `add_string("i")` is two
   // glyphs where `add_string("fi")` is one, so a ligature never joins glyphs of two runs.
   it('counts f and i of two runs as two glyphs', () => {
-    const layout = shape('abcdefghfi');
+    const layout = shape('abcdefghfi', 0, (i) => (i < 9 ? 0 : 1));
     const reveal = { behavior: VC_GLYPHS_LTR, characters: 9, ratio: 0.99, rtl: false };
     const runs = [{ text: 'abcdefghf' }, { text: 'i' }];
     const kept = revealedGlyphs(countedLayoutForReveal(layout, runs, reveal)!, reveal);

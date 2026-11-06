@@ -125,6 +125,22 @@ describe('<TextRun>', () => {
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
+  it('draws a ligature of the atlas face on the bundled canvas face, as the atlas holds no ligature glyph', async () => {
+    bundled.metrics = createOpenSansCanvasFontMetrics('bundled-textrun-ligature-test');
+    const renderer = await renderTextRun({ layout: layoutFor('office') });
+    await vi.waitFor(() => expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1));
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect(mesh.material).not.toBeInstanceOf(THREE.ShaderMaterial);
+  });
+
+  it('draws a mark of the atlas face on the bundled canvas face, as the atlas holds no mark glyph', async () => {
+    bundled.metrics = createOpenSansCanvasFontMetrics('bundled-textrun-mark-test');
+    const renderer = await renderTextRun({ layout: layoutFor('a\u0308\u0301') });
+    await vi.waitFor(() => expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1));
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect(mesh.material).not.toBeInstanceOf(THREE.ShaderMaterial);
+  });
+
   it('draws nothing for an emboldened atlas face while the bundled canvas face loads', async () => {
     bundled.metrics = undefined;
     const renderer = await renderTextRun({ layout: emboldenedLayout(1.2) });

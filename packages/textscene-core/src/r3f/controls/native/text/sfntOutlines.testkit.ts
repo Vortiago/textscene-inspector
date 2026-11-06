@@ -10,7 +10,9 @@
 import { join } from 'node:path';
 import { fileBytes } from '../../../../resources/testing/fileBytes';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
+import type { LookupGlyph } from './autofit/openTypeGdef';
 import type { GlyphContours } from './glyphContours';
+import { sfntGlyphIndex } from './sfntCmap';
 import { openFontOutlines, type SfntOutlines } from './sfntOutlines';
 import { openSfnt, type SfntFile } from './sfntTables';
 
@@ -304,4 +306,13 @@ export function buildTestFont(input: TestFontInput): ArrayBuffer {
     ],
     input.container
   );
+}
+
+/** The glyphs `cmap` gives the characters of `text` in decomposed form, as a cluster a mark reader takes. */
+export function clusterGlyphs(sfnt: SfntFile, text: string): LookupGlyph[] {
+  const glyphIndex = sfntGlyphIndex(sfnt)!;
+  return Array.from(text.normalize('NFD'), (ch) => {
+    const codePoint = ch.codePointAt(0)!;
+    return { glyph: glyphIndex(codePoint), codePoint };
+  });
 }

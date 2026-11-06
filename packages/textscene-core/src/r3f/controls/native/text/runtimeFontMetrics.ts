@@ -3,8 +3,7 @@
  * the injected `measureWidthUnits`, so the module runs under happy-dom with a fake measurer.
  */
 
-import type { FontMetrics } from './fontMetrics';
-import type { Decomposition } from './sfntDecomposition';
+import type { FaceGlyphs, FontMetrics } from './fontMetrics';
 
 /** A width in design units for a string of one or more characters. `sceneFontLoader.ts` binds it to canvas. */
 export type DesignUnitWidthFn = (text: string) => number;
@@ -20,8 +19,8 @@ export interface RuntimeFontMetricsInput {
   readonly cssFontFamily: string;
   /** From the font's `cmap`: canvas has no "no glyph" signal. */
   readonly hasGlyph: (ch: string) => boolean;
-  /** From the font's `cmap` and `GPOS`: how the face draws a character it lacks as a base and marks. */
-  readonly decomposition?: Decomposition;
+  /** From the font's tables: the glyphs each cluster of a run draws, and where its marks sit. Absent for a font this previewer cannot read. */
+  readonly glyphs?: FaceGlyphs;
   /** The ink box of one character, measured like `measureWidthUnits`. */
   readonly measureInkUnits?: (ch: string) => GlyphInk;
 }
@@ -51,7 +50,7 @@ export function isCanvasFontMetrics(metrics: FontMetrics | undefined): metrics i
  * pair on every shape.
  */
 export function createRuntimeFontMetrics(input: RuntimeFontMetricsInput): CanvasFontMetrics {
-  const { scalars, measureWidthUnits, cssFontFamily, hasGlyph, measureInkUnits, decomposition } = input;
+  const { scalars, measureWidthUnits, cssFontFamily, hasGlyph, measureInkUnits, glyphs } = input;
 
   const advanceCache = new Map<string, number>();
   const kerningCache = new Map<string, number>();
@@ -74,7 +73,7 @@ export function createRuntimeFontMetrics(input: RuntimeFontMetricsInput): Canvas
     ascent: scalars.ascent,
     descent: scalars.descent,
     hasGlyph,
-    decomposition,
+    ...glyphs,
 
     // Never `null`: canvas has no "no glyph" signal, and the measured width is what `fillText`
     // paints. It carries the real `hmtx` advance, not a hand-parsed one, though a measured float

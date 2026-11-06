@@ -88,7 +88,6 @@ export function revealedGlyphs(counted: CountedLayout, reveal: RichTextReveal): 
   const shownLines = applyVisibleCharsReveal(counted.lines, {
     behavior: reveal.behavior,
     text: counted.text,
-    spanStarts: counted.spanStarts,
     indexOf: counted.indexOf,
     visibleChars: reveal.characters,
     visibleRatio: reveal.ratio,
@@ -124,8 +123,6 @@ export interface CountedLayout {
   lines: readonly TextLineLayout[];
   /** The text the glyph indices count over: the runs' text less the implicit newlines. */
   text: string;
-  /** Where each run after the first starts in `text`: Godot shapes each run apart. */
-  spanStarts: ReadonlySet<number>;
   /** Absent when a glyph's `sourceIndex` is already Godot's index. */
   indexOf?: (glyph: GlyphPlacement) => number | undefined;
   /** For each text index and the end, the implicit newlines before it. Absent when the text has none. */
@@ -145,8 +142,8 @@ export function countedLayoutForReveal(
 }
 
 /**
- * The counted layout of each layout and runs pair, so a reveal tick on an unchanged layout keeps the same filtered
- * line arrays and the ligature cache hits.
+ * The counted layout of each layout and runs pair, so a reveal tick on an unchanged layout keeps the
+ * same filtered line arrays.
  */
 const countedLayoutsOf = perObject((layout: TextLayoutResult) =>
   perObject((runs: readonly CountedRun[]) => countedLayoutOf(layout, runs))
@@ -158,7 +155,7 @@ function countedLayoutOf(layout: TextLayoutResult, runs: readonly CountedRun[]):
   const joined = joinedText(runs);
   const totalCharacters = codePointCount(joined) - implicit.size;
   if (implicit.size === 0) {
-    return { lines: layout.lines, text: joined, spanStarts: runStarts(runs), totalCharacters };
+    return { lines: layout.lines, text: joined, totalCharacters };
   }
   // The glyph a budget sees carries Godot's character index: the index in the text less the
   // implicit newlines before it.
@@ -178,16 +175,7 @@ function countedLayoutOf(layout: TextLayoutResult, runs: readonly CountedRun[]):
     glyph.sourceIndex === undefined
       ? undefined
       : glyph.sourceIndex - (skippedBefore[glyph.sourceIndex] ?? implicit.size);
-  const spanStarts = new Set([...runStarts(runs)].map((start) => start - skippedBefore[start]!));
-  return { lines, text, spanStarts, indexOf, skippedBefore, totalCharacters };
-}
-
-/** The offsets in the runs' joined text where each run after the first starts. */
-function runStarts(runs: readonly CountedRun[]): ReadonlySet<number> {
-  const starts = new Set<number>();
-  let offset = 0;
-  for (const run of runs.slice(0, -1)) starts.add((offset += run.text.length));
-  return starts;
+  return { lines, text, indexOf, skippedBefore, totalCharacters };
 }
 
 /**

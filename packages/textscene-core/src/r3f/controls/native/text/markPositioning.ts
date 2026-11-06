@@ -20,9 +20,8 @@ import {
   type Lookup,
   type LayoutTable,
 } from './autofit/openTypeLayout';
-import { glyphPropsReader, lookupMatcher, MARK_PROPS } from './autofit/openTypeGdef';
+import { glyphPropsReader, lookupMatcher, MARK_PROPS, type LookupGlyph } from './autofit/openTypeGdef';
 import { defaultSubstitution, featureLookups, findScript } from './autofit/openTypeFeatures';
-import { sfntGlyphIndex } from './sfntCmap';
 import { glyphMetricsReader } from './sfntGlyphMetrics';
 import type { SfntFile } from './sfntTables';
 
@@ -131,29 +130,24 @@ function attachmentOf(
 }
 
 /**
- * The offset of each character of a cluster from the first, in design units. The first character is
- * the base, at the origin.
+ * The offset of each glyph of a cluster from the first, in design units. The first glyph is the
+ * base, at the origin.
  */
-export type ClusterOffsets = (cluster: readonly string[]) => readonly MarkOffset[];
+export type ClusterOffsets = (cluster: readonly LookupGlyph[]) => readonly MarkOffset[];
 
-/** The reader of a font whose `GPOS` has a script, or null for a font without `GPOS`, `cmap` or the scripts. */
+/** The reader of a font whose `GPOS` has a script, or null for a font without `GPOS` or the scripts. */
 export function markPositioningReader(sfnt: SfntFile): ClusterOffsets | null {
   const table = sfntGpos(sfnt);
-  const glyphIndexOf = sfntGlyphIndex(sfnt);
-  if (!table || !glyphIndexOf || !findScript(table, MARK_SCRIPT_TAGS)) return null;
+  if (!table || !findScript(table, MARK_SCRIPT_TAGS)) return null;
   const lookups = attachmentLookups(table);
   const propsOf = glyphPropsReader(sfnt);
   const matches = lookupMatcher(sfnt);
   const metricsOf = glyphMetricsReader(sfnt);
 
   return (cluster) => {
-    const lookupGlyphs = cluster.map((ch) => {
-      const codePoint = ch.codePointAt(0)!;
-      return { glyph: glyphIndexOf(codePoint), codePoint };
-    });
     const clusterGlyphs: ClusterGlyphs = {
-      glyphs: lookupGlyphs.map(({ glyph }) => glyph),
-      props: lookupGlyphs.map(propsOf),
+      glyphs: cluster.map(({ glyph }) => glyph),
+      props: cluster.map(propsOf),
     };
     const attachments: (Attachment | undefined)[] = [];
     for (const { props: lookupProps, subtables } of lookups) {

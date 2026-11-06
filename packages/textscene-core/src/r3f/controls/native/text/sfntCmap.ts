@@ -8,6 +8,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { firstEndAtOrAbove } from '../../../../utils/firstEndAtOrAbove';
 import { perObject } from '../../../../utils/perObject';
 import { drawnCharacters } from './canonicalGlyphs';
 import { readGlyphCount, type SfntFile } from './sfntTables';
@@ -39,18 +40,6 @@ function findCmapSubtable(dv: DataView, cmapOffset: number): number | null {
     }
   }
   return null;
-}
-
-/** Binary search for the first of `count` ascending entries whose end is at or above `target`. */
-export function firstEndAtOrAbove(count: number, endAt: (index: number) => number, target: number): number {
-  let low = 0;
-  let high = count;
-  while (low < high) {
-    const middle = (low + high) >> 1;
-    if (endAt(middle) < target) low = middle + 1;
-    else high = middle;
-  }
-  return low;
 }
 
 /** `cmap` format 4: segments of two-byte codes, each mapped by a delta or through a glyph-id array. */
@@ -142,7 +131,7 @@ export function cmapCodePoints(dv: DataView, cmapOffset: number, glyphCount: num
  * FreeType. `FT_Get_Char_Index` answers 0 for an index at or past `maxp.numGlyphs`. Null for a font
  * with no `cmap` subtable this module reads.
  */
-const sfntMapsGlyph = perObject((sfnt: SfntFile): ((ch: string) => boolean) | null => {
+export const sfntMapsGlyph = perObject((sfnt: SfntFile): ((ch: string) => boolean) | null => {
   const glyphIndexOf = sfntGlyphIndex(sfnt);
   if (!glyphIndexOf) return null;
   const glyphCount = readGlyphCount(sfnt) ?? Infinity;
@@ -156,19 +145,17 @@ const sfntMapsGlyph = perObject((sfnt: SfntFile): ((ch: string) => boolean) | nu
  * The glyphs `sfnt` draws a character as (`drawnCharacters`), read once per code point: the shaper
  * asks for each character on every pass. Null for a font with no `cmap` subtable this module reads.
  */
-export const sfntDrawnCharacters = perObject(
-  (sfnt: SfntFile): ((ch: string) => readonly string[] | null) | null => {
-    const mapsGlyph = sfntMapsGlyph(sfnt);
-    if (!mapsGlyph) return null;
-    const drawnByCodePoint = new Map<number, readonly string[] | null>();
-    return (ch) => {
-      const codePoint = ch.codePointAt(0)!;
-      let drawn = drawnByCodePoint.get(codePoint);
-      if (drawn === undefined) drawnByCodePoint.set(codePoint, (drawn = drawnCharacters(ch, mapsGlyph)));
-      return drawn;
-    };
-  }
-);
+const sfntDrawnCharacters = perObject((sfnt: SfntFile): ((ch: string) => readonly string[] | null) | null => {
+  const mapsGlyph = sfntMapsGlyph(sfnt);
+  if (!mapsGlyph) return null;
+  const drawnByCodePoint = new Map<number, readonly string[] | null>();
+  return (ch) => {
+    const codePoint = ch.codePointAt(0)!;
+    let drawn = drawnByCodePoint.get(codePoint);
+    if (drawn === undefined) drawnByCodePoint.set(codePoint, (drawn = drawnCharacters(ch, mapsGlyph)));
+    return drawn;
+  };
+});
 
 /**
  * Whether `sfnt` draws a character without `.notdef`: `sfntMapsGlyph`, or every piece of its

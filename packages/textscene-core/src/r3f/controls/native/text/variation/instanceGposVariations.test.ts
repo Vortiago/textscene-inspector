@@ -46,7 +46,12 @@ describe('the kerning of a font with GPOS feature variations at an instance', ()
     if (!outlines) throw new Error(`expected outlines in ${row.font}, got none`);
     const face = withVariation(canvasFace, { opentype: opentypeOf(row.opentype), outlines });
 
-    const ours = getFontKerningAdjustmentPx(face, row.pair![0]!, row.pair![1]!, row.sizePx);
+    const ours = getFontKerningAdjustmentPx(
+      face,
+      { char: row.pair![0]! },
+      { char: row.pair![1]! },
+      row.sizePx
+    );
 
     expect(Math.abs(ours - row.kerningPx)).toBeLessThanOrEqual(HARFBUZZ_STEP_PX);
   });

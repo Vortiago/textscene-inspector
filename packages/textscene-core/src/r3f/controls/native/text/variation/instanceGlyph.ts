@@ -1,15 +1,16 @@
 /**
- * The glyph a character draws at one instance of a variable font. HarfBuzz swaps glyphs by the
- * `rvrn` feature of the `GSUB` `FeatureVariations` record whose conditions hold at the instance's
- * coordinates, and Godot shapes every font so (`text_server_adv.cpp:1915-1950` sets them).
+ * The glyph a character draws at one instance of a variable font, and the glyphs of a run of them.
+ * HarfBuzz swaps glyphs by the `rvrn` feature of the `GSUB` `FeatureVariations` record whose
+ * conditions hold at the instance's coordinates, and Godot shapes every font so
+ * (`text_server_adv.cpp:1915-1950` sets them).
  */
 
 import { perObject } from '../../../../../utils/perObject';
 import { featureSubstitutionAt, type FeatureSubstitution, sfntGsub } from '../autofit/openTypeLayout';
+import { keptRunShaping, type RunShaping, sfntRunShapingFace } from '../glyphRun';
 import { featureLookups, FIRST_STAGE_FEATURES } from '../autofit/openTypeFeatures';
-import { applyGsub, type GsubBuffer } from '../autofit/openTypeGsub';
 import { scriptTagsOf } from '../autofit/afScripts';
-import type { ShapingFace } from '../autofit/openTypeShaping';
+import { type GsubFace, substitutedGlyphs } from '../autofit/openTypeShaping';
 import { orOnRangeError } from '../sfntCmap';
 import type { SfntFile } from '../sfntTables';
 import type { FontInstance } from './fontInstance';
@@ -23,17 +24,12 @@ export type InstanceGlyphIndex = (codePoint: number, instance: FontInstance | nu
  * `FeatureVariations` record of the instance, for the script of the character. It is the glyph `cmap`
  * gives, unless the lookups turn it into exactly one other glyph.
  */
-function rvrnGlyph(
-  face: Pick<ShapingFace, 'glyphIndex' | 'gsub'>,
-  codePoint: number,
-  substitution: FeatureSubstitution | undefined
-): number {
+function rvrnGlyph(face: GsubFace, codePoint: number, substitution: FeatureSubstitution | undefined): number {
   const glyph = face.glyphIndex(codePoint);
   if (!face.gsub || glyph === 0) return glyph;
   const lookups = featureLookups(face.gsub, scriptTagsOf(codePoint), FIRST_STAGE_FEATURES, substitution);
   if (lookups.length === 0) return glyph;
-  const buffer: GsubBuffer = { glyphs: [glyph], randomState: 1 };
-  applyGsub(face.gsub, [{ lookups, randomLookups: new Set() }], buffer);
+  const buffer = substitutedGlyphs(face, [codePoint], [{ lookups, randomLookups: new Set() }]);
   return buffer.glyphs.length === 1 ? buffer.glyphs[0]! : glyph;
 }
 
@@ -64,4 +60,21 @@ export function instanceGlyphIndex(
     }
     return glyph;
   };
+}
+
+/**
+ * The run shaping of `sfnt` at each instance, under the lookups of the instance's `FeatureVariations`
+ * record, kept for each record. Null for a font with no `cmap` this previewer reads.
+ */
+export function instanceRunShaping(sfnt: SfntFile): ((instance: FontInstance) => RunShaping) | null {
+  const face = sfntRunShapingFace(sfnt);
+  if (!face) return null;
+  const { gsub } = face;
+  const byRecord = new Map<FeatureSubstitution | undefined, RunShaping>();
+  return perObject((instance: FontInstance) => {
+    const record = gsub ? featureSubstitutionOfInstance(gsub, instance.normalized) : undefined;
+    let shaping = byRecord.get(record);
+    if (!shaping) byRecord.set(record, (shaping = keptRunShaping(face, record)));
+    return shaping;
+  });
 }

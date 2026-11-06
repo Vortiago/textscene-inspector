@@ -1338,6 +1338,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Shaped Runs",
+    "file": "unit-label-shaped-runs.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Stacked Effects",
     "file": "unit-label-stacked-effects.tscn",
     "category": "Other"

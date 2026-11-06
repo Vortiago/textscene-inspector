@@ -76,6 +76,7 @@ A precomposed character the font lacks draws as its base and marks in that font,
 needs the pieces of its canonical decomposition (`hb-ot-shape-normalize.cc`). The marks sit at the
 offsets of the font's `GPOS` mark lookups. A line rises to a mark above the font's ascent and
 sinks to one below its descent (`text_server_adv.cpp:5161-5162`). A font with no `GPOS` script has its marks placed against the ink of the base (`hb-ot-shape-fallback.cc`). A `GPOS` with no mark lookup leaves each mark at its pen position. The `label-decomposed-marks` golden pins all three.
+A base and a combining mark typed as two characters join into the composite the font has, as HarfBuzz's normalisation does. Where the font lacks the composite, the mark sits at the same offsets.
 
 ## Variable fonts
 
@@ -99,6 +100,7 @@ A `GPOS` `FeatureVariations` record that gives the `kern` feature other lookups 
 <!-- compare: image=unit-label-font-variation-glyph-swap status=done fixture=unit-label-font-variation-glyph-swap.tscn -->
 
 The `rvrn` feature of a font's `GSUB` `FeatureVariations` swaps glyphs at some axis values. Recursive draws the mono forms of `f`, `g`, `i`, `l` and `0` at `MONO` 1. It draws the slanted forms of `a`, `g`, `i` and `z` at `slnt` -15. The glyph of each character matches Godot's for every character and instance measured.
+Each span shapes as one run, as Godot does (`text_server_adv.cpp:7401`). The font's ligatures and contextual alternates form at the default instance and at each instance. A lookup skips the glyphs its lookup flags ignore, so a ligature forms across a mark. A mark sits on the first glyph of a multiple substitution. A substituted glyph kerns, draws and advances as its own glyph (`text_server_adv.cpp:7056-7090`).
 
 ## Linting
 
@@ -197,13 +199,11 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 ## Known limitations
 
 - **Not drawn** Arabic letters draw in their isolated forms, since the shaper does not join them.
-- **Approximated** At an instance, a variable font swaps glyphs by `rvrn` for each character alone, so its ligatures and contextual alternates keep the `cmap` glyphs (#1393).
 - **Approximated** At an instance, the `GPOS` kerning reads the pair lookups of every script, where Godot reads those of each script run.
 - **Approximated** At an instance, the `GPOS` kerning reads the default language system of each script, where Godot reads the system of the text's language.
 - **Approximated** At an instance, the `GPOS` kerning pairs adjacent characters only, where Godot also kerns across a glyph that a lookup flag skips.
 - **Approximated** A font the previewer cannot read outlines from draws with the browser's
   rasteriser and hinting, so a cap can sit 1 px lower here.
-- **Approximated** A base and a combining mark typed as two characters keep their own pens, with no `GPOS` mark offset (#1393).
 - **Approximated** A wrapping Label inside a ScrollContainer can read one line short when
   the wrap is what makes the scrollbar appear.
 - **Not drawn** `BREAK_TRIM_INDENT` (an `autowrap_trim_flags` bit): a wrapped

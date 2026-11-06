@@ -14,7 +14,7 @@
  */
 
 import { perObject } from '../../../../../utils/perObject';
-import { applyGsub, type GsubBuffer, type GsubStage } from './openTypeGsub';
+import { applyGsub, type GlyphFilter, type GsubBuffer, type GsubStage } from './openTypeGsub';
 import {
   defaultSubstitution,
   FIRST_STAGE_FEATURES,
@@ -23,6 +23,7 @@ import {
 } from './openTypeFeatures';
 import {
   coverageIndex,
+  type FeatureSubstitution,
   GposType,
   i16,
   type LayoutTable,
@@ -39,14 +40,44 @@ export interface ShapedGlyph {
   yOffset: number;
 }
 
-export interface ShapingFace {
+/** The tables a `GSUB` pass reads: the glyph of each character, the `GSUB`, and how its lookup flags skip glyphs. */
+export interface GsubFace {
   glyphIndex(codePoint: number): number;
   readonly gsub: LayoutTable | null;
+  /** Absent: each lookup reads every glyph, whatever its flag. */
+  readonly filter?: GlyphFilter;
+}
+
+export interface ShapingFace extends GsubFace {
   readonly gpos: LayoutTable | null;
 }
 
-function stagesOf(table: LayoutTable, scriptTags: readonly string[], feature: string | null): GsubStage[] {
-  const substitution = defaultSubstitution(table);
+/**
+ * The glyphs `cmap` gives `codePoints`, through the lookups of `stages`, as HarfBuzz's buffer holds
+ * them after `GSUB`. `clusters` gives the cluster of each code point, which the buffer then tracks.
+ */
+export function substitutedGlyphs(
+  face: GsubFace,
+  codePoints: readonly number[],
+  stages: readonly GsubStage[],
+  clusters?: readonly number[]
+): GsubBuffer {
+  const buffer: GsubBuffer = {
+    glyphs: codePoints.map((codePoint) => face.glyphIndex(codePoint)),
+    randomState: 1,
+    codePoints: [...codePoints],
+    ...(clusters && { clusters: [...clusters] }),
+  };
+  if (face.gsub) applyGsub(face.gsub, stages, buffer, face.filter ?? null);
+  return buffer;
+}
+
+function stagesOf(
+  table: LayoutTable,
+  scriptTags: readonly string[],
+  feature: string | null,
+  substitution: FeatureSubstitution | undefined
+): GsubStage[] {
   const lookupsOf = (features: readonly string[]): number[] =>
     featureLookups(table, scriptTags, features, substitution);
   return [
@@ -55,25 +86,35 @@ function stagesOf(table: LayoutTable, scriptTags: readonly string[], feature: st
   ];
 }
 
-type StyleReader<T> = (table: LayoutTable, scriptTags: readonly string[], feature: string | null) => T;
+type StyleReader<T> = (
+  table: LayoutTable,
+  scriptTags: readonly string[],
+  feature: string | null,
+  substitution: FeatureSubstitution | undefined
+) => T;
 
-/** `read` built once for each table and each style's script tags and feature. */
+/** `read` built once for each table, `FeatureVariations` record, and each style's script tags and feature. */
 function perStyle<T>(read: StyleReader<T>): StyleReader<T> {
-  const byTable = perObject<LayoutTable, Map<string, T>>(() => new Map());
-  return (table, scriptTags, feature) => {
-    const byStyle = byTable(table);
+  const byTable = perObject<LayoutTable, Map<FeatureSubstitution | undefined, Map<string, T>>>(
+    () => new Map()
+  );
+  return (table, scriptTags, feature, substitution) => {
+    const byRecord = byTable(table);
+    let byStyle = byRecord.get(substitution);
+    if (!byStyle) byRecord.set(substitution, (byStyle = new Map()));
     const key = JSON.stringify([scriptTags, feature]);
     const stored = byStyle.get(key);
     if (stored !== undefined) return stored;
-    const value = read(table, scriptTags, feature);
+    const value = read(table, scriptTags, feature, substitution);
     byStyle.set(key, value);
     return value;
   };
 }
 
-const gsubStages = perStyle(stagesOf);
-const gposLookups = perStyle((table, scriptTags, feature) =>
-  featureLookups(table, scriptTags, shapingFeatures(scriptTags, feature), defaultSubstitution(table))
+/** HarfBuzz's `GSUB` stages for text of `scriptTags` with `feature` on, under the lookups of `substitution`. */
+export const gsubStages = perStyle(stagesOf);
+const gposLookups = perStyle((table, scriptTags, feature, substitution) =>
+  featureLookups(table, scriptTags, shapingFeatures(scriptTags, feature), substitution)
 );
 
 /** The y placement of a `GPOS` value record of `valueFormat` at `at`, 0 for a record without one. */
@@ -133,13 +174,11 @@ export function shapeCluster(
 ): ShapedGlyph[] {
   const codePoints = [...cluster].map((character) => character.codePointAt(0)!);
   const tags = codePoints.every(isAsciiDigit) ? [] : scriptTags;
-  const buffer: GsubBuffer = {
-    glyphs: codePoints.map((codePoint) => face.glyphIndex(codePoint)),
-    randomState: 1,
-  };
-  if (face.gsub) applyGsub(face.gsub, gsubStages(face.gsub, tags, feature), buffer);
+  const stages = face.gsub ? gsubStages(face.gsub, tags, feature, defaultSubstitution(face.gsub)) : [];
+  const buffer = substitutedGlyphs(face, codePoints, stages);
   const shaped = buffer.glyphs.map((glyph): ShapedGlyph => ({ glyph, yOffset: 0 }));
-  if (face.gpos) applyGpos(face.gpos, gposLookups(face.gpos, tags, feature), shaped);
+  if (face.gpos)
+    applyGpos(face.gpos, gposLookups(face.gpos, tags, feature, defaultSubstitution(face.gpos)), shaped);
   return shaped;
 }
 

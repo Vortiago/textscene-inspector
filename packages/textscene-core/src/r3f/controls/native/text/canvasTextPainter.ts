@@ -11,6 +11,7 @@
 import * as THREE from 'three';
 import {
   glyphContoursReader,
+  variedGlyphContoursReader,
   maxEmboldenGrowthPx,
   paintEmboldenedFill,
   shearAboutBaseline,
@@ -333,7 +334,17 @@ export function paintSceneFontCanvas(
   // draws only for a face with no outlines, or a glyph with no contour.
   const contourOutlines = metrics.outlines ?? null;
   const contoursOf = contourOutlines && glyphContoursReader(contourOutlines, fontSizePx, variation);
-  const drawsAsText = (gp: GlyphPlacement) => hasOwnGlyph(gp) && !contoursOf?.(gp.char);
+  // A glyph a `GSUB` lookup gives has no character to draw as text, so it draws its contours. So does
+  // each glyph of its cluster: the text of one character would shape through the lookup again.
+  const contoursOfGlyph =
+    contourOutlines && variedGlyphContoursReader(contourOutlines, fontSizePx, variation);
+  const substitutedSources = contoursOfGlyph && substitutedSourceIndices(layout);
+  const placementContours = (gp: GlyphPlacement): GlyphContours | null => {
+    if (gp.glyphIndex !== undefined && substitutedSources?.has(gp.sourceIndex))
+      return contoursOfGlyph!(gp.glyphIndex);
+    return contoursOf ? contoursOf(gp.char) : null;
+  };
+  const drawsAsText = (gp: GlyphPlacement) => hasOwnGlyph(gp) && !placementContours(gp);
   const colour = opaqueByteColour(tint);
   const stroked = strokeWidthPx > 0;
   // Only a paint with a glyph drawn as text needs a canvas: a bitmap lays on the raster alone.
@@ -391,7 +402,7 @@ export function paintSceneFontCanvas(
       const glyphBaselineY = baselineY + yOffsetPx;
       // Godot shears a glyph about its own origin, so the line's shear must not move an offset origin.
       const lineShearedPenX = isLineSheared ? penX + skew * yOffsetPx : penX;
-      const contours = contoursOf ? contoursOf(gp.char) : null;
+      const contours = placementContours(gp);
       if (contours) collectGlyphBitmap(contours, penX, glyphBaselineY);
       else if (contourOutlines && skew !== 0)
         paintShearedGlyphText(gp.char, penX, glyphBaselineY, gp.emboldenGrowthPx);
@@ -404,6 +415,14 @@ export function paintSceneFontCanvas(
     ? ctx.getImageData(0, 0, canvasWidthPx, canvasHeightPx)
     : new ImageData(canvasWidthPx, canvasHeightPx);
   return glyphRaster(image, glyphBitmaps, colour);
+}
+
+/** The source index of each cluster of `layout` that draws a glyph a `GSUB` lookup gave. */
+function substitutedSourceIndices(layout: TextLayoutResult): ReadonlySet<number | undefined> {
+  const indices = new Set<number | undefined>();
+  for (const line of layout.lines)
+    for (const glyph of line.glyphs) if (glyph.isSubstituted) indices.add(glyph.sourceIndex);
+  return indices;
 }
 
 interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {

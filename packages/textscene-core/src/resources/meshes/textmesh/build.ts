@@ -101,7 +101,7 @@ const MAX_CACHED_SETTINGS_PER_FONT = 8;
 
 /**
  * The glyph mesh data of one font by its `font_size`, `pixel_size`, `curve_step` and variation, then
- * by codepoint. Godot clears its cache when one of the first three changes (`:3043-3060`); the
+ * by glyph. Godot clears its cache when one of the first three changes (`:3043-3060`). The
  * embolden and skew change the contours, so they key it too. The cache belongs to the font, so two
  * meshes of one font at two sizes do not discard each other's glyphs on every edit.
  */
@@ -114,11 +114,14 @@ function cachedGlyphMeshes(outlines: SfntOutlines, settings: string): GlyphMeshe
   return glyphMeshCaches(outlines)(settings, () => new Map());
 }
 
+/** The mesh data of a face's glyphs, and the glyph each character draws at the face's instance. */
+interface FaceGlyphMeshes {
+  glyphIndexOf(char: string): number;
+  meshOf(glyphIndex: number): GlyphMeshData | null;
+}
+
 /** Each glyph's mesh data, built once per font and settings, so a keystroke in `text` triangulates only the glyphs it adds. */
-function glyphMeshes(
-  properties: TextMeshProperties,
-  face: TextMeshFace
-): (codepoint: number) => GlyphMeshData | null {
+function glyphMeshes(properties: TextMeshProperties, face: TextMeshFace): FaceGlyphMeshes {
   const { outlines } = face;
   const variation: GlyphVariation = {
     embolden: face.embolden,
@@ -129,25 +132,23 @@ function glyphMeshes(
     outlines,
     `${properties.fontSize}|${properties.pixelSize}|${properties.curveStep}|${variationKey(variation)}`
   );
-  return (codepoint) => {
-    if (!meshes.has(codepoint)) {
-      const index = outlines.glyphIndex(codepoint, variation.opentype);
-      meshes.set(
-        codepoint,
-        index === 0
-          ? null
-          : buildGlyphMeshData(
-              outlines.glyphContours(index, properties.fontSize, variation),
-              properties.pixelSize,
-              properties.curveStep
-            )
-      );
-    }
-    return meshes.get(codepoint)!;
+  return {
+    glyphIndexOf: (char) => outlines.glyphIndex(char.codePointAt(0)!, variation.opentype),
+    meshOf(glyphIndex) {
+      if (glyphIndex === 0) return null;
+      if (!meshes.has(glyphIndex)) {
+        const contours = outlines.glyphContours(glyphIndex, properties.fontSize, variation);
+        meshes.set(glyphIndex, buildGlyphMeshData(contours, properties.pixelSize, properties.curveStep));
+      }
+      return meshes.get(glyphIndex)!;
+    },
   };
 }
 
-/** The glyph meshes of each face a glyph draws in: the fallback the shaper gave it, else the first face. */
+/**
+ * The glyph meshes of each face a glyph draws in: the fallback the shaper gave it, else the first
+ * face. A glyph a `GSUB` lookup gave draws that glyph, and any other draws `char` through the face's `cmap`.
+ */
 function glyphMeshesByFace(
   properties: TextMeshProperties,
   face: TextMeshFace,
@@ -156,8 +157,10 @@ function glyphMeshesByFace(
   const meshesOf = perObject((glyphFace: TextMeshFace) => glyphMeshes(properties, glyphFace));
   const fallbackFaces = new Map<FontMetrics, TextMeshFace>(fallbacks.map((fallback) => [fallback, fallback]));
   return (glyph) => {
-    const glyphFace = fallbackFaces.get(glyph.fontMetrics) ?? face;
-    return meshesOf(glyphFace)(glyph.char.codePointAt(0)!);
+    const { glyphIndexOf, meshOf } = meshesOf(fallbackFaces.get(glyph.fontMetrics) ?? face);
+    return meshOf(
+      glyph.isSubstituted && glyph.glyphIndex !== undefined ? glyph.glyphIndex : glyphIndexOf(glyph.char)
+    );
   };
 }
 

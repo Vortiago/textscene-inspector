@@ -10,6 +10,7 @@
 
 import { tableFits, type SfntFile } from '../sfntTables';
 import { coverageIndex, glyphClass, LookupFlag, u16 } from './openTypeLayout';
+import type { GlyphFilter } from './openTypeGsub';
 
 /** A glyph to match against a lookup flag: its index, and the character it shapes, for a font with no glyph classes. */
 export interface LookupGlyph {
@@ -123,4 +124,9 @@ export function lookupMatcher(
     const attachmentType = lookupProps & LookupFlag.MARK_ATTACHMENT_TYPE;
     return !attachmentType || attachmentType === (glyphProps & LookupFlag.MARK_ATTACHMENT_TYPE);
   };
+}
+
+/** How the lookups of `sfnt` skip glyphs by their flags: the props of each glyph, and `lookupMatcher`. */
+export function glyphFilterOf(sfnt: SfntFile): GlyphFilter {
+  return { propsOf: glyphPropsReader(sfnt), matches: lookupMatcher(sfnt) };
 }

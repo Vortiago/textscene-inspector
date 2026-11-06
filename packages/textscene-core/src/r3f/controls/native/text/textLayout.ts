@@ -20,13 +20,16 @@ import {
   getFontDescentPx,
   getFontEmboldenGrowthPx,
   getFontExtraAdvancePx,
-  getFontGlyphAdvancePx,
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
+  getFontRunGlyphAdvancePx,
   fallbackChainOf,
   type FontMetrics,
+  type KernGlyph,
 } from './fontMetrics';
-import type { DecomposedGlyph } from './sfntDecomposition';
+import type { SizedClusterOffsets } from './fallbackMarkPositioning';
+import { getFontRunShaping, type RunCluster } from './glyphRun';
+import { atlasGlyphOfIndex } from './openSansAtlasGlyphs';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { tabAlignAdvances } from './textTabStops';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
@@ -118,6 +121,11 @@ export interface ShapeTextOptions {
    * character in `fontMetrics`, which also sets the line pitch and the baseline.
    */
   fontMetricsAt?: (charIndex: number) => FontMetrics;
+  /**
+   * Per-character span, keyed like `fontSizePxAt`: Godot shapes each span of a RichTextLabel apart
+   * (`text_server_adv.cpp:7401`), so no ligature or kerning pair joins two. Undefined is one span.
+   */
+  spanAt?: (charIndex: number) => number;
   /** The `FontMetrics` to shape against, by default `OPEN_SANS_FONT_METRICS`. Only an `'atlas'` font gets `GlyphPlacement.glyph`. */
   fontMetrics?: FontMetrics;
   /**
@@ -164,7 +172,10 @@ const BREAK_TRIM_END_EDGE_SPACES = 1 << 7;
 
 /** One glyph's placement within its line, in target-font-size px. */
 export interface GlyphPlacement {
-  /** The character rendered (post-uppercase-transform, if requested). */
+  /**
+   * The characters of the glyph's cluster (post-uppercase-transform, if requested): one character,
+   * or a base and its marks, or the characters of a ligature. They run from `sourceIndex`.
+   */
   char: string;
   /** Pen-origin x within the line: the left edge of the glyph's advance box, not its ink. */
   x: number;
@@ -179,10 +190,23 @@ export interface GlyphPlacement {
   glyph: OpenSansGlyph | null;
   /** The control character this glyph draws as a hex-code box (`draw_hex_code_box`), set only when `preserveControl` kept it. */
   controlCodepoint?: number;
+  /** The font glyph the run shaping gives this glyph. Absent for a face whose glyphs this previewer cannot read. */
+  glyphIndex?: number;
   /**
-   * `x_off`: how far the glyph's origin sits right of the pen `x`, px. Absent for 0. A mark of a
-   * character the face draws as a base and marks has one, as HarfBuzz places it: zero advance, and the
-   * `sourceIndex` of its base.
+   * Whether a `GSUB` lookup gave `glyphIndex`: a ligature, a glyph its neighbours swap, or a glyph of
+   * a multiple substitution. `char` alone then does not draw it. Absent for false.
+   */
+  isSubstituted?: true;
+  /**
+   * The source text of the cluster this glyph draws a part of, where the cluster draws more than one
+   * glyph or another character. Absent where `char` is the source text. A substituted glyph that
+   * starts its cluster carries the source text as `char`.
+   */
+  cluster?: string;
+  /**
+   * `x_off`: how far the glyph's origin sits right of the pen `x`, px. Absent for 0. A glyph after an
+   * exact half-pixel remainder has one. A mark of a cluster has one, as HarfBuzz places it: zero
+   * advance, and the `sourceIndex` of its cluster.
    */
   xOffset?: number;
   /** `y_off`: how far the glyph's origin sits below the baseline, px. Absent for 0. */
@@ -377,11 +401,28 @@ interface BreakGlyph {
   controlCodepoint?: number;
   /** The outline growth of the embolden that widened `advance`, px. 0 for none. */
   emboldenGrowthPx: number;
-  /**
-   * The base and marks the face draws the character as, absent for one glyph. A mark's `x` is from
-   * the base's origin, and `y` is down and whole: `roundGlyphAdvance` rounds the x.
-   */
-  decomposition?: DecomposedGlyph;
+  /** The glyphs a shaped cluster draws, in order. Absent for a break, a control, a tab and a hex-code box. */
+  glyphs?: ClusterGlyph[];
+  /** `GlyphPlacement.xOffset` of a glyph with no `glyphs`. */
+  xOffset?: number;
+  /** Whether the first character of the cluster draws this one: `start` and `end` are the cluster's. */
+  isClusterTail?: true;
+}
+
+/** A glyph of a shaped cluster, as the run shaping gives it and the layout places it. */
+interface ClusterGlyph {
+  /** The character it shapes, after normalisation. */
+  readonly char: string;
+  readonly glyphIndex?: number;
+  readonly isSubstituted: boolean;
+  /** Whether its face places it over the glyph before it, with no advance. */
+  readonly isMark: boolean;
+  /** Its advance, px, kerning included, rounded with its run where the run rounds. */
+  advance: number;
+  /** `GlyphPlacement.xOffset`: a mark's from the pen at it, set by `placeMarks`. */
+  xOffset: number;
+  /** `GlyphPlacement.yOffset`, a whole px. */
+  yOffset: number;
 }
 
 /**
@@ -398,6 +439,8 @@ interface RunStyle {
   levels: Uint8Array;
   /** The bidi override range of each character, -1 for none: each range runs its own bidi pass and runs (`:7266`). */
   rangeIds: Int32Array;
+  /** The span of each character (`ShapeTextOptions.spanAt`), or null for one span. */
+  spans: Int32Array | null;
   /**
    * Whether a character has no glyph in its face, once the chain is searched. False lets
    * `toBreakGlyphs` skip the per-character glyph test: the paragraph pass already ran it.
@@ -416,7 +459,8 @@ function startsNewSpanRun(style: RunStyle, i: number): boolean {
     style.sizes[i] !== style.sizes[i - 1] ||
     style.spanFaces[i] !== style.spanFaces[i - 1] ||
     style.levels[i] !== style.levels[i - 1] ||
-    style.rangeIds[i] !== style.rangeIds[i - 1]
+    style.rangeIds[i] !== style.rangeIds[i - 1] ||
+    (style.spans !== null && style.spans[i] !== style.spans[i - 1])
   );
 }
 
@@ -425,12 +469,12 @@ function isRtlRun(style: RunStyle, i: number): boolean {
   return style.levels[i]! % 2 === 1;
 }
 
-/** The `[start, end)` of each run of its span's face over `length` characters, in logical order. */
-function spanRunRanges(style: RunStyle, length: number): Array<[number, number]> {
+/** The `[start, end)` of each run over `length` characters, in logical order, where `startsRun` tells each run's first character. */
+function rangesOf(length: number, startsRun: (i: number) => boolean): Array<[number, number]> {
   const ranges: Array<[number, number]> = [];
   let start = 0;
   for (let i = 1; i <= length; i++) {
-    if (i === length || startsNewSpanRun(style, i)) {
+    if (i === length || startsRun(i)) {
       ranges.push([start, i]);
       start = i;
     }
@@ -438,14 +482,14 @@ function spanRunRanges(style: RunStyle, length: number): Array<[number, number]>
   return ranges;
 }
 
-/**
- * The `hmtx` advance through `getFontGlyphAdvancePx`, the fixed-point chain of FreeType and HarfBuzz.
- * Not `xadvance` from `openSansAtlas.ts`, which is fixed at the 42 px bake size rather than
- * quantised at the shaped size. A character outside the charset advances by `averageAdvanceUnits`,
- * so it leaves a gap rather than collapsing the line.
- */
-function glyphAdvancePx(ch: string, fontSizePx: number, metrics: FontMetrics): number {
-  return getFontGlyphAdvancePx(metrics, ch, fontSizePx);
+/** The `[start, end)` of each run of its span's face over `length` characters, in logical order. */
+function spanRunRanges(style: RunStyle, length: number): Array<[number, number]> {
+  return rangesOf(length, (i) => startsNewSpanRun(style, i));
+}
+
+/** The `[start, end)` of each run Godot shapes apart, over `length` characters, in logical order. */
+function runRanges(style: RunStyle, length: number): Array<[number, number]> {
+  return rangesOf(length, (i) => startsNewRun(style, i));
 }
 
 /**
@@ -463,11 +507,6 @@ function isSpaceSeparator(cp: number): boolean {
     cp === 0x205f ||
     cp === 0x3000
   );
-}
-
-/** `metrics.getKerningAdjustmentUnits` scaled to `fontSizePx` with `getFontKerningAdjustmentPx`. */
-function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: FontMetrics): number {
-  return getFontKerningAdjustmentPx(metrics, a, b, fontSizePx);
 }
 
 /**
@@ -555,117 +594,161 @@ function unshapedGlyph(index: number): BreakGlyph {
   };
 }
 
-/**
- * How `ch` draws where `face` draws it as a base and marks, with their offsets at
- * `fontSizePx`. Godot rounds a mark's y offset to a whole pixel at any size, and its x offset where
- * the face has no subpixel positioning (`text_server_adv.cpp:7062-7068`): `roundGlyphAdvance` does
- * the x.
- */
-function placedDecomposition(face: FontMetrics, ch: string, fontSizePx: number): DecomposedGlyph | undefined {
-  const decomposed = face.decomposition?.(ch, fontSizePx);
-  if (!decomposed) return undefined;
-  const marks = decomposed.marks.map(({ char, x, y }) => ({ char, x, y: -godotRound(y) }));
-  return { base: decomposed.base, marks };
+/** The text of the cluster that runs from `start` to `end`. */
+function clusterText(chars: ArrayLike<string>, start: number, end: number): string {
+  return end <= start + 1 ? chars[start]! : Array.prototype.slice.call(chars, start, end).join('');
+}
+
+/** A character after the first of its cluster, which the first one draws: no width and no break of its own. */
+function clusterTail(start: number, end: number): BreakGlyph {
+  return { ...unshapedGlyph(start), end, isClusterTail: true };
 }
 
 /**
- * The glyphs of `placed` where its face draws it as `decomposition`: the base, then each mark at the
- * pen after the base with no advance, as HarfBuzz emits a cluster.
+ * The glyph of character `i` where it takes no shaping: a break, a control, a tab or a hex-code box.
+ * Undefined for a character its face shapes.
  */
-function clusterPlacements(placed: GlyphPlacement, { base, marks }: DecomposedGlyph): GlyphPlacement[] {
-  const penAfterBase = placed.x + placed.advance;
-  return [
-    { ...placed, char: base },
-    ...marks.map(({ char, x, y }) => {
-      const xOffset = x - placed.advance;
-      return {
-        ...placed,
-        char,
-        x: penAfterBase,
-        advance: 0,
-        glyph: null,
-        ...(xOffset !== 0 && { xOffset }),
-        ...(y !== 0 && { yOffset: y }),
-      };
-    }),
-  ];
+function specialGlyph(
+  chars: ArrayLike<string>,
+  i: number,
+  style: RunStyle,
+  preserveControl: boolean
+): BreakGlyph | undefined {
+  const ch = chars[i]!;
+  const cp = ch.codePointAt(0)!;
+  const hardBreak = isLinebreak(cp);
+  const isTab = isTabChar(ch);
+  // A break grapheme, U+200B and a tab take no advance whatever the face holds: the baked charset has
+  // no entry for the first two, and a tab no stop aligns is as wide as the font's glyph for it, which
+  // is none (measured in Godot 4.6.3: `a<TAB>b` with `tab_size` 0 sets `b` against `a`).
+  const isZeroWidth = hardBreak || cp === 0x200b || isTab;
+  // Only the "no font has a glyph" case is left (`text_server_adv.cpp:6842-6907`).
+  const isControl = !isZeroWidth && isControlChar(cp);
+  const lacksFaceGlyph = !isZeroWidth && !isControl && lacksGlyph(style.faces[i]!, ch, style.hasUndrawnGlyph);
+  if (!isZeroWidth && !isControl && !lacksFaceGlyph) return undefined;
+  const glyph: BreakGlyph = {
+    start: i,
+    end: i + 1,
+    advance: 0,
+    isSpace: isWhitespace(cp),
+    isHardBreak: hardBreak,
+    isTab,
+    emboldenGrowthPx: 0,
+  };
+  // Without `preserve_invalid` or `preserve_control`, a control pushes no `Glyph` (`:6844`).
+  if (isZeroWidth || (isControl && !preserveControl)) return glyph;
+  return { ...glyph, advance: hexCodeBoxAdvanceSize(style.sizes[i]!, cp).x, controlCodepoint: cp };
 }
 
 /**
- * One glyph per character, plus the zero-advance whitespace terminator Label appends
- * (`label.cpp:164`). `chars` are the characters the glyphs draw, mirrored where the level is odd,
- * and `style` sets the size, face and level of each.
+ * The glyph a shaped cluster of `chars` breaks as, its first character drawing its glyphs: each with
+ * its advance, and a mark with none where its face places it over the base.
  */
-function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveControl = false): BreakGlyph[] {
-  const { sizes, faces } = style;
-  const glyphs: BreakGlyph[] = [];
-  for (let i = 0; i < chars.length; i++) {
-    if (style.rangeIds[i]! < 0 || chars[i] === '') {
-      glyphs.push(unshapedGlyph(i));
+function clusterGlyph(
+  cluster: RunCluster,
+  offset: number,
+  chars: ArrayLike<string>,
+  style: RunStyle
+): BreakGlyph {
+  const start = offset + cluster.start;
+  const face = style.faces[start]!;
+  const size = style.sizes[start]!;
+  const embolden = face.embolden ?? 0;
+  const extraPx = getFontExtraAdvancePx(embolden, size);
+  const placesMarks = !!face.markOffsets;
+  const glyphs = cluster.glyphs.map((glyph): ClusterGlyph => {
+    const isPlacedMark = glyph.isMark && placesMarks;
+    // HarfBuzz zeroes a placed mark's advance, and Godot adds the embolden to every glyph (`:7076-7078`).
+    const fontAdvancePx = isPlacedMark ? 0 : getFontRunGlyphAdvancePx(face, glyph, size);
+    return {
+      char: glyph.char,
+      glyphIndex: glyph.glyph,
+      isSubstituted: glyph.isSubstituted,
+      isMark: isPlacedMark,
+      advance: fontAdvancePx + extraPx,
+      xOffset: 0,
+      yOffset: 0,
+    };
+  });
+  return {
+    start,
+    end: offset + cluster.end,
+    advance: glyphs.reduce((sum, glyph) => sum + glyph.advance, 0),
+    isSpace: isWhitespace(chars[start]!.codePointAt(0)!),
+    isHardBreak: false,
+    isTab: false,
+    emboldenGrowthPx: getFontEmboldenGrowthPx(embolden, size),
+    glyphs,
+  };
+}
+
+/**
+ * Pushes onto `glyphs` the glyphs of `chars[start, end)`, which draw in one run: each cluster that
+ * its face shapes from `characters`, the characters of the stretch, and a tail for each character
+ * after a cluster's first. An empty string stands for a character the stretch does not hold.
+ */
+function pushShapedStretch(
+  glyphs: BreakGlyph[],
+  chars: ArrayLike<string>,
+  start: number,
+  characters: readonly string[],
+  style: RunStyle
+): void {
+  if (characters.length === 0) return;
+  for (const cluster of getFontRunShaping(style.faces[start]!, characters)) {
+    const glyph = clusterGlyph(cluster, start, chars, style);
+    while (glyphs.length < glyph.start) glyphs.push(unshapedGlyph(glyphs.length));
+    glyphs.push(glyph);
+    for (let tail = glyph.start + 1; tail < glyph.end; tail++)
+      glyphs.push(clusterTail(glyph.start, glyph.end));
+  }
+  while (glyphs.length < start + characters.length) glyphs.push(unshapedGlyph(glyphs.length));
+}
+
+/**
+ * The glyphs of the run `chars[start, end)`: each stretch of characters its face shapes, as HarfBuzz
+ * shapes the run whole (`_shape_run`, `text_server_adv.cpp:7011`), and a glyph of its own for each
+ * break, control, tab and hex-code box between them. Pushed onto `glyphs`.
+ */
+function pushRunGlyphs(
+  glyphs: BreakGlyph[],
+  chars: ArrayLike<string>,
+  [start, end]: [number, number],
+  style: RunStyle,
+  preserveControl: boolean
+): void {
+  let stretchStart = start;
+  let stretch: string[] = [];
+  for (let i = start; i < end; i++) {
+    const special =
+      style.rangeIds[i]! < 0
+        ? unshapedGlyph(i)
+        : chars[i] === ''
+          ? null
+          : specialGlyph(chars, i, style, preserveControl);
+    if (!special) {
+      stretch.push(chars[i]!);
       continue;
     }
-    const ch = chars[i]!;
-    const cp = ch.codePointAt(0)!;
-    const hardBreak = isLinebreak(cp);
-    // Tab and the linebreaks take their own branches, so this is only the "no font has a glyph"
-    // case (`text_server_adv.cpp:6842-6907`).
-    const isControl = !hardBreak && !isTabChar(ch) && isControlChar(cp);
-    let advance: number;
-    let emboldenGrowthPx = 0;
-    let controlCodepoint: number | undefined;
-    let decomposition: DecomposedGlyph | undefined;
-    if (hardBreak || cp === 0x200b) {
-      // A break grapheme and U+200B carry no advance in Godot; the baked
-      // charset has no entry for either, so the metrics fallback would give
-      // them an average-width one that the overflow test then spends on a
-      // spurious wrap.
-      advance = 0;
-    } else if (isControl) {
-      if (preserveControl) {
-        advance = hexCodeBoxAdvanceSize(sizes[i]!, cp).x;
-        controlCodepoint = cp;
-      } else {
-        // Without `preserve_invalid` or `preserve_control`, no `Glyph` is pushed
-        // (`text_server_adv.cpp:6844`): zero width.
-        advance = 0;
-      }
-    } else if (isTabChar(ch)) {
-      // A tab no stop aligns is as wide as the font's glyph for it, which is none (measured in
-      // Godot 4.6.3: `a<TAB>b` with `tab_size` 0 sets `b` against `a`).
-      advance = 0;
-    } else if (lacksGlyph(faces[i]!, ch, style.hasUndrawnGlyph)) {
-      advance = hexCodeBoxAdvanceSize(sizes[i]!, cp).x;
-      controlCodepoint = cp;
-    } else {
-      const embolden = faces[i]!.embolden ?? 0;
-      advance = glyphAdvancePx(ch, sizes[i]!, faces[i]!) + getFontExtraAdvancePx(embolden, sizes[i]!);
-      emboldenGrowthPx = getFontEmboldenGrowthPx(embolden, sizes[i]!);
-      decomposition = placedDecomposition(faces[i]!, ch, sizes[i]!);
-    }
-    glyphs.push({
-      start: i,
-      end: i + 1,
-      advance,
-      isSpace: isWhitespace(cp),
-      isHardBreak: hardBreak,
-      isTab: isTabChar(ch),
-      controlCodepoint,
-      emboldenGrowthPx,
-      decomposition,
-    });
+    pushShapedStretch(glyphs, chars, stretchStart, stretch, style);
+    glyphs.push(special);
+    stretchStart = i + 1;
+    stretch = [];
   }
-  // Kerning folds into the visually left advance, skipped across a run boundary, before the
-  // whole-pixel round: a GPOS pair is already inside HarfBuzz's `x_advance` when
-  // `text_server_adv.cpp:7077` reads it. The pair stays logical, as the font defines it. Where
-  // HarfBuzz quantises the pair is not pinned, as the vendored font has no kerning.
-  for (let i = 0; i < chars.length; i++) {
-    if (chars[i] === '' || style.rangeIds[i]! < 0) continue;
-    // A surrogate pair's glyph char holds both units, so its length steps over the second.
-    const next = i + chars[i]!.length;
-    if (next >= chars.length || startsNewRun(style, next)) continue;
-    const visualLeft = isRtlRun(style, i) ? next : i;
-    glyphs[visualLeft]!.advance += kerningAdjustmentPx(chars[i]!, chars[next]!, sizes[i]!, faces[i]!);
-  }
+  pushShapedStretch(glyphs, chars, stretchStart, stretch, style);
+}
+
+/**
+ * One glyph per character, a cluster's first character drawing the whole cluster, plus the
+ * zero-advance whitespace terminator Label appends (`label.cpp:164`). `chars` are the characters
+ * the glyphs draw, mirrored where the level is odd, and `style` sets the size, face and level of each.
+ */
+function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveControl = false): BreakGlyph[] {
+  const glyphs: BreakGlyph[] = [];
+  for (const range of runRanges(style, chars.length))
+    pushRunGlyphs(glyphs, chars, range, style, preserveControl);
+  kernGlyphs(glyphs, chars, style);
+  placeMarks(glyphs, style);
   roundAdvancesToWholePixels(glyphs, chars, style);
   glyphs.push({
     start: chars.length,
@@ -677,6 +760,125 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
     emboldenGrowthPx: 0,
   });
   return glyphs;
+}
+
+/** The last glyph of a cluster that is no mark: a kerning lookup skips marks, so it pairs with the next cluster. */
+function lastBaseGlyph(glyphs: readonly ClusterGlyph[] | undefined): ClusterGlyph | undefined {
+  if (!glyphs) return undefined;
+  for (let k = glyphs.length - 1; k >= 0; k--) if (!glyphs[k]!.isMark) return glyphs[k];
+  return undefined;
+}
+
+/** The glyph a kerning pair reads for `glyph`, or for `char` where it draws no cluster. */
+function kernGlyphOf(glyph: ClusterGlyph | undefined, char: string): KernGlyph {
+  return glyph ? { char: glyph.char, glyph: glyph.glyphIndex, isSubstituted: glyph.isSubstituted } : { char };
+}
+
+/** Adds `px` to the advance of `glyph`, on its last glyph that is no mark, which the pair kerns. */
+function addKerning(glyph: BreakGlyph, px: number): void {
+  glyph.advance += px;
+  const kerned = lastBaseGlyph(glyph.glyphs);
+  if (kerned) kerned.advance += px;
+}
+
+/**
+ * Folds kerning into the visually left advance, skipped across a run boundary, before the
+ * whole-pixel round: a GPOS pair is already inside HarfBuzz's `x_advance` when
+ * `text_server_adv.cpp:7077` reads it. The pair stays logical, as the font defines it, and pairs
+ * the glyphs on each side of two clusters. Mutates `glyphs`.
+ */
+function kernGlyphs(glyphs: BreakGlyph[], chars: ArrayLike<string>, style: RunStyle): void {
+  for (let i = 0; i < chars.length; i++) {
+    if (chars[i] === '' || style.rangeIds[i]! < 0 || glyphs[i]!.isClusterTail) continue;
+    kernClusterGlyphs(glyphs[i]!, style);
+    // A surrogate pair's glyph char holds both units, so its length steps over the second.
+    const next = Math.max(i + chars[i]!.length, glyphs[i]!.end);
+    if (next >= chars.length || startsNewRun(style, next)) continue;
+    const kerningPx = getFontKerningAdjustmentPx(
+      style.faces[i]!,
+      kernGlyphOf(lastBaseGlyph(glyphs[i]!.glyphs), chars[i]!),
+      kernGlyphOf(glyphs[next]!.glyphs?.[0], chars[next]!),
+      style.sizes[i]!
+    );
+    if (kerningPx !== 0) addKerning(glyphs[isRtlRun(style, i) ? next : i]!, kerningPx);
+  }
+}
+
+/**
+ * Kerns each pair of glyphs of one cluster that are no marks, such as the glyphs of a multiple
+ * substitution: a kerning lookup reads glyphs, whatever their clusters. Mutates `glyph`.
+ */
+function kernClusterGlyphs(glyph: BreakGlyph, style: RunStyle): void {
+  const clusterGlyphs = glyph.glyphs;
+  if (!clusterGlyphs || clusterGlyphs.length < 2) return;
+  const face = style.faces[glyph.start]!;
+  const size = style.sizes[glyph.start]!;
+  let left: ClusterGlyph | undefined;
+  for (const right of clusterGlyphs) {
+    if (right.isMark) continue;
+    if (left) {
+      const kerningPx = getFontKerningAdjustmentPx(
+        face,
+        kernGlyphOf(left, left.char),
+        kernGlyphOf(right, right.char),
+        size
+      );
+      left.advance += kerningPx;
+      glyph.advance += kerningPx;
+    }
+    left = right;
+  }
+}
+
+/**
+ * Sets the offsets of the marks of each cluster its face places. HarfBuzz attaches a mark to the
+ * first glyph of a multiple substitution (`MarkBasePos`), so each mark sits against the cluster's
+ * first glyph that is no mark, offset from the pen at the mark: the advances since that glyph, their
+ * kerning included. Godot rounds the y offset to a whole pixel at any size
+ * (`text_server_adv.cpp:7062-7068`), and `roundGlyphAdvance` rounds the x with the run.
+ */
+function placeMarks(glyphs: BreakGlyph[], style: RunStyle): void {
+  for (const glyph of glyphs) {
+    const clusterGlyphs = glyph.glyphs;
+    if (!clusterGlyphs?.some((g) => g.isMark)) continue;
+    const face = style.faces[glyph.start]!;
+    const size = style.sizes[glyph.start]!;
+    placeClusterMarks(
+      clusterGlyphs,
+      face.markOffsets!,
+      size,
+      getFontExtraAdvancePx(face.embolden ?? 0, size)
+    );
+  }
+}
+
+/**
+ * Sets the offsets of the marks of `clusterGlyphs` at `fontSizePx`. HarfBuzz offsets a mark from
+ * advances without the embolden `extraPx`, which Godot adds after.
+ */
+function placeClusterMarks(
+  clusterGlyphs: readonly ClusterGlyph[],
+  offsetsOf: SizedClusterOffsets,
+  fontSizePx: number,
+  extraPx: number
+): void {
+  const baseIndex = clusterGlyphs.findIndex((g) => !g.isMark);
+  if (baseIndex < 0 || clusterGlyphs.some((g) => g.glyphIndex === undefined)) return;
+  const attached = [clusterGlyphs[baseIndex]!, ...clusterGlyphs.slice(baseIndex + 1).filter((g) => g.isMark)];
+  const offsets = offsetsOf(
+    attached.map((g) => ({ glyph: g.glyphIndex!, codePoint: g.char.codePointAt(0)! })),
+    fontSizePx
+  );
+  let penFromBase = 0;
+  let mark = 1;
+  for (const g of clusterGlyphs.slice(baseIndex)) {
+    if (g.isMark) {
+      const offset = offsets[mark++]!;
+      g.xOffset = offset.x - penFromBase;
+      g.yOffset = -godotRound(offset.y);
+    }
+    penFromBase += g.advance - extraPx;
+  }
 }
 
 /**
@@ -728,38 +930,44 @@ function roundGlyphAdvance(
   i: number,
   remainder: number
 ): number {
-  // The second unit of a surrogate pair has no glyph to round: rounding its 0 advance would move
-  // the remainder of a whole half pixel into it.
-  if (chars[i] === '') return remainder;
+  const glyph = glyphs[i]!;
+  // The second unit of a surrogate pair and the tail of a cluster have no glyph to round: rounding
+  // their 0 advance would move the remainder of a whole half pixel into them.
+  if (chars[i] === '' || glyph.isClusterTail) return remainder;
   const cp = chars[i]!.codePointAt(0)!;
   // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
-  const carried = cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp) ? 0 : remainder;
-  const fullAdvance = carried + glyphs[i]!.advance;
-  const rounded = godotRound(fullAdvance);
-  const glyph = glyphs[i]!;
-  glyph.advance = rounded;
-  if (glyph.decomposition) glyph.decomposition = withRoundedMarks(glyph.decomposition, carried, rounded);
-  return fullAdvance - rounded;
+  const resets = cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp);
+  if (!glyph.glyphs) {
+    const rounded = roundedGlyph(glyph.advance, 0, resets ? 0 : remainder);
+    glyph.advance = rounded.advance;
+    if (rounded.xOffset !== 0) glyph.xOffset = rounded.xOffset;
+    return rounded.remainder;
+  }
+  let advance = 0;
+  for (const clusterGlyph of glyph.glyphs) {
+    const rounded = roundedGlyph(clusterGlyph.advance, clusterGlyph.xOffset, resets ? 0 : remainder);
+    clusterGlyph.advance = rounded.advance;
+    clusterGlyph.xOffset = rounded.xOffset;
+    advance += rounded.advance;
+    remainder = rounded.remainder;
+  }
+  glyph.advance = advance;
+  return remainder;
 }
 
 /**
- * A mark's `x_off` rounds from the pen after the base, with the remainder the base left
- * (`text_server_adv.cpp:7062`): the half-way ties round away from zero in that frame, not from the
- * base's origin.
+ * A glyph's advance and `x_offset` rounded with the remainder `carried` before it, and the remainder
+ * after it. `x_off` rounds with the remainder too (`:7062-7064`): a glyph after an exact half pixel
+ * draws a pixel off its pen.
  */
-function withRoundedMarks(
-  { base, marks }: DecomposedGlyph,
-  carriedPx: number,
-  roundedAdvancePx: number
-): DecomposedGlyph {
-  return {
-    base,
-    marks: marks.map(({ char, x, y }) => ({
-      char,
-      x: roundedAdvancePx + godotRound(carriedPx - roundedAdvancePx + x),
-      y,
-    })),
-  };
+function roundedGlyph(
+  advancePx: number,
+  xOffsetPx: number,
+  carried: number
+): { advance: number; xOffset: number; remainder: number } {
+  const fullAdvance = carried + advancePx;
+  const advance = godotRound(fullAdvance);
+  return { advance, xOffset: godotRound(carried + xOffsetPx), remainder: fullAdvance - advance };
 }
 
 /**
@@ -1002,6 +1210,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     lineSpacingPx,
     fontSizePxAt,
     fontMetricsAt,
+    spanAt,
     fontMetrics = OPEN_SANS_FONT_METRICS,
     paragraphSeparator,
     terminateLastParagraph = true,
@@ -1061,6 +1270,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       spanFaces,
       levels: bidi.levels,
       rangeIds: bidi.rangeIds,
+      spans: spanAt ? Int32Array.from({ length: paraText.length }, (_v, i) => spanAt(sourceIndex(i))) : null,
       hasUndrawnGlyph: !spansDraw,
     };
     const breakGlyphs = toBreakGlyphs(chars, runStyle, preserveControl);
@@ -1096,26 +1306,25 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       let penX = 0;
       const glyphs = bidi
         .visualOrder(start, clampedEnd)
-        .filter((idx) => chars[idx] !== '')
+        .filter((idx) => chars[idx] !== '' && !breakGlyphs[idx]!.isClusterTail)
         .flatMap((idx): GlyphPlacement[] => {
-          const breakGlyph = breakGlyphs[idx]!;
-          const advance = lineAdvances ? lineAdvances[idx - start]! : breakGlyph.advance;
+          const glyph = breakGlyphs[idx]!;
+          const advance = lineAdvances ? lineAdvances[idx - start]! : glyph.advance;
           const x = penX;
           penX += advance;
           const placed: GlyphPlacement = {
-            char: chars[idx]!,
+            char: clusterText(chars, idx, glyph.end),
             x,
             advance,
-            // Atlas bitmaps exist only for the font `openSansAtlas.ts` bakes.
-            glyph:
-              runStyle.faces[idx]!.kind === 'atlas' ? (OPEN_SANS_ATLAS_GLYPHS[chars[idx]!] ?? null) : null,
-            controlCodepoint: breakGlyph.controlCodepoint,
-            emboldenGrowthPx: breakGlyph.emboldenGrowthPx || undefined,
+            glyph: null,
+            controlCodepoint: glyph.controlCodepoint,
+            emboldenGrowthPx: glyph.emboldenGrowthPx || undefined,
+            xOffset: glyph.xOffset,
             sourceIndex: para.offset + idx,
             fontSizePx: runStyle.sizes[idx]!,
             fontMetrics: runStyle.faces[idx]!,
           };
-          return breakGlyph.decomposition ? clusterPlacements(placed, breakGlyph.decomposition) : [placed];
+          return glyph.glyphs ? clusterPlacements(placed, glyph.glyphs) : [placed];
         });
       lines.push({
         text: paraText.slice(start, clampedEnd),
@@ -1134,6 +1343,41 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
   const heightPx = lines.length * linePitchPx;
 
   return { shapedText: transformed, lines, linePitchPx, widthPx, heightPx, baselineOffsetPx, fontMetrics };
+}
+
+/**
+ * The placement of each glyph of the cluster `placed` draws, at its own pen and advance. A
+ * substituted glyph that starts the cluster draws its source text where the face has no glyph to
+ * draw, so it keeps that text as its `char`.
+ */
+function clusterPlacements(placed: GlyphPlacement, glyphs: readonly ClusterGlyph[]): GlyphPlacement[] {
+  const sourceText = placed.char;
+  const isAtlas = placed.fontMetrics?.kind === 'atlas';
+  let pen = placed.x;
+  return glyphs.map((glyph, k) => {
+    const char = glyph.isSubstituted && k === 0 ? sourceText : glyph.char;
+    const placement: GlyphPlacement = {
+      ...placed,
+      char,
+      x: pen,
+      advance: glyph.advance,
+      // Atlas bitmaps exist only for the font `openSansAtlas.ts` bakes.
+      glyph: isAtlas ? atlasGlyphOf(glyph) : null,
+      glyphIndex: glyph.glyphIndex,
+      ...(glyph.isSubstituted && { isSubstituted: true as const }),
+      ...((glyphs.length > 1 || char !== sourceText) && { cluster: sourceText }),
+      xOffset: glyph.xOffset !== 0 ? glyph.xOffset : undefined,
+      ...(glyph.yOffset !== 0 && { yOffset: glyph.yOffset }),
+    };
+    pen += glyph.advance;
+    return placement;
+  });
+}
+
+/** The atlas bitmap of `glyph`: by its glyph for a substituted one, which no character names. */
+function atlasGlyphOf(glyph: ClusterGlyph): OpenSansGlyph | null {
+  if (glyph.isSubstituted) return glyph.glyphIndex === undefined ? null : atlasGlyphOfIndex(glyph.glyphIndex);
+  return OPEN_SANS_ATLAS_GLYPHS[glyph.char] ?? null;
 }
 
 /** How far the glyph offsets of `glyphs` reach above and below the baseline, px: `-y_off` and `y_off`. */

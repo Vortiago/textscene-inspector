@@ -305,6 +305,10 @@ export const CANVAS_2D_SCENES = [
   // in a Label at 16 px and 32 px and in a RichTextLabel whose fallback holds a character the marks cannot make,
   // and in Labels over fonts with no GPOS script and with a GPOS that has no mark lookup.
   { name: 'label-decomposed-marks', file: 'unit-label-decomposed-marks.tscn', mode: '2d' },
+  // The one variable: a run that shapes as a whole, with the default font's ligatures, a contextual
+  // GSUB swap at a variable-font instance, a base and marks typed as separate characters, and a
+  // RichTextLabel whose colour span splits a ligature.
+  { name: 'label-shaped-runs', file: 'unit-label-shaped-runs.tscn', mode: '2d' },
   // The one variable: `FontVariation.variation_embolden` over a scene font at 0, 1.2 and 2.0, which
   // grows the outline and widens each advance, as the bold of a RichTextLabel does.
   { name: 'label-font-variation-embolden', file: 'unit-label-font-variation-embolden.tscn', mode: '2d' },

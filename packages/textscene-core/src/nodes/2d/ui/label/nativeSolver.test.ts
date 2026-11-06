@@ -696,9 +696,11 @@ describe('labelMinimumSize — shapes in label_settings.font (label.cpp:112,349,
     fallbacks: [],
     properties: {},
   };
-  // Twice the bundled advances: a width that only the settings font can produce.
+  // Twice the bundled advances: a width that only the settings font can produce. No `shaping`, whose
+  // glyphs would carry the bundled `hmtx` advances past `getGlyphAdvanceUnits`.
   const WIDE_METRICS: FontMetrics = {
     ...OPEN_SANS_FONT_METRICS,
+    shaping: undefined,
     getGlyphAdvanceUnits: (ch) => (OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits(ch) ?? 0) * 2,
   };
   const settings = resolveLabelSettings('SubResource("1")', [

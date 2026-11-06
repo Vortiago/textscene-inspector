@@ -51,30 +51,39 @@ const readContours = perObject((_outlines: SfntOutlines) =>
 );
 
 /**
- * Reads the outline of a character as the font variation leaves it at `fontSizePx`: null for a
- * glyph the font has no outline for. The face's cache is found once, so a glyph costs one lookup.
+ * Reads the outline of a glyph as the font variation leaves it at `fontSizePx`: null for glyph 0 and
+ * a glyph with no outline. The face's cache is found once, so a glyph costs one lookup.
  */
+export function variedGlyphContoursReader(
+  outlines: SfntOutlines,
+  fontSizePx: number,
+  variation: GlyphVariation
+): (glyphIndex: number) => GlyphContours | null {
+  const read = readContours(outlines)(`${fontSizePx}/${variationKey(variation)}`, () => new Map());
+  return (glyphIndex) => {
+    if (glyphIndex === 0) return null;
+    let contours = read.get(glyphIndex);
+    if (contours === undefined)
+      read.set(glyphIndex, (contours = outlines.glyphContours(glyphIndex, fontSizePx, variation)));
+    return contours;
+  };
+}
+
+/** {@link variedGlyphContoursReader} for the `cmap` glyph of a character at the variation's instance. */
 export function glyphContoursReader(
   outlines: SfntOutlines,
   fontSizePx: number,
   variation: GlyphVariation
 ): (char: string) => GlyphContours | null {
-  const byFace = readContours(outlines);
-  const faceKey = `${fontSizePx}/${variationKey(variation)}`;
-  const read = byFace(faceKey, () => new Map());
+  const contoursOfGlyph = variedGlyphContoursReader(outlines, fontSizePx, variation);
   const byChar = new Map<string, GlyphContours | null>();
   return (char) => {
-    const known = byChar.get(char);
-    if (known !== undefined) return known;
-    const glyphIndex = outlines.glyphIndex(char.codePointAt(0)!, variation.opentype);
-    let contours: GlyphContours | null = null;
-    if (glyphIndex !== 0) {
-      let cached = read.get(glyphIndex);
-      if (cached === undefined)
-        read.set(glyphIndex, (cached = outlines.glyphContours(glyphIndex, fontSizePx, variation)));
-      contours = cached;
-    }
-    byChar.set(char, contours);
+    let contours = byChar.get(char);
+    if (contours === undefined)
+      byChar.set(
+        char,
+        (contours = contoursOfGlyph(outlines.glyphIndex(char.codePointAt(0)!, variation.opentype)))
+      );
     return contours;
   };
 }

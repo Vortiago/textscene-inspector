@@ -154,9 +154,17 @@ _Avoid_: "sprite font", "pixel font".
 The faces a font tries for each glyph, in order: its own face, then each of its `fallbacks` and theirs, depth first (`Font::_update_rids`). The shaper draws a character from the first face that has it. A character no face has stays in the first face.
 _Avoid_: "fallback font" for the bundled Open Sans, which is the **Project default font**'s last resort.
 
+**Cluster** (`GlyphPlacement.char` and `sourceIndex` in `r3f/controls/native/text/textLayout.ts`):
+The characters of a run that draw as one unit: a base and the marks typed after it, or the characters of a **Shaped glyph**. The layout places each cluster once, with the cluster's text as its `char`. A line break and a reveal step fall only at the edge of a cluster, as Godot's glyph `start` and `end` set them.
+_Avoid_: "grapheme", which Unicode segments by other rules.
+
+**Shaped glyph** (`SubstitutedCluster` in `r3f/controls/native/text/glyphRun.ts`):
+A glyph the `GSUB` lookups of a run give a **Cluster** in place of the `cmap` glyph of each character: a ligature, or a glyph a contextual lookup swaps by its neighbours. Godot shapes each span's run whole (`text_server_adv.cpp:7401`), so a lookup reads every character of the run. The cluster takes the glyph's own advance and draws by its glyph id.
+_Avoid_: "ligature" for a swap of one character, which joins nothing.
+
 **Decomposed glyph** (`DecomposedGlyph` in `r3f/controls/native/text/sfntDecomposition.ts`):
-A character the face lacks that HarfBuzz draws as a base and marks the face has, found by the canonical decomposition (`canonicalGlyphs.ts`). Each mark sits at the offset of the face's `GPOS` mark lookups (`markPositioning.ts`), or against the ink of the base where the face has no `GPOS` script (`fallbackMarkPositioning.ts`). The face then counts as having the character, so its cluster stays in the face and out of the **Fallback chain**.
-_Avoid_: "composed glyph", which names the opposite step.
+A **Cluster** that HarfBuzz's normalisation draws as other characters of the face: a character the face lacks splits into a base and marks by its canonical decomposition, the marks sort by combining class, and a typed base and mark join into the composite the face has (`canonicalGlyphs.ts`). Each mark sits at the offset of the face's `GPOS` mark lookups (`markPositioning.ts`), or against the ink of the base where the face has no `GPOS` script (`fallbackMarkPositioning.ts`). The face then counts as having the character, so its cluster stays in the face and out of the **Fallback chain**.
+_Avoid_: "composed glyph", which names one step of it.
 
 **Project fonts** (`resources/fonts/font/projectFonts.ts`):
 The two files the **Project settings** name for every font lookup: the project theme (`gui/theme/custom`) and the **Project default font**. The Control solve tree, TextMesh and Label3D each resolve them from one source.

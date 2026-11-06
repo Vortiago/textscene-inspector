@@ -112,8 +112,8 @@ export function instanceKerningReader(
   sfnt: SfntFile
 ): ((normalized: Int32Array) => PairKerningReader) | null {
   const table = sfntGpos(sfnt);
-  const axes = readFvarAxes(sfnt);
-  if (!table || !axes) return null;
+  if (!table) return null;
+  const axisCount = axisCountOf(sfnt);
   const pairLookupsByRecord = new Map<FeatureSubstitution | undefined, PairLookup[]>();
   const pairLookupsOfRecord = (record: FeatureSubstitution | undefined): PairLookup[] => {
     let found = pairLookupsByRecord.get(record);
@@ -124,7 +124,7 @@ export function instanceKerningReader(
     (record) => pairLookupsOfRecord(record).length > 0
   );
   if (!hasPairLookups) return null;
-  const store = gdefVariationStore(sfnt, axes.length);
+  const store = gdefVariationStore(sfnt, axisCount);
   const propsOf = glyphPropsReader(sfnt);
   const matches = lookupMatcher(sfnt);
   const { dv } = sfnt;
@@ -150,3 +150,11 @@ export function instanceKerningReader(
     };
   };
 }
+
+/** The kerning reader of `sfnt` at its default instance, or null for a font with no pair kerning. */
+export function defaultKerningReader(sfnt: SfntFile): PairKerningReader | null {
+  return instanceKerningReader(sfnt)?.(new Int32Array(axisCountOf(sfnt))) ?? null;
+}
+
+/** The axes of `sfnt`: a font with no `fvar` has one instance, at no coordinates. */
+const axisCountOf = (sfnt: SfntFile): number => readFvarAxes(sfnt)?.length ?? 0;

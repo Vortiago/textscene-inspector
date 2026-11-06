@@ -59,7 +59,7 @@ describe('the kerning of a variable font at an instance', () => {
         outlines: await recursiveOutlines(),
       });
       for (const [pair, kerningPx] of Object.entries(row.kerning)) {
-        const ours = getFontKerningAdjustmentPx(face, pair[0]!, pair[1]!, row.sizePx);
+        const ours = getFontKerningAdjustmentPx(face, { char: pair[0]! }, { char: pair[1]! }, row.sizePx);
         expect(Math.abs(ours - kerningPx), pair).toBeLessThanOrEqual(HARFBUZZ_STEP_PX);
       }
     }
@@ -70,6 +70,8 @@ describe('the kerning of a variable font at an instance', () => {
       opentype: opentypeOf({ 1297043023: 0.5 }),
       outlines: await recursiveOutlines(),
     });
-    expect(getFontKerningAdjustmentPx(face, 'A', '一', UNIT_SIZE_PX)).toBe(MEASURED_KERNING_UNITS);
+    expect(getFontKerningAdjustmentPx(face, { char: 'A' }, { char: '一' }, UNIT_SIZE_PX)).toBe(
+      MEASURED_KERNING_UNITS
+    );
   });
 });

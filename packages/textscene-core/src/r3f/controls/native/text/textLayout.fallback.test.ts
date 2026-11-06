@@ -106,13 +106,24 @@ describe('shapeText — a fallback chain', () => {
 });
 
 describe('shapeText — a character the face draws as a base and marks', () => {
-  /** 2048 units, so 16 px is 1/128 em: 1024 units are 8 px. Ascent 12 px, descent 4 px. */
-  const accented = (decomposition: FontMetrics['decomposition'], advanceUnits = 1024): FontMetrics => ({
+  /**
+   * A face that shapes `Ä` as A and a mark at `x`, `y` px from its origin. 2048 units, so 16 px is
+   * 1/128 em: 1024 units are 8 px. Ascent 12 px, descent 4 px.
+   */
+  const withMark = (x: number, y: number, advanceUnits = 1024): FontMetrics => ({
     ...faceOf({ A: advanceUnits, Ä: advanceUnits, '\u0308': 0 }),
-    decomposition,
+    shaping: (chars) => [
+      {
+        start: 0,
+        end: chars.length,
+        glyphs: [
+          { glyph: 1, char: 'A', isMark: false, isSubstituted: false },
+          { glyph: 2, char: '\u0308', isMark: true, isSubstituted: false },
+        ],
+      },
+    ],
+    markOffsets: (cluster) => cluster.map((_glyph, k) => (k === 0 ? { x: 0, y: 0 } : { x, y })),
   });
-  const withMark = (x: number, y: number, advanceUnits?: number) =>
-    accented(() => ({ base: 'A', marks: [{ char: '\u0308', x, y }] }), advanceUnits);
   const shapedLine = (face: FontMetrics) =>
     shapeText('Ä', {
       fontSizePx: 16,
@@ -146,15 +157,6 @@ describe('shapeText — a character the face draws as a base and marks', () => {
   it('rounds a half-way x offset from the pen after the base, away from zero', () => {
     // A 1397-unit advance is 21.83 px at 32 px, rounded to 22. A mark at 20.5 px is -1.5 px from that pen.
     expect(glyphsOf('Ä', withMark(20.5, 0, 1397), 32)[1]!.xOffset).toBe(-2);
-  });
-
-  it('draws a character the face draws as one glyph alone', () => {
-    expect(
-      glyphsOf(
-        'A',
-        accented(() => null)
-      ).map(({ char }) => char)
-    ).toEqual(['A']);
   });
 
   it('lifts the baseline and the pitch to a mark raised past the ascent (text_server_adv.cpp:5161)', () => {

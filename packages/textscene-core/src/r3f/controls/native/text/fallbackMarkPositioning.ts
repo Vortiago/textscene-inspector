@@ -12,12 +12,12 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { COMBINING_CLASS_RUNS } from './combiningClasses';
+import { combiningClassOf } from './canonicalGlyphs';
 import { ftMulFix, getFontOutlineScale, glyphAdvance26_6, FIXED_26_6_ONE } from './fontMetrics';
 import { ORIGIN, type MarkOffset } from './markPositioning';
+import type { LookupGlyph } from './autofit/openTypeGdef';
 import { extent } from './glyphContours';
 import { unscaledCffOutlines } from './sfntCff';
-import { firstEndAtOrAbove, sfntGlyphIndex } from './sfntCmap';
 import { unscaledGlyfOutlines } from './sfntGlyf';
 import { glyphMetricsReader } from './sfntGlyphMetrics';
 import type { SfntFile } from './sfntTables';
@@ -62,14 +62,9 @@ interface Extents {
   height: number;
 }
 
-/** The combining class of a code point that a canonical decomposition ends in, 0 for any other. */
-function combiningClassOf(codePoint: number): number {
-  const run =
-    COMBINING_CLASS_RUNS[
-      firstEndAtOrAbove(COMBINING_CLASS_RUNS.length, (i) => COMBINING_CLASS_RUNS[i]![1], codePoint)
-    ];
-  if (!run || run[0] > codePoint) return 0;
-  const klass = run[2];
+/** The combining class of a code point, as the fallback placement recategorises it. */
+function placementClassOf(codePoint: number): number {
+  const klass = combiningClassOf(codePoint);
   return RECATEGORIZED_CLASS.get(klass) ?? klass;
 }
 
@@ -181,17 +176,19 @@ function inkBoxReader(
   };
 }
 
-/** Where each mark of a cluster sits against the base's origin in px, y up, at `fontSizePx`. */
-export type SizedClusterOffsets = (cluster: readonly string[], fontSizePx: number) => readonly MarkOffset[];
+/** Where each mark of a cluster's glyphs sits against the base's origin in px, y up, at `fontSizePx`. */
+export type SizedClusterOffsets = (
+  cluster: readonly LookupGlyph[],
+  fontSizePx: number
+) => readonly MarkOffset[];
 
 /**
- * The reader of a font with no `GPOS` script, or null for a font whose outlines, `cmap` or metrics
- * `sfnt` lacks. `sfnt` holds `glyf` or `CFF `, `hmtx`, `cmap` and `head`.
+ * The reader of a font with no `GPOS` script, or null for a font whose outlines or metrics `sfnt`
+ * lacks. `sfnt` holds `glyf` or `CFF `, `hmtx` and `head`.
  */
 export function fallbackMarkReader(sfnt: SfntFile): SizedClusterOffsets | null {
-  const glyphIndexOf = sfntGlyphIndex(sfnt);
   const reader = inkBoxReader(sfnt);
-  if (!glyphIndexOf || !reader) return null;
+  if (!reader) return null;
   const { unitsPerEm, inkBoxOf } = reader;
   const metricsOf = glyphMetricsReader(sfnt);
 
@@ -208,7 +205,7 @@ export function fallbackMarkReader(sfnt: SfntFile): SizedClusterOffsets | null {
     const yGap = (ftMulFix(unitsPerEm, xScale) / 16) | 0;
     const toPx = ({ x, y }: MarkOffset): MarkOffset => ({ x: x / FIXED_26_6_ONE, y: y / FIXED_26_6_ONE });
 
-    const glyphs = cluster.map((ch) => glyphIndexOf(ch.codePointAt(0)!));
+    const glyphs = cluster.map(({ glyph }) => glyph);
     const baseInk = inkBoxOf(glyphs[0]!);
     if (!baseInk) return cluster.map(() => ORIGIN);
     // The horizontal advance, not the ink, bounds the base (harfbuzz#1532): a glyph with no ink has one too.
@@ -222,7 +219,7 @@ export function fallbackMarkReader(sfnt: SfntFile): SizedClusterOffsets | null {
     let lastClass = 255;
     const offsets: MarkOffset[] = [ORIGIN];
     for (let i = 1; i < cluster.length; i++) {
-      const klass = combiningClassOf(cluster[i]!.codePointAt(0)!);
+      const klass = placementClassOf(cluster[i]!.codePoint);
       const markInk = klass === 0 ? null : inkBoxOf(glyphs[i]!);
       if (!markInk) {
         offsets.push(ORIGIN);

@@ -7,16 +7,14 @@
  */
 import { describe, expect, it } from 'vitest';
 import { fallbackMarkReader } from './fallbackMarkPositioning';
-import { fixtureSfnt } from './sfntOutlines.testkit';
+import { clusterGlyphs, fixtureSfnt } from './sfntOutlines.testkit';
 
 /** The font's em in px: a design unit is then a whole pixel, and the 26.6 scale has no remainder. */
 const EM_PX = 1000;
 
+const NO_GPOS_FONT = fixtureSfnt('montserrat-semibold-marks-nogpos-subset.ttf');
 const offsetsOf = (cluster: string) =>
-  fallbackMarkReader(fixtureSfnt('montserrat-semibold-marks-nogpos-subset.ttf'))!(
-    Array.from(cluster.normalize('NFD')),
-    EM_PX
-  );
+  fallbackMarkReader(NO_GPOS_FONT)!(clusterGlyphs(NO_GPOS_FONT, cluster), EM_PX);
 
 describe('fallbackMarkReader', () => {
   it.each([
