@@ -103,21 +103,12 @@ interface Stage {
 }
 
 function stagesOf(table: LayoutTable, scriptTags: readonly string[], feature: string | null): Stage[] {
-  const random = new Set(featureLookups(table, scriptTags, ['rand'], defaultSubstitution(table)));
+  const substitution = defaultSubstitution(table);
+  const lookupsOf = (features: readonly string[]): number[] =>
+    featureLookups(table, scriptTags, features, substitution);
   return [
-    {
-      lookups: featureLookups(table, scriptTags, FIRST_STAGE_FEATURES, defaultSubstitution(table)),
-      randomLookups: new Set(),
-    },
-    {
-      lookups: featureLookups(
-        table,
-        scriptTags,
-        shapingFeatures(scriptTags, feature),
-        defaultSubstitution(table)
-      ),
-      randomLookups: random,
-    },
+    { lookups: lookupsOf(FIRST_STAGE_FEATURES), randomLookups: new Set() },
+    { lookups: lookupsOf(shapingFeatures(scriptTags, feature)), randomLookups: new Set(lookupsOf(['rand'])) },
   ];
 }
 
