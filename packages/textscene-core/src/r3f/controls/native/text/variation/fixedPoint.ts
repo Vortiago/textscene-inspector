@@ -12,6 +12,9 @@ import { FIXED_16_16_ONE } from '../fontMetrics';
 /** `FT_fdot14ToFixed`: 2.14 to 16.16. */
 export const fdot14ToFixed = (value: number): number => value * 4;
 
+/** 16.16 to 2.14, as `hb-ft.cc` hands HarfBuzz a font's normalised coordinates, and as `TT_GetVariation` gives them to a program. */
+export const fixedToFdot14 = (value: number): number => value >> 2;
+
 /** `FT_intToFixed`. */
 export const intToFixed = (value: number): number => value * 0x10000;
 

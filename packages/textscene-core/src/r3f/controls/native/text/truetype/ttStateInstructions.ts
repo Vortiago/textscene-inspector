@@ -9,6 +9,7 @@
  */
 
 import { ftMulFix } from '../fontMetrics';
+import { fixedToFdot14 } from '../variation/fixedPoint';
 import { toUint16 } from '../../../../../godot/variant/intWidth';
 import { CodeRange, type ExecContext } from './ttExecContext';
 import { GLYPH_ZONE, TWILIGHT_ZONE } from './ttGraphicsState';
@@ -195,7 +196,8 @@ export function getVariation(exc: ExecContext, a: number): void {
     exc.fail('Stack_Overflow');
     return;
   }
-  for (let axis = 0; axis < axisCount; axis++) exc.stack[a + axis] = normalizedCoordinates[axis]! >> 2;
+  for (let axis = 0; axis < axisCount; axis++)
+    exc.stack[a + axis] = fixedToFdot14(normalizedCoordinates[axis]!);
   exc.newTop += axisCount;
 }
 

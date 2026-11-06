@@ -1268,6 +1268,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Font Variation Glyph Swap",
+    "file": "unit-label-font-variation-glyph-swap.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Font Variation Instance",
     "file": "unit-label-font-variation-instance.tscn",
     "category": "Other"

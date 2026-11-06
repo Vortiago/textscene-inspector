@@ -50,12 +50,19 @@ export const LookupFlag = {
   MARK_ATTACHMENT_TYPE: 0xff00,
 } as const;
 
+/** A `ConditionFormat1`: the range of normalised axis values, in 2.14, that the condition holds for. */
+interface AxisRange {
+  readonly axis: number;
+  readonly min: number;
+  readonly max: number;
+}
+
 /**
- * A record of `FeatureVariations`: whether its conditions hold at the default instance, which
- * HarfBuzz shapes at with no coordinates set, and the alternate lookups of each feature it changes.
+ * A record of `FeatureVariations`: the conditions that select it, and the alternate lookups of each
+ * feature it changes. The conditions are null where one has a format HarfBuzz holds false.
  */
-interface FeatureSubstitution {
-  readonly isDefaultInstance: boolean;
+export interface FeatureSubstitution {
+  readonly conditions: readonly AxisRange[] | null;
   readonly substitutions: ReadonlyMap<number, readonly number[]>;
 }
 
@@ -174,21 +181,43 @@ function readFeatureSubstitutions(dv: DataView, table: number): FeatureSubstitut
     const conditionSetOffset = dv.getUint32(record, false);
     const substitutionOffset = dv.getUint32(record + 4, false);
     return {
-      isDefaultInstance: conditionSetOffset === 0 || holdsAtDefault(dv, variations + conditionSetOffset),
+      conditions: conditionSetOffset === 0 ? [] : readConditions(dv, variations + conditionSetOffset),
       substitutions:
         substitutionOffset === 0 ? new Map() : readSubstitutions(dv, variations + substitutionOffset),
     };
   });
 }
 
-/** Whether every condition of the `ConditionSet` at `at` holds at coordinate 0 on its axis. */
-function holdsAtDefault(dv: DataView, at: number): boolean {
-  for (let i = 0; i < u16(dv, at); i++) {
+function readConditions(dv: DataView, at: number): AxisRange[] | null {
+  const conditions: AxisRange[] = [];
+  const count = u16(dv, at);
+  for (let i = 0; i < count; i++) {
     const condition = at + dv.getUint32(at + 2 + 4 * i, false);
-    if (u16(dv, condition) !== CONDITION_AXIS_RANGE) return false;
-    if (dv.getInt16(condition + 4, false) > 0 || dv.getInt16(condition + 6, false) < 0) return false;
+    if (u16(dv, condition) !== CONDITION_AXIS_RANGE) return null;
+    conditions.push({
+      axis: u16(dv, condition + 2),
+      min: dv.getInt16(condition + 4, false),
+      max: dv.getInt16(condition + 6, false),
+    });
   }
-  return true;
+  return conditions;
+}
+
+/**
+ * The first record of `FeatureVariations` whose conditions all hold, as HarfBuzz finds it
+ * (`hb_ot_layout_table_find_feature_variations`). `coordinates` holds the normalised axis values
+ * in 2.14, and an axis past its end is at 0, the default instance.
+ */
+export function featureSubstitutionAt(
+  table: LayoutTable,
+  coordinates: ArrayLike<number>
+): FeatureSubstitution | undefined {
+  return table.featureSubstitutions.find(({ conditions }) =>
+    conditions?.every(({ axis, min, max }) => {
+      const coordinate = coordinates[axis] ?? 0;
+      return coordinate >= min && coordinate <= max;
+    })
+  );
 }
 
 function readSubstitutions(dv: DataView, at: number): Map<number, readonly number[]> {
