@@ -56,8 +56,9 @@ function smallStemWidth(dist: number): number {
 }
 
 /**
- * `af_latin_compute_stem_width` in normal mode: the fitted width of a stem `width` wide between
- * edges of `baseFlags` and `stemFlags`. A stem near the axis's standard width takes it.
+ * `af_latin_compute_stem_width`: the fitted width of a stem `width` wide between edges of
+ * `baseFlags` and `stemFlags`. A stem near the axis's standard width takes it. The light target
+ * keeps every width.
  */
 function stemWidth(
   metrics: LatinMetrics,
@@ -68,7 +69,7 @@ function stemWidth(
   stemFlags: number
 ): number {
   const axis = metrics.axis[dim];
-  if (axis.isExtraLight) return width;
+  if (metrics.scaler.renderMode === 'light' || axis.isExtraLight) return width;
   const isVertical = dim === Dimension.VERT;
   let dist = Math.abs(width);
   const sign = width < 0 ? -1 : 1;

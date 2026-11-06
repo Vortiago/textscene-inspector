@@ -26,6 +26,7 @@ import {
   createCanvasTextMaterial,
   originPhase,
   snapsGlyphsToItemPixels,
+  type CanvasTextCanvasLayout,
   type CanvasTextPaintOptions,
 } from './canvasTextPainter';
 import type { SurfaceShading } from '../../../materialFor2d';
@@ -200,6 +201,23 @@ function sampleRaster(texture: THREE.Texture, { textureFilter, mipmapped }: Rast
   applyTextureFilterState(texture, textureFilter);
 }
 
+/**
+ * The texture of a painted raster, its first row at the top as a canvas's is. A blank one the
+ * raster's size where the document has no 2D context.
+ */
+function rasterTexture(
+  raster: ImageData | null,
+  { canvasWidthPx, canvasHeightPx }: CanvasTextCanvasLayout
+): THREE.DataTexture {
+  const data = raster
+    ? new Uint8Array(raster.data.buffer, raster.data.byteOffset, raster.data.byteLength)
+    : new Uint8Array(canvasWidthPx * canvasHeightPx * 4);
+  const texture = new THREE.DataTexture(data, canvasWidthPx, canvasHeightPx);
+  texture.flipY = true;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 /** The geometry of merged glyph quads. A lit run reads the normal, so a caller adds it. */
 function quadGeometry({ positions, uvs, indices }: GlyphQuadArrays): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
@@ -311,11 +329,11 @@ function buildTextRun(
     // On every run, so toggling the shading rebuilds the material alone, not the raster.
     geo.setAttribute('normal', quadFacingPlusZ(positions.length / 3));
 
-    const canvas = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, canvasPaint);
-    const texture = new THREE.CanvasTexture(canvas);
+    const raster = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, canvasPaint);
+    const texture = rasterTexture(raster, canvasLayout);
     // `SRGBColorSpace`, not the 2D-canvas rule's `NoColorSpace`: measured, `NoColorSpace` dips
     // 5/255 below the backdrop at a glyph edge, where Godot draws a monotonic ramp. `textRun.md`
-    // gives the engine lines, and why a raster split into coverage plus colour would reopen this.
+    // gives the engine lines.
     texture.colorSpace = THREE.SRGBColorSpace;
     sampleRaster(texture, sampling);
     texture.wrapS = THREE.ClampToEdgeWrapping;

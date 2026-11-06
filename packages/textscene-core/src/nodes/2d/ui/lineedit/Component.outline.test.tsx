@@ -99,12 +99,12 @@ describe('<LineEdit> theme text outline', () => {
   });
 
   describe('on the bundled font', () => {
-    it('strokes the ring on the canvas face and keeps the fill on the atlas', async () => {
+    it('strokes the ring and fills the text on the canvas face, as FreeType draws both', async () => {
       await render(outlined({ font_outline_color: RED }, { outline_size: OUTLINE_SIZE }));
 
       await vi.waitFor(() => expect(strokeRuns().length).toBeGreaterThan(0));
       expect(ringRun().layout.fontMetrics.kind).toBe('canvas');
-      expect(fillRun().layout.fontMetrics.kind).toBe('atlas');
+      expect(fillRun().layout.fontMetrics.kind).toBe('canvas');
     });
   });
 });

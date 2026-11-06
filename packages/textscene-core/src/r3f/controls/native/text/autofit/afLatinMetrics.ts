@@ -246,6 +246,7 @@ function scaleBlues(blues: readonly LatinBlue[], scale: number, delta: number): 
 /** `af_latin_metrics_scale`: scales both axes to the load's scaler. */
 export function scaleLatinMetrics(metrics: LatinMetrics, scaler: Scaler): void {
   metrics.scaler.ppem = scaler.ppem;
+  metrics.scaler.renderMode = scaler.renderMode;
   scaleLatinAxis(metrics, scaler, Dimension.HORZ);
   scaleLatinAxis(metrics, scaler, Dimension.VERT);
 }

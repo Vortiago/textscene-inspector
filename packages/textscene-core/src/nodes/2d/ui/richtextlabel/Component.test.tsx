@@ -28,8 +28,10 @@ import {
 } from '../shared/ScrollBarChrome';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
-// The bundled canvas face, which a [b] run draws on: the door to register it is shut under vitest,
-// and a real face would decode the bundled outlines, which a painter test does not read.
+// The bundled canvas face, which every run draws on: the door to register it is shut under vitest,
+// and a real face would decode the bundled outlines, which a painter test does not read. The painter
+// contract tests read the MSDF uniforms, so they run where the face cannot register and the atlas fills.
+const bundledFace = vi.hoisted(() => ({ isRegistered: false }));
 vi.mock('../../../../r3f/controls/native/text/bundledCanvasFace', async () => {
   const { createOpenSansCanvasFontMetrics } =
     await import('../../../../r3f/controls/native/text/openSansCanvasFontMetrics');
@@ -37,8 +39,14 @@ vi.mock('../../../../r3f/controls/native/text/bundledCanvasFace', async () => {
   const bundled = createOpenSansCanvasFontMetrics('bundled-rtl-test');
   return {
     peekBundledCanvasFace: (atlasFace: FontMetrics) =>
-      withVariation(bundled, { embolden: atlasFace.embolden, skew: atlasFace.skew }),
+      bundledFace.isRegistered
+        ? withVariation(bundled, { embolden: atlasFace.embolden, skew: atlasFace.skew })
+        : null,
   };
+});
+
+afterEach(() => {
+  bundledFace.isRegistered = false;
 });
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
@@ -105,11 +113,12 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(5);
   });
 
-  it("draws a [b] run, Godot's FreeType embolden, on the bundled canvas face; a plain run stays on the atlas", async () => {
+  it("draws a plain run and a [b] run, Godot's FreeType embolden, both on the bundled canvas face", async () => {
+    bundledFace.isRegistered = true;
     const renderer = await render({ text: 'plain [b]bold[/b]', bbcodeEnabled: true });
     await vi.waitFor(() => expect(meshesOf(renderer)).toHaveLength(2));
     const kinds = meshesOf(renderer).map((m) => (m.material as THREE.Material).type);
-    expect(kinds.filter((type) => type === 'ShaderMaterial')).toHaveLength(1);
+    expect(kinds.filter((type) => type === 'ShaderMaterial')).toHaveLength(0);
   });
 
   it(
@@ -360,7 +369,7 @@ describe('<RichTextLabel> — scene-font (canvas-kind FontMetrics) text path', (
 
   function canvasMeshes(renderer: Awaited<ReturnType<typeof render>>): THREE.Mesh[] {
     return meshesOf(renderer).filter(
-      (m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.CanvasTexture
+      (m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.DataTexture
     );
   }
 

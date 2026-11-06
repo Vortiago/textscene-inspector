@@ -7,7 +7,7 @@
 import plainReference from './ftEmbolden.godot.json';
 import type { ContourTag, GlyphContours, ScaledOutline } from './glyphContours';
 import type { GlyphVariation, OpentypeCoordinates } from './fontMetrics';
-import { openAutoHintedFontOutlines, openFontOutlines } from './sfntOutlines';
+import { CONTOUR_LOAD, openFontOutlines } from './sfntOutlines';
 import { fixtureFontBytes } from './sfntOutlines.testkit';
 
 export interface ReferenceGlyph {
@@ -62,8 +62,8 @@ export const variationOf = ({ embolden, skew, opentype }: ReferenceGlyph): Glyph
 
 /** The contours the reader gives the font of `glyph` for its character, size and variation. */
 export async function readerContours(glyph: ReferenceGlyph): Promise<GlyphContours> {
-  const open = glyph.forceAutohinter ? openAutoHintedFontOutlines : openFontOutlines;
-  const outlines = (await open(fixtureFontBytes(glyph.font)))!;
+  const load = { ...CONTOUR_LOAD, isAutohinterForced: glyph.forceAutohinter ?? false };
+  const outlines = (await openFontOutlines(fixtureFontBytes(glyph.font), load))!;
   return outlines.glyphContours(
     outlines.glyphIndex(glyph.char.codePointAt(0)!),
     glyph.sizePx,

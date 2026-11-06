@@ -21,8 +21,8 @@ paragraph stays unfitted under the default flags, and a single-line paragraph is
 A Label draws its layers in Godot's order (`label.cpp:828-883`). The shadow ring and the shadow come first. Then
 each stacked shadow and each stacked outline draw from the last index to the first. The outline comes next, and the fill
 comes last. A ring is a stroked contour with a one-sided radius of `outline_size / 4` px (`text_server_adv.cpp:1383`).
-It draws on the canvas painter for the bundled font and a scene font alike (ADR-0040). The fill and the plain shadows
-draw on the painter their font takes.
+It draws on the canvas painter for the bundled font and a scene font alike (ADR-0040), as do the fill and the plain
+shadows. Each glyph and ring draw from FreeType's bitmap at the font's `hinting`, as Godot draws them.
 An embolden over the bundled font draws on the canvas painter, which emboldens the outline as
 FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0040).
 
@@ -168,8 +168,8 @@ is already applied. Every real Godot save guarantees that, since `text` is the f
 
 Every count counts code points, as Godot's `String` does (`label.cpp:1375-1377`): the
 denominator, the cut at VC_CHARS_BEFORE_SHAPING (`:155-156`) and the budget of
-VC_CHARS_AFTER_SHAPING (`label.h:207`). An astral character, such as an emoji, counts one. The
-previewer draws no colour emoji, so only the letters after it show the count.
+VC_CHARS_AFTER_SHAPING (`label.h:207`). An astral character, such as an emoji, counts one. An emoji
+the font lacks draws its hex-code box, as Godot draws it on a host with no system font that has it.
 
 ## Text direction
 
@@ -202,8 +202,8 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 - **Approximated** At an instance, the `GPOS` kerning reads the pair lookups of every script, where Godot reads those of each script run.
 - **Approximated** At an instance, the `GPOS` kerning reads the default language system of each script, where Godot reads the system of the text's language.
 - **Approximated** At an instance, the `GPOS` kerning pairs adjacent characters only, where Godot also kerns across a glyph that a lookup flag skips.
-- **Approximated** A scene font's glyphs draw with the browser's hinting, not FreeType's light
-  hinting (`font.h:203`, `text_server_adv.cpp:1276-1277`), so a cap can sit 1 px lower here.
+- **Approximated** A font the previewer cannot read outlines from draws with the browser's
+  rasteriser and hinting, so a cap can sit 1 px lower here.
 - **Approximated** A wrapping Label inside a ScrollContainer can read one line short when
   the wrap is what makes the scrollbar appear.
 - **Not drawn** `BREAK_TRIM_INDENT` (an `autowrap_trim_flags` bit): a wrapped

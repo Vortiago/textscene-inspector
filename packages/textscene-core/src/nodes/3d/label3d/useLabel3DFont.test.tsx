@@ -148,12 +148,12 @@ beforeEach(async () => {
 });
 
 describe('useLabel3DFont metrics', () => {
-  it('is the bundled canvas metrics for a label with no font in a project with none', async () => {
+  it('is the bundled canvas face for a label with no font in a project with none', async () => {
     const { result } = renderMetrics(undefined);
 
-    await settle();
-
-    expect(result.current?.metrics).toBe(bundled.metrics);
+    await vi.waitFor(() =>
+      expect(result.current?.metrics).toMatchObject({ cssFontFamily: bundled.metrics!.cssFontFamily })
+    );
   });
 
   it('is undefined until the bundled font registers', async () => {
@@ -203,13 +203,11 @@ describe('useLabel3DFont metrics', () => {
 describe('useLabel3DFont outlines', () => {
   afterEach(() => vi.doUnmock('../../../r3f/controls/native/text/sceneFontLoader'));
 
-  it('reads no outlines for a face that is neither emboldened nor sheared', async () => {
+  // FreeType draws every glyph from its outline (`text_server_adv.cpp:1360-1393`), varied or not.
+  it('reads the outlines of the bundled font for a face that is neither emboldened nor sheared', async () => {
     const { result } = renderMetrics(undefined);
 
-    await settle();
-
-    expect(result.current?.metrics).toBeDefined();
-    expect(result.current?.metrics.outlines).toBeUndefined();
+    await vi.waitFor(() => expect(result.current?.metrics.outlines).toBeDefined());
   });
 
   it('is ready, with no outlines, for an unvaried canvas face', async () => {

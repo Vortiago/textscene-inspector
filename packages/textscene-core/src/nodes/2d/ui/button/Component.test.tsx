@@ -386,12 +386,12 @@ describe('<Button> — scene-font (canvas-kind FontMetrics) text path', () => {
     );
   }
 
-  /** The canvas painter's mesh: a `MeshBasicMaterial` over a `CanvasTexture`, not the MSDF `ShaderMaterial`. */
+  /** The canvas painter's mesh: a `MeshBasicMaterial` over the raster's `DataTexture`, not the MSDF `ShaderMaterial`. */
   function findCanvasTextMesh(scene: Rendered['scene']) {
     return scene
       .findAllByType('Mesh')
       .map((m) => m.instance as THREE.Mesh)
-      .find((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.CanvasTexture);
+      .find((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.DataTexture);
   }
 
   it('paints the label through the canvas rasteriser — ONE quad, not one per glyph, and no MSDF material', async () => {

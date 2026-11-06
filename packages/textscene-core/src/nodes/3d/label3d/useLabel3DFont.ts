@@ -5,7 +5,10 @@
  */
 
 import { useCallback } from 'react';
-import { projectDefaultFontGeneratesMipmaps } from '../../../parser/projectSettingsParser';
+import {
+  projectDefaultFontGeneratesMipmaps,
+  projectDefaultFontHinting,
+} from '../../../parser/projectSettingsParser';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -76,7 +79,7 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
     // keeps its fallbacks.
     if (isBitmapFontMetrics(settled) || isCanvasFontMetrics(settled))
       return { font: { metrics: settled, generatesMipmaps, fallbackMipmaps }, isChainSettling };
-    const canvasFace = peekBundledCanvasFace(settled);
+    const canvasFace = peekBundledCanvasFace(settled, projectDefaultFontHinting(settings));
     if (!canvasFace) return NO_FONT;
     const metrics = withFallbacks(canvasFace, fallbacks ?? []);
     return { font: { metrics, generatesMipmaps, fallbackMipmaps }, isChainSettling };

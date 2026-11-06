@@ -9,7 +9,6 @@
 // `createRuntimeFontMetrics`. Its `measureText` floats enter the fixed-point chain
 // (`ftadvanc.c:52`, `hb-ft.cc:519,523`) up to a 1/64 px step off the integer `hmtx` value.
 import { OPEN_SANS_ATLAS_GLYPHS, OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
-import type { FontMetrics } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import type { CanvasFontMetrics, GlyphInk } from './runtimeFontMetrics';
 
@@ -38,13 +37,9 @@ function atlasGlyphInkUnits(ch: string): GlyphInk | undefined {
 /**
  * Wraps the bundled font's baked metrics as `'canvas'`-kind, tagged with the CSS family it was
  * registered under. An unregistered `cssFontFamily` makes `ctx.fillText` paint a system font.
- * `glyphContours` reads the outlines of the registered bytes, for a glyph no character names.
  * Getters, not a snapshot, so a live mutation of `OPEN_SANS_METRICS` stays visible.
  */
-export function createOpenSansCanvasFontMetrics(
-  cssFontFamily: string,
-  glyphContours?: FontMetrics['glyphContours']
-): CanvasFontMetrics {
+export function createOpenSansCanvasFontMetrics(cssFontFamily: string): CanvasFontMetrics {
   return {
     kind: 'canvas',
     cssFontFamily,
@@ -70,6 +65,5 @@ export function createOpenSansCanvasFontMetrics(
     get markOffsets() {
       return OPEN_SANS_FONT_METRICS.markOffsets;
     },
-    glyphContours,
   };
 }

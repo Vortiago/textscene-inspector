@@ -90,7 +90,7 @@ export const SCENE_FONT_TABLE_TAGS: readonly string[] = [
   'GSUB',
 ];
 
-/** The tables the fallback mark placement (`fallbackMarkPositioning.ts`) and the unhinted contours (`unhintedGlyphContours.ts`) read. */
+/** The tables the fallback mark placement reads of a font with no `GPOS` script (`fallbackMarkPositioning.ts`). */
 export const FALLBACK_MARK_TABLE_TAGS: readonly string[] = [...SCENE_FONT_TABLE_TAGS, 'glyf', 'loca', 'CFF '];
 
 /**

@@ -10,7 +10,6 @@ import { identityKey } from '../../../../utils/identityKey';
 import { recentlyRead } from '../../../../utils/recentlyRead';
 import type { LookupGlyph } from './autofit/openTypeGdef';
 import type { SizedClusterOffsets } from './fallbackMarkPositioning';
-import type { GlyphContours } from './glyphContours';
 import type { RunGlyph, RunShaping } from './glyphRun';
 import type { SfntOutlines } from './sfntOutlines';
 import type { PairKerningReader } from './variation/instanceKerning';
@@ -61,11 +60,6 @@ export interface FontMetrics {
    * a glyph that a `GSUB` lookup gave takes. Absent for a face with no pair kerning to read.
    */
   readonly getGlyphKerningUnits?: PairKerningReader;
-  /**
-   * The unhinted contours of a glyph at a font size, which a glyph with no character to draw as text
-   * fills. Absent for a face whose outlines this previewer cannot read.
-   */
-  readonly glyphContours?: (glyphIndex: number, fontSizePx: number) => GlyphContours | null;
   /** A character's own advance width, design units, or `null` if this font has no glyph for it (a shaper falls back to `averageAdvanceUnits`). */
   getGlyphAdvanceUnits(ch: string): number | null;
   /**
@@ -99,10 +93,7 @@ export interface FontMetrics {
 }
 
 /** The fields of a face whose glyphs this previewer reads from its font file (`sfntFaceGlyphs.ts`). */
-export type FaceGlyphs = Pick<
-  FontMetrics,
-  'shaping' | 'markOffsets' | 'getGlyphKerningUnits' | 'glyphContours'
->;
+export type FaceGlyphs = Pick<FontMetrics, 'shaping' | 'markOffsets' | 'getGlyphKerningUnits'>;
 
 /**
  * `units` scaled to `fontSizePx` as `units * (fontSizePx / unitsPerEm)`, which `units * fontSizePx
@@ -398,7 +389,7 @@ export function isInstanced(opentype: OpentypeCoordinates | undefined): opentype
 }
 
 /** Whether the variation changes the glyph outline at all. */
-export function isGlyphVaried({ embolden = 0, skew = 0, opentype }: GlyphVariation): boolean {
+function isGlyphVaried({ embolden = 0, skew = 0, opentype }: GlyphVariation): boolean {
   return embolden !== 0 || skew !== 0 || isInstanced(opentype);
 }
 

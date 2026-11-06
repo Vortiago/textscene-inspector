@@ -1,7 +1,7 @@
 /**
  * The MSDF quad shader for every glyph mesh (`TextRunMesh.tsx`): msdfgen's median-of-3
- * decode against the vendored atlas (`openSansAtlas.ts`), antialiased with `fwidth`. It paints 2D
- * Control text at the bundled font. An embolden and an outline ring draw on the canvas painter (ADR-0040).
+ * decode against the vendored atlas (`openSansAtlas.ts`), antialiased with `fwidth`. It fills the
+ * bundled font only where the bundled canvas face cannot register (`BundledCanvasRun.tsx`, ADR-0040).
  */
 // Godot's default project font is not MSDF (`servers/text/text_server.cpp:2386`,
 // `scene/theme/theme_db.cpp:59`). Its MSDF branch is `scene/resources/material.cpp:1639-1656`,
