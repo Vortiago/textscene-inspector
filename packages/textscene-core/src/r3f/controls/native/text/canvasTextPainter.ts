@@ -26,6 +26,7 @@ import {
   type FontMetrics,
   type GlyphVariation,
 } from './fontMetrics';
+import type { GlyphContours } from './glyphContours';
 import type { GlyphPlacement, TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics, type CanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
@@ -237,6 +238,38 @@ export interface CanvasTextPaintOptions {
 }
 
 /**
+ * Paints the contours of `glyph`, or of its base and marks at their offsets from the pen. False
+ * where no character of it has an outline, so the caller paints it as text.
+ */
+function paintGlyphContours(
+  paint: (ctx: CanvasRenderingContext2D, contours: GlyphContours, penX: number, baselineY: number) => void,
+  ctx: CanvasRenderingContext2D,
+  contoursOf: (char: string) => GlyphContours | null,
+  glyph: GlyphPlacement,
+  penX: number,
+  baselineY: number
+): boolean {
+  const { decomposition } = glyph;
+  if (!decomposition) {
+    const contours = contoursOf(glyph.char);
+    if (contours) paint(ctx, contours, penX, baselineY);
+    return contours !== null;
+  }
+  let isPainted = false;
+  const base = contoursOf(decomposition.base);
+  if (base) {
+    paint(ctx, base, penX, baselineY);
+    isPainted = true;
+  }
+  for (const { char, x, y } of decomposition.marks) {
+    const contours = contoursOf(char);
+    if (contours) paint(ctx, contours, penX + x, baselineY + y);
+    isPainted ||= contours !== null;
+  }
+  return isPainted;
+}
+
+/**
  * Draws `layout`, shaped against a `'canvas'`-kind `FontMetrics`, glyph by glyph
  * at each `GlyphPlacement.x`.
  * `skew` shears each line's ink about its own baseline. With the `outlines` its metrics carry, the ring of
@@ -334,10 +367,12 @@ export function paintSceneFontCanvas(
         (snapsGlyphs ? canvasGlyphPenXPx(originPhasePx.x + gp.x, fontSizePx, metrics) : gp.x);
       // A glyph shaped with no growth, in a layout that is not sheared or at an instance, stays on its plain ring.
       const hasVariedGlyph = gp.emboldenGrowthPx || isShapeVaried;
-      const contours = contoursOf && hasVariedGlyph ? contoursOf(gp.char) : null;
-      if (contours) (stroked ? strokeContours : fillContours)(ctx, contours, penX, baselineY);
-      else if (contourOutlines && skew !== 0)
-        paintShearedGlyphText(gp.char, penX, baselineY, gp.emboldenGrowthPx);
+      const isContourPainted =
+        contoursOf &&
+        hasVariedGlyph &&
+        paintGlyphContours(stroked ? strokeContours : fillContours, ctx, contoursOf, gp, penX, baselineY);
+      if (isContourPainted) continue;
+      if (contourOutlines && skew !== 0) paintShearedGlyphText(gp.char, penX, baselineY, gp.emboldenGrowthPx);
       else paintGlyphText(gp.char, penX, baselineY, gp.emboldenGrowthPx);
     }
     ctx.restore();
