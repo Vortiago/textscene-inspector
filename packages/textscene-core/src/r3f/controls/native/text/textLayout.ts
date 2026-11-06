@@ -504,9 +504,14 @@ function drawsCluster(face: FontMetrics, chars: ArrayLike<string>, start: number
   return true;
 }
 
-/** Whether `face` is a BMFont with no glyph for `ch`: Godot then draws `ch` as a hex-code box. The caller takes a tab first. */
-function lacksBitmapGlyph(face: FontMetrics, ch: string): boolean {
-  return isBitmapFontMetrics(face) && !face.glyphOf(ch);
+/**
+ * Whether no font of the chain has a glyph for `ch`: Godot then draws `ch` as a hex-code box
+ * (`text_server_adv.cpp:6835-6890`). The previewer has no host fonts, so `allow_system_fallback`
+ * finds nothing past the last fallback (`_find_sys_font_for_text`, `:6820-6833`). The caller takes a tab first.
+ */
+function lacksGlyph(face: FontMetrics, ch: string): boolean {
+  if (isBitmapFontMetrics(face)) return !face.glyphOf(ch);
+  return !face.hasGlyph(ch) && !KEEPS_ITS_FACE.test(ch);
 }
 
 /**
@@ -566,9 +571,7 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
       // A tab no stop aligns is as wide as the font's glyph for it, which is none (measured in
       // Godot 4.6.3: `a<TAB>b` with `tab_size` 0 sets `b` against `a`).
       advance = 0;
-    } else if (lacksBitmapGlyph(faces[i]!, ch)) {
-      // A BMFont lacks the character and has no system fallback (`resource_importer_bmfont.cpp:79`):
-      // the shaper keeps the invalid character as a hex-code box (`text_server_adv.cpp:6835-6890`).
+    } else if (lacksGlyph(faces[i]!, ch)) {
       advance = hexCodeBoxAdvanceSize(sizes[i]!, cp).x;
       controlCodepoint = cp;
     } else {

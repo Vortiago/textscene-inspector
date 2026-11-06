@@ -34,7 +34,7 @@ broke. Find a regression here, then pin it in the `unit-*` fixture of the type t
 
 - **Approximated** Text edges differ slightly from Godot's, because glyphs come from an MSDF
   atlas, while layout, wrap points and every non-text surface match.
-- **Not supported** The default font draws no arrows (`→ ← ↑ ↓`), as Godot takes them from a host font.
+- **Not supported** The default font has no arrows (`→ ← ↑ ↓`), and the previewer has no host fonts. Where Godot takes them from a host font, the previewer draws a hex-code box, as Godot does when no font matches.
 - **Approximated** A `[u]` underline sits slightly higher and softer than Godot's.
 - **Approximated** The `[b]` span reads heavier than Godot's and pushes the rest of its line
   slightly to the right.
