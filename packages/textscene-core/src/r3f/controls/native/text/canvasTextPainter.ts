@@ -15,7 +15,13 @@ import {
   paintEmboldenedFill,
   shearAboutBaseline,
 } from './canvasVariation';
-import { blendGlyphBitmap, placedGlyphBitmap, type ByteColour, type GlyphBitmap } from './glyphCoverage';
+import {
+  blendGlyphBitmap,
+  colourRaster,
+  placedGlyphBitmap,
+  type ByteColour,
+  type GlyphBitmap,
+} from './glyphCoverage';
 import {
   canvasGlyphPenXPx,
   drawnOpentype,
@@ -51,7 +57,7 @@ function wholeRasterPx(cssPx: number): number {
   return Math.max(1, Math.ceil(cssPx));
 }
 
-interface CanvasTextCanvasLayout {
+export interface CanvasTextCanvasLayout {
   /** `HTMLCanvasElement#width`: the drawn extent (`drawnExtentPx`), plus both pads and the origin phase, rounded up to a whole pixel. */
   canvasWidthPx: number;
   /** `HTMLCanvasElement#height`: `layout.heightPx` plus twice `offsetYPx`, rounded up to a whole pixel. */
@@ -222,16 +228,19 @@ function opaqueByteColour(tint: Pick<Rgba, 'r' | 'g' | 'b'>): ByteColour {
   return [clamp255(tint.r), clamp255(tint.g), clamp255(tint.b)];
 }
 
-/** Lays each glyph bitmap over what the context has drawn, in `colour`. */
-function blendGlyphBitmaps(
+/**
+ * The raster of what the context has drawn with each glyph bitmap laid over it, in `colour`. It is
+ * read back, not put, as a canvas keeps no colour under alpha 0 (`colourRaster`).
+ */
+function glyphRaster(
   ctx: CanvasRenderingContext2D,
   bitmaps: readonly GlyphBitmap[],
   colour: ByteColour
-): void {
-  if (bitmaps.length === 0) return;
+): ImageData {
   const image = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
-  for (const bitmap of bitmaps) blendGlyphBitmap(image, bitmap, colour);
-  ctx.putImageData(image, 0, 0);
+  for (const bitmap of bitmaps) blendGlyphBitmap(image, bitmap);
+  colourRaster(image, colour);
+  return image;
 }
 
 export interface CanvasTextPaintOptions {
@@ -251,10 +260,11 @@ export interface CanvasTextPaintOptions {
  * at each `GlyphPlacement.x`.
  * `skew` shears each line's ink about its own baseline. With the `outlines` its metrics carry, each
  * glyph draws as FreeType's bitmap of its contour, or of the ring round it (`glyphCoverage.ts`). The
- * contour carries the embolden and the shear, so a shear does not shear the ring's width.
+ * contour carries the embolden and the shear, so a shear does not shear the ring's width. Null where
+ * the document has no 2D context.
  */
 // Happy-dom has no 2D context, so a unit test gives the canvas a recording one and reads its calls
-// and the image data it puts.
+// and the raster it returns.
 export function paintSceneFontCanvas(
   layout: TextLayoutResult,
   fontSizePx: number,
@@ -262,7 +272,7 @@ export function paintSceneFontCanvas(
   skew: number,
   canvasLayout: CanvasTextCanvasLayout,
   { strokeWidthPx = 0, glyphDrawer = 'canvasItem', originPhasePx = VECTOR2_ZERO }: CanvasTextPaintOptions = {}
-): HTMLCanvasElement {
+): ImageData | null {
   const metrics = layout.fontMetrics;
   if (!isCanvasFontMetrics(metrics)) {
     throw new Error('paintSceneFontCanvas requires a layout shaped against a canvas-kind FontMetrics');
@@ -275,7 +285,7 @@ export function paintSceneFontCanvas(
   // A CPU canvas: the glyph bitmaps read and put its pixels, and a glyph with no outline draws on
   // the CPU rasteriser, which covers by exact area where the GPU raster thins small glyphs (`textRun.md`).
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) return canvas; // happy-dom/vitest only.
+  if (!ctx) return null;
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
@@ -356,9 +366,7 @@ export function paintSceneFontCanvas(
     }
     ctx.restore();
   });
-  blendGlyphBitmaps(ctx, glyphBitmaps, colour);
-
-  return canvas;
+  return glyphRaster(ctx, glyphBitmaps, colour);
 }
 
 interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {

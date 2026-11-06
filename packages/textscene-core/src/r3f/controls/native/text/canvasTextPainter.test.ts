@@ -261,11 +261,8 @@ interface Call {
 }
 
 /** The alpha at raster pixel `(x, y)` of the image the paint put, 0 where it put none. */
-function alphaAt(calls: readonly Call[], x: number, y: number): number {
-  const put = calls.find((call) => call.op === 'putImageData');
-  if (!put) return 0;
-  const image = put.args[0] as ImageData;
-  return image.data[(y * image.width + x) * 4 + 3]!;
+function alphaAt(raster: ImageData | null, x: number, y: number): number {
+  return raster ? raster.data[(y * raster.width + x) * 4 + 3]! : 0;
 }
 
 /** The grown outline of a glyph: a triangle 4 px wide and 6 px tall, its base on the baseline. */
@@ -336,10 +333,9 @@ function paintRecording(
       width,
       height,
     }),
-    putImageData: record('putImageData'),
   };
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never);
-  paintSceneFontCanvas(
+  const raster = paintSceneFontCanvas(
     carrying(layout, skew, outlines),
     fontSizePx,
     { r: 1, g: 1, b: 1, a: 1 },
@@ -351,7 +347,7 @@ function paintRecording(
       originPhasePx,
     }
   );
-  return { calls, canvasLayout };
+  return { calls, canvasLayout, raster };
 }
 
 function boldLayoutFor(text: string, embolden: number) {
@@ -480,14 +476,14 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
   it('fills the grown outline of a bold glyph from its pen, in place of the text', () => {
     const layout = boldLayoutFor('A', 1.2);
     const { outlines, glyphContours } = outlinesStub();
-    const { calls, canvasLayout } = paintRecording(layout, 0, { skew: 0, outlines });
+    const { raster, calls, canvasLayout } = paintRecording(layout, 0, { skew: 0, outlines });
     const penX = canvasLayout.offsetXPx;
     const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
 
     expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 1.2, skew: 0 });
-    expect(calls.map((call) => call.op)).toEqual(['putImageData']);
-    expect(alphaAt(calls, penX + 3, baselineY - 3)).toBe(255);
-    expect(alphaAt(calls, penX, baselineY - 1)).toBe(0);
+    expect(calls).toEqual([]);
+    expect(alphaAt(raster, penX + 3, baselineY - 3)).toBe(255);
+    expect(alphaAt(raster, penX, baselineY - 1)).toBe(0);
   });
 
   // A negative embolden shrinks the outline (`FT_Outline_Embolden`); a stroke of a negative width cannot.
@@ -496,7 +492,7 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
     const { calls } = paintRecording(boldLayoutFor('A', -0.5), 0, { skew: 0, outlines });
 
     expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: -0.5, skew: 0 });
-    expect(calls.map((call) => call.op)).toEqual(['putImageData']);
+    expect(calls).toEqual([]);
   });
 
   it('fills a bold and sheared glyph by one outline that carries both, under the identity transform', () => {
@@ -504,7 +500,7 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
     const { calls } = paintRecording(boldLayoutFor('A', 1.2), 0, { skew: 0.3, outlines });
 
     expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 1.2, skew: 0.3 });
-    expect(calls.map((call) => call.op)).toEqual(['putImageData']);
+    expect(calls).toEqual([]);
     expect(calls.every((call) => call.shear === 0)).toBe(true);
   });
 
@@ -520,14 +516,14 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
   it('fills the outline of a plain glyph from its pen, in place of the text', () => {
     const layout = layoutFor('A', 0);
     const { outlines, glyphContours } = outlinesStub();
-    const { calls, canvasLayout } = paintRecording(layout, 0, { skew: 0, outlines });
+    const { raster, calls, canvasLayout } = paintRecording(layout, 0, { skew: 0, outlines });
     const penX = canvasLayout.offsetXPx;
     const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
 
     expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0 });
-    expect(calls.map((call) => call.op)).toEqual(['putImageData']);
-    expect(alphaAt(calls, penX + 3, baselineY - 3)).toBe(255);
-    expect(alphaAt(calls, penX + 3, baselineY + 1)).toBe(0);
+    expect(calls).toEqual([]);
+    expect(alphaAt(raster, penX + 3, baselineY - 3)).toBe(255);
+    expect(alphaAt(raster, penX + 3, baselineY + 1)).toBe(0);
   });
 
   it('fills the sheared outline of a sheared glyph under the identity transform', () => {
@@ -535,7 +531,7 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
     const { calls } = paintRecording(layoutFor('A', 0), 0, { skew: 0.3, outlines });
 
     expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0.3 });
-    expect(calls.map((call) => call.op)).toEqual(['putImageData']);
+    expect(calls).toEqual([]);
     expect(calls.every((call) => call.shear === 0)).toBe(true);
   });
 });
@@ -548,13 +544,13 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
   it('strokes the outline of a plain glyph into a ring round its contour at its pen', () => {
     const layout = layoutFor('A', 0);
     const { outlines } = outlinesStub();
-    const { calls, canvasLayout } = paintRecording(layout, 4, { outlines });
+    const { raster, calls, canvasLayout } = paintRecording(layout, 4, { outlines });
     const penX = canvasLayout.offsetXPx;
     const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
 
-    expect(calls.map((call) => call.op)).toEqual(['putImageData']);
-    expect(alphaAt(calls, penX + 3, baselineY + 1)).toBe(255);
-    expect(alphaAt(calls, penX + 3, baselineY + 2)).toBe(0);
+    expect(calls).toEqual([]);
+    expect(alphaAt(raster, penX + 3, baselineY + 1)).toBe(255);
+    expect(alphaAt(raster, penX + 3, baselineY + 2)).toBe(0);
   });
 
   // FreeType strokes the emboldened contour (`text_server_adv.cpp:1314-1315`, then `:1383-1390`).
@@ -563,7 +559,7 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
     const { calls } = paintRecording(boldLayoutFor('A', 1.2), 4, { outlines });
 
     expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 1.2, skew: 0 });
-    expect(calls.map((call) => call.op)).toEqual(['putImageData']);
+    expect(calls).toEqual([]);
   });
 
   it('grows the outline of a repeated character once for the whole paint', () => {
@@ -581,7 +577,7 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
     const { calls } = paintRecording(layoutFor('A', 0), 4, { skew: 0.3, outlines });
 
     expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0.3 });
-    expect(calls.map((call) => call.op)).toEqual(['putImageData']);
+    expect(calls).toEqual([]);
     expect(calls.every((call) => call.shear === 0)).toBe(true);
   });
 
@@ -656,7 +652,7 @@ describe('paintSceneFontCanvas — a variable font at an instance', () => {
     const { calls } = paintRecording(instanceLayoutFor('A', outlines), 0);
 
     expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0, opentype: MONO_INSTANCE });
-    expect(calls.map((call) => call.op)).toEqual(['putImageData']);
+    expect(calls).toEqual([]);
   });
 
   it('strokes the ring of the outline at a non-default instance', () => {
@@ -664,7 +660,7 @@ describe('paintSceneFontCanvas — a variable font at an instance', () => {
     const { calls } = paintRecording(instanceLayoutFor('A', outlines), 4);
 
     expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0, opentype: MONO_INSTANCE });
-    expect(calls.map((call) => call.op)).toEqual(['putImageData']);
+    expect(calls).toEqual([]);
   });
 
   it('reads the default glyph where the axis values draw the default instance', () => {

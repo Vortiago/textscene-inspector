@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blendGlyphBitmap, placedGlyphBitmap, type GlyphBitmap } from './glyphCoverage';
+import { blendGlyphBitmap, colourRaster, placedGlyphBitmap, type GlyphBitmap } from './glyphCoverage';
 import type { GlyphContours } from './glyphContours';
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
 
@@ -50,18 +50,18 @@ describe('placedGlyphBitmap', () => {
 describe('blendGlyphBitmap', () => {
   const half: GlyphBitmap = { grid: { left: 0, top: 0, width: 1, height: 1 }, coverage: Uint8Array.of(128) };
 
-  it('lays the coverage in the colour as the alpha of the pixel', () => {
+  it('lays the coverage as the alpha of the pixel', () => {
     const image = imageOf(1, 1);
-    blendGlyphBitmap(image, half, [10, 20, 30]);
+    blendGlyphBitmap(image, half);
 
-    expect([...image.data]).toEqual([10, 20, 30, 128]);
+    expect([...image.data]).toEqual([0, 0, 0, 128]);
   });
 
   // Godot blends each glyph quad over the last, so two half-covered glyphs leave a quarter uncovered.
   it('combines the alphas of two glyphs that overlap as one over the other', () => {
     const image = imageOf(1, 1);
-    blendGlyphBitmap(image, half, [10, 20, 30]);
-    blendGlyphBitmap(image, half, [10, 20, 30]);
+    blendGlyphBitmap(image, half);
+    blendGlyphBitmap(image, half);
 
     expect(image.data[3]).toBe(192);
   });
@@ -72,8 +72,20 @@ describe('blendGlyphBitmap', () => {
       grid: { left: -1, top: 0, width: 3, height: 1 },
       coverage: Uint8Array.of(9, 255, 9),
     };
-    blendGlyphBitmap(image, wide, [0, 0, 0]);
+    blendGlyphBitmap(image, wide);
 
     expect(image.data[3]).toBe(255);
+  });
+});
+
+describe('colourRaster', () => {
+  // Godot's glyph texture holds one colour in every texel (`FORMAT_LA8`), so a filter at an edge
+  // blends no black from the texels the glyph leaves uncovered.
+  it('gives an uncovered pixel the colour too, and keeps each alpha', () => {
+    const image = imageOf(2, 1);
+    image.data[3] = 128;
+    colourRaster(image, [10, 20, 30]);
+
+    expect([...image.data]).toEqual([10, 20, 30, 128, 10, 20, 30, 0]);
   });
 });

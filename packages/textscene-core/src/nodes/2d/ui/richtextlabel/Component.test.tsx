@@ -369,7 +369,7 @@ describe('<RichTextLabel> — scene-font (canvas-kind FontMetrics) text path', (
 
   function canvasMeshes(renderer: Awaited<ReturnType<typeof render>>): THREE.Mesh[] {
     return meshesOf(renderer).filter(
-      (m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.CanvasTexture
+      (m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.DataTexture
     );
   }
 

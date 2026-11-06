@@ -83,14 +83,10 @@ export function placedGlyphBitmap(
 export type ByteColour = readonly [red: number, green: number, blue: number];
 
 /**
- * Lays `bitmap` over `image` in `colour`, as Godot blends each glyph quad over what
- * is under it: the alphas combine as `a + c (1 - a)`. A pixel off the image is dropped.
+ * Lays the coverage of `bitmap` over the alpha of `image`, as Godot blends each glyph quad over
+ * what is under it: the alphas combine as `a + c (1 - a)`. A pixel off the image is dropped.
  */
-export function blendGlyphBitmap(
-  image: ImageData,
-  { grid, coverage }: GlyphBitmap,
-  colour: ByteColour
-): void {
+export function blendGlyphBitmap(image: ImageData, { grid, coverage }: GlyphBitmap): void {
   const { data, width, height } = image;
   for (let row = 0; row < grid.height; row++) {
     const y = grid.top + row;
@@ -99,11 +95,22 @@ export function blendGlyphBitmap(
       const x = grid.left + column;
       const level = coverage[row * grid.width + column]!;
       if (x < 0 || x >= width || level === 0) continue;
-      const at = (y * width + x) * 4;
-      data[at] = colour[0];
-      data[at + 1] = colour[1];
-      data[at + 2] = colour[2];
-      data[at + 3] = Math.round(level + (data[at + 3]! * (255 - level)) / 255);
+      const at = (y * width + x) * 4 + 3;
+      data[at] = Math.round(level + (data[at]! * (255 - level)) / 255);
     }
+  }
+}
+
+/**
+ * Gives every pixel of `image` the colour `colour` and keeps its alpha, as Godot's glyph texture holds
+ * one colour in every texel and the coverage in alpha (`FORMAT_LA8`, `text_server_adv.cpp:1170-1174`).
+ * A texel with no colour under alpha 0 would darken an edge under a linear filter and in each mip level.
+ */
+export function colourRaster(image: ImageData, colour: ByteColour): void {
+  const { data } = image;
+  for (let at = 0; at < data.length; at += 4) {
+    data[at] = colour[0];
+    data[at + 1] = colour[1];
+    data[at + 2] = colour[2];
   }
 }

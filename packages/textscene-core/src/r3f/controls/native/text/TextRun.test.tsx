@@ -273,14 +273,14 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
     expect(map.generateMipmaps).toBe(false);
   });
 
-  it('uses a plain textured material (no MSDF uniforms/shader), sourced from a canvas texture', async () => {
+  it("uses a plain textured material (no MSDF uniforms/shader), sourced from the raster's data texture", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <TextRun layout={canvasLayoutFor('Hi')} fontSizePx={16} tint={WHITE} />
     );
     const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
       .material as THREE.MeshBasicMaterial;
     expect((mat as unknown as { isShaderMaterial?: boolean }).isShaderMaterial).toBeUndefined();
-    expect(mat.map).toBeInstanceOf(THREE.CanvasTexture);
+    expect(mat.map).toBeInstanceOf(THREE.DataTexture);
     expect(mat.transparent).toBe(true);
   });
 
