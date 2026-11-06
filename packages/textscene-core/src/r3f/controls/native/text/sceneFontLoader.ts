@@ -255,7 +255,7 @@ function peekFace(font: FontResource, nodePath: string): FontMetrics | typeof MI
   if (metrics === undefined) return null;
   if (metrics === null) return MISSING_FACE;
   const variation = fontVariation(font);
-  const outlines = peekGlyphOutlines(face, metrics, variation);
+  const outlines = peekGlyphOutlines(face, metrics);
   return outlines === undefined ? null : withVariation(metrics, { ...variation, outlines });
 }
 

@@ -342,7 +342,7 @@ export function isInstanced(opentype: OpentypeCoordinates | undefined): opentype
 }
 
 /** Whether the variation changes the glyph outline at all. */
-export function isGlyphVaried({ embolden = 0, skew = 0, opentype }: GlyphVariation): boolean {
+function isGlyphVaried({ embolden = 0, skew = 0, opentype }: GlyphVariation): boolean {
   return embolden !== 0 || skew !== 0 || isInstanced(opentype);
 }
 

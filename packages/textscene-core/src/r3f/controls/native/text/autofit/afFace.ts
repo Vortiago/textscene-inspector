@@ -22,13 +22,20 @@ export interface AutofitFace extends ShapingFace, UnscaledOutlines {
   readonly codePoints: readonly number[];
 }
 
-/** `AF_ScalerRec`: the 16.16 scales and 26.6 offsets of one load, and the size's ppem. */
+/**
+ * `FT_LOAD_TARGET_*` of a load, which `scaler.render_mode` holds: the light target fits no stem
+ * width, and the Latin system hints no x.
+ */
+export type RenderMode = 'normal' | 'light';
+
+/** `AF_ScalerRec`: the 16.16 scales and 26.6 offsets of one load, the size's ppem, and its target. */
 export interface Scaler {
   xScale: number;
   yScale: number;
   xDelta: number;
   yDelta: number;
   ppem: number;
+  renderMode: RenderMode;
 }
 
 /**
@@ -64,6 +71,7 @@ export const newScaler = (): Scaler => ({
   xDelta: 0,
   yDelta: 0,
   ppem: 0,
+  renderMode: 'normal',
 });
 
 /** The clusters of a blue or standard string: the runs between its spaces. */

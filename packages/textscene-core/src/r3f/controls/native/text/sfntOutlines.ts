@@ -1,11 +1,9 @@
 /**
- * A font's glyph outlines as Godot's text server hands them to TextMesh: the glyph index of a
- * character from `cmap` (`sfntCmap.ts`), and the points of that glyph from `glyf` (`sfntGlyf.ts`) or
- * from `CFF ` and `CFF2` (`sfntCff.ts`). A WOFF or WOFF2 opens through `fontContainer.ts`, which
- * hands the readers the plain tables. A TrueType font that FreeType hints natively loads the bytecode
- * interpreter (`truetype/trueTypeHinting.ts`) on demand, which hints each `glyf` outline. Any
- * other TrueType font, and any font that forces it, loads the auto-hinter (`autofit/autoHinter.ts`)
- * on demand.
+ * A font's glyph outlines as Godot's text server loads them for TextMesh and for its glyph bitmaps:
+ * the glyph index of a character from `cmap` (`sfntCmap.ts`), and the points of that glyph from
+ * `glyf` (`sfntGlyf.ts`) or from `CFF ` and `CFF2` (`sfntCff.ts`). A WOFF or WOFF2 opens through
+ * `fontContainer.ts`, which hands the readers the plain tables. The bytecode interpreter
+ * (`truetype/trueTypeHinting.ts`) and the auto-hinter (`autofit/autoHinter.ts`) load on demand.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -13,11 +11,12 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { Hinting, type FontHinting } from '../../../../godot/text/textServerEnums';
 import { orOnRangeError, sfntGlyphIndex } from './sfntCmap';
 import { glyphMetricsReader, metricsAtInstance } from './sfntGlyphMetrics';
 import type { GlyphContours, GlyphOutlineReader } from './glyphContours';
 import { glyphAdvance26_6, isInstanced, type GlyphVariation, type OpentypeCoordinates } from './fontMetrics';
-import { cffOutlineReader } from './sfntCff';
+import { cffOutlineReader, unhintedCffOutlineReader } from './sfntCff';
 import { isNativelyHinted, type GlyphHinting } from './glyphHinting';
 import { glyfAdvanceReader, glyphOutlineReader } from './sfntGlyf';
 import { variedContours } from './glyphVariation';
@@ -63,32 +62,29 @@ export interface SfntOutlines {
   drawsInstance?(opentype: OpentypeCoordinates): boolean;
 }
 
+/** How a font's glyphs load: its `hinting` (`text_server_adv.cpp:1270-1282`), and `force_autohinter`. */
+export interface GlyphLoad {
+  hinting: FontHinting;
+  isAutohinterForced: boolean;
+}
+
+/** The load of `font_get_glyph_contours`, which a TextMesh extrudes: the normal target (`text_server_adv.cpp:3613`). */
+export const CONTOUR_LOAD: GlyphLoad = { hinting: Hinting.NORMAL, isAutohinterForced: false };
+
 /**
  * Reads the outlines of a TrueType or OpenType-CFF font in a plain, WOFF or WOFF2 file, or returns
  * `null`, never throws, for a font with no `glyf` or CFF table, no readable `cmap` or a table that
  * does not fit its buffer. The reader answers no glyph, not an error, for an offset a corrupt table
- * puts past the buffer. A `glyf` font without its own hints loads through the auto-hinter.
+ * puts past the buffer. Each glyph loads as `load` asks.
  */
-export function openFontOutlines(bytes: ArrayBuffer): Promise<SfntOutlines | null> {
-  return openOutlines(bytes, (sfnt) => sfnt.tables.has('glyf') && !isNativelyHinted(sfnt));
-}
-
-/**
- * `openFontOutlines` for a `FontFile` with `force_autohinter` on: any font loads through the
- * auto-hinter, even with its own hints, unless it is tricky (`ftobjs.c`, `FT_Load_Glyph`).
- */
-export function openAutoHintedFontOutlines(bytes: ArrayBuffer): Promise<SfntOutlines | null> {
-  return openOutlines(bytes, (sfnt) => !isTrickyFont(sfnt));
-}
-
-async function openOutlines(
+export async function openFontOutlines(
   bytes: ArrayBuffer,
-  isAutoHinted: (sfnt: SfntFile) => boolean
+  load: GlyphLoad = CONTOUR_LOAD
 ): Promise<SfntOutlines | null> {
   const sfnt = await openFontContainer(bytes, OUTLINE_TABLE_TAGS);
   if (!sfnt) return null;
   const [outlineOf, kerningReader, glyphIndexReader] = await Promise.all([
-    isAutoHinted(sfnt) ? autoHintedReaderOf(sfnt) : nativeReaderOf(sfnt),
+    outlineReaderOf(sfnt, load),
     variationReaderOf(
       sfnt,
       ['GPOS', 'fvar'],
@@ -101,6 +97,26 @@ async function openOutlines(
     ),
   ]);
   return readSfntOutlines(sfnt, outlineOf, kerningReader, glyphIndexReader);
+}
+
+/**
+ * The reader `FT_Load_Glyph` picks for `load` (`ftobjs.c:976-1016`): a tricky font hints itself,
+ * even with no hinting asked (`ttdriver.c`, `tt_glyph_load`). Otherwise no hinting reads the outline
+ * as it is, and the auto-hinter takes a forced load, a TrueType font at the light target, since its
+ * driver does not hint lightly, and a TrueType font without hints.
+ */
+async function outlineReaderOf(sfnt: SfntFile, load: GlyphLoad): Promise<GlyphOutlineReader | null> {
+  if (isTrickyFont(sfnt)) return nativeReaderOf(sfnt);
+  if (load.hinting === Hinting.NONE) return unhintedReaderOf(sfnt);
+  const isTrueType = sfnt.tables.has('glyf');
+  const isAutoHinted =
+    load.isAutohinterForced || (isTrueType && (load.hinting === Hinting.LIGHT || !isNativelyHinted(sfnt)));
+  return isAutoHinted ? autoHintedReaderOf(sfnt, load.hinting) : nativeReaderOf(sfnt);
+}
+
+/** The reader of a font's outlines scaled with no hints, as `FT_LOAD_NO_HINTING` loads them. */
+function unhintedReaderOf(sfnt: SfntFile): GlyphOutlineReader | null {
+  return glyphOutlineReader(sfnt, null) ?? unhintedCffOutlineReader(sfnt);
 }
 
 /**
@@ -189,10 +205,13 @@ async function glyphHintingOf(sfnt: SfntFile): Promise<GlyphHinting | null> {
   return orOnRangeError(() => trueTypeHinting(sfnt), null);
 }
 
-/** The auto-hinter's reader, which hints a variable font at the instance that its glyphs and blue zones follow. */
-async function autoHintedReaderOf(sfnt: SfntFile): Promise<GlyphOutlineReader | null> {
+/**
+ * The auto-hinter's reader for the target `hinting`, which hints a variable font at the instance that
+ * its glyphs and blue zones follow.
+ */
+async function autoHintedReaderOf(sfnt: SfntFile, hinting: FontHinting): Promise<GlyphOutlineReader | null> {
   const { autoHintedReader } = await import('./autofit/autoHinter');
-  return orOnRangeError(() => autoHintedReader(sfnt), null);
+  return orOnRangeError(() => autoHintedReader(sfnt, hinting === Hinting.LIGHT ? 'light' : 'normal'), null);
 }
 
 /** The font at the axis values of `variation`, or null for the default instance. */

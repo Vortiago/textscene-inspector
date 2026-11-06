@@ -23,10 +23,14 @@ const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 const bundled = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | null | undefined }));
 
 vi.mock('./bundledFontLoader', () => ({ peekBundledCanvasFontMetrics: () => bundled.metrics }));
-vi.mock('./sceneFontOutlines', () => ({ peekGlyphOutlines: () => null }));
+vi.mock('./sceneFontOutlines', () => ({
+  peekGlyphOutlines: () => null,
+  peekBundledGlyphOutlines: () => null,
+}));
 
+// Null is a bundled canvas face that cannot register, which leaves the atlas to draw the fill.
 beforeEach(() => {
-  bundled.metrics = undefined;
+  bundled.metrics = null;
 });
 
 function emboldenedLayout(embolden: number) {
@@ -56,6 +60,22 @@ async function renderTextRun(props: Partial<TextRunProps> = {}) {
 }
 
 describe('<TextRun>', () => {
+  // Godot's default font is not MSDF, so FreeType fills every glyph (`text_server_adv.cpp:1360-1373`).
+  it('draws a plain atlas face on the bundled canvas face, as FreeType fills every glyph', async () => {
+    bundled.metrics = createOpenSansCanvasFontMetrics('bundled-textrun-fill-test');
+    const renderer = await renderTextRun();
+    await vi.waitFor(() => expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1));
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect(mesh.material).not.toBeInstanceOf(THREE.ShaderMaterial);
+    expect(mesh.geometry.getAttribute('position').count).toBe(4);
+  });
+
+  it('draws nothing for a plain atlas face while the bundled canvas face loads', async () => {
+    bundled.metrics = undefined;
+    const renderer = await renderTextRun();
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
   it('mounts a single mesh carrying the merged glyph geometry', async () => {
     const renderer = await renderTextRun();
     const meshes = renderer.scene.findAllByType('Mesh');
@@ -253,14 +273,14 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
     expect(map.generateMipmaps).toBe(false);
   });
 
-  it('uses a plain textured material (no MSDF uniforms/shader), sourced from a canvas texture', async () => {
+  it("uses a plain textured material (no MSDF uniforms/shader), sourced from the raster's data texture", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <TextRun layout={canvasLayoutFor('Hi')} fontSizePx={16} tint={WHITE} />
     );
     const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
       .material as THREE.MeshBasicMaterial;
     expect((mat as unknown as { isShaderMaterial?: boolean }).isShaderMaterial).toBeUndefined();
-    expect(mat.map).toBeInstanceOf(THREE.CanvasTexture);
+    expect(mat.map).toBeInstanceOf(THREE.DataTexture);
     expect(mat.transparent).toBe(true);
   });
 

@@ -4,7 +4,7 @@
  * `"Arbitrary:1,Word:2,Word (Smart):3"` while Button's offers `"Off,Arbitrary,Word,Word (Smart)"`.
  */
 
-import { enumNamesByValue, flagLabels } from '../classdb/enumNames.js';
+import { enumMember, enumNamesByValue, flagLabels, type EnumValue } from '../classdb/enumNames.js';
 
 /**
  * `TextServer::AutowrapMode`: AUTOWRAP_OFF=0 … AUTOWRAP_WORD_SMART=3
@@ -40,6 +40,21 @@ export const ContourPointTag = {
   ON: 1,
   OFF_CUBIC: 2,
 } as const;
+
+/**
+ * `TextServer::Hinting` (`servers/text/text_server.h:161-163`), each member without `HINTING_`: the
+ * target FreeType loads a glyph for.
+ */
+export const Hinting = {
+  NONE: 0,
+  LIGHT: 1,
+  NORMAL: 2,
+} as const;
+export type FontHinting = EnumValue<typeof Hinting>;
+
+/** The hinting a `TextServer::Hinting` value names. Absent or unknown is light, the default of a font. */
+export const fontHintingOf = (value: number | undefined): FontHinting =>
+  (value === undefined ? null : enumMember(Hinting, value)) ?? Hinting.LIGHT;
 
 /**
  * `TextServer::OverrunBehavior`: OVERRUN_NO_TRIMMING=0 …

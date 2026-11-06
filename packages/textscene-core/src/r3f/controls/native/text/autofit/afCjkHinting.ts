@@ -192,10 +192,11 @@ function computeCjkBlueEdges(hints: GlyphHints, metrics: CjkMetrics): void {
 const STANDARD_WIDTH_SNAP = 40;
 
 /**
- * `af_cjk_compute_stem_width` in normal mode. FreeType reads the standard width's `cur`, which it
- * never scales, so a stem under 40/64 px grows to 48/64 px.
+ * `af_cjk_compute_stem_width`. FreeType reads the standard width's `cur`, which it never scales, so
+ * a stem under 40/64 px grows to 48/64 px. The light target keeps every width.
  */
 function cjkStemWidth(metrics: CjkMetrics, dim: DimensionValue, width: number): number {
+  if (metrics.scaler.renderMode === 'light') return width;
   const { widths } = metrics.axis[dim];
   let dist = Math.abs(width);
   if (widths.length > 0 && Math.abs(dist - widths[0]!.cur) < STANDARD_WIDTH_SNAP)
@@ -222,8 +223,9 @@ function alignCjkLinkedEdge(metrics: CjkMetrics, dim: DimensionValue, base: Edge
 }
 
 /**
- * `af_hint_normal_stem` with stems adjusting: fits the stem's width, centres it on its place moved
- * by `anchor`, and shifts it to the nearer whole pixel for both sides. Returns the shift.
+ * `af_hint_normal_stem`: fits the stem's width, centres it on its place moved by `anchor`, and
+ * shifts it to the nearer whole pixel for both sides. The light target shifts a stem at most
+ * `LIGHT_MAX_SHIFT`. Returns the shift.
  */
 function hintNormalStem(
   metrics: CjkMetrics,
@@ -232,35 +234,56 @@ function hintNormalStem(
   edge2: Edge,
   anchor: number
 ): number {
+  const isLight = metrics.scaler.renderMode === 'light';
   const length = cjkStemWidth(metrics, dim, edge2.opos - edge.opos);
   const pos1 = divide(edge.opos + edge2.opos, 2) + anchor - divide(length, 2);
-  const delta = stemShift(pos1, length);
+  const threshold = isLight ? lightStemThreshold(dim, edge, edge2) : 64;
+  const shift = stemShift(pos1, length, threshold);
+  const delta = isLight ? Math.min(Math.max(shift, -LIGHT_MAX_SHIFT), LIGHT_MAX_SHIFT) : shift;
   if (edge.opos < edge2.opos) [edge.pos, edge2.pos] = [pos1 + delta, pos1 + delta + length];
   else [edge.pos, edge2.pos] = [pos1 + delta + length, pos1 + delta];
   return delta;
 }
 
-/** The full pixel of the normal mode: the light mode's lower thresholds and clamp do not apply. */
-const STEM_THRESHOLD = 64;
+/** `AF_LIGHT_MODE_MAX_HORZ_GAP` and `AF_LIGHT_MODE_MAX_VERT_GAP` (`afcjk.c:1659-1660`), in 26.6. */
+const LIGHT_MAX_HORZ_GAP = 9;
+const LIGHT_MAX_VERT_GAP = 15;
+/** `AF_LIGHT_MODE_MAX_DELTA_ABS` (`afcjk.c:1661`): the largest shift of a stem at the light target. */
+const LIGHT_MAX_SHIFT = 14;
 
-/** The shift of a stem from `pos1`, `length` long, that puts the side nearer the grid on it. */
-function stemShift(pos1: number, length: number): number {
+/**
+ * The light target's threshold of a stem: a stem this short shifts only to put one side on the grid,
+ * and a side this far off it leaves the stem in place. Round stems take the whole gap, others a third.
+ */
+function lightStemThreshold(dim: DimensionValue, edge: Edge, edge2: Edge): number {
+  const gap = dim === Dimension.VERT ? LIGHT_MAX_HORZ_GAP : LIGHT_MAX_VERT_GAP;
+  const isRound = edge.flags & edge2.flags & EdgeFlag.ROUND;
+  return 64 - (isRound ? gap : Math.trunc(gap / 3));
+}
+
+/**
+ * The shift of a stem from `pos1`, `length` long, that puts the side nearer the grid on it. The
+ * normal target's `threshold` is a full pixel.
+ */
+function stemShift(pos1: number, length: number, threshold: number): number {
   const pos2 = pos1 + length;
   let dOff1 = pos1 - pixFloor(pos1);
   let dOff2 = pos2 - pixFloor(pos2);
   let uOff1 = 64 - dOff1;
+  let uOff2 = 64 - dOff2;
   if (dOff1 === 0 || dOff2 === 0) return 0;
-  if (length <= STEM_THRESHOLD) {
+  if (length <= threshold) {
     if (dOff2 >= length) return 0;
     return uOff1 <= dOff2 ? uOff1 : -dOff2;
   }
+  if (threshold < 64 && Math.max(dOff1, uOff1, dOff2, uOff2) >= threshold) return 0;
   let offset = length & 63;
   if (offset < 32) {
     if (uOff1 <= offset || dOff2 <= offset) return 0;
-  } else offset = 64 - STEM_THRESHOLD;
-  dOff1 = STEM_THRESHOLD - uOff1;
+  } else offset = 64 - threshold;
+  dOff1 = threshold - uOff1;
   uOff1 -= offset;
-  let uOff2 = STEM_THRESHOLD - dOff2;
+  uOff2 = threshold - dOff2;
   dOff2 -= offset;
   if (dOff1 <= uOff1) uOff1 = -dOff1;
   if (dOff2 <= uOff2) uOff2 = -dOff2;

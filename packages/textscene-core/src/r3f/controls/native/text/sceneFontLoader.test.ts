@@ -486,7 +486,7 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
     const font = ttf();
 
     peek(font, 'Root/Ink');
-    await settleLoads();
+    await vi.waitFor(() => expect(peek(font, 'Root/Ink')).not.toBeNull(), OUTLINE_LOAD_TIMEOUT_MS);
 
     const face = peek(font, 'Root/Ink') as CanvasFontMetrics;
     expect(face.getGlyphInkUnits?.('A')).toEqual({ left: 30, right: 470 });
