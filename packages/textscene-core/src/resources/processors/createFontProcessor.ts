@@ -17,6 +17,7 @@ import type { DependencyGraph } from '../dependencyGraph';
 import { buildFontResource, fontResourceFromBitmap, fontResourceFromContainer } from '../fonts/font/loadFont';
 import { isFontContainerPath } from '../formats/dynamicfont/fontBytes';
 import { BMFONT_IMPORTER, DYNAMIC_FONT_IMPORTER } from '../../godot/import/fontImport';
+import { importFontParams } from '../../parser/importParser';
 import { isBmfontPath } from '../formats/bmfont/extensions';
 import { loadBitmapFont } from '../formats/bmfont/loadBitmapFont';
 import type { PageImage } from '../formats/bmfont/pageFill';
@@ -63,10 +64,7 @@ export function createFontProcessor(
     return false;
   };
 
-  /**
-   * The `[params]` of a font's `.import` sidecar, which Godot's `importer` sets on the FontFile.
-   * A sidecar of another importer sets nothing on it, so it reads as none.
-   */
+  /** The `[params]` of a font's `.import` sidecar that `importer` sets on the FontFile. */
   const importParamsOf = async (path: string, importer: string): Promise<Record<string, string>> => {
     const sidecar = await readImportSidecar({
       assetPath: path,
@@ -74,7 +72,7 @@ export function createFontProcessor(
       fileEventBus,
       dependencies,
     });
-    return sidecar?.importer === importer ? sidecar.params : {};
+    return importFontParams(sidecar, importer);
   };
 
   /** A BMFont page: its bytes, decoded to pixels, with the format Godot's image loader gives the file. Records the page as a read of `font`, so a change to it reloads the font. */

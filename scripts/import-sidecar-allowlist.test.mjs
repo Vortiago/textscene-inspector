@@ -355,18 +355,6 @@ function topLevelBlocks(text) {
   return blocks.sort();
 }
 
-/** Each parameter of a read sidecar that leaves its asserted default, as one line. */
-function defaultFindings(name, { importer, params }, deviations = {}) {
-  const findings = [];
-  for (const [key, value] of Object.entries(params)) {
-    const expected = MUST_BE_DEFAULT.get(key) ?? IMPORTER_MUST_BE_DEFAULT.get(importer)?.get(key);
-    if (expected !== undefined && expected !== value && deviations[key] !== value) {
-      findings.push(`${name}: ${key}=${value} would change the render (want ${expected || '""'})`);
-    }
-  }
-  return findings;
-}
-
 /** Per importer, the parameters whose default is asserted. */
 const IMPORTER_MUST_BE_DEFAULT = new Map([
   [TEXTURE_IMPORTER, TEXTURE_MUST_BE_DEFAULT],
@@ -379,6 +367,18 @@ const IMPORTER_REVIEWED = new Map([
   [DYNAMIC_FONT_IMPORTER, DYNAMIC_FONT_INERT],
   ...[...LAYERED_TEXTURE_IMPORTERS].map((importer) => [importer, LAYERED_TEXTURE_PARAMS]),
 ]);
+
+/** Each parameter of a read sidecar that leaves its asserted default, as one line. */
+function defaultFindings(name, { importer, params }, deviations = {}) {
+  const findings = [];
+  for (const [key, value] of Object.entries(params)) {
+    const expected = MUST_BE_DEFAULT.get(key) ?? IMPORTER_MUST_BE_DEFAULT.get(importer)?.get(key);
+    if (expected !== undefined && expected !== value && deviations[key] !== value) {
+      findings.push(`${name}: ${key}=${value} would change the render (want ${expected || '""'})`);
+    }
+  }
+  return findings;
+}
 
 const rel = (file) => relative(REPO_ROOT, file).split(sep).join('/');
 
