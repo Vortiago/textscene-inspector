@@ -338,15 +338,14 @@ export function paintSceneFontCanvas(
     throw new Error('paintSceneFontCanvas requires a layout shaped against a canvas-kind FontMetrics');
   }
   const contoursOf = placementContoursReader(metrics, fontSizePx, skew);
-  const glyphs = placeGlyphs(
-    layout,
+  const frame: RasterFrame = {
     metrics,
     fontSizePx,
     canvasLayout,
-    glyphDrawer,
     originPhasePx,
-    contoursOf
-  );
+    snapsGlyphs: snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, metrics),
+  };
+  const glyphs = placeGlyphs(layout, frame, contoursOf);
   const textGlyphs = glyphs.filter((glyph) => !glyph.contours);
   const colour = opaqueByteColour(tint);
   const { canvasWidthPx, canvasHeightPx } = canvasLayout;
@@ -388,18 +387,22 @@ function placementContoursReader(
   return (gp) => (gp.glyphIndex === undefined ? contoursOfChar(gp.char) : contoursOfGlyph(gp.glyphIndex));
 }
 
+/** Where a raster sits against the run origin, and whether its glyphs snap to whole item pixels. */
+interface RasterFrame {
+  readonly metrics: CanvasFontMetrics;
+  readonly fontSizePx: number;
+  readonly canvasLayout: CanvasTextCanvasLayout;
+  readonly originPhasePx: Readonly<Vector2>;
+  readonly snapsGlyphs: boolean;
+}
+
 /** Each glyph of `layout` that draws, at its pen and baseline in the raster. */
 function placeGlyphs(
   layout: TextLayoutResult,
-  metrics: CanvasFontMetrics,
-  fontSizePx: number,
-  canvasLayout: CanvasTextCanvasLayout,
-  glyphDrawer: GlyphDrawer,
-  originPhasePx: Readonly<Vector2>,
+  { metrics, fontSizePx, canvasLayout, originPhasePx, snapsGlyphs }: RasterFrame,
   contoursOf: (gp: GlyphPlacement) => GlyphContours | null
 ): PlacedGlyph[] {
   // The raster starts at the whole item pixel at or before the run origin, where its quad sits.
-  const snapsGlyphs = snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, metrics);
   return layout.lines.flatMap((line, lineIndex) => {
     const lineBaselinePx = lineIndex * layout.linePitchPx + layout.baselineOffsetPx;
     const baselineY =

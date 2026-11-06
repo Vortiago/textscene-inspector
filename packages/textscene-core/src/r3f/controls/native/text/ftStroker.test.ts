@@ -51,8 +51,9 @@ function polygon(points: readonly (readonly [number, number])[]): GlyphContours 
 }
 
 describe('strokeGlyphContours', () => {
-  // A spread of this many points into `splice` exceeds the engine's argument limit (RangeError).
-  it('strokes a contour of more points than a call takes as arguments', () => {
+  // A spread of this many points into `splice` exceeds the engine's argument limit (RangeError),
+  // which V8 reaches near 125,000. Stroking costs about 17 µs a point: 3.4 s here, 5.3 s on CI.
+  it('strokes a contour of more points than a call takes as arguments', { timeout: 20_000 }, () => {
     const POINT_COUNT = 200_000;
     const RADIUS = 1_000_000;
     const ring = Array.from({ length: POINT_COUNT }, (_, i): [number, number] => {
