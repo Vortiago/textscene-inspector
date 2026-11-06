@@ -11,7 +11,6 @@
 
 import {
   DEFAULT_FEATURES,
-  featureSubstitutionAt,
   type FeatureSubstitution,
   GposType,
   i16,
@@ -28,7 +27,8 @@ import {
 import { gdefOf, glyphPropsReader, lookupMatcher, type LookupGlyph } from '../autofit/openTypeGdef';
 import { FIXED_16_16_ONE } from '../fontMetrics';
 import type { SfntFile } from '../sfntTables';
-import { fixedToFdot14 } from './fixedPoint';
+import { featureLookupsAt } from '../autofit/openTypeFeatures';
+import { featureSubstitutionOfInstance } from './instanceRecord';
 import { readFvarAxes } from './fvar';
 import { itemDeltaFixed, readItemVariationStore, type ItemVariationStore } from './itemVariationStore';
 
@@ -59,9 +59,7 @@ function kernLookups(table: LayoutTable, substitution: FeatureSubstitution | und
   for (const { defaultLanguage } of table.scripts) {
     if (!defaultLanguage) continue;
     for (const index of languageFeatures(table, defaultLanguage, DEFAULT_FEATURES))
-      (substitution?.substitutions.get(index) ?? table.features[index]?.lookups ?? []).forEach((lookup) =>
-        lookups.add(lookup)
-      );
+      featureLookupsAt(table, index, substitution).forEach((lookup) => lookups.add(lookup));
   }
   return [...lookups].sort((a, b) => a - b);
 }
@@ -122,7 +120,7 @@ export function instanceKerningReader(
   if (!hasPairLookups) return null;
   const pairLookupsByRecord = new Map<FeatureSubstitution | undefined, PairLookup[]>();
   const pairLookupsAt = (normalized: Int32Array): PairLookup[] => {
-    const record = featureSubstitutionAt(table, Array.from(normalized, fixedToFdot14));
+    const record = featureSubstitutionOfInstance(table, normalized);
     let found = pairLookupsByRecord.get(record);
     if (!found) pairLookupsByRecord.set(record, (found = pairLookupsOf(table, record)));
     return found;

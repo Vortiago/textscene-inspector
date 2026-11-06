@@ -43,7 +43,16 @@ const FALLBACK_SCRIPT_TAGS = ['DFLT', 'dflt', 'latn'] as const;
 /** The `FeatureVariations` record that holds at the default instance, found once for a table. */
 export const defaultSubstitution = perObject((table: LayoutTable) => featureSubstitutionAt(table, []));
 
-/** The lookups of `features` under the first script of `scriptTags` the table has, its default language, as `substitution` changes them. */
+/** The lookups of feature `index`: those of `substitution`, the `FeatureVariations` record that holds, or its own. */
+export function featureLookupsAt(
+  table: LayoutTable,
+  index: number,
+  substitution: FeatureSubstitution | undefined
+): readonly number[] {
+  return substitution?.substitutions.get(index) ?? table.features[index]?.lookups ?? [];
+}
+
+/** The lookups of `features` under the first script of `scriptTags` the table has, in its default language. */
 export function featureLookups(
   table: LayoutTable,
   scriptTags: readonly string[],
@@ -56,8 +65,6 @@ export function featureLookups(
   const language = script?.defaultLanguage;
   if (!language) return [];
   const indices = languageFeatures(table, language, features);
-  const lookupsOf = (index: number): readonly number[] =>
-    substitution?.substitutions.get(index) ?? table.features[index]?.lookups ?? [];
-  const lookups = new Set(indices.flatMap(lookupsOf));
+  const lookups = new Set(indices.flatMap((index) => featureLookupsAt(table, index, substitution)));
   return [...lookups].sort((a, b) => a - b);
 }

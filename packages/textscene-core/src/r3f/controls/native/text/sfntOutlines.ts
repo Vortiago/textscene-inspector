@@ -277,7 +277,7 @@ function readSfntOutlines(
   const instanceAt = instanceReaderOf(sfnt);
   const glyphIndex: InstanceGlyphIndex = glyphIndexReader
     ? glyphIndexReader(sfnt, cmapGlyphIndex)
-    : (codePoint) => cmapGlyphIndex(codePoint);
+    : cmapGlyphIndex;
   return {
     glyphIndex: (codePoint, opentype) => glyphIndex(codePoint, opentype ? instanceAt(opentype) : null),
     advanceAtInstance: instanceAdvanceReader(sfnt, instanceAt),

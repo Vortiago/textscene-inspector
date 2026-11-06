@@ -12,7 +12,7 @@ import { scriptTagsOf } from '../autofit/afScripts';
 import type { ShapingFace } from '../autofit/openTypeShaping';
 import type { SfntFile } from '../sfntTables';
 import type { FontInstance } from './fontInstance';
-import { fixedToFdot14 } from './fixedPoint';
+import { featureSubstitutionOfInstance } from './instanceRecord';
 
 /** The glyph of a character at an instance, or at the default instance for null. */
 export type InstanceGlyphIndex = (codePoint: number, instance: FontInstance | null) => number;
@@ -23,13 +23,14 @@ export type InstanceGlyphIndex = (codePoint: number, instance: FontInstance | nu
  * gives, unless the lookups turn it into exactly one other glyph.
  */
 function rvrnGlyph(
-  face: ShapingFace,
+  face: Pick<ShapingFace, 'glyphIndex' | 'gsub'>,
   codePoint: number,
   substitution: FeatureSubstitution | undefined
 ): number {
   const glyph = face.glyphIndex(codePoint);
   if (!face.gsub || glyph === 0) return glyph;
   const lookups = featureLookups(face.gsub, scriptTagsOf(codePoint), FIRST_STAGE_FEATURES, substitution);
+  if (lookups.length === 0) return glyph;
   const buffer: GsubBuffer = { glyphs: [glyph], randomState: 1 };
   applyGsub(face.gsub, [{ lookups, randomLookups: new Set() }], buffer);
   return buffer.glyphs.length === 1 ? buffer.glyphs[0]! : glyph;
@@ -48,7 +49,7 @@ export function instanceGlyphIndex(
   const face = { glyphIndex, gsub, gpos: null };
   const defaultRecord = featureSubstitutionAt(gsub, []);
   const recordOf = perObject((instance: FontInstance) =>
-    featureSubstitutionAt(gsub, Array.from(instance.normalized, fixedToFdot14))
+    featureSubstitutionOfInstance(gsub, instance.normalized)
   );
   const glyphsByRecord = new Map<FeatureSubstitution | undefined, Map<number, number>>();
   return (codePoint, instance) => {
