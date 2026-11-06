@@ -27,7 +27,7 @@ import { TscnParser } from '../../../parser/TscnParser';
 import { parsedNode } from '../../../parser/testing/parserKit';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver';
 import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
-import type { SolveNode } from './solveTree';
+import { LABEL_SETTINGS_FONT_LOADING, type SolveNode } from './solveTree';
 import { nativeTheme } from './nativeTheme';
 import { themeResource } from './testing/themeResource';
 import { CAPTION_PATH, HOST_LEAF_PATH, hostScene, scenesByPath } from '../../testing/graftedScopeFixture';
@@ -1434,7 +1434,37 @@ describe('useBuildSolveTree — theme resolution', () => {
       expect(result.current.tree[0]?.projectFonts.projectDefaultFont).toEqual({
         kind: 'variation',
         baseFont: null,
+        fallbacks: [],
         properties: { spacing_glyph: '3' },
+      });
+    });
+
+    it("draws a LabelSettings SystemFont as the project's default font", async () => {
+      const loader = loaderServing({
+        'res://project.godot': projectGodot('res://body_font.tres'),
+        'res://body_font.tres':
+          '[gd_resource type="FontVariation" format=3]\n\n[resource]\nspacing_glyph = 3\n',
+      });
+      const settings: TscnInternalResource[] = [
+        { id: '1', type: 'LabelSettings', data: { font: 'SubResource("2")' } },
+        { id: '2', type: 'SystemFont', data: { font_names: 'PackedStringArray("Zz No Such Font")' } },
+      ];
+      const { result } = renderHook(
+        () => useBuildSolveTree([label('L', { labelSettings: 'SubResource("1")' })], [], settings),
+        {
+          wrapper: ({ children }: { children: ReactNode }) => (
+            <ResourceLoaderProvider loader={loader}>
+              <ProjectSettingsProvider sceneKey="res://scene.tscn">{children}</ProjectSettingsProvider>
+            </ResourceLoaderProvider>
+          ),
+        }
+      );
+
+      await settle();
+
+      expect(result.current.tree[0]?.labelSettingsFont).toMatchObject({
+        kind: 'system',
+        baseFont: { kind: 'variation', properties: { spacing_glyph: '3' } },
       });
     });
 
@@ -2417,6 +2447,102 @@ describe("useBuildSolveTree — a Label's own label_settings", () => {
     });
 
     expect(result.current.tree[0]?.labelSettings).toBeNull();
+  });
+});
+
+describe("useBuildSolveTree — a Label's label_settings.font resolves in the file that wrote the settings", () => {
+  const SETTINGS_PATH = 'res://settings.tres';
+  const SCENE_FONT_PATH = 'res://fonts/scene.ttf';
+  const SETTINGS_FONT_PATH = 'res://fonts/settings.ttf';
+  const FONT_B: FontResource = { ...FONT_A };
+  const settingsFontFile = (fontRef: string): ParsedResource =>
+    parseTresFile(
+      `[gd_resource type="LabelSettings" load_steps=2 format=3]\n\n` +
+        `[ext_resource type="FontFile" path="${SETTINGS_FONT_PATH}" id="1"]\n\n` +
+        `[resource]\nfont = ${fontRef}\n`
+    );
+
+  function buildLabel(
+    loader: ReturnType<typeof createFakeResourceLoader>,
+    labelSettings: string,
+    externalResources: TscnExternalResource[],
+    internalResources: TscnInternalResource[] = []
+  ) {
+    const { result } = renderHook(
+      () => useBuildSolveTree([label('L', { labelSettings })], externalResources, internalResources),
+      { wrapper: wrapperFor(loader.loader) }
+    );
+    return result.current.tree[0]!;
+  }
+
+  it('resolves an inline LabelSettings font against the scene tables', () => {
+    const loader = createFakeResourceLoader();
+    loader.fonts.seed(SCENE_FONT_PATH, FONT_A);
+    const solved = buildLabel(
+      loader,
+      'SubResource("1")',
+      [{ id: '1', path: SCENE_FONT_PATH, type: 'FontFile' }],
+      [{ id: '1', type: 'LabelSettings', data: { font: 'ExtResource("1")' } }]
+    );
+    expect(solved.labelSettingsFont).toBe(FONT_A);
+  });
+
+  it("resolves a .tres font against the .tres's own ext_resource table, not the scene's id 1", () => {
+    const loader = createFakeResourceLoader();
+    loader.resources.seed(SETTINGS_PATH, settingsFontFile('ExtResource("1")'));
+    loader.fonts.seed(SETTINGS_FONT_PATH, FONT_A);
+    loader.fonts.seed(SCENE_FONT_PATH, FONT_B);
+    const solved = buildLabel(loader, 'ExtResource("9_settings")', [
+      { id: '9_settings', path: SETTINGS_PATH, type: 'LabelSettings' },
+      { id: '1', path: SCENE_FONT_PATH, type: 'FontFile' },
+    ]);
+    expect(solved.labelSettingsFont).toBe(FONT_A);
+  });
+
+  it('holds no font for settings without one', () => {
+    const loader = createFakeResourceLoader();
+    const solved = buildLabel(loader, 'SubResource("1")', [], [{ id: '1', type: 'LabelSettings', data: {} }]);
+    expect(solved.labelSettingsFont).toBeNull();
+  });
+
+  it('holds no font for a font that failed to load, so the theme font answers', () => {
+    const loader = createFakeResourceLoader();
+    loader.fonts.seed(SCENE_FONT_PATH, null);
+    const solved = buildLabel(
+      loader,
+      'SubResource("1")',
+      [{ id: '1', path: SCENE_FONT_PATH, type: 'FontFile' }],
+      [{ id: '1', type: 'LabelSettings', data: { font: 'ExtResource("1")' } }]
+    );
+    expect(solved.labelSettingsFont).toBeNull();
+  });
+
+  it('marks a font still loading, and requests it', () => {
+    const loader = createFakeResourceLoader();
+    const requested: string[] = [];
+    loader.fonts.setRequestImpl((path) => requested.push(path));
+    const solved = buildLabel(
+      loader,
+      'SubResource("1")',
+      [{ id: '1', path: SCENE_FONT_PATH, type: 'FontFile' }],
+      [{ id: '1', type: 'LabelSettings', data: { font: 'ExtResource("1")' } }]
+    );
+    expect(solved.labelSettingsFont).toBe(LABEL_SETTINGS_FONT_LOADING);
+    expect(requested).toContain(SCENE_FONT_PATH);
+  });
+
+  it('resolves an inline FontVariation in the scene tables', () => {
+    const loader = createFakeResourceLoader();
+    const solved = buildLabel(
+      loader,
+      'SubResource("1")',
+      [],
+      [
+        { id: '1', type: 'LabelSettings', data: { font: 'SubResource("2")' } },
+        { id: '2', type: 'FontVariation', data: { variation_embolden: '1.0' } },
+      ]
+    );
+    expect(solved.labelSettingsFont).toMatchObject({ kind: 'variation' });
   });
 });
 

@@ -163,7 +163,7 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     "spreads the canvas item's transform onto a `<group>`, which has no material slot",
   'packages/textscene-core/src/r3f/components/CanvasItemGroup.tsx':
     'passes its caller props through to a `<group>`, typed as R3F group props, which carry no material',
-  'packages/textscene-core/src/r3f/controls/native/text/TextRun.tsx':
+  'packages/textscene-core/src/r3f/controls/native/text/TextRunMesh.tsx':
     'one material per built text run, replaced and disposed together with the run geometry it was built with',
   'packages/textscene-core/src/r3f/internal/glb-scene-root/Component.tsx':
     'mounts the per-consumer GLB Object3D clone; the surfaces inside it keep the materials the loader gave them',

@@ -13,11 +13,12 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { CHECK_BOX_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   checkBoxDrawnIconSize,
@@ -60,13 +61,15 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const hasText = text.length > 0;
   const { fontSizePx, color: baseFontColor } = checkBoxTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   // Read inside the render body, not the `useMemo` below: Label's Component.tsx
   // gives the reason.
   const fontMetrics = resolveNodeFontMetrics(solveNode, CHECKBOX_THEME_FONT_KEY);
+  const bidi = useControlBidiOptions(props, solveNode);
   const layout: TextLayoutResult | null = useMemo(
-    () => (hasText ? shapeButtonLabel(text, fontSizePx, fontMetrics) : null),
-    [hasText, text, fontSizePx, fontMetrics]
+    () => (hasText ? shapeButtonLabel(text, { fontSizePx, fontMetrics, bidi }) : null),
+    [hasText, text, fontSizePx, fontMetrics, bidi]
   );
 
   const content = useMemo(
@@ -105,10 +108,11 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       </CanvasItemGroup>
       {content.textOffset && layout && (
         <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
-          <TextRun
+          <OutlinedTextRun
             layout={layout}
             fontSizePx={fontSizePx}
             tint={tintedFontColor}
+            outline={textOutline}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />

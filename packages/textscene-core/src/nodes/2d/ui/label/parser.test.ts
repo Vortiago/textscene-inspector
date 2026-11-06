@@ -70,6 +70,9 @@ describe('parseLabel', () => {
     expect(jacketed.ellipsisChar).toBe('a');
     const bare = parseLabel(heading('Label', { name: 'T' }), { ellipsis_char: '"*"' });
     expect(bare.ellipsisChar).toBe('*');
+    // Godot's `left(1)` keeps a whole astral character, never half a surrogate pair.
+    const astral = parseLabel(heading('Label', { name: 'T' }), { ellipsis_char: '"😀b"' });
+    expect(astral.ellipsisChar).toBe('😀');
   });
 
   it('an empty ellipsis_char literal leaves ellipsisChar undefined (falls back to the engine default)', () => {
@@ -123,6 +126,14 @@ describe('parseLabel', () => {
       expect(p.visibleRatio).toBe(1);
     });
 
+    it('counts code points, so an astral character is one (label.cpp:1375-1377)', () => {
+      // Measured on 4.6.3: "😀😀😀😀abcdefgh" has 12 characters, so ratio 0.5 gives visible_characters 6.
+      const text = '"😀😀😀😀abcdefgh"';
+      const fromRatio = parseLabel(heading('Label', { name: 'T' }), { text, visible_ratio: '0.5' });
+      const fromCharacters = parseLabel(heading('Label', { name: 'T' }), { text, visible_characters: '6' });
+      expect([fromRatio.visibleCharacters, fromCharacters.visibleRatio]).toEqual([6, 0.5]);
+    });
+
     it('visible_ratio alone clamps at 1.0 and resets visible_characters to -1', () => {
       // Measured on 4.6.3 (linterParser.ts): visible_ratio = 3.0 alone clamps to 1.0.
       const p = parseLabel(heading('Label', { name: 'T' }), { text: '"0"', visible_ratio: '3.0' });
@@ -157,6 +168,51 @@ describe('parseLabel', () => {
       const p = parseLabel(heading('Label', { name: 'T' }), { text: '"Hello"' });
       expect(p.visibleCharacters).toBeUndefined();
       expect(p.visibleRatio).toBeUndefined();
+    });
+  });
+
+  describe('direction, language and structured override', () => {
+    it('defaults to AUTO, no language, the DEFAULT parser and no options (label.h:68-72)', () => {
+      const p = parseLabel(heading('Label', { name: 'T' }), {});
+      expect(p.textDirection).toBe(0);
+      expect(p.language).toBe('');
+      expect(p.structuredTextBidiOverride).toBe(0);
+      expect(p.structuredTextBidiOverrideOptions).toEqual([]);
+    });
+
+    it('reads text_direction, language, the parser and its options', () => {
+      const p = parseLabel(heading('Label', { name: 'T' }), {
+        text_direction: '2',
+        language: '"he"',
+        structured_text_bidi_override: '4',
+        structured_text_bidi_override_options: '["/", &"x", 3]',
+      });
+      expect(p.textDirection).toBe(2);
+      expect(p.language).toBe('he');
+      expect(p.structuredTextBidiOverride).toBe(4);
+      // A StringName is a string to `is_string()`. Any other Variant keeps its place as null.
+      expect(p.structuredTextBidiOverrideOptions).toEqual(['/', 'x', null]);
+    });
+
+    it('keeps an escaped option as the string the tokenizer resolves', () => {
+      const p = parseLabel(heading('Label', { name: 'T' }), {
+        structured_text_bidi_override_options: '["\\\\", "a\\"b"]',
+      });
+      expect(p.structuredTextBidiOverrideOptions).toEqual(['\\', 'a"b']);
+    });
+
+    it('drops a trailing comma, as Godot loads one element from `[","]`', () => {
+      const p = parseLabel(heading('Label', { name: 'T' }), {
+        structured_text_bidi_override_options: '[",",]',
+      });
+      expect(p.structuredTextBidiOverrideOptions).toEqual([',']);
+    });
+
+    it('reads the options of a typed Array literal', () => {
+      const p = parseLabel(heading('Label', { name: 'T' }), {
+        structured_text_bidi_override_options: 'Array[String]([","])',
+      });
+      expect(p.structuredTextBidiOverrideOptions).toEqual([',']);
     });
   });
 });

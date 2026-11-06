@@ -14,11 +14,12 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { OPTION_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   layoutOptionButtonContent,
@@ -54,12 +55,14 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
   const hasText = text.length > 0;
   const { fontSizePx, color: baseFontColor } = optionButtonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   // Read in the render body, not the `useMemo` below, for the reason Label's Component.tsx gives.
   const fontMetrics = resolveNodeFontMetrics(solveNode, OPTION_BUTTON_THEME_FONT_KEY);
+  const bidi = useControlBidiOptions(props, solveNode);
   const layout: TextLayoutResult | null = useMemo(
-    () => (hasText ? shapeButtonLabel(text, fontSizePx, fontMetrics) : null),
-    [hasText, text, fontSizePx, fontMetrics]
+    () => (hasText ? shapeButtonLabel(text, { fontSizePx, fontMetrics, bidi }) : null),
+    [hasText, text, fontSizePx, fontMetrics, bidi]
   );
 
   // Content layout: text and arrow placement within the solved rect
@@ -114,10 +117,11 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
       </CanvasItemGroup>
       {hasText && layout && (
         <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
-          <TextRun
+          <OutlinedTextRun
             layout={layout}
             fontSizePx={fontSizePx}
             tint={tintedFontColor}
+            outline={textOutline}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />

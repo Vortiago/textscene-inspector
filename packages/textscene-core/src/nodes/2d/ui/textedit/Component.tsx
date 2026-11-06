@@ -17,6 +17,7 @@ import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { useSubOrExtResource } from '../../../../resources/useSubOrExtResource';
 import { decodeCodeHighlighter } from '../../../../resources/styles/codehighlighter/decode';
@@ -33,6 +34,7 @@ import {
   pickTextEditStyleBox,
   resolveTextEditStyleState,
   textEditTextTheme,
+  textEditDrawnLines,
   textEditRowHeightPx,
   textEditWrapWidthPx,
   shapeTextEditLines,
@@ -41,8 +43,10 @@ import {
   textEditRowOriginXPx,
   textEditRowStartIndices,
   textEditRowColorRuns,
+  textEditDrawnGlyphs,
   textEditColorRunLine,
   textEditGlyphColorAt,
+  textEditGlyphLineIndex,
   textEditTabStopsPx,
   TEXT_EDIT_THEME_FONT_KEY,
 } from './nativeSolver';
@@ -57,7 +61,7 @@ const GLYPH_ICON_SIZE_PX = 8;
 const CURRENT_LINE_COLOR = { r: 0.25, g: 0.25, b: 0.26, a: 0.8 };
 
 /** The stand-in row for a buffer line with no shaped rows: an empty line measures no indent. */
-const EMPTY_ROW = { text: '', glyphs: [], widthPx: 0 };
+const EMPTY_ROW = { text: '', glyphs: [], widthPx: 0, paragraphIndex: 0 };
 
 /** `default_theme.cpp:481` (TextEdit) / `:527` (CodeEdit): `caret_width`, the same literal for both. Unscaled, like every constant here. */
 const CARET_WIDTH_PX = 1;
@@ -100,7 +104,17 @@ export function TextEditBody({
   const state = resolveTextEditStyleState(props.editable);
   const styleBox = pickTextEditStyleBox(solveNode.styleBoxes, theme.widgets.lineEdit, state);
 
-  const { fontSizePx, color: baseFontColor } = textEditTextTheme(solveNode, props, state, { theme });
+  // `_using_placeholder` swaps the buffer for `placeholder_text` and its colour whatever `editable` says (`:1350-1352`).
+  const { lines, isPlaceholder } = useMemo(
+    () => textEditDrawnLines(props.text, props.placeholderText),
+    [props.text, props.placeholderText]
+  );
+  const { fontSizePx, color: baseFontColor } = textEditTextTheme(
+    solveNode,
+    props,
+    isPlaceholder ? 'placeholder' : state,
+    { theme }
+  );
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, TEXT_EDIT_THEME_FONT_KEY);
   const lineSpacingPx = theme.separation; // nativeSolver.ts says why.
@@ -129,24 +143,27 @@ export function TextEditBody({
     [rect.w, styleBox, gutterBandWidthPx, props.minimapWidth, props.minimapDraw]
   );
 
-  const lines = useMemo(() => (props.text ?? '').split('\n'), [props.text]);
+  // The step-in reads line 0 of the buffer, which is empty while a placeholder draws (`:1480-1483`).
+  const indentsWrappedRows = props.indentWrappedLines && !isPlaceholder;
   const tabStopsPx = useMemo(
     () => textEditTabStopsPx(tabSize, fontMetrics, fontSizePx),
     [tabSize, fontMetrics, fontSizePx]
   );
+  const bidi = useControlBidiOptions(props, solveNode);
   const lineLayouts = useMemo(
     () =>
-      shapeTextEditLines(
-        lines,
+      shapeTextEditLines(lines, {
         fontSizePx,
-        props.wrapMode,
-        props.autowrapMode,
-        wrapWidthPx,
         fontMetrics,
+        wrapMode: props.wrapMode,
+        autowrapMode: props.autowrapMode,
+        wrapWidthPx,
         tabStopsPx,
-        props.drawControlChars,
-        props.indentWrappedLines
-      ),
+        preserveControl: props.drawControlChars,
+        indentWrappedLines: props.indentWrappedLines,
+        bidi,
+        placeholder: isPlaceholder,
+      }),
     [
       lines,
       fontSizePx,
@@ -157,11 +174,14 @@ export function TextEditBody({
       tabStopsPx,
       props.drawControlChars,
       props.indentWrappedLines,
+      bidi,
+      isPlaceholder,
     ]
   );
 
   // `syntax_highlighter` resolves in this node's scope, never `useSceneResources()`. Only a
   // `CodeHighlighter` decodes: anything else leaves `highlighter` null, and lines paint at `font_color`.
+  // A placeholder paints at its own colour: the colour map of the empty buffer line is empty (`:1346-1352`).
   const highlighterResource = useSubOrExtResource(props.syntaxHighlighter, solveNode.resources)?.resource;
   const highlighter = useMemo(
     () =>
@@ -173,14 +193,14 @@ export function TextEditBody({
   // Threaded line by line: one open region (an unterminated string or comment)
   // carries into the next line (`highlight.ts`).
   const lineColorSpans = useMemo<(readonly CodeHighlighterColorSpan[])[] | null>(() => {
-    if (!highlighter) return null;
+    if (!highlighter || isPlaceholder) return null;
     let region = -1;
     return lines.map((lineText) => {
       const { spans, regionAtLineEnd } = resolveLineColors(lineText, highlighter, baseFontColor, region);
       region = regionAtLineEnd;
       return spans;
     });
-  }, [highlighter, lines, baseFontColor]);
+  }, [highlighter, isPlaceholder, lines, baseFontColor]);
 
   // `tint.own` (raw sRGB, `self_modulate` folded onto `modulate`) tints the StyleBoxQuad and every
   // font, highlight and icon colour before its one sRGB-to-linear conversion, as in LineEdit.
@@ -251,33 +271,34 @@ export function TextEditBody({
         const spans = lineColorSpans?.[lineIndex];
         // Computed whenever the wrap indent or the highlighter's spans need it.
         const rowStartIndices =
-          spans || props.indentWrappedLines ? textEditRowStartIndices(lineText, layout.lines) : undefined;
-        const wrapIndentPx = props.indentWrappedLines
+          spans || indentsWrappedRows ? textEditRowStartIndices(lineText, layout.lines) : undefined;
+        const wrapIndentPx = indentsWrappedRows
           ? textEditWrapIndentPx(layout.lines[0] ?? EMPTY_ROW, lineText, wrapWidthPx)
           : 0;
-        const firstIndentRow = props.indentWrappedLines
+        const firstIndentRow = indentsWrappedRows
           ? textEditFirstIndentRow(lineText, rowStartIndices ?? [0])
           : 0;
         return layout.lines.map((line, rowInLine) => {
           const row = startRow + rowInLine;
           const rowTopPx = textEditRowTextTopPx(rowBandTopPx(row), rowHeightPx, textHeightPx);
           const rowStartIndex = rowStartIndices?.[rowInLine] ?? 0;
-          const runs = textEditRowColorRuns(line.glyphs, rowStartIndex, spans, baseFontColor);
+          const rowOriginXPx = textEditRowOriginXPx(
+            band.xMarginBeginPx,
+            rect.w,
+            line.widthPx,
+            solveNode.rtl,
+            rowInLine > firstIndentRow ? wrapIndentPx : 0
+          );
+          // Godot drops each glyph that crosses a margin and stops walking at the end one (`:1724-1738`).
+          const drawn = textEditDrawnGlyphs(
+            line.glyphs,
+            rowOriginXPx,
+            band.xMarginBeginPx,
+            band.xMarginEndPx
+          );
+          const runs = textEditRowColorRuns(line.glyphs, rowStartIndex, spans, baseFontColor, drawn);
           return (
-            <CanvasItemGroup
-              key={`${lineIndex}-${rowInLine}`}
-              position={[
-                textEditRowOriginXPx(
-                  band.xMarginBeginPx,
-                  rect.w,
-                  line.widthPx,
-                  solveNode.rtl,
-                  rowInLine > firstIndentRow ? wrapIndentPx : 0
-                ),
-                -rowTopPx,
-                0,
-              ]}
-            >
+            <CanvasItemGroup key={`${lineIndex}-${rowInLine}`} position={[rowOriginXPx, -rowTopPx, 0]}>
               {runs.map((run, runIndex) => (
                 <TextRun
                   key={runIndex}
@@ -290,52 +311,36 @@ export function TextEditBody({
               ))}
               {(props.drawTabs || props.drawSpaces) &&
                 line.glyphs.map((glyph, glyphIndex) => {
-                  if (props.drawTabs && glyph.char === '\t') {
-                    // The per-glyph highlighted colour tints its icon, not a
-                    // fixed font_color (text_edit.cpp:1674,1714).
-                    const iconColor = multiplyModulate(
-                      tint.own,
-                      textEditGlyphColorAt(spans, rowStartIndex + glyphIndex, baseFontColor)
-                    );
-                    return (
-                      <CanvasItemGroup
-                        key={glyphIndex}
-                        position={[glyph.x, -((rowHeightPx - GLYPH_ICON_SIZE_PX) / 2), 0]}
-                      >
-                        <ControlQuad
-                          width={GLYPH_ICON_SIZE_PX}
-                          height={GLYPH_ICON_SIZE_PX}
-                          color={godotColorToLinear(iconColor)}
-                          opacity={iconColor.a}
-                          map={tabIcon}
-                          renderOrder={renderOrder}
-                        />
-                      </CanvasItemGroup>
-                    );
-                  }
-                  if (props.drawSpaces && glyph.char === ' ') {
-                    const xOfs = glyph.x + (glyph.advance - GLYPH_ICON_SIZE_PX) / 2;
-                    const iconColor = multiplyModulate(
-                      tint.own,
-                      textEditGlyphColorAt(spans, rowStartIndex + glyphIndex, baseFontColor)
-                    );
-                    return (
-                      <CanvasItemGroup
-                        key={glyphIndex}
-                        position={[xOfs, -((rowHeightPx - GLYPH_ICON_SIZE_PX) / 2), 0]}
-                      >
-                        <ControlQuad
-                          width={GLYPH_ICON_SIZE_PX}
-                          height={GLYPH_ICON_SIZE_PX}
-                          color={godotColorToLinear(iconColor)}
-                          opacity={iconColor.a}
-                          map={spaceIcon}
-                          renderOrder={renderOrder}
-                        />
-                      </CanvasItemGroup>
-                    );
-                  }
-                  return null;
+                  // The icons draw before the margin test, but only for a glyph the walk reaches.
+                  if (glyphIndex >= drawn.length) return null;
+                  const isTabIcon = props.drawTabs && glyph.char === '\t';
+                  if (!isTabIcon && !(props.drawSpaces && glyph.char === ' ')) return null;
+                  // The per-glyph highlighted colour tints its icon, not a
+                  // fixed font_color (text_edit.cpp:1674,1714).
+                  const iconColor = multiplyModulate(
+                    tint.own,
+                    textEditGlyphColorAt(
+                      spans,
+                      textEditGlyphLineIndex(glyph, rowStartIndex, glyphIndex),
+                      baseFontColor
+                    )
+                  );
+                  const iconXPx = isTabIcon ? glyph.x : glyph.x + (glyph.advance - GLYPH_ICON_SIZE_PX) / 2;
+                  return (
+                    <CanvasItemGroup
+                      key={glyphIndex}
+                      position={[iconXPx, -((rowHeightPx - GLYPH_ICON_SIZE_PX) / 2), 0]}
+                    >
+                      <ControlQuad
+                        width={GLYPH_ICON_SIZE_PX}
+                        height={GLYPH_ICON_SIZE_PX}
+                        color={godotColorToLinear(iconColor)}
+                        opacity={iconColor.a}
+                        map={isTabIcon ? tabIcon : spaceIcon}
+                        renderOrder={renderOrder}
+                      />
+                    </CanvasItemGroup>
+                  );
                 })}
             </CanvasItemGroup>
           );

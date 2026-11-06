@@ -32,10 +32,15 @@ CheckButton binds no new property beyond Button's, only theme items, so the stri
 lenient parsers agree on every key Button's parser reads. The lenient parser also reads
 `button_pressed` (a BaseButton property) for the on/off state of the switch.
 
+CheckButton draws the theme text outline, `font_outline_color` and `outline_size`, as Godot
+does (`button.cpp:458-462`). A ring of `outline_size / 4` px sits under the fill. No ring
+draws at an `outline_size` of 0 or a zero alpha. The ring strokes on the canvas painter for the
+bundled font too (ADR-0040).
+
+A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
+outline ring (ADR-0064).
+
 ## Known limitations
 
 - **Not drawn** Button's inherited `icon` property (distinct from the toggle glyph) is
   parsed but never drawn.
-- **Approximated** Under `layout_direction = 3` or `text_direction = 2`, the label's glyphs
-  keep left-to-right order for a right-to-left script or trailing punctuation, while the
-  label, icon and chrome swap sides.

@@ -522,8 +522,20 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
   });
 
   it('pushes the FONT the same way, off a TabContainer-addressed theme entry (tab_container.cpp:338)', () => {
-    const containerFont: FontResource = { kind: 'system', fontNames: ['Container Face'], properties: {} };
-    const barFont: FontResource = { kind: 'system', fontNames: ['Bar Face'], properties: {} };
+    const containerFont: FontResource = {
+      kind: 'system',
+      fontNames: ['Container Face'],
+      baseFont: null,
+      fallbacks: [],
+      properties: {},
+    };
+    const barFont: FontResource = {
+      kind: 'system',
+      fontNames: ['Bar Face'],
+      baseFont: null,
+      fallbacks: [],
+      properties: {},
+    };
     const projectTheme = themeResource({
       fonts: { TabContainer: { font: containerFont }, TabBar: { font: barFont } },
     });

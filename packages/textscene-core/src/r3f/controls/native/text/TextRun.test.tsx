@@ -3,7 +3,7 @@
  * assertions read scene-graph structure only, never pixels: the paint is a
  * golden-image concern.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { godotTextureFilterState } from '../../../../resources/textures/godotTextureFilter';
 import { TextureFilter } from '../../../../godot/rendering/materials/textureFilter';
 import * as THREE from 'three';
@@ -12,12 +12,36 @@ import { fakeCanvasRenderer } from '../../../testing/fakeCanvasRenderer';
 import { TextRun, type TextRunProps } from './TextRun';
 import { shapeText } from './textLayout';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
-import { createRuntimeFontMetrics } from './runtimeFontMetrics';
+import { createRuntimeFontMetrics, type CanvasFontMetrics } from './runtimeFontMetrics';
 import { withVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
+import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
+
+const bundled = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | null | undefined }));
+
+vi.mock('./bundledFontLoader', () => ({ peekBundledCanvasFontMetrics: () => bundled.metrics }));
+vi.mock('./sceneFontOutlines', () => ({
+  peekOutlines: () => null,
+  drawLoad: () => ({}),
+}));
+
+// Null is a bundled canvas face that cannot register, which leaves the atlas to draw the fill.
+beforeEach(() => {
+  bundled.metrics = null;
+});
+
+function emboldenedLayout(embolden: number) {
+  return shapeText('AB', {
+    fontSizePx: 16,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 3,
+    fontMetrics: withVariation(OPEN_SANS_FONT_METRICS, { embolden }),
+  });
+}
 
 function layoutFor(text: string, uppercase = false) {
   return shapeText(text, {
@@ -36,6 +60,23 @@ async function renderTextRun(props: Partial<TextRunProps> = {}) {
 }
 
 describe('<TextRun>', () => {
+  // Godot's default font is not MSDF, so FreeType fills every glyph (`text_server_adv.cpp:1360-1373`).
+  it('draws a plain atlas face on the bundled canvas face, as FreeType fills every glyph', async () => {
+    bundled.metrics = createOpenSansCanvasFontMetrics('bundled-textrun-fill-test');
+    const renderer = await renderTextRun();
+    await vi.waitFor(() => expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1));
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect(mesh.material).not.toBeInstanceOf(THREE.ShaderMaterial);
+    expect(mesh.geometry.getAttribute('position').count).toBe(4);
+  });
+
+  it('fills a plain atlas face on the atlas while the bundled canvas face loads', async () => {
+    bundled.metrics = undefined;
+    const renderer = await renderTextRun();
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect(mesh.material).toBeInstanceOf(THREE.ShaderMaterial);
+  });
+
   it('mounts a single mesh carrying the merged glyph geometry', async () => {
     const renderer = await renderTextRun();
     const meshes = renderer.scene.findAllByType('Mesh');
@@ -56,23 +97,55 @@ describe('<TextRun>', () => {
     expect(mat.uniforms.uOpacity!.value).toBe(0.75);
   });
 
-  it('gives the material no distance bias for a layout with no embolden', async () => {
-    const renderer = await renderTextRun();
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(mat.uniforms.uDistanceBias!.value).toBe(0);
+  it('draws an emboldened atlas face on the bundled canvas face, as FreeType emboldens every value', async () => {
+    bundled.metrics = createOpenSansCanvasFontMetrics('bundled-textrun-test');
+    const renderer = await renderTextRun({ layout: emboldenedLayout(1.2) });
+    await vi.waitFor(() => expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1));
+    const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
+    expect(geometry.getAttribute('position').count).toBe(4);
   });
 
-  it("derives the material's distance bias from the embolden of the layout's face", async () => {
-    const layout = shapeText('AB', {
-      fontSizePx: 16,
-      boxWidthPx: 0,
-      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-      lineSpacingPx: 3,
-      fontMetrics: withVariation(OPEN_SANS_FONT_METRICS, { embolden: 1.2 }),
-    });
-    const renderer = await renderTextRun({ layout });
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(mat.uniforms.uDistanceBias!.value).toBeCloseTo(0.39375, 10);
+  it('strokes an outline ring of an atlas face on the bundled canvas face, as a stroked contour', async () => {
+    bundled.metrics = createOpenSansCanvasFontMetrics('bundled-textrun-ring-test');
+    const renderer = await renderTextRun({ strokeWidthPx: 2 });
+    await vi.waitFor(() => expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1));
+    const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
+    expect(geometry.getAttribute('position').count).toBe(4);
+  });
+
+  it('draws an emboldened atlas face on the atlas when the bundled canvas face cannot register', async () => {
+    bundled.metrics = null;
+    const renderer = await renderTextRun({ layout: emboldenedLayout(1.2) });
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect(mesh.material).toBeInstanceOf(THREE.ShaderMaterial);
+  });
+
+  it('draws no outline ring of an atlas face when the bundled canvas face cannot register', async () => {
+    bundled.metrics = null;
+    const renderer = await renderTextRun({ strokeWidthPx: 2 });
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('draws a ligature of the atlas face on the bundled canvas face, as the atlas holds no ligature glyph', async () => {
+    bundled.metrics = createOpenSansCanvasFontMetrics('bundled-textrun-ligature-test');
+    const renderer = await renderTextRun({ layout: layoutFor('office') });
+    await vi.waitFor(() => expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1));
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect(mesh.material).not.toBeInstanceOf(THREE.ShaderMaterial);
+  });
+
+  it('draws a mark of the atlas face on the bundled canvas face, as the atlas holds no mark glyph', async () => {
+    bundled.metrics = createOpenSansCanvasFontMetrics('bundled-textrun-mark-test');
+    const renderer = await renderTextRun({ layout: layoutFor('a\u0308\u0301') });
+    await vi.waitFor(() => expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1));
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect(mesh.material).not.toBeInstanceOf(THREE.ShaderMaterial);
+  });
+
+  it('draws no outline ring of an atlas face while the bundled canvas face loads', async () => {
+    bundled.metrics = undefined;
+    const renderer = await renderTextRun({ strokeWidthPx: 2 });
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
   it("shears the glyphs by the skew of the layout's face: the top moves right, the bottom stays", async () => {
@@ -92,21 +165,6 @@ describe('<TextRun>', () => {
     const topShiftPx = skewed.getX(0) - upright.getX(0);
     const bottomShiftPx = skewed.getX(2) - upright.getX(2);
     expect(topShiftPx).toBeGreaterThan(bottomShiftPx + 1);
-  });
-
-  it('forwards outlineColor/outlineWidthPx to the material, sRGB-converted like tint', async () => {
-    const outlineColor = { r: 0, g: 0, b: 0, a: 1 };
-    const renderer = await renderTextRun({ outlineColor, outlineWidthPx: 2 });
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(mat.uniforms.uOutlineWidthPx!.value).toBe(2);
-    expect(mat.uniforms.uOutlineOpacity!.value).toBe(1);
-    expect((mat.uniforms.uOutlineColor!.value as THREE.Vector3).toArray()).toEqual([0, 0, 0]);
-  });
-
-  it('leaves the outline width at zero when no outlineColor is given, even with a nonzero outlineWidthPx', async () => {
-    const renderer = await renderTextRun({ outlineWidthPx: 2 });
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(mat.uniforms.uOutlineWidthPx!.value).toBe(0);
   });
 
   it('forwards clipping planes to the material (per-material state)', async () => {
@@ -148,6 +206,7 @@ describe('<TextRun>', () => {
 
 describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-kind FontMetrics', () => {
   const CANVAS_METRICS = createRuntimeFontMetrics({
+    hasGlyph: () => true,
     scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
     measureWidthUnits: (text) => text.length * 500,
     cssFontFamily: 'scene-font-textrun-test',
@@ -231,14 +290,14 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
     expect(map.generateMipmaps).toBe(false);
   });
 
-  it('uses a plain textured material (no MSDF uniforms/shader), sourced from a canvas texture', async () => {
+  it("uses a plain textured material (no MSDF uniforms/shader), sourced from the raster's data texture", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <TextRun layout={canvasLayoutFor('Hi')} fontSizePx={16} tint={WHITE} />
     );
     const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
       .material as THREE.MeshBasicMaterial;
     expect((mat as unknown as { isShaderMaterial?: boolean }).isShaderMaterial).toBeUndefined();
-    expect(mat.map).toBeInstanceOf(THREE.CanvasTexture);
+    expect(mat.map).toBeInstanceOf(THREE.DataTexture);
     expect(mat.transparent).toBe(true);
   });
 
@@ -252,7 +311,7 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
       'a CONSTANT colour channel (`text_server_adv.cpp` `rasterize_bitmap`, `FT_PIXEL_MODE_GRAY`: ' +
       '`wr[ofs+0] = 255` always, only `wr[ofs+1]` -- alpha, never sRGB-encoded -- varies), so the ' +
       "byte-vs-decoded-first blend order this file's sibling fixes correct for icons/sprites is, " +
-      "for Godot's OWN text rendering, never even in play. `TextRun.tsx`'s own doc has the full " +
+      "for Godot's OWN text rendering, never even in play. `TextRunMesh.tsx`'s own doc has the full " +
       'derivation. This pins the decision against a future change that "completes the pattern" by ' +
       'copying the icon/sprite retag here without re-measuring.',
     async () => {

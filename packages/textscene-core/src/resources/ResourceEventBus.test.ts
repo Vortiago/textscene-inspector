@@ -114,6 +114,54 @@ describe('ResourceEventBus', () => {
     });
   });
 
+  describe('changesSince', () => {
+    it('lists a loaded, a failed and an invalidated after the token on the buses asked about, and nothing else', () => {
+      eventBus.emit('scene', 'loaded', 'before');
+      const since = eventBus.changeToken();
+      eventBus.emit('scene', 'failed', 'a');
+      eventBus.emit('scene', 'requested', 'b');
+      eventBus.emit('glb', 'invalidated', 'c');
+      eventBus.emit('texture', 'loaded', 'd');
+
+      expect(eventBus.changesSince(['scene', 'glb'], since)).toEqual([
+        { busType: 'scene', event: 'failed', key: 'a' },
+        { busType: 'glb', event: 'invalidated', key: 'c' },
+      ]);
+    });
+
+    it('lists only the last change of a key that changed twice', () => {
+      const since = eventBus.changeToken();
+      eventBus.emit('scene', 'loaded', 'a');
+      eventBus.emit('scene', 'invalidated', 'a');
+
+      expect(eventBus.changesSince(['scene'], since)).toEqual([
+        { busType: 'scene', event: 'invalidated', key: 'a' },
+      ]);
+    });
+
+    it('already lists a change when a handler of that change asks', () => {
+      const since = eventBus.changeToken();
+      let seen: unknown[] = [];
+      eventBus.on('scene', 'loaded', () => {
+        seen = eventBus.changesSince(['scene'], since);
+      });
+
+      eventBus.emit('scene', 'loaded', 'a');
+
+      expect(seen).toHaveLength(1);
+    });
+  });
+
+  describe('hasChangedSince', () => {
+    it('is false for a change on another bus', () => {
+      const since = eventBus.changeToken();
+      eventBus.emit('texture', 'loaded', 'a');
+
+      expect(eventBus.hasChangedSince(['scene'], since)).toBe(false);
+      expect(eventBus.hasChangedSince(['texture'], since)).toBe(true);
+    });
+  });
+
   describe('once', () => {
     it('resolves when matching event fires', async () => {
       const promise = eventBus.once<string>('texture', 'loaded', 'tex1');

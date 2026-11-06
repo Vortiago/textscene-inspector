@@ -1,0 +1,134 @@
+; One variable: the paragraph direction of a RichTextLabel, through `text_direction`, `language`, the
+; structured override and the `[p dir lang st]` options (rich_text_label.cpp:5802-5840). `_draw_line`
+; starts a line of an RTL paragraph at the right edge (rich_text_label.cpp:940,987-1014).
+
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://fonts/dejavu-sans-bidi-subset.ttf" id="1_font"]
+
+[sub_resource type="Theme" id="Theme_1"]
+default_font = ExtResource("1_font")
+default_font_size = 28
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.1, 0.12, 0.18, 1)
+
+; `[p dir=rtl]` puts the line at the right edge with `!` first.
+[node name="PDirRtl" type="RichTextLabel" parent="."]
+offset_left = 400.0
+offset_top = 20.0
+offset_right = 800.0
+offset_bottom = 64.0
+bbcode_enabled = true
+text = "[p dir=rtl]Hello![/p]"
+
+; `text_direction` does the same for every paragraph.
+[node name="TextDirectionRtl" type="RichTextLabel" parent="."]
+offset_left = 400.0
+offset_top = 84.0
+offset_right = 800.0
+offset_bottom = 128.0
+text = "Hello!"
+text_direction = 2
+
+; AUTO infers RTL from Hebrew, but the line stays at the left.
+[node name="AutoHebrew" type="RichTextLabel" parent="."]
+offset_left = 400.0
+offset_top = 148.0
+offset_right = 800.0
+offset_bottom = 192.0
+text = "שלום abc"
+
+; `[p lang=he]` sets the direction of neutral text. The line stays at the left.
+[node name="PLangHe" type="RichTextLabel" parent="."]
+offset_left = 500.0
+offset_top = 212.0
+offset_right = 1000.0
+offset_bottom = 256.0
+bbcode_enabled = true
+text = "[p lang=he]123![/p]"
+
+; `[p st=file]` keeps each path segment in logical order.
+[node name="PStFile" type="RichTextLabel" parent="."]
+offset_left = 500.0
+offset_top = 276.0
+offset_right = 1000.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "[p dir=rtl st=file]שלום/עולם/abc.txt[/p]"
+
+; Without an override, the Latin name goes to the visual left.
+[node name="PNoSt" type="RichTextLabel" parent="."]
+offset_left = 500.0
+offset_top = 340.0
+offset_right = 1000.0
+offset_bottom = 384.0
+bbcode_enabled = true
+text = "[p dir=rtl]שלום/עולם/abc.txt[/p]"
+
+; RIGHT does not add the free width, so the RTL line goes to the left.
+[node name="RightRtl" type="RichTextLabel" parent="."]
+offset_left = 400.0
+offset_top = 404.0
+offset_right = 800.0
+offset_bottom = 448.0
+text = "Hello!"
+text_direction = 2
+horizontal_alignment = 2
+
+; CENTER centres the RTL line.
+[node name="CenterRtl" type="RichTextLabel" parent="."]
+offset_left = 400.0
+offset_top = 468.0
+offset_right = 800.0
+offset_bottom = 512.0
+text = "Hello!"
+text_direction = 2
+horizontal_alignment = 1
+
+; INHERITED takes the right-to-left layout. A right-to-left control mirrors its own offsets in its parent (control.cpp:1785).
+[node name="Inherited" type="RichTextLabel" parent="."]
+layout_direction = 3
+offset_left = 762.0
+offset_top = 532.0
+offset_right = 1112.0
+offset_bottom = 576.0
+text = "Hello!"
+text_direction = 3
+
+; `[p dir=ltr]` under an RTL layout: the line stays at the left.
+[node name="PDirLtr" type="RichTextLabel" parent="."]
+layout_direction = 3
+offset_left = 762.0
+offset_top = 596.0
+offset_right = 1112.0
+offset_bottom = 640.0
+bbcode_enabled = true
+text = "[p dir=ltr]Hello![/p]"
+
+; `[p dir=r]`, the short spelling, under an LTR layout.
+[node name="PDirShort" type="RichTextLabel" parent="."]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 340.0
+offset_bottom = 64.0
+bbcode_enabled = true
+text = "[p dir=r]Hello![/p]"
+
+; A paragraph tag after text starts a new line (rich_text_label.cpp:4096-4103), here an RTL one.
+[node name="ParagraphBreak" type="RichTextLabel" parent="."]
+offset_left = 40.0
+offset_top = 84.0
+offset_right = 340.0
+offset_bottom = 172.0
+bbcode_enabled = true
+text = "ab[p dir=rtl]Hello![/p]"

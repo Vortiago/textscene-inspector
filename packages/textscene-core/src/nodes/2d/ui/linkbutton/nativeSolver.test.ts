@@ -18,8 +18,10 @@ import {
   linkButtonUnderlineSpacing,
   linkButtonUnderlineGeometry,
   linkButtonTextPlacement,
+  linkButtonLabelShape,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 function node(props: Partial<LinkButtonProperties>): SolveNode {
   return {
@@ -90,6 +92,10 @@ describe('linkButtonTextTheme', () => {
   it('a theme_override_colors/font_color override wins over the default', () => {
     const props: LinkButtonProperties = {
       name: 'L',
+      textDirection: 0,
+      language: '',
+      structuredTextBidiOverride: 0,
+      structuredTextBidiOverrideOptions: [],
       themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
     };
     expect(linkButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({
@@ -197,5 +203,27 @@ describe('linkButtonTextPlacement', () => {
 
   it('draws flush against the right edge under RTL', () => {
     expect(linkButtonTextPlacement(200, 63.4, true).originX).toBe(136);
+  });
+});
+
+describe('linkButtonLabelShape — direction, language and structured override (link_button.cpp:41-47)', () => {
+  /** The shaped line's glyph characters, left to right. */
+  function visual(props: Partial<LinkButtonProperties>, overrides: Partial<SolveNode> = {}): string {
+    const layout = linkButtonLabelShape({ ...node(props), ...overrides }, nativeTheme(1))!;
+    return visualChars(layout.lines[0]!);
+  }
+
+  it('shapes an RTL paragraph with `!` at the visual left', () => {
+    expect(visual({ text: 'Hello!', textDirection: 2 })).toBe('!Hello');
+  });
+
+  it('shapes an INHERITED paragraph at the layout direction', () => {
+    expect(visual({ text: 'Hello!', textDirection: 3 }, { rtl: true })).toBe('!Hello');
+  });
+
+  it('keeps the FILE segments in logical order, left to right', () => {
+    const text = 'שלום/abc';
+    expect(visual({ text, textDirection: 2, structuredTextBidiOverride: 2 })).toBe('םולש/abc');
+    expect(visual({ text, textDirection: 2 })).toBe('abc/םולש');
   });
 });

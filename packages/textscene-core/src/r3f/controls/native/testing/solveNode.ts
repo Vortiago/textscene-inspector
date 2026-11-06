@@ -42,6 +42,7 @@ export function solveNode(): Pick<
   | 'parentVisibleInTree'
   | 'fontOverrides'
   | 'labelSettings'
+  | 'labelSettingsFont'
   | 'themeChain'
   | 'projectFonts'
   | 'colors'
@@ -52,6 +53,7 @@ export function solveNode(): Pick<
   | 'paintSequence'
   | 'skippedAncestors'
   | 'rtl'
+  | 'locale'
 > {
   return {
     children: [],
@@ -64,6 +66,7 @@ export function solveNode(): Pick<
     parentVisibleInTree: true,
     fontOverrides: NO_FONT_OVERRIDES,
     labelSettings: null,
+    labelSettingsFont: null,
     themeChain: NO_THEME_CHAIN,
     projectFonts: NO_PROJECT_FONTS,
     colors: NO_COLORS,
@@ -78,6 +81,8 @@ export function solveNode(): Pick<
     skippedAncestors: null,
     // `LAYOUT_DIRECTION_INHERITED` all the way to a left-to-right root.
     rtl: false,
+    // No `internationalization/locale/test`.
+    locale: '',
   };
 }
 

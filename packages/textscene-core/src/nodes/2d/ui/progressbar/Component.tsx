@@ -5,43 +5,30 @@
  * `ControlCanvasWalker` owns `visible`, the children and the transform.
  */
 import { useMemo } from 'react';
+import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
-import { isCanvasFontMetrics } from '../../../../r3f/controls/native/text/runtimeFontMetrics';
 import { resolveNodeFont } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { peekSceneFontMetrics } from '../../../../r3f/controls/native/text/sceneFontLoader';
-// A 2D Control outlines text through the same TextServer path as Label3D.
-// `outlineRadiusPx` is the outward-only expansion for `<TextRun>`'s
-// `outlineWidthPx`. `outlineStrokeWidthPx` is the centred canvas stroke width.
-import { outlineRadiusPx, outlineStrokeWidthPx } from '../../../3d/label3d/glyphLayout';
 import { rangeRatio } from '../shared/range';
 import {
   progressBarDefaultBackground,
   progressBarDefaultFill,
   progressBarFillRect,
   progressBarIndeterminateFillRect,
-  progressBarOutlineColor,
-  progressBarOutlineSize,
   progressBarPercentRatio,
+  progressBarPercentText,
   progressBarTextTheme,
   PROGRESS_BAR_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { ProgressBarProperties } from './types';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
-
-/**
- * The percentage draws above its stroked outline, as `progress_bar.cpp:180` draws it. Two runs of one
- * renderOrder sort by creation, and the stroke's mesh can be created after the fill's. Less than the
- * step between two Controls' render orders, so the percentage stays below the next Control.
- */
-const PERCENT_ABOVE_OUTLINE = 0.05;
 
 export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = painterView<ProgressBarProperties>(solveNode);
@@ -69,13 +56,14 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
   const showPercentage = !indeterminate && (props.showPercentage ?? true);
 
   const { fontSizePx, color: fontColorSrgb } = progressBarTextTheme(solveNode, props, { theme });
-  const outlineColorSrgb = progressBarOutlineColor(solveNode.colors);
-  const outlineSize = progressBarOutlineSize(solveNode.constants);
   const font = resolveNodeFont(solveNode, PROGRESS_BAR_THEME_FONT_KEY);
   const fontMetrics = peekSceneFontMetrics(font, solveNode.path);
 
   const percentText = showPercentage
-    ? `${Math.round(progressBarPercentRatio(props, orderedKeys) * 100)}%`
+    ? progressBarPercentText(progressBarPercentRatio(props, orderedKeys), {
+        locale: solveNode.locale,
+        localizeNumeralSystem: props.localizeNumeralSystem,
+      })
     : null;
 
   const layout = useMemo(() => {
@@ -100,20 +88,10 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
     };
   }, [layout, size.x, size.y]);
 
-  // `tint.own` is raw sRGB: each `<StyleBoxQuad>` takes it as is, and it
-  // multiplies into the font and outline colours before their one linear conversion.
+  // `tint.own` is raw sRGB: each `<StyleBoxQuad>` takes it as is, and it multiplies into the
+  // font and outline colours before their one linear conversion.
   const tintedFontColor = useMemo(() => multiplyModulate(fontColorSrgb, tint.own), [fontColorSrgb, tint.own]);
-  const tintedOutlineColor = useMemo(
-    () => multiplyModulate(outlineColorSrgb, tint.own),
-    [outlineColorSrgb, tint.own]
-  );
-
-  // `progress_bar.cpp:180`: `font_outline_size > 0 && font_outline_color.a > 0`.
-  const hasOutline = outlineSize > 0 && outlineColorSrgb.a > 0 && layout !== null;
-  // The MSDF atlas, the default font, has no contour to stroke: it composites
-  // a second, wider fill threshold in the same mesh.
-  const drawCanvasOutline = hasOutline && isCanvasFontMetrics(layout.fontMetrics);
-  const drawMsdfOutline = hasOutline && !isCanvasFontMetrics(layout.fontMetrics);
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   return (
     <>
@@ -130,24 +108,13 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
       )}
       {layout && textPos && (
         <CanvasItemGroup position={[textPos.x, -textPos.y, 0]}>
-          {drawCanvasOutline && (
-            <TextRun
-              layout={layout}
-              fontSizePx={fontSizePx}
-              tint={tintedOutlineColor}
-              strokeWidthPx={outlineStrokeWidthPx(outlineSize)}
-              clippingPlanes={clippingPlanes}
-              renderOrder={renderOrder}
-            />
-          )}
-          <TextRun
+          <OutlinedTextRun
             layout={layout}
             fontSizePx={fontSizePx}
             tint={tintedFontColor}
-            outlineColor={drawMsdfOutline ? tintedOutlineColor : undefined}
-            outlineWidthPx={drawMsdfOutline ? outlineRadiusPx(outlineSize) : 0}
+            outline={textOutline}
             clippingPlanes={clippingPlanes}
-            renderOrder={drawCanvasOutline ? renderOrder + PERCENT_ABOVE_OUTLINE : renderOrder}
+            renderOrder={renderOrder}
           />
         </CanvasItemGroup>
       )}

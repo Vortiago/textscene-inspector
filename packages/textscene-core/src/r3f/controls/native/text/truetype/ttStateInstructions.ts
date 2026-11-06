@@ -9,6 +9,7 @@
  */
 
 import { ftMulFix } from '../fontMetrics';
+import { fixedToFdot14 } from '../variation/fixedPoint';
 import { toUint16 } from '../../../../../godot/variant/intWidth';
 import { CodeRange, type ExecContext } from './ttExecContext';
 import { GLYPH_ZONE, TWILIGHT_ZONE } from './ttGraphicsState';
@@ -186,16 +187,17 @@ export function getInformation(exc: ExecContext, a: number): void {
 }
 
 /**
- * GETVARIATION: the normalised coordinate of each axis, in 2.14. Godot draws a variable font at
- * its default instance, whose every coordinate is zero.
+ * GETVARIATION: the normalised coordinate of each axis, in 2.14 (`Ins_GETVARIATION`, `ttinterp.c`),
+ * the 16.16 one shifted right by two. They are all zero at the default instance.
  */
 export function getVariation(exc: ExecContext, a: number): void {
-  const { axisCount } = exc.face;
+  const { axisCount, normalizedCoordinates } = exc.face;
   if (overflowsStack(exc, axisCount)) {
     exc.fail('Stack_Overflow');
     return;
   }
-  exc.stack.fill(0, a, a + axisCount);
+  for (let axis = 0; axis < axisCount; axis++)
+    exc.stack[a + axis] = fixedToFdot14(normalizedCoordinates[axis]!);
   exc.newTop += axisCount;
 }
 

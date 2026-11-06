@@ -187,6 +187,23 @@ export function isPathResourceLiteral(raw: string): boolean {
   return match[1]!.startsWith('uid://') !== second.startsWith('uid://');
 }
 
+/**
+ * Every `Resource(…)` literal in a text, `[1]` and `[2]` its arguments. The word boundary keeps the
+ * tail of an `ExtResource(…)` or a `SubResource(…)` out, whose argument is an id, not a path.
+ */
+const PATH_RESOURCE_ANYWHERE_RE = new RegExp(`\\b${PATH_RESOURCE_RE.source.slice(1, -1)}`, 'g');
+
+/**
+ * The `res://` path of each `Resource(…)` literal in `text`, in order, as an import parameter such as
+ * `fallbacks=[Resource("uid://…", "res://a.ttf")]` holds them. A literal with only a `uid://` is
+ * skipped: nothing here resolves one.
+ */
+export function pathResourcePathsIn(text: string): string[] {
+  return [...text.matchAll(PATH_RESOURCE_ANYWHERE_RE)].flatMap(([, first, second]) =>
+    [first!, second].filter((arg): arg is string => arg !== undefined && !arg.startsWith('uid://'))
+  );
+}
+
 /** The id of the first `SubResource(…)` anywhere in `text`, or null. */
 export function subResourceRefAnywhere(text: string): string | null {
   const match = SUB_RESOURCE_REF_ANYWHERE_RE.exec(text);

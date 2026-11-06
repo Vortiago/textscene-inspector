@@ -167,6 +167,40 @@ describe('captureScene console-error gate', () => {
   });
 });
 
+describe('captureScene failed requests', () => {
+  function pageStateWithFailedRequests(count) {
+    const diagnostics = emptyDiagnostics();
+    const lost = Array.from({ length: count }, (_, i) => ({
+      url: `http://h/chunk-${i}.js`,
+      failure: 'net::ERR_FAILED',
+    }));
+    // A requestfailed listener fires during the open, after captureScene has cleared the lists.
+    openScene.mockImplementation(async () => {
+      diagnostics.failedRequests.push(...lost);
+      return { target: null, reason: 'no canvas' };
+    });
+    return { page: {}, diagnostics };
+  }
+
+  it('names a failed request in the reason of a scene that never opens (error path)', async () => {
+    const result = await captureScene(pageStateWithFailedRequests(1), 'http://localhost:1', {
+      name: 'lost-chunk',
+      file: 'unit-lost.tscn',
+    });
+
+    expect(result.reason).toBe('no canvas; failed requests: net::ERR_FAILED http://h/chunk-0.js');
+  });
+
+  it('lists the first few failed requests and counts the rest (edge case)', async () => {
+    const result = await captureScene(pageStateWithFailedRequests(8), 'http://localhost:1', {
+      name: 'lost-textures',
+      file: 'unit-lost.tscn',
+    });
+
+    expect(result.reason).toMatch(/net::ERR_FAILED http:\/\/h\/chunk-2\.js and 5 more$/);
+  });
+});
+
 /**
  * `--update` captures every scene, and an unchanged render can re-encode to new PNG bytes, so
  * without this guard the images that moved would hide among rewritten ones.

@@ -23,7 +23,7 @@ import {
   type AtlasTileModel,
   type TileSetModel,
 } from '../resources/tileset/types';
-import { CanvasItemKeyProvider } from './components/CanvasItemGroup';
+import { CanvasItemProvider } from './components/CanvasItemGroup';
 import { canvasRenderOrder } from './canvasPaintOrder';
 import { CanvasModulateContext } from './canvasModulate';
 import { WHITE_MODULATE } from './canvasItemModulate';
@@ -119,7 +119,7 @@ function render(
     <ResourceLoaderProvider loader={fake.loader}>
       <CanvasLighting2DContext.Provider value={lighting}>
         <CanvasModulateContext.Provider value={canvasModulate}>
-          <CanvasItemKeyProvider value={layerKey(zFinal)}>{children}</CanvasItemKeyProvider>
+          <CanvasItemProvider value={layerKey(zFinal)}>{children}</CanvasItemProvider>
         </CanvasModulateContext.Provider>
       </CanvasLighting2DContext.Provider>
     </ResourceLoaderProvider>

@@ -24,10 +24,17 @@ import {
   textEditCaretRect,
   textEditWrapIndentPx,
   textEditFirstIndentRow,
+  textEditDrawnLines,
+  textEditDrawnGlyphs,
+  textEditRowColorRuns,
 } from './nativeSolver';
 import { withVariation } from '../../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { TextEditProperties } from './types';
+import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { StructuredTextParser } from '../../../../godot/text/textServerEnums';
+import type { GlyphPlacement } from '../../../../r3f/controls/native/text/textLayout';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const THEME = nativeTheme(1);
 
@@ -98,27 +105,46 @@ describe('textEditWrapWidthPx', () => {
 
 describe('shapeTextEditLines', () => {
   it('shapes each buffer line independently, one row per line when unwrapped', () => {
-    const result = shapeTextEditLines(['a', 'bb'], 16, 0, undefined, 0, OPEN_SANS_FONT_METRICS);
+    const result = shapeTextEditLines(['a', 'bb'], { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS });
     expect(result).toHaveLength(2);
     expect(result[0]!.startRow).toBe(0);
     expect(result[0]!.layout.lines).toHaveLength(1);
     expect(result[1]!.startRow).toBe(1);
   });
   it("preserveControl threads through to each line's own shapeText call (Text::set_draw_control_chars, text_edit.cpp:292)", () => {
-    const dropped = shapeTextEditLines(['AB'], 16, 0, undefined, 0, OPEN_SANS_FONT_METRICS);
-    const boxed = shapeTextEditLines(['AB'], 16, 0, undefined, 0, OPEN_SANS_FONT_METRICS, [], true);
+    const dropped = shapeTextEditLines(['AB'], { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS });
+    const boxed = shapeTextEditLines(['AB'], {
+      fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      preserveControl: true,
+    });
     expect(dropped[0]!.layout.lines[0]!.glyphs[1]!.controlCodepoint).toBeUndefined();
     expect(boxed[0]!.layout.lines[0]!.glyphs[1]!.controlCodepoint).toBe(0x0001);
   });
   it('still occupies one row for an empty buffer line (a blank line is not zero rows)', () => {
-    const result = shapeTextEditLines(['a', '', 'b'], 16, 0, undefined, 0, OPEN_SANS_FONT_METRICS);
+    const result = shapeTextEditLines(['a', '', 'b'], {
+      fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+    });
     expect(result.map((l) => l.startRow)).toEqual([0, 1, 2]);
     expect(result[1]!.layout.lines[0]!.glyphs).toHaveLength(0);
   });
   it('wraps a long line into multiple rows only when wrap_mode is BOUNDARY(1)', () => {
     const longLine = 'a repeated word wrap word wrap word wrap word wrap';
-    const unwrapped = shapeTextEditLines([longLine], 16, 0, 3, 60, OPEN_SANS_FONT_METRICS);
-    const wrapped = shapeTextEditLines([longLine], 16, 1, 3, 60, OPEN_SANS_FONT_METRICS);
+    const unwrapped = shapeTextEditLines([longLine], {
+      fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      wrapMode: 0,
+      autowrapMode: 3,
+      wrapWidthPx: 60,
+    });
+    const wrapped = shapeTextEditLines([longLine], {
+      fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      wrapMode: 1,
+      autowrapMode: 3,
+      wrapWidthPx: 60,
+    });
     expect(unwrapped[0]!.layout.lines.length).toBe(1);
     expect(wrapped[0]!.layout.lines.length).toBeGreaterThan(1);
   });
@@ -148,7 +174,15 @@ describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () =>
   });
 
   it('adds the gutter band width into the width', () => {
-    const props: TextEditProperties = { name: 'T', text: 'a', fitContentWidth: true };
+    const props: TextEditProperties = {
+      name: 'T',
+      textDirection: 0,
+      language: '',
+      structuredTextBidiOverride: 0,
+      structuredTextBidiOverrideOptions: [],
+      text: 'a',
+      fitContentWidth: true,
+    };
     const box = THEME.widgets.lineEdit.normal;
     const withoutGutter = textEditMinimumSizeWith(node(props), ctx(), props, box, 0).x;
     expect(textEditMinimumSizeWith(node(props), ctx(), props, box, 5).x).toBe(withoutGutter + 5);
@@ -161,6 +195,69 @@ describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () =>
 
   it('floors the height at one row for an entirely empty buffer', () => {
     expect(fitHeight('')).toBe(ROW_HEIGHT_PX);
+  });
+
+  it('sizes an empty buffer by its placeholder rows and width (text_edit.cpp:8602,8608)', () => {
+    const placeholderProps = { text: '', placeholderText: 'a\nbb' };
+    expect(fitWidth(placeholderProps)).toBe(fitWidth({ text: 'bb' }));
+    expect(
+      textEditMinimumSize(node({ ...placeholderProps, fitContentHeight: true }), ctx()).y - STYLE_MIN_Y
+    ).toBe(2 * ROW_HEIGHT_PX);
+  });
+
+  it('ignores the placeholder once the buffer holds text', () => {
+    expect(fitWidth({ text: 'a', placeholderText: 'a much longer placeholder' })).toBe(
+      fitWidth({ text: 'a' })
+    );
+  });
+});
+
+describe('textEditDrawnLines', () => {
+  it('splits a buffer into its lines', () => {
+    expect(textEditDrawnLines('a\nb', undefined)).toEqual({ lines: ['a', 'b'], isPlaceholder: false });
+  });
+
+  it('shows the placeholder as one paragraph while the buffer is empty (text_edit.cpp:3377-3379)', () => {
+    expect(textEditDrawnLines('', 'a\nb')).toEqual({
+      lines: ['a\nb'],
+      isPlaceholder: true,
+    });
+  });
+
+  it('treats an unset text as empty', () => {
+    expect(textEditDrawnLines(undefined, 'x').isPlaceholder).toBe(true);
+  });
+
+  it('keeps a buffer of one newline as real text, since it holds two lines', () => {
+    expect(textEditDrawnLines('\n', 'x').isPlaceholder).toBe(false);
+  });
+});
+
+describe('shapeTextEditLines — placeholder', () => {
+  const OPTIONS = { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS };
+
+  it('breaks a placeholder paragraph at its newline into rows of the one entry', () => {
+    const [entry] = shapeTextEditLines(['a\nb'], { ...OPTIONS, placeholder: true });
+    expect(entry!.layout.lines).toHaveLength(2);
+  });
+
+  it('drops the structured-text override, which Godot never applies to a placeholder (text_edit.cpp:3348-3351)', () => {
+    const bidi = controlBidiOptions(
+      {
+        textDirection: 0,
+        language: '',
+        structuredTextBidiOverride: StructuredTextParser.STRUCTURED_TEXT_FILE,
+        structuredTextBidiOverrideOptions: [],
+      },
+      { rtl: false, locale: 'en' }
+    );
+    const text = 'שלום/world';
+    const shaped = (placeholder: boolean) =>
+      visualChars(shapeTextEditLines([text], { ...OPTIONS, bidi, placeholder })[0]!.layout.lines[0]!);
+    expect(shaped(true)).toBe(
+      visualChars(shapeTextEditLines([text], { ...OPTIONS, placeholder: true })[0]!.layout.lines[0]!)
+    );
+    expect(shaped(false)).not.toBe(shaped(true));
   });
 });
 
@@ -309,15 +406,16 @@ describe('textEditCaretRect (text_edit.cpp:926-927,945-947,1858-1877)', () => {
  */
 describe('textEditWrapIndentPx (text_edit.cpp:190-217,1363)', () => {
   const ROW = {
+    paragraphIndex: 0,
     text: '    ab',
     widthPx: 0,
     glyphs: [
-      { char: ' ', x: 0, advance: 5, glyph: null },
-      { char: ' ', x: 5, advance: 5, glyph: null },
-      { char: ' ', x: 10, advance: 5, glyph: null },
-      { char: ' ', x: 15, advance: 5, glyph: null },
-      { char: 'a', x: 20, advance: 9, glyph: null },
-      { char: 'b', x: 29, advance: 9, glyph: null },
+      { char: ' ', x: 0, advance: 5, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
+      { char: ' ', x: 5, advance: 5, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
+      { char: ' ', x: 10, advance: 5, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
+      { char: ' ', x: 15, advance: 5, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
+      { char: 'a', x: 20, advance: 9, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
+      { char: 'b', x: 29, advance: 9, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
     ],
   };
 
@@ -342,10 +440,11 @@ describe('textEditWrapIndentPx (text_edit.cpp:190-217,1363)', () => {
       text: '\tab',
       widthPx: 0,
       glyphs: [
-        { char: '\t', x: 0, advance: 32, glyph: null },
-        { char: 'a', x: 32, advance: 9, glyph: null },
-        { char: 'b', x: 41, advance: 9, glyph: null },
+        { char: '\t', x: 0, advance: 32, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
+        { char: 'a', x: 32, advance: 9, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
+        { char: 'b', x: 41, advance: 9, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
       ],
+      paragraphIndex: 0,
     };
     expect(textEditWrapIndentPx(tabbed, '\tab', 1000)).toBe(32);
   });
@@ -368,5 +467,93 @@ describe('textEditFirstIndentRow (text_edit.cpp:4107-4131)', () => {
     // Eight leading spaces broken after the fourth: the run is still going
     // when row 1 starts, so the first row that may take the indent is row 2.
     expect(textEditFirstIndentRow('        alpha', [0, 4])).toBe(1);
+  });
+});
+
+describe('shapeTextEditLines — direction, language and structured override (text_edit.cpp:3394-3401)', () => {
+  /** Each buffer line's glyph characters, left to right. */
+  function visual(lines: string[], props: Partial<TextEditProperties>, rtl = false): string[] {
+    const bidi = controlBidiOptions({ textDirection: 0, language: '', ...props }, { rtl, locale: '' });
+    return shapeTextEditLines(lines, { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS, bidi }).map(
+      ({ layout }) => visualChars(layout.lines[0]!)
+    );
+  }
+
+  it('reorders each line of an RTL paragraph on its own', () => {
+    expect(visual(['Hello!', 'abc?'], { textDirection: 2 })).toEqual(['!Hello', '?abc']);
+  });
+
+  it('shapes an INHERITED paragraph at the layout direction', () => {
+    expect(visual(['Hello!'], { textDirection: 3 }, true)).toEqual(['!Hello']);
+  });
+
+  it('lets each AUTO line infer its own direction', () => {
+    expect(visual(['Hello!', 'שלום!'], { textDirection: 0 })).toEqual(['Hello!', '!םולש']);
+  });
+
+  it('runs the structured parser on each line on its own (text_edit.cpp:297-324)', () => {
+    const file = { textDirection: 2, structuredTextBidiOverride: 2 };
+    expect(visual(['שלום/abc', 'a/שלום'], file)).toEqual(['םולש/abc', 'a/םולש']);
+  });
+});
+
+describe('textEditDrawnGlyphs', () => {
+  // Three 10 px glyphs at pen x 0, 10 and 20.
+  const glyphs = [0, 10, 20].map((x) => ({ x, advance: 10 })) as GlyphPlacement[];
+
+  it('draws every glyph whose advance box lies between the margins (text_edit.cpp:1724)', () => {
+    expect(textEditDrawnGlyphs(glyphs, 4, 4, 34)).toEqual([true, true, true]);
+  });
+
+  it('drops a glyph that crosses the end margin whole, and stops the walk (:1736-1738)', () => {
+    expect(textEditDrawnGlyphs(glyphs, 4, 4, 33)).toEqual([true, true, false]);
+  });
+
+  it('keeps a glyph that ends on the end margin, then stops the walk', () => {
+    expect(textEditDrawnGlyphs(glyphs, 4, 4, 24)).toEqual([true, true]);
+  });
+
+  it('drops a glyph that starts before the begin margin and keeps walking', () => {
+    expect(textEditDrawnGlyphs(glyphs, -5, 0, 100)).toEqual([false, true, true]);
+  });
+});
+
+describe('textEditRowColorRuns — culled glyphs', () => {
+  const glyphs = [0, 10, 20].map((x) => ({ x, advance: 10, char: 'a' })) as GlyphPlacement[];
+  const colour = { r: 1, g: 1, b: 1, a: 1 };
+
+  it('omits a glyph the cull dropped and keeps the others at their own index', () => {
+    const [run] = textEditRowColorRuns(glyphs, 0, undefined, colour, [true, false, true]);
+    expect(run!.glyphs.map((glyph) => glyph.x)).toEqual([0, 20]);
+  });
+
+  it('still yields one empty run when every glyph is dropped, so the row keeps its TextRun', () => {
+    expect(textEditRowColorRuns(glyphs, 0, undefined, colour, [false, false, false])).toEqual([
+      { glyphs: [], color: colour },
+    ]);
+  });
+});
+
+describe('textEditRowColorRuns — a decomposed character (text_edit.cpp:1674)', () => {
+  const red = { r: 1, g: 0, b: 0, a: 1 };
+  const blue = { r: 0, g: 0, b: 1, a: 1 };
+
+  it('colours the glyph after a base and its mark by its own character', () => {
+    const glyphs = [
+      { x: 0, advance: 10, char: 'A', sourceIndex: 0 },
+      { x: 10, advance: 0, char: '̈', sourceIndex: 0 },
+      { x: 10, advance: 10, char: 'b', sourceIndex: 1 },
+    ] as GlyphPlacement[];
+    const spans = [
+      { startIndex: 0, endIndex: 1, color: red },
+      { startIndex: 1, endIndex: 2, color: blue },
+    ];
+
+    const runs = textEditRowColorRuns(glyphs, 0, spans, red);
+
+    expect(runs.map(({ glyphs: run, color }) => [run.map((glyph) => glyph.char).join(''), color])).toEqual([
+      ['Ä', red],
+      ['b', blue],
+    ]);
   });
 });

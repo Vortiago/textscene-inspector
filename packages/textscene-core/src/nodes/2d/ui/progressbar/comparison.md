@@ -12,6 +12,8 @@ renders_as: a background and ratio-filled StyleBox pair, with a percentage label
 ProgressBar draws its `background` StyleBox across the whole control and its `fill`
 StyleBox windowed to the current value's ratio, in the direction `fill_mode` names.
 Unless `indeterminate` is set, it adds a centred percentage label with an optional outline.
+While `localize_numeral_system` is true, its default, the label uses the digits of the project locale. It
+ends with the percent sign of that locale (`progress_bar.cpp:168-174`).
 
 ## Linting
 
@@ -41,10 +43,17 @@ The lenient parser reads `fill_mode`, `show_percentage`, `indeterminate` and
 outside 0-3 draws as `FILL_BEGIN_TO_END`: `set_fill_mode`'s `ERR_FAIL_INDEX` refuses
 the out-of-range write, so the node keeps its class-default mode.
 
+The percentage's outline is a stroked contour ring with a one-sided radius of `outline_size / 4` px
+(`text_server_adv.cpp:1383`), drawn before the text (`progress_bar.cpp:180-181`). It draws on the
+canvas painter (painter B) for the bundled font and a scene font alike, as does the fill (ADR-0040).
+Each glyph and its ring draw from FreeType's bitmap, as Godot draws them.
+
+A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
+outline ring (ADR-0064).
+
 ## Known limitations
 
 - **Approximated** `indeterminate` never animates, so the previewer always draws Godot's
   static frame (the bar centred in the control), whatever `editor_preview_indeterminate`
   says.
-- **Approximated** An emboldened glyph that Godot hints with its CFF hinter or its auto-hinter follows the unhinted contour, a fraction of a pixel off Godot's.
-- **Resource gap** A SystemFont has no bytes to read, so it draws the glyph as it stands, where Godot emboldens or shears it.
+- **Resource gap** A SystemFont always draws the default font, as Godot does when no OS font matches its names, where Godot draws a matching OS font.

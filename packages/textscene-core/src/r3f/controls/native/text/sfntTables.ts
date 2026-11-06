@@ -71,12 +71,32 @@ const MAXP_GLYPH_COUNT_LENGTH = 6;
 const MAXP_VERSION_1 = 0x10000;
 const MAXP_VERSION_1_LENGTH = 32;
 
-/** The tables the readers of this module use. A compressed container decompresses these and no others. */
-export const SCENE_FONT_TABLE_TAGS: readonly string[] = ['head', 'hhea', 'OS/2', 'fvar'];
+/**
+ * The tables the scene-font loader reads: this module's, the `cmap` and `maxp` that tell which
+ * characters have a glyph, the `GPOS`, `GDEF` and `hmtx` that place the marks of a decomposed character,
+ * and the `GSUB` of the glyphs a run shapes into.
+ * A compressed container decompresses these and no others.
+ */
+export const SCENE_FONT_TABLE_TAGS: readonly string[] = [
+  'head',
+  'hhea',
+  'OS/2',
+  'fvar',
+  'cmap',
+  'maxp',
+  'GPOS',
+  'GDEF',
+  'hmtx',
+  'GSUB',
+];
+
+/** The tables the fallback mark placement reads of a font with no `GPOS` script (`fallbackMarkPositioning.ts`). */
+export const FALLBACK_MARK_TABLE_TAGS: readonly string[] = [...SCENE_FONT_TABLE_TAGS, 'glyf', 'loca', 'CFF '];
 
 /**
  * The tables an outline reader uses (`sfntOutlines.ts`), for the container readers to decompress:
- * the outlines, the metrics that place a TrueType glyph's phantom points, and its hinting programs.
+ * the outlines, the metrics that place a TrueType glyph's phantom points, its hinting programs, the
+ * layout tables the auto-hinter reads, and the `GPOS` and `GDEF` tables of the kerning at an instance.
  */
 export const OUTLINE_TABLE_TAGS: readonly string[] = [
   'head',
@@ -95,7 +115,15 @@ export const OUTLINE_TABLE_TAGS: readonly string[] = [
   'fpgm',
   'prep',
   'fvar',
+  'avar',
+  'gvar',
+  'cvar',
+  'HVAR',
+  'VVAR',
   'name',
+  'GSUB',
+  'GPOS',
+  'GDEF',
 ];
 
 export interface TableRecord {

@@ -17,7 +17,10 @@ import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderCont
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { ItemList } from './Component';
-import { ICON_MODE_LEFT, ITEM_LIST_THEME_FONT_KEY, shapeItemListText } from './nativeSolver';
+import { ITEM_LIST_THEME_FONT_KEY, shapeItemText } from './nativeSolver';
+import { ItemListIconMode } from '../../../../godot/scene/gui';
+
+const { ICON_MODE_LEFT } = ItemListIconMode;
 import type { ItemListProperties } from './types';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
@@ -233,14 +236,15 @@ describe('<ItemList> — RTL', () => {
   // inside its own `104 - 22` wide box (text_paragraph.cpp:916-921).
   it('moves the row label to Godot own RTL pen, right-aligned in its box', async () => {
     const node = solveNode(RTL_ITEMS, false, { item_0: { x: 16, y: 16 } });
-    const shaped = shapeItemListText({
+    const shaped = shapeItemText({
       text: 'Sword',
       fontSizePx: nativeTheme(1).fontSize,
       fontMetrics: resolveNodeFontMetrics(node, ITEM_LIST_THEME_FONT_KEY),
       iconMode: ICON_MODE_LEFT,
+      locale: '',
       maxTextLines: 1,
       fixedColumnWidth: 100,
-    })!;
+    }).shaped!;
     const ltr = await renderWithIconLoaded(RTL_ITEMS);
     const rtl = await renderWithIconLoaded(RTL_ITEMS, true);
     expect(absoluteX(findTextMeshes(ltr.scene)[0]!)).toBeCloseTo(26, 5);

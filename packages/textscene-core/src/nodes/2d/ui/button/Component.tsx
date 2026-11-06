@@ -15,14 +15,17 @@ import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import {
   clampAutowrapMode,
+  infersRtl,
   shapedTextSizeWidthPx,
   soloLineLayout,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import { overrunFlagsForBehavior, trimLayoutToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import { isDrawnRtl } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   resolveButtonDrawState,
@@ -30,6 +33,7 @@ import {
   tintColor,
   layoutButtonContent,
   buttonTextAlignShiftPx,
+  buttonTextBufWidthPx,
   swapAlignmentSide,
 } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
@@ -55,6 +59,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   const hasText = text.length > 0;
   const { fontSizePx, color: baseFontColor } = buttonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, BUTTON_THEME_FONT_KEY);
   // Pass 1, unwrapped: what the icon's own reservation is measured against. It is the
@@ -136,12 +141,18 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   const drawableWidthPx = layoutButtonContent({
     ...contentInput,
     textNaturalSize: naturalSize(unwrapped),
+    isTextRtl: infersRtl(unwrapped),
   }).drawableSize.x;
   const layout: TextLayoutResult | null = wraps
-    ? buttonLabelShape(solveNode, theme, Math.ceil(Math.max(1, drawableWidthPx)))
+    ? buttonLabelShape(solveNode, theme, buttonTextBufWidthPx(drawableWidthPx))
     : unwrapped;
   const content = useMemo(
-    () => layoutButtonContent({ ...contentInput, textNaturalSize: naturalSize(layout) }),
+    () =>
+      layoutButtonContent({
+        ...contentInput,
+        textNaturalSize: naturalSize(layout),
+        isTextRtl: infersRtl(layout),
+      }),
     [contentInput, layout]
   );
 
@@ -149,10 +160,8 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
     () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
     [props.overrunBehavior]
   );
-  const trimmedLayout: TextLayoutResult | null = useMemo(() => {
-    // The TextServer trims a wrapped buffer per row. This single-line
-    // trim would collapse it to its first row, so it stands down there.
-    if (!layout || !overrunFlags.trim || layout.lines.length > 1) return layout;
+  const isLineDrawnRtl = isDrawnRtl(useControlBidiOptions(props, solveNode));
+  const trimWidthPx = useMemo(() => {
     const customElementWidth = rect.w - baseStyleBox.contentMargin.left - baseStyleBox.contentMargin.right;
     const iconReserve =
       content.icon &&
@@ -162,24 +171,35 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
         : 0;
     // button.cpp:424 `text_buf_width = ceil(MAX(1, drawable_size_remained.width))`. The icon's
     // computed reservation, `content.icon.rect.w`, keeps this in step with `layoutButtonContent`.
-    const trimWidthPx = Math.ceil(Math.max(1, customElementWidth - iconReserve));
-    const trimmedLine = trimLineToWidth(layout.lines[0]!, trimWidthPx, overrunFlags, {
-      fontMetrics,
-      fontSizePx,
-    });
-    return soloLineLayout(trimmedLine, layout);
+    return buttonTextBufWidthPx(customElementWidth - iconReserve);
   }, [
-    layout,
-    overrunFlags,
     rect.w,
     baseStyleBox.contentMargin,
     content.icon,
     props.iconAlignment,
     solveNode.constants,
     theme.separation,
-    fontMetrics,
-    fontSizePx,
   ]);
+  // `TextParagraph::_shape_lines` trims each row of an unwrapped buffer, and no row of a wrapped
+  // one, since Button hides no line (`text_paragraph.cpp:228-262,282-293`).
+  const trimmedLayout = useMemo(() => {
+    if (!layout || !overrunFlags.trim || wraps) return layout;
+    return trimLayoutToWidth(layout, trimWidthPx, overrunFlags, {
+      fontMetrics,
+      fontSizePx,
+      isDrawnRtl: isLineDrawnRtl,
+    });
+  }, [layout, overrunFlags, wraps, trimWidthPx, fontMetrics, fontSizePx, isLineDrawnRtl]);
+
+  // One layout object per row, so a row's runs keep their meshes across renders.
+  const lineLayouts = useMemo(
+    () => trimmedLayout?.lines.map((line) => soloLineLayout(line, trimmedLayout)) ?? [],
+    [trimmedLayout]
+  );
+  // `content.text.offset.x` holds this shift of the untrimmed `layout`; each row backs it out.
+  const untrimmedShiftPx = content.text
+    ? buttonTextAlignShiftPx(naturalSize(layout).x, content.drawableSize.x, textAlignment, infersRtl(layout))
+    : 0;
 
   return (
     <>
@@ -202,26 +222,28 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
         trimmedLayout &&
         trimmedLayout.lines.map((line, i) => (
           // `TextParagraph::draw` aligns each line on its own (`text_paragraph.cpp:887-922`),
-          // so shorter rows re-centre. `content.text.offset.x` carries the widest row's
-          // shift, so it is backed out and each row's own put in its place.
+          // so shorter rows re-centre. `content.text.offset.x` carries the shift of the untrimmed
+          // `layout`, so that shift is backed out and each row's own put in its place.
           <CanvasItemGroup
             key={i}
             position={[
               content.text!.offset.x -
-                buttonTextAlignShiftPx(naturalSize(trimmedLayout).x, content.drawableSize.x, textAlignment) +
+                untrimmedShiftPx +
                 buttonTextAlignShiftPx(
                   shapedTextSizeWidthPx(line.widthPx),
                   content.drawableSize.x,
-                  textAlignment
+                  textAlignment,
+                  line.isRtl === true
                 ),
               -(content.text!.offset.y + i * trimmedLayout.linePitchPx),
               0,
             ]}
           >
-            <TextRun
-              layout={soloLineLayout(line, trimmedLayout)}
+            <OutlinedTextRun
+              layout={lineLayouts[i]!}
               fontSizePx={fontSizePx}
               tint={tintedFontColor}
+              outline={textOutline}
               clippingPlanes={clippingPlanes}
               renderOrder={renderOrder}
             />

@@ -1,5 +1,5 @@
 /**
- * The canvas outline of a `<ProgressBar>` percentage draws beneath the percentage. `<TextRun>` is
+ * The canvas outline of a `<ProgressBar>` percentage draws beneath the percentage. `<TextRunMesh>` is
  * stubbed to read the props the painter hands it.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -8,7 +8,9 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { isCanvasFontMetrics } from '../../../../r3f/controls/native/text/runtimeFontMetrics';
 import { createOpenSansCanvasFontMetrics } from '../../../../r3f/controls/native/text/openSansCanvasFontMetrics';
+import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { withVariation } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { ProgressBar } from './Component';
@@ -16,10 +18,13 @@ import { ProgressBar } from './Component';
 interface RunProps {
   strokeWidthPx?: number;
   renderOrder?: number;
+  layout: { fontMetrics?: FontMetrics };
+  outlineColor?: unknown;
 }
 
 const scene = vi.hoisted(() => ({
   metrics: undefined as FontMetrics | undefined,
+  bundled: undefined as FontMetrics | undefined,
   runs: [] as RunProps[],
 }));
 
@@ -31,8 +36,11 @@ vi.mock('../../../../r3f/controls/native/text/sceneFontLoader', async (importOri
   ...(await importOriginal<typeof import('../../../../r3f/controls/native/text/sceneFontLoader')>()),
   peekSceneFontMetrics: () => scene.metrics,
 }));
-vi.mock('../../../../r3f/controls/native/text/TextRun', () => ({
-  TextRun: (props: RunProps) => {
+vi.mock('../../../../r3f/controls/native/text/bundledFontLoader', () => ({
+  peekBundledCanvasFontMetrics: () => scene.bundled,
+}));
+vi.mock('../../../../r3f/controls/native/text/TextRunMesh', () => ({
+  TextRunMesh: (props: RunProps) => {
     scene.runs.push(props);
     return null;
   },
@@ -72,5 +80,40 @@ describe('<ProgressBar> canvas outline', () => {
     const outline = strokeRuns().at(-1);
     const percentage = scene.runs.find((run) => !run.strokeWidthPx);
     expect(percentage?.renderOrder).toBeGreaterThan(outline?.renderOrder ?? Infinity);
+  });
+});
+
+describe('<ProgressBar> bundled-font outline', () => {
+  beforeEach(() => {
+    scene.metrics = OPEN_SANS_FONT_METRICS;
+    scene.bundled = createOpenSansCanvasFontMetrics('progress-bar-bundled-ring-test');
+  });
+
+  it('strokes the ring on the bundled canvas face, below the percentage', async () => {
+    await renderBar();
+
+    await vi.waitFor(() => expect(strokeRuns().length).toBeGreaterThan(0));
+    const percentage = scene.runs.find((run) => !run.strokeWidthPx);
+    expect(isCanvasFontMetrics(strokeRuns().at(-1)?.layout.fontMetrics)).toBe(true);
+    expect(strokeRuns().at(-1)?.renderOrder).toBeLessThan(percentage?.renderOrder ?? -Infinity);
+  });
+
+  it('fills the percentage on the canvas face with no outline of its own', async () => {
+    await renderBar();
+
+    await vi.waitFor(() => expect(strokeRuns().length).toBeGreaterThan(0));
+    const percentage = scene.runs.find((run) => !run.strokeWidthPx);
+    expect(isCanvasFontMetrics(percentage?.layout.fontMetrics)).toBe(true);
+    expect(percentage).not.toHaveProperty('outlineColor');
+  });
+
+  it('fills the percentage on the atlas while the bundled canvas face registers', async () => {
+    scene.bundled = undefined;
+
+    await renderBar();
+
+    await vi.waitFor(() => expect(scene.runs).toHaveLength(1));
+    expect(scene.runs[0]?.strokeWidthPx ?? 0).toBe(0);
+    expect(isCanvasFontMetrics(scene.runs[0]?.layout.fontMetrics)).toBe(false);
   });
 });

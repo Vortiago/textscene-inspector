@@ -17,6 +17,12 @@ async function drawn(char: string, fontSizePx: number): Promise<string[]> {
 
 // Every expectation is what `font_get_glyph_contours` of Godot 4.6.3 returned for this font.
 describe('openFontOutlines CFF glyph', () => {
+  it('reads the points of H at 16 px, with the stems on whole pixels', async () => {
+    expect(await drawn('H', 16)).toEqual([
+      '11.578125,0 11.578125,-12 8.25,-12 8.25,-7 4.265625,-7 4.265625,-12 0.9375,-12 0.9375,0 4.265625,0 4.265625,-4.421875 8.25,-4.421875 8.25,0',
+    ]);
+  });
+
   it('reads the points of H at 64 px, with the stems on whole pixels', async () => {
     expect(await drawn('H', 64)).toEqual([
       '46.328125,0 46.328125,-45 33.015625,-45 33.015625,-27 17.078125,-27 17.078125,-45 3.765625,-45 3.765625,0 17.078125,0 17.078125,-16.6875 33.015625,-16.6875 33.015625,0',

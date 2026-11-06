@@ -1,6 +1,7 @@
 /**
- * The lines of a TextMesh: the shaped text broken at `width` as `autowrap_mode` says, and justified
- * under `HORIZONTAL_ALIGNMENT_FILL` (`primitive_meshes.cpp:3257-3304`). A TextMesh passes no trim
+ * The lines of a TextMesh: the text shaped in its direction, language and override
+ * (`primitive_meshes.cpp:3224-3240`), broken at `width` as `autowrap_mode` says, and justified under
+ * `HORIZONTAL_ALIGNMENT_FILL` (`:3257-3304`). A TextMesh passes no trim
  * flag to the line breaker, so it keeps the spaces at the edge of a line, unlike a Label.
  *
  * Portions ported from Godot Engine (MIT).
@@ -12,10 +13,10 @@
 import { HorizontalAlignment } from '../../../godot/math/alignment';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import type { FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
-import { fitLineToWidth, justifyToLineIndex } from '../../../r3f/controls/native/text/textJustify';
+import { textBidiOptions } from '../../../r3f/controls/native/text/textBidiOptions';
+import { justifyLinesToWidth } from '../../../r3f/controls/native/text/textJustify';
 import {
   clampAutowrapMode,
-  shapedTextSizeWidthPx,
   shapeText,
   type TextLineLayout,
 } from '../../../r3f/controls/native/text/textLayout';
@@ -32,24 +33,14 @@ export interface TextMeshLines {
   linePitchPx: number;
 }
 
-/** The width a justified line grows or shrinks to: `width`, else the widest line (`:3284-3304`). */
-function justificationWidthPx(width: number, lines: readonly TextLineLayout[]): number {
-  if (width > 0) return width;
-  return Math.max(0, ...lines.map((line) => shapedTextSizeWidthPx(line.widthPx)));
-}
-
-function justified(lines: readonly TextLineLayout[], properties: TextMeshProperties): TextLineLayout[] {
-  const toLine = justifyToLineIndex(lines, properties.justificationFlags);
-  const widthPx = justificationWidthPx(properties.width, lines);
-  return lines.map((line, i) =>
-    i < toLine
-      ? fitLineToWidth(line, widthPx, properties.justificationFlags, { fontSizePx: properties.fontSize }).line
-      : line
-  );
-}
-
-export function shapeTextMeshLines(properties: TextMeshProperties, metrics: FontMetrics): TextMeshLines {
+/** An empty `language` takes `locale`, the project's `_get_locale()` (`primitive_meshes.cpp:3230`). */
+export function shapeTextMeshLines(
+  properties: TextMeshProperties,
+  locale: string,
+  metrics: FontMetrics
+): TextMeshLines {
   const layout = shapeText(properties.text, {
+    ...textBidiOptions(properties, locale),
     fontSizePx: properties.fontSize,
     boxWidthPx: properties.width,
     autowrapMode: clampAutowrapMode(properties.autowrapMode, AutowrapMode.AUTOWRAP_OFF),
@@ -60,7 +51,9 @@ export function shapeTextMeshLines(properties: TextMeshProperties, metrics: Font
   });
   const isFill = properties.horizontalAlignment === HorizontalAlignment.HORIZONTAL_ALIGNMENT_FILL;
   return {
-    lines: isFill ? justified(layout.lines, properties) : layout.lines,
+    lines: isFill
+      ? justifyLinesToWidth(layout.lines, properties.width, properties.justificationFlags)
+      : layout.lines,
     baselineOffsetPx: layout.baselineOffsetPx,
     linePitchPx: layout.linePitchPx,
   };

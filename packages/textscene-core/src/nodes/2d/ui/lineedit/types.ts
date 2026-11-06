@@ -1,8 +1,14 @@
 /** LineEdit's parsed properties. */
 
 import type { ControlProperties } from '../control/types';
+import type {
+  StructuredTextOverrideProperties,
+  TextDirectionProperties,
+} from '../../../../godot/text/paragraphDirection';
 
-export interface LineEditProperties extends ControlProperties {
+/** The text shapes in `text_direction`, `language`, else the locale, and the structured override (`line_edit.cpp:3104-3112`). */
+export interface LineEditProperties
+  extends ControlProperties, TextDirectionProperties, StructuredTextOverrideProperties {
   /** The edited string. Godot default "". */
   text?: string;
   /** Shown, dimmed, whenever `text` is empty. Godot default "". */

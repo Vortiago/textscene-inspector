@@ -57,8 +57,9 @@ export interface ParsedImportFile {
    * (`resource_importer.cpp:76`), and any other value as written. The typed readers cover only
    * `nodes/root_scale`, `nodes/apply_root_scale`, the glTF naming options, the lightmap unwrap
    * options, `nodes/use_name_suffixes`, the `_subresources` material remaps, mesh layers, mesh
-   * lightmap overrides and clip loop modes, a texture's compression and a 3D texture's slices.
-   * The rest is GLTFLoader's work or a bake concern with no visual effect.
+   * lightmap overrides and clip loop modes, a texture's compression and a 3D texture's slices. A
+   * raw font takes the whole block as its FontFile properties. The rest is GLTFLoader's work or a
+   * bake concern with no visual effect.
    */
   params: Record<string, string>;
 }
@@ -176,6 +177,14 @@ export function importTextureOptions(parsed: ParsedImportFile | null): TextureIm
       params['roughness/src_normal']
     ),
   };
+}
+
+/**
+ * The `[params]` of a font's sidecar, which the font importer `importer` sets on the FontFile. A
+ * sidecar of another importer, or none, sets nothing, so it reads as no params.
+ */
+export function importFontParams(parsed: ParsedImportFile | null, importer: string): Record<string, string> {
+  return parsed?.importer === importer ? parsed.params : {};
 }
 
 /** `compress/mode` by the number the sidecar stores, the default for one outside the enum. */

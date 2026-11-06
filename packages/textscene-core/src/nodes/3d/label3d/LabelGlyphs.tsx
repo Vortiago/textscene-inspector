@@ -1,12 +1,12 @@
 /**
  * Label3D's glyph-drawing pass, `React.lazy`-loaded so the font stays out of the
- * initial bundle. Shaped with `'canvas'` metrics, not MSDF: Godot's default font is
- * not MSDF (`servers/text/text_server.cpp:2386`, read by `scene/theme/theme_db.cpp:59`),
+ * initial bundle. Shaped with `'canvas'` metrics, or `'bitmap'` for a BMFont, not MSDF: Godot's
+ * default font is not MSDF (`servers/text/text_server.cpp:2386`, read by `scene/theme/theme_db.cpp:59`),
  * and a distance field cannot reach as far as the FreeType outline.
  */
 import { useMemo, type RefObject } from 'react';
 import * as THREE from 'three';
-import { shapeText, soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
+import { soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../r3f/controls/native/text/TextRun';
 import { NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
 import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
@@ -15,10 +15,13 @@ import { usePendingWhile } from '../../../resources/usePendingWhile';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 import { labelBillboardAabb } from '../../../godot/scene/billboard';
-import { label3DAabb, layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
+import { breakLabel3DLines, justifyLabel3DLines, label3DAabb, layoutLabel3DLines } from './glyphLayout';
+import { outlineStrokeWidthPx } from '../../../r3f/controls/native/text/textOutline';
+import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import { type Label3DProperties } from './types';
 import { useLabel3DFont } from './useLabel3DFont';
-import { AutowrapMode } from '../../../godot/text/textServerEnums';
+import { useLayoutDirectionEnv } from '../../../r3f/contexts/useLayoutDirectionEnv';
+import { textBidiOptions } from '../../../r3f/controls/native/text/textBidiOptions';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 
 export interface LabelGlyphsProps {
@@ -40,25 +43,59 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   const fontMetrics = font?.metrics;
   usePendingWhile(!fontMetrics);
 
-  const layout = useMemo(
+  // Each memo lists the fields it reads, so an unrelated property edit keeps the layout.
+  const { text, font_size, line_spacing, width, autowrap_mode, autowrap_trim_flags } = properties;
+  const { justification_flags, horizontal_alignment, vertical_alignment, uppercase } = properties;
+  const { textDirection, language, structuredTextBidiOverride, structuredTextBidiOverrideOptions } =
+    properties;
+  const locale = useLayoutDirectionEnv().applicationLocale;
+  // An empty `language` takes the project's `_get_locale()` (`label_3d.cpp:483`).
+  const bidi = useMemo(
     () =>
-      // Godot breaks the paragraph on `\n` only: `width` is unparsed, so autowrap
-      // is off, and `shapeText` ignores `boxWidthPx` for OFF.
-      shapeText(properties.text, {
-        fontSizePx: properties.font_size,
-        boxWidthPx: 0,
-        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-        lineSpacingPx: properties.line_spacing,
-        fontMetrics,
-      }),
-    [properties.text, properties.font_size, properties.line_spacing, fontMetrics]
+      textBidiOptions(
+        { textDirection, language, structuredTextBidiOverride, structuredTextBidiOverrideOptions },
+        locale
+      ),
+    [textDirection, language, structuredTextBidiOverride, structuredTextBidiOverrideOptions, locale]
+  );
+  const { x: offsetX, y: offsetY } = properties.offset;
+  // Width reaches the break only in a wrapping mode, so it is 0 otherwise: `shapeText` ignores it for OFF.
+  const breakWidth = autowrap_mode === AutowrapMode.AUTOWRAP_OFF ? 0 : width;
+  const broken = useMemo(
+    () =>
+      breakLabel3DLines(
+        { text, font_size, line_spacing, width: breakWidth, autowrap_mode, autowrap_trim_flags, uppercase },
+        bidi,
+        fontMetrics
+      ),
+    [
+      text,
+      font_size,
+      line_spacing,
+      breakWidth,
+      autowrap_mode,
+      autowrap_trim_flags,
+      uppercase,
+      bidi,
+      fontMetrics,
+    ]
+  );
+  const layout = useMemo(
+    () => justifyLabel3DLines(broken, { width, justification_flags, horizontal_alignment }),
+    [broken, width, justification_flags, horizontal_alignment]
   );
 
   // One `<TextRun>` per line: Godot aligns each line by its own width
   // (`label_3d.cpp:588-599`).
   const placements = useMemo(
-    () => layoutLabel3DLines(layout, properties.horizontal_alignment, properties.line_spacing),
-    [layout, properties.horizontal_alignment, properties.line_spacing]
+    () =>
+      layoutLabel3DLines(layout, {
+        horizontal_alignment,
+        vertical_alignment,
+        line_spacing,
+        offset: { x: offsetX, y: offsetY },
+      }),
+    [layout, horizontal_alignment, vertical_alignment, line_spacing, offsetX, offsetY]
   );
 
   // Memoised: `TextRun` keys its geometry and material off this object's
@@ -88,7 +125,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   // Not memoised: `TextRun` keys its material off the blend's fields, not its identity, so a fresh
   // equal-valued one rebuilds nothing.
   const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
-  const { blends, joinsShadowPass, side, depthTest, textureFilter } = materialFor2d({
+  const { blends, joinsShadowPass, shading, side, depthTest, textureFilter } = materialFor2d({
     alphaCut: properties.alpha_cut,
     alphaScissorThreshold: properties.alpha_scissor_threshold,
     // Label3D's DrawFlags have no FLAG_TRANSPARENT (`label_3d.h:42-47`).
@@ -98,13 +135,26 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     alphaAntialiasingEdge: properties.alpha_antialiasing_edge,
     doubleSided: properties.double_sided,
     noDepthTest: properties.no_depth_test,
+    shaded: properties.shaded,
     textureFilter: properties.texture_filter,
     anisotropicFilteringLevel,
   });
   // The glyph pages carry a mip chain only for a font with `generate_mipmaps`; the filter row
   // says whether a mipmapped sampler reads it.
   const mipmapped = font?.generatesMipmaps ?? false;
-  const surfaceShadow = { ...shadow, castShadow: shadow.castShadow && joinsShadowPass };
+  // Both surfaces take one material (`label_3d.cpp:396`), so they share these props.
+  const surfaceProps = {
+    glyphDrawer: 'label3D' as const,
+    depthTest,
+    side,
+    textureFilter,
+    mipmapped,
+    fallbackMipmaps: font?.fallbackMipmaps,
+    blends,
+    shadow: { ...shadow, castShadow: shadow.castShadow && joinsShadowPass },
+    layers: properties.layers,
+    shading,
+  };
 
   // `label_3d.cpp:401-405`: only an ALPHA_CUT_DISABLED surface is sorted by its
   // material's render priority. Any other mode bakes `priority * pixel_size` into
@@ -124,7 +174,8 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
 
   // `modulate` is authored sRGB. Godot decodes the vertex colour (`label_3d.cpp:428`)
   // through `FLAG_SRGB_VERTEX_COLOR` (`material.cpp:3048-3049`, `material.cpp:1218`).
-  // Here the tint is baked as sRGB bytes that the texture's `SRGBColorSpace` decodes.
+  // A canvas run bakes the tint as sRGB bytes that the texture's `SRGBColorSpace` decodes, and a
+  // BMFont run multiplies the decoded page by the linear tint.
   // `frameExcluded`: Godot's framing camera never sees shaped text (`FramePoint` in `label3d/Component.tsx`).
   return (
     <group>
@@ -138,14 +189,8 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                   fontSizePx={properties.font_size}
                   tint={properties.outline_modulate}
                   strokeWidthPx={strokeWidthPx}
-                  depthTest={depthTest}
-                  side={side}
                   renderOrder={outlineSurface.renderOrder}
-                  textureFilter={textureFilter}
-                  mipmapped={mipmapped}
-                  blends={blends}
-                  shadow={surfaceShadow}
-                  layers={properties.layers}
+                  {...surfaceProps}
                   frameExcluded
                 />
               </group>
@@ -155,14 +200,8 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                 layout={lineLayouts[index]!}
                 fontSizePx={properties.font_size}
                 tint={properties.modulate}
-                depthTest={depthTest}
-                side={side}
                 renderOrder={fillSurface.renderOrder}
-                textureFilter={textureFilter}
-                mipmapped={mipmapped}
-                blends={blends}
-                shadow={surfaceShadow}
-                layers={properties.layers}
+                {...surfaceProps}
                 frameExcluded
               />
             </group>

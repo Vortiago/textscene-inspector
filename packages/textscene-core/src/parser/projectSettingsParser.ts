@@ -12,7 +12,9 @@ import {
 } from '../godot/string/string.js';
 import { boolSlotValue } from '../godot/variant/variantBool.js';
 import { dataDirectoryPath, extensionListPath } from '../godot/project/project.js';
+import { standardizeLocale } from '../godot/text/standardizeLocale.js';
 import { isLocaleRightToLeft } from '../godot/text/textServer.js';
+import { fontHintingOf, type FontHinting } from '../godot/text/textServerEnums.js';
 import type { LayoutDirectionEnv } from '../godot/scene/control.js';
 import { DEFAULT_CLEAR_COLOR } from '../godot/rendering/rendering.js';
 import { DEFAULT_PHYSICS_CLOCK, type PhysicsClock } from '../godot/scene/physicsTicks.js';
@@ -314,6 +316,11 @@ export function projectDefaultFontGeneratesMipmaps(settings: ProjectSettings | n
   return boolSlotValue(settings?.['gui/theme/default_font_generate_mipmaps']) ?? false;
 }
 
+/** `gui/theme/default_font_hinting`, which the default font takes (`theme_db.cpp:56`). Light by default (`text_server.cpp:2383`). */
+export function projectDefaultFontHinting(settings: ProjectSettings | null): FontHinting {
+  return fontHintingOf(parseOptionalInt(settings?.['gui/theme/default_font_hinting']));
+}
+
 /** `RS::VIEWPORT_ANISOTROPY_16X`, the last level `Viewport.AnisotropicFiltering` names. */
 const MAX_ANISOTROPIC_FILTERING_LEVEL = 4;
 
@@ -416,9 +423,9 @@ export function projectLayoutDirectionEnv(settings: ProjectSettings | null): Lay
   const forceRtl =
     boolSlotValue(settings?.['internationalization/rendering/force_right_to_left_layout_direction']) === true;
   // The locale comes from `internationalization/locale/test` when set, else the OS
-  // (`core/string/translation_server.cpp:592-599`). The OS locale is in no file, so
+  // (`core/string/translation_server.cpp:592-599`), standardised by `set_locale` (`:482`). The OS locale is in no file, so
   // those arms stay left-to-right.
-  const testLocale = settings?.['internationalization/locale/test']?.trim() ?? '';
+  const testLocale = standardizeLocale(settings?.['internationalization/locale/test']?.trim() ?? '');
   const applicationLocaleRtl = testLocale !== '' && isLocaleRightToLeft(testLocale);
   // The host's locale, which no scene file states.
   const systemLocaleRtl = false;
@@ -435,7 +442,7 @@ export function projectLayoutDirectionEnv(settings: ProjectSettings | null): Lay
           ? systemLocaleRtl
           : applicationLocaleRtl;
 
-  return { forceRtl, rootRtl, applicationLocaleRtl, systemLocaleRtl };
+  return { forceRtl, rootRtl, applicationLocaleRtl, systemLocaleRtl, applicationLocale: testLocale };
 }
 
 /** The prefix of an `[autoload]` entry's full setting name. */

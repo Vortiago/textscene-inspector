@@ -1,0 +1,73 @@
+; One variable: the Label arms that read the inferred paragraph direction, not the layout one.
+; FILL with autowrap (label.cpp:472-478), the overrun trim (text_server_adv.cpp:6053-6067,
+; label.h:198-241) and the glyph reveal (label.cpp:779-780) all follow the shaped direction.
+
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://fonts/dejavu-sans-bidi-subset.ttf" id="1_font"]
+
+[sub_resource type="Theme" id="Theme_1"]
+default_font = ExtResource("1_font")
+default_font_size = 28
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.1, 0.12, 0.18, 1)
+
+; RIGHT reads the layout direction only, so an RTL paragraph under an LTR layout stays at the right.
+[node name="RightRtl" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 540.0
+offset_bottom = 64.0
+text = "שלום עולם!"
+horizontal_alignment = 2
+
+; FILL with autowrap: the fitted first line fills the box, and the last line sits at the right edge.
+[node name="FillRtl" type="Label" parent="."]
+offset_left = 600.0
+offset_top = 20.0
+offset_right = 900.0
+offset_bottom = 110.0
+text = "שלום עולם שלום עולם שלום"
+horizontal_alignment = 3
+autowrap_mode = 3
+
+; ELLIPSIS on an RTL line keeps the logical start and draws the dots at the visual left.
+[node name="EllipsisRtl" type="Label" parent="."]
+offset_left = 600.0
+offset_top = 148.0
+offset_right = 800.0
+offset_bottom = 192.0
+text = "שלום עולם שלום עולם"
+text_overrun_behavior = 3
+
+; VC_GLYPHS_LTR reveals the first six glyphs in visual order: the Latin word, then the visual
+; left of the Hebrew run.
+[node name="GlyphsLtr" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 148.0
+offset_right = 540.0
+offset_bottom = 192.0
+text = "abc שלום def"
+visible_characters = 6
+visible_characters_behavior = 3
+
+; VC_CHARS_AFTER_SHAPING reveals the first six characters in logical order: abc, the space and
+; the first two Hebrew letters, which draw at the right end of the run.
+[node name="CharsAfter" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 212.0
+offset_right = 540.0
+offset_bottom = 256.0
+text = "abc שלום def"
+visible_characters = 6
+visible_characters_behavior = 1

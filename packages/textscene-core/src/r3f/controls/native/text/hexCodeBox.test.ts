@@ -34,14 +34,14 @@ describe('hexCodeBoxRects — TextServer::draw_hex_code_box/_draw_hex_code_box_n
     expect(hexCodeBoxRects(15, 0)).toEqual([]);
   });
 
-  it('the four frame rects sit at the drawn (ONE CELL NARROWER than advance) size, shifted up by 85% of the height', () => {
-    // fontSize 15 -> cellPx=1; one-byte codepoint -> sizeX=(4+3+0)*1=7, sizeY=15*1=15, originY=-15*0.85=-12.75.
+  it('the four frame rects sit at the drawn (ONE CELL NARROWER than advance) size, shifted up by 85% of the height, truncated to whole pixels', () => {
+    // fontSize 15 -> cellPx=1; one-byte codepoint -> sizeX=(4+3+0)*1=7, sizeY=15*1=15, originY=-trunc(15*0.85)=-12: `Point2i(0, size.y * 0.85)` truncates (:781).
     const rects = hexCodeBoxRects(15, 0x00 + 1); // 0x01: a=1 ("1" digit, 2 segments), b=0 ("0" digit, 6 segments)
     const [left, right, top, bottom] = rects;
-    expect(left).toEqual({ x: 0, y: -12.75, w: 1, h: 15 });
-    expect(right).toEqual({ x: 6, y: -12.75, w: 1, h: 15 });
-    expect(top).toEqual({ x: 0, y: -12.75, w: 7, h: 1 });
-    expect(bottom).toEqual({ x: 0, y: 1.25, w: 7, h: 1 });
+    expect(left).toEqual({ x: 0, y: -12, w: 1, h: 15 });
+    expect(right).toEqual({ x: 6, y: -12, w: 1, h: 15 });
+    expect(top).toEqual({ x: 0, y: -12, w: 7, h: 1 });
+    expect(bottom).toEqual({ x: 0, y: 2, w: 7, h: 1 });
   });
 
   it('digit "0" (segment mask 0x7E) draws its 6 segments, digit "1" (0x30) draws 2 — codepoint 0x01 totals 4 frame + 6 + 2 = 12 rects', () => {

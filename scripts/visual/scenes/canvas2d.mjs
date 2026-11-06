@@ -239,11 +239,17 @@ export const CANVAS_2D_SCENES = [
   // the offset is zero and Godot's int conversion of it is a no-op, so nothing
   // else draws the CENTER/BOTTOM/FILL branches.
   { name: 'label-valign', file: 'unit-label-2d-valign.tscn', mode: '2d' },
+  // The one variable: `paragraph_spacing` and `line_spacing`, from `label_settings` and from the
+  // theme constants. Godot 4.6.3 `--mode 2d` ink rows at font size 20: 28, 79, 130 (pitch 51) and
+  // 28, 49, 70 (pitch 21). Every other Label keeps the default spacing of 3 and 0.
+  { name: 'label-paragraph-spacing', file: 'unit-label-paragraph-spacing.tscn', mode: '2d' },
   // The one variable: a Theme `.tres`'s `default_font`/`default_font_size`, set
   // through `theme =` on the root Control. Two Labels with no font override, one
   // two hops down past a themeless Control, resolve it by the ancestor walk.
   // Every other Control golden draws the bundled MSDF atlas.
   { name: 'control-scene-font-theme', file: 'unit-control-scene-font-theme.tscn', mode: '2d' },
+  // The one variable: the arrows U+2190 to U+2193 from a scene font, as the bundled font has none.
+  { name: 'control-font-arrows', file: 'unit-control-font-arrows.tscn', mode: '2d' },
   // The one variable: a variable `.woff2` font drawn at its `fvar` defaults. Its metrics come
   // from its own tables, which `fontContainer.ts` decompresses. No same-face `.woff2`/`.otf`
   // pair exists, so compare with Godot, not the sibling.
@@ -270,11 +276,46 @@ export const CANVAS_2D_SCENES = [
     file: 'project-default-font/unit-label-project-default-font.tscn',
     mode: '2d',
   },
+  // The one variable: a SystemFont as `gui/theme/custom_font`, which is every default it tries, so
+  // it has no face and draws hex-code boxes, under a FontVariation too.
+  {
+    name: 'label-custom-font-system-font',
+    file: 'custom-font-system-font/unit-custom-font-system-font-label.tscn',
+    mode: '2d',
+  },
+  // The one variable: a SystemFont as the project theme's `default_font`, which skips itself and
+  // draws `gui/theme/custom_font`.
+  { name: 'label-theme-system-font', file: 'theme-system-font/unit-theme-system-font.tscn', mode: '2d' },
+  // The one variable: a BMFont `.fnt` font at its fixed size, double, one and a half times, tinted, and with a missing glyph.
+  { name: 'label-bmfont', file: 'unit-label-bmfont.tscn', mode: '2d' },
+  // The one variable: a BMFont's outline set, which Godot draws for any `outline_size` above 0.
+  { name: 'label-bmfont-outline', file: 'unit-label-bmfont-outline.tscn', mode: '2d' },
+  // The one variable: `variation_opentype` at `wght` 700 over Cascadia Code, whose `gvar` deltas move the outlines.
+  { name: 'label-font-variation-instance', file: 'unit-label-font-variation-instance.tscn', mode: '2d' },
+  // The one variable: `variation_opentype` at `MONO` 0.5 over Recursive, whose `GPOS` kerning halves at that instance.
+  { name: 'label-font-variation-kerning', file: 'unit-label-font-variation-kerning.tscn', mode: '2d' },
+  // The one variable: `variation_opentype` at `MONO` 1 or `slnt` -15 over Recursive, whose `GSUB` feature variations swap glyphs.
+  { name: 'label-font-variation-glyph-swap', file: 'unit-label-font-variation-glyph-swap.tscn', mode: '2d' },
+  // The one variable: a BMFont's import `scaling_mode`, Integer and Disabled, at sizes off the fixed size.
+  { name: 'label-bmfont-scaling', file: 'unit-label-bmfont-scaling.tscn', mode: '2d' },
+  // The one variable: a character the font lacks, drawn from the first font of its fallback chain
+  // that has it, on a raw font's import, a FontVariation, a BMFont's import and a RichTextLabel.
+  { name: 'label-font-fallbacks', file: 'unit-label-font-fallbacks.tscn', mode: '2d' },
+  // The one variable: a precomposed character the font lacks, drawn as its base and the marks the font has,
+  // in a Label at 16 px and 32 px and in a RichTextLabel whose fallback holds a character the marks cannot make,
+  // and in Labels over fonts with no GPOS script and with a GPOS that has no mark lookup.
+  { name: 'label-decomposed-marks', file: 'unit-label-decomposed-marks.tscn', mode: '2d' },
+  // The one variable: a run that shapes as a whole, with the default font's ligatures, a contextual
+  // GSUB swap at a variable-font instance, a base and marks typed as separate characters, and a
+  // RichTextLabel whose colour span splits a ligature.
+  { name: 'label-shaped-runs', file: 'unit-label-shaped-runs.tscn', mode: '2d' },
   // The one variable: `FontVariation.variation_embolden` over a scene font at 0, 1.2 and 2.0, which
   // grows the outline and widens each advance, as the bold of a RichTextLabel does.
   { name: 'label-font-variation-embolden', file: 'unit-label-font-variation-embolden.tscn', mode: '2d' },
   // A ProgressBar percentage with an outline, over a plain, an emboldened, a sheared and an emboldened and sheared face.
   { name: 'progress-bar-outline-variation', file: 'unit-progress-bar-outline-variation.tscn', mode: '2d' },
+  // The one variable: `outline_size` of a bundled-font ProgressBar percentage, a ring stroked on the canvas painter.
+  { name: 'progress-bar-bundled-outline', file: 'unit-progress-bar-bundled-outline.tscn', mode: '2d' },
   // The one variable: the FontVariation of a ProgressBar percentage with no outline, so the fill alone draws.
   { name: 'progress-bar-embolden-fill', file: 'unit-progress-bar-embolden-fill.tscn', mode: '2d' },
   // The one variable: the font of each RichTextLabel style. The default theme's bold, italics and bold
@@ -292,6 +333,20 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-label-font-variation-bundled-embolden.tscn',
     mode: '2d',
   },
+  // The one variable: a large embolden on a bare variation, which draws on the canvas painter with
+  // FreeType's emboldened outline, as every embolden does.
+  {
+    name: 'label-font-variation-bundled-embolden-high',
+    file: 'unit-label-font-variation-bundled-embolden-high.tscn',
+    mode: '2d',
+  },
+  // The one variable: the fractional width of a centred Button, whose text then sits off a whole item
+  // pixel, which Godot floors.
+  {
+    name: 'button-fractional-text-origin',
+    file: 'project-default-font/unit-button-fractional-text-origin.tscn',
+    mode: '2d',
+  },
   // The one variable: the same bare variations in a project whose `gui/theme/custom_font` is the
   // default font they wrap.
   {
@@ -305,6 +360,17 @@ export const CANVAS_2D_SCENES = [
   // the slice's sheet records. A span-layout change moves them here.
   { name: 'richtext-label-bbcode', file: 'unit-rich-text-label.tscn', mode: '2d' },
   { name: 'button-states', file: 'unit-button-states.tscn', mode: '2d' },
+  // The one variable: the theme text outline of Button, CheckBox, CheckButton, OptionButton and MenuButton.
+  { name: 'button-family-outline', file: 'unit-button-family-outline.tscn', mode: '2d' },
+  // The one variable: the theme text outline of LinkButton, the FoldableContainer title and ItemList
+  // items, left to right and as a trimmed AUTO Hebrew line, whose ring trims by the inferred direction.
+  {
+    name: 'link-foldable-item-list-outline',
+    file: 'unit-text-outline-link-foldable-item-list.tscn',
+    mode: '2d',
+  },
+  // The same outline on rows set LTR and RTL, where the ring and the fill trim alike.
+  { name: 'text-outline-set-direction', file: 'unit-text-outline-set-direction.tscn', mode: '2d' },
   // The one variable: a Theme item keyed on BaseButton, which a Button finds only by walking its
   // ClassDB chain. Every other themed golden keys its items on the node's own class.
   { name: 'control-theme-base-class', file: 'unit-control-theme-base-class.tscn', mode: '2d' },
@@ -711,14 +777,18 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-control-anchor-parent-plain-node.tscn',
     mode: '2d',
   },
-  // The one variable: a second coverage threshold on the glyph field, drawn as
-  // an outline and as an offset pass behind the fill. Other text scenes draw the
-  // fill alone. Godot 4.6.3 `--mode 2d`: mean 0.372 of 255, MSDF stem
-  // antialiasing along the outline edge.
+  // The one variable: a theme outline, a stroked ring on the canvas painter behind the fill.
+  // Other text scenes draw the fill alone. `label-stacked-effects` adds the stacked arrays.
   { name: 'label-outline', file: 'unit-label-outline.tscn', mode: '2d' },
+  { name: 'label-stacked-effects', file: 'unit-label-stacked-effects.tscn', mode: '2d' },
+  // The one variable: a large glyph's curved edges, filled and ringed apart, as FreeType's chords draw them.
+  { name: 'label-glyph-edges', file: 'unit-label-glyph-edges.tscn', mode: '2d' },
   // The one variable: a `label_settings` loaded from its own `.tres` file, which beats the
   // node-local theme overrides as an inline one does.
   { name: 'label-label-settings-tres', file: 'unit-label-label-settings-tres.tscn', mode: '2d' },
+  // The one variable: `label_settings.font`. Godot 4.6.3 `--mode 2d`: the settings-font Label
+  // inks x 22-430, rows 26-67.
+  { name: 'label-settings-font', file: 'unit-label-settings-font.tscn', mode: '2d' },
   // The one variable: a control character reaching the shaper. Elsewhere it
   // advances zero, so only a field that opts into the hex box shows whether its
   // geometry and its advance agree. Godot 4.6.3 `--mode 2d`: mean 0.037 of 255.
@@ -727,6 +797,8 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-lineedit-control-chars.tscn',
     mode: '2d',
   },
+  // The one variable: the theme text outline of LineEdit, at outline_size 4, 8 and 16.
+  { name: 'lineedit-outline', file: 'unit-lineedit-outline.tscn', mode: '2d' },
   // The one variable: where a canvas root sits. A CanvasItem under a non-canvas
   // parent, or with `top_level`, parents at the canvas, which sets its transform,
   // anchors, tint and draw order. The Control and Node2D walks reach it
@@ -846,18 +918,38 @@ export const CANVAS_2D_SCENES = [
   { name: 'check-button-rtl', file: 'unit-check-button-rtl.tscn', mode: '2d' },
   { name: 'optionbutton-rtl', file: 'unit-optionbutton-rtl.tscn', mode: '2d' },
   { name: 'link-button-rtl', file: 'unit-link-button-rtl.tscn', mode: '2d' },
-  // The text family places runs on the resolved direction without reordering
-  // them. Two pin an absence: Godot does not mirror a FILL label or a
-  // RichTextLabel line, since those arms read the paragraph direction, dead at
-  // `text_direction`'s AUTO default.
+  // The text family places runs on the resolved layout direction. Two pin an
+  // absence: a Latin paragraph infers LTR at `text_direction`'s AUTO default, so
+  // Godot mirrors neither a FILL label nor a RichTextLabel line, whose arms read
+  // the paragraph direction.
   { name: 'label-rtl-alignment', file: 'unit-label-rtl-alignment.tscn', mode: '2d' },
   { name: 'label-rtl-fill-autowrap', file: 'unit-label-rtl-fill-autowrap.tscn', mode: '2d' },
   { name: 'label-rtl-visible-chars-auto', file: 'unit-label-rtl-visible-chars-auto.tscn', mode: '2d' },
+  { name: 'label-visible-characters-astral', file: 'unit-label-visible-characters-astral.tscn', mode: '2d' },
+  // A Label's own paragraph direction: the bidirectional reorder, the arms that read the inferred
+  // direction, the structured override and the language.
+  { name: 'label-bidi', file: 'unit-label-bidi.tscn', mode: '2d' },
+  { name: 'label-bidi-alignment', file: 'unit-label-bidi-alignment.tscn', mode: '2d' },
+  { name: 'label-structured-text', file: 'unit-label-structured-text.tscn', mode: '2d' },
+  { name: 'label-language', file: 'unit-label-language.tscn', mode: '2d' },
+  { name: 'label-astral-rtl', file: 'unit-label-astral-rtl.tscn', mode: '2d' },
   { name: 'line-edit-rtl', file: 'unit-line-edit-rtl.tscn', mode: '2d' },
   { name: 'text-edit-rtl', file: 'unit-text-edit-rtl.tscn', mode: '2d' },
+  { name: 'text-edit-placeholder', file: 'unit-text-edit-placeholder.tscn', mode: '2d' },
+  { name: 'text-edit-overflow', file: 'unit-text-edit-overflow.tscn', mode: '2d' },
+  { name: 'code-edit-empty-gutter', file: 'unit-code-edit-empty-gutter.tscn', mode: '2d' },
   { name: 'code-edit-rtl', file: 'unit-code-edit-rtl.tscn', mode: '2d' },
   { name: 'rich-text-label-rtl', file: 'unit-rich-text-label-rtl.tscn', mode: '2d' },
   { name: 'spin-box-rtl', file: 'unit-spin-box-rtl.tscn', mode: '2d' },
+  // Each text Control's own paragraph direction, language and structured override, as the label-bidi
+  // scenes hold them for a Label: the button family, the editors, RichTextLabel paragraphs, the
+  // TabBar, MenuBar and FoldableContainer titles, and ItemList items.
+  { name: 'button-text-direction', file: 'unit-button-text-direction.tscn', mode: '2d' },
+  { name: 'line-edit-text-direction', file: 'unit-line-edit-text-direction.tscn', mode: '2d' },
+  { name: 'text-edit-text-direction', file: 'unit-text-edit-text-direction.tscn', mode: '2d' },
+  { name: 'rich-text-label-text-direction', file: 'unit-rich-text-label-text-direction.tscn', mode: '2d' },
+  { name: 'title-text-direction', file: 'unit-title-text-direction.tscn', mode: '2d' },
+  { name: 'item-list-text-direction', file: 'unit-item-list-text-direction.tscn', mode: '2d' },
   // Lists, ranges and the picker. The Tree scene is 100px wide so the column
   // division leaves a remainder: an even width makes the RTL row match the LTR.
   { name: 'item-list-rtl', file: 'unit-item-list-rtl.tscn', mode: '2d' },
@@ -873,6 +965,30 @@ export const CANVAS_2D_SCENES = [
   // width: at a whole width the ceiled and raw line extents give one offset.
   { name: 'rich-text-label-center-overflow', file: 'unit-rich-text-label-center-overflow.tscn', mode: '2d' },
   { name: 'rich-text-label-fractional-box', file: 'unit-rich-text-label-fractional-box.tscn', mode: '2d' },
+  { name: 'rich-text-label-fill', file: 'unit-rich-text-label-fill.tscn', mode: '2d' },
+  { name: 'rich-text-label-clip', file: 'unit-rich-text-label-clip.tscn', mode: '2d' },
+  { name: 'rich-text-label-scrollbar', file: 'unit-rich-text-label-scrollbar.tscn', mode: '2d' },
+  { name: 'rich-text-label-scrollbar-rtl', file: 'unit-rich-text-label-scrollbar-rtl.tscn', mode: '2d' },
+  { name: 'rich-text-label-scrollbar-following', file: 'unit-rich-text-label-scrollbar-following.tscn', mode: '2d' },
+  { name: 'rich-text-label-visible-characters', file: 'unit-rich-text-label-visible-characters.tscn', mode: '2d' },
+  {
+    name: 'rich-text-label-visible-characters-follow',
+    file: 'unit-rich-text-label-visible-characters-follow.tscn',
+    mode: '2d',
+  },
+  { name: 'rich-text-label-hr', file: 'unit-rich-text-label-hr.tscn', mode: '2d' },
+  { name: 'rich-text-label-font-size-outline', file: 'unit-rich-text-label-font-size-outline.tscn', mode: '2d' },
+  { name: 'rich-text-label-paragraph-justification', file: 'unit-rich-text-label-paragraph-justification.tscn', mode: '2d' },
+  { name: 'rich-text-label-paragraph-tab-stops', file: 'unit-rich-text-label-paragraph-tab-stops.tscn', mode: '2d' },
+  { name: 'rich-text-label-empty-styling-before-paragraph', file: 'unit-rich-text-label-empty-styling-before-paragraph.tscn', mode: '2d' },
+  { name: 'rich-text-label-empty-line-vertical-fill', file: 'unit-rich-text-label-empty-line-vertical-fill.tscn', mode: '2d' },
+  { name: 'rich-text-label-lists', file: 'unit-rich-text-label-lists.tscn', mode: '2d' },
+  { name: 'rich-text-label-numeral-system', file: 'unit-rich-text-label-numeral-system.tscn', mode: '2d' },
+  { name: 'numeral-locale', file: 'numeral-locale/unit-numeral-locale.tscn', mode: '2d' },
+  { name: 'spin-box-direction', file: 'numeral-locale/unit-spin-box-direction.tscn', mode: '2d' },
+  { name: 'label-fill-paragraphs', file: 'unit-label-fill-paragraphs.tscn', mode: '2d' },
+  { name: 'label-tab-without-stop', file: 'unit-label-tab-without-stop.tscn', mode: '2d' },
+  { name: 'label-fill-trim', file: 'unit-label-fill-trim.tscn', mode: '2d' },
   // Each scene below moves one property no other scene authors. Godot 4.6.3
   // `--mode 2d`: 0.005 to 0.342 of 255.
 

@@ -39,4 +39,4 @@ The enum and range keys (`cast_shadow`, `gi_mode`, `layers`, `transparency`, the
 
 - **Approximated** A transparent material renders darker than Godot's on a brightly lit
   face, while an opaque one agrees.
-- **Resource gap** A TextMesh with a SystemFont draws a wireframe box, and the node's details name the type.
+- **Resource gap** A SystemFont always draws the default font, as Godot does when no OS font matches its names, where Godot draws a matching OS font.

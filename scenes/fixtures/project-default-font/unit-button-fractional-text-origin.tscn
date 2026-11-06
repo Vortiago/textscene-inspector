@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+; The one variable: the fractional width of a centred Button, which puts its text's canvas-item
+; origin off a whole pixel. Godot floors a glyph's origin in the item (text_server_adv.cpp:4082-4084).
+; The project font draws on the canvas painter, where the snap applies.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Button0" type="Button" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 260.0
+offset_bottom = 100.0
+theme_override_font_sizes/font_size = 16
+text = "Hog Wave 123"
+
+[node name="Button1" type="Button" parent="."]
+layout_mode = 0
+offset_left = 310.0
+offset_top = 40.0
+offset_right = 530.25
+offset_bottom = 100.0
+theme_override_font_sizes/font_size = 16
+text = "Hog Wave 123"
+
+[node name="Button2" type="Button" parent="."]
+layout_mode = 0
+offset_left = 580.0
+offset_top = 40.0
+offset_right = 800.5
+offset_bottom = 100.0
+theme_override_font_sizes/font_size = 16
+text = "Hog Wave 123"
+
+[node name="Button3" type="Button" parent="."]
+layout_mode = 0
+offset_left = 850.0
+offset_top = 40.0
+offset_right = 1070.75
+offset_bottom = 100.0
+theme_override_font_sizes/font_size = 16
+text = "Hog Wave 123"

@@ -8,6 +8,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { formatControlNumber } from '../../../../godot/text/numberFormat';
 import type {
   MinimumSizeFn,
   SolveContext,
@@ -16,6 +17,10 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { shapeLineEditText } from '../lineedit/nativeSolver';
+import { textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { TextDirection } from '../../../../godot/text/textServerEnums';
+import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { peekSceneFontMetrics } from '../../../../r3f/controls/native/text/sceneFontLoader';
@@ -182,13 +187,16 @@ export function formatGodotNumber(value: number, decimals: number): string {
 }
 
 /**
- * `SpinBox::_update_text` (`spin_box.cpp:88-114`) for a still frame: `line_edit->is_editing()` is
- * always false, so the prefix and suffix always apply. `accepted` stays `true` without a live
- * edit, so the `update_on_text_changed` re-format never runs.
+ * `SpinBox::_update_text` (`spin_box.cpp:88-114`) for a still frame. The value takes the digits of
+ * `locale` (`:91-93`). `line_edit->is_editing()` is always false, so the prefix and suffix always apply.
+ * `accepted` stays `true` without a live edit, so the `update_on_text_changed` re-format never runs.
  */
-export function spinBoxDisplayText(props: SpinBoxProperties, resolvedValue: number): string {
+export function spinBoxDisplayText(props: SpinBoxProperties, resolvedValue: number, locale: string): string {
   const step = props.step ?? SPIN_BOX_STEP_DEFAULT;
-  let text = formatGodotNumber(resolvedValue, rangeStepDecimals(step));
+  let text = formatControlNumber(formatGodotNumber(resolvedValue, rangeStepDecimals(step)), {
+    locale,
+    localizeNumeralSystem: props.localizeNumeralSystem,
+  });
   const prefix = props.prefix ?? '';
   const suffix = props.suffix ?? '';
   if (prefix !== '') text = `${prefix} ${text}`;
@@ -276,6 +284,20 @@ export function spinBoxFieldTextTheme(
     fontMetrics,
     color: editable ? LINE_EDIT_DEFAULT_FONT_COLOR : LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
   };
+}
+
+/**
+ * The field's text shaped as its inner LineEdit shapes it. The field keeps `LineEdit`'s default
+ * `text_direction` AUTO (`line_edit.h:144`) and sets no language, so neutral text takes the
+ * direction of the project `locale` (`line_edit.cpp:3103-3112`), whatever the layout direction.
+ */
+export function shapeSpinBoxFieldText(
+  text: string,
+  { fontSizePx, fontMetrics }: Pick<SpinBoxFieldTextTheme, 'fontSizePx' | 'fontMetrics'>,
+  locale: string
+): TextLayoutResult {
+  const bidi = textBidiOptions({ textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: '' }, locale);
+  return shapeLineEditText(text, {}, { ...bidi, fontSizePx, fontMetrics });
 }
 
 /**

@@ -1,8 +1,14 @@
 /** TextEdit properties: the subset a static preview draws. */
 
 import type { ControlProperties } from '../control/types';
+import type {
+  StructuredTextOverrideProperties,
+  TextDirectionProperties,
+} from '../../../../godot/text/paragraphDirection';
 
-export interface TextEditProperties extends ControlProperties {
+/** Every line shapes in `text_direction` and `language`, else the locale, and each runs the structured override on its own (`text_edit.cpp:297-324,3394-3401`). */
+export interface TextEditProperties
+  extends ControlProperties, TextDirectionProperties, StructuredTextOverrideProperties {
   /** The buffer, real newlines and all. Godot default "". */
   text?: string;
   /** Shown, dimmed, whenever `text` is empty. Godot default "". */

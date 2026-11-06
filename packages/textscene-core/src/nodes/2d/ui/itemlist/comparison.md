@@ -71,6 +71,14 @@ Godot's saver never writes both forms in one file, because the array predates th
 `item_count`/`item_N/*` only. A wrong arity (`arr.size() % 3 != 0`) yields no rows, as
 Godot's `ERR_FAIL_COND_V` does before `clear()` runs.
 
+Each row draws the theme text outline, `font_outline_color` and `outline_size`, as Godot does
+(`item_list.cpp:1642-1644,1672-1674`). A ring of `outline_size / 4` px sits under the fill. No
+ring draws at an `outline_size` of 0 or a zero alpha. A LEFT-mode row that leaves its text no
+room past the icon draws the ring alone (`:1676-1688`). Each row trims at its own draw width
+(`:1632,1661`). A trimmed AUTO line whose paragraph resolves right-to-left trims its ring by that
+direction, with the ellipsis first. Its fill draws the glyphs that trim drops, from the visual
+left, as Godot's set-direction draw does (`text_server.cpp:1740-1935`).
+
 ## Known limitations
 
 - **Not drawn** The scroll-hint icon (`scroll_hint_mode`), which needs a live scroll
@@ -87,16 +95,8 @@ Godot's `ERR_FAIL_COND_V` does before `clear()` runs.
   so a column of another width keeps lines that Godot re-wraps.
 - **Approximated** `max_text_lines` reserves a row's text height but does not cap its
   lines, where Godot collapses the tail into an ellipsis on the last visible line.
-- **Approximated** A right-to-left script draws in logical order, since the previewer has
-  no bidirectional pass, though every layout branch of `is_layout_rtl()` is ported.
 - **Not drawn** Both scrollbars, along with the row-guide shift and narrower packing that
   a right-to-left vertical scrollbar causes (`item_list.cpp:1454-1458`, `:1862-1864`).
-- **Approximated** A right-to-left, CENTER-aligned TOP-mode line wider than its box stays
-  at the box origin, where Godot pulls it to the trailing edge
-  (`text_paragraph.cpp:907-914`).
 - **Needs runtime** The right-to-left arms of `get_item_at_position`
   (`item_list.cpp:1975,1986`) and `is_pos_at_end_of_items` (`:2021-2023`) answer mouse
   hits under a live cursor, which a static preview does not have.
-- **Approximated** `text_overrun_behavior` trims each row at its minimum-size width
-  (`fixed_column_width`, or unconstrained when unset), so a row narrower at draw time is
-  not re-trimmed.

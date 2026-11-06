@@ -44,13 +44,21 @@ Strict parsing format-checks these `FoldableContainer` properties, plus 53 inher
 <!-- lint:end -->
 
 `parser.ts` reads the own keys that change what draws: `folded`, `title`,
-`title_alignment`, `title_position` and `title_text_overrun_behavior`.
-`foldable_group`, `title_text_direction` and `language` are behaviour, not pixels, and
-stay unread. A malformed `folded` becomes `false`. A malformed `title_alignment`,
+`title_alignment`, `title_position`, `title_text_overrun_behavior`, `title_text_direction`
+and `language`. The title shapes in its direction and language (`foldable_container.cpp:487-499`),
+and a trimmed title cuts and draws as `shaped_text_draw` does. `foldable_group` is behaviour, not pixels, and stays
+unread. A malformed `folded` becomes `false`. A malformed `title_alignment`,
 `title_position` or `title_text_overrun_behavior` becomes `undefined`, and the render
 default (LEFT / TOP / no trimming) applies.
 
+The title draws the theme text outline, `font_outline_color` and `outline_size`, as Godot
+does (`foldable_container.cpp:310-312`). A ring of `outline_size / 4` px sits under the fill.
+No ring draws at an `outline_size` of 0 or a zero alpha. The default `font_outline_color` is
+white (`default_theme.cpp:1327`). A trimmed AUTO title whose paragraph resolves right-to-left
+trims its ring by that direction, with the ellipsis first. Its fill draws the glyphs that trim
+drops, from the visual left, as Godot's set-direction draw does (`text_server.cpp:1740-1935`).
+A title set RTL draws its ring and its fill alike.
+
 ## Known limitations
 
-- **Approximated** A right-to-left title keeps its glyphs in the written order, and
-  `title_text_direction` changes nothing.
+None known.

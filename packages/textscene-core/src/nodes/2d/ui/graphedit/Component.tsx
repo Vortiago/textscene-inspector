@@ -15,6 +15,7 @@ import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/control
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
+import { HAIRLINE_THICKNESS_PX, hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
@@ -49,11 +50,8 @@ import {
 } from './minimap';
 import { GraphEditMinimapChrome } from './MinimapChrome';
 import { minimapConnectionsOf } from './minimapConnections';
-import { graphEditScrollBars, type GraphEditScrollBar } from './scrollBars';
-import {
-  snappedControlOrigin,
-  type ControlDrawTransform,
-} from '../../../../r3f/controls/native/controlPixelSnap';
+import { graphEditScrollBars } from './scrollBars';
+import { ScrollBarChrome, SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET } from '../shared/ScrollBarChrome';
 import type { GraphEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 
@@ -100,15 +98,6 @@ const GRAPH_EDIT_THEME_FONT_KEY = 'font';
 /** `snapping_distance_spinbox->set_step(1)` (`graph_edit.cpp:3292`): the digit budget of `_update_text`. */
 const SNAPPING_SPINBOX_STEP = 1;
 
-/** The thickness of a grid line in Godot px: the default width of `draw_line` is one hairline pixel. */
-const LINE_THICKNESS_PX = 1;
-
-/**
- * `draw_line` without a width is a two-point line, not a quad (`renderer_canvas_cull.cpp:754-763`).
- * Vulkan lights the pixel within half a pixel of it, and on a tie the one before it. A quad centred
- * on the line covers the same pixel under the top-left tie rule (ADR-0057).
- */
-const LINE_CENTRE_OFFSET_PX = LINE_THICKNESS_PX / 2;
 /** `graph_edit.cpp:1945,1957`: `Rect2(x - 1, y - 1, 3, 3)`. */
 const DOT_SIZE_PX = 3;
 
@@ -133,10 +122,10 @@ function GridLineQuad({
   renderOrder: number;
 }) {
   const { color, opacity } = line.major ? majorColor : minorColor;
-  const width = line.axis === 'vertical' ? LINE_THICKNESS_PX : rect.w;
-  const height = line.axis === 'vertical' ? rect.h : LINE_THICKNESS_PX;
-  const x = line.axis === 'vertical' ? line.at - LINE_CENTRE_OFFSET_PX : 0;
-  const y = line.axis === 'vertical' ? 0 : line.at - LINE_CENTRE_OFFSET_PX;
+  const width = line.axis === 'vertical' ? HAIRLINE_THICKNESS_PX : rect.w;
+  const height = line.axis === 'vertical' ? rect.h : HAIRLINE_THICKNESS_PX;
+  const x = line.axis === 'vertical' ? hairlineQuadStartPx(line.at) : 0;
+  const y = line.axis === 'vertical' ? 0 : hairlineQuadStartPx(line.at);
   return (
     <CanvasItemGroup position={[x, -y, 0]}>
       <ControlQuad width={width} height={height} color={color} opacity={opacity} renderOrder={renderOrder} />
@@ -162,48 +151,6 @@ function GridDotQuad({
         opacity={colorQuad.opacity}
         renderOrder={renderOrder}
       />
-    </CanvasItemGroup>
-  );
-}
-
-/** No bar has an authored rotation, scale or pivot: `set_anchor_and_offset` alone places each (`graph_edit.cpp:844-851`). */
-const SCROLL_BAR_DRAW_TRANSFORM: ControlDrawTransform = {
-  rotation: 0,
-  scale: { x: 1, y: 1 },
-  pivot: { x: 0, y: 0 },
-};
-
-/** One of GraphEdit's own scrollbars: `ScrollBar::_notification(NOTIFICATION_DRAW)`'s track then grabber (`scroll_bar.cpp:295-344`). */
-function ScrollBarChrome({
-  bar,
-  track,
-  grabber,
-  color,
-  renderOrder,
-  snapToPixels,
-}: {
-  bar: GraphEditScrollBar;
-  track: StyleBoxFlatData;
-  grabber: StyleBoxFlatData;
-  color: NativeControlComponentProps['tint']['own'];
-  renderOrder: number;
-  snapToPixels: boolean;
-}) {
-  if (!bar.visible) return null;
-  // Each bar is its own CanvasItem, so its translation is floored on its own
-  // (the PIXEL SNAP doc of `scrollcontainer/Component.tsx`).
-  const origin = snappedControlOrigin(bar.rect, SCROLL_BAR_DRAW_TRANSFORM, snapToPixels);
-  return (
-    <CanvasItemGroup position={[origin.x, -origin.y, 0]}>
-      <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={renderOrder} />
-      <CanvasItemGroup position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}>
-        <StyleBoxQuad
-          styleBox={grabber}
-          color={color}
-          rect={bar.grabberRect}
-          renderOrder={renderOrder + 0.05}
-        />
-      </CanvasItemGroup>
     </CanvasItemGroup>
   );
 }
@@ -282,7 +229,7 @@ export function GraphEdit({
   const shape = (text: string): TextLayoutResult => {
     let layout = layoutCache.get(text);
     if (!layout) {
-      layout = shapeButtonLabel(text, theme.fontSize, fontMetrics);
+      layout = shapeButtonLabel(text, { fontSizePx: theme.fontSize, fontMetrics });
       layoutCache.set(text, layout);
     }
     return layout;
@@ -375,7 +322,8 @@ export function GraphEdit({
           track={theme.widgets.scrollBar.scrollHorizontal}
           grabber={theme.widgets.scrollBar.grabber}
           color={tint.own}
-          renderOrder={subtreeChromeRenderOrder + 0.25}
+          renderOrder={subtreeChromeRenderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET}
+          grabberRenderOrder={subtreeChromeRenderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET + 0.05}
           snapToPixels={snapToPixels}
         />
         <ScrollBarChrome
@@ -383,7 +331,8 @@ export function GraphEdit({
           track={theme.widgets.scrollBar.scrollVertical}
           grabber={theme.widgets.scrollBar.grabber}
           color={tint.own}
-          renderOrder={subtreeChromeRenderOrder + 0.25}
+          renderOrder={subtreeChromeRenderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET}
+          grabberRenderOrder={subtreeChromeRenderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET + 0.05}
           snapToPixels={snapToPixels}
         />
 

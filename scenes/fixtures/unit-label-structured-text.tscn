@@ -1,0 +1,64 @@
+; One variable: structured_text_bidi_override (label.cpp:195). Each range runs the bidirectional
+; algorithm on its own and the ranges stay in logical order left to right
+; (text_server_adv.cpp:7258-7300, text_server.cpp:2140-2290).
+
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://fonts/dejavu-sans-bidi-subset.ttf" id="1_font"]
+
+[sub_resource type="Theme" id="Theme_1"]
+default_font = ExtResource("1_font")
+default_font_size = 28
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.1, 0.12, 0.18, 1)
+
+; Without an override, the RTL paragraph puts the Latin file name at the visual left.
+[node name="FileNone" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 540.0
+offset_bottom = 64.0
+text = "שלום/עולם/abc.txt"
+text_direction = 2
+
+; FILE splits at each slash, so the path reads left to right.
+[node name="FileOverride" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 84.0
+offset_right = 540.0
+offset_bottom = 128.0
+text = "שלום/עולם/abc.txt"
+text_direction = 2
+structured_text_bidi_override = 2
+
+; LIST at its one separator: each part and separator is INHERITED, so it runs at the paragraph
+; direction and the parts keep their logical order.
+[node name="ListOverride" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 148.0
+offset_right = 540.0
+offset_bottom = 192.0
+text = "abc,שלום,def"
+text_direction = 2
+structured_text_bidi_override = 4
+structured_text_bidi_override_options = [","]
+
+; URI splits at each separator, each an LTR range.
+[node name="UriOverride" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 212.0
+offset_right = 540.0
+offset_bottom = 256.0
+text = "http://שלום.abc/עולם?x=1"
+text_direction = 2
+structured_text_bidi_override = 1

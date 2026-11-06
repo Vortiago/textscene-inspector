@@ -20,11 +20,16 @@ import type {
   SolveContext,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
-import { scrollBarGrabberGeometry, scrollBarMinimumSize } from '../shared/scrollBarSolver';
+import {
+  scrollBarGrabberGeometry,
+  scrollBarMinimumSize,
+  type ScrollBarPlacement,
+} from '../shared/scrollBarSolver';
 import type { ScrollContainerProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
 import { ScrollContainerScrollHintMode, ScrollMode } from '../../../../godot/scene/gui';
+import { clampRangeValue } from '../shared/range';
 
 /** `scrollbar_h_separation`/`scrollbar_v_separation` default to 0 (`scroll_container.h:104-105`), and `default_theme.cpp` overrides them only for `Tree`. */
 const SCROLLBAR_SEPARATION = 0;
@@ -125,15 +130,6 @@ export const scrollContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const margins = scrollContainerMargins(n, ctx.theme);
   return { x: x + margins.left + margins.right, y: y + margins.top + margins.bottom };
 };
-
-export interface ScrollBarPlacement {
-  /** `ScrollBar::is_visible()` per `_update_scrollbars` (`scroll_container.cpp:592-593`). */
-  visible: boolean;
-  /** This bar's own rect, relative to the ScrollContainer's own top-left (`_update_scrollbar_position`). */
-  rect: Rect2;
-  /** The grabber StyleBox's rect, relative to THIS bar's own top-left (`scroll_bar.cpp`'s `NOTIFICATION_DRAW`). */
-  grabberRect: Rect2;
-}
 
 /**
  * `scroll_hint_vertical.svg`/`scroll_hint_horizontal.svg` (`scene/theme/icons/`) are 32x24 and
@@ -260,7 +256,7 @@ function settledScrollValue(raw: number, range: number, rawPage: number): number
   // `_update_scrollbars` (`:595-599`) sets `max` to the largest child minimum and `page` to the
   // viewport extent. `set_max` and `set_page` both re-run `set_value(shared->val)`, so the
   // authored offset is re-clamped, and a container that does not overflow scrolls by 0.
-  return Math.max(0, Math.min(raw, range - clampPage(rawPage, range)));
+  return clampRangeValue(raw, 0, range, clampPage(rawPage, range));
 }
 
 /**

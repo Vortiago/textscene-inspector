@@ -28,6 +28,7 @@ import {
 } from '../../../../r3f/controls/native/textTheme';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
+import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   BUTTON_DEFAULT_FONT_COLOR,
@@ -68,7 +69,11 @@ export const menuButtonLabelShape = defineShare<TextLayoutResult | null>((n, the
   if (text.length === 0) return null;
   const state = resolveButtonDrawState(props.disabled);
   const { fontSizePx } = menuButtonTextTheme(n, props, state, { theme });
-  return shapeButtonLabel(text, fontSizePx, resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY));
+  return shapeButtonLabel(text, {
+    fontSizePx,
+    fontMetrics: resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY),
+    bidi: controlBidiOptions(props, n),
+  });
 });
 
 /**

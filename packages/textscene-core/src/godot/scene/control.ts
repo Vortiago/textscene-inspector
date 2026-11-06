@@ -93,6 +93,11 @@ export interface LayoutDirectionEnv {
   applicationLocaleRtl: boolean;
   /** `TS->is_locale_right_to_left(OS::get_singleton()->get_locale())`. */
   systemLocaleRtl: boolean;
+  /**
+   * `TranslationServer::get_locale()` as the project states it: `internationalization/locale/test`,
+   * else empty, since the OS locale is in no file. A Label shapes its casing and neutral text with it.
+   */
+  applicationLocale: string;
 }
 
 /** Godot's own defaults: force off, root direction 0, a left-to-right locale. */
@@ -101,6 +106,7 @@ export const LTR_LAYOUT_ENV: LayoutDirectionEnv = {
   rootRtl: false,
   applicationLocaleRtl: false,
   systemLocaleRtl: false,
+  applicationLocale: '',
 };
 
 /**

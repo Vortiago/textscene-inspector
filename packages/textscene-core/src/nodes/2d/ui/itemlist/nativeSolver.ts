@@ -28,7 +28,7 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import { overrunFlagsForBehavior, trimLayoutToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import {
   shapeText,
   shapedTextSizeWidthPx,
@@ -39,14 +39,15 @@ import type { ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_LOWER_COLOR } from '../../../../godot/scene/theme';
-import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { AutowrapMode, OverrunBehavior, TextDirection } from '../../../../godot/text/textServerEnums';
+import { isDrawnRtl, textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
+import { hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
+import { ItemListIconMode } from '../../../../godot/scene/gui';
 
 // --- Enum literals ------------------------------------------------------
 
-/** `ItemList::IconMode` (`item_list.h:43-44`). */
-export const ICON_MODE_TOP = 0;
-export const ICON_MODE_LEFT = 1;
+const { ICON_MODE_TOP, ICON_MODE_LEFT } = ItemListIconMode;
 
 // --- Theme font ----------------------------------------------------------
 
@@ -201,16 +202,23 @@ function adjustToMaxSize(size: Vector2, maxSize: Vector2): Rect2 {
  * Godot breaks it mid-word (`comparison.md`).
  */
 function itemListAutowrapMode(iconMode: number, maxTextLines: number): EnumValue<typeof AutowrapMode> {
-  return iconMode === ICON_MODE_TOP && maxTextLines > 0
-    ? AutowrapMode.AUTOWRAP_WORD
-    : AutowrapMode.AUTOWRAP_OFF;
+  return isItemTextWrapped(iconMode, maxTextLines) ? AutowrapMode.AUTOWRAP_WORD : AutowrapMode.AUTOWRAP_OFF;
+}
+
+/**
+ * Whether an item's text wraps and draws as a centred paragraph: TOP icon mode with
+ * `max_text_lines > 0` (`item_list.cpp:48,1624`). Any other item draws one line.
+ */
+export function isItemTextWrapped(iconMode: number, maxTextLines: number): boolean {
+  return iconMode === ICON_MODE_TOP && maxTextLines > 0;
 }
 
 /**
  * The width `text_buf->set_width()` is called with during the MINSIZE pass
  * (`item_list.cpp:1763-1766`): `fixed_column_width` when set, else
- * unconstrained (Godot's `-1`, this engine's `0`). Text is not shaped again at the
- * final column width (`item_list.cpp:1628-1634,1657-1661`), so a wider fitted column is approximate.
+ * unconstrained (Godot's `-1`, this engine's `0`). The text wraps at this width only: the draw
+ * pass re-trims at its own width (`trimItemListText`), but does not wrap again
+ * (`item_list.cpp:1628-1634,1657-1661`), so a wider fitted column is approximate.
  */
 function itemListShapeWidth(fixedColumnWidth: number): number {
   return fixedColumnWidth > 0 ? fixedColumnWidth : 0;
@@ -223,54 +231,84 @@ interface ItemTextShapeInput {
   iconMode: number;
   maxTextLines: number;
   fixedColumnWidth: number;
+  /** The control's `_get_locale()`, which an item's empty `language` takes (`item_list.cpp:45`). */
+  locale: string;
+}
+
+/** An item's own `text_direction` and `language` (`item_list.h:73-74`), which no scene changes. */
+const ITEM_BIDI = { textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: '' };
+
+/** An AUTO item draws its fill left to right, whatever direction its text infers. */
+const IS_ITEM_DRAWN_RTL = isDrawnRtl(textBidiOptions(ITEM_BIDI, ''));
+
+/**
+ * Shapes one item's text, untrimmed, or `null` for an item with none. The minsize pass and the
+ * draw pass each trim it at their own `text_buf->set_width` (`trimItemListText`).
+ * `shapeText` spaces no lines: `force_update_list_size` adds a flat
+ * `line_separation * max_text_lines` (`item_list.cpp:1772`), which `itemContentMinSize` adds.
+ */
+function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult | null {
+  if (input.text.length === 0) return null;
+  return shapeText(input.text, {
+    ...textBidiOptions(ITEM_BIDI, input.locale),
+    fontSizePx: input.fontSizePx,
+    boxWidthPx: itemListShapeWidth(input.fixedColumnWidth),
+    autowrapMode: itemListAutowrapMode(input.iconMode, input.maxTextLines),
+    lineSpacingPx: 0,
+    fontMetrics: input.fontMetrics,
+  });
+}
+
+interface ItemTextTrimOptions extends Pick<ItemTextShapeInput, 'iconMode' | 'maxTextLines'> {
+  fontSizePx: number;
   /** `TextServer::OverrunBehavior`. Godot default 3 (OVERRUN_TRIM_ELLIPSIS, `item_list.h:131`). */
   overrunBehavior?: number;
 }
 
 /**
- * Shapes one item's text, or `null` for an item with none. The minsize pass
- * (`item_list.cpp:1763-1766`) and the draw pass (`:1621-1661`) both read the
- * trimmed size after `text_buf->set_width`, so the overrun trim applies here, to
- * each line, as `TextParagraph::_shape_lines` does (`text_paragraph.cpp:257-270`).
+ * `text_buf->set_width(widthPx)`: the overrun trim of each line, as `TextParagraph::_shape_lines`
+ * does (`text_paragraph.cpp:257-270`). The minsize pass trims at `itemListShapeWidth`
+ * (`item_list.cpp:1763-1766`), the draw pass at the row's text width (`:1632,1661`). A width of 0
+ * or less trims nothing, and wrapped text trims nothing: Godot trims only a line that hides the
+ * next (`:228-262`), and this engine hides no line.
  */
-export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult | null {
-  if (input.text.length === 0) return null;
-  const widthPx = itemListShapeWidth(input.fixedColumnWidth);
-  const layout = shapeText(input.text, {
-    fontSizePx: input.fontSizePx,
-    boxWidthPx: widthPx,
-    autowrapMode: itemListAutowrapMode(input.iconMode, input.maxTextLines),
-    lineSpacingPx: itemListLineSeparationForShaping(input),
-    fontMetrics: input.fontMetrics,
-  });
+export function trimItemListText(
+  layout: TextLayoutResult,
+  widthPx: number,
+  options: ItemTextTrimOptions
+): TextLayoutResult {
   const overrunFlags = overrunFlagsForBehavior(
-    input.overrunBehavior ?? OverrunBehavior.OVERRUN_TRIM_ELLIPSIS
+    options.overrunBehavior ?? OverrunBehavior.OVERRUN_TRIM_ELLIPSIS
   );
-  if (!overrunFlags.trim || widthPx <= 0) return layout;
+  if (!overrunFlags.trim || widthPx <= 0 || isItemTextWrapped(options.iconMode, options.maxTextLines)) {
+    return layout;
+  }
 
-  const trimmedLines = layout.lines.map((line) =>
-    // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to
-    // the vendored atlas font when the caller passes none, and the trim must
-    // agree with whichever metrics actually shaped these glyphs.
-    trimLineToWidth(line, widthPx, overrunFlags, {
-      fontMetrics: layout.fontMetrics,
-      fontSizePx: input.fontSizePx,
-    })
-  );
-  return {
-    ...layout,
-    lines: trimmedLines,
-    widthPx: trimmedLines.reduce((max, l) => Math.max(max, l.widthPx), 0),
-  };
+  // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to the vendored atlas
+  // font when the caller passes none, and the trim must agree with the metrics that shaped the glyphs.
+  return trimLayoutToWidth(layout, widthPx, overrunFlags, {
+    fontMetrics: layout.fontMetrics,
+    fontSizePx: options.fontSizePx,
+    isDrawnRtl: IS_ITEM_DRAWN_RTL,
+  });
 }
 
-/**
- * Zero: `shapeText` spaces between lines, but `force_update_list_size`
- * (`item_list.cpp:1772`) adds a flat `line_separation * max_text_lines`, which
- * `itemContentMinSize` adds.
- */
-function itemListLineSeparationForShaping(_input: ItemTextShapeInput): number {
-  return 0;
+interface ItemTextShape {
+  /** Untrimmed, or null for an item with no text. */
+  shaped: TextLayoutResult | null;
+  /**
+   * The text size the minsize pass reads (`item_list.cpp:1763-1766`): `shaped` trimmed at
+   * `itemListShapeWidth`, its width ceiled, or zero for an item with no text.
+   */
+  minimumSize: Vector2;
+}
+
+/** One item's shaped text and the size the minsize pass reads from it. */
+export function shapeItemText(input: ItemTextShapeInput & ItemTextTrimOptions): ItemTextShape {
+  const shaped = shapeItemListText(input);
+  if (!shaped) return { shaped, minimumSize: { x: 0, y: 0 } };
+  const trimmed = trimItemListText(shaped, itemListShapeWidth(input.fixedColumnWidth), input);
+  return { shaped, minimumSize: { x: shapedTextSizeWidthPx(trimmed.widthPx), y: trimmed.heightPx } };
 }
 
 // --- Per-item minimum size --------------------------------------------------
@@ -489,9 +527,9 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
     );
     const text = item.text ?? '';
     const hasText = text.length > 0;
-    const layout =
+    const textSize =
       hasText && ctx.measureText
-        ? shapeItemListText({
+        ? shapeItemText({
             text,
             fontSizePx,
             fontMetrics,
@@ -499,11 +537,9 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
             maxTextLines,
             fixedColumnWidth,
             overrunBehavior: props.textOverrunBehavior,
-          })
-        : null;
-    const textSize = layout
-      ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
-      : { x: 0, y: 0 };
+            locale: n.locale,
+          }).minimumSize
+        : { x: 0, y: 0 };
     return itemMinimumSize(
       { hasIcon, iconSize, hasText, textSize, iconMode, maxTextLines, fixedColumnWidth },
       ctx.theme
@@ -586,19 +622,19 @@ export function itemIconDraw(
 
 /**
  * `item_list.cpp:1606-1691`'s LTR pen origin, before the RTL branches
- * (`itemListRowTextX`/`itemListMirrorX`) move it. TOP mode centres
- * (`HORIZONTAL_ALIGNMENT_CENTER`); LEFT mode is a single line, aligned LEFT
- * under LTR and RIGHT under RTL (`:1668,1670`).
+ * (`itemListRowTextX`/`itemListMirrorX`) move it. Wrapped text (`isItemTextWrapped`) centres
+ * (`HORIZONTAL_ALIGNMENT_CENTER`). A single line is aligned LEFT under LTR and RIGHT under RTL
+ * (`:1668,1670`).
  */
 export function itemTextDrawOffset(
-  iconMode: number,
+  isWrapped: boolean,
   iconOffset: Vector2,
   itemRectSize: Vector2,
   textLineHeightTotal: number,
   hSeparation: number,
   vSeparation: number
 ): Vector2 {
-  if (iconMode === ICON_MODE_TOP) {
+  if (isWrapped) {
     return {
       x: iconOffset.x + Math.max(hSeparation, 0) / 2,
       y: iconOffset.y + Math.max(vSeparation, 0) / 2,
@@ -610,9 +646,18 @@ export function itemTextDrawOffset(
   };
 }
 
-/** One line's own horizontal offset under `HORIZONTAL_ALIGNMENT_CENTER` (TOP icon mode only: LEFT mode never centres, `_shape_text`'s own alignment call site). */
-export function itemTextLineCenterOffset(centerWidth: number, lineWidthCeiled: number): number {
-  return Math.max(0, centerWidth - lineWidthCeiled) / 2;
+/**
+ * One line's own horizontal offset under `HORIZONTAL_ALIGNMENT_CENTER` (TOP icon mode only: LEFT mode
+ * never centres, `_shape_text`'s own alignment call site). A line wider than its box stays at the
+ * origin, or ends at the trailing edge when it infers RTL (`text_paragraph.cpp:900-913`).
+ */
+export function itemTextLineCenterOffset(
+  centerWidth: number,
+  lineWidthCeiled: number,
+  isRtl: boolean
+): number {
+  if (lineWidthCeiled <= centerWidth) return (centerWidth - lineWidthCeiled) / 2;
+  return isRtl ? centerWidth - lineWidthCeiled : 0;
 }
 
 // --- Per-item colour: item_list.cpp:1568-1571,1607-1622, minus selected/hovered ---
@@ -638,7 +683,10 @@ export function itemListGuideColor(n: Pick<SolveNode, 'colors'>): Rgba {
 }
 
 interface ItemListGuideLine {
-  /** Content-relative Y: the caller adds the panel's own offset (`origin`, `item_list.cpp:1429`). */
+  /**
+   * Content-relative top of the hairline quad: the caller adds the panel's own offset (`origin`,
+   * `item_list.cpp:1429`).
+   */
   y: number;
   /** Spans the panel's own content width, from its content origin (`item_list.cpp:1455-1457`). */
   width: number;
@@ -655,7 +703,7 @@ export function itemListGuideLines(
   contentWidth: number
 ): ItemListGuideLine[] {
   if (iconMode === ICON_MODE_TOP) return [];
-  return separators.map((y) => ({ y, width: contentWidth }));
+  return separators.map((y) => ({ y: hairlineQuadStartPx(y), width: contentWidth }));
 }
 
 // --- RTL draw geometry: item_list.cpp:1582-1584,1629-1641,1657-1668 -------
@@ -740,4 +788,25 @@ export function itemListWrappedTextWidthPx(
  */
 export function itemListRightAlignOffsetPx(textWidthPx: number, lineWidthPx: number): number {
   return textWidthPx > 0 ? textWidthPx - lineWidthPx : 0;
+}
+
+interface ItemTextFillInput {
+  fixedColumnWidth: number;
+  wraparoundItems: boolean;
+  rowWidthPx: number;
+  /** The list's `width`: the control less the panel's minimum size (`item_list.cpp:1387`). */
+  contentWidthPx: number;
+  iconWidthPx: number;
+  hSeparation: number;
+}
+
+/**
+ * Whether a LEFT-mode row draws its text fill (`item_list.cpp:1676-1688`): only while the text
+ * keeps room past the icon. A static preview has no scroll, so the wraparound test reads 0 for it.
+ */
+export function isItemTextFillDrawn(input: ItemTextFillInput): boolean {
+  const reservePx = input.iconWidthPx + Math.max(input.hSeparation, 0);
+  if (input.fixedColumnWidth > 0) return input.rowWidthPx - reservePx > 0;
+  if (input.wraparoundItems) return input.contentWidthPx - reservePx > 0;
+  return true;
 }

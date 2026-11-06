@@ -18,12 +18,11 @@ import type {
 import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
-  buttonTextAlignShiftPx,
+  buttonTextRightShiftPx,
   centredTextTopPx,
   fitIconSize,
   tintColor,
 } from '../../../../r3f/controls/native/buttonBase';
-import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -277,14 +276,7 @@ export function layoutCheckBoxContent(input: CheckBoxContentInput): CheckBoxCont
     const drawableWidth = rectSize.x - 2 * margin - reserved;
     // `rtl` moves the reservation to SIDE_RIGHT (`:98-100`) and the icon to the right margin
     // (`:129`), and the constructor's LEFT alignment (`:174`) swaps to RIGHT (`button.cpp:271-275`).
-    const x = rtl
-      ? margin +
-        buttonTextAlignShiftPx(
-          textNaturalSize.x,
-          drawableWidth,
-          HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT
-        )
-      : margin + reserved;
+    const x = rtl ? margin + buttonTextRightShiftPx(textNaturalSize.x, drawableWidth) : margin + reserved;
     const y = centredTextTopPx(customElementHeight, textNaturalSize.y, margin);
     textOffset = { x, y };
   }

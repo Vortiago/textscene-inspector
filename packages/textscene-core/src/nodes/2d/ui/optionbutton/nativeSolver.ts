@@ -19,14 +19,13 @@ import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistr
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
-  buttonTextAlignShiftPx,
+  buttonTextRightShiftPx,
   centredTextTopPx,
   pickButtonStyleBox,
   resolveButtonDrawState,
   tintColor,
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
-import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   resolveTextTheme,
@@ -214,13 +213,7 @@ export function layoutOptionButtonContent(input: OptionButtonContentInput): Opti
   // (`:654`) swaps to RIGHT (`button.cpp:271-275`), so only that arm reads `h_separation`.
   const textOffset: Vector2 = {
     x: rtl
-      ? styleMargin.left +
-        reserved +
-        buttonTextAlignShiftPx(
-          textNaturalSize.x,
-          drawableWidth,
-          HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT
-        )
+      ? styleMargin.left + reserved + buttonTextRightShiftPx(textNaturalSize.x, drawableWidth)
       : styleMargin.left,
     y: centredTextTopPx(customElementHeight, textNaturalSize.y, styleMargin.top),
   };

@@ -1,0 +1,52 @@
+[gd_scene format=3 uid="uid://unitlabel3dshaded"]
+
+; The one variable: `shaded`, which lights a Label3D with the scene's lights
+; (`SHADING_MODE_PER_PIXEL`, `material.cpp:3045`). An unshaded label, a shaded label and a shaded
+; label turned to show its back face stand under one coloured sun at N·L = 0.5. The back face takes
+; the flipped normal (`scene_forward_clustered.glsl:1263-1266`), so it is lit as the front.
+
+[sub_resource type="QuadMesh" id="QuadMesh_backdrop"]
+size = Vector2(9, 4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_backdrop"]
+shading_mode = 0
+albedo_color = Color(0.1, 0.12, 0.18, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 6)
+fov = 70.0
+
+[node name="Backdrop" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.05)
+mesh = SubResource("QuadMesh_backdrop")
+surface_material_override/0 = SubResource("StandardMaterial3D_backdrop")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.5, 0, 0.866025, 0, 1, 0, -0.866025, 0, 0.5, 0, 0, 0)
+light_color = Color(1, 0.3, 0.2, 1)
+light_energy = 0.5
+
+[node name="Unshaded" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.6, 0, 0)
+pixel_size = 0.01
+font_size = 96
+outline_size = 0
+text = "Ab"
+
+[node name="Shaded" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+pixel_size = 0.01
+font_size = 96
+outline_size = 0
+shaded = true
+text = "Ab"
+
+[node name="ShadedBack" type="Label3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 2.6, 0, 0)
+pixel_size = 0.01
+font_size = 96
+outline_size = 0
+shaded = true
+text = "Ab"

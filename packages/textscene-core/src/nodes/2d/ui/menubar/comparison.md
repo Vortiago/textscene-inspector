@@ -38,9 +38,10 @@ Strict parsing format-checks these `MenuBar` properties, plus 53 inherited from 
 <!-- lint:end -->
 
 `linterParser.ts` format-checks all of MenuBar's own members. `parser.ts` reads
-`flat`: a malformed value becomes `false`, with no warning. The others
-(`start_index`, `switch_on_hover`, `prefer_global_menu`, `text_direction`, `language`)
-are behaviour, not pixels, and stay unread by the render parser. `text_direction` errors
+`flat`, `text_direction` and `language`: a malformed `flat` becomes `false`, with no warning.
+Each title shapes in the bar's direction and language (`menu_bar.cpp:520-528`). The others
+(`start_index`, `switch_on_hover`, `prefer_global_menu`) are behaviour, not pixels, and stay
+unread by the render parser. `text_direction` errors
 outside `-1..3`, since the setter refuses anything else, while the inspector hint offers
 only `0..3`.
 
@@ -51,8 +52,5 @@ with no serialised property, so a `.tscn` cannot author them.
 
 ## Known limitations
 
-- **Approximated** Under `layout_direction = 3`, a menu title in a right-to-left script
-  keeps left-to-right glyph order, while the titles still start from the mirrored end of
-  the bar.
 - **Not drawn** Opening a menu, hovering a title and the `*_mirrored` hover and
   pressed StyleBoxes all need a pointer, so none of them appears.

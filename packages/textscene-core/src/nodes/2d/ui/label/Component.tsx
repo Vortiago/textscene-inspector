@@ -14,17 +14,19 @@ import {
   soloLineLayout,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import {
+  overrunFlagsForBehavior,
+  trimFilledLineToWidth,
+  trimLineToWidth,
+} from '../../../../r3f/controls/native/text/textOverrun';
+import { OutlineRingRun, textLayerRenderOrder } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
+import { TextRun, type TextRunProps } from '../../../../r3f/controls/native/text/TextRun';
 import {
   LABEL_PARAGRAPH_SEPARATOR,
-  LABEL_THEME_FONT_KEY,
-  applyVisibleCharsReveal,
   labelEffectiveTextTheme,
-  labelOutlineTheme,
+  labelFontState,
   labelPreShapeText,
-  labelShadowTheme,
   labelShapingWidthPx,
   labelTextTheme,
   labelUnwrappedShape,
@@ -32,7 +34,10 @@ import {
   layoutLabelLines,
   windowLabelLines,
   type LabelLinePlacement,
+  type LineTrim,
 } from './nativeSolver';
+import { applyVisibleCharsReveal } from '../shared/visibleChars';
+import { labelEffectLayers, labelFillLayer, type LabelEffectLayer } from './effectLayers';
 import type { LabelProperties } from './types';
 import {
   AutowrapMode,
@@ -54,28 +59,54 @@ function useSoloLineLayouts(placements: LabelLinePlacement[], layout: TextLayout
   );
 }
 
+type LayerRunsProps = Pick<TextRunProps, 'fontSizePx' | 'clippingPlanes' | 'renderOrder'> & {
+  layer: LabelEffectLayer;
+  placements: LabelLinePlacement[];
+  lineLayouts: TextLayoutResult[];
+};
+
+/** One layer on every line. A ring strokes on the canvas painter, a plain layer draws on the painter of its font. */
+function LayerRuns({ layer, placements, lineLayouts, ...run }: LayerRunsProps) {
+  return placements.map((placement, index) => (
+    <CanvasItemGroup
+      key={index}
+      position={[placement.x + layer.offset.x, -(placement.y + layer.offset.y), 0]}
+    >
+      {layer.kind === 'ring' ? (
+        <OutlineRingRun {...run} layout={lineLayouts[index]!} tint={layer.color} sizePx={layer.ringSizePx} />
+      ) : (
+        <TextRun {...run} layout={lineLayouts[index]!} tint={layer.color} />
+      )}
+    </CanvasItemGroup>
+  ));
+}
+
 export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LabelProperties>(solveNode);
   const themeResolved = useMemo(() => labelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
   const labelSettings = solveNode.labelSettings;
   // A valid `label_settings` beats the theme outright: see its own doc.
   const textTheme = useMemo(
-    () => labelEffectiveTextTheme(themeResolved, labelSettings),
-    [themeResolved, labelSettings]
+    () => labelEffectiveTextTheme(themeResolved, labelSettings, solveNode.constants),
+    [themeResolved, labelSettings, solveNode.constants]
   );
 
   // Composed in sRGB: `TextRun` converts its `tint` once, internally.
   const tintColor = multiplyModulate(tint.own, textTheme.color);
 
-  // label.cpp:762-767,876-878: the outline draws over the fill at the same pen
-  // position, so `<TextRun>` composites both in one pass. The shadow draws behind,
-  // at its own offset, colour and outline size.
-  const outlineTheme = useMemo(() => labelOutlineTheme(solveNode), [solveNode]);
-  const shadowTheme = useMemo(() => labelShadowTheme(solveNode), [solveNode]);
-  const outlineColor = multiplyModulate(tint.own, outlineTheme.color);
-  const shadowColor = multiplyModulate(tint.own, shadowTheme.color);
-  const hasOutline = outlineTheme.size > 0 && outlineColor.a !== 0;
-  const hasShadow = shadowColor.a > 0;
+  // label.cpp:828-883: the shadows and rings draw behind the fill, each with its own colour, and
+  // the Label's modulate tints every layer as it tints the fill.
+  const effectLayers = useMemo(() => labelEffectLayers(solveNode), [solveNode]);
+  const layers = useMemo(
+    () => [
+      ...effectLayers
+        .map((layer) => ({ ...layer, color: multiplyModulate(tint.own, layer.color) }))
+        // A layer the modulate makes invisible draws nothing, so it gets no mesh.
+        .filter((layer) => layer.color.a > 0),
+      labelFillLayer(tintColor),
+    ],
+    [effectLayers, tint.own, tintColor]
+  );
   const inheritedClippingPlanes = useControlClipPlanes();
   // `clip_text` scissors this Label's own drawn ink to its rect
   // (`label.cpp:733-734`'s `canvas_item_set_clip`): always called (hooks run
@@ -98,10 +129,12 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   // Read in the render body, not the `useMemo`: `peekSceneFontMetrics` reads a
   // WeakMap cache that a later async load fills in place, so each render must look.
   // The `useMemo` dependency on `fontMetrics` limits re-shaping to an identity change.
-  const fontMetrics = resolveNodeFontMetrics(solveNode, LABEL_THEME_FONT_KEY);
+  const { metrics: fontMetrics, isLoading: isFontLoading } = labelFontState(solveNode);
+  const bidiOptions = useControlBidiOptions(props, solveNode);
   const layout = useMemo(() => {
     if (sharedLayout) return sharedLayout;
-    const shaped = shapeText(text, {
+    // A loading font draws nothing, so its layout shapes no text.
+    const shaped = shapeText(isFontLoading ? '' : text, {
       fontSizePx: textTheme.fontSizePx,
       boxWidthPx: labelShapingWidthPx(rect.w),
       autowrapMode,
@@ -111,14 +144,17 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
       tabStopsPx: props.tabStopsPx,
       autowrapTrimFlags: props.autowrapTrimFlags,
+      ...bidiOptions,
     });
     const range = labelVisibleLineRange(shaped.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible);
-    return windowLabelLines(shaped, range);
+    return windowLabelLines(shaped, range, textTheme.paragraphSpacingPx);
   }, [
     sharedLayout,
+    isFontLoading,
     text,
     textTheme.fontSizePx,
     textTheme.lineSpacingPx,
+    textTheme.paragraphSpacingPx,
     rect.w,
     autowrapMode,
     props.uppercase,
@@ -126,6 +162,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     props.paragraphSeparator,
     props.tabStopsPx,
     props.autowrapTrimFlags,
+    bidiOptions,
     props.linesSkipped,
     props.maxLinesVisible,
   ]);
@@ -136,6 +173,25 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     const base = props.justificationFlags ?? DEFAULT_JUSTIFICATION_FLAGS;
     return props.tabStopsPx && props.tabStopsPx.length > 0 ? base | JustificationFlag.AFTER_LAST_TAB : base;
   }, [props.justificationFlags, props.tabStopsPx]);
+
+  // label.cpp:302-332 (autowrap OFF): each line is overrun-trimmed at the shaping
+  // width, whatever clip_text says, before it is aligned. The autowrap-ON branch (`:269-301`)
+  // trims only the line `max_lines_visible` hides, which is not modelled
+  // (`LabelProperties.overrunBehavior`).
+  const overrunFlags = useMemo(
+    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
+    [props.overrunBehavior]
+  );
+  const trim = useMemo((): LineTrim | undefined => {
+    if (autowrapMode !== AutowrapMode.AUTOWRAP_OFF || !overrunFlags.trim) return undefined;
+    const widthPx = labelShapingWidthPx(rect.w);
+    const options = { fontMetrics, fontSizePx: textTheme.fontSizePx, ellipsisChar: props.ellipsisChar };
+    return {
+      line: (line) => trimLineToWidth(line, widthPx, overrunFlags, options),
+      filledLine: (line, justificationFlags) =>
+        trimFilledLineToWidth(line, widthPx, overrunFlags, { ...options, justificationFlags }),
+    };
+  }, [autowrapMode, overrunFlags, rect.w, fontMetrics, textTheme.fontSizePx, props.ellipsisChar]);
 
   // Godot aligns each line by its own width (`Label::_get_line_rect`), so each line
   // gets its own box top here, and `<TextRun>` anchors it at the baseline.
@@ -148,8 +204,13 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
         props.horizontalAlignment,
         props.verticalAlignment,
         effectiveJustificationFlags,
-        textTheme.fontSizePx,
-        { rtl: solveNode.rtl }
+        {
+          rtl: solveNode.rtl,
+          isAutowrapped: autowrapMode !== AutowrapMode.AUTOWRAP_OFF,
+          trim,
+          lineSpacingPx: textTheme.lineSpacingPx,
+          paragraphSpacingPx: textTheme.paragraphSpacingPx,
+        }
       ),
     [
       layout,
@@ -158,49 +219,33 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       props.horizontalAlignment,
       props.verticalAlignment,
       effectiveJustificationFlags,
-      textTheme.fontSizePx,
+      textTheme.lineSpacingPx,
+      textTheme.paragraphSpacingPx,
       solveNode.rtl,
+      autowrapMode,
+      trim,
     ]
   );
-
-  // label.cpp:302-332 (autowrap OFF): each line is overrun-trimmed at the shaping
-  // width, whatever clip_text says. The autowrap-ON branch (`:269-301`) trims only
-  // the line `max_lines_visible` hides, which is not modelled
-  // (`LabelProperties.overrunBehavior`).
-  const overrunFlags = useMemo(
-    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
-    [props.overrunBehavior]
-  );
-  const trimmedPlacements = useMemo(() => {
-    if (autowrapMode !== AutowrapMode.AUTOWRAP_OFF || !overrunFlags.trim) return placements;
-    const widthPx = labelShapingWidthPx(rect.w);
-    return placements.map((placement) => ({
-      ...placement,
-      line: trimLineToWidth(placement.line, widthPx, overrunFlags, {
-        fontMetrics,
-        fontSizePx: textTheme.fontSizePx,
-        ellipsisChar: props.ellipsisChar,
-      }),
-    }));
-  }, [placements, autowrapMode, overrunFlags, rect.w, fontMetrics, textTheme.fontSizePx, props.ellipsisChar]);
 
   // label.cpp:778-883's draw-time reveal: Godot ORs it with the overrun trim in
   // one draw loop. `visibleCharacters`/`visibleRatio` are `parseLabel`'s final
   // numbers, and VC_CHARS_BEFORE_SHAPING, the default, already ran before shaping.
   const revealedPlacements = useMemo(() => {
     const revealed = applyVisibleCharsReveal(
-      trimmedPlacements.map((placement) => placement.line),
+      placements.map((placement) => placement.line),
       {
         behavior: props.visibleCharactersBehavior ?? VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING,
+        text: layout.shapedText,
         visibleChars: props.visibleCharacters,
         visibleRatio: props.visibleRatio,
         rtl: solveNode.rtl,
       }
     );
-    return trimmedPlacements.map((placement, index) => ({ ...placement, line: revealed[index]! }));
+    return placements.map((placement, index) => ({ ...placement, line: revealed[index]! }));
   }, [
-    trimmedPlacements,
+    placements,
     props.visibleCharactersBehavior,
+    layout.shapedText,
     props.visibleCharacters,
     props.visibleRatio,
     solveNode.rtl,
@@ -208,40 +253,24 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
 
   const lineLayouts = useSoloLineLayouts(revealedPlacements, layout);
 
-  // Each `<TextRun>` takes `renderOrder` itself, since three never inherits it,
-  // and sits in a `<CanvasItemGroup>`, since three reads the nearest group's order
-  // first and a bare `<group>` resets it to zero (`r3f/canvasPaintOrder.ts`).
+  // A settings font that is still loading draws nothing, never the theme font (ADR-0059).
+  if (isFontLoading) return <CanvasItemGroup ref={anchorRef} />;
+
+  // Each run takes `renderOrder` itself, since three never inherits it, and sits in a
+  // `<CanvasItemGroup>`, since three reads the nearest group's order first and a bare `<group>`
+  // resets it to zero (`r3f/canvasPaintOrder.ts`).
   return (
     <CanvasItemGroup ref={anchorRef}>
-      {hasShadow &&
-        revealedPlacements.map((placement, index) => (
-          <CanvasItemGroup
-            key={`shadow-${index}`}
-            position={[placement.x + shadowTheme.offset.x, -(placement.y + shadowTheme.offset.y), 0]}
-          >
-            <TextRun
-              layout={lineLayouts[index]!}
-              fontSizePx={textTheme.fontSizePx}
-              tint={shadowColor}
-              outlineColor={shadowColor}
-              outlineWidthPx={shadowTheme.size}
-              clippingPlanes={clippingPlanes}
-              renderOrder={renderOrder}
-            />
-          </CanvasItemGroup>
-        ))}
-      {revealedPlacements.map((placement, index) => (
-        <CanvasItemGroup key={index} position={[placement.x, -placement.y, 0]}>
-          <TextRun
-            layout={lineLayouts[index]!}
-            fontSizePx={textTheme.fontSizePx}
-            tint={tintColor}
-            outlineColor={hasOutline ? outlineColor : undefined}
-            outlineWidthPx={hasOutline ? outlineTheme.size : 0}
-            clippingPlanes={clippingPlanes}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
+      {layers.map((layer, layerIndex) => (
+        <LayerRuns
+          key={layerIndex}
+          layer={layer}
+          placements={revealedPlacements}
+          lineLayouts={lineLayouts}
+          fontSizePx={textTheme.fontSizePx}
+          clippingPlanes={clippingPlanes}
+          renderOrder={textLayerRenderOrder(renderOrder, layerIndex, layers.length)}
+        />
       ))}
     </CanvasItemGroup>
   );

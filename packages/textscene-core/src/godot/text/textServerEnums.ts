@@ -4,7 +4,7 @@
  * `"Arbitrary:1,Word:2,Word (Smart):3"` while Button's offers `"Off,Arbitrary,Word,Word (Smart)"`.
  */
 
-import { enumNamesByValue, flagLabels } from '../classdb/enumNames.js';
+import { enumMember, enumNamesByValue, flagLabels, type EnumValue } from '../classdb/enumNames.js';
 
 /**
  * `TextServer::AutowrapMode`: AUTOWRAP_OFF=0 … AUTOWRAP_WORD_SMART=3
@@ -20,6 +20,17 @@ export const AutowrapMode = {
 export const AUTOWRAP_MODE_NAMES = enumNamesByValue(AutowrapMode);
 
 /**
+ * `TextServer::FixedSizeScaleMode` (`servers/text/text_server.h:224-228`): how a fixed-size (bitmap)
+ * font draws at a size other than its own. The BMFont importer offers all three
+ * (`resource_importer_bmfont.cpp:67`).
+ */
+export const FixedSizeScaleMode = {
+  FIXED_SIZE_SCALE_DISABLE: 0,
+  FIXED_SIZE_SCALE_INTEGER_ONLY: 1,
+  FIXED_SIZE_SCALE_ENABLED: 2,
+} as const;
+
+/**
  * `TextServer::ContourPointTag` (`servers/text/text_server.h:194-198`): the tag in the `z` of each point
  * `font_get_glyph_contours` returns. FreeType's `FT_CURVE_TAG` of the point is the value, so a
  * conic control point is 0.
@@ -29,6 +40,21 @@ export const ContourPointTag = {
   ON: 1,
   OFF_CUBIC: 2,
 } as const;
+
+/**
+ * `TextServer::Hinting` (`servers/text/text_server.h:161-163`), each member without `HINTING_`: the
+ * target FreeType loads a glyph for.
+ */
+export const Hinting = {
+  NONE: 0,
+  LIGHT: 1,
+  NORMAL: 2,
+} as const;
+export type FontHinting = EnumValue<typeof Hinting>;
+
+/** The hinting a `TextServer::Hinting` value names. Absent or unknown is light, the default of a font. */
+export const fontHintingOf = (value: number | undefined): FontHinting =>
+  (value === undefined ? null : enumMember(Hinting, value)) ?? Hinting.LIGHT;
 
 /**
  * `TextServer::OverrunBehavior`: OVERRUN_NO_TRIMMING=0 …
@@ -63,7 +89,7 @@ export const JustificationFlag = {
   DO_NOT_SKIP_SINGLE_LINE: 1 << 7,
 } as const;
 
-/** The `jst_flags` default of `Label` (`label.h:46`) and of `TextMesh` (`primitive_meshes.h:585`). */
+/** The `jst_flags` default of `Label` (`label.h:46`), `Label3D` (`label_3d.h:115`) and `TextMesh` (`primitive_meshes.h:585`). */
 export const DEFAULT_JUSTIFICATION_FLAGS =
   JustificationFlag.WORD_BOUND |
   JustificationFlag.KASHIDA |
@@ -99,6 +125,10 @@ const LineBreakFlag = {
   TRIM_START_EDGE_SPACES: 1 << 6,
   TRIM_END_EDGE_SPACES: 1 << 7,
 } as const;
+
+/** The `autowrap_trim_flags` default of `Label` (`label.h:45`) and `Label3D` (`label_3d.h:114`). */
+export const DEFAULT_AUTOWRAP_TRIM_FLAGS =
+  LineBreakFlag.TRIM_START_EDGE_SPACES | LineBreakFlag.TRIM_END_EDGE_SPACES;
 
 /**
  * `BREAK_TRIM_MASK` (servers/text/text_server.h:120), shared with its bound:
@@ -159,7 +189,7 @@ export const VISIBLE_CHARACTERS_BEHAVIOR_NAMES = enumNamesByValue(VisibleCharact
  * labels index 5 "None", but the labels follow the enum, so a diagnostic names
  * STRUCTURED_TEXT_GDSCRIPT, as the engine does.
  */
-const StructuredTextParser = {
+export const StructuredTextParser = {
   STRUCTURED_TEXT_DEFAULT: 0,
   STRUCTURED_TEXT_URI: 1,
   STRUCTURED_TEXT_FILE: 2,
