@@ -246,7 +246,7 @@ function useShapedRichText(
   const { visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior } = props;
   const reveal = useMemo(() => {
     // Without a budget the count is unread, so a label that shows everything skips it.
-    if (visibleCharacters === undefined && !visibleRatioDrives) return undefined;
+    if ((visibleCharacters === undefined || visibleCharacters < 0) && !visibleRatioDrives) return undefined;
     return richTextReveal(
       { visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior },
       rtl,

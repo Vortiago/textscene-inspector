@@ -634,6 +634,8 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
 function roundAdvancesToWholePixels(glyphs: BreakGlyph[], chars: ArrayLike<string>, style: RunStyle): void {
   for (const [start, end] of spanRunRanges(style, chars.length)) {
     const chain = fallbackChainOf(style.spanFaces[start]!);
+    // A one-face run under subpixel positioning rounds nothing, so it builds no index list.
+    if (chain.length === 1 && fontUsesSubpixelPositioning(style.sizes[start]!, chain[0]!)) continue;
     const isRtl = isRtlRun(style, start);
     const indices = Array.from({ length: end - start }, (_v, k) => start + k);
     if (isRtl) indices.reverse();

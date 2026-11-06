@@ -50,6 +50,8 @@ export function richTextReveal(
     return { behavior, characters, ratio: visibleRatio, rtl };
   }
   if (visibleCharacters === undefined || visibleCharacters < 0) return undefined;
+  // A budget that covers a non-empty text hides nothing. An empty text keeps its ratio, which hides a list marker.
+  if (totalCharacters > 0 && visibleCharacters >= totalCharacters) return undefined;
   const ratio = totalCharacters > 0 ? storedReal(visibleCharacters / totalCharacters) : visibleRatio;
   return { behavior, characters: visibleCharacters, ratio, rtl };
 }
@@ -153,8 +155,8 @@ export function countedLayoutForReveal(
 /** `layout` as the budget counts it. */
 function countedLayoutOf(layout: TextLayoutResult, runs: readonly CountedRun[]): CountedLayout {
   const implicit = implicitBreakIndices(runs);
-  const totalCharacters = countedCharacters(runs);
   const joined = joinedText(runs);
+  const totalCharacters = codePointCount(joined) - implicit.size;
   if (implicit.size === 0) {
     return { lines: layout.lines, text: joined, spanStarts: runStarts(runs), totalCharacters };
   }
