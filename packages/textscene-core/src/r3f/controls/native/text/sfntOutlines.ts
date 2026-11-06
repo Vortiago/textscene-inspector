@@ -100,13 +100,14 @@ export async function openFontOutlines(
 }
 
 /**
- * The reader `FT_Load_Glyph` picks for `load` (`ftobjs.c:976-1016`): no hinting reads the outline as
- * it is. A tricky font hints itself. Otherwise the auto-hinter takes a forced load, a TrueType font
- * at the light target, since its driver does not hint lightly, and a TrueType font without hints.
+ * The reader `FT_Load_Glyph` picks for `load` (`ftobjs.c:976-1016`): a tricky font hints itself,
+ * even with no hinting asked (`ttdriver.c`, `tt_glyph_load`). Otherwise no hinting reads the outline
+ * as it is, and the auto-hinter takes a forced load, a TrueType font at the light target, since its
+ * driver does not hint lightly, and a TrueType font without hints.
  */
 async function outlineReaderOf(sfnt: SfntFile, load: GlyphLoad): Promise<GlyphOutlineReader | null> {
-  if (load.hinting === 'none') return unhintedReaderOf(sfnt);
   if (isTrickyFont(sfnt)) return nativeReaderOf(sfnt);
+  if (load.hinting === 'none') return unhintedReaderOf(sfnt);
   const isTrueType = sfnt.tables.has('glyf');
   const isAutoHinted =
     load.isAutohinterForced || (isTrueType && (load.hinting === 'light' || !isNativelyHinted(sfnt)));

@@ -210,7 +210,7 @@ function rasterTexture(
   { canvasWidthPx, canvasHeightPx }: CanvasTextCanvasLayout
 ): THREE.DataTexture {
   const data = raster
-    ? new Uint8Array(raster.data.buffer)
+    ? new Uint8Array(raster.data.buffer, raster.data.byteOffset, raster.data.byteLength)
     : new Uint8Array(canvasWidthPx * canvasHeightPx * 4);
   const texture = new THREE.DataTexture(data, canvasWidthPx, canvasHeightPx);
   texture.flipY = true;

@@ -328,11 +328,11 @@ function paintRecording(
     fill: record('fill'),
     stroke: record('stroke'),
     canvas: { width: canvasLayout.canvasWidthPx, height: canvasLayout.canvasHeightPx },
-    getImageData: (_x: number, _y: number, width: number, height: number) => ({
+    getImageData: vi.fn((_x: number, _y: number, width: number, height: number) => ({
       data: new Uint8ClampedArray(width * height * 4),
       width,
       height,
-    }),
+    })),
   };
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never);
   const raster = paintSceneFontCanvas(
@@ -347,7 +347,7 @@ function paintRecording(
       originPhasePx,
     }
   );
-  return { calls, canvasLayout, raster };
+  return { calls, canvasLayout, raster, getImageData: ctx.getImageData };
 }
 
 function boldLayoutFor(text: string, embolden: number) {
@@ -542,6 +542,17 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
     expect(calls).toEqual([]);
     expect(alphaAt(raster, penX + 3, baselineY - 3)).toBe(255);
     expect(alphaAt(raster, penX + 3, baselineY + 1)).toBe(0);
+  });
+
+  it('reads no pixel back from the canvas where every glyph draws from its bitmap', () => {
+    const { outlines } = outlinesStub();
+    const { getImageData } = paintRecording(layoutFor('A', 0), 0, { skew: 0, outlines });
+    expect(getImageData).not.toHaveBeenCalled();
+  });
+
+  it('reads the canvas back where a glyph draws as text', () => {
+    const { getImageData } = paintRecording(layoutFor('A', 0), 0);
+    expect(getImageData).toHaveBeenCalledOnce();
   });
 
   it('fills the sheared outline of a sheared glyph under the identity transform', () => {
