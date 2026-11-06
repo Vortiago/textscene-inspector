@@ -68,6 +68,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/controls/native/text/variation/axisCoordinates.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_ensure_cache_for_size`, which writes the variations, and `_tag_to_name`) |
 | `packages/textscene-core/src/godot/text/openTypeNames.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_insert_feature` calls and `_tag_to_name`) |
 | `packages/textscene-core/src/godot/text/numberFormat.ts` | `core/string/translation_server.cpp` (`TranslationServer::format_number`) and `core/string/locales.h` (`num_system_data`) |
+| `packages/textscene-core/src/godot/text/standardizeLocale.ts` | `core/string/translation_server.cpp` (`TranslationServer::standardize_locale`, `Locale`) and `core/string/locales.h` (`script_list`, `locale_variants`, `locale_renames`, `country_renames`) |
 | `packages/textscene-core/src/r3f/controls/native/text/sfntCmap.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_index`) |
 | `packages/textscene-core/src/resources/meshes/boxmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`BoxMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/planemesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PlaneMesh::_create_mesh_array`) |
