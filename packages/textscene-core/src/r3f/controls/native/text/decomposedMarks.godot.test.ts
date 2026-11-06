@@ -28,9 +28,10 @@ function fontMetricsOf(font: string): FontMetrics {
   const glyphIndexOf = sfntGlyphIndex(sfnt)!;
   const metricsOf = glyphMetricsReader(sfnt);
   const decomposition = sfntDecomposition(sfnt) ?? undefined;
-  // The browser shapes a character the font lacks as its base and marks, so its advance is the base's.
+  // The browser shapes a character the font lacks as its base and marks, so its advance is the base's,
+  // which does not depend on the size.
   const advanceUnits = (ch: string) =>
-    metricsOf(glyphIndexOf((decomposition?.(ch)?.base ?? ch).codePointAt(0)!), 0).horizontal.advance;
+    metricsOf(glyphIndexOf((decomposition?.(ch, 16)?.base ?? ch).codePointAt(0)!), 0).horizontal.advance;
   return {
     kind: 'canvas',
     unitsPerEm,
@@ -44,7 +45,8 @@ function fontMetricsOf(font: string): FontMetrics {
   };
 }
 
-const references = reference as ReferenceCharacter[];
+// The JSON module types an offset as number[], not as the pair it holds.
+const references = reference as unknown as ReferenceCharacter[];
 
 describe('shapeText — the marks of a decomposed character against Godot', () => {
   it.each(references.map((row) => [`${row.char} at ${row.sizePx} px in ${row.font}`, row] as const))(
