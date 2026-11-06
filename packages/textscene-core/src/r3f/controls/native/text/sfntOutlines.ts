@@ -25,12 +25,13 @@ import { isTrickyFont } from './trickyFont';
 import { openFontContainer } from './fontContainer';
 import { OUTLINE_TABLE_TAGS, readHeadUnitsPerEm, type SfntFile } from './sfntTables';
 import { fontInstanceOf, type FontInstance } from './variation/fontInstance';
-import { instanceGlyphIndex, type InstanceGlyphIndex } from './variation/instanceGlyph';
+import type { instanceGlyphIndex, InstanceGlyphIndex } from './variation/instanceGlyph';
 import type { instanceKerningReader, PairKerningReader } from './variation/instanceKerning';
 import { perObject } from '../../../../utils/perObject';
 import { recentlyRead } from '../../../../utils/recentlyRead';
 
 type InstanceKerningReader = typeof instanceKerningReader;
+type InstanceGlyphIndexReader = typeof instanceGlyphIndex;
 
 export interface SfntOutlines {
   /**
@@ -86,23 +87,36 @@ async function openOutlines(
 ): Promise<SfntOutlines | null> {
   const sfnt = await openFontContainer(bytes, OUTLINE_TABLE_TAGS);
   if (!sfnt) return null;
-  const [outlineOf, kerningReader] = await Promise.all([
+  const [outlineOf, kerningReader, glyphIndexReader] = await Promise.all([
     isAutoHinted(sfnt) ? autoHintedReaderOf(sfnt) : nativeReaderOf(sfnt),
-    kerningReaderOf(sfnt),
+    variationReaderOf(
+      sfnt,
+      ['GPOS', 'fvar'],
+      async () => (await import('./variation/instanceKerning')).instanceKerningReader
+    ),
+    variationReaderOf(
+      sfnt,
+      ['GSUB', 'fvar'],
+      async () => (await import('./variation/instanceGlyph')).instanceGlyphIndex
+    ),
   ]);
-  return readSfntOutlines(sfnt, outlineOf, kerningReader);
+  return readSfntOutlines(sfnt, outlineOf, kerningReader, glyphIndexReader);
 }
 
 /**
- * The `GPOS` kerning reader of a variable font, or null for a font without `GPOS` and `fvar`. Its
- * module loads with the font, and `instanceKerningOf` reads the tables when an instance first asks.
+ * The reader of a variable font that `load` imports, or null for a font without all of `tables`. The
+ * module loads with the font, and the reader reads the tables when an instance first asks.
  */
-async function kerningReaderOf(sfnt: SfntFile): Promise<InstanceKerningReader | null> {
-  if (!sfnt.tables.has('GPOS') || !sfnt.tables.has('fvar')) return null;
+async function variationReaderOf<Reader>(
+  sfnt: SfntFile,
+  tables: readonly string[],
+  load: () => Promise<Reader>
+): Promise<Reader | null> {
+  if (!tables.every((tag) => sfnt.tables.has(tag))) return null;
   try {
-    return (await import('./variation/instanceKerning')).instanceKerningReader;
+    return await load();
   } catch {
-    // Kerning only refines the advances: a chunk that fails to load (offline, after a deploy) must not take the outlines with it.
+    // A reader only refines the glyphs and advances: a chunk that fails to load (offline, after a deploy) must not take the outlines with it.
     return null;
   }
 }
@@ -254,13 +268,16 @@ function instanceAdvanceReaders(
 function readSfntOutlines(
   sfnt: SfntFile,
   outlineOf: GlyphOutlineReader | null,
-  kerningReader: InstanceKerningReader | null
+  kerningReader: InstanceKerningReader | null,
+  glyphIndexReader: InstanceGlyphIndexReader | null
 ): SfntOutlines | null {
   const cmapGlyphIndex = outlineOf && sfntGlyphIndex(sfnt);
   if (!cmapGlyphIndex) return null;
 
   const instanceAt = instanceReaderOf(sfnt);
-  const glyphIndex = instanceGlyphIndex(sfnt, cmapGlyphIndex);
+  const glyphIndex: InstanceGlyphIndex = glyphIndexReader
+    ? glyphIndexReader(sfnt, cmapGlyphIndex)
+    : (codePoint) => cmapGlyphIndex(codePoint);
   return {
     glyphIndex: (codePoint, opentype) => glyphIndex(codePoint, opentype ? instanceAt(opentype) : null),
     advanceAtInstance: instanceAdvanceReader(sfnt, instanceAt),

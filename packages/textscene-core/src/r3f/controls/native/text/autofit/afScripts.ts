@@ -548,3 +548,13 @@ export const AUTOFIT_SCRIPTS: readonly AutofitScript[] = [
     nonbaseRanges: [0x302a, 0x302f, 0x3190, 0x319f],
   },
 ];
+
+/** The OpenType script tags of the first script whose ranges hold `codePoint`, or none for a common character. */
+export function scriptTagsOf(codePoint: number): readonly string[] {
+  const script = AUTOFIT_SCRIPTS.find(({ ranges }) => {
+    for (let i = 0; i < ranges.length; i += 2)
+      if (codePoint >= ranges[i]! && codePoint <= ranges[i + 1]!) return true;
+    return false;
+  });
+  return script?.openTypeTags ?? [];
+}

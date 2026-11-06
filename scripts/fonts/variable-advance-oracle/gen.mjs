@@ -1,7 +1,8 @@
-// Runs oracle.gd for each instance of a case and writes the shaped advance and glyph of each character:
-// variableAdvance.godot.json for the default case, variableAdvanceNoHvar.godot.json for NO_HVAR=1 and
-// instanceGlyph.godot.json for the `recursive` case. Run it from this folder with Godot 4.6.3 on the path.
-// Usage: [NO_HVAR=1] node gen.mjs <fixtures dir> <out path> [recursive]
+// Runs oracle.gd for each instance of a case and writes what Godot's shaper gives each character: its
+// advance and glyph, and the kerning of each pair a case lists. Run it from this folder with Godot 4.6.3 on the path.
+// Cases and their files: open-sans (variableAdvance.godot.json), open-sans-no-hvar (variableAdvanceNoHvar.godot.json),
+// recursive (instanceGlyph.godot.json) and gpos-feature-variations (instanceGposVariations.godot.json).
+// Usage: node gen.mjs <fixtures dir> <out path> <case>
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -11,22 +12,24 @@ const WGHT = 2003265652;
 const WDTH = 2003072104;
 const MONO = 1297043023;
 const SLNT = 1936486004;
+const CASL = 1128354636;
+const OPEN_SANS = {
+  characters: 'HamgiWD.',
+  sizes: '9,12,16,20',
+  instances: [
+    { [WGHT]: 300 },
+    { [WGHT]: 600 },
+    { [WGHT]: 800 },
+    { [WDTH]: 75 },
+    { [WGHT]: 700, [WDTH]: 85 },
+    { weight: 650.5 },
+    { [WGHT]: 1000, [WDTH]: 50 },
+    { [WGHT]: 100 },
+  ],
+};
 const CASES = {
-  default: {
-    font: process.env.NO_HVAR ? 'open-sans-variable-subset-no-hvar.ttf' : 'open-sans-variable-subset.ttf',
-    characters: 'HamgiWD.',
-    sizes: '9,12,16,20',
-    instances: [
-      { [WGHT]: 300 },
-      { [WGHT]: 600 },
-      { [WGHT]: 800 },
-      { [WDTH]: 75 },
-      { [WGHT]: 700, [WDTH]: 85 },
-      { weight: 650.5 },
-      { [WGHT]: 1000, [WDTH]: 50 },
-      { [WGHT]: 100 },
-    ],
-  },
+  'open-sans': { ...OPEN_SANS, font: 'open-sans-variable-subset.ttf' },
+  'open-sans-no-hvar': { ...OPEN_SANS, font: 'open-sans-variable-subset-no-hvar.ttf' },
   // Recursive swaps glyphs by GSUB FeatureVariations: MONO gives the mono forms, slnt the slanted ones.
   recursive: {
     font: 'recursive-vf-subset.woff2',
@@ -41,10 +44,21 @@ const CASES = {
       { [MONO]: 1, [SLNT]: -15 },
     ],
   },
+  // A GPOS FeatureVariations record kerns AV by a further -300 units where CASL is 0.5 or more.
+  'gpos-feature-variations': {
+    font: 'recursive-gpos-feature-variations.woff2',
+    characters: 'A',
+    sizes: '12,16,20',
+    pairs: 'AV,AT,VA',
+    instances: [{}, { [CASL]: 0.25 }, { [CASL]: 0.5 }, { [CASL]: 1 }, { [CASL]: 0.75, [MONO]: 1 }],
+  },
 };
-const { font, characters, sizes, instances } = CASES[caseName ?? 'default'];
+if (!(caseName in CASES)) {
+  throw new Error(`expected a case of ${Object.keys(CASES).join(', ')}, got ${caseName}`);
+}
+const { font, characters, sizes, pairs, instances } = CASES[caseName];
 const glyphs = instances.flatMap((spec) => {
-  const args = [join(fixtures, font), characters, sizes, JSON.stringify(spec)];
+  const args = [join(fixtures, font), characters, sizes, JSON.stringify(spec), ...(pairs ? [pairs] : [])];
   const output = execFileSync(
     'godot',
     ['--headless', '--path', '.', '--script', 'oracle.gd', '--', ...args],
@@ -58,4 +72,4 @@ const glyphs = instances.flatMap((spec) => {
   );
 });
 writeFileSync(out, JSON.stringify(glyphs, null, 2));
-console.log(glyphs.length, 'glyphs');
+console.log(glyphs.length, 'rows');

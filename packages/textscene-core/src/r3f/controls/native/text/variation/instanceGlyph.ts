@@ -5,8 +5,11 @@
  */
 
 import { perObject } from '../../../../../utils/perObject';
-import { featureSubstitutionAt, sfntGsub, type FeatureSubstitution } from '../autofit/openTypeLayout';
-import { rvrnGlyph, rvrnLookups } from '../autofit/openTypeShaping';
+import { featureSubstitutionAt, type FeatureSubstitution, sfntGsub } from '../autofit/openTypeLayout';
+import { featureLookups, FIRST_STAGE_FEATURES } from '../autofit/openTypeFeatures';
+import { applyGsub, type GsubBuffer } from '../autofit/openTypeGsub';
+import { scriptTagsOf } from '../autofit/afScripts';
+import type { ShapingFace } from '../autofit/openTypeShaping';
 import type { SfntFile } from '../sfntTables';
 import type { FontInstance } from './fontInstance';
 import { fixedToFdot14 } from './fixedPoint';
@@ -14,10 +17,22 @@ import { fixedToFdot14 } from './fixedPoint';
 /** The glyph of a character at an instance, or at the default instance for null. */
 export type InstanceGlyphIndex = (codePoint: number, instance: FontInstance | null) => number;
 
-/** The `rvrn` lookups of one `FeatureVariations` record, and the glyph each character has under them. */
-interface RecordGlyphs {
-  readonly lookups: readonly number[];
-  readonly glyphs: Map<number, number>;
+/**
+ * The glyph HarfBuzz's `rvrn` stage gives `codePoint` alone, under the lookups of `substitution`, the
+ * `FeatureVariations` record of the instance, for the script of the character. It is the glyph `cmap`
+ * gives, unless the lookups turn it into exactly one other glyph.
+ */
+function rvrnGlyph(
+  face: ShapingFace,
+  codePoint: number,
+  substitution: FeatureSubstitution | undefined
+): number {
+  const glyph = face.glyphIndex(codePoint);
+  if (!face.gsub || glyph === 0) return glyph;
+  const lookups = featureLookups(face.gsub, scriptTagsOf(codePoint), FIRST_STAGE_FEATURES, substitution);
+  const buffer: GsubBuffer = { glyphs: [glyph], randomState: 1 };
+  applyGsub(face.gsub, [{ lookups, randomLookups: new Set() }], buffer);
+  return buffer.glyphs.length === 1 ? buffer.glyphs[0]! : glyph;
 }
 
 /**
@@ -35,16 +50,13 @@ export function instanceGlyphIndex(
   const recordOf = perObject((instance: FontInstance) =>
     featureSubstitutionAt(gsub, Array.from(instance.normalized, fixedToFdot14))
   );
-  const byRecord = new Map<FeatureSubstitution | undefined, RecordGlyphs>();
-  const glyphsOf = (record: FeatureSubstitution | undefined): RecordGlyphs => {
-    let found = byRecord.get(record);
-    if (!found) byRecord.set(record, (found = { lookups: rvrnLookups(gsub, record), glyphs: new Map() }));
-    return found;
-  };
+  const glyphsByRecord = new Map<FeatureSubstitution | undefined, Map<number, number>>();
   return (codePoint, instance) => {
-    const { lookups, glyphs } = glyphsOf(instance ? recordOf(instance) : defaultRecord);
+    const record = instance ? recordOf(instance) : defaultRecord;
+    let glyphs = glyphsByRecord.get(record);
+    if (!glyphs) glyphsByRecord.set(record, (glyphs = new Map()));
     let glyph = glyphs.get(codePoint);
-    if (glyph === undefined) glyphs.set(codePoint, (glyph = rvrnGlyph(face, codePoint, lookups)));
+    if (glyph === undefined) glyphs.set(codePoint, (glyph = rvrnGlyph(face, codePoint, record)));
     return glyph;
   };
 }

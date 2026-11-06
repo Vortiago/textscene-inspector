@@ -133,7 +133,7 @@ string against `true`, so an absent property or any other value silently resolve
 
 ## Known limitations
 
-- **Approximated** At an instance, a variable font swaps glyphs by `rvrn` alone, so its ligatures and contextual alternates keep the `cmap` glyphs.
+- **Approximated** At an instance, a variable font swaps glyphs by `rvrn` for each character alone, so its ligatures and contextual alternates keep the `cmap` glyphs.
 - **Approximated** Only a subset of BBCode tags is styled, and a tag outside it renders as
   plain text.
 - **Approximated** The glyph budget joins only the default font's ligatures (`ff`, `fi`, `fl`, `ffi`, `ffl`),
