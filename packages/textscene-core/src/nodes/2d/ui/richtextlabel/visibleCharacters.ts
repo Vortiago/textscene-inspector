@@ -92,17 +92,13 @@ export function revealedGlyphs(
     behavior: reveal.behavior,
     text: counted.text,
     spanStarts: counted.spanStarts,
+    indexOf: counted.indexOf,
     visibleChars: reveal.characters,
     visibleRatio: reveal.ratio,
     totalCharacters: counted.totalCharacters,
     rtl: reveal.rtl,
   });
-  const { originals } = counted;
-  return new Set(
-    shownLines.flatMap((line) =>
-      originals ? line.glyphs.map((glyph) => originals.get(glyph)!) : line.glyphs
-    )
-  );
+  return new Set(shownLines.flatMap((line) => line.glyphs));
 }
 
 /**
@@ -127,15 +123,15 @@ export function isPrefixShown(
   return firstGlyph === undefined || (revealed?.has(firstGlyph) ?? true);
 }
 
-/** A layout as the budget counts it: Godot's character indices, and the glyph each counted glyph copies. */
+/** A layout as the budget counts it: its lines without the implicit newlines, and Godot's character index of each glyph. */
 export interface CountedLayout {
   lines: readonly TextLineLayout[];
   /** The text the glyph indices count over: the runs' text less the implicit newlines. */
   text: string;
   /** Where each run after the first starts in `text`: Godot shapes each run apart. */
   spanStarts: ReadonlySet<number>;
-  /** Absent when no glyph needed a copy. */
-  originals?: Map<GlyphPlacement, GlyphPlacement>;
+  /** Absent when a glyph's `sourceIndex` is already Godot's index. */
+  indexOf?: (glyph: GlyphPlacement) => number | undefined;
   /** For each text index and the end, the implicit newlines before it. Absent when the text has none. */
   skippedBefore?: readonly number[];
   totalCharacters: number;
@@ -167,24 +163,19 @@ function countedLayoutOf(layout: TextLayoutResult, runs: readonly CountedRun[]):
     .split('')
     .filter((_, index) => !implicit.has(index))
     .join('');
-  const originals = new Map<GlyphPlacement, GlyphPlacement>();
   const lines = layout.lines.map((line) => ({
     ...line,
-    glyphs: line.glyphs
-      .filter((glyph) => glyph.sourceIndex === undefined || !implicit.has(glyph.sourceIndex))
-      .map((glyph) => {
-        // A glyph past the text, or with no index, follows every implicit break.
-        const index = glyph.sourceIndex;
-        const counted =
-          index === undefined
-            ? glyph
-            : { ...glyph, sourceIndex: index - (skippedBefore[index] ?? implicit.size) };
-        originals.set(counted, glyph);
-        return counted;
-      }),
+    glyphs: line.glyphs.filter(
+      (glyph) => glyph.sourceIndex === undefined || !implicit.has(glyph.sourceIndex)
+    ),
   }));
+  // A glyph past the text follows every implicit break.
+  const indexOf = (glyph: GlyphPlacement): number | undefined =>
+    glyph.sourceIndex === undefined
+      ? undefined
+      : glyph.sourceIndex - (skippedBefore[glyph.sourceIndex] ?? implicit.size);
   const spanStarts = new Set([...runStarts(runs)].map((start) => start - skippedBefore[start]!));
-  return { lines, text, spanStarts, originals, skippedBefore, totalCharacters };
+  return { lines, text, spanStarts, indexOf, skippedBefore, totalCharacters };
 }
 
 /** The offsets in the runs' joined text where each run after the first starts. */
