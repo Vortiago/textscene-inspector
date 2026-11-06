@@ -3,7 +3,7 @@ extends SceneTree
 # of subpixel positioning (text_server_adv.cpp:7077). font_get_glyph_advance returns the hinted glyph slot's advance, not this.
 # With a fifth argument of comma separated pairs, it prints the kerning of each pair too: the shaped advance of the pair's first
 # glyph, less its advance alone.
-# Usage: godot --headless --path . --script oracle.gd -- <font path> <chars> <sizes, comma separated> <variation_opentype as JSON, keys int or string> [pairs]
+# Usage: godot --headless --path scripts/fonts/godot-oracle --script <absolute path of oracle.gd> -- <font path> <chars> <sizes, comma separated> <variation_opentype as JSON, keys int or string> [pairs]
 func _init():
 	var args = OS.get_cmdline_user_args()
 	var file = FontFile.new()

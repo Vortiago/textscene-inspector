@@ -8,6 +8,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { perObject } from '../../../../utils/perObject';
 import { drawnCharacters } from './canonicalGlyphs';
 import { readGlyphCount, type SfntFile } from './sfntTables';
 
@@ -141,7 +142,7 @@ export function cmapCodePoints(dv: DataView, cmapOffset: number, glyphCount: num
  * FreeType. `FT_Get_Char_Index` answers 0 for an index at or past `maxp.numGlyphs`. Null for a font
  * with no `cmap` subtable this module reads.
  */
-export function sfntMapsGlyph(sfnt: SfntFile): ((ch: string) => boolean) | null {
+const sfntMapsGlyph = perObject((sfnt: SfntFile): ((ch: string) => boolean) | null => {
   const glyphIndexOf = sfntGlyphIndex(sfnt);
   if (!glyphIndexOf) return null;
   const glyphCount = readGlyphCount(sfnt) ?? Infinity;
@@ -149,7 +150,25 @@ export function sfntMapsGlyph(sfnt: SfntFile): ((ch: string) => boolean) | null 
     const glyphIndex = glyphIndexOf(ch.codePointAt(0)!);
     return glyphIndex !== 0 && glyphIndex < glyphCount;
   };
-}
+});
+
+/**
+ * The glyphs `sfnt` draws a character as (`drawnCharacters`), read once per code point: the shaper
+ * asks for each character on every pass. Null for a font with no `cmap` subtable this module reads.
+ */
+export const sfntDrawnCharacters = perObject(
+  (sfnt: SfntFile): ((ch: string) => readonly string[] | null) | null => {
+    const mapsGlyph = sfntMapsGlyph(sfnt);
+    if (!mapsGlyph) return null;
+    const drawnByCodePoint = new Map<number, readonly string[] | null>();
+    return (ch) => {
+      const codePoint = ch.codePointAt(0)!;
+      let drawn = drawnByCodePoint.get(codePoint);
+      if (drawn === undefined) drawnByCodePoint.set(codePoint, (drawn = drawnCharacters(ch, mapsGlyph)));
+      return drawn;
+    };
+  }
+);
 
 /**
  * Whether `sfnt` draws a character without `.notdef`: `sfntMapsGlyph`, or every piece of its
@@ -157,27 +176,19 @@ export function sfntMapsGlyph(sfnt: SfntFile): ((ch: string) => boolean) | null 
  * module reads answers true, so its text keeps it.
  */
 export function sfntHasGlyph(sfnt: SfntFile): (ch: string) => boolean {
-  const mapsGlyph = sfntMapsGlyph(sfnt);
-  if (!mapsGlyph) return () => true;
-  // One answer per code point: the shaper asks for each character on every pass.
-  const answers = new Map<number, boolean>();
-  return (ch) => {
-    const codePoint = ch.codePointAt(0)!;
-    let answer = answers.get(codePoint);
-    if (answer === undefined) answers.set(codePoint, (answer = drawnCharacters(ch, mapsGlyph) !== null));
-    return answer;
-  };
+  const drawnOf = sfntDrawnCharacters(sfnt);
+  return drawnOf ? (ch) => drawnOf(ch) !== null : () => true;
 }
 
 /**
  * The glyph index of a code point through the `cmap` of `sfnt`, 0 for none or for a read a malformed
  * table sends past the end. Null for a font with no subtable this module reads.
  */
-export function sfntGlyphIndex(sfnt: SfntFile): ((codePoint: number) => number) | null {
+export const sfntGlyphIndex = perObject((sfnt: SfntFile): ((codePoint: number) => number) | null => {
   const cmap = sfnt.tables.get('cmap');
   const lookup = cmap ? orOnRangeError(() => cmapLookup(sfnt.dv, cmap.offset), null) : null;
   return lookup && ((codePoint) => orOnRangeError(() => lookup(codePoint), 0));
-}
+});
 
 /** `read()`, or `fallback` where a malformed table sends it past the end of the bytes. */
 export function orOnRangeError<T>(read: () => T, fallback: T): T {

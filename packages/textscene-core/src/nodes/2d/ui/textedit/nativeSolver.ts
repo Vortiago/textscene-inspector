@@ -508,6 +508,19 @@ function colorAt(spans: readonly CodeHighlighterColorSpan[], index: number, fall
 }
 
 /**
+ * The buffer-line index a glyph's colour is read at: `glyphs[j].start` (`text_edit.cpp:1674`). A
+ * decomposed character's marks share their base's index, so the glyph's place in the row is only
+ * the fallback for a glyph with no `sourceIndex`.
+ */
+export function textEditGlyphLineIndex(
+  glyph: GlyphPlacement,
+  rowStartIndex: number,
+  glyphIndex: number
+): number {
+  return glyph.sourceIndex ?? rowStartIndex + glyphIndex;
+}
+
+/**
  * The glyph colour at `lineIndex`: `text_edit.cpp:1674`'s `gl_color = current_color`, which also
  * tints the `tab`/`space` icons (`:1714,1718`), not a fixed `font_color`. With no highlighter
  * (`spans` undefined) it is `fallback`, as in `textEditRowColorRuns`.
@@ -568,7 +581,7 @@ export function textEditRowColorRuns(
   let current: TextEditGlyphColorRun | undefined;
   rowGlyphs.forEach((glyph, k) => {
     if (isDrawn && !isDrawn[k]) return;
-    const color = spans ? colorAt(spans, rowStartIndex + k, fallbackColor) : fallbackColor;
+    const color = textEditGlyphColorAt(spans, textEditGlyphLineIndex(glyph, rowStartIndex, k), fallbackColor);
     if (current && sameColor(current.color, color)) {
       current.glyphs.push(glyph);
     } else {

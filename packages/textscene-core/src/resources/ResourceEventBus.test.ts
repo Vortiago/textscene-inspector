@@ -114,35 +114,51 @@ describe('ResourceEventBus', () => {
     });
   });
 
-  describe('settleCount', () => {
-    it('counts a loaded and a failed on the buses asked about, and nothing else', () => {
-      eventBus.emit('scene', 'loaded', 'a');
-      eventBus.emit('scene', 'failed', 'b');
-      eventBus.emit('scene', 'requested', 'c');
-      eventBus.emit('glb', 'loaded', 'd');
+  describe('changesSince', () => {
+    it('lists a loaded, a failed and an invalidated after the token on the buses asked about, and nothing else', () => {
+      eventBus.emit('scene', 'loaded', 'before');
+      const since = eventBus.changeToken();
+      eventBus.emit('scene', 'failed', 'a');
+      eventBus.emit('scene', 'requested', 'b');
+      eventBus.emit('glb', 'invalidated', 'c');
+      eventBus.emit('texture', 'loaded', 'd');
 
-      expect(eventBus.settleCount(['scene'])).toBe(2);
-      expect(eventBus.settleCount(['scene', 'glb'])).toBe(3);
-      expect(eventBus.settleCount(['texture'])).toBe(0);
+      expect(eventBus.changesSince(['scene', 'glb'], since)).toEqual([
+        { busType: 'scene', event: 'failed', key: 'a' },
+        { busType: 'glb', event: 'invalidated', key: 'c' },
+      ]);
     });
 
-    it('counts an invalidated in the change count and not in the settle count', () => {
+    it('lists only the last change of a key that changed twice', () => {
+      const since = eventBus.changeToken();
       eventBus.emit('scene', 'loaded', 'a');
       eventBus.emit('scene', 'invalidated', 'a');
 
-      expect(eventBus.settleCount(['scene'])).toBe(1);
-      expect(eventBus.changeCount(['scene'])).toBe(2);
+      expect(eventBus.changesSince(['scene'], since)).toEqual([
+        { busType: 'scene', event: 'invalidated', key: 'a' },
+      ]);
     });
 
-    it('is already bumped when a handler of the settle reads it', () => {
-      let seen = -1;
+    it('already lists a change when a handler of that change asks', () => {
+      const since = eventBus.changeToken();
+      let seen: unknown[] = [];
       eventBus.on('scene', 'loaded', () => {
-        seen = eventBus.settleCount(['scene']);
+        seen = eventBus.changesSince(['scene'], since);
       });
 
       eventBus.emit('scene', 'loaded', 'a');
 
-      expect(seen).toBe(1);
+      expect(seen).toHaveLength(1);
+    });
+  });
+
+  describe('hasChangedSince', () => {
+    it('is false for a change on another bus', () => {
+      const since = eventBus.changeToken();
+      eventBus.emit('texture', 'loaded', 'a');
+
+      expect(eventBus.hasChangedSince(['scene'], since)).toBe(false);
+      expect(eventBus.hasChangedSince(['texture'], since)).toBe(true);
     });
   });
 

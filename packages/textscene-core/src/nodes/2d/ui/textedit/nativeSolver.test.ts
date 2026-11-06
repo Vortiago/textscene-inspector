@@ -533,3 +533,27 @@ describe('textEditRowColorRuns — culled glyphs', () => {
     ]);
   });
 });
+
+describe('textEditRowColorRuns — a decomposed character (text_edit.cpp:1674)', () => {
+  const red = { r: 1, g: 0, b: 0, a: 1 };
+  const blue = { r: 0, g: 0, b: 1, a: 1 };
+
+  it('colours the glyph after a base and its mark by its own character', () => {
+    const glyphs = [
+      { x: 0, advance: 10, char: 'A', sourceIndex: 0 },
+      { x: 10, advance: 0, char: '̈', sourceIndex: 0 },
+      { x: 10, advance: 10, char: 'b', sourceIndex: 1 },
+    ] as GlyphPlacement[];
+    const spans = [
+      { startIndex: 0, endIndex: 1, color: red },
+      { startIndex: 1, endIndex: 2, color: blue },
+    ];
+
+    const runs = textEditRowColorRuns(glyphs, 0, spans, red);
+
+    expect(runs.map(({ glyphs: run, color }) => [run.map((glyph) => glyph.char).join(''), color])).toEqual([
+      ['Ä', red],
+      ['b', blue],
+    ]);
+  });
+});

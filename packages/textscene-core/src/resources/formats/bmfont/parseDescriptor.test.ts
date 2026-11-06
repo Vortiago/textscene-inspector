@@ -101,4 +101,19 @@ describe('parseDescriptor', () => {
       /block \d needs \d+ bytes, but only \d+ remain/
     );
   });
+
+  it('names the missing version byte of a binary descriptor cut after its magic', () => {
+    const magicOnly = new Uint8Array(binaryDescriptor()).slice(0, 3);
+
+    expect(() => parseDescriptor(magicOnly.buffer)).toThrowError(/needs a version byte after BMF/);
+  });
+
+  it('names the missing bytes of a block header cut short', () => {
+    const whole = new Uint8Array(binaryDescriptor());
+    const headerCut = new Uint8Array([...whole.slice(0, 4), 1, 0, 0]);
+
+    expect(() => parseDescriptor(headerCut.buffer)).toThrowError(
+      /block header at byte 4 needs 5 bytes, but only 3 remain/
+    );
+  });
 });

@@ -17,7 +17,7 @@ import { ftMulFix, getFontOutlineScale, glyphAdvance26_6, FIXED_26_6_ONE } from 
 import { ORIGIN, type MarkOffset } from './markPositioning';
 import { extent } from './glyphContours';
 import { unscaledCffOutlines } from './sfntCff';
-import { sfntGlyphIndex } from './sfntCmap';
+import { firstEndAtOrAbove, sfntGlyphIndex } from './sfntCmap';
 import { unscaledGlyfOutlines } from './sfntGlyf';
 import { glyphMetricsReader } from './sfntGlyphMetrics';
 import type { SfntFile } from './sfntTables';
@@ -64,16 +64,13 @@ interface Extents {
 
 /** The combining class of a code point that a canonical decomposition ends in, 0 for any other. */
 function combiningClassOf(codePoint: number): number {
-  let low = 0;
-  let high = COMBINING_CLASS_RUNS.length - 1;
-  while (low <= high) {
-    const middle = (low + high) >> 1;
-    const [first, last, klass] = COMBINING_CLASS_RUNS[middle]!;
-    if (codePoint < first) high = middle - 1;
-    else if (codePoint > last) low = middle + 1;
-    else return RECATEGORIZED_CLASS.get(klass) ?? klass;
-  }
-  return 0;
+  const run =
+    COMBINING_CLASS_RUNS[
+      firstEndAtOrAbove(COMBINING_CLASS_RUNS.length, (i) => COMBINING_CLASS_RUNS[i]![1], codePoint)
+    ];
+  if (!run || run[0] > codePoint) return 0;
+  const klass = run[2];
+  return RECATEGORIZED_CLASS.get(klass) ?? klass;
 }
 
 /** Integer division by two, which truncates toward zero as C does. */

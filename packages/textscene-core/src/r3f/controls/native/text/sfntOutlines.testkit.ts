@@ -12,11 +12,19 @@ import { fileBytes } from '../../../../resources/testing/fileBytes';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import type { GlyphContours } from './glyphContours';
 import { openFontOutlines, type SfntOutlines } from './sfntOutlines';
+import { openSfnt, type SfntFile } from './sfntTables';
 
 const FIXTURE_FONTS = join(import.meta.dirname, '../../../../../../../scenes/fixtures/fonts');
 
 export function fixtureFontBytes(name: string): ArrayBuffer {
   return fileBytes(join(FIXTURE_FONTS, name));
+}
+
+/** The fixture font `name`, opened. Throws for a file that holds no sfnt. */
+export function fixtureSfnt(name: string): SfntFile {
+  const sfnt = openSfnt(fixtureFontBytes(name));
+  if (!sfnt) throw new Error(`expected an sfnt in ${name}, got none`);
+  return sfnt;
 }
 
 /** The contours of the glyph of `char` at `sizePx`. Throws for a character with no outline. */

@@ -26,7 +26,7 @@ import { sfntGlyphIndex } from './sfntCmap';
 import { glyphMetricsReader } from './sfntGlyphMetrics';
 import type { SfntFile } from './sfntTables';
 
-/** Where a mark's origin sits against its base's origin, in design units with y up. */
+/** Where a mark's origin sits against its base's origin, y up: design units from `markPositioningReader`, px from a reader at a size. */
 export interface MarkOffset {
   readonly x: number;
   readonly y: number;
@@ -37,12 +37,6 @@ export const ORIGIN: MarkOffset = { x: 0, y: 0 };
 
 /** The scripts whose marks the reader places: the first one the font has, else its default script. */
 const MARK_SCRIPT_TAGS = ['latn', 'grek', 'cyrl'] as const;
-
-/** Whether HarfBuzz positions the marks of the font by `GPOS`: it has a script that the marks' text selects. */
-export function hasMarkScript(sfnt: SfntFile): boolean {
-  const table = sfntGpos(sfnt);
-  return table !== null && findScript(table, MARK_SCRIPT_TAGS) !== undefined;
-}
 
 /** The `GPOS` lookups of the `mark` and `mkmk` features that attach a mark. */
 function attachmentLookups(table: LayoutTable): Lookup[] {

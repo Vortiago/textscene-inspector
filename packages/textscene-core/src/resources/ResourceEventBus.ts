@@ -37,12 +37,23 @@ export interface ResourceChange {
   key: string;
 }
 
+interface SequencedChange extends ResourceChange {
+  at: number;
+}
+
+function isChangeEvent(eventType: ResourceEventType): eventType is ResourceChange['event'] {
+  return (CHANGE_EVENTS as readonly string[]).includes(eventType);
+}
+
 export class ResourceEventBus {
   private handlers = new Map<string, Set<EventHandler<unknown>>>();
   private threeManager: THREE.LoadingManager;
-  /** Written only by `emit`, never reset: a reader compares two reads of them. */
-  private settles: Partial<Record<ResourceType, number>> = {};
-  private invalidations: Partial<Record<ResourceType, number>> = {};
+  /** Written only by `emit`, never reset: a reader compares a token it took with a later one. */
+  private sequence = 0;
+  /** The last change to each key of each bus, at its sequence. Written only by `emit`. */
+  private lastChanges = new Map<ResourceType, Map<string, SequencedChange>>();
+  /** The sequence of the last change on each bus. Written only by `emit`. */
+  private lastChangeAt = new Map<ResourceType, number>();
 
   constructor() {
     this.threeManager = new THREE.LoadingManager();
@@ -53,23 +64,35 @@ export class ResourceEventBus {
   }
 
   /**
-   * How many loads have settled, loaded or failed, on `busTypes`. A reader that subscribes after it
-   * rendered compares it with the count at its render, to learn of a settle that landed in between.
+   * A token for now. A reader takes it with what it reads of a cache, and later asks
+   * {@link changesSince} what moved after it.
    */
-  settleCount(busTypes: readonly ResourceType[]): number {
-    let count = 0;
-    for (const busType of busTypes) count += this.settles[busType] ?? 0;
-    return count;
+  changeToken(): number {
+    return this.sequence;
+  }
+
+  /** True when a key on `busTypes` has changed after the token `since`. */
+  hasChangedSince(busTypes: readonly ResourceType[], since: number): boolean {
+    // A loop, not `.some`: every reader's commit calls this, and a closure per call is garbage.
+    for (const busType of busTypes) {
+      if ((this.lastChangeAt.get(busType) ?? 0) > since) return true;
+    }
+    return false;
   }
 
   /**
-   * {@link settleCount} and the invalidations on `busTypes`: every change to what a cache holds.
-   * A reader that listens only while mounted compares it across the time it did not listen.
+   * The last change of each key on `busTypes` that changed after the token `since`, oldest first.
+   * A key that changed twice shows only its last change, which is what its cache holds now.
    */
-  changeCount(busTypes: readonly ResourceType[]): number {
-    let count = this.settleCount(busTypes);
-    for (const busType of busTypes) count += this.invalidations[busType] ?? 0;
-    return count;
+  changesSince(busTypes: readonly ResourceType[], since: number): ResourceChange[] {
+    if (!this.hasChangedSince(busTypes, since)) return [];
+    const changes: SequencedChange[] = [];
+    for (const busType of busTypes) {
+      for (const change of this.lastChanges.get(busType)?.values() ?? []) {
+        if (change.at > since) changes.push(change);
+      }
+    }
+    return changes.sort((a, b) => a.at - b.at).map(({ busType, event, key }) => ({ busType, event, key }));
   }
 
   /**
@@ -107,11 +130,7 @@ export class ResourceEventBus {
 
   emit<T = unknown>(resourceType: ResourceType, eventType: ResourceEventType, id: string, data?: T): void {
     const key = `${resourceType}:${eventType}`;
-    if (eventType === 'loaded' || eventType === 'failed') {
-      this.settles[resourceType] = (this.settles[resourceType] ?? 0) + 1;
-    } else if (eventType === 'invalidated') {
-      this.invalidations[resourceType] = (this.invalidations[resourceType] ?? 0) + 1;
-    }
+    if (isChangeEvent(eventType)) this.recordChange({ busType: resourceType, event: eventType, key: id });
     const handlers = this.handlers.get(key);
     if (handlers) {
       for (const handler of handlers) {
@@ -122,6 +141,14 @@ export class ResourceEventBus {
         }
       }
     }
+  }
+
+  /** Before the handlers run, so a handler that takes a token already sees this change. */
+  private recordChange(change: ResourceChange): void {
+    let changes = this.lastChanges.get(change.busType);
+    if (!changes) this.lastChanges.set(change.busType, (changes = new Map()));
+    changes.set(change.key, { ...change, at: ++this.sequence });
+    this.lastChangeAt.set(change.busType, this.sequence);
   }
 
   /**
