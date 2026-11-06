@@ -193,14 +193,8 @@ export interface GlyphPlacement {
   /** The font glyph the run shaping gives this glyph. Absent for a face whose glyphs this previewer cannot read. */
   glyphIndex?: number;
   /**
-   * Whether a `GSUB` lookup gave `glyphIndex`: a ligature, a glyph its neighbours swap, or a glyph of
-   * a multiple substitution. `char` alone then does not draw it. Absent for false.
-   */
-  isSubstituted?: true;
-  /**
    * The source text of the cluster this glyph draws a part of, where the cluster draws more than one
-   * glyph or another character. Absent where `char` is the source text. A substituted glyph that
-   * starts its cluster carries the source text as `char`.
+   * glyph or another character. Absent where `char` is the source text.
    */
   cluster?: string;
   /**
@@ -414,7 +408,6 @@ interface ClusterGlyph {
   /** The character it shapes, after normalisation. */
   readonly char: string;
   readonly glyphIndex?: number;
-  readonly isSubstituted: boolean;
   /** Whether its face places it over the glyph before it, with no advance. */
   readonly isMark: boolean;
   /** Its advance, px, kerning included, rounded with its run where the run rounds. */
@@ -618,14 +611,6 @@ function specialGlyph(
   const cp = ch.codePointAt(0)!;
   const hardBreak = isLinebreak(cp);
   const isTab = isTabChar(ch);
-  // A break grapheme, U+200B and a tab take no advance whatever the face holds: the baked charset has
-  // no entry for the first two, and a tab no stop aligns is as wide as the font's glyph for it, which
-  // is none (measured in Godot 4.6.3: `a<TAB>b` with `tab_size` 0 sets `b` against `a`).
-  const isZeroWidth = hardBreak || cp === 0x200b || isTab;
-  // Only the "no font has a glyph" case is left (`text_server_adv.cpp:6842-6907`).
-  const isControl = !isZeroWidth && isControlChar(cp);
-  const lacksFaceGlyph = !isZeroWidth && !isControl && lacksGlyph(style.faces[i]!, ch, style.hasUndrawnGlyph);
-  if (!isZeroWidth && !isControl && !lacksFaceGlyph) return undefined;
   const glyph: BreakGlyph = {
     start: i,
     end: i + 1,
@@ -635,9 +620,35 @@ function specialGlyph(
     isTab,
     emboldenGrowthPx: 0,
   };
-  // Without `preserve_invalid` or `preserve_control`, a control pushes no `Glyph` (`:6844`).
-  if (isZeroWidth || (isControl && !preserveControl)) return glyph;
-  return { ...glyph, advance: hexCodeBoxAdvanceSize(style.sizes[i]!, cp).x, controlCodepoint: cp };
+  // A break grapheme, U+200B and a tab take no advance whatever the face holds: the baked charset has
+  // no entry for the first two, and a tab no stop aligns is as wide as the font's glyph for it, which
+  // is none (measured in Godot 4.6.3: `a<TAB>b` with `tab_size` 0 sets `b` against `a`).
+  if (hardBreak || cp === 0x200b || isTab) return glyph;
+  // Only the "no font has a glyph" case is left (`text_server_adv.cpp:6842-6907`).
+  if (isControlChar(cp)) {
+    // Without `preserve_invalid` or `preserve_control`, a control pushes no `Glyph` (`:6844`).
+    return preserveControl ? hexCodeBox(glyph, style.sizes[i]!, cp) : glyph;
+  }
+  if (!lacksGlyph(style.faces[i]!, ch, style.hasUndrawnGlyph)) return undefined;
+  return hexCodeBox(glyph, style.sizes[i]!, cp);
+}
+
+function hexCodeBox(glyph: BreakGlyph, size: number, cp: number): BreakGlyph {
+  glyph.advance = hexCodeBoxAdvanceSize(size, cp).x;
+  glyph.controlCodepoint = cp;
+  return glyph;
+}
+
+/** The glyph of character `i` that breaks a shaped stretch, or undefined where its face shapes it. */
+function specialGlyphAt(
+  chars: ArrayLike<string>,
+  i: number,
+  style: RunStyle,
+  preserveControl: boolean
+): BreakGlyph | undefined {
+  if (style.rangeIds[i]! < 0) return unshapedGlyph(i);
+  if (chars[i] === '') return undefined;
+  return specialGlyph(chars, i, style, preserveControl);
 }
 
 /**
@@ -663,7 +674,6 @@ function clusterGlyph(
     return {
       char: glyph.char,
       glyphIndex: glyph.glyph,
-      isSubstituted: glyph.isSubstituted,
       isMark: isPlacedMark,
       advance: fontAdvancePx + extraPx,
       xOffset: 0,
@@ -720,12 +730,7 @@ function pushRunGlyphs(
   let stretchStart = start;
   let stretch: string[] = [];
   for (let i = start; i < end; i++) {
-    const special =
-      style.rangeIds[i]! < 0
-        ? unshapedGlyph(i)
-        : chars[i] === ''
-          ? null
-          : specialGlyph(chars, i, style, preserveControl);
+    const special = specialGlyphAt(chars, i, style, preserveControl);
     if (!special) {
       stretch.push(chars[i]!);
       continue;
@@ -771,7 +776,7 @@ function lastBaseGlyph(glyphs: readonly ClusterGlyph[] | undefined): ClusterGlyp
 
 /** The glyph a kerning pair reads for `glyph`, or for `char` where it draws no cluster. */
 function kernGlyphOf(glyph: ClusterGlyph | undefined, char: string): KernGlyph {
-  return glyph ? { char: glyph.char, glyph: glyph.glyphIndex, isSubstituted: glyph.isSubstituted } : { char };
+  return glyph ? { char: glyph.char, glyph: glyph.glyphIndex } : { char };
 }
 
 /** Adds `px` to the advance of `glyph`, on its last glyph that is no mark, which the pair kerns. */
@@ -1345,17 +1350,13 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
   return { shapedText: transformed, lines, linePitchPx, widthPx, heightPx, baselineOffsetPx, fontMetrics };
 }
 
-/**
- * The placement of each glyph of the cluster `placed` draws, at its own pen and advance. A
- * substituted glyph that starts the cluster draws its source text where the face has no glyph to
- * draw, so it keeps that text as its `char`.
- */
+/** The placement of each glyph of the cluster `placed` draws, at its own pen and advance. */
 function clusterPlacements(placed: GlyphPlacement, glyphs: readonly ClusterGlyph[]): GlyphPlacement[] {
   const sourceText = placed.char;
   const isAtlas = placed.fontMetrics?.kind === 'atlas';
   let pen = placed.x;
-  return glyphs.map((glyph, k) => {
-    const char = glyph.isSubstituted && k === 0 ? sourceText : glyph.char;
+  return glyphs.map((glyph) => {
+    const { char } = glyph;
     const placement: GlyphPlacement = {
       ...placed,
       char,
@@ -1364,7 +1365,6 @@ function clusterPlacements(placed: GlyphPlacement, glyphs: readonly ClusterGlyph
       // Atlas bitmaps exist only for the font `openSansAtlas.ts` bakes.
       glyph: isAtlas ? atlasGlyphOf(glyph) : null,
       glyphIndex: glyph.glyphIndex,
-      ...(glyph.isSubstituted && { isSubstituted: true as const }),
       ...((glyphs.length > 1 || char !== sourceText) && { cluster: sourceText }),
       xOffset: glyph.xOffset !== 0 ? glyph.xOffset : undefined,
       ...(glyph.yOffset !== 0 && { yOffset: glyph.yOffset }),
@@ -1374,9 +1374,9 @@ function clusterPlacements(placed: GlyphPlacement, glyphs: readonly ClusterGlyph
   });
 }
 
-/** The atlas bitmap of `glyph`: by its glyph for a substituted one, which no character names. */
+/** The atlas bitmap of `glyph`: by its glyph where the run shaping read one, else by its character. */
 function atlasGlyphOf(glyph: ClusterGlyph): OpenSansGlyph | null {
-  if (glyph.isSubstituted) return glyph.glyphIndex === undefined ? null : atlasGlyphOfIndex(glyph.glyphIndex);
+  if (glyph.glyphIndex !== undefined) return atlasGlyphOfIndex(glyph.glyphIndex);
   return OPEN_SANS_ATLAS_GLYPHS[glyph.char] ?? null;
 }
 

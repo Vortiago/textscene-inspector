@@ -38,7 +38,7 @@ vi.mock('../../../../r3f/controls/native/text/bundledCanvasFace', async () => {
   const { withVariation } = await import('../../../../r3f/controls/native/text/fontMetrics');
   const bundled = createOpenSansCanvasFontMetrics('bundled-rtl-test');
   return {
-    peekBundledCanvasFace: (atlasFace: FontMetrics) =>
+    useBundledCanvasFace: () => (atlasFace: FontMetrics) =>
       bundledFace.isRegistered
         ? withVariation(bundled, { embolden: atlasFace.embolden, skew: atlasFace.skew })
         : null,

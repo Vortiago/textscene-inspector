@@ -51,6 +51,20 @@ function polygon(points: readonly (readonly [number, number])[]): GlyphContours 
 }
 
 describe('strokeGlyphContours', () => {
+  // A spread of this many points into `splice` exceeds the engine's argument limit (RangeError).
+  it('strokes a contour of more points than a call takes as arguments', () => {
+    const POINT_COUNT = 200_000;
+    const RADIUS = 1_000_000;
+    const ring = Array.from({ length: POINT_COUNT }, (_, i): [number, number] => {
+      const angle = (2 * Math.PI * i) / POINT_COUNT;
+      return [Math.round(RADIUS * Math.cos(angle)), Math.round(RADIUS * Math.sin(angle))];
+    });
+
+    const stroked = strokeGlyphContours(polygon(ring), 1);
+
+    expect(stroked.contourEnds).toHaveLength(2);
+  });
+
   // `ft_stroke_border_lineto` returns before it sets `movable` for a line within 2/64 px, so the
   // corner point before it stays. The points are libfreetype's `FT_Glyph_Stroke` at radius 128.
   it('keeps the corner point before a line too short to draw', () => {

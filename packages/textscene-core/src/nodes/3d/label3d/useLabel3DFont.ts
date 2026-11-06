@@ -5,14 +5,11 @@
  */
 
 import { useCallback } from 'react';
-import {
-  projectDefaultFontGeneratesMipmaps,
-  projectDefaultFontHinting,
-} from '../../../parser/projectSettingsParser';
+import { projectDefaultFontGeneratesMipmaps } from '../../../parser/projectSettingsParser';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { peekBundledCanvasFace } from '../../../r3f/controls/native/text/bundledCanvasFace';
+import { useBundledCanvasFace } from '../../../r3f/controls/native/text/bundledCanvasFace';
 import {
   isBitmapFontMetrics,
   type BitmapFontMetrics,
@@ -59,6 +56,7 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
   );
   const { loadedFont, projectFonts, isLoading } = useLoadedFilesAndFonts(noFiles, fontsPlan, true);
   const { settings } = useProjectSettings();
+  const peekBundledCanvasFace = useBundledCanvasFace();
 
   /** The font the label draws with, and whether a chain face reloads, whose fallback faces draw at the label setting meanwhile. */
   const settledFont = (): SettledLabel3DFont => {
@@ -79,7 +77,7 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
     // keeps its fallbacks.
     if (isBitmapFontMetrics(settled) || isCanvasFontMetrics(settled))
       return { font: { metrics: settled, generatesMipmaps, fallbackMipmaps }, isChainSettling };
-    const canvasFace = peekBundledCanvasFace(settled, projectDefaultFontHinting(settings));
+    const canvasFace = peekBundledCanvasFace(settled);
     if (!canvasFace) return NO_FONT;
     const metrics = withFallbacks(canvasFace, fallbacks ?? []);
     return { font: { metrics, generatesMipmaps, fallbackMipmaps }, isChainSettling };

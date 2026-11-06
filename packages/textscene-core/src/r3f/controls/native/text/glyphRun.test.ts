@@ -3,12 +3,11 @@
  * whole, read off the bundled Open Sans and the contextual `rvrn` fixture.
  */
 import { describe, expect, it } from 'vitest';
-import { join } from 'node:path';
 import { defaultSubstitution } from './autofit/openTypeFeatures';
 import { openFontContainer } from './fontContainer';
 import type { FontMetrics } from './fontMetrics';
 import { getFontRunShaping, keptRunShaping, sfntRunShapingFace, type RunShapingFace } from './glyphRun';
-import { fileBytes } from '../../../../resources/testing/fileBytes';
+import { bundledFontBytes } from './bundledFontBytes';
 import { fixtureFontBytes } from './sfntOutlines.testkit';
 import { OUTLINE_TABLE_TAGS } from './sfntTables';
 
@@ -22,21 +21,30 @@ async function faceOf(bytes: ArrayBuffer): Promise<RunShapingFace> {
   return sfntRunShapingFace(sfnt!)!;
 }
 
-const openSans = () =>
-  faceOf(fileBytes(join(import.meta.dirname, '../../../../../assets/fonts/OpenSans_SemiBold.woff2')));
+const openSans = () => faceOf(bundledFontBytes());
 
 const shape = (face: RunShapingFace, chars: readonly string[]) =>
   keptRunShaping(face, defaultSubstitution(face.gsub!))(chars);
 
+/** The glyph `cmap` gives the first character of `text`. */
+const cmapGlyphOf = (face: RunShapingFace, text: string) => face.glyphIndex(text.codePointAt(0)!);
+
 /** The clusters of `text` that draw a glyph a lookup gave, with that glyph. */
 const substitutedOf = (face: RunShapingFace, text: string) =>
   shape(face, [...text]).flatMap(({ start, end, glyphs }) =>
-    glyphs.filter((glyph) => glyph.isSubstituted).map(({ glyph }) => ({ start, end, glyph }))
+    glyphs
+      .filter(({ glyph, char }) => glyph !== cmapGlyphOf(face, char))
+      .map(({ glyph }) => ({ start, end, glyph }))
   );
 
 describe('keptRunShaping', () => {
   it('draws a ligature as one cluster of its characters', async () => {
     expect(substitutedOf(await openSans(), 'office')).toEqual([{ start: 1, end: 4, glyph: OPEN_SANS_FFI }]);
+  });
+
+  it('gives a ligature the source text of its cluster as its char', async () => {
+    const [cluster] = shape(await openSans(), [...'fi']);
+    expect(cluster!.glyphs.map(({ char }) => char)).toEqual(['fi']);
   });
 
   it('gives a ligature the advance of its own glyph', async () => {
@@ -57,10 +65,11 @@ describe('keptRunShaping', () => {
   });
 
   it('draws the glyph cmap gives each character of a run the lookups do not change', async () => {
-    const clusters = shape(await openSans(), [...'ft']);
-    expect(clusters.flatMap(({ glyphs }) => glyphs.map((glyph) => glyph.isSubstituted))).toEqual([
-      false,
-      false,
+    const face = await openSans();
+    const clusters = shape(face, [...'ft']);
+    expect(clusters.flatMap(({ glyphs }) => glyphs.map(({ glyph }) => glyph))).toEqual([
+      cmapGlyphOf(face, 'f'),
+      cmapGlyphOf(face, 't'),
     ]);
   });
 
@@ -80,7 +89,7 @@ describe('getFontRunShaping of a face with no shaping', () => {
   it('draws the composite of a base and a mark where the face has it', () => {
     const face = { hasGlyph: (ch: string) => ch !== '\u0301' } as FontMetrics;
     expect(getFontRunShaping(face, [...'e\u0301'])).toEqual([
-      { start: 0, end: 2, glyphs: [{ char: 'é', isMark: false, isSubstituted: false }] },
+      { start: 0, end: 2, glyphs: [{ char: 'é', isMark: false }] },
     ]);
   });
 });

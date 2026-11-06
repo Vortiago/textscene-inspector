@@ -5,10 +5,7 @@
  * so the answer is never there on the first peek. It never throws.
  */
 import type { FontResource } from '../../../../resources/fonts/font/types';
-import type { FontHinting } from '../../../../godot/text/textServerEnums';
 import * as logger from '../../../../logger';
-import type { FontMetrics } from './fontMetrics';
-import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { bitmapFontOutlines } from './bitmapFontOutlines';
 import {
   BUNDLED_FACE,
@@ -33,7 +30,7 @@ type PeekedOutlines = SfntOutlines | null | undefined;
  * by the bytes, as the metrics are, so a reloaded file is read again, and a shared one or a copy of
  * it (`withDefaultFonts`) once.
  */
-const peekOutlines = createSettledPeek<object, SfntOutlines | null>();
+const peekSettledOutlines = createSettledPeek<object, SfntOutlines | null>();
 
 /** The cache key of the bundled font's bytes, which have no resource. */
 const BUNDLED = {};
@@ -56,7 +53,7 @@ function peekLoadedOutlines(
   readBytes: () => ArrayBuffer | Promise<ArrayBuffer>,
   load: GlyphLoad
 ): PeekedOutlines {
-  return peekOutlines(loadKey(font, load), () =>
+  return peekSettledOutlines(loadKey(font, load), () =>
     settledOutlines(async () => openFontOutlines(await readBytes(), load))
   );
 }
@@ -73,54 +70,45 @@ function settledOutlines(read: () => Promise<SfntOutlines | null>): Promise<Sfnt
 }
 
 /**
- * The bundled Open Sans SemiBold, which every font whose face is `BUNDLED_FACE` draws, as `load`
- * loads it. Its bytes load as their own chunk, so a scene with no text drawn from outlines never
- * fetches them.
- */
-function peekBundledOutlines(load: GlyphLoad): PeekedOutlines {
-  const readBytes = async () => (await import('./bundledFontBytes')).bundledFontBytes();
-  return peekLoadedOutlines(BUNDLED, readBytes, load);
-}
-
-/**
- * The outlines of `font` that a TextMesh extrudes, starting their load on the first peek. A chain of
- * fonts with no glyphs, and bytes that hold no outlines this reader opens, are null. A BMFont has
- * glyphs with no contours (`bitmapFontOutlines.ts`).
+ * The outlines of `face` as `load` loads them, starting the load on the first peek. The bundled
+ * Open Sans SemiBold loads its bytes as their own chunk, so a scene with no text drawn from
+ * outlines never fetches them. A face with no bytes is null. A BMFont has glyphs with no contours
+ * (`bitmapFontOutlines.ts`).
  *
- * @canonical Glyph outlines of a scene font in any container, from its font resource
+ * @canonical Glyph outlines of a drawn face, at the glyph load the caller picks
  */
-export function peekSceneFontOutlines(font: FontResource | null | undefined): PeekedOutlines {
-  const face: DrawnFace = findDrawnFace(font);
-  if (face === BUNDLED_FACE) return peekBundledOutlines(CONTOUR_LOAD);
+export function peekOutlines(face: DrawnFace, load: GlyphLoad): PeekedOutlines {
+  if (face === BUNDLED_FACE) return peekLoadedOutlines(BUNDLED, readBundledBytes, load);
   if (face === NO_FACE) return NO_OUTLINES;
   if (face && hasBitmap(face)) return bitmapFontOutlines(face.bitmap);
   const bytes = face?.bytes;
   if (!face || !bytes) return null;
-  return peekLoadedOutlines(bytes, () => bytes, {
-    ...CONTOUR_LOAD,
-    isAutohinterForced: fontForcesAutohinter(face),
-  });
+  return peekLoadedOutlines(bytes, () => bytes, load);
+}
+
+async function readBundledBytes(): Promise<ArrayBuffer> {
+  return (await import('./bundledFontBytes')).bundledFontBytes();
+}
+
+/** The load of the contours a TextMesh extrudes (`font_get_glyph_contours`). */
+export function contourLoad(face: DrawnFace): GlyphLoad {
+  const isFile = !!face && typeof face === 'object' && !hasBitmap(face);
+  return { ...CONTOUR_LOAD, isAutohinterForced: isFile && fontForcesAutohinter(face) };
 }
 
 /**
- * The outlines that the text of the `metrics` face of a font file draws from, as Godot loads its
- * glyph bitmaps: at the font's `hinting` (`text_server_adv.cpp:1270-1285`). A canvas face draws
- * every glyph from its outline. An atlas face has no contour to follow, and answers null.
- *
- * @canonical Glyph outlines that the text of a canvas face draws from
+ * The load of the glyphs a canvas face of a font file draws, as Godot loads its glyph bitmaps: at
+ * the font's `hinting` (`text_server_adv.cpp:1270-1285`).
  */
-export function peekGlyphOutlines(face: FileWithBytes, metrics: FontMetrics): PeekedOutlines {
-  if (!isCanvasFontMetrics(metrics)) return null;
-  return peekLoadedOutlines(face.bytes, () => face.bytes, {
-    hinting: fontHinting(face),
-    isAutohinterForced: fontForcesAutohinter(face),
-  });
+export function drawLoad(face: FileWithBytes): GlyphLoad {
+  return { hinting: fontHinting(face), isAutohinterForced: fontForcesAutohinter(face) };
 }
 
 /**
- * The outlines that the text of the bundled canvas face draws from, at `hinting`, the project's
- * `gui/theme/default_font_hinting`.
+ * The outlines of `font` that a TextMesh extrudes. A chain of fonts with no glyphs, and bytes that
+ * hold no outlines this reader opens, are null.
  */
-export function peekBundledGlyphOutlines(hinting: FontHinting): PeekedOutlines {
-  return peekBundledOutlines({ hinting, isAutohinterForced: false });
+export function peekSceneFontOutlines(font: FontResource | null | undefined): PeekedOutlines {
+  const face = findDrawnFace(font);
+  return peekOutlines(face, contourLoad(face));
 }

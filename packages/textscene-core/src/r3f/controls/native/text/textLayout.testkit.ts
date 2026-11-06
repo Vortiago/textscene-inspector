@@ -19,3 +19,11 @@ export function glyphsOf(text: string, fontMetrics: FontMetrics, fontSizePx = 16
     fontMetrics,
   }).lines[0]!.glyphs.filter((glyph) => glyph.char !== '\u200b');
 }
+
+/**
+ * `metrics` with no run shaping, so the layout places characters and names no glyph. A test pairs it
+ * with the outlines of another font, whose glyph indices the shaping of `metrics` would not match.
+ */
+export function unshapedFace<Metrics extends FontMetrics>(metrics: Metrics): Metrics {
+  return { ...metrics, shaping: undefined };
+}

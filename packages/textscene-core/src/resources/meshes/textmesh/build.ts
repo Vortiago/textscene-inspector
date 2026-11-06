@@ -147,7 +147,7 @@ function glyphMeshes(properties: TextMeshProperties, face: TextMeshFace): FaceGl
 
 /**
  * The glyph meshes of each face a glyph draws in: the fallback the shaper gave it, else the first
- * face. A glyph a `GSUB` lookup gave draws that glyph, and any other draws `char` through the face's `cmap`.
+ * face. A glyph draws its glyph index where the run shaping read one, else `char` through the face's `cmap`.
  */
 function glyphMeshesByFace(
   properties: TextMeshProperties,
@@ -158,9 +158,7 @@ function glyphMeshesByFace(
   const fallbackFaces = new Map<FontMetrics, TextMeshFace>(fallbacks.map((fallback) => [fallback, fallback]));
   return (glyph) => {
     const { glyphIndexOf, meshOf } = meshesOf(fallbackFaces.get(glyph.fontMetrics) ?? face);
-    return meshOf(
-      glyph.isSubstituted && glyph.glyphIndex !== undefined ? glyph.glyphIndex : glyphIndexOf(glyph.char)
-    );
+    return meshOf(glyph.glyphIndex ?? glyphIndexOf(glyph.char));
   };
 }
 

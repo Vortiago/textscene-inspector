@@ -39,7 +39,7 @@ vi.mock('../../../r3f/controls/native/text/bundledFontLoader', () => ({
 // The range tests read no contour, so the bundled face settles at once, with none to follow.
 vi.mock('../../../r3f/controls/native/text/sceneFontOutlines', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  peekBundledGlyphOutlines: () => null,
+  peekOutlines: () => null,
 }));
 
 beforeEach(() => {

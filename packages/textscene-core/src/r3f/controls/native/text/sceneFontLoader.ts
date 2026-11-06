@@ -23,6 +23,7 @@ import {
 } from './sfntTables';
 import {
   createRuntimeFontMetrics,
+  isCanvasFontMetrics,
   type CanvasFontMetrics,
   type DesignUnitWidthFn,
 } from './runtimeFontMetrics';
@@ -43,7 +44,7 @@ import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import { warnOnce } from '../../../../utils/warnOnce';
 import { createSettledPeek } from './settledChannel';
-import { peekGlyphOutlines } from './sceneFontOutlines';
+import { drawLoad, peekOutlines } from './sceneFontOutlines';
 import { registerFontFace } from './fontFaceDoor';
 import { IS_VITEST } from '../../../../utils/isVitest';
 
@@ -279,7 +280,8 @@ function peekFace(font: FontResource, nodePath: string): FontMetrics | typeof MI
   if (metrics === undefined) return null;
   if (metrics === null) return MISSING_FACE;
   const variation = fontVariation(font);
-  const outlines = peekGlyphOutlines(face, metrics);
+  // A canvas face draws every glyph from its outline. An atlas face has no contour to follow.
+  const outlines = isCanvasFontMetrics(metrics) ? peekOutlines(face, drawLoad(face)) : null;
   return outlines === undefined ? null : withVariation(metrics, { ...variation, outlines });
 }
 

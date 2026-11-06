@@ -117,8 +117,8 @@ describe('shapeText — a character the face draws as a base and marks', () => {
         start: 0,
         end: chars.length,
         glyphs: [
-          { glyph: 1, char: 'A', isMark: false, isSubstituted: false },
-          { glyph: 2, char: '\u0308', isMark: true, isSubstituted: false },
+          { glyph: 1, char: 'A', isMark: false },
+          { glyph: 2, char: '\u0308', isMark: true },
         ],
       },
     ],

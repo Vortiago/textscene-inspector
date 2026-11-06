@@ -9,6 +9,7 @@ import { withOutlines, withVariation } from '../../../r3f/controls/native/text/f
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
 import { openFontOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
+import { unshapedFace } from '../../../r3f/controls/native/text/textLayout.testkit';
 import { buildTextMeshSurface } from './build';
 import { decodeTextMesh } from './decode';
 
@@ -24,7 +25,10 @@ interface Mesh {
 }
 
 function vertexCount({ text, embolden, skew, depth = 0, fontSize = 64, curveStep = 0.5 }: Mesh): number {
-  const face = withOutlines(withVariation(OPEN_SANS_FONT_METRICS, { embolden, skew }), outlines);
+  const face = withOutlines(
+    withVariation(unshapedFace(OPEN_SANS_FONT_METRICS), { embolden, skew }),
+    outlines
+  );
   const properties = decodeTextMesh({
     text: `"${text}"`,
     font_size: String(fontSize),

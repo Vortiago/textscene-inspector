@@ -107,11 +107,13 @@ describe('<ProgressBar> bundled-font outline', () => {
     expect(percentage).not.toHaveProperty('outlineColor');
   });
 
-  it('draws no text while the bundled canvas face registers', async () => {
+  it('fills the percentage on the atlas while the bundled canvas face registers', async () => {
     scene.bundled = undefined;
 
     await renderBar();
 
-    expect(scene.runs).toHaveLength(0);
+    await vi.waitFor(() => expect(scene.runs).toHaveLength(1));
+    expect(scene.runs[0]?.strokeWidthPx ?? 0).toBe(0);
+    expect(isCanvasFontMetrics(scene.runs[0]?.layout.fontMetrics)).toBe(false);
   });
 });

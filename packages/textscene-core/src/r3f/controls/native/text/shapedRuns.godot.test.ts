@@ -8,7 +8,6 @@
 import { describe, expect, it } from 'vitest';
 import reference from './shapedRuns.godot.json';
 import { withVariation, type FontMetrics } from './fontMetrics';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { openFontContainer } from './fontContainer';
 import { opentypeOf } from './glyphVariation.testkit';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
@@ -16,12 +15,12 @@ import { sfntGlyphIndex, sfntHasGlyph } from './sfntCmap';
 import { sfntFaceGlyphs } from './sfntFaceGlyphs';
 import { glyphMetricsReader } from './sfntGlyphMetrics';
 import { openFontOutlines } from './sfntOutlines';
+import { bundledFontBytes } from './bundledFontBytes';
 import { fixtureFontBytes } from './sfntOutlines.testkit';
-import { fileBytes } from '../../../../resources/testing/fileBytes';
 import { OUTLINE_TABLE_TAGS, parseSfntScalars, type SfntFile } from './sfntTables';
-import { shapeText, type GlyphPlacement } from './textLayout';
+import type { GlyphPlacement } from './textLayout';
+import { glyphsOf } from './textLayout.testkit';
 import { defaultKerningReader } from './variation/instanceKerning';
-import { join } from 'node:path';
 
 interface ReferenceGlyph {
   readonly index: number;
@@ -49,9 +48,7 @@ interface ReferenceCluster {
 const BUNDLED_FONT = 'OpenSans_SemiBold.woff2';
 
 const bytesOf = (font: string): ArrayBuffer =>
-  font === BUNDLED_FONT
-    ? fileBytes(join(import.meta.dirname, '../../../../../assets/fonts', font))
-    : fixtureFontBytes(font);
+  font === BUNDLED_FONT ? bundledFontBytes() : fixtureFontBytes(font);
 
 async function sfntOf(font: string): Promise<SfntFile> {
   const sfnt = await openFontContainer(bytesOf(font), OUTLINE_TABLE_TAGS);
@@ -103,16 +100,6 @@ function clustersOf(glyphs: readonly ReferenceGlyph[]): ReferenceCluster[] {
     else clusters.push({ start: glyph.start, end: glyph.end, glyphs: [glyph] });
   }
   return clusters;
-}
-
-function placementsOf(text: string, sizePx: number, fontMetrics: FontMetrics): GlyphPlacement[] {
-  return shapeText(text, {
-    fontSizePx: sizePx,
-    boxWidthPx: 0,
-    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-    lineSpacingPx: 0,
-    fontMetrics,
-  }).lines[0]!.glyphs;
 }
 
 /** What Godot draws for one cluster, in the shape the layout gives it: a glyph, its pen and each mark's offset. */
@@ -190,7 +177,7 @@ const title = (row: ReferenceRun): string =>
 describe('shapeText — the glyph runs of a font against Godot', () => {
   it.each(rows.map((row) => [title(row), row] as const))('shapes %s', async (_, row) => {
     const glyphIndexOf = sfntGlyphIndex(await sfntOf(row.font))!;
-    const placements = placementsOf(row.text, row.sizePx, await faceAt(row));
+    const placements = glyphsOf(row.text, await faceAt(row), row.sizePx);
 
     expect(layoutClusters(placements, (ch) => glyphIndexOf(ch.codePointAt(0)!))).toEqual(godotClusters(row));
   });
@@ -203,7 +190,7 @@ describe('shapeText — the ligatures of the default theme font against Godot', 
     'shapes %s on the atlas face',
     async (_, row) => {
       const glyphIndexOf = sfntGlyphIndex(await sfntOf(row.font))!;
-      const placements = placementsOf(row.text, row.sizePx, OPEN_SANS_FONT_METRICS);
+      const placements = glyphsOf(row.text, OPEN_SANS_FONT_METRICS, row.sizePx);
 
       expect(layoutClusters(placements, (ch) => glyphIndexOf(ch.codePointAt(0)!))).toEqual(
         godotClusters(row)

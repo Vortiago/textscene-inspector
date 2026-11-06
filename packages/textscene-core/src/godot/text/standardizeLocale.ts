@@ -72,10 +72,13 @@ export function standardizeLocale(locale: string): string {
     if (COUNTRY_PATTERN.test(second)) country = second;
   }
   // Godot reads the third segment as a country or a variant, and the fourth as a variant only.
-  for (const [offset, segment] of elements.slice(2, 4).entries()) {
-    if (offset === 0 && COUNTRY_PATTERN.test(segment)) country = segment;
-    else variant = variantOf(segment, language) ?? variant;
+  const third = elements[2];
+  if (third !== undefined) {
+    if (COUNTRY_PATTERN.test(third)) country = third;
+    else variant = variantOf(third, language) ?? variant;
   }
+  const fourth = elements[3];
+  if (fourth !== undefined) variant = variantOf(fourth, language) ?? variant;
 
   const atParts = readAtParts(afterAt.split(';'), language);
   script = atParts.script ?? script;

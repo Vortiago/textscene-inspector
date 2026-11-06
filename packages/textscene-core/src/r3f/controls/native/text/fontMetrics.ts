@@ -563,8 +563,6 @@ export function getFontEmboldenStrength(embolden: number, fontSizePx: number): n
 export interface KernGlyph {
   readonly char: string;
   readonly glyph?: number;
-  /** Whether a `GSUB` lookup gave `glyph`, so no character names it. */
-  readonly isSubstituted?: boolean;
 }
 
 /** The glyph a kerning lookup reads for `glyph`, or `cmapGlyph` of its character where the shaping read none. */
@@ -575,7 +573,7 @@ function lookupGlyphOf({ char, glyph }: KernGlyph, cmapGlyph: (codePoint: number
 
 /**
  * The kerning of `a` and `b` scaled to `fontSizePx`: the `GPOS` kerning of the instance at the face's
- * `variation_opentype`, else the `GPOS` kerning of a pair with a substituted glyph, else
+ * `variation_opentype`, else the default `GPOS` kerning of a pair of shaped glyphs, else
  * `metrics.getKerningAdjustmentUnits`. HarfBuzz positions a glyph in the 26.6 units of the FreeType
  * size Godot's `hb_font` takes (`text_server_adv.cpp:1513`), so the kerning lands on a 1/64 pixel.
  */
@@ -587,7 +585,7 @@ export function getFontKerningAdjustmentPx(
 ): number {
   const units =
     instanceKerningUnits(metrics, a, b) ??
-    substitutedKerningUnits(metrics, a, b) ??
+    glyphKerningUnits(metrics, a, b) ??
     metrics.getKerningAdjustmentUnits(a.char, b.char);
   if (units === 0) return 0;
   return Math.round(unitsToPx(units, metrics, fontSizePx) * FIXED_26_6_ONE) / FIXED_26_6_ONE;
@@ -605,15 +603,14 @@ function instanceKerningUnits(metrics: FontMetrics, a: KernGlyph, b: KernGlyph):
 }
 
 /**
- * The default `GPOS` kerning of a pair with a glyph a `GSUB` lookup gave, or null for a pair of
- * characters. No pair of characters names a substituted glyph, so a face with no glyph kerning gives 0.
+ * The default `GPOS` kerning of a pair of glyphs the run shaping read, or null where it read none or
+ * the face has no glyph kerning: the kerning of the characters stands.
  */
-function substitutedKerningUnits(metrics: FontMetrics, a: KernGlyph, b: KernGlyph): number | null {
-  if (!a.isSubstituted && !b.isSubstituted) return null;
+function glyphKerningUnits(metrics: FontMetrics, a: KernGlyph, b: KernGlyph): number | null {
   const kerningOf = metrics.getGlyphKerningUnits;
-  if (!kerningOf || a.glyph === undefined || b.glyph === undefined) return 0;
-  return kerningOf(lookupGlyphOf(a, NO_GLYPH), lookupGlyphOf(b, NO_GLYPH));
+  if (!kerningOf || a.glyph === undefined || b.glyph === undefined) return null;
+  return kerningOf(
+    { glyph: a.glyph, codePoint: a.char.codePointAt(0)! },
+    { glyph: b.glyph, codePoint: b.char.codePointAt(0)! }
+  );
 }
-
-/** No `cmap` to read: both glyphs of the pair are known. */
-const NO_GLYPH = (): number => 0;

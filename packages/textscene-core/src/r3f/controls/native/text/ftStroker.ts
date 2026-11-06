@@ -119,8 +119,8 @@ class StrokeBorder {
       this.points[start] = this.points.pop()!;
       this.tags[start] = this.tags.pop()!;
       if (isReversed) {
-        this.points.splice(start + 1, Infinity, ...this.points.slice(start + 1).reverse());
-        this.tags.splice(start + 1, Infinity, ...this.tags.slice(start + 1).reverse());
+        reverseFrom(this.points, start + 1);
+        reverseFrom(this.tags, start + 1);
       }
       this.tags[start]! |= TAG_BEGIN;
       this.tags[this.tags.length - 1]! |= TAG_END;
@@ -183,6 +183,15 @@ class StrokeBorder {
     this.start = this.points.length;
     this.movable = false;
     this.lineTo(to, false);
+  }
+}
+
+/** Reverses `items[from..]` in place. A spread of a large contour into `splice` overflows the stack. */
+function reverseFrom<T>(items: T[], from: number): void {
+  for (let low = from, high = items.length - 1; low < high; low++, high--) {
+    const item = items[low]!;
+    items[low] = items[high]!;
+    items[high] = item;
   }
 }
 
