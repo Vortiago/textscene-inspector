@@ -17,6 +17,7 @@ import { withSurfaceAlbedo } from './meshEdit.mjs';
 import { diffMask, meanColourUnderMask, missingPlaceholderPixels } from './pixels.mjs';
 import { installTextureWorkProbe } from '../e2e/textureWorkProbe.mjs';
 import { TEXTURE_WORK_STATUS_TESTID } from '../visual/preview/appContract.mjs';
+import { describeFailedRequests } from '../visual/preview/pageDiagnostics.mjs';
 
 /**
  * The Control fixture whose only ink is text. The preview CSP (`webviewHtml.ts`)
@@ -240,11 +241,7 @@ function checkRun(gate, label, report) {
   );
   gate.check(
     webview.failedRequests.length === 0,
-    `${where} ${webview.failedRequests.length} failed request(s) from the preview: ` +
-      webview.failedRequests
-        .slice(0, 3)
-        .map((entry) => brief(`${entry.failure} ${entry.url}`))
-        .join(' | ')
+    `${where} failed request(s) from the preview: ${brief(describeFailedRequests(webview.failedRequests))}`
   );
   gate.check(
     webview.consoleErrors.length === 0,

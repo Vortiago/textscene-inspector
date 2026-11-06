@@ -3,7 +3,7 @@
  * failed requests that `attachDiagnostics` collects per page, checked per scenario.
  */
 
-import { describeFailedRequests } from '../visual/previewServer.mjs';
+import { describeFailedRequests } from '../visual/preview/pageDiagnostics.mjs';
 
 /**
  * Patterns for the warnings a healthy load logs. Every other warning fails the scenario, so a
@@ -43,7 +43,6 @@ export function checkDiagnostics(gate, label, diagnostics, { expectedWarnings = 
   );
   gate.check(
     diagnostics.failedRequests.length === 0,
-    `${label} ${diagnostics.failedRequests.length} failed request(s): ` +
-      describeFailedRequests(diagnostics.failedRequests)
+    `${label} failed request(s): ${describeFailedRequests(diagnostics.failedRequests)}`
   );
 }

@@ -62,6 +62,6 @@ describe('checkDiagnostics', () => {
     const gate = fakeGate();
     const failedRequests = [{ url: 'http://h/a.js', failure: 'net::ERR_X' }];
     checkDiagnostics(gate, '[3D]', { ...CLEAN_LOAD, failedRequests });
-    expect(gate.failures).toEqual(['[3D] 1 failed request(s): net::ERR_X http://h/a.js']);
+    expect(gate.failures).toEqual(['[3D] failed request(s): net::ERR_X http://h/a.js']);
   });
 });
