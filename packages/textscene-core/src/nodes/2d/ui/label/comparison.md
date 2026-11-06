@@ -166,9 +166,8 @@ is already applied. Every real Godot save guarantees that, since `text` is the f
 
 Every count counts code points, as Godot's `String` does (`label.cpp:1375-1377`): the
 denominator, the cut at VC_CHARS_BEFORE_SHAPING (`:155-156`) and the budget of
-VC_CHARS_AFTER_SHAPING (`label.h:207`). An astral character, such as an emoji, counts one.
-- **Approximated** Godot draws an emoji the font lacks from a system font. The previewer draws its
-  hex-code box, so only the letters after it show the count.
+VC_CHARS_AFTER_SHAPING (`label.h:207`). An astral character, such as an emoji, counts one. An emoji
+the font lacks draws its hex-code box, as Godot draws it on a host with no system font that has it.
 
 ## Text direction
 
