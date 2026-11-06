@@ -3,6 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
 import { useCacheVersion } from './useCacheVersion';
 import type { ResourceLoader } from './ResourceLoader';
+import { renderWithSettleInGap } from './testing/renderWithSettleInGap';
 
 function mount(busTypes: Parameters<typeof useCacheVersion>[1], read?: string[]) {
   const fake = createFakeResourceLoader();
@@ -12,6 +13,44 @@ function mount(busTypes: Parameters<typeof useCacheVersion>[1], read?: string[])
 }
 
 describe('useCacheVersion', () => {
+  it('moves on for a load that settles between the render and the subscription (edge case)', () => {
+    const fake = createFakeResourceLoader();
+    const busTypes = ['font'] as const;
+
+    const reads = renderWithSettleInGap(
+      () => useCacheVersion(fake.loader as ResourceLoader, busTypes),
+      () => fake.fonts._resolve('res://a.ttf', {} as never)
+    );
+
+    expect(reads.at(-1)).toBeGreaterThan(reads[0]!);
+  });
+
+  it('stays put for a load on another bus that settles between the render and the subscription', () => {
+    const fake = createFakeResourceLoader();
+    const busTypes = ['theme'] as const;
+
+    const reads = renderWithSettleInGap(
+      () => useCacheVersion(fake.loader as ResourceLoader, busTypes),
+      () => fake.fonts._resolve('res://a.ttf', {} as never)
+    );
+
+    expect(reads.at(-1)).toBe(reads[0]);
+  });
+
+  it('keeps growing when its inputs change and it starts a new store', () => {
+    const fake = createFakeResourceLoader();
+    const loader = fake.loader as ResourceLoader;
+    let busTypes: readonly ('font' | 'theme')[] = ['font'];
+    const hook = renderHook(() => useCacheVersion(loader, busTypes));
+    act(() => fake.fonts._resolve('res://a.ttf', {} as never));
+    const before = hook.result.current;
+
+    busTypes = ['font', 'theme'];
+    hook.rerender();
+
+    expect(hook.result.current).toBeGreaterThan(before);
+  });
+
   it('moves on when a listed bus loads or fails a key', () => {
     const { fake, hook } = mount(['theme', 'font']);
     const start = hook.result.current;
@@ -95,8 +134,12 @@ describe('useCacheVersion', () => {
   });
 
   it('stays at its first version without a loader', () => {
-    const hook = renderHook(() => useCacheVersion(null, ['theme']));
+    const busTypes = ['theme'] as const;
+    const hook = renderHook(() => useCacheVersion(null, busTypes));
+    const first = hook.result.current;
 
-    expect(hook.result.current).toBe(0);
+    hook.rerender();
+
+    expect(hook.result.current).toBe(first);
   });
 });

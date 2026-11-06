@@ -1,6 +1,11 @@
 import { EventEmitter } from 'node:events';
 import { describe, expect, it } from 'vitest';
-import { attachDiagnostics, clearDiagnostics, loggedErrors } from './pageDiagnostics.mjs';
+import {
+  attachDiagnostics,
+  clearDiagnostics,
+  describeFailedRequests,
+  loggedErrors,
+} from './pageDiagnostics.mjs';
 
 /** A Playwright page's `on`, with handlers the test drives. */
 function fakePage() {
@@ -77,5 +82,24 @@ describe('clearDiagnostics', () => {
     clearDiagnostics(diagnostics);
     emitConsole(page, 'error', 'fresh');
     expect(diagnostics.consoleErrors).toEqual(['fresh']);
+  });
+});
+
+describe('describeFailedRequests', () => {
+  const lost = (n) =>
+    Array.from({ length: n }, (_, i) => ({ url: `http://h/${i}.js`, failure: 'net::ERR_X' }));
+
+  it('names each failed request as its failure and url', () => {
+    expect(describeFailedRequests(lost(2))).toBe('net::ERR_X http://h/0.js | net::ERR_X http://h/1.js');
+  });
+
+  it('lists the first three and counts the rest (edge case)', () => {
+    expect(describeFailedRequests(lost(5))).toBe(
+      'net::ERR_X http://h/0.js | net::ERR_X http://h/1.js | net::ERR_X http://h/2.js and 2 more'
+    );
+  });
+
+  it('names a request that carries no failure text (edge case)', () => {
+    expect(describeFailedRequests([{ url: 'http://h/a.js' }])).toBe('unknown failure http://h/a.js');
   });
 });
