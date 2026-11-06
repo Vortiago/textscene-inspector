@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import reference from './instanceGlyph.godot.json';
-import { getFontGlyphAdvancePx, withVariation, type FontMetrics } from '../fontMetrics';
+import { getFontRunGlyphAdvancePx, withVariation, type FontMetrics } from '../fontMetrics';
 import { createRuntimeFontMetrics } from '../runtimeFontMetrics';
 import { openFontOutlines } from '../sfntOutlines';
 import { fixtureFontBytes } from '../sfntOutlines.testkit';
@@ -66,7 +66,7 @@ describe('the glyph of a variable font at an instance', () => {
         outlines,
       });
 
-      expect(getFontGlyphAdvancePx(metrics, row.char, row.sizePx)).toBe(row.advancePx);
+      expect(getFontRunGlyphAdvancePx(metrics, { char: row.char }, row.sizePx)).toBe(row.advancePx);
     }
   );
 });

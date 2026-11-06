@@ -87,8 +87,6 @@ The glyph raster has a mip chain only when its font generates mipmaps and `textu
 
 ## Known limitations
 
-- **Approximated** A contextual swap of one character draws the character's `cmap` glyph in a scene font at its default instance with no embolden or skew.
-- **Approximated** A lookup reaches no character past a base and its typed marks, and ignores the lookup flags that tell HarfBuzz which glyphs to skip.
 - **Approximated** The glyph mip chain is per label raster, where Godot's is per glyph page, so a minified label differs slightly.
 - **Resource gap** A SystemFont always draws the default font, as Godot does when no OS font matches its names, where Godot draws a matching OS font.
 - **Approximated** Godot's font rasteriser differs from the browser's, so the glyph edges and the `outline_size` outline differ slightly from Godot's.

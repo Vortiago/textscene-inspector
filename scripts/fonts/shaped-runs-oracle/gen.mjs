@@ -1,9 +1,10 @@
 // Runs oracle.gd for each case and writes the glyphs Godot 4.6.3's shaper gives each text: glyph index, cluster,
-// advance and offset. Run it from this folder with Godot 4.6.3 on the path.
+// advance and offset. Run it with Godot 4.6.3 on the path.
 // Usage: node gen.mjs <repository root> <out path>
-import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { runGodotOracle } from '../godot-oracle/godotOracle.mjs';
 
 const [root, out] = process.argv.slice(2);
 const FIXTURES = join(root, 'scenes/fixtures/fonts');
@@ -77,24 +78,12 @@ const CASES = [
   })),
 ];
 
-const rows = CASES.flatMap(({ font, texts, sizes, opentype }) => {
-  const output = execFileSync(
-    'godot',
-    [
-      '--headless',
-      '--path',
-      '.',
-      '--script',
-      'oracle.gd',
-      '--',
-      font,
-      JSON.stringify(texts),
-      sizes,
-      JSON.stringify(opentype),
-    ],
-    { encoding: 'utf8' }
-  );
-  const json = output.split('\n').find((line) => line.startsWith('JSON:'));
-  return JSON.parse(json.slice('JSON:'.length)).map((row) => ({ font: font.split('/').pop(), ...row }));
-});
+const ORACLE = join(dirname(fileURLToPath(import.meta.url)), 'oracle.gd');
+
+const rows = CASES.flatMap(({ font, texts, sizes, opentype }) =>
+  runGodotOracle(ORACLE, [font, JSON.stringify(texts), sizes, JSON.stringify(opentype)]).map((row) => ({
+    font: font.split('/').pop(),
+    ...row,
+  }))
+);
 writeFileSync(out, `${JSON.stringify(rows, null, 1)}\n`);

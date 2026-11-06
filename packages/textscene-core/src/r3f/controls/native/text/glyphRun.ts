@@ -123,7 +123,7 @@ function drawnCharacters(
  * `substitution`, the `FeatureVariations` record of an instance. Each shaped cluster covers the
  * clusters a lookup merged into it.
  */
-export function shapeRun(
+function shapeRun(
   face: RunShapingFace,
   chars: readonly string[],
   substitution: FeatureSubstitution | undefined
@@ -167,7 +167,7 @@ function runGlyph(face: RunShapingFace, glyph: number, codePoint: number): RunGl
  * The run shaping of a face whose glyphs this previewer cannot read: each cluster normalised against
  * the characters `hasCharacter` accepts, with no `GSUB`. The browser shapes the text it draws.
  */
-export function characterRunShaping(hasCharacter: (ch: string) => boolean): RunShaping {
+function characterRunShaping(hasCharacter: (ch: string) => boolean): RunShaping {
   return (chars) =>
     characterClusters(chars).map((cluster) => ({
       start: cluster.start,
@@ -198,7 +198,10 @@ export function keptRunShaping(
   const kept = recentlyRead<string, readonly RunCluster[]>(MAX_KEPT_RUNS);
   const unshaped = characterRunShaping(face.mapsCharacter);
   return (chars) =>
-    kept(runKey(chars), () => orOnRangeError(() => shapeRun(face, chars, substitution), unshaped(chars)));
+    kept(
+      runKey(chars),
+      () => orOnRangeError(() => shapeRun(face, chars, substitution), null) ?? unshaped(chars)
+    );
 }
 
 /** The run shaping of `sfnt` at its default instance, or null for a font with no `cmap` this previewer reads. */

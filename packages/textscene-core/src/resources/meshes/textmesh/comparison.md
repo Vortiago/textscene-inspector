@@ -48,7 +48,6 @@ The lenient parser clamps `font_size` to 1-127, `pixel_size` to 0.0001-128 and `
 
 - **Approximated** An auto-hinted Malayalam, Kannada or Sinhala glyph can differ by up to a pixel, as the previewer lacks HarfBuzz's Indic and USE shapers.
 - **Resource gap** A SystemFont always draws the default font, as Godot does when no OS font matches its names, where Godot draws a matching OS font.
-- **Approximated** A lookup reaches no character past a base and its typed marks, and ignores the lookup flags that tell HarfBuzz which glyphs to skip.
 - **Approximated** A character the font lacks draws as a hex-code box, where Godot first tries the font's fallbacks and the system fonts.
 - **Approximated** A hex-code box taller than the font's ascent sits up to 1.5 px high, where Godot grows the ascent to fit the box (#1324).
 - **Approximated** Arabic letters draw unjoined, as the previewer has no Arabic shaper.

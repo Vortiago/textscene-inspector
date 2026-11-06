@@ -2,7 +2,8 @@ extends SceneTree
 # Prints the glyphs Godot's shaper gives each text: the glyph index, the cluster's [start, end) in the text, the advance and
 # the offset in px (text_server_adv.cpp:7062-7077). The font keeps the import default, subpixel positioning on Auto, which a
 # FontFile made by `new()` leaves off, and no system font stands in for a character the font lacks.
-# Usage: godot --headless --path . --script oracle.gd -- <font path> <texts as a JSON array> <sizes, comma separated> <variation_opentype as JSON>
+# Usage: godot --headless --path ../godot-oracle --script oracle.gd -- <font path> <texts as a JSON array> <sizes, comma separated> <variation_opentype as JSON>
+# gen.mjs runs it so, through runGodotOracle.
 func _init():
 	var args = OS.get_cmdline_user_args()
 	var file = FontFile.new()

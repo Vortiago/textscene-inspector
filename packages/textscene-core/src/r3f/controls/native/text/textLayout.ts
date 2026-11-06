@@ -873,7 +873,7 @@ function placeClusterMarks(
   let penFromBase = 0;
   let mark = 1;
   for (const g of clusterGlyphs.slice(baseIndex)) {
-    if (g.isMark && g !== attached[0]) {
+    if (g.isMark) {
       const offset = offsets[mark++]!;
       g.xOffset = offset.x - penFromBase;
       g.yOffset = -godotRound(offset.y);

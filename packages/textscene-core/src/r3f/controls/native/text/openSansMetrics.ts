@@ -7,7 +7,7 @@
 // licence OFL-1.1). Re-run the bake script to regenerate; its `--check` mode
 // fails if this file has drifted from the vendored font.
 
-import { firstEndAtOrAbove } from './sfntCmap';
+import { firstEndAtOrAbove } from '../../../../utils/firstEndAtOrAbove';
 
 /**
  * Font-wide scalar metrics for OpenSans_SemiBold, in font design units
@@ -90,7 +90,7 @@ export function getKerningAdjustmentUnits(a: string, b: string): number {
 /**
  * A baked character's own `hmtx` advance width, design units, or `null`
  * outside `advanceWidths` (the same charset as `OPEN_SANS_ATLAS_GLYPHS` —
- * `textLayout.ts`'s `glyphAdvancePx` falls back to `averageAdvanceUnits` in
+ * `fontMetrics.ts`'s `getFontGlyphAdvancePx` falls back to `averageAdvanceUnits` in
  * that case).
  *
  * This is the RAW design-unit value, at no size and quantized by nothing —

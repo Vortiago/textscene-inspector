@@ -29,20 +29,28 @@ const ATLAS_SIZE = { x: OPEN_SANS_ATLAS_INFO.scaleW, y: OPEN_SANS_ATLAS_INFO.sca
 const hasInk = (glyph: OpenSansGlyph | null | undefined): glyph is OpenSansGlyph =>
   !!glyph && glyph.width > 0 && glyph.height > 0;
 
+/** Whether placement `i` of `glyphs` is the first of its cluster: the placements of one cluster share a `sourceIndex`. */
+const startsCluster = (glyphs: readonly GlyphPlacement[], i: number): boolean =>
+  glyphs[i]!.cluster === undefined || glyphs[i - 1]?.sourceIndex !== glyphs[i]!.sourceIndex;
+
 /**
- * Visits each atlas bitmap `gp` draws, `penPx` past its pen, its `xOffset` included. A substituted
- * glyph the atlas does not bake draws the characters of its source text at their own advances.
+ * Visits each atlas bitmap placement `i` of `glyphs` draws, `penPx` past its pen, its `xOffset`
+ * included. A substituted glyph the atlas does not bake draws the characters of its source text at
+ * their own advances, once for its cluster: each later glyph of a multiple substitution draws none.
  */
 function forEachInkedGlyph(
-  gp: GlyphPlacement,
+  glyphs: readonly GlyphPlacement[],
+  i: number,
   scale: number,
   visit: (glyph: OpenSansGlyph, penPx: number) => void
 ): void {
+  const gp = glyphs[i]!;
   let penPx = gp.xOffset ?? 0;
   if (gp.glyph || !gp.isSubstituted) {
     if (hasInk(gp.glyph)) visit(gp.glyph, penPx);
     return;
   }
+  if (!startsCluster(glyphs, i)) return;
   for (const char of gp.char) {
     const glyph = OPEN_SANS_ATLAS_GLYPHS[char];
     if (hasInk(glyph)) visit(glyph, penPx);
@@ -73,7 +81,7 @@ export function buildGlyphQuadArrays(
 
   let glyphCount = 0;
   for (const line of layout.lines)
-    for (const gp of line.glyphs) forEachInkedGlyph(gp, scale, () => glyphCount++);
+    for (let i = 0; i < line.glyphs.length; i++) forEachInkedGlyph(line.glyphs, i, scale, () => glyphCount++);
 
   const positions = new Float32Array(glyphCount * 4 * 3);
   const uvs = new Float32Array(glyphCount * 4 * 2);
@@ -83,8 +91,8 @@ export function buildGlyphQuadArrays(
   layout.lines.forEach((line, lineIndex) => {
     const lineTopPx = lineIndex * layout.linePitchPx;
     const baselinePx = lineTopPx + baselineOffsetPx;
-    for (const gp of line.glyphs) {
-      forEachInkedGlyph(gp, scale, (glyph, penPx) => {
+    line.glyphs.forEach((gp, i) => {
+      forEachInkedGlyph(line.glyphs, i, scale, (glyph, penPx) => {
         // FreeType keeps an emboldened glyph's left and bottom edges and grows it right and up. The
         // material's bias grows it on every side, so the quad moves half the growth to match.
         const shiftPx = (gp.emboldenGrowthPx ?? 0) / 2;
@@ -108,7 +116,7 @@ export function buildGlyphQuadArrays(
         indices.set([v + 2, v + 3, v, v + 3, v + 1, v], quad * 6);
         quad++;
       });
-    }
+    });
   });
 
   return { positions, uvs, indices };

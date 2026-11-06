@@ -28,8 +28,10 @@ async function registerBundledFont(): Promise<CanvasFontMetrics | null> {
   try {
     const { bundledFontBytes } = await import('./bundledFontBytes');
     const doc = await registerFontFace(BUNDLED_FAMILY, bundledFontBytes);
-    const openOutlines = await lazyFontContainer(bundledFontBytes(), FALLBACK_MARK_TABLE_TAGS);
-    if (doc) return createOpenSansCanvasFontMetrics(BUNDLED_FAMILY, unhintedContoursReader(openOutlines));
+    if (doc) {
+      const openOutlines = await lazyFontContainer(bundledFontBytes(), FALLBACK_MARK_TABLE_TAGS);
+      return createOpenSansCanvasFontMetrics(BUNDLED_FAMILY, unhintedContoursReader(openOutlines));
+    }
     logger.warn(
       '[BundledFont] No FontFace/document.fonts in this environment; the bundled canvas-rasterised font is unavailable.'
     );

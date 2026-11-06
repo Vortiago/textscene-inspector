@@ -1,12 +1,13 @@
 /**
- * `shapeRun`: the clusters of a run and the glyphs each draws as the `GSUB` of a font shapes the run
+ * The run shaping of a face: the clusters of a run and the glyphs each draws as the `GSUB` of a font shapes the run
  * whole, read off the bundled Open Sans and the contextual `rvrn` fixture.
  */
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 import { defaultSubstitution } from './autofit/openTypeFeatures';
 import { openFontContainer } from './fontContainer';
-import { characterRunShaping, sfntRunShapingFace, shapeRun, type RunShapingFace } from './glyphRun';
+import type { FontMetrics } from './fontMetrics';
+import { getFontRunShaping, keptRunShaping, sfntRunShapingFace, type RunShapingFace } from './glyphRun';
 import { fileBytes } from '../../../../resources/testing/fileBytes';
 import { fixtureFontBytes } from './sfntOutlines.testkit';
 import { OUTLINE_TABLE_TAGS } from './sfntTables';
@@ -25,7 +26,7 @@ const openSans = () =>
   faceOf(fileBytes(join(import.meta.dirname, '../../../../../assets/fonts/OpenSans_SemiBold.woff2')));
 
 const shape = (face: RunShapingFace, chars: readonly string[]) =>
-  shapeRun(face, chars, defaultSubstitution(face.gsub!));
+  keptRunShaping(face, defaultSubstitution(face.gsub!))(chars);
 
 /** The clusters of `text` that draw a glyph a lookup gave, with that glyph. */
 const substitutedOf = (face: RunShapingFace, text: string) =>
@@ -33,7 +34,7 @@ const substitutedOf = (face: RunShapingFace, text: string) =>
     glyphs.filter((glyph) => glyph.isSubstituted).map(({ glyph }) => ({ start, end, glyph }))
   );
 
-describe('shapeRun', () => {
+describe('keptRunShaping', () => {
   it('draws a ligature as one cluster of its characters', async () => {
     expect(substitutedOf(await openSans(), 'office')).toEqual([{ start: 1, end: 4, glyph: OPEN_SANS_FFI }]);
   });
@@ -75,10 +76,10 @@ describe('shapeRun', () => {
   });
 });
 
-describe('characterRunShaping', () => {
+describe('getFontRunShaping of a face with no shaping', () => {
   it('draws the composite of a base and a mark where the face has it', () => {
-    const shaping = characterRunShaping((ch) => ch !== '\u0301');
-    expect(shaping([...'e\u0301'])).toEqual([
+    const face = { hasGlyph: (ch: string) => ch !== '\u0301' } as FontMetrics;
+    expect(getFontRunShaping(face, [...'e\u0301'])).toEqual([
       { start: 0, end: 2, glyphs: [{ char: 'é', isMark: false, isSubstituted: false }] },
     ]);
   });

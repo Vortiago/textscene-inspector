@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import hvarReference from './variableAdvance.godot.json';
 import gvarReference from './variableAdvanceNoHvar.godot.json';
-import { getFontGlyphAdvancePx, withVariation, type FontMetrics } from '../fontMetrics';
+import { getFontRunGlyphAdvancePx, withVariation, type FontMetrics } from '../fontMetrics';
 import { createRuntimeFontMetrics } from '../runtimeFontMetrics';
 import { openFontOutlines } from '../sfntOutlines';
 import { fixtureFontBytes } from '../sfntOutlines.testkit';
@@ -48,7 +48,7 @@ describe.each([
     async (_, glyph) => {
       const metrics = await metricsAt(glyph);
 
-      expect(getFontGlyphAdvancePx(metrics, glyph.char, glyph.sizePx)).toBe(glyph.advancePx);
+      expect(getFontRunGlyphAdvancePx(metrics, { char: glyph.char }, glyph.sizePx)).toBe(glyph.advancePx);
     }
   );
 });

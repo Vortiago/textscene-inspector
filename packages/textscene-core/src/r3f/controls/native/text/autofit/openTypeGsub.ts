@@ -16,6 +16,7 @@ import {
   glyphClass,
   GsubType,
   type LayoutTable,
+  LookupFlag,
   singleSubstitute,
   substituteList,
   type Subtable,
@@ -48,13 +49,44 @@ export interface GlyphFilter {
   matches(glyph: number, glyphProps: number, lookupProps: number): boolean;
 }
 
-/** The lookup being applied: its flag, and how the buffer's glyphs match it. A null filter skips none. */
+/**
+ * The lookup being applied: its subtables, its flag, and how the buffer's glyphs match it. A null
+ * filter, or a flag with no bit that skips a glyph, reads every glyph.
+ */
 interface LookupContext {
   readonly table: LayoutTable;
   readonly buffer: GsubBuffer;
+  readonly subtables: readonly Subtable[];
   readonly filter: GlyphFilter | null;
   readonly lookupProps: number;
 }
+
+/** The context of lookup `lookupIndex` of `table` over `buffer`, or null for an index past the list. */
+function lookupContext(
+  table: LayoutTable,
+  lookupIndex: number,
+  buffer: GsubBuffer,
+  filter: GlyphFilter | null
+): LookupContext | null {
+  const lookup = table.lookups[lookupIndex];
+  if (!lookup) return null;
+  const skipsAny = (lookup.props & SKIPPING_FLAGS) !== 0;
+  return {
+    table,
+    buffer,
+    subtables: lookup.subtables,
+    filter: skipsAny ? filter : null,
+    lookupProps: lookup.props,
+  };
+}
+
+/** The flag bits that make a lookup skip a glyph (`LookupFlag::IgnoreFlags`, the mark filter and the mark class). */
+const SKIPPING_FLAGS =
+  LookupFlag.IGNORE_BASE_GLYPHS |
+  LookupFlag.IGNORE_LIGATURES |
+  LookupFlag.IGNORE_MARKS |
+  LookupFlag.USE_MARK_FILTERING_SET |
+  LookupFlag.MARK_ATTACHMENT_TYPE;
 
 /** Whether the lookup reads the glyph at `at`, or skips it by its flag (`check_glyph_property`). */
 function isRead({ buffer, filter, lookupProps }: LookupContext, at: number): boolean {
@@ -95,6 +127,10 @@ function replaceGlyphs(
   replacement: readonly number[]
 ): void {
   const at = positions[0]!;
+  if (positions.length === 1 && replacement.length === 1) {
+    buffer.glyphs[at] = replacement[0]!;
+    return;
+  }
   const { clusters, codePoints } = buffer;
   if (clusters)
     clusters.fill(Math.min(...clusters.slice(at, positions.at(-1)! + 1)), at, positions.at(-1)! + 1);
@@ -276,7 +312,8 @@ function applyContext(context: LookupContext, subtable: Subtable, at: number, de
     if (depth >= MAX_NESTING || sequenceIndex >= input.length) continue;
     const lengthBefore = buffer.glyphs.length;
     const position = input[sequenceIndex]!;
-    applyLookupAt(context.table, lookupIndex, buffer, context.filter, position, false, depth + 1);
+    const nested = lookupContext(context.table, lookupIndex, buffer, context.filter);
+    if (nested) applyLookupAt(nested, position, false, depth + 1);
     // The later input positions shift by the glyphs the nested lookup adds or removes (`apply_lookup`).
     const delta = buffer.glyphs.length - lengthBefore;
     for (let k = sequenceIndex + 1; k < input.length; k++) input[k] = Math.max(position, input[k]! + delta);
@@ -312,20 +349,9 @@ function applySubtable(
  * Applies the first subtable of a lookup that applies at `at`, as a nested lookup does. A glyph that
  * the lookup's flag skips takes no subtable.
  */
-function applyLookupAt(
-  table: LayoutTable,
-  lookupIndex: number,
-  buffer: GsubBuffer,
-  filter: GlyphFilter | null,
-  at: number,
-  isRandom: boolean,
-  depth: number
-): Applied | null {
-  const lookup = table.lookups[lookupIndex];
-  if (!lookup) return null;
-  const context: LookupContext = { table, buffer, filter, lookupProps: lookup.props };
+function applyLookupAt(context: LookupContext, at: number, isRandom: boolean, depth: number): Applied | null {
   if (!isRead(context, at)) return null;
-  for (const subtable of lookup.subtables) {
+  for (const subtable of context.subtables) {
     const applied = applySubtable(context, subtable, at, isRandom, depth);
     if (applied) return applied;
   }
@@ -341,9 +367,11 @@ export function applyGsub(
 ): void {
   for (const { lookups, randomLookups } of stages) {
     for (const lookupIndex of lookups) {
+      const context = lookupContext(table, lookupIndex, buffer, filter);
+      if (!context) continue;
       const isRandom = randomLookups.has(lookupIndex);
       for (let at = 0; at < buffer.glyphs.length;) {
-        const applied = applyLookupAt(table, lookupIndex, buffer, filter, at, isRandom, 0);
+        const applied = applyLookupAt(context, at, isRandom, 0);
         // A deletion leaves `next` at `at`, on the glyph after the deleted one, which the lookup
         // still visits. A subtable that does not advance shrinks the buffer, so the loop ends.
         at = applied ? Math.max(applied.next, at) : at + 1;

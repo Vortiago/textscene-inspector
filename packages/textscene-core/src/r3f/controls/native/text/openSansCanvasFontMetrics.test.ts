@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { OPEN_SANS_METRICS } from './openSansMetrics';
-import { getFontGlyphAdvancePx } from './fontMetrics';
+import { getFontRunGlyphAdvancePx } from './fontMetrics';
 
 const BAKED_CHARSET = Object.keys(OPEN_SANS_METRICS.advanceWidths);
 
@@ -52,8 +52,8 @@ describe('createOpenSansCanvasFontMetrics', () => {
     for (const ch of BAKED_CHARSET) {
       expect(metrics.getGlyphAdvanceUnits(ch)).toBe(OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits(ch));
       for (const size of [14, 16, 28]) {
-        expect(getFontGlyphAdvancePx(metrics, ch, size)).toBe(
-          getFontGlyphAdvancePx(OPEN_SANS_FONT_METRICS, ch, size)
+        expect(getFontRunGlyphAdvancePx(metrics, { char: ch }, size)).toBe(
+          getFontRunGlyphAdvancePx(OPEN_SANS_FONT_METRICS, { char: ch }, size)
         );
       }
     }

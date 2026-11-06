@@ -66,7 +66,7 @@ export const OPEN_SANS_ATLAS_INFO: OpenSansAtlasInfo = {"fontSize":42,"distanceR
  *
  * A codepoint OUTSIDE this table draws no ink (`openSansAtlas`-backed
  * painters skip a glyph placement with no atlas entry) but is NOT silently
- * zero-width: `text/textLayout.ts`'s `glyphAdvancePx` falls back to this
+ * zero-width: `text/fontMetrics.ts`'s `getFontGlyphAdvancePx` falls back to this
  * font's own OS/2 `xAvgCharWidth` (`OPEN_SANS_METRICS.averageAdvanceUnits`,
  * scaled) rather than 0, so an unbaked character still occupies roughly its
  * own width instead of collapsing the line around it.

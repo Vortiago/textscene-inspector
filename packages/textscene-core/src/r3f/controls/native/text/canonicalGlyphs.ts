@@ -7,19 +7,15 @@
 
 import { COMBINING_CLASS_RUNS } from './combiningClasses';
 import { codePointCount } from '../../../../godot/string/codePoints';
+import { firstEndAtOrAbove } from '../../../../utils/firstEndAtOrAbove';
 
 /** The canonical combining class of a code point, 0 for a character with none. */
 export function combiningClassOf(codePoint: number): number {
-  let low = 0;
-  let high = COMBINING_CLASS_RUNS.length - 1;
-  while (low <= high) {
-    const middle = (low + high) >> 1;
-    const [first, last, klass] = COMBINING_CLASS_RUNS[middle]!;
-    if (codePoint < first) high = middle - 1;
-    else if (codePoint > last) low = middle + 1;
-    else return klass;
-  }
-  return 0;
+  const run =
+    COMBINING_CLASS_RUNS[
+      firstEndAtOrAbove(COMBINING_CLASS_RUNS.length, (i) => COMBINING_CLASS_RUNS[i]![1], codePoint)
+    ];
+  return run && run[0] <= codePoint ? run[2] : 0;
 }
 
 /** The canonical decomposition of `ch` in two steps: the composite that holds all but the last mark, and that mark. */
@@ -48,13 +44,9 @@ export function drawnCharacters(ch: string, hasCharacter: (ch: string) => boolea
 const classOf = (ch: string): number => combiningClassOf(ch.codePointAt(0)!);
 
 const STARTS_WITH_MARK = /^\p{M}/u;
-const HOLDS_MARK = /\p{M}/u;
 
 /** Whether `ch` starts with a combining mark, which shapes in the cluster of the base before it. */
 export const isCombiningMark = (ch: string): boolean => STARTS_WITH_MARK.test(ch);
-
-/** Whether `text` holds a combining mark anywhere. */
-export const hasCombiningMark = (text: string): boolean => HOLDS_MARK.test(text);
 
 /**
  * Sorts each run of characters with a combining class by its class, keeping the order of equal

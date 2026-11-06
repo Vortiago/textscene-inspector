@@ -161,6 +161,8 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
 async function faceGlyphsOf(sfnt: SfntFile, bytes: ArrayBuffer): Promise<FaceGlyphs> {
   const [openOutlines, kerning] = await Promise.all([
     lazyFontContainer(bytes, FALLBACK_MARK_TABLE_TAGS),
+    // The kerning of a substituted glyph only refines the advances: a chunk that fails to load
+    // (offline, after a deploy) must not take the face with it.
     sfnt.tables.has('GPOS') ? import('./variation/instanceKerning').catch(() => null) : null,
   ]);
   return sfntFaceGlyphs(sfnt, openOutlines, kerning?.defaultKerningReader);

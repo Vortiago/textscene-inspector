@@ -311,7 +311,7 @@ export function canvasGlyphPenXPx(
  * so the line does not collapse around it.
  */
 // A face at a variable-font instance takes its advance from `SfntOutlines.advanceAtInstance` instead.
-export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSizePx: number): number {
+function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSizePx: number): number {
   const units = metrics.getGlyphAdvanceUnits(ch) ?? metrics.averageAdvanceUnits;
   const { outlines, opentype } = metrics;
   const glyphAtInstance =
@@ -324,7 +324,11 @@ export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSize
  * it, where the run shaping read one, else `getFontGlyphAdvancePx` of its character. A canvas face
  * measures a character as the browser shapes it alone, which a `GSUB` lookup of one glyph changes.
  */
-export function getFontRunGlyphAdvancePx(metrics: FontMetrics, glyph: RunGlyph, fontSizePx: number): number {
+export function getFontRunGlyphAdvancePx(
+  metrics: FontMetrics,
+  glyph: Pick<RunGlyph, 'char' | 'glyph' | 'advanceUnits'>,
+  fontSizePx: number
+): number {
   if (glyph.glyph === undefined || glyph.advanceUnits === undefined)
     return getFontGlyphAdvancePx(metrics, glyph.char, fontSizePx);
   return advancePx(metrics, glyph.advanceUnits, glyph.glyph, fontSizePx);
@@ -610,13 +614,13 @@ function instanceKerningUnits(metrics: FontMetrics, a: KernGlyph, b: KernGlyph):
 }
 
 /**
- * The default `GPOS` kerning of a pair with a glyph a `GSUB` lookup gave, which no pair of
- * characters names, or null for a pair of characters.
+ * The default `GPOS` kerning of a pair with a glyph a `GSUB` lookup gave, or null for a pair of
+ * characters. No pair of characters names a substituted glyph, so a face with no glyph kerning gives 0.
  */
 function substitutedKerningUnits(metrics: FontMetrics, a: KernGlyph, b: KernGlyph): number | null {
+  if (!a.isSubstituted && !b.isSubstituted) return null;
   const kerningOf = metrics.getGlyphKerningUnits;
-  if (!kerningOf || (!a.isSubstituted && !b.isSubstituted) || a.glyph === undefined || b.glyph === undefined)
-    return null;
+  if (!kerningOf || a.glyph === undefined || b.glyph === undefined) return 0;
   return kerningOf(lookupGlyphOf(a, NO_GLYPH), lookupGlyphOf(b, NO_GLYPH));
 }
 

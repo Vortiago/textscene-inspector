@@ -193,7 +193,7 @@ function bakeMetrics(font, kerning, advanceWidths) {
     underlineThickness: font.underlineThickness,
     // OS/2 `xAvgCharWidth`, design units: the font's typical glyph width, not a
     // magic constant. The fallback advance outside the baked charset in
-    // `textLayout.ts`'s `glyphAdvancePx`.
+    // `fontMetrics.ts`'s `getFontGlyphAdvancePx`.
     averageAdvanceUnits: font['OS/2'].xAvgCharWidth,
     codePointRanges: bakeCodePointRanges(font),
   };
@@ -263,7 +263,7 @@ function bakeAtlas(ttfBuffer) {
 
 function renderMetricsModule(metrics) {
   return `${GENERATED_HEADER}
-import { firstEndAtOrAbove } from './sfntCmap';
+import { firstEndAtOrAbove } from '../../../../utils/firstEndAtOrAbove';
 
 /**
  * Font-wide scalar metrics for OpenSans_SemiBold, in font design units
@@ -346,7 +346,7 @@ export function getKerningAdjustmentUnits(a: string, b: string): number {
 /**
  * A baked character's own \`hmtx\` advance width, design units, or \`null\`
  * outside \`advanceWidths\` (the same charset as \`OPEN_SANS_ATLAS_GLYPHS\` —
- * \`textLayout.ts\`'s \`glyphAdvancePx\` falls back to \`averageAdvanceUnits\` in
+ * \`fontMetrics.ts\`'s \`getFontGlyphAdvancePx\` falls back to \`averageAdvanceUnits\` in
  * that case).
  *
  * This is the RAW design-unit value, at no size and quantized by nothing —
@@ -496,7 +496,7 @@ export const OPEN_SANS_ATLAS_INFO: OpenSansAtlasInfo = ${JSON.stringify(atlasInf
  *
  * A codepoint OUTSIDE this table draws no ink (\`openSansAtlas\`-backed
  * painters skip a glyph placement with no atlas entry) but is NOT silently
- * zero-width: \`text/textLayout.ts\`'s \`glyphAdvancePx\` falls back to this
+ * zero-width: \`text/fontMetrics.ts\`'s \`getFontGlyphAdvancePx\` falls back to this
  * font's own OS/2 \`xAvgCharWidth\` (\`OPEN_SANS_METRICS.averageAdvanceUnits\`,
  * scaled) rather than 0, so an unbaked character still occupies roughly its
  * own width instead of collapsing the line around it.

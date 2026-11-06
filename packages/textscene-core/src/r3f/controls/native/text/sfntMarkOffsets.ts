@@ -30,7 +30,7 @@ function gposOffsetReader(sfnt: SfntFile): SizedClusterOffsets | null {
   const readUnits = (cluster: readonly LookupGlyph[]) => {
     const key = clusterKey(cluster);
     let offsets = unitOffsets.get(key);
-    if (!offsets) unitOffsets.set(key, (offsets = offsetsOf(cluster)));
+    if (!offsets) keep(unitOffsets, key, (offsets = offsetsOf(cluster)));
     return offsets;
   };
   return (cluster, fontSizePx) =>
@@ -63,7 +63,7 @@ export function sfntMarkOffsets(
     let offsets = kept.get(key);
     if (offsets === undefined) {
       offsets = readOffsets()?.(cluster, fontSizePx) ?? cluster.map(() => ORIGIN);
-      kept.set(key, offsets);
+      keep(kept, key, offsets);
     }
     return offsets;
   };
@@ -77,3 +77,16 @@ const newOffsetsByCluster = (): Map<string, readonly MarkOffset[]> => new Map();
 
 /** A font size animation passes through many sizes, so the offsets of this many sizes are kept. */
 const MAX_KEPT_SIZES = 8;
+
+/** A long edit session shapes ever new clusters, so a cache drops all it holds past this many. */
+const MAX_KEPT_CLUSTERS = 4096;
+
+/** Sets `key` in `offsetsByCluster`, emptied first once it holds `MAX_KEPT_CLUSTERS` clusters. */
+function keep(
+  offsetsByCluster: Map<string, readonly MarkOffset[]>,
+  key: string,
+  offsets: readonly MarkOffset[]
+): void {
+  if (offsetsByCluster.size >= MAX_KEPT_CLUSTERS) offsetsByCluster.clear();
+  offsetsByCluster.set(key, offsets);
+}
