@@ -3,7 +3,10 @@
  * door of `fontFaceDoor.ts` and the settled channel. The base64 font bytes load as their own chunk on
  * the first peek, so they stay out of the initial bundle.
  */
+import { lazyFontContainer } from './fontContainer';
 import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
+import { FALLBACK_MARK_TABLE_TAGS } from './sfntTables';
+import { unhintedContoursReader } from './unhintedGlyphContours';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
 import { registerFontFace } from './fontFaceDoor';
 import { IS_VITEST } from '../../../../utils/isVitest';
@@ -25,7 +28,8 @@ async function registerBundledFont(): Promise<CanvasFontMetrics | null> {
   try {
     const { bundledFontBytes } = await import('./bundledFontBytes');
     const doc = await registerFontFace(BUNDLED_FAMILY, bundledFontBytes);
-    if (doc) return createOpenSansCanvasFontMetrics(BUNDLED_FAMILY);
+    const openOutlines = await lazyFontContainer(bundledFontBytes(), FALLBACK_MARK_TABLE_TAGS);
+    if (doc) return createOpenSansCanvasFontMetrics(BUNDLED_FAMILY, unhintedContoursReader(openOutlines));
     logger.warn(
       '[BundledFont] No FontFace/document.fonts in this environment; the bundled canvas-rasterised font is unavailable.'
     );

@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import reference from './decomposedMarks.godot.json';
 import type { FontMetrics } from './fontMetrics';
 import { sfntGlyphIndex, sfntHasGlyph } from './sfntCmap';
-import { sfntDecomposition } from './sfntDecomposition';
+import { sfntFaceGlyphs } from './sfntFaceGlyphs';
 import { glyphMetricsReader } from './sfntGlyphMetrics';
 import { fixtureSfnt } from './sfntOutlines.testkit';
 import { parseSfntScalars } from './sfntTables';
@@ -26,11 +26,7 @@ function fontMetricsOf(font: string): FontMetrics {
   const { unitsPerEm, ascent, descent } = parseSfntScalars(sfnt)!;
   const glyphIndexOf = sfntGlyphIndex(sfnt)!;
   const metricsOf = glyphMetricsReader(sfnt);
-  const decomposition = sfntDecomposition(sfnt) ?? undefined;
-  // The browser shapes a character the font lacks as its base and marks, so its advance is the base's,
-  // which does not depend on the size.
-  const advanceUnits = (ch: string) =>
-    metricsOf(glyphIndexOf((decomposition?.(ch, 16)?.base ?? ch).codePointAt(0)!), 0).horizontal.advance;
+  const advanceUnits = (ch: string) => metricsOf(glyphIndexOf(ch.codePointAt(0)!), 0).horizontal.advance;
   return {
     kind: 'canvas',
     unitsPerEm,
@@ -40,7 +36,7 @@ function fontMetricsOf(font: string): FontMetrics {
     getGlyphAdvanceUnits: advanceUnits,
     getKerningAdjustmentUnits: () => 0,
     averageAdvanceUnits: advanceUnits('n'),
-    decomposition,
+    ...sfntFaceGlyphs(sfnt),
   };
 }
 
@@ -55,7 +51,7 @@ describe('shapeText — the marks of a decomposed character against Godot', () =
       // Adding zero turns the layout's -0 into the 0 of the reference.
       expect(
         placed.map(({ advance, xOffset = 0, yOffset = 0 }) => ({
-          advance,
+          advance: advance + 0,
           offset: [xOffset + 0, yOffset + 0],
         }))
       ).toEqual(glyphs.map(({ advance, offset }) => ({ advance, offset })));

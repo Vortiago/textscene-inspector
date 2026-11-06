@@ -1192,6 +1192,544 @@
     "text": "ffi"
   },
   {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 12.171875,
+        "end": 2,
+        "index": 3,
+        "offset": [0, 0],
+        "start": 0
+      }
+    ],
+    "opentype": {},
+    "sizePx": 16,
+    "text": "fi"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 12.171875,
+        "end": 3,
+        "index": 3,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 0,
+        "end": 3,
+        "index": 100,
+        "offset": [-1.3125, -3],
+        "start": 0
+      }
+    ],
+    "opentype": {},
+    "sizePx": 16,
+    "text": "f́i"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 12.171875,
+        "end": 4,
+        "index": 3,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 0,
+        "end": 4,
+        "index": 106,
+        "offset": [-1.3125, 0],
+        "start": 0
+      },
+      {
+        "advance": 0,
+        "end": 4,
+        "index": 100,
+        "offset": [-1.3125, -3],
+        "start": 0
+      }
+    ],
+    "opentype": {},
+    "sizePx": 16,
+    "text": "f̣́i"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 9.953125,
+        "end": 1,
+        "index": 32,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 10.953125,
+        "end": 2,
+        "index": 43,
+        "offset": [0, 0],
+        "start": 1
+      }
+    ],
+    "opentype": {},
+    "sizePx": 16,
+    "text": "an"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 9.953125,
+        "end": 2,
+        "index": 32,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 0,
+        "end": 2,
+        "index": 97,
+        "offset": [-0.171875, 0],
+        "start": 0
+      },
+      {
+        "advance": 10.953125,
+        "end": 3,
+        "index": 43,
+        "offset": [0, 0],
+        "start": 2
+      }
+    ],
+    "opentype": {},
+    "sizePx": 16,
+    "text": "än"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 9.796875,
+        "end": 2,
+        "index": 28,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 0,
+        "end": 2,
+        "index": 97,
+        "offset": [-0.25, 0],
+        "start": 0
+      },
+      {
+        "advance": 10.03125,
+        "end": 3,
+        "index": 44,
+        "offset": [0, 0],
+        "start": 2
+      },
+      {
+        "advance": 9.171875,
+        "end": 3,
+        "index": 53,
+        "offset": [0, 0],
+        "start": 2
+      }
+    ],
+    "opentype": {},
+    "sizePx": 16,
+    "text": "äx"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 10.03125,
+        "end": 1,
+        "index": 44,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 9.171875,
+        "end": 1,
+        "index": 53,
+        "offset": [0, 0],
+        "start": 0
+      }
+    ],
+    "opentype": {},
+    "sizePx": 16,
+    "text": "x"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 9.796875,
+        "end": 1,
+        "index": 28,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 10.03125,
+        "end": 2,
+        "index": 44,
+        "offset": [0, 0],
+        "start": 1
+      },
+      {
+        "advance": 9.015625,
+        "end": 2,
+        "index": 53,
+        "offset": [0, 0],
+        "start": 1
+      },
+      {
+        "advance": 9.71875,
+        "end": 3,
+        "index": 28,
+        "offset": [0, 0],
+        "start": 2
+      }
+    ],
+    "opentype": {},
+    "sizePx": 16,
+    "text": "axa"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 10.03125,
+        "end": 2,
+        "index": 44,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 9.171875,
+        "end": 2,
+        "index": 53,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 0,
+        "end": 2,
+        "index": 100,
+        "offset": [-9.265625, 0],
+        "start": 0
+      }
+    ],
+    "opentype": {},
+    "sizePx": 16,
+    "text": "x́"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 12.171875,
+        "end": 2,
+        "index": 3,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 10.03125,
+        "end": 3,
+        "index": 44,
+        "offset": [0, 0],
+        "start": 2
+      },
+      {
+        "advance": 9.171875,
+        "end": 3,
+        "index": 53,
+        "offset": [0, 0],
+        "start": 2
+      }
+    ],
+    "opentype": {},
+    "sizePx": 16,
+    "text": "fix"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 24,
+        "end": 2,
+        "index": 3,
+        "offset": [0, 0],
+        "start": 0
+      }
+    ],
+    "opentype": {},
+    "sizePx": 32,
+    "text": "fi"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 24,
+        "end": 3,
+        "index": 3,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 0,
+        "end": 3,
+        "index": 100,
+        "offset": [-2, -5],
+        "start": 0
+      }
+    ],
+    "opentype": {},
+    "sizePx": 32,
+    "text": "f́i"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 24,
+        "end": 4,
+        "index": 3,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 0,
+        "end": 4,
+        "index": 106,
+        "offset": [-2, 0],
+        "start": 0
+      },
+      {
+        "advance": 0,
+        "end": 4,
+        "index": 100,
+        "offset": [-2, -5],
+        "start": 0
+      }
+    ],
+    "opentype": {},
+    "sizePx": 32,
+    "text": "f̣́i"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 20,
+        "end": 1,
+        "index": 32,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 22,
+        "end": 2,
+        "index": 43,
+        "offset": [0, 0],
+        "start": 1
+      }
+    ],
+    "opentype": {},
+    "sizePx": 32,
+    "text": "an"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 20,
+        "end": 2,
+        "index": 32,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 0,
+        "end": 2,
+        "index": 97,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 22,
+        "end": 3,
+        "index": 43,
+        "offset": [0, 0],
+        "start": 2
+      }
+    ],
+    "opentype": {},
+    "sizePx": 32,
+    "text": "än"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 20,
+        "end": 2,
+        "index": 28,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 0,
+        "end": 2,
+        "index": 97,
+        "offset": [-1, 0],
+        "start": 0
+      },
+      {
+        "advance": 20,
+        "end": 3,
+        "index": 44,
+        "offset": [0, 0],
+        "start": 2
+      },
+      {
+        "advance": 18,
+        "end": 3,
+        "index": 53,
+        "offset": [0, 0],
+        "start": 2
+      }
+    ],
+    "opentype": {},
+    "sizePx": 32,
+    "text": "äx"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 20,
+        "end": 1,
+        "index": 44,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 18,
+        "end": 1,
+        "index": 53,
+        "offset": [0, 0],
+        "start": 0
+      }
+    ],
+    "opentype": {},
+    "sizePx": 32,
+    "text": "x"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 20,
+        "end": 1,
+        "index": 28,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 20,
+        "end": 2,
+        "index": 44,
+        "offset": [0, 0],
+        "start": 1
+      },
+      {
+        "advance": 18,
+        "end": 2,
+        "index": 53,
+        "offset": [0, 0],
+        "start": 1
+      },
+      {
+        "advance": 19,
+        "end": 3,
+        "index": 28,
+        "offset": [0, 0],
+        "start": 2
+      }
+    ],
+    "opentype": {},
+    "sizePx": 32,
+    "text": "axa"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 20,
+        "end": 2,
+        "index": 44,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 18,
+        "end": 2,
+        "index": 53,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 0,
+        "end": 2,
+        "index": 100,
+        "offset": [-18, 0],
+        "start": 0
+      }
+    ],
+    "opentype": {},
+    "sizePx": 32,
+    "text": "x́"
+  },
+  {
+    "font": "montserrat-lookup-flags.ttf",
+    "glyphs": [
+      {
+        "advance": 24,
+        "end": 2,
+        "index": 3,
+        "offset": [0, 0],
+        "start": 0
+      },
+      {
+        "advance": 20,
+        "end": 3,
+        "index": 44,
+        "offset": [0, 0],
+        "start": 2
+      },
+      {
+        "advance": 19,
+        "end": 3,
+        "index": 53,
+        "offset": [0, 0],
+        "start": 2
+      }
+    ],
+    "opentype": {},
+    "sizePx": 32,
+    "text": "fix"
+  },
+  {
     "font": "OpenSans_SemiBold.woff2",
     "glyphs": [
       {

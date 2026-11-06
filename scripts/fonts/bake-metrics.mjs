@@ -52,6 +52,13 @@ const EXTRA_CODEPOINTS = [
   0x2019, // Single curly quotes: common prose punctuation.
   0x201c,
   0x201d, // Double curly quotes: common prose punctuation.
+  // The ligatures of the font's default `liga` feature, `ff`, `fi`, `fl`, `ffi` and `ffl`: the atlas
+  // finds a substituted glyph by the character `cmap` maps to it (`openSansAtlasGlyphs.ts`).
+  0xfb00,
+  0xfb01,
+  0xfb02,
+  0xfb03,
+  0xfb04,
 ];
 
 const CHARSET = [];

@@ -302,10 +302,11 @@ export function paintSceneFontCanvas(
   const contourOutlines = followsContours ? (metrics.outlines ?? null) : null;
   const contoursOf = contourOutlines && variedContoursReader(contourOutlines, fontSizePx, variation);
   const paintContours = stroked ? strokeContours : fillContours;
-  // A glyph the run shaping gives a cluster has no character to draw as text, so it draws its contours.
-  const shapedContoursOf =
-    metrics.outlines &&
-    variedGlyphContoursReader(metrics.outlines, fontSizePx, contourOutlines ? variation : UNVARIED);
+  // A glyph a `GSUB` lookup gives has no character to draw as text, so it draws its contours. So does
+  // each glyph of its cluster: the text of one character would shape through the lookup again.
+  const substitutedContoursOf = metrics.outlines
+    ? variedGlyphContoursReader(metrics.outlines, fontSizePx, contourOutlines ? variation : UNVARIED)
+    : metrics.glyphContours && ((glyphIndex: number) => metrics.glyphContours!(glyphIndex, fontSizePx));
   const isShapeVaried = isGlyphVaried({ skew, opentype });
 
   const paintGlyphText = (char: string, penX: number, baselineY: number, growthPx: number | undefined) => {
@@ -338,6 +339,7 @@ export function paintSceneFontCanvas(
     // A contour line draws under the identity transform, so its stroke keeps its width in every direction.
     const isLineSheared = skew !== 0 && !contourOutlines;
     if (isLineSheared) shearAboutBaseline(ctx, skew, baselineY);
+    const substitutedClusters = substitutedContoursOf && substitutedSourceIndices(line.glyphs);
     for (const gp of line.glyphs) {
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
       // Godot snaps the glyph's origin, the pen plus its offset (`shaped_text_draw`).
@@ -351,8 +353,11 @@ export function paintSceneFontCanvas(
       const lineShearedPenX = isLineSheared ? penX + skew * yOffsetPx : penX;
       // A glyph shaped with no growth, in a layout that is not sheared or at an instance, stays on its plain ring.
       const hasVariedGlyph = gp.emboldenGrowthPx || isShapeVaried;
-      const shapedContours = gp.glyphIndex !== undefined ? shapedContoursOf?.(gp.glyphIndex) : null;
-      const contours = shapedContours ?? (contoursOf && hasVariedGlyph ? contoursOf(gp.char) : null);
+      const substitutedContours =
+        gp.glyphIndex !== undefined && substitutedClusters?.has(gp.sourceIndex)
+          ? substitutedContoursOf!(gp.glyphIndex)
+          : null;
+      const contours = substitutedContours ?? (contoursOf && hasVariedGlyph ? contoursOf(gp.char) : null);
       if (contours) paintContours(ctx, contours, penX, glyphBaselineY);
       else if (contourOutlines && skew !== 0)
         paintShearedGlyphText(gp.char, penX, glyphBaselineY, gp.emboldenGrowthPx);
@@ -362,6 +367,13 @@ export function paintSceneFontCanvas(
   });
 
   return canvas;
+}
+
+/** The source index of each cluster of `glyphs` that draws a glyph a `GSUB` lookup gave. */
+function substitutedSourceIndices(glyphs: readonly GlyphPlacement[]): ReadonlySet<number | undefined> {
+  const indices = new Set<number | undefined>();
+  for (const glyph of glyphs) if (glyph.isSubstituted) indices.add(glyph.sourceIndex);
+  return indices;
 }
 
 interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {

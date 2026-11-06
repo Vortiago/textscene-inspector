@@ -2,14 +2,25 @@
  * Turns a resolved `FontResource` into `FontMetrics`, or into the bundled default when that fails.
  * It registers a scene font through the `FontFace` door of `fontFaceDoor.ts`, and it never throws.
  */
-import { withFallbacks, withVariation, type FontMetrics, type GlyphVariation } from './fontMetrics';
+import {
+  withFallbacks,
+  withVariation,
+  type FaceGlyphs,
+  type FontMetrics,
+  type GlyphVariation,
+} from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { faceDescriptors } from './sceneFontFace';
 import { lazyFontContainer, openFontContainer } from './fontContainer';
 import { sfntHasGlyph } from './sfntCmap';
-import { sfntDecomposition } from './sfntDecomposition';
-import { sfntRunSubstitutions } from './glyphRun';
-import { FALLBACK_MARK_TABLE_TAGS, parseSfntScalars, readAxisDefaults, type SfntScalars } from './sfntTables';
+import { sfntFaceGlyphs } from './sfntFaceGlyphs';
+import {
+  FALLBACK_MARK_TABLE_TAGS,
+  parseSfntScalars,
+  readAxisDefaults,
+  type SfntFile,
+  type SfntScalars,
+} from './sfntTables';
 import {
   createRuntimeFontMetrics,
   type CanvasFontMetrics,
@@ -127,9 +138,10 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
     );
   }
 
-  // The outlines place marks by HarfBuzz's fallback for a font with no `GPOS` script. The container
-  // decodes once for `bytes`, so preparing them costs nothing until the first decomposed character.
-  const openMarkOutlines = sfnt ? await lazyFontContainer(bytes, FALLBACK_MARK_TABLE_TAGS) : undefined;
+  // The outlines place marks by HarfBuzz's fallback for a font with no `GPOS` script, and draw a
+  // substituted glyph. The container decodes once for `bytes`, so preparing them costs nothing until
+  // the first mark or substituted glyph.
+  const glyphs = sfnt ? await faceGlyphsOf(sfnt, bytes) : undefined;
   const hasGlyph = sfnt ? sfntHasGlyph(sfnt) : () => true;
   const measureInkUnits = (ch: string) => {
     const { actualBoundingBoxLeft, actualBoundingBoxRight } = ctx.measureText(ch);
@@ -141,9 +153,17 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
     measureInkUnits,
     cssFontFamily: family,
     hasGlyph,
-    decomposition: (sfnt && sfntDecomposition(sfnt, openMarkOutlines)) ?? undefined,
-    substitutions: (sfnt && sfntRunSubstitutions(sfnt)) ?? undefined,
+    glyphs,
   });
+}
+
+/** The glyphs of the face of `sfnt`, with the outlines and the default `GPOS` kerning of `bytes`. */
+async function faceGlyphsOf(sfnt: SfntFile, bytes: ArrayBuffer): Promise<FaceGlyphs> {
+  const [openOutlines, kerning] = await Promise.all([
+    lazyFontContainer(bytes, FALLBACK_MARK_TABLE_TAGS),
+    sfnt.tables.has('GPOS') ? import('./variation/instanceKerning').catch(() => null) : null,
+  ]);
+  return sfntFaceGlyphs(sfnt, openOutlines, kerning?.defaultKerningReader);
 }
 
 /** Loads a face from `bytes`. It never throws, and returns null for bytes that do not load. */

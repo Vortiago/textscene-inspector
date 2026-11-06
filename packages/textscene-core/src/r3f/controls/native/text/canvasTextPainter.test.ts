@@ -7,7 +7,8 @@ import {
   originPhase,
   paintSceneFontCanvas,
 } from './canvasTextPainter';
-import { getFontAscentPx, withVariation, type OpentypeCoordinates } from './fontMetrics';
+import { getFontAscentPx, withVariation, type FontMetrics, type OpentypeCoordinates } from './fontMetrics';
+import type { RunShaping } from './glyphRun';
 import { shapeText } from './textLayout';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { patchedFragment } from '../../../testing/patchedFragment';
@@ -875,22 +876,49 @@ describe('paintSceneFontCanvas — the glyphs a run shapes into', () => {
   afterEach(() => vi.restoreAllMocks());
 
   const FI_LIGATURE = 9;
-  const LIGATURE_METRICS = createRuntimeFontMetrics({
-    hasGlyph: () => true,
-    scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
-    measureWidthUnits: (text) => text.length * 500,
-    cssFontFamily: 'scene-font-test',
-    substitutions: (chars) =>
-      chars.join('') === 'fi' ? [{ start: 0, end: 2, glyph: FI_LIGATURE, advanceUnits: 600 }] : [],
-  });
-  const ligatureLayout = () =>
-    shapeText('fi', {
+  const SWAPPED_L = 11;
+  /** A face that shapes `fi` as one ligature glyph and `l` as a glyph of its own, and every other character by `cmap`. */
+  const shaping: RunShaping = (chars) =>
+    chars.join('') === 'fi'
+      ? [
+          {
+            start: 0,
+            end: 2,
+            glyphs: [
+              { glyph: FI_LIGATURE, char: 'f', isMark: false, isSubstituted: true, advanceUnits: 600 },
+            ],
+          },
+        ]
+      : chars.map((char, i) => ({
+          start: i,
+          end: i + 1,
+          glyphs: [
+            {
+              glyph: char === 'l' ? SWAPPED_L : 1,
+              char,
+              isMark: false,
+              isSubstituted: char === 'l',
+              advanceUnits: 500,
+            },
+          ],
+        }));
+  const shapedMetrics = (glyphContours?: FontMetrics['glyphContours']) =>
+    createRuntimeFontMetrics({
+      hasGlyph: () => true,
+      scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
+      measureWidthUnits: (text) => text.length * 500,
+      cssFontFamily: 'scene-font-test',
+      glyphs: { shaping, glyphContours },
+    });
+  const shapedLayout = (text: string, metrics = shapedMetrics()) =>
+    shapeText(text, {
       fontSizePx: 16,
       boxWidthPx: 0,
       autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-      fontMetrics: LIGATURE_METRICS,
+      fontMetrics: metrics,
       lineSpacingPx: 0,
     });
+  const ligatureLayout = () => shapedLayout('fi');
 
   it('fills the outline of the ligature glyph, in place of the text of its characters', () => {
     const { outlines, glyphContours } = outlinesStub();
@@ -911,6 +939,22 @@ describe('paintSceneFontCanvas — the glyphs a run shapes into', () => {
     const { calls } = paintRecording(ligatureLayout(), 0);
 
     expect(calls.map((call) => [call.op, call.args[0]])).toEqual([['fillText', 'fi']]);
+  });
+
+  it('fills the unhinted contours of a swapped glyph of a face with no varied outlines', () => {
+    const glyphContours = vi.fn(() => GROWN_TRIANGLE);
+    const { calls } = paintRecording(shapedLayout('il', shapedMetrics(glyphContours)), 0);
+
+    expect(glyphContours).toHaveBeenCalledWith(SWAPPED_L, 16);
+    expect(calls.map((call) => call.op)).toEqual([
+      'fillText',
+      'beginPath',
+      'moveTo',
+      'lineTo',
+      'lineTo',
+      'closePath',
+      'fill',
+    ]);
   });
 
   it('draws a glyph its x offset past its pen', () => {

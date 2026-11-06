@@ -151,3 +151,8 @@ export function instanceKerningReader(
     };
   };
 }
+
+/** The kerning reader of `sfnt` at its default instance, or null for a font with no pair kerning. */
+export function defaultKerningReader(sfnt: SfntFile): PairKerningReader | null {
+  return instanceKerningReader(sfnt)?.(new Int32Array(readFvarAxes(sfnt)?.length ?? 0)) ?? null;
+}

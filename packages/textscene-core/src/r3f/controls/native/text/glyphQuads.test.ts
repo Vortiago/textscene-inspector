@@ -23,8 +23,16 @@ function layoutFor(text: string, uppercase = false) {
 }
 
 describe('buildGlyphQuadArrays', () => {
-  it('draws each character of a ligature at its own advance, as the atlas holds no ligature glyph', () => {
+  it('draws a ligature as the glyph the atlas bakes for it', () => {
     const arrays = buildGlyphQuadArrays(layoutFor('fi'), 16, 0);
+    expect(arrays.positions.length / 3).toBe(4);
+    expect(arrays.positions[0]!).toBeCloseTo(OPEN_SANS_ATLAS_GLYPHS['\ufb01']!.xoffset * SCALE, 6);
+  });
+
+  it('draws each character of a substituted glyph the atlas does not bake at its own advance', () => {
+    const layout = layoutFor('fi');
+    layout.lines[0]!.glyphs[0]!.glyph = null;
+    const arrays = buildGlyphQuadArrays(layout, 16, 0);
     const f = OPEN_SANS_ATLAS_GLYPHS.f!;
     const i = OPEN_SANS_ATLAS_GLYPHS.i!;
     expect(arrays.positions.length / 3).toBe(2 * 4);

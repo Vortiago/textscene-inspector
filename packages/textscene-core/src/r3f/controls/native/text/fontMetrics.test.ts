@@ -7,6 +7,7 @@
 // Godot's `ThemeDB.fallback_font.get_char_size(c, 16).x` reports 15.125 for 'W' (1936
 // units), 10.578125 for 'A' (1354) and 14.75 for 'M' (1888): each `ceil(units / 2) / 64`.
 import { describe, expect, it } from 'vitest';
+import type { LookupGlyph } from './autofit/openTypeGdef';
 import {
   ftDivFix,
   ftMulDiv,
@@ -131,11 +132,11 @@ describe('getFontAscentPx / getFontLinePitchPx', () => {
 
 describe('getFontKerningAdjustmentPx', () => {
   it('scales a pair adjustment to the target size', () => {
-    expect(getFontKerningAdjustmentPx(METRICS, 'A', 'V', 16)).toBe(-2);
+    expect(getFontKerningAdjustmentPx(METRICS, { char: 'A' }, { char: 'V' }, 16)).toBe(-2);
   });
 
   it('short-circuits to 0 for a pair the font has no entry for', () => {
-    expect(getFontKerningAdjustmentPx(METRICS, 'A', 'A', 16)).toBe(0);
+    expect(getFontKerningAdjustmentPx(METRICS, { char: 'A' }, { char: 'A' }, 16)).toBe(0);
   });
 });
 
@@ -193,13 +194,13 @@ describe('withVariation at a variable-font instance', () => {
     glyphIndex,
     glyphContours: () => null,
     drawsInstance,
-    kerningAtInstance: (leftCodePoint: number, rightCodePoint: number, opentype: OpentypeCoordinates) => {
-      const [left, right] = [glyphIndex(leftCodePoint), glyphIndex(rightCodePoint)];
-      return !drawsInstance(opentype) || left === 0 || right === 0 ? null : left * 10 + right;
-    },
+    kerningAtInstance: (left: LookupGlyph, right: LookupGlyph, opentype: OpentypeCoordinates) =>
+      !drawsInstance(opentype) || left.glyph === 0 || right.glyph === 0
+        ? null
+        : left.glyph * 10 + right.glyph,
   };
   const kerningPx = (face: FontMetrics, a: string, b: string) =>
-    getFontKerningAdjustmentPx(face, a, b, UNIT_SIZE_PX);
+    getFontKerningAdjustmentPx(face, { char: a }, { char: b }, UNIT_SIZE_PX);
 
   it('kerns a pair by the GPOS kerning of the instance', () => {
     const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });

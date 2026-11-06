@@ -1,14 +1,17 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 ; The one variable: a run that shapes as a whole. The top Label draws the default font's ligatures
 ; (ff, fi, fl, ffi, ffl). The second draws a copy of Recursive at wght 700, whose GSUB swaps an a
 ; before a b and an l after an i (scripts/fonts/contextual-rvrn). The third types a base and
 ; combining marks as separate characters in Montserrat, which joins A and U+0308 into the composite
 ; it has and places the other marks by its GPOS. The RichTextLabel colours the i of its first fi, so
-; the two runs shape apart and form no ligature, where the second fi forms one.
+; the two runs shape apart and form no ligature, where the second fi forms one. The last Label draws
+; a Montserrat copy whose GSUB skips marks (scripts/fonts/lookup-flags): f and i ligate across a mark,
+; an a before an n swaps across a mark, and an x turns into o and x.
 
 [ext_resource type="FontFile" path="res://fonts/recursive-contextual-rvrn.woff2" id="1_rvrn"]
 [ext_resource type="FontFile" path="res://fonts/montserrat-semibold-marks-subset.ttf" id="2_marks"]
+[ext_resource type="FontFile" path="res://fonts/montserrat-lookup-flags.ttf" id="3_flags"]
 
 [sub_resource type="FontVariation" id="FontVariation_bold"]
 base_font = ExtResource("1_rvrn")
@@ -59,3 +62,13 @@ offset_bottom = 340.0
 bbcode_enabled = true
 theme_override_font_sizes/normal_font_size = 40
 text = "f[color=#ff8080]i[/color] fi office"
+
+[node name="LookupFlags" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 360.0
+offset_right = 900.0
+offset_bottom = 430.0
+theme_override_fonts/font = ExtResource("3_flags")
+theme_override_font_sizes/font_size = 40
+text = "f́i fi än an x́ axa"

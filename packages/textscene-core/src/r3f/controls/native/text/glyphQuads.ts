@@ -30,9 +30,8 @@ const hasInk = (glyph: OpenSansGlyph | null | undefined): glyph is OpenSansGlyph
   !!glyph && glyph.width > 0 && glyph.height > 0;
 
 /**
- * Visits each atlas bitmap `gp` draws, `penPx` past its pen, its `xOffset` included. The atlas holds
- * no ligature glyph, so a cluster the run shaping draws as one glyph draws its characters at their
- * own advances.
+ * Visits each atlas bitmap `gp` draws, `penPx` past its pen, its `xOffset` included. A substituted
+ * glyph the atlas does not bake draws the characters of its source text at their own advances.
  */
 function forEachInkedGlyph(
   gp: GlyphPlacement,
@@ -40,7 +39,7 @@ function forEachInkedGlyph(
   visit: (glyph: OpenSansGlyph, penPx: number) => void
 ): void {
   let penPx = gp.xOffset ?? 0;
-  if (gp.glyphIndex === undefined || gp.char.length < 2) {
+  if (gp.glyph || !gp.isSubstituted) {
     if (hasInk(gp.glyph)) visit(gp.glyph, penPx);
     return;
   }

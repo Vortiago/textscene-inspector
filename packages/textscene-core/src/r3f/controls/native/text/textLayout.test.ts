@@ -135,22 +135,28 @@ describe('shapeText — glyph pen positions', () => {
 });
 
 describe('shapeText — a character outside the baked charset', () => {
+  // U+03A9 OMEGA stands in for any unbaked codepoint. If the charset ever bakes it, pick another
+  // unbaked character rather than changing the assertions.
+  const omegaLayout = (fontMetrics: FontMetrics) =>
+    shapeText('AΩB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics,
+    });
+
+  it('advances the pen by the hmtx advance of its glyph, 1605 units, which the baked tables read', () => {
+    const [, omega] = omegaLayout(OPEN_SANS_FONT_METRICS).lines[0]!.glyphs;
+    expect(omega!.glyph).toBeNull();
+    expect(omega!.advance).toBe(12.546875);
+  });
+
   it(
-    "still advances the pen by the font's own OS/2 xAvgCharWidth fallback (9.484375px at size 16: " +
-      "1214 * 16/2048, an independent literal — openSansMetrics.ts's OPEN_SANS_METRICS.averageAdvanceUnits " +
-      'is 1214, unitsPerEm 2048) rather than collapsing to a zero-width gap; the placement still carries ' +
-      'no atlas glyph, so it draws no ink, only occupies its own width',
+    "advances the pen by the font's own OS/2 xAvgCharWidth fallback where the face reads no glyph " +
+      '(9.484375px at size 16: 1214 * 16/2048), rather than collapsing to a zero-width gap',
     () => {
-      // U+03A9 OMEGA stands in for any unbaked codepoint, to pin the fallback itself. If the charset
-      // ever bakes it, pick another unbaked character rather than changing the assertions.
-      const layout = shapeText('AΩB', {
-        fontSizePx: 16,
-        boxWidthPx: 0,
-        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-        lineSpacingPx: 3,
-      });
-      const [a, omega, b] = layout.lines[0]!.glyphs;
-      expect(omega!.glyph).toBeNull();
+      const [a, omega, b] = omegaLayout({ ...OPEN_SANS_FONT_METRICS, shaping: undefined }).lines[0]!.glyphs;
       expect(omega!.advance).toBeCloseTo(9.484375, 10);
       // The fallback advance joins the running sum like a baked one.
       expect(b!.x).toBeCloseTo(a!.advance + omega!.advance, 10);
@@ -734,6 +740,7 @@ describe('shapeText — glyph advances vs real Godot (text_server_adv.cpp:6936,7
     // 1056 units at 32 px over a 2048-unit em is 16.5 px: 17, then 16 with the carried -0.5.
     const face: FontMetrics = {
       ...OPEN_SANS_FONT_METRICS,
+      shaping: undefined,
       hasGlyph: () => true,
       getGlyphAdvanceUnits: () => 1056,
     };

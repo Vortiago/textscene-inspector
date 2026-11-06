@@ -8,9 +8,12 @@
 import { perObject } from '../../../../utils/perObject';
 import { identityKey } from '../../../../utils/identityKey';
 import { recentlyRead } from '../../../../utils/recentlyRead';
-import type { RunSubstitutions, SubstitutedCluster } from './glyphRun';
-import type { Decomposition } from './sfntDecomposition';
+import type { LookupGlyph } from './autofit/openTypeGdef';
+import type { SizedClusterOffsets } from './fallbackMarkPositioning';
+import type { GlyphContours } from './glyphContours';
+import type { RunGlyph, RunShaping } from './glyphRun';
 import type { SfntOutlines } from './sfntOutlines';
+import type { PairKerningReader } from './variation/instanceKerning';
 
 /**
  * Which glyph-painting path a `FontMetrics` pairs with, since shaping is
@@ -43,15 +46,26 @@ export interface FontMetrics {
   /** Whether the face maps `ch` to a glyph, `_font_has_char`. A face that cannot tell answers true. */
   hasGlyph(ch: string): boolean;
   /**
-   * The base and marks a character the face lacks draws as, where the face has the pieces of its
-   * canonical decomposition, at a font size. Absent, or null for a character, is one glyph.
+   * The glyphs each cluster of a run draws at the default instance, as the face's `GSUB` shapes the
+   * run whole. Absent for a face whose glyphs this previewer cannot read: each cluster draws its
+   * characters, normalised against `hasGlyph`.
    */
-  readonly decomposition?: Decomposition;
+  readonly shaping?: RunShaping;
   /**
-   * The clusters of a run of characters that the face's `GSUB` draws as a glyph of their own at the
-   * default instance: a ligature, or a glyph its neighbours swap. Absent is none.
+   * Where the marks of a shaped cluster sit against its base, px, y up. Absent for a face with no
+   * glyphs to read: a cluster with a mark then draws a glyph for each character.
    */
-  readonly substitutions?: RunSubstitutions;
+  readonly markOffsets?: SizedClusterOffsets;
+  /**
+   * The `GPOS` kerning of a pair of glyphs at the default instance, design units, which a pair with
+   * a glyph that a `GSUB` lookup gave takes. Absent for a face with no pair kerning to read.
+   */
+  readonly getGlyphKerningUnits?: PairKerningReader;
+  /**
+   * The unhinted contours of a glyph at a font size, which a glyph with no character to draw as text
+   * fills. Absent for a face whose outlines this previewer cannot read.
+   */
+  readonly glyphContours?: (glyphIndex: number, fontSizePx: number) => GlyphContours | null;
   /** A character's own advance width, design units, or `null` if this font has no glyph for it (a shaper falls back to `averageAdvanceUnits`). */
   getGlyphAdvanceUnits(ch: string): number | null;
   /**
@@ -83,6 +97,12 @@ export interface FontMetrics {
    */
   readonly outlines?: SfntOutlines | null;
 }
+
+/** The fields of a face whose glyphs this previewer reads from its font file (`sfntFaceGlyphs.ts`). */
+export type FaceGlyphs = Pick<
+  FontMetrics,
+  'shaping' | 'markOffsets' | 'getGlyphKerningUnits' | 'glyphContours'
+>;
 
 /**
  * `units` scaled to `fontSizePx` as `units * (fontSizePx / unitsPerEm)`, which `units * fontSizePx
@@ -299,13 +319,15 @@ export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSize
   return advancePx(metrics, units, glyphAtInstance, fontSizePx);
 }
 
-/** `getFontGlyphAdvancePx` for the glyph of a cluster that the face's `GSUB` changed. */
-export function getFontSubstitutedAdvancePx(
-  metrics: FontMetrics,
-  { glyph, advanceUnits }: SubstitutedCluster,
-  fontSizePx: number
-): number {
-  return advancePx(metrics, advanceUnits, glyph, fontSizePx);
+/**
+ * The advance in px of a glyph of a shaped run: the `hmtx` advance of the glyph, as HarfBuzz reads
+ * it, where the run shaping read one, else `getFontGlyphAdvancePx` of its character. A canvas face
+ * measures a character as the browser shapes it alone, which a `GSUB` lookup of one glyph changes.
+ */
+export function getFontRunGlyphAdvancePx(metrics: FontMetrics, glyph: RunGlyph, fontSizePx: number): number {
+  if (glyph.glyph === undefined || glyph.advanceUnits === undefined)
+    return getFontGlyphAdvancePx(metrics, glyph.char, fontSizePx);
+  return advancePx(metrics, glyph.advanceUnits, glyph.glyph, fontSizePx);
 }
 
 /**
@@ -355,27 +377,6 @@ function instanceGlyphAdvance26_6(
   const { outlines, opentype } = metrics;
   if (!outlines || !isInstanced(opentype) || glyphAtInstance === 0) return null;
   return outlines.advanceAtInstance?.(glyphAtInstance, fontSizePx, opentype) ?? null;
-}
-
-/** No cluster changed: one array for every run that the face's `GSUB` leaves as it is. */
-const NO_SUBSTITUTIONS: readonly SubstitutedCluster[] = [];
-
-/** Whether `metrics` reads a `GSUB` that can draw a cluster as a glyph of its own. */
-export function canSubstitute(metrics: FontMetrics): boolean {
-  return !!metrics.substitutions || !!metrics.outlines?.substitutionsAt;
-}
-
-/**
- * The clusters of `chars` that the face's `GSUB` draws as a glyph of their own, at the axis values
- * of the face's `variation_opentype`, where its outlines read them, else at the default instance.
- */
-export function getFontRunSubstitutions(
-  metrics: FontMetrics,
-  chars: readonly string[]
-): readonly SubstitutedCluster[] {
-  const { outlines, opentype } = metrics;
-  const atInstance = isInstanced(opentype) ? outlines?.substitutionsAt?.(chars, opentype) : null;
-  return atInstance ?? metrics.substitutions?.(chars) ?? NO_SUBSTITUTIONS;
 }
 
 /**
@@ -563,29 +564,61 @@ export function getFontEmboldenStrength(embolden: number, fontSizePx: number): n
   return Math.trunc(Math.fround(Math.fround(embolden) * fontSizePx * FIXED_26_6_ONE) / 16);
 }
 
+/** A glyph of a kerning pair: its character, and the font glyph where the run shaping read one. */
+export interface KernGlyph {
+  readonly char: string;
+  readonly glyph?: number;
+  /** Whether a `GSUB` lookup gave `glyph`, so no character names it. */
+  readonly isSubstituted?: boolean;
+}
+
+/** The glyph a kerning lookup reads for `glyph`, or `cmapGlyph` of its character where the shaping read none. */
+function lookupGlyphOf({ char, glyph }: KernGlyph, cmapGlyph: (codePoint: number) => number): LookupGlyph {
+  const codePoint = char.codePointAt(0)!;
+  return { glyph: glyph ?? cmapGlyph(codePoint), codePoint };
+}
+
 /**
  * The kerning of `a` and `b` scaled to `fontSizePx`: the `GPOS` kerning of the instance at the face's
- * `variation_opentype`, else `metrics.getKerningAdjustmentUnits(a, b)`. HarfBuzz positions a glyph in
- * the 26.6 units of the FreeType size Godot's `hb_font` takes (`text_server_adv.cpp:1513`), so the
- * kerning lands on a 1/64 pixel. `0` short-circuits without a scale.
+ * `variation_opentype`, else the `GPOS` kerning of a pair with a substituted glyph, else
+ * `metrics.getKerningAdjustmentUnits`. HarfBuzz positions a glyph in the 26.6 units of the FreeType
+ * size Godot's `hb_font` takes (`text_server_adv.cpp:1513`), so the kerning lands on a 1/64 pixel.
  */
 export function getFontKerningAdjustmentPx(
   metrics: FontMetrics,
-  a: string,
-  b: string,
+  a: KernGlyph,
+  b: KernGlyph,
   fontSizePx: number
 ): number {
-  const units = instanceKerningUnits(metrics, a, b) ?? metrics.getKerningAdjustmentUnits(a, b);
+  const units =
+    instanceKerningUnits(metrics, a, b) ??
+    substitutedKerningUnits(metrics, a, b) ??
+    metrics.getKerningAdjustmentUnits(a.char, b.char);
   if (units === 0) return 0;
   return Math.round(unitsToPx(units, metrics, fontSizePx) * FIXED_26_6_ONE) / FIXED_26_6_ONE;
 }
 
 /**
  * The kerning in design units of `a` and `b` at the axis values of the face's `variation_opentype`,
- * or null for a face at its default instance and a character with no glyph: the default kerning stands.
+ * or null for a face at its default instance and a glyph it lacks: the default kerning stands.
  */
-function instanceKerningUnits(metrics: FontMetrics, a: string, b: string): number | null {
+function instanceKerningUnits(metrics: FontMetrics, a: KernGlyph, b: KernGlyph): number | null {
   const { outlines, opentype } = metrics;
   if (!outlines?.kerningAtInstance || !isInstanced(opentype)) return null;
-  return outlines.kerningAtInstance(a.codePointAt(0)!, b.codePointAt(0)!, opentype);
+  const glyphAt = (codePoint: number) => outlines.glyphIndex(codePoint, opentype);
+  return outlines.kerningAtInstance(lookupGlyphOf(a, glyphAt), lookupGlyphOf(b, glyphAt), opentype);
 }
+
+/**
+ * The default `GPOS` kerning of a pair with a glyph a `GSUB` lookup gave, which no pair of
+ * characters names, or null for a pair of characters.
+ */
+function substitutedKerningUnits(metrics: FontMetrics, a: KernGlyph, b: KernGlyph): number | null {
+  const kerningOf = metrics.getGlyphKerningUnits;
+  if (!kerningOf || (!a.isSubstituted && !b.isSubstituted) || a.glyph === undefined || b.glyph === undefined)
+    return null;
+  return kerningOf(lookupGlyphOf(a, NO_GLYPH), lookupGlyphOf(b, NO_GLYPH));
+}
+
+/** No `cmap` to read: both glyphs of the pair are known. */
+const NO_GLYPH = (): number => 0;

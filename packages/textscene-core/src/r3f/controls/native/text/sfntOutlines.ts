@@ -25,12 +25,9 @@ import { isTrickyFont } from './trickyFont';
 import { openFontContainer } from './fontContainer';
 import { OUTLINE_TABLE_TAGS, readHeadUnitsPerEm, type SfntFile } from './sfntTables';
 import { fontInstanceOf, type FontInstance } from './variation/fontInstance';
-import type { SubstitutedCluster } from './glyphRun';
-import type {
-  instanceGlyphIndex,
-  InstanceGlyphIndex,
-  instanceRunSubstitutions,
-} from './variation/instanceGlyph';
+import type { RunCluster } from './glyphRun';
+import type { LookupGlyph } from './autofit/openTypeGdef';
+import type { instanceGlyphIndex, InstanceGlyphIndex, instanceRunShaping } from './variation/instanceGlyph';
 import type { instanceKerningReader, PairKerningReader } from './variation/instanceKerning';
 import { perObject } from '../../../../utils/perObject';
 import { recentlyRead } from '../../../../utils/recentlyRead';
@@ -39,7 +36,7 @@ type InstanceKerningReader = typeof instanceKerningReader;
 /** The readers of the glyphs at an instance, which load with a font that has `GSUB` and `fvar`. */
 interface InstanceGlyphReaders {
   instanceGlyphIndex: typeof instanceGlyphIndex;
-  instanceRunSubstitutions: typeof instanceRunSubstitutions;
+  instanceRunShaping: typeof instanceRunShaping;
 }
 
 export interface SfntOutlines {
@@ -58,27 +55,19 @@ export interface SfntOutlines {
    */
   advanceAtInstance?(glyphIndex: number, fontSizePx: number, opentype: OpentypeCoordinates): number | null;
   /**
-   * The `GPOS` kerning in design units of a pair of characters, as HarfBuzz shapes it at the axis
-   * values of `opentype`: null where they draw the default instance, where the font has no `kern`
-   * feature to read, and for a character it has no glyph for. Absent for outlines with no `GPOS`
-   * variation to read.
+   * The `GPOS` kerning in design units of a pair of glyphs, as HarfBuzz shapes it at the axis values
+   * of `opentype`: null where they draw the default instance, where the font has no `kern` feature
+   * to read, and for glyph 0. Absent for outlines with no `GPOS` variation to read.
    */
-  kerningAtInstance?(
-    leftCodePoint: number,
-    rightCodePoint: number,
-    opentype: OpentypeCoordinates
-  ): number | null;
+  kerningAtInstance?(left: LookupGlyph, right: LookupGlyph, opentype: OpentypeCoordinates): number | null;
   /** Whether the axis values of `opentype` draw an instance other than the default. */
   drawsInstance?(opentype: OpentypeCoordinates): boolean;
   /**
-   * `FontMetrics.substitutions` at the axis values of `opentype`, under the lookups of the `GSUB`
+   * `FontMetrics.shaping` at the axis values of `opentype`, under the lookups of the `GSUB`
    * `FeatureVariations` record that holds there: null where they draw the default instance. Absent
    * for outlines with no `GSUB` variation to read.
    */
-  substitutionsAt?(
-    chars: readonly string[],
-    opentype: OpentypeCoordinates
-  ): readonly SubstitutedCluster[] | null;
+  shapingAt?(chars: readonly string[], opentype: OpentypeCoordinates): readonly RunCluster[] | null;
 }
 
 /**
@@ -135,9 +124,6 @@ async function variationReaderOf<Reader>(
   }
 }
 
-/** The kerning of a pair of characters at one instance, or null for a character the font has no glyph for. */
-type CharacterKerning = (leftCodePoint: number, rightCodePoint: number) => number | null;
-
 /**
  * The kerning of each pair at an instance, kept for each instance as a layout asks for the same pair
  * again and again. A font at its default instance reads no table. A pair that a corrupt table puts
@@ -146,7 +132,6 @@ type CharacterKerning = (leftCodePoint: number, rightCodePoint: number) => numbe
 function instanceKerningOf(
   sfnt: SfntFile,
   instanceAt: InstanceReader,
-  glyphIndex: InstanceGlyphIndex,
   kerningReader: InstanceKerningReader | null
 ): SfntOutlines['kerningAtInstance'] {
   if (!kerningReader) return undefined;
@@ -156,37 +141,36 @@ function instanceKerningOf(
   const kerningAt = () =>
     kerningAtOf === undefined ? (kerningAtOf = orOnRangeError(() => kerningReader(sfnt), null)) : kerningAtOf;
   // Kept with its instance, and so for as long as the layout's opentype wrapper that asks for it lives.
-  const pairsAt = perObject((instance: FontInstance): CharacterKerning | null => {
+  const pairsAt = perObject((instance: FontInstance): PairKerningReader | null => {
     const kerningAtInstance = kerningAt();
-    return (
-      kerningAtInstance &&
-      keptPairs((codePoint) => glyphIndex(codePoint, instance), kerningAtInstance(instance.normalized))
-    );
+    return kerningAtInstance && keptPairs(kerningAtInstance(instance.normalized));
   });
-  return (leftCodePoint, rightCodePoint, opentype) => {
+  return (left, right, opentype) => {
+    if (left.glyph === 0 || right.glyph === 0) return null;
     const instance = instanceAt(opentype);
-    return (instance && pairsAt(instance)?.(leftCodePoint, rightCodePoint)) ?? null;
+    return (instance && pairsAt(instance)?.(left, right)) ?? null;
   };
 }
 
+/** Past the last glyph index, so `left * GLYPH_LIMIT + right` names one pair of glyphs. */
+const GLYPH_LIMIT = 0x10000;
 /** Past the last code point, so `left * CODE_POINT_LIMIT + right` names one pair, well inside 2^53. */
 const CODE_POINT_LIMIT = 0x110000;
 
-/** `kerningOf` for characters, with the answer for each pair kept by its pair of code points. */
-function keptPairs(
-  glyphIndex: (codePoint: number) => number,
-  kerningOf: PairKerningReader
-): CharacterKerning {
-  const kept = new Map<number, number | null>();
-  return (leftCodePoint, rightCodePoint) => {
-    const pair = leftCodePoint * CODE_POINT_LIMIT + rightCodePoint;
-    const known = kept.get(pair);
-    if (known !== undefined) return known;
-    const left = { glyph: glyphIndex(leftCodePoint), codePoint: leftCodePoint };
-    const right = { glyph: glyphIndex(rightCodePoint), codePoint: rightCodePoint };
-    const units =
-      left.glyph === 0 || right.glyph === 0 ? null : orOnRangeError(() => kerningOf(left, right), 0);
-    kept.set(pair, units);
+/**
+ * `kerningOf`, with the answer for each pair kept by its glyphs, then by their characters: a font
+ * with no `GDEF` class for a glyph gives it the lookup flags of its character.
+ */
+function keptPairs(kerningOf: PairKerningReader): PairKerningReader {
+  const kept = new Map<number, Map<number, number>>();
+  return (left, right) => {
+    const glyphPair = left.glyph * GLYPH_LIMIT + right.glyph;
+    let byCharacters = kept.get(glyphPair);
+    if (!byCharacters) kept.set(glyphPair, (byCharacters = new Map()));
+    const characterPair = left.codePoint * CODE_POINT_LIMIT + right.codePoint;
+    let units = byCharacters.get(characterPair);
+    if (units === undefined)
+      byCharacters.set(characterPair, (units = orOnRangeError(() => kerningOf(left, right), 0)));
     return units;
   };
 }
@@ -292,7 +276,7 @@ function readSfntOutlines(
   const glyphIndex: InstanceGlyphIndex = glyphReaders
     ? glyphReaders.instanceGlyphIndex(sfnt, cmapGlyphIndex)
     : cmapGlyphIndex;
-  const substitutionsOf = glyphReaders?.instanceRunSubstitutions(sfnt) ?? undefined;
+  const shapingOf = glyphReaders?.instanceRunShaping(sfnt) ?? undefined;
   return {
     glyphIndex: (codePoint, opentype) => glyphIndex(codePoint, opentype ? instanceAt(opentype) : null),
     advanceAtInstance: instanceAdvanceReader(sfnt, instanceAt),
@@ -301,13 +285,13 @@ function readSfntOutlines(
         const outline = outlineOf(glyph, fontSizePx, instanceOf(instanceAt, variation));
         return outline && variedContours(outline, fontSizePx, variation);
       }, null),
-    kerningAtInstance: instanceKerningOf(sfnt, instanceAt, glyphIndex, kerningReader),
+    kerningAtInstance: instanceKerningOf(sfnt, instanceAt, kerningReader),
     drawsInstance: (opentype) => instanceAt(opentype) !== null,
-    substitutionsAt:
-      substitutionsOf &&
+    shapingAt:
+      shapingOf &&
       ((chars, opentype) => {
         const instance = instanceAt(opentype);
-        return instance && substitutionsOf(instance)(chars);
+        return instance && shapingOf(instance)(chars);
       }),
   };
 }

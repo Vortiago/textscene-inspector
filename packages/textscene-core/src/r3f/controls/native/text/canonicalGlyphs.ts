@@ -101,8 +101,8 @@ function recompose(characters: string[], hasCharacter: (ch: string) => boolean):
 /**
  * The characters `cluster` draws as in a font, in order, as HarfBuzz's normalisation of the default
  * shaper gives them (`COMPOSED_DIACRITICS`): each character splits while the font lacks it, the marks
- * sort by combining class, and each mark joins its base where the font has the composite. Null where
- * the font cannot draw a character of it. Hebrew, Arabic and the scripts of Southeast Asia reorder
+ * sort by combining class, and each mark joins its base where the font has the composite, a mark the
+ * font lacks too. Null where the font cannot draw a character of the result. Hebrew, Arabic and the scripts of Southeast Asia reorder
  * their marks by HarfBuzz's own classes in their script shapers, which are not ported.
  */
 export function normalisedCharacters(
@@ -110,12 +110,9 @@ export function normalisedCharacters(
   hasCharacter: (ch: string) => boolean
 ): readonly string[] | null {
   const characters: string[] = [];
-  for (const ch of cluster) {
-    const drawn = drawnCharacters(ch, hasCharacter);
-    if (!drawn) return null;
-    characters.push(...drawn);
-  }
+  // A character the font cannot draw stays whole, as HarfBuzz keeps it for the recomposition.
+  for (const ch of cluster) characters.push(...(drawnCharacters(ch, hasCharacter) ?? [ch]));
   reorderMarks(characters);
   recompose(characters, hasCharacter);
-  return characters;
+  return characters.every(hasCharacter) ? characters : null;
 }

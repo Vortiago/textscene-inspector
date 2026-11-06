@@ -5,10 +5,10 @@
  */
 import { describe, expect, it } from 'vitest';
 import { markPositioningReader } from './markPositioning';
-import { fixtureSfnt } from './sfntOutlines.testkit';
+import { clusterGlyphs, fixtureSfnt } from './sfntOutlines.testkit';
 
-const offsetsOf = (cluster: string) =>
-  markPositioningReader(fixtureSfnt('montserrat-semibold-marks-subset.ttf'))!(Array.from(cluster));
+const MARKS_FONT = fixtureSfnt('montserrat-semibold-marks-subset.ttf');
+const offsetsOf = (cluster: string) => markPositioningReader(MARKS_FONT)!(clusterGlyphs(MARKS_FONT, cluster));
 
 describe('markPositioningReader', () => {
   it('attaches a mark to its base with the difference of their anchors', () => {
@@ -42,8 +42,8 @@ describe('markPositioningReader', () => {
   });
 
   it('leaves a mark at its pen position, after the base, where the GPOS has no mark lookup', () => {
-    const reader = markPositioningReader(fixtureSfnt('montserrat-semibold-marks-nomark-subset.ttf'))!;
-    expect(reader(Array.from('Ȫ'.normalize('NFD')))).toEqual([
+    const font = fixtureSfnt('montserrat-semibold-marks-nomark-subset.ttf');
+    expect(markPositioningReader(font)!(clusterGlyphs(font, 'Ȫ'))).toEqual([
       { x: 0, y: 0 },
       { x: 842, y: 0 },
       { x: 842, y: 0 },
@@ -51,8 +51,8 @@ describe('markPositioningReader', () => {
   });
 
   it('leaves a mark at its pen position where the GPOS has a script and no lookup at all', () => {
-    const reader = markPositioningReader(fixtureSfnt('montserrat-semibold-marks-nolookups-subset.ttf'))!;
-    expect(reader(Array.from('À'.normalize('NFD')))).toEqual([
+    const font = fixtureSfnt('montserrat-semibold-marks-nolookups-subset.ttf');
+    expect(markPositioningReader(font)!(clusterGlyphs(font, 'À'))).toEqual([
       { x: 0, y: 0 },
       { x: 749, y: 0 },
     ]);

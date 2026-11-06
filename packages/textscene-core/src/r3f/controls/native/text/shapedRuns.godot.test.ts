@@ -12,17 +12,15 @@ import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { openFontContainer } from './fontContainer';
 import { opentypeOf } from './glyphVariation.testkit';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
-import { sfntRunSubstitutions } from './glyphRun';
 import { sfntGlyphIndex, sfntHasGlyph } from './sfntCmap';
-import { sfntDecomposition } from './sfntDecomposition';
+import { sfntFaceGlyphs } from './sfntFaceGlyphs';
 import { glyphMetricsReader } from './sfntGlyphMetrics';
 import { openFontOutlines } from './sfntOutlines';
 import { fixtureFontBytes } from './sfntOutlines.testkit';
 import { fileBytes } from '../../../../resources/testing/fileBytes';
 import { OUTLINE_TABLE_TAGS, parseSfntScalars, type SfntFile } from './sfntTables';
 import { shapeText, type GlyphPlacement } from './textLayout';
-import { readFvarAxes } from './variation/fvar';
-import { instanceKerningReader } from './variation/instanceKerning';
+import { defaultKerningReader } from './variation/instanceKerning';
 import { join } from 'node:path';
 
 interface ReferenceGlyph {
@@ -71,15 +69,10 @@ async function sfntFaceOf(font: string): Promise<FontMetrics> {
   const glyphIndexOf = sfntGlyphIndex(sfnt)!;
   const metricsOf = glyphMetricsReader(sfnt);
   const advanceUnits = (ch: string) => metricsOf(glyphIndexOf(ch.codePointAt(0)!), 0).horizontal.advance;
-  const kerningOf = instanceKerningReader(sfnt)?.(new Int32Array(readFvarAxes(sfnt)?.length ?? 0));
-  const substitutions = sfntRunSubstitutions(sfnt) ?? undefined;
-  // The kerning of a cluster's text is the kerning of the glyph the text shapes into.
-  const lookupGlyph = (text: string) => {
-    const chars = [...text];
-    const [cluster] = substitutions?.(chars) ?? [];
-    const codePoint = text.codePointAt(0)!;
-    const isWhole = cluster?.start === 0 && cluster.end === chars.length;
-    return { glyph: isWhole ? cluster.glyph : glyphIndexOf(codePoint), codePoint };
+  const kerningOf = defaultKerningReader(sfnt);
+  const lookupGlyph = (ch: string) => {
+    const codePoint = ch.codePointAt(0)!;
+    return { glyph: glyphIndexOf(codePoint), codePoint };
   };
   return {
     kind: 'canvas',
@@ -90,8 +83,7 @@ async function sfntFaceOf(font: string): Promise<FontMetrics> {
     getGlyphAdvanceUnits: advanceUnits,
     getKerningAdjustmentUnits: (a, b) => kerningOf?.(lookupGlyph(a), lookupGlyph(b)) ?? 0,
     averageAdvanceUnits: advanceUnits('n'),
-    decomposition: sfntDecomposition(sfnt) ?? undefined,
-    substitutions,
+    ...sfntFaceGlyphs(sfnt, () => sfnt, defaultKerningReader),
   };
 }
 
@@ -132,16 +124,22 @@ interface DrawnCluster {
   /** How far the glyph draws from its pen, Godot's `x_off`. */
   xOffset: number;
   advance: number;
+  /** Where each later glyph of the cluster draws, from the first glyph's origin. */
   marks: (readonly [number, number])[];
 }
 
 function godotClusters(row: ReferenceRun): DrawnCluster[] {
   let pen = 0;
-  return clustersOf(row.glyphs).map(({ start, end, glyphs: [base, ...marks] }) => {
+  return clustersOf(row.glyphs).map(({ start, end, glyphs: [base, ...rest] }) => {
     const x = pen;
     pen += base!.advance;
-    // Godot offsets a mark from the pen after the base, in y down; the layout offsets it from the base's origin.
-    const markOffsets = marks.map(({ offset: [mx, my] }) => [base!.advance + mx, my] as const);
+    // Godot offsets a glyph from its pen, in y down; the layout gives each glyph after the first its
+    // own pen, so both read from the first glyph's origin.
+    const followers = rest.map(({ advance, offset: [ox, oy] }) => {
+      const follower = [pen - x + ox, oy] as const;
+      pen += advance;
+      return follower;
+    });
     return {
       start,
       end,
@@ -149,7 +147,7 @@ function godotClusters(row: ReferenceRun): DrawnCluster[] {
       x,
       xOffset: base!.offset[0],
       advance: base!.advance,
-      marks: markOffsets,
+      marks: followers,
     };
   });
 }

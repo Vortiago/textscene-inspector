@@ -4,8 +4,7 @@
  */
 
 import { decodeBase64UrlBytes } from '../../../../godot/variant/packedBytes';
-import type { FontMetrics } from './fontMetrics';
-import { sfntRunSubstitutions, type RunSubstitutions } from './glyphRun';
+import type { FaceGlyphs, FontMetrics } from './fontMetrics';
 import {
   OPEN_SANS_METRICS,
   getGlyphAdvanceUnits,
@@ -13,30 +12,31 @@ import {
   hasGlyph,
 } from './openSansMetrics';
 import { OPEN_SANS_SHAPING_TABLES } from './openSansShaping';
-import { sfntDecomposition, type Decomposition } from './sfntDecomposition';
-import { sfntFileOfTables } from './sfntTables';
+import { sfntFaceGlyphs } from './sfntFaceGlyphs';
+import { sfntFileOfTables, type SfntFile } from './sfntTables';
 
-/** How Open Sans shapes a run and draws a cluster it lacks, read from its baked tables. */
-interface OpenSansShaping {
-  readonly substitutions: RunSubstitutions | undefined;
-  readonly decomposition: Decomposition | undefined;
-}
+/** Written once, by the first read of the baked tables. */
+let sfnt: SfntFile | undefined;
 
-/** Written once, by the first read of a shaping field of `OPEN_SANS_FONT_METRICS`. */
-let shaping: OpenSansShaping | undefined;
-
-/** The shaping of the baked tables, decoded at the first run that reads it. */
-function openSansShaping(): OpenSansShaping {
-  if (shaping) return shaping;
+/** The baked shaping tables of Open Sans as a font file, decoded at the first read. They hold no outlines. */
+export function openSansShapingSfnt(): SfntFile {
+  if (sfnt) return sfnt;
   const tables = Object.entries(OPEN_SANS_SHAPING_TABLES).map(
     ([tag, base64url]) => [tag, decodeBase64UrlBytes(base64url)] as const
   );
-  const sfnt = sfntFileOfTables(new Map(tables));
-  shaping = {
-    substitutions: sfntRunSubstitutions(sfnt) ?? undefined,
-    decomposition: sfntDecomposition(sfnt) ?? undefined,
-  };
-  return shaping;
+  sfnt = sfntFileOfTables(new Map(tables));
+  return sfnt;
+}
+
+/** Written once, by the first read of a glyph field of `OPEN_SANS_FONT_METRICS`. */
+let glyphs: FaceGlyphs | undefined;
+
+/** The glyphs of the baked tables, read at the first run that reads them. */
+function openSansGlyphs(): FaceGlyphs {
+  if (glyphs) return glyphs;
+  const { shaping, markOffsets } = sfntFaceGlyphs(openSansShapingSfnt());
+  glyphs = { shaping, markOffsets };
+  return glyphs;
 }
 
 // Every field reads through to the GENERATED `openSansMetrics.ts` (`OPEN_SANS_METRICS` and its
@@ -59,10 +59,10 @@ export const OPEN_SANS_FONT_METRICS: FontMetrics = {
   get averageAdvanceUnits() {
     return OPEN_SANS_METRICS.averageAdvanceUnits;
   },
-  get substitutions() {
-    return openSansShaping().substitutions;
+  get shaping() {
+    return openSansGlyphs().shaping;
   },
-  get decomposition() {
-    return openSansShaping().decomposition;
+  get markOffsets() {
+    return openSansGlyphs().markOffsets;
   },
 };

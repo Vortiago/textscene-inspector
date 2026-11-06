@@ -39,6 +39,13 @@ const CASES = [
     sizes: '16,32',
     opentype: {},
   },
+  // `liga` lookups that skip marks, and a multiple substitution (scripts/fonts/lookup-flags).
+  {
+    font: join(FIXTURES, 'montserrat-lookup-flags.ttf'),
+    texts: ['fi', 'f\u0301i', 'f\u0301\u0323i', 'an', 'a\u0308n', 'a\u0308x', 'x', 'axa', 'x\u0301', 'fix'],
+    sizes: '16,32',
+    opentype: {},
+  },
   // Godot's default theme font: `ff`, `fi`, `fl`, `ffi` and `ffl` are ligatures.
   {
     font: join(root, 'packages/textscene-core/assets/fonts/OpenSans_SemiBold.woff2'),

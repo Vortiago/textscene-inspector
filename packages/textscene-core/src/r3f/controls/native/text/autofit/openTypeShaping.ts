@@ -14,7 +14,7 @@
  */
 
 import { perObject } from '../../../../../utils/perObject';
-import { applyGsub, type GsubBuffer, type GsubStage } from './openTypeGsub';
+import { applyGsub, type GlyphFilter, type GsubBuffer, type GsubStage } from './openTypeGsub';
 import {
   defaultSubstitution,
   FIRST_STAGE_FEATURES,
@@ -40,10 +40,36 @@ export interface ShapedGlyph {
   yOffset: number;
 }
 
-export interface ShapingFace {
+/** The tables a `GSUB` pass reads: the glyph of each character, the `GSUB`, and how its lookup flags skip glyphs. */
+export interface GsubFace {
   glyphIndex(codePoint: number): number;
   readonly gsub: LayoutTable | null;
+  /** Absent: each lookup reads every glyph, whatever its flag. */
+  readonly filter?: GlyphFilter;
+}
+
+export interface ShapingFace extends GsubFace {
   readonly gpos: LayoutTable | null;
+}
+
+/**
+ * The glyphs `cmap` gives `codePoints`, through the lookups of `stages`, as HarfBuzz's buffer holds
+ * them after `GSUB`. `clusters` gives the cluster of each code point, which the buffer then tracks.
+ */
+export function substitutedGlyphs(
+  face: GsubFace,
+  codePoints: readonly number[],
+  stages: readonly GsubStage[],
+  clusters?: readonly number[]
+): GsubBuffer {
+  const buffer: GsubBuffer = {
+    glyphs: codePoints.map((codePoint) => face.glyphIndex(codePoint)),
+    randomState: 1,
+    codePoints: [...codePoints],
+    ...(clusters && { clusters: [...clusters] }),
+  };
+  if (face.gsub) applyGsub(face.gsub, stages, buffer, face.filter ?? null);
+  return buffer;
 }
 
 function stagesOf(
@@ -148,12 +174,8 @@ export function shapeCluster(
 ): ShapedGlyph[] {
   const codePoints = [...cluster].map((character) => character.codePointAt(0)!);
   const tags = codePoints.every(isAsciiDigit) ? [] : scriptTags;
-  const buffer: GsubBuffer = {
-    glyphs: codePoints.map((codePoint) => face.glyphIndex(codePoint)),
-    randomState: 1,
-  };
-  if (face.gsub)
-    applyGsub(face.gsub, gsubStages(face.gsub, tags, feature, defaultSubstitution(face.gsub)), buffer);
+  const stages = face.gsub ? gsubStages(face.gsub, tags, feature, defaultSubstitution(face.gsub)) : [];
+  const buffer = substitutedGlyphs(face, codePoints, stages);
   const shaped = buffer.glyphs.map((glyph): ShapedGlyph => ({ glyph, yOffset: 0 }));
   if (face.gpos)
     applyGpos(face.gpos, gposLookups(face.gpos, tags, feature, defaultSubstitution(face.gpos)), shaped);

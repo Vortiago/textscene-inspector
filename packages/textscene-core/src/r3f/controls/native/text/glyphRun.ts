@@ -1,51 +1,74 @@
 /**
- * The glyphs of a run of characters that a font's `GSUB` changes, as HarfBuzz shapes the run as a
- * whole: a ligature of several characters, and a glyph that a lookup swaps by its neighbours. Godot
- * hands each run to HarfBuzz (`_shape_run`, `text_server_adv.cpp:7011`), so a lookup reads every
- * character of the run, where a layout that shaped each character alone would miss it.
+ * The glyphs of a run of characters as HarfBuzz shapes the run whole: each cluster of a base and
+ * its marks normalised against the font (`canonicalGlyphs.ts`), then the `GSUB` lookups of
+ * HarfBuzz's default features over the whole run, each skipping the glyphs its flag ignores. Godot
+ * hands each run to HarfBuzz (`_shape_run`, `text_server_adv.cpp:7011`), so a ligature, a contextual
+ * swap and a multiple substitution read every character of the run.
  */
 
+import { perObject } from '../../../../utils/perObject';
 import { recentlyRead } from '../../../../utils/recentlyRead';
 import { scriptTagsOf } from './autofit/afScripts';
 import { defaultSubstitution } from './autofit/openTypeFeatures';
-import { applyGsub, type GsubBuffer } from './autofit/openTypeGsub';
-import { type FeatureSubstitution, type LayoutTable, sfntGsub } from './autofit/openTypeLayout';
-import { gsubStages, type ShapingFace } from './autofit/openTypeShaping';
-import { orOnRangeError, sfntGlyphIndex } from './sfntCmap';
+import { glyphFilterOf, MARK_PROPS } from './autofit/openTypeGdef';
+import { type FeatureSubstitution, sfntGsub } from './autofit/openTypeLayout';
+import type { GlyphFilter } from './autofit/openTypeGsub';
+import { type GsubFace, gsubStages, substitutedGlyphs } from './autofit/openTypeShaping';
+import { isCombiningMark, normalisedCharacters } from './canonicalGlyphs';
+import { orOnRangeError, sfntGlyphIndex, sfntMapsGlyph } from './sfntCmap';
 import { glyphMetricsReader } from './sfntGlyphMetrics';
 import type { SfntFile } from './sfntTables';
+import { isInstanced, type FontMetrics } from './fontMetrics';
 
-/** A cluster of a run that draws one glyph other than the `cmap` glyph of its one character. */
-export interface SubstitutedCluster {
+/** A glyph of a shaped cluster. */
+export interface RunGlyph {
+  /** The font glyph, absent for a face whose glyphs this previewer cannot read: the browser draws `char`. */
+  readonly glyph?: number;
+  /** The character the glyph shapes, after normalisation. A glyph a lookup puts out keeps the character it replaces. */
+  readonly char: string;
+  /** Whether the glyph is a mark, which takes no advance and sits over the glyph before it. */
+  readonly isMark: boolean;
+  /** Whether a `GSUB` lookup gave the glyph, so `char` alone does not draw it. */
+  readonly isSubstituted: boolean;
+  /** The glyph's advance at the default instance, design units, where the face reads it. */
+  readonly advanceUnits?: number;
+}
+
+/** The glyphs one cluster of a run draws, in order. */
+export interface RunCluster {
   /** The index in the run of the cluster's first character. */
   readonly start: number;
   /** The index past its last character. */
   readonly end: number;
-  /** The glyph the cluster draws. */
-  readonly glyph: number;
-  /** The glyph's advance at the default instance, design units. */
-  readonly advanceUnits: number;
+  readonly glyphs: readonly RunGlyph[];
 }
 
 /**
- * The clusters of `chars` that draw a glyph of their own, in run order. An empty string in `chars`
- * holds no character: the second unit of a surrogate pair, or a character the caller draws apart.
+ * The clusters of `chars`, in run order. An empty string in `chars` holds no character: the second
+ * unit of a surrogate pair, or a character the caller draws apart, which no cluster takes.
  */
-export type RunSubstitutions = (chars: readonly string[]) => readonly SubstitutedCluster[];
+export type RunShaping = (chars: readonly string[]) => readonly RunCluster[];
 
-/** The tables a run shaping reads: the glyph of each character, the `GSUB`, and the advance of each glyph. */
-export interface RunShapingFace extends Pick<ShapingFace, 'glyphIndex'> {
-  readonly gsub: LayoutTable;
+/** The tables a run shaping reads: the `GSUB` and its lookup flags, the characters the font maps, and the advance of each glyph. */
+export interface RunShapingFace extends GsubFace {
+  readonly filter: GlyphFilter;
+  mapsCharacter(ch: string): boolean;
   advanceUnits(glyph: number): number;
 }
 
-/** The face of `sfnt` for run shaping, or null for a font with no `GSUB` or no `cmap`. */
+/** The face of `sfnt` for run shaping, or null for a font with no `cmap` this previewer reads. */
 export function sfntRunShapingFace(sfnt: SfntFile): RunShapingFace | null {
-  const gsub = sfntGsub(sfnt);
   const glyphIndex = sfntGlyphIndex(sfnt);
-  if (!gsub || !glyphIndex) return null;
+  const mapsCharacter = sfntMapsGlyph(sfnt);
+  if (!glyphIndex || !mapsCharacter) return null;
   const metricsOf = glyphMetricsReader(sfnt);
-  return { glyphIndex, gsub, advanceUnits: (glyph) => metricsOf(glyph, 0).horizontal.advance };
+  return {
+    glyphIndex,
+    gsub: sfntGsub(sfnt),
+    filter: glyphFilterOf(sfnt),
+    mapsCharacter,
+    advanceUnits: (glyph) => metricsOf(glyph, 0).horizontal.advance,
+  };
 }
 
 /**
@@ -60,55 +83,101 @@ function runScriptTags(codePoints: readonly number[]): readonly string[] {
   return [];
 }
 
+/** A cluster of a run before shaping: a base and the marks after it. */
+interface CharacterCluster {
+  readonly start: number;
+  readonly end: number;
+  readonly characters: readonly string[];
+}
+
+/**
+ * The clusters of `chars` (`hb_form_clusters`): each mark joins the cluster before it, and a
+ * character with no cluster before it starts one.
+ */
+function characterClusters(chars: readonly string[]): CharacterCluster[] {
+  const clusters: { start: number; end: number; characters: string[] }[] = [];
+  chars.forEach((ch, i) => {
+    if (ch === '') return;
+    const last = clusters.at(-1);
+    if (last && isCombiningMark(ch)) {
+      last.characters.push(ch);
+      last.end = i + ch.length;
+    } else clusters.push({ start: i, end: i + ch.length, characters: [ch] });
+  });
+  return clusters;
+}
+
+/**
+ * The characters a cluster draws as in a face that maps the characters `mapsCharacter` accepts:
+ * HarfBuzz's normalisation, or the cluster's own characters where the face cannot draw one of them.
+ */
+function drawnCharacters(
+  { characters }: CharacterCluster,
+  mapsCharacter: (ch: string) => boolean
+): readonly string[] {
+  return normalisedCharacters(characters.join(''), mapsCharacter) ?? characters;
+}
+
 /**
  * Shapes `chars` through the `GSUB` lookups of HarfBuzz's default features, under the lookups of
- * `substitution`, the `FeatureVariations` record of an instance. A cluster that puts out more than
- * one glyph is left out, as the layout draws each of its characters.
+ * `substitution`, the `FeatureVariations` record of an instance. Each shaped cluster covers the
+ * clusters a lookup merged into it.
  */
-export function shapedRunClusters(
+export function shapeRun(
   face: RunShapingFace,
   chars: readonly string[],
   substitution: FeatureSubstitution | undefined
-): SubstitutedCluster[] {
-  const { gsub } = face;
-  const clusters: number[] = [];
-  const codePoints: number[] = [];
-  chars.forEach((ch, i) => {
-    if (ch === '') return;
-    clusters.push(i);
-    codePoints.push(ch.codePointAt(0)!);
-  });
-  const stages = gsubStages(gsub, runScriptTags(codePoints), null, substitution);
-  if (stages.every(({ lookups }) => lookups.length === 0)) return [];
-  const cmapGlyphs = codePoints.map((codePoint) => face.glyphIndex(codePoint));
-  const cmapGlyphAt: number[] = [];
-  clusters.forEach((start, k) => (cmapGlyphAt[start] = cmapGlyphs[k]!));
-  const buffer: GsubBuffer = { glyphs: cmapGlyphs, randomState: 1, clusters };
-  applyGsub(gsub, stages, buffer);
-  return changedClusters(face, chars, buffer, cmapGlyphAt);
-}
-
-/** The clusters of a shaped buffer whose one glyph differs from the `cmap` glyph of a cluster of one character. */
-function changedClusters(
-  face: RunShapingFace,
-  chars: readonly string[],
-  { glyphs, clusters }: GsubBuffer,
-  cmapGlyphAt: readonly number[]
-): SubstitutedCluster[] {
-  const changed: SubstitutedCluster[] = [];
-  for (let first = 0; first < glyphs.length;) {
-    const start = clusters![first]!;
+): RunCluster[] {
+  const clusters = characterClusters(chars);
+  const drawn = clusters.map((cluster) => drawnCharacters(cluster, face.mapsCharacter));
+  const codePoints = drawn.flatMap((characters) => characters.map((ch) => ch.codePointAt(0)!));
+  const clusterIndices = drawn.flatMap((characters, k) => characters.map(() => k));
+  const stages = face.gsub ? gsubStages(face.gsub, runScriptTags(codePoints), null, substitution) : [];
+  const buffer = substitutedGlyphs(face, codePoints, stages, clusterIndices);
+  const shaped: RunCluster[] = [];
+  const bufferClusters = buffer.clusters!;
+  for (let first = 0; first < buffer.glyphs.length;) {
+    const k = bufferClusters[first]!;
     let next = first + 1;
-    while (next < glyphs.length && clusters![next] === start) next++;
-    const end = next < glyphs.length ? clusters![next]! : chars.length;
-    const glyph = glyphs[first]!;
-    const isOneCharacter = chars.slice(start + 1, end).every((ch) => ch === '');
-    const isOneGlyph = next - first === 1;
-    if (isOneGlyph && !(isOneCharacter && glyph === cmapGlyphAt[start]))
-      changed.push({ start, end, glyph, advanceUnits: face.advanceUnits(glyph) });
+    while (next < buffer.glyphs.length && bufferClusters[next] === k) next++;
+    const nextCluster = next < buffer.glyphs.length ? bufferClusters[next]! : clusters.length;
+    shaped.push({
+      start: clusters[k]!.start,
+      end: clusters[nextCluster - 1]!.end,
+      glyphs: buffer.glyphs
+        .slice(first, next)
+        .map((glyph, j) => runGlyph(face, glyph, buffer.codePoints![first + j]!)),
+    });
     first = next;
   }
-  return changed;
+  return shaped;
+}
+
+function runGlyph(face: RunShapingFace, glyph: number, codePoint: number): RunGlyph {
+  return {
+    glyph,
+    char: String.fromCodePoint(codePoint),
+    isMark: (face.filter.propsOf({ glyph, codePoint }) & MARK_PROPS) !== 0,
+    isSubstituted: glyph !== face.glyphIndex(codePoint),
+    advanceUnits: face.advanceUnits(glyph),
+  };
+}
+
+/**
+ * The run shaping of a face whose glyphs this previewer cannot read: each cluster normalised against
+ * the characters `hasCharacter` accepts, with no `GSUB`. The browser shapes the text it draws.
+ */
+export function characterRunShaping(hasCharacter: (ch: string) => boolean): RunShaping {
+  return (chars) =>
+    characterClusters(chars).map((cluster) => ({
+      start: cluster.start,
+      end: cluster.end,
+      glyphs: drawnCharacters(cluster, hasCharacter).map((char) => ({
+        char,
+        isMark: isCombiningMark(char),
+        isSubstituted: false,
+      })),
+    }));
 }
 
 /** A layout shapes the same runs again on every edit of its text, so the clusters of this many runs are kept. */
@@ -119,20 +188,34 @@ const runKey = (chars: readonly string[]): string => chars.join('￿');
 
 /**
  * The run shaping of `face` under the lookups of `substitution`, keeping the clusters of the runs read
- * most recently. A table that a corrupt offset reads past shapes nothing, as HarfBuzz reads a table it
- * cannot sanitise as empty.
+ * most recently. A table that a corrupt offset reads past shapes no lookup, as HarfBuzz reads a table
+ * it cannot sanitise as empty.
  */
-export function keptRunSubstitutions(
+export function keptRunShaping(
   face: RunShapingFace,
   substitution: FeatureSubstitution | undefined
-): RunSubstitutions {
-  const kept = recentlyRead<string, readonly SubstitutedCluster[]>(MAX_KEPT_RUNS);
+): RunShaping {
+  const kept = recentlyRead<string, readonly RunCluster[]>(MAX_KEPT_RUNS);
+  const unshaped = characterRunShaping(face.mapsCharacter);
   return (chars) =>
-    kept(runKey(chars), () => orOnRangeError(() => shapedRunClusters(face, chars, substitution), []));
+    kept(runKey(chars), () => orOnRangeError(() => shapeRun(face, chars, substitution), unshaped(chars)));
 }
 
-/** The run shaping of `sfnt` at its default instance, or null for a font with no `GSUB` or no `cmap`. */
-export function sfntRunSubstitutions(sfnt: SfntFile): RunSubstitutions | null {
+/** The run shaping of `sfnt` at its default instance, or null for a font with no `cmap` this previewer reads. */
+export function sfntRunShaping(sfnt: SfntFile): RunShaping | null {
   const face = sfntRunShapingFace(sfnt);
-  return face && keptRunSubstitutions(face, defaultSubstitution(face.gsub));
+  return face && keptRunShaping(face, face.gsub ? defaultSubstitution(face.gsub) : undefined);
+}
+
+/** The run shaping of a face with no `shaping`, kept per face so its clusters normalise against its `hasGlyph`. */
+const unshapedRuns = perObject((metrics: FontMetrics) => characterRunShaping((ch) => metrics.hasGlyph(ch)));
+
+/**
+ * The clusters of `chars` and the glyphs each draws: at the axis values of the face's
+ * `variation_opentype` where its outlines shape them, else at the default instance.
+ */
+export function getFontRunShaping(metrics: FontMetrics, chars: readonly string[]): readonly RunCluster[] {
+  const { outlines, opentype } = metrics;
+  const atInstance = isInstanced(opentype) ? outlines?.shapingAt?.(chars, opentype) : null;
+  return atInstance ?? (metrics.shaping ?? unshapedRuns(metrics))(chars);
 }
