@@ -50,9 +50,15 @@ function loadKey(bytes: object, { hinting, isAutohinterForced }: GlyphLoad): obj
   return key;
 }
 
-/** The outlines of `bytes` as `load` loads them, starting the load on the first peek. */
-function peekLoadedOutlines(bytes: ArrayBuffer, load: GlyphLoad): PeekedOutlines {
-  return peekOutlines(loadKey(bytes, load), () => settledOutlines(() => openFontOutlines(bytes, load)));
+/** The outlines of the font `readBytes` gives, keyed by `font`, as `load` loads them, starting the load on the first peek. */
+function peekLoadedOutlines(
+  font: object,
+  readBytes: () => ArrayBuffer | Promise<ArrayBuffer>,
+  load: GlyphLoad
+): PeekedOutlines {
+  return peekOutlines(loadKey(font, load), () =>
+    settledOutlines(async () => openFontOutlines(await readBytes(), load))
+  );
 }
 
 /** The outlines of a font with no face: it lacks every glyph, so a TextMesh draws each as its fallback quad. */
@@ -72,12 +78,8 @@ function settledOutlines(read: () => Promise<SfntOutlines | null>): Promise<Sfnt
  * fetches them.
  */
 function peekBundledOutlines(load: GlyphLoad): PeekedOutlines {
-  return peekOutlines(loadKey(BUNDLED, load), () =>
-    settledOutlines(async () => {
-      const { bundledFontBytes } = await import('./bundledFontBytes');
-      return openFontOutlines(bundledFontBytes(), load);
-    })
-  );
+  const readBytes = async () => (await import('./bundledFontBytes')).bundledFontBytes();
+  return peekLoadedOutlines(BUNDLED, readBytes, load);
 }
 
 /**
@@ -94,7 +96,10 @@ export function peekSceneFontOutlines(font: FontResource | null | undefined): Pe
   if (face && hasBitmap(face)) return bitmapFontOutlines(face.bitmap);
   const bytes = face?.bytes;
   if (!face || !bytes) return null;
-  return peekLoadedOutlines(bytes, { ...CONTOUR_LOAD, isAutohinterForced: fontForcesAutohinter(face) });
+  return peekLoadedOutlines(bytes, () => bytes, {
+    ...CONTOUR_LOAD,
+    isAutohinterForced: fontForcesAutohinter(face),
+  });
 }
 
 /**
@@ -106,7 +111,7 @@ export function peekSceneFontOutlines(font: FontResource | null | undefined): Pe
  */
 export function peekGlyphOutlines(face: FileWithBytes, metrics: FontMetrics): PeekedOutlines {
   if (!isCanvasFontMetrics(metrics)) return null;
-  return peekLoadedOutlines(face.bytes, {
+  return peekLoadedOutlines(face.bytes, () => face.bytes, {
     hinting: fontHinting(face),
     isAutohinterForced: fontForcesAutohinter(face),
   });

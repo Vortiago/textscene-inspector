@@ -1,6 +1,6 @@
 /**
  * The bundled font as the canvas painter draws it: a bundled atlas face turned into the bundled
- * canvas face, for the embolden and the outline ring the atlas field cannot carry (ADR-0040).
+ * canvas face, which draws each glyph from FreeType's bitmap of its outline (ADR-0040).
  */
 import { peekBundledCanvasFontMetrics } from './bundledFontLoader';
 import { withVariation, type FontMetrics } from './fontMetrics';

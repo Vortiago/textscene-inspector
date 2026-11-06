@@ -8,6 +8,7 @@
 // (`bake-metrics.mjs`), while canvas-2D calls pass it. Each glyph draws at the pen
 // `x` `textLayout.ts` computed, so a whole-string `fillText` cannot re-shape it
 // with the ligatures or kerning the measurer folded in (`runtimeFontMetrics.ts`).
+import { channelToByte } from '../../../../utils/colorSpace';
 import * as THREE from 'three';
 import {
   glyphContoursReader,
@@ -226,20 +227,14 @@ export function originPhase(placePx: Readonly<Vector2>): Vector2 {
  * `tint.a` once.
  */
 function opaqueByteColour(tint: Pick<Rgba, 'r' | 'g' | 'b'>): ByteColour {
-  const clamp255 = (c: number) => Math.max(0, Math.min(255, Math.round(c * 255)));
-  return [clamp255(tint.r), clamp255(tint.g), clamp255(tint.b)];
+  return [channelToByte(tint.r), channelToByte(tint.g), channelToByte(tint.b)];
 }
 
 /**
- * The raster of what the context has drawn with each glyph bitmap laid over it, in `colour`. It is
- * read back, not put, as a canvas keeps no colour under alpha 0 (`colourRaster`).
+ * `image` with each glyph bitmap laid over it, in `colour`. The image is read back, not put, as a
+ * canvas keeps no colour under alpha 0 (`colourRaster`).
  */
-function glyphRaster(
-  ctx: CanvasRenderingContext2D,
-  bitmaps: readonly GlyphBitmap[],
-  colour: ByteColour
-): ImageData {
-  const image = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+function glyphRaster(image: ImageData, bitmaps: readonly GlyphBitmap[], colour: ByteColour): ImageData {
   for (const bitmap of bitmaps) blendGlyphBitmap(image, bitmap);
   colourRaster(image, colour);
   return image;
@@ -323,12 +318,15 @@ export function paintSceneFontCanvas(
   const contoursOf = contourOutlines && glyphContoursReader(contourOutlines, fontSizePx, variation);
   const glyphBitmaps: GlyphBitmap[] = [];
   const outlineRadiusPx = strokeWidthPx / 2;
-  const drawGlyphBitmap = (contours: GlyphContours, penX: number, baselineY: number) => {
+  const collectGlyphBitmap = (contours: GlyphContours, penX: number, baselineY: number) => {
     const bitmap = placedGlyphBitmap(contours, penX, baselineY, outlineRadiusPx);
     if (bitmap) glyphBitmaps.push(bitmap);
   };
 
+  // A paint where every glyph draws from its bitmap reads no pixel back from the canvas.
+  let hasTextInk = false;
   const paintGlyphText = (char: string, penX: number, baselineY: number, growthPx: number | undefined) => {
+    hasTextInk = true;
     if (stroked) ctx.strokeText(char, penX, baselineY);
     else if (growthPx) paintEmboldenedFill(ctx, char, penX, baselineY, growthPx);
     else ctx.fillText(char, penX, baselineY);
@@ -372,14 +370,16 @@ export function paintSceneFontCanvas(
       // Godot shears a glyph about its own origin, so the line's shear must not move an offset origin.
       const lineShearedPenX = isLineSheared ? penX + skew * yOffsetPx : penX;
       const contours = contoursOf ? contoursOf(gp.char) : null;
-      if (contours) drawGlyphBitmap(contours, penX, glyphBaselineY);
+      if (contours) collectGlyphBitmap(contours, penX, glyphBaselineY);
       else if (contourOutlines && skew !== 0)
         paintShearedGlyphText(gp.char, penX, glyphBaselineY, gp.emboldenGrowthPx);
       else paintGlyphText(gp.char, lineShearedPenX, glyphBaselineY, gp.emboldenGrowthPx);
     }
     ctx.restore();
   });
-  return glyphRaster(ctx, glyphBitmaps, colour);
+  const { width, height } = canvas;
+  const image = hasTextInk ? ctx.getImageData(0, 0, width, height) : new ImageData(width, height);
+  return glyphRaster(image, glyphBitmaps, colour);
 }
 
 interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {

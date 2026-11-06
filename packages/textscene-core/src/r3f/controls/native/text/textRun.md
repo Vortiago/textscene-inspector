@@ -37,7 +37,8 @@ The scene-font canvas texture is `SRGBColorSpace`, not the 2D-canvas rule's `NoC
 `paintSceneFontCanvas` draws each glyph that has an outline as FreeType draws it for Godot
 (`glyphCoverage.ts`). `ftStroker.ts` strokes the outline ring and `ftGrays.ts` covers each pixel,
 so a glyph matches Godot's bitmap to the level (`hintingTarget.test.ts`, `ftStroker.test.ts`). The
-painter blends the bitmaps into the canvas with `putImageData`.
+painter blends the bitmaps into a raster it reads back from the canvas, or a blank one where no
+glyph draws as text.
 
 - A canvas fill of the same outline is off by up to 25 levels, and a canvas stroke by up to 27 on
   a curve, because Chromium's rasteriser does not cover by FreeType's integer cell sums.

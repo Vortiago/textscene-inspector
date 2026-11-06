@@ -8,6 +8,7 @@ import { strokeGlyphContours } from './ftStroker';
 import { FIXED_26_6_ONE } from './fontMetrics';
 import { toOutlineUnits, type GlyphContours } from './glyphContours';
 import { perObject } from '../../../../utils/perObject';
+import { recentlyRead } from '../../../../utils/recentlyRead';
 
 /** A coverage bitmap and the grid it covers, in px from the glyph origin or, once placed, in raster px. */
 export interface GlyphBitmap {
@@ -21,8 +22,10 @@ export interface GlyphBitmap {
  */
 const MAX_BITMAPS_PER_CONTOUR = 64;
 
-/** The bitmaps drawn so far of each glyph outline, by subpixel shift and outline radius. */
-const drawnBitmaps = perObject((_contours: GlyphContours) => new Map<string, GlyphBitmap | null>());
+/** The bitmaps drawn most recently of each glyph outline, by subpixel shift and outline radius. */
+const drawnBitmaps = perObject((_contours: GlyphContours) =>
+  recentlyRead<string, GlyphBitmap | null>(MAX_BITMAPS_PER_CONTOUR)
+);
 
 /** `contours` moved by `(dx, dy)` px. */
 function movedContours(contours: GlyphContours, dx: number, dy: number): GlyphContours {
@@ -67,13 +70,9 @@ export function placedGlyphBitmap(
   // FreeType moves an outline (`FT_Outline_Translate`) in 1/64 px.
   const dx = toOutlineUnits(originX - wholeX) / FIXED_26_6_ONE;
   const dy = toOutlineUnits(originY - wholeY) / FIXED_26_6_ONE;
-  const bitmaps = drawnBitmaps(contours);
-  const key = `${dx},${dy},${outlineRadiusPx}`;
-  let bitmap = bitmaps.get(key);
-  if (bitmap === undefined) {
-    if (bitmaps.size >= MAX_BITMAPS_PER_CONTOUR) bitmaps.delete(bitmaps.keys().next().value!);
-    bitmaps.set(key, (bitmap = drawGlyphBitmap(contours, dx, dy, outlineRadiusPx)));
-  }
+  const bitmap = drawnBitmaps(contours)(`${dx},${dy},${outlineRadiusPx}`, () =>
+    drawGlyphBitmap(contours, dx, dy, outlineRadiusPx)
+  );
   if (!bitmap) return null;
   const { grid, coverage } = bitmap;
   return { grid: { ...grid, left: grid.left + wholeX, top: grid.top + wholeY }, coverage };
@@ -88,14 +87,16 @@ export type ByteColour = readonly [red: number, green: number, blue: number];
  */
 export function blendGlyphBitmap(image: ImageData, { grid, coverage }: GlyphBitmap): void {
   const { data, width, height } = image;
-  for (let row = 0; row < grid.height; row++) {
+  const firstRow = Math.max(0, -grid.top);
+  const endRow = Math.min(grid.height, height - grid.top);
+  const firstColumn = Math.max(0, -grid.left);
+  const endColumn = Math.min(grid.width, width - grid.left);
+  for (let row = firstRow; row < endRow; row++) {
     const y = grid.top + row;
-    if (y < 0 || y >= height) continue;
-    for (let column = 0; column < grid.width; column++) {
-      const x = grid.left + column;
+    for (let column = firstColumn; column < endColumn; column++) {
       const level = coverage[row * grid.width + column]!;
-      if (x < 0 || x >= width || level === 0) continue;
-      const at = (y * width + x) * 4 + 3;
+      if (level === 0) continue;
+      const at = (y * width + grid.left + column) * 4 + 3;
       data[at] = Math.round(level + (data[at]! * (255 - level)) / 255);
     }
   }
