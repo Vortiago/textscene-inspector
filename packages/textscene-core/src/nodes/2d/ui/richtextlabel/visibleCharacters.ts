@@ -8,6 +8,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { perObject } from '../../../../utils/perObject';
 import { storedReal } from '../../../../godot/math/real';
 import { codePointCount, utf16OffsetOf, utf16WidthAt } from '../../../../godot/string/codePoints';
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
@@ -145,8 +146,16 @@ export function countedLayoutForReveal(
 ): CountedLayout | undefined {
   return reveal.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING
     ? undefined
-    : countedLayoutOf(layout, runs);
+    : countedLayoutsOf(layout)(runs);
 }
+
+/**
+ * The counted layout of each layout and runs pair, so a reveal tick on an unchanged layout keeps the same filtered
+ * line arrays and the ligature cache hits.
+ */
+const countedLayoutsOf = perObject((layout: TextLayoutResult) =>
+  perObject((runs: readonly CountedRun[]) => countedLayoutOf(layout, runs))
+);
 
 /** `layout` as the budget counts it. */
 function countedLayoutOf(layout: TextLayoutResult, runs: readonly CountedRun[]): CountedLayout {
