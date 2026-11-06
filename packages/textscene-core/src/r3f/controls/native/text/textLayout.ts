@@ -15,9 +15,8 @@ import { round as godotRound } from '../../../../godot/math/math';
 import { hexCodeBoxAdvanceSize } from './hexCodeBox';
 import { isBitmapFontMetrics } from './bitmapFontMetrics';
 import {
-  FIXED_26_6_ONE,
   fontUsesSubpixelPositioning,
-  glyphAdvance26_6,
+  glyphOffsetPx,
   getFontAscentPx,
   getFontEmboldenGrowthPx,
   getFontExtraAdvancePx,
@@ -162,7 +161,6 @@ export interface ShapeTextOptions {
 const BREAK_TRIM_START_EDGE_SPACES = 1 << 6;
 const BREAK_TRIM_END_EDGE_SPACES = 1 << 7;
 
-/** One glyph's placement within its line, in target-font-size px. */
 /** A mark drawn over its base, with its origin against the base's, px with y down (`x_off` and `y_off` of the mark's glyph). */
 export interface MarkPlacement {
   char: string;
@@ -173,9 +171,10 @@ export interface MarkPlacement {
 /** The glyphs of a character the face lacks and draws as a base and its marks, which sit over the base's origin. */
 export interface PlacedDecomposition {
   base: string;
-  marks: readonly MarkPlacement[];
+  marks: MarkPlacement[];
 }
 
+/** One glyph's placement within its line, in target-font-size px. */
 export interface GlyphPlacement {
   /** The character rendered (post-uppercase-transform, if requested). */
   char: string;
@@ -572,23 +571,12 @@ function placedDecomposition(
 ): PlacedDecomposition | undefined {
   const decomposed = face.decomposition?.(ch);
   if (!decomposed) return undefined;
-  // FreeType scales a negative value as its magnitude, then negates (`FT_MulFix`).
-  const toPx = (units: number) =>
-    (Math.sign(units) * glyphAdvance26_6(Math.abs(units), face.unitsPerEm, fontSizePx)) / FIXED_26_6_ONE;
   const marks = decomposed.marks.map(({ char, xUnits, yUnits }) => ({
     char,
-    x: toPx(xUnits),
-    y: -godotRound(toPx(yUnits)),
+    x: glyphOffsetPx(xUnits, face.unitsPerEm, fontSizePx),
+    y: -godotRound(glyphOffsetPx(yUnits, face.unitsPerEm, fontSizePx)),
   }));
   return { base: decomposed.base, marks };
-}
-
-/** The characters `glyph` draws and where, from its pen origin: itself, or its base and marks. */
-export function drawnPieces(glyph: Pick<GlyphPlacement, 'char' | 'decomposition'>): readonly MarkPlacement[] {
-  const { decomposition } = glyph;
-  return decomposition
-    ? [{ char: decomposition.base, x: 0, y: 0 }, ...decomposition.marks]
-    : [{ char: glyph.char, x: 0, y: 0 }];
 }
 
 /**
@@ -728,14 +716,13 @@ function roundGlyphAdvance(
   const fullAdvance = carried + glyphs[i]!.advance;
   const rounded = godotRound(fullAdvance);
   glyphs[i]!.advance = rounded;
-  // A mark's `x_off` takes the remainder too (`text_server_adv.cpp:7062`).
-  const { decomposition } = glyphs[i]!;
-  if (decomposition)
-    glyphs[i]!.decomposition = {
-      base: decomposition.base,
-      marks: decomposition.marks.map((mark) => ({ ...mark, x: godotRound(carried + mark.x) })),
-    };
+  roundMarkOffsets(glyphs[i]!.decomposition, carried);
   return fullAdvance - rounded;
+}
+
+/** A mark's `x_off` takes the rounding remainder the glyph carried in, as the advance does (`text_server_adv.cpp:7062`). Mutates the marks. */
+function roundMarkOffsets(decomposition: PlacedDecomposition | undefined, carriedPx: number): void {
+  for (const mark of decomposition?.marks ?? []) mark.x = godotRound(carriedPx + mark.x);
 }
 
 /**

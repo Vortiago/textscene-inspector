@@ -24,10 +24,10 @@ import {
 import { hexCodeBoxAdvanceSize } from '../../../r3f/controls/native/text/hexCodeBox';
 import type { SfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import {
-  drawnPieces,
   isControlChar,
   shapedTextSizeWidthPx,
   type GlyphPlacement,
+  type PlacedDecomposition,
 } from '../../../r3f/controls/native/text/textLayout';
 import { perObject } from '../../../utils/perObject';
 import { recentlyRead } from '../../../utils/recentlyRead';
@@ -162,6 +162,22 @@ function glyphMeshesByFace(
   };
 }
 
+/** A decomposed glyph's base and marks, each at its offset from the glyph's origin, px with y down. */
+function placeDecomposedGlyph(
+  placed: PlacedGlyph[],
+  { base, marks }: PlacedDecomposition,
+  origin: { x: number; y: number },
+  pixelSize: number,
+  meshOf: (char: string) => GlyphMeshData | null
+): void {
+  const baseMesh = meshOf(base);
+  if (baseMesh) placed.push({ ...origin, mesh: baseMesh });
+  for (const { char, x, y } of marks) {
+    const mesh = meshOf(char);
+    if (mesh) placed.push({ x: origin.x + x * pixelSize, y: origin.y - y * pixelSize, mesh });
+  }
+}
+
 function placeGlyphs(
   properties: TextMeshProperties,
   { lines, baselineOffsetPx, linePitchPx }: TextMeshLines,
@@ -182,17 +198,17 @@ function placeGlyphs(
       const codepoint = glyph.char.codePointAt(0)!;
       if (isControlChar(codepoint) || codepoint === ZERO_WIDTH_SPACE) continue;
       const origin = { x: startX + glyph.x * pixelSize, y: baseline };
-      const pieces = drawnPieces(glyph);
-      const meshes = pieces.map(({ char }) => meshOf(glyph, char));
-      if (meshes.some((mesh) => mesh === null) && !glyph.decomposition) {
-        const box = hexCodeBoxAdvanceSize(properties.fontSize, codepoint);
-        placed.push({ ...origin, box: { x: box.x * pixelSize, y: box.y * pixelSize } });
+      const { decomposition } = glyph;
+      if (decomposition) {
+        placeDecomposedGlyph(placed, decomposition, origin, pixelSize, (char) => meshOf(glyph, char));
         continue;
       }
-      pieces.forEach(({ x, y }, i) => {
-        const mesh = meshes[i];
-        if (mesh) placed.push({ x: origin.x + x * pixelSize, y: origin.y - y * pixelSize, mesh });
-      });
+      const mesh = meshOf(glyph, glyph.char);
+      if (mesh) placed.push({ ...origin, mesh });
+      else {
+        const box = hexCodeBoxAdvanceSize(properties.fontSize, codepoint);
+        placed.push({ ...origin, box: { x: box.x * pixelSize, y: box.y * pixelSize } });
+      }
     }
     lineTop -= linePitchPx * pixelSize;
   }

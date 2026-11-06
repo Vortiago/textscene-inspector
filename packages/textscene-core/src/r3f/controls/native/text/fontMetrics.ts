@@ -298,6 +298,14 @@ export function glyphAdvance26_6(units: number, unitsPerEm: number, fontSizePx: 
 }
 
 /**
+ * A signed offset of `units` at `fontSizePx`, in px. FreeType scales a negative value as its
+ * magnitude and negates it (`FT_MulFix`), which `glyphAdvance26_6` alone does not for a sign.
+ */
+export function glyphOffsetPx(units: number, unitsPerEm: number, fontSizePx: number): number {
+  return (Math.sign(units) * glyphAdvance26_6(Math.abs(units), unitsPerEm, fontSizePx)) / FIXED_26_6_ONE;
+}
+
+/**
  * The advance in 26.6 of `ch` at the axis values of the face's `variation_opentype`, or null for a
  * face at its default instance and a character with no glyph: the default advance stands.
  */

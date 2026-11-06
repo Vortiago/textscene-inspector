@@ -14,12 +14,14 @@ import {
   coverageIndex,
   GposType,
   i16,
+  LookupFlag,
   sfntGpos,
   u16,
   type Lookup,
   type LayoutTable,
 } from './autofit/openTypeLayout';
 import { glyphPropsReader, lookupMatcher } from './autofit/openTypeGdef';
+
 import { defaultSubstitution, featureLookups } from './autofit/openTypeFeatures';
 import { sfntGlyphIndex } from './sfntCmap';
 import type { SfntFile } from './sfntTables';
@@ -30,8 +32,8 @@ export interface MarkOffset {
   readonly y: number;
 }
 
-/** The glyph class bit of a `GDEF` mark in the props `glyphPropsReader` gives. */
-const MARK_PROPS = 0x8;
+/** The props bit `glyphPropsReader` gives a `GDEF` mark. */
+const MARK_PROPS = LookupFlag.IGNORE_MARKS;
 
 const ORIGIN: MarkOffset = { x: 0, y: 0 };
 
@@ -91,6 +93,45 @@ interface Attachment {
   readonly delta: MarkOffset;
 }
 
+/** The glyphs of a cluster with their `glyphPropsReader` props. */
+interface ClusterGlyphs {
+  readonly glyphs: readonly number[];
+  readonly props: readonly number[];
+}
+
+/**
+ * The glyph a subtable of `type` attaches `mark` to: the nearest base before it, which a mark-to-base
+ * lookup finds past marks, or the glyph just before it when that is a mark. -1 for none.
+ */
+function targetOf({ props }: ClusterGlyphs, mark: number, type: number): number {
+  if (type === GposType.MARK_TO_MARK) return props[mark - 1]! & MARK_PROPS ? mark - 1 : -1;
+  for (let base = mark - 1; base >= 0; base--) if (!(props[base]! & MARK_PROPS)) return base;
+  return -1;
+}
+
+/** The first subtable that attaches `mark` to its target, or undefined where none does. */
+function attachmentOf(
+  dv: DataView,
+  cluster: ClusterGlyphs,
+  mark: number,
+  subtables: Lookup['subtables']
+): Attachment | undefined {
+  for (const { type, offset } of subtables) {
+    const target = targetOf(cluster, mark, type);
+    if (target < 0) continue;
+    const anchors = anchorsOf(dv, offset, cluster.glyphs[mark]!, cluster.glyphs[target]!);
+    if (!anchors) continue;
+    return {
+      target,
+      delta: {
+        x: anchors.targetAnchor.x - anchors.markAnchor.x,
+        y: anchors.targetAnchor.y - anchors.markAnchor.y,
+      },
+    };
+  }
+  return undefined;
+}
+
 /**
  * The offset of each character of a cluster from the first, in design units, or null for a font
  * with no mark lookup. The first character is the base. A mark that no lookup attaches stays at the
@@ -106,57 +147,31 @@ export function markPositioningReader(sfnt: SfntFile): ClusterOffsets | null {
   if (lookups.length === 0) return null;
   const propsOf = glyphPropsReader(sfnt);
   const matches = lookupMatcher(sfnt);
-  const { dv } = table;
 
   return (cluster) => {
-    const glyphs = cluster.map((ch) => {
+    const lookupGlyphs = cluster.map((ch) => {
       const codePoint = ch.codePointAt(0)!;
       return { glyph: glyphIndexOf(codePoint), codePoint };
     });
-    const props = glyphs.map(propsOf);
-    const attachments: (Attachment | undefined)[] = glyphs.map(() => undefined);
+    const glyphs = { glyphs: lookupGlyphs.map(({ glyph }) => glyph), props: lookupGlyphs.map(propsOf) };
+    const attachments: (Attachment | undefined)[] = [];
     for (const { props: lookupProps, subtables } of lookups) {
-      for (let mark = 1; mark < glyphs.length; mark++) {
-        if (!(props[mark]! & MARK_PROPS) || !matches(glyphs[mark]!.glyph, props[mark]!, lookupProps))
+      for (let mark = 1; mark < glyphs.glyphs.length; mark++) {
+        if (
+          !(glyphs.props[mark]! & MARK_PROPS) ||
+          !matches(glyphs.glyphs[mark]!, glyphs.props[mark]!, lookupProps)
+        )
           continue;
-        const attachment = attachmentOf(mark, subtables);
-        if (attachment) attachments[mark] = attachment;
+        attachments[mark] = attachmentOf(table.dv, glyphs, mark, subtables) ?? attachments[mark];
       }
     }
-
-    function attachmentOf(mark: number, subtables: Lookup['subtables']): Attachment | undefined {
-      for (const { type, offset } of subtables) {
-        const target = targetOf(mark, type);
-        if (target < 0) continue;
-        const anchors = anchorsOf(dv, offset, glyphs[mark]!.glyph, glyphs[target]!.glyph);
-        if (anchors)
-          return {
-            target,
-            delta: {
-              x: anchors.targetAnchor.x - anchors.markAnchor.x,
-              y: anchors.targetAnchor.y - anchors.markAnchor.y,
-            },
-          };
-      }
-      return undefined;
-    }
-
-    /** The glyph `type` attaches `mark` to: the nearest mark-skipping base, or the glyph just before it. */
-    function targetOf(mark: number, type: number): number {
-      if (type === GposType.MARK_TO_MARK) return props[mark - 1]! & MARK_PROPS ? mark - 1 : -1;
-      for (let base = mark - 1; base >= 0; base--) if (!(props[base]! & MARK_PROPS)) return base;
-      return -1;
-    }
-
     const offsets: MarkOffset[] = [ORIGIN];
-    for (let i = 1; i < glyphs.length; i++) {
+    for (let i = 1; i < glyphs.glyphs.length; i++) {
       const attachment = attachments[i];
-      if (!attachment) {
-        offsets.push(offsets[i - 1]!);
-        continue;
-      }
-      const target = offsets[attachment.target]!;
-      offsets.push({ x: target.x + attachment.delta.x, y: target.y + attachment.delta.y });
+      const target = attachment ? offsets[attachment.target]! : offsets[i - 1]!;
+      offsets.push(
+        attachment ? { x: target.x + attachment.delta.x, y: target.y + attachment.delta.y } : target
+      );
     }
     return offsets;
   };

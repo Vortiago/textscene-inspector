@@ -4,9 +4,11 @@
  */
 
 import { drawnCharacters } from './canonicalGlyphs';
-import { markPositioningReader } from './markPositioning';
+import { markPositioningReader, type ClusterOffsets } from './markPositioning';
 import { sfntMapsGlyph } from './sfntCmap';
 import type { SfntFile } from './sfntTables';
+
+const NO_OFFSET = { x: 0, y: 0 };
 
 /** A mark drawn over a base, and where its origin sits against the base's origin, in design units with y up. */
 export interface DrawnMark {
@@ -31,12 +33,17 @@ export function sfntDecomposition(sfnt: SfntFile): Decomposition | null {
   const mapsGlyph = sfntMapsGlyph(sfnt);
   if (!mapsGlyph) return null;
   // Read at the first decomposed character: most fonts never need their `GPOS`.
-  let offsetsOf: ReturnType<typeof markPositioningReader> | undefined;
+  let offsetsOf: ClusterOffsets | null | undefined;
   const kept = new Map<string, DecomposedGlyph | null>();
   return (ch) => {
     let glyph = kept.get(ch);
     if (glyph === undefined)
-      kept.set(ch, (glyph = decompose(ch, mapsGlyph, () => (offsetsOf ??= markPositioningReader(sfnt)))));
+      kept.set(
+        ch,
+        (glyph = decompose(ch, mapsGlyph, () =>
+          offsetsOf === undefined ? (offsetsOf = markPositioningReader(sfnt)) : offsetsOf
+        ))
+      );
     return glyph;
   };
 }
@@ -44,15 +51,14 @@ export function sfntDecomposition(sfnt: SfntFile): Decomposition | null {
 function decompose(
   ch: string,
   mapsGlyph: (ch: string) => boolean,
-  offsetsOf: () => ReturnType<typeof markPositioningReader>
+  offsetsOf: () => ClusterOffsets | null
 ): DecomposedGlyph | null {
   const drawn = drawnCharacters(ch, mapsGlyph);
   if (!drawn || drawn.length < 2) return null;
   const offsets = offsetsOf()?.(drawn);
-  const marks = drawn.slice(1).map((char, i) => ({
-    char,
-    xUnits: offsets?.[i + 1]?.x ?? 0,
-    yUnits: offsets?.[i + 1]?.y ?? 0,
-  }));
+  const marks = drawn.slice(1).map((char, i) => {
+    const { x, y } = offsets?.[i + 1] ?? NO_OFFSET;
+    return { char, xUnits: x, yUnits: y };
+  });
   return { base: drawn[0]!, marks };
 }
