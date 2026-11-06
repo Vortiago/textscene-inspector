@@ -7,13 +7,22 @@
 import { useMemo, useSyncExternalStore, type RefObject } from 'react';
 import type { ResourceLoader } from './ResourceLoader';
 import type { ResourceType } from './ResourceEventBus';
+import { subscribeToNothing } from '../utils/subscribeToNothing';
 
 interface VersionStore {
   subscribe: (onChange: () => void) => () => void;
   get: () => number;
 }
 
-const NO_UNSUBSCRIBE = () => {};
+/**
+ * Written only by `nextVersion`. Every version of every store comes from it, so a store rebuilt
+ * for new inputs starts above the last one and never repeats a number a reader has seen.
+ */
+let versionClock = 0;
+
+function nextVersion(): number {
+  return ++versionClock;
+}
 
 /**
  * The version of one reader. `version` is written only by `subscribe` and its listener. A store
@@ -25,33 +34,35 @@ function createVersionStore(
   readKeys: RefObject<ReadonlySet<string>> | undefined,
   onlyReadKeys: boolean
 ): VersionStore {
-  let version = 0;
-  const settleCount = () => loader?.eventBus.settleCount(busTypes) ?? 0;
-  // The settles this reader has accounted for: it starts at the render that built the store.
-  let accountedSettles = settleCount();
+  let version = nextVersion();
+  if (!loader) return { subscribe: subscribeToNothing, get: () => version };
+
+  const { eventBus } = loader;
+  // The settles this reader has accounted for: it starts at the render that built the store, and
+  // moves to the count at each unsubscribe, since no listener sees a settle after that.
+  let accountedSettles = eventBus.settleCount(busTypes);
 
   return {
     get: () => version,
     subscribe(onChange) {
-      if (!loader) return NO_UNSUBSCRIBE;
       // A settle between the render and this subscription woke no one: React reads the snapshot
       // again after subscribing, so moving it here renders the reader once more.
-      if (settleCount() !== accountedSettles) {
-        accountedSettles = settleCount();
-        version += 1;
-      }
-      return loader.eventBus.onChange(busTypes, ({ busType, event, key }) => {
+      if (eventBus.settleCount(busTypes) !== accountedSettles) version = nextVersion();
+      const unsubscribe = eventBus.onChange(busTypes, ({ busType, event, key }) => {
         const isRead = readKeys?.current.has(key) ?? false;
         if (event === 'invalidated') {
           if (isRead) loader.processor(busType)?.request(key);
           return;
         }
-        accountedSettles = settleCount();
         if (isRead || !onlyReadKeys) {
-          version += 1;
+          version = nextVersion();
           onChange();
         }
       });
+      return () => {
+        unsubscribe();
+        accountedSettles = eventBus.settleCount(busTypes);
+      };
     },
   };
 }
@@ -64,7 +75,7 @@ function createVersionStore(
  * `readKeys` moves nothing, so a reader of few files does not render for every file in the project.
  * A load on `busTypes` that settles between the render and the subscription, which commits later,
  * moves it once after subscribing: that settle woke no one, and its reader would wait for good.
- * A caller keeps `busTypes` and `readKeys` stable: a new one starts the version again from zero.
+ * The number only grows, whatever inputs the reader changes.
  */
 export function useCacheVersion(
   loader: ResourceLoader | null | undefined,

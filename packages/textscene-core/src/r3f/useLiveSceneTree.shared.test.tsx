@@ -83,7 +83,7 @@ describe('the live tree shared by its consumers', () => {
   it('shows a sub-scene that loads between the first render and the first subscription', () => {
     const { fake, wrapper } = mount({ seeded: false });
     const LoadsAfterRender = () => {
-      fake.scenes.seed('res://kid.tscn', new TscnParser().parse(KID));
+      fake.scenes._resolve('res://kid.tscn', new TscnParser().parse(KID));
       return null;
     };
     const wrapperWithLateLoad = ({ children }: { children: ReactNode }) =>

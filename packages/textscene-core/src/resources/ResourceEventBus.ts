@@ -41,15 +41,7 @@ export class ResourceEventBus {
   private handlers = new Map<string, Set<EventHandler<unknown>>>();
   private threeManager: THREE.LoadingManager;
   /** Written only by `emit`, never reset: a reader compares two reads of it. */
-  private settles = new Map<ResourceType, number>();
-
-  /**
-   * How many loads have settled, loaded or failed, on `busTypes`. A reader that subscribes after it
-   * rendered compares it with the count at its render, to learn of a settle that landed in between.
-   */
-  settleCount(busTypes: readonly ResourceType[]): number {
-    return busTypes.reduce((sum, busType) => sum + (this.settles.get(busType) ?? 0), 0);
-  }
+  private settles: Partial<Record<ResourceType, number>> = {};
 
   constructor() {
     this.threeManager = new THREE.LoadingManager();
@@ -57,6 +49,16 @@ export class ResourceEventBus {
     this.threeManager.onProgress = (url, loaded, total) => {
       this.emit<ProgressData>('texture', 'progress', url, { loaded, total });
     };
+  }
+
+  /**
+   * How many loads have settled, loaded or failed, on `busTypes`. A reader that subscribes after it
+   * rendered compares it with the count at its render, to learn of a settle that landed in between.
+   */
+  settleCount(busTypes: readonly ResourceType[]): number {
+    let count = 0;
+    for (const busType of busTypes) count += this.settles[busType] ?? 0;
+    return count;
   }
 
   /**
@@ -95,7 +97,7 @@ export class ResourceEventBus {
   emit<T = unknown>(resourceType: ResourceType, eventType: ResourceEventType, id: string, data?: T): void {
     const key = `${resourceType}:${eventType}`;
     if (eventType === 'loaded' || eventType === 'failed') {
-      this.settles.set(resourceType, (this.settles.get(resourceType) ?? 0) + 1);
+      this.settles[resourceType] = (this.settles[resourceType] ?? 0) + 1;
     }
     const handlers = this.handlers.get(key);
     if (handlers) {

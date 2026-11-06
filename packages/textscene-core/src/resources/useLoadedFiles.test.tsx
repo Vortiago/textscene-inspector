@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { act, render, renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import type { ParsedResource } from '../parser/parsedResource';
 import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 import type { FontFileResource } from './fonts/font/types';
 import type { LoadedFile } from './scopedResource';
 import { createFakeResourceLoader, type FakeResourceLoader } from './testing/createFakeResourceLoader';
 import { missingResourcesWrapper } from './testing/missingResourcesWrapper';
+import { renderWithSettleInGap } from './testing/renderWithSettleInGap';
 import { FONT_FILES, useCachedFiles, useLoadedFiles } from './useLoadedFiles';
 
 const OUTER = 'res://outer.tres';
@@ -111,26 +112,14 @@ describe('useLoadedFiles', () => {
 
   it('stops loading for a file that lands between the render and the subscription (error path)', () => {
     const { fake } = fakeRequesting();
-    let isLoading: boolean | undefined;
-    function Reader() {
-      isLoading = useLoadedFiles(() => [OUTER]).isLoading;
-      return null;
-    }
-    // Renders after `Reader`, before the effects commit: the sibling's load lands in that gap.
-    function Sibling() {
-      fake.resources._resolve(OUTER, FILE);
-      return null;
-    }
 
-    render(
-      <>
-        <Reader />
-        <Sibling />
-      </>,
-      { wrapper: missingResourcesWrapper(fake.loader) }
+    const reads = renderWithSettleInGap(
+      () => useLoadedFiles(() => [OUTER]).isLoading,
+      () => fake.resources._resolve(OUTER, FILE),
+      missingResourcesWrapper(fake.loader)
     );
 
-    expect(isLoading).toBe(false);
+    expect(reads.at(-1)).toBe(false);
   });
 
   it('is not loading, and requests nothing, for a plan that names no file (edge case)', () => {

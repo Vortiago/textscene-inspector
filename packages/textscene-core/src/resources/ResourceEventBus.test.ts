@@ -114,6 +114,30 @@ describe('ResourceEventBus', () => {
     });
   });
 
+  describe('settleCount', () => {
+    it('counts a loaded and a failed on the buses asked about, and nothing else', () => {
+      eventBus.emit('scene', 'loaded', 'a');
+      eventBus.emit('scene', 'failed', 'b');
+      eventBus.emit('scene', 'requested', 'c');
+      eventBus.emit('glb', 'loaded', 'd');
+
+      expect(eventBus.settleCount(['scene'])).toBe(2);
+      expect(eventBus.settleCount(['scene', 'glb'])).toBe(3);
+      expect(eventBus.settleCount(['texture'])).toBe(0);
+    });
+
+    it('is already bumped when a handler of the settle reads it', () => {
+      let seen = -1;
+      eventBus.on('scene', 'loaded', () => {
+        seen = eventBus.settleCount(['scene']);
+      });
+
+      eventBus.emit('scene', 'loaded', 'a');
+
+      expect(seen).toBe(1);
+    });
+  });
+
   describe('once', () => {
     it('resolves when matching event fires', async () => {
       const promise = eventBus.once<string>('texture', 'loaded', 'tex1');

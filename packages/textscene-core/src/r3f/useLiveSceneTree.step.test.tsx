@@ -46,10 +46,10 @@ function mount(node: TscnNode) {
   return { fake, hook };
 }
 
-/** Asks the step of the instance, and then lets `kid.tscn` land with no event, as a load nobody listens for does. */
+/** Asks the step of the instance, and then lets `kid.tscn` load while no reader listens. */
 function LoadsUnseen({ fake }: { fake: ReturnType<typeof createFakeResourceLoader> }) {
   useLiveStepOf(instance, scope);
-  fake.scenes.seed('res://kid.tscn', kid);
+  fake.scenes._resolve('res://kid.tscn', kid);
   return null;
 }
 
