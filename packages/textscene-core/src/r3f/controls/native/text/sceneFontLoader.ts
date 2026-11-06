@@ -168,9 +168,13 @@ async function faceGlyphsOf(sfnt: SfntFile, bytes: ArrayBuffer): Promise<FaceGly
   return sfntFaceGlyphs(sfnt, openOutlines, kerning?.defaultKerningReader);
 }
 
+const VITEST_STAND_IN_METRICS: FontMetrics = { ...OPEN_SANS_FONT_METRICS, shaping: undefined };
+
 /** Loads a face from `bytes`. It never throws, and returns null for bytes that do not load. */
 async function loadSceneFontMetrics(bytes: ArrayBuffer, nodePath: string): Promise<FontMetrics | null> {
-  if (IS_VITEST) return OPEN_SANS_FONT_METRICS;
+  // Vitest has no FontFace, so the bundled advances stand in. The bundled shaping would hand out
+  // glyph indices of the bundled font, which the outlines of `bytes` do not share.
+  if (IS_VITEST) return VITEST_STAND_IN_METRICS;
   try {
     return await loadRuntimeFont(bytes, nodePath);
   } catch (err: unknown) {
