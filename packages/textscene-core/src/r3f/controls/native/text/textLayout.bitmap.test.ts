@@ -65,4 +65,12 @@ describe('shapeText over a BMFont', () => {
     expect(z!.controlCodepoint).toBe(0x7a);
     expect(shape('HzH', 16).lines[0]!.glyphs[2]!.x).toBe(10 + 8);
   });
+
+  it('draws no box for a U+200B or a tab the descriptor lacks, which take no advance', () => {
+    const [h, zwsp, tab, last] = shape('H\u200b\tH', 16).lines[0]!.glyphs;
+
+    expect(zwsp!.controlCodepoint).toBeUndefined();
+    expect(tab!.controlCodepoint).toBeUndefined();
+    expect(last!.x).toBe(h!.x + 10);
+  });
 });

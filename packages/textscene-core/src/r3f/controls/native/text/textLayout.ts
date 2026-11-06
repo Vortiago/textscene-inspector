@@ -617,27 +617,26 @@ function specialGlyph(
   const ch = chars[i]!;
   const cp = ch.codePointAt(0)!;
   const hardBreak = isLinebreak(cp);
-  // Tab and the linebreaks take their own branches, so this is only the "no font has a glyph"
-  // case (`text_server_adv.cpp:6842-6907`).
-  const isControl = !hardBreak && !isTabChar(ch) && isControlChar(cp);
-  const lacksFaceGlyph = !isControl && lacksGlyph(style.faces[i]!, ch, style.hasUndrawnGlyph);
-  if (!hardBreak && cp !== 0x200b && !isTabChar(ch) && !isControl && !lacksFaceGlyph) return undefined;
+  const isTab = isTabChar(ch);
+  // A break grapheme, U+200B and a tab take no advance whatever the face holds: the baked charset has
+  // no entry for the first two, and a tab no stop aligns is as wide as the font's glyph for it, which
+  // is none (measured in Godot 4.6.3: `a<TAB>b` with `tab_size` 0 sets `b` against `a`).
+  const isZeroWidth = hardBreak || cp === 0x200b || isTab;
+  // Only the "no font has a glyph" case is left (`text_server_adv.cpp:6842-6907`).
+  const isControl = !isZeroWidth && isControlChar(cp);
+  const lacksFaceGlyph = !isZeroWidth && !isControl && lacksGlyph(style.faces[i]!, ch, style.hasUndrawnGlyph);
+  if (!isZeroWidth && !isControl && !lacksFaceGlyph) return undefined;
   const glyph: BreakGlyph = {
     start: i,
     end: i + 1,
     advance: 0,
     isSpace: isWhitespace(cp),
     isHardBreak: hardBreak,
-    isTab: isTabChar(ch),
+    isTab,
     emboldenGrowthPx: 0,
   };
-  // A break grapheme and U+200B carry no advance in Godot; the baked charset has no entry for
-  // either, so the metrics fallback would give them an average-width one that the overflow test
-  // then spends on a spurious wrap. A tab no stop aligns is as wide as the font's glyph for it,
-  // which is none (measured in Godot 4.6.3: `a<TAB>b` with `tab_size` 0 sets `b` against `a`).
   // Without `preserve_invalid` or `preserve_control`, a control pushes no `Glyph` (`:6844`).
-  if (!isControl && !lacksFaceGlyph) return glyph;
-  if (isControl && !preserveControl) return glyph;
+  if (isZeroWidth || (isControl && !preserveControl)) return glyph;
   return { ...glyph, advance: hexCodeBoxAdvanceSize(style.sizes[i]!, cp).x, controlCodepoint: cp };
 }
 
