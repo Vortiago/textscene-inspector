@@ -6,6 +6,7 @@
 
 import {
   clearDiagnostics,
+  describeFailedRequests,
   loggedErrors,
   openScene,
   setDisplayToggle,
@@ -22,8 +23,7 @@ const PRE_SELECT_FIT_QUIESCENCE_MS = 1500;
  */
 function withFailedRequests(reason, { failedRequests }) {
   if (failedRequests.length === 0) return reason;
-  const lost = failedRequests.map(({ url, failure }) => `${url} (${failure})`).join(', ');
-  return `${reason}; failed requests: ${lost}`;
+  return `${reason}; failed requests: ${describeFailedRequests(failedRequests)}`;
 }
 
 /**
@@ -42,7 +42,7 @@ export async function captureScene(pageState, baseUrl, scene) {
     camera: scene.camera,
     onSlow: (ms) => console.log(`[visual]   ${scene.name}: no network idle within ${ms}ms`),
   });
-  if (!canvas) return { buffer: null, reason: canvasReason };
+  if (!canvas) return { buffer: null, reason: withFailedRequests(canvasReason, diagnostics) };
 
   if (scene.navigation) {
     // The navmesh overlay defaults on, but is set explicitly, so the baseline rests on no default.
