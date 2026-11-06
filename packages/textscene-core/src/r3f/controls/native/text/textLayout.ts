@@ -498,7 +498,7 @@ function clusterFace(face: FontMetrics, chars: ArrayLike<string>, start: number,
 function drawsCluster(face: FontMetrics, chars: ArrayLike<string>, start: number, end: number): boolean {
   for (let i = start; i < end; i++) {
     const ch = chars[i]!;
-    if (ch !== '' && lacksOutlineGlyph(face, ch)) return false;
+    if (ch !== '' && lacksNeededGlyph(face, ch)) return false;
   }
   return true;
 }
@@ -510,11 +510,14 @@ function drawsCluster(face: FontMetrics, chars: ArrayLike<string>, start: number
  */
 function lacksGlyph(face: FontMetrics, ch: string): boolean {
   if (isBitmapFontMetrics(face)) return !face.glyphOf(ch);
-  return lacksOutlineGlyph(face, ch);
+  return lacksNeededGlyph(face, ch);
 }
 
-/** Whether `face` lacks a glyph `ch` needs. `hasGlyph` first: most characters are in the face, and the property test costs more. */
-function lacksOutlineGlyph(face: FontMetrics, ch: string): boolean {
+/**
+ * Whether `face` lacks a glyph `ch` needs: a character in `KEEPS_ITS_FACE` needs none.
+ * `hasGlyph` first: most characters are in the face, and the property test costs more.
+ */
+function lacksNeededGlyph(face: FontMetrics, ch: string): boolean {
   return !face.hasGlyph(ch) && !KEEPS_ITS_FACE.test(ch);
 }
 
