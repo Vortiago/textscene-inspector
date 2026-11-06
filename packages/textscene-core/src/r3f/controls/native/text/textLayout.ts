@@ -383,6 +383,11 @@ interface RunStyle {
   levels: Uint8Array;
   /** The bidi override range of each character, -1 for none: each range runs its own bidi pass and runs (`:7266`). */
   rangeIds: Int32Array;
+  /**
+   * Whether a character has no glyph in its face, once the chain is searched. False lets
+   * `toBreakGlyphs` skip the per-character glyph test: the paragraph pass already ran it.
+   */
+  hasUndrawnGlyph: boolean;
 }
 
 /** Whether character `i`, past the first, starts a run: its size, face, bidi level or override range differs from the character before it. */
@@ -474,8 +479,6 @@ function glyphFaces(
   spanFaces: readonly FontMetrics[],
   chars: ArrayLike<string>
 ): readonly FontMetrics[] {
-  // Most paragraphs draw each character in its span face and need no segmenting, which costs 21 µs per 225 characters.
-  if (spanFaces.every((face, i) => drawsCluster(face, chars, i, i + 1))) return spanFaces;
   const faces: FontMetrics[] = [];
   graphemes ??= new Intl.Segmenter(undefined, { granularity: 'grapheme' });
   for (const { index, segment } of graphemes.segment(text)) {
@@ -508,9 +511,9 @@ function drawsCluster(face: FontMetrics, chars: ArrayLike<string>, start: number
  * (`text_server_adv.cpp:6835-6890`). The previewer has no host fonts, so `allow_system_fallback`
  * finds nothing past the last fallback (`_find_sys_font_for_text`, `:6820-6833`). The caller takes a tab first.
  */
-function lacksGlyph(face: FontMetrics, ch: string): boolean {
+function lacksGlyph(face: FontMetrics, ch: string, hasUndrawnGlyph: boolean): boolean {
   if (isBitmapFontMetrics(face)) return !face.glyphOf(ch);
-  return lacksNeededGlyph(face, ch);
+  return hasUndrawnGlyph && lacksNeededGlyph(face, ch);
 }
 
 /**
@@ -578,7 +581,7 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
       // A tab no stop aligns is as wide as the font's glyph for it, which is none (measured in
       // Godot 4.6.3: `a<TAB>b` with `tab_size` 0 sets `b` against `a`).
       advance = 0;
-    } else if (lacksGlyph(faces[i]!, ch)) {
+    } else if (lacksGlyph(faces[i]!, ch, style.hasUndrawnGlyph)) {
       advance = hexCodeBoxAdvanceSize(sizes[i]!, cp).x;
       controlCodepoint = cp;
     } else {
@@ -959,14 +962,20 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     const spanFaces = Array.from({ length: paraText.length }, (_v, i) =>
       fontMetricsAt ? fontMetricsAt(sourceIndex(i)) : fontMetrics
     );
+    // Most paragraphs draw each character in its span face: no segmenting, which costs 21 µs per 225 characters.
+    const spansDraw = spanFaces.every((face, i) => drawsCluster(face, chars, i, i + 1));
     const runStyle: RunStyle = {
       sizes: Array.from({ length: paraText.length }, (_v, i) =>
         fontSizePxAt ? fontSizePxAt(sourceIndex(i)) : fontSizePx
       ),
-      faces: spanFaces.some((face) => face.fallbacks) ? glyphFaces(paraText, spanFaces, chars) : spanFaces,
+      faces:
+        !spansDraw && spanFaces.some((face) => face.fallbacks)
+          ? glyphFaces(paraText, spanFaces, chars)
+          : spanFaces,
       spanFaces,
       levels: bidi.levels,
       rangeIds: bidi.rangeIds,
+      hasUndrawnGlyph: !spansDraw,
     };
     const breakGlyphs = toBreakGlyphs(chars, runStyle, preserveControl);
     // First tab pass: the aligned advance must be in place before line breaking measures it.
