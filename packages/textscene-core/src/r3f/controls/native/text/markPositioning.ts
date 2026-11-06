@@ -2,8 +2,9 @@
  * Where the marks of a cluster sit against its base, as HarfBuzz's `GPOS` mark attachment places them
  * (`MarkBasePosFormat1` and `MarkMarkPosFormat1`, `hb-ot-layout-gpos-table.hh`): each lookup of the
  * `mark` and `mkmk` features attaches a mark to the base before it, or to the mark before it, with
- * the difference of the two anchors. Mark-to-ligature, cursive attachment, and a font with no mark
- * lookups, which HarfBuzz positions by its fallback, are not read: the reader answers null.
+ * the difference of the two anchors. A mark that no lookup attaches stays at its own pen position,
+ * after the base. Mark-to-ligature and cursive attachment are not read. A font with no `GPOS` script
+ * has HarfBuzz's fallback placement instead (`fallbackMarkPositioning.ts`).
  *
  * Portions ported from HarfBuzz ("Old MIT" licence).
  * Copyright (C) 2007-2026 by Behdad Esfahbod and the HarfBuzz contributors.
@@ -20,8 +21,9 @@ import {
   type LayoutTable,
 } from './autofit/openTypeLayout';
 import { glyphPropsReader, lookupMatcher, MARK_PROPS } from './autofit/openTypeGdef';
-import { defaultSubstitution, featureLookups } from './autofit/openTypeFeatures';
+import { defaultSubstitution, featureLookups, findScript } from './autofit/openTypeFeatures';
 import { sfntGlyphIndex } from './sfntCmap';
+import { glyphMetricsReader } from './sfntGlyphMetrics';
 import type { SfntFile } from './sfntTables';
 
 /** Where a mark's origin sits against its base's origin, in design units with y up. */
@@ -30,10 +32,14 @@ export interface MarkOffset {
   readonly y: number;
 }
 
-const ORIGIN: MarkOffset = { x: 0, y: 0 };
-
 /** The scripts whose marks the reader places: the first one the font has, else its default script. */
 const MARK_SCRIPT_TAGS = ['latn', 'grek', 'cyrl'] as const;
+
+/** Whether HarfBuzz positions the marks of the font by `GPOS`: it has a script that the marks' text selects. */
+export function hasMarkScript(sfnt: SfntFile): boolean {
+  const table = sfntGpos(sfnt);
+  return table !== null && findScript(table, MARK_SCRIPT_TAGS) !== undefined;
+}
 
 /** The `GPOS` lookups of the `mark` and `mkmk` features that attach a mark. */
 function attachmentLookups(table: LayoutTable): Lookup[] {
@@ -128,20 +134,20 @@ function attachmentOf(
 }
 
 /**
- * The offset of each character of a cluster from the first, in design units, or null for a font
- * with no mark lookup. The first character is the base. A mark that no lookup attaches stays at the
- * origin of the glyph before it.
+ * The offset of each character of a cluster from the first, in design units. The first character is
+ * the base, at the origin.
  */
-export type ClusterOffsets = (cluster: readonly string[]) => readonly MarkOffset[] | null;
+export type ClusterOffsets = (cluster: readonly string[]) => readonly MarkOffset[];
 
+/** The reader of a font whose `GPOS` has a script, or null for a font without `GPOS`, `cmap` or the scripts. */
 export function markPositioningReader(sfnt: SfntFile): ClusterOffsets | null {
   const table = sfntGpos(sfnt);
   const glyphIndexOf = sfntGlyphIndex(sfnt);
-  if (!table || !glyphIndexOf) return null;
+  if (!table || !glyphIndexOf || !hasMarkScript(sfnt)) return null;
   const lookups = attachmentLookups(table);
-  if (lookups.length === 0) return null;
   const propsOf = glyphPropsReader(sfnt);
   const matches = lookupMatcher(sfnt);
+  const metricsOf = glyphMetricsReader(sfnt);
 
   return (cluster) => {
     const lookupGlyphs = cluster.map((ch) => {
@@ -163,12 +169,14 @@ export function markPositioningReader(sfnt: SfntFile): ClusterOffsets | null {
         attachments[mark] = attachmentOf(table.dv, clusterGlyphs, mark, subtables) ?? attachments[mark];
       }
     }
-    const offsets: MarkOffset[] = [ORIGIN];
+    // A zero-width mark that nothing attaches sits at the pen, which only the base has advanced.
+    const pen: MarkOffset = { x: metricsOf(clusterGlyphs.glyphs[0]!, 0).horizontal.advance, y: 0 };
+    const offsets: MarkOffset[] = [{ x: 0, y: 0 }];
     for (let i = 1; i < clusterGlyphs.glyphs.length; i++) {
       const attachment = attachments[i];
-      const target = attachment ? offsets[attachment.target]! : offsets[i - 1]!;
+      const target = attachment && offsets[attachment.target]!;
       offsets.push(
-        attachment ? { x: target.x + attachment.delta.x, y: target.y + attachment.delta.y } : target
+        attachment ? { x: target!.x + attachment.delta.x, y: target!.y + attachment.delta.y } : pen
       );
     }
     return offsets;

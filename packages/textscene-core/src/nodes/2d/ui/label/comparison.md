@@ -76,7 +76,7 @@ A precomposed character the font lacks draws as its base and marks in that font,
 needs the pieces of its canonical decomposition (`hb-ot-shape-normalize.cc`). The marks sit at the
 offsets of the font's `GPOS` mark lookups, and a RichTextLabel line rises to the highest mark
 (`text_server_adv.cpp:5161`). The browser draws the glyph of a scene font itself, so it places the marks
-there. The `label-decomposed-marks` golden pins this.
+there. A font with no `GPOS` script has its marks placed against the ink of the base (`hb-ot-shape-fallback.cc`). A `GPOS` with no mark lookup leaves each mark at its pen position. The `label-decomposed-marks` golden pins all three.
 
 ## Variable fonts
 

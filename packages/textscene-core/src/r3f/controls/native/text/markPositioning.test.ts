@@ -44,7 +44,20 @@ describe('markPositioningReader', () => {
     ]);
   });
 
-  it('answers null for a font with no mark lookup', () => {
-    expect(markPositioningReader(openSfnt(fixtureFontBytes('open-sans-semibold-subset.ttf'))!)).toBeNull();
+  it('leaves a mark at its pen position, after the base, where the GPOS has no mark lookup', () => {
+    const reader = markPositioningReader(
+      openSfnt(fixtureFontBytes('montserrat-semibold-marks-nomark-subset.ttf'))!
+    )!;
+    expect(reader(Array.from('Ȫ'.normalize('NFD')))).toEqual([
+      { x: 0, y: 0 },
+      { x: 842, y: 0 },
+      { x: 842, y: 0 },
+    ]);
+  });
+
+  it('answers null for a font with no GPOS script, which HarfBuzz places by its fallback', () => {
+    expect(
+      markPositioningReader(openSfnt(fixtureFontBytes('montserrat-semibold-marks-nogpos-subset.ttf'))!)
+    ).toBeNull();
   });
 });

@@ -16,7 +16,6 @@ import { hexCodeBoxAdvanceSize } from './hexCodeBox';
 import { isBitmapFontMetrics } from './bitmapFontMetrics';
 import {
   fontUsesSubpixelPositioning,
-  glyphOffsetPx,
   getFontAscentPx,
   getFontEmboldenGrowthPx,
   getFontExtraAdvancePx,
@@ -559,7 +558,7 @@ function unshapedGlyph(index: number): BreakGlyph {
 }
 
 /**
- * How `ch` draws where `face` draws it as a base and marks, with the offsets of its `GPOS` at
+ * How `ch` draws where `face` draws it as a base and marks, with their offsets at
  * `fontSizePx`. Godot rounds a mark's y offset to a whole pixel at any size, and its x offset where
  * the face has no subpixel positioning (`text_server_adv.cpp:7062-7068`): `roundGlyphAdvance` does
  * the x.
@@ -569,13 +568,9 @@ function placedDecomposition(
   ch: string,
   fontSizePx: number
 ): PlacedDecomposition | undefined {
-  const decomposed = face.decomposition?.(ch);
+  const decomposed = face.decomposition?.(ch, fontSizePx);
   if (!decomposed) return undefined;
-  const marks = decomposed.marks.map(({ char, xUnits, yUnits }) => ({
-    char,
-    x: glyphOffsetPx(xUnits, face.unitsPerEm, fontSizePx),
-    y: -godotRound(glyphOffsetPx(yUnits, face.unitsPerEm, fontSizePx)),
-  }));
+  const marks = decomposed.marks.map(({ char, xPx, yPx }) => ({ char, x: xPx, y: -godotRound(yPx) }));
   return { base: decomposed.base, marks };
 }
 
@@ -716,13 +711,22 @@ function roundGlyphAdvance(
   const fullAdvance = carried + glyphs[i]!.advance;
   const rounded = godotRound(fullAdvance);
   glyphs[i]!.advance = rounded;
-  roundMarkOffsets(glyphs[i]!.decomposition, carried);
+  roundMarkOffsets(glyphs[i]!.decomposition, carried, rounded);
   return fullAdvance - rounded;
 }
 
-/** A mark's `x_off` takes the rounding remainder the glyph carried in, as the advance does (`text_server_adv.cpp:7062`). Mutates the marks. */
-function roundMarkOffsets(decomposition: PlacedDecomposition | undefined, carriedPx: number): void {
-  for (const mark of decomposition?.marks ?? []) mark.x = godotRound(carriedPx + mark.x);
+/**
+ * A mark's `x_off` rounds from the pen after the base, with the remainder the base left
+ * (`text_server_adv.cpp:7062`): the half-way ties round away from zero in that frame, not from the
+ * base's origin. Mutates the marks.
+ */
+function roundMarkOffsets(
+  decomposition: PlacedDecomposition | undefined,
+  carriedPx: number,
+  roundedAdvancePx: number
+): void {
+  for (const mark of decomposition?.marks ?? [])
+    mark.x = roundedAdvancePx + godotRound(carriedPx - roundedAdvancePx + mark.x);
 }
 
 /**

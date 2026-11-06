@@ -155,7 +155,7 @@ The faces a font tries for each glyph, in order: its own face, then each of its 
 _Avoid_: "fallback font" for the bundled Open Sans, which is the **Project default font**'s last resort.
 
 **Decomposed glyph** (`DecomposedGlyph` in `r3f/controls/native/text/sfntDecomposition.ts`):
-A character the face lacks that HarfBuzz draws as a base and marks the face has, found by the canonical decomposition (`canonicalGlyphs.ts`). Each mark sits at the offset of the face's `GPOS` mark lookups (`markPositioning.ts`). The face then counts as having the character, so its cluster stays in the face and out of the **Fallback chain**.
+A character the face lacks that HarfBuzz draws as a base and marks the face has, found by the canonical decomposition (`canonicalGlyphs.ts`). Each mark sits at the offset of the face's `GPOS` mark lookups (`markPositioning.ts`), or against the ink of the base where the face has no `GPOS` script (`fallbackMarkPositioning.ts`). The face then counts as having the character, so its cluster stays in the face and out of the **Fallback chain**.
 _Avoid_: "composed glyph", which names the opposite step.
 
 **Project fonts** (`resources/fonts/font/projectFonts.ts`):

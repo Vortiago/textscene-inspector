@@ -52,6 +52,16 @@ export function featureLookupsAt(
   return substitution?.substitutions.get(index) ?? table.features[index]?.lookups ?? [];
 }
 
+/** The first script of `scriptTags` the table has, else the first of the default scripts, or undefined. */
+export function findScript(
+  table: LayoutTable,
+  scriptTags: readonly string[]
+): LayoutTable['scripts'][number] | undefined {
+  return [...scriptTags, ...FALLBACK_SCRIPT_TAGS]
+    .map((tag) => table.scripts.find((candidate) => candidate.tag === tag))
+    .find((found) => found !== undefined);
+}
+
 /** The lookups of `features` under the first script of `scriptTags` the table has, in its default language. */
 export function featureLookups(
   table: LayoutTable,
@@ -59,10 +69,7 @@ export function featureLookups(
   features: readonly string[],
   substitution: FeatureSubstitution | undefined
 ): number[] {
-  const script = [...scriptTags, ...FALLBACK_SCRIPT_TAGS]
-    .map((tag) => table.scripts.find((candidate) => candidate.tag === tag))
-    .find((found) => found !== undefined);
-  const language = script?.defaultLanguage;
+  const language = findScript(table, scriptTags)?.defaultLanguage;
   if (!language) return [];
   const indices = languageFeatures(table, language, features);
   const lookups = new Set(indices.flatMap((index) => featureLookupsAt(table, index, substitution)));

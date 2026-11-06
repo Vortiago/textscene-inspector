@@ -13,7 +13,7 @@ Draws text on a flat plane in 3D space. The previewer shapes it in its `text_dir
 
 A character the font lacks draws from the first font of its **Fallback chain** that has it. The `label3d-text-mesh-font-fallbacks` golden pins this. A character no font of the chain has draws nothing, as a glyph with no font has no rectangle to draw (`label_3d.cpp:357`). Godot draws no hex-code box for it, and the pen still advances.
 
-A precomposed character the font lacks draws as its base and marks in that font. The marks sit at the offsets of its `GPOS` mark lookups (`hb-ot-shape-normalize.cc`). The `label3d-text-mesh-decomposed-marks` golden pins this.
+A precomposed character the font lacks draws as its base and marks in that font (`hb-ot-shape-normalize.cc`). The marks sit at the offsets of its `GPOS` mark lookups. In a font with no `GPOS` script they sit against the ink of the base (`hb-ot-shape-fallback.cc`). The `label3d-text-mesh-decomposed-marks` golden pins this.
 
 A label is unlit by default. With `shaded` on, the scene's lights light its fill and outline, as Godot's `SHADING_MODE_PER_PIXEL` does (`material.cpp:3045`), and the label receives shadows. The plane faces +Z (`label_3d.cpp:422-423`). A double-sided label flips the normal of its back face (`scene_forward_clustered.glsl:1263-1266`), so its back is lit as its front. The `label3d-shaded` golden pins this.
 

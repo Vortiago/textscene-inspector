@@ -43,7 +43,7 @@ export interface FontMetrics {
   hasGlyph(ch: string): boolean;
   /**
    * The base and marks a character the face lacks draws as, where the face has the pieces of its
-   * canonical decomposition. Absent, or null for a character, is one glyph.
+   * canonical decomposition, at a font size. Absent, or null for a character, is one glyph.
    */
   readonly decomposition?: Decomposition;
   /** A character's own advance width, design units, or `null` if this font has no glyph for it (a shaper falls back to `averageAdvanceUnits`). */

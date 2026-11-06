@@ -1,14 +1,18 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 ; The one variable: a precomposed character the font lacks, which HarfBuzz decomposes into a base
 ; and marks the font has (hb-ot-shape-normalize.cc) and so draws in that font. Montserrat holds basic
 ; Latin and the combining marks U+0300 to U+0308, U+030A and U+0323, and none of the precomposed
 ; characters of them. The Labels draw in Montserrat alone, so the line height is its own. The
 ; RichTextLabel falls back to Noto Sans, which holds Ç: that needs U+0327, which Montserrat lacks,
-; so its whole cluster draws in Noto Sans.
+; so its whole cluster draws in Noto Sans. The last two Labels draw the same text in copies of the
+; font with no GPOS script, which HarfBuzz places by its fallback (hb-ot-shape-fallback.cc), and with
+; a GPOS that has no mark lookup, which leaves each mark at its pen position.
 
 [ext_resource type="FontFile" path="res://fonts/montserrat-semibold-marks-subset.ttf" id="2_plain"]
 [ext_resource type="FontFile" path="res://fonts/noto-sans-regular-subset.ttf" id="3_noto"]
+[ext_resource type="FontFile" path="res://fonts/montserrat-semibold-marks-nogpos-subset.ttf" id="4_nogpos"]
+[ext_resource type="FontFile" path="res://fonts/montserrat-semibold-marks-nomark-subset.ttf" id="5_nomark"]
 
 [sub_resource type="FontVariation" id="FontVariation_chain"]
 base_font = ExtResource("2_plain")
@@ -49,3 +53,23 @@ theme_override_fonts/normal_font = SubResource("FontVariation_chain")
 theme_override_font_sizes/normal_font_size = 24
 text = "ÄÖÜ äöü Ǟ
 second line éÉ Ç"
+
+[node name="NoGpos" type="Label" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 260.0
+offset_right = 760.0
+offset_bottom = 310.0
+theme_override_fonts/font = ExtResource("4_nogpos")
+theme_override_font_sizes/font_size = 32
+text = "ÀÁÂÃÄÅ äöü éÉ Ǟ Ạ"
+
+[node name="NoMarkLookup" type="Label" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 320.0
+offset_right = 760.0
+offset_bottom = 370.0
+theme_override_fonts/font = ExtResource("5_nomark")
+theme_override_font_sizes/font_size = 32
+text = "ÀÁÂÃÄÅ äöü éÉ Ǟ Ạ"

@@ -116,14 +116,14 @@ describe('shapeText — a fallback chain', () => {
 
 describe('shapeText — a character the face draws as a base and marks', () => {
   /** 2048 units, so 16 px is 1/128 em: 1024 units are 8 px. */
-  const accented = (decomposition: FontMetrics['decomposition']): FontMetrics => ({
-    ...faceOf({ A: 1024, Ä: 1024, '\u0308': 0 }),
+  const accented = (decomposition: FontMetrics['decomposition'], advanceUnits = 1024): FontMetrics => ({
+    ...faceOf({ A: advanceUnits, Ä: advanceUnits, '\u0308': 0 }),
     decomposition,
   });
 
   it('keeps the base advance, and places the mark in px with y down', () => {
     const face = accented((ch) =>
-      ch === 'Ä' ? { base: 'A', marks: [{ char: '\u0308', xUnits: 512, yUnits: 768 }] } : null
+      ch === 'Ä' ? { base: 'A', marks: [{ char: '\u0308', xPx: 4, yPx: 6 }] } : null
     );
     const [a] = glyphsOf('Ä', face);
     expect(a!.advance).toBe(8);
@@ -131,8 +131,14 @@ describe('shapeText — a character the face draws as a base and marks', () => {
   });
 
   it('rounds the y offset to a whole pixel', () => {
-    const face = accented(() => ({ base: 'A', marks: [{ char: '\u0308', xUnits: 0, yUnits: 100 }] }));
+    const face = accented(() => ({ base: 'A', marks: [{ char: '\u0308', xPx: 0, yPx: 0.78125 }] }));
     expect(glyphsOf('Ä', face)[0]!.decomposition!.marks[0]!.y).toBe(-1);
+  });
+
+  it('rounds a half-way x offset from the pen after the base, away from zero', () => {
+    // A 1397-unit advance is 21.83 px at 32 px, rounded to 22. A mark at 20.5 px is -1.5 px from that pen.
+    const face = accented(() => ({ base: 'A', marks: [{ char: '\u0308', xPx: 20.5, yPx: 0 }] }), 1397);
+    expect(glyphsOf('Ä', face, 32)[0]!.decomposition!.marks[0]!.x).toBe(20);
   });
 
   it('gives a character the face draws as one glyph no marks', () => {

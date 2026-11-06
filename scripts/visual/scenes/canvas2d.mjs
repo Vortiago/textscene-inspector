@@ -302,7 +302,8 @@ export const CANVAS_2D_SCENES = [
   // that has it, on a raw font's import, a FontVariation, a BMFont's import and a RichTextLabel.
   { name: 'label-font-fallbacks', file: 'unit-label-font-fallbacks.tscn', mode: '2d' },
   // The one variable: a precomposed character the font lacks, drawn as its base and the marks the font has,
-  // in a Label at 16 px and 32 px and in a RichTextLabel whose fallback holds a character the marks cannot make.
+  // in a Label at 16 px and 32 px and in a RichTextLabel whose fallback holds a character the marks cannot make,
+  // and in Labels over fonts with no GPOS script and with a GPOS that has no mark lookup.
   { name: 'label-decomposed-marks', file: 'unit-label-decomposed-marks.tscn', mode: '2d' },
   // The one variable: `FontVariation.variation_embolden` over a scene font at 0, 1.2 and 2.0, which
   // grows the outline and widens each advance, as the bold of a RichTextLabel does.
