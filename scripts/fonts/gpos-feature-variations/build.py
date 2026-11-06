@@ -15,6 +15,8 @@ from fontTools.varLib.featureVars import addFeatureVariationsRaw
 EXTRA_KERNING = -300
 CASL_RANGE = (0.5, 1.0)
 
+if len(sys.argv) != 3:
+    sys.exit(__doc__)
 source, out = sys.argv[1:3]
 font = TTFont(source)
 cmap = font.getBestCmap()

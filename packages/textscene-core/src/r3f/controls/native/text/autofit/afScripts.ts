@@ -554,8 +554,9 @@ export function* rangePairs(ranges: readonly number[]): Generator<[number, numbe
   for (let i = 0; i < ranges.length; i += 2) yield [ranges[i]!, ranges[i + 1]!];
 }
 
-const isCommonCharacter = (character: string): boolean =>
-  /[\p{Script=Common}\p{Script=Inherited}]/u.test(character);
+const COMMON_CHARACTER = /[\p{Script=Common}\p{Script=Inherited}]/u;
+
+const isCommonCharacter = (character: string): boolean => COMMON_CHARACTER.test(character);
 
 /**
  * The OpenType script tags of the first script whose ranges hold `codePoint`. A common character

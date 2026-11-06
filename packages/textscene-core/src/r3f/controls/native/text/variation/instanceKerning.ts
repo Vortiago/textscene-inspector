@@ -114,23 +114,22 @@ export function instanceKerningReader(
   const table = sfntGpos(sfnt);
   const axes = readFvarAxes(sfnt);
   if (!table || !axes) return null;
-  const hasPairLookups = [undefined, ...table.featureSubstitutions].some(
-    (record) => pairLookupsOf(table, record).length > 0
-  );
-  if (!hasPairLookups) return null;
   const pairLookupsByRecord = new Map<FeatureSubstitution | undefined, PairLookup[]>();
-  const pairLookupsAt = (normalized: Int32Array): PairLookup[] => {
-    const record = featureSubstitutionOfInstance(table, normalized);
+  const pairLookupsOfRecord = (record: FeatureSubstitution | undefined): PairLookup[] => {
     let found = pairLookupsByRecord.get(record);
     if (!found) pairLookupsByRecord.set(record, (found = pairLookupsOf(table, record)));
     return found;
   };
+  const hasPairLookups = [undefined, ...table.featureSubstitutions].some(
+    (record) => pairLookupsOfRecord(record).length > 0
+  );
+  if (!hasPairLookups) return null;
   const store = gdefVariationStore(sfnt, axes.length);
   const propsOf = glyphPropsReader(sfnt);
   const matches = lookupMatcher(sfnt);
   const { dv } = sfnt;
   return (normalized) => {
-    const pairLookups = pairLookupsAt(normalized);
+    const pairLookups = pairLookupsOfRecord(featureSubstitutionOfInstance(table, normalized));
     return (left, right) => {
       const leftProps = propsOf(left);
       const rightProps = propsOf(right);
