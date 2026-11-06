@@ -10,10 +10,9 @@
  */
 
 import {
-  DEFAULT_FEATURES,
+  defaultLanguageLookups,
   GposType,
   i16,
-  languageFeatures,
   pairValueRecords,
   sfntGpos,
   u16,
@@ -44,22 +43,6 @@ function gdefVariationStore(sfnt: SfntFile, axisCount: number): ItemVariationSto
   return storeOffset === 0 ? null : readItemVariationStore(sfnt.dv, gdef.offset + storeOffset, axisCount);
 }
 
-/**
- * The lookups of the default language system of every script, of the features HarfBuzz turns on by
- * default, ascending. HarfBuzz takes that system for text with no language of the font
- * (`hb-ot-layout.cc:769-804`), and the previewer gives no text a language. The reader keeps their
- * pair subtables. A `FeatureVariations` record that swaps them is left out.
- */
-function kernLookups(table: LayoutTable): number[] {
-  const lookups = new Set<number>();
-  for (const { defaultLanguage } of table.scripts) {
-    if (!defaultLanguage) continue;
-    for (const index of languageFeatures(table, defaultLanguage, DEFAULT_FEATURES))
-      table.features[index]?.lookups.forEach((lookup) => lookups.add(lookup));
-  }
-  return [...lookups].sort((a, b) => a - b);
-}
-
 /** A kerning lookup's flag, and the pair subtables it holds. */
 interface PairLookup {
   props: number;
@@ -69,7 +52,7 @@ interface PairLookup {
 /** The kerning lookups that hold a pair subtable, each with its pair subtables only. */
 function pairLookupsOf(table: LayoutTable): PairLookup[] {
   const pairLookups: PairLookup[] = [];
-  for (const index of kernLookups(table)) {
+  for (const index of defaultLanguageLookups(table)) {
     const lookup = table.lookups[index];
     if (!lookup) continue;
     const subtables = lookup.subtables.filter((subtable) => subtable.type === GposType.PAIR);

@@ -1238,6 +1238,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Decomposed Marks",
+    "file": "unit-label-decomposed-marks.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Fill Paragraphs",
     "file": "unit-label-fill-paragraphs.tscn",
     "category": "Other"
@@ -1380,6 +1385,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Label3d Text Direction",
     "file": "unit-label3d-text-direction.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label3d Text Mesh Decomposed Marks",
+    "file": "unit-label3d-text-mesh-decomposed-marks.tscn",
     "category": "Other"
   },
   {

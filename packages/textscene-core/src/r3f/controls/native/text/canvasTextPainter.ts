@@ -26,7 +26,8 @@ import {
   type FontMetrics,
   type GlyphVariation,
 } from './fontMetrics';
-import type { GlyphPlacement, TextLayoutResult } from './textLayout';
+import type { GlyphContours } from './glyphContours';
+import { drawnPieces, type GlyphPlacement, type TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics, type CanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
 import type { CanvasItemPixelMaterial } from '../../../components/LitCanvasItemPixels';
@@ -236,6 +237,18 @@ export interface CanvasTextPaintOptions {
   originPhasePx?: Readonly<Vector2>;
 }
 
+/** The contours of each character `glyph` draws, at its offset from the pen. Null where none has an outline. */
+function contoursOfPieces(
+  contoursOf: (char: string) => GlyphContours | null,
+  glyph: GlyphPlacement
+): { contours: GlyphContours; x: number; y: number }[] | null {
+  const pieces = drawnPieces(glyph).flatMap(({ char, x, y }) => {
+    const contours = contoursOf(char);
+    return contours ? [{ contours, x, y }] : [];
+  });
+  return pieces.length > 0 ? pieces : null;
+}
+
 /**
  * Draws `layout`, shaped against a `'canvas'`-kind `FontMetrics`, glyph by glyph
  * at each `GlyphPlacement.x`.
@@ -334,8 +347,10 @@ export function paintSceneFontCanvas(
         (snapsGlyphs ? canvasGlyphPenXPx(originPhasePx.x + gp.x, fontSizePx, metrics) : gp.x);
       // A glyph shaped with no growth, in a layout that is not sheared or at an instance, stays on its plain ring.
       const hasVariedGlyph = gp.emboldenGrowthPx || isShapeVaried;
-      const contours = contoursOf && hasVariedGlyph ? contoursOf(gp.char) : null;
-      if (contours) (stroked ? strokeContours : fillContours)(ctx, contours, penX, baselineY);
+      const pieces = contoursOf && hasVariedGlyph ? contoursOfPieces(contoursOf, gp) : null;
+      if (pieces)
+        for (const { contours, x, y } of pieces)
+          (stroked ? strokeContours : fillContours)(ctx, contours, penX + x, baselineY + y);
       else if (contourOutlines && skew !== 0)
         paintShearedGlyphText(gp.char, penX, baselineY, gp.emboldenGrowthPx);
       else paintGlyphText(gp.char, penX, baselineY, gp.emboldenGrowthPx);

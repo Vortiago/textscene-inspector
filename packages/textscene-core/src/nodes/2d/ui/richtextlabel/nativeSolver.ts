@@ -874,6 +874,9 @@ function lineMetricsOf(
         ascentPx = Math.max(ascentPx, getFontAscentPx(face, run.fontSizePx));
         descentPx = Math.max(descentPx, fontDescentPx(face, run.fontSizePx));
       }
+      // A mark raised past the font's ascent lifts the line (`text_server_adv.cpp:5161`: `-gl.y_off`).
+      for (const { decomposition } of segment.glyphs)
+        for (const { y } of decomposition?.marks ?? []) ascentPx = Math.max(ascentPx, -y);
     }
     // A blank line shapes its break in the paragraph font, so it keeps that height.
     if (segments.length === 0) {

@@ -13,6 +13,8 @@ Draws text on a flat plane in 3D space. The previewer shapes it in its `text_dir
 
 A character the font lacks draws from the first font of its **Fallback chain** that has it. The `label3d-text-mesh-font-fallbacks` golden pins this. A character no font of the chain has draws nothing, as a glyph with no font has no rectangle to draw (`label_3d.cpp:357`). Godot draws no hex-code box for it, and the pen still advances.
 
+A precomposed character the font lacks draws as its base and marks in that font, the marks at the offsets of its `GPOS` mark lookups (`hb-ot-shape-normalize.cc`). The `label3d-text-mesh-decomposed-marks` golden pins this.
+
 A label is unlit by default. With `shaded` on, the scene's lights light its fill and outline, as Godot's `SHADING_MODE_PER_PIXEL` does (`material.cpp:3045`), and the label receives shadows. The plane faces +Z (`label_3d.cpp:422-423`). A double-sided label flips the normal of its back face (`scene_forward_clustered.glsl:1263-1266`), so its back is lit as its front. The `label3d-shaded` golden pins this.
 
 A label casts no shadow by default, as its constructor turns `cast_shadow` off (`label_3d.cpp:1090`). With it on, the glyphs cast when Godot files their surface in the shadow pass (`render_forward_clustered.cpp:4079-4089`). That pass takes a cut surface, or an `OPAQUE_PREPASS` one, with the depth test on. An `OPAQUE_PREPASS` surface blends uncut, writes its depth in a depth prepass cut at 0.99, and cuts its shadow at 0.1 (`render_forward_clustered.cpp:1791,2770`). A blended label, the default `alpha_cut`, casts nothing. The `label3d-shadow` golden pins this.
@@ -85,6 +87,7 @@ The glyph raster has a mip chain only when its font generates mipmaps and `textu
 
 ## Known limitations
 
+- **Approximated** A base and a combining mark typed as two characters sit at their own pens, not at the offsets of the font's `GPOS` mark lookups (#1393).
 - **Approximated** The glyph mip chain is per label raster, where Godot's is per glyph page, so a minified label differs slightly.
 - **Resource gap** A SystemFont always draws the default font, as Godot does when no OS font matches its names, where Godot draws a matching OS font.
 - **Approximated** Godot's font rasteriser differs from the browser's, so the glyph edges and the `outline_size` outline differ slightly from Godot's.

@@ -113,3 +113,33 @@ describe('shapeText — a fallback chain', () => {
     expect(han!.advance).toBe(17);
   });
 });
+
+describe('shapeText — a character the face draws as a base and marks', () => {
+  /** 2048 units, so 16 px is 1/128 em: 1024 units are 8 px. */
+  const accented = (decomposition: FontMetrics['decomposition']): FontMetrics => ({
+    ...faceOf({ A: 1024, Ä: 1024, '\u0308': 0 }),
+    decomposition,
+  });
+
+  it('keeps the base advance, and places the mark in px with y down', () => {
+    const face = accented((ch) =>
+      ch === 'Ä' ? { base: 'A', marks: [{ char: '\u0308', xUnits: 512, yUnits: 768 }] } : null
+    );
+    const [a] = glyphsOf('Ä', face);
+    expect(a!.advance).toBe(8);
+    expect(a!.decomposition).toEqual({ base: 'A', marks: [{ char: '\u0308', x: 4, y: -6 }] });
+  });
+
+  it('rounds the y offset to a whole pixel', () => {
+    const face = accented(() => ({ base: 'A', marks: [{ char: '\u0308', xUnits: 0, yUnits: 100 }] }));
+    expect(glyphsOf('Ä', face)[0]!.decomposition!.marks[0]!.y).toBe(-1);
+  });
+
+  it('gives a character the face draws as one glyph no marks', () => {
+    const [a] = glyphsOf(
+      'A',
+      accented(() => null)
+    );
+    expect(a!.decomposition).toBeUndefined();
+  });
+});

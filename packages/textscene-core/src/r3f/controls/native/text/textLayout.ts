@@ -15,7 +15,9 @@ import { round as godotRound } from '../../../../godot/math/math';
 import { hexCodeBoxAdvanceSize } from './hexCodeBox';
 import { isBitmapFontMetrics } from './bitmapFontMetrics';
 import {
+  FIXED_26_6_ONE,
   fontUsesSubpixelPositioning,
+  glyphAdvance26_6,
   getFontAscentPx,
   getFontEmboldenGrowthPx,
   getFontExtraAdvancePx,
@@ -161,6 +163,19 @@ const BREAK_TRIM_START_EDGE_SPACES = 1 << 6;
 const BREAK_TRIM_END_EDGE_SPACES = 1 << 7;
 
 /** One glyph's placement within its line, in target-font-size px. */
+/** A mark drawn over its base, with its origin against the base's, px with y down (`x_off` and `y_off` of the mark's glyph). */
+export interface MarkPlacement {
+  char: string;
+  x: number;
+  y: number;
+}
+
+/** The glyphs of a character the face lacks and draws as a base and its marks, which sit over the base's origin. */
+export interface PlacedDecomposition {
+  base: string;
+  marks: readonly MarkPlacement[];
+}
+
 export interface GlyphPlacement {
   /** The character rendered (post-uppercase-transform, if requested). */
   char: string;
@@ -177,6 +192,8 @@ export interface GlyphPlacement {
   glyph: OpenSansGlyph | null;
   /** The control character this glyph draws as a hex-code box (`draw_hex_code_box`), set only when `preserveControl` kept it. */
   controlCodepoint?: number;
+  /** How `char` draws where the face lacks it and has its canonical decomposition. Absent for a character of one glyph. */
+  decomposition?: PlacedDecomposition;
   /** How far the embolden grows this glyph's outline at its own size, px. Absent for a glyph with none. */
   emboldenGrowthPx?: number;
   /** This glyph's own size, px, `gl.font_size` in Godot: it scales the space-shrink floor of `fitLineToWidth` (`text_server_adv.cpp:5659`) and the measured ink. */
@@ -367,6 +384,8 @@ interface BreakGlyph {
   controlCodepoint?: number;
   /** The outline growth of the embolden that widened `advance`, px. 0 for none. */
   emboldenGrowthPx: number;
+  /** `GlyphPlacement.decomposition`. The mark x is the offset before the whole-pixel round of `roundGlyphAdvance`. */
+  decomposition?: PlacedDecomposition;
 }
 
 /**
@@ -541,6 +560,38 @@ function unshapedGlyph(index: number): BreakGlyph {
 }
 
 /**
+ * How `ch` draws where `face` draws it as a base and marks, with the offsets of its `GPOS` at
+ * `fontSizePx`. Godot rounds a mark's y offset to a whole pixel at any size, and its x offset where
+ * the face has no subpixel positioning (`text_server_adv.cpp:7062-7068`): `roundGlyphAdvance` does
+ * the x.
+ */
+function placedDecomposition(
+  face: FontMetrics,
+  ch: string,
+  fontSizePx: number
+): PlacedDecomposition | undefined {
+  const decomposed = face.decomposition?.(ch);
+  if (!decomposed) return undefined;
+  // FreeType scales a negative value as its magnitude, then negates (`FT_MulFix`).
+  const toPx = (units: number) =>
+    (Math.sign(units) * glyphAdvance26_6(Math.abs(units), face.unitsPerEm, fontSizePx)) / FIXED_26_6_ONE;
+  const marks = decomposed.marks.map(({ char, xUnits, yUnits }) => ({
+    char,
+    x: toPx(xUnits),
+    y: -godotRound(toPx(yUnits)),
+  }));
+  return { base: decomposed.base, marks };
+}
+
+/** The characters `glyph` draws and where, from its pen origin: itself, or its base and marks. */
+export function drawnPieces(glyph: Pick<GlyphPlacement, 'char' | 'decomposition'>): readonly MarkPlacement[] {
+  const { decomposition } = glyph;
+  return decomposition
+    ? [{ char: decomposition.base, x: 0, y: 0 }, ...decomposition.marks]
+    : [{ char: glyph.char, x: 0, y: 0 }];
+}
+
+/**
  * One glyph per character, plus the zero-advance whitespace terminator Label appends
  * (`label.cpp:164`). `chars` are the characters the glyphs draw, mirrored where the level is odd,
  * and `style` sets the size, face and level of each.
@@ -562,6 +613,7 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
     let advance: number;
     let emboldenGrowthPx = 0;
     let controlCodepoint: number | undefined;
+    let decomposition: PlacedDecomposition | undefined;
     if (hardBreak || cp === 0x200b) {
       // A break grapheme and U+200B carry no advance in Godot; the baked
       // charset has no entry for either, so the metrics fallback would give
@@ -588,6 +640,7 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
       const embolden = faces[i]!.embolden ?? 0;
       advance = glyphAdvancePx(ch, sizes[i]!, faces[i]!) + getFontExtraAdvancePx(embolden, sizes[i]!);
       emboldenGrowthPx = getFontEmboldenGrowthPx(embolden, sizes[i]!);
+      decomposition = placedDecomposition(faces[i]!, ch, sizes[i]!);
     }
     glyphs.push({
       start: i,
@@ -598,6 +651,7 @@ function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveContro
       isTab: isTabChar(ch),
       controlCodepoint,
       emboldenGrowthPx,
+      decomposition,
     });
   }
   // Kerning folds into the visually left advance, skipped across a run boundary, before the
@@ -670,10 +724,17 @@ function roundGlyphAdvance(
   if (chars[i] === '') return remainder;
   const cp = chars[i]!.codePointAt(0)!;
   // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
-  const fullAdvance =
-    (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp) ? 0 : remainder) + glyphs[i]!.advance;
+  const carried = cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp) ? 0 : remainder;
+  const fullAdvance = carried + glyphs[i]!.advance;
   const rounded = godotRound(fullAdvance);
   glyphs[i]!.advance = rounded;
+  // A mark's `x_off` takes the remainder too (`text_server_adv.cpp:7062`).
+  const { decomposition } = glyphs[i]!;
+  if (decomposition)
+    glyphs[i]!.decomposition = {
+      base: decomposition.base,
+      marks: decomposition.marks.map((mark) => ({ ...mark, x: godotRound(carried + mark.x) })),
+    };
   return fullAdvance - rounded;
 }
 
@@ -1024,6 +1085,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
               runStyle.faces[idx]!.kind === 'atlas' ? (OPEN_SANS_ATLAS_GLYPHS[chars[idx]!] ?? null) : null,
             controlCodepoint: breakGlyphs[idx]!.controlCodepoint,
             emboldenGrowthPx: breakGlyphs[idx]!.emboldenGrowthPx || undefined,
+            decomposition: breakGlyphs[idx]!.decomposition,
             sourceIndex: para.offset + idx,
             fontSizePx: runStyle.sizes[idx]!,
             fontMetrics: runStyle.faces[idx]!,

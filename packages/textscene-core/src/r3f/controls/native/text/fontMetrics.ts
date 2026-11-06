@@ -8,6 +8,7 @@
 import { perObject } from '../../../../utils/perObject';
 import { identityKey } from '../../../../utils/identityKey';
 import { recentlyRead } from '../../../../utils/recentlyRead';
+import type { Decomposition } from './sfntDecomposition';
 import type { SfntOutlines } from './sfntOutlines';
 
 /**
@@ -40,6 +41,11 @@ export interface FontMetrics {
   readonly descent: number;
   /** Whether the face maps `ch` to a glyph, `_font_has_char`. A face that cannot tell answers true. */
   hasGlyph(ch: string): boolean;
+  /**
+   * The base and marks a character the face lacks draws as, where the face has the pieces of its
+   * canonical decomposition. Absent, or null for a character, is one glyph.
+   */
+  readonly decomposition?: Decomposition;
   /** A character's own advance width, design units, or `null` if this font has no glyph for it (a shaper falls back to `averageAdvanceUnits`). */
   getGlyphAdvanceUnits(ch: string): number | null;
   /**

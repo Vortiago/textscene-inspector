@@ -24,6 +24,7 @@ import {
 import { hexCodeBoxAdvanceSize } from '../../../r3f/controls/native/text/hexCodeBox';
 import type { SfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import {
+  drawnPieces,
   isControlChar,
   shapedTextSizeWidthPx,
   type GlyphPlacement,
@@ -152,19 +153,19 @@ function glyphMeshesByFace(
   properties: TextMeshProperties,
   face: TextMeshFace,
   fallbacks: readonly TextMeshFace[]
-): (glyph: GlyphPlacement) => GlyphMeshData | null {
+): (glyph: GlyphPlacement, char: string) => GlyphMeshData | null {
   const meshesOf = perObject((glyphFace: TextMeshFace) => glyphMeshes(properties, glyphFace));
   const fallbackFaces = new Map<FontMetrics, TextMeshFace>(fallbacks.map((fallback) => [fallback, fallback]));
-  return (glyph) => {
+  return (glyph, char) => {
     const glyphFace = fallbackFaces.get(glyph.fontMetrics) ?? face;
-    return meshesOf(glyphFace)(glyph.char.codePointAt(0)!);
+    return meshesOf(glyphFace)(char.codePointAt(0)!);
   };
 }
 
 function placeGlyphs(
   properties: TextMeshProperties,
   { lines, baselineOffsetPx, linePitchPx }: TextMeshLines,
-  meshOf: (glyph: GlyphPlacement) => GlyphMeshData | null
+  meshOf: (glyph: GlyphPlacement, char: string) => GlyphMeshData | null
 ): PlacedGlyph[] {
   const { pixelSize } = properties;
   const blockHeight = lines.length * linePitchPx * pixelSize;
@@ -181,12 +182,17 @@ function placeGlyphs(
       const codepoint = glyph.char.codePointAt(0)!;
       if (isControlChar(codepoint) || codepoint === ZERO_WIDTH_SPACE) continue;
       const origin = { x: startX + glyph.x * pixelSize, y: baseline };
-      const mesh = meshOf(glyph);
-      if (mesh) placed.push({ ...origin, mesh });
-      else {
+      const pieces = drawnPieces(glyph);
+      const meshes = pieces.map(({ char }) => meshOf(glyph, char));
+      if (meshes.some((mesh) => mesh === null) && !glyph.decomposition) {
         const box = hexCodeBoxAdvanceSize(properties.fontSize, codepoint);
         placed.push({ ...origin, box: { x: box.x * pixelSize, y: box.y * pixelSize } });
+        continue;
       }
+      pieces.forEach(({ x, y }, i) => {
+        const mesh = meshes[i];
+        if (mesh) placed.push({ x: origin.x + x * pixelSize, y: origin.y - y * pixelSize, mesh });
+      });
     }
     lineTop -= linePitchPx * pixelSize;
   }

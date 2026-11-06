@@ -7,6 +7,7 @@ import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { faceDescriptors } from './sceneFontFace';
 import { openFontContainer } from './fontContainer';
 import { sfntHasGlyph } from './sfntCmap';
+import { sfntDecomposition } from './sfntDecomposition';
 import { parseSfntScalars, readAxisDefaults, type SfntScalars } from './sfntTables';
 import {
   createRuntimeFontMetrics,
@@ -136,6 +137,7 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
     measureInkUnits,
     cssFontFamily: family,
     hasGlyph,
+    decomposition: (sfnt && sfntDecomposition(sfnt)) ?? undefined,
   });
 }
 

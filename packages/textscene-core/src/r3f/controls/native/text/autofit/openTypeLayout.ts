@@ -275,6 +275,22 @@ export function languageFeatures(
   return indices;
 }
 
+/**
+ * The lookups of the default language system of every script, of the features HarfBuzz turns on by
+ * default, ascending. HarfBuzz takes that system for text with no language of the font
+ * (`hb-ot-layout.cc:769-804`), and the previewer gives no text a language. A `FeatureVariations` record
+ * that swaps them is left out.
+ */
+export function defaultLanguageLookups(table: LayoutTable): number[] {
+  const lookups = new Set<number>();
+  for (const { defaultLanguage } of table.scripts) {
+    if (!defaultLanguage) continue;
+    for (const index of languageFeatures(table, defaultLanguage, DEFAULT_FEATURES))
+      table.features[index]?.lookups.forEach((lookup) => lookups.add(lookup));
+  }
+  return [...lookups].sort((a, b) => a - b);
+}
+
 /** HarfBuzz skips a script or language system with nothing in it (`hb_collect_features_context_t::visited`). */
 const isEmptyScript = (script: Script): boolean => !script.defaultLanguage && script.languages.length === 0;
 const isEmptyLanguage = (language: LanguageSystem): boolean =>
