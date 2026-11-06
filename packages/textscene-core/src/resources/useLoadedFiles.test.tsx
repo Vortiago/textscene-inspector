@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
+import { act, render, renderHook } from '@testing-library/react';
 import type { ParsedResource } from '../parser/parsedResource';
 import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 import type { FontFileResource } from './fonts/font/types';
@@ -107,6 +107,30 @@ describe('useLoadedFiles', () => {
 
     act(() => fake.resources._resolve(OUTER, FILE));
     expect(result.current.files.loadedFile).not.toBe(loadedFile);
+  });
+
+  it('stops loading for a file that lands between the render and the subscription (error path)', () => {
+    const { fake } = fakeRequesting();
+    let isLoading: boolean | undefined;
+    function Reader() {
+      isLoading = useLoadedFiles(() => [OUTER]).isLoading;
+      return null;
+    }
+    // Renders after `Reader`, before the effects commit: the sibling's load lands in that gap.
+    function Sibling() {
+      fake.resources._resolve(OUTER, FILE);
+      return null;
+    }
+
+    render(
+      <>
+        <Reader />
+        <Sibling />
+      </>,
+      { wrapper: missingResourcesWrapper(fake.loader) }
+    );
+
+    expect(isLoading).toBe(false);
   });
 
   it('is not loading, and requests nothing, for a plan that names no file (edge case)', () => {
