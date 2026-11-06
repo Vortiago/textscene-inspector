@@ -21,6 +21,7 @@ import {
   ftVectorUnit,
   shiftRight,
 } from './ftVector';
+import { reverseFrom } from '../../../../utils/reverseFrom';
 import { divide } from './autofit/afHints';
 import { splitCubic } from './freeTypeChords';
 import {
@@ -183,15 +184,6 @@ class StrokeBorder {
     this.start = this.points.length;
     this.movable = false;
     this.lineTo(to, false);
-  }
-}
-
-/** Reverses `items[from..]` in place. A spread of a large contour into `splice` overflows the stack. */
-function reverseFrom<T>(items: T[], from: number): void {
-  for (let low = from, high = items.length - 1; low < high; low++, high--) {
-    const item = items[low]!;
-    items[low] = items[high]!;
-    items[high] = item;
   }
 }
 
