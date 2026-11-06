@@ -19,7 +19,9 @@ export default function BundledCanvasRun({ layout, ...run }: TextRunProps) {
   // The canvas face keeps the baked advances, so the atlas layout places its glyphs.
   const canvasLayout = useMemo(() => face && { ...layout, fontMetrics: face }, [layout, face]);
   usePendingWhile(face === undefined);
-  if (canvasLayout) return <TextRunMesh {...run} layout={canvasLayout} />;
+  // A key, so the canvas run mounts fresh rather than reusing the atlas fill's mesh, which moves a
+  // pixel of `complex-2d-gui` 1/255 away from Godot.
+  if (canvasLayout) return <TextRunMesh key="canvas" {...run} layout={canvasLayout} />;
   // While the face registers, or where it cannot, the atlas fill keeps the text visible. The atlas
   // cannot stroke a ring.
   const isFill = !((run.strokeWidthPx ?? 0) > 0);
