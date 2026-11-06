@@ -26,7 +26,12 @@ vi.mock('./TextRunMesh', () => ({
   },
 }));
 
-const LAYOUT = shapeText('AB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.AUTOWRAP_OFF });
+const LAYOUT = shapeText('AB', {
+  fontSizePx: 16,
+  boxWidthPx: 0,
+  autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+  lineSpacingPx: 0,
+});
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
 describe('<BundledCanvasRun>', () => {
