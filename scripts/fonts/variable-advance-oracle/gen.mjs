@@ -1,11 +1,14 @@
 // Runs oracle.gd for each instance of a case and writes what Godot's shaper gives each character: its
-// advance and glyph, and the kerning of each pair a case lists. Run it from this folder with Godot 4.6.3 on the path.
+// advance and glyph, and the kerning of each pair a case lists. Godot 4.6.3 must be on the path.
 // Cases and their files: open-sans (variableAdvance.godot.json), open-sans-no-hvar (variableAdvanceNoHvar.godot.json),
 // recursive (instanceGlyph.godot.json) and gpos-feature-variations (instanceGposVariations.godot.json).
 // Usage: node gen.mjs <fixtures dir> <out path> <case>
-import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { runGodotOracle } from '../godot-oracle/godotOracle.mjs';
+
+const ORACLE = fileURLToPath(new URL('oracle.gd', import.meta.url));
 
 const [fixtures, out, caseName] = process.argv.slice(2);
 const WGHT = 2003265652;
@@ -58,18 +61,8 @@ if (!(caseName in CASES)) {
 }
 const { font, characters, sizes, pairs, instances } = CASES[caseName];
 const glyphs = instances.flatMap((spec) => {
-  const args = [join(fixtures, font), characters, sizes, JSON.stringify(spec), ...(pairs ? [pairs] : [])];
-  const output = execFileSync(
-    'godot',
-    ['--headless', '--path', '.', '--script', 'oracle.gd', '--', ...args],
-    { encoding: 'utf8' }
-  );
-  return JSON.parse(
-    output
-      .split('\n')
-      .find((line) => line.startsWith('JSON:'))
-      .slice(5)
-  );
+  const args = [resolve(fixtures, font), characters, sizes, JSON.stringify(spec), ...(pairs ? [pairs] : [])];
+  return runGodotOracle(ORACLE, args);
 });
 writeFileSync(out, JSON.stringify(glyphs, null, 2));
 console.log(glyphs.length, 'rows');

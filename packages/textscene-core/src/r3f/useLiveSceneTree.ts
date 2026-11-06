@@ -86,13 +86,13 @@ const NO_LOAD_TICKS: LoadTicks = { version: 0, subscribe: subscribeToNothing, ge
 const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
   const listeners = new Set<() => void>();
   let stopListening: (() => void) | undefined;
-  // The changes seen so far: a count that moved while no reader listened is a load or a cache clear that went unseen.
-  let seenChanges = loader.eventBus.changeCount(LIVE_TREE_BUSES);
+  // The token of the last time a reader listened: a change after it is a load or a cache clear that went unseen.
+  let listenedUntil = loader.eventBus.changeToken();
   const ticks: LoadTicks = {
     version: 0,
     getVersion: () => ticks.version,
     subscribe: (onChange) => {
-      if (listeners.size === 0 && loader.eventBus.changeCount(LIVE_TREE_BUSES) !== seenChanges)
+      if (listeners.size === 0 && loader.eventBus.hasChangedSince(LIVE_TREE_BUSES, listenedUntil))
         ticks.version++;
       listeners.add(onChange);
       stopListening ??= loader.eventBus.onChange(LIVE_TREE_BUSES, ({ event }) => {
@@ -105,7 +105,7 @@ const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
         if (listeners.size > 0) return;
         stopListening?.();
         stopListening = undefined;
-        seenChanges = loader.eventBus.changeCount(LIVE_TREE_BUSES);
+        listenedUntil = loader.eventBus.changeToken();
       };
     },
   };

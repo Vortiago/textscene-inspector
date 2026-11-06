@@ -7,13 +7,12 @@
 import { describe, expect, it } from 'vitest';
 import reference from './decomposedMarks.godot.json';
 import type { FontMetrics } from './fontMetrics';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { sfntGlyphIndex, sfntHasGlyph } from './sfntCmap';
 import { sfntDecomposition } from './sfntDecomposition';
 import { glyphMetricsReader } from './sfntGlyphMetrics';
-import { fixtureFontBytes } from './sfntOutlines.testkit';
-import { openSfnt, parseSfntScalars } from './sfntTables';
-import { shapeText } from './textLayout';
+import { fixtureSfnt } from './sfntOutlines.testkit';
+import { parseSfntScalars } from './sfntTables';
+import { glyphsOf } from './textLayout.testkit';
 
 interface ReferenceCharacter {
   readonly font: string;
@@ -23,7 +22,7 @@ interface ReferenceCharacter {
 }
 
 function fontMetricsOf(font: string): FontMetrics {
-  const sfnt = openSfnt(fixtureFontBytes(font))!;
+  const sfnt = fixtureSfnt(font);
   const { unitsPerEm, ascent, descent } = parseSfntScalars(sfnt)!;
   const glyphIndexOf = sfntGlyphIndex(sfnt)!;
   const metricsOf = glyphMetricsReader(sfnt);
@@ -52,21 +51,14 @@ describe('shapeText — the marks of a decomposed character against Godot', () =
   it.each(references.map((row) => [`${row.char} at ${row.sizePx} px in ${row.font}`, row] as const))(
     'places %s',
     (_, { font, char, sizePx, glyphs }) => {
-      const [placed] = shapeText(char, {
-        fontSizePx: sizePx,
-        boxWidthPx: 0,
-        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-        lineSpacingPx: 0,
-        fontMetrics: fontMetricsOf(font),
-      }).lines[0]!.glyphs;
-
-      const [base, ...marks] = glyphs;
-      expect(placed!.advance).toBe(base!.advance);
-      // Godot offsets a mark from the pen after the base, in y down; the placement is from the base's origin.
+      const placed = glyphsOf(char, fontMetricsOf(font), sizePx);
       // Adding zero turns the layout's -0 into the 0 of the reference.
-      expect(placed!.decomposition!.marks.map(({ x, y }) => [x + 0, y + 0])).toEqual(
-        marks.map(({ offset: [x, y] }) => [base!.advance + x, y])
-      );
+      expect(
+        placed.map(({ advance, xOffset = 0, yOffset = 0 }) => ({
+          advance,
+          offset: [xOffset + 0, yOffset + 0],
+        }))
+      ).toEqual(glyphs.map(({ advance, offset }) => ({ advance, offset })));
     }
   );
 });

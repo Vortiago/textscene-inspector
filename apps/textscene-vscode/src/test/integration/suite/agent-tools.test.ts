@@ -46,7 +46,12 @@ suite('Agent tools', () => {
     await vscode.extensions.getExtension(EXTENSION_ID)?.activate();
   });
 
-  suiteTeardown(() => removeGodotProject(PROJECT));
+  // The open-preview test leaves a preview that renders on, and on a Windows runner it
+  // holds back the next suite's webview past the 30 s capture load deadline.
+  suiteTeardown(async () => {
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    await removeGodotProject(PROJECT);
+  });
 
   test('the manifest contributes every agent tool', () => {
     const names = contributedTools(extensionUnderTest()).map((tool) => tool.name);

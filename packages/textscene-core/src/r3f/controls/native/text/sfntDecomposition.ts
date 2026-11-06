@@ -5,18 +5,15 @@
  */
 
 import { recentlyRead } from '../../../../utils/recentlyRead';
-import { drawnCharacters } from './canonicalGlyphs';
 import { fallbackMarkReader, type SizedClusterOffsets } from './fallbackMarkPositioning';
 import { glyphOffsetPx } from './fontMetrics';
-import { hasMarkScript, markPositioningReader, ORIGIN } from './markPositioning';
-import { sfntMapsGlyph } from './sfntCmap';
+import { markPositioningReader, ORIGIN, type MarkOffset } from './markPositioning';
+import { sfntDrawnCharacters } from './sfntCmap';
 import { parseSfntScalars, type SfntFile } from './sfntTables';
 
 /** A mark drawn over a base, and where its origin sits against the base's origin in px with y up, at one font size. */
-export interface DrawnMark {
+export interface DrawnMark extends MarkOffset {
   readonly char: string;
-  readonly xPx: number;
-  readonly yPx: number;
 }
 
 /** A character drawn as a base and the marks over it. */
@@ -30,9 +27,6 @@ export interface DecomposedGlyph {
  * glyph or not at all.
  */
 export type Decomposition = (ch: string, fontSizePx: number) => DecomposedGlyph | null;
-
-/** Whether `sfntDecomposition` needs outlines for `sfnt`: the font has no `GPOS` script for marks. */
-export const usesFallbackMarks = (sfnt: SfntFile): boolean => !hasMarkScript(sfnt);
 
 function fallbackMarkReaderOf(openOutlines: () => SfntFile | null): SizedClusterOffsets | null {
   const outlines = openOutlines();
@@ -61,47 +55,48 @@ function gposOffsetReader(sfnt: SfntFile): SizedClusterOffsets | null {
 
 /**
  * `openOutlines` opens the font with the tables the fallback placement reads (`glyf` or `CFF `, and
- * `hmtx`). A font with a `GPOS` script never calls it: see `usesFallbackMarks`.
+ * `hmtx`). A font with a `GPOS` script for its marks never calls it.
  */
 export function sfntDecomposition(
   sfnt: SfntFile,
   openOutlines: () => SfntFile | null = () => sfnt
 ): Decomposition | null {
-  const mapsGlyph = sfntMapsGlyph(sfnt);
-  if (!mapsGlyph) return null;
+  const drawnOf = sfntDrawnCharacters(sfnt);
+  if (!drawnOf) return null;
   // Read at the first decomposed character: most fonts never need their `GPOS` or outlines.
   let offsetsOf: SizedClusterOffsets | null | undefined;
   const readOffsets = () =>
     offsetsOf === undefined
       ? (offsetsOf = gposOffsetReader(sfnt) ?? fallbackMarkReaderOf(openOutlines))
       : offsetsOf;
-  const keptAtSize = recentlyRead<number, Map<string, DecomposedGlyph | null>>(MAX_KEPT_SIZES);
+  const keptAtSize = recentlyRead<number, Map<string, DecomposedGlyph>>(MAX_KEPT_SIZES);
   return (ch, fontSizePx) => {
+    // A character drawn as one glyph or not at all skips the cache per size: `drawnOf` already caches it.
+    const drawn = drawnOf(ch);
+    if (!drawn || drawn.length < 2) return null;
     const kept = keptAtSize(fontSizePx, newDecompositionsByCharacter);
     let glyph = kept.get(ch);
-    if (glyph === undefined) kept.set(ch, (glyph = decompose(ch, fontSizePx, mapsGlyph, readOffsets)));
+    if (glyph === undefined) kept.set(ch, (glyph = decompose(drawn, fontSizePx, readOffsets)));
     return glyph;
   };
 }
 
 /** Declared once, not inline: an arrow inside the reader would allocate a closure on every read. */
-const newDecompositionsByCharacter = (): Map<string, DecomposedGlyph | null> => new Map();
+const newDecompositionsByCharacter = (): Map<string, DecomposedGlyph> => new Map();
 
 /** A font size animation passes through many sizes, so the decompositions of this many sizes are kept. */
 const MAX_KEPT_SIZES = 8;
 
+/** The glyph that `drawn`, a base and at least one mark, makes at `fontSizePx`. */
 function decompose(
-  ch: string,
+  drawn: readonly string[],
   fontSizePx: number,
-  mapsGlyph: (ch: string) => boolean,
   readOffsets: () => SizedClusterOffsets | null
-): DecomposedGlyph | null {
-  const drawn = drawnCharacters(ch, mapsGlyph);
-  if (!drawn || drawn.length < 2) return null;
+): DecomposedGlyph {
   const offsets = readOffsets()?.(drawn, fontSizePx);
   const marks = drawn.slice(1).map((char, i) => {
     const { x, y } = offsets?.[i + 1] ?? ORIGIN;
-    return { char, xPx: x, yPx: y };
+    return { char, x, y };
   });
   return { base: drawn[0]!, marks };
 }

@@ -6,8 +6,8 @@
  */
 
 import { openSfnt, SCENE_FONT_TABLE_TAGS, type SfntFile } from './sfntTables';
-import { WOFF_SIGNATURE, lazyWoffTables, readWoffTables } from './woffContainer';
-import { WOFF2_SIGNATURE, lazyWoff2Tables, readWoff2Tables } from './woff2Container';
+import { WOFF_SIGNATURE, lazyWoffTables } from './woffContainer';
+import { WOFF2_SIGNATURE, lazyWoff2Tables } from './woff2Container';
 
 /**
  * The tables of `bytes` that a plain sfnt, a WOFF or a WOFF2 holds under `tags`: the scalars' by
@@ -17,20 +17,7 @@ export async function openFontContainer(
   bytes: ArrayBuffer,
   tags: readonly string[] = SCENE_FONT_TABLE_TAGS
 ): Promise<SfntFile | null> {
-  if (bytes.byteLength < 4) return null;
-  try {
-    switch (new DataView(bytes).getUint32(0, false)) {
-      case WOFF_SIGNATURE:
-        return await readWoffTables(bytes, tags);
-      case WOFF2_SIGNATURE:
-        return await readWoff2Tables(bytes, tags);
-      default:
-        return openSfnt(bytes);
-    }
-  } catch {
-    // A container that does not decompress is a font the loader falls back from, never a throw.
-    return null;
-  }
+  return (await lazyFontContainer(bytes, tags))();
 }
 
 /**

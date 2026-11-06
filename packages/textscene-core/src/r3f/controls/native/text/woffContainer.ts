@@ -8,7 +8,7 @@ import {
   zlibBlockInflater,
   type BlockInflater,
 } from '../../../../resources/formats/binaryresource/compressedStream';
-import { SCENE_FONT_TABLE_TAGS, readTag, sfntFileOfTables, type SfntFile } from './sfntTables';
+import { readTag, sfntFileOfTables, type SfntFile } from './sfntTables';
 
 export const WOFF_SIGNATURE = 0x774f4646; // 'wOFF'
 const WOFF_HEADER_SIZE = 44;
@@ -19,15 +19,11 @@ const WOFF_RECORD_SIZE = 20;
 /** The tables inflated so far from one buffer: the metrics and the outlines of a scene font both read `head`. */
 const inflatedTablesOf = perObject((_bytes: ArrayBuffer) => new Map<string, Uint8Array>());
 
-/** Throws on a directory or a table that does not fit `bytes`, or on a zlib stream that does not inflate to its `origLength`. */
-export async function readWoffTables(
-  bytes: ArrayBuffer,
-  tags: readonly string[] = SCENE_FONT_TABLE_TAGS
-): Promise<SfntFile> {
-  return (await lazyWoffTables(bytes, tags))();
-}
-
-/** `readWoffTables` split at its slow step: the inflater loads here, and the thunk inflates the tables of `tags` when first called. */
+/**
+ * The tables of `tags`, split at the slow step: the inflater loads here, and the thunk inflates the
+ * tables when first called. The thunk throws on a directory or a table that does not fit `bytes`, or
+ * on a zlib stream that does not inflate to its `origLength`.
+ */
 export async function lazyWoffTables(bytes: ArrayBuffer, tags: readonly string[]): Promise<() => SfntFile> {
   const inflate = await zlibBlockInflater();
   return () => woffTablesOf(bytes, tags, inflate);
