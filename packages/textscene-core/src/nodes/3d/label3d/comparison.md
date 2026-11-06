@@ -89,7 +89,7 @@ The glyph raster has a mip chain only when its font generates mipmaps and `textu
 - **Resource gap** A SystemFont always draws the default font, as Godot does when no OS font matches its names, where Godot draws a matching OS font.
 - **Approximated** Godot's font rasteriser differs from the browser's, so the glyph edges and the `outline_size` outline differ slightly from Godot's.
 - **Approximated** An emboldened glyph, or one at a variable font's instance, follows FreeType's normal hinting, where Godot rasterises with light hinting.
-- **Approximated** At an instance, a variable font swaps glyphs by `rvrn` alone. Its other `GSUB` features (ligatures, contextual alternates) keep the `cmap` glyphs.
+- **Approximated** At an instance, a variable font swaps glyphs by `rvrn` alone, so its ligatures and contextual alternates keep the `cmap` glyphs.
 - **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
 - **Approximated** A line with a hex-code box keeps the ascent of a BMFont, where Godot grows it to fit the box (#1324).

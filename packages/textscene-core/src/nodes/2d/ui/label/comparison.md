@@ -187,7 +187,7 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 ## Known limitations
 
 - **Not drawn** Arabic letters draw in their isolated forms, since the shaper does not join them.
-- **Approximated** At an instance, a variable font swaps glyphs by `rvrn` alone. Its other `GSUB` features (ligatures, contextual alternates) keep the `cmap` glyphs.
+- **Approximated** At an instance, a variable font swaps glyphs by `rvrn` alone, so its ligatures and contextual alternates keep the `cmap` glyphs.
 - **Approximated** At an instance, the `GPOS` kerning reads the pair lookups of every script, where Godot reads those of each script run.
 - **Approximated** At an instance, the `GPOS` kerning reads the default language system of each script, where Godot reads the system of the text's language.
 - **Approximated** At an instance, the `GPOS` kerning pairs adjacent characters only, where Godot also kerns across a glyph that a lookup flag skips.
