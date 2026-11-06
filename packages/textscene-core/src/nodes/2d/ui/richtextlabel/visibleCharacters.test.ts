@@ -12,6 +12,7 @@ import type { StyledTextRun } from './nativeSolver';
 import { IMAGE_OBJECT_CHAR } from './bbcode';
 import {
   countedCharacters,
+  countedLayoutForReveal,
   revealedGlyphs,
   richTextReveal,
   truncateRunsToCharacters,
@@ -43,7 +44,7 @@ function shown(
   implicitBreaks?: number[]
 ): string[] {
   const layout = shape(text, boxWidthPx);
-  const kept = revealedGlyphs(layout, [{ text, implicitBreaks }], reveal);
+  const kept = revealedGlyphs(countedLayoutForReveal(layout, [{ text, implicitBreaks }], reveal)!, reveal);
   return layout.lines.map((line) =>
     visualChars({ ...line, glyphs: line.glyphs.filter((g) => kept!.has(g)) }).replaceAll(
       PARAGRAPH_TERMINATOR,
@@ -74,12 +75,9 @@ describe('revealedGlyphs', () => {
   // glyphs where `add_string("fi")` is one, so a ligature never joins glyphs of two runs.
   it('counts f and i of two runs as two glyphs', () => {
     const layout = shape('abcdefghfi');
-    const kept = revealedGlyphs(layout, [{ text: 'abcdefghf' }, { text: 'i' }], {
-      behavior: VC_GLYPHS_LTR,
-      characters: 9,
-      ratio: 0.99,
-      rtl: false,
-    });
+    const reveal = { behavior: VC_GLYPHS_LTR, characters: 9, ratio: 0.99, rtl: false };
+    const runs = [{ text: 'abcdefghf' }, { text: 'i' }];
+    const kept = revealedGlyphs(countedLayoutForReveal(layout, runs, reveal)!, reveal);
     expect(
       layout.lines.map((line) => visualChars({ ...line, glyphs: line.glyphs.filter((g) => kept!.has(g)) }))
     ).toEqual(['abcdefghf']);
@@ -162,7 +160,7 @@ describe('revealedGlyphs', () => {
 
   it('skips no glyph before shaping, which cuts the text instead', () => {
     const reveal = { behavior: VC_CHARS_BEFORE_SHAPING, characters: 2, ratio: 0.4, rtl: false };
-    expect(revealedGlyphs(shape('Hello'), [{ text: 'Hello' }], reveal)).toBeUndefined();
+    expect(countedLayoutForReveal(shape('Hello'), [{ text: 'Hello' }], reveal)).toBeUndefined();
   });
 });
 

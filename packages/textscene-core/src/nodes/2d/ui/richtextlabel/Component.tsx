@@ -244,30 +244,19 @@ function useShapedRichText(
   );
 
   const { visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior } = props;
-  const totalCharacters = useMemo(() => countedCharacters(shaped.runs), [shaped.runs]);
-  const reveal = useMemo(
-    () =>
-      richTextReveal(
-        { visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior },
-        rtl,
-        totalCharacters
-      ),
-    [visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior, rtl, totalCharacters]
-  );
+  const reveal = useMemo(() => {
+    // Without a budget the count is unread, so a label that shows everything skips it.
+    if (visibleCharacters === undefined && !visibleRatioDrives) return undefined;
+    return richTextReveal(
+      { visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior },
+      rtl,
+      countedCharacters(shaped.runs)
+    );
+  }, [visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior, rtl, shaped.runs]);
 
   // Before Shaping draws a prefix shaped on its own, so a typewriter reveal wraps as it grows. Only
   // this prefix depends on the reveal: the full shape above, which the heights and the bar read, does not.
   const isBeforeShaping = reveal?.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING;
-  const fullText = useMemo(
-    () =>
-      isBeforeShaping
-        ? {
-            heightPx: shaped.contentHeightPx,
-            lineCount: shaped.layout.lines.length,
-          }
-        : undefined,
-    [isBeforeShaping, shaped]
-  );
   const shown = useMemo(() => {
     if (!reveal || !isBeforeShaping) return undefined;
     const { runs, layout, wrapWidthPx } = shaped;
@@ -280,7 +269,7 @@ function useShapedRichText(
     };
   }, [shaped, reveal, isBeforeShaping, shapeAtWidth]);
 
-  return { ...shaped, shown, fullText, reveal };
+  return { ...shaped, shown, isBeforeShaping, reveal };
 }
 
 /** The lines and images of a RichTextLabel, and its scrollbar. A `ControlQuad` reads its clip from context, a `TextRun` from `clippingPlanes`. */
@@ -299,8 +288,18 @@ function RichTextBody({
     [solveNode, props, theme]
   );
 
-  const { runs, layout, shown, fullText, reveal, wrapWidthPx, textOriginXPx, scrollOffsetPx, scrollBar } =
-    useShapedRichText(solveNode, props, rect, theme, textTheme);
+  const {
+    runs,
+    layout,
+    shown,
+    isBeforeShaping,
+    contentHeightPx,
+    reveal,
+    wrapWidthPx,
+    textOriginXPx,
+    scrollOffsetPx,
+    scrollBar,
+  } = useShapedRichText(solveNode, props, rect, theme, textTheme);
 
   // The alignment property and the `[center]`/`[right]`/`[left]`/`[fill]` tags
   // (`rich_text_label.cpp:5681-5696`) resolve through one `_find_alignment`
@@ -314,13 +313,14 @@ function RichTextBody({
         horizontalAlignment: props.horizontalAlignment,
         verticalAlignment: props.verticalAlignment,
         reveal,
-        fullText,
+        fullText: isBeforeShaping ? { heightPx: contentHeightPx, lineCount: layout.lines.length } : undefined,
       }),
     [
       runs,
       layout,
       shown,
-      fullText,
+      isBeforeShaping,
+      contentHeightPx,
       reveal,
       wrapWidthPx,
       rect.h,

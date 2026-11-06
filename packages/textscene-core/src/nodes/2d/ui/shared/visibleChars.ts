@@ -9,6 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { storedReal } from '../../../../godot/math/real';
 import { utf16OffsetOf } from '../../../../godot/string/codePoints';
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type { GlyphPlacement, TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
@@ -24,24 +25,20 @@ interface VisibleCharsState {
 /** Godot's construction defaults for both classes (label.h:75-76, rich_text_label.h:553). */
 const DEFAULT_VISIBLE_CHARS_STATE: VisibleCharsState = { visibleChars: -1, visibleRatio: 1 };
 
-/** The ratio a `visible_characters` write leaves on empty text, given the state before it. */
-type EmptyTextRatio = (state: VisibleCharsState) => number;
-
-/** Label resets the ratio on empty text (`label.cpp:1288`). */
-const labelEmptyTextRatio: EmptyTextRatio = () => 1;
-
-/** RichTextLabel leaves the ratio on empty text (`rich_text_label.cpp:7898-7900`). */
-const richTextEmptyTextRatio: EmptyTextRatio = (state) => state.visibleRatio;
-
-/** `Label::set_visible_characters` (label.cpp:1285-1299): a no-op when `p_amount` matches the current field, else re-derives both fields from the current text length. */
+/**
+ * `Label::set_visible_characters` (label.cpp:1285-1299): a no-op when `p_amount` matches the current
+ * field, else re-derives both fields from the current text length. On empty text Label resets the
+ * ratio to 1 (`label.cpp:1288`) and RichTextLabel keeps it (`rich_text_label.cpp:7898-7900`).
+ */
 function applySetVisibleCharacters(
   state: VisibleCharsState,
   amount: number,
   totalChars: number,
-  emptyTextRatio: EmptyTextRatio
+  resetsRatioOnEmptyText: boolean
 ): VisibleCharsState {
   if (state.visibleChars === amount) return state;
-  const visibleRatio = amount === -1 ? 1 : totalChars === 0 ? emptyTextRatio(state) : amount / totalChars;
+  const emptyTextRatio = resetsRatioOnEmptyText ? 1 : state.visibleRatio;
+  const visibleRatio = amount === -1 ? 1 : totalChars === 0 ? emptyTextRatio : amount / totalChars;
   return { visibleChars: amount, visibleRatio, lastSetter: 'characters' };
 }
 
@@ -50,7 +47,7 @@ function applySetVisibleCharacters(
  * 29.999999999999996 in double precision, which truncates to 29, and 30 in float.
  */
 export function truncatedShare(count: number, ratio: number): number {
-  return Math.trunc(Math.fround(count * Math.fround(ratio)));
+  return Math.trunc(storedReal(count * storedReal(ratio)));
 }
 
 /** `Label::set_visible_ratio` (label.cpp:1305-1323): a no-op when `p_ratio` matches the current field. */
@@ -74,7 +71,7 @@ function applySetVisibleRatio(
 function resolveVisibleChars(
   properties: Record<string, string>,
   textLength: () => number,
-  emptyTextRatio: EmptyTextRatio
+  resetsRatioOnEmptyText: boolean
 ): VisibleCharsState | undefined {
   const rawChars = properties.visible_characters;
   const rawRatio = properties.visible_ratio;
@@ -85,7 +82,8 @@ function resolveVisibleChars(
   for (const key of Object.keys(properties)) {
     if (key === 'visible_characters') {
       const amount = parseOptionalInt(rawChars);
-      if (amount !== undefined) state = applySetVisibleCharacters(state, amount, totalChars, emptyTextRatio);
+      if (amount !== undefined)
+        state = applySetVisibleCharacters(state, amount, totalChars, resetsRatioOnEmptyText);
     } else if (key === 'visible_ratio') {
       const ratio = parseOptionalFloat(rawRatio);
       if (ratio !== undefined) state = applySetVisibleRatio(state, ratio, totalChars);
@@ -99,7 +97,7 @@ export function resolveLabelVisibleChars(
   properties: Record<string, string>,
   textLength: () => number
 ): VisibleCharsState | undefined {
-  return resolveVisibleChars(properties, textLength, labelEmptyTextRatio);
+  return resolveVisibleChars(properties, textLength, true);
 }
 
 /** RichTextLabel's pair: empty text keeps the ratio (`rich_text_label.cpp:7898-7900`). */
@@ -107,7 +105,7 @@ export function resolveRichTextVisibleChars(
   properties: Record<string, string>,
   textLength: () => number
 ): VisibleCharsState | undefined {
-  return resolveVisibleChars(properties, textLength, richTextEmptyTextRatio);
+  return resolveVisibleChars(properties, textLength, false);
 }
 
 interface VisibleCharsBudget {
@@ -179,7 +177,9 @@ function revealCharacters(
  * The default font draws these sequences as one glyph, which `shaped_text_get_glyph_count` counts once
  * (measured with `pnpm ref:godot`; `ft`, `tt`, `fj`, `fb`, `fh`, `fk` and `Th` stay two). Longest first.
  */
-const LIGATURES = ['ffi', 'ffl', 'ff', 'fi', 'fl'];
+const LIGATURES: readonly (readonly string[])[] = ['ffi', 'ffl', 'ff', 'fi', 'fl'].map((ligature) => [
+  ...ligature,
+]);
 
 /** `f` starts every ligature, so a line without one skips the search. */
 const LIGATURE_START = 'f';
@@ -226,22 +226,35 @@ function ligatureLengthAt(
   start: number,
   spanStarts: ReadonlySet<number> | undefined
 ): number {
+  for (const ligature of LIGATURES) {
+    if (joinsLigature(glyphs, start, ligature, spanStarts)) return ligature.length;
+  }
+  return 0;
+}
+
+/** Indexed, not `every`: no closure for each `f` glyph. */
+function joinsLigature(
+  glyphs: readonly GlyphPlacement[],
+  start: number,
+  ligature: readonly string[],
+  spanStarts: ReadonlySet<number> | undefined
+): boolean {
   const first = glyphs[start]!;
-  return (
-    LIGATURES.find((ligature) =>
-      [...ligature].every((char, offset) => {
-        const glyph = glyphs[start + offset];
-        return (
-          glyph?.char === char &&
-          glyph.glyph !== null &&
-          glyph.sourceIndex === first.sourceIndex! + offset &&
-          !(offset > 0 && spanStarts?.has(glyph.sourceIndex)) &&
-          glyph.fontMetrics === first.fontMetrics &&
-          glyph.fontSizePx === first.fontSizePx
-        );
-      })
-    )?.length ?? 0
-  );
+  for (let offset = 0; offset < ligature.length; offset++) {
+    const glyph = glyphs[start + offset];
+    if (
+      glyph === undefined ||
+      glyph.char !== ligature[offset] ||
+      glyph.glyph === null ||
+      glyph.sourceIndex !== first.sourceIndex! + offset ||
+      (offset > 0 && spanStarts?.has(glyph.sourceIndex)) ||
+      glyph.fontMetrics !== first.fontMetrics ||
+      glyph.fontSizePx !== first.fontSizePx
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /** The GLYPHS behaviours: `visible_ratio * total_glyphs` glyphs, counted in visual order across lines. */
