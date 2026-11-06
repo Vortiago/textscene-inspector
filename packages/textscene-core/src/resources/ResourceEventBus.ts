@@ -40,15 +40,15 @@ export interface ResourceChange {
 export class ResourceEventBus {
   private handlers = new Map<string, Set<EventHandler<unknown>>>();
   private threeManager: THREE.LoadingManager;
-  private settles = 0;
+  /** Written only by `emit`, never reset: a reader compares two reads of it. */
+  private settles = new Map<ResourceType, number>();
 
   /**
-   * How many loads have settled, loaded or failed, on every bus: never reset. A reader that
-   * subscribes after it rendered compares it with the count at its render, to learn of a settle
-   * that landed in between.
+   * How many loads have settled, loaded or failed, on `busTypes`. A reader that subscribes after it
+   * rendered compares it with the count at its render, to learn of a settle that landed in between.
    */
-  get settleCount(): number {
-    return this.settles;
+  settleCount(busTypes: readonly ResourceType[]): number {
+    return busTypes.reduce((sum, busType) => sum + (this.settles.get(busType) ?? 0), 0);
   }
 
   constructor() {
@@ -94,7 +94,9 @@ export class ResourceEventBus {
 
   emit<T = unknown>(resourceType: ResourceType, eventType: ResourceEventType, id: string, data?: T): void {
     const key = `${resourceType}:${eventType}`;
-    if (eventType === 'loaded' || eventType === 'failed') this.settles += 1;
+    if (eventType === 'loaded' || eventType === 'failed') {
+      this.settles.set(resourceType, (this.settles.get(resourceType) ?? 0) + 1);
+    }
     const handlers = this.handlers.get(key);
     if (handlers) {
       for (const handler of handlers) {

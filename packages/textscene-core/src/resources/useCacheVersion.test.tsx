@@ -14,9 +14,10 @@ function mount(busTypes: Parameters<typeof useCacheVersion>[1], read?: string[])
 describe('useCacheVersion', () => {
   it('moves on for a load that settles between the render and the subscription (error path)', () => {
     const fake = createFakeResourceLoader();
+    const busTypes = ['font'] as const;
     let version = 0;
     function Reader() {
-      version = useCacheVersion(fake.loader as ResourceLoader, ['font']);
+      version = useCacheVersion(fake.loader as ResourceLoader, busTypes);
       return null;
     }
     // Renders after `Reader`, before the effects commit: the sibling's load lands in that gap.
@@ -33,6 +34,29 @@ describe('useCacheVersion', () => {
     );
 
     expect(version).toBeGreaterThan(0);
+  });
+
+  it('stays put for a load on another bus that settles between the render and the subscription', () => {
+    const fake = createFakeResourceLoader();
+    const busTypes = ['theme'] as const;
+    let version = 0;
+    function Reader() {
+      version = useCacheVersion(fake.loader as ResourceLoader, busTypes);
+      return null;
+    }
+    function Sibling() {
+      fake.fonts._resolve('res://a.ttf', {} as never);
+      return null;
+    }
+
+    render(
+      <>
+        <Reader />
+        <Sibling />
+      </>
+    );
+
+    expect(version).toBe(0);
   });
 
   it('moves on when a listed bus loads or fails a key', () => {
