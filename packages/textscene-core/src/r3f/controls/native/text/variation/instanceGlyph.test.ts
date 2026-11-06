@@ -12,6 +12,11 @@ import { createRuntimeFontMetrics } from '../runtimeFontMetrics';
 import { openFontOutlines } from '../sfntOutlines';
 import { fixtureFontBytes } from '../sfntOutlines.testkit';
 import { opentypeOf } from '../glyphVariation.testkit';
+import { openFontContainer } from '../fontContainer';
+import { OUTLINE_TABLE_TAGS, sfntFileOfTables, tableBytes } from '../sfntTables';
+import { sfntGlyphIndex } from '../sfntCmap';
+import { sfntGsub } from '../autofit/openTypeLayout';
+import { instanceGlyphIndex } from './instanceGlyph';
 
 interface ReferenceGlyph {
   font: string;
@@ -64,4 +69,26 @@ describe('the glyph of a variable font at an instance', () => {
       expect(getFontGlyphAdvancePx(metrics, row.char, row.sizePx)).toBe(row.advancePx);
     }
   );
+});
+
+describe('the glyph of a variable font with a corrupt GSUB', () => {
+  it('stays the cmap glyph where a subtable reads past the table', async () => {
+    const whole = (await openFontContainer(
+      fixtureFontBytes('recursive-vf-subset.woff2'),
+      OUTLINE_TABLE_TAGS
+    ))!;
+    // Lookup 37 swaps `l` at the default instance. Its coverage offset now points past the bytes of
+    // the file, because `GSUB` is the last table.
+    const subtableAt = sfntGsub(whole)!.lookups[37]!.subtables[0]!.offset - whole.tables.get('GSUB')!.offset;
+    const gsub = tableBytes(whole, 'GSUB').slice();
+    new DataView(gsub.buffer).setUint16(subtableAt + 2, 0xffff, false);
+    const tables = new Map([...whole.tables.keys()].map((tag) => [tag, tableBytes(whole, tag)] as const));
+    tables.delete('GSUB');
+    const corrupt = sfntFileOfTables(tables.set('GSUB', gsub));
+    const cmapGlyph = sfntGlyphIndex(corrupt)!('l'.codePointAt(0)!);
+
+    const glyphAt = instanceGlyphIndex(corrupt, sfntGlyphIndex(corrupt)!);
+
+    expect(glyphAt('l'.codePointAt(0)!, null)).toBe(cmapGlyph);
+  });
 });

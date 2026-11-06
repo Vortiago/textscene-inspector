@@ -10,6 +10,7 @@ import { featureLookups, FIRST_STAGE_FEATURES } from '../autofit/openTypeFeature
 import { applyGsub, type GsubBuffer } from '../autofit/openTypeGsub';
 import { scriptTagsOf } from '../autofit/afScripts';
 import type { ShapingFace } from '../autofit/openTypeShaping';
+import { orOnRangeError } from '../sfntCmap';
 import type { SfntFile } from '../sfntTables';
 import type { FontInstance } from './fontInstance';
 import { featureSubstitutionOfInstance } from './instanceRecord';
@@ -57,7 +58,10 @@ export function instanceGlyphIndex(
     let glyphs = glyphsByRecord.get(record);
     if (!glyphs) glyphsByRecord.set(record, (glyphs = new Map()));
     let glyph = glyphs.get(codePoint);
-    if (glyph === undefined) glyphs.set(codePoint, (glyph = rvrnGlyph(face, codePoint, record)));
+    if (glyph === undefined) {
+      const cmapGlyph = glyphIndex(codePoint);
+      glyphs.set(codePoint, (glyph = orOnRangeError(() => rvrnGlyph(face, codePoint, record), cmapGlyph)));
+    }
     return glyph;
   };
 }
