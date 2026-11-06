@@ -35,6 +35,7 @@ import {
   projectPhysicsClock,
 } from './projectSettingsParser';
 import { DEFAULT_PHYSICS_CLOCK } from '../godot/scene/physicsTicks';
+import { Hinting } from '../godot/text/textServerEnums';
 import { VOLUMETRIC_FOG_DEFAULTS } from '../godot/rendering/environment/volumetricFog';
 import {
   SSAO_PROJECT_DEFAULTS,
@@ -765,12 +766,12 @@ describe('projectDefaultFontHinting', () => {
   it('reads the hinting a project.godot line names', () => {
     const settings = parseProjectSettings('[gui]\n\ntheme/default_font_hinting=2\n');
 
-    expect(projectDefaultFontHinting(settings)).toBe('normal');
+    expect(projectDefaultFontHinting(settings)).toBe(Hinting.NORMAL);
   });
 
   it("is light with no project or no key, Godot's default (text_server.cpp:2383)", () => {
-    expect(projectDefaultFontHinting(null)).toBe('light');
-    expect(projectDefaultFontHinting({ 'gui/other': '0' })).toBe('light');
+    expect(projectDefaultFontHinting(null)).toBe(Hinting.LIGHT);
+    expect(projectDefaultFontHinting({ 'gui/other': '0' })).toBe(Hinting.LIGHT);
   });
 });
 

@@ -11,10 +11,11 @@ import { coverageRows, freeTypeGrid, type GodotGlyphBitmap } from './glyphBitmap
 import type { GlyphContours } from './glyphContours';
 import { charContours, fixtureFontBytes } from './sfntOutlines.testkit';
 import { openFontOutlines } from './sfntOutlines';
-import type { FontHinting } from '../../../../godot/text/textServerEnums';
+import { Hinting } from '../../../../godot/text/textServerEnums';
 
+/** The oracle writes each hinting by its `TextServer::Hinting` name, lowercase and without `HINTING_`. */
 interface ReferenceBitmap extends GodotGlyphBitmap {
-  hinting: FontHinting;
+  hinting: Lowercase<keyof typeof Hinting>;
 }
 
 const bitmaps = reference as ReferenceBitmap[];
@@ -23,7 +24,8 @@ const cases = bitmaps.map(
 );
 
 async function glyphContoursOf(bitmap: ReferenceBitmap): Promise<GlyphContours> {
-  const load = { hinting: bitmap.hinting, isAutohinterForced: false };
+  const hinting = Hinting[bitmap.hinting.toUpperCase() as keyof typeof Hinting];
+  const load = { hinting, isAutohinterForced: false };
   const outlines = (await openFontOutlines(fixtureFontBytes(bitmap.font), load))!;
   return charContours(outlines, bitmap.char, bitmap.sizePx);
 }

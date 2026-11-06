@@ -11,7 +11,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { FontHinting } from '../../../../godot/text/textServerEnums';
+import { Hinting, type FontHinting } from '../../../../godot/text/textServerEnums';
 import { orOnRangeError, sfntGlyphIndex } from './sfntCmap';
 import { glyphMetricsReader, metricsAtInstance } from './sfntGlyphMetrics';
 import type { GlyphContours, GlyphOutlineReader } from './glyphContours';
@@ -69,7 +69,7 @@ export interface GlyphLoad {
 }
 
 /** The load of `font_get_glyph_contours`, which a TextMesh extrudes: the normal target (`text_server_adv.cpp:3613`). */
-export const CONTOUR_LOAD: GlyphLoad = { hinting: 'normal', isAutohinterForced: false };
+export const CONTOUR_LOAD: GlyphLoad = { hinting: Hinting.NORMAL, isAutohinterForced: false };
 
 /**
  * Reads the outlines of a TrueType or OpenType-CFF font in a plain, WOFF or WOFF2 file, or returns
@@ -107,10 +107,10 @@ export async function openFontOutlines(
  */
 async function outlineReaderOf(sfnt: SfntFile, load: GlyphLoad): Promise<GlyphOutlineReader | null> {
   if (isTrickyFont(sfnt)) return nativeReaderOf(sfnt);
-  if (load.hinting === 'none') return unhintedReaderOf(sfnt);
+  if (load.hinting === Hinting.NONE) return unhintedReaderOf(sfnt);
   const isTrueType = sfnt.tables.has('glyf');
   const isAutoHinted =
-    load.isAutohinterForced || (isTrueType && (load.hinting === 'light' || !isNativelyHinted(sfnt)));
+    load.isAutohinterForced || (isTrueType && (load.hinting === Hinting.LIGHT || !isNativelyHinted(sfnt)));
   return isAutoHinted ? autoHintedReaderOf(sfnt, load.hinting) : nativeReaderOf(sfnt);
 }
 
@@ -211,7 +211,7 @@ async function glyphHintingOf(sfnt: SfntFile): Promise<GlyphHinting | null> {
  */
 async function autoHintedReaderOf(sfnt: SfntFile, hinting: FontHinting): Promise<GlyphOutlineReader | null> {
   const { autoHintedReader } = await import('./autofit/autoHinter');
-  return orOnRangeError(() => autoHintedReader(sfnt, hinting === 'light' ? 'light' : 'normal'), null);
+  return orOnRangeError(() => autoHintedReader(sfnt, hinting === Hinting.LIGHT ? 'light' : 'normal'), null);
 }
 
 /** The font at the axis values of `variation`, or null for the default instance. */

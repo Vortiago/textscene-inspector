@@ -4,7 +4,7 @@
  * `"Arbitrary:1,Word:2,Word (Smart):3"` while Button's offers `"Off,Arbitrary,Word,Word (Smart)"`.
  */
 
-import { enumNamesByValue, flagLabels } from '../classdb/enumNames.js';
+import { enumMember, enumNamesByValue, flagLabels, type EnumValue } from '../classdb/enumNames.js';
 
 /**
  * `TextServer::AutowrapMode`: AUTOWRAP_OFF=0 … AUTOWRAP_WORD_SMART=3
@@ -42,14 +42,19 @@ export const ContourPointTag = {
 } as const;
 
 /**
- * `TextServer::Hinting` by value: HINTING_NONE=0, HINTING_LIGHT=1, HINTING_NORMAL=2
- * (servers/text/text_server.h:161-163): the target FreeType loads a glyph for.
+ * `TextServer::Hinting` (`servers/text/text_server.h:161-163`), each member without `HINTING_`: the
+ * target FreeType loads a glyph for.
  */
-const FONT_HINTINGS = ['none', 'light', 'normal'] as const;
-export type FontHinting = (typeof FONT_HINTINGS)[number];
+export const Hinting = {
+  NONE: 0,
+  LIGHT: 1,
+  NORMAL: 2,
+} as const;
+export type FontHinting = EnumValue<typeof Hinting>;
 
 /** The hinting a `TextServer::Hinting` value names. Absent or unknown is light, the default of a font. */
-export const fontHintingOf = (value: number | undefined): FontHinting => FONT_HINTINGS[value ?? 1] ?? 'light';
+export const fontHintingOf = (value: number | undefined): FontHinting =>
+  (value === undefined ? null : enumMember(Hinting, value)) ?? Hinting.LIGHT;
 
 /**
  * `TextServer::OverrunBehavior`: OVERRUN_NO_TRIMMING=0 …

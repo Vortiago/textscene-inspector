@@ -7,7 +7,7 @@ import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { peekBundledGlyphOutlines, peekGlyphOutlines, peekSceneFontOutlines } from './sceneFontOutlines';
 import { openFontOutlines } from './sfntOutlines';
 import { bundledFontBytes } from './bundledFontBytes';
-import type { FontHinting } from '../../../../godot/text/textServerEnums';
+import { Hinting, type FontHinting } from '../../../../godot/text/textServerEnums';
 import { FACELESS_FONT, type FileWithBytes } from './sceneFontResolution';
 import { charContours, fixtureFontBytes, fontFile, systemFont } from './sfntOutlines.testkit';
 import autoHintedReference from './autofit/autoHinting.godot.json';
@@ -166,7 +166,7 @@ describe('peekGlyphOutlines', () => {
     const outlines = await settledGlyphOutlines(font);
 
     expect(charContours(outlines, 'a', 16)).toEqual(
-      await referenceContours('open-sans-semibold-subset.ttf', 'light')
+      await referenceContours('open-sans-semibold-subset.ttf', Hinting.LIGHT)
     );
   });
 
@@ -179,20 +179,20 @@ describe('peekGlyphOutlines', () => {
     const outlines = await settledGlyphOutlines(font);
 
     expect(charContours(outlines, 'a', 16)).toEqual(
-      await referenceContours('open-sans-semibold-subset.ttf', 'none')
+      await referenceContours('open-sans-semibold-subset.ttf', Hinting.NONE)
     );
   });
 });
 
 describe('peekBundledGlyphOutlines', () => {
   it('reads the bundled Open Sans at the hinting the project sets', async () => {
-    await vi.waitFor(() => expect(peekBundledGlyphOutlines('normal')).not.toBeUndefined());
+    await vi.waitFor(() => expect(peekBundledGlyphOutlines(Hinting.NORMAL)).not.toBeUndefined());
     const bundled = await openFontOutlines(bundledFontBytes(), {
-      hinting: 'normal',
+      hinting: Hinting.NORMAL,
       isAutohinterForced: false,
     });
 
-    expect(charContours(peekBundledGlyphOutlines('normal')!, 'a', 16)).toEqual(
+    expect(charContours(peekBundledGlyphOutlines(Hinting.NORMAL)!, 'a', 16)).toEqual(
       charContours(bundled!, 'a', 16)
     );
   });

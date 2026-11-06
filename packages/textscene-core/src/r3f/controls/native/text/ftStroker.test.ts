@@ -9,7 +9,7 @@ import { glyphBitmapGrid } from './ftGrays';
 import { strokeGlyphContours } from './ftStroker';
 import { coverageRows, freeTypeGrid, type GodotGlyphBitmap } from './glyphBitmap.testkit';
 import { contoursScaledOutline, type GlyphContours } from './glyphContours';
-import { ContourPointTag } from '../../../../godot/text/textServerEnums';
+import { ContourPointTag, Hinting } from '../../../../godot/text/textServerEnums';
 import { charContours, fixtureFontBytes } from './sfntOutlines.testkit';
 import { openFontOutlines } from './sfntOutlines';
 import { outlineStrokeWidthPx } from './textOutline';
@@ -25,7 +25,7 @@ const cases = bitmaps.map(
 );
 
 async function strokedContoursOf(bitmap: ReferenceBitmap): Promise<GlyphContours> {
-  const load = { hinting: 'light', isAutohinterForced: false } as const;
+  const load = { hinting: Hinting.LIGHT, isAutohinterForced: false };
   const outlines = (await openFontOutlines(fixtureFontBytes(bitmap.font), load))!;
   const contours = charContours(outlines, bitmap.char, bitmap.sizePx);
   return strokeGlyphContours(contours, outlineStrokeWidthPx(bitmap.outlineSize) / 2);
