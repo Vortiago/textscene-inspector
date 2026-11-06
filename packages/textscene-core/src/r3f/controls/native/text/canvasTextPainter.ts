@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import {
   fillContours,
   variedContoursReader,
+  variedGlyphContoursReader,
   maxEmboldenGrowthPx,
   paintEmboldenedFill,
   shearAboutBaseline,
@@ -127,8 +128,10 @@ function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: numb
       let inkFace = inkFaces.get(face);
       if (inkFace === undefined) inkFaces.set(face, (inkFace = drawsMeasuredInk(face) ? face : null));
       const { leftPx, rightPx } = glyphReachPx(glyph, inkFace, layout.baselineOffsetPx);
-      startPx = Math.min(startPx, glyph.x - leftPx - INK_SLACK_LEFT_PX);
-      endPx = Math.max(endPx, glyph.x + rightPx + INK_SLACK_RIGHT_PX);
+      // The ink draws `xOffset` past the pen, so its reach moves with it.
+      const inkPenPx = glyph.x + (glyph.xOffset ?? 0);
+      startPx = Math.min(startPx, inkPenPx - leftPx - INK_SLACK_LEFT_PX);
+      endPx = Math.max(endPx, inkPenPx + rightPx + INK_SLACK_RIGHT_PX);
     }
   }
   return startPx === Infinity ? { startPx: 0, endPx: layout.widthPx } : { startPx, endPx };
@@ -238,11 +241,12 @@ export interface CanvasTextPaintOptions {
 }
 
 /**
- * Paints the contours of `glyph`, or of its base and marks at their offsets from the pen. False
- * where no character of it has an outline, so the caller paints it as text.
+ * Paints the contours of `glyph`, or of its base and marks at their offsets from the pen. The base
+ * draws `xOffset` past the pen. False where no character of it has an outline, so the caller paints
+ * it as text.
  */
 function paintGlyphContours(
-  paint: (ctx: CanvasRenderingContext2D, contours: GlyphContours, penX: number, baselineY: number) => void,
+  paint: ContourPaint,
   ctx: CanvasRenderingContext2D,
   contoursOf: (char: string) => GlyphContours | null,
   glyph: GlyphPlacement,
@@ -250,24 +254,27 @@ function paintGlyphContours(
   baselineY: number
 ): boolean {
   const { decomposition } = glyph;
-  if (!decomposition) {
-    const contours = contoursOf(glyph.char);
-    if (contours) paint(ctx, contours, penX, baselineY);
-    return contours !== null;
-  }
-  let isPainted = false;
-  const base = contoursOf(decomposition.base);
-  if (base) {
-    paint(ctx, base, penX, baselineY);
-    isPainted = true;
-  }
-  for (const { char, x, y } of decomposition.marks) {
+  const basePenX = penX + (glyph.xOffset ?? 0);
+  const base = contoursOf(decomposition?.base ?? glyph.char);
+  if (base) paint(ctx, base, basePenX, baselineY);
+  let isPainted = base !== null;
+  for (const { char, x, y } of decomposition?.marks ?? []) {
     const contours = contoursOf(char);
     if (contours) paint(ctx, contours, penX + x, baselineY + y);
     isPainted ||= contours !== null;
   }
   return isPainted;
 }
+
+type ContourPaint = (
+  ctx: CanvasRenderingContext2D,
+  contours: GlyphContours,
+  penX: number,
+  baselineY: number
+) => void;
+
+/** The variation of contours a sheared context draws: the context shears them. */
+const UNVARIED: GlyphVariation = { embolden: 0, skew: 0 };
 
 /**
  * Draws `layout`, shaped against a `'canvas'`-kind `FontMetrics`, glyph by glyph
@@ -329,6 +336,11 @@ export function paintSceneFontCanvas(
   const followsContours = isGlyphVaried(stroked ? variation : { embolden, opentype });
   const contourOutlines = followsContours ? (metrics.outlines ?? null) : null;
   const contoursOf = contourOutlines && variedContoursReader(contourOutlines, fontSizePx, variation);
+  const paintContours = stroked ? strokeContours : fillContours;
+  // A glyph the run shaping gives a cluster has no character to draw as text, so it draws its contours.
+  const shapedContoursOf =
+    metrics.outlines &&
+    variedGlyphContoursReader(metrics.outlines, fontSizePx, contourOutlines ? variation : UNVARIED);
   const isShapeVaried = isGlyphVaried({ skew, opentype });
 
   const paintGlyphText = (char: string, penX: number, baselineY: number, growthPx: number | undefined) => {
@@ -365,15 +377,22 @@ export function paintSceneFontCanvas(
       const penX =
         canvasLayout.offsetXPx +
         (snapsGlyphs ? canvasGlyphPenXPx(originPhasePx.x + gp.x, fontSizePx, metrics) : gp.x);
+      const shapedContours = gp.glyphIndex !== undefined && shapedContoursOf?.(gp.glyphIndex);
+      if (shapedContours) {
+        paintContours(ctx, shapedContours, penX + (gp.xOffset ?? 0), baselineY);
+        continue;
+      }
       // A glyph shaped with no growth, in a layout that is not sheared or at an instance, stays on its plain ring.
       const hasVariedGlyph = gp.emboldenGrowthPx || isShapeVaried;
       const isContourPainted =
         contoursOf &&
         hasVariedGlyph &&
-        paintGlyphContours(stroked ? strokeContours : fillContours, ctx, contoursOf, gp, penX, baselineY);
+        paintGlyphContours(paintContours, ctx, contoursOf, gp, penX, baselineY);
       if (isContourPainted) continue;
-      if (contourOutlines && skew !== 0) paintShearedGlyphText(gp.char, penX, baselineY, gp.emboldenGrowthPx);
-      else paintGlyphText(gp.char, penX, baselineY, gp.emboldenGrowthPx);
+      const textPenX = penX + (gp.xOffset ?? 0);
+      if (contourOutlines && skew !== 0)
+        paintShearedGlyphText(gp.char, textPenX, baselineY, gp.emboldenGrowthPx);
+      else paintGlyphText(gp.char, textPenX, baselineY, gp.emboldenGrowthPx);
     }
     ctx.restore();
   });

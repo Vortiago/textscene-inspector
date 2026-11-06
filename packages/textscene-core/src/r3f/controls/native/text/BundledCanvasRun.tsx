@@ -1,7 +1,8 @@
 /**
  * A run on the bundled font that the atlas field cannot carry: an embolden, which Godot grows with
- * FreeType at every value (`text_server_adv.cpp:1313-1316`), or a stroked outline ring, a real
- * contour annulus (ADR-0040). It draws on the canvas painter through the bundled canvas face.
+ * FreeType at every value (`text_server_adv.cpp:1313-1316`), a stroked outline ring, a real contour
+ * annulus (ADR-0040), or a ligature or a mark, which the atlas holds no glyph for. It draws on the canvas
+ * painter through the bundled canvas face.
  */
 import { useMemo } from 'react';
 import { peekBundledCanvasFace } from './bundledCanvasFace';
@@ -20,7 +21,7 @@ export default function BundledCanvasRun({ layout, ...run }: TextRunProps) {
   const canvasLayout = useMemo(() => face && { ...layout, fontMetrics: face }, [layout, face]);
   usePendingWhile(face === undefined);
   if (canvasLayout) return <TextRunMesh {...run} layout={canvasLayout} />;
-  // The atlas fill keeps the text visible without its embolden. The atlas cannot stroke a ring.
+  // The atlas fill keeps the text visible without its embolden, its ligatures or its marks. The atlas cannot stroke a ring.
   const isFill = !((run.strokeWidthPx ?? 0) > 0);
   if (face === null && isFill) return <TextRunMesh {...run} layout={layout} />;
   return null;

@@ -27,10 +27,27 @@ export interface GsubStage {
   randomLookups: ReadonlySet<number>;
 }
 
-/** The shaping buffer: its glyphs, and the state of `rand`'s random number generator (`hb_buffer_t`). */
+/**
+ * The shaping buffer: its glyphs, the state of `rand`'s random number generator, and the cluster of
+ * each glyph where the caller asks for them (`hb_buffer_t`). A cluster is the index of the first
+ * character the glyph draws.
+ */
 export interface GsubBuffer {
   glyphs: number[];
   randomState: number;
+  clusters?: number[];
+}
+
+/**
+ * Replaces `count` glyphs at `at` with `replacement`, as HarfBuzz's buffer output does: every glyph
+ * put out takes the lowest cluster of those it replaces (`hb_buffer_t::merge_clusters`).
+ */
+function replaceGlyphs(buffer: GsubBuffer, at: number, count: number, replacement: readonly number[]): void {
+  buffer.glyphs.splice(at, count, ...replacement);
+  const { clusters } = buffer;
+  if (!clusters) return;
+  const cluster = Math.min(...clusters.slice(at, at + count));
+  clusters.splice(at, count, ...replacement.map(() => cluster));
 }
 
 /** HarfBuzz's random alternate: a Lehmer generator seeded with 1 (`hb_ot_apply_context_t::random_number`). */
@@ -62,7 +79,7 @@ function applyMultiple(dv: DataView, offset: number, buffer: GsubBuffer, at: num
   const index = coverageIndex(dv, offset + u16(dv, offset + 2), buffer.glyphs[at]!);
   if (index < 0) return null;
   const sequence = substituteList(dv, offset, index);
-  buffer.glyphs.splice(at, 1, ...sequence);
+  replaceGlyphs(buffer, at, 1, sequence);
   return { next: at + sequence.length };
 }
 
@@ -94,7 +111,7 @@ function applyLigature(dv: DataView, offset: number, buffer: GsubBuffer, at: num
     for (let c = 1; c < componentCount && isMatch; c++)
       isMatch = buffer.glyphs[at + c] === u16(dv, ligature + 4 + 2 * (c - 1));
     if (!isMatch) continue;
-    buffer.glyphs.splice(at, componentCount, u16(dv, ligature));
+    replaceGlyphs(buffer, at, componentCount, [u16(dv, ligature)]);
     return { next: at + 1 };
   }
   return null;

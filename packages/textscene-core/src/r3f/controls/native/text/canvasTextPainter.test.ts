@@ -859,3 +859,54 @@ describe('createCanvasTextMaterial', () => {
     }
   );
 });
+
+describe('paintSceneFontCanvas — the glyphs a run shapes into', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const FI_LIGATURE = 9;
+  const LIGATURE_METRICS = createRuntimeFontMetrics({
+    hasGlyph: () => true,
+    scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
+    measureWidthUnits: (text) => text.length * 500,
+    cssFontFamily: 'scene-font-test',
+    substitutions: (chars) =>
+      chars.join('') === 'fi' ? [{ start: 0, end: 2, glyph: FI_LIGATURE, advanceUnits: 600 }] : [],
+  });
+  const ligatureLayout = () =>
+    shapeText('fi', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      fontMetrics: LIGATURE_METRICS,
+      lineSpacingPx: 0,
+    });
+
+  it('fills the outline of the ligature glyph, in place of the text of its characters', () => {
+    const { outlines, glyphContours } = outlinesStub();
+    const { calls } = paintRecording(ligatureLayout(), 0, { outlines });
+
+    expect(glyphContours).toHaveBeenCalledWith(FI_LIGATURE, 16, { embolden: 0, skew: 0 });
+    expect(calls.map((call) => call.op)).toEqual([
+      'beginPath',
+      'moveTo',
+      'lineTo',
+      'lineTo',
+      'closePath',
+      'fill',
+    ]);
+  });
+
+  it('fills the text of the ligature where the face has no outlines, which the canvas shapes alike', () => {
+    const { calls } = paintRecording(ligatureLayout(), 0);
+
+    expect(calls.map((call) => [call.op, call.args[0]])).toEqual([['fillText', 'fi']]);
+  });
+
+  it('draws a glyph its x offset past its pen', () => {
+    const layout = layoutFor('A', 0);
+    layout.lines[0]!.glyphs[0]!.xOffset = -1;
+    const { calls, canvasLayout } = paintRecording(layout, 0);
+
+    expect(calls[0]!.args[1]).toBe(canvasLayout.offsetXPx - 1);
+  });
+});

@@ -23,6 +23,7 @@ import {
 } from './openTypeFeatures';
 import {
   coverageIndex,
+  type FeatureSubstitution,
   GposType,
   i16,
   type LayoutTable,
@@ -45,8 +46,12 @@ export interface ShapingFace {
   readonly gpos: LayoutTable | null;
 }
 
-function stagesOf(table: LayoutTable, scriptTags: readonly string[], feature: string | null): GsubStage[] {
-  const substitution = defaultSubstitution(table);
+function stagesOf(
+  table: LayoutTable,
+  scriptTags: readonly string[],
+  feature: string | null,
+  substitution: FeatureSubstitution | undefined
+): GsubStage[] {
   const lookupsOf = (features: readonly string[]): number[] =>
     featureLookups(table, scriptTags, features, substitution);
   return [
@@ -55,25 +60,35 @@ function stagesOf(table: LayoutTable, scriptTags: readonly string[], feature: st
   ];
 }
 
-type StyleReader<T> = (table: LayoutTable, scriptTags: readonly string[], feature: string | null) => T;
+type StyleReader<T> = (
+  table: LayoutTable,
+  scriptTags: readonly string[],
+  feature: string | null,
+  substitution: FeatureSubstitution | undefined
+) => T;
 
-/** `read` built once for each table and each style's script tags and feature. */
+/** `read` built once for each table, `FeatureVariations` record, and each style's script tags and feature. */
 function perStyle<T>(read: StyleReader<T>): StyleReader<T> {
-  const byTable = perObject<LayoutTable, Map<string, T>>(() => new Map());
-  return (table, scriptTags, feature) => {
-    const byStyle = byTable(table);
+  const byTable = perObject<LayoutTable, Map<FeatureSubstitution | undefined, Map<string, T>>>(
+    () => new Map()
+  );
+  return (table, scriptTags, feature, substitution) => {
+    const byRecord = byTable(table);
+    let byStyle = byRecord.get(substitution);
+    if (!byStyle) byRecord.set(substitution, (byStyle = new Map()));
     const key = JSON.stringify([scriptTags, feature]);
     const stored = byStyle.get(key);
     if (stored !== undefined) return stored;
-    const value = read(table, scriptTags, feature);
+    const value = read(table, scriptTags, feature, substitution);
     byStyle.set(key, value);
     return value;
   };
 }
 
-const gsubStages = perStyle(stagesOf);
-const gposLookups = perStyle((table, scriptTags, feature) =>
-  featureLookups(table, scriptTags, shapingFeatures(scriptTags, feature), defaultSubstitution(table))
+/** HarfBuzz's `GSUB` stages for text of `scriptTags` with `feature` on, under the lookups of `substitution`. */
+export const gsubStages = perStyle(stagesOf);
+const gposLookups = perStyle((table, scriptTags, feature, substitution) =>
+  featureLookups(table, scriptTags, shapingFeatures(scriptTags, feature), substitution)
 );
 
 /** The y placement of a `GPOS` value record of `valueFormat` at `at`, 0 for a record without one. */
@@ -137,9 +152,11 @@ export function shapeCluster(
     glyphs: codePoints.map((codePoint) => face.glyphIndex(codePoint)),
     randomState: 1,
   };
-  if (face.gsub) applyGsub(face.gsub, gsubStages(face.gsub, tags, feature), buffer);
+  if (face.gsub)
+    applyGsub(face.gsub, gsubStages(face.gsub, tags, feature, defaultSubstitution(face.gsub)), buffer);
   const shaped = buffer.glyphs.map((glyph): ShapedGlyph => ({ glyph, yOffset: 0 }));
-  if (face.gpos) applyGpos(face.gpos, gposLookups(face.gpos, tags, feature), shaped);
+  if (face.gpos)
+    applyGpos(face.gpos, gposLookups(face.gpos, tags, feature, defaultSubstitution(face.gpos)), shaped);
   return shaped;
 }
 

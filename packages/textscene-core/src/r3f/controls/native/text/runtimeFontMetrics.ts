@@ -4,6 +4,7 @@
  */
 
 import type { FontMetrics } from './fontMetrics';
+import type { RunSubstitutions } from './glyphRun';
 import type { Decomposition } from './sfntDecomposition';
 
 /** A width in design units for a string of one or more characters. `sceneFontLoader.ts` binds it to canvas. */
@@ -22,6 +23,8 @@ export interface RuntimeFontMetricsInput {
   readonly hasGlyph: (ch: string) => boolean;
   /** From the font's `cmap` and `GPOS`: how the face draws a character it lacks as a base and marks. */
   readonly decomposition?: Decomposition;
+  /** From the font's `GSUB`: the glyphs a run shapes into, such as a ligature. */
+  readonly substitutions?: RunSubstitutions;
   /** The ink box of one character, measured like `measureWidthUnits`. */
   readonly measureInkUnits?: (ch: string) => GlyphInk;
 }
@@ -51,7 +54,15 @@ export function isCanvasFontMetrics(metrics: FontMetrics | undefined): metrics i
  * pair on every shape.
  */
 export function createRuntimeFontMetrics(input: RuntimeFontMetricsInput): CanvasFontMetrics {
-  const { scalars, measureWidthUnits, cssFontFamily, hasGlyph, measureInkUnits, decomposition } = input;
+  const {
+    scalars,
+    measureWidthUnits,
+    cssFontFamily,
+    hasGlyph,
+    measureInkUnits,
+    decomposition,
+    substitutions,
+  } = input;
 
   const advanceCache = new Map<string, number>();
   const kerningCache = new Map<string, number>();
@@ -75,6 +86,7 @@ export function createRuntimeFontMetrics(input: RuntimeFontMetricsInput): Canvas
     descent: scalars.descent,
     hasGlyph,
     decomposition,
+    substitutions,
 
     // Never `null`: canvas has no "no glyph" signal, and the measured width is what `fillText`
     // paints. It carries the real `hmtx` advance, not a hand-parsed one, though a measured float

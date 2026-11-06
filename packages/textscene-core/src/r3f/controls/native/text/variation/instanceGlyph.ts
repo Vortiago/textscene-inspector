@@ -1,11 +1,13 @@
 /**
- * The glyph a character draws at one instance of a variable font. HarfBuzz swaps glyphs by the
- * `rvrn` feature of the `GSUB` `FeatureVariations` record whose conditions hold at the instance's
- * coordinates, and Godot shapes every font so (`text_server_adv.cpp:1915-1950` sets them).
+ * The glyph a character draws at one instance of a variable font, and the glyphs of a run of them.
+ * HarfBuzz swaps glyphs by the `rvrn` feature of the `GSUB` `FeatureVariations` record whose
+ * conditions hold at the instance's coordinates, and Godot shapes every font so
+ * (`text_server_adv.cpp:1915-1950` sets them).
  */
 
 import { perObject } from '../../../../../utils/perObject';
 import { featureSubstitutionAt, type FeatureSubstitution, sfntGsub } from '../autofit/openTypeLayout';
+import { keptRunSubstitutions, type RunSubstitutions, sfntRunShapingFace } from '../glyphRun';
 import { featureLookups, FIRST_STAGE_FEATURES } from '../autofit/openTypeFeatures';
 import { applyGsub, type GsubBuffer } from '../autofit/openTypeGsub';
 import { scriptTagsOf } from '../autofit/afScripts';
@@ -64,4 +66,23 @@ export function instanceGlyphIndex(
     }
     return glyph;
   };
+}
+
+/**
+ * The run shaping of `sfnt` at each instance, under the lookups of the instance's `FeatureVariations`
+ * record, kept for each record. Null for a font with no `GSUB` or no `cmap`.
+ */
+export function instanceRunSubstitutions(
+  sfnt: SfntFile
+): ((instance: FontInstance) => RunSubstitutions) | null {
+  const face = sfntRunShapingFace(sfnt);
+  if (!face) return null;
+  const { gsub } = face;
+  const byRecord = new Map<FeatureSubstitution | undefined, RunSubstitutions>();
+  return perObject((instance: FontInstance) => {
+    const record = featureSubstitutionOfInstance(gsub, instance.normalized);
+    let substitutions = byRecord.get(record);
+    if (!substitutions) byRecord.set(record, (substitutions = keptRunSubstitutions(face, record)));
+    return substitutions;
+  });
 }

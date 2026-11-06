@@ -25,13 +25,22 @@ import { isTrickyFont } from './trickyFont';
 import { openFontContainer } from './fontContainer';
 import { OUTLINE_TABLE_TAGS, readHeadUnitsPerEm, type SfntFile } from './sfntTables';
 import { fontInstanceOf, type FontInstance } from './variation/fontInstance';
-import type { instanceGlyphIndex, InstanceGlyphIndex } from './variation/instanceGlyph';
+import type { SubstitutedCluster } from './glyphRun';
+import type {
+  instanceGlyphIndex,
+  InstanceGlyphIndex,
+  instanceRunSubstitutions,
+} from './variation/instanceGlyph';
 import type { instanceKerningReader, PairKerningReader } from './variation/instanceKerning';
 import { perObject } from '../../../../utils/perObject';
 import { recentlyRead } from '../../../../utils/recentlyRead';
 
 type InstanceKerningReader = typeof instanceKerningReader;
-type InstanceGlyphIndexReader = typeof instanceGlyphIndex;
+/** The readers of the glyphs at an instance, which load with a font that has `GSUB` and `fvar`. */
+interface InstanceGlyphReaders {
+  instanceGlyphIndex: typeof instanceGlyphIndex;
+  instanceRunSubstitutions: typeof instanceRunSubstitutions;
+}
 
 export interface SfntOutlines {
   /**
@@ -61,6 +70,15 @@ export interface SfntOutlines {
   ): number | null;
   /** Whether the axis values of `opentype` draw an instance other than the default. */
   drawsInstance?(opentype: OpentypeCoordinates): boolean;
+  /**
+   * `FontMetrics.substitutions` at the axis values of `opentype`, under the lookups of the `GSUB`
+   * `FeatureVariations` record that holds there: null where they draw the default instance. Absent
+   * for outlines with no `GSUB` variation to read.
+   */
+  substitutionsAt?(
+    chars: readonly string[],
+    opentype: OpentypeCoordinates
+  ): readonly SubstitutedCluster[] | null;
 }
 
 /**
@@ -87,20 +105,16 @@ async function openOutlines(
 ): Promise<SfntOutlines | null> {
   const sfnt = await openFontContainer(bytes, OUTLINE_TABLE_TAGS);
   if (!sfnt) return null;
-  const [outlineOf, kerningReader, glyphIndexReader] = await Promise.all([
+  const [outlineOf, kerningReader, glyphReaders] = await Promise.all([
     isAutoHinted(sfnt) ? autoHintedReaderOf(sfnt) : nativeReaderOf(sfnt),
     variationReaderOf(
       sfnt,
       ['GPOS', 'fvar'],
       async () => (await import('./variation/instanceKerning')).instanceKerningReader
     ),
-    variationReaderOf(
-      sfnt,
-      ['GSUB', 'fvar'],
-      async () => (await import('./variation/instanceGlyph')).instanceGlyphIndex
-    ),
+    variationReaderOf(sfnt, ['GSUB', 'fvar'], () => import('./variation/instanceGlyph')),
   ]);
-  return readSfntOutlines(sfnt, outlineOf, kerningReader, glyphIndexReader);
+  return readSfntOutlines(sfnt, outlineOf, kerningReader, glyphReaders);
 }
 
 /**
@@ -269,15 +283,16 @@ function readSfntOutlines(
   sfnt: SfntFile,
   outlineOf: GlyphOutlineReader | null,
   kerningReader: InstanceKerningReader | null,
-  glyphIndexReader: InstanceGlyphIndexReader | null
+  glyphReaders: InstanceGlyphReaders | null
 ): SfntOutlines | null {
   const cmapGlyphIndex = outlineOf && sfntGlyphIndex(sfnt);
   if (!cmapGlyphIndex) return null;
 
   const instanceAt = instanceReaderOf(sfnt);
-  const glyphIndex: InstanceGlyphIndex = glyphIndexReader
-    ? glyphIndexReader(sfnt, cmapGlyphIndex)
+  const glyphIndex: InstanceGlyphIndex = glyphReaders
+    ? glyphReaders.instanceGlyphIndex(sfnt, cmapGlyphIndex)
     : cmapGlyphIndex;
+  const substitutionsOf = glyphReaders?.instanceRunSubstitutions(sfnt) ?? undefined;
   return {
     glyphIndex: (codePoint, opentype) => glyphIndex(codePoint, opentype ? instanceAt(opentype) : null),
     advanceAtInstance: instanceAdvanceReader(sfnt, instanceAt),
@@ -288,5 +303,11 @@ function readSfntOutlines(
       }, null),
     kerningAtInstance: instanceKerningOf(sfnt, instanceAt, glyphIndex, kerningReader),
     drawsInstance: (opentype) => instanceAt(opentype) !== null,
+    substitutionsAt:
+      substitutionsOf &&
+      ((chars, opentype) => {
+        const instance = instanceAt(opentype);
+        return instance && substitutionsOf(instance)(chars);
+      }),
   };
 }

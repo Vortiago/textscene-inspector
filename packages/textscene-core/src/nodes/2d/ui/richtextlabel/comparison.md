@@ -133,9 +133,7 @@ string against `true`, so an absent property or any other value silently resolve
 
 ## Known limitations
 
-- **Approximated** At an instance, a variable font swaps glyphs by `rvrn` for each character alone, so its ligatures and contextual alternates keep the `cmap` glyphs (#1393).
 - **Approximated** Only a subset of BBCode tags is styled, and a tag outside it renders as
   plain text.
-- **Approximated** The glyph budget joins only the default font's ligatures (`ff`, `fi`, `fl`, `ffi`, `ffl`),
-  so a ligature of another font counts extra.
+- **Approximated** A base drawn with marks shows or hides whole under the glyph budget, where Godot reveals each mark glyph apart.
 - **Not drawn** The loading bar's right-to-left fill (:2580-2588), since the loading bar is not drawn.

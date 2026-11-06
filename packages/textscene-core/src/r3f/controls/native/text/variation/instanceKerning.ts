@@ -112,8 +112,9 @@ export function instanceKerningReader(
   sfnt: SfntFile
 ): ((normalized: Int32Array) => PairKerningReader) | null {
   const table = sfntGpos(sfnt);
-  const axes = readFvarAxes(sfnt);
-  if (!table || !axes) return null;
+  if (!table) return null;
+  // A font with no `fvar` has one instance, at no coordinates.
+  const axisCount = readFvarAxes(sfnt)?.length ?? 0;
   const pairLookupsByRecord = new Map<FeatureSubstitution | undefined, PairLookup[]>();
   const pairLookupsOfRecord = (record: FeatureSubstitution | undefined): PairLookup[] => {
     let found = pairLookupsByRecord.get(record);
@@ -124,7 +125,7 @@ export function instanceKerningReader(
     (record) => pairLookupsOfRecord(record).length > 0
   );
   if (!hasPairLookups) return null;
-  const store = gdefVariationStore(sfnt, axes.length);
+  const store = gdefVariationStore(sfnt, axisCount);
   const propsOf = glyphPropsReader(sfnt);
   const matches = lookupMatcher(sfnt);
   const { dv } = sfnt;

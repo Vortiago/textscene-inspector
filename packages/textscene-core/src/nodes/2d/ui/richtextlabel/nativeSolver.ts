@@ -621,6 +621,13 @@ function fontMetricsAtFromRuns(
   return (charIndex) => faceAt(charIndex) ?? faces.normal;
 }
 
+/** The per-character `spanAt` for `shapeText`: the index of each character's run, which Godot shapes apart. */
+function spanAtFromRuns(styledRuns: readonly StyledTextRun[]): (charIndex: number) => number {
+  const indexOfRun = new Map(styledRuns.map((run, index) => [run, index]));
+  const spanAt = perCharacter(styledRuns, (run) => indexOfRun.get(run)!);
+  return (charIndex) => spanAt(charIndex) ?? 0;
+}
+
 /** The run a character of the concatenated text is in (`runAtFromRuns`). */
 type RunAt = (charIndex: number) => StyledTextRun | undefined;
 
@@ -699,6 +706,7 @@ export function shapeRichText(
     lineSpacingPx: 0,
     fontSizePxAt: fontSizePxAtFromRuns(styledRuns),
     fontMetricsAt: fontMetricsAtFromRuns(styledRuns, faces),
+    spanAt: spanAtFromRuns(styledRuns),
     fontMetrics: faces.normal,
     tabStopsPxAt: tabStopsPxAtFromRuns(runAt, getFontTabStopsPx(faces.normal, tabSize, fontSizePx)),
     autowrapTrimFlags,

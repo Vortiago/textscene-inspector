@@ -59,5 +59,11 @@ export function createOpenSansCanvasFontMetrics(cssFontFamily: string): CanvasFo
     get averageAdvanceUnits() {
       return OPEN_SANS_FONT_METRICS.averageAdvanceUnits;
     },
+    get substitutions() {
+      return OPEN_SANS_FONT_METRICS.substitutions;
+    },
+    get decomposition() {
+      return OPEN_SANS_FONT_METRICS.decomposition;
+    },
   };
 }

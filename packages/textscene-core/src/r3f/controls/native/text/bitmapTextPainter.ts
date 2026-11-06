@@ -51,7 +51,7 @@ function inkedGlyph(
   drawer: GlyphDrawer
 ) {
   if (placement.controlCodepoint !== undefined) return undefined;
-  const glyph = metrics.glyphOf(placement.char);
+  const glyph = metrics.glyphOf(placement.decomposition?.base ?? placement.char);
   const hasInk =
     glyph &&
     drawsGlyphRect(drawer, glyph.width, glyph.height) &&
@@ -106,7 +106,7 @@ export function buildBitmapQuads(
     const baselinePx = lineIndex * layout.linePitchPx + layout.baselineOffsetPx;
     const originX = floorsPen ? Math.floor(originPhasePx.x + placement.x) - originPhasePx.x : placement.x;
     const originY = floorsPen ? Math.floor(originPhasePx.y + baselinePx) - originPhasePx.y : baselinePx;
-    const left = originX + glyph.offsetX * scale;
+    const left = originX + (placement.xOffset ?? 0) + glyph.offsetX * scale;
     const top = originY + glyph.offsetY * scale;
     const right = left + glyph.width * scale;
     const bottom = top + glyph.height * scale;

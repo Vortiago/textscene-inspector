@@ -10,10 +10,11 @@
  */
 
 import { storedReal } from '../../../../godot/math/real';
-import { utf16OffsetOf } from '../../../../godot/string/codePoints';
+import { codePointCount, utf16OffsetOf } from '../../../../godot/string/codePoints';
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type { GlyphPlacement, TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import { parseOptionalFloat, parseOptionalInt } from '../../../../parser/valueParsers';
+import { perObject } from '../../../../utils/perObject';
 
 interface VisibleCharsState {
   visibleChars: number;
@@ -116,11 +117,9 @@ interface VisibleCharsBudget {
   visibleChars: number | undefined;
   /** Final resolved `visible_ratio`, the budget of the GLYPHS_* behaviours. */
   visibleRatio: number | undefined;
-  /** The UTF-16 offsets in `text` where a span of the label starts after the first. Godot shapes each span apart, so a ligature never joins glyphs across one. */
-  spanStarts?: ReadonlySet<number>;
   /** The index of a glyph in `text`, where a caller's glyphs do not carry it. Defaults to the glyph's `sourceIndex`. */
   indexOf?: (glyph: GlyphPlacement) => number | undefined;
-  /** The characters of the text when the lines hold fewer: RichTextLabel counts each paragraph's characters, trimmed edge spaces included (`rich_text_label.cpp:8017-8033`). Each ligature still counts one glyph. */
+  /** The characters of the text when the lines hold fewer: RichTextLabel counts each paragraph's characters, trimmed edge spaces included (`rich_text_label.cpp:8017-8033`). Each cluster still counts its glyphs. */
   totalCharacters?: number;
   /** `is_layout_rtl()` (`SolveNode.rtl`), which picks the end GLYPHS_AUTO trims from (`label.cpp:779-780`). Defaults `false`. */
   rtl?: boolean;
@@ -150,7 +149,7 @@ export function applyVisibleCharsReveal(
  */
 function revealCharacters(lines: readonly TextLineLayout[], budget: VisibleCharsBudget): TextLineLayout[] {
   const { text, visibleChars } = budget;
-  const indexing = indexingOf(budget);
+  const indexOf = budget.indexOf ?? ((glyph: GlyphPlacement) => glyph.sourceIndex);
   if (visibleChars === undefined || visibleChars < 0) return [...lines];
   // Glyph source indices are UTF-16 offsets; the budget counts code points.
   const visibleEnd = utf16OffsetOf(text, visibleChars);
@@ -159,140 +158,60 @@ function revealCharacters(lines: readonly TextLineLayout[], budget: VisibleChars
   const ellipsisEnd = utf16OffsetOf(text, visibleChars + 1);
   return lines.map((line) => {
     const isEllipsisShown = (line.paragraphStart ?? 0) <= ellipsisEnd;
-    const { tails, lastIndexOf } = ligatureClusters(line.glyphs, indexing);
-    let isLigatureShown = false;
     return {
       ...line,
       glyphs: line.glyphs.filter((glyph) => {
-        if (tails.has(glyph)) return isLigatureShown;
-        const index = indexing.indexOf(glyph);
+        const index = indexOf(glyph);
         if (index === undefined) return isEllipsisShown;
-        // A ligature's `end` is its last character's, so it shows whole or not at all.
-        isLigatureShown = (lastIndexOf.get(glyph) ?? index) < visibleEnd;
-        return isLigatureShown;
+        // A cluster's `end` is past its last character, so a ligature shows whole or not at all.
+        return index + glyph.char.length <= visibleEnd;
       }),
     };
   });
 }
 
 /**
- * The default font draws these sequences as one glyph, which `shaped_text_get_glyph_count` counts once
- * (measured with `pnpm ref:godot`; `ft`, `tt`, `fj`, `fb`, `fh`, `fk` and `Th` stay two). Longest first.
+ * The glyphs Godot counts for `glyph` (`shaped_text_get_glyph_count`): a cluster draws one, and a
+ * base drawn with marks one more for each mark.
  */
-const LIGATURES: readonly (readonly string[])[] = ['ffi', 'ffl', 'ff', 'fi', 'fl'].map((ligature) => [
-  ...ligature,
-]);
+const glyphCountOf = (glyph: GlyphPlacement): number => 1 + (glyph.decomposition?.marks.length ?? 0);
 
-/** `f` starts every ligature, so a line without one skips the search. */
-const LIGATURE_START = 'f';
-
-interface LigatureClusters {
-  /** The glyphs that only continue the ligature before them: the layout has one glyph per character, Godot one for the sequence. */
-  tails: Set<GlyphPlacement>;
-  /** For each ligature's first glyph, the source index of its last character, where the cluster ends. */
-  lastIndexOf: Map<GlyphPlacement, number>;
-}
-
-/** What the ligature search reads of a budget: where spans start, and the index of each glyph. */
-interface GlyphIndexing {
-  spanStarts: ReadonlySet<number> | undefined;
-  indexOf: (glyph: GlyphPlacement) => number | undefined;
-}
-
-const indexingOf = ({ spanStarts, indexOf }: VisibleCharsBudget): GlyphIndexing => ({
-  spanStarts,
-  indexOf: indexOf ?? ((glyph) => glyph.sourceIndex),
+/**
+ * The glyphs and the characters, in code points, that `lines` draw. Kept per lines array, which
+ * RichTextLabel passes again on each reveal tick. Label builds a new array, so it counts again.
+ */
+const drawnCountsOf = perObject((lines: readonly TextLineLayout[]) => {
+  let glyphs = 0;
+  let characters = 0;
+  for (const line of lines)
+    for (const glyph of line.glyphs) {
+      glyphs += glyphCountOf(glyph);
+      characters += codePointCount(glyph.char);
+    }
+  return { glyphs, characters };
 });
 
-interface CachedClusters {
-  spanStarts: ReadonlySet<number> | undefined;
-  clusters: LigatureClusters;
-}
-
-/** Whether two span start sets hold the same offsets. A caller rebuilds its set, so identity never matches. */
-function sameSpanStarts(a: ReadonlySet<number> | undefined, b: ReadonlySet<number> | undefined): boolean {
-  if (a === b) return true;
-  if (a === undefined || b === undefined || a.size !== b.size) return false;
-  for (const start of a) if (!b.has(start)) return false;
-  return true;
-}
-
-/** Written only by `ligatureClusters`. A line's glyph array never changes, so a reveal step reuses its entry. */
-// eslint-disable-next-line no-restricted-syntax -- the build needs the span starts beside its glyph key, which `perObject` cannot take.
-const clustersByGlyphs = new WeakMap<readonly GlyphPlacement[], CachedClusters>();
-
-/** The ligatures in a line of glyphs, built once for each line's glyph array. Only the default font's glyphs form one here. */
-function ligatureClusters(glyphs: readonly GlyphPlacement[], indexing: GlyphIndexing): LigatureClusters {
-  const cached = clustersByGlyphs.get(glyphs);
-  if (cached && sameSpanStarts(cached.spanStarts, indexing.spanStarts)) return cached.clusters;
-  const clusters: LigatureClusters = { tails: new Set(), lastIndexOf: new Map() };
-  for (let start = 0; start < glyphs.length; start++) {
-    if (glyphs[start]!.char !== LIGATURE_START) continue;
-    const length = ligatureLengthAt(glyphs, start, indexing);
-    if (length === 0) continue;
-    for (let offset = 1; offset < length; offset++) clusters.tails.add(glyphs[start + offset]!);
-    clusters.lastIndexOf.set(glyphs[start]!, indexing.indexOf(glyphs[start + length - 1]!)!);
-    start += length - 1;
-  }
-  clustersByGlyphs.set(glyphs, { spanStarts: indexing.spanStarts, clusters });
-  return clusters;
-}
-
-/** A ligature joins glyphs of one span, face and size: a style or size change inside the sequence splits it. */
-function ligatureLengthAt(glyphs: readonly GlyphPlacement[], start: number, indexing: GlyphIndexing): number {
-  for (const ligature of LIGATURES) {
-    if (joinsLigature(glyphs, start, ligature, indexing)) return ligature.length;
-  }
-  return 0;
-}
-
-/** Indexed, not `every`: no closure for each `f` glyph. */
-function joinsLigature(
-  glyphs: readonly GlyphPlacement[],
-  start: number,
-  ligature: readonly string[],
-  { spanStarts, indexOf }: GlyphIndexing
-): boolean {
-  const first = glyphs[start]!;
-  const firstIndex = indexOf(first)!;
-  for (let offset = 0; offset < ligature.length; offset++) {
-    const glyph = glyphs[start + offset];
-    if (glyph === undefined) return false;
-    const index = indexOf(glyph);
-    if (
-      glyph.char !== ligature[offset] ||
-      glyph.glyph === null ||
-      index !== firstIndex + offset ||
-      (offset > 0 && spanStarts?.has(index!)) ||
-      glyph.fontMetrics !== first.fontMetrics ||
-      glyph.fontSizePx !== first.fontSizePx
-    ) {
-      return false;
-    }
-  }
-  return true;
-}
-
-/** The GLYPHS behaviours: `visible_ratio * total_glyphs` glyphs, counted in visual order across lines. */
+/**
+ * The GLYPHS behaviours: `visible_ratio * total_glyphs` glyphs, counted in visual order across lines.
+ * A placement shows while its first glyph is within the budget.
+ */
 function revealGlyphs(lines: readonly TextLineLayout[], budget: VisibleCharsBudget): TextLineLayout[] {
   if (budget.visibleRatio === undefined || budget.visibleRatio >= 1) return [...lines];
-  const indexing = indexingOf(budget);
-  const tailsByLine = lines.map((line) => ligatureClusters(line.glyphs, indexing).tails);
-  const tailCount = tailsByLine.reduce((sum, tails) => sum + tails.size, 0);
+  const drawn = drawnCountsOf(lines);
   const totalGlyphs =
-    (budget.totalCharacters ?? lines.reduce((sum, l) => sum + l.glyphs.length, 0)) - tailCount;
+    budget.totalCharacters === undefined
+      ? drawn.glyphs
+      : budget.totalCharacters - drawn.characters + drawn.glyphs;
   const limit = truncatedShare(totalGlyphs, Math.max(0, budget.visibleRatio));
   const fromEnd =
     budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_RTL ||
     (budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_AUTO && budget.rtl === true);
   const hideBefore = fromEnd ? totalGlyphs - limit : 0;
   let seen = 0;
-  let isShown = false;
-  return lines.map((line, lineIndex) => {
+  return lines.map((line) => {
     const glyphs = line.glyphs.filter((glyph) => {
-      if (tailsByLine[lineIndex]!.has(glyph)) return isShown;
-      isShown = fromEnd ? seen >= hideBefore : seen < limit;
-      seen++;
+      const isShown = fromEnd ? seen >= hideBefore : seen < limit;
+      seen += glyphCountOf(glyph);
       return isShown;
     });
     return glyphs.length === line.glyphs.length ? line : { ...line, glyphs };

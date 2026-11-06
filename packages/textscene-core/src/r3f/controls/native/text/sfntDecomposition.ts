@@ -1,11 +1,12 @@
 /**
- * How a font draws a character it lacks: the marks of its decomposition, each with the offset that
- * the font's `GPOS` mark lookups give it against the base (`canonicalGlyphs.ts`, `markPositioning.ts`),
- * or HarfBuzz's fallback placement where the font has no `GPOS` script (`fallbackMarkPositioning.ts`).
+ * How a font draws a cluster of a base and marks, or a character it lacks: the characters HarfBuzz's
+ * normalisation gives it (`canonicalGlyphs.ts`), each mark with the offset that the font's `GPOS`
+ * mark lookups give it against the base (`markPositioning.ts`), or HarfBuzz's fallback placement
+ * where the font has no `GPOS` script (`fallbackMarkPositioning.ts`).
  */
 
 import { recentlyRead } from '../../../../utils/recentlyRead';
-import { drawnCharacters } from './canonicalGlyphs';
+import { normalisedCharacters } from './canonicalGlyphs';
 import { fallbackMarkReader, type SizedClusterOffsets } from './fallbackMarkPositioning';
 import { glyphOffsetPx } from './fontMetrics';
 import { hasMarkScript, markPositioningReader, ORIGIN } from './markPositioning';
@@ -19,17 +20,18 @@ export interface DrawnMark {
   readonly yPx: number;
 }
 
-/** A character drawn as a base and the marks over it. */
+/** A cluster drawn as a base and the marks over it. A cluster that composes into one character has no marks. */
 export interface DecomposedGlyph {
   readonly base: string;
   readonly marks: readonly DrawnMark[];
 }
 
 /**
- * How `ch` draws as a base and marks at `fontSizePx`, or null for a character the font draws as one
- * glyph or not at all.
+ * How `cluster`, a character or a base and its marks, draws at `fontSizePx`: as another character,
+ * or as a base and marks. Null for a cluster of one character that the font draws as itself, and for
+ * one the font cannot draw.
  */
-export type Decomposition = (ch: string, fontSizePx: number) => DecomposedGlyph | null;
+export type Decomposition = (cluster: string, fontSizePx: number) => DecomposedGlyph | null;
 
 /** Whether `sfntDecomposition` needs outlines for `sfnt`: the font has no `GPOS` script for marks. */
 export const usesFallbackMarks = (sfnt: SfntFile): boolean => !hasMarkScript(sfnt);
@@ -76,28 +78,30 @@ export function sfntDecomposition(
       ? (offsetsOf = gposOffsetReader(sfnt) ?? fallbackMarkReaderOf(openOutlines))
       : offsetsOf;
   const keptAtSize = recentlyRead<number, Map<string, DecomposedGlyph | null>>(MAX_KEPT_SIZES);
-  return (ch, fontSizePx) => {
-    const kept = keptAtSize(fontSizePx, newDecompositionsByCharacter);
-    let glyph = kept.get(ch);
-    if (glyph === undefined) kept.set(ch, (glyph = decompose(ch, fontSizePx, mapsGlyph, readOffsets)));
+  return (cluster, fontSizePx) => {
+    const kept = keptAtSize(fontSizePx, newDecompositionsByCluster);
+    let glyph = kept.get(cluster);
+    if (glyph === undefined)
+      kept.set(cluster, (glyph = decompose(cluster, fontSizePx, mapsGlyph, readOffsets)));
     return glyph;
   };
 }
 
 /** Declared once, not inline: an arrow inside the reader would allocate a closure on every read. */
-const newDecompositionsByCharacter = (): Map<string, DecomposedGlyph | null> => new Map();
+const newDecompositionsByCluster = (): Map<string, DecomposedGlyph | null> => new Map();
 
 /** A font size animation passes through many sizes, so the decompositions of this many sizes are kept. */
 const MAX_KEPT_SIZES = 8;
 
 function decompose(
-  ch: string,
+  cluster: string,
   fontSizePx: number,
   mapsGlyph: (ch: string) => boolean,
   readOffsets: () => SizedClusterOffsets | null
 ): DecomposedGlyph | null {
-  const drawn = drawnCharacters(ch, mapsGlyph);
-  if (!drawn || drawn.length < 2) return null;
+  const drawn = normalisedCharacters(cluster, mapsGlyph);
+  if (!drawn || (drawn.length === 1 && drawn[0] === cluster)) return null;
+  if (drawn.length === 1) return { base: drawn[0]!, marks: [] };
   const offsets = readOffsets()?.(drawn, fontSizePx);
   const marks = drawn.slice(1).map((char, i) => {
     const { x, y } = offsets?.[i + 1] ?? ORIGIN;

@@ -12,7 +12,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { COMBINING_CLASS_RUNS } from './combiningClasses';
+import { combiningClassOf } from './canonicalGlyphs';
 import { ftMulFix, getFontOutlineScale, glyphAdvance26_6, FIXED_26_6_ONE } from './fontMetrics';
 import { ORIGIN, type MarkOffset } from './markPositioning';
 import { extent } from './glyphContours';
@@ -62,18 +62,10 @@ interface Extents {
   height: number;
 }
 
-/** The combining class of a code point that a canonical decomposition ends in, 0 for any other. */
-function combiningClassOf(codePoint: number): number {
-  let low = 0;
-  let high = COMBINING_CLASS_RUNS.length - 1;
-  while (low <= high) {
-    const middle = (low + high) >> 1;
-    const [first, last, klass] = COMBINING_CLASS_RUNS[middle]!;
-    if (codePoint < first) high = middle - 1;
-    else if (codePoint > last) low = middle + 1;
-    else return RECATEGORIZED_CLASS.get(klass) ?? klass;
-  }
-  return 0;
+/** The combining class of a code point, as the fallback placement recategorises it. */
+function placementClassOf(codePoint: number): number {
+  const klass = combiningClassOf(codePoint);
+  return RECATEGORIZED_CLASS.get(klass) ?? klass;
 }
 
 /** Integer division by two, which truncates toward zero as C does. */
@@ -225,7 +217,7 @@ export function fallbackMarkReader(sfnt: SfntFile): SizedClusterOffsets | null {
     let lastClass = 255;
     const offsets: MarkOffset[] = [ORIGIN];
     for (let i = 1; i < cluster.length; i++) {
-      const klass = combiningClassOf(cluster[i]!.codePointAt(0)!);
+      const klass = placementClassOf(cluster[i]!.codePointAt(0)!);
       const markInk = klass === 0 ? null : inkBoxOf(glyphs[i]!);
       if (!markInk) {
         offsets.push(ORIGIN);

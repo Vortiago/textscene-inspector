@@ -8,6 +8,7 @@
 import { perObject } from '../../../../utils/perObject';
 import { identityKey } from '../../../../utils/identityKey';
 import { recentlyRead } from '../../../../utils/recentlyRead';
+import type { RunSubstitutions, SubstitutedCluster } from './glyphRun';
 import type { Decomposition } from './sfntDecomposition';
 import type { SfntOutlines } from './sfntOutlines';
 
@@ -46,6 +47,11 @@ export interface FontMetrics {
    * canonical decomposition, at a font size. Absent, or null for a character, is one glyph.
    */
   readonly decomposition?: Decomposition;
+  /**
+   * The clusters of a run of characters that the face's `GSUB` draws as a glyph of their own at the
+   * default instance: a ligature, or a glyph its neighbours swap. Absent is none.
+   */
+  readonly substitutions?: RunSubstitutions;
   /** A character's own advance width, design units, or `null` if this font has no glyph for it (a shaper falls back to `averageAdvanceUnits`). */
   getGlyphAdvanceUnits(ch: string): number | null;
   /**
@@ -276,10 +282,30 @@ export function canvasGlyphPenXPx(
 // A face at a variable-font instance takes its advance from `SfntOutlines.advanceAtInstance` instead.
 export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSizePx: number): number {
   const units = metrics.getGlyphAdvanceUnits(ch) ?? metrics.averageAdvanceUnits;
+  const { outlines, opentype } = metrics;
+  const glyphAtInstance =
+    outlines && isInstanced(opentype) ? outlines.glyphIndex(ch.codePointAt(0)!, opentype) : 0;
+  return advancePx(metrics, units, glyphAtInstance, fontSizePx);
+}
+
+/** `getFontGlyphAdvancePx` for the glyph of a cluster that the face's `GSUB` changed. */
+export function getFontSubstitutedAdvancePx(
+  metrics: FontMetrics,
+  { glyph, advanceUnits }: SubstitutedCluster,
+  fontSizePx: number
+): number {
+  return advancePx(metrics, advanceUnits, glyph, fontSizePx);
+}
+
+/**
+ * The advance of a glyph of `units`, or of glyph `glyphAtInstance` at the face's instance. Glyph 0
+ * is none, so the default advance stands.
+ */
+function advancePx(metrics: FontMetrics, units: number, glyphAtInstance: number, fontSizePx: number): number {
   // A bitmap font's advance reaches HarfBuzz in 26.6 as `advance * 64` and leaves as
   // `advance * scale` (`text_server_adv.cpp:130,7077`): no FreeType chain.
   if (metrics.pxPerUnit) return unitsToPx(units, metrics, fontSizePx);
-  const advanceAtInstance = instanceGlyphAdvance26_6(metrics, ch, fontSizePx);
+  const advanceAtInstance = instanceGlyphAdvance26_6(metrics, glyphAtInstance, fontSizePx);
   if (advanceAtInstance !== null) return advanceAtInstance / FIXED_26_6_ONE;
   // The error only adds width, so a run of odd advances can push
   // `shapedTextSizeWidthPx`'s ceil a whole pixel wider, as in Godot.
@@ -306,14 +332,39 @@ export function glyphOffsetPx(units: number, unitsPerEm: number, fontSizePx: num
 }
 
 /**
- * The advance in 26.6 of `ch` at the axis values of the face's `variation_opentype`, or null for a
- * face at its default instance and a character with no glyph: the default advance stands.
+ * The advance in 26.6 of glyph `glyphAtInstance`, at the axis values of the face's
+ * `variation_opentype`, or null for a face at its default instance and for no glyph: the default
+ * advance stands.
  */
-function instanceGlyphAdvance26_6(metrics: FontMetrics, ch: string, fontSizePx: number): number | null {
+function instanceGlyphAdvance26_6(
+  metrics: FontMetrics,
+  glyphAtInstance: number,
+  fontSizePx: number
+): number | null {
   const { outlines, opentype } = metrics;
-  if (!outlines || !isInstanced(opentype)) return null;
-  const glyphIndex = outlines.glyphIndex(ch.codePointAt(0)!, opentype);
-  return glyphIndex === 0 ? null : (outlines.advanceAtInstance?.(glyphIndex, fontSizePx, opentype) ?? null);
+  if (!outlines || !isInstanced(opentype) || glyphAtInstance === 0) return null;
+  return outlines.advanceAtInstance?.(glyphAtInstance, fontSizePx, opentype) ?? null;
+}
+
+/** No cluster changed: one array for every run that the face's `GSUB` leaves as it is. */
+const NO_SUBSTITUTIONS: readonly SubstitutedCluster[] = [];
+
+/** Whether `metrics` reads a `GSUB` that can draw a cluster as a glyph of its own. */
+export function canSubstitute(metrics: FontMetrics): boolean {
+  return !!metrics.substitutions || !!metrics.outlines?.substitutionsAt;
+}
+
+/**
+ * The clusters of `chars` that the face's `GSUB` draws as a glyph of their own, at the axis values
+ * of the face's `variation_opentype`, where its outlines read them, else at the default instance.
+ */
+export function getFontRunSubstitutions(
+  metrics: FontMetrics,
+  chars: readonly string[]
+): readonly SubstitutedCluster[] {
+  const { outlines, opentype } = metrics;
+  const atInstance = isInstanced(opentype) ? outlines?.substitutionsAt?.(chars, opentype) : null;
+  return atInstance ?? metrics.substitutions?.(chars) ?? NO_SUBSTITUTIONS;
 }
 
 /**
@@ -503,7 +554,9 @@ export function getFontEmboldenStrength(embolden: number, fontSizePx: number): n
 
 /**
  * The kerning of `a` and `b` scaled to `fontSizePx`: the `GPOS` kerning of the instance at the face's
- * `variation_opentype`, else `metrics.getKerningAdjustmentUnits(a, b)`. `0` short-circuits without a scale.
+ * `variation_opentype`, else `metrics.getKerningAdjustmentUnits(a, b)`. HarfBuzz positions a glyph in
+ * the 26.6 units of the FreeType size Godot's `hb_font` takes (`text_server_adv.cpp:1513`), so the
+ * kerning lands on a 1/64 pixel. `0` short-circuits without a scale.
  */
 export function getFontKerningAdjustmentPx(
   metrics: FontMetrics,
@@ -513,7 +566,7 @@ export function getFontKerningAdjustmentPx(
 ): number {
   const units = instanceKerningUnits(metrics, a, b) ?? metrics.getKerningAdjustmentUnits(a, b);
   if (units === 0) return 0;
-  return unitsToPx(units, metrics, fontSizePx);
+  return Math.round(unitsToPx(units, metrics, fontSizePx) * FIXED_26_6_ONE) / FIXED_26_6_ONE;
 }
 
 /**

@@ -8,6 +8,7 @@ import { faceDescriptors } from './sceneFontFace';
 import { lazyFontContainer, openFontContainer } from './fontContainer';
 import { sfntHasGlyph } from './sfntCmap';
 import { sfntDecomposition, usesFallbackMarks } from './sfntDecomposition';
+import { sfntRunSubstitutions } from './glyphRun';
 import { FALLBACK_MARK_TABLE_TAGS, parseSfntScalars, readAxisDefaults, type SfntScalars } from './sfntTables';
 import {
   createRuntimeFontMetrics,
@@ -142,6 +143,7 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
     cssFontFamily: family,
     hasGlyph,
     decomposition: (sfnt && sfntDecomposition(sfnt, openMarkOutlines)) ?? undefined,
+    substitutions: (sfnt && sfntRunSubstitutions(sfnt)) ?? undefined,
   });
 }
 

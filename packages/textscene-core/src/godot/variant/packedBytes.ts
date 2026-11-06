@@ -46,3 +46,8 @@ export function decodeBase64Bytes(base64: string): Uint8Array<ArrayBuffer> {
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
 }
+
+/** The bytes a base64url body holds (RFC 4648 section 5), which a generated module writes. */
+export function decodeBase64UrlBytes(base64url: string): Uint8Array<ArrayBuffer> {
+  return decodeBase64Bytes(base64url.replaceAll('-', '+').replaceAll('_', '/'));
+}

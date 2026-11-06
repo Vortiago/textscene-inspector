@@ -1,27 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
-import type { GlyphPlacement, TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
-import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
+import { AutowrapMode, VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
+import { shapeText, type TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import {
   applyVisibleCharsReveal,
   resolveLabelVisibleChars,
   resolveRichTextVisibleChars,
 } from './visibleChars';
 
-const DEFAULT_FONT = {} as FontMetrics;
-
-/** A line of default-font glyphs, one per character; the font draws the sequences `ff`, `fi`, `fl`, `ffi` and `ffl` as one glyph. */
-function defaultFontLine(text: string): TextLineLayout {
-  const glyphs: GlyphPlacement[] = [...text].map((char, i) => ({
-    char,
-    x: i,
-    advance: 1,
-    sourceIndex: i,
-    glyph: {} as GlyphPlacement['glyph'],
+/**
+ * `text` shaped on the default font, which draws the sequences `ff`, `fi`, `fl`, `ffi` and `ffl` as
+ * one glyph, without the paragraph terminator. `fontSizePxAt` sets each character's size.
+ */
+function defaultFontLine(text: string, fontSizePxAt?: (charIndex: number) => number): TextLineLayout {
+  const [line] = shapeText(text, {
     fontSizePx: 16,
-    fontMetrics: DEFAULT_FONT,
-  }));
-  return { text, glyphs, widthPx: text.length, paragraphIndex: 0 };
+    fontSizePxAt,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 0,
+    terminateLastParagraph: false,
+  }).lines;
+  return line!;
 }
 
 const glyphBudget = (visibleRatio: number) => ({
@@ -64,15 +63,7 @@ describe('applyVisibleCharsReveal ligatures', () => {
   });
 
   it('forms no ligature across a change of font size, as the spans shape apart', () => {
-    const line = defaultFontLine('abcdefghfi');
-    line.glyphs[9]!.fontSizePx = 40;
-    const [revealed] = applyVisibleCharsReveal([line], glyphBudget(0.99));
-    expect(revealed!.glyphs.map((glyph) => glyph.char).join('')).toBe('abcdefghf');
-  });
-
-  it('draws no ligature for a glyph outside the default font atlas', () => {
-    const line = defaultFontLine('abcdefghfi');
-    for (const glyph of line.glyphs) glyph.glyph = null;
+    const line = defaultFontLine('abcdefghfi', (i) => (i < 9 ? 16 : 40));
     const [revealed] = applyVisibleCharsReveal([line], glyphBudget(0.99));
     expect(revealed!.glyphs.map((glyph) => glyph.char).join('')).toBe('abcdefghf');
   });

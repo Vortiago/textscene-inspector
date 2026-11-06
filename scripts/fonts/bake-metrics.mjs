@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Bakes the vendored OpenSans_SemiBold's metrics, MSDF atlas, atlas image and bytes into the
- * committed `openSans{Metrics,Atlas,AtlasImage,FontBytes}.ts` modules the native Control
+ * Bakes the vendored OpenSans_SemiBold's metrics, MSDF atlas, atlas image, shaping tables and bytes
+ * into the committed `openSans{Metrics,Atlas,AtlasImage,Shaping,FontBytes}.ts` modules the native Control
  * text painter reads: `node scripts/fonts/bake-metrics.mjs [--check]`. `--check`
  * diffs a fresh bake against them byte for byte and exits 1 on a difference.
  */
@@ -26,6 +26,7 @@ const METRICS_OUT = join(TEXT_DIR, 'openSansMetrics.ts');
 const ATLAS_OUT = join(TEXT_DIR, 'openSansAtlas.ts');
 const ATLAS_IMAGE_OUT = join(TEXT_DIR, 'openSansAtlasImage.ts');
 const FONT_BYTES_OUT = join(TEXT_DIR, 'openSansFontBytes.ts');
+const SHAPING_OUT = join(TEXT_DIR, 'openSansShaping.ts');
 
 // Full ASCII printable, 0x20 (space) to 0x7E (~), 95 glyphs. Do not narrow it.
 const CHARSET_START = 0x20;
@@ -139,6 +140,33 @@ function bakeCodePointRanges(font) {
     else ranges.push([cp, cp]);
   }
   return ranges;
+}
+
+/** The bytes of the table `tag` in the TTF `ttfBuffer`, read from its table directory. */
+function tableBytes(ttfBuffer, tag) {
+  const numTables = ttfBuffer.readUInt16BE(4);
+  for (let i = 0; i < numTables; i++) {
+    const record = 12 + i * 16;
+    if (ttfBuffer.toString('latin1', record, record + 4) !== tag) continue;
+    const offset = ttfBuffer.readUInt32BE(record + 8);
+    return ttfBuffer.subarray(offset, offset + ttfBuffer.readUInt32BE(record + 12));
+  }
+  throw new Error(`expected a ${tag} table in the vendored font, found none`);
+}
+
+/**
+ * The tables the atlas face shapes a run with, as a scene font's face does (`sfntTables.ts`
+ * `SCENE_FONT_TABLE_TAGS`): the `GSUB` of its ligatures, and the `cmap`, `GPOS`, `GDEF`
+ * and metrics that place the marks of a character the font lacks.
+ */
+const SHAPING_TABLE_TAGS = ['head', 'hhea', 'maxp', 'cmap', 'hmtx', 'GDEF', 'GPOS', 'GSUB'];
+
+// base64url, not base64: a `/` of base64 pairs with the next into what the literal-grammar guard
+// reads as a regex literal (`godotLiteralGrammar.guard.test.ts`).
+function bakeShaping(ttfBuffer) {
+  return Object.fromEntries(
+    SHAPING_TABLE_TAGS.map((tag) => [tag, tableBytes(ttfBuffer, tag).toString('base64url')])
+  );
 }
 
 /** Font-wide scalar metrics, design units (`font.unitsPerEm`-relative). */
@@ -480,6 +508,16 @@ export const OPEN_SANS_ATLAS_PNG_DATA_URL = ${JSON.stringify(pngDataUrl)};
 `;
 }
 
+function renderShapingModule(tables) {
+  return `${GENERATED_HEADER}
+// The tables below are generated data on long lines. The atlas face shapes each run through them
+// (\`openSansFontMetrics.ts\`), as Godot's HarfBuzz shapes the font.
+
+/** The font's shaping tables, base64url with no padding, by tag. */
+export const OPEN_SANS_SHAPING_TABLES: Readonly<Record<string, string>> = ${JSON.stringify(tables, null, 2)};
+`;
+}
+
 function renderFontBytesModule(woff2Buffer) {
   return `${GENERATED_HEADER}
 // The base64 payload below is generated data on one very long line. Unlike
@@ -514,17 +552,19 @@ async function bake() {
     atlasSource: renderAtlasModule({ glyphsByChar, atlasInfo }),
     atlasImageSource: renderAtlasImageModule(pngDataUrl),
     fontBytesSource: renderFontBytesModule(readFileSync(WOFF2_PATH)),
+    shapingSource: renderShapingModule(bakeShaping(ttfBuffer)),
   };
 }
 
 async function main() {
   const check = process.argv.includes('--check');
-  const { metricsSource, atlasSource, atlasImageSource, fontBytesSource } = await bake();
+  const { metricsSource, atlasSource, atlasImageSource, fontBytesSource, shapingSource } = await bake();
   const outputs = [
     [METRICS_OUT, metricsSource],
     [ATLAS_OUT, atlasSource],
     [ATLAS_IMAGE_OUT, atlasImageSource],
     [FONT_BYTES_OUT, fontBytesSource],
+    [SHAPING_OUT, shapingSource],
   ];
 
   if (check) checkGenerated(outputs, { tool: 'bake-metrics', command: 'pnpm fonts:bake' });
