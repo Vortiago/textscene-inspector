@@ -11,7 +11,8 @@ import { basename } from 'node:path';
  * The importers whose sidecars the previewer reads (ADR-0028): a scene's re-import options, a
  * texture's format and mip chain, and the slices of a 3D texture or a texture array, such as a
  * lightmap atlas, a BMFont's scale mode and fallbacks, and a dynamic font's options, which become
- * its FontFile properties. `import-sidecar-allowlist.test.mjs` asserts it against the importers core names.
+ * its FontFile properties. Plain node cannot import core's `.ts` constants, so
+ * `import-sidecar-allowlist.test.mjs` asserts this set against the importers core names.
  */
 export const READ_IMPORTERS = new Set([
   'scene',

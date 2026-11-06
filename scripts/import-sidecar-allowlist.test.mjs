@@ -2,7 +2,8 @@
  * Asserts the `.import` parameter allowlist against the corpus (ADR-0028). The previewer's asset
  * re-import honours `nodes/root_scale`, `nodes/apply_root_scale`, `meshes/light_baking`,
  * `meshes/lightmap_texel_size`, from `_subresources` the `use_external` material remaps, the
- * `mesh_instance/layers` mask, a BMFont's `scaling_mode` and `fallbacks`, a dynamic font's `generate_mipmaps` and `force_autohinter`, the per-mesh `generate/lightmap_uv` and the per-clip
+ * `mesh_instance/layers` mask, a BMFont's `scaling_mode` and `fallbacks`, a dynamic font's
+ * `generate_mipmaps` and `force_autohinter`, the per-mesh `generate/lightmap_uv` and the per-clip
  * `settings/loop_mode`, `nodes/use_name_suffixes` for the clip names, a `3d_texture` slice grid,
  * and a `texture` import's compression. A vendored sidecar that needs any other parameter would
  * render wrong with nothing to say so, so this test fails instead.
@@ -368,12 +369,17 @@ const IMPORTER_REVIEWED = new Map([
   ...[...LAYERED_TEXTURE_IMPORTERS].map((importer) => [importer, LAYERED_TEXTURE_PARAMS]),
 ]);
 
+/** Whether a listed deviation sets `key` to `value`. Only a font option has one, never a global default. */
+function isListedDeviation(deviations, key, value) {
+  return DYNAMIC_FONT_MUST_BE_DEFAULT.has(key) && deviations[key] === value;
+}
+
 /** Each parameter of a read sidecar that leaves its asserted default, as one line. */
 function defaultFindings(name, { importer, params }, deviations = {}) {
   const findings = [];
   for (const [key, value] of Object.entries(params)) {
     const expected = MUST_BE_DEFAULT.get(key) ?? IMPORTER_MUST_BE_DEFAULT.get(importer)?.get(key);
-    if (expected !== undefined && expected !== value && deviations[key] !== value) {
+    if (expected !== undefined && expected !== value && !isListedDeviation(deviations, key, value)) {
       findings.push(`${name}: ${key}=${value} would change the render (want ${expected || '""'})`);
     }
   }
