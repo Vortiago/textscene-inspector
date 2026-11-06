@@ -129,6 +129,21 @@ describe('a child that an AnimationPlayer moves across the rows of a y-sorted Ti
     expect(drawOrder(sceneRoot(renderer))).toEqual(['row 0', 'row 1', 'Child', 'row 2']);
   });
 
+  // The y-sort renders its items in collection order: a reordered child makes R3F apply its authored
+  // position again, which would put the child back at y 20 after the mixer moved it.
+  it('keeps the pose the mixer wrote once the child re-sorts past a row', async () => {
+    const { renderer } = await mountWithPlayer(SCENE, 'Layer/Player', {
+      workspace: '2d',
+      seed: seedTileSet,
+    });
+    await settleLoads();
+    await play();
+    await ReactThreeTestRenderer.act(async () => renderer.advanceFrames(1, 0.5));
+    await ReactThreeTestRenderer.act(async () => renderer.advanceFrames(1, 0));
+
+    expect(Math.abs(sceneRoot(renderer).getObjectByName('Child')!.position.y)).toBeCloseTo(110);
+  });
+
   it('draws under the rows again when the clip stops', async () => {
     const { renderer } = await mountWithPlayer(SCENE, 'Layer/Player', {
       workspace: '2d',

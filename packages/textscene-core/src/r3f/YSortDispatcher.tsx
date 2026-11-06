@@ -101,8 +101,8 @@ function SortedChildren({
   // Re-packs this subtree's run in sorted order. Nothing outside can land in the
   // run, and each item keeps a run as wide as its subtree, so its descendants draw
   // between it and the next-ranked item. The items render in collection order, not
-  // sorted: a moved child makes R3F apply its authored props again, which would undo the
-  // pose a mixer has just written.
+  // sorted: a moved child makes R3F apply its authored props again, which undoes the
+  // pose a mixer has just written (`ySortAnimatedChild.test.tsx`, "keeps the pose").
   const packed = useMemo(() => {
     // A tile-group item is one group with no subtree, drawn from its layer's
     // reserve. Sized by the layer node, each row would claim a new reserve.
