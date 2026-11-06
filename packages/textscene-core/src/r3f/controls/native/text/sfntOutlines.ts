@@ -25,6 +25,7 @@ import { isTrickyFont } from './trickyFont';
 import { openFontContainer } from './fontContainer';
 import { OUTLINE_TABLE_TAGS, readHeadUnitsPerEm, type SfntFile } from './sfntTables';
 import { fontInstanceOf, type FontInstance } from './variation/fontInstance';
+import { instanceGlyphIndex, type InstanceGlyphIndex } from './variation/instanceGlyph';
 import type { instanceKerningReader, PairKerningReader } from './variation/instanceKerning';
 import { perObject } from '../../../../utils/perObject';
 import { recentlyRead } from '../../../../utils/recentlyRead';
@@ -32,8 +33,12 @@ import { recentlyRead } from '../../../../utils/recentlyRead';
 type InstanceKerningReader = typeof instanceKerningReader;
 
 export interface SfntOutlines {
-  /** The glyph index `cmap` gives `codePoint`, or 0 for a character the font lacks. */
-  glyphIndex(codePoint: number): number;
+  /**
+   * The glyph index of `codePoint` as HarfBuzz's `rvrn` feature leaves it at the axis values of
+   * `opentype`, or at the default instance without them: the glyph `cmap` gives it, or 0 for a
+   * character the font lacks.
+   */
+  glyphIndex(codePoint: number, opentype?: OpentypeCoordinates): number;
   /** The contours of a glyph at `fontSizePx`, changed by `variation`, or null for a glyph with no outline. */
   glyphContours(glyphIndex: number, fontSizePx: number, variation?: GlyphVariation): GlyphContours | null;
   /**
@@ -113,7 +118,7 @@ type CharacterKerning = (leftCodePoint: number, rightCodePoint: number) => numbe
 function instanceKerningOf(
   sfnt: SfntFile,
   instanceAt: InstanceReader,
-  glyphIndex: (codePoint: number) => number,
+  glyphIndex: InstanceGlyphIndex,
   kerningReader: InstanceKerningReader | null
 ): SfntOutlines['kerningAtInstance'] {
   if (!kerningReader) return undefined;
@@ -125,7 +130,10 @@ function instanceKerningOf(
   // Kept with its instance, and so for as long as the layout's opentype wrapper that asks for it lives.
   const pairsAt = perObject((instance: FontInstance): CharacterKerning | null => {
     const kerningAtInstance = kerningAt();
-    return kerningAtInstance && keptPairs(glyphIndex, kerningAtInstance(instance.normalized));
+    return (
+      kerningAtInstance &&
+      keptPairs((codePoint) => glyphIndex(codePoint, instance), kerningAtInstance(instance.normalized))
+    );
   });
   return (leftCodePoint, rightCodePoint, opentype) => {
     const instance = instanceAt(opentype);
@@ -248,12 +256,13 @@ function readSfntOutlines(
   outlineOf: GlyphOutlineReader | null,
   kerningReader: InstanceKerningReader | null
 ): SfntOutlines | null {
-  const glyphIndex = outlineOf && sfntGlyphIndex(sfnt);
-  if (!glyphIndex) return null;
+  const cmapGlyphIndex = outlineOf && sfntGlyphIndex(sfnt);
+  if (!cmapGlyphIndex) return null;
 
   const instanceAt = instanceReaderOf(sfnt);
+  const glyphIndex = instanceGlyphIndex(sfnt, cmapGlyphIndex);
   return {
-    glyphIndex,
+    glyphIndex: (codePoint, opentype) => glyphIndex(codePoint, opentype ? instanceAt(opentype) : null),
     advanceAtInstance: instanceAdvanceReader(sfnt, instanceAt),
     glyphContours: (glyph, fontSizePx, variation) =>
       orOnRangeError(() => {

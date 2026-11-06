@@ -298,7 +298,7 @@ export function glyphAdvance26_6(units: number, unitsPerEm: number, fontSizePx: 
 function instanceGlyphAdvance26_6(metrics: FontMetrics, ch: string, fontSizePx: number): number | null {
   const { outlines, opentype } = metrics;
   if (!outlines || !isInstanced(opentype)) return null;
-  const glyphIndex = outlines.glyphIndex(ch.codePointAt(0)!);
+  const glyphIndex = outlines.glyphIndex(ch.codePointAt(0)!, opentype);
   return glyphIndex === 0 ? null : (outlines.advanceAtInstance?.(glyphIndex, fontSizePx, opentype) ?? null);
 }
 

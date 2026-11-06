@@ -84,6 +84,12 @@ with its deltas at the instance. A `FontVariation` over another takes its own ax
 
 Recursive at `MONO` 0.5 kerns each pair by half its kerning at the default instance, as Godot does.
 
+## Glyph swaps at a variable-font instance
+
+<!-- compare: image=unit-label-font-variation-glyph-swap status=done fixture=unit-label-font-variation-glyph-swap.tscn -->
+
+The `rvrn` feature of a font's `GSUB` `FeatureVariations` swaps glyphs at some axis values. Recursive draws the mono forms of `f`, `g`, `i`, `l` and `0` at `MONO` 1, and the slanted forms of `a`, `g`, `i` and `z` at `slnt` -15. The glyph of each character matches Godot's for every character and instance measured.
+
 ## Linting
 
 <!-- lint:begin Label -->
@@ -181,7 +187,7 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 ## Known limitations
 
 - **Not drawn** Arabic letters draw in their isolated forms, since the shaper does not join them.
-- **Approximated** At an instance, a variable font keeps its default glyphs where its `GSUB` feature variations swap them.
+- **Approximated** At an instance, a variable font swaps glyphs by `rvrn` alone, as one glyph for each character: its other `GSUB` features (ligatures, contextual alternates) keep the `cmap` glyphs.
 - **Approximated** At an instance, the `GPOS` kerning reads the pair lookups of every script, where Godot reads those of each script run.
 - **Approximated** At an instance, the `GPOS` kerning reads the default language system of each script, where Godot reads the system of the text's language.
 - **Approximated** At an instance, the `GPOS` kerning pairs adjacent characters only, where Godot also kerns across a glyph that a lookup flag skips.

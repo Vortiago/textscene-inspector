@@ -23,7 +23,7 @@ func _init():
 			ts.shaped_text_add_string(srid, ch, font.get_rids(), size, {}, "")
 			ts.shaped_text_shape(srid)
 			var glyphs = ts.shaped_text_get_glyphs(srid)
-			out.append({"font": args[0].get_file(), "char": ch, "sizePx": size, "opentype": spec, "advancePx": glyphs[0]["advance"]})
+			out.append({"font": args[0].get_file(), "char": ch, "sizePx": size, "opentype": spec, "advancePx": glyphs[0]["advance"], "glyph": glyphs[0]["index"]})
 			ts.free_rid(srid)
 	print("JSON:" + JSON.stringify(out))
 	quit()

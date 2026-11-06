@@ -20,6 +20,8 @@ import {
   type ContextRule,
   coverageIndex,
   DEFAULT_FEATURES,
+  featureSubstitutionAt,
+  type FeatureSubstitution,
   glyphClass,
   GposType,
   GsubType,
@@ -72,11 +74,15 @@ function shapingFeatures(scriptTags: readonly string[], feature: string | null):
 /** The default script HarfBuzz falls back on, then the two it tries after it (`hb_ot_layout_table_select_script`). */
 const FALLBACK_SCRIPT_TAGS = ['DFLT', 'dflt', 'latn'] as const;
 
-/** The lookups of `features` under the first script of `scriptTags` the table has, its default language. */
+/** The `FeatureVariations` record that holds at the default instance, found once for a table. */
+const defaultSubstitution = perObject((table: LayoutTable) => featureSubstitutionAt(table, []));
+
+/** The lookups of `features` under the first script of `scriptTags` the table has, its default language, as `substitution` changes them. */
 function featureLookups(
   table: LayoutTable,
   scriptTags: readonly string[],
-  features: readonly string[]
+  features: readonly string[],
+  substitution: FeatureSubstitution | undefined
 ): number[] {
   const script = [...scriptTags, ...FALLBACK_SCRIPT_TAGS]
     .map((tag) => table.scripts.find((candidate) => candidate.tag === tag))
@@ -84,11 +90,8 @@ function featureLookups(
   const language = script?.defaultLanguage;
   if (!language) return [];
   const indices = languageFeatures(table, language, features);
-  const substitutions = table.featureSubstitutions.find(
-    (variation) => variation.isDefaultInstance
-  )?.substitutions;
   const lookupsOf = (index: number): readonly number[] =>
-    substitutions?.get(index) ?? table.features[index]?.lookups ?? [];
+    substitution?.substitutions.get(index) ?? table.features[index]?.lookups ?? [];
   const lookups = new Set(indices.flatMap(lookupsOf));
   return [...lookups].sort((a, b) => a - b);
 }
@@ -100,11 +103,19 @@ interface Stage {
 }
 
 function stagesOf(table: LayoutTable, scriptTags: readonly string[], feature: string | null): Stage[] {
-  const random = new Set(featureLookups(table, scriptTags, ['rand']));
+  const random = new Set(featureLookups(table, scriptTags, ['rand'], defaultSubstitution(table)));
   return [
-    { lookups: featureLookups(table, scriptTags, FIRST_STAGE_FEATURES), randomLookups: new Set() },
     {
-      lookups: featureLookups(table, scriptTags, shapingFeatures(scriptTags, feature)),
+      lookups: featureLookups(table, scriptTags, FIRST_STAGE_FEATURES, defaultSubstitution(table)),
+      randomLookups: new Set(),
+    },
+    {
+      lookups: featureLookups(
+        table,
+        scriptTags,
+        shapingFeatures(scriptTags, feature),
+        defaultSubstitution(table)
+      ),
       randomLookups: random,
     },
   ];
@@ -128,7 +139,7 @@ function perStyle<T>(read: StyleReader<T>): StyleReader<T> {
 
 const gsubStages = perStyle(stagesOf);
 const gposLookups = perStyle((table, scriptTags, feature) =>
-  featureLookups(table, scriptTags, shapingFeatures(scriptTags, feature))
+  featureLookups(table, scriptTags, shapingFeatures(scriptTags, feature), defaultSubstitution(table))
 );
 
 /** The shaping buffer: its glyphs, and the state of `rand`'s random number generator (`hb_buffer_t`). */
@@ -415,3 +426,23 @@ export function shapeCluster(
 }
 
 const isAsciiDigit = (codePoint: number): boolean => codePoint >= 0x30 && codePoint <= 0x39;
+
+/**
+ * The `rvrn` lookups at the instance whose `FeatureVariations` record is `substitution`. The script is
+ * the default one, as for a cluster of digits.
+ */
+export function rvrnLookups(table: LayoutTable, substitution: FeatureSubstitution | undefined): number[] {
+  return featureLookups(table, [], FIRST_STAGE_FEATURES, substitution);
+}
+
+/**
+ * The glyph HarfBuzz's `rvrn` stage gives `codePoint` alone: the glyph `cmap` gives it, unless the
+ * lookups turn it into exactly one other glyph. A character draws one glyph here.
+ */
+export function rvrnGlyph(face: ShapingFace, codePoint: number, lookups: readonly number[]): number {
+  const glyph = face.glyphIndex(codePoint);
+  if (!face.gsub || glyph === 0 || lookups.length === 0) return glyph;
+  const buffer: Buffer = { glyphs: [glyph], randomState: 1 };
+  applyGsub(face.gsub, [{ lookups, randomLookups: new Set() }], buffer);
+  return buffer.glyphs.length === 1 ? buffer.glyphs[0]! : glyph;
+}

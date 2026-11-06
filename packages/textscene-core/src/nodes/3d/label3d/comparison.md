@@ -27,7 +27,7 @@ A `FontVariation` over a variable font draws the instance that its `variation_op
 the axes on FreeType and HarfBuzz (`text_server_adv.cpp:1915-1950`). The glyphs and the outline draw from the outlines
 at the instance. They follow the `fvar`, `avar`, `gvar` and `cvar` tables. Each advance follows `HVAR`, or the
 phantom points that `gvar` moves in a font without `HVAR`. The pair kerning follows the `GPOS` `kern` feature
-with its deltas at the instance. A `FontVariation` over another takes its own axis values alone (`font.cpp:3120-3131`).
+with its deltas at the instance. The `rvrn` feature of the `GSUB` `FeatureVariations` swaps glyphs at some axis values. A `FontVariation` over another takes its own axis values alone (`font.cpp:3120-3131`).
 
 ## Linting
 
@@ -89,7 +89,7 @@ The glyph raster has a mip chain only when its font generates mipmaps and `textu
 - **Resource gap** A SystemFont always draws the default font, as Godot does when no OS font matches its names, where Godot draws a matching OS font.
 - **Approximated** Godot's font rasteriser differs from the browser's, so the glyph edges and the `outline_size` outline differ slightly from Godot's.
 - **Approximated** An emboldened glyph, or one at a variable font's instance, follows FreeType's normal hinting, where Godot rasterises with light hinting.
-- **Approximated** At an instance, a variable font keeps its default glyphs where its `GSUB` feature variations swap them.
+- **Approximated** At an instance, a variable font swaps glyphs by `rvrn` alone, as one glyph for each character: its other `GSUB` features (ligatures, contextual alternates) keep the `cmap` glyphs.
 - **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
 - **Approximated** A line with a hex-code box keeps the ascent of a BMFont, where Godot grows it to fit the box (#1324).
