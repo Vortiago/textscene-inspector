@@ -2,7 +2,8 @@
  * Asserts the `.import` parameter allowlist against the corpus (ADR-0028). The previewer's asset
  * re-import honours `nodes/root_scale`, `nodes/apply_root_scale`, `meshes/light_baking`,
  * `meshes/lightmap_texel_size`, from `_subresources` the `use_external` material remaps, the
- * `mesh_instance/layers` mask, a BMFont's `scaling_mode` and `fallbacks`, the per-mesh `generate/lightmap_uv` and the per-clip
+ * `mesh_instance/layers` mask, a BMFont's `scaling_mode` and `fallbacks`, a dynamic font's
+ * `generate_mipmaps` and `force_autohinter`, the per-mesh `generate/lightmap_uv` and the per-clip
  * `settings/loop_mode`, `nodes/use_name_suffixes` for the clip names, a `3d_texture` slice grid,
  * and a `texture` import's compression. A vendored sidecar that needs any other parameter would
  * render wrong with nothing to say so, so this test fails instead.
@@ -12,6 +13,10 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { READ_IMPORTERS, sidecarImporter } from './vendor-prune.mjs';
+import {
+  BMFONT_IMPORTER,
+  DYNAMIC_FONT_IMPORTER,
+} from '../packages/textscene-core/src/godot/import/fontImport.ts';
 import { TEXTURE_IMPORTER } from '../packages/textscene-core/src/godot/import/textureImport.ts';
 import {
   TEXTURE_2D_ARRAY_IMPORTER,
@@ -38,6 +43,9 @@ const HONOURED = new Set([
   // A BMFont's fallback fonts, which the shaper searches per glyph (`resource_importer_bmfont.cpp:98`).
   'fallbacks',
   '_subresources',
+  // A dynamic font's options, which Godot sets as the FontFile's properties (`resource_importer_dynamic_font.cpp:150-200`).
+  'generate_mipmaps',
+  'force_autohinter',
 ]);
 
 /**
@@ -164,6 +172,55 @@ const MUST_BE_DEFAULT = new Map([
   ['offset_mesh', 'Vector3(0, 0, 0)'],
   ['generate_lightmap_uv2', 'false'],
 ]);
+
+/**
+ * The font_data_dynamic importer's group headings and advanced-dialog storage: the editor's glyph
+ * preload and language and script pickers, which add no glyph the shaper does not draw on demand.
+ */
+const DYNAMIC_FONT_INERT = new Set([
+  'Rendering',
+  'Fallbacks',
+  'Compress',
+  'preload',
+  'language_support',
+  'script_support',
+]);
+
+/**
+ * The font_data_dynamic options that change how a glyph rasterises or shapes and that the
+ * previewer does not read, with their importer defaults. A sidecar that leaves one is listed in
+ * `KNOWN_FONT_DEVIATIONS`.
+ */
+const DYNAMIC_FONT_MUST_BE_DEFAULT = new Map([
+  ['antialiasing', '1'],
+  ['disable_embedded_bitmaps', 'true'],
+  ['multichannel_signed_distance_field', 'false'],
+  ['msdf_pixel_range', '8'],
+  ['msdf_size', '48'],
+  ['allow_system_fallback', 'true'],
+  ['modulate_color_glyphs', 'false'],
+  ['hinting', '1'],
+  ['subpixel_positioning', '4'],
+  ['keep_rounding_remainders', 'true'],
+  ['oversampling', '0.0'],
+  ['opentype_features', '{}'],
+]);
+
+/**
+ * The font sidecars that leave a `DYNAMIC_FONT_MUST_BE_DEFAULT` option, with the values they set.
+ * The previewer does not apply these options yet.
+ */
+const KNOWN_FONT_DEVIATIONS = {
+  'scenes/demos/3d/voxel/menu/theme/TinyUnicode.ttf.import': { antialiasing: '0' },
+  'scenes/demos/3d/labels_and_texts/fonts/Xolonium-Regular-MSDF.ttf.import': {
+    multichannel_signed_distance_field: 'true',
+    msdf_pixel_range: '10',
+  },
+  'scenes/demos/3d/labels_and_texts/fonts/Xolonium-Regular-MSDF-Mipmaps.ttf.import': {
+    multichannel_signed_distance_field: 'true',
+    msdf_pixel_range: '10',
+  },
+};
 
 /**
  * `_subresources` carries per-node, per-mesh and per-material import overrides and is not
@@ -299,14 +356,30 @@ function topLevelBlocks(text) {
   return blocks.sort();
 }
 
+/** Per importer, the parameters whose default is asserted. */
+const IMPORTER_MUST_BE_DEFAULT = new Map([
+  [TEXTURE_IMPORTER, TEXTURE_MUST_BE_DEFAULT],
+  [DYNAMIC_FONT_IMPORTER, DYNAMIC_FONT_MUST_BE_DEFAULT],
+]);
+
+/** Per importer, the parameters reviewed as read or inert at any value. */
+const IMPORTER_REVIEWED = new Map([
+  [TEXTURE_IMPORTER, TEXTURE_PARAMS],
+  [DYNAMIC_FONT_IMPORTER, DYNAMIC_FONT_INERT],
+  ...[...LAYERED_TEXTURE_IMPORTERS].map((importer) => [importer, LAYERED_TEXTURE_PARAMS]),
+]);
+
+/** Whether a listed deviation sets `key` to `value`. Only a font option has one, never a global default. */
+function isListedDeviation(deviations, key, value) {
+  return DYNAMIC_FONT_MUST_BE_DEFAULT.has(key) && deviations[key] === value;
+}
+
 /** Each parameter of a read sidecar that leaves its asserted default, as one line. */
-function defaultFindings(name, { importer, params }) {
+function defaultFindings(name, { importer, params }, deviations = {}) {
   const findings = [];
   for (const [key, value] of Object.entries(params)) {
-    const expected =
-      MUST_BE_DEFAULT.get(key) ??
-      (importer === TEXTURE_IMPORTER ? TEXTURE_MUST_BE_DEFAULT.get(key) : undefined);
-    if (expected !== undefined && expected !== value) {
+    const expected = MUST_BE_DEFAULT.get(key) ?? IMPORTER_MUST_BE_DEFAULT.get(importer)?.get(key);
+    if (expected !== undefined && expected !== value && !isListedDeviation(deviations, key, value)) {
       findings.push(`${name}: ${key}=${value} would change the render (want ${expected || '""'})`);
     }
   }
@@ -339,7 +412,9 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
 
   it('keeps the sidecars of every importer core reads', () => {
     expect(
-      [TEXTURE_IMPORTER, ...LAYERED_TEXTURE_IMPORTERS].filter((importer) => !READ_IMPORTERS.has(importer))
+      [TEXTURE_IMPORTER, ...LAYERED_TEXTURE_IMPORTERS, DYNAMIC_FONT_IMPORTER, BMFONT_IMPORTER].filter(
+        (importer) => !READ_IMPORTERS.has(importer)
+      )
     ).toEqual([]);
   });
 
@@ -356,8 +431,7 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
       const { importer } = READ.get(file);
       for (const key of Object.keys(readParams(file))) {
         if (HONOURED.has(key) || INERT.has(key) || MUST_BE_DEFAULT.has(key)) continue;
-        if (LAYERED_TEXTURE_IMPORTERS.has(importer) && LAYERED_TEXTURE_PARAMS.has(key)) continue;
-        if (importer === TEXTURE_IMPORTER && (TEXTURE_PARAMS.has(key) || TEXTURE_MUST_BE_DEFAULT.has(key)))
+        if (IMPORTER_REVIEWED.get(importer)?.has(key) || IMPORTER_MUST_BE_DEFAULT.get(importer)?.has(key))
           continue;
         unknown.push(`${rel(file)}: ${key}`);
       }
@@ -366,7 +440,9 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
   });
 
   it('leaves every render-affecting parameter we do not read at its default', () => {
-    expect(sidecars.flatMap((file) => defaultFindings(rel(file), READ.get(file)))).toEqual([]);
+    expect(
+      sidecars.flatMap((file) => defaultFindings(rel(file), READ.get(file), KNOWN_FONT_DEVIATIONS[rel(file)]))
+    ).toEqual([]);
   });
 
   it('flags a texture sidecar that changes the channels of its image', () => {
@@ -377,6 +453,21 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
     expect(defaultFindings('grey.png.import', remapped)).toEqual([
       'grey.png.import: process/channel_remap/red=1 would change the render (want 0)',
     ]);
+  });
+
+  it('flags a font sidecar that turns on signed distance fields without a listed deviation', () => {
+    const msdf = { importer: DYNAMIC_FONT_IMPORTER, params: { multichannel_signed_distance_field: 'true' } };
+    expect(defaultFindings('a.ttf.import', msdf)).toEqual([
+      'a.ttf.import: multichannel_signed_distance_field=true would change the render (want false)',
+    ]);
+  });
+
+  it('lists only font deviations a sidecar still carries', () => {
+    const stale = Object.entries(KNOWN_FONT_DEVIATIONS).filter(([file, set]) => {
+      const params = READ.get(join(REPO_ROOT, file))?.params ?? {};
+      return !Object.entries(set).every(([key, value]) => params[key] === value);
+    });
+    expect(stale.map(([file]) => file)).toEqual([]);
   });
 
   it('carries only the _subresources blocks already accounted for', () => {
