@@ -15,12 +15,12 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   fitIconSize,
-  isTextWidthClipped,
   pickButtonStyleBox,
   resolveButtonDrawState,
   shapeButtonLabel,
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
+import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import { type Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import {

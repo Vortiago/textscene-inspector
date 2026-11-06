@@ -15,8 +15,7 @@ import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
-import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { overrunFlagsForBehavior, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
 import {
   linkButtonLabelShape,
   linkButtonTextPlacement,
@@ -28,7 +27,6 @@ import {
   LINKBUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { LinkButtonProperties } from './types';
-import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
@@ -51,18 +49,14 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
 
   // link_button.cpp:286-289: `text_buf->set_width(MAX(1, size.width))` for any `overrun_behavior` but
   // NO_TRIMMING, at the control's own rect, with no style margin.
-  const overrunFlags = useMemo(
-    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
-    [props.overrunBehavior]
-  );
+  const overrunFlags = useMemo(() => overrunFlagsForBehavior(props.overrunBehavior), [props.overrunBehavior]);
   const layout: TextLayoutResult | null = useMemo(() => {
-    if (!unshapedLayout || !overrunFlags.trim) return unshapedLayout;
-    const trimmedLine = trimLineToWidth(unshapedLayout.lines[0]!, Math.max(1, rect.w), overrunFlags, {
+    if (!unshapedLayout) return null;
+    return trimSoloLine(unshapedLayout, overrunFlags, Math.max(1, rect.w), {
       fontMetrics,
       fontSizePx,
       ellipsisChar: props.ellipsisChar,
     });
-    return soloLineLayout(trimmedLine, unshapedLayout);
   }, [unshapedLayout, overrunFlags, rect.w, fontMetrics, fontSizePx, props.ellipsisChar]);
 
   // `link_button.cpp:289-303`: the paragraph origin, which RTL moves to the far edge. The underline

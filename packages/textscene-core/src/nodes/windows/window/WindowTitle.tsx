@@ -10,8 +10,8 @@ import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { TextRun } from '../../../r3f/controls/native/text/TextRun';
-import { shapedTextSizeWidthPx, soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
-import { overrunFlagsForBehavior, trimLineToWidth } from '../../../r3f/controls/native/text/textOverrun';
+import { shapedTextSizeWidthPx } from '../../../r3f/controls/native/text/textLayout';
+import { overrunFlagsForBehavior, trimSoloLine } from '../../../r3f/controls/native/text/textOverrun';
 import { resolveNodeFont } from '../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { peekSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { isCanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
@@ -70,14 +70,12 @@ export function WindowTitle({
 
   const layout = useMemo(() => {
     if (space <= 0) return null;
-    const shaped = shapeTitle(props.title, fontSizePx, fontMetrics);
     // `set_direction` follows the window's `is_layout_rtl()` (`viewport.cpp:375`).
-    const line = trimLineToWidth(shaped.lines[0]!, space, TITLE_OVERRUN_FLAGS, {
+    return trimSoloLine(shapeTitle(props.title, fontSizePx, fontMetrics), TITLE_OVERRUN_FLAGS, space, {
       fontMetrics,
       fontSizePx,
       isRtl: solveNode.rtl,
     });
-    return soloLineLayout(line, shaped);
   }, [props.title, fontSizePx, fontMetrics, space, solveNode.rtl]);
 
   if (!layout) return null;

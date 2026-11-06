@@ -7,8 +7,7 @@ import { useRef, type MutableRefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { AnimationAction, AnimationMixer } from 'three';
 import type { PlayState } from '../contexts/AnimationTransportContext';
-import { useAnnounceMixerPose } from '../contexts/AnimatedValueContext';
-import { drivenUuids } from './drivenUuids';
+import { useWriteMixerPose } from './useWriteMixerPose';
 import { stepPlayback } from './stepPlayback';
 import { startAction, seekAction } from './actionHelpers';
 
@@ -43,7 +42,7 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
   /** Written only by the frame below: the mixer it last drove. */
   const prevMixerRef = useRef<AnimationMixer | null>(null);
 
-  const announceMixerPose = useAnnounceMixerPose();
+  const writePose = useWriteMixerPose();
 
   useFrame((_, delta) => {
     const { playState, selectedClip, transportTime, mixerRef, actionsRef } = params;
@@ -91,16 +90,14 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
           startAction(action);
           if (mixerRebuilt) action.time = transportTime;
         }
-        mixer.update(delta * speedScale);
-        announceMixerPose(drivenUuids(actionsRef.current));
+        writePose(actionsRef.current, () => mixer.update(delta * speedScale));
         if (action) params.reportTime(action.time);
         break;
       }
       case 'seek': {
         if (action) {
           seekAction(action, transportTime);
-          mixer.update(0);
-          announceMixerPose(drivenUuids(actionsRef.current));
+          writePose(actionsRef.current, () => mixer.update(0));
         }
         break;
       }
@@ -111,9 +108,10 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
         break;
       }
       case 'stop-and-restore': {
-        mixer.stopAllAction();
-        params.restore();
-        announceMixerPose(drivenUuids(actionsRef.current));
+        writePose(actionsRef.current, () => {
+          mixer.stopAllAction();
+          params.restore();
+        });
         break;
       }
       case 'none': {

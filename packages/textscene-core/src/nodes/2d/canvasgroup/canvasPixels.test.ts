@@ -24,7 +24,7 @@ describe('canvasPixelRect', () => {
 describe('worldBoxOfCanvasPixels', () => {
   it('maps a canvas pixel rect back to the world box it came from', () => {
     const world = box(50, -60, 60, -50);
-    expect(worldBoxOfCanvasPixels(canvasPixelRect(world, ZOOMED), ZOOMED)).toEqual(world);
+    expect(worldBoxOfCanvasPixels(canvasPixelRect(world, ZOOMED), ZOOMED, new THREE.Box3())).toEqual(world);
   });
 });
 

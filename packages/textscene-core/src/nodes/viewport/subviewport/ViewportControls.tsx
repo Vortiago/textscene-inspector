@@ -25,6 +25,7 @@ import { EmbeddedWindows } from '../../windows/window/EmbeddedWindows.js';
 import type { ThemeOwner } from '../../windows/window/themeOwners.js';
 import { usePublishWrappedSize } from '../../windows/window/usePublishWrappedSize.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
+import { isEmbeddedWindow } from './viewportBoundary.js';
 
 interface ViewportControlsProps {
   /** The viewport's live path. */
@@ -56,7 +57,8 @@ export function ViewportControls({
   const { externalResources, internalResources } = useSceneResources();
   const { themeScale } = useProjectSettings();
   const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
-  const { tree, generation, windows, isWindowForest } = useBuildViewportTree(
+  const isWindowForest = isEmbeddedWindow(viewport.type);
+  const { tree, generation, windows } = useBuildViewportTree(
     viewport,
     externalResources,
     internalResources,

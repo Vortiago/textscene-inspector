@@ -35,13 +35,37 @@ export function drawCanvasKeys<T>(
   const rejected: THREE.Object3D[] = [];
   const visit = (object: THREE.Object3D, inherited: number): void => {
     const key = canvasKeyOf(object, inherited);
-    if (!inWindow(key) && object.layers.isEnabled(DEFAULT_CAMERA_LAYER)) {
-      object.layers.disable(DEFAULT_CAMERA_LAYER);
-      rejected.push(object);
-    }
+    rejectOutside(object, key, inWindow, rejected);
     for (const child of object.children) visit(child, key);
   };
   visit(scene, 0);
+  return drawThenRestore(rejected, draw);
+}
+
+/** {@link drawCanvasKeys} over objects already keyed, so a caller that draws a scene often walks it once. */
+export function drawKeyedObjects<T>(
+  objects: readonly THREE.Object3D[],
+  keys: readonly number[],
+  inWindow: (key: number) => boolean,
+  draw: () => T
+): T {
+  const rejected: THREE.Object3D[] = [];
+  for (let i = 0; i < objects.length; i++) rejectOutside(objects[i]!, keys[i]!, inWindow, rejected);
+  return drawThenRestore(rejected, draw);
+}
+
+function rejectOutside(
+  object: THREE.Object3D,
+  key: number,
+  inWindow: (key: number) => boolean,
+  rejected: THREE.Object3D[]
+): void {
+  if (inWindow(key) || !object.layers.isEnabled(DEFAULT_CAMERA_LAYER)) return;
+  object.layers.disable(DEFAULT_CAMERA_LAYER);
+  rejected.push(object);
+}
+
+function drawThenRestore<T>(rejected: readonly THREE.Object3D[], draw: () => T): T {
   try {
     return draw();
   } finally {

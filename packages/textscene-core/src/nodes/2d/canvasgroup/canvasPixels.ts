@@ -17,14 +17,17 @@ export function canvasPixelRect(box: THREE.Box3, { rect, scale }: CanvasClip): R
   };
 }
 
-/** The world box that `pixels`, a canvas pixel rect, covers. */
-export function worldBoxOfCanvasPixels(pixels: Rect2, { rect, scale }: CanvasClip): THREE.Box3 {
+/** The world box that `pixels`, a canvas pixel rect, covers, written into `out`. */
+export function worldBoxOfCanvasPixels(
+  pixels: Rect2,
+  { rect, scale }: CanvasClip,
+  out: THREE.Box3
+): THREE.Box3 {
   const minX = rect.x + pixels.x / scale.x;
   const maxY = rect.y + rect.h - pixels.y / scale.y;
-  return new THREE.Box3(
-    new THREE.Vector3(minX, maxY - pixels.h / scale.y, 0),
-    new THREE.Vector3(minX + pixels.w / scale.x, maxY, 0)
-  );
+  out.min.set(minX, maxY - pixels.h / scale.y, 0);
+  out.max.set(minX + pixels.w / scale.x, maxY, 0);
+  return out;
 }
 
 /** The clip in canvas pixels, `Rect2(0, 0, size)` (`renderer_viewport.cpp:390`). */

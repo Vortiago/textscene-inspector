@@ -7,7 +7,13 @@ import { describe, expect, it } from 'vitest';
 import { shapeText } from './textLayout';
 import { getFontEmboldenedAdvancePx, withVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
-import { overrunFlagsForBehavior, trimLineToWidth, type OverrunTrimFlags } from './textOverrun';
+import {
+  isTextWidthClipped,
+  overrunFlagsForBehavior,
+  trimLineToWidth,
+  trimSoloLine,
+  type OverrunTrimFlags,
+} from './textOverrun';
 import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 const FONT_SIZE_PX = 16;
@@ -228,5 +234,55 @@ describe('trimLineToWidth in a right-to-left paragraph', () => {
     const result = rtlTrim('AAAAAAAAAAAA', 100, ELLIPSIS);
     expect(result.text).toBe('…AAAAAAAA');
     expect(result.widthPx).toBeCloseTo(8 * 10.578125 + 13, 10);
+  });
+});
+
+function shaped(text: string) {
+  return shapeText(text, {
+    fontSizePx: FONT_SIZE_PX,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 0,
+  });
+}
+
+const SOLO_OPTIONS = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX };
+
+describe('trimSoloLine', () => {
+  it('returns the same layout when the behaviour does not trim', () => {
+    const layout = shaped('AAAAAAAA');
+    expect(
+      trimSoloLine(layout, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_NO_TRIMMING), 20, SOLO_OPTIONS)
+    ).toBe(layout);
+  });
+
+  it('returns the same layout when the line fits', () => {
+    const layout = shaped('A');
+    expect(
+      trimSoloLine(layout, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS), 100, SOLO_OPTIONS)
+    ).toBe(layout);
+  });
+
+  it('cuts an overlong line to the width as trimLineToWidth does', () => {
+    const layout = shaped('AAAAAAAA');
+    const flags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+    const trimmed = trimSoloLine(layout, flags, 40, SOLO_OPTIONS);
+    expect(trimmed.lines).toEqual([trimLineToWidth(layout.lines[0]!, 40, flags, SOLO_OPTIONS)]);
+    expect(trimmed.widthPx).toBe(trimmed.lines[0]!.widthPx);
+  });
+});
+
+describe('isTextWidthClipped', () => {
+  it('is false with no clip_text and no trimming overrun', () => {
+    expect(isTextWidthClipped({})).toBe(false);
+    expect(isTextWidthClipped({ overrunBehavior: OverrunBehavior.OVERRUN_NO_TRIMMING })).toBe(false);
+  });
+
+  it('is true under clip_text', () => {
+    expect(isTextWidthClipped({ clipText: true })).toBe(true);
+  });
+
+  it('is true under a trimming overrun behaviour', () => {
+    expect(isTextWidthClipped({ overrunBehavior: OverrunBehavior.OVERRUN_TRIM_CHAR })).toBe(true);
   });
 });

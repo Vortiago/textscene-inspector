@@ -451,11 +451,16 @@ export function allocatePaintRange(
   };
 }
 
+/** A CanvasGroup draws its composite rect over the buffer its children fill, so each child draws first. */
+function drawsEveryChildFirst(node: TscnNode): boolean {
+  return node.type === 'CanvasGroup';
+}
+
 /** `allocatePaintRange` for `node`'s own children, with the layout the node declares. */
 export function allocateNodePaintRange(range: PaintRange, node: TscnNode): AllocatedPaintRange {
   return allocatePaintRange(range, node.children, {
     sortsChildren: (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true,
-    drawsChildrenFirst: node.type === 'CanvasGroup',
+    drawsChildrenFirst: drawsEveryChildFirst(node),
     frontRoom: internalFrontRoom(node),
     backRoom: internalBackRoom(node),
     listedOrder: listedChildOrder(node, node.children),

@@ -19,7 +19,7 @@ interface Pose {
   items: readonly YSortItem[];
   chains: Map<string, Object3D[]>;
   ys: Map<string, number>;
-  order: string | null;
+  order: string[] | null;
 }
 
 function newPose(items: readonly YSortItem[]): Pose {
@@ -27,8 +27,24 @@ function newPose(items: readonly YSortItem[]): Pose {
 }
 
 /** The ids of `items` in draw order, with `ys` laid over their authored sort y. */
-function drawOrder(items: readonly YSortItem[], ys: LiveYs): string {
-  return withLiveYs(items, ys).sort(compareYSortItems).map(ySortItemId).join(' ');
+function drawOrder(items: readonly YSortItem[], ys: LiveYs): string[] {
+  return withLiveYs(items, ys).sort(compareYSortItems).map(ySortItemId);
+}
+
+function isSameOrder(a: readonly string[], b: readonly string[]): boolean {
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+// Indexed, not `.some`: no closure per item per mixer frame.
+function hasDetachedGroup(chain: readonly Object3D[]): boolean {
+  for (let i = 0; i < chain.length; i++) if (!chain[i]!.parent) return true;
+  return false;
+}
+
+function hasPosedGroup(chain: readonly Object3D[], posed: ReadonlySet<string>): boolean {
+  for (let i = 0; i < chain.length; i++) if (posed.has(chain[i]!.uuid)) return true;
+  return false;
 }
 
 function withLiveYs(items: readonly YSortItem[], ys: LiveYs): YSortItem[] {
@@ -65,24 +81,24 @@ export function useLiveYSort(items: readonly YSortItem[], basePath: string): rea
       for (const item of pose.items) {
         const id = ySortItemId(item);
         let chain: Object3D[] | null | undefined = pose.chains.get(id);
-        if (!chain || chain.some((group) => !group.parent)) {
+        if (!chain || hasDetachedGroup(chain)) {
           chain = liveGroupChain(item, basePath, groupAt);
           if (chain) pose.chains.set(id, chain);
         }
         // A pose that moved none of the item's groups leaves its y as it was read.
-        if (!chain || (posed && !chain.some((group) => posed.has(group.uuid)))) continue;
+        if (!chain || (posed && !hasPosedGroup(chain, posed))) continue;
         const y = sortYOfChain(chain);
         if (y !== (pose.ys.get(id) ?? item.sortY)) moves.push([id, y]);
       }
       // Sorted only when some y moved: the frames of a held pose cost a read of each moved group.
       if (moves.length === 0) return;
-      const read = new Map([...pose.ys, ...moves]);
-      pose.ys = read;
       pose.order ??= drawOrder(pose.items, NO_YS);
-      const order = drawOrder(pose.items, read);
-      if (order === pose.order) return;
+      for (const [id, y] of moves) pose.ys.set(id, y);
+      const order = drawOrder(pose.items, pose.ys);
+      if (isSameOrder(order, pose.order)) return;
       pose.order = order;
-      setLive({ items: pose.items, ys: read });
+      // A copy: the render keeps the ys it drew with while later poses write `pose.ys`.
+      setLive({ items: pose.items, ys: new Map(pose.ys) });
     },
     [selection, basePath, pose]
   );

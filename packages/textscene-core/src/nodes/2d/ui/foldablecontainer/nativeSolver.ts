@@ -9,6 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
@@ -201,7 +202,6 @@ function foldableContainerTitleMetrics(
 ): FoldableContainerTitleMetrics {
   const folded = props.folded === true;
   const titlePosition = props.titlePosition ?? TITLE_POSITION_TOP;
-  const overrunBehavior = props.titleTextOverrunBehavior ?? 0; // OVERRUN_NO_TRIMMING
 
   const titleStyle = folded
     ? (n.styleBoxes.title_collapsed_panel ?? defaultTitleStyle(ctx.theme, true, titlePosition))
@@ -238,9 +238,9 @@ function foldableContainerTitleMetrics(
     width += foldableContainerHSeparation(ctx.theme);
     const textHeight = layout ? layout.heightPx : 0;
     height += Math.max(textHeight, arrowSize.y);
-    // foldable_container.cpp:455: only OVERRUN_NO_TRIMMING (0) adds the text width.
+    // foldable_container.cpp:455: only OVERRUN_NO_TRIMMING adds the text width.
     // A trimming mode sizes the title bar to the arrow alone.
-    if (overrunBehavior === 0 && layout) {
+    if (!isTextWidthClipped({ overrunBehavior: props.titleTextOverrunBehavior }) && layout) {
       width += shapedTextSizeWidthPx(layout.widthPx);
     }
   } else {

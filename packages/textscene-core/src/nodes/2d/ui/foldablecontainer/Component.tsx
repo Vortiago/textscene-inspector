@@ -13,8 +13,8 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { shapedTextSizeWidthPx, soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
-import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
+import { overrunFlagsForBehavior, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -27,7 +27,6 @@ import {
 } from './nativeSolver';
 import { FOLDABLE_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { TITLE_POSITION_TOP, type FoldableContainerProperties } from './types';
-import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 const ARROW_ICON_URL: Record<FoldableContainerArrow, string> = {
   expanded: FOLDABLE_CONTAINER_ICONS.expandedArrow,
@@ -97,16 +96,15 @@ export function FoldableContainer({
   // `text_buf->set_width(title_text_width)` (`foldable_container.cpp:307`) sets the trim
   // `TextParagraph::draw` applies, so the drawn title is the trimmed shape.
   const overrunFlags = useMemo(
-    () => overrunFlagsForBehavior(props.titleTextOverrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
+    () => overrunFlagsForBehavior(props.titleTextOverrunBehavior),
     [props.titleTextOverrunBehavior]
   );
   const trimmedLayout = useMemo(() => {
-    if (!title.layout || !overrunFlags.trim) return title.layout;
-    const trimmedLine = trimLineToWidth(title.layout.lines[0]!, Math.max(1, titleTextWidth), overrunFlags, {
+    if (!title.layout) return null;
+    return trimSoloLine(title.layout, overrunFlags, Math.max(1, titleTextWidth), {
       fontMetrics: title.layout.fontMetrics,
       fontSizePx: title.fontSizePx,
     });
-    return soloLineLayout(trimmedLine, title.layout);
   }, [title.layout, overrunFlags, titleTextWidth, title.fontSizePx]);
 
   // `TextLine::set_horizontal_alignment(_get_actual_alignment())` shifts the

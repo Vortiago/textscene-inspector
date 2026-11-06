@@ -20,13 +20,6 @@ export function animatedValueKey(nodePath: string, property: string): string {
   return `${nodePath}:${property}`;
 }
 
-/**
- * The registry key a driver writes after its mixer moves the scene's objects. A pass that reads
- * the transforms drawn, such as the y-sort, listens to it instead of racing the mixer's frame.
- * Node paths are never empty, so no node's property takes this key.
- */
-const MIXER_POSED_KEY = animatedValueKey('', 'posed');
-
 const { Provider: AnimatedValueProvider, useStore: useAnimatedValueRegistry } =
   createPushStoreContext<readonly number[]>('AnimatedValueContext');
 
@@ -108,37 +101,51 @@ export function withPushedVisible<K>(
   return next;
 }
 
-/** Written only by the announcer, just before it notifies: the uuids the latest pose moved. */
-// eslint-disable-next-line no-restricted-syntax -- a handoff written by the announcer, not a cache built on ask.
-const latestPosed = new WeakMap<AnimatedValueRegistry, ReadonlySet<string>>();
-const NOTHING_POSED: ReadonlySet<string> = new Set();
+type PoseListener = (posed: ReadonlySet<string>) => void;
+
+/**
+ * The mixer-pose listeners under each registry's provider. Written only by `useOnMixerPose`, which
+ * adds a listener on mount and removes it on unmount.
+ */
+// eslint-disable-next-line no-restricted-syntax -- a listener list per provider, not a cache built on ask.
+const poseListeners = new WeakMap<AnimatedValueRegistry, Set<PoseListener>>();
+
+function poseListenersOf(registry: AnimatedValueRegistry): Set<PoseListener> {
+  let listeners = poseListeners.get(registry);
+  if (!listeners) {
+    listeners = new Set();
+    poseListeners.set(registry, listeners);
+  }
+  return listeners;
+}
 
 /**
  * The function a driver calls after its mixer has moved the scene's objects, with the uuids of the
- * objects its actions drive, so a listener skips a pose that moved nothing it reads.
+ * objects its actions drive, so a listener skips a pose that moved nothing it reads. A pass that
+ * reads the transforms drawn, such as the y-sort, listens instead of racing the mixer's frame.
  */
-export function useAnnounceMixerPose(): (posed: ReadonlySet<string>) => void {
+export function useAnnounceMixerPose(): PoseListener {
   const registry = useAnimatedValueRegistry();
-  const poses = useRef(0);
   return useCallback(
     (posed) => {
-      latestPosed.set(registry, posed);
-      registry.set(MIXER_POSED_KEY, [++poses.current]);
+      const listeners = poseListeners.get(registry);
+      if (listeners) for (const listener of listeners) listener(posed);
     },
     [registry]
   );
 }
 
 /** Calls `listener` after each pose a driver's mixer writes. `listener` is read through a ref. */
-export function useOnMixerPose(listener: (posed: ReadonlySet<string>) => void): void {
+export function useOnMixerPose(listener: PoseListener): void {
   const registry = useAnimatedValueRegistry();
   const listenerRef = useRef(listener);
   listenerRef.current = listener;
-  useEffect(
-    () =>
-      registry.subscribe(MIXER_POSED_KEY, () =>
-        listenerRef.current(latestPosed.get(registry) ?? NOTHING_POSED)
-      ),
-    [registry]
-  );
+  useEffect(() => {
+    const listeners = poseListenersOf(registry);
+    const relay: PoseListener = (posed) => listenerRef.current(posed);
+    listeners.add(relay);
+    return () => {
+      listeners.delete(relay);
+    };
+  }, [registry]);
 }
