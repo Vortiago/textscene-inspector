@@ -86,7 +86,7 @@ const NO_LOAD_TICKS: LoadTicks = { version: 0, subscribe: subscribeToNothing, ge
 const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
   const listeners = new Set<() => void>();
   let stopListening: (() => void) | undefined;
-  // The settles seen so far: a count that moved while no reader listened is a load or a cache clear that went unseen.
+  // The changes seen so far: a count that moved while no reader listened is a load or a cache clear that went unseen.
   let seenChanges = loader.eventBus.changeCount(LIVE_TREE_BUSES);
   const ticks: LoadTicks = {
     version: 0,

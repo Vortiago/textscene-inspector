@@ -132,7 +132,7 @@ function useLateSettle<T extends object>(
   useLayoutEffect(() => {
     if (!cache) return;
     const hasLate = [...files].some(
-      ([path, file]) => file === undefined && cache.getCached(path) !== undefined
+      ([path, file]) => file === undefined && (cache.getCached(path) ?? undefined) !== undefined
     );
     if (hasLate) onLate();
     // `onLate` only moves a counter, so its identity must not re-run the check.
