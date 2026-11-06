@@ -17,6 +17,16 @@ import {
 const PRE_SELECT_FIT_QUIESCENCE_MS = 1500;
 
 /**
+ * `reason` with the requests the page lost, so a scene that never loads names the chunk or file
+ * that failed. A failed request leaves no console error when its caller waits on it for good.
+ */
+function withFailedRequests(reason, { failedRequests }) {
+  if (failedRequests.length === 0) return reason;
+  const lost = failedRequests.map(({ url, failure }) => `${url} (${failure})`).join(', ');
+  return `${reason}; failed requests: ${lost}`;
+}
+
+/**
  * Navigates to a scene and captures its target after two byte-identical screenshots. Returns the
  * PNG buffer, or null with a reason when the scene never settles or logs a console error.
  * `pageState` is the page the scene captures on (see `pagePool.mjs`).
@@ -76,7 +86,7 @@ export async function captureScene(pageState, baseUrl, scene) {
   }
 
   const result = await settleCanvas(page, canvas, { screenshotTimeout: scene.settleTimeout });
-  if (!result.buffer) return result;
+  if (!result.buffer) return { ...result, reason: withFailedRequests(result.reason, diagnostics) };
   const errors = loggedErrors(diagnostics);
   if (errors.length > 0) {
     // A console error in a settled, plausible capture is still a broken render: pixels cannot see a
