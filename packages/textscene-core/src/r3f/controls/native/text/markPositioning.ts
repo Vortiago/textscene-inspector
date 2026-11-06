@@ -14,14 +14,12 @@ import {
   coverageIndex,
   GposType,
   i16,
-  LookupFlag,
   sfntGpos,
   u16,
   type Lookup,
   type LayoutTable,
 } from './autofit/openTypeLayout';
-import { glyphPropsReader, lookupMatcher } from './autofit/openTypeGdef';
-
+import { glyphPropsReader, lookupMatcher, MARK_PROPS } from './autofit/openTypeGdef';
 import { defaultSubstitution, featureLookups } from './autofit/openTypeFeatures';
 import { sfntGlyphIndex } from './sfntCmap';
 import type { SfntFile } from './sfntTables';
@@ -31,9 +29,6 @@ export interface MarkOffset {
   readonly x: number;
   readonly y: number;
 }
-
-/** The props bit `glyphPropsReader` gives a `GDEF` mark. */
-const MARK_PROPS = LookupFlag.IGNORE_MARKS;
 
 const ORIGIN: MarkOffset = { x: 0, y: 0 };
 
@@ -153,20 +148,23 @@ export function markPositioningReader(sfnt: SfntFile): ClusterOffsets | null {
       const codePoint = ch.codePointAt(0)!;
       return { glyph: glyphIndexOf(codePoint), codePoint };
     });
-    const glyphs = { glyphs: lookupGlyphs.map(({ glyph }) => glyph), props: lookupGlyphs.map(propsOf) };
+    const clusterGlyphs: ClusterGlyphs = {
+      glyphs: lookupGlyphs.map(({ glyph }) => glyph),
+      props: lookupGlyphs.map(propsOf),
+    };
     const attachments: (Attachment | undefined)[] = [];
     for (const { props: lookupProps, subtables } of lookups) {
-      for (let mark = 1; mark < glyphs.glyphs.length; mark++) {
+      for (let mark = 1; mark < clusterGlyphs.glyphs.length; mark++) {
         if (
-          !(glyphs.props[mark]! & MARK_PROPS) ||
-          !matches(glyphs.glyphs[mark]!, glyphs.props[mark]!, lookupProps)
+          !(clusterGlyphs.props[mark]! & MARK_PROPS) ||
+          !matches(clusterGlyphs.glyphs[mark]!, clusterGlyphs.props[mark]!, lookupProps)
         )
           continue;
-        attachments[mark] = attachmentOf(table.dv, glyphs, mark, subtables) ?? attachments[mark];
+        attachments[mark] = attachmentOf(table.dv, clusterGlyphs, mark, subtables) ?? attachments[mark];
       }
     }
     const offsets: MarkOffset[] = [ORIGIN];
-    for (let i = 1; i < glyphs.glyphs.length; i++) {
+    for (let i = 1; i < clusterGlyphs.glyphs.length; i++) {
       const attachment = attachments[i];
       const target = attachment ? offsets[attachment.target]! : offsets[i - 1]!;
       offsets.push(
