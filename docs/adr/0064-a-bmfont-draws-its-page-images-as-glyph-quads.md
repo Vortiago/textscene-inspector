@@ -41,8 +41,8 @@ font draws hex-code boxes in a fresh project and the fallback in a settled one.
 
 ## Consequences
 
-A character the descriptor lacks draws a hex-code box, where Godot draws it from the font's
-`fallbacks`. No font kind has a per-glyph fallback search yet.
+A character the descriptor lacks draws from the first face of the font's **Fallback chain** that has
+it, per character (`textLayout.ts`), and draws a hex-code box when no face has it.
 
 A Label3D draws a BMFont with the same painter under its own rules (`glyphDrawer.ts`): it keeps the
 pen, skips a glyph whose page rectangle is 2 px or less and draws no hex-code box

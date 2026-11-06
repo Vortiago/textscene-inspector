@@ -194,7 +194,6 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 - **Approximated** At an instance, the `GPOS` kerning pairs adjacent characters only, where Godot also kerns across a glyph that a lookup flag skips.
 - **Approximated** A scene font's glyphs draw with the browser's hinting, not FreeType's light
   hinting (`font.h:203`, `text_server_adv.cpp:1276-1277`), so a cap can sit 1 px lower here.
-- **Not drawn** The `fallbacks` of a BMFont: a missing character draws as a hex-code box (`text_server_adv.cpp:6810-6928`, #1298).
 - **Approximated** A wrapping Label inside a ScrollContainer can read one line short when
   the wrap is what makes the scrollbar appear.
 - **Not drawn** `BREAK_TRIM_INDENT` (an `autowrap_trim_flags` bit): a wrapped
