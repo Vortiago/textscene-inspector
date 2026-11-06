@@ -37,6 +37,32 @@ describe('useCacheVersion', () => {
     expect(reads.at(-1)).toBe(reads[0]);
   });
 
+  it('stays put with onlyReadKeys for an unread key that settles between the render and the subscription', () => {
+    const fake = createFakeResourceLoader();
+    const busTypes = ['font'] as const;
+    const readKeys = { current: new Set(['res://read.ttf']) };
+
+    const reads = renderWithSettleInGap(
+      () => useCacheVersion(fake.loader as ResourceLoader, busTypes, readKeys, { onlyReadKeys: true }),
+      () => fake.fonts._resolve('res://other.ttf', {} as never)
+    );
+
+    expect(reads).toHaveLength(1);
+  });
+
+  it('moves on with onlyReadKeys for a read key that settles between the render and the subscription', () => {
+    const fake = createFakeResourceLoader();
+    const busTypes = ['font'] as const;
+    const readKeys = { current: new Set(['res://read.ttf']) };
+
+    const reads = renderWithSettleInGap(
+      () => useCacheVersion(fake.loader as ResourceLoader, busTypes, readKeys, { onlyReadKeys: true }),
+      () => fake.fonts._resolve('res://read.ttf', {} as never)
+    );
+
+    expect(reads.at(-1)).toBeGreaterThan(reads[0]!);
+  });
+
   it('keeps growing when its inputs change and it starts a new store', () => {
     const fake = createFakeResourceLoader();
     const loader = fake.loader as ResourceLoader;

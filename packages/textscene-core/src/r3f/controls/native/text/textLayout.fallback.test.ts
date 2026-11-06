@@ -5,9 +5,10 @@
  * hides a wrong face.
  */
 import { describe, expect, it } from 'vitest';
-import { shapeText, type GlyphPlacement } from './textLayout';
+import { shapeText } from './textLayout';
 import type { FontMetrics } from './fontMetrics';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { glyphsOf } from './textLayout.testkit';
 
 /** A 2048-unit face that has a glyph only for the characters of `advances`. */
 function faceOf(advances: Record<string, number>, kerning: Record<string, number> = {}): FontMetrics {
@@ -21,16 +22,6 @@ function faceOf(advances: Record<string, number>, kerning: Record<string, number
     getKerningAdjustmentUnits: (a, b) => kerning[a + b] ?? 0,
     averageAdvanceUnits: 1024,
   };
-}
-
-function glyphsOf(text: string, fontMetrics: FontMetrics, fontSizePx = 16): GlyphPlacement[] {
-  return shapeText(text, {
-    fontSizePx,
-    boxWidthPx: 0,
-    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-    lineSpacingPx: 0,
-    fontMetrics,
-  }).lines[0]!.glyphs.filter((glyph) => glyph.char !== '\u200b');
 }
 
 const LATIN = faceOf({ A: 1024, ' ': 512 });
@@ -115,37 +106,71 @@ describe('shapeText — a fallback chain', () => {
 });
 
 describe('shapeText — a character the face draws as a base and marks', () => {
-  /** 2048 units, so 16 px is 1/128 em: 1024 units are 8 px. */
+  /** 2048 units, so 16 px is 1/128 em: 1024 units are 8 px. Ascent 12 px, descent 4 px. */
   const accented = (decomposition: FontMetrics['decomposition'], advanceUnits = 1024): FontMetrics => ({
     ...faceOf({ A: advanceUnits, Ä: advanceUnits, '\u0308': 0 }),
     decomposition,
   });
+  const withMark = (x: number, y: number, advanceUnits?: number) =>
+    accented(() => ({ base: 'A', marks: [{ char: '\u0308', x, y }] }), advanceUnits);
+  const shapedLine = (face: FontMetrics) =>
+    shapeText('Ä', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      fontMetrics: face,
+    });
 
-  it('keeps the base advance, and places the mark in px with y down', () => {
-    const face = accented((ch) =>
-      ch === 'Ä' ? { base: 'A', marks: [{ char: '\u0308', xPx: 4, yPx: 6 }] } : null
-    );
-    const [a] = glyphsOf('Ä', face);
-    expect(a!.advance).toBe(8);
-    expect(a!.decomposition).toEqual({ base: 'A', marks: [{ char: '\u0308', x: 4, y: -6 }] });
+  it('draws the base with its advance', () => {
+    const [base] = glyphsOf('Ä', withMark(4, 6));
+    expect(base).toMatchObject({ char: 'A', x: 0, advance: 8 });
+  });
+
+  it('draws the mark at the pen after the base, with no advance and the base source index', () => {
+    const [, mark] = glyphsOf('Ä', withMark(4, 6));
+    expect(mark).toMatchObject({
+      char: '\u0308',
+      x: 8,
+      advance: 0,
+      xOffset: -4,
+      yOffset: -6,
+      sourceIndex: 0,
+    });
   });
 
   it('rounds the y offset to a whole pixel', () => {
-    const face = accented(() => ({ base: 'A', marks: [{ char: '\u0308', xPx: 0, yPx: 0.78125 }] }));
-    expect(glyphsOf('Ä', face)[0]!.decomposition!.marks[0]!.y).toBe(-1);
+    expect(glyphsOf('Ä', withMark(0, 0.78125))[1]!.yOffset).toBe(-1);
   });
 
   it('rounds a half-way x offset from the pen after the base, away from zero', () => {
     // A 1397-unit advance is 21.83 px at 32 px, rounded to 22. A mark at 20.5 px is -1.5 px from that pen.
-    const face = accented(() => ({ base: 'A', marks: [{ char: '\u0308', xPx: 20.5, yPx: 0 }] }), 1397);
-    expect(glyphsOf('Ä', face, 32)[0]!.decomposition!.marks[0]!.x).toBe(20);
+    expect(glyphsOf('Ä', withMark(20.5, 0, 1397), 32)[1]!.xOffset).toBe(-2);
   });
 
-  it('gives a character the face draws as one glyph no marks', () => {
-    const [a] = glyphsOf(
-      'A',
-      accented(() => null)
-    );
-    expect(a!.decomposition).toBeUndefined();
+  it('draws a character the face draws as one glyph alone', () => {
+    expect(
+      glyphsOf(
+        'A',
+        accented(() => null)
+      ).map(({ char }) => char)
+    ).toEqual(['A']);
+  });
+
+  it('lifts the baseline and the pitch to a mark raised past the ascent (text_server_adv.cpp:5161)', () => {
+    const layout = shapedLine(withMark(0, 15));
+    expect(layout.baselineOffsetPx).toBe(15);
+    expect(layout.linePitchPx).toBe(19);
+  });
+
+  it('lowers the pitch to a mark dropped past the descent', () => {
+    const layout = shapedLine(withMark(0, -6));
+    expect(layout.baselineOffsetPx).toBe(12);
+    expect(layout.linePitchPx).toBe(18);
+  });
+
+  it('keeps the font line for a mark inside the ascent', () => {
+    const layout = shapedLine(withMark(0, 6));
+    expect([layout.baselineOffsetPx, layout.linePitchPx]).toEqual([12, 16]);
   });
 });

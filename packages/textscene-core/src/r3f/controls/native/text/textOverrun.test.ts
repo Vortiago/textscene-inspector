@@ -326,6 +326,11 @@ describe('trimTextBufferLineToWidth — an AUTO line whose paragraph resolved ri
     expect(drawnText(result)).toBe('AAAAAAAA…');
   });
 
+  it('keeps the paragraph indent of the line it trims', () => {
+    const indented = { ...line('AAAAAAAAAAAA'), indentPx: 12 };
+    expect(trimTextBufferLineToWidth(indented, 100, ELLIPSIS, OPTIONS).indentPx).toBe(12);
+  });
+
   it('leaves a line that fits unchanged', () => {
     const full = line(HEBREW);
     expect(trimTextBufferLineToWidth(full, full.widthPx + 1, ELLIPSIS, OPTIONS)).toBe(full);
@@ -414,5 +419,27 @@ describe('trimLineToWidth — the ellipsis from a fallback chain', () => {
 
   it('draws three dots where no font of the chain has the ellipsis', () => {
     expect(drawnText(trimIn({ ...NO_ELLIPSIS, fallbacks: [NO_ELLIPSIS] })).endsWith('...')).toBe(true);
+  });
+});
+
+describe('trimLineToWidth — a base and its mark (text_server_adv.cpp:6073)', () => {
+  /** The Hebrew line with a zero-advance mark after its visually left glyph, in that glyph's cluster. */
+  function lineWithMark(): TextLineLayout {
+    const shaped = line(HEBREW);
+    const [base, ...rest] = shaped.glyphs;
+    const mark = { ...base!, char: 'ָ', x: base!.x + base!.advance, advance: 0 };
+    return { ...shaped, glyphs: [base!, mark, ...rest] };
+  }
+
+  it('cuts before the cluster, not between the base and the mark', () => {
+    const marked = lineWithMark();
+    const [base] = marked.glyphs;
+    const result = trimLineToWidth(
+      marked,
+      marked.widthPx - base!.advance,
+      overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_CHAR),
+      { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX }
+    );
+    expect(result.glyphs.filter((glyph) => glyph.sourceIndex === base!.sourceIndex)).toEqual([]);
   });
 });

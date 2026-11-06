@@ -104,8 +104,10 @@ export function buildBitmapQuads(
   for (const { glyph, placement, lineIndex } of inked) {
     const rowOffset = sheet.rowOffsets[glyph.fillIndex]!;
     const baselinePx = lineIndex * layout.linePitchPx + layout.baselineOffsetPx;
-    const originX = floorsPen ? Math.floor(originPhasePx.x + placement.x) - originPhasePx.x : placement.x;
-    const originY = floorsPen ? Math.floor(originPhasePx.y + baselinePx) - originPhasePx.y : baselinePx;
+    const penX = placement.x + (placement.xOffset ?? 0);
+    const penY = baselinePx + (placement.yOffset ?? 0);
+    const originX = floorsPen ? Math.floor(originPhasePx.x + penX) - originPhasePx.x : penX;
+    const originY = floorsPen ? Math.floor(originPhasePx.y + penY) - originPhasePx.y : penY;
     const left = originX + glyph.offsetX * scale;
     const top = originY + glyph.offsetY * scale;
     const right = left + glyph.width * scale;

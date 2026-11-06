@@ -25,6 +25,11 @@ interface VisibleCharsState {
 /** Godot's construction defaults for both classes (label.h:75-76, rich_text_label.h:553). */
 const DEFAULT_VISIBLE_CHARS_STATE: VisibleCharsState = { visibleChars: -1, visibleRatio: 1 };
 
+/** The ratio `set_visible_characters` leaves on empty text, where `amount / total` has no value. */
+type RatioOnEmptyText = (state: VisibleCharsState) => number;
+const resetRatio: RatioOnEmptyText = () => 1;
+const keepRatio: RatioOnEmptyText = (state) => state.visibleRatio;
+
 /**
  * `Label::set_visible_characters` (label.cpp:1285-1299): a no-op when `p_amount` matches the current
  * field, else re-derives both fields from the current text length. On empty text Label resets the
@@ -34,11 +39,10 @@ function applySetVisibleCharacters(
   state: VisibleCharsState,
   amount: number,
   totalChars: number,
-  resetsRatioOnEmptyText: boolean
+  ratioOnEmptyText: RatioOnEmptyText
 ): VisibleCharsState {
   if (state.visibleChars === amount) return state;
-  const emptyTextRatio = resetsRatioOnEmptyText ? 1 : state.visibleRatio;
-  const visibleRatio = amount === -1 ? 1 : totalChars === 0 ? emptyTextRatio : amount / totalChars;
+  const visibleRatio = amount === -1 ? 1 : totalChars === 0 ? ratioOnEmptyText(state) : amount / totalChars;
   return { visibleChars: amount, visibleRatio, lastSetter: 'characters' };
 }
 
@@ -71,7 +75,7 @@ function applySetVisibleRatio(
 function resolveVisibleChars(
   properties: Record<string, string>,
   textLength: () => number,
-  resetsRatioOnEmptyText: boolean
+  ratioOnEmptyText: RatioOnEmptyText
 ): VisibleCharsState | undefined {
   const rawChars = properties.visible_characters;
   const rawRatio = properties.visible_ratio;
@@ -83,7 +87,7 @@ function resolveVisibleChars(
     if (key === 'visible_characters') {
       const amount = parseOptionalInt(rawChars);
       if (amount !== undefined)
-        state = applySetVisibleCharacters(state, amount, totalChars, resetsRatioOnEmptyText);
+        state = applySetVisibleCharacters(state, amount, totalChars, ratioOnEmptyText);
     } else if (key === 'visible_ratio') {
       const ratio = parseOptionalFloat(rawRatio);
       if (ratio !== undefined) state = applySetVisibleRatio(state, ratio, totalChars);
@@ -97,7 +101,7 @@ export function resolveLabelVisibleChars(
   properties: Record<string, string>,
   textLength: () => number
 ): VisibleCharsState | undefined {
-  return resolveVisibleChars(properties, textLength, true);
+  return resolveVisibleChars(properties, textLength, resetRatio);
 }
 
 /** RichTextLabel's pair: empty text keeps the ratio (`rich_text_label.cpp:7898-7900`). */
@@ -105,7 +109,7 @@ export function resolveRichTextVisibleChars(
   properties: Record<string, string>,
   textLength: () => number
 ): VisibleCharsState | undefined {
-  return resolveVisibleChars(properties, textLength, false);
+  return resolveVisibleChars(properties, textLength, keepRatio);
 }
 
 interface VisibleCharsBudget {
@@ -150,7 +154,7 @@ export function applyVisibleCharsReveal(
  */
 function revealCharacters(lines: readonly TextLineLayout[], budget: VisibleCharsBudget): TextLineLayout[] {
   const { text, visibleChars } = budget;
-  const indexing = indexingOf(budget);
+  const indexOf = budget.indexOf ?? sourceIndexOf;
   if (visibleChars === undefined || visibleChars < 0) return [...lines];
   // Glyph source indices are UTF-16 offsets; the budget counts code points.
   const visibleEnd = utf16OffsetOf(text, visibleChars);
@@ -159,13 +163,13 @@ function revealCharacters(lines: readonly TextLineLayout[], budget: VisibleChars
   const ellipsisEnd = utf16OffsetOf(text, visibleChars + 1);
   return lines.map((line) => {
     const isEllipsisShown = (line.paragraphStart ?? 0) <= ellipsisEnd;
-    const { tails, lastIndexOf } = ligatureClusters(line.glyphs, indexing);
+    const { tails, lastIndexOf } = ligatureClusters(line.glyphs, budget);
     let isLigatureShown = false;
     return {
       ...line,
       glyphs: line.glyphs.filter((glyph) => {
         if (tails.has(glyph)) return isLigatureShown;
-        const index = indexing.indexOf(glyph);
+        const index = indexOf(glyph);
         if (index === undefined) return isEllipsisShown;
         // A ligature's `end` is its last character's, so it shows whole or not at all.
         isLigatureShown = (lastIndexOf.get(glyph) ?? index) < visibleEnd;
@@ -193,28 +197,14 @@ interface LigatureClusters {
   lastIndexOf: Map<GlyphPlacement, number>;
 }
 
-/** What the ligature search reads of a budget: where spans start, and the index of each glyph. */
-interface GlyphIndexing {
-  spanStarts: ReadonlySet<number> | undefined;
-  indexOf: (glyph: GlyphPlacement) => number | undefined;
-}
+type GlyphIndexOf = (glyph: GlyphPlacement) => number | undefined;
 
-const indexingOf = ({ spanStarts, indexOf }: VisibleCharsBudget): GlyphIndexing => ({
-  spanStarts,
-  indexOf: indexOf ?? ((glyph) => glyph.sourceIndex),
-});
+/** A glyph's index when the budget names no other: its own `sourceIndex`. */
+const sourceIndexOf: GlyphIndexOf = (glyph) => glyph.sourceIndex;
 
 interface CachedClusters {
   spanStarts: ReadonlySet<number> | undefined;
   clusters: LigatureClusters;
-}
-
-/** Whether two span start sets hold the same offsets. A caller rebuilds its set, so identity never matches. */
-function sameSpanStarts(a: ReadonlySet<number> | undefined, b: ReadonlySet<number> | undefined): boolean {
-  if (a === b) return true;
-  if (a === undefined || b === undefined || a.size !== b.size) return false;
-  for (const start of a) if (!b.has(start)) return false;
-  return true;
 }
 
 /** Written only by `ligatureClusters`. A line's glyph array never changes, so a reveal step reuses its entry. */
@@ -222,26 +212,33 @@ function sameSpanStarts(a: ReadonlySet<number> | undefined, b: ReadonlySet<numbe
 const clustersByGlyphs = new WeakMap<readonly GlyphPlacement[], CachedClusters>();
 
 /** The ligatures in a line of glyphs, built once for each line's glyph array. Only the default font's glyphs form one here. */
-function ligatureClusters(glyphs: readonly GlyphPlacement[], indexing: GlyphIndexing): LigatureClusters {
+function ligatureClusters(glyphs: readonly GlyphPlacement[], budget: VisibleCharsBudget): LigatureClusters {
   const cached = clustersByGlyphs.get(glyphs);
-  if (cached && sameSpanStarts(cached.spanStarts, indexing.spanStarts)) return cached.clusters;
+  // Identity holds: the counted layout, which owns `spanStarts`, is cached per layout and runs.
+  if (cached && cached.spanStarts === budget.spanStarts) return cached.clusters;
+  const indexOf = budget.indexOf ?? sourceIndexOf;
   const clusters: LigatureClusters = { tails: new Set(), lastIndexOf: new Map() };
   for (let start = 0; start < glyphs.length; start++) {
     if (glyphs[start]!.char !== LIGATURE_START) continue;
-    const length = ligatureLengthAt(glyphs, start, indexing);
+    const length = ligatureLengthAt(glyphs, start, budget.spanStarts, indexOf);
     if (length === 0) continue;
     for (let offset = 1; offset < length; offset++) clusters.tails.add(glyphs[start + offset]!);
-    clusters.lastIndexOf.set(glyphs[start]!, indexing.indexOf(glyphs[start + length - 1]!)!);
+    clusters.lastIndexOf.set(glyphs[start]!, indexOf(glyphs[start + length - 1]!)!);
     start += length - 1;
   }
-  clustersByGlyphs.set(glyphs, { spanStarts: indexing.spanStarts, clusters });
+  clustersByGlyphs.set(glyphs, { spanStarts: budget.spanStarts, clusters });
   return clusters;
 }
 
 /** A ligature joins glyphs of one span, face and size: a style or size change inside the sequence splits it. */
-function ligatureLengthAt(glyphs: readonly GlyphPlacement[], start: number, indexing: GlyphIndexing): number {
+function ligatureLengthAt(
+  glyphs: readonly GlyphPlacement[],
+  start: number,
+  spanStarts: ReadonlySet<number> | undefined,
+  indexOf: GlyphIndexOf
+): number {
   for (const ligature of LIGATURES) {
-    if (joinsLigature(glyphs, start, ligature, indexing)) return ligature.length;
+    if (joinsLigature(glyphs, start, ligature, spanStarts, indexOf)) return ligature.length;
   }
   return 0;
 }
@@ -251,7 +248,8 @@ function joinsLigature(
   glyphs: readonly GlyphPlacement[],
   start: number,
   ligature: readonly string[],
-  { spanStarts, indexOf }: GlyphIndexing
+  spanStarts: ReadonlySet<number> | undefined,
+  indexOf: GlyphIndexOf
 ): boolean {
   const first = glyphs[start]!;
   const firstIndex = indexOf(first)!;
@@ -276,8 +274,7 @@ function joinsLigature(
 /** The GLYPHS behaviours: `visible_ratio * total_glyphs` glyphs, counted in visual order across lines. */
 function revealGlyphs(lines: readonly TextLineLayout[], budget: VisibleCharsBudget): TextLineLayout[] {
   if (budget.visibleRatio === undefined || budget.visibleRatio >= 1) return [...lines];
-  const indexing = indexingOf(budget);
-  const tailsByLine = lines.map((line) => ligatureClusters(line.glyphs, indexing).tails);
+  const tailsByLine = lines.map((line) => ligatureClusters(line.glyphs, budget).tails);
   const tailCount = tailsByLine.reduce((sum, tails) => sum + tails.size, 0);
   const totalGlyphs =
     (budget.totalCharacters ?? lines.reduce((sum, l) => sum + l.glyphs.length, 0)) - tailCount;

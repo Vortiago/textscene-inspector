@@ -230,6 +230,10 @@ class DescriptorBuilder {
 
 const BINARY_MAGIC = 'BMF';
 const BINARY_VERSION = 3;
+/** `BMF` and the version byte. */
+const BINARY_HEADER_SIZE = 4;
+/** A block's type byte and its 32-bit size. */
+const BLOCK_HEADER_SIZE = 5;
 
 /** Bytes of a BMFont: `BMF` and a version byte for the binary format, else text. Throws on a file Godot refuses. */
 export function parseDescriptor(bytes: ArrayBuffer): BmfontDescriptor {
@@ -244,15 +248,23 @@ export function parseDescriptor(bytes: ArrayBuffer): BmfontDescriptor {
 /** The bytes after a binary block's header: `version`, then blocks of a type byte, a size and a body. */
 function parseBinary(bytes: ArrayBuffer, builder: DescriptorBuilder): void {
   const view = new DataView(bytes);
+  if (bytes.byteLength < BINARY_HEADER_SIZE)
+    throw new Error('A binary BMFont needs a version byte after BMF.');
   const version = view.getUint8(3);
   if (version !== BINARY_VERSION) {
     throw new Error(`Version ${version} of BMFont is not supported (should be ${BINARY_VERSION}).`);
   }
-  let position = 4;
+  let position = BINARY_HEADER_SIZE;
   while (position < bytes.byteLength) {
+    const headerLeft = bytes.byteLength - position;
+    if (headerLeft < BLOCK_HEADER_SIZE) {
+      throw new Error(
+        `BMFont block header at byte ${position} needs ${BLOCK_HEADER_SIZE} bytes, but only ${headerLeft} remain.`
+      );
+    }
     const type = view.getUint8(position);
     const size = view.getUint32(position + 1, true);
-    const body = position + 5;
+    const body = position + BLOCK_HEADER_SIZE;
     if (body + size > bytes.byteLength) {
       throw new Error(
         `BMFont block ${type} needs ${size} bytes, but only ${bytes.byteLength - body} remain.`

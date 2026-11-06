@@ -2,7 +2,7 @@ extends SceneTree
 # Prints how Godot's shaper draws each character alone: the glyph that follows the first in its cluster is a
 # mark, with the offset it takes from the pen after the base (text_server_adv.cpp:7062-7068) in px. The font keeps
 # the import default, subpixel positioning on Auto, which a FontFile made by `new()` leaves off.
-# Usage: godot --headless --path . --script oracle.gd -- <font path> <chars> <sizes, comma separated>
+# Usage: godot --headless --path scripts/fonts/godot-oracle --script <absolute path of oracle.gd> -- <font path> <chars> <sizes, comma separated>
 func _init():
 	var args = OS.get_cmdline_user_args()
 	var file = FontFile.new()
@@ -21,5 +21,5 @@ func _init():
 				glyphs.append({"index": g["index"], "advance": g["advance"], "offset": [g["offset"].x, g["offset"].y]})
 			out.append({"font": args[0].get_file(), "char": ch, "sizePx": size, "glyphs": glyphs})
 			ts.free_rid(rid)
-	print(JSON.stringify(out))
+	print("JSON:" + JSON.stringify(out))
 	quit()
