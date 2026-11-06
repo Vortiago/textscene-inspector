@@ -100,7 +100,7 @@ A `GPOS` `FeatureVariations` record that gives the `kern` feature other lookups 
 <!-- compare: image=unit-label-font-variation-glyph-swap status=done fixture=unit-label-font-variation-glyph-swap.tscn -->
 
 The `rvrn` feature of a font's `GSUB` `FeatureVariations` swaps glyphs at some axis values. Recursive draws the mono forms of `f`, `g`, `i`, `l` and `0` at `MONO` 1. It draws the slanted forms of `a`, `g`, `i` and `z` at `slnt` -15. The glyph of each character matches Godot's for every character and instance measured.
-A run shapes whole, as Godot shapes the run of each span (`text_server_adv.cpp:7401`), so the font's ligatures and contextual alternates form at the default instance and at each instance.
+Each span shapes as one run, as Godot does (`text_server_adv.cpp:7401`). The font's ligatures and contextual alternates form at the default instance and at each instance.
 
 ## Linting
 
@@ -204,8 +204,8 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 - **Approximated** At an instance, the `GPOS` kerning pairs adjacent characters only, where Godot also kerns across a glyph that a lookup flag skips.
 - **Approximated** A scene font's glyphs draw with the browser's hinting, not FreeType's light
   hinting (`font.h:203`, `text_server_adv.cpp:1276-1277`), so a cap can sit 1 px lower here.
-- **Approximated** A scene font at its default instance, with no embolden or skew, draws the glyph that a contextual lookup swaps one character for as the character's `cmap` glyph, since the browser draws the character's text. Its advance is Godot's.
-- **Approximated** A ligature or contextual lookup reaches no character past a base and its typed marks, and reads every glyph where HarfBuzz skips the glyphs the lookup's flag names.
+- **Approximated** A contextual swap of one character draws the character's `cmap` glyph in a scene font at its default instance with no embolden or skew.
+- **Approximated** A lookup reaches no character past a base and its typed marks, and ignores the lookup flags that tell HarfBuzz which glyphs to skip.
 - **Approximated** A wrapping Label inside a ScrollContainer can read one line short when
   the wrap is what makes the scrollbar appear.
 - **Not drawn** `BREAK_TRIM_INDENT` (an `autowrap_trim_flags` bit): a wrapped

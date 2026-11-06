@@ -354,12 +354,13 @@ vendors the identical font Godot ships rather than substituting a system or web 
 `packages/textscene-core/assets/fonts/OpenSans_SemiBold.woff2` is an unmodified copy of
 Godot 4.6.3's vendored file. `scripts/fonts/bake-metrics.mjs` reads it at build time
 (decompressing to a TTF in memory, since neither the metrics tool nor the atlas tool
-decompresses real Brotli woff2 itself) and bakes the four committed artifacts
+decompresses real Brotli woff2 itself) and bakes the five committed artifacts
 `openSansMetrics.ts` (font-wide scalar metrics + kerning table), `openSansAtlas.ts`
 (the pre-baked MSDF glyph table — see ADR-0003 and `packages/textscene-core/src/r3f/controls/native/text/openSansAtlas.ts`'s own citation of why a
 pre-baked atlas, not a runtime font parse, is what the VS Code webview CSP allows),
-`packages/textscene-core/src/r3f/controls/native/text/openSansAtlasImage.ts` (the atlas image) and
-`packages/textscene-core/src/r3f/controls/native/text/openSansFontBytes.ts` (the font's bytes as base64, which the canvas text painter loads as a font face).
+`packages/textscene-core/src/r3f/controls/native/text/openSansAtlasImage.ts` (the atlas image),
+`packages/textscene-core/src/r3f/controls/native/text/openSansFontBytes.ts` (the font's bytes as base64, which the canvas text painter loads as a font face) and
+`packages/textscene-core/src/r3f/controls/native/text/openSansShaping.ts` (the font's shaping tables as base64url, which the layout shapes each run with).
 
 `scenes/fixtures/fonts/open-sans-semibold-subset.ttf` is a TrueType subset of the same font: the space, `!`, the digits, the Latin letters and `é`. The TextMesh goldens and the tests that read glyph outlines use it.
 
