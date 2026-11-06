@@ -73,7 +73,11 @@ export class ResourceEventBus {
 
   /** True when a key on `busTypes` has changed after the token `since`. */
   hasChangedSince(busTypes: readonly ResourceType[], since: number): boolean {
-    return busTypes.some((busType) => (this.lastChangeAt.get(busType) ?? 0) > since);
+    // A loop, not `.some`: every reader's commit calls this, and a closure per call is garbage.
+    for (const busType of busTypes) {
+      if ((this.lastChangeAt.get(busType) ?? 0) > since) return true;
+    }
+    return false;
   }
 
   /**

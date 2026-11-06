@@ -581,9 +581,7 @@ export function textEditRowColorRuns(
   let current: TextEditGlyphColorRun | undefined;
   rowGlyphs.forEach((glyph, k) => {
     if (isDrawn && !isDrawn[k]) return;
-    const color = spans
-      ? colorAt(spans, textEditGlyphLineIndex(glyph, rowStartIndex, k), fallbackColor)
-      : fallbackColor;
+    const color = textEditGlyphColorAt(spans, textEditGlyphLineIndex(glyph, rowStartIndex, k), fallbackColor);
     if (current && sameColor(current.color, color)) {
       current.glyphs.push(glyph);
     } else {

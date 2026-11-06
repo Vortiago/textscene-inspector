@@ -442,4 +442,22 @@ describe('trimLineToWidth — a base and its mark (text_server_adv.cpp:6073)', (
     );
     expect(result.glyphs.filter((glyph) => glyph.sourceIndex === base!.sourceIndex)).toEqual([]);
   });
+
+  it('takes a right-to-left mark with an advance off the width it walks past (text_server_adv.cpp:6106-6108)', () => {
+    const shaped = line(HEBREW);
+    const [base, ...rest] = shaped.glyphs;
+    const mark = { ...base!, char: 'ָ', x: base!.x + base!.advance };
+    const marked = { ...shaped, glyphs: [base!, mark, ...rest], widthPx: shaped.widthPx + mark.advance };
+    // A hair over the width without the cluster, so rounding cannot push the cut one cluster on.
+    const withoutClusterPx = marked.widthPx - base!.advance - mark.advance + 0.001;
+
+    const result = trimLineToWidth(
+      marked,
+      withoutClusterPx,
+      overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_CHAR),
+      { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX }
+    );
+
+    expect(result.glyphs.map((glyph) => glyph.sourceIndex)).toEqual(rest.map((glyph) => glyph.sourceIndex));
+  });
 });

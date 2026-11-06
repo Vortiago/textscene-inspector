@@ -435,30 +435,28 @@ function findCut(
     if (!isParagraphRtl) width -= glyph.advance;
     // Godot tests a cut only at a glyph with `count > 0`, the first of its cluster, so a mark stays
     // with its base. Every glyph still leaves the right-to-left width (`:6106-6108`).
-    if (!startsCluster(glyphs, i)) {
-      if (isParagraphRtl) width -= glyph.advance;
-      continue;
-    }
-    const isAboveMinCharThreshold = (isParagraphRtl ? length - 1 - i : i) >= ELL_MIN_CHARACTERS;
-    if (!isAboveMinCharThreshold && lastValidCutWithoutEl !== -1) {
-      trimPos = lastValidCutWithoutEl;
-      ellipsisPos = -1;
-      width = widthWithoutElPx;
-      break;
-    }
-    const isAllowed = isCutAllowed(glyph, flags, isAboveMinCharThreshold);
-    if (!flags.enforceEllipsis && width <= widthPx && lastValidCutWithoutEl === -1 && isAllowed) {
-      lastValidCutWithoutEl = i;
-      widthWithoutElPx = width;
-    }
-    if (width + ellipsisBudgetPx(budget, isAboveMinCharThreshold) <= widthPx && isAllowed) {
-      const fitsEllipsis =
-        flags.addEllipsis &&
-        (isAboveMinCharThreshold || flags.enforceEllipsis) &&
-        width - ellipsisWidthPx <= widthPx;
-      trimPos = i;
-      if (fitsEllipsis) ellipsisPos = i;
-      break;
+    if (startsCluster(glyphs, i)) {
+      const isAboveMinCharThreshold = (isParagraphRtl ? length - 1 - i : i) >= ELL_MIN_CHARACTERS;
+      if (!isAboveMinCharThreshold && lastValidCutWithoutEl !== -1) {
+        trimPos = lastValidCutWithoutEl;
+        ellipsisPos = -1;
+        width = widthWithoutElPx;
+        break;
+      }
+      const isAllowed = isCutAllowed(glyph, flags, isAboveMinCharThreshold);
+      if (!flags.enforceEllipsis && width <= widthPx && lastValidCutWithoutEl === -1 && isAllowed) {
+        lastValidCutWithoutEl = i;
+        widthWithoutElPx = width;
+      }
+      if (width + ellipsisBudgetPx(budget, isAboveMinCharThreshold) <= widthPx && isAllowed) {
+        const fitsEllipsis =
+          flags.addEllipsis &&
+          (isAboveMinCharThreshold || flags.enforceEllipsis) &&
+          width - ellipsisWidthPx <= widthPx;
+        trimPos = i;
+        if (fitsEllipsis) ellipsisPos = i;
+        break;
+      }
     }
     if (isParagraphRtl) width -= glyph.advance;
   }
