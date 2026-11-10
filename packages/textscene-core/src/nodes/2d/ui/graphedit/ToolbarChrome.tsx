@@ -12,7 +12,6 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -270,28 +269,32 @@ export function GraphEditToolbarChrome({
               inset={lineEditInsetX}
             />
             {spinUpTexture && (
-              <CanvasItemGroup position={[upPos.x, -upPos.y, 0]} renderOrder={items.content.key}>
-                <ControlQuad
-                  width={SPIN_BOX_ARROW_ICON_SIZE.x}
-                  height={SPIN_BOX_ARROW_ICON_SIZE.y}
-                  color={arrowColor}
-                  opacity={tint.opacity}
-                  map={spinUpTexture}
-                  renderOrder={items.content.key}
-                />
-              </CanvasItemGroup>
+              <TextureQuad
+                rect={{
+                  x: upPos.x,
+                  y: upPos.y,
+                  w: SPIN_BOX_ARROW_ICON_SIZE.x,
+                  h: SPIN_BOX_ARROW_ICON_SIZE.y,
+                }}
+                texture={spinUpTexture}
+                color={arrowColor}
+                opacity={tint.opacity}
+                renderOrder={items.content.key}
+              />
             )}
             {spinDownTexture && (
-              <CanvasItemGroup position={[downPos.x, -downPos.y, 0]} renderOrder={items.content.key}>
-                <ControlQuad
-                  width={SPIN_BOX_ARROW_ICON_SIZE.x}
-                  height={SPIN_BOX_ARROW_ICON_SIZE.y}
-                  color={arrowColor}
-                  opacity={tint.opacity}
-                  map={spinDownTexture}
-                  renderOrder={items.content.key}
-                />
-              </CanvasItemGroup>
+              <TextureQuad
+                rect={{
+                  x: downPos.x,
+                  y: downPos.y,
+                  w: SPIN_BOX_ARROW_ICON_SIZE.x,
+                  h: SPIN_BOX_ARROW_ICON_SIZE.y,
+                }}
+                texture={spinDownTexture}
+                color={arrowColor}
+                opacity={tint.opacity}
+                renderOrder={items.content.key}
+              />
             )}
           </CanvasItemGroup>
         );

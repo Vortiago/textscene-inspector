@@ -5,6 +5,7 @@
  * visibility, children and transform.
  */
 
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -283,16 +284,13 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
         </CanvasItemGroup>
       )}
       {isRadialMode && radialVal !== null && radialVal >= 1 && progressTexture && radialSize && (
-        <CanvasItemGroup position={[progressOffset.x, -progressOffset.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={radialSize.x}
-            height={radialSize.y}
-            color={progressColor}
-            opacity={progressColorSrgb.a}
-            map={progressTexture}
-          />
-        </CanvasItemGroup>
+        <TextureQuad
+          rect={{ x: progressOffset.x, y: progressOffset.y, w: radialSize.x, h: radialSize.y }}
+          texture={progressTexture}
+          color={progressColor}
+          opacity={progressColorSrgb.a}
+          renderOrder={renderOrder}
+        />
       )}
       {radialGeometry && progressTexture && (
         <CanvasItemGroup position={[progressOffset.x, -progressOffset.y, 0]}>
@@ -306,16 +304,18 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
         </CanvasItemGroup>
       )}
       {progressLinear && progressCropped && (
-        <CanvasItemGroup position={[progressLinear.offset.x, -progressLinear.offset.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={progressLinear.size.x}
-            height={progressLinear.size.y}
-            color={progressColor}
-            opacity={progressColorSrgb.a}
-            map={progressCropped}
-          />
-        </CanvasItemGroup>
+        <TextureQuad
+          rect={{
+            x: progressLinear.offset.x,
+            y: progressLinear.offset.y,
+            w: progressLinear.size.x,
+            h: progressLinear.size.y,
+          }}
+          texture={progressCropped}
+          color={progressColor}
+          opacity={progressColorSrgb.a}
+          renderOrder={renderOrder}
+        />
       )}
 
       {overTexture && overSize && !ninePatchStretch && (

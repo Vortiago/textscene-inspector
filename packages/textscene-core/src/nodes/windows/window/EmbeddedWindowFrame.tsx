@@ -3,13 +3,14 @@
  * `scene/main/viewport.cpp:342-401`): the border StyleBox, the title and the close icon unless the
  * window is borderless, then the window's own target over the rect its content scale gives.
  */
+import { TextureQuad } from '../../../r3f/controls/native/TextureQuad';
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { Vector2 } from '../../../godot/math/vector';
-import { CanvasItemGroup, CanvasItemProvider } from '../../../r3f/components/CanvasItemGroup';
+import { CanvasItemProvider } from '../../../r3f/components/CanvasItemGroup';
 import { ControlQuad } from '../../../r3f/controls/native/controlQuad';
 import { StyleBoxQuad } from '../../../r3f/controls/native/StyleBoxQuad';
 import { useNodeIcon } from '../../../r3f/controls/native/useIconTexture';
@@ -126,16 +127,13 @@ export function EmbeddedWindowFrame({
           />
         ) : null}
         {texture ? (
-          <CanvasItemGroup position={[drawRect.x, -drawRect.y, 0]}>
-            <ControlQuad
-              width={drawRect.w}
-              height={drawRect.h}
-              color={WHITE}
-              opacity={1}
-              map={texture}
-              renderOrder={slots.content.key}
-            />
-          </CanvasItemGroup>
+          <TextureQuad
+            rect={drawRect}
+            texture={texture}
+            color={WHITE}
+            opacity={1}
+            renderOrder={slots.content.key}
+          />
         ) : null}
       </CanvasItemProvider>
     </group>
@@ -199,16 +197,13 @@ function WindowDecoration({
         slot={titleSlot}
       />
       {closeTexture ? (
-        <CanvasItemGroup position={[closeOrigin.x, -closeOrigin.y, 0]}>
-          <ControlQuad
-            width={closeSize.x}
-            height={closeSize.y}
-            color={WHITE}
-            opacity={1}
-            map={closeTexture}
-            renderOrder={closeKey}
-          />
-        </CanvasItemGroup>
+        <TextureQuad
+          rect={{ x: closeOrigin.x, y: closeOrigin.y, w: closeSize.x, h: closeSize.y }}
+          texture={closeTexture}
+          color={WHITE}
+          opacity={1}
+          renderOrder={closeKey}
+        />
       ) : null}
     </>
   );

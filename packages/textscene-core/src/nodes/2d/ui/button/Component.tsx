@@ -4,15 +4,14 @@
  * comes only from `disabled`: a static viewer has no hover, pressed or focus.
  * `ControlCanvasWalker` owns `visible`, the children and the transform.
  */
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useMemo } from 'react';
 import { sizeWithArea } from '../../../../resources/textures/textureSize';
-import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
@@ -177,16 +176,18 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
         />
       )}
       {content.icon && iconTexture && (
-        <CanvasItemGroup position={[content.icon.rect.x, -content.icon.rect.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={content.icon.rect.w}
-            height={content.icon.rect.h}
-            color={iconLinearColor}
-            opacity={tintedIconColorSrgb.a}
-            map={iconTexture}
-          />
-        </CanvasItemGroup>
+        <TextureQuad
+          rect={{
+            x: content.icon.rect.x,
+            y: content.icon.rect.y,
+            w: content.icon.rect.w,
+            h: content.icon.rect.h,
+          }}
+          texture={iconTexture}
+          color={iconLinearColor}
+          opacity={tintedIconColorSrgb.a}
+          renderOrder={renderOrder}
+        />
       )}
       {content.labelBox && layout && (
         <ButtonLabel

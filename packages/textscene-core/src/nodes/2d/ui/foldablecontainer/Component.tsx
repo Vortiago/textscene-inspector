@@ -4,12 +4,12 @@
  * title bar, the arrow, the title text and, unless `folded`, the content `panel`.
  * `ControlCanvasWalker` draws the children.
  */
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
@@ -151,16 +151,13 @@ export function FoldableContainer({
           renderOrder={renderOrder}
         />
       </CanvasItemGroup>
-      <CanvasItemGroup position={[titleRect.x + iconPos.x, -(titleRect.y + iconPos.y), 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={arrowSize.x}
-          height={arrowSize.y}
-          color={tint.color}
-          opacity={tint.opacity}
-          map={iconTexture}
-        />
-      </CanvasItemGroup>
+      <TextureQuad
+        rect={{ x: titleRect.x + iconPos.x, y: titleRect.y + iconPos.y, w: arrowSize.x, h: arrowSize.y }}
+        texture={iconTexture}
+        color={tint.color}
+        opacity={tint.opacity}
+        renderOrder={renderOrder}
+      />
       {trimmedLayout && titleTextWidth > 0 && (
         <CanvasItemGroup position={[titleRect.x + textPos.x, -(titleRect.y + textPos.y), 0]}>
           <OutlinedTextRun

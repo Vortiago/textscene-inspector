@@ -16,7 +16,6 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
@@ -77,16 +76,13 @@ function GraphNodePort({ solveNode, iconRef, slotColor, tintOwn, x, y, renderOrd
   const { color, opacity } = useTintedColor(tintOwn, slotColor);
 
   return (
-    <CanvasItemGroup position={[x - size.x / 2, -(y - size.y / 2), 0]}>
-      <ControlQuad
-        width={size.x}
-        height={size.y}
-        color={color}
-        opacity={opacity}
-        map={texture}
-        renderOrder={renderOrder}
-      />
-    </CanvasItemGroup>
+    <TextureQuad
+      rect={{ x: x - size.x / 2, y: y - size.y / 2, w: size.x, h: size.y }}
+      texture={texture}
+      color={color}
+      opacity={opacity}
+      renderOrder={renderOrder}
+    />
   );
 }
 

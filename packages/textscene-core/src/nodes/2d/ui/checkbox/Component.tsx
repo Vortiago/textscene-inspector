@@ -4,11 +4,10 @@
  * the "normal" StyleBox is a `StyleBoxEmpty`. `ControlCanvasWalker` owns `visible`, the
  * children and the transform.
  */
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useMemo } from 'react';
-import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useCheckBoxIcon } from './useCheckBoxIcon';
 import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
@@ -78,16 +77,18 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // the disabled SVGs carry their own dimming, so the icon takes the tint directly.
   return (
     <>
-      <CanvasItemGroup position={[content.iconPosition.x, -content.iconPosition.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={drawnIconSize.x}
-          height={drawnIconSize.y}
-          color={tint.color}
-          opacity={tint.opacity}
-          map={iconTexture}
-        />
-      </CanvasItemGroup>
+      <TextureQuad
+        rect={{
+          x: content.iconPosition.x,
+          y: content.iconPosition.y,
+          w: drawnIconSize.x,
+          h: drawnIconSize.y,
+        }}
+        texture={iconTexture}
+        color={tint.color}
+        opacity={tint.opacity}
+        renderOrder={renderOrder}
+      />
       {content.labelBox && layout && (
         <ButtonLabel
           layout={layout}

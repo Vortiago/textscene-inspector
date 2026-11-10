@@ -4,6 +4,7 @@
  * drawn as one `<OutlinedTextRun>` per line and style run, or one `<RichTextImage>` per
  * `[img]`, through the MSDF text engine `<Label>` uses. Other tags are a non-goal.
  */
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useCallback, useMemo } from 'react';
 import type * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -108,16 +109,13 @@ function RichTextImage({
   const imageTint = multiplyModulate(tint, spec.color);
 
   return (
-    <CanvasItemGroup position={[offsetXPx, -offsetYPx, 0]}>
-      <ControlQuad
-        renderOrder={renderOrder}
-        width={drawWidthPx}
-        height={drawHeightPx}
-        color={toItemLinear(imageTint)}
-        opacity={imageTint.a}
-        map={drawnTexture}
-      />
-    </CanvasItemGroup>
+    <TextureQuad
+      rect={{ x: offsetXPx, y: offsetYPx, w: drawWidthPx, h: drawHeightPx }}
+      texture={drawnTexture}
+      color={toItemLinear(imageTint)}
+      opacity={imageTint.a}
+      renderOrder={renderOrder}
+    />
   );
 }
 

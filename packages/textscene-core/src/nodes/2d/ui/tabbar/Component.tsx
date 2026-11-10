@@ -4,6 +4,7 @@
  * current tab draws last at the same `renderOrder`, so it overlaps its neighbours as in the
  * source's two-pass draw.
  */
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useMemo } from 'react';
 import type { Plane } from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -14,7 +15,6 @@ import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
@@ -308,16 +308,18 @@ function TabBarTabChrome({
         renderOrder={renderOrder}
       />
       {content.icon && iconTexture && (
-        <CanvasItemGroup position={[content.icon.rect.x, -content.icon.rect.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={content.icon.rect.w}
-            height={content.icon.rect.h}
-            color={iconLinearColor}
-            opacity={tintedIconColor.a}
-            map={iconTexture}
-          />
-        </CanvasItemGroup>
+        <TextureQuad
+          rect={{
+            x: content.icon.rect.x,
+            y: content.icon.rect.y,
+            w: content.icon.rect.w,
+            h: content.icon.rect.h,
+          }}
+          texture={iconTexture}
+          color={iconLinearColor}
+          opacity={tintedIconColor.a}
+          renderOrder={renderOrder}
+        />
       )}
       {tab.title.length > 0 && content.text && (
         <CanvasItemGroup position={[content.text.offset.x, -content.text.offset.y, 0]}>
@@ -331,16 +333,18 @@ function TabBarTabChrome({
         </CanvasItemGroup>
       )}
       {content.close && (
-        <CanvasItemGroup position={[content.close.iconOffset.x, -content.close.iconOffset.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={closeIconSize.x}
-            height={closeIconSize.y}
-            color={closeLinearColor}
-            opacity={tint.own.a}
-            map={closeIconTexture}
-          />
-        </CanvasItemGroup>
+        <TextureQuad
+          rect={{
+            x: content.close.iconOffset.x,
+            y: content.close.iconOffset.y,
+            w: closeIconSize.x,
+            h: closeIconSize.y,
+          }}
+          texture={closeIconTexture}
+          color={closeLinearColor}
+          opacity={tint.own.a}
+          renderOrder={renderOrder}
+        />
       )}
     </CanvasItemGroup>
   );
@@ -383,26 +387,30 @@ function ScrollArrows({
 
   return (
     <>
-      <CanvasItemGroup position={[arrows.decrement.x, -arrows.decrement.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={decrementIconSize.x}
-          height={decrementIconSize.y}
-          color={white}
-          opacity={alpha(arrows.decrement.dim)}
-          map={decrementIconTexture}
-        />
-      </CanvasItemGroup>
-      <CanvasItemGroup position={[arrows.increment.x, -arrows.increment.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={incrementIconSize.x}
-          height={incrementIconSize.y}
-          color={white}
-          opacity={alpha(arrows.increment.dim)}
-          map={incrementIconTexture}
-        />
-      </CanvasItemGroup>
+      <TextureQuad
+        rect={{
+          x: arrows.decrement.x,
+          y: arrows.decrement.y,
+          w: decrementIconSize.x,
+          h: decrementIconSize.y,
+        }}
+        texture={decrementIconTexture}
+        color={white}
+        opacity={alpha(arrows.decrement.dim)}
+        renderOrder={renderOrder}
+      />
+      <TextureQuad
+        rect={{
+          x: arrows.increment.x,
+          y: arrows.increment.y,
+          w: incrementIconSize.x,
+          h: incrementIconSize.y,
+        }}
+        texture={incrementIconTexture}
+        color={white}
+        opacity={alpha(arrows.increment.dim)}
+        renderOrder={renderOrder}
+      />
     </>
   );
 }

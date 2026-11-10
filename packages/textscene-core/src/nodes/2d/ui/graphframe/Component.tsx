@@ -9,13 +9,13 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { isStyleBoxTexture, type ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
@@ -166,16 +166,18 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
         ))}
 
       {resizerTexture && (
-        <CanvasItemGroup position={[rect.w - RESIZER_SE_ICON_SIZE.x, -(rect.h - RESIZER_SE_ICON_SIZE.y), 0]}>
-          <ControlQuad
-            width={RESIZER_SE_ICON_SIZE.x}
-            height={RESIZER_SE_ICON_SIZE.y}
-            color={resizerColor}
-            opacity={resizerCombined.a}
-            map={resizerTexture}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
+        <TextureQuad
+          rect={{
+            x: rect.w - RESIZER_SE_ICON_SIZE.x,
+            y: rect.h - RESIZER_SE_ICON_SIZE.y,
+            w: RESIZER_SE_ICON_SIZE.x,
+            h: RESIZER_SE_ICON_SIZE.y,
+          }}
+          texture={resizerTexture}
+          color={resizerColor}
+          opacity={resizerCombined.a}
+          renderOrder={renderOrder}
+        />
       )}
     </>
   );

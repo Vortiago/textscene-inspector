@@ -4,6 +4,7 @@
  * `grabber_area` fill to the grabber's centre, each `tick`, then the `grabber`.
  * `shared/sliderSolver.ts` owns the geometry, `ControlCanvasWalker` `visible`, `children` and the transform.
  */
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -77,16 +78,13 @@ export function HSlider({ solveNode, tint, rect, theme, renderOrder }: NativeCon
           />
         </CanvasItemGroup>
       ))}
-      <CanvasItemGroup position={[grabberRect.x, -grabberRect.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={grabberRect.w}
-          height={grabberRect.h}
-          color={tint.color}
-          opacity={tint.opacity}
-          map={grabberTexture}
-        />
-      </CanvasItemGroup>
+      <TextureQuad
+        rect={grabberRect}
+        texture={grabberTexture}
+        color={tint.color}
+        opacity={tint.opacity}
+        renderOrder={renderOrder}
+      />
     </>
   );
 }
