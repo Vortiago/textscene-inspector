@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import {
+  buttonContentSize,
   buttonDrawnLabel,
   fitIconSize,
   iconOnlyButtonIconRect,
@@ -54,7 +55,7 @@ function styleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatData {
 }
 
 describe('resolveButtonDrawState', () => {
-  it('is "normal" when disabled is false/undefined, "disabled" when true (no hover/pressed/focus — no input modelled)', () => {
+  it('is "normal" when disabled is false/undefined, "disabled" when true (no hover/pressed/focus: no input modelled)', () => {
     expect(resolveButtonDrawState(undefined)).toBe('normal');
     expect(resolveButtonDrawState(false)).toBe('normal');
     expect(resolveButtonDrawState(true)).toBe('disabled');
@@ -150,7 +151,7 @@ const BASE_INPUT: ButtonContentInput = {
   rtl: false,
 };
 
-describe('layoutButtonContent — text only, no icon', () => {
+describe('layoutButtonContent: text only, no icon', () => {
   it('LEFT alignment: text starts flush at the style margin', () => {
     const { icon, text } = layoutButtonContent(BASE_INPUT);
     expect(icon).toBeNull();
@@ -182,7 +183,7 @@ describe('layoutButtonContent — text only, no icon', () => {
  * against it (`text_paragraph.cpp:887-922`). Only CENTER adds
  * `(drawable - text_buf_width) / 2`, and stops shifting once the line overflows (`:902`).
  */
-describe('layoutButtonContent — the paragraph box the alignment measures against', () => {
+describe('layoutButtonContent: the paragraph box the alignment measures against', () => {
   it('CENTER floors its own half (text_paragraph.cpp:904)', () => {
     // drawable 112, text_buf_width 112, length 51: floor(61/2) = 30, not 30.5.
     const { text } = layoutButtonContent({
@@ -246,13 +247,13 @@ describe('layoutButtonContent — the paragraph box the alignment measures again
     expect(text!.offset.x).toBeCloseTo(3.5, 10);
   });
 
-  it('LEFT is untouched by all of it — the source adds nothing for it', () => {
+  it('LEFT is untouched by all of it: the source adds nothing for it', () => {
     const { text } = layoutButtonContent({ ...BASE_INPUT, rectSize: { x: 120.5, y: 32 } });
     expect(text!.offset.x).toBe(4);
   });
 });
 
-describe('layoutButtonContent — icon + text, horizontal icon_alignment', () => {
+describe('layoutButtonContent: icon + text, horizontal icon_alignment', () => {
   const WITH_ICON: ButtonContentInput = {
     ...BASE_INPUT,
     iconNaturalSize: { x: 16, y: 16 },
@@ -273,7 +274,7 @@ describe('layoutButtonContent — icon + text, horizontal icon_alignment', () =>
     expect(text!.offset.x).toBe(25);
   });
 
-  it('icon CENTER: no width reservation at all — text lays out exactly as if there were no icon', () => {
+  it('icon CENTER: no width reservation at all: text lays out exactly as if there were no icon', () => {
     const { icon, text } = layoutButtonContent({ ...WITH_ICON, iconAlignment: HORIZONTAL_ALIGNMENT_CENTER });
     // iconX = 4 + (112-16)/2 = 52.
     expect(icon).toEqual({ rect: { x: 52, y: 8, w: 16, h: 16 } });
@@ -281,7 +282,7 @@ describe('layoutButtonContent — icon + text, horizontal icon_alignment', () =>
   });
 });
 
-describe('layoutButtonContent — vertical_icon_alignment', () => {
+describe('layoutButtonContent: vertical_icon_alignment', () => {
   const WITH_ICON: ButtonContentInput = {
     ...BASE_INPUT,
     iconNaturalSize: { x: 16, y: 16 },
@@ -310,7 +311,7 @@ describe('layoutButtonContent — vertical_icon_alignment', () => {
   });
 });
 
-describe('layoutButtonContent — vertical centring floors like the per-glyph Math::floor(cpos.y) (text_server_adv.cpp:4083)', () => {
+describe('layoutButtonContent: vertical centring floors like the per-glyph Math::floor(cpos.y) (text_server_adv.cpp:4083)', () => {
   it('floors a half-pixel centring remainder DOWN, matching a 32px Button around 23px-tall SemiBold text', () => {
     // drawableHeight = 32-4-4=24; (24-23)/2=0.5; +styleMargin.top(4)=4.5 -> floor 4.
     const { text } = layoutButtonContent({
@@ -322,7 +323,7 @@ describe('layoutButtonContent — vertical centring floors like the per-glyph Ma
   });
 });
 
-describe('layoutButtonContent — expand_icon', () => {
+describe('layoutButtonContent: expand_icon', () => {
   it('scales the icon to fill the remaining box height, preserving aspect, when it fits within the remaining width', () => {
     const { icon } = layoutButtonContent({
       ...BASE_INPUT,
@@ -349,7 +350,7 @@ describe('layoutButtonContent — expand_icon', () => {
   });
 });
 
-describe('layoutButtonContent — icon_max_width clamps the FINAL icon size', () => {
+describe('layoutButtonContent: icon_max_width clamps the FINAL icon size', () => {
   it('clamps a non-expanding icon before it is positioned', () => {
     const { icon } = layoutButtonContent({
       ...BASE_INPUT,
@@ -362,7 +363,7 @@ describe('layoutButtonContent — icon_max_width clamps the FINAL icon size', ()
   });
 });
 
-describe('layoutButtonContent — no icon at all', () => {
+describe('layoutButtonContent: no icon at all', () => {
   it('returns icon: null and leaves text layout exactly as the no-icon case', () => {
     const { icon, text } = layoutButtonContent({ ...BASE_INPUT, iconNaturalSize: { x: 0, y: 0 } });
     expect(icon).toBeNull();
@@ -376,7 +377,7 @@ describe('layoutButtonContent — no icon at all', () => {
  * reads only the swapped values, so the expected pixels are the LTR ones of the
  * opposite alignment.
  */
-describe('layoutButtonContent — RTL swaps the text alignment side', () => {
+describe('layoutButtonContent: RTL swaps the text alignment side', () => {
   it('lays LEFT-aligned text out at the RIGHT edge of the drawable box', () => {
     const { text } = layoutButtonContent({ ...BASE_INPUT, rtl: true });
     // align_rtl_checked = RIGHT: 4 (style margin) + (112 - 50) = 66.
@@ -402,7 +403,7 @@ describe('layoutButtonContent — RTL swaps the text alignment side', () => {
   });
 });
 
-describe('layoutButtonContent — RTL swaps the icon side', () => {
+describe('layoutButtonContent: RTL swaps the icon side', () => {
   const WITH_ICON: ButtonContentInput = {
     ...BASE_INPUT,
     rtl: true,
@@ -446,7 +447,7 @@ function lineOf(text: string): TextLineLayout {
   return { text, glyphs, widthPx: glyphs.length * 10, paragraphIndex: 0 };
 }
 
-describe('buttonDrawnLabel — each line cut to the paragraph box as TextParagraph::draw cuts it', () => {
+describe('buttonDrawnLabel: each line cut to the paragraph box as TextParagraph::draw cuts it', () => {
   const WIDE = lineOf('abcdefghij');
 
   it('LEFT keeps the leading glyphs that fit the box', () => {
@@ -485,7 +486,7 @@ describe('buttonDrawnLabel — each line cut to the paragraph box as TextParagra
   });
 });
 
-describe('textMinimumWidthPx — the label width a minimum size keeps (button.cpp:493-495)', () => {
+describe('textMinimumWidthPx: the label width a minimum size keeps (button.cpp:493-495)', () => {
   it('keeps the measured width, ceiled, with no clipping property', () => {
     expect(textMinimumWidthPx(40.2, {})).toBe(41);
   });
@@ -510,7 +511,7 @@ describe('textMinimumWidthPx — the label width a minimum size keeps (button.cp
   });
 });
 
-describe('trimButtonLabel — the label trimmed to its paragraph box (button.cpp:428-432, text_paragraph.cpp:286-293)', () => {
+describe('trimButtonLabel: the label trimmed to its paragraph box (button.cpp:428-432, text_paragraph.cpp:286-293)', () => {
   const FONT_SIZE_PX = 16;
   const UNWRAPPED = { isWrapped: false, fontSizePx: FONT_SIZE_PX, isDrawnRtl: false };
 
@@ -565,7 +566,7 @@ describe('trimButtonLabel — the label trimmed to its paragraph box (button.cpp
   });
 });
 
-describe('iconOnlyButtonIconRect — an icon with no text sits at the left margin and floors its centred y (button.cpp:349-405)', () => {
+describe('iconOnlyButtonIconRect: an icon with no text sits at the left margin and floors its centred y (button.cpp:349-405)', () => {
   const margin = { left: 4, top: 4, right: 4, bottom: 4 };
 
   it("puts a 16px icon of a 28x31 button at (4, 7), as pnpm ref:godot measures text_type's script icon", () => {
@@ -595,5 +596,25 @@ describe('iconOnlyButtonIconRect — an icon with no text sits at the left margi
       w: 16,
       h: 16,
     });
+  });
+});
+
+describe('buttonContentSize', () => {
+  const left = 0;
+  const center = 1;
+  const base = { textSize: { x: 50, y: 20 }, hasText: true, hSeparation: 4, verticalIconAlignment: center };
+
+  it('adds a side icon and the separation to the text width and floors the height on the icon', () => {
+    const size = buttonContentSize({ ...base, iconSize: { x: 16, y: 24 }, iconAlignment: left });
+    expect(size).toEqual({ x: 70, y: 24 });
+  });
+
+  it('takes the wider of the text and a centred icon', () => {
+    const size = buttonContentSize({ ...base, iconSize: { x: 80, y: 16 }, iconAlignment: center });
+    expect(size).toEqual({ x: 80, y: 20 });
+  });
+
+  it('is the text alone without an icon', () => {
+    expect(buttonContentSize({ ...base, iconSize: null, iconAlignment: left })).toEqual({ x: 50, y: 20 });
   });
 });

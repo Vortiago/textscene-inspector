@@ -47,7 +47,7 @@ function minHeight(result: ReturnType<typeof colorPickerMinimumSize>): number {
 }
 
 describe('invertRgb', () => {
-  it('flips rgb and leaves alpha — core/math/color.h Color::inverted()', () => {
+  it('flips rgb and leaves alpha: core/math/color.h Color::inverted()', () => {
     expect(invertRgb({ r: 0.2, g: 0.4, b: 0.6, a: 0.5 })).toEqual({ r: 0.8, g: 0.6, b: 0.4, a: 0.5 });
   });
 });
@@ -62,7 +62,7 @@ describe('extractHsv', () => {
     expect(v).toBeCloseTo(1);
   });
 
-  it('normalises an overbright colour before extracting h/s/v — color_picker.cpp:593-602', () => {
+  it('normalises an overbright colour before extracting h/s/v: color_picker.cpp:593-602', () => {
     // r=2 (linear-equivalent overbright red): multiplier > 1, so v settles
     // back to 1 after the srgb round-trip, not 2.
     const { s, v } = extractHsv({ r: 2, g: 0, b: 0, a: 1 });
@@ -99,7 +99,7 @@ const measure = (text: string) => ({ x: text.length * 10, y: 20 });
 const measureText: SolveContext['measureText'] = (text) => measure(text);
 
 describe('colorPickerRows', () => {
-  it('sizes the shape row from sv_width/sv_height/h_width at scale 1 — default_theme.cpp:1077-1079, no other row present', () => {
+  it('sizes the shape row from sv_width/sv_height/h_width at scale 1: default_theme.cpp:1077-1079, no other row present', () => {
     const rows = colorPickerRows(400, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, null);
     expect(rows.shape).toEqual({ x: 0, y: 0, w: 400, h: 256 });
     expect(rows.sample).toBeNull();
@@ -122,11 +122,11 @@ describe('colorPickerRows', () => {
     expect(wheel.sample).toEqual({ x: 0, y: 4, w: 400, h: 24 });
   });
 
-  it('draws no shape row for SHAPE_NONE (4) — matches Godot exactly, not a gap', () => {
+  it('draws no shape row for SHAPE_NONE (4): matches Godot exactly, not a gap', () => {
     expect(colorPickerRows(400, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 4 }, null).shape).toBeNull();
   });
 
-  it('drops every hidden row AND its separation gap — color_picker.cpp:1906-1956', () => {
+  it('drops every hidden row AND its separation gap: color_picker.cpp:1906-1956', () => {
     const rows = colorPickerRows(400, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, measure);
     expect(rows.mode).toBeNull();
     expect(rows.sliders).toBeNull();
@@ -177,7 +177,7 @@ describe('colorPickerRows', () => {
 });
 
 describe('colorPickerMinimumSize', () => {
-  it("sums every visible row plus internal_margin's own content_margin on every side — color_picker.cpp:161-166", () => {
+  it("sums every visible row plus internal_margin's own content_margin on every side: color_picker.cpp:161-166", () => {
     const ctx: SolveContext = { theme: THEME, measureText, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
     expect(colorPickerMinimumSize(node({}), ctx)).toEqual({ x: 298, y: 580 });
   });
@@ -225,7 +225,7 @@ describe('svAndHueRects', () => {
 describe('svSquareCursorPosition', () => {
   const SQUARE = { x: 10, y: 20, w: 100, h: 100 };
 
-  it('places the cursor at s along x and (1-v) along y — color_picker_shape.cpp:259-261', () => {
+  it('places the cursor at s along x and (1-v) along y: color_picker_shape.cpp:259-261', () => {
     expect(svSquareCursorPosition(SQUARE, 0.5, 0.25)).toEqual({ x: 60, y: 95 });
   });
 
@@ -239,7 +239,7 @@ describe('svSquareCursorPosition', () => {
 });
 
 describe('hueIndicatorY', () => {
-  it('is proportional to h across the slider height — color_picker_shape.cpp:431', () => {
+  it('is proportional to h across the slider height: color_picker_shape.cpp:431', () => {
     expect(hueIndicatorY(256, 0.5)).toBe(128);
   });
 
@@ -253,7 +253,7 @@ describe('hueIndicatorY', () => {
 });
 
 describe('hexRowColumns', () => {
-  it('splits label(38)/text_type(28)/field(fill) — color_picker.cpp:2191-2222', () => {
+  it('splits label(38)/text_type(28)/field(fill): color_picker.cpp:2191-2222', () => {
     const cols = hexRowColumns({ x: 0, y: 0, w: 400, h: 28 }, THEME);
     expect(cols.label).toEqual({ x: 0, y: 0, w: 38, h: 28 });
     expect(cols.textType).toEqual({ x: 42, y: 0, w: 28, h: 28 }); // 38 + sep(4)
@@ -262,7 +262,7 @@ describe('hexRowColumns', () => {
 });
 
 describe('modeRowButtonRects', () => {
-  it('splits 3 equal-width buttons + a fixed-width dropdown — color_picker.cpp:2129-2154', () => {
+  it('splits 3 equal-width buttons + a fixed-width dropdown: color_picker.cpp:2129-2154', () => {
     const cols = modeRowButtonRects({ x: 0, y: 0, w: 400, h: 20 }, THEME);
     expect(cols.buttons).toEqual([
       { x: 0, y: 0, w: 120, h: 20 },
@@ -274,7 +274,7 @@ describe('modeRowButtonRects', () => {
 });
 
 describe('modeRowButtonRects at a fractional share', () => {
-  it('gives every button whole pixels and ends flush with the row — box_container.cpp:100-130', () => {
+  it('gives every button whole pixels and ends flush with the row: box_container.cpp:100-130', () => {
     const cols = modeRowButtonRects({ x: 0, y: 0, w: 401, h: 20 }, THEME);
     const rects = [...cols.buttons, cols.dropdown];
     for (const r of rects) {
@@ -286,7 +286,7 @@ describe('modeRowButtonRects at a fractional share', () => {
 });
 
 describe('swatchesRowRects', () => {
-  it('splits palette_box (Swatches + menu_btn) then btn_recent_preset — color_picker.cpp:2239-2287', () => {
+  it('splits palette_box (Swatches + menu_btn) then btn_recent_preset: color_picker.cpp:2239-2287', () => {
     const cols = swatchesRowRects({ x: 0, y: 0, w: 400, h: 44 }, THEME);
     // menu_btn's own natural width: icon(16) + button.normal margin(8) = 24, not the 16px icon alone.
     expect(cols.swatchesButton).toEqual({ x: 0, y: 0, w: 372, h: 20 }); // 400 - sep(4) - menuBtn(24)
@@ -382,7 +382,7 @@ describe('colorPickerSliderBoxRect', () => {
   });
 
   // control.h fit_child_in_rect uses Math::floor, so an odd remainder floors down.
-  it('floors an odd remainder — control.h fit_child_in_rect', () => {
+  it('floors an odd remainder: control.h fit_child_in_rect', () => {
     expect(colorPickerSliderBoxRect({ x: 0, y: 0, w: 400, h: 29 }, THEME, { x: 16, y: 16 }).y).toBe(6); // floor(13/2)=6, not 7
   });
 });
@@ -417,7 +417,7 @@ describe('colorPickerChannelGrabberRect', () => {
 });
 
 describe('sliderGridRowRects', () => {
-  it("splits label(10)/slider(fill)/value(48) per row, stacked with the grid's own v_separation — color_picker.cpp:2172-2180", () => {
+  it("splits label(10)/slider(fill)/value(48) per row, stacked with the grid's own v_separation: color_picker.cpp:2172-2180", () => {
     // The caller supplies labelWidth and valueWidth. This test covers the column split only.
     const rows = sliderGridRowRects({ x: 0, y: 0, w: 400, h: 156 }, 5, THEME, 10, 48);
     expect(rows).toHaveLength(5);
@@ -499,7 +499,7 @@ describe('RTL rows (box_container.cpp:184-192, grid_container.cpp:193-197,218-22
     expect(cols.pick).toEqual({ x: 372, y: 0, w: 28, h: 24 });
   });
 
-  it('colorPickerChannelGrabberRect reads the ratio from the right — slider.cpp:363', () => {
+  it('colorPickerChannelGrabberRect reads the ratio from the right: slider.cpp:363', () => {
     // `(rtl ? 1 - ratio : ratio) * areasize + grabber_shift`, the same branch
     // the stock grabber already takes (`shared/sliderSolver.ts`).
     expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0, { x: 16, y: 16 }, 8, true).x).toBe(392);
@@ -527,7 +527,7 @@ describe('sampleRowColumns', () => {
     expect(cols.shape).toEqual({ x: 372, y: 0, w: 28, h: 24 });
   });
 
-  it('drops the shape button at SHAPE_NONE (4) — color_picker.cpp:321', () => {
+  it('drops the shape button at SHAPE_NONE (4): color_picker.cpp:321', () => {
     const cols = sampleRowColumns(SAMPLE, THEME, 4);
     expect(cols.shape).toBeNull();
     expect(cols.sample.w).toBe(368); // 400 - 28 - 4

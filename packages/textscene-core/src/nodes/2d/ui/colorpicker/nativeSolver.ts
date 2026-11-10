@@ -401,7 +401,7 @@ export function colorPickerRows(
   const shapeHeight = drawShape ? svSize : 0;
 
   const textHeightPx = measure ? measure('0').y : 0;
-  const sampleHeight = Math.round(COLOR_PICKER_SAMPLE_ICON_SIZE * scale) + 2 * Math.round(4 * scale);
+  const sampleHeight = colorPickerButtonIconSize(theme) + 2 * Math.round(4 * scale);
   const modeSize = modeRowSize(theme, measure);
   const sliderRowCount = colorPickerSliderRowCount(props);
   const sliderRowHeight = lineRowHeight(theme, textHeightPx);

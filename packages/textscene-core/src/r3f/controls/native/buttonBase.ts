@@ -507,16 +507,14 @@ interface ButtonContentSizeInput {
  */
 export function buttonContentSize(input: ButtonContentSizeInput): Vector2 {
   const { textSize, hasText, iconSize, iconAlignment, verticalIconAlignment, hSeparation } = input;
+  const isVerticallyCentred = verticalIconAlignment === VerticalAlignment.VERTICAL_ALIGNMENT_CENTER;
+  const stackHeights = (above: number, below: number) =>
+    isVerticallyCentred ? Math.max(above, below) : above + below;
   let width = textSize.x;
   let height = textSize.y;
 
   if (iconSize) {
-    if (verticalIconAlignment === VerticalAlignment.VERTICAL_ALIGNMENT_CENTER) {
-      height = Math.max(height, iconSize.y);
-    } else {
-      height += iconSize.y;
-    }
-
+    height = stackHeights(height, iconSize.y);
     if (iconAlignment !== HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER) {
       width += iconSize.x;
       if (hasText) width += Math.max(0, hSeparation);
@@ -525,13 +523,7 @@ export function buttonContentSize(input: ButtonContentSizeInput): Vector2 {
     }
   }
 
-  if (hasText) {
-    if (verticalIconAlignment === VerticalAlignment.VERTICAL_ALIGNMENT_CENTER) {
-      height = Math.max(textSize.y, height);
-    } else {
-      height += textSize.y;
-    }
-  }
+  if (hasText) height = stackHeights(textSize.y, height);
 
   return { x: width, y: height };
 }

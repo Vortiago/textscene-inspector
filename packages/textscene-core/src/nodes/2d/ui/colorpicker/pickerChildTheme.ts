@@ -4,13 +4,14 @@
  * (`Control::get_theme_stylebox`, `control.cpp:3078`), not the ColorPicker's own.
  */
 import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
+import { CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 import { pickButtonStyleBox } from '../../../../r3f/controls/native/buttonBase';
 import { internalChildThemeItems } from '../../../../r3f/controls/native/buildSolveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';
 import { LABEL_DEFAULT_FONT_COLOR } from '../label/nativeSolver';
-import { pickLineEditStyleBox } from '../lineedit/nativeSolver';
+import { LINE_EDIT_DEFAULT_FONT_COLOR, pickLineEditStyleBox } from '../lineedit/nativeSolver';
 
 export interface PickerChildTheme {
   /** `theme` with the Button and LineEdit styleboxes of the Theme chain. */
@@ -44,8 +45,8 @@ export function pickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildT
       },
     },
     labelColor: label.colors.font_color ?? LABEL_DEFAULT_FONT_COLOR,
-    buttonColor: button.colors.font_color ?? CONTROL_FONT_COLOR,
+    buttonColor: button.colors.font_color ?? BUTTON_DEFAULT_FONT_COLOR,
     buttonPressedColor: button.colors.font_pressed_color ?? CONTROL_FONT_PRESSED_COLOR,
-    lineEditColor: lineEdit.colors.font_color ?? CONTROL_FONT_COLOR,
+    lineEditColor: lineEdit.colors.font_color ?? LINE_EDIT_DEFAULT_FONT_COLOR,
   };
 }

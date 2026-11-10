@@ -84,14 +84,14 @@ function flatStyleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatDa
   };
 }
 
-describe('lineEditMinimumSize — StyleBox content margins + minimum_character_width*W-advance + font height', () => {
+describe('lineEditMinimumSize: StyleBox content margins + minimum_character_width*W-advance + font height', () => {
   it('is exactly minimum_character_width(4)*W-advance + margin(8), and fontHeight(23) + margin(8), by default', () => {
     const result = lineEditMinimumSize(node({}), ctx());
     expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE, 6);
     expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 
-  it('treats an absent measurer as "the W-advance contributes nothing", NOT the whole function failing — margin + font height alone still return', () => {
+  it('treats an absent measurer as "the W-advance contributes nothing", NOT the whole function failing: margin + font height alone still return', () => {
     const result = lineEditMinimumSize(node({}), ctx(false));
     expect(result).toEqual({ x: 8, y: 8 + FONT_HEIGHT });
   });
@@ -115,7 +115,7 @@ describe('lineEditMinimumSize — StyleBox content margins + minimum_character_w
     }
   );
 
-  it("is unaffected by the node's own text/placeholder content — LineEdit floors width on minimum_character_width, not on what is typed", () => {
+  it("is unaffected by the node's own text/placeholder content: LineEdit floors width on minimum_character_width, not on what is typed", () => {
     const withLongText = lineEditMinimumSize(
       node({ text: 'a much longer string than four characters' }),
       ctx()
@@ -145,7 +145,7 @@ describe('lineEditMinimumSize — StyleBox content margins + minimum_character_w
   });
 });
 
-describe('lineEditMinimumSize — expand_to_text_length (line_edit.cpp:2454-2457)', () => {
+describe('lineEditMinimumSize: expand_to_text_length (line_edit.cpp:2454-2457)', () => {
   // 'W' has no kerning partner in the vendored metrics (`kerning: {}`), so N
   // repeats shape to exactly N * W_ADVANCE, ceiled (`shaped_text_get_size`,
   // `shapedTextSizeWidthPx`). 6 * 15.125 = 90.75 -> ceil 91.
@@ -158,7 +158,7 @@ describe('lineEditMinimumSize — expand_to_text_length (line_edit.cpp:2454-2457
     expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 
-  it('sizes to the PLACEHOLDER when text is empty — _shape() shapes whichever string using_placeholder selects', () => {
+  it('sizes to the PLACEHOLDER when text is empty: _shape() shapes whichever string using_placeholder selects', () => {
     const result = lineEditMinimumSize(node({ placeholderText: 'WWWWWW', expandToTextLength: true }), ctx());
     expect(result.x).toBe(8 + SIX_W_WIDTH + 1);
   });
@@ -181,7 +181,7 @@ describe('lineEditMinimumSize — expand_to_text_length (line_edit.cpp:2454-2457
   });
 });
 
-describe('lineEditMinimumSize — right_icon / clear_button_enabled contribution (line_edit.cpp:2459-2472)', () => {
+describe('lineEditMinimumSize: right_icon / clear_button_enabled contribution (line_edit.cpp:2459-2472)', () => {
   it("adds a right_icon's ORIGINAL_SIZE natural width, and floors height at it when taller than the font", () => {
     const n = { ...node({}), textureSlots: { right_icon: { x: 32, y: 40 } } };
     const result = lineEditMinimumSize(n, ctx());
@@ -242,7 +242,7 @@ describe('lineEditMinimumSize — right_icon / clear_button_enabled contribution
   });
 });
 
-describe('lineEditRightIconSize — LineEdit::_get_right_icon_size (line_edit.cpp:373-406)', () => {
+describe('lineEditRightIconSize: LineEdit::_get_right_icon_size (line_edit.cpp:373-406)', () => {
   it('ORIGINAL_SIZE returns the natural size unchanged, ignoring scale/controlSize/fontHeight', () => {
     expect(
       lineEditRightIconSize({ x: 32, y: 16 }, EXPAND_MODE_ORIGINAL_SIZE, 23, { x: 999, y: 999 }, 0.1)
@@ -303,7 +303,7 @@ describe('lineEditRightIconSize — LineEdit::_get_right_icon_size (line_edit.cp
   });
 });
 
-describe('lineEditCaretRect — the caret_force_displayed static-preview position (line_edit.cpp:1552-1611)', () => {
+describe('lineEditCaretRect: the caret_force_displayed static-preview position (line_edit.cpp:1552-1611)', () => {
   const MARGIN = { left: 4, top: 4, right: 4, bottom: 4 };
   const RECT = { x: 200, y: 30 };
   // The LEFT test of layoutLineEditContent uses the same formula: yArea = trunc(30-4-4) = 22,
@@ -387,7 +387,7 @@ describe('lineEditCaretRect — the caret_force_displayed static-preview positio
   });
 });
 
-describe('lineEditTextureSlots — right_icon (own scope) + the themed "clear" icon', () => {
+describe('lineEditTextureSlots: right_icon (own scope) + the themed "clear" icon', () => {
   it('requests right_icon under its own property key when authored', () => {
     const requests = lineEditTextureSlots(
       controlNode('L', 'LineEdit', { name: 'L', rightIcon: 'ExtResource("1_icon")' })
@@ -419,7 +419,7 @@ describe('lineEditTextureSlots — right_icon (own scope) + the themed "clear" i
   });
 });
 
-describe('resolveLineEditTextState — which theme_override_colors key/default this node reads', () => {
+describe('resolveLineEditTextState: which theme_override_colors key/default this node reads', () => {
   it('is "placeholder" whenever the displayed string IS the placeholder, regardless of editable', () => {
     expect(resolveLineEditTextState(true, true)).toBe('placeholder');
     expect(resolveLineEditTextState(false, true)).toBe('placeholder');
@@ -435,7 +435,7 @@ describe('resolveLineEditTextState — which theme_override_colors key/default t
   });
 });
 
-describe('lineEditTextTheme — font_color / font_uneditable_color / font_placeholder_color key mapping', () => {
+describe('lineEditTextTheme: font_color / font_uneditable_color / font_placeholder_color key mapping', () => {
   it('resolves control_font_color (0.875, opaque) for the normal state', () => {
     expect(lineEditTextTheme(node({}), {} as LineEditProperties, 'normal', ctx())).toEqual({
       fontSizePx: 16,
@@ -481,7 +481,7 @@ describe('lineEditTextTheme — font_color / font_uneditable_color / font_placeh
   });
 });
 
-describe('layoutLineEditContent — NOTIFICATION_DRAW x_ofs/y_ofs (line_edit.cpp:1392-1427)', () => {
+describe('layoutLineEditContent: NOTIFICATION_DRAW x_ofs/y_ofs (line_edit.cpp:1392-1427)', () => {
   const MARGIN = { left: 4, top: 4, right: 4, bottom: 4 };
 
   it('LEFT (default): x_ofs is exactly the left margin', () => {
@@ -498,7 +498,7 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW x_ofs/y_ofs (line_edit.cpp
     expect(result.textOffset.y).toBe(3);
   });
 
-  it("y_ofs includes the ACTIVE style's own TOP margin — `style->get_offset().y` (style_box.cpp:87-89) — not just the text/area centring term", () => {
+  it("y_ofs includes the ACTIVE style's own TOP margin: `style->get_offset().y` (style_box.cpp:87-89) — not just the text/area centring term", () => {
     // A margin-heavy style shifts y_ofs down by its own top margin, while the centring term
     // (y_area - text_height)/2 matches the LEFT case above.
     const result = layoutLineEditContent({
@@ -588,7 +588,7 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW x_ofs/y_ofs (line_edit.cpp
   });
 });
 
-describe('layoutLineEditContent — right_icon/clear-button inset (line_edit.cpp:1444-1485)', () => {
+describe('layoutLineEditContent: right_icon/clear-button inset (line_edit.cpp:1444-1485)', () => {
   const MARGIN = { left: 4, top: 4, right: 4, bottom: 4 };
 
   it('LEFT: an icon narrows ofsMaxPx but never moves x_ofs off the left margin', () => {
@@ -647,7 +647,7 @@ describe('layoutLineEditContent — right_icon/clear-button inset (line_edit.cpp
     expect(result.textOffset.x).toBe(4);
   });
 
-  it('hasIcon:false ignores a stray iconWidthPx entirely — the no-icon formulas apply exactly', () => {
+  it('hasIcon:false ignores a stray iconWidthPx entirely: the no-icon formulas apply exactly', () => {
     const withIcon = layoutLineEditContent({
       rectSize: { x: 200, y: 30 },
       styleMargin: MARGIN,
@@ -668,7 +668,7 @@ describe('layoutLineEditContent — right_icon/clear-button inset (line_edit.cpp
   });
 });
 
-describe(`lineEditMinimumSize — resolves this LineEdit's own theme font key ("${LINE_EDIT_THEME_FONT_KEY}", default_theme.cpp:419)`, () => {
+describe(`lineEditMinimumSize: resolves this LineEdit's own theme font key ("${LINE_EDIT_THEME_FONT_KEY}", default_theme.cpp:419)`, () => {
   // An unresolvable font's warn is the observable proof here (`resolveNodeFontMetrics.test.ts`).
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
@@ -693,7 +693,7 @@ describe(`lineEditMinimumSize — resolves this LineEdit's own theme font key ("
   });
 });
 
-describe('layoutLineEditContent — RTL layout (line_edit.cpp:1397-1421,1455-1483)', () => {
+describe('layoutLineEditContent: RTL layout (line_edit.cpp:1397-1421,1455-1483)', () => {
   const MARGIN = { left: 4, top: 4, right: 4, bottom: 4 };
   const BOX = { x: 200, y: 30 };
 
@@ -744,7 +744,7 @@ describe('layoutLineEditContent — RTL layout (line_edit.cpp:1397-1421,1455-148
     expect(rtl.textOffset.x).toBe(ltr.textOffset.x);
   });
 
-  it('leaves ofs_max at the right margin under RTL — the icon is subtracted only when !rtl (:1481-1483)', () => {
+  it('leaves ofs_max at the right margin under RTL: the icon is subtracted only when !rtl (:1481-1483)', () => {
     const result = layoutLineEditContent({
       rectSize: BOX,
       styleMargin: MARGIN,
@@ -815,7 +815,7 @@ describe('layoutLineEditContent — RTL layout (line_edit.cpp:1397-1421,1455-148
   });
 });
 
-describe('lineEditCaretRect — RTL layout (line_edit.cpp:1560-1584)', () => {
+describe('lineEditCaretRect: RTL layout (line_edit.cpp:1560-1584)', () => {
   const MARGIN = { left: 4, top: 4, right: 4, bottom: 4 };
   const BASE = {
     rectSize: { x: 200, y: 30 },
@@ -844,7 +844,7 @@ describe('lineEditCaretRect — RTL layout (line_edit.cpp:1560-1584)', () => {
     );
   });
 
-  it('real text still rides the pen x under RTL — the fallback is gated on using_placeholder (:1555)', () => {
+  it('real text still rides the pen x under RTL: the fallback is gated on using_placeholder (:1555)', () => {
     expect(lineEditCaretRect({ ...BASE, alignment: 0, isPlaceholder: false, rtl: true }).x).toBe(146);
   });
 });
@@ -898,7 +898,7 @@ describe('lineEditDrawnLine: the glyphs the draw loop keeps (line_edit.cpp:1512-
   });
 });
 
-describe('shapeLineEditText — direction, language and structured override (line_edit.cpp:3104-3112)', () => {
+describe('shapeLineEditText: direction, language and structured override (line_edit.cpp:3104-3112)', () => {
   /** The shaped line's glyph characters, left to right. */
   function visual(props: Partial<LineEditProperties>, overrides: Partial<SolveNode> = {}): string {
     const n = { ...node(props), ...overrides };

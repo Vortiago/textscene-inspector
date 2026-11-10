@@ -83,13 +83,13 @@ describe('<ColorPicker> (isolated painter contract)', () => {
     expect(meshes).toHaveLength(10);
   });
 
-  it('draws the checkerboard only when the colour is translucent — color_picker.cpp:1400', async () => {
+  it('draws the checkerboard only when the colour is translucent: color_picker.cpp:1400', async () => {
     const opaqueCount = await meshCount({ color: 'Color(1, 0, 0, 1)', ...ONLY_SHAPE_AND_SAMPLE });
     const translucentCount = await meshCount({ color: 'Color(1, 0, 0, 0.5)', ...ONLY_SHAPE_AND_SAMPLE });
     expect(translucentCount).toBe(opaqueCount + 1);
   });
 
-  it('draws an overbright indicator when a channel exceeds 1 — color_picker.cpp:1411-1413', async () => {
+  it('draws an overbright indicator when a channel exceeds 1: color_picker.cpp:1411-1413', async () => {
     expect(await meshCount({ color: 'Color(1.5, 0, 0, 1)', ...ONLY_SHAPE_AND_SAMPLE })).toBe(11);
   });
 
@@ -253,7 +253,7 @@ describe('<ColorPicker> (isolated painter contract)', () => {
 
   it('sizes every slider band to 185px in a 300px picker, as Godot measures (band ends at x = 210)', async () => {
     // The value column is the SpinBox minimum with the W advance unrounded (15.125 px), then truncated by
-    // `GridContainer` to 86 (`grid_container.cpp:290`). A ceiled advance gave 90 and a 181px band.
+    // `GridContainer` to 86 (`grid_container.cpp:290`).
     const renderer = await renderPicker(
       { ...ONLY_SLIDERS, color: 'Color(0.8, 0.6, 0.4, 1)', colorMode: 1 },
       { w: 300, h: 160 }
@@ -271,13 +271,13 @@ describe('<ColorPicker> (isolated painter contract)', () => {
     expect(new Set(bandWidths)).toEqual(new Set([185, 186]));
   });
 
-  it('draws the H row of color_mode HSV as a grey polygon and the color_hue rainbow over it — color_mode.cpp:200-221', async () => {
+  it('draws the H row of color_mode HSV as a grey polygon and the color_hue rainbow over it: color_mode.cpp:200-221', async () => {
     const rgb = await meshCount({ ...ONLY_SLIDERS, colorMode: 0 });
     // R's one gradient band becomes H's grey base plus its rainbow.
     expect(await meshCount({ ...ONLY_SLIDERS, colorMode: 1 })).toBe(rgb + 1);
   });
 
-  it('hex row draws a field box and its text — hex_visible default true', async () => {
+  it('hex row draws a field box and its text: hex_visible default true', async () => {
     const hidden = await meshCount({
       pickerShape: 4,
       samplerVisible: false,
@@ -297,7 +297,7 @@ describe('<ColorPicker> (isolated painter contract)', () => {
     expect(shown).toBeGreaterThan(hidden);
   });
 
-  it('draws the disabled script icon in text_type for an HDR colour, not for an ordinary one — color_picker.cpp:1319-1325', async () => {
+  it('draws the disabled script icon in text_type for an HDR colour, not for an ordinary one: color_picker.cpp:1319-1325', async () => {
     // `icon_disabled_color` is `Color(1, 1, 1, 0.4)` (`default_theme.cpp:169`).
     const iconOpacities = async (color: string) => {
       const renderer = await renderPicker({ color, ...ONLY_HEX }, { w: 300, h: 60 });
@@ -313,7 +313,7 @@ describe('<ColorPicker> (isolated painter contract)', () => {
     expect(await iconOpacities('Color(0.8, 0.6, 0.4, 1)')).toHaveLength(0);
   });
 
-  it('swatches row draws its two button labels — presets_visible default true', async () => {
+  it('swatches row draws its two button labels: presets_visible default true', async () => {
     const hidden = await meshCount({
       pickerShape: 4,
       samplerVisible: false,

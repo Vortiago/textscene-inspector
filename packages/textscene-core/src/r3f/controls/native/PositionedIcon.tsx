@@ -1,6 +1,6 @@
 /**
- * One icon quad at a Control-local rect. The Button painters, the GraphEdit toolbar and the
- * ColorPicker share it, so an icon's origin, size and tint are placed in one spot.
+ * One icon quad at a Control-local rect. The GraphEdit toolbar and the ColorPicker share it,
+ * so an icon's origin, size and tint are placed in one spot.
  */
 import type * as THREE from 'three';
 import type { Rect2 } from '../../../godot/math/rect2';
