@@ -22,9 +22,7 @@ const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /**
  * `default_theme.cpp:860`: `make_flat_stylebox(style_normal_color, 4, 4, 4, 5)`, whose bottom
- * margin (5) differs from `default_margin` (4). `NativeTheme` has no raw `scale` for
- * `Math.round(5 * scale)`, so the bottom is `Math.round(theme.contentMargin * 1.25)`, which is 5
- * at the default scale.
+ * margin (5) differs from `default_margin` (4), so the bottom is `Math.round(5 * scale)`.
  */
 function treePanelStyleBox(theme: NativeTheme): StyleBoxFlatData {
   const m = theme.contentMargin;
@@ -39,7 +37,7 @@ function treePanelStyleBox(theme: NativeTheme): StyleBoxFlatData {
       bottomLeft: theme.cornerRadius,
     },
     expandMargin: ZERO_SIDES,
-    contentMargin: { left: m, top: m, right: m, bottom: Math.round(m * 1.25) },
+    contentMargin: { left: m, top: m, right: m, bottom: Math.round(5 * theme.scale) },
     drawCenter: true,
     borderBlend: false,
     antiAliased: true,

@@ -15,17 +15,15 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { useCanvasItemMerge } from '../../../../r3f/components/LitCanvasItemPixels';
-import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import {
   multiplyModulate,
   useItemLinearColor,
   useItemLinearColorOf,
   useVertexColorTint,
-  type VertexColorTint,
 } from '../../../../r3f/canvasItemModulate';
 import { parseColor } from '../../../../utils/colorParser';
 import { AlphaCheckerboardQuad } from '../shared/AlphaCheckerboardQuad';
@@ -46,15 +44,26 @@ import { sliderTrackRect, sliderGrabberAreaRect, sliderGrabberRect } from '../sh
 import { spinBoxArrowPosition, spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { isColorOverbright } from '../shared/colorOverbright';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { TextDirection } from '../../../../godot/text/textServerEnums';
+import { HAIRLINE_THICKNESS_PX, hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
+import { pickerChildTheme } from './pickerChildTheme';
+import { IconButton, iconModulate } from './IconButton';
+import { GradientMesh, buildGeometry, tintVertexColors } from './GradientMesh';
+import { LabelledText } from '../shared/LabelledText';
+import { TextTypeScriptIcon } from './TextTypeScriptIcon';
+import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
+import type { ButtonLabelBox } from '../../../../r3f/controls/native/buttonBase';
+import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import {
+  infersRtl,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
+import { buttonIconColor } from '../button/nativeSolver';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { hsvToRgb } from '../../../../godot/math/color';
-import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   COLOR_MODE_NAMES,
   COLOR_PICKER_SAMPLE_HEIGHT_FRACTION,
@@ -62,19 +71,23 @@ import {
   colorPickerChannelGrabberRect,
   colorPickerIntensityRatio,
   colorPickerLabelColumnWidth,
-  colorPickerModeButtonStyleBox,
+  modeButtonBox,
   colorPickerRows,
-  colorPickerScale,
   colorPickerSliderBoxRect,
   colorPickerSliderRowCount,
   colorPickerValueColumnWidth,
+  colorPickerEmWidthPx,
+  presetButtonContent,
+  type ButtonText,
+  modeButtonLabel,
+  textTypeLabel,
   COLOR_PICKER_SLIDER_GRABBER_OFFSET,
   SHAPE_HSV_RECTANGLE,
-  extractHsv,
   hexRowColumns,
   hueIndicatorY,
   invertRgb,
   modeRowButtonRects,
+  MODE_BUTTON_COUNT,
   sampleRowColumns,
   sliderGridRowRects,
   svAndHueRects,
@@ -88,13 +101,13 @@ import {
   linearizeStops,
   svSquareBaseLayer,
   svSquareHueLayer,
-  type QuadGeometry,
 } from './svGradient';
 import {
   MODE_HSV,
   MODE_LINEAR,
   MODE_OKHSL,
   MODE_RGB,
+  extractHsv,
   alphaChannelGradientStops,
   colorModeAlphaChannel,
   colorModeChannels,
@@ -104,8 +117,7 @@ import {
   formatSliderValue,
   hexFieldText,
   hsvChannelGradientStops,
-  hsvHueChannelBase,
-  hsvHueChannelOverlayAlpha,
+  hsvHueChannelLayers,
   okhslHueChannelStops,
   okhslLightnessGradientStops,
   okhslSaturationGradientStops,
@@ -114,156 +126,27 @@ import {
 } from './colorModes';
 import type { ColorPickerProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
-import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
+import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 
-/** `Button`'s `font_pressed_color` (`default_theme.cpp:157`), which the toggled-on `mode_btns[i]` reads. */
-const MODE_BUTTON_PRESSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
+/** The picker's child Buttons keep the `text_direction` and `language` defaults. */
+const AUTO_TEXT_DIRECTION = { textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: '' };
 
-function buildGeometry(g: QuadGeometry): THREE.BufferGeometry {
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(g.positions), 3));
-  geometry.setIndex(g.indices);
-  geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(g.colors), 4));
-  return geometry;
-}
-
-interface GradientMeshProps {
-  geometry: THREE.BufferGeometry;
-  renderOrder: number;
-  clippingPlanes: THREE.Plane[];
-  /**
-   * The vertex colours are already linear (`linearizeStops`), so the GPU's linear lerp reproduces
-   * `GRADIENT_COLOR_SPACE_LINEAR_SRGB`. Otherwise they are sRGB, interpolated as stored, since
-   * interpolating two sRGB colours in linear space moves the ramp's midpoint.
-   */
-  linear?: boolean;
-  /** The item's tint, whose vertex factor the geometry's colours already carry. */
-  tint: VertexColorTint;
-}
-
-/** One vertex-coloured, single-pass mesh: the SV square's two layers, the hue strip and every channel-slider band. */
-function GradientMesh({ geometry, renderOrder, clippingPlanes, linear, tint }: GradientMeshProps) {
-  const canvasItemMerge = useCanvasItemMerge();
-  useDisposeOnRelease(geometry);
-  const program = materialProgramInputs({
-    props: {
-      color: tint.color,
-      opacity: tint.opacity,
-      vertexColors: true,
-      transparent: true,
-      depthWrite: false,
-      clippingPlanes,
-      defines: linear ? undefined : tint.defines,
-    },
-    merge: canvasItemMerge,
-  });
-  return (
-    <mesh renderOrder={renderOrder}>
-      <primitive object={geometry} attach="geometry" />
-      <meshBasicMaterial key={program.key} {...program.props} />
-    </mesh>
-  );
-}
-
-/**
- * The rendering server applies a CanvasItem's accumulated modulate to every draw call, so the
- * vertex factor of `useVertexColorTint` multiplies into each colour.
- */
-function tintVertexColors(colors: number[], tint: { r: number; g: number; b: number; a: number }): number[] {
-  const out = new Array<number>(colors.length);
-  for (let i = 0; i < colors.length; i += 4) {
-    out[i] = colors[i]! * tint.r;
-    out[i + 1] = colors[i + 1]! * tint.g;
-    out[i + 2] = colors[i + 2]! * tint.b;
-    out[i + 3] = colors[i + 3]! * tint.a;
-  }
-  return out;
-}
-
-interface LabelledTextProps {
-  rect: Rect2;
-  layout: TextLayoutResult | null;
-  fontSizePx: number;
-  tint: Rgba;
-  clippingPlanes: THREE.Plane[];
-  renderOrder: number;
-  /** Right-aligns within `rect`, as the SpinBox's `LineEdit` does for a number (`line_edit.cpp`). A plain `Label` aligns left. */
-  alignRight?: boolean;
-  /** Centres within `rect`: `Button`'s default `alignment` (`button.h:54`), which `mode_btns` and `text_type` keep. `btn_preset` and `btn_recent_preset` set LEFT (`color_picker.cpp:2248,2283`). Wins over `alignRight`. */
-  center?: boolean;
-  /** The `x_ofs` floor of `LineEdit::_notification(NOTIFICATION_DRAW)`: the gap between the text and its aligned edge. 0 for a Label or Button, which has no box under the text. */
-  inset?: number;
-  /** `Control::is_layout_rtl()`: swaps the leading and trailing arms and leaves centre alone, as `label.cpp:497-509`, `line_edit.cpp:1397-1421` and `button.cpp:262-276` do. */
-  rtl?: boolean;
-}
-
-/** One row of shaped text, vertically centred in `rect`. */
-function LabelledText({
-  rect,
-  layout,
-  fontSizePx,
+export function ColorPicker({
+  solveNode,
   tint,
-  clippingPlanes,
+  rect,
   renderOrder,
-  alignRight,
-  center,
-  inset = 0,
-  rtl = false,
-}: LabelledTextProps) {
-  if (!layout) return null;
-  const width = shapedTextSizeWidthPx(layout.widthPx);
-  const trailing = Math.max(inset, rect.w - width - inset);
-  const x = center ? Math.max(0, (rect.w - width) / 2) : (alignRight ?? false) !== rtl ? trailing : inset;
-  const y = Math.max(0, (rect.h - layout.heightPx) / 2);
-  return (
-    <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]}>
-      <TextRun
-        layout={layout}
-        fontSizePx={fontSizePx}
-        tint={tint}
-        clippingPlanes={clippingPlanes}
-        renderOrder={renderOrder}
-      />
-    </CanvasItemGroup>
-  );
-}
-
-interface CenteredIconProps {
-  rect: Rect2;
-  size: number;
-  texture: THREE.Texture | null;
-  tint: NativeControlComponentProps['tint'];
-  renderOrder: number;
-}
-
-/** One button icon, centred inside `rect`. */
-function CenteredIcon({ rect, size, texture, tint, renderOrder }: CenteredIconProps) {
-  if (!texture) return null;
-  const x = (rect.w - size) / 2;
-  const y = (rect.h - size) / 2;
-  return (
-    <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]}>
-      <ControlQuad
-        width={size}
-        height={size}
-        color={tint.color}
-        opacity={tint.opacity}
-        map={texture}
-        renderOrder={renderOrder}
-      />
-    </CanvasItemGroup>
-  );
-}
-
-export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
+  theme: defaultTheme,
+}: NativeControlComponentProps) {
+  const child = pickerChildTheme(solveNode, defaultTheme);
+  const theme = child.theme;
   const toItemLinear = useItemLinearColorOf();
   const props = painterView<ColorPickerProperties>(solveNode);
   const fill = useMemo(() => parseColor(props.color), [props.color]);
   const hsv = useMemo(() => extractHsv(fill), [fill]);
   const normalized = useMemo(() => colorNormalized(fill), [fill]);
   const clippingPlanes = useControlClipPlanes() as THREE.Plane[];
-  const scale = colorPickerScale(theme);
+  const scale = theme.scale;
 
   const fontSizePx = theme.fontSize;
   // Read in the render body, not a `useMemo` (`Label`'s `Component.tsx` says why).
@@ -282,13 +165,34 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     return { x: shapedTextSizeWidthPx(l.widthPx), y: l.heightPx };
   };
 
+  const buttonText = (text: string): ButtonText => ({
+    size: measure(text),
+    direction: { rtl: solveNode.rtl, isTextRtl: infersRtl(shape(text)) },
+  });
+  // One Button label as `Button::_notification` draws it. The picker's Buttons never trim.
+  const buttonLabel = (key: string, text: string, tintOfText: Rgba, box: ButtonLabelBox) => (
+    <ButtonLabel
+      key={key}
+      layout={shape(text)}
+      box={box}
+      overrunBehavior={undefined}
+      bidi={bidi}
+      fontSizePx={fontSizePx}
+      tint={tintOfText}
+      outline={textOutline}
+      clippingPlanes={clippingPlanes}
+      renderOrder={renderOrder}
+    />
+  );
+
   const contentWidth = Math.max(0, rect.w - 2 * theme.contentMargin);
   const rows = useMemo(
-    () => colorPickerRows(contentWidth, theme, props, measure),
+    () => colorPickerRows(contentWidth, theme, child.valueFieldTheme, props, measure),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       contentWidth,
       theme,
+      child.valueFieldTheme,
       props.pickerShape,
       props.samplerVisible,
       props.colorModesVisible,
@@ -297,18 +201,33 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
       props.presetsVisible,
       props.editAlpha,
       props.editIntensity,
+      props.colorMode,
       fontSizePx,
       fontMetrics,
     ]
   );
 
-  const fontColor = useMemo(() => multiplyModulate(tint.own, CONTROL_FONT_COLOR), [tint.own]);
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
+  const bidi = useControlBidiOptions(AUTO_TEXT_DIRECTION, solveNode);
+  const labelColor = useMemo(() => multiplyModulate(tint.own, child.labelColor), [tint.own, child]);
+  const buttonFontColor = useMemo(() => multiplyModulate(tint.own, child.buttonColor), [tint.own, child]);
   const pressedFontColor = useMemo(
-    () => multiplyModulate(tint.own, MODE_BUTTON_PRESSED_FONT_COLOR),
-    [tint.own]
+    () => multiplyModulate(tint.own, child.buttonPressedColor),
+    [tint.own, child]
   );
-  // Every value and hex `LineEdit` uses the same box, so one inset covers both.
+  // The picker's Buttons modulate their icons by `icon_normal_color` of the Theme chain (`button.cpp:321-329`).
+  const iconTint = useMemo(
+    () => ({ ...tint, ...iconModulate(toItemLinear, tint, buttonIconColor(child.buttonColors, 'normal')) }),
+    [tint, child, toItemLinear]
+  );
+  const lineEditFontColor = useMemo(() => multiplyModulate(tint.own, child.lineEditColor), [tint.own, child]);
+  const spinArrowGrey = useMemo(() => multiplyModulate(tint.own, CONTROL_FONT_COLOR), [tint.own]);
+  const valueFieldFontColor = useMemo(
+    () => multiplyModulate(tint.own, child.valueFieldColor),
+    [tint.own, child]
+  );
   const lineEditInsetX = theme.widgets.lineEdit.normal.contentMargin.left;
+  const valueFieldInsetX = child.valueFieldTheme.widgets.lineEdit.normal.contentMargin.left;
 
   const sampleFill = useMemo(() => multiplyModulate(tint.own, fill), [tint.own, fill]);
   const sampleColor = useItemLinearColor(sampleFill);
@@ -322,7 +241,6 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     : null;
   // `btn_shape`, `btn_mode` and `menu_btn` use `FlatMenuButton`, whose boxes are `StyleBoxEmpty`
   // (`default_theme.cpp:360,372-375`). Only `btn_pick`, a plain `Button` (`default_theme.cpp:138-141`), draws one.
-  const pickButtonBox = theme.widgets.button.normal;
   const pickIconTexture = useNodeIcon(solveNode.icons.screen_picker, COLOR_PICKER_PIPETTE_ICON);
   // `shape_rect` is correct only at `SHAPE_HSV_RECTANGLE`. No other shape is drawn (`comparison.md`).
   const isHsvRectangle = (props.pickerShape ?? SHAPE_HSV_RECTANGLE) === SHAPE_HSV_RECTANGLE;
@@ -336,7 +254,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const spinUpTexture = useNodeIcon(solveNode.icons.up, SPIN_BOX_ICONS.up);
   const spinDownTexture = useNodeIcon(solveNode.icons.down, SPIN_BOX_ICONS.down);
   // `up_icon_modulate` and `down_icon_modulate` default to `control_font_color` (`default_theme.cpp:634,638`).
-  const spinArrowColor = useItemLinearColor(fontColor);
+  const spinArrowColor = useItemLinearColor(spinArrowGrey);
 
   const shapeRects = rows.shape ? svAndHueRects(rows.shape, theme, solveNode.rtl) : null;
 
@@ -376,7 +294,15 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const hueLineLinear = useItemLinearColor(hueLineColor);
   const hueY = shapeRects ? hueIndicatorY(shapeRects.hueSlider.h, hsv.h) : 0;
 
-  const modeCols = rows.mode ? modeRowButtonRects(rows.mode, theme, solveNode.rtl) : null;
+  const modeCols = rows.mode
+    ? modeRowButtonRects(
+        rows.mode,
+        theme,
+        solveNode.rtl,
+        COLOR_MODE_NAMES.slice(0, MODE_BUTTON_COUNT).map((name) => measure(name).x),
+        props.colorMode ?? MODE_RGB
+      )
+    : null;
 
   const colorMode = props.colorMode ?? MODE_RGB;
   const editAlpha = props.editAlpha ?? true;
@@ -390,7 +316,9 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     measure,
     colorPickerSliderLabels(colorMode, editAlpha, editIntensity)
   );
-  const sliderValueWidth = colorPickerValueColumnWidth(theme, measure);
+  // The unceiled advance: `Font::get_char_size` does not ceil it, where `measure` does.
+  const emWidthPx = colorPickerEmWidthPx((text) => shape(text).widthPx);
+  const sliderValueWidth = colorPickerValueColumnWidth(child.valueFieldTheme, emWidthPx);
   const sliderCols = useMemo(
     () =>
       rows.sliders
@@ -410,7 +338,11 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     label: string;
     valueText: string;
     stops: Rgba[];
-    overlay?: { base: Rgba; alpha: number };
+    /**
+     * Drawn under the gradient: the alpha row's `sample_bg` tiles (`color_picker.cpp:1434`), or the
+     * HSV H row's grey polygon, over which the hue texture is modulated (`color_mode.cpp:218-221`).
+     */
+    underlay?: { kind: 'checkerboard' } | { kind: 'grey'; color: Rgba };
     /** The grabber position, `value/max`. Every channel's `min` is 0 except intensity's, which has its own ratio. */
     ratio: number;
     /** `GRADIENT_COLOR_SPACE_LINEAR_SRGB` (`color_mode.cpp:311`): only the R, G and B rows of `MODE_LINEAR`. */
@@ -434,12 +366,14 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     for (let i = 0; i < 3; i++) {
       const c = channels[i]!;
       let stops: Rgba[] = [];
-      let overlay: { base: Rgba; alpha: number } | undefined;
+      let underlay: SliderRowContent['underlay'];
       if (colorMode === MODE_RGB || colorMode === MODE_LINEAR) {
         stops = rgbChannelGradientStops(i, normalized);
       } else if (colorMode === MODE_HSV) {
         if (i === 0) {
-          overlay = { base: hsvHueChannelBase(normalized), alpha: hsvHueChannelOverlayAlpha(normalized) };
+          const hue = hsvHueChannelLayers(normalized);
+          underlay = { kind: 'grey', color: hue.base };
+          stops = hue.stops;
         } else {
           stops = hsvChannelGradientStops(i as 1 | 2, normalized);
         }
@@ -452,7 +386,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
         label: sliderLabels[out.length] ?? c.label,
         valueText: formatSliderValue(c.value, c.decimals),
         stops,
-        overlay,
+        underlay,
         ratio: c.max !== 0 ? c.value / c.max : 0,
         linearSpace: colorMode === MODE_LINEAR,
       });
@@ -470,6 +404,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
         label: sliderLabels[out.length] ?? alphaChannel.label,
         valueText: formatSliderValue(alphaChannel.value, alphaChannel.decimals),
         stops: alphaChannelGradientStops(normalized),
+        underlay: { kind: 'checkerboard' },
         ratio: alphaChannel.max !== 0 ? alphaChannel.value / alphaChannel.max : 0,
       });
     }
@@ -508,36 +443,31 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     solveNode.icons.folded_arrow,
     FOLDABLE_CONTAINER_ICONS.foldedArrow
   );
-  // Button's `h_separation` (`default_theme.cpp:171`) is a different theme key
-  // from BoxContainer's `separation`, with the same value `round(4 * scale)`.
-  const buttonIconTextSeparation = theme.separation;
 
   return (
     <CanvasItemGroup position={[theme.contentMargin, -theme.contentMargin, 0]}>
       {/* Sample row */}
       {rows.sample && sampleCols && sampleQuadRect && (
         <>
-          <CanvasItemGroup position={[sampleCols.pick.x, -sampleCols.pick.y, 0]}>
-            <StyleBoxQuad
-              styleBox={pickButtonBox}
-              rect={{ x: 0, y: 0, w: sampleCols.pick.w, h: sampleCols.pick.h }}
-              color={tint.own}
-              renderOrder={renderOrder}
-            />
-          </CanvasItemGroup>
-          <CenteredIcon
+          <IconButton
             rect={sampleCols.pick}
+            box={theme.widgets.button.normal}
             size={COLOR_PICKER_BUTTON_ICON_SIZE}
             texture={pickIconTexture}
             tint={tint}
+            iconTint={iconTint}
+            rtl={solveNode.rtl}
             renderOrder={renderOrder}
           />
           {sampleCols.shape && (
-            <CenteredIcon
+            <IconButton
               rect={sampleCols.shape}
+              box={theme.widgets.flatMenuButton.normal}
               size={COLOR_PICKER_BUTTON_ICON_SIZE}
               texture={shapeIconTexture}
               tint={tint}
+              iconTint={iconTint}
+              rtl={solveNode.rtl}
               renderOrder={renderOrder}
             />
           )}
@@ -619,10 +549,10 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
               clippingPlanes={clippingPlanes}
               tint={vertexTint}
             />
-            <CanvasItemGroup position={[0, -hueY, 0]}>
+            <CanvasItemGroup position={[0, -hairlineQuadStartPx(hueY), 0]}>
               <ControlQuad
                 width={shapeRects.hueSlider.w}
-                height={1}
+                height={HAIRLINE_THICKNESS_PX}
                 color={hueLineLinear}
                 opacity={hueLineColor.a}
                 renderOrder={renderOrder}
@@ -638,30 +568,29 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
           {modeCols.buttons.map((r, i) => (
             <CanvasItemGroup key={`${COLOR_MODE_NAMES[i]}-box`} position={[r.x, -r.y, 0]}>
               <StyleBoxQuad
-                styleBox={colorPickerModeButtonStyleBox(theme, colorMode === i)}
+                styleBox={modeButtonBox(theme, i, colorMode)}
                 rect={{ x: 0, y: 0, w: r.w, h: r.h }}
                 color={tint.own}
                 renderOrder={renderOrder}
               />
             </CanvasItemGroup>
           ))}
-          {modeCols.buttons.map((r, i) => (
-            <LabelledText
-              key={COLOR_MODE_NAMES[i]}
-              rect={r}
-              layout={shape(COLOR_MODE_NAMES[i]!)}
-              fontSizePx={fontSizePx}
-              tint={colorMode === i ? pressedFontColor : fontColor}
-              clippingPlanes={clippingPlanes}
-              renderOrder={renderOrder}
-              center
-            />
-          ))}
-          <CenteredIcon
+          {modeCols.buttons.map((r, i) =>
+            buttonLabel(
+              COLOR_MODE_NAMES[i]!,
+              COLOR_MODE_NAMES[i]!,
+              colorMode === i ? pressedFontColor : buttonFontColor,
+              modeButtonLabel(r, theme, modeButtonBox(theme, i, colorMode), buttonText(COLOR_MODE_NAMES[i]!))
+            )
+          )}
+          <IconButton
             rect={modeCols.dropdown}
+            box={theme.widgets.flatMenuButton.normal}
             size={COLOR_PICKER_BUTTON_ICON_SIZE}
             texture={menuIconTexture}
             tint={tint}
+            iconTint={iconTint}
+            rtl={solveNode.rtl}
             renderOrder={renderOrder}
           />
         </>
@@ -674,21 +603,23 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
           if (!col) return null;
           const geometry = sliderGeometries[i];
           // `_reset_sliders_theme` (`color_picker.cpp:628-651`) gives every row but intensity the
-          // `bar_arrow` grabber and a gradient band. Only such a row has `overlay` or `stops`.
+          // `bar_arrow` grabber and a gradient band. Only such a row has `stops`.
           // Intensity keeps the stock `HSlider` track, fill and grabber.
-          const isColorized = row.stops.length >= 2 || !!row.overlay;
+          const isColorized = row.stops.length >= 2;
           const grabberIconSize = isColorized
             ? { x: COLOR_PICKER_BUTTON_ICON_SIZE, y: COLOR_PICKER_BUTTON_ICON_SIZE }
             : { x: theme.sliderGrabberSize, y: theme.sliderGrabberSize };
           const sliderBox = colorPickerSliderBoxRect(col.slider, theme, grabberIconSize);
           const sliderBoxSize = { x: sliderBox.w, y: sliderBox.h };
+          // `margin = 16 * base_scale` (`color_mode.cpp:187`, `color_picker.cpp:1433`): the grey, the rainbow and the checkerboard share it.
+          const bandHeight = Math.min(col.slider.h, 16 * scale);
           return (
             <CanvasItemGroup key={`${row.label}-${i}`} position={[0, 0, 0]}>
               <LabelledText
                 rect={col.label}
                 layout={shape(row.label)}
                 fontSizePx={fontSizePx}
-                tint={fontColor}
+                tint={labelColor}
                 clippingPlanes={clippingPlanes}
                 renderOrder={renderOrder}
                 rtl={solveNode.rtl}
@@ -745,11 +676,21 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                       </>
                     );
                   })()}
-                {row.overlay && (
+                {row.underlay?.kind === 'checkerboard' && (
+                  <AlphaCheckerboardQuad
+                    width={sliderBox.w}
+                    height={bandHeight}
+                    color={tint.color}
+                    opacity={tint.opacity}
+                    renderOrder={renderOrder}
+                    themed={solveNode.icons.sample_bg}
+                  />
+                )}
+                {row.underlay?.kind === 'grey' && (
                   <ControlQuad
                     width={sliderBox.w}
-                    height={sliderBox.h}
-                    color={toItemLinear(multiplyModulate(tint.own, row.overlay.base))}
+                    height={bandHeight}
+                    color={toItemLinear(multiplyModulate(tint.own, row.underlay.color))}
                     opacity={tint.opacity}
                     renderOrder={renderOrder}
                   />
@@ -819,7 +760,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                   <>
                     <CanvasItemGroup position={[fieldRect.x, -fieldRect.y, 0]}>
                       <StyleBoxQuad
-                        styleBox={theme.widgets.lineEdit.normal}
+                        styleBox={child.valueFieldTheme.widgets.lineEdit.normal}
                         rect={{ x: 0, y: 0, w: fieldRect.w, h: fieldRect.h }}
                         color={tint.own}
                         renderOrder={renderOrder}
@@ -829,11 +770,11 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                       rect={fieldRect}
                       layout={shape(row.valueText)}
                       fontSizePx={fontSizePx}
-                      tint={fontColor}
+                      tint={valueFieldFontColor}
                       clippingPlanes={clippingPlanes}
                       renderOrder={renderOrder}
                       alignRight
-                      inset={lineEditInsetX}
+                      inset={valueFieldInsetX}
                       rtl={solveNode.rtl}
                     />
                     <CanvasItemGroup position={[upIconPos.x, -upIconPos.y, 0]}>
@@ -870,20 +811,26 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
             rect={hexCols.label}
             layout={shape(hexContent.label)}
             fontSizePx={fontSizePx}
-            tint={fontColor}
+            tint={labelColor}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
             rtl={solveNode.rtl}
           />
-          {hexContent.typeText && (
-            <LabelledText
+          {hexContent.typeText ? (
+            buttonLabel(
+              'text-type',
+              hexContent.typeText,
+              buttonFontColor,
+              textTypeLabel(hexCols.textType, theme, buttonText(hexContent.typeText))
+            )
+          ) : (
+            <TextTypeScriptIcon
               rect={hexCols.textType}
-              layout={shape(hexContent.typeText)}
-              fontSizePx={fontSizePx}
-              tint={fontColor}
-              clippingPlanes={clippingPlanes}
+              solveNode={solveNode}
+              theme={theme}
+              buttonColors={child.buttonColors}
+              tint={tint}
               renderOrder={renderOrder}
-              center
             />
           )}
           <CanvasItemGroup position={[hexCols.field.x, -hexCols.field.y, 0]}>
@@ -898,7 +845,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
             rect={hexCols.field}
             layout={shape(hexContent.text)}
             fontSizePx={fontSizePx}
-            tint={fontColor}
+            tint={lineEditFontColor}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
             inset={lineEditInsetX}
@@ -915,45 +862,29 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
             { key: 'recent', box: swatchesCols.recentColorsButton, text: 'Recent Colors' },
           ].map(({ key, box, text }) => {
             // Both buttons have the default `icon_alignment` and LEFT text
-            // (`color_picker.cpp:2242-2248,2279-2283`). RTL swaps both sides (`button.cpp:262-276`),
-            // so the icon goes to the trailing edge and the text aligns right.
-            const iconX = solveNode.rtl ? box.x + box.w - COLOR_PICKER_BUTTON_ICON_SIZE : box.x;
-            const textBox = {
-              ...box,
-              x: solveNode.rtl ? box.x : box.x + COLOR_PICKER_BUTTON_ICON_SIZE + buttonIconTextSeparation,
-              w: Math.max(0, box.w - COLOR_PICKER_BUTTON_ICON_SIZE - buttonIconTextSeparation),
-            };
+            // (`color_picker.cpp:2242-2248,2279-2283`). RTL swaps both sides (`button.cpp:262-276`).
+            const { icon, label } = presetButtonContent(box, theme, buttonText(text));
             return (
               <CanvasItemGroup key={key} position={[0, 0, 0]}>
-                <CanvasItemGroup
-                  position={[iconX, -(box.y + (box.h - COLOR_PICKER_BUTTON_ICON_SIZE) / 2), 0]}
-                >
-                  <ControlQuad
-                    width={COLOR_PICKER_BUTTON_ICON_SIZE}
-                    height={COLOR_PICKER_BUTTON_ICON_SIZE}
-                    color={tint.color}
-                    opacity={tint.opacity}
-                    map={dropdownArrowTexture}
-                    renderOrder={renderOrder}
-                  />
-                </CanvasItemGroup>
-                <LabelledText
-                  rect={textBox}
-                  layout={shape(text)}
-                  fontSizePx={fontSizePx}
-                  tint={fontColor}
-                  clippingPlanes={clippingPlanes}
+                <PositionedIcon
+                  rect={icon}
+                  texture={dropdownArrowTexture}
+                  color={iconTint.color}
+                  opacity={iconTint.opacity}
                   renderOrder={renderOrder}
-                  rtl={solveNode.rtl}
                 />
+                {buttonLabel(key, text, buttonFontColor, label)}
               </CanvasItemGroup>
             );
           })}
-          <CenteredIcon
+          <IconButton
             rect={swatchesCols.menuButton}
+            box={theme.widgets.flatMenuButton.normal}
             size={COLOR_PICKER_BUTTON_ICON_SIZE}
             texture={menuIconTexture}
             tint={tint}
+            iconTint={iconTint}
+            rtl={solveNode.rtl}
             renderOrder={renderOrder}
           />
         </>

@@ -5,16 +5,15 @@
  * children and the transform.
  */
 import { useMemo } from 'react';
-import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { CHECK_BOX_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { isButtonAutowrapped } from '../../../../r3f/controls/native/buttonBase';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import {
@@ -87,20 +86,22 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
     [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout, props.alignment, solveNode.rtl]
   );
 
+  const iconRect = useMemo(
+    () => ({ ...content.iconPosition, w: drawnIconSize.x, h: drawnIconSize.y }),
+    [content.iconPosition, drawnIconSize.x, drawnIconSize.y]
+  );
+
   // The icon colour is opaque white in both states (`default_theme.cpp:312-313`), and
   // the disabled SVGs carry their own dimming, so the icon takes the tint directly.
   return (
     <>
-      <CanvasItemGroup position={[content.iconPosition.x, -content.iconPosition.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={drawnIconSize.x}
-          height={drawnIconSize.y}
-          color={tint.color}
-          opacity={tint.opacity}
-          map={iconTexture}
-        />
-      </CanvasItemGroup>
+      <PositionedIcon
+        rect={iconRect}
+        texture={iconTexture}
+        color={tint.color}
+        opacity={tint.opacity}
+        renderOrder={renderOrder}
+      />
       {content.labelBox && layout && (
         <ButtonLabel
           layout={layout}

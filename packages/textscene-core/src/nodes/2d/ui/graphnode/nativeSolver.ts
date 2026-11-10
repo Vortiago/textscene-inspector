@@ -14,7 +14,6 @@ import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/nativ
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   controlSolverRegistry,
@@ -55,10 +54,8 @@ function flatBox(
  */
 function defaultStyles(theme: NativeTheme) {
   // `make_flat_stylebox(style_normal_color, 18, 12, 18, 12)` scales literal margins,
-  // not `default_margin` (4). `NativeTheme` holds no raw scale, so it comes from
-  // `theme.contentMargin` (`Math.round(DEFAULT_CONTENT_MARGIN * scale)`), exact where
-  // that rounding is lossless, as at each scale the previewer's UI offers.
-  const scale = theme.contentMargin / DEFAULT_CONTENT_MARGIN;
+  // not `default_margin` (4).
+  const { scale } = theme;
   const panelMargin = {
     left: Math.round(18 * scale),
     top: Math.round(12 * scale),
@@ -95,12 +92,11 @@ export function graphNodeStyles(n: SolveNode, theme: NativeTheme) {
   };
 }
 
-/** `theme_override_constants/separation`, else `Math.round(2 * scale)` (`default_theme.cpp`, GraphNode's own `separation`): scale recovered as `defaultStyles`'s own doc explains. */
+/** `theme_override_constants/separation`, else `Math.round(2 * scale)` (`default_theme.cpp`, GraphNode's own `separation`). */
 function separationOf(n: SolveNode, theme: NativeTheme): number {
   const override = n.constants.separation;
   if (override !== undefined) return override;
-  const scale = theme.contentMargin / DEFAULT_CONTENT_MARGIN;
-  return Math.round(2 * scale);
+  return Math.round(2 * theme.scale);
 }
 
 function hFlagsOf(n: SolveNode): number {

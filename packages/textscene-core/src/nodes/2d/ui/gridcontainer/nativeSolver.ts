@@ -20,6 +20,7 @@ import {
   type ContainerLayoutFn,
   type MinimumSizeFn,
 } from '../../../../r3f/controls/native/solverRegistry';
+import { gridCellMinimumExtent } from '../shared/gridCellMinimum';
 import { fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
 import { DEFAULT_SIZE_FLAGS, SizeFlags } from '../../../../godot/scene/control';
 
@@ -66,8 +67,8 @@ const gridContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
     validIndex++;
 
     const ms = ctx.combinedMinimumSize(child);
-    const w = Math.trunc(ms.x);
-    const h = Math.trunc(ms.y);
+    const w = gridCellMinimumExtent(ms.x);
+    const h = gridCellMinimumExtent(ms.y);
     colMinW.set(col, Math.max(colMinW.get(col) ?? 0, w));
     rowMinH.set(row, Math.max(rowMinH.get(row) ?? 0, h));
     maxColIndex = Math.max(maxColIndex, col);
@@ -162,8 +163,8 @@ const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) =
   sortable.forEach(({ node: child, minSize }, index) => {
     const row = Math.floor(index / columns);
     const col = index % columns;
-    colMinW.set(col, Math.max(colMinW.get(col) ?? 0, Math.trunc(minSize.x)));
-    rowMinH.set(row, Math.max(rowMinH.get(row) ?? 0, Math.trunc(minSize.y)));
+    colMinW.set(col, Math.max(colMinW.get(col) ?? 0, gridCellMinimumExtent(minSize.x)));
+    rowMinH.set(row, Math.max(rowMinH.get(row) ?? 0, gridCellMinimumExtent(minSize.y)));
     if (hasFlag(hFlagsOf(child), SizeFlags.EXPAND)) colExpanded.add(col);
     if (hasFlag(vFlagsOf(child), SizeFlags.EXPAND)) rowExpanded.add(row);
   });

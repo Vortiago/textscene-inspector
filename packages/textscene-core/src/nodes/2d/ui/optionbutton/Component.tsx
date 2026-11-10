@@ -5,11 +5,10 @@
  * `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
 import { useMemo } from 'react';
-import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { OPTION_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -111,16 +110,13 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
       {!props.flat && (
         <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
       )}
-      <CanvasItemGroup position={[content.arrowRect.x, -content.arrowRect.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={content.arrowRect.w}
-          height={content.arrowRect.h}
-          color={tint.color}
-          opacity={tint.opacity}
-          map={arrowTexture}
-        />
-      </CanvasItemGroup>
+      <PositionedIcon
+        rect={content.arrowRect}
+        texture={arrowTexture}
+        color={tint.color}
+        opacity={tint.opacity}
+        renderOrder={renderOrder}
+      />
       {hasText && layout && (
         <ButtonLabel
           layout={layout}

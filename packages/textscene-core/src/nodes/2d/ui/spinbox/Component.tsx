@@ -29,6 +29,7 @@ import {
   spinBoxDisplayText,
   shapeSpinBoxFieldText,
   spinBoxFieldTextTheme,
+  spinBoxFieldThemeItems,
   spinBoxUpButtonState,
   spinBoxDownButtonState,
   spinBoxIconColor,
@@ -50,7 +51,11 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   );
 
   const styleState = resolveLineEditStyleState(props.editable);
-  const fieldBox = pickLineEditStyleBox({}, theme.widgets.lineEdit, styleState);
+  const fieldBox = pickLineEditStyleBox(
+    spinBoxFieldThemeItems(solveNode).styleBoxes,
+    theme.widgets.lineEdit,
+    styleState
+  );
 
   const orderedKeys = controlLayoutOrder(solveNode);
   const resolvedValue = resolveRangeValue(props, orderedKeys);

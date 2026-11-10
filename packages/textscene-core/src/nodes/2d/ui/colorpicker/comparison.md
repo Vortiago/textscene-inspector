@@ -27,9 +27,11 @@ walk. It draws these parts:
   `HSlider` chrome under its gradient band, with the `bar_arrow` grabber that
   `_reset_sliders_theme` sets (`color_picker.cpp:628-651`). Intensity keeps the default
   circle grabber, since that override skips it.
-- The value `SpinBox` of each row, at the real width of its `LineEdit` field
-  (`spin_box.cpp:82-86`), with the `up`/`down` stepper icons beside it.
-- The hex/expression field.
+- The value `SpinBox` of each row, with the `up`/`down` stepper icons beside it. Its column is
+  the `LineEdit` minimum plus the stepper block (`spin_box.cpp:82-86`). The "W" advance stays
+  unrounded, and `GridContainer` truncates the sum (`grid_container.cpp:290`).
+- The hex/expression field. For an HDR or negative `color`, `text_type` draws the disabled
+  `script` icon where it shows "#" otherwise (`color_picker.cpp:1319-1325`).
 - The swatches rows: a collapsed "Swatches" toggle with its `folded_arrow` and a menu
   button, and a "Recent Colors" toggle. Neither toggle changes state. This is all a
   `.tscn`-loaded picker holds: presets arrive only through `add_preset()` at runtime,
@@ -85,11 +87,6 @@ raw `Color()` member default, because `ColorPicker::ColorPicker()` calls
 - **Shader missing** A `picker_shape` other than `0` (HSV Rectangle) or `4` (none) selects
   a shader-backed shape (wheel, VHS/OKHSL circle, either OK rectangle), so only the sample
   row draws.
-- **Not drawn** The `script` icon of `text_type` (`color_picker.cpp:1324`), which shows only
-  for an HDR or negative `color`.
-- **Approximated** The HSV hue channel row (`color_mode = MODE_HSV`, slider index 0)
-  draws a flat grey base with no rainbow overlay, where Godot blends one in at
-  `alpha = saturation` (`color_mode.cpp:218-221`).
 - **Approximated** The minimum-size calculation floors the channel-label column at
   `label_width` (10px), not the widest label's width, which the shape row's 290px floor
   hides in every fixture.

@@ -3,11 +3,10 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { pickerChildTheme } from './pickerChildTheme';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import {
   invertRgb,
-  extractHsv,
-  colorPickerScale,
   colorPickerRows,
   colorPickerMinimumSize,
   svAndHueRects,
@@ -17,22 +16,34 @@ import {
   hexRowColumns,
   modeRowButtonRects,
   swatchesRowRects,
+  presetButtonContent,
+  modeButtonLabel,
+  textTypeLabel,
   sliderGridRowRects,
   colorPickerValueColumnWidth,
   colorPickerLabelColumnWidth,
-  colorPickerModeButtonStyleBox,
+  modeButtonBox,
   colorPickerSliderBoxRect,
   colorPickerChannelGrabberRect,
   colorPickerIntensityRatio,
+  colorPickerEmWidthPx,
 } from './nativeSolver';
-
-const THEME = nativeTheme(1);
-const CTX: SolveContext = { theme: THEME, measureText: null, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
+import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
+import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
+import { measureText as measureTextWithFont } from '../../../../r3f/controls/native/text/measurer';
 
 function node(properties: Record<string, unknown>): SolveNode {
   const tscnNode: TscnNode = controlNode('P', 'ColorPicker', properties);
   return { ...emptySolveNode(), path: 'P', node: tscnNode };
 }
+
+const THEME = pickerChildTheme(node({}), nativeTheme(1)).theme;
+
+/** `THEME` with some widget boxes replaced. */
+function themeWithWidgets(widgets: Partial<typeof THEME.widgets>): typeof THEME {
+  return { ...THEME, widgets: { ...THEME.widgets, ...widgets } };
+}
+const CTX: SolveContext = { theme: THEME, measureText: null, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
 
 /** Every assertion below is on the height alone. */
 function minHeight(result: ReturnType<typeof colorPickerMinimumSize>): number {
@@ -40,41 +51,8 @@ function minHeight(result: ReturnType<typeof colorPickerMinimumSize>): number {
 }
 
 describe('invertRgb', () => {
-  it('flips rgb and leaves alpha — core/math/color.h Color::inverted()', () => {
+  it('flips rgb and leaves alpha: core/math/color.h Color::inverted()', () => {
     expect(invertRgb({ r: 0.2, g: 0.4, b: 0.6, a: 0.5 })).toEqual({ r: 0.8, g: 0.6, b: 0.4, a: 0.5 });
-  });
-});
-
-describe('extractHsv', () => {
-  it('matches Color::get_h/get_s/get_v directly for a non-overbright colour', () => {
-    // color_picker.cpp:593-602: multiplier is 1 for any channel <= 1, so
-    // color_normalized === color and this is the plain HSV extraction.
-    const { h, s, v } = extractHsv({ r: 1, g: 0, b: 0, a: 1 });
-    expect(h).toBeCloseTo(0);
-    expect(s).toBeCloseTo(1);
-    expect(v).toBeCloseTo(1);
-  });
-
-  it('normalises an overbright colour before extracting h/s/v — color_picker.cpp:593-602', () => {
-    // r=2 (linear-equivalent overbright red): multiplier > 1, so v settles
-    // back to 1 after the srgb round-trip, not 2.
-    const { s, v } = extractHsv({ r: 2, g: 0, b: 0, a: 1 });
-    expect(s).toBeCloseTo(1, 2);
-    expect(v).toBeCloseTo(1, 2);
-  });
-
-  it('is achromatic (h=0) for pure black', () => {
-    expect(extractHsv({ r: 0, g: 0, b: 0, a: 1 })).toEqual({ h: 0, s: 0, v: 0 });
-  });
-});
-
-describe('colorPickerScale', () => {
-  it('is 1 at the default theme', () => {
-    expect(colorPickerScale(THEME)).toBe(1);
-  });
-
-  it("reads the theme's own raw scale", () => {
-    expect(colorPickerScale({ scale: 2 })).toBe(2);
   });
 });
 
@@ -92,21 +70,22 @@ const measure = (text: string) => ({ x: text.length * 10, y: 20 });
 const measureText: SolveContext['measureText'] = (text) => measure(text);
 
 describe('colorPickerRows', () => {
-  it('sizes the shape row from sv_width/sv_height/h_width at scale 1 — default_theme.cpp:1077-1079, no other row present', () => {
-    const rows = colorPickerRows(400, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, null);
+  it('sizes the shape row from sv_width/sv_height/h_width at scale 1: default_theme.cpp:1077-1079, no other row present', () => {
+    const rows = colorPickerRows(400, THEME, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, null);
     expect(rows.shape).toEqual({ x: 0, y: 0, w: 400, h: 256 });
     expect(rows.sample).toBeNull();
     expect(rows.totalHeight).toBe(256);
   });
 
   it('floors the shape row at its own minimum when the solved width is narrower', () => {
-    const rows = colorPickerRows(50, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, null);
+    const rows = colorPickerRows(50, THEME, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, null);
     expect(rows.shape!.w).toBe(290); // 256 + 4 + 30
   });
 
   it('draws no shape row for any picker_shape but SHAPE_HSV_RECTANGLE, keeping the row a (zero-height) stacking slot', () => {
     const wheel = colorPickerRows(
       400,
+      THEME,
       THEME,
       { ...ALL_ROWS_HIDDEN, pickerShape: 1, samplerVisible: true },
       null
@@ -115,12 +94,12 @@ describe('colorPickerRows', () => {
     expect(wheel.sample).toEqual({ x: 0, y: 4, w: 400, h: 24 });
   });
 
-  it('draws no shape row for SHAPE_NONE (4) — matches Godot exactly, not a gap', () => {
-    expect(colorPickerRows(400, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 4 }, null).shape).toBeNull();
+  it('draws no shape row for SHAPE_NONE (4): matches Godot exactly, not a gap', () => {
+    expect(colorPickerRows(400, THEME, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 4 }, null).shape).toBeNull();
   });
 
-  it('drops every hidden row AND its separation gap — color_picker.cpp:1906-1956', () => {
-    const rows = colorPickerRows(400, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, measure);
+  it('drops every hidden row AND its separation gap: color_picker.cpp:1906-1956', () => {
+    const rows = colorPickerRows(400, THEME, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, measure);
     expect(rows.mode).toBeNull();
     expect(rows.sliders).toBeNull();
     expect(rows.hex).toBeNull();
@@ -131,7 +110,7 @@ describe('colorPickerRows', () => {
   });
 
   it('sizes every row when all are visible, with a deterministic 10px/char measurer', () => {
-    const rows = colorPickerRows(400, THEME, { pickerShape: 0 }, measure);
+    const rows = colorPickerRows(400, THEME, THEME, { pickerShape: 0 }, measure);
     // mode: 3 buttons ("RGB"=30,"HSV"=30,"Linear"=60) + dropdown(28) + 3*sep(4) = 160.
     // height: max(tab stylebox margin(8), btn_mode nat(16+8=24), text(20)+tab margin(8)=28) = 28.
     expect(rows.mode).toEqual({ x: 0, y: 288, w: 400, h: 28 });
@@ -140,39 +119,59 @@ describe('colorPickerRows', () => {
     expect(rows.sliderRowCount).toBe(5);
     // hex: 20 + 8 (LineEdit content margin) = 28.
     expect(rows.hex).toEqual({ x: 0, y: 480, w: 400, h: 28 });
-    // swatches: row1 max("Swatches"=20, menu_btn nat(16+8)=24)=24, + sep(4) + "Recent Colors"=20 = 48 tall.
-    expect(rows.swatches).toEqual({ x: 0, y: 512, w: 400, h: 48 });
-    expect(rows.totalHeight).toBe(560);
+    // swatches: each Button is max(text(20), icon(16)) + button.normal margin(8) = 28 (Godot 31 at text 23),
+    // so 28 + sep(4) + 28 = 60 tall.
+    expect(rows.swatches).toEqual({ x: 0, y: 512, w: 400, h: 60 });
+    expect(rows.totalHeight).toBe(572);
   });
 
   it('edit_alpha=false drops one slider row and its own trailing space', () => {
-    const rows = colorPickerRows(400, THEME, { pickerShape: 0, editAlpha: false }, measure);
+    const rows = colorPickerRows(400, THEME, THEME, { pickerShape: 0, editAlpha: false }, measure);
     expect(rows.sliderRowCount).toBe(4);
     expect(rows.sliders!.h).toBe(4 * 28 + 3 * 4); // 124
   });
 
   it('edit_intensity=false drops one slider row', () => {
-    const rows = colorPickerRows(400, THEME, { pickerShape: 0, editIntensity: false }, measure);
+    const rows = colorPickerRows(400, THEME, THEME, { pickerShape: 0, editIntensity: false }, measure);
     expect(rows.sliderRowCount).toBe(4);
   });
 
-  it("swatches row 1 floors to menu_btn's own 16px icon height even with no text measurer", () => {
-    // The `palette_box` row is as tall as max(btn_preset text, menu_btn icon), also
-    // with no `measure`. The `btn_recent_preset` row and its separation still follow.
+  it("swatches rows floor to a Button's 16px icon plus its margin even with no text measurer", () => {
+    // `btn_preset` and `btn_recent_preset` each hold the `folded_arrow` icon, also with no `measure`.
     const rows = colorPickerRows(
       400,
+      THEME,
       THEME,
       { ...ALL_ROWS_HIDDEN, pickerShape: 4, presetsVisible: true },
       null
     );
-    expect(rows.swatches!.h).toBe(28); // 24 (row1, menu_btn nat: icon(16)+button.normal margin(8)) + 4 (separation) + 0 (row2, text contributes nothing)
+    expect(rows.swatches!.h).toBe(52); // 24 (icon(16) + button.normal margin(8)) + 4 (separation) + 24
   });
 });
 
 describe('colorPickerMinimumSize', () => {
-  it("sums every visible row plus internal_margin's own content_margin on every side — color_picker.cpp:161-166", () => {
+  it("sums every visible row plus internal_margin's own content_margin on every side: color_picker.cpp:161-166", () => {
     const ctx: SolveContext = { theme: THEME, measureText, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
-    expect(colorPickerMinimumSize(node({}), ctx)).toEqual({ x: 298, y: 568 });
+    expect(colorPickerMinimumSize(node({}), ctx)).toEqual({ x: 298, y: 580 });
+  });
+
+  it('sizes the swatches rows as Buttons with the folded_arrow icon: "Swatches" 10px/char gives 108 and "Recent Colors" 158', () => {
+    // btn_preset 80 + sep(4) + icon(16) + margin(8) = 108. Row 1 adds sep(4) + menu_btn(24) = 136. btn_recent_preset 130 + 28 = 158.
+    const ctx: SolveContext = { theme: THEME, measureText, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
+    const swatchesOnly = node({ ...ALL_ROWS_HIDDEN, pickerShape: 4, presetsVisible: true });
+    expect(colorPickerMinimumSize(swatchesOnly, ctx).x).toBe(158 + 8);
+  });
+
+  it('reserves the whole-pixel shaped width of the preset texts, as the painter draws them (text_server_adv.cpp:7524-7537)', () => {
+    const fractional: SolveContext['measureText'] = (text) => ({ x: text.length * 10.4, y: 20 });
+    const ctx: SolveContext = {
+      theme: THEME,
+      measureText: fractional,
+      combinedMinimumSize: () => ({ x: 0, y: 0 }),
+    };
+    const swatchesOnly = node({ ...ALL_ROWS_HIDDEN, pickerShape: 4, presetsVisible: true });
+    // btn_recent_preset: ceil(135.2) = 136, plus icon(16), sep(4) and margin(8) = 164, plus internal_margin 8.
+    expect(colorPickerMinimumSize(swatchesOnly, ctx).x).toBe(164 + 8);
   });
 
   it('drops the shape row contribution once picker_shape selects an undrawn shape', () => {
@@ -211,7 +210,7 @@ describe('svAndHueRects', () => {
 describe('svSquareCursorPosition', () => {
   const SQUARE = { x: 10, y: 20, w: 100, h: 100 };
 
-  it('places the cursor at s along x and (1-v) along y — color_picker_shape.cpp:259-261', () => {
+  it('places the cursor at s along x and (1-v) along y: color_picker_shape.cpp:259-261', () => {
     expect(svSquareCursorPosition(SQUARE, 0.5, 0.25)).toEqual({ x: 60, y: 95 });
   });
 
@@ -225,8 +224,12 @@ describe('svSquareCursorPosition', () => {
 });
 
 describe('hueIndicatorY', () => {
-  it('is proportional to h across the slider height — color_picker_shape.cpp:431', () => {
+  it('is proportional to h across the slider height: color_picker_shape.cpp:431', () => {
     expect(hueIndicatorY(256, 0.5)).toBe(128);
+  });
+
+  it('truncates to the whole pixel row, as the int y does', () => {
+    expect(hueIndicatorY(256, 0.6)).toBe(153);
   });
 
   it('is 0 at h=0', () => {
@@ -235,7 +238,7 @@ describe('hueIndicatorY', () => {
 });
 
 describe('hexRowColumns', () => {
-  it('splits label(38)/text_type(28)/field(fill) — color_picker.cpp:2191-2222', () => {
+  it('splits label(38)/text_type(28)/field(fill): color_picker.cpp:2191-2222', () => {
     const cols = hexRowColumns({ x: 0, y: 0, w: 400, h: 28 }, THEME);
     expect(cols.label).toEqual({ x: 0, y: 0, w: 38, h: 28 });
     expect(cols.textType).toEqual({ x: 42, y: 0, w: 28, h: 28 }); // 38 + sep(4)
@@ -243,9 +246,18 @@ describe('hexRowColumns', () => {
   });
 });
 
+const NO_LABEL_WIDTHS = [0, 0, 0];
+const MODE_RGB_PRESSED = 0;
+
 describe('modeRowButtonRects', () => {
-  it('splits 3 equal-width buttons + a fixed-width dropdown — color_picker.cpp:2129-2154', () => {
-    const cols = modeRowButtonRects({ x: 0, y: 0, w: 400, h: 20 }, THEME);
+  it('splits 3 equal-width buttons + a fixed-width dropdown: color_picker.cpp:2129-2154', () => {
+    const cols = modeRowButtonRects(
+      { x: 0, y: 0, w: 400, h: 20 },
+      THEME,
+      false,
+      NO_LABEL_WIDTHS,
+      MODE_RGB_PRESSED
+    );
     expect(cols.buttons).toEqual([
       { x: 0, y: 0, w: 120, h: 20 },
       { x: 124, y: 0, w: 120, h: 20 },
@@ -255,24 +267,192 @@ describe('modeRowButtonRects', () => {
   });
 });
 
+const WIDE_PRESSED_THEME = themeWithWidgets({
+  tabContainer: {
+    ...THEME.widgets.tabContainer,
+    selected: {
+      ...THEME.widgets.tabContainer.selected,
+      contentMargin: { left: 30, top: 10, right: 30, bottom: 10 },
+    },
+  },
+});
+
+describe('the slider rows with a SpinBox inner LineEdit box', () => {
+  it('take their height from the value field theme, and the hex row from the plain LineEdit box', () => {
+    const tall = {
+      ...THEME.widgets.lineEdit.normal,
+      contentMargin: { left: 4, top: 10, right: 4, bottom: 10 },
+    };
+    const rows = colorPickerRows(
+      400,
+      THEME,
+      themeWithWidgets({ lineEdit: { ...THEME.widgets.lineEdit, normal: tall } }),
+      { ...ALL_ROWS_HIDDEN, slidersVisible: true, hexVisible: true, editAlpha: false, editIntensity: false },
+      measure
+    );
+    expect(rows.sliders!.h).toBe(3 * (20 + 20) + 2 * 4);
+    expect(rows.hex!.h).toBe(20 + 8);
+  });
+});
+
+describe('the pressed mode button with wider margins than the others', () => {
+  it('reserves its own margins for the pressed button (button.cpp:525)', () => {
+    const labels = [20, 20, 20];
+    const rgb = modeRowButtonRects({ x: 0, y: 0, w: 120, h: 20 }, WIDE_PRESSED_THEME, false, labels, 0);
+    const hsv = modeRowButtonRects({ x: 0, y: 0, w: 120, h: 20 }, WIDE_PRESSED_THEME, false, labels, 1);
+    expect(rgb.buttons[0]!.w).toBeGreaterThan(hsv.buttons[0]!.w);
+    expect(hsv.buttons[1]!.w).toBeGreaterThan(rgb.buttons[1]!.w);
+  });
+
+  it('makes the mode row as tall as the pressed button: text plus its margins', () => {
+    const rows = (colorMode: number) =>
+      colorPickerRows(
+        400,
+        WIDE_PRESSED_THEME,
+        WIDE_PRESSED_THEME,
+        { ...ALL_ROWS_HIDDEN, colorModesVisible: true, colorMode },
+        measure
+      );
+    expect(rows(0).mode!.h).toBe(20 + 20);
+  });
+});
+
+const WIDE_FLAT_THEME = themeWithWidgets({
+  flatMenuButton: {
+    ...THEME.widgets.flatMenuButton,
+    normal: {
+      ...THEME.widgets.flatMenuButton.normal,
+      contentMargin: { left: 14, top: 10, right: 14, bottom: 10 },
+    },
+  },
+});
+
+describe('the FlatMenuButton box of the Theme chain', () => {
+  it('widens btn_shape to the icon plus its margins when that exceeds the 28 minimum (color_picker.cpp:122-124)', () => {
+    const cols = sampleRowColumns({ x: 0, y: 0, w: 400, h: 36 }, WIDE_FLAT_THEME, 0);
+    expect(cols.shape!.w).toBe(16 + 28);
+    expect(cols.pick.w).toBe(28);
+  });
+
+  it('widens the btn_mode dropdown the same way', () => {
+    const cols = modeRowButtonRects(
+      { x: 0, y: 0, w: 400, h: 36 },
+      WIDE_FLAT_THEME,
+      false,
+      NO_LABEL_WIDTHS,
+      0
+    );
+    expect(cols.dropdown.w).toBe(44);
+  });
+
+  it('makes the sample row as tall as btn_shape, unless SHAPE_NONE hides it', () => {
+    const sampleHeight = (pickerShape: number) =>
+      colorPickerRows(
+        400,
+        WIDE_FLAT_THEME,
+        WIDE_FLAT_THEME,
+        { ...ALL_ROWS_HIDDEN, samplerVisible: true, pickerShape },
+        null
+      ).sample!.h;
+    expect(sampleHeight(0)).toBe(16 + 20);
+    expect(sampleHeight(4)).toBe(16 + 8);
+  });
+
+  it('stretches the first swatches row to menu_btn and gives the rest to Recent Colors', () => {
+    const rects = swatchesRowRects({ x: 0, y: 0, w: 300, h: 60 }, WIDE_FLAT_THEME);
+    expect(rects.menuButton.h).toBe(36);
+    expect(rects.swatchesButton.h).toBe(36);
+    expect(rects.recentColorsButton).toMatchObject({ y: 40, h: 20 });
+  });
+});
+
+describe('modeRowButtonRects with a label wider than its share', () => {
+  it('keeps that button at its minimum and shares the rest (box_container.cpp:100-130)', () => {
+    const cols = modeRowButtonRects(
+      { x: 0, y: 0, w: 300, h: 20 },
+      THEME,
+      false,
+      [120, 10, 10],
+      MODE_RGB_PRESSED
+    );
+    expect(cols.buttons[0]!.w).toBeGreaterThanOrEqual(120);
+    expect(cols.buttons[1]!.w).toBeLessThan(cols.buttons[0]!.w);
+    expect(cols.dropdown.x + cols.dropdown.w).toBe(300);
+  });
+});
+
+describe('modeRowButtonRects with a fractional label width', () => {
+  it('reserves the shaped, whole-pixel width of the text (text_server_adv.cpp:7524-7537)', () => {
+    const fractional = modeRowButtonRects(
+      { x: 0, y: 0, w: 300, h: 20 },
+      THEME,
+      false,
+      [120.2, 10, 10],
+      MODE_RGB_PRESSED
+    );
+    const whole = modeRowButtonRects(
+      { x: 0, y: 0, w: 300, h: 20 },
+      THEME,
+      false,
+      [121, 10, 10],
+      MODE_RGB_PRESSED
+    );
+    expect(fractional.buttons).toEqual(whole.buttons);
+  });
+});
+
+describe('modeRowButtonRects at a fractional share', () => {
+  it('gives every button whole pixels and ends flush with the row: box_container.cpp:100-130', () => {
+    const cols = modeRowButtonRects(
+      { x: 0, y: 0, w: 401, h: 20 },
+      THEME,
+      false,
+      NO_LABEL_WIDTHS,
+      MODE_RGB_PRESSED
+    );
+    const rects = [...cols.buttons, cols.dropdown];
+    for (const r of rects) {
+      expect(Number.isInteger(r.x)).toBe(true);
+      expect(Number.isInteger(r.w)).toBe(true);
+    }
+    expect(cols.dropdown.x + cols.dropdown.w).toBe(401);
+  });
+});
+
 describe('swatchesRowRects', () => {
-  it('splits palette_box (Swatches + menu_btn) then btn_recent_preset — color_picker.cpp:2239-2287', () => {
-    const cols = swatchesRowRects({ x: 0, y: 0, w: 400, h: 44 }, THEME);
-    // menu_btn's own natural width: icon(16) + button.normal margin(8) = 24, not the 16px icon alone.
-    expect(cols.swatchesButton).toEqual({ x: 0, y: 0, w: 372, h: 20 }); // 400 - sep(4) - menuBtn(24)
-    expect(cols.menuButton).toEqual({ x: 376, y: 0, w: 24, h: 20 });
-    expect(cols.recentColorsButton).toEqual({ x: 0, y: 24, w: 400, h: 20 }); // 20 + sep(4)
+  it('splits palette_box (Swatches + menu_btn) then btn_recent_preset: color_picker.cpp:2239-2287', () => {
+    const cols = swatchesRowRects({ x: 0, y: 0, w: 400, h: 52 }, THEME);
+    // menu_btn's own natural size: icon(16) + button.normal margin(8) = 24, not the 16px icon alone.
+    expect(cols.swatchesButton).toEqual({ x: 0, y: 0, w: 372, h: 24 }); // 400 - sep(4) - menuBtn(24)
+    expect(cols.menuButton).toEqual({ x: 376, y: 0, w: 24, h: 24 });
+    expect(cols.recentColorsButton).toEqual({ x: 0, y: 28, w: 400, h: 24 }); // 24 + sep(4)
   });
 });
 
 describe('colorPickerValueColumnWidth', () => {
   // spin_box.cpp:82-86: line_edit->get_combined_minimum_size() + buttons_block_width.
   it('is the LineEdit style margin(8) + 4*em("W")(10) + the SpinBox buttons block(18)', () => {
-    expect(colorPickerValueColumnWidth(THEME, measure)).toBe(66); // 8 + 40 + 18
+    expect(colorPickerValueColumnWidth(THEME, 10)).toBe(66); // 8 + 40 + 18
   });
 
-  it('floors to the style margin + buttons block alone with no measurer', () => {
-    expect(colorPickerValueColumnWidth(THEME, null)).toBe(26); // 8 + 0 + 18
+  it('truncates the fractional minimum as GridContainer does: Godot measures 86.5 as an 86px column', () => {
+    expect(colorPickerValueColumnWidth(THEME, 15.125)).toBe(86); // 8 + 60.5 + 18 = 86.5
+  });
+
+  it('floors to the style margin + buttons block alone with no em width', () => {
+    expect(colorPickerValueColumnWidth(THEME, 0)).toBe(26); // 8 + 0 + 18
+  });
+
+  it("ends a 300px picker's band at x=210 and starts its value field at x=214, as pnpm ref:godot measures", () => {
+    const [row] = sliderGridRowRects(
+      { x: 8, y: 0, w: 292, h: 20 },
+      1,
+      THEME,
+      13,
+      colorPickerValueColumnWidth(THEME, 15.125)
+    );
+    expect(row!.slider.x + row!.slider.w).toBe(210);
+    expect(row!.value.x).toBe(214);
   });
 });
 
@@ -305,22 +485,20 @@ describe('colorPickerLabelColumnWidth', () => {
   });
 });
 
-describe('colorPickerModeButtonStyleBox', () => {
+describe('modeButtonBox', () => {
   // color_picker.cpp:2060-2061: BIND_THEME_ITEM_EXT to TabContainer's tab_unselected/tab_selected.
   it('picks tab_unselected (black 60%) when not pressed', () => {
-    expect(colorPickerModeButtonStyleBox(THEME, false).bgColor).toEqual({ r: 0, g: 0, b: 0, a: 0.6 });
+    expect(modeButtonBox(THEME, 1, 0).bgColor).toEqual({ r: 0, g: 0, b: 0, a: 0.6 });
   });
 
   it('picks tab_selected (dark grey 60%, top border) when pressed', () => {
-    const box = colorPickerModeButtonStyleBox(THEME, true);
+    const box = modeButtonBox(THEME, 0, 0);
     expect(box.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
     expect(box.borderWidth.top).toBe(2);
   });
 
   it('both states share the same content margin (10,4,10,4)', () => {
-    expect(colorPickerModeButtonStyleBox(THEME, false).contentMargin).toEqual(
-      colorPickerModeButtonStyleBox(THEME, true).contentMargin
-    );
+    expect(modeButtonBox(THEME, 1, 0).contentMargin).toEqual(modeButtonBox(THEME, 0, 0).contentMargin);
   });
 });
 
@@ -336,7 +514,7 @@ describe('colorPickerSliderBoxRect', () => {
   });
 
   // control.h fit_child_in_rect uses Math::floor, so an odd remainder floors down.
-  it('floors an odd remainder — control.h fit_child_in_rect', () => {
+  it('floors an odd remainder: control.h fit_child_in_rect', () => {
     expect(colorPickerSliderBoxRect({ x: 0, y: 0, w: 400, h: 29 }, THEME, { x: 16, y: 16 }).y).toBe(6); // floor(13/2)=6, not 7
   });
 });
@@ -371,7 +549,7 @@ describe('colorPickerChannelGrabberRect', () => {
 });
 
 describe('sliderGridRowRects', () => {
-  it("splits label(10)/slider(fill)/value(48) per row, stacked with the grid's own v_separation — color_picker.cpp:2172-2180", () => {
+  it("splits label(10)/slider(fill)/value(48) per row, stacked with the grid's own v_separation: color_picker.cpp:2172-2180", () => {
     // The caller supplies labelWidth and valueWidth. This test covers the column split only.
     const rows = sliderGridRowRects({ x: 0, y: 0, w: 400, h: 156 }, 5, THEME, 10, 48);
     expect(rows).toHaveLength(5);
@@ -412,7 +590,13 @@ describe('RTL rows (box_container.cpp:184-192, grid_container.cpp:193-197,218-22
   it('modeRowButtonRects puts btn_mode first and RGB last', () => {
     // Reverse walk of [RGB, HSV, Linear, btn_mode]: dropdown(28) at 0, sep(4),
     // Linear(120) at 32, sep, HSV at 156, sep, RGB at 280, ending at 400.
-    const cols = modeRowButtonRects({ x: 0, y: 0, w: 400, h: 20 }, THEME, true);
+    const cols = modeRowButtonRects(
+      { x: 0, y: 0, w: 400, h: 20 },
+      THEME,
+      true,
+      NO_LABEL_WIDTHS,
+      MODE_RGB_PRESSED
+    );
     expect(cols.dropdown).toEqual({ x: 0, y: 0, w: 28, h: 20 });
     expect(cols.buttons).toEqual([
       { x: 280, y: 0, w: 120, h: 20 },
@@ -425,10 +609,10 @@ describe('RTL rows (box_container.cpp:184-192, grid_container.cpp:193-197,218-22
     // palette_box reverse walk: menu_btn(24) at 0, sep(4), btn_preset(372) at
     // 28. `btn_recent_preset` spans the whole row, so its own mirror is the
     // identity.
-    const cols = swatchesRowRects({ x: 0, y: 0, w: 400, h: 44 }, THEME, true);
-    expect(cols.menuButton).toEqual({ x: 0, y: 0, w: 24, h: 20 });
-    expect(cols.swatchesButton).toEqual({ x: 28, y: 0, w: 372, h: 20 });
-    expect(cols.recentColorsButton).toEqual({ x: 0, y: 24, w: 400, h: 20 });
+    const cols = swatchesRowRects({ x: 0, y: 0, w: 400, h: 52 }, THEME, true);
+    expect(cols.menuButton).toEqual({ x: 0, y: 0, w: 24, h: 24 });
+    expect(cols.swatchesButton).toEqual({ x: 28, y: 0, w: 372, h: 24 });
+    expect(cols.recentColorsButton).toEqual({ x: 0, y: 28, w: 400, h: 24 });
   });
 
   it("sliderGridRowRects starts each row at the grid's right edge and walks left", () => {
@@ -453,7 +637,7 @@ describe('RTL rows (box_container.cpp:184-192, grid_container.cpp:193-197,218-22
     expect(cols.pick).toEqual({ x: 372, y: 0, w: 28, h: 24 });
   });
 
-  it('colorPickerChannelGrabberRect reads the ratio from the right — slider.cpp:363', () => {
+  it('colorPickerChannelGrabberRect reads the ratio from the right: slider.cpp:363', () => {
     // `(rtl ? 1 - ratio : ratio) * areasize + grabber_shift`, the same branch
     // the stock grabber already takes (`shared/sliderSolver.ts`).
     expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0, { x: 16, y: 16 }, 8, true).x).toBe(392);
@@ -481,9 +665,90 @@ describe('sampleRowColumns', () => {
     expect(cols.shape).toEqual({ x: 372, y: 0, w: 28, h: 24 });
   });
 
-  it('drops the shape button at SHAPE_NONE (4) — color_picker.cpp:321', () => {
+  it('scales the pick and shape buttons to 28 * scale in a scale-2 theme: color_picker.cpp:122-124', () => {
+    const doubled = pickerChildTheme(node({}), nativeTheme(2)).theme;
+    const cols = sampleRowColumns({ x: 0, y: 0, w: 400, h: 48 }, doubled, 0);
+    expect(cols.pick.w).toBe(56);
+    expect(cols.shape!.w).toBe(56);
+  });
+
+  it('drops the shape button at SHAPE_NONE (4): color_picker.cpp:321', () => {
     const cols = sampleRowColumns(SAMPLE, THEME, 4);
     expect(cols.shape).toBeNull();
     expect(cols.sample.w).toBe(368); // 400 - 28 - 4
+  });
+});
+
+describe('presetButtonContent', () => {
+  // btn_preset and btn_recent_preset: a Button with the folded_arrow icon at the left, LEFT text, margin 4 (button.cpp:349-405).
+  const box = { x: 10, y: 20, w: 366, h: 31 };
+  const text = { x: 73, y: 23 };
+
+  it('puts the icon at the left margin and the text after it, as pnpm ref:godot measures the rows', () => {
+    const { icon, label } = presetButtonContent(box, THEME, {
+      size: text,
+      direction: { rtl: false, isTextRtl: false },
+    });
+    // y: floor((31 - 8 - 16) / 2) = 3, plus margin 4.
+    expect(icon).toEqual({ x: 14, y: 27, w: 16, h: 16 });
+    // x: margin 4 + icon 16 + h_separation 4 = 24 into the box, and 366 - 8 - 20 = 338 wide.
+    expect(label).toMatchObject({ leftPx: 34, widthPx: 338 });
+  });
+
+  it('mirrors in a right-to-left layout: the icon on the trailing edge, the text from the leading margin', () => {
+    const { icon, label } = presetButtonContent(box, THEME, {
+      size: text,
+      direction: { rtl: true, isTextRtl: false },
+    });
+    expect(icon).toEqual({ x: 356, y: 27, w: 16, h: 16 });
+    expect(label).toMatchObject({ leftPx: 14, widthPx: 338 });
+  });
+});
+
+describe('colorPickerEmWidthPx', () => {
+  it('gives the painter (shapeButtonLabel) and the solver (measureText) the same em', () => {
+    const fontSizePx = THEME.fontSize;
+    const painterEm = colorPickerEmWidthPx(
+      (text) => shapeButtonLabel(text, { fontSizePx, fontMetrics: OPEN_SANS_FONT_METRICS }).widthPx
+    );
+    const solverEm = colorPickerEmWidthPx(
+      (text) => measureTextWithFont(text, fontSizePx, 0, OPEN_SANS_FONT_METRICS).x
+    );
+    expect(painterEm).toBe(solverEm);
+    expect(painterEm).toBeGreaterThan(0);
+  });
+});
+
+describe('modeButtonLabel', () => {
+  const box = { x: 100.5, y: 300, w: 120.25, h: 31 };
+  const text = { x: 41, y: 23 };
+  const direction = { rtl: false, isTextRtl: false };
+
+  it('centres the text in the drawable width after the style margins', () => {
+    const label = modeButtonLabel(box, THEME, THEME.widgets.tabContainer.unselected, {
+      size: text,
+      direction,
+    });
+    expect(label.alignment).toBe(1);
+    expect(label.leftPx).toBeGreaterThan(box.x);
+    expect(label.widthPx).toBeLessThan(box.w);
+  });
+
+  it.each([false, true])('starts the box at the left margin of the style (pressed: %s)', (isPressed) => {
+    const styleBox = isPressed ? THEME.widgets.tabContainer.selected : THEME.widgets.tabContainer.unselected;
+    const label = modeButtonLabel(box, THEME, styleBox, { size: text, direction });
+    expect(label.leftPx).toBe(box.x + styleBox.contentMargin.left);
+  });
+});
+
+describe('textTypeLabel', () => {
+  it('centres the "#" with the button_normal margins', () => {
+    const box = { x: 700, y: 510, w: 28, h: 31 };
+    const label = textTypeLabel(box, THEME, {
+      size: { x: 10, y: 23 },
+      direction: { rtl: false, isTextRtl: false },
+    });
+    expect(label.leftPx).toBe(box.x + THEME.widgets.button.normal.contentMargin.left);
+    expect(label.alignment).toBe(1);
   });
 });

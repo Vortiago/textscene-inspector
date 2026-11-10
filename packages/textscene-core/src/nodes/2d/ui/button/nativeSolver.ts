@@ -16,6 +16,7 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
+  buttonContentSize,
   fitIconSize,
   pickButtonStyleBox,
   resolveToggleDrawState,
@@ -86,11 +87,11 @@ const BUTTON_ICON_COLOR_KEYS: Record<ToggleDrawState, string> = {
 };
 
 /**
- * The default-theme icon modulate per draw state: `icon_normal_color = Color(1, 1, 1, 1)`
- * (`default_theme.cpp:164`) and `icon_disabled_color = Color(1, 1, 1, 0.4)` (`:169`). No other
- * builtin widget sets either key.
+ * The default-theme icon modulate per draw state: `icon_normal_color` and `icon_pressed_color` are
+ * `Color(1, 1, 1, 1)` (`default_theme.cpp:164-165`), `icon_disabled_color` is `Color(1, 1, 1, 0.4)` (`:169`).
+ * No other builtin widget sets these keys.
  */
-const BUTTON_ICON_MODULATE: Record<ToggleDrawState, Rgba> = {
+export const BUTTON_ICON_MODULATE: Record<ToggleDrawState, Rgba> = {
   normal: { r: 1, g: 1, b: 1, a: 1 },
   pressed: { r: 1, g: 1, b: 1, a: 1 },
   disabled: { r: 1, g: 1, b: 1, a: 0.4 },
@@ -277,39 +278,18 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   // overrun behaviour or autowrap, since a narrower box trims or wraps it (`button.cpp:493-495`).
   const textSize = labelMinimumTextSize(layout, props);
 
-  let width = textSize.x;
-  let height = textSize.y;
+  const iconSize =
+    !props.expandIcon && n.textureSize && n.textureSize.x > 0 && n.textureSize.y > 0
+      ? fitIconSize(n.textureSize, n.constants.icon_max_width ?? 0)
+      : null;
+  const content = buttonContentSize({
+    textSize,
+    hasText,
+    iconSize,
+    iconAlignment: props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    verticalIconAlignment: props.verticalIconAlignment ?? VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
+    hSeparation: n.constants.h_separation ?? ctx.theme.separation,
+  });
 
-  const iconAlignment = props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT;
-  const verticalIconAlignment = props.verticalIconAlignment ?? VerticalAlignment.VERTICAL_ALIGNMENT_CENTER;
-  const iconMaxWidth = n.constants.icon_max_width ?? 0;
-  const hSeparation = n.constants.h_separation ?? ctx.theme.separation;
-
-  // A `null` `n.textureSize` is an icon still resolving, which contributes nothing yet.
-  if (!props.expandIcon && n.textureSize && n.textureSize.x > 0 && n.textureSize.y > 0) {
-    const iconSize = fitIconSize(n.textureSize, iconMaxWidth);
-
-    if (verticalIconAlignment === VerticalAlignment.VERTICAL_ALIGNMENT_CENTER) {
-      height = Math.max(height, iconSize.y);
-    } else {
-      height += iconSize.y;
-    }
-
-    if (iconAlignment !== HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER) {
-      width += iconSize.x;
-      if (hasText) width += Math.max(0, hSeparation);
-    } else {
-      width = Math.max(width, iconSize.x);
-    }
-  }
-
-  if (hasText) {
-    if (verticalIconAlignment === VerticalAlignment.VERTICAL_ALIGNMENT_CENTER) {
-      height = Math.max(textSize.y, height);
-    } else {
-      height += textSize.y;
-    }
-  }
-
-  return { x: marginX + width, y: marginY + height };
+  return { x: marginX + content.x, y: marginY + content.y };
 };

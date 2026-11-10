@@ -84,8 +84,8 @@ function ctx(withMeasurer = true): SolveContext {
   };
 }
 
-describe('buttonMinimumSize — StyleBox content margins + text, no icon', () => {
-  it('is exactly the default-theme button margin for empty text (8, 8) — content_margin=4 all sides', () => {
+describe('buttonMinimumSize: StyleBox content margins + text, no icon', () => {
+  it('is exactly the default-theme button margin for empty text (8, 8): content_margin=4 all sides', () => {
     expect(minSize(node({}), ctx())).toEqual({ x: 8, y: 8 });
   });
 
@@ -95,7 +95,7 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
     expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 
-  it('treats an absent measurer as "text contributes nothing", NOT as the whole function failing — margin alone still returns', () => {
+  it('treats an absent measurer as "text contributes nothing", NOT as the whole function failing: margin alone still returns', () => {
     const result = minSize(node({ text: 'AB' }), ctx(false));
     expect(result).toEqual({ x: 8, y: 8 });
   });
@@ -169,7 +169,7 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
   });
 });
 
-describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)', () => {
+describe('buttonMinimumSize: icon contribution (!expand_icon && icon present)', () => {
   it('vertical_icon_alignment CENTER (default): height is the MAX of icon/text, width ADDS icon width + h_separation', () => {
     // icon 20x20 (shorter than the 23px font height): height stays 23.
     // width: 21.125 (text) + 20 (icon) + 4 (h_separation default) = 45.125.
@@ -229,7 +229,7 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
   });
 });
 
-describe('buttonLabelShape — the one shaping the solver and the painter share', () => {
+describe('buttonLabelShape: the one shaping the solver and the painter share', () => {
   const shape = (props: Partial<ButtonProperties>): TextLayoutResult | null =>
     buttonLabelShape(node(props), ctx().theme);
 
@@ -240,11 +240,11 @@ describe('buttonLabelShape — the one shaping the solver and the painter share'
     expect(layout.lines[0]?.text).toBe('AB');
   });
 
-  it('is null for empty text — the one case neither side draws', () => {
+  it('is null for empty text: the one case neither side draws', () => {
     expect(shape({})).toBeNull();
   });
 
-  it('shapes at boxWidthPx 0 / autowrap OFF / lineSpacingPx 0 — Button never wraps', () => {
+  it('shapes at boxWidthPx 0 / autowrap OFF / lineSpacingPx 0: Button never wraps', () => {
     // Single line ('AB' has no hard break), so widthPx/heightPx alone prove
     // this: an autowrap-constrained shape of 'AB' at a 0-width box would
     // have broken onto multiple lines instead.
@@ -253,13 +253,13 @@ describe('buttonLabelShape — the one shaping the solver and the painter share'
     expect(layout.heightPx).toBe(FONT_HEIGHT);
   });
 
-  it('ignores the readiness gate — that lives in the solver, and the painter shapes unconditionally', () => {
+  it('ignores the readiness gate: that lives in the solver, and the painter shapes unconditionally', () => {
     expect(minSize(node({ text: 'AB' }), ctx(false))).toEqual(minSize(node({}), ctx(false)));
     expect(buttonLabelShape(node({ text: 'AB' }), ctx(false).theme)).not.toBeNull();
   });
 });
 
-describe('buttonLabelShape — direction and language (button.cpp:564-569)', () => {
+describe('buttonLabelShape: direction and language (button.cpp:564-569)', () => {
   /** The shaped line's glyph characters, left to right. */
   function visual(props: Partial<ButtonProperties>, overrides: Partial<SolveNode> = {}): string {
     const layout = buttonLabelShape({ ...node(props), ...overrides }, ctx().theme)!;
@@ -285,7 +285,7 @@ describe('buttonLabelShape — direction and language (button.cpp:564-569)', () 
   });
 });
 
-describe('buttonTextTheme — font_color / font_disabled_color key mapping', () => {
+describe('buttonTextTheme: font_color / font_disabled_color key mapping', () => {
   it('resolves the theme default control_font_color for the normal state', () => {
     expect(buttonTextTheme(node({}), {} as ButtonProperties, 'normal', ctx())).toEqual({
       fontSizePx: 16,
@@ -323,7 +323,7 @@ describe('buttonTextTheme — font_color / font_disabled_color key mapping', () 
   });
 });
 
-describe('buttonIconColor — icon_normal_color / icon_disabled_color (default_theme.cpp:164,169)', () => {
+describe('buttonIconColor: icon_normal_color / icon_disabled_color (default_theme.cpp:164,169)', () => {
   it('is opaque white for the normal state (icon_normal_color = Color(1,1,1,1))', () => {
     expect(buttonIconColor({}, 'normal')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
@@ -371,7 +371,7 @@ describe('a focused Button (button.cpp:282-288)', () => {
   });
 });
 
-describe(`buttonMinimumSize — resolves this Button's own theme font key ("font", default_theme.cpp:152)`, () => {
+describe(`buttonMinimumSize: resolves this Button's own theme font key ("font", default_theme.cpp:152)`, () => {
   // Without a DOM, `peekSceneFontMetrics` always answers the bundled default, so a
   // resolved value cannot be observed. It warns for an unresolvable font (a FontFile with no bytes),
   // which proves the lookup found something.
@@ -407,7 +407,7 @@ describe(`buttonMinimumSize — resolves this Button's own theme font key ("font
  * Expected widths are `get_combined_minimum_size()` (height 31) in Godot 4.6.3 on
  * `scenes/fixtures/complex-2d-gui.tscn` at 1152x648, whose buttons add only the default margin 4 a side.
  */
-describe('buttonMinimumSize — the shaped text extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
+describe('buttonMinimumSize: the shaped text extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
   it.each([
     ['Apply', 52],
     ['Restore defaults', 135],
@@ -416,7 +416,7 @@ describe('buttonMinimumSize — the shaped text extent is ceiled (text_server_ad
     expect(minSize(node({ text }), ctx()).x).toBe(expected);
   });
 
-  it('adds the margin to the CEILED text width, not the ceil of the margined width — both are whole here, and the text is what carries the fraction', () => {
+  it('adds the margin to the CEILED text width, not the ceil of the margined width: both are whole here, and the text is what carries the fraction', () => {
     const withText = minSize(node({ text: 'Apply' }), ctx()).x;
     const empty = minSize(node({}), ctx()).x;
     expect(empty).toBe(8);
@@ -485,7 +485,7 @@ describe('Button.expand_icon under autowrap shapes at the drawn width (button.cp
   });
 });
 
-describe('buttonLabelShape — the wrap width and trim flags reach the shaper (button.cpp:428-432,546-561)', () => {
+describe('buttonLabelShape: the wrap width and trim flags reach the shaper (button.cpp:428-432,546-561)', () => {
   function rows(props: Partial<ButtonProperties>, boxWidthPx: number): string[] {
     return (buttonLabelShape(node(props), nativeTheme(1), boxWidthPx)?.lines ?? []).map((l) => l.text);
   }
