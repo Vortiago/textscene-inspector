@@ -132,9 +132,9 @@ lenient tree carries none of them, and a malformed one does not reach the tree.
 
 ## Known limitations
 
-- **Approximated** Text in a zoomed GraphElement child keeps the sharp edge of the bundled
-  font's atlas. Godot rasterises each glyph at its base size and magnifies that bitmap, so its
-  edge blurs above `zoom = 1` (`canvas_item.cpp:146`, `text_server_adv.cpp:3981-3996`).
-  ADR-0040 keeps the atlas for Controls, so the text of every scaled Control differs this way.
+- **Approximated** Text under a scale above 1, in a zoomed GraphElement child as in any scaled
+  Control, keeps the sharp edge of the bundled font's atlas. Godot rasterises each glyph at its
+  base size and magnifies that bitmap, so its edge blurs (`canvas_item.cpp:146`,
+  `text_server_adv.cpp:3981-3996`). ADR-0040 keeps the atlas for Controls.
 - **Approximated** The toolbar buttons and SpinBox draw their icons, pressed boxes, field,
   arrows and disabled state, but no hover or focus state.
