@@ -50,7 +50,7 @@ interface ControlCanvasWalkerProps {
    * that owns another viewport must state it.
    */
   snapToPixels?: boolean;
-  /** Receives the solve of `tree`, for a caller that needs a rect the walk draws from. */
+  /** Called after each solve, with the solved controls keyed by tree path. */
   onSolved?: (solved: ReadonlyMap<string, SolvedControl>) => void;
 }
 

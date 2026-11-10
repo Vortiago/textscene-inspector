@@ -31,14 +31,15 @@ export default function UnownedNodeControls({ node }: { node: LiveNode }) {
     internalResources,
     usePaintRange()
   );
-  // The tree's first node is the Control root the placement holds, which the tile layer sorts on.
+  // The first tree node is the Control root the placement holds, which the tile layer sorts on.
+  const rootPath = tree[0]?.path;
   const { reportRootRect } = node;
   const onSolved = useCallback(
     (solved: ReadonlyMap<string, SolvedControl>) => {
-      const rect = tree[0] && solved.get(tree[0].path)?.rect;
+      const rect = rootPath && solved.get(rootPath)?.rect;
       if (rect) reportRootRect?.(rect);
     },
-    [tree, reportRootRect]
+    [rootPath, reportRootRect]
   );
   return (
     <ControlCanvasWalker

@@ -41,3 +41,8 @@ export function rect2Merge(a: Rect2, b: Rect2): Rect2 {
 export function rect2Grow(r: Rect2, amount: number): Rect2 {
   return { x: r.x - amount, y: r.y - amount, w: r.w + amount * 2, h: r.h + amount * 2 };
 }
+
+/** Whether both rects have the same position and size. */
+export function rect2Equals(a: Rect2, b: Rect2): boolean {
+  return a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
+}
