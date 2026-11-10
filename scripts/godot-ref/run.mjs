@@ -461,8 +461,8 @@ export function parseArgs(argv) {
         args.particles = nonNegativeNumber('--particles', argv[++i]);
         break;
       case '--debug-collisions':
-        // The editor's "Visible Collision Shapes" run flag: a 2D joint draws its marker, and a
-        // collision shape its outline, in a game too (`pin_joint_2d.cpp:42-50`).
+        // The editor's "Visible Collision Shapes" run flag: a 2D joint draws its marker in a game too
+        // (`pin_joint_2d.cpp:42-50`).
         args.debugCollisions = true;
         break;
       case '--rendering-driver':

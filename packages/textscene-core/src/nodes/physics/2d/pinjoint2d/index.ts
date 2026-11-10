@@ -2,7 +2,7 @@
  * PinJoint2D registration: the parser.
  *
  * It reuses the Node2D parse, and property knowledge lives in linterParser.ts. Its marker
- * has no property to read, so index.r3f.ts draws it from constants.
+ * has no property to read, so Component.tsx draws it from constants.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
