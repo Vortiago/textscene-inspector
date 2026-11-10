@@ -15,6 +15,7 @@ import { perObject } from '../../../../utils/perObject';
 import { useInstancedScenePaths } from '../../../../r3f/contexts/InstancedScenePathsContext';
 import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsContext';
 import {
+  combinedPivotOffset,
   controlItemOrigin,
   snapControlsToPixelsEnabled,
 } from '../../../../r3f/controls/native/controlPixelSnap';
@@ -73,7 +74,6 @@ export function useSceneTileNodes(
     // instantiate is a valid scene whose `instantiate()` returns null, so its tiles draw nothing.
     const placeable = new Map<TileScene, PlaceableScene>();
     const sceneless = new Set<TileScene>();
-    const instanceOf = instanceNodesOf(scope);
     scenes.forEach((scene, index) => {
       const step = sceneSteps[index]!;
       // A scene not yet loaded has no root to judge: its tile draws nothing and shows no disc.
@@ -81,7 +81,7 @@ export function useSceneTileNodes(
       if (step.isFailedInstance || root === null) sceneless.add(scene);
       else if (!step.isRefusedInstance)
         placeable.set(scene, {
-          instance: instanceOf(scene),
+          instance: sceneNodes[index]!,
           root,
           ySortRoot: ySortRootOf(step.node, root, snapToPixels),
         });
@@ -98,7 +98,7 @@ export function useSceneTileNodes(
         ({ tile }) => !tile.scene || tile.displayPlaceholder || sceneless.has(tile.scene)
       ),
     };
-  }, [model, allTiles, tiles, scenes, sceneSteps, scope, snapToPixels]);
+  }, [model, allTiles, tiles, scenes, sceneNodes, sceneSteps, snapToPixels]);
 }
 
 /**
@@ -154,9 +154,8 @@ function rootKindOf(rootType: string): SceneRootKind | null {
 
 /**
  * The instance root as the sort reads it. A Node2D root has its own transform and z. A Control root
- * sorts on the origin of its canvas item (`control.cpp:726-736`): its offsets, the rect of a parent
- * with no size, then its pivot, rotation and scale, snapped as the walker snaps it. It keeps the
- * placement's z. A text minimum size that grows the rect towards the beginning is not read.
+ * sorts on its canvas item origin (`control.cpp:726-736`): offsets, then pivot, rotation and scale,
+ * snapped as the walker snaps them, with the placement's z. A text minimum size is not read.
  */
 function ySortRootOf(rootNode: LiveNode, root: SceneRootKind, snapToPixels: boolean): YSortRoot {
   if (root === 'node2d') {
@@ -169,10 +168,7 @@ function ySortRootOf(rootNode: LiveNode, root: SceneRootKind, snapToPixels: bool
   }
   const control = rootNode.properties as ControlProperties;
   const { offsetLeft = 0, offsetTop = 0, offsetRight = 0, offsetBottom = 0 } = control;
-  const pivot = {
-    x: (control.pivotOffset?.x ?? 0) + (control.pivotOffsetRatio?.x ?? 0) * (offsetRight - offsetLeft),
-    y: (control.pivotOffset?.y ?? 0) + (control.pivotOffsetRatio?.y ?? 0) * (offsetBottom - offsetTop),
-  };
+  const pivot = combinedPivotOffset(control, { w: offsetRight - offsetLeft, h: offsetBottom - offsetTop });
   const origin = controlItemOrigin(
     { x: offsetLeft, y: offsetTop },
     { rotation: control.rotation ?? 0, scale: control.scale ?? { x: 1, y: 1 }, pivot },

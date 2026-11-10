@@ -38,6 +38,15 @@ describe('a TileSetScenesCollectionSource in a scene', () => {
     });
   });
 
+  it('gives the tiles that name one scene the same scene object', () => {
+    const { model } = tileSetWith({
+      'scenes/1/scene': 'ExtResource("5")',
+      'scenes/2/scene': 'ExtResource("5")',
+    });
+    const { scenes } = model.sceneSources.get(2)!;
+    expect(scenes.get(1)!.scene).toBe(scenes.get(2)!.scene);
+  });
+
   it.each([
     ['an ExtResource that is no PackedScene', 'ExtResource("6")'],
     ['an ExtResource the file lacks', 'ExtResource("9")'],

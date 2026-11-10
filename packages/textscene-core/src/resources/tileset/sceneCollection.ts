@@ -30,6 +30,12 @@ export function resolveSceneCollectionSource(
   tables: SceneTables
 ): SceneCollectionSourceModel {
   const scenes = new Map<number, SceneTileModel>();
+  // One `TileScene` per reference, so the tiles that name a scene share one instance node and step.
+  const sceneByValue = new Map<string, TileScene | null>();
+  const sharedSceneOf = (value: string): TileScene | null => {
+    if (!sceneByValue.has(value)) sceneByValue.set(value, sceneOf(value, tables));
+    return sceneByValue.get(value)!;
+  };
   // `next_scene_id`, advanced past the taken ids after each created tile (`tile_set.cpp:5739-5743`).
   let nextSceneId = 1;
   const createTile = (id: number, scene: TileScene | null): SceneTileModel => {
@@ -46,7 +52,7 @@ export function resolveSceneCollectionSource(
     const sceneId = stringToInt(match[1]!);
     const existing = scenes.get(sceneId);
     if (match[2] === 'scene') {
-      const scene = sceneOf(value, tables);
+      const scene = sharedSceneOf(value);
       if (existing) existing.scene = scene;
       else createTile(sceneId, scene);
     } else {

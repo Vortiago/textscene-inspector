@@ -26,7 +26,7 @@ import { INHERIT_PARENT_MATERIAL } from '../../canvasAncestors';
 import { isCanvasLayerType } from '../../canvasPaintOrder';
 import { CanvasItemGroup, CanvasItemProvider } from '../../components/CanvasItemGroup';
 import { NodePathProvider } from '../../contexts/NodePathContext';
-import { snapControlsToPixelsEnabled, snappedControlOrigin } from './controlPixelSnap';
+import { combinedPivotOffset, snapControlsToPixelsEnabled, snappedControlOrigin } from './controlPixelSnap';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import {
   CanvasItemChildScope,
@@ -191,8 +191,7 @@ function ControlItemGroup({ solveNode, solved, theme, measureText, snapToPixels 
   const scaleX = layoutScale ? layoutScale.x : resets ? 1 : (props.scale?.x ?? 1);
   const scaleY = layoutScale ? layoutScale.y : resets ? 1 : (props.scale?.y ?? 1);
   const hasOwnTransform = rotation !== 0 || scaleX !== 1 || scaleY !== 1;
-  const pivotX = (props.pivotOffset?.x ?? 0) + (props.pivotOffsetRatio?.x ?? 0) * rect.w;
-  const pivotY = (props.pivotOffset?.y ?? 0) + (props.pivotOffsetRatio?.y ?? 0) * rect.h;
+  const { x: pivotX, y: pivotY } = combinedPivotOffset(props, rect);
 
   // Godot snaps the canvas item, leaving `get_rect()` at full precision. The inner
   // pivot groups add their own translation, so this is the outer half of one

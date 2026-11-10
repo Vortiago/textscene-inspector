@@ -100,3 +100,14 @@ export function controlItemOrigin(
   const internal = internalTransformTranslation(transform);
   return { x: outer.x + internal.x, y: outer.y + internal.y };
 }
+
+/** `Control::get_combined_pivot_offset()`: the pivot offset plus the ratio of the rect size. */
+export function combinedPivotOffset(
+  control: { pivotOffset?: Vector2; pivotOffsetRatio?: Vector2 },
+  size: { w: number; h: number }
+): Vector2 {
+  return {
+    x: (control.pivotOffset?.x ?? 0) + (control.pivotOffsetRatio?.x ?? 0) * size.w,
+    y: (control.pivotOffset?.y ?? 0) + (control.pivotOffsetRatio?.y ?? 0) * size.h,
+  };
+}
