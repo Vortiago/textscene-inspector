@@ -205,7 +205,8 @@ function presetTimeMinimumSize(n: SolveNode, ctx: SolveContext): Vector2 {
 export function createSolveContext(
   theme: NativeTheme,
   measureText: TextMeasurer | null = null,
-  tentativeRect?: (n: SolveNode) => Rect2 | undefined
+  tentativeRect?: (n: SolveNode) => Rect2 | undefined,
+  embedderSize?: Vector2
 ): SolveContext {
   const cache = new Map<string, Vector2>();
   const ctx: SolveContext = {
@@ -221,6 +222,7 @@ export function createSolveContext(
       return value;
     },
     tentativeRect,
+    embedderSize,
   };
   return ctx;
 }

@@ -17,6 +17,7 @@ const EMBEDDED_WINDOW_TYPE_NAMES = [
   'Window',
   'Popup',
   'PopupPanel',
+  'PopupMenu',
   'AcceptDialog',
   'ConfirmationDialog',
 ] as const;

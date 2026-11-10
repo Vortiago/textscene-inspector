@@ -58,7 +58,7 @@ export const STYLE_FILL = {
 } as const satisfies Record<string, Rgba>;
 
 /** `default_corner_radius` = 3 (px): the corner radius of every default flat stylebox. */
-const DEFAULT_CORNER_RADIUS = 3;
+export const DEFAULT_CORNER_RADIUS = 3;
 
 /** `default_margin` = 4 (px): the Button "normal" stylebox content margin (all sides). */
 export const DEFAULT_CONTENT_MARGIN = 4;

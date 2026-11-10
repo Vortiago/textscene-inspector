@@ -117,7 +117,7 @@ export function resolveCheckBoxIconKey(props: CheckBoxProperties): CheckBoxIconK
 }
 
 /** Every vendored icon shares this authored size (`native/themeIcons.ts`: `checked.svg` et al, 16x16). */
-const CHECKBOX_ICON_NATURAL_SIZE: Vector2 = { x: 16, y: 16 };
+export const CHECKBOX_ICON_NATURAL_SIZE: Vector2 = { x: 16, y: 16 };
 
 /**
  * Each `CheckBoxIconKey` to the Theme item name Godot registers it under (`check_box.cpp:157-164`),
@@ -134,7 +134,7 @@ export const CHECK_BOX_ICON_THEME_NAME: Record<CheckBoxIconKey, string> = {
   radioUncheckedDisabled: 'radio_unchecked_disabled',
 };
 
-const CHECK_BOX_ICON_THEME_NAMES = Object.values(CHECK_BOX_ICON_THEME_NAME);
+export const CHECK_BOX_ICON_THEME_NAMES = Object.values(CHECK_BOX_ICON_THEME_NAME);
 
 /**
  * Which of CheckBox's 8 icon slots have a themed answer, for `SolveNode.textureSlots`. The walker

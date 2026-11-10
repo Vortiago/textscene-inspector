@@ -53,6 +53,12 @@ export interface SolveContext {
    * pass that runs only for a type registered with `registerSizeDependentMinimum`.
    */
   tentativeRect?(n: SolveNode): Rect2 | undefined;
+  /**
+   * The visible size of the viewport that embeds the window being wrapped
+   * (`Window::get_usable_parent_rect`, `window.cpp:2326-2340`), which a popup's contents minimum
+   * limits its height to. Absent outside a window wrap, where nothing limits it.
+   */
+  embedderSize?: Vector2;
 }
 
 /**

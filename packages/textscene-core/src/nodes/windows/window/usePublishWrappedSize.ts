@@ -4,6 +4,7 @@
  * the loaded size holds the Controls.
  */
 import { useEffect, useMemo } from 'react';
+import type { Vector2 } from '../../../godot/math/vector';
 import { useRegisterViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
@@ -17,15 +18,16 @@ export function usePublishWrappedSize(
   window: SolveNode | null,
   theme: NativeTheme,
   measureText: TextMeasurer | null,
-  generation: number
+  generation: number,
+  embedderSize: Vector2
 ): void {
   const registerViewportRect = useRegisterViewportRect();
   const wrapped = useMemo(
-    () => (window ? wrappedWindowSize(window, theme, measureText) : null),
+    () => (window ? wrappedWindowSize(window, theme, measureText, embedderSize) : null),
     // `generation` is a cache-buster, not read inside: a font or StyleBox that settles changes the
     // minimums without changing `window`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [window, theme, measureText, generation]
+    [window, theme, measureText, generation, embedderSize]
   );
   const loaded = window ? (window.node.properties as WindowProperties).size : null;
   const grows = wrapped !== null && loaded !== null && (wrapped.x !== loaded.x || wrapped.y !== loaded.y);

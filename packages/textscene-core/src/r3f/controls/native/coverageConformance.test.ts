@@ -72,13 +72,13 @@ function bareSolveNode(type: string): SolveNode {
 /**
  * The 59 Control types `ClassDB.can_instantiate` accepts, plus `CanvasLayer`
  * and `ParallaxBackground`, which each root a 2D UI subtree on their own canvas
- * (`canvas_item.cpp:246-252` stops the climb at either), plus `Window`, `Popup`
- * and `PopupPanel`, which root the canvas of their own viewport.
+ * (`canvas_item.cpp:246-252` stops the climb at either), plus `Window`, `Popup`,
+ * `PopupPanel` and `PopupMenu`, which root the canvas of their own viewport.
  */
 // `ScrollBar`, `Separator`, `Slider` and the three `OpenXR*Editor*` classes are
 // abstract, so no scene holds one. A number, not a derived list: every other
 // check here moves with the registry, so a slice deleted from both sides passes.
-const REGISTERED_CONTROL_TYPES = 66;
+const REGISTERED_CONTROL_TYPES = 67;
 
 /**
  * A slice that writes a `TextureSlotsFn` and never registers it passes its own

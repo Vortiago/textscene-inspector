@@ -47,7 +47,8 @@ function scaledContentsMinimumSize(window: SolveNode, ctx: SolveContext): Vector
 export function wrappedWindowSize(
   window: SolveNode,
   theme: NativeTheme,
-  measureText: TextMeasurer | null
+  measureText: TextMeasurer | null,
+  embedderSize?: Vector2
 ): Vector2 {
   const props = window.node.properties as WindowProperties;
   const limits = { minSize: props.min_size, maxSize: props.max_size };
@@ -55,6 +56,6 @@ export function wrappedWindowSize(
   return embeddedWindowSize(
     props.size,
     limits,
-    scaledContentsMinimumSize(window, createSolveContext(theme, measureText))
+    scaledContentsMinimumSize(window, createSolveContext(theme, measureText, undefined, embedderSize))
   );
 }

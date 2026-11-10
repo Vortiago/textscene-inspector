@@ -23,6 +23,12 @@ import type { SubViewportProperties } from './types.js';
 import { viewportGateAt, type ViewportGate } from './viewportGate.js';
 import { viewportThemeOwners, type ThemeOwner } from '../../windows/window/themeOwners.js';
 
+/** The viewport around another: the one a window embeds in, whose visible size limits the window's height. */
+interface EnclosingViewport {
+  path: string;
+  node: TscnNode;
+}
+
 /** A sub-viewport whose target is produced by rasterising a Control subtree. */
 export interface ControlRasterViewport extends SceneScope {
   /** Dispatcher-absolute path: the key `viewportTextureRegistryKey` resolves to. */
@@ -38,6 +44,8 @@ export interface ControlRasterViewport extends SceneScope {
   inheritedRtl: boolean | null;
   /** The theme owners above a window, whose Controls take their themes (`viewportThemeOwners`). */
   themeOwners: readonly ThemeOwner[];
+  /** The nearest viewport above, or `null` where the project's own viewport is the one around it. */
+  embedder: EnclosingViewport | null;
   /** What the tree says of the viewport's update mode: its container, and the viewport around it. */
   gate: ViewportGate;
 }
@@ -64,6 +72,14 @@ export function inheritedRtlAt(tree: LiveTree, path: string, env: LayoutDirectio
   if (above === null) return null;
   const link = tree.at(above);
   return link ? rtlBelow(link.step.node, inheritedRtlAt(tree, above, env), env) : null;
+}
+
+function enclosingViewport(tree: LiveTree, path: string): EnclosingViewport | null {
+  for (let above = parentPathOf(path); above !== null; above = parentPathOf(above)) {
+    const link = tree.at(above);
+    if (link && isViewportBoundary(link.step.node.type)) return { path: above, node: link.step.node };
+  }
+  return null;
 }
 
 /**
@@ -102,6 +118,7 @@ export function collectControlRasterViewports(
         node: step.node,
         inheritedRtl,
         themeOwners: viewportThemeOwners(tree, path),
+        embedder: enclosingViewport(tree, path),
         gate: viewportGateAt(tree, path, authoredMode),
         ...step.scope,
       });

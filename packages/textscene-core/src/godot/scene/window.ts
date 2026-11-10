@@ -88,13 +88,14 @@ const ACCEPT_DIALOG_DEFAULTS: WindowClassDefaults = {
 
 /**
  * Each constructor's own flags, keyed by the class that sets them: `Popup::Popup()`
- * (`popup.cpp:215-225`), `PopupPanel::PopupPanel()` (`popup.cpp:430`) and the two dialogs
- * (`dialogs.cpp:464-534`).
+ * (`popup.cpp:215-225`), `PopupPanel::PopupPanel()` (`popup.cpp:430`), `PopupMenu::PopupMenu()`
+ * (`popup_menu.cpp:3464`) and the two dialogs (`dialogs.cpp:464-534`).
  */
 const CLASS_DEFAULTS: Readonly<Record<string, WindowClassDefaults>> = {
   Window: WINDOW_DEFAULTS,
   Popup: { ...WINDOW_DEFAULTS, visible: false, wrapControls: true, borderless: true },
   PopupPanel: { ...WINDOW_DEFAULTS, visible: false, wrapControls: true, borderless: true, transparent: true },
+  PopupMenu: { ...WINDOW_DEFAULTS, visible: false, wrapControls: true, borderless: true, transparent: true },
   AcceptDialog: ACCEPT_DIALOG_DEFAULTS,
   ConfirmationDialog: { ...ACCEPT_DIALOG_DEFAULTS, title: 'Please Confirm...', minSize: { x: 200, y: 70 } },
 };

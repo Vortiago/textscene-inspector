@@ -15,7 +15,7 @@ import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { EnclosingViewportProvider } from '../../../r3f/contexts/EnclosingViewportContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
-import { ViewportSizeProvider } from '../../../r3f/contexts/ViewportSizeContext';
+import { ViewportSizeProvider, useEmbedderViewportSize } from '../../../r3f/contexts/ViewportSizeContext';
 import { LayerRanksProvider } from '../../../r3f/contexts/PaintOrderContext';
 import { canvasLayerRanks } from '../../../r3f/canvasPaintOrder';
 import { Node } from '../../node/Component';
@@ -53,6 +53,7 @@ function MixedViewportControls({
 }) {
   const inheritedRtl = useInheritedRtl(path);
   const themeOwners = useViewportThemeOwners(path);
+  const embedderSize = useEmbedderViewportSize();
   return (
     <ViewportControls
       path={path}
@@ -60,6 +61,7 @@ function MixedViewportControls({
       size={size}
       inheritedRtl={inheritedRtl}
       themeOwners={themeOwners}
+      embedderSize={embedderSize}
       embedsWindows={embedsWindows}
     />
   );

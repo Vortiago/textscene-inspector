@@ -2078,6 +2078,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Popup Menu Embedded",
+    "file": "unit-popup-menu-embedded.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Popup Menu Rtl",
+    "file": "unit-popup-menu-rtl.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Popup Menu Scroll",
+    "file": "unit-popup-menu-scroll.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Popup Menu",
     "file": "unit-popup-menu.tscn",
     "category": "Other"
