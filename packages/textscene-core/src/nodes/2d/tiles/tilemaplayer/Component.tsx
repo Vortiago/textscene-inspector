@@ -8,7 +8,6 @@
 
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
-import type { TscnNode } from '../../../../parser/types';
 import type { TileSetModel } from '../../../../resources/tileset/types';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
@@ -16,7 +15,8 @@ import { TileQuadrants } from '../../../../r3f/TileQuadrants';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel';
 import { YSortDispatcher } from '../../../../r3f/YSortDispatcher';
 import { SceneTileInstances } from '../shared/SceneTileInstances';
-import { useSceneTileNodes } from '../shared/useSceneTileNodes';
+import { ScenePlaceholders } from '../shared/ScenePlaceholders';
+import { useSceneTileNodes, type SceneTileDrawing } from '../shared/useSceneTileNodes';
 import type { TileMapLayerProperties } from './types';
 
 export function TileMapLayer({ node, children }: NodeComponentProps) {
@@ -34,9 +34,16 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
     );
   }
   // A scene tile is a child canvas item of the layer, so it sorts with the layer's rows and children.
-  const withSceneTiles = sceneTiles.length ? { ...node, children: [...node.children, ...sceneTiles] } : node;
+  const { instances, placeholderTiles } = sceneTiles;
+  const withSceneTiles = instances.length ? { ...node, children: [...node.children, ...instances] } : node;
   return (
-    <CanvasItem2D node={node} props={props}>
+    <CanvasItem2D
+      node={node}
+      props={props}
+      ownItems={(state) =>
+        model && <ScenePlaceholders grid={model} tiles={placeholderTiles} modulate={state.tint.inherited} />
+      }
+    >
       <YSortDispatcher node={withSceneTiles}>{children}</YSortDispatcher>
     </CanvasItem2D>
   );
@@ -45,7 +52,7 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
 interface QuadrantLayerProps extends NodeComponentProps {
   model: TileSetModel | null;
   status: 'pending' | 'loaded' | 'unavailable';
-  sceneTiles: readonly TscnNode[];
+  sceneTiles: SceneTileDrawing;
 }
 
 function QuadrantLayer({ node, model, status, sceneTiles, children }: QuadrantLayerProps) {
@@ -67,23 +74,32 @@ function QuadrantLayer({ node, model, status, sceneTiles, children }: QuadrantLa
     <CanvasItem2D
       node={node}
       props={props}
-      ownItems={(state) =>
-        props.enabled && status === 'loaded' && model && quadrants ? (
-          <TileQuadrants
-            quadrants={quadrants}
-            model={model}
-            selfTint={state.tint.self}
-            material={state.material}
-            lightMask={state.lightMask}
-            zFinal={state.zFinal}
-            name={node.name}
-            sampler={state.sampler}
-          />
-        ) : null
-      }
+      ownItems={(state) => (
+        <>
+          {props.enabled && status === 'loaded' && model && quadrants && (
+            <TileQuadrants
+              quadrants={quadrants}
+              model={model}
+              selfTint={state.tint.self}
+              material={state.material}
+              lightMask={state.lightMask}
+              zFinal={state.zFinal}
+              name={node.name}
+              sampler={state.sampler}
+            />
+          )}
+          {model && (
+            <ScenePlaceholders
+              grid={model}
+              tiles={sceneTiles.placeholderTiles}
+              modulate={state.tint.inherited}
+            />
+          )}
+        </>
+      )}
     >
       {children}
-      <SceneTileInstances node={node} instances={sceneTiles} />
+      <SceneTileInstances node={node} instances={sceneTiles.instances} />
     </CanvasItem2D>
   );
 }

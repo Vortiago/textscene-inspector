@@ -21,22 +21,34 @@ import type { PlacedCell } from './tileData';
 const INSTANCE_NAME = 'Instance';
 
 /** A scene tile that has a scene to instantiate. */
-type InstancedSceneTile = SceneTileCell & { scene: TileScene };
+interface InstancedSceneTile {
+  tile: SceneTileCell;
+  scene: TileScene;
+}
+
+/** What a layer draws for the scene tiles of its cells. */
+export interface SceneTileDrawing {
+  /** The nodes that draw the scenes, in the order of the cells. */
+  instances: TscnNode[];
+  /** The tiles the editor marks with a placeholder disc: no scene, a refused root or `display_placeholder`. */
+  placeholderTiles: SceneTileCell[];
+}
 
 /**
- * The nodes that draw the scene tiles of `cells`, in the order of the cells, or none while the
- * layer is not `enabled` or has no TileSet. `owner` makes the names unique across the layers of a
- * TileMap, whose instances share the TileMap as parent.
+ * The scene tiles of `cells` drawn, or none while the layer is not `enabled` or has no TileSet.
+ * `owner` makes the instance names unique across the layers of a TileMap, whose instances share
+ * the TileMap as parent.
  */
 export function useSceneTileNodes(
   model: TileSetModel | null,
   cells: readonly PlacedCell[] | null | undefined,
   { isEnabled, owner }: { isEnabled: boolean; owner: string }
-): TscnNode[] {
-  const tiles = useMemo(
-    () => (model && isEnabled && cells ? instancedTiles(model, cells) : NONE),
+): SceneTileDrawing {
+  const allTiles = useMemo(
+    () => (model && isEnabled && cells ? sceneTileCells(model, cells) : NO_TILES),
     [model, isEnabled, cells]
   );
+  const tiles = useMemo(() => instancedTiles(allTiles), [allTiles]);
   const ambient = useSceneResources();
   const enclosingScenePaths = useInstancedScenePaths();
   const scope = useMemo<SceneScope>(
@@ -47,22 +59,30 @@ export function useSceneTileNodes(
   const steps = useLiveStepsOf(instances, scope);
 
   return useMemo(() => {
-    if (!model) return [];
-    return tiles.flatMap((tile, index) => {
+    if (!model) return NO_DRAWING;
+    // `set_scene_tile_scene` refuses a root that is no CanvasItem, so that tile has no scene.
+    const refused = new Set<SceneTileCell>();
+    const placed: LiveNode[] = [];
+    tiles.forEach((tile, index) => {
       const root = rootKindOf(steps[index]!.node.type);
-      // `set_scene_tile_scene` refuses a root that is no CanvasItem, so the tile has no scene.
-      if (root === null) return [];
-      return [placementNode(`@SceneTile@${owner}${index}`, tile, instances[index]!, model, root)];
+      if (root === null) refused.add(tile.tile);
+      else
+        placed.push(placementNode(`@SceneTile@${owner}${index}`, tile.tile, instances[index]!, model, root));
     });
-  }, [model, tiles, instances, steps, owner]);
+    return {
+      instances: placed,
+      placeholderTiles: allTiles.filter(
+        (tile) => !tile.tile.scene || tile.tile.displayPlaceholder || refused.has(tile)
+      ),
+    };
+  }, [model, allTiles, tiles, instances, steps, owner]);
 }
 
-const NONE: readonly InstancedSceneTile[] = [];
+const NO_TILES: readonly SceneTileCell[] = [];
+const NO_DRAWING: SceneTileDrawing = { instances: [], placeholderTiles: [] };
 
-function instancedTiles(model: TileSetModel, cells: readonly PlacedCell[]): InstancedSceneTile[] {
-  return sceneTileCells(model, cells).flatMap((tile) =>
-    tile.tile.scene ? [{ ...tile, scene: tile.tile.scene }] : []
-  );
+function instancedTiles(tiles: readonly SceneTileCell[]): InstancedSceneTile[] {
+  return tiles.flatMap((tile) => (tile.tile.scene ? [{ tile, scene: tile.tile.scene }] : []));
 }
 
 /** The instance, resolved in the tables of the file that holds the TileSet, not the scene's. */

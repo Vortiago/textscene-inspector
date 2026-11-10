@@ -21,7 +21,8 @@ import type { TscnNode } from '../../../../parser/types';
 import type { TileMapLayerProperties } from '../tilemaplayer/types';
 import type { TileSetModel } from '../../../../resources/tileset/types';
 import { SceneTileInstances } from '../shared/SceneTileInstances';
-import { useSceneTileNodes } from '../shared/useSceneTileNodes';
+import { LayerPlaceholders } from './LayerPlaceholders';
+import { useSceneTileNodes, type SceneTileDrawing } from '../shared/useSceneTileNodes';
 import type { PlacedCell } from '../shared/tileData';
 import { childCanvasItemProperties } from '../shared/childCanvasItem';
 import type { TileMapLayerData, TileMapProperties } from './types';
@@ -43,7 +44,7 @@ export function TileMap({ node, children }: NodeComponentProps) {
     );
   }
   return (
-    <YSortedTileMap node={node} sceneTiles={sceneTiles}>
+    <YSortedTileMap node={node} model={model} sceneTiles={sceneTiles}>
       {children}
     </YSortedTileMap>
   );
@@ -56,13 +57,27 @@ function enabledLayerCells(layers: readonly TileMapLayerData[]): PlacedCell[] {
 
 function YSortedTileMap({
   node,
+  model,
   sceneTiles,
   children,
-}: { sceneTiles: readonly TscnNode[] } & NodeComponentProps) {
+}: { model: TileSetModel | null; sceneTiles: SceneTileDrawing } & NodeComponentProps) {
   const props = node.properties as TileMapProperties;
-  const withLayers = useMemo(() => withLayerNodes(node, sceneTiles), [node, sceneTiles]);
+  const withLayers = useMemo(() => withLayerNodes(node, sceneTiles.instances), [node, sceneTiles.instances]);
   return (
-    <CanvasItem2D node={node} props={props}>
+    <CanvasItem2D
+      node={node}
+      props={props}
+      ownItems={(state) =>
+        model && (
+          <LayerPlaceholders
+            grid={model}
+            layers={props.layers}
+            tiles={sceneTiles.placeholderTiles}
+            modulate={state.tint.inherited}
+          />
+        )
+      }
+    >
       <YSortDispatcher node={withLayers}>{children}</YSortDispatcher>
     </CanvasItem2D>
   );
@@ -101,7 +116,7 @@ function withLayerNodes(map: TscnNode, sceneTiles: readonly TscnNode[]): TscnNod
 interface LayeredTileMapProps extends NodeComponentProps {
   model: TileSetModel | null;
   status: 'pending' | 'loaded' | 'unavailable';
-  sceneTiles: readonly TscnNode[];
+  sceneTiles: SceneTileDrawing;
 }
 
 function LayeredTileMap({ node, model, status, sceneTiles, children }: LayeredTileMapProps) {
@@ -138,38 +153,48 @@ function LayeredTileMap({ node, model, status, sceneTiles, children }: LayeredTi
     <CanvasItem2D
       node={node}
       props={props}
-      ownItems={(state) =>
-        status === 'loaded' && model && layerQuadrantSets
-          ? layerQuadrantSets.map((set) => {
-              // Godot's TileMap adds a TileMapLayer CanvasItem per layer and forwards
-              // `set_z_index` to it (`scene/2d/tile_map.cpp:279,376`), so each layer
-              // takes a key of its own at its own sequence.
-              const place = childCanvasPlace(
-                { key: state.keyAt(layerSequences[set.layerIndex]!), zFinal: state.zFinal },
-                set.layer.zIndex
-              );
-              return (
-                // Each layer draws at its own place in the canvas, so its key rides
-                // its group: three reads the nearest enclosing group first.
-                <CanvasItemGroup key={set.layerIndex} renderOrder={place.key}>
-                  <TileQuadrants
-                    quadrants={set.quadrants}
-                    model={model}
-                    selfTint={layerTint(state.tint, set.layer)}
-                    material={state.material}
-                    lightMask={state.lightMask}
-                    zFinal={place.zFinal}
-                    name={node.name}
-                    sampler={state.sampler}
-                  />
-                </CanvasItemGroup>
-              );
-            })
-          : null
-      }
+      ownItems={(state) => (
+        <>
+          {status === 'loaded' && model && layerQuadrantSets
+            ? layerQuadrantSets.map((set) => {
+                // Godot's TileMap adds a TileMapLayer CanvasItem per layer and forwards
+                // `set_z_index` to it (`scene/2d/tile_map.cpp:279,376`), so each layer
+                // takes a key of its own at its own sequence.
+                const place = childCanvasPlace(
+                  { key: state.keyAt(layerSequences[set.layerIndex]!), zFinal: state.zFinal },
+                  set.layer.zIndex
+                );
+                return (
+                  // Each layer draws at its own place in the canvas, so its key rides
+                  // its group: three reads the nearest enclosing group first.
+                  <CanvasItemGroup key={set.layerIndex} renderOrder={place.key}>
+                    <TileQuadrants
+                      quadrants={set.quadrants}
+                      model={model}
+                      selfTint={layerTint(state.tint, set.layer)}
+                      material={state.material}
+                      lightMask={state.lightMask}
+                      zFinal={place.zFinal}
+                      name={node.name}
+                      sampler={state.sampler}
+                    />
+                  </CanvasItemGroup>
+                );
+              })
+            : null}
+          {model && (
+            <LayerPlaceholders
+              grid={model}
+              layers={props.layers}
+              tiles={sceneTiles.placeholderTiles}
+              modulate={state.tint.inherited}
+            />
+          )}
+        </>
+      )}
     >
       {children}
-      <SceneTileInstances node={node} instances={sceneTiles} />
+      <SceneTileInstances node={node} instances={sceneTiles.instances} />
     </CanvasItem2D>
   );
 }
