@@ -54,7 +54,7 @@ Two layers name a ViewportTexture as their atlas texture, one inline and one fro
 An atlas source whose texture is a CanvasTexture lights its tiles through the `normal_texture` and
 `specular_texture` under PointLight2D and DirectionalLight2D. Each run of cells from one source
 binds the maps of that source. A source with no normal map keeps the plain accumulation. A cell's
-flips negate the matching normal component, and its transpose swaps the two first. The tile's own
+flips negate the matching normal component, and its transpose swaps the two and negates both first. The tile's own
 flips compose as they do for the drawn cell (`canvas.glsl:655-661`). A padded source samples its maps
 where it samples its diffuse. The layer's rotation and scale turn the normal after that
 (`canvas.glsl:708-710`). A TileMap lights its layers the same way.
