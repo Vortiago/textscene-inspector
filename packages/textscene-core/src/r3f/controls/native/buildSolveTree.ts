@@ -438,7 +438,7 @@ const SOLVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'texture', 'resource
 /** What the forest starts from, which its roots cannot see above them. */
 interface ForestStart {
   /** The run the forest's roots draw from. The whole canvas unless a node's own run holds the forest. */
-  rootRange?: PaintRange;
+  rootRange: PaintRange;
   /**
    * `Control::is_layout_rtl()` for the nearest ancestor Control or Window above
    * this forest, `null` for a scene's roots. A `SubViewport`'s caller passes its
@@ -481,7 +481,7 @@ function buildForest(
   projectSettings: ProjectSettings | null,
   hiddenNodePaths: ReadonlySet<string>,
   layoutDirectionEnv: LayoutDirectionEnv,
-  { inheritedRtl, contentRoot, themeOwners, rootRange = WHOLE_CANVAS_RANGE }: ForestStart,
+  { inheritedRtl, contentRoot, themeOwners, rootRange }: ForestStart,
   viewportTargetSize: ViewportTargetSize
 ): ForestResult {
   const pendingScenes = new Map<string, PendingScene>();
@@ -1082,7 +1082,10 @@ export function useBuildSolveTree(
   /** `ForestStart.inheritedRtl`. */
   inheritedRtl: boolean | null = null
 ): UseBuildSolveTreeResult {
-  const start = useMemo(() => ({ inheritedRtl, contentRoot: null, themeOwners: NO_OWNERS }), [inheritedRtl]);
+  const start = useMemo(
+    () => ({ inheritedRtl, contentRoot: null, themeOwners: NO_OWNERS, rootRange: WHOLE_CANVAS_RANGE }),
+    [inheritedRtl]
+  );
   return useSolveForest(nodes, externalResources, internalResources, start);
 }
 
@@ -1117,7 +1120,7 @@ export function useBuildViewportTree(
   const contentRoot = isEmbeddedWindow(viewport.type) ? viewport : null;
   const nodes = useMemo(() => (contentRoot ? [contentRoot] : viewport.children), [contentRoot, viewport]);
   const start = useMemo(
-    () => ({ inheritedRtl, contentRoot, themeOwners }),
+    () => ({ inheritedRtl, contentRoot, themeOwners, rootRange: WHOLE_CANVAS_RANGE }),
     [inheritedRtl, contentRoot, themeOwners]
   );
   return useSolveForest(nodes, externalResources, internalResources, start);
