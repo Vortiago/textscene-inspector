@@ -28,8 +28,13 @@ const ORIGIN = Object.freeze({ x: 0, y: 0 });
  * The size lines in file order, a malformed one skipped as the lenient parse skips any bad value.
  * A class that floors its size in its constructor writes `min_size` first.
  */
-function sizeWrites(properties: Record<string, string>, constructorMinSize: Vector2): WindowSizeWrite[] {
+function sizeWrites(
+  properties: Record<string, string>,
+  constructorMinSize: Vector2,
+  constructorSize: Vector2 | undefined
+): WindowSizeWrite[] {
   const writes: WindowSizeWrite[] = [{ key: 'min_size', value: constructorMinSize }];
+  if (constructorSize) writes.push({ key: 'size', value: constructorSize });
   for (const [key, raw] of Object.entries(properties)) {
     if (!isWindowSizeKey(key)) continue;
     const value = parseOptionalVector2i(raw);
@@ -78,7 +83,7 @@ export function parseWindow(heading: ParsedHeading, properties: Record<string, s
     ...viewport,
     ...parseThemeOwnerFields(properties),
     transparent_bg: parseTransparentBackground(properties, defaults.transparent, context),
-    size: replayWindowSize(sizeWrites(properties, defaults.minSize)),
+    size: replayWindowSize(sizeWrites(properties, defaults.minSize, defaults.size)),
     size_2d_override: ORIGIN,
     size_2d_override_stretch: false,
     // `Window()` disables the update (`window.cpp:3578`), and the embedder sets

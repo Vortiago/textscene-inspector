@@ -3103,6 +3103,30 @@ export const fixtures: Fixture[] = [
     "root": "decal-filter"
   },
   {
+    "name": "File Dialog Current Path",
+    "file": "file-dialog-current-path/unit-file-dialog-current-path.tscn",
+    "category": "Other",
+    "root": "file-dialog-current-path"
+  },
+  {
+    "name": "File Dialog Open Empty",
+    "file": "file-dialog-open-empty/unit-file-dialog-open-empty.tscn",
+    "category": "Other",
+    "root": "file-dialog-open-empty"
+  },
+  {
+    "name": "File Dialog Options",
+    "file": "file-dialog-options/unit-file-dialog-options.tscn",
+    "category": "Other",
+    "root": "file-dialog-options"
+  },
+  {
+    "name": "File Dialog Save Empty",
+    "file": "file-dialog-save-empty/unit-file-dialog-save-empty.tscn",
+    "category": "Other",
+    "root": "file-dialog-save-empty"
+  },
+  {
     "name": "Glow Linear Upscale",
     "file": "glow-linear-upscale/unit-glow-linear-upscale.tscn",
     "category": "Other",

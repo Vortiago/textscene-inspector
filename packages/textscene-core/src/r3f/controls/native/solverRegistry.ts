@@ -127,7 +127,11 @@ export interface TextureSlotRequest {
   sizeOfFile?: (parsed: ParsedResource) => Vector2 | null;
 }
 
-/** The request for a themed icon: its ref, in its theme's scope, held as its theme holds it. */
+/**
+ * The request for a themed icon: its ref, in its theme's scope, held as its theme holds it. A pending or failed load
+ * gives `null`, and each consumer reads `textureSlots[name] ?? <default icon size>`, as `Theme::has_icon` refuses an
+ * invalid icon (`theme.cpp:306`).
+ */
 export function themedSlotRequest(key: string, themed: ThemedIconRef): TextureSlotRequest {
   return { key, ref: themed.ref, scope: themed.resources, isHeldLocally: themed.isHeldLocally };
 }

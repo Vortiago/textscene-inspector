@@ -10,6 +10,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useTexture2D } from '../../../../resources/useTexture2D';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
@@ -24,7 +25,7 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import {
-  resolveButtonDrawState,
+  resolveToggleDrawState,
   pickButtonStyleBox,
   tintColor,
   layoutButtonContent,
@@ -51,7 +52,7 @@ interface ButtonPainterProps extends NativeControlComponentProps {
 /** The painter every `Button` subclass that adds no draw code of its own shares. */
 export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textTheme }: ButtonPainterProps) {
   const props = painterView<ButtonProperties>(solveNode);
-  const state = resolveButtonDrawState(props.disabled);
+  const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
 
   const baseStyleBox = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, state, solveNode.rtl);
 
@@ -85,12 +86,21 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
   // NoColorSpace: the 2D canvas's hardware filter blends undecoded sRGB
   // bytes (`canvas2DTextureDecode.ts`). `ControlQuad` decodes the
   // already-filtered sample once it sees this tag.
-  const iconTexture = useOwnerCanvas2DTexture(iconSource);
-
-  const iconNaturalSize = useMemo(
-    () => (props.icon && iconTexture ? sizeWithArea(iconSize) : null),
-    [props.icon, iconTexture, iconSize]
+  const ownIconTexture = useOwnerCanvas2DTexture(iconSource);
+  // A theme icon the Control gave this Button: the vendored default is a 16x16 SVG whose size
+  // `textureSize` already holds, since the loader returns a blank texture before the decode.
+  const themedIcon = solveNode.syntheticDraw?.themedIcon;
+  const themedIconTexture = useNodeIcon(
+    themedIcon && solveNode.icons[themedIcon.name],
+    themedIcon?.vendoredUrl ?? null
   );
+  const iconTexture = themedIcon ? themedIconTexture : ownIconTexture;
+
+  const iconNaturalSize = useMemo(() => {
+    if (!iconTexture) return null;
+    if (themedIcon) return solveNode.textureSize;
+    return props.icon ? sizeWithArea(iconSize) : null;
+  }, [props.icon, themedIcon, iconTexture, iconSize, solveNode.textureSize]);
 
   const isFocusStyled = isButtonFocusStyled(props, state);
   const baseIconColor = isFocusStyled
