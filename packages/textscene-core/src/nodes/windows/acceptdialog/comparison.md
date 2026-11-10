@@ -17,7 +17,7 @@ The panel, the message and the focused OK button, sized to the content.
 ## Theme
 <!-- compare: image=unit-accept-dialog-theme status=done fixture=unit-accept-dialog-theme.tscn -->
 
-A Theme on the dialog or an ancestor restyles the Button and the Label inside it, as it does a Button and a Label in the scene.
+A Theme on the dialog or an ancestor restyles the Button and the Label inside it. It does so as for a Button and a Label in the scene.
 
 ## Linting
 
