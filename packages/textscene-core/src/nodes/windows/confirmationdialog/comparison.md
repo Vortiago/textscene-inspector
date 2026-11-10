@@ -1,15 +1,15 @@
 ---
 type: ConfirmationDialog
 category: Other
-status: unimplemented
-fixture: unit-confirmation-dialog.tscn
-# image: unit-confirmation-dialog
-renders_as: nothing yet, not implemented
+status: done
+fixture: unit-confirmation-dialog-embedded.tscn
+image: unit-confirmation-dialog-embedded
+renders_as: an embedded window with a panel, a message and buttons
 ---
 
 # ConfirmationDialog
 
-A two-button dialog with independent OK and Cancel outcomes, built on AcceptDialog. The previewer parses and validates it but does not draw it. The base `Node` mounts under `renderIntent: 'pending'` as an empty group, and its children still show (ADR-0045).
+A two-button dialog with OK and Cancel outcomes, built on AcceptDialog. The previewer draws a visible dialog as an embedded window sized to its content. It shows the title "Please Confirm...", the `dialog_text` message, a Cancel button and a focused OK button.
 
 ## Linting
 
@@ -28,8 +28,4 @@ Strict parsing format-checks these `ConfirmationDialog` properties, plus 5 inher
 |  | `window-content-scale-factor-floored` | warning |
 <!-- lint:end -->
 
-The lenient parser registers the plain `Node` reader, which reads only the heading attributes and an optional `transform`. A bad `cancel_button_text` is never read, substituted or reported on the lenient path.
-
-## Known limitations
-
-- **Not drawn** Godot displays the dialog once popped up, but the previewer draws nothing for it.
+The lenient parser reads every Window key and dialog text key it draws with. A malformed value takes the class default, as an unset key does, and no diagnostic comes from the lenient path.

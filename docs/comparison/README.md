@@ -311,9 +311,9 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 
 ## Other
 
-- [AcceptDialog](../../packages/textscene-core/src/nodes/windows/acceptdialog/comparison.md): nothing yet, not implemented
+- [AcceptDialog](../../packages/textscene-core/src/nodes/windows/acceptdialog/comparison.md): an embedded window with a panel, a message and buttons
 - [AudioStreamPlayer](../../packages/textscene-core/src/nodes/audio/audiostreamplayer/comparison.md): nothing (a non-spatial audio node)
-- [ConfirmationDialog](../../packages/textscene-core/src/nodes/windows/confirmationdialog/comparison.md): nothing yet, not implemented
+- [ConfirmationDialog](../../packages/textscene-core/src/nodes/windows/confirmationdialog/comparison.md): an embedded window with a panel, a message and buttons
 - [FileDialog](../../packages/textscene-core/src/nodes/windows/filedialog/comparison.md): nothing yet, not implemented
 - [HTTPRequest](../../packages/textscene-core/src/nodes/networking/httprequest/comparison.md): nothing (a transform-only group)
 - [MultiplayerSpawner](../../packages/textscene-core/src/nodes/networking/multiplayerspawner/comparison.md): nothing (a transform-only group)

@@ -56,6 +56,9 @@ const CONTAINER_TYPES = new Set([
   'GraphEdit',
   // A Window, not a Container, but `_update_child_rects` sets every child's rect (`popup.cpp:346-368`).
   'PopupPanel',
+  // The dialogs lay their message, authored children and button row out in `_update_child_rects` (`dialogs.cpp:219-316`).
+  'AcceptDialog',
+  'ConfirmationDialog',
 ]);
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
@@ -75,7 +78,7 @@ function bareSolveNode(type: string): SolveNode {
 // `ScrollBar`, `Separator`, `Slider` and the three `OpenXR*Editor*` classes are
 // abstract, so no scene holds one. A number, not a derived list: every other
 // check here moves with the registry, so a slice deleted from both sides passes.
-const REGISTERED_CONTROL_TYPES = 64;
+const REGISTERED_CONTROL_TYPES = 66;
 
 /**
  * A slice that writes a `TextureSlotsFn` and never registers it passes its own

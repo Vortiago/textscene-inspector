@@ -49,6 +49,37 @@ describe('parseWindow', () => {
     });
   });
 
+  it('hides an AcceptDialog, titles it "Alert!" and makes it wrap and exclusive (dialogs.cpp:464-497)', () => {
+    expect(parseWindow(heading('AcceptDialog'), {})).toMatchObject({
+      title: 'Alert!',
+      visible: false,
+      borderless: false,
+      wrap_controls: true,
+      exclusive: true,
+      size: { x: 100, y: 100 },
+      min_size: { x: 0, y: 0 },
+    });
+  });
+
+  it('floors a ConfirmationDialog at 200x70 and titles it "Please Confirm..." (dialogs.cpp:529-534)', () => {
+    expect(parseWindow(heading('ConfirmationDialog'), {})).toMatchObject({
+      title: 'Please Confirm...',
+      size: { x: 200, y: 100 },
+      min_size: { x: 200, y: 70 },
+    });
+  });
+
+  it('lets a later size line shrink a ConfirmationDialog only to its floor', () => {
+    expect(parseWindow(heading('ConfirmationDialog'), { size: 'Vector2i(50, 30)' }).size).toEqual({
+      x: 200,
+      y: 70,
+    });
+  });
+
+  it('lets a scene title replace the dialog title', () => {
+    expect(parseWindow(heading('AcceptDialog'), { title: '"Heads up"' }).title).toBe('Heads up');
+  });
+
   it('gives a PopupPanel a transparent background (popup.cpp:430, window.cpp:548-549)', () => {
     expect(parseWindow(heading('PopupPanel'), {}).transparent_bg).toBe(true);
   });

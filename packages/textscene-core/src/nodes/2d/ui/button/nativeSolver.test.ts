@@ -339,6 +339,35 @@ describe('buttonIconColor — icon_normal_color / icon_disabled_color (default_t
   });
 });
 
+describe('a focused Button (button.cpp:282-288)', () => {
+  const focused = { hasFocus: true } as ButtonProperties;
+
+  it('draws its text in font_focus_color, 0.95 grey by default (default_theme.cpp:159)', () => {
+    expect(buttonTextTheme(node({}), focused, 'normal', ctx()).color).toEqual({
+      r: 0.95,
+      g: 0.95,
+      b: 0.95,
+      a: 1,
+    });
+  });
+
+  it('keeps the disabled colour while disabled', () => {
+    expect(buttonTextTheme(node({}), focused, 'disabled', ctx()).color).toEqual(
+      buttonTextTheme(node({}), {} as ButtonProperties, 'disabled', ctx()).color
+    );
+  });
+
+  it('reads icon_focus_color for the icon, white without a theme item', () => {
+    expect(buttonIconColor({}, 'normal', true)).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    expect(buttonIconColor({ icon_focus_color: { r: 1, g: 0, b: 0, a: 1 } }, 'normal', true)).toEqual({
+      r: 1,
+      g: 0,
+      b: 0,
+      a: 1,
+    });
+  });
+});
+
 describe(`buttonMinimumSize — resolves this Button's own theme font key ("font", default_theme.cpp:152)`, () => {
   // Without a DOM, `peekSceneFontMetrics` always answers the bundled default, so a
   // resolved value cannot be observed. It warns for an unresolvable font (a FontFile with no bytes),

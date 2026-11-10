@@ -59,6 +59,7 @@ describe('default theme metrics', () => {
       hover: { r: 0.225, g: 0.225, b: 0.225, a: 0.6 },
       pressed: { r: 0, g: 0, b: 0, a: 0.6 },
       disabled: { r: 0.1, g: 0.1, b: 0.1, a: 0.3 },
+      focus: { r: 1, g: 1, b: 1, a: 0.75 },
       popup: { r: 0.25, g: 0.25, b: 0.25, a: 1 },
       popupHover: { r: 0.4, g: 0.4, b: 0.4, a: 1 },
       progress: { r: 1, g: 1, b: 1, a: 0.4 },
