@@ -342,7 +342,7 @@ describe('<ColorPicker> (isolated painter contract)', () => {
     expect(await halfIcons([])).toHaveLength(0);
   });
 
-  it('draws the FlatMenuButton normal box of the Theme chain behind the menu button', async () => {
+  describe('the FlatMenuButton normal box of the Theme chain', () => {
     const box = {
       id: 'box',
       type: 'StyleBoxFlat',
@@ -353,22 +353,27 @@ describe('<ColorPicker> (isolated painter contract)', () => {
       styles: { FlatMenuButton: { normal: 'SubResource("box")' } },
       resources: { externalResources: [], internalResources: [box] },
     });
-    const meshes = async (themeChain: ThemeResource[]) =>
-      (await renderPicker({ ...ONLY_SWATCHES }, { w: 400, h: 100 }, themeChain)).scene.findAllByType('Mesh');
     /** A box mesh's first vertex colour, linear: the StyleBox's `bg_color` before the tint. */
     const isRedBox = (mesh: { instance: unknown }) => {
       const colors = (mesh.instance as THREE.Mesh).geometry.getAttribute('color');
       return colors !== undefined && colors.getX(0) === 1 && colors.getY(0) === 0 && colors.getZ(0) === 0;
     };
-    const redBoxes = async (themeChain: ThemeResource[]) => (await meshes(themeChain)).filter(isRedBox);
-    expect(await redBoxes([])).toHaveLength(0);
-    const [redBox] = await redBoxes([themed]);
-    const mesh = redBox!.instance as THREE.Mesh;
-    mesh.updateWorldMatrix(true, false);
-    const bounds = new THREE.Box3().setFromObject(mesh);
-    // The menu button sits on the trailing edge of the swatches row (`color_picker.cpp:2255`).
-    expect(bounds.min.x).toBeGreaterThan(200);
-    expect(await meshes([themed])).toHaveLength((await meshes([])).length + 1);
+    const redBoxes = async (themeChain: ThemeResource[]) =>
+      (await renderPicker({ ...ONLY_SWATCHES }, { w: 400, h: 100 }, themeChain)).scene
+        .findAllByType('Mesh')
+        .filter(isRedBox);
+
+    it('draws one box only when the Theme chain gives one', async () => {
+      expect(await redBoxes([])).toHaveLength(0);
+      expect(await redBoxes([themed])).toHaveLength(1);
+    });
+
+    it('draws it behind the menu button on the trailing edge of the swatches row: color_picker.cpp:2255', async () => {
+      const [redBox] = await redBoxes([themed]);
+      const mesh = redBox!.instance as THREE.Mesh;
+      mesh.updateWorldMatrix(true, false);
+      expect(new THREE.Box3().setFromObject(mesh).min.x).toBeGreaterThan(200);
+    });
   });
 
   it('swatches row draws its two button labels: presets_visible default true', async () => {

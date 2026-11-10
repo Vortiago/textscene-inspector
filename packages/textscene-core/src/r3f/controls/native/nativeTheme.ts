@@ -53,7 +53,7 @@ function flatStyleBox(
   contentMargin: { left: number; top: number; right: number; bottom: number },
   cornerRadius: number
 ): StyleBoxFlatData {
-  return makeFlatStyleBox(bgColor, { contentMargin, cornerRadius });
+  return freezeStyleBox(makeFlatStyleBox(bgColor, { contentMargin, cornerRadius }));
 }
 
 /**
@@ -208,7 +208,7 @@ export function nativeTheme(scale: number): NativeTheme {
     right: scaled.contentMargin,
     bottom: scaled.contentMargin,
   };
-  const flatMenuButtonBox = freezeStyleBox(flatStyleBox(TRANSPARENT, buttonMargin, 0));
+  const flatMenuButtonBox = flatStyleBox(TRANSPARENT, buttonMargin, 0);
   const optionButtonMargin = {
     left: scaled.optionButtonMarginX,
     top: scaled.optionButtonMarginY,

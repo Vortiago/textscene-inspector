@@ -282,13 +282,16 @@ describe('nativeTheme', () => {
       expect(widgets.flatMenuButton.normal.bgColor.a).toBe(0);
     });
 
-    it('freezes the shared tab and FlatMenuButton boxes, so an in-place margin edit throws', () => {
+    it('freezes the shared tab, FlatMenuButton and Button boxes, so an in-place margin edit throws', () => {
       const { widgets } = nativeTheme(1);
       expect(() => {
         widgets.tabContainer.unselected.contentMargin.left += 1;
       }).toThrow(TypeError);
       expect(() => {
         widgets.flatMenuButton.normal.contentMargin.left += 1;
+      }).toThrow(TypeError);
+      expect(() => {
+        widgets.button.normal.contentMargin.left += 1;
       }).toThrow(TypeError);
     });
   });
