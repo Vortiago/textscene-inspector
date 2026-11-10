@@ -114,6 +114,22 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'Interaction base with no parser of its own; press semantics, grouping and shortcuts describe behaviour under input, which a static preview never applies.',
   },
 
+  // The editor never plays a stream (`video_stream_player.cpp:146`), so playback state and the
+  // audio keys leave the frame as it is. `stream` and `expand` size the node and are read.
+  VideoStreamPlayer: {
+    linterOnly: [
+      'audio_track',
+      'autoplay',
+      'buffering_msec',
+      'bus',
+      'loop',
+      'paused',
+      'speed_scale',
+      'volume_db',
+    ],
+    reason: 'Playback and audio keys change nothing in the editor, which never plays the stream.',
+  },
+
   // Editing, list and graph tiers: an indexed family (`tab_#/*`, `slot/#/*`) is
   // read through a computed key the scrape cannot match. Carets, selection and
   // the like have no frozen-frame surface, and the rest is a render gap.

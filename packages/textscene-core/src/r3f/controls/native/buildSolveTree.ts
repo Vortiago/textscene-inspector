@@ -89,7 +89,7 @@ import {
 import type { WindowProperties } from '../../../nodes/windows/window/types';
 import { NO_OWNERS, type ThemeOwner } from '../../../nodes/windows/window/themeOwners';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
-import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
+import { controlSolverRegistry, type ChildVisibilityFn, type TextureSlotRequest } from './solverRegistry';
 import {
   INHERIT_PARENT_MATERIAL,
   NO_PARENT_MATERIAL,
@@ -640,7 +640,8 @@ function buildForest(
     ext: readonly TscnExternalResource[],
     int: readonly TscnInternalResource[],
     consumerPath: string,
-    isHeldLocally: boolean
+    isHeldLocally: boolean,
+    sizeOfFile?: TextureSlotRequest['sizeOfFile']
   ): Vector2 | null {
     const sizing: ViewportTextureSizing = {
       isHeldLocally,
@@ -662,7 +663,7 @@ function buildForest(
         return null;
       }
       if (cached === null) return null;
-      return extResourceTexture2DSize(cached, sizing);
+      return sizeOfFile ? sizeOfFile(cached) : extResourceTexture2DSize(cached, sizing);
     }
 
     // `resolveTexture2DPath`, as the painters use: it unwraps a `SubResource(...)`
@@ -699,14 +700,15 @@ function buildForest(
     if (slotsFn) {
       const requests = slotsFn(node, themedIcons);
       const slots: Record<string, Vector2 | null> = {};
-      for (const { key, ref, scope, isHeldLocally = NODE_PROPERTY } of requests) {
+      for (const { key, ref, scope, isHeldLocally = NODE_PROPERTY, sizeOfFile } of requests) {
         slots[key] = ref
           ? resolveTextureRefSize(
               ref,
               scope?.externalResources ?? ext,
               scope?.internalResources ?? int,
               path,
-              isHeldLocally
+              isHeldLocally,
+              sizeOfFile
             )
           : null;
       }

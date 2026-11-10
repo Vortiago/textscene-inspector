@@ -6,15 +6,10 @@
  */
 
 import type { ProgramInjection } from './materialProgramInputs';
-import { editedChunk, editedProgram, type TextEdit } from './shaderPatch/chunkPatch';
+import { afterInclude, editedChunk, editedProgram } from './shaderPatch/chunkPatch';
 
 /** The per-vertex attribute that holds a tile's bounds, `tileGeometry.ts`'s `uvBounds`. */
 export const TILE_UV_BOUNDS_ATTRIBUTE = 'tileUvBounds';
-
-/** `include` followed by `addition`. */
-function after(include: string, addition: string): TextEdit {
-  return { three: include, godot: `${include}\n${addition}` };
-}
 
 /**
  * The map chunk as it stands when the program compiles, the canvas sRGB multiply included, with its
@@ -34,14 +29,15 @@ export const TILE_TEXTURE_PADDING: ProgramInjection = {
       shader,
       {
         vertex: [
-          after(
+          afterInclude(
             '#include <uv_pars_vertex>',
             `attribute vec4 ${TILE_UV_BOUNDS_ATTRIBUTE};\nvarying vec4 vTileUvBounds;`
           ),
-          after('#include <uv_vertex>', `vTileUvBounds = ${TILE_UV_BOUNDS_ATTRIBUTE};`),
+          afterInclude('#include <uv_vertex>', `vTileUvBounds = ${TILE_UV_BOUNDS_ATTRIBUTE};`),
         ],
         fragment: [
-          after('#include <uv_pars_fragment>', 'varying vec4 vTileUvBounds;'),
+          // The define tells a normal-mapped program to clamp its map samples alike (`normalMappedLighting.ts`).
+          afterInclude('#include <uv_pars_fragment>', '#define TILE_UV_BOUNDS\nvarying vec4 vTileUvBounds;'),
           { three: '#include <map_fragment>', godot: clampedMapFragment() },
         ],
       },

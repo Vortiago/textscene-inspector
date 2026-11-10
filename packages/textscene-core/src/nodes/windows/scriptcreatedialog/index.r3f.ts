@@ -1,7 +1,7 @@
 /**
- * ScriptCreateDialog is parsed but not drawn. `renderIntent: 'pending'` drives the "not
- * implemented" badge and the placeholder marker. `container: true` holds the type in
- * both canvases. The `Node` base applies no `visible`.
+ * ScriptCreateDialog is an editor class, so a game cannot create it and draws nothing for it
+ * (`class_db.cpp:579-581`, ADR-0008). The `Node` base keeps its children in the right
+ * transform space, and `container: true` holds the type in both canvases.
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
@@ -11,5 +11,5 @@ nodeComponentRegistry.register({
   typeName: 'ScriptCreateDialog',
   Component: Node,
   container: true,
-  renderIntent: 'pending',
+  renderIntent: 'transform-only',
 });

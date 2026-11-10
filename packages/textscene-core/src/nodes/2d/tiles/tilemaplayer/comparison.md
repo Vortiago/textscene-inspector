@@ -12,7 +12,7 @@ of tile material or `z_index`. The quadrant's cells draw
 in Godot's order, x then y (`tile_map_layer.cpp:306-311`), with each run of cells from one atlas
 source batched into one quad mesh. Under `use_texture_padding` (the default), a tile samples
 only its own texels and repeats its edge texels outward, as Godot's padded atlas copy does.
-A filtered tile then shows no seam from its neighbour. Godot builds that copy once, from the texture's image at load (`tile_set.cpp:5622-5654`). So a padded `ViewportTexture` source draws its target as it stands before its first render: black when opaque and clear when transparent. One that Godot never sets up draws the placeholder. Tiles sample with the layer's inherited `texture_filter` and `texture_repeat`.
+A filtered tile then shows no seam from its neighbour. Godot builds that copy once, from the texture's image at load (`tile_set.cpp:5622-5654`). So a padded `ViewportTexture` source draws its target as it stands before its first render: black when opaque and clear when transparent. One that Godot never sets up draws the placeholder. Tiles sample with the layer's inherited `texture_filter` and `texture_repeat`, or with those of the atlas source's CanvasTexture where it sets them.
 A cell whose atlas source has no texture draws nothing (`tile_map_layer.cpp:724`). A texture that is set but fails to load draws a placeholder.
 
 ## Tile grid
@@ -46,6 +46,18 @@ Two padded layers draw tiles from an AtlasTexture over one ViewportTexture. Only
 <!-- compare: image=unit-tile-atlas-viewport-texture-file status=done fixture=unit-tile-atlas-viewport-texture-file.tscn -->
 
 Two layers name a ViewportTexture as their atlas texture, one inline and one from a `.tres`. A ViewportTexture reports no area while the scene loads, so `create_tile` finds room for no tile and neither layer draws (`tile_set.cpp:4985`). The previewer loads the texture's file before it creates any tile.
+
+## Normal map
+
+<!-- compare: image=unit-tilemaplayer-normal-map status=done fixture=unit-tilemaplayer-normal-map.tscn -->
+
+An atlas source whose texture is a CanvasTexture lights its tiles through the `normal_texture` and
+`specular_texture` under PointLight2D and DirectionalLight2D. Each run of cells from one source
+binds the maps of that source. A source with no normal map keeps the plain accumulation. A cell's
+flips negate the matching normal component, and its transpose swaps the two and negates both first. The tile's own
+flips compose as they do for the drawn cell (`canvas.glsl:655-661`). A padded source samples its maps
+where it samples its diffuse. The layer's rotation and scale turn the normal after that
+(`canvas.glsl:708-710`). A TileMap lights its layers the same way.
 
 ## Linting
 

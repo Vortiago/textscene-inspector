@@ -22,6 +22,7 @@ import type { TabBarProperties } from '../tabbar/types';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts';
 import { ROOT_TEXTURE_SAMPLER } from '../../../../r3f/canvasItemTextureSampler';
+import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
 
 const tabContainerLayout = controlSolverRegistry.containerLayout('TabContainer')!;
 const tabContainerMinimumSize = controlSolverRegistry.minimumSize('TabContainer')!;
@@ -35,7 +36,7 @@ const NO_TABBAR_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };
 const TABBAR_MARGIN = { left: 10, top: 5, right: 30, bottom: 7 };
 
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
-  return 'rects' in result ? result.rects : result;
+  return normalizeContainerLayoutResult(result).rects;
 }
 
 function page(name: string, props: Partial<ControlProperties> = {}): SolveNode {

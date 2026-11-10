@@ -42,6 +42,7 @@ import { AtlasDepthMaterial, ParaboloidDepthMaterial } from '../positionalShadow
 import { canvasItemLightingProps } from '../lighting2d/canvasItemLighting';
 import { LIGHTMAP_PROGRAM } from '../lightmap/lightmapProgram';
 import { TILE_TEXTURE_PADDING } from '../tileTexturePadding';
+import { TILE_NORMAL_ORIENTATION } from '../tileNormalOrientation';
 import { UNSHADED_ROUGHNESS } from '../screenSpaceEffects/unshadedRoughness';
 import { HEIGHTMAP_DEFAULTS } from '../../resources/materials/standardmaterial3d/types';
 import { GODOT_FOG_PARS_CHUNK } from '../fog/fogChunks';
@@ -245,6 +246,7 @@ const INJECTIONS: readonly InjectionCase[] = [
   ),
   injected('lightmap/lightmapProgram.ts', 'lightmap read', LIT, () => LIGHTMAP_PROGRAM),
   injected('tileTexturePadding.ts', 'tile texture padding', COLOUR, () => TILE_TEXTURE_PADDING),
+  injected('tileNormalOrientation.ts', 'tile normal orientation', COLOUR, () => TILE_NORMAL_ORIENTATION),
 ];
 
 /** The program as `injection` leaves it. It throws when an anchor is missing or occurs twice. */

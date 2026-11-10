@@ -288,6 +288,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Bone2d Gizmo Child",
+    "file": "unit-bone2d-gizmo-child.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Bone2d Gizmo",
+    "file": "unit-bone2d-gizmo.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Bone2d Rig",
     "file": "unit-bone2d-rig.tscn",
     "category": "Other"
@@ -1108,8 +1118,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Graph Edit Zoom In",
+    "file": "unit-graph-edit-zoom-in.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Graph Edit Zoom Label",
     "file": "unit-graph-edit-zoom-label.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Zoom Out",
+    "file": "unit-graph-edit-zoom-out.tscn",
     "category": "Other"
   },
   {
@@ -2288,6 +2308,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Script Create Dialog Placeholder",
+    "file": "unit-script-create-dialog-placeholder.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Script Create Dialog",
     "file": "unit-script-create-dialog.tscn",
     "category": "Other"
@@ -2800,6 +2825,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "V Separator",
     "file": "unit-v-separator.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Video Stream Player Picture Size",
+    "file": "unit-video-stream-player-picture-size.tscn",
     "category": "Other"
   },
   {
@@ -3759,6 +3789,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tile Map",
     "file": "unit-tile-map.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tilemaplayer Normal Map",
+    "file": "unit-tilemaplayer-normal-map.tscn",
     "category": "Unit - 2D Canvas"
   },
   {

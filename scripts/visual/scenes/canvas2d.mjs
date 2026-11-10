@@ -42,6 +42,8 @@ export const CANVAS_2D_SCENES = [
   // orphan; (120,40) green, its child re-rooted on its own; (40,120) blue, below a moved parent that
   // does not apply. Dropped, all three are the grey background.
   { name: 'orphan-reroot', file: 'unit-orphan-reroot.tscn', mode: '2d' },
+  // A ScriptCreateDialog is an editor class: a game loads a placeholder, and its children still draw.
+  { name: 'script-create-dialog-placeholder', file: 'unit-script-create-dialog-placeholder.tscn', mode: '2d' },
   // Two chained Bone2Ds, each turned and moved, with a bar under each. Godot
   // probes: (387,210) orange, mid upper arm, and (473,340) blue, mid forearm.
   // A bone drawn as an untransformed group stacks both bars at the skeleton.
@@ -151,6 +153,10 @@ export const CANVAS_2D_SCENES = [
   // flip_h flips the frame's normal. Godot 4.6.3 `--mode 2d`: Plain rgb(226) at (100,324), Flipped
   // rgb(128) at (852,324) and rgb(244) at (976,324).
   { name: 'animatedsprite2d-normal-map-flip', file: 'unit-animatedsprite2d-normal-map-flip.tscn', mode: '2d' },
+  // A cell's flips and transpose turn its tile's normal. Godot 4.6.3 `--mode 2d`, at the light's x, 100 left
+  // of it, 24 left, 24 right, 100 right, 100 above and 100 below: Plain rgb(226, 244, 168, 128, 160, 161),
+  // FlippedH rgb(128, 170, 244, 225, 161, 161) and Transposed rgb(160, 206, 205, 161, 226, 128).
+  { name: 'tilemaplayer-normal-map', file: 'unit-tilemaplayer-normal-map.tscn', mode: '2d' },
   // A Line2D whose CanvasTexture carries a normal map; only the item's rotation turns the normal. Godot
   // 4.6.3 `--mode 2d`: Vertical rgb(226) at (100,324), rgb(160) at (200,224) and rgb(161) at (200,424).
   // Turned rgb(161) at (852,324), rgb(226) at (952,224) and rgb(128) at (952,424).
@@ -473,6 +479,15 @@ export const CANVAS_2D_SCENES = [
   {
     name: 'texturerect-filter-inherit',
     file: 'unit-texture-rect-filter-inherit.tscn',
+    mode: '2d',
+  },
+  // VideoStreamPlayer takes its Theora picture size as its minimum size with `expand` off. Each
+  // player has a 1 x 1 authored rect and a full-rect ColorRect child. Godot 4.6.3 `--mode 2d`:
+  // x 8-71 y 8-55 (autoplay, stopped, paused or not), x 100-227 y 8-103 (expand), 1 x 1 for a
+  // Vorbis-only file, and x 100-169 y 230-259 for a 70 x 30 picture in an 80 x 32 frame.
+  {
+    name: 'video-stream-player-picture-size',
+    file: 'unit-video-stream-player-picture-size.tscn',
     mode: '2d',
   },
   // The same atlas decode reached through SpriteFrames. It shares the decode but
@@ -919,6 +934,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'graph-edit', file: 'unit-graph-edit.tscn', mode: '2d' },
   { name: 'graph-edit-frame-order', file: 'unit-graph-edit-frame-order.tscn', mode: '2d' },
   { name: 'graph-edit-menu-hidden', file: 'unit-graph-edit-menu-hidden.tscn', mode: '2d' },
+  { name: 'graph-edit-zoom-out', file: 'unit-graph-edit-zoom-out.tscn', mode: '2d' },
+  { name: 'graph-edit-zoom-in', file: 'unit-graph-edit-zoom-in.tscn', mode: '2d' },
   { name: 'graph-edit-zoom-label', file: 'unit-graph-edit-zoom-label.tscn', mode: '2d' },
   {
     name: 'graph-edit-zoom-buttons-hidden',

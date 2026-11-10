@@ -331,3 +331,42 @@ function mirrorResponse(body: string, contentType = 'application/octet-stream') 
     arrayBuffer: async () => new TextEncoder().encode(body).buffer,
   };
 }
+
+describe('WebResourceProvider bounded reads', () => {
+  it('reads only the first bytes of an uploaded binary file', async () => {
+    const provider = new WebResourceProvider();
+    provider.addUploadedFile(
+      'res://video/clip.ogv',
+      new File([new Uint8Array([1, 2, 3, 4, 5, 6])], 'clip.ogv')
+    );
+
+    const head = await provider.loadResource('res://video/clip.ogv', undefined, 4);
+
+    expect(new Uint8Array(head as ArrayBuffer)).toEqual(new Uint8Array([1, 2, 3, 4]));
+  });
+
+  it('stops a mirror transfer at the cap and cancels the rest', async () => {
+    const chunks = [new Uint8Array([1, 2, 3]), new Uint8Array([4, 5, 6]), new Uint8Array([7, 8, 9])];
+    const cancel = vi.fn();
+    let next = 0;
+    const response = {
+      ok: true,
+      headers: { get: () => 'application/octet-stream' },
+      body: {
+        getReader: () => ({
+          read: async () =>
+            next < chunks.length ? { done: false, value: chunks[next++] } : { done: true, value: undefined },
+          cancel,
+        }),
+      },
+    };
+    global.fetch = vi.fn().mockResolvedValue(response as unknown as Response);
+    const provider = new WebResourceProvider();
+
+    const head = await provider.loadResource('res://video/clip.ogv', undefined, 4);
+
+    expect(new Uint8Array(head as ArrayBuffer)).toEqual(new Uint8Array([1, 2, 3, 4]));
+    expect(next).toBe(2);
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+});

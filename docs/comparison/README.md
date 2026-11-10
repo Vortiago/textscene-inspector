@@ -202,7 +202,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [AudioStreamPlayer2D](../../packages/textscene-core/src/nodes/audio/audiostreamplayer2d/comparison.md): an invisible Node2D transform group
 - [BackBufferCopy](../../packages/textscene-core/src/nodes/2d/backbuffercopy/comparison.md): nothing (a transform-only group)
 - [BaseButton](../../packages/textscene-core/src/nodes/2d/ui/basebutton/comparison.md): nothing of its own
-- [Bone2D](../../packages/textscene-core/src/nodes/2d/bone2d/comparison.md): nothing (a transform-only group, the bone gizmo is editor-only)
+- [Bone2D](../../packages/textscene-core/src/nodes/2d/bone2d/comparison.md): a kite gizmo for every bone
 - [BoxContainer](../../packages/textscene-core/src/nodes/2d/ui/boxcontainer/comparison.md): children laid out along its own `vertical`-chosen axis
 - [Button](../../packages/textscene-core/src/nodes/2d/ui/button/comparison.md): a StyleBox quad with a centred text run
 - [Camera2D](../../packages/textscene-core/src/nodes/2d/camera2d/comparison.md): a 2D view frame with no drawn geometry
@@ -227,7 +227,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [FlowContainer](../../packages/textscene-core/src/nodes/2d/ui/flowcontainer/comparison.md): children flowed along one axis and wrapped into lines
 - [FoldableContainer](../../packages/textscene-core/src/nodes/2d/ui/foldablecontainer/comparison.md): a collapsible titled panel (accordion)
 - [GPUParticles2D](../../packages/textscene-core/src/nodes/2d/particles/gpuparticles2d/comparison.md): nothing yet, Godot draws a particle cloud, the previewer does not
-- [GraphEdit](../../packages/textscene-core/src/nodes/2d/ui/graphedit/comparison.md): a background panel, grid, toolbar, scrollbars and minimap, with GraphElement children placed by position_offset and the whole rect clipped
+- [GraphEdit](../../packages/textscene-core/src/nodes/2d/ui/graphedit/comparison.md): a background panel, grid, toolbar, scrollbars and minimap, with GraphElement children placed by position_offset, scaled by zoom and the whole rect clipped
 - [GraphElement](../../packages/textscene-core/src/nodes/2d/ui/graphelement/comparison.md): an invisible container that fits its children into its own rect
 - [GraphFrame](../../packages/textscene-core/src/nodes/2d/ui/graphframe/comparison.md): a titled frame around its own content rect
 - [GraphNode](../../packages/textscene-core/src/nodes/2d/ui/graphnode/comparison.md): a titled panel with slot rows and left/right port icons
@@ -300,7 +300,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [Tree](../../packages/textscene-core/src/nodes/2d/ui/tree/comparison.md): an empty panel, with a blank header row when column_titles_visible
 - [VBoxContainer](../../packages/textscene-core/src/nodes/2d/ui/vboxcontainer/comparison.md): children laid out down a column
 - [VFlowContainer](../../packages/textscene-core/src/nodes/2d/ui/vflowcontainer/comparison.md): children flowed down a column, wrapping to a new column
-- [VideoStreamPlayer](../../packages/textscene-core/src/nodes/2d/ui/videostreamplayer/comparison.md): nothing (no decoded frame ever reaches it)
+- [VideoStreamPlayer](../../packages/textscene-core/src/nodes/2d/ui/videostreamplayer/comparison.md): a transparent rect at the Ogg Theora picture size, as in the Godot editor
 - [VisibleOnScreenEnabler2D](../../packages/textscene-core/src/nodes/2d/visibleonscreenenabler2d/comparison.md): nothing (a transform-only group)
 - [VisibleOnScreenNotifier2D](../../packages/textscene-core/src/nodes/2d/visibleonscreennotifier2d/comparison.md): nothing (a transform-only group)
 - [VScrollBar](../../packages/textscene-core/src/nodes/2d/ui/vscrollbar/comparison.md): a vertical track with a rectangular grabber
@@ -321,7 +321,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [Node](../../packages/textscene-core/src/nodes/node/comparison.md): nothing, a non-spatial base node
 - [PopupMenu](../../packages/textscene-core/src/nodes/windows/popupmenu/comparison.md): nothing yet, not implemented
 - [ResourcePreloader](../../packages/textscene-core/src/nodes/resources/resourcepreloader/comparison.md): nothing (a transform-only group)
-- [ScriptCreateDialog](../../packages/textscene-core/src/nodes/windows/scriptcreatedialog/comparison.md): nothing yet, not implemented
+- [ScriptCreateDialog](../../packages/textscene-core/src/nodes/windows/scriptcreatedialog/comparison.md): nothing (a transform-only group)
 - [ShaderGlobalsOverride](../../packages/textscene-core/src/nodes/rendering/shaderglobalsoverride/comparison.md): nothing yet, Godot re-shades every material that reads the overridden globals, the previewer does not
 - [StatusIndicator](../../packages/textscene-core/src/nodes/os/statusindicator/comparison.md): nothing (a transform-only group)
 - [Timer](../../packages/textscene-core/src/nodes/timers/timer/comparison.md): nothing (a countdown timer node)
