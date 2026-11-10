@@ -497,7 +497,8 @@ function buildForest(
     int: readonly TscnInternalResource[],
     consumerPath: string,
     isHeldLocally: boolean,
-    sizeOfFile?: TextureSlotRequest['sizeOfFile']
+    sizeOfFile?: TextureSlotRequest['sizeOfFile'],
+    fallbackSize: Vector2 | null = null
   ): Vector2 | null {
     const sizing: ViewportTextureSizing = {
       isHeldLocally,
@@ -518,7 +519,7 @@ function buildForest(
         pendingResourceFiles.add(resourceFile);
         return null;
       }
-      if (cached === null) return null;
+      if (cached === null) return fallbackSize;
       return sizeOfFile ? sizeOfFile(cached) : extResourceTexture2DSize(cached, sizing);
     }
 
@@ -526,13 +527,13 @@ function buildForest(
     // texture too. ExtResource alone would give a painted node a (0, 0) minimum,
     // and a container would collapse it over its siblings.
     const path = resolveTexture2DPath(ref, ext, int);
-    if (!path) return null;
+    if (!path) return fallbackSize;
     const cached = textureCache.getCached(path);
     if (cached === undefined) {
       pendingTextures.add(path);
       return null;
     }
-    if (cached === null) return null;
+    if (cached === null) return fallbackSize;
     const image = cached.image as { width?: number; height?: number } | undefined;
     return { x: image?.width ?? 0, y: image?.height ?? 0 };
   }
@@ -556,7 +557,7 @@ function buildForest(
     if (slotsFn) {
       const requests = slotsFn(node, themedIcons);
       const slots: Record<string, Vector2 | null> = {};
-      for (const { key, ref, scope, isHeldLocally = NODE_PROPERTY, sizeOfFile } of requests) {
+      for (const { key, ref, scope, isHeldLocally = NODE_PROPERTY, sizeOfFile, fallbackSize } of requests) {
         slots[key] = ref
           ? resolveTextureRefSize(
               ref,
@@ -564,7 +565,8 @@ function buildForest(
               scope?.internalResources ?? int,
               path,
               isHeldLocally,
-              sizeOfFile
+              sizeOfFile,
+              fallbackSize
             )
           : null;
       }

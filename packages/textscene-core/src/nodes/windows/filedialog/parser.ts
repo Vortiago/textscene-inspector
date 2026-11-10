@@ -6,6 +6,16 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { unquoteString } from '../../../parser/utils';
+import {
+  finishLocation,
+  setAccess,
+  setCurrentDir,
+  setCurrentFile,
+  setCurrentPath,
+  setRootSubfolder,
+  startLocation,
+  type FileDialogLocation,
+} from './location';
 import { stringToInt } from '../../../godot/string/string.js';
 import { indexedKeyRegex } from '../../../godot/classdb/indexedKey.js';
 import { stringArrayBodies } from '../../../godot/variant/variantParser';
@@ -28,10 +38,9 @@ export interface FileDialogOption {
   defaultIndex: number;
 }
 
-export interface FileDialogProperties extends ConfirmationDialogProperties {
+export interface FileDialogProperties extends ConfirmationDialogProperties, FileDialogLocation {
   file_mode: number;
   display_mode: number;
-  access: number;
   /** Each entry as written: `*.png ; PNG Image`. */
   filters: readonly string[];
   options: readonly FileDialogOption[];
@@ -108,6 +117,20 @@ function replayModeTexts(properties: Record<string, string>, constructorTitle: s
   return { mode, title };
 }
 
+/** The lines that place the dialog, run through the setters in file order. */
+function replayLocation(properties: Record<string, string>, context: string): FileDialogLocation {
+  const state = startLocation();
+  for (const [key, raw] of Object.entries(properties)) {
+    if (key === 'access') {
+      setAccess(state, enumOr(raw, FILE_DIALOG_ACCESS_NAMES, state.access, `${context}.access`));
+    } else if (key === 'root_subfolder') setRootSubfolder(state, unquoteString(raw));
+    else if (key === 'current_dir') setCurrentDir(state, unquoteString(raw));
+    else if (key === 'current_file') setCurrentFile(state, unquoteString(raw));
+    else if (key === 'current_path') setCurrentPath(state, unquoteString(raw));
+  }
+  return finishLocation(state);
+}
+
 /** An enum line the setter refuses when out of range keeps the constructor's value (`ERR_FAIL_INDEX`). */
 function enumOr(
   raw: string | undefined,
@@ -144,7 +167,7 @@ export function parseFileDialog(
       0,
       `${context}.display_mode`
     ),
-    access: enumOr(properties.access, FILE_DIALOG_ACCESS_NAMES, 0, `${context}.access`),
+    ...replayLocation(properties, context),
     filters: properties.filters === undefined ? [] : parseStringArray(properties.filters),
     options: replayOptions(properties, context),
     hidden_files_toggle_enabled: flag(properties.hidden_files_toggle_enabled, 'hidden_files_toggle_enabled'),

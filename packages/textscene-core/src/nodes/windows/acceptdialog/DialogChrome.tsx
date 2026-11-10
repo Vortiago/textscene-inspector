@@ -39,15 +39,17 @@ export function DialogChrome(props: NativeControlComponentProps) {
   );
   const panelBox = useMemo(() => dialogPanelBox(solveNode, theme), [solveNode, theme]);
   const panelRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
-  const drawnBody = useMemo(
-    () =>
-      geometry.body.flatMap(({ control, rect: at }) => {
-        const Painter = controlComponentRegistry.get(control.node.type);
-        return Painter ? [{ control, at, Painter }] : [];
-      }),
-    [geometry]
-  );
   // The label is piece 0 and the body Controls follow in tree order, so the body draws over it.
+  const drawnBody = useMemo(() => {
+    const painted = geometry.body.flatMap(({ control, rect: at }) => {
+      const Painter = controlComponentRegistry.get(control.node.type);
+      return Painter ? [{ control, at, Painter }] : [];
+    });
+    return painted.map((part, index) => ({
+      ...part,
+      slot: canvasPieceSlot(slot, 1 + index, 1 + painted.length),
+    }));
+  }, [geometry, slot]);
   const pieceCount = 1 + drawnBody.length;
   const labelSlot = canvasPieceSlot(slot, 0, pieceCount);
   const buttonsSlot = canvasPieceSlot(chromeSlot, 0, 1);
@@ -78,8 +80,8 @@ export function DialogChrome(props: NativeControlComponentProps) {
     <>
       <StyleBoxQuad styleBox={panelBox} color={tint.own} rect={panelRect} renderOrder={renderOrder} />
       {drawControl(label, geometry.content, labelSlot, Label)}
-      {drawnBody.map(({ control, at, Painter }, index) =>
-        drawControl(control, at, canvasPieceSlot(slot, 1 + index, pieceCount), Painter)
+      {drawnBody.map(({ control, at, Painter, slot: bodySlot }) =>
+        drawControl(control, at, bodySlot, Painter)
       )}
       {buttons.map((button) => drawControl(button.node, button.rect, buttonsSlot, Button))}
     </>

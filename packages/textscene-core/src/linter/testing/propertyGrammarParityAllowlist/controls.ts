@@ -7,7 +7,11 @@
 import type { AsymmetryEntry } from './types.js';
 
 export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
-  // FileDialog: its file list is always empty, so what lists, filters or sorts files, and what a click on Save asks, never shows.
+  // FileDialog: each key below changes no pixel of a frozen frame. Measured against Godot 4.6.3:
+  // `show_hidden_files` and `filename_filter` act on the file list rows, which the file list will draw; `deleting_enabled`
+  // and `overwrite_warning_enabled` gate a confirmation a click raises; `use_native_dialog` swaps in the
+  // system dialog only when it pops up. `current_*` are never saved (`PROPERTY_USAGE_NONE`,
+  // `file_dialog.cpp:2136-2138`), so a linter has nothing to check, and the parser reads them as the loader would.
   FileDialog: {
     linterOnly: [
       'deleting_enabled',
@@ -16,9 +20,9 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'show_hidden_files',
       'use_native_dialog',
     ],
-    renderGap: ['root_subfolder'],
+    parserOnly: ['current_dir', 'current_file', 'current_path'],
     reason:
-      'No file is listed, so no file is deleted, filtered or hidden, and an overwrite is never asked. A system dialog replaces the drawn one only at run time. root_subfolder changes the path field and the previewer has no folders.',
+      'No listed file exists to delete, filter or hide, and an overwrite is never asked. A system dialog replaces the drawn one only at run time. A key Godot never saves has no validator.',
   },
 
   // Dialogs: closing a dialog needs input, so a frozen frame never shows it.

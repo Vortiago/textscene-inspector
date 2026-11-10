@@ -22,7 +22,7 @@ import { SelectionProvider } from '../../contexts/SelectionContext';
 import { HiddenSeeder } from '../../testing/HiddenSeeder';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import { peekSceneFontMetrics } from './text/sceneFontLoader';
-import { useBuildSolveTree } from './buildSolveTree';
+import { useBuildSolveTree, useBuildViewportTree } from './buildSolveTree';
 import { TscnParser } from '../../../parser/TscnParser';
 import { parsedNode } from '../../../parser/testing/parserKit';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver';
@@ -2595,5 +2595,33 @@ remote_path = NodePath("../../HolderA")
     });
 
     expect(result.current.tree[0]!.skippedAncestors!.transform.tx).toBeCloseTo(29930, 3);
+  });
+});
+
+describe('useBuildSolveTree — a themed icon that fails to load', () => {
+  const slotOf = (seed: (loader: ReturnType<typeof createFakeResourceLoader>) => void) => {
+    const loader = createFakeResourceLoader();
+    seed(loader);
+    const dialog = node('Dialog', 'FileDialog', {
+      properties: { name: 'Dialog', themeOverrideIcons: { back_folder: 'ExtResource("1")' } },
+    });
+    const { result } = renderHook(
+      () => useBuildViewportTree(dialog, [{ id: '1', path: 'res://icon.png', type: 'Texture2D' }], [], []),
+      { wrapper: wrapperFor(loader.loader) }
+    );
+    return result.current.tree[0]?.textureSlots.back_folder;
+  };
+
+  it('takes the texture size once it loads', () => {
+    const texture = { image: { width: 32, height: 32 } } as unknown as THREE.Texture;
+    expect(slotOf((loader) => loader.textures.seed('res://icon.png', texture))).toEqual({ x: 32, y: 32 });
+  });
+
+  it('takes the default theme icon size: Theme::has_icon refuses an invalid icon (theme.cpp:306)', () => {
+    expect(slotOf((loader) => loader.textures.seed('res://icon.png', null))).toEqual({ x: 16, y: 16 });
+  });
+
+  it('has no size while the texture still loads', () => {
+    expect(slotOf(() => {})).toBeNull();
   });
 });

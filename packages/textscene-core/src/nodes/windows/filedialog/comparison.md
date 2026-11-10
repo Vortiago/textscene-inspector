@@ -24,6 +24,11 @@ Save File mode adds the create-folder button, titles the window "Save a File" an
 
 A CheckBox option and a value option draw in the options row and the option grid under the filter.
 
+## Current path
+<!-- compare: image=unit-file-dialog-current-path status=limitation fixture=file-dialog-current-path/unit-file-dialog-current-path.tscn -->
+
+`current_path` puts the dialog in a folder and a file name in the File field. The name before its dot is selected, and the next-folder button is disabled, as in Godot.
+
 ## Linting
 
 <!-- lint:begin FileDialog -->
@@ -61,9 +66,10 @@ Strict parsing format-checks these `FileDialog` properties, plus 1 inherited fro
 | `valid-filedialog-properties` (type-family match) | `filedialog-option-index-out-of-range` | error |
 <!-- lint:end -->
 
-The lenient parser replays `title`, `file_mode`, `mode_overrides_title` and the `option_*` lines in file order, as Godot's loader sets them. A value the setter refuses, such as a `file_mode` of `9`, keeps the previous one. The seven customisation flags default to true.
+The lenient parser replays `title`, `file_mode`, `mode_overrides_title` and the `option_*` lines in file order, as Godot's loader sets them. It replays the placing lines the same way: `access`, `root_subfolder`, `current_dir`, `current_file` and `current_path`. A value the setter refuses, such as a `file_mode` of `9`, keeps the previous one. A changed `access` resets `root_subfolder`. The seven customisation flags default to true. Godot does not save `current_dir`, `current_file` or `current_path`, but the parser reads them as the loader would.
 
 ## Known limitations
 
 - **Not drawn** The file list always shows no entry, so a folder's files and directories do not appear, and the Favorites and Recent lists stay empty.
-- **Approximated** `access = 2` (filesystem) and `root_subfolder` depend on the machine's folders, so the path field shows no root for them.
+- **Approximated** `access = 2` (filesystem) opens the machine's working directory (`file_dialog.cpp:1517`), which a scene does not carry, so the path field is empty.
+- **Approximated** A folder that `root_subfolder` or `current_dir` names is taken as existing, though Godot refuses one that does not (`file_dialog.cpp:1334`).

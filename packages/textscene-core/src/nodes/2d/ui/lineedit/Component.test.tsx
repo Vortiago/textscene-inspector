@@ -623,3 +623,29 @@ describe('<LineEdit> — caret_force_displayed', () => {
     expect((quads[0]!.parent as THREE.Object3D).position.x).toBe(4);
   });
 });
+
+describe('<LineEdit> — selection (line_edit.cpp:1491-1506)', () => {
+  const plainQuads = (renderer: Rendered) =>
+    findControlQuadMeshes(renderer.scene).filter((m) => (m.material as THREE.MeshBasicMaterial).map == null);
+
+  it('draws no selection quad without a selection', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'a.png' })} rect={RECT} renderOrder={0} />
+    );
+    expect(plainQuads(renderer)).toHaveLength(0);
+  });
+
+  it('draws one quad behind the selected glyphs, from the pen origin', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <LineEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'a.png', selection: { begin: 0, end: 1 } })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const quads = plainQuads(renderer);
+    expect(quads).toHaveLength(1);
+    expect((quads[0]!.parent as THREE.Object3D).position.x).toBe(4);
+  });
+});

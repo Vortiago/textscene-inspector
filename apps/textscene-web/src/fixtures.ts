@@ -3103,6 +3103,12 @@ export const fixtures: Fixture[] = [
     "root": "decal-filter"
   },
   {
+    "name": "File Dialog Current Path",
+    "file": "file-dialog-current-path/unit-file-dialog-current-path.tscn",
+    "category": "Other",
+    "root": "file-dialog-current-path"
+  },
+  {
     "name": "File Dialog Open Empty",
     "file": "file-dialog-open-empty/unit-file-dialog-open-empty.tscn",
     "category": "Other",

@@ -1,6 +1,7 @@
 /** Godot 4.6.3's FileDialog facts a scene's properties carry. */
 
 import { enumNamesByValue } from '../classdb/enumNames.js';
+import { stripEdges } from '../string/string.js';
 
 /** `FileDialog::FileMode` (`scene/gui/file_dialog.h:119-125`). */
 const FileMode = {
@@ -79,7 +80,7 @@ const MAX_RECOGNISED_FILTERS = 5;
 
 /** A filter's `patterns ; description` parts, each stripped (`get_slicec(';', n).strip_edges()`). */
 function filterFields(filter: string): [patterns: string, description: string] {
-  const parts = filter.split(';').map((part) => part.trim());
+  const parts = filter.split(';').map(stripEdges);
   return [parts[0] ?? '', parts[1] ?? ''];
 }
 

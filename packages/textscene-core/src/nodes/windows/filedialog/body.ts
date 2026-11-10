@@ -12,7 +12,6 @@
 
 import { parseNodeWithRegistry } from '../../../core/NodeRegistry';
 import {
-  accessRootPath,
   DisplayMode,
   firstFilterLabel,
   isOpenFileMode,
@@ -35,7 +34,7 @@ const EXPAND_FILL = String(SizeFlags.EXPAND | SizeFlags.FILL);
 const SHRINK_CENTER = String(SizeFlags.SHRINK_CENTER);
 
 /** The size of every FileDialog icon (`scene/theme/icons/`, 16x16). */
-export const FILE_DIALOG_ICON_SIZE: Vector2 = { x: 16, y: 16 };
+const FILE_DIALOG_ICON_SIZE: Vector2 = { x: 16, y: 16 };
 
 /** `favorite_list` and `recent_list` floor their width at `128 * get_theme_default_base_scale()` (`file_dialog.cpp:261-262`). */
 const SIDE_LIST_MINIMUM_WIDTH = 128;
@@ -93,13 +92,17 @@ function topToolbar({ props, rtl }: Dialog): Widget {
   return widget('HBoxContainer', 'TopToolbar', {
     children: [
       iconButton('DirPrev', rtl ? 'forward_folder' : 'back_folder'),
-      iconButton('DirNext', rtl ? 'back_folder' : 'forward_folder'),
+      iconButton(
+        'DirNext',
+        rtl ? 'back_folder' : 'forward_folder',
+        props.is_next_folder_disabled ? { disabled: 'true' } : {}
+      ),
       iconButton('DirUp', 'parent_folder'),
       widget('Label', 'PathLabel', { raw: { text: '"Path:"' } }),
       widget('HBoxContainer', 'DrivesContainer'),
       widget('LineEdit', 'DirectoryEdit', {
         raw: { size_flags_horizontal: EXPAND_FILL },
-        properties: { text: accessRootPath(props.access) ?? '' },
+        properties: { text: props.path_text },
       }),
       widget('HBoxContainer', 'ShortcutsContainer'),
       iconButton('RefreshButton', 'reload'),
@@ -191,6 +194,10 @@ function fileColumn(dialog: Dialog): Widget {
           widget('Label', 'FileLabel', { raw: { text: '"File:"' } }),
           widget('LineEdit', 'FilenameEdit', {
             raw: { size_flags_horizontal: EXPAND_FILL, size_flags_stretch_ratio: '4.0' },
+            properties: {
+              text: dialog.props.current_file,
+              selection: dialog.props.file_selection ?? undefined,
+            },
           }),
           widget('OptionButton', 'Filter', {
             raw: { size_flags_horizontal: EXPAND_FILL, size_flags_stretch_ratio: '3.0', clip_text: 'true' },
@@ -285,7 +292,7 @@ function iconSizeOf(dialog: SolveNode, name: FileDialogThemeIcon): Vector2 | nul
 export const fileDialogTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) =>
   FILE_DIALOG_THEME_ICONS.flatMap((name) => {
     const themed = themedIcons[name];
-    return themed ? [themedSlotRequest(name, themed)] : [];
+    return themed ? [themedSlotRequest(name, themed, FILE_DIALOG_ICON_SIZE)] : [];
   });
 
 function build(dialog: SolveNode, theme: NativeTheme, spec: Widget, parentPath: string): SolveNode {

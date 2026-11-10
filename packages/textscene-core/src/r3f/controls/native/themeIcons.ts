@@ -210,11 +210,11 @@ const ARROW_DOWN_B64 =
 const ARROW_UP_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNDUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTExLjAxMTA2MyA5Ljk3NzYyNDYtMy4wMjIyMDk0LTIuOTc3NjI0Ni0yLjk3NzYyNDcgMy4wMjIyMSIvPjwvc3ZnPgo=';
 
-/** `scene/theme/icons/arrow_right.svg` (16x16): FoldableContainer's `folded_arrow`. */
+/** `scene/theme/icons/arrow_right.svg` (16x16): FoldableContainer's `folded_arrow` and FileDialog's `forward_folder`. */
 const ARROW_RIGHT_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNDUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTYgMTEgMy0zLTMtMyIvPjwvc3ZnPgo=';
 
-/** `scene/theme/icons/arrow_left.svg` (16x16): FoldableContainer's `folded_arrow_mirrored` (RTL only, never selected here). */
+/** `scene/theme/icons/arrow_left.svg` (16x16): FoldableContainer's `folded_arrow_mirrored` (RTL only) and FileDialog's `back_folder`. */
 const ARROW_LEFT_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNDUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTkgMTEtMy0zIDMtMyIvPjwvc3ZnPgo=';
 
@@ -442,14 +442,6 @@ export const GRAPH_EDIT_MINIMAP_RESIZER_ICON = svgDataUrl(GRAPH_EDIT_MINIMAP_RES
 /** Every GraphEdit/GraphEditMinimap icon above shares this authored size: 16x16, never rescaled by the project theme scale (same limitation as `SPIN_BOX_ARROW_ICON_SIZE`). */
 export const GRAPH_EDIT_ICON_SIZE = 16;
 
-/** `scene/theme/icons/arrow_left.svg` (16x16), bound as `FileDialog/back_folder` (`default_theme.cpp:702-716`). */
-const FILE_DIALOG_BACK_FOLDER_B64 =
-  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNDUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTkgMTEtMy0zIDMtMyIvPjwvc3ZnPgo=';
-
-/** `scene/theme/icons/arrow_right.svg` (16x16), bound as `FileDialog/forward_folder` (`default_theme.cpp:702-716`). */
-const FILE_DIALOG_FORWARD_FOLDER_B64 =
-  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNDUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTYgMTEgMy0zLTMtMyIvPjwvc3ZnPgo=';
-
 /** `scene/theme/icons/folder_up.svg` (16x16), bound as `FileDialog/parent_folder` (`default_theme.cpp:702-716`). */
 const FILE_DIALOG_PARENT_FOLDER_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTggMTFWNG00IDRMOCA0IDQgOCIvPjwvc3ZnPgo=';
@@ -494,10 +486,10 @@ const FILE_DIALOG_FAVORITE_UP_B64 =
 const FILE_DIALOG_FAVORITE_DOWN_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTBlMGUwIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTEwIDJINm0yIDR2OE00IDlsNCA1IDQtNSIvPjwvc3ZnPgo=';
 
-/** The vendored default of each `FileDialog` theme icon the toolbar buttons show. */
+/** The vendored default of each `FileDialog` theme icon the toolbar buttons show (`default_theme.cpp:702-716`). `back_folder` and `forward_folder` are `arrow_left.svg` and `arrow_right.svg`. */
 export const FILE_DIALOG_ICON_URLS: Readonly<Record<FileDialogThemeIcon, string>> = {
-  back_folder: svgDataUrl(FILE_DIALOG_BACK_FOLDER_B64),
-  forward_folder: svgDataUrl(FILE_DIALOG_FORWARD_FOLDER_B64),
+  back_folder: svgDataUrl(ARROW_LEFT_B64),
+  forward_folder: svgDataUrl(ARROW_RIGHT_B64),
   parent_folder: svgDataUrl(FILE_DIALOG_PARENT_FOLDER_B64),
   reload: svgDataUrl(FILE_DIALOG_RELOAD_B64),
   favorite: svgDataUrl(FILE_DIALOG_FAVORITE_B64),

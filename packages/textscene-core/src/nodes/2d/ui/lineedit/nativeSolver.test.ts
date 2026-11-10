@@ -21,6 +21,7 @@ import {
   resolveLineEditTextState,
   layoutLineEditContent,
   lineEditDrawnLayout,
+  lineEditSelection,
   lineEditRightIconSize,
   lineEditCaretRect,
   lineEditTextureSlots,
@@ -886,6 +887,52 @@ describe('lineEditDrawnLine: the glyphs the draw loop keeps (line_edit.cpp:1512-
 
   it('keeps the line width the alignment used', () => {
     expect(lineEditDrawnLayout(layoutOf([10, 10, 10]), 4, 20).lines[0]!.widthPx).toBe(30);
+  });
+});
+
+describe('lineEditSelection: the rect and the glyphs a selection covers (line_edit.cpp:1491-1506,1534)', () => {
+  const advances = [10, 10, 10, 10];
+  const layout = {
+    shapedText: 'abcd',
+    lines: [
+      {
+        paragraphIndex: 0,
+        text: 'abcd',
+        widthPx: 40,
+        glyphs: advances.map((advance, i) => ({
+          char: 'abcd'[i]!,
+          x: i * 10,
+          advance,
+          sourceIndex: i,
+          glyph: null,
+          fontMetrics: OPEN_SANS_FONT_METRICS,
+          fontSizePx: 16,
+        })),
+      },
+    ],
+    linePitchPx: 20,
+    widthPx: 40,
+    heightPx: 20,
+    baselineOffsetPx: 15,
+    fontMetrics: OPEN_SANS_FONT_METRICS,
+  };
+  const chars = (result: typeof layout) => result.lines[0]!.glyphs.map((glyph) => glyph.char).join('');
+
+  it('spans the covered glyphs from the pen origin', () => {
+    expect(lineEditSelection(layout, { begin: 0, end: 2 }, 4, 100).rect).toEqual({ x: 4, w: 20 });
+  });
+
+  it('splits the glyphs into the covered and the rest', () => {
+    const { selected, unselected } = lineEditSelection(layout, { begin: 1, end: 3 }, 0, 100);
+    expect([chars(selected), chars(unselected)]).toEqual(['bc', 'ad']);
+  });
+
+  it('clips the rect to ofs_max', () => {
+    expect(lineEditSelection(layout, { begin: 0, end: 4 }, 0, 25).rect).toEqual({ x: 0, w: 25 });
+  });
+
+  it('has no rect for an empty selection', () => {
+    expect(lineEditSelection(layout, { begin: 0, end: 0 }, 0, 100).rect).toBeNull();
   });
 });
 

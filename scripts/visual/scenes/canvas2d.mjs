@@ -1190,6 +1190,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'file-dialog-save-empty', file: 'file-dialog-save-empty/unit-file-dialog-save-empty.tscn', mode: '2d' },
   // A CheckBox option and a value option draw the options row and the option grid. Max 26, mean 0.22 (SVG icon edges).
   { name: 'file-dialog-options', file: 'file-dialog-options/unit-file-dialog-options.tscn', mode: '2d' },
+  // current_path puts the dialog in a sub folder and a file name in the File field, its name before the dot selected. Max 26, mean 0.22 (SVG icon edges).
+  { name: 'file-dialog-current-path', file: 'file-dialog-current-path/unit-file-dialog-current-path.tscn', mode: '2d' },
 
   // MeshInstance2D draws a mesh through the canvas. Godot 4.6.3 `--mode 2d` probes: the textured QuadMesh
   // shows its texture upside down, (75,75) blue and (75,125) red, and the PlaneMesh at (100,300) draws

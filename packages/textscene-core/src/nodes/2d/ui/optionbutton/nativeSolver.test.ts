@@ -19,6 +19,7 @@ import {
   resolveOptionButtonSelectedText,
   layoutOptionButtonContent,
   optionButtonArrowSize,
+  optionButtonTextureSlots,
   OPTION_BUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -51,6 +52,14 @@ function ctx(withMeasurer = true): SolveContext {
     combinedMinimumSize: () => ({ x: 0, y: 0 }),
   };
 }
+
+describe('optionButtonTextureSlots', () => {
+  it('falls back to the default arrow size when the themed arrow fails to load (theme.cpp:306)', () => {
+    const themed = { ref: 'ExtResource("1")', resources: solveNode().resources, isHeldLocally: true };
+    const [request] = optionButtonTextureSlots(controlNode('Opt', 'OptionButton'), { arrow: themed });
+    expect(request?.fallbackSize).toEqual({ x: 12, y: 12 });
+  });
+});
 
 describe('optionButtonArrowSize', () => {
   it("is option_button_arrow.svg's own authored 12x12 when no arrow is themed", () => {

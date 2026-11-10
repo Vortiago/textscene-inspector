@@ -102,7 +102,7 @@ const OPTION_BUTTON_ARROW_NATURAL_SIZE: Vector2 = { x: 12, y: 12 };
 export const optionButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
   const themed = themedIcons.arrow;
   const requests: TextureSlotRequest[] = [];
-  if (themed) requests.push(themedSlotRequest('arrow', themed));
+  if (themed) requests.push(themedSlotRequest('arrow', themed, OPTION_BUTTON_ARROW_NATURAL_SIZE));
   return requests;
 };
 
