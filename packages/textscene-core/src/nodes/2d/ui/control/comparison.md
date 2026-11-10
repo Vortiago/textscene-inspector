@@ -110,7 +110,7 @@ malformed `anchor_left`, `offset_top`, `rotation`, `scale`, `pivot_offset`,
 renderer applies its own default. `theme_override_styles/*` is stored unparsed.
 `visible` is `true` for anything other than a value that reads as `false`.
 
-`clip_children` clips a Control's children to its drawn pixels, as it does for a Node2D (the Node2D sheet gives the rules). The `clip-children-control` golden has a Button clip a ColorRect. Its rounded corner pixels differ by up to 3/255 from Godot. The same Button unclipped differs by 1/255, because the contrast with the child scales the corner coverage.
+`clip_children` clips a Control's children to its drawn pixels, as it does for a Node2D (the Node2D sheet gives the rules). The `clip-children-control` golden has a Button clip a ColorRect.
 
 ## Known limitations
 
