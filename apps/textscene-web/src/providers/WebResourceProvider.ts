@@ -133,7 +133,7 @@ export class WebResourceProvider implements ResourceProvider {
 async function readBytes(response: Response, maxBytes: number | undefined): Promise<ArrayBuffer> {
   if (maxBytes === undefined || !response.body) return response.arrayBuffer();
   const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
+  const chunks: Uint8Array<ArrayBuffer>[] = [];
   let received = 0;
   try {
     while (received < maxBytes) {
