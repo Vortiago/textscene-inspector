@@ -13,7 +13,7 @@
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { Vector2 } from '../../../godot/math/vector';
 import { SizeFlags, DEFAULT_SIZE_FLAGS } from '../../../godot/scene/control';
-import { internalChildThemeItems } from '../../../r3f/controls/native/buildSolveTree';
+import { internalChildThemeItems } from '../../../r3f/controls/native/themeItems';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type {
   ContainerLayoutFn,
@@ -104,6 +104,18 @@ function buttonRow(dialog: SolveNode, ctx: SolveContext): ButtonRow {
   };
 }
 
+/** The rect every authored Control takes (`dialogs.cpp:249-259`): the panel less the button row and its separation. */
+export function dialogContentRect(dialog: SolveNode, size: Vector2, ctx: SolveContext): Rect2 {
+  const panel = dialogPanelBox(dialog, ctx.theme);
+  const margins = contentMarginSize(panel);
+  return {
+    x: panel.contentMargin.left,
+    y: panel.contentMargin.top,
+    w: size.x - margins.x,
+    h: size.y - margins.y - buttonRow(dialog, ctx).minimum.y - buttonsSeparation(dialog, ctx.theme),
+  };
+}
+
 /**
  * `_update_child_rects` (`dialogs.cpp:219-260`) for a dialog of `size`: the row from the bottom edge
  * at its minimum height, the content above it less the separation.
@@ -111,7 +123,6 @@ function buttonRow(dialog: SolveNode, ctx: SolveContext): ButtonRow {
 export function dialogGeometry(dialog: SolveNode, size: Vector2, ctx: SolveContext): DialogGeometry {
   const panel = dialogPanelBox(dialog, ctx.theme);
   const margins = contentMarginSize(panel);
-  const separation = buttonsSeparation(dialog, ctx.theme);
   const row = buttonRow(dialog, ctx);
 
   const rowRect: Rect2 = {
@@ -120,12 +131,7 @@ export function dialogGeometry(dialog: SolveNode, size: Vector2, ctx: SolveConte
     w: size.x - margins.x,
     h: row.minimum.y,
   };
-  const content: Rect2 = {
-    x: panel.contentMargin.left,
-    y: panel.contentMargin.top,
-    w: size.x - margins.x,
-    h: size.y - margins.y - row.minimum.y - separation,
-  };
+  const content = dialogContentRect(dialog, size, ctx);
 
   const rects = resortBoxContainer(
     false,
@@ -187,6 +193,5 @@ export const dialogContentsMinimumSize: MinimumSizeFn = (dialog, ctx) => {
 
 /** Every authored Control takes the content rect (`dialogs.cpp:249-259`). */
 export const dialogLayout: ContainerLayoutFn = (dialog, children, rect, ctx) => {
-  const { content } = dialogGeometry(dialog, { x: rect.w, y: rect.h }, ctx);
-  return everyChildFills(children, content);
+  return everyChildFills(children, dialogContentRect(dialog, { x: rect.w, y: rect.h }, ctx));
 };

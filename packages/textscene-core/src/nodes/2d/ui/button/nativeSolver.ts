@@ -110,13 +110,13 @@ export function buttonTextTheme(
   const isFocusStyled = isButtonFocusStyled(props, state);
   const defaults: TextThemeDefaults = {
     fontSizePx: ctx.theme.fontSize,
-    color: isFocusStyled
-      ? CONTROL_FONT_FOCUS_COLOR
-      : state === 'disabled'
-        ? BUTTON_DEFAULT_DISABLED_FONT_COLOR
-        : BUTTON_DEFAULT_FONT_COLOR,
+    color: isFocusStyled ? CONTROL_FONT_FOCUS_COLOR : buttonDefaultFontColor(state),
   };
   return resolveTextTheme(n, props, isFocusStyled ? BUTTON_FOCUS_KEYS : BUTTON_THEME_KEYS[state], defaults);
+}
+
+function buttonDefaultFontColor(state: ButtonDrawState): Rgba {
+  return state === 'disabled' ? BUTTON_DEFAULT_DISABLED_FONT_COLOR : BUTTON_DEFAULT_FONT_COLOR;
 }
 
 /**

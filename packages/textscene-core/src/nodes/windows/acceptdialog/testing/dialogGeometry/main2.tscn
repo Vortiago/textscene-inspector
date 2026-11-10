@@ -1,0 +1,4 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Script" path="res://oracle2.gd" id="1"]
+[node name="Oracle" type="Node"]
+script = ExtResource("1")

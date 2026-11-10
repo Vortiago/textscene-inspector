@@ -514,6 +514,13 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
     expect(bar.icons.close?.ref).toBe('ExtResource("1")');
   });
 
+  it('ignores a TabBar theme entry for a key the container pushes (tab_container.cpp:306-337)', () => {
+    const projectTheme = themeResource({ colors: { TabBar: { font_selected_color: '#ff0000' } } });
+    const n = container({}, projectTheme);
+    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
+    expect(bar.colors.font_selected_color).toBeUndefined();
+  });
+
   it("pushes the container's own theme_override_font_sizes/font_size", () => {
     expect(barFontSize(container({ themeOverrideFontSizes: { font_size: 28 } }))).toBe(28);
   });

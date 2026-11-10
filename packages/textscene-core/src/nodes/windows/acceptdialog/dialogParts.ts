@@ -15,7 +15,7 @@ import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import type { TscnNode } from '../../../parser/types';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
-import { internalChildThemeItems } from '../../../r3f/controls/native/buildSolveTree';
+import { internalChildThemeItems } from '../../../r3f/controls/native/themeItems';
 import { perObject } from '../../../utils/perObject';
 import { flatStyleBox } from '../../../r3f/controls/native/styleBoxFlat';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
@@ -90,7 +90,7 @@ function internalControl(dialog: SolveNode, type: string, name: string, properti
 /** `message_label` (`dialogs.cpp:474-479`): `dialog_autowrap` picks `AUTOWRAP_WORD` (`:196-198`). */
 export function messageLabelNode(dialog: SolveNode): SolveNode {
   const props = dialog.node.properties as DialogProperties;
-  return messageLabel(dialog, 'MessageLabel', props.dialog_autowrap);
+  return messageLabel(dialog, props.dialog_autowrap);
 }
 
 /**
@@ -99,20 +99,17 @@ export function messageLabelNode(dialog: SolveNode): SolveNode {
  */
 export function cachedMessageLabelNode(dialog: SolveNode): SolveNode {
   const props = dialog.node.properties as DialogProperties;
-  return messageLabel(
-    dialog,
-    'CachedMessageLabel',
-    props.dialog_autowrap && !props.has_unwrapped_message_minimum
-  );
+  return messageLabel(dialog, props.dialog_autowrap && !props.has_unwrapped_message_minimum);
 }
 
-function messageLabel(dialog: SolveNode, name: string, wraps: boolean): SolveNode {
+/** One cached Label per wrap setting: the name carries `wraps`, which is the only thing the two differ by. */
+function messageLabel(dialog: SolveNode, wraps: boolean): SolveNode {
   const props = dialog.node.properties as DialogProperties;
   const properties: Partial<LabelProperties> = {
     text: props.dialog_text,
     autowrapMode: wraps ? AutowrapMode.AUTOWRAP_WORD : AutowrapMode.AUTOWRAP_OFF,
   };
-  return internalControl(dialog, 'Label', name, properties);
+  return internalControl(dialog, 'Label', wraps ? 'WrappingMessageLabel' : 'MessageLabel', properties);
 }
 
 /** The label of a button: the OK text, or the Cancel text only a ConfirmationDialog carries. */

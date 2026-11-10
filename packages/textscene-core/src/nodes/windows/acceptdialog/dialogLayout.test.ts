@@ -1,6 +1,6 @@
 /**
  * The geometry of an AcceptDialog and a ConfirmationDialog, against rects measured in Godot 4.6.3
- * (`/mnt/project-files/dialog-1178/oracle.gd`, window space, at the default theme scale).
+ * (`testing/dialogGeometry/`, window space, at the default theme scale).
  */
 import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../parser/types';

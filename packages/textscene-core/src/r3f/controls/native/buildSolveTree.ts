@@ -13,7 +13,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
-import { perObject } from '../../../utils/perObject';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
 import { projectPhysicsClock, type ProjectSettings } from '../../../parser/projectSettingsParser';
@@ -35,7 +34,6 @@ import {
   inlineTexture2DSize,
   type ViewportTextureSizing,
 } from '../../../resources/texture2DSize';
-import { isThemeLocalToScene } from '../../../resources/styles/theme/isThemeLocalToScene';
 import {
   recordingSizes,
   sizesStillAnswered,
@@ -48,7 +46,7 @@ import { useSharedLiveTree } from '../../useLiveSceneTree';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { resolveInlineFontResource } from '../../../resources/fonts/font/decode';
 import { resolveProjectFonts } from '../../../resources/fonts/font/projectFonts';
-import { NO_DEFAULT_FONTS, withDefaultFonts } from '../../../resources/fonts/font/defaultFont';
+import { withDefaultFonts } from '../../../resources/fonts/font/defaultFont';
 import type { FontCacheReader, FontResource } from '../../../resources/fonts/font/types';
 import { resolveInlineThemeResource } from '../../../resources/styles/theme/decode';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
@@ -58,11 +56,7 @@ import {
 } from '../../../resources/styles/labelsettings/decode';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
 import type { LabelProperties } from '../../../nodes/2d/ui/label/types';
-import {
-  mergeThemedRecord,
-  themeResolutionScope,
-  type ThemeResolutionScope,
-} from '../../../resources/styles/theme/lookup';
+import { themeResolutionScope, type ThemeResolutionScope } from '../../../resources/styles/theme/lookup';
 import { useSceneFontSettleCount } from './text/useSceneFontSettleCount';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useLayoutDirectionEnv } from '../../contexts/useLayoutDirectionEnv';
@@ -117,8 +111,12 @@ import {
   WHOLE_CANVAS_RANGE,
   type PaintRange,
 } from '../../canvasPaintOrder';
-import { parseStyleBox, type ResolvedStyleBox } from './parseStyleBox';
-import type { Rgba } from '../../../godot/math/math.js';
+import {
+  resolveStyleBoxes,
+  resolveThemedColors,
+  resolveThemedConstants,
+  resolveThemedIcons,
+} from './themeItems';
 import type { Vector2 } from '../../../godot/math/vector.js';
 
 interface UseBuildSolveTreeResult {
@@ -136,148 +134,6 @@ interface UseBuildSolveTreeResult {
 /** A LabelSettings font with the default fonts under it, as a theme font takes them, once it has loaded. */
 function withSettingsDefaultFonts(font: LabelSettingsFont, scope: ThemeResolutionScope): LabelSettingsFont {
   return font === LABEL_SETTINGS_FONT_LOADING ? font : withDefaultFonts(font, scope.defaultFonts);
-}
-
-/** No ancestor or project theme: `mergeThemedRecord` returns the seed unchanged. */
-const NO_THEME_SCOPE: ThemeResolutionScope = {
-  typeChain: [],
-  searchOrder: [],
-  projectDefaultFont: null,
-  defaultFonts: NO_DEFAULT_FONTS,
-};
-
-/**
- * A theme's `styles` refs, resolved against that theme's own sub-resource pool,
- * never the querying node's: a Theme's StyleBoxes live in the theme file. Keyed by
- * the `ThemeResource` object, which every referencing node shares.
- */
-const resolvedStylesOfTheme = perObject(
-  (theme: ThemeResource): Readonly<Record<string, Readonly<Record<string, ResolvedStyleBox>>>> => {
-    const { externalResources, internalResources } = theme.resources ?? {
-      externalResources: [],
-      internalResources: [],
-    };
-    const out: Record<string, Record<string, ResolvedStyleBox>> = {};
-    for (const [type, byName] of Object.entries(theme.styles ?? {})) {
-      for (const [name, ref] of Object.entries(byName)) {
-        const resolved = parseStyleBox(ref, externalResources, internalResources, isThemeLocalToScene(theme));
-        if (resolved) (out[type] ??= {})[name] = resolved;
-      }
-    }
-    return out;
-  }
-);
-
-/**
- * Every StyleBox slot, keyed as `Control::get_theme_stylebox` keys them. A
- * `theme_override_styles/*`, resolved in the node's own `scope`, wins over the
- * theme chain. An unresolvable ref is omitted, and all four StyleBox kinds are
- * kept: each wraps a `StyleBoxFlatData` core with its own `contentMargin`.
- */
-function resolveStyleBoxes(
-  node: TscnNode,
-  scope: SceneScope,
-  themeScope: ThemeResolutionScope = NO_THEME_SCOPE
-): Readonly<Record<string, ResolvedStyleBox>> {
-  const overrides = (node.properties as ControlProperties).themeOverrideStyles;
-  const local: Record<string, ResolvedStyleBox> = {};
-  if (overrides) {
-    for (const [key, ref] of Object.entries(overrides)) {
-      const resolved = parseStyleBox(ref, scope.externalResources, scope.internalResources, NODE_PROPERTY);
-      if (resolved) local[key] = resolved;
-    }
-  }
-  return mergeThemedRecord(themeScope, local, resolvedStylesOfTheme);
-}
-
-/**
- * Every theme colour, keyed as `Control::get_theme_color` keys them: a
- * `theme_override_colors/*` wins with no validity gate, else the theme chain.
- */
-function resolveThemedColors(
-  node: TscnNode,
-  themeScope: ThemeResolutionScope
-): Readonly<Record<string, Rgba>> {
-  const local = (node.properties as ControlProperties).themeOverrideColors ?? {};
-  return mergeThemedRecord(themeScope, local, (theme) => theme.colors);
-}
-
-/**
- * The constant counterpart of `resolveThemedColors` (`Control::get_theme_constant`).
- * A Theme's `<Type>/constants/<name>` is an unscaled int. Only a painter's own
- * built-in fallback on a miss is scaled.
- */
-function resolveThemedConstants(
-  node: TscnNode,
-  themeScope: ThemeResolutionScope
-): Readonly<Record<string, number>> {
-  const local = (node.properties as ControlProperties).themeOverrideConstants ?? {};
-  return mergeThemedRecord(themeScope, local, (theme) => theme.constants);
-}
-
-/**
- * A theme's `icons` refs, each paired with that theme's scope and cached per
- * theme like `resolvedStylesOfTheme`. Left unresolved: loading a texture needs a
- * `useTexture2D` subscription only a component can hold.
- */
-const iconRefsOfTheme = perObject(
-  (theme: ThemeResource): Readonly<Record<string, Readonly<Record<string, ThemedIconRef>>>> => {
-    const resources = theme.resources ?? { externalResources: [], internalResources: [] };
-    const out: Record<string, Record<string, ThemedIconRef>> = {};
-    for (const [type, byName] of Object.entries(theme.icons ?? {})) {
-      for (const [name, ref] of Object.entries(byName)) {
-        (out[type] ??= {})[name] = { ref, resources, isHeldLocally: isThemeLocalToScene(theme) };
-      }
-    }
-    return out;
-  }
-);
-
-/**
- * `Control::get_theme_icon`'s override-then-chain walk. A local
- * `theme_override_icons/<name>` ref carries the node's own `scope`, and a Theme's
- * `<Type>/icons/<name>` carries that theme's scope.
- */
-function resolveThemedIcons(
-  node: TscnNode,
-  scope: SceneScope,
-  themeScope: ThemeResolutionScope
-): Readonly<Record<string, ThemedIconRef>> {
-  const overrides = (node.properties as ControlProperties).themeOverrideIcons;
-  const local: Record<string, ThemedIconRef> = {};
-  if (overrides) {
-    for (const [key, ref] of Object.entries(overrides)) {
-      local[key] = { ref, resources: scope, isHeldLocally: NODE_PROPERTY };
-    }
-  }
-  return mergeThemedRecord(themeScope, local, iconRefsOfTheme);
-}
-
-type InternalThemeItems = Pick<SolveNode, 'styleBoxes' | 'colors' | 'constants' | 'icons'>;
-
-/** Written only by `internalChildThemeItems`: a parent node is replaced when the scene changes, so its internal Controls resolve once per type. */
-const internalThemeItemsOf = perObject((_parent: SolveNode) => new Map<string, InternalThemeItems>());
-
-/**
- * The theme items of a Control `memnew`d inside `parent` and never serialised, such as a dialog's
- * buttons. It resolves them through the parent's theme chain by its own class chain
- * (`Control::get_theme_stylebox`, `control.cpp:3078`, then `ThemeOwner::get_theme_item_in_types`), and no
- * scene line overrides them.
- */
-export function internalChildThemeItems(parent: SolveNode, type: string): InternalThemeItems {
-  const byType = internalThemeItemsOf(parent);
-  const known = byType.get(type);
-  if (known) return known;
-  const themeScope = themeResolutionScope(type, undefined, parent.themeChain, parent.projectFonts);
-  const node = { name: type, type, children: [], properties: {}, rawProperties: {} } as TscnNode;
-  const items = {
-    styleBoxes: resolveStyleBoxes(node, parent.resources, themeScope),
-    colors: resolveThemedColors(node, themeScope),
-    constants: resolveThemedConstants(node, themeScope),
-    icons: resolveThemedIcons(node, parent.resources, themeScope),
-  };
-  byType.set(type, items);
-  return items;
 }
 
 /** A Label's `label_settings` with the font it names. */
