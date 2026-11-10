@@ -1,8 +1,6 @@
 /**
  * `<TextureQuad>`: a texture stretched over a rect in its Control's top-left space, the quad that
  * `draw_texture_rect` makes for an icon. It draws nothing until the texture has loaded.
- *
- * @canonical Draw an icon texture over a rect of a Control
  */
 import type * as THREE from 'three';
 import type { Rect2 } from '../../../godot/math/rect2';
@@ -19,6 +17,7 @@ interface TextureQuadProps {
   renderOrder: number;
 }
 
+/** @canonical Draw an icon texture over a rect of a Control. Draws nothing until the texture has loaded. */
 export function TextureQuad({ rect, texture, tint, opacity = tint.opacity, renderOrder }: TextureQuadProps) {
   if (!texture) return null;
   return (
