@@ -295,6 +295,34 @@ describe('drawCanvasGroups', () => {
       expect(clears).toEqual([]);
     });
 
+    it('freezes the matrices of the owner subtree it renders, so three does not recompute them', () => {
+      const { scene, meshes } = clippedScene();
+      register(scene, clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), { masking: false }));
+      const { gl } = recordingRenderer(meshes);
+      const frozen: boolean[] = [];
+      const render = gl.render;
+      gl.render = (root: THREE.Object3D, cam: THREE.Camera) => {
+        frozen.push(!root.matrixWorldAutoUpdate);
+        render(root, cam);
+      };
+
+      drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
+
+      expect(frozen).toEqual([true, true, true]);
+    });
+
+    it('refreshes the camera view before it sizes the buffer region from it', () => {
+      const { scene, meshes } = clippedScene();
+      register(scene, clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), { masking: false }));
+      const { gl } = recordingRenderer(meshes);
+      const refresh = vi.spyOn(camera, 'updateMatrixWorld');
+
+      drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
+
+      expect(refresh).toHaveBeenCalled();
+      refresh.mockRestore();
+    });
+
     it("keeps the owner's own pieces, at keys inside its slot, out of the buffer", () => {
       const scene = new THREE.Scene();
       const owner = item(scene, 10, 0);

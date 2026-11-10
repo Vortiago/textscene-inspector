@@ -9,8 +9,7 @@ import { useThree } from '@react-three/fiber';
 import { useSharedClipBuffer } from '../../../r3f/canvasGroup/sharedClipBuffer';
 import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
 import type { CanvasItemState } from '../../../r3f/canvasItemState';
-import { behindParentRanges, type PaintRange } from '../../../r3f/canvasPaintOrder';
-import type { TscnNode } from '../../../parser/types';
+import type { PaintRange } from '../../../r3f/canvasPaintOrder';
 import { createClipMask } from '../../../r3f/canvasGroup/clipMask';
 import { ClipMaskProvider } from '../../../r3f/canvasGroup/ClipMaskContext';
 import { registerCanvasGroup, type CanvasGroupClip } from '../../../r3f/canvasGroup/canvasGroupPass';
@@ -27,7 +26,8 @@ interface ClipChildrenScopeProps {
   /** The item's `clip_children`. */
   mode: number;
   state: CanvasItemState;
-  node: TscnNode;
+  /** The ranges of the children that draw behind the item, as its walk allocated them. */
+  behindRanges: readonly PaintRange[];
   /** The run of draw sequences the item's subtree owns, which its group collects. */
   range: PaintRange;
   /** The item's own pixels, which take the mask. Its descendants stay outside the scope. */
@@ -40,11 +40,11 @@ const CLIP_MODES: ReadonlyMap<number, CanvasGroupClip['mode']> = new Map([
   [CanvasItemClipChildrenMode.AND_DRAW, 'clipAndDraw'],
 ]);
 
-export function ClipChildrenScope({ mode, state, node, range, children }: ClipChildrenScopeProps) {
+export function ClipChildrenScope({ mode, state, behindRanges, range, children }: ClipChildrenScopeProps) {
   const clipMode = CLIP_MODES.get(mode);
   if (!clipMode) return children;
   return (
-    <ClippingGroup mode={clipMode} state={state} node={node} range={range}>
+    <ClippingGroup mode={clipMode} state={state} behindRanges={behindRanges} range={range}>
       {children}
     </ClippingGroup>
   );
@@ -53,13 +53,13 @@ export function ClipChildrenScope({ mode, state, node, range, children }: ClipCh
 function ClippingGroup({
   mode,
   state,
-  node,
+  behindRanges,
   range,
   children,
 }: {
   mode: CanvasGroupClip['mode'];
   state: CanvasItemState;
-  node: TscnNode;
+  behindRanges: readonly PaintRange[];
   range: PaintRange;
   children: ReactNode;
 }) {
@@ -78,13 +78,13 @@ function ClippingGroup({
   );
   const behind = useMemo(
     () =>
-      behindParentRanges(range, node)
+      behindRanges
         .filter((run) => run.size > 0)
         .map((run) => ({
           from: keyAt(run.base),
           to: keyAt(run.base + run.size - 1) + 1,
         })),
-    [range, node, keyAt]
+    [behindRanges, keyAt]
   );
   const fitRect = useGroupFit({ fitMargin: 0, clearMargin: CLEAR_MARGIN });
   // A CanvasItemMaterial replaces the clip shader of a CLIP_ONLY owner (`:2207-2216`), so its

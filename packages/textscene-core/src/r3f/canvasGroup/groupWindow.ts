@@ -53,8 +53,9 @@ export function drawOrderOf(
     owners.some((owner) => owner.behind.some((span) => key >= span.from && key < span.to));
   const steps: DrawStep[] = [];
   let cursor = from;
-  const addRest = (start: number, end: number) =>
-    steps.push({ from: start, to: end, admits: (key) => accept(key) && !isBehind(key) });
+  const addRest = (start: number, end: number) => {
+    if (start < end) steps.push({ from: start, to: end, admits: (key) => accept(key) && !isBehind(key) });
+  };
   for (const owner of owners) {
     addRest(cursor, owner.window.from);
     for (const span of owner.behind) steps.push({ ...span, admits: accept });

@@ -25,7 +25,7 @@ import {
   useResolvedCanvasItemMaterial,
 } from '../../components/canvasItemMaterialContext';
 import { INHERIT_PARENT_MATERIAL } from '../../canvasAncestors';
-import { isCanvasLayerType } from '../../canvasPaintOrder';
+import { groupingClipMode, isCanvasLayerType } from '../../canvasPaintOrder';
 import { CanvasItemGroup, CanvasItemProvider } from '../../components/CanvasItemGroup';
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import { snapControlsToPixelsEnabled, snappedControlOrigin } from './controlPixelSnap';
@@ -258,9 +258,9 @@ function ControlItemGroup({ solveNode, solved, theme, measureText, snapToPixels 
     painter
   ) : (
     <ClipChildrenScope
-      mode={props.clipChildren}
+      mode={groupingClipMode(solveNode.node, props.clipChildren)}
       state={state}
-      node={solveNode.node}
+      behindRanges={solveNode.behindRanges}
       range={solveNode.paintRange}
     >
       <LitCanvasItemPixels material={state.material} lightMask={state.lightMask} zFinal={state.zFinal}>

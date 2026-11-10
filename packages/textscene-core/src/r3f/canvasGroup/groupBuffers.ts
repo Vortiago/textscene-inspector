@@ -11,7 +11,13 @@ import { copyTexels, wholeTexels } from '../texelCopy';
 import { renderToOffscreenTarget } from '../../nodes/viewport/subviewport/offscreenViewport';
 import { collects, drawOrderOf, isOwnKey, type DrawStep } from './groupWindow';
 import type { TexelRegion } from './groupRegion';
-import type { CanvasFrameTarget, CanvasGroupEntry, InertOwner, KeyedScene } from './canvasGroupPass';
+import type {
+  CanvasFrameTarget,
+  CanvasGroupEntry,
+  ClippingEntry,
+  InertOwner,
+  KeyedScene,
+} from './canvasGroupPass';
 
 /** Runs `draw` with the scene's matrices as they are: only layers change between the buffer draws. */
 export function withFrozenMatrices(scene: THREE.Object3D, draw: () => void): void {
@@ -67,7 +73,8 @@ function drawGroupKeys(
   const at = keyed.groupAt.get(own);
   const root = at === undefined ? scene : keyed.objects[at]!;
   const range = at === undefined ? undefined : { start: at, end: keyed.ends[at]! };
-  drawKeyedObjects(keyed, step, () => gl.render(root, camera), range);
+  // three updates the matrices of the root it renders unless that root's own flag is off.
+  withFrozenMatrices(root, () => drawKeyedObjects(keyed, step, () => gl.render(root, camera), range));
 }
 
 function sizeLike(buffer: THREE.WebGLRenderTarget, frame: CanvasFrameTarget): void {
@@ -84,29 +91,29 @@ export function fillClipBuffer(
   keyed: KeyedScene,
   scene: THREE.Object3D,
   camera: THREE.Camera,
-  { window, buffer, clip }: CanvasGroupEntry,
+  { window, buffer, clip }: ClippingEntry,
   frame: CanvasFrameTarget,
   region: TexelRegion,
   inertOwners: readonly InertOwner[]
 ): void {
-  sizeLike(buffer!, frame);
+  sizeLike(buffer, frame);
   // The mask reads the buffer only under the owner, so the copy and the draws stay in the region.
-  buffer!.scissor.set(region.x, region.y, region.width, region.height);
-  buffer!.scissorTest = true;
-  drawOffscreen(gl, () => copyTexels(gl, frame.texture, buffer!, wholeTexels(frame.width, frame.height)));
+  buffer.scissor.set(region.x, region.y, region.width, region.height);
+  buffer.scissorTest = true;
+  drawOffscreen(gl, () => copyTexels(gl, frame.texture, buffer, wholeTexels(frame.width, frame.height)));
   // The owner draws before every child, behind-parent children included
   // (`renderer_canvas_render_rd.cpp:822-828` queues it ahead of the group's items).
   const drawKeys = (step: DrawStep) =>
     drawOffscreen(gl, () => drawGroupKeys(gl, { keyed, scene, camera }, window.own, step));
   renderToOffscreenTarget(gl, {
-    target: buffer!,
+    target: buffer,
     clearColor: BLACK,
     transparentBg: true,
     keepsColor: true,
     draw: () => {
       // The copy holds no depth, and the last frame's depth would cull this frame's items.
       gl.clear(false, true, false);
-      if (clip!.mode === 'clipAndDraw')
+      if (clip.mode === 'clipAndDraw')
         drawKeys({ from: window.own, to: window.own + 1, admits: (key) => isOwnKey(window, key) });
       for (const step of drawOrderOf((key) => collects(window, key), window.from, window.to, inertOwners))
         drawKeys(step);

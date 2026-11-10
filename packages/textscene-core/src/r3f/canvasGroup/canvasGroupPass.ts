@@ -63,6 +63,17 @@ export interface CanvasGroupEntry {
   fit(drawn: readonly THREE.Box3[], nested: boolean, frameClip: CanvasClip | null): THREE.Box3 | null;
 }
 
+/** A group that clips: it owns a buffer and a mask. */
+export type ClippingEntry = CanvasGroupEntry & {
+  readonly buffer: THREE.WebGLRenderTarget;
+  readonly clip: CanvasGroupClip;
+};
+
+/** Whether `group` clips and reads a buffer for it. */
+function isClipping(group: CanvasGroupEntry): group is ClippingEntry {
+  return group.clip !== undefined && group.buffer !== null;
+}
+
 /** The mounted groups of one scene, and how they nest. */
 interface SceneGroups {
   /** Written only by `registerCanvasGroup`. */
@@ -125,7 +136,9 @@ export function drawCanvasGroups(
     return;
   }
   scene.updateMatrixWorld();
-  const keyed = keyedScene(scene, camera);
+  // The camera sits outside the scene, and the regions read its view before the first render updates it.
+  camera.updateMatrixWorld();
+  const keyed = keyedScene(scene, camera, keyIsInWindowSpan(groups.entries));
   const nesting = nestingOf(groups, clipGroupsDrawingNothing(groups.entries, keyed));
   const drawing = fitGroups(nesting, drawnBoxes(keyed, nesting.innermostFirst), frameClipOf(camera, frame));
   const { outermost } = nesting;
@@ -134,7 +147,7 @@ export function drawCanvasGroups(
   );
   for (const group of groups.entries) group.clip?.setMasking(false);
   const clipping = outermost
-    .filter((group) => group.clip && group.buffer && drawing.has(group))
+    .filter((group): group is ClippingEntry => isClipping(group) && drawing.has(group))
     .sort((a, b) => a.window.from - b.window.from);
   beginStep(gl, 'Canvas groups');
   try {
@@ -155,7 +168,7 @@ export function drawCanvasGroups(
     );
   } finally {
     // A later draw of the scene, or a draw that threw, must not find an owner still masked.
-    for (const group of clipping) group.clip!.setMasking(false);
+    for (const group of clipping) group.clip.setMasking(false);
   }
 }
 
@@ -202,7 +215,7 @@ interface FrameDraw {
  */
 function drawFrame(
   { gl, scene, camera, frame, keyed, draw, inertOwners }: FrameDraw,
-  clipping: readonly CanvasGroupEntry[],
+  clipping: readonly ClippingEntry[],
   isFrameKey: (key: number) => boolean
 ): void {
   const frameTarget = gl.getRenderTarget();
@@ -230,7 +243,7 @@ function drawFrame(
     drawSpan(group.window.from);
     spanFrom = group.window.from;
     fillClipBuffer(gl, keyed, scene, camera, group, frame, regions[i]!, inertOwners);
-    group.clip!.setMasking(true);
+    group.clip.setMasking(true);
   });
   drawSpan(Number.POSITIVE_INFINITY);
 }
@@ -331,16 +344,25 @@ function fitGroups(
   return drawing;
 }
 
-/**
- * Every object of a scene with its paint-order key, from one walk a frame. `measured` marks the
- * objects whose box a group lists: visible, and under no node icon or group rect.
- */
+/** Whether a key lies in the span from the first window to the last, which holds every group's items. */
+function keyIsInWindowSpan(entries: ReadonlySet<CanvasGroupEntry>): (key: number) => boolean {
+  let first = Infinity;
+  let last = -Infinity;
+  for (const { window } of entries) {
+    first = Math.min(first, window.own, window.from);
+    last = Math.max(last, window.to);
+  }
+  return (key) => key >= first && key < last;
+}
+
+/** Every object of a scene with its paint-order key, from one walk a frame. */
 export interface KeyedScene extends KeyedObjects {
   objects: THREE.Object3D[];
   keys: number[];
-  /** Whether the object is visible and under no node icon or group rect, so a group lists it. */
-  measured: boolean[];
-  /** The world box of each mesh `camera` draws, null for any other object. */
+  /**
+   * The world box of each mesh `camera` draws that is visible and under no node icon or group rect,
+   * so a group lists it. Null for any other object, and for one with a key outside the span of the windows.
+   */
   boxes: (THREE.Box3 | null)[];
   ends: number[];
   minKeys: number[];
@@ -349,11 +371,14 @@ export interface KeyedScene extends KeyedObjects {
   groupAt: Map<number, number>;
 }
 
-function keyedScene(scene: THREE.Object3D, camera: THREE.Camera): KeyedScene {
+function keyedScene(
+  scene: THREE.Object3D,
+  camera: THREE.Camera,
+  isGrouped: (key: number) => boolean
+): KeyedScene {
   const keyed: KeyedScene = {
     objects: [],
     keys: [],
-    measured: [],
     boxes: [],
     ends: [],
     minKeys: [],
@@ -367,9 +392,10 @@ function keyedScene(scene: THREE.Object3D, camera: THREE.Camera): KeyedScene {
     const index = keyed.objects.length;
     keyed.objects.push(object);
     keyed.keys.push(key);
-    keyed.measured.push(isMeasured);
     keyed.boxes.push(
-      isMeasured && isDrawable(object) && camera.layers.test(object.layers) ? worldBox(object) : null
+      isMeasured && isDrawable(object) && isGrouped(key) && camera.layers.test(object.layers)
+        ? worldBox(object)
+        : null
     );
     keyed.ends.push(index + 1);
     keyed.minKeys.push(key);

@@ -163,6 +163,13 @@ describe('clip_children on a Polygon2D', () => {
     expect(draws.map(({ readsTarget }) => readsTarget)).toEqual([false, false, false, false]);
   });
 
+  it('draws a y-sorted Polygon2D as one frame, as Godot groups nothing for it', async () => {
+    const { draws } = await drawParent({ clip_children: '1', y_sort_enabled: 'true' });
+
+    expect(draws).toHaveLength(1);
+    expect(draws[0]!.seen).toEqual(['parent', 'child']);
+  });
+
   it('draws a Polygon2D without clip_children as one frame', async () => {
     const { draws } = await drawParent({});
 

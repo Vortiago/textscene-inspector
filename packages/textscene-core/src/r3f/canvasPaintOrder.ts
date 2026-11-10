@@ -12,7 +12,7 @@
 import type { TscnNode } from '../parser/types';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes';
 import { ruleInt } from '../godot/variant/intSlots';
-import { clipsChildren } from '../nodes/canvasitem/shared/clipAncestry';
+import { CanvasItemClipChildrenMode } from '../godot/scene/canvasItem';
 import { DEFAULT_CANVAS_LAYER, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
 import { clampCanvasItemZ, WORLD_CANVAS_LAYER } from './lighting2d/canvasItemPlacement';
@@ -453,10 +453,24 @@ export function allocatePaintRange(
   };
 }
 
-/** Whether the previewer clips: a mode of 1 or 2, as `parseClipChildrenMode` reads it, which a negative one is not. */
+/**
+ * Whether the previewer clips `node`'s children: a mode of 1 or 2, as `parseClipChildrenMode` reads
+ * it. A y-sorted item groups nothing (`renderer_canvas_cull.cpp:437-469`), as `CanvasGroup` does.
+ */
 function drawsClipped(node: TscnNode): boolean {
   const mode = ruleInt(node.rawProperties.clip_children ?? '0');
-  return clipsChildren(node) && mode !== null && mode > 0;
+  const isClipping = mode === CanvasItemClipChildrenMode.ONLY || mode === CanvasItemClipChildrenMode.AND_DRAW;
+  return isClipping && !ysortsChildren(node);
+}
+
+/** The `clip_children` mode that groups: DISABLED for a y-sorted item, which groups nothing. */
+export function groupingClipMode(node: TscnNode, mode: number): number {
+  return ysortsChildren(node) ? CanvasItemClipChildrenMode.DISABLED : mode;
+}
+
+/** Whether `node` re-orders its children by `y_sort_enabled`, so the behind/ahead split does not apply. */
+export function ysortsChildren(node: TscnNode): boolean {
+  return (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true;
 }
 
 /**
@@ -472,14 +486,18 @@ export function drawsEveryChildFirst(node: TscnNode): boolean {
  * draws nothing has no group, so these draw before its other children.
  */
 export function behindParentRanges(range: PaintRange, node: TscnNode): PaintRange[] {
-  const { children } = allocateNodePaintRange(range, node);
-  return children.filter((_, index) => drawsBehindParent(node.children[index]!));
+  return behindRangesOf(node.children, allocateNodePaintRange(range, node).children);
+}
+
+/** The `ranges` of the `show_behind_parent` `children`, for a caller that allocated the ranges itself. */
+export function behindRangesOf(children: readonly TscnNode[], ranges: readonly PaintRange[]): PaintRange[] {
+  return ranges.filter((_, index) => drawsBehindParent(children[index]!));
 }
 
 /** `allocatePaintRange` for `node`'s own children, with the layout the node declares. */
 export function allocateNodePaintRange(range: PaintRange, node: TscnNode): AllocatedPaintRange {
   return allocatePaintRange(range, node.children, {
-    sortsChildren: (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true,
+    sortsChildren: ysortsChildren(node),
     drawsChildrenFirst: drawsEveryChildFirst(node),
     frontRoom: internalFrontRoom(node),
     backRoom: internalBackRoom(node),

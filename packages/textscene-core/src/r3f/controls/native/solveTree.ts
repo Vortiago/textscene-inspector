@@ -56,6 +56,8 @@ export interface SolveNode {
    * included, so a `ColorRect` authored first draws under the sprites after it.
    */
   paintRange: PaintRange;
+  /** The ranges of the children that draw behind this node, in child order, as the walk allocated them. */
+  behindRanges: readonly PaintRange[];
   /**
    * The draw-sequence value of this node's own pixels: after any
    * `show_behind_parent` children and before the rest.

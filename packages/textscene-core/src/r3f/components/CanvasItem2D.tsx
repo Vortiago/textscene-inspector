@@ -6,6 +6,8 @@
  */
 
 import { useMemo, useState, type ReactNode } from 'react';
+import { CanvasItemClipChildrenMode } from '../../godot/scene/canvasItem';
+import { behindParentRanges, groupingClipMode } from '../canvasPaintOrder';
 import type { TscnNode } from '../../parser/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from '../node2dTransform';
@@ -90,6 +92,11 @@ export function CanvasItem2D({
     sequence: useNodePaintSequence(node),
   });
   const paintRange = usePaintRange();
+  const clips = groupingClipMode(node, props.clip_children) !== CanvasItemClipChildrenMode.DISABLED;
+  const behindRanges = useMemo(
+    () => (clips ? behindParentRanges(paintRange, node) : []),
+    [clips, paintRange, node]
+  );
   const { key, zFinal, tint, material } = state;
   // A pushed `visible` takes the place of the authored one, as for a Node3D.
   const animatedVisible = useAnimatedValue('visible', (value) => value[0] !== 0);
@@ -106,7 +113,12 @@ export function CanvasItem2D({
     >
       <CanvasItemProvider value={key}>
         <OwnCanvasModulateProvider value={tint.canvasModulate}>
-          <ClipChildrenScope mode={props.clip_children} state={state} node={node} range={paintRange}>
+          <ClipChildrenScope
+            mode={groupingClipMode(node, props.clip_children)}
+            state={state}
+            behindRanges={behindRanges}
+            range={paintRange}
+          >
             {body && (
               <LitCanvasItemPixels
                 material={material}
