@@ -138,8 +138,6 @@ export interface LitItem {
   readonly plain: CanvasItemLightingUniforms;
   /** The material props of a surface that has no normal map, which never change once mounted. */
   readonly plainProps: CanvasItemLightingProps;
-  /** The canvas space the item shades in, which picks its program variant. */
-  readonly isLinearCanvas: boolean;
   /**
    * For the object that holds the item's own geometry, its child items left out. The per-item cap
    * measures its rect (`itemLightCap.ts`).
@@ -193,8 +191,8 @@ export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions):
   const { isLinear: isLinearCanvas } = canvasSpace;
   const plainProps = useMemo(() => canvasItemLightingProps(bound, isLinearCanvas), [bound, isLinearCanvas]);
   return useMemo(
-    () => ({ placement, lightMode, list, plain: bound, plainProps, isLinearCanvas, geometryRef }),
-    [placement, lightMode, list, bound, plainProps, isLinearCanvas]
+    () => ({ placement, lightMode, list, plain: bound, plainProps, geometryRef }),
+    [placement, lightMode, list, bound, plainProps]
   );
 }
 
@@ -207,7 +205,8 @@ export function useSurfaceLighting(
   item: LitItem,
   surface: CanvasItemSurface | null
 ): CanvasItemLightingProps {
-  const { placement, lightMode, list, plain, plainProps, isLinearCanvas } = item;
+  const { placement, lightMode, list, plain, plainProps } = item;
+  const { isLinear: isLinearCanvas } = useCanvasColorSpace();
   const readsNormals = surface !== null && lightMode !== CanvasItemMaterialLightMode.UNSHADED;
   const lightOnly = lightMode === CanvasItemMaterialLightMode.LIGHT_ONLY;
   const read: LitItemRead = readsNormals ? 'apart' : lightOnly ? 'lightOnly' : 'plain';

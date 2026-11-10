@@ -80,10 +80,17 @@ describe('canvasItemLightingProps', () => {
 
   it('recovers the albedo through a FLOORED divisor, so a black canvas tint still lights', () => {
     const { shader } = compile(CanvasItemMaterialLightMode.NORMAL);
-    expect(shader.fragmentShader).toContain(`max(lightSeed, vec3(${CANVAS_MODULATE_FLOOR}))`);
+    expect(shader.fragmentShader).toContain('max(lightSeed, vec3(canvasModulateFloor))');
+    expect(shader.fragmentShader).toContain(`const float canvasModulateFloor = ${CANVAS_MODULATE_FLOOR};`);
     expect(CANVAS_MODULATE_FLOOR).toBeGreaterThan(0);
     // Below one 8-bit step, so the floor cannot show on screen.
     expect(CANVAS_MODULATE_FLOOR).toBeLessThanOrEqual(1 / 255);
+  });
+
+  it('floors a linear canvas at the converted floor the CPU folds in, not at the sRGB step', () => {
+    const { shader } = compile(CanvasItemMaterialLightMode.NORMAL, true);
+    const floor = Number(/const float canvasModulateFloor = ([\d.e-]+);/.exec(shader.fragmentShader)![1]);
+    expect(floor).toBeCloseTo(0.000304, 6);
   });
 
   it("clamps in Godot's space before handing the fragment back to three", () => {

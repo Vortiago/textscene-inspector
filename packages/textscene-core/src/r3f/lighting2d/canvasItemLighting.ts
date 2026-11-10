@@ -3,8 +3,8 @@
  * composes `albedo × canvas_modulation`, so the injection divides the tint out. A non-HDR 2D
  * viewport (`hdr_2d` false) never goes linear, so the injection decodes to sRGB, does Godot's
  * arithmetic with its [0, 1] clamp, and re-encodes before three's `colorspace_fragment`. A linear
- * canvas (`hdr_2d` true), a program variant, holds linear half floats, where Godot adds the light to the linear albedo
- * with no clamp (`canvas.glsl:727-760`); the light colours stay the authored numbers.
+ * canvas (`hdr_2d` true) is a program variant: it holds linear half floats, so the light adds to the
+ * linear albedo with no clamp (`canvas.glsl:727-760`). The light colours stay as authored.
  */
 /*
  * Portions ported from Godot Engine (MIT).
@@ -16,6 +16,7 @@ import type * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs.js';
 import { editedProgram } from '../shaderPatch/chunkPatch.js';
 import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/rendering/srgbTransfer.js';
+import { canvasColorSpaceOf, canvasNumbersOf } from '../canvasColorSpace.js';
 import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial.js';
 
 /**
@@ -24,6 +25,17 @@ import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMateria
  * costs at most that on the base term and nothing lit, since `S` carries the true modulate.
  */
 export const CANVAS_MODULATE_FLOOR = 1 / 255;
+
+/**
+ * The floor in the numbers the canvas draws with. The CPU floors the sRGB tint, then converts it,
+ * so a linear canvas divides by the converted floor: a bigger one would darken a dim tint's albedo.
+ */
+const canvasModulateFloorIn = (isLinearCanvas: boolean): number =>
+  canvasNumbersOf(canvasColorSpaceOf(isLinearCanvas), {
+    r: CANVAS_MODULATE_FLOOR,
+    g: CANVAS_MODULATE_FLOOR,
+    b: CANVAS_MODULATE_FLOOR,
+  }).r;
 
 /** Both directions: the item side encodes to compare and decodes to write back. */
 const TRANSFER_GLSL = GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL;
@@ -65,7 +77,7 @@ export interface CanvasItemLightingUniforms {
 }
 
 /**
- * The uniforms every lit item's program reads, with the sRGB transfer it shades in. A linear canvas
+ * The declarations every lit item's program reads, and the transfer of its canvas space. A linear canvas
  * is a compile-time `#define`, not a uniform: the canvas space is fixed per viewport, and the
  * program then carries no dead branch or transfer call (cache key suffix: `canvasProgramKey`).
  */
@@ -73,6 +85,7 @@ export function itemLightingGlsl(isLinearCanvas: boolean): string {
   return `${isLinearCanvas ? '#define LINEAR_CANVAS\n' : ''}uniform vec2 uLightResolution;
 uniform vec3 uCanvasModulate;
 uniform float uLightMode;
+const float canvasModulateFloor = ${canvasModulateFloorIn(isLinearCanvas)};
 ${TRANSFER_GLSL}
 #ifdef LINEAR_CANVAS
 vec3 canvasAlbedo(vec3 fragment) { return fragment; }
@@ -112,7 +125,7 @@ bool lightOnly = uLightMode > ${ABOVE_UNSHADED};`;
  */
 export const ITEM_ALBEDO_GLSL = `vec3 lightSeed = lightOnly ? vec3(1.0) : uCanvasModulate;
 vec2 lightUv = gl_FragCoord.xy / uLightResolution;
-vec3 albedo = canvasAlbedo(gl_FragColor.rgb) / max(lightSeed, vec3(${CANVAS_MODULATE_FLOOR}));`;
+vec3 albedo = canvasAlbedo(gl_FragColor.rgb) / max(lightSeed, vec3(canvasModulateFloor));`;
 
 const LIGHT_INJECTION = `${LIGHT_MODE_GLSL}
 // canvas.glsl:719: MODE_UNSHADED skips the canvas tint and the light loop,
