@@ -19,7 +19,7 @@ import {
   resolveButtonDrawState,
   shapeWrappedButtonLabel,
   labelWrapWidthPx,
-  textMinimumWidthPx,
+  labelMinimumTextSize,
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
 import { type Rgba } from '../../../../godot/math/math';
@@ -194,9 +194,7 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   // over `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`):
   // the ceiled extent, not the raw pen advance. Its width drops under `clip_text`, a trimming
   // overrun behaviour or autowrap, since a narrower box trims or wraps it (`button.cpp:493-495`).
-  const textSize = layout
-    ? { x: textMinimumWidthPx(layout.widthPx, props), y: layout.heightPx }
-    : { x: 0, y: 0 };
+  const textSize = labelMinimumTextSize(layout, props);
 
   let width = textSize.x;
   let height = textSize.y;

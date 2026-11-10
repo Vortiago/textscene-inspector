@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../components/CanvasItemGroup';
 import {
   buttonDrawnLabel,
+  isButtonAutowrapped,
   shapeWrappedButtonLabel,
   trimButtonLabel,
   type ButtonLabelBox,
@@ -88,15 +89,17 @@ export function useButtonLabelLayout(
 ): TextLayoutResult | null {
   const fontMetrics = resolveNodeFontMetrics(solveNode, themeFontKey);
   const { autowrapMode, autowrapTrimFlags } = wrap;
+  // The width keys the memo only while the label wraps: at AUTOWRAP_OFF a resize re-shapes nothing.
+  const wrapWidthPx = isButtonAutowrapped(wrap) ? boxWidthPx : 0;
   return useMemo(
     () =>
       text.length > 0
         ? shapeWrappedButtonLabel(
             text,
             { autowrapMode, autowrapTrimFlags },
-            { fontSizePx, fontMetrics, bidi, boxWidthPx }
+            { fontSizePx, fontMetrics, bidi, boxWidthPx: wrapWidthPx }
           )
         : null,
-    [text, fontSizePx, fontMetrics, bidi, autowrapMode, autowrapTrimFlags, boxWidthPx]
+    [text, fontSizePx, fontMetrics, bidi, autowrapMode, autowrapTrimFlags, wrapWidthPx]
   );
 }

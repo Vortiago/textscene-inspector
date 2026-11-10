@@ -87,7 +87,7 @@ export function fitIconSize(size: Vector2, maxWidth: number): Vector2 {
 }
 
 /** What a Button-family label shapes with, beyond its text. */
-export interface ButtonLabelShapeOptions {
+interface ButtonLabelShapeOptions {
   fontSizePx: number;
   fontMetrics: FontMetrics;
   /** The paragraph's direction, language and override ranges (`button.cpp:564-569`). Undefined shapes at AUTO in the root locale. */
@@ -402,8 +402,16 @@ export function reservedLabelBox(input: {
 }
 
 /** The drawable width of a label that reserves `reservedPx` beside its margins (`button.cpp:332-352,444-456`). */
-export function reservedLabelWidthPx(rectWidthPx: number, marginsPx: number, reservedPx: number): number {
+function reservedLabelWidthPx(rectWidthPx: number, marginsPx: number, reservedPx: number): number {
   return rectWidthPx - marginsPx - reservedPx;
+}
+
+/** A shaped label's contribution to a minimum size: its text width ({@link textMinimumWidthPx}) and height, or none without a layout. */
+export function labelMinimumTextSize(
+  layout: TextLayoutResult | null,
+  props: TextClipProperties & ButtonWrapProperties
+): Vector2 {
+  return layout ? { x: textMinimumWidthPx(layout.widthPx, props), y: layout.heightPx } : { x: 0, y: 0 };
 }
 
 /**

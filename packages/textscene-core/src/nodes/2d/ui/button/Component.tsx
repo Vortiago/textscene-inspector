@@ -17,7 +17,6 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import {
-  clampAutowrapMode,
   infersRtl,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
@@ -29,6 +28,7 @@ import {
   tintColor,
   layoutButtonContent,
   buttonTextBufWidthPx,
+  isButtonAutowrapped,
 } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import {
@@ -40,7 +40,6 @@ import {
 } from './nativeSolver';
 import type { ButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 interface ButtonPainterProps extends NativeControlComponentProps {
@@ -141,8 +140,7 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
   // `button.cpp:428-432` re-shapes a wrapping label at the width the unwrapped pass measured:
   // `is_clipped` is true under autowrap (`:332`), so the icon's reservation does not move
   // with the text. Godot reaches the same state over two frames.
-  const wraps =
-    clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF) !== AutowrapMode.AUTOWRAP_OFF;
+  const wraps = isButtonAutowrapped(props);
   const drawableWidthPx = layoutButtonContent({
     ...contentInput,
     textNaturalSize: naturalSize(unwrapped),

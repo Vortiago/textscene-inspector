@@ -22,7 +22,7 @@ import {
   labelWrapWidthPx,
   reservedLabelBox,
   shapeWrappedButtonLabel,
-  textMinimumWidthPx,
+  labelMinimumTextSize,
   tintColor,
   type ButtonLabelBox,
 } from '../../../../r3f/controls/native/buttonBase';
@@ -247,9 +247,7 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
         })
       : null;
   // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
-  const textSize = layout
-    ? { x: textMinimumWidthPx(layout.widthPx, props), y: layout.heightPx }
-    : { x: 0, y: 0 };
+  const textSize = labelMinimumTextSize(layout, props);
 
   const iconSize = fitIconSize(checkBoxIconNaturalSize(n), checkBoxIconMaxWidth(n.constants));
   const hSeparation = checkBoxHSeparation(n.constants, ctx);
