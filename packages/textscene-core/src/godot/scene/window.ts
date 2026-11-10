@@ -64,6 +64,8 @@ interface WindowClassDefaults {
   exclusive: boolean;
   title: string;
   minSize: Vector2;
+  /** The size the constructor sets, where the class sets one: a Window starts at {@link DEFAULT_WINDOW_SIZE}. */
+  size?: Vector2;
 }
 
 /** `window.h:126-140`: a Window starts visible, decorated and opaque, with no title or size floor. */
@@ -86,10 +88,17 @@ const ACCEPT_DIALOG_DEFAULTS: WindowClassDefaults = {
   title: 'Alert!',
 };
 
+/** `ConfirmationDialog::ConfirmationDialog()` (`dialogs.cpp:524-534`): a title and a 200x70 floor. */
+const CONFIRMATION_DIALOG_DEFAULTS: WindowClassDefaults = {
+  ...ACCEPT_DIALOG_DEFAULTS,
+  title: 'Please Confirm...',
+  minSize: { x: 200, y: 70 },
+};
+
 /**
  * Each constructor's own flags, keyed by the class that sets them: `Popup::Popup()`
  * (`popup.cpp:215-225`), `PopupPanel::PopupPanel()` (`popup.cpp:430`), `PopupMenu::PopupMenu()`
- * (`popup_menu.cpp:3464`) and the two dialogs (`dialogs.cpp:464-534`).
+ * (`popup_menu.cpp:3464`), the dialogs (`dialogs.cpp:464-534`) and `FileDialog`.
  */
 const CLASS_DEFAULTS: Readonly<Record<string, WindowClassDefaults>> = {
   Window: WINDOW_DEFAULTS,
@@ -97,7 +106,9 @@ const CLASS_DEFAULTS: Readonly<Record<string, WindowClassDefaults>> = {
   PopupPanel: { ...WINDOW_DEFAULTS, visible: false, wrapControls: true, borderless: true, transparent: true },
   PopupMenu: { ...WINDOW_DEFAULTS, visible: false, wrapControls: true, borderless: true, transparent: true },
   AcceptDialog: ACCEPT_DIALOG_DEFAULTS,
-  ConfirmationDialog: { ...ACCEPT_DIALOG_DEFAULTS, title: 'Please Confirm...', minSize: { x: 200, y: 70 } },
+  ConfirmationDialog: CONFIRMATION_DIALOG_DEFAULTS,
+  // `FileDialog::FileDialog()` (`file_dialog.cpp:2281-2284`): `set_title("Save a File")`, `set_size(Size2(640, 360))`.
+  FileDialog: { ...CONFIRMATION_DIALOG_DEFAULTS, title: 'Save a File', size: { x: 640, y: 360 } },
 };
 
 /** The defaults of `type`, from the nearest class in its chain that sets its own. */

@@ -59,6 +59,7 @@ const CONTAINER_TYPES = new Set([
   // The dialogs lay their message, authored children and button row out in `_update_child_rects` (`dialogs.cpp:219-316`).
   'AcceptDialog',
   'ConfirmationDialog',
+  'FileDialog',
 ]);
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };

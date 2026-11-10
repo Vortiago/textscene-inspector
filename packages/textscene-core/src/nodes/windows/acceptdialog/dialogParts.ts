@@ -50,10 +50,78 @@ export function buttonsSeparation(n: SolveNode, theme: NativeTheme): number {
 const internalNodes = perObject((_dialog: SolveNode) => new Map<string, SolveNode>());
 
 /**
- * An internal Control as a `SolveNode` in the dialog's scope. It has no scene node, so none of the
- * dialog's own theme items (`panel`, `buttons_separation`) apply to it. Its own come through the
- * dialog's theme chain.
+ * The Controls a dialog class's constructor builds above its message and buttons, as one tree whose root fills
+ * the content rect. A class registers one, so the dialog solver and painter stay free of its types.
  */
+export type DialogBody = (dialog: SolveNode, theme: NativeTheme) => SolveNode;
+
+/** Written only by `registerDialogBody`, at module load. */
+const dialogBodies = new Map<string, DialogBody>();
+
+export function registerDialogBody(typeName: string, body: DialogBody): void {
+  dialogBodies.set(typeName, body);
+}
+
+/** The body `dialog`'s class builds, or `null` for a class that builds none. */
+export function dialogBodyOf(dialog: SolveNode, theme: NativeTheme): SolveNode | null {
+  return dialogBodies.get(dialog.node.type)?.(dialog, theme) ?? null;
+}
+
+/** What a dialog's constructor `memnew`s: a Control the scene never serialises. */
+export interface SyntheticControl {
+  type: string;
+  name: string;
+  /** Where it sits in the dialog's tree: the path of its parent, which a container lays its children out by. The dialog's own by default. */
+  parentPath?: string;
+  /** The Control's parsed properties, defaults included. */
+  properties: object;
+  children?: readonly SolveNode[];
+  /** The `theme_type_variation` its constructor sets. */
+  variation?: string;
+  /** Theme items the default theme gives the variation. Any item the dialog's theme chain sets wins over them. */
+  variationDefaults?: Partial<Pick<SolveNode, 'styleBoxes' | 'colors' | 'constants'>>;
+  /** Icons its dialog's theme gives it, by name. Any the dialog's theme chain gives its type override them. */
+  icons?: SolveNode['icons'];
+  textureSize?: SolveNode['textureSize'];
+  /** What it draws that a scene line cannot carry. */
+  syntheticDraw?: SolveNode['syntheticDraw'];
+}
+
+/**
+ * A Control `memnew`d inside `dialog` as a `SolveNode` in the dialog's scope. It has no scene node, so
+ * none of the dialog's own theme items (`panel`, `buttons_separation`) apply to it. Its own come through
+ * the dialog's theme chain, under the default theme's items for its variation.
+ */
+export function syntheticControl(dialog: SolveNode, spec: SyntheticControl): SolveNode {
+  const { type, name, variation } = spec;
+  const node: TscnNode = {
+    name,
+    type,
+    children: [],
+    properties: spec.properties as ControlProperties,
+    rawProperties: {},
+  };
+  const items = internalChildThemeItems(dialog, type, variation);
+  const defaults = spec.variationDefaults ?? {};
+  return {
+    ...dialog,
+    path: `${spec.parentPath ?? dialog.path}/@${name}`,
+    node,
+    children: spec.children ?? [],
+    styleBoxes: { ...defaults.styleBoxes, ...items.styleBoxes },
+    colors: { ...defaults.colors, ...items.colors },
+    constants: { ...defaults.constants, ...items.constants },
+    icons: { ...spec.icons, ...items.icons },
+    fontOverrides: {},
+    textureSize: spec.textureSize ?? null,
+    syntheticDraw: spec.syntheticDraw,
+    textureSlots: {},
+    labelSettings: null,
+    labelSettingsFont: null,
+  };
+}
+
+/** The Control for `name`, built once per dialog node. */
 function internalControl(
   dialog: SolveNode,
   type: string,
@@ -63,25 +131,8 @@ function internalControl(
   const byName = internalNodes(dialog);
   const built = byName.get(name);
   if (built) return built;
-  const node: TscnNode = {
-    name,
-    type,
-    children: [],
-    properties: { name, ...parseControlCanvasItem({}, name), ...makeProperties() } as ControlProperties,
-    rawProperties: {},
-  };
-  const control: SolveNode = {
-    ...dialog,
-    path: `${dialog.path}/@${name}`,
-    node,
-    children: [],
-    ...internalChildThemeItems(dialog, type),
-    fontOverrides: {},
-    textureSize: null,
-    textureSlots: {},
-    labelSettings: null,
-    labelSettingsFont: null,
-  };
+  const properties = { name, ...parseControlCanvasItem({}, name), ...makeProperties() };
+  const control = syntheticControl(dialog, { type, name, properties });
   byName.set(name, control);
   return control;
 }
@@ -127,6 +178,7 @@ export function dialogButtonNode(dialog: SolveNode, role: DialogButtonRole): Sol
     text: dialogButtonText(dialog, role),
     customMinimumSize: { x: buttonsMinWidth, y: buttonsMinHeight },
     hasFocus: role === 'ok',
+    disabled: role === 'ok' && (dialog.node.properties as DialogProperties).ok_button_disabled === true,
   });
   return internalControl(dialog, 'Button', role === 'ok' ? 'OkButton' : 'CancelButton', properties);
 }

@@ -20,6 +20,7 @@ const EMBEDDED_WINDOW_TYPE_NAMES = [
   'PopupMenu',
   'AcceptDialog',
   'ConfirmationDialog',
+  'FileDialog',
 ] as const;
 
 /** A `Window` class an embedder draws: the one list the registration helpers take their names from. */

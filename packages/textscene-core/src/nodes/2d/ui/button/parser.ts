@@ -15,6 +15,8 @@ export function parseButton(heading: ParsedHeading, properties: Record<string, s
   if (properties.text !== undefined) result.text = unquoteString(properties.text);
   result.disabled = boolSlotValue(properties.disabled) === true;
   result.flat = boolSlotValue(properties.flat) === true;
+  result.buttonPressed =
+    boolSlotValue(properties.toggle_mode) === true && boolSlotValue(properties.button_pressed) === true;
   result.alignment = parseOptionalInt(properties.alignment);
   // class_button.html: icon_alignment 0 (LEFT), vertical_icon_alignment 1
   // (CENTER), expand_icon false. An icon-only button carries no text.

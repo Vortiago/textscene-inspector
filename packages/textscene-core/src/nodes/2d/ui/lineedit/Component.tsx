@@ -2,7 +2,7 @@
  * `<LineEdit>`, the native painter: `normal` or `read_only` chrome unless `flat`, the glyphs of the text
  * `lineEditDisplayText` picks that end inside `ofs_max`, in its state's colour over its theme outline ring,
  * the active icon, and the caret while `caret_force_displayed`, since a static preview never focuses and
- * `_validate_caret_can_draw()`'s other branch never fires. It draws no selection or IME. `ControlCanvasWalker` owns `visible`, `children` and the transform.
+ * `_validate_caret_can_draw()`'s other branch never fires. It draws the selection a dialog sets in `syntheticDraw`, and no IME. `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
 import { useMemo } from 'react';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
@@ -36,6 +36,9 @@ import {
   LINE_EDIT_THEME_FONT_KEY,
   LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR,
   LINE_EDIT_DEFAULT_CARET_COLOR,
+  LINE_EDIT_DEFAULT_SELECTED_FONT_COLOR,
+  LINE_EDIT_DEFAULT_SELECTION_COLOR,
+  lineEditSelection,
   EXPAND_MODE_ORIGINAL_SIZE,
   shapeLineEditText,
 } from './nativeSolver';
@@ -139,6 +142,30 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
     [layout, content.textOffset.x, content.ofsMaxPx]
   );
 
+  const fieldSelection = solveNode.syntheticDraw?.selection;
+  // The rect comes from the whole layout, so it reaches `ofs_max` where a glyph it covers is dropped.
+  const selection = useMemo(() => {
+    if (!layout || !fieldSelection) return null;
+    const {
+      rect: selectionRect,
+      selected,
+      unselected,
+    } = lineEditSelection(layout, fieldSelection, content.textOffset.x, content.ofsMaxPx);
+    return {
+      rect: selectionRect,
+      selected: lineEditDrawnLayout(selected, content.textOffset.x, content.ofsMaxPx),
+      unselected: lineEditDrawnLayout(unselected, content.textOffset.x, content.ofsMaxPx),
+    };
+  }, [layout, fieldSelection, content.textOffset.x, content.ofsMaxPx]);
+  const selectionColor = solveNode.colors['selection_color'] ?? LINE_EDIT_DEFAULT_SELECTION_COLOR;
+  const tintedSelectionColor = useMemo(() => tintColor(selectionColor, tint.own), [selectionColor, tint.own]);
+  const selectionLinearColor = useItemLinearColor(tintedSelectionColor);
+  const selectedFontColor = solveNode.colors['font_selected_color'] ?? LINE_EDIT_DEFAULT_SELECTED_FONT_COLOR;
+  const tintedSelectedFontColor = useMemo(
+    () => tintColor(selectedFontColor, tint.own),
+    [selectedFontColor, tint.own]
+  );
+
   // Both hooks run in a fixed order and each shows nothing on an absent input (`useNodeIcon`).
   // `right_icon` loads in its own scope and is retagged `NoColorSpace` for the 2D canvas
   // (`useOwnerCanvas2DTexture`). `useNodeIcon` prefers a themed `"clear"` and applies the same tag.
@@ -210,16 +237,37 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       {!props.flat && (
         <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
       )}
+      {selection?.rect && (
+        <CanvasItemGroup position={[selection.rect.x, -content.textOffset.y, 0]}>
+          <ControlQuad
+            width={selection.rect.w}
+            height={layout?.heightPx ?? 0}
+            color={selectionLinearColor}
+            opacity={tintedSelectionColor.a}
+            renderOrder={renderOrder}
+          />
+        </CanvasItemGroup>
+      )}
       {drawnLayout && (
         <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
           <OutlinedTextRun
-            layout={drawnLayout}
+            layout={selection ? selection.unselected : drawnLayout}
             fontSizePx={fontSizePx}
             tint={tintedFontColor}
             outline={textOutline}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />
+          {selection && (
+            <OutlinedTextRun
+              layout={selection.selected}
+              fontSizePx={fontSizePx}
+              tint={tintedSelectedFontColor}
+              outline={textOutline}
+              clippingPlanes={clippingPlanes}
+              renderOrder={renderOrder}
+            />
+          )}
         </CanvasItemGroup>
       )}
       {hasIcon && activeIconTexture && iconSize.x > 0 && iconSize.y > 0 && (

@@ -37,6 +37,7 @@ import '../../nodes/windows/popuppanel/controls.r3f';
 import '../../nodes/windows/popupmenu/controls.r3f';
 import '../../nodes/windows/acceptdialog/controls.r3f';
 import '../../nodes/windows/confirmationdialog/controls.r3f';
+import '../../nodes/windows/filedialog/controls.r3f';
 import '../../nodes/2d/ui/codeedit/index.r3f';
 import '../../nodes/2d/ui/colorpicker/index.r3f';
 import '../../nodes/2d/ui/colorpickerbutton/index.r3f';

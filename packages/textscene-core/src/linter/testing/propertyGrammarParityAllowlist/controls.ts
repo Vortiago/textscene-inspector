@@ -7,6 +7,23 @@
 import type { AsymmetryEntry } from './types.js';
 
 export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
+  // FileDialog: each key below changes no pixel of a frozen frame. `show_hidden_files` only invalidates the list
+  // (`file_dialog.cpp:2213-2219`), and `filename_filter` shows its box only through `show_filename_filter` (`:1222-1224`).
+  // The other linter-only keys gate a click or a pop-up. `current_*` are never saved (`PROPERTY_USAGE_NONE`,
+  // `file_dialog.cpp:2136-2138`), so a linter has nothing to check, and the parser reads them as the loader would.
+  FileDialog: {
+    linterOnly: [
+      'deleting_enabled',
+      'filename_filter',
+      'overwrite_warning_enabled',
+      'show_hidden_files',
+      'use_native_dialog',
+    ],
+    parserOnly: ['current_dir', 'current_file', 'current_path'],
+    reason:
+      'No listed file exists to delete, filter or hide, and an overwrite is never asked. A system dialog replaces the drawn one only at run time. A key Godot never saves has no validator.',
+  },
+
   // Dialogs: closing a dialog needs input, so a frozen frame never shows it.
   AcceptDialog: {
     linterOnly: ['dialog_close_on_escape', 'dialog_hide_on_ok'],
@@ -99,14 +116,13 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'The drag-area and dragger keys tune an interactive splitter a static frame never shows.',
   },
 
-  // Like the container bases, BaseButton has no parser.ts, so one entry covers
-  // Button and every button leaf below it. `disabled` is absent because
-  // button/parser.ts does read it: the preview dims a disabled button.
+  // Like the container bases, BaseButton has no parser.ts, so one entry covers Button and every
+  // button leaf below it. `disabled` and `button_pressed` are absent: the preview reads them.
+  // `toggle_mode` stays: only a Button reads it, and only together with `button_pressed`.
   BaseButton: {
     linterOnly: [
-      // Interaction state and press semantics, all meaningless in a still frame.
+      // Press semantics, all meaningless in a still frame.
       'toggle_mode',
-      'button_pressed',
       'action_mode',
       'button_mask',
       'keep_pressed_outside',
