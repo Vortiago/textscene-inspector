@@ -46,7 +46,7 @@ alpha, draws no ring.
 <!-- compare: image=unit-popup-menu-size-after-items status=done fixture=unit-popup-menu-size-after-items.tscn -->
 
 Godot applies the properties in file order. A `size` line below the items is clamped to the minimum of
-those items while the menu is outside the tree, so the window keeps the full item height and does not
+those items while the menu is outside the tree. The window keeps the full item height and does not
 take the height limit. Godot saves `size` above the items, which gives the limited height.
 
 ## Under a Window
