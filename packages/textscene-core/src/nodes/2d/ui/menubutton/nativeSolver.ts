@@ -12,22 +12,22 @@ import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/nativ
 import type { ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { ToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import { type Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
   type TextThemeDefaults,
 } from '../../../../r3f/controls/native/textTheme';
-import { BUTTON_DEFAULT_FONT_COLOR, BUTTON_THEME_KEYS, buttonMinimumSize } from '../button/nativeSolver';
+import { BUTTON_DEFAULT_FONT_COLORS, BUTTON_THEME_KEYS, buttonMinimumSize } from '../button/nativeSolver';
 import type { MenuButtonProperties } from './types';
 
 /** `Color(1, 1, 1, 0.3)`: MenuButton's own disabled font colour (`default_theme.cpp:268`), not Button's `control_font_disabled_color` (`:161`). */
 const MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 0.3 };
 
-function menuButtonDefaultFontColor(state: ToggleDrawState): Rgba {
-  if (state === 'pressed') return CONTROL_FONT_PRESSED_COLOR;
-  return state === 'disabled' ? MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR : BUTTON_DEFAULT_FONT_COLOR;
-}
+/** MenuButton's font colour default for each draw state: Button's, but for its own disabled colour. */
+const MENU_BUTTON_DEFAULT_FONT_COLORS: Readonly<Record<ToggleDrawState, Rgba>> = {
+  ...BUTTON_DEFAULT_FONT_COLORS,
+  disabled: MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR,
+};
 
 /** MenuButton's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the theme default, else MenuButton's literal. */
 export function menuButtonTextTheme(
@@ -38,7 +38,7 @@ export function menuButtonTextTheme(
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = {
     fontSizePx: ctx.theme.fontSize,
-    color: menuButtonDefaultFontColor(state),
+    color: MENU_BUTTON_DEFAULT_FONT_COLORS[state],
   };
   return resolveTextTheme(n, props, BUTTON_THEME_KEYS[state], defaults);
 }

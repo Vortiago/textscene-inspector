@@ -639,7 +639,7 @@ describe('<LineEdit> — selection (line_edit.cpp:1491-1506)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <LineEdit
         {...painterEnv()}
-        solveNode={solveNode({ text: 'a.png', selection: { begin: 0, end: 1 } })}
+        solveNode={{ ...solveNode({ text: 'a.png' }), syntheticDraw: { selection: { begin: 0, end: 1 } } }}
         rect={RECT}
         renderOrder={0}
       />

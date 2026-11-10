@@ -6,6 +6,7 @@ import {
   RES_PATH_BODY_SOURCE,
   IS_VALID_INT_RE,
   literalText,
+  simplifyPath,
   simplifyResPath,
   splitTopLevel,
   STRING_LITERAL_RE,
@@ -501,5 +502,23 @@ describe('pathJoin', () => {
 
   it('is the file alone under an empty directory (edge case)', () => {
     expect(pathJoin('', 'leaf.png')).toBe('leaf.png');
+  });
+});
+
+describe('simplifyPath', () => {
+  it.each([
+    ['res://sub/../other', 'res://other'],
+    ['res://./a//b/', 'res://a/b'],
+    ['/a/b/../../..', '/'],
+    ['res://..', 'res://..'],
+    ['a/../..', '..'],
+    ['user://a/..', 'user://'],
+    ['a\\b', 'a/b'],
+    ['//host/share/../x', '//host/x'],
+    ['//..', '//'],
+    ['C:/a/../..', 'C:/'],
+    ['\\\\a\\..\\..', '\\\\'],
+  ])('simplifies %s to %s (ustring.cpp:4152-4231)', (path, expected) => {
+    expect(simplifyPath(path)).toBe(expected);
   });
 });

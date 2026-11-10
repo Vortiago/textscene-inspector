@@ -65,6 +65,13 @@ export const BUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
 /** Button's `font_disabled_color` default (`default_theme.cpp:161`). */
 const BUTTON_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
+/** Button's font colour default for each draw state (`default_theme.cpp:156-161`). */
+export const BUTTON_DEFAULT_FONT_COLORS: Readonly<Record<ToggleDrawState, Rgba>> = {
+  normal: BUTTON_DEFAULT_FONT_COLOR,
+  pressed: CONTROL_FONT_PRESSED_COLOR,
+  disabled: BUTTON_DEFAULT_DISABLED_FONT_COLOR,
+};
+
 /** `icon_normal_color` / `icon_disabled_color` theme_override_colors keys (`default_theme.cpp:164,169`). */
 const BUTTON_ICON_COLOR_KEYS: Record<ToggleDrawState, string> = {
   normal: 'icon_normal_color',
@@ -114,14 +121,9 @@ export function buttonTextTheme(
   const isFocusStyled = isButtonFocusStyled(props, state);
   const defaults: TextThemeDefaults = {
     fontSizePx: ctx.theme.fontSize,
-    color: isFocusStyled ? CONTROL_FONT_FOCUS_COLOR : buttonDefaultFontColor(state),
+    color: isFocusStyled ? CONTROL_FONT_FOCUS_COLOR : BUTTON_DEFAULT_FONT_COLORS[state],
   };
   return resolveTextTheme(n, props, isFocusStyled ? BUTTON_FOCUS_KEYS : BUTTON_THEME_KEYS[state], defaults);
-}
-
-function buttonDefaultFontColor(state: ToggleDrawState): Rgba {
-  if (state === 'pressed') return CONTROL_FONT_PRESSED_COLOR;
-  return state === 'disabled' ? BUTTON_DEFAULT_DISABLED_FONT_COLOR : BUTTON_DEFAULT_FONT_COLOR;
 }
 
 /**

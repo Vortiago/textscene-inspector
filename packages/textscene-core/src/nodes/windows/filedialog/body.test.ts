@@ -198,3 +198,21 @@ describe('FileDialog toolbar icon sizes', () => {
     expect(requests.map(({ key }) => key)).toEqual(['back_folder']);
   });
 });
+
+describe('FileDialog synthetic drawing', () => {
+  const bodyControl = (lines: Record<string, string>, name: string) => {
+    const dialog = fileDialog(lines);
+    const size = wrappedWindowSize(dialog, THEME, measureText);
+    const { body } = dialogGeometry(dialog, size, createSolveContext(THEME, measureText));
+    return body.find(({ control }) => control.node.name === name)!.control;
+  };
+
+  it('gives the previous-folder button its theme icon', () => {
+    expect(bodyControl(CASES.open!, 'DirPrev').syntheticDraw?.themedIcon?.name).toBe('back_folder');
+  });
+
+  it('selects the file name before its dot', () => {
+    const field = bodyControl({ ...CASES.open!, current_file: '"a.png"' }, 'FilenameEdit');
+    expect(field.syntheticDraw?.selection).toEqual({ begin: 0, end: 1 });
+  });
+});

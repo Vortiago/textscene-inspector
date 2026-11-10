@@ -71,5 +71,5 @@ The lenient parser replays `title`, `file_mode`, `mode_overrides_title` and the 
 ## Known limitations
 
 - **Not drawn** The file list always shows no entry, so a folder's files and directories do not appear, and the Favorites and Recent lists stay empty.
-- **Approximated** `access = 2` (filesystem) opens the machine's working directory (`file_dialog.cpp:1517`), which a scene does not carry, so the path field is empty.
+- **Approximated** `access = 2` opens the host's working directory and drive list (`file_dialog.cpp:1517,1620`), which a scene does not carry, so the path field is empty.
 - **Approximated** A folder that `root_subfolder` or `current_dir` names is taken as existing, though Godot refuses one that does not (`file_dialog.cpp:1334`).

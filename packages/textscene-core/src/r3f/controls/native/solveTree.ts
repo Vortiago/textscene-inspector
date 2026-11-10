@@ -36,6 +36,17 @@ export interface ThemedIconRef {
 }
 
 /**
+ * What a Control a dialog builds draws that no scene line carries, which its painter reads beside its parsed
+ * properties: a theme icon for its Button (`set_button_icon`) and the characters selected in its LineEdit.
+ */
+export interface SyntheticDraw {
+  /** The theme icon `SolveNode.icons[name]` resolves and `vendoredUrl` stands in for. */
+  themedIcon?: { name: string; vendoredUrl: string };
+  /** The selected character range `[begin, end)` (`LineEdit::select`). */
+  selection?: { begin: number; end: number };
+}
+
+/**
  * One Control or 2D-UI node in the live, collapsed scene tree (instance roots
  * merged, sub-scene scope resolved), ready for the solver.
  */
@@ -109,6 +120,8 @@ export interface SolveNode {
   styleBoxes: Readonly<Record<string, StyleBoxFlatData>>;
   /** `null` until the node's texture (if any) has loaded. */
   textureSize: Vector2 | null;
+  /** Set only on a Control a dialog builds. */
+  syntheticDraw?: SyntheticDraw;
   /**
    * Every Texture2D-valued slot the type registers (`registerTextureSlots`), by
    * its key: `null` until loaded, empty for a type that registers none. Resolved

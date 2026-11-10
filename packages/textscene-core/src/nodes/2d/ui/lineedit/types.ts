@@ -39,9 +39,4 @@ export interface LineEditProperties
   caretForceDisplayed?: boolean;
   /** Draws an unshapeable control character as a hex-code box instead of dropping it (`shaped_text_set_preserve_control`). Godot default false. */
   drawControlChars?: boolean;
-  /**
-   * The selected character range `[begin, end)`. Not a scene property: a dialog that selects text in a
-   * field it builds sets it, as FileDialog does for a file name (`_focus_file_text`, `file_dialog.cpp:56-63`).
-   */
-  selection?: { begin: number; end: number };
 }

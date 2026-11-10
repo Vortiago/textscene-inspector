@@ -32,6 +32,22 @@ describe('FileDialog Path field', () => {
     expect([shown.path_text, shown.root_subfolder]).toEqual(['user://', '']);
   });
 
+  it('takes a relative root_subfolder from the folder current_dir set before it (file_dialog.cpp:1332-1342)', () => {
+    const shown = location({
+      current_dir: '"res://sub"',
+      root_subfolder: '"deep"',
+      current_file: '"a.png"',
+    });
+    expect(shown.path_text).toBe('');
+    expect(
+      location({
+        current_dir: '"res://sub"',
+        root_subfolder: '"deep"',
+        ...{ current_path: '"res://sub/deep/x/a.png"' },
+      }).path_text
+    ).toBe('x');
+  });
+
   it('keeps root_subfolder when a line repeats the access it has', () => {
     expect(location({ root_subfolder: '"sub"', access: '0' }).root_subfolder).toBe('sub');
   });
@@ -103,5 +119,30 @@ describe('FileDialog next-folder button', () => {
     [{ current_path: '"y.png"' }],
   ])('stays enabled for %j, which never push a folder', (lines) => {
     expect(location(lines).is_next_folder_disabled).toBe(false);
+  });
+});
+
+describe('FileDialog current_dir with dot parts (measured in Godot 4.6.3, dir_access_unix.cpp:343-366)', () => {
+  it.each([
+    ['res://sub/../other', 'res://other'],
+    ['res://./sub', 'res://sub'],
+    ['res://sub/deep/..', 'res://sub'],
+    ['res://sub/.', 'res://sub'],
+    ['res://sub//deep', 'res://sub/deep'],
+    ['sub/../other', 'res://other'],
+  ])('shows %s as %s', (target, shown) => {
+    expect(location({ current_dir: JSON.stringify(target) }).path_text).toBe(shown);
+  });
+
+  it('refuses a folder above the root and stays where it was', () => {
+    expect(location({ current_dir: '"res://.."' }).path_text).toBe('res://');
+    expect(location({ current_dir: '"res://sub"', current_path: '"res://../y.png"' }).path_text).toBe(
+      'res://sub'
+    );
+  });
+
+  it('takes a root_subfolder with dot parts as the folder they resolve to', () => {
+    const lines = { root_subfolder: '"sub/../other"', current_dir: '"res://other/deep"' };
+    expect(location(lines).path_text).toBe('deep');
   });
 });

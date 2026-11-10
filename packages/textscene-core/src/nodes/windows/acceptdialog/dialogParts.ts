@@ -89,6 +89,8 @@ export interface SyntheticControl {
   /** Icons its dialog's theme gives it, by name. Any the dialog's theme chain gives its type override them. */
   icons?: SolveNode['icons'];
   textureSize?: SolveNode['textureSize'];
+  /** What it draws that a scene line cannot carry. */
+  syntheticDraw?: SolveNode['syntheticDraw'];
 }
 
 /**
@@ -118,6 +120,7 @@ export function syntheticControl(dialog: SolveNode, spec: SyntheticControl): Sol
     icons: { ...spec.icons, ...items.icons },
     fontOverrides: {},
     textureSize: spec.textureSize ?? null,
+    syntheticDraw: spec.syntheticDraw,
     textureSlots: {},
     labelSettings: null,
     labelSettingsFont: null,

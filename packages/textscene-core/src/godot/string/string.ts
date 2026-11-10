@@ -214,6 +214,37 @@ export function simplifyResPath(path: string): string {
   );
 }
 
+/** `String::is_absolute_path()` (`core/string/ustring.cpp:4287-4295`): a leading slash, or a `:/` or `:\\` anywhere. */
+const isAbsolutePath = (path: string) => /^[/\\]/.test(path) || (path.length > 1 && /:[/\\]/.test(path));
+
+/** The drive `simplify_path` sets aside: a `scheme://`, a `//` or `\\\\` network share, a lone slash or a `C:/` (`ustring.cpp:4156-4185`). */
+function driveOf(path: string): string {
+  const schemeEnd = path.indexOf('://');
+  if (schemeEnd > 0 && /^[A-Za-z0-9]+$/.test(path.slice(0, schemeEnd))) return path.slice(0, schemeEnd + 3);
+  if (/^(\/\/|\\\\)/.test(path)) return path.slice(0, 2);
+  if (/^[/\\]/.test(path)) return path.slice(0, 1);
+  const colon = path.search(/:[/\\]/);
+  return colon !== -1 && colon < path.indexOf('/') ? path.slice(0, colon + 2) : '';
+}
+
+/**
+ * `String::simplify_path()` (`core/string/ustring.cpp:4152-4231`): the drive stays in front, `\` reads as `/`, a run of
+ * slashes collapses, a `.` part goes and a `..` removes the part before it. A `..` with no part to remove stays, except
+ * first in an absolute path that does not start with `res://`, where it goes.
+ */
+export function simplifyPath(path: string): string {
+  const drive = driveOf(path);
+  const dropsLeadingParent = isAbsolutePath(path) && !path.startsWith('res://');
+  const parts: string[] = [];
+  for (const part of path.slice(drive.length).replaceAll('\\', '/').split('/')) {
+    if (part === '' || part === '.') continue;
+    if (part !== '..') parts.push(part);
+    else if (parts.length > 0 && parts[parts.length - 1] !== '..') parts.pop();
+    else if (!(dropsLeadingParent && parts.length === 0)) parts.push(part);
+  }
+  return drive + parts.join('/');
+}
+
 /**
  * `String::to_float()` (`core/string/ustring.cpp:2680-2685`): an empty string is 0, and `built_in_strtod` takes the longest
  * numeric prefix, or 0. Not {@link parseGodotFloat}, which reads an anchored TSCN float literal because unread text corrupts

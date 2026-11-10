@@ -10,6 +10,7 @@
  */
 
 import { accessRootPath } from '../../../godot/scene/fileDialog';
+import { simplifyPath } from '../../../godot/string/string.js';
 
 export interface FileDialogLocation {
   /** The `access` the steps end on: a changed `access` resets `root_subfolder` (`file_dialog.cpp:1509-1516`). */
@@ -47,19 +48,18 @@ export const startLocation = (): LocationState => ({
   isNextFolderDisabled: false,
 });
 
-/** `String::get_base_dir` without the trailing slash, except a scheme root such as `res://`. */
-function withoutTrailingSlash(dir: string): string {
-  return dir.endsWith('/') && !dir.endsWith('://') ? dir.slice(0, -1) : dir;
-}
-
-/** The split at the last `/` leaves `res:/` of `res://y.png`: it is the scheme root `res://`, not a relative folder. */
-const withSchemeRoot = (dir: string) => (dir.endsWith(':/') ? `${dir}/` : dir);
-
 const isAbsolute = (dir: string) => dir.includes('://') || dir.startsWith('/');
 
-function resolveDir(dir: string, accessRoot: string | null): string {
-  if (isAbsolute(dir) || accessRoot === null) return withoutTrailingSlash(dir);
-  return withoutTrailingSlash(accessRoot.endsWith('/') ? accessRoot + dir : `${accessRoot}/${dir}`);
+/**
+ * `change_dir` joins a relative target to the current folder and simplifies it (`dir_access_unix.cpp:343-366`,
+ * `String::simplify_path`). A `..` that climbs out of the root is refused, as measured in Godot 4.6.3: the dialog stays
+ * where it was, which is the null this returns. A null `base` is the host's working directory, which a scene does not
+ * carry: a relative target then stays relative.
+ */
+function resolveDir(dir: string, base: string | null): string | null {
+  const joined = isAbsolute(dir) || base === null ? dir : base + (base.endsWith('/') ? '' : '/') + dir;
+  const simplified = simplifyPath(joined);
+  return simplified.split('/').includes('..') ? null : simplified;
 }
 
 /** `get_current_dir(false).trim_prefix(root_prefix).trim_prefix("/")` (`file_dialog.cpp:363`). */
@@ -78,8 +78,8 @@ export function setAccess(state: LocationState, access: number): void {
   state.dir = accessRootPath(access);
 }
 
-function changeDir(state: LocationState, target: string): void {
-  state.dir = resolveDir(target, accessRootPath(state.access));
+function changeDir(state: LocationState, target: string, base: string | null = state.dir): void {
+  state.dir = resolveDir(target, base) ?? state.dir;
 }
 
 /** `set_root_subfolder` (`file_dialog.cpp:1332-1347`): the folder becomes the root the Path field trims. */
@@ -93,8 +93,9 @@ export function setRootSubfolder(state: LocationState, folder: string): void {
   state.rootPrefix = state.dir ?? '';
 }
 
+/** `set_current_dir` moves a relative target to the access root first (`file_dialog.cpp:1298-1304`). */
 export function setCurrentDir(state: LocationState, target: string): void {
-  changeDir(state, target);
+  changeDir(state, target, accessRootPath(state.access));
   state.isNextFolderDisabled = true;
 }
 
@@ -103,6 +104,9 @@ export function setCurrentFile(state: LocationState, name: string): void {
   if (name === state.file) return;
   state.file = name;
 }
+
+/** Splitting `res://y.png` at its last slash leaves `res:/`: the folder is the scheme root. */
+const withSchemeRoot = (dir: string) => (dir.endsWith(':/') ? `${dir}/` : dir);
 
 /** `set_current_path` splits at the last `/` or `\` and ignores an empty path (`file_dialog.cpp:1318-1331`). */
 export function setCurrentPath(state: LocationState, path: string): void {

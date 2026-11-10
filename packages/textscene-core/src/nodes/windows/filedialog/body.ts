@@ -61,6 +61,8 @@ interface Widget {
   variation?: string;
   /** The theme icon this button shows (`set_button_icon`, `file_dialog.cpp:1559`). */
   icon?: FileDialogThemeIcon;
+  /** The characters selected in this LineEdit (`select`, `file_dialog.cpp:56-63`). */
+  selection?: { begin: number; end: number };
   children?: readonly Widget[];
 }
 
@@ -194,10 +196,8 @@ function fileColumn(dialog: Dialog): Widget {
           widget('Label', 'FileLabel', { raw: { text: '"File:"' } }),
           widget('LineEdit', 'FilenameEdit', {
             raw: { size_flags_horizontal: EXPAND_FILL, size_flags_stretch_ratio: '4.0' },
-            properties: {
-              text: dialog.props.current_file,
-              selection: dialog.props.file_selection ?? undefined,
-            },
+            properties: { text: dialog.props.current_file },
+            selection: dialog.props.file_selection ?? undefined,
           }),
           widget('OptionButton', 'Filter', {
             raw: { size_flags_horizontal: EXPAND_FILL, size_flags_stretch_ratio: '3.0', clip_text: 'true' },
@@ -305,7 +305,6 @@ function build(dialog: SolveNode, theme: NativeTheme, spec: Widget, parentPath: 
     ...parsed.properties,
     ...spec.properties,
     ...(spec.variation && { themeTypeVariation: spec.variation }),
-    ...(spec.icon && { themedIcon: { name: spec.icon, vendoredUrl: FILE_DIALOG_ICON_URLS[spec.icon] } }),
   };
   return syntheticControl(dialog, {
     type: spec.type,
@@ -319,6 +318,10 @@ function build(dialog: SolveNode, theme: NativeTheme, spec: Widget, parentPath: 
     variationDefaults: isFlatButton(spec.variation) ? { styleBoxes: flatButtonBoxes(theme) } : undefined,
     icons: themedIconsOf(dialog, spec.icon),
     textureSize: spec.icon && iconSizeOf(dialog, spec.icon),
+    syntheticDraw: {
+      themedIcon: spec.icon && { name: spec.icon, vendoredUrl: FILE_DIALOG_ICON_URLS[spec.icon] },
+      selection: spec.selection,
+    },
   });
 }
 
