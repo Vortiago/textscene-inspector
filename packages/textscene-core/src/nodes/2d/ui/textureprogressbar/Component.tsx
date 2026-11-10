@@ -22,7 +22,7 @@ import { useOwnedTextureView } from '../../../../r3f/useTextureView';
 import { regionUvWindow } from '../../../../r3f/uvWindow';
 import { rangeRatio } from '../shared/range';
 import { ninePatchGeometry } from '../../../../r3f/controls/native/ninePatchGeometry';
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { drawNinePatchStretched, type NinePatchMargin } from './ninePatchProgress';
 import { linearProgressDraw } from './linearFill';
 import {
@@ -284,12 +284,13 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
         </CanvasItemGroup>
       )}
       {isRadialMode && radialVal !== null && radialVal >= 1 && progressTexture && radialSize && (
-        <TextureQuad
+        <PositionedIcon
           rect={{ x: progressOffset.x, y: progressOffset.y, w: radialSize.x, h: radialSize.y }}
           texture={progressTexture}
           color={progressColor}
           opacity={progressColorSrgb.a}
           renderOrder={renderOrder}
+          canvasKey={renderOrder}
         />
       )}
       {radialGeometry && progressTexture && (
@@ -304,7 +305,7 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
         </CanvasItemGroup>
       )}
       {progressLinear && progressCropped && (
-        <TextureQuad
+        <PositionedIcon
           rect={{
             x: progressLinear.offset.x,
             y: progressLinear.offset.y,
@@ -315,6 +316,7 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
           color={progressColor}
           opacity={progressColorSrgb.a}
           renderOrder={renderOrder}
+          canvasKey={renderOrder}
         />
       )}
 

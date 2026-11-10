@@ -14,7 +14,7 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
   pickLineEditStyleBox,
   resolveLineEditStyleState,
@@ -29,6 +29,7 @@ import {
   spinBoxDisplayText,
   shapeSpinBoxFieldText,
   spinBoxFieldTextTheme,
+  spinBoxFieldThemeItems,
   spinBoxUpButtonState,
   spinBoxDownButtonState,
   spinBoxIconColor,
@@ -50,7 +51,11 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   );
 
   const styleState = resolveLineEditStyleState(props.editable);
-  const fieldBox = pickLineEditStyleBox({}, theme.widgets.lineEdit, styleState);
+  const fieldBox = pickLineEditStyleBox(
+    spinBoxFieldThemeItems(solveNode).styleBoxes,
+    theme.widgets.lineEdit,
+    styleState
+  );
 
   const orderedKeys = controlLayoutOrder(solveNode);
   const resolvedValue = resolveRangeValue(props, orderedKeys);
@@ -183,19 +188,21 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
           />
         </CanvasItemGroup>
       )}
-      <TextureQuad
+      <PositionedIcon
         rect={{ x: upIconPos.x, y: upIconPos.y, w: upIconSize.x, h: upIconSize.y }}
         texture={upIconTexture}
         color={upIconLinear}
         opacity={upIconColorSrgb.a}
         renderOrder={renderOrder}
+        canvasKey={renderOrder}
       />
-      <TextureQuad
+      <PositionedIcon
         rect={{ x: downIconPos.x, y: downIconPos.y, w: downIconSize.x, h: downIconSize.y }}
         texture={downIconTexture}
         color={downIconLinear}
         opacity={downIconColorSrgb.a}
         renderOrder={renderOrder}
+        canvasKey={renderOrder}
       />
     </CanvasItemGroup>
   );

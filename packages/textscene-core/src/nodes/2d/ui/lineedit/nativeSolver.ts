@@ -43,7 +43,7 @@ import type { TscnNode } from '../../../../parser/types';
 import { lineEditDisplayText } from './displayText';
 import { LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import type { LineEditProperties } from './types';
-import { type Vector2, vector2Max } from '../../../../godot/math/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 import { type Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import {
@@ -251,6 +251,21 @@ export function shapeLineEditText(
 }
 
 /**
+ * `style_min_size` of `LineEdit::get_minimum_size` (`line_edit.cpp:2475`): the larger of the `normal` and
+ * `read_only` minimum sizes, whatever `editable` says. Each caller passes the boxes it resolved.
+ */
+export function lineEditStyleMinSize(normal: StyleBoxFlatData, readOnly: StyleBoxFlatData): Vector2 {
+  const normalMargin = contentMarginSize(normal);
+  const readOnlyMargin = contentMarginSize(readOnly);
+  return { x: Math.max(normalMargin.x, readOnlyMargin.x), y: Math.max(normalMargin.y, readOnlyMargin.y) };
+}
+
+/** The text part of `LineEdit::get_minimum_size`'s width (`:2447-2451`): `minimum_character_width` ems of "W". */
+export function lineEditTextMinimumWidth(emWidthPx: number): number {
+  return LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emWidthPx;
+}
+
+/**
  * `LineEdit::get_minimum_size` (`line_edit.cpp:2443-2477`): `minimum_character_width` em widths of
  * 'W', widened to `full_width + caret_width` with `expand_to_text_length`, plus the widest icon, by
  * `min_size.height = MAX(shaped height, font->get_height(font_size))`, plus the larger of the `normal`
@@ -260,13 +275,11 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LineEditProperties;
   const { fontSizePx } = lineEditTextTheme(n, props, 'normal', ctx);
 
-  // `style_min_size` floors against both `normal` and `read_only`, whatever `editable` says, while the
-  // draw pass reads only the active box. A wider read-only override floors an editable field too.
-  const normalBox = pickLineEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, 'normal');
-  const readOnlyBox = pickLineEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, 'read_only');
-  const normalMargin = contentMarginSize(normalBox);
-  const readOnlyMargin = contentMarginSize(readOnlyBox);
-  const styleMinSize = vector2Max(normalMargin, readOnlyMargin);
+  // The draw pass reads only the active box. A wider read-only override floors an editable field too.
+  const styleMinSize = lineEditStyleMinSize(
+    pickLineEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, 'normal'),
+    pickLineEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, 'read_only')
+  );
 
   const fontMetrics = resolveNodeFontMetrics(n, LINE_EDIT_THEME_FONT_KEY);
   const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx, 0, fontMetrics).x : 0;
@@ -274,7 +287,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   // LineEdit sets no `line_spacing`, so a spacing of 0 gives ascent and descent, each ceiled, summed.
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
 
-  let width = LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emSpaceSize;
+  let width = lineEditTextMinimumWidth(emSpaceSize);
 
   if (props.expandToTextLength && ctx.measureText) {
     // `full_width` (`:2456`, set at the end of `_shape()`) is the ceiled width of the string

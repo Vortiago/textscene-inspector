@@ -11,6 +11,7 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
@@ -29,7 +30,6 @@ import {
   layoutButtonContent,
   buttonTextBufWidthPx,
 } from '../../../../r3f/controls/native/buttonBase';
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import {
   buttonLabelShape,
@@ -185,8 +185,8 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
           renderOrder={renderOrder}
         />
       )}
-      {content.icon && iconTexture && (
-        <TextureQuad
+      {content.icon && (
+        <PositionedIcon
           rect={content.icon.rect}
           texture={iconTexture}
           color={iconLinearColor}

@@ -200,7 +200,13 @@ export interface ButtonLabelBox {
 }
 
 interface ButtonContentLayout {
+  /** The icon to draw, `null` for no icon or an `expand_icon` one with no room left. */
   icon: ButtonIconLayout | null;
+  /**
+   * The icon's size as `button.cpp:349-405` takes it off the label's box, where there is text and the
+   * icon is not centred on that axis. It is negative when `expand_icon` leaves no room: `icon` is then `null`.
+   */
+  iconReserve: Vector2 | null;
   text: ButtonTextLayout | null;
   /** The label's paragraph box, `null` without text. `<ButtonLabel>` draws the label in it. */
   labelBox: ButtonLabelBox | null;
@@ -280,7 +286,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     }
     size = fitIconSize(size, iconMaxWidth);
     size = { x: Math.round(size.x), y: Math.round(size.y) };
-    if (size.x > 0) iconSize = size;
+    iconSize = size;
   }
 
   let iconLayout: ButtonIconLayout | null = null;
@@ -319,13 +325,18 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
       if (verticalIconAlignment !== V_CENTER) drawableHeight -= iconSize.y;
     }
 
-    iconLayout = { rect: { x: Math.floor(iconX), y: Math.floor(iconY), w: iconSize.x, h: iconSize.y } };
+    // A zero or negative width draws nothing, but `drawableWidth` and the text offsets above keep its size.
+    if (iconSize.x > 0) {
+      iconLayout = {
+        rect: { x: Math.floor(iconX), y: Math.floor(iconY), w: iconSize.x, h: iconSize.y },
+      };
+    }
   }
 
   let textLayout: ButtonTextLayout | null = null;
   if (hasText) {
     let boxLeftPx = styleMargin.left;
-    if (iconLayout && iconAlign === H_LEFT) {
+    if (iconSize && iconAlign === H_LEFT) {
       // Only a LEFT icon pushes the text right. A RIGHT or CENTER icon has
       // already narrowed `drawableWidth`.
       boxLeftPx += customElementSize.x - drawableWidth;
@@ -334,7 +345,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
       boxLeftPx + buttonTextAlignShiftPx(textNaturalSize.x, drawableWidth, textAlign, isTextRtl);
 
     let textOffsetY = centredTextTopPx(drawableHeight, textNaturalSize.y, styleMargin.top);
-    if (iconLayout && verticalIconAlignment === V_TOP) {
+    if (iconSize && verticalIconAlignment === V_TOP) {
       textOffsetY += customElementSize.y - drawableHeight;
     }
     textLayout = { offset: { x: textOffsetX, y: textOffsetY }, boxLeftPx };
@@ -348,10 +359,53 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
   };
   return {
     icon: iconLayout,
+    iconReserve: iconSize,
     text: textLayout,
     labelBox,
     drawableSize: { x: drawableWidth, y: drawableHeight },
   };
+}
+
+/**
+ * The icon rect of a Button with an icon and no text, at `iconAlignment` (LEFT is the default, swapped
+ * to the trailing edge in an RTL layout) and the default `vertical_icon_alignment` (CENTER), local to the
+ * button. Null for an empty icon.
+ */
+function iconOnlyButtonIconRect(
+  rectSize: Vector2,
+  styleMargin: ButtonContentInput['styleMargin'],
+  iconSize: Vector2,
+  rtl: boolean,
+  iconAlignment: number = H_LEFT
+): Rect2 | null {
+  const { icon } = layoutButtonContent({
+    rectSize,
+    styleMargin,
+    hSeparation: 0,
+    iconMaxWidth: 0,
+    textAlignment: H_CENTER,
+    iconAlignment,
+    verticalIconAlignment: V_CENTER,
+    expandIcon: false,
+    iconNaturalSize: iconSize,
+    hasText: false,
+    textNaturalSize: { x: 0, y: 0 },
+    isTextRtl: false,
+    rtl,
+  });
+  return icon?.rect ?? null;
+}
+
+/** `iconOnlyButtonIconRect` for a button at `box`, in the coordinates `box` is in. */
+export function iconOnlyButtonIconRectIn(
+  box: Rect2,
+  styleMargin: ButtonContentInput['styleMargin'],
+  iconSize: Vector2,
+  rtl: boolean,
+  iconAlignment?: number
+): Rect2 | null {
+  const local = iconOnlyButtonIconRect({ x: box.w, y: box.h }, styleMargin, iconSize, rtl, iconAlignment);
+  return local && { ...local, x: box.x + local.x, y: box.y + local.y };
 }
 
 /**
@@ -471,4 +525,41 @@ export function trimButtonLabel(
 /** The width `button.cpp:424-432` gives the text buffer: the drawable width, at least 1, ceiled. */
 export function buttonTextBufWidthPx(drawableWidthPx: number): number {
   return Math.ceil(Math.max(1, drawableWidthPx));
+}
+
+interface ButtonContentSizeInput {
+  textSize: Vector2;
+  hasText: boolean;
+  /** The fitted icon, or `null` for no icon or an `expand_icon` one. */
+  iconSize: Vector2 | null;
+  iconAlignment: number;
+  verticalIconAlignment: number;
+  hSeparation: number;
+}
+
+/**
+ * The text and icon terms of `Button::get_minimum_size_for_text_and_icon` (`button.cpp:492-523`),
+ * without the stylebox margin, for any control that draws a Button.
+ */
+export function buttonContentSize(input: ButtonContentSizeInput): Vector2 {
+  const { textSize, hasText, iconSize, iconAlignment, verticalIconAlignment, hSeparation } = input;
+  const isVerticallyCentred = verticalIconAlignment === VerticalAlignment.VERTICAL_ALIGNMENT_CENTER;
+  const stackHeights = (above: number, below: number) =>
+    isVerticallyCentred ? Math.max(above, below) : above + below;
+  let width = textSize.x;
+  let height = textSize.y;
+
+  if (iconSize) {
+    height = stackHeights(height, iconSize.y);
+    if (iconAlignment !== HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER) {
+      width += iconSize.x;
+      if (hasText) width += Math.max(0, hSeparation);
+    } else {
+      width = Math.max(width, iconSize.x);
+    }
+  }
+
+  if (hasText) height = stackHeights(textSize.y, height);
+
+  return { x: width, y: height };
 }

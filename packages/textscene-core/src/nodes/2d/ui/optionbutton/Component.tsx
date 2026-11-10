@@ -7,8 +7,8 @@
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { OPTION_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -93,7 +93,7 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
       {!props.flat && (
         <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
       )}
-      <TextureQuad
+      <PositionedIcon
         rect={content.arrowRect}
         texture={arrowTexture}
         color={tint.color}

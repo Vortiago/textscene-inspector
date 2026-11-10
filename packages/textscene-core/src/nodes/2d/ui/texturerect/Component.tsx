@@ -8,7 +8,7 @@
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
   useCanvasItemViewSampler,
   useInheritedTextureSampler,
@@ -53,12 +53,13 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
   if (!draw || !drawnTexture) return null;
 
   return (
-    <TextureQuad
+    <PositionedIcon
       rect={{ x: draw.offset.x, y: draw.offset.y, w: draw.size.x, h: draw.size.y }}
       texture={drawnTexture}
       color={tint.color}
       opacity={tint.opacity}
       renderOrder={renderOrder}
+      canvasKey={renderOrder}
     />
   );
 }

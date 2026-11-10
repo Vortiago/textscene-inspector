@@ -5,7 +5,7 @@
  * rather than setting a CSS `rgba(...)` background.
  */
 
-import { flatStyleBox as makeFlatStyleBox } from './styleBoxFlat';
+import { flatStyleBox as makeFlatStyleBox, freezeStyleBox } from './styleBoxFlat';
 import { POPUP_MENU_DEFAULTS } from '../../../godot/scene/popupMenu';
 import {
   DEFAULT_CORNER_RADIUS,
@@ -16,6 +16,7 @@ import {
   type ScaledGodotTheme,
 } from '../../../godot/scene/theme';
 import type { StyleBoxFlatData } from './styleBoxFlat';
+import { tabBarStyleBoxes, type TabBarStyleBoxes } from './tabStyleBoxes';
 import type { Rgba } from '../../../godot/math/math';
 
 /**
@@ -40,6 +41,8 @@ interface NativeThemeStyleFill {
   progress: Rgba;
 }
 
+const TRANSPARENT: Rgba = { r: 0, g: 0, b: 0, a: 0 };
+
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /**
@@ -53,7 +56,7 @@ function flatStyleBox(
   contentMargin: { left: number; top: number; right: number; bottom: number },
   cornerRadius: number
 ): StyleBoxFlatData {
-  return makeFlatStyleBox(bgColor, { contentMargin, cornerRadius });
+  return freezeStyleBox(makeFlatStyleBox(bgColor, { contentMargin, cornerRadius }));
 }
 
 /**
@@ -68,11 +71,11 @@ function lineEditStyleBox(
   contentMargin: { left: number; top: number; right: number; bottom: number },
   cornerRadius: number
 ): StyleBoxFlatData {
-  return {
+  return freezeStyleBox({
     ...flatStyleBox(bgColor, contentMargin, cornerRadius),
     borderColor,
     borderWidth: { left: 0, top: 0, right: 0, bottom: LINE_EDIT_BORDER_BOTTOM_WIDTH },
-  };
+  });
 }
 
 /** The focus outline's border width and expand margin before the theme scale (`default_theme.cpp:142-144`). */
@@ -125,6 +128,16 @@ interface NativeThemeWidgets {
     /** `focus` (`default_theme.cpp:142-150`): an outline drawn around a focused Button, flush with it. */
     focus: StyleBoxFlatData;
   };
+  /**
+   * `FlatMenuButton`'s `normal` and `disabled` (`default_theme.cpp:360-375`): a `StyleBoxEmpty`
+   * with the margins of `button_normal`, so it draws nothing and takes the same room.
+   */
+  flatMenuButton: {
+    normal: StyleBoxFlatData;
+    disabled: StyleBoxFlatData;
+  };
+  /** `TabContainer` and `TabBar` `tab_selected`, `tab_unselected`, `tab_disabled` and `tab_hovered` (`default_theme.cpp:974-985`). */
+  tabContainer: TabBarStyleBoxes;
   /** LineEdit's `normal`/`read_only` styleboxes, `default_theme.cpp:405-417`. */
   lineEdit: {
     normal: StyleBoxFlatData;
@@ -213,6 +226,7 @@ function buildNativeTheme(scale: number): NativeTheme {
     right: scaled.contentMargin,
     bottom: scaled.contentMargin,
   };
+  const flatMenuButtonBox = flatStyleBox(TRANSPARENT, buttonMargin, 0);
   const optionButtonMargin = {
     left: scaled.optionButtonMarginX,
     top: scaled.optionButtonMarginY,
@@ -258,6 +272,8 @@ function buildNativeTheme(scale: number): NativeTheme {
         disabled: flatStyleBox(STYLE_FILL.disabled, buttonMargin, scaled.cornerRadius),
         focus: focusStyleBox(buttonMargin, scaled.cornerRadius, Math.round(FOCUS_BORDER_WIDTH * scale)),
       },
+      flatMenuButton: { normal: flatMenuButtonBox, disabled: flatMenuButtonBox },
+      tabContainer: tabBarStyleBoxes(scale),
       lineEdit: {
         // default_theme.cpp:405-409: make_flat_stylebox(style_normal_color) + border.
         normal: lineEditStyleBox(

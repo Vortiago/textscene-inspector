@@ -4,7 +4,11 @@
  * `scaledGodotTheme` unchanged while colours are not scaled.
  */
 import { describe, expect, it } from 'vitest';
-import { scaledGodotTheme } from '../../../godot/scene/theme';
+import {
+  DEFAULT_THEME_TYPE_VARIATIONS,
+  FLAT_MENU_BUTTON_VARIATION,
+  scaledGodotTheme,
+} from '../../../godot/scene/theme';
 import { nativeTheme } from './nativeTheme';
 
 describe('nativeTheme', () => {
@@ -293,6 +297,33 @@ describe('nativeTheme', () => {
     it('truncates the scaled detail to an int, as set_corner_detail does', () => {
       expect(nativeTheme(1).widgets.popupMenuPanel.cornerDetail).toBe(5);
       expect(nativeTheme(1.5).widgets.popupMenuPanel.cornerDetail).toBe(7);
+    });
+  });
+
+  describe('the default type variations it models', () => {
+    it('registers FlatMenuButton with a base type, as widgets.flatMenuButton holds its boxes', () => {
+      expect(DEFAULT_THEME_TYPE_VARIATIONS[FLAT_MENU_BUTTON_VARIATION]).toBeTruthy();
+      expect(nativeTheme(1).widgets.flatMenuButton).toBeDefined();
+    });
+
+    it('gives the FlatMenuButton boxes the margins of the Button box and no fill (default_theme.cpp:360-375)', () => {
+      const { widgets } = nativeTheme(1);
+      expect(widgets.flatMenuButton.normal.contentMargin).toEqual(widgets.button.normal.contentMargin);
+      expect(widgets.flatMenuButton.normal.bgColor.a).toBe(0);
+    });
+
+    it('freezes the shared tab, FlatMenuButton and Button boxes, so an in-place margin edit throws', () => {
+      const { widgets } = nativeTheme(1);
+      for (const box of [
+        widgets.tabContainer.unselected,
+        widgets.flatMenuButton.normal,
+        widgets.button.normal,
+      ]) {
+        const margin = box.contentMargin as { left: number };
+        expect(() => {
+          margin.left += 1;
+        }).toThrow(TypeError);
+      }
     });
   });
 });

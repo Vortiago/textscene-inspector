@@ -10,7 +10,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { SLIDER_GRABBER_ICONS, SLIDER_TICK_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
   resolveSliderRatio,
   sliderGrabberAreaRect,
@@ -66,21 +66,23 @@ export function HSlider({ solveNode, tint, rect, theme, renderOrder }: NativeCon
         />
       </CanvasItemGroup>
       {tickRects.map((tickRect, i) => (
-        <TextureQuad
+        <PositionedIcon
           key={tickIndices[i]}
           rect={tickRect}
           texture={tickTexture}
           color={tint.color}
           opacity={tint.opacity}
           renderOrder={renderOrder}
+          canvasKey={renderOrder}
         />
       ))}
-      <TextureQuad
+      <PositionedIcon
         rect={grabberRect}
         texture={grabberTexture}
         color={tint.color}
         opacity={tint.opacity}
         renderOrder={renderOrder}
+        canvasKey={renderOrder}
       />
     </>
   );

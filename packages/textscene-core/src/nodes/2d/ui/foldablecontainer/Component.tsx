@@ -26,7 +26,7 @@ import {
   type FoldableContainerArrow,
 } from './nativeSolver';
 import { FOLDABLE_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { TITLE_POSITION_TOP, type FoldableContainerProperties } from './types';
 
 const ARROW_ICON_URL: Record<FoldableContainerArrow, string> = {
@@ -151,12 +151,13 @@ export function FoldableContainer({
           renderOrder={renderOrder}
         />
       </CanvasItemGroup>
-      <TextureQuad
+      <PositionedIcon
         rect={{ x: titleRect.x + iconPos.x, y: titleRect.y + iconPos.y, w: arrowSize.x, h: arrowSize.y }}
         texture={iconTexture}
         color={tint.color}
         opacity={tint.opacity}
         renderOrder={renderOrder}
+        canvasKey={renderOrder}
       />
       {trimmedLayout && titleTextWidth > 0 && (
         <CanvasItemGroup position={[titleRect.x + textPos.x, -(titleRect.y + textPos.y), 0]}>

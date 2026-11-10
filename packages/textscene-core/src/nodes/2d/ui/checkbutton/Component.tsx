@@ -13,7 +13,7 @@ import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/nati
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
   checkButtonCheckVOffset,
   checkButtonHSeparation,
@@ -93,7 +93,7 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
 
   return (
     <>
-      <TextureQuad
+      <PositionedIcon
         rect={{
           x: content.iconPosition.x,
           y: content.iconPosition.y,
@@ -104,6 +104,7 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
         color={iconLinearColor}
         opacity={tintedIconColorSrgb.a}
         renderOrder={renderOrder}
+        canvasKey={renderOrder}
       />
       {content.labelBox && layout && (
         <ButtonLabel

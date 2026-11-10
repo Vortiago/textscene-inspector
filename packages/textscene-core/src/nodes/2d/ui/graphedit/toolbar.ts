@@ -19,12 +19,12 @@ import {
   resortBoxContainer,
   type BoxChildInput,
 } from '../shared/boxContainerSolver';
-import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH, scaledPx } from '../../../../godot/scene/theme';
+import { lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
 import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
 import { GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { isMinimapEnabled } from './minimap';
 import type { GraphEditProperties } from './types';
-import { type Vector2, vector2Max } from '../../../../godot/math/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
 
 /** `menu_panel->set_position(Vector2(10, 10))` (`graph_edit.cpp:3232`): unscaled. */
@@ -100,10 +100,10 @@ export function graphEditMenuPanelStyleBox(theme: NativeTheme): StyleBoxFlatData
     },
     expandMargin: { left: 0, top: 0, right: 0, bottom: 0 },
     contentMargin: {
-      left: scaledPx(4, scale),
-      top: scaledPx(2, scale),
-      right: scaledPx(4, scale),
-      bottom: scaledPx(2, scale),
+      left: Math.round(4 * scale),
+      top: Math.round(2 * scale),
+      right: Math.round(4 * scale),
+      bottom: Math.round(2 * scale),
     },
     drawCenter: true,
     borderBlend: false,
@@ -135,13 +135,11 @@ function toolbarButtonMinSize(theme: NativeTheme): Vector2 {
  * SpinBox's internal field, so the plain theme boxes are the whole input.
  */
 function toolbarSpinBoxMinSize(theme: NativeTheme, metrics: ToolbarTextMetrics): Vector2 {
-  const normal = contentMarginSize(theme.widgets.lineEdit.normal);
-  const readOnly = contentMarginSize(theme.widgets.lineEdit.readOnly);
-  const styleMin = vector2Max(normal, readOnly);
+  const styleMin = lineEditStyleMinSize(theme.widgets.lineEdit.normal, theme.widgets.lineEdit.readOnly);
   return {
     x:
       styleMin.x +
-      LINE_EDIT_MINIMUM_CHARACTER_WIDTH * metrics.emSpaceWidthPx +
+      lineEditTextMinimumWidth(metrics.emSpaceWidthPx) +
       spinBoxButtonsBlockWidth(SPIN_BOX_ARROW_ICON_SIZE.x),
     y: styleMin.y + metrics.fontHeightPx,
   };

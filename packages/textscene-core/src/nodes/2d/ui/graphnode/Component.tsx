@@ -15,7 +15,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
@@ -76,12 +76,13 @@ function GraphNodePort({ solveNode, iconRef, slotColor, tintOwn, x, y, renderOrd
   const { color, opacity } = useTintedColor(tintOwn, slotColor);
 
   return (
-    <TextureQuad
+    <PositionedIcon
       rect={{ x: x - size.x / 2, y: y - size.y / 2, w: size.x, h: size.y }}
       texture={texture}
       color={color}
       opacity={opacity}
       renderOrder={renderOrder}
+      canvasKey={renderOrder}
     />
   );
 }
@@ -247,7 +248,7 @@ export function GraphNode({
         </Fragment>
       ))}
       {resizerTexture && props.resizable === true && (
-        <TextureQuad
+        <PositionedIcon
           rect={{
             x: rect.w - RESIZER_SE_ICON_SIZE.x,
             y: rect.h - RESIZER_SE_ICON_SIZE.y,
@@ -258,6 +259,7 @@ export function GraphNode({
           color={resizerTint.color}
           opacity={resizerTint.opacity}
           renderOrder={renderOrder}
+          canvasKey={renderOrder}
         />
       )}
     </>

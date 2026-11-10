@@ -80,7 +80,7 @@ export const LABEL_PARAGRAPH_SEPARATOR = '\n';
  * "Label" to `Color(1, 1, 1)`, not the `control_font_color` gray most other
  * widget types read.
  */
-const LABEL_DEFAULT_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
+export const LABEL_DEFAULT_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** This Label's theme font size and colour: its overrides, else the ancestor Theme chain, else the theme default, else Label's white (`resolveTextTheme`). */
 export function labelTextTheme(

@@ -16,7 +16,7 @@ import {
   useControlClipPlanes,
   useWorldClipPlanes,
 } from '../../../r3f/controls/native/controlClipping';
-import { TextureQuad } from '../../../r3f/controls/native/TextureQuad';
+import { PositionedIcon } from '../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../r3f/controls/native/StyleBoxQuad';
 import { OutlinedTextRun, useTintedOutline } from '../../../r3f/controls/native/text/OutlinedTextRun';
 import type { CheckBoxIconKey } from '../../2d/ui/checkbox/nativeSolver';
@@ -45,12 +45,13 @@ function CheckMark({
   const size = checkIconSize(solveNode, iconKey);
   const rect = { x: position.x, y: position.y, w: size.x, h: size.y };
   return (
-    <TextureQuad
+    <PositionedIcon
       rect={rect}
       texture={texture}
       color={tint.color}
       opacity={tint.opacity}
       renderOrder={renderOrder}
+      canvasKey={renderOrder}
     />
   );
 }
@@ -67,12 +68,13 @@ function ItemIcon({
   const { texture: source } = useTexture2D(textureRef, externalResources, internalResources);
   const texture = useOwnerCanvas2DTexture(source);
   return (
-    <TextureQuad
+    <PositionedIcon
       rect={rect}
       texture={texture}
       color={tint.color}
       opacity={tint.opacity}
       renderOrder={renderOrder}
+      canvasKey={renderOrder}
     />
   );
 }

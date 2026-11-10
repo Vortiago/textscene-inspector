@@ -10,6 +10,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import type { TabBarStyleBoxes } from '../../../../r3f/controls/native/tabStyleBoxes';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -23,7 +24,7 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import type { TabBarProperties, TabBarTabProperties } from './types';
 import { TAB_BAR_ICONS } from '../../../../r3f/controls/native/themeIcons';
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
   TAB_ALIGNMENT_LEFT,
   TAB_BAR_THEME_FONT_KEY,
@@ -33,7 +34,6 @@ import {
   layoutScrollArrows,
   layoutTabContent,
   pickTabStyleBox,
-  reconstructThemeScale,
   resolveTabDrawState,
   isTabUnselectable,
   resolveTabBarCurrentTab,
@@ -41,7 +41,6 @@ import {
   tabBarFontColor,
   tabBarFontSizePx,
   tabBarIconColor,
-  tabBarStyleBoxes,
   tabBarThemeIconSize,
   tabContentWidth,
   tabDrawX,
@@ -82,8 +81,7 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
   const tabSeparation = solveNode.constants.tab_separation ?? 0;
   const iconMaxWidth = solveNode.constants.icon_max_width ?? 0;
 
-  const scale = reconstructThemeScale(theme);
-  const defaults = useMemo(() => tabBarStyleBoxes(scale), [scale]);
+  const defaults = theme.widgets.tabContainer;
   const overrides = solveNode.styleBoxes;
   const closeButtonMargin = theme.widgets.button.normal.contentMargin;
   const closeIconSize = tabBarThemeIconSize(solveNode, 'close');
@@ -231,7 +229,7 @@ interface TabBarTabChromeProps {
   currentTab: number;
   solveNode: SolveNode;
   overrides: Readonly<Record<string, StyleBoxFlatData>>;
-  defaults: ReturnType<typeof tabBarStyleBoxes>;
+  defaults: TabBarStyleBoxes;
   tint: NativeControlComponentProps['tint'];
   renderOrder: number;
   barHeight: number;
@@ -308,12 +306,13 @@ function TabBarTabChrome({
         renderOrder={renderOrder}
       />
       {content.icon && iconTexture && (
-        <TextureQuad
+        <PositionedIcon
           rect={content.icon.rect}
           texture={iconTexture}
           color={iconLinearColor}
           opacity={tintedIconColor.a}
           renderOrder={renderOrder}
+          canvasKey={renderOrder}
         />
       )}
       {tab.title.length > 0 && content.text && (
@@ -328,7 +327,7 @@ function TabBarTabChrome({
         </CanvasItemGroup>
       )}
       {content.close && (
-        <TextureQuad
+        <PositionedIcon
           rect={{
             x: content.close.iconOffset.x,
             y: content.close.iconOffset.y,
@@ -339,6 +338,7 @@ function TabBarTabChrome({
           color={closeLinearColor}
           opacity={tint.own.a}
           renderOrder={renderOrder}
+          canvasKey={renderOrder}
         />
       )}
     </CanvasItemGroup>
@@ -382,7 +382,7 @@ function ScrollArrows({
 
   return (
     <>
-      <TextureQuad
+      <PositionedIcon
         rect={{
           x: arrows.decrement.x,
           y: arrows.decrement.y,
@@ -393,8 +393,9 @@ function ScrollArrows({
         color={white}
         opacity={alpha(arrows.decrement.dim)}
         renderOrder={renderOrder}
+        canvasKey={renderOrder}
       />
-      <TextureQuad
+      <PositionedIcon
         rect={{
           x: arrows.increment.x,
           y: arrows.increment.y,
@@ -405,6 +406,7 @@ function ScrollArrows({
         color={white}
         opacity={alpha(arrows.increment.dim)}
         renderOrder={renderOrder}
+        canvasKey={renderOrder}
       />
     </>
   );

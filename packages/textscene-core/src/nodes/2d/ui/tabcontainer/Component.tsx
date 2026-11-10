@@ -12,7 +12,7 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import { PanelChrome } from '../../../../r3f/controls/native/PanelChrome';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import { TAB_ALIGNMENT_LEFT, reconstructThemeScale, tabBarMinimumSize } from '../tabbar/nativeSolver';
+import { TAB_ALIGNMENT_LEFT, tabBarMinimumSize } from '../tabbar/nativeSolver';
 import { TabBar } from '../tabbar/Component';
 import type { TabContainerProperties } from './types';
 import {
@@ -65,7 +65,7 @@ export function TabContainer({
   const showsStrip = tabsVisible && derivedTabs.length > 0;
   const headerHeight = showsStrip ? tabHeaderHeight(barMinHeight, tabbarMargin) : 0;
 
-  const sideMargin = Math.round(SIDE_MARGIN_LITERAL * reconstructThemeScale(theme));
+  const sideMargin = Math.round(SIDE_MARGIN_LITERAL * theme.scale);
   const barRect = showsStrip
     ? tabBarRect(rect, barMinHeight, tabsPosition, alignment, sideMargin, tabbarMargin, solveNode.rtl)
     : null;

@@ -45,7 +45,7 @@ import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnum
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { ResolvedTextTheme, TextOutlineTheme } from '../../../../r3f/controls/native/textTheme';
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 
 interface ImageLike {
   width?: number;
@@ -109,12 +109,13 @@ function RichTextImage({
   const imageTint = multiplyModulate(tint, spec.color);
 
   return (
-    <TextureQuad
+    <PositionedIcon
       rect={{ x: offsetXPx, y: offsetYPx, w: drawWidthPx, h: drawHeightPx }}
       texture={drawnTexture}
       color={toItemLinear(imageTint)}
       opacity={imageTint.a}
       renderOrder={renderOrder}
+      canvasKey={renderOrder}
     />
   );
 }

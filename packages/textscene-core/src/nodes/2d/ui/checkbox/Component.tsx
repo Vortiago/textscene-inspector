@@ -8,11 +8,12 @@ import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { useCheckBoxIcon } from './useCheckBoxIcon';
+import { CHECK_BOX_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import {
   checkBoxDrawnIconSize,
@@ -26,6 +27,7 @@ import {
   resolveCheckBoxDrawState,
   resolveCheckBoxIconKey,
   tintColor,
+  CHECK_BOX_ICON_THEME_NAME,
   CHECKBOX_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { CheckBoxProperties } from './types';
@@ -39,7 +41,10 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const clippingPlanes = useControlClipPlanes();
 
   const iconKey = resolveCheckBoxIconKey(props);
-  const iconTexture = useCheckBoxIcon(solveNode, iconKey);
+  const iconTexture = useNodeIcon(
+    solveNode.icons[CHECK_BOX_ICON_THEME_NAME[iconKey]],
+    CHECK_BOX_ICONS[iconKey]
+  );
   // Fitted, not rounded: CheckBox draws `_fit_icon_size` as it is (`check_box.cpp:61`, `:140-142`).
   const iconSize = useMemo(
     () => fitIconSize(checkBoxIconNaturalSize(solveNode), checkBoxIconMaxWidth(solveNode.constants)),
@@ -73,17 +78,17 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
     [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout, props.alignment, solveNode.rtl]
   );
 
+  const iconRect = useMemo(
+    () => ({ ...content.iconPosition, w: drawnIconSize.x, h: drawnIconSize.y }),
+    [content.iconPosition, drawnIconSize.x, drawnIconSize.y]
+  );
+
   // The icon colour is opaque white in both states (`default_theme.cpp:312-313`), and
   // the disabled SVGs carry their own dimming, so the icon takes the tint directly.
   return (
     <>
-      <TextureQuad
-        rect={{
-          x: content.iconPosition.x,
-          y: content.iconPosition.y,
-          w: drawnIconSize.x,
-          h: drawnIconSize.y,
-        }}
+      <PositionedIcon
+        rect={iconRect}
         texture={iconTexture}
         color={tint.color}
         opacity={tint.opacity}

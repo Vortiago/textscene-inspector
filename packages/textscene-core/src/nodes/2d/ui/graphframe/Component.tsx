@@ -20,7 +20,7 @@ import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItem
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
   resolveTitleFontTheme,
   shapeTitleText,
@@ -166,7 +166,7 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
         ))}
 
       {resizerTexture && (
-        <TextureQuad
+        <PositionedIcon
           rect={{
             x: rect.w - RESIZER_SE_ICON_SIZE.x,
             y: rect.h - RESIZER_SE_ICON_SIZE.y,
@@ -177,6 +177,7 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
           color={resizerColor}
           opacity={resizerCombined.a}
           renderOrder={renderOrder}
+          canvasKey={renderOrder}
         />
       )}
     </>
