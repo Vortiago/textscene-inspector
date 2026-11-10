@@ -7,7 +7,7 @@ renders_as: an embedded window with the file chooser's toolbar, lists, filter an
 
 # FileDialog
 
-A preset dialog for choosing files or directories, built on ConfirmationDialog with filters and a per-dialog options family. The previewer draws a visible dialog as an embedded window: the toolbar, the Favorites and Recent lists, the file list, the filter and the options over the button row. Its file list is empty.
+A preset dialog for choosing files or directories. It builds on ConfirmationDialog and adds filters and options. The previewer draws a visible dialog as an embedded window. It shows the toolbar, the Favorites and Recent lists, the file list, the filter and the options over the button row. The file list is empty.
 
 ## Open File
 <!-- compare: image=unit-file-dialog-open-empty status=limitation fixture=file-dialog-open-empty/unit-file-dialog-open-empty.tscn -->
@@ -60,6 +60,8 @@ Strict parsing format-checks these `FileDialog` properties, plus 1 inherited fro
 |  | `window-content-scale-factor-floored` | warning |
 | `valid-filedialog-properties` (type-family match) | `filedialog-option-index-out-of-range` | error |
 <!-- lint:end -->
+
+The lenient parser replays `title`, `file_mode`, `mode_overrides_title` and the `option_*` lines in file order, as Godot's loader sets them. A value the setter refuses, such as a `file_mode` of `9`, keeps the previous one. The seven customisation flags default to true.
 
 ## Known limitations
 
