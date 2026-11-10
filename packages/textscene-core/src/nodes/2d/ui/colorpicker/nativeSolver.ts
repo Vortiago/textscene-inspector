@@ -8,22 +8,35 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { linearChannelToSRGB, sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import { colorHue, colorSaturation } from '../../../../godot/math/color';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
+import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import {
+  buttonContentSize,
+  layoutButtonContent,
+  type ButtonContentInput,
+  type ButtonLabelBox,
+} from '../../../../r3f/controls/native/buttonBase';
+import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
+import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
-import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../godot/scene/theme';
-import { tabBarStyleBoxes } from '../tabbar/nativeSolver';
+import { SizeFlags } from '../../../../godot/scene/control';
+import { ContainerAlignment } from '../../../../godot/scene/container';
+import { resortBoxContainer } from '../shared/boxContainerSolver';
+import { pickerChildTheme } from './pickerChildTheme';
+import { MODE_RGB } from './colorModes';
+import { gridCellMinimumExtent } from '../shared/gridCellMinimum';
+import { lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { sliderMinimumSize } from '../shared/sliderSolver';
 import type { ColorPickerProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
 
 /** `MODE_BUTTON_COUNT` (`color_picker.h:184`). OKHSL has no mode button: only the dropdown reaches it. */
-const MODE_BUTTON_COUNT = 3;
+export const MODE_BUTTON_COUNT = 3;
 
 /** `ColorMode::get_name()` per mode (`color_mode.h:72,94,118,148`). The first 3 label `mode_btns`. */
 export const COLOR_MODE_NAMES = ['RGB', 'HSV', 'Linear', 'OKHSL'] as const;
@@ -36,6 +49,9 @@ export type TextWidthMeasurer = (text: string) => Vector2;
 
 /** The one `PickerShapeType` value (`color_picker.h`) this previewer draws. */
 export const SHAPE_HSV_RECTANGLE = 0;
+
+/** `SHAPE_NONE` (`color_picker.h`): the picker shows no shape and hides `btn_shape` (`color_picker.cpp:321`). */
+const SHAPE_NONE = 4;
 
 /** `sv_width`/`sv_height` (`default_theme.cpp:1077-1078`), at scale 1. */
 const COLOR_PICKER_SV_SIZE = 256;
@@ -62,39 +78,35 @@ const COLOR_PICKER_HEX_LABEL_WIDTH = 38;
 const COLOR_PICKER_TEXT_TYPE_WIDTH = 28;
 
 /**
- * The natural width of `values[i]`. `create_slider` sets no custom minimum on the
- * value `SpinBox` (`color_picker.cpp:456-
- * 458`), so the column floors to `SpinBox::get_minimum_size()` (`spin_box.cpp:82-86`):
- * `LineEdit::get_minimum_size()` (`line_edit.cpp:2443-2477`) plus the 16px-arrow buttons block.
+ * The value column of `slider_gc`: the `SpinBox` minimum (`spin_box.cpp:82-86`), a `LineEdit` minimum
+ * plus the buttons block, truncated as a `GridContainer` column (`gridCellMinimumExtent`).
+ * `emWidthPx` is the unrounded advance of "W": `Font::get_char_size` does not ceil it.
  */
-export function colorPickerValueColumnWidth(
-  theme: Pick<NativeTheme, 'widgets'>,
-  measure: TextWidthMeasurer | null
-): number {
-  const styleMinX = Math.max(
-    contentMarginSize(theme.widgets.lineEdit.normal).x,
-    contentMarginSize(theme.widgets.lineEdit.readOnly).x
+export function colorPickerValueColumnWidth(theme: Pick<NativeTheme, 'widgets'>, emWidthPx: number): number {
+  return gridCellMinimumExtent(
+    colorPickerHexFieldMinWidth(theme, emWidthPx) + spinBoxButtonsBlockWidth(SPIN_BOX_ARROW_ICON_SIZE.x)
   );
-  const emWidth = measure ? measure('W').x : 0;
-  const fieldWidth = styleMinX + LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emWidth;
-  return fieldWidth + spinBoxButtonsBlockWidth(SPIN_BOX_ARROW_ICON_SIZE.x);
 }
 
 /**
- * The natural width of `c_text`, a plain `LineEdit` (`color_picker.cpp:2215`):
- * `LineEdit::get_minimum_size()` with no buttons block. Only the minimum size
- * reads it. The field fills what `hexRowColumns` leaves.
+ * `LineEdit::get_minimum_size()` (`line_edit.cpp:2443-2477`) of a plain `LineEdit`, with no buttons
+ * block. `c_text` (`color_picker.cpp:2215`) fills what `hexRowColumns` leaves, so only the
+ * minimum size reads its own; the `SpinBox` value column adds its block to this.
  */
-function colorPickerHexFieldMinWidth(
-  theme: Pick<NativeTheme, 'widgets'>,
-  measure: TextWidthMeasurer | null
-): number {
-  const styleMinX = Math.max(
-    contentMarginSize(theme.widgets.lineEdit.normal).x,
-    contentMarginSize(theme.widgets.lineEdit.readOnly).x
-  );
-  const emWidth = measure ? measure('W').x : 0;
-  return styleMinX + LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emWidth;
+function colorPickerHexFieldMinWidth(theme: Pick<NativeTheme, 'widgets'>, emWidthPx: number): number {
+  const { lineEdit } = theme.widgets;
+  return lineEditStyleMinSize(lineEdit.normal, lineEdit.readOnly).x + lineEditTextMinimumWidth(emWidthPx);
+}
+
+/** The square `menu_option` and `folded_arrow` icons as a size. */
+function colorPickerButtonIconVector(theme: Pick<NativeTheme, 'scale'>): Vector2 {
+  const side = colorPickerButtonIconSize(theme);
+  return { x: side, y: side };
+}
+
+/** The side of the square `menu_option` and `folded_arrow` icons (`default_theme.cpp:1088`). */
+function colorPickerButtonIconSize(theme: Pick<NativeTheme, 'scale'>): number {
+  return Math.round(COLOR_PICKER_SAMPLE_ICON_SIZE * theme.scale);
 }
 
 /**
@@ -104,51 +116,27 @@ function colorPickerHexFieldMinWidth(
  * `button_normal` (`default_theme.cpp:359-363`). `btn_mode` has this size, with its width floored to 28.
  */
 function colorPickerMenuButtonSize(theme: Pick<NativeTheme, 'widgets' | 'scale'>): Vector2 {
-  const icon = Math.round(COLOR_PICKER_SAMPLE_ICON_SIZE * colorPickerScale(theme));
-  const margin = contentMarginSize(theme.widgets.button.normal);
+  return iconButtonSize(theme, theme.widgets.flatMenuButton.normal);
+}
+
+/** The natural size of an icon-only Button drawing `box`: the icon plus the margins of `box` (`button.cpp:481-525`). */
+function iconButtonSize(theme: Pick<NativeTheme, 'scale'>, box: StyleBoxFlatData): Vector2 {
+  const icon = colorPickerButtonIconSize(theme);
+  const margin = contentMarginSize(box);
   return { x: icon + margin.x, y: icon + margin.y };
 }
 
-/** `ScaledGodotTheme.scale` (`godot/scene/theme.ts`): the raw `gui/theme/default_theme_scale`. */
-export function colorPickerScale(theme: Pick<NativeTheme, 'scale'>): number {
-  return theme.scale;
+/**
+ * The width of `btn_pick`, `btn_shape` or `btn_mode`: the 28 minimum (`color_picker.cpp:122-124`)
+ * floors the icon plus the margins of the `box` the button draws (`button.cpp:525`).
+ */
+function iconButtonWidth(theme: Pick<NativeTheme, 'scale'>, box: StyleBoxFlatData): number {
+  return Math.max(Math.round(COLOR_PICKER_BUTTON_WIDTH * theme.scale), iconButtonSize(theme, box).x);
 }
 
 /** `Color::inverted()` (`core/math/color.h`): flips rgb and keeps alpha. */
 export function invertRgb(c: Rgba): Rgba {
   return { r: 1 - c.r, g: 1 - c.g, b: 1 - c.b, a: c.a };
-}
-
-interface HsvColor {
-  h: number;
-  s: number;
-  v: number;
-}
-
-/**
- * The HSV of `_set_pick_color` (`color_picker.cpp:324-345`): `_copy_color_to_normalized_and_intensity`
- * (`:593-602`) divides out an HDR `intensity` so no channel of `color_normalized`
- * exceeds 1. `_copy_normalized_to_hsv_okhsl` (`:552-565`) then reads the HSV of that
- * normalised colour with `Color::get_h/get_s/get_v` (`core/math/color.cpp:136-180`).
- */
-export function extractHsv(color: Rgba): HsvColor {
-  const linear = {
-    r: sRGBChannelToLinear(color.r),
-    g: sRGBChannelToLinear(color.g),
-    b: sRGBChannelToLinear(color.b),
-  };
-  const multiplier = Math.max(1, linear.r, linear.g, linear.b);
-  const normalized = {
-    r: linearChannelToSRGB(linear.r / multiplier),
-    g: linearChannelToSRGB(linear.g / multiplier),
-    b: linearChannelToSRGB(linear.b / multiplier),
-  };
-
-  return {
-    h: colorHue(normalized),
-    s: colorSaturation(normalized),
-    v: Math.max(normalized.r, normalized.g, normalized.b),
-  };
 }
 
 interface ColorPickerRows {
@@ -168,6 +156,9 @@ interface ColorPickerRows {
   sliderRowCount: number;
   /** The combined minimum height of `real_vbox`, without the margin of `internal_margin`. */
   totalHeight: number;
+  /** The minimum widths of `mode_hbc` and `swatches_vbc`, measured once for the row heights. */
+  modeMinWidth: number;
+  swatchesMinWidth: number;
 }
 
 /**
@@ -180,7 +171,7 @@ function shapeRowMinWidth(
   pickerShape: number | undefined
 ): number {
   if ((pickerShape ?? SHAPE_HSV_RECTANGLE) !== SHAPE_HSV_RECTANGLE) return 0;
-  const scale = colorPickerScale(theme);
+  const scale = theme.scale;
   return (
     Math.round(COLOR_PICKER_SV_SIZE * scale) + theme.separation + Math.round(COLOR_PICKER_HUE_WIDTH * scale)
   );
@@ -198,34 +189,168 @@ export function colorPickerSliderRowCount(
   return 3 + (rowVisible(props.editAlpha) ? 1 : 0) + (rowVisible(props.editIntensity) ? 1 : 0);
 }
 
-/** The height of one channel row, which the SpinBox's `LineEdit` sets (`spin_box.cpp:82-86`). */
-function lineRowHeight(theme: Pick<NativeTheme, 'widgets'>, textHeightPx: number): number {
-  return textHeightPx + contentMarginSize(theme.widgets.lineEdit.normal).y;
+/** The height of a row whose `LineEdit` draws `box` (`spin_box.cpp:82-86`). */
+function lineRowHeight(box: StyleBoxFlatData, textHeightPx: number): number {
+  return textHeightPx + contentMarginSize(box).y;
 }
 
 /**
  * The size of `mode_hbc`. A `null` `measure` means text contributes nothing
  * (the `ctx.measureText` contract). The height is the tallest child: `mode_btns`
- * have text over the tab margin and no icon. `btn_mode` has the icon, and its
- * custom minimum floors only its width (`color_picker.cpp:124`).
+ * have text over their own box margins (the pressed one has `mode_button_pressed`) and no icon.
+ * `btn_mode` has the icon, and its custom minimum floors only its width (`color_picker.cpp:124`).
  */
 function modeRowSize(
   theme: Pick<NativeTheme, 'separation' | 'scale' | 'widgets'>,
-  measure: TextWidthMeasurer | null
+  measure: TextWidthMeasurer | null,
+  pressedMode: number
 ): Vector2 {
-  const scale = colorPickerScale(theme);
-  const btnModeWidth = Math.round(COLOR_PICKER_BUTTON_WIDTH * scale);
-  const tabMarginY = contentMarginSize(tabBarStyleBoxes(scale).unselected).y;
+  const btnModeWidth = iconButtonWidth(theme, theme.widgets.flatMenuButton.normal);
+  const normalMarginY = contentMarginSize(theme.widgets.tabContainer.unselected).y;
+  const pressedMarginY = contentMarginSize(theme.widgets.tabContainer.selected).y;
   const btnModeHeight = colorPickerMenuButtonSize(theme).y;
-  let height = Math.max(tabMarginY, btnModeHeight);
+  let height = Math.max(normalMarginY, pressedMarginY, btnModeHeight);
   if (!measure) return { x: btnModeWidth, y: height };
   let width = btnModeWidth;
-  for (const name of COLOR_MODE_NAMES.slice(0, MODE_BUTTON_COUNT)) {
+  COLOR_MODE_NAMES.slice(0, MODE_BUTTON_COUNT).forEach((name, index) => {
     const m = measure(name);
-    width += m.x + theme.separation;
-    height = Math.max(height, m.y + tabMarginY);
-  }
+    width += modeButtonMinimumWidth(modeButtonBox(theme, index, pressedMode), m.x) + theme.separation;
+    height = Math.max(height, m.y + (index === pressedMode ? pressedMarginY : normalMarginY));
+  });
   return { x: width, y: height };
+}
+
+/** The height of `sample_hbc`: the taller of `btn_pick` and, unless `SHAPE_NONE` hides it, `btn_shape`. */
+function sampleRowHeight(
+  theme: Pick<NativeTheme, 'widgets' | 'scale'>,
+  pickerShape: number | undefined
+): number {
+  const pick = iconButtonSize(theme, theme.widgets.button.normal).y;
+  const shape = (pickerShape ?? SHAPE_HSV_RECTANGLE) === SHAPE_NONE ? 0 : colorPickerMenuButtonSize(theme).y;
+  return Math.max(pick, shape);
+}
+
+/**
+ * The natural size of `btn_preset` or `btn_recent_preset`: a `Button` with the `folded_arrow` icon and a
+ * label, `Button::get_minimum_size_for_text_and_icon` (`button.cpp:481-523`) plus the `button.normal` margin.
+ * The icon is the size of `menu_btn`'s icon, and the gap is `h_separation`.
+ */
+function colorPickerPresetButtonSize(
+  theme: Pick<NativeTheme, 'separation' | 'scale' | 'widgets'>,
+  text: Vector2
+): Vector2 {
+  const margin = contentMarginSize(theme.widgets.button.normal);
+  const content = buttonContentSize({
+    textSize: text,
+    hasText: true,
+    iconSize: colorPickerButtonIconVector(theme),
+    iconAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    verticalIconAlignment: VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
+    hSeparation: theme.separation,
+  });
+  return { x: margin.x + content.x, y: margin.y + content.y };
+}
+
+interface ButtonContentBoxes {
+  /** The icon in `box`'s coordinates, or `null` for an icon-less button. */
+  icon: Rect2 | null;
+  /** The label's paragraph box in `box`'s coordinates (`ButtonLabel` draws in it). */
+  label: ButtonLabelBox;
+}
+
+interface ButtonTextDirection {
+  rtl: boolean;
+  isTextRtl: boolean;
+}
+
+/** A Button's text as the layout reads it: its shaped size and the direction it infers. */
+export interface ButtonText {
+  size: Vector2;
+  direction: ButtonTextDirection;
+}
+
+/** `Button` placement (`button.cpp:349-456`) of an optional left icon and the label inside `box`, in the parent's coordinates. */
+function colorPickerButtonContent(
+  box: Rect2,
+  theme: Pick<NativeTheme, 'separation'>,
+  text: ButtonText,
+  look: {
+    styleMargin: ButtonContentInput['styleMargin'];
+    iconNaturalSize: Vector2 | null;
+    textAlignment: number;
+  }
+): ButtonContentBoxes {
+  const layout = layoutButtonContent({
+    rectSize: { x: box.w, y: box.h },
+    styleMargin: look.styleMargin,
+    // Button's `h_separation` (`default_theme.cpp:171`) is another theme key, with the value of `separation`.
+    hSeparation: theme.separation,
+    iconMaxWidth: 0,
+    textAlignment: look.textAlignment,
+    iconAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    verticalIconAlignment: VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
+    expandIcon: false,
+    iconNaturalSize: look.iconNaturalSize,
+    hasText: true,
+    textNaturalSize: text.size,
+    isTextRtl: text.direction.isTextRtl,
+    rtl: text.direction.rtl,
+  });
+  const label = layout.labelBox!;
+  return {
+    icon: layout.icon && {
+      ...layout.icon.rect,
+      x: box.x + layout.icon.rect.x,
+      y: box.y + layout.icon.rect.y,
+    },
+    label: { ...label, leftPx: box.x + label.leftPx, topPx: box.y + label.topPx },
+  };
+}
+
+/** The icon and label of `btn_preset` or `btn_recent_preset` in `box`. */
+export function presetButtonContent(
+  box: Rect2,
+  theme: Pick<NativeTheme, 'separation' | 'scale' | 'widgets'>,
+  text: ButtonText
+): ButtonContentBoxes & { icon: Rect2 } {
+  const boxes = colorPickerButtonContent(box, theme, text, {
+    styleMargin: theme.widgets.button.normal.contentMargin,
+    iconNaturalSize: colorPickerButtonIconVector(theme),
+    textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+  });
+  return { ...boxes, icon: boxes.icon! };
+}
+
+function centredButtonLabel(
+  box: Rect2,
+  theme: Pick<NativeTheme, 'separation'>,
+  styleMargin: ButtonContentInput['styleMargin'],
+  text: ButtonText
+): ButtonLabelBox {
+  return colorPickerButtonContent(box, theme, text, {
+    styleMargin,
+    iconNaturalSize: null,
+    textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
+  }).label;
+}
+
+/** The label of a `mode_btns` button (`color_picker.cpp:2162-2174`): centred, with the style's own margins. */
+export function modeButtonLabel(
+  box: Rect2,
+  theme: Pick<NativeTheme, 'separation'>,
+  styleBox: StyleBoxFlatData,
+  text: ButtonText
+): ButtonLabelBox {
+  return centredButtonLabel(box, theme, styleBox.contentMargin, text);
+}
+
+/** The "#" label of `text_type` (`color_picker.cpp:1330`): a centred Button with the `button_normal` margins. */
+export function textTypeLabel(
+  box: Rect2,
+  theme: Pick<NativeTheme, 'separation' | 'widgets'>,
+  text: ButtonText
+): ButtonLabelBox {
+  return centredButtonLabel(box, theme, theme.widgets.button.normal.contentMargin, text);
 }
 
 function swatchesRowSize(
@@ -233,14 +358,12 @@ function swatchesRowSize(
   measure: TextWidthMeasurer | null
 ): Vector2 {
   const menuBtn = colorPickerMenuButtonSize(theme);
-  const menuBtnWidth = menuBtn.x;
-  const menuBtnHeight = menuBtn.y;
-  // The `palette_box` row is as tall as `max(btn_preset text, menu_btn)`, with or
-  // without `measure`. A `null` `measure` zeroes the text sizes, and the second row stays.
-  const swatches = measure ? measure('Swatches') : { x: 0, y: 0 };
-  const recent = measure ? measure('Recent Colors') : { x: 0, y: 0 };
-  const row1Height = Math.max(swatches.y, menuBtnHeight);
-  const row1Width = swatches.x + theme.separation + menuBtnWidth;
+  // A `null` `measure` zeroes the text sizes, and each button keeps its icon.
+  const none = { x: 0, y: 0 };
+  const swatches = colorPickerPresetButtonSize(theme, measure ? measure('Swatches') : none);
+  const recent = colorPickerPresetButtonSize(theme, measure ? measure('Recent Colors') : none);
+  const row1Height = Math.max(swatches.y, menuBtn.y);
+  const row1Width = swatches.x + theme.separation + menuBtn.x;
   return { x: Math.max(row1Width, recent.x), y: row1Height + theme.separation + recent.y };
 }
 
@@ -252,6 +375,7 @@ function swatchesRowSize(
 export function colorPickerRows(
   width: number,
   theme: NativeTheme,
+  valueFieldTheme: Pick<NativeTheme, 'widgets'>,
   props: Pick<
     ColorPickerProperties,
     | 'pickerShape'
@@ -262,21 +386,22 @@ export function colorPickerRows(
     | 'presetsVisible'
     | 'editAlpha'
     | 'editIntensity'
+    | 'colorMode'
   >,
   measure: TextWidthMeasurer | null
 ): ColorPickerRows {
-  const scale = colorPickerScale(theme);
+  const scale = theme.scale;
   const svSize = Math.round(COLOR_PICKER_SV_SIZE * scale);
   const drawShape = (props.pickerShape ?? SHAPE_HSV_RECTANGLE) === SHAPE_HSV_RECTANGLE;
   const shapeHeight = drawShape ? svSize : 0;
 
   const textHeightPx = measure ? measure('0').y : 0;
-  const sampleHeight = Math.round(COLOR_PICKER_SAMPLE_ICON_SIZE * scale) + 2 * Math.round(4 * scale);
-  const modeSize = modeRowSize(theme, measure);
+  const sampleHeight = sampleRowHeight(theme, props.pickerShape);
+  const modeSize = modeRowSize(theme, measure, props.colorMode ?? MODE_RGB);
   const sliderRowCount = colorPickerSliderRowCount(props);
-  const sliderRowHeight = lineRowHeight(theme, textHeightPx);
+  const sliderRowHeight = lineRowHeight(valueFieldTheme.widgets.lineEdit.normal, textHeightPx);
   const slidersHeight = sliderRowCount * sliderRowHeight + (sliderRowCount - 1) * theme.separation;
-  const hexHeight = lineRowHeight(theme, textHeightPx);
+  const hexHeight = lineRowHeight(theme.widgets.lineEdit.normal, textHeightPx);
   const swatchesSize = swatchesRowSize(theme, measure);
 
   let y = 0;
@@ -321,6 +446,8 @@ export function colorPickerRows(
     swatches,
     sliderRowCount: sliders ? sliderRowCount : 0,
     totalHeight: y,
+    modeMinWidth: modeSize.x,
+    swatchesMinWidth: swatchesSize.x,
   };
 }
 
@@ -331,24 +458,35 @@ export function colorPickerRows(
  */
 function contentMinWidth(
   theme: NativeTheme,
+  valueFieldTheme: Pick<NativeTheme, 'widgets'>,
   props: ColorPickerProperties,
-  measure: TextWidthMeasurer | null
+  rows: Pick<ColorPickerRows, 'modeMinWidth' | 'swatchesMinWidth'>,
+  emWidthPx: number
 ): number {
-  const scale = colorPickerScale(theme);
+  const scale = theme.scale;
   const labelWidth = Math.round(COLOR_PICKER_LABEL_WIDTH * scale);
-  const sliderRowWidth = labelWidth + 2 * theme.separation + colorPickerValueColumnWidth(theme, measure);
+  const sliderRowWidth =
+    labelWidth + 2 * theme.separation + colorPickerValueColumnWidth(valueFieldTheme, emWidthPx);
 
   const hexLabelWidth = Math.round(COLOR_PICKER_HEX_LABEL_WIDTH * scale);
   const textTypeWidth = Math.round(COLOR_PICKER_TEXT_TYPE_WIDTH * scale);
   const hexRowWidth =
-    hexLabelWidth + 2 * theme.separation + textTypeWidth + colorPickerHexFieldMinWidth(theme, measure);
+    hexLabelWidth + 2 * theme.separation + textTypeWidth + colorPickerHexFieldMinWidth(theme, emWidthPx);
 
   let width = 0;
-  if (rowVisible(props.colorModesVisible)) width = Math.max(width, modeRowSize(theme, measure).x);
+  if (rowVisible(props.colorModesVisible)) width = Math.max(width, rows.modeMinWidth);
   if (rowVisible(props.slidersVisible)) width = Math.max(width, sliderRowWidth);
   if (rowVisible(props.hexVisible)) width = Math.max(width, hexRowWidth);
-  if (rowVisible(props.presetsVisible)) width = Math.max(width, swatchesRowSize(theme, measure).x);
+  if (rowVisible(props.presetsVisible)) width = Math.max(width, rows.swatchesMinWidth);
   return width;
+}
+
+/**
+ * The em of the value column: the unceiled advance of "W" (`line_edit.cpp:2443-2477`). The painter
+ * and the minimum size both call it, so the two cannot disagree on the column.
+ */
+export function colorPickerEmWidthPx(widthOf: (text: string) => number): number {
+  return widthOf('W');
 }
 
 /**
@@ -358,13 +496,25 @@ function contentMinWidth(
  */
 export const colorPickerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ColorPickerProperties;
-  const theme = ctx.theme;
-  const measure: TextWidthMeasurer | null = ctx.measureText
-    ? (text) => ctx.measureText!(text, theme.fontSize)
+  const { theme, valueFieldTheme } = pickerChildTheme(n, ctx.theme);
+  // The painter shapes in this font (`Component.tsx`), so the minimum measures in it too.
+  const fontMetrics = resolveNodeFontMetrics(n, COLOR_PICKER_THEME_FONT_KEY);
+  const measureUnceiled: TextWidthMeasurer | null = ctx.measureText
+    ? (text) => ctx.measureText!(text, theme.fontSize, 0, fontMetrics)
     : null;
-
-  const rows = colorPickerRows(0, theme, props, measure);
-  const width = Math.max(shapeRowMinWidth(theme, props.pickerShape), contentMinWidth(theme, props, measure));
+  // The painter reserves the whole-pixel shaped width of a text, and the em of "W" stays unceiled.
+  const measure: TextWidthMeasurer | null =
+    measureUnceiled &&
+    ((text) => {
+      const size = measureUnceiled(text);
+      return { x: shapedTextSizeWidthPx(size.x), y: size.y };
+    });
+  const emWidthPx = measureUnceiled ? colorPickerEmWidthPx((text) => measureUnceiled(text).x) : 0;
+  const rows = colorPickerRows(0, theme, valueFieldTheme, props, measure);
+  const width = Math.max(
+    shapeRowMinWidth(theme, props.pickerShape),
+    contentMinWidth(theme, valueFieldTheme, props, rows, emWidthPx)
+  );
 
   return {
     x: width + 2 * theme.contentMargin,
@@ -401,7 +551,7 @@ export function svAndHueRects(
   theme: Pick<NativeTheme, 'separation' | 'scale'>,
   rtl = false
 ): ShapeRowSplit {
-  const scale = colorPickerScale(theme);
+  const scale = theme.scale;
   const hueWidth = Math.round(COLOR_PICKER_HUE_WIDTH * scale);
   const svWidth = shape.w - theme.separation - hueWidth;
   return {
@@ -426,9 +576,9 @@ export function svSquareCursorPosition(square: Rect2, s: number, v: number): Vec
   };
 }
 
-/** `ColorPickerShapeRectangle::_hue_slider_draw`'s indicator line (`color_picker_shape.cpp:431`). */
+/** `ColorPickerShapeRectangle::_hue_slider_draw`'s indicator line: `int y = size.y * h` (`color_picker_shape.cpp:431`). */
 export function hueIndicatorY(height: number, h: number): number {
-  return height * h;
+  return Math.trunc(height * h);
 }
 
 interface SliderGridRowColumns {
@@ -447,7 +597,7 @@ export function colorPickerLabelColumnWidth(
   measure: TextWidthMeasurer | null,
   labels: readonly string[]
 ): number {
-  const floor = Math.round(COLOR_PICKER_LABEL_WIDTH * colorPickerScale(theme));
+  const floor = Math.round(COLOR_PICKER_LABEL_WIDTH * theme.scale);
   if (!measure) return floor;
   let width = floor;
   for (const label of labels) width = Math.max(width, measure(label).x);
@@ -493,7 +643,7 @@ interface HexRowColumns {
 
 /** The 3-column split of `hex_hbc` (`color_picker.cpp:2191-2222`). */
 export function hexRowColumns(hex: Rect2, theme: NativeTheme, rtl = false): HexRowColumns {
-  const scale = colorPickerScale(theme);
+  const scale = theme.scale;
   const labelWidth = Math.round(COLOR_PICKER_HEX_LABEL_WIDTH * scale);
   const textTypeWidth = Math.round(COLOR_PICKER_TEXT_TYPE_WIDTH * scale);
   const fieldX = hex.x + labelWidth + theme.separation + textTypeWidth + theme.separation;
@@ -517,34 +667,48 @@ interface ModeRowButtons {
   dropdown: Rect2;
 }
 
+/** A `mode_btns` button's minimum width: its text plus the margins of the box it draws (`button.cpp:525`). */
+function modeButtonMinimumWidth(styleBox: StyleBoxFlatData, textWidth: number): number {
+  return shapedTextSizeWidthPx(textWidth) + contentMarginSize(styleBox).x;
+}
+
 /**
  * The split of `mode_hbc` (`color_picker.cpp:2129-2154`): 3 `SIZE_EXPAND_FILL`
- * buttons of equal width, then the fixed-width `btn_mode` dropdown.
+ * buttons of equal width, then the fixed-width `btn_mode` dropdown. `labelWidths` are the button texts.
  */
-export function modeRowButtonRects(mode: Rect2, theme: NativeTheme, rtl = false): ModeRowButtons {
-  const scale = colorPickerScale(theme);
-  const dropdownWidth = Math.round(COLOR_PICKER_BUTTON_WIDTH * scale);
-  const buttonsWidth = Math.max(
-    0,
-    mode.w - dropdownWidth - theme.separation - (MODE_BUTTON_COUNT - 1) * theme.separation
-  );
-  const buttonWidth = buttonsWidth / MODE_BUTTON_COUNT;
-
-  const buttons: Rect2[] = [];
-  for (let i = 0; i < MODE_BUTTON_COUNT; i++) {
-    buttons.push(
-      mirroredColumn(
-        { x: mode.x + i * (buttonWidth + theme.separation), y: mode.y, w: buttonWidth, h: mode.h },
-        mode,
-        rtl
-      )
-    );
-  }
-  const dropdownX = mode.x + buttonsWidth + MODE_BUTTON_COUNT * theme.separation;
-  return {
-    buttons,
-    dropdown: mirroredColumn({ x: dropdownX, y: mode.y, w: dropdownWidth, h: mode.h }, mode, rtl),
+export function modeRowButtonRects(
+  mode: Rect2,
+  theme: NativeTheme,
+  rtl: boolean,
+  labelWidths: readonly number[],
+  pressedMode: number
+): ModeRowButtons {
+  const dropdownWidth = iconButtonWidth(theme, theme.widgets.flatMenuButton.normal);
+  // `mode_hbc` is an HBoxContainer: three `SIZE_EXPAND_FILL` buttons, then `btn_mode`, whole pixels each (`box_container.cpp:100-130`).
+  const expandFill = (index: number) => ({
+    minSize: {
+      x: modeButtonMinimumWidth(modeButtonBox(theme, index, pressedMode), labelWidths[index]!),
+      y: 0,
+    },
+    hSizeFlags: SizeFlags.FILL | SizeFlags.EXPAND,
+    vSizeFlags: SizeFlags.FILL,
+    stretchRatio: 1,
+  });
+  const fixed = {
+    minSize: { x: dropdownWidth, y: 0 },
+    hSizeFlags: SizeFlags.FILL,
+    vSizeFlags: SizeFlags.FILL,
+    stretchRatio: 1,
   };
+  const rects = resortBoxContainer(
+    false,
+    { width: mode.w, height: mode.h },
+    theme.separation,
+    ContainerAlignment.ALIGNMENT_BEGIN,
+    rtl,
+    [...Array.from({ length: MODE_BUTTON_COUNT }, (_, i) => expandFill(i)), fixed]
+  ).map((r) => ({ ...r, x: mode.x + r.x, y: mode.y + r.y }));
+  return { buttons: rects.slice(0, MODE_BUTTON_COUNT), dropdown: rects[MODE_BUTTON_COUNT]! };
 }
 
 /**
@@ -552,9 +716,9 @@ export function modeRowButtonRects(mode: Rect2, theme: NativeTheme, rtl = false)
  * `tab_unselected` and `tab_selected` of `TabContainer` (`color_picker.cpp:2060-2061`).
  * The `mode_button_hover` bind (`:2062`) is left out: a static preview never hovers.
  */
-export function colorPickerModeButtonStyleBox(theme: Pick<NativeTheme, 'scale'>, pressed: boolean) {
-  const boxes = tabBarStyleBoxes(colorPickerScale(theme));
-  return pressed ? boxes.selected : boxes.unselected;
+export function modeButtonBox(theme: Pick<NativeTheme, 'widgets'>, index: number, pressedMode: number) {
+  const { selected, unselected } = theme.widgets.tabContainer;
+  return index === pressedMode ? selected : unselected;
 }
 
 interface SampleRowColumns {
@@ -574,10 +738,10 @@ export function sampleRowColumns(
   pickerShape: number | undefined,
   rtl = false
 ): SampleRowColumns {
-  const scale = colorPickerScale(theme);
-  const btnWidth = Math.round(COLOR_PICKER_BUTTON_WIDTH * scale);
-  const showShapeBtn = (pickerShape ?? SHAPE_HSV_RECTANGLE) !== 4; // SHAPE_NONE
-  const shapeBtnSpace = showShapeBtn ? btnWidth + theme.separation : 0;
+  const btnWidth = iconButtonWidth(theme, theme.widgets.button.normal);
+  const shapeWidth = iconButtonWidth(theme, theme.widgets.flatMenuButton.normal);
+  const showShapeBtn = (pickerShape ?? SHAPE_HSV_RECTANGLE) !== SHAPE_NONE;
+  const shapeBtnSpace = showShapeBtn ? shapeWidth + theme.separation : 0;
   return {
     pick: mirroredColumn({ x: sample.x, y: sample.y, w: btnWidth, h: sample.h }, sample, rtl),
     sample: mirroredColumn(
@@ -592,7 +756,7 @@ export function sampleRowColumns(
     ),
     shape: showShapeBtn
       ? mirroredColumn(
-          { x: sample.x + sample.w - btnWidth, y: sample.y, w: btnWidth, h: sample.h },
+          { x: sample.x + sample.w - shapeWidth, y: sample.y, w: shapeWidth, h: sample.h },
           sample,
           rtl
         )
@@ -613,8 +777,9 @@ interface SwatchesRowRects {
  */
 export function swatchesRowRects(swatches: Rect2, theme: NativeTheme, rtl = false): SwatchesRowRects {
   const menuButtonWidth = colorPickerMenuButtonSize(theme).x;
-  // Both rows have the text height, so the block splits evenly around the gap.
-  const rowHeight = (swatches.h - theme.separation) / 2;
+  // The two preset buttons share one height, so the block splits evenly around the gap unless the taller `menu_btn` stretches the first row.
+  const firstRowHeight = Math.max(colorPickerMenuButtonSize(theme).y, (swatches.h - theme.separation) / 2);
+  const recentRowHeight = swatches.h - theme.separation - firstRowHeight;
   // `btn_recent_preset` spans the row, so only the two columns of `palette_box` mirror.
   return {
     swatchesButton: mirroredColumn(
@@ -622,21 +787,21 @@ export function swatchesRowRects(swatches: Rect2, theme: NativeTheme, rtl = fals
         x: swatches.x,
         y: swatches.y,
         w: Math.max(0, swatches.w - theme.separation - menuButtonWidth),
-        h: rowHeight,
+        h: firstRowHeight,
       },
       swatches,
       rtl
     ),
     menuButton: mirroredColumn(
-      { x: swatches.x + swatches.w - menuButtonWidth, y: swatches.y, w: menuButtonWidth, h: rowHeight },
+      { x: swatches.x + swatches.w - menuButtonWidth, y: swatches.y, w: menuButtonWidth, h: firstRowHeight },
       swatches,
       rtl
     ),
     recentColorsButton: {
       x: swatches.x,
-      y: swatches.y + rowHeight + theme.separation,
+      y: swatches.y + firstRowHeight + theme.separation,
       w: swatches.w,
-      h: rowHeight,
+      h: recentRowHeight,
     },
   };
 }

@@ -176,3 +176,23 @@ export function scaledGodotTheme(scale: number): ScaledGodotTheme {
     sliderTickThickness: Math.round(SLIDER_TICK_THICKNESS * scale),
   };
 }
+
+/** The variation the picker's `btn_shape`, `btn_mode` and `menu_btn` name (`color_picker.cpp:2098,2148,2255`). */
+export const FLAT_MENU_BUTTON_VARIATION = 'FlatMenuButton';
+
+/**
+ * The type variations the default theme registers, each with its base (`default_theme.cpp:357-358`,
+ * `:394-400`, `:814`, `:845`, `:1167-1171`). A Theme that sets items for one of them is read for a
+ * Control that names it, though no scene Theme registers it.
+ */
+export const DEFAULT_THEME_TYPE_VARIATIONS: Readonly<Record<string, string>> = {
+  FlatButton: 'Button',
+  [FLAT_MENU_BUTTON_VARIATION]: 'MenuButton',
+  HeaderSmall: 'Label',
+  HeaderMedium: 'Label',
+  HeaderLarge: 'Label',
+  GraphNodeTitleLabel: 'Label',
+  GraphFrameTitleLabel: 'Label',
+  TooltipPanel: 'PopupPanel',
+  TooltipLabel: 'Label',
+};

@@ -3,7 +3,11 @@
  * `ThemeResource`s `decode.ts` produces. Pure: no I/O, no parsing.
  */
 
-import { DEFAULT_FONT_SIZE, DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS } from '../../../godot/scene/theme';
+import {
+  DEFAULT_FONT_SIZE,
+  DEFAULT_THEME_TYPE_VARIATIONS,
+  DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS,
+} from '../../../godot/scene/theme';
 import { classInheritanceChain } from '../../../godot/classdb/classBaseTypes';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { withDefaultFonts, type DefaultFonts } from '../../fonts/font/defaultFont';
@@ -57,7 +61,13 @@ function buildThemeTypeChain(
     const owner = themeSearchOrder(ancestorThemes, projectTheme).find((t) =>
       Object.hasOwn(t.typeVariations, typeVariation)
     );
-    if (owner) {
+    // No scene or project theme registers it: the default theme may (`theme_owner.cpp:200-208`).
+    const bases = owner
+      ? owner.typeVariations
+      : Object.hasOwn(DEFAULT_THEME_TYPE_VARIATIONS, typeVariation)
+        ? DEFAULT_THEME_TYPE_VARIATIONS
+        : undefined;
+    if (bases) {
       // Godot walks this unguarded. A previewer reads files it did not write, so
       // a `MyPanel/base_type = &"MyPanel"` cycle must stop the walk.
       const seen = new Set<string>();
@@ -65,9 +75,7 @@ function buildThemeTypeChain(
       while (current !== undefined && current !== '' && !seen.has(current)) {
         seen.add(current);
         chain.push(current);
-        const base: string | undefined = Object.hasOwn(owner.typeVariations, current)
-          ? owner.typeVariations[current]
-          : undefined;
+        const base: string | undefined = Object.hasOwn(bases, current) ? bases[current] : undefined;
         current = base;
         if (current === nativeType) break;
       }

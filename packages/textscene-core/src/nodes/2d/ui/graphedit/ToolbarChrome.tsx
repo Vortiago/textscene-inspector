@@ -13,36 +13,24 @@ import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { BUTTON_ICON_MODULATE } from '../button/nativeSolver';
+import { LABEL_DEFAULT_FONT_COLOR } from '../label/nativeSolver';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import {
-  shapedTextSizeWidthPx,
-  type TextLayoutResult,
-} from '../../../../r3f/controls/native/text/textLayout';
+import { LabelledText } from '../shared/LabelledText';
+import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { GRAPH_EDIT_ICONS, GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { spinBoxArrowPosition, spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
-import { layoutButtonContent } from '../../../../r3f/controls/native/buttonBase';
-import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
+import { iconOnlyButtonIconRectIn } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { flatButtonBoxes } from '../../../../r3f/controls/native/flatButtonBoxes';
 import { graphEditMenuPanelStyleBox, type GraphEditToolbar, type ToolbarItem } from './toolbar';
-import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 import { canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemState';
-
-/** The `font_color` of `Label` (`default_theme.cpp:384`): opaque white, where other controls use grey. */
-const LABEL_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-
-/**
- * `DRAW_DISABLED` swaps in `icon_disabled_color` (`button.cpp:321-329`), `Color(1, 1, 1, 0.4)` for
- * `Button` (`default_theme.cpp:169`). `icon_normal_color` and `icon_pressed_color` are opaque white
- * (`default_theme.cpp:164-165`), so a disabled icon differs only in alpha.
- */
-const ICON_DISABLED_ALPHA = 0.4;
 
 interface GraphEditToolbarProps {
   toolbar: GraphEditToolbar;
@@ -73,34 +61,22 @@ interface ButtonIconProps {
  */
 function ButtonIcon({ item, texture, contentMargin, tint, rtl, renderOrder }: ButtonIconProps) {
   if (!texture) return null;
-  const layout = layoutButtonContent({
-    rectSize: { x: item.rect.w, y: item.rect.h },
-    styleMargin: { left: contentMargin, top: contentMargin, right: contentMargin, bottom: contentMargin },
-    hSeparation: 0,
-    iconMaxWidth: 0,
-    textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
-    iconAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
-    verticalIconAlignment: VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
-    expandIcon: false,
-    iconNaturalSize: { x: GRAPH_EDIT_ICON_SIZE, y: GRAPH_EDIT_ICON_SIZE },
-    hasText: false,
-    textNaturalSize: { x: 0, y: 0 },
-    isTextRtl: false,
-    rtl,
-  });
-  if (!layout.icon) return null;
-  const icon = layout.icon.rect;
+  const icon = iconOnlyButtonIconRectIn(
+    item.rect,
+    { left: contentMargin, top: contentMargin, right: contentMargin, bottom: contentMargin },
+    { x: GRAPH_EDIT_ICON_SIZE, y: GRAPH_EDIT_ICON_SIZE },
+    rtl
+  );
+  if (!icon) return null;
   return (
-    <CanvasItemGroup position={[item.rect.x + icon.x, -(item.rect.y + icon.y), 0]} renderOrder={renderOrder}>
-      <ControlQuad
-        width={icon.w}
-        height={icon.h}
-        color={tint.color}
-        opacity={item.disabled ? tint.opacity * ICON_DISABLED_ALPHA : tint.opacity}
-        map={texture}
-        renderOrder={renderOrder}
-      />
-    </CanvasItemGroup>
+    <PositionedIcon
+      rect={icon}
+      texture={texture}
+      color={tint.color}
+      opacity={item.disabled ? tint.opacity * BUTTON_ICON_MODULATE.disabled.a : tint.opacity}
+      renderOrder={renderOrder}
+      canvasKey={renderOrder}
+    />
   );
 }
 
@@ -108,46 +84,6 @@ function ButtonIcon({ item, texture, contentMargin, tint, rtl, renderOrder }: Bu
 function arrowPosition(spinBox: Rect2, button: Rect2): { x: number; y: number } {
   const local = spinBoxArrowPosition(button, SPIN_BOX_ARROW_ICON_SIZE);
   return { x: spinBox.x + local.x, y: spinBox.y + local.y };
-}
-
-interface ToolbarTextProps {
-  rect: Rect2;
-  layout: TextLayoutResult;
-  fontSizePx: number;
-  tint: Rgba;
-  clippingPlanes: THREE.Plane[];
-  renderOrder: number;
-  /** `HORIZONTAL_ALIGNMENT_CENTER`, as `zoom_label` sets (`graph_edit.cpp:3242`). The SpinBox field is LEFT (`spin_box.cpp:731`). */
-  centred?: boolean;
-  /** The `x_ofs` of `LineEdit::_notification(NOTIFICATION_DRAW)`: the field text sits one content margin in. */
-  inset?: number;
-}
-
-/** One run of text, vertically centred in `rect`. */
-function ToolbarText({
-  rect,
-  layout,
-  fontSizePx,
-  tint,
-  clippingPlanes,
-  renderOrder,
-  centred,
-  inset = 0,
-}: ToolbarTextProps) {
-  const width = shapedTextSizeWidthPx(layout.widthPx);
-  const x = centred ? Math.max(0, (rect.w - width) / 2) : inset;
-  const y = Math.max(0, (rect.h - layout.heightPx) / 2);
-  return (
-    <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]} renderOrder={renderOrder}>
-      <TextRun
-        layout={layout}
-        fontSizePx={fontSizePx}
-        tint={tint}
-        clippingPlanes={clippingPlanes}
-        renderOrder={renderOrder}
-      />
-    </CanvasItemGroup>
-  );
 }
 
 /** Each item is a child item of `menu_hbox` (`graph_edit.cpp:3235-3321`): its box draws before its content. */
@@ -166,7 +102,7 @@ export function GraphEditToolbarChrome({
   const items = canvasSubOrders(slot, TOOLBAR_ITEM_PIECES);
   const panelStyle = useMemo(() => graphEditMenuPanelStyleBox(theme), [theme]);
   const pressedStyle = useMemo(() => flatButtonBoxes(theme).pressed, [theme]);
-  const labelColor = useMemo(() => multiplyModulate(tint.own, LABEL_FONT_COLOR), [tint.own]);
+  const labelColor = useMemo(() => multiplyModulate(tint.own, LABEL_DEFAULT_FONT_COLOR), [tint.own]);
   const fieldColor = useMemo(() => multiplyModulate(tint.own, CONTROL_FONT_COLOR), [tint.own]);
   const arrowColor = useItemLinearColor(fieldColor);
   const clippingPlanes = useControlClipPlanes() as THREE.Plane[];
@@ -198,7 +134,7 @@ export function GraphEditToolbarChrome({
       {toolbar.items.map((item) => {
         if (item.kind === 'label') {
           return (
-            <ToolbarText
+            <LabelledText
               key={item.id}
               rect={item.rect}
               layout={shape(text.zoomLabel)}
@@ -252,7 +188,7 @@ export function GraphEditToolbarChrome({
                 renderOrder={items.boxes.key}
               />
             </CanvasItemGroup>
-            <ToolbarText
+            <LabelledText
               rect={fieldRect}
               layout={shape(text.snappingDistance)}
               fontSizePx={theme.fontSize}
@@ -260,6 +196,7 @@ export function GraphEditToolbarChrome({
               clippingPlanes={clippingPlanes}
               renderOrder={items.content.key}
               inset={lineEditInsetX}
+              rtl={rtl}
             />
             {spinUpTexture && (
               <CanvasItemGroup position={[upPos.x, -upPos.y, 0]} renderOrder={items.content.key}>

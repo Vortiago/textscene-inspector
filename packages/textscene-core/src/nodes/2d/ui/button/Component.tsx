@@ -6,14 +6,13 @@
  */
 import { useMemo } from 'react';
 import { sizeWithArea } from '../../../../resources/textures/textureSize';
-import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
@@ -186,17 +185,14 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
           renderOrder={renderOrder}
         />
       )}
-      {content.icon && iconTexture && (
-        <CanvasItemGroup position={[content.icon.rect.x, -content.icon.rect.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={content.icon.rect.w}
-            height={content.icon.rect.h}
-            color={iconLinearColor}
-            opacity={tintedIconColorSrgb.a}
-            map={iconTexture}
-          />
-        </CanvasItemGroup>
+      {content.icon && (
+        <PositionedIcon
+          rect={content.icon.rect}
+          texture={iconTexture}
+          color={iconLinearColor}
+          opacity={tintedIconColorSrgb.a}
+          renderOrder={renderOrder}
+        />
       )}
       {content.labelBox && layout && (
         <ButtonLabel

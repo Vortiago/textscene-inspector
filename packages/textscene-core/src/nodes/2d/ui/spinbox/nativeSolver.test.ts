@@ -28,6 +28,8 @@ import {
   shapeSpinBoxFieldText,
 } from './nativeSolver';
 import { controlProps } from '../control/testing/controlProps';
+import type { ThemeResource } from '../../../../resources/styles/theme/types';
+import type { TscnInternalResource } from '../../../../parser/types';
 
 // At font size 16 with no theme in the chain: 'W' advances 1936*(16/2048) = 15.125
 // (`openSansMetrics.ts`'s hmtx), and the line is ceil(2189*16/2048) + ceil(600*16/2048) = 23 with
@@ -267,5 +269,60 @@ describe('shapeSpinBoxFieldText', () => {
 
   it('keeps the typed order under a left-to-right locale', () => {
     expect(visual('$ -12.5', 'en')).toBe('$ -12.5');
+  });
+});
+
+describe('the inner LineEdit reads its items through the ancestor Theme chain', () => {
+  const RED = { r: 1, g: 0, b: 0, a: 1 };
+  const BLUE = { r: 0, g: 0, b: 1, a: 1 };
+  const box: TscnInternalResource = {
+    id: 'box',
+    type: 'StyleBoxFlat',
+    data: {
+      content_margin_left: '10.0',
+      content_margin_top: '9.0',
+      content_margin_right: '10.0',
+      content_margin_bottom: '9.0',
+    },
+  };
+
+  function under(overrides: Partial<ThemeResource>): SolveNode {
+    const themeResource: ThemeResource = {
+      defaultFont: null,
+      defaultFontSize: undefined,
+      fonts: {},
+      fontSizes: {},
+      typeVariations: {},
+      properties: {},
+      resources: { externalResources: [], internalResources: [box] },
+      ...overrides,
+    };
+    return { ...node(), themeChain: [themeResource] };
+  }
+
+  it('sizes the field from the LineEdit normal stylebox of the Theme', () => {
+    const themed = under({ styles: { LineEdit: { normal: 'SubResource("box")' } } });
+    const result = spinBoxMinimumSize(themed, ctx(false));
+    expect(result.x).toBe(20 + 18);
+    expect(result.y).toBe(18 + FONT_HEIGHT);
+  });
+
+  it('draws the font_color of LineEdit, and font_uneditable_color when not editable', () => {
+    const themed = under({ colors: { LineEdit: { font_color: RED, font_uneditable_color: BLUE } } });
+    expect(spinBoxFieldTextTheme(themed, ctx(), true).color).toEqual(RED);
+    expect(spinBoxFieldTextTheme(themed, ctx(), false).color).toEqual(BLUE);
+  });
+
+  it('prefers the SpinBoxInnerLineEdit variation over LineEdit', () => {
+    const themed = under({
+      colors: { LineEdit: { font_color: RED }, SpinBoxInnerLineEdit: { font_color: BLUE } },
+      typeVariations: { SpinBoxInnerLineEdit: 'LineEdit' },
+    });
+    expect(spinBoxFieldTextTheme(themed, ctx(), true).color).toEqual(BLUE);
+  });
+
+  it('ignores the colours of another class', () => {
+    const themed = under({ colors: { Button: { font_color: RED } } });
+    expect(spinBoxFieldTextTheme(themed, ctx(), true).color).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
   });
 });

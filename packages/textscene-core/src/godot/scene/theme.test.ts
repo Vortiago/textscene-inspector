@@ -9,7 +9,6 @@ import {
   CONTROL_FONT_PLACEHOLDER_COLOR,
   CONTROL_FONT_PRESSED_COLOR,
   DEFAULT_CONTENT_MARGIN,
-  DEFAULT_FONT_SIZE,
   STYLE_FILL,
   scaledGodotTheme,
 } from './theme.js';
@@ -52,7 +51,7 @@ describe('default theme font colours', () => {
 
 describe('default theme metrics', () => {
   it('pins default_font_size = 16 (default_theme.cpp:50)', () => {
-    expect(DEFAULT_FONT_SIZE).toBe(16);
+    expect(scaledGodotTheme(1).fontSize).toBe(16);
   });
 
   it('pins default_margin = 4 (default_theme.cpp:54)', () => {

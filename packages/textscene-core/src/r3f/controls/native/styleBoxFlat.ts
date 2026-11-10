@@ -113,3 +113,21 @@ export function contentMarginSize(box: StyleBoxFlatData): Vector2 {
     y: box.contentMargin.top + box.contentMargin.bottom,
   };
 }
+
+/** A box whose own fields and nested colour, width and margin objects are read-only, as `freezeStyleBox` leaves it. */
+export type FrozenStyleBoxData = { readonly [K in keyof StyleBoxFlatData]: Readonly<StyleBoxFlatData[K]> };
+
+/**
+ * Returns a frozen copy of a box and of its nested colour, width and margin objects. A theme shares
+ * one box between states, so a consumer that edits a margin in place would change every state: it
+ * throws instead. The caller's own objects stay editable.
+ */
+export function freezeStyleBox(box: StyleBoxFlatData): FrozenStyleBoxData {
+  const copy = { ...box };
+  for (const key of Object.keys(copy) as (keyof StyleBoxFlatData)[]) {
+    const value = copy[key];
+    if (typeof value === 'object' && value !== null)
+      Object.assign(copy, { [key]: Object.freeze({ ...value }) });
+  }
+  return Object.freeze(copy);
+}

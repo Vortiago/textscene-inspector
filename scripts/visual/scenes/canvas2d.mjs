@@ -1037,6 +1037,8 @@ export const CANVAS_2D_SCENES = [
   // each type needs its own scene: CheckBox and CheckButton swap which edge the
   // check sits on, OptionButton its arrow, LinkButton its text origin.
   { name: 'button-rtl', file: 'unit-button-rtl.tscn', mode: '2d' },
+  { name: 'button-expand-icon-no-room', file: 'unit-button-expand-icon-no-room.tscn', mode: '2d' },
+  { name: 'button-icon-zero-size', file: 'unit-button-icon-zero-size.tscn', mode: '2d' },
   { name: 'checkbox-rtl', file: 'unit-checkbox-rtl.tscn', mode: '2d' },
   { name: 'check-button-rtl', file: 'unit-check-button-rtl.tscn', mode: '2d' },
   { name: 'optionbutton-rtl', file: 'unit-optionbutton-rtl.tscn', mode: '2d' },
@@ -1086,6 +1088,16 @@ export const CANVAS_2D_SCENES = [
   // undecoded bytes as the other layers do, and a second sRGB decode would darken it.
   { name: 'texture-progress-bar-partial', file: 'unit-texture-progress-bar-partial.tscn', mode: '2d' },
   { name: 'color-picker-rtl', file: 'unit-color-picker-rtl.tscn', mode: '2d' },
+  // The one variable is `color_mode = 1` (HSV rainbow row) and, in the second scene, an HDR `color`
+  // (the `script` icon of `text_type`).
+  { name: 'color-picker-hsv-rows', file: 'unit-color-picker-hsv-rows.tscn', mode: '2d' },
+  { name: 'color-picker-hdr-hex', file: 'unit-color-picker-hdr-hex.tscn', mode: '2d' },
+  // The one variable is an ancestor Theme that sets the font colours of Label, Button and LineEdit.
+  { name: 'color-picker-theme', file: 'unit-color-picker-theme.tscn', mode: '2d' },
+  // The one variable is a FlatMenuButton box that the shape, mode and menu buttons draw and size by.
+  { name: 'color-picker-flat-menu-button', file: 'unit-color-picker-flat-menu-button.tscn', mode: '2d' },
+  // The one variable is a TabContainer tab_selected box that the pressed mode button reads.
+  { name: 'color-picker-mode-button-margins', file: 'unit-color-picker-mode-button-margins.tscn', mode: '2d' },
   // Two LTR alignment scenes. The fractional-box one needs a non-integer box
   // width: at a whole width the ceiled and raw line extents give one offset.
   { name: 'rich-text-label-center-overflow', file: 'unit-rich-text-label-center-overflow.tscn', mode: '2d' },
