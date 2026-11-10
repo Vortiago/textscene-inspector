@@ -27,10 +27,9 @@ walk. It draws these parts:
   `HSlider` chrome under its gradient band, with the `bar_arrow` grabber that
   `_reset_sliders_theme` sets (`color_picker.cpp:628-651`). Intensity keeps the default
   circle grabber, since that override skips it.
-- The value `SpinBox` of each row, at the width `GridContainer` gives its column: the
-  `LineEdit` minimum plus the stepper block, with the "W" advance unrounded and the sum
-  truncated (`spin_box.cpp:82-86`, `grid_container.cpp:290`), and the `up`/`down` stepper
-  icons beside it.
+- The value `SpinBox` of each row, with the `up`/`down` stepper icons beside it. Its column is
+  the `LineEdit` minimum plus the stepper block (`spin_box.cpp:82-86`). The "W" advance stays
+  unrounded, and `GridContainer` truncates the sum (`grid_container.cpp:290`).
 - The hex/expression field. For an HDR or negative `color`, `text_type` draws the disabled
   `script` icon where it shows "#" otherwise (`color_picker.cpp:1319-1325`).
 - The swatches rows: a collapsed "Swatches" toggle with its `folded_arrow` and a menu
