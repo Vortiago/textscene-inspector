@@ -1188,6 +1188,12 @@ export const CANVAS_2D_SCENES = [
   { name: 'window-content-scale', file: 'unit-window-content-scale.tscn', mode: '2d' },
   // A content_scale_mode outside the enum leaves the target empty: black content. Max 92, mean 0.318.
   { name: 'window-content-scale-unknown', file: 'unit-window-content-scale-unknown.tscn', mode: '2d' },
+  // A visible AcceptDialog: panel, message and a focused OK button, sized to its content. Max 7, mean 0.32.
+  { name: 'accept-dialog-embedded', file: 'unit-accept-dialog-embedded.tscn', mode: '2d' },
+  // A visible ConfirmationDialog adds Cancel before OK, with custom button texts. Max 7, mean 0.32.
+  { name: 'confirmation-dialog-embedded', file: 'unit-confirmation-dialog-embedded.tscn', mode: '2d' },
+  // A Theme on the dialog restyles its Button and Label: a red normal box, yellow focus text, green message. Max 7, mean 0.33.
+  { name: 'accept-dialog-theme', file: 'unit-accept-dialog-theme.tscn', mode: '2d' },
 
   // MeshInstance2D draws a mesh through the canvas. Godot 4.6.3 `--mode 2d` probes: the textured QuadMesh
   // shows its texture upside down, (75,75) blue and (75,125) red, and the PlaneMesh at (100,300) draws

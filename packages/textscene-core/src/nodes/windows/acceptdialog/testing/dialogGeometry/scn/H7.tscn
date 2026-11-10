@@ -1,0 +1,6 @@
+[gd_scene format=3]
+[node name="Root" type="Control"]
+[node name="Dialog" type="AcceptDialog" parent="."]
+visible = true
+ok_button_text = "A very very very long OK button label for the dialog here"
+size = Vector2i(120, 100)

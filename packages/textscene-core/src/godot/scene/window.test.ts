@@ -67,6 +67,9 @@ describe('windowClassDefaults', () => {
       wrapControls: false,
       borderless: false,
       transparent: false,
+      exclusive: false,
+      title: '',
+      minSize: { x: 0, y: 0 },
     });
   });
 
@@ -76,12 +79,39 @@ describe('windowClassDefaults', () => {
       wrapControls: true,
       borderless: true,
       transparent: false,
+      exclusive: false,
+      title: '',
+      minSize: { x: 0, y: 0 },
     });
   });
 
   it('makes a PopupPanel transparent on top of the Popup defaults (popup.cpp:430)', () => {
     expect(windowClassDefaults('PopupPanel').transparent).toBe(true);
     expect(windowClassDefaults('PopupPanel').visible).toBe(false);
+  });
+});
+
+describe('windowClassDefaults for the dialogs', () => {
+  it('hides an AcceptDialog, wraps its Controls and makes it exclusive (dialogs.cpp:464-470)', () => {
+    expect(windowClassDefaults('AcceptDialog')).toEqual({
+      visible: false,
+      wrapControls: true,
+      borderless: false,
+      transparent: false,
+      exclusive: true,
+      title: 'Alert!',
+      minSize: { x: 0, y: 0 },
+    });
+  });
+
+  it('retitles a ConfirmationDialog and floors it at 200x70 (dialogs.cpp:529-534)', () => {
+    expect(windowClassDefaults('ConfirmationDialog')).toMatchObject({
+      visible: false,
+      wrapControls: true,
+      exclusive: true,
+      title: 'Please Confirm...',
+      minSize: { x: 200, y: 70 },
+    });
   });
 });
 

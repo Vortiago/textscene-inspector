@@ -1,0 +1,34 @@
+; One variable: a Theme on the dialog restyles the Button and Label inside it, as it does any real Button and Label.
+
+[gd_scene format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn"]
+bg_color = Color(0.6, 0.1, 0.1, 1)
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+
+[sub_resource type="Theme" id="Theme_dialog"]
+Button/colors/font_focus_color = Color(1, 0.9, 0.2, 1)
+Button/styles/normal = SubResource("StyleBoxFlat_btn")
+Label/colors/font_color = Color(0.4, 1, 0.5, 1)
+Label/constants/line_spacing = 12
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Dialog" type="AcceptDialog" parent="."]
+position = Vector2i(100, 100)
+visible = true
+theme = SubResource("Theme_dialog")
+dialog_text = "Line one
+Line two"

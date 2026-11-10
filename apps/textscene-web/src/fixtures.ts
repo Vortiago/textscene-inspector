@@ -83,6 +83,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Accept Dialog Embedded",
+    "file": "unit-accept-dialog-embedded.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Accept Dialog Theme",
+    "file": "unit-accept-dialog-theme.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Accept Dialog",
     "file": "unit-accept-dialog.tscn",
     "category": "Other"
@@ -455,6 +465,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Cone Twist Joint 3d",
     "file": "unit-cone-twist-joint-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Confirmation Dialog Embedded",
+    "file": "unit-confirmation-dialog-embedded.tscn",
     "category": "Other"
   },
   {
