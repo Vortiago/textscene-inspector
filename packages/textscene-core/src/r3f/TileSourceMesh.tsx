@@ -73,8 +73,7 @@ export function TileSourceMesh({
   }, [cells, source, grid, texW, texH, isStandIn]);
   const colors = useMemo(() => arrays && tintedColors(arrays.colors, tint.vertex), [arrays, tint.vertex]);
   const { canvasTexture } = texResult;
-  // A stand-in's UVs address one texel, so the CanvasTexture's maps cannot be sampled through them.
-  const hasNormalMap = !isStandIn && Boolean(canvasTexture?.slot.texture.normalTexture);
+  const hasNormalMap = Boolean(canvasTexture?.slot.texture.normalTexture);
   const orientations = useMemo(
     () => (hasNormalMap ? tileNormalOrientations(cells) : null),
     [hasNormalMap, cells]

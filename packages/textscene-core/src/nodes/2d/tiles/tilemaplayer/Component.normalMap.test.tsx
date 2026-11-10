@@ -143,3 +143,31 @@ describe('TileMapLayer with two sources', () => {
     expect(registerItem.mock.calls.map(([, read]) => read).sort()).toContain('plain');
   });
 });
+
+describe('TileMapLayer with a padded CanvasTexture over an unset ViewportTexture', () => {
+  it('draws no tile, as Godot does with or without its normal map', async () => {
+    const sources = [
+      subResource('ViewportTexture', 'unset', { viewport_path: 'NodePath("Nowhere")' }),
+      subResource('Gradient', 'Gradient_n', { colors: 'PackedColorArray(1, 0, 0, 1)' }),
+      subResource('GradientTexture2D', 'GradientTexture2D_n', {
+        gradient: 'SubResource("Gradient_n")',
+        width: '8',
+        height: '8',
+      }),
+      subResource('CanvasTexture', 'CanvasTexture_stand_in', {
+        diffuse_texture: 'SubResource("unset")',
+        normal_texture: 'SubResource("GradientTexture2D_n")',
+      }),
+      subResource('TileSetAtlasSource', 'atlas', {
+        texture: 'SubResource("CanvasTexture_stand_in")',
+        texture_region_size: 'Vector2i(8, 8)',
+        use_texture_padding: 'true',
+        '0:0/0': '0',
+      }),
+      subResource('TileSet', 'ts', { 'sources/0': 'SubResource("atlas")' }),
+    ];
+    const canvas = await renderOnLitCanvas(<TileMapLayer node={layerNode()} />, sources, LISTS);
+    const meshes = canvas.renderer.scene.findAllByType('Mesh').map((mesh) => mesh.instance as THREE.Mesh);
+    expect(meshes).toEqual([]);
+  });
+});
