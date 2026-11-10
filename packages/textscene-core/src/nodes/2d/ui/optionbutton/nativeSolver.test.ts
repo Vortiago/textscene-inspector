@@ -19,6 +19,7 @@ import {
   resolveOptionButtonSelectedText,
   layoutOptionButtonContent,
   optionButtonArrowSize,
+  optionButtonTextureSlots,
   OPTION_BUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -52,9 +53,16 @@ function ctx(withMeasurer = true): SolveContext {
   };
 }
 
-describe('optionButtonArrowSize with a themed arrow', () => {
-  it('keeps the default arrow size while the themed arrow loads or after it fails (theme.cpp:306)', () => {
-    expect(optionButtonArrowSize({ textureSlots: { arrow: null } })).toEqual({ x: 12, y: 12 });
+describe('optionButtonTextureSlots', () => {
+  const themed = { ref: 'ExtResource("1")', resources: solveNode().resources, isHeldLocally: true };
+
+  it('requests one slot for a themed arrow', () => {
+    const requests = optionButtonTextureSlots(controlNode('Opt', 'OptionButton'), { arrow: themed });
+    expect(requests.map(({ key }) => key)).toEqual(['arrow']);
+  });
+
+  it('requests none when no arrow is themed', () => {
+    expect(optionButtonTextureSlots(controlNode('Opt', 'OptionButton'), {})).toEqual([]);
   });
 });
 
@@ -65,6 +73,10 @@ describe('optionButtonArrowSize', () => {
 
   it('is a themed arrow at its own size, never clamped by icon_max_width', () => {
     expect(optionButtonArrowSize({ textureSlots: { arrow: { x: 40, y: 30 } } })).toEqual({ x: 40, y: 30 });
+  });
+
+  it('keeps the default while the themed arrow loads or after it fails (theme.cpp:306)', () => {
+    expect(optionButtonArrowSize({ textureSlots: { arrow: null } })).toEqual({ x: 12, y: 12 });
   });
 
   it('ignores a themed texture in another slot (edge case)', () => {

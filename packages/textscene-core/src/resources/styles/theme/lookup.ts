@@ -274,8 +274,9 @@ export function resolveThemeFontSizeIn(
 /** The default theme's font size for a variation, which sits after every Theme a scene or a project sets. */
 function defaultThemeVariationFontSize(variation: string | undefined, name: string): number | undefined {
   if (variation === undefined || name !== 'font_size') return undefined;
-  const step = DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS[variation];
-  return step === undefined ? undefined : DEFAULT_FONT_SIZE + step;
+  // Own keys only: a variation named `constructor` must not read `Object.prototype`.
+  if (!Object.hasOwn(DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS, variation)) return undefined;
+  return DEFAULT_FONT_SIZE + DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS[variation]!;
 }
 
 /**

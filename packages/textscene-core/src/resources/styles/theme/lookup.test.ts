@@ -442,6 +442,17 @@ describe('resolveThemeFontSizeIn', () => {
     ).toBe(16);
   });
 
+  it('ignores a type variation named for an Object.prototype member', () => {
+    expect(
+      resolveThemeFontSizeIn(
+        themeResolutionScope('Label', 'constructor', [theme()], NO_PROJECT_FONTS),
+        'font_size',
+        undefined,
+        16
+      )
+    ).toBe(16);
+  });
+
   it('the nearest ancestor wins over a farther one', () => {
     const nearest = theme({ fontSizes: { Label: { font_size: 20 } } });
     const farther = theme({ fontSizes: { Label: { font_size: 30 } } });
