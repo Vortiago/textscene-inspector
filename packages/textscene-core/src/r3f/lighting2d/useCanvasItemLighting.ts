@@ -8,6 +8,7 @@
 import { useMemo, useRef, useState, type RefObject } from 'react';
 import * as THREE from 'three';
 import { useCanvasModulate } from '../canvasModulate.js';
+import { canvasNumbersOf, useCanvasColorSpace } from '../canvasColorSpace.js';
 import { type CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types.js';
 import { useCanvasLighting2D, useCapItemLights, useRegisterLitItem } from './CanvasLighting2D.js';
 import {
@@ -62,6 +63,7 @@ function createUniforms(resolution: THREE.Vector2): CanvasItemLightingUniforms {
     resolution: { value: resolution },
     canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
     lightMode: { value: CanvasItemMaterialLightMode.NORMAL },
+    isLinearCanvas: { value: 0 },
   };
 }
 
@@ -71,6 +73,7 @@ function createNormalMappedUniforms(plain: CanvasItemLightingUniforms): NormalMa
     resolution: plain.resolution,
     canvasModulate: plain.canvasModulate,
     lightMode: plain.lightMode,
+    isLinearCanvas: plain.isLinearCanvas,
     lightLayers: { value: EMPTY_LIGHT_LAYERS as THREE.Texture },
     shadowTintLayers: { value: EMPTY_LIGHT_LAYERS as THREE.Texture },
     places: { value: [] },
@@ -150,6 +153,7 @@ export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions):
   // The raw canvas tint, not the light-mode-gated one: the shader divides out
   // exactly what the CPU folded in, and the floor is applied on both sides.
   const canvasModulate = useCanvasModulate();
+  const canvasSpace = useCanvasColorSpace();
   const lightMode = material?.lightMode ?? CanvasItemMaterialLightMode.NORMAL;
   const lightOnly = lightMode === CanvasItemMaterialLightMode.LIGHT_ONLY;
 
@@ -180,7 +184,9 @@ export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions):
   // The provider owns these textures and this vector, so a resize or a
   // reallocation reaches every item without a re-render.
   bound.resolution.value = resolution;
-  (bound.canvasModulate.value as THREE.Vector3).set(canvasModulate.r, canvasModulate.g, canvasModulate.b);
+  const tint = useMemo(() => canvasNumbersOf(canvasSpace, canvasModulate), [canvasSpace, canvasModulate]);
+  (bound.canvasModulate.value as THREE.Vector3).set(tint.r, tint.g, tint.b);
+  bound.isLinearCanvas.value = canvasSpace.isLinear ? 1 : 0;
   // The mode rides the uniforms too: a re-parse changes `light_mode` under a
   // mounted item, and three would keep the program it first compiled.
   bound.lightMode.value = lightMode;

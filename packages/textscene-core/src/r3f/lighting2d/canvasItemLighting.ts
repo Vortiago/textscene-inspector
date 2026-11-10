@@ -2,7 +2,9 @@
  * How a canvas item takes the light, per `canvas.glsl`: `color.rgb = albedo × S`. `useCanvasItemTint`
  * composes `albedo × canvas_modulation`, so the injection divides the tint out. A non-HDR 2D
  * viewport (`hdr_2d` false) never goes linear, so the injection decodes to sRGB, does Godot's
- * arithmetic with its [0, 1] clamp, and re-encodes before three's `colorspace_fragment`.
+ * arithmetic with its [0, 1] clamp, and re-encodes before three's `colorspace_fragment`. A linear
+ * canvas (`hdr_2d` true) holds linear half floats, where Godot adds the light to the linear albedo
+ * with no clamp (`canvas.glsl:727-760`); the light colours stay the authored numbers.
  */
 /*
  * Portions ported from Godot Engine (MIT).
@@ -60,13 +62,18 @@ export interface CanvasItemLightingUniforms {
    * item. On Godot 4.6.3 Light Only masks alpha: transparent where unlit, authored colour where lit.
    */
   readonly lightMode: THREE.IUniform;
+  /** `1` in a linear canvas, whose fragments hold linear values to shade as they are, else `0`. */
+  readonly isLinearCanvas: THREE.IUniform;
 }
 
 /** The uniforms every lit item's program reads, with the sRGB transfer it shades in. */
 export const ITEM_LIGHTING_GLSL = `uniform vec2 uLightResolution;
 uniform vec3 uCanvasModulate;
 uniform float uLightMode;
-${TRANSFER_GLSL}`;
+uniform float uLinearCanvas;
+${TRANSFER_GLSL}
+vec3 canvasAlbedo(vec3 fragment) { return uLinearCanvas > 0.5 ? fragment : godotToSrgb(fragment); }
+vec3 canvasShaded(vec3 color) { return uLinearCanvas > 0.5 ? color : godotToLinear(clamp(color, 0.0, 1.0)); }`;
 
 /** Both injections depend only on module constants, so they are built once. */
 const UNIFORM_PREAMBLE = `uniform sampler2D uLightList;
@@ -91,7 +98,7 @@ bool lightOnly = uLightMode > ${ABOVE_UNSHADED};`;
  */
 export const ITEM_ALBEDO_GLSL = `vec3 lightSeed = lightOnly ? vec3(1.0) : uCanvasModulate;
 vec2 lightUv = gl_FragCoord.xy / uLightResolution;
-vec3 albedo = godotToSrgb(gl_FragColor.rgb) / max(lightSeed, vec3(${CANVAS_MODULATE_FLOOR}));`;
+vec3 albedo = canvasAlbedo(gl_FragColor.rgb) / max(lightSeed, vec3(${CANVAS_MODULATE_FLOOR}));`;
 
 const LIGHT_INJECTION = `${LIGHT_MODE_GLSL}
 // canvas.glsl:719: MODE_UNSHADED skips the canvas tint and the light loop,
@@ -103,7 +110,7 @@ if (!unshaded && (uLit > 0.5 || lightOnly)) {
   // shadow_color is the one light term Godot does NOT scale by the albedo.
   vec3 shadowTint = texture2D(uShadowTint, lightUv).rgb;
   if (lightOnly) gl_FragColor.a = clamp(gl_FragColor.a * accum.a, 0.0, 1.0);
-  gl_FragColor.rgb = godotToLinear(clamp(albedo * accum.rgb + shadowTint, 0.0, 1.0));
+  gl_FragColor.rgb = canvasShaded(albedo * accum.rgb + shadowTint);
 }
 #include <colorspace_fragment>`;
 
@@ -127,6 +134,7 @@ export function canvasItemLightingProps(uniforms: CanvasItemLightingUniforms): C
         shader.uniforms.uLightResolution = uniforms.resolution;
         shader.uniforms.uCanvasModulate = uniforms.canvasModulate;
         shader.uniforms.uLightMode = uniforms.lightMode;
+        shader.uniforms.uLinearCanvas = uniforms.isLinearCanvas;
 
         editedProgram(
           shader,

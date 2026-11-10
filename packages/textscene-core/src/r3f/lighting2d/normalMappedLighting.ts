@@ -2,7 +2,8 @@
  * How a normal-mapped canvas item takes the light, per `canvas.glsl:652-760`. Each light reaches the
  * item at an angle, so it shades each light kept apart (`lightPassContext.ts`) by its own normal
  * term before it blends, in Godot's order. The arithmetic is Godot's, in sRGB space with its [0, 1]
- * clamp, as `canvasItemLighting.ts` does for an item with no normal map.
+ * clamp, or on the linear albedo with no clamp in a linear canvas, as `canvasItemLighting.ts` does
+ * for an item with no normal map.
  */
 /*
  * Portions ported from Godot Engine (MIT).
@@ -43,7 +44,7 @@ export interface CanvasItemSurface {
  */
 export interface NormalMappedLightingUniforms extends Pick<
   CanvasItemLightingUniforms,
-  'resolution' | 'canvasModulate' | 'lightMode'
+  'resolution' | 'canvasModulate' | 'lightMode' | 'isLinearCanvas'
 > {
   /** `ApartLightBuffers.buffer`. */
   readonly lightLayers: THREE.IUniform;
@@ -157,7 +158,7 @@ if (!unshaded) {
     lightOnlyAlpha += lit.a;
   }
   if (lightOnly) gl_FragColor.a = clamp(gl_FragColor.a * lightOnlyAlpha, 0.0, 1.0);
-  gl_FragColor.rgb = godotToLinear(clamp(color, 0.0, 1.0));
+  gl_FragColor.rgb = canvasShaded(color);
 }
 #include <colorspace_fragment>`;
 
@@ -186,6 +187,7 @@ export function normalMappedLightingProps(
         shader.uniforms.uLightResolution = uniforms.resolution;
         shader.uniforms.uCanvasModulate = uniforms.canvasModulate;
         shader.uniforms.uLightMode = uniforms.lightMode;
+        shader.uniforms.uLinearCanvas = uniforms.isLinearCanvas;
 
         editedProgram(
           shader,

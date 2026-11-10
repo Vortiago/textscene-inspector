@@ -3,7 +3,9 @@
  * of the host's size, when the host calls `run`. The 2D stage and each SubViewport are such hosts.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { renderLightLists } from './lightAccumulationPass';
+
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -18,6 +20,12 @@ import { useCanvasModulate } from '../canvasModulate';
 import type { Rgba } from '../../godot/math/math';
 import { settleLoads } from '../testing/settleLoads';
 import { withStubbedGl } from '../testing/stubbedGl';
+import { canvasColorSpaceOf, CanvasColorSpaceProvider, type CanvasColorSpace } from '../canvasColorSpace';
+
+vi.mock('./lightAccumulationPass', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./lightAccumulationPass')>();
+  return { ...actual, renderLightLists: vi.fn(actual.renderLightLists) };
+});
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
@@ -160,5 +168,34 @@ describe('CanvasLightPass', () => {
       </CanvasLightPass>
     );
     expect(seen).toEqual(night);
+  });
+
+  describe('seeds the accumulators with the canvas modulate in the space the items shade in', () => {
+    const NIGHT: Rgba = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
+
+    /** The canvas modulate the pass seeded its accumulators with on its latest run. */
+    async function seedIn(space: CanvasColorSpace): Promise<{ r: number; g: number; b: number }> {
+      const host = fakeLightPassHost(300, 200);
+      const seen: Seen = {};
+      await ReactThreeTestRenderer.create(
+        <CanvasColorSpaceProvider value={space}>
+          <CanvasLightPass host={host} canvasModulate={NIGHT}>
+            <Scene seen={seen} />
+          </CanvasLightPass>
+        </CanvasColorSpaceProvider>
+      );
+      await settleLoads();
+      vi.mocked(renderLightLists).mockClear();
+      await withStubbedGl(seen.gl!, {}, () => host.run.current!());
+      return vi.mocked(renderLightLists).mock.lastCall![0].canvasModulate;
+    }
+
+    it('keeps the authored tint in an sRGB canvas', async () => {
+      expect((await seedIn(canvasColorSpaceOf(false))).r).toBe(0.5);
+    });
+
+    it('converts the tint to linear in a linear canvas', async () => {
+      expect((await seedIn(canvasColorSpaceOf(true))).r).toBeCloseTo(0.214, 3);
+    });
   });
 });

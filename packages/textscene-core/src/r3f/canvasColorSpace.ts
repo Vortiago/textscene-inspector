@@ -9,6 +9,7 @@
 import { createContext, useContext } from 'react';
 import * as THREE from 'three';
 import { CANVAS_LINEAR_DEFINES, CANVAS_SRGB_DEFINES } from './canvasSrgbMultiply';
+import { godotColorToLinear } from './godotColor';
 import type { ViewportTextureView } from '../resources/textures/viewporttexture/useViewportTextureSlot';
 
 export interface CanvasColorSpace {
@@ -48,6 +49,19 @@ const LINEAR_CANVAS: CanvasColorSpace = {
 /** The space of a canvas whose render target uses HDR when `usesHdr`. */
 export function canvasColorSpaceOf(usesHdr: boolean): CanvasColorSpace {
   return usesHdr ? LINEAR_CANVAS : SRGB_CANVAS;
+}
+
+/**
+ * A Godot colour in the numbers `space` draws with: the authored sRGB, or linear in a linear canvas
+ * (`renderer_canvas_render_rd.cpp:692-693`).
+ *
+ * @canonical A Godot colour in the numbers of a canvas colour space
+ */
+export function canvasNumbersOf(
+  space: CanvasColorSpace,
+  colour: { r: number; g: number; b: number }
+): { r: number; g: number; b: number } {
+  return space.isLinear ? godotColorToLinear(colour) : colour;
 }
 
 /**

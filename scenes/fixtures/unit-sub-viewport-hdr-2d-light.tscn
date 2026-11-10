@@ -1,0 +1,55 @@
+; One variable: the SubViewport's use_hdr_2d, under a CanvasModulate above 1 and a DirectionalLight2D.
+; A linear canvas adds the light to the linear albedo with no clamp, and seeds the CanvasModulate in
+; linear. The left viewport is HDR and the right one is not, each with the same floor and light.
+; Every other lit golden runs with use_hdr_2d off, so none shows the linear arithmetic.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="HdrBox" type="SubViewportContainer" parent="."]
+layout_mode = 0
+offset_left = 100.0
+offset_top = 100.0
+offset_right = 500.0
+offset_bottom = 400.0
+
+[node name="V" type="SubViewport" parent="HdrBox"]
+use_hdr_2d = true
+size = Vector2i(400, 300)
+
+[node name="Floor" type="Polygon2D" parent="HdrBox/V"]
+color = Color(0.6, 0.6, 0.6, 1)
+polygon = PackedVector2Array(0, 0, 400, 0, 400, 300, 0, 300)
+
+[node name="Tint" type="CanvasModulate" parent="HdrBox/V"]
+color = Color(0.6, 0.8, 1.4, 1)
+
+[node name="Sun" type="DirectionalLight2D" parent="HdrBox/V"]
+color = Color(0.8, 0.9, 1, 1)
+energy = 1.7
+
+[node name="SdrBox" type="SubViewportContainer" parent="."]
+layout_mode = 0
+offset_left = 600.0
+offset_top = 100.0
+offset_right = 1000.0
+offset_bottom = 400.0
+
+[node name="V" type="SubViewport" parent="SdrBox"]
+size = Vector2i(400, 300)
+
+[node name="Floor" type="Polygon2D" parent="SdrBox/V"]
+color = Color(0.6, 0.6, 0.6, 1)
+polygon = PackedVector2Array(0, 0, 400, 0, 400, 300, 0, 300)
+
+[node name="Tint" type="CanvasModulate" parent="SdrBox/V"]
+color = Color(0.6, 0.8, 1.4, 1)
+
+[node name="Sun" type="DirectionalLight2D" parent="SdrBox/V"]
+color = Color(0.8, 0.9, 1, 1)
+energy = 1.7

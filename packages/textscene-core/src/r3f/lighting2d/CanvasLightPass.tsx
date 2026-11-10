@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { CanvasModulateContext } from '../canvasModulate.js';
+import { canvasNumbersOf, useCanvasColorSpace } from '../canvasColorSpace.js';
 import { ShadowCasterStage } from './ShadowCasterStage.js';
 import { CanvasLightSequenceProvider } from './useLightSequence.js';
 import {
@@ -95,6 +96,8 @@ function apartModes(
 export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightPassProps) {
   const gl = useThree((s) => s.gl);
   const { scene, camera, readBufferSize, readClip } = host;
+  const space = useCanvasColorSpace();
+  const seedModulate = useMemo(() => canvasNumbersOf(space, canvasModulate), [space, canvasModulate]);
 
   const [lights, registerLight] = useLightRegistry();
   const [placements, registerItem] = usePlacementRegistry();
@@ -225,7 +228,7 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
       lists: accumulationLists,
       passMeshes,
       seedMaterial,
-      canvasModulate,
+      canvasModulate: seedModulate,
       resolution,
       readBufferSize,
       windows,
@@ -246,7 +249,7 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
     apartPlace,
     accumulationLists,
     seedMaterial,
-    canvasModulate,
+    seedModulate,
     resolution,
   ]);
   useEffect(() => {

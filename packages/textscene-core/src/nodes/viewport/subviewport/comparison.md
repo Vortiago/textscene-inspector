@@ -87,5 +87,4 @@ Strict and lenient parsing diverge only on out-of-range enums. The lenient parse
 ## Known limitations
 
 - **Approximated** A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.
-- **Approximated** A Light2D in a `use_hdr_2d` canvas lights its items brighter than Godot does.
 - **Needs runtime** A viewport whose camera or world is assigned by script shows only its clear colour in 3D, and frames from the origin in 2D.

@@ -192,6 +192,8 @@ export const TILE_AND_TARGET_SCENES = [
   // The root viewport's hdr_2d, from a Fixture project's project.godot: the root canvas draws linear
   // half floats and the copy to the screen converts them to sRGB. Every other golden runs at the default, off.
   { name: 'hdr-2d', file: 'hdr-2d/unit-hdr-2d.tscn', mode: '2d' },
+  // Lighting in that root: the linear albedo plus an unclamped light, with the authored light colour.
+  { name: 'hdr-2d-lights', file: 'hdr-2d/unit-hdr-2d-lights.tscn', mode: '2d' },
   { name: 'sub-viewport-msaa', file: 'unit-sub-viewport-msaa.tscn', mode: '2d' },
   // Alpha antialiasing's three modes on a scissor cut: under msaa_3d 2X, from its own Fixture project,
   // and at one sample, where the coverage is all or none.

@@ -1,7 +1,7 @@
 # hdr-2d
 
 `unit-hdr-2d.tscn` draws four squares in the root viewport under `rendering/viewport/hdr_2d=true`.
-The scene header names the variable. This file holds the measurements behind it.
+`unit-hdr-2d-lights.tscn` lights two shapes in it. The scene headers name the variable. This file holds the measurements behind them.
 
 ## Why the root draws linear
 
@@ -26,6 +26,13 @@ probes below read the same on both sides.
 
 Without `hdr_2d` the same squares read (127, 128, 0) for the blend and (191, 191, 191) for the
 gray. The HDR root blends in linear light, so each reads brighter.
+
+## Lighting in a linear canvas
+
+A canvas light adds `albedo × light colour × energy` to the item, with the light colour as authored
+and the albedo linear (`canvas.glsl:727-760`). The CanvasModulate seed converts to linear
+(`renderer_canvas_render_rd.cpp:692-693`). Nothing clamps before the copy to the screen, so a sum
+above 1 survives. `unit-hdr-2d-lights.tscn` reads the same on both sides: `pnpm ref:diff` gives max 0.
 
 ## Why the reference uses `--mode 2d-root`
 

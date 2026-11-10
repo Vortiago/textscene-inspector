@@ -3094,6 +3094,12 @@ export const fixtures: Fixture[] = [
     "root": "glow-linear-upscale"
   },
   {
+    "name": "Hdr 2d Lights",
+    "file": "hdr-2d/unit-hdr-2d-lights.tscn",
+    "category": "Other",
+    "root": "hdr-2d"
+  },
+  {
     "name": "Hdr 2d",
     "file": "hdr-2d/unit-hdr-2d.tscn",
     "category": "Other",
@@ -5322,6 +5328,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Debanding",
     "file": "unit-sub-viewport-debanding.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Hdr 2d Light",
+    "file": "unit-sub-viewport-hdr-2d-light.tscn",
     "category": "Unit - Viewports"
   },
   {

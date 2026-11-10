@@ -91,8 +91,18 @@ describe('canvasItemLightingProps', () => {
     // accumulation is unclamped half-float. The shadow_color term joins inside that clamp and
     // outside the albedo multiply, where `light_shadow_compute` puts it.
     const { shader } = compile(CanvasItemMaterialLightMode.NORMAL);
-    expect(shader.fragmentShader).toContain('clamp(albedo * accum.rgb + shadowTint, 0.0, 1.0)');
+    expect(shader.fragmentShader).toContain('canvasShaded(albedo * accum.rgb + shadowTint)');
+    expect(shader.fragmentShader).toContain('godotToLinear(clamp(color, 0.0, 1.0))');
     expect(shader.fragmentShader).toContain('#include <colorspace_fragment>');
+  });
+
+  it('shades a linear canvas as it is, with no clamp and no sRGB round trip', () => {
+    // Godot adds the light to the linear albedo in a half-float target, which holds above 1
+    // (`canvas.glsl:727-760`); the copy to the screen clamps.
+    const { shader, shared } = compile(CanvasItemMaterialLightMode.NORMAL);
+    expect(shader.fragmentShader).toContain('uLinearCanvas > 0.5 ? fragment : godotToSrgb(fragment)');
+    expect(shader.fragmentShader).toContain('uLinearCanvas > 0.5 ? color : godotToLinear');
+    expect(shader.uniforms.uLinearCanvas).toBe(shared.isLinearCanvas);
   });
 
   it('declares the mode uniform, so a light_mode edit reaches the GPU', () => {
@@ -107,7 +117,7 @@ describe('canvasItemLightingProps', () => {
     const guard = shader.fragmentShader.indexOf('if (!unshaded &&');
     expect(guard).toBeGreaterThan(-1);
     // Every write the injection makes is inside that guard.
-    expect(shader.fragmentShader.indexOf('gl_FragColor.rgb = godotToLinear')).toBeGreaterThan(guard);
+    expect(shader.fragmentShader.indexOf('gl_FragColor.rgb = canvasShaded')).toBeGreaterThan(guard);
     expect(shader.fragmentShader.indexOf('gl_FragColor.a = clamp')).toBeGreaterThan(guard);
   });
 
@@ -128,7 +138,7 @@ describe('canvasItemLightingProps', () => {
     // Both seeds live in one program and `uLightMode` picks at runtime. The divide-out is by the
     // seed, so Light Only's 1.0 makes it a no-op.
     expect(shader.fragmentShader).toContain('lightOnly ? vec3(1.0) : uCanvasModulate');
-    expect(shader.fragmentShader).toContain('godotToSrgb(gl_FragColor.rgb) / max(lightSeed');
+    expect(shader.fragmentShader).toContain('canvasAlbedo(gl_FragColor.rgb) / max(lightSeed');
   });
 
   it('throws, naming the hook, for a shader with no colorspace hook (error case)', () => {

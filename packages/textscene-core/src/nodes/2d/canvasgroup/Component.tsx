@@ -15,8 +15,7 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import { node2dZStep, useCanvasRunKeysOfNode } from '../../../r3f/canvasItemState';
 import type { CanvasItemTint } from '../../../r3f/canvasItemModulate';
-import { useCanvasColorSpace, type CanvasColorSpace } from '../../../r3f/canvasColorSpace';
-import { godotColorToLinear } from '../../../r3f/godotColor';
+import { canvasNumbersOf, useCanvasColorSpace, type CanvasColorSpace } from '../../../r3f/canvasColorSpace';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { createCanvasFrame } from '../../../r3f/components/Canvas2DStage/canvasFrame';
 import { useCanvasLighting2D } from '../../../r3f/lighting2d/CanvasLighting2D';
@@ -217,6 +216,6 @@ function placeRect(mesh: THREE.Mesh, world: THREE.Box3): void {
  * linear one, where Godot converts each modulate before it multiplies.
  */
 function writeCompositeColour(out: THREE.Vector4, colour: Rgba, space: CanvasColorSpace): void {
-  const { r, g, b } = space.isLinear ? godotColorToLinear(colour) : colour;
+  const { r, g, b } = canvasNumbersOf(space, colour);
   out.set(r, g, b, colour.a);
 }

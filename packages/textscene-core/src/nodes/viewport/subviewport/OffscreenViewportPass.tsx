@@ -16,7 +16,7 @@ import {
   WorldEnvironmentScope,
 } from '../../../r3f/environment/WorldEnvironmentScope';
 import { drawWith } from '../../../r3f/environment/sceneEnvironment';
-import { CanvasColorSpaceProvider } from '../../../r3f/canvasColorSpace';
+import { CanvasColorSpaceProvider, type CanvasColorSpace } from '../../../r3f/canvasColorSpace';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
 import { WorldRootProvider } from '../../../r3f/parentSpaceScope';
 import * as THREE from 'three';
@@ -351,12 +351,9 @@ export function OffscreenViewportPass({
 
   const canvasBackdropAndItems = canvasOverWorld ? (
     <>
-      {/* The backdrop sits outside the viewport's canvas scope, so it takes the canvas space here. */}
-      <CanvasColorSpaceProvider value={canvasSpace}>
-        <PendingSuspense>
-          <CanvasOverWorld world={target.texture} size={viewSize} anchor={backdropAnchor} />
-        </PendingSuspense>
-      </CanvasColorSpaceProvider>
+      <PendingSuspense>
+        <CanvasOverWorld world={target.texture} size={viewSize} anchor={backdropAnchor} />
+      </PendingSuspense>
       <CanvasOverWorldScopeProvider>{canvasOverWorld}</CanvasOverWorldScopeProvider>
     </>
   ) : null;
@@ -366,7 +363,7 @@ export function OffscreenViewportPass({
       <CanvasWorkspaceProvider workspace="2d">
         <WorldRootProvider value={canvasScene}>
           <CanvasSpaceProvider value={null}>
-            <LitCanvas host={lightHost} canvasModulate={canvasModulate}>
+            <LitCanvas host={lightHost} canvasModulate={canvasModulate} space={canvasSpace}>
               {canvasBackdropAndItems}
             </LitCanvas>
           </CanvasSpaceProvider>
@@ -399,7 +396,11 @@ export function OffscreenViewportPass({
           <WorldScope>
             {stage}
             <CanvasSpaceProvider value={null}>
-              <LitCanvas host={kind === '2d' ? lightHost : null} canvasModulate={canvasModulate}>
+              <LitCanvas
+                host={kind === '2d' ? lightHost : null}
+                canvasModulate={canvasModulate}
+                space={canvasSpace}
+              >
                 {children}
               </LitCanvas>
             </CanvasSpaceProvider>
@@ -417,22 +418,32 @@ export function OffscreenViewportPass({
   );
 }
 
-/** A canvas lit by its viewport's 2D light pass, or one that no light reaches where `host` is null. */
+/**
+ * A canvas lit by its viewport's 2D light pass, or one that no light reaches where `host` is null.
+ * The pass and the backdrop sit outside the viewport's canvas scope, so they take the canvas `space`
+ * here: the lights seed in the space the items shade in.
+ */
 function LitCanvas({
   host,
   canvasModulate,
+  space,
   children,
 }: {
   host: LightPassHost | null;
   canvasModulate: Rgba;
+  space: CanvasColorSpace;
   children: ReactNode;
 }) {
-  return host ? (
-    <CanvasLightPass host={host} canvasModulate={canvasModulate}>
-      {children}
-    </CanvasLightPass>
-  ) : (
-    <World2DLightingBoundary canvasModulate={canvasModulate}>{children}</World2DLightingBoundary>
+  return (
+    <CanvasColorSpaceProvider value={space}>
+      {host ? (
+        <CanvasLightPass host={host} canvasModulate={canvasModulate}>
+          {children}
+        </CanvasLightPass>
+      ) : (
+        <World2DLightingBoundary canvasModulate={canvasModulate}>{children}</World2DLightingBoundary>
+      )}
+    </CanvasColorSpaceProvider>
   );
 }
 
