@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+; One variable: a ScriptCreateDialog, an editor class. A game cannot create it, so the loader
+; makes a placeholder Node (`class_db.cpp:579-581`, `packed_scene.cpp:316-345`) that draws
+; nothing and ignores the dialog's position and size. Its full-rect child still draws: red fills
+; the frame at (5,5), (65,65), (300,200) and (1000,600). A dialog drawn as a window moves them.
+; The blue Marker keeps the capture from being one colour, which the baseline writer refuses.
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Dialog" type="ScriptCreateDialog" parent="."]
+position = Vector2i(60, 60)
+size = Vector2i(500, 300)
+visible = true
+
+[node name="Fill" type="ColorRect" parent="Dialog"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(1, 0, 0, 1)
+
+[node name="Marker" type="ColorRect" parent="Dialog"]
+offset_left = 1090.0
+offset_top = 20.0
+offset_right = 1130.0
+offset_bottom = 60.0
+color = Color(0, 0, 1, 1)

@@ -42,6 +42,9 @@ export const CANVAS_2D_SCENES = [
   // orphan; (120,40) green, its child re-rooted on its own; (40,120) blue, below a moved parent that
   // does not apply. Dropped, all three are the grey background.
   { name: 'orphan-reroot', file: 'unit-orphan-reroot.tscn', mode: '2d' },
+  // A ScriptCreateDialog is an editor class, so a game loads a placeholder that draws nothing and its
+  // full-rect child fills the frame under a blue marker square. Godot probes: red 255,0,0 at (5,5), (65,65), (300,200) and (1000,600).
+  { name: 'script-create-dialog-placeholder', file: 'unit-script-create-dialog-placeholder.tscn', mode: '2d' },
   // Two chained Bone2Ds, each turned and moved, with a bar under each. Godot
   // probes: (387,210) orange, mid upper arm, and (473,340) blue, mid forearm.
   // A bone drawn as an untransformed group stacks both bars at the skeleton.
