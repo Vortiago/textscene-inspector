@@ -86,6 +86,7 @@ export function readTheoraPictureSize(bytes: Uint8Array): Vector2 | null {
 
   try {
     for (let page = readOggPage(reader); page; page = readOggPage(reader)) {
+      // The identification header is 42 bytes, so one segment holds it whole.
       const firstSegment = page.segments[0];
       if (theoraSerial === null && (page.flags & BEGINNING_OF_STREAM) !== 0 && firstSegment) {
         const isIdentification =

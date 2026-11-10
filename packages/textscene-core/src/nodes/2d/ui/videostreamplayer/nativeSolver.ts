@@ -24,5 +24,5 @@ export const videoStreamPlayerTextureSlots: TextureSlotsFn = (node: TscnNode) =>
 export const videoStreamPlayerMinimumSize: MinimumSizeFn = (n) => {
   const { expand } = n.node.properties as VideoStreamPlayerProperties;
   const pictureSize = n.textureSlots[STREAM_KEY];
-  return expand || !pictureSize ? { x: 0, y: 0 } : pictureSize;
+  return expand || !pictureSize ? { x: 0, y: 0 } : { x: pictureSize.x, y: pictureSize.y };
 };

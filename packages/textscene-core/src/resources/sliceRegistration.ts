@@ -35,7 +35,7 @@ interface ResourceSliceRegistration {
    * Reads this slice's bytes into the ParsedResource its files give on the `resource` bus. A binary
    * slice without it holds Godot's RSRC container.
    */
-  parseBytes?: (bytes: ArrayBuffer) => ParsedResource;
+  parseBytes?: (bytes: ArrayBuffer) => ParsedResource | Promise<ParsedResource>;
   /**
    * Whether a cached value is shared scene-graph state that each consumer must
    * clone (an `Object3D` has one parent). Read by `useResource` per bus.

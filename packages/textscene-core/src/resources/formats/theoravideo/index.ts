@@ -11,6 +11,7 @@ registerResourceSlice({
   slice: 'theoravideo',
   kind: 'foreign-format',
   typeNames: [],
+  // The one extension Godot's Theora loader recognises (`video_stream_theora.cpp:792-823`).
   extensions: ['.ogv'],
   parseBytes: parseTheoraVideo,
   binaryBytes: true,
