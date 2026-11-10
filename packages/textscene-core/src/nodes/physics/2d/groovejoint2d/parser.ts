@@ -1,8 +1,9 @@
-/** GrooveJoint2D parser: the spring joint's parse, and the `initial_offset` its marker draws. */
+/** GrooveJoint2D parser: the Node2D parse, and the `length` and `initial_offset` its marker draws. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { floatOr } from '../../../../parser/valueParsers';
-import { parseDampedSpringJoint2D } from '../dampedspringjoint2d/parser';
+import { parseNode2D } from '../../../base/node2d/parser';
+import { parseJointLength } from '../shared/jointLength';
 import type { GrooveJoint2DProperties } from './types';
 
 export function parseGrooveJoint2D(
@@ -10,7 +11,8 @@ export function parseGrooveJoint2D(
   properties: Record<string, string>
 ): GrooveJoint2DProperties {
   return {
-    ...parseDampedSpringJoint2D(heading, properties),
+    ...parseNode2D(heading, properties),
+    length: parseJointLength(properties.length),
     initial_offset: floatOr(properties.initial_offset, 25),
   };
 }
