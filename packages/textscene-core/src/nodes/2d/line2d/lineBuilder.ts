@@ -100,8 +100,20 @@ function toPoints(flat: Float32Array): Vector2[] {
  * and measured on 4.6.3 its closing quad draws nothing.
  */
 interface FirstJoint {
-  pair: { up: Vector2; down: Vector2 } | null;
+  pair: EdgePair | null;
   isSharp: boolean;
+}
+
+/** The two edge points of the stroke across one point of the line. */
+interface EdgePair {
+  up: Vector2;
+  down: Vector2;
+}
+
+/** `pair` scaled by `weight` about its midpoint, as Godot's `first_pos_center.lerp(...)` does. */
+function scaledAboutMidpoint({ up, down }: EdgePair, weight: number): EdgePair {
+  const center = vector2Lerp(up, down, 0.5);
+  return { up: vector2Lerp(center, up, weight), down: vector2Lerp(center, down, weight) };
 }
 
 /** One pass of `LineBuilder::build` along a line, with the state it carries from point to point. */
@@ -304,18 +316,12 @@ class StrokeWalk {
   private firstJointOf(joint: Joint): FirstJoint {
     const isSharp = joint.jointMode === LineJointMode.SHARP;
     if (this.widthFactor === 0) return { pair: null, isSharp };
-    const center = vector2Scaled(vector2Add(joint.up1, joint.down1), 0.5);
-    const weight = f(1 / this.widthFactor);
-    return {
-      pair: { up: vector2Lerp(center, joint.up1, weight), down: vector2Lerp(center, joint.down1, weight) },
-      isSharp,
-    };
+    const pair = scaledAboutMidpoint({ up: joint.up1, down: joint.down1 }, f(1 / this.widthFactor));
+    return { pair, isSharp };
   }
 
-  private addClosingQuad(first: { up: Vector2; down: Vector2 }, color: Rgba | null): void {
-    const center = vector2Scaled(vector2Add(first.up, first.down), 0.5);
-    const up = vector2Lerp(center, first.up, this.widthFactor);
-    const down = vector2Lerp(center, first.down, this.widthFactor);
+  private addClosingQuad(first: EdgePair, color: Rgba | null): void {
+    const { up, down } = scaledAboutMidpoint(first, this.widthFactor);
     stripAddQuad(this.strip, up, down, color, this.uvx);
   }
 
