@@ -86,5 +86,6 @@ import './formats/glb/index.js';
 import './formats/image/index.js';
 import './formats/image3d/index.js';
 import './formats/image2darray/index.js';
+import './formats/theoravideo/index.js';
 import './formats/packedscene/index.js';
 import './formats/dynamicfont/index.js';

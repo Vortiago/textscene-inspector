@@ -300,7 +300,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [Tree](../../packages/textscene-core/src/nodes/2d/ui/tree/comparison.md): an empty panel, with a blank header row when column_titles_visible
 - [VBoxContainer](../../packages/textscene-core/src/nodes/2d/ui/vboxcontainer/comparison.md): children laid out down a column
 - [VFlowContainer](../../packages/textscene-core/src/nodes/2d/ui/vflowcontainer/comparison.md): children flowed down a column, wrapping to a new column
-- [VideoStreamPlayer](../../packages/textscene-core/src/nodes/2d/ui/videostreamplayer/comparison.md): nothing (no decoded frame ever reaches it)
+- [VideoStreamPlayer](../../packages/textscene-core/src/nodes/2d/ui/videostreamplayer/comparison.md): a transparent rect at the Ogg Theora picture size, as in the Godot editor
 - [VisibleOnScreenEnabler2D](../../packages/textscene-core/src/nodes/2d/visibleonscreenenabler2d/comparison.md): nothing (a transform-only group)
 - [VisibleOnScreenNotifier2D](../../packages/textscene-core/src/nodes/2d/visibleonscreennotifier2d/comparison.md): nothing (a transform-only group)
 - [VScrollBar](../../packages/textscene-core/src/nodes/2d/ui/vscrollbar/comparison.md): a vertical track with a rectangular grabber

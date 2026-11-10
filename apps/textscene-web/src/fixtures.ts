@@ -2588,6 +2588,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Video Stream Player Picture Size",
+    "file": "unit-video-stream-player-picture-size.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Video Stream Player",
     "file": "unit-video-stream-player.tscn",
     "category": "Other"
