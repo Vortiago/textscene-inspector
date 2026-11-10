@@ -101,7 +101,7 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
         const state = resolveTabDrawState(tab, i, currentTab);
         const iconNatural = tabIconNaturalSize(solveNode, i);
         const iconSize = iconNatural ? fitTabIconSize(iconNatural, iconMaxWidth) : null;
-        const layout = shapeTabLabel(tab.title, fontSizePx, fontMetrics);
+        const layout = shapeTabLabel(tab.title, solveNode, { fontSizePx, fontMetrics });
         return { tab, state, iconSize, layout };
       }),
     [tabs, currentTab, iconMaxWidth, fontSizePx, fontMetrics, solveNode]

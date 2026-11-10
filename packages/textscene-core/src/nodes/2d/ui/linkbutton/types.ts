@@ -1,6 +1,12 @@
 import type { ControlProperties } from '../control/types';
+import type {
+  StructuredTextOverrideProperties,
+  TextDirectionProperties,
+} from '../../../../godot/text/paragraphDirection';
 
-export interface LinkButtonProperties extends ControlProperties {
+/** The label shapes in `text_direction`, `language`, else the locale, and the structured override (`link_button.cpp:41-47`). */
+export interface LinkButtonProperties
+  extends ControlProperties, TextDirectionProperties, StructuredTextOverrideProperties {
   /** The link's own label text. */
   text?: string;
   /** Never navigated, parsed for completeness only. */

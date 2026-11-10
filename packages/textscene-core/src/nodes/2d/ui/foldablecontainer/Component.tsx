@@ -12,7 +12,7 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { overrunFlagsForBehavior, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
@@ -23,6 +23,7 @@ import {
   foldableContainerHSeparation,
   foldableContainerTitleShape,
   FOLDABLE_CONTAINER_ARROW_THEME_NAME,
+  FOLDABLE_CONTAINER_DEFAULT_OUTLINE_COLOR,
   type FoldableContainerArrow,
 } from './nativeSolver';
 import { FOLDABLE_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
@@ -64,6 +65,7 @@ export function FoldableContainer({
     ARROW_ICON_URL[title.arrow]
   );
   const tintedFontColor = useMemo(() => tintColor(title.color, tint.own), [title.color, tint.own]);
+  const textOutline = useTintedTextOutline(solveNode, tint.own, FOLDABLE_CONTAINER_DEFAULT_OUTLINE_COLOR);
   const arrowSize = title.arrowSize;
   const hSeparation = foldableContainerHSeparation(theme);
 
@@ -104,8 +106,9 @@ export function FoldableContainer({
     return trimSoloLine(title.layout, overrunFlags, Math.max(1, titleTextWidth), {
       fontMetrics: title.layout.fontMetrics,
       fontSizePx: title.fontSizePx,
+      isDrawnRtl: title.isDrawnRtl,
     });
-  }, [title.layout, overrunFlags, titleTextWidth, title.fontSizePx]);
+  }, [title.layout, overrunFlags, titleTextWidth, title.fontSizePx, title.isDrawnRtl]);
 
   // `TextLine::set_horizontal_alignment(_get_actual_alignment())` shifts the
   // drawn glyphs within `title_text_width` (`foldable_container.cpp:497,313`).
@@ -160,10 +163,11 @@ export function FoldableContainer({
       </CanvasItemGroup>
       {trimmedLayout && titleTextWidth > 0 && (
         <CanvasItemGroup position={[titleRect.x + textPos.x, -(titleRect.y + textPos.y), 0]}>
-          <TextRun
+          <OutlinedTextRun
             layout={trimmedLayout}
             fontSizePx={title.fontSizePx}
             tint={tintedFontColor}
+            outline={textOutline}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />

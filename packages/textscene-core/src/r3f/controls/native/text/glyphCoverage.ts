@@ -1,0 +1,117 @@
+/**
+ * A glyph drawn as Godot draws it: FreeType's coverage bitmap of the outline, or of its stroked ring,
+ * laid on a raster at the glyph's place. A canvas fill or stroke of the same outline misses
+ * FreeType's coverage by up to 27 levels, which this matches to the level.
+ */
+import { glyphBitmapGrid, rasteriseGlyph, type BitmapGrid } from './ftGrays';
+import { strokeGlyphContours } from './ftStroker';
+import { FIXED_26_6_ONE } from './fontMetrics';
+import { toOutlineUnits, type GlyphContours } from './glyphContours';
+import { perObject } from '../../../../utils/perObject';
+import { recentlyRead } from '../../../../utils/recentlyRead';
+
+/** A coverage bitmap and the grid it covers, in px from the glyph origin or, once placed, in raster px. */
+export interface GlyphBitmap {
+  grid: BitmapGrid;
+  coverage: Uint8Array;
+}
+
+/**
+ * The bitmaps one contour keeps. A canvas item's pen takes at most four subpixel steps, while a
+ * Label3D can sit at any 1/64 px, which would keep 4096 bitmaps of each glyph and radius.
+ */
+const MAX_BITMAPS_PER_CONTOUR = 64;
+
+/** The bitmaps drawn most recently of each glyph outline, by subpixel shift and outline radius. */
+const drawnBitmaps = perObject((_contours: GlyphContours) =>
+  recentlyRead<string, GlyphBitmap | null>(MAX_BITMAPS_PER_CONTOUR)
+);
+
+/** `contours` moved by `(dx, dy)` px. */
+function movedContours(contours: GlyphContours, dx: number, dy: number): GlyphContours {
+  if (dx === 0 && dy === 0) return contours;
+  return {
+    ...contours,
+    points: contours.points.map((point) => ({ ...point, x: point.x + dx, y: point.y + dy })),
+  };
+}
+
+/**
+ * The bitmap of `contours` moved by a subpixel shift of `(dx, dy)` px, filled or stroked at
+ * `outlineRadiusPx`. Godot moves the outline before it strokes it (`text_server_adv.cpp:1303-1310`),
+ * which is not the same as a stroke moved after: the stroker truncates each midpoint toward zero.
+ */
+function drawGlyphBitmap(
+  contours: GlyphContours,
+  dx: number,
+  dy: number,
+  outlineRadiusPx: number
+): GlyphBitmap | null {
+  const moved = movedContours(contours, dx, dy);
+  const drawn = outlineRadiusPx > 0 ? strokeGlyphContours(moved, outlineRadiusPx) : moved;
+  const grid = glyphBitmapGrid(drawn);
+  if (!grid || grid.width === 0 || grid.height === 0) return null;
+  return { grid, coverage: rasteriseGlyph(drawn, grid) };
+}
+
+/**
+ * The bitmap of the glyph `contours` at the glyph origin `(originX, originY)` on a raster, filled,
+ * or stroked for an `outlineRadiusPx` above 0. The bitmap lands on whole raster pixels, and the
+ * outline takes the origin's fraction in 1/64 px. Nothing, for a glyph that draws no pixel.
+ */
+export function placedGlyphBitmap(
+  contours: GlyphContours,
+  originX: number,
+  originY: number,
+  outlineRadiusPx: number
+): GlyphBitmap | null {
+  const wholeX = Math.floor(originX);
+  const wholeY = Math.floor(originY);
+  // FreeType moves an outline (`FT_Outline_Translate`) in 1/64 px.
+  const dx = toOutlineUnits(originX - wholeX) / FIXED_26_6_ONE;
+  const dy = toOutlineUnits(originY - wholeY) / FIXED_26_6_ONE;
+  const bitmap = drawnBitmaps(contours)(`${dx},${dy},${outlineRadiusPx}`, () =>
+    drawGlyphBitmap(contours, dx, dy, outlineRadiusPx)
+  );
+  if (!bitmap) return null;
+  const { grid, coverage } = bitmap;
+  return { grid: { ...grid, left: grid.left + wholeX, top: grid.top + wholeY }, coverage };
+}
+
+/** An opaque sRGB colour, each channel 0-255. */
+export type ByteColour = readonly [red: number, green: number, blue: number];
+
+/**
+ * Lays the coverage of `bitmap` over the alpha of `image`, as Godot blends each glyph quad over
+ * what is under it: the alphas combine as `a + c (1 - a)`. A pixel off the image is dropped.
+ */
+export function blendGlyphBitmap(image: ImageData, { grid, coverage }: GlyphBitmap): void {
+  const { data, width, height } = image;
+  const firstRow = Math.max(0, -grid.top);
+  const endRow = Math.min(grid.height, height - grid.top);
+  const firstColumn = Math.max(0, -grid.left);
+  const endColumn = Math.min(grid.width, width - grid.left);
+  for (let row = firstRow; row < endRow; row++) {
+    const y = grid.top + row;
+    for (let column = firstColumn; column < endColumn; column++) {
+      const level = coverage[row * grid.width + column]!;
+      if (level === 0) continue;
+      const at = (y * width + grid.left + column) * 4 + 3;
+      data[at] = Math.round(level + (data[at]! * (255 - level)) / 255);
+    }
+  }
+}
+
+/**
+ * Gives every pixel of `image` the colour `colour` and keeps its alpha, as Godot's glyph texture holds
+ * one colour in every texel and the coverage in alpha (`FORMAT_LA8`, `text_server_adv.cpp:1170-1174`).
+ * A texel with no colour under alpha 0 would darken an edge under a linear filter and in each mip level.
+ */
+export function colourRaster(image: ImageData, colour: ByteColour): void {
+  const { data } = image;
+  for (let at = 0; at < data.length; at += 4) {
+    data[at] = colour[0];
+    data[at + 1] = colour[1];
+    data[at + 2] = colour[2];
+  }
+}

@@ -1,6 +1,7 @@
 /** CSGMesh3D's brush for a TextMesh: it builds from the font once the font file and its metrics have loaded. */
 
 import { describe, expect, it, vi } from 'vitest';
+import { fontFile, systemFont } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { parseTresFile, type ParsedResource } from '../../../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../../../parser/types';
 import type { CsgGeometryContext } from '../../../../r3f/csg/csgRegistration';
@@ -8,11 +9,7 @@ import { enclosedVolume } from '../../../../r3f/csg/testing/brushVolume';
 import { csgGeometryContext } from '../../../../r3f/csg/testing/csgGeometryContext';
 import type { FontFileResource } from '../../../../resources/fonts/font/types';
 import { distinctAttributePositions } from '../../../../resources/meshes/textmesh/distinctPositions.testkit';
-import {
-  FONT_PATH,
-  systemFontResource,
-  trueTypeFontFile,
-} from '../../../../resources/meshes/textmesh/textMeshFont.testkit';
+import { FONT_PATH, trueTypeFontFile } from '../../../../resources/meshes/textmesh/textMeshFont.testkit';
 import {
   csgMesh3DAwaitsFont,
   csgMesh3DGeometry,
@@ -116,10 +113,20 @@ describe('csgMesh3DUndrawnMeshType for a TextMesh', () => {
     const ctx = csgGeometryContext({
       internalResources: [TEXT],
       externalResources: [FONT_REFERENCE],
-      fonts: { [FONT_PATH]: systemFontResource() },
+      fonts: { [FONT_PATH]: fontFile(undefined) },
     });
 
     expect(csgMesh3DUndrawnMeshType(PROPERTIES, ctx)).toBe('TextMesh');
+  });
+
+  it('names no type for a mesh with a SystemFont, which draws the default font', () => {
+    const ctx = csgGeometryContext({
+      internalResources: [TEXT],
+      externalResources: [FONT_REFERENCE],
+      fonts: { [FONT_PATH]: systemFont() },
+    });
+
+    expect(csgMesh3DUndrawnMeshType(PROPERTIES, ctx)).toBeNull();
   });
 
   it('names no type for a mesh whose font is ready', async () => {

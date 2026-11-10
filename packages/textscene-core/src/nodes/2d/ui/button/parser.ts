@@ -2,12 +2,16 @@
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
+import { parseTextDirectionProperties } from '../../../../parser/textDirectionParser';
 import type { ButtonProperties } from './types';
 import { parseControl } from '../control/parser';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
 export function parseButton(heading: ParsedHeading, properties: Record<string, string>): ButtonProperties {
-  const result: ButtonProperties = { ...parseControl(heading, properties) };
+  const result: ButtonProperties = {
+    ...parseControl(heading, properties),
+    ...parseTextDirectionProperties(properties, heading.attributes.type ?? 'Button'),
+  };
   if (properties.text !== undefined) result.text = unquoteString(properties.text);
   result.disabled = boolSlotValue(properties.disabled) === true;
   result.flat = boolSlotValue(properties.flat) === true;

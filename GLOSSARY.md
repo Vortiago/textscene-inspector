@@ -146,6 +146,26 @@ _Avoid_: "config file" for a `.tscn`. A general settings store.
 The font that the **Project settings** name in `gui/theme/custom_font`. A font lookup that no theme answers ends at it, before the bundled Open Sans. A path that does not load keeps the bundled font and is a **Missing resource**.
 _Avoid_: "custom font", which a node's `theme_override_fonts` also is. "fallback font" for the bundled one.
 
+**BMFont**:
+A bitmap font a `FontFile` loads from an AngelCode `.fnt` or `.font` descriptor and the page images it names. Each glyph is a rectangle of a page, drawn at the font's fixed size and scaled to the requested size by its scale mode.
+_Avoid_: "sprite font", "pixel font".
+
+**Fallback chain** (`fallbackChain` in `r3f/controls/native/text/sceneFontResolution.ts`):
+The faces a font tries for each glyph, in order: its own face, then each of its `fallbacks` and theirs, depth first (`Font::_update_rids`). The shaper draws a character from the first face that has it. A character no face has stays in the first face.
+_Avoid_: "fallback font" for the bundled Open Sans, which is the **Project default font**'s last resort.
+
+**Cluster** (`GlyphPlacement.char` and `sourceIndex` in `r3f/controls/native/text/textLayout.ts`):
+The characters of a run that draw as one unit: a base and the marks typed after it, or the characters of a **Shaped glyph**. The layout places each cluster once, with the cluster's text as its `char`. A line break and a reveal step fall only at the edge of a cluster, as Godot's glyph `start` and `end` set them.
+_Avoid_: "grapheme", which Unicode segments by other rules.
+
+**Shaped glyph** (`SubstitutedCluster` in `r3f/controls/native/text/glyphRun.ts`):
+A glyph the `GSUB` lookups of a run give a **Cluster** in place of the `cmap` glyph of each character: a ligature, or a glyph a contextual lookup swaps by its neighbours. Godot shapes each span's run whole (`text_server_adv.cpp:7401`), so a lookup reads every character of the run. The cluster takes the glyph's own advance and draws by its glyph id.
+_Avoid_: "ligature" for a swap of one character, which joins nothing.
+
+**Decomposed glyph** (`DecomposedGlyph` in `r3f/controls/native/text/sfntDecomposition.ts`):
+A **Cluster** that HarfBuzz's normalisation draws as other characters of the face: a character the face lacks splits into a base and marks by its canonical decomposition, the marks sort by combining class, and a typed base and mark join into the composite the face has (`canonicalGlyphs.ts`). Each mark sits at the offset of the face's `GPOS` mark lookups (`markPositioning.ts`), or against the ink of the base where the face has no `GPOS` script (`fallbackMarkPositioning.ts`). The face then counts as having the character, so its cluster stays in the face and out of the **Fallback chain**.
+_Avoid_: "composed glyph", which names one step of it.
+
 **Project fonts** (`resources/fonts/font/projectFonts.ts`):
 The two files the **Project settings** name for every font lookup: the project theme (`gui/theme/custom`) and the **Project default font**. The Control solve tree, TextMesh and Label3D each resolve them from one source.
 _Avoid_: "theme context", which Godot's `ThemeContext` also names.
@@ -153,6 +173,34 @@ _Avoid_: "theme context", which Godot's `ThemeContext` also names.
 **Style face** (`nodes/2d/ui/richtextlabel/styleFaces.ts`):
 The font a RichTextLabel draws a `[b]`, `[i]` or `[b][i]` span in: the theme's `bold_font`, `italics_font` or `bold_italics_font`. Where no theme sets the key, it is a `FontVariation` over the **Project default font** with embolden 1.2, skew 0.2, or both.
 _Avoid_: "synthetic bold" for a face a theme sets.
+
+**Glyph hinting** (`r3f/controls/native/text/sfntOutlines.ts`):
+How a glyph's outline is fitted to the pixel grid at its font size before TextMesh tessellates it, as FreeType does when Godot loads it. A TrueType font with its own hinting programs runs them, a CFF font uses its charstring hints, and any other TrueType font goes through the **Auto-hinter**.
+_Avoid_: "font smoothing" or "antialiasing", which act on the rasterised glyph.
+
+**Auto-hinter** (`r3f/controls/native/text/autofit/`):
+FreeType's hinter that finds a glyph's stems and blue zones from the outline alone, per script. It takes a TrueType font with no font program and a control value program of at most 7 bytes, and any font that is not tricky when its `FontFile` sets `force_autohinter`.
+_Avoid_: "autohint" as a verb for the native TrueType hinter.
+
+**Text paragraph** (`TextLineLayout.paragraphIndex` in `r3f/controls/native/text/textLayout.ts`):
+The text up to a separator, which Godot shapes as its own `TextParagraph`: a `\n` ends one in a Label (`paragraph_separator`) and in a RichTextLabel. Autowrap splits a paragraph into lines, and `justification_flags` count their lines inside the paragraph, so each fits or skips its own last line (`justifyParagraphs`).
+_Avoid_: "line" for it, and a count of lines over the whole text.
+
+**Paragraph inset** (`TextLineLayout.indentPx` in `r3f/controls/native/text/textLayout.ts`, set by `nodes/2d/ui/richtextlabel/listing.ts`):
+How far a RichTextLabel paragraph sits from the edge its text starts at: the margin of every `[indent]`, `[ul]` and `[ol]` around it, plus the width of its list's widest **List marker**. The paragraph wraps and aligns in the width left of it (`l.indent`).
+_Avoid_: "indent" for the sum, which names the tag and its margin alone.
+
+**List marker** (`ListMarker` in `nodes/2d/ui/richtextlabel/listing.ts`):
+The bullet or number a `[ul]` or `[ol]` item draws before its first line (`text_prefix`). It is shaped in the item's font, drawn at the line's top and right-aligned against the text, and an empty item draws one too.
+_Avoid_: "prefix", which is the engine's name for the marker's text.
+
+**Text buffer** (`trimTextBufferLineToWidth` in `r3f/controls/native/text/textOverrun.ts`):
+A Control's own `TextLine` or `TextParagraph`, its `text_buf`, which Button, LinkButton, the FoldableContainer title and each ItemList item draw. Its fill draws in the set direction (`shaped_text_draw`) and its outline in the **inferred direction** (`shaped_text_draw_outline`), so a trimmed AUTO line that resolves right-to-left draws a different glyph set in each. Label draws its own lines in the inferred direction for both.
+_Avoid_: "text line" for it, which names one shaped line.
+
+**Inferred direction** (`TextLineLayout.isRtl`):
+The direction the text server resolves for a paragraph, `shaped_text_get_inferred_direction`: the set direction, or for AUTO the direction of the first strong character. The overrun trim always cuts by it (`text_server_adv.cpp:6053`).
+_Avoid_: "set direction" for it, which is the `text_direction` a Control passes.
 
 **Asset re-import**:
 What the previewer does in place of Godot's import pipeline: it loads the source asset (`.gltf`, `.glb`, `.obj`) and re-derives the scene from it.
@@ -375,6 +423,11 @@ _Avoid_: "UI renderer", "ControlDispatcher".
 The two-phase pass that computes every Control's `Rect2` before anything paints: minimum sizes bottom-up, then placement top-down.
 It is a line-by-line port of Godot 4.6.3's `scene/gui/control.cpp` (ADR-0037).
 _Avoid_: "layout solve".
+
+**Label effect layer** (`nodes/2d/ui/label/effectLayers.ts`):
+One shadow, stacked shadow, stacked outline or outline that a Label draws behind its fill, in Godot's order.
+A ring layer strokes the glyph contour. A plain layer draws the glyphs at an offset.
+_Avoid_: "effect pass", "decoration".
 
 **Painter view** (`r3f/controls/native/solveTree.ts`'s `painterView`/`PainterView`):
 The node properties a native Control painter may see: all except `modulate` and `selfModulate`, which **ControlCanvasWalker** has already applied.

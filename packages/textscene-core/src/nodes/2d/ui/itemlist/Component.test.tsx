@@ -242,6 +242,7 @@ describe('<ItemList> — RTL', () => {
       fontSizePx: nativeTheme(1).fontSize,
       fontMetrics: resolveNodeFontMetrics(node, ITEM_LIST_THEME_FONT_KEY),
       iconMode: ICON_MODE_LEFT,
+      locale: '',
       maxTextLines: 1,
       widthPx: 100,
     })!;

@@ -28,6 +28,7 @@ import {
   projectAnisotropicFilteringLevel,
   projectDecalFilter,
   projectDefaultFontGeneratesMipmaps,
+  projectDefaultFontHinting,
   projectTextureMipmapBias,
   projectViewportSize,
   projectVolumetricFogSettings,
@@ -35,6 +36,7 @@ import {
   projectPhysicsClock,
 } from './projectSettingsParser';
 import { DEFAULT_PHYSICS_CLOCK } from '../godot/scene/physicsTicks';
+import { Hinting } from '../godot/text/textServerEnums';
 import { VOLUMETRIC_FOG_DEFAULTS } from '../godot/rendering/environment/volumetricFog';
 import {
   SSAO_PROJECT_DEFAULTS,
@@ -463,6 +465,7 @@ describe('projectLayoutDirectionEnv', () => {
       rootRtl: false,
       applicationLocaleRtl: false,
       systemLocaleRtl: false,
+      applicationLocale: '',
     });
   });
 
@@ -507,6 +510,19 @@ describe('projectLayoutDirectionEnv', () => {
         'internationalization/rendering/root_node_layout_direction': '3',
       }).rootRtl
     ).toBe(false);
+  });
+
+  it('keeps the trimmed test locale, which Label shapes its casing and neutral text with', () => {
+    expect(
+      projectLayoutDirectionEnv({ 'internationalization/locale/test': ' tr_TR ' }).applicationLocale
+    ).toBe('tr_TR');
+  });
+
+  it('standardises the test locale as `set_locale` does, so a hyphenated locale matches a numeral system', () => {
+    // `String new_locale = standardize_locale(p_locale);` (`translation_server.cpp:482`).
+    expect(projectLayoutDirectionEnv({ 'internationalization/locale/test': 'ar-EG' }).applicationLocale).toBe(
+      'ar_EG'
+    );
   });
 
   it('leaves the system-locale answer false — the host locale is not in the scene', () => {
@@ -755,6 +771,19 @@ describe('projectDecalFilter', () => {
 
   it.each(['6', '-1', '99'])('keeps the default for filter %s, which the enum does not name', (filter) => {
     expect(projectDecalFilter({ [KEY]: filter })).toBe(3);
+  });
+});
+
+describe('projectDefaultFontHinting', () => {
+  it('reads the hinting a project.godot line names', () => {
+    const settings = parseProjectSettings('[gui]\n\ntheme/default_font_hinting=2\n');
+
+    expect(projectDefaultFontHinting(settings)).toBe(Hinting.NORMAL);
+  });
+
+  it("is light with no project or no key, Godot's default (text_server.cpp:2383)", () => {
+    expect(projectDefaultFontHinting(null)).toBe(Hinting.LIGHT);
+    expect(projectDefaultFontHinting({ 'gui/other': '0' })).toBe(Hinting.LIGHT);
   });
 });
 

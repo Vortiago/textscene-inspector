@@ -15,11 +15,8 @@ import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/control
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import {
-  HAIRLINE_THICKNESS_PX,
-  HAIRLINE_CENTRE_OFFSET_PX,
-  ControlQuad,
-} from '../../../../r3f/controls/native/controlQuad';
+import { HAIRLINE_THICKNESS_PX, hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
+import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -128,8 +125,8 @@ function GridLineQuad({
   const { color, opacity } = line.major ? majorColor : minorColor;
   const width = line.axis === 'vertical' ? HAIRLINE_THICKNESS_PX : rect.w;
   const height = line.axis === 'vertical' ? rect.h : HAIRLINE_THICKNESS_PX;
-  const x = line.axis === 'vertical' ? line.at - HAIRLINE_CENTRE_OFFSET_PX : 0;
-  const y = line.axis === 'vertical' ? 0 : line.at - HAIRLINE_CENTRE_OFFSET_PX;
+  const x = line.axis === 'vertical' ? hairlineQuadStartPx(line.at) : 0;
+  const y = line.axis === 'vertical' ? 0 : hairlineQuadStartPx(line.at);
   return (
     <CanvasItemGroup position={[x, -y, 0]}>
       <ControlQuad width={width} height={height} color={color} opacity={opacity} renderOrder={renderOrder} />
@@ -240,7 +237,7 @@ export function GraphEdit({
   const shape = (text: string): TextLayoutResult => {
     let layout = layoutCache.get(text);
     if (!layout) {
-      layout = shapeButtonLabel(text, theme.fontSize, fontMetrics);
+      layout = shapeButtonLabel(text, { fontSizePx: theme.fontSize, fontMetrics });
       layoutCache.set(text, layout);
     }
     return layout;

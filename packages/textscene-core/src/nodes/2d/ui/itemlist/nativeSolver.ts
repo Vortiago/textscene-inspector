@@ -30,7 +30,7 @@ import {
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   overrunFlagsForBehavior,
-  trimLineToWidth,
+  trimTextBufferLineToWidth,
   type OverrunTrimFlags,
 } from '../../../../r3f/controls/native/text/textOverrun';
 import {
@@ -45,7 +45,8 @@ import type { ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_LOWER_COLOR } from '../../../../godot/scene/theme';
-import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { AutowrapMode, OverrunBehavior, TextDirection } from '../../../../godot/text/textServerEnums';
+import { isDrawnRtl, textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 import { ItemListIconMode } from '../../../../godot/scene/gui';
 
@@ -227,6 +228,12 @@ export function itemListMinimumShapeWidthPx(fixedColumnWidth: number): number {
   return fixedColumnWidth > 0 ? fixedColumnWidth : 0;
 }
 
+/** An item's own `text_direction` and `language` (`item_list.h:73-74`), which no scene changes. */
+const ITEM_BIDI = { textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: '' };
+
+/** An AUTO item draws its fill left to right, whatever direction its text infers. */
+const IS_ITEM_DRAWN_RTL = isDrawnRtl(textBidiOptions(ITEM_BIDI, ''));
+
 interface ItemTextShapeInput {
   text: string;
   fontSizePx: number;
@@ -235,6 +242,8 @@ interface ItemTextShapeInput {
   maxTextLines: number;
   /** The `set_width()` argument. `<= 0` is unconstrained: no wrap and no trim. */
   widthPx: number;
+  /** The control's `_get_locale()`, which an item's empty `language` takes (`item_list.cpp:45`). */
+  locale: string;
   /** `TextServer::OverrunBehavior`. Godot default 3 (OVERRUN_TRIM_ELLIPSIS, `item_list.h:131`). */
   overrunBehavior?: number;
 }
@@ -249,6 +258,7 @@ export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult |
   if (input.text.length === 0) return null;
   const wrapped = isItemListTextWrapped(input.iconMode, input.maxTextLines);
   const layout = shapeText(input.text, {
+    ...textBidiOptions(ITEM_BIDI, input.locale),
     fontSizePx: input.fontSizePx,
     boxWidthPx: input.widthPx,
     autowrapMode: itemListAutowrapMode(input.iconMode, input.maxTextLines),
@@ -262,9 +272,10 @@ export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult |
   // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to the vendored atlas font
   // when the caller passes none, and the trim must agree with the metrics that shaped these glyphs.
   const trim = (line: TextLineLayout, flags: OverrunTrimFlags) =>
-    trimLineToWidth(line, input.widthPx, flags, {
+    trimTextBufferLineToWidth(line, input.widthPx, flags, {
       fontMetrics: layout.fontMetrics,
       fontSizePx: input.fontSizePx,
+      isDrawnRtl: IS_ITEM_DRAWN_RTL,
     });
 
   const lines = wrapped
@@ -568,6 +579,7 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
             maxTextLines,
             widthPx: itemListMinimumShapeWidthPx(fixedColumnWidth),
             overrunBehavior: props.textOverrunBehavior,
+            locale: n.locale,
           })
         : null;
     const textSize = layout
@@ -664,19 +676,19 @@ export function itemIconDraw(
 
 /**
  * `item_list.cpp:1606-1691`'s LTR pen origin, before the RTL branches
- * (`itemListRowTextX`/`itemListMirrorX`) move it. TOP mode centres
- * (`HORIZONTAL_ALIGNMENT_CENTER`); LEFT mode is a single line, aligned LEFT
- * under LTR and RIGHT under RTL (`:1668,1670`).
+ * (`itemListRowTextX`/`itemListMirrorX`) move it. Wrapped text (`isItemListTextWrapped`) centres
+ * (`HORIZONTAL_ALIGNMENT_CENTER`). A single line is aligned LEFT under LTR and RIGHT under RTL
+ * (`:1668,1670`).
  */
 export function itemTextDrawOffset(
-  iconMode: number,
+  isWrapped: boolean,
   iconOffset: Vector2,
   itemRectSize: Vector2,
   textLineHeightTotal: number,
   hSeparation: number,
   vSeparation: number
 ): Vector2 {
-  if (iconMode === ICON_MODE_TOP) {
+  if (isWrapped) {
     return {
       x: iconOffset.x + Math.max(hSeparation, 0) / 2,
       y: iconOffset.y + Math.max(vSeparation, 0) / 2,
@@ -711,7 +723,10 @@ export function itemListGuideColor(n: Pick<SolveNode, 'colors'>): Rgba {
 }
 
 interface ItemListGuideLine {
-  /** Content-relative Y: the caller adds the panel's own offset (`origin`, `item_list.cpp:1429`). */
+  /**
+   * Content-relative top of the hairline quad: the caller adds the panel's own offset (`origin`,
+   * `item_list.cpp:1429`).
+   */
   y: number;
   /** From the panel's left content edge: the vertical bar's width under RTL, else 0 (`item_list.cpp:1454-1457`). */
   x: number;

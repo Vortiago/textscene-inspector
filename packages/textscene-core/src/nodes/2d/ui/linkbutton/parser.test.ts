@@ -48,4 +48,25 @@ describe('parseLinkButton', () => {
     const p = parseLinkButton(h({ name: 'Link', type: 'LinkButton' }), {});
     expect(p.ellipsisChar).toBeUndefined();
   });
+
+  it('defaults the direction, language and structured override (link_button.h)', () => {
+    const p = parseLinkButton(h({ name: 'Link', type: 'LinkButton' }), {});
+    expect(p.textDirection).toBe(0);
+    expect(p.language).toBe('');
+    expect(p.structuredTextBidiOverride).toBe(0);
+    expect(p.structuredTextBidiOverrideOptions).toEqual([]);
+  });
+
+  it('reads the direction, language and structured override', () => {
+    const p = parseLinkButton(h({ name: 'Link', type: 'LinkButton' }), {
+      text_direction: '2',
+      language: '"he"',
+      structured_text_bidi_override: '4',
+      structured_text_bidi_override_options: '[","]',
+    });
+    expect(p.textDirection).toBe(2);
+    expect(p.language).toBe('he');
+    expect(p.structuredTextBidiOverride).toBe(4);
+    expect(p.structuredTextBidiOverrideOptions).toEqual([',']);
+  });
 });

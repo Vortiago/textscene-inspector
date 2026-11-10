@@ -1,6 +1,12 @@
 import type { ControlProperties } from '../control/types';
+import type {
+  StructuredTextOverrideProperties,
+  TextDirectionProperties,
+} from '../../../../godot/text/paragraphDirection';
 
-export interface RichTextLabelProperties extends ControlProperties {
+/** The `text_direction`, `language` and override are the defaults a `[p]` tag overrides per paragraph. */
+export interface RichTextLabelProperties
+  extends ControlProperties, TextDirectionProperties, StructuredTextOverrideProperties {
   /** Raw text, which may contain BBCode tags when bbcodeEnabled is true. */
   text?: string;
   /** When true, BBCode tags in `text` are interpreted rather than shown literally. */
@@ -28,4 +34,22 @@ export interface RichTextLabelProperties extends ControlProperties {
   tabSize?: number;
   /** `TextServer::LineBreakFlag`'s BREAK_TRIM_* subset. Undefined means Godot's default (`rich_text_label.h:558`, Label's pair), `shapeText`'s default. */
   autowrapTrimFlags?: number;
+  /** `TextServer::JustificationFlag` bit mask, stored as authored (`rich_text_label.cpp:7276-7289`). Default 163 (`rich_text_label.h:582`). */
+  justificationFlags: number;
+  /** While true, the control's own rect clips its drawing. RichTextLabel's constructor sets it (`rich_text_label.cpp:8225`), unlike Control. */
+  clipContents: boolean;
+  /** While true, text taller than the rect shows the vertical scrollbar and wraps beside it (`rich_text_label.h:565`). */
+  scrollActive: boolean;
+  /** While true, text taller than the rect shows its foot: the scroll value follows the text height (`rich_text_label.h:561`). */
+  scrollFollowing: boolean;
+  /** `visible_characters`, derived with `visible_ratio` in file order (`rich_text_label.cpp:7401-7430,7892-7948`). Godot's default is -1, every character (`rich_text_label.h:553`). Unset means the default. */
+  visibleCharacters?: number;
+  /** `visible_ratio`, derived with `visible_characters`. It budgets the glyph behaviours (`rich_text_label.cpp:947`). Default 1. */
+  visibleRatio?: number;
+  /** Set when `visible_ratio` was written last, so the render derives `visible_characters` from the characters it draws: an `[img]` counts only once its texture loads (`rich_text_label.cpp:4210`). */
+  visibleRatioDrives?: true;
+  /** `TextServer::VisibleCharactersBehavior`. Unset means VC_CHARS_BEFORE_SHAPING, Godot's default (`rich_text_label.h:554`). */
+  visibleCharactersBehavior?: number;
+  /** While true, `scroll_active` keeps the bar showing and the text scrolled to `_update_follow_vc`'s position (`rich_text_label.cpp:2659-2667,5209-5221`). */
+  scrollFollowingVisibleCharacters: boolean;
 }

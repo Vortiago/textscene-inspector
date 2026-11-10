@@ -1,7 +1,7 @@
 /**
  * `<SpinBox>`: the native painter for `SpinBox::_notification(NOTIFICATION_DRAW)`
  * (`scene/gui/spin_box.cpp:429-500`) without hover, pressed or drag state: the field's LineEdit
- * chrome, one clipped run of text and the stepper arrows. `ControlCanvasWalker` owns `visible`,
+ * chrome, the glyphs of the text that end inside `ofs_max` and the stepper arrows. `ControlCanvasWalker` owns `visible`,
  * children and the transform.
  */
 import { useMemo } from 'react';
@@ -11,14 +11,15 @@ import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { shapeText, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import {
   pickLineEditStyleBox,
   resolveLineEditStyleState,
   layoutLineEditContent,
+  lineEditDrawnLayout,
 } from '../lineedit/nativeSolver';
 import { resolveRangeValue } from '../shared/range';
 import { SPIN_BOX_ICONS } from './icons';
@@ -26,6 +27,7 @@ import {
   spinBoxArrowPosition,
   spinBoxLayout,
   spinBoxDisplayText,
+  shapeSpinBoxFieldText,
   spinBoxFieldTextTheme,
   spinBoxUpButtonState,
   spinBoxDownButtonState,
@@ -35,7 +37,6 @@ import {
 } from './nativeSolver';
 import type { SpinBoxProperties } from './types';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
@@ -53,7 +54,7 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
 
   const orderedKeys = controlLayoutOrder(solveNode);
   const resolvedValue = resolveRangeValue(props, orderedKeys);
-  const text = spinBoxDisplayText(props, resolvedValue);
+  const text = spinBoxDisplayText(props, resolvedValue, solveNode.locale);
 
   const {
     fontSizePx,
@@ -65,15 +66,8 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
   const textLayout: TextLayoutResult = useMemo(
-    () =>
-      shapeText(text, {
-        fontSizePx,
-        boxWidthPx: 0,
-        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-        lineSpacingPx: 0,
-        fontMetrics,
-      }),
-    [text, fontSizePx, fontMetrics]
+    () => shapeSpinBoxFieldText(text, { fontSizePx, fontMetrics }, solveNode.locale),
+    [text, fontSizePx, fontMetrics, solveNode.locale]
   );
 
   const content = useMemo(
@@ -96,13 +90,12 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
     ]
   );
 
-  // `content` is field-local, and the field sits at the control origin only in LTR
-  // (`spinBoxLayout`).
-  const clipRect = useMemo(
-    () => ({ ...content.contentRect, x: content.contentRect.x + layout.fieldRect.x }),
-    [content.contentRect, layout.fieldRect.x]
+  // The field's LineEdit draws no clip: it drops each glyph that ends past `ofs_max` (`line_edit.cpp:1512-1545`).
+  const clippingPlanes = useControlClipPlanes();
+  const drawnLayout: TextLayoutResult = useMemo(
+    () => lineEditDrawnLayout(textLayout, content.textOffset.x, content.ofsMaxPx),
+    [textLayout, content.textOffset.x, content.ofsMaxPx]
   );
-  const { anchorRef, clippingPlanes } = useWorldClipPlanes(clipRect);
 
   const upState = spinBoxUpButtonState(props, resolvedValue);
   const downState = spinBoxDownButtonState(props, resolvedValue);
@@ -133,7 +126,7 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   const fieldSeparatorBox = solveNode.styleBoxes['field_and_buttons_separator'];
 
   return (
-    <CanvasItemGroup ref={anchorRef}>
+    <CanvasItemGroup>
       <CanvasItemGroup position={[layout.fieldRect.x, -layout.fieldRect.y, 0]}>
         <StyleBoxQuad
           styleBox={fieldBox}
@@ -144,7 +137,7 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
         {textLayout.lines.length > 0 && text.length > 0 && (
           <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
             <TextRun
-              layout={textLayout}
+              layout={drawnLayout}
               fontSizePx={fontSizePx}
               tint={tintedFontColor}
               clippingPlanes={clippingPlanes}

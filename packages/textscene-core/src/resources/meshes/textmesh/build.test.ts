@@ -6,8 +6,12 @@ import {
   type GlyphVariation,
 } from '../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
+import { NO_FACE_METRICS } from '../../../r3f/controls/native/text/noFaceMetrics';
+import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
+import { FACELESS_FONT } from '../../../r3f/controls/native/text/sceneFontResolution';
 import { openFontOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
+import { unshapedFace } from '../../../r3f/controls/native/text/textLayout.testkit';
 import { shapedTextSizeWidthPx, shapeText } from '../../../r3f/controls/native/text/textLayout';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import type { GodotSurface } from '../godotSurface';
@@ -27,12 +31,12 @@ const BOTTOM = '2';
 const HALF_DEPTH = Math.fround(0.025);
 
 const outlines = (await openFontOutlines(fixtureFontBytes('open-sans-semibold-subset.ttf')))!;
-const face: TextMeshFace = withOutlines(OPEN_SANS_FONT_METRICS, outlines);
+const face: TextMeshFace = withOutlines(unshapedFace(OPEN_SANS_FONT_METRICS), outlines);
 
 /** A TextMesh at `font_size` 64 with depth 0.05, the properties of `raw` over those defaults, built. */
 function surfaceOf(text: string, raw: Record<string, string> = {}): GodotSurface {
   const properties = decodeTextMesh({ text: `"${text}"`, font_size: String(FONT_SIZE), ...raw });
-  return buildTextMeshSurface(properties, face);
+  return buildTextMeshSurface(properties, '', [face]);
 }
 
 /** The mesh data of `char` as the TextMesh builds it at the defaults of `surfaceOf`. */
@@ -306,6 +310,27 @@ describe('buildTextMeshSurface missing glyph', () => {
     expect(Array.from(surface.indices)).toEqual([0, 1, 2, 0, 2, 3]);
   });
 
+  // Godot 4.6.3 `TextMesh.get_mesh_arrays()` of "8aA" at 64 px, depth 0, on a SystemFont as the project font.
+  it('places a quad per glyph of a font with no face, at the vertices Godot builds', () => {
+    const noFace = withOutlines(NO_FACE_METRICS, peekSceneFontOutlines(FACELESS_FONT)!);
+    const properties = decodeTextMesh({ text: '"8aA"', font_size: String(FONT_SIZE), depth: '0.0' });
+    const surface = buildTextMeshSurface(properties, '', [noFace]);
+    const quad = (left: number, right: number) => [left, -0.21, left, 0.39, right, 0.39, right, -0.21];
+    const godot = [...quad(-0.48, -0.16), ...quad(-0.16, 0.16), ...quad(0.16, 0.48)];
+    const xy = Array.from(
+      { length: godot.length },
+      (_v, i) => surface.positions[Math.floor(i / 2) * 3 + (i % 2)]!
+    );
+    expect(xy).toEqual(godot.map((value) => expect.closeTo(value, 6)));
+  });
+
+  // `primitive_meshes.cpp:3559-3562` remaps over the bounds of no outline, +INF to -INF, as the dump shows.
+  it('gives the quads of a font with no face NaN UVs, as Godot does', () => {
+    const noFace = withOutlines(NO_FACE_METRICS, peekSceneFontOutlines(FACELESS_FONT)!);
+    const properties = decodeTextMesh({ text: '"8"', font_size: String(FONT_SIZE), depth: '0.0' });
+    expect(uvAxis(buildTextMeshSurface(properties, '', [noFace]), 0).every(Number.isNaN)).toBe(true);
+  });
+
   it('leaves the quad out of the box the UV spans', () => {
     const raw = { horizontal_alignment: LEFT };
     const withBox = uvAxis(surfaceOf(`H${missing}`, raw), 0);
@@ -318,14 +343,14 @@ describe('buildTextMeshSurface font variation', () => {
   const EMBOLDENED = { embolden: 0.6 };
   const SHEARED = { skew: 0.3 };
   const faceOf = (variation: GlyphVariation): TextMeshFace =>
-    withOutlines(withVariation(OPEN_SANS_FONT_METRICS, variation), outlines);
+    withOutlines(withVariation(unshapedFace(OPEN_SANS_FONT_METRICS), variation), outlines);
   const maxX = (variation: GlyphVariation): number => {
     const properties = decodeTextMesh({
       text: '"H"',
       font_size: String(FONT_SIZE),
       horizontal_alignment: LEFT,
     });
-    return extent(axis(buildTextMeshSurface(properties, faceOf(variation)), 0)).max;
+    return extent(axis(buildTextMeshSurface(properties, '', [faceOf(variation)]), 0)).max;
   };
 
   it.each([
@@ -353,11 +378,13 @@ describe('buildTextMeshSurface glyph reuse', () => {
         return outlines.glyphContours(...args);
       },
     };
-    return { face: withOutlines(OPEN_SANS_FONT_METRICS, counting), contoursRead: () => reads };
+    return { face: withOutlines(unshapedFace(OPEN_SANS_FONT_METRICS), counting), contoursRead: () => reads };
   }
 
   const build = (text: string, face: TextMeshFace, raw: Record<string, string> = {}) =>
-    buildTextMeshSurface(decodeTextMesh({ text: `"${text}"`, font_size: String(FONT_SIZE), ...raw }), face);
+    buildTextMeshSurface(decodeTextMesh({ text: `"${text}"`, font_size: String(FONT_SIZE), ...raw }), '', [
+      face,
+    ]);
 
   it('reads the outline of a glyph once across builds of one font, so a keystroke adds only its own glyph', () => {
     const { face: counted, contoursRead } = countingFace();
@@ -380,5 +407,20 @@ describe('buildTextMeshSurface glyph reuse', () => {
     build('H', counted);
     build('H', counted, { pixel_size: '0.02' });
     expect(contoursRead()).toBe(2);
+  });
+});
+
+// A glyph the face lacks draws from the first fallback that has it (`text_server_adv.cpp:7132-7170`).
+describe('buildTextMeshSurface — a fallback chain', () => {
+  it("extrudes a glyph the face lacks from the fallback's outlines", async () => {
+    const dejaVu = (await openFontOutlines(fixtureFontBytes('dejavu-sans-bidi-subset.ttf')))!;
+    const fallback = withOutlines({ ...unshapedFace(OPEN_SANS_FONT_METRICS), hasGlyph: () => true }, dejaVu);
+    const lacksA = withOutlines(
+      { ...unshapedFace(OPEN_SANS_FONT_METRICS), hasGlyph: (ch: string) => ch !== 'A' },
+      outlines
+    );
+    const properties = decodeTextMesh({ text: '"A"', font_size: String(FONT_SIZE) });
+    const drawn = buildTextMeshSurface(properties, '', [lacksA, fallback]);
+    expect(drawn.positions).toEqual(buildTextMeshSurface(properties, '', [fallback]).positions);
   });
 });

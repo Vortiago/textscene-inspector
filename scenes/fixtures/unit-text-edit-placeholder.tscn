@@ -1,0 +1,34 @@
+; One variable: `placeholder_text` on an empty TextEdit. Godot draws it in `font_placeholder_color`, shaped
+; in the node's own direction (text_edit.cpp:1106,1350-1357,3324-3375): `Ltr` reads left to right, `Rtl`
+; (`layout_direction = 3`) mirrors it, and `Wrapped` breaks it at its newline and at the 240 px wrap width. No
+; other fixture gives an empty TextEdit text, so no other scene shows a regression in the placeholder.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Ltr" type="TextEdit" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 16.0
+offset_bottom = 76.0
+placeholder_text = "Type here"
+
+[node name="Rtl" type="TextEdit" parent="."]
+layout_mode = 1
+layout_direction = 3
+anchor_right = 1.0
+offset_top = 92.0
+offset_bottom = 152.0
+placeholder_text = "Type here"
+
+[node name="Wrapped" type="TextEdit" parent="."]
+layout_mode = 1
+offset_top = 168.0
+offset_right = 240.0
+offset_bottom = 288.0
+placeholder_text = "Slow light across the shelf\nWave rift over quiet stone and amber water"
+wrap_mode = 1

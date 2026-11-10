@@ -10,6 +10,7 @@
  */
 
 import { toInt16, toUint16 } from '../../../../godot/variant/intWidth';
+import type { FontInstance } from './variation/fontInstance';
 import {
   HHEA_ASCENDER_OFFSET,
   HHEA_DESCENDER_OFFSET,
@@ -108,4 +109,19 @@ export function glyphMetricsReader(sfnt: SfntFile): (glyphIndex: number, yMax: n
       ? axisMetrics(vertical, glyphIndex)
       : { bearing: toInt16(ascender - yMax), advance: toUint16(Math.abs(ascender - descender)) },
   });
+}
+
+/** `tt_get_metrics`: the glyph's advances adjusted by `HVAR` and `VVAR` at `instance`, in font units. */
+export function metricsAtInstance(
+  { horizontal, vertical }: GlyphMetrics,
+  { advanceDelta }: FontInstance,
+  glyphIndex: number
+): GlyphMetrics {
+  return {
+    horizontal: {
+      ...horizontal,
+      advance: toUint16(horizontal.advance + advanceDelta.horizontal(glyphIndex)),
+    },
+    vertical: { ...vertical, advance: toUint16(vertical.advance + advanceDelta.vertical(glyphIndex)) },
+  };
 }

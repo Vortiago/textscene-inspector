@@ -1,0 +1,59 @@
+; One variable: the stacked outlines and stacked shadows of a Label's `label_settings`
+; (`label.cpp:838-874`). The outline pane stacks two rings on a base outline, so the ring sizes
+; are 20, 12 and 4 and each draws over the one before. The shadow pane stacks two shadows, the
+; first with its own outline. A single outline (`unit-label-outline.tscn`) or a single shadow
+; draws neither array, so only this scene shows a stack drawn in the wrong order or at the
+; wrong size.
+
+[gd_scene load_steps=3 format=3 uid="uid://unit_label_stacked_effects"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_outlines"]
+font_size = 64
+outline_size = 4
+outline_color = Color(0, 0, 0, 1)
+stacked_outline_count = 2
+stacked_outline_0/size = 8
+stacked_outline_0/color = Color(1, 0, 0, 1)
+stacked_outline_1/size = 8
+stacked_outline_1/color = Color(0, 1, 0, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_shadows"]
+font_size = 64
+shadow_size = 0
+shadow_color = Color(0.5, 0.5, 0.5, 1)
+shadow_offset = Vector2(2, 2)
+stacked_shadow_count = 2
+stacked_shadow_0/offset = Vector2(6, 6)
+stacked_shadow_0/color = Color(0, 0, 1, 1)
+stacked_shadow_0/outline_size = 4
+stacked_shadow_1/offset = Vector2(12, 12)
+stacked_shadow_1/color = Color(1, 1, 0, 1)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.08, 0.09, 0.12, 1)
+
+; Pane 1. Stacked outlines of 8 and 8 over an outline of 4: green at 20, red at 12, black at 4.
+[node name="Outlines" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 240.0
+offset_bottom = 140.0
+text = "I"
+label_settings = SubResource("LabelSettings_outlines")
+
+; Pane 2. Stacked shadows under a grey shadow: yellow at (12, 12), blue at (6, 6) with an outline of 4.
+[node name="Shadows" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 240.0
+offset_right = 240.0
+offset_bottom = 340.0
+text = "I"
+label_settings = SubResource("LabelSettings_shadows")

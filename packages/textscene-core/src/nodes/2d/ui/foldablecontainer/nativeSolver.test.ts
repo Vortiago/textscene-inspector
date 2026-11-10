@@ -22,6 +22,7 @@ import {
 } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const MARGIN = 8; // content_margin 4, both sides.
 const FONT_HEIGHT = 23;
@@ -243,5 +244,36 @@ describe('foldableContainerChildVisibility — `c->set_visible(!folded)` (foldab
       false,
       false,
     ]);
+  });
+});
+
+// `_shape` (`foldable_container.cpp:487-499`): INHERITED takes the layout direction, an empty language the locale.
+describe('foldableContainerTitleShape direction', () => {
+  function visualTitle(props: Partial<FoldableContainerProperties>, rtl = false): string {
+    const title = titleShape({
+      ...node({ title: 'Hello!', titleTextDirection: 0, language: '', ...props }),
+      rtl,
+    });
+    return visualChars(title.layout!.lines[0]!);
+  }
+
+  it('draws "!" first at RTL', () => {
+    expect(visualTitle({ titleTextDirection: 2 })).toBe('!Hello');
+  });
+
+  it('takes the layout direction for INHERITED', () => {
+    expect(visualTitle({ titleTextDirection: 3 }, true)).toBe('!Hello');
+    expect(visualTitle({ titleTextDirection: 3 }, false)).toBe('Hello!');
+  });
+
+  it('takes the direction of neutral text from the language', () => {
+    expect(visualTitle({ title: '123!', language: 'he' })).toBe('!123');
+  });
+
+  // `shaped_text_draw` reads the set direction, so an AUTO Hebrew title draws left to right.
+  it('draws right to left only when the title direction is RTL', () => {
+    const rtl = titleShape(node({ title: 'Hello!', titleTextDirection: 2, language: '' }));
+    const autoHebrew = titleShape(node({ title: 'שלום', titleTextDirection: 0, language: '' }));
+    expect([rtl.isDrawnRtl, autoHebrew.isDrawnRtl]).toEqual([true, false]);
   });
 });

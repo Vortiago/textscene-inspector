@@ -5,13 +5,11 @@
  */
 
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
+import type { MaterialFor2dFields } from '../../../parser/materialFor2dParser';
 import type { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
-import type { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
-import type { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 import type { Vector3Axis } from '../../../godot/math/vector3Axis';
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
-import type { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /**
@@ -24,15 +22,12 @@ interface Rect2 {
   height: number;
 }
 
-export interface Sprite3DProperties extends GeometryInstance3DProperties {
+export interface Sprite3DProperties extends GeometryInstance3DProperties, MaterialFor2dFields {
   /** Texture resource reference (ExtResource or SubResource). */
   texture?: string;
 
   /** Billboard mode (default: DISABLED, as for Label3D). */
   billboard: EnumValue<typeof BillboardMode>;
-
-  /** Alpha-cut mode (default: DISABLED). */
-  alpha_cut: EnumValue<typeof AlphaCutMode>;
 
   /** The axis the sprite faces (default: Z, `sprite_3d.h:77`). */
   axis: EnumValue<typeof Vector3Axis>;
@@ -62,9 +57,6 @@ export interface Sprite3DProperties extends GeometryInstance3DProperties {
   flip_h: boolean;
   flip_v: boolean;
 
-  /** Visible from behind (Godot default true → THREE.DoubleSide). */
-  double_sided: boolean;
-
   /** Use the texture's alpha for transparency (Godot default true). */
   transparent: boolean;
 
@@ -76,36 +68,6 @@ export interface Sprite3DProperties extends GeometryInstance3DProperties {
 
   /** Color tint applied to the sprite (default: white). */
   modulate: Rgba;
-
-  /**
-   * `FLAG_SHADED`: false (SHADING_MODE_UNSHADED) by default. The `SpriteBase3D()` flag loop sets
-   * only FLAG_TRANSPARENT and FLAG_DOUBLE_SIDED (`sprite_3d.cpp:712-714`).
-   */
-  shaded: boolean;
-
-  /** `FLAG_DISABLE_DEPTH_TEST` → `render_mode depth_test_disabled` (`material.cpp:863`). Default false. */
-  no_depth_test: boolean;
-
-  /**
-   * `FLAG_FIXED_SIZE`: depth-proportional rescale in the vertex shader (`material.cpp:1357`).
-   * Default false.
-   */
-  fixed_size: boolean;
-
-  /** Alpha-scissor cutoff (`sprite_3d.h:89`). Default 0.5. */
-  alpha_scissor_threshold: number;
-
-  /** Alpha-hash dither scale (`sprite_3d.h:90`). Default 1.0. */
-  alpha_hash_scale: number;
-
-  /** Alpha antialiasing mode (`sprite_3d.h:91`). Default OFF. */
-  alpha_antialiasing_mode: EnumValue<typeof AlphaAntiAliasing>;
-
-  /** Alpha-to-coverage edge (`sprite_3d.h:92`). Default 0.0. */
-  alpha_antialiasing_edge: number;
-
-  /** Sampler filter for the sprite texture (`sprite_3d.h:94`). Default LINEAR_WITH_MIPMAPS. */
-  texture_filter: EnumValue<typeof TextureFilter>;
 
   /** Render priority within the alpha-blended bucket (default: 0). */
   render_priority: number;

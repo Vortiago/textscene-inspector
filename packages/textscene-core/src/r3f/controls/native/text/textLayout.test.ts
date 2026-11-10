@@ -135,27 +135,59 @@ describe('shapeText — glyph pen positions', () => {
 });
 
 describe('shapeText — a character outside the baked charset', () => {
+  // U+03A9 OMEGA stands in for any unbaked codepoint. If the charset ever bakes it, pick another
+  // unbaked character rather than changing the assertions.
+  const omegaLayout = (fontMetrics: FontMetrics) =>
+    shapeText('AΩB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics,
+    });
+
+  it('advances the pen by the hmtx advance of its glyph, 1605 units, which the baked tables read', () => {
+    const [, omega] = omegaLayout(OPEN_SANS_FONT_METRICS).lines[0]!.glyphs;
+    expect(omega!.glyph).toBeNull();
+    expect(omega!.advance).toBe(12.546875);
+  });
+
   it(
-    "still advances the pen by the font's own OS/2 xAvgCharWidth fallback (9.484375px at size 16: " +
-      "1214 * 16/2048, an independent literal — openSansMetrics.ts's OPEN_SANS_METRICS.averageAdvanceUnits " +
-      'is 1214, unitsPerEm 2048) rather than collapsing to a zero-width gap; the placement still carries ' +
-      'no atlas glyph, so it draws no ink, only occupies its own width',
+    "advances the pen by the font's own OS/2 xAvgCharWidth fallback where the face reads no glyph " +
+      '(9.484375px at size 16: 1214 * 16/2048), rather than collapsing to a zero-width gap',
     () => {
-      // U+03A9 OMEGA stands in for any unbaked codepoint, to pin the fallback itself. If the charset
-      // ever bakes it, pick another unbaked character rather than changing the assertions.
-      const layout = shapeText('AΩB', {
-        fontSizePx: 16,
-        boxWidthPx: 0,
-        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-        lineSpacingPx: 3,
-      });
-      const [a, omega, b] = layout.lines[0]!.glyphs;
-      expect(omega!.glyph).toBeNull();
+      const [a, omega, b] = omegaLayout({ ...OPEN_SANS_FONT_METRICS, shaping: undefined }).lines[0]!.glyphs;
       expect(omega!.advance).toBeCloseTo(9.484375, 10);
       // The fallback advance joins the running sum like a baked one.
       expect(b!.x).toBeCloseTo(a!.advance + omega!.advance, 10);
     }
   );
+});
+
+describe('shapeText — a character no font of the chain has (text_server_adv.cpp:6835-6890)', () => {
+  // Godot asks the host for a system font only while `allow_system_fallback` is on
+  // (`:6820`, default true). The previewer has no host fonts, so `_find_sys_font_for_text`
+  // finds nothing and `preserve_invalid` (default true, `text_server_adv.h:539`) draws a box.
+  const FACE_WITHOUT_CJK: FontMetrics = { ...OPEN_SANS_FONT_METRICS, hasGlyph: (ch) => ch !== '一' };
+  const shapeCjk = (fontMetrics: FontMetrics) =>
+    shapeText('A一', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics,
+    }).lines[0]!.glyphs[1]!;
+
+  it('draws a hex-code box for a character past the last fallback', () => {
+    const missing = shapeCjk({ ...FACE_WITHOUT_CJK, fallbacks: [FACE_WITHOUT_CJK] });
+    // hexCodeBoxAdvanceSize(16, 0x4e00).x: cell 1 px, two bytes, (4 + 3 * 2 + 1 + 1) * 1.
+    expect(missing.advance).toBe(12);
+    expect(missing.controlCodepoint).toBe(0x4e00);
+  });
+
+  it('draws a hex-code box for a character a face with no fallbacks lacks', () => {
+    expect(shapeCjk(FACE_WITHOUT_CJK).controlCodepoint).toBe(0x4e00);
+  });
 });
 
 describe('shapeText — preserveControl / control characters (text_server_adv.cpp:6844-6907, char_utils.h:117-118 is_control)', () => {
@@ -399,6 +431,7 @@ describe('shapeText — embolden (extra advance per glyph)', () => {
 
   it("takes a face's own embolden from its FontMetrics when fontMetricsAt names none", () => {
     const boldFace: FontMetrics = {
+      hasGlyph: () => true,
       kind: 'canvas',
       unitsPerEm: 1000,
       ascent: 800,
@@ -425,6 +458,7 @@ describe('shapeText — embolden (extra advance per glyph)', () => {
 // advances and draws each character by its own face.
 describe('shapeText — a face for each character', () => {
   const wideFace: CanvasFontMetrics = {
+    hasGlyph: () => true,
     kind: 'canvas',
     unitsPerEm: 1000,
     ascent: 800,
@@ -526,6 +560,7 @@ describe('shapeText — TextLayoutResult.fontMetrics / baselineOffsetPx (the sha
 
   it('a font of kind "canvas" shapes through the SAME line-breaking/placement code but every glyph placement carries no atlas bitmap', () => {
     const canvasMetrics: FontMetrics = {
+      hasGlyph: () => true,
       kind: 'canvas',
       unitsPerEm: 1000,
       ascent: 800,
@@ -555,6 +590,7 @@ describe('shapeText — TextLayoutResult.fontMetrics / baselineOffsetPx (the sha
 
 describe('soloLineLayout — re-wrapping one line of an already-shaped result', () => {
   const FAKE_SCENE_FONT_METRICS: CanvasFontMetrics = {
+    hasGlyph: () => true,
     kind: 'canvas',
     cssFontFamily: 'tscn-scene-font-test',
     unitsPerEm: 1000,
@@ -699,6 +735,24 @@ describe('shapeText — glyph advances vs real Godot (text_server_adv.cpp:6936,7
     expect(layout.widthPx).toBe(257);
     expect(shapedTextSizeWidthPx(layout.widthPx)).toBe(257);
   });
+
+  it('size 32: the second unit of a surrogate pair rounds nothing, so the remainder carries to the next glyph', () => {
+    // 1056 units at 32 px over a 2048-unit em is 16.5 px: 17, then 16 with the carried -0.5.
+    const face: FontMetrics = {
+      ...OPEN_SANS_FONT_METRICS,
+      shaping: undefined,
+      hasGlyph: () => true,
+      getGlyphAdvanceUnits: () => 1056,
+    };
+    const layout = shapeText('😀😀', {
+      fontSizePx: 32,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics: face,
+    });
+    expect(layout.lines[0]!.glyphs.map((g) => g.advance)).toEqual([17, 16]);
+  });
 });
 
 // `Label::_shape` splits on `paragraph_separator` first, keeping empty entries, and ends each
@@ -742,6 +796,20 @@ describe('shapeText — paragraphSeparator (Label::_shape)', () => {
     expect(split.lines[0]!.glyphs.at(-1)!.glyph).toBeNull();
   });
 
+  // RichTextLabel adds its ZWSP for an ITEM_NEWLINE (`rich_text_label.cpp:626-644`), so only a
+  // paragraph that a "\n" ends carries one.
+  it('leaves the last paragraph unterminated with terminateLastParagraph false', () => {
+    const layout = shapeText('ab\ncd', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      paragraphSeparator: '\n',
+      terminateLastParagraph: false,
+    });
+    expect(layout.lines.map((l) => l.text)).toEqual([`ab${'\u200b'}`, 'cd']);
+  });
+
   it('is off by default — the callers whose engine counterpart never splits', () => {
     expect(
       shapeText('a\n\nb', {
@@ -772,6 +840,22 @@ describe('shapeText — tab_stops (ShapeTextOptions.tabStopsPx, label.cpp:196-19
     // from line 2's own pen origin, not the paragraph's.
     expect(layout.lines[0]!.glyphs[1]!.advance).toBeCloseTo(4.421875, 10);
     expect(layout.lines[1]!.glyphs[1]!.advance).toBeCloseTo(4.421875, 10);
+  });
+
+  it('aligns the tab after an astral character, and leaves every other advance as it was', () => {
+    const plain = shapeText('\u{1F600}\tB', opts).lines[0]!.glyphs;
+    const aligned = shapeText('\u{1F600}\tB', { ...opts, tabStopsPx: [40] }).lines[0]!.glyphs;
+    const tabIndex = aligned.findIndex((glyph) => glyph.char === '\t');
+    expect(aligned[tabIndex + 1]!.x).toBeCloseTo(40, 10);
+    aligned.forEach((glyph, i) => {
+      if (i !== tabIndex) expect(glyph.advance).toBe(plain[i]!.advance);
+    });
+  });
+
+  it('gives a tab that no stop aligns no advance, so the next glyph sits against the last (measured, Godot 4.6.3)', () => {
+    const [a, tab, b] = shapeText('A\tB', opts).lines[0]!.glyphs;
+    expect(tab!.advance).toBe(0);
+    expect(b!.x).toBe(a!.x + a!.advance);
   });
 
   it('no stops is a no-op, matching every caller before this option existed', () => {

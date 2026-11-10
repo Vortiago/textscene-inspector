@@ -22,7 +22,7 @@ describe('isFontContainerPath', () => {
 
 /** The mime type `fontResourceFromBytes` stamps on a font at `path`. */
 function mimeTypeOf(path: string): string | undefined {
-  return fontResourceFromBytes(path, new ArrayBuffer(1)).mimeType;
+  return fontResourceFromBytes(path, new ArrayBuffer(1), {}).mimeType;
 }
 
 describe('the mime type of a wrapped font', () => {
@@ -41,7 +41,7 @@ describe('the mime type of a wrapped font', () => {
 describe('fontResourceFromBytes', () => {
   it('wraps raw bytes with the derived mime type and no fallbacks', () => {
     const bytes = new ArrayBuffer(4);
-    const resource = fontResourceFromBytes('res://fonts/Xolonium-Regular.ttf', bytes);
+    const resource = fontResourceFromBytes('res://fonts/Xolonium-Regular.ttf', bytes, {});
     expect(resource).toEqual({
       kind: 'file',
       bytes,

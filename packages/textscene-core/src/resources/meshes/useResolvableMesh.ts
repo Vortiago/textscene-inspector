@@ -15,6 +15,7 @@ import {
   primitiveMeshReadsFont,
 } from './primitivemesh/surface';
 import { useSceneFontSettleCount } from '../../r3f/controls/native/text/useSceneFontSettleCount';
+import { useLayoutDirectionEnv } from '../../r3f/contexts/useLayoutDirectionEnv';
 
 export interface ResolvableMesh {
   /** Null for no mesh, and while a file, or the outlines or metrics the build reads, load. */
@@ -35,9 +36,10 @@ export function useResolvableMesh(scoped: ScopedResource | null): ResolvableMesh
     fontsPlan,
     readsFonts
   );
+  const locale = useLayoutDirectionEnv().applicationLocale;
   const loaded = useMemo(
-    () => (scoped && !isLoading ? { ...scoped, loadedFile, loadedFont, projectFonts } : null),
-    [scoped, isLoading, loadedFile, loadedFont, projectFonts]
+    () => (scoped && !isLoading ? { ...scoped, loadedFile, loadedFont, projectFonts, locale } : null),
+    [scoped, isLoading, loadedFile, loadedFont, projectFonts, locale]
   );
   const hasFontPending = loaded !== null && isAwaitingFont(loaded);
   // The count moves the render that reads the font again, once its outlines and metrics settle.

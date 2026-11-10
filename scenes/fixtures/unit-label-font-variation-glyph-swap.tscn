@@ -1,0 +1,56 @@
+[gd_scene load_steps=4 format=3]
+
+; The one variable: a `FontVariation` over Recursive whose `variation_opentype` sets the `MONO` axis to 1
+; (tag 1297043023) or the `slnt` axis to -15 (tag 1936486004). The `rvrn` feature of the font's `GSUB`
+; `FeatureVariations` swaps glyphs by those axes: the mono forms of `f`, `g`, `i`, `l` and `0`, and the
+; slanted forms of `a`, `g`, `i` and `z`. The top Label draws the font at its default instance, the others
+; the two instances, all at 56 px. Even the default instance swaps `l` and `0`.
+
+[ext_resource type="FontFile" path="res://fonts/recursive-vf-subset.woff2" id="1_font"]
+
+[sub_resource type="FontVariation" id="FontVariation_mono"]
+base_font = ExtResource("1_font")
+variation_opentype = {
+1297043023: 1.0
+}
+
+[sub_resource type="FontVariation" id="FontVariation_slant"]
+base_font = ExtResource("1_font")
+variation_opentype = {
+1936486004: -15.0
+}
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Default" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 30.0
+offset_right = 1100.0
+offset_bottom = 110.0
+theme_override_fonts/font = ExtResource("1_font")
+theme_override_font_sizes/font_size = 56
+text = "agilfz l0 agilfz"
+
+[node name="Mono" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 130.0
+offset_right = 1100.0
+offset_bottom = 210.0
+theme_override_fonts/font = SubResource("FontVariation_mono")
+theme_override_font_sizes/font_size = 56
+text = "agilfz l0 agilfz"
+
+[node name="Slant" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 230.0
+offset_right = 1100.0
+offset_bottom = 310.0
+theme_override_fonts/font = SubResource("FontVariation_slant")
+theme_override_font_sizes/font_size = 56
+text = "agilfz l0 agilfz"

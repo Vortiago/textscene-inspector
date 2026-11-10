@@ -331,25 +331,31 @@ describe('<LineEdit> — tint composition', () => {
   });
 });
 
-describe('<LineEdit> — content-rect clipping', () => {
-  it("clips its own text to the content rect (inset by the ACTIVE stylebox's margins), narrower than the full outer rect", async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+describe('<LineEdit> — glyphs past ofs_max', () => {
+  const glyphCount = (renderer: Rendered) =>
+    findTextMesh(renderer.scene)!.geometry.attributes.position!.count;
+
+  it('draws no glyph that ends past ofs_max, and no clip plane of its own', async () => {
+    const narrow: Rect2 = { x: 0, y: 0, w: 40, h: 30 };
+    const long = await ReactThreeTestRenderer.create(
+      <LineEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'Hello world' })}
+        rect={narrow}
+        renderOrder={0}
+      />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial & {
+    const fits = await ReactThreeTestRenderer.create(
+      <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'Hello' })} rect={RECT} renderOrder={0} />
+    );
+    const material = findTextMesh(long.scene)!.material as THREE.ShaderMaterial & {
       clippingPlanes?: THREE.Plane[];
     };
-    const planes = material.clippingPlanes!;
-    expect(planes.length).toBeGreaterThanOrEqual(4);
-    // Inside the margin-inset content box.
-    const inside = new THREE.Vector3(100, -15, 0);
-    expect(planes.every((p) => p.distanceToPoint(inside) >= 0)).toBe(true);
-    // Inside the outer rect (200x30) but past the 4px right content margin.
-    const pastContentRight = new THREE.Vector3(199, -15, 0);
-    expect(planes.some((p) => p.distanceToPoint(pastContentRight) < 0)).toBe(true);
+    expect(material.clippingPlanes ?? []).toHaveLength(0);
+    expect(glyphCount(long)).toBeLessThan(glyphCount(fits));
   });
 
-  it('merges its own content-rect planes onto whatever it inherited from an ancestor', async () => {
+  it('keeps the clip planes it inherited from an ancestor', async () => {
     const inheritedPlane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0);
     const renderer = await ReactThreeTestRenderer.create(
       <ControlClipProvider value={{ planes: [inheritedPlane], rect: null }}>
@@ -404,12 +410,12 @@ describe('<LineEdit> — scene-font (canvas-kind FontMetrics) text path', () => 
     );
   }
 
-  /** The canvas painter's mesh: a plain `MeshBasicMaterial` over a `CanvasTexture`, never the MSDF `ShaderMaterial` `findTextMesh` looks for. */
+  /** The canvas painter's mesh: a plain `MeshBasicMaterial` over the raster's `DataTexture`, never the MSDF `ShaderMaterial` `findTextMesh` looks for. */
   function findCanvasTextMesh(scene: Rendered['scene']) {
     return scene
       .findAllByType('Mesh')
       .map((m) => m.instance as THREE.Mesh)
-      .find((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.CanvasTexture);
+      .find((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.DataTexture);
   }
 
   it('paints the run through the canvas rasteriser — ONE quad, not one per glyph, and no MSDF material', async () => {
@@ -497,24 +503,14 @@ describe('<LineEdit> — right_icon', () => {
     expect(quads.some((m) => (m.material as THREE.MeshBasicMaterial).map != null)).toBe(true);
   });
 
-  it("insets the text content rect by the icon's own (ORIGINAL_SIZE) width", async () => {
-    const withIcon = await renderWithIcon({ text: 'Hi' }, RECT);
+  it("ends the drawn glyphs at the icon's own (ORIGINAL_SIZE) width inside the right margin", async () => {
+    const wide: Rect2 = { x: 0, y: 0, w: 60, h: 30 };
+    const glyphCount = (m: Rendered) => findTextMesh(m.scene)!.geometry.attributes.position!.count;
+    const withIcon = await renderWithIcon({ text: 'Hello' }, wide);
     const without = await ReactThreeTestRenderer.create(
-      <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+      <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'Hello' })} rect={wide} renderOrder={0} />
     );
-    const material = (m: Rendered) =>
-      m.scene
-        .findAllByType('Mesh')
-        .map((x) => x.instance as THREE.Mesh)
-        .find((x) => (x.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined)!
-        .material as THREE.ShaderMaterial & { clippingPlanes?: THREE.Plane[] };
-    // Just past the icon-narrowed content edge (200 - 4 margin - 32 icon = 164): inside a content rect
-    // that ignored the icon, outside this one.
-    const probe = new THREE.Vector3(170, -15, 0);
-    const iconPlanes = material(withIcon).clippingPlanes!;
-    const plainPlanes = material(without).clippingPlanes!;
-    expect(iconPlanes.some((p) => p.distanceToPoint(probe) < 0)).toBe(true);
-    expect(plainPlanes.every((p) => p.distanceToPoint(probe) >= 0)).toBe(true);
+    expect(glyphCount(withIcon)).toBeLessThan(glyphCount(without));
   });
 });
 
