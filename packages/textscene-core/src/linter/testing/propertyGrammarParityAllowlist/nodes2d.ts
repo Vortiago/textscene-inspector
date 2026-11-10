@@ -55,12 +55,11 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   Polygon2D: {
-    linterOnly: [
-      // Display tweak with no rendering parity requirement.
+    renderGap: [
+      // `antialiased` is stored and read by no Godot draw (`polygon_2d.cpp:395-401,507-514`).
       'antialiased',
     ],
-    reason:
-      'polygon/polygons/vertex_colors/bones/skeleton are parsed AND validated now; antialiased is a display tweak with no equivalent.',
+    reason: 'Godot 4.6.3 ignores antialiased, so there is nothing to draw.',
   },
 
   Bone2D: {
