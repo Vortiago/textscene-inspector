@@ -26,9 +26,10 @@ export function pinMarker(): JointStrokes {
   return { frame: [bar(0), line(0, -BAR_HALF_LENGTH, 0, BAR_HALF_LENGTH)], offset: [] };
 }
 
-/** A bar at the origin and at `length`, and the line between (`damped_spring_joint_2d.cpp:46-48`). */
+/** A bar at the origin and at `length`, and the line between. */
 const axis = (length: number): Line2[] => [bar(0), bar(length), line(0, 0, 0, length)];
 
+/** `damped_spring_joint_2d.cpp:46-48`. */
 export function dampedSpringMarker(length: number): JointStrokes {
   return { frame: axis(length), offset: [] };
 }
