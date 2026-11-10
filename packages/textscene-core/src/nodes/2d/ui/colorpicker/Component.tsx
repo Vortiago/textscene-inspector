@@ -281,11 +281,11 @@ function CenteredIcon({ rect, size, texture, tint, theme, rtl, renderOrder }: Ce
 function iconModulate(
   toItemLinear: ReturnType<typeof useItemLinearColorOf>,
   tint: NativeControlComponentProps['tint'],
-  modulate: Rgba
+  iconColor: Rgba
 ) {
   return {
-    color: toItemLinear(multiplyModulate(tint.own, { ...modulate, a: 1 })),
-    opacity: tint.opacity * modulate.a,
+    color: toItemLinear(multiplyModulate(tint.own, { ...iconColor, a: 1 })),
+    opacity: tint.opacity * iconColor.a,
   };
 }
 
