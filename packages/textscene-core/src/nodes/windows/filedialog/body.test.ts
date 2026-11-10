@@ -171,7 +171,12 @@ describe('FileDialog toolbar icon sizes', () => {
   const base = fileDialog(CASES.open!);
 
   it('gives the vendored default the 16x16 it has', () => {
-    expect(prevWidth(base)).toBe(prevWidth({ ...base, icons: {}, textureSlots: {} }));
+    const sixteen = {
+      ...base,
+      icons: { back_folder: themedIcon },
+      textureSlots: { back_folder: { x: 16, y: 16 } },
+    };
+    expect(prevWidth(base)).toBe(prevWidth(sixteen));
   });
 
   it('lays out the size of the texture a Theme gives the icon', () => {

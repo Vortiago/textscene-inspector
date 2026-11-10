@@ -113,10 +113,9 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'The drag-area and dragger keys tune an interactive splitter a static frame never shows.',
   },
 
-  // Like the container bases, BaseButton has no parser.ts, so one entry covers
-  // Button and every button leaf below it. `disabled` and `button_pressed` are absent because
-  // button/parser.ts reads them: the preview dims a disabled button and draws a toggle that is on
-  // pressed. `toggle_mode` stays for the leaves that do not read it, as a Button reads it only with `button_pressed`.
+  // Like the container bases, BaseButton has no parser.ts, so one entry covers Button and every
+  // button leaf below it. `disabled` and `button_pressed` are absent: the preview reads them.
+  // `toggle_mode` stays: only a Button reads it, and only together with `button_pressed`.
   BaseButton: {
     linterOnly: [
       // Press semantics, all meaningless in a still frame.
