@@ -145,7 +145,7 @@ export function parseFileDialog(
   const dialog = parseConfirmationDialog(heading, properties);
   const context = viewportParseContext(heading, dialog.name);
   const { mode, title } = replayModeTexts(properties, dialog.title, context);
-  const flag = (key: string) => boolOr(properties[key], true, `${context}.${key}`);
+  const flag = (raw: string | undefined, key: string) => boolOr(raw, true, `${context}.${key}`);
   return {
     ...dialog,
     title,
@@ -166,12 +166,12 @@ export function parseFileDialog(
     ...replayLocation(properties, context),
     filters: properties.filters === undefined ? [] : (parsePackedStringArray(properties.filters) ?? []),
     options: replayOptions(properties, context),
-    hidden_files_toggle_enabled: flag('hidden_files_toggle_enabled'),
-    file_filter_toggle_enabled: flag('file_filter_toggle_enabled'),
-    file_sort_options_enabled: flag('file_sort_options_enabled'),
-    folder_creation_enabled: flag('folder_creation_enabled'),
-    favorites_enabled: flag('favorites_enabled'),
-    recent_list_enabled: flag('recent_list_enabled'),
-    layout_toggle_enabled: flag('layout_toggle_enabled'),
+    hidden_files_toggle_enabled: flag(properties.hidden_files_toggle_enabled, 'hidden_files_toggle_enabled'),
+    file_filter_toggle_enabled: flag(properties.file_filter_toggle_enabled, 'file_filter_toggle_enabled'),
+    file_sort_options_enabled: flag(properties.file_sort_options_enabled, 'file_sort_options_enabled'),
+    folder_creation_enabled: flag(properties.folder_creation_enabled, 'folder_creation_enabled'),
+    favorites_enabled: flag(properties.favorites_enabled, 'favorites_enabled'),
+    recent_list_enabled: flag(properties.recent_list_enabled, 'recent_list_enabled'),
+    layout_toggle_enabled: flag(properties.layout_toggle_enabled, 'layout_toggle_enabled'),
   };
 }

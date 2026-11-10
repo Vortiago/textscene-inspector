@@ -3,7 +3,7 @@
  * Control-only sub-viewport, publishing a texture consumers sample directly.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { LTR_LAYOUT_ENV } from '../../../godot/scene/control';
+import { LTR_LAYOUT_ENV } from '../../../testing/ltrLayoutEnv';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 

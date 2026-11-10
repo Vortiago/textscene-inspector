@@ -15,7 +15,7 @@ import type { CachedSceneSource } from '../../../r3f/liveSceneTree';
 import '../../../r3f/nodes/index';
 import { contextOver, sourcesOver, sceneCacheOver } from '../../../r3f/liveSceneTree.testkit';
 import { liveTreeOf } from '../../../r3f/liveSceneTree';
-import { LTR_LAYOUT_ENV } from '../../../godot/scene/control';
+import { LTR_LAYOUT_ENV } from '../../../testing/ltrLayoutEnv';
 
 function parse(source: string): TscnScene {
   return new TscnParser().parse(source);
