@@ -263,7 +263,9 @@ export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult |
     boxWidthPx: input.widthPx,
     autowrapMode: itemListAutowrapMode(input.iconMode, input.maxTextLines),
     breakMandatory: wrapped,
-    lineSpacingPx: itemListLineSeparationForShaping(input),
+    // Zero: `force_update_list_size` adds a flat `line_separation * max_text_lines`
+    // (`item_list.cpp:1772`), which `itemContentMinSize` adds.
+    lineSpacingPx: 0,
     fontMetrics: input.fontMetrics,
   });
   const overrunFlags = overrunFlagsForBehavior(
@@ -301,15 +303,6 @@ function withHiddenLinesEllipsis(
   const visible = lines.slice(0, maxLines);
   visible[maxLines - 1] = trimLast(visible[maxLines - 1]!);
   return visible;
-}
-
-/**
- * Zero: `shapeText` spaces between lines, but `force_update_list_size`
- * (`item_list.cpp:1772`) adds a flat `line_separation * max_text_lines`, which
- * `itemContentMinSize` adds.
- */
-function itemListLineSeparationForShaping(_input: ItemTextShapeInput): number {
-  return 0;
 }
 
 // --- Per-item minimum size --------------------------------------------------
