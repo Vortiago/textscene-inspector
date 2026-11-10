@@ -5,7 +5,7 @@
  * Children render beside the painter, since the solve has already placed them.
  */
 import { useEffect, useMemo } from 'react';
-import type { Rect2 } from '../../../godot/math/rect2';
+import { ZERO_RECT, type Rect2 } from '../../../godot/math/rect2';
 import { VECTOR2_ZERO, type Vector2 } from '../../../godot/math/vector';
 import { controlProps, type SolveNode } from './solveTree';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
@@ -57,14 +57,14 @@ interface ControlCanvasWalkerProps {
   snapToPixels?: boolean;
   /**
    * A position the root Controls' parent adds before the snap. Godot sets a scene tile root's position
-   * to `map_to_local + position`, so the snap rounds the sum (`tile_map_layer.cpp:1636`).
+   * to `map_to_local + position`, so the snap rounds the sum (`tile_map_layer.cpp:1636`). It applies to
+   * the first root and to a root promoted past the placement chain. The caller moves a `top_level` root.
    */
   rootOffset?: Vector2;
   /** Called after each solve, with the solved controls keyed by tree path. */
   onSolved?: (solved: ReadonlyMap<string, SolvedControl>) => void;
 }
 
-export const ZERO_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
 /** The scale of a node with none authored, and of a container child `fit_child_in_rect` reset. */
 const UNIT_SCALE = { x: 1, y: 1 };
 
@@ -105,7 +105,7 @@ export function ControlCanvasWalker({
           theme={theme}
           measureText={measurer}
           snapToPixels={snapEnabled}
-          rootOffset={rootOffset}
+          rootOffset={n.skippedAncestors || n === tree[0] ? rootOffset : undefined}
         />
       ))}
     </>
@@ -223,10 +223,9 @@ function ControlItemGroup({
   // Godot snaps the canvas item, leaving `get_rect()` at full precision. The inner
   // pivot groups add their own translation, so this is the outer half of one
   // snapped origin.
-  // Only a Control under the skipped placement chain has the offset in its position. A `top_level` one does not.
   const origin = snappedControlOriginUnder(
     rect,
-    solveNode.skippedAncestors && rootOffset ? rootOffset : VECTOR2_ZERO,
+    rootOffset ?? VECTOR2_ZERO,
     { rotation, scale: { x: scaleX, y: scaleY }, pivot: { x: pivotX, y: pivotY } },
     snapToPixels
   );

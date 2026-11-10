@@ -26,7 +26,7 @@ import { parseNode2D } from '../../../base/node2d/parser';
 import { TRANSFORM2D_IDENTITY, transform2DDecompose } from '../../../../godot/math/transform2d';
 import { node2DLocalTransform } from '../../../../r3f/node2dTransform';
 import type { Node2DLocalTransform } from '../../../base/node2d/types';
-import type { Vector2 } from '../../../../godot/math/vector';
+import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
 import { rect2Equals, type Rect2 } from '../../../../godot/math/rect2';
 import type { PlacedCell } from './tileData';
 
@@ -239,12 +239,16 @@ function controlYSortRootAt(
   };
   const zIndex = control.zIndex ?? 0;
   const zAsRelative = control.zAsRelative ?? true;
-  return (placement) => {
+  const rootAt: YSortRootAt = (placement) => {
     // The placement node adds its own position back.
     const origin = controlItemOriginUnder(rect, placement, transform, snapToPixels);
     const pose = { ...TRANSFORM2D_IDENTITY, tx: origin.x, ty: origin.y };
     return { pose, zIndex, zAsRelative };
   };
+  // Without the snap the placement cancels, so every tile of the scene shares one root.
+  if (snapToPixels) return rootAt;
+  const sharedRoot = rootAt(VECTOR2_ZERO);
+  return () => sharedRoot;
 }
 
 /** A tile scene as its tiles share it: the instance node, and its loaded root as the sort reads it. */

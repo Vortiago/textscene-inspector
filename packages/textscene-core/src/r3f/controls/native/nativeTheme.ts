@@ -183,14 +183,13 @@ const SPLIT_CONTAINER_GRABBER_EXTENT = 8;
 /** `autohide` (`default_theme.cpp:1264-1266`). */
 const SPLIT_CONTAINER_AUTOHIDE = true;
 
-/** Written only by `nativeTheme`. Never cleared: a project holds few scales. */
-const themeAtScale = new Map<number, NativeTheme>();
+/** Written only by `nativeTheme`. One project setting gives one scale, so one entry is enough. */
+let lastTheme: { scale: number; theme: NativeTheme } | null = null;
 
 /** `NativeTheme` at a project's `gui/theme/default_theme_scale`, built once per scale: a walker per scene tile asks for the same one. */
 export function nativeTheme(scale: number): NativeTheme {
-  let theme = themeAtScale.get(scale);
-  if (!theme) themeAtScale.set(scale, (theme = buildNativeTheme(scale)));
-  return theme;
+  if (lastTheme?.scale !== scale) lastTheme = { scale, theme: buildNativeTheme(scale) };
+  return lastTheme.theme;
 }
 
 // A widget reuses `contentMargin`/`cornerRadius` where its `default_theme.cpp` call passes

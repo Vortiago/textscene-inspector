@@ -14,9 +14,13 @@ import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { usePaintRange } from '../../contexts/PaintOrderContext';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { useBuildUnownedTree } from './buildSolveTree';
-import { ControlCanvasWalker, ZERO_RECT } from './ControlCanvasWalker';
+import { ZERO_RECT } from '../../../godot/math/rect2';
+import { ControlCanvasWalker } from './ControlCanvasWalker';
 import { nativeTheme } from './nativeTheme';
 import { measureText } from './text/measurer';
+import { CanvasItemGroup } from '../../components/CanvasItemGroup';
+import { CanvasRootScope } from '../../canvasRootScope';
+import { isTopLevelItem } from '../../canvasPaintOrder';
 
 export default function UnownedNodeControls({ node }: { node: LiveNode }) {
   const { externalResources, internalResources } = useSceneResources();
@@ -41,7 +45,7 @@ export default function UnownedNodeControls({ node }: { node: LiveNode }) {
     },
     [rootPath, reportRootRect]
   );
-  return (
+  const walker = (
     <ControlCanvasWalker
       tree={tree}
       generation={generation}
@@ -51,5 +55,13 @@ export default function UnownedNodeControls({ node }: { node: LiveNode }) {
       rootOffset={placement}
       onSolved={onSolved}
     />
+  );
+  const rootNode = tree[0]?.node;
+  if (!rootNode || !placement || !isTopLevelItem(rootNode)) return walker;
+  // A top_level root ignores the layer's transform, so it draws in the canvas at the placement.
+  return (
+    <CanvasRootScope node={rootNode} parentIsCanvasItem>
+      <CanvasItemGroup position={[placement.x, -placement.y, 0]}>{walker}</CanvasItemGroup>
+    </CanvasRootScope>
   );
 }

@@ -3779,6 +3779,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tile Map Layer Scene Tile Control Top Level",
+    "file": "unit-tile-map-layer-scene-tile-control-top-level.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Tile Map Layer Scene Tile Control Z",
     "file": "unit-tile-map-layer-scene-tile-control-z.tscn",
     "category": "Unit - 2D Canvas"
@@ -3821,6 +3826,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tile Map Layer Scene Tile Raised Control",
     "file": "unit-tile-map-layer-scene-tile-raised-control.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Top Level Control",
+    "file": "unit-tile-map-layer-scene-tile-top-level-control.tscn",
     "category": "Unit - 2D Canvas"
   },
   {

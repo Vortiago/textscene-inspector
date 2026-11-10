@@ -80,7 +80,7 @@ describe('TileMapLayer scene tiles', () => {
   });
 
   it.each([
-    ['a scene id the source lacks', cell(0, 0, 17)],
+    ['a scene id the source lacks', cell(0, 0, 18)],
     ['atlas coords other than (0, 0)', cell(0, 0, 1, { atlasCoords: { x: 1, y: 0 } })],
     ['a source the TileSet lacks', cell(0, 0, 1, { sourceId: 5 })],
   ])('draws no instance for %s', async (_name, placed) => {
@@ -249,6 +249,15 @@ polygon = PackedVector2Array(0, 0, 10, 0, 10, 10, 0, 10)
       { prepare: withCells([cell(0, 0, 15)]) }
     );
     expect(drawnBoxes(renderer)).toEqual([[108, 28, 10, 10]]);
+  });
+
+  it('draws a top_level Control root in the canvas at the cell centre, not under the layer', async () => {
+    // Godot 4.6.3 draws it at the rounded cell centre (8, 8) of a 15 px grid, ignoring the layer at (100, 20).
+    const { renderer } = await renderSceneTiles(
+      layerScene('').replace('Vector2i(64, 64)', 'Vector2i(15, 15)'),
+      { prepare: withCells([cell(0, 0, 17)]) }
+    );
+    expect(drawnBoxes(renderer)).toEqual([[8, 8, 10, 10]]);
   });
 
   it('keeps the draw order inside each of 400 instances', async () => {

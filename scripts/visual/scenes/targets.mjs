@@ -52,6 +52,11 @@ export const TILE_AND_TARGET_SCENES = [
     mode: '2d',
   },
   {
+    name: 'tile-map-layer-scene-tile-control-top-level',
+    file: 'unit-tile-map-layer-scene-tile-control-top-level.tscn',
+    mode: '2d',
+  },
+  {
     name: 'tile-map-layer-scene-tile-control-z',
     file: 'unit-tile-map-layer-scene-tile-control-z.tscn',
     mode: '2d',
