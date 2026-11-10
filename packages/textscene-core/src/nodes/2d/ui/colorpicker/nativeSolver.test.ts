@@ -3,7 +3,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { defaultPickerTheme } from './pickerChildTheme';
+import { pickerChildTheme } from './pickerChildTheme';
 import { extractHsv } from './colorModes';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import {
@@ -34,13 +34,13 @@ import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { measureText as measureTextWithFont } from '../../../../r3f/controls/native/text/measurer';
 
-const THEME = defaultPickerTheme(nativeTheme(1));
-const CTX: SolveContext = { theme: THEME, measureText: null, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
-
 function node(properties: Record<string, unknown>): SolveNode {
   const tscnNode: TscnNode = controlNode('P', 'ColorPicker', properties);
   return { ...emptySolveNode(), path: 'P', node: tscnNode };
 }
+
+const THEME = pickerChildTheme(node({}), nativeTheme(1)).theme;
+const CTX: SolveContext = { theme: THEME, measureText: null, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
 
 /** Every assertion below is on the height alone. */
 function minHeight(result: ReturnType<typeof colorPickerMinimumSize>): number {

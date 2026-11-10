@@ -27,10 +27,7 @@ export interface PickerTheme extends NativeTheme {
 }
 
 /** `theme` with the default mode button boxes, for a picker with no Theme. */
-export function defaultPickerTheme(
-  theme: NativeTheme,
-  boxes: TabBarStyleBoxes = tabBarStyleBoxes(theme.scale)
-): PickerTheme {
+function defaultPickerTheme(theme: NativeTheme, boxes: TabBarStyleBoxes): PickerTheme {
   return {
     ...theme,
     modeButton: { normal: boxes.unselected, pressed: boxes.selected },

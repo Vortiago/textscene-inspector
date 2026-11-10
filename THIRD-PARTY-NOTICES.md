@@ -228,6 +228,9 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/colorModes.ts` | `scene/gui/color_mode.cpp`/`.h` (every `ColorMode` subclass: `get_slider_value`/`get_slider_max`/`get_alpha_slider_max`/`get_alpha_slider_value`/`slider_draw`), `scene/gui/color_picker.cpp` (`_copy_color_to_normalized_and_intensity`, `_update_text_value`, `_alpha_slider_draw`, `is_color_valid_hex`/`_append_hex`) and `core/math/color.cpp` (`Color::to_html`, `Color::srgb_to_linear`) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/okhsl.ts` | `core/math/color.cpp` (`Color::set_ok_hsl`/`get_ok_hsl_h`/`get_ok_hsl_s`/`get_ok_hsl_l`) and `thirdparty/misc/ok_color.h` (MIT, Copyright (c) 2021 Björn Ottosson — `srgb_to_okhsl`/`okhsl_to_srgb` and their shared helpers) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/Component.tsx` | `scene/gui/color_picker.cpp` (`ColorPicker::_sample_draw`, the constructor's `sample_hbc`/`mode_hbc`/`hex_hbc`/`swatches_vbc` layout) and `scene/gui/color_picker_shape.cpp` (`ColorPickerShape::draw_cursor`) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/GradientMesh.tsx` | `scene/gui/color_picker_shape.cpp` and `scene/gui/color_mode.cpp` (the gradients the SV square, hue slider and channel sliders draw) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/LabelledText.tsx` | `scene/gui/label.cpp`, `scene/gui/line_edit.cpp` and `scene/gui/button.cpp` (where each aligns its text) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/TextTypeScriptIcon.tsx` | `scene/gui/color_picker.cpp` (`ColorPicker::_update_text_value`) and `scene/gui/button.cpp` (icon placement) |
 
 ### Reproduced values
 
