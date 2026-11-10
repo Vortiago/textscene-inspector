@@ -3,9 +3,12 @@
  * `ThemeResource`s `decode.ts` produces. Pure: no I/O, no parsing.
  */
 
-import { DEFAULT_FONT_SIZE, DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS } from '../../../godot/scene/theme';
+import {
+  DEFAULT_FONT_SIZE,
+  DEFAULT_THEME_TYPE_VARIATIONS,
+  DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS,
+} from '../../../godot/scene/theme';
 import { classInheritanceChain } from '../../../godot/classdb/classBaseTypes';
-import { DEFAULT_THEME_TYPE_VARIATIONS } from '../../../godot/scene/theme';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { withDefaultFonts, type DefaultFonts } from '../../fonts/font/defaultFont';
 import type { ProjectFonts } from '../../fonts/font/projectFonts';

@@ -81,9 +81,9 @@ const BUTTON_ICON_COLOR_KEYS: Record<ToggleDrawState, string> = {
 };
 
 /**
- * The default-theme icon modulate per draw state: `icon_normal_color = Color(1, 1, 1, 1)`
- * (`default_theme.cpp:164`) and `icon_disabled_color = Color(1, 1, 1, 0.4)` (`:169`). No other
- * builtin widget sets either key.
+ * The default-theme icon modulate per draw state: `icon_normal_color` and `icon_pressed_color` are
+ * `Color(1, 1, 1, 1)` (`default_theme.cpp:164-165`), `icon_disabled_color` is `Color(1, 1, 1, 0.4)` (`:169`).
+ * No other builtin widget sets these keys.
  */
 export const BUTTON_ICON_MODULATE: Record<ToggleDrawState, Rgba> = {
   normal: { r: 1, g: 1, b: 1, a: 1 },
