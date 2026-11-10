@@ -55,8 +55,8 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   Polygon2D: {
-    renderGap: [
-      // `antialiased` is stored and read by no Godot draw (`polygon_2d.cpp:395-401,507-514`).
+    linterOnly: [
+      // Godot stores `antialiased` and no draw reads it (`polygon_2d.cpp:395-401,507-514`).
       'antialiased',
     ],
     reason: 'Godot 4.6.3 ignores antialiased, so there is nothing to draw.',
