@@ -3552,6 +3552,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Line2d Closed Width Curve Zero",
+    "file": "unit-line2d-closed-width-curve-zero.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Line2d Gradient",
     "file": "unit-line2d-gradient.tscn",
     "category": "Unit - 2D Canvas"
@@ -3804,6 +3809,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tile Map",
     "file": "unit-tile-map.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tilemaplayer Normal Map Padded Viewport",
+    "file": "unit-tilemaplayer-normal-map-padded-viewport.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
