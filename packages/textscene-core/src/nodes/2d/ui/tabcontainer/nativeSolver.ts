@@ -19,6 +19,7 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { isTopLevelItem } from '../../../../r3f/canvasPaintOrder';
+import { internalChildThemeItems, type InternalThemeItems } from '../../../../r3f/controls/native/themeItems';
 import { isPromotedControl, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
@@ -133,6 +134,11 @@ function internalTabBarThemeConstants(
   };
 }
 
+/** The bar icons the container does not push: `_on_theme_changed` sets the others (`tab_container.cpp:306-312`). */
+function tabBarOwnIcons(barItems: InternalThemeItems): SolveNode['icons'] {
+  return barItems.icons.close ? { close: barItems.icons.close } : {};
+}
+
 /**
  * A synthetic `SolveNode` for TabContainer's internal `TabBar`, with the scope of `n`. The bar is no
  * scene node (`memnew`d at `tab_container.cpp:1280`), and type `'TabBar'` reaches `tabBarMinimumSize`.
@@ -165,12 +171,14 @@ export function buildInternalTabBarNode(
       ),
     },
   };
+  const barItems = internalChildThemeItems(n, 'TabBar');
   return {
     ...n,
     node: { ...n.node, type: 'TabBar', properties: barProps, children: [] },
     children: [],
-    // `constants` remaps TabContainer's keys (`internalTabBarThemeConstants`). `colors` and
-    // `styleBoxes`, spread from `n`, use the same key names, so they need no remap.
+    // The container pushes every other item the bar reads (`tab_container.cpp:306-343`), so a bar
+    // theme entry for one never applies. Only the close icon comes from the bar's own lookup.
+    icons: { ...tabBarOwnIcons(barItems), ...n.icons },
     constants: internalTabBarThemeConstants(n.constants, theme),
     // `tab_bar->add_theme_font_override(font, theme_cache.tab_font)` (`:338`),
     // the font twin of the size push above.
