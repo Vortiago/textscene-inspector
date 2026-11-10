@@ -26,7 +26,7 @@ import {
   TILE_ORIENTATION_FLIP_H,
   TILE_ORIENTATION_FLIP_V,
   TILE_ORIENTATION_TRANSPOSE,
-} from '../../resources/tileset/tileGeometry.js';
+} from '../../resources/tileset/tileOrientationBits.js';
 
 /** What a CanvasTexture adds to an item's diffuse texture, sampled where the diffuse is. */
 export interface CanvasItemSurface {

@@ -20,6 +20,7 @@ import {
   replayWindowSize,
   isMaxSizeSet,
   validMaxSize,
+  windowClassDefaults,
   type WindowSizeWrite,
 } from '../../../godot/scene/window.js';
 
@@ -45,10 +46,13 @@ const formatSize = (size: Vector2): string => `Vector2i(${size.x}, ${size.y})`;
 const sameSize = (a: Vector2, b: Vector2): boolean => a.x === b.x && a.y === b.y;
 
 function checkMaxBelowMin(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
-  if (rawProps.max_size === undefined || rawProps.min_size === undefined) return [];
+  if (rawProps.max_size === undefined) return [];
 
   const maxSize = matchVector2i(rawProps.max_size);
-  const minSize = matchVector2i(rawProps.min_size);
+  const minSize =
+    rawProps.min_size === undefined
+      ? windowClassDefaults(node.type).minSize
+      : matchVector2i(rawProps.min_size);
   if (!maxSize || !minSize) return [];
 
   // Both setters floor a negative component at 0 (`_clamp_limit_size`, :461-469) before
@@ -71,8 +75,11 @@ function checkMaxBelowMin(node: RuleContext['node'], rawProps: Record<string, st
  * `max_size` lines in order, or `null` when `size` is absent or one of them holds no int32.
  * The `wrap_controls` floor is not modelled: it needs the solved Controls.
  */
-function replaySize(rawProps: Record<string, string>): { written: Vector2; loaded: Vector2 } | null {
-  const writes: WindowSizeWrite[] = [];
+function replaySize(
+  rawProps: Record<string, string>,
+  constructorMin: Vector2
+): { written: Vector2; loaded: Vector2 } | null {
+  const writes: WindowSizeWrite[] = [{ key: 'min_size', value: constructorMin }];
   let written: Vector2 | null = null;
   for (const [key, raw] of Object.entries(rawProps)) {
     if (!isWindowSizeKey(key)) continue;
@@ -85,8 +92,10 @@ function replaySize(rawProps: Record<string, string>): { written: Vector2; loade
 }
 
 function checkSizeClamped(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
-  if (rawProps.min_size === undefined && rawProps.max_size === undefined) return [];
-  const replayed = replaySize(rawProps);
+  const constructorMin = windowClassDefaults(node.type).minSize;
+  const hasConstructorMin = constructorMin.x > 0 || constructorMin.y > 0;
+  if (rawProps.min_size === undefined && rawProps.max_size === undefined && !hasConstructorMin) return [];
+  const replayed = replaySize(rawProps, constructorMin);
   if (!replayed) return [];
   const { written, loaded } = replayed;
   // A negative component is the validator's error on this same clamp, so the floor at 0

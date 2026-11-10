@@ -55,6 +55,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
       node={node}
       props={props}
       canvasTexture={canvasTexture}
+      isDrawn={!textureMissing && drawnTexture !== null}
       body={({ color, opacity }, _material, pixelMaterial) =>
         // No texture draws nothing, as Godot's draw returns early (`sprite_2d.cpp:159`). The
         // placeholder is for a texture that is set but never draws.

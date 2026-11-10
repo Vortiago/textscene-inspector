@@ -83,6 +83,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Accept Dialog Embedded",
+    "file": "unit-accept-dialog-embedded.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Accept Dialog Theme",
+    "file": "unit-accept-dialog-theme.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Accept Dialog",
     "file": "unit-accept-dialog.tscn",
     "category": "Other"
@@ -455,6 +465,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Cone Twist Joint 3d",
     "file": "unit-cone-twist-joint-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Confirmation Dialog Embedded",
+    "file": "unit-confirmation-dialog-embedded.tscn",
     "category": "Other"
   },
   {
@@ -3549,6 +3564,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Line2d Closed Width Curve Zero",
+    "file": "unit-line2d-closed-width-curve-zero.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Line2d Gradient",
     "file": "unit-line2d-gradient.tscn",
     "category": "Unit - 2D Canvas"
@@ -3801,6 +3821,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tile Map",
     "file": "unit-tile-map.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tilemaplayer Normal Map Padded Viewport",
+    "file": "unit-tilemaplayer-normal-map-padded-viewport.tscn",
     "category": "Unit - 2D Canvas"
   },
   {

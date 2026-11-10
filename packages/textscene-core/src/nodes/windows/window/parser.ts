@@ -5,6 +5,7 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { unquoteString } from '../../../parser/utils';
+import type { Vector2 } from '../../../godot/math/vector';
 import { boolOr, floatOr, intOr, parseOptionalVector2i, vec2iOr } from '../../../parser/valueParsers';
 import {
   clampLimitSize,
@@ -23,9 +24,12 @@ import type { WindowProperties } from './types';
 /** Frozen: every parsed window shares it as a default, so no reader may write through it. */
 const ORIGIN = Object.freeze({ x: 0, y: 0 });
 
-/** The size lines in file order, a malformed one skipped as the lenient parse skips any bad value. */
-function sizeWrites(properties: Record<string, string>): WindowSizeWrite[] {
-  const writes: WindowSizeWrite[] = [];
+/**
+ * The size lines in file order, a malformed one skipped as the lenient parse skips any bad value.
+ * A class that floors its size in its constructor writes `min_size` first.
+ */
+function sizeWrites(properties: Record<string, string>, constructorMinSize: Vector2): WindowSizeWrite[] {
+  const writes: WindowSizeWrite[] = [{ key: 'min_size', value: constructorMinSize }];
   for (const [key, raw] of Object.entries(properties)) {
     if (!isWindowSizeKey(key)) continue;
     const value = parseOptionalVector2i(raw);
@@ -74,7 +78,7 @@ export function parseWindow(heading: ParsedHeading, properties: Record<string, s
     ...viewport,
     ...parseThemeOwnerFields(properties),
     transparent_bg: parseTransparentBackground(properties, defaults.transparent, context),
-    size: replayWindowSize(sizeWrites(properties)),
+    size: replayWindowSize(sizeWrites(properties, defaults.minSize)),
     size_2d_override: ORIGIN,
     size_2d_override_stretch: false,
     // `Window()` disables the update (`window.cpp:3578`), and the embedder sets
@@ -83,7 +87,7 @@ export function parseWindow(heading: ParsedHeading, properties: Record<string, s
       ? SubViewportUpdateMode.WHEN_PARENT_VISIBLE
       : SubViewportUpdateMode.DISABLED,
     render_target_clear_mode: SubViewportClearMode.ALWAYS,
-    title: properties.title === undefined ? '' : unquoteString(properties.title),
+    title: properties.title === undefined ? defaults.title : unquoteString(properties.title),
     position: vec2iOr(properties.position, ORIGIN, context),
     initial_position: intOr(
       properties.initial_position,
@@ -94,10 +98,10 @@ export function parseWindow(heading: ParsedHeading, properties: Record<string, s
     borderless: boolOr(properties.borderless, defaults.borderless, context),
     unfocusable: boolOr(properties.unfocusable, false, context),
     always_on_top: boolOr(properties.always_on_top, false, context),
-    exclusive: boolOr(properties.exclusive, false, context),
+    exclusive: boolOr(properties.exclusive, defaults.exclusive, context),
     wrap_controls: boolOr(properties.wrap_controls, defaults.wrapControls, context),
     force_native: boolOr(properties.force_native, false, context),
-    min_size: clampLimitSize(vec2iOr(properties.min_size, ORIGIN, context)),
+    min_size: clampLimitSize(vec2iOr(properties.min_size, defaults.minSize, context)),
     max_size: clampLimitSize(vec2iOr(properties.max_size, ORIGIN, context)),
     content_scale: parseContentScale(properties, context),
   };

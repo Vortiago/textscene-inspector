@@ -7,6 +7,11 @@ export interface ButtonProperties extends ControlProperties, TextDirectionProper
   text?: string;
   /** Disabled buttons render dimmed and non-interactive. */
   disabled?: boolean;
+  /**
+   * The button holds its viewport's focus (`button.cpp:220,284`). Not a scene property: a scene has
+   * no focus, so only a Control that grabs it for its own button, an AcceptDialog's OK, sets it.
+   */
+  hasFocus?: boolean;
   /** Flat buttons drop the default background/border chrome. */
   flat?: boolean;
   /** HorizontalAlignment of the text (0=left, 1=center, 2=right, 3=fill). */

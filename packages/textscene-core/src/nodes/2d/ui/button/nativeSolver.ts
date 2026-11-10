@@ -33,7 +33,11 @@ import type { TextLayoutResult } from '../../../../r3f/controls/native/text/text
 import { clampAutowrapMode, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ButtonProperties } from './types';
-import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
+import {
+  CONTROL_FONT_COLOR,
+  CONTROL_FONT_DISABLED_COLOR,
+  CONTROL_FONT_FOCUS_COLOR,
+} from '../../../../godot/scene/theme';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 
@@ -75,9 +79,25 @@ const BUTTON_ICON_MODULATE: Record<ButtonDrawState, Rgba> = {
   disabled: { r: 1, g: 1, b: 1, a: 0.4 },
 };
 
+/** `font_focus_color` and its default (`default_theme.cpp:159`): the text of a focused, enabled Button (`button.cpp:284-285`). */
+const BUTTON_FOCUS_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_focus_color' };
+
+/** `icon_focus_color` (`button.cpp:286-288`): applied only where a theme sets it. */
+const BUTTON_ICON_FOCUS_COLOR_KEY = 'icon_focus_color';
+
+/** Whether `props` draws with the focus colours: a focused Button in the normal draw mode (`button.cpp:282-285`). */
+export function isButtonFocusStyled(props: ButtonProperties, state: ButtonDrawState): boolean {
+  return state === 'normal' && props.hasFocus === true;
+}
+
 /** Resolves this Button's icon modulate colour for `state`: `n.colors` (a local override or the ancestor Theme chain) wins, else the default-theme literal. */
 export function buttonIconColor(colors: SolveNode['colors'], state: ButtonDrawState): Rgba {
   return colors[BUTTON_ICON_COLOR_KEYS[state]] ?? BUTTON_ICON_MODULATE[state];
+}
+
+/** The icon modulate of a focused Button in the normal draw mode: `icon_focus_color`, else white, never `icon_normal_color` (`button.cpp:286-288`). */
+export function buttonFocusIconColor(colors: SolveNode['colors']): Rgba {
+  return colors[BUTTON_ICON_FOCUS_COLOR_KEY] ?? BUTTON_ICON_MODULATE.normal;
 }
 
 /** Resolves this Button's theme font size and colour for `state`: overrides, else the ancestor Theme chain, the theme default or Button's own literal. */
@@ -87,11 +107,16 @@ export function buttonTextTheme(
   state: ButtonDrawState,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
+  const isFocusStyled = isButtonFocusStyled(props, state);
   const defaults: TextThemeDefaults = {
     fontSizePx: ctx.theme.fontSize,
-    color: state === 'disabled' ? BUTTON_DEFAULT_DISABLED_FONT_COLOR : BUTTON_DEFAULT_FONT_COLOR,
+    color: isFocusStyled ? CONTROL_FONT_FOCUS_COLOR : buttonDefaultFontColor(state),
   };
-  return resolveTextTheme(n, props, BUTTON_THEME_KEYS[state], defaults);
+  return resolveTextTheme(n, props, isFocusStyled ? BUTTON_FOCUS_KEYS : BUTTON_THEME_KEYS[state], defaults);
+}
+
+function buttonDefaultFontColor(state: ButtonDrawState): Rgba {
+  return state === 'disabled' ? BUTTON_DEFAULT_DISABLED_FONT_COLOR : BUTTON_DEFAULT_FONT_COLOR;
 }
 
 /**

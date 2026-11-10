@@ -42,6 +42,9 @@ export const CANVAS_2D_SCENES = [
   // orphan; (120,40) green, its child re-rooted on its own; (40,120) blue, below a moved parent that
   // does not apply. Dropped, all three are the grey background.
   { name: 'orphan-reroot', file: 'unit-orphan-reroot.tscn', mode: '2d' },
+  // A closed BEVEL Line2D whose width curve is 0 at its start: Godot 4.6.3 `--mode 2d` draws no
+  // closing segment, so (100,250) on the left side is the background, rgb(76).
+  { name: 'line2d-closed-width-curve-zero', file: 'unit-line2d-closed-width-curve-zero.tscn', mode: '2d' },
   // A ScriptCreateDialog is an editor class: a game loads a placeholder, and its children still draw.
   { name: 'script-create-dialog-placeholder', file: 'unit-script-create-dialog-placeholder.tscn', mode: '2d' },
   // Two chained Bone2Ds, each turned and moved, with a bar under each. Godot
@@ -157,6 +160,13 @@ export const CANVAS_2D_SCENES = [
   // of it, 24 left, 24 right, 100 right, 100 above and 100 below: Plain rgb(226, 244, 168, 128, 160, 161),
   // FlippedH rgb(128, 170, 244, 225, 161, 161) and Transposed rgb(160, 206, 205, 161, 226, 128).
   { name: 'tilemaplayer-normal-map', file: 'unit-tilemaplayer-normal-map.tscn', mode: '2d' },
+  // The same tiles over a padded CanvasTexture whose diffuse windows a SubViewport. Godot 4.6.3
+  // `--mode 2d`: rgb(0) at (192,324), (576,324) and (960,224), the unrendered target, unlit.
+  {
+    name: 'tilemaplayer-normal-map-padded-viewport',
+    file: 'unit-tilemaplayer-normal-map-padded-viewport.tscn',
+    mode: '2d',
+  },
   // A Line2D whose CanvasTexture carries a normal map; only the item's rotation turns the normal. Godot
   // 4.6.3 `--mode 2d`: Vertical rgb(226) at (100,324), rgb(160) at (200,224) and rgb(161) at (200,424).
   // Turned rgb(161) at (852,324), rgb(226) at (952,224) and rgb(128) at (952,424).
@@ -1179,6 +1189,12 @@ export const CANVAS_2D_SCENES = [
   { name: 'window-content-scale', file: 'unit-window-content-scale.tscn', mode: '2d' },
   // A content_scale_mode outside the enum leaves the target empty: black content. Max 92, mean 0.318.
   { name: 'window-content-scale-unknown', file: 'unit-window-content-scale-unknown.tscn', mode: '2d' },
+  // A visible AcceptDialog: panel, message and a focused OK button, sized to its content. Max 7, mean 0.32.
+  { name: 'accept-dialog-embedded', file: 'unit-accept-dialog-embedded.tscn', mode: '2d' },
+  // A visible ConfirmationDialog adds Cancel before OK, with custom button texts. Max 7, mean 0.32.
+  { name: 'confirmation-dialog-embedded', file: 'unit-confirmation-dialog-embedded.tscn', mode: '2d' },
+  // A Theme on the dialog restyles its Button and Label: a red normal box, yellow focus text, green message. Max 7, mean 0.33.
+  { name: 'accept-dialog-theme', file: 'unit-accept-dialog-theme.tscn', mode: '2d' },
 
   // MeshInstance2D draws a mesh through the canvas. Godot 4.6.3 `--mode 2d` probes: the textured QuadMesh
   // shows its texture upside down, (75,75) blue and (75,125) red, and the PlaneMesh at (100,300) draws

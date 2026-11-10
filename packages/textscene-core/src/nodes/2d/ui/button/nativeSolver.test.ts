@@ -18,6 +18,7 @@ import {
   buttonMinimumSize,
   buttonTextTheme,
   buttonIconColor,
+  buttonFocusIconColor,
   BUTTON_DEFAULT_FONT_COLOR,
   buttonLabelShape,
 } from './nativeSolver';
@@ -331,6 +332,35 @@ describe('buttonIconColor — icon_normal_color / icon_disabled_color (default_t
 
   it('a theme_override_colors/icon_disabled_color override (already folded into n.colors) wins over the default', () => {
     expect(buttonIconColor({ icon_disabled_color: { r: 1, g: 0, b: 0, a: 1 } }, 'disabled')).toEqual({
+      r: 1,
+      g: 0,
+      b: 0,
+      a: 1,
+    });
+  });
+});
+
+describe('a focused Button (button.cpp:282-288)', () => {
+  const focused = { hasFocus: true } as ButtonProperties;
+
+  it('draws its text in font_focus_color, 0.95 grey by default (default_theme.cpp:159)', () => {
+    expect(buttonTextTheme(node({}), focused, 'normal', ctx()).color).toEqual({
+      r: 0.95,
+      g: 0.95,
+      b: 0.95,
+      a: 1,
+    });
+  });
+
+  it('keeps the disabled colour while disabled', () => {
+    expect(buttonTextTheme(node({}), focused, 'disabled', ctx()).color).toEqual(
+      buttonTextTheme(node({}), {} as ButtonProperties, 'disabled', ctx()).color
+    );
+  });
+
+  it('reads icon_focus_color for the icon, white without a theme item', () => {
+    expect(buttonFocusIconColor({})).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    expect(buttonFocusIconColor({ icon_focus_color: { r: 1, g: 0, b: 0, a: 1 } })).toEqual({
       r: 1,
       g: 0,
       b: 0,
