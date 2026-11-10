@@ -19,14 +19,13 @@ interface GizmoMeshProps {
   color: THREE.ColorRepresentation;
   /** The opacity of the fill, from 0 to 1. */
   alpha: number;
-  /** Added to the gizmo render order, so a fill draws after another at a lesser value. Defaults to 0. */
+  /** Added to the gizmo render order, so a fill draws after another at a lesser value. Keep it below 1. */
   order?: number;
 }
 
 export function GizmoMesh({ geometry, color: ownColor, alpha: ownAlpha, order = 0 }: GizmoMeshProps) {
   const { color, opacity } = useGizmoLook(ownColor, ownAlpha);
   useDisposeOnRelease(geometry);
-  // Godot's gizmo material culls no face (`node_3d_editor_gizmos.cpp:927`), so one pass draws both.
   const hasVertexColors = geometry?.hasAttribute('color') ?? false;
   const program = useMemo(
     () =>
@@ -39,6 +38,7 @@ export function GizmoMesh({ geometry, color: ownColor, alpha: ownAlpha, order = 
           depthWrite: false,
           fog: false,
         },
+        // Godot's gizmo material culls no face (`node_3d_editor_gizmos.cpp:927`), so one pass draws both.
         merge: [canvasItemFacing()],
       }),
     [color, opacity, hasVertexColors]

@@ -14,12 +14,12 @@ export interface BoneKiteSource {
   /** The live paths of its Bone2D children, in order. */
   children: readonly string[];
   /**
-   * Where its kite draws among all kites, in (0, 1) and later for a greater value. Godot makes the
+   * Where its kite draws among all kites, later for a greater rank. Godot makes the
    * gizmo item of a bone on its first draw, after the items of the bones below it exist, and items
    * of one z draw in tree order (`skeleton_2d.cpp:197-202`). So a kite draws after every kite below
    * it and after the kites of earlier bones: the order is the post-order of the bones.
    */
-  drawOrder: number;
+  drawRank: number;
 }
 
 /** Written only by {@link kept}: the last source of each bone node, by live path. */
@@ -36,24 +36,17 @@ function kept(node: object, bonePath: string, source: BoneKiteSource): BoneKiteS
 
 /** The kite source of each Bone2D of `tree`, by the live path of the bone. */
 export function bindBoneChildren(tree: LiveTree): ReadonlyMap<string, BoneKiteSource> {
-  const children = new Map<string, string[]>();
-  const nodes = new Map<string, object>();
-  const postOrder: string[] = [];
+  const bones: { path: string; node: object; children: string[] }[] = [];
+  const childrenOf = new Map<string, string[]>();
   tree.fold<string | null, void>(null, ({ step, path }, parentBone, descend) => {
     if (step.node.type !== 'Bone2D') return void descend(null);
-    children.set(path, []);
-    nodes.set(path, step.node);
-    if (parentBone !== null) children.get(parentBone)!.push(path);
+    const children: string[] = [];
+    childrenOf.set(path, children);
+    if (parentBone !== null) childrenOf.get(parentBone)!.push(path);
     descend(path);
-    postOrder.push(path);
+    bones.push({ path, node: step.node, children });
   });
   return new Map(
-    postOrder.map((path, index) => [
-      path,
-      kept(nodes.get(path)!, path, {
-        children: children.get(path)!,
-        drawOrder: (index + 1) / (postOrder.length + 1),
-      }),
-    ])
+    bones.map(({ path, node, children }, drawRank) => [path, kept(node, path, { children, drawRank })])
   );
 }

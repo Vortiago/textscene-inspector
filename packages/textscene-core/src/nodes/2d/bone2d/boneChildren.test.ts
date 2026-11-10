@@ -50,12 +50,10 @@ describe('bindBoneChildren', () => {
   // Godot makes the gizmo canvas item of a bone on its first draw, after the items of its children
   // exist, so a bone's kite draws after every kite below it and after the kites of earlier siblings.
   it('orders the kites children first, then parents, siblings in tree order', () => {
-    const order = (path: string) => bindBoneChildren(tree()).get(path)!.drawOrder;
+    const order = (path: string) => bindBoneChildren(tree()).get(path)!.drawRank;
     expect(order('Root/Arm/Forearm')).toBeLessThan(order('Root/Arm/Hand/Finger'));
     expect(order('Root/Arm/Hand/Finger')).toBeLessThan(order('Root/Arm/Hand'));
     expect(order('Root/Arm/Hand')).toBeLessThan(order('Root/Arm'));
     expect(order('Root/Arm')).toBeLessThan(order('Root/Bystander/Stray'));
-    expect(order('Root/Arm/Forearm')).toBeGreaterThan(0);
-    expect(order('Root/Bystander/Stray')).toBeLessThan(1);
   });
 });

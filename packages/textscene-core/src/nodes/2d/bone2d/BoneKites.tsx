@@ -30,6 +30,15 @@ import {
 } from './boneKite';
 import type { Bone2DProperties } from './types';
 
+/** A scene stores a meta as `metadata/<name>`, and `has_meta` ignores its value. */
+const POSE_OVERRIDE_KEY = 'metadata/_local_pose_override_enabled_';
+
+/** The children of a bone the pass has not reached. */
+const NO_CHILDREN: readonly string[] = [];
+
+/** One rank of {@link BoneKiteSource.drawRank} in render order, small enough that 10,000 bones stay below the next layer. */
+const DRAW_RANK_STEP = 1e-4;
+
 const POINTS_PER_KITE = OUTLINE_POINT_COUNT + FILL_POINT_COUNT;
 /** Ear clipping gives a polygon of n points n - 2 triangles. */
 const INDICES_PER_KITE = 3 * (OUTLINE_POINT_COUNT - 2 + FILL_POINT_COUNT - 2);
@@ -61,7 +70,7 @@ interface KiteLook {
 
 /**
  * Writes the colour of every point of every kite: the outline in one colour, the fill in two
- * alternating, or all in the IK colour for a bone with a pose override (`skeleton_2d.cpp:235-241`).
+ * alternating, or the fill all in the IK colour for a bone with a pose override (`skeleton_2d.cpp:235-241`).
  */
 function writeColors(geometry: THREE.BufferGeometry, { isSelected, hasPoseOverride }: KiteLook): void {
   const colors = geometry.getAttribute('color') as THREE.BufferAttribute;
@@ -69,9 +78,9 @@ function writeColors(geometry: THREE.BufferGeometry, { isSelected, hasPoseOverri
   const pointCount = colors.count;
   for (let point = 0; point < pointCount; point++) {
     const inKite = point % POINTS_PER_KITE;
-    const fill = hasPoseOverride ? POSE_OVERRIDE_COLOR : FILL_COLORS[(inKite - OUTLINE_POINT_COUNT) % 2]!;
-    const color = inKite < OUTLINE_POINT_COUNT ? outline : fill;
-    colors.array.set(color, point * FLOATS_PER_COLOR);
+    const isOutline = inKite < OUTLINE_POINT_COUNT;
+    const fill = hasPoseOverride ? POSE_OVERRIDE_COLOR : FILL_COLORS[(inKite - OUTLINE_POINT_COUNT) % 2];
+    colors.array.set(isOutline ? outline : fill!, point * FLOATS_PER_COLOR);
   }
   colors.needsUpdate = true;
 }
@@ -123,13 +132,7 @@ function writeKites(geometry: THREE.BufferGeometry, kites: readonly BoneKite[]):
   geometry.computeBoundingSphere();
 }
 
-/** A scene stores a meta as `metadata/<name>`, and `has_meta` ignores its value. */
-const POSE_OVERRIDE_KEY = 'metadata/_local_pose_override_enabled_';
-
 const TRANSFORM_TERMS = 6;
-
-/** The children of a bone the pass has not reached. */
-const NO_CHILDREN: readonly string[] = [];
 
 function storeTerm(out: Float64Array, at: number, term: number): boolean {
   const hasChanged = out[at] !== term;
@@ -211,5 +214,12 @@ export function BoneKites({ node }: { node: TscnNode }) {
   const angle = props.auto_calculate_length_and_angle ? props.rotation : props.bone_angle;
   const reach = useMemo(() => ({ length: props.length, angle }), [props.length, angle]);
   useKiteFollow(geometry, path, childPaths, reach);
-  return <GizmoMesh geometry={geometry} color={0xffffff} alpha={1} order={source?.drawOrder} />;
+  return (
+    <GizmoMesh
+      geometry={geometry}
+      color={0xffffff}
+      alpha={1}
+      order={(source?.drawRank ?? 0) * DRAW_RANK_STEP}
+    />
+  );
 }

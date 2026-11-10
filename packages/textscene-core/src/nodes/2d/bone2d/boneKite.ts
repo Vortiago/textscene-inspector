@@ -79,6 +79,12 @@ function scaledBy(points: readonly Vector2[], by: Vector2): Vector2[] {
   return points.map(({ x, y }) => ({ x: x * by.x, y: y * by.y }));
 }
 
+/** The tip of a bone with no child, or none where its length is not positive (`skeleton_2d.cpp:320-330`). */
+function reachRel({ length, angle }: BoneReach, scale: Vector2): Vector2[] {
+  if (length <= 0) return [];
+  return [{ x: Math.cos(angle) * length * scale.x, y: Math.sin(angle) * length * scale.y }];
+}
+
 /**
  * The kites of a bone in its own pixels. `global` is the bone's global transform, `childOrigins` the
  * global origins of its Bone2D children in order, and `reach` what a bone with no such child draws.
@@ -105,10 +111,4 @@ export function boneKitesOf(
     const kite = kiteTo(rel);
     return { fill: scaledBy(kite.fill, undoScale), outline: scaledBy(kite.outline, undoScale) };
   });
-}
-
-/** The tip of a bone with no child, or none where its length is not positive (`skeleton_2d.cpp:320-330`). */
-function reachRel({ length, angle }: BoneReach, scale: Vector2): Vector2[] {
-  if (length <= 0) return [];
-  return [{ x: Math.cos(angle) * length * scale.x, y: Math.sin(angle) * length * scale.y }];
 }
