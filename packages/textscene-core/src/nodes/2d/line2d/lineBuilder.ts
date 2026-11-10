@@ -94,10 +94,13 @@ function toPoints(flat: Float32Array): Vector2[] {
   }));
 }
 
-/** The pair that ends the first segment of a closed line, which its last segment closes on. */
+/**
+ * The pair that ends the first segment of a closed line, which its last segment closes on. Null
+ * where the width factor there is 0: Godot's `1 / 0` weight makes the pair NaN (`line_builder.cpp:316`),
+ * and measured on 4.6.3 its closing quad draws nothing.
+ */
 interface FirstJoint {
-  up: Vector2;
-  down: Vector2;
+  pair: { up: Vector2; down: Vector2 } | null;
   isSharp: boolean;
 }
 
@@ -281,10 +284,7 @@ class StrokeWalk {
       const isClosingJoint = wrapsAround && i === lastIndex;
       if (isClosingJoint && first && this.options.widthFactorAt && !first.isSharp) {
         // A width curve that does not meet itself ends on the first pair, scaled to the last width.
-        const center = vector2Scaled(vector2Add(first.up, first.down), 0.5);
-        const up = vector2Lerp(center, first.up, this.widthFactor);
-        const down = vector2Lerp(center, first.down, this.widthFactor);
-        stripAddQuad(this.strip, up, down, color1, this.uvx);
+        if (first.pair) this.addClosingQuad(first.pair, color1);
         return;
       }
       stripAddQuad(this.strip, joint.up1, joint.down1, color1, this.uvx);
@@ -302,14 +302,21 @@ class StrokeWalk {
   }
 
   private firstJointOf(joint: Joint): FirstJoint {
+    const isSharp = joint.jointMode === LineJointMode.SHARP;
+    if (this.widthFactor === 0) return { pair: null, isSharp };
     const center = vector2Scaled(vector2Add(joint.up1, joint.down1), 0.5);
-    // A width factor of 0 gives the zero-width limit, where Godot's 1 / 0 gives an infinite weight and NaN.
-    const weight = this.widthFactor === 0 ? 0 : f(1 / this.widthFactor);
+    const weight = f(1 / this.widthFactor);
     return {
-      up: vector2Lerp(center, joint.up1, weight),
-      down: vector2Lerp(center, joint.down1, weight),
-      isSharp: joint.jointMode === LineJointMode.SHARP,
+      pair: { up: vector2Lerp(center, joint.up1, weight), down: vector2Lerp(center, joint.down1, weight) },
+      isSharp,
     };
+  }
+
+  private addClosingQuad(first: { up: Vector2; down: Vector2 }, color: Rgba | null): void {
+    const center = vector2Scaled(vector2Add(first.up, first.down), 0.5);
+    const up = vector2Lerp(center, first.up, this.widthFactor);
+    const down = vector2Lerp(center, first.down, this.widthFactor);
+    stripAddQuad(this.strip, up, down, color, this.uvx);
   }
 
   /** The bevel triangle or the round fan that fills the outside of a corner (`line_builder.cpp:289-338`). */
