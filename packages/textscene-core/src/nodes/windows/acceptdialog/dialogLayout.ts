@@ -14,7 +14,8 @@ import type { Rect2 } from '../../../godot/math/rect2';
 import type { Vector2 } from '../../../godot/math/vector';
 import { SizeFlags, DEFAULT_SIZE_FLAGS } from '../../../godot/scene/control';
 import { internalChildThemeItems } from '../../../r3f/controls/native/themeItems';
-import type { SolveNode } from '../../../r3f/controls/native/solveTree';
+import { controlProps, type SolveNode } from '../../../r3f/controls/native/solveTree';
+import { solveControlTree } from '../../../r3f/controls/native/controlRectSolver';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import type {
   ContainerLayoutFn,
@@ -34,6 +35,7 @@ import {
   dialogButtonRoles,
   buttonsSeparation,
   dialogPanelBox,
+  dialogBodyOf,
   cachedMessageLabelNode,
   type DialogButtonRole,
 } from './dialogParts';
@@ -45,10 +47,18 @@ interface DialogButton {
   rect: Rect2;
 }
 
+/** A Control of the dialog's body and its rect in the dialog's own space. */
+interface PlacedControl {
+  control: SolveNode;
+  rect: Rect2;
+}
+
 interface DialogGeometry {
   /** The message label's rect, which every authored Control shares (`content`). */
   content: Rect2;
   buttons: readonly DialogButton[];
+  /** The visible Controls of the dialog's body in tree order, parents before children. Empty for a class with no body. */
+  body: readonly PlacedControl[];
 }
 
 /** `HBoxContainer::add_spacer`: it takes the width the buttons leave (`box_container.cpp`). */
@@ -131,6 +141,26 @@ function dialogContentRect(dialog: SolveNode, size: Vector2, ctx: SolveContext):
   );
 }
 
+/** Every visible Control of the tree under `root`, placed by the solve that laid it out inside the rect at `origin`. */
+function placeVisible(
+  root: SolveNode,
+  solved: ReadonlyMap<string, { rect: Rect2 }>,
+  origin: Vector2
+): PlacedControl[] {
+  const entry = solved.get(root.path);
+  if (!entry || controlProps(root).visible === false) return [];
+  const rect = { ...entry.rect, x: origin.x + entry.rect.x, y: origin.y + entry.rect.y };
+  const children = root.children.flatMap((child) => placeVisible(child, solved, rect));
+  return [{ control: root, rect }, ...children];
+}
+
+/** The body's Controls placed in the content rect, which the body's root fills. */
+function placeBody(dialog: SolveNode, content: Rect2, ctx: SolveContext): PlacedControl[] {
+  const root = dialogBodyOf(dialog, ctx.theme);
+  if (!root) return [];
+  return placeVisible(root, solveControlTree([root], content, ctx), content);
+}
+
 /**
  * `_update_child_rects` (`dialogs.cpp:219-260`) for a dialog of `size`: the row from the bottom edge
  * at its minimum height, the content above it less the separation.
@@ -165,7 +195,7 @@ export function dialogGeometry(dialog: SolveNode, size: Vector2, ctx: SolveConte
       rect: { x: rowRect.x + rect.x, y: rowRect.y + rect.y, w: rect.w, h: rect.h },
     };
   });
-  return { content, buttons };
+  return { content, buttons, body: placeBody(dialog, content, ctx) };
 }
 
 /**
@@ -188,6 +218,15 @@ function messageMinimumSize(dialog: SolveNode, ctx: SolveContext, width: number)
   });
 }
 
+/** The largest combined minimum among the dialog's own Controls: the authored ones and its class's body. */
+function largestChildMinimum(dialog: SolveNode, ctx: SolveContext): Vector2 {
+  const authored = largestLaidOutChildMinimum(dialog, ctx);
+  const body = dialogBodyOf(dialog, ctx.theme);
+  if (!body) return authored;
+  const bodyMinimum = ctx.combinedMinimumSize(body);
+  return { x: Math.max(authored.x, bodyMinimum.x), y: Math.max(authored.y, bodyMinimum.y) };
+}
+
 /**
  * `AcceptDialog::_get_contents_minimum_size` (`dialogs.cpp:281-316`): the message and the authored
  * Controls stacked above the button row and its separation, inside the panel's margins.
@@ -196,7 +235,7 @@ export const dialogContentsMinimumSize: MinimumSizeFn = (dialog, ctx) => {
   const margins = contentMarginSize(dialogPanelBox(dialog, ctx.theme));
   const separation = buttonsSeparation(dialog, ctx.theme);
   const row = buttonRow(dialog, ctx).minimum;
-  const authored = largestLaidOutChildMinimum(dialog, ctx);
+  const authored = largestChildMinimum(dialog, ctx);
   const widthWithoutMessage = Math.max(row.x, authored.x);
   const message = messageMinimumSize(dialog, ctx, wrapWidth(dialog, widthWithoutMessage, margins.x));
   const content = { x: Math.max(authored.x, message.x), y: Math.max(authored.y, message.y) };

@@ -535,6 +535,10 @@ _Avoid_: "viewport container" for the concept. "render target" for the surface.
 A visible Window, Popup or PopupPanel that a viewport draws on its own canvas instead of the system's. The window's Controls draw into its target as a **sub-viewport**'s do, rooted at the window itself (ADR-0033).
 _Avoid_: "dialog" for the base case. "native window", which Godot draws through the system.
 
+**Dialog body** (`nodes/windows/filedialog/body.ts`):
+The Controls a dialog's constructor `memnew`s above its button row, which no scene serialises, such as a FileDialog's `main_vbox`. They are synthetic `SolveNode`s in the dialog's scope, solved by the Control solver and painted by `DialogChrome`.
+_Avoid_: "dialog content", which is the rect that authored children fill.
+
 **Embedder**:
 The viewport that draws an **Embedded window**: the nearest viewport above it with `gui_embed_subwindows`, the root through `display/window/subwindows/embed_subwindows`. It draws each window's frame, title, close icon and target on its subwindow canvas, layer 1024, in stack order (`viewport.cpp:342-401`).
 _Avoid_: "parent viewport", which may not embed.

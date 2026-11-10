@@ -1,15 +1,28 @@
 ---
 type: FileDialog
 category: Other
-status: unimplemented
 fixture: unit-file-dialog.tscn
-# image: unit-file-dialog
-renders_as: nothing yet, not implemented
+renders_as: an embedded window with the file chooser's toolbar, lists, filter and options
 ---
 
 # FileDialog
 
-A preset dialog for choosing files or directories, built on ConfirmationDialog with filters and a per-dialog options family. The previewer parses and validates it but does not draw it. The base `Node` mounts under `renderIntent: 'pending'` as an empty group, and its children still show (ADR-0045).
+A preset dialog for choosing files or directories, built on ConfirmationDialog with filters and a per-dialog options family. The previewer draws a visible dialog as an embedded window: the toolbar, the Favorites and Recent lists, the file list, the filter and the options over the button row. Its file list is empty.
+
+## Open File
+<!-- compare: image=unit-file-dialog-open-empty status=limitation fixture=file-dialog-open-empty/unit-file-dialog-open-empty.tscn -->
+
+A dialog in Open File mode over a folder with no matching file. The OK button is disabled, as Godot disables it while nothing is selected.
+
+## Save File
+<!-- compare: image=unit-file-dialog-save-empty status=limitation fixture=file-dialog-save-empty/unit-file-dialog-save-empty.tscn -->
+
+Save File mode adds the create-folder button, titles the window "Save a File" and enables the Save button.
+
+## Options
+<!-- compare: image=unit-file-dialog-options status=limitation fixture=file-dialog-options/unit-file-dialog-options.tscn -->
+
+A CheckBox option and a value option draw in the options row and the option grid under the filter.
 
 ## Linting
 
@@ -53,3 +66,8 @@ The lenient parser registers the plain `Node` reader, which reads only the headi
 ## Known limitations
 
 - **Not drawn** Godot displays the dialog once popped up, but the previewer draws nothing for it.
+
+## Known limitations
+
+- **Not drawn** The file list always shows no entry, so a folder's files and directories do not appear, and the Favorites and Recent lists stay empty.
+- **Approximated** `access = 2` (filesystem) and `root_subfolder` depend on the machine's folders, so the path field shows no root for them.

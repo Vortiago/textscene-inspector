@@ -104,6 +104,8 @@ function fontSizeInTheme(theme: ThemeResource, type: string, name: string): numb
  */
 export interface ThemeResolutionScope {
   readonly typeChain: readonly string[];
+  /** The `theme_type_variation` the lookup was asked for, which the default theme may define though no Theme in `searchOrder` does. */
+  readonly variation: string | undefined;
   readonly searchOrder: readonly ThemeResource[];
   /** The font a lookup reaches after every theme: the default theme's `default_font`. Null draws the bundled font. */
   readonly projectDefaultFont: FontResource | null;
@@ -162,6 +164,7 @@ export function themeResolutionScope(
   const defaultFonts = defaultFontsOf(projectFonts);
   return {
     typeChain: buildThemeTypeChain(nativeType, typeVariation, ancestorThemes, projectTheme),
+    variation: typeVariation,
     searchOrder: themeSearchOrder(ancestorThemes, projectTheme),
     projectDefaultFont: withDefaultFonts(projectDefaultFont, defaultFonts),
     defaultFonts,
@@ -264,7 +267,22 @@ export function resolveThemeFontSizeIn(
       if (found !== undefined) return found;
     }
   }
-  return builtInDefaultPx;
+  return defaultThemeVariationFontSize(scope.variation, name) ?? builtInDefaultPx;
+}
+
+/**
+ * The font sizes the default theme gives its Label variations (`default_theme.cpp:394-401`): the default size plus
+ * 4, 8 and 12. They are not scaled by the theme, and they sit after every Theme a scene or a project sets.
+ */
+const DEFAULT_THEME_VARIATION_FONT_SIZES: Readonly<Record<string, number>> = {
+  HeaderSmall: 20,
+  HeaderMedium: 24,
+  HeaderLarge: 28,
+};
+
+function defaultThemeVariationFontSize(variation: string | undefined, name: string): number | undefined {
+  if (variation === undefined || name !== 'font_size') return undefined;
+  return DEFAULT_THEME_VARIATION_FONT_SIZES[variation];
 }
 
 /**

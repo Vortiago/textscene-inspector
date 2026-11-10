@@ -10,8 +10,9 @@
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { ShareNode } from '../../../../r3f/controls/native/solveHandoff';
-import type { ButtonDrawState } from '../../../../r3f/controls/native/buttonBase';
+import type { ToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import { type Rgba } from '../../../../godot/math/math';
+import { CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -23,16 +24,21 @@ import type { MenuButtonProperties } from './types';
 /** `Color(1, 1, 1, 0.3)`: MenuButton's own disabled font colour (`default_theme.cpp:268`), not Button's `control_font_disabled_color` (`:161`). */
 const MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 0.3 };
 
+function menuButtonDefaultFontColor(state: ToggleDrawState): Rgba {
+  if (state === 'pressed') return CONTROL_FONT_PRESSED_COLOR;
+  return state === 'disabled' ? MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR : BUTTON_DEFAULT_FONT_COLOR;
+}
+
 /** MenuButton's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the theme default, else MenuButton's literal. */
 export function menuButtonTextTheme(
   n: ShareNode,
   props: MenuButtonProperties,
-  state: ButtonDrawState,
+  state: ToggleDrawState,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = {
     fontSizePx: ctx.theme.fontSize,
-    color: state === 'disabled' ? MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR : BUTTON_DEFAULT_FONT_COLOR,
+    color: menuButtonDefaultFontColor(state),
   };
   return resolveTextTheme(n, props, BUTTON_THEME_KEYS[state], defaults);
 }

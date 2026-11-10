@@ -552,3 +552,31 @@ describe('fontForNode', () => {
     ).toBeNull();
   });
 });
+
+describe('the default theme font size of a Label type variation (default_theme.cpp:394-401)', () => {
+  const sizeOf = (variation: string | undefined, themes: readonly ThemeResource[] = []) =>
+    resolveThemeFontSizeIn(
+      themeResolutionScope('Label', variation, themes, { ...NO_PROJECT_FONTS, projectTheme: null }),
+      'font_size',
+      undefined,
+      16
+    );
+
+  it.each([
+    ['HeaderSmall', 20],
+    ['HeaderMedium', 24],
+    ['HeaderLarge', 28],
+  ])('gives %s %d', (variation, size) => {
+    expect(sizeOf(variation)).toBe(size);
+  });
+
+  it('keeps the built-in size for a variation the default theme lacks', () => {
+    expect(sizeOf('Unknown')).toBe(16);
+    expect(sizeOf(undefined)).toBe(16);
+  });
+
+  it('yields to a Theme that sets the size for the type', () => {
+    const own = theme({ fontSizes: { Label: { font_size: 40 } } });
+    expect(sizeOf('HeaderSmall', [own])).toBe(40);
+  });
+});

@@ -7,6 +7,20 @@
 import type { AsymmetryEntry } from './types.js';
 
 export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
+  // FileDialog: its file list is always empty, so what lists, filters or sorts files, and what a click on Save asks, never shows.
+  FileDialog: {
+    linterOnly: [
+      'deleting_enabled',
+      'filename_filter',
+      'overwrite_warning_enabled',
+      'show_hidden_files',
+      'use_native_dialog',
+    ],
+    renderGap: ['root_subfolder'],
+    reason:
+      'No file is listed, so no file is deleted, filtered or hidden, and an overwrite is never asked. A system dialog replaces the drawn one only at run time. root_subfolder changes the path field and the previewer has no folders.',
+  },
+
   // Dialogs: closing a dialog needs input, so a frozen frame never shows it.
   AcceptDialog: {
     linterOnly: ['dialog_close_on_escape', 'dialog_hide_on_ok'],
@@ -106,7 +120,6 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     linterOnly: [
       // Interaction state and press semantics, all meaningless in a still frame.
       'toggle_mode',
-      'button_pressed',
       'action_mode',
       'button_mask',
       'keep_pressed_outside',

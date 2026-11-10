@@ -242,7 +242,7 @@ describe('property-grammar parity guard', () => {
   // equality: it moves only when a slice is added or a gap closes. A new
   // validator makes an unread key visible, so a rise usually means the list
   // became honest.
-  const EXPECTED_RENDER_GAP_KEYS = 100;
+  const EXPECTED_RENDER_GAP_KEYS = 101;
 
   it('the render-gap surface matches its recorded size', () => {
     const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>
@@ -265,10 +265,10 @@ describe('property-grammar parity guard', () => {
   // gap `renderIntent` already declares, so neither widens the population.
   // A type that reads its own properties through a parser of its own is a swept slice, not a reuser.
   // Bone2D, BoneAttachment3D, CanvasGroup, DampedSpringJoint2D, GrooveJoint2D, MeshInstance2D,
-  // OccluderInstance3D, RayCast3D, ShapeCast3D, VideoStreamPlayer, AcceptDialog and
-  // ConfirmationDialog read theirs.
-  const SWEPT_SLICES = 149;
-  const PARSER_REUSING_SLICES = 102;
+  // OccluderInstance3D, RayCast3D, ShapeCast3D, VideoStreamPlayer, AcceptDialog,
+  // ConfirmationDialog and FileDialog read theirs.
+  const SWEPT_SLICES = 150;
+  const PARSER_REUSING_SLICES = 101;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>
