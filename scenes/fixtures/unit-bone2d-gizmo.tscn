@@ -1,0 +1,40 @@
+[gd_scene format=3]
+
+; One variable: the editor kite of a Bone2D chain (skeleton_2d.cpp:189-354). It draws only with the
+; Gizmos toggle on, which the goldens bone2d-unselected and bone2d-selected set, so no other scene shows
+; a regression in it. The chain holds a bone turned and scaled by its
+; parent, a child bone that sets its own gizmo off, a leaf that draws along its authored length and
+; angle, and a leaf that calculates its angle from its own rotation. Upper bone scale 1.5 shows the
+; kite width staying 5 pixels where the bone grows.
+
+[node name="Bone2DRoot" type="Node2D"]
+
+[node name="Skeleton" type="Skeleton2D" parent="."]
+position = Vector2(150, 250)
+
+[node name="Upper" type="Bone2D" parent="Skeleton"]
+rotation = 0.35
+scale = Vector2(1.5, 1.5)
+rest = Transform2D(0.939, 0.343, -0.343, 0.939, 0, 0)
+
+[node name="Middle" type="Bone2D" parent="Skeleton/Upper"]
+position = Vector2(90, 0)
+rotation = 0.7
+rest = Transform2D(0.765, 0.644, -0.644, 0.765, 90, 0)
+
+[node name="Hidden" type="Bone2D" parent="Skeleton/Upper"]
+position = Vector2(60, 40)
+rest = Transform2D(1, 0, 0, 1, 60, 40)
+editor_settings/show_bone_gizmo = false
+
+[node name="Tip" type="Bone2D" parent="Skeleton/Upper/Middle"]
+position = Vector2(70, 0)
+rest = Transform2D(1, 0, 0, 1, 70, 0)
+auto_calculate_length_and_angle = false
+length = 50.0
+bone_angle = -30.0
+
+[node name="Leaf" type="Bone2D" parent="Skeleton/Upper/Hidden"]
+position = Vector2(0, 50)
+rotation = 1.0
+rest = Transform2D(0.54, 0.84, -0.84, 0.54, 0, 50)

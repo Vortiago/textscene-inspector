@@ -1,18 +1,21 @@
 ---
 type: Bone2D
 category: 2D
-status: linter-only
+status: done
 fixture: unit-bone-2d.tscn
 # image: unit-bone-2d
 visual: false
-renders_as: nothing (a transform-only group, the bone gizmo is editor-only)
+renders_as: a kite gizmo for every bone
 ---
 
 # Bone2D
 
-Bone2D is one bone of a Skeleton2D chain. Its gizmo draws only in the editor, so at
-runtime the node is a transform, and the previewer renders it as a transform-only group
-(ADR-0008). Its pose against its `rest` moves the Polygon2Ds its skeleton deforms.
+Bone2D is one bone of a Skeleton2D chain. The previewer draws Godot's editor kite for every
+bone (ADR-0056). The kite runs from the bone to each Bone2D child, or along `length` and
+`bone_angle` for a bone with none. The outline turns red for the selected bone. A capture keeps the
+Gizmos toggle off, so a plain capture shows nothing, as Godot's game render does. A bone with
+`editor_settings/show_bone_gizmo` off draws no kite. Its pose against its `rest` moves the
+Polygon2Ds its skeleton deforms.
 
 ## Linting
 
@@ -37,8 +40,8 @@ Strict parsing format-checks these `Bone2D` properties, plus 12 inherited from N
 |  | `bone2d-missing-rest-pose` | warning |
 <!-- lint:end -->
 
-The lenient parser reads `rest` on top of `parseNode2D`, and reads none of the other four
-bone keys. A `rest` that is not a finite Transform2D warns and reads as the all-zero unset
-rest. A `length` of `2048` or a `bone_angle` of `900` is carried through untouched and
-changes nothing on screen, where strict warns on both. `default_length` is a legacy alias Godot
+The lenient parser reads `rest`, `auto_calculate_length_and_angle`, `length`, `bone_angle` and
+`editor_settings/show_bone_gizmo` on top of `parseNode2D`. A `rest` that is not a finite
+Transform2D warns and reads as the all-zero unset rest. A `length` of `2048` or a `bone_angle`
+of `900` is drawn as written, where strict warns on both. `default_length` is a legacy alias Godot
 never writes, so an old scene carrying it lints clean.

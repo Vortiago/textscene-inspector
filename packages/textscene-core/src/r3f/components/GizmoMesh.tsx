@@ -1,5 +1,6 @@
 /**
- * A fill gizmo: a geometry drawn as an unlit translucent `<mesh>` over the scene. Inside a
+ * A fill gizmo: a geometry drawn as an unlit translucent `<mesh>` over the scene. A geometry with a
+ * `color` attribute shades by vertex, and a four-component one carries each vertex's alpha. Inside a
  * `PluginGizmo` it wears the look of its node, from the every-node gate or `SelectedOnly` (ADR-0056).
  * The caller builds and memoises the geometry.
  */
@@ -24,13 +25,21 @@ export function GizmoMesh({ geometry, color: ownColor, alpha: ownAlpha }: GizmoM
   const { color, opacity } = useGizmoLook(ownColor, ownAlpha);
   useDisposeOnRelease(geometry);
   // Godot's gizmo material culls no face (`node_3d_editor_gizmos.cpp:927`), so one pass draws both.
+  const hasVertexColors = geometry?.hasAttribute('color') ?? false;
   const program = useMemo(
     () =>
       materialProgramInputs({
-        props: { color, opacity, transparent: true, depthWrite: false, fog: false },
+        props: {
+          color,
+          opacity,
+          vertexColors: hasVertexColors,
+          transparent: true,
+          depthWrite: false,
+          fog: false,
+        },
         merge: [canvasItemFacing()],
       }),
-    [color, opacity]
+    [color, opacity, hasVertexColors]
   );
   if (!geometry) return null;
 

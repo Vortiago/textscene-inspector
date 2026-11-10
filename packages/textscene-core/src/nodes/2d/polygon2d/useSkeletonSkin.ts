@@ -18,7 +18,7 @@ import type { Vector2 } from '../../../godot/math/vector.js';
 import { canvasFrameOf } from '../../../r3f/canvasFrame.js';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext.js';
 import { lookupDrawnObjects, type DrawnObjects } from '../../../r3f/drawnObjects.js';
-import { transform2DFromThreeMatrixInto, writeGodotPointAsThree } from '../../../r3f/node2dTransform.js';
+import { canvasTransformInto, writeGodotPointAsThree } from '../../../r3f/node2dTransform.js';
 import { observeSceneCamera } from '../../../r3f/sceneRenderCamera.js';
 import { skinnedPointsInto } from './polygonSkin.js';
 import type { PolygonSkeletonBinding } from './skeletonBinding.js';
@@ -164,18 +164,6 @@ function skinObjectsOf(mesh: THREE.Mesh, drawn: readonly (THREE.Object3D | null)
   if (!skeleton || !bones.every((bone): bone is THREE.Object3D => bone !== null)) return null;
   const frames = [canvasFrameOf(mesh), canvasFrameOf(skeleton)];
   return { skeleton, bones, watched: [mesh, ...frames, skeleton, ...bones] };
-}
-
-/** Written only by {@link canvasTransformInto}, and read back before it returns. */
-const scratchMatrix = new THREE.Matrix4();
-
-/** The node's global transform in Godot pixels, written into `out`: its world matrix within the frame of its canvas. */
-function canvasTransformInto(out: MutableTransform2D, object: THREE.Object3D): MutableTransform2D {
-  const frame = canvasFrameOf(object);
-  const matrix = frame
-    ? scratchMatrix.copy(frame.matrixWorld).invert().multiply(object.matrixWorld)
-    : object.matrixWorld;
-  return transform2DFromThreeMatrixInto(out, matrix);
 }
 
 /** The first `count` points of `geometry`, back in Godot's +Y-down pixels. */

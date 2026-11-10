@@ -288,6 +288,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Bone2d Gizmo",
+    "file": "unit-bone2d-gizmo.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Bone2d Rig",
     "file": "unit-bone2d-rig.tscn",
     "category": "Other"
