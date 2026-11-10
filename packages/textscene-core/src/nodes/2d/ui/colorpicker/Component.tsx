@@ -15,6 +15,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -70,6 +71,8 @@ import {
   colorPickerSliderBoxRect,
   colorPickerSliderRowCount,
   colorPickerValueColumnWidth,
+  colorPickerEmWidthPx,
+  presetButtonContent,
   COLOR_PICKER_SLIDER_GRABBER_OFFSET,
   SHAPE_HSV_RECTANGLE,
   extractHsv,
@@ -242,19 +245,15 @@ interface CenteredIconProps {
 /** One button icon, centred inside `rect`. */
 function CenteredIcon({ rect, size, texture, tint, renderOrder }: CenteredIconProps) {
   if (!texture) return null;
-  const x = (rect.w - size) / 2;
-  const y = (rect.h - size) / 2;
+  const iconRect = { x: rect.x + (rect.w - size) / 2, y: rect.y + (rect.h - size) / 2, w: size, h: size };
   return (
-    <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]}>
-      <ControlQuad
-        width={size}
-        height={size}
-        color={tint.color}
-        opacity={tint.opacity}
-        map={texture}
-        renderOrder={renderOrder}
-      />
-    </CanvasItemGroup>
+    <PositionedIcon
+      rect={iconRect}
+      texture={texture}
+      color={tint.color}
+      opacity={tint.opacity}
+      renderOrder={renderOrder}
+    />
   );
 }
 
@@ -285,16 +284,13 @@ function TextTypeScriptIcon({ rect, solveNode, theme, tint, renderOrder }: TextT
   if (!iconRect) return null;
   const disabledColor = buttonIconColor(solveNode.colors, 'disabled');
   return (
-    <CanvasItemGroup position={[rect.x + iconRect.x, -(rect.y + iconRect.y), 0]}>
-      <ControlQuad
-        width={iconRect.w}
-        height={iconRect.h}
-        color={toItemLinear(multiplyModulate(tint.own, { ...disabledColor, a: 1 }))}
-        opacity={tint.opacity * disabledColor.a}
-        map={texture}
-        renderOrder={renderOrder}
-      />
-    </CanvasItemGroup>
+    <PositionedIcon
+      rect={{ ...iconRect, x: rect.x + iconRect.x, y: rect.y + iconRect.y }}
+      texture={texture}
+      color={toItemLinear(multiplyModulate(tint.own, { ...disabledColor, a: 1 }))}
+      opacity={tint.opacity * disabledColor.a}
+      renderOrder={renderOrder}
+    />
   );
 }
 
@@ -433,7 +429,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     colorPickerSliderLabels(colorMode, editAlpha, editIntensity)
   );
   // The unceiled advance: `Font::get_char_size` does not ceil it, where `measure` does.
-  const emWidthPx = shape('W').widthPx;
+  const emWidthPx = colorPickerEmWidthPx((text) => shape(text).widthPx);
   const sliderValueWidth = colorPickerValueColumnWidth(theme, emWidthPx);
   const sliderCols = useMemo(
     () =>
@@ -556,9 +552,6 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     solveNode.icons.folded_arrow,
     FOLDABLE_CONTAINER_ICONS.foldedArrow
   );
-  // Button's `h_separation` (`default_theme.cpp:171`) is a different theme key
-  // from BoxContainer's `separation`, with the same value `round(4 * scale)`.
-  const buttonIconTextSeparation = theme.separation;
 
   return (
     <CanvasItemGroup position={[theme.contentMargin, -theme.contentMargin, 0]}>
@@ -983,28 +976,17 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
             { key: 'recent', box: swatchesCols.recentColorsButton, text: 'Recent Colors' },
           ].map(({ key, box, text }) => {
             // Both buttons have the default `icon_alignment` and LEFT text
-            // (`color_picker.cpp:2242-2248,2279-2283`). RTL swaps both sides (`button.cpp:262-276`),
-            // so the icon goes to the trailing edge and the text aligns right.
-            const iconX = solveNode.rtl ? box.x + box.w - COLOR_PICKER_BUTTON_ICON_SIZE : box.x;
-            const textBox = {
-              ...box,
-              x: solveNode.rtl ? box.x : box.x + COLOR_PICKER_BUTTON_ICON_SIZE + buttonIconTextSeparation,
-              w: Math.max(0, box.w - COLOR_PICKER_BUTTON_ICON_SIZE - buttonIconTextSeparation),
-            };
+            // (`color_picker.cpp:2242-2248,2279-2283`). RTL swaps both sides (`button.cpp:262-276`).
+            const { icon, textBox } = presetButtonContent(box, theme, measure(text), solveNode.rtl);
             return (
               <CanvasItemGroup key={key} position={[0, 0, 0]}>
-                <CanvasItemGroup
-                  position={[iconX, -(box.y + (box.h - COLOR_PICKER_BUTTON_ICON_SIZE) / 2), 0]}
-                >
-                  <ControlQuad
-                    width={COLOR_PICKER_BUTTON_ICON_SIZE}
-                    height={COLOR_PICKER_BUTTON_ICON_SIZE}
-                    color={tint.color}
-                    opacity={tint.opacity}
-                    map={dropdownArrowTexture}
-                    renderOrder={renderOrder}
-                  />
-                </CanvasItemGroup>
+                <PositionedIcon
+                  rect={icon}
+                  texture={dropdownArrowTexture}
+                  color={tint.color}
+                  opacity={tint.opacity}
+                  renderOrder={renderOrder}
+                />
                 <LabelledText
                   rect={textBox}
                   layout={shape(text)}

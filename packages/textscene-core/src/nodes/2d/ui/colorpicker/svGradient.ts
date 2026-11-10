@@ -109,16 +109,15 @@ export const COLOR_HUE_STOPS: readonly Rgba[] = Array.from({ length: COLOR_HUE_S
 
 /** `COLOR_HUE_STOPS` as one vertical strip. */
 export function hueStripGeometry(w: number, h: number): QuadGeometry {
-  const hueStops = COLOR_HUE_STOPS;
   const positions: number[] = [];
   const colors: number[] = [];
   const indices: number[] = [];
-  hueStops.forEach((c, i) => {
-    const y = -h * (i / (hueStops.length - 1));
+  COLOR_HUE_STOPS.forEach((c, i) => {
+    const y = -h * (i / (COLOR_HUE_STOPS.length - 1));
     positions.push(0, y, 0, w, y, 0);
     colors.push(c.r, c.g, c.b, 1, c.r, c.g, c.b, 1);
   });
-  for (let i = 0; i < hueStops.length - 1; i++) {
+  for (let i = 0; i < COLOR_HUE_STOPS.length - 1; i++) {
     const a = i * 2;
     indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
   }

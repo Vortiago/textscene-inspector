@@ -13,9 +13,11 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import { colorHue, colorSaturation } from '../../../../godot/math/color';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { layoutButtonContent } from '../../../../r3f/controls/native/buttonBase';
+import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
-import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../godot/scene/theme';
+import { lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
 import { tabBarStyleBoxes } from '../tabbar/nativeSolver';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { sliderMinimumSize } from '../shared/sliderSolver';
@@ -79,11 +81,13 @@ export function colorPickerValueColumnWidth(theme: Pick<NativeTheme, 'widgets'>,
  * minimum size reads its own; the `SpinBox` value column adds its block to this.
  */
 function colorPickerHexFieldMinWidth(theme: Pick<NativeTheme, 'widgets'>, emWidthPx: number): number {
-  const styleMinX = Math.max(
-    contentMarginSize(theme.widgets.lineEdit.normal).x,
-    contentMarginSize(theme.widgets.lineEdit.readOnly).x
-  );
-  return styleMinX + LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emWidthPx;
+  const { lineEdit } = theme.widgets;
+  return lineEditStyleMinSize(lineEdit.normal, lineEdit.readOnly).x + lineEditTextMinimumWidth(emWidthPx);
+}
+
+/** The side of the square `menu_option` and `folded_arrow` icons (`default_theme.cpp:1088`). */
+function colorPickerButtonIconSize(theme: Pick<NativeTheme, 'scale'>): number {
+  return Math.round(COLOR_PICKER_SAMPLE_ICON_SIZE * colorPickerScale(theme));
 }
 
 /**
@@ -93,7 +97,7 @@ function colorPickerHexFieldMinWidth(theme: Pick<NativeTheme, 'widgets'>, emWidt
  * `button_normal` (`default_theme.cpp:359-363`). `btn_mode` has this size, with its width floored to 28.
  */
 function colorPickerMenuButtonSize(theme: Pick<NativeTheme, 'widgets' | 'scale'>): Vector2 {
-  const icon = Math.round(COLOR_PICKER_SAMPLE_ICON_SIZE * colorPickerScale(theme));
+  const icon = colorPickerButtonIconSize(theme);
   const margin = contentMarginSize(theme.widgets.button.normal);
   return { x: icon + margin.x, y: icon + margin.y };
 }
@@ -217,19 +221,72 @@ function modeRowSize(
   return { x: width, y: height };
 }
 
+/**
+ * The natural size of `btn_preset` or `btn_recent_preset`: a `Button` with the `folded_arrow` icon and a
+ * label, `Button::get_minimum_size_for_text_and_icon` (`button.cpp:481-523`) plus the `button.normal` margin.
+ * The icon is the size of `menu_btn`'s icon, and the gap is `h_separation`.
+ */
+function colorPickerPresetButtonSize(
+  theme: Pick<NativeTheme, 'separation' | 'scale' | 'widgets'>,
+  text: Vector2
+): Vector2 {
+  const margin = contentMarginSize(theme.widgets.button.normal);
+  const iconSize = colorPickerButtonIconSize(theme);
+  return {
+    x: text.x + theme.separation + iconSize + margin.x,
+    y: Math.max(text.y, iconSize) + margin.y,
+  };
+}
+
+interface PresetButtonContent {
+  icon: Rect2;
+  /** The box the label draws in, after the margins and the icon. */
+  textBox: Rect2;
+}
+
+/** The icon and label boxes of `btn_preset` or `btn_recent_preset` in `box`: `Button` placement (`button.cpp:349-456`). */
+export function presetButtonContent(
+  box: Rect2,
+  theme: Pick<NativeTheme, 'separation' | 'scale' | 'widgets'>,
+  text: Vector2,
+  rtl: boolean
+): PresetButtonContent {
+  const iconSize = colorPickerButtonIconSize(theme);
+  const layout = layoutButtonContent({
+    rectSize: { x: box.w, y: box.h },
+    styleMargin: theme.widgets.button.normal.contentMargin,
+    // Button's `h_separation` (`default_theme.cpp:171`) is another theme key, with the value of `separation`.
+    hSeparation: theme.separation,
+    iconMaxWidth: 0,
+    textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    iconAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    verticalIconAlignment: VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
+    expandIcon: false,
+    iconNaturalSize: { x: iconSize, y: iconSize },
+    hasText: true,
+    textNaturalSize: text,
+    isTextRtl: false,
+    rtl,
+  });
+  const icon = layout.icon!.rect;
+  const label = layout.labelBox!;
+  return {
+    icon: { ...icon, x: box.x + icon.x, y: box.y + icon.y },
+    textBox: { x: box.x + label.leftPx, y: box.y, w: label.widthPx, h: box.h },
+  };
+}
+
 function swatchesRowSize(
   theme: Pick<NativeTheme, 'separation' | 'scale' | 'widgets'>,
   measure: TextWidthMeasurer | null
 ): Vector2 {
   const menuBtn = colorPickerMenuButtonSize(theme);
-  const menuBtnWidth = menuBtn.x;
-  const menuBtnHeight = menuBtn.y;
-  // The `palette_box` row is as tall as `max(btn_preset text, menu_btn)`, with or
-  // without `measure`. A `null` `measure` zeroes the text sizes, and the second row stays.
-  const swatches = measure ? measure('Swatches') : { x: 0, y: 0 };
-  const recent = measure ? measure('Recent Colors') : { x: 0, y: 0 };
-  const row1Height = Math.max(swatches.y, menuBtnHeight);
-  const row1Width = swatches.x + theme.separation + menuBtnWidth;
+  // A `null` `measure` zeroes the text sizes, and each button keeps its icon.
+  const none = { x: 0, y: 0 };
+  const swatches = colorPickerPresetButtonSize(theme, measure ? measure('Swatches') : none);
+  const recent = colorPickerPresetButtonSize(theme, measure ? measure('Recent Colors') : none);
+  const row1Height = Math.max(swatches.y, menuBtn.y);
+  const row1Width = swatches.x + theme.separation + menuBtn.x;
   return { x: Math.max(row1Width, recent.x), y: row1Height + theme.separation + recent.y };
 }
 
@@ -342,6 +399,14 @@ function contentMinWidth(
 }
 
 /**
+ * The em of the value column: the unceiled advance of "W" (`line_edit.cpp:2443-2477`). The painter
+ * and the minimum size both call it, so the two cannot disagree on the column (#1228).
+ */
+export function colorPickerEmWidthPx(widthOf: (text: string) => number): number {
+  return widthOf('W');
+}
+
+/**
  * ColorPicker does not override `get_minimum_size`: it is the minimum of `real_vbox`
  * plus the `content_margin` of `internal_margin` on every side (`color_picker.cpp:161-166`,
  * `default_theme.cpp:1074`), which equals `theme.contentMargin`.
@@ -354,7 +419,7 @@ export const colorPickerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const measure: TextWidthMeasurer | null = ctx.measureText
     ? (text) => ctx.measureText!(text, theme.fontSize, 0, fontMetrics)
     : null;
-  const emWidthPx = measure ? measure('W').x : 0;
+  const emWidthPx = measure ? colorPickerEmWidthPx((text) => measure(text).x) : 0;
   const rows = colorPickerRows(0, theme, props, measure);
   const width = Math.max(
     shapeRowMinWidth(theme, props.pickerShape),

@@ -30,10 +30,10 @@ import {
   themeResolutionScope,
   type ThemeResolutionScope,
 } from '../../../../resources/styles/theme/lookup';
-import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../godot/scene/theme';
-import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   pickLineEditStyleBox,
+  lineEditStyleMinSize,
+  lineEditTextMinimumWidth,
   LINE_EDIT_DEFAULT_FONT_COLOR,
   LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
 } from '../lineedit/nativeSolver';
@@ -314,20 +314,16 @@ export const spinBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   // The field is `add_child`ed at construction (`spin_box.cpp:724-731`), never a scene node, so a
   // SpinBox's `theme_override_styles/*` address its own items (`up_background`, …). The field
   // always draws the default LineEdit box, hence `{}`.
-  const normalBox: StyleBoxFlatData = pickLineEditStyleBox({}, ctx.theme.widgets.lineEdit, 'normal');
-  const readOnlyBox: StyleBoxFlatData = pickLineEditStyleBox({}, ctx.theme.widgets.lineEdit, 'read_only');
-  const normalMargin = contentMarginSize(normalBox);
-  const readOnlyMargin = contentMarginSize(readOnlyBox);
-  const styleMinSize = {
-    x: Math.max(normalMargin.x, readOnlyMargin.x),
-    y: Math.max(normalMargin.y, readOnlyMargin.y),
-  };
+  const styleMinSize = lineEditStyleMinSize(
+    pickLineEditStyleBox({}, ctx.theme.widgets.lineEdit, 'normal'),
+    pickLineEditStyleBox({}, ctx.theme.widgets.lineEdit, 'read_only')
+  );
 
   const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx, 0, fontMetrics).x : 0;
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
 
   const fieldMin = {
-    x: styleMinSize.x + LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emSpaceSize,
+    x: styleMinSize.x + lineEditTextMinimumWidth(emSpaceSize),
     y: styleMinSize.y + fontHeightPx,
   };
 

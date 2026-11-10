@@ -19,7 +19,7 @@ import {
   resortBoxContainer,
   type BoxChildInput,
 } from '../shared/boxContainerSolver';
-import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../godot/scene/theme';
+import { lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
 import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
 import { GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { isMinimapEnabled } from './minimap';
@@ -135,13 +135,11 @@ function toolbarButtonMinSize(theme: NativeTheme): Vector2 {
  * SpinBox's internal field, so the plain theme boxes are the whole input.
  */
 function toolbarSpinBoxMinSize(theme: NativeTheme, metrics: ToolbarTextMetrics): Vector2 {
-  const normal = contentMarginSize(theme.widgets.lineEdit.normal);
-  const readOnly = contentMarginSize(theme.widgets.lineEdit.readOnly);
-  const styleMin = { x: Math.max(normal.x, readOnly.x), y: Math.max(normal.y, readOnly.y) };
+  const styleMin = lineEditStyleMinSize(theme.widgets.lineEdit.normal, theme.widgets.lineEdit.readOnly);
   return {
     x:
       styleMin.x +
-      LINE_EDIT_MINIMUM_CHARACTER_WIDTH * metrics.emSpaceWidthPx +
+      lineEditTextMinimumWidth(metrics.emSpaceWidthPx) +
       spinBoxButtonsBlockWidth(SPIN_BOX_ARROW_ICON_SIZE.x),
     y: styleMin.y + metrics.fontHeightPx,
   };

@@ -17,6 +17,7 @@ import {
   hexRowColumns,
   modeRowButtonRects,
   swatchesRowRects,
+  presetButtonContent,
   sliderGridRowRects,
   colorPickerValueColumnWidth,
   colorPickerLabelColumnWidth,
@@ -24,7 +25,10 @@ import {
   colorPickerSliderBoxRect,
   colorPickerChannelGrabberRect,
   colorPickerIntensityRatio,
+  colorPickerEmWidthPx,
 } from './nativeSolver';
+import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
+import { measureText as measureTextWithFont } from '../../../../r3f/controls/native/text/measurer';
 
 const THEME = nativeTheme(1);
 const CTX: SolveContext = { theme: THEME, measureText: null, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
@@ -140,9 +144,10 @@ describe('colorPickerRows', () => {
     expect(rows.sliderRowCount).toBe(5);
     // hex: 20 + 8 (LineEdit content margin) = 28.
     expect(rows.hex).toEqual({ x: 0, y: 480, w: 400, h: 28 });
-    // swatches: row1 max("Swatches"=20, menu_btn nat(16+8)=24)=24, + sep(4) + "Recent Colors"=20 = 48 tall.
-    expect(rows.swatches).toEqual({ x: 0, y: 512, w: 400, h: 48 });
-    expect(rows.totalHeight).toBe(560);
+    // swatches: each Button is max(text(20), icon(16)) + button.normal margin(8) = 28 (Godot 31 at text 23),
+    // so 28 + sep(4) + 28 = 60 tall.
+    expect(rows.swatches).toEqual({ x: 0, y: 512, w: 400, h: 60 });
+    expect(rows.totalHeight).toBe(572);
   });
 
   it('edit_alpha=false drops one slider row and its own trailing space', () => {
@@ -156,23 +161,29 @@ describe('colorPickerRows', () => {
     expect(rows.sliderRowCount).toBe(4);
   });
 
-  it("swatches row 1 floors to menu_btn's own 16px icon height even with no text measurer", () => {
-    // The `palette_box` row is as tall as max(btn_preset text, menu_btn icon), also
-    // with no `measure`. The `btn_recent_preset` row and its separation still follow.
+  it("swatches rows floor to a Button's 16px icon plus its margin even with no text measurer", () => {
+    // `btn_preset` and `btn_recent_preset` each hold the `folded_arrow` icon, also with no `measure`.
     const rows = colorPickerRows(
       400,
       THEME,
       { ...ALL_ROWS_HIDDEN, pickerShape: 4, presetsVisible: true },
       null
     );
-    expect(rows.swatches!.h).toBe(28); // 24 (row1, menu_btn nat: icon(16)+button.normal margin(8)) + 4 (separation) + 0 (row2, text contributes nothing)
+    expect(rows.swatches!.h).toBe(52); // 24 (icon(16) + button.normal margin(8)) + 4 (separation) + 24
   });
 });
 
 describe('colorPickerMinimumSize', () => {
   it("sums every visible row plus internal_margin's own content_margin on every side — color_picker.cpp:161-166", () => {
     const ctx: SolveContext = { theme: THEME, measureText, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
-    expect(colorPickerMinimumSize(node({}), ctx)).toEqual({ x: 298, y: 568 });
+    expect(colorPickerMinimumSize(node({}), ctx)).toEqual({ x: 298, y: 580 });
+  });
+
+  it('sizes the swatches rows as Buttons with the folded_arrow icon: "Swatches" 10px/char gives 108 and "Recent Colors" 158', () => {
+    // btn_preset 80 + sep(4) + icon(16) + margin(8) = 108. Row 1 adds sep(4) + menu_btn(24) = 136. btn_recent_preset 130 + 28 = 158.
+    const ctx: SolveContext = { theme: THEME, measureText, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
+    const swatchesOnly = node({ ...ALL_ROWS_HIDDEN, pickerShape: 4, presetsVisible: true });
+    expect(colorPickerMinimumSize(swatchesOnly, ctx).x).toBe(158 + 8);
   });
 
   it('drops the shape row contribution once picker_shape selects an undrawn shape', () => {
@@ -501,5 +512,35 @@ describe('sampleRowColumns', () => {
     const cols = sampleRowColumns(SAMPLE, THEME, 4);
     expect(cols.shape).toBeNull();
     expect(cols.sample.w).toBe(368); // 400 - 28 - 4
+  });
+});
+
+describe('presetButtonContent', () => {
+  // btn_preset and btn_recent_preset: a Button with the folded_arrow icon at the left, LEFT text, margin 4 (button.cpp:349-405).
+  const box = { x: 10, y: 20, w: 366, h: 31 };
+  const text = { x: 73, y: 23 };
+
+  it('puts the icon at the left margin and the text after it, as pnpm ref:godot measures the rows', () => {
+    const { icon, textBox } = presetButtonContent(box, THEME, text, false);
+    // y: floor((31 - 8 - 16) / 2) = 3, plus margin 4.
+    expect(icon).toEqual({ x: 14, y: 27, w: 16, h: 16 });
+    // x: margin 4 + icon 16 + h_separation 4 = 24 into the box, and 366 - 8 - 20 = 338 wide.
+    expect(textBox).toEqual({ x: 34, y: 20, w: 338, h: 31 });
+  });
+
+  it('mirrors in a right-to-left layout: the icon on the trailing edge, the text from the leading margin', () => {
+    const { icon, textBox } = presetButtonContent(box, THEME, text, true);
+    expect(icon).toEqual({ x: 356, y: 27, w: 16, h: 16 });
+    expect(textBox).toEqual({ x: 14, y: 20, w: 338, h: 31 });
+  });
+});
+
+describe('colorPickerEmWidthPx', () => {
+  it('gives the painter (shapeButtonLabel) and the solver (measureText) the same em', () => {
+    const fontSizePx = THEME.fontSize;
+    const painterEm = colorPickerEmWidthPx((text) => shapeButtonLabel(text, { fontSizePx }).widthPx);
+    const solverEm = colorPickerEmWidthPx((text) => measureTextWithFont(text, fontSizePx, 0).x);
+    expect(painterEm).toBe(solverEm);
+    expect(painterEm).toBeGreaterThan(0);
   });
 });
