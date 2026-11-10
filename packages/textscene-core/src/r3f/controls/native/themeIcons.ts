@@ -340,9 +340,14 @@ const COLOR_PICKER_CURSOR_B64 =
 const COLOR_PICKER_CURSOR_BG_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiI+PGNpcmNsZSBjeD0iNiIgY3k9IjYiIHI9IjQiIGZpbGw9IiNmZmYiLz48L3N2Zz4K';
 
+/** `scene/theme/icons/script.svg` (16x16): `ColorPicker`'s `color_script`, the icon of `text_type` for an expression (`default_theme.cpp:1102`). */
+const COLOR_SCRIPT_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2UwZTBlMCIgZD0iTTYgMWEyIDIgMCAwIDAtMiAydjdIMXYzYTIgMiAwIDAgMCAyIDJoN2EyIDIgMCAwIDAgMi0yVjVoM1YzYTIgMiAwIDAgMC0yLTJ6Ii8+PHBhdGggZmlsbC1vcGFjaXR5PSIuMiIgZD0iTTYgMWEyIDIgMCAwIDAtMiAydjdIMXYzYTIgMiAwIDEgMCA0IDBWM2ExIDEgMCAwIDEgMiAwdjNoNVY1SDhWM2EyIDIgMCAwIDAtMi0yek0yIDExaDJ2MmExIDEgMCAwIDEtMiAweiIvPjwvc3ZnPgo=';
+
 /** ColorPicker's/ColorPickerButton's checkerboard, overbright and cursor icons: `default_theme.cpp:1096,1098,1100-1101,1133`. */
 export const MINI_CHECKERBOARD_ICON = svgDataUrl(MINI_CHECKERBOARD_B64);
 export const COLOR_PICKER_OVERBRIGHT_ICON = svgDataUrl(COLOR_PICKER_OVERBRIGHT_B64);
+export const COLOR_SCRIPT_ICON = svgDataUrl(COLOR_SCRIPT_B64);
 export const COLOR_PICKER_CURSOR_ICON = svgDataUrl(COLOR_PICKER_CURSOR_B64);
 export const COLOR_PICKER_CURSOR_BG_ICON = svgDataUrl(COLOR_PICKER_CURSOR_BG_B64);
 

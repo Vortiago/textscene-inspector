@@ -9,6 +9,7 @@ import type { StyleBoxFlatData } from './styleBoxFlat';
 import {
   buttonDrawnLabel,
   fitIconSize,
+  iconOnlyButtonIconRect,
   layoutButtonContent,
   pickButtonStyleBox,
   resolveButtonDrawState,
@@ -561,5 +562,28 @@ describe('trimButtonLabel — the label trimmed to its paragraph box (button.cpp
     expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, -5, UNWRAPPED).lines[0]!.widthPx).toBe(
       0
     );
+  });
+});
+
+describe('iconOnlyButtonIconRect — an icon with no text sits at the left margin and floors its centred y (button.cpp:349-405)', () => {
+  const margin = { left: 4, top: 4, right: 4, bottom: 4 };
+
+  it("puts a 16px icon of a 28x31 button at (4, 7), as pnpm ref:godot measures text_type's script icon", () => {
+    // x: style margin 4. y: floor((31 - 8 - 16) / 2) = 3, plus margin 4.
+    expect(iconOnlyButtonIconRect({ x: 28, y: 31 }, margin, { x: 16, y: 16 }, false)).toEqual({
+      x: 4,
+      y: 7,
+      w: 16,
+      h: 16,
+    });
+  });
+
+  it('puts the icon on the trailing edge in a right-to-left layout', () => {
+    expect(iconOnlyButtonIconRect({ x: 28, y: 31 }, margin, { x: 16, y: 16 }, true)).toEqual({
+      x: 8,
+      y: 7,
+      w: 16,
+      h: 16,
+    });
   });
 });

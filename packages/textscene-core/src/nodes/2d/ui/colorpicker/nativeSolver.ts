@@ -17,6 +17,7 @@ import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat'
 import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
 import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../godot/scene/theme';
 import { tabBarStyleBoxes } from '../tabbar/nativeSolver';
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { sliderMinimumSize } from '../shared/sliderSolver';
 import type { ColorPickerProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
@@ -62,39 +63,29 @@ const COLOR_PICKER_HEX_LABEL_WIDTH = 38;
 const COLOR_PICKER_TEXT_TYPE_WIDTH = 28;
 
 /**
- * The natural width of `values[i]`. `create_slider` sets no custom minimum on the
- * value `SpinBox` (`color_picker.cpp:456-
- * 458`), so the column floors to `SpinBox::get_minimum_size()` (`spin_box.cpp:82-86`):
- * `LineEdit::get_minimum_size()` (`line_edit.cpp:2443-2477`) plus the 16px-arrow buttons block.
+ * The width of the value column of `slider_gc`: the `SpinBox` minimum (`spin_box.cpp:82-86`),
+ * `LineEdit::get_minimum_size()` (`line_edit.cpp:2443-2477`) plus the buttons block, truncated
+ * because `GridContainer` keeps each column minimum as an `int` (`grid_container.cpp:290`).
+ * `create_slider` sets no custom minimum on the value `SpinBox` (`color_picker.cpp:456-458`).
+ * `emWidthPx` is the unrounded advance of "W": `Font::get_char_size` does not ceil it.
  */
-export function colorPickerValueColumnWidth(
-  theme: Pick<NativeTheme, 'widgets'>,
-  measure: TextWidthMeasurer | null
-): number {
-  const styleMinX = Math.max(
-    contentMarginSize(theme.widgets.lineEdit.normal).x,
-    contentMarginSize(theme.widgets.lineEdit.readOnly).x
+export function colorPickerValueColumnWidth(theme: Pick<NativeTheme, 'widgets'>, emWidthPx: number): number {
+  return Math.trunc(
+    colorPickerHexFieldMinWidth(theme, emWidthPx) + spinBoxButtonsBlockWidth(SPIN_BOX_ARROW_ICON_SIZE.x)
   );
-  const emWidth = measure ? measure('W').x : 0;
-  const fieldWidth = styleMinX + LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emWidth;
-  return fieldWidth + spinBoxButtonsBlockWidth(SPIN_BOX_ARROW_ICON_SIZE.x);
 }
 
 /**
- * The natural width of `c_text`, a plain `LineEdit` (`color_picker.cpp:2215`):
- * `LineEdit::get_minimum_size()` with no buttons block. Only the minimum size
- * reads it. The field fills what `hexRowColumns` leaves.
+ * `LineEdit::get_minimum_size()` (`line_edit.cpp:2443-2477`) of a plain `LineEdit`, with no buttons
+ * block. `c_text` (`color_picker.cpp:2215`) fills what `hexRowColumns` leaves, so only the
+ * minimum size reads its own; the `SpinBox` value column adds its block to this.
  */
-function colorPickerHexFieldMinWidth(
-  theme: Pick<NativeTheme, 'widgets'>,
-  measure: TextWidthMeasurer | null
-): number {
+function colorPickerHexFieldMinWidth(theme: Pick<NativeTheme, 'widgets'>, emWidthPx: number): number {
   const styleMinX = Math.max(
     contentMarginSize(theme.widgets.lineEdit.normal).x,
     contentMarginSize(theme.widgets.lineEdit.readOnly).x
   );
-  const emWidth = measure ? measure('W').x : 0;
-  return styleMinX + LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emWidth;
+  return styleMinX + LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emWidthPx;
 }
 
 /**
@@ -332,16 +323,17 @@ export function colorPickerRows(
 function contentMinWidth(
   theme: NativeTheme,
   props: ColorPickerProperties,
-  measure: TextWidthMeasurer | null
+  measure: TextWidthMeasurer | null,
+  emWidthPx: number
 ): number {
   const scale = colorPickerScale(theme);
   const labelWidth = Math.round(COLOR_PICKER_LABEL_WIDTH * scale);
-  const sliderRowWidth = labelWidth + 2 * theme.separation + colorPickerValueColumnWidth(theme, measure);
+  const sliderRowWidth = labelWidth + 2 * theme.separation + colorPickerValueColumnWidth(theme, emWidthPx);
 
   const hexLabelWidth = Math.round(COLOR_PICKER_HEX_LABEL_WIDTH * scale);
   const textTypeWidth = Math.round(COLOR_PICKER_TEXT_TYPE_WIDTH * scale);
   const hexRowWidth =
-    hexLabelWidth + 2 * theme.separation + textTypeWidth + colorPickerHexFieldMinWidth(theme, measure);
+    hexLabelWidth + 2 * theme.separation + textTypeWidth + colorPickerHexFieldMinWidth(theme, emWidthPx);
 
   let width = 0;
   if (rowVisible(props.colorModesVisible)) width = Math.max(width, modeRowSize(theme, measure).x);
@@ -359,12 +351,17 @@ function contentMinWidth(
 export const colorPickerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ColorPickerProperties;
   const theme = ctx.theme;
+  // The painter shapes in this font (`Component.tsx`), so the minimum measures in it too.
+  const fontMetrics = resolveNodeFontMetrics(n, COLOR_PICKER_THEME_FONT_KEY);
   const measure: TextWidthMeasurer | null = ctx.measureText
-    ? (text) => ctx.measureText!(text, theme.fontSize)
+    ? (text) => ctx.measureText!(text, theme.fontSize, 0, fontMetrics)
     : null;
-
+  const emWidthPx = measure ? measure('W').x : 0;
   const rows = colorPickerRows(0, theme, props, measure);
-  const width = Math.max(shapeRowMinWidth(theme, props.pickerShape), contentMinWidth(theme, props, measure));
+  const width = Math.max(
+    shapeRowMinWidth(theme, props.pickerShape),
+    contentMinWidth(theme, props, measure, emWidthPx)
+  );
 
   return {
     x: width + 2 * theme.contentMargin,

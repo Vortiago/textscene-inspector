@@ -343,6 +343,35 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
 }
 
 /**
+ * The icon rect of a Button with an icon and no text, at the default `icon_alignment` (LEFT, swapped
+ * to the trailing edge in an RTL layout) and `vertical_icon_alignment` (CENTER), local to the button.
+ * Null for an empty icon.
+ */
+export function iconOnlyButtonIconRect(
+  rectSize: Vector2,
+  styleMargin: ButtonContentInput['styleMargin'],
+  iconSize: Vector2,
+  rtl: boolean
+): Rect2 | null {
+  const { icon } = layoutButtonContent({
+    rectSize,
+    styleMargin,
+    hSeparation: 0,
+    iconMaxWidth: 0,
+    textAlignment: H_CENTER,
+    iconAlignment: H_LEFT,
+    verticalIconAlignment: V_CENTER,
+    expandIcon: false,
+    iconNaturalSize: iconSize,
+    hasText: false,
+    textNaturalSize: { x: 0, y: 0 },
+    isTextRtl: false,
+    rtl,
+  });
+  return icon?.rect ?? null;
+}
+
+/**
  * The label box of a Button-family Control that reserves `reservedPx` (its check, toggle or arrow plus
  * `h_separation`) on one side, as `_internal_margin` does (`button.cpp:247-260`). Under RTL the
  * reservation changes sides at the caller and the alignment swaps here (`button.cpp:271-275`).

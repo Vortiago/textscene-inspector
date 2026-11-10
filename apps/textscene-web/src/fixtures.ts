@@ -433,6 +433,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Color Picker Hdr Hex",
+    "file": "unit-color-picker-hdr-hex.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Color Picker Hsv Rows",
+    "file": "unit-color-picker-hsv-rows.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Color Picker Rtl",
     "file": "unit-color-picker-rtl.tscn",
     "category": "Other"

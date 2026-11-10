@@ -268,11 +268,27 @@ describe('swatchesRowRects', () => {
 describe('colorPickerValueColumnWidth', () => {
   // spin_box.cpp:82-86: line_edit->get_combined_minimum_size() + buttons_block_width.
   it('is the LineEdit style margin(8) + 4*em("W")(10) + the SpinBox buttons block(18)', () => {
-    expect(colorPickerValueColumnWidth(THEME, measure)).toBe(66); // 8 + 40 + 18
+    expect(colorPickerValueColumnWidth(THEME, 10)).toBe(66); // 8 + 40 + 18
   });
 
-  it('floors to the style margin + buttons block alone with no measurer', () => {
-    expect(colorPickerValueColumnWidth(THEME, null)).toBe(26); // 8 + 0 + 18
+  it('truncates the fractional minimum as GridContainer does: Godot measures 86.5 as an 86px column', () => {
+    expect(colorPickerValueColumnWidth(THEME, 15.125)).toBe(86); // 8 + 60.5 + 18 = 86.5
+  });
+
+  it('floors to the style margin + buttons block alone with no em width', () => {
+    expect(colorPickerValueColumnWidth(THEME, 0)).toBe(26); // 8 + 0 + 18
+  });
+
+  it("ends a 300px picker's band at x=210 and starts its value field at x=214, as pnpm ref:godot measures", () => {
+    const [row] = sliderGridRowRects(
+      { x: 8, y: 0, w: 292, h: 20 },
+      1,
+      THEME,
+      13,
+      colorPickerValueColumnWidth(THEME, 15.125)
+    );
+    expect(row!.slider.x + row!.slider.w).toBe(210);
+    expect(row!.value.x).toBe(214);
   });
 });
 

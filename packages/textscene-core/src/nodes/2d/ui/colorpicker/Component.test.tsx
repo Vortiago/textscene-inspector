@@ -31,6 +31,25 @@ const ONLY_SHAPE_AND_SAMPLE = {
   presetsVisible: false,
 };
 
+/** Hides every row but the slider grid. */
+const ONLY_SLIDERS = {
+  color: 'Color(0.8, 0.6, 0.4, 1)',
+  pickerShape: 4,
+  samplerVisible: false,
+  colorModesVisible: false,
+  hexVisible: false,
+  presetsVisible: false,
+};
+
+/** Hides every row but the hex row. */
+const ONLY_HEX = {
+  pickerShape: 4,
+  samplerVisible: false,
+  colorModesVisible: false,
+  slidersVisible: false,
+  presetsVisible: false,
+};
+
 async function meshCount(properties: Record<string, unknown>): Promise<number> {
   const renderer = await ReactThreeTestRenderer.create(
     <ColorPicker
@@ -223,9 +242,49 @@ describe('<ColorPicker> (isolated painter contract)', () => {
         5 /* value text */ +
         10 /* 5 rows * (up+down arrows) */ +
         4 /* R,G,B,A gradient bands */ +
+        1 /* the checkerboard under the A band: color_picker.cpp:1434 */ +
         4 /* R,G,B,A bar_arrow grabbers */ +
         3 /* intensity: track+fill+grabber */
     );
+  });
+
+  it('sizes the slider band to 185px in a 300px picker, as Godot measures: band 25..210, field at 214', async () => {
+    // The value column is the SpinBox minimum with the W advance unrounded (15.125 px), then truncated by
+    // `GridContainer` to 86 (`grid_container.cpp:290`). A ceiled advance gave 90 and a 181px band.
+    const renderer = await ReactThreeTestRenderer.create(
+      <ColorPicker
+        {...painterEnv()}
+        theme={THEME}
+        solveNode={node({
+          color: 'Color(0.8, 0.6, 0.4, 1)',
+          colorMode: 1,
+          pickerShape: 4,
+          samplerVisible: false,
+          colorModesVisible: false,
+          hexVisible: false,
+          presetsVisible: false,
+        })}
+        rect={{ x: 0, y: 0, w: 300, h: 160 }}
+        renderOrder={0}
+      />
+    );
+    const bandWidths = renderer.scene
+      .findAllByType('Mesh')
+      .map((mesh) => {
+        const geometry = (mesh.instance as THREE.Mesh).geometry;
+        geometry.computeBoundingBox();
+        const box = geometry.boundingBox!;
+        return box.max.x - box.min.x;
+      })
+      .filter((width) => width > 100);
+    // Every band is 185px wide. The intensity track is 186px: it is not a band.
+    expect(new Set(bandWidths)).toEqual(new Set([185, 186]));
+  });
+
+  it('draws the H row of color_mode HSV as a grey polygon and the color_hue rainbow over it — color_mode.cpp:200-221', async () => {
+    const rgb = await meshCount({ ...ONLY_SLIDERS, colorMode: 0 });
+    // R's one gradient band becomes H's grey base plus its rainbow.
+    expect(await meshCount({ ...ONLY_SLIDERS, colorMode: 1 })).toBe(rgb + 1);
   });
 
   it('hex row draws a field box and its text — hex_visible default true', async () => {
@@ -246,6 +305,27 @@ describe('<ColorPicker> (isolated painter contract)', () => {
       presetsVisible: false,
     });
     expect(shown).toBeGreaterThan(hidden);
+  });
+
+  it('draws the disabled script icon in text_type for an HDR colour, not for an ordinary one — color_picker.cpp:1319-1325', async () => {
+    // `icon_disabled_color` is `Color(1, 1, 1, 0.4)` (`default_theme.cpp:169`).
+    const iconOpacities = async (color: string) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <ColorPicker
+          {...painterEnv()}
+          theme={THEME}
+          solveNode={node({ color, ...ONLY_HEX })}
+          rect={{ x: 0, y: 0, w: 300, h: 60 }}
+          renderOrder={0}
+        />
+      );
+      return renderer.scene
+        .findAllByType('Mesh')
+        .map((mesh) => ((mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity)
+        .filter((opacity) => Math.abs(opacity - 0.4) < 1e-6);
+    };
+    expect(await iconOpacities('Color(1.5, 0.5, 0.25, 1)')).toHaveLength(1);
+    expect(await iconOpacities('Color(0.8, 0.6, 0.4, 1)')).toHaveLength(0);
   });
 
   it('swatches row draws its two button labels — presets_visible default true', async () => {

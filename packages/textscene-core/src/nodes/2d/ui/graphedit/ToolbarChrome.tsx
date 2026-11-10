@@ -25,8 +25,7 @@ import {
 import { GRAPH_EDIT_ICONS, GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { spinBoxArrowPosition, spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
-import { layoutButtonContent } from '../../../../r3f/controls/native/buttonBase';
-import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
+import { iconOnlyButtonIconRect } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { graphEditMenuPanelStyleBox, type GraphEditToolbar, type ToolbarItem } from './toolbar';
@@ -83,23 +82,13 @@ interface ButtonIconProps {
  */
 function ButtonIcon({ item, texture, contentMargin, tint, rtl, renderOrder }: ButtonIconProps) {
   if (!texture) return null;
-  const layout = layoutButtonContent({
-    rectSize: { x: item.rect.w, y: item.rect.h },
-    styleMargin: { left: contentMargin, top: contentMargin, right: contentMargin, bottom: contentMargin },
-    hSeparation: 0,
-    iconMaxWidth: 0,
-    textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
-    iconAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
-    verticalIconAlignment: VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
-    expandIcon: false,
-    iconNaturalSize: { x: GRAPH_EDIT_ICON_SIZE, y: GRAPH_EDIT_ICON_SIZE },
-    hasText: false,
-    textNaturalSize: { x: 0, y: 0 },
-    isTextRtl: false,
-    rtl,
-  });
-  if (!layout.icon) return null;
-  const icon = layout.icon.rect;
+  const icon = iconOnlyButtonIconRect(
+    { x: item.rect.w, y: item.rect.h },
+    { left: contentMargin, top: contentMargin, right: contentMargin, bottom: contentMargin },
+    { x: GRAPH_EDIT_ICON_SIZE, y: GRAPH_EDIT_ICON_SIZE },
+    rtl
+  );
+  if (!icon) return null;
   return (
     <CanvasItemGroup position={[item.rect.x + icon.x, -(item.rect.y + icon.y), 0]} renderOrder={renderOrder}>
       <ControlQuad

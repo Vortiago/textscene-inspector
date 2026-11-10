@@ -14,7 +14,7 @@ import {
   rgbChannelGradientStops,
   hsvChannelGradientStops,
   hsvHueChannelBase,
-  hsvHueChannelOverlayAlpha,
+  hsvHueChannelStops,
   okhslHueChannelStops,
   okhslLightnessGradientStops,
   okhslSaturationGradientStops,
@@ -146,10 +146,35 @@ describe('hsvChannelGradientStops', () => {
   });
 });
 
-describe('hsvHueChannelBase / hsvHueChannelOverlayAlpha', () => {
-  it('base is grey at v, overlay alpha is s — color_mode.cpp:192-206', () => {
-    closeColor(hsvHueChannelBase(RED), { r: 1, g: 1, b: 1, a: 1 });
-    expect(hsvHueChannelOverlayAlpha(RED)).toBeCloseTo(1, 9);
+describe('hsvHueChannelBase', () => {
+  it('is the grey polygon at the value — color_mode.cpp:192-206', () => {
+    closeColor(hsvHueChannelBase({ r: 0.8, g: 0.6, b: 0.4, a: 1 }), { r: 0.8, g: 0.8, b: 0.8, a: 1 });
+  });
+});
+
+describe('hsvHueChannelStops', () => {
+  const PICKED = { r: 0.8, g: 0.6, b: 0.4, a: 1 }; // v = 0.8, s = 0.5
+
+  it('are the 7 color_hue stops, from_hsv(i / 6, 1, 1), modulated by from_hsv(0, 0, v, s) — color_mode.cpp:218-221, default_theme.cpp:1105-1128', () => {
+    const stops = hsvHueChannelStops(PICKED);
+    expect(stops).toHaveLength(7);
+    // Red, yellow, green, cyan, blue, magenta, red, each times v = 0.8, at alpha s = 0.5.
+    const hues = [
+      [1, 0, 0],
+      [1, 1, 0],
+      [0, 1, 0],
+      [0, 1, 1],
+      [0, 0, 1],
+      [1, 0, 1],
+      [1, 0, 0],
+    ];
+    stops.forEach((stop, i) => {
+      closeColor(stop, { r: hues[i]![0]! * 0.8, g: hues[i]![1]! * 0.8, b: hues[i]![2]! * 0.8, a: 0.5 });
+    });
+  });
+
+  it('vanishes at saturation 0 — Color::from_hsv(0, 0, v, 0) has alpha 0', () => {
+    for (const stop of hsvHueChannelStops({ r: 0.5, g: 0.5, b: 0.5, a: 1 })) expect(stop.a).toBe(0);
   });
 });
 

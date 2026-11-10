@@ -14,6 +14,7 @@ import {
   TAB_BAR_ICON_SIZE,
   MINI_CHECKERBOARD_ICON,
   COLOR_PICKER_OVERBRIGHT_ICON,
+  COLOR_SCRIPT_ICON,
   COLOR_PICKER_CURSOR_ICON,
   COLOR_PICKER_CURSOR_BG_ICON,
   MINI_CHECKERBOARD_SIZE,
@@ -247,6 +248,12 @@ describe('ColorPicker/ColorPickerButton icons', () => {
     expect(height).toBe(16);
   });
 
+  it('COLOR_SCRIPT_ICON is 16x16 — default_theme.cpp:1102', () => {
+    const { width, height } = svgSize(decodeSvg(COLOR_SCRIPT_ICON));
+    expect(width).toBe(16);
+    expect(height).toBe(16);
+  });
+
   it('COLOR_PICKER_CURSOR_ICON and COLOR_PICKER_CURSOR_BG_ICON are both 12x12 — default_theme.cpp:1100-1101', () => {
     for (const url of [COLOR_PICKER_CURSOR_ICON, COLOR_PICKER_CURSOR_BG_ICON]) {
       const svg = decodeSvg(url);
@@ -257,10 +264,11 @@ describe('ColorPicker/ColorPickerButton icons', () => {
     }
   });
 
-  it('the four icons are pairwise distinct data: URLs', () => {
+  it('the five icons are pairwise distinct data: URLs', () => {
     const values = [
       MINI_CHECKERBOARD_ICON,
       COLOR_PICKER_OVERBRIGHT_ICON,
+      COLOR_SCRIPT_ICON,
       COLOR_PICKER_CURSOR_ICON,
       COLOR_PICKER_CURSOR_BG_ICON,
     ];

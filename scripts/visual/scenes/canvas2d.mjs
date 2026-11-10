@@ -1052,6 +1052,10 @@ export const CANVAS_2D_SCENES = [
   // undecoded bytes as the other layers do, and a second sRGB decode would darken it.
   { name: 'texture-progress-bar-partial', file: 'unit-texture-progress-bar-partial.tscn', mode: '2d' },
   { name: 'color-picker-rtl', file: 'unit-color-picker-rtl.tscn', mode: '2d' },
+  // The one variable is `color_mode = 1` (HSV rainbow row) and, in the second scene, an HDR `color`
+  // (the `script` icon of `text_type`).
+  { name: 'color-picker-hsv-rows', file: 'unit-color-picker-hsv-rows.tscn', mode: '2d' },
+  { name: 'color-picker-hdr-hex', file: 'unit-color-picker-hdr-hex.tscn', mode: '2d' },
   // Two LTR alignment scenes. The fractional-box one needs a non-integer box
   // width: at a whole width the ceiled and raw line extents give one offset.
   { name: 'rich-text-label-center-overflow', file: 'unit-rich-text-label-center-overflow.tscn', mode: '2d' },

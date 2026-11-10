@@ -13,6 +13,7 @@ import { formatGodotNumber } from '../spinbox/nativeSolver';
 import { extractHsv } from './nativeSolver';
 import { hsvToRgb } from '../../../../godot/math/color';
 import { okhslToSrgb, srgbToOkhsl } from './okhsl';
+import { COLOR_HUE_STOPS } from './svGradient';
 import type { Rgba } from '../../../../godot/math/math';
 
 /** `ColorModeType` (`color_picker.h`). `MODE_RAW` is a deprecated alias with the value of `MODE_LINEAR` (`:105-107`). */
@@ -184,16 +185,18 @@ export function hsvChannelGradientStops(channel: 1 | 2, normalized: Rgba): [Rgba
 /**
  * `ColorModeHSV::slider_draw`'s H channel (`color_mode.cpp:218-221`): a flat
  * grey base at `color.get_v()`, then the 7-stop `color_hue` rainbow over it with
- * a `Color::from_hsv(0, 0, v, s)` modulate. This is the base, and the overlay
- * alpha is `hsvHueChannelOverlayAlpha`.
+ * a `Color::from_hsv(0, 0, v, s)` modulate. This is the base, and
+ * `hsvHueChannelStops` is the rainbow.
  */
 export function hsvHueChannelBase(normalized: Rgba): Rgba {
   const { v } = extractHsv(normalized);
   return { r: v, g: v, b: v, a: 1 };
 }
 
-export function hsvHueChannelOverlayAlpha(normalized: Rgba): number {
-  return extractHsv(normalized).s;
+/** The `color_hue` stops of `hsvHueChannelBase`'s overlay, each times `v` at alpha `s`. At `s` = 0 the rainbow vanishes. */
+export function hsvHueChannelStops(normalized: Rgba): Rgba[] {
+  const { s, v } = extractHsv(normalized);
+  return COLOR_HUE_STOPS.map((c) => ({ r: c.r * v, g: c.g * v, b: c.b * v, a: s }));
 }
 
 /**

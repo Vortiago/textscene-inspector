@@ -97,23 +97,28 @@ export function linearizeStops(stops: readonly Rgba[]): Rgba[] {
 
 /**
  * The 7 stops of the `color_hue` `GradientTexture2D` (`default_theme.cpp:1104-1128`),
- * `Color::from_hsv(h, 1, 1)` with linear interpolation, as one vertical strip.
- * A hue sweep is piecewise linear in RGB between multiples of 60 degrees, so a
- * GPU lerp between the stops is exact, with no 800px texture to sample.
+ * `Color::from_hsv(i / 6, 1, 1)`, in order. A hue sweep is piecewise linear in RGB
+ * between multiples of 60 degrees, so a GPU lerp between the stops is exact, with no
+ * 800px texture to sample.
  */
+const COLOR_HUE_STOP_COUNT = 7;
+export const COLOR_HUE_STOPS: readonly Rgba[] = Array.from({ length: COLOR_HUE_STOP_COUNT }, (_, i) => ({
+  ...hsvToRgb(i / (COLOR_HUE_STOP_COUNT - 1), 1, 1),
+  a: 1,
+}));
+
+/** `COLOR_HUE_STOPS` as one vertical strip. */
 export function hueStripGeometry(w: number, h: number): QuadGeometry {
-  const stops = 7;
+  const hueStops = COLOR_HUE_STOPS;
   const positions: number[] = [];
   const colors: number[] = [];
   const indices: number[] = [];
-  for (let i = 0; i < stops; i++) {
-    const t = i / (stops - 1);
-    const y = -h * t;
-    const c = hsvToRgb(t, 1, 1);
+  hueStops.forEach((c, i) => {
+    const y = -h * (i / (hueStops.length - 1));
     positions.push(0, y, 0, w, y, 0);
     colors.push(c.r, c.g, c.b, 1, c.r, c.g, c.b, 1);
-  }
-  for (let i = 0; i < stops - 1; i++) {
+  });
+  for (let i = 0; i < hueStops.length - 1; i++) {
     const a = i * 2;
     indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
   }

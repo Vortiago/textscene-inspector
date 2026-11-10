@@ -37,6 +37,7 @@ import {
   COLOR_PICKER_CURSOR_SIZE,
   COLOR_PICKER_MENU_ICON,
   COLOR_PICKER_OVERBRIGHT_ICON,
+  COLOR_SCRIPT_ICON,
   COLOR_PICKER_PIPETTE_ICON,
   COLOR_PICKER_SHAPE_RECT_ICON,
   FOLDABLE_CONTAINER_ICONS,
@@ -51,7 +52,8 @@ import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
+import { iconOnlyButtonIconRect, shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
+import { buttonIconColor } from '../button/nativeSolver';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { hsvToRgb } from '../../../../godot/math/color';
 import type { Rect2 } from '../../../../godot/math/rect2';
@@ -105,7 +107,7 @@ import {
   hexFieldText,
   hsvChannelGradientStops,
   hsvHueChannelBase,
-  hsvHueChannelOverlayAlpha,
+  hsvHueChannelStops,
   okhslHueChannelStops,
   okhslLightnessGradientStops,
   okhslSaturationGradientStops,
@@ -256,6 +258,45 @@ function CenteredIcon({ rect, size, texture, tint, renderOrder }: CenteredIconPr
   );
 }
 
+interface TextTypeScriptIconProps {
+  rect: Rect2;
+  solveNode: NativeControlComponentProps['solveNode'];
+  theme: NativeControlComponentProps['theme'];
+  tint: NativeControlComponentProps['tint'];
+  renderOrder: number;
+}
+
+/**
+ * The `color_script` icon of `text_type`, which `_update_text_value` disables while the colour is
+ * not a valid hex (`color_picker.cpp:1319-1325`). The `Button` places it at its disabled box's left
+ * margin (`button.cpp:349-405`) and modulates it by `icon_disabled_color`. Only a picker that draws
+ * it loads the texture.
+ */
+function TextTypeScriptIcon({ rect, solveNode, theme, tint, renderOrder }: TextTypeScriptIconProps) {
+  const toItemLinear = useItemLinearColorOf();
+  const texture = useNodeIcon(solveNode.icons.color_script, COLOR_SCRIPT_ICON);
+  const iconRect = iconOnlyButtonIconRect(
+    { x: rect.w, y: rect.h },
+    theme.widgets.button.disabled.contentMargin,
+    { x: COLOR_PICKER_BUTTON_ICON_SIZE, y: COLOR_PICKER_BUTTON_ICON_SIZE },
+    solveNode.rtl
+  );
+  if (!iconRect) return null;
+  const disabledColor = buttonIconColor(solveNode.colors, 'disabled');
+  return (
+    <CanvasItemGroup position={[rect.x + iconRect.x, -(rect.y + iconRect.y), 0]}>
+      <ControlQuad
+        width={iconRect.w}
+        height={iconRect.h}
+        color={toItemLinear(multiplyModulate(tint.own, { ...disabledColor, a: 1 }))}
+        opacity={tint.opacity * disabledColor.a}
+        map={texture}
+        renderOrder={renderOrder}
+      />
+    </CanvasItemGroup>
+  );
+}
+
 export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const toItemLinear = useItemLinearColorOf();
   const props = painterView<ColorPickerProperties>(solveNode);
@@ -390,7 +431,9 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     measure,
     colorPickerSliderLabels(colorMode, editAlpha, editIntensity)
   );
-  const sliderValueWidth = colorPickerValueColumnWidth(theme, measure);
+  // The unceiled advance: `Font::get_char_size` does not ceil it, where `measure` does.
+  const emWidthPx = shape('W').widthPx;
+  const sliderValueWidth = colorPickerValueColumnWidth(theme, emWidthPx);
   const sliderCols = useMemo(
     () =>
       rows.sliders
@@ -410,7 +453,9 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     label: string;
     valueText: string;
     stops: Rgba[];
-    overlay?: { base: Rgba; alpha: number };
+    hueBase?: Rgba;
+    /** The alpha row tiles `sample_bg` under its gradient (`color_picker.cpp:1434`). */
+    hasCheckerboard?: boolean;
     /** The grabber position, `value/max`. Every channel's `min` is 0 except intensity's, which has its own ratio. */
     ratio: number;
     /** `GRADIENT_COLOR_SPACE_LINEAR_SRGB` (`color_mode.cpp:311`): only the R, G and B rows of `MODE_LINEAR`. */
@@ -434,12 +479,13 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     for (let i = 0; i < 3; i++) {
       const c = channels[i]!;
       let stops: Rgba[] = [];
-      let overlay: { base: Rgba; alpha: number } | undefined;
+      let hueBase: Rgba | undefined;
       if (colorMode === MODE_RGB || colorMode === MODE_LINEAR) {
         stops = rgbChannelGradientStops(i, normalized);
       } else if (colorMode === MODE_HSV) {
         if (i === 0) {
-          overlay = { base: hsvHueChannelBase(normalized), alpha: hsvHueChannelOverlayAlpha(normalized) };
+          hueBase = hsvHueChannelBase(normalized);
+          stops = hsvHueChannelStops(normalized);
         } else {
           stops = hsvChannelGradientStops(i as 1 | 2, normalized);
         }
@@ -452,7 +498,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
         label: sliderLabels[out.length] ?? c.label,
         valueText: formatSliderValue(c.value, c.decimals),
         stops,
-        overlay,
+        hueBase,
         ratio: c.max !== 0 ? c.value / c.max : 0,
         linearSpace: colorMode === MODE_LINEAR,
       });
@@ -470,6 +516,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
         label: sliderLabels[out.length] ?? alphaChannel.label,
         valueText: formatSliderValue(alphaChannel.value, alphaChannel.decimals),
         stops: alphaChannelGradientStops(normalized),
+        hasCheckerboard: true,
         ratio: alphaChannel.max !== 0 ? alphaChannel.value / alphaChannel.max : 0,
       });
     }
@@ -674,9 +721,9 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
           if (!col) return null;
           const geometry = sliderGeometries[i];
           // `_reset_sliders_theme` (`color_picker.cpp:628-651`) gives every row but intensity the
-          // `bar_arrow` grabber and a gradient band. Only such a row has `overlay` or `stops`.
+          // `bar_arrow` grabber and a gradient band. Only such a row has `hueBase` or `stops`.
           // Intensity keeps the stock `HSlider` track, fill and grabber.
-          const isColorized = row.stops.length >= 2 || !!row.overlay;
+          const isColorized = row.stops.length >= 2 || !!row.hueBase;
           const grabberIconSize = isColorized
             ? { x: COLOR_PICKER_BUTTON_ICON_SIZE, y: COLOR_PICKER_BUTTON_ICON_SIZE }
             : { x: theme.sliderGrabberSize, y: theme.sliderGrabberSize };
@@ -745,11 +792,21 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                       </>
                     );
                   })()}
-                {row.overlay && (
+                {row.hasCheckerboard && (
+                  <AlphaCheckerboardQuad
+                    width={sliderBox.w}
+                    height={Math.min(sliderBox.h, 16 * scale)}
+                    color={tint.color}
+                    opacity={tint.opacity}
+                    renderOrder={renderOrder}
+                    themed={solveNode.icons.sample_bg}
+                  />
+                )}
+                {row.hueBase && (
                   <ControlQuad
                     width={sliderBox.w}
                     height={sliderBox.h}
-                    color={toItemLinear(multiplyModulate(tint.own, row.overlay.base))}
+                    color={toItemLinear(multiplyModulate(tint.own, row.hueBase))}
                     opacity={tint.opacity}
                     renderOrder={renderOrder}
                   />
@@ -875,7 +932,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
             renderOrder={renderOrder}
             rtl={solveNode.rtl}
           />
-          {hexContent.typeText && (
+          {hexContent.typeText ? (
             <LabelledText
               rect={hexCols.textType}
               layout={shape(hexContent.typeText)}
@@ -884,6 +941,14 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
               clippingPlanes={clippingPlanes}
               renderOrder={renderOrder}
               center
+            />
+          ) : (
+            <TextTypeScriptIcon
+              rect={hexCols.textType}
+              solveNode={solveNode}
+              theme={theme}
+              tint={tint}
+              renderOrder={renderOrder}
             />
           )}
           <CanvasItemGroup position={[hexCols.field.x, -hexCols.field.y, 0]}>
