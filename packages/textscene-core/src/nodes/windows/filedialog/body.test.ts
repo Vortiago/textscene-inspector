@@ -20,6 +20,7 @@ import { fileDialogTextureSlots } from './body';
 import { parseFileDialog } from './parser';
 
 const THEME = nativeTheme(1);
+const EMBEDDER = { x: 1152, y: 648 };
 const PNG = 'PackedStringArray("*.png ; PNG Image")';
 
 /** The scene lines of each oracle case (`testing/fileDialogGeometry/oracle.gd`). */
@@ -164,7 +165,7 @@ describe.each(Object.keys(CASES))('FileDialog %s', (name) => {
     nodes: OracleRow[];
   };
   const window = fileDialog(CASES[name]!);
-  const size = wrappedWindowSize(window, THEME, measureText);
+  const size = wrappedWindowSize(window, THEME, measureText, EMBEDDER);
 
   it('has the size Godot gives the window', () => {
     expect([size.x, size.y]).toEqual(expected.size);
@@ -250,7 +251,7 @@ describe('FileDialog toolbar icon sizes', () => {
 describe('FileDialog synthetic drawing', () => {
   const bodyControl = (lines: Record<string, string>, name: string) => {
     const dialog = fileDialog(lines);
-    const size = wrappedWindowSize(dialog, THEME, measureText);
+    const size = wrappedWindowSize(dialog, THEME, measureText, EMBEDDER);
     const { body } = dialogGeometry(dialog, size, createSolveContext(THEME, measureText));
     return body.find(({ control }) => control.node.name === name)!.control;
   };
