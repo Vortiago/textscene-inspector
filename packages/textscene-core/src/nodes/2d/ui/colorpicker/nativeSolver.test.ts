@@ -4,10 +4,10 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { defaultPickerTheme } from './pickerChildTheme';
+import { extractHsv } from './colorModes';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import {
   invertRgb,
-  extractHsv,
   colorPickerScale,
   colorPickerRows,
   colorPickerMinimumSize,

@@ -10,7 +10,7 @@ import { multiplyModulate, type useItemLinearColorOf } from '../../../../r3f/can
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import { iconOnlyButtonIconRect } from '../../../../r3f/controls/native/buttonBase';
+import { iconOnlyButtonIconRectIn } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Rgba } from '../../../../godot/math/math';
@@ -32,9 +32,9 @@ function drawsBox({ bgColor, borderWidth }: StyleBoxFlatData): boolean {
 
 /** The icon sits at the whole pixel `Button` floors to. */
 export function IconButton({ rect, box, size, texture, tint, iconTint, rtl, renderOrder }: IconButtonProps) {
-  const local = texture
-    ? iconOnlyButtonIconRect(
-        { x: rect.w, y: rect.h },
+  const iconRect = texture
+    ? iconOnlyButtonIconRectIn(
+        rect,
         box.contentMargin,
         { x: size, y: size },
         rtl,
@@ -53,9 +53,9 @@ export function IconButton({ rect, box, size, texture, tint, iconTint, rtl, rend
           />
         </CanvasItemGroup>
       )}
-      {texture && local && (
+      {texture && iconRect && (
         <PositionedIcon
-          rect={{ ...local, x: rect.x + local.x, y: rect.y + local.y }}
+          rect={iconRect}
           texture={texture}
           color={iconTint.color}
           opacity={iconTint.opacity}

@@ -9,7 +9,7 @@
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useItemLinearColorOf } from '../../../../r3f/canvasItemModulate';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
-import { iconOnlyButtonIconRect } from '../../../../r3f/controls/native/buttonBase';
+import { iconOnlyButtonIconRectIn } from '../../../../r3f/controls/native/buttonBase';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { COLOR_PICKER_BUTTON_ICON_SIZE, COLOR_SCRIPT_ICON } from '../../../../r3f/controls/native/themeIcons';
 import { buttonIconColor } from '../button/nativeSolver';
@@ -42,8 +42,8 @@ export function TextTypeScriptIcon({
   const toItemLinear = useItemLinearColorOf();
   const texture = useNodeIcon(solveNode.icons.color_script, COLOR_SCRIPT_ICON);
   if (!texture) return null;
-  const iconRect = iconOnlyButtonIconRect(
-    { x: rect.w, y: rect.h },
+  const iconRect = iconOnlyButtonIconRectIn(
+    rect,
     theme.widgets.button.disabled.contentMargin,
     { x: COLOR_PICKER_BUTTON_ICON_SIZE, y: COLOR_PICKER_BUTTON_ICON_SIZE },
     solveNode.rtl
@@ -52,7 +52,7 @@ export function TextTypeScriptIcon({
   const { color, opacity } = iconModulate(toItemLinear, tint, buttonIconColor(buttonColors, 'disabled'));
   return (
     <PositionedIcon
-      rect={{ ...iconRect, x: rect.x + iconRect.x, y: rect.y + iconRect.y }}
+      rect={iconRect}
       texture={texture}
       color={color}
       opacity={opacity}

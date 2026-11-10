@@ -10,7 +10,7 @@ import { internalChildThemeItems, type InternalThemeItems } from '../../../../r3
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { tabBarStyleBoxes, pickTabStyleBox } from '../tabbar/nativeSolver';
+import { tabBarStyleBoxes, pickTabStyleBox, type TabBarStyleBoxes } from '../tabbar/nativeSolver';
 import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';
 import { LABEL_DEFAULT_FONT_COLOR } from '../label/nativeSolver';
 import { spinBoxFieldThemeItems } from '../spinbox/nativeSolver';
@@ -25,8 +25,10 @@ export interface PickerTheme extends NativeTheme {
 }
 
 /** `theme` with the default mode button boxes, for a picker with no Theme. */
-export function defaultPickerTheme(theme: NativeTheme): PickerTheme {
-  const boxes = tabBarStyleBoxes(theme.scale);
+export function defaultPickerTheme(
+  theme: NativeTheme,
+  boxes: TabBarStyleBoxes = tabBarStyleBoxes(theme.scale)
+): PickerTheme {
   return { ...theme, modeButton: { normal: boxes.unselected, pressed: boxes.selected } };
 }
 
@@ -66,9 +68,9 @@ export function pickerChildTheme(n: SolveNode, nativeTheme: NativeTheme): Picker
   const lineEdit = internalChildThemeItems(n, 'LineEdit');
   const valueField = spinBoxFieldThemeItems(n);
   const tabs = internalChildThemeItems(n, 'TabContainer');
-  const theme = defaultPickerTheme(nativeTheme);
+  const defaultTabs = tabBarStyleBoxes(nativeTheme.scale);
+  const theme = defaultPickerTheme(nativeTheme, defaultTabs);
   const { widgets } = theme;
-  const tabDefaults = tabBarStyleBoxes(theme.scale);
   const withButtonBoxes: PickerTheme = {
     ...theme,
     widgets: {
@@ -84,8 +86,8 @@ export function pickerChildTheme(n: SolveNode, nativeTheme: NativeTheme): Picker
       },
     },
     modeButton: {
-      normal: pickTabStyleBox(tabs.styleBoxes, tabDefaults, 'unselected'),
-      pressed: pickTabStyleBox(tabs.styleBoxes, tabDefaults, 'selected'),
+      normal: pickTabStyleBox(tabs.styleBoxes, defaultTabs, 'unselected'),
+      pressed: pickTabStyleBox(tabs.styleBoxes, defaultTabs, 'selected'),
     },
   };
   return {

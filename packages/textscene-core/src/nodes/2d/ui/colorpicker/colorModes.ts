@@ -10,11 +10,42 @@
 import { linearChannelToSRGB, sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { isColorOverbright } from '../shared/colorOverbright';
 import { formatGodotNumber } from '../spinbox/nativeSolver';
-import { extractHsv } from './nativeSolver';
-import { hsvToRgb } from '../../../../godot/math/color';
+import { colorHue, colorSaturation, hsvToRgb } from '../../../../godot/math/color';
 import { okhslToSrgb, srgbToOkhsl } from './okhsl';
 import { COLOR_HUE_STOPS } from './svGradient';
 import type { Rgba } from '../../../../godot/math/math';
+
+interface HsvColor {
+  h: number;
+  s: number;
+  v: number;
+}
+
+/**
+ * The HSV of `_set_pick_color` (`color_picker.cpp:324-345`): `_copy_color_to_normalized_and_intensity`
+ * (`:593-602`) divides out an HDR `intensity` so no channel of `color_normalized`
+ * exceeds 1. `_copy_normalized_to_hsv_okhsl` (`:552-565`) then reads the HSV of that
+ * normalised colour with `Color::get_h/get_s/get_v` (`core/math/color.cpp:136-180`).
+ */
+export function extractHsv(color: Rgba): HsvColor {
+  const linear = {
+    r: sRGBChannelToLinear(color.r),
+    g: sRGBChannelToLinear(color.g),
+    b: sRGBChannelToLinear(color.b),
+  };
+  const multiplier = Math.max(1, linear.r, linear.g, linear.b);
+  const normalized = {
+    r: linearChannelToSRGB(linear.r / multiplier),
+    g: linearChannelToSRGB(linear.g / multiplier),
+    b: linearChannelToSRGB(linear.b / multiplier),
+  };
+
+  return {
+    h: colorHue(normalized),
+    s: colorSaturation(normalized),
+    v: Math.max(normalized.r, normalized.g, normalized.b),
+  };
+}
 
 /** `ColorModeType` (`color_picker.h`). `MODE_RAW` is a deprecated alias with the value of `MODE_LINEAR` (`:105-107`). */
 export const MODE_RGB = 0;

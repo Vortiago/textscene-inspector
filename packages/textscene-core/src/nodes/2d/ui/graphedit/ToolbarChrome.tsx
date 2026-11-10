@@ -28,7 +28,7 @@ import {
 import { GRAPH_EDIT_ICONS, GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { spinBoxArrowPosition, spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
-import { iconOnlyButtonIconRect } from '../../../../r3f/controls/native/buttonBase';
+import { iconOnlyButtonIconRectIn } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { graphEditMenuPanelStyleBox, type GraphEditToolbar, type ToolbarItem } from './toolbar';
@@ -74,8 +74,8 @@ interface ButtonIconProps {
  */
 function ButtonIcon({ item, texture, contentMargin, tint, rtl, renderOrder }: ButtonIconProps) {
   if (!texture) return null;
-  const icon = iconOnlyButtonIconRect(
-    { x: item.rect.w, y: item.rect.h },
+  const icon = iconOnlyButtonIconRectIn(
+    item.rect,
     { left: contentMargin, top: contentMargin, right: contentMargin, bottom: contentMargin },
     { x: GRAPH_EDIT_ICON_SIZE, y: GRAPH_EDIT_ICON_SIZE },
     rtl
@@ -83,7 +83,7 @@ function ButtonIcon({ item, texture, contentMargin, tint, rtl, renderOrder }: Bu
   if (!icon) return null;
   return (
     <PositionedIcon
-      rect={{ ...icon, x: item.rect.x + icon.x, y: item.rect.y + icon.y }}
+      rect={icon}
       texture={texture}
       color={tint.color}
       opacity={item.disabled ? tint.opacity * BUTTON_ICON_MODULATE.disabled.a : tint.opacity}

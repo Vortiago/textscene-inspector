@@ -58,8 +58,12 @@ function buildThemeTypeChain(
       Object.hasOwn(t.typeVariations, typeVariation)
     );
     // No scene or project theme registers it: the default theme may (`theme_owner.cpp:200-208`).
-    const bases = owner ? owner.typeVariations : DEFAULT_THEME_TYPE_VARIATIONS;
-    if (owner || Object.hasOwn(DEFAULT_THEME_TYPE_VARIATIONS, typeVariation)) {
+    const bases = owner
+      ? owner.typeVariations
+      : Object.hasOwn(DEFAULT_THEME_TYPE_VARIATIONS, typeVariation)
+        ? DEFAULT_THEME_TYPE_VARIATIONS
+        : undefined;
+    if (bases) {
       // Godot walks this unguarded. A previewer reads files it did not write, so
       // a `MyPanel/base_type = &"MyPanel"` cycle must stop the walk.
       const seen = new Set<string>();

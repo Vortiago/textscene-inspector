@@ -11,6 +11,7 @@ import {
   buttonDrawnLabel,
   fitIconSize,
   iconOnlyButtonIconRect,
+  iconOnlyButtonIconRectIn,
   layoutButtonContent,
   pickButtonStyleBox,
   resolveButtonDrawState,
@@ -574,6 +575,16 @@ describe('iconOnlyButtonIconRect: an icon with no text sits at the left margin a
     expect(iconOnlyButtonIconRect({ x: 28, y: 31 }, margin, { x: 16, y: 16 }, false)).toEqual({
       x: 4,
       y: 7,
+      w: 16,
+      h: 16,
+    });
+  });
+
+  it('offsets the icon by the button position in iconOnlyButtonIconRectIn', () => {
+    const box = { x: 10, y: 20, w: 28, h: 31 };
+    expect(iconOnlyButtonIconRectIn(box, margin, { x: 16, y: 16 }, false)).toEqual({
+      x: 14,
+      y: 27,
       w: 16,
       h: 16,
     });

@@ -150,7 +150,7 @@ function flatBox(
   };
 }
 
-interface TabBarStyleBoxes {
+export interface TabBarStyleBoxes {
   selected: StyleBoxFlatData;
   unselected: StyleBoxFlatData;
   disabled: StyleBoxFlatData;

@@ -372,6 +372,18 @@ export function iconOnlyButtonIconRect(
   return icon?.rect ?? null;
 }
 
+/** `iconOnlyButtonIconRect` for a button at `box`, in the coordinates `box` is in. */
+export function iconOnlyButtonIconRectIn(
+  box: Rect2,
+  styleMargin: ButtonContentInput['styleMargin'],
+  iconSize: Vector2,
+  rtl: boolean,
+  iconAlignment?: number
+): Rect2 | null {
+  const local = iconOnlyButtonIconRect({ x: box.w, y: box.h }, styleMargin, iconSize, rtl, iconAlignment);
+  return local && { ...local, x: box.x + local.x, y: box.y + local.y };
+}
+
 /**
  * The label box of a Button-family Control that reserves `reservedPx` (its check, toggle or arrow plus
  * `h_separation`) on one side, as `_internal_margin` does (`button.cpp:247-260`). Under RTL the

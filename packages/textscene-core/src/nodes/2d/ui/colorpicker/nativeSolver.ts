@@ -8,9 +8,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { linearChannelToSRGB, sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import { colorHue, colorSaturation } from '../../../../godot/math/color';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -118,8 +116,13 @@ function colorPickerButtonIconSize(theme: Pick<NativeTheme, 'scale'>): number {
  * `button_normal` (`default_theme.cpp:359-363`). `btn_mode` has this size, with its width floored to 28.
  */
 function colorPickerMenuButtonSize(theme: Pick<NativeTheme, 'widgets' | 'scale'>): Vector2 {
+  return iconButtonSize(theme, theme.widgets.flatMenuButton.normal);
+}
+
+/** The natural size of an icon-only Button drawing `box`: the icon plus the margins of `box` (`button.cpp:481-525`). */
+function iconButtonSize(theme: Pick<NativeTheme, 'scale'>, box: StyleBoxFlatData): Vector2 {
   const icon = colorPickerButtonIconSize(theme);
-  const margin = contentMarginSize(theme.widgets.flatMenuButton.normal);
+  const margin = contentMarginSize(box);
   return { x: icon + margin.x, y: icon + margin.y };
 }
 
@@ -128,10 +131,9 @@ function colorPickerMenuButtonSize(theme: Pick<NativeTheme, 'widgets' | 'scale'>
  * floors the icon plus the margins of the `box` the button draws (`button.cpp:525`).
  */
 function iconButtonWidth(theme: Pick<NativeTheme, 'scale'>, box: StyleBoxFlatData): number {
-  const icon = colorPickerButtonIconSize(theme);
   return Math.max(
     Math.round(COLOR_PICKER_BUTTON_WIDTH * colorPickerScale(theme)),
-    icon + contentMarginSize(box).x
+    iconButtonSize(theme, box).x
   );
 }
 
@@ -143,38 +145,6 @@ export function colorPickerScale(theme: Pick<NativeTheme, 'scale'>): number {
 /** `Color::inverted()` (`core/math/color.h`): flips rgb and keeps alpha. */
 export function invertRgb(c: Rgba): Rgba {
   return { r: 1 - c.r, g: 1 - c.g, b: 1 - c.b, a: c.a };
-}
-
-interface HsvColor {
-  h: number;
-  s: number;
-  v: number;
-}
-
-/**
- * The HSV of `_set_pick_color` (`color_picker.cpp:324-345`): `_copy_color_to_normalized_and_intensity`
- * (`:593-602`) divides out an HDR `intensity` so no channel of `color_normalized`
- * exceeds 1. `_copy_normalized_to_hsv_okhsl` (`:552-565`) then reads the HSV of that
- * normalised colour with `Color::get_h/get_s/get_v` (`core/math/color.cpp:136-180`).
- */
-export function extractHsv(color: Rgba): HsvColor {
-  const linear = {
-    r: sRGBChannelToLinear(color.r),
-    g: sRGBChannelToLinear(color.g),
-    b: sRGBChannelToLinear(color.b),
-  };
-  const multiplier = Math.max(1, linear.r, linear.g, linear.b);
-  const normalized = {
-    r: linearChannelToSRGB(linear.r / multiplier),
-    g: linearChannelToSRGB(linear.g / multiplier),
-    b: linearChannelToSRGB(linear.b / multiplier),
-  };
-
-  return {
-    h: colorHue(normalized),
-    s: colorSaturation(normalized),
-    v: Math.max(normalized.r, normalized.g, normalized.b),
-  };
 }
 
 interface ColorPickerRows {
@@ -194,6 +164,9 @@ interface ColorPickerRows {
   sliderRowCount: number;
   /** The combined minimum height of `real_vbox`, without the margin of `internal_margin`. */
   totalHeight: number;
+  /** The minimum widths of `mode_hbc` and `swatches_vbc`, measured once for the row heights. */
+  modeMinWidth: number;
+  swatchesMinWidth: number;
 }
 
 /**
@@ -241,16 +214,16 @@ function modeRowSize(
   pressedMode: number
 ): Vector2 {
   const btnModeWidth = iconButtonWidth(theme, theme.widgets.flatMenuButton.normal);
-  const marginY = (index: number) =>
-    contentMarginSize(colorPickerModeButtonStyleBox(theme, index === pressedMode)).y;
+  const normalMarginY = contentMarginSize(colorPickerModeButtonStyleBox(theme, false)).y;
+  const pressedMarginY = contentMarginSize(colorPickerModeButtonStyleBox(theme, true)).y;
   const btnModeHeight = colorPickerMenuButtonSize(theme).y;
-  let height = Math.max(marginY(-1), marginY(pressedMode), btnModeHeight);
+  let height = Math.max(normalMarginY, pressedMarginY, btnModeHeight);
   if (!measure) return { x: btnModeWidth, y: height };
   let width = btnModeWidth;
   COLOR_MODE_NAMES.slice(0, MODE_BUTTON_COUNT).forEach((name, index) => {
     const m = measure(name);
     width += modeButtonMinimumWidth(theme, m.x, index === pressedMode) + theme.separation;
-    height = Math.max(height, m.y + marginY(index));
+    height = Math.max(height, m.y + (index === pressedMode ? pressedMarginY : normalMarginY));
   });
   return { x: width, y: height };
 }
@@ -260,8 +233,7 @@ function sampleRowHeight(
   theme: Pick<NativeTheme, 'widgets' | 'scale'>,
   pickerShape: number | undefined
 ): number {
-  const icon = colorPickerButtonIconSize(theme);
-  const pick = icon + contentMarginSize(theme.widgets.button.normal).y;
+  const pick = iconButtonSize(theme, theme.widgets.button.normal).y;
   const shape = (pickerShape ?? SHAPE_HSV_RECTANGLE) === SHAPE_NONE ? 0 : colorPickerMenuButtonSize(theme).y;
   return Math.max(pick, shape);
 }
@@ -482,6 +454,8 @@ export function colorPickerRows(
     swatches,
     sliderRowCount: sliders ? sliderRowCount : 0,
     totalHeight: y,
+    modeMinWidth: modeSize.x,
+    swatchesMinWidth: swatchesSize.x,
   };
 }
 
@@ -494,7 +468,7 @@ function contentMinWidth(
   theme: PickerTheme,
   valueFieldTheme: Pick<NativeTheme, 'widgets'>,
   props: ColorPickerProperties,
-  measure: TextWidthMeasurer | null,
+  rows: Pick<ColorPickerRows, 'modeMinWidth' | 'swatchesMinWidth'>,
   emWidthPx: number
 ): number {
   const scale = colorPickerScale(theme);
@@ -508,11 +482,10 @@ function contentMinWidth(
     hexLabelWidth + 2 * theme.separation + textTypeWidth + colorPickerHexFieldMinWidth(theme, emWidthPx);
 
   let width = 0;
-  if (rowVisible(props.colorModesVisible))
-    width = Math.max(width, modeRowSize(theme, measure, props.colorMode ?? MODE_RGB).x);
+  if (rowVisible(props.colorModesVisible)) width = Math.max(width, rows.modeMinWidth);
   if (rowVisible(props.slidersVisible)) width = Math.max(width, sliderRowWidth);
   if (rowVisible(props.hexVisible)) width = Math.max(width, hexRowWidth);
-  if (rowVisible(props.presetsVisible)) width = Math.max(width, swatchesRowSize(theme, measure).x);
+  if (rowVisible(props.presetsVisible)) width = Math.max(width, rows.swatchesMinWidth);
   return width;
 }
 
@@ -541,7 +514,7 @@ export const colorPickerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const rows = colorPickerRows(0, theme, props, measure);
   const width = Math.max(
     shapeRowMinWidth(theme, props.pickerShape),
-    contentMinWidth(theme, valueFieldTheme, props, measure, emWidthPx)
+    contentMinWidth(theme, valueFieldTheme, props, rows, emWidthPx)
   );
 
   return {
@@ -713,7 +686,7 @@ function modeButtonMinimumWidth(
 export function modeRowButtonRects(
   mode: Rect2,
   theme: PickerTheme,
-  rtl = false,
+  rtl: boolean,
   labelWidths: readonly number[],
   pressedMode: number
 ): ModeRowButtons {
