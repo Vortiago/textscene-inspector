@@ -1,0 +1,28 @@
+[gd_scene load_steps=4 format=3 uid="uid://unittilemaplayerscenetilecontrolsort"]
+
+; The one variable: a Control scene tile root that its minimum size grows upwards (grow_vertical = 0),
+; in a y-sorted TileMapLayer. The root is 2 px tall with a minimum height of 30, so its canvas item
+; sits 28 px above its top edge (control.cpp:1773-1797) and sorts before the red child at y 80 that
+; its top edge alone would put after it. unit-tile-map-layer-scene-tiles has no y-sorted layer.
+
+[ext_resource type="PackedScene" path="res://unit-tile-map-layer-scene-tile-grown.tscn" id="1_grown"]
+
+[sub_resource type="TileSetScenesCollectionSource" id="TileSetScenesCollectionSource_a"]
+scenes/1/scene = ExtResource("1_grown")
+
+[sub_resource type="TileSet" id="TileSet_b"]
+tile_size = Vector2i(64, 64)
+sources/0 = SubResource("TileSetScenesCollectionSource_a")
+
+[node name="World" type="Node2D"]
+
+[node name="Layer" type="TileMapLayer" parent="."]
+y_sort_enabled = true
+position = Vector2(100, 20)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0)
+tile_set = SubResource("TileSet_b")
+
+[node name="Low" type="Polygon2D" parent="Layer"]
+position = Vector2(0, 80)
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 40, 0, 40, 40, 0, 40)

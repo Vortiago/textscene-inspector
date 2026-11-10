@@ -3769,6 +3769,81 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tile Map Layer Scene Tile Control Odd Grid",
+    "file": "unit-tile-map-layer-scene-tile-control-odd-grid.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Control Sort",
+    "file": "unit-tile-map-layer-scene-tile-control-sort.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Control Top Level",
+    "file": "unit-tile-map-layer-scene-tile-control-top-level.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Control Z",
+    "file": "unit-tile-map-layer-scene-tile-control-z.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Control",
+    "file": "unit-tile-map-layer-scene-tile-control.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Grown",
+    "file": "unit-tile-map-layer-scene-tile-grown.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Magenta",
+    "file": "unit-tile-map-layer-scene-tile-magenta.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Offset",
+    "file": "unit-tile-map-layer-scene-tile-offset.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Placeholders",
+    "file": "unit-tile-map-layer-scene-tile-placeholders.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Plain Control",
+    "file": "unit-tile-map-layer-scene-tile-plain-control.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Polygon",
+    "file": "unit-tile-map-layer-scene-tile-polygon.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Raised Control",
+    "file": "unit-tile-map-layer-scene-tile-raised-control.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Top Level Control",
+    "file": "unit-tile-map-layer-scene-tile-top-level-control.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Yellow",
+    "file": "unit-tile-map-layer-scene-tile-yellow.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tiles",
+    "file": "unit-tile-map-layer-scene-tiles.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Tile Map Layer Texture Padding",
     "file": "unit-tile-map-layer-texture-padding.tscn",
     "category": "Unit - 2D Canvas"

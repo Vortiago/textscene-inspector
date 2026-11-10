@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://unittilemaplayerscenetileoffset"]
+
+[node name="Root" type="Node2D"]
+position = Vector2(5, 3)
+
+[node name="Shape" type="Polygon2D" parent="."]
+color = Color(0, 0, 1, 1)
+polygon = PackedVector2Array(0, 0, 10, 0, 10, 10, 0, 10)

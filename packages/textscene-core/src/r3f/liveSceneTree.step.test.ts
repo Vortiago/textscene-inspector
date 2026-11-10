@@ -39,6 +39,23 @@ describe('the step of a plain node', () => {
   });
 });
 
+describe('the step of an instance whose scene the cache lacks', () => {
+  const cacheAnswering = (answer: null | undefined) => ({
+    ...graftedContext,
+    sceneCache: { getCached: (path: string) => (path === SUB_PATH ? answer : undefined) },
+  });
+  const stepOfSub = (answer: null | undefined) =>
+    liveTreeOf(hostScene.nodes, cacheAnswering(answer)).at('Host/Sub')!.step;
+
+  it('is a failed instance when the loader failed the scene', () => {
+    expect([stepOfSub(null).isFailedInstance, stepOfSub(null).isMerged]).toEqual([true, false]);
+  });
+
+  it('is no failed instance while the scene is not loaded yet', () => {
+    expect(stepOfSub(undefined).isFailedInstance).toBe(false);
+  });
+});
+
 describe('the step of a merged instance root', () => {
   const sub = tree.at('Host/Sub')!;
 

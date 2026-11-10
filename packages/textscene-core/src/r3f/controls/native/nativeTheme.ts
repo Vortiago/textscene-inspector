@@ -183,11 +183,19 @@ const SPLIT_CONTAINER_GRABBER_EXTENT = 8;
 /** `autohide` (`default_theme.cpp:1264-1266`). */
 const SPLIT_CONTAINER_AUTOHIDE = true;
 
+/** Written only by `nativeTheme`. One project setting gives one scale, so one entry is enough. */
+let lastTheme: { scale: number; theme: NativeTheme } | null = null;
+
+/** `NativeTheme` at a project's `gui/theme/default_theme_scale`, built once per scale: a walker per scene tile asks for the same one. */
+export function nativeTheme(scale: number): NativeTheme {
+  if (lastTheme?.scale !== scale) lastTheme = { scale, theme: buildNativeTheme(scale) };
+  return lastTheme.theme;
+}
+
 // A widget reuses `contentMargin`/`cornerRadius` where its `default_theme.cpp` call passes
 // `default_margin` (4) or `default_corner_radius` (3). A call passing another
 // literal, such as ScrollBar's 10, gets its own scaled constant.
-/** `NativeTheme` at a project's `gui/theme/default_theme_scale`. */
-export function nativeTheme(scale: number): NativeTheme {
+function buildNativeTheme(scale: number): NativeTheme {
   const scaled = scaledGodotTheme(scale);
   const buttonMargin = {
     left: scaled.contentMargin,

@@ -1,7 +1,7 @@
 /** The process-wide draws and the POINTS and DIRECTED_POINTS steps both emitters share, against values Godot 4.6.3 printed. */
 
 import { describe, expect, it } from 'vitest';
-import { GodotRandomPCG } from './godotRng';
+import { GodotRandomPCG } from '../../../godot/math/randomPcg';
 import { DEFAULT_PREVIEW_SEED } from './process';
 import { storedVector2 } from '../../../godot/math/real.js';
 import { pickPoint, previewProcessRng, processRandf, turnedByNormal } from './emissionPoints';
