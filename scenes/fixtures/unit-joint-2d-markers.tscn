@@ -2,7 +2,8 @@
 
 ; The variable is the editor marker of the three 2D joints, at the default, zero, long and negative
 ; `length` and `initial_offset`, and on a rotated and a scaled node. The golden turns the Gizmos toggle
-; on. No other golden has a 2D joint with it on, so none shows a regression in the marker.
+; on. Godot draws the markers in a game only with collision debugging, so measure it with
+; `pnpm ref:godot --mode 2d-root --debug-collisions`. No other golden has a 2D joint with it on, so none shows a regression in the marker.
 
 [node name="Joint2DMarkersRoot" type="Node2D"]
 

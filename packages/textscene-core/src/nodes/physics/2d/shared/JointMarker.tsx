@@ -1,7 +1,7 @@
 /**
- * The editor marker of a 2D joint: its strokes as filled quads in the two colours Godot draws them
- * in, for every node while the Gizmos toggle is on (ADR-0056). Godot's 2D joints draw it in the
- * editor and with collision debugging on (`pin_joint_2d.cpp:42`).
+ * The editor marker of a 2D joint: its strokes as filled quads in the two looks Godot draws them in,
+ * for every node while the Gizmos toggle is on (ADR-0056). Godot's 2D joints draw it in the editor
+ * and with collision debugging on (`pin_joint_2d.cpp:42`).
  */
 
 import { useMemo } from 'react';
@@ -11,7 +11,10 @@ import { thickLinesGeometry } from '../../../../r3f/gizmo/thickLines';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import type { JointStroke, JointStrokeStyle } from './jointStrokes';
 
-/** Width in pixels, colour and alpha of each stroke style (`groove_joint_2d.cpp:46-49`). */
+/**
+ * Width in pixels, colour and alpha of each stroke style (`groove_joint_2d.cpp:46-49`). The
+ * offset bar comes last, as Godot draws it last, so it sits on top of the frame.
+ */
 const STROKE_LOOKS: Record<
   JointStrokeStyle,
   { width: number; color: { r: number; g: number; b: number }; alpha: number }
@@ -20,32 +23,26 @@ const STROKE_LOOKS: Record<
   offset: { width: 5, color: { r: 0.8, g: 0.8, b: 0.9 }, alpha: 0.5 },
 };
 
-/** Drawn in this order: the offset bar sits on top of the frame, as Godot draws it last. */
-const STYLES: JointStrokeStyle[] = ['frame', 'offset'];
-
 export function JointMarker({ strokes }: { strokes: readonly JointStroke[] }) {
   const isDrawn = useGizmoDrawn('every-node');
-  const geometries = useMemo(
+  const layers = useMemo(
     () =>
-      STYLES.map((style) =>
-        thickLinesGeometry(
+      (Object.keys(STROKE_LOOKS) as JointStrokeStyle[]).flatMap((style) => {
+        const geometry = thickLinesGeometry(
           strokes.filter((stroke) => stroke.style === style),
           STROKE_LOOKS[style].width
-        )
-      ),
+        );
+        return geometry ? [{ style, geometry }] : [];
+      }),
     [strokes]
   );
   if (!isDrawn) return null;
-  return (
-    <>
-      {STYLES.map((style, index) => (
-        <GizmoMesh
-          key={style}
-          geometry={geometries[index]!}
-          color={godotColorToLinear(STROKE_LOOKS[style].color)}
-          alpha={STROKE_LOOKS[style].alpha}
-        />
-      ))}
-    </>
-  );
+  return layers.map(({ style, geometry }) => (
+    <GizmoMesh
+      key={style}
+      geometry={geometry}
+      color={godotColorToLinear(STROKE_LOOKS[style].color)}
+      alpha={STROKE_LOOKS[style].alpha}
+    />
+  ));
 }

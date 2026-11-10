@@ -1,16 +1,12 @@
 /**
- * The triangles of Godot's `draw_line` with a width: each line is a quad, its two long sides the
- * line pushed half the width to either side, with butt ends (`renderer_canvas_cull.cpp:734-753`).
+ * The triangles of Godot's `draw_line` with a width: each line is a butt-ended quad
+ * (`renderer_canvas_cull.cpp:734-753`), the strip `buildLineStroke` builds for a two-point Line2D.
  */
 
 import * as THREE from 'three';
-import {
-  FLOATS_PER_VERTEX,
-  normalizedVector2,
-  vector2Orthogonal,
-  vector2Sub,
-  type Vector2,
-} from '../../godot/math/vector';
+import { FLOATS_PER_VERTEX, type Vector2 } from '../../godot/math/vector';
+import { LineCapMode, LineJointMode, LineTextureMode } from '../../godot/scene/line2d';
+import { buildLineStroke } from '../../nodes/2d/line2d/lineBuilder';
 import { writeGodotPointAsThree } from '../node2dTransform';
 
 export interface Line2 {
@@ -18,31 +14,47 @@ export interface Line2 {
   to: Vector2;
 }
 
-const CORNERS_PER_QUAD = 4;
-const QUAD_TRIANGLES = [0, 1, 2, 0, 2, 3];
-
-/** Null for no lines. A line of no length has no normal, so its quad collapses and draws nothing. */
-export function thickLinesGeometry(lines: readonly Line2[], width: number): THREE.BufferGeometry | null {
-  if (lines.length === 0) return null;
-  const positions = new Float32Array(lines.length * CORNERS_PER_QUAD * FLOATS_PER_VERTEX);
-  const indices: number[] = [];
-  lines.forEach(({ from, to }, index) => {
-    const normal = normalizedVector2(vector2Orthogonal(vector2Sub(from, to)));
-    const half = { x: (normal.x * width) / 2, y: (normal.y * width) / 2 };
-    const corners = [
-      { x: from.x + half.x, y: from.y + half.y },
-      { x: from.x - half.x, y: from.y - half.y },
-      { x: to.x - half.x, y: to.y - half.y },
-      { x: to.x + half.x, y: to.y + half.y },
-    ];
-    const first = index * CORNERS_PER_QUAD;
-    corners.forEach(({ x, y }, corner) =>
-      writeGodotPointAsThree(positions, (first + corner) * FLOATS_PER_VERTEX, x, y)
-    );
-    indices.push(...QUAD_TRIANGLES.map((corner) => first + corner));
+/** A line of no length gives a quad of no area. */
+function quadOf({ from, to }: Line2, width: number) {
+  return buildLineStroke({
+    points: new Float32Array([from.x, from.y, to.x, to.y]),
+    width,
+    closed: false,
+    jointMode: LineJointMode.SHARP,
+    sharpLimit: 2,
+    roundPrecision: 8,
+    beginCapMode: LineCapMode.NONE,
+    endCapMode: LineCapMode.NONE,
+    textureMode: LineTextureMode.NONE,
+    gradient: null,
+    widthFactorAt: null,
+    tileAspect: 1,
   });
+}
+
+/** Null for no lines. */
+export function thickLinesGeometry(lines: readonly Line2[], width: number): THREE.BufferGeometry | null {
+  const strokes = lines.map((line) => quadOf(line, width)).filter((stroke) => stroke !== null);
+  if (strokes.length === 0) return null;
+  const vertexCount = strokes.reduce((sum, { vertices }) => sum + vertices.length / 2, 0);
+  const positions = new Float32Array(vertexCount * FLOATS_PER_VERTEX);
+  const indices = new Uint32Array(strokes.reduce((sum, { indices }) => sum + indices.length, 0));
+  let vertexAt = 0;
+  let indexAt = 0;
+  for (const { vertices, indices: strokeIndices } of strokes) {
+    for (let i = 0; i < vertices.length; i += 2) {
+      writeGodotPointAsThree(
+        positions,
+        (vertexAt + i / 2) * FLOATS_PER_VERTEX,
+        vertices[i]!,
+        vertices[i + 1]!
+      );
+    }
+    strokeIndices.forEach((index) => (indices[indexAt++] = vertexAt + index));
+    vertexAt += vertices.length / 2;
+  }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, FLOATS_PER_VERTEX));
-  geometry.setIndex(indices);
+  geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   return geometry;
 }

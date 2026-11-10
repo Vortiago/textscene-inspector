@@ -1,18 +1,14 @@
 /**
  * The editor marker of the 2D joints: the lines `PinJoint2D`, `GrooveJoint2D` and `DampedSpringJoint2D`
- * draw in their `NOTIFICATION_DRAW`, in Godot canvas pixels. `frame` strokes are 3 px wide in
- * `Color(0.7, 0.6, 0, 0.5)`, `offset` strokes 5 px wide in `Color(0.8, 0.8, 0.9, 0.5)`.
+ * draw in their `NOTIFICATION_DRAW`, in Godot canvas pixels. The `frame` and `offset` styles are the
+ * two looks Godot draws them in, which `JointMarker` holds.
  */
 
-import type { Vector2 } from '../../../../godot/math/vector';
+import type { Line2 } from '../../../../r3f/gizmo/thickLines';
 
 export type JointStrokeStyle = 'frame' | 'offset';
 
-export interface JointStroke {
-  style: JointStrokeStyle;
-  from: Vector2;
-  to: Vector2;
-}
+export type JointStroke = Line2 & { style: JointStrokeStyle };
 
 /** Half the 20 px bar every joint draws across its axis (`pin_joint_2d.cpp:45`). */
 const BAR_HALF_LENGTH = 10;

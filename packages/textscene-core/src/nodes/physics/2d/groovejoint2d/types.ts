@@ -1,10 +1,8 @@
-/** GrooveJoint2D properties: the Node2D transform, and the two lengths its marker draws. */
+/** GrooveJoint2D properties: the spring joint's `length`, and the offset its marker draws. */
 
-import type { Node2DProperties } from '../../../base/node2d/types';
+import type { DampedSpringJoint2DProperties } from '../dampedspringjoint2d/types';
 
-export interface GrooveJoint2DProperties extends Node2DProperties {
-  /** Pixels along local +Y to the far end of the groove (`groove_joint_2d.h:40`, default 50). */
-  length: number;
+export interface GrooveJoint2DProperties extends DampedSpringJoint2DProperties {
   /** Pixels along local +Y to the second body's anchor (`groove_joint_2d.h:41`, default 25). */
   initial_offset: number;
 }
