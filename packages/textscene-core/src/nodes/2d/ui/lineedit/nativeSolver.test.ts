@@ -33,6 +33,7 @@ import {
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
+import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 
 // line_edit.h:85-89 numbers ExpandMode from EXPAND_MODE_ORIGINAL_SIZE = 0.
 const EXPAND_MODE_FIT_TO_TEXT = 1;
@@ -916,7 +917,7 @@ describe('lineEditSelection: the rect and the glyphs a selection covers (line_ed
     baselineOffsetPx: 15,
     fontMetrics: OPEN_SANS_FONT_METRICS,
   };
-  const chars = (result: typeof layout) => result.lines[0]!.glyphs.map((glyph) => glyph.char).join('');
+  const chars = (result: TextLayoutResult) => result.lines[0]!.glyphs.map((glyph) => glyph.char).join('');
 
   it('spans the covered glyphs from the pen origin', () => {
     expect(lineEditSelection(layout, { begin: 0, end: 2 }, 4, 100).rect).toEqual({ x: 4, w: 20 });
