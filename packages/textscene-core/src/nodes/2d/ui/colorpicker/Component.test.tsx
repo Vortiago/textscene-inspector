@@ -50,17 +50,20 @@ const ONLY_HEX = {
   presetsVisible: false,
 };
 
-async function meshCount(properties: Record<string, unknown>): Promise<number> {
-  const renderer = await ReactThreeTestRenderer.create(
+async function renderPicker(properties: Record<string, unknown>, size = { w: 400, h: 400 }) {
+  return ReactThreeTestRenderer.create(
     <ColorPicker
       {...painterEnv()}
       theme={THEME}
       solveNode={node(properties)}
-      rect={{ x: 0, y: 0, w: 400, h: 400 }}
+      rect={{ x: 0, y: 0, ...size }}
       renderOrder={0}
     />
   );
-  return renderer.scene.findAllByType('Mesh').length;
+}
+
+async function meshCount(properties: Record<string, unknown>): Promise<number> {
+  return (await renderPicker(properties)).scene.findAllByType('Mesh').length;
 }
 
 describe('<ColorPicker> (isolated painter contract)', () => {
@@ -251,22 +254,9 @@ describe('<ColorPicker> (isolated painter contract)', () => {
   it('sizes every slider band to 185px in a 300px picker, as Godot measures (band ends at x = 210)', async () => {
     // The value column is the SpinBox minimum with the W advance unrounded (15.125 px), then truncated by
     // `GridContainer` to 86 (`grid_container.cpp:290`). A ceiled advance gave 90 and a 181px band.
-    const renderer = await ReactThreeTestRenderer.create(
-      <ColorPicker
-        {...painterEnv()}
-        theme={THEME}
-        solveNode={node({
-          color: 'Color(0.8, 0.6, 0.4, 1)',
-          colorMode: 1,
-          pickerShape: 4,
-          samplerVisible: false,
-          colorModesVisible: false,
-          hexVisible: false,
-          presetsVisible: false,
-        })}
-        rect={{ x: 0, y: 0, w: 300, h: 160 }}
-        renderOrder={0}
-      />
+    const renderer = await renderPicker(
+      { ...ONLY_SLIDERS, color: 'Color(0.8, 0.6, 0.4, 1)', colorMode: 1 },
+      { w: 300, h: 160 }
     );
     const bandWidths = renderer.scene
       .findAllByType('Mesh')
@@ -310,15 +300,7 @@ describe('<ColorPicker> (isolated painter contract)', () => {
   it('draws the disabled script icon in text_type for an HDR colour, not for an ordinary one — color_picker.cpp:1319-1325', async () => {
     // `icon_disabled_color` is `Color(1, 1, 1, 0.4)` (`default_theme.cpp:169`).
     const iconOpacities = async (color: string) => {
-      const renderer = await ReactThreeTestRenderer.create(
-        <ColorPicker
-          {...painterEnv()}
-          theme={THEME}
-          solveNode={node({ color, ...ONLY_HEX })}
-          rect={{ x: 0, y: 0, w: 300, h: 60 }}
-          renderOrder={0}
-        />
-      );
+      const renderer = await renderPicker({ color, ...ONLY_HEX }, { w: 300, h: 60 });
       return (
         renderer.scene
           .findAllByType('Mesh')

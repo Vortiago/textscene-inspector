@@ -489,3 +489,48 @@ export function trimButtonLabel(
 export function buttonTextBufWidthPx(drawableWidthPx: number): number {
   return Math.ceil(Math.max(1, drawableWidthPx));
 }
+
+interface ButtonContentSizeInput {
+  textSize: Vector2;
+  hasText: boolean;
+  /** The fitted icon, or `null` for no icon or an `expand_icon` one. */
+  iconSize: Vector2 | null;
+  iconAlignment: number;
+  verticalIconAlignment: number;
+  hSeparation: number;
+}
+
+/**
+ * The text and icon terms of `Button::get_minimum_size_for_text_and_icon` (`button.cpp:492-523`),
+ * without the stylebox margin, for any control that draws a Button.
+ */
+export function buttonContentSize(input: ButtonContentSizeInput): Vector2 {
+  const { textSize, hasText, iconSize, iconAlignment, verticalIconAlignment, hSeparation } = input;
+  let width = textSize.x;
+  let height = textSize.y;
+
+  if (iconSize) {
+    if (verticalIconAlignment === VerticalAlignment.VERTICAL_ALIGNMENT_CENTER) {
+      height = Math.max(height, iconSize.y);
+    } else {
+      height += iconSize.y;
+    }
+
+    if (iconAlignment !== HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER) {
+      width += iconSize.x;
+      if (hasText) width += Math.max(0, hSeparation);
+    } else {
+      width = Math.max(width, iconSize.x);
+    }
+  }
+
+  if (hasText) {
+    if (verticalIconAlignment === VerticalAlignment.VERTICAL_ALIGNMENT_CENTER) {
+      height = Math.max(textSize.y, height);
+    } else {
+      height += textSize.y;
+    }
+  }
+
+  return { x: width, y: height };
+}

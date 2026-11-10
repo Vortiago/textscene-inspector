@@ -13,10 +13,16 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import { colorHue, colorSaturation } from '../../../../godot/math/color';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { layoutButtonContent } from '../../../../r3f/controls/native/buttonBase';
+import {
+  buttonContentSize,
+  layoutButtonContent,
+  type ButtonContentInput,
+  type ButtonLabelBox,
+} from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
+import { gridCellMinimumExtent } from '../shared/gridCellMinimum';
 import { lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
 import { tabBarStyleBoxes } from '../tabbar/nativeSolver';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -66,11 +72,11 @@ const COLOR_PICKER_TEXT_TYPE_WIDTH = 28;
 
 /**
  * The value column of `slider_gc`: the `SpinBox` minimum (`spin_box.cpp:82-86`), a `LineEdit` minimum
- * plus the buttons block, truncated as `GridContainer` keeps columns as `int` (`grid_container.cpp:290`).
+ * plus the buttons block, truncated as a `GridContainer` column (`gridCellMinimumExtent`).
  * `emWidthPx` is the unrounded advance of "W": `Font::get_char_size` does not ceil it.
  */
 export function colorPickerValueColumnWidth(theme: Pick<NativeTheme, 'widgets'>, emWidthPx: number): number {
-  return Math.trunc(
+  return gridCellMinimumExtent(
     colorPickerHexFieldMinWidth(theme, emWidthPx) + spinBoxButtonsBlockWidth(SPIN_BOX_ARROW_ICON_SIZE.x)
   );
 }
@@ -83,6 +89,12 @@ export function colorPickerValueColumnWidth(theme: Pick<NativeTheme, 'widgets'>,
 function colorPickerHexFieldMinWidth(theme: Pick<NativeTheme, 'widgets'>, emWidthPx: number): number {
   const { lineEdit } = theme.widgets;
   return lineEditStyleMinSize(lineEdit.normal, lineEdit.readOnly).x + lineEditTextMinimumWidth(emWidthPx);
+}
+
+/** The square `menu_option` and `folded_arrow` icons as a size. */
+function colorPickerButtonIconVector(theme: Pick<NativeTheme, 'scale'>): Vector2 {
+  const side = colorPickerButtonIconSize(theme);
+  return { x: side, y: side };
 }
 
 /** The side of the square `menu_option` and `folded_arrow` icons (`default_theme.cpp:1088`). */
@@ -231,49 +243,117 @@ function colorPickerPresetButtonSize(
   text: Vector2
 ): Vector2 {
   const margin = contentMarginSize(theme.widgets.button.normal);
-  const iconSize = colorPickerButtonIconSize(theme);
+  const content = buttonContentSize({
+    textSize: text,
+    hasText: true,
+    iconSize: colorPickerButtonIconVector(theme),
+    iconAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    verticalIconAlignment: VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
+    hSeparation: theme.separation,
+  });
+  return { x: margin.x + content.x, y: margin.y + content.y };
+}
+
+interface ButtonContentBoxes {
+  /** The icon in `box`'s coordinates, or `null` for an icon-less button. */
+  icon: Rect2 | null;
+  /** The label's paragraph box in `box`'s coordinates (`ButtonLabel` draws in it). */
+  label: ButtonLabelBox;
+}
+
+interface ButtonTextDirection {
+  rtl: boolean;
+  isTextRtl: boolean;
+}
+
+/** `Button` placement (`button.cpp:349-456`) of an optional left icon and the label inside `box`, in the parent's coordinates. */
+function colorPickerButtonContent(
+  box: Rect2,
+  theme: Pick<NativeTheme, 'separation'>,
+  text: Vector2,
+  direction: ButtonTextDirection,
+  look: {
+    styleMargin: ButtonContentInput['styleMargin'];
+    iconNaturalSize: Vector2 | null;
+    textAlignment: number;
+  }
+): ButtonContentBoxes {
+  const layout = layoutButtonContent({
+    rectSize: { x: box.w, y: box.h },
+    styleMargin: look.styleMargin,
+    // Button's `h_separation` (`default_theme.cpp:171`) is another theme key, with the value of `separation`.
+    hSeparation: theme.separation,
+    iconMaxWidth: 0,
+    textAlignment: look.textAlignment,
+    iconAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    verticalIconAlignment: VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
+    expandIcon: false,
+    iconNaturalSize: look.iconNaturalSize,
+    hasText: true,
+    textNaturalSize: text,
+    isTextRtl: direction.isTextRtl,
+    rtl: direction.rtl,
+  });
+  const label = layout.labelBox!;
   return {
-    x: text.x + theme.separation + iconSize + margin.x,
-    y: Math.max(text.y, iconSize) + margin.y,
+    icon: layout.icon && {
+      ...layout.icon.rect,
+      x: box.x + layout.icon.rect.x,
+      y: box.y + layout.icon.rect.y,
+    },
+    label: { ...label, leftPx: box.x + label.leftPx, topPx: box.y + label.topPx },
   };
 }
 
-interface PresetButtonContent {
-  icon: Rect2;
-  /** The box the label draws in, after the margins and the icon. */
-  textBox: Rect2;
-}
-
-/** The icon and label boxes of `btn_preset` or `btn_recent_preset` in `box`: `Button` placement (`button.cpp:349-456`). */
+/** The icon and label of `btn_preset` or `btn_recent_preset` in `box`. */
 export function presetButtonContent(
   box: Rect2,
   theme: Pick<NativeTheme, 'separation' | 'scale' | 'widgets'>,
   text: Vector2,
-  rtl: boolean
-): PresetButtonContent {
-  const iconSize = colorPickerButtonIconSize(theme);
-  const layout = layoutButtonContent({
-    rectSize: { x: box.w, y: box.h },
+  direction: ButtonTextDirection
+): ButtonContentBoxes & { icon: Rect2 } {
+  const boxes = colorPickerButtonContent(box, theme, text, direction, {
     styleMargin: theme.widgets.button.normal.contentMargin,
-    // Button's `h_separation` (`default_theme.cpp:171`) is another theme key, with the value of `separation`.
-    hSeparation: theme.separation,
-    iconMaxWidth: 0,
+    iconNaturalSize: colorPickerButtonIconVector(theme),
     textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
-    iconAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
-    verticalIconAlignment: VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
-    expandIcon: false,
-    iconNaturalSize: { x: iconSize, y: iconSize },
-    hasText: true,
-    textNaturalSize: text,
-    isTextRtl: false,
-    rtl,
   });
-  const icon = layout.icon!.rect;
-  const label = layout.labelBox!;
-  return {
-    icon: { ...icon, x: box.x + icon.x, y: box.y + icon.y },
-    textBox: { x: box.x + label.leftPx, y: box.y, w: label.widthPx, h: box.h },
-  };
+  return { ...boxes, icon: boxes.icon! };
+}
+
+function centredButtonLabel(
+  box: Rect2,
+  theme: Pick<NativeTheme, 'separation'>,
+  styleMargin: ButtonContentInput['styleMargin'],
+  text: Vector2,
+  direction: ButtonTextDirection
+): ButtonLabelBox {
+  return colorPickerButtonContent(box, theme, text, direction, {
+    styleMargin,
+    iconNaturalSize: null,
+    textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
+  }).label;
+}
+
+/** The label of a `mode_btns` button (`color_picker.cpp:2162-2174`): centred, with the style's own margins. */
+export function modeButtonLabel(
+  box: Rect2,
+  theme: NativeTheme,
+  isPressed: boolean,
+  text: Vector2,
+  direction: ButtonTextDirection
+): ButtonLabelBox {
+  const { contentMargin } = colorPickerModeButtonStyleBox(theme, isPressed);
+  return centredButtonLabel(box, theme, contentMargin, text, direction);
+}
+
+/** The "#" label of `text_type` (`color_picker.cpp:1330`): a centred Button with the `button_normal` margins. */
+export function textTypeLabel(
+  box: Rect2,
+  theme: Pick<NativeTheme, 'separation' | 'scale' | 'widgets'>,
+  text: Vector2,
+  direction: ButtonTextDirection
+): ButtonLabelBox {
+  return centredButtonLabel(box, theme, theme.widgets.button.normal.contentMargin, text, direction);
 }
 
 function swatchesRowSize(
@@ -486,9 +566,9 @@ export function svSquareCursorPosition(square: Rect2, s: number, v: number): Vec
   };
 }
 
-/** `ColorPickerShapeRectangle::_hue_slider_draw`'s indicator line (`color_picker_shape.cpp:431`). */
+/** `ColorPickerShapeRectangle::_hue_slider_draw`'s indicator line: `int y = size.y * h` (`color_picker_shape.cpp:431`). */
 export function hueIndicatorY(height: number, h: number): number {
-  return height * h;
+  return Math.trunc(height * h);
 }
 
 interface SliderGridRowColumns {

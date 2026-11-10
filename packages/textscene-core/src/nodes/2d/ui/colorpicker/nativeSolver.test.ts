@@ -18,6 +18,8 @@ import {
   modeRowButtonRects,
   swatchesRowRects,
   presetButtonContent,
+  modeButtonLabel,
+  textTypeLabel,
   sliderGridRowRects,
   colorPickerValueColumnWidth,
   colorPickerLabelColumnWidth,
@@ -239,6 +241,10 @@ describe('svSquareCursorPosition', () => {
 describe('hueIndicatorY', () => {
   it('is proportional to h across the slider height — color_picker_shape.cpp:431', () => {
     expect(hueIndicatorY(256, 0.5)).toBe(128);
+  });
+
+  it('truncates to the whole pixel row, as the int y does', () => {
+    expect(hueIndicatorY(256, 0.6)).toBe(153);
   });
 
   it('is 0 at h=0', () => {
@@ -522,17 +528,17 @@ describe('presetButtonContent', () => {
   const text = { x: 73, y: 23 };
 
   it('puts the icon at the left margin and the text after it, as pnpm ref:godot measures the rows', () => {
-    const { icon, textBox } = presetButtonContent(box, THEME, text, false);
+    const { icon, label } = presetButtonContent(box, THEME, text, { rtl: false, isTextRtl: false });
     // y: floor((31 - 8 - 16) / 2) = 3, plus margin 4.
     expect(icon).toEqual({ x: 14, y: 27, w: 16, h: 16 });
     // x: margin 4 + icon 16 + h_separation 4 = 24 into the box, and 366 - 8 - 20 = 338 wide.
-    expect(textBox).toEqual({ x: 34, y: 20, w: 338, h: 31 });
+    expect(label).toMatchObject({ leftPx: 34, widthPx: 338 });
   });
 
   it('mirrors in a right-to-left layout: the icon on the trailing edge, the text from the leading margin', () => {
-    const { icon, textBox } = presetButtonContent(box, THEME, text, true);
+    const { icon, label } = presetButtonContent(box, THEME, text, { rtl: true, isTextRtl: false });
     expect(icon).toEqual({ x: 356, y: 27, w: 16, h: 16 });
-    expect(textBox).toEqual({ x: 14, y: 20, w: 338, h: 31 });
+    expect(label).toMatchObject({ leftPx: 14, widthPx: 338 });
   });
 });
 
@@ -547,5 +553,32 @@ describe('colorPickerEmWidthPx', () => {
     );
     expect(painterEm).toBe(solverEm);
     expect(painterEm).toBeGreaterThan(0);
+  });
+});
+
+describe('modeButtonLabel', () => {
+  const box = { x: 100.5, y: 300, w: 120.25, h: 31 };
+  const text = { x: 41, y: 23 };
+  const direction = { rtl: false, isTextRtl: false };
+
+  it('centres the text in the drawable width after the style margins', () => {
+    const label = modeButtonLabel(box, THEME, false, text, direction);
+    expect(label.alignment).toBe(1);
+    expect(label.leftPx).toBeGreaterThan(box.x);
+    expect(label.widthPx).toBeLessThan(box.w);
+  });
+
+  it.each([false, true])('starts the box at the left margin of the style (pressed: %s)', (isPressed) => {
+    const label = modeButtonLabel(box, THEME, isPressed, text, direction);
+    expect(label.leftPx).toBe(box.x + colorPickerModeButtonStyleBox(THEME, isPressed).contentMargin.left);
+  });
+});
+
+describe('textTypeLabel', () => {
+  it('centres the "#" with the button_normal margins', () => {
+    const box = { x: 700, y: 510, w: 28, h: 31 };
+    const label = textTypeLabel(box, THEME, { x: 10, y: 23 }, { rtl: false, isTextRtl: false });
+    expect(label.leftPx).toBe(box.x + THEME.widgets.button.normal.contentMargin.left);
+    expect(label.alignment).toBe(1);
   });
 });

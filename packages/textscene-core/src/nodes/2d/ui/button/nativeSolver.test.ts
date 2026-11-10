@@ -21,6 +21,7 @@ import {
   BUTTON_DEFAULT_FONT_COLOR,
   buttonLabelShape,
 } from './nativeSolver';
+import { buttonContentSize } from '../../../../r3f/controls/native/buttonBase';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { controlProps } from '../control/testing/controlProps';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
@@ -457,5 +458,25 @@ describe('buttonLabelShape — the wrap width and trim flags reach the shaper (b
       'alpha ',
       'bravo',
     ]);
+  });
+});
+
+describe('buttonContentSize', () => {
+  const left = 0;
+  const center = 1;
+  const base = { textSize: { x: 50, y: 20 }, hasText: true, hSeparation: 4, verticalIconAlignment: center };
+
+  it('adds a side icon and the separation to the text width and floors the height on the icon', () => {
+    const size = buttonContentSize({ ...base, iconSize: { x: 16, y: 24 }, iconAlignment: left });
+    expect(size).toEqual({ x: 70, y: 24 });
+  });
+
+  it('takes the wider of the text and a centred icon', () => {
+    const size = buttonContentSize({ ...base, iconSize: { x: 80, y: 16 }, iconAlignment: center });
+    expect(size).toEqual({ x: 80, y: 20 });
+  });
+
+  it('is the text alone without an icon', () => {
+    expect(buttonContentSize({ ...base, iconSize: null, iconAlignment: left })).toEqual({ x: 50, y: 20 });
   });
 });

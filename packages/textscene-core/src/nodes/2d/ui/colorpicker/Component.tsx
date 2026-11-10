@@ -48,8 +48,16 @@ import { sliderTrackRect, sliderGrabberAreaRect, sliderGrabberRect } from '../sh
 import { spinBoxArrowPosition, spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { isColorOverbright } from '../shared/colorOverbright';
+import { TextDirection } from '../../../../godot/text/textServerEnums';
+import { HAIRLINE_THICKNESS_PX, hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
+import { LABEL_DEFAULT_FONT_COLOR } from '../label/nativeSolver';
+import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
+import type { ButtonLabelBox } from '../../../../r3f/controls/native/buttonBase';
+import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import {
+  infersRtl,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
@@ -73,6 +81,8 @@ import {
   colorPickerValueColumnWidth,
   colorPickerEmWidthPx,
   presetButtonContent,
+  modeButtonLabel,
+  textTypeLabel,
   COLOR_PICKER_SLIDER_GRABBER_OFFSET,
   SHAPE_HSV_RECTANGLE,
   extractHsv,
@@ -294,6 +304,9 @@ function TextTypeScriptIcon({ rect, solveNode, theme, tint, renderOrder }: TextT
   );
 }
 
+/** The picker's child Buttons keep the `text_direction` and `language` defaults. */
+const AUTO_TEXT_DIRECTION = { textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: '' };
+
 export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const toItemLinear = useItemLinearColorOf();
   const props = painterView<ColorPickerProperties>(solveNode);
@@ -320,6 +333,23 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     return { x: shapedTextSizeWidthPx(l.widthPx), y: l.heightPx };
   };
 
+  const textDirection = (text: string) => ({ rtl: solveNode.rtl, isTextRtl: infersRtl(shape(text)) });
+  // One Button label as `Button::_notification` draws it. The picker's Buttons never trim.
+  const buttonLabel = (key: string, text: string, tintOfText: Rgba, box: ButtonLabelBox) => (
+    <ButtonLabel
+      key={key}
+      layout={shape(text)}
+      box={box}
+      overrunBehavior={undefined}
+      bidi={bidi}
+      fontSizePx={fontSizePx}
+      tint={tintOfText}
+      outline={textOutline}
+      clippingPlanes={clippingPlanes}
+      renderOrder={renderOrder}
+    />
+  );
+
   const contentWidth = Math.max(0, rect.w - 2 * theme.contentMargin);
   const rows = useMemo(
     () => colorPickerRows(contentWidth, theme, props, measure),
@@ -340,6 +370,10 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     ]
   );
 
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
+  const bidi = useControlBidiOptions(AUTO_TEXT_DIRECTION, solveNode);
+  // The slider and hex labels are `Label`s, which default to white, not the Control grey.
+  const labelColor = useMemo(() => multiplyModulate(tint.own, LABEL_DEFAULT_FONT_COLOR), [tint.own]);
   const fontColor = useMemo(() => multiplyModulate(tint.own, CONTROL_FONT_COLOR), [tint.own]);
   const pressedFontColor = useMemo(
     () => multiplyModulate(tint.own, MODE_BUTTON_PRESSED_FONT_COLOR),
@@ -450,9 +484,11 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     label: string;
     valueText: string;
     stops: Rgba[];
-    hueBase?: Rgba;
-    /** The alpha row tiles `sample_bg` under its gradient (`color_picker.cpp:1434`). */
-    hasCheckerboard?: boolean;
+    /**
+     * Drawn under the gradient: the alpha row's `sample_bg` tiles (`color_picker.cpp:1434`), or the
+     * HSV H row's grey polygon, over which the hue texture is modulated (`color_mode.cpp:218-221`).
+     */
+    underlay?: { kind: 'checkerboard' } | { kind: 'grey'; color: Rgba };
     /** The grabber position, `value/max`. Every channel's `min` is 0 except intensity's, which has its own ratio. */
     ratio: number;
     /** `GRADIENT_COLOR_SPACE_LINEAR_SRGB` (`color_mode.cpp:311`): only the R, G and B rows of `MODE_LINEAR`. */
@@ -476,12 +512,12 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     for (let i = 0; i < 3; i++) {
       const c = channels[i]!;
       let stops: Rgba[] = [];
-      let hueBase: Rgba | undefined;
+      let underlay: SliderRowContent['underlay'];
       if (colorMode === MODE_RGB || colorMode === MODE_LINEAR) {
         stops = rgbChannelGradientStops(i, normalized);
       } else if (colorMode === MODE_HSV) {
         if (i === 0) {
-          hueBase = hsvHueChannelBase(normalized);
+          underlay = { kind: 'grey', color: hsvHueChannelBase(normalized) };
           stops = hsvHueChannelStops(normalized);
         } else {
           stops = hsvChannelGradientStops(i as 1 | 2, normalized);
@@ -495,7 +531,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
         label: sliderLabels[out.length] ?? c.label,
         valueText: formatSliderValue(c.value, c.decimals),
         stops,
-        hueBase,
+        underlay,
         ratio: c.max !== 0 ? c.value / c.max : 0,
         linearSpace: colorMode === MODE_LINEAR,
       });
@@ -513,7 +549,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
         label: sliderLabels[out.length] ?? alphaChannel.label,
         valueText: formatSliderValue(alphaChannel.value, alphaChannel.decimals),
         stops: alphaChannelGradientStops(normalized),
-        hasCheckerboard: true,
+        underlay: { kind: 'checkerboard' },
         ratio: alphaChannel.max !== 0 ? alphaChannel.value / alphaChannel.max : 0,
       });
     }
@@ -660,10 +696,10 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
               clippingPlanes={clippingPlanes}
               tint={vertexTint}
             />
-            <CanvasItemGroup position={[0, -hueY, 0]}>
+            <CanvasItemGroup position={[0, -hairlineQuadStartPx(hueY), 0]}>
               <ControlQuad
                 width={shapeRects.hueSlider.w}
-                height={1}
+                height={HAIRLINE_THICKNESS_PX}
                 color={hueLineLinear}
                 opacity={hueLineColor.a}
                 renderOrder={renderOrder}
@@ -686,18 +722,20 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
               />
             </CanvasItemGroup>
           ))}
-          {modeCols.buttons.map((r, i) => (
-            <LabelledText
-              key={COLOR_MODE_NAMES[i]}
-              rect={r}
-              layout={shape(COLOR_MODE_NAMES[i]!)}
-              fontSizePx={fontSizePx}
-              tint={colorMode === i ? pressedFontColor : fontColor}
-              clippingPlanes={clippingPlanes}
-              renderOrder={renderOrder}
-              center
-            />
-          ))}
+          {modeCols.buttons.map((r, i) =>
+            buttonLabel(
+              COLOR_MODE_NAMES[i]!,
+              COLOR_MODE_NAMES[i]!,
+              colorMode === i ? pressedFontColor : fontColor,
+              modeButtonLabel(
+                r,
+                theme,
+                colorMode === i,
+                measure(COLOR_MODE_NAMES[i]!),
+                textDirection(COLOR_MODE_NAMES[i]!)
+              )
+            )
+          )}
           <CenteredIcon
             rect={modeCols.dropdown}
             size={COLOR_PICKER_BUTTON_ICON_SIZE}
@@ -731,7 +769,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                 rect={col.label}
                 layout={shape(row.label)}
                 fontSizePx={fontSizePx}
-                tint={fontColor}
+                tint={labelColor}
                 clippingPlanes={clippingPlanes}
                 renderOrder={renderOrder}
                 rtl={solveNode.rtl}
@@ -788,7 +826,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                       </>
                     );
                   })()}
-                {row.hasCheckerboard && (
+                {row.underlay?.kind === 'checkerboard' && (
                   <AlphaCheckerboardQuad
                     width={sliderBox.w}
                     height={bandHeight}
@@ -798,11 +836,11 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                     themed={solveNode.icons.sample_bg}
                   />
                 )}
-                {row.hueBase && (
+                {row.underlay?.kind === 'grey' && (
                   <ControlQuad
                     width={sliderBox.w}
                     height={bandHeight}
-                    color={toItemLinear(multiplyModulate(tint.own, row.hueBase))}
+                    color={toItemLinear(multiplyModulate(tint.own, row.underlay.color))}
                     opacity={tint.opacity}
                     renderOrder={renderOrder}
                   />
@@ -923,21 +961,23 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
             rect={hexCols.label}
             layout={shape(hexContent.label)}
             fontSizePx={fontSizePx}
-            tint={fontColor}
+            tint={labelColor}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
             rtl={solveNode.rtl}
           />
           {hexContent.typeText ? (
-            <LabelledText
-              rect={hexCols.textType}
-              layout={shape(hexContent.typeText)}
-              fontSizePx={fontSizePx}
-              tint={fontColor}
-              clippingPlanes={clippingPlanes}
-              renderOrder={renderOrder}
-              center
-            />
+            buttonLabel(
+              'text-type',
+              hexContent.typeText,
+              fontColor,
+              textTypeLabel(
+                hexCols.textType,
+                theme,
+                measure(hexContent.typeText),
+                textDirection(hexContent.typeText)
+              )
+            )
           ) : (
             <TextTypeScriptIcon
               rect={hexCols.textType}
@@ -977,7 +1017,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
           ].map(({ key, box, text }) => {
             // Both buttons have the default `icon_alignment` and LEFT text
             // (`color_picker.cpp:2242-2248,2279-2283`). RTL swaps both sides (`button.cpp:262-276`).
-            const { icon, textBox } = presetButtonContent(box, theme, measure(text), solveNode.rtl);
+            const { icon, label } = presetButtonContent(box, theme, measure(text), textDirection(text));
             return (
               <CanvasItemGroup key={key} position={[0, 0, 0]}>
                 <PositionedIcon
@@ -987,15 +1027,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                   opacity={tint.opacity}
                   renderOrder={renderOrder}
                 />
-                <LabelledText
-                  rect={textBox}
-                  layout={shape(text)}
-                  fontSizePx={fontSizePx}
-                  tint={fontColor}
-                  clippingPlanes={clippingPlanes}
-                  renderOrder={renderOrder}
-                  rtl={solveNode.rtl}
-                />
+                {buttonLabel(key, text, fontColor, label)}
               </CanvasItemGroup>
             );
           })}

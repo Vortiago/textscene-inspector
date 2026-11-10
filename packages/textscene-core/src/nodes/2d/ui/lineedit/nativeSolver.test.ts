@@ -124,6 +124,15 @@ describe('lineEditMinimumSize — StyleBox content margins + minimum_character_w
     expect(withLongText).toEqual(empty);
   });
 
+  it.each([
+    [16, 68.5],
+    [13, 57.1875],
+    [21, 88],
+  ])('is the width Godot 4.6.3 measures for a bare LineEdit at font size %i (%f)', (fontSize, godotWidth) => {
+    const result = lineEditMinimumSize(node({ themeOverrideFontSizes: { font_size: fontSize } }), ctx());
+    expect(result.x).toBe(godotWidth);
+  });
+
   it('a theme_override_font_sizes/font_size override changes BOTH the W-advance and the font height', () => {
     const result = lineEditMinimumSize(node({ themeOverrideFontSizes: { font_size: 32 } }), ctx());
     // 'W' is 30.25 at size 32, but above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE the engine rounds the

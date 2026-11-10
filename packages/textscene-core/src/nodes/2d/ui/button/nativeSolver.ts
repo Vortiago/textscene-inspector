@@ -14,6 +14,7 @@ import type { ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
+  buttonContentSize,
   fitIconSize,
   pickButtonStyleBox,
   resolveButtonDrawState,
@@ -178,39 +179,18 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
     textSize.x = 0;
   }
 
-  let width = textSize.x;
-  let height = textSize.y;
+  const iconSize =
+    !props.expandIcon && n.textureSize && n.textureSize.x > 0 && n.textureSize.y > 0
+      ? fitIconSize(n.textureSize, n.constants.icon_max_width ?? 0)
+      : null;
+  const content = buttonContentSize({
+    textSize,
+    hasText,
+    iconSize,
+    iconAlignment: props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    verticalIconAlignment: props.verticalIconAlignment ?? VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
+    hSeparation: n.constants.h_separation ?? ctx.theme.separation,
+  });
 
-  const iconAlignment = props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT;
-  const verticalIconAlignment = props.verticalIconAlignment ?? VerticalAlignment.VERTICAL_ALIGNMENT_CENTER;
-  const iconMaxWidth = n.constants.icon_max_width ?? 0;
-  const hSeparation = n.constants.h_separation ?? ctx.theme.separation;
-
-  // A `null` `n.textureSize` is an icon still resolving, which contributes nothing yet.
-  if (!props.expandIcon && n.textureSize && n.textureSize.x > 0 && n.textureSize.y > 0) {
-    const iconSize = fitIconSize(n.textureSize, iconMaxWidth);
-
-    if (verticalIconAlignment === VerticalAlignment.VERTICAL_ALIGNMENT_CENTER) {
-      height = Math.max(height, iconSize.y);
-    } else {
-      height += iconSize.y;
-    }
-
-    if (iconAlignment !== HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER) {
-      width += iconSize.x;
-      if (hasText) width += Math.max(0, hSeparation);
-    } else {
-      width = Math.max(width, iconSize.x);
-    }
-  }
-
-  if (hasText) {
-    if (verticalIconAlignment === VerticalAlignment.VERTICAL_ALIGNMENT_CENTER) {
-      height = Math.max(textSize.y, height);
-    } else {
-      height += textSize.y;
-    }
-  }
-
-  return { x: marginX + width, y: marginY + height };
+  return { x: marginX + content.x, y: marginY + content.y };
 };
