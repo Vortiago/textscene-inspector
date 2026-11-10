@@ -64,7 +64,3 @@ each with a warning. So do `invert_enabled` to `false`, `offset` and `texture_of
 silently. Malformed `polygon`, `polygons`, `uv` or `vertex_colors` warn and degrade to
 empty, which is Godot's own size-mismatch branch. A `bones` array with an odd count warns
 and deforms nothing. Weights that are not a PackedFloat32Array skip their bone.
-
-## Known limitations
-
-- **Approximated** `antialiased` is ignored, so edges are marginally harder.
