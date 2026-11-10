@@ -4,7 +4,7 @@
  * never shears. A registered painter draws the chrome, `<ControlFallback>` otherwise.
  * Children render beside the painter, since the solve has already placed them.
  */
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { ZERO_RECT, type Rect2 } from '../../../godot/math/rect2';
 import { VECTOR2_ZERO, type Vector2 } from '../../../godot/math/vector';
 import { controlProps, type SolveNode } from './solveTree';
@@ -25,10 +25,11 @@ import {
 } from '../../components/canvasItemMaterialContext';
 import { INHERIT_PARENT_MATERIAL } from '../../canvasAncestors';
 import { isCanvasLayerType } from '../../canvasPaintOrder';
+import { CanvasRootScope } from '../../canvasRootScope';
 import { CanvasItemGroup, CanvasItemProvider } from '../../components/CanvasItemGroup';
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import {
-  combinedPivotOffset,
+  controlDrawTransformOf,
   snapControlsToPixelsEnabled,
   snappedControlOriginUnder,
 } from './controlPixelSnap';
@@ -58,15 +59,13 @@ interface ControlCanvasWalkerProps {
   /**
    * A position the root Controls' parent adds before the snap. Godot sets a scene tile root's position
    * to `map_to_local + position`, so the snap rounds the sum (`tile_map_layer.cpp:1636`). It applies to
-   * the first root and to a root promoted past the placement chain. The caller moves a `top_level` root.
+   * the first root and to a root promoted past the placement chain. A root that parents at the canvas
+   * ignores the transform above the walk and sits at the offset.
    */
   rootOffset?: Vector2;
   /** Called after each solve, with the solved controls keyed by tree path. */
   onSolved?: (solved: ReadonlyMap<string, SolvedControl>) => void;
 }
-
-/** The scale of a node with none authored, and of a container child `fit_child_in_rect` reset. */
-const UNIT_SCALE = { x: 1, y: 1 };
 
 export function ControlCanvasWalker({
   tree,
@@ -98,17 +97,45 @@ export function ControlCanvasWalker({
   return (
     <>
       {tree.map((n) => (
-        <ControlNodeGroup
-          key={n.path}
-          solveNode={n}
-          solved={solved}
-          theme={theme}
-          measureText={measurer}
-          snapToPixels={snapEnabled}
-          rootOffset={n.skippedAncestors || n === tree[0] ? rootOffset : undefined}
-        />
+        <WalkRoot key={n.path} solveNode={n} isPlaced={n === tree[0]} rootOffset={rootOffset}>
+          <ControlNodeGroup
+            solveNode={n}
+            solved={solved}
+            theme={theme}
+            measureText={measurer}
+            snapToPixels={snapEnabled}
+            rootOffset={n.skippedAncestors || n === tree[0] ? rootOffset : undefined}
+          />
+        </WalkRoot>
       ))}
     </>
+  );
+}
+
+/**
+ * A root of a walk below a placement (`rootOffset`). A root with no skipped ancestors parents at the
+ * canvas, so it ignores the transform above the walk, and the placed one then sits at the offset.
+ */
+function WalkRoot({
+  solveNode,
+  isPlaced,
+  rootOffset,
+  children,
+}: {
+  solveNode: SolveNode;
+  isPlaced: boolean;
+  rootOffset: Vector2 | undefined;
+  children: ReactNode;
+}) {
+  if (!rootOffset || solveNode.skippedAncestors) return children;
+  return (
+    <CanvasRootScope node={solveNode.node} parentIsCanvasItem={false}>
+      {isPlaced ? (
+        <CanvasItemGroup position={[rootOffset.x, -rootOffset.y, 0]}>{children}</CanvasItemGroup>
+      ) : (
+        children
+      )}
+    </CanvasRootScope>
   );
 }
 
@@ -214,21 +241,19 @@ function ControlItemGroup({
 
   // The solve says whether `Container::fit_child_in_rect` reset this child to rotation 0 and
   // scale 1, and the snap's rotation gate must see that too.
-  const resets = solvedEntry?.resetsChildTransform === true;
-  const rotation = resets ? 0 : (props.rotation ?? 0);
-  const { x: scaleX, y: scaleY } = solvedEntry?.scale ?? (resets ? UNIT_SCALE : (props.scale ?? UNIT_SCALE));
+  const transform = controlDrawTransformOf(props, rect, {
+    resets: solvedEntry?.resetsChildTransform === true,
+    solvedScale: solvedEntry?.scale,
+  });
+  const { rotation, scale, pivot } = transform;
+  const { x: scaleX, y: scaleY } = scale;
+  const { x: pivotX, y: pivotY } = pivot;
   const hasOwnTransform = rotation !== 0 || scaleX !== 1 || scaleY !== 1;
-  const { x: pivotX, y: pivotY } = combinedPivotOffset(props, rect);
 
   // Godot snaps the canvas item, leaving `get_rect()` at full precision. The inner
   // pivot groups add their own translation, so this is the outer half of one
   // snapped origin.
-  const origin = snappedControlOriginUnder(
-    rect,
-    rootOffset ?? VECTOR2_ZERO,
-    { rotation, scale: { x: scaleX, y: scaleY }, pivot: { x: pivotX, y: pivotY } },
-    snapToPixels
-  );
+  const origin = snappedControlOriginUnder(rect, rootOffset ?? VECTOR2_ZERO, transform, snapToPixels);
 
   const Painter = controlComponentRegistry.get(solveNode.node.type) ?? ControlFallback;
   const childElements = solveNode.children.map((child) => (

@@ -127,6 +127,25 @@ export function controlItemOriginUnder(
   return snapSumLess(position, offset, (sum) => controlItemOrigin(sum, transform, snapEnabled));
 }
 
+const UNIT_SCALE: Readonly<Vector2> = Object.freeze({ x: 1, y: 1 });
+
+/**
+ * The rotation, scale and pivot a Control draws with. `Container::fit_child_in_rect` resets a
+ * container child to rotation 0 and scale 1, and the solve may hold a scale of its own for it.
+ */
+export function controlDrawTransformOf(
+  control: { rotation?: number; scale?: Vector2; pivotOffset?: Vector2; pivotOffsetRatio?: Vector2 },
+  rect: { w: number; h: number },
+  fit: { resets: boolean; solvedScale?: Vector2 } = { resets: false }
+): ControlDrawTransform {
+  const { resets, solvedScale } = fit;
+  return {
+    rotation: resets ? 0 : (control.rotation ?? 0),
+    scale: solvedScale ?? (resets ? UNIT_SCALE : (control.scale ?? UNIT_SCALE)),
+    pivot: combinedPivotOffset(control, rect),
+  };
+}
+
 /** `Control::get_combined_pivot_offset()`: the pivot offset plus the ratio of the rect size. */
 export function combinedPivotOffset(
   control: { pivotOffset?: Vector2; pivotOffsetRatio?: Vector2 },

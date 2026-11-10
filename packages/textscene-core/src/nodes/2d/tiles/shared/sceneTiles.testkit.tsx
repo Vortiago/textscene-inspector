@@ -193,7 +193,27 @@ offset_bottom = 10.0
 color = Color(1, 0, 0, 1)
 `;
 
-/** The `[ext_resource]` and `[sub_resource]` headings of a TileSet with the scene tiles 1 to 5 and 7 to 17 in source 0. */
+/** Scene tile 18: a scene that instances itself, which Godot cannot load. */
+const CYCLIC_SCENE = `[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://cyclic.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Again" parent="." instance=ExtResource("1")]
+`;
+
+/** Scene tile 19: a scene that instances a scene absent from the project. */
+const MISSING_SUB_SCENE_SCENE = `[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://absent.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Gone" parent="." instance=ExtResource("1")]
+`;
+
+/** The `[ext_resource]` and `[sub_resource]` headings of a TileSet with the scene tiles 1 to 5 and 7 to 19 in source 0. */
 export const SCENE_TILESET_RESOURCES = `[ext_resource type="PackedScene" path="res://polygon.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://offset.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://control.tscn" id="3"]
@@ -210,6 +230,8 @@ export const SCENE_TILESET_RESOURCES = `[ext_resource type="PackedScene" path="r
 [ext_resource type="PackedScene" path="res://plain-control.tscn" id="14"]
 [ext_resource type="PackedScene" path="res://raised-control.tscn" id="15"]
 [ext_resource type="PackedScene" path="res://top-level-control.tscn" id="16"]
+[ext_resource type="PackedScene" path="res://cyclic.tscn" id="17"]
+[ext_resource type="PackedScene" path="res://missing-sub-scene.tscn" id="18"]
 
 [sub_resource type="TileSetScenesCollectionSource" id="scenes"]
 scenes/1/scene = ExtResource("1")
@@ -228,6 +250,8 @@ scenes/14/scene = ExtResource("13")
 scenes/15/scene = ExtResource("14")
 scenes/16/scene = ExtResource("15")
 scenes/17/scene = ExtResource("16")
+scenes/18/scene = ExtResource("17")
+scenes/19/scene = ExtResource("18")
 
 [sub_resource type="TileSet" id="tileset"]
 tile_size = Vector2i(64, 64)
@@ -251,6 +275,8 @@ const TILE_SCENES: Record<string, string> = {
   'res://plain-control.tscn': PLAIN_CONTROL_SCENE,
   'res://raised-control.tscn': RAISED_CONTROL_SCENE,
   'res://top-level-control.tscn': TOP_LEVEL_CONTROL_SCENE,
+  'res://cyclic.tscn': CYCLIC_SCENE,
+  'res://missing-sub-scene.tscn': MISSING_SUB_SCENE_SCENE,
 };
 
 /** What the viewport and the Scene dock see of the rendered scene. */
@@ -290,6 +316,9 @@ export async function renderSceneTiles(tscn: string, options: RenderSceneTilesOp
     if (options.withheldScenes?.includes(path)) continue;
     if (options.failedScenes?.includes(path)) fake.scenes._fail(path, `cannot load ${path}`);
     else fake.scenes._resolve(path, new TscnParser().parse(text));
+  }
+  for (const path of options.failedScenes ?? []) {
+    if (!(path in TILE_SCENES)) fake.scenes._fail(path, `cannot load ${path}`);
   }
   const probe: SceneTileProbe = { selection: null, livePaths: [] };
   const treeOf = (text: string, prepare?: (scene: TscnScene) => void) => {

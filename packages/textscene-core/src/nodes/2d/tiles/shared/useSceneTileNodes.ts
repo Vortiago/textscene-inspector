@@ -15,7 +15,7 @@ import { perObject } from '../../../../utils/perObject';
 import { useInstancedScenePaths } from '../../../../r3f/contexts/InstancedScenePathsContext';
 import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsContext';
 import {
-  combinedPivotOffset,
+  controlDrawTransformOf,
   controlItemOriginUnder,
   snapControlsToPixelsEnabled,
 } from '../../../../r3f/controls/native/controlPixelSnap';
@@ -233,11 +233,7 @@ function controlYSortRootAt(
     w: offsetRight - offsetLeft,
     h: offsetBottom - offsetTop,
   };
-  const transform = {
-    rotation: control.rotation ?? 0,
-    scale: control.scale ?? { x: 1, y: 1 },
-    pivot: combinedPivotOffset(control, rect),
-  };
+  const transform = controlDrawTransformOf(control, rect);
   const zIndex = control.zIndex ?? 0;
   const zAsRelative = control.zAsRelative ?? true;
   const rootAt: YSortRootAt = (placement) => {
