@@ -28,4 +28,6 @@ export interface ResolvableResource extends ScopedResource {
   loadedFont: LoadedFont;
   /** The theme and default font that a font lookup ends at, when the resource has no font of its own. */
   projectFonts: ProjectFonts;
+  /** The project's `_get_locale()`, which a TextMesh with no `language` shapes in. */
+  locale: string;
 }

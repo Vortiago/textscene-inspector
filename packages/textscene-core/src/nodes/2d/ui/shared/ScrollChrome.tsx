@@ -114,6 +114,12 @@ interface ScrollBarChromeProps {
   snapToPixels: boolean;
 }
 
+/** The draw-order keys of a bar's track and of its grabber, which paints over the track. */
+function scrollBarRenderOrders(chromeSlot: CanvasSlot): { track: number; grabber: number } {
+  const bars = scrollChromeOrders(chromeSlot).bars;
+  return { track: bars.key, grabber: canvasSubOrder(bars).key };
+}
+
 /**
  * One scrollbar's track and grabber. Each bar is its own CanvasItem
  * (`scene/gui/scroll_container.cpp:919,924`), so it snaps through
@@ -129,15 +135,14 @@ export function ScrollBarChrome({
   snapToPixels,
 }: ScrollBarChromeProps) {
   if (!bar.visible) return null;
-  const bars = scrollChromeOrders(chromeSlot).bars;
-  const grabberKey = canvasSubOrder(bars).key;
+  const { track: trackKey, grabber: grabberKey } = scrollBarRenderOrders(chromeSlot);
   const origin = snappedControlOrigin(bar.rect, SCROLL_BAR_DRAW_TRANSFORM, snapToPixels);
   // A group carries the position. `StyleBoxQuad` takes only the size and flips y.
   // The grabber is no node (`scene/gui/scroll_bar.cpp:326-344`): it draws
   // unrounded inside the bar's canvas item and inherits the bar's snap.
   return (
-    <CanvasItemGroup position={[origin.x, -origin.y, 0]} renderOrder={bars.key}>
-      <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={bars.key} />
+    <CanvasItemGroup position={[origin.x, -origin.y, 0]} renderOrder={trackKey}>
+      <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={trackKey} />
       <CanvasItemGroup position={[bar.grabberRect.x, -bar.grabberRect.y, 0]} renderOrder={grabberKey}>
         <StyleBoxQuad styleBox={grabber} color={color} rect={bar.grabberRect} renderOrder={grabberKey} />
       </CanvasItemGroup>

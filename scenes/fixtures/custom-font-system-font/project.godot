@@ -1,0 +1,14 @@
+; A res:// root of its own, because `gui/theme/custom_font` is a PROJECT setting and no .tscn can
+; carry one. The project font is a SystemFont whose name no OS font matches, so every default it
+; tries is itself, and its text has no face.
+
+config_version=5
+
+[application]
+
+config/name="Custom font system font"
+config/features=PackedStringArray("4.6")
+
+[gui]
+
+theme/custom_font="res://system_font.tres"

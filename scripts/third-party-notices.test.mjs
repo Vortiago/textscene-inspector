@@ -149,6 +149,19 @@ describe('bundledNotices', () => {
     expect(text).not.toContain('## Godot Engine');
   });
 
+  it('carries the bidi-js notice when the bundle holds the package, whose dist has no copyright line', () => {
+    const bidiFile = {
+      path: 'node_modules/.pnpm/bidi-js@1.1.0/node_modules/bidi-js/dist/bidi.mjs',
+      text: 'function bidiFactory() {\nvar bidi = (function (exports) {',
+    };
+
+    const text = bundledNotices(notices, [bidiFile, plainFile]);
+
+    expect(text).toContain('## bidi-js');
+    expect(text).toContain('Copyright (c) 2021 Jason Johnston');
+    expect(text).not.toContain('## Godot Engine');
+  });
+
   it('carries the font licence when the bundle holds the font', () => {
     const fontFile = {
       path: 'packages/textscene-core/src/r3f/controls/native/text/openSansFontBytes.ts',

@@ -31,6 +31,9 @@ export interface ControlProperties {
    */
   layoutDirection?: number;
 
+  /** `Control.localize_numeral_system` (`control.cpp:3629`): a control that writes a number writes it in the digits of its language. Absent means Godot's default, true (`control.h:293`). */
+  localizeNumeralSystem?: boolean;
+
   /** Container child sizing bitmask (1=FILL, 2=EXPAND, 4=SHRINK_CENTER, 8=SHRINK_END). */
   sizeFlagsHorizontal?: number;
   sizeFlagsVertical?: number;

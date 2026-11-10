@@ -1,0 +1,42 @@
+[gd_scene format=3 uid="uid://unitlineeditoutline"]
+
+; The one variable: the theme text outline of LineEdit. Each box draws "Edit" at font_size 48 with a
+; red outline_size of 4, 8 and 16. Every other LineEdit scene leaves outline_size at its default 0.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Out4" type="LineEdit" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 320.0
+offset_bottom = 120.0
+text = "Edit"
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 48
+
+[node name="Out8" type="LineEdit" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 140.0
+offset_right = 320.0
+offset_bottom = 240.0
+text = "Edit"
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 48
+
+[node name="Out16" type="LineEdit" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 260.0
+offset_right = 320.0
+offset_bottom = 360.0
+text = "Edit"
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 16
+theme_override_font_sizes/font_size = 48

@@ -37,6 +37,10 @@ describe('decodeTextMesh', () => {
       pixelSize: Math.fround(0.01),
       curveStep: 0.5,
       offset: { x: 0, y: 0 },
+      textDirection: 0,
+      language: '',
+      structuredTextBidiOverride: 0,
+      structuredTextBidiOverrideOptions: [],
     });
     expect(warnSpy).not.toHaveBeenCalled();
   });
@@ -58,6 +62,10 @@ describe('decodeTextMesh', () => {
         pixel_size: '0.02',
         curve_step: '2.0',
         offset: 'Vector2(10, -5)',
+        text_direction: '2',
+        language: '"tr"',
+        structured_text_bidi_override: '2',
+        structured_text_bidi_override_options: '["/"]',
       })
     ).toEqual({
       text: 'Hog\nTextMesh',
@@ -73,6 +81,10 @@ describe('decodeTextMesh', () => {
       pixelSize: Math.fround(0.02),
       curveStep: 2,
       offset: { x: 10, y: -5 },
+      textDirection: 2,
+      language: 'tr',
+      structuredTextBidiOverride: 2,
+      structuredTextBidiOverrideOptions: ['/'],
     });
   });
 
@@ -109,6 +121,10 @@ describe('decodeTextMesh', () => {
   it('accepts the fill alignment on both axes', () => {
     const mesh = decodeTextMesh({ horizontal_alignment: '3', vertical_alignment: '3' });
     expect([mesh.horizontalAlignment, mesh.verticalAlignment]).toEqual([3, 3]);
+  });
+
+  it('keeps AUTO for a text_direction the setter refuses (primitive_meshes.cpp:3918)', () => {
+    expect(decodeTextMesh({ text_direction: '-2' }).textDirection).toBe(0);
   });
 
   it('warns then falls back for a malformed font_size', () => {

@@ -62,6 +62,7 @@ export function scopedMesh(
     loadedFile: NO_FILES,
     loadedFont: NO_FONTS,
     projectFonts: NO_PROJECT_FONTS,
+    locale: '',
   };
 }
 

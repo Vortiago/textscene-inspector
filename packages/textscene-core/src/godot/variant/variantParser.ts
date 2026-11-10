@@ -7,8 +7,15 @@
  * Every pattern below derives from one body string per literal, so no copy can diverge on padding.
  */
 import { TSCN_FLOAT_PATTERN_SOURCE, TSCN_FLOAT_RE } from './number.js';
-import { STRING_LITERAL_SOURCE, stringLiteralBodies } from '../string/string.js';
-import { boolLiteralAsNumber } from './variantBool.js';
+import {
+  STRING_LITERAL_SOURCE,
+  dropTrailingComma,
+  literalText,
+  splitTopLevel,
+  stringLiteralBodies,
+  stringToFloat,
+} from '../string/string.js';
+import { boolLiteralAsNumber, scalarSlotValue } from './variantBool.js';
 
 const WS = '\\s*';
 
@@ -150,6 +157,42 @@ export function dictNumberField(key: string, global = false): RegExp {
  */
 export function dictBoolField(key: string): RegExp {
   return new RegExp(`"${key}"${WS}:${WS}(true|false|${TSCN_FLOAT_PATTERN_SOURCE})${WS}(?=[,}])`);
+}
+
+const DICTIONARY_ENTRY_RE = new RegExp(
+  `^(${WS}[&@]?${STRING_LITERAL_SOURCE}|[+-]?\\d+)${WS}:${WS}([\\s\\S]*)$`
+);
+
+/** A Dictionary entry keyed by an int or a string, with the double its value converts to. */
+export type NumberEntry = readonly [key: number | string, value: number];
+
+/** The text of a string literal, less the `&` or `@` sigil of a StringName. */
+const stringContent = (literal: string): string => literalText(literal.replace(/^@/, ''));
+
+/** `Variant::operator double` (`variant.h:380-396`): nil, bool, int, float and string convert, any other type is 0. */
+function variantAsDouble(raw: string): number {
+  const text = raw.trim();
+  if (isNilLiteral(text)) return 0;
+  if (JACKETED_STRING_RE.test(text)) return stringToFloat(stringContent(text));
+  return scalarSlotValue(text) ?? 0;
+}
+
+/**
+ * The entries of a serialised Dictionary that a lookup by an int or a string key can reach (`&"x"` and `@"x"` included), in
+ * order, with each value as a double. An entry with another kind of key is skipped. Null when the text is no Dictionary. It
+ * lives here for the reason {@link dictNumberField} gives.
+ */
+export function dictNumberEntries(raw: string): NumberEntry[] | null {
+  const text = raw.trim();
+  if (!DICTIONARY_RE.test(text)) return null;
+  const entries: NumberEntry[] = [];
+  for (const part of dropTrailingComma(splitTopLevel(text.slice(1, -1)))) {
+    const match = DICTIONARY_ENTRY_RE.exec(part);
+    if (!match) continue;
+    const key = match[1]!.trim();
+    entries.push([/^[+-]?\d+$/.test(key) ? Number(key) : stringContent(key), variantAsDouble(match[2]!)]);
+  }
+  return entries;
 }
 
 /** A serialised Dictionary's `"key":`, to test that the key is present whatever its value. */

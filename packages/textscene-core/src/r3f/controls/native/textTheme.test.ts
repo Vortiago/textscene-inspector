@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import type { SolveNode } from './solveTree';
 import { controlNode, solveNode as emptySolveNode } from './testing/solveNode';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
-import { resolveTextTheme, type TextThemeKeys } from './textTheme';
+import { resolveTextOutline, resolveTextTheme, type TextThemeKeys } from './textTheme';
 
 const LABEL_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
 const RICH_TEXT_LABEL_KEYS: TextThemeKeys = { sizeKey: 'normal_font_size', colorKey: 'default_color' };
@@ -116,5 +116,18 @@ describe('resolveTextTheme', () => {
       DEFAULTS
     );
     expect(resolved.color).toEqual({ r: 0.2, g: 0.4, b: 0.6, a: 0.8 });
+  });
+});
+
+describe('resolveTextOutline', () => {
+  it('defaults to opaque black at size 0, as the default theme does for every type', () => {
+    expect(resolveTextOutline(node())).toEqual({ color: { r: 0, g: 0, b: 0, a: 1 }, sizePx: 0 });
+  });
+
+  it('reads font_outline_color and outline_size from the folded bags', () => {
+    const resolved = resolveTextOutline(
+      node({ colors: { font_outline_color: { r: 1, g: 0, b: 0, a: 0.5 } }, constants: { outline_size: 8 } })
+    );
+    expect(resolved).toEqual({ color: { r: 1, g: 0, b: 0, a: 0.5 }, sizePx: 8 });
   });
 });

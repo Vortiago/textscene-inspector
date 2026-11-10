@@ -1,0 +1,58 @@
+; One variable: a Label's language. It picks the casing rules of uppercase (label.cpp:153) and the
+; direction of a paragraph with no strong character (text_server_adv.cpp:534-541,7231-7256).
+
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://fonts/dejavu-sans-bidi-subset.ttf" id="1_font"]
+
+[sub_resource type="Theme" id="Theme_1"]
+default_font = ExtResource("1_font")
+default_font_size = 28
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.1, 0.12, 0.18, 1)
+
+; Turkish upper-cases i to the dotted capital I.
+[node name="UpperTr" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 540.0
+offset_bottom = 64.0
+text = "istanbul"
+uppercase = true
+language = "tr"
+
+; With no language, the root rules give a plain I.
+[node name="UpperRoot" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 84.0
+offset_right = 540.0
+offset_bottom = 128.0
+text = "istanbul"
+uppercase = true
+
+; Hebrew is right-to-left, so the neutral text infers RTL and the `!` goes to the visual left.
+[node name="NeutralHe" type="Label" parent="."]
+offset_left = 600.0
+offset_top = 20.0
+offset_right = 840.0
+offset_bottom = 64.0
+text = "123!"
+language = "he"
+
+; With no language and no test locale, the neutral text infers LTR.
+[node name="NeutralRoot" type="Label" parent="."]
+offset_left = 600.0
+offset_top = 84.0
+offset_right = 840.0
+offset_bottom = 128.0
+text = "123!"

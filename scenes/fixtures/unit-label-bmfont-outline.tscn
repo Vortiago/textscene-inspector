@@ -1,0 +1,60 @@
+[gd_scene load_steps=2 format=3]
+
+; The one variable: the outline of a BMFont (`fonts/bmfont-outline.fnt`, a red glyph channel and a
+; green outline channel). Godot draws the font's outline set, at the glyph's own rectangle, for any
+; outline_size above 0. The rows are no outline, outline_size 4 at 16 px, at 32 px, and a half-alpha
+; outline_color under a font colour.
+
+[ext_resource type="FontFile" path="res://fonts/bmfont-outline.fnt" id="1"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Plain" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 30.0
+offset_right = 400.0
+offset_bottom = 60.0
+theme_override_fonts/font = ExtResource("1")
+theme_override_font_sizes/font_size = 16
+text = "Hi Hi"
+
+[node name="Outlined" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 100.0
+offset_right = 400.0
+offset_bottom = 130.0
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_fonts/font = ExtResource("1")
+theme_override_font_sizes/font_size = 16
+text = "Hi Hi"
+
+[node name="OutlinedDouble" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 170.0
+offset_right = 400.0
+offset_bottom = 230.0
+theme_override_colors/font_outline_color = Color(0, 0.5, 1, 1)
+theme_override_constants/outline_size = 4
+theme_override_fonts/font = ExtResource("1")
+theme_override_font_sizes/font_size = 32
+text = "Hi Hi"
+
+[node name="Tinted" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 260.0
+offset_right = 400.0
+offset_bottom = 290.0
+theme_override_colors/font_color = Color(0.2, 1, 0.4, 1)
+theme_override_colors/font_outline_color = Color(1, 0, 0, 0.5)
+theme_override_constants/outline_size = 2
+theme_override_fonts/font = ExtResource("1")
+theme_override_font_sizes/font_size = 16
+text = "Hi Hi"

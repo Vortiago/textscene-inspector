@@ -32,9 +32,23 @@ export function loggedErrors({ consoleErrors, pageErrors }) {
   return [...consoleErrors, ...pageErrors];
 }
 
+// Enough to name the chunk or file at fault, short enough that a page whose every request failed
+// leaves a readable line.
+const MAX_LISTED_FAILED_REQUESTS = 3;
+
+/** The failed requests as one line, `failure url` each, the first few and a count of the rest. */
+export function describeFailedRequests(failedRequests) {
+  const listed = failedRequests
+    .slice(0, MAX_LISTED_FAILED_REQUESTS)
+    .map(({ url, failure }) => `${failure ?? 'unknown failure'} ${url}`)
+    .join(' | ');
+  const more = failedRequests.length - MAX_LISTED_FAILED_REQUESTS;
+  return more > 0 ? `${listed} and ${more} more` : listed;
+}
+
 /**
- * The logged errors for a failure message, each labelled with its source, then every failed
- * request with its URL and network error. A `TypeError: Failed to fetch` names no URL itself.
+ * The logged errors for a failure message, each labelled with its source, then each failed
+ * request with its URL. A `TypeError: Failed to fetch` names no URL itself.
  */
 export function errorReport({ consoleErrors, pageErrors, failedRequests }) {
   return [

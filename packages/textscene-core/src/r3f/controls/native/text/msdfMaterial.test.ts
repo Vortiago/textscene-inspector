@@ -1,7 +1,6 @@
 /**
  * `createMsdfMaterial`, the MSDF quad shader every glyph mesh shares: msdfgen's
- * median-of-3 decode, not a Godot port, a `distanceBias` for synthesised bold,
- * and clip planes on the material, since three.js clipping is per-material state.
+ * median-of-3 decode, not a Godot port, and clip planes on the material, since three.js clipping is per-material state.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -26,52 +25,9 @@ describe('createMsdfMaterial', () => {
     expect(mat.uniforms.uOpacity!.value).toBe(0.5);
   });
 
-  it('defaults distanceBias to zero (no embolden) and reflects an explicit value', () => {
-    const plain = createMsdfMaterial({ map: new THREE.Texture(), color: RED, opacity: 1, pxRange: 4 });
-    expect(plain.uniforms.uDistanceBias!.value).toBe(0);
-
-    const bold = createMsdfMaterial({
-      map: new THREE.Texture(),
-      color: RED,
-      opacity: 1,
-      pxRange: 4,
-      distanceBias: 0.08,
-    });
-    expect(bold.uniforms.uDistanceBias!.value).toBe(0.08);
-  });
-
-  it('decodes the median-of-3 MSDF channel and applies the embolden bias before thresholding', () => {
+  it('decodes the median-of-3 MSDF channel before thresholding', () => {
     const mat = createMsdfMaterial({ map: new THREE.Texture(), color: RED, opacity: 1, pxRange: 4 });
     expect(mat.fragmentShader).toMatch(/median/i);
-    expect(mat.fragmentShader).toContain('uDistanceBias');
-  });
-
-  it('fades the fill out where the field is empty, so a bias does not fill the whole glyph quad', () => {
-    const mat = createMsdfMaterial({ map: new THREE.Texture(), color: RED, opacity: 1, pxRange: 4 });
-    expect(mat.fragmentShader).toMatch(/inRange\s*=\s*smoothstep\(0\.0,\s*0\.04,\s*m\)/);
-    expect(mat.fragmentShader).toMatch(/fillCoverage\s*=[^;]*\*\s*inRange/);
-  });
-
-  it('defaults the outline width to zero and reflects an explicit outline', () => {
-    const plain = createMsdfMaterial({ map: new THREE.Texture(), color: RED, opacity: 1, pxRange: 4 });
-    expect(plain.uniforms.uOutlineWidthPx!.value).toBe(0);
-
-    const outlined = createMsdfMaterial({
-      map: new THREE.Texture(),
-      color: RED,
-      opacity: 1,
-      pxRange: 4,
-      outline: { color: { r: 0, g: 0, b: 0 }, opacity: 1, widthPx: 2 },
-    });
-    expect(outlined.uniforms.uOutlineWidthPx!.value).toBe(2);
-    expect((outlined.uniforms.uOutlineColor!.value as THREE.Vector3).toArray()).toEqual([0, 0, 0]);
-    expect(outlined.uniforms.uOutlineOpacity!.value).toBe(1);
-  });
-
-  it('composites the outline at a second, shifted distance threshold in the fragment shader', () => {
-    const mat = createMsdfMaterial({ map: new THREE.Texture(), color: RED, opacity: 1, pxRange: 4 });
-    expect(mat.fragmentShader).toContain('uOutlineWidthPx');
-    expect(mat.fragmentShader).toContain('uOutlineColor');
   });
 
   it('spreads supplied clipping planes onto the material (per-material state)', () => {

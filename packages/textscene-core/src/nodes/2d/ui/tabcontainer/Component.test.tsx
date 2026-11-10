@@ -14,6 +14,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { ControlProperties } from '../control/types';
 import type { TabContainerProperties } from './types';
 import { TabContainer } from './Component';
+import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { wholeKeySlot } from '../../../../r3f/canvasItemState';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -146,6 +147,24 @@ describe('<TabContainer> (isolated painter contract)', () => {
     const inSlot = (order: number, key: number) => key < order && order < key + 1;
     expect(inSlot(stripMesh(behind.scene).renderOrder, 9)).toBe(true);
     expect(inSlot(stripMesh(front.scene).renderOrder, 5)).toBe(true);
+  });
+
+  // three sorts by the nearest group's renderOrder before the mesh's own, so a strip text left in
+  // the container's group draws under its own tab StyleBox.
+  it('puts the strip text in a group at the subtree-chrome slot, as its tab StyleBox is', async () => {
+    const behind = await ReactThreeTestRenderer.create(
+      <TabContainer
+        {...painterEnv()}
+        solveNode={solveNode({ currentTab: 0, allTabsInFront: false }, [page('A')])}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={5}
+        slot={wholeKeySlot(5)}
+        chromeSlot={wholeKeySlot(9)}
+      />
+    );
+    const groupOrder = nearestGroupOrder(findTextMeshes(behind.scene)[0]!);
+    expect(9 < groupOrder && groupOrder < 10).toBe(true);
   });
 });
 

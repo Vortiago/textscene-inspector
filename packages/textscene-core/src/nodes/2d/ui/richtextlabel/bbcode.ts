@@ -9,11 +9,19 @@ import { stringToFloat, stringToInt } from '../../../../godot/string/string';
 import type { Rgba } from '../../../../godot/math/math';
 
 /** One currently-open BBCode tag. `value` is the `[name=value]` payload, if the tag carries one. */
-interface OpenBBCodeTag {
+export interface OpenBBCodeTag {
   /** Lowercased tag name, such as `'b'` or `'color'`. */
   name: string;
-  /** The `=value` portion, verbatim; absent for a bare `[name]` or the space-attribute form. */
+  /**
+   * The `=value` portion, verbatim; absent for a bare `[name]` or the space-attribute form. A
+   * `[ul bullet=...]` carries everything after its first `=`, as `_get_tag_value` reads it (`:5239-5241`).
+   */
   value?: string;
+  /**
+   * `bbcode_options`, the `key=value` pieces after the name (`rich_text_label.cpp:5357-5382`).
+   * Present, perhaps empty, when a space follows the name, which `[p ` reads apart from a bare `[p]` (`:5753`).
+   */
+  options?: ReadonlyMap<string, string>;
 }
 
 /** `String::chr(0xfffc)`: the OBJECT REPLACEMENT CHARACTER Godot appends to `txt` for every inline object (`rich_text_label.cpp:686`), one glyph as wide as the object. */
@@ -23,8 +31,47 @@ export const IMAGE_OBJECT_CHAR = '\ufffc';
 interface BBCodeRun {
   text: string;
   tags: readonly OpenBBCodeTag[];
+  /**
+   * Indices in `text` of the newlines a paragraph tag adds to end a line that holds items
+   * (`rich_text_label.cpp:4097-4103`). Godot starts a new `Line` there with no `ITEM_NEWLINE`, so
+   * these count no character. Absent when there are none.
+   */
+  implicitBreaks?: number[];
+  /**
+   * Set only when a line starts at this run's first character and its first item leaves an indent or a
+   * list of `tags` out: the tags open at that item (`Line::from`). A styling tag that opens the line before
+   * a list is that item (`rich_text_label.cpp:4096-4103`). A line that starts later in the run has all of `tags`.
+   */
+  startTags?: readonly OpenBBCodeTag[];
+  /**
+   * Set only inside an indent or a list: the tags opened since the character before this run's first one,
+   * the ones since closed included. They are the formatting items at that character's offset, which an
+   * empty line's marker takes (`rich_text_label.cpp:312-321`).
+   */
+  openedAtStart?: readonly OpenBBCodeTag[];
   /** Set only on the single-U+FFFC run for an `[img]` (`rich_text_label.cpp:6145`'s `add_image`), never alongside real text. */
   image?: ParsedImgTag;
+  /** Set only on the single-U+FFFC run for an `[hr]` (`add_hr`, `:4159`), whose tags end in the `hr` paragraph. */
+  rule?: ParsedRuleTag;
+  /**
+   * Set only on the single `\n` run that ends a line with no text or object, such as one
+   * left by `[font_size][/font_size][p]`. Godot keeps that line, as an empty text buffer of no height.
+   */
+  zeroHeightBreak?: true;
+}
+
+/**
+ * What the `hr` arm of `append_text` (`rich_text_label.cpp:5955-5983`) passes to `add_hr`, but the
+ * colour: its fallback is the theme `default_color`, which only the solver knows.
+ */
+export interface ParsedRuleTag {
+  /** `[hr width=…]`: 90 percent unless set. */
+  width: number;
+  widthInPercent: boolean;
+  /** `[hr height=…]`: 2 px unless set. */
+  height: number;
+  heightInPercent: boolean;
+  colorOption: string | undefined;
 }
 
 /** Which point of the image meets which point of the text: `core/math/math_defs.h`'s `InlineAlignment` bitfield as two named axes. */
@@ -62,12 +109,39 @@ export interface ParsedImgTag {
   /** `alt=` (`:6040-6043`): accessibility metadata, draws nothing, read unconditionally like `color`/`region`. */
   altText: string;
   alignment: ParsedImageAlignment;
+  /** Set only on an `[hr]`'s image: it draws the theme's solid white `horizontal_rule` icon, so `path` names no resource. */
+  solid?: true;
 }
 
-// A tag is `[name]`, `[name=value]`, `[name attr=...]`, or a `[/name]` close.
-// Godot does not trim `value` either. Space attributes are matched and ignored.
-const OPEN = /^\[([a-zA-Z_][a-zA-Z0-9_]*)(?:=([^\]]*)|\s[^\]]*)?\]$/;
+// A tag is `[name]`, `[name=value]`, `[name attr=...]`, or a `[/name]` close. Only a space starts
+// the options (`rich_text_label.cpp:5358`), and Godot does not trim `value` either.
+const OPEN = /^\[([a-zA-Z_][a-zA-Z0-9_]*)(?:=([^\]]*)| [^\]]*)?\]$/;
 const CLOSE = /^\[\/([a-zA-Z_][a-zA-Z0-9_]*)\]$/;
+
+/** The tags that indent their lines (`push_indent`, `push_list`): the ones whose frames `listing.ts` reads. */
+export const INDENT_TAGS: ReadonlySet<string> = new Set(['indent', 'ol', 'ul']);
+
+/** The `[ol type=...]` forms Godot opens (`rich_text_label.cpp:5711-5742`): any other `ol` form is text. */
+const ORDERED_LIST_FORMS: ReadonlySet<string> = new Set([
+  'ol',
+  'ol type=1',
+  'ol type=a',
+  'ol type=A',
+  'ol type=i',
+  'ol type=I',
+]);
+
+/** `tag == "ol" || tag.begins_with("ol ") || ...` (`rich_text_label.cpp:5436`): the tags that open a list item, valid or not. */
+function isListTagText(inner: string): boolean {
+  return /^(ol|ul)( |$)/.test(inner);
+}
+
+/** Whether `inner`, the text between the brackets, is a list or indent form Godot opens (`:5702-5748`). */
+function isIndentFormText(inner: string): boolean {
+  return (
+    ORDERED_LIST_FORMS.has(inner) || inner === 'ul' || inner.startsWith('ul bullet=') || inner === 'indent'
+  );
+}
 
 /**
  * Every tag identifier `RichTextLabel::append_text` answers to
@@ -163,8 +237,36 @@ const SELF_CLOSING_TEXT: ReadonlyMap<string, string> = new Map([
   ['shy', '\u00ad'],
 ]);
 
-/** `[hr]`: consumed and drawn, contributing no text and no open tag. */
-const SELF_CLOSING_SILENT: ReadonlySet<string> = new Set(['hr']);
+/**
+ * Tags whose push adds its item with `p_ensure_newline` (`rich_text_label.cpp:4096-4103`):
+ * `push_paragraph`, `push_indent` and `push_list` (`:4718,4732,4749`).
+ */
+const PARAGRAPH_TAGS: ReadonlySet<string> = new Set([
+  'p',
+  'left',
+  'center',
+  'right',
+  'fill',
+  'indent',
+  'ol',
+  'ul',
+]);
+
+/**
+ * Tags whose item `_find_layout_subitem` skips (`:3712-3727`): a font, a colour, an underline or a
+ * strikethrough. Any other open item makes the line count, though it has no height without text.
+ */
+const STYLING_TAGS: ReadonlySet<string> = new Set([
+  'b',
+  'i',
+  'code',
+  'font',
+  'opentype_features',
+  'otf',
+  'color',
+  'u',
+  's',
+]);
 
 /**
  * What a self-closing tag adds to the surrounding run, or `null` when `name`
@@ -174,7 +276,6 @@ const SELF_CLOSING_SILENT: ReadonlySet<string> = new Set(['hr']);
 function selfClosingText(name: string, value: string | undefined): string | null {
   const fixed = SELF_CLOSING_TEXT.get(name);
   if (fixed !== undefined) return fixed;
-  if (SELF_CLOSING_SILENT.has(name)) return '';
   if (name !== 'char') return null;
   const codePoint = parseInt(value ?? '', 16);
   // The surrogate range has no scalar value, so `String.fromCodePoint` would
@@ -191,7 +292,7 @@ function selfClosingText(name: string, value: string | undefined): string | null
 }
 
 /** `String::unquote()` (`ustring.cpp:5575-5581`): strips a matched leading and trailing `"` or `'` pair, and returns anything else as is. */
-function unquoteMatchedPair(s: string): string {
+export function unquoteMatchedPair(s: string): string {
   if (s.length < 2) return s;
   const first = s[0]!;
   const last = s[s.length - 1]!;
@@ -204,7 +305,7 @@ function unquoteMatchedPair(s: string): string {
  * (`rich_text_label.cpp:5243-5301`): splits `src` on `splitter` outside quotes,
  * and drops empty pieces as the source's `end > from` guard does.
  */
-function splitUnquoted(src: string, splitter: string): string[] {
+export function splitUnquoted(src: string, splitter: string): string[] {
   const out: string[] = [];
   let start = 0;
   let inSingle = false;
@@ -317,6 +418,26 @@ function parseSizeValue(value: string): { amount: number; inPercent: boolean } {
 }
 
 /**
+ * `bbcode_options` (`rich_text_label.cpp:5357-5382`): each piece after the first that holds a `=`,
+ * its value unquoted. A later piece with the same key wins.
+ */
+function bbcodeOptions(splitBlock: readonly string[]): Map<string, string> {
+  const options = new Map<string, string>();
+  for (const expr of splitBlock.slice(1)) {
+    const eq = expr.indexOf('=');
+    if (eq > -1) options.set(expr.slice(0, eq), unquoteMatchedPair(expr.slice(eq + 1)));
+  }
+  return options;
+}
+
+/** The tag a `[name...]` token opens, with an options map when a space follows its name. */
+function openTag(name: string, value: string | undefined, token: string): OpenBBCodeTag {
+  // Options follow a space right after the name (`:5753`), so `[color=a b]` has none.
+  if (token[name.length + 1] !== ' ') return { name, value };
+  return { name, value, options: bbcodeOptions(splitUnquoted(token.slice(1, -1), ' ')) };
+}
+
+/**
  * The `img` arm of `RichTextLabel::append_text` (`rich_text_label.cpp:5990-6146`)
  * for the tag content without its brackets, such as `"img=100x50 color=red"`.
  * The first unquoted piece's `=value` is `bbcode_value`, and later pieces are
@@ -325,11 +446,7 @@ function parseSizeValue(value: string): { amount: number; inPercent: boolean } {
 function parseImgTag(content: string, path: string): ParsedImgTag {
   const splitBlock = splitUnquoted(content, ' ');
   const first = splitBlock[0] ?? content;
-  const options = new Map<string, string>();
-  for (const expr of splitBlock.slice(1)) {
-    const eq = expr.indexOf('=');
-    if (eq > -1) options.set(expr.slice(0, eq), unquoteMatchedPair(expr.slice(eq + 1)));
-  }
+  const options = bbcodeOptions(splitBlock);
   const mainEq = first.indexOf('=');
   const bbcodeValue = mainEq > -1 ? first.slice(mainEq + 1) : '';
 
@@ -399,8 +516,43 @@ function parseImgTag(content: string, path: string): ParsedImgTag {
   };
 }
 
+/** The `hr` arm matches by prefix, `tag.begins_with("hr")` (`rich_text_label.cpp:5955`), so `[hrx]` draws a rule. */
+const RULE_TAG_PREFIX = 'hr';
+
+/**
+ * The `hr` arm's options (`:5955-5983`), or `undefined` for a negative size, which `add_hr`
+ * refuses (`:4167-4168`) before it adds an item. `align` is the raw option, which
+ * `paragraphAlignment` reads.
+ */
+function parseRuleTag(
+  options: ReadonlyMap<string, string> | undefined
+): { rule: ParsedRuleTag; align: string | undefined } | undefined {
+  const widthOption = options?.get('width');
+  const heightOption = options?.get('height');
+  const rule: ParsedRuleTag = {
+    width: widthOption === undefined ? 90 : stringToInt(widthOption),
+    widthInPercent: widthOption === undefined || widthOption.endsWith('%'),
+    height: heightOption === undefined ? 2 : stringToInt(heightOption),
+    heightInPercent: heightOption !== undefined && heightOption.endsWith('%'),
+    colorOption: options?.get('color'),
+  };
+  if (rule.width < 0 || rule.height < 0) return undefined;
+  return { rule, align: options?.get('align') };
+}
+
+/**
+ * Whether two stacks draw alike. An indent or a list is one frame, so two of them never merge even
+ * where their tags read the same: `listing.ts` counts items by frame.
+ */
 function sameTags(a: readonly OpenBBCodeTag[], b: readonly OpenBBCodeTag[]): boolean {
-  return a.length === b.length && a.every((t, i) => t.name === b[i]!.name && t.value === b[i]!.value);
+  return (
+    a.length === b.length &&
+    a.every((t, i) =>
+      INDENT_TAGS.has(t.name)
+        ? t === b[i]
+        : t.name === b[i]!.name && t.value === b[i]!.value && t.options === b[i]!.options
+    )
+  );
 }
 
 /** The next `[` at or after `from`, or the end of the string (`:6026-6029`). */
@@ -419,51 +571,197 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
   const stack: OpenBBCodeTag[] = [];
   const runs: BBCodeRun[] = [];
   let pending = '';
+  // The tags open at the first item of the current line, or null while the line holds no item.
+  let lineFirstItemTags: OpenBBCodeTag[] | null = null;
+  // Whether the current line holds a character yet, and the tags a line starting at `pending` has.
+  let lineHasCharacter = false;
+  let pendingStartTags: OpenBBCodeTag[] | undefined;
+  // The tags pushed since the last character, and the ones the pending run's first character follows.
+  let openedSinceCharacter: OpenBBCodeTag[] = [];
+  let pendingOpenedAtStart: OpenBBCodeTag[] | undefined;
+  // Whether the current line has height, from text or an object.
+  let lineHasHeight = false;
+  // Whether the current line holds an item `_find_layout_subitem` counts, with or without height.
+  let lineHasLayout = false;
+  // Indices in `pending` of the newlines a paragraph tag adds, which `flush` hands to the run.
+  let pendingBreaks: number[] = [];
+  // `after_list_open_tag` and `after_list_close_tag` (`:5317-5318`).
+  let afterListOpen = false;
+  let afterListClose = false;
+
+  function startLine(): void {
+    lineFirstItemTags = null;
+    lineHasCharacter = false;
+  }
+
+  /** Records the non-empty `added` text against the line state the list markers read. */
+  function noteCharacters(added: string): void {
+    if (pending === '' && openedSinceCharacter.length > 0 && stack.some((tag) => INDENT_TAGS.has(tag.name))) {
+      pendingOpenedAtStart = openedSinceCharacter;
+    }
+    openedSinceCharacter = [];
+    for (let start = 0; start < added.length;) {
+      const newline = added.indexOf('\n', start);
+      lineFirstItemTags ??= [...stack];
+      if (!lineHasCharacter) {
+        const firstItemTags = lineFirstItemTags;
+        const leavesOutFrame = stack.some((tag) => INDENT_TAGS.has(tag.name) && !firstItemTags.includes(tag));
+        if (pending === '' && leavesOutFrame) pendingStartTags = firstItemTags;
+        lineHasCharacter = true;
+      }
+      if (newline < 0) return;
+      startLine();
+      start = newline + 1;
+    }
+  }
+
+  function append(added: string): void {
+    if (added === '') return;
+    noteCharacters(added);
+    pending += added;
+    const lastBreak = added.lastIndexOf('\n');
+    lineHasHeight = lastBreak < 0 || lastBreak < added.length - 1;
+    lineHasLayout = lineHasHeight;
+  }
+
+  /** `_add_item`'s `p_ensure_newline` (`:4097-4104`): a line that counts ends, with or without height. */
+  function endLineForParagraph(): void {
+    if (lineHasHeight) {
+      append('\n');
+      pendingBreaks.push(pending.length - 1);
+      return;
+    }
+    if (!lineHasLayout) return;
+    flush();
+    runs.push({ text: '\n', tags: [...stack], zeroHeightBreak: true, implicitBreaks: [0] });
+    lineHasLayout = false;
+    startLine();
+  }
+
+  function push(tag: OpenBBCodeTag): void {
+    if (PARAGRAPH_TAGS.has(tag.name)) endLineForParagraph();
+    flush();
+    stack.push(tag);
+    openedSinceCharacter.push(tag);
+    lineFirstItemTags ??= [...stack];
+    // `[img]` opens a tag but no item (`:6145`): its loaded image sets the flags where it is added.
+    if (!STYLING_TAGS.has(tag.name) && tag.name !== 'img') lineHasLayout = true;
+  }
+
+  /** `add_hr`: a paragraph item, so the line of the text before ends, then the rule on the new line. */
+  function addRule(rule: ParsedRuleTag, align: string | undefined): void {
+    endLineForParagraph();
+    flush();
+    noteCharacters(IMAGE_OBJECT_CHAR);
+    runs.push({ text: IMAGE_OBJECT_CHAR, tags: [...stack, { name: 'hr', value: align }], rule });
+    lineHasHeight = true;
+    lineHasLayout = true;
+  }
 
   function flush(): void {
     if (!pending) return;
     // Text with an unchanged stack merges into the previous run, so a literal
-    // bracket or `[hr]` never splits it into separate meshes. An image run
-    // never merges: its `text` is the object placeholder a painter keys off.
+    // bracket never splits it into separate meshes. An image or rule run never
+    // merges: its `text` is the object placeholder a painter keys off.
     const previous = runs[runs.length - 1];
-    if (previous && !previous.image && sameTags(previous.tags, stack)) previous.text += pending;
-    else runs.push({ text: pending, tags: [...stack] });
+    const breaks = pendingBreaks;
+    pendingBreaks = [];
+    const startsAtMarkedPoint = pendingStartTags || pendingOpenedAtStart;
+    if (
+      previous &&
+      !previous.image &&
+      !previous.rule &&
+      !previous.zeroHeightBreak &&
+      !startsAtMarkedPoint &&
+      sameTags(previous.tags, stack)
+    ) {
+      if (breaks.length > 0) {
+        previous.implicitBreaks ??= [];
+        for (const index of breaks) previous.implicitBreaks.push(previous.text.length + index);
+      }
+      previous.text += pending;
+    } else {
+      runs.push({
+        text: pending,
+        tags: [...stack],
+        ...(breaks.length > 0 && { implicitBreaks: breaks }),
+        ...(pendingStartTags && { startTags: pendingStartTags }),
+        ...(pendingOpenedAtStart && { openedAtStart: pendingOpenedAtStart }),
+      });
+    }
     pending = '';
+    pendingStartTags = undefined;
+    pendingOpenedAtStart = undefined;
   }
 
   let pos = 0;
-  while (pos < text.length) {
+  while (pos <= text.length) {
     const brkStart = text.indexOf('[', pos);
+    let before = text.slice(pos, brkStart < 0 ? text.length : brkStart);
+    // The first newline after a list tag is dropped: a list adds the one it needs (`:5331-5334`).
+    if ((afterListClose || afterListOpen) && before.startsWith('\n')) before = before.slice(1);
+
     if (brkStart < 0) {
-      pending += text.slice(pos);
+      append(before === '' && afterListOpen ? '\n' : before);
       break;
     }
-    pending += text.slice(pos, brkStart);
 
     const brkEnd = text.indexOf(']', brkStart);
     if (brkEnd < 0) {
       // No closing bracket at all: the rest is text, brackets included.
-      pending += text.slice(brkStart);
+      append(before + text.slice(brkStart));
       break;
     }
     const token = text.slice(brkStart, brkEnd + 1);
 
     const close = CLOSE.exec(token);
-    if (close && stack.length > 0 && stack[stack.length - 1]!.name === close[1]!.toLowerCase()) {
+    if (close && stack.length > 0 && stack[stack.length - 1]!.name === close[1]) {
+      if (before === '' && afterListOpen) before = '\n';
+      afterListOpen = false;
+      if (close[1] === 'ol' || close[1] === 'ul') {
+        // The last item of a list ends with a newline, and an empty list holds one empty item (`:5415-5424`).
+        if (before !== '') before = before.endsWith('\n') ? before : `${before}\n`;
+        else if (!afterListClose) before = '\n';
+        afterListClose = true;
+      } else {
+        afterListClose = false;
+      }
+      append(before);
       flush();
       stack.pop();
       pos = brkEnd + 1;
       continue;
     }
 
+    const inner = token.slice(1, -1);
+    if (isListTagText(inner)) {
+      if (before === '' && afterListOpen) before = '\n';
+      afterListOpen = true;
+    } else {
+      afterListOpen = false;
+    }
+    append(before);
+    afterListClose = false;
+
     const open = close ? null : OPEN.exec(token);
-    if (open && RECOGNISED_TAGS.has(open[1]!.toLowerCase())) {
-      const name = open[1]!.toLowerCase();
+    // Tag names compare exactly (`:5452`), so `[B]` is text.
+    if (
+      open &&
+      (RECOGNISED_TAGS.has(open[1]!) || open[1]!.startsWith(RULE_TAG_PREFIX)) &&
+      (!INDENT_TAGS.has(open[1]!) || isIndentFormText(inner))
+    ) {
+      const name = open[1]!;
       const emitted = selfClosingText(name, open[2]);
       if (emitted !== null) {
         // Part of the surrounding run, so no `flush()`: it carries the same
         // stack as the text either side of it.
-        pending += emitted;
+        append(emitted);
+        pos = brkEnd + 1;
+        continue;
+      }
+      if (name.startsWith(RULE_TAG_PREFIX)) {
+        const parsed = parseRuleTag(openTag(name, open[2], token).options);
+        if (parsed) addRule(parsed.rule, parsed.align);
         pos = brkEnd + 1;
         continue;
       }
@@ -475,23 +773,28 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
         flush();
         // A failed `ResourceLoader::load(image, "Texture2D")` (`:6034`) adds no
         // image and no glyph, but the tag still opens (`:6145`).
-        if (path !== '')
+        if (path !== '') {
+          noteCharacters(IMAGE_OBJECT_CHAR);
           runs.push({
             text: IMAGE_OBJECT_CHAR,
             tags: [...stack],
             image: parseImgTag(token.slice(1, -1), path),
           });
-        stack.push({ name, value: open[2] });
+          lineHasHeight = true;
+          lineHasLayout = true;
+        }
+        push(openTag(name, open[2], token));
         pos = imgEnd;
         continue;
       }
-      flush();
-      stack.push({ name, value: open[2] });
+      const tag = openTag(name, open[2], token);
+      if (name === 'ul' && inner.startsWith('ul bullet=')) tag.value = inner.slice(inner.indexOf('=') + 1);
+      push(tag);
       pos = brkEnd + 1;
       continue;
     }
 
-    pending += '[';
+    append('[');
     pos = brkStart + 1;
   }
 

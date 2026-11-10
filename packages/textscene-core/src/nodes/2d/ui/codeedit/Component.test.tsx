@@ -53,6 +53,19 @@ describe('<CodeEdit> — reuses TextEditBody for chrome and text', () => {
     // 2 buffer-line TextRuns. The gutter is off by default, so no line-number meshes.
     expect(findTextMeshes(renderer.scene)).toHaveLength(2);
   });
+
+  it('draws an empty buffer as its placeholder at font_placeholder_color, as TextEdit does', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CodeEdit
+        {...painterEnv()}
+        solveNode={solveNode({ placeholderText: 'Code' })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const material = findTextMeshes(renderer.scene)[0]!.material as THREE.ShaderMaterial;
+    expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.6, 5);
+  });
 });
 
 describe('<CodeEdit> — line-number gutter', () => {

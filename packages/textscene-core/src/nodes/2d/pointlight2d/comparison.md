@@ -81,7 +81,7 @@ HUD panel.
 `shadow_filter = PCF5` or `PCF13` averages taps offset in angle across Godot's polar
 shadow map, so the boundary is a stepped ramp that widens with distance. The previewer
 builds the same map and taps it in the light's fragment shader, as Godot's Vulkan renderer
-does (ADR-0064).
+does (ADR-0066).
 
 ## An unfiltered shadow edge far from its light
 

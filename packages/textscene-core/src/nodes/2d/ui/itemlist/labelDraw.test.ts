@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { itemListDrawnLabel } from './labelDraw';
+import { isItemListLabelFillDrawn, itemListDrawnLabel } from './labelDraw';
 
 /** The x shift of one glyph-less line of `lineWidthPx`, which no clip can cut. */
 function itemListLineShiftPx(
@@ -40,5 +40,30 @@ describe('itemListLineShiftPx', () => {
   it('is zero for a box of zero or negative width', () => {
     expect(itemListLineShiftPx(30, 0, false, true)).toBe(0);
     expect(itemListLineShiftPx(30, -4, true, false)).toBe(0);
+  });
+});
+
+// item_list.cpp:1676-1688: a LEFT-mode row draws its fill only when the text keeps room past the
+// icon. The outline above it draws regardless (:1672-1674).
+describe('isItemListLabelFillDrawn', () => {
+  const ROW = { wrapped: false, iconWidthPx: 16, hSeparation: 4, itemRectWidthPx: 120, contentWidthPx: 200 };
+
+  it('draws the fill of a fixed column wider than the icon and separation', () => {
+    expect(isItemListLabelFillDrawn({ ...ROW, fixedColumnWidth: 120, wraparoundItems: true })).toBe(true);
+  });
+
+  it('hides the fill of a fixed column no wider than the icon and separation', () => {
+    const narrow = { ...ROW, itemRectWidthPx: 20, fixedColumnWidth: 20, wraparoundItems: true };
+    expect(isItemListLabelFillDrawn(narrow)).toBe(false);
+  });
+
+  it('hides the fill of a wraparound list no wider than the icon and separation', () => {
+    const narrow = { ...ROW, contentWidthPx: 20, fixedColumnWidth: 0, wraparoundItems: true };
+    expect(isItemListLabelFillDrawn(narrow)).toBe(false);
+  });
+
+  it('draws the fill of a list without wraparound at any width', () => {
+    const empty = { ...ROW, contentWidthPx: 0, fixedColumnWidth: 0, wraparoundItems: false };
+    expect(isItemListLabelFillDrawn(empty)).toBe(true);
   });
 });

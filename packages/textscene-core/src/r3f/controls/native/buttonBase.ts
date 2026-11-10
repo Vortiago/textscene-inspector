@@ -23,9 +23,11 @@ import {
 import {
   isTextWidthClipped,
   overrunFlagsForBehavior,
-  trimSoloLine,
+  trimLayoutToWidth,
+  type TextBufferTrimOptions,
   type TextClipProperties,
 } from './text/textOverrun';
+import type { TextBidiOptions } from './text/textBidiOptions';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { type Rgba } from '../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
@@ -82,22 +84,33 @@ export function fitIconSize(size: Vector2, maxWidth: number): Vector2 {
   return size;
 }
 
-/**
- * Shapes a Button-family label, the one measure its painters and solvers share.
- * @param boxWidthPx The width `Button::_notification` shapes at
- *   (`button.cpp:428-432`), `Math::ceil(MAX(1.0f, drawable_size_remained.width))`.
- *   A caller that does not wrap omits the last three.
- * @param autowrapTrimFlags `autowrap_flags_trim`, ORed onto the break flags at `:560`.
- *   Undefined keeps the class default, both edge-space trims.
- */
-export function shapeButtonLabel(
-  text: string,
-  fontSizePx: number,
-  fontMetrics: FontMetrics,
-  boxWidthPx = 0,
-  autowrapMode: EnumValue<typeof AutowrapMode> = AutowrapMode.AUTOWRAP_OFF,
-  autowrapTrimFlags?: number
-): TextLayoutResult {
+/** What a Button-family label shapes with, beyond its text. */
+interface ButtonLabelShapeOptions {
+  fontSizePx: number;
+  fontMetrics: FontMetrics;
+  /** The paragraph's direction, language and override ranges (`button.cpp:564-569`). Undefined shapes at AUTO in the root locale. */
+  bidi?: TextBidiOptions;
+  /**
+   * The width `Button::_notification` shapes at (`button.cpp:428-432`),
+   * `Math::ceil(MAX(1.0f, drawable_size_remained.width))`. A caller that does not wrap omits it and the
+   * two below.
+   */
+  boxWidthPx?: number;
+  autowrapMode?: EnumValue<typeof AutowrapMode>;
+  /** `autowrap_flags_trim`, ORed onto the break flags at `:560`. Undefined keeps the class default, both edge-space trims. */
+  autowrapTrimFlags?: number;
+}
+
+/** Shapes a Button-family label, the one measure its painters and solvers share. */
+export function shapeButtonLabel(text: string, options: ButtonLabelShapeOptions): TextLayoutResult {
+  const {
+    fontSizePx,
+    fontMetrics,
+    bidi,
+    boxWidthPx = 0,
+    autowrapMode = AutowrapMode.AUTOWRAP_OFF,
+    autowrapTrimFlags,
+  } = options;
   return shapeText(text, {
     fontSizePx,
     boxWidthPx,
@@ -107,6 +120,7 @@ export function shapeButtonLabel(
     lineSpacingPx: 0,
     fontMetrics,
     autowrapTrimFlags,
+    ...bidi,
   });
 }
 
@@ -143,6 +157,8 @@ export interface ButtonContentInput {
   hasText: boolean;
   /** The shaped text's unwrapped size, `(0, 0)` when `hasText` is false. */
   textNaturalSize: Vector2;
+  /** Whether the shaped text infers RTL (`shaped_text_get_inferred_direction`): an overflowing CENTER line then ends at the trailing edge. */
+  isTextRtl: boolean;
   /** `Control::is_layout_rtl()` (`SolveNode.rtl`): swaps the icon and text alignment sides. */
   rtl: boolean;
 }
@@ -210,6 +226,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     iconNaturalSize,
     hasText,
     textNaturalSize,
+    isTextRtl,
     rtl,
   } = input;
   const hSeparation = Math.max(0, hSeparationRaw);
@@ -301,7 +318,8 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
       // already narrowed `drawableWidth`.
       boxLeftPx += customElementSize.x - drawableWidth;
     }
-    const textOffsetX = boxLeftPx + buttonTextAlignShiftPx(textNaturalSize.x, drawableWidth, textAlign);
+    const textOffsetX =
+      boxLeftPx + buttonTextAlignShiftPx(textNaturalSize.x, drawableWidth, textAlign, isTextRtl);
 
     let textOffsetY = centredTextTopPx(drawableHeight, textNaturalSize.y, styleMargin.top);
     if (iconLayout && verticalIconAlignment === V_TOP) {
@@ -362,32 +380,31 @@ export function textMinimumWidthPx(measuredWidthPx: number, props: TextClipPrope
   return isTextWidthClipped(props) ? 0 : shapedTextSizeWidthPx(measuredWidthPx);
 }
 
-/** `button.cpp:428,432`: the paragraph box width, the drawable width ceiled to a whole pixel. */
-function textBufWidthPx(drawableWidthPx: number): number {
-  return Math.ceil(Math.max(1, drawableWidthPx));
-}
-
 /**
  * The ceiling's leftover (`button.cpp:437-439`): only CENTER centres the whole paragraph box in the
  * drawable width, and every other alignment starts the box at its left edge.
  */
 function textBoxOffsetPx(drawableWidthPx: number, alignment: number): number {
   if (alignment !== H_CENTER) return 0;
-  return (drawableWidthPx - textBufWidthPx(drawableWidthPx)) / 2;
+  return (drawableWidthPx - buttonTextBufWidthPx(drawableWidthPx)) / 2;
 }
 
 /**
  * A Button-family line's shift in its drawable box: `button.cpp:437-441`, then
  * `TextParagraph::draw`'s alignment (`text_paragraph.cpp:887-922`). Every arm
  * measures against the ceiled paragraph width (`:437`), not the drawable width.
- * An overflowing CENTER line right-hugs only an inferred RTL direction (`:902`),
- * which this shaper never produces.
  * @param contentWidthPx `shaped_text_get_width`, ceiled (`text_server_adv.cpp:7561-7570`).
+ * @param isRtl Whether the line infers RTL, which an overflowing CENTER line and a FILL line read.
  */
-function buttonTextAlignShiftPx(contentWidthPx: number, drawableWidthPx: number, alignment: number): number {
+function buttonTextAlignShiftPx(
+  contentWidthPx: number,
+  drawableWidthPx: number,
+  alignment: number,
+  isRtl: boolean
+): number {
   return (
     textBoxOffsetPx(drawableWidthPx, alignment) +
-    textParagraphLineShiftPx(contentWidthPx, textBufWidthPx(drawableWidthPx), alignment, false)
+    textParagraphLineShiftPx(contentWidthPx, buttonTextBufWidthPx(drawableWidthPx), alignment, isRtl)
   );
 }
 
@@ -407,16 +424,21 @@ export function buttonDrawnLabel(
   alignment: number
 ): ButtonDrawnLine[] {
   const boxOffsetPx = textBoxOffsetPx(drawableWidthPx, alignment);
-  return drawnLinesInBox(lines, textBufWidthPx(drawableWidthPx), alignment, false).map(
+  return drawnLinesInBox(lines, buttonTextBufWidthPx(drawableWidthPx), alignment, false).map(
     ({ line, shiftPx }) => ({ line, offsetXPx: boxOffsetPx + shiftPx })
   );
 }
 
+/** What {@link trimButtonLabel} trims with, beyond the layout and the box. */
+export interface ButtonLabelTrimOptions extends Omit<TextBufferTrimOptions, 'fontMetrics'> {
+  /** The label wraps: Button hides no line, so `TextParagraph::_shape_lines` trims no row of it. */
+  isWrapped: boolean;
+}
+
 /**
- * The label trimmed to its paragraph box by `text_overrun_behavior`: `TextParagraph::draw` calls
- * `shaped_text_overrun_trim_to_width` on the box width `ceil(max(1, drawable width))`
- * (`button.cpp:428,432`, `text_paragraph.cpp:286-293`). A wrapped label stays whole: the TextServer trims
- * it per row, and this single-line trim would collapse it to its first row.
+ * The label trimmed to its paragraph box by `text_overrun_behavior`: `TextParagraph::_shape_lines`
+ * trims each row of an unwrapped buffer on the box width `ceil(max(1, drawable width))`
+ * (`button.cpp:428,432`, `text_paragraph.cpp:228-262,282-293`). A wrapped label stays whole.
  *
  * @canonical A Button-family label trimmed to its paragraph box by text_overrun_behavior
  */
@@ -424,11 +446,17 @@ export function trimButtonLabel(
   layout: TextLayoutResult,
   overrunBehavior: number | undefined,
   drawableWidthPx: number,
-  fontSizePx: number
+  { isWrapped, ...options }: ButtonLabelTrimOptions
 ): TextLayoutResult {
-  if (layout.lines.length !== 1) return layout;
-  return trimSoloLine(layout, overrunFlagsForBehavior(overrunBehavior), textBufWidthPx(drawableWidthPx), {
+  const flags = overrunFlagsForBehavior(overrunBehavior);
+  if (!flags.trim || isWrapped) return layout;
+  return trimLayoutToWidth(layout, buttonTextBufWidthPx(drawableWidthPx), flags, {
     fontMetrics: layout.fontMetrics,
-    fontSizePx,
+    ...options,
   });
+}
+
+/** The width `button.cpp:424-432` gives the text buffer: the drawable width, at least 1, ceiled. */
+export function buttonTextBufWidthPx(drawableWidthPx: number): number {
+  return Math.ceil(Math.max(1, drawableWidthPx));
 }

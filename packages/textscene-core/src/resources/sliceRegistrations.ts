@@ -89,3 +89,4 @@ import './formats/image2darray/index.js';
 import './formats/theoravideo/index.js';
 import './formats/packedscene/index.js';
 import './formats/dynamicfont/index.js';
+import './formats/bmfont/index.js';

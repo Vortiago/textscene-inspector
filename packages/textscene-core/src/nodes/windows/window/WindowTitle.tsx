@@ -4,29 +4,23 @@
  * the `title_height` band (`viewport.cpp:363-379`). The outline draws first, under the text, as a
  * stroked ring (ADR-0040).
  */
-import { lazy, useMemo, type ComponentProps } from 'react';
+import { useMemo } from 'react';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
-import { TextRun } from '../../../r3f/controls/native/text/TextRun';
+import { OutlinedTextRun } from '../../../r3f/controls/native/text/OutlinedTextRun';
 import { shapedTextSizeWidthPx } from '../../../r3f/controls/native/text/textLayout';
 import { overrunFlagsForBehavior, trimSoloLine } from '../../../r3f/controls/native/text/textOverrun';
 import { resolveNodeFont } from '../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { peekSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
-import { isCanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
-import { PendingSuspense } from '../../../resources/PendingSuspense';
 import { resolveTextTheme } from '../../../r3f/controls/native/textTheme';
 import { contentMarginSize } from '../../../r3f/controls/native/styleBoxFlat';
 import { OverrunBehavior } from '../../../godot/text/textServerEnums';
-import { outlineStrokeWidthPx } from '../../3d/label3d/glyphLayout';
-import { canvasSubOrder, type CanvasSlot } from '../../../r3f/canvasItemState';
+import type { CanvasSlot } from '../../../r3f/canvasItemState';
 import { shapeTitle, titleOrigin, titleSpace } from './decoration';
 import type { WindowThemeDefaults } from './theme';
 import type { WindowProperties } from './types';
-
-// Lazy: only an outlined title in the atlas face needs the bundled canvas face's bytes.
-const TitleOutlineRing = lazy(() => import('./TitleOutlineRing'));
 
 /** `TextLine::overrun_behavior`'s default (`text_line.h:50`), which the embedder never changes. */
 const TITLE_OVERRUN_FLAGS = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
@@ -40,7 +34,7 @@ interface WindowTitleProps {
   closeHOffset: number;
   defaults: WindowThemeDefaults;
   theme: NativeTheme;
-  /** The title's slot: the outline at its key, the text in the piece after it. */
+  /** The title's slot: the outline and the text draw as layers from its key. */
   slot: CanvasSlot;
 }
 
@@ -70,12 +64,17 @@ export function WindowTitle({
 
   const layout = useMemo(() => {
     if (space <= 0) return null;
-    // `set_direction` follows the window's `is_layout_rtl()` (`viewport.cpp:375`).
-    return trimSoloLine(shapeTitle(props.title, fontSizePx, fontMetrics), TITLE_OVERRUN_FLAGS, space, {
-      fontMetrics,
-      fontSizePx,
-      isRtl: solveNode.rtl,
-    });
+    const isRtl = solveNode.rtl;
+    return trimSoloLine(
+      shapeTitle(props.title, { fontSizePx, fontMetrics, isRtl }),
+      TITLE_OVERRUN_FLAGS,
+      space,
+      {
+        fontMetrics,
+        fontSizePx,
+        isDrawnRtl: isRtl,
+      }
+    );
   }, [props.title, fontSizePx, fontMetrics, space, solveNode.rtl]);
 
   if (!layout) return null;
@@ -83,44 +82,18 @@ export function WindowTitle({
     x: shapedTextSizeWidthPx(layout.widthPx),
     y: layout.heightPx,
   });
-  // `outline_size > 0 && font_outline_color.a > 0` (`viewport.cpp:374`).
-  const hasOutline = outlineSize > 0 && outlineColor.a > 0;
-  const textKey = hasOutline ? canvasSubOrder(slot).key : slot.key;
+  // `OutlinedTextRun` draws the ring only at `outline_size > 0 && font_outline_color.a > 0` (`viewport.cpp:374`).
+  const outline = { color: outlineColor, sizePx: outlineSize };
 
   return (
     <CanvasItemGroup position={[origin.x, -origin.y, 0]}>
-      {hasOutline ? (
-        <TitleOutline
-          layout={layout}
-          font={font}
-          fontSizePx={fontSizePx}
-          tint={outlineColor}
-          outlineSize={outlineSize}
-          renderOrder={slot.key}
-        />
-      ) : null}
-      <TextRun layout={layout} fontSizePx={fontSizePx} tint={color} renderOrder={textKey} />
+      <OutlinedTextRun
+        layout={layout}
+        fontSizePx={fontSizePx}
+        tint={color}
+        outline={outline}
+        renderOrder={slot.key}
+      />
     </CanvasItemGroup>
-  );
-}
-
-/** The outline ring: a canvas face strokes its own glyphs, and an atlas face takes the bundled canvas face. */
-function TitleOutline(props: ComponentProps<typeof TitleOutlineRing>) {
-  if (!isCanvasFontMetrics(props.layout.fontMetrics)) {
-    return (
-      <PendingSuspense>
-        <TitleOutlineRing {...props} />
-      </PendingSuspense>
-    );
-  }
-  const { layout, fontSizePx, tint, outlineSize, renderOrder } = props;
-  return (
-    <TextRun
-      layout={layout}
-      fontSizePx={fontSizePx}
-      tint={tint}
-      strokeWidthPx={outlineStrokeWidthPx(outlineSize)}
-      renderOrder={renderOrder}
-    />
   );
 }

@@ -9,7 +9,7 @@ import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { Vector2 } from '../../../godot/math/vector';
-import { CanvasItemGroup, CanvasItemKeyProvider } from '../../../r3f/components/CanvasItemGroup';
+import { CanvasItemGroup, CanvasItemProvider } from '../../../r3f/components/CanvasItemGroup';
 import { ControlQuad } from '../../../r3f/controls/native/controlQuad';
 import { StyleBoxQuad } from '../../../r3f/controls/native/StyleBoxQuad';
 import { useNodeIcon } from '../../../r3f/controls/native/useIconTexture';
@@ -103,7 +103,7 @@ export function EmbeddedWindowFrame({
       position={[rect.x, -rect.y, 0]}
       renderOrder={key}
     >
-      <CanvasItemKeyProvider value={key}>
+      <CanvasItemProvider value={key}>
         {props.borderless ? null : (
           <WindowDecoration
             solveNode={solveNode}
@@ -137,7 +137,7 @@ export function EmbeddedWindowFrame({
             />
           </CanvasItemGroup>
         ) : null}
-      </CanvasItemKeyProvider>
+      </CanvasItemProvider>
     </group>
   );
 }

@@ -1,5 +1,5 @@
 /**
- * `<SpinBox>` render contract: LineEdit-style field chrome, one clipped run of formatted text and
+ * `<SpinBox>` render contract: LineEdit-style field chrome, one run of formatted text and
  * the stepper icons, with no button background without a `theme_override_styles/*` override (both
  * are `StyleBoxEmpty` by default). It asserts structure, tint and render order, not pixels.
  */
@@ -246,5 +246,35 @@ describe('<SpinBox> — RTL layout', () => {
     const rtlX = findTextMesh(rtl.scene)!.getWorldPosition(new THREE.Vector3()).x;
     const ltrX = findTextMesh(ltr.scene)!.getWorldPosition(new THREE.Vector3()).x;
     expect(rtlX).toBeGreaterThan(ltrX + FIELD_LEFT_RTL);
+  });
+});
+
+describe('<SpinBox> — field text direction (line_edit.cpp:3103-3112)', () => {
+  afterEach(() => {
+    controlSolverRegistry.clear();
+  });
+
+  /** The atlas rectangle of each drawn glyph quad (four corners of u, v), left to right. */
+  async function glyphAtlasRects(locale: string): Promise<number[][]> {
+    const renderer = await ReactThreeTestRenderer.create(
+      <SpinBox
+        {...painterEnv()}
+        solveNode={{
+          ...solveNode({ prefix: '$', value: -12.5, step: 0.5, localizeNumeralSystem: false }),
+          locale,
+        }}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const uv = Array.from(findTextMesh(renderer.scene)!.geometry.attributes.uv!.array);
+    return Array.from({ length: uv.length / 8 }, (_, i) => uv.slice(i * 8, i * 8 + 8));
+  }
+
+  it('draws the prefix as the first glyph under a left-to-right locale and the last under a right-to-left one', async () => {
+    const ltr = await glyphAtlasRects('en');
+    const rtl = await glyphAtlasRects('ar');
+    expect(rtl.at(-1)).toEqual(ltr[0]);
+    expect(rtl[0]).not.toEqual(ltr[0]);
   });
 });

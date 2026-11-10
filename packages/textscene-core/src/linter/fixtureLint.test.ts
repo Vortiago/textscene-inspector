@@ -54,6 +54,11 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason:
       'the fixture IS that shape: an autowrapped Label sized by its container with no custom_minimum_size, held so the height it reports can be measured against Godot',
   },
+  'unit-label3d-text-direction.tscn': {
+    rules: ['format:text_direction'],
+    reason:
+      'the row named Three sets text_direction to 3, which label_3d.cpp:705 takes and the hint does not list; the fixture measures that Godot shapes it as AUTO',
+  },
   'unit-instance-child.tscn': {
     rules: ['collisionobject3d-needs-collision-shape'],
     reason:

@@ -15,16 +15,20 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
+import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import {
   clampAutowrapMode,
+  infersRtl,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import {
   resolveButtonDrawState,
   pickButtonStyleBox,
   tintColor,
   layoutButtonContent,
+  buttonTextBufWidthPx,
 } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import { buttonLabelShape, buttonTextTheme, buttonIconColor } from './nativeSolver';
@@ -56,6 +60,7 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
   const hasText = text.length > 0;
   const { fontSizePx, color: baseFontColor } = textTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   // Pass 1, unwrapped: what the icon's own reservation is measured against. It is the
   // **solve handoff** the minimum-size solver calls too, so one shaping sizes both.
@@ -132,14 +137,22 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
   const drawableWidthPx = layoutButtonContent({
     ...contentInput,
     textNaturalSize: naturalSize(unwrapped),
+    isTextRtl: infersRtl(unwrapped),
   }).drawableSize.x;
   const layout: TextLayoutResult | null = wraps
-    ? buttonLabelShape(solveNode, theme, Math.ceil(Math.max(1, drawableWidthPx)))
+    ? buttonLabelShape(solveNode, theme, buttonTextBufWidthPx(drawableWidthPx))
     : unwrapped;
   const content = useMemo(
-    () => layoutButtonContent({ ...contentInput, textNaturalSize: naturalSize(layout) }),
+    () =>
+      layoutButtonContent({
+        ...contentInput,
+        textNaturalSize: naturalSize(layout),
+        isTextRtl: infersRtl(layout),
+      }),
     [contentInput, layout]
   );
+
+  const bidi = useControlBidiOptions(props, solveNode);
 
   return (
     <>
@@ -162,9 +175,12 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
         <ButtonLabel
           layout={layout}
           overrunBehavior={props.overrunBehavior}
+          bidi={bidi}
+          isWrapped={wraps}
           box={content.labelBox}
           fontSizePx={fontSizePx}
           tint={tintedFontColor}
+          outline={textOutline}
           clippingPlanes={clippingPlanes}
           renderOrder={renderOrder}
         />

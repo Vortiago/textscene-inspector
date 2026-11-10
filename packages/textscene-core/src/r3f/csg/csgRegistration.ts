@@ -21,6 +21,8 @@ export interface CsgGeometryContext extends SceneResources {
   loadedFont: LoadedFont;
   /** The theme and default font a shape's font lookup ends at. */
   projectFonts: ProjectFonts;
+  /** The project's `_get_locale()`, which a TextMesh with no `language` shapes in. */
+  locale: string;
 }
 
 /**

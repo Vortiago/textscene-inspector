@@ -12,7 +12,7 @@
     props it was compiled from change.
   - ADR-0031: the resource pipeline builds a `StandardMaterial3D` imperatively and
     complete, which exempts the `<primitive>` arm below.
-  - ADR-0030 and ADR-0064: the per-light cookie quad of the 2D shadow path, memoised on
+  - ADR-0030 and ADR-0066: the per-light cookie quad of the 2D shadow path, memoised on
     each input (its shadow `defines` included) and disposed on replacement, is a named
     imperative exemption.
   - ADR-0039 (one StandardMaterial3D derivation, two adapters) derives the bag this owner

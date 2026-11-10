@@ -95,6 +95,7 @@ function ButtonIcon({ item, texture, contentMargin, tint, rtl, renderOrder }: Bu
     iconNaturalSize: { x: GRAPH_EDIT_ICON_SIZE, y: GRAPH_EDIT_ICON_SIZE },
     hasText: false,
     textNaturalSize: { x: 0, y: 0 },
+    isTextRtl: false,
     rtl,
   });
   if (!layout.icon) return null;

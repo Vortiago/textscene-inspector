@@ -23,6 +23,7 @@ export { createCaptureContext, installStyle, paintedOutChromeCss } from './previ
 export {
   attachDiagnostics,
   clearDiagnostics,
+  describeFailedRequests,
   errorReport,
   loggedErrors,
 } from './preview/pageDiagnostics.mjs';
