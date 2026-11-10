@@ -191,8 +191,8 @@ interface ButtonContentLayout {
   /** The icon to draw, `null` for no icon or an `expand_icon` one with no room left. */
   icon: ButtonIconLayout | null;
   /**
-   * The size `button.cpp:349-405` takes off the label's box. It is negative when `expand_icon` leaves
-   * no room: `icon` is then `null`, and the text still moves by this much.
+   * The icon's size as `button.cpp:349-405` takes it off the label's box, where there is text and the
+   * icon is not centred on that axis. It is negative when `expand_icon` leaves no room: `icon` is then `null`.
    */
   iconReserve: Vector2 | null;
   text: ButtonTextLayout | null;
@@ -252,7 +252,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
   let drawableWidth = customElementSize.x;
   let drawableHeight = customElementSize.y;
 
-  let iconReserve: Vector2 | null = null;
+  let iconSize: Vector2 | null = null;
   if (iconNaturalSize && iconNaturalSize.x > 0 && iconNaturalSize.y > 0) {
     let size: Vector2 = iconNaturalSize;
     if (expandIcon) {
@@ -274,18 +274,18 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     }
     size = fitIconSize(size, iconMaxWidth);
     size = { x: Math.round(size.x), y: Math.round(size.y) };
-    iconReserve = size;
+    iconSize = size;
   }
 
   let iconLayout: ButtonIconLayout | null = null;
-  if (iconReserve) {
+  if (iconSize) {
     let iconX: number;
     switch (iconAlign) {
       case H_CENTER:
-        iconX = styleMargin.left + (customElementSize.x - iconReserve.x) / 2;
+        iconX = styleMargin.left + (customElementSize.x - iconSize.x) / 2;
         break;
       case H_RIGHT:
-        iconX = rectSize.x - styleMargin.right - iconReserve.x;
+        iconX = rectSize.x - styleMargin.right - iconSize.x;
         break;
       case H_LEFT:
       default:
@@ -295,10 +295,10 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     let iconY: number;
     switch (verticalIconAlignment) {
       case V_CENTER:
-        iconY = styleMargin.top + (customElementSize.y - iconReserve.y) / 2;
+        iconY = styleMargin.top + (customElementSize.y - iconSize.y) / 2;
         break;
       case V_BOTTOM:
-        iconY = rectSize.y - styleMargin.bottom - iconReserve.y;
+        iconY = rectSize.y - styleMargin.bottom - iconSize.y;
         break;
       case V_TOP:
       default:
@@ -309,13 +309,14 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     // The icon's reservation narrows the text box only when there is text, as
     // `if (!xl_text.is_empty())` gates it.
     if (hasText) {
-      if (iconAlign !== H_CENTER) drawableWidth -= iconReserve.x + hSeparation;
-      if (verticalIconAlignment !== V_CENTER) drawableHeight -= iconReserve.y;
+      if (iconAlign !== H_CENTER) drawableWidth -= iconSize.x + hSeparation;
+      if (verticalIconAlignment !== V_CENTER) drawableHeight -= iconSize.y;
     }
 
-    if (iconReserve.x > 0) {
+    // A zero or negative width draws nothing, but `drawableWidth` and the text offsets above keep its size.
+    if (iconSize.x > 0) {
       iconLayout = {
-        rect: { x: Math.floor(iconX), y: Math.floor(iconY), w: iconReserve.x, h: iconReserve.y },
+        rect: { x: Math.floor(iconX), y: Math.floor(iconY), w: iconSize.x, h: iconSize.y },
       };
     }
   }
@@ -323,7 +324,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
   let textLayout: ButtonTextLayout | null = null;
   if (hasText) {
     let boxLeftPx = styleMargin.left;
-    if (iconReserve && iconAlign === H_LEFT) {
+    if (iconSize && iconAlign === H_LEFT) {
       // Only a LEFT icon pushes the text right. A RIGHT or CENTER icon has
       // already narrowed `drawableWidth`.
       boxLeftPx += customElementSize.x - drawableWidth;
@@ -332,7 +333,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
       boxLeftPx + buttonTextAlignShiftPx(textNaturalSize.x, drawableWidth, textAlign, isTextRtl);
 
     let textOffsetY = centredTextTopPx(drawableHeight, textNaturalSize.y, styleMargin.top);
-    if (iconReserve && verticalIconAlignment === V_TOP) {
+    if (iconSize && verticalIconAlignment === V_TOP) {
       textOffsetY += customElementSize.y - drawableHeight;
     }
     textLayout = { offset: { x: textOffsetX, y: textOffsetY }, boxLeftPx };
@@ -346,7 +347,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
   };
   return {
     icon: iconLayout,
-    iconReserve,
+    iconReserve: iconSize,
     text: textLayout,
     labelBox,
     drawableSize: { x: drawableWidth, y: drawableHeight },

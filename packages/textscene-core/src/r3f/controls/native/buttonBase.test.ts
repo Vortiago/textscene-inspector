@@ -368,6 +368,44 @@ describe('layoutButtonContent: expand_icon with no room left', () => {
   });
 });
 
+describe('layoutButtonContent: an icon with no area to draw', () => {
+  const input = {
+    ...BASE_INPUT,
+    rectSize: { x: 56, y: 62 },
+    styleMargin: { left: 10, top: 8, right: 10, bottom: 8 },
+    textNaturalSize: { x: 36, y: 30 },
+    iconAlignment: HORIZONTAL_ALIGNMENT_LEFT,
+  };
+
+  it('draws no icon at exactly zero room, and reserves zero plus the separation (button.cpp:349-405)', () => {
+    // The box is 20 wide inside 10/10 margins and the text has no width, so w = 0 and iw = ih = 0.
+    const { icon, iconReserve, drawableSize } = layoutButtonContent({
+      ...input,
+      textNaturalSize: { x: 0, y: 30 },
+      hasText: true,
+      hSeparation: 0,
+      expandIcon: true,
+      iconNaturalSize: { x: 24, y: 24 },
+      verticalIconAlignment: VERTICAL_ALIGNMENT_TOP,
+      rectSize: { x: 20, y: 46 },
+    });
+    expect(iconReserve?.x).toBe(0);
+    expect(icon).toBeNull();
+    expect(drawableSize.x).toBe(0);
+  });
+
+  it('keeps a 1x0 icon (100x1 clamped by icon_max_width 1) and reserves its width and the separation', () => {
+    const { icon, iconReserve, drawableSize } = layoutButtonContent({
+      ...input,
+      iconMaxWidth: 1,
+      iconNaturalSize: { x: 100, y: 1 },
+    });
+    expect(iconReserve).toEqual({ x: 1, y: 0 });
+    expect(icon!.rect.w).toBe(1);
+    expect(drawableSize.x).toBe(36 - 1 - 4);
+  });
+});
+
 describe('layoutButtonContent: icon_max_width clamps the FINAL icon size', () => {
   it('clamps a non-expanding icon before it is positioned', () => {
     const { icon } = layoutButtonContent({

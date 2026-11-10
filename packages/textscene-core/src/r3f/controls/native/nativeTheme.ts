@@ -68,11 +68,11 @@ function lineEditStyleBox(
   contentMargin: { left: number; top: number; right: number; bottom: number },
   cornerRadius: number
 ): StyleBoxFlatData {
-  return {
+  return freezeStyleBox({
     ...flatStyleBox(bgColor, contentMargin, cornerRadius),
     borderColor,
     borderWidth: { left: 0, top: 0, right: 0, bottom: LINE_EDIT_BORDER_BOTTOM_WIDTH },
-  };
+  });
 }
 
 /** The focus outline's border width and expand margin before the theme scale (`default_theme.cpp:142-144`). */
