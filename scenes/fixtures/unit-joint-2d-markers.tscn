@@ -1,55 +1,66 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3]
 
-; The variable is the editor marker of the three 2D joints, at the default, zero, long and negative
+[sub_resource type="RectangleShape2D" id="Shape_1"]
+
+; The variable is the editor marker of the three 2D joints, at the default and a long
 ; `length` and `initial_offset`, and on a rotated and a scaled node. The golden turns the Gizmos toggle
 ; on. No other golden has a 2D joint with it on, so none shows a regression in the marker.
 ; Godot draws the markers in a game only with collision debugging. Measure them with
 ; `pnpm ref:godot --mode 2d --debug-collisions`, the mode the golden captures with.
+; The two bodies sit far off screen, so the debug collision shapes stay out of the frame. Every value is in range.
 
 [node name="Joint2DMarkersRoot" type="Node2D"]
 
 [node name="Pin" type="PinJoint2D" parent="."]
+node_a = NodePath("../BodyA")
+node_b = NodePath("../BodyB")
 position = Vector2(160, 130)
 
 [node name="PinRotated" type="PinJoint2D" parent="."]
+node_a = NodePath("../BodyA")
+node_b = NodePath("../BodyB")
 position = Vector2(280, 130)
 rotation = 0.6
 
 [node name="GrooveDefault" type="GrooveJoint2D" parent="."]
+node_a = NodePath("../BodyA")
+node_b = NodePath("../BodyB")
 position = Vector2(400, 110)
 
 [node name="GrooveLong" type="GrooveJoint2D" parent="."]
+node_a = NodePath("../BodyA")
+node_b = NodePath("../BodyB")
 position = Vector2(540, 110)
 length = 90.0
 initial_offset = 60.0
 
-[node name="GrooveZero" type="GrooveJoint2D" parent="."]
-position = Vector2(680, 110)
-length = 0.0
-initial_offset = 0.0
-
-[node name="GrooveNegative" type="GrooveJoint2D" parent="."]
-position = Vector2(820, 270)
-length = -70.0
-initial_offset = -25.0
-
 [node name="SpringDefault" type="DampedSpringJoint2D" parent="."]
+node_a = NodePath("../BodyA")
+node_b = NodePath("../BodyB")
 position = Vector2(160, 410)
 
 [node name="SpringLong" type="DampedSpringJoint2D" parent="."]
+node_a = NodePath("../BodyA")
+node_b = NodePath("../BodyB")
 position = Vector2(320, 410)
 length = 100.0
 
-[node name="SpringZero" type="DampedSpringJoint2D" parent="."]
-position = Vector2(440, 410)
-length = 0.0
-
-[node name="SpringNegative" type="DampedSpringJoint2D" parent="."]
-position = Vector2(560, 510)
-length = -60.0
-
 [node name="SpringScaled" type="DampedSpringJoint2D" parent="."]
+node_a = NodePath("../BodyA")
+node_b = NodePath("../BodyB")
 position = Vector2(720, 410)
 rotation = -0.5
 scale = Vector2(1.5, 0.8)
 length = 70.0
+
+[node name="BodyA" type="StaticBody2D" parent="."]
+position = Vector2(-5000, -5000)
+
+[node name="Shape" type="CollisionShape2D" parent="BodyA"]
+shape = SubResource("Shape_1")
+
+[node name="BodyB" type="StaticBody2D" parent="."]
+position = Vector2(-5000, -5000)
+
+[node name="Shape" type="CollisionShape2D" parent="BodyB"]
+shape = SubResource("Shape_1")

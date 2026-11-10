@@ -35,7 +35,7 @@ The lenient parser reads `length` and `initial_offset` on top of the Node2D tran
 
 ## Marker
 
-Every node draws a 20 px bar at 0 and at `length` and the line between them, in `Color(0.7, 0.6, 0, 0.5)` and 3 px wide. A 20 px bar at `initial_offset` follows, in `Color(0.8, 0.8, 0.9, 0.5)` and 5 px wide (`groove_joint_2d.cpp:46-49`). A zero or negative `length` and `initial_offset` draw where they say, with no clamp. The scene `unit-joint-2d-markers.tscn` holds the three joints' markers at several values.
+Every node draws a 20 px bar at 0 and at `length` and the line between them, in `Color(0.7, 0.6, 0, 0.5)` and 3 px wide. A 20 px bar at `initial_offset` follows, in `Color(0.8, 0.8, 0.9, 0.5)` and 5 px wide (`groove_joint_2d.cpp:46-49`). The setters store any value, so a zero or negative `length` and `initial_offset` draw where they say, with no clamp (`groove_joint_2d.cpp:63-75`). The inspector range of 1 to 65535 limits only the editor field. The scene `unit-joint-2d-markers.tscn` holds the three joints' markers at in-range values.
 
 ## Known limitations
 
