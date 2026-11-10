@@ -460,9 +460,9 @@ export function isPropertyOverrideHeading(heading: ParsedHeading): boolean {
 }
 
 /**
- * `PackedStringArray("a")`, `Array[String](["a"])` or `["a"]` as unescaped elements, or `null` if malformed. The
- * four string-array getters return `TypedArray<String>` (code_edit.cpp:2036, :2065, :2222, :956), so the serializer
- * writes `Array[String]` (core/variant/variant_parser.cpp:2341-2344). The packed spelling reads back too, and a bare
+ * `PackedStringArray("a")`, `Array[String](["a"])` or `["a"]` as unescaped elements, or `null` if malformed. A
+ * `TypedArray<String>` getter, such as CodeEdit's four (code_edit.cpp:2036, :2065, :2222, :956), makes the
+ * serializer write `Array[String]` (core/variant/variant_parser.cpp:2341-2344). The packed spelling reads back too, and a bare
  * `[…]` loads because `TypedArray<T>(const Array &)` converts element-wise (core/variant/typed_array.h:43-50).
  *
  * @canonical A String array literal's unescaped elements

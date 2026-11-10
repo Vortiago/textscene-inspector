@@ -43,7 +43,7 @@ import type { TscnNode } from '../../../../parser/types';
 import { lineEditDisplayText } from './displayText';
 import { LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import type { LineEditProperties } from './types';
-import type { Vector2 } from '../../../../godot/math/vector';
+import { type Vector2, vector2Max } from '../../../../godot/math/vector';
 import { type Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import {
@@ -266,10 +266,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const readOnlyBox = pickLineEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, 'read_only');
   const normalMargin = contentMarginSize(normalBox);
   const readOnlyMargin = contentMarginSize(readOnlyBox);
-  const styleMinSize = {
-    x: Math.max(normalMargin.x, readOnlyMargin.x),
-    y: Math.max(normalMargin.y, readOnlyMargin.y),
-  };
+  const styleMinSize = vector2Max(normalMargin, readOnlyMargin);
 
   const fontMetrics = resolveNodeFontMetrics(n, LINE_EDIT_THEME_FONT_KEY);
   const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx, 0, fontMetrics).x : 0;

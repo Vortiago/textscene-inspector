@@ -38,7 +38,7 @@ import {
 } from '../lineedit/nativeSolver';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SpinBoxProperties } from './types';
-import type { Vector2 } from '../../../../godot/math/vector';
+import { type Vector2, vector2Max } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
 
@@ -312,10 +312,7 @@ export const spinBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   const readOnlyBox: StyleBoxFlatData = pickLineEditStyleBox({}, ctx.theme.widgets.lineEdit, 'read_only');
   const normalMargin = contentMarginSize(normalBox);
   const readOnlyMargin = contentMarginSize(readOnlyBox);
-  const styleMinSize = {
-    x: Math.max(normalMargin.x, readOnlyMargin.x),
-    y: Math.max(normalMargin.y, readOnlyMargin.y),
-  };
+  const styleMinSize = vector2Max(normalMargin, readOnlyMargin);
 
   const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx, 0, fontMetrics).x : 0;
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);

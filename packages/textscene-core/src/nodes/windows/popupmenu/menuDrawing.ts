@@ -197,7 +197,8 @@ function itemRowDrawing(context: RowContext, row: MenuRow): RowDrawing {
 
 /**
  * The rows of the menu in view as `_draw_items` draws them, for an item control `width` wide and a scroll
- * area `viewHeight` tall. The gutter reads every row, so a row below the view only costs that read.
+ * area `viewHeight` tall. The gutter reads every row, so a row below the view only costs that read. Rows
+ * rise in `y`, so the result is a prefix of `rows` and each index pairs with the row at that index.
  */
 export function popupMenuDrawing(
   n: SolveNode,
