@@ -16,8 +16,7 @@ import { fileExtension } from '../fileExtension';
 import { resourceSliceRegistry } from '../sliceRegistration';
 
 function bytesParser(path: string): (bytes: ArrayBuffer) => ParsedResource | Promise<ParsedResource> {
-  const extension = fileExtension(path);
-  return (extension && resourceSliceRegistry.byExtension(extension)?.parseBytes) || parseBinaryResource;
+  return resourceSliceRegistry.byPath(path)?.parseBytes ?? parseBinaryResource;
 }
 
 export function createTresResourceProcessor(

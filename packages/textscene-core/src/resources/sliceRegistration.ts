@@ -99,19 +99,18 @@ export function registerGenericResourceSlice(
   registerResourceSlice({ slice, kind: 'godot-text', typeNames, busType: 'resource', declaresNoProperties });
 }
 
+function byPath(path: string): ResourceSliceRegistration | null {
+  const extension = fileExtension(path);
+  return (extension !== null && byExtension.get(extension)) || null;
+}
+
 export const resourceSliceRegistry = {
   byTypeName: (typeName: string): ResourceSliceRegistration | null => byTypeName.get(typeName) ?? null,
   byExtension: (extension: string): ResourceSliceRegistration | null => byExtension.get(extension) ?? null,
+  /** The slice claiming the path's extension, or null when no slice claims it. */
+  byPath,
   /** The slot the slice claiming the path's extension loads it on, or null when no slice claims it. */
-  busTypeOfPath: (path: string): ResourceBusType | null => {
-    const extension = fileExtension(path);
-    return (extension !== null && byExtension.get(extension)?.busType) || null;
-  },
-  /** How many leading bytes the slice claiming the path's extension reads, or undefined for the whole file. */
-  headBytesOfPath: (path: string): number | undefined => {
-    const extension = fileExtension(path);
-    return extension === null ? undefined : byExtension.get(extension)?.headBytes;
-  },
+  busTypeOfPath: (path: string): ResourceBusType | null => byPath(path)?.busType ?? null,
   /** Whether the slice claiming `busType` marks its values clone-per-consumer. */
   clonesPerConsumer: (busType: ResourceBusType): boolean =>
     all.some((r) => r.busType === busType && r.clonePerConsumer === true),
