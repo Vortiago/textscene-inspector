@@ -4,9 +4,11 @@ import {
   computeCanvasTextCanvasLayout,
   buildCanvasTextQuadArrays,
   createCanvasTextMaterial,
+  originPhase,
   paintSceneFontCanvas,
 } from './canvasTextPainter';
-import { withVariation } from './fontMetrics';
+import { getFontAscentPx, withVariation, type OpentypeCoordinates } from './fontMetrics';
+import type { RunShaping } from './glyphRun';
 import { shapeText } from './textLayout';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { patchedFragment } from '../../../testing/patchedFragment';
@@ -15,8 +17,11 @@ import { litPixelMaterial } from '../../../lighting2d/testing/litPixelMaterial';
 import { AutowrapMode, ContourPointTag } from '../../../../godot/text/textServerEnums';
 import type { GlyphContours } from './glyphContours';
 import type { SfntOutlines } from './sfntOutlines';
+import type { GlyphDrawer } from './glyphDrawer';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 const CANVAS_METRICS = createRuntimeFontMetrics({
+  hasGlyph: () => true,
   scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
   measureWidthUnits: (text) => text.length * 500,
   cssFontFamily: 'scene-font-test',
@@ -54,21 +59,182 @@ function contentOriginOnQuad(canvasLayout: ReturnType<typeof computeCanvasTextCa
 }
 
 describe('computeCanvasTextCanvasLayout', () => {
-  it('with no skew, pads only for anti-aliasing overshoot: canvas content area equals the layout box', () => {
+  // A glyph's ink can pass its pen box by a side bearing, as a `j` does left of the line start.
+  it('reaches one ascent and the pen snap past each end of the glyphs of a face that measures no ink, and keeps the content box at the quad origin', () => {
     const layout = layoutFor('AB');
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
-    expect(canvasLayout.canvasWidthPx).toBeCloseTo(layout.widthPx, 6);
-    expect(canvasLayout.offsetXPx).toBe(0);
+    const reachPx = layout.baselineOffsetPx;
+    const inkLeftPx = Math.floor(-reachPx - 2);
+    expect(canvasLayout.offsetXPx).toBe(-inkLeftPx);
+    expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx + reachPx + 1 - inkLeftPx));
+    expect(contentOriginOnQuad(canvasLayout).x).toBeCloseTo(0, 6);
+  });
+
+  it("reaches a face's own ascent where it passes the line's baseline offset", () => {
+    const layout = layoutFor('AB');
+    const lowBaseline = { ...layout, baselineOffsetPx: 1 };
+    const glyph = layout.lines[0]!.glyphs[0]!;
+    const inkLeftPx = Math.floor(-getFontAscentPx(glyph.fontMetrics, glyph.fontSizePx) - 2);
+    expect(computeCanvasTextCanvasLayout(lowBaseline, 0).offsetXPx).toBe(-inkLeftPx);
+  });
+
+  // A fallback face's run draws at the line's baseline, which the taller first face sets.
+  it("reaches the line's ascent past a glyph of a shorter fallback face", () => {
+    const shortFace = createRuntimeFontMetrics({
+      hasGlyph: (ch) => ch === '一',
+      scalars: { unitsPerEm: 1000, ascent: 100, descent: 100 },
+      measureWidthUnits: (text) => text.length * 1000,
+      cssFontFamily: 'short-fallback-test',
+    });
+    const firstFace = createRuntimeFontMetrics({
+      hasGlyph: (ch) => ch !== '一',
+      scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
+      measureWidthUnits: (text) => text.length * 500,
+      cssFontFamily: 'tall-first-face-test',
+    });
+    const layout = shapeText('A一', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      fontMetrics: { ...firstFace, fallbacks: [shortFace] },
+      lineSpacingPx: 0,
+    });
+    const line = layout.lines[0]!;
+    const fallbackGlyph = line.glyphs.find((glyph) => glyph.fontMetrics === shortFace)!;
+    const fallbackRun = { ...layout, lines: [{ ...line, glyphs: [fallbackGlyph] }] };
+    const inkLeftPx = Math.floor(fallbackGlyph.x - layout.baselineOffsetPx - 2);
+    const canvasLayout = computeCanvasTextCanvasLayout(fallbackRun, 0);
+    expect(canvasLayout.canvasWidthPx).toBe(
+      Math.ceil(fallbackGlyph.x + fallbackGlyph.advance + layout.baselineOffsetPx + 1 - inkLeftPx)
+    );
+  });
+
+  // A trimmed AUTO right-to-left fill draws past the trimmed width it reports (text_server.cpp:1744).
+  it('ends the raster past the glyphs, not the layout width', () => {
+    const layout = layoutFor('AB');
+    const line = layout.lines[0]!;
+    const narrowed = { ...layout, widthPx: 8, lines: [{ ...line, widthPx: 8 }] };
+    expect(computeCanvasTextCanvasLayout(narrowed, 0).canvasWidthPx).toBe(
+      computeCanvasTextCanvasLayout(layout, 0).canvasWidthPx
+    );
+  });
+
+  // A fallback face's own run starts where its first glyph is on the line (`faceLayouts.ts`).
+  it('starts the raster one ascent left of the first glyph of a run that starts mid-line', () => {
+    const layout = layoutFor('ABCDEFGH');
+    const line = layout.lines[0]!;
+    const firstIndex = line.glyphs.findIndex((glyph) => glyph.x > 2 * layout.baselineOffsetPx);
+    expect(firstIndex).toBeGreaterThan(0);
+    const shifted = { ...layout, lines: [{ ...line, glyphs: line.glyphs.slice(firstIndex) }] };
+    const reachPx = layout.baselineOffsetPx;
+    const inkLeftPx = Math.floor(line.glyphs[firstIndex]!.x - reachPx - 2);
+    const canvasLayout = computeCanvasTextCanvasLayout(shifted, 0);
+    expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx + reachPx + 1 - inkLeftPx));
+    expect(contentOriginOnQuad(canvasLayout).x).toBeCloseTo(0, 6);
+  });
+
+  it('reaches no further at a large line spacing, which moves no ink', () => {
+    const tight = computeCanvasTextCanvasLayout(layoutFor('AB', 0), 0.3);
+    const loose = computeCanvasTextCanvasLayout(layoutFor('AB', 2000), 0.3);
+    expect(loose.offsetXPx).toBe(tight.offsetXPx);
+    expect(loose.canvasWidthPx).toBe(tight.canvasWidthPx);
+  });
+
+  it("bounds the raster by a face's measured ink, with the pen box inside it", () => {
+    // A `j`-like glyph whose ink reaches 100 units left of its pen and 300 right, at 16 px over 1000 units.
+    const measured = createRuntimeFontMetrics({
+      hasGlyph: () => true,
+      scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
+      measureWidthUnits: (text) => text.length * 500,
+      measureInkUnits: () => ({ left: 100, right: 300 }),
+      cssFontFamily: 'scene-font-ink-test',
+    });
+    const layout = shapeText('jj', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      fontMetrics: measured,
+      lineSpacingPx: 0,
+    });
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
+    // 100 units at 16 px is 1.6 px left of the first pen, and the second glyph's pen box ends the ink.
+    // The pen snap and the hinting take 2 px on the left and 1 px on the right: floor(-3.6) is -4,
+    // and 16 + 1 + 4 is 21.
+    expect(canvasLayout.offsetXPx).toBe(4);
+    expect(canvasLayout.canvasWidthPx).toBe(21);
+  });
+
+  // `measureText` measures the default instance, which the outlines of another instance can pass.
+  it('reaches one ascent past the glyphs of a face drawn at an instance, whose measured ink is the default', () => {
+    const measured = createRuntimeFontMetrics({
+      hasGlyph: () => true,
+      scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
+      measureWidthUnits: (text) => text.length * 500,
+      measureInkUnits: () => ({ left: 0, right: 500 }),
+      cssFontFamily: 'scene-font-instance-ink-test',
+    });
+    const { outlines } = instanceOutlinesStub();
+    const layout = shapeText('jj', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      fontMetrics: withVariation(measured, { opentype: MONO_INSTANCE, outlines }),
+      lineSpacingPx: 0,
+    });
+    const reachPx = layout.baselineOffsetPx;
+    const inkLeftPx = Math.floor(-reachPx - 2);
+    expect(computeCanvasTextCanvasLayout(layout, 0).offsetXPx).toBe(-inkLeftPx);
+  });
+
+  // The rows above the baseline run up to the vertical pad, and shear furthest there. A stroke
+  // widens that pad past `CANVAS_TEXT_VERTICAL_PAD_PX`, so its top row shears further.
+  it('pads a sheared raster by the shear of its top row', () => {
+    const layout = layoutFor('AB');
+    const strokeWidthPx = 8;
+    const straight = computeCanvasTextCanvasLayout(layout, 0, strokeWidthPx);
+    const skewed = computeCanvasTextCanvasLayout(layout, 0.3, strokeWidthPx);
+    expect(skewed.offsetXPx - straight.offsetXPx).toBe(
+      Math.ceil(0.3 * (layout.baselineOffsetPx + straight.offsetYPx))
+    );
+  });
+
+  it('pads a sheared raster at a line spacing that takes the pitch below zero', () => {
+    const layout = layoutFor('AB', -100);
+    const straight = computeCanvasTextCanvasLayout(layout, 0);
+    expect(computeCanvasTextCanvasLayout(layout, 0.3).offsetXPx).toBeGreaterThan(straight.offsetXPx);
+  });
+
+  it('widens by the origin phase, which carries the content that far right of the quad', () => {
+    const layout = layoutFor('AB');
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0, 0, { x: 0.25, y: 0 });
+    const reachPx = layout.baselineOffsetPx;
+    const inkLeftPx = Math.floor(-reachPx - 2);
+    expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(layout.widthPx + reachPx + 1 - inkLeftPx + 0.25));
   });
 
   it('a nonzero skew widens the canvas symmetrically to fit the sheared ink, and offsets content by the same pad', () => {
     const layout = layoutFor('AB');
     const straight = computeCanvasTextCanvasLayout(layout, 0);
     const skewed = computeCanvasTextCanvasLayout(layout, 0.3);
-    expect(skewed.canvasWidthPx).toBeGreaterThan(straight.canvasWidthPx);
-    expect(skewed.offsetXPx).toBeGreaterThan(0);
+    const padPx = skewed.offsetXPx - straight.offsetXPx;
+    expect(padPx).toBeGreaterThan(0);
     // Symmetric: padding added equally left/right.
-    expect(skewed.canvasWidthPx - layout.widthPx).toBeCloseTo(2 * skewed.offsetXPx, 6);
+    expect(skewed.canvasWidthPx - straight.canvasWidthPx).toBe(2 * padPx);
+  });
+
+  // A fractional pad puts each texel between two screen pixels, and the linear filter then thins
+  // every edge: an emboldened 32 px run drew 3% less ink than Godot.
+  it('pads by whole pixels, so each texel of the raster lands on a screen pixel', () => {
+    const emboldened = shapeText('AB', {
+      fontSizePx: 32,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      fontMetrics: withVariation(CANVAS_METRICS, { embolden: 1.8 }),
+      lineSpacingPx: 3,
+    });
+    const canvasLayout = computeCanvasTextCanvasLayout(emboldened, 0.3, 1.5);
+    expect(Number.isInteger(canvasLayout.offsetXPx)).toBe(true);
+    expect(Number.isInteger(canvasLayout.offsetYPx)).toBe(true);
   });
 
   it('canvas height always exceeds the layout height by the same fixed vertical pad, independent of skew', () => {
@@ -95,7 +261,12 @@ interface Call {
   shear: number;
 }
 
-/** The grown outline of a glyph: a triangle, whose points the tests read back from the path. */
+/** The alpha at raster pixel `(x, y)` of the image the paint put, 0 where it put none. */
+function alphaAt(raster: ImageData | null, x: number, y: number): number {
+  return raster ? raster.data[(y * raster.width + x) * 4 + 3]! : 0;
+}
+
+/** The grown outline of a glyph: a triangle 4 px wide and 6 px tall, its base on the baseline. */
 const GROWN_TRIANGLE: GlyphContours = {
   points: [
     { x: 1, y: 0, tag: ContourPointTag.ON },
@@ -118,8 +289,21 @@ function outlinesStub(glyphIndex = 7) {
 function paintRecording(
   layout: ReturnType<typeof layoutFor>,
   strokeWidthPx: number,
-  { skew = 0, outlines = null }: { skew?: number; outlines?: SfntOutlines | null } = {}
+  {
+    skew = 0,
+    outlines = null,
+    glyphDrawer,
+    originPhasePx,
+    fontSizePx = 16,
+  }: {
+    fontSizePx?: number;
+    skew?: number;
+    outlines?: SfntOutlines | null;
+    glyphDrawer?: GlyphDrawer;
+    originPhasePx?: Vector2;
+  } = {}
 ) {
+  const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
   const calls: Call[] = [];
   let matrix = new DOMMatrix();
   const saved: DOMMatrix[] = [];
@@ -144,18 +328,27 @@ function paintRecording(
     closePath: record('closePath'),
     fill: record('fill'),
     stroke: record('stroke'),
+    canvas: { width: canvasLayout.canvasWidthPx, height: canvasLayout.canvasHeightPx },
+    getImageData: vi.fn((_x: number, _y: number, width: number, height: number) => ({
+      data: new Uint8ClampedArray(width * height * 4),
+      width,
+      height,
+    })),
   };
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never);
-  const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
-  paintSceneFontCanvas(
+  const raster = paintSceneFontCanvas(
     carrying(layout, skew, outlines),
-    16,
+    fontSizePx,
     { r: 1, g: 1, b: 1, a: 1 },
     skew,
     canvasLayout,
-    strokeWidthPx
+    {
+      strokeWidthPx,
+      glyphDrawer,
+      originPhasePx,
+    }
   );
-  return { calls, canvasLayout };
+  return { calls, canvasLayout, raster, getImageData: ctx.getImageData };
 }
 
 function boldLayoutFor(text: string, embolden: number) {
@@ -171,27 +364,114 @@ function boldLayoutFor(text: string, embolden: number) {
 // `FT_Outline_Embolden` grows the outline by `embolden * size / 16` px and anchors it at the left
 // and bottom (`text_server_adv.cpp:1314-1315`): half the growth on each side, then a shift of half.
 describe('embolden padding', () => {
+  // The growth is 1.2 * 16 / 16 = 1.2 px, which the pad rounds up to 2 whole pixels.
   it('pads the raster by the outline growth on every side, so the grown ink stays inside it', () => {
     const plain = computeCanvasTextCanvasLayout(layoutFor('AB', 0), 0);
     const bold = computeCanvasTextCanvasLayout(boldLayoutFor('AB', 1.2), 0);
-    const growthPx = (1.2 * 16) / 16;
-    expect(bold.offsetXPx).toBeCloseTo(plain.offsetXPx + growthPx, 10);
-    expect(bold.offsetYPx).toBeCloseTo(plain.offsetYPx + growthPx, 10);
+    expect(bold.offsetXPx).toBe(plain.offsetXPx + 2);
+    expect(bold.offsetYPx).toBe(plain.offsetYPx + 2);
   });
 
   it('pads by the largest growth when two glyphs differ', () => {
+    const plain = computeCanvasTextCanvasLayout(layoutFor('AB', 0), 0);
     const layout = layoutFor('AB', 0);
     layout.lines[0]!.glyphs[1]!.emboldenGrowthPx = 2;
-    expect(computeCanvasTextCanvasLayout(layout, 0).offsetXPx).toBeCloseTo(2, 10);
+    expect(computeCanvasTextCanvasLayout(layout, 0).offsetXPx).toBe(plain.offsetXPx + 2);
+  });
+});
+
+describe('paintSceneFontCanvas — pen', () => {
+  /** A two-glyph line whose second pen sits between quarter pixels, as a justified line can put it. */
+  function fractionalPenLayout() {
+    const layout = layoutFor('AB', 0);
+    layout.lines[0]!.glyphs[1]!.x = 10.6;
+    return layout;
+  }
+
+  it('draws a glyph at the quarter pixel a 16 px canvas item rounds its pen to', () => {
+    const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0);
+    expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 10.5);
+  });
+
+  it('rounds the pen where it sits in the canvas item, past the whole pixel the quad starts on', () => {
+    const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, {
+      originPhasePx: { x: 0.3, y: 0 },
+    });
+    // 0.3 + 10.6 = 10.9 rounds to the quarter step 11, and the quad starts at the floored origin 0.
+    expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 11);
+  });
+
+  it('shears a raised glyph about its own origin, so the line shear does not move its pen', () => {
+    const penOfSecondGlyph = (yOffset: number) => {
+      const layout = layoutFor('AB', 0);
+      layout.lines[0]!.glyphs[1]!.yOffset = yOffset;
+      const { calls, canvasLayout } = paintRecording(layout, 0, { skew: 0.3 });
+      return (calls.filter((c) => c.op === 'fillText')[1]!.args[1] as number) - canvasLayout.offsetXPx;
+    };
+    // Each glyph shears about its own baseline, so a raised glyph keeps its pen.
+    expect(penOfSecondGlyph(-8)).toBeCloseTo(penOfSecondGlyph(0), 9);
+  });
+
+  // `text_server_adv.cpp:4082-4084`: a glyph at scale 1 draws at the floored `cpos.y`.
+  it('puts the baseline on the whole pixel a canvas item floors it to, its run origin included', () => {
+    const layout = layoutFor('A\nB', 0.5);
+    const { calls, canvasLayout } = paintRecording(layout, 0, { originPhasePx: { x: 0, y: 0.6 } });
+    // The second baseline sits 17.5 + 13 px down, which the origin carries to 31.1 and the floor to 31.
+    expect(layout.linePitchPx + layout.baselineOffsetPx).toBeCloseTo(30.5, 9);
+    expect(calls.filter((c) => c.op === 'fillText')[1]!.args[2]).toBe(canvasLayout.offsetYPx + 31);
+  });
+
+  // Godot's `int64_t` size has no fraction, so a fractional one draws at `scale != 1.0` (`canvasGlyphPenXPx`).
+  it('keeps the baseline of a fractional font size, which draws off the scale-1 branch', () => {
+    const layout = layoutFor('A\nB', 0.5);
+    const { calls, canvasLayout } = paintRecording(layout, 0, {
+      fontSizePx: 15.5,
+      originPhasePx: { x: 0, y: 0.6 },
+    });
+    expect(calls.filter((c) => c.op === 'fillText')[1]!.args[2]).toBeCloseTo(
+      canvasLayout.offsetYPx + 30.5,
+      9
+    );
+  });
+
+  it('keeps the pen of a Label3D, whose mesh places each glyph where it is', () => {
+    const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, {
+      glyphDrawer: 'label3D',
+      originPhasePx: { x: 0.3, y: 0.6 },
+    });
+    expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 10.6);
+  });
+
+  it('keeps the baseline of a Label3D', () => {
+    const layout = fractionalPenLayout();
+    const { calls, canvasLayout } = paintRecording(layout, 0, {
+      glyphDrawer: 'label3D',
+      originPhasePx: { x: 0.3, y: 0.6 },
+    });
+    expect(calls.filter((c) => c.op === 'fillText')[0]!.args[2]).toBe(
+      canvasLayout.offsetYPx + layout.baselineOffsetPx
+    );
   });
 });
 
 describe('paintSceneFontCanvas — embolden', () => {
   afterEach(() => vi.restoreAllMocks());
 
+  it('rasterises on the CPU, whose exact-area coverage FreeType shares, not the GPU path rasteriser', () => {
+    paintRecording(layoutFor('A', 0), 0);
+    expect(HTMLCanvasElement.prototype.getContext).toHaveBeenCalledWith('2d', { willReadFrequently: true });
+  });
+
   it('draws a plain glyph with one fill and no stroke', () => {
     const { calls } = paintRecording(layoutFor('A', 0), 0);
     expect(calls.map((c) => c.op)).toEqual(['fillText']);
+  });
+
+  it('leaves a character the font lacks to its hex-code box, so no host font draws it', () => {
+    const layout = layoutFor('AB', 0);
+    layout.lines[0]!.glyphs[1]!.controlCodepoint = 0x1f600;
+    const { calls } = paintRecording(layout, 0);
+    expect(calls.filter((c) => c.op === 'fillText').map((c) => c.args[0])).toEqual(['A']);
   });
 
   it('draws a bold glyph filled and stroked by the growth, shifted right and up by half of it', () => {
@@ -215,19 +495,14 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
   it('fills the grown outline of a bold glyph from its pen, in place of the text', () => {
     const layout = boldLayoutFor('A', 1.2);
     const { outlines, glyphContours } = outlinesStub();
-    const { calls, canvasLayout } = paintRecording(layout, 0, { skew: 0, outlines });
+    const { raster, calls, canvasLayout } = paintRecording(layout, 0, { skew: 0, outlines });
+    const penX = canvasLayout.offsetXPx;
     const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
 
     expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 1.2, skew: 0 });
-    expect(calls.map((call) => call.op)).toEqual([
-      'beginPath',
-      'moveTo',
-      'lineTo',
-      'lineTo',
-      'closePath',
-      'fill',
-    ]);
-    expect(calls[1]!.args).toEqual([canvasLayout.offsetXPx + 1, baselineY]);
+    expect(calls).toEqual([]);
+    expect(alphaAt(raster, penX + 3, baselineY - 3)).toBe(255);
+    expect(alphaAt(raster, penX, baselineY - 1)).toBe(0);
   });
 
   // A negative embolden shrinks the outline (`FT_Outline_Embolden`); a stroke of a negative width cannot.
@@ -236,7 +511,7 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
     const { calls } = paintRecording(boldLayoutFor('A', -0.5), 0, { skew: 0, outlines });
 
     expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: -0.5, skew: 0 });
-    expect(calls.at(-1)!.op).toBe('fill');
+    expect(calls).toEqual([]);
   });
 
   it('fills a bold and sheared glyph by one outline that carries both, under the identity transform', () => {
@@ -244,7 +519,7 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
     const { calls } = paintRecording(boldLayoutFor('A', 1.2), 0, { skew: 0.3, outlines });
 
     expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 1.2, skew: 0.3 });
-    expect(calls.at(-1)!.op).toBe('fill');
+    expect(calls).toEqual([]);
     expect(calls.every((call) => call.shear === 0)).toBe(true);
   });
 
@@ -256,61 +531,65 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
     expect(calls.every((call) => Math.abs(call.shear + 0.3) < 1e-9)).toBe(true);
   });
 
-  it('fills the text of a plain glyph, which has no grown outline to follow', () => {
-    const { outlines } = outlinesStub();
-    const { calls } = paintRecording(layoutFor('A', 0), 0, { skew: 0, outlines });
+  // Godot fills the hinted outline of every glyph through FreeType (`text_server_adv.cpp:1360-1373`).
+  it('fills the outline of a plain glyph from its pen, in place of the text', () => {
+    const layout = layoutFor('A', 0);
+    const { outlines, glyphContours } = outlinesStub();
+    const { raster, calls, canvasLayout } = paintRecording(layout, 0, { skew: 0, outlines });
+    const penX = canvasLayout.offsetXPx;
+    const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
 
-    expect(calls.map((call) => call.op)).toEqual(['fillText']);
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0 });
+    expect(calls).toEqual([]);
+    expect(alphaAt(raster, penX + 3, baselineY - 3)).toBe(255);
+    expect(alphaAt(raster, penX + 3, baselineY + 1)).toBe(0);
   });
 
-  it('fills the text of a sheared glyph in the sheared space, as a shear alone leaves the fill be', () => {
+  it('reads no pixel back from the canvas where every glyph draws from its bitmap', () => {
     const { outlines } = outlinesStub();
+    const { getImageData } = paintRecording(layoutFor('A', 0), 0, { skew: 0, outlines });
+    expect(getImageData).not.toHaveBeenCalled();
+  });
+
+  it('reads the canvas back where a glyph draws as text', () => {
+    const { getImageData } = paintRecording(layoutFor('A', 0), 0);
+    expect(getImageData).toHaveBeenCalledOnce();
+  });
+
+  it('fills the sheared outline of a sheared glyph under the identity transform', () => {
+    const { outlines, glyphContours } = outlinesStub();
     const { calls } = paintRecording(layoutFor('A', 0), 0, { skew: 0.3, outlines });
 
-    expect(calls.map((call) => call.op)).toEqual(['fillText']);
-    expect(calls[0]!.shear).toBeCloseTo(-0.3, 10);
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0.3 });
+    expect(calls).toEqual([]);
+    expect(calls.every((call) => call.shear === 0)).toBe(true);
   });
 });
 
 describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('strokes a plain glyph once, centred on its contour at its pen', () => {
+  // Godot strokes the hinted outline of every glyph (`text_server_adv.cpp:1376-1393`), a ring the
+  // radius each side of the contour: 2 px for a 4 px stroke.
+  it('strokes the outline of a plain glyph into a ring round its contour at its pen', () => {
     const layout = layoutFor('A', 0);
     const { outlines } = outlinesStub();
-    const { calls, canvasLayout } = paintRecording(layout, 4, { outlines });
+    const { raster, calls, canvasLayout } = paintRecording(layout, 4, { outlines });
+    const penX = canvasLayout.offsetXPx;
+    const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
 
-    expect(calls).toEqual([
-      {
-        op: 'strokeText',
-        args: ['A', canvasLayout.offsetXPx, canvasLayout.offsetYPx + layout.baselineOffsetPx],
-        lineWidth: 4,
-        shear: 0,
-      },
-    ]);
+    expect(calls).toEqual([]);
+    expect(alphaAt(raster, penX + 3, baselineY + 1)).toBe(255);
+    expect(alphaAt(raster, penX + 3, baselineY + 2)).toBe(0);
   });
 
-  // FreeType strokes the emboldened contour (`text_server_adv.cpp:1314-1315`, then `:1383-1390`),
-  // which `FT_Outline_Embolden` has already shifted right and up.
-  it('strokes the grown outline of a bold glyph from its pen, in place of the text', () => {
-    const layout = boldLayoutFor('A', 1.2);
+  // FreeType strokes the emboldened contour (`text_server_adv.cpp:1314-1315`, then `:1383-1390`).
+  it('strokes the grown outline of a bold glyph, in place of the text', () => {
     const { outlines, glyphContours } = outlinesStub(7);
-    const { calls, canvasLayout } = paintRecording(layout, 4, { outlines });
-    const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
-    const penX = canvasLayout.offsetXPx;
+    const { calls } = paintRecording(boldLayoutFor('A', 1.2), 4, { outlines });
 
     expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 1.2, skew: 0 });
-    expect(calls.map((call) => call.op)).toEqual([
-      'beginPath',
-      'moveTo',
-      'lineTo',
-      'lineTo',
-      'closePath',
-      'stroke',
-    ]);
-    expect(calls[1]!.args).toEqual([penX + 1, baselineY]);
-    expect(calls[3]!.args).toEqual([penX + 3, baselineY - 6]);
-    expect(calls.at(-1)!.lineWidth).toBe(4);
+    expect(calls).toEqual([]);
   });
 
   it('grows the outline of a repeated character once for the whole paint', () => {
@@ -328,7 +607,7 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
     const { calls } = paintRecording(layoutFor('A', 0), 4, { skew: 0.3, outlines });
 
     expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0.3 });
-    expect(calls.map((call) => call.op)).toContain('stroke');
+    expect(calls).toEqual([]);
     expect(calls.every((call) => call.shear === 0)).toBe(true);
   });
 
@@ -369,6 +648,67 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
   });
 });
 
+/** `MONO` at 1: Recursive's monospace instance. */
+const MONO_INSTANCE: OpentypeCoordinates = new Map([[1297043023, 1]]);
+
+/** Outlines whose axis values draw an instance other than the default where `drawsInstance` answers so. */
+function variableOutlinesStub(drawsInstance: () => boolean) {
+  const { outlines, glyphContours } = outlinesStub();
+  return { outlines: { ...outlines, drawsInstance } satisfies SfntOutlines, glyphContours };
+}
+
+const instanceOutlinesStub = () => variableOutlinesStub(() => true);
+const defaultInstanceOutlinesStub = () => variableOutlinesStub(() => false);
+
+/** `text` shaped against the canvas face at `MONO_INSTANCE`, which carries `outlines` as the font loader hands it to a run. */
+function instanceLayoutFor(text: string, outlines: SfntOutlines) {
+  return shapeText(text, {
+    fontSizePx: 16,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    fontMetrics: withVariation(CANVAS_METRICS, { opentype: MONO_INSTANCE, outlines }),
+    lineSpacingPx: 0,
+  });
+}
+
+// FreeType draws a glyph at the coordinates set on the face (`text_server_adv.cpp:1915-1950`), which
+// `fillText` cannot: canvas text has no font variation settings.
+describe('paintSceneFontCanvas — a variable font at an instance', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  // Godot loads the glyph at the axis values of the face's `variation_opentype` (`text_server_adv.cpp:1260-1268`).
+  it('fills the outline of a glyph at a non-default instance, in place of the text', () => {
+    const { outlines, glyphContours } = instanceOutlinesStub();
+    const { calls } = paintRecording(instanceLayoutFor('A', outlines), 0);
+
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0, opentype: MONO_INSTANCE });
+    expect(calls).toEqual([]);
+  });
+
+  it('strokes the ring of the outline at a non-default instance', () => {
+    const { outlines, glyphContours } = instanceOutlinesStub();
+    const { calls } = paintRecording(instanceLayoutFor('A', outlines), 4);
+
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0, opentype: MONO_INSTANCE });
+    expect(calls).toEqual([]);
+  });
+
+  it('reads the default glyph where the axis values draw the default instance', () => {
+    const { outlines, glyphContours } = defaultInstanceOutlinesStub();
+    paintRecording(instanceLayoutFor('A', outlines), 0);
+
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0, opentype: undefined });
+  });
+
+  it('fills the text of a glyph the font has no outline for at an instance', () => {
+    const { outlines } = instanceOutlinesStub();
+    const empty: SfntOutlines = { ...outlines, glyphContours: () => null };
+    const { calls } = paintRecording(instanceLayoutFor('A', empty), 0);
+
+    expect(calls.map((call) => call.op)).toEqual(['fillText']);
+  });
+});
+
 describe('the outline surface overlays the fill surface exactly', () => {
   // Label3D draws a stroked outline (`label_3d.cpp:610-615`) and the fill from one
   // layout, and they line up despite the stroke padding. Fractional line spacing
@@ -393,6 +733,12 @@ describe('the outline surface overlays the fill surface exactly', () => {
   });
 });
 
+describe('originPhase', () => {
+  it('measures a negative place from the whole pixel below it, where Godot floors it', () => {
+    expect(originPhase({ x: -0.25, y: 2.75 })).toEqual({ x: 0.75, y: 0.75 });
+  });
+});
+
 describe('buildCanvasTextQuadArrays', () => {
   it('emits exactly one quad (4 verts, 6 indices) regardless of glyph count', () => {
     const layout = layoutFor('Hello World');
@@ -413,10 +759,17 @@ describe('buildCanvasTextQuadArrays', () => {
     const trX = arrays.positions[3]!;
     const blY = arrays.positions[2 * 3 + 1]!;
     expect(tlX).toBeCloseTo(-canvasLayout.offsetXPx, 6);
-    expect(trX).toBeCloseTo(layout.widthPx + canvasLayout.offsetXPx, 6);
+    expect(trX).toBeCloseTo(canvasLayout.canvasWidthPx - canvasLayout.offsetXPx, 6);
     // Y is negated (three-local Y-up); top edge y = -(-offsetYPx) = offsetYPx (above the content box).
     expect(tlY).toBeCloseTo(canvasLayout.offsetYPx, 6);
     expect(blY).toBeCloseTo(-(canvasLayout.canvasHeightPx - canvasLayout.offsetYPx), 6);
+  });
+
+  it('moves back to the whole pixel at or before a fractional item origin, so each texel lands on a pixel', () => {
+    const canvasLayout = computeCanvasTextCanvasLayout(layoutFor('AB'), 0);
+    const arrays = buildCanvasTextQuadArrays(canvasLayout, { x: 0.25, y: 0.75 });
+    expect(arrays.positions[0]).toBeCloseTo(-canvasLayout.offsetXPx - 0.25, 6);
+    expect(arrays.positions[1]).toBeCloseTo(canvasLayout.offsetYPx + 0.75, 6);
   });
 
   it('UVs cover the full [0,1] texture with flipY convention (top edge v=1)', () => {
@@ -523,4 +876,79 @@ describe('createCanvasTextMaterial', () => {
       expect(mat.defines).toBeUndefined();
     }
   );
+});
+
+describe('paintSceneFontCanvas — the glyphs a run shapes into', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const FI_LIGATURE = 9;
+  const SWAPPED_L = 11;
+  /** A face that shapes `fi` as one ligature glyph and `l` as a glyph of its own, and every other character by `cmap`. */
+  const shaping: RunShaping = (chars) =>
+    chars.join('') === 'fi'
+      ? [
+          {
+            start: 0,
+            end: 2,
+            glyphs: [{ glyph: FI_LIGATURE, char: 'fi', isMark: false, advanceUnits: 600 }],
+          },
+        ]
+      : chars.map((char, i) => ({
+          start: i,
+          end: i + 1,
+          glyphs: [
+            {
+              glyph: char === 'l' ? SWAPPED_L : 1,
+              char,
+              isMark: false,
+              advanceUnits: 500,
+            },
+          ],
+        }));
+  const shapedMetrics = () =>
+    createRuntimeFontMetrics({
+      hasGlyph: () => true,
+      scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
+      measureWidthUnits: (text) => text.length * 500,
+      cssFontFamily: 'scene-font-test',
+      glyphs: { shaping },
+    });
+  const shapedLayout = (text: string) =>
+    shapeText(text, {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      fontMetrics: shapedMetrics(),
+      lineSpacingPx: 0,
+    });
+
+  it('draws the bitmap of the ligature glyph, in place of the text of its characters', () => {
+    const { outlines, glyphContours } = outlinesStub();
+    const { calls } = paintRecording(shapedLayout('fi'), 0, { outlines });
+
+    expect(glyphContours).toHaveBeenCalledWith(FI_LIGATURE, 16, { embolden: 0, skew: 0 });
+    expect(calls).toEqual([]);
+  });
+
+  it('fills the text of the ligature where the face has no outlines, which the canvas shapes alike', () => {
+    const { calls } = paintRecording(shapedLayout('fi'), 0);
+
+    expect(calls.map((call) => [call.op, call.args[0]])).toEqual([['fillText', 'fi']]);
+  });
+
+  it('draws the bitmap of a swapped glyph, not of the glyph its character maps to', () => {
+    const { outlines, glyphContours } = outlinesStub();
+    paintRecording(shapedLayout('l'), 0, { outlines });
+
+    expect(glyphContours).toHaveBeenCalledWith(SWAPPED_L, 16, { embolden: 0, skew: 0 });
+    expect(glyphContours).not.toHaveBeenCalledWith(7, 16, expect.anything());
+  });
+
+  it('draws a glyph its x offset past its pen', () => {
+    const layout = layoutFor('A', 0);
+    layout.lines[0]!.glyphs[0]!.xOffset = -1;
+    const { calls, canvasLayout } = paintRecording(layout, 0);
+
+    expect(calls[0]!.args[1]).toBe(canvasLayout.offsetXPx - 1);
+  });
 });

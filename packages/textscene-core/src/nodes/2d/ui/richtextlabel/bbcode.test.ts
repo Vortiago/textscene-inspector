@@ -10,6 +10,7 @@ import {
   parseBBCodeRuns,
   resolveBBColor,
   type ParsedImgTag,
+  type ParsedRuleTag,
 } from './bbcode';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
@@ -62,7 +63,7 @@ describe('parseBBCodeRuns', () => {
     // `[wave]` is a real `rich_text_label.cpp:6412` tag: Godot consumes it, and
     // `get_parsed_text()` is "keep".
     const runs = parseBBCodeRuns('[wave amp=50]keep[/wave]');
-    expect(runs).toEqual([{ text: 'keep', tags: [{ name: 'wave' }] }]);
+    expect(runs).toEqual([{ text: 'keep', tags: [{ name: 'wave', options: new Map([['amp', '50']]) }] }]);
   });
 
   it('renders a tag Godot does NOT recognise as literal text, brackets and all', () => {
@@ -84,9 +85,14 @@ describe('parseBBCodeRuns', () => {
     ]);
   });
 
-  it('lowercases tag names', () => {
-    const runs = parseBBCodeRuns('[B]x[/B]');
-    expect(runs[0]!.tags).toEqual([{ name: 'b' }]);
+  it('draws an upper-case tag as text, as Godot compares tag names exactly', () => {
+    // `rich_text_label.cpp:5452`: `tag == "b"`, so `[B]` is no tag.
+    expect(parseBBCodeRuns('[B]x[/B]')).toEqual([{ text: '[B]x[/B]', tags: [] }]);
+  });
+
+  it('draws a tag whose name a tab follows as text, as only a space starts its options', () => {
+    // `rich_text_label.cpp:5358`: `_split_unquoted(tag, ' ')`, so `b\tx` is the whole name.
+    expect(parseBBCodeRuns('[b\tx]y')).toEqual([{ text: '[b\tx]y', tags: [] }]);
   });
 
   it('emits no run for text between two adjacent tags', () => {
@@ -148,10 +154,6 @@ describe('parseBBCodeRuns', () => {
       expect(parseBBCodeRuns('[lrm][rlm][zwnj][shy]')).toEqual([
         { text: '\u200e\u200f\u200c\u00ad', tags: [] },
       ]);
-    });
-
-    it('consumes [hr] without opening it — `:5955` draws a rule and never pushes', () => {
-      expect(parseBBCodeRuns('a[hr]b')).toEqual([{ text: 'ab', tags: [] }]);
     });
 
     it('still opens [p] and [img], which DO push (`:5746`, `:5992`)', () => {
@@ -360,5 +362,248 @@ describe('resolveBBColor', () => {
 
   it("falls back for an unrecognised name (Color::from_string's own fallback contract, color.cpp:450-456), not white", () => {
     expect(resolveBBColor('not-a-real-color-name', FALLBACK)).toEqual(FALLBACK);
+  });
+});
+
+describe('parseBBCodeRuns paragraph options', () => {
+  it('keeps the space-separated options of a tag, unquoted (`rich_text_label.cpp:5357-5382`)', () => {
+    const [run] = parseBBCodeRuns('[p dir=rtl lang="he"]x[/p]');
+    expect(run!.tags[0]!.options).toEqual(
+      new Map([
+        ['dir', 'rtl'],
+        ['lang', 'he'],
+      ])
+    );
+  });
+
+  it('gives a bare tag no options', () => {
+    const [run] = parseBBCodeRuns('[p]x[/p]');
+    expect(run!.tags[0]!.options).toBeUndefined();
+  });
+});
+
+// `push_paragraph` adds its item with `p_ensure_newline` (`rich_text_label.cpp:4718,4096-4103`): a line
+// that already holds a text, an image or a non-styling item ends there.
+describe('parseBBCodeRuns paragraph breaks', () => {
+  it('ends the line before a paragraph tag that follows text', () => {
+    expect(parseBBCodeRuns('a[p]b[/p]').map((run) => run.text)).toEqual(['a\n', 'b']);
+  });
+
+  it('ends the line between two paragraphs', () => {
+    expect(parseBBCodeRuns('[center]a[/center][right]b[/right]').map((run) => run.text)).toEqual([
+      'a',
+      '\n',
+      'b',
+    ]);
+  });
+
+  it('adds no break at the start of the text or after a newline', () => {
+    expect(parseBBCodeRuns('[p]a[/p]\n[p]b[/p]').map((run) => run.text)).toEqual(['a', '\n', 'b']);
+  });
+
+  it('adds no break after a styling tag alone (`_find_layout_subitem`, `:3712-3727`)', () => {
+    expect(parseBBCodeRuns('[b][p]x[/p][/b]').map((run) => run.text)).toEqual(['x']);
+  });
+
+  it.each(['[p][/p]', '[font_size=30][/font_size]', '[indent][/indent]', '[url=x][/url]', '[wave][/wave]'])(
+    'ends the line of %s with a break of no height, since the empty item counts (`:4097-4104`)',
+    (empty) => {
+      const runs = parseBBCodeRuns(`${empty}[p]x[/p]`);
+      expect(runs.map((run) => run.text)).toEqual(['\n', 'x']);
+      expect(runs[0]!.zeroHeightBreak).toBe(true);
+      expect(runs[0]!.implicitBreaks).toEqual([0]);
+    }
+  );
+
+  it('gives a real break, not one of no height, to a line that holds text', () => {
+    expect(parseBBCodeRuns('a[p]x[/p]')[0]!.zeroHeightBreak).toBeUndefined();
+  });
+
+  it('still ends a line that holds text before an empty tag', () => {
+    expect(parseBBCodeRuns('a[font_size=30][/font_size][p]x[/p]').map((run) => run.text)).toEqual([
+      'a\n',
+      'x',
+    ]);
+  });
+
+  it('ends a line that holds only a list item, which draws its bullet (measured, Godot 4.6.3)', () => {
+    expect(parseBBCodeRuns('[ul][/ul][p]x[/p]').map((run) => run.text)).toEqual(['\n', 'x']);
+  });
+
+  it('adds no break after an [img] with no path, which adds no item (`:6145`)', () => {
+    expect(parseBBCodeRuns('[img][/img][p]x[/p]').map((run) => run.text)).toEqual(['x']);
+  });
+});
+
+// `push_paragraph`'s new line is a `Line`, not an `ITEM_NEWLINE`, so Godot counts no character for it
+// (`rich_text_label.cpp:4097-4103,4089-4091`), unlike a newline in the text.
+describe('parseBBCodeRuns implicit breaks', () => {
+  it('marks the newline a paragraph tag adds after text, and not one the text holds', () => {
+    expect(parseBBCodeRuns('a[p]b[/p]')[0]!.implicitBreaks).toEqual([1]);
+    expect(parseBBCodeRuns('a\n[p]b[/p]').every((run) => run.implicitBreaks === undefined)).toBe(true);
+  });
+
+  it('keeps the index when later text of the same tags joins the run', () => {
+    const [run] = parseBBCodeRuns('ab[p][/p]cd');
+    expect(run).toMatchObject({ text: 'ab\ncd', implicitBreaks: [2] });
+  });
+
+  it('marks the newline between two paragraphs on its own run', () => {
+    const runs = parseBBCodeRuns('[center]a[/center][right]b[/right]');
+    expect(runs.map((run) => run.implicitBreaks)).toEqual([undefined, [0], undefined]);
+  });
+});
+
+// `rich_text_label.cpp:5326-5345,5399-5450`: the first newline after a list tag is dropped, a
+// list that holds nothing gets one empty item, and every list ends its last item with a newline.
+describe('parseBBCodeRuns lists', () => {
+  it('ends the last item of a list with a newline', () => {
+    expect(parseBBCodeRuns('[ul]a\nb[/ul]').map((run) => run.text)).toEqual(['a\nb\n']);
+  });
+
+  it('keeps one newline when the text already ends with it', () => {
+    expect(parseBBCodeRuns('[ul]a\n[/ul]').map((run) => run.text)).toEqual(['a\n']);
+  });
+
+  it('drops the first newline after the list tag', () => {
+    expect(parseBBCodeRuns('[ol]\na[/ol]').map((run) => run.text)).toEqual(['a\n']);
+  });
+
+  it('gives an empty list one empty item', () => {
+    expect(parseBBCodeRuns('[ul][/ul]').map((run) => run.text)).toEqual(['\n']);
+  });
+
+  it('gives a list that opens at the end of the text one empty item', () => {
+    expect(parseBBCodeRuns('a[ul]').map((run) => run.text)).toEqual(['a\n', '\n']);
+  });
+
+  it('gives each list of a nest its own empty item, and ends the innermost only', () => {
+    expect(parseBBCodeRuns('[ul][ul][/ul][/ul]').map((run) => run.text)).toEqual(['\n', '\n']);
+  });
+
+  it('keeps two lists apart even where their tags match', () => {
+    const runs = parseBBCodeRuns('[ul]a[/ul][ul]b[/ul]');
+    expect(runs.map((run) => run.text)).toEqual(['a\n', 'b\n']);
+    expect(runs[0]!.tags[0]).not.toBe(runs[1]!.tags[0]);
+  });
+
+  it('opens [ul bullet=...] with the bullet read as Godot reads it, after the first =', () => {
+    const [run] = parseBBCodeRuns('[ul bullet=* ]a[/ul]');
+    expect(run!.tags[0]).toMatchObject({ name: 'ul', value: '* ' });
+  });
+
+  it.each([
+    '[ul foo]a[/ul]',
+    '[ul=1]a[/ul]',
+    '[ol type=x]a[/ol]',
+    '[ol bullet=x]a[/ol]',
+    '[indent=2]a[/indent]',
+  ])('draws %s as text, as only the exact forms open a list or an indent (`:5702-5742`)', (source) => {
+    expect(parseBBCodeRuns(source)).toEqual([{ text: source, tags: [] }]);
+  });
+
+  it.each(['[ol type=1]', '[ol type=a]', '[ol type=A]', '[ol type=i]', '[ol type=I]'])(
+    'opens %s',
+    (source) => {
+      expect(parseBBCodeRuns(`${source}a[/ol]`)[0]!.tags[0]).toMatchObject({ name: 'ol' });
+    }
+  );
+
+  it('records the tags a line starts with when a styling tag opens the list on its line', () => {
+    // `[color]` is the line's first item and `_find_layout_subitem` skips it, so the line's
+    // `from` is the colour, not the list (`:3712-3727`, `:4096-4103`).
+    const [run] = parseBBCodeRuns('[color=red][ul]a[/ul][/color]');
+    expect(run!.tags.map((tag) => tag.name)).toEqual(['color', 'ul']);
+    expect(run!.startTags!.map((tag) => tag.name)).toEqual(['color']);
+  });
+
+  it('records no start tags when the line starts in the full stack', () => {
+    const [run] = parseBBCodeRuns('[ul]a[/ul]');
+    expect(run!.startTags).toBeUndefined();
+  });
+
+  it('records the tags opened since the last character, the closed ones included, inside a list', () => {
+    const runs = parseBBCodeRuns('[ul]a\n[color=blue][/color]\n[/ul]');
+    expect(runs.map((run) => run.text)).toEqual(['a\n', '\n']);
+    expect(runs[1]!.openedAtStart!.map((tag) => tag.name)).toEqual(['color']);
+  });
+
+  it('records no opened tags outside a list or indent', () => {
+    expect(parseBBCodeRuns('a[color=blue][/color]b')[0]!.openedAtStart).toBeUndefined();
+  });
+});
+
+/** `[hr]` is `add_hr` (`rich_text_label.cpp:4159-4199`): its own paragraph item, then an image item. */
+describe('parseBBCodeRuns [hr]', () => {
+  const RULE: ParsedRuleTag = {
+    width: 90,
+    widthInPercent: true,
+    height: 2,
+    heightInPercent: false,
+    colorOption: undefined,
+  };
+  const ruleRun = (align: string | undefined = undefined, rule = RULE) => ({
+    text: IMAGE_OBJECT_CHAR,
+    tags: [{ name: 'hr', value: align }],
+    rule,
+  });
+
+  it('ends the line of the text before it and shares its own line with the text after it', () => {
+    expect(parseBBCodeRuns('abc[hr]def')).toEqual([
+      { text: 'abc\n', tags: [], implicitBreaks: [3] },
+      ruleRun(),
+      { text: 'def', tags: [] },
+    ]);
+  });
+
+  it('adds no break before a rule that starts the text or follows only a styling tag (`:4097-4101`)', () => {
+    expect(parseBBCodeRuns('[hr]')).toEqual([ruleRun()]);
+    expect(parseBBCodeRuns('[b][/b][hr]')).toEqual([ruleRun()]);
+  });
+
+  it('gives a paragraph tag after a rule its own line, for the rule holds layout', () => {
+    expect(parseBBCodeRuns('[hr][p]x[/p]').map((run) => run.text)).toEqual([IMAGE_OBJECT_CHAR, '\n', 'x']);
+  });
+
+  it('keeps the tags open around it on the text either side, and opens none itself (`:5955`)', () => {
+    expect(parseBBCodeRuns('[b]a[hr]b[/b]')[2]).toEqual({
+      text: 'b',
+      tags: [{ name: 'b', value: undefined }],
+    });
+  });
+
+  it('reads align, color, width and height (`:5955-5983`)', () => {
+    expect(parseBBCodeRuns('[hr align=right color=red width=50 height=4%]')).toEqual([
+      ruleRun('right', {
+        width: 50,
+        widthInPercent: false,
+        height: 4,
+        heightInPercent: true,
+        colorOption: 'red',
+      }),
+    ]);
+  });
+
+  it('reads the percent of width from its suffix and the length with `to_int`', () => {
+    expect(parseBBCodeRuns('[hr width=30%]')[0]!.rule).toMatchObject({ width: 30, widthInPercent: true });
+    expect(parseBBCodeRuns('[hr width=12.9]')[0]!.rule).toMatchObject({ width: 12, widthInPercent: false });
+  });
+
+  it('keeps the align option as written, for `paragraphAlignment` to read', () => {
+    expect(parseBBCodeRuns('[hr align=fill]')[0]!.tags).toEqual([{ name: 'hr', value: 'fill' }]);
+    expect(parseBBCodeRuns('[hr align=l]')[0]!.tags).toEqual([{ name: 'hr', value: 'l' }]);
+  });
+
+  it('matches the tag by prefix, as `tag.begins_with("hr")` does (`:5955`)', () => {
+    expect(parseBBCodeRuns('a[hrx width=5]b').map((run) => run.text)).toEqual([
+      'a\n',
+      IMAGE_OBJECT_CHAR,
+      'b',
+    ]);
+  });
+
+  it('adds nothing for a negative width or height, which `add_hr` refuses (`:4167-4168`)', () => {
+    expect(parseBBCodeRuns('a[hr width=-1]b')).toEqual([{ text: 'ab', tags: [] }]);
+    expect(parseBBCodeRuns('a[hr height=-2]b')).toEqual([{ text: 'ab', tags: [] }]);
   });
 });

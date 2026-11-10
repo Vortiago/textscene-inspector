@@ -14,6 +14,8 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { OPTION_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
+import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import {
   layoutOptionButtonContent,
@@ -49,8 +51,10 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
   const hasText = text.length > 0;
   const { fontSizePx, color: baseFontColor } = optionButtonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
 
-  const layout = useButtonLabelLayout(solveNode, OPTION_BUTTON_THEME_FONT_KEY, text, fontSizePx);
+  const bidi = useControlBidiOptions(props, solveNode);
+  const layout = useButtonLabelLayout(solveNode, OPTION_BUTTON_THEME_FONT_KEY, text, fontSizePx, bidi);
 
   // Content layout: text and arrow placement within the solved rect
   const arrowMargin = solveNode.constants.arrow_margin ?? theme.separation;
@@ -104,9 +108,11 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
         <ButtonLabel
           layout={layout}
           overrunBehavior={props.overrunBehavior}
+          bidi={bidi}
           box={content.labelBox}
           fontSizePx={fontSizePx}
           tint={tintedFontColor}
+          outline={textOutline}
           clippingPlanes={clippingPlanes}
           renderOrder={renderOrder}
         />

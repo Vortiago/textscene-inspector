@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
-/** Lets the registration a peek started settle: it resolves within a macrotask here. */
-function settleLoads(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
+import { settleFontWork } from '../../../testing/settleFontWork';
 
 /**
  * `fillText` with an unregistered family paints a system font that passes the visual harness's
@@ -44,6 +40,8 @@ function installFontFace(): void {
 // `resetModules` gives each test its own registration cache. The logger and the settled channel come
 // from the same graph, or the spy and the listener sit on a different module instance.
 async function freshModule() {
+  // The door is skipped under vitest, as a scene font's is, so the stub reaches it only without the guard.
+  vi.stubEnv('VITEST', 'false');
   vi.resetModules();
   const logger = await import('../../../../logger');
   vi.spyOn(logger, 'warn').mockImplementation(() => {});
@@ -54,6 +52,7 @@ async function freshModule() {
 
 describe('bundled font registration gate', () => {
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     Reflect.deleteProperty(document, 'fonts');
     vi.restoreAllMocks();
@@ -63,6 +62,7 @@ describe('bundled font registration gate', () => {
     installFontFace();
     const { peekBundledCanvasFontMetrics } = await freshModule();
     expect(peekBundledCanvasFontMetrics()).toBeUndefined();
+    await settleFontWork();
   });
 
   it('hands out canvas metrics for the registered family once registration resolves, and peeks the same object after', async () => {
@@ -70,7 +70,7 @@ describe('bundled font registration gate', () => {
     const { peekBundledCanvasFontMetrics } = await freshModule();
 
     peekBundledCanvasFontMetrics();
-    await settleLoads();
+    await settleFontWork();
     const metrics = peekBundledCanvasFontMetrics();
     expect(metrics?.kind).toBe('canvas');
     expect(FakeFontFace.instances).toHaveLength(1);
@@ -84,7 +84,7 @@ describe('bundled font registration gate', () => {
     installFontFace();
     const { peekBundledCanvasFontMetrics } = await freshModule();
     peekBundledCanvasFontMetrics();
-    await settleLoads();
+    await settleFontWork();
 
     const source = FakeFontFace.instances[0]?.source;
     expect(source).toBeInstanceOf(ArrayBuffer);
@@ -97,7 +97,7 @@ describe('bundled font registration gate', () => {
 
     peekBundledCanvasFontMetrics();
     peekBundledCanvasFontMetrics();
-    await settleLoads();
+    await settleFontWork();
     expect(peekBundledCanvasFontMetrics()).toBe(peekBundledCanvasFontMetrics());
     expect(FakeFontFace.instances).toHaveLength(1);
   });
@@ -110,21 +110,21 @@ describe('bundled font registration gate', () => {
     const off = onSceneFontSettled(listener);
     try {
       peekBundledCanvasFontMetrics();
-      await settleLoads();
+      await settleFontWork();
       expect(listener).toHaveBeenCalledTimes(1);
     } finally {
       off();
     }
   });
 
-  it('stays undefined and warns when the registration rejects', async () => {
+  it('settles on null and warns when the registration rejects', async () => {
     installFontFace();
     FakeFontFace.loadResult = 'reject';
     const { peekBundledCanvasFontMetrics, logger } = await freshModule();
 
     peekBundledCanvasFontMetrics();
-    await settleLoads();
-    expect(peekBundledCanvasFontMetrics()).toBeUndefined();
+    await settleFontWork();
+    expect(peekBundledCanvasFontMetrics()).toBeNull();
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('bad font bytes'));
   });
 
@@ -137,8 +137,8 @@ describe('bundled font registration gate', () => {
     const off = onSceneFontSettled(listener);
     try {
       peekBundledCanvasFontMetrics();
-      await settleLoads();
-      expect(peekBundledCanvasFontMetrics()).toBeUndefined();
+      await settleFontWork();
+      expect(peekBundledCanvasFontMetrics()).toBeNull();
       expect(listener).toHaveBeenCalledTimes(1);
     } finally {
       off();
@@ -146,15 +146,27 @@ describe('bundled font registration gate', () => {
   });
 
   // happy-dom without the stub is the non-DOM case, the branch a scene font takes outside a browser.
-  it('stays undefined and warns in an environment with no FontFace at all', async () => {
+  it('settles on null and warns in an environment with no FontFace at all', async () => {
     const { peekBundledCanvasFontMetrics, logger } = await freshModule();
 
     peekBundledCanvasFontMetrics();
-    await settleLoads();
-    expect(peekBundledCanvasFontMetrics()).toBeUndefined();
+    await settleFontWork();
+    expect(peekBundledCanvasFontMetrics()).toBeNull();
     // The door's diagnosis, not the catch's: an absent environment is not broken font bytes.
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('No FontFace/document.fonts in this environment')
     );
+  });
+
+  it('settles on null without a warning under this test environment, which skips the door on purpose', async () => {
+    vi.resetModules();
+    const logger = await import('../../../../logger');
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const { peekBundledCanvasFontMetrics } = await import('./bundledFontLoader');
+
+    peekBundledCanvasFontMetrics();
+    await settleFontWork();
+    expect(peekBundledCanvasFontMetrics()).toBeNull();
+    expect(warn).not.toHaveBeenCalled();
   });
 });

@@ -1,33 +1,52 @@
 /**
  * Turns a resolved `FontResource` into `FontMetrics`, or into the bundled default when that fails.
- * It owns the `FontFace` door, which `bundledFontLoader.ts` shares. It is the one DOM-touching
- * module of the font pipeline, and it never throws.
+ * It registers a scene font through the `FontFace` door of `fontFaceDoor.ts`, and it never throws.
  */
-import { withVariation, type FontMetrics, type GlyphVariation } from './fontMetrics';
+import {
+  withFallbacks,
+  withVariation,
+  type FaceGlyphs,
+  type FontMetrics,
+  type GlyphVariation,
+} from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { faceDescriptors } from './sceneFontFace';
-import { openFontContainer } from './fontContainer';
-import { parseSfntScalars, readAxisDefaults, type SfntScalars } from './sfntTables';
+import { lazyFontContainer, openFontContainer } from './fontContainer';
+import { sfntHasGlyph } from './sfntCmap';
+import { sfntFaceGlyphs } from './sfntFaceGlyphs';
+import {
+  FALLBACK_MARK_TABLE_TAGS,
+  parseSfntScalars,
+  readAxisDefaults,
+  type SfntFile,
+  type SfntScalars,
+} from './sfntTables';
 import {
   createRuntimeFontMetrics,
+  isCanvasFontMetrics,
   type CanvasFontMetrics,
   type DesignUnitWidthFn,
 } from './runtimeFontMetrics';
-import { fontVariationEmbolden, fontVariationSkew, resolveFontFileBytes } from './sceneFontResolution';
-import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
-import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
+import {
+  BUNDLED_FACE,
+  NO_FACE,
+  fallbackChain,
+  findDrawnFace,
+  fontVariationEmbolden,
+  fontVariationOpentype,
+  fontVariationSkew,
+  hasBitmap,
+} from './sceneFontResolution';
+import { createBitmapFontMetrics } from './bitmapFontMetrics';
+import { NO_FACE_METRICS } from './noFaceMetrics';
+import { perObject } from '../../../../utils/perObject';
+import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import { warnOnce } from '../../../../utils/warnOnce';
 import { createSettledPeek } from './settledChannel';
-import { peekGlyphOutlines } from './sceneFontOutlines';
-
-// happy-dom has neither `FontFace` nor a 2D canvas context, so under vitest the loader skips to the
-// bundled default before any DOM font API. The skip is deliberate, so it does not warn.
-// `r3f/internalTextLabel.tsx` uses the same detection.
-const IS_VITEST = (() => {
-  const proc = (globalThis as { process?: { env?: { VITEST?: string } } }).process;
-  return proc?.env?.VITEST === 'true';
-})();
+import { drawLoad, peekOutlines } from './sceneFontOutlines';
+import { registerFontFace } from './fontFaceDoor';
+import { IS_VITEST } from '../../../../utils/isVitest';
 
 /**
  * Design units per em for a font `sfntTables.ts` cannot parse; every measurement uses this size.
@@ -39,43 +58,30 @@ const SYNTHETIC_UNITS_PER_EM = 1000;
 /** A counter suffix per load, so two scene fonts never collide in `document.fonts`. */
 let familyCounter = 0;
 
-/** Keyed by the resolved leaf `FontFileResource`, so nodes that share a font share one load. */
-const peekMetrics = createSettledPeek<FontFileResource, FontMetrics>();
+/**
+ * Keyed by the bytes of the resolved leaf `FontFileResource`, so nodes that share a font share one
+ * load, and so does each copy `withDefaultFonts` makes of a leaf whose fallbacks take a default. Null
+ * is a load that failed: the face draws the bundled default.
+ */
+const peekMetrics = createSettledPeek<ArrayBuffer, FontMetrics | null>();
+
+/**
+ * Written only by `peekSettledSceneFontMetrics`, once the whole chain of a font has settled. Never
+ * cleared: a settled load never changes, so a solve pass composes each chain once.
+ */
+// eslint-disable-next-line no-restricted-syntax -- the build needs the node path for its warnings, and a perObject build takes the key alone.
+const settledMetrics = new WeakMap<FontResource, FontMetrics>();
+
+/** One `BitmapFontMetrics` for each decoded BMFont, so a layout memoised on its identity keeps its hits. */
+const bitmapMetricsOf = perObject(createBitmapFontMetrics);
 
 /** Warns once per unresolvable resource, not per call: the peek runs on every solve pass, and the failure belongs to the resource. */
 function warnUnresolvable(font: FontResource, nodePath: string): void {
-  const reason =
-    font.kind === 'system'
-      ? `a SystemFont (OS family names: ${font.fontNames.join(', ') || '(none)'}) -- this previewer has no access to the user's system fonts`
-      : 'no FontFile in its fallback chain carries loadable bytes';
   warnOnce(
     font,
     'unresolvable',
-    `[SceneFont] Node "${nodePath}": font resource is unresolvable (${reason}). Falling back to the bundled default font.`
+    `[SceneFont] Node "${nodePath}": font resource is unresolvable (no FontFile in its fallback chain carries loadable bytes). Falling back to the bundled default font, or to the next font of its fallback chain.`
   );
-}
-
-/**
- * The CSP-validated door (`default-src 'none'`, no `connect-src` or `font-src`):
- * bytes in hand go to `new FontFace` and `document.fonts.add`, with no fetch of any URL, no worker,
- * eval or WASM. Resolves to `undefined` with no `FontFace`, and rejects only on bytes that are not
- * a font, so `bytes` is a thunk that does not decode where there is no door.
- */
-export async function registerFontFace(
-  family: string,
-  bytes: () => ArrayBuffer,
-  descriptors?: FontFaceDescriptors
-): Promise<Document | undefined> {
-  // Read lazily: a non-DOM environment answers `undefined`, and a late `document.fonts` is still seen.
-  const { FontFace: FontFaceCtor, document: doc } = globalThis as {
-    FontFace?: typeof FontFace;
-    document?: Document;
-  };
-  if (!FontFaceCtor || !doc?.fonts) return undefined;
-  const face = new FontFaceCtor(family, bytes(), descriptors);
-  await face.load();
-  doc.fonts.add(face);
-  return doc;
 }
 
 /**
@@ -133,52 +139,152 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
     );
   }
 
-  return createRuntimeFontMetrics({ scalars, measureWidthUnits, cssFontFamily: family });
+  // The outlines place marks by HarfBuzz's fallback for a font with no `GPOS` script. The container
+  // decodes once for `bytes`, so preparing them costs nothing until the first mark.
+  const glyphs = sfnt ? await faceGlyphsOf(sfnt, bytes) : undefined;
+  const hasGlyph = sfnt ? sfntHasGlyph(sfnt) : () => true;
+  const measureInkUnits = (ch: string) => {
+    const { actualBoundingBoxLeft, actualBoundingBoxRight } = ctx.measureText(ch);
+    return { left: actualBoundingBoxLeft, right: actualBoundingBoxRight };
+  };
+  return createRuntimeFontMetrics({
+    scalars,
+    measureWidthUnits,
+    measureInkUnits,
+    cssFontFamily: family,
+    hasGlyph,
+    glyphs,
+  });
 }
 
-/** Loads the font at `bytes`. It never throws, and always returns usable `FontMetrics`. */
-async function loadSceneFontMetrics(bytes: ArrayBuffer, nodePath: string): Promise<FontMetrics> {
-  if (IS_VITEST) return OPEN_SANS_FONT_METRICS;
+/** The glyphs of the face of `sfnt`, with the outlines and the default `GPOS` kerning of `bytes`. */
+async function faceGlyphsOf(sfnt: SfntFile, bytes: ArrayBuffer): Promise<FaceGlyphs> {
+  const [openOutlines, kerning] = await Promise.all([
+    lazyFontContainer(bytes, FALLBACK_MARK_TABLE_TAGS),
+    // The kerning of shaped glyphs only refines the advances: a chunk that fails to load (offline,
+    // after a deploy) must not take the face with it.
+    sfnt.tables.has('GPOS') ? import('./variation/instanceKerning').catch(() => null) : null,
+  ]);
+  return sfntFaceGlyphs(sfnt, openOutlines, kerning?.defaultKerningReader);
+}
+
+const VITEST_STAND_IN_METRICS: FontMetrics = { ...OPEN_SANS_FONT_METRICS, shaping: undefined };
+
+/** Loads a face from `bytes`. It never throws, and returns null for bytes that do not load. */
+async function loadSceneFontMetrics(bytes: ArrayBuffer, nodePath: string): Promise<FontMetrics | null> {
+  // Vitest has no FontFace, so the bundled advances stand in. The bundled shaping would hand out
+  // glyph indices of the bundled font, which the outlines of `bytes` do not share.
+  if (IS_VITEST) return VITEST_STAND_IN_METRICS;
   try {
     return await loadRuntimeFont(bytes, nodePath);
   } catch (err: unknown) {
     logger.warn(
-      `[SceneFont] Node "${nodePath}": failed to load scene font (${err instanceof Error ? err.message : String(err)}). Falling back to the bundled default font.`
+      `[SceneFont] Node "${nodePath}": failed to load scene font (${err instanceof Error ? err.message : String(err)}). Falling back to the bundled default font, or to the next font of its fallback chain.`
     );
-    return OPEN_SANS_FONT_METRICS;
+    return null;
   }
 }
 
-/** The embolden and skew of `font`, when it is a `FontVariation`. */
+/** The embolden, skew and OpenType axes of `font`, when it is a `FontVariation`. */
 function fontVariation(font: FontResource): GlyphVariation {
-  return { embolden: fontVariationEmbolden(font), skew: fontVariationSkew(font) };
+  return {
+    embolden: fontVariationEmbolden(font),
+    skew: fontVariationSkew(font),
+    opentype: fontVariationOpentype(font),
+  };
 }
 
 /**
- * The metrics of `font` once its load has settled, with the `FontVariation` embolden and skew on
- * top, and null while a load is in flight. A font that cannot load, or has no bytes to load,
- * settles at once on the bundled default. It starts one load per font, so calling both peeks
- * never double-loads. A consumer that must not draw against the default while
- * the real font loads reads this one.
+ * The metrics of `font` once the loads of its whole **Fallback chain** have settled, each face with
+ * its `FontVariation` embolden and skew on top, and null while a load is in flight. A font that
+ * cannot load, or has no bytes to load, settles at once on the bundled default, and a fallback that
+ * cannot load drops out. It starts one load per face, so calling both peeks never double-loads. A
+ * consumer that must not draw against the default while the real font loads reads this one.
  */
 export function peekSettledSceneFontMetrics(
   font: FontResource | null | undefined,
   nodePath: string
 ): FontMetrics | null {
   if (!font) return OPEN_SANS_FONT_METRICS;
+  const settled = settledMetrics.get(font);
+  if (settled) return settled;
+  const faces = peekSettledChainFaces(font, nodePath);
+  if (!faces) return null;
+  const [face, ...fallbacks] = faces.map(({ metrics }) => metrics);
+  const metrics = withFallbacks(face!, fallbacks);
+  settledMetrics.set(font, metrics);
+  return metrics;
+}
 
-  const resolved = resolveFontFileBytes(font);
-  if (!resolved) {
-    // A variation with no `base_font` over the bundled default font: no failure, so no warning.
-    if (endsWithoutBase(font)) return withVariation(OPEN_SANS_FONT_METRICS, fontVariation(font));
+/** A font of a **Fallback chain**, and the settled metrics of the face it draws. Null is the bundled font. */
+export interface SettledChainFace {
+  readonly font: FontResource | null;
+  readonly metrics: FontMetrics;
+  /** Whether `metrics` are the bundled font's, standing in for a first face that is missing. */
+  readonly isStandIn?: true;
+}
+
+/**
+ * The settled faces of the **Fallback chain** of `font`, the drawn face first, as
+ * {@link peekSettledSceneFontMetrics} composes them. Null while a load is in flight. A consumer that
+ * reads more of each face than its metrics, such as its outlines, starts from this list.
+ */
+export function peekSettledChainFaces(
+  font: FontResource | null | undefined,
+  nodePath: string
+): readonly SettledChainFace[] | null {
+  if (!font) return [{ font: null, metrics: OPEN_SANS_FONT_METRICS }];
+  const ownChain = fallbackChain(font);
+  const chain = ownChain.length > 0 ? ownChain : [font];
+  const faces = chain.map((entry) => peekFace(entry, nodePath));
+  if (faces.includes(null)) return null;
+  return chain.flatMap((entry, i): SettledChainFace[] => {
+    const metrics = faces[i]!;
+    if (metrics !== MISSING_FACE) return [{ font: entry, metrics }];
+    // The bundled font draws in its place, with the variation the font still names.
+    return i === 0
+      ? [
+          {
+            font: entry,
+            metrics: withVariation(OPEN_SANS_FONT_METRICS, fontVariation(entry)),
+            isStandIn: true,
+          },
+        ]
+      : [];
+  });
+}
+
+/**
+ * A face with none of its own: none resolves, or its load failed. The first face of a chain draws the
+ * bundled default in its place, and a fallback drops out of its chain.
+ */
+const MISSING_FACE = Symbol('missing face');
+
+/**
+ * The settled metrics of the face `font` draws alone: {@link MISSING_FACE} when it has none, and null
+ * while a load is in flight.
+ */
+function peekFace(font: FontResource, nodePath: string): FontMetrics | typeof MISSING_FACE | null {
+  const face = findDrawnFace(font);
+  // No failure, so no warning: Godot draws the bundled font here too.
+  if (face === BUNDLED_FACE) return withVariation(OPEN_SANS_FONT_METRICS, fontVariation(font));
+  if (face === NO_FACE) return NO_FACE_METRICS;
+  if (!face) {
     warnUnresolvable(font, nodePath);
-    return OPEN_SANS_FONT_METRICS;
+    return MISSING_FACE;
   }
 
-  const metrics = peekMetrics(resolved.leaf, () => loadSceneFontMetrics(resolved.bytes, nodePath));
-  if (!metrics) return null;
+  // A BMFont is decoded by the time its resource settles, so it needs no load of its own. Only the
+  // embolden of a variation reaches it: FreeType shears and emboldens an outline, and it has none.
+  if (hasBitmap(face))
+    return withVariation(bitmapMetricsOf(face.bitmap), { embolden: fontVariationEmbolden(font) });
+
+  const metrics = peekMetrics(face.bytes, () => loadSceneFontMetrics(face.bytes, nodePath));
+  if (metrics === undefined) return null;
+  if (metrics === null) return MISSING_FACE;
   const variation = fontVariation(font);
-  const outlines = peekGlyphOutlines(font, metrics, variation);
+  // A canvas face draws every glyph from its outline. An atlas face has no contour to follow.
+  const outlines = isCanvasFontMetrics(metrics) ? peekOutlines(face, drawLoad(face)) : null;
   return outlines === undefined ? null : withVariation(metrics, { ...variation, outlines });
 }
 

@@ -11,7 +11,8 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { HAIRLINE_CENTRE_OFFSET_PX, ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
 import {
   ControlClipProvider,
   useControlClipPlanes,
@@ -19,7 +20,12 @@ import {
 } from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import {
+  OutlinedTextRun,
+  TextOutlineRing,
+  useTintedTextOutline,
+} from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import type { TextOutlineTheme } from '../../../../r3f/controls/native/textTheme';
 import {
   shapedTextSizeWidthPx,
   soloLineLayout,
@@ -60,8 +66,7 @@ import {
 } from './nativeSolver';
 import { ScrollBarChrome, ScrollHintChrome, SCROLL_HINT_MODULATE } from '../shared/ScrollChrome';
 import { itemListScrollBars } from './scrollBars';
-import { itemListDrawnLabel, itemListLabelIsDrawn } from './labelDraw';
-import type { DrawnLine } from '../../../../r3f/controls/native/text/lineDrawClip';
+import { itemListDrawnLabel, isItemListLabelFillDrawn } from './labelDraw';
 import type { ItemListItem, ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
@@ -80,6 +85,12 @@ interface RowContent {
   minimumLayout: TextLayoutResult | null;
 }
 
+/** One drawn line of a row's label: its own layout, and the alignment shift `TextParagraph::draw` gave it. */
+interface DrawnLabelLine {
+  lineLayout: TextLayoutResult;
+  shiftPx: number;
+}
+
 /** Pass 2: this row's fully-resolved, plain-data geometry: everything but the async icon load. */
 interface RowGeometry {
   item: ItemListItem;
@@ -88,13 +99,15 @@ interface RowGeometry {
   iconNaturalSize: Vector2 | null;
   fixedIconSizeSet: boolean;
   iconDraw: ReturnType<typeof itemIconDraw>;
-  /** The label shaped again at its draw width (`item_list.cpp:1625-1661`), or `null` when the row draws none. */
-  label: { layout: TextLayoutResult; lines: DrawnLine[] } | null;
+  /** The label shaped again at its draw width (`item_list.cpp:1625-1661`), or `null` for an item with no text. */
+  label: { linePitchPx: number; lines: DrawnLabelLine[] } | null;
   /** Row-relative pen x, already through the RTL branch of `item_list.cpp:1639-1670`. */
   textX: number;
   textY: number;
   /** Row-relative icon x, already mirrored (`item_list.cpp:1582-1584`). */
   iconX: number;
+  /** False where the row hides its fill and draws the outline alone (`item_list.cpp:1672-1688`). */
+  isTextFillDrawn: boolean;
   rect: Rect2;
   textColor: Rgba;
 }
@@ -103,6 +116,8 @@ interface ItemListRowProps {
   geometry: RowGeometry;
   origin: Vector2;
   tint: Rgba;
+  /** Tinted by the list, not by the item: `draw_outline` takes the theme colour (`item_list.cpp:1643`). */
+  outline: TextOutlineTheme;
   renderOrder: number;
   fontSizePx: number;
   resources: SceneScope;
@@ -113,8 +128,17 @@ interface ItemListRowProps {
  * site: React forbids a varying hook count. `tint` multiplies the font and icon
  * colour before the one sRGB-to-linear conversion.
  */
-function ItemListRow({ geometry, origin, tint, renderOrder, fontSizePx, resources }: ItemListRowProps) {
-  const { item, disabled, hasIcon, iconDraw, label, textX, textY, iconX, rect, textColor } = geometry;
+function ItemListRow({
+  geometry,
+  origin,
+  tint,
+  outline,
+  renderOrder,
+  fontSizePx,
+  resources,
+}: ItemListRowProps) {
+  const { item, disabled, hasIcon, iconDraw, label, textX, textY, iconX, isTextFillDrawn, rect, textColor } =
+    geometry;
 
   const { texture: iconSource } = useTexture2D(
     item.icon,
@@ -128,6 +152,7 @@ function ItemListRow({ geometry, origin, tint, renderOrder, fontSizePx, resource
   const iconColorSrgb = useMemo(() => tintColor(itemIconColor(disabled), tint), [disabled, tint]);
   const iconColorLinear = useItemLinearColor(iconColorSrgb);
   const tintedTextColor = useMemo(() => tintColor(textColor, tint), [textColor, tint]);
+  const run = { fontSizePx, outline, clippingPlanes, renderOrder };
 
   return (
     <CanvasItemGroup position={[origin.x + rect.x, -(origin.y + rect.y), 0]}>
@@ -144,18 +169,13 @@ function ItemListRow({ geometry, origin, tint, renderOrder, fontSizePx, resource
         </CanvasItemGroup>
       )}
       {label &&
-        label.lines.map(({ line, shiftPx }, index) => (
-          <CanvasItemGroup
-            key={index}
-            position={[textX + shiftPx, -(textY + index * label.layout.linePitchPx), 0]}
-          >
-            <TextRun
-              layout={soloLineLayout(line, label.layout)}
-              fontSizePx={fontSizePx}
-              tint={tintedTextColor}
-              clippingPlanes={clippingPlanes}
-              renderOrder={renderOrder}
-            />
+        label.lines.map(({ lineLayout, shiftPx }, index) => (
+          <CanvasItemGroup key={index} position={[textX + shiftPx, -(textY + index * label.linePitchPx), 0]}>
+            {isTextFillDrawn ? (
+              <OutlinedTextRun {...run} layout={lineLayout} tint={tintedTextColor} />
+            ) : (
+              <TextOutlineRing {...run} layout={lineLayout} />
+            )}
           </CanvasItemGroup>
         ))}
     </CanvasItemGroup>
@@ -199,10 +219,18 @@ export function ItemList({
   const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
   const { anchorRef, clip } = useWorldClipPlanes(ownRect);
   const clipsContents = props.clipContents !== false;
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   const textShape = useMemo(
-    () => ({ fontSizePx, fontMetrics, iconMode, maxTextLines, overrunBehavior: props.textOverrunBehavior }),
-    [fontSizePx, fontMetrics, iconMode, maxTextLines, props.textOverrunBehavior]
+    () => ({
+      fontSizePx,
+      fontMetrics,
+      iconMode,
+      maxTextLines,
+      overrunBehavior: props.textOverrunBehavior,
+      locale: solveNode.locale,
+    }),
+    [fontSizePx, fontMetrics, iconMode, maxTextLines, props.textOverrunBehavior, solveNode.locale]
   );
 
   const rows: RowContent[] = useMemo(() => {
@@ -355,8 +383,9 @@ export function ItemList({
         vSeparation,
         iconMargin
       );
+      const wrapped = isItemListTextWrapped(iconMode, maxTextLines);
       const textOffset = itemTextDrawOffset(
-        iconMode,
+        wrapped,
         iconDraw.textOffsetContribution,
         packedSize,
         r.minimumLayout?.heightPx ?? 0,
@@ -366,7 +395,6 @@ export function ItemList({
       // Every RTL branch works in control coordinates; the row group keeps
       // its LTR origin, so each piece comes back relative to it.
       const rowOriginX = origin.x + packedRect.x;
-      const wrapped = isItemListTextWrapped(iconMode, maxTextLines);
       const textWidthPx = wrapped
         ? itemListWrappedTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems)
         : itemListLineTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems);
@@ -384,7 +412,7 @@ export function ItemList({
             },
             rtl
           );
-      const isLabelDrawn = itemListLabelIsDrawn({
+      const isTextFillDrawn = isItemListLabelFillDrawn({
         wrapped,
         fixedColumnWidth,
         itemRectWidthPx: packedRect.w,
@@ -393,8 +421,15 @@ export function ItemList({
         wraparoundItems,
         hSeparation,
       });
-      const layout = isLabelDrawn ? shapeLabelAt(r, textWidthPx) : null;
-      const label = layout ? { layout, lines: itemListDrawnLabel(layout, textWidthPx, wrapped, rtl) } : null;
+      const layout = shapeLabelAt(r, textWidthPx);
+      const label = layout && {
+        linePitchPx: layout.linePitchPx,
+        // One layout object per line, made here, so a line keeps its meshes across renders.
+        lines: itemListDrawnLabel(layout, textWidthPx, wrapped, rtl).map(({ line, shiftPx }) => ({
+          lineLayout: soloLineLayout(line, layout),
+          shiftPx,
+        })),
+      };
       return {
         item: r.item,
         disabled: r.disabled,
@@ -403,6 +438,7 @@ export function ItemList({
         fixedIconSizeSet,
         iconDraw,
         label,
+        isTextFillDrawn,
         textX: textBoxX - rowOriginX,
         textY: textOffset.y,
         iconX: iconDraw.rect
@@ -439,7 +475,7 @@ export function ItemList({
       {guideLines.map((line, index) => (
         <CanvasItemGroup
           key={`guide-${index}`}
-          position={[origin.x + line.x, -(origin.y + line.y - HAIRLINE_CENTRE_OFFSET_PX), 0]}
+          position={[origin.x + line.x, -hairlineQuadStartPx(origin.y + line.y), 0]}
         >
           <ControlQuad
             renderOrder={renderOrder}
@@ -456,6 +492,7 @@ export function ItemList({
           geometry={geometry}
           origin={origin}
           tint={tint.own}
+          outline={textOutline}
           renderOrder={renderOrder}
           fontSizePx={fontSizePx}
           resources={solveNode.resources}

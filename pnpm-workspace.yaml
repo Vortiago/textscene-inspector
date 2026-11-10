@@ -63,6 +63,10 @@ catalog:
   # Pure JS, as the VS Code webview's policy allows no WebAssembly. MIT.
   fzstd: 0.1.1
 
+  # The Unicode bidirectional algorithm (UAX #9) for right-to-left and mixed-direction text, the
+  # part of ICU's ubidi that Godot's text server calls. Pure JS, no dependencies. MIT.
+  bidi-js: 1.1.0
+
   # Brotli decoding for the tables of a .woff2 scene font. Pure JS, as the VS Code webview's
   # policy allows no WebAssembly, and `DecompressionStream` has no brotli format. MIT.
   brotli: 2.1.0

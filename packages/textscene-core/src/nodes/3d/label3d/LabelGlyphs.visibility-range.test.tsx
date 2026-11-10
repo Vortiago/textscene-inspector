@@ -36,6 +36,12 @@ vi.mock('../../../r3f/controls/native/text/bundledFontLoader', () => ({
   peekBundledCanvasFontMetrics: () => loader.metrics,
 }));
 
+// The range tests read no contour, so the bundled face settles at once, with none to follow.
+vi.mock('../../../r3f/controls/native/text/sceneFontOutlines', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  peekOutlines: () => null,
+}));
+
 beforeEach(() => {
   loader.metrics = createOpenSansCanvasFontMetrics('label3d-range-test-family');
 });

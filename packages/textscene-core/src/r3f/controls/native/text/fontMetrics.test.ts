@@ -7,21 +7,26 @@
 // Godot's `ThemeDB.fallback_font.get_char_size(c, 16).x` reports 15.125 for 'W' (1936
 // units), 10.578125 for 'A' (1354) and 14.75 for 'M' (1888): each `ceil(units / 2) / 64`.
 import { describe, expect, it } from 'vitest';
+import type { LookupGlyph } from './autofit/openTypeGdef';
 import {
   ftDivFix,
   ftMulDiv,
   fontUsesSubpixelPositioning,
+  canvasGlyphPenXPx,
   getFontAscentPx,
-  getFontGlyphAdvancePx,
+  getFontRunGlyphAdvancePx,
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
   withOutlines,
+  drawnOpentype,
+  type OpentypeCoordinates,
   withVariation,
   type FontMetrics,
 } from './fontMetrics';
 
 /** Open Sans SemiBold's scalars with an odd and an even advance, since only an odd one moves under 26.6 quantisation at size 16. */
 const METRICS: FontMetrics = {
+  hasGlyph: () => true,
   kind: 'atlas',
   unitsPerEm: 2048,
   ascent: 2189,
@@ -31,32 +36,32 @@ const METRICS: FontMetrics = {
   averageAdvanceUnits: 1214,
 };
 
-describe('getFontGlyphAdvancePx', () => {
+describe('getFontRunGlyphAdvancePx of a character', () => {
   it('quantizes an ODD design-unit advance UP to the next 1/64 px, where a continuous scale would land between two', () => {
     // 'l', 571 units. x_scale is 0.5 in 16.16 at size 16, so the chain reduces
     // to ceil(571/2)/64 = 286/64 = 4.46875, the advance Godot reports, against a
     // continuous 571*16/2048 = 4.4609375.
-    expect(getFontGlyphAdvancePx(METRICS, 'l', 16)).toBe(4.46875);
-    expect(getFontGlyphAdvancePx(METRICS, 'T', 16)).toBe(9.046875);
+    expect(getFontRunGlyphAdvancePx(METRICS, { char: 'l' }, 16)).toBe(4.46875);
+    expect(getFontRunGlyphAdvancePx(METRICS, { char: 'T' }, 16)).toBe(9.046875);
   });
 
   it('leaves an EVEN design-unit advance exactly where a continuous scale puts it — there is nothing to round', () => {
-    expect(getFontGlyphAdvancePx(METRICS, 'A', 16)).toBe(10.578125);
-    expect(getFontGlyphAdvancePx(METRICS, 'A', 16)).toBe((1354 * 16) / 2048);
+    expect(getFontRunGlyphAdvancePx(METRICS, { char: 'A' }, 16)).toBe(10.578125);
+    expect(getFontRunGlyphAdvancePx(METRICS, { char: 'A' }, 16)).toBe((1354 * 16) / 2048);
   });
 
   it('re-derives x_scale per size, so the same glyph quantizes differently at a different one', () => {
     // Size 18: x_scale 0.5625, 16.16 advance 779904, (779904 + 512) >> 10 =
     // 762 -> 11.90625, where a continuous scale gives 11.900390625.
-    expect(getFontGlyphAdvancePx(METRICS, 'A', 18)).toBe(762 / 64);
+    expect(getFontRunGlyphAdvancePx(METRICS, { char: 'A' }, 18)).toBe(762 / 64);
     // Size 32: x_scale is exactly 1.0, so the 26.6 advance is the design
     // units and the quantization is again a no-op.
-    expect(getFontGlyphAdvancePx(METRICS, 'A', 32)).toBe(1354 / 64);
+    expect(getFontRunGlyphAdvancePx(METRICS, { char: 'A' }, 32)).toBe(1354 / 64);
   });
 
   it('falls back to averageAdvanceUnits — through the SAME quantization — for a character the font has no glyph for', () => {
     // 1214 units, even: ceil(1214/2)/64 = 607/64 = 9.484375.
-    expect(getFontGlyphAdvancePx(METRICS, 'Ω', 16)).toBe(9.484375);
+    expect(getFontRunGlyphAdvancePx(METRICS, { char: 'Ω' }, 16)).toBe(9.484375);
   });
 
   it('collapses an advance finer than the 26.6 grid to zero, and both roundings are half UP', () => {
@@ -64,27 +69,55 @@ describe('getFontGlyphAdvancePx', () => {
     // 1 design unit at size 16 is 1/2048 em = exactly half of 1/64 px, and
     // both FT_MulFix and hb-ft's shift round half up, so it lifts to 1/64
     // rather than vanishing.
-    expect(getFontGlyphAdvancePx(hairline, 'A', 16)).toBe(1 / 64);
+    expect(getFontRunGlyphAdvancePx(hairline, { char: 'A' }, 16)).toBe(1 / 64);
     // At size 1 the same unit is 1/2048 px, well under half the grid step, so
     // FreeType reports zero: the grid is the engine's, not an approximation.
-    expect(getFontGlyphAdvancePx(hairline, 'A', 1)).toBe(0);
-    expect(getFontGlyphAdvancePx({ ...METRICS, getGlyphAdvanceUnits: () => 0 }, 'A', 16)).toBe(0);
+    expect(getFontRunGlyphAdvancePx(hairline, { char: 'A' }, 1)).toBe(0);
+    expect(getFontRunGlyphAdvancePx({ ...METRICS, getGlyphAdvanceUnits: () => 0 }, { char: 'A' }, 16)).toBe(
+      0
+    );
   });
 });
 
 describe('fontUsesSubpixelPositioning', () => {
   it('is true at and below SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE — every Godot theme default sits here', () => {
-    expect(fontUsesSubpixelPositioning(16)).toBe(true);
-    expect(fontUsesSubpixelPositioning(20)).toBe(true);
+    expect(fontUsesSubpixelPositioning(16, {})).toBe(true);
+    expect(fontUsesSubpixelPositioning(20, {})).toBe(true);
   });
 
   it('is false above it, which is where Godot starts rounding advances to whole pixels', () => {
-    expect(fontUsesSubpixelPositioning(21)).toBe(false);
-    expect(fontUsesSubpixelPositioning(28)).toBe(false);
+    expect(fontUsesSubpixelPositioning(21, {})).toBe(false);
+    expect(fontUsesSubpixelPositioning(28, {})).toBe(false);
   });
 
   it("is true for a FRACTIONAL size at any magnitude — Godot's own int64_t size API cannot express one, and `scale != 1.0` is the branch it would take", () => {
-    expect(fontUsesSubpixelPositioning(28.5)).toBe(true);
+    expect(fontUsesSubpixelPositioning(28.5, {})).toBe(true);
+  });
+});
+
+describe('canvasGlyphPenXPx', () => {
+  it('floors the pen to a whole pixel above 20 px', () => {
+    expect(canvasGlyphPenXPx(680.6, 28, {})).toBe(680);
+    expect(canvasGlyphPenXPx(10.99, 21, {})).toBe(10);
+  });
+
+  it('rounds the pen to a half pixel, a quarter early, from 17 to 20 px', () => {
+    expect(canvasGlyphPenXPx(10.2, 20, {})).toBe(10);
+    expect(canvasGlyphPenXPx(10.3, 20, {})).toBe(10.5);
+    expect(canvasGlyphPenXPx(10.8, 17, {})).toBe(11);
+  });
+
+  it('rounds the pen to a quarter pixel, an eighth early, at 16 px and below', () => {
+    expect(canvasGlyphPenXPx(10.6, 16, {})).toBe(10.5);
+    expect(canvasGlyphPenXPx(10.65, 16, {})).toBe(10.75);
+  });
+
+  it('keeps the pen of a fractional size, which skips the floor as `scale != 1.0`', () => {
+    expect(canvasGlyphPenXPx(10.6, 28.5, {})).toBe(10.6);
+  });
+
+  it('keeps the pen of a face scaled off its own size, which skips the floor as `scale != 1.0`', () => {
+    expect(canvasGlyphPenXPx(10.6, 28, { pxPerUnit: () => 2 })).toBe(10.6);
   });
 });
 
@@ -101,11 +134,22 @@ describe('getFontAscentPx / getFontLinePitchPx', () => {
 
 describe('getFontKerningAdjustmentPx', () => {
   it('scales a pair adjustment to the target size', () => {
-    expect(getFontKerningAdjustmentPx(METRICS, 'A', 'V', 16)).toBe(-2);
+    expect(getFontKerningAdjustmentPx(METRICS, { char: 'A' }, { char: 'V' }, 16)).toBe(-2);
   });
 
   it('short-circuits to 0 for a pair the font has no entry for', () => {
-    expect(getFontKerningAdjustmentPx(METRICS, 'A', 'A', 16)).toBe(0);
+    expect(getFontKerningAdjustmentPx(METRICS, { char: 'A' }, { char: 'A' }, 16)).toBe(0);
+  });
+
+  it('takes the glyph kerning of a pair of shaped glyphs', () => {
+    const face: FontMetrics = { ...METRICS, getGlyphKerningUnits: () => -128 };
+    expect(getFontKerningAdjustmentPx(face, { char: 'A', glyph: 36 }, { char: 'V', glyph: 57 }, 16)).toBe(-1);
+  });
+
+  // HarfBuzz applies the legacy `kern` table to a font whose `GPOS` has no pair kerning.
+  it('keeps the kerning of the characters where the face reads no glyph kerning', () => {
+    const face: FontMetrics = { ...METRICS, getGlyphKerningUnits: () => null };
+    expect(getFontKerningAdjustmentPx(face, { char: 'A', glyph: 36 }, { char: 'V', glyph: 57 }, 16)).toBe(-2);
   });
 });
 
@@ -137,6 +181,69 @@ describe('withVariation', () => {
   it('returns one object per face, embolden and skew, so a layout memoised on it keeps its hits', () => {
     expect(withVariation(METRICS, { embolden: 1.2 })).toBe(withVariation(METRICS, { embolden: 1.2 }));
     expect(withVariation(METRICS, { embolden: 1.2 })).not.toBe(withVariation(METRICS, { skew: 1.2 }));
+  });
+
+  // An animation of `variation_opentype` steps through axis values without end.
+  it('drops the wrapper read least recently once an animation steps through many variations', () => {
+    const first = withVariation(METRICS, { embolden: 0.5 });
+    for (let step = 1; step <= 1000; step++) withVariation(METRICS, { embolden: 0.5 + step / 1000 });
+    expect(withVariation(METRICS, { embolden: 0.5 })).not.toBe(first);
+  });
+});
+
+describe('withVariation at a variable-font instance', () => {
+  const WGHT = 0x77676874;
+  const BOLD = new Map([[WGHT, 700]]);
+  const REGULAR = new Map([[WGHT, 400]]);
+  /** At the font's units per em, a kerning in px equals the kerning in design units. */
+  const UNIT_SIZE_PX = METRICS.unitsPerEm;
+  /**
+   * Outlines whose default instance is wght 400, with A at glyph 1, V at glyph 2 and no glyph for any
+   * other character. Like the real outlines, they kern nothing at the default instance.
+   */
+  const glyphIndex = (codePoint: number) => ({ A: 1, V: 2 })[String.fromCodePoint(codePoint)] ?? 0;
+  const drawsInstance = (opentype: OpentypeCoordinates) => opentype.get(WGHT) !== 400;
+  const variableOutlines = {
+    glyphIndex,
+    glyphContours: () => null,
+    drawsInstance,
+    kerningAtInstance: (left: LookupGlyph, right: LookupGlyph, opentype: OpentypeCoordinates) =>
+      !drawsInstance(opentype) || left.glyph === 0 || right.glyph === 0
+        ? null
+        : left.glyph * 10 + right.glyph,
+  };
+  const kerningPx = (face: FontMetrics, a: string, b: string) =>
+    getFontKerningAdjustmentPx(face, { char: a }, { char: b }, UNIT_SIZE_PX);
+
+  it('kerns a pair by the GPOS kerning of the instance', () => {
+    const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    expect(kerningPx(face, 'A', 'V')).toBe(12);
+  });
+
+  it('keeps the kerning of the face for a character the font has no glyph for', () => {
+    const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    expect(kerningPx(face, 'A', 'x')).toBe(0);
+  });
+
+  it('draws axis values at the default instance as the font itself, with its own kerning', () => {
+    const face = withVariation(METRICS, { opentype: REGULAR, outlines: variableOutlines });
+    expect(drawnOpentype(face)).toBeUndefined();
+    expect(kerningPx(face, 'A', 'V')).toBe(-256);
+  });
+
+  // A TextMesh reads its outlines apart from its metrics, so a face may first settle without them.
+  it('keeps the axis values of a face without outlines, so outlines added later draw the instance', () => {
+    const settled = withVariation(METRICS, { opentype: BOLD, outlines: null });
+    expect(kerningPx(withOutlines(settled, variableOutlines), 'A', 'V')).toBe(12);
+  });
+
+  // A `FontVariation` over another finds its face at its own axis values (`font.cpp:3120-3131`), as
+  // the bold that the default theme makes of a project font does (`default_theme.cpp:1393-1394`).
+  it('drops the instance under a variation of its own that sets no axis', () => {
+    const atInstance = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    const bold = withVariation(atInstance, { embolden: 1.2 });
+    expect(drawnOpentype(bold)).toBeUndefined();
+    expect(kerningPx(bold, 'A', 'V')).toBe(-256);
   });
 });
 

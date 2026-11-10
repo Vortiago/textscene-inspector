@@ -35,6 +35,12 @@ export const NOTICE_SOURCES = [
     copyright: /Copyright 2013 Google Inc\. All Rights Reserved\./,
     isInstalled: true,
   },
+  {
+    section: 'bidi-js',
+    // The dist carries no copyright line, so its factory's name finds it in a bundle's inputs.
+    copyright: /Copyright \(c\) 2021 Jason Johnston|function bidiFactory\(\)/,
+    isInstalled: true,
+  },
 ];
 
 /**

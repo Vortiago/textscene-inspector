@@ -22,20 +22,25 @@ import type { Label3DProperties } from './types';
 import { labelProperties } from './testing/labelProperties';
 import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
 import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
-import { HorizontalAlignment } from '../../../godot/math/alignment';
+import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
+import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
 /** The painter's fixed anti-aliasing pad on each vertical raster edge, CSS px. */
 const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
 
-// happy-dom has neither `FontFace` nor `document.fonts`, so the real bundled
-// registration can only ever answer `undefined` here (`bundledFontLoader.ts`'s
-// own doc). Mocking the function `LabelGlyphs` reads through is what lets both sides of the gate
-// be exercised.
+// The real bundled registration settles on null under vitest (`bundledFontLoader.ts`). Mocking
+// the function `LabelGlyphs` reads through lets both sides of the gate be exercised.
 const loader = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | undefined }));
 vi.mock('../../../r3f/controls/native/text/bundledFontLoader', () => ({
   peekBundledCanvasFontMetrics: () => loader.metrics,
+}));
+
+// The painter tests read no contour, so the bundled face settles at once, with none to follow.
+vi.mock('../../../r3f/controls/native/text/sceneFontOutlines', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  peekOutlines: () => null,
 }));
 
 beforeEach(() => {
@@ -139,8 +144,11 @@ describe('<LabelGlyphs>', () => {
     // Both sizes are above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE, so each advance
     // rounds to a whole pixel with the remainder carried (`text_server_adv.cpp:7079-7084`),
     // independently at each size. Doubling the size does not exactly double the
-    // pen extent: the residual is bounded by the rounding.
-    expect(Math.abs(largeSize.x - smallSize.x * 2)).toBeLessThan(2);
+    // pen extent: the residual is bounded by the rounding. The quad reaches 2 fixed pixels past the ink
+    // on the left and 1 on the right (`canvasTextPainter.ts`'s INK_SLACK_LEFT_PX and INK_SLACK_RIGHT_PX),
+    // which do not scale.
+    const slackPx = 3;
+    expect(Math.abs(largeSize.x - slackPx - (smallSize.x - slackPx) * 2)).toBeLessThan(2);
     // The quad's vertical anti-aliasing pad is fixed, so the content box is what
     // grows, and only near-proportionally: ascent and descent each ceil to a
     // whole pixel independently at each size (`text_server_adv.cpp:1515-1516`).
@@ -174,6 +182,55 @@ describe('<LabelGlyphs>', () => {
     const double = await render(labelProperties({ double_sided: true }));
     expect((meshOf(front).material as THREE.Material).side).toBe(THREE.FrontSide);
     expect((meshOf(double).material as THREE.Material).side).toBe(THREE.DoubleSide);
+  });
+
+  describe('shaded', () => {
+    // `get_material_for_2d` sets `SHADING_MODE_PER_PIXEL` for a shaded label and
+    // `SHADING_MODE_UNSHADED` otherwise (`material.cpp:3045`), for the fill and outline alike.
+    const outlined = { outline_size: 12, outline_modulate: { r: 0, g: 0, b: 0, a: 1 } };
+    const runMaterials = async (shaded: boolean) =>
+      (await render(labelProperties({ ...outlined, shaded }))).scene
+        .findAllByType('Mesh')
+        .map((m) => (m.instance as THREE.Mesh).material as THREE.Material);
+
+    it('draws both runs of an unshaded label unlit', async () => {
+      expect((await runMaterials(false)).map((m) => m.type)).toEqual([
+        'MeshBasicMaterial',
+        'MeshBasicMaterial',
+      ]);
+    });
+
+    it("draws both runs of a shaded label lit, at the label material's metallic and roughness", async () => {
+      // `material_set_param(..., "metallic", 0.0)` and `"roughness", 1.0` (`label_3d.cpp:372-373`).
+      const materials = (await runMaterials(true)) as THREE.MeshStandardMaterial[];
+      expect(materials.map((m) => [m.type, m.metalness, m.roughness])).toEqual([
+        ['MeshStandardMaterial', 0, 1],
+        ['MeshStandardMaterial', 0, 1],
+      ]);
+      expect(materials.every((m) => m.map !== null)).toBe(true);
+    });
+
+    it('gives the lit quad the normal +Z on every vertex (label_3d.cpp:422-423)', async () => {
+      const mesh = meshOf(await render(labelProperties({ shaded: true })));
+      const normal = mesh.geometry.getAttribute('normal');
+      const normals = Array.from({ length: normal.count }, (_, i) => [
+        normal.getX(i),
+        normal.getY(i),
+        normal.getZ(i),
+      ]);
+      expect(normals).toEqual(Array.from({ length: normal.count }, () => [0, 0, 1]));
+    });
+
+    it('draws a double-sided lit label in one pass, where the back face takes the flipped normal (scene_forward_clustered.glsl:1263-1266)', async () => {
+      const material = meshOf(await render(labelProperties({ shaded: true, double_sided: true })))
+        .material as THREE.Material;
+      // Drawn both sides in one pass, three's lit fragment multiplies the normal by `faceDirection`.
+      expect([material.side, material.forceSinglePass]).toEqual([THREE.DoubleSide, true]);
+    });
+
+    it('receives shadows on a shaded label', async () => {
+      expect(meshOf(await render(labelProperties({ shaded: true }))).receiveShadow).toBe(true);
+    });
   });
 
   describe('outline pass', () => {
@@ -486,19 +543,40 @@ describe('<LabelGlyphs>', () => {
     });
   });
 
-  describe('horizontal_alignment', () => {
-    it('FILL positions a line the same as CENTER (no per-line justification, width is unparsed)', async () => {
-      const center = await render(
-        labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER })
+  describe('autowrap_mode', () => {
+    it('breaks a line that passes width into one line-group per line', async () => {
+      const renderer = await render(
+        labelProperties({ text: 'aaa bbb ccc', width: 140, autowrap_mode: AutowrapMode.AUTOWRAP_WORD })
       );
-      const fill = await render(
-        labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_FILL })
-      );
-      const centerGroup = lineGroups(center)[0]!;
-      const fillGroup = lineGroups(fill)[0]!;
-      expect(fillGroup.position.x).toBeCloseTo(centerGroup.position.x, 6);
+      expect(lineGroups(renderer).length).toBe(2);
     });
+  });
 
+  describe('vertical_alignment and offset', () => {
+    it('hangs a TOP label below the origin, moved up by a positive offset y', async () => {
+      const renderer = await render(
+        labelProperties({
+          text: 'Hi',
+          vertical_alignment: VerticalAlignment.VERTICAL_ALIGNMENT_TOP,
+          offset: { x: 5, y: 10 },
+        })
+      );
+      const group = lineGroups(renderer)[0]!;
+      expect([group.position.x, group.position.y]).toEqual([5 - 33 / 2, 10]);
+    });
+  });
+
+  describe('horizontal_alignment', () => {
+    it('FILL stretches a line to width, centred on the origin (label_3d.cpp:538-557)', async () => {
+      const fill = await render(
+        labelProperties({
+          text: 'Hi Ho',
+          width: 300,
+          horizontal_alignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_FILL,
+        })
+      );
+      expect(lineGroups(fill)[0]!.position.x).toBe(-150);
+    });
     it('LEFT starts a line at x=0; RIGHT ends a line at x=0', async () => {
       const left = await render(
         labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT })

@@ -17,7 +17,7 @@ import type { CanvasItemTexture } from '../canvasItemTexture';
 import { LitCanvasItemPixels, type CanvasItemPixelMaterial } from './LitCanvasItemPixels';
 import { useNodePaintSequence } from '../contexts/PaintOrderContext';
 import { useAnimatedValue } from '../contexts/AnimatedValueContext';
-import { CanvasItemKeyProvider } from './CanvasItemGroup';
+import { CanvasItemProvider } from './CanvasItemGroup';
 import { useCanvasItemMaterial } from './canvasItemMaterialContext';
 import {
   CanvasItemChildScope,
@@ -92,7 +92,7 @@ export function CanvasItem2D({ node, props, body, canvasTexture, ownItems, child
       visible={animatedVisible ?? props.visible !== false}
       renderOrder={key}
     >
-      <CanvasItemKeyProvider value={key}>
+      <CanvasItemProvider value={key}>
         <OwnCanvasModulateProvider value={tint.canvasModulate}>
           {body && (
             <LitCanvasItemPixels
@@ -113,7 +113,7 @@ export function CanvasItem2D({ node, props, body, canvasTexture, ownItems, child
             onSurface={setSurface}
           />
         )}
-      </CanvasItemKeyProvider>
+      </CanvasItemProvider>
       <CanvasItemChildScope state={state}>
         <CanvasSpaceProvider value={canvasSpace}>{children}</CanvasSpaceProvider>
       </CanvasItemChildScope>

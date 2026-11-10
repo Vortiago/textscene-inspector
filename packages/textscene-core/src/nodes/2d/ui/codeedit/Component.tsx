@@ -16,6 +16,7 @@ import { shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { CODE_EDIT_FOLD_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { ControlQuad as FoldQuad } from '../../../../r3f/controls/native/controlQuad';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { TextEditBody } from '../textedit/Component';
 import {
@@ -90,19 +91,20 @@ export function CodeEdit(props: NativeControlComponentProps) {
     () => textEditTabStopsPx(codeEditProps.indentSize, fontMetrics, fontSizePx),
     [codeEditProps.indentSize, fontMetrics, fontSizePx]
   );
+  const bidi = useControlBidiOptions(codeEditProps, solveNode);
   const lineLayouts = useMemo(
     () =>
-      shapeTextEditLines(
-        lines,
+      shapeTextEditLines(lines, {
         fontSizePx,
-        codeEditProps.wrapMode,
-        codeEditProps.autowrapMode,
-        wrapWidthPx,
         fontMetrics,
+        wrapMode: codeEditProps.wrapMode,
+        autowrapMode: codeEditProps.autowrapMode,
+        wrapWidthPx,
         tabStopsPx,
-        codeEditProps.drawControlChars,
-        codeEditProps.indentWrappedLines
-      ),
+        preserveControl: codeEditProps.drawControlChars,
+        indentWrappedLines: codeEditProps.indentWrappedLines,
+        bidi,
+      }),
     [
       lines,
       fontSizePx,
@@ -113,9 +115,11 @@ export function CodeEdit(props: NativeControlComponentProps) {
       tabStopsPx,
       codeEditProps.drawControlChars,
       codeEditProps.indentWrappedLines,
+      bidi,
     ]
   );
 
+  const numerals = { locale: solveNode.locale, localizeNumeralSystem: codeEditProps.localizeNumeralSystem };
   const lineNumberGutterXPx = codeEditLineNumberGutterXPx(styleBox.contentMargin.left, band.mainWidthPx);
 
   const drawBand = layoutTextEditDrawBand(
@@ -235,7 +239,8 @@ export function CodeEdit(props: NativeControlComponentProps) {
           const text = codeEditLineNumberText(
             lineIndex,
             band.lineNumberDigits,
-            codeEditProps.gutterZeroPadLineNumbers
+            codeEditProps.gutterZeroPadLineNumbers,
+            numerals
           );
           const layout = shapeText(text, {
             fontSizePx,
@@ -243,6 +248,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
             autowrapMode: AutowrapMode.AUTOWRAP_OFF,
             lineSpacingPx: 0,
             fontMetrics,
+            language: solveNode.locale,
           });
           // The gutter cell is the row's own band (`text_edit.cpp:1448`), so
           // it starts where the band does, not at the control's top edge.

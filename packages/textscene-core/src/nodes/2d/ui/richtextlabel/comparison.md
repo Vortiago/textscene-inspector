@@ -12,6 +12,74 @@ renders_as: a run of shaped text with per-span styling
 RichTextLabel lays out a run of rich text. With `bbcode_enabled` the previewer styles a
 subset of BBCode inline (ADR-0003).
 
+Each `\n` ends a paragraph (`rich_text_label.cpp:4016-4053`). Under FILL, from `horizontal_alignment` or a
+`[fill]` tag, the previewer fits the lines of each paragraph to the text rect by `justification_flags`
+(`text_paragraph.cpp:234-292`). The default flags, 163, skip the last line of a paragraph and fit a
+single-line paragraph (`rich_text_label.h:582`). The fit width is the control's width truncated to a whole
+pixel (`rich_text_label.h:672`).
+
+A `[p]` tag reads `jst` or `justification_flags`, and `tab_stops`, for its own paragraph (`rich_text_label.cpp:5758-5789`). A bare
+`[p]` has the header flags and no tab stops, so its tabs use `tab_size` (`rich_text_label.h:849`). A `[p]` with other options,
+and each alignment tag, takes the node's flags and stops. A tab that no stop aligns has no width.
+
+`[hr]` draws the theme's 2 x 2 white `horizontal_rule` icon (`add_hr`, `:4159-4199`), at `width` (90 percent),
+`height` (2 px), `color` and `align`. A percent size truncates to whole pixels (`rich_text_label.h:741`). The text after the tag
+shares the rule's line. A line with no text, object or list item has no height, but it still counts as a line.
+`vertical_alignment` FILL spreads its gap over that line (`:1643-1648`). An empty colour, font, underline or strikethrough
+before a `[p]` adds no line (`_find_layout_subitem`, `:3712-3727`).
+
+`[indent]`, `[ul]` and `[ol]` inset each line they hold by `tab_size` spaces of the font around them
+(`_find_margin`, `rich_text_label.cpp:3407-3460`). A `[ul]` or `[ol]` line also draws a marker. The marker is
+the `bullet` option or `•` for `[ul]`, and for `[ol]` the number in the `type` option (`1`, `a`, `A`, `i`, `I`).
+It takes the font of the item and the outermost colour of the item. It sits right-aligned in the inset, which
+is as wide as the widest marker of the list (`:242-372,1017-1039`). A nested `[ol]` writes the outer number
+first, as `1.a.`, and a bullet ends the number (`:242-270`). While `localize_numeral_system` is true, its
+default (`control.h:293`), an `[ol]` writes each plain number in the digits of the item's language. That
+language is the innermost `[lang]` or `[p]` language, else `language`, else the locale
+(`:255-258,3557`, `TranslationServer::format_number`). A language with no number system keeps the ASCII
+digits. A letter or roman numeral keeps its letters. A list ends its last item with a newline, and an empty
+list holds one empty item (`:5326-5345,5415-5424`).
+
+While `clip_contents` is true, its default for this node (`rich_text_label.cpp:8225`), the control's own rect
+clips every glyph, image and underline (`control.cpp:3948`). `fit_content` grows the control to its text, so
+nothing is cut.
+
+With `scroll_active` true, text taller than the rect shows the vertical scrollbar over the right edge of
+the rect. The text wraps beside the bar (`rich_text_label.cpp:3801-3830`). A right-to-left layout mirrors
+the bar to the left edge and starts every line after it (`:990-996`). `scroll_following` scrolls the text
+to its foot (`:3827-3828`). A line that starts below the rect or ends above it is never drawn
+(`:973,978-981`), whether or not the control clips.
+
+`[font_size=N]` sizes its text when N is above 0, over the size of an enclosing `[b]` or `[i]` (`rich_text_label.cpp:639-641`).
+Line height and wrapping follow. `[outline_size=N]` and `[outline_color=C]` draw a ring under the glyphs, and a negative
+size draws none (`:6367-6371`, `:1198-1202`). The theme's `outline_size` and `font_outline_color` are the defaults the tags
+override. The ring takes the alpha of the run's colour (`:1457`).
+A list marker takes the size and outline of its item (`_add_list_prefixes`, `:342-358`, `:1020-1021`).
+The golden `rich-text-label-font-size-outline` shows each tag.
+
+`visible_characters` and `visible_ratio` derive each other in file order, in single precision
+(`rich_text_label.cpp:7401-7430,7892-7948`). Before Shaping, the default, shapes only the shown prefix
+for drawing, so the paragraph the count ends in wraps again as it grows (`:668-671`). After Shaping and
+the Glyphs behaviours keep the full wrap and skip glyphs (`:943-947,1466`). The glyph budget counts every
+character of the text, including an edge space that a wrap trims (`:8017-8033`). An `[img]` counts only when
+Godot loads its texture (`:4210`), so a ratio takes the total of the images drawn. The line a paragraph tag
+ends counts no character (`:4097-4103`). A list marker draws only while its item starts at or before the budget (`:1016`).
+
+`scroll_following_visible_characters` runs as the scene loads, before any line exists. It scrolls to
+the scroll bar's default max, 100, and shows the bar over text that fits (`:2659-2667,5209-5221`).
+`scroll_active` false hides the bar and keeps the scroll. `scroll_following` scrolls the same way
+without the bar (`:3827-3830`).
+
+A `[b]` run and any embolden over the bundled font draw on the canvas painter, which emboldens the
+outline as FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0040). The run draws nothing until the
+bundled face loads, and draws on the atlas without its embolden where the face cannot register.
+
+A `FontVariation` over a variable font draws the instance that its `variation_opentype` names, as Godot sets
+the axes on FreeType and HarfBuzz (`text_server_adv.cpp:1915-1950`). The glyphs fill and stroke from the outlines
+at the instance. They follow the `fvar`, `avar`, `gvar` and `cvar` tables. Each advance follows `HVAR`, or the
+phantom points that `gvar` moves in a font without `HVAR`. The pair kerning follows the `GPOS` `kern` feature
+with its deltas at the instance. A `FontVariation` over another takes its own axis values alone (`font.cpp:3120-3131`).
+
 ## Linting
 
 <!-- lint:begin RichTextLabel -->
@@ -67,15 +135,5 @@ string against `true`, so an absent property or any other value silently resolve
 
 - **Approximated** Only a subset of BBCode tags is styled, and a tag outside it renders as
   plain text.
-- **Approximated** A `[b]` run on the bundled font grows the MSDF edge by the embolden, since the atlas
-  has no formula for FreeType's outline growth.
-- **Approximated** An embolden above about 1.4 over the bundled font differs from FreeType, since the atlas rounds corners and holds limited growth.
-- **Approximated** Fill alignment is not justified, so a filled paragraph keeps a ragged
-  right edge instead of stretching to the box.
-- **Not drawn** `[p dir=]` and the right-to-left arms of `_draw_line`
-  (rich_text_label.cpp:987-1014), which Godot reaches only off the default `text_direction`.
-- **Not drawn** The right-to-left scrollbar offset (:988-996,2093-2100), the loading bar's
-  right-to-left fill (:2580-2588) and the reveal end of `VC_GLYPHS_AUTO` (:944-945), since
-  none of their inputs is drawn.
-- **Not drawn** The clip to `_get_text_rect()` (rich_text_label.cpp:158,2594), so a line
-  wider than its own box hangs past the control's edge, where Godot cuts it.
+- **Approximated** A base drawn with marks shows or hides whole under the glyph budget, where Godot reveals each mark glyph apart.
+- **Not drawn** The loading bar's right-to-left fill (:2580-2588), since the loading bar is not drawn.

@@ -9,9 +9,9 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
+import { OPEN_SANS_ATLAS_GLYPHS, OPEN_SANS_ATLAS_INFO, type OpenSansGlyph } from './openSansAtlas';
 import { regionUvRect } from '../../../uvWindow';
-import type { TextLayoutResult } from './textLayout';
+import type { GlyphPlacement, TextLayoutResult } from './textLayout';
 
 /** The vertex, UV and index buffers of one merged glyph quad set. */
 export interface GlyphQuadArrays {
@@ -25,6 +25,38 @@ export interface GlyphQuadArrays {
 
 /** The atlas's size in bake pixels, which its glyph rects are measured in. */
 const ATLAS_SIZE = { x: OPEN_SANS_ATLAS_INFO.scaleW, y: OPEN_SANS_ATLAS_INFO.scaleH };
+
+const hasInk = (glyph: OpenSansGlyph | null | undefined): glyph is OpenSansGlyph =>
+  !!glyph && glyph.width > 0 && glyph.height > 0;
+
+/** Whether placement `i` of `glyphs` is the first of its cluster: the placements of one cluster share a `sourceIndex`. */
+const startsCluster = (glyphs: readonly GlyphPlacement[], i: number): boolean =>
+  glyphs[i]!.cluster === undefined || glyphs[i - 1]?.sourceIndex !== glyphs[i]!.sourceIndex;
+
+/**
+ * Visits each atlas bitmap placement `i` of `glyphs` draws, `penPx` past its pen, its `xOffset`
+ * included. A glyph the atlas does not bake, such as a ligature, draws the characters of its `char`
+ * at their own advances, once for its cluster: each later glyph of its cluster draws none.
+ */
+function forEachInkedGlyph(
+  glyphs: readonly GlyphPlacement[],
+  i: number,
+  scale: number,
+  visit: (glyph: OpenSansGlyph, penPx: number) => void
+): void {
+  const gp = glyphs[i]!;
+  let penPx = gp.xOffset ?? 0;
+  if (gp.glyph) {
+    if (hasInk(gp.glyph)) visit(gp.glyph, penPx);
+    return;
+  }
+  if (!startsCluster(glyphs, i)) return;
+  for (const char of gp.char) {
+    const glyph = OPEN_SANS_ATLAS_GLYPHS[char];
+    if (hasInk(glyph)) visit(glyph, penPx);
+    penPx += (glyph?.xadvance ?? 0) * scale;
+  }
+}
 
 /**
  * Builds one merged quad set for `layout`, skipping a placement with no atlas
@@ -48,11 +80,8 @@ export function buildGlyphQuadArrays(
   const bakeAnchorPx = OPEN_SANS_ATLAS_INFO.base * scale;
 
   let glyphCount = 0;
-  for (const line of layout.lines) {
-    for (const gp of line.glyphs) {
-      if (gp.glyph && gp.glyph.width > 0 && gp.glyph.height > 0) glyphCount++;
-    }
-  }
+  for (const line of layout.lines)
+    for (let i = 0; i < line.glyphs.length; i++) forEachInkedGlyph(line.glyphs, i, scale, () => glyphCount++);
 
   const positions = new Float32Array(glyphCount * 4 * 3);
   const uvs = new Float32Array(glyphCount * 4 * 2);
@@ -62,33 +91,32 @@ export function buildGlyphQuadArrays(
   layout.lines.forEach((line, lineIndex) => {
     const lineTopPx = lineIndex * layout.linePitchPx;
     const baselinePx = lineTopPx + baselineOffsetPx;
-    for (const gp of line.glyphs) {
-      const glyph = gp.glyph;
-      if (!glyph || glyph.width <= 0 || glyph.height <= 0) continue;
+    line.glyphs.forEach((gp, i) => {
+      forEachInkedGlyph(line.glyphs, i, scale, (glyph, penPx) => {
+        // FreeType keeps an emboldened glyph's left and bottom edges and grows it right and up. The
+        // material's bias grows it on every side, so the quad moves half the growth to match.
+        const shiftPx = (gp.emboldenGrowthPx ?? 0) / 2;
+        const leftPx = gp.x + penPx + glyph.xoffset * scale + shiftPx;
+        const topPx = baselinePx - bakeAnchorPx + glyph.yoffset * scale - shiftPx;
+        const rightPx = leftPx + glyph.width * scale;
+        const bottomPx = topPx + glyph.height * scale;
 
-      // FreeType keeps an emboldened glyph's left and bottom edges and grows it right and up. The
-      // material's bias grows it on every side, so the quad moves half the growth to match.
-      const shiftPx = (gp.emboldenGrowthPx ?? 0) / 2;
-      const leftPx = gp.x + glyph.xoffset * scale + shiftPx;
-      const topPx = baselinePx - bakeAnchorPx + glyph.yoffset * scale - shiftPx;
-      const rightPx = leftPx + glyph.width * scale;
-      const bottomPx = topPx + glyph.height * scale;
+        const dx = (yPx: number): number => -skew * (yPx - baselinePx);
+        const tl: [number, number] = [leftPx + dx(topPx), topPx];
+        const tr: [number, number] = [rightPx + dx(topPx), topPx];
+        const bl: [number, number] = [leftPx + dx(bottomPx), bottomPx];
+        const br: [number, number] = [rightPx + dx(bottomPx), bottomPx];
 
-      const dx = (yPx: number): number => -skew * (yPx - baselinePx);
-      const tl: [number, number] = [leftPx + dx(topPx), topPx];
-      const tr: [number, number] = [rightPx + dx(topPx), topPx];
-      const bl: [number, number] = [leftPx + dx(bottomPx), bottomPx];
-      const br: [number, number] = [rightPx + dx(bottomPx), bottomPx];
+        const v = quad * 4;
+        positions.set([tl[0], -tl[1], 0, tr[0], -tr[1], 0, bl[0], -bl[1], 0, br[0], -br[1], 0], v * 3);
 
-      const v = quad * 4;
-      positions.set([tl[0], -tl[1], 0, tr[0], -tr[1], 0, bl[0], -bl[1], 0, br[0], -br[1], 0], v * 3);
+        const uv = regionUvRect({ x: glyph.x, y: glyph.y, w: glyph.width, h: glyph.height }, ATLAS_SIZE);
+        uvs.set([uv.u0, uv.vTop, uv.u1, uv.vTop, uv.u0, uv.vBottom, uv.u1, uv.vBottom], v * 2);
 
-      const uv = regionUvRect({ x: glyph.x, y: glyph.y, w: glyph.width, h: glyph.height }, ATLAS_SIZE);
-      uvs.set([uv.u0, uv.vTop, uv.u1, uv.vTop, uv.u0, uv.vBottom, uv.u1, uv.vBottom], v * 2);
-
-      indices.set([v + 2, v + 3, v, v + 3, v + 1, v], quad * 6);
-      quad++;
-    }
+        indices.set([v + 2, v + 3, v, v + 3, v + 1, v], quad * 6);
+        quad++;
+      });
+    });
   });
 
   return { positions, uvs, indices };

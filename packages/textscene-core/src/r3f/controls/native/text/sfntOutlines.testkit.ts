@@ -1,7 +1,8 @@
 /**
  * Builds a tiny TrueType font in memory for the outline reader's tests: the tables `openFontOutlines`
  * cannot do without (`head`, `maxp`, `cmap`, `loca`, `glyf`) and nothing else, so a test states the
- * glyphs it needs and no more. With no metrics and no hinting programs, its glyphs load unhinted.
+ * glyphs it needs and no more. With no metrics and no hinting programs, its glyphs load through the
+ * auto-hinter, as Godot loads a TrueType font without hints.
  * Every coordinate is a whole design unit, written as a 16-bit delta.
  * It also reads the font fixtures of `scenes/fixtures/fonts/`, and the contours of a character.
  */
@@ -9,13 +10,23 @@
 import { join } from 'node:path';
 import { fileBytes } from '../../../../resources/testing/fileBytes';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
+import type { LookupGlyph } from './autofit/openTypeGdef';
 import type { GlyphContours } from './glyphContours';
+import { sfntGlyphIndex } from './sfntCmap';
 import { openFontOutlines, type SfntOutlines } from './sfntOutlines';
+import { openSfnt, type SfntFile } from './sfntTables';
 
 const FIXTURE_FONTS = join(import.meta.dirname, '../../../../../../../scenes/fixtures/fonts');
 
 export function fixtureFontBytes(name: string): ArrayBuffer {
   return fileBytes(join(FIXTURE_FONTS, name));
+}
+
+/** The fixture font `name`, opened. Throws for a file that holds no sfnt. */
+export function fixtureSfnt(name: string): SfntFile {
+  const sfnt = openSfnt(fixtureFontBytes(name));
+  if (!sfnt) throw new Error(`expected an sfnt in ${name}, got none`);
+  return sfnt;
 }
 
 /** The contours of the glyph of `char` at `sizePx`. Throws for a character with no outline. */
@@ -43,6 +54,15 @@ export async function glyphContoursOf(
  */
 export function fontFile(bytes: ArrayBuffer | undefined, fallbacks: FontResource[] = []): FontFileResource {
   return { kind: 'file', bytes, mimeType: bytes ? 'font/ttf' : undefined, fallbacks, properties: {} };
+}
+
+/**
+ * A `SystemFont` whose name no OS font matches, new on each call: it draws the default font.
+ *
+ * @canonical A SystemFont resource fixture for a font test
+ */
+export function systemFont(): FontResource {
+  return { kind: 'system', fontNames: ['Zz No Such Font'], baseFont: null, fallbacks: [], properties: {} };
 }
 
 export interface TestPoint {
@@ -107,6 +127,12 @@ export class ByteWriter {
 
   u32(value: number): this {
     return this.u16(value >>> 16).u16(value & 0xffff);
+  }
+
+  /** A four-character table, script, feature or axis tag. */
+  tag(name: string): this {
+    for (const char of name) this.u8(char.charCodeAt(0));
+    return this;
   }
 
   raw(other: ByteWriter | readonly number[]): this {
@@ -260,8 +286,7 @@ export function sfntFileBytes(
     .u16(0);
   let offset = sfntStart + directorySize;
   for (const [tag, table] of tables) {
-    for (const char of tag) out.u8(char.charCodeAt(0));
-    out.u32(0).u32(offset).u32(table.length);
+    out.tag(tag).u32(0).u32(offset).u32(table.length);
     offset += Math.ceil(table.length / 4) * 4;
   }
   for (const [, table] of tables) out.raw(table).pad4();
@@ -281,4 +306,13 @@ export function buildTestFont(input: TestFontInput): ArrayBuffer {
     ],
     input.container
   );
+}
+
+/** The glyphs `cmap` gives the characters of `text` in decomposed form, as a cluster a mark reader takes. */
+export function clusterGlyphs(sfnt: SfntFile, text: string): LookupGlyph[] {
+  const glyphIndex = sfntGlyphIndex(sfnt)!;
+  return Array.from(text.normalize('NFD'), (ch) => {
+    const codePoint = ch.codePointAt(0)!;
+    return { glyph: glyphIndex(codePoint), codePoint };
+  });
 }

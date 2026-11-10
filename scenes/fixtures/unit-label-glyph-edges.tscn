@@ -1,0 +1,33 @@
+; The one variable: a large bundled-font glyph's curved edge, filled on one Label and ringed alone
+; on the other. FreeType draws each curve as chords up to 1/16 px inside it (`ftgrays.c`), so an
+; edge drawn on the true curve sits a fraction of a pixel off Godot's. The ring Label has a clear
+; fill, so its ring is the only ink.
+
+[gd_scene load_steps=1 format=3 uid="uid://unitlabelglyphedges"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Fill" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 620.0
+offset_bottom = 140.0
+theme_override_font_sizes/font_size = 96
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "Ocean"
+
+[node name="Ring" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 160.0
+offset_right = 620.0
+offset_bottom = 280.0
+theme_override_font_sizes/font_size = 96
+theme_override_colors/font_color = Color(1, 1, 1, 0)
+theme_override_colors/font_outline_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 4
+text = "Ocean"

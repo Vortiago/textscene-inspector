@@ -10,6 +10,9 @@ export interface Vector2 {
   y: number;
 }
 
+/** Godot's `Vector2.ZERO`. */
+export const VECTOR2_ZERO: Readonly<Vector2> = Object.freeze({ x: 0, y: 0 });
+
 /** A point, a size or a direction: three components, as Godot's `Vector3` and `Vector3i` hold them. */
 export interface Vector3 {
   x: number;

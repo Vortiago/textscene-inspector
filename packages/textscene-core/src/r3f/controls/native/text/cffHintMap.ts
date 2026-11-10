@@ -36,11 +36,25 @@ export class HintMap {
   /** The map of the captured edges. The initial map is its own. */
   private readonly initialMap: HintMap;
 
-  constructor(
+  private constructor(
     private readonly blues: BlueZones,
-    initialMap?: HintMap
+    initialMap: HintMap | null,
+    private readonly isHinted: boolean
   ) {
     this.initialMap = initialMap ?? this;
+  }
+
+  /**
+   * The initial map of a glyph, its own. `isHinted` false maps every y by the scale alone, as an
+   * unhinted load does (`cf2_hintmap_map`), and so does every map built on it.
+   */
+  static initial(blues: BlueZones, isHinted: boolean): HintMap {
+    return new HintMap(blues, null, isHinted);
+  }
+
+  /** A map that captures the edges of `initialMap`. */
+  static on(initialMap: HintMap): HintMap {
+    return new HintMap(initialMap.blues, initialMap, initialMap.isHinted);
   }
 
   /** The scale of the font size, which places an edge no hint moves. */
@@ -49,7 +63,7 @@ export class HintMap {
   }
 
   clone(): HintMap {
-    const copy = new HintMap(this.blues, this.initialMap);
+    const copy = HintMap.on(this.initialMap);
     copy.isValid = this.isValid;
     // A built map never changes its edges, so a clone shares them: `build` replaces the array.
     copy.edges = this.edges;
@@ -59,7 +73,7 @@ export class HintMap {
   /** The device space y of character space `y` (`cf2_hintmap_map`). */
   map(y: number): number {
     const { edges } = this;
-    if (edges.length === 0) return ftMulFix(y, this.scale);
+    if (edges.length === 0 || !this.isHinted) return ftMulFix(y, this.scale);
     // The highest edge at or below y, so an edge that shares a position with another uses the upper one.
     let i = 0;
     while (i < edges.length - 1 && y >= edges[i + 1]!.csCoord) i++;

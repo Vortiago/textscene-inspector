@@ -74,6 +74,50 @@ describe('createFontProcessor', () => {
     expect(processor.getCached('res://fonts/Xolonium-Regular.ttf')).toBe(resource);
   });
 
+  it("takes a raw font's import params from its sidecar, as Godot's importer sets them on the FontFile", async () => {
+    const { processor, eventBus } = setup({
+      'res://fonts/x.ttf': new ArrayBuffer(8),
+      'res://fonts/x.ttf.import':
+        '[remap]\n\nimporter="font_data_dynamic"\n\n[params]\n\nforce_autohinter=true\n',
+    });
+
+    const loaded = eventBus.once<FontResource>('font', 'loaded', 'res://fonts/x.ttf', 2000);
+    processor.request('res://fonts/x.ttf');
+    const resource = (await loaded) as FontFileResource;
+
+    expect(resource.properties).toEqual({ force_autohinter: 'true' });
+  });
+
+  it('ignores the sidecar of a raw font that another importer names (the dynamic font importer sets the params)', async () => {
+    const { processor, eventBus } = setup({
+      'res://fonts/x.ttf': new ArrayBuffer(8),
+      'res://fonts/x.ttf.import': '[remap]\n\nimporter="texture"\n\n[params]\n\nforce_autohinter=true\n',
+    });
+
+    const loaded = eventBus.once<FontResource>('font', 'loaded', 'res://fonts/x.ttf', 2000);
+    processor.request('res://fonts/x.ttf');
+    const resource = (await loaded) as FontFileResource;
+
+    expect(resource.properties).toEqual({});
+  });
+
+  it("loads a raw font's `fallbacks` import param as its fallbacks (`resource_importer_dynamic_font.cpp:192`)", async () => {
+    const fallbackBytes = new ArrayBuffer(16);
+    const { processor, eventBus } = setup({
+      'res://fonts/x.ttf': new ArrayBuffer(8),
+      'res://fonts/x.ttf.import':
+        '[remap]\n\nimporter="font_data_dynamic"\n\n[params]\n\nfallbacks=[Resource("uid://c4k", "res://fonts/cjk.otf")]\n',
+      'res://fonts/cjk.otf': fallbackBytes,
+    });
+
+    const loaded = eventBus.once<FontResource>('font', 'loaded', 'res://fonts/x.ttf', 2000);
+    processor.request('res://fonts/x.ttf');
+    const resource = (await loaded) as FontFileResource;
+
+    expect((resource.fallbacks[0] as FontFileResource | undefined)?.bytes).toBe(fallbackBytes);
+    expect(resource.properties).toEqual({});
+  });
+
   it("fails a raw font with the provider's reason, not a bare not-found", async () => {
     const provider: ResourceProvider = {
       loadResource: vi.fn(async () => {
@@ -164,7 +208,13 @@ describe('createFontProcessor', () => {
     processor.request('res://fonts/system.tres');
     const resource = await loaded;
 
-    expect(resource).toEqual({ kind: 'system', fontNames: ['sans-serif'], properties: {} });
+    expect(resource).toEqual({
+      kind: 'system',
+      fontNames: ['sans-serif'],
+      baseFont: null,
+      fallbacks: [],
+      properties: {},
+    });
   });
 
   it('addresses a FontFile declared as a named sub-resource of a .tres', async () => {

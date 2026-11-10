@@ -4,6 +4,8 @@ import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalFloat, parseOptionalInt } from '../../../../parser/valueParsers';
 import { parseControl } from '../control/parser';
 import type { LineEditProperties } from './types';
+import { parseTextDirectionProperties } from '../../../../parser/textDirectionParser';
+import { parseStructuredTextOverride } from '../../../../parser/structuredTextOverrideParser';
 
 /** `unquoteString` on a present value, `undefined` on an absent one. */
 function optionalString(value: string | undefined): string | undefined {
@@ -16,6 +18,8 @@ export function parseLineEdit(
 ): LineEditProperties {
   const result: LineEditProperties = {
     ...parseControl(heading, properties),
+    ...parseTextDirectionProperties(properties, 'LineEdit'),
+    ...parseStructuredTextOverride(properties),
     text: optionalString(properties.text),
     placeholderText: optionalString(properties.placeholder_text),
     alignment: parseOptionalInt(properties.alignment),

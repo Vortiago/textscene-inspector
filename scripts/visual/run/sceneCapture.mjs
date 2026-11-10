@@ -6,6 +6,7 @@
 
 import {
   clearDiagnostics,
+  describeFailedRequests,
   errorReport,
   loggedErrors,
   openScene,
@@ -17,6 +18,15 @@ import { pausePlayer, seekPlayer } from './seekAnimation.mjs';
 // Greater than CameraFit's last load-time fit timer (1100 ms after mount), with margin for
 // render-loop latency under host contention.
 const PRE_SELECT_FIT_QUIESCENCE_MS = 1500;
+
+/**
+ * `reason` with the requests the page lost, so a scene that never loads names the chunk or file
+ * that failed. A failed request leaves no console error when its caller waits on it for good.
+ */
+function withFailedRequests(reason, { failedRequests }) {
+  if (failedRequests.length === 0) return reason;
+  return `${reason}; failed requests: ${describeFailedRequests(failedRequests)}`;
+}
 
 /**
  * Navigates to a scene and captures its target after two byte-identical screenshots. Returns the
@@ -34,12 +44,12 @@ export async function captureScene(pageState, baseUrl, scene) {
     camera: scene.camera,
     onSlow: (ms) => console.log(`[visual]   ${scene.name}: no network idle within ${ms}ms`),
   });
-  if (!canvas) return { buffer: null, reason: canvasReason };
+  if (!canvas) return { buffer: null, reason: withFailedRequests(canvasReason, diagnostics) };
 
   if (scene.navigation) {
     // The navmesh overlay defaults on, but is set explicitly, so the baseline rests on no default.
     const reason = await setDisplayToggle(page, 'Navigation', true);
-    if (reason) return { buffer: null, reason };
+    if (reason) return { buffer: null, reason: withFailedRequests(reason, diagnostics) };
     await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
     await page.mouse.move(0, 0);
   }
@@ -48,7 +58,7 @@ export async function captureScene(pageState, baseUrl, scene) {
     // "Visible Collision Shapes" is off by default (ADR-0005/0006), so every other golden hides a
     // CollisionShape gizmo.
     const reason = await setDisplayToggle(page, 'Collisions', true);
-    if (reason) return { buffer: null, reason };
+    if (reason) return { buffer: null, reason: withFailedRequests(reason, diagnostics) };
     // Let CameraFit's load-time timers finish before changing what is on
     // screen, and take the pointer off the toolbar so no hover is captured.
     await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
@@ -64,7 +74,8 @@ export async function captureScene(pageState, baseUrl, scene) {
     try {
       await row.waitFor({ timeout: 10000 });
     } catch {
-      return { buffer: null, reason: `select target not found in tree: ${scene.select}` };
+      const reason = `select target not found in tree: ${scene.select}`;
+      return { buffer: null, reason: withFailedRequests(reason, diagnostics) };
     }
     // After CameraFit's fit timers (150/500/1100 ms after mount) have all fired: a click before the
     // last one lets it see the new gizmo and widen the frame, and host load picks the winner. The
@@ -86,7 +97,7 @@ export async function captureScene(pageState, baseUrl, scene) {
   }
 
   const result = await settleCanvas(page, canvas, { screenshotTimeout: scene.settleTimeout });
-  if (!result.buffer) return result;
+  if (!result.buffer) return { ...result, reason: withFailedRequests(result.reason, diagnostics) };
   if (loggedErrors(diagnostics).length > 0) {
     // A console error in a settled, plausible capture is still a broken render: pixels cannot see a
     // swallowed resource failure that leaves the previous frame on screen.

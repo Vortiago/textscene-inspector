@@ -11,6 +11,7 @@
  */
 
 import type { SfntFile } from './sfntTables';
+import type { FontInstance } from './variation/fontInstance';
 import { isTrickyFont } from './trickyFont';
 
 /** `FT_CURVE_TAG_TOUCH_X`: an instruction has moved the point along x. */
@@ -84,11 +85,12 @@ export interface GlyphLoadHinter {
 /** The glyph loads of one font, each at a ppem and scale. */
 export interface GlyphHinting {
   /**
-   * The hinter of one load at `ppem`, whose 16.16 `scale` takes font units to 26.6 pixels. Null
-   * when the control value program turns hinting off, so the glyph loads unhinted. `'failed'` when
-   * the font program or the control value program failed at this size, so FreeType loads no glyph.
+   * The hinter of one load at `ppem`, whose 16.16 `scale` takes font units to 26.6 pixels, of the
+   * font at `instance` when it is variable and not at its default. Null when the control value
+   * program turns hinting off, so the glyph loads unhinted. `'failed'` when the font program or the
+   * control value program failed at this size, so FreeType loads no glyph.
    */
-  beginLoad(ppem: number, scale: number): GlyphLoadHinter | null | 'failed';
+  beginLoad(ppem: number, scale: number, instance?: FontInstance | null): GlyphLoadHinter | null | 'failed';
 }
 
 /** The size of a control value program that the auto-hinter still takes over from (`ftobjs.c`). */

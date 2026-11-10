@@ -269,7 +269,43 @@ describe('<Button> — the label is cut to its paragraph box whatever clip_text 
     const unclipped = await render({}, { x: 0, y: 0, w: 140, h: 32 });
     expect(glyphQuadCount(fitting)).toBe(glyphQuadCount(unclipped));
   });
+
+  it('trims every row of an unwrapped label (text_paragraph.cpp:282-293)', async () => {
+    const narrow: Rect2 = { x: 0, y: 0, w: 30, h: 64 };
+    const renderer = await ReactThreeTestRenderer.create(
+      <Button
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'AAAAAAAAAAAA\nAAAAAAAAAAAA', overrunBehavior: 1 })}
+        rect={narrow}
+        renderOrder={0}
+      />
+    );
+    expect(textQuadCounts(renderer.scene)).toEqual([2, 2]);
+  });
+
+  it('trims no row of a wrapped label, which hides no line (text_paragraph.cpp:228-262)', async () => {
+    const narrow: Rect2 = { x: 0, y: 0, w: 30, h: 64 };
+    const renderer = await ReactThreeTestRenderer.create(
+      <Button
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'AAAAAAAAAAAA', overrunBehavior: 1, autowrapMode: 2 })}
+        rect={narrow}
+        renderOrder={0}
+      />
+    );
+    // AUTOWRAP_WORD finds no break in one word, so the untrimmed row is only cut by the draw box.
+    expect(textQuadCounts(renderer.scene)).toEqual([2]);
+  });
 });
+
+/** The glyph quads of each text mesh, in draw order. */
+function textQuadCounts(scene: Rendered['scene']): number[] {
+  return scene
+    .findAllByType('Mesh')
+    .map((m) => m.instance as THREE.Mesh)
+    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined)
+    .map((m) => m.geometry.attributes.position!.count / 4);
+}
 
 describe('<Button> — icon (ControlQuad), via ResourceLoader/SceneResources', () => {
   function fakeTexture(w: number, h: number): THREE.Texture {
@@ -382,12 +418,12 @@ describe('<Button> — scene-font (canvas-kind FontMetrics) text path', () => {
     );
   }
 
-  /** The canvas painter's mesh: a `MeshBasicMaterial` over a `CanvasTexture`, not the MSDF `ShaderMaterial`. */
+  /** The canvas painter's mesh: a `MeshBasicMaterial` over the raster's `DataTexture`, not the MSDF `ShaderMaterial`. */
   function findCanvasTextMesh(scene: Rendered['scene']) {
     return scene
       .findAllByType('Mesh')
       .map((m) => m.instance as THREE.Mesh)
-      .find((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.CanvasTexture);
+      .find((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.DataTexture);
   }
 
   it('paints the label through the canvas rasteriser — ONE quad, not one per glyph, and no MSDF material', async () => {

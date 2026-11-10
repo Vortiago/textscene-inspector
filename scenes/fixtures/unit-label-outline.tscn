@@ -1,6 +1,6 @@
-; font_outline_color and outline_size, the one variable no other Label fixture sets. The MSDF
-; text engine composites the outline into the fill's mesh at a second distance threshold
-; (`msdfMaterial.ts`). Drawing no border, or one of the wrong width, beside a correct fill is
+; font_outline_color and outline_size, the one variable no other Label fixture sets. The ring is a
+; stroked contour of radius outline_size / 4 px on the canvas painter, behind the fill
+; (`label.cpp:876-878`). Drawing no ring, or one of the wrong width, beside a correct fill is
 ; invisible to a diff that checks only the fill's ink.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitlabeloutline"]

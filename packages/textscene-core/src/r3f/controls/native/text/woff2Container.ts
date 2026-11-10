@@ -8,7 +8,7 @@ import { ByteReader } from '../../../../resources/formats/binaryresource/byteRea
 import { exactly } from '../../../../resources/formats/binaryresource/compressedStream';
 import { perObject } from '../../../../utils/perObject';
 import { loadBrotliDecoder } from './brotliDecoder';
-import { SCENE_FONT_TABLE_TAGS, sfntFileOfTables, type SfntFile } from './sfntTables';
+import { sfntFileOfTables, type SfntFile } from './sfntTables';
 import { rebuildGlyfTables } from './woff2Glyf';
 import { rebuiltHmtxOf, type DecodedTable } from './woff2Hmtx';
 
@@ -185,14 +185,17 @@ function plainTablesOf(
 }
 
 /**
- * Throws on a collection, a directory or stream that does not fit `bytes`, a Brotli stream that
- * does not decode to the lengths the directory sums to, or a transformed table FreeType rejects.
+ * The tables of `tags`, split at the slow step: the Brotli stream decodes once for `bytes` here, and
+ * the thunk rebuilds the tables when first called, which a `glyf` rebuild makes costly. Both throw on
+ * a collection, a directory or stream that does not fit `bytes`, a Brotli stream that does not decode
+ * to the lengths the directory sums to, or a transformed table FreeType rejects.
  */
-export async function readWoff2Tables(
-  bytes: ArrayBuffer,
-  tags: readonly string[] = SCENE_FONT_TABLE_TAGS
-): Promise<SfntFile> {
+export async function lazyWoff2Tables(bytes: ArrayBuffer, tags: readonly string[]): Promise<() => SfntFile> {
   const stream = await decodedStreamOf(bytes);
+  return () => tablesOfStream(stream, tags);
+}
+
+function tablesOfStream(stream: DecodedStream, tags: readonly string[]): SfntFile {
   const stored = storedTablesOf(stream);
   const tables = plainTablesOf(stored, tags);
 

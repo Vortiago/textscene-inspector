@@ -1,0 +1,95 @@
+/**
+ * The run shaping of a face: the clusters of a run and the glyphs each draws as the `GSUB` of a font shapes the run
+ * whole, read off the bundled Open Sans and the contextual `rvrn` fixture.
+ */
+import { describe, expect, it } from 'vitest';
+import { defaultSubstitution } from './autofit/openTypeFeatures';
+import { openFontContainer } from './fontContainer';
+import type { FontMetrics } from './fontMetrics';
+import { getFontRunShaping, keptRunShaping, sfntRunShapingFace, type RunShapingFace } from './glyphRun';
+import { bundledFontBytes } from './bundledFontBytes';
+import { fixtureFontBytes } from './sfntOutlines.testkit';
+import { OUTLINE_TABLE_TAGS } from './sfntTables';
+
+/** The glyphs Godot 4.6.3 gives these runs (`shapedRuns.godot.json`). */
+const OPEN_SANS_FI = 907;
+const OPEN_SANS_FFI = 909;
+const RECURSIVE_SWAPPED_L = 337;
+
+async function faceOf(bytes: ArrayBuffer): Promise<RunShapingFace> {
+  const sfnt = await openFontContainer(bytes, OUTLINE_TABLE_TAGS);
+  return sfntRunShapingFace(sfnt!)!;
+}
+
+const openSans = () => faceOf(bundledFontBytes());
+
+const shape = (face: RunShapingFace, chars: readonly string[]) =>
+  keptRunShaping(face, defaultSubstitution(face.gsub!))(chars);
+
+/** The glyph `cmap` gives the first character of `text`. */
+const cmapGlyphOf = (face: RunShapingFace, text: string) => face.glyphIndex(text.codePointAt(0)!);
+
+/** The clusters of `text` that draw a glyph a lookup gave, with that glyph. */
+const substitutedOf = (face: RunShapingFace, text: string) =>
+  shape(face, [...text]).flatMap(({ start, end, glyphs }) =>
+    glyphs
+      .filter(({ glyph, char }) => glyph !== cmapGlyphOf(face, char))
+      .map(({ glyph }) => ({ start, end, glyph }))
+  );
+
+describe('keptRunShaping', () => {
+  it('draws a ligature as one cluster of its characters', async () => {
+    expect(substitutedOf(await openSans(), 'office')).toEqual([{ start: 1, end: 4, glyph: OPEN_SANS_FFI }]);
+  });
+
+  it('gives a ligature the source text of its cluster as its char', async () => {
+    const [cluster] = shape(await openSans(), [...'fi']);
+    expect(cluster!.glyphs.map(({ char }) => char)).toEqual(['fi']);
+  });
+
+  it('gives a ligature the advance of its own glyph', async () => {
+    const face = await openSans();
+    const [cluster] = shape(face, [...'fi']);
+    expect(cluster!.glyphs).toMatchObject([
+      { glyph: OPEN_SANS_FI, advanceUnits: face.advanceUnits(OPEN_SANS_FI) },
+    ]);
+  });
+
+  it('keeps the place of an empty string, which holds no character', async () => {
+    const face = await openSans();
+    const clusters = shape(face, ['x', '', 'f', 'i']);
+    expect(clusters.map(({ start, end }) => [start, end])).toEqual([
+      [0, 1],
+      [2, 4],
+    ]);
+  });
+
+  it('draws the glyph cmap gives each character of a run the lookups do not change', async () => {
+    const face = await openSans();
+    const clusters = shape(face, [...'ft']);
+    expect(clusters.flatMap(({ glyphs }) => glyphs.map(({ glyph }) => glyph))).toEqual([
+      cmapGlyphOf(face, 'f'),
+      cmapGlyphOf(face, 't'),
+    ]);
+  });
+
+  it('joins a mark to the cluster of its base, as a glyph with no advance of its own', async () => {
+    const [cluster] = shape(await openSans(), [...'x\u0308']);
+    expect(cluster).toMatchObject({ start: 0, end: 2, glyphs: [{ isMark: false }, { isMark: true }] });
+  });
+
+  // The fixture's default instance swaps `l` for its own glyph whatever its neighbours.
+  it('swaps a glyph by a lookup of the run', async () => {
+    const face = await faceOf(fixtureFontBytes('recursive-contextual-rvrn.woff2'));
+    expect(substitutedOf(face, 'il')).toEqual([{ start: 1, end: 2, glyph: RECURSIVE_SWAPPED_L }]);
+  });
+});
+
+describe('getFontRunShaping of a face with no shaping', () => {
+  it('draws the composite of a base and a mark where the face has it', () => {
+    const face = { hasGlyph: (ch: string) => ch !== '\u0301' } as FontMetrics;
+    expect(getFontRunShaping(face, [...'e\u0301'])).toEqual([
+      { start: 0, end: 2, glyphs: [{ char: 'é', isMark: false }] },
+    ]);
+  });
+});

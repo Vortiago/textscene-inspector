@@ -179,8 +179,23 @@ export const GEOMETRY_SCENES = [
   // depth prepass cast, and a blended surface or one with no depth test casts nothing.
   { name: 'sprite3d-shadow', file: 'unit-sprite3d-shadow.tscn' },
   { name: 'label3d-shadow', file: 'unit-label3d-shadow.tscn' },
+  // The one variable: `shaded`. An unshaded label, a shaded label and a shaded back face under one
+  // coloured sun at N·L = 0.5.
+  { name: 'label3d-shaded', file: 'unit-label3d-shaded.tscn', camera: 'Root/Camera3D' },
   // The one variable: the `font` of a Label3D, with an outline ring under an embolden.
   { name: 'label3d-scene-font', file: 'unit-label3d-scene-font.tscn' },
+  // The one variable: a BMFont as the font of a TextMesh, which draws nothing, and of two Label3Ds.
+  { name: 'label3d-bmfont', file: 'unit-label3d-bmfont.tscn' },
+  // The one variable: a Label3D and a TextMesh draw a character the font lacks from its fallback chain.
+  { name: 'label3d-text-mesh-font-fallbacks', file: 'unit-label3d-text-mesh-font-fallbacks.tscn' },
+  // The one variable: a precomposed character the font lacks, drawn by a Label3D and a TextMesh as its base
+  // and marks, the marks at the offsets of the font's GPOS, of a font with no GPOS script and of one with no mark lookup.
+  { name: 'label3d-text-mesh-decomposed-marks', file: 'unit-label3d-text-mesh-decomposed-marks.tscn' },
+  // The one variable: how a Label3D lays its text out. Wrap at `width`, FILL, TOP and BOTTOM
+  // vertical alignment, `offset` and `uppercase`, seen through the scene's own camera.
+  { name: 'label3d-layout', file: 'unit-label3d-layout.tscn', camera: 'Root/Camera3D' },
+  // The one variable: a Label3D's paragraph direction, language and structured override.
+  { name: 'label3d-text-direction', file: 'unit-label3d-text-direction.tscn', camera: 'Root/Camera3D' },
   // The default font's glyph pages with a mip chain (`gui/theme/default_font_generate_mipmaps`), seen
   // small at a project mipmap bias of -1. A raster without the chain draws the same text sparkling.
   { name: 'label3d-glyph-mipmaps', file: 'label3d-glyph-mipmaps/unit-label3d-glyph-mipmaps.tscn' },

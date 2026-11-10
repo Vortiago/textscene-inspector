@@ -35,6 +35,7 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import type { ButtonProperties } from './types';
 import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 
 /**
  * Button's theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:152`). Only
@@ -112,14 +113,14 @@ export function buttonLabelShape(
   const mode = clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF);
   // Not `ctx.measureText`: its `Vector2` drops the layout the painter needs, and its readiness
   // gate belongs to the solver. The painter shapes unconditionally.
-  return shapeButtonLabel(
-    text,
+  return shapeButtonLabel(text, {
     fontSizePx,
-    resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY),
-    mode === AutowrapMode.AUTOWRAP_OFF ? 0 : boxWidthPx,
-    mode,
-    props.autowrapTrimFlags
-  );
+    fontMetrics: resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY),
+    bidi: controlBidiOptions(props, n),
+    boxWidthPx: mode === AutowrapMode.AUTOWRAP_OFF ? 0 : boxWidthPx,
+    autowrapMode: mode,
+    autowrapTrimFlags: props.autowrapTrimFlags,
+  });
 }
 
 /**

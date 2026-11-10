@@ -39,12 +39,12 @@ describe('buildFontResource', () => {
 describe('fontResourceFromContainer', () => {
   it('wraps the bytes of a raw font file', () => {
     const bytes = new ArrayBuffer(2);
-    const resource = fontResourceFromContainer('res://fonts/Xolonium-Regular.ttf', bytes);
+    const resource = fontResourceFromContainer('res://fonts/Xolonium-Regular.ttf', bytes, {});
     expect(resource).toEqual({ kind: 'file', bytes, mimeType: 'font/ttf', fallbacks: [], properties: {} });
   });
 
   it('throws for text at a container path, which holds no font bytes', () => {
-    expect(() => fontResourceFromContainer('res://fonts/x.ttf', 'not a font')).toThrow(
+    expect(() => fontResourceFromContainer('res://fonts/x.ttf', 'not a font', {})).toThrow(
       'res://fonts/x.ttf is text, not font bytes'
     );
   });
