@@ -1,7 +1,8 @@
 /**
  * A canvas item that draws a texture loads it through `useCanvasItemTexture` and hands the result's
- * `canvasTexture` to `CanvasItem2D`. Loading it any other way leaves its CanvasTexture maps out of
- * the lighting, which is how Line2D drew a normal-mapped texture flat.
+ * `canvasTexture` to `CanvasItem2D`, or to `CanvasItemSurfaceSource` where it lights its own meshes.
+ * Loading it any other way leaves its CanvasTexture maps out of the lighting, which is how Line2D
+ * drew a normal-mapped texture flat.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
@@ -32,11 +33,11 @@ const canvasItems = sourceFiles(SRC)
     name: relative(SRC, path).split(sep).join('/'),
     text: withoutComments(readFileSync(path, 'utf8')),
   }))
-  .filter(({ text }) => text.includes('<CanvasItem2D'));
+  .filter(({ text }) => text.includes('<CanvasItem2D') || text.includes('<CanvasItemSurfaceSource'));
 
-const LOADS_THROUGH_HOOK = /\buseCanvasItemTexture\(/;
+const LOADS_THROUGH_HOOK = /\buseCanvasItemTexture(?:SampledBy)?\(/;
 const LOADS_DIRECTLY = /\buseTexture2D\s*\(/;
-const PASSES_CANVAS_TEXTURE = /\bcanvasTexture\s*=\s*\{/;
+const PASSES_CANVAS_TEXTURE = /\bcanvasTexture\s*=\s*\{|\bcanvasTexture\.slot\b/;
 
 describe('a texture-drawing canvas item', () => {
   it('finds the canvas items that draw a texture', () => {
@@ -49,6 +50,7 @@ describe('a texture-drawing canvas item', () => {
         'nodes/2d/polygon2d/Component.tsx',
         'nodes/2d/sprite2d/Component.tsx',
         'r3f/components/CanvasMeshItem.tsx',
+        'r3f/TileSourceMesh.tsx',
       ])
     );
   });
@@ -60,7 +62,7 @@ describe('a texture-drawing canvas item', () => {
     expect(loadsDirectly).toEqual([]);
   });
 
-  it('passes the CanvasTexture on to CanvasItem2D', () => {
+  it('passes the CanvasTexture on to the lighting', () => {
     const dropsIt = canvasItems
       .filter(({ text }) => LOADS_THROUGH_HOOK.test(text) && !PASSES_CANVAS_TEXTURE.test(text))
       .map(({ name }) => name);

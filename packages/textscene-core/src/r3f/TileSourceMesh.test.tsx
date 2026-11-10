@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TileSourceMesh } from './TileSourceMesh';
-import { LitCanvasItemPixels } from './components/LitCanvasItemPixels';
+import { LitCanvasItem } from './components/LitCanvasItemPixels';
 import { TILE_UV_BOUNDS_ATTRIBUTE } from './tileTexturePadding';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
@@ -81,19 +81,16 @@ async function renderBesideViewport(source: AtlasSourceModel, isTransparent: boo
 
 function tileMesh(source: AtlasSourceModel, sampler: typeof DEFAULT_SAMPLER) {
   return (
-    <LitCanvasItemPixels material={null} lightMask={undefined} zFinal={0}>
-      {(pixelMaterial) => (
-        <TileSourceMesh
-          source={source}
-          cells={[drawableCellOf({ coords: { x: 0, y: 0 }, atlasCoords: { x: 1, y: 0 } })]}
-          grid={grid}
-          renderOrder={0}
-          tint={WHITE_TINT}
-          pixelMaterial={pixelMaterial}
-          sampler={sampler}
-        />
-      )}
-    </LitCanvasItemPixels>
+    <LitCanvasItem material={null} lightMask={undefined} zFinal={0}>
+      <TileSourceMesh
+        source={source}
+        cells={[drawableCellOf({ coords: { x: 0, y: 0 }, atlasCoords: { x: 1, y: 0 } })]}
+        grid={grid}
+        renderOrder={0}
+        tint={WHITE_TINT}
+        sampler={sampler}
+      />
+    </LitCanvasItem>
   );
 }
 

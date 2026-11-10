@@ -2808,6 +2808,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Video Stream Player Picture Size",
+    "file": "unit-video-stream-player-picture-size.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Video Stream Player",
     "file": "unit-video-stream-player.tscn",
     "category": "Other"
@@ -3764,6 +3769,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tile Map",
     "file": "unit-tile-map.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tilemaplayer Normal Map",
+    "file": "unit-tilemaplayer-normal-map.tscn",
     "category": "Unit - 2D Canvas"
   },
   {

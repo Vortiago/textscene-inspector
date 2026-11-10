@@ -116,6 +116,8 @@ export type LoadResourceMessage = {
   path: string;
   /** Absent for a processor load: the byte layer reads a file without knowing its type. */
   resourceType?: string;
+  /** Absent for a file read whole: the byte layer asks for a file's leading bytes only when its parse needs no more. */
+  maxBytes?: number;
   requestId: string;
 };
 

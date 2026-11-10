@@ -9,7 +9,7 @@ import type { DrawableCell } from '../resources/tileset/drawableCell';
 import type { TileMaterial, TileSetModel } from '../resources/tileset/types';
 import { quadrantCanvasItems, type TileCanvasItem } from '../resources/tileset/tileCanvasItems';
 import type { CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
-import { LitCanvasItemPixels } from './components/LitCanvasItemPixels';
+import { LitCanvasItem } from './components/LitCanvasItemPixels';
 import { CanvasItemGroup, useCanvasItemKey } from './components/CanvasItemGroup';
 import { useCanvasItemMaterialFile } from './components/canvasItemMaterialContext';
 import type * as THREE from 'three';
@@ -100,23 +100,20 @@ function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
   );
   return (
     <CanvasItemGroup renderOrder={canvasKey}>
-      <LitCanvasItemPixels material={material} lightMask={layer.lightMask} zFinal={zFinal}>
-        {(pixelMaterial) =>
-          item.runs.map(({ source, cells }, runIndex) => (
-            <TileSourceMesh
-              key={runIndex}
-              source={source}
-              cells={cells}
-              grid={layer.model}
-              renderOrder={item.firstOrder + runIndex}
-              tint={tint}
-              name={layer.name}
-              pixelMaterial={pixelMaterial}
-              sampler={layer.sampler}
-            />
-          ))
-        }
-      </LitCanvasItemPixels>
+      <LitCanvasItem material={material} lightMask={layer.lightMask} zFinal={zFinal}>
+        {item.runs.map(({ source, cells }, runIndex) => (
+          <TileSourceMesh
+            key={runIndex}
+            source={source}
+            cells={cells}
+            grid={layer.model}
+            renderOrder={item.firstOrder + runIndex}
+            tint={tint}
+            name={layer.name}
+            sampler={layer.sampler}
+          />
+        ))}
+      </LitCanvasItem>
     </CanvasItemGroup>
   );
 }

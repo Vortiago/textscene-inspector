@@ -125,7 +125,7 @@ export class TscnPreviewPanel {
         void writeClipboard(msg.nodePath);
       },
       loadResource: (msg) => {
-        void this._handleLoadResource(msg.path, msg.resourceType, msg.requestId);
+        void this._handleLoadResource(msg.path, msg.resourceType, msg.requestId, msg.maxBytes);
       },
       log: (msg) => {
         relayWebviewLog(msg.level, msg.message, msg.args);
@@ -351,7 +351,8 @@ export class TscnPreviewPanel {
   private async _handleLoadResource(
     resourcePath: string,
     resourceType: string | undefined,
-    requestId: string
+    requestId: string,
+    maxBytes: number | undefined
   ): Promise<void> {
     try {
       const provider = this._getResourceProvider();
@@ -359,7 +360,7 @@ export class TscnPreviewPanel {
         throw new Error('No workspace folder found');
       }
 
-      const content = await provider.loadResource(resourcePath, resourceType);
+      const content = await provider.loadResource(resourcePath, resourceType, maxBytes);
       const payload = encodeResourceResponse(content);
 
       this._postMessageToWebview({

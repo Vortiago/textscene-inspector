@@ -2,11 +2,16 @@
  * Generic .tres processor: fetches a Godot resource file through the
  * FileEventBus and parses it into a ParsedResource on the 'resource' bus slot.
  */
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect, vi } from 'vitest';
 import { ResourceEventBus } from '../ResourceEventBus';
 import type { FileEventBus, FileData } from '../FileEventBus';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { createTresResourceProcessor } from './createTresResourceProcessor';
+import { fixturesDir } from '../../parser/testing/parserKit';
+import '../formats/theoravideo/index';
+import { theoraPictureSizeOf } from '../formats/theoravideo/parse';
 import { ragdollBytes } from '../testing/ragdollBake';
 
 const TILESET_TRES = `[gd_resource type="TileSet" format=3]
@@ -131,5 +136,23 @@ describe('createTresResourceProcessor', () => {
       'expected a binary resource starting with RSRC, got "\\u0000\\u0000\\u0000\\u0000"'
     );
     expect(processor.getCached('res://theme.res')).toBeNull();
+  });
+});
+
+describe('createTresResourceProcessor on an .ogv file', () => {
+  it('reads the Theora picture size of the clip into a VideoStreamTheora', async () => {
+    const clip = readFileSync(resolve(fixturesDir(), 'video', 'clip-64x48.ogv'));
+    const file = mockFileBus();
+    const eventBus = new ResourceEventBus();
+    const processor = createTresResourceProcessor(file.bus, eventBus);
+
+    const loaded = eventBus.once<ParsedResource>('resource', 'loaded', 'res://v/clip.ogv', 1000);
+    processor.request('res://v/clip.ogv');
+    file.emitLoaded(
+      'res://v/clip.ogv',
+      clip.buffer.slice(clip.byteOffset, clip.byteOffset + clip.byteLength)
+    );
+
+    expect(theoraPictureSizeOf(await loaded)).toEqual({ x: 64, y: 48 });
   });
 });
