@@ -155,3 +155,21 @@ export function menuItems(
     return { item, text, textSize, iconSize, height: itemHeight(n, item, textSize.y, iconSize.y, theme) };
   });
 }
+
+/** What the gutter column holds: the widest icon, the widest check mark, and whether the compact layout applies. */
+export interface Gutter {
+  iconWidth: number;
+  checkWidth: number;
+  hasCheck: boolean;
+  isCompact: boolean;
+}
+
+/** The width of the column before the text: one shared column when compact, else an icon column and a check column (`popup_menu.cpp:268-277,1043-1056`). */
+export function gutterWidth(
+  { iconWidth, checkWidth, hasCheck, isCompact }: Gutter,
+  hSeparation: number
+): number {
+  if (isCompact) return Math.max(iconWidth, checkWidth) + hSeparation;
+  const icon = iconWidth > 0 ? iconWidth + hSeparation : 0;
+  return icon + (hasCheck ? checkWidth + hSeparation : 0);
+}

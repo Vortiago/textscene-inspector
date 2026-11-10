@@ -18,6 +18,7 @@ import { parseConfirmationDialog } from '../confirmationdialog/parser';
 import { parseDialog } from './parser';
 
 const THEME = nativeTheme(1);
+const EMBEDDER = { x: 1152, y: 648 };
 const LONG_TEXT = 'This is a rather long message that should wrap across several lines inside the dialog';
 
 function quoted(text: string): string {
@@ -49,7 +50,7 @@ function authoredBox(name = 'Box', minimum = { x: 120, y: 50 }): SolveNode {
 }
 
 function sizeOf(window: SolveNode) {
-  return wrappedWindowSize(window, THEME, measureText);
+  return wrappedWindowSize(window, THEME, measureText, EMBEDDER);
 }
 
 /** A fresh context for each solve: it memoises minimum sizes by path. */

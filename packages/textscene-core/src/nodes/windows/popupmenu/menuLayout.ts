@@ -22,7 +22,7 @@ import {
   type ScrollBarPlacement,
 } from '../../2d/ui/shared/scrollBarSolver';
 import { insetSize, panelRect, shadowInsets } from '../window/panelInsets';
-import { menuItems, minimumCheckSize, type MenuItem } from './menuItems';
+import { gutterWidth, menuItems, minimumCheckSize, type MenuItem } from './menuItems';
 import { popupMenuTheme, type PopupMenuTheme } from './menuTheme';
 
 /** The width of the internal ScrollContainer's vertical bar, which the minimum reserves whether or not it shows (`popup_menu.cpp:230`). */
@@ -33,13 +33,6 @@ function scrollBarWidth(theme: NativeTheme): number {
 /** The widest icon, ignoring whether the item is a separator: the minimum's reading (`popup_menu.cpp:245`). */
 function widestIcon(items: readonly MenuItem[]): number {
   return Math.max(0, ...items.map(({ iconSize }) => iconSize.x));
-}
-
-/** `check_w + h_separation`, the column a check gutter takes, from `check_w` wide icons. */
-function gutterWidth(menu: PopupMenuTheme, iconWidth: number, checkWidth: number, hasCheck: boolean) {
-  if (menu.isGutterCompact) return Math.max(iconWidth, checkWidth) + menu.hSeparation;
-  const icon = iconWidth > 0 ? iconWidth + menu.hSeparation : 0;
-  return icon + (hasCheck ? checkWidth + menu.hSeparation : 0);
 }
 
 /** `_get_items_total_height` (`popup_menu.cpp:255-263`): every item and the gap under it. */
@@ -61,12 +54,14 @@ export const popupMenuContentsMinimumSize: MinimumSizeFn = (n, ctx) => {
   const checkables = items.filter(({ item }) => item.checkable !== ItemCheckableType.NONE && !item.separator);
   const bodyWidth = Math.max(0, ...items.map(({ textSize }) => textSize.x));
   const hasCheckIcon = checkables.some(({ item }) => item.icon !== undefined);
-  const compact = menu.isGutterCompact && !hasCheckIcon;
   const gutter = gutterWidth(
-    { ...menu, isGutterCompact: compact },
-    widestIcon(items),
-    minimumCheckSize(n).x,
-    checkables.length > 0
+    {
+      iconWidth: widestIcon(items),
+      checkWidth: minimumCheckSize(n).x,
+      hasCheck: checkables.length > 0,
+      isCompact: menu.isGutterCompact && !hasCheckIcon,
+    },
+    menu.hSeparation
   );
 
   const width =
@@ -84,6 +79,8 @@ export const popupMenuContentsMinimumSize: MinimumSizeFn = (n, ctx) => {
 
 export interface MenuRow {
   entry: MenuItem;
+  /** The item's position in the menu, which names its icon slot. */
+  index: number;
   /** The row's top within the item control (`popup_menu.cpp:870-872`). */
   y: number;
 }
@@ -104,7 +101,7 @@ function menuRows(items: readonly MenuItem[], menu: PopupMenuTheme): MenuRow[] {
   let y = 0;
   return items.map((entry, index) => {
     y += index > 0 ? menu.vSeparation : Math.trunc(menu.vSeparation / 2);
-    const row = { entry, y };
+    const row = { entry, index, y };
     y += entry.height;
     return row;
   });

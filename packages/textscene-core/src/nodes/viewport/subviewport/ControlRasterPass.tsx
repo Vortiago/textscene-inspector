@@ -51,7 +51,7 @@ export function ControlRasterPasses({ viewports }: ControlRasterPassesProps) {
 }
 
 /** The visible size of the viewport around this one: its layout size, else the project's. */
-function useEmbedderSize(embedder: ControlRasterViewport['embedder']): Vector2 {
+function useEnclosingViewportSize(embedder: ControlRasterViewport['embedder']): Vector2 {
   const projectSize = useViewportSize();
   const forced = useViewportRect(embedder?.path ?? null);
   const layout = embedder ? viewportPassSizes(embedder.node, forced).layout : projectSize;
@@ -95,7 +95,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
 
   const canvasModulate = useCanvasModulateColor(node.children);
   const controlsSize = useStableVector2(sizes.layout);
-  const embedderSize = useEmbedderSize(embedder);
+  const enclosingViewportSize = useEnclosingViewportSize(embedder);
 
   const renderState = useViewportRenderState(gate.updateMode);
   const renderPass = useCallback(() => {
@@ -130,7 +130,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
             size={controlsSize}
             inheritedRtl={inheritedRtl}
             themeOwners={themeOwners}
-            embedderSize={embedderSize}
+            enclosingViewportSize={enclosingViewportSize}
             embedsWindows={properties.gui_embed_subwindows}
           />
         </SubViewportCanvasScope>

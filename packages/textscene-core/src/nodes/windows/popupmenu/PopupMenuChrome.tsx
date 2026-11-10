@@ -172,7 +172,10 @@ export function PopupMenuChrome({
   const { anchorRef, clip } = useWorldClipPlanes(geometry.scroll);
   const orders = canvasSubOrders(slot, ['rows', 'bars']);
   const rowOrder = orders.rows.key;
-  const panelRect = { x: 0, y: 0, w: geometry.panel.w, h: geometry.panel.h };
+  const panelRect = useMemo(
+    () => ({ x: 0, y: 0, w: geometry.panel.w, h: geometry.panel.h }),
+    [geometry.panel.w, geometry.panel.h]
+  );
 
   return (
     <CanvasItemGroup ref={anchorRef}>

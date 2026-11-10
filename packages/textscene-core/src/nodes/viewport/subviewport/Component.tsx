@@ -53,7 +53,7 @@ function MixedViewportControls({
 }) {
   const inheritedRtl = useInheritedRtl(path);
   const themeOwners = useViewportThemeOwners(path);
-  const embedderSize = useEmbedderViewportSize();
+  const enclosingViewportSize = useEmbedderViewportSize();
   return (
     <ViewportControls
       path={path}
@@ -61,7 +61,7 @@ function MixedViewportControls({
       size={size}
       inheritedRtl={inheritedRtl}
       themeOwners={themeOwners}
-      embedderSize={embedderSize}
+      enclosingViewportSize={enclosingViewportSize}
       embedsWindows={embedsWindows}
     />
   );
