@@ -3577,6 +3577,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Parallax 2d Camera Scroll",
+    "file": "unit-parallax-2d-camera-scroll.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Parallax 2d Repeat",
+    "file": "unit-parallax-2d-repeat.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Parallax 2d",
     "file": "unit-parallax-2d.tscn",
     "category": "Unit - 2D Canvas"
