@@ -30,7 +30,7 @@ export interface PlaceholderCircle {
  * bits included (`:1681-1693`). Hue takes the top byte of the first `RandomPCG` word; saturation
  * and value take the next two bytes, each lerped into the upper half.
  */
-export function placeholderColor(sourceId: number, alternativeId: number): Rgba {
+function placeholderColor(sourceId: number, alternativeId: number): Rgba {
   const word = new GodotRandomPCG(hashIntArray([sourceId, alternativeId])).rand();
   const byte = (shift: number) => ((word >>> shift) & 0xff) / 256;
   const rgb = hsvToRgb(byte(24), 0.5 + 0.5 * byte(16), 0.5 + 0.5 * byte(8));

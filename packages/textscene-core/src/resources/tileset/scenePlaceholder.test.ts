@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { placeholderCircles, placeholderColor } from './scenePlaceholder';
+import { placeholderCircles } from './scenePlaceholder';
+import { PLACEHOLDER_TEST_GRID as grid, placeholderColorOf } from './scenePlaceholder.testkit';
 import type { SceneTileCell } from './sceneTileCells';
-import { TileLayout, TileOffsetAxis, TileShape } from '../../godot/scene/tileSet';
 
 describe('placeholderColor', () => {
   // Printed by Godot 4.6.3 from `[source_id, alternative_tile].hash()` through RandomNumberGenerator
@@ -13,7 +13,7 @@ describe('placeholderColor', () => {
     [2, 536870913, { r: 0.34402847290039, g: 0.6640625, b: 0.228271484375 }],
     [5, -1, { r: 0.6484375, g: 0.0101318359375, b: 0.50382137298584 }],
   ])('colours source %i alternative %i as Godot does', (source, alternative, expected) => {
-    const color = placeholderColor(source, alternative);
+    const color = placeholderColorOf(source, alternative);
     expect(color.r).toBeCloseTo(expected.r, 6);
     expect(color.g).toBeCloseTo(expected.g, 6);
     expect(color.b).toBeCloseTo(expected.b, 6);
@@ -22,12 +22,6 @@ describe('placeholderColor', () => {
 });
 
 describe('placeholderCircles', () => {
-  const grid = {
-    shape: TileShape.TILE_SHAPE_SQUARE,
-    layout: TileLayout.TILE_LAYOUT_STACKED,
-    offsetAxis: TileOffsetAxis.TILE_OFFSET_AXIS_HORIZONTAL,
-    tileSize: { x: 64, y: 32 },
-  };
   const tile = (x: number, y: number): SceneTileCell => ({
     cell: { coords: { x, y }, sourceId: 3, atlasCoords: { x: 0, y: 0 }, alternativeId: 7 },
     tile: { scene: null, displayPlaceholder: false },

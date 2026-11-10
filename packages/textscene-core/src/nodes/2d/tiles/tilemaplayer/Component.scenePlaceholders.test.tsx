@@ -10,7 +10,7 @@ import type { PlacedCell } from '../shared/tileData';
 import { drawnBoxes, nodesOfType, onlyMesh, renderSceneTiles } from '../shared/sceneTiles.testkit';
 import { PLACEHOLDER_TILESET_RESOURCES } from '../shared/scenePlaceholders.testkit';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
-import { placeholderColor } from '../../../../resources/tileset/scenePlaceholder';
+import { placeholderColorOf } from '../../../../resources/tileset/scenePlaceholder.testkit';
 import type { TileMapLayerProperties } from './types';
 
 const layerScene = (layerExtra = '') => `[gd_scene format=3]
@@ -51,7 +51,7 @@ describe('TileMapLayer scene tile placeholders', () => {
   it('draws the disc in the colour Godot derives from the ids', async () => {
     const material = onlyMesh(await renderLayer([cell(1, 0, 6)], { showGizmos: true }))
       .material as THREE.MeshBasicMaterial;
-    const expected = placeholderColor(0, 6);
+    const expected = placeholderColorOf(0, 6);
     expect(material.opacity).toBeCloseTo(0.8, 6);
     // The gizmo colour is linear: the sRGB channels, decoded.
     const linear = godotColorToLinear(expected);
