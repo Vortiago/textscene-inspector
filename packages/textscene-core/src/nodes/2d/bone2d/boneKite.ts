@@ -23,6 +23,9 @@ import {
 const BONE_WIDTH = 5;
 const BONE_OUTLINE_WIDTH = 2;
 
+/** Where the kite is widest, as a fraction of the way to the tip (`skeleton_2d.cpp:313-354`). */
+const WIDEST_AT = 0.2;
+
 /** The points of a kite's outline and of its fill. */
 export const OUTLINE_POINT_COUNT = 6;
 export const FILL_POINT_COUNT = 4;
@@ -56,7 +59,7 @@ function kiteTo(rel: Vector2): BoneKite {
   const relt = vector2Scaled(normalizedVector2(vector2Scaled(vector2Orthogonal(rel), -1)), BONE_WIDTH);
   const reln = normalizedVector2(rel);
   const reltn = normalizedVector2(relt);
-  const near = vector2Scaled(rel, 0.2);
+  const near = vector2Scaled(rel, WIDEST_AT);
   const along = (alongRel: number, alongTangent: number) =>
     vector2Scaled(add(vector2Scaled(reln, alongRel), vector2Scaled(reltn, alongTangent)), BONE_OUTLINE_WIDTH);
   return {

@@ -33,6 +33,8 @@ const POINTS_PER_KITE = OUTLINE_POINT_COUNT + FILL_POINT_COUNT;
 const INDICES_PER_KITE = 3 * (OUTLINE_POINT_COUNT - 2 + FILL_POINT_COUNT - 2);
 const FLOATS_PER_COLOR = 4;
 
+type Rgba = { r: number; g: number; b: number; a: number };
+
 /** An editor colour as the linear RGBA of a vertex. */
 function vertexColor({ r, g, b, a }: Rgba): number[] {
   const linear = godotColorToLinear({ r, g, b });
@@ -40,7 +42,6 @@ function vertexColor({ r, g, b, a }: Rgba): number[] {
 }
 
 /** `editors/2d/bone_color1`, `bone_color2`, `bone_selected_color` and `bone_outline_color` (`editor_settings.cpp:975-979`). */
-type Rgba = { r: number; g: number; b: number; a: number };
 const FILL_COLORS = [
   vertexColor({ r: 1, g: 1, b: 1, a: 0.7 }),
   vertexColor({ r: 0.6, g: 0.6, b: 0.6, a: 0.7 }),
@@ -55,7 +56,7 @@ function writeColors(geometry: THREE.BufferGeometry, isSelected: boolean): void 
   const pointCount = colors.count;
   for (let point = 0; point < pointCount; point++) {
     const inKite = point % POINTS_PER_KITE;
-    const color = inKite < OUTLINE_POINT_COUNT ? outline : FILL_COLORS[inKite % 2]!;
+    const color = inKite < OUTLINE_POINT_COUNT ? outline : FILL_COLORS[(inKite - OUTLINE_POINT_COUNT) % 2]!;
     colors.array.set(color, point * FLOATS_PER_COLOR);
   }
   colors.needsUpdate = true;
@@ -115,15 +116,20 @@ function boneChildNames(node: TscnNode): string[] {
 
 const TRANSFORM_TERMS = 6;
 
-/** Writes the terms of `transform` at `at` in `out`, and whether any differed from what was there. */
-function storeTransform(out: Float64Array, at: number, t: MutableTransform2D): boolean {
-  const terms = [t.a, t.b, t.c, t.d, t.tx, t.ty];
-  let hasChanged = false;
-  terms.forEach((term, i) => {
-    if (out[at + i] !== term) hasChanged = true;
-    out[at + i] = term;
-  });
+function storeTerm(out: Float64Array, at: number, term: number): boolean {
+  const hasChanged = out[at] !== term;
+  out[at] = term;
   return hasChanged;
+}
+
+/** Writes the terms of `t` at `at` in `out`, and whether any differed from what was there. Allocates nothing: it runs every render. */
+function storeTransform(out: Float64Array, at: number, t: MutableTransform2D): boolean {
+  let hasChanged = storeTerm(out, at, t.a);
+  hasChanged = storeTerm(out, at + 1, t.b) || hasChanged;
+  hasChanged = storeTerm(out, at + 2, t.c) || hasChanged;
+  hasChanged = storeTerm(out, at + 3, t.d) || hasChanged;
+  hasChanged = storeTerm(out, at + 4, t.tx) || hasChanged;
+  return storeTerm(out, at + 5, t.ty) || hasChanged;
 }
 
 /**
@@ -146,16 +152,18 @@ function useKiteFollow(
     let drawn: DrawnObjects | null = null;
     return observeSceneCamera(scene, () => {
       drawn = lookupDrawnObjects(nodeObjects, paths, drawn);
-      if (drawn.objects.some((object) => object === null)) {
-        geometry.setDrawRange(0, 0);
-        written.fill(NaN);
-        return;
-      }
+      const objects = drawn.objects;
       let hasMoved = false;
-      drawn.objects.forEach((object, i) => {
-        canvasTransformInto(transforms[i]!, object!);
+      for (let i = 0; i < objects.length; i++) {
+        const object = objects[i];
+        if (!object) {
+          geometry.setDrawRange(0, 0);
+          written.fill(NaN);
+          return;
+        }
+        canvasTransformInto(transforms[i]!, object);
         hasMoved = storeTransform(written, i * TRANSFORM_TERMS, transforms[i]!) || hasMoved;
-      });
+      }
       if (!hasMoved) return;
       const [bone, ...children] = transforms;
       writeKites(
