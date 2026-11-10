@@ -2273,6 +2273,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Script Create Dialog Placeholder",
+    "file": "unit-script-create-dialog-placeholder.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Script Create Dialog",
     "file": "unit-script-create-dialog.tscn",
     "category": "Other"
