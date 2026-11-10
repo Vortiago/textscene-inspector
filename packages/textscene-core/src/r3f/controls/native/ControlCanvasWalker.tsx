@@ -18,6 +18,7 @@ import { ControlFallback } from './ControlFallback';
 import { OwnCanvasModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
 import { useInheritedTextureSampler } from '../../canvasItemTextureSampler';
 import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
+import { ClipChildrenScope } from '../../../nodes/2d/canvasgroup/ClipChildrenScope';
 import {
   useCanvasAncestorMaterial,
   useResolvedCanvasItemMaterial,
@@ -255,9 +256,11 @@ function ControlItemGroup({ solveNode, solved, theme, measureText, snapToPixels 
   const litPainter = isCanvasLayerType(solveNode.node.type) ? (
     painter
   ) : (
-    <LitCanvasItemPixels material={state.material} lightMask={state.lightMask} zFinal={state.zFinal}>
-      {painter}
-    </LitCanvasItemPixels>
+    <ClipChildrenScope mode={props.clipChildren} state={state} range={solveNode.paintRange}>
+      <LitCanvasItemPixels material={state.material} lightMask={state.lightMask} zFinal={state.zFinal}>
+        {painter}
+      </LitCanvasItemPixels>
+    </ClipChildrenScope>
   );
   const content = wrapsChildren ? (
     litPainter

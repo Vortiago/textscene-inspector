@@ -13,6 +13,19 @@ export const CANVAS_2D_SCENES = [
   // An INT component past int32 wraps as Godot stores it. Godot probes: (260,160) red, the square at
   // (200,100), and (660,360) blue, the square at (600,300). Refused, both sit at the origin.
   { name: 'int-wrap-position', file: 'edge-int-wrap-position.tscn', mode: '2d' },
+  // clip_children CLIP_ONLY: the red child shows only over the green parent, in its own colour. Godot
+  // probes: (125,125) background, the parent alone; (175,175) red; (425,125) green, the unclipped twin.
+  { name: 'clip-children-only', file: 'unit-clip-children-only.tscn', mode: '2d' },
+  // CLIP_AND_DRAW draws the parent too, and the half-alpha child blends over it: (125,125) green and
+  // (175,175) (127,128,0). Outside the parent the canvas shows through: (220,220) background.
+  { name: 'clip-children-and-draw', file: 'unit-clip-children-and-draw.tscn', mode: '2d' },
+  // A soft mask: the radial alpha of the Sprite2D scales the child. Godot probes: (175,175) (193,27,27)
+  // and (220,220) (203,22,22); the corner (125,125) is background.
+  { name: 'clip-children-soft-mask', file: 'unit-clip-children-soft-mask.tscn', mode: '2d' },
+  // The owner's ADD material does not reach the masked draw: (125,125) is (76,139,76), (175,175) (165,38,38).
+  { name: 'clip-children-material', file: 'unit-clip-children-material.tscn', mode: '2d' },
+  // A Button clips a ColorRect: (160,130) is (183,30,30) and (300,130) background.
+  { name: 'clip-children-control', file: 'unit-clip-children-control.tscn', mode: '2d' },
   { name: 'line-2d', file: 'unit-line2d.tscn', mode: '2d' },
   // Line2D as Godot's LineBuilder builds it. Caps: NONE is background at (45,50), BOX white at (45,100)
   // and (159,100), ROUND white at (41,150) and background at (42,142). A closed line ignores its caps.

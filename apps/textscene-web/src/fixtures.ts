@@ -403,6 +403,31 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Clip Children And Draw",
+    "file": "unit-clip-children-and-draw.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children Control",
+    "file": "unit-clip-children-control.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children Material",
+    "file": "unit-clip-children-material.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children Only",
+    "file": "unit-clip-children-only.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children Soft Mask",
+    "file": "unit-clip-children-soft-mask.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Code Edit Delimiters",
     "file": "unit-code-edit-delimiters.tscn",
     "category": "Other"

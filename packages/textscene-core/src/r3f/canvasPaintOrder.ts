@@ -11,6 +11,7 @@
 
 import type { TscnNode } from '../parser/types';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes';
+import { CanvasItemClipChildrenMode } from '../godot/scene/canvasItem';
 import { DEFAULT_CANVAS_LAYER, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
 import { clampCanvasItemZ, WORLD_CANVAS_LAYER } from './lighting2d/canvasItemPlacement';
@@ -376,7 +377,7 @@ interface PaintRangeLayout {
   /** `y_sort_enabled`: the children are re-packed in sort order after the parent. */
   sortsChildren?: boolean;
   /**
-   * A CanvasGroup's: every child draws before the parent, in index order (lines 471-484). A parent
+   * A CanvasGroup's or a clipping item's: every child draws before the parent, in index order (lines 471-484). A parent
    * that sorts its children takes the y-sort branch instead, which groups nothing (lines 437-469).
    */
   drawsChildrenFirst?: boolean;
@@ -451,9 +452,19 @@ export function allocatePaintRange(
   };
 }
 
-/** A CanvasGroup draws its composite rect over the buffer its children fill, so each child draws first. */
+/** `clip_children` as a clipping mode, under either casing the two parsers produce. */
+function clipsChildren(node: TscnNode): boolean {
+  const props = node.properties as { clip_children?: number; clipChildren?: number };
+  const mode = props.clip_children ?? props.clipChildren;
+  return mode === CanvasItemClipChildrenMode.ONLY || mode === CanvasItemClipChildrenMode.AND_DRAW;
+}
+
+/**
+ * A CanvasGroup draws its composite rect over the buffer its children fill, and a clipping item
+ * draws its mask over it, so each child draws first (`renderer_canvas_cull.cpp:471-484`).
+ */
 function drawsEveryChildFirst(node: TscnNode): boolean {
-  return node.type === 'CanvasGroup';
+  return node.type === 'CanvasGroup' || clipsChildren(node);
 }
 
 /** `allocatePaintRange` for `node`'s own children, with the layout the node declares. */

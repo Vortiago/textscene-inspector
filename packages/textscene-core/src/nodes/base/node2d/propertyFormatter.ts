@@ -61,6 +61,9 @@ export function formatNode2DProperties(properties: Node2DProperties): PropertySe
   if (properties.light_mask !== 1) {
     canvasItems.push({ label: 'Light Mask', value: properties.light_mask.toString() });
   }
+  if (properties.clip_children !== 0) {
+    canvasItems.push({ label: 'Clip Children', value: properties.clip_children === 1 ? 'Only' : 'And Draw' });
+  }
   if (properties.y_sort_enabled) {
     canvasItems.push({ label: 'Y Sort Enabled', value: 'Yes' });
     if (properties.y_sort_origin !== 0) {

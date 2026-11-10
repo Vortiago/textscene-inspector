@@ -1,0 +1,34 @@
+/**
+ * The blend of a masked owner: Godot draws it with the default clip children shader and its MIX
+ * blend, whatever `CanvasItemMaterial` it carries, while the buffer fill keeps that material.
+ */
+import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
+import { createClipMask } from './clipMask';
+import { canvasItemBlendState } from '../../resources/materials/canvasitemmaterial/build';
+import { CanvasItemMaterialBlendMode } from '../../godot/scene/canvasItemMaterial';
+
+function compiledWith(mask = createClipMask()) {
+  const material = new THREE.MeshBasicMaterial(canvasItemBlendState(CanvasItemMaterialBlendMode.ADD));
+  const shader = {
+    vertexShader: THREE.ShaderLib.basic.vertexShader,
+    fragmentShader: THREE.ShaderLib.basic.fragmentShader,
+    uniforms: {},
+  };
+  mask.injection.onBeforeCompile.call(material, shader);
+  return { mask, material };
+}
+
+describe('a clip mask', () => {
+  it('draws the owner with MIX blending while masking, and with its own blend otherwise', () => {
+    const { mask, material } = compiledWith();
+
+    mask.setMasking(true);
+    expect([material.blending, material.blendDst]).toEqual([
+      THREE.NormalBlending,
+      THREE.OneMinusSrcAlphaFactor,
+    ]);
+    mask.setMasking(false);
+    expect([material.blending, material.blendDst]).toEqual([THREE.CustomBlending, THREE.OneFactor]);
+  });
+});

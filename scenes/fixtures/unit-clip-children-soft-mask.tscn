@@ -1,0 +1,28 @@
+; One variable: the clipping parent is a Sprite2D whose radial GradientTexture2D fades from alpha 1 at
+; the centre to alpha 0 at the rim, so the mask is soft. The red child, a square across the whole
+; sprite, shows at the parent's alpha: solid at the centre, fading to the canvas at the rim.
+
+[gd_scene format=3]
+
+[sub_resource type="Gradient" id="Gradient_fade"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_fade"]
+gradient = SubResource("Gradient_fade")
+width = 200
+height = 200
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[node name="Root" type="Node2D"]
+
+[node name="Mask" type="Sprite2D" parent="."]
+position = Vector2(200, 200)
+clip_children = 1
+texture = SubResource("GradientTexture2D_fade")
+
+[node name="Child" type="Polygon2D" parent="Mask"]
+position = Vector2(-100, -100)
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 200, 0, 200, 200, 0, 200)

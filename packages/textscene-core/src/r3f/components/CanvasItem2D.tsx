@@ -15,7 +15,7 @@ import { useNode2DTextureSampler } from '../canvasItemTextureSampler';
 import { CanvasItemSurfaceSource } from '../canvasItemSurface';
 import type { CanvasItemTexture } from '../canvasItemTexture';
 import { LitCanvasItemPixels, type CanvasItemPixelMaterial } from './LitCanvasItemPixels';
-import { useNodePaintSequence } from '../contexts/PaintOrderContext';
+import { useNodePaintSequence, usePaintRange } from '../contexts/PaintOrderContext';
 import { useAnimatedValue } from '../contexts/AnimatedValueContext';
 import { CanvasItemProvider } from './CanvasItemGroup';
 import { useCanvasItemMaterial } from './canvasItemMaterialContext';
@@ -27,6 +27,7 @@ import {
 } from '../canvasItemState';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 import type { CanvasItemSurface } from '../lighting2d/normalMappedLighting';
+import { ClipChildrenScope } from '../../nodes/2d/canvasgroup/ClipChildrenScope';
 
 interface CanvasItem2DProps {
   node: TscnNode;
@@ -78,6 +79,7 @@ export function CanvasItem2D({ node, props, body, canvasTexture, ownItems, child
     lightMask: props.light_mask,
     sequence: useNodePaintSequence(node),
   });
+  const paintRange = usePaintRange();
   const { key, zFinal, tint, material } = state;
   // A pushed `visible` takes the place of the authored one, as for a Node3D.
   const animatedVisible = useAnimatedValue('visible', (value) => value[0] !== 0);
@@ -94,17 +96,19 @@ export function CanvasItem2D({ node, props, body, canvasTexture, ownItems, child
     >
       <CanvasItemProvider value={key}>
         <OwnCanvasModulateProvider value={tint.canvasModulate}>
-          {body && (
-            <LitCanvasItemPixels
-              material={material}
-              lightMask={state.lightMask}
-              zFinal={zFinal}
-              surface={surface}
-            >
-              {(pixelMaterial) => body(tint, material, pixelMaterial)}
-            </LitCanvasItemPixels>
-          )}
-          {ownItems?.(state)}
+          <ClipChildrenScope mode={props.clip_children} state={state} range={paintRange}>
+            {body && (
+              <LitCanvasItemPixels
+                material={material}
+                lightMask={state.lightMask}
+                zFinal={zFinal}
+                surface={surface}
+              >
+                {(pixelMaterial) => body(tint, material, pixelMaterial)}
+              </LitCanvasItemPixels>
+            )}
+            {ownItems?.(state)}
+          </ClipChildrenScope>
         </OwnCanvasModulateProvider>
         {canvasTexture?.slot.texture.normalTexture && (
           <CanvasItemSurfaceSource

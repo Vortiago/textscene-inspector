@@ -11,6 +11,7 @@ import {
   parseHeadingIndex,
 } from '../../../../parser/valueParsers';
 import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../../godot/scene/canvasItem.js';
+import { parseClipChildrenMode } from '../../../canvasitem/shared/clipChildrenMode';
 import { LayoutDirection } from '../../../../godot/scene/control.js';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
@@ -29,6 +30,7 @@ export function parseControlCanvasItem(
     showBehindParent: boolSlotValue(properties.show_behind_parent) === true,
     topLevel: boolSlotValue(properties.top_level) === true,
     lightMask: intOr(properties.light_mask, 1, `${label}.light_mask`),
+    clipChildren: parseClipChildrenMode(properties.clip_children, `${label}.clip_children`),
     useParentMaterial: boolSlotValue(properties.use_parent_material) === true,
     textureFilter: intOr(
       properties.texture_filter,

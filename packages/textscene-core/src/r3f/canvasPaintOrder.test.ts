@@ -272,6 +272,32 @@ describe('allocatePaintRange', () => {
     expect(allocated.children[1]!.base).toBeLessThan(allocated.self);
   });
 
+  it.each([
+    ['a Node2D', 'Polygon2D', { clip_children: 1 }],
+    ['a Control', 'ColorRect', { clipChildren: 2 }],
+  ])('draws %s with clip_children after every child, as a CanvasGroup', (_, type, properties) => {
+    // A clipping item groups its children as a CanvasGroup does, so it culls them before itself.
+    const clipping = node(
+      'Clip',
+      type,
+      [node('Front', 'Sprite2D'), node('Behind', 'Sprite2D', [], { show_behind_parent: true })],
+      properties
+    );
+    const allocated = allocateNodePaintRange({ base: 0, size: paintRangeSize(clipping) }, clipping);
+
+    expect(allocated.children[0]!.base).toBeLessThan(allocated.children[1]!.base);
+    expect(allocated.children[1]!.base).toBeLessThan(allocated.self);
+  });
+
+  it('draws an item whose clip_children is DISABLED in the order of its children', () => {
+    const plain = node('Plain', 'Polygon2D', [node('Behind', 'Sprite2D', [], { show_behind_parent: true })], {
+      clip_children: 0,
+    });
+    const allocated = allocateNodePaintRange({ base: 0, size: paintRangeSize(plain) }, plain);
+
+    expect(allocated.children[0]!.base).toBeLessThan(allocated.self);
+  });
+
   it('draws a y-sorted CanvasGroup first, as any y-sorting parent, since it groups nothing', () => {
     const group = node('Group', 'CanvasGroup', [node('Child', 'Sprite2D')], { y_sort_enabled: true });
     const allocated = allocateNodePaintRange({ base: 0, size: paintRangeSize(group) }, group);
