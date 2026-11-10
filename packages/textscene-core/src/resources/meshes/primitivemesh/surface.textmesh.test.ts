@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { fontFile, systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { meshContentKey } from '../meshSource';
-import {
-  FONT_PATH,
-  readyTextMesh,
-  systemFontResource,
-  textMeshWith,
-  trueTypeFontFile,
-} from '../textmesh/textMeshFont.testkit';
+import { FONT_PATH, readyTextMesh, textMeshWith, trueTypeFontFile } from '../textmesh/textMeshFont.testkit';
 import { isDrawablePrimitiveMesh, primitiveMeshSurface, referencesKey } from './surface';
 import { scopedMesh } from './surface.testkit';
 
@@ -73,11 +68,24 @@ describe('primitiveMeshSurface for a TextMesh', () => {
 
     expect(primitiveMeshSurface(reloaded, TEXEL_SIZE)).not.toBe(primitiveMeshSurface(first, TEXEL_SIZE));
   });
+
+  it('builds again in another locale, which a TextMesh with no language shapes in', async () => {
+    const mesh = await readyTextMesh({ text: '"i"', uppercase: 'true' });
+    const root = primitiveMeshSurface(mesh, TEXEL_SIZE)!;
+
+    const turkish = primitiveMeshSurface({ ...mesh, locale: 'tr' }, TEXEL_SIZE)!;
+
+    expect(turkish.positions).not.toEqual(root.positions);
+  });
 });
 
 describe('isDrawablePrimitiveMesh', () => {
   it('is false for a TextMesh whose font has no readable outlines', () => {
-    expect(isDrawablePrimitiveMesh(textMeshWith({}, { [FONT_PATH]: systemFontResource() }))).toBe(false);
+    expect(isDrawablePrimitiveMesh(textMeshWith({}, { [FONT_PATH]: fontFile(undefined) }))).toBe(false);
+  });
+
+  it('is true for a TextMesh with a SystemFont, which draws the default font', () => {
+    expect(isDrawablePrimitiveMesh(textMeshWith({}, { [FONT_PATH]: systemFont() }))).toBe(true);
   });
 
   it('is true for a TextMesh with no loaded font, which draws the bundled font', () => {

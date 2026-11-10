@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { parseTresFile } from '../../parser/parsedResource';
-import { notifySceneFontSettled } from '../../r3f/controls/native/text/settledChannel';
+import { createSettledPeek } from '../../r3f/controls/native/text/settledChannel';
+import { settleFontWork } from '../../r3f/testing/settleFontWork';
 import { NO_RESOURCES } from '../../r3f/SceneResourcesContext';
 import type { ScopedResource } from '../scopedResource';
 import { createFakeResourceLoader } from '../testing/createFakeResourceLoader';
@@ -9,6 +10,12 @@ import { missingResourcesWrapper } from '../testing/missingResourcesWrapper';
 import { COARSE_TUBE, curveEndingAt } from './primitivemesh/surface.testkit';
 import { FONT_PATH, textMeshWith, trueTypeFontFile } from './textmesh/textMeshFont.testkit';
 import { useResolvableMesh } from './useResolvableMesh';
+
+/** Settles a font load no mesh reads, which wakes every settled listener. */
+async function settleAnUnrelatedFontLoad(): Promise<void> {
+  createSettledPeek<object, null>()({}, () => Promise.resolve(null));
+  await settleFontWork();
+}
 
 const CURVE_PATH = 'res://grow.tres';
 const CURVE_FILE = parseTresFile(
@@ -119,11 +126,11 @@ describe('useResolvableMesh and the metrics of a font that settle', () => {
     return { fake, result, renders: () => renders };
   }
 
-  it('does not render again for a mesh that reads no font', () => {
+  it('does not render again for a mesh that reads no font', async () => {
     const { renders } = renderCounting(BOX);
     const before = renders();
 
-    act(() => notifySceneFontSettled());
+    await act(settleAnUnrelatedFontLoad);
 
     expect(renders()).toBe(before);
   });
@@ -135,7 +142,7 @@ describe('useResolvableMesh and the metrics of a font that settle', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     const before = renders();
 
-    act(() => notifySceneFontSettled());
+    await act(settleAnUnrelatedFontLoad);
 
     expect(renders()).toBe(before);
   });
@@ -147,7 +154,7 @@ describe('useResolvableMesh and the metrics of a font that settle', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     const before = renders();
 
-    act(() => notifySceneFontSettled());
+    await act(settleAnUnrelatedFontLoad);
 
     expect(renders()).toBe(before);
   });

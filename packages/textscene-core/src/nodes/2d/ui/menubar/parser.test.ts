@@ -25,4 +25,14 @@ describe('parseMenuBar', () => {
     const p = parseMenuBar(h({ name: 'Bar', type: 'MenuBar' }), { flat: 'maybe' });
     expect(p.flat).toBe(false);
   });
+
+  it('defaults text_direction to AUTO and language to empty (`menu_bar.h:46-47`)', () => {
+    const p = parseMenuBar(h({ name: 'Bar', type: 'MenuBar' }), {});
+    expect([p.textDirection, p.language]).toEqual([0, '']);
+  });
+
+  it('reads text_direction and language', () => {
+    const p = parseMenuBar(h({ name: 'Bar', type: 'MenuBar' }), { text_direction: '2', language: '"he"' });
+    expect([p.textDirection, p.language]).toEqual([2, 'he']);
+  });
 });

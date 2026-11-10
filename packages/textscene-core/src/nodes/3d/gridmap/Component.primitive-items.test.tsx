@@ -152,10 +152,11 @@ describe('<GridMap> item with an inline PrimitiveMesh Godot builds no surface fo
   });
 });
 
-const SYSTEM_FONT_TEXT = `[sub_resource type="SystemFont" id="SystemFont_item"]
+/** A FontFile with no data: a font with no outlines to read. */
+const UNREADABLE_FONT_TEXT = `[sub_resource type="FontFile" id="Font_item"]
 
 [sub_resource type="TextMesh" id="Mesh_item"]
-font = SubResource("SystemFont_item")`;
+font = SubResource("Font_item")`;
 
 describe('<GridMap> item whose mesh path holds a TextMesh with no readable font', () => {
   it('draws the placeholder', async () => {
@@ -169,7 +170,7 @@ item/0/mesh = ExtResource("1_text")
 `,
       files: {
         'res://stage/meshes/text.tres':
-          '[gd_resource type="TextMesh" format=3]\n\n[sub_resource type="SystemFont" id="SystemFont_item"]\n\n[resource]\nfont = SubResource("SystemFont_item")\n',
+          '[gd_resource type="TextMesh" format=3]\n\n[sub_resource type="FontFile" id="Font_item"]\n\n[resource]\nfont = SubResource("Font_item")\n',
       },
     });
     expect((tile.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
@@ -179,9 +180,22 @@ item/0/mesh = ExtResource("1_text")
 describe('<GridMap> item whose inline mesh is a TextMesh with no readable font', () => {
   it('draws the placeholder, as the previewer has no outlines to draw', async () => {
     const tile = await renderInstancedTile({
-      library: inlineMeshLibrary(SYSTEM_FONT_TEXT),
+      library: inlineMeshLibrary(UNREADABLE_FONT_TEXT),
     });
     expect((tile.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
+  });
+});
+
+describe('<GridMap> item whose inline mesh is a TextMesh with a SystemFont', () => {
+  it('draws the text in the default font, not the placeholder', async () => {
+    const tile = await renderInstancedTile({
+      library: inlineMeshLibrary(`[sub_resource type="SystemFont" id="SystemFont_item"]
+font_names = PackedStringArray("Zz No Such Font")
+
+[sub_resource type="TextMesh" id="Mesh_item"]
+font = SubResource("SystemFont_item")`),
+    });
+    expect((tile.material as THREE.MeshBasicMaterial).wireframe).toBeFalsy();
   });
 });
 

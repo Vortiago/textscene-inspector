@@ -17,9 +17,19 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode, ThemedIconRef } from '../../../../r3f/controls/native/solveTree';
-import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
+import {
+  controlBidiOptions,
+  type TextBidiOptions,
+} from '../../../../r3f/controls/native/text/textBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  shapeText,
+  shapedTextSizeWidthPx,
+  type GlyphPlacement,
+  type TextLayoutResult,
+  type TextLineLayout,
+} from '../../../../r3f/controls/native/text/textLayout';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -189,6 +199,25 @@ export const lineEditTextureSlots: TextureSlotsFn = (
 };
 
 /**
+ * `LineEdit::_shape` (`line_edit.cpp:3104-3112`): the shown string, the text or the placeholder, in
+ * `text_direction`, `language` and the structured override, with no wrap and no `line_spacing`.
+ * The minimum size and the painter both read it.
+ */
+export function shapeLineEditText(
+  text: string,
+  props: Pick<LineEditProperties, 'drawControlChars'>,
+  options: TextBidiOptions & { fontSizePx: number; fontMetrics: FontMetrics }
+): TextLayoutResult {
+  return shapeText(text, {
+    ...options,
+    preserveControl: props.drawControlChars,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 0,
+  });
+}
+
+/**
  * `LineEdit::get_minimum_size` (`line_edit.cpp:2443-2477`): `minimum_character_width` em widths of
  * 'W', widened to `full_width + caret_width` with `expand_to_text_length`, plus the widest icon, by
  * `min_size.height = MAX(shaped height, font->get_height(font_size))`, plus the larger of the `normal`
@@ -223,14 +252,8 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
     const { text: displayed } = lineEditDisplayText(props);
     const fullWidthPx = displayed.length
       ? shapedTextSizeWidthPx(
-          shapeText(displayed, {
-            fontSizePx,
-            boxWidthPx: 0,
-            autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-            lineSpacingPx: 0,
-            fontMetrics,
-            preserveControl: props.drawControlChars,
-          }).widthPx
+          shapeLineEditText(displayed, props, { ...controlBidiOptions(props, n), fontSizePx, fontMetrics })
+            .widthPx
         )
       : 0;
     const caretWidthPx = n.constants['caret_width'] ?? DEFAULT_CARET_WIDTH;
@@ -300,8 +323,6 @@ interface LineEditContentInput {
 }
 
 interface LineEditContentLayout {
-  /** The glyph clip rect: this rect inset by `styleMargin`, and by the active icon's width on its side, floored at a zero extent. */
-  contentRect: Rect2;
   /** The text box's top-left, local Godot px, for `<TextRun>`, which anchors each line at its baseline from there (`buildGlyphQuadArrays`). */
   textOffset: Vector2;
   /** `ofs_max` (`line_edit.cpp:1420,1482`): the rightmost x a glyph pen may reach, and RIGHT alignment's caret fallback x (`lineEditCaretRect`). */
@@ -376,17 +397,32 @@ export function layoutLineEditContent(input: LineEditContentInput): LineEditCont
   // (line_edit.cpp:1420,1482). Both truncate, and the icon term applies only when `!rtl` (:1481-1483).
   const ofsMaxPx = Math.trunc(rectSize.x - styleMargin.right - (hasIcon && !rtl ? iconWidthPx : 0));
 
-  // The drawn band is [x_ofs, ofs_max] (:1541); under RTL the icon sits at the LEFT
-  // margin (:1455-1458), so the band starts past it instead of stopping short of it.
-  const bandLeft = styleMargin.left + (hasIcon && rtl ? iconWidthPx : 0);
-  const contentRect: Rect2 = {
-    x: bandLeft,
-    y: styleMargin.top,
-    w: Math.max(0, ofsMaxPx - bandLeft),
-    h: Math.max(0, yArea),
-  };
+  return { textOffset: { x: xOfs, y: yOfs }, ofsMaxPx };
+}
 
-  return { contentRect, textOffset: { x: xOfs, y: yOfs }, ofsMaxPx };
+/**
+ * The glyphs `NOTIFICATION_DRAW` draws, fill and outline ring alike (`line_edit.cpp:1512-1545`): a glyph
+ * whose advance box ends past `ofs_max` is dropped whole, not clipped. The walk stops there, and at a
+ * glyph that ends on `ofs_max`, since the pen has reached it. The left test `ceil(ofs.x) >= x_ofs`
+ * always holds without a `scroll_offset`. Each line keeps its `widthPx`, the width the alignment used.
+ */
+export function lineEditDrawnLayout(
+  layout: TextLayoutResult,
+  penXPx: number,
+  ofsMaxPx: number
+): TextLayoutResult {
+  return { ...layout, lines: layout.lines.map((line) => drawnLine(line, penXPx, ofsMaxPx)) };
+}
+
+function drawnLine(line: TextLineLayout, penXPx: number, ofsMaxPx: number): TextLineLayout {
+  const glyphs: GlyphPlacement[] = [];
+  for (const glyph of line.glyphs) {
+    const endX = penXPx + glyph.x + glyph.advance;
+    if (endX > ofsMaxPx) break;
+    glyphs.push(glyph);
+    if (endX === ofsMaxPx) break;
+  }
+  return { ...line, glyphs };
 }
 
 /**

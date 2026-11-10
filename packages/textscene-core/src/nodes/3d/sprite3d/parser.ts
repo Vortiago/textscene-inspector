@@ -35,9 +35,6 @@ export function parseSprite3D(
     transparent: boolOr(properties.transparent, true),
     region_enabled: boolOr(properties.region_enabled, false),
     modulate: properties.modulate ? parseColor(properties.modulate) : { r: 1, g: 1, b: 1, a: 1 },
-    // The `SpriteBase3D()` flag loop leaves every flag but TRANSPARENT and
-    // DOUBLE_SIDED false (`sprite_3d.cpp:712-714`).
-    shaded: boolOr(properties.shaded, false, 'Sprite3D shaded'),
     ...parseMaterialFor2dFields(properties, 'Sprite3D'),
     render_priority: intOr(properties.render_priority, 0),
   };

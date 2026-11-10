@@ -1,0 +1,17 @@
+[remap]
+
+importer="font_data_bmfont"
+type="FontFile"
+uid="uid://bmfontscaledis1"
+path="res://.godot/imported/bmfont-blocks-disabled.fnt-0a1b2c3d4e5f60718293a4b5c6d7e8f9.fontdata"
+
+[deps]
+
+source_file="res://fonts/bmfont-blocks-disabled.fnt"
+dest_files=["res://.godot/imported/bmfont-blocks-disabled.fnt-0a1b2c3d4e5f60718293a4b5c6d7e8f9.fontdata"]
+
+[params]
+
+fallbacks=[]
+compress=true
+scaling_mode=0

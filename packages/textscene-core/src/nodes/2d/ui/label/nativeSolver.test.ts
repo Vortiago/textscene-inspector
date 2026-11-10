@@ -5,8 +5,9 @@
  * ceil(600*16/2048) = 5, line_spacing 3 (default_theme.cpp:392): pitch 26, font height 23.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { LABEL_SETTINGS_FONT_LOADING, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry, type SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -15,6 +16,7 @@ import { panelContainerLayout, panelContainerMinimumSize } from '../panelcontain
 import { makeBoxContainerLayout, makeBoxContainerMinimumSize } from '../shared/boxContainerSolver';
 import type { LabelProperties } from './types';
 import {
+  clampAutowrapMode,
   shapeText,
   type TextLayoutResult,
   type TextLineLayout,
@@ -24,28 +26,37 @@ import {
   labelMinimumSize,
   labelShapingWidthPx,
   labelUnwrappedShape,
-  LABEL_THEME_FONT_KEY,
   LABEL_LINE_SPACING_PX,
+  LABEL_PARAGRAPH_SEPARATOR,
   labelTextTheme,
   layoutLabelLines,
   labelVisibleLineRange,
   windowLabelLines,
   labelPreShapeText,
-  applyVisibleCharsReveal,
   labelEffectiveTextTheme,
   labelOutlineTheme,
   labelShadowTheme,
+  labelFontState,
 } from './nativeSolver';
+import { applyVisibleCharsReveal } from '../shared/visibleChars';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { resolveLabelSettings } from '../../../../resources/styles/labelsettings/decode';
 import * as logger from '../../../../logger';
+import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
+import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
+import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
+import {
+  overrunFlagsForBehavior,
+  trimFilledLineToWidth,
+  trimLineToWidth,
+} from '../../../../r3f/controls/native/text/textOverrun';
 import {
   AutowrapMode,
+  OverrunBehavior,
   VisibleCharactersBehavior,
   JustificationFlag,
 } from '../../../../godot/text/textServerEnums';
-import { controlProps } from '../control/testing/controlProps';
 
 const minSize = labelMinimumSize;
 
@@ -384,7 +395,7 @@ describe("labelShapingWidthPx (label.cpp:581's `int width = get_size().width - s
 describe('labelTextTheme', () => {
   it('reads the font_size and font_color overrides', () => {
     const red = { r: 1, g: 0, b: 0, a: 1 };
-    const props = controlProps({ name: 'L', themeOverrideFontSizes: { font_size: 20 } });
+    const props = { themeOverrideFontSizes: { font_size: 20 } };
     const resolved = labelTextTheme(node({}, { colors: { font_color: red } }), props, {
       theme: nativeTheme(1),
     });
@@ -393,12 +404,12 @@ describe('labelTextTheme', () => {
 
   it("resolves the theme's own default font size and Label's opaque white absent an override", () => {
     // default_theme.cpp sets Label's font_color to Color(1, 1, 1), not the gray control_font_color.
-    const resolved = labelTextTheme(node({}), { name: 'L' } as LabelProperties, { theme: nativeTheme(1) });
+    const resolved = labelTextTheme(node({}), {}, { theme: nativeTheme(1) });
     expect(resolved).toEqual({ fontSizePx: 16, color: { r: 1, g: 1, b: 1, a: 1 } });
   });
 
   it("ignores RichTextLabel's normal_font_size and default_color keys (edge case)", () => {
-    const props = controlProps({ name: 'L', themeOverrideFontSizes: { normal_font_size: 20 } });
+    const props = { themeOverrideFontSizes: { normal_font_size: 20 } };
     const n = node({}, { colors: { default_color: { r: 1, g: 0, b: 0, a: 1 } } });
     expect(labelTextTheme(n, props, { theme: nativeTheme(1) })).toEqual({
       fontSizePx: 16,
@@ -510,6 +521,20 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
     const placements = layoutLabelLines(layout, 200, 200, 3, undefined);
     expect(placements[0]!.line.widthPx).toBeCloseTo(200, 6);
     expect(placements[1]!.line.widthPx).toBeCloseTo(naturalWidth, 6);
+  });
+
+  // `Label::_shape` counts `jst_to_line` inside each paragraph (`label.cpp:304-319`), so a paragraph
+  // of one line is fitted (`DO_NOT_SKIP_SINGLE_LINE`), whichever paragraph it is.
+  it('horizontal FILL (3), two single-line paragraphs: both lines fit the box', () => {
+    const layout = shapeText('A B\nA B', {
+      fontSizePx: FONT_SIZE,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      paragraphSeparator: '\n',
+    });
+    const placements = layoutLabelLines(layout, 200, 200, 3, undefined);
+    expect(placements.map((p) => p.line.widthPx)).toEqual([200, 200]);
   });
 });
 
@@ -638,7 +663,7 @@ describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-
   });
 });
 
-describe(`labelMinimumSize — resolves this Label's own theme font key ("${LABEL_THEME_FONT_KEY}", default_theme.cpp:381)`, () => {
+describe(`labelMinimumSize — resolves this Label's own theme font key ("font", default_theme.cpp:381)`, () => {
   // An unresolvable font's warn is the observable proof here (`resolveNodeFontMetrics.test.ts`).
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
@@ -649,17 +674,79 @@ describe(`labelMinimumSize — resolves this Label's own theme font key ("${LABE
   });
 
   it('a theme_override_fonts/font local override is fed to the text engine, even for empty text (fontHeightPx is resolved unconditionally)', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n = { ...node({}), fontOverrides: { [LABEL_THEME_FONT_KEY]: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n = { ...node({}), fontOverrides: { font: unresolvableFont } };
     labelMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('a local override under a different key is not consulted', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n = { ...node({}), fontOverrides: { normal_font: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n = { ...node({}), fontOverrides: { normal_font: unresolvableFont } };
     labelMinimumSize(n, ctx());
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('labelMinimumSize — shapes in label_settings.font (label.cpp:112,349,473,523,758,913,978,1024)', () => {
+  const settingsFont: FontResource = {
+    kind: 'file',
+    bytes: new ArrayBuffer(1),
+    mimeType: 'font/otf',
+    fallbacks: [],
+    properties: {},
+  };
+  // Twice the bundled advances: a width that only the settings font can produce. No `shaping`, whose
+  // glyphs would carry the bundled `hmtx` advances past `getGlyphAdvanceUnits`.
+  const WIDE_METRICS: FontMetrics = {
+    ...OPEN_SANS_FONT_METRICS,
+    shaping: undefined,
+    getGlyphAdvanceUnits: (ch) => (OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits(ch) ?? 0) * 2,
+  };
+  const settings = resolveLabelSettings('SubResource("1")', [
+    { id: '1', type: 'LabelSettings', data: { font_size: '16' } },
+  ])!;
+
+  beforeEach(() => {
+    vi.spyOn(sceneFontLoader, 'peekSettledSceneFontMetrics').mockImplementation((font) =>
+      font === settingsFont ? WIDE_METRICS : OPEN_SANS_FONT_METRICS
+    );
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('takes the minimum width from the settings font advances, not the bundled font', () => {
+    const themeWidth = minSize(node({ text: 'AB' }, { labelSettings: settings }), ctx()).x;
+    const settingsWidth = minSize(
+      node({ text: 'AB' }, { labelSettings: settings, labelSettingsFont: settingsFont }),
+      ctx()
+    ).x;
+    expect(themeWidth).toBe(AB_SHAPED_WIDTH);
+    expect(settingsWidth).toBe(Math.ceil(AB_WIDTH * 2));
+  });
+
+  it('keeps the theme font for settings that name none', () => {
+    const n = node({ text: 'AB' }, { labelSettings: settings, labelSettingsFont: null });
+    expect(minSize(n, ctx()).x).toBe(AB_SHAPED_WIDTH);
+  });
+
+  it('shapes the shared layout in the settings font too', () => {
+    const n = node({ text: 'AB' }, { labelSettings: settings, labelSettingsFont: settingsFont });
+    expect(labelUnwrappedShape(n, nativeTheme(1))!.widthPx).toBeCloseTo(AB_WIDTH * 2, 5);
+  });
+
+  it('reports a font still loading, and shapes in the theme font meanwhile', () => {
+    const n = node(
+      { text: 'AB' },
+      { labelSettings: settings, labelSettingsFont: LABEL_SETTINGS_FONT_LOADING }
+    );
+    expect(labelFontState(n).isLoading).toBe(true);
+    expect(minSize(n, ctx()).x).toBe(AB_SHAPED_WIDTH);
+  });
+
+  it('reports no loading font for settings without one', () => {
+    expect(labelFontState(node({ text: 'AB' }, { labelSettings: settings })).isLoading).toBe(false);
   });
 });
 
@@ -740,10 +827,11 @@ describe('labelVisibleLineRange (label.cpp:344-361)', () => {
 
 describe('windowLabelLines', () => {
   const layout: TextLayoutResult = {
+    shapedText: 'abc',
     lines: [
-      { text: 'a', glyphs: [], widthPx: 10 },
-      { text: 'b', glyphs: [], widthPx: 30 },
-      { text: 'c', glyphs: [], widthPx: 20 },
+      { text: 'a', glyphs: [], widthPx: 10, paragraphIndex: 0 },
+      { text: 'b', glyphs: [], widthPx: 30, paragraphIndex: 1 },
+      { text: 'c', glyphs: [], widthPx: 20, paragraphIndex: 2 },
     ],
     linePitchPx: 26,
     widthPx: 30,
@@ -753,14 +841,14 @@ describe('windowLabelLines', () => {
   };
 
   it('recomputes widthPx/heightPx over the KEPT lines only (happy path)', () => {
-    const windowed = windowLabelLines(layout, { start: 1, end: 3 });
+    const windowed = windowLabelLines(layout, { start: 1, end: 3 }, 0);
     expect(windowed.lines.map((l) => l.widthPx)).toEqual([30, 20]);
     expect(windowed.widthPx).toBe(30);
     expect(windowed.heightPx).toBe(52);
   });
 
   it('an empty range yields zero lines and zero height (edge case)', () => {
-    const windowed = windowLabelLines(layout, { start: 3, end: 3 });
+    const windowed = windowLabelLines(layout, { start: 3, end: 3 }, 0);
     expect(windowed.lines).toEqual([]);
     expect(windowed.heightPx).toBe(0);
     expect(windowed.widthPx).toBe(0);
@@ -780,6 +868,10 @@ describe('labelPreShapeText (label.cpp:155-156)', () => {
     expect(labelPreShapeText('Hello', 3, VisibleCharactersBehavior.VC_GLYPHS_LTR)).toBe('Hello');
   });
 
+  it('cuts by code points, so an astral character is never split (edge case)', () => {
+    expect(labelPreShapeText('😀😀😀😀abcdefgh', 6, undefined)).toBe('😀😀😀😀ab');
+  });
+
   it('a negative or absent visibleChars is "show all" (edge case)', () => {
     expect(labelPreShapeText('Hello', -1, VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING)).toBe('Hello');
     expect(labelPreShapeText('Hello', undefined, VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING)).toBe(
@@ -788,18 +880,29 @@ describe('labelPreShapeText (label.cpp:155-156)', () => {
   });
 });
 
-function fakeLine(charCount: number): TextLineLayout {
+/** A line of `charCount` glyphs whose source characters start at `firstSourceIndex`. */
+function fakeLine(charCount: number, firstSourceIndex = 0): TextLineLayout {
   return {
     text: 'x'.repeat(charCount),
-    glyphs: Array.from({ length: charCount }, (_, i) => ({ char: 'x', x: i, advance: 1, glyph: null })),
+    glyphs: Array.from({ length: charCount }, (_, i) => ({
+      char: 'x',
+      x: i,
+      advance: 1,
+      glyph: null,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      fontSizePx: 16,
+      sourceIndex: firstSourceIndex + i,
+    })),
     widthPx: charCount,
+    paragraphIndex: 0,
   };
 }
 
 describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
   it('VC_CHARS_AFTER_SHAPING keeps a running CHARACTER budget across lines (happy path)', () => {
-    const [l1, l2] = applyVisibleCharsReveal([fakeLine(3), fakeLine(3)], {
+    const [l1, l2] = applyVisibleCharsReveal([fakeLine(3), fakeLine(3, 3)], {
       behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+      text: 'x'.repeat(6),
       visibleChars: 4,
       visibleRatio: undefined,
     });
@@ -807,9 +910,66 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(l2!.glyphs.length).toBe(1);
   });
 
+  it('VC_CHARS_AFTER_SHAPING hides each glyph whose source character is past the budget, in visual order', () => {
+    // `glyph.end + para_start > visible_chars` (label.h:207) reads the logical end, so a reversed
+    // Hebrew run loses its logical tail from its visual left.
+    const line = shapeText('abc שלום', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+    }).lines[0]!;
+    const [revealed] = applyVisibleCharsReveal([line], {
+      behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+      text: 'abc שלום',
+      visibleChars: 6,
+      visibleRatio: undefined,
+    });
+    expect(revealed!.glyphs.map((glyph) => glyph.sourceIndex)).toEqual([0, 1, 2, 3, 5, 4]);
+  });
+
+  it('VC_CHARS_AFTER_SHAPING budgets code points, so an astral glyph costs one (label.h:207)', () => {
+    // "😀😀ab" has glyph source indices 0, 2, 4, 5 in UTF-16 units but code points 0, 1, 2, 3.
+    const line = fakeLine(4);
+    line.glyphs = line.glyphs.map((glyph, index) => ({ ...glyph, sourceIndex: [0, 2, 4, 5][index] }));
+    const [revealed] = applyVisibleCharsReveal([line], {
+      behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+      text: '😀😀ab',
+      visibleChars: 3,
+      visibleRatio: undefined,
+    });
+    expect(revealed!.glyphs.map((glyph) => glyph.sourceIndex)).toEqual([0, 2, 4]);
+  });
+
+  it('VC_CHARS_AFTER_SHAPING hides the ellipsis of a paragraph that starts past the budget, plus one', () => {
+    // An ellipsis glyph's `end` is -1 (`text_server.h:628`), so `-1 + para_start > visible_chars` hides it.
+    const ellipsis = {
+      char: '…',
+      x: 0,
+      advance: 1,
+      glyph: null,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      fontSizePx: 16,
+    };
+    const withEllipsis = (paragraphStart: number): TextLineLayout => ({
+      ...fakeLine(0),
+      glyphs: [ellipsis],
+      paragraphStart,
+    });
+    const [kept, hidden] = applyVisibleCharsReveal([withEllipsis(3), withEllipsis(4)], {
+      behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+      text: 'x'.repeat(6),
+      visibleChars: 2,
+      visibleRatio: undefined,
+    });
+    expect(kept!.glyphs).toEqual([ellipsis]);
+    expect(hidden!.glyphs).toEqual([]);
+  });
+
   it('VC_GLYPHS_AUTO/LTR reveal GLYPHS from the FRONT, budgeted by visible_ratio * total_glyphs', () => {
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
     });
@@ -817,6 +977,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(l2!.glyphs.length).toBe(0);
     const auto = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_AUTO,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
     });
@@ -824,9 +985,32 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(auto[1]!.glyphs.length).toBe(0);
   });
 
+  it('multiplies the ratio and the glyph count in single precision, as `total_glyphs * visible_ratio` does', () => {
+    // 30/44 in double precision times 44 is 29.999999999999996, which truncates to 29. Godot's float ratio gives 30.
+    const [line] = applyVisibleCharsReveal([fakeLine(44)], {
+      behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+      text: '',
+      visibleChars: 30,
+      visibleRatio: 30 / 44,
+    });
+    expect(line!.glyphs.length).toBe(30);
+  });
+
+  it('budgets by the total glyph count it is given when that differs from the lines', () => {
+    const [line] = applyVisibleCharsReveal([fakeLine(4)], {
+      behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+      text: '',
+      visibleChars: undefined,
+      visibleRatio: 0.5,
+      totalCharacters: 6,
+    });
+    expect(line!.glyphs.length).toBe(3);
+  });
+
   it('VC_GLYPHS_RTL reveals GLYPHS from the BACK — the opposite end from LTR/AUTO (error path)', () => {
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_RTL,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
     });
@@ -839,6 +1023,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(
       applyVisibleCharsReveal(lines, {
         behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+        text: 'x'.repeat(6),
         visibleChars: undefined,
         visibleRatio: 1,
       })[0]!.glyphs.length
@@ -846,6 +1031,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(
       applyVisibleCharsReveal(lines, {
         behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
+        text: 'x'.repeat(6),
         visibleChars: -1,
         visibleRatio: undefined,
       })[0]!.glyphs.length
@@ -857,6 +1043,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     expect(
       applyVisibleCharsReveal(lines, {
         behavior: VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING,
+        text: '',
         visibleChars: 0,
         visibleRatio: 0,
       })[0]!.glyphs.length
@@ -870,16 +1057,18 @@ describe('labelEffectiveTextTheme', () => {
   const themeResolved = { fontSizePx: 40, color: { r: 1, g: 0, b: 0, a: 1 } };
 
   it('falls back to the theme-resolved values absent label_settings (happy path)', () => {
-    expect(labelEffectiveTextTheme(themeResolved, null)).toEqual({
+    expect(labelEffectiveTextTheme(themeResolved, null, {})).toEqual({
       fontSizePx: 40,
       color: { r: 1, g: 0, b: 0, a: 1 },
       lineSpacingPx: LABEL_LINE_SPACING_PX,
+      paragraphSpacingPx: 0,
     });
   });
 
   it('a valid label_settings wins OUTRIGHT, even at its own class defaults, over a node-local theme override (error path)', () => {
     const settings = {
       lineSpacing: 3,
+      paragraphSpacing: 0,
       fontSize: 16,
       fontColor: { r: 1, g: 1, b: 1, a: 1 },
       outlineSize: 0,
@@ -887,17 +1076,21 @@ describe('labelEffectiveTextTheme', () => {
       shadowSize: 1,
       shadowColor: { r: 0, g: 0, b: 0, a: 0 },
       shadowOffset: { x: 1, y: 1 },
+      stackedOutlines: [],
+      stackedShadows: [],
     };
-    expect(labelEffectiveTextTheme(themeResolved, settings)).toEqual({
+    expect(labelEffectiveTextTheme(themeResolved, settings, {})).toEqual({
       fontSizePx: 16,
       color: { r: 1, g: 1, b: 1, a: 1 },
       lineSpacingPx: 3,
+      paragraphSpacingPx: 0,
     });
   });
 
   it('truncates a fractional line_spacing toward zero — a real_t assigned into a C++ int (label.cpp:346)', () => {
     const settings = {
       lineSpacing: 3.7,
+      paragraphSpacing: 0,
       fontSize: 16,
       fontColor: { r: 1, g: 1, b: 1, a: 1 },
       outlineSize: 0,
@@ -905,8 +1098,10 @@ describe('labelEffectiveTextTheme', () => {
       shadowSize: 1,
       shadowColor: { r: 0, g: 0, b: 0, a: 0 },
       shadowOffset: { x: 1, y: 1 },
+      stackedOutlines: [],
+      stackedShadows: [],
     };
-    expect(labelEffectiveTextTheme(themeResolved, settings).lineSpacingPx).toBe(3);
+    expect(labelEffectiveTextTheme(themeResolved, settings, {}).lineSpacingPx).toBe(3);
   });
 });
 
@@ -928,6 +1123,7 @@ describe('labelOutlineTheme', () => {
   it('a valid label_settings wins OUTRIGHT over the node-local theme override (edge case)', () => {
     const labelSettings = {
       lineSpacing: 3,
+      paragraphSpacing: 0,
       fontSize: 16,
       fontColor: { r: 1, g: 1, b: 1, a: 1 },
       outlineSize: 5,
@@ -935,6 +1131,8 @@ describe('labelOutlineTheme', () => {
       shadowSize: 1,
       shadowColor: { r: 0, g: 0, b: 0, a: 0 },
       shadowOffset: { x: 1, y: 1 },
+      stackedOutlines: [],
+      stackedShadows: [],
     };
     const n = node({}, { constants: { outline_size: 3 }, labelSettings });
     expect(labelOutlineTheme(n)).toEqual({ size: 5, color: { r: 0, g: 1, b: 0, a: 1 } });
@@ -968,6 +1166,7 @@ describe('labelShadowTheme', () => {
   it('a valid label_settings wins OUTRIGHT over the node-local theme override (edge case)', () => {
     const labelSettings = {
       lineSpacing: 3,
+      paragraphSpacing: 0,
       fontSize: 16,
       fontColor: { r: 1, g: 1, b: 1, a: 1 },
       outlineSize: 0,
@@ -975,6 +1174,8 @@ describe('labelShadowTheme', () => {
       shadowSize: 7,
       shadowColor: { r: 0, g: 0, b: 0, a: 0.9 },
       shadowOffset: { x: 3, y: 3 },
+      stackedOutlines: [],
+      stackedShadows: [],
     };
     const n = node({}, { constants: { shadow_outline_size: 2 }, labelSettings });
     expect(labelShadowTheme(n)).toEqual({
@@ -1036,7 +1237,7 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
   }
 
   function originAt(alignment: number, rtl: boolean): number {
-    return layoutLabelLines(lineOfWidth(70), 200, 100, alignment, undefined, undefined, FONT_SIZE, {
+    return layoutLabelLines(lineOfWidth(70), 200, 100, alignment, undefined, undefined, {
       rtl,
     })[0]!.x;
   }
@@ -1066,19 +1267,133 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
     // `if (rtl && autowrap_mode != AUTOWRAP_OFF)` reads `shaped_text_get_inferred_direction` (:470),
     // not `rtl_layout` (:471). `text_direction` defaults to TEXT_DIRECTION_AUTO (`label.h:70`), so `:179`
     // hands the TextServer DIRECTION_AUTO and a Latin paragraph infers LTR (`text_server_adv.cpp:7241-7247`).
-    const placements = layoutLabelLines(
-      lineOfWidth(70),
-      200,
-      100,
-      3,
-      undefined,
-      UNJUSTIFIED_FLAGS,
-      FONT_SIZE,
-      {
-        rtl: true,
-      }
-    );
+    const placements = layoutLabelLines(lineOfWidth(70), 200, 100, 3, undefined, UNJUSTIFIED_FLAGS, {
+      rtl: true,
+    });
     expect(placements[0]!.x).toBe(0);
+  });
+});
+
+describe('layoutLabelLines — the overrun trim (label.cpp:302-332)', () => {
+  it('aligns a RIGHT line by its trimmed width, as `_shape` trims before `_get_line_rect` reads it', () => {
+    const layout = shapeText('A long line of text that overruns', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+    });
+    const trimTo60 = (line: TextLineLayout): TextLineLayout => ({ ...line, widthPx: 60 });
+    const [placement] = layoutLabelLines(layout, 100, 40, 2, undefined, undefined, {
+      trim: { line: trimTo60, filledLine: trimTo60 },
+    });
+    expect(placement!.line.widthPx).toBe(60);
+    expect(placement!.x).toBe(40);
+  });
+});
+
+describe('layoutLabelLines — the justification-aware trim of FILL with autowrap off (label.cpp:322-325)', () => {
+  const layout = shapeText('A long line of text', {
+    fontSizePx: 16,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 3,
+  });
+  const naturalWidthPx = layout.lines[0]!.widthPx;
+  const markTrimmed = (line: TextLineLayout): TextLineLayout => ({ ...line, text: `${line.text}…` });
+  const fillAt = (boxWidthPx: number) =>
+    layoutLabelLines(layout, boxWidthPx, 40, 3, undefined, JustificationFlag.WORD_BOUND, {
+      trim: { line: markTrimmed, filledLine: markTrimmed },
+    })[0]!.line;
+
+  it('skips the trim of a line whose spaces shrink to fit, as `fit_width_minimum_reached` stays false (text_server_adv.cpp:5947)', () => {
+    expect(fillAt(Math.floor(naturalWidthPx) - 4).text).toBe('A long line of text');
+  });
+
+  it('trims a line that stays wider than the box at the smallest space', () => {
+    expect(fillAt(Math.floor(naturalWidthPx / 2)).text).toBe('A long line of text…');
+  });
+});
+
+describe('layoutLabelLines — the trimmed FILL line fitted again with CONSTRAIN_ELLIPSIS (label.cpp:325)', () => {
+  // 'A' 10.578125 and the default ellipsis 13.0625 (truncated to 13 in `ellipsis_width`) at size 16.
+  const layout = shapeText('AAAAAAAA AAAAAAAA', {
+    fontSizePx: 16,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 3,
+  });
+  const BOX_WIDTH_PX = 100;
+  const ELLIPSIS_WIDTH_PX = 13;
+  const trimOptions = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 };
+  const ellipsisFlags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+  const filledLineAt = (justificationFlags: number) =>
+    layoutLabelLines(layout, BOX_WIDTH_PX, 40, 3, undefined, justificationFlags, {
+      trim: {
+        line: (line) => trimLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, trimOptions),
+        filledLine: (line, filledFlags) =>
+          trimFilledLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, {
+            ...trimOptions,
+            justificationFlags: filledFlags,
+          }),
+      },
+    })[0]!.line;
+
+  it('stretches the kept spaces so the ellipsis ends at the box width', () => {
+    const ellipsis = filledLineAt(JustificationFlag.WORD_BOUND).glyphs.at(-1)!;
+    expect(ellipsis.char).toBe('…');
+    expect(ellipsis.x).toBe(BOX_WIDTH_PX - ELLIPSIS_WIDTH_PX);
+  });
+
+  it('leaves the spaces at the smallest width without WORD_BOUND', () => {
+    const ellipsis = filledLineAt(0).glyphs.at(-1)!;
+    expect(ellipsis.x).toBeLessThan(BOX_WIDTH_PX - ELLIPSIS_WIDTH_PX);
+  });
+});
+
+describe('layoutLabelLines — the inferred paragraph direction (label.cpp:470-478)', () => {
+  const FONT_SIZE = 16;
+  const UNJUSTIFIED_FLAGS = JustificationFlag.WORD_BOUND | JustificationFlag.SKIP_LAST_LINE;
+
+  function fillOrigin(isRtl: boolean, isAutowrapped: boolean, rtl = false): number {
+    const layout = shapeText('Wave rift', {
+      fontSizePx: FONT_SIZE,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+    });
+    const lines = layout.lines.map((line) => ({ ...line, widthPx: 70, isRtl }));
+    return layoutLabelLines({ ...layout, lines }, 200, 100, 3, undefined, UNJUSTIFIED_FLAGS, {
+      rtl,
+      isAutowrapped,
+    })[0]!.x;
+  }
+
+  it('H_FILL puts a line of an RTL paragraph at the right edge when autowrap is on', () => {
+    expect(fillOrigin(true, true)).toBe(130);
+  });
+
+  it('H_FILL keeps a line of an RTL paragraph at x 0 with autowrap off', () => {
+    expect(fillOrigin(true, false)).toBe(0);
+  });
+
+  it('H_FILL keeps a line of an LTR paragraph at x 0 under an RTL layout', () => {
+    expect(fillOrigin(false, true, true)).toBe(0);
+  });
+
+  it('H_FILL puts the last line of a wrapped Hebrew paragraph at the right edge', () => {
+    const layout = shapeText('שלום עולם שלום עולם', {
+      fontSizePx: FONT_SIZE,
+      boxWidthPx: 100,
+      autowrapMode: AutowrapMode.AUTOWRAP_WORD_SMART,
+      lineSpacingPx: 3,
+    });
+    const placements = layoutLabelLines(layout, 100, 100, 3, undefined, undefined, {
+      isAutowrapped: true,
+    });
+    const last = placements.at(-1)!;
+    expect(placements.length).toBeGreaterThan(1);
+    expect(last.x).toBe(Math.trunc(100 - Math.ceil(last.line.widthPx)));
+    expect(last.x).toBeGreaterThan(0);
   });
 });
 
@@ -1088,6 +1403,7 @@ describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
     // layout direction, so the same budget hides the opposite end from the LTR case.
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_AUTO,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
       rtl: true,
@@ -1099,6 +1415,7 @@ describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
   it('VC_GLYPHS_LTR and VC_GLYPHS_RTL are explicit and ignore the layout direction (:779-780)', () => {
     const ltr = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
       rtl: true,
@@ -1106,10 +1423,156 @@ describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
     expect(ltr[0]!.glyphs.length).toBe(4);
     const rtlBehavior = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VisibleCharactersBehavior.VC_GLYPHS_RTL,
+      text: '',
       visibleChars: undefined,
       visibleRatio: 0.5,
       rtl: false,
     });
     expect(rtlBehavior[0]!.glyphs.length).toBe(0);
+  });
+});
+
+describe('Label paragraph_spacing and the theme spacing constants (label.cpp:344-388, :517-617, :889)', () => {
+  // At font_size 20 the pitch is 31 (line_spacing 3) and the font height 28, measured from Godot 4.6.3.
+  const FONT_SIZE = 20;
+
+  function settingsFor(data: Record<string, string>) {
+    return resolveLabelSettings('SubResource("1")', [
+      { id: '1', type: 'LabelSettings', data: { font_size: String(FONT_SIZE), ...data } },
+    ]);
+  }
+
+  function spacedNode(props: Partial<LabelProperties>, overrides: Partial<SolveNode> = {}): SolveNode {
+    return node({ autowrapMode: 0, ...props }, overrides);
+  }
+
+  /** The Label painter's path: shape, window to the visible lines, then place. */
+  function placeLines(n: SolveNode, boxWidthPx: number, boxHeightPx: number): number[] {
+    const props = n.node.properties as LabelProperties;
+    const theme = labelEffectiveTextTheme(
+      labelTextTheme(n, props, { theme: nativeTheme(1) }),
+      n.labelSettings,
+      n.constants
+    );
+    const shaped = shapeText(props.text ?? '', {
+      fontSizePx: theme.fontSizePx,
+      boxWidthPx: labelShapingWidthPx(boxWidthPx),
+      autowrapMode: clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF),
+      lineSpacingPx: theme.lineSpacingPx,
+      paragraphSeparator: LABEL_PARAGRAPH_SEPARATOR,
+    });
+    const windowed = windowLabelLines(
+      shaped,
+      labelVisibleLineRange(shaped.lines.length, 0, undefined),
+      theme.paragraphSpacingPx
+    );
+    return layoutLabelLines(
+      windowed,
+      boxWidthPx,
+      boxHeightPx,
+      undefined,
+      props.verticalAlignment,
+      undefined,
+      {
+        lineSpacingPx: theme.lineSpacingPx,
+        paragraphSpacingPx: theme.paragraphSpacingPx,
+      }
+    ).map((p) => p.y);
+  }
+
+  it('paragraph_spacing 20.7 truncates to 20 and places three paragraphs at a pitch of 51', () => {
+    const n = spacedNode({ text: 'I\nI\nI' }, { labelSettings: settingsFor({ paragraph_spacing: '20.7' }) });
+    expect(placeLines(n, 200, 200)).toEqual([0, 51, 102]);
+  });
+
+  it('a negative paragraph_spacing of -10 places the same text at a pitch of 21', () => {
+    const n = spacedNode({ text: 'I\nI\nI' }, { labelSettings: settingsFor({ paragraph_spacing: '-10' }) });
+    expect(placeLines(n, 200, 200)).toEqual([0, 21, 42]);
+  });
+
+  it('CENTER subtracts the trailing line and paragraph spacing: first line top 135 in a 400 px box', () => {
+    const n = spacedNode(
+      { text: 'I\nI\nI', verticalAlignment: 1 },
+      { labelSettings: settingsFor({ paragraph_spacing: '20.7' }) }
+    );
+    expect(placeLines(n, 200, 400)[0]).toBe(135);
+  });
+
+  it('CENTER uses the settings line_spacing 10, not the constant 3', () => {
+    const n = spacedNode(
+      { text: 'I\nI', verticalAlignment: 1 },
+      { labelSettings: settingsFor({ line_spacing: '10' }) }
+    );
+    // Pitch 38, two lines: 76 - 10 = 66, (400 - 66) / 2 = 167.
+    expect(placeLines(n, 200, 400)[0]).toBe(167);
+  });
+
+  it('minimum height of "I\\nI" at paragraph_spacing 20.7 is 79', () => {
+    const n = spacedNode({ text: 'I\nI' }, { labelSettings: settingsFor({ paragraph_spacing: '20.7' }) });
+    expect(minSize(n, ctx()).y).toBe(79);
+  });
+
+  it('a line that autowrap breaks inside a paragraph keeps the plain pitch of 31', () => {
+    const n = spacedNode(
+      { text: 'I I\nI', autowrapMode: 1 },
+      { labelSettings: settingsFor({ paragraph_spacing: '20.7' }) }
+    );
+    // Width 8 breaks "I I" into two lines of one paragraph, then the paragraph gap of 20.
+    expect(placeLines(n, 8, 200)).toEqual([0, 31, 82]);
+  });
+
+  it('theme_override_constants line_spacing and paragraph_spacing apply without label_settings', () => {
+    const n = spacedNode({ text: 'I\nI' }, { constants: { line_spacing: 10, paragraph_spacing: 5 } });
+    const props = n.node.properties as LabelProperties;
+    const themeResolved = labelTextTheme(n, props, { theme: nativeTheme(1) });
+    expect(labelEffectiveTextTheme(themeResolved, null, n.constants)).toMatchObject({
+      lineSpacingPx: 10,
+      paragraphSpacingPx: 5,
+    });
+  });
+
+  it('label_settings replaces the theme constants outright', () => {
+    const constants = { line_spacing: 10, paragraph_spacing: 5 };
+    const themeResolved = { fontSizePx: 16, color: { r: 1, g: 1, b: 1, a: 1 } };
+    expect(labelEffectiveTextTheme(themeResolved, settingsFor({}), constants)).toMatchObject({
+      lineSpacingPx: 3,
+      paragraphSpacingPx: 0,
+    });
+  });
+});
+
+describe('labelUnwrappedShape — direction, language and structured override (label.cpp:139-195)', () => {
+  /** The first shaped line's glyph characters, left to right, without the paragraph terminator. */
+  function visual(props: Partial<LabelProperties>, overrides: Partial<SolveNode> = {}): string {
+    const layout = labelUnwrappedShape(node({ autowrapMode: 0, ...props }, overrides), nativeTheme(1))!;
+    return layout.lines[0]!.glyphs.map((glyph) => glyph.char)
+      .join('')
+      .replace('\u200b', '');
+  }
+
+  it('shapes an INHERITED paragraph at the layout direction (label.cpp:178-179)', () => {
+    expect(visual({ text: 'Hello!', textDirection: 3 }, { rtl: true })).toBe('!Hello');
+    expect(visual({ text: 'Hello!', textDirection: 3 }, { rtl: false })).toBe('Hello!');
+  });
+
+  it('passes an explicit direction through, whatever the layout direction (label.cpp:180-181)', () => {
+    expect(visual({ text: 'Hello!', textDirection: 2 }, { rtl: false })).toBe('!Hello');
+    expect(visual({ text: 'Hello!', textDirection: 0 }, { rtl: true })).toBe('Hello!');
+  });
+
+  it('takes a neutral paragraph from the language, else the locale (label.cpp:139)', () => {
+    expect(visual({ text: '123!', language: 'he' })).toBe('!123');
+    expect(visual({ text: '123!' }, { locale: 'he_IL' })).toBe('!123');
+    expect(visual({ text: '123!', language: 'en' }, { locale: 'he_IL' })).toBe('123!');
+  });
+
+  it('upper-cases with the language, else the locale (label.cpp:153)', () => {
+    expect(visual({ text: 'istanbul', uppercase: true, language: 'tr' })).toBe('İSTANBUL');
+    expect(visual({ text: 'istanbul', uppercase: true }, { locale: 'tr' })).toBe('İSTANBUL');
+  });
+
+  it('runs each paragraph through the structured parser and its options (label.cpp:195)', () => {
+    expect(visual({ text: 'שלום/abc', textDirection: 2, structuredTextBidiOverride: 2 })).toBe('םולש/abc');
+    expect(visual({ text: 'שלום/abc', textDirection: 2 })).toBe('abc/םולש');
   });
 });

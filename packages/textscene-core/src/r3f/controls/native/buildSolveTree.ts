@@ -48,6 +48,7 @@ import { useSharedLiveTree } from '../../useLiveSceneTree';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { resolveInlineFontResource } from '../../../resources/fonts/font/decode';
 import { resolveProjectFonts } from '../../../resources/fonts/font/projectFonts';
+import { NO_DEFAULT_FONTS, withDefaultFonts } from '../../../resources/fonts/font/defaultFont';
 import type { FontCacheReader, FontResource } from '../../../resources/fonts/font/types';
 import { resolveInlineThemeResource } from '../../../resources/styles/theme/decode';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
@@ -89,7 +90,6 @@ import type { WindowProperties } from '../../../nodes/windows/window/types';
 import { NO_OWNERS, type ThemeOwner } from '../../../nodes/windows/window/themeOwners';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
-import type { SolveNode, ThemedIconRef } from './solveTree';
 import {
   INHERIT_PARENT_MATERIAL,
   NO_PARENT_MATERIAL,
@@ -97,6 +97,12 @@ import {
   foldCanvasAncestors,
   type CanvasAncestors,
 } from '../../canvasAncestors';
+import {
+  LABEL_SETTINGS_FONT_LOADING,
+  type LabelSettingsFont,
+  type SolveNode,
+  type ThemedIconRef,
+} from './solveTree';
 import { liveNodePatches } from '../../liveNodePatches';
 import { liveScenePassResults } from '../../liveScenePass';
 import { patchedNode } from '../../nodePatch';
@@ -127,12 +133,17 @@ interface UseBuildSolveTreeResult {
   windows: readonly SolveNode[];
 }
 
+/** A LabelSettings font with the default fonts under it, as a theme font takes them, once it has loaded. */
+function withSettingsDefaultFonts(font: LabelSettingsFont, scope: ThemeResolutionScope): LabelSettingsFont {
+  return font === LABEL_SETTINGS_FONT_LOADING ? font : withDefaultFonts(font, scope.defaultFonts);
+}
+
 /** No ancestor or project theme: `mergeThemedRecord` returns the seed unchanged. */
 const NO_THEME_SCOPE: ThemeResolutionScope = {
   typeChain: [],
   searchOrder: [],
   projectDefaultFont: null,
-  variationBaseFont: null,
+  defaultFonts: NO_DEFAULT_FONTS,
 };
 
 /**
@@ -241,6 +252,14 @@ function resolveThemedIcons(
   }
   return mergeThemedRecord(themeScope, local, iconRefsOfTheme);
 }
+
+/** A Label's `label_settings` with the font it names. */
+interface OwnLabelSettings {
+  settings: LabelSettingsResource | null;
+  font: LabelSettingsFont;
+}
+
+const NO_LABEL_SETTINGS: OwnLabelSettings = { settings: null, font: null };
 
 /** An uncached sub-scene the walk found: the path to request, and the ExtResource to register first (absent for a raw `res://` instance). */
 interface PendingScene {
@@ -519,27 +538,43 @@ function buildForest(
   }
 
   /**
-   * A Label's own `label_settings` (`label.cpp:1121-1133`). An ExtResource `.tres` loads on the
-   * resource bus, and a SubResource decodes inline. Null until a `.tres` arrives, as Godot draws
-   * from the theme until the property holds a resource.
+   * A Label's own `label_settings` (`label.cpp:1121-1133`) and its font. An ExtResource `.tres`
+   * loads on the resource bus, and a SubResource decodes inline. Null until a `.tres` arrives, as
+   * Godot draws from the theme until the property holds a resource. The `font` resolves in the
+   * file that wrote the settings (ADR-0051): the `.tres`'s own tables, or the node's scope.
    */
   function resolveOwnLabelSettings(
     node: TscnNode,
     ext: readonly TscnExternalResource[],
     int: readonly TscnInternalResource[]
-  ): LabelSettingsResource | null {
+  ): OwnLabelSettings {
     const ref = (node.properties as Partial<LabelProperties>).labelSettings;
-    if (!ref) return null;
-    if (parseResourceReference(ref)?.type !== 'ExtResource') return resolveLabelSettings(ref, int);
+    if (!ref) return NO_LABEL_SETTINGS;
+    if (parseResourceReference(ref)?.type !== 'ExtResource') {
+      return withSettingsFont(resolveLabelSettings(ref, int), ext, int);
+    }
 
     const path = parsedResourcePath(ref, ext);
-    if (!path) return null;
+    if (!path) return NO_LABEL_SETTINGS;
     const cached = resourceCache.getCached(path);
     if (cached === undefined) {
       pendingResourceFiles.add(path);
-      return null;
+      return NO_LABEL_SETTINGS;
     }
-    return cached && labelSettingsFromResource(cached);
+    if (!cached) return NO_LABEL_SETTINGS;
+    return withSettingsFont(labelSettingsFromResource(cached), cached.extResources, cached.subResources);
+  }
+
+  function withSettingsFont(
+    settings: LabelSettingsResource | null,
+    ext: readonly TscnExternalResource[],
+    int: readonly TscnInternalResource[]
+  ): OwnLabelSettings {
+    if (!settings) return NO_LABEL_SETTINGS;
+    const stillLoading = new Set<string>();
+    const font = resolveInlineFontResource(settings.font, ext, int, fontCache, stillLoading);
+    for (const path of stillLoading) pendingFonts.add(path);
+    return { settings, font: stillLoading.size > 0 ? LABEL_SETTINGS_FONT_LOADING : font };
   }
 
   /**
@@ -781,11 +816,13 @@ function buildForest(
       skippedAncestors: null,
       parentVisibleInTree: true,
       rtl: inheritedRtl ?? layoutDirectionEnv.rootRtl,
+      locale: layoutDirectionEnv.applicationLocale,
       hidden,
       ...themeItems(window, scope, themeScope),
       textureSize: null,
       textureSlots: EMPTY_TEXTURE_SLOTS,
       labelSettings: null,
+      labelSettingsFont: null,
       resources: scope,
       themeChain,
       projectFonts,
@@ -957,6 +994,11 @@ function buildForest(
     // A canvas boundary IS the canvas every chain broken below it parents
     // to, so it adopts those; every other Control passes them further up.
     const isBoundary = controlSolverRegistry.isCanvasBoundary(collapsed.type);
+    const ownLabelSettings = resolveOwnLabelSettings(
+      collapsed,
+      ownScope.externalResources,
+      ownScope.internalResources
+    );
     const solved: SolveNode = {
       path,
       node: live,
@@ -975,15 +1017,13 @@ function buildForest(
       // this one (`SolveNode.parentVisibleInTree`).
       parentVisibleInTree,
       rtl: rtl ?? layoutDirectionEnv.rootRtl,
+      locale: layoutDirectionEnv.applicationLocale,
       hidden,
       ...items,
       textureSize: texture.size,
       textureSlots: texture.slots,
-      labelSettings: resolveOwnLabelSettings(
-        collapsed,
-        ownScope.externalResources,
-        ownScope.internalResources
-      ),
+      labelSettings: ownLabelSettings.settings,
+      labelSettingsFont: withSettingsDefaultFonts(ownLabelSettings.font, themeScope),
       resources: ownScope,
       themeChain: nodeThemeChain,
       projectFonts,

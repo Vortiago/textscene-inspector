@@ -233,7 +233,8 @@ export class ResourceLoader {
       this.eventBus,
       this.sectionLoaderFor('font'),
       (path) => this.readFile(path, 'FontFile'),
-      this.dependencies
+      this.dependencies,
+      fileEventBus
     );
 
     // A Theme's font refs resolve through the FONT processor (a different peer, unlike a

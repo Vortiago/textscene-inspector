@@ -1,0 +1,62 @@
+; One variable: whether the text is taller than the rect. A RichTextLabel with scroll_active true
+; shows its vertical scrollbar and wraps its text beside it once the text exceeds the rect height
+; (rich_text_label.cpp:3801-3830). Each label has the same text and width. Overflow is shorter than
+; its text and shows the bar; ScrollInactive is the same box with scroll_active false and shows
+; none; Fits is tall enough for its text and shows none. No other RichTextLabel fixture sets
+; scroll_active true with text that exceeds its rect, so no other scene shows a regression in it.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="OverflowBox" type="ColorRect" parent="."]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 200.0
+offset_bottom = 60.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Overflow" type="RichTextLabel" parent="."]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 200.0
+offset_bottom = 60.0
+text = "Wave rift over quiet stone and amber light"
+
+[node name="ScrollInactiveBox" type="ColorRect" parent="."]
+offset_left = 40.0
+offset_top = 100.0
+offset_right = 200.0
+offset_bottom = 140.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="ScrollInactive" type="RichTextLabel" parent="."]
+offset_left = 40.0
+offset_top = 100.0
+offset_right = 200.0
+offset_bottom = 140.0
+text = "Wave rift over quiet stone and amber light"
+scroll_active = false
+
+[node name="FitsBox" type="ColorRect" parent="."]
+offset_left = 40.0
+offset_top = 180.0
+offset_right = 200.0
+offset_bottom = 260.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Fits" type="RichTextLabel" parent="."]
+offset_left = 40.0
+offset_top = 180.0
+offset_right = 200.0
+offset_bottom = 260.0
+text = "Wave rift over quiet stone and amber light"

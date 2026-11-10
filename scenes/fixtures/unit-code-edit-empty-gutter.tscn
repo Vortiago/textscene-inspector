@@ -1,0 +1,37 @@
+; One variable: whether the CodeEdit's text was ever set. `line_number_digits` starts at 1 and only a
+; `text_set` or a changed `gutters_line_numbers_min_digits` recomputes it (code_edit.cpp:3863-3880,
+; 1536-1550), so `Untouched` keeps a two-digit-wide gutter while `EmptyText` (an assigned `text = ""`)
+; and `MinDigits` (a changed minimum) widen it. No other fixture holds a CodeEdit with its text unset.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Untouched" type="CodeEdit" parent="."]
+layout_mode = 1
+offset_top = 16.0
+offset_right = 300.0
+offset_bottom = 76.0
+placeholder_text = "Untouched"
+gutters_draw_line_numbers = true
+
+[node name="EmptyText" type="CodeEdit" parent="."]
+layout_mode = 1
+offset_top = 92.0
+offset_right = 300.0
+offset_bottom = 152.0
+text = ""
+placeholder_text = "EmptyText"
+gutters_draw_line_numbers = true
+
+[node name="MinDigits" type="CodeEdit" parent="."]
+layout_mode = 1
+offset_top = 168.0
+offset_right = 300.0
+offset_bottom = 228.0
+placeholder_text = "MinDigits"
+gutters_draw_line_numbers = true
+gutters_line_numbers_min_digits = 5

@@ -3,6 +3,8 @@
 import { type ParsedHeading, unquoteString, unquoteStringName } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { LinkButtonProperties } from './types';
+import { parseTextDirectionProperties } from '../../../../parser/textDirectionParser';
+import { parseStructuredTextOverride } from '../../../../parser/structuredTextOverrideParser';
 import { parseControl } from '../control/parser';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
@@ -10,7 +12,11 @@ export function parseLinkButton(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): LinkButtonProperties {
-  const result: LinkButtonProperties = { ...parseControl(heading, properties) };
+  const result: LinkButtonProperties = {
+    ...parseControl(heading, properties),
+    ...parseTextDirectionProperties(properties, 'LinkButton'),
+    ...parseStructuredTextOverride(properties),
+  };
   if (properties.text !== undefined) result.text = unquoteString(properties.text);
   if (properties.uri !== undefined) result.uri = unquoteString(properties.uri);
   result.underline = parseOptionalInt(properties.underline);

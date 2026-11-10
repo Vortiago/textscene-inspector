@@ -1,0 +1,36 @@
+[gd_scene load_steps=3 format=3 uid="uid://unit_label_settings_font"]
+
+[ext_resource type="FontFile" path="res://fonts/montserrat-extra-bold.otf" id="1_font"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_1"]
+font = ExtResource("1_font")
+font_size = 40
+
+[sub_resource type="LabelSettings" id="LabelSettings_2"]
+font_size = 40
+
+; The one variable: `label_settings.font`. The top Label names Montserrat ExtraBold, the bottom
+; Label's settings name none and keep the theme font. Both use font_size 40, so the font alone moves
+; the ink. The bottom Label shows that a settings resource without a font leaves the theme font alone
+; (label.cpp:112), so no other Label scene regresses.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="SettingsFont" type="Label" parent="."]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 600.0
+offset_bottom = 80.0
+text = "Settings font WWW"
+label_settings = SubResource("LabelSettings_1")
+
+[node name="ThemeFont" type="Label" parent="."]
+offset_left = 20.0
+offset_top = 200.0
+offset_right = 600.0
+offset_bottom = 260.0
+text = "Settings font WWW"
+label_settings = SubResource("LabelSettings_2")

@@ -134,6 +134,11 @@ function calcValue(val: number, min: number, max: number, page: number, gates: R
   return v;
 }
 
+/** `_calc_value` with no gate set: at most `max - page`, then at least `min`. */
+export function clampRangeValue(val: number, min: number, max: number, page: number): number {
+  return calcValue(val, min, max, page);
+}
+
 /** The `_calc_value` terms that are properties rather than bounds. */
 interface RangeValueGates {
   step?: number;

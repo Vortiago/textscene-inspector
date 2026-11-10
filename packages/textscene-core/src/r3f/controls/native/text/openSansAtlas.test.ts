@@ -32,7 +32,7 @@ describe('OPEN_SANS_ATLAS_GLYPHS', () => {
     'covers ASCII printable (0x20-0x7E), Latin-1 Supplement (0xA0-0xFF, EXCLUDING 0xAD SOFT HYPHEN — a Cf ' +
       'format character this font maps to visible ink with unusually large kerning, never verified against ' +
       'real Godot and not needed by any default or fixture), and bullet/ellipsis/en-dash/em-dash/curly-quote ' +
-      'punctuation (U+2022/2026/2013/2014/2018/2019/201C/201D) — decided, not narrowed',
+      'punctuation (U+2022/2026/2013/2014/2018/2019/201C/201D), and the liga ligatures (U+FB00-FB04) — decided, not narrowed',
     () => {
       const expectedChars: string[] = [];
       for (let cp = 0x20; cp <= 0x7e; cp++) expectedChars.push(String.fromCodePoint(cp));
@@ -40,7 +40,10 @@ describe('OPEN_SANS_ATLAS_GLYPHS', () => {
         if (cp === 0xad) continue;
         expectedChars.push(String.fromCodePoint(cp));
       }
-      for (const cp of [0x2022, 0x2026, 0x2013, 0x2014, 0x2018, 0x2019, 0x201c, 0x201d]) {
+      for (const cp of [
+        0x2022, 0x2026, 0x2013, 0x2014, 0x2018, 0x2019, 0x201c, 0x201d, 0xfb00, 0xfb01, 0xfb02, 0xfb03,
+        0xfb04,
+      ]) {
         expectedChars.push(String.fromCodePoint(cp));
       }
       expect(Object.keys(OPEN_SANS_ATLAS_GLYPHS).sort()).toEqual(expectedChars.sort());

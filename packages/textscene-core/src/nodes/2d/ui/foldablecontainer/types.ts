@@ -20,4 +20,8 @@ export interface FoldableContainerProperties extends ControlProperties {
    * trims the drawn text to that same space (`foldable_container.cpp:307-313`).
    */
   titleTextOverrunBehavior?: number;
+  /** `title_text_direction`, a `Control::TextDirection`. Godot default AUTO. */
+  titleTextDirection: number;
+  /** The language of the title. Empty takes the locale. */
+  language: string;
 }

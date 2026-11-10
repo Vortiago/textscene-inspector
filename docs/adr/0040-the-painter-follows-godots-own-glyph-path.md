@@ -3,6 +3,22 @@
 - Status: Accepted. **Supersedes ADR-0034.**
 - Amended by ADR-0042: the webview CSP now grants `worker-src blob:`. The MSDF finding
   below stands, because runtime MSDF generation also needs `connect-src`, which stays closed.
+- Amended for 2D Controls: the fill and the outline ring of Label, Button, CheckBox, CheckButton,
+  OptionButton, MenuButton and ProgressBar draw on painter B for the bundled font too
+  (`BundledCanvasRun.tsx`, `OutlinedTextRun`). Painter A draws the fill only where the bundled
+  canvas face cannot register. A Label draws a ring for each outline and stacked outline, and for
+  each shadow outline.
+- Amended for glyph coverage: painter B draws each glyph that has an outline as FreeType draws it,
+  not through the browser's text rasteriser. It loads the outline at the font's `hinting`
+  (`gui/theme/default_font_hinting` for the bundled font, `text_server_adv.cpp:1270-1285`). It
+  strokes the ring with a port of `ftstroke.c` and covers each pixel with a port of `ftgrays.c`
+  (`glyphCoverage.ts`). Both match Godot's glyph bitmaps to the level. The browser rasterises only
+  a glyph with no outline, so the Skia and canvas-stroke notes below hold for that glyph alone.
+- Amended for embolden: an embolden over the bundled font draws on painter B at every value, with
+  the bundled font's baked advances and its emboldened outlines (`BundledCanvasRun.tsx`). Godot
+  has no MSDF cutoff: its default font is not MSDF (`text_server.cpp:2386`), so FreeType grows
+  every embolden (`text_server_adv.cpp:1313-1316`). This covers the synthesised `[b]` of a
+  RichTextLabel.
 - Related: ADR-0037 (Control nodes render natively in the canvas: the 2D text this
   decision leaves on the atlas is that decision's text), ADR-0026 (comparison sheets live
   in their slice: the per-node limitations below are recorded there too).

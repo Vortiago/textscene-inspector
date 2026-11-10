@@ -1,0 +1,68 @@
+[gd_scene format=3]
+
+; The one variable: the `[font_size]`, `[outline_size]` and `[outline_color]` tags. The rows differ
+; only in those tags, over a plain 24 px label. The first row sizes a span, which grows its line.
+; The second outlines a span in red and in a size past the control's. The third sets the control's
+; own outline through theme overrides, and a tag that turns it off. The fourth wraps sized text in
+; a narrow box. The fifth gives list items a size and an outline, which the marker follows, and a size of 0 that draws none. No other scene shows a regression in these tags, since none sets one.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Sized" type="RichTextLabel" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 1100.0
+offset_bottom = 100.0
+theme_override_font_sizes/normal_font_size = 24
+bbcode_enabled = true
+text = "small [font_size=48]Big[/font_size] small [font_size=0]zero[/font_size] [b][font_size=36]bold[/font_size][/b]"
+
+[node name="Outlined" type="RichTextLabel" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 120.0
+offset_right = 1100.0
+offset_bottom = 200.0
+theme_override_font_sizes/normal_font_size = 36
+bbcode_enabled = true
+text = "plain [outline_size=4][outline_color=red]red 4[/outline_color][/outline_size] [outline_size=8]black 8[/outline_size] [outline_size=-3]neg[/outline_size]"
+
+[node name="ThemeOutline" type="RichTextLabel" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 220.0
+offset_right = 1100.0
+offset_bottom = 300.0
+theme_override_colors/font_outline_color = Color(0, 0.6, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/normal_font_size = 36
+bbcode_enabled = true
+text = "theme [outline_size=0]none[/outline_size] [outline_color=#0000ff]blue[/outline_color]"
+
+[node name="Wrapped" type="RichTextLabel" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 320.0
+offset_right = 340.0
+offset_bottom = 520.0
+theme_override_font_sizes/normal_font_size = 20
+bbcode_enabled = true
+text = "one [font_size=32]two three[/font_size] four [font_size=12]five six seven[/font_size] eight nine"
+
+[node name="Listed" type="RichTextLabel" parent="."]
+layout_mode = 0
+offset_left = 400.0
+offset_top = 320.0
+offset_right = 1100.0
+offset_bottom = 600.0
+theme_override_font_sizes/normal_font_size = 20
+bbcode_enabled = true
+text = "[ul][font_size=36]big item[/font_size]
+[outline_size=3][outline_color=red]outlined[/outline_color][/outline_size]
+[font_size=0]no marker[/font_size]
+plain[/ul][ol][font_size=30]one[/font_size]
+two[/ol]"

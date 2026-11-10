@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Bakes the vendored OpenSans_SemiBold's metrics, MSDF atlas, atlas image and bytes into the
- * committed `openSans{Metrics,Atlas,AtlasImage,FontBytes}.ts` modules the native Control
+ * Bakes the vendored OpenSans_SemiBold's metrics, MSDF atlas, atlas image, shaping tables and bytes
+ * into the committed `openSans{Metrics,Atlas,AtlasImage,Shaping,FontBytes}.ts` modules the native Control
  * text painter reads: `node scripts/fonts/bake-metrics.mjs [--check]`. `--check`
  * diffs a fresh bake against them byte for byte and exits 1 on a difference.
  */
@@ -26,6 +26,7 @@ const METRICS_OUT = join(TEXT_DIR, 'openSansMetrics.ts');
 const ATLAS_OUT = join(TEXT_DIR, 'openSansAtlas.ts');
 const ATLAS_IMAGE_OUT = join(TEXT_DIR, 'openSansAtlasImage.ts');
 const FONT_BYTES_OUT = join(TEXT_DIR, 'openSansFontBytes.ts');
+const SHAPING_OUT = join(TEXT_DIR, 'openSansShaping.ts');
 
 // Full ASCII printable, 0x20 (space) to 0x7E (~), 95 glyphs. Do not narrow it.
 const CHARSET_START = 0x20;
@@ -40,6 +41,8 @@ const LATIN1_SUPPLEMENT_END = 0xff;
 const LATIN1_SUPPLEMENT_EXCLUDE = new Set([0xad]);
 
 // Punctuation outside both ranges, each baked for its own reason.
+// The arrows U+2190 to U+2193 are not baked: Open Sans SemiBold has no glyph for them, and Godot
+// draws them from a host font. A scene that needs them names a font that holds them.
 const EXTRA_CODEPOINTS = [
   0x2022, // BULLET: LineEdit's default `secret_character` (`line_edit.cpp:3094`: `secret_character.is_empty() ? U"•" : ...`).
   0x2026, // HORIZONTAL ELLIPSIS: Label's default overrun character (`label.cpp:294`, also :299/:324/:328: `(el_char.length() > 0) ? el_char[0] : 0x2026`).
@@ -49,6 +52,13 @@ const EXTRA_CODEPOINTS = [
   0x2019, // Single curly quotes: common prose punctuation.
   0x201c,
   0x201d, // Double curly quotes: common prose punctuation.
+  // The ligatures of the font's default `liga` feature, `ff`, `fi`, `fl`, `ffi` and `ffl`: the atlas
+  // finds a substituted glyph by the character `cmap` maps to it (`openSansAtlasGlyphs.ts`).
+  0xfb00,
+  0xfb01,
+  0xfb02,
+  0xfb03,
+  0xfb04,
 ];
 
 const CHARSET = [];
@@ -127,6 +137,45 @@ function bakeAdvanceWidths(font) {
   return advanceWidths;
 }
 
+/** The code points the `cmap` maps to a glyph, as ascending `[first, last]` ranges: what `_font_has_char` reads. */
+function bakeCodePointRanges(font) {
+  const ranges = [];
+  const codePoints = font.characterSet.filter((cp) => font.hasGlyphForCodePoint(cp)).sort((a, b) => a - b);
+  for (const cp of codePoints) {
+    const last = ranges.at(-1);
+    if (last && last[1] === cp - 1) last[1] = cp;
+    else ranges.push([cp, cp]);
+  }
+  return ranges;
+}
+
+/** The bytes of the table `tag` in the TTF `ttfBuffer`, read from its table directory. */
+function tableBytes(ttfBuffer, tag) {
+  const numTables = ttfBuffer.readUInt16BE(4);
+  for (let i = 0; i < numTables; i++) {
+    const record = 12 + i * 16;
+    if (ttfBuffer.toString('latin1', record, record + 4) !== tag) continue;
+    const offset = ttfBuffer.readUInt32BE(record + 8);
+    return ttfBuffer.subarray(offset, offset + ttfBuffer.readUInt32BE(record + 12));
+  }
+  throw new Error(`expected a ${tag} table in the vendored font, found none`);
+}
+
+/**
+ * The tables the atlas face shapes a run with, as a scene font's face does (`sfntTables.ts`
+ * `SCENE_FONT_TABLE_TAGS`): the `GSUB` of its ligatures, and the `cmap`, `GPOS`, `GDEF`
+ * and metrics that place the marks of a character the font lacks.
+ */
+const SHAPING_TABLE_TAGS = ['head', 'hhea', 'maxp', 'cmap', 'hmtx', 'GDEF', 'GPOS', 'GSUB'];
+
+// base64url, not base64: a `/` of base64 pairs with the next into what the literal-grammar guard
+// reads as a regex literal (`godotLiteralGrammar.guard.test.ts`).
+function bakeShaping(ttfBuffer) {
+  return Object.fromEntries(
+    SHAPING_TABLE_TAGS.map((tag) => [tag, tableBytes(ttfBuffer, tag).toString('base64url')])
+  );
+}
+
 /** Font-wide scalar metrics, design units (`font.unitsPerEm`-relative). */
 function bakeMetrics(font, kerning, advanceWidths) {
   return {
@@ -144,8 +193,9 @@ function bakeMetrics(font, kerning, advanceWidths) {
     underlineThickness: font.underlineThickness,
     // OS/2 `xAvgCharWidth`, design units: the font's typical glyph width, not a
     // magic constant. The fallback advance outside the baked charset in
-    // `textLayout.ts`'s `glyphAdvancePx`.
+    // `fontMetrics.ts`'s `getFontGlyphAdvancePx`.
     averageAdvanceUnits: font['OS/2'].xAvgCharWidth,
+    codePointRanges: bakeCodePointRanges(font),
   };
 }
 
@@ -213,6 +263,8 @@ function bakeAtlas(ttfBuffer) {
 
 function renderMetricsModule(metrics) {
   return `${GENERATED_HEADER}
+import { firstEndAtOrAbove } from '../../../../utils/firstEndAtOrAbove';
+
 /**
  * Font-wide scalar metrics for OpenSans_SemiBold, in font design units
  * (\`unitsPerEm\` = ${metrics.unitsPerEm}), read via \`fontkit\` from the vendored
@@ -280,6 +332,8 @@ interface OpenSansMetrics {
    * table's own doc in the atlas module).
    */
   averageAdvanceUnits: number;
+  /** The code points the whole font maps to a glyph, as ascending \`[first, last]\` ranges, beyond the baked charset. */
+  codePointRanges: [number, number][];
 }
 
 export const OPEN_SANS_METRICS: OpenSansMetrics = ${JSON.stringify(metrics)};
@@ -292,7 +346,7 @@ export function getKerningAdjustmentUnits(a: string, b: string): number {
 /**
  * A baked character's own \`hmtx\` advance width, design units, or \`null\`
  * outside \`advanceWidths\` (the same charset as \`OPEN_SANS_ATLAS_GLYPHS\` —
- * \`textLayout.ts\`'s \`glyphAdvancePx\` falls back to \`averageAdvanceUnits\` in
+ * \`fontMetrics.ts\`'s \`getFontGlyphAdvancePx\` falls back to \`averageAdvanceUnits\` in
  * that case).
  *
  * This is the RAW design-unit value, at no size and quantized by nothing —
@@ -318,6 +372,14 @@ export function getKerningAdjustmentUnits(a: string, b: string): number {
  */
 export function getGlyphAdvanceUnits(ch: string): number | null {
   return OPEN_SANS_METRICS.advanceWidths[ch] ?? null;
+}
+
+/** Whether the whole font, not only the baked charset, has a glyph for \`ch\`: Godot's default font draws it. */
+export function hasGlyph(ch: string): boolean {
+  const codePoint = ch.codePointAt(0)!;
+  const ranges = OPEN_SANS_METRICS.codePointRanges;
+  const i = firstEndAtOrAbove(ranges.length, (k) => ranges[k]![1], codePoint);
+  return i < ranges.length && ranges[i]![0] <= codePoint;
 }
 
 /**
@@ -434,7 +496,7 @@ export const OPEN_SANS_ATLAS_INFO: OpenSansAtlasInfo = ${JSON.stringify(atlasInf
  *
  * A codepoint OUTSIDE this table draws no ink (\`openSansAtlas\`-backed
  * painters skip a glyph placement with no atlas entry) but is NOT silently
- * zero-width: \`text/textLayout.ts\`'s \`glyphAdvancePx\` falls back to this
+ * zero-width: \`text/fontMetrics.ts\`'s \`getFontGlyphAdvancePx\` falls back to this
  * font's own OS/2 \`xAvgCharWidth\` (\`OPEN_SANS_METRICS.averageAdvanceUnits\`,
  * scaled) rather than 0, so an unbaked character still occupies roughly its
  * own width instead of collapsing the line around it.
@@ -450,6 +512,16 @@ function renderAtlasImageModule(pngDataUrl) {
 
 /** MSDF atlas texture (\`distanceField.fieldType: "msdf"\`), inline so it rides \`img-src ... data:\` under the VS Code webview CSP (ADR-0003). */
 export const OPEN_SANS_ATLAS_PNG_DATA_URL = ${JSON.stringify(pngDataUrl)};
+`;
+}
+
+function renderShapingModule(tables) {
+  return `${GENERATED_HEADER}
+// The tables below are generated data on long lines. The atlas face shapes each run through them
+// (\`openSansFontMetrics.ts\`), as Godot's HarfBuzz shapes the font.
+
+/** The font's shaping tables, base64url with no padding, by tag. */
+export const OPEN_SANS_SHAPING_TABLES: Readonly<Record<string, string>> = ${JSON.stringify(tables, null, 2)};
 `;
 }
 
@@ -487,17 +559,19 @@ async function bake() {
     atlasSource: renderAtlasModule({ glyphsByChar, atlasInfo }),
     atlasImageSource: renderAtlasImageModule(pngDataUrl),
     fontBytesSource: renderFontBytesModule(readFileSync(WOFF2_PATH)),
+    shapingSource: renderShapingModule(bakeShaping(ttfBuffer)),
   };
 }
 
 async function main() {
   const check = process.argv.includes('--check');
-  const { metricsSource, atlasSource, atlasImageSource, fontBytesSource } = await bake();
+  const { metricsSource, atlasSource, atlasImageSource, fontBytesSource, shapingSource } = await bake();
   const outputs = [
     [METRICS_OUT, metricsSource],
     [ATLAS_OUT, atlasSource],
     [ATLAS_IMAGE_OUT, atlasImageSource],
     [FONT_BYTES_OUT, fontBytesSource],
+    [SHAPING_OUT, shapingSource],
   ];
 
   if (check) checkGenerated(outputs, { tool: 'bake-metrics', command: 'pnpm fonts:bake' });

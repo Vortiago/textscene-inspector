@@ -52,8 +52,6 @@ and applies no walk ceiling.
 
 ## Known limitations
 
-- **Approximated** Under `layout_direction = 3`, a tab title in a right-to-left script
-  keeps left-to-right glyph order, while the strip and its tabs still mirror.
 - **Approximated** `tab_alignment = Right` never reclaims the strip's `side_margin`
   gutter when its own tabs overflow and scroll, a narrow case Godot's own
   `_update_margins` special-cases.

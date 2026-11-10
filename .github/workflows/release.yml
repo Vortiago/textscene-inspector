@@ -55,6 +55,10 @@ jobs:
           PREVIOUS_TAG: ${{ steps.tag.outputs.previous_tag }}
 
       - uses: ./.github/actions/setup
+      # `fonts:combining-classes --check` reads Unicode 15.1.0, which only Python 3.13 ships.
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.13'
 
       - run: pnpm validate
 

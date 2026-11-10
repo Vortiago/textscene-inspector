@@ -1,0 +1,415 @@
+[
+  {
+    "advancePx": 9.59375,
+    "char": "a",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 66,
+    "opentype": {},
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "g",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 83,
+    "opentype": {},
+    "sizePx": 16
+  },
+  {
+    "advancePx": 5.59375,
+    "char": "i",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 85,
+    "opentype": {},
+    "sizePx": 16
+  },
+  {
+    "advancePx": 5.59375,
+    "char": "l",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 337,
+    "opentype": {},
+    "sizePx": 16
+  },
+  {
+    "advancePx": 6.40625,
+    "char": "f",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 82,
+    "opentype": {},
+    "sizePx": 16
+  },
+  {
+    "advancePx": 8.796875,
+    "char": "z",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 118,
+    "opentype": {},
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "0",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 339,
+    "opentype": {},
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "a",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 66,
+    "opentype": {
+      "1297043023": 1
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "g",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 326,
+    "opentype": {
+      "1297043023": 1
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "i",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 327,
+    "opentype": {
+      "1297043023": 1
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "l",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 332,
+    "opentype": {
+      "1297043023": 1
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "f",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 325,
+    "opentype": {
+      "1297043023": 1
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "z",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 118,
+    "opentype": {
+      "1297043023": 1
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "0",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 143,
+    "opentype": {
+      "1297043023": 1
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "a",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 66,
+    "opentype": {
+      "1297043023": 0.5
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "g",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 83,
+    "opentype": {
+      "1297043023": 0.5
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 7.59375,
+    "char": "i",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 85,
+    "opentype": {
+      "1297043023": 0.5
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 7.59375,
+    "char": "l",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 337,
+    "opentype": {
+      "1297043023": 0.5
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 8,
+    "char": "f",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 82,
+    "opentype": {
+      "1297043023": 0.5
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.203125,
+    "char": "z",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 118,
+    "opentype": {
+      "1297043023": 0.5
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "0",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 339,
+    "opentype": {
+      "1297043023": 0.5
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "a",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 277,
+    "opentype": {
+      "1936486004": -15
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "g",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 294,
+    "opentype": {
+      "1936486004": -15
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 5.59375,
+    "char": "i",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 296,
+    "opentype": {
+      "1936486004": -15
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 5.59375,
+    "char": "l",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 337,
+    "opentype": {
+      "1936486004": -15
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 6.40625,
+    "char": "f",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 82,
+    "opentype": {
+      "1936486004": -15
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 8.796875,
+    "char": "z",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 321,
+    "opentype": {
+      "1936486004": -15
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "0",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 339,
+    "opentype": {
+      "1936486004": -15
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "a",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 66,
+    "opentype": {
+      "1936486004": -5
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "g",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 83,
+    "opentype": {
+      "1936486004": -5
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 5.59375,
+    "char": "i",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 85,
+    "opentype": {
+      "1936486004": -5
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 5.59375,
+    "char": "l",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 337,
+    "opentype": {
+      "1936486004": -5
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 6.40625,
+    "char": "f",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 82,
+    "opentype": {
+      "1936486004": -5
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 8.796875,
+    "char": "z",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 118,
+    "opentype": {
+      "1936486004": -5
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "0",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 339,
+    "opentype": {
+      "1936486004": -5
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "a",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 277,
+    "opentype": {
+      "1297043023": 1,
+      "1936486004": -15
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "g",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 294,
+    "opentype": {
+      "1297043023": 1,
+      "1936486004": -15
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "i",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 296,
+    "opentype": {
+      "1297043023": 1,
+      "1936486004": -15
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "l",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 303,
+    "opentype": {
+      "1297043023": 1,
+      "1936486004": -15
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "f",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 293,
+    "opentype": {
+      "1297043023": 1,
+      "1936486004": -15
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "z",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 321,
+    "opentype": {
+      "1297043023": 1,
+      "1936486004": -15
+    },
+    "sizePx": 16
+  },
+  {
+    "advancePx": 9.59375,
+    "char": "0",
+    "font": "recursive-vf-subset.woff2",
+    "glyph": 143,
+    "opentype": {
+      "1297043023": 1,
+      "1936486004": -15
+    },
+    "sizePx": 16
+  }
+]

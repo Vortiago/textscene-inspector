@@ -8,7 +8,7 @@ import {
   zlibBlockInflater,
   type BlockInflater,
 } from '../../../../resources/formats/binaryresource/compressedStream';
-import { SCENE_FONT_TABLE_TAGS, readTag, sfntFileOfTables, type SfntFile } from './sfntTables';
+import { readTag, sfntFileOfTables, type SfntFile } from './sfntTables';
 
 export const WOFF_SIGNATURE = 0x774f4646; // 'wOFF'
 const WOFF_HEADER_SIZE = 44;
@@ -19,16 +19,21 @@ const WOFF_RECORD_SIZE = 20;
 /** The tables inflated so far from one buffer: the metrics and the outlines of a scene font both read `head`. */
 const inflatedTablesOf = perObject((_bytes: ArrayBuffer) => new Map<string, Uint8Array>());
 
-/** Throws on a directory or a table that does not fit `bytes`, or on a zlib stream that does not inflate to its `origLength`. */
-export async function readWoffTables(
-  bytes: ArrayBuffer,
-  tags: readonly string[] = SCENE_FONT_TABLE_TAGS
-): Promise<SfntFile> {
+/**
+ * The tables of `tags`, split at the slow step: the inflater loads here, and the thunk inflates the
+ * tables when first called. The thunk throws on a directory or a table that does not fit `bytes`, or
+ * on a zlib stream that does not inflate to its `origLength`.
+ */
+export async function lazyWoffTables(bytes: ArrayBuffer, tags: readonly string[]): Promise<() => SfntFile> {
+  const inflate = await zlibBlockInflater();
+  return () => woffTablesOf(bytes, tags, inflate);
+}
+
+function woffTablesOf(bytes: ArrayBuffer, tags: readonly string[], inflate: BlockInflater): SfntFile {
   const dv = new DataView(bytes);
   const numTables = dv.getUint16(WOFF_NUM_TABLES_OFFSET, false);
   const tables = new Map<string, Uint8Array>();
   const inflated = inflatedTablesOf(bytes);
-  let inflate: BlockInflater | undefined;
 
   for (let index = 0; index < numTables; index++) {
     const at = WOFF_HEADER_SIZE + index * WOFF_RECORD_SIZE;
@@ -43,7 +48,6 @@ export async function readWoffTables(
       continue;
     }
     if (!inflated.has(tag)) {
-      inflate ??= await zlibBlockInflater();
       inflated.set(tag, inflate(stored, length));
     }
     tables.set(tag, inflated.get(tag)!);
