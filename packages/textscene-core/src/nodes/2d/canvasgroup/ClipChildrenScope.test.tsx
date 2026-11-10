@@ -127,6 +127,12 @@ describe('clip_children on a Polygon2D', () => {
     expect(draws[1]!.target).not.toBeNull();
   });
 
+  it('takes the alpha of the owner before its lighting, which its mask shader does not apply', async () => {
+    const { program } = await drawParent({ clip_children: '1' });
+
+    expect(program.fragmentShader).toMatch(/gl_FragColor\.a\s*=\s*diffuseColor\.a/);
+  });
+
   it('reads the buffer at the fragment and keeps the parent alpha', async () => {
     const { program } = await drawParent({ clip_children: '1' });
 

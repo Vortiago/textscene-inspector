@@ -10,6 +10,7 @@ import { drawOffscreen } from '../offscreen';
 import { copyTexels, wholeTexels } from '../texelCopy';
 import { renderToOffscreenTarget } from '../../nodes/viewport/subviewport/offscreenViewport';
 import { collects, isOwnKey } from './groupWindow';
+import type { TexelRegion } from './groupRegion';
 import type { CanvasFrameTarget, CanvasGroupEntry, KeyedScene } from './canvasGroupPass';
 
 /** Runs `draw` with the scene's matrices as they are: only layers change between the buffer draws. */
@@ -70,9 +71,13 @@ export function fillClipBuffer(
   scene: THREE.Object3D,
   camera: THREE.Camera,
   { window, buffer, clip }: CanvasGroupEntry,
-  frame: CanvasFrameTarget
+  frame: CanvasFrameTarget,
+  region: TexelRegion
 ): void {
   sizeLike(buffer!, frame);
+  // The mask reads the buffer only under the owner, so the copy and the draws stay in the region.
+  buffer!.scissor.set(region.x, region.y, region.width, region.height);
+  buffer!.scissorTest = true;
   drawOffscreen(gl, () => copyTexels(gl, frame.texture, buffer!, wholeTexels(frame.width, frame.height)));
   clip!.setMasking(false);
   // The owner draws before every child, behind-parent children included

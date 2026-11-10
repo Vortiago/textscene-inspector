@@ -11,6 +11,7 @@
 
 import type { TscnNode } from '../parser/types';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes';
+import { nodeComponentRegistry } from './NodeComponentRegistry';
 import { ruleInt } from '../godot/variant/intSlots';
 import { clipsChildren } from '../nodes/canvasitem/shared/clipAncestry';
 import { DEFAULT_CANVAS_LAYER, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
@@ -460,11 +461,19 @@ function drawsClipped(node: TscnNode): boolean {
 }
 
 /**
+ * A clipping item has a group only if it draws something (`renderer_canvas_cull.cpp:476`). A
+ * transform-only type never does, so its children keep the plain order.
+ */
+function hasClipGroup(node: TscnNode): boolean {
+  return drawsClipped(node) && nodeComponentRegistry.renderIntentOf(node.type) !== 'transform-only';
+}
+
+/**
  * A CanvasGroup draws its composite rect over the buffer its children fill, and a clipping item
  * draws its mask over it, so each child draws first (`renderer_canvas_cull.cpp:471-484`).
  */
 export function drawsEveryChildFirst(node: TscnNode): boolean {
-  return node.type === 'CanvasGroup' || drawsClipped(node);
+  return node.type === 'CanvasGroup' || hasClipGroup(node);
 }
 
 /** `allocatePaintRange` for `node`'s own children, with the layout the node declares. */

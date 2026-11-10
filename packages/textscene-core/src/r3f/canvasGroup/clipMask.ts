@@ -25,10 +25,14 @@ export interface ClipMask {
 
 /**
  * The buffer sample comes after `colorspace_fragment`: the buffer holds the canvas's own numbers,
- * which the program would otherwise encode a second time.
+ * which the program would otherwise encode a second time. The alpha is the owner's before its
+ * lighting, since Godot's clip shader replaces the owner's material (a LIGHT_ONLY one included).
  */
 const MASK_GLSL = `#include <colorspace_fragment>
-if (uClipMasking > 0.5) gl_FragColor.rgb = texelFetch(uClipBuffer, ivec2(gl_FragCoord.xy), 0).rgb;`;
+if (uClipMasking > 0.5) {
+  gl_FragColor.rgb = texelFetch(uClipBuffer, ivec2(gl_FragCoord.xy), 0).rgb;
+  gl_FragColor.a = diffuseColor.a;
+}`;
 
 const UNIFORMS_GLSL = `uniform sampler2D uClipBuffer;
 uniform float uClipMasking;

@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import { canvasKeyOf, drawKeyedObjects } from '../canvasKeyWindow';
 import { isNodeIcon } from '../editorHelpers';
-import { drawableLocalBox, isDrawable, type Drawable } from '../drawable';
+import { drawableLocalBox, isDrawable } from '../drawable';
 import { drawOffscreen } from '../offscreen';
 import { perObject } from '../../utils/perObject';
 import { beginStep, endStep } from '../frameProfile/frameProfile';
@@ -19,6 +19,7 @@ import { clipOfCamera } from '../../nodes/viewport/subviewport/viewportLightPass
 import type { CanvasClip } from '../lighting2d/lightPassHost';
 import { collects, isOwnKey, type CanvasGroupWindow } from './groupWindow';
 import { fillBuffer, fillClipBuffer, withFrozenMatrices } from './groupBuffers';
+import { clipRegions, worldBox } from './groupRegion';
 
 /**
  * What a clipping group asks of the pass. `clipOnly` leaves the owner out of the buffer, and
@@ -180,12 +181,13 @@ function drawFrame(
     drawKeyedObjects(keyed.objects, keyed.keys, inSpan, drawOver);
     isFirstSpan = false;
   };
-  for (const group of clipping) {
+  const regions = clipRegions(keyed, camera, frame, clipping);
+  clipping.forEach((group, i) => {
     drawSpan(group.window.from);
     spanFrom = group.window.from;
-    withFrozenMatrices(scene, () => fillClipBuffer(gl, keyed, scene, camera, group, frame));
+    withFrozenMatrices(scene, () => fillClipBuffer(gl, keyed, scene, camera, group, frame, regions[i]!));
     group.clip!.setMasking(true);
-  }
+  });
   drawSpan(Number.POSITIVE_INFINITY);
 }
 
@@ -319,13 +321,4 @@ function drawnBoxes(
     }
   }
   return drawn;
-}
-
-/** Each drawable's world box, reused every frame. Written only by `worldBox`. */
-const worldBoxOf = perObject((_object: Drawable) => new THREE.Box3());
-
-/** The bounds of a drawable object's geometry, its instances included, in world space. */
-function worldBox(object: Drawable): THREE.Box3 | null {
-  const local = drawableLocalBox(object);
-  return local.isEmpty() ? null : worldBoxOf(object).copy(local).applyMatrix4(object.matrixWorld);
 }

@@ -312,6 +312,19 @@ describe('drawCanvasGroups', () => {
       expect(filled).toEqual([false, false]);
     });
 
+    it('copies only the texels under the owner and its children, with the margin a group clears', () => {
+      const { scene, meshes } = clippedScene();
+      meshes.child.position.x = 0.5;
+      const buffer = new THREE.WebGLRenderTarget(1, 1);
+      register(scene, clipEntry('clipOnly', buffer, { masking: false }));
+      const { gl } = recordingRenderer(meshes);
+
+      drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
+
+      expect(buffer.scissorTest).toBe(true);
+      expect(buffer.scissor.toArray()).toEqual([10, 2, 54, 28]);
+    });
+
     it('draws the owner first into the buffer in CLIP_AND_DRAW, whatever key its children have, and not in CLIP_ONLY', () => {
       const buffers = {
         clipOnly: new THREE.WebGLRenderTarget(1, 1),
