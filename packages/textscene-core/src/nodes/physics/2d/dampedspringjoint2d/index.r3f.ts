@@ -1,14 +1,13 @@
 /**
- * DampedSpringJoint2D draws nothing of its own (ADR-0008), so it reuses the Node2D
- * component, and its children still land in the right transform space.
+ * DampedSpringJoint2D draws its editor marker for every node (ADR-0056). The joint simulation is runtime only
+ * (ADR-0005), so the previewer's editor pose has no drive to register.
  */
 
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { Node2D } from '../../../base/node2d/Component';
+import { DampedSpringJoint2D } from './Component';
 
 nodeComponentRegistry.register({
   typeName: 'DampedSpringJoint2D',
-  Component: Node2D,
+  Component: DampedSpringJoint2D,
   canvasItem: true,
-  renderIntent: 'transform-only',
 });

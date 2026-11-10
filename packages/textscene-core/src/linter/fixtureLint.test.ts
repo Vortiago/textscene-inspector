@@ -161,6 +161,11 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason:
       'each node hangs off a path that names nothing on purpose: the warning is the point, and the golden pins where Godot draws the re-rooted node',
   },
+  'unit-joint-2d-markers.tscn': {
+    rules: ['format:length', 'format:initial_offset', 'joint-not-connected'],
+    reason:
+      'the markers are the fixture: a zero and a negative length and offset are outside the inspector hint on purpose, so the golden pins where Godot draws them, and no joint has a body because the marker needs none (pin_joint_2d.cpp:42-50)',
+  },
   'unit-pointlight2d-cookie-edge.tscn': {
     rules: ['format:energy'],
     reason:

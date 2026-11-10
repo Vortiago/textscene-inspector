@@ -222,7 +222,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [Container](../../packages/textscene-core/src/nodes/2d/ui/container/comparison.md): nothing of its own; children stay at their own free/anchored rects
 - [Control](../../packages/textscene-core/src/nodes/2d/ui/control/comparison.md): a full-rect layout region
 - [CPUParticles2D](../../packages/textscene-core/src/nodes/2d/cpuparticles2d/comparison.md): one merged quad mesh holding a frozen particle pose
-- [DampedSpringJoint2D](../../packages/textscene-core/src/nodes/physics/2d/dampedspringjoint2d/comparison.md): nothing (a transform-only group)
+- [DampedSpringJoint2D](../../packages/textscene-core/src/nodes/physics/2d/dampedspringjoint2d/comparison.md): a transform group with an editor marker for every node
 - [DirectionalLight2D](../../packages/textscene-core/src/nodes/2d/directionallight2d/comparison.md): one term over the whole light buffer that every lit CanvasItem multiplies in
 - [FlowContainer](../../packages/textscene-core/src/nodes/2d/ui/flowcontainer/comparison.md): children flowed along one axis and wrapped into lines
 - [FoldableContainer](../../packages/textscene-core/src/nodes/2d/ui/foldablecontainer/comparison.md): a collapsible titled panel (accordion)
@@ -232,7 +232,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [GraphFrame](../../packages/textscene-core/src/nodes/2d/ui/graphframe/comparison.md): a titled frame around its own content rect
 - [GraphNode](../../packages/textscene-core/src/nodes/2d/ui/graphnode/comparison.md): a titled panel with slot rows and left/right port icons
 - [GridContainer](../../packages/textscene-core/src/nodes/2d/ui/gridcontainer/comparison.md): children packed into a fixed column count
-- [GrooveJoint2D](../../packages/textscene-core/src/nodes/physics/2d/groovejoint2d/comparison.md): nothing (a transform-only group, the groove is an editor gizmo)
+- [GrooveJoint2D](../../packages/textscene-core/src/nodes/physics/2d/groovejoint2d/comparison.md): a transform group with an editor marker for every node
 - [HBoxContainer](../../packages/textscene-core/src/nodes/2d/ui/hboxcontainer/comparison.md): children laid out along a row
 - [HFlowContainer](../../packages/textscene-core/src/nodes/2d/ui/hflowcontainer/comparison.md): children flowed left to right, wrapping to a new row
 - [HScrollBar](../../packages/textscene-core/src/nodes/2d/ui/hscrollbar/comparison.md): a horizontal track with a rectangular grabber
@@ -268,7 +268,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [Path2D](../../packages/textscene-core/src/nodes/2d/path2d/comparison.md): nothing at runtime, a curve gizmo for every node
 - [PathFollow2D](../../packages/textscene-core/src/nodes/2d/pathfollow2d/comparison.md): a transform-only follower with a dot for the selected node
 - [PhysicalBone2D](../../packages/textscene-core/src/nodes/physics/2d/physicalbone2d/comparison.md): a transform-only Node2D group
-- [PinJoint2D](../../packages/textscene-core/src/nodes/physics/2d/pinjoint2d/comparison.md): nothing (a transform-only group)
+- [PinJoint2D](../../packages/textscene-core/src/nodes/physics/2d/pinjoint2d/comparison.md): a transform group with an editor marker for every node
 - [PointLight2D](../../packages/textscene-core/src/nodes/2d/pointlight2d/comparison.md): the light's cookie multiplied into every CanvasItem beneath it
 - [Polygon2D](../../packages/textscene-core/src/nodes/2d/polygon2d/comparison.md): a filled, optionally textured mesh
 - [Popup](../../packages/textscene-core/src/nodes/windows/popup/comparison.md): its viewport's target, drawn by its embedder with no frame

@@ -10,6 +10,9 @@
 export const GIZMO_SCENES = [
   // Select the node, capture the gizmo. These pin the real tree-click → selection → gizmo path for
   // every gizmo node type. Thin AA gizmo lines and the selection box are AA-sensitive.
+  // The three 2D joint markers at several lengths and offsets, 0 and negative included. Godot draws them
+  // for every node, so nothing is selected.
+  { name: 'joint-2d-markers', file: 'unit-joint-2d-markers.tscn', gizmos: true, mode: '2d' },
   { name: 'marker2d-selected', file: 'unit-marker2d.tscn', gizmos: true, select: 'Marker2DRoot/DefaultMarker', mode: '2d' },
   { name: 'path2d-selected', file: 'unit-path2d.tscn', gizmos: true, select: 'Path2DRoot/ArcPath', mode: '2d' },
   { name: 'pathfollow2d-selected', file: 'unit-pathfollow2d.tscn', gizmos: true, select: 'PathFollow2DRoot/TrackPath/Follower', mode: '2d' },

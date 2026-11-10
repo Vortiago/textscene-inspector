@@ -1,5 +1,5 @@
 /**
- * 2D leaf slices, and the two physics nodes whose linter-only keys are runtime
+ * 2D leaf slices, and the physics nodes whose linter-only keys are runtime
  * simulation settings.
  */
 
@@ -208,5 +208,17 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     ],
     reason:
       'CollisionShape2D one_way settings affect runtime physics only; the renderer reads shape/disabled/debug_color for visual display.',
+  },
+
+  Joint2D: {
+    linterOnly: ['node_a', 'node_b', 'bias', 'disable_collision'],
+    reason:
+      'They connect and steer the joint simulation (ADR-0005), which the previewer does not run. Godot draws the 2D joint marker without the bodies (pin_joint_2d.cpp:42-50), so the marker reads none of them.',
+  },
+
+  DampedSpringJoint2D: {
+    linterOnly: ['rest_length', 'stiffness', 'damping'],
+    reason:
+      'The spring parameters change how a running game moves the bodies (ADR-0005); the marker reads only length.',
   },
 };
