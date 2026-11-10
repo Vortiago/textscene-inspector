@@ -82,6 +82,7 @@ import {
   colorPickerValueColumnWidth,
   colorPickerEmWidthPx,
   presetButtonContent,
+  type ButtonText,
   modeButtonLabel,
   textTypeLabel,
   COLOR_PICKER_SLIDER_GRABBER_OFFSET,
@@ -349,7 +350,10 @@ export function ColorPicker({
     return { x: shapedTextSizeWidthPx(l.widthPx), y: l.heightPx };
   };
 
-  const textDirection = (text: string) => ({ rtl: solveNode.rtl, isTextRtl: infersRtl(shape(text)) });
+  const buttonText = (text: string): ButtonText => ({
+    size: measure(text),
+    direction: { rtl: solveNode.rtl, isTextRtl: infersRtl(shape(text)) },
+  });
   // One Button label as `Button::_notification` draws it. The picker's Buttons never trim.
   const buttonLabel = (key: string, text: string, tintOfText: Rgba, box: ButtonLabelBox) => (
     <ButtonLabel
@@ -748,13 +752,7 @@ export function ColorPicker({
               COLOR_MODE_NAMES[i]!,
               COLOR_MODE_NAMES[i]!,
               colorMode === i ? pressedFontColor : buttonFontColor,
-              modeButtonLabel(
-                r,
-                theme,
-                colorMode === i,
-                measure(COLOR_MODE_NAMES[i]!),
-                textDirection(COLOR_MODE_NAMES[i]!)
-              )
+              modeButtonLabel(r, theme, colorMode === i, buttonText(COLOR_MODE_NAMES[i]!))
             )
           )}
           <CenteredIcon
@@ -994,12 +992,7 @@ export function ColorPicker({
               'text-type',
               hexContent.typeText,
               buttonFontColor,
-              textTypeLabel(
-                hexCols.textType,
-                theme,
-                measure(hexContent.typeText),
-                textDirection(hexContent.typeText)
-              )
+              textTypeLabel(hexCols.textType, theme, buttonText(hexContent.typeText))
             )
           ) : (
             <TextTypeScriptIcon
@@ -1040,7 +1033,7 @@ export function ColorPicker({
           ].map(({ key, box, text }) => {
             // Both buttons have the default `icon_alignment` and LEFT text
             // (`color_picker.cpp:2242-2248,2279-2283`). RTL swaps both sides (`button.cpp:262-276`).
-            const { icon, label } = presetButtonContent(box, theme, measure(text), textDirection(text));
+            const { icon, label } = presetButtonContent(box, theme, buttonText(text));
             return (
               <CanvasItemGroup key={key} position={[0, 0, 0]}>
                 <PositionedIcon

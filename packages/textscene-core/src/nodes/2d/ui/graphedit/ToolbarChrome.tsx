@@ -13,6 +13,8 @@ import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { BUTTON_ICON_MODULATE } from '../button/nativeSolver';
+import { LABEL_DEFAULT_FONT_COLOR } from '../label/nativeSolver';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -34,21 +36,10 @@ import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 import { canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemState';
 
-/** The `font_color` of `Label` (`default_theme.cpp:384`): opaque white, where other controls use grey. */
-const LABEL_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-
-/**
- * `DRAW_DISABLED` swaps in `icon_disabled_color` (`button.cpp:321-329`), `Color(1, 1, 1, 0.4)` for
- * `Button` (`default_theme.cpp:169`). `icon_normal_color` and `icon_pressed_color` are opaque white
- * (`default_theme.cpp:164-165`), so a disabled icon differs only in alpha.
- */
-const ICON_DISABLED_ALPHA = 0.4;
-
 /**
  * `flat_button_pressed` (`default_theme.cpp:363-364`): `button_pressed` with `bg_color * Color(1, 1, 1, 0.85)`.
  * Every button is a `FlatButton` (`:3249`), whose `normal` and `disabled` boxes are `StyleBoxEmpty`
- * (`default_theme.cpp:
- * 360-370`), so only a pressed toggle draws a box.
+ * (`default_theme.cpp:360-370`), so only a pressed toggle draws a box.
  */
 function flatButtonPressedStyleBox(base: StyleBoxFlatData): StyleBoxFlatData {
   return { ...base, bgColor: { ...base.bgColor, a: base.bgColor.a * 0.85 } };
@@ -95,7 +86,7 @@ function ButtonIcon({ item, texture, contentMargin, tint, rtl, renderOrder }: Bu
       rect={{ ...icon, x: item.rect.x + icon.x, y: item.rect.y + icon.y }}
       texture={texture}
       color={tint.color}
-      opacity={item.disabled ? tint.opacity * ICON_DISABLED_ALPHA : tint.opacity}
+      opacity={item.disabled ? tint.opacity * BUTTON_ICON_MODULATE.disabled.a : tint.opacity}
       renderOrder={renderOrder}
       canvasKey={renderOrder}
     />
@@ -164,7 +155,7 @@ export function GraphEditToolbarChrome({
   const items = canvasSubOrders(slot, TOOLBAR_ITEM_PIECES);
   const panelStyle = useMemo(() => graphEditMenuPanelStyleBox(theme), [theme]);
   const pressedStyle = useMemo(() => flatButtonPressedStyleBox(theme.widgets.button.pressed), [theme]);
-  const labelColor = useMemo(() => multiplyModulate(tint.own, LABEL_FONT_COLOR), [tint.own]);
+  const labelColor = useMemo(() => multiplyModulate(tint.own, LABEL_DEFAULT_FONT_COLOR), [tint.own]);
   const fieldColor = useMemo(() => multiplyModulate(tint.own, CONTROL_FONT_COLOR), [tint.own]);
   const arrowColor = useItemLinearColor(fieldColor);
   const clippingPlanes = useControlClipPlanes() as THREE.Plane[];

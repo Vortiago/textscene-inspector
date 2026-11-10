@@ -262,13 +262,18 @@ const internalThemeItemsOf = perObject((_parent: SolveNode) => new Map<string, I
  * The theme items of a Control `memnew`d inside `parent` and never serialised, such as a dialog's
  * buttons. It resolves them through the parent's theme chain by its own class chain
  * (`Control::get_theme_stylebox`, `control.cpp:3078`, then `ThemeOwner::get_theme_item_in_types`), and no
- * scene line overrides them.
+ * scene line overrides them. A `variation` is the type variation the parent sets on it.
  */
-export function internalChildThemeItems(parent: SolveNode, type: string): InternalThemeItems {
+export function internalChildThemeItems(
+  parent: SolveNode,
+  type: string,
+  variation?: string
+): InternalThemeItems {
   const byType = internalThemeItemsOf(parent);
-  const known = byType.get(type);
+  const key = variation ? `${type}/${variation}` : type;
+  const known = byType.get(key);
   if (known) return known;
-  const themeScope = themeResolutionScope(type, undefined, parent.themeChain, parent.projectFonts);
+  const themeScope = themeResolutionScope(type, variation, parent.themeChain, parent.projectFonts);
   const node = { name: type, type, children: [], properties: {}, rawProperties: {} } as TscnNode;
   const items = {
     styleBoxes: resolveStyleBoxes(node, parent.resources, themeScope),
@@ -276,7 +281,7 @@ export function internalChildThemeItems(parent: SolveNode, type: string): Intern
     constants: resolveThemedConstants(node, themeScope),
     icons: resolveThemedIcons(node, parent.resources, themeScope),
   };
-  byType.set(type, items);
+  byType.set(key, items);
   return items;
 }
 

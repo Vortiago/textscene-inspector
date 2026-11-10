@@ -270,12 +270,17 @@ interface ButtonTextDirection {
   isTextRtl: boolean;
 }
 
+/** A Button's text as the layout reads it: its shaped size and the direction it infers. */
+export interface ButtonText {
+  size: Vector2;
+  direction: ButtonTextDirection;
+}
+
 /** `Button` placement (`button.cpp:349-456`) of an optional left icon and the label inside `box`, in the parent's coordinates. */
 function colorPickerButtonContent(
   box: Rect2,
   theme: Pick<NativeTheme, 'separation'>,
-  text: Vector2,
-  direction: ButtonTextDirection,
+  text: ButtonText,
   look: {
     styleMargin: ButtonContentInput['styleMargin'];
     iconNaturalSize: Vector2 | null;
@@ -294,9 +299,9 @@ function colorPickerButtonContent(
     expandIcon: false,
     iconNaturalSize: look.iconNaturalSize,
     hasText: true,
-    textNaturalSize: text,
-    isTextRtl: direction.isTextRtl,
-    rtl: direction.rtl,
+    textNaturalSize: text.size,
+    isTextRtl: text.direction.isTextRtl,
+    rtl: text.direction.rtl,
   });
   const label = layout.labelBox!;
   return {
@@ -313,10 +318,9 @@ function colorPickerButtonContent(
 export function presetButtonContent(
   box: Rect2,
   theme: Pick<NativeTheme, 'separation' | 'scale' | 'widgets'>,
-  text: Vector2,
-  direction: ButtonTextDirection
+  text: ButtonText
 ): ButtonContentBoxes & { icon: Rect2 } {
-  const boxes = colorPickerButtonContent(box, theme, text, direction, {
+  const boxes = colorPickerButtonContent(box, theme, text, {
     styleMargin: theme.widgets.button.normal.contentMargin,
     iconNaturalSize: colorPickerButtonIconVector(theme),
     textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
@@ -328,10 +332,9 @@ function centredButtonLabel(
   box: Rect2,
   theme: Pick<NativeTheme, 'separation'>,
   styleMargin: ButtonContentInput['styleMargin'],
-  text: Vector2,
-  direction: ButtonTextDirection
+  text: ButtonText
 ): ButtonLabelBox {
-  return colorPickerButtonContent(box, theme, text, direction, {
+  return colorPickerButtonContent(box, theme, text, {
     styleMargin,
     iconNaturalSize: null,
     textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
@@ -343,21 +346,19 @@ export function modeButtonLabel(
   box: Rect2,
   theme: NativeTheme,
   isPressed: boolean,
-  text: Vector2,
-  direction: ButtonTextDirection
+  text: ButtonText
 ): ButtonLabelBox {
   const { contentMargin } = colorPickerModeButtonStyleBox(theme, isPressed);
-  return centredButtonLabel(box, theme, contentMargin, text, direction);
+  return centredButtonLabel(box, theme, contentMargin, text);
 }
 
 /** The "#" label of `text_type` (`color_picker.cpp:1330`): a centred Button with the `button_normal` margins. */
 export function textTypeLabel(
   box: Rect2,
   theme: Pick<NativeTheme, 'separation' | 'scale' | 'widgets'>,
-  text: Vector2,
-  direction: ButtonTextDirection
+  text: ButtonText
 ): ButtonLabelBox {
-  return centredButtonLabel(box, theme, theme.widgets.button.normal.contentMargin, text, direction);
+  return centredButtonLabel(box, theme, theme.widgets.button.normal.contentMargin, text);
 }
 
 function swatchesRowSize(
@@ -484,7 +485,7 @@ function contentMinWidth(
 
 /**
  * The em of the value column: the unceiled advance of "W" (`line_edit.cpp:2443-2477`). The painter
- * and the minimum size both call it, so the two cannot disagree on the column (#1228).
+ * and the minimum size both call it, so the two cannot disagree on the column.
  */
 export function colorPickerEmWidthPx(widthOf: (text: string) => number): number {
   return widthOf('W');

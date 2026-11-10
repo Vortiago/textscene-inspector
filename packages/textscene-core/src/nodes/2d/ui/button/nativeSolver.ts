@@ -71,7 +71,7 @@ const BUTTON_ICON_COLOR_KEYS: Record<ButtonDrawState, string> = {
  * (`default_theme.cpp:164`) and `icon_disabled_color = Color(1, 1, 1, 0.4)` (`:169`). No other
  * builtin widget sets either key.
  */
-const BUTTON_ICON_MODULATE: Record<ButtonDrawState, Rgba> = {
+export const BUTTON_ICON_MODULATE: Record<ButtonDrawState, Rgba> = {
   normal: { r: 1, g: 1, b: 1, a: 1 },
   disabled: { r: 1, g: 1, b: 1, a: 0.4 },
 };

@@ -5,15 +5,14 @@
  * children and the transform.
  */
 import { useMemo } from 'react';
-import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { CHECK_BOX_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import {
@@ -83,16 +82,13 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // the disabled SVGs carry their own dimming, so the icon takes the tint directly.
   return (
     <>
-      <CanvasItemGroup position={[content.iconPosition.x, -content.iconPosition.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={drawnIconSize.x}
-          height={drawnIconSize.y}
-          color={tint.color}
-          opacity={tint.opacity}
-          map={iconTexture}
-        />
-      </CanvasItemGroup>
+      <PositionedIcon
+        rect={{ ...content.iconPosition, w: drawnIconSize.x, h: drawnIconSize.y }}
+        texture={iconTexture}
+        color={tint.color}
+        opacity={tint.opacity}
+        renderOrder={renderOrder}
+      />
       {content.labelBox && layout && (
         <ButtonLabel
           layout={layout}

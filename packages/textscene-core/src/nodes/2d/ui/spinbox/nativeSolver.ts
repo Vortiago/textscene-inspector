@@ -16,6 +16,7 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
+import { internalChildThemeItems } from '../../../../r3f/controls/native/buildSolveTree';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { shapeLineEditText } from '../lineedit/nativeSolver';
 import { textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
@@ -262,16 +263,21 @@ function spinBoxFieldThemeScope(n: Pick<SolveNode, 'themeChain' | 'projectFonts'
   return themeResolutionScope('LineEdit', 'SpinBoxInnerLineEdit', n.themeChain, n.projectFonts);
 }
 
+/** The inner LineEdit's theme items: `LineEdit`'s, then `SpinBoxInnerLineEdit`'s, through the ancestor Theme chain. */
+export function spinBoxFieldThemeItems(n: SolveNode) {
+  return internalChildThemeItems(n, 'LineEdit', 'SpinBoxInnerLineEdit');
+}
+
 interface SpinBoxFieldTextTheme {
   fontSizePx: number;
   fontMetrics: FontMetrics;
-  /** `control_font_color`/`control_font_disabled_color` (LineEdit's `font_color`/`font_uneditable_color` defaults). No ancestor-theme colour walk exists (`textTheme.ts`), so the field draws only this colour. */
+  /** The field's `font_color`, or `font_uneditable_color` when not editable (`line_edit.cpp:1430-1442`). */
   color: Rgba;
 }
 
-/** The field's font (face + size, ancestor-walked) and colour (override-less default), for `editable` state. */
+/** The field's font (face + size) and colour, ancestor-walked, for `editable` state. */
 export function spinBoxFieldTextTheme(
-  n: Pick<SolveNode, 'themeChain' | 'projectFonts' | 'path'>,
+  n: SolveNode,
   ctx: Pick<SolveContext, 'theme'>,
   editable: boolean
 ): SpinBoxFieldTextTheme {
@@ -279,10 +285,13 @@ export function spinBoxFieldTextTheme(
   const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size', undefined, ctx.theme.fontSize);
   const fontResource = resolveThemeFontIn(scope, 'font', undefined);
   const fontMetrics = peekSceneFontMetrics(fontResource, n.path);
+  const { colors } = spinBoxFieldThemeItems(n);
   return {
     fontSizePx,
     fontMetrics,
-    color: editable ? LINE_EDIT_DEFAULT_FONT_COLOR : LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
+    color: editable
+      ? (colors.font_color ?? LINE_EDIT_DEFAULT_FONT_COLOR)
+      : (colors.font_uneditable_color ?? LINE_EDIT_DEFAULT_UNEDITABLE_COLOR),
   };
 }
 
@@ -312,11 +321,12 @@ export const spinBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   const { fontSizePx, fontMetrics } = spinBoxFieldTextTheme(n, ctx, editable);
 
   // The field is `add_child`ed at construction (`spin_box.cpp:724-731`), never a scene node, so a
-  // SpinBox's `theme_override_styles/*` address its own items (`up_background`, …). The field
-  // always draws the default LineEdit box, hence `{}`.
+  // SpinBox's `theme_override_styles/*` address its own items (`up_background`, …). The field reads
+  // only the Theme chain's LineEdit boxes.
+  const { styleBoxes } = spinBoxFieldThemeItems(n);
   const styleMinSize = lineEditStyleMinSize(
-    pickLineEditStyleBox({}, ctx.theme.widgets.lineEdit, 'normal'),
-    pickLineEditStyleBox({}, ctx.theme.widgets.lineEdit, 'read_only')
+    pickLineEditStyleBox(styleBoxes, ctx.theme.widgets.lineEdit, 'normal'),
+    pickLineEditStyleBox(styleBoxes, ctx.theme.widgets.lineEdit, 'read_only')
   );
 
   const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx, 0, fontMetrics).x : 0;

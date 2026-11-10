@@ -5,6 +5,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
+import type { TscnInternalResource } from '../../../../parser/types';
 import { pickerChildTheme } from './pickerChildTheme';
 
 const THEME = nativeTheme(1);
@@ -59,5 +60,57 @@ describe('pickerChildTheme', () => {
     const child = pickerChildTheme(pickerUnder(themeWithColors({ Button: { font_color: RED } })), THEME);
     expect(child.labelColor).toEqual(WHITE);
     expect(child.lineEditColor).toEqual(CONTROL_FONT_COLOR);
+  });
+
+  describe('the styleboxes', () => {
+    const box: TscnInternalResource = {
+      id: 'box',
+      type: 'StyleBoxFlat',
+      data: {
+        content_margin_left: '10.0',
+        content_margin_top: '9.0',
+        content_margin_right: '10.0',
+        content_margin_bottom: '9.0',
+      },
+    };
+    const themed = (styles: Record<string, Record<string, string>>) =>
+      pickerUnder({
+        ...themeWithColors({}),
+        styles,
+        resources: { externalResources: [], internalResources: [box] },
+      });
+
+    it('gives the mode and preset buttons the normal and disabled styleboxes of Button', () => {
+      const child = pickerChildTheme(
+        themed({ Button: { normal: 'SubResource("box")', disabled: 'SubResource("box")' } }),
+        THEME
+      );
+      expect(child.theme.widgets.button.normal.contentMargin).toEqual({
+        left: 10,
+        top: 9,
+        right: 10,
+        bottom: 9,
+      });
+      expect(child.theme.widgets.button.disabled.contentMargin).toEqual({
+        left: 10,
+        top: 9,
+        right: 10,
+        bottom: 9,
+      });
+    });
+
+    it('gives the value and hex fields the normal and read_only styleboxes of LineEdit', () => {
+      const child = pickerChildTheme(
+        themed({ LineEdit: { normal: 'SubResource("box")', read_only: 'SubResource("box")' } }),
+        THEME
+      );
+      expect(child.theme.widgets.lineEdit.normal.contentMargin.left).toBe(10);
+      expect(child.theme.widgets.lineEdit.readOnly.contentMargin.left).toBe(10);
+    });
+
+    it('keeps the default styleboxes without an override', () => {
+      const child = pickerChildTheme(themed({}), THEME);
+      expect(child.theme.widgets.button.normal).toBe(THEME.widgets.button.normal);
+    });
   });
 });
