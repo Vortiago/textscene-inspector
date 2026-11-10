@@ -1,7 +1,6 @@
 /**
  * Solves the Control root of each tile scene, so a scene tile sorts on the position its minimum size
- * and grow direction leave. Loaded lazily, as `UnownedNodeControls` is, so a canvas with no Control
- * scene tile loads no Control solver.
+ * and grow direction leave. Loaded lazily, so a canvas with no Control scene tile loads no solver.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -14,7 +13,7 @@ import { useBuildUnownedTree } from '../../../../r3f/controls/native/buildSolveT
 import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
-import type { ControlRoot } from './useSceneTileNodes';
+import { NO_RECTS, type ControlRoot } from './useSceneTileNodes';
 
 const ZERO_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
 
@@ -36,19 +35,18 @@ export default function ControlRootRects({ roots, onRects }: ControlRootRectsPro
     usePaintRange()
   );
   const rects = useMemo(() => {
-    const solved = new Map<TileScene, Rect2>();
+    const solved = solveControlTree(tree, ZERO_RECT, createSolveContext(theme, measureText));
+    const rectOf = new Map<TileScene, Rect2>();
     roots.forEach(({ scene }, index) => {
-      const root = tree.find((solveNode) => solveNode.path === nodes[index]!.name);
-      if (!root) return;
-      const rect = solveControlTree([root], ZERO_RECT, createSolveContext(theme, measureText)).get(
-        root.path
-      )?.rect;
-      if (rect) solved.set(scene, rect);
+      const rect = solved.get(nodes[index]!.name)?.rect;
+      if (rect) rectOf.set(scene, rect);
     });
-    return solved;
+    return rectOf;
     // `generation` is a cache-buster, as in `ControlCanvasWalker`: a resource can load under the same tree.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roots, nodes, tree, generation, theme]);
   useEffect(() => onRects(rects), [rects, onRects]);
+  // Unmount clears the rects, so a scene that becomes a Control root again starts from its offsets.
+  useEffect(() => () => onRects(NO_RECTS), [onRects]);
   return null;
 }

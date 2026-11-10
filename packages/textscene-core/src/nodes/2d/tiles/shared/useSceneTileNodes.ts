@@ -4,13 +4,14 @@
  * instance loader, its materials and the paint order are the ones an `instance=` node uses.
  */
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { SceneScope, TscnNode } from '../../../../parser/types';
 import type { LiveNode, YSortRoot } from '../../../../resources/liveNode';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes';
 import { sceneTileCells, type SceneTileCell } from '../../../../resources/tileset/sceneTileCells';
 import { sceneTilePlacement, type SceneRootKind } from '../../../../resources/tileset/sceneTilePlacement';
 import type { TileGrid, TileScene, TileSetModel } from '../../../../resources/tileset/types';
+import { useByValue } from '../../../../r3f/hooks/useByValue';
 import { perObject } from '../../../../utils/perObject';
 import { useInstancedScenePaths } from '../../../../r3f/contexts/InstancedScenePathsContext';
 import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsContext';
@@ -41,7 +42,7 @@ export interface SceneTileDrawing {
   placeholderTiles: SceneTileCell[];
   /** The loaded Control roots of the scenes, which the sort reads the solved rect of. */
   controlRoots: ControlRoot[];
-  /** Receives the solved rect of each Control root; the sort of its tiles follows it. */
+  /** Receives the solved rect of each Control root. The sort of its tiles follows it. */
   onRootRects: (rects: ReadonlyMap<TileScene, Rect2>) => void;
 }
 
@@ -77,7 +78,7 @@ export function useSceneTileNodes(
   const sceneNodes = useMemo(() => scenes.map(instanceNodesOf(scope)), [scenes, scope]);
   const sceneSteps = useLiveStepsOf(sceneNodes, scope);
 
-  const controlRoots = useMemo(
+  const judgedRoots = useMemo(
     () =>
       scenes.flatMap((scene, index) => {
         const step = sceneSteps[index]!;
@@ -86,9 +87,17 @@ export function useSceneTileNodes(
       }),
     [scenes, sceneSteps]
   );
+  // A live-step tick that leaves the roots alone keeps the roots the solver is already solving.
+  const controlRoots = useByValue(judgedRoots, sameControlRoots);
   // The solver's rect of each Control root, once the Control walk has solved it. The sort reads the
   // authored offsets until then.
   const [rootRects, setRootRects] = useState<ReadonlyMap<TileScene, Rect2>>(NO_RECTS);
+  // The same rects keep the same map: a new map would rebuild every placement node for nothing.
+  const reportRootRects = useCallback(
+    (rects: ReadonlyMap<TileScene, Rect2>) =>
+      setRootRects((previous) => (sameRects(previous, rects) ? previous : rects)),
+    []
+  );
 
   return useMemo(() => {
     if (!model) return NO_DRAWING;
@@ -122,9 +131,20 @@ export function useSceneTileNodes(
         ({ tile }) => !tile.scene || tile.displayPlaceholder || sceneless.has(tile.scene)
       ),
       controlRoots,
-      onRootRects: setRootRects,
+      onRootRects: reportRootRects,
     };
-  }, [model, allTiles, tiles, scenes, sceneNodes, sceneSteps, snapToPixels, rootRects, controlRoots]);
+  }, [
+    model,
+    allTiles,
+    tiles,
+    scenes,
+    sceneNodes,
+    sceneSteps,
+    snapToPixels,
+    rootRects,
+    controlRoots,
+    reportRootRects,
+  ]);
 }
 
 /**
@@ -146,7 +166,23 @@ class TileNames {
 const PLACEMENT_DEFAULTS = parseNode2D({ type: 'Node2D', attributes: { name: '', parent: '.' } }, {});
 
 const NO_TILES: readonly SceneTileCell[] = [];
-const NO_RECTS: ReadonlyMap<TileScene, Rect2> = new Map();
+export const NO_RECTS: ReadonlyMap<TileScene, Rect2> = new Map();
+function sameControlRoots(a: readonly ControlRoot[], b: readonly ControlRoot[]): boolean {
+  return (
+    a.length === b.length && a.every((root, i) => root.scene === b[i]!.scene && root.node === b[i]!.node)
+  );
+}
+
+function sameRects(a: ReadonlyMap<TileScene, Rect2>, b: ReadonlyMap<TileScene, Rect2>): boolean {
+  if (a.size !== b.size) return false;
+  for (const [scene, rect] of a) {
+    const other = b.get(scene);
+    if (!other || other.x !== rect.x || other.y !== rect.y || other.w !== rect.w || other.h !== rect.h)
+      return false;
+  }
+  return true;
+}
+
 const NO_DRAWING: SceneTileDrawing = {
   instances: [],
   placeholderTiles: [],
