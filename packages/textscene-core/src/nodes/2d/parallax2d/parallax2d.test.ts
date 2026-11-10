@@ -16,7 +16,6 @@ describe('Parallax2D registration', () => {
 
   it('registers its component as a drawn node, not a declared gap', () => {
     expect(nodeComponentRegistry.get('Parallax2D')).toBe(Parallax2D);
-    expect(nodeComponentRegistry.renderIntentOf('Parallax2D')).not.toBe('pending');
-    expect(rendersOwnVisual('Parallax2D')).not.toBe('not-implemented');
+    expect(rendersOwnVisual('Parallax2D')).toBe('draws');
   });
 });

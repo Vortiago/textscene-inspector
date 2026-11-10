@@ -60,49 +60,39 @@ function deltaGroup(scene: THREE.Object3D): THREE.Object3D {
 }
 
 describe('<Parallax2D>', () => {
-  it('uses the authored screen_offset on the main 2D stage, which frames no camera', async () => {
+  /** Renders a Parallax2D beside a Camera2D at (600, 400) and fires one pass, on the stage or in a viewport. */
+  async function scrolledGroup(properties: Record<string, string>, pass: 'stage' | 'viewport') {
     const storeCamera = { current: null as THREE.Camera | null };
     const renderer = await ReactThreeTestRenderer.create(
       <>
         <StoreCamera into={storeCamera} />
         <group userData={{ camera2d: CAMERA_TAG }} position={[600, -400, 0]} />
-        <Parallax2D node={parallaxNode(SCROLLED)} />
+        <Parallax2D node={parallaxNode(properties)} />
       </>
     );
     const scene = renderer.scene.instance;
-    fireSceneRender(scene, storeCamera.current!);
+    if (pass === 'stage') fireSceneRender(scene, storeCamera.current!);
+    else fireSceneRender(scene, viewportPassCamera(), new THREE.WebGLRenderTarget(1152, 648));
+    return deltaGroup(scene);
+  }
 
+  it('uses the authored screen_offset on the main 2D stage, which frames no camera', async () => {
+    const group = await scrolledGroup(SCROLLED, 'stage');
     // Godot: screen_offset (50, 0) at scroll_scale 0.5 puts the node at 50 - 25.
-    expect(deltaGroup(scene).position.x).toBe(25);
-    expect(deltaGroup(scene).position.y).toBe(0);
+    expect(group.position.x).toBe(25);
+    expect(group.position.y).toBe(0);
   });
 
   it('takes the screen_offset from the current Camera2D in a sub-viewport pass', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <>
-        <group userData={{ camera2d: CAMERA_TAG }} position={[600, -400, 0]} />
-        <Parallax2D node={parallaxNode(SCROLLED)} />
-      </>
-    );
-    const scene = renderer.scene.instance;
-    fireSceneRender(scene, viewportPassCamera(), new THREE.WebGLRenderTarget(1152, 648));
-
+    const group = await scrolledGroup(SCROLLED, 'viewport');
     // camera_screen_center (600, 400) - 0.5 * (1152, 648) = (24, 76); half of it is the scroll.
-    expect(deltaGroup(scene).position.x).toBe(12);
-    expect(deltaGroup(scene).position.y).toBe(-38);
+    expect(group.position.x).toBe(12);
+    expect(group.position.y).toBe(-38);
   });
 
   it('keeps the authored screen_offset under ignore_camera_scroll', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <>
-        <group userData={{ camera2d: CAMERA_TAG }} position={[600, -400, 0]} />
-        <Parallax2D node={parallaxNode({ ...SCROLLED, ignore_camera_scroll: 'true' })} />
-      </>
-    );
-    const scene = renderer.scene.instance;
-    fireSceneRender(scene, viewportPassCamera(), new THREE.WebGLRenderTarget(1152, 648));
-
-    expect(deltaGroup(scene).position.x).toBe(25);
+    const group = await scrolledGroup({ ...SCROLLED, ignore_camera_scroll: 'true' }, 'viewport');
+    expect(group.position.x).toBe(25);
   });
 
   it('replaces the authored position, so the delta cancels it', async () => {

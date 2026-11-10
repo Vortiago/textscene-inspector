@@ -37,23 +37,23 @@ export function parallax2DPosition(
   viewportSize: Vector2,
   nodeScale: Vector2
 ): Vector2 {
-  const x = scrolledAxis(
-    screenOffset.x,
-    limitedAxis(screenOffset.x, props.limit_begin.x, props.limit_end.x, viewportSize.x) *
-      props.scroll_scale.x,
-    props.scroll_offset.x,
-    props.repeat_size.x,
-    nodeScale.x
-  );
-  const y = scrolledAxis(
-    screenOffset.y,
-    limitedAxis(screenOffset.y, props.limit_begin.y, props.limit_end.y, viewportSize.y) *
-      props.scroll_scale.y,
-    props.scroll_offset.y,
-    props.repeat_size.y,
-    nodeScale.y
-  );
-  return props.follow_viewport ? { x, y } : { x: x - screenOffset.x, y: y - screenOffset.y };
+  const axis = (key: 'x' | 'y'): number => {
+    const limited = limitedAxis(
+      screenOffset[key],
+      props.limit_begin[key],
+      props.limit_end[key],
+      viewportSize[key]
+    );
+    const scrolled = scrolledAxis(
+      screenOffset[key],
+      limited * props.scroll_scale[key],
+      props.scroll_offset[key],
+      props.repeat_size[key],
+      nodeScale[key]
+    );
+    return props.follow_viewport ? scrolled : scrolled - screenOffset[key];
+  };
+  return { x: axis('x'), y: axis('y') };
 }
 
 /**

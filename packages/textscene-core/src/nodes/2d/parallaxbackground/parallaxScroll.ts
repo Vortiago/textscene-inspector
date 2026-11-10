@@ -8,7 +8,7 @@
 import type { Vector2 } from '../../../godot/math/vector';
 
 /** Stable empty result so an unmirrored layer never re-renders on identity. */
-const EMPTY_MIRROR: readonly Vector2[] = [];
+const NO_REPEATS: readonly Vector2[] = [];
 
 /** The canvas transform a viewport renders its 2D world through. */
 export interface ParallaxViewFraming {
@@ -178,12 +178,13 @@ export function parallaxLayerDelta(
  * `registerNodeObject` keeps a path's last writer, so picking selects the node itself.
  */
 export function parallaxRepeatOffsets(size: Vector2, times: number): readonly Vector2[] {
-  if (!size.x && !size.y) return EMPTY_MIRROR;
+  if (!size.x && !size.y) return NO_REPEATS;
 
   const countX = size.x ? times : 0;
   const countY = size.y ? times : 0;
-  const startX = size.x * -Math.trunc(times / 2);
-  const startY = size.y * -Math.trunc(times / 2);
+  const firstCopy = -Math.trunc(times / 2);
+  const startX = size.x * firstCopy;
+  const startY = size.y * firstCopy;
   const repeats: Vector2[] = [];
   for (let ry = 0; ry <= countY; ry++) {
     for (let rx = 0; rx <= countX; rx++) {
