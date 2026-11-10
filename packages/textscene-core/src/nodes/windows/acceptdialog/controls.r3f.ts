@@ -1,8 +1,7 @@
 /**
- * A dialog as the root of their own Control canvas: a canvas
- * boundary whose layout fills the content rect with each authored child (`dialogLayout.ts`), whose
- * contents minimum, which `wrap_controls` reads, holds the message and the buttons, and which
- * paints its panel, message and buttons (`DialogChrome.tsx`).
+ * A dialog is the root of its own Control canvas. Its layout fills the content rect with each authored
+ * child (`dialogLayout.ts`). Its contents minimum, which `wrap_controls` reads, holds the message and
+ * the buttons. `DialogChrome.tsx` paints the panel, the message and the buttons.
  */
 
 import { controlComponentRegistry } from '../../../r3f/controls/ControlComponentRegistry';

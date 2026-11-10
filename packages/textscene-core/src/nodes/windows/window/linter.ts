@@ -45,17 +45,14 @@ const arms = {
 const formatSize = (size: Vector2): string => `Vector2i(${size.x}, ${size.y})`;
 const sameSize = (a: Vector2, b: Vector2): boolean => a.x === b.x && a.y === b.y;
 
-/** The `min_size` the class constructor sets before any scene line (`ConfirmationDialog::ConfirmationDialog`). */
-function constructorMinSize(node: RuleContext['node']): Vector2 {
-  return windowClassDefaults(node.type).minSize;
-}
-
 function checkMaxBelowMin(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
   if (rawProps.max_size === undefined) return [];
 
   const maxSize = matchVector2i(rawProps.max_size);
   const minSize =
-    rawProps.min_size === undefined ? constructorMinSize(node) : matchVector2i(rawProps.min_size);
+    rawProps.min_size === undefined
+      ? windowClassDefaults(node.type).minSize
+      : matchVector2i(rawProps.min_size);
   if (!maxSize || !minSize) return [];
 
   // Both setters floor a negative component at 0 (`_clamp_limit_size`, :461-469) before
@@ -95,7 +92,7 @@ function replaySize(
 }
 
 function checkSizeClamped(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
-  const constructorMin = constructorMinSize(node);
+  const constructorMin = windowClassDefaults(node.type).minSize;
   const hasConstructorMin = constructorMin.x > 0 || constructorMin.y > 0;
   if (rawProps.min_size === undefined && rawProps.max_size === undefined && !hasConstructorMin) return [];
   const replayed = replaySize(rawProps, constructorMin);

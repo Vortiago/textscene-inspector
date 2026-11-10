@@ -3,11 +3,12 @@
  * under every authored Control, then the button row over them. The panel and the label are
  * `INTERNAL_MODE_FRONT` children and the row is `INTERNAL_MODE_BACK`, so the row draws from the chrome slot.
  */
-import { useMemo } from 'react';
+import { useMemo, type ComponentType } from 'react';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { canvasSubOrder } from '../../../r3f/canvasItemState';
 import type { NativeControlComponentProps } from '../../../r3f/controls/ControlComponentRegistry';
+import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { createSolveContext } from '../../../r3f/controls/native/controlRectSolver';
 import { StyleBoxQuad } from '../../../r3f/controls/native/StyleBoxQuad';
 import { Button } from '../../2d/ui/button/Component';
@@ -39,7 +40,12 @@ export function DialogChrome(props: NativeControlComponentProps) {
   const buttonsSlot = canvasSubOrder(chromeSlot);
 
   // A synthetic Control draws from its own group, as any Control the walker places does.
-  const drawControl = (control: typeof label, at: Rect2, controlSlot: typeof slot, Painter: typeof Label) => (
+  const drawControl = (
+    control: SolveNode,
+    at: Rect2,
+    controlSlot: typeof slot,
+    Painter: ComponentType<NativeControlComponentProps>
+  ) => (
     <CanvasItemGroup key={control.path} position={[at.x, -at.y, 0]} renderOrder={controlSlot.key}>
       <Painter
         {...props}

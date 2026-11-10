@@ -11,7 +11,7 @@
 
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { Vector2 } from '../../../godot/math/vector';
-import { type SolveNode } from '../../../r3f/controls/native/solveTree';
+import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import type { ContainerLayoutFn, MinimumSizeFn } from '../../../r3f/controls/native/solverRegistry';

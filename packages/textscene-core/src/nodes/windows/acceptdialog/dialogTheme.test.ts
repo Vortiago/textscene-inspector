@@ -12,6 +12,7 @@ import '../../../r3f/controls/index';
 import { wrappedWindowSize } from '../window/wrapControls';
 import { dialogButtonNode, messageLabelNode } from './dialogParts';
 import { dialogGeometry } from './dialogLayout';
+import { parseConfirmationDialog } from '../confirmationdialog/parser';
 import { parseDialog } from './parser';
 
 const THEME = nativeTheme(1);
@@ -60,5 +61,23 @@ describe('a dialog under a Theme', () => {
         createSolveContext(THEME, measureText)
       ).content;
     expect(contentOf(spaced).h).toBeGreaterThan(contentOf(plain).h);
+  });
+
+  it('spaces the buttons by the HBoxContainer separation of the theme', () => {
+    const confirmation = (themeChain: readonly ThemeResource[]): SolveNode => {
+      const base = dialog(themeChain);
+      const properties = parseConfirmationDialog(heading('ConfirmationDialog', { name: 'Dialog' }), {});
+      return { ...base, node: { ...base.node, type: 'ConfirmationDialog', properties } };
+    };
+    const gapOf = (window: SolveNode) => {
+      const [cancel, ok] = dialogGeometry(
+        window,
+        { x: 400, y: 200 },
+        createSolveContext(THEME, measureText)
+      ).buttons;
+      return ok!.rect.x - (cancel!.rect.x + cancel!.rect.w);
+    };
+    const spaced = confirmation([themeOf({ constants: { HBoxContainer: { separation: 40 } } })]);
+    expect(gapOf(spaced)).toBeGreaterThan(gapOf(confirmation([])));
   });
 });

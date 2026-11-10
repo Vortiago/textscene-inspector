@@ -13,6 +13,7 @@
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { Vector2 } from '../../../godot/math/vector';
 import { SizeFlags, DEFAULT_SIZE_FLAGS } from '../../../godot/scene/control';
+import { internalChildThemeItems } from '../../../r3f/controls/native/buildSolveTree';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type {
   ContainerLayoutFn,
@@ -57,12 +58,21 @@ const SPACER: BoxChildInput = {
   stretchRatio: 1,
 };
 
+/** A spacer leads the row and follows each button, so button `i` is child `1 + 2 * i`. */
+const BUTTON_FIRST_SLOT = 1;
+const BUTTON_SLOT_STRIDE = 2;
+
 interface ButtonRow {
   /** The row's children, spacers included. */
   inputs: BoxChildInput[];
-  /** The index in `inputs` of each button, in `roles` order. */
-  buttonSlots: number[];
+  /** The gap between the row's children. */
+  separation: number;
   minimum: Vector2;
+}
+
+/** The `separation` theme item of the row's HBoxContainer, resolved through the dialog's theme chain (`dialogs.cpp:486`). */
+function rowSeparation(dialog: SolveNode, ctx: SolveContext): number {
+  return internalChildThemeItems(dialog, 'HBoxContainer').constants.separation ?? ctx.theme.separation;
 }
 
 /**
@@ -71,10 +81,8 @@ interface ButtonRow {
  */
 function buttonRow(dialog: SolveNode, ctx: SolveContext): ButtonRow {
   const inputs: BoxChildInput[] = [SPACER];
-  const buttonSlots: number[] = [];
   for (const role of dialogButtonRoles(dialog.node.type)) {
     const minSize = ctx.combinedMinimumSize(dialogButtonNode(dialog, role));
-    buttonSlots.push(inputs.length);
     inputs.push({
       minSize,
       hSizeFlags: DEFAULT_SIZE_FLAGS,
@@ -83,13 +91,14 @@ function buttonRow(dialog: SolveNode, ctx: SolveContext): ButtonRow {
     });
     inputs.push(SPACER);
   }
+  // The row's own `separation` theme item, not the dialog's `buttons_separation` (the gap above the row).
+  const separation = rowSeparation(dialog, ctx);
   return {
     inputs,
-    buttonSlots,
-    // The row's own `separation` theme item, not the dialog's `buttons_separation` (the gap above the row).
+    separation,
     minimum: boxContainerMinimumSize(
       false,
-      ctx.theme.separation,
+      separation,
       inputs.map((input) => input.minSize)
     ),
   };
@@ -121,14 +130,14 @@ export function dialogGeometry(dialog: SolveNode, size: Vector2, ctx: SolveConte
   const rects = resortBoxContainer(
     false,
     { width: rowRect.w, height: rowRect.h },
-    ctx.theme.separation,
+    row.separation,
     0,
     dialog.rtl,
     row.inputs
   );
   const roles = dialogButtonRoles(dialog.node.type);
   const buttons = roles.map((role, i): DialogButton => {
-    const rect = rects[row.buttonSlots[i]!]!;
+    const rect = rects[BUTTON_FIRST_SLOT + BUTTON_SLOT_STRIDE * i]!;
     return {
       role,
       text: dialogButtonText(dialog, role),
