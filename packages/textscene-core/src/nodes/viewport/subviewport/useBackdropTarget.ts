@@ -3,18 +3,26 @@
  * its background. Made on the first draw that wants it, and freed by the first draw that does not.
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
 import type * as THREE from 'three';
 import type { CanvasColorSpace } from '../../../r3f/canvasColorSpace';
+import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { createSceneTarget } from './offscreenViewport';
 
-/** A held target with the inputs it was made from, so a draw after a change never reads a stale one. */
-interface HeldTarget {
-  target: THREE.WebGLRenderTarget;
-  width: number;
-  height: number;
-  name: string;
-  space: CanvasColorSpace;
+/** Holds the target of one set of inputs: a change of inputs makes a new, empty holder and frees this one. */
+class TargetHolder {
+  private target: THREE.WebGLRenderTarget | null = null;
+
+  constructor(private readonly create: () => THREE.WebGLRenderTarget) {}
+
+  get(): THREE.WebGLRenderTarget {
+    return (this.target ??= this.create());
+  }
+
+  dispose(): void {
+    this.target?.dispose();
+    this.target = null;
+  }
 }
 
 /** Answers the target when `wanted`, made at the first call and again after a resize, else null. */
@@ -24,36 +32,17 @@ export function useBackdropTarget(
   name: string,
   space: CanvasColorSpace
 ): (wanted: boolean) => THREE.WebGLRenderTarget | null {
-  const held = useRef<HeldTarget | null>(null);
-  const release = useCallback(() => {
-    held.current?.target.dispose();
-    held.current = null;
-  }, []);
-  useEffect(() => release, [release]);
+  const holder = useMemo(
+    () => new TargetHolder(() => createSceneTarget(width, height, `${name}::canvas`, space)),
+    [width, height, name, space]
+  );
+  useDisposeOnRelease(holder);
   return useCallback(
     (wanted: boolean) => {
-      if (!wanted) {
-        release();
-        return null;
-      }
-      const current = held.current;
-      if (
-        current &&
-        (current.width !== width ||
-          current.height !== height ||
-          current.name !== name ||
-          current.space !== space)
-      )
-        release();
-      held.current ??= {
-        target: createSceneTarget(width, height, `${name}::canvas`, space),
-        width,
-        height,
-        name,
-        space,
-      };
-      return held.current.target;
+      if (wanted) return holder.get();
+      holder.dispose();
+      return null;
     },
-    [release, width, height, name, space]
+    [holder]
   );
 }
