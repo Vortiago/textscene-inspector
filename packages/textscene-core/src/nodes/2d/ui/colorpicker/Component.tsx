@@ -193,6 +193,7 @@ export function ColorPicker({
     [
       contentWidth,
       theme,
+      child.valueFieldTheme,
       props.pickerShape,
       props.samplerVisible,
       props.colorModesVisible,

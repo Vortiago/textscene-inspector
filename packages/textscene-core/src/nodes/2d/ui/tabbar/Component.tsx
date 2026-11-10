@@ -4,13 +4,13 @@
  * current tab draws last at the same `renderOrder`, so it overlaps its neighbours as in the
  * source's two-pass draw.
  */
-import type { TabBarStyleBoxes } from '../../../../r3f/controls/native/tabStyleBoxes';
 import { useMemo } from 'react';
 import type { Plane } from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import type { TabBarStyleBoxes } from '../../../../r3f/controls/native/tabStyleBoxes';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';

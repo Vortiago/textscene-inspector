@@ -294,7 +294,7 @@ export function textEditMinimumSizeWith(
   const { fontSizePx } = textEditTextTheme(n, props, state, ctx);
   const fontMetrics = resolveNodeFontMetrics(n, TEXT_EDIT_THEME_FONT_KEY);
   // TextEdit's `line_spacing` (`default_theme.cpp:479`) and BoxContainer's `DEFAULT_SEPARATION`
-  // are both `Math.round(4 * scale)`, and `nativeTheme.ts` exposes no raw `scale` to derive it.
+  // are both `Math.round(4 * scale)`, which `theme.separation` holds.
   const lineSpacingPx = ctx.theme.separation;
 
   if (!props.fitContentWidth && !props.fitContentHeight) return styleMin;
