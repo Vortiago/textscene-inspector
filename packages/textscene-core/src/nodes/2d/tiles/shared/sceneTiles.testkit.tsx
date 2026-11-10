@@ -127,7 +127,28 @@ color = Color(0, 1, 0, 1)
 polygon = PackedVector2Array(-5, -5, 5, -5, 5, 5, -5, 5)
 `;
 
-/** The `[ext_resource]` and `[sub_resource]` headings of a TileSet with the scene tiles 1 to 5 and 7 to 11 in source 0. */
+/** Scene tile 12: two parentless headings, which Godot refuses to instantiate (`packed_scene.cpp:207`). */
+const REFUSED_SCENE = `[gd_scene format=3]
+
+[node name="One" type="Node2D"]
+
+[node name="Two" type="Node2D"]
+`;
+
+/** Scene tile 13: a ColorRect root turned half a circle about a pivot 40 px below it, so its canvas item sits 80 px lower. */
+const TURNED_CONTROL_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="ColorRect"]
+offset_left = -5.0
+offset_top = -5.0
+offset_right = 5.0
+offset_bottom = 5.0
+pivot_offset = Vector2(0, 40)
+rotation = 3.14159265358979
+color = Color(0, 1, 0, 1)
+`;
+
+/** The `[ext_resource]` and `[sub_resource]` headings of a TileSet with the scene tiles 1 to 5 and 7 to 13 in source 0. */
 export const SCENE_TILESET_RESOURCES = `[ext_resource type="PackedScene" path="res://polygon.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://offset.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://control.tscn" id="3"]
@@ -138,6 +159,8 @@ export const SCENE_TILESET_RESOURCES = `[ext_resource type="PackedScene" path="r
 [ext_resource type="PackedScene" path="res://plain-root.tscn" id="8"]
 [ext_resource type="PackedScene" path="res://stack.tscn" id="9"]
 [ext_resource type="PackedScene" path="res://raised-root.tscn" id="10"]
+[ext_resource type="PackedScene" path="res://refused.tscn" id="11"]
+[ext_resource type="PackedScene" path="res://turned-control.tscn" id="12"]
 
 [sub_resource type="TileSetScenesCollectionSource" id="scenes"]
 scenes/1/scene = ExtResource("1")
@@ -150,6 +173,8 @@ scenes/8/scene = ExtResource("7")
 scenes/9/scene = ExtResource("8")
 scenes/10/scene = ExtResource("9")
 scenes/11/scene = ExtResource("10")
+scenes/12/scene = ExtResource("11")
+scenes/13/scene = ExtResource("12")
 
 [sub_resource type="TileSet" id="tileset"]
 tile_size = Vector2i(64, 64)
@@ -167,6 +192,8 @@ const TILE_SCENES: Record<string, string> = {
   'res://plain-root.tscn': PLAIN_ROOT_SCENE,
   'res://stack.tscn': STACK_SCENE,
   'res://raised-root.tscn': RAISED_ROOT_SCENE,
+  'res://refused.tscn': REFUSED_SCENE,
+  'res://turned-control.tscn': TURNED_CONTROL_SCENE,
 };
 
 /** What the viewport and the Scene dock see of the rendered scene. */
@@ -189,6 +216,8 @@ export interface RenderSceneTilesOptions {
   selectedPath?: string | null;
   /** The `res://` paths of tile scenes that never finish loading. */
   withheldScenes?: string[];
+  /** The `res://` paths of tile scenes whose load fails. */
+  failedScenes?: string[];
   /** Changes the parsed scene before it renders, such as the cells of a layer. */
   prepare?: (scene: TscnScene) => void;
 }
@@ -202,7 +231,8 @@ export async function renderSceneTiles(tscn: string, options: RenderSceneTilesOp
   const fake = createFakeResourceLoader();
   for (const [path, text] of Object.entries(TILE_SCENES)) {
     if (options.withheldScenes?.includes(path)) continue;
-    fake.scenes._resolve(path, new TscnParser().parse(text));
+    if (options.failedScenes?.includes(path)) fake.scenes._fail(path, `cannot load ${path}`);
+    else fake.scenes._resolve(path, new TscnParser().parse(text));
   }
   const probe: SceneTileProbe = { selection: null, livePaths: [] };
   const treeOf = (text: string, prepare?: (scene: TscnScene) => void) => {

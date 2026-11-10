@@ -85,3 +85,18 @@ export function snappedControlOrigin(
     y: Math.floor(position.y + internal.y + 0.5) - internal.y,
   };
 }
+
+/**
+ * Where the canvas item of a Control sits in its parent: `_update_canvas_item_transform`'s origin
+ * (`control.cpp:726-736`), the position plus the internal translation, whole pixels when it snaps.
+ * A y-sorted parent sorts the Control on this origin's y.
+ */
+export function controlItemOrigin(
+  position: Vector2,
+  transform: ControlDrawTransform,
+  snapEnabled: boolean
+): Vector2 {
+  const outer = snappedControlOrigin(position, transform, snapEnabled);
+  const internal = internalTransformTranslation(transform);
+  return { x: outer.x + internal.x, y: outer.y + internal.y };
+}

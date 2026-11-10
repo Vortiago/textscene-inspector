@@ -13,6 +13,12 @@ import { sceneTilePlacement, type SceneRootKind } from '../../../../resources/ti
 import type { TileGrid, TileScene, TileSetModel } from '../../../../resources/tileset/types';
 import { perObject } from '../../../../utils/perObject';
 import { useInstancedScenePaths } from '../../../../r3f/contexts/InstancedScenePathsContext';
+import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsContext';
+import {
+  controlItemOrigin,
+  snapControlsToPixelsEnabled,
+} from '../../../../r3f/controls/native/controlPixelSnap';
+import type { ControlProperties } from '../../ui/control/types';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useLiveStepsOf } from '../../../../r3f/useLiveSceneTree';
 import { parseNode2D } from '../../../base/node2d/parser';
@@ -47,6 +53,7 @@ export function useSceneTileNodes(
     [model, cells]
   );
   const tiles = useMemo(() => allTiles.filter(({ tile }) => tile.scene), [allTiles]);
+  const snapToPixels = snapControlsToPixelsEnabled(useProjectSettings().settings);
   const ambient = useSceneResources();
   const enclosingScenePaths = useInstancedScenePaths();
   const scope = useMemo<SceneScope>(
@@ -60,18 +67,24 @@ export function useSceneTileNodes(
 
   return useMemo(() => {
     if (!model) return NO_DRAWING;
-    // The root judged once per scene, not per tile. `set_scene_tile_scene` refuses a root that is no
-    // CanvasItem, so a tile of that scene has no scene.
+    // Each scene is judged once, not per tile. A scene that failed to load, or whose root is no
+    // CanvasItem (`set_scene_tile_scene` refuses it), leaves its tiles with no scene, which the
+    // editor marks with a disc (`tile_map_layer.cpp:1676-1678`). A scene Godot refuses to
+    // instantiate is a valid scene whose `instantiate()` returns null, so its tiles draw nothing.
     const placeable = new Map<TileScene, PlaceableScene>();
-    const refusedScenes = new Set<TileScene>();
+    const sceneless = new Set<TileScene>();
     const instanceOf = instanceNodesOf(scope);
     scenes.forEach((scene, index) => {
       const step = sceneSteps[index]!;
       // A scene not yet loaded has no root to judge: its tile draws nothing and shows no disc.
       const root = step.isMerged ? rootKindOf(step.node.type) : 'node2d';
-      if (root === null) refusedScenes.add(scene);
-      else
-        placeable.set(scene, { instance: instanceOf(scene), root, ySortRoot: ySortRootOf(step.node, root) });
+      if (step.isFailedInstance || root === null) sceneless.add(scene);
+      else if (!step.isRefusedInstance)
+        placeable.set(scene, {
+          instance: instanceOf(scene),
+          root,
+          ySortRoot: ySortRootOf(step.node, root, snapToPixels),
+        });
     });
     const placed: LiveNode[] = [];
     const names = new TileNames();
@@ -82,10 +95,10 @@ export function useSceneTileNodes(
     return {
       instances: placed,
       placeholderTiles: allTiles.filter(
-        ({ tile }) => !tile.scene || tile.displayPlaceholder || refusedScenes.has(tile.scene)
+        ({ tile }) => !tile.scene || tile.displayPlaceholder || sceneless.has(tile.scene)
       ),
     };
-  }, [model, allTiles, tiles, scenes, sceneSteps, scope]);
+  }, [model, allTiles, tiles, scenes, sceneSteps, scope, snapToPixels]);
 }
 
 /**
@@ -141,9 +154,11 @@ function rootKindOf(rootType: string): SceneRootKind | null {
 
 /**
  * The instance root as the sort reads it. A Node2D root has its own transform and z. A Control root
- * sits at its offsets, the rect of a parent with no size, and has the z of its own CanvasItem.
+ * sorts on the origin of its canvas item (`control.cpp:726-736`): its offsets, the rect of a parent
+ * with no size, then its pivot, rotation and scale, snapped as the walker snaps it. It keeps the
+ * placement's z. A text minimum size that grows the rect towards the beginning is not read.
  */
-function ySortRootOf(rootNode: LiveNode, root: SceneRootKind): YSortRoot {
+function ySortRootOf(rootNode: LiveNode, root: SceneRootKind, snapToPixels: boolean): YSortRoot {
   if (root === 'node2d') {
     const { z_index: zIndex = 0, z_as_relative: zAsRelative = true } = rootNode.properties as {
       z_index?: number;
@@ -152,18 +167,18 @@ function ySortRootOf(rootNode: LiveNode, root: SceneRootKind): YSortRoot {
     const pose = node2DLocalTransform(rootNode.properties as Partial<Node2DLocalTransform>);
     return { pose, zIndex, zAsRelative };
   }
-  const {
-    offsetLeft = 0,
-    offsetTop = 0,
-    zIndex = 0,
-    zAsRelative = true,
-  } = rootNode.properties as {
-    offsetLeft?: number;
-    offsetTop?: number;
-    zIndex?: number;
-    zAsRelative?: boolean;
+  const control = rootNode.properties as ControlProperties;
+  const { offsetLeft = 0, offsetTop = 0, offsetRight = 0, offsetBottom = 0 } = control;
+  const pivot = {
+    x: (control.pivotOffset?.x ?? 0) + (control.pivotOffsetRatio?.x ?? 0) * (offsetRight - offsetLeft),
+    y: (control.pivotOffset?.y ?? 0) + (control.pivotOffsetRatio?.y ?? 0) * (offsetBottom - offsetTop),
   };
-  return { pose: { ...TRANSFORM2D_IDENTITY, tx: offsetLeft, ty: offsetTop }, zIndex, zAsRelative };
+  const origin = controlItemOrigin(
+    { x: offsetLeft, y: offsetTop },
+    { rotation: control.rotation ?? 0, scale: control.scale ?? { x: 1, y: 1 }, pivot },
+    snapToPixels
+  );
+  return { pose: { ...TRANSFORM2D_IDENTITY, tx: origin.x, ty: origin.y }, zIndex: 0, zAsRelative: true };
 }
 
 /** A tile scene as its tiles share it: the instance node, and its loaded root as the sort reads it. */

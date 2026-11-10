@@ -80,7 +80,7 @@ describe('TileMapLayer scene tiles', () => {
   });
 
   it.each([
-    ['a scene id the source lacks', cell(0, 0, 12)],
+    ['a scene id the source lacks', cell(0, 0, 14)],
     ['atlas coords other than (0, 0)', cell(0, 0, 1, { atlasCoords: { x: 1, y: 0 } })],
     ['a source the TileSet lacks', cell(0, 0, 1, { sourceId: 5 })],
   ])('draws no instance for %s', async (_name, placed) => {
@@ -199,6 +199,19 @@ polygon = PackedVector2Array(0, 0, 10, 0, 10, 10, 0, 10)
       [100, 320, 10, 10],
       [127, 431, 10, 10],
     ]);
+  });
+
+  it('sorts a Control root on the origin of its canvas item, pivot and rotation included', async () => {
+    // The root turns about a pivot 40 px below it, so its item sits at y 32 - 5 + 80 = 107, below the child at 60.
+    const authored = `
+[node name="Mid" type="Polygon2D" parent="Layer"]
+position = Vector2(0, 60)
+polygon = PackedVector2Array(0, 0, 10, 0, 10, 10, 0, 10)
+`;
+    const renderer = await render([cell(0, 0, 13)], 'y_sort_enabled = true\n', authored);
+    const order = boxesInPaintOrder(renderer);
+    expect(order[0]).toEqual([100, 80, 10, 10]);
+    expect(order).toHaveLength(2);
   });
 
   it('keeps the draw order inside each of 400 instances', async () => {

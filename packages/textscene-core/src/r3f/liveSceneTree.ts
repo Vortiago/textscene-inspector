@@ -144,6 +144,12 @@ function loadedInstance(
   return { scenePath, cached, isRefused: isRefusedScene(cached, scenePath, own, sceneCache) };
 }
 
+/** Whether the cache holds a failure for the scene `node` instances, which is not the same as no answer yet. */
+function hasFailedLoad(node: LiveNode, own: SceneScope, sceneCache: CachedSceneSource): boolean {
+  const scenePath = loadableScenePath(node, own);
+  return scenePath !== null && sceneCache.getCached(scenePath) === null;
+}
+
 /**
  * Whether Godot refuses to instantiate `cached`: the parse says so, or its root inherits a base
  * that Godot refuses (`packed_scene.cpp:227-232`), or one of its nodes instances a scene that Godot
@@ -442,6 +448,8 @@ export interface LiveStep {
   readonly scope: SceneScope;
   /** Whether the node instances a scene that Godot refuses to instantiate, which draws as a failed load. */
   readonly isRefusedInstance: boolean;
+  /** Whether the loader failed to load the scene the node instances, as opposed to not having loaded it yet. */
+  readonly isFailedInstance: boolean;
   /** What is below the node, in the order the tree shows it. */
   readonly groups: readonly LiveChildGroup[];
 }
@@ -469,6 +477,7 @@ function liveStep(
       instancePath,
       scope: own,
       isRefusedInstance: instanced?.isRefused ?? false,
+      isFailedInstance: hasFailedLoad(node, own, sceneCache),
       groups,
     };
   }
@@ -479,6 +488,7 @@ function liveStep(
     instancePath,
     scope: groups[0]!.scope,
     isRefusedInstance: false,
+    isFailedInstance: false,
     groups,
   };
 }
