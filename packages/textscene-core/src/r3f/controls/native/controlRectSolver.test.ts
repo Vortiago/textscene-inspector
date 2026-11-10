@@ -548,6 +548,20 @@ describe("solveControlTree — a registered ContainerLayoutFn overrides its chil
     expect(solved.get('Stack/Child1')?.rect).toEqual({ x: 0, y: 10, w: 1152, h: 10 });
   });
 
+  it('marks a container child as reset to rotation 0 and scale 1, and a placement-only child as not', () => {
+    const place: ContainerLayoutFn = (_n, children, contentRect) =>
+      new Map(children.map((c) => [c.node.path, contentRect]));
+    controlSolverRegistry.registerContainerLayout(TYPE, place);
+    controlSolverRegistry.registerPlacementOnlyLayout('Placer', place);
+
+    const stack = node('Stack', TYPE, { anchorsPreset: 15 }, [node('Stack/Child', 'Control', {})]);
+    const placer = node('Placer', 'Placer', { anchorsPreset: 15 }, [node('Placer/Child', 'Control', {})]);
+
+    const solved = solveControlTree([stack, placer], VIEWPORT, ctx());
+    expect(solved.get('Stack/Child')?.resetsTransform).toBe(true);
+    expect(solved.get('Placer/Child')?.resetsTransform).toBe(false);
+  });
+
   it("re-floors a container-assigned rect against the child's FULL-PRECISION minimum", () => {
     // `fit_child_in_rect` ends in `Control::set_rect`, whose `_size_changed`
     // (control.cpp:1531-1541,1760-1797, named in no container.cpp) re-floors at the

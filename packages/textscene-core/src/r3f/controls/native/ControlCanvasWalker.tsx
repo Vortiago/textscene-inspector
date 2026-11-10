@@ -11,7 +11,7 @@ import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { threeMatrixFromTransform2D } from '../../node2dTransform';
 import type { NativeTheme } from './nativeTheme';
-import { controlSolverRegistry, type TextMeasurer } from './solverRegistry';
+import type { TextMeasurer } from './solverRegistry';
 import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
 import { controlComponentRegistry } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
@@ -83,7 +83,6 @@ export function ControlCanvasWalker({
           key={n.path}
           solveNode={n}
           solved={solved}
-          isFreeParent
           theme={theme}
           measureText={measurer}
           snapToPixels={snapEnabled}
@@ -96,8 +95,6 @@ export function ControlCanvasWalker({
 interface ControlNodeGroupProps {
   solveNode: SolveNode;
   solved: ReadonlyMap<string, SolvedControl>;
-  /** Whether this node's parent imposes no container layout. */
-  isFreeParent: boolean;
   theme: NativeTheme;
   measureText: TextMeasurer | null;
   /** `Viewport::is_snap_controls_to_pixels_enabled()` (`controlPixelSnap.ts`). */
@@ -165,14 +162,7 @@ function ControlNodeGroup(props: ControlNodeGroupProps) {
   );
 }
 
-function ControlItemGroup({
-  solveNode,
-  solved,
-  isFreeParent,
-  theme,
-  measureText,
-  snapToPixels,
-}: ControlNodeGroupProps) {
+function ControlItemGroup({ solveNode, solved, theme, measureText, snapToPixels }: ControlNodeGroupProps) {
   const props = controlProps(solveNode);
   const state = useControlState(solveNode, props);
   const { key: renderOrder, tint } = state;
@@ -193,12 +183,13 @@ function ControlItemGroup({
   const solvedEntry = solved.get(solveNode.path);
   const rect = solvedEntry?.rect ?? ZERO_RECT;
 
-  // `Container::fit_child_in_rect` resets a container child to rotation 0 and
+  // The solve says whether `Container::fit_child_in_rect` reset this child to rotation 0 and
   // scale 1, and the snap's rotation gate must see that too.
-  const rotation = isFreeParent ? (props.rotation ?? 0) : 0;
+  const resets = solvedEntry?.resetsTransform === true;
+  const rotation = resets ? 0 : (props.rotation ?? 0);
   const layoutScale = solvedEntry?.scale;
-  const scaleX = layoutScale ? layoutScale.x : isFreeParent ? (props.scale?.x ?? 1) : 1;
-  const scaleY = layoutScale ? layoutScale.y : isFreeParent ? (props.scale?.y ?? 1) : 1;
+  const scaleX = layoutScale ? layoutScale.x : resets ? 1 : (props.scale?.x ?? 1);
+  const scaleY = layoutScale ? layoutScale.y : resets ? 1 : (props.scale?.y ?? 1);
   const hasOwnTransform = rotation !== 0 || scaleX !== 1 || scaleY !== 1;
   const pivotX = (props.pivotOffset?.x ?? 0) + (props.pivotOffsetRatio?.x ?? 0) * rect.w;
   const pivotY = (props.pivotOffset?.y ?? 0) + (props.pivotOffsetRatio?.y ?? 0) * rect.h;
@@ -213,16 +204,11 @@ function ControlItemGroup({
   );
 
   const Painter = controlComponentRegistry.get(solveNode.node.type) ?? ControlFallback;
-  // The registry read `dispatchChildren` makes, so walker and solver agree on
-  // which children are free.
-  const childIsFreeParent = controlSolverRegistry.keepsChildTransform(solveNode.node.type);
-
   const childElements = solveNode.children.map((child) => (
     <ControlNodeGroup
       key={child.path}
       solveNode={child}
       solved={solved}
-      isFreeParent={childIsFreeParent}
       theme={theme}
       measureText={measureText}
       snapToPixels={snapToPixels}

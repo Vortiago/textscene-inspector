@@ -36,7 +36,15 @@ export interface SolvedControl {
   meta?: SealedHandoff;
   /** The scale the parent's layout wrote onto this node, or `undefined` to keep the authored one. */
   scale?: Vector2;
+  /**
+   * Whether the parent's layout reset this node to rotation 0 and scale 1, as
+   * `Container::fit_child_in_rect` does. False under a placement-only parent, and unset on a free node.
+   */
+  resetsTransform?: boolean;
 }
+
+/** What a parent's layout writes onto a child's transform, beside the child's rect. */
+type ChildTransformWrite = Pick<SolvedControl, 'scale' | 'resetsTransform'>;
 
 // --- Anchors ---------------------------------------------------------------
 
@@ -231,9 +239,9 @@ function record(
   rect: Rect2,
   minSize: Vector2,
   out: Map<string, SolvedControl>,
-  scale?: Vector2
+  transformWrite: ChildTransformWrite = {}
 ): void {
-  out.set(n.path, scale ? { rect, minSize, scale } : { rect, minSize });
+  out.set(n.path, { rect, minSize, ...transformWrite });
 }
 
 /**
@@ -247,7 +255,8 @@ function solveFree(
   origin: Vector2,
   viewport: Rect2,
   ctx: SolveContext,
-  out: Map<string, SolvedControl>
+  out: Map<string, SolvedControl>,
+  transformWrite?: ChildTransformWrite
 ): void {
   const minSize = ctx.combinedMinimumSize(n);
   let rect: Rect2;
@@ -264,7 +273,7 @@ function solveFree(
     );
     if (n.rtl) rect = mirrorRectRtl(rect, anchorable.w);
   }
-  record(n, rect, minSize, out);
+  record(n, rect, minSize, out, transformWrite);
   dispatchChildren(n, rect, { x: origin.x + rect.x, y: origin.y + rect.y }, viewport, ctx, out);
 }
 
@@ -291,12 +300,14 @@ function dispatchChildren(
     return;
   }
 
+  // `fit_child_in_rect` resets each child's rotation and scale. A placement-only layout never runs it.
+  const resetsTransform = !controlSolverRegistry.isPlacementOnly(n.node.type);
   // A child the layout does not place stays free against the rect `parentAnchorableRect` gives
   // it: zero for a promoted one, the boundary's own for one a canvas boundary adopted.
   const laidOut: SolveNode[] = [];
   for (const child of n.children) {
     if (isLaidOutChild(n, child)) laidOut.push(child);
-    else solveFree(child, rect, origin, viewport, ctx, out);
+    else solveFree(child, rect, origin, viewport, ctx, out, { resetsTransform });
   }
 
   const childEntries = laidOut.map((child) => ({
@@ -341,7 +352,10 @@ function dispatchChildren(
       );
       childRect = child.rtl ? mirrorRectRtl(floored, rect.w) : floored;
     }
-    record(child, childRect, minSize, out, childScales?.get(child.path));
+    record(child, childRect, minSize, out, {
+      scale: childScales?.get(child.path),
+      resetsTransform,
+    });
     dispatchChildren(
       child,
       childRect,
