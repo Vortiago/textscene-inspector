@@ -310,12 +310,16 @@ describe('<ControlCanvasWalker>', () => {
     const placeInContentRect: ContainerLayoutFn = (_n, children, contentRect) => {
       const out = new Map<string, Rect2>();
       children.forEach((c) => out.set(c.node.path, contentRect));
-      return { rects: out, childScales: new Map([['Host/Scaled', { x: 0.5, y: 0.5 }]]) };
+      return {
+        rects: out,
+        childScales: new Map([['Host/Scaled', { x: 0.5, y: 0.5 }]]),
+        resetsChildTransform: false,
+      };
     };
     const authored = { anchorsPreset: 15, rotation: 0.3, scale: { x: 3, y: 3 } };
 
     async function groupsOf(...children: SolveNode[]) {
-      controlSolverRegistry.registerPlacementOnlyLayout(TYPE, placeInContentRect);
+      controlSolverRegistry.registerContainerLayout(TYPE, placeInContentRect);
       const root = solveNode('Host', TYPE, { anchorsPreset: 15 }, children);
       const renderer = await ReactThreeTestRenderer.create(
         <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />

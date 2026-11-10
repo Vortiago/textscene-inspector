@@ -79,7 +79,7 @@ const graphEditLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
       rects.set(child.path, natural);
     }
   }
-  return { rects, childScales };
+  return { rects, childScales, resetsChildTransform: false };
 };
 
-controlSolverRegistry.registerPlacementOnlyLayout('GraphEdit', graphEditLayout);
+controlSolverRegistry.registerContainerLayout('GraphEdit', graphEditLayout);

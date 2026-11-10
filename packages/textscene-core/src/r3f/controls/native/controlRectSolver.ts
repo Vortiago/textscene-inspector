@@ -37,14 +37,11 @@ export interface SolvedControl {
   /** The scale the parent's layout wrote onto this node, or `undefined` to keep the authored one. */
   scale?: Vector2;
   /**
-   * Whether the parent's layout reset this node to rotation 0 and scale 1, as
-   * `Container::fit_child_in_rect` does. False under a placement-only parent, and unset on a free node.
+   * True when the parent's layout reset this node to rotation 0 and scale 1, as
+   * `Container::fit_child_in_rect` does.
    */
   resetsTransform?: boolean;
 }
-
-/** What a parent's layout writes onto a child's transform, beside the child's rect. */
-type ChildTransformWrite = Pick<SolvedControl, 'scale' | 'resetsTransform'>;
 
 // --- Anchors ---------------------------------------------------------------
 
@@ -154,9 +151,17 @@ export function normalizeContainerLayoutResult(result: ReadonlyMap<string, Rect2
   rects: ReadonlyMap<string, Rect2>;
   meta: SealedHandoff | undefined;
   childScales: ReadonlyMap<string, Vector2> | undefined;
+  resetsTransform: boolean;
 } {
-  if ('rects' in result) return { rects: result.rects, meta: result.meta, childScales: result.childScales };
-  return { rects: result, meta: undefined, childScales: undefined };
+  if ('rects' in result) {
+    return {
+      rects: result.rects,
+      meta: result.meta,
+      childScales: result.childScales,
+      resetsTransform: result.resetsChildTransform ?? true,
+    };
+  }
+  return { rects: result, meta: undefined, childScales: undefined, resetsTransform: true };
 }
 
 /**
@@ -239,9 +244,10 @@ function record(
   rect: Rect2,
   minSize: Vector2,
   out: Map<string, SolvedControl>,
-  transformWrite: ChildTransformWrite = {}
+  scale?: Vector2,
+  resetsTransform?: boolean
 ): void {
-  out.set(n.path, { rect, minSize, ...transformWrite });
+  out.set(n.path, { rect, minSize, scale, resetsTransform });
 }
 
 /**
@@ -256,7 +262,7 @@ function solveFree(
   viewport: Rect2,
   ctx: SolveContext,
   out: Map<string, SolvedControl>,
-  transformWrite?: ChildTransformWrite
+  resetsTransform?: boolean
 ): void {
   const minSize = ctx.combinedMinimumSize(n);
   let rect: Rect2;
@@ -273,7 +279,7 @@ function solveFree(
     );
     if (n.rtl) rect = mirrorRectRtl(rect, anchorable.w);
   }
-  record(n, rect, minSize, out, transformWrite);
+  record(n, rect, minSize, out, undefined, resetsTransform);
   dispatchChildren(n, rect, { x: origin.x + rect.x, y: origin.y + rect.y }, viewport, ctx, out);
 }
 
@@ -300,15 +306,9 @@ function dispatchChildren(
     return;
   }
 
-  // `fit_child_in_rect` resets each child's rotation and scale. A placement-only layout never runs it.
-  const resetsTransform = !controlSolverRegistry.isPlacementOnly(n.node.type);
-  // A child the layout does not place stays free against the rect `parentAnchorableRect` gives
-  // it: zero for a promoted one, the boundary's own for one a canvas boundary adopted.
   const laidOut: SolveNode[] = [];
-  for (const child of n.children) {
-    if (isLaidOutChild(n, child)) laidOut.push(child);
-    else solveFree(child, rect, origin, viewport, ctx, out, { resetsTransform });
-  }
+  const unplaced: SolveNode[] = [];
+  for (const child of n.children) (isLaidOutChild(n, child) ? laidOut : unplaced).push(child);
 
   const childEntries = laidOut.map((child) => ({
     node: child,
@@ -320,7 +320,12 @@ function dispatchChildren(
     rects: childRects,
     meta: containerMeta,
     childScales,
+    resetsTransform,
   } = normalizeContainerLayoutResult(containerFn(sortableView(n), childEntries, rect, ctx));
+
+  // A child the layout does not place stays free against the rect `parentAnchorableRect` gives
+  // it: zero for a promoted one, the boundary's own for one a canvas boundary adopted.
+  for (const child of unplaced) solveFree(child, rect, origin, viewport, ctx, out, resetsTransform);
 
   // The caller has already recorded `n`, so the handoff is patched in.
   if (containerMeta !== undefined) {
@@ -352,10 +357,7 @@ function dispatchChildren(
       );
       childRect = child.rtl ? mirrorRectRtl(floored, rect.w) : floored;
     }
-    record(child, childRect, minSize, out, {
-      scale: childScales?.get(child.path),
-      resetsTransform,
-    });
+    record(child, childRect, minSize, out, childScales?.get(child.path), resetsTransform);
     dispatchChildren(
       child,
       childRect,

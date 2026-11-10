@@ -552,7 +552,10 @@ describe("solveControlTree — a registered ContainerLayoutFn overrides its chil
     const place: ContainerLayoutFn = (_n, children, contentRect) =>
       new Map(children.map((c) => [c.node.path, contentRect]));
     controlSolverRegistry.registerContainerLayout(TYPE, place);
-    controlSolverRegistry.registerPlacementOnlyLayout('Placer', place);
+    controlSolverRegistry.registerContainerLayout('Placer', (n, children, contentRect, c) => ({
+      rects: place(n, children, contentRect, c) as ReadonlyMap<string, Rect2>,
+      resetsChildTransform: false,
+    }));
 
     const stack = node('Stack', TYPE, { anchorsPreset: 15 }, [node('Stack/Child', 'Control', {})]);
     const placer = node('Placer', 'Placer', { anchorsPreset: 15 }, [node('Placer/Child', 'Control', {})]);
