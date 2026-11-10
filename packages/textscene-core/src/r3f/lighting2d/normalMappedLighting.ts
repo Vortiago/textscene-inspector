@@ -20,6 +20,11 @@ import {
   type CanvasItemLightingProps,
   type CanvasItemLightingUniforms,
 } from './canvasItemLighting.js';
+import {
+  TILE_ORIENTATION_FLIP_H,
+  TILE_ORIENTATION_FLIP_V,
+  TILE_ORIENTATION_TRANSPOSE,
+} from '../../resources/tileset/tileGeometry.js';
 
 /** What a CanvasTexture adds to an item's diffuse texture, sampled where the diffuse is. */
 export interface CanvasItemSurface {
@@ -97,8 +102,10 @@ vec3 itemNormal() {
   vec3 normal;
   normal.xy = texture2D(uNormalMap, surfaceUv()).xy * 2.0 - 1.0;
 #ifdef TILE_NORMAL_ORIENTATION
-  if (vTileNormalOrientation.z > 0.5) normal.xy = -normal.yx;
-  normal.xy *= vTileNormalOrientation.xy;
+  int orientation = int(vTileNormalOrientation + 0.5);
+  if ((orientation & ${TILE_ORIENTATION_TRANSPOSE}) != 0) normal.xy = -normal.yx;
+  if ((orientation & ${TILE_ORIENTATION_FLIP_H}) != 0) normal.x = -normal.x;
+  if ((orientation & ${TILE_ORIENTATION_FLIP_V}) != 0) normal.y = -normal.y;
 #endif
   normal.z = sqrt(max(0.0, 1.0 - dot(normal.xy, normal.xy)));
   normal.xy = mat2(vItemAxes.xy, vItemAxes.zw) * normal.xy;

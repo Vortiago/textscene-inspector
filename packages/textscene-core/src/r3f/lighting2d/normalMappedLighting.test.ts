@@ -79,7 +79,10 @@ describe('normalMappedLightingProps', () => {
     const { fragmentShader } = compile(1).shader;
     const orientation = fragmentShader.slice(fragmentShader.indexOf('#ifdef TILE_NORMAL_ORIENTATION'));
     expect(orientation.indexOf('normal.xy = -normal.yx;')).toBeGreaterThan(-1);
-    expect(orientation.indexOf('normal.xy *= vTileNormalOrientation.xy;')).toBeGreaterThan(
+    expect(orientation.indexOf('normal.x = -normal.x;')).toBeGreaterThan(
+      orientation.indexOf('normal.xy = -normal.yx;')
+    );
+    expect(orientation.indexOf('normal.y = -normal.y;')).toBeGreaterThan(
       orientation.indexOf('normal.xy = -normal.yx;')
     );
   });

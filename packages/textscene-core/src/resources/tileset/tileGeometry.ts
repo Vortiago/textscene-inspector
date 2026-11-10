@@ -24,7 +24,19 @@ interface TileGeometryArrays {
    * Godot's padded atlas does (`tile_set.cpp:5622-5671`).
    */
   uvBounds: Float32Array | null;
+  /**
+   * Per vertex, the cell's flips and transpose as the `TILE_ORIENTATION_*` bits, or null when the
+   * caller did not ask. The draw shader flips a normal by the sign of the source rect and swaps its
+   * axes for a transposed one (`canvas.glsl:655-661`), and the UVs already carry the diffuse through
+   * the same orientation, so a normal map is sampled where the diffuse is and turned by these.
+   */
+  orientations: Float32Array | null;
 }
+
+/** The bits of a vertex's orientation. */
+export const TILE_ORIENTATION_FLIP_H = 1;
+export const TILE_ORIENTATION_FLIP_V = 2;
+export const TILE_ORIENTATION_TRANSPOSE = 4;
 
 type RegionPx = ReturnType<typeof tileDrawInfo>['regionPx'];
 
@@ -34,7 +46,8 @@ export function buildTileGeometryArrays(
   source: AtlasSourceModel,
   grid: TileGrid,
   texW: number,
-  texH: number
+  texH: number,
+  withOrientations = false
 ): TileGeometryArrays {
   return buildArrays(
     cells,
@@ -44,6 +57,7 @@ export function buildTileGeometryArrays(
     {
       sampledRegion: (_cell, regionPx) => regionPx,
       hasBounds: source.usesTexturePadding,
+      hasOrientations: withOrientations,
     }
   );
 }
@@ -67,6 +81,7 @@ export function buildPaddedStandInGeometryArrays(
     {
       sampledRegion: (cell, regionPx) => paddedTileRegion(source, cell.atlasCoords, regionPx),
       hasBounds: false,
+      hasOrientations: false,
     }
   );
 }
@@ -75,6 +90,7 @@ interface Sampling {
   /** The pixel rect a cell samples, from its rect in the atlas. */
   sampledRegion(cell: DrawableCell, regionPx: RegionPx): RegionPx;
   hasBounds: boolean;
+  hasOrientations: boolean;
 }
 
 function buildArrays(
@@ -89,6 +105,7 @@ function buildArrays(
   const colors = new Float32Array(cells.length * 4 * 4);
   const indices = new Uint32Array(cells.length * 6);
   const uvBounds = sampling.hasBounds ? new Float32Array(cells.length * 4 * 4) : null;
+  const orientations = sampling.hasOrientations ? new Float32Array(cells.length * 4) : null;
 
   cells.forEach((cell, i) => {
     const center = mapToLocalPx(grid, cell.coords);
@@ -132,32 +149,25 @@ function buildArrays(
     uvs.set([...corners[0]![0]!, ...corners[0]![1]!, ...corners[1]![0]!, ...corners[1]![1]!], i * 8);
     writeCornerColors(colors, i * 16, cell.tileData.modulate);
     if (uvBounds) writeCornerUvBounds(uvBounds, i * 16, uv, texSize.x, texSize.y);
+    orientations?.fill(orientationBits(info.orientation), i * 4, i * 4 + 4);
 
     const v = i * 4;
     indices.set([v + 2, v + 3, v, v + 3, v + 1, v], i * 6);
   });
 
-  return { positions, uvs, colors, indices, uvBounds };
+  return { positions, uvs, colors, indices, uvBounds, orientations };
 }
 
-/**
- * Per vertex, how a cell's flips and transpose turn its normal map's normal: the sign each flip
- * gives its x and y, then 1 where the cell swaps its axes, else 0. The draw shader flips the
- * normal by the sign of the source rect and swaps its axes for a transposed rect
- * (`canvas.glsl:655-661`), and the geometry's UVs already carry the diffuse through the same
- * orientation, so the normal map is sampled where the diffuse is and turned here.
- */
-export function tileNormalOrientations(cells: readonly DrawableCell[]): Float32Array {
-  const orientations = new Float32Array(cells.length * 4 * 3);
-  cells.forEach((cell, i) => {
-    const { flipH, flipV, transpose } = tileDrawInfo(cell.source, cell).orientation;
-    for (let k = i * 12; k < i * 12 + 12; k += 3) {
-      orientations[k] = flipH ? -1 : 1;
-      orientations[k + 1] = flipV ? -1 : 1;
-      orientations[k + 2] = transpose ? 1 : 0;
-    }
-  });
-  return orientations;
+function orientationBits({
+  flipH,
+  flipV,
+  transpose,
+}: ReturnType<typeof tileDrawInfo>['orientation']): number {
+  return (
+    (flipH ? TILE_ORIENTATION_FLIP_H : 0) |
+    (flipV ? TILE_ORIENTATION_FLIP_V : 0) |
+    (transpose ? TILE_ORIENTATION_TRANSPOSE : 0)
+  );
 }
 
 /** The UV rect inset by half a texel, on a quad's four corners. */

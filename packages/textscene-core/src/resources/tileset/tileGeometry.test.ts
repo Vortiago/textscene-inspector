@@ -6,7 +6,9 @@ import { describe, it, expect } from 'vitest';
 import {
   buildPaddedStandInGeometryArrays,
   buildTileGeometryArrays,
-  tileNormalOrientations,
+  TILE_ORIENTATION_FLIP_H,
+  TILE_ORIENTATION_FLIP_V,
+  TILE_ORIENTATION_TRANSPOSE,
 } from './tileGeometry';
 import {
   TILE_TRANSFORM_FLIP_H,
@@ -179,41 +181,46 @@ describe('buildPaddedStandInGeometryArrays', () => {
   });
 });
 
-describe('tileNormalOrientations', () => {
+describe('tile orientations', () => {
   const FLIP_H = TILE_TRANSFORM_FLIP_H;
   const FLIP_V = TILE_TRANSFORM_FLIP_V;
   const TRANSPOSE = TILE_TRANSFORM_TRANSPOSE;
+  const BIT_H = TILE_ORIENTATION_FLIP_H;
+  const BIT_V = TILE_ORIENTATION_FLIP_V;
+  const BIT_T = TILE_ORIENTATION_TRANSPOSE;
 
-  /** The alternative bits of a cell, and the (x sign, y sign, transpose) all four vertices carry. */
-  const ORIENTATIONS: [string, number, number[]][] = [
-    ['untransformed', 0, [1, 1, 0]],
-    ['flip h', FLIP_H, [-1, 1, 0]],
-    ['flip v', FLIP_V, [1, -1, 0]],
-    ['flip h and v', FLIP_H | FLIP_V, [-1, -1, 0]],
-    ['transpose', TRANSPOSE, [1, 1, 1]],
-    ['transpose and flip h', TRANSPOSE | FLIP_H, [-1, 1, 1]],
-    ['transpose and flip v', TRANSPOSE | FLIP_V, [1, -1, 1]],
-    ['transpose and flip h and v', TRANSPOSE | FLIP_H | FLIP_V, [-1, -1, 1]],
+  /** The alternative bits of a cell, and the orientation bits all four vertices carry. */
+  const ORIENTATIONS: [string, number, number][] = [
+    ['untransformed', 0, 0],
+    ['flip h', FLIP_H, BIT_H],
+    ['flip v', FLIP_V, BIT_V],
+    ['flip h and v', FLIP_H | FLIP_V, BIT_H | BIT_V],
+    ['transpose', TRANSPOSE, BIT_T],
+    ['transpose and flip h', TRANSPOSE | FLIP_H, BIT_T | BIT_H],
+    ['transpose and flip v', TRANSPOSE | FLIP_V, BIT_T | BIT_V],
+    ['transpose and flip h and v', TRANSPOSE | FLIP_H | FLIP_V, BIT_T | BIT_H | BIT_V],
   ];
 
-  it.each(ORIENTATIONS)(
-    'gives each vertex of a %s cell its signs and transpose',
-    (_name, alternativeId, vertex) => {
-      const orientations = tileNormalOrientations([drawableCellOf({ alternativeId })]);
-      expect(Array.from(orientations)).toEqual([...vertex, ...vertex, ...vertex, ...vertex]);
-    }
-  );
+  const orientationsOf = (cells: DrawableCell[]) =>
+    buildTileGeometryArrays(cells, source, grid, 4, 4, true).orientations;
+
+  it.each(ORIENTATIONS)('gives each vertex of a %s cell its bits', (_name, alternativeId, bits) => {
+    const orientations = orientationsOf([drawableCellOf({ alternativeId })]);
+    expect(Array.from(orientations ?? [])).toEqual([bits, bits, bits, bits]);
+  });
 
   it("composes the tile's own flip with the cell's, as the drawn rect does (tile_map_layer.cpp:2727-2774)", () => {
     const flippedTile = drawableCellOf({ alternativeId: FLIP_H }, { flipH: true });
-    expect(Array.from(tileNormalOrientations([flippedTile]).slice(0, 3))).toEqual([1, 1, 0]);
+    expect(Array.from(orientationsOf([flippedTile]) ?? [])).toEqual([0, 0, 0, 0]);
   });
 
   it('gives each cell its own four vertices, in cell order', () => {
-    const orientations = tileNormalOrientations([
-      drawableCellOf({}),
-      drawableCellOf({ alternativeId: FLIP_V }),
-    ]);
-    expect(Array.from(orientations.slice(12, 15))).toEqual([1, -1, 0]);
+    const orientations = orientationsOf([drawableCellOf({}), drawableCellOf({ alternativeId: FLIP_V })]);
+    expect(Array.from(orientations?.slice(4) ?? [])).toEqual([BIT_V, BIT_V, BIT_V, BIT_V]);
+  });
+
+  it('builds none unless asked, and none for a stand-in', () => {
+    expect(buildTileGeometryArrays([cell(0, 0)], source, grid, 4, 4).orientations).toBeNull();
+    expect(buildPaddedStandInGeometryArrays([cell(0, 0)], source, grid, 4, 4).orientations).toBeNull();
   });
 });

@@ -8,11 +8,7 @@ import { useDisposeOnRelease } from './useDisposeOnRelease';
 import * as THREE from 'three';
 import { useCanvasItemTextureSampledBy } from './canvasItemTexture';
 import { NO_RESOURCES } from './SceneResourcesContext';
-import {
-  buildPaddedStandInGeometryArrays,
-  buildTileGeometryArrays,
-  tileNormalOrientations,
-} from '../resources/tileset/tileGeometry';
+import { buildPaddedStandInGeometryArrays, buildTileGeometryArrays } from '../resources/tileset/tileGeometry';
 import type { DrawableCell } from '../resources/tileset/drawableCell';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
@@ -66,18 +62,15 @@ export function TileSourceMesh({
   const texW = image?.width;
   const texH = image?.height;
 
-  const arrays = useMemo(() => {
-    if (!texW || !texH) return null;
-    const build = isStandIn ? buildPaddedStandInGeometryArrays : buildTileGeometryArrays;
-    return build(cells, source, grid, texW, texH);
-  }, [cells, source, grid, texW, texH, isStandIn]);
-  const colors = useMemo(() => arrays && tintedColors(arrays.colors, tint.vertex), [arrays, tint.vertex]);
   const { canvasTexture } = texResult;
   const hasNormalMap = Boolean(canvasTexture?.slot.texture.normalTexture);
-  const orientations = useMemo(
-    () => (hasNormalMap ? tileNormalOrientations(cells) : null),
-    [hasNormalMap, cells]
-  );
+  const arrays = useMemo(() => {
+    if (!texW || !texH) return null;
+    return isStandIn
+      ? buildPaddedStandInGeometryArrays(cells, source, grid, texW, texH)
+      : buildTileGeometryArrays(cells, source, grid, texW, texH, hasNormalMap);
+  }, [cells, source, grid, texW, texH, isStandIn, hasNormalMap]);
+  const colors = useMemo(() => arrays && tintedColors(arrays.colors, tint.vertex), [arrays, tint.vertex]);
   const geometry = useMemo(() => {
     if (!arrays || !colors) return null;
     const geom = new THREE.BufferGeometry();
@@ -86,11 +79,11 @@ export function TileSourceMesh({
     geom.setAttribute('color', new THREE.BufferAttribute(colors, 4));
     if (arrays.uvBounds)
       geom.setAttribute(TILE_UV_BOUNDS_ATTRIBUTE, new THREE.BufferAttribute(arrays.uvBounds, 4));
-    if (orientations)
-      geom.setAttribute(TILE_NORMAL_ORIENTATION_ATTRIBUTE, new THREE.BufferAttribute(orientations, 3));
+    if (arrays.orientations)
+      geom.setAttribute(TILE_NORMAL_ORIENTATION_ATTRIBUTE, new THREE.BufferAttribute(arrays.orientations, 1));
     geom.setIndex(new THREE.BufferAttribute(arrays.indices, 1));
     return geom;
-  }, [arrays, colors, orientations]);
+  }, [arrays, colors]);
   // R3F does not dispose a geometry passed as a prop, so this releases it.
   useDisposeOnRelease(geometry);
   // The run's own maps, so runs of one tile item from different sources each light with theirs.
@@ -122,7 +115,7 @@ export function TileSourceMesh({
     merge: [
       pixelMaterial,
       padsInShader(source, isStandIn) ? { injection: TILE_TEXTURE_PADDING } : undefined,
-      surface && orientations ? { injection: TILE_NORMAL_ORIENTATION } : undefined,
+      surface && arrays?.orientations ? { injection: TILE_NORMAL_ORIENTATION } : undefined,
     ],
   });
 

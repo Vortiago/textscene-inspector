@@ -19,9 +19,9 @@ function compiledBasic() {
 describe('TILE_NORMAL_ORIENTATION', () => {
   it('passes the per-vertex orientation attribute through to the fragment', () => {
     const { vertexShader, fragmentShader } = compiledBasic();
-    expect(vertexShader).toContain(`attribute vec3 ${TILE_NORMAL_ORIENTATION_ATTRIBUTE};`);
+    expect(vertexShader).toContain(`attribute float ${TILE_NORMAL_ORIENTATION_ATTRIBUTE};`);
     expect(vertexShader).toContain(`vTileNormalOrientation = ${TILE_NORMAL_ORIENTATION_ATTRIBUTE};`);
-    expect(fragmentShader).toContain('varying vec3 vTileNormalOrientation;');
+    expect(fragmentShader).toContain('varying float vTileNormalOrientation;');
   });
 
   it('tells a normal-mapped program that the mesh carries an orientation', () => {

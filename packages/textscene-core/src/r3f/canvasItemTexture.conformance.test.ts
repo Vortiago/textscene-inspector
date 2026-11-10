@@ -15,9 +15,6 @@ const LOADS_NO_DRAWN_TEXTURE: Record<string, string> = {
   'nodes/2d/pointlight2d/Component.tsx': 'its texture is a light cookie, which no CanvasTexture lights',
 };
 
-/** Canvas items that light their own meshes, so hold no `<CanvasItem2D`. */
-const LIGHTS_OWN_MESHES = ['r3f/TileSourceMesh.tsx'];
-
 function sourceFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -36,7 +33,7 @@ const canvasItems = sourceFiles(SRC)
     name: relative(SRC, path).split(sep).join('/'),
     text: withoutComments(readFileSync(path, 'utf8')),
   }))
-  .filter(({ name, text }) => text.includes('<CanvasItem2D') || LIGHTS_OWN_MESHES.includes(name));
+  .filter(({ text }) => text.includes('<CanvasItem2D') || text.includes('<CanvasItemSurfaceSource'));
 
 const LOADS_THROUGH_HOOK = /\buseCanvasItemTexture(?:SampledBy)?\(/;
 const LOADS_DIRECTLY = /\buseTexture2D\s*\(/;

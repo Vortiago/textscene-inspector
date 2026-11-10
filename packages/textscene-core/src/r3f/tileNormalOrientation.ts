@@ -7,7 +7,7 @@
 import type { ProgramInjection } from './materialProgramInputs';
 import { afterInclude, editedProgram } from './shaderPatch/chunkPatch';
 
-/** The per-vertex attribute that holds a tile's orientation, `tileGeometry.ts`'s `tileNormalOrientations`. */
+/** The per-vertex attribute that holds a tile's orientation, `tileGeometry.ts`'s `orientations`. */
 export const TILE_NORMAL_ORIENTATION_ATTRIBUTE = 'tileNormalOrientation';
 
 export const TILE_NORMAL_ORIENTATION: ProgramInjection = {
@@ -19,7 +19,7 @@ export const TILE_NORMAL_ORIENTATION: ProgramInjection = {
         vertex: [
           afterInclude(
             '#include <uv_pars_vertex>',
-            `attribute vec3 ${TILE_NORMAL_ORIENTATION_ATTRIBUTE};\nvarying vec3 vTileNormalOrientation;`
+            `attribute float ${TILE_NORMAL_ORIENTATION_ATTRIBUTE};\nvarying float vTileNormalOrientation;`
           ),
           afterInclude(
             '#include <uv_vertex>',
@@ -30,7 +30,7 @@ export const TILE_NORMAL_ORIENTATION: ProgramInjection = {
           // The define tells a normal-mapped program to turn its normal (`normalMappedLighting.ts`).
           afterInclude(
             '#include <uv_pars_fragment>',
-            '#define TILE_NORMAL_ORIENTATION\nvarying vec3 vTileNormalOrientation;'
+            '#define TILE_NORMAL_ORIENTATION\nvarying float vTileNormalOrientation;'
           ),
         ],
       },

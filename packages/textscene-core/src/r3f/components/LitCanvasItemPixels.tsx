@@ -64,13 +64,30 @@ interface LitItemScope {
 const LitItemScopeContext = createContext<LitItemScope | undefined>(undefined);
 LitItemScopeContext.displayName = 'LitItemScopeContext';
 
+function blendModeOf(material: CanvasItemMaterialProperties | null) {
+  return material?.blendMode ?? CanvasItemMaterialBlendMode.MIX;
+}
+
+/** The pixel material of one surface of `item`, lit with `surface` or with no normal map while it is null. */
+function usePixelMaterial(
+  item: LitItem,
+  blendMode: CanvasItemMaterialProperties['blendMode'],
+  surface: CanvasItemSurface | null
+): CanvasItemPixelMaterial {
+  const lighting = useSurfaceLighting(item, surface);
+  return useMemo(
+    () => ({ ...canvasItemFacing(), ...canvasItemBlendState(blendMode), ...lighting }),
+    [blendMode, lighting]
+  );
+}
+
 /**
  * A lit canvas item whose surfaces light themselves: each calls `useSurfacePixelMaterial` with its
  * own maps. A tile item has a surface for each atlas source it draws from.
  */
 export function LitCanvasItem({ material, lightMask, zFinal, children }: LitCanvasItemProps) {
   const item = useLitItem({ material, lightMask, zFinal });
-  const blendMode = material?.blendMode ?? CanvasItemMaterialBlendMode.MIX;
+  const blendMode = blendModeOf(material);
   const scope = useMemo(() => ({ item, blendMode }), [item, blendMode]);
   // An `object3D`, not a group: three takes a group's `renderOrder` as the draw key.
   return (
@@ -87,12 +104,7 @@ export function LitCanvasItem({ material, lightMask, zFinal, children }: LitCanv
 export function useSurfacePixelMaterial(surface: CanvasItemSurface | null): CanvasItemPixelMaterial {
   const scope = useContext(LitItemScopeContext);
   if (!scope) throw new Error('expected a LitCanvasItem around the surface, found none');
-  const { item, blendMode } = scope;
-  const lighting = useSurfaceLighting(item, surface);
-  return useMemo(
-    () => ({ ...canvasItemFacing(), ...canvasItemBlendState(blendMode), ...lighting }),
-    [blendMode, lighting]
-  );
+  return usePixelMaterial(scope.item, scope.blendMode, surface);
 }
 
 interface LitCanvasItemPixelsProps extends Omit<LitCanvasItemProps, 'children'> {
@@ -102,20 +114,21 @@ interface LitCanvasItemPixelsProps extends Omit<LitCanvasItemProps, 'children'> 
   children: ReactNode | ((pixelMaterial: CanvasItemPixelMaterial) => ReactNode);
 }
 
-/** A lit canvas item whose pixels are one surface. */
-export function LitCanvasItemPixels({ surface = null, children, ...item }: LitCanvasItemPixelsProps) {
+/** A lit canvas item whose pixels are one surface, with no component between the item and its pixels. */
+export function LitCanvasItemPixels({
+  material,
+  lightMask,
+  zFinal,
+  surface = null,
+  children,
+}: LitCanvasItemPixelsProps) {
+  const item = useLitItem({ material, lightMask, zFinal });
+  const pixelMaterial = usePixelMaterial(item, blendModeOf(material), surface);
   return (
-    <LitCanvasItem {...item}>
-      <PixelsOfSurface surface={surface}>{children}</PixelsOfSurface>
-    </LitCanvasItem>
-  );
-}
-
-function PixelsOfSurface({ surface, children }: Pick<LitCanvasItemPixelsProps, 'surface' | 'children'>) {
-  const pixelMaterial = useSurfacePixelMaterial(surface ?? null);
-  return (
-    <CanvasItemPixelMaterialContext.Provider value={pixelMaterial}>
-      {typeof children === 'function' ? children(pixelMaterial) : children}
-    </CanvasItemPixelMaterialContext.Provider>
+    <object3D ref={item.geometryRef} userData={LIT_ITEM_USER_DATA}>
+      <CanvasItemPixelMaterialContext.Provider value={pixelMaterial}>
+        {typeof children === 'function' ? children(pixelMaterial) : children}
+      </CanvasItemPixelMaterialContext.Provider>
+    </object3D>
   );
 }
