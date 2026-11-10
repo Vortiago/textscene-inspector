@@ -97,7 +97,7 @@ async function renderGroup(
     clear: () => {},
     render: () => {},
   } as unknown as THREE.WebGLRenderer;
-  drawCanvasGroups(gl, scene, camera, { width: 64, height: 64 }, () => {});
+  drawCanvasGroups(gl, scene, camera, { width: 64, height: 64, texture: new THREE.Texture() }, () => {});
   return { renderer, scene };
 }
 
