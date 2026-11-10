@@ -448,6 +448,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Color Picker Theme",
+    "file": "unit-color-picker-theme.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Color Picker",
     "file": "unit-color-picker.tscn",
     "category": "Other"

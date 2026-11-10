@@ -22,6 +22,10 @@ import {
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
+import { SizeFlags } from '../../../../godot/scene/control';
+import { ContainerAlignment } from '../../../../godot/scene/container';
+import { resortBoxContainer } from '../shared/boxContainerSolver';
+import { pickerChildTheme } from './pickerChildTheme';
 import { gridCellMinimumExtent } from '../shared/gridCellMinimum';
 import { lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
 import { tabBarStyleBoxes } from '../tabbar/nativeSolver';
@@ -493,7 +497,7 @@ export function colorPickerEmWidthPx(widthOf: (text: string) => number): number 
  */
 export const colorPickerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ColorPickerProperties;
-  const theme = ctx.theme;
+  const { theme } = pickerChildTheme(n, ctx.theme);
   // The painter shapes in this font (`Component.tsx`), so the minimum measures in it too.
   const fontMetrics = resolveNodeFontMetrics(n, COLOR_PICKER_THEME_FONT_KEY);
   const measure: TextWidthMeasurer | null = ctx.measureText
@@ -664,27 +668,23 @@ interface ModeRowButtons {
 export function modeRowButtonRects(mode: Rect2, theme: NativeTheme, rtl = false): ModeRowButtons {
   const scale = colorPickerScale(theme);
   const dropdownWidth = Math.round(COLOR_PICKER_BUTTON_WIDTH * scale);
-  const buttonsWidth = Math.max(
-    0,
-    mode.w - dropdownWidth - theme.separation - (MODE_BUTTON_COUNT - 1) * theme.separation
-  );
-  const buttonWidth = buttonsWidth / MODE_BUTTON_COUNT;
-
-  const buttons: Rect2[] = [];
-  for (let i = 0; i < MODE_BUTTON_COUNT; i++) {
-    buttons.push(
-      mirroredColumn(
-        { x: mode.x + i * (buttonWidth + theme.separation), y: mode.y, w: buttonWidth, h: mode.h },
-        mode,
-        rtl
-      )
-    );
-  }
-  const dropdownX = mode.x + buttonsWidth + MODE_BUTTON_COUNT * theme.separation;
-  return {
-    buttons,
-    dropdown: mirroredColumn({ x: dropdownX, y: mode.y, w: dropdownWidth, h: mode.h }, mode, rtl),
+  // `mode_hbc` is an HBoxContainer: three `SIZE_EXPAND_FILL` buttons, then `btn_mode`, whole pixels each (`box_container.cpp:100-130`).
+  const expandFill = {
+    minSize: { x: 0, y: 0 },
+    hSizeFlags: SizeFlags.FILL | SizeFlags.EXPAND,
+    vSizeFlags: SizeFlags.FILL,
+    stretchRatio: 1,
   };
+  const fixed = { ...expandFill, minSize: { x: dropdownWidth, y: 0 }, hSizeFlags: SizeFlags.FILL };
+  const rects = resortBoxContainer(
+    false,
+    { width: mode.w, height: mode.h },
+    theme.separation,
+    ContainerAlignment.ALIGNMENT_BEGIN,
+    rtl,
+    [...Array.from({ length: MODE_BUTTON_COUNT }, () => expandFill), fixed]
+  ).map((r) => ({ ...r, x: mode.x + r.x, y: mode.y + r.y }));
+  return { buttons: rects.slice(0, MODE_BUTTON_COUNT), dropdown: rects[MODE_BUTTON_COUNT]! };
 }
 
 /**

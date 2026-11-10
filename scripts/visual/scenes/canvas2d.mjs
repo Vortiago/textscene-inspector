@@ -1056,6 +1056,8 @@ export const CANVAS_2D_SCENES = [
   // (the `script` icon of `text_type`).
   { name: 'color-picker-hsv-rows', file: 'unit-color-picker-hsv-rows.tscn', mode: '2d' },
   { name: 'color-picker-hdr-hex', file: 'unit-color-picker-hdr-hex.tscn', mode: '2d' },
+  // The one variable is an ancestor Theme that sets the font colours of Label, Button and LineEdit.
+  { name: 'color-picker-theme', file: 'unit-color-picker-theme.tscn', mode: '2d' },
   // Two LTR alignment scenes. The fractional-box one needs a non-integer box
   // width: at a whole width the ceiled and raw line extents give one offset.
   { name: 'rich-text-label-center-overflow', file: 'unit-rich-text-label-center-overflow.tscn', mode: '2d' },

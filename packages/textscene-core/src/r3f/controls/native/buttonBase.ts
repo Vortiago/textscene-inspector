@@ -343,15 +343,16 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
 }
 
 /**
- * The icon rect of a Button with an icon and no text, at the default `icon_alignment` (LEFT, swapped
- * to the trailing edge in an RTL layout) and `vertical_icon_alignment` (CENTER), local to the button.
- * Null for an empty icon.
+ * The icon rect of a Button with an icon and no text, at `iconAlignment` (LEFT is the default, swapped
+ * to the trailing edge in an RTL layout) and the default `vertical_icon_alignment` (CENTER), local to the
+ * button. Null for an empty icon.
  */
 export function iconOnlyButtonIconRect(
   rectSize: Vector2,
   styleMargin: ButtonContentInput['styleMargin'],
   iconSize: Vector2,
-  rtl: boolean
+  rtl: boolean,
+  iconAlignment: number = H_LEFT
 ): Rect2 | null {
   const { icon } = layoutButtonContent({
     rectSize,
@@ -359,7 +360,7 @@ export function iconOnlyButtonIconRect(
     hSeparation: 0,
     iconMaxWidth: 0,
     textAlignment: H_CENTER,
-    iconAlignment: H_LEFT,
+    iconAlignment,
     verticalIconAlignment: V_CENTER,
     expandIcon: false,
     iconNaturalSize: iconSize,

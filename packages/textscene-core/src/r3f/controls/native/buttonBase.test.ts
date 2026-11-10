@@ -586,4 +586,14 @@ describe('iconOnlyButtonIconRect — an icon with no text sits at the left margi
       h: 16,
     });
   });
+
+  it('floors a centred icon of a 29x31 button to whole pixels (icon_alignment CENTER)', () => {
+    const centred = 1;
+    expect(iconOnlyButtonIconRect({ x: 29, y: 31 }, margin, { x: 16, y: 16 }, false, centred)).toEqual({
+      x: 6,
+      y: 7,
+      w: 16,
+      h: 16,
+    });
+  });
 });

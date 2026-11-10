@@ -273,6 +273,18 @@ describe('modeRowButtonRects', () => {
   });
 });
 
+describe('modeRowButtonRects at a fractional share', () => {
+  it('gives every button whole pixels and ends flush with the row — box_container.cpp:100-130', () => {
+    const cols = modeRowButtonRects({ x: 0, y: 0, w: 401, h: 20 }, THEME);
+    const rects = [...cols.buttons, cols.dropdown];
+    for (const r of rects) {
+      expect(Number.isInteger(r.x)).toBe(true);
+      expect(Number.isInteger(r.w)).toBe(true);
+    }
+    expect(cols.dropdown.x + cols.dropdown.w).toBe(401);
+  });
+});
+
 describe('swatchesRowRects', () => {
   it('splits palette_box (Swatches + menu_btn) then btn_recent_preset — color_picker.cpp:2239-2287', () => {
     const cols = swatchesRowRects({ x: 0, y: 0, w: 400, h: 44 }, THEME);

@@ -48,9 +48,10 @@ import { sliderTrackRect, sliderGrabberAreaRect, sliderGrabberRect } from '../sh
 import { spinBoxArrowPosition, spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { isColorOverbright } from '../shared/colorOverbright';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { TextDirection } from '../../../../godot/text/textServerEnums';
 import { HAIRLINE_THICKNESS_PX, hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
-import { LABEL_DEFAULT_FONT_COLOR } from '../label/nativeSolver';
+import { pickerChildTheme } from './pickerChildTheme';
 import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
 import type { ButtonLabelBox } from '../../../../r3f/controls/native/buttonBase';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
@@ -129,11 +130,8 @@ import {
 } from './colorModes';
 import type { ColorPickerProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
+import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
-
-/** `Button`'s `font_pressed_color` (`default_theme.cpp:157`), which the toggled-on `mode_btns[i]` reads. */
-const MODE_BUTTON_PRESSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
 
 function buildGeometry(g: QuadGeometry): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
@@ -249,13 +247,23 @@ interface CenteredIconProps {
   size: number;
   texture: THREE.Texture | null;
   tint: NativeControlComponentProps['tint'];
+  theme: NativeControlComponentProps['theme'];
+  rtl: boolean;
   renderOrder: number;
 }
 
-/** One button icon, centred inside `rect`. */
-function CenteredIcon({ rect, size, texture, tint, renderOrder }: CenteredIconProps) {
+/** The icon of an icon-only Button with `HORIZONTAL_ALIGNMENT_CENTER` (`color_picker.cpp:2085,2101,2153`), at the whole pixel `Button` floors to. */
+function CenteredIcon({ rect, size, texture, tint, theme, rtl, renderOrder }: CenteredIconProps) {
   if (!texture) return null;
-  const iconRect = { x: rect.x + (rect.w - size) / 2, y: rect.y + (rect.h - size) / 2, w: size, h: size };
+  const local = iconOnlyButtonIconRect(
+    { x: rect.w, y: rect.h },
+    theme.widgets.button.normal.contentMargin,
+    { x: size, y: size },
+    rtl,
+    HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER
+  );
+  if (!local) return null;
+  const iconRect = { ...local, x: rect.x + local.x, y: rect.y + local.y };
   return (
     <PositionedIcon
       rect={iconRect}
@@ -307,7 +315,15 @@ function TextTypeScriptIcon({ rect, solveNode, theme, tint, renderOrder }: TextT
 /** The picker's child Buttons keep the `text_direction` and `language` defaults. */
 const AUTO_TEXT_DIRECTION = { textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: '' };
 
-export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
+export function ColorPicker({
+  solveNode,
+  tint,
+  rect,
+  renderOrder,
+  theme: defaultTheme,
+}: NativeControlComponentProps) {
+  const child = useMemo(() => pickerChildTheme(solveNode, defaultTheme), [solveNode, defaultTheme]);
+  const theme = child.theme;
   const toItemLinear = useItemLinearColorOf();
   const props = painterView<ColorPickerProperties>(solveNode);
   const fill = useMemo(() => parseColor(props.color), [props.color]);
@@ -372,13 +388,14 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
 
   const textOutline = useTintedTextOutline(solveNode, tint.own);
   const bidi = useControlBidiOptions(AUTO_TEXT_DIRECTION, solveNode);
-  // The slider and hex labels are `Label`s, which default to white, not the Control grey.
-  const labelColor = useMemo(() => multiplyModulate(tint.own, LABEL_DEFAULT_FONT_COLOR), [tint.own]);
-  const fontColor = useMemo(() => multiplyModulate(tint.own, CONTROL_FONT_COLOR), [tint.own]);
+  const labelColor = useMemo(() => multiplyModulate(tint.own, child.labelColor), [tint.own, child]);
+  const buttonFontColor = useMemo(() => multiplyModulate(tint.own, child.buttonColor), [tint.own, child]);
   const pressedFontColor = useMemo(
-    () => multiplyModulate(tint.own, MODE_BUTTON_PRESSED_FONT_COLOR),
-    [tint.own]
+    () => multiplyModulate(tint.own, child.buttonPressedColor),
+    [tint.own, child]
   );
+  const lineEditFontColor = useMemo(() => multiplyModulate(tint.own, child.lineEditColor), [tint.own, child]);
+  const spinArrowGrey = useMemo(() => multiplyModulate(tint.own, CONTROL_FONT_COLOR), [tint.own]);
   // Every value and hex `LineEdit` uses the same box, so one inset covers both.
   const lineEditInsetX = theme.widgets.lineEdit.normal.contentMargin.left;
 
@@ -408,7 +425,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const spinUpTexture = useNodeIcon(solveNode.icons.up, SPIN_BOX_ICONS.up);
   const spinDownTexture = useNodeIcon(solveNode.icons.down, SPIN_BOX_ICONS.down);
   // `up_icon_modulate` and `down_icon_modulate` default to `control_font_color` (`default_theme.cpp:634,638`).
-  const spinArrowColor = useItemLinearColor(fontColor);
+  const spinArrowColor = useItemLinearColor(spinArrowGrey);
 
   const shapeRects = rows.shape ? svAndHueRects(rows.shape, theme, solveNode.rtl) : null;
 
@@ -607,6 +624,8 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
             size={COLOR_PICKER_BUTTON_ICON_SIZE}
             texture={pickIconTexture}
             tint={tint}
+            theme={theme}
+            rtl={solveNode.rtl}
             renderOrder={renderOrder}
           />
           {sampleCols.shape && (
@@ -615,6 +634,8 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
               size={COLOR_PICKER_BUTTON_ICON_SIZE}
               texture={shapeIconTexture}
               tint={tint}
+              theme={theme}
+              rtl={solveNode.rtl}
               renderOrder={renderOrder}
             />
           )}
@@ -726,7 +747,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
             buttonLabel(
               COLOR_MODE_NAMES[i]!,
               COLOR_MODE_NAMES[i]!,
-              colorMode === i ? pressedFontColor : fontColor,
+              colorMode === i ? pressedFontColor : buttonFontColor,
               modeButtonLabel(
                 r,
                 theme,
@@ -741,6 +762,8 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
             size={COLOR_PICKER_BUTTON_ICON_SIZE}
             texture={menuIconTexture}
             tint={tint}
+            theme={theme}
+            rtl={solveNode.rtl}
             renderOrder={renderOrder}
           />
         </>
@@ -920,7 +943,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                       rect={fieldRect}
                       layout={shape(row.valueText)}
                       fontSizePx={fontSizePx}
-                      tint={fontColor}
+                      tint={lineEditFontColor}
                       clippingPlanes={clippingPlanes}
                       renderOrder={renderOrder}
                       alignRight
@@ -970,7 +993,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
             buttonLabel(
               'text-type',
               hexContent.typeText,
-              fontColor,
+              buttonFontColor,
               textTypeLabel(
                 hexCols.textType,
                 theme,
@@ -999,7 +1022,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
             rect={hexCols.field}
             layout={shape(hexContent.text)}
             fontSizePx={fontSizePx}
-            tint={fontColor}
+            tint={lineEditFontColor}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
             inset={lineEditInsetX}
@@ -1027,7 +1050,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                   opacity={tint.opacity}
                   renderOrder={renderOrder}
                 />
-                {buttonLabel(key, text, fontColor, label)}
+                {buttonLabel(key, text, buttonFontColor, label)}
               </CanvasItemGroup>
             );
           })}
@@ -1036,6 +1059,8 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
             size={COLOR_PICKER_BUTTON_ICON_SIZE}
             texture={menuIconTexture}
             tint={tint}
+            theme={theme}
+            rtl={solveNode.rtl}
             renderOrder={renderOrder}
           />
         </>
