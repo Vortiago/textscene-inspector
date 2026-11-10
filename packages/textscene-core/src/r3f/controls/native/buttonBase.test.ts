@@ -353,7 +353,7 @@ describe('layoutButtonContent: expand_icon', () => {
 describe('layoutButtonContent: expand_icon with no room left', () => {
   it('draws no icon but still takes its negative size off the text box (button.cpp:349-405)', () => {
     // 56x62, margins 10/8, text 36x30: w=36-(36+4)=-4, h=46-30=16; iw=16>w -> iw=ih=-4.
-    const { icon, drawableSize } = layoutButtonContent({
+    const { icon, iconReserve, drawableSize } = layoutButtonContent({
       ...BASE_INPUT,
       rectSize: { x: 56, y: 62 },
       styleMargin: { left: 10, top: 8, right: 10, bottom: 8 },
@@ -363,6 +363,7 @@ describe('layoutButtonContent: expand_icon with no room left', () => {
       verticalIconAlignment: VERTICAL_ALIGNMENT_TOP,
     });
     expect(icon).toBeNull();
+    expect(iconReserve).toEqual({ x: -4, y: -4 });
     expect(drawableSize).toEqual({ x: 36, y: 50 });
   });
 });
