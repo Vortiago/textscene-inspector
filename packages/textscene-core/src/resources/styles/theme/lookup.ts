@@ -3,7 +3,7 @@
  * `ThemeResource`s `decode.ts` produces. Pure: no I/O, no parsing.
  */
 
-import { DEFAULT_FONT_SIZE } from '../../../godot/scene/theme';
+import { DEFAULT_FONT_SIZE, DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS } from '../../../godot/scene/theme';
 import { classInheritanceChain } from '../../../godot/classdb/classBaseTypes';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { withDefaultFonts, type DefaultFonts } from '../../fonts/font/defaultFont';
@@ -271,17 +271,7 @@ export function resolveThemeFontSizeIn(
   return defaultThemeVariationFontSize(scope.variation, name) ?? builtInDefaultPx;
 }
 
-/**
- * What the default theme adds to the default font size for each Label variation (`default_theme.cpp:394-401`).
- * The sum is the unscaled `default_font_size` plus the step, so it ignores the theme scale. It sits after every
- * Theme a scene or a project sets.
- */
-const DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS: Readonly<Record<string, number>> = {
-  HeaderSmall: 4,
-  HeaderMedium: 8,
-  HeaderLarge: 12,
-};
-
+/** The default theme's font size for a variation, which sits after every Theme a scene or a project sets. */
 function defaultThemeVariationFontSize(variation: string | undefined, name: string): number | undefined {
   if (variation === undefined || name !== 'font_size') return undefined;
   const step = DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS[variation];

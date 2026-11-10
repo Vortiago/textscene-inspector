@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { rendersOwnVisual } from '../../../r3f/nodeSupport';
+import { MAX_WALKED_ELEMENTS } from '../../2d/ui/shared/countWalk';
 import { parseFileDialog } from './parser';
 import './index';
 import './index.r3f';
@@ -103,9 +104,13 @@ describe('FileDialog options', () => {
     ]);
   });
 
-  it('counts a negative option index from the end', () => {
+  it('ignores a negative option index, as Godot 4.6.3 does (property_list_helper.cpp:58-59)', () => {
     const dialog = parse({ option_count: '2', 'option_-1/name': '"Last"' });
-    expect(dialog.options[1]!.name).toBe('Last');
+    expect(dialog.options.map(({ name }) => name)).toEqual(['', '']);
+  });
+
+  it('stops at the walk ceiling for an option_count that would exhaust the heap', () => {
+    expect(parse({ option_count: '2000000000' }).options).toHaveLength(MAX_WALKED_ELEMENTS);
   });
 
   it('ignores an option line outside the count', () => {

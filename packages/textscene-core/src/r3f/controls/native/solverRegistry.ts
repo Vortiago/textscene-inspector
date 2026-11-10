@@ -125,21 +125,15 @@ export interface TextureSlotRequest {
    * texture. A `VideoStreamPlayer`'s stream reports its picture size. Omitted, the file is a texture resource.
    */
   sizeOfFile?: (parsed: ParsedResource) => Vector2 | null;
-  /**
-   * The size when `ref` fails to load. A themed icon sets it to its default theme icon's: `Theme::has_icon`
-   * refuses an invalid icon (`theme.cpp:306`), so the lookup falls through to the default theme's. Omitted,
-   * a failed load has no size, as for an icon the node itself holds.
-   */
-  fallbackSize?: Vector2;
 }
 
-/** The request for a themed icon: its ref, in its theme's scope, held as its theme holds it, and the size of the default icon it falls back to. */
-export function themedSlotRequest(
-  key: string,
-  themed: ThemedIconRef,
-  fallbackSize?: Vector2
-): TextureSlotRequest {
-  return { key, ref: themed.ref, scope: themed.resources, isHeldLocally: themed.isHeldLocally, fallbackSize };
+/**
+ * The request for a themed icon: its ref, in its theme's scope, held as its theme holds it. A pending or failed load
+ * gives `null`, and each consumer reads `textureSlots[name] ?? <default icon size>`, as `Theme::has_icon` refuses an
+ * invalid icon (`theme.cpp:306`).
+ */
+export function themedSlotRequest(key: string, themed: ThemedIconRef): TextureSlotRequest {
+  return { key, ref: themed.ref, scope: themed.resources, isHeldLocally: themed.isHeldLocally };
 }
 
 /**

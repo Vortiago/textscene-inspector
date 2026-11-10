@@ -20,6 +20,7 @@ import { stringToInt } from '../../../godot/string/string.js';
 import { indexedKeyRegex } from '../../../godot/classdb/indexedKey.js';
 import { stringArrayBodies } from '../../../godot/variant/variantParser';
 import { boolOr, intOr } from '../../../parser/valueParsers';
+import { MAX_WALKED_ELEMENTS } from '../../2d/ui/shared/countWalk';
 import { viewportParseContext } from '../../viewport/shared/parser';
 import {
   DEFAULT_FILE_MODE,
@@ -53,13 +54,12 @@ export interface FileDialogProperties extends ConfirmationDialogProperties, File
   layout_toggle_enabled: boolean;
 }
 
-/** `PropertyListHelper` gates the index with `is_valid_int`, a sign included: a negative index reaches the setter. */
+/** `PropertyListHelper` reads the index with `is_valid_int`, a sign included (`property_list_helper.cpp:50-58`). */
 const OPTION_KEY = indexedKeyRegex('^option_(#)/(name|values|default)$', 'is_valid_int');
 
-/** `ERR_FAIL_INDEX` after a negative index counts from the end (`file_dialog.cpp:1977-2015`). */
+/** A negative index never reaches the setter, so `option_-1/name` is not set (`property_list_helper.cpp:58-59`, measured in Godot 4.6.3). */
 function optionIndex(raw: string, count: number): number | undefined {
-  const requested = stringToInt(raw);
-  const index = requested < 0 ? requested + count : requested;
+  const index = stringToInt(raw);
   return index >= 0 && index < count ? index : undefined;
 }
 
@@ -78,7 +78,8 @@ function replayOptions(properties: Record<string, string>, context: string): Fil
   let options: FileDialogOption[] = [];
   for (const [key, raw] of Object.entries(properties)) {
     if (key === 'option_count') {
-      const count = Math.max(intOr(raw, 0, `${context}.option_count`), 0);
+      // Capped like every dense walk a count drives: a legal `option_count = 2000000000` would exhaust the heap.
+      const count = Math.min(Math.max(intOr(raw, 0, `${context}.option_count`), 0), MAX_WALKED_ELEMENTS);
       const empty = (): FileDialogOption => ({ name: '', values: [], defaultIndex: 0 });
       options = Array.from({ length: count }, (_, i) => options[i] ?? empty());
       continue;

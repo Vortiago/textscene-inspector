@@ -10,7 +10,7 @@
  */
 
 import { accessRootPath } from '../../../godot/scene/fileDialog';
-import { simplifyPath } from '../../../godot/string/string.js';
+import { isAbsolutePath, simplifyPath } from '../../../godot/string/string.js';
 
 export interface FileDialogLocation {
   /** The `access` the steps end on: a changed `access` resets `root_subfolder` (`file_dialog.cpp:1509-1516`). */
@@ -48,8 +48,6 @@ export const startLocation = (): LocationState => ({
   isNextFolderDisabled: false,
 });
 
-const isAbsolute = (dir: string) => dir.includes('://') || dir.startsWith('/');
-
 /**
  * `change_dir` joins a relative target to the current folder and simplifies it (`dir_access_unix.cpp:343-366`,
  * `String::simplify_path`). A `..` that climbs out of the root is refused, as measured in Godot 4.6.3: the dialog stays
@@ -57,7 +55,7 @@ const isAbsolute = (dir: string) => dir.includes('://') || dir.startsWith('/');
  * carry: a relative target then stays relative.
  */
 function resolveDir(dir: string, base: string | null): string | null {
-  const joined = isAbsolute(dir) || base === null ? dir : base + (base.endsWith('/') ? '' : '/') + dir;
+  const joined = isAbsolutePath(dir) || base === null ? dir : base + (base.endsWith('/') ? '' : '/') + dir;
   const simplified = simplifyPath(joined);
   return simplified.split('/').includes('..') ? null : simplified;
 }
@@ -93,15 +91,14 @@ export function setRootSubfolder(state: LocationState, folder: string): void {
   state.rootPrefix = state.dir ?? '';
 }
 
-/** `set_current_dir` moves a relative target to the access root first (`file_dialog.cpp:1298-1304`). */
+/** `set_current_dir` moves a relative target to the access root first and pushes the history even when `_change_dir` refuses it (`file_dialog.cpp:1298-1305,1604-1614`). */
 export function setCurrentDir(state: LocationState, target: string): void {
   changeDir(state, target, accessRootPath(state.access));
   state.isNextFolderDisabled = true;
 }
 
-/** `set_current_file` leaves a name it already shows alone, and selects the part before the last dot. */
+/** `set_current_file` shows `name`. `finishLocation` selects the part before its last dot. */
 export function setCurrentFile(state: LocationState, name: string): void {
-  if (name === state.file) return;
   state.file = name;
 }
 

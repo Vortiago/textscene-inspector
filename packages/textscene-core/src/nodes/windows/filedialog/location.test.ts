@@ -138,6 +138,14 @@ describe('FileDialog current_dir with dot parts (measured in Godot 4.6.3, dir_ac
     expect(location({ access: '1', current_dir: JSON.stringify(target) }).path_text).toBe('user://');
   });
 
+  it('takes a current_dir with a drive as absolute (String::is_absolute_path, ustring.cpp:4287-4295)', () => {
+    expect(location({ current_dir: '"C:/data"' }).path_text).toBe('C:/data');
+  });
+
+  it('disables the next-folder button even when the folder above the root is refused', () => {
+    expect(location({ current_dir: '"res://.."' }).is_next_folder_disabled).toBe(true);
+  });
+
   it('refuses a folder above the root and stays where it was', () => {
     expect(location({ current_dir: '"res://.."' }).path_text).toBe('res://');
     expect(location({ current_dir: '"res://sub"', current_path: '"res://../y.png"' }).path_text).toBe(

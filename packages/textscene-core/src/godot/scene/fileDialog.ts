@@ -112,3 +112,9 @@ export const FILE_DIALOG_THEME_ICONS = [
 ] as const;
 
 export type FileDialogThemeIcon = (typeof FILE_DIALOG_THEME_ICONS)[number];
+
+/** The size of every FileDialog icon (`scene/theme/icons/`, 16x16). */
+export const FILE_DIALOG_ICON_SIZE: Readonly<{ x: number; y: number }> = { x: 16, y: 16 };
+
+/** `favorite_list` and `recent_list` floor their width at `128 * get_theme_default_base_scale()` (`file_dialog.cpp:261-262`). */
+export const FILE_DIALOG_SIDE_LIST_MINIMUM_WIDTH = 128;

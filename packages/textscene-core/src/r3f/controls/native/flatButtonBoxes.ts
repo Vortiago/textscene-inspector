@@ -10,7 +10,7 @@ import type { NativeTheme } from './nativeTheme';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 
 /** The theme items a `FlatButton` reads, keyed as `Button` reads them. */
-export type FlatButtonBoxes = Readonly<Record<'normal' | 'hover' | 'pressed' | 'disabled', StyleBoxFlatData>>;
+export type FlatButtonBoxes = Readonly<Record<'normal' | 'pressed' | 'disabled', StyleBoxFlatData>>;
 
 /** `flat_button_pressed` (`default_theme.cpp:363-364`): `button_pressed` with `style_pressed_color * Color(1, 1, 1, 0.85)`. */
 const PRESSED_ALPHA = 0.85;
@@ -28,7 +28,6 @@ export const flatButtonBoxes = perObject((theme: NativeTheme): FlatButtonBoxes =
   const empty = neutralStyleBox(margin);
   return {
     normal: empty,
-    hover: empty,
     disabled: empty,
     pressed: { ...pressed, bgColor: { ...pressed.bgColor, a: pressed.bgColor.a * PRESSED_ALPHA } },
   };

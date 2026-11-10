@@ -215,7 +215,8 @@ export function simplifyResPath(path: string): string {
 }
 
 /** `String::is_absolute_path()` (`core/string/ustring.cpp:4287-4295`): a leading slash, or a `:/` or `:\\` anywhere. */
-const isAbsolutePath = (path: string) => /^[/\\]/.test(path) || (path.length > 1 && /:[/\\]/.test(path));
+export const isAbsolutePath = (path: string) =>
+  /^[/\\]/.test(path) || (path.length > 1 && /:[/\\]/.test(path));
 
 /** The drive `simplify_path` sets aside: a `scheme://`, a `//` or `\\\\` network share, a lone slash or a `C:/` (`ustring.cpp:4156-4185`). */
 function driveOf(path: string): string {

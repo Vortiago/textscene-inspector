@@ -7,10 +7,10 @@
 import type { AsymmetryEntry } from './types.js';
 
 export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
-  // FileDialog: each key below changes no pixel of a frozen frame. Measured against Godot 4.6.3:
-  // `show_hidden_files` and `filename_filter` act on the file list rows, which the file list will draw; `deleting_enabled`
-  // and `overwrite_warning_enabled` gate a confirmation a click raises; `use_native_dialog` swaps in the
-  // system dialog only when it pops up. `current_*` are never saved (`PROPERTY_USAGE_NONE`,
+  // FileDialog: each key below changes no pixel of a frozen frame. `show_hidden_files` only invalidates the list
+  // (`file_dialog.cpp:2213-2219`), and the toggle reads it once in the constructor (`:2450`). `filename_filter` shows its
+  // box only through `show_filename_filter` (`:1222-1224`). `deleting_enabled` and `overwrite_warning_enabled` gate a
+  // confirmation a click raises. `use_native_dialog` swaps in the system dialog only when it pops up. `current_*` are never saved (`PROPERTY_USAGE_NONE`,
   // `file_dialog.cpp:2136-2138`), so a linter has nothing to check, and the parser reads them as the loader would.
   FileDialog: {
     linterOnly: [

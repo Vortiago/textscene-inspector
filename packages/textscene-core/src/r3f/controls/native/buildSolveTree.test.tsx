@@ -2598,7 +2598,7 @@ remote_path = NodePath("../../HolderA")
   });
 });
 
-describe('useBuildSolveTree — a themed icon that fails to load', () => {
+describe('useBuildSolveTree — a themed icon slot while it loads or after it fails', () => {
   const slotOf = (seed: (loader: ReturnType<typeof createFakeResourceLoader>) => void) => {
     const loader = createFakeResourceLoader();
     seed(loader);
@@ -2617,8 +2617,8 @@ describe('useBuildSolveTree — a themed icon that fails to load', () => {
     expect(slotOf((loader) => loader.textures.seed('res://icon.png', texture))).toEqual({ x: 32, y: 32 });
   });
 
-  it('takes the default theme icon size: Theme::has_icon refuses an invalid icon (theme.cpp:306)', () => {
-    expect(slotOf((loader) => loader.textures.seed('res://icon.png', null))).toEqual({ x: 16, y: 16 });
+  it('has no size after the texture fails, so a consumer reads its default icon size (theme.cpp:306)', () => {
+    expect(slotOf((loader) => loader.textures.seed('res://icon.png', null))).toBeNull();
   });
 
   it('has no size while the texture still loads', () => {

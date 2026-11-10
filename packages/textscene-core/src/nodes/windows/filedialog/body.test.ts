@@ -133,7 +133,29 @@ function oracleBody(rows: readonly OracleRow[]): OracleRow[] {
   return rows.slice(start, end);
 }
 
+/** The oracle's res:// holds this file, which an unfiltered dialog puts in the File field. The previewer's file list is empty. */
+const ORACLE_LISTED_FILE = 'main.tscn';
+
 const rectOf = (rect: number[]) => ({ x: rect[0], y: rect[1], w: rect[2], h: rect[3] });
+
+/** What the oracle records of a Control besides its rect: the text it shows and whether it is disabled or pressed. */
+function shownState(control: SolveNode) {
+  const props = control.node.properties as {
+    text?: string;
+    items?: { text: string }[];
+    selected?: number;
+    disabled?: boolean;
+    buttonPressed?: boolean;
+  };
+  const isOptionButton = control.node.type === 'OptionButton';
+  const text = isOptionButton ? (props.items?.[props.selected ?? 0]?.text ?? '') : (props.text ?? '');
+  return {
+    type: control.node.type,
+    text,
+    isDisabled: props.disabled === true,
+    isPressed: props.buttonPressed === true,
+  };
+}
 
 describe.each(Object.keys(CASES))('FileDialog %s', (name) => {
   const expected = oracle[name as keyof typeof oracle] as {
@@ -157,6 +179,17 @@ describe.each(Object.keys(CASES))('FileDialog %s', (name) => {
     const placed = body.map(({ control, rect }) => ({ type: control.node.type, rect }));
     const wanted = oracleBody(expected.nodes).map((row) => ({ type: row.type, rect: rectOf(row.rect) }));
     expect(placed).toEqual(wanted);
+  });
+
+  it('shows the text, the disabled state and the pressed state Godot shows', () => {
+    const { body } = dialogGeometry(window, size, createSolveContext(THEME, measureText));
+    const wanted = oracleBody(expected.nodes).map(({ type, text = '', disabled, pressed }) => ({
+      type,
+      text: text === ORACLE_LISTED_FILE ? '' : text,
+      isDisabled: disabled === true,
+      isPressed: pressed === true,
+    }));
+    expect(body.map(({ control }) => shownState(control))).toEqual(wanted);
   });
 });
 
