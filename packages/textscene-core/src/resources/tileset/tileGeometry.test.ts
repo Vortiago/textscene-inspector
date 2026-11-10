@@ -3,13 +3,12 @@
  * with Y negated once, and UVs under spriteFrame.ts's flipY=true convention.
  */
 import { describe, it, expect } from 'vitest';
+import { buildPaddedStandInGeometryArrays, buildTileGeometryArrays } from './tileGeometry';
 import {
-  buildPaddedStandInGeometryArrays,
-  buildTileGeometryArrays,
   TILE_ORIENTATION_FLIP_H,
   TILE_ORIENTATION_FLIP_V,
   TILE_ORIENTATION_TRANSPOSE,
-} from './tileGeometry';
+} from './tileOrientationBits';
 import {
   TILE_TRANSFORM_FLIP_H,
   TILE_TRANSFORM_FLIP_V,
@@ -202,7 +201,7 @@ describe('tile orientations', () => {
   ];
 
   const orientationsOf = (cells: DrawableCell[]) =>
-    buildTileGeometryArrays(cells, source, grid, 4, 4, true).orientations;
+    buildTileGeometryArrays(cells, source, grid, 4, 4).orientations;
 
   it.each(ORIENTATIONS)('gives each vertex of a %s cell its bits', (_name, alternativeId, bits) => {
     const orientations = orientationsOf([drawableCellOf({ alternativeId })]);
@@ -219,8 +218,7 @@ describe('tile orientations', () => {
     expect(Array.from(orientations?.slice(4) ?? [])).toEqual([BIT_V, BIT_V, BIT_V, BIT_V]);
   });
 
-  it('builds none unless asked, and none for a stand-in', () => {
-    expect(buildTileGeometryArrays([cell(0, 0)], source, grid, 4, 4).orientations).toBeNull();
+  it('builds none for a stand-in', () => {
     expect(buildPaddedStandInGeometryArrays([cell(0, 0)], source, grid, 4, 4).orientations).toBeNull();
   });
 });

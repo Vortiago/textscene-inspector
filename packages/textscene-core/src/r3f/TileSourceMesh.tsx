@@ -6,7 +6,7 @@
 import { useMemo, useState } from 'react';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
 import * as THREE from 'three';
-import { useCanvasItemTextureSampledBy } from './canvasItemTexture';
+import { useCanvasItemTextureSampledBy, type CanvasItemTexture } from './canvasItemTexture';
 import { NO_RESOURCES } from './SceneResourcesContext';
 import { buildPaddedStandInGeometryArrays, buildTileGeometryArrays } from '../resources/tileset/tileGeometry';
 import type { DrawableCell } from '../resources/tileset/drawableCell';
@@ -68,8 +68,8 @@ export function TileSourceMesh({
     if (!texW || !texH) return null;
     return isStandIn
       ? buildPaddedStandInGeometryArrays(cells, source, grid, texW, texH)
-      : buildTileGeometryArrays(cells, source, grid, texW, texH, hasNormalMap);
-  }, [cells, source, grid, texW, texH, isStandIn, hasNormalMap]);
+      : buildTileGeometryArrays(cells, source, grid, texW, texH);
+  }, [cells, source, grid, texW, texH, isStandIn]);
   const colors = useMemo(() => arrays && tintedColors(arrays.colors, tint.vertex), [arrays, tint.vertex]);
   const geometry = useMemo(() => {
     if (!arrays || !colors) return null;
@@ -79,16 +79,13 @@ export function TileSourceMesh({
     geom.setAttribute('color', new THREE.BufferAttribute(colors, 4));
     if (arrays.uvBounds)
       geom.setAttribute(TILE_UV_BOUNDS_ATTRIBUTE, new THREE.BufferAttribute(arrays.uvBounds, 4));
-    if (arrays.orientations)
+    if (hasNormalMap && arrays.orientations)
       geom.setAttribute(TILE_NORMAL_ORIENTATION_ATTRIBUTE, new THREE.BufferAttribute(arrays.orientations, 1));
     geom.setIndex(new THREE.BufferAttribute(arrays.indices, 1));
     return geom;
-  }, [arrays, colors]);
+  }, [arrays, colors, hasNormalMap]);
   // R3F does not dispose a geometry passed as a prop, so this releases it.
   useDisposeOnRelease(geometry);
-  // The run's own maps, so runs of one tile item from different sources each light with theirs.
-  const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
-  const pixelMaterial = useSurfacePixelMaterial(surface);
 
   // A source with no texture draws nothing (`tile_map_layer.cpp:724`). A failed load gets one
   // placeholder for the whole source (the panel row comes from the resolver's missing report).
@@ -98,12 +95,51 @@ export function TileSourceMesh({
   }
   // Pending: render nothing, so no placeholder flashes.
   if (!tex || !geometry) return null;
+  return (
+    <LitTileRun
+      geometry={geometry}
+      map={tex}
+      tint={tint}
+      renderOrder={renderOrder}
+      padsInShader={padsInShader(source, isStandIn)}
+      orientsNormals={arrays?.orientations != null}
+      canvasTexture={(hasNormalMap && canvasTexture) || null}
+    />
+  );
+}
 
+interface LitTileRunProps {
+  geometry: THREE.BufferGeometry;
+  map: THREE.Texture;
+  tint: VertexColorTint;
+  renderOrder: number;
+  padsInShader: boolean;
+  /** Whether the geometry carries each tile's orientation for a normal map to turn by. */
+  orientsNormals: boolean;
+  /** The source's CanvasTexture while it names a normal map, else null. */
+  canvasTexture: CanvasItemTexture | null;
+}
+
+/**
+ * The run's mesh, mounted only once it draws, so a source that draws nothing registers no light read.
+ * It lights with the run's own maps, so runs of one tile item from different sources each light with theirs.
+ */
+function LitTileRun({
+  geometry,
+  map,
+  tint,
+  renderOrder,
+  padsInShader,
+  orientsNormals,
+  canvasTexture,
+}: LitTileRunProps) {
+  const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
+  const pixelMaterial = useSurfacePixelMaterial(surface);
   // Keyed, since the program depends on it and nothing recompiles in place
   // (`materialProgramInputs.ts`). The atlas is awaited, so it holds steady.
   const program = materialProgramInputs({
     props: {
-      map: tex,
+      map,
       color: tint.color,
       opacity: tint.opacity,
       // Each tile's `modulate`, multiplied onto its pixels (`tile_map_layer.cpp:2690`) in sRGB.
@@ -114,8 +150,8 @@ export function TileSourceMesh({
     },
     merge: [
       pixelMaterial,
-      padsInShader(source, isStandIn) ? { injection: TILE_TEXTURE_PADDING } : undefined,
-      surface && arrays?.orientations ? { injection: TILE_NORMAL_ORIENTATION } : undefined,
+      padsInShader ? { injection: TILE_TEXTURE_PADDING } : undefined,
+      surface && orientsNormals ? { injection: TILE_NORMAL_ORIENTATION } : undefined,
     ],
   });
 
@@ -124,7 +160,7 @@ export function TileSourceMesh({
       <mesh renderOrder={renderOrder} geometry={geometry}>
         <meshBasicMaterial key={program.key} {...program.props} />
       </mesh>
-      {hasNormalMap && canvasTexture && (
+      {canvasTexture && (
         <CanvasItemSurfaceSource
           slot={canvasTexture.slot}
           sampler={canvasTexture.sampler}

@@ -5,6 +5,11 @@
  * window through geometry, not texture.repeat, since every cell shares one cached texture.
  */
 
+import {
+  TILE_ORIENTATION_FLIP_H,
+  TILE_ORIENTATION_FLIP_V,
+  TILE_ORIENTATION_TRANSPOSE,
+} from './tileOrientationBits';
 import { mapToLocalPx } from './tilePlacement';
 import type { DrawableCell } from './drawableCell';
 import { tileDrawInfo, type AtlasSourceModel, type TileGrid } from './types';
@@ -25,18 +30,13 @@ interface TileGeometryArrays {
    */
   uvBounds: Float32Array | null;
   /**
-   * Per vertex, the cell's flips and transpose as the `TILE_ORIENTATION_*` bits, or null when the
-   * caller did not ask. The draw shader flips a normal by the sign of the source rect and swaps its
+   * Per vertex, the cell's flips and transpose as the `TILE_ORIENTATION_*` bits, or null for a
+   * padded stand-in, which no normal map lights. The draw shader flips a normal by the sign of the source rect and swaps its
    * axes for a transposed one (`canvas.glsl:655-661`), and the UVs already carry the diffuse through
    * the same orientation, so a normal map is sampled where the diffuse is and turned by these.
    */
   orientations: Float32Array | null;
 }
-
-/** The bits of a vertex's orientation. */
-export const TILE_ORIENTATION_FLIP_H = 1;
-export const TILE_ORIENTATION_FLIP_V = 2;
-export const TILE_ORIENTATION_TRANSPOSE = 4;
 
 type RegionPx = ReturnType<typeof tileDrawInfo>['regionPx'];
 
@@ -46,8 +46,7 @@ export function buildTileGeometryArrays(
   source: AtlasSourceModel,
   grid: TileGrid,
   texW: number,
-  texH: number,
-  withOrientations = false
+  texH: number
 ): TileGeometryArrays {
   return buildArrays(
     cells,
@@ -57,7 +56,7 @@ export function buildTileGeometryArrays(
     {
       sampledRegion: (_cell, regionPx) => regionPx,
       hasBounds: source.usesTexturePadding,
-      hasOrientations: withOrientations,
+      hasOrientations: true,
     }
   );
 }
