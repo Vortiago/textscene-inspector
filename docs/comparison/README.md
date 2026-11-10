@@ -227,7 +227,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [FlowContainer](../../packages/textscene-core/src/nodes/2d/ui/flowcontainer/comparison.md): children flowed along one axis and wrapped into lines
 - [FoldableContainer](../../packages/textscene-core/src/nodes/2d/ui/foldablecontainer/comparison.md): a collapsible titled panel (accordion)
 - [GPUParticles2D](../../packages/textscene-core/src/nodes/2d/particles/gpuparticles2d/comparison.md): nothing yet, Godot draws a particle cloud, the previewer does not
-- [GraphEdit](../../packages/textscene-core/src/nodes/2d/ui/graphedit/comparison.md): a background panel, grid, toolbar, scrollbars and minimap, with GraphElement children placed by position_offset and the whole rect clipped
+- [GraphEdit](../../packages/textscene-core/src/nodes/2d/ui/graphedit/comparison.md): a background panel, grid, toolbar, scrollbars and minimap, with GraphElement children placed by position_offset, scaled by zoom and the whole rect clipped
 - [GraphElement](../../packages/textscene-core/src/nodes/2d/ui/graphelement/comparison.md): an invisible container that fits its children into its own rect
 - [GraphFrame](../../packages/textscene-core/src/nodes/2d/ui/graphframe/comparison.md): a titled frame around its own content rect
 - [GraphNode](../../packages/textscene-core/src/nodes/2d/ui/graphnode/comparison.md): a titled panel with slot rows and left/right port icons

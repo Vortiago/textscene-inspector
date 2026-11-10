@@ -196,8 +196,8 @@ function ControlItemGroup({
   // `Container::fit_child_in_rect` resets a container child to rotation 0 and
   // scale 1, and the snap's rotation gate must see that too.
   const rotation = isFreeParent ? (props.rotation ?? 0) : 0;
-  const scaleX = isFreeParent ? (props.scale?.x ?? 1) : 1;
-  const scaleY = isFreeParent ? (props.scale?.y ?? 1) : 1;
+  const authoredScale = isFreeParent ? { x: props.scale?.x ?? 1, y: props.scale?.y ?? 1 } : { x: 1, y: 1 };
+  const { x: scaleX, y: scaleY } = solvedEntry?.scale ?? authoredScale;
   const hasOwnTransform = rotation !== 0 || scaleX !== 1 || scaleY !== 1;
   const pivotX = (props.pivotOffset?.x ?? 0) + (props.pivotOffsetRatio?.x ?? 0) * rect.w;
   const pivotY = (props.pivotOffset?.y ?? 0) + (props.pivotOffsetRatio?.y ?? 0) * rect.h;
@@ -214,7 +214,9 @@ function ControlItemGroup({
   const Painter = controlComponentRegistry.get(solveNode.node.type) ?? ControlFallback;
   // The registry read `dispatchChildren` makes, so walker and solver agree on
   // which children are free.
-  const childIsFreeParent = controlSolverRegistry.containerLayout(solveNode.node.type) === undefined;
+  const childIsFreeParent =
+    controlSolverRegistry.containerLayout(solveNode.node.type) === undefined ||
+    controlSolverRegistry.isPlacementOnly(solveNode.node.type);
 
   const childElements = solveNode.children.map((child) => (
     <ControlNodeGroup

@@ -13,6 +13,7 @@
 import type { ControlProperties } from '../control/types';
 import type { GraphElementProperties } from '../graphelement/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
+import type { Vector2 } from '../../../../godot/math/vector';
 import {
   controlSolverRegistry,
   type ContainerLayoutFn,
@@ -37,10 +38,9 @@ function anchoredRect(
 }
 
 /**
- * `GraphEdit::_update_scroll_offset` (`:435-462`), position half only: GraphEdit is a plain `Control`
- * (`graph_edit.h:114`) registered as a container to place its children, and `ControlCanvasWalker`
- * then forces each child to scale 1 and rotation 0 (`ControlCanvasWalker.tsx:210-216`). Exact at the
- * default `zoom = 1`. `Component.tsx` has the matching gap.
+ * `GraphEdit::_update_scroll_offset` (`:435-462`): the position of each GraphElement child, and its
+ * scale `(zoom, zoom)` (`:446-451`, `:730`). GraphEdit is a plain `Control` (`graph_edit.h:114`), so
+ * each child keeps its authored rotation and pivot: it registers a placement-only layout.
  */
 const graphEditLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const props = n.node.properties as GraphEditProperties;
@@ -48,6 +48,7 @@ const graphEditLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const scrollOffset = props.scrollOffset ?? { x: 0, y: 0 };
 
   const rects = new Map<string, Rect2>();
+  const childScales = new Map<string, Vector2>();
   for (const { node: child } of children) {
     const childProps = child.node.properties as ControlProperties;
     const layout = resolveControlLayout(childProps, controlLayoutOrder(child), () =>
@@ -70,13 +71,14 @@ const graphEditLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
         w: natural.w,
         h: natural.h,
       });
+      childScales.set(child.path, { x: zoom, y: zoom });
     } else {
       // `_update_scroll_offset` skips a non-GraphElement (`:441-444`), so it keeps its anchored rect.
       // A registered container's child never reaches `controlRectSolver.ts`'s own anchored path.
       rects.set(child.path, natural);
     }
   }
-  return rects;
+  return { rects, childScales };
 };
 
-controlSolverRegistry.registerContainerLayout('GraphEdit', graphEditLayout);
+controlSolverRegistry.registerPlacementOnlyLayout('GraphEdit', graphEditLayout);

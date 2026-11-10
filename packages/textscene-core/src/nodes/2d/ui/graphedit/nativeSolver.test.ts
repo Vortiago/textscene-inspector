@@ -1,11 +1,8 @@
-/**
- * `graphEditLayout` versus `GraphEdit::_update_scroll_offset`
- * (`scene/gui/graph_edit.cpp:435-462`, position half only: see the
- * module's own doc for the unreachable `set_scale(zoom, zoom)` half).
- */
+/** `graphEditLayout` versus `GraphEdit::_update_scroll_offset` (`scene/gui/graph_edit.cpp:435-462`). */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
 import type { GraphElementProperties } from '../graphelement/types';
+import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutResult, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
@@ -16,6 +13,10 @@ import './nativeSolver';
 import type { GraphEditProperties } from './types';
 
 const graphEditLayout = controlSolverRegistry.containerLayout('GraphEdit')!;
+
+function scalesOf(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Vector2> {
+  return 'rects' in result ? (result.childScales ?? new Map()) : new Map();
+}
 
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
   return 'rects' in result ? result.rects : result;
@@ -54,7 +55,7 @@ function ctx(): SolveContext {
   };
 }
 
-describe('graphEditLayout (graph_edit.cpp:435-462, position only)', () => {
+describe('graphEditLayout (graph_edit.cpp:435-462)', () => {
   it('places a GraphElement child at position_offset - scroll_offset, at zoom 1, natural size from its own offsets', () => {
     const child = graphNodeChild('n', {
       positionOffset: { x: 40, y: 60 },
@@ -101,5 +102,32 @@ describe('graphEditLayout (graph_edit.cpp:435-462, position only)', () => {
       graphEditLayout(n, [{ node: child, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 800, h: 600 }, ctx())
     );
     expect(rects.get('c')).toEqual({ x: 5, y: 5, w: 20, h: 10 });
+  });
+
+  it.each([0.5, 1, 1.5])('writes scale (zoom, zoom) onto each GraphElement child at zoom %s', (zoom) => {
+    const nodes = ['GraphElement', 'GraphNode', 'GraphFrame'].map((type) => ({
+      ...graphNodeChild(type),
+      node: controlNode(type, type, { name: type, scale: { x: 3, y: 3 } }),
+    }));
+    const n = graphEdit('G', { zoom }, nodes);
+    const result = graphEditLayout(
+      n,
+      nodes.map((node) => ({ node, minSize: { x: 0, y: 0 } })),
+      { x: 0, y: 0, w: 800, h: 600 },
+      ctx()
+    );
+    expect([...scalesOf(result).values()]).toEqual(nodes.map(() => ({ x: zoom, y: zoom })));
+  });
+
+  it('writes no scale onto a child that is not a GraphElement', () => {
+    const child = controlChild('c', { scale: { x: 3, y: 3 } });
+    const n = graphEdit('G', { zoom: 0.5 }, [child]);
+    const result = graphEditLayout(
+      n,
+      [{ node: child, minSize: { x: 0, y: 0 } }],
+      { x: 0, y: 0, w: 800, h: 600 },
+      ctx()
+    );
+    expect(scalesOf(result).size).toBe(0);
   });
 });

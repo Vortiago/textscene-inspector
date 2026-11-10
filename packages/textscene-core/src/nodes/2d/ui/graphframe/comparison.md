@@ -15,6 +15,8 @@ GraphEdit. The previewer draws its panel/titlebar StyleBoxes (tint-substituted w
 `autoshrink_enabled` is not. It draws the frame at its authored `size`/`position_offset`.
 That is the rect a freshly loaded scene shows. `attach_graph_element_to_frame` is a
 runtime call with no `.tscn` surface, so no auto-resize runs before a script calls it.
+Inside a GraphEdit it draws at the GraphEdit's `zoom` and behind the connections, in reverse
+scene order against the other frames (`graph_edit.cpp:712-717`).
 
 ## Linting
 

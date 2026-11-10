@@ -201,9 +201,8 @@ export function GraphEdit({
   // The default `connection_rim_color` is `style_normal_color` (`default_theme.cpp:1301`),
   // which `theme.styleFill.normal` holds.
   const rimColor = solveNode.colors.connection_rim_color ?? theme.styleFill.normal;
-  // The walker draws each GraphElement at scale 1 (`isFreeParent` in `ControlCanvasWalker.tsx`),
-  // but an endpoint keeps the full `* zoom` (`connectionEndpoints.ts`). At a zoom other than 1,
-  // the line ends where Godot's port is, away from the unscaled node.
+  // An endpoint keeps the full `* zoom` (`connectionEndpoints.ts`), as the walker scales each
+  // GraphElement child by `zoom`.
   const connections = useMemo(
     () => resolveGraphEditConnections(solveNode, childRects, props, theme, measureText),
     [solveNode, childRects, props, theme, measureText]

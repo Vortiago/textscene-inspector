@@ -71,6 +71,11 @@ export interface ContainerLayoutResult {
    * `SolvedControl.meta` and `NativeControlComponentProps.meta`.
    */
   meta?: SealedHandoff;
+  /**
+   * The scale the layout writes onto a child, by path, such as GraphEdit's `set_scale(zoom, zoom)`.
+   * It replaces the child's authored scale. A child without an entry keeps its own.
+   */
+  childScales?: ReadonlyMap<string, Vector2>;
 }
 
 /**
@@ -154,6 +159,7 @@ class ControlSolverRegistry {
   private readonly childVisibilityFns = createTypeRegistry<ChildVisibilityFn>(
     'controlSolverRegistry.childVisibility'
   );
+  private readonly placementOnlyTypes = new Set<string>();
   private readonly canvasBoundaryTypes = new Set<string>();
   private readonly sizeDependentMinimumTypes = new Set<string>();
 
@@ -194,6 +200,21 @@ class ControlSolverRegistry {
     this.containerLayoutFns.register(typeName, fn);
   }
 
+  /**
+   * `registerContainerLayout` for a Control that places its children without being a `Container`,
+   * such as GraphEdit (`graph_edit.h:114`). `fit_child_in_rect` never runs, so each child keeps its
+   * own rotation and scale, except the scale the layout returns in `childScales`.
+   */
+  registerPlacementOnlyLayout(typeName: string, fn: ContainerLayoutFn): void {
+    this.containerLayoutFns.register(typeName, fn);
+    this.placementOnlyTypes.add(typeName);
+  }
+
+  /** Whether this type's children keep their own rotation and scale (see `registerPlacementOnlyLayout`). */
+  isPlacementOnly(typeName: string): boolean {
+    return this.placementOnlyTypes.has(typeName);
+  }
+
   registerTextureSlots(typeName: string, fn: TextureSlotsFn): void {
     this.textureSlotFns.register(typeName, fn);
   }
@@ -230,6 +251,7 @@ class ControlSolverRegistry {
     this.containerLayoutFns.clear();
     this.textureSlotFns.clear();
     this.childVisibilityFns.clear();
+    this.placementOnlyTypes.clear();
     this.canvasBoundaryTypes.clear();
     this.sizeDependentMinimumTypes.clear();
   }

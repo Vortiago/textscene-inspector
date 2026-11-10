@@ -305,6 +305,36 @@ describe('<ControlCanvasWalker>', () => {
     expect(groups.every((g) => g.rotation.z === 0)).toBe(true);
   });
 
+  describe('a placement-only layout', () => {
+    const TYPE = 'TestWalkerPlacementOnly';
+    const placeInContentRect: ContainerLayoutFn = (_n, children, contentRect) => {
+      const out = new Map<string, Rect2>();
+      children.forEach((c) => out.set(c.node.path, contentRect));
+      return { rects: out, childScales: new Map([['Host/Scaled', { x: 0.5, y: 0.5 }]]) };
+    };
+    const authored = { anchorsPreset: 15, rotation: 0.3, scale: { x: 3, y: 3 } };
+
+    async function groupsOf(...children: SolveNode[]) {
+      controlSolverRegistry.registerPlacementOnlyLayout(TYPE, placeInContentRect);
+      const root = solveNode('Host', TYPE, { anchorsPreset: 15 }, children);
+      const renderer = await ReactThreeTestRenderer.create(
+        <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      );
+      return renderer.scene.findAllByType('Group').map((g) => g.instance as THREE.Group);
+    }
+
+    it('draws a child at the scale the layout returns and its authored rotation', async () => {
+      const groups = await groupsOf(solveNode('Host/Scaled', 'TestType', authored));
+      expect(groups.some((g) => g.scale.x === 0.5 && g.rotation.z === -0.3)).toBe(true);
+      expect(groups.some((g) => g.scale.x === 3)).toBe(false);
+    });
+
+    it('keeps the authored scale of a child the layout returns none for', async () => {
+      const groups = await groupsOf(solveNode('Host/Plain', 'TestType', authored));
+      expect(groups.some((g) => g.scale.x === 3 && g.rotation.z === -0.3)).toBe(true);
+    });
+  });
+
   it("takes each Control's renderOrder from the shared canvas key at its own draw sequence", async () => {
     const child = solveNode('Root/Child', 'TestType', { anchorsPreset: 15 });
     const root = solveNode('Root', 'TestType', { anchorsPreset: 15 }, [child]);
