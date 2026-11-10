@@ -4,7 +4,7 @@
  * instance loader, its materials and the paint order are the ones an `instance=` node uses.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { SceneScope, TscnNode } from '../../../../parser/types';
 import type { LiveNode, YSortRoot } from '../../../../resources/liveNode';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes';
@@ -27,6 +27,7 @@ import { TRANSFORM2D_IDENTITY, transform2DDecompose } from '../../../../godot/ma
 import { node2DLocalTransform } from '../../../../r3f/node2dTransform';
 import type { Node2DLocalTransform } from '../../../base/node2d/types';
 import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { PlacedCell } from './tileData';
 
 /** The instance's name below its placement node. The Scene dock lists neither. */
@@ -38,6 +39,16 @@ export interface SceneTileDrawing {
   instances: TscnNode[];
   /** The tiles the editor marks with a placeholder disc: no scene, a refused root or `display_placeholder`. */
   placeholderTiles: SceneTileCell[];
+  /** The loaded Control roots of the scenes, which the sort reads the solved rect of. */
+  controlRoots: ControlRoot[];
+  /** Receives the solved rect of each Control root; the sort of its tiles follows it. */
+  onRootRects: (rects: ReadonlyMap<TileScene, Rect2>) => void;
+}
+
+/** A tile scene whose root is a Control: its rect needs the Control solver. */
+export interface ControlRoot {
+  scene: TileScene;
+  node: LiveNode;
 }
 
 /**
@@ -66,6 +77,19 @@ export function useSceneTileNodes(
   const sceneNodes = useMemo(() => scenes.map(instanceNodesOf(scope)), [scenes, scope]);
   const sceneSteps = useLiveStepsOf(sceneNodes, scope);
 
+  const controlRoots = useMemo(
+    () =>
+      scenes.flatMap((scene, index) => {
+        const step = sceneSteps[index]!;
+        const isControlRoot = step.isMerged && rootKindOf(step.node.type) === 'control';
+        return isControlRoot && !step.isRefusedInstance ? [{ scene, node: step.node }] : [];
+      }),
+    [scenes, sceneSteps]
+  );
+  // The solver's rect of each Control root, once the Control walk has solved it. The sort reads the
+  // authored offsets until then.
+  const [rootRects, setRootRects] = useState<ReadonlyMap<TileScene, Rect2>>(NO_RECTS);
+
   return useMemo(() => {
     if (!model) return NO_DRAWING;
     // Each scene is judged once, not per tile. A scene that failed to load, or whose root is no
@@ -83,7 +107,7 @@ export function useSceneTileNodes(
         placeable.set(scene, {
           instance: sceneNodes[index]!,
           root,
-          ySortRoot: ySortRootOf(step.node, root, snapToPixels),
+          ySortRoot: ySortRootOf(step.node, root, snapToPixels, rootRects.get(scene)),
         });
     });
     const placed: LiveNode[] = [];
@@ -97,8 +121,10 @@ export function useSceneTileNodes(
       placeholderTiles: allTiles.filter(
         ({ tile }) => !tile.scene || tile.displayPlaceholder || sceneless.has(tile.scene)
       ),
+      controlRoots,
+      onRootRects: setRootRects,
     };
-  }, [model, allTiles, tiles, scenes, sceneNodes, sceneSteps, snapToPixels]);
+  }, [model, allTiles, tiles, scenes, sceneNodes, sceneSteps, snapToPixels, rootRects, controlRoots]);
 }
 
 /**
@@ -120,7 +146,13 @@ class TileNames {
 const PLACEMENT_DEFAULTS = parseNode2D({ type: 'Node2D', attributes: { name: '', parent: '.' } }, {});
 
 const NO_TILES: readonly SceneTileCell[] = [];
-const NO_DRAWING: SceneTileDrawing = { instances: [], placeholderTiles: [] };
+const NO_RECTS: ReadonlyMap<TileScene, Rect2> = new Map();
+const NO_DRAWING: SceneTileDrawing = {
+  instances: [],
+  placeholderTiles: [],
+  controlRoots: [],
+  onRootRects: () => {},
+};
 
 /** A cell edit keeps the node of a scene it still draws, so the instances mounted below it keep their memos. */
 const instanceNodesOf = perObject((scope: SceneScope) =>
@@ -152,26 +184,47 @@ function rootKindOf(rootType: string): SceneRootKind | null {
   return null;
 }
 
+/** The instance root as the sort reads it: a Node2D root has its own transform and z. */
+function ySortRootOf(
+  rootNode: LiveNode,
+  root: SceneRootKind,
+  snapToPixels: boolean,
+  solvedRect: Rect2 | undefined
+): YSortRoot {
+  if (root === 'control')
+    return controlYSortRoot(rootNode.properties as ControlProperties, snapToPixels, solvedRect);
+  const { z_index: zIndex = 0, z_as_relative: zAsRelative = true } = rootNode.properties as {
+    z_index?: number;
+    z_as_relative?: boolean;
+  };
+  const pose = node2DLocalTransform(rootNode.properties as Partial<Node2DLocalTransform>);
+  return { pose, zIndex, zAsRelative };
+}
+
 /**
- * The instance root as the sort reads it. A Node2D root has its own transform and z. A Control root
- * sorts on its canvas item origin (`control.cpp:726-736`): offsets, then pivot, rotation and scale,
- * snapped as the walker snaps them, with the placement's z. A text minimum size is not read.
+ * A Control root sorts on the origin of its canvas item (`control.cpp:726-736`), with the z of the
+ * placement. The solved rect holds the position the minimum size and grow direction leave
+ * (`control.cpp:1773-1797`). Before the solve, the rect is the one the offsets name.
  */
-function ySortRootOf(rootNode: LiveNode, root: SceneRootKind, snapToPixels: boolean): YSortRoot {
-  if (root === 'node2d') {
-    const { z_index: zIndex = 0, z_as_relative: zAsRelative = true } = rootNode.properties as {
-      z_index?: number;
-      z_as_relative?: boolean;
-    };
-    const pose = node2DLocalTransform(rootNode.properties as Partial<Node2DLocalTransform>);
-    return { pose, zIndex, zAsRelative };
-  }
-  const control = rootNode.properties as ControlProperties;
+function controlYSortRoot(
+  control: ControlProperties,
+  snapToPixels: boolean,
+  solvedRect: Rect2 | undefined
+): YSortRoot {
   const { offsetLeft = 0, offsetTop = 0, offsetRight = 0, offsetBottom = 0 } = control;
-  const pivot = combinedPivotOffset(control, { w: offsetRight - offsetLeft, h: offsetBottom - offsetTop });
+  const rect = solvedRect ?? {
+    x: offsetLeft,
+    y: offsetTop,
+    w: offsetRight - offsetLeft,
+    h: offsetBottom - offsetTop,
+  };
   const origin = controlItemOrigin(
-    { x: offsetLeft, y: offsetTop },
-    { rotation: control.rotation ?? 0, scale: control.scale ?? { x: 1, y: 1 }, pivot },
+    rect,
+    {
+      rotation: control.rotation ?? 0,
+      scale: control.scale ?? { x: 1, y: 1 },
+      pivot: combinedPivotOffset(control, rect),
+    },
     snapToPixels
   );
   return { pose: { ...TRANSFORM2D_IDENTITY, tx: origin.x, ty: origin.y }, zIndex: 0, zAsRelative: true };

@@ -80,7 +80,7 @@ describe('TileMapLayer scene tiles', () => {
   });
 
   it.each([
-    ['a scene id the source lacks', cell(0, 0, 14)],
+    ['a scene id the source lacks', cell(0, 0, 15)],
     ['atlas coords other than (0, 0)', cell(0, 0, 1, { atlasCoords: { x: 1, y: 0 } })],
     ['a source the TileSet lacks', cell(0, 0, 1, { sourceId: 5 })],
   ])('draws no instance for %s', async (_name, placed) => {
@@ -212,6 +212,20 @@ polygon = PackedVector2Array(0, 0, 10, 0, 10, 10, 0, 10)
     const order = boxesInPaintOrder(renderer);
     expect(order[0]).toEqual([100, 80, 10, 10]);
     expect(order).toHaveLength(2);
+  });
+
+  it('sorts a Control root on the origin its minimum size moves: growing upwards puts it before a child below it', async () => {
+    // The root's top edge is at y 32 + 64, and its minimum height of 30 lifts it to y 32 + 36, above the child at 80.
+    const authored = `
+[node name="Low" type="Polygon2D" parent="Layer"]
+position = Vector2(0, 80)
+polygon = PackedVector2Array(0, 0, 10, 0, 10, 10, 0, 10)
+`;
+    const renderer = await render([cell(0, 0, 14)], 'y_sort_enabled = true\n', authored);
+    expect(boxesInPaintOrder(renderer)).toEqual([
+      [132, 88, 10, 30],
+      [100, 100, 10, 10],
+    ]);
   });
 
   it('keeps the draw order inside each of 400 instances', async () => {

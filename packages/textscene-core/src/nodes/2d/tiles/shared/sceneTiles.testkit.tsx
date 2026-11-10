@@ -148,7 +148,22 @@ rotation = 3.14159265358979
 color = Color(0, 1, 0, 1)
 `;
 
-/** The `[ext_resource]` and `[sub_resource]` headings of a TileSet with the scene tiles 1 to 5 and 7 to 13 in source 0. */
+/**
+ * Scene tile 14: a ColorRect root 2 px tall whose minimum height is 30. It grows upwards
+ * (`grow_vertical = 0`), so its canvas item sits 28 px above its top edge (`control.cpp:1789-1797`).
+ */
+const GROWN_CONTROL_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="ColorRect"]
+custom_minimum_size = Vector2(10, 30)
+offset_top = 64.0
+offset_right = 10.0
+offset_bottom = 66.0
+grow_vertical = 0
+color = Color(0, 0, 1, 1)
+`;
+
+/** The `[ext_resource]` and `[sub_resource]` headings of a TileSet with the scene tiles 1 to 5 and 7 to 14 in source 0. */
 export const SCENE_TILESET_RESOURCES = `[ext_resource type="PackedScene" path="res://polygon.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://offset.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://control.tscn" id="3"]
@@ -161,6 +176,7 @@ export const SCENE_TILESET_RESOURCES = `[ext_resource type="PackedScene" path="r
 [ext_resource type="PackedScene" path="res://raised-root.tscn" id="10"]
 [ext_resource type="PackedScene" path="res://refused.tscn" id="11"]
 [ext_resource type="PackedScene" path="res://turned-control.tscn" id="12"]
+[ext_resource type="PackedScene" path="res://grown-control.tscn" id="13"]
 
 [sub_resource type="TileSetScenesCollectionSource" id="scenes"]
 scenes/1/scene = ExtResource("1")
@@ -175,6 +191,7 @@ scenes/10/scene = ExtResource("9")
 scenes/11/scene = ExtResource("10")
 scenes/12/scene = ExtResource("11")
 scenes/13/scene = ExtResource("12")
+scenes/14/scene = ExtResource("13")
 
 [sub_resource type="TileSet" id="tileset"]
 tile_size = Vector2i(64, 64)
@@ -194,6 +211,7 @@ const TILE_SCENES: Record<string, string> = {
   'res://raised-root.tscn': RAISED_ROOT_SCENE,
   'res://refused.tscn': REFUSED_SCENE,
   'res://turned-control.tscn': TURNED_CONTROL_SCENE,
+  'res://grown-control.tscn': GROWN_CONTROL_SCENE,
 };
 
 /** What the viewport and the Scene dock see of the rendered scene. */
