@@ -16,34 +16,32 @@ per repeat copy. A sub-viewport's current Camera2D writes the screen offset.
 ## Linting
 
 <!-- lint:begin Parallax2D -->
-
 Strict parsing format-checks these `Parallax2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property               | Accepts                                                | Out of range |
-| ---------------------- | ------------------------------------------------------ | ------------ |
-| `autoscroll`           | Vector2(x, y), or the Vector2i spelling Godot converts |              |
-| `follow_viewport`      | true or false                                          |              |
-| `ignore_camera_scroll` | true or false                                          |              |
-| `limit_begin`          | Vector2(x, y), or the Vector2i spelling Godot converts |              |
-| `limit_end`            | Vector2(x, y), or the Vector2i spelling Godot converts |              |
-| `repeat_size`          | Vector2(x, y), each >= 0                               |              |
-| `repeat_times`         | integer >= 1                                           | error below  |
-| `screen_offset`        | Vector2(x, y), or the Vector2i spelling Godot converts |              |
-| `scroll_offset`        | Vector2(x, y), or the Vector2i spelling Godot converts |              |
-| `scroll_scale`         | Vector2(x, y), or the Vector2i spelling Godot converts |              |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `autoscroll` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `follow_viewport` | true or false |  |
+| `ignore_camera_scroll` | true or false |  |
+| `limit_begin` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `limit_end` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `repeat_size` | Vector2(x, y), each >= 0 |  |
+| `repeat_times` | integer >= 1 | error below |
+| `screen_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `scroll_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `scroll_scale` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 
-| Rule                                                 | Reports                              | Severity |
-| ---------------------------------------------------- | ------------------------------------ | -------- |
-| `binary-resource-reference` (all nodes)              | `binary-resource-reference`          | info     |
-| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning  |
-|                                                      | `canvasitem-ancestor-is-canvasgroup` | warning  |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
-An unreadable scroll key falls back to its Godot default: `scroll_scale` `Vector2(1, 1)`,
-the offsets and `repeat_size` `Vector2(0, 0)`, `repeat_times` 1, the limits `-10000000` and
-`10000000`, `follow_viewport` true. A negative `repeat_size` component is clamped to `0` and
-`repeat_times` below 1 to 1, as the setters do.
+An unreadable scroll key falls back to its Godot default. That is `Vector2(1, 1)` for
+`scroll_scale`, `Vector2(0, 0)` for the offsets and `repeat_size`, and 1 for `repeat_times`. The
+limits fall back to `-10000000` and `10000000`, and `follow_viewport` to true. A negative
+`repeat_size` component is clamped to `0` and `repeat_times` below 1 to 1, as the setters do.
 
 ## Known limitations
 
