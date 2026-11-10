@@ -1303,6 +1303,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Joint 2d Markers",
+    "file": "unit-joint-2d-markers.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Joint 3d Gizmos 6dof",
     "file": "unit-joint-3d-gizmos-6dof.tscn",
     "category": "Other"
@@ -3589,6 +3594,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Marker2d",
     "file": "unit-marker2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Parallax 2d Camera Scroll",
+    "file": "unit-parallax-2d-camera-scroll.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Parallax 2d Repeat",
+    "file": "unit-parallax-2d-repeat.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
